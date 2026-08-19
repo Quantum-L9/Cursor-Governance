@@ -5,6 +5,9 @@ contract for any agent working **in a repo that consumes** this repository.
 
 Read this file before touching activation, hooks, or symlink wiring.
 
+Authority order: `CANONICAL_LAW.md` > `ops/autonomy/surface_profile.yaml` >
+this file > skills. Agent-invented contracts are lowest.
+
 ---
 
 ## 1. Mission of this repo
@@ -27,92 +30,51 @@ This repo does **not** own:
 
 ---
 
-## 2.0 Bounded autonomy (Cursor SOP)
-
-For parallel non-dependent Tasks and **background PR-poll while the main agent
-continues**, use `/autonomy` and skill `l9-bounded-autonomy` (explicit-only).
-Authority is a **campaign authorization packet** (not an envelope). Claude Code
-machine runtime remains `environment/claude-code/autonomy/` — see its README
-“Cursor SOP” link. Human merge only; do not rewrite the Python scheduler from Cursor.
-
-### 2.0.1 Adapter Autonomy Velocity (Claude Code / peers)
-
-SSOT: `ops/autonomy/surface_profile.yaml` (CANONICAL_LAW §6.1). On adapter
-surfaces with `L9_AUTONOMY_ENABLED=true`, scoped commit/push/PR/remediation is
-authorized without per-action ask; merge is denied by `ops/autonomy/merge_gate.py`.
-Install settings: `make claude-settings WS="$(pwd)"`. Cursor remains ask-first
-except campaign packet / `make pr` remediation.
-
-### 2.0.2 L4 Local Autonomy (no mid-execution push)
-
-SSOT: `ops/autonomy/surface_profile.yaml` → `l4_local_autonomy`
-(CANONICAL_LAW §6.2). Default ON (`L9_L4_LOCAL_AUTONOMY=1`).
-
-Proceed L4: stacked-branch **local commits only** through program/contract
-execution — **no mid-execution push**, no push-approval pacing stalls. When
-finished locally, run `kernels/Recursive Alignment.md` then
-`kernels/Validate & Repair.md` on everything, then:
-
-```bash
-python3 ops/autonomy/l4_local.py begin --contract-id "<id>"   # if not begun
-python3 ops/autonomy/l4_local.py record-kernels
-python3 ops/autonomy/l4_local.py authorize-release
-make pr   # push + open scoped PR using PULL_REQUEST_TEMPLATE.md
-# then: l9-pr-remediation Converge → green → resolve review threads
-# then: if user authorized merge — merge; older open PRs first (bottom-up)
-```
-
-After push: run `l9-pr-remediation` until green, resolve all code-review agent
-comments, reach mergeable. When the user authorizes merge, merge. If older open
-PRs exist (earlier `createdAt`), remediate and merge those **bottom-up first**
-so older work lands before newer tips (avoids rebasing old PRs onto new main).
-
-Enforcement: `ops/autonomy/local_execution_gate.py` (Claude PreToolUse + Cursor
-`beforeShellExecution`) and `open_pr_after_gate.sh`. Status:
-`python3 ops/autonomy/l4_local.py status`.
-
 ## 2. Activation — how a session boots L9 governance
 
 **There is exactly one activation mechanism, and it is automatic.**
 
-### 2.1 Automatic (every session, no action needed)
+### 2.1 SessionStart (every session, no action needed)
 
 `ops/hooks/session_start_bootstrap.sh` is installed as a real file at
 `~/.cursor/hooks/session-start-bootstrap.sh` and registered in
-`~/.cursor/hooks.json` under `sessionStart` (30s timeout). It runs on every
-Cursor session start with no manual step:
+`~/.cursor/hooks.json` under `sessionStart` (**60s** timeout). It:
 
-1. Backgrounds `governance_sync.sh` — **bidirectional** reconcile of this clone
-   against `origin/main`: fast-forward-only pull (never destroys local edits,
-   never hard-resets), then a push via `backup_to_github.sh` so local work is
-   backed up at session start too, not only on a clean session end. Set
-   `GOVERNANCE_SYNC_PUSH=0` to make it pull-only.
-2. Backgrounds `setup_claude_code_plugins.sh --quiet --workspace "$REPO"` —
-   reconciles the declared Claude Code plugin set: a core set every governed
-   workspace inherits (user-scope, `~/.claude/`), plus class-gated addons
-   (project-scope, `<repo>/.claude/settings.json`) per `environment/plugins/`
-   classification — see `environment/plugins/README.md`
-3. Auto-wires `.cursor-commands` + `~/.cursor/{skills,commands,rules}`
-   symlinks in the active workspace if any are missing
-4. Backgrounds `install_ide_profile.sh --quiet` — reconciles the IDE profile
-   declared in `environment/ide/` (extensions machine-wide, managed-key merge
-   into the workspace's `.vscode/settings.json`)
-5. Loads Graphiti env, scaffolds `memory-bank/` in the active workspace
-6. Ensures the Graphiti SSH tunnel, then runs a health check
-7. Reads a `memory-bank/activeContext.md` excerpt (T0 resume context)
-8. Runs `check_governance_wiring.sh` and reports PASS/FAIL
-9. Delegates to `ops/hooks/session_start_memory_orchestrator.sh` for
-   code-graph health (PlasticOS repos) + Graphiti `inject "session start"`
-   prefetch
-10. Emits one combined `additional_context` JSON blob back to Cursor
+1. Foreground-runs `governance_activate_fresh.sh` **before** resolving the
+   SSOT. Tip authority is GitHub `origin/main` (ff-only when safe, else
+   shallow clone + atomic swap). Prefers
+   `$HOME/.cursor-governance/ops/scripts/governance_activate_fresh.sh`, then
+   the `~/.cursor/hooks/governance-activate-fresh.sh` sidecar; chicken-egg
+   minimal clone if both are missing. Parses the STATUS line
+   (`action` / `sha` / `remote_sha` / `detail`).
+   `governance_sync.sh` is **on-demand** bidirectional reconcile only — it is
+   **not** the sessionStart tip-activation step.
+2. Backgrounds `setup_claude_code_plugins.sh --quiet --workspace "$REPO"`
+   (core user-scope plugins plus class-gated project addons — see
+   `environment/plugins/README.md`).
+3. Auto-wires consumer `.cursor-commands`, `.cursor/plans` → `~/.cursor/plans`,
+   and the `l9-governance` plugin when missing. SSOT must **not** self-alias
+   `.cursor-commands`.
+4. Backgrounds `install_ide_profile.sh --quiet` (extensions machine-wide;
+   managed-key merge into `.vscode/settings.json`).
+5. Loads Graphiti env, ensures the SSH tunnel, health-checks. Does **not**
+   scaffold or excerpt `memory-bank/`. Resume SSOT is Graphiti (`inject` /
+   PICKUP / hydration). See `ops/graphiti/MEMORY_BANK_POLICY.md`.
+6. Runs `check_governance_wiring.sh` (PASS/FAIL, including tip freshness
+   `HEAD == origin/main`).
+7. Delegates to `ops/hooks/session_start_memory_orchestrator.sh` (code-graph
+   on PlasticOS repos + Graphiti `inject "session start"` with
+   `hydrate_stats`).
+8. Emits sectioned markdown `additional_context` (Governance / Runtime /
+   Graphiti hydrate / Code-graph / Plan audit) via COMBINED env. Exit 0 always.
+
+Do not recreate a YAML `start-session.yaml` “protocol.” The `.sh` hook is the
+canonical activation mechanism.
 
 ### 2.1.1 Worktree create ⇒ wire (not sessionStart)
 
 `sessionStart` fires when Cursor opens a session in a folder. It does **not**
-fire when an agent runs `git worktree add`. New worktrees start without
-gitignored `.cursor/` / `.vscode/` links.
-
-After creating a worktree, wire that path once:
+fire when an agent runs `git worktree add`. After creating a worktree:
 
 ```bash
 bash "$HOME/.cursor-governance/ops/scripts/worktree_add_wired.sh" -b feat/<id> /path/to/wt origin/main
@@ -126,178 +88,338 @@ another wire. Do not treat `/start-session` as a per-branch ritual.
 
 ### 2.2 Manual / on-demand commands
 
-To re-run the **entire** sequence above against the current repo — same script,
-synchronously, with output on your terminal instead of in a JSON payload:
-
 ```bash
 make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 ```
 
-Consumer repos may add a two-line delegating `start` target so plain `make start`
-works from inside the repo.
+Consumer repos may add a two-line delegating `start` target so plain
+`make start` works from inside the repo.
 
-Same inheritance pattern for the local PR / security gate (no per-repo scanner
-install beyond machine-level `gitleaks` + `uv`; bandit/semgrep/pip-audit run via
-`uvx` from this clone). **Invariant:** `make pr` / PR pre-commit scan
-**changed files only** (vs `PR_BASE`, default `origin/main`); full-corpus scans
-are nightly CI (`make pr-full` / `make precommit` for intentional local full runs).
+**Invariant:** `make pr` / PR pre-commit scan **changed files only** (vs
+`PR_BASE`, default `origin/main`); full-corpus scans are nightly CI
+(`make pr-full` / `make precommit` for intentional local full runs).
 
 ```bash
 make -C "$HOME/.cursor-governance" pr WS="$(pwd)"
-# or security scanners only:
 make -C "$HOME/.cursor-governance" pr-security WS="$(pwd)"
 ```
 
-When adopting **l9-ci-core**'s common workflow, consumer repos use the **identical
-thin Makefile** from `tools/l9_repo/Makefile.template` (delegates to
-`python -m tools.l9_repo`); they do **not** copy Cursor-Governance's fat Makefile.
-Optional thin consumer Makefile that only delegates governance `pr`:
+There is **no** `tools/l9_repo/` tree and **no** `Makefile.template` in this
+repo. Consumers that only need governance `pr` use this delegate — they do
+**not** copy this repo’s fat Makefile:
 
 ```makefile
 pr:
 	$(MAKE) -C "$(HOME)/.cursor-governance" pr WS="$(CURDIR)"
 ```
 
-Run these directly if you need to re-check or repair only one piece mid-session:
+Piecewise repair (run from the consumer workspace unless noted):
 
 ```bash
+bash "$HOME/.cursor-governance/ops/scripts/governance_activate_fresh.sh"
 bash "$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
 bash "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh" "$(pwd)"
-bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"      # run from inside the consumer workspace, not from ~/.cursor-governance itself
+bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"
 bash "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh"
-bash "$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh"     # reconcile Claude Code plugins; run from inside the consumer workspace (or pass --workspace)
-bash "$HOME/.cursor-governance/ops/scripts/install_ide_profile.sh" "$(pwd)"  # reconcile IDE profile (--dry-run to preview)
-python3 "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health
+bash "$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh" --workspace "$(pwd)"
+bash "$HOME/.cursor-governance/ops/scripts/install_ide_profile.sh" "$(pwd)"
+"$HOME/.cursor-governance/.venv/bin/python" \
+  "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health
 ```
 
-**Caution:** `setup_workspace_symlinks.sh` and `validate_governance_symlinks.sh`
-resolve the workspace as `$(pwd)` — always `cd` into the consumer repo first.
-Running them from inside `~/.cursor-governance` self-wires the SSOT clone as
-if it were a consumer (harmless, but pointless; `.cursor-commands` and
-`.cursor/` are gitignored here for exactly this reason). `setup_claude_code_plugins.sh`
-defaults to `$(pwd)` the same way but also accepts an explicit `--workspace <path>`
-(used by `setup_workspace_symlinks.sh` and the sessionStart hook internally) —
-pass it directly if you're not `cd`'d into the target repo.
+`setup_workspace_symlinks.sh` and `validate_governance_symlinks.sh` resolve
+the workspace as `$(pwd)`. Running them from inside `~/.cursor-governance`
+must **not** create a `.cursor-commands` self-alias (setup removes it).
+Prefer wiring consumers, not the SSOT clone.
 
-### 2.3 Toolchain pins (local `make pr` / pre-commit)
+### 2.3 Session-end backup
 
-**Authority:** when [l9-ci-sdk](https://github.com/Quantum-L9/l9-ci-sdk) and
-[l9-ci-core](https://github.com/Quantum-L9/l9-ci-core) disagree on a version,
-**l9-ci-sdk wins**. Core is used only for tools the SDK does not pin
-(gitleaks / bandit / pip-audit — SDK intentionally omits those).
+This clone reconciles with `origin/main` on demand via `governance_sync.sh`
+(ff-only pull, then push via `backup_to_github.sh`) and pushes again at
+session end (`backup_to_github.sh` via the `sessionEnd` hook). Both directions
+are commit-preserving. The session-end push is gated by
+`ops/scripts/backup_gate.sh`. If a backup you expected did not happen, read
+`backup.log`. Do not weaken the gate; run `make backup` or set
+`GOVERNANCE_BACKUP_FORCE=1`.
 
-**SSOT file in this repo:** [`requirements.txt`](requirements.txt) (exact pins +
-comments). Keep `pyproject.toml` `[project.optional-dependencies] dev` and
-`.pre-commit-config.yaml` ruff `rev` in lockstep with that file.
+---
+
+## 3. Autonomy and merge
+
+SSOT: `ops/autonomy/surface_profile.yaml` (CANONICAL_LAW §6.1 / §6.2).
+
+Shared autonomy brain is `ops/autonomy/` (Cursor-primary). Provider-neutral
+bounded-concurrency runtime is
+`environment/program-execution/peer_execution/autonomy/`. No provider owns a
+scheduler. Do not rewrite the Python scheduler from Cursor.
+
+Claude Code gold-standard pack: `environment/agents/adapters/claude-code/`.
+`environment/claude-code/` does **not** exist. The pack has **no** `autonomy/`
+subdirectory. Cloud Web/Mobile memory uses HTTPS Graphiti
+(`GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`);
+see ADR-0006 + ADR-0007.
+
+**Cursor** remains ask-first except campaign packet / explicit L4 program.
+Adapter surfaces (`claude-code`, `codex`, `gemini`, `manus`) with
+`L9_AUTONOMY_ENABLED=true` may scoped-commit locally without per-action ask.
+They still publish only via `make pr`. Install settings:
+`make claude-settings WS="$(pwd)"`.
+
+### 3.1 L4 local autonomy (default ON)
+
+`L9_L4_LOCAL_AUTONOMY=1`. Local commits only through program/contract
+execution — **no mid-execution push**. When finished locally, run
+`kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md`, then
+`make improve IMPROVE_RECORD=1` (or `l4-begin` / `l4-record-kernels` /
+`l4-authorize`). An L4 release receipt does **not** authorize merge.
+
+Enforcement: `ops/autonomy/local_execution_gate.py` (Claude PreToolUse +
+Cursor `beforeShellExecution`) and `open_pr_after_gate.sh`. Status:
+`make l4-status`.
+
+### 3.2 Merge authority (resolved)
+
+Launching a program or clicking Build is **not** merge authorization.
+
+- Campaigns and `make pr` end **green + merge-ready**. They do **not** merge.
+- Invoking **`/l9-pr-remediation` (Converge)** **is** merge authorization for
+  **all open PRs**. Write
+  `"$HOME/.cursor-governance/.venv/bin/python" ops/autonomy/authorize_merge.py --repo <owner/name> --all-open`,
+  converge each PR, then merge oldest first, stack-safe.
+- `/pr` is Diagnose-only (no merge).
+- `L9_MERGE_AUTHORIZED=<reason>` is the human breakglass for ordinary merge.
+- Force-push, hard-reset, and `--admin` stay denied.
+- Squash/rebase is denied when the head branch is the base of an open PR
+  (`ops/autonomy/merge_gate.py`). Land children bottom-up first, retarget
+  them, or merge the parent with `--merge`. Breakglass:
+  `L9_STACK_CHECK_BYPASS=<reason>`.
+- After a parent is squash-merged, never merge `main` into the child. Use
+  `git rebase --onto origin/main <old-parent-tip> <child>`.
+- Do not split mixed work into a parent that deletes and a child that
+  restores. Cut sibling branches from the pre-mix base instead.
+
+For parallel non-dependent Tasks and background PR-poll, use `/autonomy` and
+skill `l9-bounded-autonomy` (explicit-only). Authority is a **campaign
+authorization packet**.
+
+### 3.3 Campaigns
+
+One integration branch per campaign (`campaign/<campaign_id>`). Set
+`PR_BASE=origin/campaign/<campaign_id>`. Do **not** open campaign PRs against
+`main`. Do **not** mix campaign work onto other feature branches. Branch map:
+`environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml`.
+Publish with `PR_REMEDIATE=0 make pr`.
+
+---
+
+## 4. Publish path (capability graph)
+
+Makefile is a capability graph.
+
+| Kind | Verbs |
+|---|---|
+| **PUBLIC** | `improve`, `pr-check`, `pr` |
+| **INTERNAL** | `pr-preflight`, `precommit`, `precommit-repo` |
+
+This repo does **not** use a git commit hook. Do not run `pre-commit install`.
+
+1. `make improve` composes L4 wrappers. Apply the two kernels, commit
+   revisions, then `make improve IMPROVE_RECORD=1`.
+2. `make pr-check` is quality only (changed-files pre-commit + locked ruff /
+   security / pytest). No L4. Empty changeset vs `PR_BASE` is PASS. A PASS
+   writes `.l9/pr/gate-receipt.json`. The same HEAD + worktree + `PR_BASE` is
+   not re-gated.
+3. Single path to GitHub = **`make pr`** after L4 release. Raw `git push` /
+   `gh pr create` / `gh pr edit` / MCP `create_pull_request` / `push_files`
+   are denied at every phase. `make pr` / `PR` / `Pr` / `pR` are equivalent.
+4. Failure loop: diagnose → fix → (`make improve` if kernels apply) →
+   `make pr-check` → `make pr` **once**. Do not run a second full gate on an
+   unchanged tree.
+5. `make pr` runs INTERNAL `pr-preflight`, then `pr-check` (receipt skip if
+   unchanged), then `open_pr_after_gate.sh`.
+
+`make pr` auto-heals derived artifacts via
+`ops/scripts/sync_generated_artifacts.py` (WARN to stage, not a hard fail).
+
+**`PR_REMEDIATE`:** Makefile default is `1` (after open, emit
+`L9_AGENT_REQUIRED` so the agent may spawn `l9-pr-remediation`).
+`open_pr_after_gate.sh` itself defaults to `0` if the env is unset.
+Campaign and L4 authorize-release publish **MUST** pass
+`PR_REMEDIATE=0 make pr`. Spawn remediation only when `PR_REMEDIATE=1` or
+the user invokes `/l9-pr-remediation`. Cap in the skill pack is **3**
+(`skills/l9-pr-remediation`). `surface_profile.yaml` lists `max_cycles: 5`
+— follow the skill pack until that key is aligned.
+
+Handoff: `.l9/pr/pr-remediation-handoff.json`. Live rule:
+`rules/48-make-pr-remediation.mdc`.
+
+Do not open or push if `make pr` / `make pr-check` fails.
+
+CI Lint is `uv run ruff`, not the pre-commit CLI. Pin lockstep:
+`.pre-commit-config.yaml` ruff `rev` matches `requirements.txt`.
+
+### 4.1 PR overlap
+
+SSOT: `rules/53-pr-overlap-guardrail.mdc`; policy under
+`pr_stacking.pr_overlap` in `ops/autonomy/surface_profile.yaml`.
+
+`make pr` runs `ops/scripts/pr_overlap_check.py` between the L4 release
+check and `git push`. Default `PR_OVERLAP=block`. Generated artifacts
+(`GENERATED_PATH_PREFIXES` in `ops/scripts/sync_generated_artifacts.py`)
+are exempt and merge via `merge=l9-generated`.
+
+Overlap remedy: commit into the same-agent open PR, else wait, else
+renegotiate scope. `PR_STACK=auto` still exists as a knob but creates the
+topology squash-merge denies — use it only when the parent will merge with
+`--merge`. Fail-open on missing `gh` telemetry; fail-closed on a detected
+non-generated textual conflict.
+
+After any merge touching generated paths, or while
+`.l9/pr/regen-required.txt` is non-empty, run
+`"$HOME/.cursor-governance/.venv/bin/python" ops/scripts/sync_generated_artifacts.py --force`,
+stage, and commit before opening or updating a PR.
+
+---
+
+## 5. Interpreter
+
+Makefile recipes MUST call `$(PYTHON)` / `$(RUFF)` / `$(MYPY)` —
+`$(CURDIR)/.venv/bin/{python,ruff,mypy}` from `pyproject.toml` + `uv.lock`
+(`make venv` → `uv sync --locked --extra dev`). macOS `/usr/bin/make` is
+GNU Make 3.81 and does **not** export `export PATH :=` into recipe shells.
+
+`make gov-python` is an auto-prereq of every goal except `help` / `venv`.
+It runs `ops/scripts/ensure_gov_python.sh` and fail-closes unless
+`sys.prefix` is `.venv` and `yaml`, `pydantic`, `jsonschema`, `structlog`,
+`cryptography`, and `langgraph` import.
+
+Manual Graphiti / secrets / L4 / `authorize_merge.py` /
+`sync_generated_artifacts.py` / `port_aws_to_infisical.py` MUST use
+`"$HOME/.cursor-governance/.venv/bin/python"` (or a `make` target).
+`ModuleNotFoundError: No module named 'yaml'` means the wrong interpreter.
+
+Exception (known): three `replay_campaign.py` recipes in the Makefile still
+call bare `python3`. Do not copy that pattern.
+
+Do not `uv pip install` past the lockfile for the default toolchain.
+
+---
+
+## 6. Toolchain pins (local `make pr` / pre-commit)
+
+SSOT: [`requirements.txt`](requirements.txt) + `uv.lock`. Keep
+`pyproject.toml` `[project.optional-dependencies] dev` and
+`.pre-commit-config.yaml` ruff `rev` in lockstep.
+
+Live authority in `requirements.txt`: ruff / mypy / pytest match
+**l9-ci-core** `install-consumer-ci`. Other analysis tools follow l9-ci-sdk
+when it pins them. Core owns gitleaks / bandit / pip-audit (sdk omits).
 
 | Tool | Version | Install | Source |
 |---|---|---|---|
-| ruff | `0.16.0` | `uv sync --extra dev` | sdk `requirements-ci.txt` |
-| mypy | `2.3.0` | same | sdk |
-| pytest | `9.1.1` | same | sdk |
-| pytest-cov | `7.1.0` | same | sdk |
-| types-PyYAML | `6.0.12.20260724` | same | sdk |
-| bandit | `1.8.6` | same / `uvx` | core `security.yml` (sdk omits) |
-| pip-audit | `2.9.0` | same / `uvx` | core `security.yml` (sdk omits) |
-| gitleaks | `8.24.3` | `brew install gitleaks` | core `security.yml` (sdk omits) |
+| ruff | `0.16.1` | `make venv` | `requirements.txt`; pre-commit `rev: v0.16.1` |
+| mypy | `2.3.0` | same | `requirements.txt` |
+| pytest | `9.1.1` | same | `requirements.txt` |
+| pytest-cov | `7.1.0` | same | `requirements.txt` |
+| types-PyYAML | `6.0.12.20260724` | same | `requirements.txt` |
+| bandit | `1.9.4` | same / `uvx` | `requirements.txt` |
+| pip-audit | `2.10.1` | same / `uvx` | `requirements.txt` |
+| gitleaks | `8.24.3` | `brew install gitleaks` | comment in `requirements.txt` |
 | semgrep | `>=1.100.0,<2.0.0` | brew / pip / `uvx` | sdk SemgrepVersionPolicy |
 | pre-commit | latest stable | pipx / pip / brew | framework only |
 | uv | `>=0.8.0` | https://docs.astral.sh/uv/ | `[tool.uv] required-version` |
 
 ```bash
-# One-time / refresh local analysis toolchain
-uv pip install -r "$HOME/.cursor-governance/requirements.txt"
-# preferred in this clone (locked):
-make -C "$HOME/.cursor-governance" venv   # uv sync --locked --extra dev
-brew install gitleaks                     # pin 8.24.3 when possible
+make -C "$HOME/.cursor-governance" venv
+brew install gitleaks
 ```
 
-**Not required for `make pr`:** `SEMGREP_APP_TOKEN` / `semgrep login` (optional
-unthrottle / private rules), `SONAR_TOKEN` (SonarCloud / SonarLint only).
-
-**Invariant:** `make pr` scans **changed files only**. Full-corpus = nightly CI
-(`make precommit` / `make pr-full` for intentional local full runs).
-
-### 2.4 Graphiti — activated (2026-07-27)
-
-Graphiti memory is **fully activated and round-trip verified**, not degraded.
-C1's `graphiti-mcp` container was found running `zepai/graphiti:latest` (a REST
-API server with no `/mcp` endpoint — every tool call 404'd); it is now pinned
-to `zepai/knowledge-graph-mcp:1.0.2-graphiti-0.28.2-standalone` per
-`ops/graphiti/docker-compose.yml` + `ops/graphiti/config-docker-neo4j.yaml`.
-The OpenAI key backing it was rotated (the prior key was revoked) and the
-current key lives in AWS Secrets Manager (`l9/OPENAI_API_KEY`) — see
-`ops/graphiti/graphiti.env.example`. `ops/graphiti/graphiti_memory_client.py`
-was patched to match the real server's MCP protocol: session handshake
-(`initialize` → `Mcp-Session-Id`), SSE response parsing, and the server's
-actual tool/param names (`add_memory`, `search_memory_facts`, `group_ids` as
-a list) — the client previously assumed names (`add_episode`, `search_facts`,
-`group_id`) that never matched this deployment's `tools/list`.
-
-Expect the health check to report `"graphiti: healthy"` / a successful
-`tools/list`, not a degraded state. If you see `"MCP tools degraded"` again,
-that is a regression — check the deployed image on C1
-(`docker inspect graphiti-mcp-cursor --format '{{.Config.Image}}'` should say
-`zepai/knowledge-graph-mcp`, not `zepai/graphiti`) before assuming this note
-is stale.
-
-### 2.5 Retired: `start-session.yaml`
-
-A 917-line declarative YAML protocol of the same name previously existed at
-the repo root. It was **deleted (2026-07-19)** — it was never wired into any
-hook (Cursor doesn't execute YAML), and it had drifted from the pre-Graphiti
-learning pipeline archived in `ops/scripts/_archived/`. Do not recreate a
-YAML "protocol" file; the `.sh` hook above is the canonical activation
-mechanism. If you need a human-readable narrative of what activation does,
-this section is that narrative — keep it in sync with the hook, not a
-separate spec file.
-
-### 2.6 AWS secrets registry + UI operator (2026-08-06)
-
-**SSOT:** this repository owns `ops/secrets/openclaw-igorbot.registry.yaml`.
-Sync pulls secret names (and JSON key names) from AWS Secrets Manager under
-namespace `openclaw-igorbot/*` (region `us-east-1`). Consumers (igorbot, bots,
-CI) depend on this registry — do not reverse the dependency.
-
-| Piece | Path / command |
-|---|---|
-| Registry + resolve | `ops/secrets/` — `make secrets-sync`, `make secrets-check REF='…'` |
-| Skill (refs) | `l9-aws-secrets` |
-| UI console + cartridges | `ops/ui-operator/` — skill `l9-ui-operator` (explicit-only) |
-| Optional install | `make ui-operator-sync` → `uv sync --extra ui-operator && playwright install` |
-
-**Rules:** secret **values** never in git/logs/receipts; inventory is IDs/keys
-only; no macOS Keychain or daily-Chrome cookie decrypt for governed UI
-automation; diagnose before mutating vault contents; UI receipts redact values.
-
-**GitHub authority (CANONICAL_LAW.md §14):** agents **MUST** resolve
-`openclaw-igorbot/github#token` for `gh`/API work and **MUST NOT** ask the
-human to operate `github.com` UI when that PAT can complete the outcome. Do
-**not** provision a second GitHub PAT in AWS while this ref works.
+**Not required for `make pr`:** `SEMGREP_APP_TOKEN` / `semgrep login`,
+`SONAR_TOKEN`.
 
 ---
 
-## 3. Source-of-truth files
+## 7. Graphiti
+
+Graphiti memory is activated. C1 `graphiti-mcp` is pinned to
+`zepai/knowledge-graph-mcp:1.0.2-graphiti-0.28.2-standalone` per
+`ops/graphiti/docker-compose.yml`. Client tool names:
+`add_memory`, `search_memory_facts`, `group_ids` (list).
+
+Expect `"graphiti: healthy"` / a successful `tools/list`. If you see
+`"MCP tools degraded"`, check the deployed image on C1
+(`docker inspect graphiti-mcp-cursor --format '{{.Config.Image}}'` should say
+`zepai/knowledge-graph-mcp`, not `zepai/graphiti`).
+
+Health:
+
+```bash
+"$HOME/.cursor-governance/.venv/bin/python" \
+  "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health
+```
+
+Residual `memory-bank/` trees are archival residue; wiring checks WARN if
+present and PASS when absent. Agents must not recreate them.
+
+On chat X-out (`sessionEnd`), archive user/assistant text + timestamps to S3
+`l9-chat-transcripts-020125249784`
+(`python -m ops.graphiti.hydration.archive_transcript` via the locked
+interpreter). See `ops/scripts/RETIRED_export_chats_and_learning_processor.md`.
+
+---
+
+## 8. Secrets
+
+**AWS name-inventory SSOT:** `ops/secrets/openclaw-igorbot.registry.yaml`
+(`openclaw-igorbot/*`, `us-east-1`). `make secrets-sync` /
+`make secrets-check REF='…'`. Skill `l9-aws-secrets`.
+
+**Infisical (long-term values):** project **Cursor-Governance**
+(`slug: cursor-governance`, env `prod`, path `/`). Inventory:
+`ops/secrets/infisical-cursor-governance.yaml`. Hydrate from
+`openclaw-igorbot/infisical-cursor-governance`. Re-port:
+`"$HOME/.cursor-governance/.venv/bin/python" ops/secrets/port_aws_to_infisical.py`.
+
+Secret **values** never in git/logs/receipts/chat. UI operator:
+`ops/ui-operator/` / skill `l9-ui-operator` (explicit-only);
+`make ui-operator-sync`.
+
+**GitHub authority (`CANONICAL_LAW.md` §14):** resolve
+`openclaw-igorbot/github#token` for `gh`/API work. Do **not** ask the human
+to operate `github.com` UI when that PAT can complete the outcome. Do **not**
+provision a second GitHub PAT in AWS while this ref works.
+
+---
+
+## 9. Source-of-truth files
 
 - `CANONICAL_LAW.md` — symlink law, memory layer, anti-patterns (authoritative)
 - `README.md` — directory structure and key-file index
 - `ops/hooks/session_start_bootstrap.sh` — activation entry point (§2.1)
-- `ops/scripts/resolve_governance_paths.sh` — path resolution (GitHub clone only, no Dropbox fallback)
+- `ops/scripts/resolve_governance_paths.sh` — path resolution (GitHub clone
+  only, no Dropbox fallback)
 - `ORG_INVARIANTS.yaml` — canonical Quantum-L9 org policy
+- `ops/autonomy/surface_profile.yaml` — autonomy / L4 / campaign / overlap
+- [`requirements.txt`](requirements.txt) — toolchain pins
 
 Agents must keep code and these docs aligned — see `TODO.md` for known drift
 not yet reconciled.
 
 ---
 
-## 4. Symlink law (summary — `CANONICAL_LAW.md` §1-3 is authoritative)
+## 10. Symlink law (summary — `CANONICAL_LAW.md` §1–3 is authoritative)
 
 | Workspace path | Target |
 |---|---|
-| `.cursor-commands` | `~/.cursor-governance/` (sole entry, every consumer repo) |
+| `.cursor-commands` | `~/.cursor-governance/` (consumers only; SSOT must not self-alias) |
 | `.cursor/governance/CANONICAL_LAW.md` | file symlink to the law file only |
 | `.cursor/governance/` | local directory, **never** a symlink to the governance root |
-| `~/.cursor/skills`, `~/.cursor/commands` | `~/.cursor-governance/skills/`, `~/.cursor-governance/commands/` |
+| `.cursor/plans` | `~/.cursor/plans` |
+| `~/.cursor/plugins/local/l9-governance` | governance root (plugin discovery) |
+
+Do **not** create `~/.cursor/{skills,commands,rules}` whole-directory
+symlinks — `setup_workspace_symlinks.sh` removes those pre-4.0.0 artifacts.
+Cursor discovers `rules/`, `skills/`, `commands/` under the plugin root.
 
 Forbidden: a second governance tree in any repo, `.cursor/commands` or
 `.cursor/skills` duplicating `.cursor-commands/*`, hard-reset/force-push of
@@ -305,112 +427,192 @@ this clone.
 
 **Cursor-primary ownership (`CANONICAL_LAW.md` §2.1):** build shared capability
 in Cursor-primary / `ops/` first; wrap outward for Claude Code and other
-adapters. Never implement a shared brain under `environment/claude-code/` and
-have Cursor import it — that is adapter spaghetti.
+adapters. Never implement a shared brain under an adapter tree and have
+Cursor import it.
 
 ---
 
-## 5. Change policy
+## 11. Workspace kinds
 
-### 5.1 Allowed
+`ops/scripts/lib/workspace_kind.sh`: `ssot` | `ssot_checkout` | `consumer`
+(identity files, not a `$HOME/.l9/gov-worktrees/` prefix).
+
+1. `ssot` = live `$HOME/.cursor-governance`. No `.cursor-commands` self-alias.
+2. `ssot_checkout` = worktree or second clone of this repo. `make pr` /
+   `symlinks-check` must not require consumer IDE wiring.
+3. `consumer` = every other governed repo. Unchanged.
+
+Do not “fix” a gov worktree by running `setup_workspace_symlinks.sh` just
+to pass `make pr`.
+
+---
+
+## 12. Change policy
+
+### 12.1 Allowed
+
 Bug fixes, dangling-reference repair, test/doc additions, new skills via
 `l9-skill-compiler` → `l9-wire-skill-into-repo`.
 
-### 5.2 High-risk — extreme care
+### 12.2 High-risk — extreme care
+
 Changes to `CANONICAL_LAW.md`, `resolve_governance_paths.sh`,
 `backup_to_github.sh`, `ops/hooks/session_start_bootstrap.sh`, or anything in
 `ops/scripts/_archived/` (archived = intentionally retired, not missing —
 verify the archival rationale in git history before restoring anything).
 
-`pyproject.toml` is a **protected file** (`ORG_INVARIANTS.yaml` `protected_paths`
-+ CODEOWNERS): it pins the dependency/interpreter contract and the local
-`make pr` / pre-commit gate config. **Append only — never overwrite existing
-keys or lines.** Single-key TOML fields such as `[tool.pytest.ini_options]`
-`addopts` cannot be extended by appending; put additive pytest collection
-controls in the root `conftest.py` instead of rewriting the field here.
+`pyproject.toml` is a **protected file** (`ORG_INVARIANTS.yaml`
+`protected_paths` + CODEOWNERS): **append only — never overwrite existing
+keys or lines.** Put additive pytest collection controls in root
+`conftest.py` instead of rewriting `[tool.pytest.ini_options] addopts`.
 
-### 5.3 Forbidden
+### 12.3 Forbidden
+
 - Reintroducing Dropbox as an SSOT fallback in any resolver script
 - Owning shared cross-surface capability under a dependent adapter and wrapping
   Cursor to consume it (violates `CANONICAL_LAW.md` §2.1)
 - Restoring archived pre-Graphiti daemons without confirming they're not
-  superseded (check `git log` for the archiving commit's stated rationale
-  first)
-- A new YAML/manual "protocol" file duplicating the `.sh` hook's job
+  superseded (`git log` the archiving commit first)
+- A new YAML/manual “protocol” file duplicating the `.sh` hook’s job
+
+Before restoring anything from `ops/scripts/_archived/`, run
+`git log --oneline -- ops/scripts/_archived/<file>` and read the archiving
+commit. Prefer fixing the stale checker over restoring the retired artifact.
+
+### 12.4 KERNEL pack landing branch
+
+Do **not** ask whether to land a KERNEL pack, PE overlay, or similar governed
+architecture change on the current feature branch vs a new branch. Default:
+new branch from `origin/main` (ff-only tip); do not mix unrelated WIP. Rule:
+`rules/46-kernel-pack-new-branch.mdc`.
 
 ---
 
-## 6. Validation workflow before merge
+<!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:AGENTS -->
 
-**Binding pre-PR gate (`CANONICAL_LAW.md` §12) — non-optional, fail-closed.**
-Before opening *any* PR (opening or updating a PR triggers CI), the local
-changed-files pipeline MUST pass:
+## 13. Program Execution adapter layer
 
-```bash
-make pr-check  # gate only — changed-files pre-commit + ruff + security
-make pr        # gate → open PR → subscribe → agent spawns l9-pr-remediation
-```
+The reusable subsystem lives at `environment/program-execution/`. Do not copy
+its core schemas, root `autonomy/`, the Claude bounded-autonomy scheduler,
+the agent registry, or the Graphiti client into an adapter.
 
-Do not open the PR, and do not push to trigger CI, if `make pr` / `make pr-check`
-fails — fix and re-run first. `make pr` / `make PR` / `make Pr` / `make pR` are
-equivalent (Makefile remaps any capitalization of `pr`).
-
-`make pr` auto-heals derived artifacts via `ops/scripts/sync_generated_artifacts.py`
-(RULES-MANIFEST, skill-registry, skillOverrides, COMMANDS_MANIFEST, PE digests,
-orphan skills → `explicit_only`). Regenerated files are a **WARN to stage**, not
-a hard fail. On a local governance clone it also reconciles Claude skills and
-fail-closes on hooks/bootstrap/plugin wiring.
-
-After the gate PASSes, `make pr` (any capitalization) runs
-`ops/scripts/open_pr_after_gate.sh`: push the feature branch, open or reuse the
-GitHub PR, subscribe to PR notifications, write
-`memory-bank/pr-remediation-handoff.json`, and print an `L9_AGENT_REQUIRED`
-block. **Any agent that sees that block MUST immediately** spawn a background
-Task (`run_in_background=true`) using `l9-pr-remediation` + the
-`poll_worker` template in `skills/l9-bounded-autonomy/references/prompt-templates.md`
-(packet fields from the handoff JSON). Cap 3 fix-push cycles; never merge;
-never force-push; main agent continues (do not AwaitShell on that PR). Use
-`make pr-check`, `OPEN_PR=0 make pr`, or `PR_REMEDIATE=0 make pr` to skip
-open and/or remediation spawn. Opening requires commits ahead of `PR_BASE`
-(default `origin/main`) and refuses `main`/`master`.
-
-Then run the governance-wiring checks:
+Program Execution tasks use the Program Execution Controller lease as the
+sole authoritative work claim. They must not acquire a competing Graphiti
+task claim. A Graphiti projection is observability only.
 
 ```bash
-bash ops/scripts/check_governance_wiring.sh "$(pwd)"
-bash ops/scripts/validate_governance_symlinks.sh
-bash ops/scripts/validate_governance_no_hardcoded_paths.sh
-python3 ops/graphiti/graphiti_memory_client.py health   # expect healthy — see §2.3
+make program-execution-core-validate
+make program-execution-adapters
+make program-execution-conformance
+make program-execution-probe
+make pr
 ```
 
 ---
 
-## 7. Guidance for AI coding agents
+<!-- ROOT_FILE_APPEND_ONLY_PROTECTION_V1 -->
 
-- Before restoring anything from `ops/scripts/_archived/`, run
-  `git log --oneline -- ops/scripts/_archived/<file>` and read the archiving
-  commit's PR description. "Nothing references it" is not sufficient
-  justification to restore it, and archival is not sufficient justification
-  to assume it's safe to delete permanently either — check intent both ways.
-- Prefer fixing the stale artifact over restoring the retired one. When a
-  verification script fails because it checks a pre-archive path, the script
-  is usually the thing that's stale, not the archive.
-- This repo reconciles with `origin/main` in **both directions at session start**
-  (`governance_sync.sh`: ff-only pull, then push via `backup_to_github.sh`) and
-  pushes again at session end (`backup_to_github.sh` via the `sessionEnd` hook).
-  Both directions are commit-preserving: the pull is fast-forward-only, the push
-  rebases and aborts rather than committing over a conflict. Never hand-edit
-  files in a way that assumes a different sync model.
-- The session-end push is gated by `ops/scripts/backup_gate.sh`, because
-  `sessionEnd` fires once per composer conversation (aborted chats and window
-  closes included) and would otherwise commit a tree an agent is still writing.
-  If a backup you expected did not happen, read `backup.log` — every skip is
-  logged with its reason. Do not weaken the gate to force a backup through; run
-  `make backup` (ungated) or set `GOVERNANCE_BACKUP_FORCE=1`.
+## 14. Repository-root files are append-only
+
+Every file at the repository root is protected. Incoming changes may **add**
+content freely, but may **not delete or overwrite** existing content in a
+protected root file without both:
+
+1. an `ALLOW-ROOT-DELETION: <path> — <reason with proof of necessity>` line
+   in a commit message, and
+2. CODEOWNERS approval from the repository owner.
+
+Authoritative list: `ops/config/root-file-protection.json`.
+
+- **additive_only** — deletions/overwrites fail the gate without the marker
+- **managed** — edited freely with owner review; no marker
+- **regenerable** — rewritten wholesale by tooling
+
+A new root file must be registered with a tier. Enforcement:
+`.github/workflows/root-file-protection.yml` →
+`ops/scripts/validate_root_file_protection.py`. Removing or weakening the
+gate is itself a protected-path change (`ORG_INVARIANTS.yaml`
+`protected_paths`).
+
+This file is `additive_only`. A whole-file fold (this revision) is authorized
+only when the commit includes `ALLOW-ROOT-DELETION: AGENTS.md — …`.
 
 ---
 
-## 8. Final principle
+## 15. WIP corpus on main
+
+`WIP/` is a **dated tracked corpus on `main`**. Prefer `WIP/<M-D-YY>/<topic>/`.
+Named series (`WIP/CG/`) stay and are inventoried.
+
+Agents **may** read/write WIP for hygiene, filing loose root notes, and
+high-evidence prune (`make wip-hygiene` / `ops/scripts/wip_corpus.py`).
+Auto-prune only when a WIP file’s sha256 matches a tracked **non-WIP** path,
+or inventory has an explicit `landed:` marker. Receipts:
+`WIP/_receipts/`.
+
+Do **not** park WIP under `/tmp` or `.l9/scratch-hold/`. Stage with pathspecs
+only (rule 49). `WIP/Legal Defense/` and credential globs stay untracked.
+`TODO.md` remains the agent task queue. `l9-git-work-preserve` inventories
+git refs/stashes and never auto-deletes branches.
+
+---
+
+## 16. SessionStart Plan audit
+
+Bootstrap `additional_context` includes `### Plan audit`, produced by
+`skills/l9-plan-audit/scripts/audit_plans.py` (fail-open, ~2s budget).
+Scans machine-global Cursor plans for **unbuilt** plans with mtime in the
+last **7 days**. Findings are **display-only** — do not auto-Build.
+On-demand: `/plan-audit`.
+
+---
+
+## 17. Stack-safe merge + automatic hygiene
+
+Local residue is cleaned at `sessionEnd` by `ops/scripts/repo_hygiene.py`
+(see `ops/scripts/REPO_HYGIENE.md`). Spent branches, spent worktrees, and
+stale stashes go without being asked; every delete is preceded by a
+`refs/l9/preserved/` ref. Dirty worktrees and untracked files are never
+touched, only reported. Do not ask the human whether there are untracked
+files — run the report.
+
+A branch name is never reused after its PR merges
+(`reused_after_merge` — hygiene refuses to delete it).
+
+---
+
+## 18. pre-commit “files were modified by this hook”
+
+That message names a **window**, not a writer. `symlinks-check` has the
+widest window and is repo-read-only. Do **not** audit the named hook first:
+
+```bash
+bash ops/scripts/attribute_tree_writers.sh "$(pwd)" <status-before> <precommit-log>
+cat .l9/pr/gate-dirtiness.json
+```
+
+`make pr` separates a real `- exit code:` FAIL from a modified tree
+(classify → attribute → quiesce → retry once). Every hook is
+`read_only` or `writer` in `ops/config/precommit-hook-contract.json`.
+Automated writers serialize behind `ops/scripts/lib/repo_write_lock.sh`.
+Background: `learning/failures/precommit-hook-attribution.md`.
+
+---
+
+## 19. Guidance for AI coding agents
+
+- Before restoring anything from `ops/scripts/_archived/`, read the
+  archiving commit. “Nothing references it” is not sufficient to restore
+  or to delete permanently.
+- Prefer fixing the stale artifact over restoring the retired one.
+- Never hand-edit files in a way that assumes a different sync model than
+  ff-only pull + rebase-and-abort push.
+- If `install_ide_profile` dirties only the generated formatter block,
+  restore `AGENTS.md` from HEAD unless `environment/ide/policy.json` changed.
+
+---
+
+## 20. Final principle
 
 This repo is the governance boundary for every L9/Quantum-L9 coding workspace.
 Activation must stay boring and automatic — one hook, one clone, one symlink
@@ -421,8 +623,7 @@ activation path, however convenient it seems in the moment.
 
 ## Formatter ownership
 
-Workspace class: `biome_default` — Default for every governed workspace: Biome owns JS/TS/JSON, VS Code JSON language features owns JSONC (the Biome extension cannot format jsonc), Ruff owns Python.
-Prettier owns Markdown (format-on-save off so governance docs do not churn).
+Workspace class: `biome_default` — Default for every governed workspace: Biome owns JS/TS/JSON, VS Code JSON language features owns JSONC (the Biome extension cannot format jsonc), Ruff owns Python, Prettier owns Markdown (format-on-save off so governance docs do not churn).
 
 Exactly one formatter owns each language. Do not reformat a file with a tool other than its owner, and do not add config for a competing formatter: the result is a diff that churns on every save.
 
@@ -436,614 +637,3 @@ Exactly one formatter owns each language. Do not reformat a file with a tool oth
 Generated from `environment/ide/policy.json` in the governance clone by `ops/scripts/adapters/agentdocs.sh`. Edit the policy, not this block.
 
 <!-- END L9 FORMATTER OWNERSHIP -->
-<!-- PROGRAM_EXECUTION_ADAPTER_LAYER_V1:AGENTS -->
-
-## Program Execution adapter layer
-
-The reusable subsystem lives at `environment/program-execution/`. Do not copy its
-core schemas, root `autonomy/`, the Claude bounded-autonomy scheduler, the agent
-registry, or the Graphiti client into an adapter.
-
-Program Execution tasks use the Program Execution Controller lease as the sole
-authoritative work claim. They must not acquire a competing Graphiti task claim.
-A Graphiti projection is observability only and is never authoritative.
-
-Validation:
-
-```bash
-make program-execution-core-validate
-make program-execution-adapters
-make program-execution-conformance
-make program-execution-probe
-make pr
-```
-
-<!-- ROOT_FILE_APPEND_ONLY_PROTECTION_V1 -->
-
-## Repository-root files are append-only
-
-Every file at the repository root is protected. Incoming changes may **add**
-content freely, but may **not delete or overwrite** existing content in a
-protected root file without both:
-
-1. an `ALLOW-ROOT-DELETION: <path> — <reason with proof of necessity>` line in a
-   commit message (highlighting the delta and justifying the removal), and
-2. CODEOWNERS approval from the repository owner.
-
-The authoritative protected-file list and the per-file rule live in
-`ops/config/root-file-protection.json`. Three tiers apply (every tier is
-CODEOWNERS-reviewed; the tier only decides whether the additive gate also fires):
-
-- **additive_only** (governance, legal, dependency, gate/security, and
-  environment-modifying files): deletions/overwrites fail the gate without a
-  justification marker.
-- **managed** (living/operational/community docs and low-risk config — e.g.
-  `README.md`, `CHANGELOG.md`, `TODO.md`, `.env.example`): edited freely with owner
-  review; no marker required, not additive-locked.
-- **regenerable** (machine-generated artifacts — `uv.lock`,
-  `governance-health-report.json`, `.harvest_executor_state.json`): exempt from the
-  additive check because they are rewritten wholesale by tooling.
-
-A new repository-root file must be registered in the policy with a tier — an
-unregistered new root file fails the gate, so "every root file is protected"
-cannot be silently bypassed by adding one.
-
-Enforcement is mechanical and fail-closed on every pull request via
-`.github/workflows/root-file-protection.yml` →
-`ops/scripts/validate_root_file_protection.py`. The gate is read-only and never
-edits files. Removing or weakening the gate is itself a protected-path change
-(`ORG_INVARIANTS.yaml` `protected_paths`). Every change stays traceable to its
-originating commit/agent and is reversible with `git revert`.
-
-<!-- MEMORY_BANK_RETIRED_APPEND_V1 -->
-## memory-bank/ retired (2026-08-11) — supersedes §2.1 steps 5/7 and §6 handoff path
-
-Authoritative corrections (do not treat older bullets above as SSOT):
-
-1. SessionStart does **not** scaffold `memory-bank/` and does **not** excerpt
-   `memory-bank/activeContext.md`. Resume SSOT is Graphiti (`inject` / PICKUP /
-   hydration). See `ops/graphiti/MEMORY_BANK_POLICY.md` and
-   `docs/MEMORY_PIPELINE_MAP.md`.
-2. After `make pr` opens a PR, the remediation handoff path is
-   `.l9/pr/pr-remediation-handoff.json` (written by
-   `ops/scripts/open_pr_after_gate.sh`), **not**
-   `memory-bank/pr-remediation-handoff.json`. Rule `98-make-pr-remediation`
-   matches this path.
-3. Residual `memory-bank/` trees are archival residue; wiring checks WARN if
-   present and PASS when absent. Agents must not recreate them.
-
-<!-- L4_PROGRAM_BUILD_IMPLIES_MERGE_V1 -->
-## L4 program/plan Build implies merge (2026-08-12) — supersedes §2.0.2 merge phrasing
-
-Authoritative correction (do not treat older “when the user authorizes merge”
-bullets above as requiring a second ask):
-
-1. Launching a program or clicking Build on a plan **is** merge authorization
-   for that stack. After `l9-pr-remediation` reaches green + mergeable: merge.
-2. Older open PRs (earlier `createdAt`): remediate and merge **bottom-up first**.
-3. Merge outside that L4 program/plan Build stack still requires
-   `L9_MERGE_AUTHORIZED` (or a valid L4 release receipt for ordinary
-   `gh pr merge` via `ops/autonomy/merge_gate.py`). Force-push / admin-merge /
-   hard-reset remain forbidden.
-
-<!-- CLAUDE_CODE_ADAPTER_PLACEMENT_V1 -->
-## Claude Code adapter placement (2026-08-12)
-
-Claude Code gold-standard pack lives at
-`environment/agents/adapters/claude-code/`. A transitional symlink may exist at
-`environment/claude-code` until extinguishment. Cloud Web/Mobile memory uses
-HTTPS Graphiti (`GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`);
-see ADR-0006 + ADR-0007.
-
-<!-- CLAUDE_CODE_SYMLINK_EXTINGUISHED_V1 -->
-## Claude Code symlink extinguished (2026-08-12) — supersedes §2.0 autonomy path + placement symlink note
-
-Authoritative corrections:
-
-1. Sole pack home is `environment/agents/adapters/claude-code/` (including
-   `autonomy/`). Do not teach `environment/claude-code/` as a live path.
-2. The transitional symlink `environment/claude-code` is **removed**.
-3. Older bullets naming `environment/claude-code/autonomy/` as the machine
-   runtime are historical; use the adapters path.
-
-
-<!-- GOVERNANCE_ACTIVATE_FRESH_SESSIONSTART_V1 -->
-## SessionStart tip activation (2026-08-12) — supersedes §2.1 step 1 and related bullets
-
-Authoritative corrections (do not treat older §2.1 / §2.2 bullets above as SSOT
-where they conflict):
-
-1. `sessionStart` timeout is **60s** (not 30s).
-2. Step 1 is foreground `governance_activate_fresh.sh` **before** resolving the
-   SSOT — tip authority is GitHub `origin/main` (ff-only when safe, else shallow
-   clone + atomic swap). Prefers
-   `$HOME/.cursor-governance/ops/scripts/governance_activate_fresh.sh`, then the
-   `~/.cursor/hooks/governance-activate-fresh.sh` sidecar; chicken-egg minimal
-   clone if both are missing. Parses the STATUS line
-   (`action` / `sha` / `remote_sha` / `detail`).
-   `governance_sync.sh` remains available for manual / on-demand bidirectional
-   reconcile; it is **not** the sessionStart tip-activation step.
-3. Auto-wire targets: consumer `.cursor-commands`, `.cursor/plans` →
-   `~/.cursor/plans`, and the `l9-governance` plugin when missing. SSOT must
-   **not** self-alias `.cursor-commands`.
-4. `check_governance_wiring.sh` reports PASS/FAIL including tip freshness
-   (`HEAD == origin/main`).
-5. Memory orchestrator emits Graphiti hydrate packet stats
-   (`hydrate_stats`: facts_returned, pickup_parsed, …) with
-   `inject "session start"`.
-6. Combined `additional_context` is sectioned markdown (Governance / Runtime /
-   Graphiti hydrate / Code-graph) via COMBINED env to Python; exit 0 always.
-7. On-demand repair set includes:
-   `bash "$HOME/.cursor-governance/ops/scripts/governance_activate_fresh.sh"`.
-8. Running symlink setup from inside `~/.cursor-governance` must **not** create
-   a `.cursor-commands` self-alias (setup removes it). Prefer wiring consumers,
-   not the SSOT clone.
-
-<!-- INFISICAL_CURSOR_GOVERNANCE_VAULT_V1 -->
-## Infisical Cursor-Governance vault (2026-08-13) — extends §2.6
-
-Authoritative additions (do not treat older §2.6 bullets as Infisical-unaware):
-
-1. Long-term secret **values** for this agent live in Infisical project
-   **Cursor-Governance** (`slug: cursor-governance`, env `prod`, path `/`
-   as env-var names). Inventory of IDs/key names:
-   `ops/secrets/infisical-cursor-governance.yaml`.
-2. AWS `openclaw-igorbot/*` remains the name-inventory SSOT and the chicken-egg
-   Universal Auth bootstrap. Hydrate Infisical from
-   `openclaw-igorbot/infisical-cursor-governance`
-   (`INFISICAL_CLIENT_ID` / `_SECRET` / `INFISICAL_PROJECT_ID` / `INFISICAL_ENV=prod`).
-3. Skill `l9-aws-secrets` covers **both** vaults. Agents MUST resolve via that
-   skill before asking the human. Values never in git/logs/chat.
-4. Re-port AWS → Infisical: `python3 ops/secrets/port_aws_to_infisical.py`.
-
-<!-- CHAT_TRANSCRIPT_S3_ARCHIVE_V1 -->
-## Closed-chat word archive (2026-08-13)
-
-Authoritative additions:
-
-1. Hourly `ops/scripts/export_chats.sh` and tenx `com.tenx.learning-processor`
-   (`memory_aggregator.py`) are retired. They never captured nested `.jsonl` words.
-2. On chat X-out (`sessionEnd`), archive user/assistant text + timestamps to S3
-   `l9-chat-transcripts-020125249784` (`python -m ops.graphiti.hydration.archive_transcript`).
-   Not GitHub, not a local-only copy. No sqlite.
-3. See `ops/scripts/RETIRED_export_chats_and_learning_processor.md`.
-
-<!-- KERNEL_PACK_NEW_BRANCH_DEFAULT_V1 -->
-## KERNEL pack landing branch default (2026-08-13)
-
-Do **not** ask whether to land a KERNEL pack, PE overlay, or similar governed
-architecture change on the current feature branch vs a new branch.
-
-Default, without asking:
-
-1. Create a **new branch from `origin/main`** (ff-only tip) in this clone.
-2. Do **not** mix unrelated WIP (legal ingest, other feature work) into that
-   branch.
-3. Ask only if the user already named the target branch as the subject of the
-   change, or `origin/main` cannot be resolved.
-
-Stock pack apply scripts that hard-reset or require a foreign `BASE_SHA` are
-not the landing path in a dirty or unrelated checkout. Rule:
-`rules/46-kernel-pack-new-branch.mdc`.
-
-<!-- PEER_EXECUTION_CORE_RUNTIME_V1 -->
-## Peer Execution shared runtime (2026-08-14)
-
-Bounded concurrency runtime is provider-neutral at `environment/program-execution/peer_execution/autonomy/`. Every provider binds to the same shared runtime through Program Execution; no provider owns a scheduler. Human merge only.
-
-<!-- RULES_CORPUS_CLEANUP_REFS_V1 -->
-## Rules corpus cleanup refs (2026-08-14) — supersedes MEMORY_BANK_RETIRED rule id
-
-Authoritative correction (do not treat the older `98-make-pr-remediation`
-stem above as live):
-
-1. Rule stem `98-make-pr-remediation` was renamed to `48-make-pr-remediation`
-   (`rules/48-make-pr-remediation.mdc`) in rules-corpus-cleanup-v1.
-2. Handoff path remains `.l9/pr/pr-remediation-handoff.json`.
-
-<!-- PRECOMMIT_HOOK_ATTRIBUTION_V1 -->
-## pre-commit "files were modified by this hook" names a window (2026-08-14)
-
-`_run_single_hook` diffs the tracked worktree before and after each hook and
-threads the result forward (`pre_commit/commands/run.py`). The message therefore
-means "the tree changed while this hook was running" — **not** "this hook
-wrote". `symlinks-check` has the widest window in this repo's hook set and
-absorbs blame for concurrent writers; it is repo-read-only.
-
-1. Do **not** audit the named hook first. Measure:
-
-```bash
-bash ops/scripts/attribute_tree_writers.sh "$(pwd)" <status-before> <precommit-log>
-cat .l9/pr/gate-dirtiness.json
-```
-
-2. `make pr` no longer dies on that exit code. It separates a real
- `- exit code:` (FAIL, hook named) from a modified tree (classify → attribute →
- quiesce → retry once → FAIL with exact paths). `L9_GATE_STRICT_LEGACY=1`
- restores the old behavior.
-3. Every hook is declared `read_only` or `writer` in
- `ops/config/precommit-hook-contract.json`; `make precommit-hook-contract`
- fails closed on drift.
-4. Automated writers serialize behind `ops/scripts/lib/repo_write_lock.sh`
- (`make pr` holds it; sessionStart reconcilers yield). Machine-local and
- short-lived — distinct from the tracked `.governance-build-lock` kill switch,
- and not a substitute for a per-agent worktree (`rules/49`).
-5. The gate's two dirtiness domains are reported apart: tracked (`git diff`,
- what pre-commit compares) and untracked (`git status --porcelain`).
- Untracked-only churn can never have produced the message.
-
-Background: `learning/failures/precommit-hook-attribution.md`.
-
-<!-- PLAN_AUDIT_SESSIONSTART_V1 -->
-## SessionStart Plan audit (2026-08-12) — extends tip-activation §6 sections
-
-Authoritative addition (do not treat older “Governance / Runtime / Graphiti
-hydrate / Code-graph” lists as exhaustive):
-
-1. Bootstrap `additional_context` also includes `### Plan audit`, produced by
-   `skills/l9-plan-audit/scripts/audit_plans.py` (fail-open, ~2s budget).
-2. Scans machine-global Cursor plans (`<workspace>/.cursor/plans` →
-   `~/.cursor/plans`) for **unbuilt** plans with mtime in the last **7 days**
-   and attaches staleness flags (see skill `references/staleness-rules.md`).
-3. Findings are **display-only** — do not auto-Build. On-demand:
-   `/plan-audit` → same CLI. `/start-session` STATE_SYNC surfaces the section.
-
-<!-- CAMPAIGN_EXECUTION_MAKE_PR_NO_MERGE_V1 -->
-## Campaign execution publish path (2026-08-14) — supersedes §2.0.2 / L4 merge phrasing
-
-Authoritative corrections for Program Execution campaigns and default `make pr`:
-
-1. After L4 kernels + `authorize-release`, agents MUST publish with
-   `PR_REMEDIATE=0 make pr` so Makefile checkers run and only clean code is
-   pushed. Do not use raw `gh pr create` as the publish path.
-2. Do **not** remediate (`l9-pr-remediation` / poll workers). Do **not** merge.
-   `ops/autonomy/merge_gate.py` no longer treats an L4 release receipt as merge
-   authority. Human only: `L9_MERGE_AUTHORIZED`.
-3. Each campaign has one integration branch. Land all campaign PRs into that
-   branch (`PR_BASE=origin/campaign/<campaign_id>`). Do **not** open campaign
-   PRs against `main`. Do **not** mix campaign work onto other feature branches.
-4. Branch map and order: `environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml`.
-   Profile SSOT: `ops/autonomy/surface_profile.yaml` → `campaign_execution`.
-
-<!-- PR_REMEDIATION_AUTHORIZES_MERGE_V1 -->
-## /l9-pr-remediation authorizes merge (2026-08-16) — supersedes campaign no-merge for remediations
-
-Authoritative corrections (do not treat older “do not merge / Human only
-`L9_MERGE_AUTHORIZED`” bullets as blocking this skill):
-
-1. Campaigns and `make pr` still end at **green + merge-ready**. They do
-   not merge. An L4 release receipt still does not authorize merge.
-2. Invoking **`/l9-pr-remediation`** (Converge) **is** merge authorization
-   for **all open PRs** in the target repo. Write
-   `python3 ops/autonomy/authorize_merge.py --repo <owner/name> --all-open`,
-   converge each PR, then `gh pr merge --squash --repo` oldest first.
-3. `ops/autonomy/merge_gate.py` allows that ordinary merge after the
-   receipt (or `L9_MERGE_AUTHORIZED`). Force-push, hard-reset, and
-   `--admin` stay denied.
-4. `/pr` remains Diagnose-only (no merge).
-
-<!-- WIP_CORPUS_ON_MAIN_V1 -->
-## WIP corpus on main (2026-08-16) — supersedes “agents never touch WIP”
-
-Authoritative corrections (do not treat older “never read or write WIP” or
-`current_work/` bullets as SSOT):
-
-1. `WIP/` is a **dated tracked corpus on `main`**. Prefer
-   `WIP/<M-D-YY>/<topic>/`. Named series (`WIP/CG/`) stay and are inventoried.
-2. Agents **may** read/write WIP for hygiene, filing loose root notes, and
-   high-evidence prune (`make wip-hygiene` / `ops/scripts/wip_corpus.py`).
-3. Auto-prune only when a WIP file’s sha256 matches a tracked **non-WIP**
-   path, or inventory has an explicit `landed:` marker. Unique WIP is kept.
-   Receipts live in `WIP/_receipts/`. Git history is the undo.
-4. Do **not** park WIP under `/tmp` or `.l9/scratch-hold/`. Stage with
-   pathspecs only (rule 49). `WIP/Legal Defense/` and credential globs stay
-   untracked. Scanner excludes of `WIP/**` stay in place.
-5. `TODO.md` remains the agent task queue. `l9-git-work-preserve` still
-   inventories git refs/stashes and never auto-deletes branches.
-
-<!-- MAKE_LOCKED_VENV_V1 -->
-## Makefile locked interpreter (2026-08-17) — supersedes bare `python3` in §2.2 / §2.3 / §6
-
-Authoritative corrections (do not treat older `python3 …` bullets as the
-Make/toolchain interpreter):
-
-1. `Makefile` recipes MUST call `$(PYTHON)` / `$(RUFF)` / `$(MYPY)` —
-   `$(CURDIR)/.venv/bin/{python,ruff,mypy}` from `pyproject.toml` + `uv.lock`
-   (`make venv` → `uv sync --locked --extra dev`). macOS `/usr/bin/make` is
-   GNU Make 3.81 and does **not** export `export PATH :=` into recipe shells,
-   so prepending `.venv/bin` does not bind recipe `python3`.
-2. `make gov-python` is an auto-prereq of every goal except `help` / `venv`.
-   It runs `ops/scripts/ensure_gov_python.sh`: fingerprint-cached locked sync,
-   then fail-closes unless `sys.prefix` is `.venv` and `yaml`, `pydantic`,
-   `jsonschema`, `structlog`, `cryptography`, and `langgraph` import.
-3. `make pr` / `make test` / `make campaign` must not fall through to
-   Homebrew or system `python3`. `ops/scripts/run_pr_gate.sh` and
-   `ops/scripts/run_pytest_suites.sh` call the same probe.
-4. Manual Graphiti / secrets / L4 commands in older bullets that say `python3`
-   MUST use `"$HOME/.cursor-governance/.venv/bin/python"` (or a `make` target
-   so `$(PYTHON)` expands). `ModuleNotFoundError: No module named 'yaml'`
-   means the wrong interpreter.
-5. Do not `uv pip install` past the lockfile for the default toolchain.
-
-<!-- SSOT_CHECKOUT_MAKE_PR_V1 -->
-## SSOT-family make pr (2026-08-17) — gov worktrees are not consumers
-
-Authoritative corrections (do not treat older “every workspace needs
-`.cursor-commands`” bullets as applying to a checkout of this repo):
-
-1. Workspace kinds (`ops/scripts/lib/workspace_kind.sh`): `ssot`,
-   `ssot_checkout`, `consumer`. Identity files, not `$HOME/.l9/gov-worktrees/`
-   path prefix.
-2. `ssot` = live `$HOME/.cursor-governance`. No `.cursor-commands` self-alias.
-3. `ssot_checkout` = worktree or second clone of this repo. `make pr` /
-   `symlinks-check` must not require consumer IDE wiring
-   (`.cursor-commands`, `.cursor/plans`, `.cursor/governance`, IDE stamp).
-4. Machine-global hooks (sessionEnd, plugin, Graphiti) stay fail-closed.
-   Consumer repos are unchanged.
-5. Do not “fix” a gov worktree by running `setup_workspace_symlinks.sh` just
-   to pass `make pr`. That is the wrong category.
-
-<!-- PR_OVERLAP_GUARDRAIL_V1 -->
-## PR overlap guardrail (V1)
-
-Append-only law for the publish path — extends §6 additively, supersedes
-nothing. SSOT: `rules/53-pr-overlap-guardrail.mdc`; policy keys live under
-`pr_stacking.pr_overlap` in `ops/autonomy/surface_profile.yaml`.
-
-1. `make pr` (the only sanctioned path to GitHub) runs
-   `ops/scripts/pr_overlap_check.py` between the L4 release check and
-   `git push`. It blocks pre-push when the branch textually conflicts with an
-   already-open PR, naming the PR number, head branch, and files.
-2. Env knobs: `PR_OVERLAP=block` (default) | `warn` | `ignore` (justification
-   required); `PR_STACK=auto` re-resolves the PR base to the overlapping open
-   PR's head instead of blocking (never main). Ambiguous sibling chains still
-   block with routing instructions.
-3. On overlap, prefer in order: (1) commit into the same-agent open PR branch,
-   (2) stack via `PR_STACK=auto` / `PR_BASE=origin/<open-pr-head>`,
-   (3) `PR_OVERLAP=ignore` with stated justification.
-4. Generated artifacts (`GENERATED_PATH_PREFIXES` in
-   `ops/scripts/sync_generated_artifacts.py`; `--print-generated-prefixes`
-   prints the live list) are exempt from overlap blocking and merge via
-   `merge=l9-generated`: the driver keeps ours and marks the path in
-   `.l9/pr/regen-required.txt`. The driver is registered per-clone by
-   `ops/scripts/ensure_git_merge_drivers.sh`, wired into
-   `check_governance_wiring.sh`. `skills/AUTONOMY_MANIFEST.yaml` is
-   intentionally NOT attributed — the authored routing SSOT must keep a
-   normal text merge.
-5. Regen obligation: after any merge touching generated paths, or while
-   `.l9/pr/regen-required.txt` is non-empty, run
-   `python3 ops/scripts/sync_generated_artifacts.py --force`, stage, and
-   commit before opening or updating a PR.
-6. Fail-open on missing telemetry (gh unavailable / api failure) so network
-   loss never bricks the publish path; fail-closed on a detected
-   non-generated textual conflict.
-
-<!-- PR_LIFECYCLE_CAPABILITY_GRAPH_V1 -->
-## make improve / pr-check / pr (2026-08-17) — capability graph + failure loop
-
-Authoritative corrections (do not treat older `l4_local.py begin && record-kernels
-&& authorize-release` bullets as the happy path):
-
-1. Makefile is a capability graph. **PUBLIC** verbs: `improve`, `pr-check`, `pr`.
-   **INTERNAL** leaf: `pr-preflight` (do not invoke as a shipping command).
-2. `make improve` composes the existing `l4-begin` / `l4-record-kernels` /
-   `l4-authorize` wrappers. Apply `kernels/Recursive Alignment.md` then
-   `kernels/Validate & Repair.md`, commit revisions, then
-   `make improve IMPROVE_RECORD=1`.
-3. `make pr-check` is quality only (lint/ruff/pytest/security). No L4. An empty
-   changeset vs `PR_BASE` is PASS (`OK: nothing to gate`). A PASS writes
-   `.l9/pr/gate-receipt.json`. The same HEAD + worktree + `PR_BASE` is not
-   re-gated.
-4. Single path to GitHub = **mutation** (push / PR create / update / merge).
-   `improve` and `pr-check` do not publish. Raw `git push` / `gh pr create`
-   remain leaves of `make pr` only.
-5. Failure loop: diagnose → fix → (`make improve` if kernels apply) →
-   `make pr-check` → `make pr` **once** to publish. Do not run a second full
-   gate on an unchanged tree (`pr-check && make pr` reuses the receipt).
-6. `make pr` runs INTERNAL `pr-preflight` (branch, commits-ahead, L4 receipt)
-   then `pr-check` (receipt skip if unchanged) then `open_pr_after_gate.sh`.
-
-<!-- PRECOMMIT_IS_PR_CHECK_LEAF_V1 -->
-## pre-commit is a leaf of `make pr-check` (2026-08-17)
-
-Authoritative corrections (do not treat older `pre-commit install` / `make
-precommit` bullets as a parallel public gate):
-
-1. **Public quality gate is `make pr-check`.** It already runs the hook catalog
-   in `.pre-commit-config.yaml` on changed files via
-   `ops/scripts/run_pr_precommit.sh`, then locked ruff / security / pytest.
-2. **This repo does not use a git commit hook.** `core.hooksPath` is unset and
-   `.git/hooks/pre-commit` is not the shipping path. Do not run
-   `pre-commit install`. Do not tell operators that commits are gated that way.
-3. **`make precommit` and `precommit-repo` are INTERNAL.** Full-tree of the same
-   catalog (`--all-files`) for nightly / `make pr-full`. Agents do not invoke
-   them instead of `pr-check`.
-4. **CI Lint is `uv run ruff`, not the pre-commit CLI.** CI Test Suite must not
-   require `pre-commit` on PATH. An empty changed-file list is PASS without the
-   binary.
-5. Pin lockstep remains: `.pre-commit-config.yaml` ruff `rev` matches
-   `requirements.txt` / locked `.venv` ruff. Dual ruff (catalog + gate) is
-   owned by `pr-check`; do not add a third runner.
-
-<!-- STACK_SAFE_MERGE_AND_AUTO_HYGIENE_V1 -->
-## Stack-safe merge + automatic hygiene (2026-08-17) — supersedes PR_OVERLAP_GUARDRAIL_V1 §3 rung 2
-
-Authoritative additions (do not treat older “`gh pr merge --squash`, oldest
-first” bullets as unconditional, and do not treat `PR_STACK=auto` as a
-generally safe overlap remedy):
-
-1. **Squash/rebase merge is denied when the head branch is the base of an open
-   PR.** The squash commit shares no ancestry with the head's commits, so the
-   child's merge base rewinds to before the parent's deletions; git then reads
-   “child preserved the file” and “child never touched the file” as the same
-   snapshot and drops it with no conflict. Enforced by
-   `ops/autonomy/merge_gate.py` (fail-closed when the stack state cannot be
-   determined). Land the children bottom-up first, retarget them, or merge the
-   parent with `--merge`. Breakglass: `L9_STACK_CHECK_BYPASS=<reason>`.
-2. **Do not split mixed work into a parent that deletes and a child that
-   restores.** That shape has no representation in a three-way merge. Cut two
-   sibling branches from the pre-mix base instead, each purely additive.
-3. **After a parent is squash-merged, never merge `main` into the child.** Use
-   `git rebase --onto origin/main <old-parent-tip> <child>`.
-4. **Local residue is cleaned automatically at `sessionEnd`** by
-   `ops/scripts/repo_hygiene.py` (see `ops/scripts/REPO_HYGIENE.md`). Spent
-   branches, spent worktrees, and stale stashes go without being asked; every
-   delete is preceded by a `refs/l9/preserved/` ref. Dirty worktrees and
-   untracked files are never touched, only reported. Do not ask the human
-   whether there are untracked files — run the report.
-5. **A branch name is never reused after its PR merges.** `repo_hygiene.py`
-   reports that state as `reused_after_merge` and refuses to delete it,
-   because GitHub still calls the branch merged while the newer commits are
-   not in `main`.
-6. **Overlap remedy order is now: commit into the open PR, else wait, else
-   renegotiate scope.** `PR_STACK=auto` creates the exact topology item 1
-   denies at merge time, so it is no longer the second-choice remedy —
-   use it only when the parent will be merged with `--merge`.
-
-<!-- AGENTS_OPERATING_DIGEST_2026_08_18_V1 -->
-## Operating digest (2026-08-18) — live reading rule + remaining drift
-
-This block is the **live operating digest**. Where earlier body text or dated
-appends conflict, **this block wins**. Do not execute superseded merge,
-activation, interpreter, pin, or path bullets from §§2.0–2.3 / §6.
-
-Authority order is unchanged: `CANONICAL_LAW.md` >
-`ops/autonomy/surface_profile.yaml` > this file > skills.
-
-### Activation (live)
-
-1. One automatic mechanism: `ops/hooks/session_start_bootstrap.sh`, installed
-   as a real file at `~/.cursor/hooks/session-start-bootstrap.sh`.
-   `sessionStart` timeout is **60s** (not 30s).
-2. Step 1 is foreground `governance_activate_fresh.sh` **before** resolving
-   the SSOT. Tip authority is GitHub `origin/main`. `governance_sync.sh` is
-   on-demand bidirectional reconcile only — it is **not** the sessionStart
-   tip-activation step.
-3. SessionStart does **not** scaffold or excerpt `memory-bank/`. Resume SSOT
-   is Graphiti (`inject` / PICKUP / hydration).
-4. Combined `additional_context` is sectioned markdown (Governance / Runtime /
-   Graphiti hydrate / Code-graph / Plan audit). Exit 0 always.
-5. Auto-wire targets: consumer `.cursor-commands`, `.cursor/plans` →
-   `~/.cursor/plans`, and the `l9-governance` plugin when missing. SSOT must
-   **not** self-alias `.cursor-commands`.
-6. `git worktree add` does not fire sessionStart. Wire once with
-   `ops/scripts/worktree_add_wired.sh` or
-   `ops/scripts/ensure_workspace_wired.sh`.
-7. On-demand full sequence: `make -C "$HOME/.cursor-governance" start WS="$(pwd)"`.
-
-### Autonomy and merge (resolved)
-
-1. Shared autonomy brain is `ops/autonomy/` (Cursor-primary). Provider-neutral
-   bounded-concurrency runtime is
-   `environment/program-execution/peer_execution/autonomy/`.
-2. Claude Code pack home is `environment/agents/adapters/claude-code/`.
-   `environment/claude-code/` does **not** exist. The pack also has **no**
-   `autonomy/` subdirectory — do not teach
-   `environment/agents/adapters/claude-code/autonomy/` as a live path.
-3. L4: local commits only through program/contract execution, then
-   `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md`, then
-   `make improve IMPROVE_RECORD=1` (or `l4-begin` / `l4-record-kernels` /
-   `l4-authorize`). An L4 release receipt does **not** authorize merge.
-4. Launching a program or clicking Build is **not** merge authorization
-   (supersedes `L4_PROGRAM_BUILD_IMPLIES_MERGE_V1`).
-5. Campaigns and `make pr` end **green + merge-ready**. They do not merge.
-6. Invoking **`/l9-pr-remediation` (Converge)** **is** merge authorization for
-   **all open PRs**. Write the receipt with the locked interpreter:
-
-   ```bash
-   "$HOME/.cursor-governance/.venv/bin/python" \
-     ops/autonomy/authorize_merge.py --repo <owner/name> --all-open
-   ```
-
-   Then converge each PR and merge oldest first, stack-safe (squash/rebase
-   denied when the head is the base of an open PR). `/pr` is Diagnose-only.
-7. Force-push, hard-reset, and `--admin` stay denied.
-8. Overlap remedy: commit into the same-agent open PR, else wait, else
-   renegotiate scope. Use `PR_STACK=auto` only when the parent will merge
-   with `--merge`.
-9. Cursor remains ask-first except campaign packet / explicit L4 program.
-   Adapter surfaces with `L9_AUTONOMY_ENABLED=true` may scoped-commit locally
-   without per-action ask; they still publish only via `make pr`.
-
-### Publish path (capability graph)
-
-1. **PUBLIC** verbs: `improve`, `pr-check`, `pr`. **INTERNAL**: `pr-preflight`,
-   `precommit`, `precommit-repo`. This repo has no git `pre-commit` hook.
-2. Single path to GitHub = `make pr` after L4 release. Raw `git push` /
-   `gh pr create` / `gh pr edit` are denied at every phase.
-3. Default Makefile `PR_REMEDIATE=1` (after open, emit `L9_AGENT_REQUIRED`).
-   Campaign and L4 authorize-release publish **MUST** use
-   `PR_REMEDIATE=0 make pr`.
-4. Handoff path is `.l9/pr/pr-remediation-handoff.json`. Live rule stem is
-   `48-make-pr-remediation` (`rules/48-make-pr-remediation.mdc`).
-5. Skill-pack remediation cap is **3** (`skills/l9-pr-remediation`).
-   `ops/autonomy/surface_profile.yaml` lists `max_cycles: 5`. When executing
-   the skill, follow the skill pack (3) until that profile key is aligned.
-
-### Interpreter
-
-Makefile recipes MUST call `$(PYTHON)` / `$(RUFF)` / `$(MYPY)` from
-`.venv` (`make venv` → `uv sync --locked --extra dev`; `make gov-python`
-probes imports). Manual Graphiti / secrets / L4 / `authorize_merge.py` /
-`sync_generated_artifacts.py` / `port_aws_to_infisical.py` MUST use
-`"$HOME/.cursor-governance/.venv/bin/python"` (or a `make` target). Bare
-`python3` in older bullets — including later dated append examples — is
-historical. `ModuleNotFoundError: No module named 'yaml'` means the wrong
-interpreter.
-
-### Toolchain pins (live — supersedes §2.3 table and “sdk wins” sentence)
-
-SSOT: [`requirements.txt`](requirements.txt) + `uv.lock`. Keep
-`pyproject.toml` `[project.optional-dependencies] dev` and
-`.pre-commit-config.yaml` ruff `rev` in lockstep.
-
-Live authority comment in `requirements.txt`: ruff / mypy / pytest match
-**l9-ci-core** `install-consumer-ci`. Other analysis tools follow l9-ci-sdk
-when it pins them. Core still owns gitleaks / bandit / pip-audit (sdk omits).
-Do not treat the older “when sdk and core disagree, sdk wins” sentence as live.
-
-| Tool | Version | Install | Source |
-|---|---|---|---|
-| ruff | `0.16.1` | `make venv` | `requirements.txt`; pre-commit `rev: v0.16.1` |
-| mypy | `2.3.0` | same | `requirements.txt` |
-| pytest | `9.1.1` | same | `requirements.txt` |
-| pytest-cov | `7.1.0` | same | `requirements.txt` |
-| types-PyYAML | `6.0.12.20260724` | same | `requirements.txt` |
-| bandit | `1.9.4` | same / `uvx` | `requirements.txt` (was 1.8.6 in §2.3) |
-| pip-audit | `2.10.1` | same / `uvx` | `requirements.txt` (was 2.9.0 in §2.3) |
-| gitleaks | `8.24.3` | `brew install gitleaks` | comment in `requirements.txt` |
-| semgrep | `>=1.100.0,<2.0.0` | brew / pip / `uvx` | sdk SemgrepVersionPolicy |
-| pre-commit | latest stable | pipx / pip / brew | framework only; not a commit hook here |
-| uv | `>=0.8.0` | https://docs.astral.sh/uv/ | `[tool.uv] required-version` |
-
-Do not `uv pip install` past the lockfile for the default toolchain.
-
-### Consumer Makefile
-
-There is **no** `tools/l9_repo/` tree and **no** `Makefile.template` in this
-repo. Consumers that only need governance `pr` use the two-line delegate
-already shown in §2.2. Do **not** copy this repo’s fat Makefile.
-
-### Workspace kinds
-
-`ops/scripts/lib/workspace_kind.sh`: `ssot` | `ssot_checkout` | `consumer`
-(identity files, not a `$HOME/.l9/gov-worktrees/` prefix). `ssot_checkout`
-`make pr` / `symlinks-check` must not require consumer IDE wiring.
-
-### Generated formatter block
-
-The `BEGIN L9 FORMATTER OWNERSHIP` block is generated from
-`environment/ide/policy.json` by `ops/scripts/adapters/agentdocs.sh`.
-Do not hand-edit it. Policy `biome_default.description` is one comma-joined
-sentence; sessionStart `install_ide_profile` may rewrite the committed
-line wrap. If that is the only dirty hunk, restore `AGENTS.md` from HEAD
-unless `policy.json` changed.
-
-### Still accurate (do not re-derive)
-
-§1 mission, §4 symlink law (`CANONICAL_LAW.md` §1–3 authoritative), §5 change
-policy, §8 principle, PE adapter-layer lease rule, root-file append-only
-protection, WIP corpus on main, Infisical + AWS secrets rules (values never
-in git/logs/chat), closed-chat S3 archive, KERNEL pack new-branch default,
-plan-audit display-only, stack-safe sessionEnd hygiene, Graphiti image pin
-`zepai/knowledge-graph-mcp:1.0.2-graphiti-0.28.2-standalone`.
