@@ -213,9 +213,9 @@
       "alias": null,
       "class": "always",
       "output": "49-shared-worktree-isolation.md",
-      "output_sha256": "5fba49cdb148f3c849461968ee00c0fa7f85a86596d0903936b003db01eac512",
+      "output_sha256": "e0e13fba21b30e1c9f5cd2d31e5adc3895b7beed785c148cc28b9ca59137d3d6",
       "source": "rules/49-shared-worktree-isolation.mdc",
-      "source_sha256": "3dac52c010fb5a6653fbd90608764e8afd353e66374d5ce1f00f9a8e2606c92f",
+      "source_sha256": "9f0288253b252e993f73174d35c7c1963180014c665ca512e8d05f1d0a0829c9",
       "stem": "49-shared-worktree-isolation"
     },
     {
@@ -249,9 +249,9 @@
       "alias": null,
       "class": "always",
       "output": "53-pr-overlap-guardrail.md",
-      "output_sha256": "e3d4935e0b0d28f66c596a79f66c797ca1c931683c66afb4778d63bfec7987bd",
+      "output_sha256": "46cec6e3f999f2b176832d1966aa300b38d2541f5126809e09d9c2ac7164db94",
       "source": "rules/53-pr-overlap-guardrail.mdc",
-      "source_sha256": "d715d26e5161adb52fac031a4111e5dcb48a231d8b92a94a8a0eeb2739aae969",
+      "source_sha256": "e65dba8873911e45fc1298201388a9dee7162769d9abf40fa6d9bc0320718be3",
       "stem": "53-pr-overlap-guardrail"
     },
     {
@@ -554,6 +554,15 @@
     {
       "alias": null,
       "class": "always",
+      "output": "96-multi-agent-main-bound-execution.md",
+      "output_sha256": "d9a2c5f9720c64e3a6d060955ba2cf2b9fa09fb142ee6c3d3846189f769a1d5b",
+      "source": "rules/96-multi-agent-main-bound-execution.mdc",
+      "source_sha256": "4c3da47effd7ad684e4d7d918b1b218658fd81124c4925a9dc2cabd51de87d10",
+      "stem": "96-multi-agent-main-bound-execution"
+    },
+    {
+      "alias": null,
+      "class": "always",
       "output": "97-graph-layer-boundary.md",
       "output_sha256": "7980ac86a9d33ce04d2ac433d281e73ce0911fa5cc96ccc8acd3f78c43d52124",
       "source": "rules/97-graph-layer-boundary.mdc",
@@ -564,9 +573,9 @@
       "alias": null,
       "class": "always",
       "output": "98-graphiti-memory-gate.md",
-      "output_sha256": "4100a76ba82d53b0607ccd9c6cbbe2a6ffc22d7f2384ef0c61aed31397eab52b",
+      "output_sha256": "2c73cc0c7bad7f84d0146bfa6d2e1a6ee9145dbad08f4a5c7a682b0cc254eca8",
       "source": "rules/98-graphiti-memory-gate.mdc",
-      "source_sha256": "2d2dc233b222ca49e634e12a2cc8e10de846428911b1d7c3d9cf01bdfe57a7c5",
+      "source_sha256": "557a495cb0cabc05a3cba5c5323612f4ab724320f77818f36fd88bb453f2f361",
       "stem": "98-graphiti-memory-gate"
     },
     {
@@ -584,7 +593,7 @@
       "output": "zz-autonomy-surface-override.md",
       "output_sha256": "f23440e6eb36d5eee9e40f406ac2806a85f82387a93de0a09f4c4c414ebc8feb",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "3b8df0c05f57d4c07c6572fc7e6cdd46516de3173e131818d0a8bf07393a3712",
+      "source_sha256": "e9721591b00f8f1df060a8ddf32ab8758908a479cc0aecf5af9795049e8258be",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -592,9 +601,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 47,
+    "projected": 48,
     "skipped_agent_requested": 17,
-    "source_mdc": 65
+    "source_mdc": 66
   },
-  "tree_sha256": "c2ab22b77b3880e292dae0a3c65bb773a563185549589e14021702e7b94c5994"
+  "tree_sha256": "afdab4db64494842ad273c15f28d9c5ba9a11dfed28fe9531972db5d1b5361e9"
 }
