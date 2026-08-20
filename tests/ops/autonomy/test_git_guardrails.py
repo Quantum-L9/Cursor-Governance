@@ -11,6 +11,7 @@ of git, and no blanket deny of a subcommand by name.
 
 from __future__ import annotations
 
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
@@ -20,6 +21,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
+import git_guardrails as guardrails  # noqa: E402
+import local_execution_gate as gate  # noqa: E402
 from git_guardrails import (  # noqa: E402
     HUMAN_AUTHORIZATION_ENV,
     DirtyPath,
@@ -38,6 +41,7 @@ from git_guardrails import (  # noqa: E402
     human_authorized,
     run_guards,
 )
+from worktree_isolation_gate import command_violates_worktree_isolation  # noqa: E402
 
 # Command fragments are assembled rather than written literally so a governance
 # scanner reading this file never mistakes a fixture for an instruction (the
@@ -548,6 +552,71 @@ class TestGhPolicy:
     def test_admin_merge_denied_and_ordinary_merge_guarded(self) -> None:
         assert outcome("gh pr merge 12 --admin") is Outcome.DENY_REQUIRES_HUMAN
         assert outcome("gh pr merge 12 --squash") is Outcome.GUARD_THEN_ALLOW
+
+
+class TestGateWiring:
+    """The guardrail must run BEFORE the git/gh workflow exemption.
+
+    Without these, a refactor could restore the old blanket allow — the
+    exemption would answer first and no destructive git command would ever be
+    evaluated again.
+    """
+
+    def test_destructive_git_is_denied_by_the_execution_gate(
+        self, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(HUMAN_AUTHORIZATION_ENV, raising=False)
+        for command in (f"{GIT} prune", f"{GIT} gc --prune=now"):
+            reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
+            assert reason is not None, command
+            assert "git guardrails" in reason
+
+    def test_read_only_git_still_passes_the_execution_gate(self, stacked_repo: Path) -> None:
+        assert gate.evaluate("Bash", {"command": f"{GIT} status"}, root=stacked_repo) is None
+
+    def test_isolation_gate_delegates_forced_clean_to_the_guardrail(
+        self, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """Generated-only targets pass; an unknown untracked file does not."""
+        for key in ("L9_GIT_CLEAN_AUTHORIZED", "L9_WORKTREE_ISOLATION", HUMAN_AUTHORIZATION_ENV):
+            monkeypatch.delenv(key, raising=False)
+        (stacked_repo / "build").mkdir()
+        (stacked_repo / "build" / "out.o").write_text("x", encoding="utf-8")
+        assert command_violates_worktree_isolation(f"{GIT} clean -fd", root=stacked_repo) is None, (
+            "a clean over build output destroys nothing"
+        )
+
+        (stacked_repo / "notes-uncommitted.txt").write_text("mine\n", encoding="utf-8")
+        reason = command_violates_worktree_isolation(f"{GIT} clean -fd", root=stacked_repo)
+        assert reason is not None and "notes-uncommitted.txt" in reason
+
+    def test_wip_stays_absolutely_protected(self, stacked_repo: Path) -> None:
+        """Sacred WIP is not delegated — it is denied whatever the guardrail says."""
+        reason = command_violates_worktree_isolation(f"{GIT} clean -fd WIP/", root=stacked_repo)
+        assert reason is not None and "WIP" in reason
+
+
+def test_generated_prefixes_have_not_drifted() -> None:
+    """The gate's copy of the generated-path list must stay a known subset.
+
+    A prefix added to the sync script and not here would make the gate treat a
+    regenerable artifact as user content (noisy but safe); one removed there
+    and left here would make it treat real content as disposable (unsafe).
+    """
+    spec = importlib.util.spec_from_file_location(
+        "sync_generated_artifacts", ROOT / "ops" / "scripts" / "sync_generated_artifacts.py"
+    )
+    assert spec and spec.loader
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    ours = set(guardrails.GENERATED_PATH_PREFIXES)
+    theirs = set(module.GENERATED_PATH_PREFIXES)
+    assert ours <= theirs, f"gate lists prefixes the sync script does not: {ours - theirs}"
+    assert theirs - ours == set(guardrails.DELIBERATELY_NOT_GENERATED), (
+        "sync script gained or lost a generated prefix; reconcile "
+        "git_guardrails.GENERATED_PATH_PREFIXES / DELIBERATELY_NOT_GENERATED"
+    )
 
 
 def test_effects_are_reported_for_audit() -> None:
