@@ -11,6 +11,7 @@ import json
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 PE_SCRIPTS = Path(__file__).resolve().parents[1]
@@ -27,7 +28,11 @@ from pe_prepare_state import (  # type: ignore[import-not-found]  # noqa: E402
     PrepareCache,
     PrepareState,
 )
-from pe_timing import StageCache, StageTimer  # type: ignore[import-not-found]  # noqa: E402
+from pe_timing import (  # type: ignore[import-not-found]  # noqa: E402
+    StageCache,
+    StageTimer,
+    write_json_atomic,
+)
 
 
 class PrepareStateTests(unittest.TestCase):
@@ -71,6 +76,32 @@ class PrepareStateTests(unittest.TestCase):
             for index in range(3):
                 state.record(f"stage{index}", key="k", decision=_decision(True, REUSED))
             self.assertEqual([p.name for p in root.glob("*.tmp")], [])
+
+
+class AtomicWriteTests(unittest.TestCase):
+    """Preparation is the phase that gets interrupted, so its record must survive it."""
+
+    def test_a_failed_write_leaves_the_previous_content_intact(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            path = root / "state.json"
+            write_json_atomic(path, {"generation": 1})
+
+            with unittest.mock.patch("os.replace", side_effect=OSError("disk full")):
+                with self.assertRaises(OSError):
+                    write_json_atomic(path, {"generation": 2})
+
+            self.assertEqual(json.loads(path.read_text(encoding="utf-8")), {"generation": 1})
+            self.assertEqual([p.name for p in root.glob("*.tmp")], [])
+
+    def test_a_reader_never_sees_a_partial_file(self) -> None:
+        """os.replace is atomic, so the file is only ever one whole document."""
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "state.json"
+            for generation in range(1, 6):
+                write_json_atomic(path, {"generation": generation, "pad": "x" * 100_000})
+                doc = json.loads(path.read_text(encoding="utf-8"))
+                self.assertEqual(doc["generation"], generation)
 
 
 class PrepareCacheDecisionTests(unittest.TestCase):

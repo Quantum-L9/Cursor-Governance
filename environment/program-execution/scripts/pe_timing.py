@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import tempfile
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -40,6 +42,28 @@ VERIFIED_STATES = {"PASSED_LOCAL", "COMPLETED"}
 def format_duration(seconds: float) -> str:
     total = int(round(seconds))
     return f"{total // 60:02d}m {total % 60:02d}s"
+
+
+def write_json_atomic(path: Path, value: Any) -> Path:
+    """Write JSON so an interrupted write cannot leave a readable half-file.
+
+    These files are the record of what preparation has already done, and
+    preparation is exactly the phase that gets interrupted -- a partial timings
+    or cache file turns "resume from here" into "cannot parse my own state".
+    The rename is atomic within a filesystem, so a reader sees either the
+    previous content or the new content and never a blend of the two.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(value, indent=2, sort_keys=True) + "\n"
+    handle, staged = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(payload)
+        os.replace(staged, path)
+    except BaseException:
+        Path(staged).unlink(missing_ok=True)
+        raise
+    return path
 
 
 class StageTimer:
@@ -94,10 +118,7 @@ class StageTimer:
     def flush(self) -> Path | None:
         if self.workspace is None:
             return None
-        path = self.workspace / "runtime" / "TIMINGS.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self.report(), indent=2, sort_keys=True) + "\n", "utf-8")
-        return path
+        return write_json_atomic(self.workspace / "runtime" / "TIMINGS.json", self.report())
 
     def format(self) -> str:
         lines = ["timing:"]
@@ -160,10 +181,8 @@ class StageCache:
     def put(self, stage: str, key: str, value: Any) -> None:
         if not self.enabled:
             return
-        path = self._path(stage)
-        path.parent.mkdir(parents=True, exist_ok=True)
         payload = {"schema": CACHE_SCHEMA, "stage": stage, "key": key, "value": value}
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        write_json_atomic(self._path(stage), payload)
 
     def invalidate(self, stage: str) -> None:
         self._path(stage).unlink(missing_ok=True)

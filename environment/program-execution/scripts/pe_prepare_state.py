@@ -22,13 +22,18 @@ in `PREPARE_STATE.json` next to the campaign it describes.
 from __future__ import annotations
 
 import json
-import os
-import tempfile
+import sys
 from collections.abc import Callable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
+
+_SCRIPT_DIR = Path(__file__).resolve().parent
+if str(_SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(_SCRIPT_DIR))
+
+from pe_timing import write_json_atomic  # noqa: E402 - sibling, after the sys.path guard
 
 PREPARE_STATE_SCHEMA = "program-execution.prepare-state.v1"
 
@@ -124,23 +129,7 @@ class PrepareState:
         }
 
     def save(self) -> Path:
-        """Write atomically: a half-written state file must never be readable.
-
-        Preparation is exactly the phase that gets interrupted, so the temp-write
-        and rename is the difference between "rebuild one stage" and "cannot parse
-        my own state".
-        """
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        payload = json.dumps(self.report(), indent=2, sort_keys=True) + "\n"
-        handle, staged = tempfile.mkstemp(dir=str(self.path.parent), suffix=".tmp")
-        try:
-            with os.fdopen(handle, "w", encoding="utf-8") as stream:
-                stream.write(payload)
-            os.replace(staged, self.path)
-        except BaseException:
-            Path(staged).unlink(missing_ok=True)
-            raise
-        return self.path
+        return write_json_atomic(self.path, self.report())
 
 
 class PrepareCache:

@@ -1607,11 +1607,11 @@
     },
     {
       "path": "scripts/pe_prepare_state.py",
-      "sha256": "9056903beaa275d0c2ebf28ad10b737223954d19840928f70b71323423bf393a"
+      "sha256": "d2780e4f9743f0a47cad5d9e36061c3b1d05f84466df027d252bc620c0bd7352"
     },
     {
       "path": "scripts/pe_timing.py",
-      "sha256": "9063fe84d5d0672ec4368a5267c67d31d1e1b6cc75cfd8e9540131af4c3c0c5b"
+      "sha256": "130070616d060a2bb810562ffebfe0e648949eac48ed6a5ea70f7926f429b186"
     },
     {
       "path": "scripts/pe_trace.py",
@@ -1699,7 +1699,7 @@
     },
     {
       "path": "scripts/tests/test_pe_prepare_state.py",
-      "sha256": "de5d9a91108f1a1fa3a89123225d478ffe38ac109a83aa5f3dc4b2204aee4353"
+      "sha256": "3ea6e3e6c9a568dc8dc37d40873c8ed8ec41c5c3a42cb8f6cf8f6380bc89b082"
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
