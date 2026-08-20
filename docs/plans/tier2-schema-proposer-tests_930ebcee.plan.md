@@ -83,18 +83,35 @@ No new dependencies. `pyproject.toml` is untouched. `pytest.ini_options.asyncio_
 # L9 Master Kernel §3.1 + §5.1 + §5.2 — banned non-canonical field name forms.
 # This list is the single source of truth derived from the kernel and changes only
 # when the kernel changes. It is NOT a per-domain or per-tenant override.
-BANNED_FIELD_NAMES_L9_KERNEL: frozenset[str] = frozenset({
-    # §5.1 — TransportPacket / shared contract drift forms
-    "packetid", "packetID", "packettype", "packetType",
-    "contentHash", "content_hash_sha256",
-    "threadId", "threadID", "traceId", "traceID",
-    "parentIds", "sourceNode", "onBehalfOf",
-    "orgId", "orgID",
-    # §5.2 — spec.yaml drift forms (incl. valid-snake_case-but-wrong synonyms)
-    "matchentities", "nodelabels", "matchdirections",
-    "candidateprop", "null_semantics", "computation_type",
-    "targetnode", "idproperty",
-})
+BANNED_FIELD_NAMES_L9_KERNEL: frozenset[str] = frozenset(
+    {
+        # §5.1 — TransportPacket / shared contract drift forms
+        "packetid",
+        "packetID",
+        "packettype",
+        "packetType",
+        "contentHash",
+        "content_hash_sha256",
+        "threadId",
+        "threadID",
+        "traceId",
+        "traceID",
+        "parentIds",
+        "sourceNode",
+        "onBehalfOf",
+        "orgId",
+        "orgID",
+        # §5.2 — spec.yaml drift forms (incl. valid-snake_case-but-wrong synonyms)
+        "matchentities",
+        "nodelabels",
+        "matchdirections",
+        "candidateprop",
+        "null_semantics",
+        "computation_type",
+        "targetnode",
+        "idproperty",
+    }
+)
 
 # L9 Master Kernel §3.1 — canonical snake_case form for any proposed field name.
 _SNAKE_CASE_RE: re.Pattern[str] = re.compile(r"^[a-z][a-z0-9_]*$")

@@ -59,9 +59,9 @@ For the new `mobile` field, we add it to [`plasticos_crm_bridge/models/crm_lead.
 def _compute_mobile_sanitized(self):
     for lead in self:
         if lead.mobile:
-            lead.mobile_sanitized = lead._phone_format(
-                number=lead.mobile, force_format="E164"
-            ) or lead.mobile
+            lead.mobile_sanitized = (
+                lead._phone_format(number=lead.mobile, force_format="E164") or lead.mobile
+            )
         else:
             lead.mobile_sanitized = False
 ```
@@ -72,6 +72,7 @@ def _compute_mobile_sanitized(self):
 @api.constrains("mobile")
 def _check_mobile_format(self):
     import re
+
     for lead in self:
         if not lead.mobile:
             continue
@@ -79,9 +80,7 @@ def _check_mobile_format(self):
         if digits.startswith("1") and len(digits) == 11:
             digits = digits[1:]
         if len(digits) != 10:
-            raise ValidationError(
-                "Mobile must be a 10-digit US number (e.g., 555-100-0001)."
-            )
+            raise ValidationError("Mobile must be a 10-digit US number (e.g., 555-100-0001).")
 ```
 
 - On conversion (`action_convert_to_intake` / `_find_or_create_partner_from_lead`), copy `self.mobile` to `partner.mobile`
@@ -141,11 +140,14 @@ Odoo's `_find_matching_partner()` only matches by **email**. When our VanillaSof
 def _find_matching_partner(self):
     partner = super()._find_matching_partner()
     if not partner and self.partner_name:
-        partner = self.env["res.partner"].search([
-            ("name", "=ilike", self.partner_name.strip()),
-            ("is_company", "=", True),
-            ("parent_id", "=", False),
-        ], limit=1)
+        partner = self.env["res.partner"].search(
+            [
+                ("name", "=ilike", self.partner_name.strip()),
+                ("is_company", "=", True),
+                ("parent_id", "=", False),
+            ],
+            limit=1,
+        )
     return partner
 ```
 
