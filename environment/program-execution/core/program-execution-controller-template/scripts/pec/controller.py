@@ -12,7 +12,13 @@ from typing import Any
 
 from jsonschema import Draft202012Validator
 
-from .blueprint import BlueprintError, verify_program_lock, write_program_lock
+from .blueprint import (
+    BlueprintError,
+    relock_tasks,
+    stale_task_ids,
+    verify_program_lock,
+    write_program_lock,
+)
 from .common import (
     ControllerError,
     digest_object,
@@ -328,6 +334,97 @@ def bootstrap(
     }
 
 
+def relock_definitions(workspace: Path, *, actor: str) -> dict[str, Any]:
+    """Adopt edited task definitions without discarding execution history.
+
+    Definition state and execution history were conflated: an edited task card
+    made the whole lock stale, and the only cure was a fresh workspace, which
+    threw away every completed task to adopt one changed definition.
+
+    This separates them. The definitions that moved are relocked; the tasks that
+    did not move are untouched. A task still in flight loses its contract
+    binding, because that contract was rendered from a definition that no longer
+    exists and re-rendering it is cheap. A task already COMPLETED keeps its
+    state and its receipts: the work happened, and the provenance record below
+    is what makes "which definition produced that code" answerable afterwards.
+    """
+    db, ledger = open_runtime(workspace)
+    lock_path = workspace / "runtime" / "program-lock.json"
+    try:
+        stale = stale_task_ids(lock_path)
+        if stale is None:
+            raise ControllerError(
+                "definition drift cannot be attributed to individual tasks "
+                "(program-wide source changed, or the lock is unreadable); "
+                "start a fresh workspace instead of relocking"
+            )
+        if not stale:
+            return {"status": "CURRENT", "relocked": [], "superseded_after_completion": []}
+
+        outcome = relock_tasks(lock_path, stale)
+        superseded: list[str] = []
+        for task_id in outcome["relocked"]:
+            existing = db.task(task_id)
+            state = str((existing or {}).get("runtime_state") or "")
+            db.upsert_task(outcome["tasks"][task_id])
+            if state == "COMPLETED":
+                # History survives: the receipt stays bound to the definition it
+                # was verified against, and provenance records the supersession.
+                superseded.append(task_id)
+                continue
+            db.update_task(
+                task_id,
+                scope_status="intent_only",
+                source_contract_path=None,
+                source_contract_digest=None,
+                rendered_contract_path=None,
+                rendered_contract_digest=None,
+            )
+            for name in ("source", "rendered"):
+                (workspace / "contracts" / name / f"{task_id}.json").unlink(missing_ok=True)
+            if state not in {"BLOCKED", "ELIGIBLE"}:
+                # STALE is the state model's own word for "the definition this
+                # was working from was replaced", and unlike BLOCKED it is
+                # reachable from every active state. Land on ELIGIBLE from
+                # there: readiness is recomputed per call, so an unmet
+                # dependency still blocks the task.
+                db.transition_task(task_id, "STALE", last_error=None)
+                db.transition_task(task_id, "ELIGIBLE", last_error=None)
+
+        db.set_meta("program_digest", outcome["lock_digest"])
+        record = {
+            "schema": "program-execution-controller.definition-provenance.v1",
+            "recorded_at": utc_now(),
+            "actor": actor,
+            "previous_lock_digest": outcome["previous_lock_digest"],
+            "lock_digest": outcome["lock_digest"],
+            "definitions": outcome["definitions"],
+            "superseded_after_completion": sorted(superseded),
+        }
+        history = workspace / "runtime" / "definition-provenance.jsonl"
+        history.parent.mkdir(parents=True, exist_ok=True)
+        with history.open("a", encoding="utf-8") as stream:
+            stream.write(json.dumps(record, sort_keys=True) + "\n")
+        ledger.append(
+            "TASK_DEFINITIONS_RELOCKED",
+            actor,
+            {
+                "relocked": outcome["relocked"],
+                "lock_digest": outcome["lock_digest"],
+                "superseded_after_completion": sorted(superseded),
+            },
+        )
+        return {
+            "status": "RELOCKED",
+            "relocked": outcome["relocked"],
+            "superseded_after_completion": sorted(superseded),
+            "lock_digest": outcome["lock_digest"],
+            "provenance": str(history),
+        }
+    finally:
+        db.close()
+
+
 def validate_runtime(workspace: Path) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     errors: list[str] = []
@@ -549,6 +646,26 @@ def _approval_valid(
     return False
 
 
+def lock_trusted_for_task(workspace: Path, task_id: str) -> bool:
+    """Is the locked plan still authoritative for this one task?
+
+    Editing one task card used to make every task in the program unready and
+    every verification STALE, because the lock is verified at file granularity
+    and all task cards share a file. That conflates the definition of a task
+    with the history recorded against every other task.
+
+    A task is judged against its own definition: unchanged means the lock still
+    describes it, whatever was edited elsewhere in the file. When the change
+    cannot be attributed to particular tasks, `stale_task_ids` says so and the
+    global verdict stands.
+    """
+    lock_path = workspace / "runtime" / "program-lock.json"
+    stale = stale_task_ids(lock_path)
+    if stale is None:
+        return verify_program_lock(lock_path)[0]
+    return task_id not in stale
+
+
 def task_readiness(
     db: StateDB, task: dict[str, Any], workspace: Path | None = None
 ) -> tuple[bool, list[str]]:
@@ -558,8 +675,7 @@ def task_readiness(
         "scoped_unknowns": [],
     }
     if workspace is not None:
-        lock_ok, _ = verify_program_lock(workspace / "runtime" / "program-lock.json")
-        if not lock_ok:
+        if not lock_trusted_for_task(workspace, str(task["id"])):
             blockers.append("program_lock_stale_or_invalid")
         try:
             from .replan import plan_adaptation
@@ -1298,8 +1414,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         lease = db.active_lease_for_task(task_id)
         attempt = db.latest_attempt(task_id)
         gates: dict[str, str] = {}
-        lock_ok, _ = verify_program_lock(workspace / "runtime" / "program-lock.json")
-        gates["program_lock"] = "PASS" if lock_ok else "STALE"
+        gates["program_lock"] = "PASS" if lock_trusted_for_task(workspace, task_id) else "STALE"
         ledger_ok, _ = ledger.verify()
         gates["ledger"] = "PASS" if ledger_ok else "FAIL"
         gates["lease"] = (

@@ -28,6 +28,7 @@ from .controller import (
     record_attempt,
     recover,
     release_lease,
+    relock_definitions,
     set_decision,
     set_halt,
     set_unknown,
@@ -59,6 +60,13 @@ def parser() -> argparse.ArgumentParser:
 
     cmd = sub.add_parser("validate")
     cmd.add_argument("--workspace", required=True, type=Path)
+
+    cmd = sub.add_parser(
+        "relock",
+        help="adopt edited task definitions without discarding completed history",
+    )
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--actor", required=True)
 
     cmd = sub.add_parser(
         "fresh-workspace",
@@ -319,6 +327,8 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             if value["status"] != "PASS":
                 print_json(value)
                 return 1
+        elif args.command == "relock":
+            value = relock_definitions(args.workspace, actor=args.actor)
         elif args.command == "fresh-workspace":
             value = fresh_execution_workspace(
                 args.workspace,
