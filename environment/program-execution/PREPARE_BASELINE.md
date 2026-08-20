@@ -62,3 +62,32 @@ Note that `stack_proof` reads ~0.000s here only because the benchmark supplies a
 stubbed research hook. In a live campaign it is network-backed, so its real cost
 is absent from this table by construction and must not be read as "already
 cheap".
+
+## After PE-FAST-002 (same harness, 35 tasks)
+
+| run | total | vs cold | recomputed |
+| --- | ----: | ------: | ---------- |
+| cold | 3.524s | — | everything |
+| 2nd | 1.264s | 2.79x | `admission_evidence`, `arm`, `isolate`, `launchability`, `validate_blueprint` |
+| 3rd | 0.959s | 3.67x | `admission_evidence`, `arm`, `isolate` |
+
+Cold is 3.1x faster than the 30-task baseline above at a *larger* task count,
+almost entirely from arming the runnable frontier instead of every locked task
+(`arm` 9.160s → 1.279s). Repeat prepare resumes instead of quarantining, which
+is what makes a warm run cheaper than a cold one at all.
+
+The second run still recomputes `validate_blueprint` and `launchability` because
+admission and acceptance annotate the blueprint *after* validation reads it, so
+the blueprint's fingerprint has moved by the next invocation. It settles by the
+third run. This is a fingerprint-ordering artifact, not a correctness issue.
+
+### Why blueprint validation was not split into structural vs full sweep
+
+The contract proposed splitting validation into a cheap structural check on the
+critical path and a full sweep off it. Preparation already runs the cheaper of
+the validator's two modes (`--mode template`, not `instantiated`), and at 35
+tasks that costs 0.306s cold and is reused on repeats. A split would therefore
+buy ~0.3s on cold runs only, in exchange for a second validation path and the
+possibility of a blueprint that passed the cheap check being armed before the
+full sweep contradicts it. Measured benefit does not justify that trade, so the
+validator is left whole.
