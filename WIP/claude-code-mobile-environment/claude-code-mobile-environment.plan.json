@@ -1,0 +1,591 @@
+{
+  "schema_version": "1",
+  "mode": "plan",
+  "depth": "standard",
+  "title": "Restore local validation capability for model-controlled sessions across the L9 node fleet",
+  "objective": "Remove the recurring friction observed during SEO-Bot PR #61 remediation: a model-controlled Claude Code session cannot install @quantum-l9 packages by governance policy, so every session starts with zero local validation capability and each agent improvises a workaround. Make the policy-compliant path canonical, wired, and shared by all four node repos.",
+  "code_in_scope": true,
+  "success_criteria": [
+    "A fresh model-controlled session in SEO-Bot, Website-Bot or LLM-Router can run the repo's blocking gates (typecheck + tests) without a PAT and without hand-built stubs.",
+    "`make pr-check` exits 0 on a clean checkout of main, so it can serve as the pre-PR go/no-go it advertises itself to be.",
+    "The SessionStart hook in SEO-Bot actually fires (registered in .claude/settings.json), proven by its output appearing in a new session.",
+    "ensure-npm-auth.sh no longer advises a remediation that is structurally impossible on a model surface; it names the local-link path instead.",
+    "All four @quantum-l9 dependencies resolve from local sibling sources with zero hand-written stubs.",
+    "npm run verify:all completes non-interactively instead of hanging in vitest watch mode.",
+    "AGENTS.md no longer contradicts ci.yml on lockfile/npm ci.",
+    "l9-plan and the other governance skills needed for this work are reachable via the Skill tool in a fresh session.",
+    "A fresh session rooted at a multi-repo workspace lists l9-plan among its invocable skills with no manual reconciliation step."
+  ],
+  "scope": {
+    "in": [
+      "SEO-Bot: .claude/settings.json hook registration, scripts/ensure-npm-auth.sh messaging, package.json verify:all/test scripts, AGENTS.md lockfile prose",
+      "Cursor-Governance: a reusable link-local-packages command shared by all node repos, plus skill-sync coverage",
+      "Website-Bot and LLM-Router: adopt the same hook registration + link command",
+      "Biome baseline so authors can prove zero new findings without hand-diffing against main"
+    ],
+    "out": [
+      "Weakening surface_trust / resolve_secret / authed_npm PAT policy in any way",
+      "Changing CI workflow definitions or branch protection",
+      "Publishing or re-versioning any @quantum-l9 package",
+      "Refactoring build-intelligence or any product code"
+    ]
+  },
+  "pre_validation": [
+    {
+      "id": "PV1",
+      "command_or_action": "cd . && .venv/bin/python ops/secrets/resolve_secret.py --ref openclaw-igorbot/github#token",
+      "pass_criteria": "Confirms DENIED for model-controlled surface 'claude-code' \u2014 establishes that no PAT-based fix is permissible",
+      "status": "passed"
+    },
+    {
+      "id": "PV2",
+      "command_or_action": "ls ../SEO-Bot/.claude/settings.json",
+      "pass_criteria": "Absent \u2014 proves .claude/hooks/session-start.sh is unregistered and never fires",
+      "status": "passed"
+    },
+    {
+      "id": "PV3",
+      "command_or_action": "python3 -c \"import json;print(json.load(open('../SEO-Bot/package.json'))['scripts']['test'])\"",
+      "pass_criteria": "Prints 'vitest' (watch mode), proving verify:all hangs non-interactively",
+      "status": "passed"
+    },
+    {
+      "id": "PV4",
+      "command_or_action": "Confirm Quantum-L9/l9-graphiti-memory publishes @quantum-l9/graphiti-memory-client (read its package.json name field)",
+      "pass_criteria": "package.json name equals @quantum-l9/graphiti-memory-client",
+      "status": "pending"
+    },
+    {
+      "id": "PV5",
+      "command_or_action": "ls $HOME/.claude/skills/synced | grep -c '^l9-' and compare to ls skills | grep -c '^l9-'",
+      "pass_criteria": "Confirms 8 of 51 governance l9 skills are synced (l9-plan absent)",
+      "status": "passed"
+    },
+    {
+      "id": "PV6",
+      "command_or_action": "git checkout origin/main -- . && npx biome check .",
+      "pass_criteria": "Confirms 13 errors / 174 warnings on PRISTINE main \u2014 the repo's own `make pr-check` gate is red before any change is made",
+      "status": "passed"
+    },
+    {
+      "id": "PV7",
+      "command_or_action": "ls $HOME/.claude/settings.json; ls $HOME/.l9/claude/bootstrap-state.json",
+      "pass_criteria": "Both ABSENT \u2014 proves no user-scope SessionStart hook exists and `make claude-install` never ran in this container, so the governance skill reconciler never fired",
+      "status": "passed"
+    },
+    {
+      "id": "PV8",
+      "command_or_action": "python ops/scripts/reconcile_claude_l9_skills.py --root . --scope user --check",
+      "pass_criteria": "Reported drift 51/51 missing, 0 conflicts \u2014 the entire governance skill corpus was invisible to the session",
+      "status": "passed"
+    },
+    {
+      "id": "PV9",
+      "command_or_action": "python ops/scripts/reconcile_claude_l9_skills.py --root . --scope user",
+      "pass_criteria": "created=51, conflicts=0, all symlinks resolve, pre-existing synced/ and session-start-hook untouched; skills became invocable IMMEDIATELY without a session restart",
+      "status": "passed"
+    },
+    {
+      "id": "PV10",
+      "command_or_action": "Count disable-model-invocation:true across the 51 governance SKILL.md frontmatters",
+      "pass_criteria": "24 model-invocable / 27 user-invocable-only \u2014 explains why only ~16 new names surfaced rather than 51",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Write ops/scripts/link_local_l9_packages.sh in Cursor-Governance: for each @quantum-l9 dep in the caller repo's package.json, locate the sibling source checkout, build it if needed, and install it via a file: override into node_modules WITHOUT mutating the committed package.json or package-lock.json. Emit a machine-readable report of linked vs unresolved packages.",
+      "files": [
+        "ops/scripts/link_local_l9_packages.sh"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "leverage_rank": 1,
+      "shared_root_cause": "no-policy-compliant-local-install-path"
+    },
+    {
+      "id": "T2",
+      "task": "Add a package-name to source-repo map (bot-interop -> Website-Bot/packages/bot-interop, llm-router -> LLM-Router, infisical-config -> infisical-config, graphiti-memory-client -> l9-graphiti-memory) as data the link script reads, so the mapping is declared once rather than rediscovered per session.",
+      "files": [
+        "ops/scripts/l9_package_sources.yaml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Create",
+      "leverage_rank": 2,
+      "shared_root_cause": "no-policy-compliant-local-install-path"
+    },
+    {
+      "id": "T3",
+      "task": "Register the existing SessionStart hook by creating SEO-Bot/.claude/settings.json with a hooks.SessionStart entry pointing at .claude/hooks/session-start.sh, mirroring the working Cursor-Governance settings.json shape.",
+      "files": [
+        "../SEO-Bot/.claude/settings.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "leverage_rank": 4,
+      "shared_root_cause": "hook-written-but-never-wired"
+    },
+    {
+      "id": "T4",
+      "task": "Rewrite the fallback branch of SEO-Bot/.claude/hooks/session-start.sh: when NODE_AUTH_TOKEN is absent (the normal model-surface case), invoke the governance link script instead of printing advice to fix AWS. Keep soft-fail and exit 0 semantics.",
+      "files": [
+        "../SEO-Bot/.claude/hooks/session-start.sh"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "operation": "Replace",
+      "anchor": "if [[ -z \"${NODE_AUTH_TOKEN:-}\" ]]; then  # WARN branch",
+      "leverage_rank": 5,
+      "shared_root_cause": "no-policy-compliant-local-install-path"
+    },
+    {
+      "id": "T5",
+      "task": "Correct scripts/ensure-npm-auth.sh so the terminal WARN states that model-controlled surfaces are denied a PAT by design (surface_trust) and directs the reader to the link script, rather than telling them to make AWS resolve the ref.",
+      "files": [
+        "../SEO-Bot/scripts/ensure-npm-auth.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "ensure-npm-auth: WARN \u2014 could not resolve $REF",
+      "leverage_rank": 6,
+      "shared_root_cause": "advice-that-cannot-be-followed"
+    },
+    {
+      "id": "T6",
+      "task": "Fix the verify:all hang: point it at a non-interactive runner (vitest run) and include the real blocking gate (tsc) so verify:all actually mirrors CI.",
+      "files": [
+        "../SEO-Bot/package.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "\"verify:all\": \"npm run verify:preflight && ... && npm test\"",
+      "leverage_rank": 7,
+      "shared_root_cause": "local-commands-diverge-from-ci"
+    },
+    {
+      "id": "T7",
+      "task": "Correct AGENTS.md section 1 and 5 where they state 'no lockfile' and 'never npm ci'; ci.yml commits a lockfile and runs npm ci. Add it to the existing known-stale-prose list or fix the rule outright.",
+      "files": [
+        "../SEO-Bot/AGENTS.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "No lockfile \u2014 never `npm ci`",
+      "leverage_rank": 8,
+      "shared_root_cause": "docs-contradict-executable-truth"
+    },
+    {
+      "id": "T8",
+      "task": "Make `make pr-check` pass on a clean tree. It runs `npx biome check .`, which reports 13 errors / 174 warnings on pristine origin/main, so the repo's own advertised pre-PR gate cannot go green and no agent can use it as a go/no-go. Either clear the findings or commit a baseline/suppression so pr-check is a real signal.",
+      "files": [
+        "../SEO-Bot/biome.json",
+        "../SEO-Bot/package.json"
+      ],
+      "effort": "M-L",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "leverage_rank": 3,
+      "shared_root_cause": "canonical-gate-is-red-on-main"
+    },
+    {
+      "id": "T9",
+      "task": "Make governance skill availability automatic for model-controlled sessions. The corpus is NOT supplied by setup_claude_code_plugins.sh's marketplace path and is NOT editable via the account-synced registry; it is produced by ops/scripts/reconcile_claude_l9_skills.py from ops/generated/skill-registry.json. Nothing invokes it in a multi-repo workspace, because the only registered SessionStart hook is project-scoped to Cursor-Governance and this workspace root is the multi-repo parent directory, not the governance clone. Register a USER-scope $HOME/.claude/settings.json SessionStart hook (or run `make claude-install` once per container) so the reconciler runs unconditionally. Verified manually: reconciler created 51/51 symlinks with 0 conflicts and took effect without a session restart.",
+      "files": [
+        "$HOME/.claude/settings.json",
+        "environment/agents/adapters/claude-code/install.sh",
+        ".claude/hooks/session_start_claude_governance.sh"
+      ],
+      "effort": "S-M",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "leverage_rank": 4,
+      "shared_root_cause": "hook-written-but-never-wired"
+    },
+    {
+      "id": "T10",
+      "task": "Roll T3 and T4 to Website-Bot and LLM-Router, which have .claude/ but no settings.json and no hook at all.",
+      "files": [
+        "../Website-Bot/.claude/settings.json",
+        "../LLM-Router/.claude/settings.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T4"
+      ],
+      "operation": "Create",
+      "leverage_rank": 10,
+      "shared_root_cause": "hook-written-but-never-wired"
+    },
+    {
+      "id": "T11",
+      "task": "Reconcile the two skill registries. 4 account-synced skills (l9-ci-gap-auditor, l9-ci-repair, l9-github-ci, l9-pr-analysis) exist ONLY in the Anthropic account registry with no counterpart in Cursor-Governance/skills, while 47 repo skills existed only on disk. Decide the SSOT per skill and eliminate the divergence so a session's capability is predictable.",
+      "files": [
+        "ops/generated/skill-registry.json",
+        "skills/AUTONOMY_MANIFEST.yaml"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T9"
+      ],
+      "operation": "Replace",
+      "leverage_rank": 11,
+      "shared_root_cause": "two-registries-no-reconciliation"
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T9",
+    "T8",
+    "T10"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "A single governance command links every @quantum-l9 dependency from local sibling sources with no PAT and no stubs.",
+      "unlocks": "Local typecheck and tests become possible in any model-controlled session."
+    },
+    {
+      "id": "M2",
+      "outcome": "SEO-Bot's SessionStart hook fires and runs that command automatically.",
+      "unlocks": "Zero-touch validation capability at session start instead of a per-agent improvisation."
+    },
+    {
+      "id": "M2b",
+      "outcome": "`make pr-check` is green on main and usable as the single pre-PR gate.",
+      "unlocks": "Agents stop hand-building ad-hoc validation and local green becomes a trustworthy CI predictor."
+    },
+    {
+      "id": "M3",
+      "outcome": "Local commands and docs agree with ci.yml (verify:all, lockfile prose, biome baseline).",
+      "unlocks": "An agent can trust local green as a predictor of CI green."
+    },
+    {
+      "id": "M4",
+      "outcome": "The pattern is adopted by Website-Bot and LLM-Router.",
+      "unlocks": "Fleet-wide consistency; the next node repo inherits it."
+    },
+    {
+      "id": "M5",
+      "outcome": "Every model-controlled session starts with the full governance skill corpus reconciled, from any workspace root.",
+      "unlocks": "Planning and remediation skills are reachable by name instead of being read off disk."
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T2",
+      "evidence_required": "Running the link script in a clean SEO-Bot checkout resolves all four @quantum-l9 packages and prints zero unresolved.",
+      "no_go_action": "If graphiti-memory-client or infisical-config cannot be resolved from source, stop and report which package lacks a buildable local origin rather than reintroducing hand-written stubs."
+    },
+    {
+      "id": "C2",
+      "after": "T4",
+      "evidence_required": "A fresh session shows the hook's output, and npx tsc -p tsconfig.check.json --noEmit exits 0 with no manual setup.",
+      "no_go_action": "If the hook does not fire, verify the settings.json shape against Cursor-Governance's working example before changing the script."
+    },
+    {
+      "id": "C2b",
+      "after": "T8",
+      "evidence_required": "make pr-check exits 0 on pristine origin/main with no working-tree changes.",
+      "no_go_action": "Do not silence rules wholesale to force green \u2014 if the findings are real, land them as their own change and record the remaining count."
+    },
+    {
+      "id": "C3",
+      "after": "T6",
+      "evidence_required": "npm run verify:all exits non-interactively with a nonzero-on-failure status.",
+      "no_go_action": "Revert the script change; do not mask a real failure to make the command terminate."
+    },
+    {
+      "id": "C4",
+      "after": "T10",
+      "evidence_required": "The same two commands succeed unmodified in Website-Bot and LLM-Router.",
+      "no_go_action": "Keep the SEO-Bot wiring and record the blocking difference per repo instead of forcing a shared shape."
+    },
+    {
+      "id": "C5",
+      "after": "T9",
+      "evidence_required": "A fresh session rooted at a multi-repo path (not Cursor-Governance) lists l9-plan among invocable skills with no manual step.",
+      "no_go_action": "If a user-scope hook is not supported on this surface, document `make claude-install` as a required one-time container step in the runbook rather than leaving it implicit."
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "SEO-Bot/AGENTS.md",
+      "action": "update",
+      "todo_ids": [
+        "T5",
+        "T6",
+        "T7"
+      ],
+      "reason": "Section 5 command table and the lockfile rule both become wrong once verify:all and the auth guidance change."
+    },
+    {
+      "surface": "SEO-Bot/RUNBOOK.md",
+      "action": "update",
+      "todo_ids": [
+        "T1",
+        "T5"
+      ],
+      "reason": "ensure-npm-auth.sh points readers at 'RUNBOOK.md section Private npm packages'; that section must describe the link path."
+    },
+    {
+      "surface": "Cursor-Governance/ops/secrets/README.md",
+      "action": "update",
+      "todo_ids": [
+        "T1"
+      ],
+      "reason": "Document the link script as the sanctioned model-surface alternative to authed_npm.sh."
+    },
+    {
+      "surface": "Website-Bot/AGENTS.md and LLM-Router docs",
+      "action": "n_a",
+      "reason": "Deferred until T10 proves the pattern transfers; no doc change until the wiring lands there."
+    },
+    {
+      "surface": "Cursor-Governance/README.md or RUNBOOK",
+      "action": "update",
+      "todo_ids": [
+        "T9",
+        "T11"
+      ],
+      "reason": "The one-time `make claude-install` container step and the skill-delivery mechanism are currently undocumented, which is why the corpus silently went missing."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Do local sibling sources actually match the versions package.json pins? Observed: bot-interop 1.1.0 satisfies ^1.1.0 and LLM-Router 1.3.0 matches the exact pin \u2014 but this is a point-in-time match that can drift.",
+      "Is linking local sources a correctness hazard \u2014 could an agent validate against source newer than the published artifact CI installs?",
+      "Does the fleet actually keep all sibling repos checked out side by side, or was that specific to this session's workspace?",
+      "Is the two-package stub gap real, or does some other checkout already provide infisical-config and graphiti-memory-client?",
+      "Would registering the hook slow session start enough to matter?",
+      "Is `make pr-check` red on main by oversight, or deliberately, pending the enforce-biome:true flip described in docs/runbooks/BIOME_INSTANTIATION.md?",
+      "Is the account-synced registry deliberately a curated subset for model surfaces, making full 51-skill reconciliation an anti-goal?"
+    ],
+    "assumed_false_ifs": [
+      "If sibling repos are not reliably co-located, the link script must clone on demand and the effort estimate for T1 roughly doubles.",
+      "If local source can diverge from the published version, the link script must print the version delta loudly and the plan needs a drift guard todo.",
+      "If the skill sync list is generated remotely rather than by setup_claude_code_plugins.sh, T9 targets the wrong file and needs re-scoping.",
+      "If Biome's error count is not stable across versions, a raw count baseline is the wrong mechanism and T8 should use a suppression file.",
+      "If the biome debt is a tracked, deliberate migration with an owner and a date, T8 becomes 'do not touch \u2014 document the expected count' rather than a cleanup.",
+      "If the 8-skill synced set is a deliberate curation rather than drift, T9 should reconcile only an approved allowlist and T11 becomes a documentation task."
+    ],
+    "blast_radius": "Development-environment and documentation surfaces only. No product code, no CI workflow, no branch protection, no secret policy. The one behavioral change to a committed script is verify:all, which currently cannot complete non-interactively. Linked packages live in gitignored node_modules; package.json and package-lock.json stay untouched, so nothing can leak into a commit.",
+    "rollback": "Delete .claude/settings.json to unwire the hook; git revert the ensure-npm-auth.sh, package.json and AGENTS.md edits; remove the governance link script. Each todo is independently revertible and none is load-bearing for CI."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T8",
+      "T9",
+      "T3",
+      "T4",
+      "T5",
+      "T6",
+      "T7",
+      "T11",
+      "T10"
+    ],
+    "shared_causes": [
+      "no-policy-compliant-local-install-path \u2014 the single dominant cause; governance deliberately denies a PAT to model surfaces, yet no sanctioned alternative exists, so every agent improvises",
+      "canonical-gate-is-red-on-main \u2014 `make pr-check` runs `biome check .` which fails with 13 errors on pristine main, so the one command the repo offers as a pre-PR gate is unusable and every agent substitutes an ad-hoc check",
+      "hook-written-but-never-wired \u2014 a correct SessionStart hook exists in SEO-Bot but no settings.json registers it, so it is dead code",
+      "advice-that-cannot-be-followed \u2014 ensure-npm-auth.sh and the hook both tell the reader to make AWS resolve a ref that surface_trust will always deny",
+      "docs-contradict-executable-truth \u2014 AGENTS.md asserts no lockfile and never npm ci while ci.yml does exactly that",
+      "local-commands-diverge-from-ci \u2014 verify:all cannot terminate and omits the blocking typecheck",
+      "governance-capability-not-reachable-from-session \u2014 the 51-skill corpus is delivered by a reconciler that only a project-scoped Cursor-Governance hook invokes; in a multi-repo workspace nothing runs it, so 47 skills were invisible and l9-plan had to be read off disk",
+      "two-registries-no-reconciliation \u2014 account-synced skills and the repo corpus overlap by only 4 of 51 and have drifted in both directions"
+    ],
+    "deletions_or_consolidations": [
+      "Delete the AWS-resolution advice from both the hook and ensure-npm-auth.sh rather than maintaining a path that policy guarantees will fail.",
+      "Consolidate four per-repo bespoke install workarounds into one governance link script.",
+      "Consolidate the package-to-source mapping into one declared data file instead of rediscovering it by find(1) each session.",
+      "Consolidate skill delivery onto the governance reconciler as SSOT instead of maintaining a divergent account-synced set."
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Local sibling source drifts ahead of the published package, so local green stops predicting CI green.",
+      "mitigation": "The link script prints the local version against the package.json range for every package and warns on any mismatch; CI remains the authority and still installs published artifacts."
+    },
+    {
+      "risk": "An agent mistakes linked local packages for a committable state and pushes a file: dependency.",
+      "mitigation": "The script writes only into gitignored node_modules and never edits package.json or package-lock.json; add a pre-commit assertion that no file: spec appears under dependencies."
+    },
+    {
+      "risk": "Changing the SessionStart hook could stall sessions if a step blocks.",
+      "mitigation": "Preserve the existing soft-fail contract \u2014 every step guarded, always exit 0 \u2014 and cap the link step with a timeout."
+    },
+    {
+      "risk": "T9 touches shared plugin setup and could affect other surfaces' skill availability.",
+      "mitigation": "Additive only: extend the sync list, do not remove entries; verify the synced manifest before and after."
+    },
+    {
+      "risk": "Clearing 13 biome errors touches files unrelated to any feature and could mask a real defect while reformatting.",
+      "mitigation": "Land the biome cleanup as a standalone commit with no behavioral edits; require tsc + vitest green before and after and diff for logic changes."
+    },
+    {
+      "risk": "User-scope $HOME/.claude/settings.json is container-local and is lost when the container is reclaimed.",
+      "mitigation": "Treat `make claude-install` as the durable path and document it as a one-time per-container step; the hook is an optimization, not the contract."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does Quantum-L9/l9-graphiti-memory publish @quantum-l9/graphiti-memory-client, and does Quantum-L9/infisical-config publish @quantum-l9/infisical-config?",
+      "decision_effect": "Determines whether the link script reaches full four-package coverage or whether two packages still need a declared stub contract.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "Are the four node repos reliably co-located in one workspace across environments, or was that specific to this remote session?",
+      "decision_effect": "Decides whether the link script resolves siblings by path or must clone on demand.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "RESOLVED: $HOME/.claude/skills/synced/manifest.json is produced by the Anthropic ACCOUNT registry (custom entries carry server ids skill_01...) and is not editable from this repo. The repo corpus is delivered instead by ops/scripts/reconcile_claude_l9_skills.py. T9 was rescoped accordingly.",
+      "decision_effect": "Closed \u2014 T9 retargeted from setup_claude_code_plugins.sh to user-scope SessionStart registration.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U4",
+      "question": "Which mechanism supplies the PR body template and the 'the bot fills this in on push' Files touched section? No pull_request_template.md exists in SEO-Bot/.github.",
+      "decision_effect": "Determines whether a stale template is a repo-level fix or belongs to the org .github repo, and why the Files touched section was never populated on PR 61.",
+      "resolution": "ask"
+    },
+    {
+      "id": "U5",
+      "question": "Is the 13-error biome debt on main tracked and scheduled (docs/runbooks/BIOME_INSTANTIATION.md, enforce-biome flag), or unowned drift?",
+      "decision_effect": "Decides whether T8 clears the findings or merely records an expected baseline count.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U6",
+      "question": "Which registry is SSOT for the 4 account-only skills (l9-ci-gap-auditor, l9-ci-repair, l9-github-ci, l9-pr-analysis) \u2014 should they be committed into Cursor-Governance/skills, or is the account registry intentionally authoritative for them?",
+      "decision_effect": "Determines the direction of the T11 reconciliation and whether the repo corpus is complete.",
+      "resolution": "ask"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "FV0",
+      "command": "make pr-check",
+      "pass_criteria": "exits 0 on a clean tree (tsc + vitest + biome all green) \u2014 no commit, no push",
+      "status": "pending"
+    },
+    {
+      "id": "FV1",
+      "command": "rm -rf node_modules && bash ops/scripts/link_local_l9_packages.sh && npx tsc -p tsconfig.check.json --noEmit",
+      "pass_criteria": "exit 0 with no PAT present and no hand-written stub files",
+      "status": "pending"
+    },
+    {
+      "id": "FV2",
+      "command": "npx vitest run",
+      "pass_criteria": "41 files / 434 tests pass, matching the counts observed during PR 61 remediation",
+      "status": "pending"
+    },
+    {
+      "id": "FV3",
+      "command": "npm run verify:all",
+      "pass_criteria": "terminates non-interactively and returns nonzero when a gate fails",
+      "status": "pending"
+    },
+    {
+      "id": "FV4",
+      "command": "Start a fresh session in SEO-Bot and inspect hook output",
+      "pass_criteria": "SessionStart hook output is present, proving registration works",
+      "status": "pending"
+    },
+    {
+      "id": "FV5",
+      "command": "git status --porcelain",
+      "pass_criteria": "package.json and package-lock.json unmodified after linking",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2",
+      "U4",
+      "U5",
+      "U6"
+    ],
+    "next_skill": "l9-plan-audit",
+    "stop_reason": "Build-ready on the critical path T1-T4, T9, T8, T10. U3 closed by direct probe (skill delivery mechanism identified and the reconciler run successfully: 51 created, 0 conflicts). U1/U2 gate the link script's shape and are cheap first-step probes; U4 and U6 are operator questions; U5 decides whether T8 clears the biome debt or records it."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "SEO-Bot/.claude/settings.json",
+      "SEO-Bot/.claude/hooks/session-start.sh",
+      "SEO-Bot/scripts/ensure-npm-auth.sh",
+      "SEO-Bot/package.json (scripts block only)",
+      "SEO-Bot/AGENTS.md",
+      "SEO-Bot/RUNBOOK.md",
+      "SEO-Bot/biome.json",
+      "Cursor-Governance/ops/scripts/link_local_l9_packages.sh",
+      "Cursor-Governance/ops/scripts/l9_package_sources.yaml",
+      "Cursor-Governance/ops/secrets/README.md",
+      "Website-Bot/.claude/settings.json",
+      "LLM-Router/.claude/settings.json",
+      "$HOME/.claude/settings.json",
+      "Cursor-Governance/environment/agents/adapters/claude-code/install.sh",
+      "Cursor-Governance/ops/generated/skill-registry.json"
+    ],
+    "must_not_modify": [
+      "Cursor-Governance/ops/secrets/surface_trust.py",
+      "Cursor-Governance/ops/secrets/resolve_secret.py",
+      "Cursor-Governance/ops/secrets/authed_npm.sh",
+      "Cursor-Governance/ops/secrets/capabilities.yaml",
+      "SEO-Bot/.github/workflows/*",
+      "SEO-Bot/package-lock.json",
+      "SEO-Bot/src/**",
+      "SEO-Bot/tests/**"
+    ],
+    "preserved_contracts": [
+      "A model-controlled surface never receives a PAT (surface_trust.require_trusted)",
+      "SessionStart hooks soft-fail and always exit 0",
+      "CI installs published artifacts via npm ci and remains the authority on green",
+      "package.json and package-lock.json stay byte-identical to main during local linking"
+    ],
+    "validation_commands": [
+      "npx tsc -p tsconfig.check.json --noEmit",
+      "npx vitest run",
+      "npm run verify:all",
+      "git status --porcelain",
+      "python3 ops/scripts/reconcile_claude_l9_skills.py --root . --scope user --check"
+    ]
+  }
+}
