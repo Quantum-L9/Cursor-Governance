@@ -41,7 +41,9 @@ from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
 CAMPAIGN_ID = str(READY_SEED["campaign_id"])
 
 
-class PrepareResumeTests(unittest.TestCase):
+class PrepareFixture(unittest.TestCase):
+    """A Ready campaign that can be prepared repeatedly in a temp directory."""
+
     @classmethod
     def setUpClass(cls) -> None:
         cls.mod = _load("run_campaign_resume", SCRIPT)
@@ -80,6 +82,14 @@ class PrepareResumeTests(unittest.TestCase):
             self._prepare(entry, root=root, l9=l9, primary=tmp / "primary")
         return l9, entry
 
+    def _prepare_once(self, tmp: Path) -> tuple[Path, Any]:
+        root, entry, l9 = self._fixture(tmp)
+        with unittest.mock.patch.dict("os.environ", {**os.environ, "L9_CAMPAIGN_UNTIL_DEBUG": "1"}):
+            report = self._prepare(entry, root=root, l9=l9, primary=tmp / "primary")
+        return l9, report
+
+
+class PrepareResumeTests(PrepareFixture):
     def test_repeating_prepare_does_not_quarantine_the_live_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             l9, _ = self._prepare_twice(Path(raw))
@@ -154,6 +164,48 @@ class PrepareResumeTests(unittest.TestCase):
                 "compile was skipped even though its blueprint had been deleted",
             )
             self.assertTrue(Path(report.blueprint).is_dir(), "blueprint was not rebuilt")
+
+
+class LocalAcceptanceTests(PrepareFixture):
+    """FAST local acceptance must be auditable, and must not travel."""
+
+    def test_fast_prepare_records_what_the_acceptance_rests_on(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            l9, _ = self._prepare_once(Path(raw))
+
+            record = _local_acceptance(l9)
+            self.assertEqual(record["status"], "LOCAL_ACCEPTED")
+            self.assertEqual(record["basis"]["compile"]["status"], "PASS")
+            self.assertEqual(record["basis"]["launchability"]["status"], "PASS")
+            self.assertTrue(
+                str(record["basis"]["compile"]["key"]).strip(),
+                "acceptance recorded no fingerprint for the compile it rests on",
+            )
+            self.assertTrue(str(record["revision"]).strip())
+
+    def test_local_acceptance_is_scoped_away_from_publish(self) -> None:
+        """The record exists to be auditable, not to be reusable as authority."""
+        with tempfile.TemporaryDirectory() as raw:
+            l9, _ = self._prepare_once(Path(raw))
+
+            record = _local_acceptance(l9)
+            self.assertEqual(record["authority"], "local_only")
+            self.assertEqual(sorted(record["not_sufficient_for"]), ["deploy", "merge", "publish"])
+
+    def test_preparation_never_reaches_a_publication_stage(self) -> None:
+        """Preparation stops at arm; nothing it does may push, merge or deploy."""
+        with tempfile.TemporaryDirectory() as raw:
+            _, report = self._prepare_once(Path(raw))
+
+            for forbidden in ("pr", "close", "execute"):
+                self.assertNotIn(forbidden, report.stages_completed)
+
+
+def _local_acceptance(l9: Path) -> dict[str, Any]:
+    path = l9 / "primed" / CAMPAIGN_ID / "LOCAL_ACCEPTANCE.json"
+    if not path.is_file():
+        raise AssertionError(f"no local acceptance recorded at {path}")
+    return dict(json.loads(path.read_text(encoding="utf-8")))
 
 
 def _prepare_state(l9: Path) -> dict[str, Any]:

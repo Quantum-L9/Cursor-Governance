@@ -3141,6 +3141,18 @@ def _run_campaign_stages(
                 else:
                     default_admit(blueprint, revision=host_revision)
             staged.value = {"revision": host_revision}
+    if fast:
+        # An acceptance nobody typed still has to be auditable. Record the two
+        # facts it rests on, scoped local_only so publish cannot read it as
+        # authority for leaving this machine.
+        prepare.record_local_acceptance(
+            primed_root / campaign_id / "LOCAL_ACCEPTANCE.json",
+            campaign_id=campaign_id,
+            revision=host_revision,
+            compile_key=compile_input,
+            launchability=report.launchability,
+        )
+        log(f"accept {prepare.LOCAL_ACCEPTED} (local_only: compile PASS + launchability PASS)")
     report.stages_completed.append("admit")
     if not should_run(until, "bootstrap"):
         write_launch_pointer(

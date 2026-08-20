@@ -36,6 +36,12 @@ if str(_SCRIPT_DIR) not in sys.path:
 from pe_timing import write_json_atomic  # noqa: E402 - sibling, after the sys.path guard
 
 PREPARE_STATE_SCHEMA = "program-execution.prepare-state.v1"
+LOCAL_ACCEPTANCE_SCHEMA = "program-execution.local-acceptance.v1"
+LOCAL_ACCEPTED = "LOCAL_ACCEPTED"
+
+# The three transitions that must never read a local acceptance as authority.
+# They leave the machine, so they re-derive acceptance strictly.
+NOT_SUFFICIENT_FOR = ("publish", "merge", "deploy")
 
 # Reasons a stage ran. `REUSED` is the only one that skips work; the rest are
 # the vocabulary of "why did preparation do that again?".
@@ -44,6 +50,45 @@ NO_RECORD = "no_prior_record"
 INPUT_CHANGED = "input_changed"
 OUTPUT_MISSING = "output_missing"
 CACHE_DISABLED = "cache_disabled"
+
+
+def record_local_acceptance(
+    path: Path,
+    *,
+    campaign_id: str,
+    revision: str,
+    compile_key: str,
+    launchability: dict[str, Any],
+) -> Path:
+    """Write the provenance for an acceptance granted by local evidence alone.
+
+    In FAST local mode a campaign is accepted on exactly two facts: it compiled,
+    and it is launchable. Those are enough to start work on this machine and are
+    deliberately not enough to leave it, so the record names the facts and the
+    fingerprint they were established at rather than asserting a bare verdict.
+
+    The record is scoped `local_only`. It exists so that an acceptance nobody
+    typed is still auditable -- not so that publish can skip its own checks.
+    """
+    return write_json_atomic(
+        path,
+        {
+            "schema": LOCAL_ACCEPTANCE_SCHEMA,
+            "status": LOCAL_ACCEPTED,
+            "campaign_id": campaign_id,
+            "authority": "local_only",
+            "not_sufficient_for": list(NOT_SUFFICIENT_FOR),
+            "revision": revision,
+            "basis": {
+                "compile": {"status": "PASS", "key": compile_key},
+                "launchability": {
+                    "status": "PASS" if launchability.get("launchable") else "FAIL",
+                    "task_count": launchability.get("task_count"),
+                    "inferred": bool(launchability.get("inferred")),
+                },
+            },
+        },
+    )
 
 
 @dataclass(frozen=True)
