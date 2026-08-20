@@ -1294,6 +1294,13 @@ def default_authorize_and_merge(host_repo: str, number: int) -> dict[str, Any]:
     return {"output": merge.stdout.strip()}
 
 
+def campaign_source_path(worktree: Path, campaign_id: str) -> Path:
+    """Where the emitted campaign source lives inside a host worktree."""
+    return (
+        worktree / "environment/program-execution/campaigns" / campaign_id / "CAMPAIGN_SOURCE.yaml"
+    )
+
+
 def assert_allowed_campaign_dir(worktree: Path, campaign_id: str) -> None:
     campaign_dir = worktree / "environment/program-execution/campaigns" / campaign_id
     if not campaign_dir.is_dir():
@@ -2837,6 +2844,16 @@ def _run_campaign_stages(
         )
     primed_root = l9_home / "primed"
     cache = timing.StageCache(primed_root / campaign_id, enabled=fast)
+    # The cache and the prepare-state record live under `primed/`, deliberately
+    # outside the pec workspace and the blueprint: those two get stepped aside on
+    # rebuild, and evidence of what was already prepared must survive that.
+    prepare = _load_script("pe_prepare_state", PE_ROOT / "scripts/pe_prepare_state.py")
+    reuse = prepare.PrepareCache(
+        cache,
+        prepare.PrepareState.load(
+            primed_root / campaign_id / "PREPARE_STATE.json", campaign_id=campaign_id
+        ),
+    )
     stack_fn = hooks.context7_stack or default_context7_stack
     log(f"stack-proof {campaign_id}")
     with timer.stage("stack_proof") as entry:
@@ -2894,16 +2911,32 @@ def _run_campaign_stages(
             )
         log("compiler: compile_campaign_source (direct, no activation rebuild)")
         log(f"emit {campaign_id} into {write_root}")
-        with timer.stage("emit"):
-            with traced(trace, "compile", "place_campaign_source"):
-                place_campaign_source(campaign_source_doc, write_root, campaign_id)
+        emitted = campaign_source_path(write_root, campaign_id)
+        emit_key = timing.fingerprint(campaign_source_doc, str(write_root))
+        with reuse.stage(timer, "emit", emit_key, outputs=[emitted]) as staged:
+            if not staged.reused:
+                with traced(trace, "compile", "place_campaign_source"):
+                    place_campaign_source(campaign_source_doc, write_root, campaign_id)
+                staged.value = {"path": str(emitted)}
     else:
         plan_fn = hooks.plan_window or default_plan_window
         log(f"plan-window {campaign_id}")
-        with timer.stage("plan_window"):
-            with traced(trace, "planning", "plan_window") as planned:
-                plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
-                planned["plan_status"] = str(plan_receipt.get("plan_status") or "")
+        plan_key = timing.fingerprint(seed, stack_proof_path)
+
+        def _planned_intent_survives(receipt: Any) -> bool:
+            # The receipt is only reusable while the intent it projected is still
+            # on disk; the next stage reads that file.
+            declared = str((receipt or {}).get("intent_path") or "")
+            return not declared or Path(declared).is_file()
+
+        with reuse.stage(timer, "plan_window", plan_key, verify=_planned_intent_survives) as staged:
+            if staged.reused:
+                plan_receipt = staged.value
+            else:
+                with traced(trace, "planning", "plan_window") as planned:
+                    plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
+                    planned["plan_status"] = str(plan_receipt.get("plan_status") or "")
+                staged.value = plan_receipt
         projected_intent = Path(str(plan_receipt.get("intent_path") or resolved_intent))
         if str(plan_receipt.get("plan_status") or "") not in {"Ready", "ConditionallyReady"}:
             if hooks.compile_activation is None:
@@ -2912,12 +2945,14 @@ def _run_campaign_stages(
                     "ConditionallyReady; refuse seal"
                 )
         log(f"emit {campaign_id} into {write_root}")
-        with timer.stage("emit"):
-            with traced(trace, "compile", "compile_activation"):
-                compile_activation(
-                    projected_intent if projected_intent.is_file() else resolved_intent,
-                    write_root,
-                )
+        activation_input = projected_intent if projected_intent.is_file() else resolved_intent
+        emitted = campaign_source_path(write_root, campaign_id)
+        emit_key = timing.fingerprint(activation_input, str(write_root))
+        with reuse.stage(timer, "emit", emit_key, outputs=[emitted]) as staged:
+            if not staged.reused:
+                with traced(trace, "compile", "compile_activation"):
+                    compile_activation(activation_input, write_root)
+                staged.value = {"path": str(emitted)}
     assert_allowed_campaign_dir(write_root, campaign_id)
     target_worktree = str(l9_home / "program-worktrees" / campaign_id)
     mark_host_campaign_active(
@@ -2941,48 +2976,80 @@ def _run_campaign_stages(
 
     quarantine_occupied(Path(report.pec_workspace), trace=trace)
     quarantine_occupied(Path(report.blueprint), trace=trace)
-    source = (
-        write_root
-        / "environment/program-execution/campaigns"
-        / campaign_id
-        / "CAMPAIGN_SOURCE.yaml"
-    )
+    source = campaign_source_path(write_root, campaign_id)
     blueprint = Path(report.blueprint)
     log(f"blueprint {blueprint}")
     allowlist = write_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
     compile_input = pe_trace.fingerprint(source, allowlist, stack_proof_path)
-    with timer.stage("compile"):
-        with traced(trace, "compile", "compile_campaign_source", input_fingerprint=compile_input):
-            if hooks.compile_source is not None:
-                hooks.compile_source(source, blueprint)
-            else:
-                default_compile_source(
-                    source,
-                    blueprint,
-                    allowlist_path=allowlist,
-                    stack_proof=stack_proof_path,
-                )
-        annotate_phase0_without_forging_ack(blueprint)
-    with timer.stage("validate_blueprint"):
-        validate = hooks.validate_blueprint or default_validate_blueprint
-        with traced(
-            trace,
-            "blueprint",
-            "blueprint_validation",
-            input_fingerprint=blueprint_fingerprint(blueprint),
-        ) as validated:
-            errors = validate(blueprint)
-            validated["error_count"] = len(errors)
-            if errors:
-                validated["error_code"] = "BLUEPRINT_VALIDATION_FAILED"
-                validated["error_message"] = "; ".join(errors)
+    with reuse.stage(timer, "compile", compile_input, outputs=[blueprint]) as staged:
+        if not staged.reused:
+            with traced(
+                trace, "compile", "compile_campaign_source", input_fingerprint=compile_input
+            ):
+                if hooks.compile_source is not None:
+                    hooks.compile_source(source, blueprint)
+                else:
+                    default_compile_source(
+                        source,
+                        blueprint,
+                        allowlist_path=allowlist,
+                        stack_proof=stack_proof_path,
+                    )
+            annotate_phase0_without_forging_ack(blueprint)
+            # Mint a token for this particular compiled blueprint. Stages that go
+            # on to mutate the blueprint key on it rather than on compile's
+            # inputs: identical inputs rebuild an identical -- but freshly
+            # un-mutated -- blueprint, and keying on inputs alone would let those
+            # stages skip work the new blueprint has not had done to it.
+            staged.value = {
+                "blueprint": str(blueprint),
+                "generation": timing.fingerprint(compile_input, datetime.now(UTC).isoformat()),
+            }
+    compile_generation = str((staged.value or {}).get("generation") or compile_input)
+
+    # Validation is a pure function of blueprint content, so the compiled
+    # fingerprint is the whole key. A blueprint that validated once does not
+    # need re-validating until it changes.
+    validate_key = blueprint_fingerprint(blueprint)
+    with reuse.stage(timer, "validate_blueprint", validate_key) as staged:
+        if staged.reused:
+            errors = list(staged.value.get("errors") or [])
+        else:
+            validate = hooks.validate_blueprint or default_validate_blueprint
+            with traced(
+                trace,
+                "blueprint",
+                "blueprint_validation",
+                input_fingerprint=validate_key,
+            ) as validated:
+                errors = validate(blueprint)
+                validated["error_count"] = len(errors)
+                if errors:
+                    validated["error_code"] = "BLUEPRINT_VALIDATION_FAILED"
+                    validated["error_message"] = "; ".join(errors)
+            staged.value = {"errors": list(errors)}
     if errors:
         raise CampaignError("template validate failed: " + "; ".join(errors))
     log("template validate PASS")
-    with timer.stage("launchability"):
-        report.launchability = check_launchability(
-            blueprint, write_root, fast=fast, campaign_id=campaign_id
-        )
+
+    launch_receipt = blueprint / "launchability-report.json"
+
+    def _launch_receipt_survives(cached: Any) -> bool:
+        # A campaign with no task cards never writes a receipt, so only demand
+        # the file when the cached verdict says there was something to check.
+        if int((cached or {}).get("task_count") or 0) == 0:
+            return True
+        return launch_receipt.is_file()
+
+    launch_key = timing.fingerprint(validate_key, str(write_root), fast, campaign_id)
+    with reuse.stage(timer, "launchability", launch_key, verify=_launch_receipt_survives) as staged:
+        if staged.reused:
+            report.launchability = dict(staged.value)
+        else:
+            report.launchability = check_launchability(
+                blueprint, write_root, fast=fast, campaign_id=campaign_id
+            )
+            staged.value = dict(report.launchability)
     report.stages_completed.append("blueprint")
     if not should_run(until, "admit"):
         write_launch_pointer(
@@ -2996,10 +3063,24 @@ def _run_campaign_stages(
 
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
     target_path = Path(target_worktree)
+
+    def ensure_target_checkout_once() -> None:
+        """Provision the target checkout at most once while it stays present.
+
+        Only the provisioning is cached. The revision measured from the checkout
+        is admission evidence and is always read fresh: reusing a recorded SHA
+        would bind a campaign to a revision the checkout no longer has.
+        """
+        key = timing.fingerprint(str(target_path), repository_id)
+        with reuse.stage(timer, "target_checkout", key, outputs=[target_path]) as checkout:
+            if not checkout.reused:
+                with traced(trace, "workspace", "ensure_target_checkout"):
+                    default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+                checkout.value = {"path": str(target_path)}
+
     with timer.stage("admission_evidence") as entry:
         if hooks.admit is None:
-            with traced(trace, "workspace", "ensure_target_checkout"):
-                default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+            ensure_target_checkout_once()
             measured = measure_admission_evidence(target_path)
             entry["detail"] = measured
             if not measured.get("available"):
@@ -3014,12 +3095,17 @@ def _run_campaign_stages(
         else:
             host_revision = str((seed.get("target") or {}).get("repository_id") or host_repo)
     log(f"admit EVID-001 bind {host_revision}")
-    with timer.stage("accept"):
-        with traced(trace, "acceptance", "acceptance", metadata={"revision": host_revision}):
-            if hooks.admit is not None:
-                hooks.admit(blueprint)
-            else:
-                default_admit(blueprint, revision=host_revision)
+    # Keyed on the compiled blueprint instance plus the revision being bound, so
+    # a rebuilt blueprint is always admitted again and an unchanged one is not.
+    accept_key = timing.fingerprint(compile_generation, host_revision)
+    with reuse.stage(timer, "accept", accept_key, outputs=[blueprint]) as staged:
+        if not staged.reused:
+            with traced(trace, "acceptance", "acceptance", metadata={"revision": host_revision}):
+                if hooks.admit is not None:
+                    hooks.admit(blueprint)
+                else:
+                    default_admit(blueprint, revision=host_revision)
+            staged.value = {"revision": host_revision}
     report.stages_completed.append("admit")
     if not should_run(until, "bootstrap"):
         write_launch_pointer(
@@ -3079,8 +3165,7 @@ def _run_campaign_stages(
             if hooks.arm is not None:
                 hooks.arm(Path(report.pec_workspace), campaign_id)
             else:
-                with traced(trace, "workspace", "ensure_target_checkout"):
-                    default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+                ensure_target_checkout_once()
                 default_arm(
                     Path(report.pec_workspace),
                     campaign_id,
