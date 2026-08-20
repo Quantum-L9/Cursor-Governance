@@ -2175,6 +2175,16 @@ def check_launchability(
     if not tasks:
         return {"launchable": True, "task_count": 0, "findings": [], "skipped": "no_task_cards"}
     report = module.check_tasks(tasks, repo_root, infer=fast)
+    # Inference is only true if it lands in the artifact the contract is rendered
+    # from. Write it into the Task Cards now, while the blueprint is still ours
+    # to change -- after bootstrap freezes the lock it is too late, and the task
+    # would reach `pec verify` with nothing to run.
+    injected = module.apply_synthesized_validations(
+        blueprint, report.get("synthesized_validations") or {}
+    )
+    if injected:
+        report["injected_validations"] = injected
+        log(f"validations inferred and written into {len(injected)} task card(s)")
     receipt = blueprint / "launchability-report.json"
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -3334,6 +3344,15 @@ def _run_campaign_stages(
                 blueprint, write_root, fast=fast, campaign_id=campaign_id
             )
             staged.value = dict(report.launchability)
+    if report.launchability.get("injected_validations"):
+        # Inference just edited the Task Cards that validation had already read.
+        # Re-validate rather than arm a blueprint in a state nothing checked.
+        validate = hooks.validate_blueprint or default_validate_blueprint
+        with timer.stage("validate_blueprint_reinjected") as entry:
+            errors = validate(blueprint)
+            entry["detail"] = {"tasks": list(report.launchability["injected_validations"])}
+        if errors:
+            raise CampaignError("inferred validations broke the blueprint: " + "; ".join(errors))
     report.stages_completed.append("blueprint")
     if not should_run(until, "admit"):
         write_launch_pointer(
