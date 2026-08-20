@@ -189,7 +189,8 @@ class ResourceClassLintTests(unittest.TestCase):
         # own a pool, so one family saturating cannot starve another.
         declared = load_policy("resource-classes")["classes"]
         used = {item["resource_class"] for item in load_example("w7-actions.json")["actions"]}
-        self.assertTrue(used <= set(declared), msg=f"undeclared classes: {used - set(declared)}")
+        undeclared = used - set(declared)
+        self.assertSetEqual(set(), undeclared, msg=f"undeclared classes: {undeclared}")
         expected = {
             "repository_recon",
             "context_compile",
