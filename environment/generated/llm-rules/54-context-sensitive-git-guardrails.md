@@ -1,0 +1,72 @@
+---
+description: Git and destructive filesystem commands are judged by actual effect, target sensitivity, and provable recoverability — never by subcommand name.
+---
+
+# Context-sensitive git guardrails
+
+Contract `l9-context-sensitive-git-guardrails` v1.0.0. Brain:
+`ops/autonomy/git_guardrails.py`. Suite: `tests/ops/autonomy/test_git_guardrails.py`.
+
+A command name is not a risk. `git reset --hard` on a clean tree destroys
+nothing; `git clean -fd` over `build/` destroys nothing; the same commands over
+unrecoverable foreign edits destroy work permanently. Decide from four
+dimensions — **effect**, **sensitivity**, **recoverability**, **blast radius** —
+never from the subcommand.
+
+## Outcomes
+
+| Outcome | When |
+|---|---|
+| `ALLOW` | observation, or a destructive primitive whose target is proven disposable, generated, or clean |
+| `GUARD_THEN_ALLOW` | sensitive state affected **and** recovery is provable — observe, capture recovery, proceed |
+| `DENY_REQUIRES_HUMAN` | sensitive state affected and recovery is **not** provable |
+
+Human authorization is `L9_GIT_DESTRUCTIVE_AUTHORIZED=<reason>` with an explicit
+reason. A bare `1`/`true`/`yes` is not a reason, and an agent never issues it
+for itself.
+
+## MUST
+
+- Read-only git (`status`, `diff`, `log`, `show`, `ls-files`, `ls-remote`,
+  `archive`, `fetch`, `stash list`, `clean -nd`, …) runs unconditionally, even
+  with Graphiti, L4, and the policy evaluator all down.
+- Run `git clean -nd` before any forced clean and read the target list.
+- Keep diagnostic probes observational. `git status --porcelain`, `git diff`,
+  `git clean -nd` — never a mutation to measure state.
+- Prove ownership before calling state disposable: a session receipt, a change
+  manifest, or a deterministic regeneration contract. Never cwd, branch name,
+  or mtime.
+- Capture recovery as a pre-operation binary patch, a safety commit, or a
+  backup ref, and verify it before the destructive step.
+
+## MUST NOT
+
+- Use `git stash` as a safety probe, or as a generic pre-flight before another
+  command. Stash is an explicit task action or nothing.
+- Treat reflog entries or dangling objects as sufficient recovery proof.
+- Destroy recovery state while its value is still possible: `git gc --prune=now`,
+  `git prune`, `git reflog expire`, `git stash clear`.
+- Force-push without a lease, or force-with-lease onto a shared or protected
+  branch, or when the expected remote sha is unknown.
+- Delete a branch that carries commits reachable from no other ref, with no
+  backup ref.
+- `rm -rf` a target with an unresolved or empty variable expansion. An empty
+  `$VAR` deletes the parent.
+- Let ambiguity fail open. Unknown target + destructive effect = deny.
+
+## Not in scope
+
+Publish path (`make pr` only) stays `48-make-pr-remediation` and
+`88-l4-local-autonomy`. Foreign-work scoops and sacred WIP stay
+`49-shared-worktree-isolation`. This rule governs destruction, not workflow: a
+guardrail ALLOW is never permission to publish a different way.
+
+## Enforcement
+
+`ops/autonomy/local_execution_gate.py` (Claude PreToolUse + Cursor
+`beforeShellExecution`) evaluates every shell command through
+`git_guardrails.command_requires_human` **before** the git/gh workflow
+exemption. `worktree_isolation_gate` delegates forced-clean classification to
+the same brain.
+
+<!-- generated-from: rules/54-context-sensitive-git-guardrails.mdc; do-not-edit -->
