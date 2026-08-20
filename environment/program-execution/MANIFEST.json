@@ -1655,7 +1655,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "1b442c701012c5fbb1ac6f7d8ce4af8709e945d062bc13d96f81f59c1c6520fb"
+      "sha256": "eb16032dc7b45a460a52f10ca1e5c1bce816dbd2b492f71c24bdc49f5310d8fe"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1671,7 +1671,7 @@
     },
     {
       "path": "scripts/tests/pe_prepare_bench.py",
-      "sha256": "08509648f5e90cde21891c822d9da1df7aca3ab7e7d3fe139129f43869aea7eb"
+      "sha256": "98214556edfffe66c84f65a9c858bb04abaa41865e067352b823bd6b688130ee"
     },
     {
       "path": "scripts/tests/test_campaign_pr_copy.py",
@@ -1708,6 +1708,10 @@
     {
       "path": "scripts/tests/test_pe_trace.py",
       "sha256": "dafc51b650a2263511d866c90acb185ccf32f0e5807e6f2b205dbabdf08eb7bb"
+    },
+    {
+      "path": "scripts/tests/test_prepare_resumable.py",
+      "sha256": "b808ab0a99dd532e5ea3f7805a2d79acdcd6edd7183618ff1af12762ecd098a8"
     },
     {
       "path": "scripts/tests/test_replay_campaign.py",

@@ -1764,6 +1764,29 @@ def resumable_workspace(workspace: Path) -> bool:
     )
 
 
+def preparation_is_resumable(
+    *,
+    pec_workspace: Path,
+    blueprint: Path,
+    state: Any,
+    compile_key: str,
+) -> bool:
+    """True when the live runtime was prepared from exactly these inputs.
+
+    Resuming is only sound when all three agree: the pec runtime is live rather
+    than a draft leftover, its blueprint is still on disk, and the compile inputs
+    that produced it are the ones this run computed. A campaign whose source
+    moved is a different campaign wearing the same id, and must still be
+    quarantined rather than attached to.
+    """
+    if not resumable_workspace(pec_workspace):
+        return False
+    if not blueprint.is_dir():
+        return False
+    recorded = str((state.stages.get("compile") or {}).get("key") or "")
+    return bool(recorded) and recorded == compile_key
+
+
 def committed_changed_files(worktree: Path, base_sha: str, candidate_sha: str) -> list[str]:
     """Claim the diff git actually recorded, not the paths the task declared.
 
@@ -2974,13 +2997,25 @@ def _run_campaign_stages(
         )
         return report
 
-    quarantine_occupied(Path(report.pec_workspace), trace=trace)
-    quarantine_occupied(Path(report.blueprint), trace=trace)
     source = campaign_source_path(write_root, campaign_id)
     blueprint = Path(report.blueprint)
-    log(f"blueprint {blueprint}")
     allowlist = write_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
     compile_input = pe_trace.fingerprint(source, allowlist, stack_proof_path)
+    # Preparing an already-prepared campaign is the operation an operator repeats
+    # most often, and stepping the runtime aside to rebuild it unconditionally is
+    # what made the second run cost the same as the first. Step aside only when
+    # the live runtime did not come from these inputs.
+    if fast and preparation_is_resumable(
+        pec_workspace=Path(report.pec_workspace),
+        blueprint=blueprint,
+        state=reuse.state,
+        compile_key=compile_input,
+    ):
+        log(f"resume prepared runtime {report.pec_workspace} (compile inputs unchanged)")
+    else:
+        quarantine_occupied(Path(report.pec_workspace), trace=trace)
+        quarantine_occupied(Path(report.blueprint), trace=trace)
+    log(f"blueprint {blueprint}")
     with reuse.stage(timer, "compile", compile_input, outputs=[blueprint]) as staged:
         if not staged.reused:
             with traced(
@@ -3119,17 +3154,31 @@ def _run_campaign_stages(
 
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_workspace_path = Path(report.pec_workspace)
-    with timer.stage("bootstrap"):
-        with traced(
-            trace,
-            "bootstrap",
-            "pec_bootstrap",
-            input_fingerprint=blueprint_fingerprint(blueprint),
-        ):
-            with trace_stepped_aside(trace, pec_workspace_path):
-                pec_result = pec(pec_workspace_path, blueprint)
-            if trace is not None:
-                trace.rehome(pec_workspace_path)
+    # Bootstrap requires an empty workspace, so the live runtime is both its
+    # output and the proof it already ran. Verifying against that is what makes
+    # skipping it safe: a quarantined workspace fails the check and rebuilds.
+    bootstrap_key = timing.fingerprint(compile_generation, str(pec_workspace_path))
+    with reuse.stage(
+        timer,
+        "bootstrap",
+        bootstrap_key,
+        verify=lambda _: resumable_workspace(pec_workspace_path),
+    ) as staged:
+        if staged.reused:
+            pec_result = dict(staged.value or {})
+        else:
+            with traced(
+                trace,
+                "bootstrap",
+                "pec_bootstrap",
+                input_fingerprint=blueprint_fingerprint(blueprint),
+            ):
+                with trace_stepped_aside(trace, pec_workspace_path):
+                    pec_result = pec(pec_workspace_path, blueprint)
+                if trace is not None:
+                    trace.rehome(pec_workspace_path)
+            if not pec_result.get("draft"):
+                staged.value = dict(pec_result)
     if pec_result.get("draft"):
         raise CampaignError("pec --admission-draft is not a live campaign path")
     # Bootstrap requires an empty workspace, so timings only start persisting

@@ -132,8 +132,14 @@ def _prepare(mod: Any, entry: Path, *, root: Path, l9: Path, primary: Path) -> t
     return report, time.monotonic() - started
 
 
-def bench(task_count: int) -> dict[str, Any]:
-    """Prepare a fresh N-task campaign, then prepare it again. Report both."""
+def bench(task_count: int, *, repeat: int = 3) -> dict[str, Any]:
+    """Prepare a fresh N-task campaign, then prepare it again `repeat`-1 times.
+
+    Three runs rather than two, because the second run is not yet steady state:
+    the first run's admission mutates the blueprint after validation has already
+    been recorded against the pre-admission content, so run two re-validates
+    once and run three is the repeat cost an operator actually lives with.
+    """
     mod = _load(f"run_campaign_bench_{task_count}", SCRIPT)
     activate = _load(f"compile_activation_bench_{task_count}", ACTIVATE)
 
@@ -156,39 +162,32 @@ def bench(task_count: int) -> dict[str, Any]:
         target.mkdir(parents=True)
         _git_init(target)
 
-        result: dict[str, Any] = {"tasks": task_count}
+        result: dict[str, Any] = {"tasks": task_count, "runs": []}
         env = {"L9_CAMPAIGN_UNTIL_DEBUG": "1"}
         with unittest.mock.patch.dict("os.environ", {**os.environ, **env}):
-            cold_report, cold_elapsed = _prepare(
-                mod, entry, root=root, l9=l9, primary=tmp / "primary"
-            )
             workspace = l9 / "programs" / str(seed["campaign_id"])
-            cold_stages, cold_cached = _stage_timings(workspace)
-            result["cold"] = {
-                "seconds": round(cold_elapsed, 3),
-                "stages_completed": list(cold_report.stages_completed),
-                "stage_seconds": {k: round(v, 3) for k, v in cold_stages.items()},
-                "cached_stages": sorted(cold_cached),
-            }
-
-            # The warm run is the contract's real subject: same seed, same l9
-            # root, nothing changed. Any failure here is itself the finding, so
-            # record it rather than letting it abort the benchmark.
-            try:
-                warm_report, warm_elapsed = _prepare(
-                    mod, entry, root=root, l9=l9, primary=tmp / "primary"
+            for index in range(repeat):
+                # A failure on a repeat run is itself the measurement, so record
+                # it rather than letting it abort the whole benchmark.
+                try:
+                    report, elapsed = _prepare(
+                        mod, entry, root=root, l9=l9, primary=tmp / "primary"
+                    )
+                except Exception as exc:  # noqa: BLE001 - the failure IS the finding
+                    result["runs"].append(
+                        {"run": index + 1, "failed": f"{type(exc).__name__}: {exc}"}
+                    )
+                    break
+                stages, cached = _stage_timings(workspace)
+                result["runs"].append(
+                    {
+                        "run": index + 1,
+                        "seconds": round(elapsed, 3),
+                        "stages_completed": list(report.stages_completed),
+                        "stage_seconds": {k: round(v, 3) for k, v in stages.items()},
+                        "cached_stages": sorted(cached),
+                    }
                 )
-                warm_stages, warm_cached = _stage_timings(workspace)
-                result["warm"] = {
-                    "seconds": round(warm_elapsed, 3),
-                    "stages_completed": list(warm_report.stages_completed),
-                    "stage_seconds": {k: round(v, 3) for k, v in warm_stages.items()},
-                    "cached_stages": sorted(warm_cached),
-                }
-            except Exception as exc:  # noqa: BLE001 - the failure IS the measurement
-                result["warm"] = {
-                    "failed": f"{type(exc).__name__}: {exc}",
-                }
         return result
 
 
@@ -201,28 +200,38 @@ def main(argv: list[str] | None = None) -> int:
         default=[2, 7],
         help="task counts to benchmark (default: 2 7)",
     )
+    parser.add_argument(
+        "--repeat",
+        type=int,
+        default=3,
+        help="prepare invocations per campaign, first is cold (default: 3)",
+    )
     parser.add_argument("--json", action="store_true", help="emit the raw JSON report")
     args = parser.parse_args(argv)
 
-    report = {"prepare_last_stage": PREPARE_LAST_STAGE, "runs": []}
+    report: dict[str, Any] = {"prepare_last_stage": PREPARE_LAST_STAGE, "campaigns": []}
     for count in args.tasks:
-        outcome = bench(count)
-        report["runs"].append(outcome)
+        outcome = bench(count, repeat=args.repeat)
+        report["campaigns"].append(outcome)
         if args.json:
             continue
-        cold = outcome["cold"]
-        warm = outcome["warm"]
         print(f"\n=== {count} tasks ===")
-        print(f"cold: {cold['seconds']:>8.3f}s  stages={','.join(cold['stages_completed'])}")
-        for stage, seconds in sorted(cold["stage_seconds"].items(), key=lambda kv: -kv[1]):
-            print(f"        {stage:<22} {seconds:>8.3f}s")
-        if "failed" in warm:
-            print(f"warm: FAILED  {warm['failed']}")
-        else:
-            speedup = cold["seconds"] / warm["seconds"] if warm["seconds"] else float("inf")
-            print(f"warm: {warm['seconds']:>8.3f}s  ({speedup:.2f}x vs cold)")
-            hits = ",".join(warm["cached_stages"]) or "NONE"
-            print(f"        cache hits on warm run: {hits}")
+        cold_seconds = None
+        for run in outcome["runs"]:
+            label = "cold" if run["run"] == 1 else f"run {run['run']}"
+            if "failed" in run:
+                print(f"{label}: FAILED  {run['failed']}")
+                continue
+            if cold_seconds is None:
+                cold_seconds = run["seconds"]
+                print(f"{label}: {run['seconds']:>8.3f}s")
+                for stage, seconds in sorted(run["stage_seconds"].items(), key=lambda kv: -kv[1]):
+                    print(f"        {stage:<22} {seconds:>8.3f}s")
+                continue
+            speedup = cold_seconds / run["seconds"] if run["seconds"] else float("inf")
+            print(f"{label}: {run['seconds']:>8.3f}s  ({speedup:.2f}x vs cold)")
+            recomputed = sorted(set(run["stage_seconds"]) - set(run["cached_stages"]))
+            print(f"        recomputed: {','.join(recomputed) or 'NONE'}")
 
     if args.json:
         print(json.dumps(report, indent=2))
