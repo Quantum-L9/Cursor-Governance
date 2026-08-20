@@ -215,6 +215,56 @@ def check_tasks(
     }
 
 
+def apply_synthesized_validations(
+    blueprint_dir: Path, synthesized: dict[str, list[str]]
+) -> list[str]:
+    """Write inferred validations into the Task Cards they were inferred for.
+
+    Inference used to stop at the report: `--fast` said it would infer a
+    validation, the finding recorded what it inferred, and then the contract was
+    rendered from a task card that still declared none. The controller then
+    returned INCOMPLETE on a campaign whose own preparation had told the operator
+    it was handled -- the gap between the message and the artifact.
+
+    The entry is written as an ordinary `method: command` validation, because
+    that is what the lock and the rendered contract read. Its `VAL-INFERRED-*`
+    id is the only provenance the Task Card schema has room for
+    (`additionalProperties: false`), and it is enough to tell an operator
+    reading the card that they did not write this line.
+
+    Returns the task ids that were changed, so a caller can re-validate.
+    """
+    import yaml
+
+    cards = blueprint_dir / "TASK_CARDS.yaml"
+    if not synthesized or not cards.is_file():
+        return []
+    doc = yaml.safe_load(cards.read_text(encoding="utf-8")) or {}
+    changed: list[str] = []
+    for task in doc.get("tasks") or []:
+        commands = synthesized.get(str(task.get("id")))
+        if not commands or declared_validation_commands(task):
+            continue
+        entries = list(task.get("validation") or [])
+        for index, command in enumerate(commands, start=1):
+            entries.append(
+                {
+                    "id": f"VAL-INFERRED-{index:03d}",
+                    "method": "command",
+                    "command_or_inspection": command,
+                    "environment": "repo_local",
+                    "expected_result": "PASS",
+                }
+            )
+        task["validation"] = entries
+        changed.append(str(task.get("id")))
+    if changed:
+        cards.write_text(
+            yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=100), encoding="utf-8"
+        )
+    return sorted(changed)
+
+
 def blueprint_tasks(blueprint_dir: Path) -> list[dict[str, Any]]:
     """Read compiled Task Cards without importing the blueprint toolchain."""
     tasks_path = blueprint_dir / "tasks.json"
