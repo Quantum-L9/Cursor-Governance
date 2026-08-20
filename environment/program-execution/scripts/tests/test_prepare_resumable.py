@@ -201,6 +201,79 @@ class LocalAcceptanceTests(PrepareFixture):
                 self.assertNotIn(forbidden, report.stages_completed)
 
 
+class ScopedInvalidationTests(PrepareFixture):
+    """Re-preparing after a one-task edit must not rebuild the whole campaign."""
+
+    def _edit_task_validation(self, entry: Path, task_id: str) -> None:
+        import yaml
+
+        doc = yaml.safe_load(entry.read_text(encoding="utf-8"))
+        for task in doc["tasks"]:
+            if task["id"] == task_id:
+                task["validation"] = [{"command": "python3 -c 'print(2)'"}]
+        _dump(entry, doc)
+
+    def _prepare_across_an_edit(self, tmp: Path, task_id: str) -> tuple[Path, Path]:
+        root, entry, l9 = self._fixture(tmp)
+        with unittest.mock.patch.dict("os.environ", {**os.environ, "L9_CAMPAIGN_UNTIL_DEBUG": "1"}):
+            self._prepare(entry, root=root, l9=l9, primary=tmp / "primary")
+            self._edit_task_validation(entry, task_id)
+            self._prepare(entry, root=root, l9=l9, primary=tmp / "primary")
+        return l9, entry
+
+    def test_editing_one_task_does_not_quarantine_the_runtime(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            l9, _ = self._prepare_across_an_edit(Path(raw), "TASK-002")
+
+            stale = l9 / "programs" / "stale"
+            self.assertFalse(
+                stale.exists() and any(stale.iterdir()),
+                "a one-task definition edit rebuilt the whole runtime",
+            )
+
+    def test_the_edited_definition_is_adopted(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            l9, _ = self._prepare_across_an_edit(Path(raw), "TASK-002")
+
+            lock = json.loads(
+                (l9 / "programs" / CAMPAIGN_ID / "runtime" / "program-lock.json").read_text(
+                    encoding="utf-8"
+                )
+            )
+            edited = next(task for task in lock["tasks"] if task["id"] == "TASK-002")
+            self.assertEqual(edited["required_validation_commands"], ["python3 -c 'print(2)'"])
+
+    def test_a_change_outside_the_tasks_still_rebuilds_the_runtime(self) -> None:
+        """The safety half: task-scoped adoption must not absorb a new program."""
+
+        def edit_the_objective(entry: Path) -> None:
+            import yaml
+
+            doc = yaml.safe_load(entry.read_text(encoding="utf-8"))
+            doc["operator_directive"]["objective"] = "Something else entirely."
+            _dump(entry, doc)
+
+        with tempfile.TemporaryDirectory() as raw:
+            l9, _ = self._prepare_twice(Path(raw), mutate=edit_the_objective)
+
+            stale = l9 / "programs" / "stale"
+            self.assertTrue(
+                stale.is_dir() and any(stale.iterdir()),
+                "a changed set of tasks was adopted in place instead of rebuilt",
+            )
+
+    def test_the_relock_is_recorded_with_its_provenance(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            l9, _ = self._prepare_across_an_edit(Path(raw), "TASK-002")
+
+            provenance = l9 / "programs" / CAMPAIGN_ID / "runtime" / "definition-provenance.jsonl"
+            self.assertTrue(
+                provenance.is_file(), "no provenance recorded for the definition change"
+            )
+            record = json.loads(provenance.read_text(encoding="utf-8").strip().splitlines()[-1])
+            self.assertEqual(sorted(record["definitions"]), ["TASK-002"])
+
+
 def _local_acceptance(l9: Path) -> dict[str, Any]:
     path = l9 / "primed" / CAMPAIGN_ID / "LOCAL_ACCEPTANCE.json"
     if not path.is_file():

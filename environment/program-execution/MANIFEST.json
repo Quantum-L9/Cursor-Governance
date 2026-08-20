@@ -1607,7 +1607,7 @@
     },
     {
       "path": "scripts/pe_prepare_state.py",
-      "sha256": "0bd54e38e8271d91d43fdbb8d3f7823dc633fd7e23bd24c960f28716512c3716"
+      "sha256": "1d7f82581e6fb1e9afdbf0dfe60630f072b1e3f00487b6ae7c4e674556025a78"
     },
     {
       "path": "scripts/pe_timing.py",
@@ -1655,7 +1655,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "63cf7674716b99fdba0c353a36a55338a191520e9ae29219828c51481b829b10"
+      "sha256": "cf0d50ed4dfef8a8d228642b53276265a86daf50ef256a79ad16f04a90249828"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1715,7 +1715,7 @@
     },
     {
       "path": "scripts/tests/test_prepare_resumable.py",
-      "sha256": "50376c8386fe361d8ae6ed4132ad54566ceb76148f81ab79b11719bc84859d58"
+      "sha256": "cc5475c912bc4cec2d69e863536659d37b521384de4762af13a2c4082ca89f49"
     },
     {
       "path": "scripts/tests/test_replay_campaign.py",

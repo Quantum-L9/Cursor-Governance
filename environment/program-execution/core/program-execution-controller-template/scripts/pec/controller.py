@@ -7,6 +7,7 @@ import re
 import shutil
 import subprocess
 import uuid
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -334,7 +335,9 @@ def bootstrap(
     }
 
 
-def relock_definitions(workspace: Path, *, actor: str) -> dict[str, Any]:
+def relock_definitions(
+    workspace: Path, *, actor: str, task_ids: Iterable[str] | None = None
+) -> dict[str, Any]:
     """Adopt edited task definitions without discarding execution history.
 
     Definition state and execution history were conflated: an edited task card
@@ -347,11 +350,23 @@ def relock_definitions(workspace: Path, *, actor: str) -> dict[str, Any]:
     exists and re-rendering it is cheap. A task already COMPLETED keeps its
     state and its receipts: the work happened, and the provenance record below
     is what makes "which definition produced that code" answerable afterwards.
+
+    Which definitions moved is either inferred here from the blueprint on disk,
+    or named by the caller. Naming them exists because inference reads compiled
+    blueprint files, and admission annotates several of those after the lock
+    freezes them -- so on a live campaign every rerun looks program-wide even
+    when the operator edited one task card. A caller that compared the authored
+    campaign source knows better than the annotated output does, and takes
+    responsibility for that comparison by passing the ids.
     """
     db, ledger = open_runtime(workspace)
     lock_path = workspace / "runtime" / "program-lock.json"
     try:
-        stale = stale_task_ids(lock_path)
+        stale = (
+            stale_task_ids(lock_path)
+            if task_ids is None
+            else sorted(dict.fromkeys(str(item) for item in task_ids))
+        )
         if stale is None:
             raise ControllerError(
                 "definition drift cannot be attributed to individual tasks "

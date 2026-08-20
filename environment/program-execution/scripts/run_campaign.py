@@ -1859,6 +1859,105 @@ def resumable_workspace(workspace: Path) -> bool:
     )
 
 
+def runtime_already_admitted(pec_workspace: Path, blueprint: Path) -> bool:
+    """Is this blueprint already frozen into the live runtime's lock?
+
+    Acceptance precedes bootstrap by design, and `accept_blueprint` refuses to
+    re-accept a blueprint some workspace has already locked. That refusal is
+    correct for a fresh campaign and wrong for a resumed one, where the program
+    was admitted on an earlier run and the change since then has been recorded
+    per task by the relock.
+    """
+    lock_path = pec_workspace / "runtime" / "program-lock.json"
+    if not lock_path.is_file():
+        return False
+    try:
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    recorded = str(lock.get("blueprint_root") or "")
+    return bool(recorded) and Path(recorded).resolve() == blueprint.resolve()
+
+
+def campaign_source_shape(source: Path) -> dict[str, Any] | None:
+    """Digest the authored campaign source as a body plus one digest per task.
+
+    This is the artifact an operator actually edits, so it is the only honest
+    place to ask what they changed. The compiled blueprint cannot answer it:
+    admission and acceptance annotate several of its files after the lock has
+    frozen them, so a rerun that recompiles from an unchanged source still
+    produces different digests for `PROGRAM.yaml` and `EVIDENCE_CATALOG.yaml`,
+    and a per-file comparison reads one edited task card as a program-wide
+    change.
+    """
+    doc = load_yaml(source)
+    if not isinstance(doc, dict):
+        return None
+    body = {key: value for key, value in doc.items() if key != "tasks"}
+    tasks = doc.get("tasks") or []
+    if not isinstance(tasks, list):
+        return None
+    digests: dict[str, str] = {}
+    for task in tasks:
+        if not isinstance(task, dict) or not task.get("id"):
+            return None
+        digests[str(task["id"])] = pe_trace.fingerprint(task)
+    return {"body": pe_trace.fingerprint(body), "tasks": digests}
+
+
+def edited_task_ids(current: dict[str, Any], recorded: Any) -> list[str] | None:
+    """Which task definitions moved, or None if the change is wider than tasks.
+
+    Wider means anything a live runtime cannot absorb per task: the program body,
+    or the set of task ids. Those decide the shape of the program the lock froze,
+    so adopting them in place would leave the runtime describing a program that
+    no longer exists.
+    """
+    if not isinstance(recorded, dict) or not isinstance(recorded.get("tasks"), dict):
+        return None
+    if current["body"] != recorded.get("body"):
+        return None
+    before: dict[str, Any] = recorded["tasks"]
+    if set(before) != set(current["tasks"]):
+        return None
+    return sorted(
+        task_id for task_id, value in current["tasks"].items() if before[task_id] != value
+    )
+
+
+def adopt_changed_definitions(workspace: Path, task_ids: Iterable[str]) -> dict[str, Any] | None:
+    """Relock the named task definitions, or None if the runtime refuses.
+
+    The caller decides *which* definitions moved, from the authored source; the
+    controller decides whether this runtime can absorb them, by attempting the
+    absorption. `pec relock` refuses without mutating, so a refusal is the
+    signal to quarantine and rebuild rather than an error.
+    """
+    named: list[str] = []
+    for task_id in task_ids:
+        named.extend(["--task", str(task_id)])
+    result = run_cmd(
+        [
+            sys.executable,
+            str(PEC),
+            "relock",
+            "--workspace",
+            str(workspace),
+            "--actor",
+            "make-campaign",
+            *named,
+        ],
+        timeout=PEC_TIMEOUT_S,
+    )
+    if result.returncode != 0:
+        return None
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
 def preparation_is_resumable(
     *,
     pec_workspace: Path,
@@ -3105,14 +3204,28 @@ def _run_campaign_stages(
     # most often, and stepping the runtime aside to rebuild it unconditionally is
     # what made the second run cost the same as the first. Step aside only when
     # the live runtime did not come from these inputs.
-    if fast and preparation_is_resumable(
+    unchanged = fast and preparation_is_resumable(
         pec_workspace=Path(report.pec_workspace),
         blueprint=blueprint,
         state=reuse.state,
         compile_key=compile_input,
+    )
+    # A changed source is not necessarily a different campaign. Ask the source
+    # itself what moved: editing one task's definition is a change a live runtime
+    # can absorb per task, while the program body or the set of tasks changes the
+    # shape of the program the lock froze and cannot be absorbed at all.
+    shape = campaign_source_shape(source)
+    edited: list[str] | None = None
+    if (
+        fast
+        and not unchanged
+        and shape is not None
+        and resumable_workspace(Path(report.pec_workspace))
     ):
+        edited = edited_task_ids(shape, (reuse.recorded_value("compile") or {}).get("source"))
+    if unchanged:
         log(f"resume prepared runtime {report.pec_workspace} (compile inputs unchanged)")
-    else:
+    elif edited is None:
         quarantine_occupied(Path(report.pec_workspace), trace=trace)
         quarantine_occupied(Path(report.blueprint), trace=trace)
     log(f"blueprint {blueprint}")
@@ -3139,8 +3252,35 @@ def _run_campaign_stages(
             staged.value = {
                 "blueprint": str(blueprint),
                 "generation": timing.fingerprint(compile_input, datetime.now(UTC).isoformat()),
+                # What the program was compiled from, per task. The next run
+                # compares its own source against this to decide whether the
+                # drift is absorbable.
+                "source": shape,
             }
     compile_generation = str((staged.value or {}).get("generation") or compile_input)
+
+    # The edited definitions are adopted after compile, because the relock reads
+    # the definitions out of the blueprint it is adopting. The runtime keeps the
+    # history of everything already done; only the tasks whose definitions moved
+    # lose their contract bindings.
+    scoped_resume = False
+    if not unchanged and edited is not None:
+        with timer.stage("relock") as entry:
+            adopted = (
+                adopt_changed_definitions(Path(report.pec_workspace), edited) if edited else {}
+            )
+            entry["detail"] = adopted or {"status": "REFUSED" if edited else "CURRENT"}
+        if adopted is None:
+            log("runtime cannot absorb the edited definitions; rebuilding from the new blueprint")
+            # The blueprint is already the new one, so only the runtime is
+            # stepped aside; bootstrap then freezes what compile just produced.
+            quarantine_occupied(Path(report.pec_workspace), trace=trace)
+        else:
+            scoped_resume = True
+            relocked = ", ".join(adopted.get("relocked") or edited) or "none"
+            log(
+                f"resume prepared runtime {report.pec_workspace} (definitions relocked: {relocked})"
+            )
 
     # Validation is a pure function of blueprint content, so the compiled
     # fingerprint is the whole key. A blueprint that validated once does not
@@ -3233,8 +3373,16 @@ def _run_campaign_stages(
     # Keyed on the compiled blueprint instance plus the revision being bound, so
     # a rebuilt blueprint is always admitted again and an unchanged one is not.
     accept_key = timing.fingerprint(compile_generation, host_revision)
+    admitted_already = fast and runtime_already_admitted(Path(report.pec_workspace), blueprint)
     with reuse.stage(timer, "accept", accept_key, outputs=[blueprint]) as staged:
-        if not staged.reused:
+        if staged.reused:
+            pass
+        elif admitted_already:
+            # The program was admitted on an earlier run and the live runtime is
+            # locked to this blueprint. Re-accepting it is refused, and would add
+            # nothing: what changed since is recorded per task by the relock.
+            staged.value = {"revision": host_revision, "admitted_by": "existing_lock"}
+        else:
             with traced(trace, "acceptance", "acceptance", metadata={"revision": host_revision}):
                 if hooks.admit is not None:
                     hooks.admit(blueprint)
@@ -3278,6 +3426,13 @@ def _run_campaign_stages(
     ) as staged:
         if staged.reused:
             pec_result = dict(staged.value or {})
+        elif scoped_resume:
+            # The compiled blueprint changed, so the key moved, but this runtime
+            # was bootstrapped from it and the moved definitions were relocked
+            # into it. Bootstrapping again would refuse: it requires an empty
+            # workspace, and emptying this one is what discards the history.
+            pec_result = {"ok": True, "draft": False, "output": "relocked live runtime"}
+            staged.value = dict(pec_result)
         else:
             with traced(
                 trace,

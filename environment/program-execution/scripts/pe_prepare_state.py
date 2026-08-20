@@ -214,6 +214,20 @@ class PrepareCache:
     def store(self, stage: str, key: str, value: Any) -> None:
         self.cache.put(stage, key, value)
 
+    def recorded_value(self, stage: str) -> Any:
+        """What `stage` produced last time, whatever key it ran under.
+
+        `decide` deliberately cannot answer this: it only reuses a value when the
+        inputs match. A caller that wants to know *how* the inputs differ needs
+        the stale value itself, so it can compare the two rather than being told
+        they are not equal.
+        """
+        prior = self.state.stages.get(stage) or {}
+        key = prior.get("key")
+        if not key or not getattr(self.cache, "enabled", False):
+            return None
+        return self.cache.get(stage, str(key))
+
     @contextmanager
     def stage(
         self,
