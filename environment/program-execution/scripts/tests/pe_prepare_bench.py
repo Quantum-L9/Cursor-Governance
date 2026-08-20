@@ -90,21 +90,24 @@ def _seed(task_count: int, *, campaign_id: str = "demo-activate-v1") -> dict[str
     }
 
 
-def _stage_timings(workspace: Path) -> tuple[dict[str, float], set[str]]:
-    """Per-stage seconds as PE recorded them, plus which stages reported a hit.
+def _stage_timings(workspace: Path) -> tuple[dict[str, float], set[str], dict[str, str]]:
+    """Per-stage seconds, which stages reported a hit, and why the rest ran.
 
-    Reads `duration_s` and the `cached` flag written by `pe_timing.StageTimer`.
-    Returns ({}, set()) when the campaign recorded nothing.
+    Reads `duration_s`, the `cached` flag, and the recorded decision written by
+    `pe_timing.StageTimer`. A benchmark that reports a repeat cost without
+    saying which stage refused to be reused, and why, cannot be acted on.
+    Returns empty results when the campaign recorded nothing.
     """
     timings = workspace / "runtime/TIMINGS.json"
     if not timings.is_file():
-        return {}, set()
+        return {}, set(), {}
     try:
         doc = json.loads(timings.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return {}, set()
+        return {}, set(), {}
     out: dict[str, float] = {}
     cached: set[str] = set()
+    reasons: dict[str, str] = {}
     for entry in doc.get("stages") or []:
         stage = entry.get("stage")
         seconds = entry.get("duration_s")
@@ -115,7 +118,9 @@ def _stage_timings(workspace: Path) -> tuple[dict[str, float], set[str]]:
         out[str(stage)] = out.get(str(stage), 0.0) + float(seconds)
         if entry.get("cached"):
             cached.add(str(stage))
-    return out, cached
+        else:
+            reasons[str(stage)] = str((entry.get("detail") or {}).get("reason") or "always_runs")
+    return out, cached, reasons
 
 
 def _prepare(mod: Any, entry: Path, *, root: Path, l9: Path, primary: Path) -> tuple[Any, float]:
@@ -178,7 +183,7 @@ def bench(task_count: int, *, repeat: int = 3) -> dict[str, Any]:
                         {"run": index + 1, "failed": f"{type(exc).__name__}: {exc}"}
                     )
                     break
-                stages, cached = _stage_timings(workspace)
+                stages, cached, reasons = _stage_timings(workspace)
                 result["runs"].append(
                     {
                         "run": index + 1,
@@ -186,6 +191,7 @@ def bench(task_count: int, *, repeat: int = 3) -> dict[str, Any]:
                         "stages_completed": list(report.stages_completed),
                         "stage_seconds": {k: round(v, 3) for k, v in stages.items()},
                         "cached_stages": sorted(cached),
+                        "recompute_reasons": reasons,
                     }
                 )
         return result
@@ -231,7 +237,11 @@ def main(argv: list[str] | None = None) -> int:
             speedup = cold_seconds / run["seconds"] if run["seconds"] else float("inf")
             print(f"{label}: {run['seconds']:>8.3f}s  ({speedup:.2f}x vs cold)")
             recomputed = sorted(set(run["stage_seconds"]) - set(run["cached_stages"]))
-            print(f"        recomputed: {','.join(recomputed) or 'NONE'}")
+            if not recomputed:
+                print("        recomputed: NONE")
+            for stage in recomputed:
+                reason = run.get("recompute_reasons", {}).get(stage, "unknown")
+                print(f"        recomputed {stage:<22} {reason}")
 
     if args.json:
         print(json.dumps(report, indent=2))

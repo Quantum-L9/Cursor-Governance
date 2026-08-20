@@ -281,6 +281,51 @@ class StageContextTests(unittest.TestCase):
                 self.assertIn("duration_s", entry)
 
 
+class ReportedReasonTests(unittest.TestCase):
+    """The operator-facing line must say why a stage ran, not just how long."""
+
+    def _cache(self, root: Path) -> PrepareCache:
+        return PrepareCache(
+            StageCache(root / "cache.json"), PrepareState.load(root / "PREPARE_STATE.json")
+        )
+
+    def _formatted(self, timer: StageTimer, stage: str) -> str:
+        """The most recent line for `stage`, which is the decision under test."""
+        matches = [line for line in timer.format().splitlines() if line.strip().startswith(stage)]
+        if not matches:
+            raise AssertionError(f"{stage} missing from {timer.format()!r}")
+        return matches[-1]
+
+    def test_a_changed_input_is_named_as_the_reason(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            cache = self._cache(Path(raw))
+            timer = StageTimer()
+            for key in ("key-1", "key-2"):
+                with cache.stage(timer, "compile", key) as run:
+                    if not run.reused:
+                        run.value = {"ok": True}
+
+            self.assertIn("input_changed", self._formatted(timer, "compile"))
+
+    def test_a_reused_stage_says_so(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            cache = self._cache(Path(raw))
+            timer = StageTimer()
+            for _ in range(2):
+                with cache.stage(timer, "accept", "key-1") as run:
+                    if not run.reused:
+                        run.value = {"ok": True}
+
+            self.assertIn("(reused)", self._formatted(timer, "accept"))
+
+    def test_a_stage_outside_the_cache_still_gets_a_reason(self) -> None:
+        timer = StageTimer()
+        with timer.stage("arm"):
+            pass
+
+        self.assertIn("(always runs)", self._formatted(timer, "arm"))
+
+
 def _decision(reuse: bool, reason: str):
     from pe_prepare_state import Decision  # type: ignore[import-not-found]
 

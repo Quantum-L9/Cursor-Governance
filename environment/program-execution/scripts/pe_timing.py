@@ -66,6 +66,29 @@ def write_json_atomic(path: Path, value: Any) -> Path:
     return path
 
 
+def stage_note(entry: dict[str, Any]) -> str:
+    """The parenthetical after a stage's duration: reused, or why it ran again.
+
+    When preparation is slow the operator's question is not "how long did each
+    stage take", it is "why did it do that again?". The reasons are already
+    recorded per stage; printing only `(cached)` threw away the half of the
+    answer that is actionable.
+    """
+    detail = entry.get("detail") or {}
+    if entry.get("cached"):
+        return " (reused)"
+    reason = str(detail.get("reason") or "")
+    if not reason:
+        # A stage with no recorded decision never consults the cache, which is
+        # itself the reason it ran: say that rather than leaving a blank the
+        # reader has to interpret as either "no reason" or "no reuse possible".
+        return " (always runs)"
+    if reason == "cache_disabled":
+        return " (cache off)"
+    extra = str(detail.get("detail") or "")
+    return f" ({reason}: {extra})" if extra else f" ({reason})"
+
+
 class StageTimer:
     """Record how long each named stage took, and persist it for comparison."""
 
@@ -123,8 +146,9 @@ class StageTimer:
     def format(self) -> str:
         lines = ["timing:"]
         for entry in self.stages:
-            mark = " (cached)" if entry.get("cached") else ""
-            lines.append(f"  {entry['stage']:<24} {format_duration(entry['duration_s'])}{mark}")
+            lines.append(
+                f"  {entry['stage']:<24} {format_duration(entry['duration_s'])}{stage_note(entry)}"
+            )
         lines.append(f"  {'TOTAL':<24} {format_duration(self.total_s())}")
         return "\n".join(lines)
 
