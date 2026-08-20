@@ -21,9 +21,10 @@ import pytest
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
-import git_guardrails as guardrails  # noqa: E402
 import local_execution_gate as gate  # noqa: E402
 from git_guardrails import (  # noqa: E402
+    DELIBERATELY_NOT_GENERATED,
+    GENERATED_PATH_PREFIXES,
     HUMAN_AUTHORIZATION_ENV,
     DirtyPath,
     Effect,
@@ -39,6 +40,7 @@ from git_guardrails import (  # noqa: E402
     capture_recovery,
     evaluate_command,
     human_authorized,
+    is_generated_path,
     run_guards,
 )
 from worktree_isolation_gate import command_violates_worktree_isolation  # noqa: E402
@@ -596,6 +598,15 @@ class TestGateWiring:
         assert reason is not None and "WIP" in reason
 
 
+def test_carved_out_paths_are_never_classified_generated() -> None:
+    """A hand-authored SSOT must not read as disposable, whatever the prefixes say."""
+    for path in DELIBERATELY_NOT_GENERATED:
+        assert not is_generated_path(path), path
+        assert OwnershipOracle().classify(path) is Ownership.USER_OR_FOREIGN, path
+    context = ctx(probe=StaticProbe(clean_targets=("skills/AUTONOMY_MANIFEST.yaml",)))
+    assert outcome(f"{GIT} clean -fd", context) is Outcome.DENY_REQUIRES_HUMAN
+
+
 def test_generated_prefixes_have_not_drifted() -> None:
     """The gate's copy of the generated-path list must stay a known subset.
 
@@ -610,10 +621,10 @@ def test_generated_prefixes_have_not_drifted() -> None:
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
 
-    ours = set(guardrails.GENERATED_PATH_PREFIXES)
+    ours = set(GENERATED_PATH_PREFIXES)
     theirs = set(module.GENERATED_PATH_PREFIXES)
     assert ours <= theirs, f"gate lists prefixes the sync script does not: {ours - theirs}"
-    assert theirs - ours == set(guardrails.DELIBERATELY_NOT_GENERATED), (
+    assert theirs - ours == set(DELIBERATELY_NOT_GENERATED), (
         "sync script gained or lost a generated prefix; reconcile "
         "git_guardrails.GENERATED_PATH_PREFIXES / DELIBERATELY_NOT_GENERATED"
     )

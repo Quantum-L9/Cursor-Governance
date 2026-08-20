@@ -288,8 +288,17 @@ def _normalize_rel(rel: str) -> str:
 
 
 def is_generated_path(rel: str) -> bool:
-    """True for a governance artifact a generator rewrites deterministically."""
+    """True for a governance artifact a generator rewrites deterministically.
+
+    The carve-out is checked first and on purpose. Today no entry in
+    GENERATED_PATH_PREFIXES would match a carved-out path, so the guard changes
+    nothing — but a later broad prefix (``skills/``, ``environment/
+    program-execution/``) would silently reclassify a hand-authored SSOT as
+    disposable, and this gate decides whether work can be destroyed.
+    """
     rel = _normalize_rel(rel)
+    if any(rel == carve or rel.startswith(f"{carve}/") for carve in DELIBERATELY_NOT_GENERATED):
+        return False
     if any(
         rel.startswith(prefix) or rel == prefix.rstrip(".") for prefix in GENERATED_PATH_PREFIXES
     ):
@@ -512,14 +521,6 @@ class OwnershipOracle:
         if rel in self.session_owned:
             return Ownership.AGENT_OWNED
         return Ownership.USER_OR_FOREIGN
-
-
-_SENSITIVITY_BY_OWNERSHIP = {
-    Ownership.EPHEMERAL: Sensitivity.EPHEMERAL_SCRATCH,
-    Ownership.GENERATED: Sensitivity.GENERATED,
-    Ownership.AGENT_OWNED: Sensitivity.AGENT_OWNED,
-    Ownership.USER_OR_FOREIGN: Sensitivity.USER_UNCOMMITTED,
-}
 
 
 # ---------------------------------------------------------------------------
