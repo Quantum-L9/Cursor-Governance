@@ -90,6 +90,59 @@ def test_is_make_pr_rejects_other_goals(command: str) -> None:
     assert gate.is_make_pr(command) is False
 
 
+class TestMakeGoalsAreExactTokens:
+    """`make pr-check` is the local quality gate and never reaches GitHub.
+
+    A regex for `make pr` matches `make pr-check` too — \\b closes on the hyphen
+    — so the L4 remote gate denied the one command an agent is supposed to run
+    before publishing. Goals are matched as exact tokens instead.
+    """
+
+    def test_pr_check_is_not_a_remote_mutation(self) -> None:
+        assert gate.command_is_remote_mutation("make pr-check") is False
+        assert gate.command_bypasses_publish_path("make pr-check") is None
+
+    def test_pr_check_passes_the_gate_without_a_release_receipt(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv("L9_LOCAL_PUSH_AUTHORIZED", raising=False)
+        monkeypatch.setenv("L9_L4_LOCAL_AUTONOMY", "1")
+        monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+        assert gate.evaluate("Bash", {"command": "make pr-check"}, root=tmp_path) is None
+
+    @pytest.mark.parametrize(
+        "command",
+        ["make pr", "make push", "PR_REMEDIATE=0 make pr", "make -C /tmp/repo pr"],
+    )
+    def test_real_publish_goals_still_classify(self, command: str) -> None:
+        assert gate.command_is_remote_mutation(command) is True
+
+    def test_dash_c_publish_was_previously_missed(self) -> None:
+        """`make -C <path> pr` never matched `\\bmake\\s+pr\\b` — a fail-open hole.
+
+        The old regex needed `pr` right after `make`, so a publish run against
+        another checkout skipped the L4 receipt check entirely.
+        """
+        assert gate.command_is_remote_mutation("make -C /tmp/repo pr") is True
+        assert gate.is_make_pr("make -C /tmp/repo pr") is True
+
+    def test_goal_lists_are_scanned_whole(self) -> None:
+        """`make pr-check pr` runs both goals, so the publish must be seen."""
+        assert gate.is_make_pr("make pr-check pr") is True
+        assert gate.command_is_remote_mutation("make pr-check pr") is True
+        assert gate.make_goals("make pr-check pr") == ("pr-check", "pr")
+
+    @pytest.mark.parametrize(
+        "command", ["make test", "make lint", "make improve", "make start", "make pr-check"]
+    )
+    def test_local_goals_are_never_remote(self, command: str) -> None:
+        assert gate.command_is_remote_mutation(command) is False
+
+    def test_non_make_segments_have_no_goals(self) -> None:
+        assert gate.make_goals("git push origin main") == ()
+        assert gate.make_goals("") == ()
+
+
 def test_publish_matcher_is_linear_not_exponential() -> None:
     """Regression: CodeQL py/redos on PR #168.
 

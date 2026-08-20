@@ -6,6 +6,7 @@ from typing import Any
 
 # Embedded payloads — no filesystem I/O (Sonar pythonsecurity:S8707).
 # Edit autonomy/{policies,examples,tests/golden} JSON, then regenerate this module.
+# Regenerate: python3 ops/scripts/regenerate_autonomy_policy_loader.py
 
 _POLICIES: dict[str, Any] = json.loads(
     """
@@ -154,38 +155,142 @@ _POLICIES: dict[str, Any] = json.loads(
   },
   "resource-classes": {
     "classes": {
+      "context_compile": {
+        "capacity": 64,
+        "fill_policy": "saturate",
+        "min_concurrency": 1,
+        "mutation": false,
+        "preemptible": true,
+        "target_concurrency": 32
+      },
       "controller_mutation": {
-        "capacity": 1,
+        "capacity": 16,
+        "min_concurrency": 1,
         "mutation": true,
-        "preemptible": false
+        "preemptible": false,
+        "target_concurrency": 8
+      },
+      "evidence": {
+        "capacity": 32,
+        "min_concurrency": 0,
+        "mutation": false,
+        "preemptible": true,
+        "target_concurrency": 16
+      },
+      "failure_analysis": {
+        "capacity": 64,
+        "fill_policy": "saturate",
+        "min_concurrency": 0,
+        "mutation": false,
+        "preemptible": true,
+        "target_concurrency": 32
       },
       "human_gate": {
         "capacity": 1,
+        "min_concurrency": 0,
         "mutation": false,
-        "preemptible": false
+        "preemptible": false,
+        "target_concurrency": 1
       },
       "live_runtime": {
-        "capacity": 2,
+        "capacity": 64,
+        "fill_policy": "saturate",
+        "min_concurrency": 0,
         "mutation": false,
-        "preemptible": false
+        "preemptible": false,
+        "target_concurrency": 32
       },
       "poll_remote": {
-        "capacity": 3,
+        "capacity": 64,
+        "fill_policy": "saturate",
+        "min_concurrency": 0,
         "mutation": false,
-        "preemptible": true
+        "preemptible": true,
+        "target_concurrency": 32
+      },
+      "remediation_mutation": {
+        "capacity": 96,
+        "conflict_policy": "exclusive_claims_only",
+        "fill_policy": "saturate",
+        "min_concurrency": 1,
+        "mutation": true,
+        "preemptible": false,
+        "target_concurrency": 64
       },
       "repository_mutation": {
-        "capacity": 1,
+        "capacity": 128,
+        "conflict_policy": "exclusive_claims_only",
+        "fill_policy": "saturate",
+        "min_concurrency": 1,
         "mutation": true,
-        "preemptible": false
+        "preemptible": false,
+        "target_concurrency": 96
       },
       "repository_read": {
-        "capacity": 4,
+        "capacity": 400,
+        "fill_policy": "saturate",
+        "min_concurrency": 32,
         "mutation": false,
-        "preemptible": true
+        "preemptible": true,
+        "target_concurrency": 350
+      },
+      "repository_recon": {
+        "capacity": 300,
+        "fill_policy": "saturate",
+        "min_concurrency": 32,
+        "mutation": false,
+        "preemptible": true,
+        "target_concurrency": 300
+      },
+      "review": {
+        "capacity": 96,
+        "fill_policy": "saturate",
+        "min_concurrency": 2,
+        "mutation": false,
+        "preemptible": true,
+        "target_concurrency": 64
+      },
+      "sentinel": {
+        "capacity": 16,
+        "min_concurrency": 1,
+        "mutation": false,
+        "preemptible": false,
+        "target_concurrency": 8
+      },
+      "synthesis": {
+        "capacity": 64,
+        "fill_policy": "saturate",
+        "min_concurrency": 1,
+        "mutation": false,
+        "preemptible": true,
+        "target_concurrency": 32
+      },
+      "verification": {
+        "capacity": 160,
+        "fill_policy": "saturate",
+        "min_concurrency": 4,
+        "mutation": false,
+        "preemptible": true,
+        "target_concurrency": 128
       }
     },
-    "schema_version": "1.0.0"
+    "global": {
+      "adaptive_backpressure": {
+        "decrease_factor": 0.75,
+        "enabled": true,
+        "on_429": "multiplicative_decrease",
+        "recovery": "additive_increase"
+      },
+      "backfill": true,
+      "fill_policy": "saturate",
+      "force_parallel_ready_actions": true,
+      "mutation_parallelism": "max_non_conflicting",
+      "provider_concurrency_ceiling": 500,
+      "read_parallelism": "max_available",
+      "reserved_control_slots": 20,
+      "target_total_concurrency": 480
+    },
+    "schema_version": "2.0.0"
   },
   "role-capabilities": {
     "globally_forbidden_capabilities": [
@@ -326,6 +431,29 @@ _POLICIES: dict[str, Any] = json.loads(
 _EXAMPLES: dict[str, Any] = json.loads(
     """
 {
+  "adapters/claude-code.json": {
+    "adapter_id": "claude-code-local",
+    "adapter_type": "claude-code",
+    "autonomous_merge": false,
+    "direct_tool_access": false,
+    "executable": "claude",
+    "metadata": {
+      "database_path": ".l9/autonomy/runtime.sqlite3",
+      "merge_protocol": "human-only",
+      "poll_protocol": "protocol-b",
+      "pre_tool_hook_required": true,
+      "task_transport": "claude-code-task"
+    },
+    "protocol_version": "1.0.0",
+    "supports_agent_identity": true,
+    "supports_background_agents": true,
+    "supports_heartbeat": true,
+    "supports_human_gate": true,
+    "supports_independent_review": true,
+    "supports_lease_propagation": true,
+    "supports_typed_artifacts": true,
+    "tool_mediation_mode": "mandatory"
+  },
   "adapters/cursor.json": {
     "adapter_id": "cursor-local",
     "adapter_type": "cursor",
@@ -395,7 +523,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
         "kind": "work",
         "mutation": false,
         "priority_weight": 9,
-        "resource_class": "repository_read",
+        "resource_class": "context_compile",
         "role": "context_compiler"
       },
       {
@@ -424,7 +552,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
         "kind": "work",
         "mutation": false,
         "priority_weight": 8,
-        "resource_class": "repository_read",
+        "resource_class": "repository_recon",
         "role": "recon"
       },
       {
@@ -453,7 +581,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
         "kind": "work",
         "mutation": false,
         "priority_weight": 10,
-        "resource_class": "repository_read",
+        "resource_class": "repository_recon",
         "role": "recon"
       },
       {
@@ -482,7 +610,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
         "kind": "work",
         "mutation": false,
         "priority_weight": 9,
-        "resource_class": "repository_read",
+        "resource_class": "repository_recon",
         "role": "recon"
       },
       {
@@ -511,7 +639,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
         "kind": "work",
         "mutation": false,
         "priority_weight": 7,
-        "resource_class": "repository_read",
+        "resource_class": "repository_recon",
         "role": "recon"
       },
       {
@@ -542,7 +670,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
         "kind": "synthesis",
         "mutation": false,
         "priority_weight": 10,
-        "resource_class": "repository_read",
+        "resource_class": "synthesis",
         "role": "synthesis"
       },
       {
@@ -615,7 +743,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
         "kind": "validation",
         "mutation": false,
         "priority_weight": 9,
-        "resource_class": "repository_read",
+        "resource_class": "verification",
         "role": "verifier"
       },
       {
@@ -684,7 +812,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
         "kind": "validation",
         "mutation": false,
         "priority_weight": 10,
-        "resource_class": "repository_read",
+        "resource_class": "review",
         "role": "reviewer"
       },
       {
@@ -746,7 +874,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
         "kind": "validation",
         "mutation": false,
         "priority_weight": 10,
-        "resource_class": "repository_read",
+        "resource_class": "sentinel",
         "role": "sentinel"
       },
       {
@@ -772,7 +900,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
         "kind": "work",
         "mutation": false,
         "priority_weight": 7,
-        "resource_class": "controller_mutation",
+        "resource_class": "evidence",
         "role": "evidence_writer"
       }
     ],
@@ -792,9 +920,9 @@ _EXAMPLES: dict[str, Any] = json.loads(
     "budgets": {
       "max_files_changed": 80,
       "max_lines_changed": 6000,
-      "max_mutation_agents": 1,
-      "max_poll_agents": 3,
-      "max_read_agents": 4,
+      "max_mutation_agents": 128,
+      "max_poll_agents": 64,
+      "max_read_agents": 450,
       "max_runtime_minutes": 720,
       "max_tool_failures": 8
     },
@@ -869,56 +997,66 @@ _EXAMPLES: dict[str, Any] = json.loads(
     "graph_id": "AUTO",
     "required_roles": {
       "context_compiler": {
-        "max": 1,
+        "max": 64,
         "min": 1,
         "mutation": false
       },
       "coordinator": {
-        "max": 1,
+        "max": 8,
         "min": 1,
         "mutation": false
       },
       "evidence_writer": {
-        "max": 1,
+        "max": 32,
         "min": 1,
         "mutation": false
       },
       "executor": {
-        "max": 1,
+        "max": 128,
         "min": 1,
         "mutation": true
       },
+      "failure_classifier": {
+        "max": 64,
+        "min": 0,
+        "mutation": false
+      },
       "poller": {
         "conditional_on": "pr_open",
-        "max": 3,
+        "max": 64,
         "min": 0,
         "mutation": false
       },
       "recon": {
-        "max": 8,
+        "max": 320,
         "min": 4,
         "mutation": false
+      },
+      "remediator": {
+        "max": 96,
+        "min": 0,
+        "mutation": true
       },
       "reviewer": {
         "independent_from": [
           "executor"
         ],
-        "max": 4,
+        "max": 96,
         "min": 1,
         "mutation": false
       },
       "sentinel": {
-        "max": 1,
+        "max": 16,
         "min": 1,
         "mutation": false
       },
       "synthesis": {
-        "max": 4,
+        "max": 64,
         "min": 1,
         "mutation": false
       },
       "verifier": {
-        "max": 8,
+        "max": 160,
         "min": 2,
         "mutation": false
       }
@@ -932,6 +1070,24 @@ _EXAMPLES: dict[str, Any] = json.loads(
 _GOLDEN: dict[str, Any] = json.loads(
     """
 {
+  "task045-human-stop.spec.json": {
+    "forbidden_events": [
+      "human_gate_auto_approved",
+      "autonomous_merge",
+      "admin_merge"
+    ],
+    "maximum_counts": {
+      "autonomous_merge": 0,
+      "human_gate_auto_approved": 0
+    },
+    "required_events": [
+      "campaign_bootstrapped"
+    ],
+    "required_sequence": [
+      "campaign_bootstrapped"
+    ],
+    "schema_version": "1.0.0"
+  },
   "task046-happy-path.spec.json": {
     "forbidden_events": [
       "autonomous_merge",

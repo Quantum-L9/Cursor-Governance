@@ -159,19 +159,50 @@ def resolve_repo_slug(repo: Path) -> str | None:
     return None
 
 
+#: Page size and cap for REST listings. GitHub caps the PR files endpoint at
+#: 3000 entries, so 30 full pages is the real ceiling, not an arbitrary budget.
+_PAGE_SIZE = 100
+_MAX_PAGES = 30
+
+
+def _paginated_lines(path: str, jq: str) -> list[str] | None:
+    """Fetch every page of a REST listing, one explicit page number at a time.
+
+    NOT ``gh api --paginate``. That follows the response Link header, and
+    GitHub writes those links in numeric-id form
+    (``repositories/<id>/pulls/<n>/files?page=2``). An agent proxy that only
+    permits ``repos/<owner>/<repo>/...`` answers the second page with 403, so
+    gh exits non-zero and a PR with more than one page of files reads as a
+    telemetry failure — blocking every publish behind it, with no collision
+    anywhere. Explicit page numbers keep every request on the owner/repo path.
+
+    Returns None on any failed request, and also when the cap is reached with a
+    still-full page: a truncated list would silently under-report overlap, and
+    this gate fails closed on the decision (rule 53, "no silent caps").
+    """
+    lines: list[str] = []
+    separator = "&" if "?" in path else "?"
+    for page in range(1, _MAX_PAGES + 1):
+        result = gh("api", f"{path}{separator}per_page={_PAGE_SIZE}&page={page}", "--jq", jq)
+        if result.returncode != 0:
+            return None
+        page_lines = [line for line in result.stdout.splitlines() if line]
+        lines.extend(page_lines)
+        if len(page_lines) < _PAGE_SIZE:
+            return lines
+    return None
+
+
 def open_prs(slug: str) -> list[dict[str, str | int]] | None:
-    """REST-only: repos/<o>/<n>/pulls, paginated via gh --paginate."""
-    result = gh(
-        "api",
-        "--paginate",
-        f"repos/{slug}/pulls?state=open&per_page=100",
-        "--jq",
+    """REST-only: repos/<o>/<n>/pulls, paginated by explicit page number."""
+    rows = _paginated_lines(
+        f"repos/{slug}/pulls?state=open",
         ".[] | [.number, .head.ref, .base.ref] | @tsv",
     )
-    if result.returncode != 0:
+    if rows is None:
         return None
     prs: list[dict[str, str | int]] = []
-    for line in result.stdout.splitlines():
+    for line in rows:
         parts = line.split("\t")
         if len(parts) != 3:
             continue
@@ -184,17 +215,8 @@ def open_prs(slug: str) -> list[dict[str, str | int]] | None:
 
 
 def pr_files(slug: str, number: int) -> list[str] | None:
-    """REST-only: repos/<o>/<n>/pulls/<N>/files, paginated."""
-    result = gh(
-        "api",
-        "--paginate",
-        f"repos/{slug}/pulls/{number}/files?per_page=100",
-        "--jq",
-        ".[].filename",
-    )
-    if result.returncode != 0:
-        return None
-    return [line for line in result.stdout.splitlines() if line]
+    """REST-only: repos/<o>/<n>/pulls/<N>/files, paginated by explicit page."""
+    return _paginated_lines(f"repos/{slug}/pulls/{number}/files", ".[].filename")
 
 
 _DEEPENED: set[str] = set()

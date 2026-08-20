@@ -18,7 +18,7 @@ Maps Claude Code autonomy law onto Cursor SOP behavior. Do not weaken these mapp
 - **Allow:** scoped local git commits; non-force push + PR create/update **only after L4 release_authorized**.
 - **Deny:** mid-execution push/PR (`ops/autonomy/local_execution_gate.py`), `.env` / `.mcp.json` reads, `rm -rf`, force-push, `reset --hard`, `clean -fd`, `gh pr merge --admin`.
 - **Allow ordinary merge:** `Bash(gh pr merge:*)` after `/l9-pr-remediation` (green + mergeable + threads resolved). `merge_gate.py` reads `L9_AUTONOMY_AUTONOMOUS_MERGE=true`.
-- **Env:** `L9_AUTONOMY_ENABLED=true`, `L9_AUTONOMY_AUTONOMOUS_MERGE=true`, `L9_AUTONOMY_MAX_PARALLEL=4`, `L9_AUTONOMY_MAX_MUTATION_LANES=2`, `L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation`, `L9_L4_LOCAL_AUTONOMY=1` (default).
+- **Env:** `L9_AUTONOMY_ENABLED=true`, `L9_AUTONOMY_AUTONOMOUS_MERGE=true`, `L9_AUTONOMY_MAX_PARALLEL` / `L9_AUTONOMY_MAX_MUTATION_LANES` (Claude surfaces: `480` / `128` — saturation, bounded by claims; Cursor keeps the constrained `4` / `2` runtime defaults), `L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation`, `L9_L4_LOCAL_AUTONOMY=1` (default).
 
 ## L4 local autonomy (standing)
 

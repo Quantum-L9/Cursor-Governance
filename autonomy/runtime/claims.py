@@ -9,6 +9,25 @@ from autonomy.runtime.store import RuntimeStore
 from autonomy.runtime.timeutil import utc_now_text
 
 
+def claims_collide(
+    *,
+    mode: str,
+    exclusive: bool,
+    other_mode: str,
+    other_exclusive: bool,
+) -> bool:
+    """Whether two claims on the *same* resource key may not be held at once.
+
+    Single source of truth for claim compatibility. The registry enforces it
+    transactionally, the scheduler pre-filters admission with it, and the graph
+    linter uses it to tell a real ordering constraint from a serialization-only
+    dependency edge — all three must agree or the scheduler would offer work the
+    registry then rejects.
+    """
+
+    return exclusive or other_exclusive or "write" in {mode, other_mode}
+
+
 class ClaimRegistry:
     def __init__(self, store: RuntimeStore) -> None:
         self.store = store
@@ -43,15 +62,12 @@ class ClaimRegistry:
                 )
             )
             for claim in existing:
-                existing_mode = claim["mode"]
-                existing_exclusive = bool(claim["exclusive"])
-                conflict = (
-                    requested_exclusive
-                    or existing_exclusive
-                    or requested_mode == "write"
-                    or existing_mode == "write"
-                )
-                if conflict:
+                if claims_collide(
+                    mode=requested_mode,
+                    exclusive=requested_exclusive,
+                    other_mode=str(claim["mode"]),
+                    other_exclusive=bool(claim["exclusive"]),
+                ):
                     raise PolicyViolation(
                         "CLAIM_CONFLICT: resource "
                         f"{resource_key!r} is already claimed by "

@@ -140,11 +140,45 @@ fi
 # 4) THE adapter install — identical call on CLI, Desktop, Web and Mobile.
 #    Locked toolchain from uv.lock, settings triad, skills, MCP front door,
 #    git excludes, preflight. Do not reimplement any of that here.
+# The cloud runtime may run setup from the PARENT of the checkout, so cwd is not
+# the project directory. Resolve the consumer repo explicitly and refuse rather
+# than guess: wiring the wrong directory produces a complete .claude/ tree that
+# Claude Code never loads, while the bootstrap receipt still reports READY.
+resolve_workspace() {
+  if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR/.git" ]; then
+    printf '%s' "$CLAUDE_PROJECT_DIR"
+    return 0
+  fi
+  local top
+  if top=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$top" ]; then
+    printf '%s' "$top"
+    return 0
+  fi
+  # Exactly one git repo directly under cwd is unambiguous; zero or several is not.
+  local only="" d="" n=0
+  for d in ./*/; do
+    [ -d "$d/.git" ] || continue
+    n=$((n + 1))
+    only="$d"
+  done
+  if [ "$n" -eq 1 ]; then
+    ( cd "$only" && pwd )
+    return 0
+  fi
+  return 1
+}
+
 ADAPTER_INSTALL="$GOV_DIR/environment/agents/adapters/claude-code/install.sh"
 if [ -f "$ADAPTER_INSTALL" ]; then
-  bash "$ADAPTER_INSTALL" --governance "$GOV_DIR" --workspace "$(pwd)"
-  adapter_rc=$?
-  echo "NOTE: adapter install exited $adapter_rc (see ~/.l9/claude/bootstrap-state.json)"
+  if ADAPTER_WS="$(resolve_workspace)"; then
+    echo "NOTE: adapter workspace resolved to $ADAPTER_WS"
+    bash "$ADAPTER_INSTALL" --governance "$GOV_DIR" --workspace "$ADAPTER_WS"
+    adapter_rc=$?
+    echo "NOTE: adapter install exited $adapter_rc (see ~/.l9/claude/bootstrap-state.json)"
+  else
+    echo "WARN: no git workspace resolvable from $(pwd) — adapter NOT wired"
+    echo "      (refusing to wire a non-repository directory; run 'make claude-install WS=<repo>' manually)"
+  fi
 else
   echo "WARN: missing environment/agents/adapters/claude-code/install.sh — adapter NOT wired"
 fi

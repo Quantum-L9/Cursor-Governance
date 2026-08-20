@@ -1,33 +1,156 @@
 {
-  "schema_version": "1.0.0",
+  "schema_version": "2.0.0",
+
+  "global": {
+    "provider_concurrency_ceiling": 500,
+    "reserved_control_slots": 20,
+    "target_total_concurrency": 480,
+
+    "fill_policy": "saturate",
+    "force_parallel_ready_actions": true,
+    "backfill": true,
+
+    "mutation_parallelism": "max_non_conflicting",
+    "read_parallelism": "max_available",
+
+    "adaptive_backpressure": {
+      "enabled": true,
+      "on_429": "multiplicative_decrease",
+      "decrease_factor": 0.75,
+      "recovery": "additive_increase"
+    }
+  },
+
   "classes": {
+    "repository_recon": {
+      "capacity": 300,
+      "target_concurrency": 300,
+      "min_concurrency": 32,
+      "mutation": false,
+      "preemptible": true,
+      "fill_policy": "saturate"
+    },
+
     "repository_read": {
-      "capacity": 4,
+      "capacity": 400,
+      "target_concurrency": 350,
+      "min_concurrency": 32,
       "mutation": false,
-      "preemptible": true
+      "preemptible": true,
+      "fill_policy": "saturate"
     },
+
+    "context_compile": {
+      "capacity": 64,
+      "target_concurrency": 32,
+      "min_concurrency": 1,
+      "mutation": false,
+      "preemptible": true,
+      "fill_policy": "saturate"
+    },
+
+    "synthesis": {
+      "capacity": 64,
+      "target_concurrency": 32,
+      "min_concurrency": 1,
+      "mutation": false,
+      "preemptible": true,
+      "fill_policy": "saturate"
+    },
+
     "repository_mutation": {
-      "capacity": 1,
+      "capacity": 128,
+      "target_concurrency": 96,
+      "min_concurrency": 1,
       "mutation": true,
-      "preemptible": false
+      "preemptible": false,
+      "fill_policy": "saturate",
+      "conflict_policy": "exclusive_claims_only"
     },
-    "controller_mutation": {
-      "capacity": 1,
+
+    "remediation_mutation": {
+      "capacity": 96,
+      "target_concurrency": 64,
+      "min_concurrency": 1,
       "mutation": true,
-      "preemptible": false
+      "preemptible": false,
+      "fill_policy": "saturate",
+      "conflict_policy": "exclusive_claims_only"
     },
+
+    "verification": {
+      "capacity": 160,
+      "target_concurrency": 128,
+      "min_concurrency": 4,
+      "mutation": false,
+      "preemptible": true,
+      "fill_policy": "saturate"
+    },
+
+    "review": {
+      "capacity": 96,
+      "target_concurrency": 64,
+      "min_concurrency": 2,
+      "mutation": false,
+      "preemptible": true,
+      "fill_policy": "saturate"
+    },
+
+    "failure_analysis": {
+      "capacity": 64,
+      "target_concurrency": 32,
+      "min_concurrency": 0,
+      "mutation": false,
+      "preemptible": true,
+      "fill_policy": "saturate"
+    },
+
     "live_runtime": {
-      "capacity": 2,
+      "capacity": 64,
+      "target_concurrency": 32,
+      "min_concurrency": 0,
+      "mutation": false,
+      "preemptible": false,
+      "fill_policy": "saturate"
+    },
+
+    "poll_remote": {
+      "capacity": 64,
+      "target_concurrency": 32,
+      "min_concurrency": 0,
+      "mutation": false,
+      "preemptible": true,
+      "fill_policy": "saturate"
+    },
+
+    "sentinel": {
+      "capacity": 16,
+      "target_concurrency": 8,
+      "min_concurrency": 1,
       "mutation": false,
       "preemptible": false
     },
-    "poll_remote": {
-      "capacity": 3,
+
+    "controller_mutation": {
+      "capacity": 16,
+      "target_concurrency": 8,
+      "min_concurrency": 1,
+      "mutation": true,
+      "preemptible": false
+    },
+
+    "evidence": {
+      "capacity": 32,
+      "target_concurrency": 16,
+      "min_concurrency": 0,
       "mutation": false,
       "preemptible": true
     },
+
     "human_gate": {
       "capacity": 1,
+      "target_concurrency": 1,
+      "min_concurrency": 0,
       "mutation": false,
       "preemptible": false
     }

@@ -335,6 +335,43 @@ def check_setup_linux_sandbox_hygiene(failures: list[str]) -> None:
         print("  OK: web/setup.sh pins governance to $HOME/.cursor-governance")
 
 
+def check_session_deps_installs_no_git_hook(failures: list[str]) -> None:
+    """The session-deps helper warms pre-commit environments; it never installs a hook.
+
+    ``pre-commit install`` writes ``.git/hooks/pre-commit``, which runs the whole
+    catalog without the surface-aware SKIP list that ``ops/scripts/run_pr_precommit.sh``
+    applies. On any non-cursor surface ``symlinks-check`` then fails and every
+    ``git commit`` is rejected. ``run_pr_precommit.sh`` states the rule in as many
+    words; nothing asserted it until this check.
+    """
+    helper = HERE / "hooks" / "session_deps_cloud.sh"
+    if not helper.is_file():
+        return
+    text = helper.read_text(encoding="utf-8")
+    # Match an INVOCATION, not the word inside a warning message: skip comments and
+    # anything appearing after an `echo` on the same line.
+    pattern = re.compile(r"pre-commit install(?!-hooks)\b")
+    offenders = []
+    for line in text.splitlines():
+        if line.lstrip().startswith("#"):
+            continue
+        match = pattern.search(line)
+        if not match:
+            continue
+        echo_at = line.find("echo")
+        if echo_at != -1 and echo_at < match.start():
+            continue
+        offenders.append(line.strip())
+    if offenders:
+        _fail(
+            "session_deps_cloud.sh must not run 'pre-commit install' (installs a git "
+            f"commit hook this repo forbids); use 'pre-commit install-hooks': {offenders}",
+            failures,
+        )
+    else:
+        print("  OK: session_deps_cloud.sh warms hook environments without installing a git hook")
+
+
 def check_dependency_policy(failures: list[str]) -> None:
     """uv.lock is the only source of dependency and interpreter versions.
 
@@ -624,6 +661,85 @@ def check_memory_enforcement(failures: list[str]) -> None:
         )
 
 
+def check_maximum_velocity_surface(failures: list[str]) -> None:
+    """Claude settings must not carry a Cursor economy cap.
+
+    `.claude/settings.json` is the one Claude configuration that survives the
+    clone into a Web or Mobile cloud sandbox, so whatever it says becomes the
+    execution personality of every unattended session. A `4`-worker cap, a
+    `2`-lane mutation cap, an unset native subagent limit, or a workflow size
+    guideline aimed below the task all silently re-impose serialization after
+    the L9 scheduler was unleashed. Surface policy SSOT:
+    ops/autonomy/claude-execution-profiles.json.
+    """
+    path = HERE / "settings.template.json"
+    profiles_path = HERE.parents[3] / "ops" / "autonomy" / "claude-execution-profiles.json"
+    if not path.is_file() or not profiles_path.is_file():
+        return
+    try:
+        settings = json.loads(path.read_text(encoding="utf-8"))
+        profiles = json.loads(profiles_path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError) as exc:
+        _fail(f"Claude surface policy unreadable: {exc}", failures)
+        return
+
+    expected = profiles["profiles"]["claude_cloud"]
+    env = settings.get("env") or {}
+
+    numeric_contract = {
+        "L9_AUTONOMY_MAX_PARALLEL": expected["max_parallel"],
+        "L9_AUTONOMY_MAX_MUTATION_LANES": expected["max_mutation_lanes"],
+        "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": expected["native_subagent_limit"],
+    }
+    for name, minimum in numeric_contract.items():
+        raw = env.get(name)
+        if raw is None:
+            _fail(
+                f"settings.template.json env is missing {name} — Claude falls back to a "
+                f"default below the {minimum}-worker target",
+                failures,
+            )
+            continue
+        try:
+            value = int(str(raw))
+        except ValueError:
+            _fail(f"settings.template.json env {name}={raw!r} is not an integer", failures)
+            continue
+        if value < int(minimum):
+            _fail(
+                f"settings.template.json env {name}={value} is below the maximum-velocity "
+                f"floor of {minimum} — a constrained cap is propagating to Claude cloud "
+                "sessions",
+                failures,
+            )
+
+    depth = env.get("CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH")
+    if depth is not None and int(str(depth)) < 2:
+        _fail(
+            f"settings.template.json env CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH={depth} blocks "
+            "nested delegation (main -> specialist -> delegated specialist)",
+            failures,
+        )
+
+    guideline = settings.get("workflowSizeGuideline")
+    if guideline != expected["workflow_size_guideline"]:
+        _fail(
+            f"settings.template.json workflowSizeGuideline={guideline!r} — expected "
+            f"{expected['workflow_size_guideline']!r} so workflows are sized by the task",
+            failures,
+        )
+    if settings.get("disableWorkflows"):
+        _fail("settings.template.json disables dynamic workflows on a Claude surface", failures)
+    if "CLAUDE_CODE_SUBAGENT_MODEL" in env:
+        _fail(
+            "settings.template.json env sets CLAUDE_CODE_SUBAGENT_MODEL — that forces every "
+            "subagent onto one model; role-specific model choice is the policy",
+            failures,
+        )
+    if not failures:
+        print("  OK: Claude settings carry the maximum-velocity surface profile")
+
+
 def main() -> int:
     print("=== Claude Code environment — structural validation ===")
     print(f"  root: {HERE}\n")
@@ -635,6 +751,7 @@ def main() -> int:
     check_cross_file_secret_contract(failures)
     check_cross_file_chain_prohibitions(failures)
     check_setup_linux_sandbox_hygiene(failures)
+    check_session_deps_installs_no_git_hook(failures)
     check_dependency_policy(failures)
     check_installer_health_contract(failures)
     check_publish_path_alignment(failures)
@@ -642,6 +759,7 @@ def main() -> int:
     check_memory_identity_distinct(failures)
     check_skill_activation(failures)
     check_memory_enforcement(failures)
+    check_maximum_velocity_surface(failures)
     print()
     if failures:
         print(f"RESULT: FAIL — {len(failures)} issue(s)")

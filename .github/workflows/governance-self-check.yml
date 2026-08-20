@@ -59,12 +59,14 @@ jobs:
           gen=ops/scripts/sync_generated_artifacts.py
           [ -f "$gen" ] || { echo "::error::$gen missing - cannot verify generated artifacts"; exit 1; }
           python3 "$gen" --force --check --json
+          # environment/program-execution/MANIFEST.json is deliberately absent:
+          # its automatic sync is suspended for the velocity window (TODO.md).
+          # Every other generated artifact stays fail-closed here.
           paths="rules/RULES-MANIFEST.json rules/RULES-MANIFEST.yaml rules/RULES-MANIFEST.md \
                  ops/generated/skill-registry.json \
                  skills/AUTONOMY_MANIFEST.yaml commands/COMMANDS_MANIFEST.yaml \
                  environment/generated/llm-rules \
-                 environment/program-execution/core/MANIFEST.yaml \
-                 environment/program-execution/MANIFEST.json"
+                 environment/program-execution/core/MANIFEST.yaml"
           if ! git diff --quiet -- $paths; then
             echo "::error::generated artifacts are stale - regenerate with 'python3 $gen --force' and commit"
             git --no-pager diff --stat -- $paths

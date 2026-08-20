@@ -53,7 +53,11 @@ echo ""
 echo "=== User-level Cursor ==="
 # Governance loads as a Cursor local plugin (rules/84-cursor-governance-wiring.mdc
 # v3.0.0), not whole-directory ~/.cursor/{rules,skills,commands} symlinks.
-link_check "$HOME/.cursor/plugins/local/l9-governance" "$GC" "~/.cursor/plugins/local/l9-governance"
+if is_cursor_host_surface; then
+  link_check "$HOME/.cursor/plugins/local/l9-governance" "$GC" "~/.cursor/plugins/local/l9-governance"
+else
+  pass "Cursor plugin link not required on surface=${L9_GOVERNANCE_SURFACE}"
+fi
 if [ -e "$GC/.cursor-plugin/plugin.json" ]; then
   pass ".cursor-plugin/plugin.json present at GlobalCommands root"
 else
@@ -147,7 +151,9 @@ done
 
 echo ""
 echo "=== machine hooks (sessionEnd + Graphiti; not consumer repo symlinks) ==="
-if bash "$SCRIPT_DIR/check_governance_wiring.sh" --machine "$WORKSPACE"; then
+if ! is_cursor_host_surface; then
+  pass "machine hooks not required on surface=${L9_GOVERNANCE_SURFACE} (Cursor desktop plane)"
+elif bash "$SCRIPT_DIR/check_governance_wiring.sh" --machine "$WORKSPACE"; then
   pass "machine sessionEnd + Graphiti wiring"
 else
   fail "check_governance_wiring.sh failed — see FAIL lines above"

@@ -81,6 +81,33 @@ artifacts:
     not_for:
       - provider_owned_scheduler
       - owning_program_state
+  - artifact_id: context-sensitive-git-guardrails
+    kind: destructive_risk_gate
+    first_class_artifact: true
+    version: 1.0.0
+    status: active
+    canonical_path: ops/autonomy/git_guardrails.py
+    contract_id: l9-context-sensitive-git-guardrails
+    contract_version: 1.0.0
+    gate: ops/autonomy/local_execution_gate.py
+    rule: rules/54-context-sensitive-git-guardrails.mdc
+    conformance_suite: tests/ops/autonomy/test_git_guardrails.py
+    human_authorization_env: L9_GIT_DESTRUCTIVE_AUTHORIZED
+    owns_program_state: false
+    note: >
+      Decides git and destructive filesystem commands by effect, target
+      sensitivity, and provable recoverability — never by subcommand name.
+      Runs before the git/gh workflow exemption, which covers publish path and
+      L4 phase only.
+    meta: meta/context-sensitive-git-guardrails.meta.md
+    consumed_by:
+      - ops/autonomy/local_execution_gate.py
+      - ops/autonomy/worktree_isolation_gate.py
+      - rules/54-context-sensitive-git-guardrails.mdc
+    not_for:
+      - publish_path_enforcement
+      - merge_authorization
+      - agent_self_authorization_of_destruction
 forbidden_second_ssots:
   - path_glob: skills/**/surface_profile.yaml
     reason: surface profile must remain ops/autonomy/surface_profile.yaml

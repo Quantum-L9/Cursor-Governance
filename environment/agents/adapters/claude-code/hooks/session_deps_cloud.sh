@@ -95,9 +95,13 @@ fi
 # --- Bounded synchronous run; self-detach on budget expiry -----------------
 if [ "${SESSION_DEPS_DETACHED:-}" != "1" ]; then
   (
-    SESSION_DEPS_DETACHED=1 "$BASH" "$0" --workspace "$WORKSPACE" --budget "$BUDGET" \
-      >"$STAMP_DIR/deps-$FP.log" 2>&1
-    touch "$STAMP"
+    # Stamp ONLY on a clean run: the stamp is the cache key that suppresses every
+    # future retry, so writing it after a failure caches the failure permanently
+    # for this fingerprint.
+    if SESSION_DEPS_DETACHED=1 "$BASH" "$0" --workspace "$WORKSPACE" --budget "$BUDGET" \
+        >"$STAMP_DIR/deps-$FP.log" 2>&1; then
+      touch "$STAMP"
+    fi
   ) &
   RUN_PID=$!
   END=$(( $(date +%s) + BUDGET ))
@@ -119,10 +123,17 @@ if [ "${SESSION_DEPS_DETACHED:-}" != "1" ]; then
 fi
 
 # --- Detached run: the actual install (same logic web/setup.sh used to own) -
+# DEPS_FAILED is the pass's real exit status. The outer runner stamps the cache
+# ONLY on a clean pass, so a failure is retried next session instead of being
+# cached as success. Best-effort steps (npm/pnpm, the pip fallback chain) do not
+# set it — their last resort is the expected path on flat-layout repos.
+DEPS_FAILED=0
 echo "session-deps: installing workspace toolchain (fingerprint $FP)" >&2
 if [ -f "$WORKSPACE/uv.lock" ] && have uv; then
-  ( cd "$WORKSPACE" && uv sync --locked --extra dev 2>/dev/null || uv sync --locked 2>/dev/null ) \
-    || echo "WARN: workspace uv sync --locked failed" >&2
+  if ! ( cd "$WORKSPACE" && uv sync --locked --extra dev 2>/dev/null || uv sync --locked 2>/dev/null ); then
+    DEPS_FAILED=1
+    echo "WARN: workspace uv sync --locked failed" >&2
+  fi
 elif [ -f "$WORKSPACE/pyproject.toml" ] || ls "$WORKSPACE"/*.py >/dev/null 2>&1; then
   python3 -m pip install --upgrade pip >/dev/null 2>&1 || true
   if [ -f "$WORKSPACE/pyproject.toml" ]; then
@@ -152,14 +163,20 @@ if [ -f "$WORKSPACE/.pre-commit-config.yaml" ]; then
   if ! have pre-commit; then
     pip install --only-binary :all: pre-commit 2>/dev/null \
       || python3 -m pip install pre-commit 2>/dev/null \
-      || echo "WARN: pre-commit install failed — 'make pr' will fail until installed (allowlist pypi.org)" >&2
+      || { DEPS_FAILED=1; echo "WARN: pre-commit install failed — 'make pr' will fail until installed (allowlist pypi.org)" >&2; }
   fi
   if have pre-commit; then
-    ( cd "$WORKSPACE" && \
-      pre-commit install --install-hooks 2>/dev/null \
-      || pre-commit install-hooks 2>/dev/null \
-      || echo "WARN: pre-commit hook warm-up failed — first 'make pr' will fetch hook repos (allowlist github.com)" >&2 )
+    # Warm hook environments ONLY. Never `pre-commit install`: this repository has
+    # no git commit hook (ops/scripts/run_pr_precommit.sh), and an installed hook
+    # runs the catalog without the surface-aware SKIP list, so `git commit` fails
+    # on every non-cursor surface via symlinks-check.
+    # NOTE: the status is captured from the subshell — a `DEPS_FAILED=1` set inside
+    # `( … )` would not reach this scope.
+    if ! ( cd "$WORKSPACE" && pre-commit install-hooks 2>/dev/null ); then
+      DEPS_FAILED=1
+      echo "WARN: pre-commit hook warm-up failed — first 'make pr' will fetch hook repos (allowlist github.com)" >&2
+    fi
   fi
 fi
 echo "session-deps: install pass complete" >&2
-exit 0
+exit "$DEPS_FAILED"

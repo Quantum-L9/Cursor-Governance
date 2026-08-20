@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Unconditional execution exemption for ``git`` and ``gh`` shell commands.
+"""Workflow-plane execution exemption for ``git`` and ``gh`` shell commands.
 
 Policy is unchanged: `make pr` is still the preferred publish path, shared
 worktrees are still fragile, and a raw ``git push`` is still a workflow
@@ -9,13 +9,21 @@ into an execution denial.
 
     Policy:          unchanged
     Agent guidance:  unchanged
-    Execution gate:  unrestricted for git/gh
+    Workflow gate:   unrestricted for git/gh
+    Destructive risk: still governed — see ``git_guardrails``
 
-Every gate that can emit a denial consults this module FIRST — before Graphiti
-state, GMP phase locks, L4 authorization, publish-path classification, worktree
-isolation, or the fail-closed handler that turns an internal fault into a
-denial. For a git/gh command the answer is allow, regardless of governance
-state:
+Scope: this exemption covers the WORKFLOW plane only — Graphiti state, GMP
+phase locks, L4 authorization, publish-path classification, worktree isolation,
+and the fail-closed handler that turns an internal fault into a denial. It is
+NOT a blanket allow of git. Destructive risk is a separate plane, owned by
+``git_guardrails`` (contract ``l9-context-sensitive-git-guardrails``), which
+runs BEFORE this exemption in ``local_execution_gate`` and decides from the
+command's actual effect, its target's sensitivity, and whether recovery is
+provable. A git command that destroys nothing is allowed there too; one that
+would destroy unrecoverable work is denied to a human, not to a workflow phase.
+
+For the workflow plane the answer for a git/gh command is allow, regardless of
+governance state:
 
     policy evaluator healthy     -> allow
     policy evaluator unavailable -> allow

@@ -4,10 +4,20 @@
 Also enforces shared-worktree isolation (scoop/revert/switch/reset of foreign
 dirty files) via ``worktree_isolation_gate``.
 
-``git`` and ``gh`` shell commands are EXEMPT from every denial below — see
-``git_execution_exemption``. The classifiers here still report a raw publish or
-an isolation violation, so a policy engine can say "you bypassed `make pr`"
-after the fact; this gate no longer turns that report into a blocked command.
+``git`` and ``gh`` shell commands are EXEMPT from the *workflow* denials below
+— publish-path, L4 phase, worktree isolation — see ``git_execution_exemption``.
+The classifiers still report a raw publish, so a policy engine can say "you
+bypassed `make pr`" after the fact; this gate no longer turns that report into
+a blocked command.
+
+That exemption is about workflow preference, not about destroying work, and it
+is NOT a blanket allow of git: every shell command is first evaluated by
+``git_guardrails`` (contract ``l9-context-sensitive-git-guardrails``), which
+decides from the command's actual effect, target sensitivity, and provable
+recoverability. Read-only git stays allowed unconditionally, a destructive
+primitive over disposable state stays allowed, and only an unrecoverable
+sensitive mutation is denied — to a human, not to a workflow phase.
+
 Governed non-git commands and the MCP GitHub write tools are unaffected.
 
 Claude Code PreToolUse adapter:
@@ -19,6 +29,7 @@ Cursor beforeShellExecution adapter:
 Brain lives under ops/ per CANONICAL_LAW §2.1.
 
 Escape hatches (human / ops only):
+  L9_GIT_DESTRUCTIVE_AUTHORIZED=<reason>
   L9_LOCAL_PUSH_AUTHORIZED=<reason>
   L9_L4_LOCAL_AUTONOMY=0
   L9_GIT_REVERT_AUTHORIZED=<reason>
@@ -50,19 +61,24 @@ from command_parse import (  # noqa: E402
     wrapper_subcommands,
 )
 from git_execution_exemption import (  # noqa: E402
+    SHELL_TOOL_NAMES,
     event_is_git_or_gh,
     payload_is_git_or_gh,
 )
+from git_guardrails import command_requires_human  # noqa: E402
 from l4_local import release_allows_remote, workspace_from_event  # noqa: E402
 from worktree_isolation_gate import command_violates_worktree_isolation  # noqa: E402
 
+#: git/gh forms that reach GitHub. `make` is NOT matched by regex here: see
+#: MAKE_REMOTE_GOALS, because `\bmake\s+pr\b` also matches `make pr-check`.
 REMOTE_BASH_PATTERNS = (
     re.compile(r"\bgit\s+push\b", re.I),
     re.compile(r"\bgh\s+pr\s+create\b", re.I),
     re.compile(r"\bgh\s+pr\s+edit\b", re.I),
-    re.compile(r"\bmake\s+pr\b", re.I),
-    re.compile(r"\bmake\s+push\b", re.I),
 )
+
+#: Makefile goals that perform remote mutation, matched as exact goal tokens.
+MAKE_REMOTE_GOALS = frozenset({"pr", "push"})
 
 DENY_MCP_TOOLS = {
     "mcp__github__create_pull_request",
@@ -90,8 +106,11 @@ RAW_PUBLISH_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bgit\s+push\b", re.I), "git push"),
     (re.compile(r"\bgh\s+pr\s+create\b", re.I), "gh pr create"),
     (re.compile(r"\bgh\s+pr\s+edit\b", re.I), "gh pr edit"),
-    (re.compile(r"\bmake\s+push\b", re.I), "make push"),
 )
+
+#: Makefile goals that reach GitHub outside the sanctioned `pr` goal, matched
+#: as exact goal tokens for the same reason as MAKE_REMOTE_GOALS.
+MAKE_BYPASS_GOALS = frozenset({"push"})
 
 # A leading `VAR=value` shell assignment. Anchored and non-nested: linear time.
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
@@ -103,8 +122,8 @@ _MAKE_OPTS_WITH_ARG = frozenset(
 )
 
 
-def is_make_pr(segment: str) -> bool:
-    """True when this segment invokes `make pr` — the sanctioned publish path.
+def make_goals(segment: str) -> tuple[str, ...]:
+    """Every goal a `make` segment invokes, or () when it is not a make call.
 
     Deliberately a token scan, not a regex. Matching the real forms
     (``PR_REMEDIATE=0 make pr``, ``make -C /path pr``, ``make pr WS=…``) needs
@@ -113,16 +132,20 @@ def is_make_pr(segment: str) -> bool:
     shell command an agent issues, so a hostile or merely long argument list must
     not be able to stall it: this scan is linear in the token count.
 
-    Only the goal matters. ``make pr-check`` is not a publish (it never pushes)
-    and correctly returns False.
+    Goals are exact tokens, which is the whole point: a regex for ``make pr``
+    also matches ``make pr-check``, because ``\\b`` closes on the hyphen.
+
+    All goals are returned, not just the first — ``make pr-check pr`` runs both,
+    so a caller asking "does this publish?" must see the ``pr``.
     """
     tokens = segment.split()
     index = 0
     while index < len(tokens) and ENV_ASSIGN_RE.match(tokens[index]):
         index += 1
     if index >= len(tokens) or PurePosixPath(tokens[index]).name != "make":
-        return False
+        return ()
     index += 1
+    goals: list[str] = []
     while index < len(tokens):
         token = tokens[index]
         if token in _MAKE_OPTS_WITH_ARG:
@@ -131,8 +154,19 @@ def is_make_pr(segment: str) -> bool:
         if token.startswith("-") or ENV_ASSIGN_RE.match(token):
             index += 1
             continue
-        return token == "pr"
-    return False
+        goals.append(token)
+        index += 1
+    return tuple(goals)
+
+
+def is_make_pr(segment: str) -> bool:
+    """True when this segment invokes the `pr` goal — the sanctioned publish path.
+
+    ``make pr-check`` is not a publish. It runs the local quality gate and never
+    reaches GitHub (rule 48: "pr-check is PUBLIC quality; GitHub mutation stays
+    make pr only"), so it is not this path and must not be gated as one.
+    """
+    return "pr" in make_goals(segment)
 
 
 PUBLISH_PATH_OVERRIDE_ENV = "L9_PUBLISH_PATH_OVERRIDE"
@@ -168,7 +202,15 @@ def command_bypasses_publish_path(command: str) -> str | None:
         if is_make_pr(segment):
             continue
         head = segment_head(segment)
-        if head not in {"git", "gh", "make"}:
+        if head is None:
+            continue
+        name = PurePosixPath(head).name
+        if name == "make":
+            bypass = MAKE_BYPASS_GOALS.intersection(make_goals(segment))
+            if bypass:
+                return f"make {sorted(bypass)[0]}"
+            continue
+        if name not in {"git", "gh"}:
             continue
         for pattern, label in RAW_PUBLISH_PATTERNS:
             if pattern.search(segment):
@@ -184,6 +226,10 @@ def command_is_remote_mutation(command: str) -> bool:
     so ``bash -c 'git push …'`` still matches via the wrapper descent.
     ``echo 'git push'`` and other data segments never match. Residual accepted:
     ``ssh host 'git push'`` / ``sudo git push`` heads are not pattern targets.
+
+    A `make` segment is classified by its goals, not by a regex over the text.
+    ``\\bmake\\s+pr\\b`` matches ``make pr-check`` — the word boundary closes on
+    the hyphen — which denied the local quality gate as if it were a publish.
     """
     segments: list[str] = []
     for segment in split_segments(strip_heredoc_bodies(command)):
@@ -191,7 +237,14 @@ def command_is_remote_mutation(command: str) -> bool:
         segments.extend(wrapper_subcommands(segment))
     for segment in segments:
         head = segment_head(segment)
-        if head not in {"git", "gh", "make"}:
+        if head is None:
+            continue
+        name = PurePosixPath(head).name
+        if name == "make":
+            if MAKE_REMOTE_GOALS.intersection(make_goals(segment)):
+                return True
+            continue
+        if name not in {"git", "gh"}:
             continue
         if any(pattern.search(segment) for pattern in REMOTE_BASH_PATTERNS):
             return True
@@ -234,10 +287,20 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
     Dynamic path tokens never widen the gate (extract_named_roots ignores
     them), so unknown targets stay fail-closed.
 
-    A git/gh shell command short-circuits to allow before any of that: the
-    exemption is the first thing evaluated, so no state lookup, classifier, or
-    authorization check can produce a denial for one.
+    Order matters. The context-sensitive guardrail plane runs FIRST on every
+    shell command: it is the one denial a git command can still earn, and it
+    earns it from the effect it would actually have, never from its name. Only
+    then does the git/gh exemption short-circuit the workflow plane, so no
+    state lookup, phase check, or authorization lookup can deny a git command
+    that destroys nothing.
     """
+    if tool_name in SHELL_TOOL_NAMES:
+        guardrail = command_requires_human(
+            str(tool_input.get("command") or tool_input.get("cmd") or ""), root=root
+        )
+        if guardrail:
+            return guardrail
+
     if event_is_git_or_gh(tool_name, tool_input):
         return None
 
@@ -249,7 +312,7 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
         allowed, reason = release_allows_remote(root)
         return None if allowed else reason
 
-    if tool_name in {"Bash", "bash", "Shell", "shell"}:
+    if tool_name in SHELL_TOOL_NAMES:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
         iso = command_violates_worktree_isolation(command, root=root)
         if iso:
@@ -277,6 +340,36 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
         allowed, reason = release_allows_remote(root)
         return None if allowed else reason
     return None
+
+
+def _guardrail_from_payload(raw: str) -> str | None:
+    """Guardrail verdict for a raw hook payload. Never raises.
+
+    The git/gh exemption answers before the event is parsed, so the guardrail
+    has to answer there too — otherwise a destructive git command would be
+    waved through by the exemption before any policy ran.
+    """
+    try:
+        event = json.loads(raw)
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return None
+    if not isinstance(event, dict):
+        return None
+    tool_name = str(event.get("tool_name") or event.get("toolName") or "")
+    if tool_name and tool_name not in SHELL_TOOL_NAMES:
+        return None
+    command = str(event.get("command") or event.get("full_command") or "")
+    if not command:
+        tool_input = event.get("tool_input") or event.get("toolInput") or {}
+        if isinstance(tool_input, dict):
+            command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+    if not command.strip():
+        return None
+    try:
+        root = workspace_from_event(event)
+    except Exception:  # noqa: BLE001 - an unresolvable workspace is not a verdict
+        root = None
+    return command_requires_human(command, root=root)
 
 
 def _deny_claude(reason: str) -> int:
@@ -321,6 +414,11 @@ def _fail_closed_note(exc: BaseException) -> None:
 
 def main_claude() -> int:
     raw = sys.stdin.read()
+    # The destructive-risk plane answers first, even for git: the exemption
+    # below removes workflow denials, not the guardrail.
+    guardrail = _guardrail_from_payload(raw)
+    if guardrail:
+        return _deny_claude(guardrail)
     # Answered before parsing, and outside the fail-closed handler below: for a
     # git/gh command, execution permission must not depend on this gate being
     # able to evaluate anything at all.
@@ -423,6 +521,9 @@ def effective_root(command: str, root: Path) -> Path:
 
 def main_cursor_shell() -> int:
     raw = sys.stdin.read()
+    guardrail = _guardrail_from_payload(raw)
+    if guardrail:
+        return _emit_cursor("deny", guardrail)
     if payload_is_git_or_gh(raw):
         return _emit_cursor("allow")
     try:
@@ -434,6 +535,9 @@ def main_cursor_shell() -> int:
     try:
         command = str(event.get("command") or event.get("full_command") or "")
         root = effective_root(command, workspace_from_event(event))
+        guardrail = command_requires_human(command, root=root)
+        if guardrail:
+            return _emit_cursor("deny", guardrail)
         iso = command_violates_worktree_isolation(command, root=root)
         if iso:
             return _emit_cursor("deny", iso)

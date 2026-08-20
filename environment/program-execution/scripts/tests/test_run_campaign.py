@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
 import json
 import os
 import subprocess
@@ -121,6 +123,14 @@ def _load(name: str, path: Path):
     return module
 
 
+_GIT_IDENTITY = (
+    "-c",
+    "user.email=test@example.com",
+    "-c",
+    "user.name=Test",
+)
+
+
 def _write_task_output(worktree: Path, rel: str, title: str) -> str:
     path = worktree / rel
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -130,7 +140,19 @@ def _write_task_output(worktree: Path, rel: str, title: str) -> str:
     )
     subprocess.run(["git", "-C", str(worktree), "add", "--", rel], check=True, capture_output=True)
     subprocess.run(
-        ["git", "-C", str(worktree), "commit", "-m", f"pec: {Path(rel).stem} output"],
+        [
+            "git",
+            "-C",
+            str(worktree),
+            # The worktree under test is created by the PE controller, not by
+            # `_git_init`, so it carries no committer identity and CI runners
+            # have no global one either. Bind it per-invocation: the fixture
+            # owns the commit, so it must supply the identity that commit needs.
+            *_GIT_IDENTITY,
+            "commit",
+            "-m",
+            f"pec: {Path(rel).stem} output",
+        ],
         check=True,
         capture_output=True,
     )
@@ -193,13 +215,20 @@ class RunCampaignTests(unittest.TestCase):
         cls.activate = _load("compile_activation_under_test", ACTIVATE)
 
     def test_cli_refuses_until_shortcut(self) -> None:
-        self.mod.refuse_live_until_shortcut("close")
-        self.mod.refuse_live_until_shortcut("merge")
+        """The live path runs to the autonomous boundary — no short, no long."""
         with patch.dict(os.environ, {}, clear=False):
             os.environ.pop("L9_CAMPAIGN_UNTIL_DEBUG", None)
+            os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
+            # Stopping early is still a shortcut around the live path.
             with self.assertRaises(self.mod.CampaignError) as ctx:
                 self.mod.refuse_live_until_shortcut("activate")
             self.assertIn("CAMPAIGN_UNTIL is not a live campaign path", str(ctx.exception))
+            # Running past it is publication, which autonomy may not do.
+            for stage in ("pr", "close", "merge"):
+                with self.assertRaises(self.mod.CampaignError) as ctx:
+                    self.mod.refuse_live_until_shortcut(stage)
+                self.assertIn("local-commit-only", str(ctx.exception))
+            self.mod.refuse_live_until_shortcut("execute")
         with patch.dict(os.environ, {"L9_CAMPAIGN_UNTIL_DEBUG": "1"}):
             self.mod.refuse_live_until_shortcut("activate")
 
@@ -232,7 +261,8 @@ class RunCampaignTests(unittest.TestCase):
                 self.mod.require_remote_campaign_branch(root, "demo-activate-v1")
             self.assertIn("remote campaign/demo-activate-v1 missing", str(ctx.exception))
 
-    def test_pushes_campaign_branch_before_execute(self) -> None:
+    def test_does_not_push_campaign_branch_before_execute(self) -> None:
+        """Execution is local: nothing reaches a remote to set the work up."""
         order: list[str] = []
 
         def emit(intent: Path, repo_root: Path) -> dict[str, object]:
@@ -274,7 +304,8 @@ class RunCampaignTests(unittest.TestCase):
                     close=lambda workspace, campaign_id: order.append("close") or {},
                 ),
             )
-        self.assertEqual(order[:2], ["push", "execute"])
+        self.assertEqual(order, ["execute"])
+        self.assertNotIn("push", order)
 
     def test_write_and_commit_output_refuses_stub(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -771,6 +802,12 @@ class RunCampaignTests(unittest.TestCase):
         )
 
     def test_two_task_fixture_reaches_completed(self) -> None:
+        """The full path, publication included, under a governed release.
+
+        Publication moved out of autonomous execution; it was not deleted. This
+        drives the whole chain through `close` with the release transition open,
+        so the release path keeps its end-to-end coverage.
+        """
         opened: list[str] = []
         with tempfile.TemporaryDirectory() as raw:
             root = _host_repo(Path(raw) / "host")
@@ -778,21 +815,23 @@ class RunCampaignTests(unittest.TestCase):
             target = l9 / "program-worktrees" / "demo-activate-v1"
             target.mkdir(parents=True)
             _git_init(target)
-            report = self.mod.run_campaign(
-                root / "intent.yaml",
-                until="close",
-                primary=Path(raw) / "primary",
-                repo_root=root,
-                l9_root=l9,
-                hooks=self.mod.Hooks(
-                    context7_stack=_stack_ok,
-                    write_task_output=_write_task_output,
-                    compile_activation=self.activate.compile_activation,
-                    make_pr=lambda worktree, campaign_id: (
-                        opened.append(campaign_id) or {"number": 7, "url": "https://example.test/7"}
+            with patch.dict(os.environ, {"L9_PE_RELEASE_AUTHORIZED": "test release transition"}):
+                report = self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="close",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        write_task_output=_write_task_output,
+                        compile_activation=self.activate.compile_activation,
+                        make_pr=lambda worktree, campaign_id: (
+                            opened.append(campaign_id)
+                            or {"number": 7, "url": "https://example.test/7"}
+                        ),
                     ),
-                ),
-            )
+                )
             self.assertEqual(opened, ["demo-activate-v1"])
             self.assertIn("execute", report.stages_completed)
             self.assertIn("close", report.stages_completed)
@@ -811,6 +850,288 @@ class RunCampaignTests(unittest.TestCase):
                 [item["command"] for item in receipt["validations"]],
                 ["python3 -c 'print(0)'"],
             )
+
+    def test_blueprint_fingerprint_survives_recompilation(self) -> None:
+        """A recompiled Blueprint must fingerprint alike, or no repeat is ever seen."""
+        with tempfile.TemporaryDirectory() as raw:
+            blueprint = Path(raw) / "blueprint"
+            (blueprint / "schemas").mkdir(parents=True)
+            (blueprint / "PROGRAM.yaml").write_text(
+                "campaign_id: demo-activate-v1\nsnapshot_at: '2026-08-18T18:00:00+00:00'\n",
+                encoding="utf-8",
+            )
+            (blueprint / "MANIFEST.yaml").write_text(
+                "files:\n- path: PROGRAM.yaml\n  sha256: " + ("a" * 64) + "\n",
+                encoding="utf-8",
+            )
+            before = self.mod.blueprint_fingerprint(blueprint)
+
+            # Recompile: same program, new emission stamp, new derived digest.
+            (blueprint / "PROGRAM.yaml").write_text(
+                "campaign_id: demo-activate-v1\nsnapshot_at: '2026-08-18T19:45:12+00:00'\n",
+                encoding="utf-8",
+            )
+            (blueprint / "MANIFEST.yaml").write_text(
+                "files:\n- path: PROGRAM.yaml\n  sha256: " + ("b" * 64) + "\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(before, self.mod.blueprint_fingerprint(blueprint))
+
+            # A real content change must still register.
+            (blueprint / "PROGRAM.yaml").write_text(
+                "campaign_id: other-campaign-v1\nsnapshot_at: '2026-08-18T19:45:12+00:00'\n",
+                encoding="utf-8",
+            )
+            self.assertNotEqual(before, self.mod.blueprint_fingerprint(blueprint))
+
+    def test_campaign_run_creates_events_jsonl(self) -> None:
+        """A real close-through run leaves telemetry the harvester can read.
+
+        Publication moved out of autonomous execution, so driving the chain
+        through `close` opens the release transition explicitly -- the same
+        setup `test_two_task_fixture_reaches_completed` uses. The subject here
+        is the telemetry the run emits, not the release gate itself, which keeps
+        its own coverage in the refusal tests.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
+            with patch.dict(os.environ, {"L9_PE_RELEASE_AUTHORIZED": "test release transition"}):
+                self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="close",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        write_task_output=_write_task_output,
+                        compile_activation=self.activate.compile_activation,
+                        make_pr=lambda worktree, campaign_id: {"number": 7, "url": "http://x/7"},
+                    ),
+                )
+            workspace = l9 / "programs/demo-activate-v1"
+            events_path = workspace / "telemetry/events.jsonl"
+            self.assertTrue(events_path.is_file())
+            self.assertTrue((workspace / "telemetry/run-summary.json").is_file())
+            self.assertTrue((workspace / "telemetry/run-summary.md").is_file())
+
+            events = [json.loads(line) for line in events_path.read_text().splitlines() if line]
+            self.assertEqual({item["schema"] for item in events}, {"pe.execution-trace.v1"})
+            self.assertEqual(len({item["run_id"] for item in events}), 1)
+            operations = {item["operation"] for item in events}
+            for operation in (
+                "campaign_run",
+                "input_classification",
+                "compile_campaign_source",
+                "blueprint_validation",
+                "acceptance",
+                "pec_bootstrap",
+                "arm",
+                "execute",
+                "close",
+                "validation_command",
+                "pec_verify",
+            ):
+                self.assertIn(operation, operations)
+            lifecycle = {item["event_type"] for item in events}
+            for event_type in (
+                "TASK_ELIGIBLE",
+                "TASK_SELECTED",
+                "TASK_WORKTREE_READY",
+                "TASK_WORKER_STARTED",
+                "TASK_FIRST_WRITE",
+                "TASK_VALIDATION_STARTED",
+                "TASK_VALIDATION_FINISHED",
+                "TASK_VERIFY_STARTED",
+                "TASK_VERIFY_FINISHED",
+                "TASK_COMPLETED",
+            ):
+                self.assertIn(event_type, lifecycle)
+
+            summary = json.loads((workspace / "telemetry/run-summary.json").read_text())
+            self.assertEqual(summary["campaign_id"], "demo-activate-v1")
+            self.assertEqual(summary["task_counts"], {"completed": 2, "attempted": 2})
+            self.assertIsNotNone(summary["timing"]["time_to_first_write_ms"])
+            self.assertGreater(summary["timing"]["preparation_ms"], 0)
+            # The campaign_run span is the wall clock, not a preparation cost.
+            self.assertLess(summary["timing"]["preparation_ms"], summary["wall_clock_ms"])
+            campaign_run = [
+                item
+                for item in events
+                if item["operation"] == "campaign_run" and item["status"] == "PASSED"
+            ]
+            self.assertEqual([item["category"] for item in campaign_run], ["campaign"])
+            self.assertEqual(summary["operation_counts"]["compile_campaign_source"], 1)
+            self.assertEqual(summary["operation_counts"]["pec_bootstrap"], 1)
+            self.assertEqual(summary["operation_counts"]["pec_verify"], 2)
+            self.assertEqual(summary["operation_counts"]["validation_command"], 2)
+            self.assertEqual(summary["failure_counts"], {})
+            for task_id in ("TASK-001", "TASK-002"):
+                task = summary["per_task"][task_id]
+                self.assertTrue(task["completed"])
+                self.assertEqual(task["attempts"], 1)
+                self.assertIsNotNone(task["eligible_to_first_write_ms"])
+
+    def test_default_repo_root_derives_write_root_from_l9(self) -> None:
+        """`main()` runs with repo_root=None; the isolate stage must not crash.
+
+        The write_root default is the production entry path: the Makefile
+        `campaign` target does not pass --repo-root, and every other test in
+        this module passes repo_root= explicitly, so a dropped default here
+        would leave the whole suite green while every real CLI run dies with
+        UnboundLocalError.
+
+        When repo_root is None the primary IS the host repo, so this models
+        production: primary is a real git repo with an origin the isolate
+        stage can fetch.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            primary = _host_repo(Path(raw) / "primary")
+            _git_init(primary)
+            # The production primary's main contains the whole host repo, so the
+            # isolated worktree inherits the policy files the compile step
+            # patches. Include them in the init commit.
+            subprocess.run(["git", "add", "-A"], cwd=primary, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "commit", "-m", "init", "--amend", "--no-edit"],
+                cwd=primary,
+                check=True,
+                capture_output=True,
+            )
+            origin = Path(raw) / "origin.git"
+            origin.mkdir()
+            subprocess.run(["git", "init", "--bare", str(origin)], check=True, capture_output=True)
+            subprocess.run(
+                ["git", "remote", "add", "origin", str(origin)],
+                cwd=primary,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "push", "origin", "HEAD:main"], cwd=primary, check=True, capture_output=True
+            )
+            l9 = Path(raw) / "l9"
+            report = self.mod.run_campaign(
+                primary / "intent.yaml",
+                until="execute",
+                primary=primary,
+                # repo_root left None, worktree left None -- the main() shape.
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=self.activate.compile_activation,
+                    make_pr=lambda worktree, campaign_id: {"number": 7, "url": "http://x/7"},
+                ),
+            )
+            self.assertEqual(
+                str(report.worktree),
+                str((l9 / "gov-worktrees" / "demo-activate-v1").resolve()),
+            )
+
+    def test_validation_commands_record_exit_code_not_command_text(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            worktree = Path(raw)
+            _git_init(worktree)
+            trace = self.mod.pe_trace.ExecutionTrace(worktree, "demo-activate-v1")
+            results = self.mod.run_declared_validations(
+                worktree,
+                [
+                    "python3 -c 'print(0)'",
+                    'python3 -c \'import sys; sys.stderr.write("boom-detail"); '
+                    + "raise SystemExit(3)'",
+                ],
+                trace=trace,
+                task_id="TASK-001",
+            )
+            self.assertEqual([item["exit_code"] for item in results], [0, 3])
+            spans = [
+                item
+                for item in self.mod.pe_trace.read_events(worktree)
+                if item["operation"] == "validation_command" and item["status"] != "STARTED"
+            ]
+            self.assertEqual([item["status"] for item in spans], ["PASSED", "FAILED"])
+            self.assertEqual(spans[1]["error_code"], "VALIDATION_COMMAND_FAILED")
+            self.assertEqual(spans[0]["safe_metadata"]["exit_code"], 0)
+            self.assertEqual(spans[1]["safe_metadata"]["exit_code"], 3)
+            self.assertEqual(spans[0]["task_id"], "TASK-001")
+            # Position identifies which declared command this span is; the
+            # command text and the resolved cwd are deliberately not persisted.
+            self.assertEqual(spans[0]["safe_metadata"]["count"], 1)
+            self.assertEqual(spans[0]["safe_metadata"]["validation_count"], 2)
+            for span in spans:
+                self.assertNotIn("resolved_cwd", span["safe_metadata"])
+                self.assertNotIn("command", span["safe_metadata"])
+            # The failing command's output tail reaches the attempt receipt,
+            # never the trace.
+            self.assertIsNone(spans[1]["safe_message"])
+            self.assertIn("boom-detail", results[1]["evidence"])
+
+    def test_campaign_failure_still_generates_summary(self) -> None:
+        """A campaign that dies mid-preparation still leaves a harvestable trace."""
+
+        def _explode(source: Path, blueprint: Path) -> None:
+            raise RuntimeError("compile blew up")
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            with self.assertRaises(RuntimeError):
+                self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="close",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        compile_activation=self.activate.compile_activation,
+                        compile_source=_explode,
+                    ),
+                )
+            workspace = l9 / "programs/demo-activate-v1"
+            self.assertTrue((workspace / "telemetry/events.jsonl").is_file())
+            summary = json.loads((workspace / "telemetry/run-summary.json").read_text())
+            self.assertTrue((workspace / "telemetry/run-summary.md").is_file())
+            # One root cause, counted once, even though it unwound through
+            # the enclosing campaign_run span as well.
+            self.assertEqual(summary["failure_counts"]["RuntimeError"]["count"], 1)
+            events = [
+                json.loads(line)
+                for line in (workspace / "telemetry/events.jsonl").read_text().splitlines()
+                if line
+            ]
+            failed = [item for item in events if item["status"] == "FAILED"]
+            self.assertEqual(
+                [item["operation"] for item in failed],
+                ["compile_campaign_source", "campaign_run"],
+            )
+            self.assertEqual(failed[0]["safe_message"], "compile blew up")
+            self.assertEqual(failed[0]["error_class"], "RuntimeError")
+            self.assertFalse(failed[0]["safe_metadata"]["propagated"])
+            self.assertTrue(failed[1]["safe_metadata"]["propagated"])
+
+    def test_trace_command_harvests_workspace(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            trace = self.mod.pe_trace.ExecutionTrace(workspace, "demo-activate-v1")
+            with trace.span("compile", "compile_campaign_source", input_fingerprint="abc"):
+                pass
+            with trace.span("compile", "compile_campaign_source", input_fingerprint="abc"):
+                pass
+            self.assertEqual(self.mod.main(["trace", "--workspace", str(workspace)]), 0)
+            summary = json.loads((workspace / "telemetry/run-summary.json").read_text())
+            self.assertEqual(summary["repeated_operations"][0]["executions"], 2)
+            self.assertEqual(summary["repeated_operations"][0]["extra_executions"], 1)
+            self.assertTrue((workspace / "telemetry/run-summary.md").is_file())
+
+    def test_trace_command_reports_missing_trace(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            self.assertEqual(self.mod.main(["trace", "--workspace", raw]), 2)
 
     def test_until_stages_unchanged(self) -> None:
         self.assertEqual(
@@ -1103,6 +1424,225 @@ class RunCampaignTests(unittest.TestCase):
                 self.mod.write_and_commit_output(root, "done.md", "Title", writable=["done.md"]),
                 head,
             )
+
+
+class CampaignInputRoutingTests(unittest.TestCase):
+    """The front door must route or refuse — never leave a caller improvising.
+
+    The bug these cover: a fully specified campaign-source.v2 keeps its
+    `campaign_id` under `metadata`, so the activate-seed heuristic rejected it
+    and the brief compiler was handed YAML. The public path refused a valid
+    input, and the pipeline got driven by hand instead.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.mod = _load("run_campaign_routing", SCRIPT)
+        cls.activate = _load("compile_activation_routing", ACTIVATE)
+        cls.ci = cls.mod.campaign_input_module()
+
+    def _source(self) -> dict:
+        return self.activate.build_source(READY_SEED, stamp="2026-01-01T00:00:00Z")
+
+    def test_campaign_source_v2_is_classified_by_schema_not_extension(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            _dump(path, self._source())
+            found = self.ci.classify(path)
+            self.assertIs(found.kind, self.ci.CampaignInputKind.CAMPAIGN_SOURCE_V2)
+            self.assertTrue(found.supported)
+            self.assertEqual(found.route, "campaign_source -> blueprint -> PEC")
+
+            # Same content, a name that suggests nothing, still routes the same.
+            renamed = Path(raw) / "whatever.txt"
+            _dump(renamed, self._source())
+            self.assertIs(
+                self.ci.classify(renamed).kind, self.ci.CampaignInputKind.CAMPAIGN_SOURCE_V2
+            )
+
+    def test_activate_seed_and_brief_still_classify(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            seed = Path(raw) / "intent.yaml"
+            _dump(seed, READY_SEED)
+            self.assertIs(self.ci.classify(seed).kind, self.ci.CampaignInputKind.ACTIVATE)
+            memo = Path(raw) / "brief.md"
+            memo.write_text("# campaign memo\n\nsome prose\n", encoding="utf-8")
+            self.assertIs(self.ci.classify(memo).kind, self.ci.CampaignInputKind.BRIEF)
+
+    def test_unsupported_program_intent_fails_with_reason_and_fix(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "intent.yaml"
+            _dump(path, INTENT_V1)
+            with self.assertRaises(self.ci.CampaignInputRejected) as ctx:
+                self.mod.classify_campaign_input(path)
+            payload = ctx.exception.to_dict()
+            self.assertEqual(payload["error_code"], "PE_CAMPAIGN_INPUT_REJECTED")
+            self.assertEqual(payload["detected_input_kind"], "program-execution.intent.v1")
+            self.assertTrue(payload["nothing_executed"])
+            self.assertFalse(payload["manual_stage_bypass_permitted"])
+            self.assertIn("campaign-source.v2", payload["supported_input_kinds"])
+            self.assertTrue(payload["reason"])
+            self.assertIn("campaign-source.v2", payload["fix"])
+
+    def test_rejected_input_reports_nothing_executed_and_forbids_bypass(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "intent.yaml"
+            _dump(path, INTENT_V1)
+            with self.assertRaises(self.ci.CampaignInputRejected) as ctx:
+                self.mod.classify_campaign_input(path)
+            rendered = ctx.exception.render()
+            self.assertIn("nothing_executed: true", rendered)
+            self.assertIn("tasks_started: 0", rendered)
+            self.assertIn("PUBLIC_CAMPAIGN_FRONT_DOOR_REJECTED", rendered)
+            self.assertIn("manual_stage_bypass_permitted: false", rendered)
+            self.assertIn("default_", rendered)
+
+    def test_unknown_input_fails_before_workspace_creation(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            l9 = Path(raw) / "l9"
+            junk = root / "junk.yaml"
+            _dump(junk, {"schema": "something.else.v9", "hello": "world"})
+            with self.assertRaises(self.ci.CampaignInputRejected):
+                self.mod.run_campaign(
+                    junk,
+                    until="execute",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(context7_stack=_stack_ok),
+                )
+            # Nothing may exist: no runtime root, no blueprint, no pec workspace.
+            self.assertFalse(l9.exists(), msg="rejection created runtime state")
+            self.assertFalse(
+                (root / "environment/program-execution/campaigns/demo-activate-v1").exists()
+            )
+
+    def test_campaign_source_v2_routes_directly_to_compile_source(self) -> None:
+        seen: dict[str, object] = {}
+
+        def compile_source(source: Path, target: Path) -> None:
+            seen["source"] = Path(source)
+            seen["compiled"] = _load_yaml_file(Path(source))
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            path = root / "CAMPAIGN_SOURCE.yaml"
+            _dump(path, self._source())
+            self.mod.run_campaign(
+                path,
+                until="blueprint",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    compile_source=compile_source,
+                    validate_blueprint=lambda target: [],
+                ),
+            )
+        self.assertEqual(Path(seen["source"]).name, "CAMPAIGN_SOURCE.yaml")
+        compiled = seen["compiled"]
+        self.assertEqual(compiled["schema"], self.ci.CAMPAIGN_SOURCE_SCHEMA)
+
+    def test_campaign_source_v2_does_not_pass_through_activation_compiler(self) -> None:
+        def explode(intent: Path, repo_root: Path) -> dict:
+            raise AssertionError("campaign-source.v2 was rebuilt by the activation compiler")
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            path = root / "CAMPAIGN_SOURCE.yaml"
+            _dump(path, self._source())
+            self.mod.run_campaign(
+                path,
+                until="blueprint",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    compile_activation=explode,
+                    plan_window=explode,
+                    compile_source=lambda source, target: None,
+                    validate_blueprint=lambda target: [],
+                ),
+            )
+
+    def test_rich_campaign_source_preserves_task_validations_and_dependencies(self) -> None:
+        """The whole point of the direct route: rich semantics survive intake."""
+        source = self._source()
+        source["tasks"][1]["validation"] = [
+            {"command": "python3 -c 'print(\"marker-validation-preserved\")'"}
+        ]
+        source["tasks"][1]["depends_on"] = ["TASK-001"]
+        source["tasks"][0]["paths"] = {"writable": ["docs/program-execution/marker.md"]}
+        source["dependency_edges"] = [{"from": "TASK-001", "to": "TASK-002"}]
+        landed: dict[str, object] = {}
+
+        def compile_source(source_path: Path, target: Path) -> None:
+            landed["doc"] = _load_yaml_file(Path(source_path))
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            path = root / "CAMPAIGN_SOURCE.yaml"
+            _dump(path, source)
+            self.mod.run_campaign(
+                path,
+                until="blueprint",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    compile_source=compile_source,
+                    validate_blueprint=lambda target: [],
+                ),
+            )
+        doc = landed["doc"]
+        task2 = next(item for item in doc["tasks"] if item["id"] == "TASK-002")
+        self.assertEqual(
+            task2["validation"],
+            [{"command": "python3 -c 'print(\"marker-validation-preserved\")'"}],
+        )
+        self.assertEqual(task2["depends_on"], ["TASK-001"])
+        self.assertEqual(doc["dependency_edges"], [{"from": "TASK-001", "to": "TASK-002"}])
+        task1 = next(item for item in doc["tasks"] if item["id"] == "TASK-001")
+        self.assertEqual(task1["paths"], {"writable": ["docs/program-execution/marker.md"]})
+
+    def test_check_input_reports_route_and_runs_no_stage(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            _dump(path, self._source())
+            self.assertEqual(self.mod.main(["--check-input", str(path)]), 0)
+            bad = Path(raw) / "intent-v1.yaml"
+            _dump(bad, INTENT_V1)
+            self.assertEqual(self.mod.main(["--check-input", str(bad)]), 2)
+
+    def test_cli_rejection_is_terminal_and_explains_itself(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            bad = root / "intent-v1.yaml"
+            _dump(bad, INTENT_V1)
+            buffer = io.StringIO()
+            with contextlib.redirect_stderr(buffer):
+                code = self.mod.main(
+                    [
+                        "--intent",
+                        str(bad),
+                        "--repo-root",
+                        str(root),
+                        "--l9-root",
+                        str(Path(raw) / "l9"),
+                    ]
+                )
+            self.assertEqual(code, 2)
+            printed = buffer.getvalue()
+            self.assertIn("PE_CAMPAIGN_INPUT_REJECTED", printed)
+            self.assertIn("nothing_executed: true", printed)
+
+
+def _load_yaml_file(path: Path) -> dict:
+    return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":

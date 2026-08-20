@@ -36,6 +36,8 @@ from .controller import (
     validate_runtime,
     verify_attempt,
 )
+from .exec_env import resolve_exec_env
+from .workspace_reset import fresh_execution_workspace
 
 
 def print_json(value) -> None:
@@ -57,6 +59,20 @@ def parser() -> argparse.ArgumentParser:
 
     cmd = sub.add_parser("validate")
     cmd.add_argument("--workspace", required=True, type=Path)
+
+    cmd = sub.add_parser(
+        "fresh-workspace",
+        help="idempotently clear task worktrees, registrations and pec/* branches",
+    )
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--repository", required=True, type=Path)
+    cmd.add_argument("--task-id", action="append", default=[])
+    cmd.add_argument("--keep-leases", action="store_true")
+
+    cmd = sub.add_parser(
+        "resolve-env", help="report the interpreter validation commands will resolve"
+    )
+    cmd.add_argument("--cwd", type=Path)
 
     cmd = sub.add_parser("reconcile")
     cmd.add_argument("--workspace", required=True, type=Path)
@@ -303,6 +319,15 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             if value["status"] != "PASS":
                 print_json(value)
                 return 1
+        elif args.command == "fresh-workspace":
+            value = fresh_execution_workspace(
+                args.workspace,
+                args.repository,
+                task_ids=args.task_id or None,
+                release_leases=not args.keep_leases,
+            )
+        elif args.command == "resolve-env":
+            value = resolve_exec_env(args.cwd).describe()
         elif args.command == "reconcile":
             value = reconcile_repositories(args.workspace, args.repository)
         elif args.command == "status":

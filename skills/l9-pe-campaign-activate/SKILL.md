@@ -42,7 +42,7 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
 | Pipeline | [references/pipeline.md](references/pipeline.md) |
 | Merge | [references/merge-authority.md](references/merge-authority.md) |
 | Isolation | new worktree from `origin/main`; never the dirty primary clone |
-| Publish | runner pushes `campaign/<id>` before execute; task PRs stack on that remote base |
+| Publish | not a campaign stage — autonomous runs end at `execute` with local commits; publication is a governed release transition (`L9_PE_RELEASE_AUTHORIZED`) |
 | Remediate | `l9-pr-remediation` Converge, max 5 cycles, then merge that PR |
 | Forbidden extras | README, handoff, `INTENT.yaml`, `CONTRACT_SOURCE.md`, `PROGRAM_SOURCE.md`, alignment overlays |
 
@@ -68,13 +68,16 @@ SSOT: `ops/autonomy/authorize_merge.py`. Wrapper:
    `program-execution intent` as a follow-up. If the runner exits nonzero,
    stop and report its output.
 2. Live SSOT after arm is `$HOME/.l9/programs/<id>/runtime/LAUNCH.json` plus
-   the 15-minute task cards and `STACK.json`. The runner stacks each task PR
-   on the previous task branch. Never `PR_BASE=main`. Do not open the
-   operator memo.
-3. If a STACK.json PR is red, remediate that recorded PR only. Do not start
+   the 15-minute task cards and `STACK.json`. Do not open the operator memo.
+3. The run ends at `execute` with local commits and no PR. Report that end
+   state; do not push, open a PR, or merge to "finish" it. Publication is a
+   separate governed release transition, and when it runs it stacks each task
+   PR on the previous task branch — never `PR_BASE=main`.
+4. If a STACK.json PR is red, remediate that recorded PR only. Do not start
    a parallel pec workspace or a new campaign id.
-4. Close is a runner stage. Do not run `pec close` or `close_campaign.py`
-   yourself unless the runner already failed and you are reporting that fail.
+5. Close belongs to the release transition, not the autonomous run. Do not run
+   `pec close` or `close_campaign.py` yourself unless the runner already failed
+   and you are reporting that fail.
 
 ## MUST
 
