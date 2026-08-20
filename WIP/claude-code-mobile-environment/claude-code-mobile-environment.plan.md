@@ -1,6 +1,6 @@
 ---
 name: Claude Code Mobile Environment — unified readiness master plan
-overview: "Consolidate three concurrent efforts on the same concern into one master plan: this session's forensic audit of the cloud/mobile surface from the Python governance repo, the sibling plan at WIP/claude-code-mobile-environment written from the TypeScript node fleet, and the unmerged code on branch claude/startup-audit-review-bmj21b. Restore full non-memory readiness for Claude Code Mobile, make t..."
+overview: "Repair the Claude Code Mobile bootstrap and startup environment so that governed actions — including breakglass — are actually reachable, authorized and auditable from a cloud session, and so the surface boots from the GitHub main SSOT rather than a divergent home-directory clone. Consolidates three prior efforts: this session's forensic audit, the TypeScript node-fleet plan, and the unmerged i..."
 todos:
   - id: w0-01-integrate-inflight-workspace-resolution
     content: "Replay branch claude/startup-audit-review-bmj21b onto current main as ONE resolve_workspace in web/setup.sh. Keep main's refuse-rather-than-guess posture, and adopt the branch's three genuine improvements: probe CLAUDE_PROJECT_DIR with git rev-parse --show-toplevel rather than testing for a .git directory so worktrees and subdirectories resolve, exclude the governance clone from candidate repos, and cd into the resolved workspace so later cwd-derived steps inherit it"
@@ -122,6 +122,26 @@ todos:
     status: pending
     phase: execute
     depends_on: [w5-01-broker-url-operator]
+  - id: w0-05-correct-publish-path-doctrine
+    content: "Correct the doctrine text against the code. ops/autonomy/git_execution_exemption.py states that git and gh shell commands are UNCONDITIONALLY exempt from execution denial — every gate consults it first, and the answer is allow regardless of governance state — while the surface profile, the autonomy rules and AGENTS all still assert that a raw push is denied at every phase by the execution gate. Policy is genuinely unchanged, but the enforcement mechanism is not what the prose claims: the real enforcement lives inside make pr. Rewrite the claims to say raw git and gh execute but remain a reportable workflow violation, and that MCP GitHub tools stay governed because they are not shell commands"
+    status: pending
+    phase: execute
+    depends_on: []
+  - id: w1-06-session-scoped-breakglass
+    content: "Make breakglass reachable from a governed session. Every breakglass key is implemented and read via os.environ of the HOOK process, but a hook is spawned with the session environment, so an agent writing an inline assignment ahead of a command cannot set it — the variable never reaches the evaluator. The only remaining route is the account environment field, which the environment contract explicitly forbids because it makes the bypass permanent for every future session. Add a one-shot, session-scoped, audited authorization the evaluator can see, modelled on the existing merge authorization receipt: a written record naming the action, the reason and the requester, consumed once and logged, never a persistent environment variable"
+    status: pending
+    phase: execute
+    depends_on: [w0-05-correct-publish-path-doctrine]
+  - id: w1-07-single-governance-root
+    content: "Stop running two clones of one repository. resolve_governance_paths.sh pins the root to the home-directory clone and only that clone, so on a surface where the workspace IS the governance repository there are two checkouts of the same remote at different revisions — the home copy on main and the workspace on the feature branch. Hooks therefore execute governance code from the home copy while make targets execute it from the workspace, so a gate fix does not take effect for hooks until it merges to main and the home copy refreshes. Resolve the root to the workspace when the workspace is itself the governance repository, and to the GitHub clone otherwise, with the chosen root reported at session start"
+    status: pending
+    phase: execute
+    depends_on: [w1-01-baseline-regression-guard]
+  - id: w2-03-cloud-clone-delivery-contract
+    content: "Pin the cloud delivery contract for skills and rules. The project skills and rules directories are gitignored, and on Web and Mobile only tracked files survive the clone, so those trees can never arrive with the checkout and must be materialized by a bootstrap-time reconcile. Only three project-level Claude files are tracked today. Record this as an explicit contract with a test asserting that the tracked set is sufficient to bootstrap, so a future change cannot quietly rely on an ignored path being present in a fresh cloud session"
+    status: pending
+    phase: execute
+    depends_on: [w1-03-sessionstart-reconcile]
 isProject: false
 ---
 
@@ -130,11 +150,11 @@ isProject: false
 > **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.
 > **Template SSOT:** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`
 > **Execute:** `@environment/program-execution` → Program Lock/Controller → `@autonomy` (subordinate).
-> **Suggested filename:** `claude-code-mobile-environment-unified-readiness-master-plan_c9dcc90f.plan.md`
+> **Suggested filename:** `claude-code-mobile-environment-unified-readiness-master-plan_478c5200.plan.md`
 
 ## Objective (from PLAN_DOCUMENT)
 
-Consolidate three concurrent efforts on the same concern into one master plan: this session's forensic audit of the cloud/mobile surface from the Python governance repo, the sibling plan at WIP/claude-code-mobile-environment written from the TypeScript node fleet, and the unmerged code on branch claude/startup-audit-review-bmj21b. Restore full non-memory readiness for Claude Code Mobile, make the wiring self-healing, land the in-flight code without its three merge regressions, and give the TypeScript consumer repos the same governed session contract. Memory is fenced out of scope throughout.
+Repair the Claude Code Mobile bootstrap and startup environment so that governed actions — including breakglass — are actually reachable, authorized and auditable from a cloud session, and so the surface boots from the GitHub main SSOT rather than a divergent home-directory clone. Consolidates three prior efforts: this session's forensic audit, the TypeScript node-fleet plan, and the unmerged in-flight fix branch. Memory is fenced out of scope throughout.
 
 ### Success properties (seed — complete evidence_type/proof in template sections)
 
@@ -156,6 +176,10 @@ Consolidate three concurrent efforts on the same concern into one master plan: t
 | SP-14 | SC-14: make pr-check PASSes on the changed files in this repository | quality_gate | observe during PE verify / make pr-check | true |
 | SP-15 | SC-15: capability plane reports ENABLED for sonar.read_issues and semgrep.appsec_scan (gated on the broker milestone and excluded from the pr-check gate) | quality_gate | observe during PE verify / make pr-check | true |
 | SP-16 | SC-16: make pr-check runs to completion on a headless adapter surface, with the Cursor desktop hook plane reported as skipped-by-surface rather than FAIL, and no Cursor host artifacts created to achieve it | quality_gate | observe during PE verify / make pr-check | true |
+| SP-17 | SC-17: a session can obtain a one-shot audited breakglass authorization for a governed action without setting any persistent environment variable, and the authorization is consumed once and logged | quality_gate | observe during PE verify / make pr-check | true |
+| SP-18 | SC-18: the doctrine text and ops/autonomy/git_execution_exemption.py agree on whether raw git and gh execution is denied or exempt | quality_gate | observe during PE verify / make pr-check | true |
+| SP-19 | SC-19: exactly one checkout of the governance repository is authoritative for a session, and hooks and make targets execute the same governance code | quality_gate | observe during PE verify / make pr-check | true |
+| SP-20 | SC-20: a fresh cloud clone bootstraps to a working skill and rule surface using only git-tracked files plus the reconcile | quality_gate | observe during PE verify / make pr-check | true |
 
 ## Scope (from PLAN_DOCUMENT)
 

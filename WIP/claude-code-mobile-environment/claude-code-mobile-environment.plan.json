@@ -4,7 +4,7 @@
   "depth": "deep",
   "code_in_scope": true,
   "title": "Claude Code Mobile Environment — unified readiness master plan",
-  "objective": "Consolidate three concurrent efforts on the same concern into one master plan: this session's forensic audit of the cloud/mobile surface from the Python governance repo, the sibling plan at WIP/claude-code-mobile-environment written from the TypeScript node fleet, and the unmerged code on branch claude/startup-audit-review-bmj21b. Restore full non-memory readiness for Claude Code Mobile, make the wiring self-healing, land the in-flight code without its three merge regressions, and give the TypeScript consumer repos the same governed session contract. Memory is fenced out of scope throughout.",
+  "objective": "Repair the Claude Code Mobile bootstrap and startup environment so that governed actions — including breakglass — are actually reachable, authorized and auditable from a cloud session, and so the surface boots from the GitHub main SSOT rather than a divergent home-directory clone. Consolidates three prior efforts: this session's forensic audit, the TypeScript node-fleet plan, and the unmerged in-flight fix branch. Memory is fenced out of scope throughout.",
   "success_criteria": [
     "SC-01: branch claude/startup-audit-review-bmj21b is integrated onto current main with exactly ONE resolve_workspace definition in web/setup.sh, verified by grep -c returning 1",
     "SC-02: the integrated settings.template.json still invokes hooks through the locked governance interpreter, never bare system python3, verified by grep for .venv/bin/python3 in every hook command",
@@ -21,7 +21,11 @@
     "SC-13: make pr-check exits 0 on a clean checkout in every participating repo",
     "SC-14: make pr-check PASSes on the changed files in this repository",
     "SC-15: capability plane reports ENABLED for sonar.read_issues and semgrep.appsec_scan (gated on the broker milestone and excluded from the pr-check gate)",
-    "SC-16: make pr-check runs to completion on a headless adapter surface, with the Cursor desktop hook plane reported as skipped-by-surface rather than FAIL, and no Cursor host artifacts created to achieve it"
+    "SC-16: make pr-check runs to completion on a headless adapter surface, with the Cursor desktop hook plane reported as skipped-by-surface rather than FAIL, and no Cursor host artifacts created to achieve it",
+    "SC-17: a session can obtain a one-shot audited breakglass authorization for a governed action without setting any persistent environment variable, and the authorization is consumed once and logged",
+    "SC-18: the doctrine text and ops/autonomy/git_execution_exemption.py agree on whether raw git and gh execution is denied or exempt",
+    "SC-19: exactly one checkout of the governance repository is authoritative for a session, and hooks and make targets execute the same governance code",
+    "SC-20: a fresh cloud clone bootstraps to a working skill and rule surface using only git-tracked files plus the reconcile"
   ],
   "scope": {
     "in": [
@@ -472,6 +476,73 @@
       "blocker": "Infrastructure outside this repository and outside the sandbox. The hostname has no DNS record, so the target cluster and the workload-identity binding are unresolved; see unknown U-01.",
       "leverage_rank": 22,
       "shared_root_cause": "E: capability broker absent"
+    },
+    {
+      "id": "w0-05-correct-publish-path-doctrine",
+      "task": "Correct the doctrine text against the code. ops/autonomy/git_execution_exemption.py states that git and gh shell commands are UNCONDITIONALLY exempt from execution denial — every gate consults it first, and the answer is allow regardless of governance state — while the surface profile, the autonomy rules and AGENTS all still assert that a raw push is denied at every phase by the execution gate. Policy is genuinely unchanged, but the enforcement mechanism is not what the prose claims: the real enforcement lives inside make pr. Rewrite the claims to say raw git and gh execute but remain a reportable workflow violation, and that MCP GitHub tools stay governed because they are not shell commands",
+      "files": [
+        "ops/autonomy/surface_profile.yaml",
+        "rules/88-l4-local-autonomy.mdc",
+        "rules/zz-autonomy-surface-override.mdc",
+        "AGENTS.md"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "leverage_rank": 4,
+      "shared_root_cause": "G: doctrine prose asserts enforcement the code does not implement"
+    },
+    {
+      "id": "w1-06-session-scoped-breakglass",
+      "task": "Make breakglass reachable from a governed session. Every breakglass key is implemented and read via os.environ of the HOOK process, but a hook is spawned with the session environment, so an agent writing an inline assignment ahead of a command cannot set it — the variable never reaches the evaluator. The only remaining route is the account environment field, which the environment contract explicitly forbids because it makes the bypass permanent for every future session. Add a one-shot, session-scoped, audited authorization the evaluator can see, modelled on the existing merge authorization receipt: a written record naming the action, the reason and the requester, consumed once and logged, never a persistent environment variable",
+      "files": [
+        "ops/autonomy/worktree_isolation_gate.py",
+        "ops/autonomy/l4_local.py",
+        "ops/autonomy/merge_gate.py",
+        "environment/agents/adapters/claude-code/web/environment.env.example"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "w0-05-correct-publish-path-doctrine"
+      ],
+      "operation": "Insert",
+      "leverage_rank": 2,
+      "shared_root_cause": "H: breakglass is implemented but unreachable from the surface it exists for"
+    },
+    {
+      "id": "w1-07-single-governance-root",
+      "task": "Stop running two clones of one repository. resolve_governance_paths.sh pins the root to the home-directory clone and only that clone, so on a surface where the workspace IS the governance repository there are two checkouts of the same remote at different revisions — the home copy on main and the workspace on the feature branch. Hooks therefore execute governance code from the home copy while make targets execute it from the workspace, so a gate fix does not take effect for hooks until it merges to main and the home copy refreshes. Resolve the root to the workspace when the workspace is itself the governance repository, and to the GitHub clone otherwise, with the chosen root reported at session start",
+      "files": [
+        "ops/scripts/resolve_governance_paths.sh",
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "w1-01-baseline-regression-guard"
+      ],
+      "operation": "Replace",
+      "leverage_rank": 5,
+      "shared_root_cause": "I: two checkouts of one repository, with different code executing per entrypoint"
+    },
+    {
+      "id": "w2-03-cloud-clone-delivery-contract",
+      "task": "Pin the cloud delivery contract for skills and rules. The project skills and rules directories are gitignored, and on Web and Mobile only tracked files survive the clone, so those trees can never arrive with the checkout and must be materialized by a bootstrap-time reconcile. Only three project-level Claude files are tracked today. Record this as an explicit contract with a test asserting that the tracked set is sufficient to bootstrap, so a future change cannot quietly rely on an ignored path being present in a fresh cloud session",
+      "files": [
+        "environment/agents/adapters/claude-code/tests/test_cloud_clone_contract.py",
+        "environment/agents/adapters/claude-code/README.md",
+        ".gitignore"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
+      "operation": "Create",
+      "leverage_rank": 13,
+      "shared_root_cause": "A: wiring performed only at build time, never reconciled at session time"
     }
   ],
   "critical_path": [
@@ -659,6 +730,9 @@
   "leverage": {
     "ranked_todo_ids": [
       "w1-03-sessionstart-reconcile",
+      "w1-06-session-scoped-breakglass",
+      "w0-05-correct-publish-path-doctrine",
+      "w1-07-single-governance-root",
       "w0-01-integrate-inflight-workspace-resolution",
       "w3-01-surface-aware-wiring-check",
       "w1-01-baseline-regression-guard",
@@ -681,7 +755,8 @@
       "w4-02-node-repo-session-contract",
       "w4-03-node-gate-hygiene",
       "w5-01-broker-url-operator",
-      "w5-02-broker-deployment"
+      "w5-02-broker-deployment",
+      "w2-03-cloud-clone-delivery-contract"
     ],
     "shared_causes": [
       "A: adapter wiring is performed only at environment-build time and never reconciled at session time, so one bad build freezes the surface permanently. This is the single cause behind the wrong-workspace wire, the unreachable skills, the stale receipt and the phantom skillOverrides.",
@@ -689,7 +764,10 @@
       "C: several contracts and validators are written for the Cursor host and never classify the Claude cloud surface, producing the false-red wiring check, the inert durable env, the GH_TOKEN contract break and the absent slash commands.",
       "D: two independent parallel fixes exist for the workspace defect — main's from PR 231 and the in-flight branch's from an older base — and merging them naively yields duplicate definitions plus an interpreter regression. Consolidating them is a prerequisite for everything downstream.",
       "E: the capability broker is both unconfigured and undeployed, the single cause of every unreachable capability and brokered MCP server.",
-      "F: model-controlled sessions in the TypeScript node repos start with zero validation capability because policy denies them a PAT and no local-link path is wired, so each agent improvises."
+      "F: model-controlled sessions in the TypeScript node repos start with zero validation capability because policy denies them a PAT and no local-link path is wired, so each agent improvises.",
+      "G: doctrine prose asserts an enforcement mechanism the code deliberately removed — raw git and gh are execution-exempt by design while the rules still claim denial, which misleads every agent that reads them, including this one.",
+      "H: breakglass is fully implemented but unreachable from the surface it exists for, because the evaluator reads the hook process environment and an agent can only write an inline assignment the hook never sees.",
+      "I: two checkouts of one repository are live at different revisions, so which governance code runs depends on the entrypoint."
     ],
     "deletions_or_consolidations": [
       "Three plan documents collapse into this one master plan: the audit-derived plan, the sibling node-fleet plan, and the implicit plan embodied in the unmerged branch. The sibling document is retained as the node-fleet detail record rather than duplicated here.",
@@ -746,6 +824,10 @@
     {
       "risk": "Intent recorded in a comment but never implemented in the code beneath it — the pattern that produced this blocker and that a reader skimming for comments would mistake for a completed fix",
       "mitigation": "Land the surface gate with a regression test that exercises the ssot_checkout branch on a headless surface, so the assertion is pinned by execution rather than by prose"
+    },
+    {
+      "risk": "The breakglass repair becomes a general bypass rather than a narrow audited one, weakening every gate it touches",
+      "mitigation": "Model it on the existing single-use merge authorization receipt rather than a new environment key: one action, one reason, one requester, consumed once and logged. Never a persistent variable, and never a blanket disable"
     }
   ],
   "unknowns": [
@@ -784,6 +866,12 @@
       "question": "Whether a write performed inside the SessionStart hook itself lands before the harness snapshots project skills. Mid-session discovery is ruled out by probe, but the in-hook case is not separable until the reconcile exists",
       "decision_effect": "Decides whether the reconcile benefits the current session or only the next, and therefore how the checkpoint evidence is collected",
       "resolution": "accept_bounded"
+    },
+    {
+      "id": "U-07",
+      "question": "Was the unconditional git and gh execution exemption a deliberate permanent decision, or a temporary unblock that the doctrine was meant to catch up with?",
+      "decision_effect": "Decides whether w0-05 rewrites the prose to match the code, or the exemption is narrowed to match the prose",
+      "resolution": "ask"
     }
   ],
   "final_validation": [
@@ -861,7 +949,8 @@
       "U-02",
       "U-03",
       "U-04",
-      "U-05"
+      "U-05",
+      "U-07"
     ],
     "next_skill": "l9-plan-audit",
     "stop_reason": "Validate-and-Repair applied to the plan artifact. It found one Confirmed High defect in the plan itself: w3-01 named the wrong owner. The evidence is a comment in ops/scripts/run_pr_gate.sh specifying the surface gate, and code beneath it that applies the gate on one branch and omits it on the ssot-family branch this surface takes — so the blocker is the caller's dispatch, not the checker's logic. w3-01 was rewritten to the correct owner and anchor, raised to a publication blocker, freed of its dependency, and promoted to lead the critical path, since no work in this plan can be published until it lands. Milestones M0 through M3 remain executable; M4 spans repositories not attached here; M5 stays blocked on U-01."
