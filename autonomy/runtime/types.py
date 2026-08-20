@@ -78,3 +78,73 @@ class ScheduledAction:
     resource_class: str
     score: float
     mutation: bool
+
+
+@dataclass(frozen=True)
+class SchedulingCycle:
+    """One saturation cycle: what was admitted and, when short, why.
+
+    Silent underutilization is a scheduler defect, so every action that was
+    READY but not selected is attributed to exactly one blocking reason.
+    """
+
+    selected: tuple[ScheduledAction, ...]
+    ready: int
+    running: int
+    available_global_slots: int
+    blocked_dependency: int
+    blocked_claim: int
+    blocked_resource_capacity: int
+    blocked_campaign_budget: int
+    blocked_role_cardinality: int
+    blocked_global_capacity: int
+    blocked_unknown_resource_class: int
+    blocked_human_gate: int
+    caller_limit: int | None = None
+    caller_limit_applied: bool = False
+
+    @property
+    def selected_count(self) -> int:
+        return len(self.selected)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "ready": self.ready,
+            "running": self.running,
+            "selected": self.selected_count,
+            "available_global_slots": self.available_global_slots,
+            "blocked_dependency": self.blocked_dependency,
+            "blocked_claim": self.blocked_claim,
+            "blocked_resource_capacity": self.blocked_resource_capacity,
+            "blocked_campaign_budget": self.blocked_campaign_budget,
+            "blocked_role_cardinality": self.blocked_role_cardinality,
+            "blocked_global_capacity": self.blocked_global_capacity,
+            "blocked_unknown_resource_class": self.blocked_unknown_resource_class,
+            "blocked_human_gate": self.blocked_human_gate,
+            "caller_limit": self.caller_limit,
+            "caller_limit_applied": self.caller_limit_applied,
+        }
+
+    def render(self) -> str:
+        payload = self.to_dict()
+        ordered = [
+            "ready",
+            "running",
+            "selected",
+            "available_global_slots",
+            "blocked_dependency",
+            "blocked_claim",
+            "blocked_resource_capacity",
+            "blocked_campaign_budget",
+            "blocked_role_cardinality",
+            "blocked_global_capacity",
+            "blocked_unknown_resource_class",
+            "blocked_human_gate",
+        ]
+        return " ".join(f"{name}={payload[name]}" for name in ordered)
+
+    def underutilized(self) -> bool:
+        """True when READY work was left idle while global capacity remained."""
+
+        idle_ready = self.ready - self.selected_count
+        return idle_ready > 0 and self.available_global_slots > self.selected_count

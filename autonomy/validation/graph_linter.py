@@ -8,9 +8,11 @@ from typing import Any
 from autonomy.errors import GraphValidationError
 from autonomy.models import (
     Action,
+    ActionKind,
     DeploymentManifest,
     Role,
 )
+from autonomy.runtime.claims import claims_collide
 
 
 @dataclass(frozen=True)
@@ -31,10 +33,12 @@ class GraphLinter:
         deployment: DeploymentManifest,
         role_policy: Mapping[str, Any],
         pipeline_policy: Mapping[str, Any],
+        resource_policy: Mapping[str, Any] | None = None,
     ) -> None:
         self.deployment = deployment
         self.role_policy = role_policy
         self.pipeline_policy = pipeline_policy
+        self.resource_policy = resource_policy
 
     def lint(self, compiled_graph: Mapping[str, Any]) -> list[Finding]:
         raw_actions = compiled_graph.get("actions")
@@ -50,6 +54,8 @@ class GraphLinter:
         findings.extend(self._check_human_merge_policy(actions))
         findings.extend(self._check_claim_modes(actions))
         findings.extend(self._check_completion_contracts(actions))
+        findings.extend(self._check_resource_classes(actions))
+        findings.extend(self._check_serialized_siblings(actions))
         return findings
 
     def assert_valid(self, compiled_graph: Mapping[str, Any]) -> None:
@@ -336,6 +342,123 @@ class GraphLinter:
                     )
                 )
         return findings
+
+    def _check_resource_classes(
+        self,
+        actions: Iterable[Action],
+    ) -> list[Finding]:
+        """Every action must name a declared resource class of the right kind.
+
+        An undeclared class cannot be scheduled at all, and a mutation action
+        parked in a read class would be admitted under aggressive read capacity
+        without claim-based conflict enforcement. Both fail closed here rather
+        than becoming silent scheduler underutilization or unsafe concurrency.
+        """
+
+        if self.resource_policy is None:
+            return []
+        classes = self.resource_policy.get("classes", {})
+        if not isinstance(classes, Mapping):
+            return []
+        findings: list[Finding] = []
+        for action in actions:
+            config = classes.get(action.resource_class)
+            if not isinstance(config, Mapping):
+                findings.append(
+                    Finding(
+                        "PIPE-RESOURCE-CLASS-UNKNOWN",
+                        "ERROR",
+                        f"Resource class {action.resource_class!r} is not declared "
+                        "in the resource policy",
+                        action.id,
+                    )
+                )
+                continue
+            class_is_mutation = bool(config.get("mutation", False))
+            if action.mutation and not class_is_mutation:
+                findings.append(
+                    Finding(
+                        "PIPE-RESOURCE-CLASS-MUTATION",
+                        "ERROR",
+                        "Mutation action cannot run in read-only resource class "
+                        f"{action.resource_class!r}",
+                        action.id,
+                    )
+                )
+            if not action.mutation and class_is_mutation:
+                findings.append(
+                    Finding(
+                        "PIPE-RESOURCE-CLASS-WIDTH",
+                        "WARNING",
+                        "Read-only action occupies mutation resource class "
+                        f"{action.resource_class!r} and needlessly narrows "
+                        "mutation capacity",
+                        action.id,
+                    )
+                )
+        return findings
+
+    def _check_serialized_siblings(
+        self,
+        actions: Iterable[Action],
+    ) -> list[Finding]:
+        """Reject dependency edges whose only effect is to serialize peers.
+
+        Independent work must compile to sibling DAG nodes. An edge between two
+        actions of the same role *and* the same kind whose claims do not
+        conflict is the classic recon -> recon -> recon chain: it produces depth
+        where width is legal.
+
+        Deliberately not flagged: human gates, which exist to sequence; edges
+        between different kinds of work for one role (a pipeline step, not a
+        clone); edges whose claims genuinely collide; and any edge that declares
+        `metadata.serialization_justification`.
+        """
+
+        action_by_id = {action.id: action for action in actions}
+        findings: list[Finding] = []
+        for action in action_by_id.values():
+            if action.metadata.get("serialization_justification"):
+                continue
+            if action.kind is ActionKind.HUMAN_GATE:
+                continue
+            for dependency_id in action.depends_on:
+                dependency = action_by_id.get(dependency_id)
+                if dependency is None or dependency.role is not action.role:
+                    continue
+                if dependency.kind is not action.kind:
+                    continue
+                if _claims_conflict(dependency, action):
+                    continue
+                findings.append(
+                    Finding(
+                        "PIPE-SERIAL-SIBLING",
+                        "ERROR",
+                        f"Action serializes behind same-role peer {dependency_id!r} "
+                        "with no conflicting claim; emit them as sibling nodes or "
+                        "declare metadata.serialization_justification",
+                        action.id,
+                    )
+                )
+        return findings
+
+
+def _claims_conflict(left: Action, right: Action) -> bool:
+    """Whether two actions contend for the same resource key."""
+
+    right_claims = {claim.key: claim for claim in right.claims}
+    for claim in left.claims:
+        other = right_claims.get(claim.key)
+        if other is None:
+            continue
+        if claims_collide(
+            mode=claim.mode,
+            exclusive=claim.exclusive,
+            other_mode=other.mode,
+            other_exclusive=other.exclusive,
+        ):
+            return True
+    return False
 
 
 def main() -> int:

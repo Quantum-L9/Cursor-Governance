@@ -5,6 +5,30 @@ from typing import Any
 
 from autonomy.adapters.protocol import AdapterConfig
 
+# Every parallel-safe analytical role runs in the background so a swarm is not
+# serialized by the foreground task slot.
+BACKGROUND_ROLES = frozenset(
+    {
+        "context_compiler",
+        "recon",
+        "synthesis",
+        "verifier",
+        "reviewer",
+        "failure_classifier",
+        "poller",
+        "sentinel",
+        "evidence_writer",
+    }
+)
+
+# Mutation roles are foreground by default. They are already admitted
+# concurrently by the scheduler (claim-limited, not count-limited); this flag
+# only decides whether one orchestrating session also detaches them. Enable it
+# per deployment once background tasks are confirmed to preserve lease
+# propagation, mandatory hooks, and heartbeat for a writing worker — the
+# enforcement itself is identical either way.
+MUTATION_ROLES = frozenset({"executor", "remediator"})
+
 
 def load_claude_code_config(payload: Mapping[str, Any]) -> AdapterConfig:
     config = AdapterConfig.from_dict(payload)
@@ -13,20 +37,21 @@ def load_claude_code_config(payload: Mapping[str, Any]) -> AdapterConfig:
     return config
 
 
-def build_claude_task(deployment: Mapping[str, Any]) -> dict[str, Any]:
+def build_claude_task(
+    deployment: Mapping[str, Any],
+    *,
+    background_mutation_roles: bool = False,
+) -> dict[str, Any]:
     contract = deployment["agent_contract"]
     lease = deployment["lease"]
     return {
         "name": f"l9-{contract['action_id']}",
         "description": contract["objective"],
         "subagent_type": _claude_subagent_type(contract["role"]),
-        "run_in_background": contract["role"]
-        in {
-            "recon",
-            "verifier",
-            "poller",
-            "sentinel",
-        },
+        "run_in_background": _runs_in_background(
+            contract["role"],
+            background_mutation_roles=background_mutation_roles,
+        ),
         "prompt": _render_prompt(contract),
         "environment": {
             "L9_AUTONOMY_REQUIRED": "1",
@@ -59,10 +84,28 @@ def build_claude_task(deployment: Mapping[str, Any]) -> dict[str, Any]:
     }
 
 
-def claude_task_json(deployment: Mapping[str, Any]) -> str:
+def claude_task_json(
+    deployment: Mapping[str, Any],
+    *,
+    background_mutation_roles: bool = False,
+) -> str:
     import json
 
-    return json.dumps(build_claude_task(deployment), indent=2, sort_keys=True) + "\n"
+    task = build_claude_task(
+        deployment,
+        background_mutation_roles=background_mutation_roles,
+    )
+    return json.dumps(task, indent=2, sort_keys=True) + "\n"
+
+
+def _runs_in_background(
+    role: str,
+    *,
+    background_mutation_roles: bool,
+) -> bool:
+    if role in BACKGROUND_ROLES:
+        return True
+    return background_mutation_roles and role in MUTATION_ROLES
 
 
 def _claude_subagent_type(role: str) -> str:

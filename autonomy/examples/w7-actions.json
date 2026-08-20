@@ -27,7 +27,7 @@
         "campaign-coordinator"
       ],
       "mutation": false,
-      "resource_class": "repository_read",
+      "resource_class": "context_compile",
       "claims": [
         {
           "key": "repo:odoo",
@@ -57,7 +57,7 @@
         "context-compile-task046"
       ],
       "mutation": false,
-      "resource_class": "repository_read",
+      "resource_class": "repository_recon",
       "claims": [
         {
           "key": "repo:stack-config",
@@ -86,7 +86,7 @@
         "context-compile-task046"
       ],
       "mutation": false,
-      "resource_class": "repository_read",
+      "resource_class": "repository_recon",
       "claims": [
         {
           "key": "repo:odoo",
@@ -115,7 +115,7 @@
         "context-compile-task046"
       ],
       "mutation": false,
-      "resource_class": "repository_read",
+      "resource_class": "repository_recon",
       "claims": [
         {
           "key": "repo:owner-schemas",
@@ -144,7 +144,7 @@
         "context-compile-task046"
       ],
       "mutation": false,
-      "resource_class": "repository_read",
+      "resource_class": "repository_recon",
       "claims": [
         {
           "key": "repo:gate-actions",
@@ -176,7 +176,7 @@
         "ro-gate-actions"
       ],
       "mutation": false,
-      "resource_class": "repository_read",
+      "resource_class": "synthesis",
       "claims": [],
       "completion": {
         "artifact_kind": "ExecutionBrief",
@@ -247,7 +247,7 @@
         "execute-m0"
       ],
       "mutation": false,
-      "resource_class": "repository_read",
+      "resource_class": "verification",
       "claims": [
         {
           "key": "repo:odoo",
@@ -311,7 +311,7 @@
         "verify-m0-live"
       ],
       "mutation": false,
-      "resource_class": "repository_read",
+      "resource_class": "review",
       "claims": [
         {
           "key": "repo:odoo",
@@ -377,7 +377,7 @@
         "campaign-coordinator"
       ],
       "mutation": false,
-      "resource_class": "repository_read",
+      "resource_class": "sentinel",
       "claims": [
         {
           "key": "repo:odoo",
@@ -409,7 +409,7 @@
         "base-sha-sentinel"
       ],
       "mutation": false,
-      "resource_class": "controller_mutation",
+      "resource_class": "evidence",
       "claims": [],
       "completion": {
         "artifact_kind": "EvidenceReceipt",

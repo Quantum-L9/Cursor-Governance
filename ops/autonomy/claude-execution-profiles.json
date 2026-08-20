@@ -1,0 +1,74 @@
+{
+  "schema_version": "1.0.0",
+  "id": "l9.claude_execution_profiles",
+  "updated": "2026-08-18",
+  "_doc": "Surface execution personalities. Claude = unleashed, Cursor = constrained. Resolved by ops/autonomy/execution_profile.py; pointed at from ops/autonomy/surface_profile.yaml. Runtime classification never depends on model identity.",
+
+  "classification": {
+    "cloud_env": "CLAUDE_CODE_REMOTE",
+    "cloud_value": "true",
+    "claude_surface_value": "claude-code",
+    "surface_env": "L9_GOVERNANCE_SURFACE"
+  },
+
+  "profiles": {
+    "cursor": {
+      "execution_profile": "constrained",
+      "concurrency_policy": "bounded",
+      "parallel_read": "bounded",
+      "mutation_parallelism": "bounded_lanes",
+      "model_policy": "surface_default",
+      "workflow_size_guideline": null,
+      "max_parallel": 4,
+      "max_mutation_lanes": 2,
+      "native_subagent_limit": null,
+      "subagent_spawn_depth": null
+    },
+    "claude_local": {
+      "execution_profile": "maximum_velocity",
+      "concurrency_policy": "saturate",
+      "parallel_read": "maximum_legal",
+      "mutation_parallelism": "max_non_conflicting",
+      "model_policy": "best_available_per_role",
+      "workflow_size_guideline": "unrestricted",
+      "max_parallel": 480,
+      "max_mutation_lanes": 128,
+      "native_subagent_limit": 480,
+      "subagent_spawn_depth": 3
+    },
+    "claude_cloud": {
+      "execution_profile": "maximum_velocity",
+      "concurrency_policy": "saturate",
+      "parallel_read": "maximum_legal",
+      "mutation_parallelism": "max_non_conflicting",
+      "model_policy": "best_available_per_role",
+      "workflow_size_guideline": "unrestricted",
+      "max_parallel": 480,
+      "max_mutation_lanes": 128,
+      "native_subagent_limit": 480,
+      "subagent_spawn_depth": 3
+    }
+  },
+
+  "providers": {
+    "deepseek": {
+      "match_base_url": "deepseek",
+      "provider_concurrency_ceiling": 500,
+      "reserved_control_slots": 20,
+      "worker_target": 480
+    },
+    "anthropic": {
+      "provider_concurrency_ceiling": null,
+      "reserved_control_slots": null,
+      "worker_target": null,
+      "_doc": "No published account-wide concurrency ceiling; worker target falls back to autonomy/policies/resource-classes.json global."
+    }
+  },
+
+  "native_defaults": {
+    "_doc": "Claude Code defaults these variables when unset (code.claude.com/docs/en/agent-sdk/subagents). Left unset they become the effective ceiling.",
+    "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": 20,
+    "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": 3,
+    "workflowSizeGuideline": "medium"
+  }
+}

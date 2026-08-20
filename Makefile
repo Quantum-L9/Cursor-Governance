@@ -246,6 +246,19 @@ autonomy-contracts-validate:
 autonomy-validate: autonomy-contracts-validate
 	$(PYTHON) environment/program-execution/peer_execution/autonomy/validate_autonomy.py
 
+autonomy-validate: autonomy-policy-check
+
+.PHONY: autonomy-policy-embed autonomy-policy-check
+
+## Re-embed autonomy/policies + examples + golden specs into autonomy/policy_loader.py.
+## The JSON files are the source of truth; the module is generated (no runtime file I/O).
+autonomy-policy-embed:
+	$(PYTHON) ops/scripts/regenerate_autonomy_policy_loader.py
+
+## Fail when the embedded policy module drifts from its JSON sources.
+autonomy-policy-check:
+	$(PYTHON) ops/scripts/regenerate_autonomy_policy_loader.py --check
+
 
 ## L4 local autonomy (stacked local commits → kernels → authorize → push/PR).
 l4-status:

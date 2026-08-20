@@ -65,6 +65,7 @@ class AutonomyRuntime:
         )
         self.role_policy = role_policy
         self.pipeline_policy = pipeline_policy
+        self.resource_policy = resource_policy
 
     @classmethod
     def from_repository(
@@ -104,6 +105,7 @@ class AutonomyRuntime:
             deployment=deployment,
             role_policy=self.role_policy,
             pipeline_policy=self.pipeline_policy,
+            resource_policy=self.resource_policy,
         )
         linter.assert_valid(graph_payload)
         self.store.register_campaign(
@@ -121,11 +123,21 @@ class AutonomyRuntime:
                 "graph_hash": graph_payload.get("graph_hash"),
             },
         )
+        # Deployment role maxima are authorization ceilings for concurrent
+        # workers; the scheduler still only admits roles that have READY work.
+        self.scheduler.set_role_ceilings(
+            campaign.campaign_id,
+            {
+                role.value: int(configuration.get("max", 0))
+                for role, configuration in deployment.required_roles.items()
+            },
+        )
         self.scheduler.refresh_readiness(campaign.campaign_id)
 
     def status(self, campaign_id: str) -> dict[str, Any]:
         campaign = self.store.get_campaign(campaign_id)
         actions = self.store.list_actions(campaign_id)
+        cycle = self.scheduler.next_cycle(campaign_id)
         return {
             "campaign_id": campaign_id,
             "graph_id": campaign["graph_id"],
@@ -152,8 +164,9 @@ class AutonomyRuntime:
                     "score": item.score,
                     "mutation": item.mutation,
                 }
-                for item in self.scheduler.next_actions(campaign_id)
+                for item in cycle.selected
             ],
+            "scheduling": cycle.to_dict(),
         }
 
     def suspend(
