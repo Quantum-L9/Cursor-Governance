@@ -1,0 +1,181 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "PE Factory Repair: pipeline friction fixes + bounded-autonomy defaults",
+  "depth": "standard",
+  "objective": "Repair the Cursor-Governance program-execution factory using evidence collected while driving campaign website-bot-five-push-v1: remove mechanical friction that stops or slows agent campaigns (workspace-resolution gaps, auth channels unreachable in-session, secrets path-guards, npm registry auth, unverified dependency publishes, stale Graphiti conflict edges) and encode the operator's new operating defaults — default authorization = open PR, remediate until green and mergeable, then HALT before merge; stacked PRs merged bottom-up with no rebase; all work on a single feature branch off main; authorization YAMLs updated so approval requirements are unblocked before PRs open. Non-negotiable preserved contracts: merge stays human-only; gates stay fail-closed; scanners are never weakened; protected PE core templates and the concurrent pe/pipeline-fixes workstream files are not touched by this program. Success properties SP-01..SP-09 carry the evidence-typed acceptance criteria.",
+  "success_criteria": [
+    "SP-01 Baseline matches locked SHA at execution start (git rev-parse HEAD == dbc0bde0f3bbbf646f0da96dd36531198f379567; rebaselined after PR #161 landed mid-program)",
+    "SP-02 merge_gate denies by default and allows only a valid human authorization file (fixture hook runs)",
+    "SP-03 secrets resolver works from a consumer repo cwd (--check OK)",
+    "SP-04 authed npm install works via ops/secrets/authed_npm.sh wrapper (npm ci in scratch clone)",
+    "SP-05 dependency-publish preflight catches unpublished version and fabricated lock integrity (unit fixtures)",
+    "SP-06 graphiti conflicts filters expired edges (unit fixture)",
+    "SP-07 policy YAMLs parse and encode the new operating defaults (structural assertions)",
+    "SP-08 quality gates PASS on changed files (make pr-check)",
+    "SP-09 no in-flight pe/pipeline-fixes file modified by this program (diff name check)"
+  ],
+  "scope": {
+    "in": [
+      "ops/autonomy/merge_gate.py",
+      "ops/autonomy/surface_profile.yaml",
+      "ops/secrets/resolve_secret.py",
+      "ops/secrets/sync_secrets_registry.py",
+      "ops/secrets/authed_npm.sh (new)",
+      "skills/l9-aws-secrets/SKILL.md",
+      "ops/hooks/check_gh_package_deps.py (new)",
+      ".pre-commit-config.yaml",
+      "ops/config/precommit-hook-contract.json (if registration requires)",
+      "ops/graphiti/graphiti_memory_client.py",
+      "skills/AUTONOMY_MANIFEST.yaml",
+      "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+      "ops/scripts/stack_pr.py (new)",
+      "rules/zz-autonomy-surface-override.mdc",
+      "rules/48-make-pr-remediation.mdc",
+      "unit tests alongside each changed module"
+    ],
+    "out": [
+      "environment/agents/adapters/claude-code/hooks/memory_gate.py (in-flight pe/pipeline-fixes)",
+      "environment/agents/adapters/claude-code/hooks/memory_lock.py (in-flight)",
+      "environment/agents/adapters/claude-code/hooks/memory_prefetch.py (in-flight)",
+      "environment/program-execution/MANIFEST.json (in-flight)",
+      "environment/program-execution/core/MANIFEST.yaml (in-flight)",
+      "environment/program-execution/core/program-execution-controller-template/MANIFEST.yaml (in-flight)",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py (in-flight)",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py (in-flight)",
+      "environment/program-execution/core/program-execution-controller-template/scripts/compile_campaign_source.py (in-flight)",
+      "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_compile_campaign_source.py (in-flight)",
+      "ops/autonomy/local_execution_gate.py (in-flight)",
+      "ops/autonomy/worktree_isolation_gate.py (in-flight)",
+      "environment/program-execution/core/program-execution-controller-template/RUNBOOK.md (in-flight)",
+      "/Users/macm2/.l9/gov-worktrees/pe-pipeline-fixes worktree (other agent's)",
+      "Quantum-L9/SEO-Bot and Quantum-L9/Website-Bot repos",
+      "$HOME/.l9/programs/website-bot-five-push-v1 campaign runtime"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {"id": "PV-01", "command_or_action": "git rev-parse HEAD in worktree pe-pipeline-fix-program", "pass_criteria": "== dbc0bde0f3bbbf646f0da96dd36531198f379567 and branch exists (rebaselined after PR #161 landed; scope files verified non-overlapping with #161)", "status": "passed"},
+    {"id": "PV-02", "command_or_action": "re-diff in-flight pe/pipeline-fixes worktree and intersect with scope.in", "pass_criteria": "no overlapping file paths", "status": "pending"},
+    {"id": "PV-03", "command_or_action": "git worktree list shows pe-pipeline-fix-program registered", "pass_criteria": "registered (re-verify: registration was pruned once)", "status": "passed"},
+    {"id": "PV-04", "command_or_action": "governance venv python + pytest + pre-commit available", "pass_criteria": "versions print; pre-commit run --version", "status": "pending"}
+  ],
+  "todos": [
+    {"id": "todo-01-baseline-preflight", "task": "Lock immutable baseline SHA, verify worktree registration, re-check in-flight overlap against scope.in, record receipts", "files": [], "effort": "S", "risk": "low", "dependencies": [], "leverage_rank": 1, "blocker": "no code mutation; produces preflight receipts under .l9/autonomy"},
+    {"id": "todo-02-merge-gate-human-channel", "task": "merge_gate.py: accept one-shot human authorization file (~/.l9/autonomy/merge-authorization.json with repo/pr/sha/expires_at) alongside L9_MERGE_AUTHORIZED; default remains deny; add unit tests (deny default, allow valid, deny stale/forged)", "files": ["ops/autonomy/merge_gate.py", "tests (alongside ops/autonomy)"], "effort": "M", "risk": "high", "dependencies": ["todo-01-baseline-preflight"], "leverage_rank": 2},
+    {"id": "todo-03-secrets-path-guard", "task": "resolve_secret.py + sync_secrets_registry.py: allow governance root (script-relative) in _safe_path allowed roots; regression test running from a consumer cwd", "files": ["ops/secrets/resolve_secret.py", "ops/secrets/sync_secrets_registry.py", "tests"], "effort": "S", "risk": "medium", "dependencies": ["todo-01-baseline-preflight"], "leverage_rank": 3},
+    {"id": "todo-04-authed-npm-wrapper", "task": "Add ops/secrets/authed_npm.sh that resolves the sole PAT and exports npm_config_//npm.pkg.github.com/:_authToken; document npm mechanics in skills/l9-aws-secrets/SKILL.md", "files": ["ops/secrets/authed_npm.sh", "skills/l9-aws-secrets/SKILL.md"], "effort": "S", "risk": "low", "dependencies": ["todo-01-baseline-preflight"], "leverage_rank": 6},
+    {"id": "todo-05-dep-publish-preflight", "task": "New ops/hooks/check_gh_package_deps.py: every @quantum-l9/* version in package.json must exist on GitHub Packages and lock resolved/integrity must match registry metadata; register in .pre-commit-config.yaml (+ precommit-hook-contract.json if required); fixtures + unit tests", "files": ["ops/hooks/check_gh_package_deps.py", ".pre-commit-config.yaml", "ops/config/precommit-hook-contract.json", "fixtures", "tests"], "effort": "M", "risk": "medium", "dependencies": ["todo-01-baseline-preflight"], "leverage_rank": 5},
+    {"id": "todo-06-graphiti-conflicts-freshness", "task": "graphiti_memory_client.py conflicts: exclude edges with expired_at in the past (--fresh-only); unit test with expired edge fixture", "files": ["ops/graphiti/graphiti_memory_client.py", "tests"], "effort": "S", "risk": "low", "dependencies": ["todo-01-baseline-preflight"], "leverage_rank": 7},
+    {"id": "todo-07-surface-profile-defaults", "task": "surface_profile.yaml: authorize pr_remediation_until_green_and_mergeable + open_stacked_pr_on_open_pr_head; remove remediation_after_pr/l9_pr_remediation_spawn from forbid; keep merge_pull_request + gh_pr_merge forbidden (halt before merge); forbid rebase_for_pr_stacking; post_push remediation_skill l9-pr-remediation, max_cycles 5, merge_requires never, older_open_prs merge_bottom_up; structural assertion tests", "files": ["ops/autonomy/surface_profile.yaml", "tests"], "effort": "M", "risk": "high", "dependencies": ["todo-01-baseline-preflight"], "leverage_rank": 1},
+    {"id": "todo-08-autonomy-manifest-routing", "task": "AUTONOMY_MANIFEST.yaml claude_routing: l9-pr-remediation auto_invoke under campaign/PE packet (remediate-until-green scope); merge intents remain explicit/human; validate with existing manifest validation", "files": ["skills/AUTONOMY_MANIFEST.yaml"], "effort": "M", "risk": "medium", "dependencies": ["todo-07-surface-profile-defaults"], "leverage_rank": 4},
+    {"id": "todo-09-campaign-stacking-policy", "task": "CAMPAIGN_EXECUTION_POLICY.yaml: one feature branch off main per program, exclusive worktree lease per mutating agent, stacked PRs bottom-up without rebase (first PR base = integration/main, subsequent base = open PR head); add ops/scripts/stack_pr.py helper implementing base selection + bottom-up merge order check", "files": ["environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml", "ops/scripts/stack_pr.py"], "effort": "M", "risk": "medium", "dependencies": ["todo-07-surface-profile-defaults"], "leverage_rank": 4},
+    {"id": "todo-10-rules-docs", "task": "Update rules/zz-autonomy-surface-override.mdc + rules/48-make-pr-remediation.mdc prose to the new defaults; regenerate generated llm-rules (project_llm_rules.py --root)", "files": ["rules/zz-autonomy-surface-override.mdc", "rules/48-make-pr-remediation.mdc", "environment/generated/llm-rules (regenerated)"], "effort": "S", "risk": "low", "dependencies": ["todo-07-surface-profile-defaults", "todo-08-autonomy-manifest-routing", "todo-09-campaign-stacking-policy"], "leverage_rank": 8},
+    {"id": "todo-11-prove", "task": "Run unit tests, lint, make pr-check, policy structural assertions; all PASS", "files": [], "effort": "M", "risk": "low", "dependencies": ["todo-02-merge-gate-human-channel", "todo-03-secrets-path-guard", "todo-04-authed-npm-wrapper", "todo-05-dep-publish-preflight", "todo-06-graphiti-conflicts-freshness", "todo-10-rules-docs"], "leverage_rank": 9, "blocker": "produces validation evidence receipts; no code mutation"},
+    {"id": "todo-12-converge-halt-before-merge", "task": "Open PR for pe/pipeline-fix-program (stacked on open PR head per policy if the in-flight PR is open), remediate until CI green + mergeable, then HALT before merge; human merges bottom-up", "files": [], "effort": "M", "risk": "medium", "dependencies": ["todo-11-prove"], "leverage_rank": 10, "blocker": "PR/CI state on github.com; merge stays human-only"}
+  ],
+  "critical_path": ["todo-01-baseline-preflight", "todo-02-merge-gate-human-channel", "todo-11-prove", "todo-12-converge-halt-before-merge"],
+  "milestones": [
+    {"id": "M1", "outcome": "Baseline locked; overlap verified; preflight receipts recorded", "unlocks": "todo-02, todo-03, todo-04, todo-05, todo-06, todo-07"},
+    {"id": "M2", "outcome": "Mechanical fixes (merge gate channel, secrets guard, npm wrapper, dep preflight, graphiti freshness) implemented with unit tests", "unlocks": "todo-11"},
+    {"id": "M3", "outcome": "Authorization policy defaults updated and validated (surface profile, manifest, campaign policy, rules)", "unlocks": "todo-11"},
+    {"id": "M4", "outcome": "All quality gates PASS (unit tests, lint, make pr-check, validators)", "unlocks": "todo-12"},
+    {"id": "M5", "outcome": "PR open, green, mergeable; halted before merge awaiting human (bottom-up)", "unlocks": "human merge"}
+  ],
+  "checkpoints": [
+    {"id": "CP1", "after": "todo-01-baseline-preflight", "evidence_required": "baseline receipt + overlap receipt + worktree registration check", "no_go_action": "stop_and_replan"},
+    {"id": "CP2", "after": "todo-06-graphiti-conflicts-freshness", "evidence_required": "unit tests for 02-06 pass", "no_go_action": "fix failures; do not widen scope"},
+    {"id": "CP3", "after": "todo-10-rules-docs", "evidence_required": "policy YAMLs parse + structural assertions + manifest validation PASS", "no_go_action": "do not proceed to prove"},
+    {"id": "CP4", "after": "todo-11-prove", "evidence_required": "make pr-check PASS + plan validator PASS", "no_go_action": "remediate until green then halt"},
+    {"id": "CP5", "after": "todo-12-converge-halt-before-merge", "evidence_required": "PR CI green + mergeable + autonomous_merge false", "no_go_action": "halt for human merge"}
+  ],
+  "doc_root_surface_impact": [
+    {"surface": "rules/*.mdc (zz-autonomy-surface-override, 48-make-pr-remediation)", "action": "update", "todo_ids": ["todo-10-rules-docs"]},
+    {"surface": "skills/AUTONOMY_MANIFEST.yaml", "action": "update", "todo_ids": ["todo-08-autonomy-manifest-routing"]},
+    {"surface": "ops/config/precommit-hook-contract.json", "action": "update", "todo_ids": ["todo-05-dep-publish-preflight"]},
+    {"surface": "docs/ (ADR follow-on for factory-repair operating defaults, separate plan)", "action": "n_a", "todo_ids": [], "reason": "ADR is a follow-on milestone owned by a separate plan"}
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "What if remediation cycles exceed max_cycles before green? -> terminal halt + FAIL evidence, no merge, human decides (policy must say so).",
+      "What if a merge-authorization file is forged, stale, or for a different PR/SHA? -> denied; unit-tested both directions.",
+      "What if the open PR head that a stacked PR bases on gets force-changed or closed? -> stacked PR stays on recorded base SHA; fallback documented; no rebase.",
+      "What if the in-flight pe/pipeline-fixes agent later modifies one of my scoped files? -> CP1/CP4 re-diff; stop_and_replan.",
+      "What if merge_gate regression denies ALL merges machine-wide? -> fail-closed direction is annoying but safe; tests must also prove allow-path works to avoid lockout.",
+      "What if Graphiti VPS is unreachable during conflicts filtering? -> unit tests mocked; live path degrades to unfiltered with warning, gate unchanged."
+    ],
+    "assumed_false_ifs": [
+      "Hook invocation contract (stdin JSON event) unchanged.",
+      "Governance venv python and validators present at execution.",
+      "pe/pipeline-fixes workstream files remain as inventoried today."
+    ],
+    "blast_radius": "merge_gate + surface_profile govern every agent session on this machine — a regression either locks out all merges (fail-closed, recoverable) or widens autonomy (dangerous). Both directions unit-tested; default deny preserved.",
+    "rollback": "git_restore_scoped_paths per changed file from baseline SHA; receipts recorded; no force-push/hard-reset; policy YAML rollback = restore previous file versions."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["todo-07-surface-profile-defaults", "todo-02-merge-gate-human-channel", "todo-03-secrets-path-guard", "todo-08-autonomy-manifest-routing", "todo-09-campaign-stacking-policy", "todo-04-authed-npm-wrapper", "todo-05-dep-publish-preflight", "todo-06-graphiti-conflicts-freshness", "todo-10-rules-docs", "todo-11-prove", "todo-12-converge-halt-before-merge"],
+    "shared_causes": [
+      "Workspace/session-resolution divergence across gates (L4 gate vs lock tool vs memory gate) — one root-cause family; each fix removes a stop.",
+      "Auth channels reachable only by humans or only by session env — agents burn cycles on mechanical workarounds.",
+      "Dependency publish state never verified at author time — defects surface only at CI/merge time."
+    ],
+    "deletions_or_consolidations": [
+      "Follow-on (separate plan, after in-flight workstream lands): consolidate workspace resolution into one shared helper used by local_execution_gate, merge_gate, memory_lock — deletes duplicated per-gate resolution logic.",
+      "remediation_after_pr + l9_pr_remediation_spawn forbid entries replaced by one bounded remediation policy (surface_profile) — consolidation of scattered remediation rules."
+    ]
+  },
+  "risks": [
+    {"risk": "Collision with the concurrent pe/pipeline-fixes workstream", "mitigation": "scope.out lists its files; CP1/CP4 re-diff; SP-09 blocking; stop_and_replan on overlap"},
+    {"risk": "merge_gate regression locks out or widens merges for every session", "mitigation": "bidirectional unit tests; deny default; manual hook invocation before commit"},
+    {"risk": "Policy prose forked by consumers (do-not-fork rule)", "mitigation": "update rules + regenerate generated llm-rules in the same todo; validators"},
+    {"risk": "Worktree registration pruned again mid-program", "mitigation": "CP1/CP4 verify registration; recreate from branch if needed"},
+    {"risk": "AUTONOMY_MANIFEST validation unknown", "mitigation": "U4 measurement at execution; run skills validation before claiming SP-07"}
+  ],
+  "unknowns": [
+    {"id": "U1", "question": "Will the in-flight pe/pipeline-fixes workstream touch any scope.in file before this program executes?", "decision_effect": "overlap forces stop_and_replan or stacking order change", "resolution": "probe"},
+    {"id": "U2", "question": "Exact unit-test layout for ops/autonomy hook modules", "decision_effect": "test file paths in todos 02/03", "resolution": "probe"},
+    {"id": "U3", "question": "Does registering the new pre-commit hook require ops/config/precommit-hook-contract.json entry?", "decision_effect": "whether that file is edited", "resolution": "probe"},
+    {"id": "U4", "question": "Which validator validates AUTONOMY_MANIFEST.yaml routing changes?", "decision_effect": "FV-04 command", "resolution": "probe"}
+  ],
+  "final_validation": [
+    {"id": "FV-01", "command": "python -m pytest <unit tests for todos 02-06,07> -q", "pass_criteria": "0 failures", "status": "pending"},
+    {"id": "FV-02", "command": "make pr-check", "pass_criteria": "PASS", "status": "pending"},
+    {"id": "FV-03", "command": "python scripts/validate_plan_document.py /Users/macm2/.cursor/plans/pe-pipeline-fix-program.plan.json", "pass_criteria": "PASS", "status": "pending"},
+    {"id": "FV-04", "command": "structural assertions on surface_profile.yaml + AUTONOMY_MANIFEST.yaml + CAMPAIGN_EXECUTION_POLICY.yaml", "pass_criteria": "all keys/values per SP-07", "status": "pending"},
+    {"id": "FV-05", "command": "git diff --name-only HEAD | grep -F -x -f <(scope.out paths) | wc -l", "pass_criteria": "0", "status": "pending"}
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1", "U2", "U3", "U4"],
+    "next_skill": "l9-ynp",
+    "stop_reason": "plan delivered for operator approval; execution not started (merge of SEO-Bot PR #53 also still awaiting human)"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/autonomy/merge_gate.py", "ops/autonomy/surface_profile.yaml",
+      "ops/secrets/resolve_secret.py", "ops/secrets/sync_secrets_registry.py", "ops/secrets/authed_npm.sh",
+      "skills/l9-aws-secrets/SKILL.md", "ops/hooks/check_gh_package_deps.py", ".pre-commit-config.yaml",
+      "ops/graphiti/graphiti_memory_client.py", "skills/AUTONOMY_MANIFEST.yaml",
+      "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml", "ops/scripts/stack_pr.py",
+      "rules/zz-autonomy-surface-override.mdc", "rules/48-make-pr-remediation.mdc",
+      "unit tests alongside changed modules"
+    ],
+    "must_not_modify": [
+      "in-flight pe/pipeline-fixes files (scope.out)", "environment/program-execution/core/** templates",
+      "ops/autonomy/local_execution_gate.py", "ops/autonomy/worktree_isolation_gate.py",
+      "SEO-Bot / Website-Bot repos", "$HOME/.l9/programs/website-bot-five-push-v1/**",
+      "docker-compose.yml, deploy/** (protected infra)"
+    ],
+    "preserved_contracts": [
+      "merge stays human-only (halt before merge)", "gates fail closed", "no scanner weakening to force PASS",
+      "no force-push / hard-reset / admin-merge", "sole-PAT rule (openclaw-igorbot)", "do-not-fork surface_profile prose",
+      "deterministic contracts of product repos untouched"
+    ],
+    "validation_commands": [
+      "python -m pytest -q", "make pr-check",
+      "python scripts/validate_plan_document.py /Users/macm2/.cursor/plans/pe-pipeline-fix-program.plan.json"
+    ]
+  },
+  "estimate": "2-3 sessions",
+  "checklist": []
+}

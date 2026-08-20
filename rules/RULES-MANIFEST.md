@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-20T15:46:20Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-20T19:26:25Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -68,7 +68,7 @@ Generated: `2026-08-20T15:46:20Z`. Source: `rules/*.mdc`.
 | `81-gmp-audit.mdc` | `l9.rule.81.gmp.audit` | global | governance | agent_requested | 96 | `0a3985c2fdc4` |
 | `82-deployment-manifest.mdc` | `l9.rule.82.deployment.manifest` | global | deployment | agent_requested | 72 | `b57f632b093e` |
 | `83-gmp-contracts.mdc` | `l9.rule.83.gmp.contracts` | global | governance | always | 135 | `f9c358d00e0e` |
-| `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 73 | `f82e47eb9d68` |
+| `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 73 | `7121eb2a6c46` |
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | agent_requested | 91 | `3e623c8e396d` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | agent_requested | 58 | `7a05740e99d2` |
 | `87-cursor-memory-kernel.mdc` | `l9.rule.cursor.memory.kernel` | global | memory | always | 166 | `a27cb6825319` |

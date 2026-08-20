@@ -458,7 +458,7 @@
       "output": null,
       "output_sha256": null,
       "source": "rules/84-cursor-governance-wiring.mdc",
-      "source_sha256": "f82e47eb9d687f82a3595c21e2ed4649c24564caa92330aa4bbe2d63ef865cc6",
+      "source_sha256": "7121eb2a6c4623186754c4ee0d7dc6387d2a3b7c2f9af5d849582395f2193ff2",
       "stem": "84-cursor-governance-wiring"
     },
     {

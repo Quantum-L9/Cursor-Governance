@@ -99,6 +99,8 @@ cp "$OPS_DIR/setup_workspace_symlinks.sh" "$gov/ops/scripts/"
 cp "$OPS_DIR/resolve_governance_paths.sh" "$gov/ops/scripts/"
 cp "$OPS_DIR/lib/path_contracts.sh" "$gov/ops/scripts/lib/"
 cp "$OPS_DIR/lib/rules_overlay.sh" "$gov/ops/scripts/lib/"
+cp "$OPS_DIR/lib/workspace_kind.sh" "$gov/ops/scripts/lib/"
+cp "$OPS_DIR/lib/cursor_plans_store.sh" "$gov/ops/scripts/lib/"
 printf '%s\n' '# law' > "$gov/CANONICAL_LAW.md"
 printf '%s\n' '{"version":1,"hooks":{}}' > "$gov/ops/hooks/hooks.json.template"
 cat > "$gov/ops/scripts/validate_governance_symlinks.sh" <<'SH'
@@ -122,6 +124,9 @@ assert_real_dir "$ws/.cursor/rules"
 plans_rt="$(python3 -c "import os; print(os.path.realpath('$ws/.cursor/plans'))")"
 plans_want="$(python3 -c "import os; print(os.path.realpath('$fixture_home/.cursor/plans'))")"
 [ "$plans_rt" = "$plans_want" ]
+[ -L "$fixture_home/.cursor/plans" ]
+store_rt="$(python3 -c "import os; print(os.path.realpath('$gov/docs/plans'))")"
+[ "$plans_rt" = "$store_rt" ]
 pass "full setup preserves local rules and wires .cursor-commands + .cursor/plans"
 
 # T9: SSOT setup removes self-alias (do not create .cursor-commands → self).
@@ -132,6 +137,8 @@ cp "$OPS_DIR/setup_workspace_symlinks.sh" "$gov9/ops/scripts/"
 cp "$OPS_DIR/resolve_governance_paths.sh" "$gov9/ops/scripts/"
 cp "$OPS_DIR/lib/path_contracts.sh" "$gov9/ops/scripts/lib/"
 cp "$OPS_DIR/lib/rules_overlay.sh" "$gov9/ops/scripts/lib/"
+cp "$OPS_DIR/lib/workspace_kind.sh" "$gov9/ops/scripts/lib/"
+cp "$OPS_DIR/lib/cursor_plans_store.sh" "$gov9/ops/scripts/lib/"
 printf '%s\n' '# law' > "$gov9/CANONICAL_LAW.md"
 printf '%s\n' '{"version":1,"hooks":{}}' > "$gov9/ops/hooks/hooks.json.template"
 # Minimal activator so install_session_end copy is optional
@@ -152,6 +159,10 @@ ln -sfn "$gov9" "$gov9/.cursor-commands"
 )
 [ ! -e "$gov9/.cursor-commands" ]
 [ -L "$gov9/.cursor/plans" ]
+[ -L "$fixture_home9/.cursor/plans" ]
+t9_rt="$(python3 -c "import os; print(os.path.realpath('$gov9/.cursor/plans'))")"
+t9_store="$(python3 -c "import os; print(os.path.realpath('$gov9/docs/plans'))")"
+[ "$t9_rt" = "$t9_store" ]
 pass "SSOT setup removes .cursor-commands self-alias and wires .cursor/plans"
 
 echo "RESULT: PASS ($PASS cases)"

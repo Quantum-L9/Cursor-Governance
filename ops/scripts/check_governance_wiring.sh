@@ -8,6 +8,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# shellcheck source=lib/cursor_plans_store.sh
+source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
 
 CHECK_WORKSPACE=0
 CHECK_MACHINE=0
@@ -144,8 +146,9 @@ else
   fi
 fi
 
-# Machine Cursor plans — workspace convenience symlink (not governance SSOT).
-mkdir -p "$HOME/.cursor/plans" 2>/dev/null || true
+# Machine Cursor plans — ~/.cursor/plans -> <gov>/docs/plans (tracked store).
+WORKSPACE_DIR="$WORKSPACE"
+ensure_machine_cursor_plans_store >/dev/null || true
 if [ "$WS_KIND" = "ssot_checkout" ] || [ "$WS_KIND" = "ssot" ]; then
   pass "ssot-family — .cursor/plans not required"
 elif [ ! -L "$WORKSPACE/.cursor/plans" ]; then
