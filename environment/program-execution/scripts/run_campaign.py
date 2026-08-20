@@ -18,7 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -1182,6 +1182,82 @@ def register_task_contract(workspace: Path, task_id: str) -> Path:
     return contract
 
 
+def dependency_depth(tasks: list[dict[str, Any]]) -> dict[str, int]:
+    """How many dependency hops separate each task from a task that can start now.
+
+    Depth 0 is a task with no unmet dependency inside the program. Depth is used
+    instead of `wave_id` because waves are a declared grouping and dependencies
+    are the thing that actually decides what can be worked on next.
+
+    The same edge has two spellings: an authored campaign source declares
+    `depends_on`, and `pec bootstrap` freezes it into the program lock as
+    `dependencies`. Read both, because this runs against the lock but is
+    reasoned about against the source.
+    """
+    parents = {
+        str(task["id"]): [
+            str(dep) for dep in (task.get("dependencies") or task.get("depends_on") or ())
+        ]
+        for task in tasks
+    }
+    depth: dict[str, int] = {}
+
+    def resolve(task_id: str, seen: frozenset[str]) -> int:
+        if task_id in depth:
+            return depth[task_id]
+        if task_id in seen:
+            # A dependency cycle is the blueprint validator's failure to report,
+            # not this function's: treat it as startable rather than recursing.
+            return 0
+        known = [dep for dep in parents.get(task_id, ()) if dep in parents]
+        value = 1 + max((resolve(dep, seen | {task_id}) for dep in known), default=-1)
+        depth[task_id] = value
+        return value
+
+    for task_id in parents:
+        resolve(task_id, frozenset())
+    return depth
+
+
+def materialization_frontier(
+    tasks: list[dict[str, Any]],
+    *,
+    completed: Iterable[str] = (),
+    lookahead: int = 1,
+) -> list[str]:
+    """The tasks whose contracts are worth rendering now.
+
+    Arming used to render a contract for every locked task, which costs two
+    subprocesses each and dominated preparation on a large campaign -- while all
+    but the first wave described work that could not be started yet and would be
+    re-rendered anyway if the program was replanned before reaching it.
+
+    So render the runnable frontier plus `lookahead` waves beyond it: enough that
+    finishing a task never waits on a render, without paying for the tail of the
+    program up front. Everything else materializes on demand.
+    """
+    depth = dependency_depth(tasks)
+    done = set(completed)
+    pending = [str(task["id"]) for task in tasks if str(task["id"]) not in done]
+    if not pending:
+        return []
+    horizon = min(depth[task_id] for task_id in pending) + lookahead
+    return [task_id for task_id in pending if depth[task_id] <= horizon]
+
+
+def ensure_task_contract(workspace: Path, task_id: str) -> Path:
+    """Register `task_id`'s source contract unless it is already registered.
+
+    The on-demand half of lazy materialization. Registration is idempotent for
+    identical content, so the cost of calling this on an already-armed task is
+    one `pec` invocation rather than a conflict.
+    """
+    registered = workspace / "contracts" / "source" / f"{task_id}.json"
+    if registered.is_file():
+        return workspace / "runtime" / f"{task_id}.source.json"
+    return register_task_contract(workspace, task_id)
+
+
 def default_arm(
     workspace: Path,
     campaign_id: str,
@@ -1197,9 +1273,12 @@ def default_arm(
     tasks = locked_tasks(workspace)
     if not tasks or str(tasks[0]["id"]) != FIRST_TASK_ID:
         raise CampaignError("program lock is missing TASK-001")
-    contracts: list[str] = []
-    for task in tasks:
-        contracts.append(str(register_task_contract(workspace, str(task["id"]))))
+    # Only the frontier is rendered now; the rest materializes when it is
+    # claimed. The PR stack stays whole -- it is the routing map every later task
+    # needs to know its base, and computing it is pure arithmetic over the lock.
+    frontier = materialization_frontier(tasks, completed=completed_task_ids(workspace))
+    contracts = [str(ensure_task_contract(workspace, task_id)) for task_id in frontier]
+    deferred = [str(task["id"]) for task in tasks if str(task["id"]) not in set(frontier)]
     stack = build_pr_stack(campaign_id, tasks)
     write_pr_stack(workspace, stack)
     fetch_stack_refs(target_path, campaign_id)
@@ -1220,7 +1299,8 @@ def default_arm(
     )
     return {
         "task_id": FIRST_TASK_ID,
-        "armed_task_ids": [str(task["id"]) for task in tasks],
+        "armed_task_ids": list(frontier),
+        "deferred_task_ids": deferred,
         "contracts": contracts,
         "claim": (claim.stdout or "").strip(),
         "reconcile": reconciled,
@@ -1713,6 +1793,21 @@ def pec_cmd(workspace: Path, command: str, *rest: str) -> dict[str, Any]:
 def pec_status_tasks(workspace: Path) -> list[dict[str, Any]]:
     payload = pec_cmd(workspace, "status")
     return [item for item in (payload.get("tasks") or []) if isinstance(item, dict)]
+
+
+def completed_task_ids(workspace: Path) -> list[str]:
+    """Task ids the controller already considers COMPLETED.
+
+    Read from the controller rather than the lock: the lock says what the program
+    is, only runtime state says how far through it we are.
+    """
+    if not (workspace / "runtime" / "state.sqlite").is_file():
+        return []
+    return [
+        str(item["id"])
+        for item in pec_status_tasks(workspace)
+        if str(item.get("runtime_state")) == "COMPLETED" and item.get("id")
+    ]
 
 
 def all_required_tasks_completed(workspace: Path) -> bool:
@@ -2240,6 +2335,11 @@ def default_execute(
             rendered = {"contract": str(contract_path)}
         else:
             if state not in {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "FAILED"}:
+                # Arming only rendered the frontier, and a claim is refused
+                # without a registered source contract. This is where a deferred
+                # task becomes concrete: at the moment it is actually started.
+                with traced(trace, "task_prepare", "materialize_contract", task_id=task_id):
+                    ensure_task_contract(workspace, task_id)
                 with traced(trace, "task_prepare", "pec_claim", task_id=task_id):
                     pec_cmd(
                         workspace,

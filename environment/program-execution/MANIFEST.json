@@ -1655,7 +1655,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "8f630b1679a81b215930631efd969cf89796659687ac9e637417351e376734c4"
+      "sha256": "63cf7674716b99fdba0c353a36a55338a191520e9ae29219828c51481b829b10"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1692,6 +1692,10 @@
     {
       "path": "scripts/tests/test_launchability.py",
       "sha256": "e7c7ed3eb27c3636d04f762325c1eff7792aeb92f1268063d8200509b5c3f499"
+    },
+    {
+      "path": "scripts/tests/test_lazy_materialization.py",
+      "sha256": "132167ae55f083cc4eee5ea1776eb34fb88e756623543cd5904c639e1048619b"
     },
     {
       "path": "scripts/tests/test_pe_local_commit_only.py",
