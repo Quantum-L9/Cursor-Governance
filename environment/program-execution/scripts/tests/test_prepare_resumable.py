@@ -274,6 +274,115 @@ class ScopedInvalidationTests(PrepareFixture):
             self.assertEqual(sorted(record["definitions"]), ["TASK-002"])
 
 
+class CriticalRegressionTests(ScopedInvalidationTests):
+    """The scenario the contract names: work already done must survive an edit.
+
+    Prepare, complete a task, edit a *later* task's validation, prepare again.
+    Everything that was true before the edit and is unrelated to it must still be
+    true afterwards -- otherwise "scoped invalidation" is only scoped in the part
+    of the system that was measured.
+    """
+
+    def _complete(self, workspace: Path, task_id: str) -> Path:
+        """Put a task in the state a finished task is in, receipts included."""
+        scripts = PE_ROOT / "core/program-execution-controller-template/scripts"
+        if str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
+        from pec.controller import open_runtime  # noqa: PLC0415 - path is set above
+
+        # Walk the state machine the way execution does rather than jumping to
+        # COMPLETED: the point of the scenario is that a task which really went
+        # through verification keeps what verification gave it.
+        path = [
+            "PREPARED",
+            "CONTRACTED",
+            "EXECUTING",
+            "SUBMITTED",
+            "VERIFYING",
+            "PASSED_LOCAL",
+            "COMPLETED",
+        ]
+        db, _ = open_runtime(workspace)
+        try:
+            for state in path:
+                db.transition_task(task_id, state)
+        finally:
+            db.close()
+        receipt = workspace / "receipts" / "verification" / f"{task_id}.json"
+        receipt.parent.mkdir(parents=True, exist_ok=True)
+        receipt.write_text(
+            json.dumps({"task_id": task_id, "verdict": "PASSED_LOCAL"}), encoding="utf-8"
+        )
+        return receipt
+
+    def _runtime_task(self, workspace: Path, task_id: str) -> dict[str, Any]:
+        scripts = PE_ROOT / "core/program-execution-controller-template/scripts"
+        if str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
+        from pec.controller import open_runtime  # noqa: PLC0415 - path is set above
+
+        db, _ = open_runtime(workspace)
+        try:
+            return dict(db.task(task_id) or {})
+        finally:
+            db.close()
+
+    def _scenario(self, tmp: Path) -> tuple[Path, Path, Path]:
+        root, entry, l9 = self._fixture(tmp)
+        workspace = l9 / "programs" / CAMPAIGN_ID
+        with unittest.mock.patch.dict("os.environ", {**os.environ, "L9_CAMPAIGN_UNTIL_DEBUG": "1"}):
+            self._prepare(entry, root=root, l9=l9, primary=tmp / "primary")
+            receipt = self._complete(workspace, "TASK-001")
+            self._edit_task_validation(entry, "TASK-002")
+            self._prepare(entry, root=root, l9=l9, primary=tmp / "primary")
+        return l9, workspace, receipt
+
+    def test_the_finished_task_keeps_its_state_and_its_receipt(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            _, workspace, receipt = self._scenario(Path(raw))
+
+            self.assertEqual(
+                self._runtime_task(workspace, "TASK-001")["runtime_state"], "COMPLETED"
+            )
+            self.assertEqual(
+                json.loads(receipt.read_text(encoding="utf-8"))["verdict"], "PASSED_LOCAL"
+            )
+
+    def test_the_runtime_itself_survives(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            l9, workspace, _ = self._scenario(Path(raw))
+
+            self.assertTrue((workspace / "runtime" / "state.sqlite").is_file())
+            stale = l9 / "programs" / "stale"
+            self.assertFalse(stale.exists() and any(stale.iterdir()))
+
+    def test_only_the_edited_definition_is_relocked(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            _, workspace, _ = self._scenario(Path(raw))
+
+            provenance = workspace / "runtime" / "definition-provenance.jsonl"
+            record = json.loads(provenance.read_text(encoding="utf-8").strip().splitlines()[-1])
+            self.assertEqual(sorted(record["definitions"]), ["TASK-002"])
+
+    def test_the_research_cache_survives_the_edit(self) -> None:
+        """The edit moves the seed, so the receipt is rebuilt -- from cached evidence.
+
+        Editing a task changes the seed the receipt is keyed on, so `stack_proof`
+        correctly misses. What must not happen is losing the evidence underneath
+        it: the recompute is reported as a changed input against a surviving
+        record, not as a first run against a discarded cache. That the per-tool
+        evidence is then reused without re-fetching is asserted directly in
+        `test_context7_stack_proof.py`, where tools exist to count.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            l9, _, _ = self._scenario(Path(raw))
+
+            stage = _prepare_state(l9)["stack_proof"]
+            self.assertFalse(stage["reused"])
+            self.assertEqual(stage["reason"], "input_changed")
+            self.assertTrue((l9 / "primed" / CAMPAIGN_ID / "cache" / "stack_proof.json").is_file())
+
+
 def _local_acceptance(l9: Path) -> dict[str, Any]:
     path = l9 / "primed" / CAMPAIGN_ID / "LOCAL_ACCEPTANCE.json"
     if not path.is_file():

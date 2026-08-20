@@ -1655,7 +1655,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "b07af2ab379ff8cd7b07392d4db6efe1a621c1302718e484ae3cc462b88c53b2"
+      "sha256": "300c4f17bb973b359936acb882d4e73d11773d20d4efd562b8f7225b40a5dcd8"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1699,7 +1699,7 @@
     },
     {
       "path": "scripts/tests/test_pe_local_commit_only.py",
-      "sha256": "c1527378b851fe43089357f235e33b96ff627ffb9db55658b40aa4ce62cf57cf"
+      "sha256": "90b6ffaf0d37cebba9ec2eb9a523193f0418c307be12d3d648500a0b335c84e8"
     },
     {
       "path": "scripts/tests/test_pe_prepare_state.py",
@@ -1714,8 +1714,12 @@
       "sha256": "dafc51b650a2263511d866c90acb185ccf32f0e5807e6f2b205dbabdf08eb7bb"
     },
     {
+      "path": "scripts/tests/test_prepare_benchmark.py",
+      "sha256": "763969f9b52635da6dbaac11edbf655f3fb26499013a89354dce6f28fcddb95c"
+    },
+    {
       "path": "scripts/tests/test_prepare_resumable.py",
-      "sha256": "cc5475c912bc4cec2d69e863536659d37b521384de4762af13a2c4082ca89f49"
+      "sha256": "d04c03bcbfcae7af4a4120f7c0d8bbcad83d287c64a679b14cce18541790b390"
     },
     {
       "path": "scripts/tests/test_replay_campaign.py",

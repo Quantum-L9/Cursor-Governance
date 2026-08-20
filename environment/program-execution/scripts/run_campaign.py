@@ -3090,15 +3090,17 @@ def _run_campaign_stages(
     )
     stack_fn = hooks.context7_stack or default_context7_stack
     log(f"stack-proof {campaign_id}")
-    with timer.stage("stack_proof") as entry:
-        # Network-backed research is the single most expensive preparation stage
-        # and the one most likely to be retried; keyed on the seed, a retry that
-        # changed nothing reuses the receipt instead of re-priming.
-        stack_key = timing.fingerprint(seed)
-        cached_stack = cache.get("stack_proof", stack_key)
-        if cached_stack is not None and Path(str(cached_stack.get("path") or "")).is_file():
-            stack_receipt = cached_stack
-            entry["cached"] = True
+    # Network-backed research is the single most expensive preparation stage and
+    # the one most likely to be retried; keyed on the seed, a retry that changed
+    # nothing reuses the receipt instead of re-priming.
+    stack_key = timing.fingerprint(seed)
+
+    def _stack_receipt_survives(cached: Any) -> bool:
+        return Path(str((cached or {}).get("path") or "")).is_file()
+
+    with reuse.stage(timer, "stack_proof", stack_key, verify=_stack_receipt_survives) as staged:
+        if staged.reused:
+            stack_receipt = dict(staged.value)
         else:
             with traced(trace, "research", "context7_stack_proof"):
                 # The receipt is keyed on the whole seed, so any edit misses here
@@ -3109,7 +3111,7 @@ def _run_campaign_stages(
                     stack_receipt = stack_fn(seed, primed_root)
                 else:
                     stack_receipt = stack_fn(seed, primed_root, cache)
-            cache.put("stack_proof", stack_key, stack_receipt)
+            staged.value = dict(stack_receipt)
     stack_proof_path = Path(
         str((stack_receipt or {}).get("path") or (primed_root / campaign_id / "stack-proof.json"))
     )

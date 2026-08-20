@@ -21,6 +21,7 @@ subprocess reaches a remote), and the individual publication functions.
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import sys
@@ -284,6 +285,80 @@ class LocalCommitOnlyTests(unittest.TestCase):
         with unittest.mock.patch.dict("os.environ", {}, clear=False):
             os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
             self.assertFalse(self.mod.release_authorized())
+
+
+class FastModeDoesNotWidenAuthorityTests(unittest.TestCase):
+    """FAST mode buys speed. It must not buy authority.
+
+    PE-FAST-002 relaxes preparation ceremony and grants acceptance from local
+    evidence alone, which is exactly the shape of change that quietly widens what
+    a campaign is allowed to do. The three transitions that leave this machine --
+    publish, merge, deploy -- are asserted closed under FAST here, separately from
+    the general local-commit-only fixture above, so a future relaxation of FAST
+    cannot pass by only being tested in strict mode.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.mod = _load("run_campaign_fast_authority", SCRIPT)
+        prepare_state = PE_ROOT / "scripts/pe_prepare_state.py"
+        cls.prepare = _load("pe_prepare_state_fast_authority", prepare_state)
+
+    def test_fast_does_not_open_the_publish_path(self) -> None:
+        with unittest.mock.patch.dict("os.environ", {"L9_PE_FAST": "1"}, clear=False):
+            os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
+            for call in (
+                lambda: self.mod.push_integration_branch(Path("/tmp"), "demo-activate-v1"),
+                lambda: self.mod.default_make_pr(Path("/tmp"), "demo-activate-v1"),
+            ):
+                with self.assertRaises(self.mod.CampaignError) as ctx:
+                    call()
+                self.assertIn("local-commit-only", str(ctx.exception))
+
+    def test_fast_does_not_open_the_merge_path(self) -> None:
+        with unittest.mock.patch.dict("os.environ", {"L9_PE_FAST": "1"}, clear=False):
+            os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.default_authorize_and_merge("o/r", 7)
+            self.assertIn("local-commit-only", str(ctx.exception))
+            self.assertIsNotNone(
+                self.mod.publication_command(["gh", "pr", "merge", "7", "--squash"])
+            )
+
+    def test_a_local_acceptance_is_never_authority_for_leaving_the_machine(self) -> None:
+        """The record says so, and no publication path consults it."""
+        with tempfile.TemporaryDirectory() as raw:
+            path = self.prepare.record_local_acceptance(
+                Path(raw) / "LOCAL_ACCEPTANCE.json",
+                campaign_id="demo-activate-v1",
+                revision="abc1234",
+                compile_key="k" * 16,
+                launchability={"launchable": True, "task_count": 2, "inferred": True},
+            )
+            record = json.loads(path.read_text(encoding="utf-8"))
+
+        self.assertEqual(record["authority"], "local_only")
+        self.assertEqual(sorted(record["not_sufficient_for"]), ["deploy", "merge", "publish"])
+
+        # A declaration inside the record is not a guarantee. What makes it true
+        # is that nothing on the way out of this machine reads the record: the
+        # publication functions, their shared refusal, and the merge gate.
+        import inspect
+
+        for function in (
+            self.mod.push_integration_branch,
+            self.mod.default_make_pr,
+            self.mod.default_authorize_and_merge,
+            self.mod.refuse_publication,
+        ):
+            self.assertNotIn(
+                "LOCAL_ACCEPT",
+                inspect.getsource(function),
+                msg=f"{function.__name__} consults a local acceptance",
+            )
+        merge_gate = PE_ROOT.parents[1] / "ops/autonomy/merge_gate.py"
+        if merge_gate.is_file():
+            self.assertNotIn("LOCAL_ACCEPT", merge_gate.read_text(encoding="utf-8"))
 
 
 if __name__ == "__main__":
