@@ -256,6 +256,15 @@
     },
     {
       "alias": null,
+      "class": "always",
+      "output": "54-context-sensitive-git-guardrails.md",
+      "output_sha256": "901f540e0d1babf8c043d84c62de45977ef6dc30332cebe0803a375d5cda474a",
+      "source": "rules/54-context-sensitive-git-guardrails.mdc",
+      "source_sha256": "22327366534e888c7598f5b39f085fd99272d6f745e1ce201bd0c95b3e234dfb",
+      "stem": "54-context-sensitive-git-guardrails"
+    },
+    {
+      "alias": null,
       "class": "skipped_agent_requested",
       "output": null,
       "output_sha256": null,
@@ -593,7 +602,7 @@
       "output": "zz-autonomy-surface-override.md",
       "output_sha256": "f23440e6eb36d5eee9e40f406ac2806a85f82387a93de0a09f4c4c414ebc8feb",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "d64ed09d6a332309669e59122f78b04636c432d443c55c8a19c8b89eb3d01f5f",
+      "source_sha256": "5c2842548ca32a48d31d5cfa87aff33ecb673dbc79d36ad71980c3573266654d",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -601,9 +610,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 48,
+    "projected": 49,
     "skipped_agent_requested": 17,
-    "source_mdc": 66
+    "source_mdc": 67
   },
-  "tree_sha256": "afdab4db64494842ad273c15f28d9c5ba9a11dfed28fe9531972db5d1b5361e9"
+  "tree_sha256": "23ffa9022b7e0b579e696985c8e49d4e0a5cbae331d83a6b761a91100cc04c15"
 }
