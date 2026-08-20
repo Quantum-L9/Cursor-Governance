@@ -94,10 +94,36 @@ the task branch — `verify` covers both (union of dirty changes and
 exactly; all paths must stay inside the Source Contract's writable paths.
 Commit happens later at campaign integration, not inside the task.
 
-**Retry after a FAILED verdict:** `release-lease TASK-XXX` → remove the task
-worktree and its branch (`git worktree remove <ws>/worktrees/TASK-XXX --force`
-and `git branch -D pec/<wave>/task-xxx`) → `claim` again (FAILED→ELIGIBLE is a
-legal transition) → `prepare` → `render-contract` → re-execute.
+**Retry after a FAILED verdict:** `start TASK-XXX` (FAILED→EXECUTING is a legal
+transition and the rendered contract is reused) → repair the work → submit a
+new attempt with `record-attempt` → `verify`. A verdict belongs to the attempt
+that earned it, so repair means a *new* attempt; calling `verify` twice on the
+same one replays the recorded receipt rather than producing a second verdict.
+
+**Interrupted task worktrees:** do not hand-run `git worktree remove` /
+`git branch -D` / `rm -rf`. `prepare` self-heals over residue from an
+interrupted attempt and reports `"recovered": true`. To reset every task at
+once:
+
+```bash
+python scripts/pec.py fresh-workspace --workspace ../runtime --repository <target>
+```
+
+It clears task worktrees, git's worktree registrations, `pec/*` branches and
+open leases together — cleaning only some of them is what produced
+`fatal: a branch named 'pec/<wave>/task-xxx' already exists`. It is safe to run
+repeatedly and on a workspace that never executed anything.
+
+**Validation environment:** worker-side and controller-side validation resolve
+one interpreter through `pec/exec_env.py` (no login shell). To see what
+`python3` will mean inside a validation command:
+
+```bash
+python scripts/pec.py resolve-env
+```
+
+`L9_PE_PYTHON` overrides the resolution. Do not pin a machine-specific
+`python3.12` in a campaign's validation commands.
 
 ## 8. Record and verify
 

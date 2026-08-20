@@ -15,7 +15,7 @@ files:
 - path: README.md
   sha256: 5f61529b813d694d4790fccb85f6bd6ffbac112df748ec9816f41305459540b6
 - path: RUNBOOK.md
-  sha256: 7be85d75e6e42bd975d1d7a35f1521d1475503e9499cc8b035710a44bdc9ca79
+  sha256: c012b1ddd3bb147ada5ce360ce265b1ac1e634e2527ef695146e9a441ef1b4d6
 - path: SECURITY.md
   sha256: 1bb8ae37d783ba450dbaafb779dfdcae5c2ac474ff72cbcdf1b08c5398fc4f2e
 - path: TEMPLATE_VARIABLES.yaml
@@ -95,13 +95,15 @@ files:
 - path: scripts/pec/blueprint.py
   sha256: 1a7d73ea1a26192fd2c4036ce8ca253b153a5ec913db25a111a8f55aafae42bb
 - path: scripts/pec/cli.py
-  sha256: 5de57a83955527fdd06cacf2be57601b9a38a9682bd108e61f0af0d7dc461d5a
+  sha256: d7aa0abd4edeed2f4ce9fda2bb2bc9b8fa876abf853e6b501cd57b82d93a26a5
 - path: scripts/pec/common.py
   sha256: 871aa8a77da5abcdfd1ee29156b2df42085a09bcf119ad209bc755142a6ad2f1
 - path: scripts/pec/contracts.py
   sha256: f89ab2a8a0679e8def662d82661cf4c16988604e5f2ea2fe3c6c406ad857d76e
 - path: scripts/pec/controller.py
-  sha256: 73d4cbb151c3b79dbc31841ae847283dce254b850c339070763d764602ccc805
+  sha256: 2c8a56794f23e43dd1bfab45d3fec97bcf3cf11eadb6313d4cb110c178890885
+- path: scripts/pec/exec_env.py
+  sha256: 6724de9017b05e349dc9bc2505dd925a6bd8dcccc79a553d7f87afdd26d02f4d
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
 - path: scripts/pec/preflight.py
@@ -110,6 +112,8 @@ files:
   sha256: cf1c947f1a138695dc8b8d6dc17398fb864a58f0512471fa8454fcb9c40c7fff
 - path: scripts/pec/state.py
   sha256: a52609cdff558ecda0ef69b316b22a041d1de2b6f8dbff098ee9c04dccd7995e
+- path: scripts/pec/workspace_reset.py
+  sha256: edf39052bd7f13cb79e946fa55cc2b6fecff50b96dfc0043943c007ab088a443
 - path: scripts/run_negative_tests.py
   sha256: 16dd96536bac0b9c5b6cfcf78b5cc308a6493a819712c829ebeb64bff70f4d31
 - path: scripts/tests/helpers.py
@@ -130,6 +134,8 @@ files:
   sha256: 1534779aa307ad0c4c22f856e6fcc8993fc231695c150d87238e15c03bb3ac2e
 - path: scripts/tests/test_do_not_build_verify.py
   sha256: 6462b98713377b893eca74b633ee7868c30b749a5eb054577663ee32fab51513
+- path: scripts/tests/test_execution_recovery.py
+  sha256: 6402cf39797ab7e0d3a6ef19ea6054153d6e696b327da713eda2b5f58697973e
 - path: scripts/tests/test_kernel_verdict.py
   sha256: 3795183a949fa416f0ba4838f58cd40f0ef0ec78e005f332429363b3b4805c18
 - path: scripts/tests/test_leases_and_approval.py
@@ -160,6 +166,8 @@ files:
   sha256: b1b048e85761666b5571a7c7653a7c626fb89acb689b22202589568638080cee
 - path: scripts/tests/test_verify_committed_work.py
   sha256: c8cc87f837178654df0aa58f2f8c893546c87cc8c793bf45223a4d93a05fda56
+- path: scripts/tests/test_verify_lifecycle.py
+  sha256: 39266a93b7aa9bf720b5ab1c7606e7ead7b2e1c61f830f290b4fe0398441ef55
 - path: scripts/tests/test_waived_gate.py
   sha256: 93ed81d61f51f0667b13edcac458fd269d16cf48fed04287fb2c2542203f8ad6
 - path: scripts/tests/test_wave_dependency.py

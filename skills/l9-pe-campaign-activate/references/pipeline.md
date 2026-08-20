@@ -35,15 +35,28 @@ Order inside `run_campaign.py` only (not an operator checklist):
 | blueprint | compile + template validate |
 | admit | EVID-001 on reconciled target HEAD; accept blueprint |
 | bootstrap | pec bootstrap with no draft flag; quarantine leftovers |
-| arm | draft/register every task; claim TASK-001; STACK.json; push `campaign/<id>` to GitHub before execute |
-| execute | pec prepare worktree; write/commit/verify/complete; claim next; task PRs require remote `campaign/<id>` |
-| pr | stacked task PRs; never `PR_BASE=main`; host `make pr` after execute |
-| close | pec close + host ledger + `campaigns/COMPLETED/<id>/` |
+| arm | draft/register every task; claim TASK-001; STACK.json. No push: execution is local |
+| execute | pec prepare worktree; write/commit/verify/complete; claim next. **Autonomous execution ends here** |
+| pr | release transition only: stacked task PRs; never `PR_BASE=main`; host `make pr` |
+| close | release transition only: pec close + host ledger + `campaigns/COMPLETED/<id>/` |
+
+Autonomous campaign execution is **local-commit-only**:
+
+```text
+prepare → execute → validate → verify → local commits → STOP
+```
+
+It never pushes a branch, opens or updates a PR, or merges. The `pr` and
+`close` stages are a separate governed release transition, entered only with
+`L9_PE_RELEASE_AUTHORIZED=<reason>`; merge authority remains
+`/l9-pr-remediation`'s alone. The boundary is enforced at the stage machine, at
+the `run_cmd` subprocess choke point, and in each publication function.
 
 `program-execution.intent.v1` and `pe-<hash>` workspaces are refused.
 `--admission-draft` is not a live path. Host-only merge is not program close.
-`CAMPAIGN_UNTIL` other than the live default is refused unless
-`L9_CAMPAIGN_UNTIL_DEBUG=1` (runner unit tests only).
+`CAMPAIGN_UNTIL` other than `execute` is refused unless
+`L9_CAMPAIGN_UNTIL_DEBUG=1` (runner unit tests only) or the release
+transition is open.
 `make campaign` is the Phase 0 admission act; `acknowledged_at` stays null
 and `program_deploying` stays false. Do not forge the timestamp.
 
