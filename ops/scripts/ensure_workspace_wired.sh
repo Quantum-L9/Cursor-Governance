@@ -11,6 +11,10 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# shellcheck source=lib/workspace_kind.sh
+source "$SCRIPT_DIR/lib/workspace_kind.sh"
+# shellcheck source=lib/cursor_plans_store.sh
+source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
 
 WORKSPACE="${1:-$(pwd)}"
 if [ ! -d "$WORKSPACE" ]; then
@@ -71,7 +75,8 @@ if [ "$already_wired" -eq 1 ]; then
 fi
 
 echo "WIRE: $WORKSPACE (consumer .cursor links)"
-mkdir -p "$HOME/.cursor/plans"
+WORKSPACE_DIR="$WORKSPACE"
+ensure_machine_cursor_plans_store
 if [ "$WS_REAL" = "$GC_REAL" ]; then
   if [ -e "$WORKSPACE/.cursor-commands" ] || [ -L "$WORKSPACE/.cursor-commands" ]; then
     rm -f "$WORKSPACE/.cursor-commands"

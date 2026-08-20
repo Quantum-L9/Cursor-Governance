@@ -64,7 +64,8 @@ __pycache__/
 
 # ── Self-referential workspace wiring (SSOT repo is not its own "consumer" repo) ──
 # setup_workspace_symlinks.sh can create a .cursor-commands self-alias and a
-# local .cursor/ tree (plans → ~/.cursor/plans). Never commit those.
+# local .cursor/ tree (plans → ~/.cursor/plans → docs/plans/). Never commit
+# those workspace hops; the tracked store is docs/plans/.
 /.cursor-commands
 /.cursor/
 

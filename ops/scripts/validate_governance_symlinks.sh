@@ -5,6 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# shellcheck source=lib/cursor_plans_store.sh
+source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
 
 FAIL=0
 WARN_FILE="$(mktemp)"
@@ -102,8 +104,9 @@ else
   fail ".cursor/governance/ missing (run setup_workspace_symlinks.sh)"
 fi
 
-# Machine Cursor plans — workspace convenience symlink (not governance SSOT).
-mkdir -p "$HOME/.cursor/plans"
+# Machine Cursor plans — ~/.cursor/plans -> <gov>/docs/plans (tracked store).
+WORKSPACE_DIR="$WORKSPACE"
+ensure_machine_cursor_plans_store >/dev/null || true
 if [ "$WS_KIND" = "ssot_checkout" ] || [ "$WS_KIND" = "ssot" ] || is_l9_isolate_workspace "$WORKSPACE"; then
   pass "ssot-family/isolate — skip consumer .cursor/plans symlink"
 else

@@ -637,3 +637,18 @@ Exactly one formatter owns each language. Do not reformat a file with a tool oth
 Generated from `environment/ide/policy.json` in the governance clone by `ops/scripts/adapters/agentdocs.sh`. Edit the policy, not this block.
 
 <!-- END L9 FORMATTER OWNERSHIP -->
+
+<!-- CURSOR_PLANS_REPO_STORE_V1 -->
+## Cursor plans store (2026-08-20) — supersedes “not governance SSOT” plans wording
+
+Authoritative corrections (do not treat older “convenience / not SSOT” bullets
+as the live store):
+
+1. Machine-global Cursor plans are tracked at `docs/plans/` in this repository.
+2. `~/.cursor/plans` is a symlink to that directory. Workspace `.cursor/plans`
+   still points at `~/.cursor/plans` and therefore writes into `docs/plans/`.
+3. First-run stamp: `$HOME/.cursor/l9-plans-store` (one absolute path). Prefer
+   the `ssot` / `ssot_checkout` you ran setup from so an `activate_fresh` swap
+   of `$HOME/.cursor-governance` cannot drop uncommitted plans.
+4. Do not `mkdir -p ~/.cursor/plans` as a real directory. Use
+   `ops/scripts/lib/cursor_plans_store.sh` → `ensure_machine_cursor_plans_store`.

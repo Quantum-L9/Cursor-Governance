@@ -1,0 +1,125 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "standard",
+  "title": "PE unified-loop seam wiring: worker dispatch, receipt-to-distill signals, Graphiti evidence intake, autonomy projection (clean branch off main)",
+  "objective": "Close the Program Execution development loop end-to-end by wiring the four verified-but-unconnected seams on top of what already landed on Quantum-L9/Cursor-Governance main: (1) controller-side worker dispatch through the Peer Execution Core to thin providers (claude-code-direct / codex / cursor-background / ci) under EXECUTION_ROUTING_POLICY; (2) program receipts into the subagent-signal publisher and Graphiti distill queue; (3) admission evidence intake from Graphiti via context_reader; (4) claim-time autonomy projection via the merged autonomy-control-plane mappers. ALL WORK LANDS ON A NEW CLEAN BRANCH CREATED FROM origin/main (Quantum-L9/Cursor-Governance) — never on main directly, never on the contaminated pe/pipeline-fixes branch, never in any other repo.",
+  "success_criteria": [
+    "SC-01: baseline locked: origin/main full SHA recorded at execution start; new branch pe/unified-loop created from that SHA with a clean tree (no foreign files).",
+    "SC-02: re-land of the 8 unmerged admission/gate fixes (blueprint_ops, accept/collect tools, union-diff verify, L4 named-roots, heredoc-safe matching, memory session-id flags) verified present on the branch with the golden admission loop test passing (main was verified NOT to contain them).",
+    "SC-03: dispatch integration test passes: render-contract resolves an execution profile and probes a provider and invokes it; the provider result maps to an attempt-receipt pre-submission; worker_cannot_self_verify invariant holds.",
+    "SC-04: record-attempt/verify/evaluate-gate/export-handoff call outcome_publisher and enqueue distill jobs (observable via dry-run queue listing).",
+    "SC-05: collect_evidence memory-lookup flag returns Graphiti context read-only and fails closed when Graphiti is unreachable (no memory mutation from admission).",
+    "SC-06: claim emits per-task autonomy_action_id plus packet skeleton via contract_mapper; unit test asserts the mapping without any autonomy-side mutation.",
+    "SC-07: EXECUTION_ROUTING_POLICY extended with codex for tightly-scoped mechanical work; no-match routing returns CAPABILITY_UNSUPPORTED; routing golden vectors pass.",
+    "SC-08: all existing suites stay green: PE conformance (142+), controller (25+), autonomy (56+), compile (5+), campaign-schema (2), plus the shared peer-execution lifecycle test."
+  ],
+  "scope": {
+    "in": [
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/ (dispatch.py new; contracts.py + controller.py call sites; tests/)",
+      "environment/program-execution/integrations/worker-dispatch/ (new thin module if controller-internal placement proves insufficient)",
+      "environment/program-execution/registry/EXECUTION_ROUTING_POLICY.yaml (additive preference row for codex)",
+      "environment/program-execution/scripts/collect_evidence.py (optional Graphiti intake flag)",
+      "environment/program-execution/scripts/tests/ + core controller-template scripts/tests/ (new tests)",
+      "re-landed admission/gate fixes: environment/program-execution/scripts/{blueprint_ops,accept_blueprint,collect_evidence,compile_campaign_source}.py + tests, core template RUNBOOK + MANIFEST regenerations, ops/autonomy/{command_parse,local_execution_gate,worktree_isolation_gate}.py, environment/agents/adapters/claude-code/hooks/memory_*.py, tests/ops/autonomy/*",
+      "regenerated manifests via make sync-generated + template write_manifest (canonical generators only)"
+    ],
+    "out": [
+      "Schema changes to Program Lock / Blueprint v2 required fields (no relaxation, no new required fields)",
+      "Model-level inference routing (ADR-0020 defers provider-neutral model routing — out of scope)",
+      "Autonomy-side mutation (this plan only PROJECTS to autonomy; packets/lanes are emitted, not executed here)",
+      "The contaminated origin/pe/pipeline-fixes branch (abandoned; re-cut from clean commit content)",
+      "Any repo other than Quantum-L9/Cursor-Governance",
+      "Direct commits to main"
+    ]
+  },
+  "pre_validation": [
+    {"id": "PV-01", "command_or_action": "git ls-remote origin main + record full SHA", "pass_criteria": "origin/main resolves to 6869e73e1b833198921888926c3ad4e9f61da4ca (or a later fast-forward-only tip — lock the SHA observed at execution start)", "status": "pending"},
+    {"id": "PV-02", "command_or_action": "git worktree add (new dir) -b pe/unified-loop origin/main", "pass_criteria": "clean worktree at the locked SHA; git status --porcelain empty", "status": "pending"},
+    {"id": "PV-03", "command_or_action": "verify main does NOT contain the 8 fixes (ls-tree/grep blueprint_ops.py, command_parse.py, base..HEAD union, session-id flags)", "pass_criteria": "all 8 confirmed absent on origin/main", "status": "pending"},
+    {"id": "PV-04", "command_or_action": "make program-execution-core-validate + campaign-schema on the clean worktree", "pass_criteria": "PASS at baseline", "status": "pending"},
+    {"id": "PV-05", "command_or_action": "capability probe: probe_execution_adapters.py + registry health", "pass_criteria": "providers registered with fresh capability receipts (or explicitly degraded — plan handles CAPABILITY_UNSUPPORTED)", "status": "pending"}
+  ],
+  "todos": [
+    {"id": "todo-01", "task": "Baseline + clean branch: lock origin/main full SHA; create pe/unified-loop from it in a dedicated worktree (rule 46); record baseline receipt", "files": ["(worktree)"], "effort": "S", "risk": "low", "dependencies": [], "leverage_rank": 9},
+    {"id": "todo-02", "task": "Re-land the 8 unmerged admission/gate fixes on the clean branch (re-cut from the clean 6c65557 content with explicit pathspecs; NOT from the contaminated branch tip; verify each against main before landing)", "files": ["environment/program-execution/scripts/blueprint_ops.py", "environment/program-execution/scripts/accept_blueprint.py", "environment/program-execution/scripts/collect_evidence.py", "environment/program-execution/scripts/compile_campaign_source.py", "environment/program-execution/scripts/tests/test_compile_campaign_source.py", "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py", "environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py", "environment/program-execution/core/program-execution-controller-template/RUNBOOK.md", "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_verify_committed_work.py", "environment/program-execution/core/program-execution-blueprint-template/schemas/acceptance-receipt.schema.json", "ops/autonomy/command_parse.py", "ops/autonomy/local_execution_gate.py", "ops/autonomy/worktree_isolation_gate.py", "tests/ops/autonomy/test_command_parse.py", "tests/ops/autonomy/test_gate_named_roots.py", "tests/ops/autonomy/test_gate_heredoc_data.py", "environment/agents/adapters/claude-code/hooks/memory_prefetch.py", "environment/agents/adapters/claude-code/hooks/memory_lock.py", "environment/agents/adapters/claude-code/hooks/memory_gate.py"], "effort": "M", "risk": "medium", "dependencies": ["todo-01"], "leverage_rank": 8},
+    {"id": "todo-03", "task": "Dispatch seam: new pec/dispatch.py — at render-contract, resolve execution profile via identity_binding/peer_readiness, consult EXECUTION_ROUTING_POLICY + capability probes, invoke peer_execution.runner (subprocess thin providers: claude-code-direct, codex, cursor-background) with Worker Brief + context manifest; map CanonicalProviderResult into attempt-receipt pre-submission; worker_cannot_self_verify invariant preserved; fallback to manual worker brief when CAPABILITY_UNSUPPORTED", "files": ["environment/program-execution/core/program-execution-controller-template/scripts/pec/dispatch.py", "environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py", "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_dispatch_seam.py"], "effort": "L", "risk": "medium", "dependencies": ["todo-02"], "leverage_rank": 1},
+    {"id": "todo-04", "task": "Signal seam: call outcome_publisher at record-attempt, verify, evaluate-gate, export-handoff — receipt_projection — distill_queue enqueue (dry-run observable); agent-scoped atomic facts only", "files": ["environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py", "environment/program-execution/integrations/subagent-generated-data/outcome_publisher.py", "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_distill_signals.py"], "effort": "M", "risk": "medium", "dependencies": ["todo-03"], "leverage_rank": 2},
+    {"id": "todo-05", "task": "Evidence intake: collect_evidence.py memory-lookup flag using integrations/graphiti/context_reader (read-only; fails closed offline; never writes memory from admission)", "files": ["environment/program-execution/scripts/collect_evidence.py", "environment/program-execution/scripts/tests/test_compile_campaign_source.py"], "effort": "S", "risk": "low", "dependencies": ["todo-02"], "leverage_rank": 4},
+    {"id": "todo-06", "task": "Autonomy projection: claim-time autonomy_action_id + campaign-packet skeleton emission via autonomy-control-plane contract_mapper (emission only — no autonomy-side mutation)", "files": ["environment/program-execution/integrations/autonomy-control-plane/contract_mapper.py", "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py", "environment/program-execution/integrations/autonomy-control-plane/tests/"], "effort": "M", "risk": "medium", "dependencies": ["todo-02"], "leverage_rank": 3},
+    {"id": "todo-07", "task": "Routing + conformance: add codex preference row to EXECUTION_ROUTING_POLICY for tightly-scoped mechanical work; golden vectors: policy enforcement, no-match returns CAPABILITY_UNSUPPORTED, worker_cannot_self_verify; extend shared peer-execution lifecycle test with the dispatch path", "files": ["environment/program-execution/registry/EXECUTION_ROUTING_POLICY.yaml", "environment/program-execution/peer_execution/tests/", "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_dispatch_seam.py"], "effort": "M", "risk": "medium", "dependencies": ["todo-03", "todo-06"], "leverage_rank": 5},
+    {"id": "todo-08", "task": "Converge: make sync-generated + template manifest regen; full suites (PE conformance, controller, autonomy, compile, campaign-schema); kernels; L4 authorize-release; open PR into main via the governance publish flow; remediate via l9-pr-remediation; merge per operator override (bottom-up); export handoff", "files": ["(all changed)"], "effort": "M", "risk": "medium", "dependencies": ["todo-04", "todo-05", "todo-07"], "leverage_rank": 6}
+  ],
+  "critical_path": ["todo-01", "todo-02", "todo-03", "todo-04", "todo-07", "todo-08"],
+  "milestones": [
+    {"id": "M1", "outcome": "Clean branch pe/unified-loop off locked origin/main with the re-landed admission/gate fixes; golden loop green", "unlocks": "dispatch + intake work on a coherent base"},
+    {"id": "M2", "outcome": "Controller dispatches providers end-to-end (integration test) with routing enforced", "unlocks": "subagent + multi-LLM leverage"},
+    {"id": "M3", "outcome": "Receipt-to-distill signals flow to the queue; Graphiti intake works read-only", "unlocks": "memory enrichment loop (both directions)"},
+    {"id": "M4", "outcome": "Autonomy projection emitted at claim; conformance green; PR merged", "unlocks": "campaign execution through the closed loop"}
+  ],
+  "checkpoints": [
+    {"id": "CP-01", "after": "todo-02", "evidence_required": "SC-02 golden loop test output + suite totals", "no_go_action": "STOP: re-cut fixes failed against main — resolve conflicts, do not widen scope"},
+    {"id": "CP-02", "after": "todo-03", "evidence_required": "dispatch integration test PASS + provider result receipt", "no_go_action": "STOP: provider invocation unreliable in environment — keep manual fallback documented, do not fake dispatch"},
+    {"id": "CP-03", "after": "todo-08", "evidence_required": "SC-01..SC-08 evidence + merged PR", "no_go_action": "STOP: report merge gate to operator; never admin-merge"}
+  ],
+  "doc_root_surface_impact": [
+    {"surface": "environment/program-execution/core/program-execution-controller-template/RUNBOOK.md", "action": "update", "todo_ids": ["todo-03", "todo-04", "todo-06"], "reason": "dispatch, distill signals, and autonomy projection change the worker runbook"},
+    {"surface": "environment/program-execution/README.md + ARCHITECTURE.md", "action": "update", "todo_ids": ["todo-03", "todo-04", "todo-05"], "reason": "the unified loop diagram changes"},
+    {"surface": "environment/program-execution/registry/EXECUTION_ROUTING_POLICY.yaml", "action": "update", "todo_ids": ["todo-07"], "reason": "codex preference row"}
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does the dispatch integration test pass WITHOUT a real provider available (would it silently fall back to manual-worker mode and hide the gap)?",
+      "Can a worker-subagent mutate anything outside writable_paths (dispatch must not weaken the scope gate)?",
+      "Does outcome_publisher enqueue jobs containing secrets or raw payloads (redaction contract must hold)?",
+      "Does the Graphiti intake path ever write memory during admission (must be strictly read-only)?",
+      "Does the autonomy projection emit a packet for a task the Program Lock does not authorize (mapper must stay within task ceilings)?"
+    ],
+    "assumed_false_ifs": [
+      "origin/main stays fast-forward from the locked SHA (concurrent sessions keep merging — re-lock at execution start)",
+      "providers on this machine have fresh capability receipts (else dispatch degrades to CAPABILITY_UNSUPPORTED — explicit, not silent)",
+      "distill_queue is reachable (S3 config) — enqueue failures must not fail record-attempt (signal loss logged, not blocking)",
+      "the 8 fixes remain absent from main until this branch lands"
+    ],
+    "blast_radius": "Controller call sites (contracts/controller.py) are the execution heart of every future program; mitigations: additive call sites, manual-worker fallback preserved, full controller suite before PR.",
+    "rollback": "git restore scoped paths on the pe/unified-loop branch; dispatch + signal call sites are additive — removal restores prior behavior; PR closable; no schema changes."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["todo-03", "todo-04", "todo-06", "todo-05", "todo-07", "todo-08", "todo-02", "todo-01"],
+    "shared_causes": [
+      "seams exist but are never invoked (peer_execution substrate, outcome_publisher, context_reader, contract_mapper all built-but-unwired)",
+      "receipts die in the workspace ledger instead of enriching shared memory"
+    ],
+    "deletions_or_consolidations": [
+      "abandon the contaminated origin/pe/pipeline-fixes branch after re-cutting its clean content (one fix set, one branch)"
+    ]
+  },
+  "risks": [
+    {"risk": "Concurrent sessions continue merging to main and pruning worktrees", "mitigation": "push the branch early; re-create from the origin branch per rule 49; never fight over the shared clone"},
+    {"risk": "Provider invocation (codex/cursor CLI) may not be available on this machine", "mitigation": "capability-probe gate; CAPABILITY_UNSUPPORTED leads to manual fallback, documented not silent"},
+    {"risk": "Distill queue writes could leak payloads", "mitigation": "redaction contract + dry-run in tests"}
+  ],
+  "unknowns": [
+    {"id": "U1", "question": "Does a provider capability receipt exist for codex on this host?", "decision_effect": "If absent, codex stays registered-but-unroutable; the routing row still lands but probes never select it", "resolution": "probe"}
+  ],
+  "final_validation": [
+    {"id": "FV-00", "command": "make pr-check (PR_BASE=origin/main) on the pe/unified-loop branch", "pass_criteria": "pr-check gate PASS on changed files", "status": "pending"},
+    {"id": "FV-01", "command": "make sync-generated && make program-execution-core-validate program-execution-campaign-schema program-execution-conformance", "pass_criteria": "all targets PASS", "status": "pending"},
+    {"id": "FV-02", "command": "python3 -m pytest tests/ops/autonomy/ -q", "pass_criteria": "56+ passed", "status": "pending"},
+    {"id": "FV-03", "command": "python3 -B -m unittest discover -s core/program-execution-controller-template/scripts/tests -p 'test_*.py'", "pass_criteria": "all PASS including dispatch + distill-signal tests", "status": "pending"},
+    {"id": "FV-04", "command": "golden loop: compile, collect (memory-lookup), accept, bootstrap, validate", "pass_criteria": "BOOTSTRAPPED + PASS", "status": "pending"}
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1"],
+    "next_skill": "l9-ynp",
+    "stop_reason": "U1 (codex capability receipt) resolves at preflight PV-05; plan is execution-ready on the verified seam evidence"
+  },
+  "gmp_handoff": {
+    "may_modify": ["pec dispatch/contracts/controller call sites", "registry routing policy (additive)", "collect_evidence intake flag", "re-landed fix files listed in todo-02", "regenerated manifests"],
+    "must_not_modify": ["Program Lock / Blueprint required schema fields", "peer_execution provider contracts (ADR-0017..0022)", "autonomy execution plane", "main directly", "any repo besides Quantum-L9/Cursor-Governance"],
+    "preserved_contracts": ["program-execution-blueprint.v2 schemas", "Program Lock digests", "controller receipts", "worker_cannot_self_verify", "L4 release-receipt semantics", "Graphiti group scoping (no main/default writes)"],
+    "validation_commands": ["FV-01..FV-04 as above"]
+  },
+  "code_in_scope": true
+}
