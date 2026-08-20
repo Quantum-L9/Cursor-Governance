@@ -645,3 +645,18 @@ Consequences that supersede earlier §8 phrasing:
    state cannot be determined.
 
 Memory conflicts remain useful evidence. They are not repository locks.
+
+<!-- CURSOR_PLANS_REPO_STORE_V1 -->
+## Cursor plans store (2026-08-20) — supersedes §5.1 `.cursor/plans` row
+
+Authoritative corrections (do not treat the older “not governance SSOT” cell
+as the live store):
+
+1. Tracked store: `<gov-checkout>/docs/plans/`.
+2. `~/.cursor/plans` → that directory. Workspace `.cursor/plans` →
+   `~/.cursor/plans` (unchanged hop).
+3. Heal helper: `ops/scripts/lib/cursor_plans_store.sh`. Stamp:
+   `$HOME/.cursor/l9-plans-store`.
+4. `.cursor/plans/_TEMPLATE.plan.md` still syncs via
+   `skills/l9-plan/scripts/sync_cursor_plan_template.py`; it now lands in
+   `docs/plans/` through the home symlink.

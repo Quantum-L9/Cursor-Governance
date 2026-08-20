@@ -45,7 +45,7 @@ that need a stable, name-addressable path to the governance repo.
 
 - `.cursor-commands` is the sole workspace symlink to the governance root for **consumer** workspaces. Unchanged from v2.0.0 for consumers.
 - The SSOT clone (`$HOME/.cursor-governance`) must **never** have a `.cursor-commands` self-alias (realpath(workspace)==realpath(SSOT) → remove, do not create). Self-links nest forever in the IDE.
-- `.cursor/plans` → `$HOME/.cursor/plans` is a required convenience symlink (machine Cursor plans; not governance SSOT). Wiring tools create/heal it; validators require it.
+- `.cursor/plans` → `$HOME/.cursor/plans` is a required convenience symlink. `$HOME/.cursor/plans` itself is a symlink to the tracked store `<gov-checkout>/docs/plans/` (see `ops/scripts/lib/cursor_plans_store.sh`). Wiring tools create/heal both hops; validators require the workspace hop.
 - Tip freshness: sessionStart runs `governance_activate_fresh.sh` so loaded governance HEAD equals GitHub `origin/main` (ff or clone+swap). Stale Dropbox/old tips are not acceptable load sources.
 - `.cursor/governance/` is a real local directory; `.cursor/governance/CANONICAL_LAW.md` is a file symlink to the canonical law. Unchanged from v2.0.0.
 - `.cursor/rules/` is repository-owned and reserved for rules a repository genuinely authors itself. It must **never** be a symlink — whole-directory or individual-file — to any part of GlobalCommands. This supersedes v2.0.0's "selected individual file symlinks" allowance: that mechanism is retired in favor of the plugin model above.

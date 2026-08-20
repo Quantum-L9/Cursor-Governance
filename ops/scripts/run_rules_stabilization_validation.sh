@@ -61,6 +61,7 @@ cat > "$REPORT" <<EOF_REPORT
 EOF_REPORT
 
 run_gate "Overlay regression suite" bash "$SCRIPT_DIR/tests/test_workspace_rules_overlay.sh"
+run_gate "Cursor plans store" bash "$SCRIPT_DIR/tests/test_cursor_plans_store.sh"
 run_gate "UV fingerprint suite" bash "$SCRIPT_DIR/tests/test_uv_environment_fingerprint.sh"
 run_gate "Selective rule delivery suite" bash "$SCRIPT_DIR/tests/test_selected_rules_sync.sh"
 run_gate "Python syntax compilation" python3 -c \

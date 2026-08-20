@@ -10,6 +10,10 @@ source "$SCRIPT_DIR/resolve_governance_paths.sh"
 source "$SCRIPT_DIR/lib/path_contracts.sh"
 # shellcheck source=lib/rules_overlay.sh
 source "$SCRIPT_DIR/lib/rules_overlay.sh"
+# shellcheck source=lib/workspace_kind.sh
+source "$SCRIPT_DIR/lib/workspace_kind.sh"
+# shellcheck source=lib/cursor_plans_store.sh
+source "$SCRIPT_DIR/lib/cursor_plans_store.sh"
 
 FALLBACK_LOG="$HOME/.cursor-globalcommands-fallback.log"
 DISABLE_FALLBACK=${DISABLE_FALLBACK:-1}
@@ -212,10 +216,9 @@ ensure_repo_rules_overlay "$WORKSPACE_DIR/.cursor/rules" "$GLOBAL_COMMANDS/rules
 
 setup_local_governance_dir
 
-# Convenience: expose Cursor machine plans under the workspace .cursor tree so
-# agents/users can open ~/.cursor/plans from the IDE file tree. Not governance
-# SSOT — local machine state only (.cursor/ is gitignored in this clone).
-mkdir -p "$HOME/.cursor/plans"
+# Machine-global Cursor plans are tracked at docs/plans/ in this repo.
+# ~/.cursor/plans is a symlink to that store so every workspace writes here.
+ensure_machine_cursor_plans_store
 link_or_update "$WORKSPACE_DIR/.cursor/plans" "$HOME/.cursor/plans" ".cursor/plans"
 
 remove_repo_duplicate "$WORKSPACE_DIR/.cursor/commands" ".cursor/commands"

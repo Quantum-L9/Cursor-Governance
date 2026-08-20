@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-08-20T15:46:20Z",
+  "generated_utc": "2026-08-20T19:26:25Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:2513daaa45156ab4bcd34b2fe8ae63bea9ef7793688e230e77ab2da4c768855e",
+  "source_tree_digest": "sha256:04268c681be682b33bc6d6041e8a861d6ef9307bb9db9fbfe39d888104967e70",
   "summary": {
     "total_mdc_files": 66,
     "always_apply_true": 30,
@@ -1335,7 +1335,7 @@
       "first_heading": "Cursor Governance Wiring Boundary",
       "has_yaml_frontmatter": true,
       "line_count": 73,
-      "content_digest": "sha256:f82e47eb9d687f82a3595c21e2ed4649c24564caa92330aa4bbe2d63ef865cc6",
+      "content_digest": "sha256:7121eb2a6c4623186754c4ee0d7dc6387d2a3b7c2f9af5d849582395f2193ff2",
       "authority": "canonical_global",
       "context_cost": "minimal",
       "deprecated": false,
