@@ -652,3 +652,8 @@ as the live store):
    of `$HOME/.cursor-governance` cannot drop uncommitted plans.
 4. Do not `mkdir -p ~/.cursor/plans` as a real directory. Use
    `ops/scripts/lib/cursor_plans_store.sh` → `ensure_machine_cursor_plans_store`.
+
+<!-- MAKE_PR_CASE_INSENSITIVE_V1 -->
+## `make pr` capitalization (2026-08-20)
+
+`make pr` / `make PR` / `make Pr` / `make pR` all run the same gate.
