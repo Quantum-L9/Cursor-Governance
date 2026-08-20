@@ -13,10 +13,10 @@ todos:
     status: completed
   - id: fingerprints
     content: Add PREPARE_STATE.json and extend StageCache from stack_proof only to emit, plan_window, compile, validate_blueprint, launchability, admission_evidence and accept
-    status: in_progress
+    status: completed
   - id: resume
     content: "Make repeated invocation resumable: gate quarantine_occupied() behind runtime-compatibility so a compatible pec workspace resumes instead of being quarantined; one idempotent front door"
-    status: pending
+    status: in_progress
   - id: locks
     content: Remove preparation locks from the normal local path; keep locks only for task-worktree, branch, state-DB and external publication mutation; use temp-write + atomic rename
     status: pending
