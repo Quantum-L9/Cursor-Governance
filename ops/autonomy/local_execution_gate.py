@@ -69,13 +69,16 @@ from git_guardrails import command_requires_human  # noqa: E402
 from l4_local import release_allows_remote, workspace_from_event  # noqa: E402
 from worktree_isolation_gate import command_violates_worktree_isolation  # noqa: E402
 
+#: git/gh forms that reach GitHub. `make` is NOT matched by regex here: see
+#: MAKE_REMOTE_GOALS, because `\bmake\s+pr\b` also matches `make pr-check`.
 REMOTE_BASH_PATTERNS = (
     re.compile(r"\bgit\s+push\b", re.I),
     re.compile(r"\bgh\s+pr\s+create\b", re.I),
     re.compile(r"\bgh\s+pr\s+edit\b", re.I),
-    re.compile(r"\bmake\s+pr\b", re.I),
-    re.compile(r"\bmake\s+push\b", re.I),
 )
+
+#: Makefile goals that perform remote mutation, matched as exact goal tokens.
+MAKE_REMOTE_GOALS = frozenset({"pr", "push"})
 
 DENY_MCP_TOOLS = {
     "mcp__github__create_pull_request",
@@ -103,8 +106,11 @@ RAW_PUBLISH_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bgit\s+push\b", re.I), "git push"),
     (re.compile(r"\bgh\s+pr\s+create\b", re.I), "gh pr create"),
     (re.compile(r"\bgh\s+pr\s+edit\b", re.I), "gh pr edit"),
-    (re.compile(r"\bmake\s+push\b", re.I), "make push"),
 )
+
+#: Makefile goals that reach GitHub outside the sanctioned `pr` goal, matched
+#: as exact goal tokens for the same reason as MAKE_REMOTE_GOALS.
+MAKE_BYPASS_GOALS = frozenset({"push"})
 
 # A leading `VAR=value` shell assignment. Anchored and non-nested: linear time.
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
@@ -116,8 +122,8 @@ _MAKE_OPTS_WITH_ARG = frozenset(
 )
 
 
-def is_make_pr(segment: str) -> bool:
-    """True when this segment invokes `make pr` — the sanctioned publish path.
+def make_goals(segment: str) -> tuple[str, ...]:
+    """Every goal a `make` segment invokes, or () when it is not a make call.
 
     Deliberately a token scan, not a regex. Matching the real forms
     (``PR_REMEDIATE=0 make pr``, ``make -C /path pr``, ``make pr WS=…``) needs
@@ -126,16 +132,20 @@ def is_make_pr(segment: str) -> bool:
     shell command an agent issues, so a hostile or merely long argument list must
     not be able to stall it: this scan is linear in the token count.
 
-    Only the goal matters. ``make pr-check`` is not a publish (it never pushes)
-    and correctly returns False.
+    Goals are exact tokens, which is the whole point: a regex for ``make pr``
+    also matches ``make pr-check``, because ``\\b`` closes on the hyphen.
+
+    All goals are returned, not just the first — ``make pr-check pr`` runs both,
+    so a caller asking "does this publish?" must see the ``pr``.
     """
     tokens = segment.split()
     index = 0
     while index < len(tokens) and ENV_ASSIGN_RE.match(tokens[index]):
         index += 1
     if index >= len(tokens) or PurePosixPath(tokens[index]).name != "make":
-        return False
+        return ()
     index += 1
+    goals: list[str] = []
     while index < len(tokens):
         token = tokens[index]
         if token in _MAKE_OPTS_WITH_ARG:
@@ -144,8 +154,19 @@ def is_make_pr(segment: str) -> bool:
         if token.startswith("-") or ENV_ASSIGN_RE.match(token):
             index += 1
             continue
-        return token == "pr"
-    return False
+        goals.append(token)
+        index += 1
+    return tuple(goals)
+
+
+def is_make_pr(segment: str) -> bool:
+    """True when this segment invokes the `pr` goal — the sanctioned publish path.
+
+    ``make pr-check`` is not a publish. It runs the local quality gate and never
+    reaches GitHub (rule 48: "pr-check is PUBLIC quality; GitHub mutation stays
+    make pr only"), so it is not this path and must not be gated as one.
+    """
+    return "pr" in make_goals(segment)
 
 
 PUBLISH_PATH_OVERRIDE_ENV = "L9_PUBLISH_PATH_OVERRIDE"
@@ -181,7 +202,15 @@ def command_bypasses_publish_path(command: str) -> str | None:
         if is_make_pr(segment):
             continue
         head = segment_head(segment)
-        if head not in {"git", "gh", "make"}:
+        if head is None:
+            continue
+        name = PurePosixPath(head).name
+        if name == "make":
+            bypass = MAKE_BYPASS_GOALS.intersection(make_goals(segment))
+            if bypass:
+                return f"make {sorted(bypass)[0]}"
+            continue
+        if name not in {"git", "gh"}:
             continue
         for pattern, label in RAW_PUBLISH_PATTERNS:
             if pattern.search(segment):
@@ -197,6 +226,10 @@ def command_is_remote_mutation(command: str) -> bool:
     so ``bash -c 'git push …'`` still matches via the wrapper descent.
     ``echo 'git push'`` and other data segments never match. Residual accepted:
     ``ssh host 'git push'`` / ``sudo git push`` heads are not pattern targets.
+
+    A `make` segment is classified by its goals, not by a regex over the text.
+    ``\\bmake\\s+pr\\b`` matches ``make pr-check`` — the word boundary closes on
+    the hyphen — which denied the local quality gate as if it were a publish.
     """
     segments: list[str] = []
     for segment in split_segments(strip_heredoc_bodies(command)):
@@ -204,7 +237,14 @@ def command_is_remote_mutation(command: str) -> bool:
         segments.extend(wrapper_subcommands(segment))
     for segment in segments:
         head = segment_head(segment)
-        if head not in {"git", "gh", "make"}:
+        if head is None:
+            continue
+        name = PurePosixPath(head).name
+        if name == "make":
+            if MAKE_REMOTE_GOALS.intersection(make_goals(segment)):
+                return True
+            continue
+        if name not in {"git", "gh"}:
             continue
         if any(pattern.search(segment) for pattern in REMOTE_BASH_PATTERNS):
             return True

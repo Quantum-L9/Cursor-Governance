@@ -132,8 +132,14 @@ def wrapper_subcommands(segment: str, *, _depth: int = 0) -> list[str]:
     return nested
 
 
+#: Executables whose ``-C <path>`` names the directory the command runs in.
+#: ``make -C`` means what ``git -C`` means, and a publish invoked that way must
+#: be judged against that checkout's receipt, not the session's.
+_DASH_C_EXECUTABLES = frozenset({"git", "make"})
+
+
 def extract_named_roots(command: str) -> list[str]:
-    """Static repo paths named by ``git -C <path>`` or ``cd <path>``.
+    """Static repo paths named by ``git -C``/``make -C <path>`` or ``cd <path>``.
 
     Fail-closed: tokens containing ``$``, backticks, ``(``/``)``, wildcards,
     braces, or ``~`` are ignored (dynamic targets never widen a gate).
@@ -145,7 +151,11 @@ def extract_named_roots(command: str) -> list[str]:
         for index, token in enumerate(tokens):
             head = token.rstrip(";")
             candidate: str | None = None
-            if head == "git" and index + 2 < len(tokens) and tokens[index + 1] == "-C":
+            if (
+                head in _DASH_C_EXECUTABLES
+                and index + 2 < len(tokens)
+                and tokens[index + 1] == "-C"
+            ):
                 candidate = tokens[index + 2]
             elif head == "cd" and index + 1 < len(tokens):
                 candidate = tokens[index + 1]
