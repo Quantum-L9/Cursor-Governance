@@ -58,10 +58,10 @@ todos:
     phase: execute
     depends_on: [w1-03-sessionstart-reconcile]
   - id: w3-01-surface-aware-wiring-check
-    content: "Teach check_governance_wiring.sh the surface it runs on, so Cursor IDE host checks classify as not-applicable on claude-code instead of emitting a red FAIL that masks real signal"
+    content: "PUBLICATION BLOCKER — apply the surface gate that the ssot-family branch skips. The root cause is the caller, not the checker: ops/scripts/run_pr_gate.sh states the correct fix in its own comment — the enclosing guard treats an existing writable home cursor directory as proof of a Cursor machine, while the memory state directory creates that path on every surface, so the desktop-wiring assertion must be gated on the surface id instead. The sibling branch implements exactly that and prints a skip naming the surface; the ssot and ssot_checkout branch does not, and runs the full assertion including the Cursor desktop hook plane. A headless adapter on an identity checkout therefore fails the gate on artifacts its own installer deliberately never creates, and cannot publish at all. Apply the documented surface gate to that branch while keeping the surface-independent reconcile checks above it unconditional."
     status: pending
     phase: execute
-    depends_on: [w1-01-baseline-regression-guard]
+    depends_on: []
   - id: w3-02-shellcheck-toolchain
     content: "Add shellcheck to the canonical checker toolchain acquisition beside gitleaks, with the same pinned-version and report-on-absence discipline"
     status: pending
@@ -130,7 +130,7 @@ isProject: false
 > **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.
 > **Template SSOT:** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`
 > **Execute:** `@environment/program-execution` → Program Lock/Controller → `@autonomy` (subordinate).
-> **Suggested filename:** `claude-code-mobile-environment-unified-readiness-master-plan_9763e657.plan.md`
+> **Suggested filename:** `claude-code-mobile-environment-unified-readiness-master-plan_c9dcc90f.plan.md`
 
 ## Objective (from PLAN_DOCUMENT)
 
@@ -155,6 +155,7 @@ Consolidate three concurrent efforts on the same concern into one master plan: t
 | SP-13 | SC-13: make pr-check exits 0 on a clean checkout in every participating repo | quality_gate | observe during PE verify / make pr-check | true |
 | SP-14 | SC-14: make pr-check PASSes on the changed files in this repository | quality_gate | observe during PE verify / make pr-check | true |
 | SP-15 | SC-15: capability plane reports ENABLED for sonar.read_issues and semgrep.appsec_scan (gated on the broker milestone and excluded from the pr-check gate) | quality_gate | observe during PE verify / make pr-check | true |
+| SP-16 | SC-16: make pr-check runs to completion on a headless adapter surface, with the Cursor desktop hook plane reported as skipped-by-surface rather than FAIL, and no Cursor host artifacts created to achieve it | quality_gate | observe during PE verify / make pr-check | true |
 
 ## Scope (from PLAN_DOCUMENT)
 
@@ -171,10 +172,11 @@ Consolidate three concurrent efforts on the same concern into one master plan: t
 - CI workflow definitions and branch protection
 - Cursor IDE host wiring under the home cursor directory
 - Any weakening of tests, scanners or gate thresholds to obtain a green result
+- Installing the Cursor host hook plane on this surface. The wiring failures reported under the memory heading — the session-start bootstrap and the before-submit skill router entries — are Cursor-side host artifacts, not memory-plane work and not Claude-side defects; the Claude equivalent skill router is already wired and observed working. They are made not-applicable by w3-01, never installed.
 
 ## Critical path (seed)
 
-w0-01-integrate-inflight-workspace-resolution → w1-01-baseline-regression-guard → w1-02-vendor-only-fast-path → w1-03-sessionstart-reconcile → w1-05-multi-repo-workspace-contract → w4-01-link-local-packages-script
+w3-01-surface-aware-wiring-check → w0-01-integrate-inflight-workspace-resolution → w1-01-baseline-regression-guard → w1-02-vendor-only-fast-path → w1-03-sessionstart-reconcile → w1-05-multi-repo-workspace-contract → w4-01-link-local-packages-script
 
 ## Stress (seed from PLAN_DOCUMENT)
 
@@ -185,7 +187,7 @@ w0-01-integrate-inflight-workspace-resolution → w1-01-baseline-regression-guar
 
 - status: partial
 - next_skill: l9-plan-audit
-- stop_reason: Three concurrent efforts are consolidated into one master plan with six workstreams and one dependency order. Milestones M0 through M3 are executable against verified ground truth in this repository. M4 depends on three repositories not attached to this session and carries explicit blockers. M5 stays blocked on U-01. The most urgent open item is U-02: whether the in-flight branch is still actively worked decides whether W0 is a replay this plan performs or a rebase handed to its author, and getting that wrong either duplicates the work a third time or destroys another agent's tree.
+- stop_reason: Validate-and-Repair applied to the plan artifact. It found one Confirmed High defect in the plan itself: w3-01 named the wrong owner. The evidence is a comment in ops/scripts/run_pr_gate.sh specifying the surface gate, and code beneath it that applies the gate on one branch and omits it on the ssot-family branch this surface takes — so the blocker is the caller's dispatch, not the checker's logic. w3-01 was rewritten to the correct owner and anchor, raised to a publication blocker, freed of its dependency, and promoted to lead the critical path, since no work in this plan can be published until it lands. Milestones M0 through M3 remain executable; M4 spans repositories not attached here; M5 stays blocked on U-01.
 - execute_via: @environment/program-execution → @autonomy
 
 ---
