@@ -736,11 +736,13 @@ def apply_fail_change(
     return decision
 
 
-def default_context7_stack(seed: dict[str, Any], primed_dir: Path) -> dict[str, Any]:
+def default_context7_stack(
+    seed: dict[str, Any], primed_dir: Path, tool_cache: Any | None = None
+) -> dict[str, Any]:
     # Live path never honors a skip env. Tests inject Hooks.context7_stack.
     module = _load_script("context7_stack_proof", PE_ROOT / "scripts/context7_stack_proof.py")
     try:
-        return module.prove_stack(seed, primed_dir=primed_dir)
+        return module.prove_stack(seed, primed_dir=primed_dir, tool_cache=tool_cache)
     except module.StackProofError as exc:
         raise CampaignError(str(exc), exit_code=getattr(exc, "exit_code", 2)) from exc
 
@@ -3089,7 +3091,14 @@ def _run_campaign_stages(
             entry["cached"] = True
         else:
             with traced(trace, "research", "context7_stack_proof"):
-                stack_receipt = stack_fn(seed, primed_root)
+                # The receipt is keyed on the whole seed, so any edit misses here
+                # and the proof is rebuilt. Rebuilding it is cheap; re-proving
+                # each tool over the network is not, so the default proof reuses
+                # per-tool evidence that the edit did not invalidate.
+                if hooks.context7_stack is not None:
+                    stack_receipt = stack_fn(seed, primed_root)
+                else:
+                    stack_receipt = stack_fn(seed, primed_root, cache)
             cache.put("stack_proof", stack_key, stack_receipt)
     stack_proof_path = Path(
         str((stack_receipt or {}).get("path") or (primed_root / campaign_id / "stack-proof.json"))

@@ -6,6 +6,7 @@ import os
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 
 PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/context7_stack_proof.py"
@@ -95,6 +96,46 @@ class Context7StackProofTests(unittest.TestCase):
             self.assertTrue(path.is_file())
             loaded = json.loads(path.read_text(encoding="utf-8"))
             self.assertTrue(loaded["tools"][0]["fetch_evidence"]["digest"])
+
+    def test_an_edited_task_reuses_the_proof_it_did_not_invalidate(self) -> None:
+        """An edit elsewhere in the seed must not re-fetch a tool's docs."""
+
+        calls: list[str] = []
+
+        def fetch(url: str, headers=None):
+            calls.append(url)
+            if "libs/search" in url:
+                return 200, json.dumps({"results": [{"id": "/upstash/context7"}]})
+            return 200, "language_name must be the full English name. language_code is en."
+
+        class Cache:
+            def __init__(self) -> None:
+                self.entries: dict[tuple[str, str], Any] = {}
+
+            def get(self, stage: str, key: str) -> Any:
+                return self.entries.get((stage, key))
+
+            def put(self, stage: str, key: str, value: Any) -> None:
+                self.entries[(stage, key)] = value
+
+        cache = Cache()
+        seed = {
+            "campaign_id": "ctx-demo",
+            "objective": "Configure Context7 MCP and the HTTP API",
+            "tasks": [{"title": "Docs", "objective": "query-docs"}],
+        }
+        with tempfile.TemporaryDirectory() as raw:
+            primed = Path(raw)
+            self.mod.prove_stack(seed, primed_dir=primed, fetch=fetch, tool_cache=cache)
+            first = len(calls)
+            self.assertTrue(first, "the first proof fetched nothing")
+
+            edited = {**seed, "tasks": [{"title": "Docs", "objective": "query-docs twice"}]}
+            receipt = self.mod.prove_stack(edited, primed_dir=primed, fetch=fetch, tool_cache=cache)
+
+            self.assertEqual(len(calls), first, "an unrelated task edit re-fetched the docs")
+            self.assertEqual(receipt["status"], "pass")
+            self.assertTrue(receipt["tools"][0]["fetch_evidence"]["digest"])
 
     def test_missing_key_refuses_on_live_fetch(self) -> None:
         os.environ.pop("CONTEXT7_API_KEY", None)

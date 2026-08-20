@@ -1595,7 +1595,7 @@
     },
     {
       "path": "scripts/context7_stack_proof.py",
-      "sha256": "0fd9dbe149662f79da9c1442f9f047cbad9eee2cfdbd64fcd9667819b48caeb2"
+      "sha256": "44f19213fc1f376b195f565bb1dfab8297338a824b3ff5d04350b4068c223320"
     },
     {
       "path": "scripts/generate_manifest.py",
@@ -1655,7 +1655,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "cf0d50ed4dfef8a8d228642b53276265a86daf50ef256a79ad16f04a90249828"
+      "sha256": "66a43a59d30fe02a15c7cababdc1e426ca95e88c6d1093bd4769619ca66574f3"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1687,7 +1687,7 @@
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
-      "sha256": "2fba804a87e897217cb652e61e4f71381e29995483f748f0bb6ebfe36fd22886"
+      "sha256": "ac47c0ca887b9702b5e33f5fb19a241f2561f7072e501d06001f8e14c1e30dad"
     },
     {
       "path": "scripts/tests/test_launchability.py",
