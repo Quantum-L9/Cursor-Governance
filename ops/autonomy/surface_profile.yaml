@@ -119,9 +119,16 @@ pr_stacking:
 # Program Execution campaigns — one integration branch each; PRs land there.
 # SSOT companion: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
 campaign_execution:
-  require_make_pr: true
+  # Autonomous campaign execution is local-commit-only: prepare, execute,
+  # validate, verify, local commits, STOP. Publication is a separate governed
+  # release transition (L9_PE_RELEASE_AUTHORIZED), never a campaign stage.
+  local_commit_only: true
+  completion_boundary: execute
+  push: forbidden
+  pull_request: forbidden
+  require_make_pr: false # publication left the campaign path entirely
   pr_remediate: 0
-  merge: forbidden # campaign path ends green+merge-ready; merge is remediations
+  merge: forbidden # merge authority belongs to /l9-pr-remediation
   open_pr_against_main: forbidden
   mix_with_other_feature_branches: forbidden
   one_integration_branch_per_campaign: true
@@ -137,6 +144,9 @@ campaign_execution:
       integration_branch: campaign/l9-devpack-program-execution-hardening
     l9-ecosystem-fix-plan:
       integration_branch: campaign/l9-ecosystem-fix-plan
+    pe-router-capability-safety-v4:
+      integration_branch: campaign/pe-router-capability-safety-v4
+
 authority_order:
   - CANONICAL_LAW.autonomy_velocity
   - CANONICAL_LAW.l4_local_autonomy

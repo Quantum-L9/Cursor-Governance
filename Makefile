@@ -89,13 +89,22 @@ start:
 .PHONY: campaign
 ## Activate a PE campaign from a memo .md or an activate YAML.
 ## INTENT= required (brief.md or seed.yaml). No campaign_id required for memos.
-## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|pr|merge (default merge).
+## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|execute (default execute).
+## Local-commit-only: prepare, execute, validate, verify, commit, STOP. The pr and
+## merge stages are a separate governed release transition, not a campaign stage.
 ## Does not implement target-repo tasks or close the ledger after a host-only merge.
 campaign:
 	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
 	$(PYTHON) environment/program-execution/scripts/run_campaign.py \
 	  --intent "$(INTENT)" \
-	  --until "$(or $(CAMPAIGN_UNTIL),merge)"
+	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
+	  $(CAMPAIGN_ARGS)
+
+.PHONY: campaign-check-input
+## Classify a PE campaign input and print its route. Runs no campaign stage. INTENT= required.
+campaign-check-input:
+	@test -n "$(INTENT)" || (echo "INTENT= path to classify is required" >&2; exit 2)
+	$(PYTHON) environment/program-execution/scripts/run_campaign.py --check-input "$(INTENT)"
 
 .PHONY: campaign-stack-base
 ## Print the next campaign PR base from $L9_ROOT/programs/$CAMPAIGN_ID/runtime/STACK.json.
@@ -504,6 +513,7 @@ program-execution-core-validate:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B $(PE_ROOT)/core/scripts/validate_pair.py 		$(PE_ROOT)/core --mode template
 	$(MAKE) program-execution-campaign-schema
 	$(MAKE) program-execution-campaign-compile
+	$(MAKE) program-execution-campaign-promotion
 
 program-execution-adapters:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B 		$(PE_ROOT)/scripts/validate_execution_adapters.py
@@ -516,6 +526,13 @@ program-execution-conformance: autonomy-contracts-validate
 
 program-execution-probe:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B 		$(PE_ROOT)/scripts/probe_execution_adapters.py
+
+# PE execution certification: the two-task smoke campaign runs a real worker
+# end to end, then again after a simulated interruption. This is the health
+# check to run when PE "prepares forever but never writes code".
+.PHONY: pe-smoke
+pe-smoke:
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B -m pytest -q 		$(PE_ROOT)/scripts/tests/test_pe_smoke_campaign.py 		$(PE_ROOT)/scripts/tests/test_launchability.py 		$(PE_ROOT)/core/program-execution-controller-template/scripts/tests/test_verify_lifecycle.py 		$(PE_ROOT)/core/program-execution-controller-template/scripts/tests/test_execution_recovery.py
 
 AGENTS_TOOLS := environment/agents/tools
 .PHONY: peer-execution-validate peer-execution-probe peer-execution-conformance
@@ -568,7 +585,14 @@ claude-deepseek-verify:
 	./scripts/verify-routing.sh
 
 .PHONY: program-execution-campaign-schema program-execution-campaign-compile
+.PHONY: program-execution-campaign-promotion
 .PHONY: program-execution-controller-tests
+## Campaign promotion must be mechanically valid and portable before it lands.
+program-execution-campaign-promotion:
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B $(PE_ROOT)/scripts/validate_campaign_promotion.py
+	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B -m unittest \
+		$(PE_ROOT)/scripts/tests/test_validate_campaign_promotion.py
+
 program-execution-campaign-schema:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B -m unittest \
 		$(PE_ROOT)/conformance/test_campaign_source_schema.py

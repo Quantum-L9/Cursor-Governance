@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "pe-router-capability-safety-v4",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "32e2c337c4a363016e1506a7b5646e42437e3df53c91d5c5d972ce90034345b3",
+  "bytes": 21843,
+  "pack_recorded_digest": "32e2c337c4a363016e1506a7b5646e42437e3df53c91d5c5d972ce90034345b3",
+  "pack_recorded_bytes": 21843,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-18T10:21:53Z",
+  "collection_method": "l9-pe-campaign-activate-compile",
+  "producer": "l9-pe-campaign-activate"
+}

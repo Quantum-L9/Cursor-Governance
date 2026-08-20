@@ -339,6 +339,35 @@ def _bind_stack_proof(src: dict[str, Any], stack_proof: Path | None) -> dict[str
     return receipt
 
 
+def normalize_definition_status(src: dict[str, Any]) -> list[str]:
+    """Compile ordering-blocked tasks as `ready` and let dependencies gate them.
+
+    `definition_status: blocked` describes an authoring intent — "this runs
+    after something else" — but the controller reads it as a runtime property
+    with no transition back to `ready`. Runtime dependency edges already decide
+    eligibility, so a task that is only waiting on a predecessor compiles as
+    `ready`; one that is blocked with nothing to wait for keeps its status,
+    because that is a real authoring gap rather than sequencing.
+    """
+    notes: list[str] = []
+    for task in src.get("tasks") or []:
+        if task.get("definition_status") != "blocked":
+            continue
+        dependencies = task.get("dependency_ids") or task.get("dependencies") or []
+        if not dependencies:
+            notes.append(
+                f"task {task['id']!r}: definition_status 'blocked' with no dependencies has no "
+                "controller transition to 'ready'; it can never be claimed"
+            )
+            continue
+        task["definition_status"] = "ready"
+        notes.append(
+            f"task {task['id']!r}: definition_status 'blocked' normalized to 'ready'; "
+            f"ordering is enforced by dependencies {list(dependencies)!r}"
+        )
+    return notes
+
+
 def compile_source(
     source: Path,
     target: Path,
@@ -361,6 +390,7 @@ def compile_source(
         raise CompileError(f"campaign {campaign_id} is not in COMPILE_ALLOWLIST.yaml")
     stack_receipt = _bind_stack_proof(src, stack_proof)
     warnings = _semantic_precheck(src)
+    warnings.extend(normalize_definition_status(src))
     now = stamp or utc_now()
     ensure_instantiated(target, src, now)
     prog = src["program"]

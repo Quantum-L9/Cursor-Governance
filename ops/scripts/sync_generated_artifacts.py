@@ -12,7 +12,12 @@ Covered artifacts:
   * skills/AUTONOMY_MANIFEST.yaml (orphan skills → explicit_only)
   * commands/COMMANDS_MANIFEST.yaml
   * environment/program-execution/core/MANIFEST.yaml
-  * environment/program-execution/MANIFEST.json
+
+Suspended (2026-08-19, velocity window — see TODO.md):
+  * environment/program-execution/MANIFEST.json — hashes the whole mutable
+    Program Execution tree, so ordinary PE edits rewrote it and produced
+    cross-branch churn. Automatic sync is opt-in via --pe-manifest; the
+    generator itself is untouched and still runs standalone.
 """
 
 from __future__ import annotations
@@ -42,6 +47,9 @@ GENERATED_PATH_PREFIXES = (
     "commands/COMMANDS_MANIFEST.yaml",
     "skills/AUTONOMY_MANIFEST.yaml",
     "environment/program-execution/core/MANIFEST.yaml",
+    # Auto-sync suspended (see module docstring), but the file is still a
+    # generated artifact: it stays in this SSOT so .gitattributes keeps the
+    # l9-generated merge driver and the PR overlap gate keeps its exemption.
     "environment/program-execution/MANIFEST.json",
 )
 
@@ -372,6 +380,11 @@ def sync_pe_core(root: Path, wrote: list[str]) -> None:
 
 
 def sync_pe_adapters(root: Path, wrote: list[str]) -> None:
+    """Regenerate environment/program-execution/MANIFEST.json.
+
+    Reached only when a caller opts in (``sync(..., pe_manifest=True)`` /
+    ``--pe-manifest``). Ordinary pre-commit and PR-gate runs skip it.
+    """
     pe = root / "environment" / "program-execution"
     if not pe.is_dir():
         return
@@ -397,6 +410,7 @@ def sync(
     changed_paths: set[str] | None = None,
     force: bool = False,
     workspace: Path | None = None,
+    pe_manifest: bool = False,
 ) -> dict[str, Any]:
     root = root.resolve()
     wrote: list[str] = []
@@ -439,7 +453,10 @@ def sync(
         pe_touched = should_run(changed, ("environment/program-execution/",))
         if pe_touched:
             sync_pe_core(root, wrote)
-            sync_pe_adapters(root, wrote)
+            # environment/program-execution/MANIFEST.json is opt-in only —
+            # --force does not reach it. See the module docstring and TODO.md.
+            if pe_manifest:
+                sync_pe_adapters(root, wrote)
     except Exception as exc:  # noqa: BLE001 — surface as structured error to gate
         errors.append(str(exc))
 
@@ -513,6 +530,12 @@ def main() -> int:
         help="Print GENERATED_PATH_PREFIXES one per line and exit (single SSOT for "
         "merge-driver attributes and overlap-gate exemptions)",
     )
+    parser.add_argument(
+        "--pe-manifest",
+        action="store_true",
+        help="Also regenerate environment/program-execution/MANIFEST.json "
+        "(suspended from automatic sync; explicit maintenance only)",
+    )
     parser.add_argument("--check", action="store_true", help="Validate after sync")
     parser.add_argument("--json", action="store_true", help="Print machine-readable result")
     parser.add_argument(
@@ -544,6 +567,7 @@ def main() -> int:
         changed_paths=changed,
         force=args.force,
         workspace=args.workspace.resolve() if args.workspace else None,
+        pe_manifest=args.pe_manifest,
     )
     if args.check and not result["errors"]:
         result["errors"].extend(validate_after_sync(root))

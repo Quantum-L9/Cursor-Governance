@@ -3,7 +3,6 @@ from __future__ import annotations
 import datetime as dt
 import importlib.util
 import json
-import os
 import re
 import shutil
 import subprocess
@@ -25,8 +24,10 @@ from .common import (
     write_json,
 )
 from .contracts import ContractError, path_allowed, validate_source_contract
+from .exec_env import resolve_exec_env, run_validation_command
 from .ledger import EventLedger
 from .state import StateDB
+from .workspace_reset import clean_task_execution
 
 CAMPAIGN_STATUS_SCHEMA = "program-execution-controller.campaign-status.v1"
 SOURCE_STATUSES = {"operator_intake", "registered", "withdrawn"}
@@ -850,6 +851,21 @@ def claim_task(
         db.close()
 
 
+def _add_task_worktree(
+    repo_path: Path, worktree: Path, lease: dict[str, Any]
+) -> subprocess.CompletedProcess[str]:
+    return run_git(
+        repo_path,
+        "worktree",
+        "add",
+        "-b",
+        lease["branch"],
+        str(worktree),
+        lease["base_sha"],
+        check=False,
+    )
+
+
 def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
@@ -878,23 +894,28 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
             raise ControllerError("repository state changed after reconciliation")
         worktree = workspace / "worktrees" / task_id
         reused = False
+        recovered = False
         if worktree.exists():
             if not _worktree_matches_lease(worktree, lease, repo_path):
                 raise ControllerError(f"worktree already exists: {worktree}")
             reused = True
         else:
-            result = run_git(
-                repo_path,
-                "worktree",
-                "add",
-                "-b",
-                lease["branch"],
-                str(worktree),
-                lease["base_sha"],
-                check=False,
-            )
+            result = _add_task_worktree(repo_path, worktree, lease)
             if result.returncode != 0:
-                raise ControllerError(f"failed to create worktree: {result.stderr.strip()}")
+                # Residue from an interrupted attempt — the branch, the git
+                # worktree registration, or the directory — is recoverable, and
+                # recreating a task worktree must not depend on manual cleanup.
+                clean_task_execution(workspace, repo_path, task_id, branch=lease["branch"])
+                recovered = True
+                result = _add_task_worktree(repo_path, worktree, lease)
+            if result.returncode != 0:
+                raise ControllerError(
+                    "failed to create worktree for "
+                    f"{task_id}: {result.stderr.strip() or result.stdout.strip()} "
+                    f"(worktree={worktree}, branch={lease['branch']}, "
+                    f"base_sha={lease['base_sha']}; residue cleanup already attempted — "
+                    "run `pec fresh-workspace` to reset every task worktree)"
+                )
         db.update_lease(lease["lease_id"], worktree=str(worktree))
         db.update_task(task_id, worktree=str(worktree))
         db.transition_task(task_id, "PREPARED")
@@ -907,6 +928,7 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
                 "worktree": str(worktree),
                 "base_sha": lease["base_sha"],
                 "reused": reused,
+                "recovered": recovered,
             },
         )
         return {
@@ -915,6 +937,7 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
             "branch": lease["branch"],
             "base_sha": lease["base_sha"],
             "reused": reused,
+            "recovered": recovered,
         }
     finally:
         db.close()
@@ -1078,31 +1101,7 @@ def _changed_paths(worktree: Path, base_sha: str | None = None) -> list[str]:
 
 
 def _run_validation(command: str, worktree: Path) -> dict[str, Any]:
-    try:
-        completed = subprocess.run(
-            ["bash", "-lc", command],
-            cwd=worktree,
-            text=True,
-            capture_output=True,
-            check=False,
-            timeout=300,
-            env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
-        )
-    except subprocess.TimeoutExpired as exc:
-        return {
-            "command": command,
-            "status": "FAIL",
-            "exit_code": 124,
-            "stdout": (exc.stdout or "")[-8000:] if isinstance(exc.stdout, str) else "",
-            "stderr": "validation command timed out after 300s",
-        }
-    return {
-        "command": command,
-        "status": "PASS" if completed.returncode == 0 else "FAIL",
-        "exit_code": completed.returncode,
-        "stdout": completed.stdout[-8000:],
-        "stderr": completed.stderr[-8000:],
-    }
+    return run_validation_command(command, worktree, exec_env=resolve_exec_env(worktree))
 
 
 DOD_GATES = (
@@ -1212,12 +1211,89 @@ def _dod_complete(verification: dict[str, Any]) -> bool:
     return all(dod.get(name) == "PASS" for name in DOD_GATES)
 
 
+def verification_receipt_path(workspace: Path, task_id: str) -> Path:
+    return workspace.resolve() / "receipts" / "verification" / f"{task_id}.json"
+
+
+def _verified_this_attempt(
+    workspace: Path, task: dict[str, Any], attempt: dict[str, Any] | None
+) -> dict[str, Any] | None:
+    """Return the receipt already produced for the task's current attempt.
+
+    An attempt gets exactly one controller verification. Re-invoking `verify`
+    after that verdict changed the task state is a resumable duplicate, not a
+    new verification, so the recorded verdict is replayed instead of a second
+    run against a task the state machine no longer accepts.
+    """
+    path = verification_receipt_path(workspace, task["id"])
+    if not path.is_file():
+        return None
+    try:
+        receipt = load_json(path)
+    except (json.JSONDecodeError, OSError):
+        return None
+    if str(receipt.get("task_id")) != str(task["id"]):
+        return None
+    digest = task.get("rendered_contract_digest")
+    if digest and receipt.get("contract_digest") and receipt["contract_digest"] != digest:
+        return None
+    if attempt is not None and receipt.get("candidate_sha"):
+        recorded = attempt.get("candidate_sha")
+        if recorded and recorded != receipt["candidate_sha"]:
+            return None
+    return dict(receipt)
+
+
+def _verify_state_error(task: dict[str, Any] | None, task_id: str) -> ControllerError:
+    """Explain how the task reached a state `verify` cannot act on."""
+    if task is None:
+        return ControllerError(
+            f"cannot verify {task_id}: no such task in this runtime. "
+            "Expected state SUBMITTED. Suggested next action: `pec status` to list "
+            "task ids, then bootstrap or reconcile the correct blueprint. Retry is safe."
+        )
+    state = task["runtime_state"]
+    guidance = {
+        "BLOCKED": "dependencies or definition readiness are unmet; run `pec next` to see blockers",
+        "ELIGIBLE": "the task was never claimed; run `pec claim` then prepare/render/start",
+        "LEASED": "the worktree is not prepared; run `pec prepare`",
+        "PREPARED": "no contract is rendered; run `pec render-contract`",
+        "CONTRACTED": "execution never started; run `pec start` then record an attempt",
+        "EXECUTING": "the worker has not submitted an attempt; run `pec record-attempt`",
+        "VERIFYING": "a verification is already in flight for this attempt; wait for it to finish",
+        "PASSED_LOCAL": "this attempt already verified PASS; run `pec complete`",
+        "FAILED": (
+            "this attempt already verified FAIL and the receipt is preserved; "
+            "repair the work and run `pec start` to retry, which submits a new attempt"
+        ),
+        "STALE": "the lease or repository moved; run `pec recover` then re-claim",
+        "CANCELLED": "the task is terminal and cannot be verified",
+        "COMPLETED": "the task is already complete; verification is not repeated",
+    }.get(state, "no transition to VERIFYING exists from this state")
+    return ControllerError(
+        f"cannot verify {task_id}: task is {state}, expected SUBMITTED. "
+        f"Why: {guidance}. "
+        f"Last error: {task.get('last_error') or 'none'}. "
+        f"Attempts recorded: {task.get('attempts', 0)}. "
+        f"Retry safe: {'yes' if state in {'FAILED', 'PASSED_LOCAL', 'COMPLETED'} else 'not as-is'}."
+    )
+
+
 def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
         task = db.task(task_id)
         if task is None or task["runtime_state"] != "SUBMITTED":
-            raise ControllerError("task must be SUBMITTED")
+            replay = (
+                None
+                if task is None
+                else _verified_this_attempt(workspace, task, db.latest_attempt(task_id))
+            )
+            if replay is not None:
+                replay["replayed"] = True
+                replay["runtime_state"] = task["runtime_state"]
+                return replay
+            raise _verify_state_error(task, task_id)
         db.transition_task(task_id, "VERIFYING")
         lease = db.active_lease_for_task(task_id)
         attempt = db.latest_attempt(task_id)

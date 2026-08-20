@@ -15,7 +15,7 @@
     },
     {
       "path": "README.md",
-      "sha256": "6b9035afaf696854a35ba6a8d4a77b567bce1640c6d493c9ec7ad3b40235cce2"
+      "sha256": "148134f0e5a546249927c78c958d47296ebef7d9ebb168e8ed71c1f10c9468a7"
     },
     {
       "path": "Run 1 Agent Feedback Analysis.md",
@@ -411,15 +411,15 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "a3c3fb19f7d528707da6752108575321398058eb229af1a94eeb9d31baa6fd8a"
+      "sha256": "a8b9784515b8705534e1f0e786c4b188817383fd738f84b5fda4ebe7b08b6b3e"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
-      "sha256": "b5cd2f99c19486f9a446659934c024b8422fc7166c26dc880fac682652e8c73d"
+      "sha256": "06acc60a8603a97463fd3dca4c7f01f0985a4f696b312c7a0fcf801e1d90c14f"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
-      "sha256": "87549230e39361602cf6196ba8ff942939344f08c3fd33577a4496c2243439c7"
+      "sha256": "2e6e7efcb95b6551fef3c8991450b3668bac0cdcea409dce9c7ffb396629ffa2"
     },
     {
       "path": "campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
@@ -596,6 +596,14 @@
     {
       "path": "campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
       "sha256": "337329bdee7d6450131a7b04d0f0e3c0964c6054d5f30d83da6db94f6835d024"
+    },
+    {
+      "path": "campaigns/pe-router-capability-safety-v4/CAMPAIGN_SOURCE.yaml",
+      "sha256": "32e2c337c4a363016e1506a7b5646e42437e3df53c91d5c5d972ce90034345b3"
+    },
+    {
+      "path": "campaigns/pe-router-capability-safety-v4/source-integrity-receipt.json",
+      "sha256": "5c27734b36207192d72ac2fddfae91762b7f5fa1fd12c9092c49dec72287bdde"
     },
     {
       "path": "campaigns/pe-v3-hardening/CAMPAIGN_SOURCE.yaml",
@@ -1566,6 +1574,10 @@
       "sha256": "c7cae64da3979a31621edf7eb7897a5eacbe8578a2edabd433c023caabe91ba0"
     },
     {
+      "path": "scripts/campaign_input.py",
+      "sha256": "a2c0923e067472e6ea84cf596fa3108b7a7b91a306532fc88bdc0e31853b71bf"
+    },
+    {
       "path": "scripts/campaign_pr_copy.py",
       "sha256": "7796af1594d284f7cb646a0ce0dcb3abe330c4136042096d26cb15508af738c8"
     },
@@ -1575,7 +1587,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "24fd459c52d8a0aff8f40a40325b1a94c1e2e2f01572f7fa8f6c6b291e0168a3"
+      "sha256": "e0556425440443d2ec1a5389121f43b40fb0d5ce4d34d3d3ea4de8901834a504"
     },
     {
       "path": "scripts/context7_stack_proof.py",
@@ -1586,8 +1598,20 @@
       "sha256": "9cdf86d3c3475a908f4eb4c12bc28eccab4f18bf9949a708f2a3b26603a4faff"
     },
     {
+      "path": "scripts/launchability.py",
+      "sha256": "7b171ec3ccf767e471979ffdff84eda719fb2a2e7813ac8fb19c31dd446f5b9e"
+    },
+    {
+      "path": "scripts/pe_timing.py",
+      "sha256": "9063fe84d5d0672ec4368a5267c67d31d1e1b6cc75cfd8e9540131af4c3c0c5b"
+    },
+    {
       "path": "scripts/pe_trace.py",
       "sha256": "ad173b3ac5e913140974c6e617a2629403c1f56371ccefcb63d6e2581e8f5cb2"
+    },
+    {
+      "path": "scripts/pe_worker.py",
+      "sha256": "b1fad1901fae7bf9480b80a7622a5f3a93fdeea4e02219d0fc9cc88e35906c81"
     },
     {
       "path": "scripts/peer_execution_cli.py",
@@ -1623,7 +1647,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "e99ac95b20c16709c56d16416707c6d3f01f90281c7d1c8a6f83a4a1f69d2d22"
+      "sha256": "73df7eb599612d9648bfc3e50ed34f7348e443fcdc957237199a8615293ba45c"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1654,6 +1678,18 @@
       "sha256": "2fba804a87e897217cb652e61e4f71381e29995483f748f0bb6ebfe36fd22886"
     },
     {
+      "path": "scripts/tests/test_launchability.py",
+      "sha256": "e7c7ed3eb27c3636d04f762325c1eff7792aeb92f1268063d8200509b5c3f499"
+    },
+    {
+      "path": "scripts/tests/test_pe_local_commit_only.py",
+      "sha256": "c1527378b851fe43089357f235e33b96ff627ffb9db55658b40aa4ce62cf57cf"
+    },
+    {
+      "path": "scripts/tests/test_pe_smoke_campaign.py",
+      "sha256": "0deb62a09d12c7dfffb242d2ba49be29878227c29bdad6ec0be99daf2219c245"
+    },
+    {
       "path": "scripts/tests/test_pe_trace.py",
       "sha256": "dafc51b650a2263511d866c90acb185ccf32f0e5807e6f2b205dbabdf08eb7bb"
     },
@@ -1663,7 +1699,15 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "455fcab8fa80aa3b7439d800d34150bc9c63084ee9986f218e70589a4cc7a456"
+      "sha256": "b26ecf8921fa8f44c6262f4debc02e0b2c9789cc0bdad7773b14e818e2a28beb"
+    },
+    {
+      "path": "scripts/tests/test_validate_campaign_promotion.py",
+      "sha256": "354e57c2242f5728abee9dafe8f5d51c0a835c6e2cf3613794620dabd1e30e97"
+    },
+    {
+      "path": "scripts/validate_campaign_promotion.py",
+      "sha256": "b1c5a68921321741ebbaee4880c14f1d6379a1a1b0785b92a41c88cb2ab65f68"
     },
     {
       "path": "scripts/validate_execution_adapters.py",
