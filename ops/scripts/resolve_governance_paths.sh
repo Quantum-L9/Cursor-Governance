@@ -69,6 +69,21 @@ raise SystemExit(1)
 # .cursor-commands / .cursor/plans / .cursor/governance on CI, partial clones,
 # non-cursor surfaces, and $HOME/.l9 isolates. Machine sessionEnd/Graphiti
 # checks are not covered by this skip.
+# Is this machine a Cursor DESKTOP host, i.e. may we assert Cursor-only host
+# artifacts (~/.cursor/hooks.json, ~/.cursor/plugins/local/l9-governance)?
+#
+# "~/.cursor exists and is writable" is NOT evidence: Graphiti's state directory
+# creates that path on every surface, so the old proxy silently became true for
+# headless adapters and made those assertions unsatisfiable off Cursor. Decide on
+# the declared surface id instead. Absent a declared surface, fail closed to the
+# stricter answer so a genuine Cursor machine is never let off.
+#
+# One definition, shared by every caller that gates a Cursor-host assertion
+# (run_pr_gate.sh, validate_governance_symlinks.sh). Do not re-inline it.
+is_cursor_host_surface() {
+  [ -z "${L9_GOVERNANCE_SURFACE:-}" ] || [ "${L9_GOVERNANCE_SURFACE}" = "cursor" ]
+}
+
 should_skip_consumer_symlink_checks() {
   local ws="${1:-}"
   if [ -n "${CI:-}" ] || [ -n "${GITHUB_ACTIONS:-}" ]; then

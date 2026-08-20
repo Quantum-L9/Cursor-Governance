@@ -1,591 +1,1031 @@
 {
-  "schema_version": "1",
+  "schema_version": "1.0.0",
   "mode": "plan",
-  "depth": "standard",
-  "title": "Restore local validation capability for model-controlled sessions across the L9 node fleet",
-  "objective": "Remove the recurring friction observed during SEO-Bot PR #61 remediation: a model-controlled Claude Code session cannot install @quantum-l9 packages by governance policy, so every session starts with zero local validation capability and each agent improvises a workaround. Make the policy-compliant path canonical, wired, and shared by all four node repos.",
+  "depth": "deep",
   "code_in_scope": true,
+  "title": "Claude Code Mobile Environment — unified readiness master plan",
+  "objective": "Repair the Claude Code Mobile bootstrap and startup environment so that governed actions — including breakglass — are actually reachable, authorized and auditable from a cloud session, and so the surface boots from the GitHub main SSOT rather than a divergent home-directory clone. Consolidates three prior efforts: this session's forensic audit, the TypeScript node-fleet plan, and the unmerged in-flight fix branch. Memory is fenced out of scope throughout.",
   "success_criteria": [
-    "A fresh model-controlled session in SEO-Bot, Website-Bot or LLM-Router can run the repo's blocking gates (typecheck + tests) without a PAT and without hand-built stubs.",
-    "`make pr-check` exits 0 on a clean checkout of main, so it can serve as the pre-PR go/no-go it advertises itself to be.",
-    "The SessionStart hook in SEO-Bot actually fires (registered in .claude/settings.json), proven by its output appearing in a new session.",
-    "ensure-npm-auth.sh no longer advises a remediation that is structurally impossible on a model surface; it names the local-link path instead.",
-    "All four @quantum-l9 dependencies resolve from local sibling sources with zero hand-written stubs.",
-    "npm run verify:all completes non-interactively instead of hanging in vitest watch mode.",
-    "AGENTS.md no longer contradicts ci.yml on lockfile/npm ci.",
-    "l9-plan and the other governance skills needed for this work are reachable via the Skill tool in a fresh session.",
-    "A fresh session rooted at a multi-repo workspace lists l9-plan among its invocable skills with no manual reconciliation step."
+    "SC-01: branch claude/startup-audit-review-bmj21b is integrated onto current main with exactly ONE resolve_workspace definition in web/setup.sh, verified by grep -c returning 1",
+    "SC-02: the integrated settings.template.json still invokes hooks through the locked governance interpreter, never bare system python3, verified by grep for .venv/bin/python3 in every hook command",
+    "SC-03: a fresh session's receipt records workspace equal to the project dir, with no workspace-mismatch WARN in the SessionStart projection",
+    "SC-04: Skill tool invocation of l9-aws-secrets and l9-plan returns the skill contract instead of Unknown skill, in the session after the reconcile",
+    "SC-05: find $CLAUDE_PROJECT_DIR/.claude/skills -maxdepth 2 -name SKILL.md returns 51",
+    "SC-06: a session rooted at a multi-repo parent either wires the correct repo or reports a named refusal, and never silently wires the parent",
+    "SC-07: the four account-only skills have a recorded SSOT decision and, if repo-owned, exist under skills/ with registry coverage",
+    "SC-08: bash ops/scripts/check_governance_wiring.sh exits 0 on a claude-code surface without requiring Cursor IDE artifacts",
+    "SC-09: command -v shellcheck resolves after the shared bootstrap runs",
+    "SC-10: gh api succeeds from both a login shell and a non-interactive tool shell",
+    "SC-11: a model-controlled session in a TypeScript node repo runs that repo's blocking gates with no PAT and no hand-written stubs",
+    "SC-12: npm run verify:all completes non-interactively rather than hanging in watch mode",
+    "SC-13: make pr-check exits 0 on a clean checkout in every participating repo",
+    "SC-14: make pr-check PASSes on the changed files in this repository",
+    "SC-15: capability plane reports ENABLED for sonar.read_issues and semgrep.appsec_scan (gated on the broker milestone and excluded from the pr-check gate)",
+    "SC-16: make pr-check runs to completion on a headless adapter surface, with the Cursor desktop hook plane reported as skipped-by-surface rather than FAIL, and no Cursor host artifacts created to achieve it",
+    "SC-17: a session can obtain a one-shot audited breakglass authorization for a governed action without setting any persistent environment variable, and the authorization is consumed once and logged",
+    "SC-18: the doctrine text and ops/autonomy/git_execution_exemption.py agree on whether raw git and gh execution is denied or exempt",
+    "SC-19: exactly one checkout of the governance repository is authoritative for a session, and hooks and make targets execute the same governance code",
+    "SC-20: a fresh cloud clone bootstraps to a working skill and rule surface using only git-tracked files plus the reconcile"
   ],
   "scope": {
     "in": [
-      "SEO-Bot: .claude/settings.json hook registration, scripts/ensure-npm-auth.sh messaging, package.json verify:all/test scripts, AGENTS.md lockfile prose",
-      "Cursor-Governance: a reusable link-local-packages command shared by all node repos, plus skill-sync coverage",
-      "Website-Bot and LLM-Router: adopt the same hook registration + link command",
-      "Biome baseline so authors can prove zero new findings without hand-diffing against main"
+      "Integration of branch claude/startup-audit-review-bmj21b onto current main",
+      "environment/agents/adapters/claude-code/ adapter tree: install.sh, hooks, settings template, web setup scripts, validator",
+      "ops/scripts/bootstrap_agent_environment.sh and check_governance_wiring.sh",
+      "Governance skill and slash-command delivery to the project .claude tree",
+      "SSOT decision for the four account-registry-only skills",
+      "ops/scripts/link_local_l9_packages.sh as the shared cross-repo local-link entrypoint",
+      "Coordination of the TypeScript node-fleet items owned by SEO-Bot, Website-Bot and LLM-Router",
+      "Operator-side account Environment variables field",
+      "L9 capability broker deployment"
     ],
     "out": [
-      "Weakening surface_trust / resolve_secret / authed_npm PAT policy in any way",
-      "Changing CI workflow definitions or branch protection",
+      "Memory plane in every form: Graphiti hydrate and PICKUP, memory_gate.py, memory_prefetch.py, memory_writeback.py, graphiti_bridge.py, the memory-enforcement contract and schema, and rules 03/87/97/98",
+      "The SessionEnd and Graphiti session-close half of branch claude/startup-audit-review-bmj21b, including its check_session_lifecycle_parity validator, which belongs to the memory owner",
+      "The validate_claude_env.py memory-enforcement schema failure recorded as finding I14",
+      "Protected core per rule 90: docker-compose.yml, Dockerfile, .env, infra/, deploy/, kubernetes/, helm/",
+      "Weakening surface_trust, resolve_secret or the authed_npm PAT policy in any way",
       "Publishing or re-versioning any @quantum-l9 package",
-      "Refactoring build-intelligence or any product code"
+      "Product code in any node repo, including build-intelligence",
+      "CI workflow definitions and branch protection",
+      "Cursor IDE host wiring under the home cursor directory",
+      "Any weakening of tests, scanners or gate thresholds to obtain a green result",
+      "Installing the Cursor host hook plane on this surface. The wiring failures reported under the memory heading — the session-start bootstrap and the before-submit skill router entries — are Cursor-side host artifacts, not memory-plane work and not Claude-side defects; the Claude equivalent skill router is already wired and observed working. They are made not-applicable by w3-01, never installed."
     ]
   },
   "pre_validation": [
     {
-      "id": "PV1",
-      "command_or_action": "cd . && .venv/bin/python ops/secrets/resolve_secret.py --ref openclaw-igorbot/github#token",
-      "pass_criteria": "Confirms DENIED for model-controlled surface 'claude-code' \u2014 establishes that no PAT-based fix is permissible",
+      "id": "PV-01",
+      "command_or_action": "git fetch origin main; git rev-list --count 59a9981..origin/main",
+      "pass_criteria": "returns 0 — origin/main is unchanged at 59a9981 and the baseline needs no rebase; zero open PRs",
       "status": "passed"
     },
     {
-      "id": "PV2",
-      "command_or_action": "ls ../SEO-Bot/.claude/settings.json",
-      "pass_criteria": "Absent \u2014 proves .claude/hooks/session-start.sh is unregistered and never fires",
+      "id": "PV-02",
+      "command_or_action": "Read WIP/8-17-25/claude-code-env-contract PLAN_DOCUMENT (predecessor campaign PR 214)",
+      "pass_criteria": "converged and merged before this environment was built; it built the architecture under repair, contains no SessionStart wiring reconcile, and deferred broker deployment as code-only",
       "status": "passed"
     },
     {
-      "id": "PV3",
-      "command_or_action": "python3 -c \"import json;print(json.load(open('../SEO-Bot/package.json'))['scripts']['test'])\"",
-      "pass_criteria": "Prints 'vitest' (watch mode), proving verify:all hangs non-interactively",
+      "id": "PV-03",
+      "command_or_action": "Read WIP/claude-code-mobile-environment plan on branch feat/claude-code-mobile-environment (sibling, TypeScript node fleet)",
+      "pass_criteria": "11 todos, convergence partial; its T9 and T11 overlap this plan's skill-availability finding, its U3 identifies the account skill registry as the delivery mechanism, and its U2 raises multi-repo workspace rooting which this plan had not considered",
       "status": "passed"
     },
     {
-      "id": "PV4",
-      "command_or_action": "Confirm Quantum-L9/l9-graphiti-memory publishes @quantum-l9/graphiti-memory-client (read its package.json name field)",
-      "pass_criteria": "package.json name equals @quantum-l9/graphiti-memory-client",
-      "status": "pending"
-    },
-    {
-      "id": "PV5",
-      "command_or_action": "ls $HOME/.claude/skills/synced | grep -c '^l9-' and compare to ls skills | grep -c '^l9-'",
-      "pass_criteria": "Confirms 8 of 51 governance l9 skills are synced (l9-plan absent)",
+      "id": "PV-04",
+      "command_or_action": "git merge-tree --write-tree origin/main origin/claude/startup-audit-review-bmj21b",
+      "pass_criteria": "exits 1 with a three-way conflict on validate_claude_env.py, and the merged web/setup.sh carries TWO resolve_workspace definitions at lines 149 and 184 — a naive merge is unsafe",
       "status": "passed"
     },
     {
-      "id": "PV6",
-      "command_or_action": "git checkout origin/main -- . && npx biome check .",
-      "pass_criteria": "Confirms 13 errors / 174 warnings on PRISTINE main \u2014 the repo's own `make pr-check` gate is red before any change is made",
+      "id": "PV-05",
+      "command_or_action": "git merge-base origin/main origin/claude/startup-audit-review-bmj21b, then check whether that base contained resolve_workspace",
+      "pass_criteria": "base 7517f377 predates PR 231 and contains zero resolve_workspace definitions, proving the branch and main solved the same defect independently rather than one superseding the other",
       "status": "passed"
     },
     {
-      "id": "PV7",
-      "command_or_action": "ls $HOME/.claude/settings.json; ls $HOME/.l9/claude/bootstrap-state.json",
-      "pass_criteria": "Both ABSENT \u2014 proves no user-scope SessionStart hook exists and `make claude-install` never ran in this container, so the governance skill reconciler never fired",
+      "id": "PV-06",
+      "command_or_action": "Diff the branch's settings.template.json hook commands against main's",
+      "pass_criteria": "the branch invokes hooks with bare system python3 while main uses the locked governance interpreter with a fallback warning, so a naive merge silently regresses the interpreter pin",
       "status": "passed"
     },
     {
-      "id": "PV8",
-      "command_or_action": "python ops/scripts/reconcile_claude_l9_skills.py --root . --scope user --check",
-      "pass_criteria": "Reported drift 51/51 missing, 0 conflicts \u2014 the entire governance skill corpus was invisible to the session",
-      "status": "passed"
-    },
-    {
-      "id": "PV9",
-      "command_or_action": "python ops/scripts/reconcile_claude_l9_skills.py --root . --scope user",
-      "pass_criteria": "created=51, conflicts=0, all symlinks resolve, pre-existing synced/ and session-start-hook untouched; skills became invocable IMMEDIATELY without a session restart",
-      "status": "passed"
-    },
-    {
-      "id": "PV10",
-      "command_or_action": "Count disable-model-invocation:true across the 51 governance SKILL.md frontmatters",
-      "pass_criteria": "24 model-invocable / 27 user-invocable-only \u2014 explains why only ~16 new names surfaced rather than 51",
+      "id": "PV-07",
+      "command_or_action": "Probe suite from the prior plan revision: workspace archaeology, GH_TOKEN discriminator, mid-session skill discovery, reconcile timing, MCP transport, broker DNS",
+      "pass_criteria": "all six executed; build-time cwd confirmed as the mis-wire cause, gh needs only a non-empty token value, project skills are not re-scanned mid-session, the vendor path costs well under a second on symlinks, MCP succeeds where gh GraphQL 403s, and the broker host has no DNS record",
       "status": "passed"
     }
   ],
   "todos": [
     {
-      "id": "T1",
-      "task": "Write ops/scripts/link_local_l9_packages.sh in Cursor-Governance: for each @quantum-l9 dep in the caller repo's package.json, locate the sibling source checkout, build it if needed, and install it via a file: override into node_modules WITHOUT mutating the committed package.json or package-lock.json. Emit a machine-readable report of linked vs unresolved packages.",
+      "id": "w0-01-integrate-inflight-workspace-resolution",
+      "task": "Replay branch claude/startup-audit-review-bmj21b onto current main as ONE resolve_workspace in web/setup.sh. Keep main's refuse-rather-than-guess posture, and adopt the branch's three genuine improvements: probe CLAUDE_PROJECT_DIR with git rev-parse --show-toplevel rather than testing for a .git directory so worktrees and subdirectories resolve, exclude the governance clone from candidate repos, and cd into the resolved workspace so later cwd-derived steps inherit it",
       "files": [
-        "ops/scripts/link_local_l9_packages.sh"
+        "environment/agents/adapters/claude-code/web/setup.sh"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "the single resolve_workspace definition and its caller in web/setup.sh",
+      "leverage_rank": 2,
+      "shared_root_cause": "D: two independent parallel fixes for one defect, unmergeable as-is"
+    },
+    {
+      "id": "w0-02-preserve-locked-interpreter",
+      "task": "Preserve main's locked governance interpreter in every hook command while integrating the branch's settings.template.json changes. The branch predates that hardening and calls bare system python3, which would silently un-pin every hook",
+      "files": [
+        "environment/agents/adapters/claude-code/settings.template.json"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "w0-01-integrate-inflight-workspace-resolution"
+      ],
+      "operation": "Replace",
+      "leverage_rank": 6,
+      "shared_root_cause": "D: two independent parallel fixes for one defect, unmergeable as-is"
+    },
+    {
+      "id": "w0-03-split-memory-lifecycle-out",
+      "task": "Separate the branch's SessionEnd and Graphiti session-close work, including its check_session_lifecycle_parity validator, onto its own branch owned by the memory plane. It is coupled into the same commits as the workspace fix, so the integration must split it rather than carry it, and this plan must not land it",
+      "files": [
+        "environment/agents/adapters/claude-code/validate_claude_env.py",
+        "environment/agents/adapters/claude-code/settings.template.json"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w0-01-integrate-inflight-workspace-resolution"
+      ],
+      "operation": "Delete",
+      "leverage_rank": 9,
+      "shared_root_cause": "D: two independent parallel fixes for one defect, unmergeable as-is"
+    },
+    {
+      "id": "w0-04-resolve-validator-conflict",
+      "task": "Resolve the three-way conflict on validate_claude_env.py that PV-04 detected, coordinating the branch's additions with this plan's own validator amendment so the file is edited once rather than twice",
+      "files": [
+        "environment/agents/adapters/claude-code/validate_claude_env.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w0-03-split-memory-lifecycle-out"
+      ],
+      "operation": "Replace",
+      "leverage_rank": 10,
+      "shared_root_cause": "D: two independent parallel fixes for one defect, unmergeable as-is"
+    },
+    {
+      "id": "w1-01-baseline-regression-guard",
+      "task": "Add regression tests that pin the integrated behaviour: install.sh refuses a non-git workspace, resolve_workspace prefers the checkout over its parent, a multi-repo parent produces a named refusal rather than a silent parent wire, and exactly one resolve_workspace definition exists",
+      "files": [
+        "environment/agents/adapters/claude-code/tests/test_workspace_resolution.py"
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": [],
+      "dependencies": [
+        "w0-01-integrate-inflight-workspace-resolution"
+      ],
       "operation": "Create",
-      "leverage_rank": 1,
-      "shared_root_cause": "no-policy-compliant-local-install-path"
+      "leverage_rank": 3,
+      "shared_root_cause": "A: wiring performed only at build time, never reconciled at session time"
     },
     {
-      "id": "T2",
-      "task": "Add a package-name to source-repo map (bot-interop -> Website-Bot/packages/bot-interop, llm-router -> LLM-Router, infisical-config -> infisical-config, graphiti-memory-client -> l9-graphiti-memory) as data the link script reads, so the mapping is declared once rather than rediscovered per session.",
+      "id": "w1-02-vendor-only-fast-path",
+      "task": "Add a --vendor-only flag to install.sh that runs the settings, skills, rules and MCP reconcilers while skipping the shared agent bootstrap, so a session-time reconcile costs the measured 0.16s rather than a full toolchain pass",
       "files": [
+        "environment/agents/adapters/claude-code/install.sh",
+        "ops/scripts/bootstrap_agent_environment.sh"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w1-01-baseline-regression-guard"
+      ],
+      "operation": "Insert",
+      "anchor": "install.sh argument parser and the shared bootstrap block",
+      "leverage_rank": 4,
+      "shared_root_cause": "A: wiring performed only at build time, never reconciled at session time"
+    },
+    {
+      "id": "w1-03-sessionstart-reconcile",
+      "task": "Wire a bounded adapter reconcile into the cloud branch of the SessionStart hook: run install.sh --check against the resolved project dir and, on drift, run install.sh --vendor-only, then re-read the receipt before projecting status. This is the plan's spine — it converts a permanent mis-wire into one that self-heals without an environment rebuild",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+        "environment/agents/adapters/claude-code/settings.template.json",
+        ".claude/settings.json"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w1-02-vendor-only-fast-path",
+        "w0-02-preserve-locked-interpreter"
+      ],
+      "operation": "Insert",
+      "anchor": "session_start_claude_governance.sh cloud branch beside the session_deps_cloud.sh call",
+      "leverage_rank": 1,
+      "shared_root_cause": "A: wiring performed only at build time, never reconciled at session time"
+    },
+    {
+      "id": "w1-04-receipt-truthfulness",
+      "task": "Make the bootstrap receipt self-describing: record the real surface execution mode instead of the hardcoded local literal, stamp a reconciled_at timestamp, and add a workspace_verified boolean the SessionStart projection can trust",
+      "files": [
+        "environment/agents/adapters/claude-code/install.sh",
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "w1-02-vendor-only-fast-path"
+      ],
+      "operation": "Replace",
+      "anchor": "install.sh MODE assignment and the receipt writer",
+      "leverage_rank": 7,
+      "shared_root_cause": "A: wiring performed only at build time, never reconciled at session time"
+    },
+    {
+      "id": "w1-05-multi-repo-workspace-contract",
+      "task": "Define and implement the multi-repo rooting contract raised by the sibling plan's U2: when a session is rooted at a parent holding several sibling repositories, wire each candidate repository rather than refusing wholesale, or refuse with a named list and a one-command remedy. Today main refuses and the node fleet gets nothing wired",
+      "files": [
+        "environment/agents/adapters/claude-code/web/setup.sh",
+        "environment/agents/adapters/claude-code/install.sh",
+        "environment/agents/adapters/claude-code/tests/test_workspace_resolution.py"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
+      "operation": "Insert",
+      "leverage_rank": 5,
+      "shared_root_cause": "A: wiring performed only at build time, never reconciled at session time"
+    },
+    {
+      "id": "w2-01-skill-registry-ssot-decision",
+      "task": "Record the SSOT decision for the four account-registry-only skills — l9-ci-gap-auditor, l9-ci-repair, l9-github-ci and l9-pr-analysis — which exist in the Anthropic account registry with no counterpart under skills/. Either commit them into the repository with registry coverage, or document the account registry as their owner and stop treating skills/ as complete. Any sync change is additive only: extend the list, never remove an entry, and capture the synced manifest before and after so a reconciliation cannot silently shrink another surface's skill availability",
+      "files": [
+        "skills/AUTONOMY_MANIFEST.yaml",
+        "ops/generated/skill-registry.json",
+        "environment/agents/adapters/claude-code/README.md"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
+      "operation": "Insert",
+      "leverage_rank": 12,
+      "shared_root_cause": "B: two skill registries with no reconciliation between them"
+    },
+    {
+      "id": "w2-02-claude-slash-commands",
+      "task": "Reconcile the governance commands library into the project Claude commands directory during vendor wiring, so the 54 command files resolve as native slash commands on this surface",
+      "files": [
+        "ops/scripts/reconcile_claude_commands.py",
+        "environment/agents/adapters/claude-code/install.sh",
+        "commands/COMMANDS_MANIFEST.yaml"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
+      "operation": "Create",
+      "leverage_rank": 11,
+      "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
+    },
+    {
+      "id": "w3-01-surface-aware-wiring-check",
+      "task": "PUBLICATION BLOCKER — apply the surface gate that the ssot-family branch skips. The root cause is the caller, not the checker: ops/scripts/run_pr_gate.sh states the correct fix in its own comment — the enclosing guard treats an existing writable home cursor directory as proof of a Cursor machine, while the memory state directory creates that path on every surface, so the desktop-wiring assertion must be gated on the surface id instead. The sibling branch implements exactly that and prints a skip naming the surface; the ssot and ssot_checkout branch does not, and runs the full assertion including the Cursor desktop hook plane. A headless adapter on an identity checkout therefore fails the gate on artifacts its own installer deliberately never creates, and cannot publish at all. Apply the documented surface gate to that branch while keeping the surface-independent reconcile checks above it unconditional.",
+      "files": [
+        "ops/scripts/run_pr_gate.sh",
+        "ops/scripts/check_governance_wiring.sh",
+        "ops/scripts/lib/workspace_kind.sh"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "leverage_rank": 3,
+      "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface",
+      "anchor": "run_pr_gate.sh — the ssot/ssot_checkout branch of the wiring-check dispatch, directly beneath the comment specifying the surface gate"
+    },
+    {
+      "id": "w3-02-shellcheck-toolchain",
+      "task": "Add shellcheck to the canonical checker toolchain acquisition beside gitleaks, with the same pinned-version and report-on-absence discipline",
+      "files": [
+        "ops/scripts/bootstrap_agent_environment.sh",
+        ".pre-commit-config.yaml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "w1-01-baseline-regression-guard"
+      ],
+      "operation": "Insert",
+      "leverage_rank": 15,
+      "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
+    },
+    {
+      "id": "w3-03-gh-sentinel-contract",
+      "task": "Reverse the predecessor campaign's GH_TOKEN removal narrowly, preserving its security intent. The probe proved the value is not a credential — any non-empty string works because the proxy substitutes the real one — so restore the sentinel, change the prohibited-value branch from unset to replace-with-sentinel, and narrow the validator ban to credential-shaped values while allowing the exact literal",
+      "files": [
+        "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
+        "environment/agents/adapters/claude-code/web/environment.env.example",
+        "environment/agents/adapters/claude-code/web/setup.sh",
+        "environment/agents/adapters/claude-code/validate_claude_env.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w0-04-resolve-validator-conflict"
+      ],
+      "operation": "Replace",
+      "leverage_rank": 8,
+      "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
+    },
+    {
+      "id": "w3-04-durable-env-reaches-shells",
+      "task": "Make the durable cloud session env effective for non-interactive tool shells by exporting BASH_ENV, or retire the mechanism and rely on the account variables field; the profile-sourcing path never applies to the agent Bash tool",
+      "files": [
+        "environment/agents/adapters/claude-code/web/setup.bootstrap.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "w3-03-gh-sentinel-contract"
+      ],
+      "operation": "Replace",
+      "leverage_rank": 16,
+      "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
+    },
+    {
+      "id": "w3-05-rest-merge-path",
+      "task": "Replace the GraphQL-dependent gh pr merge step in the PR remediation path with the REST or platform GitHub MCP merge call, and align merge_gate.py and the adapter deny-list so the sanctioned merge route stays singular",
+      "files": [
+        "skills/l9-pr-remediation/SKILL.md",
+        "ops/autonomy/merge_gate.py",
+        "ops/autonomy/surface_profile.yaml"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
+      "operation": "Replace",
+      "leverage_rank": 17,
+      "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
+    },
+    {
+      "id": "w3-06-context7-degraded-posture",
+      "task": "Give rule 22 a defined behaviour when no Context7 transport is reachable: record the honest degraded posture with an explicit removal trigger, require the official-docs fetch fallback the rule already names, and require the blocker to be stated in the response rather than leaving a mandatory gate silently unsatisfiable",
+      "files": [
+        "rules/22-context7-auto-invoke.mdc",
+        "ops/scripts/project_llm_rules.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
+      "operation": "Insert",
+      "leverage_rank": 18,
+      "shared_root_cause": "E: capability broker absent"
+    },
+    {
+      "id": "w3-07-narrow-pretool-stack-gate",
+      "task": "Fix the pretool stack-proof gate on two counts. Scope: its documented purpose is program-execution planning, but its filename and body patterns fire on any edit or write that merely mentions a dependency manifest, a container file, an install verb or a credential-shaped word, so it denies ordinary prose and plan documents. Narrow it to campaign seed files. Degraded path: its only two satisfaction routes are a live documentation-service call and a campaign activation receipt, both unreachable when the capability broker is down, which makes it unsatisfiable rather than fail-soft on this surface. Accept the rule-22 official-docs fallback as proof, recorded as a receipt the gate can read",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/context7_stack_pretool.py",
+        "environment/agents/adapters/claude-code/tests/test_context7_stack_pretool.py",
+        "rules/22-context7-auto-invoke.mdc"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w3-06-context7-degraded-posture"
+      ],
+      "operation": "Replace",
+      "leverage_rank": 9,
+      "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
+    },
+    {
+      "id": "w3-08-unpushed-commit-hook-surface-aware",
+      "task": "Make the stop-hook unpushed-commit check surface-aware. It asks for a direct push after every local commit, but on this surface the L4 gate denies remote until a release receipt exists and the Makefile publish path is the only sanctioned route, so the instruction is unactionable and fires repeatedly. Have it read the release-gate state and name the sanctioned next step instead of a bare push",
+      "files": [
+        "ops/autonomy/l4_local.py",
+        "environment/agents/adapters/claude-code/README.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Wrap",
+      "leverage_rank": 19,
+      "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
+    },
+    {
+      "id": "w4-01-link-local-packages-script",
+      "task": "Write ops/scripts/link_local_l9_packages.sh in this repository: for each scoped dependency declared by a caller repo, locate the sibling source checkout and install it from that local source so a model-controlled session gains validation capability without a PAT. Read the mapping from a declared ops/scripts/l9_package_sources.yaml rather than rediscovering it by find each session. Four invariants are binding, two of them established against the vendor's official documentation rather than assumed. First, pass --no-save explicitly: the package manager saves to dependencies by default, so a folder specifier would otherwise write a local-path entry into the caller's manifest and break the byte-identical guarantee below. Second, build the sibling and provision its own runtime dependencies before linking: a folder outside the project root is only symlinked and its dependencies are NOT installed, so an unbuilt sibling yields a link that fails at import time. Third, write only into the ignored dependency directory and leave the caller's manifest and lockfile byte-identical to main. Fourth, print each resolved local version against the declared range and warn on mismatch, so a drifted local source cannot masquerade as CI truth.",
+      "files": [
+        "ops/scripts/link_local_l9_packages.sh",
         "ops/scripts/l9_package_sources.yaml"
       ],
-      "effort": "S",
-      "risk": "low",
+      "effort": "L",
+      "risk": "medium",
       "dependencies": [
-        "T1"
+        "w1-05-multi-repo-workspace-contract"
       ],
       "operation": "Create",
-      "leverage_rank": 2,
-      "shared_root_cause": "no-policy-compliant-local-install-path"
+      "leverage_rank": 13,
+      "shared_root_cause": "F: model-controlled node sessions start with zero validation capability"
     },
     {
-      "id": "T3",
-      "task": "Register the existing SessionStart hook by creating SEO-Bot/.claude/settings.json with a hooks.SessionStart entry pointing at .claude/hooks/session-start.sh, mirroring the working Cursor-Governance settings.json shape.",
-      "files": [
-        "../SEO-Bot/.claude/settings.json"
+      "id": "w4-02-node-repo-session-contract",
+      "task": "Adopt the governed session contract in SEO-Bot, Website-Bot and LLM-Router: commit a .claude/settings.json that registers the SessionStart hook, and rewrite the hook's no-token branch to call the governance link script instead of advising a PAT remediation that surface_trust guarantees will fail. Preserve the soft-fail contract — every step guarded, always exit 0 — and cap the link step with a timeout so a slow resolve cannot stall session start. Delete the AWS-resolution advice from both the hook and ensure-npm-auth.sh rather than maintaining a path policy will always deny",
+      "files": [],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "w4-01-link-local-packages-script"
       ],
+      "blocker": "Cross-repository work owned by SEO-Bot, Website-Bot and LLM-Router. Those repositories are not attached to this session, so the change is coordinated here and executed there; the sibling plan tracks it as its T3, T4, T5 and T10.",
+      "leverage_rank": 19,
+      "shared_root_cause": "F: model-controlled node sessions start with zero validation capability"
+    },
+    {
+      "id": "w4-03-node-gate-hygiene",
+      "task": "Clear the node-fleet gate defects the sibling plan found: point the aggregate verify script at a non-interactive runner and include the real typecheck gate, correct the AGENTS.md sections that contradict the CI workflow on lockfile handling, and decide whether the linter debt on main is cleared or recorded so the pre-PR gate can go green. Two guardrails are binding: never silence rules wholesale to force green — if the findings are real, land them as their own commit with no behavioural edits and prove typecheck and tests green on both sides of it — and never mask a real failure to make a command terminate",
+      "files": [],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "w4-02-node-repo-session-contract"
+      ],
+      "blocker": "Cross-repository work in the node repos, tracked as sibling T6, T7 and T8. The biome decision is gated on sibling unknown U5.",
+      "leverage_rank": 20,
+      "shared_root_cause": "F: model-controlled node sessions start with zero validation capability"
+    },
+    {
+      "id": "w5-01-broker-url-operator",
+      "task": "Append the capability broker URL to the account Environment variables field as a single line. Do not re-paste the example wholesale until the sentinel work lands, because the live field still carries the GH_TOKEN sentinel while the example no longer does",
+      "files": [],
       "effort": "S",
-      "risk": "low",
-      "dependencies": [],
-      "operation": "Create",
-      "leverage_rank": 4,
-      "shared_root_cause": "hook-written-but-never-wired"
+      "risk": "medium",
+      "dependencies": [
+        "w3-03-gh-sentinel-contract"
+      ],
+      "blocker": "Operator-only action. The account Environment variables field is neither readable nor writable from inside the sandbox; the value is specified at environment/agents/adapters/claude-code/web/environment.env.example line 164.",
+      "leverage_rank": 21,
+      "shared_root_cause": "E: capability broker absent"
     },
     {
-      "id": "T4",
-      "task": "Rewrite the fallback branch of SEO-Bot/.claude/hooks/session-start.sh: when NODE_AUTH_TOKEN is absent (the normal model-surface case), invoke the governance link script instead of printing advice to fix AWS. Keep soft-fail and exit 0 semantics.",
+      "id": "w5-02-broker-deployment",
+      "task": "Deploy the L9 capability broker behind the hostname the manifest already declares and bind its Infisical workload identity. The facade code is complete and the predecessor campaign deferred deployment deliberately, so this is deployment and identity binding with no application code to write",
       "files": [
-        "../SEO-Bot/.claude/hooks/session-start.sh"
+        "ops/secrets/k8s/broker-deployment.yaml",
+        "ops/secrets/deploy/broker-kubernetes.yaml"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "w5-01-broker-url-operator"
+      ],
+      "blocker": "Infrastructure outside this repository and outside the sandbox. The hostname has no DNS record, so the target cluster and the workload-identity binding are unresolved; see unknown U-01.",
+      "leverage_rank": 22,
+      "shared_root_cause": "E: capability broker absent"
+    },
+    {
+      "id": "w0-05-correct-publish-path-doctrine",
+      "task": "Correct the doctrine text against the code. ops/autonomy/git_execution_exemption.py states that git and gh shell commands are UNCONDITIONALLY exempt from execution denial — every gate consults it first, and the answer is allow regardless of governance state — while the surface profile, the autonomy rules and AGENTS all still assert that a raw push is denied at every phase by the execution gate. Policy is genuinely unchanged, but the enforcement mechanism is not what the prose claims: the real enforcement lives inside make pr. Rewrite the claims to say raw git and gh execute but remain a reportable workflow violation, and that MCP GitHub tools stay governed because they are not shell commands",
+      "files": [
+        "ops/autonomy/surface_profile.yaml",
+        "rules/88-l4-local-autonomy.mdc",
+        "rules/zz-autonomy-surface-override.mdc",
+        "AGENTS.md"
       ],
       "effort": "M",
-      "risk": "low",
-      "dependencies": [
-        "T1",
-        "T2",
-        "T3"
-      ],
-      "operation": "Replace",
-      "anchor": "if [[ -z \"${NODE_AUTH_TOKEN:-}\" ]]; then  # WARN branch",
-      "leverage_rank": 5,
-      "shared_root_cause": "no-policy-compliant-local-install-path"
-    },
-    {
-      "id": "T5",
-      "task": "Correct scripts/ensure-npm-auth.sh so the terminal WARN states that model-controlled surfaces are denied a PAT by design (surface_trust) and directs the reader to the link script, rather than telling them to make AWS resolve the ref.",
-      "files": [
-        "../SEO-Bot/scripts/ensure-npm-auth.sh"
-      ],
-      "effort": "S",
-      "risk": "low",
-      "dependencies": [
-        "T1"
-      ],
-      "operation": "Replace",
-      "anchor": "ensure-npm-auth: WARN \u2014 could not resolve $REF",
-      "leverage_rank": 6,
-      "shared_root_cause": "advice-that-cannot-be-followed"
-    },
-    {
-      "id": "T6",
-      "task": "Fix the verify:all hang: point it at a non-interactive runner (vitest run) and include the real blocking gate (tsc) so verify:all actually mirrors CI.",
-      "files": [
-        "../SEO-Bot/package.json"
-      ],
-      "effort": "S",
-      "risk": "low",
-      "dependencies": [],
-      "operation": "Replace",
-      "anchor": "\"verify:all\": \"npm run verify:preflight && ... && npm test\"",
-      "leverage_rank": 7,
-      "shared_root_cause": "local-commands-diverge-from-ci"
-    },
-    {
-      "id": "T7",
-      "task": "Correct AGENTS.md section 1 and 5 where they state 'no lockfile' and 'never npm ci'; ci.yml commits a lockfile and runs npm ci. Add it to the existing known-stale-prose list or fix the rule outright.",
-      "files": [
-        "../SEO-Bot/AGENTS.md"
-      ],
-      "effort": "S",
-      "risk": "low",
-      "dependencies": [],
-      "operation": "Replace",
-      "anchor": "No lockfile \u2014 never `npm ci`",
-      "leverage_rank": 8,
-      "shared_root_cause": "docs-contradict-executable-truth"
-    },
-    {
-      "id": "T8",
-      "task": "Make `make pr-check` pass on a clean tree. It runs `npx biome check .`, which reports 13 errors / 174 warnings on pristine origin/main, so the repo's own advertised pre-PR gate cannot go green and no agent can use it as a go/no-go. Either clear the findings or commit a baseline/suppression so pr-check is a real signal.",
-      "files": [
-        "../SEO-Bot/biome.json",
-        "../SEO-Bot/package.json"
-      ],
-      "effort": "M-L",
       "risk": "medium",
       "dependencies": [],
+      "operation": "Replace",
+      "leverage_rank": 4,
+      "shared_root_cause": "G: doctrine prose asserts enforcement the code does not implement"
+    },
+    {
+      "id": "w1-06-session-scoped-breakglass",
+      "task": "Make breakglass reachable from a governed session. Every breakglass key is implemented and read via os.environ of the HOOK process, but a hook is spawned with the session environment, so an agent writing an inline assignment ahead of a command cannot set it — the variable never reaches the evaluator. The only remaining route is the account environment field, which the environment contract explicitly forbids because it makes the bypass permanent for every future session. Add a one-shot, session-scoped, audited authorization the evaluator can see, modelled on the existing merge authorization receipt: a written record naming the action, the reason and the requester, consumed once and logged, never a persistent environment variable",
+      "files": [
+        "ops/autonomy/worktree_isolation_gate.py",
+        "ops/autonomy/l4_local.py",
+        "ops/autonomy/merge_gate.py",
+        "environment/agents/adapters/claude-code/web/environment.env.example"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "w0-05-correct-publish-path-doctrine"
+      ],
       "operation": "Insert",
-      "leverage_rank": 3,
-      "shared_root_cause": "canonical-gate-is-red-on-main"
+      "leverage_rank": 2,
+      "shared_root_cause": "H: breakglass is implemented but unreachable from the surface it exists for"
     },
     {
-      "id": "T9",
-      "task": "Make governance skill availability automatic for model-controlled sessions. The corpus is NOT supplied by setup_claude_code_plugins.sh's marketplace path and is NOT editable via the account-synced registry; it is produced by ops/scripts/reconcile_claude_l9_skills.py from ops/generated/skill-registry.json. Nothing invokes it in a multi-repo workspace, because the only registered SessionStart hook is project-scoped to Cursor-Governance and this workspace root is the multi-repo parent directory, not the governance clone. Register a USER-scope $HOME/.claude/settings.json SessionStart hook (or run `make claude-install` once per container) so the reconciler runs unconditionally. Verified manually: reconciler created 51/51 symlinks with 0 conflicts and took effect without a session restart.",
+      "id": "w1-07-single-governance-root",
+      "task": "Stop running two clones of one repository. resolve_governance_paths.sh pins the root to the home-directory clone and only that clone, so on a surface where the workspace IS the governance repository there are two checkouts of the same remote at different revisions — the home copy on main and the workspace on the feature branch. Hooks therefore execute governance code from the home copy while make targets execute it from the workspace, so a gate fix does not take effect for hooks until it merges to main and the home copy refreshes. Resolve the root to the workspace when the workspace is itself the governance repository, and to the GitHub clone otherwise, with the chosen root reported at session start",
       "files": [
-        "$HOME/.claude/settings.json",
-        "environment/agents/adapters/claude-code/install.sh",
-        ".claude/hooks/session_start_claude_governance.sh"
+        "ops/scripts/resolve_governance_paths.sh",
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
       ],
-      "effort": "S-M",
-      "risk": "low",
-      "dependencies": [],
-      "operation": "Create",
-      "leverage_rank": 4,
-      "shared_root_cause": "hook-written-but-never-wired"
-    },
-    {
-      "id": "T10",
-      "task": "Roll T3 and T4 to Website-Bot and LLM-Router, which have .claude/ but no settings.json and no hook at all.",
-      "files": [
-        "../Website-Bot/.claude/settings.json",
-        "../LLM-Router/.claude/settings.json"
-      ],
-      "effort": "S",
-      "risk": "low",
+      "effort": "L",
+      "risk": "high",
       "dependencies": [
-        "T4"
-      ],
-      "operation": "Create",
-      "leverage_rank": 10,
-      "shared_root_cause": "hook-written-but-never-wired"
-    },
-    {
-      "id": "T11",
-      "task": "Reconcile the two skill registries. 4 account-synced skills (l9-ci-gap-auditor, l9-ci-repair, l9-github-ci, l9-pr-analysis) exist ONLY in the Anthropic account registry with no counterpart in Cursor-Governance/skills, while 47 repo skills existed only on disk. Decide the SSOT per skill and eliminate the divergence so a session's capability is predictable.",
-      "files": [
-        "ops/generated/skill-registry.json",
-        "skills/AUTONOMY_MANIFEST.yaml"
-      ],
-      "effort": "M",
-      "risk": "medium",
-      "dependencies": [
-        "T9"
+        "w1-01-baseline-regression-guard"
       ],
       "operation": "Replace",
-      "leverage_rank": 11,
-      "shared_root_cause": "two-registries-no-reconciliation"
+      "leverage_rank": 5,
+      "shared_root_cause": "I: two checkouts of one repository, with different code executing per entrypoint"
+    },
+    {
+      "id": "w2-03-cloud-clone-delivery-contract",
+      "task": "Pin the cloud delivery contract for skills and rules. The project skills and rules directories are gitignored, and on Web and Mobile only tracked files survive the clone, so those trees can never arrive with the checkout and must be materialized by a bootstrap-time reconcile. Only three project-level Claude files are tracked today. Record this as an explicit contract with a test asserting that the tracked set is sufficient to bootstrap, so a future change cannot quietly rely on an ignored path being present in a fresh cloud session",
+      "files": [
+        "environment/agents/adapters/claude-code/tests/test_cloud_clone_contract.py",
+        "environment/agents/adapters/claude-code/README.md",
+        ".gitignore"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
+      "operation": "Create",
+      "leverage_rank": 13,
+      "shared_root_cause": "A: wiring performed only at build time, never reconciled at session time"
     }
   ],
   "critical_path": [
-    "T1",
-    "T2",
-    "T3",
-    "T4",
-    "T9",
-    "T8",
-    "T10"
+    "w3-01-surface-aware-wiring-check",
+    "w0-01-integrate-inflight-workspace-resolution",
+    "w1-01-baseline-regression-guard",
+    "w1-02-vendor-only-fast-path",
+    "w1-03-sessionstart-reconcile",
+    "w1-05-multi-repo-workspace-contract",
+    "w4-01-link-local-packages-script"
   ],
   "milestones": [
     {
+      "id": "M0",
+      "outcome": "The in-flight branch is integrated onto current main with one workspace resolver, the locked interpreter intact, and the memory lifecycle work split out",
+      "unlocks": "Two parallel efforts stop competing; every later todo builds on one agreed resolver instead of forking again"
+    },
+    {
       "id": "M1",
-      "outcome": "A single governance command links every @quantum-l9 dependency from local sibling sources with no PAT and no stubs.",
-      "unlocks": "Local typecheck and tests become possible in any model-controlled session."
+      "outcome": "Adapter wiring self-heals at SessionStart and the project .claude tree carries settings, rules, skills and MCP for the real checkout",
+      "unlocks": "All 51 governance skills become invocable and the operator-rebuild dependency disappears"
     },
     {
       "id": "M2",
-      "outcome": "SEO-Bot's SessionStart hook fires and runs that command automatically.",
-      "unlocks": "Zero-touch validation capability at session start instead of a per-agent improvisation."
-    },
-    {
-      "id": "M2b",
-      "outcome": "`make pr-check` is green on main and usable as the single pre-PR gate.",
-      "unlocks": "Agents stop hand-building ad-hoc validation and local green becomes a trustworthy CI predictor."
+      "outcome": "Multi-repo rooting is contractual, and skill registry ownership is decided",
+      "unlocks": "The TypeScript node fleet can be wired at all, which is the precondition for every W4 item"
     },
     {
       "id": "M3",
-      "outcome": "Local commands and docs agree with ci.yml (verify:all, lockfile prose, biome baseline).",
-      "unlocks": "An agent can trust local green as a predictor of CI green."
+      "outcome": "Surface parity on the governance repo: commands, shellcheck, gh contract, durable env, merge path, honest Context7 posture",
+      "unlocks": "The full governance and PR-convergence workflow runs end to end on this surface"
     },
     {
       "id": "M4",
-      "outcome": "The pattern is adopted by Website-Bot and LLM-Router.",
-      "unlocks": "Fleet-wide consistency; the next node repo inherits it."
+      "outcome": "The node fleet shares the governed session contract and its gates go green without a PAT",
+      "unlocks": "Model-controlled sessions in SEO-Bot, Website-Bot and LLM-Router can validate their own work"
     },
     {
       "id": "M5",
-      "outcome": "Every model-controlled session starts with the full governance skill corpus reconciled, from any workspace root.",
-      "unlocks": "Planning and remediation skills are reachable by name instead of being read off disk."
+      "outcome": "Capability broker deployed and configured; Sonar, Semgrep, Context7 and GitGuardian resolve through it",
+      "unlocks": "Authenticated capability plane and rule 22 compliance; blocked on infrastructure outside this repository"
     }
   ],
   "checkpoints": [
     {
-      "id": "C1",
-      "after": "T2",
-      "evidence_required": "Running the link script in a clean SEO-Bot checkout resolves all four @quantum-l9 packages and prints zero unresolved.",
-      "no_go_action": "If graphiti-memory-client or infisical-config cannot be resolved from source, stop and report which package lacks a buildable local origin rather than reintroducing hand-written stubs."
+      "id": "CK-A",
+      "after": "w3-01-surface-aware-wiring-check",
+      "evidence_required": "make pr-check reaches the security stage on this surface with the desktop hook plane reported as skipped-by-surface, and no files created under the home cursor directory to achieve it",
+      "no_go_action": "Do not install the Cursor host hook plane and do not disable the gate; report the blocker and publish through a surface where the assertion legitimately applies"
     },
     {
-      "id": "C2",
-      "after": "T4",
-      "evidence_required": "A fresh session shows the hook's output, and npx tsc -p tsconfig.check.json --noEmit exits 0 with no manual setup.",
-      "no_go_action": "If the hook does not fire, verify the settings.json shape against Cursor-Governance's working example before changing the script."
+      "id": "CK-0",
+      "after": "w0-04-resolve-validator-conflict",
+      "evidence_required": "grep -c for resolve_workspace in web/setup.sh returns 1, every hook command in settings.template.json references the locked interpreter, no SessionEnd or Graphiti closer appears in the integrated diff, and the adapter test suite passes",
+      "no_go_action": "Abandon the replay and instead cherry-pick only the CLAUDE_PROJECT_DIR toplevel probe into main's existing resolver, leaving the rest of the branch for its own author"
     },
     {
-      "id": "C2b",
-      "after": "T8",
-      "evidence_required": "make pr-check exits 0 on pristine origin/main with no working-tree changes.",
-      "no_go_action": "Do not silence rules wholesale to force green \u2014 if the findings are real, land them as their own change and record the remaining count."
+      "id": "CK-1",
+      "after": "w1-03-sessionstart-reconcile",
+      "evidence_required": "Gathered from the session AFTER the one that reconciles, because project skills are not re-scanned mid-session: no workspace-mismatch WARN, receipt workspace equals the project dir, and Skill invocation of l9-plan returns its contract",
+      "no_go_action": "Revert the SessionStart hook change and escalate the wiring repair as requiring an operator environment rebuild"
     },
     {
-      "id": "C3",
-      "after": "T6",
-      "evidence_required": "npm run verify:all exits non-interactively with a nonzero-on-failure status.",
-      "no_go_action": "Revert the script change; do not mask a real failure to make the command terminate."
+      "id": "CK-2",
+      "after": "w1-03-sessionstart-reconcile",
+      "evidence_required": "Measured reconcile wall clock stays inside the SessionStart hook timeout across three consecutive cold sessions",
+      "no_go_action": "Move the reconcile behind a drift-only trigger keyed on the receipt workspace field, or into a background invocation, and re-measure"
     },
     {
-      "id": "C4",
-      "after": "T10",
-      "evidence_required": "The same two commands succeed unmodified in Website-Bot and LLM-Router.",
-      "no_go_action": "Keep the SEO-Bot wiring and record the blocking difference per repo instead of forcing a shared shape."
+      "id": "CK-3",
+      "after": "w1-05-multi-repo-workspace-contract",
+      "evidence_required": "A session rooted at a parent holding two or more sibling repositories either wires each correctly or prints a named refusal listing the candidates, with a test covering both branches",
+      "no_go_action": "Keep the single-repo contract, document multi-repo as unsupported, and give the node fleet an explicit one-command manual wire instead"
     },
     {
-      "id": "C5",
-      "after": "T9",
-      "evidence_required": "A fresh session rooted at a multi-repo path (not Cursor-Governance) lists l9-plan among invocable skills with no manual step.",
-      "no_go_action": "If a user-scope hook is not supported on this surface, document `make claude-install` as a required one-time container step in the runbook rather than leaving it implicit."
+      "id": "CK-4",
+      "after": "w4-01-link-local-packages-script",
+      "evidence_required": "In a node repo checkout, the script resolves every scoped dependency from local sources with no PAT and no hand-written stubs, and that repo's typecheck and tests run",
+      "no_go_action": "Stop before touching the node repositories and return the package-resolution question to the fleet owner"
+    },
+    {
+      "id": "CK-5",
+      "after": "w3-05-rest-merge-path",
+      "evidence_required": "A dry-run merge probe against an open PR reports mergeable through the REST or MCP route while merge_gate.py still denies without a receipt",
+      "no_go_action": "Keep the merge step manual and record the GraphQL restriction as a standing surface limitation"
+    },
+    {
+      "id": "CK-6",
+      "after": "w5-02-broker-deployment",
+      "evidence_required": "Capability check reports ENABLED for sonar.read_issues and semgrep.appsec_scan, and a Context7 tool appears on the session tool surface",
+      "no_go_action": "Keep the honest degraded posture and do not paste any credential onto this surface to force a green result"
     }
   ],
   "doc_root_surface_impact": [
     {
-      "surface": "SEO-Bot/AGENTS.md",
+      "surface": "environment/agents/adapters/claude-code/README.md",
       "action": "update",
       "todo_ids": [
-        "T5",
-        "T6",
-        "T7"
-      ],
-      "reason": "Section 5 command table and the lockfile rule both become wrong once verify:all and the auth guidance change."
+        "w0-01-integrate-inflight-workspace-resolution",
+        "w1-02-vendor-only-fast-path",
+        "w1-03-sessionstart-reconcile",
+        "w2-01-skill-registry-ssot-decision"
+      ]
     },
     {
-      "surface": "SEO-Bot/RUNBOOK.md",
+      "surface": "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md",
       "action": "update",
       "todo_ids": [
-        "T1",
-        "T5"
-      ],
-      "reason": "ensure-npm-auth.sh points readers at 'RUNBOOK.md section Private npm packages'; that section must describe the link path."
+        "w1-03-sessionstart-reconcile",
+        "w1-05-multi-repo-workspace-contract"
+      ]
     },
     {
-      "surface": "Cursor-Governance/ops/secrets/README.md",
+      "surface": "environment/agents/adapters/claude-code/web/README.md",
       "action": "update",
       "todo_ids": [
-        "T1"
-      ],
-      "reason": "Document the link script as the sanctioned model-surface alternative to authed_npm.sh."
+        "w3-03-gh-sentinel-contract",
+        "w3-04-durable-env-reaches-shells",
+        "w5-01-broker-url-operator"
+      ]
     },
     {
-      "surface": "Website-Bot/AGENTS.md and LLM-Router docs",
+      "surface": "environment/agents/adapters/claude-code/web/environment.env.example",
+      "action": "update",
+      "todo_ids": [
+        "w3-03-gh-sentinel-contract",
+        "w5-01-broker-url-operator"
+      ]
+    },
+    {
+      "surface": "WIP/claude-code-mobile-environment/claude-code-mobile-environment.plan.md",
+      "action": "update",
+      "todo_ids": [
+        "w4-01-link-local-packages-script",
+        "w4-02-node-repo-session-contract",
+        "w4-03-node-gate-hygiene"
+      ]
+    },
+    {
+      "surface": "CHANGELOG.md",
+      "action": "update",
+      "todo_ids": [
+        "w0-01-integrate-inflight-workspace-resolution",
+        "w1-03-sessionstart-reconcile",
+        "w2-02-claude-slash-commands"
+      ]
+    },
+    {
+      "surface": "AGENTS.md",
       "action": "n_a",
-      "reason": "Deferred until T10 proves the pattern transfers; no doc change until the wiring lands there."
+      "reason": "No authority-order or governance-law change; this plan repairs adapter wiring and surface parity inside existing contracts"
     },
     {
-      "surface": "Cursor-Governance/README.md or RUNBOOK",
-      "action": "update",
-      "todo_ids": [
-        "T9",
-        "T11"
-      ],
-      "reason": "The one-time `make claude-install` container step and the skill-delivery mechanism are currently undocumented, which is why the corpus silently went missing."
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "The capability contract and secret posture are unchanged; nothing here alters what a model-controlled surface may hold"
+    },
+    {
+      "surface": "README.md",
+      "action": "n_a",
+      "reason": "Repository overview does not describe per-surface adapter wiring internals"
     }
   ],
   "stress_test": {
     "disconfirming_questions": [
-      "Do local sibling sources actually match the versions package.json pins? Observed: bot-interop 1.1.0 satisfies ^1.1.0 and LLM-Router 1.3.0 matches the exact pin \u2014 but this is a point-in-time match that can drift.",
-      "Is linking local sources a correctness hazard \u2014 could an agent validate against source newer than the published artifact CI installs?",
-      "Does the fleet actually keep all sibling repos checked out side by side, or was that specific to this session's workspace?",
-      "Is the two-package stub gap real, or does some other checkout already provide infisical-config and graphiti-memory-client?",
-      "Would registering the hook slow session start enough to matter?",
-      "Is `make pr-check` red on main by oversight, or deliberately, pending the enforce-biome:true flip described in docs/runbooks/BIOME_INSTANTIATION.md?",
-      "Is the account-synced registry deliberately a curated subset for model surfaces, making full 51-skill reconciliation an anti-goal?"
+      "Is replaying the in-flight branch actually cheaper than abandoning it? Its author may be mid-flight on that branch, and a replay by a different agent silently invalidates their working tree — the coordination cost may exceed the value of the three improvements being salvaged.",
+      "Does main's refuse-rather-than-guess posture beat the branch's warn-and-continue, or is the reverse true for the node fleet? Refusing is safer for a single repo but leaves a multi-repo session with nothing wired, which is precisely the sibling plan's complaint.",
+      "If project skills are not re-scanned mid-session, does the multi-repo contract help at all in a fleet session, or does every node repo still need its own committed settings.json regardless of what the governance reconcile does?",
+      "Is the four-skill registry split actually a defect, or a deliberate separation where account-synced skills are meant to be fleet-wide and repo skills project-scoped? Treating it as drift may destroy an intentional boundary.",
+      "Does consolidating three efforts into one master plan create a single oversized change that cannot be reviewed or reverted independently, trading three tractable PRs for one unmergeable one?",
+      "If the broker is never deployed, does the honest degraded posture quietly become permanent, turning a mandatory rule into one that constrains nothing?"
     ],
     "assumed_false_ifs": [
-      "If sibling repos are not reliably co-located, the link script must clone on demand and the effort estimate for T1 roughly doubles.",
-      "If local source can diverge from the published version, the link script must print the version delta loudly and the plan needs a drift guard todo.",
-      "If the skill sync list is generated remotely rather than by setup_claude_code_plugins.sh, T9 targets the wrong file and needs re-scoping.",
-      "If Biome's error count is not stable across versions, a raw count baseline is the wrong mechanism and T8 should use a suppression file.",
-      "If the biome debt is a tracked, deliberate migration with an owner and a date, T8 becomes 'do not touch \u2014 document the expected count' rather than a cleanup.",
-      "If the 8-skill synced set is a deliberate curation rather than drift, T9 should reconcile only an approved allowlist and T11 becomes a documentation task."
+      "Assumed: the in-flight branch is abandoned or parkable. False if its author is actively working it, in which case the correct move is to hand them the merge-hazard evidence and let them rebase, not to replay their work.",
+      "Assumed: SessionStart can mutate the project .claude tree. False if the harness snapshots project configuration before hooks run, in which case the reconcile must move back to the account Setup script.",
+      "Assumed: the node repositories are reliably co-located in one workspace. The sibling plan's own U2 flags this as unverified, and if co-location was specific to one remote session then the link script's sibling-path assumption collapses.",
+      "Assumed: the broker hostname in the manifest is the intended production target. False if the deployment moved to an internal-only name, in which case the operator paste and the deployment both target the wrong place.",
+      "Assumed: the account skill registry cannot be written from this repository. The sibling plan resolved this by probe, but if a supported sync path exists then the registry-reconciliation todo is far cheaper than planned.",
+      "Assumed: full skill reconciliation is the goal. False if the account registry is a deliberately curated subset for model surfaces, in which case reconciling all 51 is an anti-goal and the correct output is a documented boundary rather than a merge.",
+      "Assumed: validating against local sources is equivalent to validating against what CI installs. False if a local source is newer than the published artifact, in which case local green is optimistic and the version-drift warning is load-bearing rather than cosmetic."
     ],
-    "blast_radius": "Development-environment and documentation surfaces only. No product code, no CI workflow, no branch protection, no secret policy. The one behavioral change to a committed script is verify:all, which currently cannot complete non-interactively. Linked packages live in gitignored node_modules; package.json and package-lock.json stay untouched, so nothing can leak into a commit.",
-    "rollback": "Delete .claude/settings.json to unwire the hook; git revert the ensure-npm-auth.sh, package.json and AGENTS.md edits; remove the governance link script. Each todo is independently revertible and none is load-bearing for CI."
+    "blast_radius": "This plan now spans four repositories and the shared adapter installer that every Claude surface reaches — CLI, Desktop, Web and Mobile — plus the shared agent bootstrap that Codex, Gemini, Manus and the generic adapter also call. A defect in the workspace resolver or the SessionStart reconcile degrades or blocks session startup on all of them, and the resolver is now the merge point of two independent implementations, which raises the chance of a subtle regression above either one alone. The SessionStart contract is fail-open, so the dominant failure mode is a slower or noisier startup, but a hook exceeding its timeout loses the entire governance context blob including the autonomy profile. The node-fleet items touch three repositories not attached to this session and cannot be validated here. The GH_TOKEN work touches credential-adjacent code where a mistake either breaks gh outright or dilutes the prohibition on real tokens. Memory paths are fenced out and, for the in-flight branch, actively split away.",
+    "rollback": "Each workstream lands as its own branch and PR so W0 through W5 revert independently; the master plan is a coordination artifact, not a single commit. W0 is the riskiest and is reverted by dropping the integration branch entirely, which returns main to its current resolver with no loss, since the branch remains intact upstream. The SessionStart reconcile ships behind an environment kill switch so a bad reconcile is disabled without a code change or redeploy, and the hook's fail-open contract means a disabled reconcile returns the session to today's behaviour. The vendor-only flag adds a new code path and changes no existing default, so reverting it is a deletion. The GH_TOKEN and durable-env changes revert by restoring the prior unset list, returning to the currently observed working state. Node-fleet changes are per-repository commits reverted in their own repositories. Broker deployment rolls back by removing the account variable, returning the capability plane to its present honest degraded posture."
   },
   "leverage": {
     "ranked_todo_ids": [
-      "T1",
-      "T2",
-      "T8",
-      "T9",
-      "T3",
-      "T4",
-      "T5",
-      "T6",
-      "T7",
-      "T11",
-      "T10"
+      "w1-03-sessionstart-reconcile",
+      "w1-06-session-scoped-breakglass",
+      "w0-05-correct-publish-path-doctrine",
+      "w1-07-single-governance-root",
+      "w0-01-integrate-inflight-workspace-resolution",
+      "w3-01-surface-aware-wiring-check",
+      "w1-01-baseline-regression-guard",
+      "w1-02-vendor-only-fast-path",
+      "w1-05-multi-repo-workspace-contract",
+      "w0-02-preserve-locked-interpreter",
+      "w1-04-receipt-truthfulness",
+      "w3-03-gh-sentinel-contract",
+      "w0-03-split-memory-lifecycle-out",
+      "w0-04-resolve-validator-conflict",
+      "w2-02-claude-slash-commands",
+      "w2-01-skill-registry-ssot-decision",
+      "w4-01-link-local-packages-script",
+      "w3-02-shellcheck-toolchain",
+      "w3-07-narrow-pretool-stack-gate",
+      "w3-04-durable-env-reaches-shells",
+      "w3-05-rest-merge-path",
+      "w3-06-context7-degraded-posture",
+      "w3-08-unpushed-commit-hook-surface-aware",
+      "w4-02-node-repo-session-contract",
+      "w4-03-node-gate-hygiene",
+      "w5-01-broker-url-operator",
+      "w5-02-broker-deployment",
+      "w2-03-cloud-clone-delivery-contract"
     ],
     "shared_causes": [
-      "no-policy-compliant-local-install-path \u2014 the single dominant cause; governance deliberately denies a PAT to model surfaces, yet no sanctioned alternative exists, so every agent improvises",
-      "canonical-gate-is-red-on-main \u2014 `make pr-check` runs `biome check .` which fails with 13 errors on pristine main, so the one command the repo offers as a pre-PR gate is unusable and every agent substitutes an ad-hoc check",
-      "hook-written-but-never-wired \u2014 a correct SessionStart hook exists in SEO-Bot but no settings.json registers it, so it is dead code",
-      "advice-that-cannot-be-followed \u2014 ensure-npm-auth.sh and the hook both tell the reader to make AWS resolve a ref that surface_trust will always deny",
-      "docs-contradict-executable-truth \u2014 AGENTS.md asserts no lockfile and never npm ci while ci.yml does exactly that",
-      "local-commands-diverge-from-ci \u2014 verify:all cannot terminate and omits the blocking typecheck",
-      "governance-capability-not-reachable-from-session \u2014 the 51-skill corpus is delivered by a reconciler that only a project-scoped Cursor-Governance hook invokes; in a multi-repo workspace nothing runs it, so 47 skills were invisible and l9-plan had to be read off disk",
-      "two-registries-no-reconciliation \u2014 account-synced skills and the repo corpus overlap by only 4 of 51 and have drifted in both directions"
+      "A: adapter wiring is performed only at environment-build time and never reconciled at session time, so one bad build freezes the surface permanently. This is the single cause behind the wrong-workspace wire, the unreachable skills, the stale receipt and the phantom skillOverrides.",
+      "B: two skill registries exist — the repository corpus and the Anthropic account registry — with no reconciliation, so neither is complete and the router recommends skills the Skill tool cannot resolve.",
+      "C: several contracts and validators are written for the Cursor host and never classify the Claude cloud surface, producing the false-red wiring check, the inert durable env, the GH_TOKEN contract break and the absent slash commands.",
+      "D: two independent parallel fixes exist for the workspace defect — main's from PR 231 and the in-flight branch's from an older base — and merging them naively yields duplicate definitions plus an interpreter regression. Consolidating them is a prerequisite for everything downstream.",
+      "E: the capability broker is both unconfigured and undeployed, the single cause of every unreachable capability and brokered MCP server.",
+      "F: model-controlled sessions in the TypeScript node repos start with zero validation capability because policy denies them a PAT and no local-link path is wired, so each agent improvises.",
+      "G: doctrine prose asserts an enforcement mechanism the code deliberately removed — raw git and gh are execution-exempt by design while the rules still claim denial, which misleads every agent that reads them, including this one.",
+      "H: breakglass is fully implemented but unreachable from the surface it exists for, because the evaluator reads the hook process environment and an agent can only write an inline assignment the hook never sees.",
+      "I: two checkouts of one repository are live at different revisions, so which governance code runs depends on the entrypoint."
     ],
     "deletions_or_consolidations": [
-      "Delete the AWS-resolution advice from both the hook and ensure-npm-auth.sh rather than maintaining a path that policy guarantees will fail.",
-      "Consolidate four per-repo bespoke install workarounds into one governance link script.",
-      "Consolidate the package-to-source mapping into one declared data file instead of rediscovering it by find(1) each session.",
-      "Consolidate skill delivery onto the governance reconciler as SSOT instead of maintaining a divergent account-synced set."
+      "Three plan documents collapse into this one master plan: the audit-derived plan, the sibling node-fleet plan, and the implicit plan embodied in the unmerged branch. The sibling document is retained as the node-fleet detail record rather than duplicated here.",
+      "Two resolve_workspace implementations collapse into one, which is the entire point of W0 and a precondition for the rest.",
+      "The durable-env todo offers deletion as the preferred option: if BASH_ENV cannot be made to work, remove the mechanism rather than keep a writer whose output never reaches the shells it names.",
+      "Findings I1, I2, I6 and I13 from the audit collapse into the single SessionStart reconcile rather than four separate remediations."
     ]
   },
   "risks": [
     {
-      "risk": "Local sibling source drifts ahead of the published package, so local green stops predicting CI green.",
-      "mitigation": "The link script prints the local version against the package.json range for every package and warns on any mismatch; CI remains the authority and still installs published artifacts."
+      "risk": "Replaying the in-flight branch invalidates its author's working tree or duplicates their effort a third time",
+      "mitigation": "Before any replay, hand the author the merge-tree evidence — the conflict and the two resolver definitions — and offer them the rebase. Only replay if the branch is confirmed parked; W0's no-go action already narrows to cherry-picking a single hunk"
     },
     {
-      "risk": "An agent mistakes linked local packages for a committable state and pushes a file: dependency.",
-      "mitigation": "The script writes only into gitignored node_modules and never edits package.json or package-lock.json; add a pre-commit assertion that no file: spec appears under dependencies."
+      "risk": "The merged resolver regresses one of the two behaviours it consolidates, breaking startup on every Claude surface",
+      "mitigation": "Land the regression tests first so both postures are pinned before the merge: refuse on a non-git workspace, prefer checkout over parent, named refusal on multi-repo, and exactly one definition"
     },
     {
-      "risk": "Changing the SessionStart hook could stall sessions if a step blocks.",
-      "mitigation": "Preserve the existing soft-fail contract \u2014 every step guarded, always exit 0 \u2014 and cap the link step with a timeout."
+      "risk": "The in-flight branch's memory lifecycle work is lost rather than split, because it is coupled into the same commits",
+      "mitigation": "W0 splits it onto its own branch and hands it to the memory owner rather than deleting it; CK-0 checks the integrated diff contains no SessionEnd or Graphiti closer"
     },
     {
-      "risk": "T9 touches shared plugin setup and could affect other surfaces' skill availability.",
-      "mitigation": "Additive only: extend the sync list, do not remove entries; verify the synced manifest before and after."
+      "risk": "The SessionStart reconcile exceeds the hook timeout on a cold container, costing the entire governance context blob",
+      "mitigation": "Gate the expensive branch behind a cheap receipt-field comparison, keep vendor-only free of the shared bootstrap, raise the timeout, and verify across three cold sessions at CK-2"
     },
     {
-      "risk": "Clearing 13 biome errors touches files unrelated to any feature and could mask a real defect while reformatting.",
-      "mitigation": "Land the biome cleanup as a standalone commit with no behavioral edits; require tsc + vitest green before and after and diff for logic changes."
+      "risk": "The GH_TOKEN work is read as re-introducing a static secret and rejected, since it reverses a merged decision",
+      "mitigation": "Carry the probe evidence in the commit and PR body — an arbitrary value works identically, so the sentinel provably carries no secret — and narrow rather than delete the validator ban. If zero tolerance is preferred, retire gh in favour of the MCP path the probe proved works"
     },
     {
-      "risk": "User-scope $HOME/.claude/settings.json is container-local and is lost when the container is reclaimed.",
-      "mitigation": "Treat `make claude-install` as the durable path and document it as a one-time per-container step; the hook is an optimization, not the contract."
+      "risk": "An operator syncing the account variables field to the current example silently disables gh across the environment",
+      "mitigation": "Sequence the operator paste behind the sentinel restoration and instruct appending one line rather than re-pasting; once the example carries the sentinel again the hazard disappears"
+    },
+    {
+      "risk": "A linked local source drifts ahead of the published artifact, so local green stops predicting CI green",
+      "mitigation": "The link script prints every resolved local version against the declared range and warns on mismatch; CI installs published artifacts and remains the sole authority on green, which the preserved contracts restate"
+    },
+    {
+      "risk": "An agent mistakes linked local sources for a committable state and commits a local-path dependency",
+      "mitigation": "The script writes only into ignored dependency directories and leaves the manifest and lockfile byte-identical; add a pre-commit assertion that no local-path specifier appears in either file"
+    },
+    {
+      "risk": "User-scope Claude settings are container-local and are lost when the container is reclaimed, so any fix that lives only there silently evaporates",
+      "mitigation": "Treat the committed project wiring and make claude-install as the durable path and the user-scope hook as an optimisation only; this is why the reconcile is wired into the committed SessionStart hook rather than a user-scope file"
+    },
+    {
+      "risk": "The node-fleet workstream stalls because those repositories are not attached and cannot be validated here",
+      "mitigation": "W4 items carry explicit blockers and depend on the link script, which lives in this repository and can be built and unit-tested here; the cross-repo adoption is coordinated rather than claimed"
+    },
+    {
+      "risk": "Consolidation produces one oversized unreviewable change",
+      "mitigation": "The master plan is a coordination artifact only. Each workstream publishes its own PR in dependency order, and the rollback section makes each independently revertible"
+    },
+    {
+      "risk": "Intent recorded in a comment but never implemented in the code beneath it — the pattern that produced this blocker and that a reader skimming for comments would mistake for a completed fix",
+      "mitigation": "Land the surface gate with a regression test that exercises the ssot_checkout branch on a headless surface, so the assertion is pinned by execution rather than by prose"
+    },
+    {
+      "risk": "The breakglass repair becomes a general bypass rather than a narrow audited one, weakening every gate it touches",
+      "mitigation": "Model it on the existing single-use merge authorization receipt rather than a new environment key: one action, one reason, one requester, consumed once and logged. Never a persistent variable, and never a blanket disable"
     }
   ],
   "unknowns": [
     {
-      "id": "U1",
-      "question": "Does Quantum-L9/l9-graphiti-memory publish @quantum-l9/graphiti-memory-client, and does Quantum-L9/infisical-config publish @quantum-l9/infisical-config?",
-      "decision_effect": "Determines whether the link script reaches full four-package coverage or whether two packages still need a declared stub contract.",
-      "resolution": "probe"
-    },
-    {
-      "id": "U2",
-      "question": "Are the four node repos reliably co-located in one workspace across environments, or was that specific to this remote session?",
-      "decision_effect": "Decides whether the link script resolves siblings by path or must clone on demand.",
-      "resolution": "probe"
-    },
-    {
-      "id": "U3",
-      "question": "RESOLVED: $HOME/.claude/skills/synced/manifest.json is produced by the Anthropic ACCOUNT registry (custom entries carry server ids skill_01...) and is not editable from this repo. The repo corpus is delivered instead by ops/scripts/reconcile_claude_l9_skills.py. T9 was rescoped accordingly.",
-      "decision_effect": "Closed \u2014 T9 retargeted from setup_claude_code_plugins.sh to user-scope SessionStart registration.",
-      "resolution": "accept_bounded"
-    },
-    {
-      "id": "U4",
-      "question": "Which mechanism supplies the PR body template and the 'the bot fills this in on push' Files touched section? No pull_request_template.md exists in SEO-Bot/.github.",
-      "decision_effect": "Determines whether a stale template is a repo-level fix or belongs to the org .github repo, and why the Files touched section was never populated on PR 61.",
+      "id": "U-01",
+      "question": "Which cluster receives the broker manifest and how does its Infisical workload identity bind? The hostname is confirmed and the facade code is complete, so only deployment remains — but TODO.md SB-05 also records an undecided question of whether cloud sessions must carry the broker at all",
+      "decision_effect": "Blocks the broker deployment todo, and the policy half decides whether the honest degraded posture is a stopgap or the permanent design",
       "resolution": "ask"
     },
     {
-      "id": "U5",
-      "question": "Is the 13-error biome debt on main tracked and scheduled (docs/runbooks/BIOME_INSTANTIATION.md, enforce-biome flag), or unowned drift?",
-      "decision_effect": "Decides whether T8 clears the findings or merely records an expected baseline count.",
+      "id": "U-02",
+      "question": "Is the in-flight branch claude/startup-audit-review-bmj21b still actively worked, parked, or abandoned?",
+      "decision_effect": "Decides whether W0 is a replay this plan performs or a rebase request handed to its author; a wrong call either duplicates work or destroys someone's tree",
+      "resolution": "ask"
+    },
+    {
+      "id": "U-03",
+      "question": "Are the four node repositories reliably co-located in one parent workspace across environments, or was that specific to one remote session? Carried forward unresolved from the sibling plan's U2",
+      "decision_effect": "Determines whether the multi-repo contract and the link script's sibling-path resolution are sound, or whether both need an explicit repository map instead",
       "resolution": "probe"
     },
     {
-      "id": "U6",
-      "question": "Which registry is SSOT for the 4 account-only skills (l9-ci-gap-auditor, l9-ci-repair, l9-github-ci, l9-pr-analysis) \u2014 should they be committed into Cursor-Governance/skills, or is the account registry intentionally authoritative for them?",
-      "decision_effect": "Determines the direction of the T11 reconciliation and whether the repo corpus is complete.",
+      "id": "U-04",
+      "question": "Which registry is SSOT for the four account-only skills — commit them into this repository, or accept the account registry as their owner? Carried forward from the sibling plan's U6",
+      "decision_effect": "Decides the shape of the registry reconciliation todo and whether skills/ can be treated as the complete corpus",
+      "resolution": "ask"
+    },
+    {
+      "id": "U-05",
+      "question": "Do the scoped packages the link script targets actually publish from the sibling repositories the map assumes? Carried forward from the sibling plan's U1",
+      "decision_effect": "Determines whether the link script can resolve every dependency from local sources or needs a per-package fallback",
+      "resolution": "probe"
+    },
+    {
+      "id": "U-06",
+      "question": "Whether a write performed inside the SessionStart hook itself lands before the harness snapshots project skills. Mid-session discovery is ruled out by probe, but the in-hook case is not separable until the reconcile exists",
+      "decision_effect": "Decides whether the reconcile benefits the current session or only the next, and therefore how the checkpoint evidence is collected",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U-07",
+      "question": "Was the unconditional git and gh execution exemption a deliberate permanent decision, or a temporary unblock that the doctrine was meant to catch up with?",
+      "decision_effect": "Decides whether w0-05 rewrites the prose to match the code, or the exemption is narrowed to match the prose",
       "resolution": "ask"
     }
   ],
   "final_validation": [
     {
-      "id": "FV0",
+      "id": "FV-01",
       "command": "make pr-check",
-      "pass_criteria": "exits 0 on a clean tree (tsc + vitest + biome all green) \u2014 no commit, no push",
+      "pass_criteria": "PASS on all changed files with no weakened scanner configuration. Ordering: this gate cannot reach the changed-files stage on a headless surface until w3-01 lands, so w3-01 leads the critical path.",
       "status": "pending"
     },
     {
-      "id": "FV1",
-      "command": "rm -rf node_modules && bash ops/scripts/link_local_l9_packages.sh && npx tsc -p tsconfig.check.json --noEmit",
-      "pass_criteria": "exit 0 with no PAT present and no hand-written stub files",
+      "id": "FV-02",
+      "command": "grep -c 'resolve_workspace()' environment/agents/adapters/claude-code/web/setup.sh",
+      "pass_criteria": "returns exactly 1",
       "status": "pending"
     },
     {
-      "id": "FV2",
-      "command": "npx vitest run",
-      "pass_criteria": "41 files / 434 tests pass, matching the counts observed during PR 61 remediation",
+      "id": "FV-03",
+      "command": "python3 -c \"import json;d=json.load(open('environment/agents/adapters/claude-code/settings.template.json'));print(json.dumps(d['hooks']))\" | grep -c 'venv/bin/python3'",
+      "pass_criteria": "every Python hook command references the locked governance interpreter and none invokes bare system python3",
       "status": "pending"
     },
     {
-      "id": "FV3",
-      "command": "npm run verify:all",
-      "pass_criteria": "terminates non-interactively and returns nonzero when a gate fails",
+      "id": "FV-04",
+      "command": "python3 -m pytest environment/agents/adapters/claude-code/tests/ -q",
+      "pass_criteria": "the workspace-resolution regression tests pass and no existing adapter test regresses",
       "status": "pending"
     },
     {
-      "id": "FV4",
-      "command": "Start a fresh session in SEO-Bot and inspect hook output",
-      "pass_criteria": "SessionStart hook output is present, proving registration works",
+      "id": "FV-05",
+      "command": "bash environment/agents/adapters/claude-code/install.sh --governance \"$HOME/.cursor-governance\" --workspace \"$CLAUDE_PROJECT_DIR\" --check --quiet",
+      "pass_criteria": "reports no drift and exits 0 against the real project directory",
       "status": "pending"
     },
     {
-      "id": "FV5",
-      "command": "git status --porcelain",
-      "pass_criteria": "package.json and package-lock.json unmodified after linking",
+      "id": "FV-06",
+      "command": "find \"$CLAUDE_PROJECT_DIR/.claude/skills\" -maxdepth 2 -name SKILL.md | wc -l",
+      "pass_criteria": "returns 51",
+      "status": "pending"
+    },
+    {
+      "id": "FV-07",
+      "command": "\"$HOME/.cursor-governance/.venv/bin/python3\" environment/agents/adapters/claude-code/validate_claude_env.py",
+      "pass_criteria": "no new failures beyond the pre-existing memory-enforcement schema issue, which is out of scope",
+      "status": "pending"
+    },
+    {
+      "id": "FV-08",
+      "command": "bash ops/scripts/check_governance_wiring.sh",
+      "pass_criteria": "exits 0 on a claude-code surface with Cursor IDE checks reported as not-applicable",
+      "status": "pending"
+    },
+    {
+      "id": "FV-09",
+      "command": "bash -lc 'gh api repos/Quantum-L9/Cursor-Governance --jq .full_name'",
+      "pass_criteria": "returns the repository name from a login shell, proving the durable env no longer strips the sentinel",
+      "status": "pending"
+    },
+    {
+      "id": "FV-10",
+      "command": "command -v shellcheck",
+      "pass_criteria": "resolves to an executable after the shared bootstrap runs",
+      "status": "pending"
+    },
+    {
+      "id": "FV-11",
+      "command": "bash ops/scripts/link_local_l9_packages.sh --check in a node repo checkout",
+      "pass_criteria": "every scoped dependency resolves from a local source with no PAT and no hand-written stub",
       "status": "pending"
     }
   ],
   "convergence": {
     "status": "partial",
     "remaining_unknown_ids": [
-      "U1",
-      "U2",
-      "U4",
-      "U5",
-      "U6"
+      "U-01",
+      "U-02",
+      "U-03",
+      "U-04",
+      "U-05",
+      "U-07"
     ],
     "next_skill": "l9-plan-audit",
-    "stop_reason": "Build-ready on the critical path T1-T4, T9, T8, T10. U3 closed by direct probe (skill delivery mechanism identified and the reconciler run successfully: 51 created, 0 conflicts). U1/U2 gate the link script's shape and are cheap first-step probes; U4 and U6 are operator questions; U5 decides whether T8 clears the biome debt or records it."
+    "stop_reason": "Validate-and-Repair applied to the plan artifact. It found one Confirmed High defect in the plan itself: w3-01 named the wrong owner. The evidence is a comment in ops/scripts/run_pr_gate.sh specifying the surface gate, and code beneath it that applies the gate on one branch and omits it on the ssot-family branch this surface takes — so the blocker is the caller's dispatch, not the checker's logic. w3-01 was rewritten to the correct owner and anchor, raised to a publication blocker, freed of its dependency, and promoted to lead the critical path, since no work in this plan can be published until it lands. Milestones M0 through M3 remain executable; M4 spans repositories not attached here; M5 stays blocked on U-01."
   },
   "gmp_handoff": {
     "may_modify": [
-      "SEO-Bot/.claude/settings.json",
-      "SEO-Bot/.claude/hooks/session-start.sh",
-      "SEO-Bot/scripts/ensure-npm-auth.sh",
-      "SEO-Bot/package.json (scripts block only)",
-      "SEO-Bot/AGENTS.md",
-      "SEO-Bot/RUNBOOK.md",
-      "SEO-Bot/biome.json",
-      "Cursor-Governance/ops/scripts/link_local_l9_packages.sh",
-      "Cursor-Governance/ops/scripts/l9_package_sources.yaml",
-      "Cursor-Governance/ops/secrets/README.md",
-      "Website-Bot/.claude/settings.json",
-      "LLM-Router/.claude/settings.json",
-      "$HOME/.claude/settings.json",
-      "Cursor-Governance/environment/agents/adapters/claude-code/install.sh",
-      "Cursor-Governance/ops/generated/skill-registry.json"
+      "environment/agents/adapters/claude-code/install.sh",
+      "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+      "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md",
+      "environment/agents/adapters/claude-code/settings.template.json",
+      "environment/agents/adapters/claude-code/tests/",
+      "environment/agents/adapters/claude-code/validate_claude_env.py",
+      "environment/agents/adapters/claude-code/web/setup.sh",
+      "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
+      "environment/agents/adapters/claude-code/web/environment.env.example",
+      "environment/agents/adapters/claude-code/web/README.md",
+      "environment/agents/adapters/claude-code/README.md",
+      "ops/scripts/bootstrap_agent_environment.sh",
+      "ops/scripts/check_governance_wiring.sh",
+      "ops/scripts/lib/workspace_kind.sh",
+      "ops/scripts/reconcile_claude_commands.py",
+      "ops/scripts/link_local_l9_packages.sh",
+      "ops/scripts/l9_package_sources.yaml",
+      "ops/autonomy/merge_gate.py",
+      "ops/autonomy/surface_profile.yaml",
+      "rules/22-context7-auto-invoke.mdc",
+      "environment/agents/adapters/claude-code/hooks/context7_stack_pretool.py",
+      "skills/AUTONOMY_MANIFEST.yaml",
+      "skills/l9-pr-remediation/SKILL.md",
+      ".claude/settings.json",
+      "CHANGELOG.md"
     ],
     "must_not_modify": [
-      "Cursor-Governance/ops/secrets/surface_trust.py",
-      "Cursor-Governance/ops/secrets/resolve_secret.py",
-      "Cursor-Governance/ops/secrets/authed_npm.sh",
-      "Cursor-Governance/ops/secrets/capabilities.yaml",
-      "SEO-Bot/.github/workflows/*",
-      "SEO-Bot/package-lock.json",
-      "SEO-Bot/src/**",
-      "SEO-Bot/tests/**"
+      "environment/agents/adapters/claude-code/memory/",
+      "environment/agents/adapters/claude-code/hooks/memory_gate.py",
+      "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
+      "environment/agents/adapters/claude-code/hooks/memory_writeback.py",
+      "ops/hooks/graphiti-session-end.sh",
+      "ops/graphiti/",
+      "rules/03-graphiti-memory.mdc",
+      "rules/87-cursor-memory-kernel.mdc",
+      "rules/97-graph-layer-boundary.mdc",
+      "rules/98-graphiti-memory-gate.mdc",
+      "docker-compose.yml",
+      "Dockerfile",
+      ".env",
+      "infra/",
+      "deploy/",
+      "kubernetes/",
+      "helm/",
+      "CANONICAL_LAW.md",
+      "AGENTS.md",
+      "environment/generated/llm-rules/",
+      "RULES-MANIFEST.yaml"
     ],
     "preserved_contracts": [
-      "A model-controlled surface never receives a PAT (surface_trust.require_trusted)",
-      "SessionStart hooks soft-fail and always exit 0",
-      "CI installs published artifacts via npm ci and remains the authority on green",
-      "package.json and package-lock.json stay byte-identical to main during local linking"
+      "Model-controlled surfaces hold capability names only and never raw secrets; raw export stays denied and no credential is added to any environment file or any node repository",
+      "surface_trust, resolve_secret and the authed_npm PAT policy are unchanged",
+      "The SessionStart hook contract stays fail-open: every failure degrades to a smaller context blob and the script always exits 0",
+      "Every Python hook runs on the locked governance interpreter, never bare system python3",
+      "make pr remains the only sanctioned route to GitHub; raw push, gh pr create and the MCP push tools stay denied at every phase",
+      "L4 local autonomy: no mid-execution push, and remote publication stays gated on the release receipt",
+      "install.sh stays idempotent and every step keeps classifying itself BLOCKED, DEGRADED or READY",
+      "No scanner, test or gate threshold is weakened to obtain a green result",
+      "CI installs published artifacts and remains the sole authority on green; local linking is a validation convenience and never a substitute",
+      "During local linking the caller repository's manifest and lockfile stay byte-identical to main",
+      "Durable wiring lives in committed project files, never in container-local user scope, which is lost when the container is reclaimed",
+      "The memory plane is untouched, and the in-flight branch's memory lifecycle work is split out rather than absorbed"
     ],
     "validation_commands": [
-      "npx tsc -p tsconfig.check.json --noEmit",
-      "npx vitest run",
-      "npm run verify:all",
-      "git status --porcelain",
-      "python3 ops/scripts/reconcile_claude_l9_skills.py --root . --scope user --check"
+      "make pr-check",
+      "python3 -m pytest environment/agents/adapters/claude-code/tests/ -q",
+      "bash ops/scripts/check_governance_wiring.sh",
+      "bash environment/agents/adapters/claude-code/install.sh --check --quiet"
     ]
-  }
+  },
+  "estimate": "M0 is one focused session and gates everything else. M1 and M2 one session each. M3 one session. M4 spans three repositories not attached here and is not estimable from this side. M5 is infrastructure and not estimable until U-01 resolves."
 }

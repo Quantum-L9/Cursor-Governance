@@ -366,11 +366,31 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
   # Isolates skip consumer repo symlinks; machine sessionEnd/Graphiti still run.
   WS_KIND="$(classify_workspace_kind "$WS")"
   if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
-    if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WS"; then
+    # Apply the surface gate the comment above specifies. This branch used to run
+    # the FULL check unconditionally, so a headless adapter on an identity
+    # checkout asserted the Cursor DESKTOP hook plane (~/.cursor/hooks.json and
+    # its sessionEnd/skill-router entries) — artifacts the cloud installer
+    # deliberately never creates, making `make pr` unrunnable off Cursor. The
+    # correct predicate already existed one branch below and already returns
+    # "skip" for any surface != cursor; it was simply evaluated second.
+    # Scope to --workspace rather than skipping wholesale: every
+    # surface-independent check (SSOT freshness, merge drivers, slash-command
+    # drift, symlink health) still runs. Only the --machine desktop assertions
+    # are dropped, and only where policy already says they do not apply.
+    wiring_args=("$WS")
+    if ! is_cursor_host_surface; then
+      wiring_args=(--workspace "$WS")
+    fi
+    if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" "${wiring_args[@]}"; then
       echo "FAIL: governance wiring incomplete — see FAIL lines above"
       exit 1
     fi
-    echo "OK: ssot-family workspace ($WS_KIND) — consumer links not required"
+    if [ "${#wiring_args[@]}" -eq 2 ]; then
+      echo "OK: ssot-family workspace ($WS_KIND) — consumer links not required;" \
+           "Cursor desktop wiring skipped by surface=${L9_GOVERNANCE_SURFACE}"
+    else
+      echo "OK: ssot-family workspace ($WS_KIND) — consumer links not required"
+    fi
   elif should_skip_consumer_symlink_checks "$WS"; then
     if is_l9_isolate_workspace "$WS"; then
       if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" --machine "$WS"; then
