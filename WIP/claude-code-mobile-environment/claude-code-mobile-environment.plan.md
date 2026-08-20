@@ -87,8 +87,18 @@ todos:
     status: pending
     phase: execute
     depends_on: [w1-03-sessionstart-reconcile]
+  - id: w3-07-narrow-pretool-stack-gate
+    content: "Fix the pretool stack-proof gate on two counts. Scope: its documented purpose is program-execution planning, but its filename and body patterns fire on any edit or write that merely mentions a dependency manifest, a container file, an install verb or a credential-shaped word, so it denies ordinary prose and plan documents. Narrow it to campaign seed files. Degraded path: its only two satisfaction routes are a live documentation-service call and a campaign activation receipt, both unreachable when the capability broker is down, which makes it unsatisfiable rather than fail-soft on this surface. Accept the rule-22 official-docs fallback as proof, recorded as a receipt the gate can read"
+    status: pending
+    phase: execute
+    depends_on: [w3-06-context7-degraded-posture]
+  - id: w3-08-unpushed-commit-hook-surface-aware
+    content: "Make the stop-hook unpushed-commit check surface-aware. It asks for a direct push after every local commit, but on this surface the L4 gate denies remote until a release receipt exists and the Makefile publish path is the only sanctioned route, so the instruction is unactionable and fires repeatedly. Have it read the release-gate state and name the sanctioned next step instead of a bare push"
+    status: pending
+    phase: execute
+    depends_on: []
   - id: w4-01-link-local-packages-script
-    content: "Write ops/scripts/link_local_l9_packages.sh in this repository: for each scoped dependency in a caller repo's package.json, locate the sibling source checkout, build when needed, and install it from that local source so a model-controlled session gains validation capability with no PAT. Include the package-name to source-repo map"
+    content: "Write ops/scripts/link_local_l9_packages.sh in this repository: for each scoped dependency declared by a caller repo, locate the sibling source checkout and install it from that local source so a model-controlled session gains validation capability without a PAT. Read the mapping from a declared ops/scripts/l9_package_sources.yaml rather than rediscovering it by find each session. Four invariants are binding, two of them established against the vendor's official documentation rather than assumed. First, pass --no-save explicitly: the package manager saves to dependencies by default, so a folder specifier would otherwise write a local-path entry into the caller's manifest and break the byte-identical guarantee below. Second, build the sibling and provision its own runtime dependencies before linking: a folder outside the project root is only symlinked and its dependencies are NOT installed, so an unbuilt sibling yields a link that fails at import time. Third, write only into the ignored dependency directory and leave the caller's manifest and lockfile byte-identical to main. Fourth, print each resolved local version against the declared range and warn on mismatch, so a drifted local source cannot masquerade as CI truth."
     status: pending
     phase: execute
     depends_on: [w1-05-multi-repo-workspace-contract]
@@ -120,7 +130,7 @@ isProject: false
 > **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.
 > **Template SSOT:** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`
 > **Execute:** `@environment/program-execution` → Program Lock/Controller → `@autonomy` (subordinate).
-> **Suggested filename:** `claude-code-mobile-environment-unified-readiness-master-plan_a4fdf965.plan.md`
+> **Suggested filename:** `claude-code-mobile-environment-unified-readiness-master-plan_9763e657.plan.md`
 
 ## Objective (from PLAN_DOCUMENT)
 

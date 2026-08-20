@@ -114,7 +114,9 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["w0-01-integrate-inflight-workspace-resolution"],
+      "dependencies": [
+        "w0-01-integrate-inflight-workspace-resolution"
+      ],
       "operation": "Replace",
       "leverage_rank": 6,
       "shared_root_cause": "D: two independent parallel fixes for one defect, unmergeable as-is"
@@ -128,7 +130,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["w0-01-integrate-inflight-workspace-resolution"],
+      "dependencies": [
+        "w0-01-integrate-inflight-workspace-resolution"
+      ],
       "operation": "Delete",
       "leverage_rank": 9,
       "shared_root_cause": "D: two independent parallel fixes for one defect, unmergeable as-is"
@@ -141,7 +145,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["w0-03-split-memory-lifecycle-out"],
+      "dependencies": [
+        "w0-03-split-memory-lifecycle-out"
+      ],
       "operation": "Replace",
       "leverage_rank": 10,
       "shared_root_cause": "D: two independent parallel fixes for one defect, unmergeable as-is"
@@ -154,7 +160,9 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": ["w0-01-integrate-inflight-workspace-resolution"],
+      "dependencies": [
+        "w0-01-integrate-inflight-workspace-resolution"
+      ],
       "operation": "Create",
       "leverage_rank": 3,
       "shared_root_cause": "A: wiring performed only at build time, never reconciled at session time"
@@ -168,7 +176,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["w1-01-baseline-regression-guard"],
+      "dependencies": [
+        "w1-01-baseline-regression-guard"
+      ],
       "operation": "Insert",
       "anchor": "install.sh argument parser and the shared bootstrap block",
       "leverage_rank": 4,
@@ -184,7 +194,10 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["w1-02-vendor-only-fast-path", "w0-02-preserve-locked-interpreter"],
+      "dependencies": [
+        "w1-02-vendor-only-fast-path",
+        "w0-02-preserve-locked-interpreter"
+      ],
       "operation": "Insert",
       "anchor": "session_start_claude_governance.sh cloud branch beside the session_deps_cloud.sh call",
       "leverage_rank": 1,
@@ -199,7 +212,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["w1-02-vendor-only-fast-path"],
+      "dependencies": [
+        "w1-02-vendor-only-fast-path"
+      ],
       "operation": "Replace",
       "anchor": "install.sh MODE assignment and the receipt writer",
       "leverage_rank": 7,
@@ -215,7 +230,9 @@
       ],
       "effort": "L",
       "risk": "medium",
-      "dependencies": ["w1-03-sessionstart-reconcile"],
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
       "operation": "Insert",
       "leverage_rank": 5,
       "shared_root_cause": "A: wiring performed only at build time, never reconciled at session time"
@@ -230,7 +247,9 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": ["w1-03-sessionstart-reconcile"],
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
       "operation": "Insert",
       "leverage_rank": 12,
       "shared_root_cause": "B: two skill registries with no reconciliation between them"
@@ -245,7 +264,9 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": ["w1-03-sessionstart-reconcile"],
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
       "operation": "Create",
       "leverage_rank": 11,
       "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
@@ -259,7 +280,9 @@
       ],
       "effort": "M",
       "risk": "low",
-      "dependencies": ["w1-01-baseline-regression-guard"],
+      "dependencies": [
+        "w1-01-baseline-regression-guard"
+      ],
       "operation": "Wrap",
       "leverage_rank": 14,
       "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
@@ -273,7 +296,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["w1-01-baseline-regression-guard"],
+      "dependencies": [
+        "w1-01-baseline-regression-guard"
+      ],
       "operation": "Insert",
       "leverage_rank": 15,
       "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
@@ -289,7 +314,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["w0-04-resolve-validator-conflict"],
+      "dependencies": [
+        "w0-04-resolve-validator-conflict"
+      ],
       "operation": "Replace",
       "leverage_rank": 8,
       "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
@@ -302,7 +329,9 @@
       ],
       "effort": "S",
       "risk": "low",
-      "dependencies": ["w3-03-gh-sentinel-contract"],
+      "dependencies": [
+        "w3-03-gh-sentinel-contract"
+      ],
       "operation": "Replace",
       "leverage_rank": 16,
       "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
@@ -317,7 +346,9 @@
       ],
       "effort": "M",
       "risk": "medium",
-      "dependencies": ["w1-03-sessionstart-reconcile"],
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
       "operation": "Replace",
       "leverage_rank": 17,
       "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
@@ -331,21 +362,56 @@
       ],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["w1-03-sessionstart-reconcile"],
+      "dependencies": [
+        "w1-03-sessionstart-reconcile"
+      ],
       "operation": "Insert",
       "leverage_rank": 18,
       "shared_root_cause": "E: capability broker absent"
     },
     {
+      "id": "w3-07-narrow-pretool-stack-gate",
+      "task": "Fix the pretool stack-proof gate on two counts. Scope: its documented purpose is program-execution planning, but its filename and body patterns fire on any edit or write that merely mentions a dependency manifest, a container file, an install verb or a credential-shaped word, so it denies ordinary prose and plan documents. Narrow it to campaign seed files. Degraded path: its only two satisfaction routes are a live documentation-service call and a campaign activation receipt, both unreachable when the capability broker is down, which makes it unsatisfiable rather than fail-soft on this surface. Accept the rule-22 official-docs fallback as proof, recorded as a receipt the gate can read",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/context7_stack_pretool.py",
+        "environment/agents/adapters/claude-code/tests/test_context7_stack_pretool.py",
+        "rules/22-context7-auto-invoke.mdc"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w3-06-context7-degraded-posture"
+      ],
+      "operation": "Replace",
+      "leverage_rank": 9,
+      "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
+    },
+    {
+      "id": "w3-08-unpushed-commit-hook-surface-aware",
+      "task": "Make the stop-hook unpushed-commit check surface-aware. It asks for a direct push after every local commit, but on this surface the L4 gate denies remote until a release receipt exists and the Makefile publish path is the only sanctioned route, so the instruction is unactionable and fires repeatedly. Have it read the release-gate state and name the sanctioned next step instead of a bare push",
+      "files": [
+        "ops/autonomy/l4_local.py",
+        "environment/agents/adapters/claude-code/README.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Wrap",
+      "leverage_rank": 19,
+      "shared_root_cause": "C: contracts and validators written for the Cursor host, blind to the Claude surface"
+    },
+    {
       "id": "w4-01-link-local-packages-script",
-      "task": "Write ops/scripts/link_local_l9_packages.sh in this repository: for each scoped dependency in a caller repo's package.json, locate the sibling source checkout, build when needed, and install it from that local source so a model-controlled session gains validation capability with no PAT. Include the package-name to source-repo map",
+      "task": "Write ops/scripts/link_local_l9_packages.sh in this repository: for each scoped dependency declared by a caller repo, locate the sibling source checkout and install it from that local source so a model-controlled session gains validation capability without a PAT. Read the mapping from a declared ops/scripts/l9_package_sources.yaml rather than rediscovering it by find each session. Four invariants are binding, two of them established against the vendor's official documentation rather than assumed. First, pass --no-save explicitly: the package manager saves to dependencies by default, so a folder specifier would otherwise write a local-path entry into the caller's manifest and break the byte-identical guarantee below. Second, build the sibling and provision its own runtime dependencies before linking: a folder outside the project root is only symlinked and its dependencies are NOT installed, so an unbuilt sibling yields a link that fails at import time. Third, write only into the ignored dependency directory and leave the caller's manifest and lockfile byte-identical to main. Fourth, print each resolved local version against the declared range and warn on mismatch, so a drifted local source cannot masquerade as CI truth.",
       "files": [
         "ops/scripts/link_local_l9_packages.sh",
         "ops/scripts/l9_package_sources.yaml"
       ],
       "effort": "L",
       "risk": "medium",
-      "dependencies": ["w1-05-multi-repo-workspace-contract"],
+      "dependencies": [
+        "w1-05-multi-repo-workspace-contract"
+      ],
       "operation": "Create",
       "leverage_rank": 13,
       "shared_root_cause": "F: model-controlled node sessions start with zero validation capability"
@@ -356,7 +422,9 @@
       "files": [],
       "effort": "L",
       "risk": "medium",
-      "dependencies": ["w4-01-link-local-packages-script"],
+      "dependencies": [
+        "w4-01-link-local-packages-script"
+      ],
       "blocker": "Cross-repository work owned by SEO-Bot, Website-Bot and LLM-Router. Those repositories are not attached to this session, so the change is coordinated here and executed there; the sibling plan tracks it as its T3, T4, T5 and T10.",
       "leverage_rank": 19,
       "shared_root_cause": "F: model-controlled node sessions start with zero validation capability"
@@ -367,7 +435,9 @@
       "files": [],
       "effort": "L",
       "risk": "medium",
-      "dependencies": ["w4-02-node-repo-session-contract"],
+      "dependencies": [
+        "w4-02-node-repo-session-contract"
+      ],
       "blocker": "Cross-repository work in the node repos, tracked as sibling T6, T7 and T8. The biome decision is gated on sibling unknown U5.",
       "leverage_rank": 20,
       "shared_root_cause": "F: model-controlled node sessions start with zero validation capability"
@@ -378,7 +448,9 @@
       "files": [],
       "effort": "S",
       "risk": "medium",
-      "dependencies": ["w3-03-gh-sentinel-contract"],
+      "dependencies": [
+        "w3-03-gh-sentinel-contract"
+      ],
       "blocker": "Operator-only action. The account Environment variables field is neither readable nor writable from inside the sandbox; the value is specified at environment/agents/adapters/claude-code/web/environment.env.example line 164.",
       "leverage_rank": 21,
       "shared_root_cause": "E: capability broker absent"
@@ -392,7 +464,9 @@
       ],
       "effort": "L",
       "risk": "high",
-      "dependencies": ["w5-01-broker-url-operator"],
+      "dependencies": [
+        "w5-01-broker-url-operator"
+      ],
       "blocker": "Infrastructure outside this repository and outside the sandbox. The hostname has no DNS record, so the target cluster and the workload-identity binding are unresolved; see unknown U-01.",
       "leverage_rank": 22,
       "shared_root_cause": "E: capability broker absent"
@@ -486,32 +560,55 @@
     {
       "surface": "environment/agents/adapters/claude-code/README.md",
       "action": "update",
-      "todo_ids": ["w0-01-integrate-inflight-workspace-resolution", "w1-02-vendor-only-fast-path", "w1-03-sessionstart-reconcile", "w2-01-skill-registry-ssot-decision"]
+      "todo_ids": [
+        "w0-01-integrate-inflight-workspace-resolution",
+        "w1-02-vendor-only-fast-path",
+        "w1-03-sessionstart-reconcile",
+        "w2-01-skill-registry-ssot-decision"
+      ]
     },
     {
       "surface": "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md",
       "action": "update",
-      "todo_ids": ["w1-03-sessionstart-reconcile", "w1-05-multi-repo-workspace-contract"]
+      "todo_ids": [
+        "w1-03-sessionstart-reconcile",
+        "w1-05-multi-repo-workspace-contract"
+      ]
     },
     {
       "surface": "environment/agents/adapters/claude-code/web/README.md",
       "action": "update",
-      "todo_ids": ["w3-03-gh-sentinel-contract", "w3-04-durable-env-reaches-shells", "w5-01-broker-url-operator"]
+      "todo_ids": [
+        "w3-03-gh-sentinel-contract",
+        "w3-04-durable-env-reaches-shells",
+        "w5-01-broker-url-operator"
+      ]
     },
     {
       "surface": "environment/agents/adapters/claude-code/web/environment.env.example",
       "action": "update",
-      "todo_ids": ["w3-03-gh-sentinel-contract", "w5-01-broker-url-operator"]
+      "todo_ids": [
+        "w3-03-gh-sentinel-contract",
+        "w5-01-broker-url-operator"
+      ]
     },
     {
       "surface": "WIP/claude-code-mobile-environment/claude-code-mobile-environment.plan.md",
       "action": "update",
-      "todo_ids": ["w4-01-link-local-packages-script", "w4-02-node-repo-session-contract", "w4-03-node-gate-hygiene"]
+      "todo_ids": [
+        "w4-01-link-local-packages-script",
+        "w4-02-node-repo-session-contract",
+        "w4-03-node-gate-hygiene"
+      ]
     },
     {
       "surface": "CHANGELOG.md",
       "action": "update",
-      "todo_ids": ["w0-01-integrate-inflight-workspace-resolution", "w1-03-sessionstart-reconcile", "w2-02-claude-slash-commands"]
+      "todo_ids": [
+        "w0-01-integrate-inflight-workspace-resolution",
+        "w1-03-sessionstart-reconcile",
+        "w2-02-claude-slash-commands"
+      ]
     },
     {
       "surface": "AGENTS.md",
@@ -567,9 +664,11 @@
       "w4-01-link-local-packages-script",
       "w3-01-surface-aware-wiring-check",
       "w3-02-shellcheck-toolchain",
+      "w3-07-narrow-pretool-stack-gate",
       "w3-04-durable-env-reaches-shells",
       "w3-05-rest-merge-path",
       "w3-06-context7-degraded-posture",
+      "w3-08-unpushed-commit-hook-surface-aware",
       "w4-02-node-repo-session-contract",
       "w4-03-node-gate-hygiene",
       "w5-01-broker-url-operator",
@@ -744,7 +843,13 @@
   ],
   "convergence": {
     "status": "partial",
-    "remaining_unknown_ids": ["U-01", "U-02", "U-03", "U-04", "U-05"],
+    "remaining_unknown_ids": [
+      "U-01",
+      "U-02",
+      "U-03",
+      "U-04",
+      "U-05"
+    ],
     "next_skill": "l9-plan-audit",
     "stop_reason": "Three concurrent efforts are consolidated into one master plan with six workstreams and one dependency order. Milestones M0 through M3 are executable against verified ground truth in this repository. M4 depends on three repositories not attached to this session and carries explicit blockers. M5 stays blocked on U-01. The most urgent open item is U-02: whether the in-flight branch is still actively worked decides whether W0 is a replay this plan performs or a rebase handed to its author, and getting that wrong either duplicates the work a third time or destroys another agent's tree."
   },
@@ -770,6 +875,7 @@
       "ops/autonomy/merge_gate.py",
       "ops/autonomy/surface_profile.yaml",
       "rules/22-context7-auto-invoke.mdc",
+      "environment/agents/adapters/claude-code/hooks/context7_stack_pretool.py",
       "skills/AUTONOMY_MANIFEST.yaml",
       "skills/l9-pr-remediation/SKILL.md",
       ".claude/settings.json",
