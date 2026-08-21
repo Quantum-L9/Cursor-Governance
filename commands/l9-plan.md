@@ -27,7 +27,7 @@ Create a structured plan before implementation. Delegates template authority to 
 
 Planning-only — do not edit product files, commit, or push from `/l9-plan`.
 
-`/plan` is **retired** — use `/l9-plan` (this file) or invoke skill `l9-plan`.
+`/plan` is **retired**. Ordinary Cursor Plan / Build-button plans use **`/l9-plan-simple`**. This command stays PE/campaign only.
 
 ---
 

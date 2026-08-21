@@ -688,3 +688,16 @@ the rewrite and re-run. Do not auto-stage. Then `PR_REMEDIATE=0 make pr`.
 **not** run a second ruff pass. There is no git commit hook — do not run
 `pre-commit install`. Local autofix is `precommit-repo`. `.github/workflows/lint-autofix.yml`
 is a post-merge janitor on `main` only.
+
+<!-- L9_PLAN_SIMPLE_V1 -->
+## Two plan skills (2026-08-21)
+
+Ordinary Cursor Plan mode / Build uses **`l9-plan-simple`** (`/l9-plan-simple`).
+It fills the same first-class template
+(`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`)
+and executes with the **Build** button on the current checkout. It does **not**
+run `make campaign`, admit a Program Lock, or write `Lock: origin/main = <sha>`.
+
+**`l9-plan`** (`/l9-plan`) stays the PE/campaign planner: same template **and**
+the Program Execution execute path. Use it only when the user asks for
+`/l9-plan`, `make campaign`, Program Lock, or PE+autonomy.
