@@ -142,9 +142,6 @@ class NetworkPostureTests(unittest.TestCase):
         self.assertIn("sonarcloud.io", body)
 
     def test_probe_asserts_the_chosen_posture(self) -> None:
-        result = probe_network_posture.run.__wrapped__ if hasattr(
-            probe_network_posture.run, "__wrapped__"
-        ) else None
         # Inject reachability rather than touching the network.
         original = probe_network_posture.reachable
         try:
@@ -163,7 +160,6 @@ class NetworkPostureTests(unittest.TestCase):
             self.assertEqual(tight["violations"], [])
         finally:
             probe_network_posture.reachable = original
-        del result
 
 
 class PlatformBlockTests(unittest.TestCase):

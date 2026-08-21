@@ -234,62 +234,77 @@ LINES+=("shared memory: Cursor Graphiti front door only (ops/graphiti inject / w
 # operator on mobile — sees what is actually available instead of discovering
 # bootstrap breakage when a later memory or publish operation fails.
 emit_bootstrap_status() {
-  local receipt="$HOME/.l9/claude/bootstrap-state.json"
-  if [ ! -f "$receipt" ]; then
-    LINES+=("L9 Claude environment: bootstrap receipt absent — run 'make claude-install' once")
+  local py="$1"
+  local reader="$GOV/ops/scripts/claude_bootstrap_receipt.py"
+  local refresh_reader="$GOV/ops/scripts/governance_refresh_receipt.py"
+
+  # The projection used to parse the receipt inline, with its own idea of what
+  # the fields mean. That second parser had no notion of an ABSENT receipt or an
+  # EXPIRED one, so it reported silence as nothing-to-say and a stale receipt as
+  # current — the same class of defect the receipt rewrite removed one layer
+  # down (B-04, B-05). One reader, one set of rules.
+  if [ -z "$py" ] || ! command -v "$py" >/dev/null 2>&1 || [ ! -f "$reader" ]; then
+    LINES+=("L9 Claude environment: receipt reader unavailable — state UNKNOWN")
     return 0
   fi
-  local py="$1"
-  if [ -n "$py" ] && command -v "$py" >/dev/null 2>&1; then
-    local block
-    block=$(CLAUDE_CODE_REMOTE="${CLAUDE_CODE_REMOTE:-false}" "$py" -c 'import json,sys,os
-try:
-    d = json.load(open(sys.argv[1], encoding="utf-8"))
-except (OSError, ValueError):
-    sys.exit(1)
-remote = os.environ.get("CLAUDE_CODE_REMOTE") == "true"
-print("surface: %s" % d.get("surface", "?"))
-print("execution: %s" % ("anthropic-cloud" if remote else "local"))
-# The receipt is written at INSTALL time and never refreshed, so its revision and
-# workspace can both be stale. Label the revision and compare it against live git;
-# compare the wired workspace against the project dir of this session. Without these
-# two lines a receipt written for another directory reports READY for artifacts that
-# Claude Code never loads.
-live = os.environ.get("LIVE_GOV_REV", "")
-rec = d.get("governance_revision", "?") or "?"
-stale = bool(live) and not rec.startswith(live)
-print("governance (at install): %s%s"
-      % (rec[:8], ("  STALE — live is %s" % live) if stale else ""))
-ws = d.get("workspace", "?")
-proj = os.environ.get("PROJECT_DIR", "") or ws
-if ws != proj:
-    print("WARN: bootstrap wired %s, but this project is %s — .claude mirrors may be missing"
-          % (ws, proj))
-print("bootstrap: %s" % d.get("shared_bootstrap", "?"))
-print("settings: %s" % d.get("settings", "?"))
-print("capability broker: %s" % d.get("capabilities", "?"))
-# "memory" here is the BROKERED MCP plane only. The Graphiti CLI front door is
-# reported separately by memory_prefetch.py and is frequently healthy while this
-# reads DEGRADED. Qualify the label so the two do not contradict each other.
-print("memory (brokered MCP): %s%s" % (d.get("memory", "?"),
-    " — no broker-authenticated cloud identity" if d.get("memory") == "DEGRADED" else ""))
-print("skills: %s" % d.get("skills", "?"))
-print("rules: %s" % d.get("rules", "?"))
-' "$receipt" 2>/dev/null || true)
-    if [ -n "$block" ]; then
-      LINES+=("--- L9 Claude environment ---")
-      while IFS= read -r line || [ -n "$line" ]; do
-        LINES+=("$line")
-      done <<< "$block"
-      return 0
-    fi
+
+  local block
+  block="$("$py" "$reader" --read 2>/dev/null || true)"
+  if [ -n "$block" ]; then
+    LINES+=("--- L9 Claude environment ---")
+    while IFS= read -r line || [ -n "$line" ]; do
+      LINES+=("$line")
+    done <<< "$block"
+  else
+    LINES+=("L9 Claude environment: bootstrap receipt unreadable — run 'make claude-install'")
   fi
-  LINES+=("L9 Claude environment: receipt unreadable — see $receipt")
+
+  if [ -f "$refresh_reader" ]; then
+    local refresh
+    refresh="$("$py" "$refresh_reader" --read 2>/dev/null || true)"
+    [ -n "$refresh" ] && LINES+=("$refresh")
+  fi
+
+  # A receipt written for a different directory reports READY for artifacts this
+  # session never loads, so compare the wired workspace against this project.
+  local wired
+  wired="$("$py" -c 'import json,sys
+try:
+    print(json.load(open(sys.argv[1], encoding="utf-8")).get("workspace",""))
+except Exception:
+    print("")' "$HOME/.l9/claude/bootstrap-state.json" 2>/dev/null || true)"
+  if [ -n "$wired" ] && [ "$wired" != "$WORKSPACE" ]; then
+    LINES+=("WARN: bootstrap wired $wired, but this project is $WORKSPACE — .claude mirrors may be missing")
+  fi
 }
 
-# PY was resolved above for the autonomy profile block; reuse it. LIVE_GOV_REV and
-# PROJECT_DIR let the projection flag a stale receipt / a wrong wired workspace.
-LIVE_GOV_REV="${sha:-}" PROJECT_DIR="$WORKSPACE" emit_bootstrap_status "$PY"
+# --- Account-field drift (WS-4.1) -------------------------------------------
+# The Setup script and Environment variables fields are copy-pasted and drift
+# from main invisibly — there is no way to read a field back from inside the
+# sandbox. The stub stamps its revision, so the comparison is possible; doing it
+# HERE is what makes it automatic rather than something an operator must
+# remember to run (audit B-06, B-07).
+emit_account_drift() {
+  local py="$1"
+  local verifier="$GOV/environment/agents/adapters/claude-code/verify_account_env.py"
+  [ -f "$verifier" ] || return 0
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
+
+  local out
+  out="$("$py" "$verifier" 2>/dev/null || true)"
+  # Report only when something is wrong; a matching environment stays quiet.
+  if printf '%s' "$out" | grep -q 'DRIFT:'; then
+    LINES+=("--- account field drift ---")
+    while IFS= read -r line || [ -n "$line" ]; do
+      case "$line" in
+        *DRIFT:*|*"    "*|*Repair:*) LINES+=("$line") ;;
+      esac
+    done <<< "$out"
+  fi
+}
+
+emit_bootstrap_status "$PY"
+emit_account_drift "$PY"
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"

@@ -24,7 +24,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 RECONCILER = REPO / "ops" / "scripts" / "reconcile_claude_settings.py"
-L9_ENV_LIB = REPO / "ops" / "scripts" / "lib" / "l9_env.sh"
+#: The authoritative resolver — one owner for "where is governance".
+L9_ENV_LIB = REPO / "ops" / "scripts" / "resolve_governance_paths.sh"
 
 MANAGED = ("hooks", "permissions", "skillOverrides", "env", "workflowSizeGuideline")
 

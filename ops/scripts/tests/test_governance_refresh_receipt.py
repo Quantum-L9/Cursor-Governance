@@ -169,6 +169,34 @@ class HookWriterTests(unittest.TestCase):
             # The hook still emits exactly one JSON document on stdout (F-08).
             json.loads(result.stdout)
 
+    def test_projection_reports_an_absent_receipt_as_never_ran(self) -> None:
+        """The SessionStart projection must use the receipt READER, not a second
+        inline parser.
+
+        The old projection had no notion of an absent or expired receipt, so it
+        reported silence as nothing-to-say and a stale receipt as current — the
+        same defect as B-04/B-05, one layer up. This drives the real hook against
+        the real repository as its governance clone, with a HOME that carries no
+        receipts at all.
+        """
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            gov = home / ".cursor-governance"
+            gov.symlink_to(REPO)
+            env = {
+                "HOME": str(home),
+                "PATH": "/usr/bin:/bin:/usr/local/bin",
+                "CLAUDE_CODE_REMOTE": "false",
+                "CLAUDE_PROJECT_DIR": str(REPO),
+            }
+            result = subprocess.run(
+                ["bash", str(HOOK)], capture_output=True, text=True, env=env, check=False
+            )
+            self.assertEqual(result.returncode, 0, "SessionStart must never block")
+            context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+            self.assertIn("never_ran", context, "an absent receipt must be named, not omitted")
+            self.assertIn("governance refresh", context)
+
 
 if __name__ == "__main__":
     unittest.main()
