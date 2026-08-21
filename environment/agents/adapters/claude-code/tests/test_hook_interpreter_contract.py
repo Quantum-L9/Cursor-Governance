@@ -71,21 +71,50 @@ class HookInterpreterBindingTests(unittest.TestCase):
         ]
         self.assertEqual(offenders, [], f"hooks still using PATH python3: {offenders}")
 
-    def test_hook_commands_share_one_shape(self) -> None:
-        """Generated from one template constant, so drift is a defect."""
+    def test_hook_commands_share_two_shapes(self) -> None:
+        """Exactly two, and the split is meaningful: gates block when they cannot
+        evaluate, observers do not (INV-1). Any third shape is drift."""
         shapes = {
-            re.sub(r"[A-Za-z0-9_]+\.py", "HOOK", command) for _event, command in self.commands
+            re.sub(r"[A-Za-z0-9_]+\.(py|sh)", "HOOK", command) for _event, command in self.commands
         }
-        self.assertEqual(len(shapes), 1, f"per-hook drift: {len(shapes)} distinct shapes")
+        self.assertEqual(len(shapes), 2, f"per-hook drift: {len(shapes)} distinct shapes")
+        gate = [s for s in shapes if "--class gate" in s]
+        observer = [s for s in shapes if "--class observer" in s]
+        self.assertEqual(len(gate), 1)
+        self.assertEqual(len(observer), 1)
+        self.assertIn("exit 2", gate[0])
+        self.assertIn("|| exit 0", observer[0])
 
-    def test_commands_are_self_contained(self) -> None:
-        """settings.json is copied into consumer repos, so a command must not
-        depend on a helper file the governance clone may not carry yet: that
-        failure mode is silent, which is the defect F-13 removes."""
+    def test_commands_depend_only_on_the_governance_clone(self) -> None:
+        """F-13's requirement, restated for the launcher.
+
+        The original form inlined `.venv/bin/python` in all ten commands so no
+        command depended on a helper file the clone might not carry — a failure
+        F-13 called silent. INV-1 then required per-CLASS behaviour (gates block,
+        observers log), and ten hand-maintained copies of that distinction is how
+        all ten guards ended up uniformly wrong in the first place.
+
+        So the binding moved into one reviewed launcher, and F-13's requirement
+        is met differently: the launcher lives in the SAME clone as the hooks it
+        runs — an incomplete clone breaks both equally — and its absence is no
+        longer silent, which is the property F-13 actually cared about.
+        """
         for event, command in self.commands:
             with self.subTest(event=event):
                 self.assertNotIn("run_governance_hook", command)
-                self.assertIn(".venv/bin/python", command)
+                self.assertIn("$HOME/.cursor-governance", command)
+                self.assertIn("l9_hook_exec.sh", command)
+                # Absence is handled explicitly, never by falling through.
+                self.assertTrue(
+                    "exit 2" in command or "|| exit 0" in command,
+                    "a missing launcher must be handled, not ignored",
+                )
+
+    def test_the_launcher_binds_the_locked_interpreter(self) -> None:
+        """The half of F-13 the launcher now owns."""
+        launcher = (HOOKS / "l9_hook_exec.sh").read_text(encoding="utf-8")
+        self.assertIn('PY="$GOV_DIR/.venv/bin/python3"', launcher)
+        self.assertNotRegex(launcher, r'exec\s+python3?\s')
 
     # --- the decisive acceptance test ------------------------------------
 
@@ -96,6 +125,11 @@ class HookInterpreterBindingTests(unittest.TestCase):
         hooks.mkdir(parents=True)
         probe = hooks / "_interpreter_probe.py"
         probe.write_text("import sys\nprint(sys.executable)\n", encoding="utf-8")
+        # The real launcher, and the marker it validates the tree by.
+        (gov / "CANONICAL_LAW.md").write_text("synthetic\n", encoding="utf-8")
+        (hooks / "l9_hook_exec.sh").write_text(
+            (HOOKS / "l9_hook_exec.sh").read_text(encoding="utf-8"), encoding="utf-8"
+        )
         marker = tmp / "locked" / "bin"
         if with_venv:
             (gov / ".venv" / "bin").mkdir(parents=True)
@@ -112,7 +146,17 @@ class HookInterpreterBindingTests(unittest.TestCase):
         return shlex.split(command)
 
     def _probe_command(self, command: str) -> str:
+        """Point the command at the probe hook instead of its real one.
+
+        The launcher takes the hook as a trailing argument rather than a path,
+        so the substitution targets that argument.
+        """
         command = re.sub(r"hooks/[A-Za-z0-9_]+\.py", "hooks/_interpreter_probe.py", command)
+        command = re.sub(
+            r"(--class (?:gate|observer) )[A-Za-z0-9_]+\.(py|sh)",
+            r"\1_interpreter_probe.py",
+            command,
+        )
         return re.sub(
             r"[A-Za-z0-9_]+\.py did NOT run", "_interpreter_probe.py did NOT run", command
         )
@@ -161,7 +205,9 @@ class HookInterpreterBindingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             self._synthetic_home(home, with_venv=False)
-            event, command = self.commands[0]
+            event, command = next(
+                (e, c) for e, c in self.commands if "--class observer" in c
+            )
             proc = subprocess.run(
                 self._argv(self._probe_command(command)),
                 capture_output=True,
@@ -173,15 +219,35 @@ class HookInterpreterBindingTests(unittest.TestCase):
         # No interpreter ran at all - nothing on stdout.
         self.assertEqual(proc.stdout.strip(), "", f"{event}: something executed the hook anyway")
         # The failure is observable, not silent.
-        self.assertIn("locked governance interpreter missing", proc.stderr)
+        self.assertIn("locked interpreter missing", proc.stderr)
         self.assertIn("did NOT run", proc.stderr)
-        # Existing hook exit policy is preserved: never block the session.
+        # Observers preserve the original policy: never block the session.
         self.assertEqual(proc.returncode, 0)
+
+    def test_a_gate_blocks_when_the_locked_interpreter_is_missing(self) -> None:
+        """INV-1. The old inline form exited 0 here for gates too, which is how
+        a memory gate, a merge gate and a publish-path gate all failed open."""
+        gates = [c for _e, c in self.commands if "--class gate" in c]
+        self.assertEqual(len(gates), 3, "three gates must be registered")
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            self._synthetic_home(home, with_venv=False)
+            for command in gates:
+                with self.subTest(gate=command[-30:]):
+                    proc = subprocess.run(
+                        self._argv(self._probe_command(command)),
+                        capture_output=True, text=True, timeout=120,
+                        env={**os.environ, "HOME": str(home)}, check=False,
+                    )
+                    self.assertEqual(proc.returncode, 2, "a gate must BLOCK, not pass")
+                    self.assertIn("BLOCKING", proc.stderr)
 
     def test_absent_governance_clone_stays_quiet(self) -> None:
         """A machine with no governance at all keeps the original contract."""
         with tempfile.TemporaryDirectory() as tmp:
-            _event, command = self.commands[0]
+            _event, command = next(
+                (e, c) for e, c in self.commands if "--class observer" in c
+            )
             proc = subprocess.run(
                 self._argv(command),
                 capture_output=True,

@@ -49,11 +49,31 @@ from capability_registry import CapabilityRegistry, load_registry  # noqa: E402
 from surface_trust import classify  # noqa: E402
 
 #: Capability status vocabulary. Shared with the shell bootstrap so a surface
-#: reports the same three words everywhere (contract R5).
+#: reports the same words everywhere (contract R5).
+#:
+#: BLOCKED_BY_PLATFORM is deliberately distinct from DEGRADED (INV-4). DEGRADED
+#: says "this deployment is missing something you can supply"; BLOCKED_BY_PLATFORM
+#: says "this runtime cannot supply it at all, and no environment field will
+#: change that". Collapsing the two sent operators to the account environment
+#: field to fix something the field cannot fix (audit B-10).
 ENABLED = "ENABLED"
 DEGRADED = "DEGRADED"
 UNAVAILABLE = "UNAVAILABLE"
-BLOCKED = "BLOCKED"
+BLOCKED_BY_PLATFORM = "BLOCKED_BY_PLATFORM"
+#: Retained so existing string comparisons keep working; new code uses the
+#: explicit name above.
+BLOCKED = BLOCKED_BY_PLATFORM
+
+#: Process exit codes for --check. A caller must be able to tell "fix your
+#: config" from "this surface can never do this" without parsing prose.
+EXIT_OK = 0
+EXIT_DEGRADED = 3
+EXIT_BLOCKED_BY_PLATFORM = 4
+
+#: Where an operator goes when a capability reports BLOCKED_BY_PLATFORM. This is
+#: a repository path rather than a bare issue number so the reference cannot rot
+#: into a dangling link; the document names the live tracking issue.
+PLATFORM_BLOCK_TRACKING = "docs/DEGRADED_MODE_CONTRACT.md#hosted-surface-identity"
 
 BROKER_URL_ENV = "L9_CAPABILITY_BROKER_URL"
 BROKER_TIMEOUT_SECONDS = 30
@@ -73,6 +93,12 @@ class SessionIdentity:
     method: str
     token: str | None
     detail: str
+    #: Machine-readable classification for the unavailable case. Empty when an
+    #: identity was obtained. These three fields exist so an operator is told
+    #: what kind of problem this is without reading prose (WS-5.1).
+    reason: str = ""
+    remediation: str = ""
+    tracking: str = ""
 
     @property
     def available(self) -> bool:
@@ -114,11 +140,30 @@ def session_identity(env: dict[str, str] | None = None) -> SessionIdentity:
         if token:
             return SessionIdentity("workload-identity-jwt", token, var)
 
+    # 3. Nothing issued one. Classify WHY, because the two cases need different
+    #    responses. A hosted surface (Anthropic cloud_default) issues no session
+    #    identity at all, so this is terminal and non-retryable: no broker URL,
+    #    no network change and no environment field will produce one. A
+    #    self-hosted or unknown runtime may simply be misconfigured.
+    hosted = (source.get("CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE") or "").strip()
+    if hosted == "cloud_default":
+        return SessionIdentity(
+            "none",
+            None,
+            "hosted surface issues no broker-verifiable session identity; capabilities are "
+            "BLOCKED_BY_PLATFORM and cannot be enabled from this repository",
+            reason="hosted_surface_issues_no_session_identity",
+            remediation="none_available_in_repo",
+            tracking=PLATFORM_BLOCK_TRACKING,
+        )
     return SessionIdentity(
         "none",
         None,
         "no platform-issued session identity; this runtime cannot authenticate to a broker "
         "without placing a reusable secret in the sandbox (BLOCKED_BY_PLATFORM)",
+        reason="no_session_identity_available",
+        remediation="run on a self-hosted ccpool_* environment, or project a workload identity",
+        tracking=PLATFORM_BLOCK_TRACKING,
     )
 
 
@@ -164,15 +209,18 @@ class CapabilityClient:
             return CapabilityStatus(
                 capability, UNAVAILABLE, f"not offered to trust class {self.trust.trust_class}"
             )
+        # Identity is evaluated BEFORE the broker URL, and the order is load-
+        # bearing. A runtime that can never mint a broker-verifiable identity is
+        # BLOCKED_BY_PLATFORM whether or not a URL happens to be configured.
+        # Checking the URL first reported that runtime as "no broker configured"
+        # — which reads as a missing environment field and sent operators to fix
+        # something the field cannot fix (audit B-10, WS-5.1).
+        if not self.identity.available:
+            return CapabilityStatus(capability, BLOCKED_BY_PLATFORM, self.identity.detail)
         if not self.url:
             return CapabilityStatus(
                 capability, DEGRADED, f"no broker configured ({BROKER_URL_ENV} unset)"
             )
-        if not self.identity.available:
-            # The platform-blocked case. It is DEGRADED rather than ENABLED
-            # precisely so an outage can never be mistaken for a passing check
-            # (contract §18).
-            return CapabilityStatus(capability, BLOCKED, self.identity.detail)
         ok, detail = self._probe()
         if not ok:
             return CapabilityStatus(capability, DEGRADED, detail)
@@ -256,6 +304,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--require", help="comma-separated capability ids that must be ENABLED")
     parser.add_argument("--param", action="append", default=[], help="key=value (repeatable)")
     parser.add_argument("--json", action="store_true", help="machine-readable output")
+    parser.add_argument(
+        "--allow-degraded",
+        action="store_true",
+        help=(
+            "exit 0 despite DEGRADED capabilities, printing the tolerated set. "
+            "Does NOT tolerate BLOCKED_BY_PLATFORM, which stays exit 4 (INV-4)."
+        ),
+    )
     args = parser.parse_args(argv)
 
     client = CapabilityClient()
@@ -273,11 +329,39 @@ def main(argv: list[str] | None = None) -> int:
             )
             for result in results:
                 print(f"  {result.line()}")
-        if not args.require:
-            return 0
-        # Required capabilities must be ENABLED. DEGRADED and BLOCKED both fail
-        # the requirement — an outage is never reported as success.
-        return 0 if all(r.status == ENABLED for r in results) else 1
+
+        blocked = [r for r in results if r.status == BLOCKED_BY_PLATFORM]
+        degraded = [r for r in results if r.status in (DEGRADED, UNAVAILABLE)]
+
+        # The platform-blocked block is printed whenever it applies, in a fixed
+        # machine-greppable shape, so the operator is not left inferring the
+        # class of failure from prose (WS-5.1).
+        if blocked and not args.json:
+            print(f"state={BLOCKED_BY_PLATFORM}")
+            print(f"reason={client.identity.reason or 'unknown'}")
+            print(f"remediation={client.identity.remediation or 'unknown'}")
+            print(f"tracking={client.identity.tracking or 'unknown'}")
+
+        if args.require:
+            # Backward-compatible contract for callers that name what they need:
+            # every required capability must be ENABLED, anything else exits 1.
+            return EXIT_OK if all(r.status == ENABLED for r in results) else 1
+
+        # Survey mode. This used to `return 0` unconditionally, so a caller that
+        # omitted --require read a total capability outage as success (B-19).
+        if blocked:
+            # --allow-degraded deliberately does not rescue this: a state nothing
+            # in this repository can repair must never exit 0 (INV-4).
+            return EXIT_BLOCKED_BY_PLATFORM
+        if degraded:
+            if args.allow_degraded:
+                print(
+                    "tolerated (--allow-degraded): "
+                    + ", ".join(r.capability for r in degraded)
+                )
+                return EXIT_OK
+            return EXIT_DEGRADED
+        return EXIT_OK
 
     params: dict[str, str] = {}
     for item in args.param:
