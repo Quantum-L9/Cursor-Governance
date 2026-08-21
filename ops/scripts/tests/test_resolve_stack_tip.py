@@ -97,9 +97,20 @@ class ResolveStackTipRepoTests(unittest.TestCase):
             capture_output=True,
             text=True,
         ).stdout.strip()
-        subprocess.run(["git", "branch", "origin/main", sha], cwd=repo, check=True, capture_output=True)
         subprocess.run(
-            ["git", "remote", "add", "origin", "https://github.com/Quantum-L9/Cursor-Governance.git"],
+            ["git", "branch", "origin/main", sha],
+            cwd=repo,
+            check=True,
+            capture_output=True,
+        )
+        subprocess.run(
+            [
+                "git",
+                "remote",
+                "add",
+                "origin",
+                "https://github.com/Quantum-L9/Cursor-Governance.git",
+            ],
             cwd=repo,
             check=True,
             capture_output=True,
