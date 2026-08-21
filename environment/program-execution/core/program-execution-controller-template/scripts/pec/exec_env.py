@@ -143,26 +143,39 @@ def _existing_venv_python(cwd: Path) -> Path | None:
 
 
 def _consumer_project_python(cwd: Path) -> Path | None:
-    """Prefer the target repo project environment over the PE controller venv."""
-    if not (cwd / "pyproject.toml").is_file() and not (cwd / "uv.lock").is_file():
+    """Prefer the target repo project environment over the PE controller venv.
+
+    Consumer repos here install with ``pip install -e .[dev]`` (see EIE
+    ``make setup``). ``uv sync`` fails when ``requires-python`` is wider than a
+    git dependency allows. Provision ``uv venv --python 3.12`` then
+    ``uv pip install -e .[dev]``.
+    """
+    if not (cwd / "pyproject.toml").is_file():
         return None
     uv = shutil.which("uv")
-    if uv is not None:
-        argv = [uv, "sync"]
-        if (cwd / "uv.lock").is_file():
-            argv.append("--frozen")
-        completed = subprocess.run(
-            argv,
+    if uv is None:
+        return _existing_venv_python(cwd)
+    if _existing_venv_python(cwd) is None:
+        created = subprocess.run(
+            [uv, "venv", "--python", "3.12"],
             cwd=str(cwd),
             text=True,
             capture_output=True,
             check=False,
-            timeout=600,
+            timeout=120,
         )
-        if completed.returncode == 0:
-            found = _existing_venv_python(cwd)
-            if found is not None:
-                return found
+        if created.returncode != 0:
+            return None
+    installed = subprocess.run(
+        [uv, "pip", "install", "-e", ".[dev]"],
+        cwd=str(cwd),
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=600,
+    )
+    if installed.returncode != 0:
+        return _existing_venv_python(cwd)
     return _existing_venv_python(cwd)
 
 
