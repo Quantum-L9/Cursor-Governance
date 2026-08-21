@@ -234,9 +234,11 @@ claude-settings-check:
 
 ## Canonical Claude environment doctor: full adapter install check (read-only,
 ## reports drift per the health accumulator) + the structural/contract validator.
+## Exit 5 means the files are correct but the runtime never wired — the state
+## the mobile bootstrap audit found while the validator still printed PASS.
 claude-env:
 	$(MAKE) claude-install-check
-	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py
+	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py --runtime
 
 ## Fail-closed first-class autonomy family registry (environment/contracts/autonomy).
 autonomy-contracts-validate:

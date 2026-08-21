@@ -15,6 +15,7 @@ Exit 0 on PASS, 1 on FAIL. Stdlib only, so it runs on a fresh sandbox.
 
 from __future__ import annotations
 
+import argparse
 import json
 import re
 import subprocess
@@ -740,7 +741,85 @@ def check_maximum_velocity_surface(failures: list[str]) -> None:
         print("  OK: Claude settings carry the maximum-velocity surface profile")
 
 
+#: Exit codes. 5 exists so "the files are right but the runtime never wired"
+#: is distinguishable from "a file is wrong" — the audited environment was the
+#: former, and a validator that returns 0 for it is how that went unnoticed.
+EXIT_OK = 0
+EXIT_STRUCTURAL_FAIL = 1
+EXIT_RUNTIME_NOT_READY = 5
+
+READY = "READY"
+DEGRADED = "DEGRADED"
+NOT_LOADED = "NOT_LOADED"
+
+
+def _load_receipt_readers() -> tuple[object, object] | None:
+    """Import the two receipt readers from the governance root.
+
+    Kept optional and lazy: the structural half of this validator is stdlib-only
+    by design so it runs on a fresh sandbox, and it must not start failing
+    because a sibling module moved.
+    """
+    import importlib.util
+
+    repo = HERE.parents[3]
+    modules = []
+    for name in ("governance_refresh_receipt", "claude_bootstrap_receipt"):
+        path = repo / "ops" / "scripts" / f"{name}.py"
+        if not path.is_file():
+            return None
+        spec = importlib.util.spec_from_file_location(name, path)
+        if spec is None or spec.loader is None:
+            return None
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[name] = module
+        spec.loader.exec_module(module)
+        modules.append(module)
+    return modules[0], modules[1]
+
+
+def report_runtime() -> str:
+    """Report what the runtime IS, from the receipts the installer leaves.
+
+    Structural validity says the adapter's files are correct. It says nothing
+    about whether any of them were ever wired into a session — the audited
+    runtime passed every structural check while eleven components sat
+    NOT_LOADED (finding B-23).
+    """
+    print("\n=== Runtime readiness (receipts, not files) ===")
+    readers = _load_receipt_readers()
+    if readers is None:
+        print("  receipt readers unavailable — runtime state UNKNOWN")
+        return NOT_LOADED
+    refresh_mod, bootstrap_mod = readers
+
+    bootstrap = bootstrap_mod.read()
+    print(f"  bootstrap receipt: {bootstrap['state']} — {bootstrap['reason']}")
+    for key, value in (bootstrap.get("components") or {}).items():
+        print(f"    {key}: {value}")
+
+    refresh = refresh_mod.read()
+    print(f"  governance refresh: {refresh['state']} — {refresh['reason']}")
+
+    state = bootstrap["state"]
+    if state in (bootstrap_mod.NEVER_RAN, bootstrap_mod.FAILED, bootstrap_mod.BLOCKED):
+        return NOT_LOADED
+    if state == bootstrap_mod.READY and refresh["state"] == refresh_mod.FRESH:
+        return READY
+    # Ready-but-stale is not ready: the tree the receipt vouches for is not the
+    # tree on disk.
+    return DEGRADED
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument(
+        "--runtime",
+        action="store_true",
+        help="additionally report runtime readiness from the installer receipts",
+    )
+    args = parser.parse_args()
+
     print("=== Claude Code environment — structural validation ===")
     print(f"  root: {HERE}\n")
     failures: list[str] = []
@@ -762,10 +841,22 @@ def main() -> int:
     check_maximum_velocity_surface(failures)
     print()
     if failures:
-        print(f"RESULT: FAIL — {len(failures)} issue(s)")
-        return 1
-    print("RESULT: PASS — Claude Code environment adapter is structurally sound")
-    return 0
+        print(f"RESULT: STRUCTURAL_FAIL — {len(failures)} issue(s)")
+        return EXIT_STRUCTURAL_FAIL
+    # INV-8: never a bare PASS. This validator checks FILES. Reporting "PASS" for
+    # a runtime where nothing was wired is the single most quotable false-healthy
+    # signal the audit found.
+    print("RESULT: STRUCTURAL_PASS (runtime readiness not asserted)")
+
+    if not args.runtime:
+        print("        run with --runtime to assert what the session actually loaded")
+        return EXIT_OK
+
+    runtime = report_runtime()
+    print(f"\nRUNTIME: {runtime}")
+    if runtime == READY:
+        return EXIT_OK
+    return EXIT_RUNTIME_NOT_READY
 
 
 if __name__ == "__main__":
