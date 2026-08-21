@@ -62,6 +62,15 @@ class ResolveFromPrsTests(unittest.TestCase):
             resolve_from_prs(prs, default_ref="origin/main")
         self.assertIn("fork at feat/base", str(ctx.exception))
 
+    def test_single_open_pr_targeting_main_is_the_tip(self) -> None:
+        result = resolve_from_prs(
+            [_pr(242, "feat/stack-safe-merge", "main", "ee" * 20)],
+            default_ref="origin/main",
+        )
+        self.assertEqual(result.ref, "feat/stack-safe-merge")
+        self.assertEqual(result.sha, "ee" * 20)
+        self.assertEqual(result.reason, "unique_chain_tip")
+
     def test_origin_main_base_is_treated_as_main(self) -> None:
         result = resolve_from_prs(
             [_pr(7, "feat/only", "origin/main", "dd" * 20)],
