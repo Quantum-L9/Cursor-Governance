@@ -26,6 +26,7 @@ from compile_activation_files import (  # noqa: E402
     CompileError,
     compile_activation,
     dump_yaml,
+    load_yaml,
 )
 
 HOST_ALLOWLIST = """schema: l9.program-execution.campaign-compile-allowlist.v1
@@ -253,6 +254,39 @@ class CompileActivationTests(unittest.TestCase):
                 compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
             campaign_dir = root / "environment/program-execution/campaigns/demo-activate-v1"
             self.assertFalse((campaign_dir / "source-integrity-receipt.json").is_file())
+
+    def test_projects_conditionally_ready_plan_tasks(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _repo(Path(raw))
+            dump_yaml(
+                root / "intent.yaml",
+                {
+                    "campaign_id": "demo-activate-v1",
+                    "title": "Demo Activate",
+                    "objective": "Activate from a compiled plan.",
+                    "plan_status": "ConditionallyReady",
+                    "target": {"repository_id": "Quantum-L9/Cursor-Governance"},
+                    "tasks": [
+                        {
+                            "id": "T1",
+                            "title": "Scope pytest",
+                            "objective": "Scope pytest to changed paths",
+                            "paths": ["Makefile"],
+                        }
+                    ],
+                },
+            )
+            result = compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
+            source = load_yaml(
+                root
+                / "environment/program-execution/campaigns/demo-activate-v1/CAMPAIGN_SOURCE.yaml"
+            )
+            task = source["tasks"][0]
+            self.assertEqual(task["id"], "TASK-001")
+            self.assertEqual(task["actions"], ["edit_declared_paths"])
+            self.assertEqual(task["nugget_id"], "NUG-001")
+            self.assertEqual(task["kernel_profile"], "CHANGE")
+            self.assertTrue(result["wrote"])
 
     def test_refuses_plan_status_partial(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
