@@ -469,6 +469,7 @@ class RunCampaignTests(unittest.TestCase):
             brief.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
             other_primary = Path(raw) / "other-primary"
             other_primary.mkdir()
+
             def _plan_keeps_partial(seed, primed_dir, stack_proof):
                 return {"plan_status": "Partial", "intent_path": ""}
 
