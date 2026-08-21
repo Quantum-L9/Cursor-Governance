@@ -60,7 +60,9 @@ jobs:
           [ -f "$gen" ] || { echo "::error::$gen missing - cannot verify generated artifacts"; exit 1; }
           python3 "$gen" --force --check --json
           # environment/program-execution/MANIFEST.json is deliberately absent:
-          # its automatic sync is suspended for the velocity window (TODO.md).
+          # it is advisory by decision, not auto-synced, and not gated anywhere
+          # (TODO.md, "advisory by decision"). Its contract is held by
+          # tests/environment/program_execution/test_manifest_contract.py.
           # Every other generated artifact stays fail-closed here.
           paths="rules/RULES-MANIFEST.json rules/RULES-MANIFEST.yaml rules/RULES-MANIFEST.md \
                  ops/generated/skill-registry.json \
