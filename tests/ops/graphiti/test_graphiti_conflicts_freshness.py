@@ -95,9 +95,7 @@ def test_conflicts_matching_task_requires_task_and_marker() -> None:
     assert {e["uuid"] for e in out} == {"task-conflict"}
 
 
-def test_cmd_conflicts_without_task_is_unavailable_not_blocking(
-    monkeypatch, capsys
-) -> None:
+def test_cmd_conflicts_without_task_is_unavailable_not_blocking(monkeypatch, capsys) -> None:
     monkeypatch.setattr(
         "graphiti_memory_client.resolve_group_id",
         lambda _p: {"group_id": "cursor-governance"},
