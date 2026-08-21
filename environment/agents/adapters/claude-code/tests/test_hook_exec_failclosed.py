@@ -151,9 +151,7 @@ class HookExecFailClosedTests(unittest.TestCase):
         self._materialize_governance()
         script = self.gov / HOOKS_REL / "session_start_claude_governance.sh"
         script.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
-        self.assertEqual(
-            self._run("observer", "session_start_claude_governance.sh").returncode, 0
-        )
+        self.assertEqual(self._run("observer", "session_start_claude_governance.sh").returncode, 0)
 
 
 class SettingsRegistrationTests(unittest.TestCase):

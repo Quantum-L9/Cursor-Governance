@@ -114,7 +114,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
         """The half of F-13 the launcher now owns."""
         launcher = (HOOKS / "l9_hook_exec.sh").read_text(encoding="utf-8")
         self.assertIn('PY="$GOV_DIR/.venv/bin/python3"', launcher)
-        self.assertNotRegex(launcher, r'exec\s+python3?\s')
+        self.assertNotRegex(launcher, r"exec\s+python3?\s")
 
     # --- the decisive acceptance test ------------------------------------
 
@@ -205,9 +205,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             self._synthetic_home(home, with_venv=False)
-            event, command = next(
-                (e, c) for e, c in self.commands if "--class observer" in c
-            )
+            event, command = next((e, c) for e, c in self.commands if "--class observer" in c)
             proc = subprocess.run(
                 self._argv(self._probe_command(command)),
                 capture_output=True,
@@ -236,8 +234,11 @@ class HookInterpreterBindingTests(unittest.TestCase):
                 with self.subTest(gate=command[-30:]):
                     proc = subprocess.run(
                         self._argv(self._probe_command(command)),
-                        capture_output=True, text=True, timeout=120,
-                        env={**os.environ, "HOME": str(home)}, check=False,
+                        capture_output=True,
+                        text=True,
+                        timeout=120,
+                        env={**os.environ, "HOME": str(home)},
+                        check=False,
                     )
                     self.assertEqual(proc.returncode, 2, "a gate must BLOCK, not pass")
                     self.assertIn("BLOCKING", proc.stderr)
@@ -245,9 +246,7 @@ class HookInterpreterBindingTests(unittest.TestCase):
     def test_absent_governance_clone_stays_quiet(self) -> None:
         """A machine with no governance at all keeps the original contract."""
         with tempfile.TemporaryDirectory() as tmp:
-            _event, command = next(
-                (e, c) for e, c in self.commands if "--class observer" in c
-            )
+            _event, command = next((e, c) for e, c in self.commands if "--class observer" in c)
             proc = subprocess.run(
                 self._argv(command),
                 capture_output=True,

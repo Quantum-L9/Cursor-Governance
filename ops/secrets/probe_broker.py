@@ -123,8 +123,10 @@ def main(argv: list[str] | None = None) -> int:
         return 0 if result["ok"] else 1
 
     print("=== Capability broker reachability ===")
-    print(f"  identity:      {result['identity_method']} "
-          f"({'available' if result['identity_available'] else result['identity_reason']})")
+    print(
+        f"  identity:      {result['identity_method']} "
+        f"({'available' if result['identity_available'] else result['identity_reason']})"
+    )
     print(f"  broker url:    {result['broker_url'] or '<unset>'}")
     if "dns" in result:
         print(f"  broker dns:    {result['dns']}")

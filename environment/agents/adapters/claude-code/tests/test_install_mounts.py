@@ -54,12 +54,18 @@ class InstallMountTests(unittest.TestCase):
         env.pop("L9_GOVERNANCE_DIR", None)
         return subprocess.run(
             [
-                "bash", str(INSTALL),
-                "--governance", str(REPO),
-                "--workspace", str(workspace or self.workspace),
+                "bash",
+                str(INSTALL),
+                "--governance",
+                str(REPO),
+                "--workspace",
+                str(workspace or self.workspace),
                 "--quiet",
             ],
-            capture_output=True, text=True, env=env, check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
         )
 
     # -- T-24 ---------------------------------------------------------------
@@ -105,7 +111,9 @@ class InstallMountTests(unittest.TestCase):
         before = foreign.read_bytes()
         self._run()
         self.assertTrue(foreign.is_file(), "a consumer's own hook must survive install")
-        self.assertEqual(foreign.read_bytes(), before, "a consumer's own hook must be byte-identical")
+        self.assertEqual(
+            foreign.read_bytes(), before, "a consumer's own hook must be byte-identical"
+        )
 
 
 class LockedInterpreterPinTests(unittest.TestCase):
@@ -143,9 +151,20 @@ class LockedInterpreterPinTests(unittest.TestCase):
         env = dict(os.environ)
         env.pop("L9_GOVERNANCE_SURFACE", None)
         return subprocess.run(
-            ["bash", str(BOOTSTRAP), "--surface", "claude-code",
-             "--governance", str(self.gov), "--workspace", str(self.workspace)],
-            capture_output=True, text=True, env=env, check=False,
+            [
+                "bash",
+                str(BOOTSTRAP),
+                "--surface",
+                "claude-code",
+                "--governance",
+                str(self.gov),
+                "--workspace",
+                str(self.workspace),
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
         )
 
     def test_absent_locked_interpreter_is_reported_not_silently_replaced(self) -> None:

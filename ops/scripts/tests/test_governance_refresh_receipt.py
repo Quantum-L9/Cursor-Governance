@@ -17,7 +17,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[3]
@@ -42,7 +42,7 @@ HOOK = (
     / "session_start_claude_governance.sh"
 )
 
-NOW = datetime(2026, 8, 21, 2, 9, 0, tzinfo=timezone.utc)
+NOW = datetime(2026, 8, 21, 2, 9, 0, tzinfo=UTC)
 SHA_A = "941ab775c3e6d2a4d8b0425b10e9cb32b9a8e403"
 SHA_B = "b406feeb4734f7029c36d718a68b004cacd6a68a"
 

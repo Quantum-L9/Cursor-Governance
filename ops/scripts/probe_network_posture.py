@@ -25,7 +25,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import socket
 import sys
 import urllib.error
 import urllib.request
@@ -49,7 +48,7 @@ def reachable(host: str, timeout: int = TIMEOUT) -> bool:
         urllib.request.urlopen(f"https://{host}/", timeout=timeout)  # noqa: S310
     except urllib.error.HTTPError:
         return True
-    except (urllib.error.URLError, OSError, socket.timeout, ValueError):
+    except (TimeoutError, urllib.error.URLError, OSError, ValueError):
         return False
     return True
 

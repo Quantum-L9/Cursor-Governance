@@ -145,15 +145,22 @@ class NetworkPostureTests(unittest.TestCase):
         # Inject reachability rather than touching the network.
         original = probe_network_posture.reachable
         try:
-            probe_network_posture.reachable = lambda host, timeout=0: host in (
-                "app.infisical.com", "sonarcloud.io", "github.com", "api.github.com", "pypi.org"
+            probe_network_posture.reachable = lambda host, timeout=0: (
+                host
+                in (
+                    "app.infisical.com",
+                    "sonarcloud.io",
+                    "github.com",
+                    "api.github.com",
+                    "pypi.org",
+                )
             )
             wide = probe_network_posture.run()
             self.assertFalse(wide["ok"])
             self.assertIn("app.infisical.com", wide["violations"])
 
-            probe_network_posture.reachable = lambda host, timeout=0: host in (
-                "github.com", "api.github.com", "pypi.org"
+            probe_network_posture.reachable = lambda host, timeout=0: (
+                host in ("github.com", "api.github.com", "pypi.org")
             )
             tight = probe_network_posture.run()
             self.assertTrue(tight["ok"], tight)

@@ -34,7 +34,10 @@ class ValidatorVerdictTests(unittest.TestCase):
             env.pop("L9_GOV_REFRESH_RECEIPT", None)
         return subprocess.run(
             ["python3", str(VALIDATOR), *args],
-            capture_output=True, text=True, env=env, check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
         )
 
     def test_never_emits_a_bare_pass(self) -> None:

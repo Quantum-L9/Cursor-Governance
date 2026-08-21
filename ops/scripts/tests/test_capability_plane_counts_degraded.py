@@ -87,17 +87,13 @@ class CapabilityPlaneDegradedTests(unittest.TestCase):
             encoding="utf-8",
         )
         self.workspace.mkdir()
-        subprocess.run(
-            ["git", "init", "-q", str(self.workspace)], check=False, capture_output=True
-        )
+        subprocess.run(["git", "init", "-q", str(self.workspace)], check=False, capture_output=True)
         self.addCleanup(self._tmp.cleanup)
 
     def _install_capability_stub(self, exit_code: int, message: str = "") -> None:
         stub = self.gov / "ops" / "secrets" / "bootstrap_agent_env.sh"
         stub.write_text(
-            "#!/usr/bin/env bash\n"
-            f'printf "%s\\n" {message!r} >&2\n'
-            f"exit {exit_code}\n",
+            f'#!/usr/bin/env bash\nprintf "%s\\n" {message!r} >&2\nexit {exit_code}\n',
             encoding="utf-8",
         )
 
@@ -135,7 +131,9 @@ class CapabilityPlaneDegradedTests(unittest.TestCase):
         result = self._run()
         self.assertEqual(result.returncode, EXIT_DEGRADED)
         self.assertNotIn("Agent environment ready", result.stderr)
-        self.assertEqual(self._degraded_count(), 1, "the receipt must carry exactly this degradation")
+        self.assertEqual(
+            self._degraded_count(), 1, "the receipt must carry exactly this degradation"
+        )
 
     def test_blocked_by_platform_counts_and_is_named_as_such(self) -> None:
         """Exit 4 is the platform-blocked class and must not read as a config gap."""

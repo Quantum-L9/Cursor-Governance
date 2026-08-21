@@ -115,14 +115,14 @@ def stub_revision_actual(env: dict[str, str] | None = None, session_env: Path | 
     if not path.is_file():
         return ""
     match = re.search(
-        r"^export L9_STUB_REVISION=[\"']?([^\"'\n]+)", path.read_text(encoding="utf-8"), re.MULTILINE
+        r"^export L9_STUB_REVISION=[\"']?([^\"'\n]+)",
+        path.read_text(encoding="utf-8"),
+        re.MULTILINE,
     )
     return match.group(1) if match else ""
 
 
-def compare(
-    expected: dict[str, str], env: dict[str, str] | None = None
-) -> list[dict[str, str]]:
+def compare(expected: dict[str, str], env: dict[str, str] | None = None) -> list[dict[str, str]]:
     """One row per deviation. Empty means the account field matches HEAD."""
     live = os.environ if env is None else env
     deviations: list[dict[str, str]] = []
@@ -130,7 +130,9 @@ def compare(
         if key in RUNTIME_MANAGED:
             continue
         if key not in live:
-            deviations.append({"key": key, "expected": want, "actual": "<missing>", "kind": "missing"})
+            deviations.append(
+                {"key": key, "expected": want, "actual": "<missing>", "kind": "missing"}
+            )
         elif live[key] != want:
             deviations.append(
                 {"key": key, "expected": want, "actual": live[key], "kind": "mismatch"}
@@ -221,7 +223,9 @@ def main(argv: list[str] | None = None) -> int:
     print("=== Account environment drift ===")
     for key in sorted(RUNTIME_MANAGED):
         if key in os.environ:
-            print(f"  INFO: {key}={safe_value(key, os.environ[key])} (runtime-managed; not compared)")
+            print(
+                f"  INFO: {key}={safe_value(key, os.environ[key])} (runtime-managed; not compared)"
+            )
     if result["stub_drift"]:
         print(
             f"  DRIFT: Setup script is revision "
@@ -243,8 +247,10 @@ def main(argv: list[str] | None = None) -> int:
             f"    {key}: expected {safe_value(key, row['expected'])!r}, "
             f"got {safe_value(key, row['actual'])!r}"
         )
-    print("\n  Repair: python3 environment/agents/adapters/claude-code/verify_account_env.py"
-          " --emit-fields")
+    print(
+        "\n  Repair: python3 environment/agents/adapters/claude-code/verify_account_env.py"
+        " --emit-fields"
+    )
     print("          then paste docs/ACCOUNT_FIELDS.md section 1 into Environment variables")
     return 1
 

@@ -33,7 +33,9 @@ REGISTRY = HERE / "capabilities.yaml"
 
 #: A hostname, not a URL and not a host:port. The broker composes the scheme and
 #: path itself; anything else here is a registry authoring error.
-_HOSTNAME = re.compile(r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))+$")
+_HOSTNAME = re.compile(
+    r"^(?=.{1,253}$)(?!-)[A-Za-z0-9-]{1,63}(?<!-)(\.(?!-)[A-Za-z0-9-]{1,63}(?<!-))+$"
+)
 
 Resolver = Callable[[str], bool]
 
@@ -75,7 +77,9 @@ def validate(
             violations.append(f"{cap_id}: upstream_host {host!r} is a URL; want a bare hostname")
             continue
         if ":" in host:
-            violations.append(f"{cap_id}: upstream_host {host!r} carries a port; want a bare hostname")
+            violations.append(
+                f"{cap_id}: upstream_host {host!r} carries a port; want a bare hostname"
+            )
             continue
         if not _HOSTNAME.match(host):
             violations.append(f"{cap_id}: upstream_host {host!r} is not a valid hostname")

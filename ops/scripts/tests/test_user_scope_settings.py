@@ -42,7 +42,10 @@ class UserScopeSettingsTests(unittest.TestCase):
         env["HOME"] = str(self.home)
         return subprocess.run(
             ["python3", str(RECONCILER), "--root", str(REPO), "--skip-gov", *args],
-            capture_output=True, text=True, env=env, check=False,
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
         )
 
     @property
@@ -162,22 +165,22 @@ class NonLoginShellEnvTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             env_file = home / "cloud-session.env"
-            env_file.write_text('export L9_GOVERNANCE_DIR=/custom/gov\n', encoding="utf-8")
+            env_file.write_text("export L9_GOVERNANCE_DIR=/custom/gov\n", encoding="utf-8")
             self.assertEqual(self._resolve(home, env_file), "/custom/gov")
 
     def test_falls_back_to_the_contract_default(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
-            self.assertEqual(
-                self._resolve(home, home / "absent.env"), f"{home}/.cursor-governance"
-            )
+            self.assertEqual(self._resolve(home, home / "absent.env"), f"{home}/.cursor-governance")
 
     def test_unexpanded_home_literal_is_refused(self) -> None:
         """The .env-format field performs no expansion; that value names nothing."""
         with tempfile.TemporaryDirectory() as tmp:
             home = Path(tmp)
             env_file = home / "cloud-session.env"
-            env_file.write_text("export L9_GOVERNANCE_DIR='$HOME/.cursor-governance'\n", encoding="utf-8")
+            env_file.write_text(
+                "export L9_GOVERNANCE_DIR='$HOME/.cursor-governance'\n", encoding="utf-8"
+            )
             self.assertEqual(self._resolve(home, env_file), f"{home}/.cursor-governance")
 
 

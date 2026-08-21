@@ -31,7 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -70,7 +70,7 @@ def receipt_path(env: dict[str, str] | None = None) -> Path:
 
 
 def evaluate(receipt: dict[str, Any] | None, *, now: datetime | None = None) -> dict[str, Any]:
-    moment = now or datetime.now(timezone.utc)
+    moment = now or datetime.now(UTC)
 
     if receipt is None:
         return {

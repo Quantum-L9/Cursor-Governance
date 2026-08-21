@@ -126,10 +126,23 @@ class SkillReconciliationTests(unittest.TestCase):
             env = dict(os.environ)
             env["HOME"] = str(home)
             result = subprocess.run(
-                ["python3", str(reconciler), "--root", str(REPO),
-                 "--scope", "user", "--scope", "project",
-                 "--workspace", str(workspace), "--quiet"],
-                capture_output=True, text=True, env=env, check=False,
+                [
+                    "python3",
+                    str(reconciler),
+                    "--root",
+                    str(REPO),
+                    "--scope",
+                    "user",
+                    "--scope",
+                    "project",
+                    "--workspace",
+                    str(workspace),
+                    "--quiet",
+                ],
+                capture_output=True,
+                text=True,
+                env=env,
+                check=False,
             )
             self.assertEqual(result.returncode, 0, result.stderr[-1500:])
 
@@ -137,7 +150,8 @@ class SkillReconciliationTests(unittest.TestCase):
             # into each scope; that is bookkeeping, not a skill.
             def mounted(root: Path) -> list[str]:
                 return sorted(
-                    p.name for p in (root / ".claude" / "skills").iterdir()
+                    p.name
+                    for p in (root / ".claude" / "skills").iterdir()
                     if not p.name.startswith(".")
                 )
 

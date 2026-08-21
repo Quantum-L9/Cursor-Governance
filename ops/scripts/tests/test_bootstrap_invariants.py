@@ -53,7 +53,10 @@ _RAW_GH_SWALLOW = re.compile(r"\bgh +(pr|repo) +[a-z-]+.*\|\| *true")
 
 RECEIPT_WRITERS = (
     ("environment/agents/adapters/claude-code/install.sh", "bootstrap-state"),
-    ("environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh", "gov-refresh"),
+    (
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+        "gov-refresh",
+    ),
 )
 
 #: The audit's §5.3 verified-absent list. `proxy-injected` is the platform's
@@ -91,7 +94,7 @@ class SwallowedFailureTests(unittest.TestCase):
         )
         self.assertNotRegex(
             body,
-            r'bootstrap_agent_env\.sh[^\n]*\\\n[^\n]*\|\| warn',
+            r"bootstrap_agent_env\.sh[^\n]*\\\n[^\n]*\|\| warn",
             "a capability-plane failure must increment DEGRADED, not merely warn",
         )
         self.assertIn("cap_rc=$?", body)
@@ -103,7 +106,8 @@ class SwallowedFailureTests(unittest.TestCase):
                 body = (REPO / rel).read_text(encoding="utf-8")
                 count = len(_SWALLOW.findall(body))
                 self.assertLessEqual(
-                    count, baseline,
+                    count,
+                    baseline,
                     f"{rel} gained a swallowed failure ({count} > {baseline}); "
                     "justify it in SWALLOW_BASELINE or route it through a classifier",
                 )
@@ -131,9 +135,9 @@ class GateFailClosedTests(unittest.TestCase):
                             self.assertNotIn("|| exit 0", command)
 
     def test_the_launcher_blocks_gates_on_every_failure_path(self) -> None:
-        body = (
-            REPO / "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh"
-        ).read_text(encoding="utf-8")
+        body = (REPO / "environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh").read_text(
+            encoding="utf-8"
+        )
         self.assertIn("INV-1: gates fail closed", body)
         # cannot_run() is the single exit path; a second bare `exit 0` for gates
         # would defeat it.
@@ -167,14 +171,17 @@ class SecretAbsenceTests(unittest.TestCase):
             for name in PROHIBITED_SECRETS
             if os.environ.get(name) and os.environ[name] != PROXY_SENTINEL
         ]
-        self.assertEqual(leaked, [], "a prohibited credential is present in a model-controlled surface")
+        self.assertEqual(
+            leaked, [], "a prohibited credential is present in a model-controlled surface"
+        )
 
     def test_aws_names_hold_only_the_proxy_sentinel_if_present(self) -> None:
         for name in ("AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY"):
             value = os.environ.get(name)
             if value:
                 self.assertEqual(
-                    value, PROXY_SENTINEL,
+                    value,
+                    PROXY_SENTINEL,
                     f"{name} holds credential material, not the platform sentinel",
                 )
 
@@ -182,7 +189,10 @@ class SecretAbsenceTests(unittest.TestCase):
         """The repo's own zero-static-secret validator, over the working tree."""
         result = subprocess.run(
             ["python3", str(REPO / "ops" / "secrets" / "validate_capability_contract.py")],
-            capture_output=True, text=True, cwd=REPO, check=False,
+            capture_output=True,
+            text=True,
+            cwd=REPO,
+            check=False,
         )
         self.assertEqual(result.returncode, 0, result.stdout[-3000:] + result.stderr[-2000:])
 

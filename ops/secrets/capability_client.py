@@ -355,10 +355,7 @@ def main(argv: list[str] | None = None) -> int:
             return EXIT_BLOCKED_BY_PLATFORM
         if degraded:
             if args.allow_degraded:
-                print(
-                    "tolerated (--allow-degraded): "
-                    + ", ".join(r.capability for r in degraded)
-                )
+                print("tolerated (--allow-degraded): " + ", ".join(r.capability for r in degraded))
                 return EXIT_OK
             return EXIT_DEGRADED
         return EXIT_OK

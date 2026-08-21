@@ -31,7 +31,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -58,14 +58,14 @@ def receipt_path(env: dict[str, str] | None = None) -> Path:
 
 def _parse_timestamp(raw: str) -> datetime | None:
     try:
-        return datetime.strptime(raw, _TIMESTAMP_FORMAT).replace(tzinfo=timezone.utc)
+        return datetime.strptime(raw, _TIMESTAMP_FORMAT).replace(tzinfo=UTC)
     except (TypeError, ValueError):
         return None
 
 
 def evaluate(receipt: dict[str, Any] | None, *, now: datetime | None = None) -> dict[str, Any]:
     """Derive the live state of a parsed receipt. Pure; `now` is injectable."""
-    moment = now or datetime.now(timezone.utc)
+    moment = now or datetime.now(UTC)
 
     if receipt is None:
         return {
@@ -108,7 +108,11 @@ def evaluate(receipt: dict[str, Any] | None, *, now: datetime | None = None) -> 
     if not local_sha or local_sha == "unknown":
         return {"state": UNKNOWN, "reason": "receipt records no local revision", **carried}
     if origin_sha and origin_sha != "unknown" and origin_sha != local_sha:
-        return {"state": STALE, "reason": f"local {local_sha[:8]} != origin {origin_sha[:8]}", **carried}
+        return {
+            "state": STALE,
+            "reason": f"local {local_sha[:8]} != origin {origin_sha[:8]}",
+            **carried,
+        }
 
     behind = receipt.get("commits_behind")
     if isinstance(behind, int) and behind > 0:
