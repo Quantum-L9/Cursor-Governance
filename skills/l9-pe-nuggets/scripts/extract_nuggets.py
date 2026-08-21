@@ -29,6 +29,11 @@ def _task_ready(item: dict[str, Any]) -> bool:
     )
 
 
+def _task_conditionally_ready(item: dict[str, Any]) -> bool:
+    """Compiled memo/plan tasks carry title + objective. Kernel fields come later."""
+    return bool(str(item.get("title") or "").strip() and str(item.get("objective") or "").strip())
+
+
 def infer_plan_status(seed: dict[str, Any]) -> str:
     explicit = str(seed.get("plan_status") or "").strip()
     if explicit in {"Ready", "ConditionallyReady", "Partial", "Blocked", "Failed", "Draft"}:
@@ -36,6 +41,8 @@ def infer_plan_status(seed: dict[str, Any]) -> str:
     tasks = [item for item in (seed.get("tasks") or []) if isinstance(item, dict)]
     if tasks and all(_task_ready(item) for item in tasks):
         return "Ready"
+    if tasks and all(_task_conditionally_ready(item) for item in tasks):
+        return "ConditionallyReady"
     if tasks:
         return "Partial"
     return "Blocked"
