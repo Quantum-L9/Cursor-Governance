@@ -399,6 +399,9 @@ def relock_definitions(
             )
             for name in ("source", "rendered"):
                 (workspace / "contracts" / name / f"{task_id}.json").unlink(missing_ok=True)
+            lease = db.active_lease_for_task(task_id)
+            if lease is not None:
+                db.release_lease(str(lease["lease_id"]))
             if state not in {"BLOCKED", "ELIGIBLE"}:
                 # STALE is the state model's own word for "the definition this
                 # was working from was replaced", and unlike BLOCKED it is
