@@ -117,6 +117,12 @@ ops/ui-operator/receipts/local/
 # Do not re-add negation exceptions for logs/ or transcripts/.
 WIP/Legal Defense/
 WIP/Legal Defense/**
+# Installed live pack is a local copy of the private skill. Keep it out of
+# skills/ (orphan heal would register case identifiers into public manifests).
+# Discovery paths are .claude/skills/defense-attorney (already ignored above)
+# and ~/.cursor/skills/defense-attorney.
+skills/defense-attorney/
+skills/defense-attorney
 
 # generated reports - CI artifacts, not source
 governance-health-report.json

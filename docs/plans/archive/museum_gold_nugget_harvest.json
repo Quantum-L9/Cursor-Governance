@@ -1,0 +1,565 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "standard",
+  "title": "Gold-nugget harvest for non-Constellation Python museum template",
+  "objective": "Mine reusable DX/tooling gold from L9-Node-Template@8999fd1 and Constellation.PackageTemplate@dcb5d24 into Quantum-L9/l9-repo-template so the museum is a first-class Quantum-L9 Python GitHub Template for runtimes, side projects, and experiments that live outside Constellation \u2014 side-by-side with (not replacing) the node template and the dependency-package template.",
+  "success_criteria": [
+    "AGENTS.md / README / ARCHITECTURE state the three-template matrix: Node-Template=nodes, PackageTemplate=constellation_* deps, l9-repo-template=non-Constellation Python repos",
+    "TEMPLATE_INVENTORY classifies every mined surface PORT_SURGICAL|EXTRACT_CONCEPT|ALREADY_HAVE|REJECT with source SHA; node/dep product surfaces are REJECT_WRONG_PRODUCT",
+    "Default example package is a plain Python package (no create_node_app, no Gate handlers, no constellation-node-sdk as required runtime dep)",
+    "General hygiene audit in verify (eval/exec/print + no Justfile/contracts/enginehandlers accidental reintro); not Constellation transport law enforcement",
+    "inventory_check + parametric Cursor rules for generic Python/FastAPI repos; birth-runner is Use-template\u2192rename\u2192verify for generic packages (OPEN_PR=0)",
+    "PackageTemplate config/errors/health/retry concepts land as optional generic helpers, not Gate-worker helpers",
+    "make pr-check and make agent-check PASS; CI remains sync-ci; tools/ allowlist unchanged"
+  ],
+  "scope": {
+    "in": [
+      "Identity lock + docs: museum is non-Constellation Quantum-L9 Python template (runtimes/side-projects/experiments)",
+      "Strip or demote Gate-worker/node shell from default template surfaces (handlers/spec/GATE_URL-required framing) toward a thin generic example package",
+      "Harvest from Node-Template: inventory/mention patterns, template_compliance ideas, VALIDATION honesty, generic hygiene rules from audit_engine (not PacketEnvelope/Gate peer laws), fastapi rule rewrite for generic apps, pre-commit inventory hook",
+      "Harvest from PackageTemplate: dep-build-runner mechanics\u2192scripts/birth-runner for generic Use-template birth; config/errors/health/retry/protocols as optional package helpers; unit/integration layout; import-smoke; birth acceptance triad rewritten for generic packages",
+      "Core thin Makefile + Repo.mk + gov-* WS= retained; sync-ci retained"
+    ],
+    "out": [
+      "Duplicating or replacing L9-Node-Template (Constellation nodes) or Constellation.PackageTemplate (constellation_* birth deps)",
+      "Making museum the canonical Gate-worker / TransportPacket / create_node_app template",
+      "Porting enginehandlers, nodespec, contracts/, ENGINESPEC, domain/, PacketEnvelope-era bridge",
+      "Porting constellation_* library birth plays, PyPI/sigstore release, mkdocs-as-required, mutmut",
+      "Museum-owned parallel CI; Justfile; Fix-B OTel Python package; expanding tools/ beyond l9_repo+integrity",
+      "Copying Cursor-Governance Makefile/ops; OPEN_PR=1 / auto-merge birth defaults",
+      "Gate-only peer-HTTP bans as museum product law (those belong to node template / Gate_SDK)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind /Users/ib-mac/l9-repo-template @6c5bc78; note current branch still carries Gate-worker head-start \u2014 this plan repositions identity",
+      "pass_criteria": "museum root exists; identity mismatch acknowledged in plan",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "sources inventoried at L9-Node-Template@8999fd1 and PackageTemplate@dcb5d24",
+      "pass_criteria": "gold tables available from prior archaeology",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "cd /Users/ib-mac/l9-repo-template && make pr-check",
+      "pass_criteria": "PASS on current tree before identity reposition edits",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "user identity lock: museum side-by-side for non-Constellation repos; NOT nodes; NOT deps",
+      "pass_criteria": "explicit user clarification recorded",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Lock three-template matrix + provenance ledger in TEMPLATE_INVENTORY/README/ARCHITECTURE: Node-Template=nodes, PackageTemplate=deps, museum=non-Constellation Python; classify mined surfaces including REJECT_WRONG_PRODUCT for node/dep-only gold",
+      "files": [
+        "TEMPLATE_INVENTORY.md",
+        "README.md",
+        "ARCHITECTURE.md",
+        "CHANGELOG.md",
+        ".l9/ci-pin"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "TEMPLATE_INVENTORY.md + README identity section",
+      "leverage_rank": 1,
+      "shared_root_cause": "museum identity drifted toward Gate-worker"
+    },
+    {
+      "id": "T2",
+      "task": "Reposition default example package away from Gate-worker shell: remove required constellation-node-sdk/create_node_app/handlers/spec/GATE_URL as template defaults; leave a thin generic Python package (+ optional FastAPI hello if kept as non-Constellation example)",
+      "files": [
+        "src/l9_example_pkg/",
+        "pyproject.toml",
+        "uv.lock",
+        "spec.yaml",
+        ".env.example",
+        "Dockerfile",
+        "docker-compose.yml",
+        "docs/agent-tasks/",
+        "tests/"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "src/l9_example_pkg and pyproject dependencies",
+      "leverage_rank": 2,
+      "shared_root_cause": "default template currently markets as Gate worker"
+    },
+    {
+      "id": "T3",
+      "task": "Port general hygiene checks from Node-Template audit_engine (eval/exec/print bans; accidental reintro of Justfile/contracts/enginehandlers) into scripts/repo_hygiene_audit.py + Semgrep; do NOT encode PacketEnvelope/Gate peer-routing laws as museum product gates",
+      "files": [
+        "scripts/repo_hygiene_audit.py",
+        ".semgrep/semgrep-rules.yaml",
+        "Repo.mk",
+        "tests/unit/test_repo_hygiene_audit.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Create",
+      "anchor": "verify target in Repo.mk",
+      "leverage_rank": 3,
+      "shared_root_cause": "useful static hygiene trapped in node-shaped audit_engine"
+    },
+    {
+      "id": "T4",
+      "task": "Extend inventory_check with mention/required-file + layout checks for museum-as-generic-template; keep tools/ allowlist; deny Justfile and constellation node/dep scaffolding dirs",
+      "files": [
+        "scripts/inventory_check.py",
+        "tests/unit/test_inventory_check.py",
+        ".pre-commit-config.yaml"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
+      "operation": "Wrap",
+      "anchor": "scripts/inventory_check.py REQUIRED/DENY",
+      "leverage_rank": 4,
+      "shared_root_cause": "inventory still assumes worker/spec surfaces"
+    },
+    {
+      "id": "T5",
+      "task": "Parametric Cursor rules for generic Quantum-L9 Python repos (l9-python-repo + optional fastapi); rewrite away from l9-node-contract/Gate-worker; document when to use Node-Template vs PackageTemplate vs museum",
+      "files": [
+        ".cursor/rules/templates/l9-python-repo.mdc.template",
+        ".cursor/rules/templates/fastapi.mdc.template",
+        "plugin-config.yaml",
+        "tests/test_render_cursor_rules.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Create",
+      "anchor": "plugin-config.yaml rule list",
+      "leverage_rank": 5,
+      "shared_root_cause": "cursor rules still node/Gate shaped"
+    },
+    {
+      "id": "T6",
+      "task": "Thicken .l9/architecture.yaml + ownership.yaml for non-Constellation Python repos; ownership explicitly defers nodes\u2192L9-Node-Template and constellation_* deps\u2192PackageTemplate",
+      "files": [
+        ".l9/architecture.yaml",
+        ".l9/ownership.yaml",
+        "AGENTS.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": ".l9/architecture.yaml identity/boundaries",
+      "leverage_rank": 6,
+      "shared_root_cause": "authority stubs implied Gate-worker ownership"
+    },
+    {
+      "id": "T7",
+      "task": "Surgically port PackageTemplate config/errors/health/retry/protocols as optional generic package helpers (safe-at-import, validate_safe, structured errors) \u2014 not Gate/worker helpers; no GATE_URL coupling",
+      "files": [
+        "src/l9_example_pkg/settings.py",
+        "src/l9_example_pkg/errors.py",
+        "src/l9_example_pkg/health.py",
+        "src/l9_example_pkg/retry.py",
+        "tests/unit/test_package_helpers.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T2",
+        "T6"
+      ],
+      "operation": "Create",
+      "anchor": "src/l9_example_pkg helpers",
+      "leverage_rank": 7,
+      "shared_root_cause": "library primitives useful outside constellation_* birth"
+    },
+    {
+      "id": "T8",
+      "task": "Adapt dep-build-runner into scripts/birth-runner/ for generic Use-template\u2192rename\u2192verify(+optional push); OPEN_PR=0; no auto-merge; no constellation_* plays; no Gate worker birth framing",
+      "files": [
+        "scripts/birth-runner/README.md",
+        "scripts/birth-runner/01_preflight.sh",
+        "scripts/birth-runner/02_bootstrap.sh",
+        "scripts/birth-runner/03_validate.sh",
+        "scripts/birth-runner/04_push.sh",
+        "scripts/birth-runner/verify.py",
+        "scripts/birth-runner/config.template.yaml",
+        "Repo.mk",
+        "docs/ops/REPO_BIRTH.md"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "T2",
+        "T3",
+        "T4"
+      ],
+      "operation": "Create",
+      "anchor": "scripts/birth-runner/ (NOT tools/)",
+      "leverage_rank": 8,
+      "shared_root_cause": "birth automation stuck in PackageTemplate product shape"
+    },
+    {
+      "id": "T9",
+      "task": "Reorganize tests unit/integration; import-smoke + hygiene + birth acceptance for generic package; optional make test-cov without library 90% gate",
+      "files": [
+        "tests/unit/",
+        "tests/integration/",
+        "tests/conftest.py",
+        "Repo.mk",
+        "pyproject.toml"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T2",
+        "T3",
+        "T7",
+        "T8"
+      ],
+      "operation": "Replace",
+      "anchor": "tests/ layout",
+      "leverage_rank": 9,
+      "shared_root_cause": "tests still Gate-worker shaped"
+    },
+    {
+      "id": "T10",
+      "task": "Rewrite docs for side-by-side identity (VALIDATION honesty, lifecycle for generic repos, when-not-to-use-this-template); remove node/handler birth docs as primary path",
+      "files": [
+        "docs/VALIDATION.md",
+        "docs/LIFECYCLE.md",
+        "docs/ops/REPO_BIRTH.md",
+        "docs/WHEN_TO_USE.md",
+        "README.md",
+        "AGENTS.md",
+        "ARCHITECTURE.md"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T1",
+        "T5",
+        "T6",
+        "T8"
+      ],
+      "operation": "Create",
+      "anchor": "docs/ WHEN_TO_USE + identity",
+      "leverage_rank": 10,
+      "shared_root_cause": "docs still sell Gate-worker / node birth"
+    },
+    {
+      "id": "T11",
+      "task": "Final compliance: inventory_check + MANIFEST + pr-check + agent-check; prove absent Justfile/contracts/enginehandlers; prove default pyproject has no required constellation-node-sdk; prove docs point to sibling templates for nodes/deps",
+      "files": [
+        "scripts/inventory_check.py",
+        "MANIFEST.sha256",
+        "tests/unit/test_template_compliance.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T2",
+        "T3",
+        "T4",
+        "T7",
+        "T8",
+        "T9",
+        "T10"
+      ],
+      "operation": "Wrap",
+      "anchor": "make pr-check / make agent-check",
+      "leverage_rank": 11,
+      "shared_root_cause": "identity regressions slip past verify"
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T7",
+    "T8",
+    "T9",
+    "T11"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Identity locked + default package no longer a Gate worker",
+      "unlocks": "safe generic helper/docs/birth ports"
+    },
+    {
+      "id": "M2",
+      "outcome": "Hygiene + inventory + birth-runner work for generic Use-template flow",
+      "unlocks": "test/docs completion"
+    },
+    {
+      "id": "M3",
+      "outcome": "Three-template matrix documented; pr-check+agent-check green",
+      "unlocks": "GMP close / PR"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "README three-template matrix present; pyproject has no required constellation-node-sdk; no handlers.py/@register_handler as default path",
+      "no_go_action": "stop harvest ports until identity strip lands"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "birth-runner dry-run rename+verify for generic PKG; OPEN_PR=0; hygiene audit does not require PacketEnvelope fixtures",
+      "no_go_action": "disable push step; keep verify-only birth"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "make pr-check && make agent-check PASS; TEMPLATE_INVENTORY has zero unclassified mined surfaces; WHEN_TO_USE points nodes/deps to sibling templates",
+      "no_go_action": "block merge"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "README.md",
+      "action": "update",
+      "todo_ids": [
+        "T1",
+        "T2",
+        "T10"
+      ]
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": [
+        "T1",
+        "T5",
+        "T6",
+        "T10"
+      ]
+    },
+    {
+      "surface": "ARCHITECTURE.md",
+      "action": "update",
+      "todo_ids": [
+        "T1",
+        "T6",
+        "T10"
+      ]
+    },
+    {
+      "surface": "TEMPLATE_INVENTORY.md",
+      "action": "update",
+      "todo_ids": [
+        "T1",
+        "T11"
+      ]
+    },
+    {
+      "surface": "docs/WHEN_TO_USE.md",
+      "action": "update",
+      "todo_ids": [
+        "T10"
+      ],
+      "reason": "new side-by-side guide"
+    },
+    {
+      "surface": "Repo.mk",
+      "action": "update",
+      "todo_ids": [
+        "T3",
+        "T8",
+        "T9"
+      ]
+    },
+    {
+      "surface": "L9-Node-Template / PackageTemplate repos",
+      "action": "n_a",
+      "reason": "siblings; museum must not absorb their product role"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does any TODO recreate a Gate-worker or constellation_* dependency scaffold as the default museum path?",
+      "Would keeping create_node_app as the example confuse users who should use L9-Node-Template?",
+      "Does hygiene audit smuggle Constellation transport bans that belong only in node/SDK repos?",
+      "Does birth-runner clone PackageTemplate plays that mint TransportPacket packages?",
+      "Is museum still documented as replacement for golden-repo Gate workers without pointing to Node-Template?"
+    ],
+    "assumed_false_ifs": [
+      "museum must include constellation-node-sdk to be Quantum-L9",
+      "side projects need Gate routing by default",
+      "node and dep templates should be deprecated in favor of museum"
+    ],
+    "blast_radius": "Wrong identity makes every Use-template birth a fake node/dep repo, duplicates sibling templates, and confuses Quantum-L9 org scaffolding.",
+    "rollback": "Revert identity/harvest commits; restore prior branch tip; keep Core facade/Repo.mk/gov-* if still desired."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T4",
+      "T8",
+      "T7",
+      "T5",
+      "T6",
+      "T9",
+      "T10",
+      "T11"
+    ],
+    "shared_causes": [
+      "Two sibling templates already own nodes and constellation_* deps",
+      "Museum value is Quantum-L9 DX for everything else",
+      "Prior Gate-worker head-start on the branch conflicts with side-by-side identity"
+    ],
+    "deletions_or_consolidations": [
+      "Demote/remove default Gate-worker shell (handlers, spec.yaml Gate registration, required SDK dep)",
+      "Do not port PacketEnvelope/Gate peer laws, enginehandlers, nodespec, contracts/, constellation_* plays",
+      "Do not vendor node/dep CI ladders; keep sync-ci",
+      "Birth-runner under scripts/ only; no tools/ expansion"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Stripping Gate-worker shell breaks in-flight consumers of feat/gate-worker-head-start",
+      "mitigation": "Document migration: Constellation nodes use L9-Node-Template; changelog notes identity correction"
+    },
+    {
+      "risk": "Generic FastAPI example reintroduces Fix-B OTel stack",
+      "mitigation": "Compose-only obs remains opt-in; no OTel Python package in default deps"
+    },
+    {
+      "risk": "Birth-runner still smells like PackageTemplate dep factory",
+      "mitigation": "No plays catalog; config fields are pkg/repo only; docs say non-Constellation"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Should the thin default example be pure library package only, or include a minimal FastAPI hello (non-Gate)?",
+      "decision_effect": "Default chosen: minimal FastAPI hello without Gate/SDK so run/dev targets remain useful for runtimes/side projects",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Retain optional observability compose pack for non-Constellation services?",
+      "decision_effect": "Keep opt-in make obs-up; not required for verify",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "cd /Users/ib-mac/l9-repo-template && make pr-check",
+      "pass_criteria": "PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "cd /Users/ib-mac/l9-repo-template && make agent-check",
+      "pass_criteria": "PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "rg -n 'constellation-node-sdk|create_node_app|register_handler' pyproject.toml src README.md || true",
+      "pass_criteria": "no required SDK/worker framing in default template surfaces (docs may mention siblings)",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "rg -n 'L9-Node-Template|PackageTemplate|WHEN_TO_USE|three-template|side-by-side' README.md ARCHITECTURE.md docs/WHEN_TO_USE.md",
+      "pass_criteria": "three-template matrix documented",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2"
+    ],
+    "next_skill": "l9-gmp-protocol",
+    "stop_reason": "Identity-corrected PLAN_DOCUMENT ready; final_validation pending GMP execution"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "TEMPLATE_INVENTORY.md",
+      "CHANGELOG.md",
+      ".l9/",
+      "AGENTS.md",
+      "ARCHITECTURE.md",
+      "README.md",
+      "Repo.mk",
+      "plugin-config.yaml",
+      ".cursor/rules/",
+      ".semgrep/",
+      ".pre-commit-config.yaml",
+      "scripts/",
+      "src/l9_example_pkg/",
+      "tests/",
+      "docs/",
+      "pyproject.toml",
+      "uv.lock",
+      "spec.yaml",
+      ".env.example",
+      "Dockerfile",
+      "docker-compose.yml",
+      "MANIFEST.sha256"
+    ],
+    "must_not_modify": [
+      "Quantum-L9/L9-Node-Template product role",
+      "Quantum-L9/Constellation.PackageTemplate product role",
+      "Cursor-Governance ops copy-in",
+      "tools/ beyond l9_repo + check_workflow_integrity",
+      "Adding Justfile, contracts/, nodespec, enginehandlers, Fix-B OTel package"
+    ],
+    "preserved_contracts": [
+      "Museum is NOT the Constellation node template and NOT the constellation_* dep template",
+      "Core thin Makefile + Repo.mk + gov-* WS=",
+      "CI via make sync-ci",
+      "tools/ allowlist",
+      "OPEN_PR=0 for in-repo gates"
+    ],
+    "validation_commands": [
+      "make pr-check",
+      "make agent-check",
+      "make inventory-check",
+      "python scripts/repo_hygiene_audit.py"
+    ]
+  },
+  "checklist": [
+    "Identity lock: side-by-side non-Constellation Python template",
+    "Does not duplicate Node-Template or PackageTemplate products",
+    "Gate-worker default shell demoted/removed",
+    "U1 FastAPI hello / U2 obs compose bounded",
+    "validate_plan_document.py PASS"
+  ],
+  "estimate": "1\u20132 GMP cycles on feat branch after identity correction"
+}

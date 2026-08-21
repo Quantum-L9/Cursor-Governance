@@ -1,0 +1,123 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-template
+# engine: graph
+# layer: [ci]
+# tags: [L9_TEMPLATE, ci, docs-sync]
+# owner: platform
+# status: active
+# --- /L9_META ---
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# DORA META: Documentation-Code Synchronization Validator
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# CREATED: 2026-02-15T21:34:00-04:00
+# AUTHOR: L9 Engineering (cryptoxdog)
+# PURPOSE: Ensure docs and code remain in sync (API signatures, schemas)
+# DEPENDENCIES: scripts/docs_sync/, API introspection
+# DEPLOYMENT: Runs on PR + weekly schedule
+# DORA METRICS: Sync drift <5% | Doc freshness <7 days
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+name: Docs-Code Sync Validation
+
+on:
+  pull_request:
+    paths:
+      - 'api/**'
+      - 'core/**'
+      - 'readme/**'
+      - 'docs/**'
+  schedule:
+    - cron: '0 0 * * 1' # Weekly on Monday
+  workflow_dispatch:
+
+concurrency:
+  group: docs-sync-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  validate-sync:
+    name: Validate Docs Sync
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+
+      - name: Check Script Existence
+        run: |
+          if [ ! -f "scripts/docs_sync/validate_api_docs.py" ]; then
+            echo "⚠️  API docs validator script not found. Skipping validation."
+            exit 0
+          fi
+
+      - name: Validate API Documentation
+        run: |
+          if [ -f "scripts/docs_sync/validate_api_docs.py" ]; then
+            python scripts/docs_sync/validate_api_docs.py
+          else
+            echo "Skipping API validation (script not present)"
+          fi
+
+      - name: Check Markdown Links
+        shell: bash
+        run: |
+          roots=()
+          for root in readme docs; do
+            [ -d "$root" ] && roots+=("$root")
+          done
+
+          if [ "${#roots[@]}" -eq 0 ]; then
+            echo "No documentation directories found; skipping link validation"
+            exit 0
+          fi
+
+          failures=0
+          while IFS= read -r -d '' file; do
+            echo "Checking links in: $file"
+            while IFS= read -r link; do
+              clean_link="${link%%#*}"
+              clean_link="${clean_link%%\?*}"
+              clean_link="${clean_link#<}"
+              clean_link="${clean_link%>}"
+
+              case "$clean_link" in
+                ""|http://*|https://*|mailto:*|tel:*) continue ;;
+                /*) target=".${clean_link}" ;;
+                *) target="$(dirname "$file")/${clean_link#./}" ;;
+              esac
+
+              if [ ! -f "$target" ] && [ ! -d "$target" ]; then
+                echo "❌ Broken link in $file: $link (resolved: $target)"
+                failures=$((failures + 1))
+              fi
+            done < <(grep -oP '\[[^]]+\]\(\K[^) ]+' "$file" || true)
+          done < <(find "${roots[@]}" -name "*.md" -type f -print0)
+
+          if [ "$failures" -gt 0 ]; then
+            echo "❌ Broken internal links found: $failures"
+            exit 1
+          fi
+          echo "✅ Markdown links are valid"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# DORA META END
+# LAST_MODIFIED: 2026-07-20T00:00:00-04:00
+# CHANGE_SUMMARY: Correct relative-link resolution and aggregate all broken links
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

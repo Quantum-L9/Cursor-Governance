@@ -1,0 +1,83 @@
+schema_id: canonical.schema.evidence_contract.v1
+schema_name: Canonical Evidence Contract Schema
+schema_class: canonical_document_type_schema
+schema_family: l9_governance_contracts
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.evidence_contract.v1.yaml
+purpose:
+  primary: Define how a governance property is proven falsified captured integrity-bound retained and evaluated.
+  output_level: schema_not_instance
+  intended_use: [invariant_proof, policy_proof, runtime_behavior_proof, structural_proof, quality_gate_proof]
+  not_for: [raw_logs_without_property_binding, command_success_as_automatic_proof, unauthenticated_validation_claims]
+ontology:
+  parent_type: governance_contract_schema
+  specialized_type: evidence_contract_schema
+  instance_type_generated_by_this_schema: evidence_contract
+  related_schema_types: [canonical.schema.governance_contract.v1]
+inheritance:
+  extends: [canonical.schema.governance_contract.v1]
+  provides: [property_evidence_model, falsification_model, evidence_integrity_model, evidence_freshness_model]
+required_sections:
+  property:
+    required: true
+    fields:
+      property_id: {type: string, required: true}
+      statement: {type: string, required: true}
+      evidence_type: {enum: [filesystem, runtime_behavior, structural, quality_gate, repository_state, network_observation, proof_receipt, human_confirmation], required: true}
+      blocking: {type: boolean, required: true}
+  observation:
+    required: true
+    fields:
+      producer: {type: string, required: true}
+      setup: {type: string_or_null, required: false}
+      check: {type: string, required: true}
+      expected_positive: {type: string, required: true}
+      expected_negative: {type: string_or_null, required: false}
+      command_exit_zero_sufficient: {const: false}
+  binding:
+    required: true
+    fields:
+      source_commit_required: {type: boolean, required: true}
+      contract_digest_required: {type: boolean, required: true}
+      artifact_hash_required: {type: boolean, required: true}
+  freshness:
+    required: true
+    fields:
+      policy: {enum: [current_execution_only, commit_bound, explicit_duration, permanent_until_contract_change], required: true}
+      max_age: {type: duration_or_null, required: false}
+  result:
+    required: true
+    fields:
+      valid_states:
+        type: list
+        min_items: 1
+        unique_items: true
+        items: {enum: [pass, fail, blocked, unknown]}
+        required: true
+      unknown_is_pass: {const: false}
+conditional_rules:
+  - when: freshness.policy == explicit_duration
+    require: [freshness.max_age is non-null]
+  - when: freshness.policy != explicit_duration
+    require: [freshness.max_age is null or absent]
+  - when: property.blocking == true
+    require: [result.valid_states contains fail, result.valid_states contains blocked, result.valid_states contains unknown]
+validation_rules:
+  - {id: EVIDENCE-CONTRACT-001, severity: blocker, rule: metadata.kind must equal evidence.}
+  - {id: EVIDENCE-CONTRACT-002, severity: blocker, rule: evidence must bind to a named property.}
+  - {id: EVIDENCE-CONTRACT-003, severity: blocker, rule: successful evidence production is not equivalent to successful property proof.}
+  - {id: EVIDENCE-CONTRACT-004, severity: blocker, rule: blocking evidence may not treat unknown as pass.}
+  - {id: EVIDENCE-CONTRACT-005, severity: blocker, rule: behavioral properties require behavioral observation rather than structural existence alone.}
+  - {id: EVIDENCE-CONTRACT-006, severity: blocker, rule: explicit-duration freshness requires max_age and other freshness policies must not depend on it.}
+derivation_targets:
+  can_generate: [evidence_contract, validation_fixture, evidence_receipt_schema, property_evidence_matrix_entry, negative_test_case]
+anti_drift_rules:
+  - Evidence emission is not proof.
+  - Command exit zero is not automatically property evidence.
+  - Evidence must be bound to the state it claims to prove.
+  - Unknown cannot silently become pass.
+  - Freshness must be explicit.
+minimum_viable_instance_requirements:
+  required: [metadata, authority, scope, property, observation, binding, freshness, result]

@@ -1,0 +1,328 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Plan template organization fields",
+  "objective": "Add machine-scannable frontmatter for leverage_class, seams_affected, and files_impacted to the executable-plan SSOT so the plans store can be scored and shelved without inventing a second schema. Align /l9-plan, renderer, and optional PLAN_DOCUMENT fields. Sync _TEMPLATE.plan.md from SSOT; never fork it.",
+  "success_criteria": [
+    "canonical.template.executable_plan.v1.plan.md frontmatter includes leverage_class, leverage, seams_affected, and files_impacted with first-order leverage enum",
+    "sync_cursor_plan_template.py --check PASSES after sync so _TEMPLATE.plan.md matches SSOT byte-for-byte",
+    "render_plan_pe_autonomy.py emits those frontmatter keys from PLAN_DOCUMENT",
+    "l9-plan SKILL.md, plan-workflow-pe-autonomy.md, and commands/l9-plan.md list the fields and use slug_M-D-YY filenames",
+    "validate_plan_document.py fixtures/plan_pass.json still PASS; self_test.py PASS; make pr-check PASS on changed files"
+  ],
+  "scope": {
+    "in": [
+      "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md",
+      "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md.meta.md",
+      "docs/plans/_TEMPLATE.plan.md (generated mirror only)",
+      "skills/l9-plan/scripts/sync_cursor_plan_template.py",
+      "skills/l9-plan/scripts/render_plan_pe_autonomy.py",
+      "skills/l9-plan/schemas/plan-document.schema.json",
+      "skills/l9-plan/SKILL.md",
+      "skills/l9-plan/references/plan-workflow-pe-autonomy.md",
+      "skills/l9-plan/references/first-order-leverage.md",
+      "commands/l9-plan.md",
+      "docs/plans/README.md score/naming lines if they drift"
+    ],
+    "out": [
+      "Mass-rename of built/backlog/archive plan bodies",
+      "New concern or date folders",
+      "Second leverage scoring system",
+      "Requiring existing PLAN_DOCUMENT fixtures to populate seams_affected",
+      "AGENTS.md / CANONICAL_LAW.md rewrites",
+      "Auto-Build or execute of the live queue"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse HEAD in /Users/ib-mac/Cursor-Governance",
+      "pass_criteria": "equals b406feeb4734f7029c36d718a68b004cacd6a68a at plan lock",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "python3 skills/l9-plan/scripts/route_plan.py",
+      "pass_criteria": "depth=standard",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "read canonical template frontmatter + first-order-leverage.md + plan-document.schema.json leverage object",
+      "pass_criteria": "leverage already exists in JSON; missing from Cursor frontmatter",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-01-baseline-preflight",
+      "task": "Re-verify HEAD and that .cursor/plans/_TEMPLATE.plan.md is a sync target of the git SSOT, not a fork",
+      "files": [
+        "skills/l9-plan/scripts/sync_cursor_plan_template.py",
+        "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 4
+    },
+    {
+      "id": "todo-02-template-frontmatter",
+      "task": "Add fill-in frontmatter keys to canonical template: leverage_class enum, leverage object, seams_affected list, files_impacted list; add matching Metadata rows",
+      "files": [
+        "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md",
+        "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md.meta.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "todo-01-baseline-preflight"
+      ],
+      "leverage_rank": 1
+    },
+    {
+      "id": "todo-03-schema-optional",
+      "task": "Extend PLAN_DOCUMENT schema with optional leverage.class enum and optional top-level seams_affected and files_impacted arrays; do not add them to required[]",
+      "files": [
+        "skills/l9-plan/schemas/plan-document.schema.json"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "todo-02-template-frontmatter"
+      ],
+      "leverage_rank": 2
+    },
+    {
+      "id": "todo-04-renderer",
+      "task": "Have render_plan_pe_autonomy.py emit the new frontmatter from PLAN_DOCUMENT (class + leverage lists + seams + union of task files)",
+      "files": [
+        "skills/l9-plan/scripts/render_plan_pe_autonomy.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-03-schema-optional"
+      ],
+      "leverage_rank": 3
+    },
+    {
+      "id": "todo-05-skill-align",
+      "task": "Align SKILL.md, plan-workflow required frontmatter list, first-order-leverage.md, commands/l9-plan.md (date filename + new fields)",
+      "files": [
+        "skills/l9-plan/SKILL.md",
+        "skills/l9-plan/references/plan-workflow-pe-autonomy.md",
+        "skills/l9-plan/references/first-order-leverage.md",
+        "commands/l9-plan.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-02-template-frontmatter"
+      ],
+      "leverage_rank": 5
+    },
+    {
+      "id": "todo-06-sync-mirror",
+      "task": "Run sync_cursor_plan_template.py so docs/plans/_TEMPLATE.plan.md (via .cursor/plans symlink) matches SSOT",
+      "files": [
+        "docs/plans/_TEMPLATE.plan.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-02-template-frontmatter"
+      ],
+      "leverage_rank": 6
+    },
+    {
+      "id": "todo-07-prove",
+      "task": "Run pack validators, fixture PASS, audit self_test, make pr-check on changed files",
+      "files": [
+        "skills/l9-plan/scripts/validate_plan_document.py",
+        "skills/l9-plan/scripts/self_test.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-03-schema-optional",
+        "todo-04-renderer",
+        "todo-05-skill-align",
+        "todo-06-sync-mirror"
+      ],
+      "leverage_rank": 7
+    }
+  ],
+  "critical_path": [
+    "todo-01-baseline-preflight",
+    "todo-02-template-frontmatter",
+    "todo-03-schema-optional",
+    "todo-04-renderer",
+    "todo-05-skill-align",
+    "todo-06-sync-mirror",
+    "todo-07-prove"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "SSOT frontmatter has org fields",
+      "unlocks": "schema + renderer + skill text"
+    },
+    {
+      "id": "M2",
+      "outcome": "mirror synced and validators PASS",
+      "unlocks": "execute complete"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "canonical template YAML parses; keys present",
+      "no_go_action": "stop; do not sync a broken template"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "sync --check 0; validate_plan_document fixtures/plan_pass.json 0; make pr-check PASS",
+      "no_go_action": "block readiness"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No root-file law change; plan store README already documents score law"
+    },
+    {
+      "surface": "commands/l9-plan.md",
+      "action": "update",
+      "todo_ids": [
+        "todo-05-skill-align"
+      ]
+    },
+    {
+      "surface": "docs/plans/README.md",
+      "action": "n_a",
+      "reason": "Score law already points at first-order leverage; update only if field names drift"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Would adding required schema fields break every existing PLAN_DOCUMENT fixture?",
+      "Would editing _TEMPLATE directly fork the SSOT and fail the next sync --check?",
+      "Would a free-text concern field recreate folder-by-concern organization?"
+    ],
+    "assumed_false_ifs": [
+      "agents treat seams_affected as a folder taxonomy",
+      "Cursor Build ignores unknown frontmatter keys"
+    ],
+    "blast_radius": "Every new /l9-plan projection and the local _TEMPLATE mirror; existing parked plans unchanged",
+    "rollback": "git restore scoped paths listed in gmp_handoff.may_modify; re-run sync to restore mirror"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-02-template-frontmatter",
+      "todo-03-schema-optional",
+      "todo-04-renderer",
+      "todo-01-baseline-preflight",
+      "todo-05-skill-align",
+      "todo-06-sync-mirror",
+      "todo-07-prove"
+    ],
+    "shared_causes": [
+      "organization fields live only in PLAN_DOCUMENT JSON, so the Cursor store cannot scan leverage/seams/files"
+    ],
+    "deletions_or_consolidations": [
+      "do not add a second score schema or concern folders; project first-order leverage into frontmatter"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Making new schema fields required breaks fixtures and old campaign JSON",
+      "mitigation": "optional properties only; required[] unchanged"
+    },
+    {
+      "risk": "Hand-editing _TEMPLATE forks SSOT",
+      "mitigation": "edit canonical template only; sync script writes the mirror"
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 skills/l9-plan/scripts/validate_plan_document.py skills/l9-plan/fixtures/plan_pass.json",
+      "pass_criteria": "exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 skills/l9-plan/scripts/self_test.py",
+      "pass_criteria": "PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "python3 skills/l9-plan/scripts/sync_cursor_plan_template.py --repo /Users/ib-mac/Cursor-Governance --check",
+      "pass_criteria": "exit 0 after sync",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on changed files",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "l9-ynp",
+    "stop_reason": "plan locked; implementation not run because /l9-plan is planning-only"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md",
+      "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md.meta.md",
+      "docs/plans/_TEMPLATE.plan.md",
+      "skills/l9-plan/scripts/render_plan_pe_autonomy.py",
+      "skills/l9-plan/schemas/plan-document.schema.json",
+      "skills/l9-plan/SKILL.md",
+      "skills/l9-plan/references/plan-workflow-pe-autonomy.md",
+      "skills/l9-plan/references/first-order-leverage.md",
+      "commands/l9-plan.md",
+      "docs/plans/README.md"
+    ],
+    "must_not_modify": [
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      "Makefile",
+      "docs/plans/built/",
+      "docs/plans/backlog/",
+      "docs/plans/archive/"
+    ],
+    "preserved_contracts": [
+      "_TEMPLATE is a sync mirror of the git SSOT",
+      "first-order leverage rank order unchanged",
+      "PLAN_DOCUMENT required[] unchanged",
+      "planning-only does not mutate product until execute"
+    ],
+    "validation_commands": [
+      "python3 skills/l9-plan/scripts/validate_plan_document.py skills/l9-plan/fixtures/plan_pass.json",
+      "python3 skills/l9-plan/scripts/self_test.py",
+      "python3 skills/l9-plan/scripts/sync_cursor_plan_template.py --check",
+      "make pr-check"
+    ]
+  },
+  "depth": "standard",
+  "checklist": [
+    "frontmatter on SSOT",
+    "optional schema fields",
+    "renderer",
+    "skill/command align",
+    "sync mirror",
+    "validators"
+  ],
+  "estimate": "one execute pass"
+}

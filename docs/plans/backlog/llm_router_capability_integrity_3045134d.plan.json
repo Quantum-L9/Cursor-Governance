@@ -1,0 +1,580 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "standard",
+  "title": "LLM-Router capability-integrity hardening (next 1.1.x patch)",
+  "objective": "Make it impossible for LLM-Router callers to request capabilities the selected execution path silently drops. Land one canonical capability resolver plus one validation authority, refactor resolveRoute and dispatch to consume a single capability decision, fail closed on vision+search, vision-without-images, images-on-non-vision, search-modifiers-without-search, and consensus-without-search, remove the impossible Perplexity disableSearch state, add capability evidence and failure outcomes to RoutingDecision, keep every mature piece (budget, circuit, fallback, transport, pricing, taxonomy, provider inventory) untouched, then publish the next unused 1.1.x patch and pin the exact same version in Website-Bot and SEO-Bot.",
+  "success_criteria": [
+    "resolveCapabilities(task) is the single internal capability authority; resolveRoute and dispatchProvider consume one RoutingDecision and never re-derive search/vision from the raw task (grep evidence: VISION_TASKS referenced only inside src/matrices/search-policy.ts)",
+    "Every route resolution carries searchRequired, searchPolicySource (EXPLICIT|TASK_DEFAULT), and visionRequired on RoutingResolution; RoutingDecision exposes outcome plus failureKind/errorCode on post-route-resolution failures",
+    "All five unsupported-combination codes throw before budget reservation and before provider dispatch: SEARCH_VISION_COMBINATION_UNSUPPORTED, VISION_INPUT_REQUIRED, IMAGES_NOT_SUPPORTED_FOR_TASK, SEARCH_MODIFIER_WITHOUT_SEARCH, CONSENSUS_REQUIRES_SEARCH",
+    "The full 14-row routing matrix from the contract passes: 8 route rows (3 STRATEGIC_REASONING, 3 COMPETITOR_RESEARCH, 2 SCREENSHOT_ANALYSIS, 1 consensus-on-search) and 6 fail rows (SEARCH_VISION, VISION_INPUT_REQUIRED, IMAGES_NOT_SUPPORTED, SEARCH_MODIFIER, CONSENSUS_REQUIRES_SEARCH plus SEARCH+CONSENSUS success)",
+    "resolvePerplexityConfig throws for any non-search task and disableSearch stays false on every router-built PerplexityConfig",
+    "getCallLog() records FAILED entries (outcome, failureKind, errorCode) for failures after route resolution without logging prompt, API key, authorization header, or image contents",
+    "npm run verify:all PASS on the capability-integrity branch (build, strict types, declaration-consumer compile, lint, lint:boundary, tests, audit, package verify)",
+    "npm pack produces the tarball; ephemeral install in Website-Bot and SEO-Bot compiles and passes tests against the packed artifact",
+    "The next unused 1.1.x patch is published after a human checkpoint and registry-version verification (never assumed), then pinned as the exact same version in both bots",
+    "Budget, circuit, fallback, image-safety regression suites stay green with no changes to src/budget, src/circuit-breaker.ts, provider transports, src/pricing.ts, or src/vision internals"
+  ],
+  "scope": {
+    "in": [
+      "Quantum-L9/LLM-Router: new branch campaign/7-router-capability-integrity from origin/main c47c0248f603786fea2e14ce4a9dcc7ea1c5ea40 (package version 1.1.3 baseline)",
+      "src/matrices/search-policy.ts (Replace+Create): resolveCapabilities, ResolvedCapabilities, validateCapabilities, VISION_TASKS canonical home, UnsupportedCapabilityCombinationError code-union extension",
+      "src/index.ts (Replace): resolveRoute consumes validated capabilities and returns them; dispatchProvider branches on decision.searchRequired/decision.visionRequired with provider and images asserts; execute() consensus check before budget reservation; failure audit logging in the catch path",
+      "src/types.ts (Replace, additive only): RoutingResolution.visionRequired; RoutingDecision outcome/failureKind/errorCode optional fields",
+      "src/matrices/perplexity-matrix.ts (Replace): throw when resolvePerplexityConfig is called for a non-search task",
+      "tests/routing-matrix.test.ts (extend to full 14 rows), tests/search-policy.test.ts (extend), tests/capability-integrity.test.ts (Create)",
+      "package.json version bump to the registry-verified next unused 1.1.x patch",
+      "ARCHITECTURE.md and README.md routing authority-chain documentation",
+      "Website-Bot package.json + package-lock.json and SEO-Bot package.json + package-lock.json: pin the exact published patch (release wave only, after publish)"
+    ],
+    "out": [
+      "src/budget/** and any budget semantics (reservation, reconciliation, throttling, surge)",
+      "src/circuit-breaker.ts behavior",
+      "src/providers/openrouter.ts and src/providers/perplexity.ts transport internals",
+      "src/pricing.ts, src/matrices/general-matrix.ts and perplexity-matrix.ts pricing/selection tables",
+      "src/vision/index.ts resolveVisionConfig logic",
+      "src/control-plane/**",
+      "src/schemas.ts (schema stays permissive; runtime validation is the new authority)",
+      "TaskType taxonomy, provider inventory, SonarModel/GeneralModel enums",
+      "Direct provider subpath exports (deprecated, kept for 1.x compatibility)",
+      "campaign/7-router-search-policy branch and PR #55 content (conflicting with main, superseded by this plan; disposition via l9-pr-remediation, never stacked onto or rebased)",
+      "npm major/minor release, public API removal, or re-export of the deprecated direct provider subpaths",
+      "WIP/Llm Router Contract.md (intent source document, not a product surface)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind Quantum-L9/LLM-Router as the change target; consumers (Website-Bot, SEO-Bot) touched only in the release wave pin step",
+      "pass_criteria": "write root is /Users/macm2/LLM-Router on the new branch; no Makefile exists in LLM-Router so make pr-check is N/A and npm run verify:all is the canonical quality gate",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "git -C /Users/macm2/LLM-Router rev-parse origin/main && node -p \"require('/Users/macm2/LLM-Router/package.json').version\"",
+      "pass_criteria": "origin/main is c47c0248f603786fea2e14ce4a9dcc7ea1c5ea40; package version is 1.1.3",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "python3 .claude/skills/l9-plan/scripts/route_plan.py --risk guarded --evidence clear --json",
+      "pass_criteria": "depth=standard omit_gates=[] (no escalation; baseline gates apply)",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "inventory current main state against the contract: requiresSearchProvider, isSearchTask, assertSearchVisionCompatible, UnsupportedCapabilityCombinationError (code SEARCH_VISION_COMBINATION_UNSUPPORTED) in src/matrices/search-policy.ts; RoutingResolution.searchRequired + searchPolicySource in src/types.ts; disableSearch: false in src/matrices/perplexity-matrix.ts line 64; VISION_TASKS in src/index.ts line 33; dispatch reinterprets via VISION_TASKS.has && images?.length at src/index.ts line 183; callLog.push success-only at line 142; recency/domainFilter independently allowed in src/schemas.ts lines 16-17",
+      "pass_criteria": "quoted evidence: contract Fix 2.A and Fix 4 disableSearch plus half of Fix 7 already landed on main via #44/#45/#46; Fix 1, 2.B, 2.C, 3, 4-guard, 5, 6, 7-visionRequired, 8 are real gaps",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "gh pr view 55 --repo Quantum-L9/LLM-Router --json number,state,headRefName,baseRefName,mergeable",
+      "pass_criteria": "PR #55 OPEN head=campaign/7-router-search-policy base=main mergeable=CONFLICTING; its scope overlaps this plan, so it is superseded; disposition happens via /l9-pr-remediation at execute start, not by stacking or rebasing",
+      "status": "passed"
+    },
+    {
+      "id": "P5",
+      "command_or_action": "npm run verify:all",
+      "pass_criteria": "named as the canonical quality gate; NOT executed in plan mode (no product mutation from planning)",
+      "status": "pending"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T00",
+      "task": "Create branch campaign/7-router-capability-integrity from origin/main c47c0248f603786fea2e14ce4a9dcc7ea1c5ea40 in LLM-Router. Bind the full SHA. Do not base on campaign/7-router-search-policy (PR #55 is CONFLICTING and superseded). Do not rebase, do not merge PR #55 content in, and do not mutate product files until the branch is bound.",
+      "files": [
+        "src/index.ts",
+        "src/matrices/search-policy.ts"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "origin/main c47c024; campaign/7-router-search-policy must stay untouched",
+      "leverage_rank": 10,
+      "shared_root_cause": "wrong baseline or conflicting superseded PR"
+    },
+    {
+      "id": "T01",
+      "task": "Fix 1 — canonical capability resolver. Add ResolvedCapabilities { searchRequired, searchPolicySource, visionRequired, imagesProvided } and resolveCapabilities(task) to src/matrices/search-policy.ts; move VISION_TASKS there from src/index.ts; keep requiresSearchProvider and isSearchTask semantics unchanged. Export resolveCapabilities and ResolvedCapabilities from src/index.ts. Do not change requiresSearch precedence (explicit boolean wins, undefined falls back to TaskType default).",
+      "files": [
+        "src/matrices/search-policy.ts",
+        "src/index.ts"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": ["T00"],
+      "operation": "Create",
+      "anchor": "requiresSearchProvider in src/matrices/search-policy.ts lines 45-50; VISION_TASKS in src/index.ts line 33",
+      "leverage_rank": 3,
+      "shared_root_cause": "no single capability authority exists"
+    },
+    {
+      "id": "T02",
+      "task": "Fix 2 — fail-closed validation authority. Add validateCapabilities(capabilities) throwing UnsupportedCapabilityCombinationError for: searchRequired+visionRequired (SEARCH_VISION_COMBINATION_UNSUPPORTED, keep the existing main code name), visionRequired without imagesProvided (VISION_INPUT_REQUIRED), imagesProvided without visionRequired (IMAGES_NOT_SUPPORTED_FOR_TASK). Extend the existing error class code union additively and keep its current constructor signature working; fold assertSearchVisionCompatible into validateCapabilities and keep the exported shim delegating for compatibility. Call validateCapabilities inside resolveRoute before any provider/model resolution.",
+      "files": [
+        "src/matrices/search-policy.ts",
+        "src/index.ts",
+        "tests/search-policy.test.ts"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T01"],
+      "operation": "Replace",
+      "anchor": "assertSearchVisionCompatible in src/matrices/search-policy.ts lines 76-80; resolveRoute in src/index.ts lines 44-58",
+      "leverage_rank": 2,
+      "shared_root_cause": "schema allows combinations the execution plane cannot honor"
+    },
+    {
+      "id": "T03",
+      "task": "Fix 3 + Fix 7 — one decision consumed by routing and dispatch, with capability evidence on the public resolution. Add visionRequired to RoutingResolution (additive; imagesProvided stays internal to the capabilities module and is not spread onto the public contract). resolveRoute returns capabilities on every branch. dispatchProvider branches on decision.searchRequired and decision.visionRequired with asserts: searchRequired implies provider PERPLEXITY, visionRequired implies provider OPENROUTER and non-empty images. Delete the second task reinterpretation (VISION_TASKS.has(task.type) && images?.length) and the now-unreachable images?.length ?? 1 fallback.",
+      "files": [
+        "src/index.ts",
+        "src/types.ts",
+        "tests/router-execution.test.ts"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": ["T01", "T02"],
+      "operation": "Replace",
+      "anchor": "dispatchProvider in src/index.ts lines 158-191; RoutingResolution in src/types.ts lines 188-199",
+      "leverage_rank": 1,
+      "shared_root_cause": "routing and dispatch independently reinterpret the task — the root cause of the no-image vision hole"
+    },
+    {
+      "id": "T04",
+      "task": "Fix 4 — impossible-state guard. Add a guard at the top of resolvePerplexityConfig: throw when requiresSearchProvider(task) is false, so provider config and routing authority agree. disableSearch: false already landed on main (perplexity-matrix.ts line 64); keep it and its comment. Do not remove the field from PerplexityConfig (public contract, direct-provider compatibility).",
+      "files": [
+        "src/matrices/perplexity-matrix.ts",
+        "tests/search-policy.test.ts"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T01"],
+      "operation": "Insert",
+      "anchor": "resolvePerplexityConfig in src/matrices/perplexity-matrix.ts lines 42-68",
+      "leverage_rank": 7,
+      "shared_root_cause": "provider config and routing authority can disagree"
+    },
+    {
+      "id": "T05",
+      "task": "Fix 5 — search-modifier validation. After capability resolution, throw SEARCH_MODIFIER_WITHOUT_SEARCH when recency or a non-empty domainFilter is present but searchRequired is false. The schema stays permissive; this is runtime contract enforcement. RequiresSearch=false plus domainFilter becomes an explicit contract error.",
+      "files": [
+        "src/matrices/search-policy.ts",
+        "src/index.ts",
+        "tests/capability-integrity.test.ts"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": ["T02"],
+      "operation": "Insert",
+      "anchor": "resolveRoute in src/index.ts after validateCapabilities; recency/domainFilter on TaskDescriptor in src/types.ts lines 112-113",
+      "leverage_rank": 5,
+      "shared_root_cause": "search-only policy silently ignored on general routes"
+    },
+    {
+      "id": "T06",
+      "task": "Fix 6 — consensus requires a search-backed route. In execute(), after route resolution and before budget reservation, throw CONSENSUS_REQUIRES_SEARCH when options.consensus is true and decision.searchRequired is false. Consensus stays a search execution modifier, never hidden routing authority. Do not change the existing variations>1 dispatch condition inside the Perplexity branch.",
+      "files": [
+        "src/index.ts",
+        "tests/router-execution.test.ts",
+        "tests/capability-integrity.test.ts"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": ["T03"],
+      "operation": "Insert",
+      "anchor": "execute() budget reservation at src/index.ts lines 124-125; consensus dispatch condition at line 170",
+      "leverage_rank": 6,
+      "shared_root_cause": "execution options silently ignored off the search branch"
+    },
+    {
+      "id": "T07",
+      "task": "Fix 8 — failed routed calls are auditable. Add optional outcome ('SUCCESS'|'FAILED'), failureKind (reuse ProviderFailureKind union from src/types.ts), and errorCode to RoutingDecision (additive). On success keep the existing push with outcome SUCCESS. In the execute() catch path after route resolution, set outcome FAILED plus classified failureKind/errorCode and push before rethrowing; budget/circuit pre-provider failures map to failureKind local/unknown with the error name as errorCode. Never log prompt, API key, authorization header, or image contents.",
+      "files": [
+        "src/index.ts",
+        "src/types.ts",
+        "src/provider-errors.ts",
+        "tests/router-execution.test.ts",
+        "tests/capability-integrity.test.ts"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T03"],
+      "operation": "Insert",
+      "anchor": "callLog.push at src/index.ts line 142; catch path lines 144-155; classifyProviderError in src/provider-errors.ts line 121",
+      "leverage_rank": 4,
+      "shared_root_cause": "call log records success only, so failure forensics are blind"
+    },
+    {
+      "id": "T08",
+      "task": "Proof wave — extend tests/routing-matrix.test.ts to the full 14-row contract matrix (8 route rows, 6 fail rows) and add capability-integrity coverage: validation throws occur before budget reservation and before any provider call (assert via injected fake clients), dispatch asserts, modifier and consensus throws, FAILED callLog entries with classified kinds, and no prompt data in call log entries. Run npm run verify:all and fix any real regression without weakening existing budget/circuit/fallback/image-safety assertions. Do not touch src/budget, src/circuit-breaker.ts, transports, src/pricing.ts, or vision internals.",
+      "files": [
+        "tests/routing-matrix.test.ts",
+        "tests/capability-integrity.test.ts",
+        "tests/search-policy.test.ts",
+        "tests/router-execution.test.ts",
+        "scripts/test-inventory.mjs"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": ["T02", "T03", "T04", "T05", "T06", "T07"],
+      "operation": "Replace",
+      "anchor": "tests/routing-matrix.test.ts already exists on main; tests inject fake provider clients via RouterDependencies",
+      "leverage_rank": 8,
+      "shared_root_cause": "capability integrity without an executable proof matrix"
+    },
+    {
+      "id": "T09",
+      "task": "Release wave — run npm run verify:all and npm pack; check the npm registry for the highest published 1.1.x (npm view, network read; fail closed on error — never assume the next number); bump package.json to the next unused patch; human checkpoint before npm publish (NPM_TOKEN via l9-aws-secrets, never printed); ephemeral install of the packed tarball into Website-Bot and SEO-Bot with consumer compile/test PASS; pin the exact published version in both bots' package.json and package-lock.json. Final invariant: Website-Bot installed Router == SEO-Bot installed Router == new verified patch.",
+      "files": [
+        "package.json",
+        "package-lock.json",
+        "Website-Bot/package.json",
+        "Website-Bot/package-lock.json",
+        "SEO-Bot/package.json",
+        "SEO-Bot/package-lock.json"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": ["T08"],
+      "operation": "Replace",
+      "anchor": "package.json version 1.1.3; consumer package pins are cross-repo edits done only in this wave",
+      "leverage_rank": 9,
+      "shared_root_cause": "verified patch that never reaches consumers"
+    },
+    {
+      "id": "T10",
+      "task": "Docs — update ARCHITECTURE.md and README.md routing sections to the single authority chain (TaskDescriptor → resolve capabilities → validate → resolve provider/model → reserve budget → dispatch EXACT resolved capability), document the fail-closed error codes and the RoutingDecision audit fields, and note the patch-release behavior change (invalid capability combinations now throw instead of silently degrading). Do not rewrite unrelated architecture prose.",
+      "files": [
+        "ARCHITECTURE.md",
+        "README.md"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": ["T09"],
+      "operation": "Replace",
+      "anchor": "existing routing documentation sections in ARCHITECTURE.md and README.md",
+      "leverage_rank": 11,
+      "shared_root_cause": "documentation diverges from the implemented authority chain"
+    }
+  ],
+  "critical_path": [
+    "T00",
+    "T01",
+    "T02",
+    "T03",
+    "T06",
+    "T08",
+    "T09",
+    "T10"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "Branch bound from origin/main c47c024; capability resolver plus fail-closed validation land",
+      "unlocks": "dispatch refactor and modifier checks"
+    },
+    {
+      "id": "M1",
+      "outcome": "One authority chain: routing and dispatch consume a single decision; perplexity guard, modifier and consensus throws, and failure audit all land",
+      "unlocks": "proof wave"
+    },
+    {
+      "id": "M2",
+      "outcome": "Full 14-row routing matrix plus capability-integrity and regression suites green; npm run verify:all PASS",
+      "unlocks": "release wave"
+    },
+    {
+      "id": "M3",
+      "outcome": "Registry-verified patch published after human checkpoint and pinned identically in Website-Bot and SEO-Bot; docs updated",
+      "unlocks": "PR and /l9-pr-remediation handoff"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C0",
+      "after": "T00",
+      "evidence_required": "git rev-parse HEAD equals c47c0248f603786fea2e14ce4a9dcc7ea1c5ea40 on campaign/7-router-capability-integrity; PR #55 disposition recorded via l9-pr-remediation diagnose",
+      "no_go_action": "stop_and_replan; do not edit on campaign/7-router-search-policy or against a moved main"
+    },
+    {
+      "id": "C1",
+      "after": "T02",
+      "evidence_required": "unit tests: the three fail-closed codes throw from resolveRoute before any provider/model resolution; existing search+vision test still passes under the kept code name",
+      "no_go_action": "do not refactor dispatch until validation is proven"
+    },
+    {
+      "id": "C2",
+      "after": "T03",
+      "evidence_required": "grep: VISION_TASKS appears only in src/matrices/search-policy.ts; dispatchProvider contains no task.type vision re-check; dispatch asserts provider and images",
+      "no_go_action": "do not add audit or consensus todos on a double-interpretation dispatch"
+    },
+    {
+      "id": "C3",
+      "after": "T08",
+      "evidence_required": "npm run verify:all PASS; all 14 matrix rows and regression suites green; no budget/circuit/fallback/image-safety test was weakened",
+      "no_go_action": "do not enter the release wave"
+    },
+    {
+      "id": "C4",
+      "after": "T09",
+      "evidence_required": "registry check evidence; tarball inspected; consumer compile/test PASS in both bots; both pins equal the published patch; human checkpoint receipt for npm publish",
+      "no_go_action": "do not publish, do not pin, and do not open the PR without the checkpoint"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "src/types.ts public contracts (RoutingResolution, RoutingDecision)",
+      "action": "update",
+      "todo_ids": ["T03", "T07"]
+    },
+    {
+      "surface": "src/index.ts public exports (resolveCapabilities, validateCapabilities, error codes)",
+      "action": "update",
+      "todo_ids": ["T01", "T02"]
+    },
+    {
+      "surface": "ARCHITECTURE.md routing authority chain",
+      "action": "update",
+      "todo_ids": ["T10"]
+    },
+    {
+      "surface": "README.md routing and audit documentation",
+      "action": "update",
+      "todo_ids": ["T10"]
+    },
+    {
+      "surface": "package.json + package-lock.json",
+      "action": "update",
+      "todo_ids": ["T09"]
+    },
+    {
+      "surface": "Website-Bot and SEO-Bot package.json + package-lock.json",
+      "action": "update",
+      "todo_ids": ["T09"]
+    },
+    {
+      "surface": "src/schemas.ts",
+      "action": "n_a",
+      "reason": "schema deliberately stays permissive; runtime validation in the capabilities module is the new authority (contract Fix 5 keeps TaskDescriptor parsing unchanged)"
+    },
+    {
+      "surface": "src/budget, src/circuit-breaker.ts, src/pricing.ts, provider transports, src/vision internals, src/control-plane",
+      "action": "n_a",
+      "reason": "contract Fix 9 preserve-mature: budget, circuit, fallback, transport, pricing, taxonomy, and provider inventory are not redesigned by this patch"
+    },
+    {
+      "surface": "WIP/Llm Router Contract.md",
+      "action": "n_a",
+      "reason": "intent source document; consumed by the plan compiler, not a product surface"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If consumers call the public resolveRoute() directly with a vision task and no images, the new throw changes their behavior at routing time, not only at execute() — is a behavior change in a 1.1.x patch acceptable for callers that previously got a silent general fallback?",
+      "If a FAILED entry is pushed for BudgetExhaustedError or circuit-open before provider completion and the consumer retries, getCallLog() grows per attempt — do existing budget/circuit tests assert exact callLog lengths on failure paths and would they break?",
+      "If dispatch asserts decision.provider === PERPLEXITY while getDowngradedModel has already mutated decision.model, can a downgraded Sonar model ever violate the SonarModel check at src/index.ts line 168?",
+      "If the routing-matrix.test.ts already on main encodes merged #46 expectations (search+vision throws with SEARCH_VISION_COMBINATION_UNSUPPORTED), does the new 14-row extension conflict with or duplicate those rows?",
+      "If the npm registry check fails (offline) during the release wave, does the wave fail closed instead of guessing the next patch number?",
+      "If options.consensus is true on a search route whose resolved config has variations === 1, consensus is still silently ignored by the existing variations>1 condition — is that residual silence acceptable for this patch?"
+    ],
+    "assumed_false_ifs": [
+      "origin/main remains c47c0248f603786fea2e14ce4a9dcc7ea1c5ea40 at execute start; if it moves, rebind the baseline and re-evaluate PR #55 before any edit",
+      "classifyProviderError's ProviderRequestError exposes kind and code directly for the audit fields (verify at T07, not assumed silently)",
+      "npm run verify:all remains the canonical quality gate (LLM-Router has no Makefile, so make pr-check does not exist in this repo)",
+      "the npm registry does not already carry a published 1.1.4+ from another actor at release time (checked, never assumed)",
+      "Website-Bot and SEO-Bot never send the now-rejected invalid capability combinations, so the consumer proof passes without consumer code changes"
+    ],
+    "blast_radius": "Router capability resolution, dispatch, the public RoutingResolution/RoutingDecision contracts, the call log, and consumer package pins. A wrong throw code rejects valid consumer traffic; a wrong dispatch assert crashes at runtime instead of degrading. Budget/circuit/fallback/transport code is untouched, so their regression surface is bounded to call-log length assertions.",
+    "rollback": "Drop the branch — no revert of main. If the patch is already published: re-pin both bots back to 1.1.3 and deprecate the patch on npm (deprecate, never unpublish). No force-push, no rebase, no admin-merge."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T03",
+      "T02",
+      "T01",
+      "T07",
+      "T05",
+      "T06",
+      "T04",
+      "T08",
+      "T09",
+      "T00",
+      "T10"
+    ],
+    "shared_causes": [
+      "routing and dispatch independently reinterpret the task, so capability loss holes exist by construction",
+      "the schema accepts capability combinations the execution plane cannot faithfully execute",
+      "the call log records success only, so failure forensics are blind"
+    ],
+    "deletions_or_consolidations": [
+      "Delete the second task reinterpretation (VISION_TASKS.has(task.type) && images?.length) in dispatchProvider and the now-unreachable images?.length ?? 1 fallback",
+      "Fold assertSearchVisionCompatible into validateCapabilities; keep only a delegating exported shim for compatibility",
+      "Do not spread imagesProvided onto the public RoutingResolution — keep it internal to the capabilities module",
+      "Do not redesign budget, circuit, fallback, transport, pricing, taxonomy, or provider inventory (contract Fix 9)",
+      "Do not mutate src/schemas.ts — runtime validation is the authority, not a second schema fork"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "PR #55 (campaign/7-router-search-policy) is OPEN and CONFLICTING with main, and its scope overlaps this plan",
+      "mitigation": "New branch from origin/main only. Disposition PR #55 through /l9-pr-remediation diagnose at execute start. Never stack onto a conflicting base and never rebase (shared-worktree-isolation policy)."
+    },
+    {
+      "risk": "Behavior change inside a 1.1.x patch: previously silent capability loss now throws",
+      "mitigation": "This is the contract's explicit intent (fail closed). Consumer compile/test proof runs in the release wave; release notes document the change; patch number, not minor, because public API signatures stay compatible."
+    },
+    {
+      "risk": "Existing budget/circuit tests may assert exact callLog length or content on failure paths",
+      "mitigation": "Inspect tests before editing expectations. Extend assertions deliberately to include FAILED entries; never weaken or delete legitimate coverage (95-test-fix-policy)."
+    },
+    {
+      "risk": "Public error-class shape change breaks consumers matching the old constructor",
+      "mitigation": "Additive code-union extension; keep the existing SEARCH_VISION_COMBINATION_UNSUPPORTED code name and constructor signature; existing call sites stay unchanged."
+    },
+    {
+      "risk": "npm publish is an outward-facing, hard-to-reverse external mutation",
+      "mitigation": "Human checkpoint before publish; NPM_TOKEN resolved via l9-aws-secrets and never printed; autonomous_merge false; publish happens only after C3 evidence and registry verification."
+    },
+    {
+      "risk": "Website-Bot and SEO-Bot pins drift apart",
+      "mitigation": "Both pins set to the exact same published version in the same wave; final invariant asserted as Website-Bot == SEO-Bot == new patch."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "UNK-001",
+      "question": "Has origin/main moved past c47c024 by execute start (dependabot or other merges)?",
+      "decision_effect": "If moved, rebind the branch base to the new tip and re-run the P3 inventory deltas before any edit.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "UNK-002",
+      "question": "Do tests/budget-reservations.test.ts or circuit-breaker-remediation.test.ts assert exact callLog length/order on failure paths?",
+      "decision_effect": "T07 must extend those assertions to expect FAILED entries rather than silence them.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "UNK-003",
+      "question": "Does ProviderRequestError expose kind and code directly on the instance (not only inside metadata)?",
+      "decision_effect": "T07 reads the fields the classification actually exposes; a one-line accessor is added only if needed.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "UNK-004",
+      "question": "Is the next 1.1.x patch number already taken on the registry at release time?",
+      "decision_effect": "T09 verifies via npm view and fails closed on network error; the number is never assumed.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "UNK-005",
+      "question": "Consensus on a search route with variations === 1 stays silently ignored by the existing dispatch condition — is that residual silence in scope?",
+      "decision_effect": "Out of scope for this patch (contract Fix 9 protects pricing/variations logic); documented in release notes instead of changed.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "F0",
+      "command": "npm run verify:all",
+      "pass_criteria": "build, verify:types, verify:declarations, lint, lint:boundary, tests, audit (high, omit dev), verify:package all PASS on the capability-integrity branch",
+      "status": "pending"
+    },
+    {
+      "id": "F1",
+      "command": "npm pack && tar -tf quantum-l9-llm-router-*.tgz | grep -vE 'dist/|README|LICENSE|package.json'",
+      "pass_criteria": "tarball contains only expected published files; no .env, no secrets, no tests, no fixtures",
+      "status": "pending"
+    },
+    {
+      "id": "F2",
+      "command": "npm view @quantum-l9/llm-router versions --json",
+      "pass_criteria": "registry read succeeds and identifies the next unused 1.1.x patch; failure fails closed",
+      "status": "pending"
+    },
+    {
+      "id": "F3",
+      "command": "ephemeral install of the packed tarball in Website-Bot and SEO-Bot, then consumer compile/test",
+      "pass_criteria": "both consumers compile and pass their test suites against the packed artifact with zero consumer code changes",
+      "status": "pending"
+    },
+    {
+      "id": "F4",
+      "command": "make pr-check",
+      "pass_criteria": "N/A for LLM-Router at plan time: the repo has no Makefile (verified in pre-validation P0), so pr-check does not exist here and is never invented to manufacture a pass. If the repo gains a pr-check target before execute, it must PASS. The canonical quality gate for this repo is npm run verify:all (F0).",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["UNK-001", "UNK-002", "UNK-003", "UNK-004", "UNK-005"],
+    "next_skill": "l9-ynp",
+    "stop_reason": "PLAN_DOCUMENT validates and the PE+autonomy blueprint projects. Pre-validation P5 and all final validations remain pending until execute. PR #55 disposition and npm publish are human-gated. Do not implement from this markdown alone; execution flows through @environment/program-execution + @autonomy under a Program lease."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "src/matrices/search-policy.ts",
+      "src/matrices/perplexity-matrix.ts",
+      "src/index.ts",
+      "src/types.ts",
+      "src/provider-errors.ts",
+      "tests/routing-matrix.test.ts",
+      "tests/search-policy.test.ts",
+      "tests/router-execution.test.ts",
+      "tests/capability-integrity.test.ts",
+      "scripts/test-inventory.mjs",
+      "package.json",
+      "package-lock.json",
+      "ARCHITECTURE.md",
+      "README.md",
+      "Website-Bot/package.json",
+      "Website-Bot/package-lock.json",
+      "SEO-Bot/package.json",
+      "SEO-Bot/package-lock.json"
+    ],
+    "must_not_modify": [
+      "src/budget/",
+      "src/circuit-breaker.ts",
+      "src/providers/openrouter.ts",
+      "src/providers/perplexity.ts",
+      "src/providers/openai-transport.ts",
+      "src/pricing.ts",
+      "src/matrices/general-matrix.ts pricing/selection tables",
+      "src/vision/index.ts",
+      "src/control-plane/",
+      "src/schemas.ts",
+      "src/memory.ts",
+      "TaskType / SonarModel / GeneralModel enums and provider inventory",
+      "direct provider subpath exports (deprecated 1.x compatibility surface)",
+      "campaign/7-router-search-policy branch and its commits",
+      "WIP/Llm Router Contract.md"
+    ],
+    "preserved_contracts": [
+      "requiresSearch explicit boolean wins; undefined falls back to the legacy TaskType default (isSearchTask)",
+      "budget reservation before provider dispatch and reconciliation after",
+      "provider circuit breaking and bounded explicit fallback",
+      "hidden SDK retries disabled (providerMaxRetries must stay 0)",
+      "disableSearch stays on the public PerplexityConfig contract with the router always setting false",
+      "budget tracker documented as process-local",
+      "one authority chain: TaskDescriptor → resolve capabilities → validate → resolve provider/model → reserve budget → dispatch EXACT resolved capability",
+      "autonomous_merge false; publish and merge are human-gated; never PR_BASE=main for campaign branches per repo precedent"
+    ],
+    "validation_commands": [
+      "npm run verify:all",
+      "npm pack",
+      "npm view @quantum-l9/llm-router versions --json"
+    ]
+  },
+  "estimate": "one consumer-package hardening campaign, eleven task cards, standard depth; release wave carries the only human checkpoints",
+  "checklist": [
+    "Validator PASS on this PLAN_DOCUMENT",
+    "PE+autonomy .plan.md retains Execute via @environment/program-execution + autonomy",
+    "Do not implement in plan mode",
+    "Recommend l9-ynp for next skill"
+  ]
+}

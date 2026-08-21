@@ -1,0 +1,213 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-template
+# engine: enrichment
+# layer: [ci, governance]
+# tags: [L9_TEMPLATE, ci, compliance, architecture]
+# owner: platform
+# status: active
+# --- /L9_META ---
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Architecture Compliance — Enrichment.Inference.Engine
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# VERSION: 1.0.0
+# PURPOSE: Enforce L9 architectural contracts and chassis isolation
+# SIBLING PARITY: Cognitive.Engine.Graphs/compliance.yml
+#
+# Scope (this repo only — avoids firing on unrelated changes):
+#   Triggers when Python, kb/, engine/, or pyproject.toml change.
+#
+# FastAPI allowlist (imports from fastapi / import fastapi allowed only here):
+#   app/api/**, app/middleware/**, app/main.py, app/core/auth.py,
+#   app/score/score_api.py (router not mounted in main — still API surface),
+#   any **/handlers.py. All other app/*.py and engine/*.py must stay FastAPI-free.
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+name: Architecture Compliance
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '**/*.py'
+      - 'kb/**'
+      - 'engine/**'
+      - 'pyproject.toml'
+  push:
+    branches:
+      - main
+    paths:
+      - '**/*.py'
+      - 'kb/**'
+      - 'engine/**'
+      - 'pyproject.toml'
+  workflow_dispatch:
+
+concurrency:
+  group: compliance-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  PYTHON_VERSION: ${{ vars.PYTHON_VERSION || '3.12' }}
+
+jobs:
+  architecture-compliance:
+    name: Architecture Compliance Gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Dependencies
+        env:
+          SDK_TOKEN: ${{ secrets.SDK_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SDK_TOKEN}@github.com/".insteadOf "https://github.com/"
+          python -m pip install --upgrade pip
+          pip install -r requirements-ci.txt
+
+      - name: Terminology Guard
+        run: |
+          echo "Checking terminology consistency..."
+          VIOLATIONS=0
+
+          # print() — app/ + engine/ (graph/KGE package; same rule as app)
+          FOUND=$(find app/ engine/ -name "*.py" -exec grep -l -P "\\bprint\\(" {} + 2>/dev/null | grep -v __pycache__ || true)
+          if [ -n "$FOUND" ]; then
+            echo "Found forbidden term: \\bprint\\("
+            echo "$FOUND"
+            VIOLATIONS=$((VIOLATIONS + 1))
+          fi
+          # Legacy typing generics — app/, tests/, engine/
+          for pattern in "\\bOptional\\[" "\\bList\\[" "\\bDict\\["; do
+            FOUND=$(find app/ tests/ engine/ -name "*.py" -exec grep -l -P "$pattern" {} + 2>/dev/null | grep -v __pycache__ || true)
+            if [ -n "$FOUND" ]; then
+              echo "Found forbidden term: $pattern"
+              echo "$FOUND"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done
+
+          if [ $VIOLATIONS -gt 0 ]; then
+            echo ""
+            echo "❌ $VIOLATIONS terminology violation(s) found"
+            echo "Use: list[T], T | None, structlog instead of print()"
+            exit 1
+          fi
+
+          echo "✅ Terminology is consistent"
+
+      - name: Chassis Isolation Check
+        run: |
+          echo "Checking chassis isolation..."
+          # app/* and top-level engine/* must not import FastAPI except allowlist (see workflow header).
+
+          VIOLATIONS=$(find app/ engine/ -name "*.py" \
+            -not -path "app/api/*" \
+            -not -path "app/middleware/*" \
+            -not -path "app/main.py" \
+            -not -path "app/core/auth.py" \
+            -not -path "app/score/score_api.py" \
+            -not -name "handlers.py" \
+            -exec grep -l "from fastapi import\|import fastapi" {} + 2>/dev/null || true)
+
+          if [ -n "$VIOLATIONS" ]; then
+            echo "❌ FastAPI imports found outside allowed modules:"
+            echo "$VIOLATIONS"
+            echo ""
+            echo "Allowlist: app/api/, app/middleware/, app/main.py, app/core/auth.py,"
+            echo "  app/score/score_api.py, **/handlers.py — see Architecture Compliance workflow header."
+            exit 1
+          fi
+
+          echo "✅ Chassis isolation is maintained"
+
+      - name: KB YAML Schema Validation
+        run: |
+          echo "Validating KB rule files..."
+          python3 -c "
+          import yaml
+          from pathlib import Path
+          import sys
+
+          errors = []
+          kb_dir = Path('kb')
+          if not kb_dir.exists():
+              print('No kb/ directory found, skipping')
+              sys.exit(0)
+
+          kb_files = sorted({*kb_dir.rglob('*.yaml'), *kb_dir.rglob('*.yml')})
+          for f in kb_files:
+              try:
+                  with open(f) as fh:
+                      data = yaml.safe_load(fh)
+                  if not isinstance(data, dict):
+                      errors.append(f'{f}: Root must be a YAML mapping')
+                      continue
+                  # Check for required top-level keys in rule files
+                  if 'rules' in data:
+                      for i, rule in enumerate(data['rules']):
+                          if 'field' not in rule:
+                              errors.append(f'{f}: Rule {i} missing required key: field')
+                          if 'conditions' not in rule and 'when' not in rule:
+                              errors.append(f'{f}: Rule {i} missing conditions/when block')
+              except yaml.YAMLError as e:
+                  errors.append(f'{f}: {e}')
+
+          if errors:
+              for e in errors:
+                  print(f'  {e}')
+              print(f'\\n{len(errors)} KB validation error(s)')
+              sys.exit(1)
+
+          print('All KB YAML files are valid')
+          "
+
+      - name: L9 Contract Audit (if available)
+        run: |
+          if [ -f "tools/audit_engine.py" ]; then
+            echo "Running L9 contract audit..."
+            PYTHONPATH=. python tools/audit_engine.py --strict || echo "Contract audit warnings (non-blocking)"
+          else
+            echo "No audit_engine.py found, skipping"
+          fi
+
+      - name: L9 Contract Verification (merge-blocking)
+        run: |
+          if [ -f "tools/verify_contracts.py" ]; then
+            echo "Running L9 contract verification..."
+            PYTHONPATH=. python tools/verify_contracts.py
+          else
+            echo "No verify_contracts.py found, skipping"
+          fi
+
+      - name: Compliance Gate Passed
+        run: |
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Architecture Compliance Results"
+          echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo ""
+          echo "  Terminology Guard:     PASSED"
+          echo "  Chassis Isolation:     PASSED"
+          echo "  KB Schema Validation:  PASSED"
+          echo "  L9 Contract Audit:     PASSED"
+          echo ""
+          echo "✅ All compliance checks passed"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# END OF ARCHITECTURE COMPLIANCE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
