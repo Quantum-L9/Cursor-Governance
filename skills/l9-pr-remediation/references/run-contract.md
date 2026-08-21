@@ -42,7 +42,7 @@ This host (Cursor-Governance / Makefile capability graph):
 - verify: `UV_PYTHON=<native> make pr-check`
 - kernels (optional): `make improve`
 - publish: `UV_PYTHON=<native> PR_REMEDIATE=0 make pr`
-- merge: stack-safe `gh pr merge` — squash when unstacked; oldest `createdAt` first
+- merge: `ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run` (method chosen in code; oldest `createdAt` first)
 - interpreter: `$PWD/.venv/bin/python` (Makefile `$(PYTHON)`). Not Homebrew / system / miniconda base.
 - read-only git: allowed
 
@@ -154,7 +154,7 @@ run_contract:
     verify: "make pr-check"
     publish: "PR_REMEDIATE=0 make pr"
     improve: "make improve"
-    merge: "gh pr merge --squash|--merge --delete-branch"
+    merge: "ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run"
     interpreter: "{repo}/.venv/bin/python"
     readonly_git: true
   venv:

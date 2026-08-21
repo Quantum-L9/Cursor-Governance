@@ -398,6 +398,16 @@ if [ -f "$GRAPHITI_CLI" ]; then
   else
     fail "before-submit-skill-router.py missing under ~/.cursor/hooks"
   fi
+  if grep -q "pr-gate-failure-shell.sh" "$HOOKS_JSON" 2>/dev/null; then
+    pass "afterShellExecution gate-failure hook registered"
+  else
+    fail "afterShellExecution pr-gate-failure-shell.sh missing from hooks.json"
+  fi
+  if [ -x "$HOME/.cursor/hooks/pr-gate-failure-shell.sh" ] || [ -L "$HOME/.cursor/hooks/pr-gate-failure-shell.sh" ]; then
+    pass "pr-gate-failure-shell.sh installed under ~/.cursor/hooks"
+  else
+    fail "pr-gate-failure-shell.sh missing under ~/.cursor/hooks"
+  fi
   # The gate must NOT deny on a memory marker: repository-write authority comes
   # from worktree/branch isolation and the publication gate, never from a
   # phase-lock (rules/96-multi-agent-main-bound-execution, E7). This check used

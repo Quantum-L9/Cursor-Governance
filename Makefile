@@ -28,6 +28,11 @@ PR_SECURITY_ADVISORY ?= 0
 # Full-tree scans are nightly CI / `make precommit` / `make pr-full` — not make pr.
 PR_BASE ?= origin/main
 
+# Stack on an overlapping open PR head by default. Do not export this variable:
+# `make pr-check` pytest would inherit it and false-pass overlap tests.
+# Opt out (publish against main): PR_STACK= make pr
+PR_STACK ?= auto
+
 # When 1, `make pr` (any capitalization) push+open GitHub PR after gate PASS.
 # Gate-only: `make pr-check` or `OPEN_PR=0 make pr`.
 OPEN_PR ?= 1
@@ -423,6 +428,8 @@ pr-check:
 
 # Additive prerequisite — do not rewrite the pr-check recipe line above.
 pr-check: capability-contract-validate
+pr-check: precommit-repo
+pr: precommit-repo
 
 ## Gate → open/reuse GitHub PR → subscribe → emit l9-pr-remediation agent handoff.
 ## `make pr` / `make PR` / `make Pr` / `make pR` are equivalent (case-insensitive).
