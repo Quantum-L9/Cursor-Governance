@@ -106,8 +106,7 @@ echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / night
 status_before="$(mktemp)"
 changed_file="$(mktemp)"
 precommit_log="$(mktemp)"
-py_list="$(mktemp)"
-trap 'rm -f "$status_before" "$changed_file" "$precommit_log" "$py_list"; repo_write_lock_release' EXIT
+trap 'rm -f "$status_before" "$changed_file" "$precommit_log"; repo_write_lock_release' EXIT
 git status --porcelain >"$status_before"
 
 _gate_write_receipt() {
@@ -244,26 +243,6 @@ if ! _gate_classify_dirtiness "pre-commit"; then
     git status --short
     exit 1
   fi
-fi
-
-echo "--- ruff (changed Python) ---"
-py_count=0
-grep -E '\.(py|pyi)$' "$changed_file" >"$py_list" || true
-py_count="$(grep -c . "$py_list" || true)"
-if [[ "${py_count:-0}" -eq 0 ]]; then
-  echo "OK: no changed Python files for ruff"
-else
-  echo "ruff (changed): ${py_count} file(s)"
-  _ruff="$GOV_ROOT/.venv/bin/ruff"
-  if [[ ! -x "$_ruff" && -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
-    _ruff="$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff"
-  fi
-  if [[ ! -x "$_ruff" ]]; then
-    echo "FAIL: locked ruff missing at $GOV_ROOT/.venv/bin/ruff (run: make venv)"
-    exit 1
-  fi
-  xargs "$_ruff" check <"$py_list"
-  xargs "$_ruff" format --check <"$py_list"
 fi
 
 echo "--- uv lock ---"

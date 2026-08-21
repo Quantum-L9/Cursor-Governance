@@ -659,3 +659,15 @@ as the live store):
 ## `make pr` capitalization (2026-08-20)
 
 `make pr` / `make PR` / `make Pr` / `make pR` all run the same gate.
+
+<!-- PRECOMMIT_REPO_OWNS_RUFF_V1 -->
+## `make precommit-repo` before `make pr` (2026-08-21)
+
+After every local commit, run `make precommit-repo` (changed-file hooks +
+locked `ruff check` / `ruff format --check`). If hooks rewrite files, commit
+the rewrite and re-run. Do not auto-stage. Then `PR_REMEDIATE=0 make pr`.
+
+`make pr-check` still runs pytest, wiring, and `run_pr_security.sh`. It does
+**not** run a second ruff pass. There is no git commit hook — do not run
+`pre-commit install`. Local autofix is `precommit-repo`. `.github/workflows/lint-autofix.yml`
+is a post-merge janitor on `main` only.

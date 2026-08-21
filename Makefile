@@ -414,6 +414,8 @@ pr-check:
 
 # Additive prerequisite — do not rewrite the pr-check recipe line above.
 pr-check: capability-contract-validate
+pr-check: precommit-repo
+pr: precommit-repo
 
 ## Gate → open/reuse GitHub PR → subscribe → emit l9-pr-remediation agent handoff.
 ## `make pr` / `make PR` / `make Pr` / `make pR` are equivalent (case-insensitive).
