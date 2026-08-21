@@ -258,6 +258,20 @@ class ExecutionEnvironmentTest(unittest.TestCase):
         cls.exec_env = exec_env
         cls.run_campaign = _load("run_campaign_env_test", PE_ROOT / "scripts/run_campaign.py")
 
+    def test_empty_unittest_collection_is_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            worktree = Path(raw)
+            (worktree / "tests").mkdir()
+            (worktree / "tests/test_empty.py").write_text(
+                "def test_ok():\n    assert True\n", encoding="utf-8"
+            )
+            result = self.exec_env.run_validation_command(
+                "python3 -m unittest tests/test_empty.py",
+                worktree,
+            )
+            self.assertEqual(result["status"], "FAIL")
+            self.assertIn("zero tests", result["stderr"])
+
     def test_worker_and_controller_resolve_the_same_python(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             worktree = Path(raw)
