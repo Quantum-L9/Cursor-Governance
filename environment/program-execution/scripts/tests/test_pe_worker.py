@@ -30,9 +30,7 @@ class PeWorkerTests(unittest.TestCase):
 
     def _repo(self, root: Path) -> Path:
         subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
-        subprocess.run(
-            ["git", "config", "user.email", "test@example.com"], cwd=root, check=True
-        )
+        subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=root, check=True)
         subprocess.run(["git", "config", "user.name", "Test"], cwd=root, check=True)
         (root / "README.md").write_text("base\n", encoding="utf-8")
         subprocess.run(["git", "add", "README.md"], cwd=root, check=True, capture_output=True)
