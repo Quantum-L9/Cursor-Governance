@@ -272,7 +272,7 @@ check and `git push`. Default `PR_OVERLAP=block`. Generated artifacts
 are exempt and merge via `merge=l9-generated`.
 
 Overlap remedy: commit into the same-agent open PR, else wait, else
-renegotiate scope. `PR_STACK=auto` is the start-time default: 
+renegotiate scope. `PR_STACK=auto` is the start-time default:
 `agent_worktree_start.sh` bases the worktree on the unique open-PR chain
 tip (implied `L9_TASK_BASE_AUTHORIZED` for that tip only). Do not invent
 an `origin/main` fork and restack at `make pr`. Empty `PR_STACK` keeps
