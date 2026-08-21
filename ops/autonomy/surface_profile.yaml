@@ -117,7 +117,7 @@ pr_stacking:
     mode_default: block # PR_OVERLAP env: block | warn | ignore
     exemptions: generated_path_prefixes # ops/scripts/sync_generated_artifacts.py SSOT
     probe: git_merge_tree # git merge-tree --write-tree textual-conflict probe
-    auto_stack_env: PR_STACK # Makefile default auto; PR_STACK= publishes against main
+    auto_stack_env: PR_STACK # auto: start on the unique open-PR tip; PR_STACK= keeps main
     gate: ops/scripts/pr_overlap_check.py
   phases:
     executing: deny_remote
@@ -192,6 +192,9 @@ session_start_block: |
 
   - Proceed in **L4 local autonomy**: commit on a stacked feature branch with
     **no mid-execution push** and no useless push-approval pacing.
+  - Start that branch from the unique open-PR stack tip when `PR_STACK=auto`
+    (`ops/scripts/agent_worktree_start.sh`). Do not invent an `origin/main`
+    fork and restack at `make pr`. Empty `PR_STACK` still uses `origin/main`.
   - YOU ARE AUTHORIZED to scoped local `git commit` without per-action ask
     (adapters; Cursor via campaign packet / explicit L4 program).
   - After the program/contract finishes locally, you MUST run

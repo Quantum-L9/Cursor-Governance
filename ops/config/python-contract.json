@@ -1,6 +1,11 @@
 {
   "schema_version": "1.0.0",
   "description": "Canonical, declarative inventory of Cursor-Governance Python test-suite topology. This is NOT a second version authority: exact dependency versions live in pyproject.toml and are mirrored in requirements.txt. This file declares only which suites exist, how they are isolated, and which false-positive test-shaped paths are intentionally excluded. Consumed by ops/scripts/run_python_test_suites.py (executor) and ops/scripts/validate_python_contract.py (fail-closed drift validator).",
+  "local_pr_check": {
+    "never_pass_repo_root_dot": true,
+    "selector": "ops/scripts/select_pr_pytest_paths.py",
+    "note": "make pr-check passes --changed-file to the runner. make test, make pr-full, and CI keep the catalog including repo-root '.'."
+  },
   "substitutions": {
     "REPO_ROOT": "absolute path of the repository root, resolved by the runner from its own location",
     "PYTHON": "absolute path of the current Python interpreter (sys.executable)"
@@ -86,7 +91,7 @@
           ]
         }
       },
-      "rationale": "Root discovery over the whole repository with root autonomy/ on PYTHONPATH. Explicitly ignores the three separately-owned active suites (each has its own registry entry) so it neither shadows their packages nor double-runs them. Non-test false positives are ignored via pyproject addopts. CI profile keeps root-only coverage XML + terminal coverage, xdist, the 300s per-test timeout, and the existing zero-percent advisory threshold."
+      "rationale": "Root discovery over the whole repository with root autonomy/ on PYTHONPATH. Explicitly ignores the three separately-owned active suites (each has its own registry entry) so it neither shadows their packages nor double-runs them. Non-test false positives are ignored via pyproject addopts. CI profile keeps root-only coverage XML + terminal coverage, xdist, the 300s per-test timeout, and the existing zero-percent advisory threshold. Local make pr-check must not pass this suite's '.' collection root; it uses --changed-file and select_pr_pytest_paths.py instead."
     },
     {
       "id": "claude-code-autonomy",
