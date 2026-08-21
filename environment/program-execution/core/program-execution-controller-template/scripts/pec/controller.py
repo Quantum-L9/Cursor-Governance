@@ -233,9 +233,7 @@ def bootstrap(
     admission_errors = _admission_errors(blueprint, admission_draft=admission_draft)
     if admission_errors:
         raise ControllerError("blueprint admission failed: " + "; ".join(admission_errors))
-    if workspace.exists() and any(
-        item.name != "telemetry" for item in workspace.iterdir()
-    ):
+    if workspace.exists() and any(item.name != "telemetry" for item in workspace.iterdir()):
         raise ControllerError(f"workspace is not empty: {workspace}")
     for rel in [
         "config",

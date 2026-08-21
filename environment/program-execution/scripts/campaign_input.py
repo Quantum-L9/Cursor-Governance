@@ -225,9 +225,7 @@ def classify(path: Path) -> Classification:
     if doc is None:
         frontmatter = _parse_frontmatter(text)
         if _is_plan_intent(frontmatter):
-            return Classification(
-                kind=CampaignInputKind.PLAN, path=path, document=frontmatter
-            )
+            return Classification(kind=CampaignInputKind.PLAN, path=path, document=frontmatter)
         if path.suffix.lower() in {".md", ".markdown", ".txt"}:
             return Classification(kind=CampaignInputKind.BRIEF, path=path)
         return Classification(kind=CampaignInputKind.UNKNOWN, path=path)
