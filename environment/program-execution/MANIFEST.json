@@ -1743,7 +1743,7 @@
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
-      "sha256": "dafc51b650a2263511d866c90acb185ccf32f0e5807e6f2b205dbabdf08eb7bb"
+      "sha256": "fec05b9b9ed2fc4f5127edd469c8a0a87cd194023f5ec47c2513e55730b62974"
     },
     {
       "path": "scripts/tests/test_pe_worker.py",
