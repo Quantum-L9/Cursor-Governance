@@ -18,7 +18,7 @@ description: Ask-first git commit/push SSOT with L4 and autonomy-surface precede
 ## Precedence (highest first)
 
 1. **Mechanical gates** — `ops/autonomy/local_execution_gate.py`, L4 receipts, `merge_gate.py`
-2. **`88-l4-local-autonomy`** — during an active L4 program: local commits authorized; mid-execution `git push` / `gh pr create` / `make pr` denied until `authorize-release`
+2. **`88-l4-local-autonomy`** — during an active L4 program: local commits authorized; mid-execution `make pr` and MCP `create_pull_request` / `push_files` denied until `authorize-release`. `git push` / `gh pr create` are off doctrine but not mechanically denied (CANONICAL_LAW §6.2.4)
 3. **This rule** — Cursor ask-first for commit/push; waived only when all of:
    - `L9_GOVERNANCE_SURFACE` is an adapter (`claude-code`, `codex`, `gemini`, `manus`) — not `cursor`
    - `L9_AUTONOMY_ENABLED=true`

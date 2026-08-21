@@ -246,7 +246,7 @@ merge:
 
 ### Converge
 - Native-ext / cryptography import fail → `ENVIRONMENT`; run venv preflight once; do not edit source; do not unpin lock pins; do not symlink a failing SSOT venv; do not use `uv python find --system`
-- `git push` denied with `make pr` in the message → cache publish=`PR_REMEDIATE=0 make pr`; do not retry `git push`
+- `git push` is NOT denied in Cursor-Governance (CANONICAL_LAW §6.2.4) — a push will simply succeed and skip every checker. Cache publish=`PR_REMEDIATE=0 make pr` from `P_cmd`, not from a denial message. Elsewhere, if a push IS denied and the message names `make pr`, switch once and do not retry
 - `git add -u` / `reset --hard` denied → stage explicit paths only
 - CI logs missing → retry annotations/job logs once; if ownership unknown, note and continue other clusters
 - Rate limit → honor reset, retry once, continue
