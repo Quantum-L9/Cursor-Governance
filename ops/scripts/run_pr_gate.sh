@@ -278,7 +278,9 @@ else
 fi
 
 echo "--- pytest ---"
-if grep -Eq '\.py$' "$changed_file"; then
+if [[ "${PR_SKIP_PYTEST:-0}" == "1" ]]; then
+  echo "OK: skip pytest (PR_SKIP_PYTEST=1)"
+elif grep -Eq '\.py$' "$changed_file"; then
   # Changed-files gate: only collect the secrets capability suite when that
   # plane changed. Full-tree remains make pr-full / nightly. Avoids a host
   # miniconda cryptography ABI break aborting unrelated PE/ops PRs.
