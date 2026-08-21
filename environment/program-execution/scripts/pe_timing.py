@@ -14,6 +14,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import os
+import tempfile
 import time
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -40,6 +42,51 @@ VERIFIED_STATES = {"PASSED_LOCAL", "COMPLETED"}
 def format_duration(seconds: float) -> str:
     total = int(round(seconds))
     return f"{total // 60:02d}m {total % 60:02d}s"
+
+
+def write_json_atomic(path: Path, value: Any) -> Path:
+    """Write JSON so an interrupted write cannot leave a readable half-file.
+
+    These files are the record of what preparation has already done, and
+    preparation is exactly the phase that gets interrupted -- a partial timings
+    or cache file turns "resume from here" into "cannot parse my own state".
+    The rename is atomic within a filesystem, so a reader sees either the
+    previous content or the new content and never a blend of the two.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    payload = json.dumps(value, indent=2, sort_keys=True) + "\n"
+    handle, staged = tempfile.mkstemp(dir=str(path.parent), suffix=".tmp")
+    try:
+        with os.fdopen(handle, "w", encoding="utf-8") as stream:
+            stream.write(payload)
+        os.replace(staged, path)
+    except BaseException:
+        Path(staged).unlink(missing_ok=True)
+        raise
+    return path
+
+
+def stage_note(entry: dict[str, Any]) -> str:
+    """The parenthetical after a stage's duration: reused, or why it ran again.
+
+    When preparation is slow the operator's question is not "how long did each
+    stage take", it is "why did it do that again?". The reasons are already
+    recorded per stage; printing only `(cached)` threw away the half of the
+    answer that is actionable.
+    """
+    detail = entry.get("detail") or {}
+    if entry.get("cached"):
+        return " (reused)"
+    reason = str(detail.get("reason") or "")
+    if not reason:
+        # A stage with no recorded decision never consults the cache, which is
+        # itself the reason it ran: say that rather than leaving a blank the
+        # reader has to interpret as either "no reason" or "no reuse possible".
+        return " (always runs)"
+    if reason == "cache_disabled":
+        return " (cache off)"
+    extra = str(detail.get("detail") or "")
+    return f" ({reason}: {extra})" if extra else f" ({reason})"
 
 
 class StageTimer:
@@ -94,16 +141,14 @@ class StageTimer:
     def flush(self) -> Path | None:
         if self.workspace is None:
             return None
-        path = self.workspace / "runtime" / "TIMINGS.json"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_text(json.dumps(self.report(), indent=2, sort_keys=True) + "\n", "utf-8")
-        return path
+        return write_json_atomic(self.workspace / "runtime" / "TIMINGS.json", self.report())
 
     def format(self) -> str:
         lines = ["timing:"]
         for entry in self.stages:
-            mark = " (cached)" if entry.get("cached") else ""
-            lines.append(f"  {entry['stage']:<24} {format_duration(entry['duration_s'])}{mark}")
+            lines.append(
+                f"  {entry['stage']:<24} {format_duration(entry['duration_s'])}{stage_note(entry)}"
+            )
         lines.append(f"  {'TOTAL':<24} {format_duration(self.total_s())}")
         return "\n".join(lines)
 
@@ -160,10 +205,8 @@ class StageCache:
     def put(self, stage: str, key: str, value: Any) -> None:
         if not self.enabled:
             return
-        path = self._path(stage)
-        path.parent.mkdir(parents=True, exist_ok=True)
         payload = {"schema": CACHE_SCHEMA, "stage": stage, "key": key, "value": value}
-        path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        write_json_atomic(self._path(stage), payload)
 
     def invalidate(self, stage: str) -> None:
         self._path(stage).unlink(missing_ok=True)

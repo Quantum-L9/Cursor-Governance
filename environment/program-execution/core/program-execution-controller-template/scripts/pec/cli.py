@@ -28,6 +28,7 @@ from .controller import (
     record_attempt,
     recover,
     release_lease,
+    relock_definitions,
     set_decision,
     set_halt,
     set_unknown,
@@ -59,6 +60,22 @@ def parser() -> argparse.ArgumentParser:
 
     cmd = sub.add_parser("validate")
     cmd.add_argument("--workspace", required=True, type=Path)
+
+    cmd = sub.add_parser(
+        "relock",
+        help="adopt edited task definitions without discarding completed history",
+    )
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--actor", required=True)
+    cmd.add_argument(
+        "--task",
+        action="append",
+        dest="tasks",
+        metavar="TASK_ID",
+        help="relock these definitions instead of inferring; repeatable. Use when "
+        "the caller compared the authored campaign source, which is more precise "
+        "than the compiled blueprint once admission has annotated it.",
+    )
 
     cmd = sub.add_parser(
         "fresh-workspace",
@@ -248,6 +265,7 @@ def parser() -> argparse.ArgumentParser:
 _TUNNEL_COMMANDS = frozenset(
     {
         "bootstrap",
+        "relock",
         "reconcile",
         "draft-contract",
         "register-contract",
@@ -319,6 +337,8 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             if value["status"] != "PASS":
                 print_json(value)
                 return 1
+        elif args.command == "relock":
+            value = relock_definitions(args.workspace, actor=args.actor, task_ids=args.tasks)
         elif args.command == "fresh-workspace":
             value = fresh_execution_workspace(
                 args.workspace,

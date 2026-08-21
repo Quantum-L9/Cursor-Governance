@@ -18,7 +18,7 @@ import re
 import shutil
 import subprocess
 import sys
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterable, Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -736,11 +736,13 @@ def apply_fail_change(
     return decision
 
 
-def default_context7_stack(seed: dict[str, Any], primed_dir: Path) -> dict[str, Any]:
+def default_context7_stack(
+    seed: dict[str, Any], primed_dir: Path, tool_cache: Any | None = None
+) -> dict[str, Any]:
     # Live path never honors a skip env. Tests inject Hooks.context7_stack.
     module = _load_script("context7_stack_proof", PE_ROOT / "scripts/context7_stack_proof.py")
     try:
-        return module.prove_stack(seed, primed_dir=primed_dir)
+        return module.prove_stack(seed, primed_dir=primed_dir, tool_cache=tool_cache)
     except module.StackProofError as exc:
         raise CampaignError(str(exc), exit_code=getattr(exc, "exit_code", 2)) from exc
 
@@ -1182,6 +1184,82 @@ def register_task_contract(workspace: Path, task_id: str) -> Path:
     return contract
 
 
+def dependency_depth(tasks: list[dict[str, Any]]) -> dict[str, int]:
+    """How many dependency hops separate each task from a task that can start now.
+
+    Depth 0 is a task with no unmet dependency inside the program. Depth is used
+    instead of `wave_id` because waves are a declared grouping and dependencies
+    are the thing that actually decides what can be worked on next.
+
+    The same edge has two spellings: an authored campaign source declares
+    `depends_on`, and `pec bootstrap` freezes it into the program lock as
+    `dependencies`. Read both, because this runs against the lock but is
+    reasoned about against the source.
+    """
+    parents = {
+        str(task["id"]): [
+            str(dep) for dep in (task.get("dependencies") or task.get("depends_on") or ())
+        ]
+        for task in tasks
+    }
+    depth: dict[str, int] = {}
+
+    def resolve(task_id: str, seen: frozenset[str]) -> int:
+        if task_id in depth:
+            return depth[task_id]
+        if task_id in seen:
+            # A dependency cycle is the blueprint validator's failure to report,
+            # not this function's: treat it as startable rather than recursing.
+            return 0
+        known = [dep for dep in parents.get(task_id, ()) if dep in parents]
+        value = 1 + max((resolve(dep, seen | {task_id}) for dep in known), default=-1)
+        depth[task_id] = value
+        return value
+
+    for task_id in parents:
+        resolve(task_id, frozenset())
+    return depth
+
+
+def materialization_frontier(
+    tasks: list[dict[str, Any]],
+    *,
+    completed: Iterable[str] = (),
+    lookahead: int = 1,
+) -> list[str]:
+    """The tasks whose contracts are worth rendering now.
+
+    Arming used to render a contract for every locked task, which costs two
+    subprocesses each and dominated preparation on a large campaign -- while all
+    but the first wave described work that could not be started yet and would be
+    re-rendered anyway if the program was replanned before reaching it.
+
+    So render the runnable frontier plus `lookahead` waves beyond it: enough that
+    finishing a task never waits on a render, without paying for the tail of the
+    program up front. Everything else materializes on demand.
+    """
+    depth = dependency_depth(tasks)
+    done = set(completed)
+    pending = [str(task["id"]) for task in tasks if str(task["id"]) not in done]
+    if not pending:
+        return []
+    horizon = min(depth[task_id] for task_id in pending) + lookahead
+    return [task_id for task_id in pending if depth[task_id] <= horizon]
+
+
+def ensure_task_contract(workspace: Path, task_id: str) -> Path:
+    """Register `task_id`'s source contract unless it is already registered.
+
+    The on-demand half of lazy materialization. Registration is idempotent for
+    identical content, so the cost of calling this on an already-armed task is
+    one `pec` invocation rather than a conflict.
+    """
+    registered = workspace / "contracts" / "source" / f"{task_id}.json"
+    if registered.is_file():
+        return workspace / "runtime" / f"{task_id}.source.json"
+    return register_task_contract(workspace, task_id)
+
+
 def default_arm(
     workspace: Path,
     campaign_id: str,
@@ -1197,9 +1275,12 @@ def default_arm(
     tasks = locked_tasks(workspace)
     if not tasks or str(tasks[0]["id"]) != FIRST_TASK_ID:
         raise CampaignError("program lock is missing TASK-001")
-    contracts: list[str] = []
-    for task in tasks:
-        contracts.append(str(register_task_contract(workspace, str(task["id"]))))
+    # Only the frontier is rendered now; the rest materializes when it is
+    # claimed. The PR stack stays whole -- it is the routing map every later task
+    # needs to know its base, and computing it is pure arithmetic over the lock.
+    frontier = materialization_frontier(tasks, completed=completed_task_ids(workspace))
+    contracts = [str(ensure_task_contract(workspace, task_id)) for task_id in frontier]
+    deferred = [str(task["id"]) for task in tasks if str(task["id"]) not in set(frontier)]
     stack = build_pr_stack(campaign_id, tasks)
     write_pr_stack(workspace, stack)
     fetch_stack_refs(target_path, campaign_id)
@@ -1220,7 +1301,8 @@ def default_arm(
     )
     return {
         "task_id": FIRST_TASK_ID,
-        "armed_task_ids": [str(task["id"]) for task in tasks],
+        "armed_task_ids": list(frontier),
+        "deferred_task_ids": deferred,
         "contracts": contracts,
         "claim": (claim.stdout or "").strip(),
         "reconcile": reconciled,
@@ -1292,6 +1374,13 @@ def default_authorize_and_merge(host_repo: str, number: int) -> dict[str, Any]:
     if merge.returncode != 0:
         raise CampaignError(f"gh pr merge failed: {merge.stderr.strip()}")
     return {"output": merge.stdout.strip()}
+
+
+def campaign_source_path(worktree: Path, campaign_id: str) -> Path:
+    """Where the emitted campaign source lives inside a host worktree."""
+    return (
+        worktree / "environment/program-execution/campaigns" / campaign_id / "CAMPAIGN_SOURCE.yaml"
+    )
 
 
 def assert_allowed_campaign_dir(worktree: Path, campaign_id: str) -> None:
@@ -1708,6 +1797,21 @@ def pec_status_tasks(workspace: Path) -> list[dict[str, Any]]:
     return [item for item in (payload.get("tasks") or []) if isinstance(item, dict)]
 
 
+def completed_task_ids(workspace: Path) -> list[str]:
+    """Task ids the controller already considers COMPLETED.
+
+    Read from the controller rather than the lock: the lock says what the program
+    is, only runtime state says how far through it we are.
+    """
+    if not (workspace / "runtime" / "state.sqlite").is_file():
+        return []
+    return [
+        str(item["id"])
+        for item in pec_status_tasks(workspace)
+        if str(item.get("runtime_state")) == "COMPLETED" and item.get("id")
+    ]
+
+
 def all_required_tasks_completed(workspace: Path) -> bool:
     locked = locked_tasks(workspace)
     if not locked:
@@ -1755,6 +1859,128 @@ def resumable_workspace(workspace: Path) -> bool:
         and str(launch.get("host_lifecycle") or "") == "in_progress"
         and bool(str(launch.get("campaign_id") or "").strip())
     )
+
+
+def runtime_already_admitted(pec_workspace: Path, blueprint: Path) -> bool:
+    """Is this blueprint already frozen into the live runtime's lock?
+
+    Acceptance precedes bootstrap by design, and `accept_blueprint` refuses to
+    re-accept a blueprint some workspace has already locked. That refusal is
+    correct for a fresh campaign and wrong for a resumed one, where the program
+    was admitted on an earlier run and the change since then has been recorded
+    per task by the relock.
+    """
+    lock_path = pec_workspace / "runtime" / "program-lock.json"
+    if not lock_path.is_file():
+        return False
+    try:
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    recorded = str(lock.get("blueprint_root") or "")
+    return bool(recorded) and Path(recorded).resolve() == blueprint.resolve()
+
+
+def campaign_source_shape(source: Path) -> dict[str, Any] | None:
+    """Digest the authored campaign source as a body plus one digest per task.
+
+    This is the artifact an operator actually edits, so it is the only honest
+    place to ask what they changed. The compiled blueprint cannot answer it:
+    admission and acceptance annotate several of its files after the lock has
+    frozen them, so a rerun that recompiles from an unchanged source still
+    produces different digests for `PROGRAM.yaml` and `EVIDENCE_CATALOG.yaml`,
+    and a per-file comparison reads one edited task card as a program-wide
+    change.
+    """
+    doc = load_yaml(source)
+    if not isinstance(doc, dict):
+        return None
+    body = {key: value for key, value in doc.items() if key != "tasks"}
+    tasks = doc.get("tasks") or []
+    if not isinstance(tasks, list):
+        return None
+    digests: dict[str, str] = {}
+    for task in tasks:
+        if not isinstance(task, dict) or not task.get("id"):
+            return None
+        digests[str(task["id"])] = pe_trace.fingerprint(task)
+    return {"body": pe_trace.fingerprint(body), "tasks": digests}
+
+
+def edited_task_ids(current: dict[str, Any], recorded: Any) -> list[str] | None:
+    """Which task definitions moved, or None if the change is wider than tasks.
+
+    Wider means anything a live runtime cannot absorb per task: the program body,
+    or the set of task ids. Those decide the shape of the program the lock froze,
+    so adopting them in place would leave the runtime describing a program that
+    no longer exists.
+    """
+    if not isinstance(recorded, dict) or not isinstance(recorded.get("tasks"), dict):
+        return None
+    if current["body"] != recorded.get("body"):
+        return None
+    before: dict[str, Any] = recorded["tasks"]
+    if set(before) != set(current["tasks"]):
+        return None
+    return sorted(
+        task_id for task_id, value in current["tasks"].items() if before[task_id] != value
+    )
+
+
+def adopt_changed_definitions(workspace: Path, task_ids: Iterable[str]) -> dict[str, Any] | None:
+    """Relock the named task definitions, or None if the runtime refuses.
+
+    The caller decides *which* definitions moved, from the authored source; the
+    controller decides whether this runtime can absorb them, by attempting the
+    absorption. `pec relock` refuses without mutating, so a refusal is the
+    signal to quarantine and rebuild rather than an error.
+    """
+    named: list[str] = []
+    for task_id in task_ids:
+        named.extend(["--task", str(task_id)])
+    result = run_cmd(
+        [
+            sys.executable,
+            str(PEC),
+            "relock",
+            "--workspace",
+            str(workspace),
+            "--actor",
+            "make-campaign",
+            *named,
+        ],
+        timeout=PEC_TIMEOUT_S,
+    )
+    if result.returncode != 0:
+        return None
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError:
+        return None
+    return payload if isinstance(payload, dict) else None
+
+
+def preparation_is_resumable(
+    *,
+    pec_workspace: Path,
+    blueprint: Path,
+    state: Any,
+    compile_key: str,
+) -> bool:
+    """True when the live runtime was prepared from exactly these inputs.
+
+    Resuming is only sound when all three agree: the pec runtime is live rather
+    than a draft leftover, its blueprint is still on disk, and the compile inputs
+    that produced it are the ones this run computed. A campaign whose source
+    moved is a different campaign wearing the same id, and must still be
+    quarantined rather than attached to.
+    """
+    if not resumable_workspace(pec_workspace):
+        return False
+    if not blueprint.is_dir():
+        return False
+    recorded = str((state.stages.get("compile") or {}).get("key") or "")
+    return bool(recorded) and recorded == compile_key
 
 
 def committed_changed_files(worktree: Path, base_sha: str, candidate_sha: str) -> list[str]:
@@ -1949,6 +2175,16 @@ def check_launchability(
     if not tasks:
         return {"launchable": True, "task_count": 0, "findings": [], "skipped": "no_task_cards"}
     report = module.check_tasks(tasks, repo_root, infer=fast)
+    # Inference is only true if it lands in the artifact the contract is rendered
+    # from. Write it into the Task Cards now, while the blueprint is still ours
+    # to change -- after bootstrap freezes the lock it is too late, and the task
+    # would reach `pec verify` with nothing to run.
+    injected = module.apply_synthesized_validations(
+        blueprint, report.get("synthesized_validations") or {}
+    )
+    if injected:
+        report["injected_validations"] = injected
+        log(f"validations inferred and written into {len(injected)} task card(s)")
     receipt = blueprint / "launchability-report.json"
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -2210,6 +2446,11 @@ def default_execute(
             rendered = {"contract": str(contract_path)}
         else:
             if state not in {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "FAILED"}:
+                # Arming only rendered the frontier, and a claim is refused
+                # without a registered source contract. This is where a deferred
+                # task becomes concrete: at the moment it is actually started.
+                with traced(trace, "task_prepare", "materialize_contract", task_id=task_id):
+                    ensure_task_contract(workspace, task_id)
                 with traced(trace, "task_prepare", "pec_claim", task_id=task_id):
                     pec_cmd(
                         workspace,
@@ -2837,21 +3078,40 @@ def _run_campaign_stages(
         )
     primed_root = l9_home / "primed"
     cache = timing.StageCache(primed_root / campaign_id, enabled=fast)
+    # The cache and the prepare-state record live under `primed/`, deliberately
+    # outside the pec workspace and the blueprint: those two get stepped aside on
+    # rebuild, and evidence of what was already prepared must survive that.
+    prepare = _load_script("pe_prepare_state", PE_ROOT / "scripts/pe_prepare_state.py")
+    reuse = prepare.PrepareCache(
+        cache,
+        prepare.PrepareState.load(
+            primed_root / campaign_id / "PREPARE_STATE.json", campaign_id=campaign_id
+        ),
+    )
     stack_fn = hooks.context7_stack or default_context7_stack
     log(f"stack-proof {campaign_id}")
-    with timer.stage("stack_proof") as entry:
-        # Network-backed research is the single most expensive preparation stage
-        # and the one most likely to be retried; keyed on the seed, a retry that
-        # changed nothing reuses the receipt instead of re-priming.
-        stack_key = timing.fingerprint(seed)
-        cached_stack = cache.get("stack_proof", stack_key)
-        if cached_stack is not None and Path(str(cached_stack.get("path") or "")).is_file():
-            stack_receipt = cached_stack
-            entry["cached"] = True
+    # Network-backed research is the single most expensive preparation stage and
+    # the one most likely to be retried; keyed on the seed, a retry that changed
+    # nothing reuses the receipt instead of re-priming.
+    stack_key = timing.fingerprint(seed)
+
+    def _stack_receipt_survives(cached: Any) -> bool:
+        return Path(str((cached or {}).get("path") or "")).is_file()
+
+    with reuse.stage(timer, "stack_proof", stack_key, verify=_stack_receipt_survives) as staged:
+        if staged.reused:
+            stack_receipt = dict(staged.value)
         else:
             with traced(trace, "research", "context7_stack_proof"):
-                stack_receipt = stack_fn(seed, primed_root)
-            cache.put("stack_proof", stack_key, stack_receipt)
+                # The receipt is keyed on the whole seed, so any edit misses here
+                # and the proof is rebuilt. Rebuilding it is cheap; re-proving
+                # each tool over the network is not, so the default proof reuses
+                # per-tool evidence that the edit did not invalidate.
+                if hooks.context7_stack is not None:
+                    stack_receipt = stack_fn(seed, primed_root)
+                else:
+                    stack_receipt = stack_fn(seed, primed_root, cache)
+            staged.value = dict(stack_receipt)
     stack_proof_path = Path(
         str((stack_receipt or {}).get("path") or (primed_root / campaign_id / "stack-proof.json"))
     )
@@ -2894,16 +3154,32 @@ def _run_campaign_stages(
             )
         log("compiler: compile_campaign_source (direct, no activation rebuild)")
         log(f"emit {campaign_id} into {write_root}")
-        with timer.stage("emit"):
-            with traced(trace, "compile", "place_campaign_source"):
-                place_campaign_source(campaign_source_doc, write_root, campaign_id)
+        emitted = campaign_source_path(write_root, campaign_id)
+        emit_key = timing.fingerprint(campaign_source_doc, str(write_root))
+        with reuse.stage(timer, "emit", emit_key, outputs=[emitted]) as staged:
+            if not staged.reused:
+                with traced(trace, "compile", "place_campaign_source"):
+                    place_campaign_source(campaign_source_doc, write_root, campaign_id)
+                staged.value = {"path": str(emitted)}
     else:
         plan_fn = hooks.plan_window or default_plan_window
         log(f"plan-window {campaign_id}")
-        with timer.stage("plan_window"):
-            with traced(trace, "planning", "plan_window") as planned:
-                plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
-                planned["plan_status"] = str(plan_receipt.get("plan_status") or "")
+        plan_key = timing.fingerprint(seed, stack_proof_path)
+
+        def _planned_intent_survives(receipt: Any) -> bool:
+            # The receipt is only reusable while the intent it projected is still
+            # on disk; the next stage reads that file.
+            declared = str((receipt or {}).get("intent_path") or "")
+            return not declared or Path(declared).is_file()
+
+        with reuse.stage(timer, "plan_window", plan_key, verify=_planned_intent_survives) as staged:
+            if staged.reused:
+                plan_receipt = staged.value
+            else:
+                with traced(trace, "planning", "plan_window") as planned:
+                    plan_receipt = plan_fn(seed, primed_root / campaign_id, stack_proof_path)
+                    planned["plan_status"] = str(plan_receipt.get("plan_status") or "")
+                staged.value = plan_receipt
         projected_intent = Path(str(plan_receipt.get("intent_path") or resolved_intent))
         if str(plan_receipt.get("plan_status") or "") not in {"Ready", "ConditionallyReady"}:
             if hooks.compile_activation is None:
@@ -2912,12 +3188,14 @@ def _run_campaign_stages(
                     "ConditionallyReady; refuse seal"
                 )
         log(f"emit {campaign_id} into {write_root}")
-        with timer.stage("emit"):
-            with traced(trace, "compile", "compile_activation"):
-                compile_activation(
-                    projected_intent if projected_intent.is_file() else resolved_intent,
-                    write_root,
-                )
+        activation_input = projected_intent if projected_intent.is_file() else resolved_intent
+        emitted = campaign_source_path(write_root, campaign_id)
+        emit_key = timing.fingerprint(activation_input, str(write_root))
+        with reuse.stage(timer, "emit", emit_key, outputs=[emitted]) as staged:
+            if not staged.reused:
+                with traced(trace, "compile", "compile_activation"):
+                    compile_activation(activation_input, write_root)
+                staged.value = {"path": str(emitted)}
     assert_allowed_campaign_dir(write_root, campaign_id)
     target_worktree = str(l9_home / "program-worktrees" / campaign_id)
     mark_host_campaign_active(
@@ -2939,50 +3217,144 @@ def _run_campaign_stages(
         )
         return report
 
-    quarantine_occupied(Path(report.pec_workspace), trace=trace)
-    quarantine_occupied(Path(report.blueprint), trace=trace)
-    source = (
-        write_root
-        / "environment/program-execution/campaigns"
-        / campaign_id
-        / "CAMPAIGN_SOURCE.yaml"
-    )
+    source = campaign_source_path(write_root, campaign_id)
     blueprint = Path(report.blueprint)
-    log(f"blueprint {blueprint}")
     allowlist = write_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
     compile_input = pe_trace.fingerprint(source, allowlist, stack_proof_path)
-    with timer.stage("compile"):
-        with traced(trace, "compile", "compile_campaign_source", input_fingerprint=compile_input):
-            if hooks.compile_source is not None:
-                hooks.compile_source(source, blueprint)
-            else:
-                default_compile_source(
-                    source,
-                    blueprint,
-                    allowlist_path=allowlist,
-                    stack_proof=stack_proof_path,
-                )
-        annotate_phase0_without_forging_ack(blueprint)
-    with timer.stage("validate_blueprint"):
-        validate = hooks.validate_blueprint or default_validate_blueprint
-        with traced(
-            trace,
-            "blueprint",
-            "blueprint_validation",
-            input_fingerprint=blueprint_fingerprint(blueprint),
-        ) as validated:
-            errors = validate(blueprint)
-            validated["error_count"] = len(errors)
-            if errors:
-                validated["error_code"] = "BLUEPRINT_VALIDATION_FAILED"
-                validated["error_message"] = "; ".join(errors)
+    # Preparing an already-prepared campaign is the operation an operator repeats
+    # most often, and stepping the runtime aside to rebuild it unconditionally is
+    # what made the second run cost the same as the first. Step aside only when
+    # the live runtime did not come from these inputs.
+    unchanged = fast and preparation_is_resumable(
+        pec_workspace=Path(report.pec_workspace),
+        blueprint=blueprint,
+        state=reuse.state,
+        compile_key=compile_input,
+    )
+    # A changed source is not necessarily a different campaign. Ask the source
+    # itself what moved: editing one task's definition is a change a live runtime
+    # can absorb per task, while the program body or the set of tasks changes the
+    # shape of the program the lock froze and cannot be absorbed at all.
+    shape = campaign_source_shape(source)
+    edited: list[str] | None = None
+    if (
+        fast
+        and not unchanged
+        and shape is not None
+        and resumable_workspace(Path(report.pec_workspace))
+    ):
+        edited = edited_task_ids(shape, (reuse.recorded_value("compile") or {}).get("source"))
+    if unchanged:
+        log(f"resume prepared runtime {report.pec_workspace} (compile inputs unchanged)")
+    elif edited is None:
+        quarantine_occupied(Path(report.pec_workspace), trace=trace)
+        quarantine_occupied(Path(report.blueprint), trace=trace)
+    log(f"blueprint {blueprint}")
+    with reuse.stage(timer, "compile", compile_input, outputs=[blueprint]) as staged:
+        if not staged.reused:
+            with traced(
+                trace, "compile", "compile_campaign_source", input_fingerprint=compile_input
+            ):
+                if hooks.compile_source is not None:
+                    hooks.compile_source(source, blueprint)
+                else:
+                    default_compile_source(
+                        source,
+                        blueprint,
+                        allowlist_path=allowlist,
+                        stack_proof=stack_proof_path,
+                    )
+            annotate_phase0_without_forging_ack(blueprint)
+            # Mint a token for this particular compiled blueprint. Stages that go
+            # on to mutate the blueprint key on it rather than on compile's
+            # inputs: identical inputs rebuild an identical -- but freshly
+            # un-mutated -- blueprint, and keying on inputs alone would let those
+            # stages skip work the new blueprint has not had done to it.
+            staged.value = {
+                "blueprint": str(blueprint),
+                "generation": timing.fingerprint(compile_input, datetime.now(UTC).isoformat()),
+                # What the program was compiled from, per task. The next run
+                # compares its own source against this to decide whether the
+                # drift is absorbable.
+                "source": shape,
+            }
+    compile_generation = str((staged.value or {}).get("generation") or compile_input)
+
+    # The edited definitions are adopted after compile, because the relock reads
+    # the definitions out of the blueprint it is adopting. The runtime keeps the
+    # history of everything already done; only the tasks whose definitions moved
+    # lose their contract bindings.
+    scoped_resume = False
+    if not unchanged and edited is not None:
+        with timer.stage("relock") as entry:
+            adopted = (
+                adopt_changed_definitions(Path(report.pec_workspace), edited) if edited else {}
+            )
+            entry["detail"] = adopted or {"status": "REFUSED" if edited else "CURRENT"}
+        if adopted is None:
+            log("runtime cannot absorb the edited definitions; rebuilding from the new blueprint")
+            # The blueprint is already the new one, so only the runtime is
+            # stepped aside; bootstrap then freezes what compile just produced.
+            quarantine_occupied(Path(report.pec_workspace), trace=trace)
+        else:
+            scoped_resume = True
+            relocked = ", ".join(adopted.get("relocked") or edited) or "none"
+            log(
+                f"resume prepared runtime {report.pec_workspace} (definitions relocked: {relocked})"
+            )
+
+    # Validation is a pure function of blueprint content, so the compiled
+    # fingerprint is the whole key. A blueprint that validated once does not
+    # need re-validating until it changes.
+    validate_key = blueprint_fingerprint(blueprint)
+    with reuse.stage(timer, "validate_blueprint", validate_key) as staged:
+        if staged.reused:
+            errors = list(staged.value.get("errors") or [])
+        else:
+            validate = hooks.validate_blueprint or default_validate_blueprint
+            with traced(
+                trace,
+                "blueprint",
+                "blueprint_validation",
+                input_fingerprint=validate_key,
+            ) as validated:
+                errors = validate(blueprint)
+                validated["error_count"] = len(errors)
+                if errors:
+                    validated["error_code"] = "BLUEPRINT_VALIDATION_FAILED"
+                    validated["error_message"] = "; ".join(errors)
+            staged.value = {"errors": list(errors)}
     if errors:
         raise CampaignError("template validate failed: " + "; ".join(errors))
     log("template validate PASS")
-    with timer.stage("launchability"):
-        report.launchability = check_launchability(
-            blueprint, write_root, fast=fast, campaign_id=campaign_id
-        )
+
+    launch_receipt = blueprint / "launchability-report.json"
+
+    def _launch_receipt_survives(cached: Any) -> bool:
+        # A campaign with no task cards never writes a receipt, so only demand
+        # the file when the cached verdict says there was something to check.
+        if int((cached or {}).get("task_count") or 0) == 0:
+            return True
+        return launch_receipt.is_file()
+
+    launch_key = timing.fingerprint(validate_key, str(write_root), fast, campaign_id)
+    with reuse.stage(timer, "launchability", launch_key, verify=_launch_receipt_survives) as staged:
+        if staged.reused:
+            report.launchability = dict(staged.value)
+        else:
+            report.launchability = check_launchability(
+                blueprint, write_root, fast=fast, campaign_id=campaign_id
+            )
+            staged.value = dict(report.launchability)
+    if report.launchability.get("injected_validations"):
+        # Inference just edited the Task Cards that validation had already read.
+        # Re-validate rather than arm a blueprint in a state nothing checked.
+        validate = hooks.validate_blueprint or default_validate_blueprint
+        with timer.stage("validate_blueprint_reinjected") as entry:
+            errors = validate(blueprint)
+            entry["detail"] = {"tasks": list(report.launchability["injected_validations"])}
+        if errors:
+            raise CampaignError("inferred validations broke the blueprint: " + "; ".join(errors))
     report.stages_completed.append("blueprint")
     if not should_run(until, "admit"):
         write_launch_pointer(
@@ -2996,10 +3368,24 @@ def _run_campaign_stages(
 
     repository_id = str((seed.get("target") or {}).get("repository_id") or host_repo)
     target_path = Path(target_worktree)
+
+    def ensure_target_checkout_once() -> None:
+        """Provision the target checkout at most once while it stays present.
+
+        Only the provisioning is cached. The revision measured from the checkout
+        is admission evidence and is always read fresh: reusing a recorded SHA
+        would bind a campaign to a revision the checkout no longer has.
+        """
+        key = timing.fingerprint(str(target_path), repository_id)
+        with reuse.stage(timer, "target_checkout", key, outputs=[target_path]) as checkout:
+            if not checkout.reused:
+                with traced(trace, "workspace", "ensure_target_checkout"):
+                    default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+                checkout.value = {"path": str(target_path)}
+
     with timer.stage("admission_evidence") as entry:
         if hooks.admit is None:
-            with traced(trace, "workspace", "ensure_target_checkout"):
-                default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+            ensure_target_checkout_once()
             measured = measure_admission_evidence(target_path)
             entry["detail"] = measured
             if not measured.get("available"):
@@ -3014,12 +3400,37 @@ def _run_campaign_stages(
         else:
             host_revision = str((seed.get("target") or {}).get("repository_id") or host_repo)
     log(f"admit EVID-001 bind {host_revision}")
-    with timer.stage("accept"):
-        with traced(trace, "acceptance", "acceptance", metadata={"revision": host_revision}):
-            if hooks.admit is not None:
-                hooks.admit(blueprint)
-            else:
-                default_admit(blueprint, revision=host_revision)
+    # Keyed on the compiled blueprint instance plus the revision being bound, so
+    # a rebuilt blueprint is always admitted again and an unchanged one is not.
+    accept_key = timing.fingerprint(compile_generation, host_revision)
+    admitted_already = fast and runtime_already_admitted(Path(report.pec_workspace), blueprint)
+    with reuse.stage(timer, "accept", accept_key, outputs=[blueprint]) as staged:
+        if staged.reused:
+            pass
+        elif admitted_already:
+            # The program was admitted on an earlier run and the live runtime is
+            # locked to this blueprint. Re-accepting it is refused, and would add
+            # nothing: what changed since is recorded per task by the relock.
+            staged.value = {"revision": host_revision, "admitted_by": "existing_lock"}
+        else:
+            with traced(trace, "acceptance", "acceptance", metadata={"revision": host_revision}):
+                if hooks.admit is not None:
+                    hooks.admit(blueprint)
+                else:
+                    default_admit(blueprint, revision=host_revision)
+            staged.value = {"revision": host_revision}
+    if fast:
+        # An acceptance nobody typed still has to be auditable. Record the two
+        # facts it rests on, scoped local_only so publish cannot read it as
+        # authority for leaving this machine.
+        prepare.record_local_acceptance(
+            primed_root / campaign_id / "LOCAL_ACCEPTANCE.json",
+            campaign_id=campaign_id,
+            revision=host_revision,
+            compile_key=compile_input,
+            launchability=report.launchability,
+        )
+        log(f"accept {prepare.LOCAL_ACCEPTED} (local_only: compile PASS + launchability PASS)")
     report.stages_completed.append("admit")
     if not should_run(until, "bootstrap"):
         write_launch_pointer(
@@ -3033,17 +3444,38 @@ def _run_campaign_stages(
 
     pec = hooks.pec_bootstrap or default_pec_bootstrap
     pec_workspace_path = Path(report.pec_workspace)
-    with timer.stage("bootstrap"):
-        with traced(
-            trace,
-            "bootstrap",
-            "pec_bootstrap",
-            input_fingerprint=blueprint_fingerprint(blueprint),
-        ):
-            with trace_stepped_aside(trace, pec_workspace_path):
-                pec_result = pec(pec_workspace_path, blueprint)
-            if trace is not None:
-                trace.rehome(pec_workspace_path)
+    # Bootstrap requires an empty workspace, so the live runtime is both its
+    # output and the proof it already ran. Verifying against that is what makes
+    # skipping it safe: a quarantined workspace fails the check and rebuilds.
+    bootstrap_key = timing.fingerprint(compile_generation, str(pec_workspace_path))
+    with reuse.stage(
+        timer,
+        "bootstrap",
+        bootstrap_key,
+        verify=lambda _: resumable_workspace(pec_workspace_path),
+    ) as staged:
+        if staged.reused:
+            pec_result = dict(staged.value or {})
+        elif scoped_resume:
+            # The compiled blueprint changed, so the key moved, but this runtime
+            # was bootstrapped from it and the moved definitions were relocked
+            # into it. Bootstrapping again would refuse: it requires an empty
+            # workspace, and emptying this one is what discards the history.
+            pec_result = {"ok": True, "draft": False, "output": "relocked live runtime"}
+            staged.value = dict(pec_result)
+        else:
+            with traced(
+                trace,
+                "bootstrap",
+                "pec_bootstrap",
+                input_fingerprint=blueprint_fingerprint(blueprint),
+            ):
+                with trace_stepped_aside(trace, pec_workspace_path):
+                    pec_result = pec(pec_workspace_path, blueprint)
+                if trace is not None:
+                    trace.rehome(pec_workspace_path)
+            if not pec_result.get("draft"):
+                staged.value = dict(pec_result)
     if pec_result.get("draft"):
         raise CampaignError("pec --admission-draft is not a live campaign path")
     # Bootstrap requires an empty workspace, so timings only start persisting
@@ -3079,8 +3511,7 @@ def _run_campaign_stages(
             if hooks.arm is not None:
                 hooks.arm(Path(report.pec_workspace), campaign_id)
             else:
-                with traced(trace, "workspace", "ensure_target_checkout"):
-                    default_ensure_target_checkout(target_path, repository_id, donor=write_root)
+                ensure_target_checkout_once()
                 default_arm(
                     Path(report.pec_workspace),
                     campaign_id,

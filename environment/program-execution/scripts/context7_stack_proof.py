@@ -267,6 +267,29 @@ def inspect_mcp_schemas(name: str) -> dict[str, Any] | None:
     }
 
 
+def tool_cache_key(tool: dict[str, str], seed: dict[str, Any]) -> str:
+    """Fingerprint of everything a single tool's proof actually depends on.
+
+    Deliberately narrower than the seed: proving `neo4j` reads the tool's own
+    identity, the objective used as the search query, and a docs override. It
+    does not read the task list. Keying the whole receipt on the whole seed --
+    which is what preparation used to do -- meant editing one task's validation
+    command re-fetched every tool's documentation over the network, so the stage
+    an operator repeats most was also the one that paid full price every time.
+    """
+    return _digest(
+        json.dumps(
+            {
+                "name": tool.get("name"),
+                "kind": tool.get("kind"),
+                "query": str(seed.get("objective") or tool.get("name") or "")[:200],
+                "docs_url": str(seed.get("docs_url") or tool.get("docs_url") or "").strip(),
+            },
+            sort_keys=True,
+        )
+    )
+
+
 def fetch_one_tool(
     tool: dict[str, str],
     seed: dict[str, Any],
@@ -377,6 +400,7 @@ def prove_stack(
     *,
     primed_dir: Path | None = None,
     fetch: FetchFn | None = None,
+    tool_cache: Any | None = None,
 ) -> dict[str, Any]:
     campaign_id = str(seed.get("campaign_id") or "").strip()
     if not campaign_id:
@@ -390,7 +414,16 @@ def prove_stack(
     tools: list[dict[str, Any]] = []
     if inferred:
         for tool in inferred:
-            tools.append(fetch_one_tool(tool, seed, fetch=fetch_fn))
+            # Prove each tool once, and only the tools this campaign still owes
+            # evidence for. The receipt is still whole -- coverage is a gate, not
+            # an optimisation -- but a tool already proven costs no network.
+            key = tool_cache_key(tool, seed)
+            proven = tool_cache.get("stack_proof_tool", key) if tool_cache is not None else None
+            if not isinstance(proven, dict):
+                proven = fetch_one_tool(tool, seed, fetch=fetch_fn)
+                if tool_cache is not None:
+                    tool_cache.put("stack_proof_tool", key, proven)
+            tools.append(proven)
     receipt = {
         "schema": SCHEMA,
         "campaign_id": campaign_id,

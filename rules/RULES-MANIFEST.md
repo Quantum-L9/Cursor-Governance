@@ -1,16 +1,16 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-18T23:11:04Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-20T19:26:25Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **65** |
-| `alwaysApply: true` | **29** |
+| Total MDC files | **66** |
+| `alwaysApply: true` | **30** |
 | `alwaysApply: false` | **36** |
 | No boolean `alwaysApply` | **0** |
-| Explicit stable IDs | **65** |
+| Explicit stable IDs | **66** |
 | Derived compatibility IDs | **0** |
 | Deprecated rules | **0** |
 
@@ -46,6 +46,7 @@ Generated: `2026-08-18T23:11:04Z`. Source: `rules/*.mdc`.
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | agent_requested | 35 | `38f6e2e26683` |
 | `53-pr-overlap-guardrail.mdc` | `l9.rule.53.pr.overlap.guardrail` | global | git | always | 85 | `e65dba887391` |
+| `54-context-sensitive-git-guardrails.mdc` | `l9.rule.54.git.guardrails` | global | git | always | 78 | `22327366534e` |
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
 | `60-anti-patterns.mdc` | `l9.rule.anti.patterns` | global | testing | always | 27 | `664ff6afbb7f` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |
@@ -67,7 +68,7 @@ Generated: `2026-08-18T23:11:04Z`. Source: `rules/*.mdc`.
 | `81-gmp-audit.mdc` | `l9.rule.81.gmp.audit` | global | governance | agent_requested | 96 | `0a3985c2fdc4` |
 | `82-deployment-manifest.mdc` | `l9.rule.82.deployment.manifest` | global | deployment | agent_requested | 72 | `b57f632b093e` |
 | `83-gmp-contracts.mdc` | `l9.rule.83.gmp.contracts` | global | governance | always | 135 | `f9c358d00e0e` |
-| `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 73 | `f82e47eb9d68` |
+| `84-cursor-governance-wiring.mdc` | `l9.rule.cursor-governance-wiring` | global | governance | always | 73 | `7121eb2a6c46` |
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | agent_requested | 91 | `3e623c8e396d` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | agent_requested | 58 | `7a05740e99d2` |
 | `87-cursor-memory-kernel.mdc` | `l9.rule.cursor.memory.kernel` | global | memory | always | 166 | `a27cb6825319` |

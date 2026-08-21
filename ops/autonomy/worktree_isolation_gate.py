@@ -9,6 +9,10 @@ tree ran unscoped ``git add`` of dirty files (including another chat's
 Same day: parallel agents kept ``git checkout`` / ``git reset`` thrashing the
 primary clone, wiping untracked fix files mid-session.
 
+Destructive-effect classification (which forced clean is safe, which is not)
+belongs to ``git_guardrails`` — this module keeps the incident-specific rules
+(foreign-work scoops, sacred WIP) and delegates the rest.
+
 Brain lives under ops/ per CANONICAL_LAW §2.1. Invoked from
 ``local_execution_gate.py`` (Cursor beforeShellExecution + Claude PreToolUse).
 
@@ -41,6 +45,7 @@ from command_parse import (  # noqa: E402
     strip_heredoc_bodies,
     wrapper_subcommands,
 )
+from git_guardrails import command_requires_human  # noqa: E402
 
 # Broad add forms that scoop the whole dirty tree.
 _BROAD_ADD_SHORT = re.compile(
@@ -226,7 +231,7 @@ def _deny_shared_git(command: str, *, dirty: bool) -> str | None:
     return None
 
 
-def _deny_sacred_wip(command: str) -> str | None:
+def _deny_sacred_wip(command: str, *, root: Path | None = None) -> str | None:
     if _MV_CP_WIP_TMP.search(command):
         return (
             "sacred-WIP isolation: moving/copying WIP to/from public temp denied "
@@ -244,11 +249,13 @@ def _deny_sacred_wip(command: str) -> str | None:
             "sacred backlog for a clean worktree."
         )
     if _GIT_CLEAN_FORCE.search(command) and not _authorized("L9_GIT_CLEAN_AUTHORIZED"):
-        return (
-            "shared-worktree isolation: clean -f/-fd/-fdx denied on shared "
-            "clones (destroys untracked work). Set L9_GIT_CLEAN_AUTHORIZED=<reason> "
-            "only for a deliberate scoped clean."
-        )
+        # Rule 49 used to deny every forced clean by flag alone. Under the
+        # context-sensitive guardrail contract the target set decides: a clean
+        # whose `git clean -nd` preflight lists only build output and caches
+        # destroys nothing, while one that would take an untracked file nobody
+        # can prove disposable still fails closed. git_guardrails runs that
+        # preflight and returns the deny reason.
+        return command_requires_human(command, root=root)
     if _TMP_HOLD_CREATE.search(command):
         return (
             "never-lose scratch: creating public-temp cg-*-hold* or *untracked-hold* "
@@ -305,4 +312,4 @@ def command_violates_worktree_isolation(command: str, *, root: Path | None = Non
             "denied — that scoops parallel agents dirty files. Stage an explicit "
             "allowlist of paths you authored, or set L9_GIT_BROAD_ADD_AUTHORIZED=<reason>."
         )
-    return _deny_sacred_wip(sanitized)
+    return _deny_sacred_wip(sanitized, root=root)

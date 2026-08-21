@@ -101,6 +101,79 @@ class LaunchabilityTest(unittest.TestCase):
             self.assertIn("dangling_dependency", codes)
 
 
+class InferenceReachesTheTaskCardTest(unittest.TestCase):
+    """An inferred validation only counts if the contract can be rendered from it."""
+
+    def _cards(self, root: Path, tasks: list[dict]) -> Path:
+        import yaml
+
+        blueprint = root / "blueprint"
+        blueprint.mkdir(parents=True, exist_ok=True)
+        cards = blueprint / "TASK_CARDS.yaml"
+        cards.write_text(yaml.safe_dump({"tasks": tasks}, sort_keys=False), encoding="utf-8")
+        return blueprint
+
+    def _written(self, blueprint: Path) -> list[dict]:
+        import yaml
+
+        doc = yaml.safe_load((blueprint / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+        return list(doc["tasks"][0]["validation"] or [])
+
+    def test_the_inferred_command_is_written_into_the_card(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            blueprint = self._cards(root, [_task(outputs=[{"location": "docs/result.md"}])])
+
+            changed = launchability.apply_synthesized_validations(
+                blueprint, {"TASK-001": ["test -s 'docs/result.md'"]}
+            )
+
+            self.assertEqual(changed, ["TASK-001"])
+            entry = self._written(blueprint)[0]
+            self.assertEqual(entry["method"], "command")
+            self.assertEqual(entry["command_or_inspection"], "test -s 'docs/result.md'")
+            # The lock reads `method: command` entries, so this is exactly what
+            # the rendered contract's validation_commands will contain.
+            self.assertEqual(
+                launchability.declared_validation_commands({"validation": [entry]}),
+                ["test -s 'docs/result.md'"],
+            )
+
+    def test_the_inferred_entry_is_marked_as_not_operator_written(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            blueprint = self._cards(Path(raw), [_task()])
+
+            launchability.apply_synthesized_validations(blueprint, {"TASK-001": ["make check"]})
+
+            self.assertTrue(self._written(blueprint)[0]["id"].startswith("VAL-INFERRED-"))
+
+    def test_a_declared_validation_is_never_overwritten(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            declared = {
+                "id": "VAL-001",
+                "method": "command",
+                "command_or_inspection": "make check",
+                "environment": "repo_local",
+                "expected_result": "PASS",
+            }
+            blueprint = self._cards(Path(raw), [_task(validation=[declared])])
+
+            changed = launchability.apply_synthesized_validations(
+                blueprint, {"TASK-001": ["python3 -m pytest -q"]}
+            )
+
+            self.assertEqual(changed, [])
+            self.assertEqual(self._written(blueprint), [declared])
+
+    def test_nothing_is_written_when_nothing_was_inferred(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            blueprint = self._cards(Path(raw), [_task()])
+            before = (blueprint / "TASK_CARDS.yaml").read_bytes()
+
+            self.assertEqual(launchability.apply_synthesized_validations(blueprint, {}), [])
+            self.assertEqual((blueprint / "TASK_CARDS.yaml").read_bytes(), before)
+
+
 class DefinitionStatusNormalizationTest(unittest.TestCase):
     """Ordering intent must not become a state the controller cannot leave."""
 

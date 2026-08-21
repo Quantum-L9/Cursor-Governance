@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
@@ -119,6 +120,63 @@ def normalize_blueprint(root: Path) -> dict[str, Any]:
     return body
 
 
+def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
+    """Refresh the frozen definition of specific tasks, leaving the rest alone.
+
+    `COMPATIBILITY.yaml` calls a source-digest change `runtime_stale_until_relock`
+    but nothing implemented the relock, so the only way past an edited task card
+    was a fresh workspace -- discarding the completed history of every other task
+    to adopt one new definition.
+
+    This is that relock, at task granularity. Definitions named in `task_ids` are
+    replaced with what the blueprint says now and the file digests are refreshed;
+    every other task's entry is preserved byte-for-byte, so the lock continues to
+    attest exactly what it attested before for the work already done.
+    """
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    root = Path(lock.get("blueprint_root") or "")
+    current = normalize_blueprint(root)
+    live = {str(task["id"]): task for task in current.get("tasks") or []}
+
+    wanted = [str(task_id) for task_id in task_ids]
+    missing = [task_id for task_id in wanted if task_id not in live]
+    if missing:
+        raise BlueprintError(f"cannot relock tasks absent from the Blueprint: {sorted(missing)}")
+
+    previous_digest = str(lock.get("lock_digest") or "")
+    definitions: dict[str, dict[str, str]] = {}
+    tasks: list[dict[str, Any]] = []
+    for task in lock.get("tasks") or []:
+        task_id = str(task["id"])
+        if task_id not in wanted:
+            tasks.append(task)
+            continue
+        definitions[task_id] = {
+            "from": task_definition_digest(task),
+            "to": task_definition_digest(live[task_id]),
+        }
+        tasks.append(live[task_id])
+
+    body = dict(lock)
+    body.pop("lock_digest", None)
+    body["tasks"] = tasks
+    # The file digests must move with the definitions, or the very next
+    # verification reports the same staleness this call just resolved.
+    body["source_digests"] = current.get("source_digests") or {}
+    body["lock_digest"] = digest_object(body)
+    schema_errors = validate_program_lock_schema(body)
+    if schema_errors:
+        raise BlueprintError("relocked program lock schema failed: " + "; ".join(schema_errors))
+    write_json(lock_path, body)
+    return {
+        "relocked": sorted(definitions),
+        "previous_lock_digest": previous_digest,
+        "lock_digest": body["lock_digest"],
+        "definitions": definitions,
+        "tasks": {task_id: live[task_id] for task_id in definitions},
+    }
+
+
 def validate_program_lock_schema(lock: dict[str, Any]) -> list[str]:
     schema = json.loads(LOCK_SCHEMA.read_text(encoding="utf-8"))
     errors = sorted(
@@ -163,3 +221,72 @@ def verify_program_lock(lock_path: Path) -> tuple[bool, list[str]]:
         elif sha256_file(path) != digest:
             errors.append(f"Blueprint source changed: {name}")
     return not errors, errors
+
+
+# The one blueprint source whose changes can be attributed to individual tasks.
+# Every other file describes the program as a whole -- authority, gates, evidence,
+# waves -- so a change to it is not scopable and keeps the global verdict.
+TASK_SOURCE = "TASK_CARDS.yaml"
+
+
+def task_definition_digest(task: dict[str, Any]) -> str:
+    """A fingerprint of one task's definition, independent of the other tasks.
+
+    The lock already carries each task's authored card under `source`, so this
+    needs no new lock field: the digest is derived from what was frozen.
+    """
+    return digest_object(task)
+
+
+def stale_task_ids(lock_path: Path) -> set[str] | None:
+    """Which tasks' own definitions have moved since the lock was written.
+
+    `verify_program_lock` answers at file granularity, which conflates two
+    different things: a lock that cannot be trusted at all, and a task card file
+    in which one task was edited. The first must block the program; the second
+    should only affect the task that was edited, because every other task's
+    definition -- and the history recorded against it -- is exactly what it was.
+
+    Returns the set of task ids whose definition changed, or None when the
+    change cannot be attributed to particular tasks and the whole lock must be
+    treated as stale. None is the conservative answer and is what callers get
+    for a corrupt lock, a missing file, or an edit to any program-wide source.
+    """
+    if not lock_path.is_file():
+        return None
+    try:
+        lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+
+    # Structural integrity is not scopable: if the lock does not describe itself
+    # correctly, nothing derived from it is evidence of anything.
+    body = dict(lock)
+    claimed = body.pop("lock_digest", None)
+    if digest_object(body) != claimed:
+        return None
+    if lock.get("schema") != "program-execution-controller.program-lock.v2":
+        return None
+
+    root = Path(lock.get("blueprint_root") or "")
+    changed: list[str] = []
+    for name, digest in (lock.get("source_digests") or {}).items():
+        path = root / name
+        if not path.is_file() or sha256_file(path) != digest:
+            changed.append(name)
+    if not changed:
+        return set()
+    if any(name != TASK_SOURCE for name in changed):
+        return None
+
+    try:
+        current = normalize_blueprint(root)
+    except BlueprintError:
+        return None
+    recorded = {str(task["id"]): task_definition_digest(task) for task in lock.get("tasks") or []}
+    live = {str(task["id"]): task_definition_digest(task) for task in current.get("tasks") or []}
+    # A task that was added or removed changes the shape of the program, not just
+    # one definition, so decline to scope rather than guessing.
+    if set(recorded) != set(live):
+        return None
+    return {task_id for task_id, digest in recorded.items() if live[task_id] != digest}

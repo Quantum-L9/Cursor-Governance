@@ -118,11 +118,39 @@ Fast mode relaxes **ceremony only**. Merge authority, publish authority,
 writable-path restrictions, dependency correctness and controller verification
 before completion are unchanged.
 
+### Preparing an already-prepared campaign
+
+Repeating `make campaign` for an id **resumes** it. The runtime is stepped aside
+only when it did not come from the current inputs, so a repeat costs a fraction
+of the first run and completed work survives:
+
+- every preparation stage is fingerprint-keyed, and its reuse decision — or the
+  reason it ran again — is recorded in `PREPARE_STATE.json` and printed next to
+  the stage's duration
+- arming renders contracts for the runnable frontier plus one wave of lookahead;
+  the rest materialize on demand when a task is claimed
+- editing a task's definition relocks that task (`pec relock`) instead of
+  rebuilding the program. Changing the program body or the set of tasks is not
+  absorbable and does rebuild
+- in FAST mode a campaign that compiles and is launchable is accepted from local
+  evidence, recorded in `LOCAL_ACCEPTANCE.json` as `authority: local_only`. That
+  record is explicitly **not** sufficient for publish, merge or deploy, and no
+  code path treats it as authority
+
+Measured timings and the reasoning behind these choices are in
+[`PREPARE_BASELINE.md`](PREPARE_BASELINE.md). Re-measure with:
+
+```bash
+.venv/bin/python environment/program-execution/scripts/tests/pe_prepare_bench.py --tasks 2 7 35
+```
+
 | Surface | What it does |
 |---|---|
 | `scripts/launchability.py` | Pre-bootstrap check that execution is possible at all; infers a validation command from repository convention when a task declares none |
 | `scripts/pe_worker.py` | Worker handoff — renders the task brief and invokes `L9_PE_WORKER_CMD` so implementation tasks reach a worker before verification |
 | `scripts/pe_timing.py` | Stage timings (`runtime/TIMINGS.json`), fingerprint-keyed reuse of preparation, and separated progress dimensions (`runtime/PROGRESS.json`) |
+| `scripts/pe_prepare_state.py` | `PREPARE_STATE.json` — what preparation produced, from which inputs, and the recorded reason each stage was reused or ran again; also writes the FAST `LOCAL_ACCEPTANCE.json` provenance |
+| `pec relock` | Adopts edited task definitions into a live runtime without discarding execution history |
 | `pec/exec_env.py` | One resolved interpreter for worker-side and controller-side validation |
 | `pec/workspace_reset.py` | `pec fresh-workspace` — idempotent recovery of task worktrees, registrations, branches and leases |
 

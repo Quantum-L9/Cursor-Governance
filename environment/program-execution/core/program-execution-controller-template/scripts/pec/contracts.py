@@ -222,10 +222,25 @@ def register_source_contract(
         raise ContractError(f"unknown task: {task_id}")
     contract = validate_source_contract(load_json(source), task)
     target = workspace / "contracts" / "source" / f"{task_id}.json"
+    digest = digest_object(contract)
     if target.exists() and not replace:
+        # The guard exists to stop a *conflicting* contract from silently
+        # replacing a registered one. An identical contract replaces nothing, so
+        # this is the same request arriving twice -- which is what re-preparing
+        # an already-prepared campaign looks like from here. Requiring the
+        # already-registered digest to match, and its recorded path to be this
+        # target, keeps the state DB the authority rather than the bare file.
+        registered_digest = str(task.get("source_contract_digest") or "")
+        registered_path = str(task.get("source_contract_path") or "")
+        if registered_digest == digest and registered_path == str(target):
+            return {
+                "status": "ALREADY_REGISTERED",
+                "task_id": task_id,
+                "path": str(target),
+                "digest": digest,
+            }
         raise ContractError("Source Contract already exists; explicit replacement is required")
     write_json(target, contract)
-    digest = digest_object(contract)
     db.update_task(
         task_id,
         source_contract_path=str(target),
