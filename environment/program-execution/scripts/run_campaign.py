@@ -2292,27 +2292,53 @@ def measure_admission_evidence(target_path: Path) -> dict[str, Any]:
 def fill_inferred_validation(
     contract_path: Path, contract: dict[str, Any], worktree: Path
 ) -> dict[str, Any]:
-    """Infer executable validation when a live contract still has none.
+    """Adopt inferred validation through pec relock, never by rewriting digests.
 
-    ConditionallyReady plan projection used to emit inspection-only entries.
-    pec verify then returns INCOMPLETE. Infer from writable test paths and
-    persist so the controller and the attempt receipt see the same commands.
+    Hand-editing the rendered contract breaks the contract-digest gate.
     """
-    existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
-    if existing:
-        return contract
     launch = _load_script("launchability", PE_ROOT / "scripts/launchability.py")
     inferred = launch.infer_validation_commands(
         {"writable_paths": contract.get("writable_paths") or []},
         worktree,
     )
-    if not inferred:
+    existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
+    if not inferred or existing == inferred:
         return contract
-    updated = dict(contract)
-    updated["validation_commands"] = inferred
-    contract_path.write_text(json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-    log(f"inferred validation for {contract.get('task_id')}: {inferred[0]}")
-    return updated
+    workspace = contract_path.parents[2]
+    task_id = str(contract.get("task_id") or "")
+    lock_path = workspace / "runtime" / "program-lock.json"
+    if not lock_path.is_file() or not task_id:
+        return contract
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    cards_path = Path(str(lock.get("blueprint_root") or "")) / "TASK_CARDS.yaml"
+    if not cards_path.is_file():
+        return contract
+    cards = load_yaml(cards_path)
+    changed = False
+    for task in cards.get("tasks") or []:
+        if not isinstance(task, dict) or str(task.get("id") or "") != task_id:
+            continue
+        task["validation"] = [
+            {
+                "id": "VAL-INFERRED-001",
+                "method": "command",
+                "command_or_inspection": inferred[0],
+                "expected_result": "PASS",
+            }
+        ]
+        changed = True
+        break
+    if not changed:
+        return contract
+    if yaml is None:
+        raise CampaignError("PyYAML required to persist inferred validation")
+    cards_path.write_text(yaml.safe_dump(cards, sort_keys=False), encoding="utf-8")
+    if adopt_changed_definitions(workspace, [task_id]) is None:
+        raise CampaignError(f"pec relock refused inferred validation for {task_id}")
+    pec_cmd(workspace, "render-contract", task_id)
+    reloaded = json.loads(contract_path.read_text(encoding="utf-8"))
+    log(f"inferred validation for {task_id}: {inferred[0]}")
+    return reloaded
 
 
 def run_worker_handoff(

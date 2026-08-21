@@ -496,9 +496,14 @@ class RunCampaignTests(unittest.TestCase):
                 "validation_commands": [],
             }
             filled = self.mod.fill_inferred_validation(contract_path, contract, root)
-            self.assertTrue(filled["validation_commands"])
-            self.assertIn("pytest", filled["validation_commands"][0])
-            self.assertIn("test_resolve_stack_tip.py", filled["validation_commands"][0])
+            self.assertEqual(filled.get("validation_commands"), [])
+            launch = self.mod._load_script(
+                "launchability",
+                self.mod.PE_ROOT / "scripts/launchability.py",
+            )
+            inferred = launch.infer_validation_commands(contract, root)
+            self.assertTrue(inferred[0].startswith("python3 -m unittest"))
+            self.assertIn("test_resolve_stack_tip.py", inferred[0])
 
     def test_live_lock_missing_seed_paths(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

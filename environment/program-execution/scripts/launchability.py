@@ -121,7 +121,7 @@ def infer_validation_commands(
                     if probe not in tests:
                         tests.append(probe)
     if tests:
-        return [f"{python} -m pytest -q {' '.join(tests)}"]
+        return [f"{python} -m unittest {' '.join(tests)}"]
     if paths:
         quoted = " ".join(f"'{path}'" for path in paths)
         return [f"test -s {quoted}"] if len(paths) == 1 else [f"ls -1 {quoted} >/dev/null"]

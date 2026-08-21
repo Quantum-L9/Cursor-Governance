@@ -167,7 +167,7 @@ def project_conditionally_ready(intent: dict[str, Any]) -> dict[str, Any]:
                     {
                         "id": f"VAL-{index:03d}",
                         "method": "command",
-                        "command_or_inspection": f"python3 -m pytest -q {' '.join(tests)}",
+                        "command_or_inspection": f"python3 -m unittest {' '.join(tests)}",
                         "expected_result": "PASS",
                     }
                 ]

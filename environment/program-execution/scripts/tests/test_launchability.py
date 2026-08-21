@@ -67,7 +67,7 @@ class LaunchabilityTest(unittest.TestCase):
             self.assertTrue(report["launchable"])
             self.assertEqual(
                 report["synthesized_validations"]["TASK-001"],
-                ["python3 -m pytest -q pkg/tests/test_widget.py"],
+                ["python3 -m unittest pkg/tests/test_widget.py"],
             )
 
     def test_declared_validation_overrides_inference(self) -> None:

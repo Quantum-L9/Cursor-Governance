@@ -319,6 +319,7 @@ class CompileActivationTests(unittest.TestCase):
             )
             validation = source["tasks"][0]["validation"][0]
             self.assertEqual(validation["method"], "command")
+            self.assertIn("unittest", validation["command_or_inspection"])
             self.assertIn("test_resolve_stack_tip.py", validation["command_or_inspection"])
 
     def test_refuses_plan_status_partial(self) -> None:
