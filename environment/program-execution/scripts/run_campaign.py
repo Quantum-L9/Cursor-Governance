@@ -1796,7 +1796,10 @@ def should_run(until: str, stage: str) -> bool:
 
 def pec_cmd(workspace: Path, command: str, *rest: str) -> dict[str, Any]:
     cmd = [sys.executable, str(PEC), command, *rest, "--workspace", str(workspace)]
-    result = run_cmd(cmd, timeout=PEC_TIMEOUT_S)
+    # verify re-runs contract validation_commands. Those may be pytest suites
+    # that legitimately exceed the short controller RPC budget.
+    timeout = VALIDATION_TIMEOUT_S if command == "verify" else PEC_TIMEOUT_S
+    result = run_cmd(cmd, timeout=timeout)
     payload: dict[str, Any] = {}
     text = (result.stdout or "").strip()
     if text:

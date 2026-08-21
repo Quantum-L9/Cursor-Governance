@@ -1236,6 +1236,19 @@ class RunCampaignTests(unittest.TestCase):
                 any(item.get("cites") == "stack-proof.json" for item in payload["nuggets"])
             )
 
+    def test_pec_verify_uses_validation_timeout(self) -> None:
+        captured: list[int] = []
+
+        def fake_run_cmd(cmd, timeout=0, **_kwargs):  # noqa: ANN001
+            captured.append(int(timeout))
+            return subprocess.CompletedProcess(cmd, 0, stdout="{}", stderr="")
+
+        with patch.object(self.mod, "run_cmd", fake_run_cmd):
+            self.mod.pec_cmd(Path("."), "verify", "TASK-003")
+            self.mod.pec_cmd(Path("."), "status")
+        self.assertEqual(captured[0], self.mod.VALIDATION_TIMEOUT_S)
+        self.assertEqual(captured[1], self.mod.PEC_TIMEOUT_S)
+
     def test_incomplete_skips_change(self) -> None:
         decision = self.mod.dispatch_kernel_change(
             {"kernel_verdict": "INCOMPLETE", "gates": {"validation": "INCOMPLETE"}}
