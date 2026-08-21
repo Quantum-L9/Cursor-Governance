@@ -15,6 +15,13 @@ venv/
 dist/
 build/
 
+# Python tool caches. Not merely noise: environment/program-execution/peer_execution
+# is a pytest rootdir, so an unignored .pytest_cache/ lands inside the Program
+# Execution manifest's input surface and shows up as an inventory entry.
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
 # IDE
 .vscode/
 .idea/
@@ -129,4 +136,3 @@ docs/skills-inventory.md
 
 # retired harvest dump — repo-hygiene fail-closes if this directory reappears
 current_work/
-
