@@ -20,6 +20,7 @@
   },
   "protected_files": [
     { "path": "AGENTS.md", "tier": "canonical", "rule": "additive_only" },
+    { "path": "CLAUDE.md", "tier": "managed", "rule": "managed" },
     { "path": "CANONICAL_LAW.md", "tier": "canonical", "rule": "additive_only" },
     { "path": "ORG_INVARIANTS.yaml", "tier": "canonical", "rule": "additive_only" },
     { "path": "CODEOWNERS", "tier": "canonical", "rule": "additive_only" },

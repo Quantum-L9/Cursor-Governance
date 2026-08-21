@@ -40,19 +40,19 @@ GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
 
 ## Preferred — GitHub merge (stack-safe)
 
-Probe first: is this PR’s `headRefName` the `baseRefName` of another open PR?
+Do **not** choose `--squash` or `--merge` by hand. The helper probes whether
+this head is the `baseRefName` of another open PR and emits the only safe
+flags (`--merge` for a parent, `--squash` for a leaf):
 
 ```bash
-# unstacked head — squash is safe
-gh pr merge {number} --squash --delete-branch -b "{summary}"
-
-# stacked parent — squash/rebase denied (silent delete-wins on the child).
-# Merge children first, retarget them, or preserve ancestry:
-gh pr merge {number} --merge --delete-branch -b "{summary}"
+GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
+"$GOV_PY" ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {number} --print
+"$GOV_PY" ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {number} --run
 ```
 
-`ops/autonomy/merge_gate.py` fail-closes squash/rebase when the head is a
-stack parent (unless human `L9_STACK_CHECK_BYPASS` / `L9_MERGE_AUTHORIZED`).
+Hand-typed `gh pr merge --squash` of a stack parent is denied by
+`ops/autonomy/merge_gate.py` on Shell and MCP (unless human
+`L9_STACK_CHECK_BYPASS` / `L9_MERGE_AUTHORIZED`).
 
 After a **parent squash**, never `gh pr update-branch` and never merge `main`
 into the child. Rebase the child onto the new base:

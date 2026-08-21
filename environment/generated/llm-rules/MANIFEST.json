@@ -249,9 +249,9 @@
       "alias": null,
       "class": "always",
       "output": "53-pr-overlap-guardrail.md",
-      "output_sha256": "46cec6e3f999f2b176832d1966aa300b38d2541f5126809e09d9c2ac7164db94",
+      "output_sha256": "bd814b85aa88b7614720a4a0bdfa50b98c1719b0a1943a7556cb6776162b6915",
       "source": "rules/53-pr-overlap-guardrail.mdc",
-      "source_sha256": "e65dba8873911e45fc1298201388a9dee7162769d9abf40fa6d9bc0320718be3",
+      "source_sha256": "dea40ccd49ee7d2530baff7094dceb828dacb8450803395233b39ca004ed5d48",
       "stem": "53-pr-overlap-guardrail"
     },
     {
@@ -602,7 +602,7 @@
       "output": "zz-autonomy-surface-override.md",
       "output_sha256": "f23440e6eb36d5eee9e40f406ac2806a85f82387a93de0a09f4c4c414ebc8feb",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "5c2842548ca32a48d31d5cfa87aff33ecb673dbc79d36ad71980c3573266654d",
+      "source_sha256": "348827ea6e8c9a972b009f8e8593f1d0c933b229336b69cd0933c8882473c0b9",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -614,5 +614,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 67
   },
-  "tree_sha256": "23ffa9022b7e0b579e696985c8e49d4e0a5cbae331d83a6b761a91100cc04c15"
+  "tree_sha256": "d59932fbb299b8f5ae4b744e283e83f6d0a29723d8d0ea041150ae55c41619be"
 }

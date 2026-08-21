@@ -12,7 +12,32 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-WS="${1:-${WS:-$(pwd)}}"
+# --mode decides what a MISSING SCANNER BINARY means (INV-5).
+#
+#   advisory  a missing binary SKIPs with a warning. Correct for local dev,
+#             where not every contributor has every scanner installed.
+#   gate      a missing binary FAILS, naming the tool and how to provision it.
+#
+# The default stays advisory so existing direct callers are unaffected; the
+# publish path (run_pr_gate.sh) opts in to gate. This distinction exists because
+# the policy "SKIP a checker whose binary is absent" reads as a pass in the
+# summary — the audit found gitleaks absent from the runtime entirely, which
+# meant secret scanning silently did not run at all (finding B-11).
+PR_SECURITY_MODE="${PR_SECURITY_MODE:-advisory}"
+_ws_arg=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --mode) PR_SECURITY_MODE="${2:?--mode needs gate|advisory}"; shift 2 ;;
+    --) shift ;;
+    *) _ws_arg="$1"; shift ;;
+  esac
+done
+case "$PR_SECURITY_MODE" in
+  gate|advisory) : ;;
+  *) echo "run_pr_security: unknown --mode '$PR_SECURITY_MODE' (want gate|advisory)" >&2; exit 2 ;;
+esac
+
+WS="${_ws_arg:-${WS:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 
 PR_SECURITY_ADVISORY="${PR_SECURITY_ADVISORY:-0}"
@@ -49,6 +74,17 @@ ok() { PASS=$((PASS + 1)); note "PASS: $*"; }
 fail() { FAIL=$((FAIL + 1)); FAILURES+=("$*"); note "FAIL: $*"; }
 skip() { SKIP=$((SKIP + 1)); note "SKIP: $*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
+
+# A scanner that is ABSENT is categorically different from a scanner that had
+# nothing to scan. Only the former is a gate failure; "no changed .py files"
+# stays a skip in both modes.
+missing_tool() { # $1=tool  $2=provisioning hint
+  if [ "$PR_SECURITY_MODE" = "gate" ]; then
+    fail "$1 is NOT INSTALLED — gate mode requires it (provision: $2)"
+  else
+    skip "$1 not available ($2)"
+  fi
+}
 
 run_uvx_pkg() {
   # run_uvx_pkg <pkg==ver> <bin> [args...]
@@ -109,7 +145,7 @@ fi
 # ── gitleaks ───────────────────────────────────────────────────────────────
 run_gitleaks() {
   if ! have gitleaks; then
-    skip "gitleaks not on PATH (brew install gitleaks@$GITLEAKS_PIN)"
+    missing_tool gitleaks "bash ops/scripts/bootstrap_agent_environment.sh --surface local"
     return 0
   fi
   local ver
@@ -155,6 +191,10 @@ run_bandit() {
     medium) sev_flag="-ll" ;;
     low) sev_flag="-l" ;;
   esac
+  if ! have uvx && ! have uv; then
+    missing_tool bandit "install uv (https://astral.sh/uv)"
+    return 0
+  fi
   if run_uvx_pkg "bandit==${BANDIT_PIN}" bandit "${py[@]}" "$sev_flag" -q; then
     ok "bandit==$BANDIT_PIN (${#py[@]} file(s), severity>=$BANDIT_SEVERITY)"
   else
@@ -213,7 +253,7 @@ run_semgrep() {
       fail "semgrep found issues in changed files"
     fi
   else
-    skip "semgrep not available"
+    missing_tool semgrep "install uv/uvx, or pip install semgrep"
   fi
 }
 
@@ -230,7 +270,7 @@ run_pip_audit() {
     return 0
   fi
   if ! have uv; then
-    skip "pip-audit (uv required)"
+    missing_tool pip-audit "install uv (https://astral.sh/uv)"
     return 0
   fi
   (
@@ -251,7 +291,7 @@ run_semgrep
 run_pip_audit
 
 note ""
-note "Summary: pass=$PASS fail=$FAIL skip=$SKIP"
+note "Summary: pass=$PASS fail=$FAIL skip=$SKIP mode=$PR_SECURITY_MODE"
 if [[ "$FAIL" -gt 0 ]]; then
   for f in "${FAILURES[@]}"; do
     note "  - $f"
