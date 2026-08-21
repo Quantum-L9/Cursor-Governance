@@ -384,11 +384,6 @@ def test_workflow_action_pins() -> None:
     assert proc.returncode == 0, proc.stdout + proc.stderr
 
 
-def test_ratchet_caller_omits_deprecated_ledger_inputs() -> None:
-    text = (ROOT / ".github" / "workflows" / "baseline-ratchet-caller.yml").read_text(
-        encoding="utf-8"
-    )
-    assert "packet-envelope" not in text
-    assert "PacketEnvelope" not in text
-    assert "test-quarantine-ledger" in text
-    assert "requirements-files: requirements.txt" in text
+def test_baseline_ratchet_caller_is_absent() -> None:
+    assert not (ROOT / ".github" / "workflows" / "baseline-ratchet-caller.yml").exists()
+    assert not (ROOT / ".l9" / "baselines" / "test-quarantine.yml").exists()

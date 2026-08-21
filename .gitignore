@@ -99,9 +99,7 @@ reports/
 # under L9_AUTONOMY_STATE_DIR (default .l9/autonomy/). It is machine-local
 # runtime state, not source. The SessionStart probe is read-only, but init/run
 # create this tree.
-.l9/*
-!.l9/baselines/
-!.l9/baselines/**
+.l9/
 # .l9/scratch-hold/ — non-WIP park vault (covered by .l9/ above; never park WIP/)
 # L9 Subagent-Generated Data runtime
 .l9/subagent-generated-data/*.sqlite3
@@ -131,3 +129,4 @@ docs/skills-inventory.md
 
 # retired harvest dump — repo-hygiene fail-closes if this directory reappears
 current_work/
+
