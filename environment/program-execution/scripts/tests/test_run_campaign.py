@@ -522,6 +522,20 @@ class RunCampaignTests(unittest.TestCase):
             )
             self.assertEqual(log.stdout.strip(), "emit once")
 
+    def test_stale_unittest_yields_to_inferred_pytest(self) -> None:
+        self.assertTrue(
+            self.mod.stale_unittest_should_yield_to_pytest(
+                "python3 -m unittest tests/test_x.py",
+                "python3 -m pytest tests/test_x.py --tb=short -q --no-cov",
+            )
+        )
+        self.assertFalse(
+            self.mod.stale_unittest_should_yield_to_pytest(
+                "python3 -c 'print(0)'",
+                "python3 -m pytest tests/test_x.py --tb=short -q --no-cov",
+            )
+        )
+
     def test_adoptable_inferred_command_accepts_bash_n(self) -> None:
         self.assertTrue(self.mod.adoptable_inferred_command("bash -n ops/scripts/run_pr_gate.sh"))
         self.assertTrue(self.mod.adoptable_inferred_command("python3 -m unittest tests/x.py"))

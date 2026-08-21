@@ -2305,6 +2305,11 @@ def _task_card_command(cards: dict[str, Any], task_id: str) -> str:
     return ""
 
 
+def stale_unittest_should_yield_to_pytest(existing: str, inferred: str) -> bool:
+    """True when a compiled unittest command would miss pytest-collectable tests."""
+    return "-m unittest" in existing and "-m pytest" in inferred
+
+
 def adoptable_inferred_command(command: str) -> bool:
     """Inferences the execute path may relock onto the rendered contract.
 
@@ -2356,7 +2361,12 @@ def fill_inferred_validation(
         worktree,
     )
     existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
-    if existing:
+    replace_stale_unittest = bool(
+        existing
+        and inferred
+        and stale_unittest_should_yield_to_pytest(existing[0], inferred[0])
+    )
+    if existing and not replace_stale_unittest:
         return contract
     if not inferred:
         return contract
