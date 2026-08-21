@@ -68,7 +68,7 @@ warn() { printf 'claude-adapter WARN: %s\n' "$*" >&2; }
 # downgrade: READY -> DEGRADED -> BLOCKED.
 STATUS_SHARED="READY"; STATUS_SETTINGS="READY"; STATUS_SKILLS="READY"
 STATUS_RULES="READY"; STATUS_CAPABILITIES="READY"; STATUS_MEMORY="READY"
-STATUS_MCP="READY"
+STATUS_MCP="READY"; STATUS_PLUGINS="READY"
 
 downgrade() { # $1=step-var-name $2=new-status $3=reason
   local name="$1" want="$2" cur="${!1}"
@@ -78,6 +78,69 @@ downgrade() { # $1=step-var-name $2=new-status $3=reason
     [ "$QUIET" = "1" ] || say "  $name -> $want${3:+: $3}"
   fi
 }
+
+# --- Receipt machinery (installed BEFORE the first exit path) ----------------
+# The receipt used to be written only at the bottom of the script, and only
+# inside `if [ -n "$GOV_PY" ]`. Every failure path above that line — no
+# governance SSOT, unusable interpreter, a workspace that is not a repository —
+# therefore produced NO receipt at all, and the SessionStart projection had
+# nothing to report but silence (audit B-04). An absent receipt is now the one
+# thing a reader may treat as `never_ran`; every other outcome leaves a file.
+#
+# Written in bash rather than through the locked interpreter deliberately: the
+# case that most needs a receipt is the case where that interpreter is missing.
+RECEIPT="${L9_CLAUDE_BOOTSTRAP_RECEIPT:-$HOME/.l9/claude/bootstrap-state.json}"
+RECEIPT_STAGE="startup"
+RECEIPT_REMEDIATION="bash $GOV_DIR/environment/agents/adapters/claude-code/install.sh"
+RECEIPT_WRITTEN=0
+
+stage() { RECEIPT_STAGE="$1"; }
+
+json_token() { printf '%s' "$1" | tr -d '\n\r\t"\\' | head -c 200; }
+
+write_receipt() {
+  local state="$1" ts
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo 'unknown')"
+  mkdir -p "$(dirname "$RECEIPT")" 2>/dev/null || return 0
+  {
+    printf '{\n'
+    printf '  "schema": "l9.claude-bootstrap.v1",\n'
+    printf '  "surface": "claude-code",\n'
+    printf '  "mode": "%s",\n' "$([ "$CHECK" = "1" ] && echo check || echo local)"
+    printf '  "state": "%s",\n' "$(json_token "$state")"
+    printf '  "stage": "%s",\n' "$(json_token "$RECEIPT_STAGE")"
+    printf '  "remediation": "%s",\n' "$(json_token "$RECEIPT_REMEDIATION")"
+    printf '  "generated_at": "%s",\n' "$ts"
+    printf '  "ttl_seconds": %s,\n' "${L9_CLAUDE_BOOTSTRAP_TTL:-86400}"
+    printf '  "governance_revision": "%s",\n' \
+      "$(json_token "$(git -C "$GOV_DIR" rev-parse HEAD 2>/dev/null || echo unknown)")"
+    printf '  "workspace": "%s",\n' "$(json_token "$WORKSPACE")"
+    printf '  "shared_bootstrap": "%s",\n' "$(json_token "$STATUS_SHARED")"
+    printf '  "settings": "%s",\n' "$(json_token "$STATUS_SETTINGS")"
+    printf '  "skills": "%s",\n' "$(json_token "$STATUS_SKILLS")"
+    printf '  "rules": "%s",\n' "$(json_token "$STATUS_RULES")"
+    printf '  "capabilities": "%s",\n' "$(json_token "$STATUS_CAPABILITIES")"
+    printf '  "memory": "%s",\n' "$(json_token "$STATUS_MEMORY")"
+    printf '  "mcp": "%s",\n' "$(json_token "$STATUS_MCP")"
+    printf '  "plugins": "%s",\n' "$(json_token "$STATUS_PLUGINS")"
+    printf '  "overall": "%s"\n' "$(json_token "$state")"
+    printf '}\n'
+  } > "$RECEIPT" 2>/dev/null || return 0
+  RECEIPT_WRITTEN=1
+}
+
+# The trap is the guarantee. Any exit that has not already written a receipt —
+# including `exit 1` from a guard clause and any unexpected termination — leaves
+# a `failed` receipt naming the stage that was in flight.
+on_exit() {
+  local rc=$?
+  if [ "$RECEIPT_WRITTEN" = "0" ]; then
+    write_receipt failed
+    warn "wrote FAILED bootstrap receipt at stage '$RECEIPT_STAGE' (exit $rc): $RECEIPT"
+  fi
+  return 0
+}
+trap on_exit EXIT
 
 # --- Workspace sanity: never wire a directory that is not a git repository ----
 # A caller that resolves the wrong workspace (e.g. the PARENT of the checkout)
@@ -109,14 +172,27 @@ fi
 # Its exit code is part of the contract: a nonzero bootstrap means the locked
 # interpreter / toolchain / secret plane is unusable, and this installer no
 # longer paperes over that with a later "adapter ready".
+stage "shared-bootstrap"
 SHARED_BOOTSTRAP="$GOV_DIR/ops/scripts/bootstrap_agent_environment.sh"
-if [ -f "$SHARED_BOOTSTRAP" ]; then
+# Testing seam. The shared bootstrap needs network egress and a uv sync, and it
+# has its own suite; adapter-level tests set this to exercise the vendor wiring
+# alone. It is never set by any surface caller — if it appears in a real
+# environment, the receipt below still records what was skipped.
+if [ "${L9_SKIP_SHARED_BOOTSTRAP:-0}" = "1" ]; then
+  warn "L9_SKIP_SHARED_BOOTSTRAP=1 — toolchain, secrets and preflight NOT run"
+  downgrade STATUS_SHARED DEGRADED "shared bootstrap skipped by request"
+elif [ -f "$SHARED_BOOTSTRAP" ]; then
   shared_args=(--surface claude-code --governance "$GOV_DIR" --workspace "$WORKSPACE")
   [ "$CHECK" = "1" ] && shared_args+=(--check)
   [ "$QUIET" = "1" ] && shared_args+=(--quiet)
   bash "$SHARED_BOOTSTRAP" "${shared_args[@]}"
   shared_rc=$?
-  if [ "$shared_rc" -ne 0 ]; then
+  # Exit 6 is the shared bootstrap's "usable but degraded" code. Treating it as
+  # BLOCKED would mark every hosted-surface install permanently blocked, since
+  # the capability plane there is BLOCKED_BY_PLATFORM by construction (INV-4).
+  if [ "$shared_rc" -eq 6 ]; then
+    downgrade STATUS_SHARED DEGRADED "shared bootstrap reported degraded components"
+  elif [ "$shared_rc" -ne 0 ]; then
     downgrade STATUS_SHARED BLOCKED "shared bootstrap exited $shared_rc"
   fi
 else
@@ -142,6 +218,7 @@ say "governance=$GOV_DIR workspace=$WORKSPACE"
 # copy, merge-patches ~/.claude/settings.json without clobbering user keys, and
 # installs the consumer workspace triad as real files. Same call on CLI, Desktop,
 # Web and Mobile — never hand-roll `cp settings.template.json`.
+stage "settings-triad"
 RECONCILE_SETTINGS="$GOV_DIR/ops/scripts/reconcile_claude_settings.py"
 if [ -n "$GOV_PY" ] && [ -f "$RECONCILE_SETTINGS" ]; then
   settings_args=(--root "$GOV_DIR" --workspace "$WORKSPACE")
@@ -161,9 +238,14 @@ elif [ -n "$GOV_PY" ]; then
 fi
 
 # --- 2) Claude skill discovery ----------------------------------------------
+stage "skill-discovery"
 RECONCILE_SKILLS="$GOV_DIR/ops/scripts/reconcile_claude_l9_skills.py"
 if [ -n "$GOV_PY" ] && [ -f "$RECONCILE_SKILLS" ]; then
-  skills_args=(--root "$GOV_DIR" --scope project --workspace "$WORKSPACE" --quiet)
+  # Both scopes. Project scope is invisible when the session's project directory
+  # is not this repository — the audited session read the whole repo only as an
+  # additional directory — so user scope is the floor that always resolves
+  # (B-01, B-15). The SSOT's 51 skills replace the 8-skill account-sync copy.
+  skills_args=(--root "$GOV_DIR" --scope user --scope project --workspace "$WORKSPACE" --quiet)
   [ "$CHECK" = "1" ] && skills_args+=(--check)
   "$GOV_PY" "$RECONCILE_SKILLS" "${skills_args[@]}" \
     || downgrade STATUS_SKILLS DEGRADED "skill reconciliation drift or local name conflict"
@@ -179,6 +261,7 @@ fi
 # installer, so project + reconcile here too — web/mobile sessions get the same
 # generated-rule mount as their CLI and Cursor peers. Both scripts import yaml,
 # so run them on the locked interpreter, not the sandbox's system python3.
+stage "llm-rules-mount"
 PROJECT_RULES="$GOV_DIR/ops/scripts/project_llm_rules.py"
 RECONCILE_RULES="$GOV_DIR/ops/scripts/reconcile_llm_rule_adapters.py"
 if [ -n "$GOV_PY" ] && [ -f "$PROJECT_RULES" ] && [ -f "$RECONCILE_RULES" ]; then
@@ -201,6 +284,7 @@ fi
 # (/mcp/graphiti) and carries NO bearer (contract S3/§12). The broker speaks
 # the MCP handshake and maps search_memory/write_governed to
 # graphiti.query/graphiti.write_governed.
+stage "mcp-front-door"
 MCP_TEMPLATE="$GOV_DIR/environment/agents/adapters/claude-code/mcp.template.json"
 if [ -f "$WORKSPACE/.mcp.json" ]; then
   say ".mcp.json already present — left as the repo committed it"
@@ -222,6 +306,28 @@ if [ -z "${L9_CAPABILITY_BROKER_URL:-}" ]; then
   downgrade STATUS_MEMORY DEGRADED "no broker-authenticated identity path"
 fi
 
+# --- 3b) Marketplace plugins ------------------------------------------------
+# The PreToolUse matcher references mcp__plugin_context7_context7__.*, so the
+# settings triad expects the context7 plugin to exist. Nothing installed it:
+# install.sh never invoked setup_claude_code_plugins.sh, and the audited runtime
+# also had SKIP_PLUGIN_MARKETPLACE=true. A matcher pointing at a guaranteed-
+# absent plugin is a dangling reference either way, so resolve it here rather
+# than leaving the two halves disagreeing.
+stage "marketplace-plugins"
+PLUGINS_SCRIPT="$GOV_DIR/ops/scripts/setup_claude_code_plugins.sh"
+if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
+  say "plugin marketplace disabled by the platform (SKIP_PLUGIN_MARKETPLACE=true)"
+  downgrade STATUS_PLUGINS DEGRADED "marketplace disabled by the platform"
+elif [ "$CHECK" = "1" ]; then
+  say "plugins: check mode, not installing"
+elif [ -f "$PLUGINS_SCRIPT" ]; then
+  bash "$PLUGINS_SCRIPT" ${WORKSPACE:+--workspace "$WORKSPACE"} \
+    || downgrade STATUS_PLUGINS DEGRADED "plugin install reported failure"
+else
+  warn "missing ops/scripts/setup_claude_code_plugins.sh — marketplace plugins NOT installed"
+  downgrade STATUS_PLUGINS DEGRADED "plugin installer missing"
+fi
+
 # --- 4) Excludes for the GENERATED .claude mirrors --------------------------
 # Shared activation artifacts are excluded by the shared bootstrap; these two
 # globs are Claude-specific. Only the GENERATED mirrors are excluded —
@@ -240,57 +346,25 @@ fi
 # --- Receipt + final classification -----------------------------------------
 OVERALL="READY"
 for st in "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_RULES" \
-          "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP"; do
+          "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP" "$STATUS_PLUGINS"; do
   case "$st" in
     BLOCKED)  OVERALL="BLOCKED"; break ;;
     DEGRADED) OVERALL="DEGRADED" ;;
   esac
 done
 
-GOV_REV="$(git -C "$GOV_DIR" rev-parse HEAD 2>/dev/null || echo "unknown")"
-MODE="local"; [ "$CHECK" = "1" ] && MODE="check"
-
-RECEIPT="$HOME/.l9/claude/bootstrap-state.json"
-if [ "$CHECK" != "1" ]; then
-  mkdir -p "$(dirname "$RECEIPT")"
-  if [ -n "$GOV_PY" ]; then
-    STATUS_SHARED="$STATUS_SHARED" STATUS_SETTINGS="$STATUS_SETTINGS" \
-    STATUS_SKILLS="$STATUS_SKILLS" STATUS_RULES="$STATUS_RULES" \
-    STATUS_CAPABILITIES="$STATUS_CAPABILITIES" STATUS_MEMORY="$STATUS_MEMORY" \
-    STATUS_MCP="$STATUS_MCP" OVERALL="$OVERALL" MODE="$MODE" GOV_REV="$GOV_REV" \
-    WORKSPACE="$WORKSPACE" RECEIPT="$RECEIPT" \
-      "$GOV_PY" - "$RECEIPT" <<'PY'
-import json, os, sys
-receipt = {
-    "schema": "l9.claude-bootstrap.v1",
-    "surface": "claude-code",
-    "mode": os.environ["MODE"],
-    "governance_revision": os.environ["GOV_REV"],
-    "workspace": os.environ["WORKSPACE"],
-    "shared_bootstrap": os.environ["STATUS_SHARED"],
-    "settings": os.environ["STATUS_SETTINGS"],
-    "skills": os.environ["STATUS_SKILLS"],
-    "rules": os.environ["STATUS_RULES"],
-    "capabilities": os.environ["STATUS_CAPABILITIES"],
-    "memory": os.environ["STATUS_MEMORY"],
-    "mcp": os.environ["STATUS_MCP"],
-    "overall": os.environ["OVERALL"],
-}
-with open(sys.argv[1], "w", encoding="utf-8") as fh:
-    json.dump(receipt, fh, indent=2, sort_keys=True)
-    fh.write("\n")
-PY
-    say "bootstrap receipt: $RECEIPT"
-  else
-    downgrade STATUS_SHARED BLOCKED "locked interpreter unusable — no receipt written"
-    OVERALL="BLOCKED"
-  fi
-fi
+stage "receipt"
+# Unconditional, and no longer gated on the locked interpreter. A missing
+# interpreter is now recorded IN the receipt rather than being the reason no
+# receipt exists — the old branch downgraded to BLOCKED and then wrote nothing,
+# which is the least useful combination available (audit B-04).
+write_receipt "$OVERALL"
+say "bootstrap receipt: $RECEIPT ($OVERALL)"
 
 log "Claude Code adapter: $OVERALL"
-[ "$QUIET" = "1" ] || printf '  shared=%s settings=%s skills=%s rules=%s capabilities=%s memory=%s mcp=%s\n' \
+[ "$QUIET" = "1" ] || printf '  shared=%s settings=%s skills=%s rules=%s capabilities=%s memory=%s mcp=%s plugins=%s\n' \
   "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_RULES" \
-  "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP"
+  "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP" "$STATUS_PLUGINS"
 
 if [ "$OVERALL" = "BLOCKED" ]; then
   warn "BLOCKED — see classification above; SessionStart will report the degraded contract"

@@ -11,6 +11,13 @@ repos:
     rev: v6.0.0
     hooks:
       - id: check-merge-conflict
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-added-large-files
+        args: ["--maxkb=1000"]
+      - id: check-yaml
+        args: ["--allow-multiple-documents"]
+        exclude: "^(environment/generated/|environment/program-execution/core/)"
 
   - repo: local
     hooks:

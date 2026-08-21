@@ -46,9 +46,11 @@ class Context7StackProofTests(unittest.TestCase):
             "objective": "Do the thing with no signals",
             "tasks": [{"title": "Work", "objective": "work"}],
         }
-        with self.assertRaises(self.mod.StackProofError) as ctx:
-            self.mod.prove_stack(seed_empty, primed_dir=Path(tempfile.mkdtemp()))
-        self.assertIn("empty inferred", str(ctx.exception))
+        primed = Path(tempfile.mkdtemp())
+        receipt = self.mod.prove_stack(seed_empty, primed_dir=primed)
+        self.assertEqual(receipt["status"], "pass")
+        self.assertEqual(receipt.get("skipped"), "no-external-stack")
+        self.assertEqual(receipt["tools"], [])
 
     def test_forged_receipt_rejected(self) -> None:
         inferred = [{"name": "Context7", "kind": "product"}]

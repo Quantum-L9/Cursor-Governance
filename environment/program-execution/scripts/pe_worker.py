@@ -60,6 +60,34 @@ def is_inspection_only(task: dict[str, Any]) -> bool:
     return str(task.get("execution_kind") or "").strip().lower() in INSPECTION_KINDS
 
 
+def worktree_already_implements(worktree: Path, contract: dict[str, Any]) -> bool:
+    """True when cursor-foreground (or any prior worker) already mutated this tree.
+
+    L9_PE_WORKER_CMD is a subprocess adapter. The bound Cursor peer is this
+    session, so a tree that already diverged from base_sha is work done, not
+    an unmodified implementation defect.
+    """
+    base = str(contract.get("base_sha") or "").strip()
+    head = subprocess.run(
+        ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=60,
+    )
+    dirty = subprocess.run(
+        ["git", "-C", str(worktree), "status", "--porcelain=v1", "--untracked-files=all"],
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=120,
+    )
+    if dirty.returncode == 0 and dirty.stdout.strip():
+        return True
+    current = (head.stdout or "").strip()
+    return bool(base and current and current != base)
+
+
 def worktree_fingerprint(worktree: Path) -> str:
     """Cheap signal for 'did anything change here', tracked or not."""
     status = subprocess.run(
@@ -149,6 +177,13 @@ def invoke_worker(
 
     configured = command if command is not None else os.environ.get(WORKER_COMMAND_ENV, "").strip()
     if not configured:
+        if worktree_already_implements(worktree, contract):
+            return WorkerOutcome(
+                invoked=False,
+                changed=True,
+                reason="worktree_already_modified",
+                detail=f"brief written to {brief_path}; worktree already diverged from base",
+            )
         return WorkerOutcome(
             invoked=False,
             changed=False,
