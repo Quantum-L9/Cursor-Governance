@@ -2883,15 +2883,24 @@ def commit_host_emit(worktree: Path, campaign_id: str) -> None:
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
-    dirty = run_cmd(
-        ["git", "-C", str(worktree), "status", "--porcelain"],
+    staged = run_cmd(
+        ["git", "-C", str(worktree), "diff", "--cached", "--name-only", "--", campaign_dir],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
-    if not (dirty.stdout or "").strip():
+    if not (staged.stdout or "").strip():
         return
     commit = run_cmd(
-        ["git", "-C", str(worktree), "commit", "-m", f"campaign: emit {campaign_id}"],
+        [
+            "git",
+            "-C",
+            str(worktree),
+            "commit",
+            "-m",
+            f"campaign: emit {campaign_id}",
+            "--",
+            campaign_dir,
+        ],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )

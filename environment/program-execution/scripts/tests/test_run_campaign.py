@@ -479,6 +479,49 @@ class RunCampaignTests(unittest.TestCase):
             self.mod.refuse_hash_campaign_id("pe-8c9f6de43b25")
         self.assertIn("intent.v1", str(ctx.exception))
 
+    def test_commit_host_emit_ignores_unrelated_isolate_dirt(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            _git_init(root)
+            campaign = root / "environment/program-execution/campaigns/demo-activate-v1"
+            campaign.mkdir(parents=True)
+            (campaign / "CAMPAIGN_SOURCE.yaml").write_text("schema: x\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "add", "environment/program-execution/campaigns/demo-activate-v1"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "commit", "-m", "emit once"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            (root / "ops/autonomy").mkdir(parents=True)
+            (root / "ops/autonomy/surface_profile.yaml").write_text("x: 1\n", encoding="utf-8")
+            (
+                root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
+            ).write_text("dirty: true\n", encoding="utf-8")
+            self.mod.commit_host_emit(root, "demo-activate-v1")
+            status = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("CAMPAIGN_STATUS.yaml", status.stdout)
+            self.assertIn("ops/", status.stdout)
+            log = subprocess.run(
+                ["git", "log", "-1", "--format=%s"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(log.stdout.strip(), "emit once")
+
     def test_adoptable_inferred_command_accepts_bash_n(self) -> None:
         self.assertTrue(self.mod.adoptable_inferred_command("bash -n ops/scripts/run_pr_gate.sh"))
         self.assertTrue(self.mod.adoptable_inferred_command("python3 -m unittest tests/x.py"))
