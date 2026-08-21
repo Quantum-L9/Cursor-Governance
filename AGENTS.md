@@ -269,10 +269,12 @@ check and `git push`. Default `PR_OVERLAP=block`. Generated artifacts
 are exempt and merge via `merge=l9-generated`.
 
 Overlap remedy: commit into the same-agent open PR, else wait, else
-renegotiate scope. `PR_STACK=auto` still exists as a knob but creates the
-topology squash-merge denies — use it only when the parent will merge with
-`--merge`. Fail-open on missing `gh` telemetry; fail-closed on a detected
-non-generated textual conflict.
+renegotiate scope. `make pr` defaults to `PR_STACK=auto` (stack on the
+overlapping open head). Opt out with `PR_STACK= make pr` to publish
+against `main`. A stack parent must merge with `--merge`, or children
+must land first — squash of a parent silently drops the child. Fail-open
+on missing `gh` telemetry; fail-closed on a detected non-generated
+textual conflict.
 
 After any merge touching generated paths, or while
 `.l9/pr/regen-required.txt` is non-empty, run

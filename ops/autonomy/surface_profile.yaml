@@ -109,7 +109,7 @@ pr_stacking:
     mode_default: block # PR_OVERLAP env: block | warn | ignore
     exemptions: generated_path_prefixes # ops/scripts/sync_generated_artifacts.py SSOT
     probe: git_merge_tree # git merge-tree --write-tree textual-conflict probe
-    auto_stack_env: PR_STACK # opt-in auto: stack on the open PR head (never main)
+    auto_stack_env: PR_STACK # Makefile default auto; PR_STACK= publishes against main
     gate: ops/scripts/pr_overlap_check.py
   phases:
     executing: deny_remote
