@@ -26,11 +26,16 @@ sys.path.insert(0, str(REPO / "ops" / "scripts"))
 import probe_broker  # noqa: E402
 import probe_network_posture  # noqa: E402
 from verify_account_env import (  # noqa: E402
+    ACCOUNT_FIELDS,
+    PLATFORM_PROXY_SENTINEL,
     RUNTIME_MANAGED,
     account_fields_markdown,
     compare,
     parse_env_example,
+    parse_network_hosts,
+    prohibited_present,
     run,
+    safe_value,
     stub_revision_actual,
     stub_revision_expected,
 )
@@ -236,3 +241,124 @@ class DegradedModeContractTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+#: A value that is obviously synthetic. Never a real credential, in any fixture.
+FAKE_SECRET = "NOT-A-REAL-CREDENTIAL-test-fixture"
+
+
+class ProhibitedKeyPresenceTests(unittest.TestCase):
+    """The unenforced half of the DELIBERATELY_ABSENT contract.
+
+    `compare()` filtered these keys out of the expected set so they could never
+    be reported missing, and nothing ever checked whether they were PRESENT. A
+    pasted Infisical secret produced "all 36 expected variables match".
+    """
+
+    def test_a_pasted_credential_is_reported(self) -> None:
+        rows = prohibited_present({"INFISICAL_CLIENT_SECRET": FAKE_SECRET})
+        self.assertEqual(len(rows), 1)
+        self.assertEqual(rows[0]["key"], "INFISICAL_CLIENT_SECRET")
+        self.assertEqual(rows[0]["kind"], "prohibited")
+
+    def test_the_value_is_never_returned(self) -> None:
+        rows = prohibited_present({"GRAPHITI_MCP_TOKEN": FAKE_SECRET, "SONAR_TOKEN": FAKE_SECRET})
+        self.assertNotIn(FAKE_SECRET, repr(rows))
+
+    def test_the_proxy_sentinel_is_not_a_violation(self) -> None:
+        """Unsetting it would break the proxying it announces."""
+        rows = prohibited_present({"GH_TOKEN": PLATFORM_PROXY_SENTINEL})
+        self.assertEqual(rows[0]["kind"], "proxy_sentinel")
+        self.assertEqual(run({"GH_TOKEN": PLATFORM_PROXY_SENTINEL})["prohibited_count"], 0)
+
+    def test_a_real_gh_token_is_a_violation(self) -> None:
+        rows = prohibited_present({"GH_TOKEN": FAKE_SECRET})
+        self.assertEqual(rows[0]["kind"], "prohibited")
+
+    def test_an_otherwise_perfect_environment_still_fails(self) -> None:
+        """The regression that matters: clean variables, pasted credential."""
+        env = {
+            **parse_env_example(),
+            "L9_STUB_REVISION": stub_revision_expected(),
+            "INFISICAL_CLIENT_SECRET": FAKE_SECRET,
+        }
+        result = run(env)
+        self.assertEqual(result["deviations"], [], "the expected set is clean")
+        self.assertEqual(result["prohibited_count"], 1)
+        self.assertFalse(result["ok"], "a pasted credential must not report ok")
+
+    def test_absence_remains_the_contract(self) -> None:
+        self.assertEqual(prohibited_present({}), [])
+
+    def test_redaction_covers_key_id_suffixes(self) -> None:
+        """`_KEY$` alone missed GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID."""
+        for key in ("GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY_ID", "CEG_API_KEY", "GH_TOKEN"):
+            self.assertEqual(safe_value(key, FAKE_SECRET), "<redacted>", key)
+        self.assertEqual(safe_value("L9_AUTONOMY_MAX_PARALLEL", "480"), "480")
+
+
+class NetworkFieldIsPasteReadyTests(unittest.TestCase):
+    """Field 3 was a pointer while fields 1 and 2 were paste-ready."""
+
+    def test_hosts_parse_from_the_policy_document(self) -> None:
+        hosts = parse_network_hosts()
+        self.assertGreater(len(hosts), 5)
+        self.assertIn("api.github.com", hosts)
+
+    def test_the_broker_host_is_in_the_pasted_block(self) -> None:
+        """Its own table required it; the block a human pastes omitted it, so
+        pasting Option B verbatim disabled every authenticated capability."""
+        self.assertIn("broker.quantumaipartners.com", parse_network_hosts())
+
+    def test_section_three_carries_hosts_and_a_checksum(self) -> None:
+        body = account_fields_markdown(parse_env_example(), "test-rev")
+        section = body.split("## 3. Network access", 1)[1]
+        for host in parse_network_hosts():
+            self.assertIn(host, section)
+        self.assertIn("Checksum", section)
+
+    def test_secret_backends_stay_out_of_the_allow_list(self) -> None:
+        hosts = parse_network_hosts()
+        self.assertNotIn("app.infisical.com", hosts)
+        self.assertNotIn("sonarcloud.io", hosts)
+
+
+class GeneratedFieldsStayInSyncTests(unittest.TestCase):
+    """The committed doc is generated from three sources and can drift silently."""
+
+    def test_committed_document_matches_its_sources(self) -> None:
+        want = account_fields_markdown(parse_env_example(), stub_revision_expected())
+        self.assertEqual(
+            ACCOUNT_FIELDS.read_text(encoding="utf-8"),
+            want,
+            "docs/ACCOUNT_FIELDS.md is stale — run verify_account_env.py --emit-fields",
+        )
+
+
+class StubHardeningTests(unittest.TestCase):
+    """Behaviours the stub must carry, expressed against its source."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.stub = (ADAPTER / "web" / "setup.bootstrap.sh").read_text(encoding="utf-8")
+
+    def test_clone_ref_is_verified_not_assumed(self) -> None:
+        """Every clone branch can end on the wrong ref; one comparison catches all."""
+        self.assertIn("L9_GOVERNANCE_REF_STATE", self.stub)
+        self.assertIn("export L9_GOVERNANCE_REVISION=", self.stub)
+
+    def test_broker_host_is_resolved_not_merely_announced(self) -> None:
+        self.assertIn("DOES NOT RESOLVE", self.stub)
+        self.assertIn("broker_host()", self.stub)
+
+    def test_leaked_names_survive_the_unset(self) -> None:
+        """Unsetting in the build process makes the leak invisible afterwards."""
+        self.assertIn("L9_ACCOUNT_FIELD_LEAKS", self.stub)
+
+    def test_durable_env_does_not_overclaim_its_reach(self) -> None:
+        """It reaches interactive and login shells only; agents run neither."""
+        self.assertIn("BASH_ENV", self.stub)
+        self.assertNotIn("also unsets them for in-session Bash", self.stub)
+
+    def test_revision_was_bumped_for_these_changes(self) -> None:
+        self.assertNotEqual(stub_revision_expected(), "2026-08-21.1")

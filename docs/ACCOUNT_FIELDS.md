@@ -55,13 +55,42 @@ USER_ID=claude_code_agent
 
 Paste `environment/agents/adapters/claude-code/web/setup.bootstrap.sh` verbatim.
 
-- Revision: `2026-08-21.1`
-- Checksum: `dab9e0f5b29ef135`
+- Revision: `2026-08-21.2`
+- Checksum: `79dfdbbad4b1de41`
 
 The stub records its own revision into `~/.l9/cloud-session.env`, so a later
 session can tell whether the pasted copy is current without reading the field.
 
 ## 3. Network access
 
-See `environment/agents/adapters/claude-code/web/network-policy.md`. That file
-records which posture this deployment chose and why.
+Select **Custom**, keep the default package-manager list, and add the 15
+hosts below. Checksum `244c29f8b7b02b47`.
+
+Every entry is owned by a capability the adapter actually invokes; the
+host -> capability table in `web/network-policy.md` records which. Dropping a
+host disables exactly the capability named beside it.
+
+```
+github.com
+*.githubusercontent.com
+api.github.com
+codeload.github.com
+cli.github.com
+objects.githubusercontent.com
+pypi.org
+files.pythonhosted.org
+registry.npmjs.org
+astral.sh
+*.astral.sh
+memory.quantumaipartners.com
+semgrep.dev
+*.semgrep.dev
+broker.quantumaipartners.com
+```
+
+`app.infisical.com` and `sonarcloud.io` are deliberately absent: the agent holds
+no credential for either, and blocking egress makes that structural rather than
+conventional. Their reachability is a finding, not a feature.
+
+Full rationale, including what the broker reaches on the agent's behalf, is in
+`environment/agents/adapters/claude-code/web/network-policy.md`.

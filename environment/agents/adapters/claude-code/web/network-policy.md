@@ -29,7 +29,15 @@ astral.sh
 memory.quantumaipartners.com
 semgrep.dev
 *.semgrep.dev
+broker.quantumaipartners.com
 ```
+
+`broker.quantumaipartners.com` is this deployment's capability broker — the host
+behind `L9_CAPABILITY_BROKER_URL` and therefore behind every authenticated
+capability. It belonged in the table below from the start but not in this block,
+so pasting Option B verbatim silently disabled the entire capability plane while
+the table said the host was required. Substitute your own broker hostname if
+your deployment uses a different one; do not delete the line.
 
 **`app.infisical.com` and `sonarcloud.io` are deliberately NOT in this list.**
 See "Egress the agent must not need" below — an agent container that can reach
@@ -48,7 +56,7 @@ a secret backend is one bad line away from using it.
 | `registry.npmjs.org` | consumer workspaces with `package.json` |
 | `memory.quantumaipartners.com` | Graphiti front door. Needed only where the broker is not yet fronting `/graphiti/mcp`; once `L9_CAPABILITY_BROKER_URL` is set, the broker reaches it and the agent does not |
 | `semgrep.dev`, `*.semgrep.dev` | Semgrep **registry rulesets** (`p/python`, `p/secrets`) for local CE only. Authenticated AppSec runs in the trusted worker, not here |
-| L9 capability broker host | every authenticated capability (`sonar.read_issues`, `semgrep.appsec_scan`, `graphiti.*`). Add your deployment's broker hostname |
+| `broker.quantumaipartners.com` (or your deployment's broker hostname) | every authenticated capability (`sonar.read_issues`, `semgrep.appsec_scan`, `graphiti.*`). Present in the Option B block above — keep the two in step |
 
 ### Egress the agent must not need (contract §16)
 
