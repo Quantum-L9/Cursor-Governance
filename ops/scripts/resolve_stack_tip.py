@@ -16,9 +16,9 @@ import os
 import shutil
 import subprocess
 import sys
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Callable
 
 MAIN_ALIASES = {"main", "origin/main"}
 _PAGE_SIZE = 100
@@ -207,7 +207,10 @@ def resolve_stack_tip(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, default=Path.cwd())
-    parser.add_argument("--default-ref", default=os.environ.get("L9_STACK_DEFAULT_REF", "origin/main"))
+    parser.add_argument(
+        "--default-ref",
+        default=os.environ.get("L9_STACK_DEFAULT_REF", "origin/main"),
+    )
     args = parser.parse_args(argv)
     try:
         result = resolve_stack_tip(args.workspace.resolve(), default_ref=args.default_ref)
