@@ -150,9 +150,7 @@ def _scope_out(plan: dict) -> list[str]:
     return [f"- {item}" for item in out]
 
 
-def render(
-    plan: dict, template_text: str, execute_via: str = EXECUTE_VIA_PE
-) -> str:
+def render(plan: dict, template_text: str, execute_via: str = EXECUTE_VIA_PE) -> str:
     """Fill a minimal executable head from JSON; append template body as fill guide."""
     title = str(plan.get("title") or "Untitled plan")
     scope = plan.get("scope") or {}

@@ -30,7 +30,7 @@ Ordinary Cursor Plan mode / Build-button plans belong to **`l9-plan-simple`** (s
 | spec | Full spec with the same validation gates | [references/spec-workflow.md](references/spec-workflow.md) |
 | ticket | Engineering ticket structure | [references/engineering-ticket-template.md](references/engineering-ticket-template.md) |
 
-Authoritative machine artifact: **PLAN_DOCUMENT** (JSON).  
+Authoritative machine artifact: **PLAN_DOCUMENT** (JSON).
 Default human/executable projection: **Cursor `.plan.md`** from the PE+autonomy template (not the legacy GMP-only markdown).
 
 Legacy projection kept in place: [references/plan-workflow.md](references/plan-workflow.md) + `scripts/render_plan_markdown.py` — do not delete; not the default deliverable.
