@@ -133,34 +133,37 @@ def _discover_python(cwd: Path | None) -> Path:
     return _keep_venv_shim(Path(sys.executable))
 
 
-def _consumer_project_python(cwd: Path) -> Path | None:
-    """Prefer the target repo lockfile environment over the PE controller venv."""
-    if not (cwd / "uv.lock").is_file() and not (cwd / "pyproject.toml").is_file():
-        return None
-    for name in (".venv", "venv"):
-        for exe in ("bin/python3", "bin/python", "Scripts/python.exe"):
-            candidate = cwd / name / exe
-            if candidate.is_file():
-                return _keep_venv_shim(candidate)
-    uv = shutil.which("uv")
-    if uv is None or not (cwd / "uv.lock").is_file():
-        return None
-    completed = subprocess.run(
-        [uv, "sync", "--frozen"],
-        cwd=str(cwd),
-        text=True,
-        capture_output=True,
-        check=False,
-        timeout=600,
-    )
-    if completed.returncode != 0:
-        return None
+def _existing_venv_python(cwd: Path) -> Path | None:
     for name in (".venv", "venv"):
         for exe in ("bin/python3", "bin/python", "Scripts/python.exe"):
             candidate = cwd / name / exe
             if candidate.is_file():
                 return _keep_venv_shim(candidate)
     return None
+
+
+def _consumer_project_python(cwd: Path) -> Path | None:
+    """Prefer the target repo project environment over the PE controller venv."""
+    if not (cwd / "pyproject.toml").is_file() and not (cwd / "uv.lock").is_file():
+        return None
+    uv = shutil.which("uv")
+    if uv is not None:
+        argv = [uv, "sync"]
+        if (cwd / "uv.lock").is_file():
+            argv.append("--frozen")
+        completed = subprocess.run(
+            argv,
+            cwd=str(cwd),
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=600,
+        )
+        if completed.returncode == 0:
+            found = _existing_venv_python(cwd)
+            if found is not None:
+                return found
+    return _existing_venv_python(cwd)
 
 
 @dataclass(frozen=True)
