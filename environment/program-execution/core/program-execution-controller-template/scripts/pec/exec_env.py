@@ -270,9 +270,7 @@ def run_validation_command(
         "status": "FAIL" if failed else "PASS",
         "exit_code": 2 if empty and completed.returncode == 0 else completed.returncode,
         "stdout": stdout,
-        "stderr": (
-            f"{stderr}\nvalidation collected zero tests".strip() if empty else stderr
-        ),
+        "stderr": (f"{stderr}\nvalidation collected zero tests".strip() if empty else stderr),
     }
     if failed:
         result["exec_env"] = resolved.describe()
@@ -286,11 +284,7 @@ def _empty_test_collection(command: str, stdout: str, stderr: str) -> bool:
     output = f"{stdout}\n{stderr}"
     if "collected 0 items /" in output:
         return False
-    return (
-        "NO TESTS RAN" in output
-        or "Ran 0 tests" in output
-        or "collected 0 items" in output
-    )
+    return "NO TESTS RAN" in output or "Ran 0 tests" in output or "collected 0 items" in output
 
 
 def to_attempt_result(result: dict[str, Any]) -> dict[str, Any]:
