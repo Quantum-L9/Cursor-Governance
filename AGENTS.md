@@ -420,6 +420,8 @@ provision a second GitHub PAT in AWS while this ref works.
 - `ORG_INVARIANTS.yaml` — canonical Quantum-L9 org policy
 - `ops/autonomy/surface_profile.yaml` — autonomy / L4 / campaign / overlap
 - [`requirements.txt`](requirements.txt) — toolchain pins
+- `ARCHITECTURE.md` — this-repo map (index; does not outrank this file or `CANONICAL_LAW.md`)
+- `INVARIANTS.md` — this-repo invariant index (`ORG_INVARIANTS.yaml` remains the machine org-policy SSOT)
 
 Agents must keep code and these docs aligned — see `TODO.md` for known drift
 not yet reconciled.
