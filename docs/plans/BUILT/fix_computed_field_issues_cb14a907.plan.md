@@ -190,16 +190,16 @@ flowchart TD
         A[Remove create_date dep] --> B[Add compute_sudo]
         B --> C[Fix missing depends]
     end
-    
+
     subgraph phase2 [Phase 2: HIGH]
         D[Remove store from empty depends fields]
     end
-    
+
     subgraph phase3 [Phase 3: MEDIUM]
         E[Add inverse method]
         F[Document time-dependent pattern]
     end
-    
+
     phase1 --> phase2 --> phase3
 ```
 

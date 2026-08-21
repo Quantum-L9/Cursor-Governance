@@ -107,7 +107,7 @@ The gap analysis doc (`plasticos_buyer_match_engine/doc/gap_analysis_v2.md` line
 
 ```python
    from plasticos_facility_profile.process_codes import PROCESS_SELECTION
-   
+
 
 ```
 
@@ -118,7 +118,7 @@ The gap analysis doc (`plasticos_buyer_match_engine/doc/gap_analysis_v2.md` line
        PROCESS_SELECTION,
        help="Primary processing type at this facility.",
    )
-   
+
 
 ```
 
@@ -143,4 +143,3 @@ H4: Import PROCESS_SELECTION from process_codes registry
 
 - `docker compose run --rm odoo -u plasticos_facility_profile,plasticos_material_profile,plasticos_intake`
 - No migrations — no stored field changes, only logic and view updates
-

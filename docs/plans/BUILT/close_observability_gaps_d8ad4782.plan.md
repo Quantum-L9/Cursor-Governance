@@ -1206,4 +1206,3 @@ Add new smoke imports to the `Import smoke check` step in `.github/workflows/ci.
 
 
 > **Observability note:** `MetricsCollector`, `AuditLogger`, and `TraceManager` exist in `engine/observability/` but their APIs were not read in this pass. Wire them in a follow-on plan after confirming their method signatures — do not guess `.increment()`, `.start_timer()`, `.log_execution()` without verification.
-

@@ -91,29 +91,29 @@ flowchart TB
         CSV2["2. Counterparties Child"]
         CSV3["3. VanillaSoft Leads"]
     end
-    
+
     subgraph OdooModels["Odoo Models"]
         Partner["res.partner"]
         CRMLead["crm.lead"]
         Intake["plasticos.intake"]
         PO["purchase.order"]
     end
-    
+
     subgraph NativeFields["Native Field Targets"]
         Industry["industry_id (Company Type)"]
         Category["category_id (Buyer/Supplier tags)"]
         UTM["utm.source (Lead Source)"]
         Stage["crm.stage (Lead Status)"]
     end
-    
+
     CSV1 --> Partner
     CSV2 --> Partner
     CSV3 --> CRMLead
-    
+
     CRMLead -->|"Convert to Partner"| Partner
     CRMLead -->|"Create Intake"| Intake
     Intake -->|"Make PO"| PO
-    
+
     Partner --> Industry
     Partner --> Category
     CRMLead --> UTM
@@ -193,7 +193,7 @@ flowchart TB
    lead_source_id = fields.Many2one("plasticos.lead.source", ...)
    # To:
    lead_source_id = fields.Many2one("utm.source", ...)
-   
+
 
 ```
 
@@ -380,7 +380,7 @@ plasticos_crm/
 ```python
 class CrmLead(models.Model):
     _inherit = "crm.lead"
-    
+
     intake_ids = fields.One2many(
         "plasticos.intake", "crm_lead_id",
         string="Intakes"
@@ -388,7 +388,7 @@ class CrmLead(models.Model):
     intake_count = fields.Integer(
         compute="_compute_intake_count"
     )
-    
+
     def action_create_intake(self):
         """Create intake from CRM lead."""
         return {
@@ -429,18 +429,18 @@ def action_make_po(self):
     self.ensure_one()
     if not self.partner_id:
         raise UserError("Cannot create PO without a supplier.")
-    
+
     # Ensure partner is a supplier
     if self.partner_id.supplier_rank == 0:
         self.partner_id.supplier_rank = 1
-    
+
     po = self.env["purchase.order"].create({
         "partner_id": self.partner_id.id,
         "origin": self.name,
     })
-    
+
     self.status = "won"
-    
+
     return {
         "type": "ir.actions.act_window",
         "res_model": "purchase.order",
@@ -783,7 +783,7 @@ One PO can have multiple loads → multiple unique Load IDs. This is domain-spec
 
 ### x_facility_role vs category_id
 
-`x_facility_role` is YOUR custom field (Selection). There is **no native Odoo field for facility role**. 
+`x_facility_role` is YOUR custom field (Selection). There is **no native Odoo field for facility role**.
 
 The migration to `category_id` (tags) is correct because:
 

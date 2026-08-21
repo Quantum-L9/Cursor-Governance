@@ -95,9 +95,9 @@ isProject: false
 
 ### Skipped RA passes (explicit)
 
-- Gate/CEG routing deep-dive — NotApplicable  
-- Neo4j / matching — OutOfScope  
-- Production deploy adapters — OutOfScope until Docker green  
+- Gate/CEG routing deep-dive — NotApplicable
+- Neo4j / matching — OutOfScope
+- Production deploy adapters — OutOfScope until Docker green
 
 ### Minimum safe next action (RA)
 
@@ -179,12 +179,12 @@ Allowlist after emit: `{Remit, Inv/Remit, Invoice, Primary, Location}` — else 
 
 Land partners with minimal clicks; map→dry-run→fix→promote until clean.
 
-1. Repo `field_map.yaml`: every CounterParty/Address/Contact column `mapped` or `deferred`; `map_id` versioned.  
-2. CLI exit `0` iff blockers=0; `2` on blockers; `1` on IO/usage.  
-3. Corporate headers = bundled corporate headers (exact). Facility = bundled facility headers **+** `parent_ref`.  
-4. Sample 50: `ref=CpID` present; ranks/tags match map; parents via `parent_ref`; orphan facilities=0; `validate_partner_graph` clean or documented AcceptedRisk.  
-5. Full (post U1): create-delta on re-run = 0.  
-6. Zero Graphiti business-row ingests.  
+1. Repo `field_map.yaml`: every CounterParty/Address/Contact column `mapped` or `deferred`; `map_id` versioned.
+2. CLI exit `0` iff blockers=0; `2` on blockers; `1` on IO/usage.
+3. Corporate headers = bundled corporate headers (exact). Facility = bundled facility headers **+** `parent_ref`.
+4. Sample 50: `ref=CpID` present; ranks/tags match map; parents via `parent_ref`; orphan facilities=0; `validate_partner_graph` clean or documented AcceptedRisk.
+5. Full (post U1): create-delta on re-run = 0.
+6. Zero Graphiti business-row ingests.
 7. `make pr-check` green when module code changes.
 
 ---
@@ -207,9 +207,9 @@ Outputs: `corporate_ready.csv`, `facility_ready.csv`, `dry_run_report.md`, `dry_
 
 ### Importer patch
 
-- Read optional `parent_ref` from facility row.  
-- Match `res.partner`: `("ref", "=", parent_ref), ("parent_id", "=", False)`.  
-- Else existing name match / auto-create for invoice types.  
+- Read optional `parent_ref` from facility row.
+- Match `res.partner`: `("ref", "=", parent_ref), ("parent_id", "=", False)`.
+- Else existing name match / auto-create for invoice types.
 - Bump `19.0.2.7.3` → next patch; `make update m=plasticos_partner_import`.
 
 ### Promote
@@ -228,22 +228,22 @@ Stratified across V/A/D/S/X/P/C; deterministic file under live `transform/` (git
 
 ## Critical path
 
-1. lock-maps (repo)  
-2. parent-by-ref + bump  
-3. transform-cli  
-4. transform-tests  
-5. dryrun-green (Improve on CLI/map until exit 0)  
-6. sample-promote  
-7. **role-confirm (U1 gate)**  
-8. full-promote  
-9. playbook  
+1. lock-maps (repo)
+2. parent-by-ref + bump
+3. transform-cli
+4. transform-tests
+5. dryrun-green (Improve on CLI/map until exit 0)
+6. sample-promote
+7. **role-confirm (U1 gate)**
+8. full-promote
+9. playbook
 
 ---
 
 ## Stress / rollback
 
-- Wrong Role map → wrong ranks on ~1.3k partners → U1 gate + stratified sample.  
-- Unpatched service ignores `parent_ref` → orphans → version bump mandatory before promote.  
+- Wrong Role map → wrong ranks on ~1.3k partners → U1 gate + stratified sample.
+- Unpatched service ignores `parent_ref` → orphans → version bump mandatory before promote.
 - Rollback: disposable Docker DB; Staging snapshot; `plasticos_import.*` XML ID cleanup; no Production.
 
 ---
@@ -274,9 +274,9 @@ Stratified across V/A/D/S/X/P/C; deterministic file under live `transform/` (git
 
 ## GMP handoff (on execute)
 
-- **May modify:** repo map/CLI/tests; importer parent_ref + bump; playbook/README; gitignored out/.  
-- **Must not:** Graphiti rows; pipeline_v2; replace bundled seed CSVs before full green; Production; commit golden dumps.  
-- **Validate:** pytest transform; CLI exit 0; sample ORM; `make update m=plasticos_partner_import`; `make pr-check`.  
+- **May modify:** repo map/CLI/tests; importer parent_ref + bump; playbook/README; gitignored out/.
+- **Must not:** Graphiti rows; pipeline_v2; replace bundled seed CSVs before full green; Production; commit golden dumps.
+- **Validate:** pytest transform; CLI exit 0; sample ORM; `make update m=plasticos_partner_import`; `make pr-check`.
 - **Next:** user says **execute** → implement RA-01/02 first.
 
 ---

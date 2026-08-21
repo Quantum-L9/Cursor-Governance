@@ -225,16 +225,16 @@ flowchart TD
     T1[T1: Move SymPy to services] --> T2[T2: Update imports]
     T2 --> T3[T3: Update __init__.py]
     T3 --> T4[T4: Create symbolic_tool.py]
-    
+
     T5[T5: Add ToolName entries] --> T6[T6: Add to L capabilities]
     T6 --> T7[T7: Wire TOOL_EXECUTORS]
     T4 --> T7
-    
+
     T7 --> T8[T8: Create c_gmp_engine.py]
     T9[T9: Create meta_loader.py] --> T8
-    
+
     T8 --> T10[T10: Create quantum_swarm_loader.py]
-    
+
     T10 --> T11[T11: Update workflow_state.md]
 ```
 

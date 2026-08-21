@@ -75,14 +75,14 @@ flowchart TB
         singletons["Manual Singletons\nget_*_singleton()"]
         flags["Legacy Feature Flags\nL9_ENABLE_LEGACY_*"]
     end
-    
+
     subgraph target [Target State - Clean]
         domain_tools["Domain Tool Modules\nmemory/tools.py\nruntime/redis_tools.py\nruntime/mcp_tools.py\netc."]
         facade["Memory Facade\nPacketService\nSemanticSearchService\nCheckpointService"]
         di["DI Container\nProtocol injection\nconfig/di_config.py"]
         registry["ExecutorToolRegistry\nAuto-discovery\n@register_tool"]
     end
-    
+
     l_tools --> domain_tools
     mss --> facade
     ato -.->|remove| registry

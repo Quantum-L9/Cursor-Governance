@@ -140,4 +140,3 @@ Remove `examples/fastapi_lifespan_di_bootstrap.py` - pattern now in production.
 3. `/lchat` endpoint works (AgentExecutorService functional)
 4. All existing app.state services remain available
 5. DIContainer debug endpoints work (optional: add `/di/services` route)
-

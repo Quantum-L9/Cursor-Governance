@@ -168,39 +168,39 @@ class GapFillExecutor:
         self.gap_type = gap_type
         self.gap_spec = gap_spec
         self.client = PerplexityClient(api_key)
-    
+
     def build_superprompt(self) -> str:
         # 1. Load base template
         template = load_template("gap_fill_superprompt.md")
-        
+
         # 2. Inject schemas based on gap_type
         schemas = self.load_schemas_for_type(self.gap_type)
         template = template.replace("{schemas_block}", schemas)
-        
+
         # 3. Inject conventions
         conventions = self.load_conventions(self.gap_type)
         template = template.replace("{conventions_block}", conventions)
-        
+
         # 4. Inject gap details
         template = template.replace("{gap_details}", self.gap_spec)
-        
+
         return template
-    
+
     async def execute(self) -> list[ExtractedFile]:
         prompt = self.build_superprompt()
-        
+
         request = PerplexityRequest(
             query=prompt,
             model=PerplexityModel.SONAR_REASONING_PRO,
             system_context="You are a code generator. Output ONLY Python code blocks.",
             max_tokens=8000,
         )
-        
+
         response = await self.client.search(request)
-        
+
         # Use existing extractor
         files = extract_files(response.content)
-        
+
         return files
 ```
 

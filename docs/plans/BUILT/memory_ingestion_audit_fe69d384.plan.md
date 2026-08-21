@@ -93,13 +93,13 @@ intake → reasoning → memory_write ──→ extract_insights
 ```python
 class TestDAGNodeCoverage:
     """Verify all expected nodes exist and execute."""
-    
+
     def test_all_nodes_registered_in_graph(self):
         """Verify graph contains all 8 expected nodes."""
         from memory.substrate_graph import build_substrate_graph
-        
+
         graph = build_substrate_graph()
-        
+
         expected_nodes = [
             "intake_node",
             "reasoning_node",
@@ -110,28 +110,28 @@ class TestDAGNodeCoverage:
             "world_model_trigger_node",
             "checkpoint_node"
         ]
-        
+
         # LangGraph stores nodes in graph structure
         actual_nodes = list(graph.nodes.keys())
-        
+
         assert set(expected_nodes) <= set(actual_nodes), \
             f"Missing nodes: {set(expected_nodes) - set(actual_nodes)}"
-    
+
     @pytest.mark.asyncio
     async def test_full_dag_execution_visits_all_nodes(self):
         """Verify all 8 nodes execute during packet ingestion."""
         from memory.substrate_graph import SubstrateDAG
         from memory.substrate_models import PacketEnvelopeIn
-        
+
         dag = SubstrateDAG()  # No repo = dry run
-        
+
         packet = PacketEnvelopeIn(
             packet_type="test.audit",
             payload={"text": "Test content for insight extraction"}
         )
-        
+
         result = await dag.run(packet.to_envelope())
-        
+
         # Verify outputs from key stages
         assert "packet_store" in result.written_tables
         assert "agent_memory_events" in result.written_tables
@@ -169,28 +169,28 @@ def _should_skip_embedding(text: str) -> bool:
 ```python
 class TestEmbeddingProduction:
     """Audit embedding generation with GMP-42 compliance."""
-    
+
     def test_gmp42_skip_filter_blocks_error_messages(self):
         """Verify GMP-42 patterns are NOT embedded."""
         from memory.substrate_graph import _should_skip_embedding, SKIP_EMBEDDING_PATTERNS
-        
+
         for pattern in SKIP_EMBEDDING_PATTERNS:
             assert _should_skip_embedding(pattern), \
                 f"GMP-42 pattern should be skipped: {pattern[:50]}"
-    
+
     def test_short_text_skipped(self):
         """Text <10 chars should not be embedded."""
         from memory.substrate_graph import _should_skip_embedding
-        
+
         assert _should_skip_embedding("Hi")
         assert _should_skip_embedding("")
         assert not _should_skip_embedding("Valid content here")
-    
+
     @pytest.mark.asyncio
     async def test_embedding_node_respects_skip_filter(self):
         """Verify semantic_embed_node uses skip filter."""
         from memory.substrate_graph import semantic_embed_node
-        
+
         state = {
             "envelope": {
                 "packet_type": "chat.message",
@@ -199,9 +199,9 @@ class TestEmbeddingProduction:
             "errors": [],
             "written_tables": []
         }
-        
+
         result_state = await semantic_embed_node(state)
-        
+
         # Should NOT have embedding
         assert result_state.get("embedding_id") is None
         assert "semantic_memory" not in result_state.get("written_tables", [])
@@ -244,7 +244,7 @@ ingest_packet() → write_packet() → SubstrateDAG.run()
 ```python
 class TestDualPipelineArchitecture:
     """Verify IngestionPipeline vs SubstrateDAG interaction."""
-    
+
     @pytest.mark.asyncio
     async def test_ingest_packet_routes_to_dag(self, mocker):
         """Verify ingest_packet() → write_packet() → SubstrateDAG.run() flow."""
@@ -254,25 +254,25 @@ class TestDualPipelineArchitecture:
             written_tables=["packet_store"],
             status="ok"
         )
-        
+
         packet = PacketEnvelopeIn(
             packet_type="test.routing",
             payload={"data": "test"}
         )
-        
+
         result = await ingest_packet(packet)
-        
+
         mock_dag_run.assert_called_once()
         assert result.status == "ok"
-    
+
     def test_neo4j_sync_only_in_ingestion_pipeline(self):
         """Verify Neo4j sync is IngestionPipeline feature, not DAG."""
         from memory.ingestion import IngestionPipeline
         from memory.substrate_graph import build_substrate_graph
-        
+
         # IngestionPipeline has Neo4j sync
         assert hasattr(IngestionPipeline, '_sync_to_graph')
-        
+
         # SubstrateDAG has no Neo4j node
         dag_nodes = list(build_substrate_graph().nodes.keys())
         assert "neo4j_sync_node" not in dag_nodes
@@ -290,7 +290,7 @@ class TestDualPipelineArchitecture:
 async with self._repository.transaction() as conn:
     await self._store_packet_with_connection(envelope, conn)
     written_tables.append("packet_store")
-    
+
     await self._store_memory_event_with_connection(envelope, conn)
     written_tables.append("agent_memory_events")
     # Transaction commits here (or rolls back on exception)
@@ -301,7 +301,7 @@ async with self._repository.transaction() as conn:
 ```python
 class TestTransactionAtomicity:
     """Verify packet_store + agent_memory_events are transactional."""
-    
+
     @pytest.mark.asyncio
     async def test_constraint_violation_rolls_back_both_tables(self, db_session):
         """If packet_store insert fails, agent_memory_events should NOT persist."""
@@ -312,17 +312,17 @@ class TestTransactionAtomicity:
             payload={"data": "first"}
         )
         await pipeline.ingest(packet1)
-        
+
         # Try duplicate (should fail)
         packet2 = PacketEnvelopeIn(
             packet_id="duplicate-test-id",  # Same ID
             packet_type="test",
             payload={"data": "second"}
         )
-        
+
         result = await pipeline.ingest(packet2)
         assert result.status == "error"
-        
+
         # Verify only ONE event exists (transaction rolled back)
         event_count = await db_session.fetchval(
             "SELECT COUNT(*) FROM agent_memory_events WHERE packet_id = $1",
@@ -355,7 +355,7 @@ async def set_session_scope(
 ```python
 class TestRLSCompliance:
     """Verify Row-Level Security enforcement."""
-    
+
     @pytest.mark.asyncio
     async def test_write_packet_with_rls_scope(self, service, test_tenant_id):
         """Packets written with RLS scope should be isolated."""
@@ -363,7 +363,7 @@ class TestRLSCompliance:
             packet_type="test.rls",
             payload={"data": "tenant-specific"}
         )
-        
+
         # Write with tenant A
         result = await service.write_packet(
             packet,
@@ -371,14 +371,14 @@ class TestRLSCompliance:
             org_id="org-a",
             user_id="user-a"
         )
-        
+
         # Switch to tenant B scope
         await service.set_session_scope(
             tenant_id="different-tenant",
             org_id="org-b",
             user_id="user-b"
         )
-        
+
         # Should NOT see tenant A's data
         retrieved = await service.get_packet(result.packet_id)
         assert retrieved is None, "RLS isolation broken"

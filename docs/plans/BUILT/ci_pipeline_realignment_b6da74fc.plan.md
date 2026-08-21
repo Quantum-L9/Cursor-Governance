@@ -102,39 +102,39 @@ flowchart TD
     subgraph triggers [PR to main]
         PR[Pull Request]
     end
-    
+
     subgraph current [Current: 4 Redundant Workflows]
         ci[ci.yml]
         ciQuality[ci-quality.yml]
         test[test.yml]
         refactor[refactoring-validation.yml]
     end
-    
+
     subgraph checks [Checks Run]
         lint[Ruff Lint]
         types[MyPy Types]
         tests[Pytest]
         coverage[Coverage]
     end
-    
+
     PR --> ci
     PR --> ciQuality
     PR --> test
     PR --> refactor
-    
+
     ci --> lint
     ci --> types
     ci --> tests
     ci --> coverage
-    
+
     ciQuality --> lint
     ciQuality --> types
     ciQuality --> tests
     ciQuality --> coverage
-    
+
     test --> tests
     test --> coverage
-    
+
     refactor --> lint
     refactor --> types
     refactor --> tests
@@ -151,11 +151,11 @@ flowchart TD
         Manual[Manual Dispatch]
         Schedule[Weekly Schedule]
     end
-    
+
     subgraph core [Core Pipeline]
         ci[ci.yml - Main Gate]
     end
-    
+
     subgraph specialized [Specialized Workflows]
         compliance[compliance.yml - Architecture]
         supply[supply-chain.yml - Licenses]
@@ -164,17 +164,17 @@ flowchart TD
         k8s[k8s-deploy.yml - Deploy]
         release[release-drafter.yml - Notes]
     end
-    
+
     PR --> ci
     PR --> compliance
     PR --> supply
-    
+
     Push --> ci
     Push --> docker
     Push --> release
-    
+
     Manual --> k8s
-    
+
     Schedule --> supply
     Schedule --> codeql
 ```
@@ -185,7 +185,7 @@ File: [.github/workflows/test.yml](.github/workflows/test.yml)
 
 **Action:** DELETE this file entirely.
 
-**Rationale:** 
+**Rationale:**
 - `ci.yml` already runs the same tests with more features (services, coverage upload, parallel execution)
 - `test.yml` uses outdated pytest version (`8.3.5` vs `9.0.2`)
 - Removing eliminates redundant test runs

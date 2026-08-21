@@ -389,4 +389,3 @@ odoo-bin -u plasticos_material_profile -d plasticos --stop-after-init
 - **Commit 1-3**: Zero DB risk, pure Python map changes, worker restart only
 - **Commit 4**: Requires module update, low risk (domain change + new computed method)
 - **Commit 5**: Requires module update, adds new seed record (form_supersacs)
-

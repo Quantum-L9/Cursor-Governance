@@ -50,17 +50,17 @@ flowchart TB
         AuthMW[verify_api_key]
         Routes["/email/{account}/*"]
     end
-    
+
     subgraph EmailAgent [Email Agent]
         Router["router.py<br/>6 endpoints"]
         Factory[GmailClient]
     end
-    
+
     subgraph Config [Per-Account Config]
         IgorCreds["~/.l9/gmail/igor/<br/>client_secret.json<br/>tokens.json"]
         LCreds["~/.l9/gmail/l/<br/>client_secret.json<br/>tokens.json"]
     end
-    
+
     AuthMW --> Routes
     Routes --> Router
     Router --> Factory
@@ -90,21 +90,21 @@ class AccountConfig:
     name: str
     email: str
     data_root: Path
-    
+
     def __post_init__(self):
         if isinstance(self.data_root, str):
             self.data_root = Path(self.data_root).expanduser()
         if not self.name.isalnum():
             raise ValueError(f"Account name must be alphanumeric: {self.name}")
-    
+
     @property
     def tokens_file(self) -> Path:
         return self.data_root / "tokens.json"
-    
+
     @property
     def client_secret_file(self) -> Path:
         return self.data_root / "client_secret.json"
-    
+
     @property
     def attachments_dir(self) -> Path:
         return self.data_root / "attachments"
@@ -153,7 +153,7 @@ Update all functions to accept optional `account` parameter. When `account=None`
 
 ```python
 from email_agent.config import (
-    get_account_config, TOKENS_FILE, CLIENT_SECRET_FILE, 
+    get_account_config, TOKENS_FILE, CLIENT_SECRET_FILE,
     SCOPES, ensure_dirs, L9_EMAIL_MULTI_ACCOUNT
 )
 
@@ -164,7 +164,7 @@ def load_client_secrets(account: str = None) -> Optional[Dict[str, Any]]:
         secret_file = config.client_secret_file
     else:
         secret_file = CLIENT_SECRET_FILE  # Legacy
-    
+
     if not secret_file.exists():
         logger.error(f"Client secrets not found at {secret_file}")
         return None
@@ -177,7 +177,7 @@ def load_tokens(account: str = None) -> Optional[Credentials]:
         tokens_file = config.tokens_file
     else:
         tokens_file = TOKENS_FILE  # Legacy
-    
+
     if not tokens_file.exists():
         return None
     # ... rest unchanged, but use tokens_file variable
@@ -212,14 +212,14 @@ Update constructor to accept optional account with backward compat:
 class GmailClient:
     def __init__(self, account: str = None):
         """Initialize Gmail client.
-        
+
         Args:
-            account: Account name ("igor" or "l"). 
+            account: Account name ("igor" or "l").
                     If None, uses legacy single-account mode.
         """
         self.account = account
         self.service = None
-        
+
         if account:
             from email_agent.config import get_account_config
             config = get_account_config(account)
@@ -229,20 +229,20 @@ class GmailClient:
             from email_agent.config import GMAIL_ACCOUNT
             self.email = GMAIL_ACCOUNT
             logger.warning("GmailClient in legacy mode (no account specified)")
-        
+
         self._authenticate()
-    
+
     def _authenticate(self):
         """Authenticate using credentials for self.account."""
         from email_agent.credentials import load_tokens
-        
+
         credentials = load_tokens(self.account)  # None = legacy
         if not credentials:
             raise RuntimeError(
                 f"No Gmail tokens found for account '{self.account or 'legacy'}'. "
                 f"Run: python -m email_agent.oauth_server --account {self.account or 'legacy'}"
             )
-        
+
         self.service = build("gmail", "v1", credentials=credentials)
 ```
 
@@ -271,15 +271,15 @@ class OAuthHandler(BaseHTTPRequestHandler):
 
 def main():
     global CURRENT_ACCOUNT
-    
+
     parser = argparse.ArgumentParser(description="Gmail OAuth Server")
-    parser.add_argument("--account", choices=["igor", "l"], 
+    parser.add_argument("--account", choices=["igor", "l"],
                        help="Account to authenticate (igor or l)")
     parser.add_argument("--port", type=int, default=8080)
     args = parser.parse_args()
-    
+
     CURRENT_ACCOUNT = args.account
-    
+
     if args.account:
         from email_agent.config import get_account_config
         config = get_account_config(args.account)
@@ -287,10 +287,10 @@ def main():
         print(f"Tokens will be saved to: {config.tokens_file}")
     else:
         print("Legacy mode: using ~/.l9/gmail/tokens.json")
-    
+
     print(f"Starting OAuth server on port {args.port}")
     print(f"Visit: http://localhost:{args.port}/oauth/start")
-    
+
     server = HTTPServer(("localhost", args.port), OAuthHandler)
     server.serve_forever()
 
@@ -322,10 +322,10 @@ async def query_emails(
     """Query emails for specific account. Requires API key."""
     if account not in VALID_ACCOUNTS:
         raise HTTPException(404, f"Unknown account: {account}")
-    
+
     trace_id = generate_trace_id()
     action = f"email.{account}.query"  # Include account in action
-    
+
     # Pre-action ingestion
     await ingest_email_event(
         trace_id=trace_id,
@@ -333,11 +333,11 @@ async def query_emails(
         phase="pre",
         payload={"query": request.query, "max_results": request.max_results, "account": account},
     )
-    
+
     try:
         client = GmailClient(account=account)  # Account-specific client
         messages = client.list_messages(request.query, request.max_results)
-        
+
         # Post-action ingestion (success)
         await ingest_email_event(
             trace_id=trace_id,
@@ -345,9 +345,9 @@ async def query_emails(
             phase="post",
             payload={"status": "success", "result_count": len(messages) if messages else 0, "account": account},
         )
-        
+
         return {"messages": messages, "trace_id": trace_id, "account": account}
-    
+
     except HTTPException:
         raise
     except Exception as e:
@@ -384,19 +384,19 @@ GMAIL_REPO_DIR = REPO_ROOT / "gmail"
 def setup_account(account_name: str):
     from email_agent.config import get_account_config
     config = get_account_config(account_name)
-    
+
     print(f"\n[{account_name}] Setting up at {config.data_root}")
     config.data_root.mkdir(parents=True, exist_ok=True)
-    
+
     source_secret = GMAIL_REPO_DIR / f"google_oauth_{account_name}.json"
     dest_secret = config.client_secret_file
-    
+
     if source_secret.exists():
         shutil.copy2(source_secret, dest_secret)
         print(f"  + Copied {source_secret.name} -> {dest_secret}")
     else:
         print(f"  ! Missing {source_secret}")
-    
+
     if config.tokens_file.exists():
         print(f"  + Tokens exist: {config.tokens_file}")
     else:
@@ -408,7 +408,7 @@ def main():
     print("=" * 50)
     for name in ACCOUNTS:
         setup_account(name)
-    
+
     print("\n" + "=" * 50)
     print("Next steps:")
     print("1. Run OAuth for each account:")
@@ -451,7 +451,7 @@ def auth_headers():
 
 class TestAuthEnforcement:
     """All endpoints require API key."""
-    
+
     @pytest.mark.parametrize("endpoint", [
         "/email/igor/query",
         "/email/igor/get",
@@ -466,7 +466,7 @@ class TestAuthEnforcement:
 
 class TestAccountRouting:
     """Account path parameter validation."""
-    
+
     def test_valid_account_igor(self, client, auth_headers):
         with patch("email_agent.router.GmailClient") as mock:
             mock.return_value.list_messages.return_value = []
@@ -478,7 +478,7 @@ class TestAccountRouting:
                 )
         # May fail on Gmail auth, but should not be 404
         assert response.status_code != 404
-    
+
     def test_invalid_account_returns_422(self, client, auth_headers):
         response = client.post(
             "/email/unknown/query",
@@ -489,7 +489,7 @@ class TestAccountRouting:
 
 class TestMemoryIngestion:
     """Pre/post events ingested to memory."""
-    
+
     def test_query_ingests_pre_post(self, client, auth_headers):
         with patch("email_agent.router.GmailClient") as mock_gmail:
             mock_gmail.return_value.list_messages.return_value = []
@@ -499,7 +499,7 @@ class TestMemoryIngestion:
                     json={"query": "test"},
                     headers=auth_headers
                 )
-        
+
         assert mock_ingest.call_count == 2
         calls = mock_ingest.call_args_list
         assert calls[0][1]["phase"] == "pre"
@@ -507,14 +507,14 @@ class TestMemoryIngestion:
 
 class TestBackwardCompat:
     """Legacy GmailClient() still works."""
-    
+
     def test_gmail_client_no_account_uses_legacy(self):
         with patch("email_agent.gmail_client.load_tokens") as mock_load:
             mock_load.return_value = MagicMock()
             with patch("email_agent.gmail_client.build"):
                 from email_agent.gmail_client import GmailClient
                 client = GmailClient()  # No account param
-        
+
         mock_load.assert_called_with(None)  # Legacy mode
 ```
 

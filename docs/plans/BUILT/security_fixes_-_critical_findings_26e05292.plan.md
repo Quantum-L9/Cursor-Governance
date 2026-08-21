@@ -143,19 +143,19 @@ async def execute_task(
 async def verify_websocket_auth(websocket: WebSocket, token: Optional[str] = None) -> bool:
     """Verify WebSocket authentication token."""
     from api.auth import EXECUTOR_API_KEY
-    
+
     if not EXECUTOR_API_KEY:
         return False
-    
+
     # Token can come from query params or first message
     if not token:
         query_token = websocket.query_params.get("token")
         if query_token:
             token = query_token
-    
+
     if not token or token != EXECUTOR_API_KEY:
         return False
-    
+
     return True
 ```
 
@@ -169,19 +169,19 @@ async def agent_ws_endpoint(websocket: WebSocket) -> None:
     if not await verify_websocket_auth(websocket, token):
         await websocket.close(code=1008, reason="Unauthorized")
         return
-    
+
     await websocket.accept()
-    
+
     # Validate token in handshake message too
     try:
         raw = await websocket.receive_json()
         handshake = AgentHandshake.model_validate(raw)
-        
+
         # Verify agent_id binding (if token provided in handshake)
         if handshake.auth_token and handshake.auth_token != token:
             await websocket.close(code=1008, reason="Invalid auth token")
             return
-        
+
         agent_id = handshake.agent_id
         # ... rest of handler
 ```
@@ -196,7 +196,7 @@ async def l_ws(websocket: WebSocket) -> None:
     if not await verify_websocket_auth(websocket, token):
         await websocket.close(code=1008, reason="Unauthorized")
         return
-    
+
     await websocket.accept()
     # ... rest of handler
 ```
@@ -261,7 +261,7 @@ async def set_session_scope(
 ) -> asyncpg.Connection:
     """
     Set PostgreSQL session variables for RLS and return connection.
-    
+
     Returns connection that must be used for all subsequent operations.
     """
     conn = await self._repository._pool.acquire()
@@ -289,7 +289,7 @@ async def write_packet(
 ) -> PacketWriteResult:
     """
     Write packet with optional RLS-scoped connection.
-    
+
     If connection provided, uses it for all operations (maintains RLS scope).
     Otherwise, uses default pool (no RLS scope).
     """
@@ -326,11 +326,11 @@ async def write_packet_with_rls(
             """SELECT l9_set_scope($1::uuid, $2::uuid, $3::uuid, $4::text)""",
             tenant_id, org_id, user_id, role,
         )
-        
+
         # All DAG operations use same connection
         envelope = packet_in.to_envelope()
         result = await self._dag.run_with_connection(envelope, conn)
-        
+
         return result
 ```
 
@@ -400,29 +400,29 @@ async def ingest(
 ) -> PacketWriteResult:
     """Ingest packet with transactional core writes."""
     # ... validation code ...
-    
+
     envelope = packet_in.to_envelope()
-    
+
     # Core writes in transaction (atomic)
     written_tables = []
     errors = []
-    
+
     async with self._repository.transaction() as conn:
         try:
             # Store structured packet
             await self._store_packet_with_connection(envelope, conn)
             written_tables.append("packet_store")
-            
+
             # Store memory event
             await self._store_memory_event_with_connection(envelope, conn)
             written_tables.append("agent_memory_events")
-            
+
             # Transaction commits here (or rolls back on exception)
         except Exception as e:
             logger.error(f"Transaction failed: {e}")
             errors.append(f"transaction: {str(e)}")
             raise  # Transaction auto-rolls back
-    
+
     # Best-effort writes (outside transaction)
     if should_embed and self._semantic_service:
         try:
@@ -431,9 +431,9 @@ async def ingest(
                 written_tables.append("semantic_memory")
         except Exception as e:
             logger.warning(f"Embedding failed (non-critical): {e}")
-    
+
     # ... rest of best-effort writes ...
-    
+
     status = "ok" if not errors else "partial" if written_tables else "error"
     return PacketWriteResult(...)
 ```
@@ -549,7 +549,7 @@ async def test_rls_tenant_isolation(substrate_service):
     await substrate_service.write_packet_with_rls(
         packet_in, tenant_id="tenant-a", org_id="org-a", user_id="user-a"
     )
-    
+
     # Try to read as tenant B (should return empty)
     results = await substrate_service.search_packets_by_type(
         packet_type="test", tenant_id="tenant-b", org_id="org-b", user_id="user-b"

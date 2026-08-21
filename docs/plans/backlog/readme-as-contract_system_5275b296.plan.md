@@ -91,21 +91,21 @@ flowchart TB
         runtimeMeta[runtime/README.meta.yaml]
         servicesMeta[services/README.meta.yaml]
     end
-    
+
     subgraph gen [Generator]
         generator[scripts/readme_generator.py]
     end
-    
+
     subgraph output [Generated READMEs]
         rootReadme[README.md]
         subsystemReadmes[Subsystem READMEs]
     end
-    
+
     subgraph enforce [Enforcement]
         ciGate[ci/check_readme_contracts.py]
         cursorRules[.cursor/rules/95-readme-contracts.mdc]
     end
-    
+
     rootMeta --> generator
     agentsMeta --> generator
     memoryMeta --> generator
@@ -113,13 +113,13 @@ flowchart TB
     orchMeta --> generator
     runtimeMeta --> generator
     servicesMeta --> generator
-    
+
     generator --> rootReadme
     generator --> subsystemReadmes
-    
+
     rootMeta --> ciGate
     agentsMeta --> ciGate
-    
+
     rootMeta --> cursorRules
 ```
 
@@ -240,7 +240,7 @@ type: subsystem
 subsystem:
   name: "Agent Execution Core"
   purpose: "Execute agent tasks via kernel-aware registry and executor service"
-  
+
 scope:
   responsibilities:
         - "Agent registration and lifecycle"
@@ -408,7 +408,7 @@ Before editing files in a module, read all files listed in:
 ```javascript
 GMP-24 (Foundation) → BLOCKS → GMP-25 (Contracts)
                     → BLOCKS → GMP-26 (CI Gate)
-                    
+
 GMP-25 (Contracts) → BLOCKS → GMP-28 (Generate)
 
 GMP-26 (CI Gate) ──────────→ Independent

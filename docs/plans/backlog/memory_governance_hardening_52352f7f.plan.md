@@ -93,7 +93,7 @@ Codex's audit identified 7 critical governance violations in the L9 memory syste
 1. Phase 0: Migrations (0014, 0015) — MUST RUN FIRST
 2. Phase 0: Feature flag setup
 3. Phase 1: Authentication middleware
-4. Phase 2: Caller identity enforcement  
+4. Phase 2: Caller identity enforcement
 5. Phase 3: Scope filtering (query_temporal)
 6. Phase 4: Project isolation
 7. Phase 5: Mandatory audit with circuit breaker
@@ -112,16 +112,16 @@ Codex's audit identified 7 critical governance violations in the L9 memory syste
 
 ```sql
 -- Add new scope values to CHECK constraint
-ALTER TABLE packet_store 
+ALTER TABLE packet_store
   DROP CONSTRAINT IF EXISTS packet_store_scope_check;
 
-ALTER TABLE packet_store 
-  ADD CONSTRAINT packet_store_scope_check 
+ALTER TABLE packet_store
+  ADD CONSTRAINT packet_store_scope_check
   CHECK (scope IN ('developer', 'global', 'l-private', 'shared'));
 
 -- Backfill: Convert existing 'shared' scope based on metadata
-UPDATE packet_store 
-SET scope = CASE 
+UPDATE packet_store
+SET scope = CASE
   WHEN envelope->'metadata'->>'creator' = 'L-CTO' THEN 'l-private'
   WHEN envelope->'metadata'->>'caller' = 'C' THEN 'developer'
   ELSE 'global'
@@ -158,7 +158,7 @@ INSERT INTO migration_log (name, applied_at) VALUES ('0015_project_id_default', 
 ```python
 class Settings(BaseSettings):
     # ... existing settings ...
-    
+
     # Governance hardening feature flags
     GOVERNANCE_HARDENING_ENABLED: bool = False  # Master switch
     GOVERNANCE_ENFORCEMENT_MODE: str = "log_only"  # "log_only" | "enforce"
@@ -262,7 +262,7 @@ async def search_memory_route(
 elif tool.name == "query_temporal":
     # Cursor CANNOT see l-private via temporal queries
     allowed_scopes = ["developer", "global"] if caller_id == "C" else None
-    
+
     result = await query_temporal(
         user_id=user_id,
         since=validated_args.since,
@@ -287,10 +287,10 @@ async def query_temporal(
     try:
         since_dt = datetime.fromisoformat(since) if since else datetime.utcnow() - timedelta(days=7)
         until_dt = datetime.fromisoformat(until) if until else datetime.utcnow()
-        
+
         params = [user_id, since_dt, until_dt]
         param_idx = 4
-        
+
         # Base query
         where_parts = [
             "ps.packet_type LIKE 'memory_write_%'",
@@ -298,14 +298,14 @@ async def query_temporal(
             "ps.timestamp >= $2",
             "ps.timestamp <= $3",
         ]
-        
+
         # CORRECT: Use PostgreSQL array operator (not string concat)
         if allowed_scopes:
             db_scopes = [map_mcp_scope_to_db_scope(s) for s in allowed_scopes]
             where_parts.append(f"ps.scope = ANY(${param_idx})")
             params.append(db_scopes)  # PostgreSQL array parameter
             param_idx += 1
-        
+
         # ... rest of implementation
 ```
 
@@ -330,16 +330,16 @@ async def search_memory_handler(
     project_id: str = "l9",  # NEW: default to l9 project
 ) -> Dict[str, Any]:
     # ... existing code ...
-    
+
     # Add project isolation with COALESCE for backward compatibility
     # Handles packets written before project_id existed
     project_filter = f"AND COALESCE(ps.envelope->'metadata'->>'project_id', 'l9') = ${param_idx}"
     params.append(project_id)
     param_idx += 1
-    
+
     # Build full query with project filter
     search_query = f"""
-    SELECT 
+    SELECT
         ps.packet_id,
         ps.packet_type,
         ps.envelope,
@@ -387,7 +387,7 @@ logger = structlog.get_logger(__name__)
 
 class AuditLogger:
     """Audit logger with circuit breaker and file fallback."""
-    
+
     def __init__(
         self,
         execute_fn,  # Database execute function
@@ -398,7 +398,7 @@ class AuditLogger:
         self.execute_fn = execute_fn
         self.fallback_path = Path(fallback_path)
         self.fallback_path.parent.mkdir(parents=True, exist_ok=True)
-        
+
         self.circuit_breaker = CircuitBreaker(
             CircuitBreakerConfig(
                 failure_threshold=failure_threshold,
@@ -407,7 +407,7 @@ class AuditLogger:
                 name="audit_logger",
             )
         )
-    
+
     async def log(
         self,
         tool_name: str,
@@ -420,7 +420,7 @@ class AuditLogger:
         error: Optional[str] = None,
     ) -> None:
         """Log audit event. Fails request if both DB and fallback fail."""
-        
+
         event = {
             "timestamp": datetime.utcnow().isoformat(),
             "tool_name": tool_name,
@@ -432,7 +432,7 @@ class AuditLogger:
             "duration_ms": duration_ms,
             "error": error,
         }
-        
+
         # Try DB first (with circuit breaker)
         if not self.circuit_breaker.is_open():
             try:
@@ -457,16 +457,16 @@ class AuditLogger:
             except Exception as e:
                 self.circuit_breaker.record_failure(str(e))
                 logger.error("Audit DB write failed", error=str(e))
-        
+
         # Fallback: Write to local file
         try:
             with open(self.fallback_path, "a") as f:
                 f.write(json.dumps(event) + "\n")
             logger.warning("Audit written to fallback file", path=str(self.fallback_path))
-            
+
             # Alert on fallback (could be Slack, email, etc.)
             await self._alert_audit_fallback(event)
-            
+
         except Exception as fallback_error:
             # Both DB and fallback failed - MUST reject operation
             logger.critical(
@@ -475,7 +475,7 @@ class AuditLogger:
                 fallback_error=str(fallback_error),
             )
             raise RuntimeError("Audit logging required but unavailable")
-    
+
     async def _alert_audit_fallback(self, event: Dict[str, Any]) -> None:
         """Alert that audit is using fallback (implement as needed)."""
         # TODO: Implement Slack webhook or email alert
@@ -503,7 +503,7 @@ from src.audit import get_audit_logger
 
 async def handle_tool_call(...):
     # ... existing code ...
-    
+
     # Replace best-effort audit (lines 877-895) with:
     audit_logger = get_audit_logger(execute)
     await audit_logger.log(
@@ -572,7 +572,7 @@ os.environ["MCP_API_KEY_C"] = "test-cursor-key-dev-global"
 async def async_client():
     """Async HTTP client for testing."""
     from mcp_memory.src.main import app
-    
+
     async with AsyncClient(app=app, base_url="http://test") as client:
         yield client
 
@@ -637,7 +637,7 @@ import pytest
 @pytest.mark.asyncio
 async def test_rest_memory_save_requires_auth(async_client):
     """Invariant 1: Auth required for all memory ops.
-    
+
     Unauthenticated POST to /memory/save MUST return 401/403.
     """
     resp = await async_client.post(
@@ -650,7 +650,7 @@ async def test_rest_memory_save_requires_auth(async_client):
 @pytest.mark.asyncio
 async def test_cursor_temporal_blocks_l_private(async_client, cursor_auth):
     """Invariant 2: Cursor cannot read l-private via query_temporal.
-    
+
     MCP call as Cursor must not return any l-private entries.
     """
     resp = await async_client.post(
@@ -662,10 +662,10 @@ async def test_cursor_temporal_blocks_l_private(async_client, cursor_auth):
         },
     )
     assert resp.status_code == 200
-    
+
     result = resp.json().get("result", {})
     memories = result.get("memories", [])
-    
+
     # CRITICAL: No l-private scope in results for Cursor
     for mem in memories:
         assert mem.get("scope") != "l-private", "Cursor received l-private memory!"
@@ -674,7 +674,7 @@ async def test_cursor_temporal_blocks_l_private(async_client, cursor_auth):
 @pytest.mark.asyncio
 async def test_project_isolation_in_search(async_client, l_auth, seed_project_data):
     """Invariant 3: Project isolation enforced.
-    
+
     Search in project A must not return project B data.
     """
     # Search with project_id filter (if supported by handler)
@@ -697,7 +697,7 @@ async def test_project_isolation_in_search(async_client, l_auth, seed_project_da
 @pytest.mark.asyncio
 async def test_rest_caller_metadata_not_accepted(async_client):
     """Invariant 4: Caller identity server-enforced.
-    
+
     REST body with spoofed creator must be rejected (no auth).
     """
     resp = await async_client.post(
@@ -717,18 +717,18 @@ async def test_rest_caller_metadata_not_accepted(async_client):
 @pytest.mark.asyncio
 async def test_audit_log_mandatory(async_client, l_auth, monkeypatch):
     """Invariant 5: Audit logging is mandatory.
-    
+
     If audit DB fails, operation must fail (not silently succeed).
     """
     async def mock_audit_fail(*args, **kwargs):
         raise Exception("Audit DB unavailable")
-    
+
     # Mock the audit execute function to fail
     monkeypatch.setattr(
         "mcp_memory.src.audit._audit_logger",
         None,  # Reset singleton
     )
-    
+
     # This test requires more setup - audit logger needs to be injectable
     # For now, mark as placeholder
     pytest.skip("Requires audit logger dependency injection")

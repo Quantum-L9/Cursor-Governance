@@ -111,7 +111,7 @@ BLOCKERS:
   CONTRACT_UNCLEAR: "STOP. Emit what's missing. Ask for clarification."
   INVENTION_REQUIRED: "STOP. Do not invent. Ask for guidance."
 
-OUTPUT_ORDER: [CONTRACT_EXTRACTIONS, FILE_MANIFEST, CODE_FILES, TEST_FILES, 
+OUTPUT_ORDER: [CONTRACT_EXTRACTIONS, FILE_MANIFEST, CODE_FILES, TEST_FILES,
                TEST_EVIDENCE_TABLE, README, WIRING_SNIPPET, ATTESTATION]
 
 ATTESTATION_CHECKS: [space_files_read, contracts_extracted, identity_resolved,
@@ -143,7 +143,7 @@ SCHEMA_EXTRACTION:
 TOOL_IDENTITY_CANON:
   identity_field: "tool_id"  # Canonical. If repo uses tool_name, normalize.
   display_field: "tool_name | display_name"  # Never for lookup/dispatch
-  alignment_required: [ToolBinding, ToolCallRequest, ToolCallResult, 
+  alignment_required: [ToolBinding, ToolCallRequest, ToolCallResult,
                        registry.dispatch, function.name, all_tests]
   blocker_if: "mixed usage detected"
 
@@ -180,7 +180,7 @@ FORBIDDEN_PATTERNS: [module_singleton, raw_dict_packet, import_time_env,
                      type_ignore, unused_imports, dict_where_model_exists,
                      status_only_tests, tool_name_as_identity, fallback_aliasing]
 
-REQUIRED_SPEC_KEYS: [module.id, module.name, module.purpose, 
+REQUIRED_SPEC_KEYS: [module.id, module.name, module.purpose,
                      module.repo.allowed_new_files, module.interfaces.inbound,
                      module.error_policy, module.acceptance.required]
 
@@ -222,7 +222,7 @@ MODULE_ADDENDA:
   governance_modules:
     must: [enum_comparisons, first_match_wins, deny_by_default, audit_packets]
     forbidden: [reload_every_call, sync_masquerading_as_async]
-  
+
   executor_modules:
     must: [os_module_pattern, bounded_dedupe, real_types_in_tests]
     forbidden: [invented_substrate_methods, placeholder_seeds]

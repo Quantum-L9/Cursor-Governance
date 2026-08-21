@@ -46,12 +46,12 @@ Add `validate_packet_protocol_rules()` function to validate that the runtime ker
 def validate_packet_protocol_rules() -> dict[str, Any]:
     """
     Validate kernel load order against 10_packet_protocol_kernel.yaml.
-    
+
     Returns:
         dict with keys: valid (bool), expected_order (list), actual_order (list), mismatches (list)
     """
     kernel_path = Path(DEFAULT_KERNEL_PATH) / "kernels" / "00_system" / "10_packet_protocol_kernel.yaml"
-    
+
     if not kernel_path.exists():
         return {
             "valid": False,
@@ -60,18 +60,18 @@ def validate_packet_protocol_rules() -> dict[str, Any]:
             "actual_order": list(KERNEL_ORDER),
             "mismatches": []
         }
-    
+
     with open(kernel_path, "r") as f:
         protocol_data = yaml.safe_load(f)
-    
+
     expected_order = protocol_data.get("load_sequence", {}).get("order", [])
     actual_order = list(KERNEL_ORDER)
-    
+
     mismatches = []
     for i, (expected, actual) in enumerate(zip(expected_order, actual_order)):
         if expected != actual:
             mismatches.append({"position": i, "expected": expected, "actual": actual})
-    
+
     return {
         "valid": len(mismatches) == 0 and len(expected_order) == len(actual_order),
         "expected_order": expected_order,

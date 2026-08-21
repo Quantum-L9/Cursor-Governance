@@ -121,19 +121,19 @@ def is_truly_dead(symbol, codebase):
     # Check 1: Dynamic access via getattr
     if grep(f"getattr(.*{symbol.name}", codebase):
         return False
-    
+
     # Check 2: Registry pattern
     if "@register" in symbol.decorators:
         return False
-    
+
     # Check 3: Protocol implementation
     if symbol in protocol_implementations:
         return False
-    
+
     # Check 4: Inheritance chain
     if used_in_any_subclass(symbol):
         return False
-    
+
     return True  # Truly dead
 ```
 
@@ -241,7 +241,7 @@ todos:
       or delete if redundant.
     confidence: 0.95
     test_needed: true
-    
+
  - id: DC-002
     file: memory/substrate_graph.py
     target_symbol: "_unused_helper"
@@ -250,7 +250,7 @@ todos:
     reason: "Private method, no internal calls"
     confidence: 0.98
     test_needed: false
-    
+
  - id: DC-003
     file: api/server.py
     target_symbol: "import asyncio"
@@ -317,20 +317,20 @@ todos:
 async def run_dead_code_pipeline():
     # Phase 1: Static analysis
     baseline = await run_dead_code_audit(min_confidence=80, parallel=8)
-    
+
     # Phase 2: Resolve false positives
     resolved = await resolve_dead_code_refs(baseline)
-    
+
     # Phase 3: Categorize by risk
     categorized = await categorize_dead_code(resolved)
-    
+
     # Phase 4: Generate TODO plan
     todos = await generate_gmp_todos(categorized)
-    
+
     # Phase 5: [Optional] Auto-execute low-risk fixes
     if all(t['risk'] == 'low' for t in todos['auto_fixable']):
         await auto_fix_dead_code(todos['auto_fixable'])
-    
+
     return {
         "baseline_count": len(baseline),
         "false_positives_eliminated": baseline - resolved,

@@ -43,9 +43,9 @@ isProject: false
 
 # GMP-GRAPHITI-GATES-002 — Complete Activation Plan
 
-**Run ID:** `GMP-GRAPHITI-GATES-002`  
-**Depends on:** GLOBAL-001 substrate (already shipped in GlobalCommands) + live VPS  
-**VPS target (locked):** Hetzner C1 `46.62.243.82` — Graphiti-only at `/opt/graphiti-cursor` after L9 stack decommission  
+**Run ID:** `GMP-GRAPHITI-GATES-002`
+**Depends on:** GLOBAL-001 substrate (already shipped in GlobalCommands) + live VPS
+**VPS target (locked):** Hetzner C1 `46.62.243.82` — Graphiti-only at `/opt/graphiti-cursor` after L9 stack decommission
 **Scope:** GlobalCommands SSOT only — no PlasticOS addon changes
 
 ### Infrastructure boundary (revised 2026-06-07)

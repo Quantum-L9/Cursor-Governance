@@ -160,7 +160,7 @@ This gives the agent awareness of the current graph state (node counts by type) 
 ```
 ### Retrieval Order (from cursor_retrieval_kernel.py)
 1. Working memory (same session cache) — FASTEST
-2. Long-term memory (semantic search via MCP) — FAST  
+2. Long-term memory (semantic search via MCP) — FAST
 3. Repo scan (grep/codebase_search) — SLOWEST, last resort
 
 NEVER skip to repo scan without checking memory first.
@@ -206,4 +206,3 @@ Items 5-8 can run in parallel after item 4 since they're independent edits to di
 - `cursor_retrieval_kernel.py` — kept dormant as Python class; pattern enforced via .mdc rule instead
 - `cursor_session_hooks.py` — wired via startup script, code unchanged
 - Existing .mdc rules — kept as-is (supplement approach, not replace)
-

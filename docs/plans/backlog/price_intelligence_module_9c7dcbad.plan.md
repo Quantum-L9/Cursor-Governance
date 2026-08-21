@@ -53,7 +53,7 @@ plasticos_price_intelligence/
 ├── models/
 │   ├── __init__.py
 │   ├── price_signal.py           # plasticos.price.signal model
-│   ├── price_band.py             # plasticos.price.band model  
+│   ├── price_band.py             # plasticos.price.band model
 │   ├── offer_harvest_hooks.py    # Inherit plasticos.offer for auto-harvest
 │   └── mail_message_harvest.py   # Stub for Email AI (hooks only)
 ├── wizards/
@@ -309,13 +309,13 @@ def migrate(cr, version):
     env = api.Environment(cr, SUPERUSER_ID, {})
     Transaction = env['plasticos.transaction']
     Signal = env['plasticos.price.signal']
-    
+
     # Find completed transactions with pricing
     transactions = Transaction.search([
         ('state', 'not in', ['cancel', 'draft']),
         ('unit_price', '>', 0),
     ])
-    
+
     for tx in transactions:
         # Create closed_deal signal (highest weight)
         Signal.create({
@@ -331,7 +331,7 @@ def migrate(cr, version):
             'notes': 'Backfilled from historical transaction',
             'auto_harvested': True,
         })
-    
+
     # Trigger initial price band computation
     env['plasticos.price.band'].compute_price_bands()
 ```
@@ -381,4 +381,3 @@ def migrate(cr, version):
 - Time decay applied correctly (90-day half-life)
 - Band confidence increases with sample size
 - Migration backfills from transactions correctly
-

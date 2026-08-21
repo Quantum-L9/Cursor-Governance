@@ -134,7 +134,7 @@ Complete the action layer for self-reflection governance tracking system. The da
    • Impact: {estimated_impact}
    • Proposals: {proposal_count}
    • Gaps Addressed: {total_gaps_addressed}
-   
+
    Review: `/api/evolution/plans/{plan_id}`
    Approve: `/api/evolution/plans/{plan_id}/approve`
    ```

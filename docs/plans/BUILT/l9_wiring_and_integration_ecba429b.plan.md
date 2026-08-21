@@ -170,7 +170,7 @@ Add imports to `[api/server.py](api/server.py)` before `router_registry.wire_all
 ```python
 # Wire orphan routers (they self-register on import)
 import api.agent_routes        # /agent endpoints
-import api.os_routes           # /os endpoints  
+import api.os_routes           # /os endpoints
 import api.webhook_mac_agent   # /mac webhook
 import api.world_model_api     # /world-model endpoints
 ```
@@ -196,5 +196,3 @@ Add `router_registry.register()` call to `[api/webhook_twilio.py](api/webhook_tw
 | 3     | Q7 (wire API orphans)                            | Medium | `api/server.py`, `api/webhook_twilio.py`                  |
 | 4     | Q6 (DTB adapter + 4 integration points)          | High   | 6+ files, feature-flagged                                 |
 | 5     | Q4 (document IR engine command integration path) | Low    | Documentation only                                        |
-
-

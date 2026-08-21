@@ -125,7 +125,7 @@ Add to [scripts/audit/run_all.py](scripts/audit/run_all.py) after cache regenera
 ```python
 DEPRECATED_CURSOR_PATHS = [
     "tools/cursor_client.py",
-    "scripts/cursor_check_mistakes.py", 
+    "scripts/cursor_check_mistakes.py",
     "memory/extractor/cursor_action_extractor.py",
     "core/governance/cursor_memory_kernel.py",
 ]
@@ -188,7 +188,7 @@ REPO_ROOT = Path(__file__).parent.parent.parent
 # Patterns to extract from docs
 PATH_PATTERNS = [
     r'api/[\w/]+\.py',
-    r'mcp_memory/src/[\w/]+\.py', 
+    r'mcp_memory/src/[\w/]+\.py',
     r'agents/cursor/[\w/]+\.py',
     r'memory/substrate_[\w]+\.py',
 ]
@@ -219,7 +219,7 @@ def scan_file(filepath: Path) -> dict:
 
 def main():
     results = {"broken_docs": [], "dangling_paths": [], "verified": []}
-    
+
     # Scan docs and scripts
     for glob_pattern in ["**/*.md", "scripts/**/*.py"]:
         for filepath in REPO_ROOT.glob(glob_pattern):
@@ -234,7 +234,7 @@ def main():
                     })
                 else:
                     results["verified"].append(path)
-    
+
     # Output
     print(json.dumps(results, indent=2))
     return 1 if results["broken_docs"] else 0

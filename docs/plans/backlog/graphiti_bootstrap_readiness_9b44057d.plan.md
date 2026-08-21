@@ -28,7 +28,7 @@ isProject: false
 
 # Graphiti Pre-Bootstrap Readiness Plan
 
-**GMP_RUN_ID:** `GMP-GRAPHITI-BOOTSTRAP-004`  
+**GMP_RUN_ID:** `GMP-GRAPHITI-BOOTSTRAP-004`
 **Authority:** [Graphiti Global Memory Integration Plan v2](Current Work - IGNORE/06-07-2026/Graphiti Global Memory Integration Plan.md) + live ground truth in [`.cursor-commands/ops/graphiti/`](.cursor-commands/ops/graphiti/) + [GMP-GRAPHITI-FILEPACK-003](.cursor-commands/reports/GMP-GRAPHITI-FILEPACK-003.md)
 
 **Decision:** Do **not** run production `bootstrap` until **ontology + allowlist** are live on C1 and **sandbox entity audit** passes. Bootstrap writes **3–5 labeled JSON episodes per repo max** (1 manifest + N integration edges)—never raw file globs.

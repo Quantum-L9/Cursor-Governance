@@ -37,7 +37,7 @@ Add the Repository Contract Loader as a new validation check in the **existing `
 The Repository Contract Loader provides **AST-based method/param validation** that enforces:
 
 - `PacketEnvelopeIn.packet_type` must be from known registry
-- `emit_packet.packet_type` must be from known registry  
+- `emit_packet.packet_type` must be from known registry
 - `save_memory.scope` must be from known enumeration
 - `add_governance_block.block_type` must be known
 - And more contracts defined in YAML
@@ -89,4 +89,3 @@ python -m pytest tests/ci/test_repository_contract_loader.py tests/ci/test_repos
 - **No new jobs** created
 - **No new engines** created
 - Leverages existing CI infrastructure
-

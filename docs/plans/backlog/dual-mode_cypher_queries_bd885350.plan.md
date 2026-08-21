@@ -65,7 +65,7 @@ flowchart TD
         C -->|Pass| D[Survivor facility_ids]
         C -->|Fail| E[Excluded]
     end
-    
+
     subgraph Stage2 [Stage 2: Neo4j Graph]
         D --> F{Mode Selection}
         F -->|strict| G[_build_strict_query]
@@ -76,7 +76,7 @@ flowchart TD
         J --> L[Scored Results]
         K --> L
     end
-    
+
     L --> M[plasticos.match.result]
     M --> N["l9_run_id: strict_v1 or relaxed_v1"]
 ```
@@ -255,15 +255,15 @@ def _build_strict_query(self):
     MATCH (f:Facility)-[:HAS_MATERIAL]->(m:MaterialProfile)
     WHERE f.facility_id IN $facility_ids
       AND m.polymer = $polymer
-      
+
       // Gate 2: Density (MaterialProfile)
       AND (m.min_density IS NULL OR $density IS NULL OR m.min_density <= $density)
       AND (m.max_density IS NULL OR $density IS NULL OR m.max_density >= $density)
-      
+
       // Gate 3: MFI Range (MaterialProfile)
       AND (m.mfi_min IS NULL OR $mfi IS NULL OR m.mfi_min <= $mfi)
       AND (m.mfi_max IS NULL OR $mfi IS NULL OR m.mfi_max >= $mfi)
-      
+
       // Gate 4: MFI-Process compatibility (physics constraint)
       AND CASE f.process_type
         WHEN 'injection' THEN ($mfi IS NULL OR $mfi >= 1.0)
@@ -272,25 +272,25 @@ def _build_strict_query(self):
         WHEN 'thermoform' THEN ($mfi IS NULL OR ($mfi >= 1.0 AND $mfi <= 8.0))
         ELSE true
       END
-      
+
       // Gate 5: Contamination (MaterialProfile)
-      AND (m.contamination_tolerance IS NULL OR $contamination_pct IS NULL 
+      AND (m.contamination_tolerance IS NULL OR $contamination_pct IS NULL
            OR m.contamination_tolerance >= $contamination_pct)
-      
+
       // Gate 6: Moisture (MaterialProfile)
       AND (m.moisture_tolerance IS NULL OR $moisture_pct IS NULL
            OR m.moisture_tolerance >= $moisture_pct)
-      
+
       // Gate 7: Metal Removal (Facility capability)
       AND (NOT $has_metal OR f.can_remove_metal = true)
-      
+
       // Gate 8: FR Filtering (Facility capability)
       AND (NOT $has_fr OR f.can_filter_fr = true)
-      
+
       // Gate 9: Wash Line / Dryer (Facility capability)
       AND (NOT $requires_wash_line OR f.has_wash_line = true)
       AND (NOT $requires_dryer OR f.can_reduce_moisture = true)
-      
+
       // Gate 10: Form-Equipment compatibility
       AND CASE $form
         WHEN 'bales' THEN (f.has_granulator = true OR f.has_shredder = true)
@@ -299,34 +299,34 @@ def _build_strict_query(self):
         WHEN 'rollstock' THEN f.handles_rollstock = true
         ELSE true
       END
-      
+
       // Gate 11: PVC / Filler / Odor (Facility acceptance)
       AND (NOT $has_pvc OR coalesce(f.accepts_pvc, false) = true)
       AND (NOT $has_filler OR f.accepts_filled_materials = true)
       AND (NOT $has_odor OR coalesce(f.accepts_odor, true) = true)
-      
+
       // Gate 12: Lot Size (Facility)
       AND (f.min_lot_size_lbs IS NULL OR $quantity IS NULL OR f.min_lot_size_lbs <= $quantity)
       AND (f.max_lot_size_lbs IS NULL OR $quantity IS NULL OR f.max_lot_size_lbs >= $quantity)
-      
+
       // Gate 13: Geo Distance (Facility)
-      AND (f.lat IS NULL OR $lat IS NULL OR 
+      AND (f.lat IS NULL OR $lat IS NULL OR
            point.distance(point({latitude: f.lat, longitude: f.lon}),
                          point({latitude: $lat, longitude: $lon})) / 1609.34 <= $radius_miles)
-      
+
       // Gate 14: Certifications (Facility)
       AND ($food_grade = false OR f.food_grade_certified = true)
       AND ($medical_grade = false OR f.medical_grade_capable = true)
-    
+
     WITH f, m,
          // Scoring calculations...
-         (material_score * $w_material + volume_score * $w_volume + 
-          quality_score * $w_quality + geo_score * $w_geo + 
+         (material_score * $w_material + volume_score * $w_volume +
+          quality_score * $w_quality + geo_score * $w_geo +
           compliance_score * $w_compliance + relationship_score * $w_relationship) AS total_score
-    
+
     RETURN f.facility_id AS facility_id, f.name AS facility_name,
            total_score, m.polymer AS polymer
-    ORDER BY total_score DESC 
+    ORDER BY total_score DESC
     LIMIT $limit
     """
 ```
@@ -342,18 +342,18 @@ def _build_relaxed_query(self):
     MATCH (f:Facility)-[:HAS_MATERIAL]->(m:MaterialProfile)
     WHERE f.facility_id IN $facility_ids
       AND m.polymer = $polymer  // Gate 1: ONLY hard gate
-    
+
     WITH f, m,
       // Gate 2: Density (MaterialProfile)
       CASE WHEN (m.min_density IS NULL OR $density IS NULL OR m.min_density <= $density)
             AND (m.max_density IS NULL OR $density IS NULL OR m.max_density >= $density)
            THEN 1.0 ELSE 0.3 END AS density_mult,
-      
+
       // Gate 3: MFI range (MaterialProfile)
       CASE WHEN (m.mfi_min IS NULL OR $mfi IS NULL OR m.mfi_min <= $mfi)
             AND (m.mfi_max IS NULL OR $mfi IS NULL OR m.mfi_max >= $mfi)
            THEN 1.0 ELSE 0.3 END AS mfi_mult,
-      
+
       // Gate 4: MFI-Process compatibility - HEAVY penalty (physics constraint)
       CASE WHEN f.process_type IS NULL OR $mfi IS NULL
                 OR (f.process_type = 'injection' AND $mfi >= 1.0)
@@ -362,30 +362,30 @@ def _build_relaxed_query(self):
                 OR (f.process_type = 'thermoform' AND $mfi >= 1.0 AND $mfi <= 8.0)
                 OR f.process_type NOT IN ['injection', 'blow_mold', 'film_blown', 'thermoform']
            THEN 1.0 ELSE 0.1 END AS mfi_process_mult,
-      
+
       // Gate 5: Contamination (MaterialProfile)
       CASE WHEN m.contamination_tolerance IS NULL OR $contamination_pct IS NULL
                 OR m.contamination_tolerance >= $contamination_pct
            THEN 1.0 ELSE 0.3 END AS contamination_mult,
-      
+
       // Gate 6: Moisture (MaterialProfile)
       CASE WHEN m.moisture_tolerance IS NULL OR $moisture_pct IS NULL
                 OR m.moisture_tolerance >= $moisture_pct
            THEN 1.0 ELSE 0.3 END AS moisture_mult,
-      
+
       // Gate 7: Metal Removal (Facility)
       CASE WHEN NOT $has_metal OR f.can_remove_metal = true
            THEN 1.0 ELSE 0.3 END AS metal_mult,
-      
+
       // Gate 8: FR Filtering (Facility)
       CASE WHEN NOT $has_fr OR f.can_filter_fr = true
            THEN 1.0 ELSE 0.3 END AS fr_mult,
-      
+
       // Gate 9: Wash Line / Dryer (Facility)
       CASE WHEN (NOT $requires_wash_line OR f.has_wash_line = true)
             AND (NOT $requires_dryer OR f.can_reduce_moisture = true)
            THEN 1.0 ELSE 0.3 END AS wash_mult,
-      
+
       // Gate 10: Form-Equipment compatibility (Facility)
       CASE WHEN $form IS NULL
                 OR ($form = 'bales' AND (f.has_granulator = true OR f.has_shredder = true))
@@ -394,45 +394,45 @@ def _build_relaxed_query(self):
                 OR ($form = 'rollstock' AND f.handles_rollstock = true)
                 OR $form NOT IN ['bales', 'regrind', 'flake', 'rollstock']
            THEN 1.0 ELSE 0.3 END AS form_equip_mult,
-      
+
       // Gate 11: PVC / Filler / Odor (Facility)
       CASE WHEN (NOT $has_pvc OR coalesce(f.accepts_pvc, false) = true)
             AND (NOT $has_filler OR f.accepts_filled_materials = true)
             AND (NOT $has_odor OR coalesce(f.accepts_odor, true) = true)
            THEN 1.0 ELSE 0.3 END AS pvc_filler_mult,
-      
+
       // Gate 12: Lot size (Facility)
       CASE WHEN (f.min_lot_size_lbs IS NULL OR $quantity IS NULL OR f.min_lot_size_lbs <= $quantity)
             AND (f.max_lot_size_lbs IS NULL OR $quantity IS NULL OR f.max_lot_size_lbs >= $quantity)
            THEN 1.0 ELSE 0.3 END AS lot_mult,
-      
+
       // Gate 13: Geo distance (Facility)
-      CASE WHEN f.lat IS NULL OR $lat IS NULL 
+      CASE WHEN f.lat IS NULL OR $lat IS NULL
                 OR point.distance(point({latitude: f.lat, longitude: f.lon}),
                                  point({latitude: $lat, longitude: $lon})) / 1609.34 <= $radius_miles
            THEN 1.0 ELSE 0.3 END AS geo_mult,
-      
+
       // Gate 14: Certifications (Facility)
       CASE WHEN ($food_grade = false OR f.food_grade_certified = true)
             AND ($medical_grade = false OR f.medical_grade_capable = true)
            THEN 1.0 ELSE 0.3 END AS cert_mult
-    
+
     // Multiplicative penalty stacking (all 14 gates)
-    WITH f, m, 
+    WITH f, m,
          density_mult, mfi_mult, mfi_process_mult, contamination_mult, moisture_mult,
          metal_mult, fr_mult, wash_mult, form_equip_mult, pvc_filler_mult,
          lot_mult, geo_mult, cert_mult,
-         100.0 * density_mult * mfi_mult * mfi_process_mult * contamination_mult * 
+         100.0 * density_mult * mfi_mult * mfi_process_mult * contamination_mult *
                  moisture_mult * metal_mult * fr_mult * wash_mult * form_equip_mult *
                  pvc_filler_mult * lot_mult * geo_mult * cert_mult AS total_score
-    
+
     RETURN f.facility_id AS facility_id, f.name AS facility_name,
            total_score, m.polymer AS polymer,
            {density: density_mult, mfi: mfi_mult, mfi_process: mfi_process_mult,
             contamination: contamination_mult, moisture: moisture_mult,
             metal: metal_mult, fr: fr_mult, wash: wash_mult, form_equip: form_equip_mult,
             pvc_filler: pvc_filler_mult, lot: lot_mult, geo: geo_mult, cert: cert_mult} AS score_breakdown
-    ORDER BY total_score DESC 
+    ORDER BY total_score DESC
     LIMIT $limit
     """
 ```
@@ -442,31 +442,31 @@ def _build_relaxed_query(self):
 ```python
 def match_buyers(self, intake, facility_ids, mode="both"):
     """Run buyer match in strict, relaxed, or both modes.
-    
+
     Args:
         intake: plasticos.intake record
         facility_ids: list of facility IDs that passed Stage 1 (Python) gates
         mode: 'strict' | 'relaxed' | 'both' (default)
-    
+
     Returns:
         dict: {'strict': [...], 'relaxed': [...]} depending on mode
     """
     params = self._intake_to_match_params(intake)
     params['facility_ids'] = facility_ids  # Stage 1 survivors
     results = {}
-    
+
     if mode in ("strict", "both"):
         query = self._build_strict_query()
         rows = self._execute_cypher(query, params)
         self._persist_match_results(intake, rows, l9_run_id="strict_v1")
         results["strict"] = rows
-    
+
     if mode in ("relaxed", "both"):
         query = self._build_relaxed_query()
         rows = self._execute_cypher(query, params)
         self._persist_match_results(intake, rows, l9_run_id="relaxed_v1")
         results["relaxed"] = rows
-    
+
     return results
 ```
 
@@ -483,10 +483,10 @@ Modify `find_matches_for_supplier()` to:
 3. Accept `mode` parameter
 
 ```python
-def find_matches_for_supplier(self, supplier_partner_id, intake_id=None, 
+def find_matches_for_supplier(self, supplier_partner_id, intake_id=None,
                                max_results=20, mode="both"):
     """Find matching buyers for a supplier's material.
-    
+
     Args:
         supplier_partner_id: res.partner ID of supplier
         intake_id: plasticos.intake ID (optional)
@@ -494,17 +494,17 @@ def find_matches_for_supplier(self, supplier_partner_id, intake_id=None,
         mode: 'strict' | 'relaxed' | 'both' (default)
     """
     # ... existing Stage 1 gate logic ...
-    
+
     # Collect facility_ids that passed Stage 1
     facility_ids = [fp.partner_id.id for fp in surviving_profiles]
-    
+
     # Call graph service with facility_ids and mode
     graph_results = graph_svc.match_buyers(
-        intake=intake, 
+        intake=intake,
         facility_ids=facility_ids,
         mode=mode
     )
-    
+
     return graph_results
 ```
 
@@ -529,4 +529,3 @@ def find_matches_for_supplier(self, supplier_partner_id, intake_id=None,
 - `facility_ids` passed from Stage 1 to Stage 2
 - Results written with `l9_run_id` = `strict_v1` or `relaxed_v1`
 - New partner types added: end_user, grinder, toll_processor, converter
-

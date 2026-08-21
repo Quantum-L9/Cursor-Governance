@@ -37,20 +37,20 @@ The packs live in `docs/` as inert markdown. Nothing loads them automatically. T
 ```mermaid
 flowchart TD
     SpacePrompt["00_master_space_prompt.md\n(Space system prompt — manual paste)"]
-    
+
     subgraph always_on ["Always-On Rules (.cursor/rules/)"]
         R10["10-plasticos-workspace-kernel.mdc\nglobs: plasticos_*/models/**/*.py\nplasticos_*/views/**/*.xml\nplasticos_*/__manifest__.py"]
         R40["40-plasticos-zero-stub-law.mdc\nglobs: plasticos_*/models/**/*.py"]
         R50["50-plasticos-web-lead-guard.mdc\nglobs: plasticos_web_leads/**/*.py\nplasticos_web_leads/**/*.xml"]
         R95["95-test-fix-policy.mdc\n(already exists)"]
     end
-    
+
     subgraph on_demand ["On-Demand Rules (no globs — invoked by trigger phrase)"]
         R20["20-plasticos-pr-review-kernel.mdc"]
         R30["30-plasticos-deploy-validation.mdc\nalso globs: Makefile, docker-compose.yml"]
         R60["60-plasticos-final-touches.mdc"]
     end
-    
+
     subgraph sources ["Source Files (docs/ — read-only reference)"]
         K03["03_workspace_kernel.md"]
         KPR["revised_odoo_pr_review_kernel.md"]
@@ -59,7 +59,7 @@ flowchart TD
         KWL["web_lead_context.md"]
         KFT["revised_odoo_final_touches_kernel.md"]
     end
-    
+
     K03 --> R10
     KPR --> R20
     KDV --> R30

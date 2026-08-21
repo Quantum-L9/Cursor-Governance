@@ -31,9 +31,9 @@ isProject: false
 
 # Skill Hardening Batch — GMP Execution Plan (v2)
 
-**Run ID:** `GMP-SKILL-HARDEN-001`  
-**Plan version:** 2 (improved + aligned against Recursive Improvement v3 / Recursive Alignment prompts)  
-**Protocol:** [l9-gmp-protocol](.cursor-commands/skills/l9-gmp-protocol/SKILL.md) phases 0–6  
+**Run ID:** `GMP-SKILL-HARDEN-001`
+**Plan version:** 2 (improved + aligned against Recursive Improvement v3 / Recursive Alignment prompts)
+**Protocol:** [l9-gmp-protocol](.cursor-commands/skills/l9-gmp-protocol/SKILL.md) phases 0–6
 **Pack authority:** [skill-pack-contract.md](.cursor-commands/skills/l9-skill-compiler/references/skill-pack-contract.md), [meta-standard.md](.cursor-commands/skills/l9-skill-compiler/references/meta-standard.md), [validation-checklist.md](.cursor-commands/skills/l9-skill-compiler/references/validation-checklist.md)
 
 ---

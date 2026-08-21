@@ -26,4 +26,3 @@ isProject: false
 ### 3. Verify
 
 - Restart Odoo. The "permission denied" error should be gone.
-

@@ -332,7 +332,7 @@ def _compute_transaction_id(self):
 
 ### 4.1 Extract `new_correlation_id()` to Shared Module
 
-**Files:** 
+**Files:**
 
 - `[plasticos_logistics/models/load.py](plasticos_logistics/models/load.py)` (lines 17-19)
 - `[plasticos_logistics/models/dispatch.py](plasticos_logistics/models/dispatch.py)` (lines 10-12)
@@ -493,5 +493,3 @@ docker compose run --rm odoo -u plasticos_logistics
 | `models/dispatch.py`                 | Add `load_id` FK (or remove model)                                                       |
 | `views/load_views.xml`               | Button visibility, readonly `sla_breached`                                               |
 | `.gitignore`                         | Add `*.pdf`                                                                              |
-
-

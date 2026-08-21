@@ -145,18 +145,18 @@ class PacketWriteResult(BaseModel):
 ```python
 class EnrichmentResult(BaseModel):
     """Result of SubstrateDAG.enrich() execution."""
-    
+
     packet_id: UUID = Field(..., description="Source packet that was enriched")
-    
+
     # Extracted data
     facts: list[KnowledgeFact] = Field(default_factory=list, description="Extracted knowledge facts")
     insights: list[ExtractedInsight] = Field(default_factory=list, description="Extracted insights")
     reasoning_trace: Optional[StructuredReasoningBlock] = Field(None, description="Reasoning trace if generated")
-    
+
     # Metrics
     facts_inserted: int = Field(default=0, description="Facts persisted to knowledge_facts table")
     world_model_triggered: bool = Field(default=False, description="Whether world model update was triggered")
-    
+
     # Timing
     enrichment_duration_ms: float = Field(default=0.0, description="Enrichment execution time")
 ```
@@ -176,23 +176,23 @@ async def insert_knowledge_fact(
 ) -> KnowledgeFactRow:
     """
     Insert or update knowledge fact (idempotent via UPSERT).
-    
+
     Uses ON CONFLICT (source_packet, subject, predicate) DO UPDATE
     to prevent duplicate facts from same packet.
-    
+
     Args:
         fact: KnowledgeFact to persist
         packet_id: Source packet ID (foreign key)
-        
+
     Returns:
         KnowledgeFactRow with assigned fact_id
-        
+
     Raises:
         Exception: DB error (caller decides whether to propagate or log)
     """
     rls_conn = _current_rls_connection.get()
     conn = rls_conn or await self._pool.acquire()
-    
+
     try:
         # UPSERT: Insert or update on conflict
         row = await conn.fetchrow(
@@ -200,8 +200,8 @@ async def insert_knowledge_fact(
             INSERT INTO knowledge_facts (
                 fact_id, subject, predicate, object, confidence, source_packet, created_at
             ) VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (source_packet, subject, predicate) 
-            DO UPDATE SET 
+            ON CONFLICT (source_packet, subject, predicate)
+            DO UPDATE SET
                 object = EXCLUDED.object,
                 confidence = EXCLUDED.confidence
             RETURNING *
@@ -248,26 +248,26 @@ async def enrich(
 ) -> EnrichmentResult:
     """
     Run ENRICHMENT ONLY pipeline on already-persisted packet.
-    
+
     SKIPS: intake_node, memory_write_node, semantic_embed_node (already done by IngestionPipeline)
     RUNS: reasoning_node → extract_insights_node → store_insights_node → world_model_trigger_node
-    
+
     Pre-validation: Envelope must have packet_id, packet_type, payload populated.
     State is pre-hydrated from envelope (no DB reads required).
-    
+
     Args:
         envelope: Already-persisted PacketEnvelope
         preload_state: Optional pre-hydrated state (for testing or custom workflows)
-        
+
     Returns:
         EnrichmentResult with extracted facts, insights, metrics
-        
+
     Raises:
         ValueError: If envelope is missing required fields
     """
     import time
     start_time = time.time()
-    
+
     # Pre-validation: envelope must be fully populated
     if not envelope.packet_id:
         raise ValueError("Envelope must have packet_id (already persisted)")
@@ -275,7 +275,7 @@ async def enrich(
         raise ValueError("Envelope must have packet_type")
     if not envelope.payload:
         raise ValueError("Envelope must have payload")
-    
+
     # Pre-hydrate state from envelope (skip intake_node's DB reads)
     state: SubstrateGraphState = preload_state or {
         "envelope": envelope.model_dump(mode="json"),
@@ -288,7 +288,7 @@ async def enrich(
         "world_model_triggered": False,
         "errors": [],
     }
-    
+
     # Run enrichment nodes ONLY (skip intake, memory_write, semantic_embed)
     state = await reasoning_node(state, repository=self._repository)
     state = await extract_insights_node(state, repository=self._repository)
@@ -298,10 +298,10 @@ async def enrich(
         repository=self._repository,
         world_model_service=self._world_model_service,
     )
-    
+
     # Build result
     duration_ms = (time.time() - start_time) * 1000
-    
+
     return EnrichmentResult(
         packet_id=envelope.packet_id,
         facts=[KnowledgeFact(**f) for f in state.get("facts", [])],
@@ -326,7 +326,7 @@ async def store_insights_node(
 ) -> SubstrateGraphState:
     """
     Store extracted insights and facts to database.
-    
+
     Uses UPSERT to ensure idempotency (same packet enriched twice = no duplicates).
     """
     logger.debug("store_insights_node: Storing insights and facts")
@@ -335,7 +335,7 @@ async def store_insights_node(
     facts = state.get("facts", [])
     errors = list(state.get("errors", []))
     written_tables = list(state.get("written_tables", []))
-    
+
     packet_id = state.get("envelope", {}).get("packet_id")
 
     if not insights and not facts:
@@ -390,7 +390,7 @@ async def store_insights_node(
         alias="ENABLE_DAG_ENRICHMENT",
         description="Enable SubstrateDAG enrichment after core writes (default: False for safety)",
     )
-    
+
     dag_enrichment_timeout_seconds: float = Field(
         default=30.0,
         alias="DAG_ENRICHMENT_TIMEOUT",
@@ -436,12 +436,12 @@ def __init__(
     self._agent_persistence = agent_persistence
     self._auto_embed = auto_embed
     self._auto_tag = auto_tag
-    
+
     # DAG enrichment (v2.1.0)
     self._dag = dag
     self._enable_enrichment = enable_enrichment
     self._enrichment_timeout = enrichment_timeout
-    
+
     logger.info("IngestionPipeline initialized", enable_enrichment=enable_enrichment)
 ```
 
@@ -454,15 +454,15 @@ def __init__(
 
 ```python
         # ... after core writes complete, before return ...
-        
+
         # DAG Enrichment (v2.1.0 - optional post-processing)
         enrichment_status = "not_attempted"
         enrichment_error = None
         enrichment_facts_count = 0
-        
+
         if self._enable_enrichment and self._dag and status in ("ok", "partial"):
             enrichment_status = "disabled" if not self._enable_enrichment else "not_attempted"
-            
+
             try:
                 import asyncio
                 # Run enrichment with timeout (NO RETRY on failure)
@@ -531,7 +531,7 @@ async def save_memory_handler(
 ) -> Dict[str, Any]:
     """
     Save memory with tiered fallback (v2.1.0 - corrected).
-    
+
     Tier 1: Try full pipeline (core + enrichment if enabled)
             - Enrichment failure = 200 with enrichment_status="failed" (NO RETRY)
             - Core failure = fall to Tier 2
@@ -539,10 +539,10 @@ async def save_memory_handler(
             - Success = 200 with tier_used="direct_db"
             - Failure = fall to Tier 3
     Tier 3: Return 503 Service Unavailable
-    
+
     KEY INVARIANT: Enrichment is NEVER retried. If it fails, core write already persisted.
     """
-    
+
     # Tier 1: Full pipeline (preferred path)
     if substrate_service:
         try:
@@ -554,18 +554,18 @@ async def save_memory_handler(
                 # ... other params ...
                 substrate_service=substrate_service,
             )
-            
+
             # Enrichment failure is NOT a tier failure - core write succeeded
             # Just return 200 with enrichment_status="failed"
             return result
-            
+
         except Exception as pipeline_error:
             logger.warning(
                 "Full pipeline failed, falling back to direct DB",
                 error=str(pipeline_error),
             )
             # Fall through to Tier 2
-    
+
     # Tier 2: Direct DB (emergency fallback)
     try:
         result = await _save_via_direct_db(
@@ -579,7 +579,7 @@ async def save_memory_handler(
         result["warnings"] = ["pipeline_unavailable", "enrichment_skipped", "neo4j_skipped"]
         logger.info("Saved via direct DB fallback", packet_id=result.get("packet_id"))
         return result
-        
+
     except Exception as direct_db_error:
         logger.error(
             "All fallbacks exhausted",
@@ -607,18 +607,18 @@ async def _save_via_main_pipeline(
 ) -> Dict[str, Any]:
     """Save memory via main L9 ingestion pipeline (full DAG)."""
     # ... existing code to build packet_in ...
-    
+
     # Use main ingestion pipeline
     start_time = time.time()
     result = await substrate_service.write_packet(packet_in)
     ingest_time_ms = (time.time() - start_time) * 1000
-    
+
     if result.status == "error":
         raise HTTPException(
             status_code=500,
             detail=f"Memory ingestion failed: {result.error_message}",
         )
-    
+
     # Wire through ALL fields from PacketWriteResult
     return {
         "packet_id": str(result.packet_id),
@@ -630,16 +630,16 @@ async def _save_via_main_pipeline(
         "created_at": datetime.utcnow().isoformat(),
         "written_tables": result.written_tables,
         "ingest_time_ms": ingest_time_ms,
-        
+
         # NEW: Enrichment visibility (v2.1.0)
         "enrichment_status": result.enrichment_status,
         "enrichment_error": result.enrichment_error,
         "enrichment_facts_count": result.enrichment_facts_count,
-        
+
         # NEW: Tier visibility (v2.1.0)
         "tier_used": result.write_tier_used,
         "warnings": result.warnings,
-        
+
         "pipeline": "main_dag",
     }
 ```
@@ -678,7 +678,7 @@ from core.schemas.packet_envelope_v2 import PacketEnvelopeIn
 
 class TestUnifiedPipeline:
     """Test IngestionPipeline with optional DAG enrichment."""
-    
+
     @pytest.mark.asyncio
     async def test_core_writes_with_enrichment_disabled(self, mock_repository):
         """Core writes succeed when enrichment is disabled."""
@@ -687,13 +687,13 @@ class TestUnifiedPipeline:
             enable_enrichment=False,
         )
         packet = PacketEnvelopeIn(packet_type="test", payload={"content": "test"})
-        
+
         result = await pipeline.ingest(packet)
-        
+
         assert result.status == "ok"
         assert result.enrichment_status == "disabled"
         assert "packet_store" in result.written_tables
-    
+
     @pytest.mark.asyncio
     async def test_core_writes_plus_enrichment(self, mock_repository, mock_dag):
         """Core writes + enrichment work when enabled."""
@@ -703,29 +703,29 @@ class TestUnifiedPipeline:
             enable_enrichment=True,
         )
         packet = PacketEnvelopeIn(packet_type="test", payload={"content": "test"})
-        
+
         result = await pipeline.ingest(packet)
-        
+
         assert result.status == "ok"
         assert result.enrichment_status == "success"
         assert result.enrichment_facts_count >= 0
         assert result.write_tier_used == "full"
-    
+
     @pytest.mark.asyncio
     async def test_enrichment_failure_does_not_block_core(self, mock_repository):
         """Enrichment failure = core write persisted, enrichment_status='failed'."""
         mock_dag = AsyncMock()
         mock_dag.enrich.side_effect = Exception("DAG exploded")
-        
+
         pipeline = IngestionPipeline(
             repository=mock_repository,
             dag=mock_dag,
             enable_enrichment=True,
         )
         packet = PacketEnvelopeIn(packet_type="test", payload={"content": "test"})
-        
+
         result = await pipeline.ingest(packet)
-        
+
         assert result.status == "ok"  # Core write succeeded!
         assert result.enrichment_status == "failed"
         assert result.enrichment_error == "DAG exploded"
@@ -735,7 +735,7 @@ class TestUnifiedPipeline:
 
 class TestMCPFallbackTiers:
     """Test MCP tiered fallback behavior."""
-    
+
     @pytest.mark.asyncio
     async def test_mcp_returns_200_on_enrichment_failure(self, mock_substrate_service):
         """Enrichment failure = 200 with enrichment_status='failed' (NO retry)."""
@@ -747,41 +747,41 @@ class TestMCPFallbackTiers:
             enrichment_error="DAG timeout",
             write_tier_used="core_only",
         )
-        
+
         result = await save_memory_handler(
             user_id="test",
             content="test",
             kind="fact",
             substrate_service=mock_substrate_service,
         )
-        
+
         assert result["enrichment_status"] == "failed"
         assert result["tier_used"] == "core_only"
         # HTTP 200 returned (not 500)
-    
+
     @pytest.mark.asyncio
     async def test_mcp_falls_back_to_direct_db_on_pipeline_failure(self):
         """Pipeline failure = try direct DB, return with tier='direct_db'."""
         mock_substrate_service = AsyncMock()
         mock_substrate_service.write_packet.side_effect = Exception("Pipeline down")
-        
+
         with patch("mcp_memory.src.routes.memory_unified._save_via_direct_db") as mock_direct:
             mock_direct.return_value = {"packet_id": str(uuid4())}
-            
+
             result = await save_memory_handler(
                 user_id="test",
                 content="test",
                 kind="fact",
                 substrate_service=mock_substrate_service,
             )
-            
+
             assert result["tier_used"] == "direct_db"
             assert "pipeline_unavailable" in result["warnings"]
 
 
 class TestIdempotency:
     """Test that same packet enriched twice doesn't duplicate facts."""
-    
+
     @pytest.mark.asyncio
     async def test_no_duplicate_facts_on_replay(self, mock_repository, mock_dag):
         """Same packet ingested twice = same fact count (UPSERT)."""
@@ -795,32 +795,32 @@ class TestIdempotency:
             packet_type="test",
             payload={"content": "test"},
         )
-        
+
         # First ingestion
         result1 = await pipeline.ingest(packet)
         facts_v1 = await mock_repository.query_facts(packet.packet_id)
-        
+
         # Second ingestion (same packet)
         result2 = await pipeline.ingest(packet)
         facts_v2 = await mock_repository.query_facts(packet.packet_id)
-        
+
         assert len(facts_v1) == len(facts_v2), "Facts duplicated on replay!"
 
 
 class TestEnrichmentTimeout:
     """Test enrichment timeout handling."""
-    
+
     @pytest.mark.asyncio
     async def test_enrichment_timeout_logs_and_continues(self, mock_repository):
         """Slow DAG = timeout, core write persisted, enrichment_status='failed'."""
         import asyncio
-        
+
         async def slow_enrich(*args, **kwargs):
             await asyncio.sleep(60)  # Way longer than timeout
-        
+
         mock_dag = AsyncMock()
         mock_dag.enrich = slow_enrich
-        
+
         pipeline = IngestionPipeline(
             repository=mock_repository,
             dag=mock_dag,
@@ -828,9 +828,9 @@ class TestEnrichmentTimeout:
             enrichment_timeout=0.1,  # 100ms timeout
         )
         packet = PacketEnvelopeIn(packet_type="test", payload={"content": "test"})
-        
+
         result = await pipeline.ingest(packet)
-        
+
         assert result.status == "ok"  # Core write succeeded
         assert result.enrichment_status == "failed"
         assert "timed out" in result.enrichment_error.lower()

@@ -197,12 +197,12 @@ def test_config_passed_to_node():
     graph.set_entry_point("test")
     graph.add_edge("test", END)
     compiled = graph.compile()
-    
+
     result = asyncio.run(compiled.ainvoke(
         {"value": 1, "config_received": False},
         config={"configurable": {"my_dep": "test_value"}}
     ))
-    
+
     assert result["config_received"], "LangGraph did NOT pass config to node!"
     print("SUCCESS: LangGraph passes config to nodes")
 
@@ -277,7 +277,7 @@ flowchart TD
     subgraph current [Current: Linear Manual]
         A1[intake] --> A2[reasoning] --> A3[memory_write] --> A4[semantic_embed] --> A5[extract_insights]
     end
-    
+
     subgraph target [Target: Native with Conditional Routing]
         B1[intake] --> B2[reasoning] --> B3[memory_write]
         B3 --> B4{should_embed?}
@@ -304,12 +304,12 @@ flowchart TD
 def _get_config_dependency(config, key: str, default=None):
     """
     Safely extract a configurable dependency from RunnableConfig.
-    
+
     Args:
         config: RunnableConfig or None
         key: Key to extract from configurable dict
         default: Default value if not found
-        
+
     Returns:
         The dependency value or default
     """
@@ -513,24 +513,24 @@ def _extract_text_for_routing(envelope: dict) -> str:
 def route_after_memory_write(state: SubstrateGraphState) -> str:
     """
     Route after memory_write_node: skip semantic_embed if low-value content.
-    
+
     GMP-42: Implements skip pattern at graph level (more efficient than in-node check).
-    
+
     Returns:
         "do_embed" to run semantic_embed_node
         "skip_embed" to skip directly to extract_insights_node
     """
     try:
         envelope = state.get("envelope", {})
-        
+
         # Guard: empty or invalid envelope
         if not envelope:
             logger.warning("route_after_memory_write: Empty envelope, defaulting to 'do_embed'")
             return "do_embed"
-        
+
         payload = envelope.get("payload", {})
         packet_type = envelope.get("packet_type", "")
-        
+
         # Check if content type is embeddable
         should_embed = (
             "semantic" in packet_type.lower()
@@ -539,19 +539,19 @@ def route_after_memory_write(state: SubstrateGraphState) -> str:
             or "content" in payload
             or "description" in payload
         )
-        
+
         if not should_embed:
             logger.debug(f"route_after_memory_write: packet_type={packet_type} not embeddable, skip")
             return "skip_embed"
-        
+
         # Check GMP-42 skip patterns
         text = _extract_text_for_routing(envelope)
         if _should_skip_embedding(text):
             logger.debug(f"route_after_memory_write: GMP-42 skip pattern matched, skip")
             return "skip_embed"
-        
+
         return "do_embed"
-        
+
     except Exception as e:
         logger.error(f"route_after_memory_write: Error in routing: {e}, defaulting to 'do_embed'")
         return "do_embed"
@@ -570,7 +570,7 @@ Modify `build_substrate_graph()` to use conditional edges.
 ```python
 def build_substrate_graph() -> StateGraph:
     """Build the LangGraph DAG with conditional routing."""
-    
+
     graph = StateGraph(SubstrateGraphState)
 
     # Add nodes (unchanged)
@@ -587,7 +587,7 @@ def build_substrate_graph() -> StateGraph:
     graph.set_entry_point("intake_node")
     graph.add_edge("intake_node", "reasoning_node")
     graph.add_edge("reasoning_node", "memory_write_node")
-    
+
     # CONDITIONAL: Route after memory_write based on content
     graph.add_conditional_edges(
         "memory_write_node",
@@ -597,10 +597,10 @@ def build_substrate_graph() -> StateGraph:
             "skip_embed": "extract_insights_node",
         }
     )
-    
+
     # Continue from semantic_embed to insights
     graph.add_edge("semantic_embed_node", "extract_insights_node")
-    
+
     # Rest of pipeline (linear)
     graph.add_edge("extract_insights_node", "store_insights_node")
     graph.add_edge("store_insights_node", "world_model_trigger_node")
@@ -623,11 +623,11 @@ import asyncio  # Add at top of file if not present
 
 async def run(self, envelope: PacketEnvelope) -> PacketWriteResult:
     """Run the substrate DAG using native LangGraph execution."""
-    
+
     # Validate envelope shape before invoke
     if not isinstance(envelope, PacketEnvelope):
         raise ValueError(f"envelope must be PacketEnvelope, got {type(envelope)}")
-    
+
     initial_state: SubstrateGraphState = {
         "envelope": envelope.model_dump(mode="json"),
         "reasoning_block": None,
@@ -639,7 +639,7 @@ async def run(self, envelope: PacketEnvelope) -> PacketWriteResult:
         "world_model_triggered": False,
         "errors": [],
     }
-    
+
     # Validate state shape
     if not isinstance(initial_state["envelope"], dict):
         raise ValueError("envelope must serialize to dict")
@@ -711,18 +711,18 @@ Build a separate enrichment graph or use subgraph for `enrich()`.
 def build_enrichment_graph() -> StateGraph:
     """Build enrichment-only DAG (skips intake, memory_write, semantic_embed)."""
     graph = StateGraph(SubstrateGraphState)
-    
+
     graph.add_node("reasoning_node", reasoning_node)
     graph.add_node("extract_insights_node", extract_insights_node)
     graph.add_node("store_insights_node", store_insights_node)
     graph.add_node("world_model_trigger_node", world_model_trigger_node)
-    
+
     graph.set_entry_point("reasoning_node")
     graph.add_edge("reasoning_node", "extract_insights_node")
     graph.add_edge("extract_insights_node", "store_insights_node")
     graph.add_edge("store_insights_node", "world_model_trigger_node")
     graph.add_edge("world_model_trigger_node", END)
-    
+
     return graph.compile()
 ```
 
@@ -779,9 +779,9 @@ async def test_intake_node_receives_config():
     state = {"envelope": make_test_envelope(), "errors": []}
     mock_repo = MagicMock()
     config = {"configurable": {"repository": mock_repo}}
-    
+
     result = await intake_node(state, config=config)
-    
+
     assert result is not None
     assert "envelope" in result
 ```
@@ -850,9 +850,9 @@ async def test_substrate_dag_run_native_execution():
         world_model_service=mock_world_model,
     )
     envelope = make_test_envelope("Valid content for embedding")
-    
+
     result = await dag.run(envelope)
-    
+
     assert result.status == "ok"
     assert "packet_store" in result.written_tables
 
@@ -861,9 +861,9 @@ async def test_substrate_dag_run_skips_embed_for_error():
     """DAG should skip semantic_embed for GMP-42 patterns."""
     dag = SubstrateDAG(...)
     envelope = make_test_envelope("Sorry, I encountered a temporary error. Please try again.")
-    
+
     result = await dag.run(envelope)
-    
+
     # Should succeed but not call semantic_embed
     assert result.status == "ok"
     # Verify semantic_embed was NOT called (via mock)
@@ -879,9 +879,9 @@ async def test_substrate_dag_enrich_native_execution():
     """enrich() should use enrichment graph, not manual calls."""
     dag = SubstrateDAG(...)
     envelope = make_persisted_envelope()  # Already has packet_id
-    
+
     result = await dag.enrich(envelope)
-    
+
     assert isinstance(result, EnrichmentResult)
     assert result.packet_id == envelope.packet_id
 ```
@@ -897,7 +897,7 @@ async def test_substrate_dag_enrich_native_execution():
 async def test_equivalence_native_vs_manual():
     """
     CRITICAL: Run same packets through both implementations, compare results.
-    
+
     This test should FAIL if native execution diverges from manual execution behavior.
     """
     test_packets = [
@@ -907,14 +907,14 @@ async def test_equivalence_native_vs_manual():
         make_test_envelope("Short", packet_type="memory"),  # < 10 chars
         make_test_envelope("Sorry, I encountered a temporary error.", packet_type="memory"),
     ]
-    
+
     for envelope in test_packets:
         # Run through OLD manual implementation (snapshot before refactor)
         old_result = await dag_manual_implementation(envelope)
-        
+
         # Run through NEW native implementation
         new_result = await dag_native_implementation(envelope)
-        
+
         # Compare results
         assert old_result.status == new_result.status, f"Status mismatch for {envelope}"
         assert old_result.written_tables == new_result.written_tables, f"Tables mismatch"
@@ -935,12 +935,12 @@ async def test_substrate_dag_run_timeout():
     async def slow_node(state, config=None):
         await asyncio.sleep(120)  # 2 minutes
         return state
-    
+
     # Replace a node with slow version
     # ...
-    
+
     result = await dag.run(envelope)
-    
+
     assert result.status == "error"
     assert "timeout" in result.error_message.lower()
 ```
@@ -962,7 +962,7 @@ async def test_substrate_dag_run_timeout():
 - **Low risk:** Changes are internal to SubstrateDAG, entry points unchanged
 - **Mitigation:** Equivalence test ensures behavior preserved
 - **Rollback:** Git revert if issues discovered
-- **Validation:** 
+- **Validation:**
 
   1. Run blocker verification scripts FIRST
   2. Run new test suite

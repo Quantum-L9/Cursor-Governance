@@ -177,11 +177,11 @@ flowchart TD
     subgraph partner [res.partner - Phase 1]
         partner_default["default_delivery_term\n(fcfs|appointment|False)\nApplies to ALL contacts"]
     end
-    
+
     subgraph lead [crm.lead - Phase 1]
         lead_dt["delivery_term\n(fcfs|appointment)\nCaptured during qualification"]
     end
-    
+
     subgraph transaction [plasticos.transaction - Phase 2]
         tx_dt["delivery_term\nDefault chain:\n1. supplier_id.default_delivery_term\n2. buyer_id.default_delivery_term\n3. 'appointment' (fallback)"]
         supplier_confirmation_sent
@@ -190,7 +190,7 @@ flowchart TD
         delivery_order_id["delivery_order_id\n(stock.picking)"]
         do_number
     end
-    
+
     subgraph load [plasticos.load - Phase 3]
         load_dt["delivery_term\n(EDITABLE - not related)"]
         override_reason["delivery_term_override_reason\n(required if changed)"]
@@ -198,17 +198,17 @@ flowchart TD
         dispatch_acknowledged
         dispatch_method
     end
-    
+
     subgraph po [purchase.order - Phase 4]
         po_dt["delivery_term\n(computed from TX)"]
     end
-    
+
     subgraph crons [Cron Jobs - Phase 5]
         cron_dispatch["cron_dispatch_acknowledgment\n(4h interval)"]
         cron_supplier["cron_supplier_confirmation\n(6h interval)"]
         cron_do["cron_auto_create_do\n(1h interval)"]
     end
-    
+
     partner -->|"supplier default"| transaction
     partner -->|"buyer default"| transaction
     lead -->|"on conversion"| transaction
@@ -235,33 +235,33 @@ sequenceDiagram
     participant LD as plasticos.load
     participant PO as purchase.order
     participant DO as stock.picking
-    
+
     Note over P: Sales sets default_delivery_term on contact
-    
+
     Note over L: Lead qualification captures delivery_term
     L->>T: delivery_term (on conversion)
-    
+
     Note over T: TX creation - default chain
     P->>T: supplier_id.default_delivery_term (priority 1)
     P->>T: buyer_id.default_delivery_term (priority 2)
     Note over T: Fallback: "appointment"
-    
+
     T->>LD: delivery_term (default on load create)
     T->>PO: delivery_term (computed)
-    
+
     Note over LD: Logistics can override (rare)
     LD->>LD: delivery_term changed
     LD->>LD: delivery_term_override_reason (REQUIRED)
-    
+
     Note over T: Supplier confirms readiness
     T->>T: supplier_confirmation_sent
     T->>T: supplier_confirmation_received
     T->>T: is_supplier_confirmed = True
-    
+
     Note over T: Auto-create DO when ready
     T->>DO: Create stock.picking
     DO->>T: delivery_order_id, do_number
-    
+
     Note over LD: Dispatch tracking
     LD->>LD: dispatch_sent
     LD->>LD: dispatch_acknowledged
@@ -298,7 +298,7 @@ from odoo import fields, models
 
 class ResPartnerDeliveryTerm(models.Model):
     """Add default delivery term to all partners (suppliers AND buyers)."""
-    
+
     _inherit = "res.partner"
 
     default_delivery_term = fields.Selection(
@@ -425,29 +425,29 @@ Add method (near other helper methods):
 ```python
 def _get_default_delivery_term(self):
     """Get delivery term default using priority chain.
-    
+
     Priority:
     1. Supplier's default_delivery_term (if set)
     2. Buyer's default_delivery_term (if set)
     3. "appointment" (fallback - safer/more conservative)
-    
+
     Note: At record creation, supplier_id/buyer_id may not be set yet.
     The field is editable, so user can always override.
     """
     # During create, context may have default values
     supplier_id = self.env.context.get("default_supplier_id")
     buyer_id = self.env.context.get("default_buyer_id")
-    
+
     if supplier_id:
         supplier = self.env["res.partner"].browse(supplier_id)
         if supplier.default_delivery_term:
             return supplier.default_delivery_term
-    
+
     if buyer_id:
         buyer = self.env["res.partner"].browse(buyer_id)
         if buyer.default_delivery_term:
             return buyer.default_delivery_term
-    
+
     # Fallback: "appointment" is safer (ensures coordination)
     return "appointment"
 ```
@@ -886,21 +886,21 @@ def _cron_check_dispatch_acknowledgments(self):
     """Check for dispatches sent but not acknowledged within threshold."""
     threshold_hours = 4
     threshold_dt = fields.Datetime.now() - timedelta(hours=threshold_hours)
-    
+
     unacknowledged = self.search([
         ("dispatch_sent", "!=", False),
         ("dispatch_sent", "<", threshold_dt),
         ("dispatch_acknowledged", "=", False),
         ("state", "in", ["dispatched", "scheduled"]),
     ])
-    
+
     for load in unacknowledged:
         _logger.warning(
             "Dispatch not acknowledged: %s (sent %s)",
             load.name,
             load.dispatch_sent,
         )
-    
+
     return True
 ```
 
@@ -926,14 +926,14 @@ Add method:
 @api.model
 def _cron_supplier_confirmation_followup(self):
     """Check for confirmation requests without response.
-    
+
     State flow: draft → active → pending_supplier → supplier_ready → ...
     By the time supplier_confirmation_sent is stamped, TX is typically
     in pending_supplier, not active. Search both states.
     """
     threshold_hours = 24
     threshold_dt = fields.Datetime.now() - timedelta(hours=threshold_hours)
-    
+
     # CALLOUT D FIX: Search active AND pending_supplier states
     # (TX moves to pending_supplier when confirmation is sent)
     pending = self.search([
@@ -942,7 +942,7 @@ def _cron_supplier_confirmation_followup(self):
         ("supplier_confirmation_received", "=", False),
         ("state", "in", ["active", "pending_supplier"]),  # NOT just "active"
     ])
-    
+
     for tx in pending:
         _logger.warning(
             "Supplier confirmation pending: %s (sent %s, state %s)",
@@ -950,7 +950,7 @@ def _cron_supplier_confirmation_followup(self):
             tx.supplier_confirmation_sent,
             tx.state,
         )
-    
+
     return True
 ```
 
@@ -971,7 +971,7 @@ Add method:
 @api.model
 def _cron_auto_create_delivery_orders(self):
     """Identify transactions ready for DO creation (stub - no business logic).
-    
+
     State flow: draft → active → pending_supplier → supplier_ready → ...
     A TX ready for DO creation could be in active, pending_supplier, or
     supplier_ready state. Search all three.
@@ -982,7 +982,7 @@ def _cron_auto_create_delivery_orders(self):
         ("delivery_order_id", "=", False),
         ("state", "in", ["active", "pending_supplier", "supplier_ready"]),  # NOT just "active"
     ])
-    
+
     for tx in ready:
         _logger.info(
             "Transaction ready for DO: %s (supplier confirmed %s, state %s)",
@@ -990,7 +990,7 @@ def _cron_auto_create_delivery_orders(self):
             tx.supplier_confirmation_received,
             tx.state,
         )
-    
+
     return True
 ```
 
@@ -1039,7 +1039,7 @@ Add delivery term and dispatch tracking groups to form view:
 <group string="Delivery Terms">
     <field name="delivery_term"/>
     <field name="delivery_term_overridden" invisible="1"/>
-    <field name="delivery_term_override_reason" 
+    <field name="delivery_term_override_reason"
            invisible="not delivery_term_overridden"
            required="delivery_term_overridden"/>
 </group>

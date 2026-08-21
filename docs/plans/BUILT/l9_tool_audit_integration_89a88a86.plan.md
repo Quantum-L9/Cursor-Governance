@@ -160,7 +160,7 @@ except Exception as e:
 ## Estimated Time
 
 - Phase 1: 5 minutes
-- Phase 2: 10 minutes  
+- Phase 2: 10 minutes
 - Phase 3: 10 minutes
 - Phase 4: 10 minutes
 - Phase 5: 5 minutes

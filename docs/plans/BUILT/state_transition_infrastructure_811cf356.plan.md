@@ -95,13 +95,13 @@ flowchart TD
         delivered --> invoiced
         invoiced --> closed
     end
-    
+
     subgraph new [New States - This Plan]
         supplier_ready2[supplier_ready] --> do_created
         do_created --> dispatched
         dispatched --> in_transit2[in_transit]
     end
-    
+
     subgraph bypass [Bypass Context]
         cron[Cron Job] -->|"bypass_state_guard=True"| action_method
         action_method -->|"with_context"| write
@@ -201,7 +201,7 @@ def _validate_state_transition(self, rec, vals):
 ```python
 def _validate_state_transition(self, rec, vals):
     """Enforce that state changes only happen via dedicated action methods.
-    
+
     System processes (crons, automated workflows) can bypass this guard by
     setting context key 'bypass_state_guard' to True. This should only be
     used by action_* methods, never by direct write() calls.
@@ -210,7 +210,7 @@ def _validate_state_transition(self, rec, vals):
         # Allow system/cron state changes via context bypass
         if self.env.context.get("bypass_state_guard"):
             return
-        
+
         # Allow explicit transitions to active or closed (existing behavior)
         allow = vals.get("state") == "active" or (
             vals.get("state") == "closed" and vals.get("commission_locked") is True
@@ -239,7 +239,7 @@ def _validate_state_transition(self, rec, vals):
 ```python
 def action_mark_do_created(self):
     """Mark transaction as having a delivery order created.
-    
+
     Called by cron or system process after DO is linked.
     Uses bypass_state_guard context to allow state transition.
     """
@@ -266,7 +266,7 @@ def action_mark_do_created(self):
 ```python
 def action_mark_dispatched(self):
     """Mark transaction as dispatched (load sent to carrier).
-    
+
     Called when the linked load transitions to dispatched state.
     Uses bypass_state_guard context to allow state transition.
     """
@@ -294,7 +294,7 @@ def action_mark_dispatched(self):
 ```python
 def action_mark_in_transit(self):
     """Mark transaction as in transit (carrier picked up load).
-    
+
     Called when the linked load transitions to picked_up state.
     Uses bypass_state_guard context to allow state transition.
     """
@@ -318,7 +318,7 @@ def action_mark_in_transit(self):
 ```python
 def action_mark_delivered(self):
     """Mark transaction as delivered.
-    
+
     Called when the linked load transitions to delivered state.
     Uses bypass_state_guard context to allow state transition.
     """
@@ -352,12 +352,12 @@ def _cron_auto_create_delivery_orders(self):
         ("delivery_order_id", "=", False),
         ("state", "=", "supplier_ready"),  # Only supplier_ready state
     ])
-    
+
     for tx in ready:
         # TODO: Create stock.picking here
         # do = self.env["stock.picking"].create({...})
         # tx.delivery_order_id = do.id
-        
+
         # After DO is linked, transition state
         if tx.delivery_order_id:
             tx.action_mark_do_created()
@@ -367,7 +367,7 @@ def _cron_auto_create_delivery_orders(self):
                 tx.name,
                 tx.supplier_confirmation_received,
             )
-    
+
     return True
 ```
 

@@ -49,10 +49,10 @@ isProject: false
 
 # Graphiti Global Memory Integration Plan v2.1
 
-**GMP_RUN_ID:** `GMP-GRAPHITI-GLOBAL-001` (+ deferred `GMP-GRAPHITI-GATES-002`)  
-**Version:** 2.1.0  
-**GMP Format:** v3.2.0 (canonical, phases 0–6)  
-**Date:** 2026-06-06  
+**GMP_RUN_ID:** `GMP-GRAPHITI-GLOBAL-001` (+ deferred `GMP-GRAPHITI-GATES-002`)
+**Version:** 2.1.0
+**GMP Format:** v3.2.0 (canonical, phases 0–6)
+**Date:** 2026-06-06
 **Status:** AWAITING PHASE 0 HUMAN APPROVAL
 
 ---
@@ -647,8 +647,8 @@ When prompt matches `GMP|phase [0-6]|modification lock|TODO plan`:
 
 ## Final Declaration (Phase 6 — to be completed)
 
-> GLOBAL-001 phases complete. GATES-002 complete separately when write enforcement enabled.  
-> GMP run `GMP-GRAPHITI-GLOBAL-001` finalized.  
+> GLOBAL-001 phases complete. GATES-002 complete separately when write enforcement enabled.
+> GMP run `GMP-GRAPHITI-GLOBAL-001` finalized.
 > No further substrate changes permitted without new GMP run.
 
 ---

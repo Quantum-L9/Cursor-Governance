@@ -184,4 +184,3 @@ These notes document decisions made during the recursive verification pass:
 3. **@api.model on cron methods**: Not strictly required for cron execution (the `model` variable is already an empty recordset from `ir_actions.py`), but is the correct semantic decorator and matches Odoo's `@api.model` documentation for "class methods that do not operate on a specific recordset."
 4. **Advisory locks**: Not an Odoo-native pattern (Odoo 18+ has built-in cron deactivation after 5 failures in 7 days), but is a valid defensive pattern for this project's custom crons that create records or send emails.
 5. **Bare ref without module prefix**: Standard Odoo behavior for same-module references. Auto-generated model xmlids resolve within module namespace.
-

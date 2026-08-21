@@ -47,18 +47,18 @@ flowchart TD
         AsyncOpenAI[AsyncOpenAI Client]
         BlueprintAdapter[BlueprintAdapter]
         MetaOrchestrator[MetaOrchestrator]
-        
+
         AsyncOpenAI --> BlueprintAdapter
         BlueprintAdapter --> MetaOrchestrator
         MetaOrchestrator --> AppState[app.state.meta_orchestrator]
     end
-    
+
     subgraph Routes [/meta/* Endpoints]
         EvaluateRoute[POST /meta/evaluate]
         CompareRoute[POST /meta/compare]
         ImproveRoute[POST /meta/improve]
     end
-    
+
     AppState --> Routes
 ```
 

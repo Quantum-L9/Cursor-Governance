@@ -95,7 +95,7 @@ Before any code, here is the verified field mapping against actual models:
 
 ## T1: Replace Hardcoded Gate Count with Constant
 
-**File**: `matcher.py`  
+**File**: `matcher.py`
 **Location**: Top of `BuyerMatcher` class (after `_description`)
 
 ```python
@@ -124,8 +124,8 @@ added without updating the counter). Using a constant prevents future drift.
 
 ## T2: Add Missing Fields to Extraction (Intake Branch)
 
-**File**: `matcher.py`  
-**Method**: `_extract_material_requirements()`  
+**File**: `matcher.py`
+**Method**: `_extract_material_requirements()`
 **Location**: Inside the `if intake:` block (~line 197), add after the `filler_type_id` line:
 
 ```python
@@ -154,8 +154,8 @@ added without updating the counter). Using a constant prevents future drift.
 
 ## T3: Add Explicit Defaults to Extraction (Fallback Branch)
 
-**File**: `matcher.py`  
-**Method**: `_extract_material_requirements()`  
+**File**: `matcher.py`
+**Method**: `_extract_material_requirements()`
 **Location**: Inside the `return` block under `# Fallback: supplier facility profile` (~line 237):
 
 Add after the existing filler fields:
@@ -186,7 +186,7 @@ Add after the existing filler fields:
 
 ## T4: Add Helper Methods
 
-**File**: `matcher.py`  
+**File**: `matcher.py`
 **Location**: After `_check_all_gates()` method (end of class).
 
 ### T4a: Math import at module top
@@ -288,7 +288,7 @@ def _haversine_miles(self, lat1, lon1, lat2, lon2):
 
 ## T5: Add Gates 13-18 to `_check_gates_strict()`
 
-**File**: `matcher.py`  
+**File**: `matcher.py`
 **Location**: After Gate 12 (Filler Matching), before the `return` statement.
 
 ```python
@@ -364,8 +364,8 @@ if max_distance > 0:
 
 ## T6: Add Gates 13-18 as Soft Signals in `_check_gates_relaxed()`
 
-**File**: `matcher.py`  
-**Method**: `_check_gates_relaxed()`  
+**File**: `matcher.py`
+**Method**: `_check_gates_relaxed()`
 
 Replace the entire method with:
 
@@ -435,8 +435,8 @@ def _check_gates_relaxed(self, buyer_profile, material_req):
 
 ## T7: Add Source Type Gate to `_build_strict_query()`
 
-**File**: `graph_service.py`  
-**Method**: `_build_strict_query()`  
+**File**: `graph_service.py`
+**Method**: `_build_strict_query()`
 **Location**: After Gate 14 (Certifications), before RETURN.
 
 ```cypher
@@ -458,8 +458,8 @@ AND (
 
 ## T8: Add Source Type Soft Multiplier to `_build_relaxed_query()`
 
-**File**: `graph_service.py`  
-**Method**: `_build_relaxed_query()`  
+**File**: `graph_service.py`
+**Method**: `_build_relaxed_query()`
 **Location**: After the `cert_mult` CASE block, add:
 
 ```cypher
@@ -485,7 +485,7 @@ END AS source_type_mult
 
 ## T9: Add `source_type` to `_intake_to_match_params()`
 
-**File**: `graph_service.py`  
+**File**: `graph_service.py`
 **Location**: After the `filler_pct` line in the return dict:
 
 ```python
@@ -496,8 +496,8 @@ END AS source_type_mult
 
 ## T11: Add `feedstock_type` to Facility Sync
 
-**File**: `graph_service.py`  
-**Method**: `_build_facility_payloads()`  
+**File**: `graph_service.py`
+**Method**: `_build_facility_payloads()`
 **Location**: In the payload dict, add after `accepts_filled_materials`:
 
 ```python
@@ -619,4 +619,3 @@ or soft_signal in relaxed mode (Python or Cypher)
 - **V43**: No import cycles between `plasticos_buyer_match_engine` and other modules
 - **V44**: `_build_facility_payloads()` includes `feedstock_type` in the sync payload
 - **V45**: Facility sync Cypher includes `fac.feedstock_type` in ON CREATE/ON MATCH SET
-

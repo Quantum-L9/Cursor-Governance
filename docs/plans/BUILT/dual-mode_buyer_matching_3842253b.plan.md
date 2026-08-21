@@ -29,17 +29,17 @@ flowchart TD
     subgraph IntakeForm[Intake Form]
         ModeField[match_mode field]
     end
-    
+
     subgraph Stage1[Stage 1 - Python matcher.py]
         StrictPy[Strict: All gates hard]
         RelaxedPy[Relaxed: Only polymer hard]
     end
-    
+
     subgraph Stage2[Stage 2 - Cypher graph_service.py]
         StrictCypher[_build_strict_query: 14 WHERE gates]
         RelaxedCypher[_build_relaxed_query: 1 WHERE + 13 CASE]
     end
-    
+
     ModeField -->|strict| StrictPy --> StrictCypher
     ModeField -->|relaxed| RelaxedPy --> RelaxedCypher
 ```
@@ -189,25 +189,25 @@ matches = matcher.find_matches_for_supplier(
 ```python
 def match_buyers(self, intake, facility_ids, mode='strict'):
     """Run Stage 2 matching with mode-appropriate query.
-    
+
     Args:
         intake: plasticos.intake record
         facility_ids: List of facility IDs from Stage 1 survivors
         mode: 'strict' or 'relaxed'
-    
+
     Returns:
         List of match results with scores
     """
     params = self._intake_to_match_params(intake)
     params['facility_ids'] = facility_ids
-    
+
     if mode == 'strict':
         query = self._build_strict_query()
         run_id = 'strict_v1'
     else:
         query = self._build_relaxed_query()
         run_id = 'relaxed_v1'
-    
+
     rows = self._execute_cypher(query, params)
     self._persist_match_results(intake, rows, l9_run_id=run_id)
     return rows
@@ -262,4 +262,3 @@ def match_buyers(self, intake, facility_ids, mode='strict'):
 - MFI fields synced to MaterialProfile nodes
 - Match results tagged with `l9_run_id` = `strict_v1` or `relaxed_v1`
 - No duplicate MatchResult class
-

@@ -99,7 +99,7 @@ Add to `EXCLUDE_DIRS`:
 
 ```python
 EXCLUDE_DIRS = {
-    "tests", "_archived", "__pycache__", ".venv", "venv", ".git", 
+    "tests", "_archived", "__pycache__", ".venv", "venv", ".git",
     "node_modules", "docs", "codegen", "igor"
 }
 ```
@@ -306,21 +306,21 @@ flowchart TD
     P2[Phase 2: HIGH Priority]
     P3[Phase 3: MEDIUM Priority]
     P4[Phase 4: LOW Priority]
-    
+
     P0 --> P1
     P1 --> P2
     P2 --> P3
     P3 --> P4
-    
+
     P0 --> |Install tools| TOOLS[pip install vulture ruff]
     P0 --> |Fix exclusions| EXCL[Update EXCLUDE_DIRS]
-    
+
     P1 --> |120 false positives| FP[Exclude archived + codegen]
-    
+
     P2 --> |33 critical| WIRE[Wire routers + deps + tools]
-    
+
     P3 --> |313 findings| AUDIT[Audit and clean per file]
-    
+
     P4 --> |3 findings| VERIFY[Verify and fix]
 ```
 

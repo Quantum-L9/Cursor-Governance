@@ -66,4 +66,3 @@ graph LR
 2. Implement surgical patch detection (identifying exact line ranges from findings).
 3. Add a CLI interface to run the generator on existing audit reports.
 4. Wire the generator as an optional post-processing step in `scripts/perplexity_audit_agent.py`.
-

@@ -54,7 +54,7 @@ Git doesn't track empty directories. After deleting all test files, the 24 empty
 
 ### 5. No demo/sample data
 
-No module has demo data. Testers will log into a system with seed reference data (polymers, colors, forms, etc.) but **zero business records** — no partners, intakes, transactions, offers, or loads. 
+No module has demo data. Testers will log into a system with seed reference data (polymers, colors, forms, etc.) but **zero business records** — no partners, intakes, transactions, offers, or loads.
 
 Options:
 - **Manual**: Testers create records by hand (tests the full create flow but is slow)

@@ -264,7 +264,7 @@ Highest-value single correction: **A1 at LLM-Router SSOT** — one publish remed
 - Alignment violation table replaces ad-hoc “also update docs maybe.”
 
 ### Estimate
-**Total:** 0.5–1.5 days (extra SEO-Bot + contract/gate sync)  
+**Total:** 0.5–1.5 days (extra SEO-Bot + contract/gate sync)
 **GMPs:** 3 — (1) LLM-Router publish, (2) Website-Bot alignment+Agent, (3) SEO-Bot pin
 
 ### Final Validation

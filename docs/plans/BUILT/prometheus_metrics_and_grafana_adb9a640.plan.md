@@ -39,18 +39,18 @@ flowchart LR
         A[ExecutorToolRegistry] --> B[dispatch_tool_call]
         B --> C[log_tool_invocation]
     end
-    
+
     subgraph Observability[Observability Layer]
         C --> D[record_tool_invocation]
         D --> E[Prometheus Registry]
         E --> F["/metrics endpoint"]
     end
-    
+
     subgraph Visualization[Visualization]
         F --> G[Prometheus Scraper]
         G --> H[Grafana Dashboard]
     end
-    
+
     subgraph Storage[Memory Storage]
         C --> I[ingest_packet]
         I --> J[PostgreSQL packet_store]

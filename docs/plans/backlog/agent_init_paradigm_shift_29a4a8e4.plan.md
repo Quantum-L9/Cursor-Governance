@@ -50,14 +50,14 @@ flowchart TD
         P7[Phase 7: Verify and Lock]
         P0 --> P1 --> P2 --> P3 --> P4 --> P5 --> P6 --> P7
     end
-    
+
     subgraph modules [Modules Enabled at Bootstrap]
         M1[Event Queue]
         M2[Tool Audit]
         M3[Virtual Context]
         M4[Evaluator]
     end
-    
+
     P7 -->|READY| modules
     modules --> Executor
     Executor -->|approval_gate| ApprovalManager

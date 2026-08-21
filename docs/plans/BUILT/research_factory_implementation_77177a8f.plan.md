@@ -137,10 +137,10 @@ Resolves inter-agent dependencies from glue YAML:
 class GlueResolver:
     def resolve_imports(self, agent_name: str) -> list[ImportSpec]:
         """Resolve what this agent imports from others"""
-    
+
     def resolve_wirings(self, agent_name: str) -> list[WiringSpec]:
         """Resolve packet/API connections"""
-    
+
     def get_dependency_order(self, agents: list[str]) -> list[str]:
         """Topological sort for extraction order"""
 ```
@@ -155,13 +155,13 @@ class GlueResolver:
 class AgentRegistry:
     def __init__(self, config_dir: str = "config/agents"):
         """Load agent configs from YAML files"""
-    
+
     def register_agent(self, config: AgentConfig) -> None:
         """Register an agent configuration"""
-    
+
     def get_agent_config(self, agent_id: str) -> Optional[AgentConfig]:
         """Get config by ID"""
-    
+
     def list_agents(self) -> list[str]:
         """List all registered agent IDs"""
 ```
@@ -351,7 +351,7 @@ flowchart LR
     P3["Phase 3\nExtractor"]
     P4["Phase 4\nIntegration"]
     P5["Phase 5\nAdvanced"]
-    
+
     P1 --> P2
     P2 --> P3
     P3 --> P4

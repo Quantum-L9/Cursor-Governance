@@ -33,11 +33,11 @@ flowchart TD
         B[Category 2: Nested One2many Fields]
         C[Category 3: Audit Script False Positives]
     end
-    
+
     A --> Fix1[Update XML: Remove x_ prefix]
     B --> Fix2[No fix needed - fields exist on related model]
     C --> Fix3[Improve audit script]
-    
+
     Fix1 --> Result1[23 fields across 5 files]
     Fix2 --> Result2[65+ fields - false positives]
     Fix3 --> Result3[Better detection logic]

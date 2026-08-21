@@ -38,25 +38,25 @@ flowchart TB
         MCP[MCPClient]
         GMP[GMPWorker]
     end
-    
+
     subgraph orchestrators [Orchestrator Layer]
         MemOrch[MemoryOrchestrator]
         ActOrch[ActionToolOrchestrator]
         Housekeep[Housekeeping]
         Validator[Validator]
     end
-    
+
     subgraph orchestration [Orchestration Layer]
         PlanExec[PlanExecutor]
         WSRouter[LangGraphRouter]
     end
-    
+
     subgraph deps [Dependencies - Already Exist]
         Substrate[MemorySubstrateService]
         ToolReg[ExecutorToolRegistry]
         WorldModel[WorldModelRuntime]
     end
-    
+
     MCP -->|JSON-RPC stdio| ExternalMCP[MCP Servers]
     GMP -->|subprocess| Cursor[Cursor CLI]
     MemOrch --> Substrate
@@ -84,7 +84,7 @@ async def _call_mcp_tool(self, server_id: str, tool_name: str, arguments: dict) 
     proc = self._server_processes.get(server_id)
     if not proc:
         proc = await self._start_server(server_id)
-    
+
     request = {"jsonrpc": "2.0", "method": "tools/call", "params": {"name": tool_name, "arguments": arguments}, "id": uuid4().hex}
     proc.stdin.write(json.dumps(request) + "\n")
     response = await self._read_response(proc.stdout)
@@ -107,13 +107,13 @@ async def _call_mcp_tool(self, server_id: str, tool_name: str, arguments: dict) 
 async def _execute_gmp(self, gmp_markdown: str, repo_root: str, caller: str, metadata: dict) -> dict:
     gmp_file = Path(repo_root) / ".cursor" / "gmp_task.md"
     gmp_file.write_text(gmp_markdown)
-    
+
     proc = await asyncio.create_subprocess_exec(
         "cursor", "--goto", repo_root, "--file", str(gmp_file),
         stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
     )
     stdout, stderr = await proc.communicate()
-    
+
     return {"success": proc.returncode == 0, "output": stdout.decode(), "error": stderr.decode() if proc.returncode else None}
 ```
 

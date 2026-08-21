@@ -25,8 +25,8 @@ The audit script flagged 13 `Config` class occurrences, but these are **Pydantic
 
 ### TODO T1: Fix Pydantic Config False Positive
 
-**File:** [scripts/audit_orphan_classes.py](scripts/audit_orphan_classes.py)  
-**Line:** ~87 (in `_extract_class_info` method)  
+**File:** [scripts/audit_orphan_classes.py](scripts/audit_orphan_classes.py)
+**Line:** ~87 (in `_extract_class_info` method)
 **Action:** Insert filter for Pydantic inner Config classes
 
 ```python
@@ -39,7 +39,7 @@ if node.name == "Config" and any(
 
 ### TODO T2: Create Comprehensive Documentation
 
-**File:** `reports/Audit_Duplicate_Classes.md` (new)  
+**File:** `reports/Audit_Duplicate_Classes.md` (new)
 **Action:** Create documentation with all 5 refinements incorporated
 
 ---
@@ -79,7 +79,7 @@ if node.name == "Config" and any(
 
 ```
 BackendType.SYMPY - 0 usages
-BackendType.CYTHON - 0 usages  
+BackendType.CYTHON - 0 usages
 BackendType.F2PY - 0 usages
 BackendType.MPMATH - 0 usages
 ```
@@ -126,7 +126,7 @@ When approved, execute these exact steps:
 1. DELETE services/symbolic_computation/models.py
 
 2. UPDATE imports in 3 files:
-   - test_symbolic_computation.py line 16: 
+   - test_symbolic_computation.py line 16:
      from symbolic_computation.models → from symbolic_computation.core.models
    - README.md line 129:
      from symbolic_computation.models → from symbolic_computation.core.models

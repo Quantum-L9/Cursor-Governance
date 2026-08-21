@@ -45,7 +45,7 @@ todos:
 Three documentation packs are **complementary, not overlapping**:
 
 1. **AI-OS Strategy** = VISION (what revolutionary agents look like)
-2. **QPF Factory Strategy** = METHOD (YAML-to-code pipeline patterns)  
+2. **QPF Factory Strategy** = METHOD (YAML-to-code pipeline patterns)
 3. **CGA Spec Library** = FRAGMENTS (81 YAML specs for implementation)
 4. **sympy module** = ENGINE (symbolic computation for code generation)
 

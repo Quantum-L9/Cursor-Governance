@@ -42,18 +42,18 @@ flowchart TB
         A --> C[register_l_tools]
         A --> D[WorldModelRuntime]
     end
-    
+
     subgraph neo4j_issue [Issue 1: Neo4j]
         B --> E{5 retries}
         E -->|all fail| F[graph features disabled]
     end
-    
+
     subgraph tool_issue [Issue 2: Tools]
         C --> G[import l_tools.py]
         G --> H["@register_tool memory_write"]
         H --> I[DuplicateRegistrationError]
     end
-    
+
     subgraph gov_issue [Issues 3+4: Governance]
         D --> J[run_forever loop]
         J --> K[fetch_packets]
@@ -144,13 +144,13 @@ Wrap `fetch_packets` call with governance context using existing pattern from [m
 async def fetch_packets(self, ...):
     if not self.substrate_service:
         return []
-    
+
     try:
         self._ensure_scope(self.tenant_id, self.org_id, self.user_id)
-        
+
         # ADD: Wrap with governance context
         from memory.governance_gate import build_governance_context, governance_context
-        
+
         gov_ctx = build_governance_context(
             caller_id="world_model_runtime",
             role="system",
@@ -163,7 +163,7 @@ async def fetch_packets(self, ...):
             creator="world_model",
             source="runtime_fetch",
         )
-        
+
         async with governance_context(gov_ctx):
             result = await self.substrate_service.query_packets(...)
 ```
@@ -184,7 +184,7 @@ async def write_packet_to_substrate(self, packet: PacketEnvelope) -> bool:
     try:
         from memory.governance_gate import build_governance_context, governance_context
         from config.rls_config import get_rls_config
-        
+
         rls_config = get_rls_config()
         gov_ctx = build_governance_context(
             caller_id="seed_loader",
@@ -198,7 +198,7 @@ async def write_packet_to_substrate(self, packet: PacketEnvelope) -> bool:
             creator="seed_loader",
             source="write_packet",
         )
-        
+
         async with governance_context(gov_ctx):
             # existing write_packet logic
 ```

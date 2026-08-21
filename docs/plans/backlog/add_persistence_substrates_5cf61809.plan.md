@@ -109,7 +109,7 @@ from world_model.state import Entity, Relation, WorldModelState
 
 class PersistenceSubstrate(Protocol):
     """Contract all persistence backends must honor."""
-    
+
     def connect(self) -> None: ...
     def disconnect(self) -> None: ...
     def store_entity(self, entity: Entity) -> None: ...
@@ -224,12 +224,12 @@ class PostgresSubstrate:
         """Support: with PostgresSubstrate(config) as substrate:"""
         self.connect()
         return self
-    
+
     def __exit__(self, exc_type, exc_val, exc_tb):
         """Auto-disconnect on exit."""
         self.disconnect()
         return False
-    
+
     @contextmanager
     def connection(self):
         """Get connection with automatic return to pool."""
@@ -349,7 +349,7 @@ def test_entity_roundtrip(postgres_substrate):
     )
     postgres_substrate.store_entity(entity)
     loaded = postgres_substrate.load_entity("user_1")
-    
+
     assert loaded is not None
     assert loaded.entity_id == "user_1"
     assert loaded.entity_type == "Person"
@@ -360,7 +360,7 @@ def test_relation_roundtrip(postgres_substrate):
     # Create entities first
     postgres_substrate.store_entity(Entity(entity_id="e1", entity_type="Type1"))
     postgres_substrate.store_entity(Entity(entity_id="e2", entity_type="Type2"))
-    
+
     relation = Relation(
         relation_id="r1",
         relation_type="CONNECTS",
@@ -370,7 +370,7 @@ def test_relation_roundtrip(postgres_substrate):
     )
     postgres_substrate.store_relation(relation)
     loaded = postgres_substrate.load_relation("r1")
-    
+
     assert loaded is not None
     assert loaded.source_id == "e1"
     assert loaded.target_id == "e2"
@@ -381,10 +381,10 @@ def test_state_sync_roundtrip(postgres_substrate):
     state.add_entity(Entity(entity_id="e1", entity_type="T1"))
     state.add_entity(Entity(entity_id="e2", entity_type="T2"))
     state.add_relation(Relation(relation_id="r1", relation_type="REL", source_id="e1", target_id="e2"))
-    
+
     postgres_substrate.sync_state_to_db(state)
     restored = postgres_substrate.load_state_from_db()
-    
+
     assert len(list(restored.get_all_entities())) == 2
     assert len(list(restored.get_all_relations())) == 1
 ```

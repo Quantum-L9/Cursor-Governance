@@ -34,16 +34,16 @@ flowchart LR
         A[GMP-A: DO Creation]
         B[GMP-B: Supplier Confirmation]
     end
-    
+
     subgraph medium [MEDIUM Priority]
         C[GMP-C: Dispatch PDF]
         D[GMP-D: Escalation]
     end
-    
+
     subgraph low [LOW Priority]
         E[GMP-E: Status Cascade]
     end
-    
+
     B --> C
     C --> D
 ```
@@ -92,25 +92,25 @@ flowchart LR
 def button_approve(self, force=False):
     """Override to link created pickings to transaction."""
     res = super().button_approve(force=force)
-    
+
     # After native _create_picking runs, link pickings to TX
     for order in self:
         if not order.picking_ids:
             continue
-        
+
         # Find TX via SO origin
         tx = None
         if order.origin:
             so = self.env["sale.order"].search([("name", "=", order.origin)], limit=1)
             if so and so.transaction_id:
                 tx = so.transaction_id
-        
+
         # Also check Many2many link
         if not tx:
             tx = self.env["plasticos.transaction"].search([
                 ("purchase_order_ids", "in", [order.id])
             ], limit=1)
-        
+
         if tx and not tx.delivery_order_id:
             # Link first outgoing picking to TX
             outgoing = order.picking_ids.filtered(
@@ -118,9 +118,9 @@ def button_approve(self, force=False):
             )
             if outgoing:
                 tx.delivery_order_id = outgoing[0].id
-                _logger.info("Linked DO %s to TX %s from PO %s", 
+                _logger.info("Linked DO %s to TX %s from PO %s",
                            outgoing[0].name, tx.name, order.name)
-    
+
     return res
 ```
 
@@ -132,7 +132,7 @@ def button_approve(self, force=False):
 @api.model
 def _cron_auto_create_delivery_orders(self):
     """Link existing pickings to transactions or trigger PO confirmation.
-    
+
     Native Odoo creates pickings on PO confirm via purchase_stock.
     This cron:
     1. Finds TXs ready for DO (supplier confirmed, no DO linked)
@@ -145,7 +145,7 @@ def _cron_auto_create_delivery_orders(self):
         ("delivery_order_id", "=", False),
         ("state", "in", ["supplier_ready", "active", "pending_supplier"]),
     ], order="supplier_confirmation_received asc", limit=100)
-    
+
     linked_count = 0
     for tx in ready:
         try:
@@ -170,10 +170,10 @@ def _cron_auto_create_delivery_orders(self):
                 # No PO with pickings found
                 if not tx.purchase_order_ids:
                     _logger.info("TX %s ready for DO but has no PO", tx.name)
-                    
+
         except Exception as e:
             _logger.error("Failed to process TX %s: %s", tx.name, str(e))
-    
+
     _logger.info("DO linkage cron: linked %d delivery orders", linked_count)
     return True
 ```
@@ -250,7 +250,7 @@ supplier_not_ready_reason = fields.Text(
 ```python
 def action_mark_supplier_not_ready(self, reason=None):
     """Mark supplier as not ready with reason tracking.
-    
+
     Called when supplier explicitly indicates they cannot fulfill the order
     on the expected timeline. Creates escalation activity.
     """
@@ -260,18 +260,18 @@ def action_mark_supplier_not_ready(self, reason=None):
                 f"Cannot mark supplier not ready: transaction must be in "
                 f"'Pending Supplier' or 'Active' state (current: {rec.state})."
             )
-        
+
         vals = {"state": "supplier_not_ready"}
         if reason:
             vals["supplier_not_ready_reason"] = reason
-        
+
         rec.with_context(bypass_state_guard=True).write(vals)
-        
+
         if reason:
             rec.message_post(body=f"Supplier not ready: {reason}")
         else:
             rec.message_post(body="Supplier marked as not ready.")
-        
+
         # Create escalation activity
         rec._escalate_supplier_confirmation()
 ```
@@ -286,7 +286,7 @@ def action_mark_supplier_ready(self):
             raise UserError(
                 f"Cannot mark supplier ready: invalid current state (current: {rec.state})."
             )
-        
+
         rec.supplier_confirmation_received = fields.Datetime.now()
         rec.with_context(bypass_state_guard=True).write({"state": "supplier_ready"})
         rec.message_post(body="Supplier confirmed ready.")
@@ -327,14 +327,14 @@ def action_send_supplier_confirmation(self):
         raise UserError("Cannot send confirmation: no supplier assigned.")
     if not self.supplier_id.email:
         raise UserError(f"Supplier {self.supplier_id.name} has no email address.")
-    
+
     template = self.env.ref(
         "plasticos_automation.email_template_supplier_confirmation",
         raise_if_not_found=False
     )
     if not template:
         raise UserError("Supplier confirmation email template not found.")
-    
+
     template.send_mail(self.id, force_send=True)
     self.supplier_confirmation_sent = fields.Datetime.now()
     self.message_post(body="Supplier confirmation request sent.")
@@ -351,43 +351,43 @@ def _cron_supplier_confirmation_followup(self):
     """Send follow-up emails for pending supplier confirmations."""
     threshold_hours = 24
     threshold_dt = fields.Datetime.now() - timedelta(hours=threshold_hours)
-    
+
     pending = self.search([
         ("supplier_confirmation_sent", "!=", False),
         ("supplier_confirmation_sent", "<", threshold_dt),
         ("supplier_confirmation_received", "=", False),
         ("state", "in", ["active", "pending_supplier"]),
     ], order="supplier_confirmation_sent asc", limit=100)
-    
+
     template = self.env.ref(
         "plasticos_automation.email_template_supplier_confirmation",
         raise_if_not_found=False
     )
-    
+
     for tx in pending:
         # Check if we already followed up today
         if tx.last_supplier_confirmation_followup_on:
             last_followup_date = tx.last_supplier_confirmation_followup_on.date()
             if last_followup_date == fields.Date.today():
                 continue
-        
+
         try:
             if template and tx.supplier_id.email:
                 template.send_mail(tx.id, force_send=True)
-            
+
             tx.supplier_confirmation_followup_count += 1
             tx.last_supplier_confirmation_followup_on = fields.Datetime.now()
-            
+
             # Escalate after 3 follow-ups
             if tx.supplier_confirmation_followup_count >= 3:
                 tx._escalate_supplier_confirmation()
-            
+
             _logger.info("Sent supplier confirmation follow-up #%d for TX %s",
                         tx.supplier_confirmation_followup_count, tx.name)
-                        
+
         except Exception as e:
             _logger.error("Failed to send follow-up for TX %s: %s", tx.name, str(e))
-    
+
     return True
 
 def _escalate_supplier_confirmation(self):
@@ -401,7 +401,7 @@ def _escalate_supplier_confirmation(self):
     ])
     if has_activity:
         return
-    
+
     self.activity_schedule(
         "mail.mail_activity_data_todo",
         user_id=self.user_id.id or self.env.user.id,
@@ -458,7 +458,7 @@ def action_send_dispatch_direct(self):
 # In plasticos_logistics/models/mail_compose_inherit.py
 class MailComposeMessage(models.TransientModel):
     _inherit = "mail.compose.message"
-    
+
     def action_send_mail(self):
         res = super().action_send_mail()
         # Check if this was a dispatch template
@@ -508,14 +508,14 @@ def _cron_check_dispatch_acknowledgments(self):
     """Check for unacknowledged dispatches and escalate."""
     threshold_hours = 4
     threshold_dt = fields.Datetime.now() - timedelta(hours=threshold_hours)
-    
+
     unacknowledged = self.search([
         ("dispatch_sent", "!=", False),
         ("dispatch_sent", "<", threshold_dt),
         ("dispatch_acknowledged", "=", False),
         ("state", "in", ["dispatched", "scheduled"]),
     ], order="dispatch_sent asc", limit=100)
-    
+
     for load in unacknowledged:
         # Check for existing escalation activity today
         has_activity = self.env["mail.activity"].search_count([
@@ -524,28 +524,28 @@ def _cron_check_dispatch_acknowledgments(self):
             ("summary", "ilike", "URGENT: No carrier acknowledgment"),
             ("date_deadline", "=", fields.Date.today()),
         ])
-        
+
         if has_activity:
             continue
-        
+
         # Create escalation activity
         tx = self.env[PLASTICOS_TRANSACTION].search([("load_id", "=", load.id)], limit=1)
         user_id = tx.user_id.id if tx and tx.user_id else self.env.user.id
-        
+
         load.activity_schedule(
             "mail.mail_activity_data_todo",
             user_id=user_id,
             summary=f"URGENT: No carrier acknowledgment for {load.name}",
             note=f"Carrier has not acknowledged dispatch sent {load.dispatch_sent}.",
         )
-        
+
         # Resend dispatch
         try:
             load.action_send_dispatch_direct()
             _logger.info("Resent dispatch for load %s", load.name)
         except Exception as e:
             _logger.error("Failed to resend dispatch for load %s: %s", load.name, str(e))
-    
+
     return True
 ```
 
@@ -606,37 +606,37 @@ VALID_CASCADES = {
 
 class StatusCascadeService:
     """Service to cascade status changes across related records.
-    
+
     Audit logging is handled via mail.thread tracking (native Odoo)
     plus structured chatter messages for cascade events.
     """
-    
+
     def __init__(self, env):
         self.env = env
-    
+
     def cascade_status(self, model_name, record_id, new_status, reason=None):
         """Cascade status change to related records with audit trail.
-        
+
         Args:
             model_name: Source model (e.g., 'plasticos.transaction')
             record_id: Source record ID
             new_status: New status value
             reason: Optional reason for the change (for audit)
-            
+
         Returns:
             dict with 'updated' list and optional 'error'
         """
         record = self.env[model_name].browse(record_id)
         if not record.exists():
             return {"error": f"{model_name} {record_id} not found"}
-        
+
         old_status = record.state if hasattr(record, "state") else None
         cascades = VALID_CASCADES.get(model_name, {}).get(new_status, [])
         updated = [(model_name, record_id)]
-        
+
         # Log the cascade initiation
         self._log_cascade_start(record, old_status, new_status, reason)
-        
+
         for target_model, field_name, target_status in cascades:
             try:
                 if field_name == "_reverse_tx":
@@ -659,34 +659,34 @@ class StatusCascadeService:
                                 self._log_cascade_effect(rec, rec_old, target_status, record)
                                 updated.append((target_model, rec.id))
             except Exception as e:
-                _logger.error("Cascade failed: %s.%s -> %s: %s", 
+                _logger.error("Cascade failed: %s.%s -> %s: %s",
                             model_name, field_name, target_status, str(e))
-        
+
         return {"updated": updated}
-    
+
     def _log_cascade_start(self, record, old_status, new_status, reason):
         """Post audit message to source record chatter."""
         if not hasattr(record, "message_post"):
             return
-        
+
         body = f"<b>Status Cascade Initiated</b><br/>"
         body += f"State: {old_status} → {new_status}<br/>"
         if reason:
             body += f"Reason: {reason}<br/>"
         body += f"Timestamp: {fields.Datetime.now()}"
-        
+
         record.message_post(body=body, message_type="notification")
-    
+
     def _log_cascade_effect(self, target_record, old_status, new_status, source_record):
         """Post audit message to cascaded record chatter."""
         if not hasattr(target_record, "message_post"):
             return
-        
+
         body = f"<b>Status Updated via Cascade</b><br/>"
         body += f"State: {old_status} → {new_status}<br/>"
         body += f"Triggered by: {source_record._name} {source_record.display_name}<br/>"
         body += f"Timestamp: {fields.Datetime.now()}"
-        
+
         target_record.message_post(body=body, message_type="notification")
 ```
 
@@ -714,7 +714,7 @@ from . import wizards
 # In transaction.py action_close or similar
 def action_close(self):
     # ... existing logic ...
-    
+
     # Trigger cascade for related records
     from odoo.addons.plasticos_transaction.services.status_cascade import StatusCascadeService
     cascade = StatusCascadeService(self.env)

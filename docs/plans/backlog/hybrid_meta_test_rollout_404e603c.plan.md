@@ -73,4 +73,3 @@ Build a frontier-grade, repo-wide contract enforcement system for method/param c
 - Refactored test engine loading catalog instead of hardcoded tuples.
 - Hybrid warning report format suitable for CI logs.
 - Promotion switches per pair for dynamic enforcement.
-

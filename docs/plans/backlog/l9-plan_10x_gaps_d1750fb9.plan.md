@@ -29,7 +29,7 @@ isProject: false
 ## PLAN: `/plan` as planning playbook — leverage permanent fixtures
 
 ### Planning Mode
-**Mode:** Deep  
+**Mode:** Deep
 **Justification:** Cross-cutting playbook wiring across skills/kernels/profiles; shared contracts.
 
 ### plan_status
@@ -147,8 +147,8 @@ Provenance [`key components/`](key%20components/) — lesson recall, pattern har
 
 ### Scope (implementation of playbook wiring)
 
-**Modify:**  
-- New `skills/l9-plan/references/authority-bindings.md` (playbook Load map above)  
+**Modify:**
+- New `skills/l9-plan/references/authority-bindings.md` (playbook Load map above)
 - `plan-workflow.md`, `SKILL.md` (2.3.0), `spec-workflow.md`, `ccp-plan-patterns.md` (slim), `commands/plan.md`, `commands-index.md`
 
 **Out:** Editing wrapped fixtures; distillate copies; WIP/10X as binding targets.
@@ -165,8 +165,8 @@ Provenance [`key components/`](key%20components/) — lesson recall, pattern har
 | T7 | gate | `make pr-check` |
 
 ### Depth
-**Evolution:** template → **planning playbook**.  
-**Precedent:** kernel-pass-pipeline wrap pattern.  
+**Evolution:** template → **planning playbook**.
+**Precedent:** kernel-pass-pipeline wrap pattern.
 **Preserved:** v2.2.0 doctrine, five-kernel pipeline, key-component conditionals, auto-chain `/ynp`.
 
 ### Dependencies
@@ -196,7 +196,7 @@ T1 → T2 → (T3 ∥ T4 ∥ T5 ∥ T6) → T7
 - [ ] `make pr-check` PASS
 
 ### Constraints
-**MUST:** wrap/call permanent fixtures; fail-closed on skipped required Loads.  
+**MUST:** wrap/call permanent fixtures; fail-closed on skipped required Loads.
 **MUST NOT:** re-host fixture contracts; execute GMP/forge from `/plan`; bind to WIP/10X.
 
 ### Final Validation

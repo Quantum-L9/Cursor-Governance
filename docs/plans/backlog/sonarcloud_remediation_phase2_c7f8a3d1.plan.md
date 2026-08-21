@@ -384,9 +384,9 @@ Remediate 38 remaining high-risk SonarCloud defects (S3776 cognitive complexity,
 
 ## Rollback
 
-**Supported:** `true`  
-**Automatic:** `false`  
-**Approval required:** `true`  
+**Supported:** `true`
+**Automatic:** `false`
+**Approval required:** `true`
 **Trigger:** baseline drift, blocking property fail, envelope breach, security incident
 
 **Strategies:**
@@ -466,9 +466,9 @@ Remediate 38 remaining high-risk SonarCloud defects (S3776 cognitive complexity,
 
 ## GMP handoff
 
-**may_modify:** All files listed in execution envelope write_allow  
-**must_not_modify:** contracts/**, .github/workflows/l9-*.yml, AGENTS.md, src/intelligence/**, src/contracts/**  
-**preserved_contracts:** DomainSpec schema backward-compatible, validation error structure unchanged, evidence collector API compatible, regex match-equivalent, template exit codes preserved  
+**may_modify:** All files listed in execution envelope write_allow
+**must_not_modify:** contracts/**, .github/workflows/l9-*.yml, AGENTS.md, src/intelligence/**, src/contracts/**
+**preserved_contracts:** DomainSpec schema backward-compatible, validation error structure unchanged, evidence collector API compatible, regex match-equivalent, template exit codes preserved
 **validation_commands:** npm test, tsc --noEmit, node --check, fuzz_regex_equivalence.mjs, make pr
 
 ## Convergence

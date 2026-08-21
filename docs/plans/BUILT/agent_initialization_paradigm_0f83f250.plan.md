@@ -51,21 +51,21 @@ flowchart TD
         B --> C[Register Tools to Neo4j]
         C --> D[Initialize Memory Substrate]
     end
-    
+
     subgraph modules [4 Implementation Modules]
         M1[MODULE 1: EventQueue]
         M2[MODULE 2: ToolAuditService]
         M3[MODULE 3: VirtualContextManager]
         M4[MODULE 4: Evaluator]
     end
-    
+
     subgraph init [AgentInitializer]
         D --> E{Feature Flag?}
         E -->|L9_NEW_AGENT_INIT=true| F[New Path with Modules]
         E -->|false| G[Legacy Path]
         F --> M1 --> M2 --> M3 --> M4
     end
-    
+
     F --> H[L-CTO Ready]
     G --> H
 ```

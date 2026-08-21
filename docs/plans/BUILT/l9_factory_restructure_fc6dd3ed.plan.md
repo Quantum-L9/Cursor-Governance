@@ -218,4 +218,3 @@ Note: `codegen/meta_ir/registry.py` already has `dependency_ordered()` (line 62)
 4. **Task 3** (Validators) -- depends on schemas
 5. **Task 4** (Resolver) -- depends on schemas
 6. **Task 6** (Tests/Docs/CI) -- last; validates everything above
-

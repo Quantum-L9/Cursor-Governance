@@ -94,7 +94,7 @@ Files to change in `$HOME/.cursor-governance/ops/graphiti/`:
 
 ## Phase 2 — Credential decision point (conditional — only if applicable)
 
-- Check whether `zepai/knowledge-graph-mcp` supports a built-in bearer-token/API-key auth mechanism (not confirmed in the README excerpt reviewed). 
+- Check whether `zepai/knowledge-graph-mcp` supports a built-in bearer-token/API-key auth mechanism (not confirmed in the README excerpt reviewed).
   - If yes: generate a new random `GRAPHITI_MCP_TOKEN` and enable it — this is the one credential that may actually change.
   - If no: leave `GRAPHITI_MCP_TOKEN` unset/deprecated and continue relying on the existing security boundary (loopback bind + SSH-tunnel-only access, no direct internet exposure) — no credential change.
 - **Any credential that does change** will be documented in a new gitignored `.env` entry at the repo root, following the existing convention in [.env.template](/Users/macm2/igorbot-07-19-2026/igorbot/.env.template) (e.g. `# aws: openclaw-igorbot/<name> field: token`) plus the actual value in local `.env`, so it can later be pushed into AWS Secrets Manager via `credentials/aws-secrets-setup.sh` conventions. Since `NEO4J_PASSWORD` and `OPENAI_API_KEY` are not changing, no update to those existing `.env.template` entries is expected — only a new token entry would be added, conditionally.

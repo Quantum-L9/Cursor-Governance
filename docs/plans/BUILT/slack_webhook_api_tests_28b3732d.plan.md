@@ -38,7 +38,7 @@ flowchart TB
         UnitTests[Unit Tests]
         RouteTests[Route Tests]
     end
-    
+
     subgraph Mocked[Mocked Dependencies]
         AgentExec[app.state.agent_executor]
         RouteMsg[route_slack_message]
@@ -46,13 +46,13 @@ flowchart TB
         SlackPost[slack_post]
         Gmail[GmailClient]
     end
-    
+
     subgraph RealCode[Real Code Under Test]
         VerifySig[verify_slack_signature]
         SlackCmd[POST /slack/commands]
         SlackEvt[POST /slack/events]
     end
-    
+
     TClient --> SlackCmd
     TClient --> SlackEvt
     Fixtures --> Mocked

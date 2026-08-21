@@ -115,7 +115,7 @@ flowchart TD
 
 ### Dependencies
 
-Phase 1: 1 → 2 → 3 → 4 → 5  
+Phase 1: 1 → 2 → 3 → 4 → 5
 Phase 2: **blocked on** concurrent `docs/v1-release-unblock` merge (or explicit handoff that the other agent has released those files) → 6
 
 ### Risks
@@ -130,8 +130,8 @@ Phase 2: **blocked on** concurrent `docs/v1-release-unblock` merge (or explicit 
 
 ### Estimate
 
-**Phase 1:** ~1–2 hours (CI waits)  
-**Phase 2:** ~30–45 min after Path A clear  
+**Phase 1:** ~1–2 hours (CI waits)
+**Phase 2:** ~30–45 min after Path A clear
 **GMPs:** 1 for phase 1; optional 2nd for seal re-render
 
 ### Success criteria

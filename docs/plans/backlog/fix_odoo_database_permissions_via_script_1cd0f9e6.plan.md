@@ -30,4 +30,3 @@ isProject: false
 
 - After the script runs successfully, restart Odoo.
 - The "permission denied" error should disappear, and Odoo should find (or create) the database.
-

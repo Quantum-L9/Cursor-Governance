@@ -248,7 +248,7 @@ grep -r "import codegen.sympy" . --include="*.py"
 grep -r "codegen/templates" agents/ --include="*.py"
 grep -r "codegen/templates" . --include="*.py"
 
-# Find all schema path references  
+# Find all schema path references
 grep -r "meta-yaml" agents/ --include="*.py"
 grep -r "meta-yaml" . --include="*.py"
 

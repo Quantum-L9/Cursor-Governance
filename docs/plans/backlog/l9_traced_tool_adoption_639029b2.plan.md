@@ -36,7 +36,7 @@ flowchart TB
         A1[register_tool decorator] --> A2[register_instance]
         A2 --> A3[tool_executor_registry]
     end
-    
+
     subgraph proposed [Proposed Flow]
         B1[register_tool decorator] --> B2{L9_TOOL_TRACING?}
         B2 -->|disabled| B3[register_instance]
@@ -124,7 +124,7 @@ def decorator(func: Callable[P, R]) -> Callable[P, R]:
 def decorator(func: Callable[P, R]) -> Callable[P, R]:
     tool_name = name or func.__name__
     tool_category = category or "general"
-    
+
     # Optionally wrap with l9_traced for DORA block integration
     wrapped_func = func
     if _should_trace_tools():
@@ -139,7 +139,7 @@ def decorator(func: Callable[P, R]) -> Callable[P, R]:
             category=tool_category,
             update_source=_should_update_source(),
         )
-    
+
     # Register the (potentially wrapped) function
     tool_executor_registry.register_instance(
         component_id=tool_name,
@@ -194,7 +194,7 @@ def enable_tracing(monkeypatch):
     tr.L9_TOOL_TRACING = "disabled"
 
 
-@pytest.fixture  
+@pytest.fixture
 def disable_tracing(monkeypatch):
     """Disable tool tracing for test."""
     monkeypatch.setenv("L9_TOOL_TRACING", "disabled")
@@ -208,7 +208,7 @@ def test_tracing_disabled_by_default(clean_registry, disable_tracing):
     @register_tool(category="test")
     async def test_tool(**kwargs):
         return {"status": "ok"}
-    
+
     # Function should not be wrapped
     executors = get_tool_executors()
     assert executors["test_tool"] == test_tool
@@ -219,7 +219,7 @@ def test_tracing_enabled_wraps_function(clean_registry, enable_tracing):
     @register_tool(category="test")
     async def traced_tool(**kwargs):
         return {"status": "traced"}
-    
+
     executors = get_tool_executors()
     # Function should be wrapped (different object)
     assert executors["traced_tool"].__wrapped__ == traced_tool
@@ -231,10 +231,10 @@ async def test_traced_tool_execution(clean_registry, enable_tracing):
     @register_tool(category="memory")
     async def memory_tool(query: str, **kwargs):
         return {"query": query, "results": []}
-    
+
     executors = get_tool_executors()
     result = await executors["memory_tool"](query="test")
-    
+
     assert result["query"] == "test"
     assert "results" in result
 ```
@@ -294,4 +294,3 @@ If issues occur:
 - Zero changes required to existing tool files (`runtime/l_tools.py`, etc.)
 - All existing tests pass with tracing both enabled and disabled
 - DORA blocks update when `L9_TOOL_TRACING=update_source`
-

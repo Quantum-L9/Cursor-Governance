@@ -61,11 +61,11 @@ error_recovery:
     behavior: skip_and_warn
     retry_count: 2
     retry_delay_ms: 1000
-  
+
   connection_timeout:
     timeout_ms: 10000
     behavior: failover_to_next
-  
+
   spawn_failure:
     behavior: log_and_disable
     re_enable_after_seconds: 300
@@ -114,17 +114,17 @@ error_recovery:
     retry_count: 2
     retry_delay_ms: 5000
     on_exhaust: return_partial_results
-  
+
   rate_limit_exceeded:
     behavior: exponential_backoff
     max_wait_seconds: 300
     fallback: queue_for_later
-  
+
   invalid_response:
     behavior: log_and_retry
     max_retries: 1
     validation: agents.research_agent.validate_response
-  
+
   api_key_missing:
     behavior: fail_fast
     error_code: CONFIG_ERROR
@@ -177,13 +177,13 @@ error_recovery:
     required_check: required_kernels
     optional_behavior: skip_and_warn
     log_level: error
-  
+
   kernel_parse_error:
     behavior: fail_loudly
     include_file_path: true
     include_line_number: true
     emit_metric: l9.kernel.parse_error
-  
+
   integrity_check_failed:
     behavior: fail_if_production
     env_override:
@@ -191,12 +191,12 @@ error_recovery:
       test: skip
       staging: fail_loudly
       production: fail_loudly
-  
+
   minimum_count_violated:
     behavior: fail_loudly
     emit_metric: l9.kernel.minimum_count_violation
     escalate_to: igor
-  
+
   loader_exception:
     behavior: use_fallback
     fallback_config: FALLBACK_CONFIG
@@ -232,20 +232,20 @@ Add after line 138 (after `side_effect:` section):
 # Implementation Paths (Policy to Enforcement)
 implementation:
   policy_loader: core.governance.tool_risk_policy._load_tool_risk_policy
-  
+
   enforcement_modules:
     - module: orchestrators.action_tool.validator
       function: validate_tool_call
       gate_type: pre_execution
-    
+
     - module: core.governance.approval_manager
       function: check_approval_required
       gate_type: approval_gate
-    
+
     - module: core.compliance.audit_reporter
       function: log_high_risk_execution
       gate_type: post_execution
-  
+
   check_functions:
     is_high_risk: core.governance.tool_risk_policy.is_high_risk
     requires_igor: core.governance.tool_risk_policy.requires_igor_approval
@@ -256,7 +256,7 @@ runtime:
   cache_policy: true
   cache_invalidation: on_file_change
   hot_reload: true
-  
+
   validation_hook:
     on_load: validate_tool_ids_exist
     validator: ci.check_tool_wiring.validate_tools_exist

@@ -70,7 +70,7 @@ Add to [app/core/exceptions.py](app/core/exceptions.py) (or create if not exists
 ```python
 class DependencyNotConfiguredError(RuntimeError):
     """Raised when a required dependency is not configured at app startup."""
-    
+
     def __init__(self, dependency_name: str, hint: str = ""):
         message = f"{dependency_name} not configured"
         if hint:
@@ -128,4 +128,3 @@ async def enrich(self, domain: str, payload: dict[str, Any]) -> EnrichmentResult
 3. **Better debugging**: Error messages include the dependency name and a hint for resolution
 4. **Testability**: Custom exception can be caught specifically in integration tests
 5. **Pythonic**: Uses `...` for abstract methods per PEP 3107 conventions
-

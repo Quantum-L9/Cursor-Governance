@@ -39,7 +39,7 @@ flowchart TD
         MIG[migrations/*.sql]
         CFG[config/*.yaml]
     end
-    
+
     subgraph extractors [Extractors]
         E1[dependencies]
         E2[docker_services]
@@ -51,11 +51,11 @@ flowchart TD
         E8[class_defs]
         E9[config_files]
     end
-    
+
     subgraph output [Output]
         YAML[.dora/state.yaml]
     end
-    
+
     REQ --> E1
     DC --> E2
     PY --> E3
@@ -66,7 +66,7 @@ flowchart TD
     DC --> E5
     MIG --> E7
     CFG --> E9
-    
+
     E1 --> YAML
     E2 --> YAML
     E3 --> YAML

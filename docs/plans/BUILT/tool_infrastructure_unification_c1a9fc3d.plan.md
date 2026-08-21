@@ -168,7 +168,7 @@ def get_action_tool_orchestrator(request: Request) -> ActionToolOrchestrator:
 def get_tool_registry(request: Request) -> ExecutorToolRegistry:
     """
     Get ExecutorToolRegistry from app.state.
-    
+
     DEPRECATED: ActionToolOrchestrator (v1.x) removed in v2.0.
     Using ExecutorToolRegistry for governance-aware dispatch.
     """
@@ -203,7 +203,7 @@ def get_tool_registry(request: Request) -> ExecutorToolRegistry:
 async def tool_graph_health(request: Request) -> dict:
     """
     Check tool graph health status.
-    
+
     Returns:
         {
             "status": "healthy" | "degraded",

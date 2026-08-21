@@ -463,8 +463,8 @@ forbidden_inside_packet:
 
 **Critical path:** `T00 → T01 → T25 → T02 → T03 → T05 → T06 → T07 → T09 → T23 → T24`
 
-**Parallel after T00:** T01, T03, T10, T11, T19, T20, T25  
-**Parallel after T05:** T06, T07, T09, T15, T17, T18, T21  
+**Parallel after T00:** T01, T03, T10, T11, T19, T20, T25
+**Parallel after T05:** T06, T07, T09, T15, T17, T18, T21
 **T23 waits for every mutate todo.**
 
 **Forbidden edges:** T05 before T01 (execute without unlock); T09 before T05 (close without execute); T24 before T23; T07 host PR before T05; any todo writing l9-ci-core.

@@ -30,4 +30,3 @@ Append the following lines to the end of `.gitignore` (after line 44, after `gen
 # Workspace setup
 scripts/setup-new-workspace.yaml
 ```
-

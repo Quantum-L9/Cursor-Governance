@@ -37,7 +37,7 @@ The self-reflection module has two pattern detectors that **never fire**:
 if not context.governance_blocks:  # Always True - empty list
     return None
 
-# selfreflection.py L212-213  
+# selfreflection.py L212-213
 if not context.user_corrections:  # Always True - empty list
     return None
 ```
@@ -67,7 +67,7 @@ user_corrections=[],  # TODO: Track user corrections
 - Imports: NONE (Dict, Any, List already imported)
 - **[T2]** File: `core/agents/schemas.py` Lines: 348 (after T1)
 - Action: Insert after governance_blocks
-- Target: `ExecutionResult` class  
+- Target: `ExecutionResult` class
 - Change: Add `user_corrections: Optional[List[Dict[str, Any]]]` field with description
 - Gate: py_compile
 - Imports: NONE
@@ -158,18 +158,18 @@ flowchart TD
         AUTH[Authority Check] -->|fails| AB[Track Authority Block]
         SAFETY[Safety Check] -->|fails| SB[Track Safety Block]
         TOOL[Tool Approval Check] -->|fails| TB[Track Tool Block]
-        
+
         AB --> RESULT[ExecutionResult]
         SB --> RESULT
         TB --> RESULT
     end
-    
+
     subgraph Instance ["AgentInstance"]
         UC[User Corrections] --> RESULT
     end
-    
+
     RESULT --> SR[_run_self_reflection]
-    
+
     subgraph Reflection ["selfreflection.py"]
         SR --> GBP[GovernanceBlockPattern]
         SR --> UCP[UserCorrectionPattern]

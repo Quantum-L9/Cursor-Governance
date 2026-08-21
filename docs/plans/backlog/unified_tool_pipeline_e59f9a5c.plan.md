@@ -256,4 +256,3 @@ Correct the report to accurately reflect what was shipped per phase.
 - **tool_graph_healthy flag (MITIGATED)**: Moved to bridge block in lifespan.
 - **_tool_belongs_to_agent removal**: With `_TOOL_AGENT_IDS` empty (never populated without `register_l_tools()`), this function always returns `True` — removing it is a no-op behavior change. Tool access filtering should happen in agent kernels or governance engine, not here.
 - **Low risk overall**: The bridge already works. We are removing the redundant L-CTO-specific path and cleaning up dead weight.
-

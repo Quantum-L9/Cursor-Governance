@@ -365,7 +365,7 @@ Program Execution has an unbound campaign-source dialect (four `CAMPAIGN_SOURCE.
 
 ## Capability preflight
 
-`schema_ref:` `canonical.schema.capability_preflight.v1`  
+`schema_ref:` `canonical.schema.capability_preflight.v1`
 `instance_binding:` `preflight.plan.program-execution.crack-remediation.v1`
 
 | Field | Value |
@@ -470,7 +470,7 @@ T8 MUST NOT change campaign YAML or receipt JSON. T2 owns TASK-007 honesty.
 
 ## Rollback
 
-`schema_ref:` `canonical.schema.rollback_contract.v1`  
+`schema_ref:` `canonical.schema.rollback_contract.v1`
 `instance_binding:` `rollback.plan.program-execution.crack-remediation.v1`
 
 | Field | Value |
@@ -541,7 +541,7 @@ T8 MUST NOT change campaign YAML or receipt JSON. T2 owns TASK-007 honesty.
 | T11 | agent | docs | [T2, T3, T10] | ARCHITECTURE/README path |
 | T12 | agent | assurance | [T4, T6, T7, T8, T9, T11] | V1–V5 evidence |
 
-**Critical path:** `T0` → `T1` → `T2` → `T3` → `T13` → `T7` → `T12`  
+**Critical path:** `T0` → `T1` → `T2` → `T3` → `T13` → `T7` → `T12`
 **Joins:** `T5` is parallel after T0 and precedes T7 and T16. `T13` follows T3. `T17` follows T7.
 
 **Forbidden edges:** T3 before T2; T7 before T3/T5; T8 editing YAML/receipt; T6 adding a git worker; T10 writing autonomy campaign JSON; any mutation on `fix/ci-required-contexts-wip-only`.

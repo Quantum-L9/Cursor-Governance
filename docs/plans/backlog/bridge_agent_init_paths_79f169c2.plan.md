@@ -34,14 +34,14 @@ flowchart TB
         KAR[KernelAwareAgentRegistry] --> LCTO[LCTOAgent]
         LCTO --> EKA[executor._kernel_aware_agent]
     end
-    
+
     subgraph path2 [PATH 2: Bootstrap Ceremony]
         BSO[AgentBootstrapOrchestrator] --> P7[7-Phase Ceremony]
         P7 --> BID[BootstrapInstanceData]
         BID --> ASL[app.state.l_agent_instance]
         ASL --> DEAD[NEVER USED]
     end
-    
+
     subgraph runtime [Runtime Task Execution]
         SAT[start_agent_task] --> IA[_instantiate_agent]
         IA --> NAI[NEW AgentInstance per task]
@@ -62,12 +62,12 @@ flowchart TB
     subgraph unified [Unified Initialization]
         KAR[KernelAwareAgentRegistry] --> LCTO[LCTOAgent]
         LCTO --> EKA[executor._kernel_aware_agent]
-        
+
         BSO[AgentBootstrapOrchestrator] --> P7[7-Phase Ceremony]
         P7 --> BID[BootstrapInstanceData]
         BID --> EBM[executor._bootstrap_metadata]
     end
-    
+
     subgraph runtime [Runtime Task Execution]
         SAT[start_agent_task] --> IA[_instantiate_agent]
         IA --> NAI[AgentInstance]
@@ -92,7 +92,7 @@ self._bootstrap_metadata: Dict[str, Any] | None = None
 def set_bootstrap_metadata(self, metadata: Any) -> None:
     """
     Set bootstrap metadata from 7-phase ceremony.
-    
+
     Stage 7: Bootstrap Integration (GMP-BRIDGE-INIT).
     Stores initialization signature, identity, and bound tools
     from the bootstrap ceremony for injection into runtime instances.
@@ -184,7 +184,7 @@ Fix return type to match actual behavior (line 68):
 # Before
 async def bootstrap_agent(...) -> AgentInstance:
 
-# After  
+# After
 async def bootstrap_agent(...) -> "BootstrapInstanceData":
 ```
 

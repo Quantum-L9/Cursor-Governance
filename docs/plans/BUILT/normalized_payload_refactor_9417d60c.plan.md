@@ -53,16 +53,16 @@ flowchart LR
         raw[Raw Fields]
         packet[last_packet_payload]
     end
-    
+
     subgraph normalizer [Normalizer]
         assemble[_assemble_packet]
     end
-    
+
     subgraph matcher [Buyer Match Engine]
         extract[_extract_material_requirements]
         cypher[_intake_to_match_params]
     end
-    
+
     raw -->|"normalize()"| assemble
     assemble -->|"stores"| packet
     raw -->|"WRONG: direct read"| extract
@@ -79,17 +79,17 @@ flowchart LR
         raw[Raw Fields]
         packet[last_packet_payload]
     end
-    
+
     subgraph normalizer [Normalizer]
         assemble[_assemble_packet]
     end
-    
+
     subgraph matcher [Buyer Match Engine]
         validate[Require normalized=True]
         extract[_extract_from_packet]
         cypher[_params_from_packet]
     end
-    
+
     raw -->|"normalize()"| assemble
     assemble -->|"stores"| packet
     packet -->|"read JSON"| validate
@@ -221,4 +221,3 @@ def _attributes_to_flags(attributes: list) -> dict:
 2. **Gradual rollout**: Add feature flag `MATCH_FROM_PACKET_ONLY` (default False initially)
 3. **Validation**: Require `normalized=True` before matching to ensure packet exists
 4. **Logging**: Add debug logging when switching between packet/raw field consumption
-

@@ -51,50 +51,50 @@ flowchart TB
         SR[SchemaRegistry]
         CH[ContentHash]
     end
-    
+
     subgraph phase2[Phase 2: Observability]
         OBS[PacketEnvelopeObservability]
         WS[WebSocketTracePropagator]
         JAEGER[Jaeger Exporter]
         PROM[Prometheus Metrics]
     end
-    
+
     subgraph phase3[Phase 3: Standardization]
         CE[CloudEvents v1.0]
         HTTP_BIN[HTTPBinaryBinding]
         HTTP_STR[HTTPStructuredBinding]
         SCHEMA[SchemaRegistry]
     end
-    
+
     subgraph phase4[Phase 4: Scalability]
         BATCH[BatchIngestionEngine]
         CQRS[CommandHandler]
         RM[ReadModel]
         ES[EventStore]
     end
-    
+
     subgraph phase5[Phase 5: Governance]
         RET[RetentionManager]
         ERASURE[ErasureEngine]
         ANON[AnonymizationEngine]
         AUDIT[ComplianceAuditLog]
     end
-    
+
     subgraph integration[Integration Layer]
         ENGINE[PacketEnvelopeUpgradeEngine]
         ADAPTER[PacketEnvelopeAdapter]
     end
-    
+
     PE_V2 --> OBS
     OBS --> CE
     CE --> BATCH
     BATCH --> RET
-    
+
     ENGINE --> OBS
     ENGINE --> CE
     ENGINE --> BATCH
     ENGINE --> RET
-    
+
     ADAPTER --> ENGINE
 ```
 

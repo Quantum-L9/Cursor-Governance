@@ -37,26 +37,26 @@ flowchart TB
         P1A[Unify CAN_EXECUTE vs HAS_TOOL]
         P1B[Migration Script]
     end
-    
+
     subgraph phase2 [Phase 2: Graph Merge]
         P2A[Single Agent Node]
         P2B[Tool Graph uses Graph State nodes]
     end
-    
+
     subgraph phase3 [Phase 3: World Model Sync]
         P3A[GraphToWorldModelSync service]
         P3B[Agent entity in WM]
     end
-    
+
     subgraph phase4 [Phase 4: Tool Patterns]
         P4A[ToolPatternExtractor]
         P4B[Scheduled job]
     end
-    
+
     subgraph phase5 [Phase 5: Memory Loop]
         P5A[Graph state in consolidation]
     end
-    
+
     phase1 --> phase2 --> phase3 --> phase4
     phase3 --> phase5
 ```
@@ -65,9 +65,9 @@ flowchart TB
 
 ## GMP-UKG-1: Schema Unification
 
-**Tier:** RUNTIME_TIER  
-**Risk:** LOW  
-**Effort:** 1 hour  
+**Tier:** RUNTIME_TIER
+**Risk:** LOW
+**Effort:** 1 hour
 **Depends On:** None
 
 ### Variable Bindings
@@ -97,9 +97,9 @@ flowchart TB
 
 ## GMP-UKG-2: Graph Merge
 
-**Tier:** RUNTIME_TIER  
-**Risk:** MEDIUM  
-**Effort:** 2 hours  
+**Tier:** RUNTIME_TIER
+**Risk:** MEDIUM
+**Effort:** 2 hours
 **Depends On:** GMP-UKG-1
 
 ### Variable Bindings
@@ -130,9 +130,9 @@ flowchart TB
 
 ## GMP-UKG-3: World Model Sync
 
-**Tier:** RUNTIME_TIER  
-**Risk:** LOW  
-**Effort:** 2 hours  
+**Tier:** RUNTIME_TIER
+**Risk:** LOW
+**Effort:** 2 hours
 **Depends On:** GMP-UKG-2
 
 ### Variable Bindings
@@ -164,9 +164,9 @@ flowchart TB
 
 ## GMP-UKG-4: Tool Pattern Extraction
 
-**Tier:** RUNTIME_TIER  
-**Risk:** LOW  
-**Effort:** 2 hours  
+**Tier:** RUNTIME_TIER
+**Risk:** LOW
+**Effort:** 2 hours
 **Depends On:** GMP-UKG-3
 
 ### Variable Bindings
@@ -197,9 +197,9 @@ flowchart TB
 
 ## GMP-UKG-5: Memory Consolidation Loop
 
-**Tier:** RUNTIME_TIER  
-**Risk:** LOW  
-**Effort:** 1 hour  
+**Tier:** RUNTIME_TIER
+**Risk:** LOW
+**Effort:** 1 hour
 **Depends On:** GMP-UKG-3
 
 ### Variable Bindings

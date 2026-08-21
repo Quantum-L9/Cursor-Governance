@@ -30,11 +30,11 @@ Insert this block **before** the `PLASTICOS_PARTNER_WIPE` guard (around line 20)
 # Always reassign sale orders from partners this module will delete
 # This prevents FK violations when _process_end() removes partner XML IDs
 cr.execute("""
-    UPDATE sale_order 
+    UPDATE sale_order
     SET partner_id = 3, partner_invoice_id = 3, partner_shipping_id = 3
     WHERE partner_id IN (
-        SELECT res_id FROM ir_model_data 
-        WHERE module = 'plasticos_partner_import' 
+        SELECT res_id FROM ir_model_data
+        WHERE module = 'plasticos_partner_import'
         AND model = 'res.partner'
     )
 """)
@@ -49,4 +49,3 @@ if reassigned:
 - Only affects sale orders referencing partners that this module owns (via `ir_model_data`)
 - Partner 3 is a safe target (system partner, won't be deleted)
 - `_process_end()` can then delete the orphaned partners without FK errors
-

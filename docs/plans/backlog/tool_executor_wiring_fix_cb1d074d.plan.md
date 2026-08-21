@@ -223,4 +223,3 @@ After implementation:
   - Expected: 0 warnings
 3. Run `/tools/health` endpoint
   - Expected: 73 tools registered
-

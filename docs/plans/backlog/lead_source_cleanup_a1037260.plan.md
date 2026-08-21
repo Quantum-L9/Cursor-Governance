@@ -45,7 +45,7 @@ flowchart LR
   subgraph facility_profile [plasticos_facility_profile]
     LeadSource["plasticos.lead.source"]
   end
-  
+
   WebLead["plasticos.web.lead"] -->|lead_source_id| LeadSource
   Partner["res.partner"] -->|lead_source_id| LeadSource
   CrmLead["crm.lead"] -->|source_id| UTM["utm.source (native)"]
