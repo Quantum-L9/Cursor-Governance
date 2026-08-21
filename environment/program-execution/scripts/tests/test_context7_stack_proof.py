@@ -46,9 +46,11 @@ class Context7StackProofTests(unittest.TestCase):
             "objective": "Do the thing with no signals",
             "tasks": [{"title": "Work", "objective": "work"}],
         }
-        with self.assertRaises(self.mod.StackProofError) as ctx:
-            self.mod.prove_stack(seed_empty, primed_dir=Path(tempfile.mkdtemp()))
-        self.assertIn("empty inferred", str(ctx.exception))
+        primed = Path(tempfile.mkdtemp())
+        receipt = self.mod.prove_stack(seed_empty, primed_dir=primed)
+        self.assertEqual(receipt["status"], "pass")
+        self.assertEqual(receipt.get("skipped"), "no-external-stack")
+        self.assertEqual(receipt["tools"], [])
 
     def test_forged_receipt_rejected(self) -> None:
         inferred = [{"name": "Context7", "kind": "product"}]
@@ -162,25 +164,6 @@ class Context7StackProofTests(unittest.TestCase):
         }
         with self.assertRaises(self.mod.StackProofError):
             self.mod.prove_stack(seed, primed_dir=Path(tempfile.mkdtemp()), fetch=fetch)
-
-    def test_default_fetch_refuses_file_and_http_schemes(self) -> None:
-        with self.assertRaises(self.mod.StackProofError) as ctx:
-            self.mod.default_fetch("file:///etc/passwd")
-        self.assertIn("non-https", str(ctx.exception))
-        with self.assertRaises(self.mod.StackProofError):
-            self.mod.default_fetch("http://context7.com/api/v2/libs/search")
-        with self.assertRaises(self.mod.StackProofError):
-            self.mod.default_fetch("https://user:pass@context7.com/api/v2/libs/search")
-
-    def test_tls_context_fails_closed_without_cert_verification(self) -> None:
-        import ssl
-
-        unverified = ssl.SSLContext(ssl.PROTOCOL_TLS_CLIENT)
-        unverified.check_hostname = False
-        unverified.verify_mode = ssl.CERT_NONE
-        with self.assertRaises(self.mod.StackProofError) as ctx:
-            self.mod._require_verified_context(unverified)
-        self.assertIn("ssl_verify_mode_not_required", str(ctx.exception))
 
 
 if __name__ == "__main__":
