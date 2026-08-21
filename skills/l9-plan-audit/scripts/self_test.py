@@ -214,6 +214,7 @@ execute_via: cursor-build
 ## Execute via Cursor Build
 
 Press Build on the current checkout.
+- Do not run `make campaign`.
 """,
             encoding="utf-8",
         )

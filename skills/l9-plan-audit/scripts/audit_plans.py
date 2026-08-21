@@ -29,6 +29,11 @@ EXECUTE_NEEDLE = "Execute via @environment/program-execution"
 COMMIT_SHA_RE = re.compile(r"(?im)^\s*commit_sha\s*:\s*[`\"']?([0-9a-f]{7,40})[`\"']?\s*$")
 STATUS_SUPERSEDED_RE = re.compile(r"(?im)^\s*status\s*:\s*superseded\s*$")
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.S)
+LIVE_CAMPAIGN_PREFIX_RE = re.compile(
+    r"(?:do not\s+run|don't\s+run|not run|never run)\s*`?\Z",
+    re.I,
+)
+CAMPAIGN_WINDOW = 64
 
 
 @dataclass
@@ -186,18 +191,30 @@ def sha_matches(plan_sha: str, head: str) -> bool:
     return a[:n] == b[:n]
 
 
+def has_live_campaign_command(body: str) -> bool:
+    """True when body contains an actionable `make campaign`, not a prohibition."""
+    for match in re.finditer(r"make campaign", body):
+        prefix = body[max(0, match.start() - CAMPAIGN_WINDOW) : match.start()]
+        if LIVE_CAMPAIGN_PREFIX_RE.search(prefix.rstrip()):
+            continue
+        return True
+    return False
+
+
 def is_simple_kind(frontmatter: dict[str, Any], body: str) -> bool:
     """Cursor-Build plans are not required to carry the PE execute heading.
 
-    Leftover PE wiring (`make campaign` or a live PE execute heading) keeps
-    the plan PE-kind so audit can still see an incomplete swap.
+    Leftover live PE wiring (unnegated `make campaign` or a live PE execute
+    heading) keeps the plan PE-kind so audit can still see an incomplete swap.
+    Required prohibition sentences such as `Do not run make campaign` are not
+    live wiring.
     """
     kind = str(frontmatter.get("kind") or "").strip().lower()
     execute_via = str(frontmatter.get("execute_via") or "").strip().lower()
     marked_simple = kind == "simple" or execute_via == "cursor-build"
     if not marked_simple:
         return False
-    if "make campaign" in body or EXECUTE_NEEDLE in body:
+    if EXECUTE_NEEDLE in body or has_live_campaign_command(body):
         return False
     return True
 
