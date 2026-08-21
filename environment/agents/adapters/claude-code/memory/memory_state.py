@@ -211,10 +211,16 @@ def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
     except (json.JSONDecodeError, OSError):
         return False
     ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
-    return (
-        data.get("session_id") == session_id
-        and (time.time() - float(data.get("created_at", 0))) < ttl
-    )
+    if data.get("session_id") != session_id:
+        return False
+    if (time.time() - float(data.get("created_at", 0))) >= ttl:
+        return False
+    # A receipt from a hydration that resolved no group and returned no facts is
+    # not a fresh hydration. Accepting it made the precondition self-satisfying:
+    # the "no -> hydrate, then continue" branch could never be taken again for
+    # the whole TTL. Returning False re-runs hydration; it does NOT block the
+    # write, which stays forbidden by rules/96 E7 and rules/98.
+    return not data.get("degraded", False)
 
 
 # --- operator break-glass audit --------------------------------------------

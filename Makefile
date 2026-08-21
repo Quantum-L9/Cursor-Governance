@@ -237,16 +237,26 @@ claude-settings-check:
 	$(PYTHON) ops/scripts/reconcile_claude_settings.py --root "$(CURDIR)" --check \
 		$(if $(WS),--workspace "$(WS)",)
 
-## Canonical Claude environment doctor: full adapter install check (read-only,
-## reports drift per the health accumulator) + the structural/contract validator.
-## Exit 5 means the files are correct but the runtime never wired — the state
-## the mobile bootstrap audit found while the validator still printed PASS.
+## Canonical Claude environment doctor: full adapter install check (reports drift
+## per the health accumulator; --check writes bootstrap-check.json, never the
+## session's own receipt) + the structural/contract validator + runtime readiness.
+##
+## Every step runs. As a plain recipe, make aborted on the first non-zero step,
+## so a structural failure took the RUNTIME verdict down with it — and runtime is
+## the half that answers "was any of this actually loaded into this session?".
+## Exit 5 (documented in CLAUDE.md as "not wired") was therefore unreachable
+## whenever anything structural was red, which is exactly when it is worth
+## reading. Structural failure still dominates the exit code; it no longer
+## suppresses the report.
 claude-env:
-	$(MAKE) claude-install-check
-	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py
-	$(PYTHON) ops/secrets/validate_capability_hosts.py
-	$(PYTHON) environment/agents/adapters/claude-code/verify_account_env.py || true
-	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py --runtime
+	@structural=0; runtime=0; \
+	$(MAKE) claude-install-check || structural=$$?; \
+	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py || structural=$$?; \
+	$(PYTHON) ops/secrets/validate_capability_hosts.py || structural=$$?; \
+	$(PYTHON) environment/agents/adapters/claude-code/verify_account_env.py || true; \
+	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py --runtime || runtime=$$?; \
+	if [ $$structural -ne 0 ]; then exit $$structural; fi; \
+	exit $$runtime
 
 ## Diagnose why the capability plane is unavailable, and whether egress matches
 ## the posture recorded in docs/NETWORK_POSTURE.md. Both report rather than fail:

@@ -1,3 +1,30 @@
+# Setup script — paste-ready
+
+**Field:** claude.ai/code → environment → **Setup script**
+**Revision:** `2026-08-21.3` · **Checksum:** `e0702860d71168ef`
+**Applies to:** NEW sessions only.
+
+Source of truth: `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`.
+Paste the stub, never `web/setup.sh`. The field is a copy, not a live link, so a
+full script pasted into it drifts from `main` on every edit; the stub is stable
+and hands off to `web/setup.sh` from the governance clone, which means setup.sh
+changes reach every new session with no re-paste.
+
+## Before you paste — copy the current field out first
+
+A field cannot be read back from inside the sandbox, so whatever is in it now is
+the only copy. If `verify_account_env.py` reports the field is **ahead** of HEAD,
+it is running bootstrap code that exists in no commit: copy it out, diff it
+against the stub below, and commit anything it added. Pasting over an ahead field
+destroys that code silently.
+
+```bash
+python3 environment/agents/adapters/claude-code/verify_account_env.py   # names the direction
+```
+
+## Paste this
+
+```bash
 #!/usr/bin/env bash
 # ---------------------------------------------------------------------------
 # L9 Claude Code cloud Setup script — startup stub (Web · Mobile · --cloud).
@@ -216,3 +243,16 @@ if [ "$SETUP_RC" -ne 0 ]; then
 fi
 note "cloud bootstrap complete — governance at $GOV_DIR ($GOV_BRANCH)"
 exit 0
+```
+
+## Verify the paste took
+
+Start a NEW session, then:
+
+```bash
+grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-08-21.3
+make claude-env                                    # structural + RUNTIME verdicts
+```
+
+The stub records its own revision into `~/.l9/cloud-session.env` on every run, so
+a later session can answer "is the pasted stub current?" without reading the field.

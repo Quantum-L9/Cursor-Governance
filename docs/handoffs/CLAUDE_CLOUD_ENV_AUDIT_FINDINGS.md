@@ -1,505 +1,297 @@
 # Audit findings — Cursor-Governance repo, Claude Code bootstrap, cloud env
 
 **Scope:** `Quantum-L9/Cursor-Governance` @ `8bc5781` · Claude Code adapter bootstrap ·
-Anthropic-hosted `cloud_default` session environment
-**Surface:** `L9_GOVERNANCE_SURFACE=claude-code`, `CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE=cloud_default`
-**Date:** 2026-08-21 · **Status:** validated — every finding below was reproduced in-session
-**Consumer:** downstream remediation. Findings are ordered by severity, each with the
-command that reproduces it and the narrowest true cause.
+Anthropic-hosted `cloud_default` session
+**Surface:** `L9_GOVERNANCE_SURFACE=claude-code`
+**Status:** every finding reproduced in-session. The **env plane is fixed** in this
+branch and verified; the repo plane is open.
 
 Findings already documented as accepted posture in `docs/DEGRADED_MODE_CONTRACT.md`
-are **not** listed as defects. See §3 for what was checked and found sound.
+are not listed as defects. §4 lists what was checked and found sound.
 
 ---
 
-## 1. Findings
+## 1. Status
 
-### F-01 · HIGH · repo · `make claude-env` fails structurally on every run
+| ID | Sev | Plane | Finding | State |
+|---|---|---|---|---|
+| F-01 | HIGH | repo | Memory contract violates its own schema — `make claude-env` fails structurally every run | **OPEN** |
+| F-02 | HIGH | repo | No test and no CI job covers that pair; the test that would have caught it was loosened | **OPEN** |
+| F-03 | HIGH | env | `capabilities`/`memory` reported READY because a variable was *set* | FIXED |
+| F-04 | HIGH | env | `group_id` unresolvable from the container root → 0 facts, read-only memory | FIXED |
+| F-14 | HIGH | repo | Publish-path verdict depends on whether the command is piped | **OPEN** |
+| F-05 | MED-HI | env | A failed hydration's receipt satisfied the memory precondition for 24h | FIXED |
+| F-06 | MED | env | Live stub revision `2026-08-21.2` exists in no commit; drift check pointed the wrong way | FIXED |
+| F-07 | MED | env | Container root — the session's own project dir — was never wired | FIXED |
+| F-08 | MED | env | `cloud-session.env` unset `GH_TOKEN`, disabling every `gh` path in a login shell | FIXED |
+| F-09 | MED | repo | `make wiring-check` asserts Cursor IDE wiring unconditionally → 100% red off Cursor | **OPEN** |
+| F-10 | MED | env | `mcp: READY` was file-presence; the front door routes through a dead host | FIXED |
+| F-15 | MED | repo | `merge_gate.py` matches its prohibitions against raw command text, denying documentation | **OPEN** |
+| F-11 | LOW-MED | env | `L9_MEMORY_REQUIRED` / `L9_MEMORY_FAIL_CLOSED` had zero consumers | FIXED |
+| F-12 | LOW | env | `L9_AUTONOMY_AUTONOMOUS_MERGE=true` where merge is documented inoperative | FIXED |
+| F-13 | LOW | env | Doctor's runtime step unreachable; "read-only" doctor rewrote the session receipt | FIXED |
+| F-16 | LOW | env | Prohibited credentials in the account field were never reported | FIXED |
 
-The memory-enforcement contract violates its own schema. `make claude-env` exits 1
-at step 2 and never reaches `validate_capability_hosts`, `verify_account_env`, or
-the `--runtime` readiness step.
+---
+
+## 2. Operator action required
+
+Two account fields are copy-paste and no agent can write them. Both are now
+generated from the SSOT:
+
+| Field | Paste from | Why |
+|---|---|---|
+| Environment variables | `docs/account-fields/ENVIRONMENT_VARIABLES.md` | drops 3 dead flags, sets merge `false` (F-11, F-12) |
+| Setup script | `docs/account-fields/SETUP_SCRIPT.md` | revision `2026-08-21.3`; stops unsetting `GH_TOKEN` (F-06, F-08) |
+
+**Before pasting the Setup script, copy the current field out.** It holds revision
+`2026-08-21.2`, which is in no commit and cannot be read back once overwritten. Diff
+it against the stub and commit anything it added. `verify_account_env.py` now names
+the direction so this decision is not guesswork.
+
+Regenerate both after any change to the SSOT:
+
+```bash
+python3 environment/agents/adapters/claude-code/verify_account_env.py --emit-fields
+```
+
+---
+
+## 3. Fixed — env plane
+
+### F-03 · Capability and memory status was presence, not verification
+
+`install.sh` downgraded only when `L9_CAPABILITY_BROKER_URL` was *unset*. The host
+has no DNS record and the hosted surface issues no session identity, so a set-but-dead
+broker reported READY — while the comment above the check called that "the honest
+posture".
+
+**Fix:** status now comes from `ops/secrets/probe_broker.py`, which already
+distinguishes identity from configuration from reachability, and answers in under a
+second when DNS fails.
+**Verified:** `capabilities: DEGRADED`, `memory: DEGRADED`, reason `broker probe: identity`.
+The URL stays configured, so this recovers by itself when the broker is deployed.
+
+### F-04 · Memory hydrated nothing in a multi-repo container
+
+A `group_id` identifies a repository. Resolving one from a container root matched all
+five and returned none, so hydration returned `facts_returned=0` and every write was
+refused `readonly: true` — with the store itself healthy (9 tools reachable).
+
+**Fix:** `hooks/memory_prefetch.py` resolves per repository root, hydrates each under
+its own namespace, and skips any that resolves to the shared cross-repo group (rules/98
+reserves `igor-workspace` and `write` rejects it).
+**Verified:** 0 facts → **32 facts** across `cursor-governance`, `llm-router`, `seo-bot`,
+`website-bot`. The cap (6 roots) is reported in the emitted text rather than truncating
+silently.
+
+### F-05 · A failed hydration satisfied the precondition it was supposed to prove
+
+`fresh_receipt()` checked session-id and TTL only. The receipt this session wrote read
+`{"status": "prefetched", "degraded": true, "group_id": "unresolved"}` — the gate saw it
+as fresh, never re-hydrated, and the session ran memory-blind for the full 24h TTL while
+every surface reported the precondition met.
+
+**Fix:** the receipt records what happened (`status: degraded`), and a degraded receipt
+is not fresh — which re-runs hydration and then **continues either way**. The gate stays
+non-blocking; rules/96 E7 and rules/98 require that and this does not change it.
+**Verified:** receipt now `status: prefetched, degraded: False` with four groups resolved.
+
+### F-06 · The live stub is code that is in no commit
+
+`~/.l9/cloud-session.env` records `2026-08-21.2`; HEAD carried `.1`; `git log --all -S`
+finds `.2` in no commit on any branch. The drift check was a bare `!=` that printed one
+remediation — "re-paste into the Setup script field" — which here would have downgraded
+production and destroyed the only copy of that code.
+
+**Fix:** HEAD is now `2026-08-21.3`, and `revision_direction()` compares revisions as
+ordered keys. *Behind* keeps the re-paste instruction; *ahead* says to copy the field out
+and commit what it added, explicitly warning not to re-paste.
+**Verified:** unit-checked across ahead / behind / same / unparseable.
+
+### F-07 · The session's own project directory was never wired
+
+Six repositories were wired; `/home/user` — the directory Claude Code loads project scope
+from — was not, because `install.sh` refused any workspace that is not a git repository.
+That guard was written against a different hazard (wiring the parent of a lone checkout),
+and a multi-repo container root is exactly the case it misclassified.
+
+**Fix:** `resolve_workspaces()` emits the container root, and the guard accepts a workspace
+that is either `CLAUDE_PROJECT_DIR` or contains two or more repositories. Git-specific steps
+already guarded on `rev-parse`, so a non-repo workspace skips them unchanged.
+**Verified:** `/home/user/.claude` now exists with 51 project-scope skills, the rules mount
+and settings; `settings/skills/rules` all READY.
+
+### F-08 · The bootstrap unset the credential `gh` needs
+
+`cloud-session.env` unset `GH_TOKEN` and `GITHUB_TOKEN`, on the reasoning that "the platform
+proxy injects its own credential". Measured:
+
+```
+git ls-remote  without them -> works    (the proxy authenticates git)
+gh api /user   without them -> refuses  ("please run gh auth login")
+```
+
+`~/.profile` sources that file unconditionally, so any login shell lost every `gh` path —
+including the REST calls `DEGRADED_MODE_CONTRACT.md` lists as working and the open-PR
+telemetry `make pr` requires before it may push.
+
+**Fix:** neither name is swept or unset. The remaining sweep (Infisical, AWS, Sonar,
+Semgrep, Graphiti) is correct and unchanged. The prohibition that still holds is on the
+*field*, and F-16 now enforces it where it can actually be checked.
+
+### F-10 · MCP readiness was file presence
+
+`.mcp.json` registers `graphiti-memory` at `${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`, and
+`install.sh` reported READY because the file existed.
+**Fix:** when the file routes through the broker and the broker is not READY, neither is the
+front door. **Verified:** `mcp: DEGRADED — front door routes through an unavailable broker`.
+
+### F-11 · Three flags that read as guarantees and enforced nothing
+
+`L9_MEMORY_REQUIRED` and `L9_MEMORY_FAIL_CLOSED` had **zero** consumers anywhere in the repo.
+`GRAPHITI_WRITE_GATES=1` has consumers, but only in the Cursor gate plane reached through
+`~/.cursor/hooks.json`, which this surface does not install.
+**Fix:** all three removed from the prescribed set, each with a comment saying why, so they
+are not re-added as an obvious omission.
+
+### F-12 · An affordance that always failed at the last step
+
+`L9_AUTONOMY_AUTONOMOUS_MERGE=true` where `gh pr merge` is a GraphQL mutation the session
+gateway does not serve. **Verified:** `gh pr list` → `HTTP 403`, `gh api .../pulls` → works.
+**Fix:** `false`, with the hosted-surface reason recorded beside it and the self-hosted case
+noted.
+
+### F-13 · The doctor suppressed its own most useful output, and rewrote what it measured
+
+`make claude-env` aborted on the first non-zero step, so a structural failure took the
+RUNTIME verdict down with it — and runtime is the half that answers "was any of this loaded
+into this session?". The documented `exit 5` was therefore unreachable whenever anything
+structural was red. Separately, `--check` overwrote `~/.l9/claude/bootstrap-state.json`;
+four component verdicts inverted between a SessionStart read and a post-doctor read.
+
+**Fix:** every step runs and the runtime verdict always prints; structural failure still
+decides the exit code. Check mode writes `bootstrap-check.json`.
+**Verified:** `RUNTIME: DEGRADED` printed despite the F-01 structural failure; session
+receipt byte-identical after a full doctor run.
+
+### F-16 · A pasted credential was never reported
+
+`DELIBERATELY_ABSENT` filtered prohibited names out of the expected set, so their *absence*
+was not reported as missing — but their *presence* was not reported either, though the
+docstring claimed presence was the drift.
+**Fix:** `prohibited_present()` reports them by name, never by value, exempting the platform's
+`proxy-injected` sentinel. That exemption is not cosmetic: `AWS_ACCESS_KEY_ID` and
+`AWS_SECRET_ACCESS_KEY` both carry it on this surface, and reporting them would cry wolf on
+every session.
+
+**Validation for all of the above:** 802 tests pass (`environment/agents/adapters/claude-code/tests/`,
+`tests/ops/`, `ops/scripts/tests/`, `tests/ops/scripts/test_multi_agent_main_bound.py`).
+
+---
+
+## 4. Open — repo plane
+
+### F-01 · HIGH · The contract violates its own schema
 
 ```
 FAIL: schema validation error: Additional properties are not allowed
       ('gate_shape', 'note' were unexpected)
 On instance['preconditions']['session_prefetch']
-RESULT: STRUCTURAL_FAIL — 1 issue(s)
 ```
 
-**Reproduce:** `make claude-env` — or, isolated,
-`.venv/bin/python environment/agents/adapters/claude-code/validate_claude_env.py`
-
-**Cause:** commit `1632fff` ("L9 Multi-Agent Main-Bound Execution") added the
-doctrine-bearing keys `gate_shape` and `note` to
-`memory/memory-enforcement.contract.json` → `preconditions.session_prefetch`, and in
-the same commit tightened `memory/memory-enforcement.schema.json`, but never added
-those two keys to `definitions/precondition`, which is `additionalProperties: false`
-with only `id` / `satisfied_by` / `established_by` / `verifies_against`.
-
-**Remediation:** extend `definitions/precondition` to permit `gate_shape` and `note`
-(both `type: string`). Keep the prose in the contract — it encodes rule 96 E7 (the
-phase-lock prohibition) next to the precondition it constrains, which is where it
-belongs. Do **not** relax `additionalProperties` globally; the same commit's
-`test_schema_makes_phase_lock_unrepresentable` depends on that strictness.
-
-**Verify:** `make claude-env` reaches `RESULT: PASS` on `validate_claude_env.py` and
-proceeds to the runtime step.
-
----
-
-### F-02 · HIGH · repo · The failure in F-01 is invisible to both tests and CI
-
-134 adapter + main-bound conformance tests pass while the validator fails, and the
-one test that would have caught it was loosened to tolerate the break rather than
-the break being fixed.
-
-**Evidence:**
-- `.venv/bin/python -m pytest environment/agents/adapters/claude-code/tests/ tests/ops/scripts/test_multi_agent_main_bound.py -q` → `134 passed, 36 subtests passed`
-- `environment/agents/adapters/claude-code/tests/test_validator_verdicts.py:55-67` —
-  `test_never_emits_a_bare_pass` asserts `STRUCTURAL_(PASS|FAIL)`, with a docstring
-  naming "a pre-existing memory-enforcement schema mismatch" as the reason it stopped
-  asserting `STRUCTURAL_PASS`.
-- No test anywhere invokes `validate_memory_enforcement.py`:
-  `grep -rn "validate_memory_enforcement\|jsonschema" tests/ .../claude-code/tests/ ops/scripts/tests/` → no hits.
-- **No CI workflow references the Claude adapter at all:**
-  `grep -rn "adapters/claude-code\|claude-env\|memory_enforcement" .github/workflows/` → no hits.
-
-**Cause:** the contract↔schema pair has no owning test, and no workflow runs the
-adapter validator. The verdict-vocabulary test absorbed the regression instead of
-surfacing it (rule 95, "do not weaken assertions until an incorrect result passes").
-
-**Remediation:**
-1. Add a test asserting `validate_memory_enforcement.py` exits 0 against the committed
-   contract — the assertion that F-01 would have failed.
-2. Add adapter validation (`make claude-env` structural step, or the two validators
-   directly) to a CI workflow. `governance-self-check.yml` is the natural home.
-3. Leave `test_never_emits_a_bare_pass` as the INV-8 vocabulary test it is; the new
-   test in (1) carries the correctness assertion. Do not re-couple them.
-
-**Verify:** revert F-01's schema fix locally → the new test fails; CI job fails.
-
----
-
-### F-03 · HIGH · env · Health receipt reports `capabilities: READY` / `memory: READY` for a plane the repo documents as blocked
-
-`install.sh` downgrades capability and memory status **only when
-`L9_CAPABILITY_BROKER_URL` is unset**. The variable is set to a host that has no DNS
-record, so a set-but-dead broker reports READY.
-
-```
-install.sh:304-307
-if [ -z "${L9_CAPABILITY_BROKER_URL:-}" ]; then
-  downgrade STATUS_CAPABILITIES DEGRADED "L9_CAPABILITY_BROKER_URL unset"
-  downgrade STATUS_MEMORY       DEGRADED "no broker-authenticated identity path"
-fi
-```
-
-**Evidence:** `.venv/bin/python ops/secrets/probe_broker.py`
-```
-identity:      none (hosted_surface_issues_no_session_identity)
-broker dns:    no_dns_record
-broker health: unreachable_URLError
-PRIMARY BLOCKER: identity
-```
-`make claude-env` in the same session prints `capabilities=READY memory=READY`.
-The comment directly above the check calls this posture "honest"; the implementation
-falsifies the comment. `ops/secrets/validate_capability_hosts.py` also passes, but it
-validates **syntax** only (`RESULT: PASS — every capability upstream_host is valid (syntax)`).
-
-**Cause:** presence-of-variable is used as a proxy for reachability-and-identity.
-
-**Remediation:** derive `STATUS_CAPABILITIES` / `STATUS_MEMORY` from
-`probe_broker.py`'s classification (identity present? host resolves? health 200?) rather
-than from `-z`. READY must require a verified path; `BLOCKED_BY_PLATFORM` already exists
-as the correct token for this surface (exit 4) and is distinct from "no broker configured"
-(exit 3) — the receipt should carry that distinction.
-
-**Verify:** on a hosted session the receipt reads `capabilities: BLOCKED_BY_PLATFORM`,
-not READY, with no change to `L9_CAPABILITY_BROKER_URL`.
-
----
-
-### F-04 · HIGH · env · Graphiti group_id is unresolvable from the container root; the session hydrates zero facts and memory is read-only
-
-The cloud container holds five repositories under `/home/user`. Group resolution scans
-the workspace, matches all five, and refuses to guess.
-
-**Reproduce:**
-```bash
-cd /home/user && .../.venv/bin/python ops/graphiti/graphiti_memory_client.py resolve
-{"group_id": null,
- "error": "ambiguous group match: ['cursor-governance','l9-graphiti-memory','llm-router','seo-bot','website-bot'] — set GRAPHITI_GROUP_ID",
- "readonly": true}
-```
-From inside a single repo it resolves cleanly:
-`… resolve` → `{"group_id":"cursor-governance","method":"registry","readonly":false}`
-
-**Session impact (from the SessionStart packet):** `group_id=unresolved`, `DEGRADED`,
-`facts_returned=0`, `pickup_parsed=no`, `context_chars=0`, and `readonly: true` — every
-memory write for the session is refused.
-
-**Not** a server problem: `graphiti_memory_client.py health` →
-`{"mcp": {"status": "healthy", "service": "graphiti-mcp"}, "tools": {"reachable": true, "tool_count": 9}}`.
-
-**Cause:** the hydration path resolves one group for one workspace root, and the hosted
-multi-repo layout has no single workspace root.
-
-**Remediation (pick one, in preference order):**
-1. Resolve per-repository: emit one hydration packet per repo root found under the
-   container root, keyed by that repo's group_id. Matches the "namespace represents
-   repository identity" contract in rule 96 §3.
-2. Have the bootstrap export `GRAPHITI_GROUP_ID` for the repo the session is actually
-   working in, when that is determinable (e.g. from the session's designated branch or
-   `CLAUDE_PROJECT_DIR`).
-3. At minimum: make the ambiguous case actionable in the packet — list the resolvable
-   group_ids and the exact export that fixes it, instead of a single degraded line.
-
-**Verify:** SessionStart packet reports a concrete `group_id` and `readonly: false` in a
-multi-repo container.
-
----
-
-### F-05 · MEDIUM-HIGH · repo · A receipt from a *failed* hydration satisfies the memory precondition, and nothing retries for 24h
-
-`fresh_receipt()` checks only session-id match and TTL. It does not read `degraded`
-or `group_id`.
-
-```python
-# memory/memory_state.py:205-218 (fresh_receipt)
-return (
-    data.get("session_id") == session_id
-    and (time.time() - float(data.get("created_at", 0))) < ttl
-)
-```
-
-The receipt this session actually wrote:
-```json
-{"status": "prefetched", "degraded": true, "group_id": "unresolved", ...}
-```
-`grep -n "degraded\|group_id" memory/memory_state.py` returns only docstring hits.
-
-**Scope note — this is not a request to make memory blocking.** The non-blocking gate
-shape is required by rule 96 E7 / rule 98 (`fresh hydration? yes → continue; no →
-hydrate, then continue`), and the contract, the schema, and
-`test_contract_does_not_gate_repository_writes_on_phase_lock` all correctly enforce
-that. The defect is narrower: a hydration that returned nothing is recorded as
-`status: "prefetched"`, the gate treats it as satisfied, and the "no → hydrate, then
-continue" branch is therefore never taken for the remaining `session_ttl_seconds`
-(86400). The session runs memory-blind while every telemetry surface reports the
-precondition met.
-
-**Remediation:** have the prefetch hook write `status: "degraded"` when the hydration
-packet is degraded, and have `fresh_receipt()` treat a degraded receipt as *not fresh*
-— which re-attempts hydration and then **continues either way**, per the mandated gate
-shape. No new blocking path.
-
-**Verify:** with an unresolvable group, a second governed write re-attempts hydration
-rather than reading the stale receipt, and still proceeds.
-
----
-
-### F-06 · MEDIUM · env+governance · The live bootstrap stub is a revision that exists in no commit, and the drift check points remediation the wrong way
-
-`~/.l9/cloud-session.env` records `L9_STUB_REVISION=2026-08-21.2`. Repo HEAD carries
-`L9_STUB_REVISION="2026-08-21.1"` (`web/setup.bootstrap.sh:31`). Revision `.2` appears
-in **no commit on any branch**:
-
-```bash
-git log --all -S'2026-08-21.2' -- environment/agents/adapters/claude-code/web/setup.bootstrap.sh
-# (no output)
-```
-Both clones agree on `.1` (`/root/.cursor-governance` and `/home/user/Cursor-Governance`
-are byte-identical), and `gov-refresh.json` confirms `local_sha == origin_sha == 8bc5781`.
-
-So the Setup-script account field is running bootstrap code that is not in the SSOT.
-
-Compounding, the drift detector is a bare inequality with a single-direction fix:
-```python
-# verify_account_env.py:193
-"stub_drift": bool(want_rev) and have_rev != want_rev,
-# :231-236 prints, unconditionally:
-#   "re-paste web/setup.bootstrap.sh into the Setup script field"
-```
-Following that instruction here would **downgrade** the live field from `.2` to `.1`
-and silently destroy the only copy of the `.2` stub.
-
-**Remediation:**
-1. Before anything else, recover the `.2` stub text from the account field and diff it
-   against HEAD. If it carries real changes, commit them; if it is stale hand-editing,
-   re-paste `.1` deliberately.
-2. Make the check direction-aware: field **ahead** of HEAD → "the Setup field carries
-   uncommitted bootstrap code; recover and commit it"; field **behind** HEAD → the
-   existing re-paste instruction.
-
-**Verify:** `verify_account_env.py` distinguishes ahead/behind and names the correct
-action for each.
-
----
-
-### F-07 · MEDIUM · env · Bootstrap wired `/home/user/.github`; the session's project directory is `/home/user`
-
-`bootstrap-state.json` records `"workspace": "/home/user/.github"`. SessionStart warned:
-`bootstrap wired /home/user/.github, but this project is /home/user — .claude mirrors may be missing`.
-
-**Evidence:**
-- `/home/user/.github/.claude/skills` → 51 skills (wired)
-- `/home/user/.claude` → **does not exist**
-- project-scope reconcile against the real project root reports all 51 skills missing:
-  `.venv/bin/python ops/scripts/reconcile_claude_l9_skills.py --root /root/.cursor-governance --scope project --workspace /home/user --check` → 51 × `missing:l9-*`
-
-**Cause:** `install.sh:47` takes `WORKSPACE="$PWD"`, and `web/setup.bootstrap.sh` runs
-under whatever cwd the platform provides — the first repo in a multi-repo container, not
-the session root. The consequence is masked here only because user scope
-(`/root/.claude/skills`, 53 skills) resolves; on a session where user scope is absent,
-project-scope skills and the `.claude/rules` mount would both be missing.
-
-**Remediation:** in a multi-repo container, reconcile every repository root **and** the
-container root, rather than a single `$PWD`. Give `install.sh` an explicit
-`--workspace` list, or derive it from the repo roots present under `$HOME`.
-
-**Verify:** `/home/user/.claude/skills` exists and the project-scope `--check` reports
-zero missing.
-
----
-
-### F-08 · MEDIUM · env · `cloud-session.env` unsets the platform GitHub credential, and `~/.profile` sources it unguarded
-
-```bash
-# ~/.l9/cloud-session.env, written by setup.bootstrap.sh:171
-unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN GITHUB_TOKEN GH_TOKEN
-```
-The same stub's own comment three lines above reads:
-`# No GH_TOKEN export: the platform proxy injects its own credential.`
-It then unsets the credential the platform injected.
-
-**Reproduce:**
-```bash
-bash -c '. "$HOME/.l9/cloud-session.env"; echo "GH_TOKEN=${GH_TOKEN:+set}"'   # → GH_TOKEN=
-```
-**Current blast radius is narrow, and by accident:** `~/.bashrc:6` returns early for
-non-interactive shells, so the `~/.bashrc:110` sourcing never fires for tool-invoked
-bash — which is why this session still holds both tokens. But `~/.profile:12` sources
-the file **unconditionally**, so any login shell (`bash -l`, `su -`, ssh) loses them.
-
-**Cause:** the vault-hygiene unset list (correctly covering Infisical / AWS / Sonar /
-Semgrep / Graphiti) was extended to two variables the platform legitimately provides.
-
-**Remediation:** drop `GITHUB_TOKEN` and `GH_TOKEN` from the unset list on hosted
-surfaces. The remaining unsets are correct and should stay. If a non-hosted surface
-needs them cleared, guard on `CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE`.
-
-**Verify:** `bash -lc 'echo ${GH_TOKEN:+set}'` → `set`; `gh api user` works from a login shell.
-
----
-
-### F-09 · MEDIUM · repo · `make wiring-check` fails 100% of the time on any non-Cursor surface
-
-Five FAILs, all asserting Cursor IDE wiring that will never exist in a headless
-`claude-code` container:
-
-```
-FAIL: hook symlink missing: /root/.cursor/hooks/governance-backup.sh
-FAIL: hooks.json missing: /root/.cursor/hooks.json
-FAIL: sessionStart bootstrap not in hooks.json
-FAIL: beforeSubmitPrompt skill router missing from hooks.json
-FAIL: before-submit-skill-router.py missing under ~/.cursor/hooks
-FAIL: afterShellExecution pr-gate-failure-shell.sh missing from hooks.json
-FAIL: pr-gate-failure-shell.sh missing under ~/.cursor/hooks
-RESULT: FAIL — sessionEnd hook incomplete
-RESULT: FAIL — Graphiti wiring
-```
-
-**Reproduce:** `make wiring-check` (exit 2)
-
-The script already classifies the workspace (`Workspace kind: ssot_checkout`) and
-correctly skips consumer-symlink requirements on that basis. The Cursor-hook sections
-simply do not consult that classification, or `L9_GOVERNANCE_SURFACE`.
-
-**Cause:** surface-awareness exists for one section of the validator and not the others.
-
-**Remediation:** gate the `sessionEnd governance backup hook` and the Cursor half of the
-`Graphiti memory (GLOBAL-001)` section on surface — report `SKIP: cursor-plane (surface=claude-code)`
-— while keeping them blocking on `cursor`. The Claude-plane equivalents are already
-verified separately and pass (`.claude/settings.json` registers SessionStart, Stop,
-UserPromptSubmit, PreToolUse ×3, UserPromptExpansion).
-
-**Verify:** `make wiring-check` exits 0 on `claude-code` and still fails on `cursor`
-with the Cursor hooks removed.
-
----
-
-### F-10 · MEDIUM · env · `mcp: READY` is file-presence, not connectivity — the memory front door cannot resolve
-
-`.mcp.json` registers `graphiti-memory` at `${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`,
-which expands to `https://broker.quantumaipartners.com/l9/capability/mcp/graphiti` — a
-host with no DNS record (F-03). `install.sh` reports `STATUS_MCP=READY` on the sole
-basis that `.mcp.json` exists (`say ".mcp.json already present — left as the repo committed it"`).
-
-**Evidence:** `curl --max-time 15 https://broker.quantumaipartners.com/l9/capability/health`
-→ `curl: (56) CONNECT tunnel failed, response 502`; `getent hosts broker.quantumaipartners.com` → no record.
-By contrast the underlying store is reachable directly:
-`curl -o /dev/null -w '%{http_code}' https://memory.quantumaipartners.com/graphiti/mcp` → `406`
-(server alive, wrong Accept header), and the CLI transport is healthy (F-04).
-
-**Remediation:** report MCP readiness from an actual handshake (or at minimum host
-resolution) rather than file presence; a registered-but-unresolvable server is
-DEGRADED. Track separately from F-03 — this is the front-door check, F-03 is the
-capability accumulator.
-
-**Verify:** the receipt reports `mcp: DEGRADED` while the broker host does not resolve.
-
----
-
-### F-11 · LOW-MEDIUM · env · Three enforcement-sounding flags are prescribed and enforce nothing on this surface
-
-`web/environment.env.example` prescribes them, and `verify_account_env.py` counts them
-among the 36 "expected variables" that must match:
-
-| Variable | Line | Consumers in repo |
-|---|---|---|
-| `L9_MEMORY_REQUIRED=true` | 73 | **0** |
-| `L9_MEMORY_FAIL_CLOSED=true` | 74 | **0** |
-| `GRAPHITI_WRITE_GATES=1` | 56 | 12 — all in `ops/graphiti/*`, the **Cursor** gate plane, which F-09 shows is not wired here |
-
-**Reproduce:** `grep -rl "L9_MEMORY_REQUIRED" --include=*.py --include=*.sh --include=*.yaml . | grep -v '.venv/\|.git/\|WIP/\|docs/'` → empty.
-
-The Claude surface gates memory through `hooks/memory_gate.py` + receipts, which read
-none of these. An operator reading the environment field would reasonably conclude
-memory writes fail closed on this surface. They do not (see F-05).
-
-**Remediation:** for each — implement it on the Claude plane, remove it from the
-prescribed set, or annotate it in `environment.env.example` as Cursor-plane-scoped.
-Silent no-ops in a file that doubles as the contract are the problem, not the values.
-
----
-
-### F-12 · LOW · env · `L9_AUTONOMY_AUTONOMOUS_MERGE=true` is prescribed for a surface where merge cannot work
-
-`environment.env.example:82` annotates it as "a real merge_gate.py control", and line 90
-sets it `true`. `docs/DEGRADED_MODE_CONTRACT.md` states, correctly, that
-`gh pr merge` is GraphQL and therefore that `L9_AUTONOMY_AUTONOMOUS_MERGE=true` is
-inoperative on this surface. Verified:
-
-```
-gh pr list  → HTTP 403: This GraphQL query (PullRequestList) is not enabled for this session
-gh api /repos/Quantum-L9/Cursor-Governance/pulls?state=open  → 266, 265, 264 …
-```
-
-**Remediation:** carry the hosted-surface caveat into `environment.env.example` beside
-the variable, or default it `false` for `cloud_default`. Documentation-only; the merge
-gate itself is sound.
-
----
-
-### F-13 · LOW · repo · The documented `make claude-env` diagnostic is unreachable, and the "read-only" doctor rewrites the session receipt
-
-Two small contradictions in the entry point `CLAUDE.md` points every agent at.
-
-1. `CLAUDE.md` says `make claude-env   # structural validation + RUNTIME readiness (exit 5 = not wired)`.
-   `EXIT_RUNTIME_NOT_READY = 5` but `EXIT_STRUCTURAL_FAIL = 1`
-   (`validate_claude_env.py:747-749`), and `make` aborts the target on the first
-   non-zero step — so while F-01 stands, the target exits 1 and the `--runtime` step
-   never runs. The advertised diagnostic cannot be observed.
-2. The Makefile comment calls the target "read-only", but its first step
-   (`claude-install-check`) rewrites `~/.l9/claude/bootstrap-state.json`. Observed in
-   this session: SessionStart reported `skills=READY rules=READY capabilities=DEGRADED
-   memory=DEGRADED`; after one `make claude-env` the same file reported
-   `skills=DEGRADED rules=DEGRADED capabilities=READY memory=READY`. Four verdicts
-   inverted because the two runs used different `--workspace` values and different
-   environments — so the receipt describes the last check, not the running session.
-
-**Remediation:** run the runtime step unconditionally (`-` prefix or reorder) so the
-readiness verdict is always reported; and have check-mode write a separate diagnostic
-receipt instead of overwriting the session's bootstrap receipt.
-
----
-
-### F-14 · HIGH · repo · The publish-path rule's verdict depends on whether the command is piped, not on what it does
-
-`git push` is allowed. `git push | tail` is denied as an unsanctioned publish path.
-Same for `gh pr create`. The gate decides on shell plumbing that has no bearing on
-whether GitHub is reached.
-
-**Reproduce** (`ops/autonomy/local_execution_gate.py`, `claude` mode; identical results
-in `cursor-shell` mode):
+Commit `1632fff` added those two doctrine-bearing keys to
+`memory/memory-enforcement.contract.json` and tightened
+`memory-enforcement.schema.json` in the same change, without adding them to
+`definitions/precondition` (`additionalProperties: false`).
+
+**Fix:** permit `gate_shape` and `note` (both `type: string`) in that definition. Keep the
+prose in the contract — it encodes rules/96 E7 beside the precondition it constrains. Do not
+relax `additionalProperties` globally; `test_schema_makes_phase_lock_unrepresentable` depends
+on that strictness.
+
+### F-02 · HIGH · Nothing covers that pair
+
+134 adapter and conformance tests pass while the validator fails. No test invokes
+`validate_memory_enforcement.py`; **no CI workflow references the Claude adapter at all**. The
+test that would have caught it — `tests/test_validator_verdicts.py:55` — was relaxed to accept
+`STRUCTURAL_(PASS|FAIL)`, its docstring naming the mismatch as the reason.
+
+**Fix:** add a test asserting `validate_memory_enforcement.py` exits 0; add adapter validation
+to a workflow (`governance-self-check.yml` is the natural home). Leave the verdict test as the
+vocabulary test it is — do not re-couple them.
+
+### F-14 · HIGH · The publish-path verdict depends on shell plumbing
 
 | Command | Verdict |
 |---|---|
-| `git push -u origin mybranch` | **allow** |
-| `git push -u origin mybranch 2>&1 \| tail -8` | **deny** — "Publish path: `git push` is not a sanctioned way to reach GitHub" |
-| `git push origin HEAD \| cat` | **deny** |
-| `gh pr create --fill` | **allow** |
+| `git push -u origin mybranch` | allow |
+| `git push -u origin mybranch \| tail -8` | **deny** — "not a sanctioned way to reach GitHub" |
+| `gh pr create --fill` | allow |
 | `gh pr create --fill \| tee /tmp/x` | **deny** |
-| `git status \| tail -5` | allow (not a publish form) |
 
-**Found by:** attempting the push this audit's own session instructions prescribe
-(`git push -u origin <branch>`), piped to `tail -8`. It was denied. The unpiped form
-of the same push is allowed.
+`local_execution_gate.py:304` exempts the event when `event_is_git_or_gh()` is true, before
+the publish-path check at line 320. `command_is_git_or_gh()` requires every segment head to be
+git/gh or neutral, so a pipe drops the exemption. Both surfaces behave identically
+(`main_cursor_shell` via `payload_is_git_or_gh`), so this is not an asymmetry.
 
-**Cause:** `local_execution_gate.py:304` exempts the entire event when
-`event_is_git_or_gh()` is true, *before* the publish-path check at line 320.
-`git_execution_exemption.command_is_git_or_gh()` requires **every** segment head to be
-in `GIT_EXECUTABLES` or `NEUTRAL_HEADS`; a pipe to `tail` / `cat` / `tee` introduces a
-head that is neither, the exemption is lost, and the command falls through to
-`command_bypasses_publish_path()` and is denied. `main_cursor_shell` has the same
-shape via `payload_is_git_or_gh(raw)` at line 527, so both surfaces agree — the defect
-is not a surface asymmetry.
+The rule therefore enforces nothing — omit the pipe and it allows — while producing confident
+false denials on ordinary usage. Three documents disagree about what it does:
+`zz-autonomy-surface-override` §2a says denied at every phase; `CLAUDE.md` says not denied;
+the gate says denied iff piped.
 
-**Consequences, both directions:**
-1. **The rule enforces nothing.** Anyone intending to bypass `make pr` simply does not
-   pipe. There is no evasion to detect — the plain form is the allowed form.
-2. **It produces confident false denials on ordinary usage,** with a message asserting
-   a prohibition the unpiped command does not obey.
-3. **Three-way documentation conflict**, none of which describes the actual behavior:
-   - `rules/zz-autonomy-surface-override` §2a: "Raw `git push`, `gh pr create` … are
-     denied at **every** phase."
-   - `CLAUDE.md`, under "The three things most often got wrong here": "Raw `git push` is
-     *not* denied by `ops/autonomy/local_execution_gate.py` … it will not [error]."
-   - Gate: denied if and only if piped.
+**Fix — decide the intent first.** Deny: evaluate the publish-path check before the exemption,
+and correct `CLAUDE.md`. Allow (the CANONICAL_LAW §6.2.4 position): stop applying the check to
+commands whose git/gh segments are the publishing ones, and correct the rule. Either way the
+same push must get the same verdict piped and unpiped.
 
-**Remediation — decide the intent first, then make the verdict plumbing-independent:**
-- If raw `git push` / `gh pr create` **should** be denied: evaluate
-  `command_bypasses_publish_path()` *before* the git/gh exemption, and correct
-  `CLAUDE.md`.
-- If they **should** be allowed (the position CANONICAL_LAW §6.2.4 and `CLAUDE.md`
-  take — git and gh answer to `git_guardrails.py` by effect, and `make pr` is preferred
-  because it runs the checkers, not because pushing errors): stop applying the
-  publish-path check to commands whose git/gh segments are the publishing ones, so a
-  pipe cannot change the answer. Then correct `rules/zz-autonomy-surface-override` §2a.
+### F-15 · MED · `merge_gate.py` matches prohibitions against raw command text
 
-Do not leave it split. Whichever way it resolves, the same push must get the same
-verdict piped and unpiped.
+The same input, through the two gates in `ops/autonomy/`:
 
-**Verify:** a parametrized test asserting that for each of
-`git push`, `gh pr create`, `gh pr edit`, the bare form and the `| tail -1` form return
-the identical verdict.
+| Command | `merge_gate` | `local_execution_gate` |
+|---|---|---|
+| heredoc whose body documents `gh pr merge --admin` | **DENY** | allow |
+| `echo '# never gh pr merge --admin'` | **DENY** | allow |
+| heredoc whose body documents `git push --force` | **DENY** | allow |
+| a real `gh pr merge 12 --admin` | DENY | DENY |
+| a real `git push --force origin main` | allow | DENY |
+
+`merge_gate.py:85-88` regexes the whole command string, so quoted arguments and heredoc bodies
+count as invocations. `local_execution_gate.py` already solved this in the same directory —
+`strip_heredoc_bodies` plus `segment_head`, documented as "`echo 'git push'` is data, not a
+push". This blocked two ordinary documentation writes during this audit.
+
+The last row is not an escape: `local_execution_gate` denies the real forced push, so the effect
+stays blocked. It does mean `merge_gate`'s bash matchers are both over-broad on text and not the
+control that enforces.
+
+**Fix:** run `merge_gate`'s bash matchers over `strip_heredoc_bodies` + command-position
+segments, as its neighbour does.
+
+### F-09 · MED · `make wiring-check` is red by construction off Cursor
+
+Five FAILs, all asserting `~/.cursor/hooks.json` and Cursor hook symlinks, on a headless
+container where Cursor will never run. The script already classifies workspace kind
+(`ssot_checkout`) and skips consumer-symlink requirements on that basis; the Cursor-hook
+sections do not consult it or `L9_GOVERNANCE_SURFACE`.
+
+**Fix:** report those sections as skipped when the surface is not `cursor`, keeping them
+blocking when it is. The Claude-plane equivalents are verified separately and pass.
 
 ---
 
-## 2. Remediation order
-
-F-01 first — it blocks the doctor that validates everything else, and it is a
-two-key schema edit. F-02 next, so the fix cannot silently regress. Then F-04 and
-F-05 together (they are one story: hydration cannot resolve, and the receipt hides
-it). F-03 and F-10 together (both are presence-vs-verification in the same
-accumulator). F-06 needs a human with account-field access before anything is
-re-pasted. F-14 is independent of all of the above and should be scheduled early: it is a correctness-of-enforcement question that needs a decision (deny or allow) before the code changes, and it currently misleads every agent reading either `CLAUDE.md` or `zz-autonomy-surface-override`. F-07, F-08, F-09 are independent and can run in parallel. F-11 → F-13
-are documentation/annotation and can be batched.
-
-## 3. Checked and found sound — do not open work here
+## 5. Checked and found sound — do not reopen
 
 | Area | Evidence |
 |---|---|
-| L4 release gate (`make pr`) | Probed directly: `make pr` → `permissionDecision: deny` carrying the L4 release sequence; `git commit` → allowed. The L4 *timing* rule behaves as CANONICAL_LAW §6.2.4 documents. The publish-*path* rule layered on top of it does not — see F-14. |
-| PR overlap guardrail | `pr_overlap_check.py --base origin/main` → `PASS: no non-generated file overlap with open PRs`, exit 0. `gh_available()` correctly probes `gh --version`, not `gh auth status`, so the documented auth false-negative does not fail it closed. |
-| Generated artifacts | `sync_generated_artifacts.py --force --check --json` → `{"errors": [], "warnings": [], "wrote": []}`. No drift. |
-| Graphiti server | `health` → `mcp: healthy`, 9 tools reachable. The store is up; only group resolution is broken (F-04). |
-| Adapter + conformance tests | 134 passed, 36 subtests. (They pass *around* F-01 — see F-02 — but the assertions themselves are sound.) |
-| Secret hygiene | Validator confirms no committed secrets, no bearer in `mcp.template.json`, no credential in `environment.env.example`, `setup.bootstrap.sh` or `web/setup.sh`; zero-static-secret contract documented. Holds. |
-| Rule projection `denied=1` | Intentional: `ops/config/llm_rules_projection.yaml` denies `84-cursor-governance-wiring` as Cursor-plugin-only. Not a defect. |
-| Claude hook plane | `.claude/settings.json` registers SessionStart, Stop, UserPromptSubmit, PreToolUse ×3, UserPromptExpansion — all via `l9_hook_exec.sh`. Gates are live (a `cat .mcp.json` was denied mid-audit by the PreToolUse gate). |
-| `plugins: DEGRADED` | Platform-imposed (`SKIP_PLUGIN_MARKETPLACE=true`), already handled in `install.sh` with an explicit branch. Not actionable in-repo. |
-| `gh auth status` false negative | Already documented in `DEGRADED_MODE_CONTRACT.md`; `gh api` REST works. Not a defect. |
-| Broker `BLOCKED_BY_PLATFORM` | Structural, documented, outside this repo. Only the *reporting* of it is a defect (F-03). |
-| Audit branch base | `claude/cursor-governance-audit-qdbhlw` is at `origin/main` (`8bc5781`) with zero divergence and a clean tree. |
+| L4 release gate | `make pr` → deny with the release sequence; `git commit` → allow. Behaves as CANONICAL_LAW §6.2.4 documents. The publish-*path* rule layered on it does not (F-14). |
+| PR overlap guardrail | `PASS: no non-generated file overlap`, exit 0. `gh_available()` probes `gh --version`, so the documented auth false-negative does not fail it closed. |
+| Generated artifacts | `sync_generated_artifacts.py --force --check --json` → `{"errors": [], "warnings": [], "wrote": []}`. |
+| Graphiti server | `health` → `mcp: healthy`, 9 tools. The store was never the problem (F-04). |
+| Secret hygiene | No committed secrets; no bearer in `mcp.template.json`; no credential in the stub, `web/setup.sh`, or the variables file. |
+| Rule projection `denied=1` | Intentional — `84-cursor-governance-wiring` is Cursor-plugin-only. |
+| Claude hook plane | SessionStart, Stop, UserPromptSubmit, PreToolUse ×3, UserPromptExpansion all registered and live. |
+| `plugins: DEGRADED` | Platform-imposed (`SKIP_PLUGIN_MARKETPLACE=true`), already branched for in `install.sh`. |
+| `gh auth status` false negative | Documented in `DEGRADED_MODE_CONTRACT.md`; `gh api` REST works. |
+| Broker `BLOCKED_BY_PLATFORM` | Structural and outside this repo. Only its *reporting* was a defect (F-03). |
