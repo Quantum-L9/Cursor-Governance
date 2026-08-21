@@ -1,0 +1,22 @@
+schema: canonical.schema.feature_tree.v1
+program_id: cycle-test
+stack_base: main
+nodes:
+  - id: AA-010
+    title: A
+    depends_on: [AA-020]
+    branch: feat/aa-010
+    base: main
+    contract: tests/fixtures/feature_trees/PE-010.contract.md
+    file_scope: [a.py]
+    gates: [g1, g2]
+    state: planned
+  - id: AA-020
+    title: B
+    depends_on: [AA-010]
+    branch: feat/aa-020
+    base: main
+    contract: tests/fixtures/feature_trees/PE-010.contract.md
+    file_scope: [b.py]
+    gates: [g1, g2]
+    state: planned

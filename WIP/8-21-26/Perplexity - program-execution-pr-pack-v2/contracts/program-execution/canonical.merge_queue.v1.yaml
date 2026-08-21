@@ -1,0 +1,7 @@
+schema_id: canonical.program_execution.merge_queue.v1
+description: Contract governing merge-queue batches vs feature-tree nodes.
+fields:
+  max_batch_size: { type: integer }
+  required_checks_source: { type: string, const: feature_tree.gates.union }
+  batch_timeout_minutes: { type: integer }
+  require_all_queue_entries_pass: { type: boolean }

@@ -1,0 +1,7 @@
+leases:
+  - node_id: PE-010
+    resources: { db_branch: preview-pe-010, port_range: [20000, 20010] }
+    state: active
+  - node_id: EN-010
+    resources: { db_branch: preview-en-010, port_range: [20011, 20020] }
+    state: active

@@ -1,0 +1,22 @@
+name: semantic-conflict
+on:
+  merge_group:
+permissions:
+  contents: read
+jobs:
+  semantic-probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml pytest
+      - id: contracts
+        run: echo "contracts=$(find reports -type f -path '*semantic_contracts/*.yaml' | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+      - run: |
+          mkdir -p reports/$(date +%F)/tasks
+          python tools/semantic_merge_probe.py --repo . --base main \
+            --branches ${{ github.event.merge_group.head_ref }} \
+            --semantic-contracts ${{ steps.contracts.outputs.contracts }} \
+            --out reports/$(date +%F)/tasks/semantic_merge_verdict.json
