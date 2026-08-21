@@ -29,6 +29,8 @@ WORKER_COMMAND_ENV = "L9_PE_WORKER_CMD"
 WORKER_TIMEOUT_ENV = "L9_PE_WORKER_TIMEOUT_S"
 DEFAULT_WORKER_TIMEOUT_S = 1800
 INSPECTION_KINDS = {"analysis", "inspection", "decision", "program_control", "review"}
+CURSOR_FOREGROUND_ADAPTER = "cursor-foreground"
+_WIRING_PATHS = (".cursor-commands", ".cursor")
 
 
 class WorkerError(RuntimeError):
@@ -55,9 +57,46 @@ class WorkerOutcome:
         }
 
 
+def configured_worker_command(env: dict[str, str] | None = None) -> str:
+    """Return the detached-worker template, or empty for cursor-foreground."""
+    source = os.environ if env is None else env
+    return str(source.get(WORKER_COMMAND_ENV, "") or "").strip()
+
+
+def worker_binding(env: dict[str, str] | None = None) -> dict[str, Any]:
+    """Record how this campaign will implement tasks.
+
+    Campaign initialization does not invent a subprocess worker. Unset
+    ``L9_PE_WORKER_CMD`` means the bound Cursor peer (cursor-foreground).
+    Operators may export the env var before ``make campaign`` when they want a
+    detached command; PE forwards it, it does not synthesize one.
+    """
+    command = configured_worker_command(env)
+    if command:
+        return {
+            "adapter": "subprocess",
+            "env_var": WORKER_COMMAND_ENV,
+            "command": command,
+            "mode": "detached_worker",
+        }
+    return {
+        "adapter": CURSOR_FOREGROUND_ADAPTER,
+        "env_var": WORKER_COMMAND_ENV,
+        "command": None,
+        "mode": "peer_session",
+    }
+
+
 def is_inspection_only(task: dict[str, Any]) -> bool:
     """True when verifying an unmodified worktree is the task's actual intent."""
     return str(task.get("execution_kind") or "").strip().lower() in INSPECTION_KINDS
+
+
+def _is_workspace_wiring_status(line: str) -> bool:
+    """True for gitignored consumer links created by ensure_workspace_wired."""
+    path = line[3:] if line[:2] in {"??", "!!"} or (len(line) > 3 and line[2] == " ") else line
+    path = path.strip()
+    return path == ".cursor-commands" or path == ".cursor" or path.startswith(".cursor/")
 
 
 def worktree_already_implements(worktree: Path, contract: dict[str, Any]) -> bool:
@@ -65,7 +104,7 @@ def worktree_already_implements(worktree: Path, contract: dict[str, Any]) -> boo
 
     L9_PE_WORKER_CMD is a subprocess adapter. The bound Cursor peer is this
     session, so a tree that already diverged from base_sha is work done, not
-    an unmodified implementation defect.
+    an unmodified implementation defect. Governance wiring links are not work.
     """
     base = str(contract.get("base_sha") or "").strip()
     head = subprocess.run(
@@ -82,8 +121,14 @@ def worktree_already_implements(worktree: Path, contract: dict[str, Any]) -> boo
         check=False,
         timeout=120,
     )
-    if dirty.returncode == 0 and dirty.stdout.strip():
-        return True
+    if dirty.returncode == 0:
+        product = [
+            line
+            for line in dirty.stdout.splitlines()
+            if line.strip() and not _is_workspace_wiring_status(line)
+        ]
+        if product:
+            return True
     current = (head.stdout or "").strip()
     return bool(base and current and current != base)
 
@@ -252,13 +297,23 @@ def unexecuted_task_message(task: dict[str, Any], outcome: WorkerOutcome, worktr
     """Say why an implementation task reached verification with no work done."""
     task_id = str(task.get("id") or "TASK")
     if not outcome.invoked:
+        binding = worker_binding()
+        if binding["mode"] == "peer_session":
+            return (
+                f"{task_id} is an implementation task ({task.get('execution_kind')}) and the "
+                f"bound adapter is {CURSOR_FOREGROUND_ADAPTER}, so its worktree at {worktree} "
+                "is unmodified. This is an error, not a warning: verifying now would certify "
+                "zero implementation. Implement the task in that worktree (brief already "
+                f"written), then rerun `make campaign`. Do not set {WORKER_COMMAND_ENV} unless "
+                "you intend a detached subprocess worker "
+                "(placeholders: {task_id}, {worktree}, {brief}). "
+                f"Worker brief: {outcome.detail}. Retry is safe."
+            )
         return (
-            f"{task_id} is an implementation task ({task.get('execution_kind')}) but no worker "
-            f"is configured, so its worktree at {worktree} is unmodified. Verifying it now would "
-            "certify zero implementation. Set "
-            f"{WORKER_COMMAND_ENV} to a command template (placeholders: {{task_id}}, "
-            "{worktree}, {brief}), or declare the task as an inspection kind if verifying an "
-            f"unmodified tree is the intent. Worker brief: {outcome.detail}. Retry is safe."
+            f"{task_id} is an implementation task ({task.get('execution_kind')}) but the "
+            f"configured {WORKER_COMMAND_ENV} was not invoked, so its worktree at {worktree} "
+            "is unmodified. Verifying it now would certify zero implementation. Worker brief: "
+            f"{outcome.detail}. Retry is safe."
         )
     if outcome.reason == "worker_failed":
         return (

@@ -277,7 +277,8 @@ class PeSmokeCampaignTests(unittest.TestCase):
                 with self.assertRaises(self.mod.CampaignError) as ctx:
                     self._run_smoke(tmp)
             message = str(ctx.exception)
-            self.assertIn("no worker is configured", message)
+            self.assertIn("cursor-foreground", message)
+            self.assertIn("certify zero implementation", message)
             self.assertIn("L9_PE_WORKER_CMD", message)
 
 

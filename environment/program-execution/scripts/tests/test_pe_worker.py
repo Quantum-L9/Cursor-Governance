@@ -3,10 +3,12 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 import tempfile
 import unittest
+import unittest.mock
 from pathlib import Path
 
 PE_ROOT = Path(__file__).resolve().parents[2]
@@ -49,6 +51,50 @@ class PeWorkerTests(unittest.TestCase):
             outcome = self.mod.invoke_worker(
                 {"id": "TASK-001", "execution_kind": "repo_local"},
                 {"base_sha": base, "writable_paths": ["ops/scripts/resolve_stack_tip.py"]},
+                worktree,
+                workspace=workspace,
+                command="",
+            )
+            self.assertFalse(outcome.changed)
+            self.assertEqual(outcome.reason, "no_worker_configured")
+
+    def test_worker_binding_defaults_to_cursor_foreground(self) -> None:
+        env = {key: value for key, value in os.environ.items() if key != "L9_PE_WORKER_CMD"}
+        with unittest.mock.patch.dict("os.environ", env, clear=True):
+            binding = self.mod.worker_binding()
+        self.assertEqual(binding["adapter"], "cursor-foreground")
+        self.assertEqual(binding["mode"], "peer_session")
+        self.assertIsNone(binding["command"])
+
+    def test_unexecuted_peer_message_does_not_require_setting_worker_cmd(self) -> None:
+        outcome = self.mod.WorkerOutcome(
+            invoked=False,
+            changed=False,
+            reason="no_worker_configured",
+            detail="brief written",
+        )
+        env = {key: value for key, value in os.environ.items() if key != "L9_PE_WORKER_CMD"}
+        with unittest.mock.patch.dict("os.environ", env, clear=True):
+            message = self.mod.unexecuted_task_message(
+                {"id": "TASK-001", "execution_kind": "repo_local"},
+                outcome,
+                Path("/tmp/task-001"),
+            )
+        self.assertIn("cursor-foreground", message)
+        self.assertIn("error, not a warning", message)
+        self.assertIn("rerun `make campaign`", message)
+        self.assertIn("Do not set L9_PE_WORKER_CMD unless", message)
+
+    def test_workspace_wiring_links_are_not_implementation(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            worktree = Path(raw) / "wt"
+            workspace = Path(raw) / "ws"
+            worktree.mkdir()
+            base = self._repo(worktree)
+            (worktree / ".cursor-commands").symlink_to(Path.home() / ".cursor-governance")
+            outcome = self.mod.invoke_worker(
+                {"id": "TASK-001", "execution_kind": "repo_local"},
+                {"base_sha": base, "writable_paths": ["app/engines/handlers.py"]},
                 worktree,
                 workspace=workspace,
                 command="",

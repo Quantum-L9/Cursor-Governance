@@ -3756,6 +3756,18 @@ def _run_campaign_stages(
 
     log(f"execute {campaign_id}")
     pec_workspace = Path(report.pec_workspace)
+    worker = _load_script("pe_worker", PE_ROOT / "scripts/pe_worker.py")
+    binding = worker.worker_binding()
+    binding_path = pec_workspace / "runtime" / "WORKER_BINDING.json"
+    binding_path.parent.mkdir(parents=True, exist_ok=True)
+    binding_path.write_text(json.dumps(binding, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    if binding["mode"] == "peer_session":
+        log(
+            "worker binding cursor-foreground (peer session); "
+            f"{worker.WORKER_COMMAND_ENV} unset — implement in the task worktree, then rerun"
+        )
+    else:
+        log(f"worker binding subprocess via {worker.WORKER_COMMAND_ENV}")
     with timer.stage("execute"):
         with traced(trace, "execute", "execute"):
             if hooks.execute is not None:
