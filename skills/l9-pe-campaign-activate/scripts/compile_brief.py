@@ -244,9 +244,7 @@ def extract_plan_todos(raw: dict[str, Any]) -> list[dict[str, Any]]:
     for item in raw.get("todos") or []:
         if not isinstance(item, dict):
             continue
-        title = str(
-            item.get("content") or item.get("task") or item.get("title") or ""
-        ).strip()
+        title = str(item.get("content") or item.get("task") or item.get("title") or "").strip()
         if not title:
             continue
         task: dict[str, Any] = {"title": title, "objective": title}

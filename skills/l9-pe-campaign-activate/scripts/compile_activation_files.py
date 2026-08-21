@@ -116,9 +116,7 @@ def project_conditionally_ready(intent: dict[str, Any]) -> dict[str, Any]:
     if str(intent.get("plan_status") or "").strip() != "ConditionallyReady":
         return intent
     target = intent.get("target") if isinstance(intent.get("target"), dict) else {}
-    repository_id = str(
-        target.get("repository_id") or "Quantum-L9/Cursor-Governance"
-    ).strip()
+    repository_id = str(target.get("repository_id") or "Quantum-L9/Cursor-Governance").strip()
     projected = dict(intent)
     raw_tasks = [item for item in (intent.get("tasks") or [])]
     id_map: dict[str, str] = {}
@@ -145,7 +143,9 @@ def project_conditionally_ready(intent: dict[str, Any]) -> dict[str, Any]:
         ]
         if not actions:
             task["actions"] = ["edit_declared_paths"] if paths else [_slug_action(title)]
-        if not [str(value).strip() for value in (task.get("consumers") or []) if str(value).strip()]:
+        if not [
+            str(value).strip() for value in (task.get("consumers") or []) if str(value).strip()
+        ]:
             task["consumers"] = paths or [repository_id]
         if not [
             str(value).strip() for value in (task.get("entrypoints") or []) if str(value).strip()
@@ -162,9 +162,7 @@ def project_conditionally_ready(intent: dict[str, Any]) -> dict[str, Any]:
                     or "/tests/" in path
                 )
             ]
-            shells = [
-                path for path in paths if path.endswith(".sh") or path.endswith(".bash")
-            ]
+            shells = [path for path in paths if path.endswith(".sh") or path.endswith(".bash")]
             if tests:
                 task["validation"] = [
                     {
@@ -193,9 +191,10 @@ def project_conditionally_ready(intent: dict[str, Any]) -> dict[str, Any]:
                     }
                 ]
         acceptance = task.get("acceptance")
-        if not ((isinstance(acceptance, list) and acceptance) or (
-            isinstance(acceptance, str) and acceptance.strip()
-        )):
+        if not (
+            (isinstance(acceptance, list) and acceptance)
+            or (isinstance(acceptance, str) and acceptance.strip())
+        ):
             task["acceptance"] = [
                 {
                     "id": f"AC-{index:03d}",
