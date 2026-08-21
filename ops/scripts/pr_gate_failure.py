@@ -93,7 +93,6 @@ def build_failure_doc(
 ) -> dict[str, Any]:
     head, digest, pr_base = parse_digest(current)
     command = recheck_command(nodes, pytest_bin)
-    message = STOP
     if nodes:
         message = (
             f"{STOP}: do not re-run the full gate. "
