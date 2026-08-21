@@ -18,7 +18,8 @@ this one choke point covers the whole publish surface.
 | `PR_OVERLAP=block` (default) | Fail closed pre-push on a non-generated textual conflict with an open PR; names the PR, head branch, files, and routing options |
 | `PR_OVERLAP=warn` | Same detection, but proceeds with a WARN (exit 0) |
 | `PR_OVERLAP=ignore` | Skips the gate — only with stated justification |
-| `PR_STACK=auto` | Instead of blocking, re-resolves the PR base to the overlapping open PR's head branch (never main) when the blocking set is one unambiguous chain; ambiguous sibling chains still block |
+| `PR_STACK=auto` (`make pr` default) | Instead of blocking, re-resolves the PR base to the overlapping open PR's head branch (never main) when the blocking set is one unambiguous chain; ambiguous sibling chains still block |
+| `PR_STACK=` | Opt out: keep `PR_BASE` (usually `origin/main`); overlap still blocks |
 
 Detection is REST-only (`gh api`): open PR list → per-PR file lists →
 filename intersection with `git diff --name-only $PR_BASE...HEAD` →
@@ -43,9 +44,10 @@ rather than the task's original BASE_SHA (E5).
 
 1. **Commit into the same-agent open PR branch** — the work belongs to that
    PR; do not open a sibling.
-2. **Stack** — `PR_STACK=auto` (or `PR_BASE=origin/<open-pr-head>`) per the
-   `pr_stacking` policy (rebase and conflict resolution forbidden; bottom-up
-   merge order).
+2. **Stack** — default for `make pr`. Opt out with `PR_STACK= make pr`
+   to publish against `main`. Policy: rebase and conflict resolution
+   forbidden; bottom-up merge order. A stack parent must use `--merge`
+   or children must land first.
 3. **`PR_OVERLAP=ignore`** — only with a stated justification.
 
 ## Generated artifacts

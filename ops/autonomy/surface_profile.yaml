@@ -109,7 +109,7 @@ pr_stacking:
     mode_default: block # PR_OVERLAP env: block | warn | ignore
     exemptions: generated_path_prefixes # ops/scripts/sync_generated_artifacts.py SSOT
     probe: git_merge_tree # git merge-tree --write-tree textual-conflict probe
-    auto_stack_env: PR_STACK # opt-in auto: stack on the open PR head (never main)
+    auto_stack_env: PR_STACK # Makefile default auto; PR_STACK= publishes against main
     gate: ops/scripts/pr_overlap_check.py
   phases:
     executing: deny_remote
@@ -169,7 +169,9 @@ remediation:
     merge-ready. They do not merge. Invoking /l9-pr-remediation (Converge)
     is merge authorization for every open PR in the target repo: write
     the repo-scoped receipt, remediate to green + mergeable, then
-    `gh pr merge --squash` bottom-up. Force-push and admin-merge stay
+    `ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --run`
+    bottom-up (method chosen in code: --merge for a stack parent,
+    --squash only for a leaf). Force-push and admin-merge stay
     forbidden. L9_MERGE_AUTHORIZED remains a human breakglass.
 
 session_start_block: |
@@ -202,7 +204,8 @@ session_start_block: |
     Do **not** merge from the campaign path. Invoking `/l9-pr-remediation`
     authorizes merge of **all open PRs** in the target repo: write
     `python3 ops/autonomy/authorize_merge.py --repo <owner/name> --all-open`,
-    converge each PR, then `gh pr merge <n> --repo <owner/name> --squash`
+    converge each PR, then
+    `ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --run`
     oldest first. Force-push and `--admin` stay denied.
   - Program Execution campaigns: one integration branch per campaign
     (`campaign/<campaign_id>`). Set `PR_BASE` to that branch. Do **not**

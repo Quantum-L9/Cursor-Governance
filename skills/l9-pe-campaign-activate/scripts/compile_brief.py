@@ -1,13 +1,22 @@
 #!/usr/bin/env python3
-"""Compile a free-form campaign memo into an activate seed.
+"""Compile a free-form campaign memo or plan into an activate seed.
 
 Factory IR only. Does not write CAMPAIGN_SOURCE.yaml or INTENT.yaml under
 campaigns/<id>/. Assigns campaign_id from the filename slug.
+
+Accepted high-level intent (all compile to the same activate seed):
+- memo brief (Release blocks / Program ordering / numbered tasks)
+- Cursor .plan.md (frontmatter todos from the PE+autonomy template)
+- PLAN_DOCUMENT JSON (mode: plan + todos)
+- activate YAML (passthrough)
+
+Plans are an additional input shape. They do not replace memos.
 """
 
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path
@@ -32,6 +41,37 @@ IT_IS_RE = re.compile(
 )
 DEFAULT_OWNER = "Igor Beylin"
 DEFAULT_TARGET = "Quantum-L9/Cursor-Governance"
+REPO_PATH_OWNERS = frozenset(
+    {
+        "environment",
+        "ops",
+        "docs",
+        "skills",
+        "tests",
+        "engine",
+        "chassis",
+        "agents",
+        "tools",
+        "scripts",
+        "commands",
+        "core",
+        "autonomy",
+    }
+)
+TARGET_REPO_RE = re.compile(
+    r"target_repo\s*[|:]\s*`?([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)`?",
+    re.I,
+)
+FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", re.S)
+PLAN_ID_RE = re.compile(r"(?:^|\b)plan_id:\s*[`*]*(plan\.[A-Za-z0-9._-]+)", re.M)
+OBJECTIVE_HEADING_RE = re.compile(
+    r"^##\s+Objective\b[^\n]*\n+(.*?)(?:\n##\s+|\Z)",
+    re.I | re.M | re.S,
+)
+PLAN_DOCUMENT_CITE_RE = re.compile(
+    r"PLAN_DOCUMENT\s+`([^`]+?\.json)`",
+    re.I,
+)
 
 
 class BriefError(RuntimeError):
@@ -40,12 +80,18 @@ class BriefError(RuntimeError):
         self.exit_code = exit_code
 
 
-def slugify_filename(filename: str) -> str:
-    stem = Path(filename).stem
-    slug = re.sub(r"[^a-z0-9]+", "-", stem.lower()).strip("-")
+def slugify_token(value: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", (value or "").lower()).strip("-")
     if len(slug) < 3:
         slug = f"campaign-{slug or 'brief'}"
     return slug[:63].strip("-")
+
+
+def slugify_filename(filename: str) -> str:
+    stem = Path(filename).stem
+    if stem.endswith(".plan"):
+        stem = stem[: -len(".plan")]
+    return slugify_token(stem)
 
 
 def title_from_filename(filename: str) -> str:
@@ -144,6 +190,168 @@ def extract_tasks(text: str) -> list[dict[str, str]]:
     )
 
 
+def parse_frontmatter(text: str) -> dict[str, Any] | None:
+    match = FRONTMATTER_RE.match(text)
+    if match is None or yaml is None:
+        return None
+    try:
+        raw = yaml.safe_load(match.group(1))
+    except yaml.YAMLError:
+        return None
+    return raw if isinstance(raw, dict) else None
+
+
+def is_activate_seed(raw: Any) -> bool:
+    if not isinstance(raw, dict):
+        return False
+    if str(raw.get("schema") or "") == "program-execution.intent.v1":
+        return False
+    tasks = raw.get("tasks")
+    return bool(
+        str(raw.get("campaign_id") or "").strip()
+        and str(raw.get("title") or "").strip()
+        and str(raw.get("objective") or "").strip()
+        and isinstance(tasks, list)
+        and tasks
+    )
+
+
+def is_plan_intent(raw: Any) -> bool:
+    """Cursor .plan.md frontmatter or PLAN_DOCUMENT JSON. Not a memo or activate seed."""
+    if not isinstance(raw, dict):
+        return False
+    if is_activate_seed(raw):
+        return False
+    schema = str(raw.get("schema") or "").strip()
+    if schema in {"l9.program-execution.campaign-source.v2", "program-execution.intent.v1"}:
+        return False
+    todos = raw.get("todos")
+    if not isinstance(todos, list) or not todos:
+        return False
+    if str(raw.get("mode") or "").strip() == "plan" and (
+        str(raw.get("title") or "").strip() or str(raw.get("objective") or "").strip()
+    ):
+        return True
+    if str(raw.get("name") or "").strip() and str(raw.get("overview") or "").strip():
+        return True
+    if str(raw.get("title") or "").strip() and str(raw.get("objective") or "").strip():
+        return True
+    return False
+
+
+def extract_plan_todos(raw: dict[str, Any]) -> list[dict[str, Any]]:
+    tasks: list[dict[str, Any]] = []
+    for item in raw.get("todos") or []:
+        if not isinstance(item, dict):
+            continue
+        title = str(
+            item.get("content") or item.get("task") or item.get("title") or ""
+        ).strip()
+        if not title:
+            continue
+        task: dict[str, Any] = {"title": title, "objective": title}
+        task_id = str(item.get("id") or "").strip()
+        if task_id:
+            task["id"] = task_id
+        files = item.get("files") or item.get("paths")
+        if isinstance(files, list) and files:
+            task["paths"] = [str(path) for path in files if path]
+        deps = item.get("depends_on") or item.get("dependencies")
+        if isinstance(deps, list) and deps:
+            task["depends_on"] = [str(dep) for dep in deps if dep]
+        tasks.append(task)
+    if not tasks:
+        raise BriefError("plan has no extractable todos; will not invent tasks")
+    return tasks
+
+
+def load_companion_plan_document(plan_path: Path, text: str) -> dict[str, Any] | None:
+    """Load a cited PLAN_DOCUMENT JSON so todo files survive into the seed."""
+    candidates: list[Path] = []
+    cited = PLAN_DOCUMENT_CITE_RE.search(text)
+    if cited:
+        raw_name = Path(cited.group(1).strip())
+        candidates.append(plan_path.parent / raw_name.name)
+        if raw_name.is_absolute():
+            candidates.append(raw_name)
+    candidates.append(plan_path.with_suffix(".json"))
+    seen: set[Path] = set()
+    for candidate in candidates:
+        resolved = candidate.resolve() if candidate.exists() else candidate
+        if resolved in seen or not candidate.is_file():
+            continue
+        seen.add(resolved)
+        try:
+            payload = json.loads(candidate.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if isinstance(payload, dict) and isinstance(payload.get("todos"), list):
+            return payload
+    return None
+
+
+def merge_companion_todo_files(
+    tasks: list[dict[str, Any]], companion: dict[str, Any]
+) -> list[dict[str, Any]]:
+    """Copy `files` from the PLAN_DOCUMENT onto compiled todos matched by id."""
+    by_id: dict[str, dict[str, Any]] = {}
+    for item in companion.get("todos") or []:
+        if not isinstance(item, dict):
+            continue
+        task_id = str(item.get("id") or "").strip()
+        if task_id:
+            by_id[task_id] = item
+    merged: list[dict[str, Any]] = []
+    for task in tasks:
+        updated = dict(task)
+        extra = by_id.get(str(updated.get("id") or ""))
+        if extra is not None and not updated.get("paths"):
+            files = extra.get("files") or extra.get("paths")
+            if isinstance(files, list) and files:
+                updated["paths"] = [str(path) for path in files if path]
+        merged.append(updated)
+    return merged
+
+
+def extract_plan_objective(raw: dict[str, Any], text: str) -> str:
+    for key in ("objective", "overview"):
+        paragraph = " ".join(str(raw.get(key) or "").split())
+        if paragraph:
+            return paragraph
+    match = OBJECTIVE_HEADING_RE.search(text)
+    if match:
+        paragraph = " ".join(match.group(1).split())
+        if paragraph:
+            return paragraph
+    raise BriefError("plan has no extractable objective (overview / objective / ## Objective)")
+
+
+def extract_plan_title(raw: dict[str, Any], filename: str, text: str = "") -> str:
+    for key in ("name", "title"):
+        title = str(raw.get(key) or "").strip()
+        if title:
+            return title
+    heading = re.search(r"^#\s+PLAN:\s+(.+)$", text, re.M)
+    if heading:
+        return heading.group(1).strip()
+    return title_from_filename(filename)
+
+
+def extract_plan_campaign_id(
+    raw: dict[str, Any],
+    text: str,
+    filename: str,
+    existing_ids: set[str],
+) -> str:
+    plan_id = str(raw.get("plan_id") or "").strip()
+    if not plan_id:
+        match = PLAN_ID_RE.search(text)
+        if match:
+            plan_id = match.group(1)
+    base = slugify_token(plan_id) if plan_id else slugify_filename(filename)
+    return assign_campaign_id(base, existing_ids)
+
+
 def extract_objective(text: str) -> str:
     judgment = re.search(r"Final architectural judgment\s*(.+)$", text, re.I | re.S)
     if judgment:
@@ -175,12 +383,17 @@ def _is_github_repo(value: str) -> bool:
         return False
     if not re.match(r"^[A-Za-z0-9._-]+$", repo):
         return False
+    if owner.lower() in REPO_PATH_OWNERS:
+        return False
     return "-" in owner or "-" in repo
 
 
 def extract_target(text: str, override: str | None = None) -> str:
     if override:
         return override.strip()
+    named = TARGET_REPO_RE.search(text)
+    if named and _is_github_repo(named.group(1)):
+        return named.group(1)
     hosted = re.search(
         r"github\.com/([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)",
         text,
@@ -195,6 +408,35 @@ def extract_target(text: str, override: str | None = None) -> str:
     return DEFAULT_TARGET
 
 
+def plan_to_seed(
+    raw: dict[str, Any],
+    text: str,
+    *,
+    filename: str,
+    source_path: Path | None = None,
+    existing_ids: set[str] | None = None,
+    target_override: str | None = None,
+) -> dict[str, Any]:
+    ids = existing_ids or set()
+    seed = {
+        "campaign_id": extract_plan_campaign_id(raw, text, filename, ids),
+        "title": extract_plan_title(raw, filename, text),
+        "owner": extract_owner(text),
+        "objective": extract_plan_objective(raw, text),
+        "problem_statement": text,
+        "target": {
+            "repository_id": extract_target(text, target_override),
+            "source_of_truth": "repository_origin_main",
+            "adapter": "git",
+        },
+        "tasks": extract_plan_todos(raw),
+    }
+    companion = load_companion_plan_document(source_path or Path(filename), text)
+    if companion is not None:
+        seed["tasks"] = merge_companion_todo_files(seed["tasks"], companion)
+    return seed
+
+
 def load_mapping(path: Path) -> Any:
     if yaml is None:
         raise BriefError("PyYAML required")
@@ -202,21 +444,6 @@ def load_mapping(path: Path) -> Any:
         return yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError:
         return None
-
-
-def is_activate_seed(raw: Any) -> bool:
-    if not isinstance(raw, dict):
-        return False
-    if str(raw.get("schema") or "") == "program-execution.intent.v1":
-        return False
-    tasks = raw.get("tasks")
-    return bool(
-        str(raw.get("campaign_id") or "").strip()
-        and str(raw.get("title") or "").strip()
-        and str(raw.get("objective") or "").strip()
-        and isinstance(tasks, list)
-        and tasks
-    )
 
 
 def brief_to_seed(
@@ -265,14 +492,26 @@ def compile_brief(
     brief_path = brief_path.resolve()
     if not brief_path.is_file():
         raise BriefError(f"brief not found: {brief_path}")
+    text = brief_path.read_text(encoding="utf-8")
     raw = load_mapping(brief_path)
+    if not isinstance(raw, dict):
+        raw = parse_frontmatter(text)
     if str((raw or {}).get("schema") or "") == "program-execution.intent.v1":
         raise BriefError("program-execution.intent.v1 is not an activate seed or memo brief")
     if is_activate_seed(raw):
         seed = dict(raw)
+    elif is_plan_intent(raw):
+        seed = plan_to_seed(
+            raw or {},
+            text,
+            filename=brief_path.name,
+            source_path=brief_path,
+            existing_ids=existing_ids,
+            target_override=target_override,
+        )
     else:
         seed = brief_to_seed(
-            brief_path.read_text(encoding="utf-8"),
+            text,
             filename=brief_path.name,
             existing_ids=existing_ids,
             target_override=target_override,

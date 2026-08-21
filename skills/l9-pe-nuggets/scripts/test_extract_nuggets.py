@@ -45,6 +45,29 @@ class ExtractNuggetsTests(unittest.TestCase):
             )
             self.assertTrue(result["stack_cited"])
 
+    def test_compiled_plan_tasks_are_conditionally_ready(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            primed = Path(raw) / "primed"
+            stack = primed / "stack-proof.json"
+            stack.parent.mkdir(parents=True)
+            stack.write_text("{}\n", encoding="utf-8")
+            result = project_plan_window(
+                {
+                    "campaign_id": "demo-plan-v1",
+                    "tasks": [
+                        {
+                            "id": "T1",
+                            "title": "Scope pytest",
+                            "objective": "Scope pytest",
+                            "paths": ["Makefile"],
+                        }
+                    ],
+                },
+                primed,
+                stack,
+            )
+            self.assertEqual(result["plan_status"], "ConditionallyReady")
+
     def test_hollow_seed_stays_partial(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             primed = Path(raw) / "primed"

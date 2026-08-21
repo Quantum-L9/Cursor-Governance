@@ -39,7 +39,8 @@ A stack nugget is appended when `stack-proof.json` exists.
 | Draft | Partial |
 | Partial / Blocked / Failed | keep |
 | all tasks have actions, consumers, entrypoints, validation, nugget_id | Ready |
-| some tasks | Partial |
+| all tasks have title and objective | ConditionallyReady |
+| some tasks (title only / hollow) | Partial |
 | no tasks | Blocked |
 
 Sealable statuses are Ready and ConditionallyReady only.

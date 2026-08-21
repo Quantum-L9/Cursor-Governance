@@ -1,11 +1,8 @@
 """Tests for ops/autonomy/merge_gate.py
 
-Shell ``git``/``gh`` commands are exempt from execution denial
-(``ops/autonomy/git_execution_exemption.py``), so this gate's remaining
-enforcement surface is the MCP merge tool, which is not a shell command. The
-merge-authorization contract, the never-waive set and the stack-safety probe
-are all pinned there; the first block pins that the shell forms are allowed
-through regardless of governance state.
+Shell ``git``/``gh`` skip merge *authorization*. Stack safety still applies:
+``gh pr merge --squash`` of a parent is denied on Shell and MCP. Other shell
+git/gh forms stay unrestricted here.
 """
 
 from __future__ import annotations
@@ -84,13 +81,20 @@ STACKED = {"Quantum-L9/SEO-Bot#53": {"head": "fix/parent", "children": [54]}}
 
 EXEMPT_SHELL = [
     "git commit -m 'ok'",
-    "gh pr merge 12",
-    "gh pr merge 12 --squash",
-    "gh pr merge 12 --admin",
     "git push --force origin HEAD",
     "git reset --hard HEAD~1",
     "git clean -fd",
 ]
+
+
+def test_commit_message_mentioning_squash_is_not_a_merge() -> None:
+    """Heredoc / -m text is data. Matching it as gh pr merge blocked commits."""
+    command = (
+        "git commit -m \"$(cat <<'EOF'\nfix: never gh pr merge --squash a stack parent\nEOF\n)\""
+    )
+    code, out, err = _run({"tool_name": "Bash", "tool_input": {"command": command}})
+    assert code == 0, err
+    assert out.strip() == ""
 
 
 @pytest.mark.parametrize("command", EXEMPT_SHELL)
@@ -100,12 +104,25 @@ def test_shell_git_and_gh_are_allowed(command: str) -> None:
     assert out.strip() == "", command
 
 
-def test_shell_merge_allowed_even_with_a_stacked_child(tmp_path: Path) -> None:
-    """Stack safety is a policy warning for shell now, not a block."""
+def test_shell_squash_denied_when_head_is_base_of_open_pr(tmp_path: Path) -> None:
+    """Agents type gh in Shell; squash of a parent must still be denied."""
     code, out, err = _run(
         {
             "tool_name": "Bash",
             "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --squash"},
+        },
+        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
+    )
+    assert code == 0, err
+    assert "deny" in out
+    assert "#54" in out
+
+
+def test_shell_merge_commit_allowed_when_stacked(tmp_path: Path) -> None:
+    code, out, err = _run(
+        {
+            "tool_name": "Bash",
+            "tool_input": {"command": "gh pr merge 53 --repo Quantum-L9/SEO-Bot --merge"},
         },
         env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
     )
