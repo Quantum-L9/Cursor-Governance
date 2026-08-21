@@ -98,6 +98,30 @@ class StatusPrecedenceTests(unittest.TestCase):
         self.assertIn("no broker configured", status.detail)
         Path(path).unlink()
 
+    def test_unconfigured_runtime_degrades_rather_than_blocking(self) -> None:
+        """A fixable identity gap must not be reported as unfixable.
+
+        BLOCKED_BY_PLATFORM means nothing here can produce an identity. An
+        unconfigured self-hosted runtime has simply not been given one, and
+        overstating that as platform-blocked is the same kind of misreport as
+        understating an outage — it just fails in the other direction. Caught by
+        tests/ops/secrets/test_capability_plane.py, which this now guards.
+        """
+        client = CapabilityClient(env=dict(BASE_ENV))
+        status = client.status("sonar.read_issues")
+        self.assertEqual(status.status, DEGRADED)
+        self.assertNotEqual(status.status, BLOCKED_BY_PLATFORM)
+
+    def test_identity_gap_with_a_broker_configured_is_degraded_not_blocked(self) -> None:
+        client = CapabilityClient(
+            env={**BASE_ENV, "L9_CAPABILITY_BROKER_URL": "https://broker.test"}
+        )
+        self.assertEqual(client.status("sonar.read_issues").status, DEGRADED)
+
+    def test_only_a_terminal_identity_gap_blocks(self) -> None:
+        self.assertTrue(session_identity(hosted_env()).terminal)
+        self.assertFalse(session_identity(BASE_ENV).terminal)
+
     def test_unregistered_capability_is_unavailable(self) -> None:
         client = CapabilityClient(env=hosted_env())
         self.assertEqual(client.status("nope.not_a_capability").status, "UNAVAILABLE")

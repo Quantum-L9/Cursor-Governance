@@ -104,6 +104,20 @@ class SessionIdentity:
     def available(self) -> bool:
         return bool(self.token)
 
+    @property
+    def terminal(self) -> bool:
+        """True when nothing available to this repository or operator can produce
+        an identity.
+
+        A hosted surface issues none by design, so its capabilities are
+        BLOCKED_BY_PLATFORM. An unconfigured self-hosted runtime has merely not
+        been given one yet — that is DEGRADED, and reporting it as
+        platform-blocked would convert a fixable gap into an un-actionable one,
+        which is the same overstatement in the opposite direction from the
+        defect this class of status exists to correct.
+        """
+        return self.remediation == "none_available_in_repo"
+
 
 def session_identity(env: dict[str, str] | None = None) -> SessionIdentity:
     """Discover a platform-issued session identity, in order of trustworthiness.
@@ -215,12 +229,16 @@ class CapabilityClient:
         # Checking the URL first reported that runtime as "no broker configured"
         # — which reads as a missing environment field and sent operators to fix
         # something the field cannot fix (audit B-10, WS-5.1).
-        if not self.identity.available:
+        if not self.identity.available and self.identity.terminal:
             return CapabilityStatus(capability, BLOCKED_BY_PLATFORM, self.identity.detail)
         if not self.url:
             return CapabilityStatus(
                 capability, DEGRADED, f"no broker configured ({BROKER_URL_ENV} unset)"
             )
+        if not self.identity.available:
+            # A broker is configured but this runtime has no identity yet. That
+            # is the operator's to close, so it degrades rather than blocks.
+            return CapabilityStatus(capability, DEGRADED, self.identity.detail)
         ok, detail = self._probe()
         if not ok:
             return CapabilityStatus(capability, DEGRADED, detail)
