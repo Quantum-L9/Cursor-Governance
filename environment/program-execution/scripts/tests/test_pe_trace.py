@@ -368,7 +368,7 @@ class HarvesterTest(unittest.TestCase):
                     "duration_ms": None,
                 },
                 {
-                    "event_type": "TASK_FIRST_WRITE",
+                    "event_type": "TASK_FIRST_OBSERVED_WRITE",
                     "operation": "task_first_write",
                     "category": "filesystem_write",
                     "status": "INFO",
@@ -379,7 +379,7 @@ class HarvesterTest(unittest.TestCase):
             ]
         )
         summary = self.mod.harvest_trace(self.workspace)
-        self.assertEqual(summary["timing"]["time_to_first_write_ms"], 150_000)
+        self.assertEqual(summary["timing"]["time_to_first_observed_write_ms"], 150_000)
 
     def test_harvester_calculates_task_eligible_to_first_write(self) -> None:
         self.write_events(
@@ -394,7 +394,7 @@ class HarvesterTest(unittest.TestCase):
                     "duration_ms": None,
                 },
                 {
-                    "event_type": "TASK_FIRST_WRITE",
+                    "event_type": "TASK_FIRST_OBSERVED_WRITE",
                     "operation": "task_first_write",
                     "category": "filesystem_write",
                     "status": "INFO",
@@ -405,7 +405,7 @@ class HarvesterTest(unittest.TestCase):
             ]
         )
         per_task = self.mod.harvest_trace(self.workspace)["per_task"]
-        self.assertEqual(per_task["TASK-001"]["eligible_to_first_write_ms"], 12_000)
+        self.assertEqual(per_task["TASK-001"]["eligible_to_first_observed_write_ms"], 12_000)
 
     def test_harvester_calculates_category_totals(self) -> None:
         self.write_events(
@@ -832,3 +832,82 @@ class SecretRedactionTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class EligibilityTruthTest(unittest.TestCase):
+    """An eligibility event must mean PEC considered the task eligible.
+
+    The runner emitted TASK_ELIGIBLE for every task it walked past, so a blocked
+    task looked schedulable and "time to first eligible task" measured loop
+    position rather than readiness.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.mod = load_module("run_campaign_eligibility", PE_ROOT / "scripts/run_campaign.py")
+
+    def test_blocked_task_does_not_emit_task_eligible(self) -> None:
+        blocked = {
+            "id": "TASK-002",
+            "runtime_state": "BLOCKED",
+            "eligible": False,
+            "blockers": ["dependency_not_complete:TASK-001"],
+        }
+        self.assertFalse(self.mod.pec_considers_runnable(blocked))
+
+    def test_unmaterialized_contract_is_not_yet_eligible(self) -> None:
+        deferred = {
+            "id": "TASK-001",
+            "runtime_state": "BLOCKED",
+            "eligible": False,
+            "blockers": ["source_contract_incomplete"],
+        }
+        self.assertFalse(self.mod.pec_considers_runnable(deferred))
+
+    def test_task_eligible_emitted_once_when_dependency_clears(self) -> None:
+        cleared = {"id": "TASK-002", "runtime_state": "BLOCKED", "eligible": True, "blockers": []}
+        self.assertTrue(self.mod.pec_considers_runnable(cleared))
+
+    def test_a_task_blocked_only_by_our_own_lease_is_still_runnable(self) -> None:
+        """`eligible` answers "may this be claimed", and we already claimed it."""
+        leased = {
+            "id": "TASK-001",
+            "runtime_state": "LEASED",
+            "eligible": False,
+            "blockers": ["runtime_state_not_claimable:LEASED", "task_already_leased"],
+        }
+        self.assertTrue(self.mod.pec_considers_runnable(leased))
+
+    def test_a_leased_task_with_a_real_blocker_is_not_runnable(self) -> None:
+        leased = {
+            "id": "TASK-001",
+            "runtime_state": "LEASED",
+            "eligible": False,
+            "blockers": ["task_already_leased", "required_approval_missing_or_invalid"],
+        }
+        self.assertFalse(self.mod.pec_considers_runnable(leased))
+
+    def test_resumed_task_does_not_emit_duplicate_eligible(self) -> None:
+        """A resume is a task that already carries an attempt."""
+        for state in ("EXECUTING", "SUBMITTED", "VERIFYING", "PASSED_LOCAL", "FAILED"):
+            self.assertIn(state, self.mod.PEC_ATTEMPTED_STATES)
+        # Arm merely contracting a task is preparation, not a previous attempt.
+        for state in ("LEASED", "PREPARED", "CONTRACTED"):
+            self.assertNotIn(state, self.mod.PEC_ATTEMPTED_STATES)
+
+    def test_eligibility_is_not_emitted_from_loop_position(self) -> None:
+        """The emit is guarded by the controller's verdict, not by reaching it."""
+        source = (PE_ROOT / "scripts/run_campaign.py").read_text(encoding="utf-8")
+        guard = source.index("if task_id in eligible_seen or not pec_considers_runnable(snapshot):")
+        emit_at = source.index('"TASK_ELIGIBLE",', guard - 4000)
+        self.assertLess(guard, emit_at, "TASK_ELIGIBLE is emitted before the verdict is read")
+
+    def test_first_write_metric_name_matches_actual_observation(self) -> None:
+        """PE sees the write only after the worker returns, so the name says so."""
+        source = (PE_ROOT / "scripts/run_campaign.py").read_text(encoding="utf-8")
+        self.assertIn("TASK_FIRST_OBSERVED_WRITE", source)
+        self.assertNotIn('"TASK_FIRST_WRITE"', source)
+        trace_source = (PE_ROOT / "scripts/pe_trace.py").read_text(encoding="utf-8")
+        self.assertNotIn("time_to_first_write_ms", trace_source)
+        self.assertNotIn("eligible_to_first_write_ms", trace_source)
+        self.assertIn("time_to_first_observed_write_ms", trace_source)

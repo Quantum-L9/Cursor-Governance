@@ -81,6 +81,14 @@ PUBLICATION_STAGES = ("pr", "close")
 # resuming it would resume stale ones.
 DEFINITION_STAGE = "definition"
 
+# PEC's own runtime states, as `pec status` reports them.
+PEC_IN_PROGRESS_STATES = frozenset(
+    {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "SUBMITTED", "VERIFYING", "PASSED_LOCAL"}
+)
+# States that mean an attempt already exists, as opposed to a task this run's
+# arm merely prepared. Only these are a resume.
+PEC_ATTEMPTED_STATES = frozenset({"EXECUTING", "SUBMITTED", "VERIFYING", "PASSED_LOCAL", "FAILED"})
+
 PREPARATION_STAGES = (
     "stack_proof",
     "isolate",
@@ -2120,7 +2128,8 @@ def observe_first_write(worktree: Path, changed: list[str]) -> list[str]:
 
     Limitation: the runner drives the worker synchronously and has no
     watcher, so the earliest point at which it can observe a write is after
-    the worker returns. TASK_FIRST_WRITE therefore times the first write the
+    the worker returns. TASK_FIRST_OBSERVED_WRITE is named for exactly that:
+    it times the first write the
     runner can *see*, which is an upper bound on when the write happened.
     Contract PE-TRACE-001 §12 accepts this in place of a watcher daemon.
     """
@@ -2134,6 +2143,39 @@ def observe_first_write(worktree: Path, changed: list[str]) -> list[str]:
     if status.returncode != 0:
         return []
     return [line[3:].strip() for line in status.stdout.splitlines() if line.strip()]
+
+
+def pec_considers_runnable(snapshot: dict[str, Any]) -> bool:
+    """Does the controller regard this task as ready to run?
+
+    `eligible` is PEC's answer to "may this be claimed now", so it goes false
+    the moment the runner holds the task's own lease. A task blocked only by
+    the lease this runner just took, or by a runtime state this runner just
+    moved it into, is still a task PEC found ready -- it granted the claim.
+    Anything else in `blockers` (an unmet dependency, an unsatisfied gate, a
+    contract not yet materialized) means it did not.
+    """
+    if snapshot.get("eligible"):
+        return True
+    state = str(snapshot.get("runtime_state") or "")
+    if state not in PEC_IN_PROGRESS_STATES:
+        return False
+    blockers = [str(item) for item in (snapshot.get("blockers") or [])]
+    self_held = {"task_already_leased", f"runtime_state_not_claimable:{state}"}
+    return bool(blockers) and all(item in self_held for item in blockers)
+
+
+def task_readiness_snapshot(workspace: Path, task_id: str) -> dict[str, Any]:
+    """PEC's current readiness verdict for one task.
+
+    Read again after the contract is materialized, because that is what clears
+    `source_contract_incomplete` — a task deferred at arm time is not eligible
+    until then, and the arm-time snapshot cannot say so.
+    """
+    for item in pec_status_tasks(workspace):
+        if str(item.get("id") or "") == task_id:
+            return dict(item)
+    return {}
 
 
 def traced_verify(
@@ -2660,18 +2702,56 @@ def default_execute(
     by_stack = {str(item.get("task_id")): item for item in stack_items if item.get("task_id")}
     completed: list[str] = []
     first_write_seen: set[str] = set()
+    eligible_seen: set[str] = set()
     for task in tasks:
         task_id = str(task["id"])
         states = {str(item["id"]): item for item in pec_status_tasks(workspace)}
-        state = str((states.get(task_id) or {}).get("runtime_state") or "")
+        reported = states.get(task_id) or {}
+        state = str(reported.get("runtime_state") or "")
         if state == "COMPLETED":
             completed.append(task_id)
             continue
+
+        def note_eligible(
+            snapshot: dict[str, Any], task_id: str = task_id
+        ) -> None:
+            """Record eligibility when PEC says the task is eligible, once.
+
+            `eligible` is the controller's own readiness verdict: it clears when
+            the dependency edges and gates that were holding the task clear.
+            Emitting on loop position instead made a blocked task look
+            schedulable and made "time to first eligible task" measure nothing.
+            """
+            if task_id in eligible_seen or not pec_considers_runnable(snapshot):
+                return
+            eligible_seen.add(task_id)
+            emit(
+                trace,
+                "TASK_ELIGIBLE",
+                "task",
+                "task_eligible",
+                task_id=task_id,
+                metadata={"runtime_state": str(snapshot.get("runtime_state") or "")},
+            )
+
+        note_eligible(reported)
+        if state in PEC_ATTEMPTED_STATES:
+            # Carries an attempt already: a resume. A task this run's arm merely
+            # contracted has not been executed, so it is not one.
+            emit(
+                trace,
+                "TASK_RESUMED",
+                "task",
+                "task_resumed",
+                task_id=task_id,
+                metadata={"runtime_state": state},
+            )
+        # Scheduling picked this task, whatever state it was in when we found it.
         emit(
             trace,
-            "TASK_ELIGIBLE",
+            "TASK_SELECTED",
             "task",
-            "task_eligible",
+            "task_selected",
             task_id=task_id,
             metadata={"runtime_state": state},
         )
@@ -2696,6 +2776,10 @@ def default_execute(
                 # task becomes concrete: at the moment it is actually started.
                 with traced(trace, "task_prepare", "materialize_contract", task_id=task_id):
                     ensure_task_contract(workspace, task_id)
+                # Materializing the contract is what clears
+                # `source_contract_incomplete`, so a task deferred at arm time
+                # only becomes eligible here.
+                note_eligible(task_readiness_snapshot(workspace, task_id))
                 with traced(trace, "task_prepare", "pec_claim", task_id=task_id):
                     pec_cmd(
                         workspace,
@@ -2707,7 +2791,6 @@ def default_execute(
                         str(TASK_BUDGET_MINUTES),
                     )
                 state = "LEASED"
-            emit(trace, "TASK_SELECTED", "task", "task_selected", task_id=task_id)
             if state == "LEASED":
                 with traced(trace, "task_prepare", "task_worktree_create", task_id=task_id):
                     prepared = pec_cmd(workspace, "prepare", task_id)
@@ -2773,7 +2856,7 @@ def default_execute(
                 first_write_seen.add(task_id)
                 emit(
                     trace,
-                    "TASK_FIRST_WRITE",
+                    "TASK_FIRST_OBSERVED_WRITE",
                     "filesystem_write",
                     "task_first_write",
                     task_id=task_id,

@@ -354,11 +354,11 @@ files:
   sha256: a9779fad92b5844ef01dba0d9daa746dc74635873a8ffa725f9ad5fef982cfa6
   bytes: 15915
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 3c93a82dfb4683dad795937130be998af79f0d6e90e8b5b9b3bd221d5a31a0b0
-  bytes: 89093
+  sha256: 255be0fb478bb7835f3368f4280dc7358caf1f1df00b1582e4cc2ffbf61689d4
+  bytes: 88760
 - path: program-execution-controller-template/scripts/pec/exec_env.py
-  sha256: 452acc83dc710414ea4be3cc0eca73117a70f2e76e42b9812f5513b22aedb8a8
-  bytes: 11317
+  sha256: a523bf5a417434b33a891cde752370c000b3f36cd72cfa2a439c38ea49db5be9
+  bytes: 14353
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -374,6 +374,9 @@ files:
 - path: program-execution-controller-template/scripts/pec/workspace_reset.py
   sha256: edf39052bd7f13cb79e946fa55cc2b6fecff50b96dfc0043943c007ab088a443
   bytes: 7158
+- path: program-execution-controller-template/scripts/pec/workspace_wiring.py
+  sha256: 180d2ea83d1f29fd0fd8349093cba588cc9668e8e966ced6de47ea1c11d721d6
+  bytes: 3922
 - path: program-execution-controller-template/scripts/pec.py
   sha256: a06ff404d01ffaf0defa06e273897bb26f2464adf6d9507714c2d64749a25273
   bytes: 180
@@ -567,5 +570,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 187
-  total_bytes: 636839
+  file_count: 188
+  total_bytes: 643464

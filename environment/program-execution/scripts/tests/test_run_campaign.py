@@ -1175,7 +1175,7 @@ class RunCampaignTests(unittest.TestCase):
                 "TASK_SELECTED",
                 "TASK_WORKTREE_READY",
                 "TASK_WORKER_STARTED",
-                "TASK_FIRST_WRITE",
+                "TASK_FIRST_OBSERVED_WRITE",
                 "TASK_VALIDATION_STARTED",
                 "TASK_VALIDATION_FINISHED",
                 "TASK_VERIFY_STARTED",
@@ -1187,7 +1187,7 @@ class RunCampaignTests(unittest.TestCase):
             summary = json.loads((workspace / "telemetry/run-summary.json").read_text())
             self.assertEqual(summary["campaign_id"], "demo-activate-v1")
             self.assertEqual(summary["task_counts"], {"completed": 2, "attempted": 2})
-            self.assertIsNotNone(summary["timing"]["time_to_first_write_ms"])
+            self.assertIsNotNone(summary["timing"]["time_to_first_observed_write_ms"])
             self.assertGreater(summary["timing"]["preparation_ms"], 0)
             # The campaign_run span is the wall clock, not a preparation cost.
             self.assertLess(summary["timing"]["preparation_ms"], summary["wall_clock_ms"])
@@ -1206,7 +1206,7 @@ class RunCampaignTests(unittest.TestCase):
                 task = summary["per_task"][task_id]
                 self.assertTrue(task["completed"])
                 self.assertEqual(task["attempts"], 1)
-                self.assertIsNotNone(task["eligible_to_first_write_ms"])
+                self.assertIsNotNone(task["eligible_to_first_observed_write_ms"])
 
     def test_default_repo_root_derives_write_root_from_l9(self) -> None:
         """`main()` runs with repo_root=None; the isolate stage must not crash.
