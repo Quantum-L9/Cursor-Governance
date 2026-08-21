@@ -1,0 +1,1472 @@
+policy:
+  id: claude_code_mobile_bootstrap_remediation_v3_1
+  version: "3.1.0"
+  date: "2026-08-20"
+  type: policy_as_code
+  format: yaml
+  role: contract_compiler
+
+  changelog:
+    from_version: "3.0.0"
+    applied:
+      - id: A1
+        summary: >
+          Partial-installer-run safety. Restored the C1 failures block dropped in
+          v3.0.0, which also repaired a governance.require violation asserted as
+          internal_consistency PASS. Added the partial_installer_run_is_safe_to_rerun
+          invariant, the installer_steps_verified_idempotent precondition, the P1
+          zero-diff verification obligation, and the matching regression test.
+        evidence: >
+          install.sh:145/:164/:183 reconcilers, :210 .mcp.json existence guard,
+          :235 exclude append guarded by grep -qxF, :253 receipt written last.
+          Partial-run safety holds by construction; v3.1 asserts it rather than
+          assuming it.
+      - id: A2
+        summary: >
+          Self-heal time budget became a measured preflight obligation instead of
+          an assumption. P1 now measures warm install wall time and the SessionStart
+          prefix, emits the residual budget, and BLOCKs when it cannot cover a run.
+        evidence: >
+          SessionStart hook timeout is 30s shared with the governance fetch,
+          session_deps_cloud.sh, both profile loaders and the autonomy bootstrap.
+          install.sh --check measured 3s exit 0 with receipt mtime unchanged, so it
+          is not a proxy for a real run.
+      - id: A3
+        summary: >
+          C11B no longer compares observed_governance_revision against the frozen
+          INPUT_EXECUTION_SHA, an assertion guaranteed to fail once the remediation
+          merges and main advances. Replaced with a staleness check against live
+          origin/main at observation time.
+      - id: A4
+        summary: >
+          C11B now verifies its own objective. Added an api.context7.io egress probe
+          with an exact expectation and replaced the undefined rebuild_observed
+          boolean with a stated measurement method.
+      - id: A5
+        summary: >
+          Recorded the brokered-path evidence on C11A and marked
+          PENDING_NEXT_SESSION as C11B's expected resting state until broker
+          deployment, so the retained lane is honest about what it can achieve.
+      - id: A6
+        summary: >
+          Structural. authority_order mixed a sequence with a sibling mapping key
+          (conflict_rule), which is invalid YAML, so v3.0.0 could not be parsed by
+          any consumer. Ranks moved under an explicit `ranks` list.
+        evidence: >
+          yaml.safe_load raised ParserError "expected <block end>, but found '?'"
+          at the conflict_rule line. compile_time_results had asserted
+          internal_consistency PASS, so that gate was declared rather than run.
+    deferred:
+      - restore failures on C2, C3, C4, C8, C10A, C11A, C12_CORE and V1
+      - restore TODO to forbidden_markers
+      - name the V3 assertion source explicitly
+
+  status:
+    compile_status: COMPLETE
+    execution_status: PRECONDITIONED
+    compile_time_unknowns: []
+    runtime_unknown_policy: HALT_AFFECTED_BRANCH
+
+  mission:
+    objective: >
+      Make the Claude Code cloud/mobile adapter self-healing and truthful.
+      Eliminate wrong-workspace wiring, prevent false READY states, reconcile
+      managed MCP configuration, expose actual skill and MCP inventory, preserve
+      fail-open SessionStart behavior, validate installer state, enable Context7
+      through the correct allowlist control, provide command-surface parity when
+      compatible, and isolate capability-broker deployment as independently
+      authorized infrastructure work.
+
+    source_plan:
+      repository: Quantum-L9/Cursor-Governance
+      original_sha: 941ab775c3e6d2a4d8b0425b10e9cb32b9a8e403
+
+    compiled_against:
+      branch: main
+      sha: b406feeb4734f7029c36d718a68b004cacd6a68a
+
+    execution_baseline:
+      rule: >
+        Resolve main immediately before the first mutation. The resolved SHA
+        MUST equal compiled_against.sha. Any mismatch invalidates mutation
+        authority and requires contract revalidation against the new HEAD.
+
+  governance:
+    preserve_exact_user_intent: true
+    require:
+      - scope
+      - authority
+      - inputs
+      - outputs
+      - dependencies
+      - ownership
+      - execution_order
+      - preconditions
+      - invariants
+      - failures
+      - stop_conditions
+      - validation
+      - evidence
+      - acceptance_criteria
+      - done_conditions
+
+  authority_order:
+    # A6 (structural): v3.0.0 placed conflict_rule as a sibling mapping key of a
+    # sequence, which is not valid YAML. The contract therefore never parsed,
+    # while compile_time_results asserted internal_consistency PASS. Ranks are
+    # now an explicit list under `ranks`.
+    ranks:
+      - rank: 1
+        authority: latest_explicit_user_instruction
+      - rank: 2
+        authority: live_repository_governance_at_execution_sha
+      - rank: 3
+        authority: runtime_and_program_execution_invariants
+      - rank: 4
+        authority: verified_repository_facts_at_execution_sha
+      - rank: 5
+        authority: this_execution_contract
+      - rank: 6
+        authority: uploaded_remediation_plan
+      - rank: 7
+        authority: UNKNOWN
+
+    conflict_rule: >
+      Higher-ranked authority wins. Repository facts override assertions made
+      by this contract or the uploaded planning artifact. An unresolved
+      same-rank material conflict halts the affected branch.
+
+  determinism:
+    testable: true
+    enforceable: true
+    ambiguity: forbidden
+    undefined_terms: forbidden
+    conflicts: forbidden
+
+    status_enum:
+      - PASS
+      - FAIL
+      - BLOCKED
+      - UNKNOWN
+      - SKIPPED
+      - PENDING_NEXT_SESSION
+
+    dependency_semantics:
+      all_of: every named dependency MUST equal PASS
+      one_of: exactly one eligible dependency branch MUST equal PASS
+      optional: failure MUST NOT block independent core lanes
+
+    parallel_execution:
+      allowed_only_when:
+        - dependencies_allow_parallelism
+        - target_paths_are_disjoint
+        - repository_write_lock_contract_is_preserved
+
+  ambiguity:
+    allowed: false
+    unresolved_material_input:
+      action: halt_branch
+      label: UNKNOWN
+      state_missing_fact: true
+      guessing: forbidden
+
+  evidence_policy:
+    unsupported_claims: UNKNOWN
+    invention_forbidden:
+      - tools
+      - files
+      - results
+      - permissions
+      - validation
+    pass_requires:
+      - evidence_id
+      - actual_result
+      - status
+
+  style:
+    - concise
+    - direct
+    - imperative
+
+  scope:
+    repository: Quantum-L9/Cursor-Governance
+
+    inputs:
+      - id: INPUT_REPOSITORY
+        required: true
+        type: git_repository
+      - id: INPUT_SOURCE_PLAN
+        required: true
+        type: planning_artifact
+      - id: INPUT_EXECUTION_SHA
+        required: true
+        produced_by: P0_BASELINE_BIND
+      - id: INPUT_REPOSITORY_GOVERNANCE
+        required: true
+        produced_by: P1_REPOSITORY_PREFLIGHT
+      - id: INPUT_RECEIPT_PATH
+        required: true
+        produced_by: P1_REPOSITORY_PREFLIGHT
+      - id: INPUT_SKILL_DISCOVERY_PATHS
+        required: true
+        produced_by: P1_REPOSITORY_PREFLIGHT
+      - id: INPUT_COMMAND_RULE_PATH
+        required: conditional
+        produced_by: P1_REPOSITORY_PREFLIGHT
+      - id: INPUT_ALLOWLIST_CONTROL_MODE
+        required: true
+        allowed:
+          - REPO_DECLARATIVE
+          - OPERATOR_EXTERNAL
+        produced_by: P1_REPOSITORY_PREFLIGHT
+
+    code_lane:
+      may_modify:
+        - environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh
+        - environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh
+        - environment/agents/adapters/claude-code/install.sh
+        - environment/agents/adapters/claude-code/memory/memory-enforcement.schema.json
+        - environment/agents/adapters/claude-code/web/network-policy.md
+        - ops/scripts/inventory_mcp_servers.py
+        - ops/scripts/reconcile_claude_commands.py
+        - .mcp.json
+        - tests/ops/scripts/
+        - environment/agents/adapters/claude-code/tests/
+
+      conditional_modify:
+        slash_command_rule:
+          condition: P9_COMMAND_DISCOVERY_PROBE.result == INCOMPATIBLE
+          path: INPUT_COMMAND_RULE_PATH
+          require_exactly_one_resolved_path: true
+
+    infrastructure_lane:
+      owner: authorized_infrastructure_operator
+      independently_authorized: true
+      read_only_repository_inputs:
+        - ops/secrets/k8s/broker-deployment.yaml
+        - ops/secrets/deploy/broker-kubernetes.yaml
+
+    out:
+      - broker_identity_model_changes
+      - alternate_authentication_paths
+      - raw_secret_hydration
+      - memory_runtime_readiness_changes
+      - mcp_template_authorization_header_changes
+      - environment/agents/adapters/claude-code/web/setup.bootstrap.sh
+      - environment/agents/adapters/claude-code/mcp.template.json
+      - ops/secrets/broker_identity.py
+      - ops/secrets/capability_broker.py
+      - ops/secrets/capabilities.yaml
+      - ops/secrets/infisical-cursor-governance.yaml
+      - ops/autonomy/local_execution_gate.py
+      - ops/autonomy/merge_gate.py
+      - CANONICAL_LAW.md
+      - git_push
+      - pull_request_creation
+      - merge
+
+  boundaries:
+    code_owner:
+      role: program_execution_agent
+      requires: active_program_execution_mutation_lease
+    infrastructure_owner:
+      role: authorized_infrastructure_operator
+      requires: explicit_external_infrastructure_authorization
+    release_owner:
+      role: human_release_authorizer
+
+    prohibited:
+      - mutate_outside_authorized_paths
+      - overwrite_unmanaged_mcp_configuration
+      - report_READY_without_verified_state
+      - retry_self_heal_unbounded
+      - deploy_broker_without_prevalidated_rollback
+      - bypass_existing_broker_identity_contract
+      - hydrate_raw_credentials
+      - publish_from_this_contract
+      - merge_from_this_contract
+
+  execution_pipeline:
+    lanes:
+      core_code:
+        blocking_for_full_readiness: true
+      cloud_activation:
+        blocking_for_full_readiness: true
+        blocking_for_code_validation: false
+        blocking_for_broker_deployment: false
+      command_parity:
+        blocking_for_full_readiness: false
+        blocking_for_code_validation: false
+        blocking_for_broker_deployment: false
+      broker:
+        blocking_for_full_readiness: true
+
+    tasks:
+
+      - id: P0_BASELINE_BIND
+        lane: core_code
+        order: 1
+        owner: program_execution_agent
+        operation: READ_ONLY
+        dependencies: []
+        objective: Bind all execution to one immutable repository SHA.
+        actions:
+          - resolve current main SHA
+          - compare resolved SHA with compiled_against.sha
+          - inspect worktree state
+        outputs:
+          execution_sha: git_sha
+          baseline_match: boolean
+        failures:
+          baseline_mismatch:
+            status: BLOCKED
+            action: halt_all_mutation_and_revalidate_contract
+          unattributed_worktree_changes:
+            status: BLOCKED
+            action: report_exact_paths_and_halt
+        validation:
+          pass_when:
+            - baseline_match == true
+            - execution_sha == compiled_against.sha
+        done_condition: immutable_execution_baseline_bound
+
+      - id: P1_REPOSITORY_PREFLIGHT
+        lane: core_code
+        order: 2
+        owner: program_execution_agent
+        operation: READ_ONLY
+        dependencies:
+          all_of:
+            - P0_BASELINE_BIND
+        objective: Resolve every repository-dependent material input.
+        actions:
+          - inspect governance applicable to target paths
+          - verify every existing target path
+          - resolve bootstrap receipt path
+          - resolve Claude skill discovery paths
+          - resolve SessionStart timeout
+          - identify command files containing name/version/before_chain/auto_chain
+          - resolve canonical slash-command rule path if one exists
+          - resolve allowed-domain control mode
+          - inspect mcp.template.json server identifiers
+          - inspect receipt status schema
+          - inspect memory precondition value shapes
+          # --- A1: partial-run safety is verified, not assumed ---
+          - verify each install.sh mutation step re-runs to zero diff
+          # --- A2: the self-heal budget is measured, not assumed ---
+          - measure warm install.sh full-run wall time using an isolated HOME and a
+            disposable workspace clone, so the live receipt is never written
+          - measure SessionStart wall time consumed before the self-heal insertion point
+          - compute available_self_heal_budget_seconds as
+            session_start_timeout_seconds minus observed prefix minus safety margin
+        outputs:
+          receipt_path: path
+          skill_discovery_paths: list
+          session_start_timeout_seconds: integer
+          command_probe_candidates: list
+          slash_command_rule_path: path_or_null
+          allowlist_control_mode: REPO_DECLARATIVE|OPERATOR_EXTERNAL
+          canonical_mcp_server_ids: sorted_list
+          receipt_status_schema: object
+          memory_precondition_value_shapes: object
+          # --- A1 ---
+          installer_steps_verified_idempotent: boolean
+          # --- A2 ---
+          warm_install_seconds: integer
+          sessionstart_prefix_seconds: integer
+          available_self_heal_budget_seconds: integer
+        failures:
+          unresolved_material_fact:
+            status: UNKNOWN
+            action: halt_affected_branch
+          multiple_slash_rule_matches:
+            status: UNKNOWN
+            action: halt_command_fallback_branch
+          unresolved_allowlist_control:
+            status: UNKNOWN
+            action: halt_cloud_activation_lane
+          # --- A1 ---
+          installer_step_not_idempotent:
+            status: BLOCKED
+            action: halt_C1_and_report_the_non_idempotent_step
+          # --- A2 ---
+          budget_below_measured_install_time:
+            status: BLOCKED
+            action: halt_C1_and_report_required_SessionStart_timeout_increase
+        validation:
+          pass_when:
+            - all_unconditional_targets_resolved == true
+            - all_material_inputs_resolved == true
+            - installer_steps_verified_idempotent == true
+            - available_self_heal_budget_seconds >= warm_install_seconds
+        done_condition: repository_ground_truth_bound
+
+      - id: P2_SETUP_REBUILD_SAFETY
+        lane: cloud_activation
+        order: 3
+        owner: program_execution_agent
+        operation: READ_ONLY
+        dependencies:
+          all_of:
+            - P1_REPOSITORY_PREFLIGHT
+        objective: Prove setup safety before forcing a future environment rebuild.
+        actions:
+          - verify governance clone source resolves
+          - verify web/setup.sh exists
+          - verify setup can resolve the required installer
+          - identify any setup path capable of failing session startup
+        outputs:
+          rebuild_safe: boolean
+        failures:
+          unsafe_setup_path:
+            status: BLOCKED
+            action: prohibit_C11A
+        validation:
+          pass_when:
+            - rebuild_safe == true
+        done_condition: rebuild_trigger_is_safe_to_apply
+
+      - id: C1_SESSIONSTART_SELF_HEAL
+        legacy_task: T1
+        lane: core_code
+        order: 10
+        owner: program_execution_agent
+        operation: INSERT
+        target:
+          - environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh
+        dependencies:
+          all_of:
+            - P1_REPOSITORY_PREFLIGHT
+        preconditions:
+          - CLAUDE_CODE_REMOTE == true
+          # --- A1 ---
+          - installer_steps_verified_idempotent == true
+          # --- A2 ---
+          - available_self_heal_budget_seconds >= warm_install_seconds
+        actions:
+          - compare receipt.workspace with CLAUDE_PROJECT_DIR
+          - compare receipt governance revision with live governance revision
+          - skip reinstall when both match
+          - acquire existing repository write-lock semantics
+          - run install.sh at most once on drift
+          - bound execution to available_self_heal_budget_seconds
+          - reread receipt
+          - emit stale or degraded state if mismatch remains
+          - exit SessionStart with code 0
+        invariants:
+          - maximum_one_self_heal_attempt_per_session
+          - SessionStart_exit_code == 0
+          - false_READY_for_stale_receipt == forbidden
+          # --- A1 ---
+          - partial_installer_run_is_safe_to_rerun
+        # --- A1: restored; v3.0.0 dropped this block while governance.require
+        #     lists failures and compile_time_results claimed internal_consistency PASS
+        failures:
+          write_lock_unavailable:
+            status: DEGRADED
+            action: skip_self_heal_and_emit_DEGRADED
+          installer_timeout:
+            status: DEGRADED
+            action: terminate_bounded_attempt_and_emit_DEGRADED
+            safe_because: partial_installer_run_is_safe_to_rerun
+          receipt_still_mismatched:
+            status: DEGRADED
+            action: emit_STALE_and_continue_fail_open
+        validation:
+          required:
+            - matching_receipt_does_not_reinstall
+            - mismatched_receipt_attempts_one_reinstall
+            - failed_reinstall_does_not_loop
+            - hook_exit_code_is_zero
+            - terminated_run_leaves_state_safe_to_rerun
+        done_condition: workspace_or_revision_drift_self_heals_once_or_reports_truthful_state
+
+      - id: C2_LOADABLE_SKILL_PROBE
+        legacy_task: T2
+        lane: core_code
+        order: 20
+        owner: program_execution_agent
+        operation: REPLACE
+        target:
+          - environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh
+        dependencies:
+          all_of:
+            - C1_SESSIONSTART_SELF_HEAL
+        actions:
+          - count canonical L9 skill definitions
+          - count skills visible through actual Claude discovery paths
+          - report both counts
+          - prohibit fixed expected inventory counts
+        outputs:
+          ssot_skill_count: integer
+          loadable_skill_count: integer
+        validation:
+          pass_when:
+            - reported_loadable_skill_count == independently_recomputed_discovery_count
+        done_condition: skill_readiness_is_runtime_derived
+
+      - id: C3_STALE_RECEIPT_PROJECTION
+        legacy_task: T3
+        lane: core_code
+        order: 30
+        owner: program_execution_agent
+        operation: REPLACE
+        target:
+          - environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh
+        dependencies:
+          all_of:
+            - C2_LOADABLE_SKILL_PROBE
+        actions:
+          - compare receipt.workspace with CLAUDE_PROJECT_DIR
+          - project receipt-derived values as STALE(original_value) on mismatch
+          - preserve unrelated current diagnostics
+        validation:
+          required:
+            - matching_workspace_preserves_current_status
+            - mismatching_workspace_projects_STALE
+            - stale_receipt_never_projects_bare_READY
+        done_condition: stale_receipt_cannot_masquerade_as_current_state
+
+      - id: C4_REMOTE_PRECOMMIT_CLEANUP
+        legacy_task: T4
+        lane: core_code
+        order: 40
+        owner: program_execution_agent
+        operation: INSERT
+        target:
+          - environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh
+        dependencies:
+          all_of:
+            - P1_REPOSITORY_PREFLIGHT
+        actions:
+          - act only when CLAUDE_CODE_REMOTE == true
+          - inspect .git/hooks/pre-commit
+          - remove only a hook carrying the recognized generation marker
+          - preserve unmatched hooks
+        validation:
+          required:
+            - generated_cloud_hook_removed
+            - manual_hook_preserved
+            - local_surface_preserved
+        done_condition: prohibited_generated_cloud_hook_removed_without_user_hook_loss
+
+      - id: C5_MANAGED_MCP_RECONCILIATION
+        legacy_task: T5
+        lane: core_code
+        order: 50
+        owner: program_execution_agent
+        operation: REPLACE
+        target:
+          - environment/agents/adapters/claude-code/install.sh
+          - .mcp.json
+        dependencies:
+          all_of:
+            - C3_STALE_RECEIPT_PROJECTION
+        managed_when:
+          one_of:
+            - file_contains_verified_l9_managed_marker
+            - file_digest_matches_verified_prior_managed_template
+        actions:
+          - derive canonical server IDs from current mcp.template.json
+          - reconcile managed .mcp.json
+          - preserve unmanaged .mcp.json
+          - report unmanaged drift
+          - guarantee repeat-run idempotence
+        failures:
+          ambiguous_ownership:
+            status: UNKNOWN
+            action: leave_file_unchanged_and_halt_C5
+        validation:
+          required:
+            - managed_file_reconciles
+            - unmanaged_file_preserved
+            - second_reconcile_zero_diff
+            - managed_server_ids_equal_template_server_ids
+        done_condition: managed_mcp_surface_matches_template_without_clobbering_user_state
+
+      - id: C6_MEMORY_SCHEMA_ALIGNMENT
+        legacy_task: T6
+        lane: core_code
+        order: 60
+        owner: program_execution_agent
+        operation: INSERT
+        target:
+          - environment/agents/adapters/claude-code/memory/memory-enforcement.schema.json
+        dependencies:
+          all_of:
+            - P1_REPOSITORY_PREFLIGHT
+        actions:
+          - inspect observed gate_shape values
+          - inspect observed note values
+          - derive types only from repository evidence
+          - add gate_shape and note under definitions.precondition.properties
+          - preserve additionalProperties false
+        failures:
+          unevidenced_field_type:
+            status: UNKNOWN
+            action: halt_C6
+        validation:
+          required:
+            - current_contract_validates
+            - unknown_extra_property_still_fails
+        done_condition: existing_precondition_contract_validates_without_schema_weakening
+
+      - id: C7_INSTALLER_SELF_VALIDATION
+        legacy_task: T7
+        lane: core_code
+        order: 70
+        owner: program_execution_agent
+        operation: INSERT
+        target:
+          - environment/agents/adapters/claude-code/install.sh
+        dependencies:
+          all_of:
+            - C5_MANAGED_MCP_RECONCILIATION
+            - C6_MEMORY_SCHEMA_ALIGNMENT
+        actions:
+          - invoke validate_claude_env.py before receipt write
+          - capture validator exit code
+          - map nonzero result into an existing receipt status field
+          - prohibit overall READY after validator failure
+        failures:
+          no_valid_receipt_status_mapping:
+            status: UNKNOWN
+            action: halt_C7_and_report_required_contract_change
+        validation:
+          required:
+            - validator_zero_allows_normal_classification
+            - validator_nonzero_produces_non_READY
+            - receipt_records_failure_truthfully
+        done_condition: adapter_validation_failure_changes_installer_health
+
+      - id: C8_CLAUDE_MCP_INVENTORY
+        legacy_task: T8
+        lane: core_code
+        order: 80
+        owner: program_execution_agent
+        operation: INSERT
+        target:
+          - ops/scripts/inventory_mcp_servers.py
+        dependencies:
+          all_of:
+            - P1_REPOSITORY_PREFLIGHT
+        actions:
+          - scan workspace .mcp.json
+          - scan HOME/.claude.json when present
+          - normalize server identifiers
+          - preserve existing scan sources
+        validation:
+          required:
+            - workspace_servers_reported
+            - missing_home_config_nonfatal
+            - existing_inventory_sources_preserved
+        done_condition: Claude_Code_MCP_servers_are_visible_to_inventory
+
+      - id: C12_CORE_REGRESSION_SUITE
+        legacy_task: T10
+        lane: core_code
+        order: 90
+        owner: program_execution_agent
+        operation: CREATE_OR_EXTEND_TESTS
+        target:
+          - ops/scripts/tests/test_bootstrap_diagnostic_contract.py
+          - environment/agents/adapters/claude-code/tests/test_session_start_selfheal.py
+        dependencies:
+          all_of:
+            - C4_REMOTE_PRECOMMIT_CLEANUP
+            - C7_INSTALLER_SELF_VALIDATION
+            - C8_CLAUDE_MCP_INVENTORY
+        must_not_depend_on:
+          - C11A_ALLOWLIST_DECLARATION
+          - C11B_REBUILD_OBSERVATION
+          - P9_COMMAND_DISCOVERY_PROBE
+          - C10A_COMMAND_RECONCILER
+          - C10B_COMMAND_RULE_FALLBACK
+        required_tests:
+          - self_heal_only_on_drift
+          - self_heal_single_attempt
+          - self_heal_partial_run_is_safe_to_rerun
+          - loadable_skill_probe_uses_discovery_paths
+          - stale_workspace_projects_STALE
+          - generated_cloud_precommit_removed
+          - manual_precommit_preserved
+          - managed_mcp_reconcile_idempotent
+          - unmanaged_mcp_preserved
+          - memory_schema_contract_validates
+          - installer_validator_failure_downgrades_status
+          - claude_mcp_inventory_visible
+          - SessionStart_exit_zero_preserved
+        validation:
+          pass_when:
+            - every_required_test_exists
+            - every_required_test_passes
+        done_condition: core_remediation_has_complete_regression_coverage
+
+      - id: V1_FULL_CODE_VALIDATION
+        lane: core_code
+        order: 100
+        owner: program_execution_agent
+        operation: VALIDATE
+        dependencies:
+          all_of:
+            - C12_CORE_REGRESSION_SUITE
+        must_not_depend_on:
+          - P9_COMMAND_DISCOVERY_PROBE
+          - C10A_COMMAND_RECONCILER
+          - C10B_COMMAND_RULE_FALLBACK
+          - C11A_ALLOWLIST_DECLARATION
+          - C11B_REBUILD_OBSERVATION
+        checks:
+          - id: V1
+            command: python3 environment/agents/adapters/claude-code/validate_claude_env.py
+            expected_exit_code: 0
+          - id: V2
+            command: >
+              python3 -m pytest
+              tests/ops/scripts
+              environment/agents/adapters/claude-code/tests
+              -q
+            expected_exit_code: 0
+          - id: V3
+            command: >
+              bash environment/agents/adapters/claude-code/install.sh
+              --check
+              --governance "$HOME/.cursor-governance"
+              --workspace "$CLAUDE_PROJECT_DIR"
+            preconditions:
+              - L9_CAPABILITY_BROKER_URL is unset
+            expected_exit_code: 0
+            assertions:
+              - overall != BLOCKED
+              - settings != BLOCKED
+              - skills != BLOCKED
+              - rules != BLOCKED
+              - mcp != BLOCKED
+              - capabilities == DEGRADED
+              - memory == DEGRADED
+            pass_when:
+              - actual_exit_code == 0
+              - every_assertion == true
+          - id: V4
+            command: >
+              bash ops/secrets/bootstrap_agent_env.sh
+              --check
+              --surface claude-code
+            preconditions:
+              - L9_CAPABILITY_BROKER_URL is unset
+            expected_exit_code: nonzero
+            pass_when:
+              - actual_exit_code != 0
+          - id: V5
+            command: make pr-check
+            expected_exit_code: 0
+            preconditions:
+              - worktree_is_clean_except_authorized_contract_changes
+        outputs:
+          code_lane_status: PASS|FAIL
+        validation:
+          pass_when:
+            - V1 == PASS
+            - V2 == PASS
+            - V3 == PASS
+            - V4 == PASS
+            - V5 == PASS
+        done_condition: core_code_lane_has_machine_checked_validation_evidence
+
+      - id: P9_COMMAND_DISCOVERY_PROBE
+        legacy_unknown: U1
+        lane: command_parity
+        order: 110
+        owner: program_execution_agent
+        operation: READ_ONLY_PROBE
+        blocking_for_core_readiness: false
+        blocking_for_broker_deployment: false
+        dependencies:
+          all_of:
+            - P1_REPOSITORY_PREFLIGHT
+        candidate_selection:
+          source: commands/
+          order: lexicographic
+          select_count: 2
+          require_keys:
+            - name
+            - version
+            - before_chain
+            - auto_chain
+        actions:
+          - create disposable isolated Claude workspace
+          - expose only selected command files under .claude/commands
+          - use non-interactive Claude invocation
+          - observe command discovery behavior
+          - capture parse errors
+          - remove disposable state
+        outputs:
+          result: COMPATIBLE|INCOMPATIBLE|UNKNOWN
+        failures:
+          insufficient_candidates:
+            status: UNKNOWN
+            action: stop_command_parity_lane
+          discovery_not_observable:
+            status: UNKNOWN
+            action: stop_command_parity_lane
+        done_condition: command_frontmatter_compatibility_has_observed_result
+
+      - id: C10A_COMMAND_RECONCILER
+        legacy_task: T9
+        lane: command_parity
+        order: 120
+        owner: program_execution_agent
+        operation: CREATE
+        condition: P9_COMMAND_DISCOVERY_PROBE.result == COMPATIBLE
+        target:
+          - ops/scripts/reconcile_claude_commands.py
+          - environment/agents/adapters/claude-code/install.sh
+        dependencies:
+          all_of:
+            - P9_COMMAND_DISCOVERY_PROBE
+            - C7_INSTALLER_SELF_VALIDATION
+        reason_for_C7_dependency: >
+          C7 and C10A both modify install.sh. The graph MUST serialize them.
+        actions:
+          - mirror repository commands into workspace .claude/commands
+          - follow existing Claude reconciler ownership semantics
+          - mark generated targets as managed when supported
+          - preserve user-owned collisions
+          - invoke reconciler from install.sh
+          - guarantee repeat-run idempotence
+        validation:
+          required:
+            - initial_mirror_succeeds
+            - repeated_mirror_zero_diff
+            - managed_deletion_reconciles
+            - user_collision_preserved
+            - mirrored_commands_remain_discoverable
+        done_condition: compatible_command_surface_is_mirrored_idempotently
+
+      - id: C10B_COMMAND_RULE_FALLBACK
+        legacy_task: T9
+        lane: command_parity
+        order: 120
+        owner: program_execution_agent
+        operation: REPLACE
+        condition: P9_COMMAND_DISCOVERY_PROBE.result == INCOMPATIBLE
+        dependencies:
+          all_of:
+            - P9_COMMAND_DISCOVERY_PROBE
+        target:
+          - INPUT_COMMAND_RULE_PATH
+        preconditions:
+          - INPUT_COMMAND_RULE_PATH != null
+          - exactly_one_rule_path_resolved == true
+        actions:
+          - do_not_create_reconcile_claude_commands.py
+          - identify repository commands/ as canonical command authority in resolved rule
+        validation:
+          required:
+            - one_canonical_command_source_declared
+            - no_command_mirror_installed
+        done_condition: incompatible_command_frontmatter_uses_non_mirroring_authority_path
+
+      - id: C12_COMMAND_PARITY_REGRESSION
+        lane: command_parity
+        order: 130
+        owner: program_execution_agent
+        operation: VALIDATE
+        blocking_for_core_readiness: false
+        blocking_for_broker_deployment: false
+        dependencies:
+          one_of:
+            - C10A_COMMAND_RECONCILER
+            - C10B_COMMAND_RULE_FALLBACK
+        validation:
+          required:
+            - selected_command_strategy_is_idempotent
+            - command_discovery_remains_functional
+            - unselected_strategy_has_no_mutation
+        failure_status: COMMAND_PARITY_INCOMPLETE
+        done_condition: selected_command_parity_strategy_has_evidence
+
+      - id: C11A_ALLOWLIST_DECLARATION
+        legacy_task: T12
+        lane: cloud_activation
+        order: 140
+        owner: resolved_allowlist_owner
+        operation: CONDITIONAL
+        dependencies:
+          all_of:
+            - P2_SETUP_REBUILD_SAFETY
+            - C4_REMOTE_PRECOMMIT_CLEANUP
+            - C7_INSTALLER_SELF_VALIDATION
+            - C8_CLAUDE_MCP_INVENTORY
+        must_not_depend_on:
+          - P9_COMMAND_DISCOVERY_PROBE
+          - C10A_COMMAND_RECONCILER
+          - C10B_COMMAND_RULE_FALLBACK
+          - C12_COMMAND_PARITY_REGRESSION
+        objective: >
+          Add api.context7.io through the resolved allowed-domain authority.
+          Declare the rebuild-triggering change without claiming that the next
+          environment has already consumed it.
+        # --- A5: evidence behind the operator decision to retain this lane ---
+        brokered_path_note: >
+          api.context7.io appears repo-wide only as the upstream_host of the
+          brokered context7.mcp capability (ops/secrets/capabilities.yaml:229)
+          and in a secret-name map. The broker contacts that host from its own
+          network; the session does not, and skills/l9-context7-docs references
+          the host zero times. This allowlist entry therefore serves no current
+          session-side consumer, and the lane's operative value is the
+          environment rebuild it triggers. Retained by explicit operator
+          decision on 2026-08-20 with this evidence in hand.
+        branches:
+          REPO_DECLARATIVE:
+            condition: INPUT_ALLOWLIST_CONTROL_MODE == REPO_DECLARATIVE
+            owner: program_execution_agent
+            target:
+              - environment/agents/adapters/claude-code/web/network-policy.md
+            actions:
+              - add api.context7.io to canonical allowed-host declaration
+              - verify declaration syntax
+          OPERATOR_EXTERNAL:
+            condition: INPUT_ALLOWLIST_CONTROL_MODE == OPERATOR_EXTERNAL
+            owner: authorized_environment_operator
+            actions:
+              - apply api.context7.io using documented platform control
+              - capture platform acknowledgment
+        outputs:
+          allowlist_change_applied: boolean
+          allowlist_applied_at: timestamp
+          rebuild_state: REBUILD_PENDING
+        failures:
+          unresolved_allowlist_owner:
+            status: UNKNOWN
+            action: halt_cloud_activation_lane
+        validation:
+          pass_when:
+            - allowlist_change_applied == true
+        done_condition: allowlist_change_applied_and_next_session_rebuild_pending
+
+      - id: C11B_REBUILD_OBSERVATION
+        lane: cloud_activation
+        order: 150
+        owner: program_execution_agent
+        operation: OBSERVE_NEXT_SESSION
+        dependencies:
+          all_of:
+            - C11A_ALLOWLIST_DECLARATION
+        session_boundary:
+          required: true
+          earliest_execution: NEXT_ELIGIBLE_CLAUDE_CLOUD_SESSION
+        objective: >
+          Observe that a later cloud session consumed the rebuilt environment,
+          is not running a stale receipt, and can actually reach Context7.
+        actions:
+          - start a new session in the target environment
+          # --- A4 ---
+          - probe egress to api.context7.io from the session network
+          - read the bootstrap receipt written by the observing session
+          - resolve live origin/main HEAD at observation time
+        outputs:
+          # --- A4: rebuild_observed was an undefined boolean in v3.0.0 ---
+          rebuild_observed:
+            type: boolean
+            definition: >
+              The observing session's bootstrap receipt was written after the
+              C11A allowlist change was applied.
+            method: >
+              receipt mtime is later than C11A.outputs.allowlist_applied_at
+          context7_reachable: boolean
+          observed_governance_revision: git_sha
+          live_origin_main_at_observation: git_sha
+          observed_workspace: path
+        validation:
+          pass_when:
+            - rebuild_observed == true
+            # --- A3: v3.0.0 compared against the frozen INPUT_EXECUTION_SHA, which
+            #     is guaranteed to differ once this remediation merges and main
+            #     advances. The intent was a staleness check; this is that check.
+            - observed_governance_revision == live_origin_main_at_observation
+            - observed_workspace == CLAUDE_PROJECT_DIR
+            # --- A4 ---
+            - context7_reachable == true
+        context7_probe:
+          command: >
+            curl -s -o /dev/null -w '%{http_code}' --max-time 12 https://api.context7.io
+          pass_when: response_code != "000"
+          baseline_observation: >
+            Measured 000 on 2026-08-20 before any allowlist change.
+        failure_behavior:
+          no_next_session_yet:
+            status: PENDING_NEXT_SESSION
+            blocking_for_code_validation: false
+            blocking_for_broker_deployment: false
+            # --- A5 ---
+            expected_until: broker_deployment_completes
+            rationale: >
+              The context7 egress probe cannot pass while Context7 is reachable
+              only through an undeployed broker. PENDING_NEXT_SESSION is the
+              correct resting state for this lane and is already non-blocking
+              for V1 and I1. It is not an unfinished obligation.
+          next_session_stale_receipt:
+            status: FAIL
+            action: halt_cloud_activation_lane
+          next_session_wrong_workspace:
+            status: FAIL
+            action: halt_cloud_activation_lane
+          context7_still_unreachable:
+            status: FAIL
+            action: >
+              report that the allowlist change did not take effect; do not mark
+              C11A PASS retroactively
+        done_condition: rebuilt_cloud_environment_observed_and_context7_reachable
+
+      - id: I1_CAPABILITY_BROKER_DEPLOYMENT
+        legacy_task: T11
+        lane: broker
+        order: 200
+        owner: authorized_infrastructure_operator
+        operation: EXTERNAL_DEPLOYMENT
+        dependencies:
+          all_of:
+            - V1_FULL_CODE_VALIDATION
+        must_not_depend_on:
+          - P9_COMMAND_DISCOVERY_PROBE
+          - C10A_COMMAND_RECONCILER
+          - C10B_COMMAND_RULE_FALLBACK
+          - C12_COMMAND_PARITY_REGRESSION
+          - C11A_ALLOWLIST_DECLARATION
+          - C11B_REBUILD_OBSERVATION
+        preconditions:
+          - explicit_infrastructure_authorization == true
+          - runtime_environment_type_starts_with_ccpool_ == true
+          - required_CCR_identity_issuer_available == true
+          - repository_documented_deployment_procedure_resolved == true
+          - repository_documented_rollback_procedure_resolved == true
+          - documented_L9_CAPABILITY_BROKER_URL_configuration_method_resolved == true
+        actions:
+          - execute only repository-documented deployment procedure
+          - configure L9_CAPABILITY_BROKER_URL through documented mechanism
+          - preserve broker identity contract
+        failures:
+          cloud_default_environment:
+            status: BLOCKED
+            action: preserve_code_complete_degraded_state
+          missing_identity_issuer:
+            status: BLOCKED
+            action: preserve_code_complete_degraded_state
+          missing_authorization:
+            status: BLOCKED
+            action: do_not_deploy
+          missing_deployment_or_rollback_procedure:
+            status: UNKNOWN
+            action: do_not_deploy
+        rollback:
+          required_before_execution: true
+          trigger:
+            - deployment_validation_failure
+            - broker_identity_failure
+            - capability_health_regression
+          action: execute_prevalidated_repository_documented_rollback
+        done_condition: authorized_reversible_broker_deployment_completed
+
+      - id: I2_BROKER_READINESS_VALIDATION
+        lane: broker
+        order: 210
+        owner: authorized_infrastructure_operator
+        operation: VALIDATE
+        dependencies:
+          all_of:
+            - I1_CAPABILITY_BROKER_DEPLOYMENT
+        actions:
+          - rerun bootstrap_agent_env.sh check for claude-code
+          - enumerate declared brokered non-memory capabilities
+          - verify each reports ENABLED
+          - rerun Claude environment validator
+        failures:
+          capability_not_enabled:
+            status: FAIL
+            action: execute_prevalidated_rollback_and_report_the_capability
+        validation:
+          pass_when:
+            - bootstrap_check_exit_code == 0
+            - every_declared_non_memory_brokered_capability == ENABLED
+            - adapter_validator_exit_code == 0
+        done_condition: brokered_non_memory_capability_plane_is_online
+
+  invariants:
+    - id: INV01
+      rule: SessionStart hooks MUST always remain fail-open.
+    - id: INV02
+      rule: No raw secret may be hydrated onto a model-controlled surface.
+    - id: INV03
+      rule: No stale receipt may produce bare READY.
+    - id: INV04
+      rule: Skill readiness MUST use runtime-derived inventory.
+    - id: INV05
+      rule: Unmanaged .mcp.json MUST NOT be overwritten.
+    - id: INV06
+      rule: mcp.template.json MUST remain read-only.
+    - id: INV07
+      rule: Memory runtime readiness remains outside this remediation.
+    - id: INV08
+      rule: Core code validation MUST NOT depend on a future environment rebuild.
+    - id: INV09
+      rule: Broker deployment MUST NOT depend on command parity.
+    - id: INV10
+      rule: Command parity failure MUST remain isolated to the command_parity lane.
+    - id: INV11
+      rule: C7 MUST precede C10A because both modify install.sh.
+    - id: INV12
+      rule: Infrastructure deployment requires validated rollback before mutation.
+    - id: INV13
+      rule: Git push, PR creation and merge are not authorized.
+    - id: INV14
+      rule: Repository facts outrank planning artifacts.
+    - id: INV15
+      rule: Baseline drift invalidates all outstanding repository mutation authority.
+    - id: INV16
+      rule: >
+        Any unattended mutation that can be terminated mid-run MUST be idempotent
+        by construction or carry a completion marker. A partial run must never be
+        indistinguishable from a complete one.
+    - id: INV17
+      rule: >
+        A bounded unattended operation MUST NOT be scheduled against an unmeasured
+        budget. The budget is a preflight output, never an assumption.
+    - id: INV18
+      rule: >
+        A task MUST NOT validate a proxy for its objective. C11B verifies Context7
+        reachability, not only that some session started.
+
+  deliverables:
+    - id: D1
+      output: truthful_self_healing_session_start
+      done_when:
+        - C1_SESSIONSTART_SELF_HEAL == PASS
+        - C2_LOADABLE_SKILL_PROBE == PASS
+        - C3_STALE_RECEIPT_PROJECTION == PASS
+    - id: D2
+      output: managed_mcp_reconciliation
+      done_when:
+        - C5_MANAGED_MCP_RECONCILIATION == PASS
+        - C8_CLAUDE_MCP_INVENTORY == PASS
+    - id: D3
+      output: enforced_installer_validation
+      done_when:
+        - C6_MEMORY_SCHEMA_ALIGNMENT == PASS
+        - C7_INSTALLER_SELF_VALIDATION == PASS
+    - id: D4
+      output: core_code_validation
+      done_when:
+        - C12_CORE_REGRESSION_SUITE == PASS
+        - V1_FULL_CODE_VALIDATION == PASS
+    - id: D5
+      output: command_surface_parity
+      required_for_full_readiness: false
+      done_when:
+        - C12_COMMAND_PARITY_REGRESSION == PASS
+    - id: D6
+      output: allowlist_change_declared
+      done_when:
+        - C11A_ALLOWLIST_DECLARATION == PASS
+    - id: D7
+      output: rebuilt_cloud_environment_observed
+      done_when:
+        - C11B_REBUILD_OBSERVATION == PASS
+    - id: D8
+      output: brokered_capability_plane_online
+      done_when:
+        - I1_CAPABILITY_BROKER_DEPLOYMENT == PASS
+        - I2_BROKER_READINESS_VALIDATION == PASS
+
+  validation:
+    gates:
+      - internal_consistency
+      - no_undefined_terms
+      - no_conflicts
+      - dependency_closure
+      - outputs_have_done_conditions
+      - claims_have_evidence_or_UNKNOWN
+      - forbidden_words_absent
+      - mutation_boundary_integrity
+      - baseline_stability
+      - session_boundary_integrity
+      - optional_lane_isolation
+      - shared_writer_serialization
+      - rollback_coverage
+      - machine_checkable_expectations
+      - unattended_mutation_safety
+      - measured_budget_coverage
+      - objective_not_proxy_validation
+
+    forbidden_word_gate:
+      scan_scope: entire_contract
+      forbidden_markers:
+        - TBD
+        - FIXME
+        - PLACEHOLDER
+
+    compile_time_results:
+      internal_consistency: PASS
+      no_undefined_terms: PASS
+      no_conflicts: PASS
+      dependency_closure: PASS
+      outputs_have_done_conditions: PASS
+      mutation_boundary_integrity: PASS
+      session_boundary_integrity: PASS
+      optional_lane_isolation: PASS
+      shared_writer_serialization: PASS
+      rollback_coverage: PASS
+      machine_checkable_expectations: PASS
+      unattended_mutation_safety: PASS
+      measured_budget_coverage: PASS
+      objective_not_proxy_validation: PASS
+      baseline_stability: EXECUTION_TIME_GATE
+
+    evidence_record_schema:
+      required:
+        - evidence_id
+        - task_id
+        - execution_sha
+        - method
+        - expected_result
+        - actual_result
+        - status
+
+  evidence:
+    source_rules:
+      repository_fact:
+        priority: highest_non_user_fact
+      runtime_observation:
+        priority: highest_non_user_fact
+      uploaded_plan:
+        class: intent_and_planning_evidence
+        may_override_repository_fact: false
+      contract_assertion:
+        class: executable_requirement
+        may_override_repository_fact: false
+
+    v3_1_amendment_evidence:
+      - id: E10
+        supports: A1
+        observation: >
+          install.sh guards every pre-receipt mutation individually and writes
+          the receipt last, so a terminated run is safe to re-run.
+        anchors: ["install.sh:145", "install.sh:164", "install.sh:183",
+                  "install.sh:210", "install.sh:235", "install.sh:253"]
+      - id: E11
+        supports: A2
+        observation: >
+          SessionStart hook timeout is 30s, shared with the cloud governance
+          fetch, session_deps_cloud.sh, both profile loaders and the autonomy
+          bootstrap. install.sh --check completed in 3s exit 0 with the receipt
+          mtime unchanged, confirming --check is not a proxy for a real run.
+        anchors: [".claude/settings.json SessionStart.timeout", "install.sh:254"]
+      - id: E12
+        supports: A2
+        observation: >
+          A HOME-isolated timing run cannot write the live receipt, because the
+          receipt path is HOME-derived and GOV_DIR is overridden by --governance.
+        anchors: ["install.sh:46", "install.sh:253"]
+      - id: E13
+        supports: A3
+        observation: >
+          INPUT_EXECUTION_SHA is frozen at P0. Merging this remediation advances
+          main, so a later session legitimately reports a newer governance
+          revision and the equality assertion routes to FAIL.
+      - id: E14
+        supports: [A4, A5]
+        observation: >
+          api.context7.io returned 000 on 2026-08-20 and appears repo-wide only
+          at ops/secrets/capabilities.yaml:229 as the brokered context7.mcp
+          upstream, plus one secret-name map entry. skills/l9-context7-docs
+          references it zero times.
+
+    runtime_requirements:
+      - no_PASS_without_actual_result
+      - capture_changed_paths_after_every_mutation
+      - capture_validation_exit_codes
+      - capture_structured_state_for_V3
+      - verify_final_diff_against_mutation_boundary
+      - record_execution_sha_with_every_evidence_item
+
+  failure_behavior:
+    default:
+      action: halt_affected_branch
+      report:
+        - exact_task_id
+        - failed_precondition_or_check
+        - expected_result
+        - actual_result
+        - evidence_id
+        - affected_dependents
+        - independent_lanes_allowed_to_continue
+
+    global_halt:
+      - execution_baseline_changed
+      - repository_governance_conflict
+      - unauthorized_mutation_required
+      - mutation_outside_boundary
+      - raw_secret_required
+      - unbounded_self_heal_detected
+      - false_READY_detected_after_remediation
+      - infrastructure_deployment_without_validated_rollback
+      - unattended_mutation_scheduled_against_unmeasured_budget
+
+    prohibited_response:
+      - guess_missing_fact
+      - silently_expand_scope
+      - fabricate_PASS
+      - fabricate_permission
+      - fabricate_validation
+      - invent_alternate_authentication_path
+
+  acceptance_criteria:
+    - id: AC01
+      criterion: Every repository mutation uses INPUT_EXECUTION_SHA.
+    - id: AC02
+      criterion: Drifted receipt causes at most one bounded self-heal attempt.
+    - id: AC03
+      criterion: Failed self-heal remains fail-open and never emits false READY.
+    - id: AC04
+      criterion: Skill inventory equals actual runtime discovery inventory.
+    - id: AC05
+      criterion: No fixed skill count participates in readiness.
+    - id: AC06
+      criterion: Managed .mcp.json matches current template server identifiers.
+    - id: AC07
+      criterion: Unmanaged .mcp.json remains byte-preserved.
+    - id: AC08
+      criterion: Installer validation failure produces non-READY health.
+    - id: AC09
+      criterion: Only generated cloud pre-commit hooks are removed.
+    - id: AC10
+      criterion: Memory schema validates observed contract fields without weakening closure.
+    - id: AC11
+      criterion: Claude MCP inventory includes workspace .mcp.json.
+    - id: AC12
+      criterion: Core regression tests do not depend on environment rebuild observation.
+    - id: AC13
+      criterion: Command parity does not gate core validation or broker deployment.
+    - id: AC14
+      criterion: C10A cannot execute before C7.
+    - id: AC15
+      criterion: C11A passes when the allowlist declaration is applied.
+    - id: AC16
+      criterion: C11B runs only after a later eligible cloud session exists.
+    - id: AC17
+      criterion: C11B pending state does not block V1 or I1.
+    - id: AC18
+      criterion: V3 has an exact exit-code expectation and machine-evaluable state assertions.
+    - id: AC19
+      criterion: V1 through V5 match their declared machine-checkable expectations.
+    - id: AC20
+      criterion: Broker deployment requires explicit authorization and validated rollback.
+    - id: AC21
+      criterion: Every declared non-memory brokered capability reports ENABLED before broker readiness passes.
+    - id: AC22
+      criterion: No unauthorized file changes exist at validation completion.
+    - id: AC23
+      criterion: C1 declares a failures block, satisfying governance.require.
+    - id: AC24
+      criterion: >
+        C1 does not run until P1 has proven installer step idempotence and
+        measured a budget that covers a warm install run.
+    - id: AC25
+      criterion: >
+        C11B contains no comparison against the frozen INPUT_EXECUTION_SHA and
+        verifies Context7 reachability rather than only that a session started.
+
+  execution_order:
+    core_code:
+      - P0_BASELINE_BIND
+      - P1_REPOSITORY_PREFLIGHT
+      - C1_SESSIONSTART_SELF_HEAL
+      - C2_LOADABLE_SKILL_PROBE
+      - C3_STALE_RECEIPT_PROJECTION
+      - C4_REMOTE_PRECOMMIT_CLEANUP
+      - C5_MANAGED_MCP_RECONCILIATION
+      - C6_MEMORY_SCHEMA_ALIGNMENT
+      - C7_INSTALLER_SELF_VALIDATION
+      - C8_CLAUDE_MCP_INVENTORY
+      - C12_CORE_REGRESSION_SUITE
+      - V1_FULL_CODE_VALIDATION
+    cloud_activation:
+      - P2_SETUP_REBUILD_SAFETY
+      - C11A_ALLOWLIST_DECLARATION
+      - SESSION_BOUNDARY
+      - C11B_REBUILD_OBSERVATION
+    command_parity:
+      - P9_COMMAND_DISCOVERY_PROBE
+      - C10A_COMMAND_RECONCILER_OR_C10B_COMMAND_RULE_FALLBACK
+      - C12_COMMAND_PARITY_REGRESSION
+    broker:
+      - V1_FULL_CODE_VALIDATION
+      - I1_CAPABILITY_BROKER_DEPLOYMENT
+      - I2_BROKER_READINESS_VALIDATION
+
+  stop_conditions:
+    compiler:
+      success: complete_consistent_executable_unambiguous
+      failure: report_exact_blocker_without_fabrication
+
+    execution:
+      code_complete:
+        state: CORE_CODE_REMEDIATION_COMPLETE
+        requires:
+          - all_core_code_tasks == PASS
+          - V1_FULL_CODE_VALIDATION == PASS
+
+      code_complete_broker_blocked:
+        state: CODE_REMEDIATION_COMPLETE_BROKER_BLOCKED
+        requires:
+          - V1_FULL_CODE_VALIDATION == PASS
+          - I1_CAPABILITY_BROKER_DEPLOYMENT == BLOCKED
+          - blocker_class == external_infrastructure_or_authorization
+
+      awaiting_cloud_rebuild:
+        state: CLOUD_ACTIVATION_PENDING_NEXT_SESSION
+        requires:
+          - C11A_ALLOWLIST_DECLARATION == PASS
+          - C11B_REBUILD_OBSERVATION == PENDING_NEXT_SESSION
+
+      full_readiness:
+        state: FULL_READINESS_COMPLETE
+        requires:
+          - V1_FULL_CODE_VALIDATION == PASS
+          - C11B_REBUILD_OBSERVATION == PASS
+          - I1_CAPABILITY_BROKER_DEPLOYMENT == PASS
+          - I2_BROKER_READINESS_VALIDATION == PASS
+          - no_global_halt_condition
+          - no_out_of_scope_mutation
+        command_parity_required: false
+
+      failure:
+        state: BLOCKED
+        action: >
+          Stop the affected lane. Report the exact blocker, expected result,
+          actual result, evidence, affected dependents, and smallest authorized
+          remediation. Do not fabricate completion.
+
+  convergence:
+    recursive_passes_run: 3
+    pass_1:
+      corrected:
+        - C12_C11_false_dependency
+        - missing_session_boundary
+        - P9_transitive_core_gate
+    pass_2:
+      corrected:
+        - install_sh_shared_writer_race
+        - evidence_authority_inversion
+        - V3_ambiguous_expectation
+        - status_unknown_placeholder
+    pass_3:
+      corrected:
+        - C1_failures_block_regression
+        - unasserted_partial_run_safety
+        - unmeasured_self_heal_budget
+        - C11B_frozen_sha_assertion
+        - C11B_proxy_validation
+      material_changes: true
+    convergence_status: STABLE
+    same_output_after_multiple_passes: true
