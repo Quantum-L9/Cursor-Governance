@@ -11,6 +11,7 @@ program-execution.intent.v1 and pe-<hash> workspaces are not this path.
 from __future__ import annotations
 
 import argparse
+import importlib
 import importlib.util
 import json
 import os
@@ -51,6 +52,22 @@ VALIDATE_BLUEPRINT = (
 )
 PEC = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 PEC_SCRIPTS = PEC.parent
+AUTONOMY_GRANT = PE_ROOT / "integrations/autonomy-control-plane/grant.py"
+PEC_MODULE_ALLOWLIST = frozenset(
+    {
+        "blueprint",
+        "cli",
+        "common",
+        "contracts",
+        "controller",
+        "exec_env",
+        "ledger",
+        "preflight",
+        "replan",
+        "state",
+        "workspace_reset",
+    }
+)
 ALLOWED_CAMPAIGN_FILES = {"CAMPAIGN_SOURCE.yaml", "source-integrity-receipt.json"}
 UNTIL_STAGES = (
     "activate",
@@ -215,6 +232,7 @@ class Hooks:
     git: Callable[..., str] | None = None
     context7_stack: Callable[[dict[str, Any], Path], dict[str, Any]] | None = None
     write_task_output: Callable[[Path, str, str], str] | None = None
+    grant_autonomy_mutation: Callable[[Path, dict[str, Any], int], dict[str, Any]] | None = None
     plan_window: Callable[[dict[str, Any], Path, Path], dict[str, Any]] | None = None
 
 
@@ -394,9 +412,33 @@ def load_pec_module(name: str) -> Any:
     workspace-recovery logic must be identical on the campaign side; copying it
     is how the two drifted apart in the first place.
     """
+    if name not in PEC_MODULE_ALLOWLIST:
+        raise CampaignError(f"pec module not allowlisted: {name}")
     if str(PEC_SCRIPTS) not in sys.path:
         sys.path.insert(0, str(PEC_SCRIPTS))
-    return importlib.import_module(f"pec.{name}")
+    if name == "blueprint":
+        return importlib.import_module("pec.blueprint")
+    if name == "cli":
+        return importlib.import_module("pec.cli")
+    if name == "common":
+        return importlib.import_module("pec.common")
+    if name == "contracts":
+        return importlib.import_module("pec.contracts")
+    if name == "controller":
+        return importlib.import_module("pec.controller")
+    if name == "exec_env":
+        return importlib.import_module("pec.exec_env")
+    if name == "ledger":
+        return importlib.import_module("pec.ledger")
+    if name == "preflight":
+        return importlib.import_module("pec.preflight")
+    if name == "replan":
+        return importlib.import_module("pec.replan")
+    if name == "state":
+        return importlib.import_module("pec.state")
+    if name == "workspace_reset":
+        return importlib.import_module("pec.workspace_reset")
+    raise CampaignError(f"pec module not allowlisted: {name}")
 
 
 def dump_yaml(path: Path, value: Any) -> None:
@@ -1668,12 +1710,17 @@ def write_launch_pointer(
         "write_tree": str(Path(workspace) / "worktrees" / FIRST_TASK_ID),
         "host_tree": host_worktree,
         "target_tree": target_worktree,
-        "autonomy_packets_not_required": True,
+        "autonomy_packets_not_required": False,
+        "autonomy_control_plane": "root-autonomy-control-plane",
+        "autonomy_packet": str(workspace / "runtime" / "autonomy-packet.json"),
+        "autonomy_grant": str(workspace / "runtime" / "autonomy-grant.json"),
         "refuse_hash_program": True,
         "next": (
-            f"Read {workspace}/runtime/{FIRST_TASK_ID}.md and STACK.json. "
+            f"Read {workspace}/runtime/{FIRST_TASK_ID}.md, STACK.json, "
+            "autonomy-packet.json, and autonomy-grant.json. "
             f"Execute {FIRST_TASK_ID} on {target_worktree} within "
-            f"{TASK_BUDGET_MINUTES} minutes. Stack every PR on the previous "
+            f"{TASK_BUDGET_MINUTES} minutes after the root-autonomy lease "
+            "grants local write and commit. Stack every PR on the previous "
             "task branch. Never PR_BASE=main. Do not open the operator memo. "
             "If blocked, stop and report; do not sit."
         ),
@@ -2231,6 +2278,28 @@ def measure_admission_evidence(target_path: Path) -> dict[str, Any]:
     return measured
 
 
+def grant_autonomy_mutation(
+    workspace: Path,
+    contract: dict[str, Any],
+    attempt_number: int,
+    *,
+    hooks: Hooks | None = None,
+) -> dict[str, Any]:
+    """Bind the rendered contract to root autonomy before any worker write."""
+    if hooks is not None and hooks.grant_autonomy_mutation is not None:
+        return hooks.grant_autonomy_mutation(workspace, contract, attempt_number)
+    grant = _load_script("pe_autonomy_grant", AUTONOMY_GRANT)
+    try:
+        return grant.grant_task_mutation(
+            GOV_ROOT,
+            workspace,
+            contract,
+            attempt_number=attempt_number,
+        )
+    except Exception as exc:
+        raise CampaignError(f"root autonomy refused mutation grant: {exc}") from exc
+
+
 def run_worker_handoff(
     workspace: Path,
     task: dict[str, Any],
@@ -2511,6 +2580,14 @@ def default_execute(
         ) -> None:
             nonlocal attempt_number
             emit(trace, "TASK_WORKER_STARTED", "worker", "worker_started", task_id=task_id)
+            grant_attempt = (attempt_number or 0) + 1
+            with traced(trace, "worker", "autonomy_grant", task_id=task_id):
+                grant_autonomy_mutation(
+                    workspace,
+                    contract,
+                    grant_attempt,
+                    hooks=hooks,
+                )
             with traced(trace, "worker", "worker_write", task_id=task_id):
                 with timer.stage("task_worker", task_id=task_id):
                     run_worker_handoff(workspace, task, contract, worktree, hooks=hooks)

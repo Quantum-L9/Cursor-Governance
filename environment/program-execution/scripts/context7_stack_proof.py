@@ -13,10 +13,9 @@ import hashlib
 import json
 import os
 import re
+import socket
 import ssl
-import urllib.error
 import urllib.parse
-import urllib.request
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -128,18 +127,94 @@ def _headers() -> dict[str, str]:
     return headers
 
 
-def default_fetch(url: str, headers: dict[str, str] | None = None) -> tuple[int, str]:
-    req = urllib.request.Request(url, headers=headers or {"User-Agent": "l9-pe-stack-proof/1"})
-    context = ssl.create_default_context()
+def _require_https_url(url: str) -> urllib.parse.ParseResult:
+    parsed = urllib.parse.urlparse(url)
+    if (
+        parsed.scheme != "https"
+        or not parsed.hostname
+        or parsed.username
+        or parsed.password
+        or parsed.port not in (None, 443)
+    ):
+        raise StackProofError(f"GET refused for non-https URL: {parsed.scheme or 'missing-scheme'}")
+    return parsed
+
+
+def _require_verified_context(context: ssl.SSLContext) -> ssl.SSLContext:
+    if context.verify_mode != ssl.CERT_REQUIRED:
+        raise StackProofError("ssl_verify_mode_not_required")
+    if not context.check_hostname:
+        raise StackProofError("ssl_check_hostname_disabled")
+    return context
+
+
+def _parse_http_response(raw: bytes) -> tuple[int, str]:
+    sep = raw.find(b"\r\n\r\n")
+    if sep < 0:
+        raise StackProofError("GET failed: bad response")
+    head = raw[:sep]
+    body = raw[sep + 4 :]
+    status_line = head.split(b"\r\n", 1)[0].decode("latin-1", errors="replace")
+    parts = status_line.split(" ", 2)
+    if len(parts) < 2:
+        raise StackProofError("GET failed: bad status line")
     try:
-        with urllib.request.urlopen(req, timeout=20, context=context) as resp:
-            body = resp.read().decode("utf-8", errors="replace")
-            return int(resp.status), body
-    except urllib.error.HTTPError as exc:
-        body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
-        return int(exc.code), body
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
-        raise StackProofError(f"GET failed for {url}: {exc}") from exc
+        status = int(parts[1])
+    except ValueError as exc:
+        raise StackProofError("GET failed: bad status line") from exc
+    headers_blob = head.split(b"\r\n", 1)[1] if b"\r\n" in head else b""
+    for line in headers_blob.split(b"\r\n"):
+        if line.lower().startswith(b"content-length:"):
+            try:
+                content_length = int(line.split(b":", 1)[1].strip())
+            except ValueError as exc:
+                raise StackProofError("GET failed: bad content-length") from exc
+            body = body[:content_length]
+            break
+    return status, body.decode("utf-8", errors="replace")
+
+
+def default_fetch(url: str, headers: dict[str, str] | None = None) -> tuple[int, str]:
+    parsed = _require_https_url(url)
+    host = parsed.hostname
+    if host is None:
+        raise StackProofError("GET refused for non-https URL: missing-host")
+    path = parsed.path or "/"
+    if parsed.query:
+        path = f"{path}?{parsed.query}"
+    wire_headers = {
+        key: value
+        for key, value in (headers or {"User-Agent": "l9-pe-stack-proof/1"}).items()
+        if key.lower() != "host"
+        and "\r" not in key
+        and "\n" not in key
+        and "\r" not in value
+        and "\n" not in value
+    }
+    header_lines = "".join(f"{key}: {value}\r\n" for key, value in wire_headers.items())
+    request = (
+        f"GET {path} HTTP/1.0\r\nHost: {host}\r\n{header_lines}Connection: close\r\n\r\n"
+    ).encode("ascii")
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    context.verify_mode = ssl.CERT_REQUIRED
+    context.check_hostname = True
+    ctx = _require_verified_context(context)
+    try:
+        with socket.create_connection((host, 443), timeout=20) as raw:
+            with ctx.wrap_socket(raw, server_hostname=host) as sock:
+                sock.sendall(request)
+                chunks: list[bytes] = []
+                while True:
+                    chunk = sock.recv(65536)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+        return _parse_http_response(b"".join(chunks))
+    except StackProofError:
+        raise
+    except (TimeoutError, OSError, ssl.SSLError) as exc:
+        raise StackProofError(f"GET failed for {host}: {exc}") from exc
 
 
 def extract_constraints(text: str) -> list[str]:

@@ -232,6 +232,17 @@ class RunCampaignTests(unittest.TestCase):
         with patch.dict(os.environ, {"L9_CAMPAIGN_UNTIL_DEBUG": "1"}):
             self.mod.refuse_live_until_shortcut("activate")
 
+    def test_load_pec_module_rejects_names_outside_allowlist(self) -> None:
+        with self.assertRaises(self.mod.CampaignError) as ctx:
+            self.mod.load_pec_module("os")
+        self.assertIn("not allowlisted", str(ctx.exception))
+        with self.assertRaises(self.mod.CampaignError):
+            self.mod.load_pec_module("exec_env.foo")
+        with self.assertRaises(self.mod.CampaignError):
+            self.mod.load_pec_module("../controller")
+        loaded = self.mod.load_pec_module("exec_env")
+        self.assertTrue(hasattr(loaded, "resolve_exec_env"))
+
     def test_rejects_intent_v1(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "intent.yaml"
@@ -458,6 +469,10 @@ class RunCampaignTests(unittest.TestCase):
             brief.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
             other_primary = Path(raw) / "other-primary"
             other_primary.mkdir()
+
+            def _plan_keeps_partial(seed, primed_dir, stack_proof):
+                return {"plan_status": "Partial", "intent_path": ""}
+
             with self.assertRaises((self.mod.CampaignError, self.activate.CompileError)):
                 self.mod.run_campaign(
                     brief,
@@ -469,6 +484,7 @@ class RunCampaignTests(unittest.TestCase):
                         context7_stack=_stack_ok,
                         write_task_output=_write_task_output,
                         compile_activation=self.activate.compile_activation,
+                        plan_window=_plan_keeps_partial,
                     ),
                 )
             campaign_dir = root / "environment/program-execution/campaigns/pe-memory"
@@ -566,6 +582,10 @@ class RunCampaignTests(unittest.TestCase):
             self.assertTrue(launch["pec_ready_empty_is_expected"])
             self.assertEqual(launch["max_task_minutes"], 15)
             self.assertIn("write_tree", launch)
+            self.assertFalse(launch["autonomy_packets_not_required"])
+            self.assertEqual(launch["autonomy_control_plane"], "root-autonomy-control-plane")
+            self.assertTrue(str(launch["autonomy_packet"]).endswith("autonomy-packet.json"))
+            self.assertTrue(str(launch["autonomy_grant"]).endswith("autonomy-grant.json"))
 
     def test_quarantine_moves_occupied_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
