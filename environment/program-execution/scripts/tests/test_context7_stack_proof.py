@@ -5,6 +5,7 @@ import json
 import os
 import tempfile
 import unittest
+import urllib.request
 from pathlib import Path
 from typing import Any
 
@@ -176,6 +177,39 @@ class Context7StackProofTests(unittest.TestCase):
             with self.subTest(url=url):
                 with self.assertRaises(self.mod.StackProofError):
                     self.mod.default_fetch(url)
+
+    def test_redirect_handler_refuses_http_destination(self) -> None:
+        handler = self.mod._HttpsOnlyRedirectHandler()
+        req = urllib.request.Request(
+            "https://example.com/docs",
+            headers={"Authorization": "Bearer secret"},
+        )
+        with self.assertRaises(self.mod.StackProofError):
+            handler.redirect_request(
+                req,
+                None,
+                302,
+                "Found",
+                {"Location": "http://evil.example/docs"},
+                "http://evil.example/docs",
+            )
+
+    def test_redirect_handler_strips_authorization_on_host_change(self) -> None:
+        handler = self.mod._HttpsOnlyRedirectHandler()
+        req = urllib.request.Request(
+            "https://context7.example/docs",
+            headers={"Authorization": "Bearer secret"},
+        )
+        redirected = handler.redirect_request(
+            req,
+            None,
+            302,
+            "Found",
+            {"Location": "https://other.example/docs"},
+            "https://other.example/docs",
+        )
+        self.assertIsNotNone(redirected)
+        self.assertIsNone(redirected.get_header("Authorization"))
 
 
 if __name__ == "__main__":

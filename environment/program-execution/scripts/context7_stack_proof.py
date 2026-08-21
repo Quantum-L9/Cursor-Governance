@@ -147,11 +147,32 @@ def require_https_url(url: str) -> urllib.parse.SplitResult:
     return parsed
 
 
+class _HttpsOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Follow https→https only; drop Authorization when the host changes."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        parsed = require_https_url(newurl)
+        new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new_req is None:
+            return None
+        old_host = (urllib.parse.urlsplit(req.full_url).netloc or "").lower()
+        if (parsed.netloc or "").lower() != old_host:
+            for name in ("Authorization", "authorization"):
+                try:
+                    new_req.remove_header(name)
+                except KeyError:
+                    pass
+        return new_req
+
+
 def default_fetch(url: str, headers: dict[str, str] | None = None) -> tuple[int, str]:
     require_https_url(url)
     req = urllib.request.Request(url, headers=headers or {"User-Agent": "l9-pe-stack-proof/1"})
     context = ssl.create_default_context()
-    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context))
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPSHandler(context=context),
+        _HttpsOnlyRedirectHandler(),
+    )
     try:
         with opener.open(req, timeout=20) as resp:
             body = resp.read().decode("utf-8", errors="replace")
@@ -159,6 +180,8 @@ def default_fetch(url: str, headers: dict[str, str] | None = None) -> tuple[int,
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
         return int(exc.code), body
+    except StackProofError:
+        raise
     except (urllib.error.URLError, TimeoutError, OSError) as exc:
         raise StackProofError(f"GET failed for {url}: {exc}") from exc
 
