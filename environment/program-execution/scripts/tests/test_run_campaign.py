@@ -483,8 +483,10 @@ class RunCampaignTests(unittest.TestCase):
         self.assertTrue(self.mod.adoptable_inferred_command("bash -n ops/scripts/run_pr_gate.sh"))
         self.assertTrue(self.mod.adoptable_inferred_command("python3 -m unittest tests/x.py"))
         self.assertTrue(self.mod.adoptable_inferred_command("python3 -m pytest tests/x.py --tb=short -q"))
-        self.assertFalse(self.mod.adoptable_inferred_command("test -s 'ops/scripts/run_pr_gate.sh'"))
-        self.assertFalse(self.mod.adoptable_inferred_command("ls -1 'a' 'b' >/dev/null"))
+        self.assertTrue(self.mod.adoptable_inferred_command("test -s 'ops/scripts/run_pr_gate.sh'"))
+        self.assertTrue(self.mod.adoptable_inferred_command("ls -1 'a' 'b' >/dev/null"))
+        self.assertFalse(self.mod.adoptable_inferred_command("true"))
+        self.assertFalse(self.mod.adoptable_inferred_command(""))
 
     def test_fill_inferred_validation_from_writable_tests(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

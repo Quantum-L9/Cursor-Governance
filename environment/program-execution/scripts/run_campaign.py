@@ -2306,9 +2306,20 @@ def _task_card_command(cards: dict[str, Any], task_id: str) -> str:
 
 
 def adoptable_inferred_command(command: str) -> bool:
-    """Inferences the execute path may relock. Presence checks (`ls`/`test -s`) stay out."""
+    """Inferences the execute path may relock onto the rendered contract.
+
+    Includes last-resort presence checks. Those do not prove behavior; pec
+    verify still requires a modified worktree, exact changed-files, and scope.
+    Refusing them leaves docs and config tasks INCOMPLETE after a real write.
+    """
     text = str(command).strip()
-    return "-m unittest" in text or "-m pytest" in text or text.startswith("bash -n ")
+    return (
+        "-m unittest" in text
+        or "-m pytest" in text
+        or text.startswith("bash -n ")
+        or text.startswith("test -s ")
+        or text.startswith("ls -1 ")
+    )
 
 
 def rematerialize_after_relock(workspace: Path, task_id: str) -> dict[str, Any]:
