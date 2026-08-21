@@ -195,16 +195,34 @@ def run_validation_command(
             "stderr": f"validation command timed out after {timeout}s",
             "exec_env": resolved.describe(),
         }
+    stdout = (completed.stdout or "")[-_STREAM_TAIL:]
+    stderr = (completed.stderr or "")[-_STREAM_TAIL:]
+    empty = _empty_test_collection(command, stdout, stderr)
+    failed = completed.returncode != 0 or empty
     result: dict[str, Any] = {
         "command": command,
-        "status": "PASS" if completed.returncode == 0 else "FAIL",
-        "exit_code": completed.returncode,
-        "stdout": (completed.stdout or "")[-_STREAM_TAIL:],
-        "stderr": (completed.stderr or "")[-_STREAM_TAIL:],
+        "status": "FAIL" if failed else "PASS",
+        "exit_code": 2 if empty and completed.returncode == 0 else completed.returncode,
+        "stdout": stdout,
+        "stderr": (
+            f"{stderr}\nvalidation collected zero tests".strip() if empty else stderr
+        ),
     }
-    if completed.returncode != 0:
+    if failed:
         result["exec_env"] = resolved.describe()
     return result
+
+
+def _empty_test_collection(command: str, stdout: str, stderr: str) -> bool:
+    """Unittest/pytest exit 0 with zero collected tests is a false PASS."""
+    if "-m unittest" not in command and "-m pytest" not in command:
+        return False
+    output = f"{stdout}\n{stderr}"
+    return (
+        "NO TESTS RAN" in output
+        or "Ran 0 tests" in output
+        or "collected 0 items" in output
+    )
 
 
 def to_attempt_result(result: dict[str, Any]) -> dict[str, Any]:
