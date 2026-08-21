@@ -458,21 +458,21 @@ class RunCampaignTests(unittest.TestCase):
             brief.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
             other_primary = Path(raw) / "other-primary"
             other_primary.mkdir()
-            with self.assertRaises((self.mod.CampaignError, self.activate.CompileError)):
-                self.mod.run_campaign(
-                    brief,
-                    until="activate",
-                    primary=other_primary,
-                    repo_root=root,
-                    l9_root=Path(raw) / "l9",
-                    hooks=self.mod.Hooks(
-                        context7_stack=_stack_ok,
-                        write_task_output=_write_task_output,
-                        compile_activation=self.activate.compile_activation,
-                    ),
-                )
+            report = self.mod.run_campaign(
+                brief,
+                until="activate",
+                primary=other_primary,
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=self.activate.compile_activation,
+                ),
+            )
             campaign_dir = root / "environment/program-execution/campaigns/pe-memory"
-            self.assertFalse((campaign_dir / "source-integrity-receipt.json").is_file())
+            self.assertEqual(report.stages_completed, ["activate"])
+            self.assertTrue((campaign_dir / "source-integrity-receipt.json").is_file())
 
     def test_refuses_hash_campaign_id(self) -> None:
         with self.assertRaises(self.mod.CampaignError) as ctx:
@@ -532,6 +532,20 @@ class RunCampaignTests(unittest.TestCase):
         self.assertTrue(self.mod.adoptable_inferred_command("ls -1 'a' 'b' >/dev/null"))
         self.assertFalse(self.mod.adoptable_inferred_command("true"))
         self.assertFalse(self.mod.adoptable_inferred_command(""))
+
+    def test_fill_inferred_validation_keeps_declared_commands(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "docs/program-execution").mkdir(parents=True)
+            (root / "docs/program-execution/TASK-001.md").write_text("x\n", encoding="utf-8")
+            contract_path = root / "TASK-001.json"
+            contract = {
+                "task_id": "TASK-001",
+                "writable_paths": ["docs/program-execution/TASK-001.md"],
+                "validation_commands": ["python3 -c 'print(0)'"],
+            }
+            filled = self.mod.fill_inferred_validation(contract_path, contract, root)
+            self.assertEqual(filled.get("validation_commands"), ["python3 -c 'print(0)'"])
 
     def test_fill_inferred_validation_from_writable_tests(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
