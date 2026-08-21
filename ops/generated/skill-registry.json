@@ -10,6 +10,7 @@
       "l9-structured-reasoning",
       "l9-gmp-protocol",
       "l9-plan",
+      "l9-plan-simple",
       "l9-code-analysis",
       "l9-gap-analysis",
       "l9-ynp",
@@ -177,7 +178,27 @@
           "write a plan",
           "planning mode",
           "execution plan",
-          "decompose requirements"
+          "decompose requirements",
+          "cursor plan mode",
+          "build button plan"
+        ],
+        "primary": "l9-plan-simple",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-structured-reasoning"
+        ]
+      },
+      {
+        "id": "pe_plan",
+        "positive_signals": [
+          "make campaign",
+          "program-execution",
+          "program lock",
+          "/l9-plan",
+          "PE+autonomy",
+          "pe+autonomy",
+          "campaign plan",
+          "program execution campaign"
         ],
         "primary": "l9-plan",
         "signal_weight": 8,
@@ -378,6 +399,7 @@
         "primary": "l9-plan-audit",
         "signal_weight": 8,
         "supporting": [
+          "l9-plan-simple",
           "l9-plan",
           "l9-ynp"
         ]
@@ -1039,18 +1061,18 @@
     },
     {
       "composition_role": "primary",
-      "description": "create a machine-validated execution plan or implementation specification before building. use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes. do not use when the user only wants to execute an already-settled plan or a trivial fully-specified one-line fix.",
+      "description": "create a machine-validated pe+autonomy execution plan or specification that runs through program-execution and make campaign. use when the user asks for /l9-plan, make campaign, program lock, campaign plan, or pe+autonomy. do not use for ordinary cursor plan mode or build-button plans (use l9-plan-simple).",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-plan",
       "path": "skills/l9-plan",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first"
+      "when_to_use": "the user asks for /l9-plan, make campaign, program lock, campaign plan, or pe+autonomy"
     },
     {
       "composition_role": "primary",
-      "description": "audit ~/.cursor/plans for unbuilt plans from the last 7 days, flag staleness, and surface findings at session start or via /plan-audit. use when session context shows Plan audit, the user asks which plans are unbuilt or stale, or /plan-audit is invoked. do not use to author new plans (use l9-plan) or to auto-build plans.",
+      "description": "audit ~/.cursor/plans for unbuilt plans from the last 7 days, flag staleness, and surface findings at session start or via /plan-audit. use when session context shows Plan audit, the user asks which plans are unbuilt or stale, or /plan-audit is invoked. do not use to author new plans (use l9-plan-simple, or l9-plan for pe/campaign) or to auto-build plans.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-plan-audit",
@@ -1058,6 +1080,17 @@
       "reason": "",
       "user_invocable": true,
       "when_to_use": "session context shows Plan audit, auditing unbuilt or stale Cursor plans under .cursor/plans, or /plan-audit is invoked"
+    },
+    {
+      "composition_role": "primary",
+      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template and execute it with the build button on the current checkout. use when scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
+      "disable_model_invocation": false,
+      "invocation": "model_allowed",
+      "name": "l9-plan-simple",
+      "path": "skills/l9-plan-simple",
+      "reason": "",
+      "user_invocable": true,
+      "when_to_use": "scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes"
     },
     {
       "composition_role": "general",
@@ -1226,6 +1259,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "6b85255abef604f2a36689768a8cac3dd1048a72b53662e6f256300e1ad581ca",
-  "source_skill_corpus_sha256": "00b1064e33a55ee0f66f21cc3077aaa547a375a9973d5885856fdd384f4cf29e"
+  "source_manifest_sha256": "e63daf8151ce1c3dd905aa15dce249f54a3f102687a8ce76068bb9a1fe05c920",
+  "source_skill_corpus_sha256": "ffcda566df1fe77c949f1b26d0b9228a11c227b9d343e60ba00109f992c69c46"
 }
