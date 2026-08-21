@@ -1,0 +1,678 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+plan_status: ConditionallyReady
+metadata:
+  campaign_id: eie-inference-isolation-v1
+  title: eie inference isolation v1
+  version: 1.0.0
+  created_at: '2026-08-21T17:19:03Z'
+  status: operator_intake
+  owner: Igor Beylin
+  intended_host: Quantum-L9/Enrichment.Inference.Engine
+  intended_drop_path: environment/program-execution/campaigns/eie-inference-isolation-v1/CAMPAIGN_SOURCE.yaml
+  runtime_root: $HOME/.l9/programs/eie-inference-isolation-v1
+  worktree_root: $HOME/.l9/program-worktrees/eie-inference-isolation-v1
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+operator_directive:
+  objective: a Wave-0/Wave-2 isolation campaign on Quantum-L9/Enrichment.Inference.Engine
+    that restores deterministic RuleEngine inference and tenant-authoritative idempotency/persistence,
+    then stops before outbox, catalog, surface quarantine, and release closure.
+  mode: controlled_autonomous_until_material_boundary
+  policy_profile: quantum-l9.safe-autonomy.v1
+  prohibited_actions:
+  - force_push
+  - admin_merge
+  - deploy
+  - weaken_validators
+  - delete_tests_for_pass
+program:
+  id: eie-inference-isolation-v1
+  name: eie inference isolation v1
+  version: 1.0.0
+  owner: Igor Beylin
+  definition_status: ready
+  plan_status: ConditionallyReady
+  snapshot_at: '2026-08-21'
+  objective: a Wave-0/Wave-2 isolation campaign on Quantum-L9/Enrichment.Inference.Engine
+    that restores deterministic RuleEngine inference and tenant-authoritative idempotency/persistence,
+    then stops before outbox, catalog, surface quarantine, and release closure.
+  problem_statement: "# EIE inference isolation v1\n\nowner: Igor Beylin\ntarget_repo: Quantum-L9/Enrichment.Inference.Engine\n\
+    \nThis memo is the live PE front-door INTENT for\n`Quantum-L9/Enrichment.Inference.Engine`.\n\
+    Filename slug is the campaign id: `eie-inference-isolation-v1`.\n\nImmutable baseline:\
+    \ `7c4ce2596ca511de32dafe642ef4cc6ee1b21b6d` (`main`).\nNew work lands on `campaign/eie-inference-isolation-v1`\
+    \ from `origin/main`.\n`autonomous_merge` stays false.\n\nCorpus authority (do not re-open\
+    \ architecture discovery):\n\n- Later Green wins. Greens 35–50 are the terminal architecture.\n\
+    - This campaign is Wave 0 plus Wave 2 isolation only: Green 6, then 45, then 35, then\
+    \ 40.\n- Greens 30–34 are invariants here (no new Neo4j, Redis/NATS bus, or direct-peer\
+    \ work). Their mutations are the next campaign.\n- Do not implement superseded early greens\
+    \ (File 3 G1/G2 text, File 4 G11/G13/G24) as if they were current.\n\n## Final architectural\
+    \ judgment\n\nIt is:\na Wave-0/Wave-2 isolation campaign on Quantum-L9/Enrichment.Inference.Engine\
+    \ that restores deterministic RuleEngine inference and tenant-authoritative idempotency/persistence,\
+    \ then stops before outbox, catalog, surface quarantine, and release closure.\n\n## Do\
+    \ not build\n\n- Greens 30–34, 36–39, 41–50\n- PlasticOS rewrite to v2 / `derived_from`\n\
+    - Delete `inference_bridge_v2`\n- SideEffectCoordinator / transactional outbox (Green\
+    \ 36)\n- Canonical action-catalog rewrite (Green 38)\n- GRAPH durable inbox (Green 39)\n\
+    - Enrich-path collapse (Green 42)\n- Direct HTTP `/api/v1/*` tenant invention (File 2\
+    \ Wave 6 is disposition-only)\n- Deprecated `chassis/router.py` / `chassis/registry.py`\
+    \ production dispatch\n- `make prod`, `make deploy`, production `alembic upgrade`, force-push,\
+    \ merge\n\n1. Release A — Deterministic RuleEngine inference\n\nRestore the PlasticOS\
+    \ `inference_rules` contract through RuleEngine so ConvergenceController receives real\
+    \ derived fields and per-field confidence. Do not convert PlasticOS to v2 in this wave.\n\
+    \nLocked path:\n\n```text\ndomains/*/spec.yaml\n  → inference_rules\n  → RuleDefinition\n\
+    \  → RuleRegistry\n  → rule_engine.infer()\n  → InferenceBridge result\n  → ConvergenceController\n\
+    ```\n\nFiles:\n\n- `app/main.py` (T4)\n- `app/engines/handlers.py` (T4)\n- `app/engines/inference/rule_loader.py`\n\
+    - `app/engines/inference/rule_engine.py`\n- `app/engines/inference_bridge_adapter.py`\n\
+    - `tests/test_rule_engine.py`\n- `tests/test_rule_loader.py`\n- `tests/test_inference_wiring.py`\
+    \ (create)\n- `domains/plasticos/spec.yaml` (read-only fixture)\n\nRequired mutations:\n\
+    \n1. In `app/main.py`, instantiate `app.engines.domain_yaml_reader.DomainYamlReader` against\
+    \ `settings.domains_dir` and pass it into `register_orchestration(..., domain_reader=...)`.\
+    \ Startup currently omits that dependency. Preserve C-13/C-21: `/v1/execute` stays SDK-owned;\
+    \ do not route production ingress through deprecated chassis dispatch.\n\n2. In `handlers._load_domain_convergence_context()`,\
+    \ after `config = _domain_reader.load(domain_id)`, read `config.raw_spec[\"inference_rules\"\
+    ]` when it is a list. Keep `inference_rules_path` only as compatibility fallback. Remove\
+    \ the magic `\"Partner\"` default. If no node label is supplied and the domain contains\
+    \ exactly one node schema, use that node; if several exist, treat the node choice as ambiguous.\n\
+    \n3. In `rule_loader.py`, keep `load_rules(path)` and factor Pydantic validation/registry-building\
+    \ into `load_rules_data(list[dict]) -> RuleRegistry`. File load and InferenceBridge share\
+    \ one validation path. Do not write a temporary YAML file.\n\n4. Make InferenceBridge\
+    \ use RuleEngine as the production backend when canonical `inference_rules` are present.\
+    \ If only a valid v2 domain graph is present, keep the v2 compatibility path. Preserve\
+    \ the ConvergenceController result shape:\n\n   - `derived_fields`\n   - `confidence_map`\n\
+    \   - `rules_fired`\n   - `rules_skipped`\n   - `rule_trace`\n   - `unlock_map`\n   -\
+    \ `blocked_fields`\n\n   For this repair, `unlock_map` stays empty. Do not invent search-unlock\
+    \ mathematics.\n\n5. Add `confidence_map: dict[str, float]` to `rule_engine.InferenceResult`\
+    \ from each winning rule confidence (`best_output`). The engine already tracks that internally\
+    \ and currently emits only aggregate `inference_confidence`.\n\nLocked PlasticOS integration\
+    \ proof (real `domains/plasticos/spec.yaml`, not mocks alone):\n\n```text\npolymer_types\
+    \ = [HDPE]\ncontamination_tolerance = 0.02\n  → material_grade = A\n  → confidence = 0.92\n\
+    \nmaterial_grade = A\nannual_capacity_mt = 6000\n  → facility_tier = tier_1\n```\n\nModernize\
+    \ the existing RuleEngine and RuleLoader tests to the current APIs (registry, not a bare\
+    \ list). Quarantine fingerprints for those tests are removed only after the tests pass\
+    \ in the same PR. Do not pre-delete ledger entries.\n\nOut of this release: field-classifier\
+    \ list-node drift, MetaPromptPlanner DomainSpec mismatch, v2/DAG retirement.\n\n2. Release\
+    \ B — One Alembic lineage\n\nMake EIE have one configured migration tree, one valid revision\
+    \ lineage, and one head. Green 45 supersedes File 3 Green 3.\n\nFiles:\n\n- `alembic.ini`\
+    \ (`script_location = migrations`)\n- `migrations/versions/001_initial_schema.py` (active\
+    \ head predecessor)\n- `alembic/versions/0002_perplexity_api_key_default.py` (orphan;\
+    \ do not import)\n- new revision after `001` in `migrations/versions/` only when Release\
+    \ C needs a schema change\n\nRequired mutations:\n\n- Treat `migrations/` as the only\
+    \ canonical tree.\n- Do not copy the orphan `alembic/versions/0002_perplexity_api_key_default.py`\
+    \ into the active chain. It references `down_revision=\"0001\"` and mutates `config_snapshots`,\
+    \ which is not part of the current four-table SQLAlchemy model.\n- Any tenant uniqueness\
+    \ change from Release C lands as the next revision after `001` in `migrations/versions/`.\n\
+    - Prove empty PostgreSQL → migrate to head → application schema works before calling the\
+    \ lineage repaired.\n\n3. Release C — Tenant Redis and Postgres idempotency\n\nMake idempotency\
+    \ tenant-scoped, collision-safe, and atomic. Green 35 plus File 2 waves 1–2. Trusted tenant\
+    \ originates from the SDK handler `tenant` argument. It must not come from `payload[\"\
+    tenant\"]`, `payload[\"tenant_id\"]`, `EnrichRequest`, entity contents, forwarded headers,\
+    \ or `\"default\"`.\n\nFiles:\n\n- `app/engines/enrichment_orchestrator.py`\n- `app/engines/handlers.py`\n\
+    - `app/services/idempotency.py`\n- `app/services/pg_store.py`\n- `app/services/pg_models.py`\n\
+    - new Alembic revision after `001` (depends on Release B)\n\nRequired mutations:\n\n-\
+    \ Carry handler `tenant` through `handle_enrich` / `handle_enrichbatch` into `enrich_entity(...)`.\
+    \ Today `handle_enrich` receives tenant and drops it; `enrich_entity` then caches on `request.idempotency_key`\
+    \ alone. Identity is three-dimensional: tenant, action, idempotency_key.\n- Change Redis\
+    \ APIs from `get(key)` / `set(key, response)` to tenant + key + request fingerprint. Namespace:\n\
+    \n  ```text\n  enrich:idem:v2:<sha256(tenant_id + \"\\0\" + idempotency_key)>\n  ```\n\
+    \n  Do not place raw tenant IDs or raw idempotency keys in Redis key names or INFO logs.\n\
+    - Store a versioned cache object with `version: 2`, `request_fingerprint`, and `response`.\n\
+    - Fingerprint canonical JSON of the semantic request (action, object type, entity, target\
+    \ schema, objective, KB context, consensus threshold, max variations, and any field that\
+    \ changes computation). Exclude transport timestamps, execution ID, the idempotency key\
+    \ itself, and logging metadata.\n- Same tenant + same key + same fingerprint → original\
+    \ canonical result.\n- Same tenant + same key + different fingerprint → explicit idempotency\
+    \ conflict; never replay the old result.\n- Different tenant + same key → independent\
+    \ execution.\n- Do not fallback-read the old global Redis key. TTL 86,400 seconds; legacy\
+    \ keys age out.\n- Replace global DB uniqueness with `UNIQUE (tenant_id, idempotency_key)`\
+    \ named `uq_enrichment_results_tenant_idempotency`.\n- `get_enrichment_result_by_idempotency_key`\
+    \ must query both columns. `save_enrichment_result` already receives `tenant_id`; use\
+    \ it on the idempotent pre-read.\n\nAdversarial proof required:\n\n```text\ntenant-a +\
+    \ enrich + key-123 → response A\ntenant-b + enrich + key-123 → response B\nA never replays\
+    \ B; B never replays A\n```\n\n4. Release D — ResultStore and approval tenant predicates\n\
+    \nA tenant-owned UUID is only an identifier. It is never authorization. File 2 waves 3–4.\n\
+    \nFiles:\n\n- `app/services/result_store.py`\n- `app/services/pg_store.py`\n\nRequired\
+    \ mutations:\n\n- `ResultStore.get_result`, checkpoint, completion, and convergence-run\
+    \ lookup must predicate `id = requested_uuid AND tenant_id = store.tenant_id`. Follow\
+    \ the existing pattern in `get_latest_enrichment_for_entity()` and `list_active_convergence_runs()`.\n\
+    - `approve_schema_proposal` must become `approve_schema_proposal(tenant_id, proposal_id,\
+    \ reviewed_by, approved)` and update only when both tenant and UUID match.\n- Prove: proposal\
+    \ belongs to tenant-b; tenant-a attempts approval with the correct UUID → zero rows changed\
+    \ / not found; no leak of tenant-b data.\n\n5. Release E — Transport tenant is authoritative\n\
+    \nReverse payload-over-transport tenant selection. Green 40 plus File 2 wave 5.\n\nFiles:\n\
+    \n- `app/engines/handlers.py` (T4)\n- `app/services/chassis_handlers.py` (T4)\n\nRequired\
+    \ mutations:\n\n- Today `handle_community_export` and `handle_schema_proposal` (and chassis\
+    \ supplemental handlers) do `tenant_id = payload.get(\"tenant_id\") or tenant`. That relationship\
+    \ reverses.\n- Transport tenant is authoritative. If a legacy payload includes `tenant_id`\
+    \ and it equals the transport tenant, accept. If it differs, reject. Payload never overrides\
+    \ transport.\n- Invert `test_tenant_override()`: it currently expects payload `\"override\"\
+    ` to win over handler `\"default\"`. Replace with a mismatch-rejection test.\n\nHTTP `/api/v1/*`\
+    \ remains disposition-only. `verify_api_key()` plus a single `api_key_hash` cannot establish\
+    \ a trustworthy tenant. Do not add a fake tenant parameter to `/api/v1/enrich`, `/fields`,\
+    \ or `/discover` and call that security.\n\n## Validation\n\nAfter each mutating release:\
+    \ targeted pytest for the files above, then `make agent-check` (EIE 7-gate pre-commit).\
+    \ Name `make pr-check` when a governed overlay exposes it; do not invent that target in\
+    \ this campaign. Coverage stays at or above 60 percent. Quarantine shrink happens only\
+    \ after the proven tests pass.\n\nC-13 lockstep applies when T4 files change: `app/main.py`,\
+    \ `app/api/v1/chassis_endpoint.py`, `app/services/chassis_handlers.py`, `app/engines/orchestration_layer.py`,\
+    \ `app/engines/handlers.py`, `app/engines/graph_sync_client.py` stay aligned. C-21 remains:\
+    \ `/v1/execute` is owned by the SDK transport runtime.\n\n## Execute\n\n```bash\nmake\
+    \ -C \"$HOME/.cursor-governance\" campaign \\\n  INTENT=\"/Users/ib-mac/Enrichment.Inference.Engine/.cursor-commands/WIP/PE\
+    \ EIE/eie-inference-isolation-v1.md\"\n```\n\nThat is the only live PE front door. Do\
+    \ not call pec, `compile_campaign_source.py`, or `program-execution intent` as a substitute."
+  target_state: a Wave-0/Wave-2 isolation campaign on Quantum-L9/Enrichment.Inference.Engine
+    that restores deterministic RuleEngine inference and tenant-authoritative idempotency/persistence,
+    then stops before outbox, catalog, surface quarantine, and release closure.
+  scope:
+    include:
+    - repository_origin_main
+    exclude:
+    - new repositories
+    - force_push
+    - admin_merge
+    - deploy
+    - production migration
+  contracts:
+    pair: program-execution-system.v2
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+  authority_order:
+  - applicable_safety_legal_security_requirements
+  - cursor_governance_canonical_law
+  - program_execution_interface_contract
+  - latest_explicit_operator_instruction
+  - accepted_program_definition
+  - implementation
+  - UNKNOWN
+  operating_rules:
+  - one_authority_per_responsibility
+  - mutable_runtime_state_remains_outside_git
+  - no_silent_scope_expansion
+  - worker_claim_is_not_verification
+  terminal_verdicts:
+  - CONVERGED
+  - CONVERGED_WITH_NON_BLOCKING_RISKS
+  - NOT_CONVERGED
+  - INCONCLUSIVE
+targets:
+- id: TARGET-001
+  name: Quantum-L9/Enrichment.Inference.Engine
+  kind: git_repository
+  authority_owner: Quantum-L9/Enrichment.Inference.Engine
+  execution_mode: repo_local
+  repository_id: Quantum-L9/Enrichment.Inference.Engine
+  source_of_truth: repository_origin_main
+  environments:
+  - local
+  - ci
+  mutability: reversible
+  expected_revision: UNKNOWN
+  adapter: git
+authorities:
+- id: AUTH-001
+  responsibility: campaign_owner
+  owner: Igor Beylin
+workstreams:
+- id: WS-01
+  name: eie inference isolation v1
+  owner: AUTH-001
+  objective: a Wave-0/Wave-2 isolation campaign on Quantum-L9/Enrichment.Inference.Engine
+    that restores deterministic RuleEngine inference and tenant-authoritative idempotency/persistence,
+    then stops before outbox, catalog, surface quarantine, and release closure.
+dependency_edges:
+- from: TASK-001
+  to: TASK-002
+- from: TASK-002
+  to: TASK-003
+- from: TASK-003
+  to: TASK-004
+- from: TASK-004
+  to: TASK-005
+waves:
+- id: W0
+  name: admission_and_first_ready_task
+  task_ids:
+  - TASK-001
+  predecessor_wave_ids: []
+  exit_gate_ids:
+  - GATE-001
+- id: W1
+  name: remaining_tasks
+  task_ids:
+  - TASK-002
+  - TASK-003
+  - TASK-004
+  - TASK-005
+  predecessor_wave_ids:
+  - W0
+  exit_gate_ids:
+  - GATE-002
+  - GATE-003
+  - GATE-004
+  - GATE-005
+tasks:
+- id: TASK-001
+  title: Deterministic RuleEngine inference
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W0
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Restore the PlasticOS `inference_rules` contract through RuleEngine so ConvergenceController
+    receives real derived fields and per-field confidence. Do not convert PlasticOS to v2
+    in this wave.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - app/main.py
+  - app/engines/handlers.py
+  - app/engines/inference/rule_loader.py
+  - app/engines/inference/rule_engine.py
+  - app/engines/inference_bridge_adapter.py
+  - tests/test_rule_engine.py
+  - tests/test_rule_loader.py
+  - tests/test_inference_wiring.py
+  nugget_id: NUG-001
+  kernel_profile: CHANGE
+  consumers:
+  - app/main.py
+  - app/engines/handlers.py
+  - app/engines/inference/rule_loader.py
+  - app/engines/inference/rule_engine.py
+  - app/engines/inference_bridge_adapter.py
+  - tests/test_rule_engine.py
+  - tests/test_rule_loader.py
+  - tests/test_inference_wiring.py
+  entrypoints:
+  - app/main.py
+  - app/engines/handlers.py
+  - app/engines/inference/rule_loader.py
+  - app/engines/inference/rule_engine.py
+  - app/engines/inference_bridge_adapter.py
+  - tests/test_rule_engine.py
+  - tests/test_rule_loader.py
+  - tests/test_inference_wiring.py
+  validation:
+  - id: VAL-001
+    method: command
+    command_or_inspection: python3 -m unittest tests/test_rule_engine.py tests/test_rule_loader.py
+      tests/test_inference_wiring.py
+    expected_result: PASS
+  actions:
+  - edit_declared_paths
+  acceptance:
+  - id: AC-001
+    statement: Restore the PlasticOS `inference_rules` contract through RuleEngine so ConvergenceController
+      receives real derived fields and per-field confidence. Do not convert PlasticOS to v2
+      in this wave.
+    required_evidence_types:
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-001
+- id: TASK-002
+  title: One Alembic lineage
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Make EIE have one configured migration tree, one valid revision lineage, and
+    one head. Green 45 supersedes File 3 Green 3.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - alembic.ini
+  - migrations/versions/001_initial_schema.py
+  nugget_id: NUG-002
+  kernel_profile: CHANGE
+  consumers:
+  - alembic.ini
+  - migrations/versions/001_initial_schema.py
+  entrypoints:
+  - alembic.ini
+  - migrations/versions/001_initial_schema.py
+  validation:
+  - id: VAL-002
+    method: inspection
+    command_or_inspection: Make EIE have one configured migration tree, one valid revision
+      lineage, and one head. Green 45 supersedes File 3 Green 3.
+    expected_result: PASS
+  actions:
+  - edit_declared_paths
+  acceptance:
+  - id: AC-002
+    statement: Make EIE have one configured migration tree, one valid revision lineage, and
+      one head. Green 45 supersedes File 3 Green 3.
+    required_evidence_types:
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-002
+- id: TASK-003
+  title: Tenant Redis and Postgres idempotency
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Make idempotency tenant-scoped, collision-safe, and atomic. Green 35 plus File
+    2 waves 1–2. Trusted tenant originates from the SDK handler `tenant` argument. It must
+    not come from `payload["tenant"]`, `payload["tenant_id"]`, `EnrichRequest`, entity contents,
+    forwarded headers, or `"default"`.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - app/engines/enrichment_orchestrator.py
+  - app/engines/handlers.py
+  - app/services/idempotency.py
+  - app/services/pg_store.py
+  - app/services/pg_models.py
+  nugget_id: NUG-003
+  kernel_profile: CHANGE
+  consumers:
+  - app/engines/enrichment_orchestrator.py
+  - app/engines/handlers.py
+  - app/services/idempotency.py
+  - app/services/pg_store.py
+  - app/services/pg_models.py
+  entrypoints:
+  - app/engines/enrichment_orchestrator.py
+  - app/engines/handlers.py
+  - app/services/idempotency.py
+  - app/services/pg_store.py
+  - app/services/pg_models.py
+  validation:
+  - id: VAL-003
+    method: inspection
+    command_or_inspection: Make idempotency tenant-scoped, collision-safe, and atomic. Green
+      35 plus File 2 waves 1–2. Trusted tenant originates from the SDK handler `tenant` argument.
+      It must not come from `payload["tenant"]`, `payload["tenant_id"]`, `EnrichRequest`,
+      entity contents, forwarded headers, or `"default"`.
+    expected_result: PASS
+  actions:
+  - edit_declared_paths
+  acceptance:
+  - id: AC-003
+    statement: Make idempotency tenant-scoped, collision-safe, and atomic. Green 35 plus File
+      2 waves 1–2. Trusted tenant originates from the SDK handler `tenant` argument. It must
+      not come from `payload["tenant"]`, `payload["tenant_id"]`, `EnrichRequest`, entity contents,
+      forwarded headers, or `"default"`.
+    required_evidence_types:
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-003
+- id: TASK-004
+  title: ResultStore and approval tenant predicates
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: A tenant-owned UUID is only an identifier. It is never authorization. File 2
+    waves 3–4.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - app/services/result_store.py
+  - app/services/pg_store.py
+  nugget_id: NUG-004
+  kernel_profile: CHANGE
+  consumers:
+  - app/services/result_store.py
+  - app/services/pg_store.py
+  entrypoints:
+  - app/services/result_store.py
+  - app/services/pg_store.py
+  validation:
+  - id: VAL-004
+    method: inspection
+    command_or_inspection: A tenant-owned UUID is only an identifier. It is never authorization.
+      File 2 waves 3–4.
+    expected_result: PASS
+  actions:
+  - edit_declared_paths
+  acceptance:
+  - id: AC-004
+    statement: A tenant-owned UUID is only an identifier. It is never authorization. File
+      2 waves 3–4.
+    required_evidence_types:
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-004
+- id: TASK-005
+  title: Transport tenant is authoritative
+  definition_status: ready
+  workstream_id: WS-01
+  wave_id: W1
+  target_id: TARGET-001
+  execution_kind: repo_local
+  objective: Reverse payload-over-transport tenant selection. Green 40 plus File 2 wave 5.
+  authority_basis_ids:
+  - AUTH-001
+  required_decision_ids: []
+  blocking_unknown_ids: []
+  input_evidence_ids: []
+  paths:
+  - app/engines/handlers.py
+  - app/services/chassis_handlers.py
+  nugget_id: NUG-005
+  kernel_profile: CHANGE
+  consumers:
+  - app/engines/handlers.py
+  - app/services/chassis_handlers.py
+  entrypoints:
+  - app/engines/handlers.py
+  - app/services/chassis_handlers.py
+  validation:
+  - id: VAL-005
+    method: inspection
+    command_or_inspection: Reverse payload-over-transport tenant selection. Green 40 plus
+      File 2 wave 5.
+    expected_result: PASS
+  actions:
+  - edit_declared_paths
+  acceptance:
+  - id: AC-005
+    statement: Reverse payload-over-transport tenant selection. Green 40 plus File 2 wave
+      5.
+    required_evidence_types:
+    - inspection
+  negative_cases:
+  - scope_expansion
+  - remote_mutation_before_release
+  rollback:
+    strategy: discard_uncommitted_or_revert_local_commit
+    trigger: validation_failure
+    validation: worktree_matches_prior_head
+  risk:
+    tier: T0
+    reversibility: fully_reversible
+    blast_radius: declared_paths
+  authorization_ceiling:
+    inspect: true
+    local_write: true
+    commit: true
+    push: true
+    pull_request: true
+    merge: false
+    publish_or_release: false
+    deploy_or_migrate: false
+    destructive_change: false
+    external_message: false
+  completion_gate_ids:
+  - GATE-005
+gates:
+- id: GATE-001
+  name: task-001_complete
+  gate_type: entry
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-001
+  required_evidence_ids: []
+  pass_criteria:
+  - Deterministic RuleEngine inference acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-002
+  name: task-002_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-002
+  required_evidence_ids: []
+  pass_criteria:
+  - One Alembic lineage acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-003
+  name: task-003_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-003
+  required_evidence_ids: []
+  pass_criteria:
+  - Tenant Redis and Postgres idempotency acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-004
+  name: task-004_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-004
+  required_evidence_ids: []
+  pass_criteria:
+  - ResultStore and approval tenant predicates acceptance is met.
+  failure_effect: block_successor_tasks
+- id: GATE-005
+  name: task-005_complete
+  gate_type: completion
+  blocking: true
+  owner_authority_id: AUTH-001
+  task_ids:
+  - TASK-005
+  required_evidence_ids: []
+  pass_criteria:
+  - Transport tenant is authoritative acceptance is met.
+  failure_effect: block_successor_tasks
+evidence_requirements:
+- id: EVID-001
+  claim: exact_target_origin_main_revision_and_worktree_state_are_known
+  source_type: repository_inspection
+  source_location: Quantum-L9/Enrichment.Inference.Engine
+  collection_method: read_only_inspection
+  freshness: collect_at_admission
+  producer: controller
+  supports:
+  - TASK-001
+  contradicts: []
