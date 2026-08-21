@@ -359,6 +359,68 @@ class RunnerTests(unittest.TestCase):
         mapping = {"REPO_ROOT": str(_SCRIPTS.parents[1]), "PYTHON": _sys.executable}
         self.assertEqual(runner.run_suite(suite, "local", [], mapping), 4)
 
+    def _two_suites(self) -> list[dict[str, Any]]:
+        return [
+            {
+                "id": "first",
+                "kind": "command",
+                "working_directory": ".",
+                "owned_paths": ["."],
+                "env": {},
+                "append_user_pytest_args": False,
+                "allow_exit_5": False,
+                "profiles": {
+                    "local": {"argv": ["${PYTHON}", "-c", "import sys; sys.exit(1)"]},
+                    "ci": {"argv": ["${PYTHON}", "-c", "import sys; sys.exit(1)"]},
+                },
+                "rationale": "fails first",
+            },
+            {
+                "id": "second",
+                "kind": "command",
+                "working_directory": ".",
+                "owned_paths": ["."],
+                "env": {},
+                "append_user_pytest_args": False,
+                "allow_exit_5": False,
+                "profiles": {
+                    "local": {"argv": ["${PYTHON}", "-c", "pass"]},
+                    "ci": {"argv": ["${PYTHON}", "-c", "pass"]},
+                },
+                "rationale": "would run second",
+            },
+        ]
+
+    def test_local_profile_stops_after_first_failure(self) -> None:
+        import sys as _sys
+
+        ran: list[str] = []
+
+        def fake_run(argv: list[str], cwd: Path, env: dict[str, str]) -> int:
+            ran.append(argv[-1] if argv else "")
+            return 1 if "sys.exit(1)" in " ".join(argv) else 0
+
+        mapping = {"REPO_ROOT": str(_SCRIPTS.parents[1]), "PYTHON": _sys.executable}
+        with mock.patch.object(runner, "_run_subprocess", side_effect=fake_run):
+            code = runner.run_suites(self._two_suites(), "local", [], mapping)
+        self.assertEqual(code, 1)
+        self.assertEqual(len(ran), 1)
+
+    def test_ci_profile_continues_after_first_failure(self) -> None:
+        import sys as _sys
+
+        ran: list[str] = []
+
+        def fake_run(argv: list[str], cwd: Path, env: dict[str, str]) -> int:
+            ran.append(" ".join(argv))
+            return 1 if "sys.exit(1)" in " ".join(argv) else 0
+
+        mapping = {"REPO_ROOT": str(_SCRIPTS.parents[1]), "PYTHON": _sys.executable}
+        with mock.patch.object(runner, "_run_subprocess", side_effect=fake_run):
+            code = runner.run_suites(self._two_suites(), "ci", [], mapping)
+        self.assertEqual(code, 1)
+        self.assertEqual(len(ran), 2)
+
 
 if __name__ == "__main__":
     unittest.main()

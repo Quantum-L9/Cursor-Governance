@@ -16,6 +16,10 @@ cd "$WS"
 export WS PR_BASE PR_SECURITY_ADVISORY
 
 _GATE_RECEIPT="$WS/.l9/pr/gate-receipt.json"
+_GATE_FAILURE="$WS/.l9/pr/gate-failure.json"
+_GATE_LOG="$WS/.l9/pr/last-gate.log"
+_GATE_FAILURE_PY="$SCRIPT_DIR/pr_gate_failure.py"
+_gate_failed=0
 _gate_state_digest() {
   local head porcelain
   head="$(git rev-parse HEAD 2>/dev/null || echo none)"
@@ -36,10 +40,19 @@ raise SystemExit(0 if want == current else 1)
 PY
 }
 
+# PASS skip first. A matching FAIL receipt then refuses a second full gate
+# (STOP LOOPING) so agents cannot wait through the same red tree again.
 if _gate_receipt_matches; then
   echo "OK: gate receipt matches unchanged state — skipping full validation"
   echo "RESULT: PASS — local PR gate clean (receipt reuse)"
   exit 0
+fi
+if [[ -f "$_GATE_FAILURE_PY" ]]; then
+  _gate_refuse_rc=0
+  python3 "$_GATE_FAILURE_PY" refuse "$_GATE_FAILURE" "$(_gate_state_digest)" || _gate_refuse_rc=$?
+  if [[ "$_gate_refuse_rc" -eq 2 ]]; then
+    exit 2
+  fi
 fi
 
 # Isolates are not a uv project. Bind PATH/UV_PROJECT to the donor or
@@ -85,7 +98,19 @@ if repo_write_lock_acquire "$WS" "${PR_LOCK_WAIT_S:-30}"; then
 else
   echo "WARN: $(repo_write_lock_skip_note "$WS") — continuing; concurrent writes may be misattributed"
 fi
-trap 'repo_write_lock_release' EXIT
+_gate_failed=1
+_gate_on_exit() {
+  if [[ "${_gate_failed:-0}" = "1" && -f "$_GATE_FAILURE_PY" ]]; then
+    mkdir -p "$WS/.l9/pr"
+    python3 "$_GATE_FAILURE_PY" write "$_GATE_FAILURE" "$(_gate_state_digest)" \
+      --log "$_GATE_LOG" \
+      --precommit "${precommit_log:-}" \
+      --pytest "$GOV_ROOT/.venv/bin/pytest" || true
+  fi
+  rm -f "${status_before:-}" "${changed_file:-}" "${precommit_log:-}"
+  repo_write_lock_release
+}
+trap '_gate_on_exit' EXIT
 
 # Always-run governance contract surface: cheap, changed-file-INDEPENDENT.
 # A Markdown/YAML/config-only mutation must never bypass the checks that prove
@@ -106,10 +131,14 @@ echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / night
 status_before="$(mktemp)"
 changed_file="$(mktemp)"
 precommit_log="$(mktemp)"
-trap 'rm -f "$status_before" "$changed_file" "$precommit_log"; repo_write_lock_release' EXIT
+mkdir -p "$WS/.l9/pr"
+: >"$_GATE_LOG"
+trap '_gate_on_exit' EXIT
 git status --porcelain >"$status_before"
 
 _gate_write_receipt() {
+  _gate_failed=0
+  rm -f "$_GATE_FAILURE"
   mkdir -p "$WS/.l9/pr"
   python3 - "$_GATE_RECEIPT" "$(_gate_state_digest)" <<'PY'
 import json, sys
@@ -179,6 +208,9 @@ _gate_run_precommit() {
   PR_CHANGED_FILE="$changed_file" bash "$SCRIPT_DIR/run_pr_precommit.sh" "$WS" 2>&1 | tee "$precommit_log"
   rc="${PIPESTATUS[0]}"
   set -e
+  if [[ -f "$precommit_log" ]]; then
+    cat "$precommit_log" >>"$_GATE_LOG" || true
+  fi
   return "$rc"
 }
 
@@ -266,7 +298,13 @@ if grep -Eq '\.py$' "$changed_file"; then
     pytest_args+=(--ignore=tests/ops/secrets)
     echo "OK: skip secrets capability suite (ops/secrets unchanged)"
   fi
-  bash "$SCRIPT_DIR/run_pytest_suites.sh" "${pytest_args[@]}"
+  set +e
+  bash "$SCRIPT_DIR/run_pytest_suites.sh" "${pytest_args[@]}" 2>&1 | tee -a "$_GATE_LOG"
+  _pytest_rc="${PIPESTATUS[0]}"
+  set -e
+  if [[ "${_pytest_rc:-0}" -ne 0 ]]; then
+    exit "${_pytest_rc}"
+  fi
 else
   echo "OK: skip pytest (no changed Python files)"
 fi
