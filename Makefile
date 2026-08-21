@@ -1,4 +1,4 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate claude-diagnose agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
 .PHONY: improve pr-preflight
 .PHONY: repo-write-lock-test precommit-hook-contract
@@ -238,6 +238,7 @@ claude-settings-check:
 ## the mobile bootstrap audit found while the validator still printed PASS.
 claude-env:
 	$(MAKE) claude-install-check
+	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py
 	$(PYTHON) ops/secrets/validate_capability_hosts.py
 	$(PYTHON) environment/agents/adapters/claude-code/verify_account_env.py || true
 	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py --runtime
