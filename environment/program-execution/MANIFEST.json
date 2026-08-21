@@ -1719,7 +1719,7 @@
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
-      "sha256": "ed583c399dc50cc8ee800cdc91a3c23b843c493a2875510c71ea5e52698aef92"
+      "sha256": "e9b7dbc9af5d8bf6d92d17d0106029891d79ffcdb81318efd015366ca13127d1"
     },
     {
       "path": "scripts/tests/test_launchability.py",
