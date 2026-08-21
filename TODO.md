@@ -1,10 +1,3 @@
-## Issue unblock (session reference)
-
-**Cluster:** Quantum-L9/Cursor-Governance#172
-**Owning fix:** `feat/cg-172-pr-body-prefill` (mechanical `compose_pr_body.py` + `open_pr_after_gate.sh`)
-**Next:** hand the opened PR to `l9-pr-remediation` do not merge from issue-remediation
-**Pickup:** Graphiti PICKUP pending closeout
-
 # GlobalCommands — Tech Debt (cleanup later)
 
 Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L9 skills, `.cursor/rules/*.mdc`, `AGENTS.md`, and active wiring scripts). `start-session.yaml` was deleted (2026-07-19) — it was never wired into any hook and had drifted from the archived pre-Graphiti learning pipeline. `ops/hooks/session_start_bootstrap.sh` is the real, live activation script: installed at `~/.cursor/hooks/session-start-bootstrap.sh`, registered in `~/.cursor/hooks.json` under `sessionStart`, runs automatically every session.
