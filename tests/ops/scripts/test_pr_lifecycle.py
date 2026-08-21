@@ -185,6 +185,120 @@ def test_gate_receipt_skip_on_unchanged_state(tmp_path: Path) -> None:
     assert "receipt reuse" in proc.stdout
 
 
+def _state_digest(repo: Path, pr_base: str = "main") -> tuple[str, str]:
+    head = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
+    digest = subprocess.check_output(
+        ["bash", "-c", "git status --porcelain | cksum | awk '{print $1}'"],
+        cwd=str(repo),
+        text=True,
+    ).strip()
+    return head, digest
+
+
+def test_gate_failure_receipt_refuses_second_full_gate(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path, feature=True)
+    head, digest = _state_digest(repo)
+    node = (
+        "environment/program-execution/scripts/tests/test_run_campaign.py::"
+        "RunCampaignTests::test_until_activate_from_memo"
+    )
+    receipt_dir = repo / ".l9" / "pr"
+    receipt_dir.mkdir(parents=True)
+    (receipt_dir / "gate-failure.json").write_text(
+        json.dumps(
+            {
+                "schema": "l9.pr_gate_failure.v1",
+                "head": head,
+                "worktree_digest": digest,
+                "pr_base": "main",
+                "failed_nodes": [node],
+                "failed_hooks": [],
+                "recheck_command": f".venv/bin/pytest {node}",
+                "message": "STOP LOOPING",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    proc = _run(
+        ["bash", str(SCRIPTS / "run_pr_gate.sh")],
+        cwd=repo,
+        env={"WS": str(repo), "PR_BASE": "main", "PR_LOCK_WAIT_S": "1"},
+    )
+    output = proc.stdout + proc.stderr
+    assert proc.returncode == 2, output
+    assert "STOP LOOPING" in output
+    assert node in output
+    assert "governance contract surface" not in output
+    assert "===== test session starts" not in output
+
+
+def test_gate_pass_receipt_wins_over_stale_failure(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path, feature=True)
+    head, digest = _state_digest(repo)
+    receipt_dir = repo / ".l9" / "pr"
+    receipt_dir.mkdir(parents=True)
+    payload = {"head": head, "worktree_digest": digest, "pr_base": "main"}
+    (receipt_dir / "gate-receipt.json").write_text(
+        json.dumps({"schema": "l9.pr_gate_receipt.v1", **payload}) + "\n",
+        encoding="utf-8",
+    )
+    (receipt_dir / "gate-failure.json").write_text(
+        json.dumps(
+            {
+                "schema": "l9.pr_gate_failure.v1",
+                **payload,
+                "failed_nodes": ["tests/x.py::test_x"],
+                "failed_hooks": [],
+                "recheck_command": "pytest tests/x.py::test_x",
+                "message": "STOP LOOPING",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    proc = _run(
+        ["bash", str(SCRIPTS / "run_pr_gate.sh")],
+        cwd=repo,
+        env={"WS": str(repo), "PR_BASE": "main", "PR_LOCK_WAIT_S": "1"},
+    )
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert "receipt reuse" in proc.stdout
+    assert "STOP LOOPING" not in proc.stdout
+
+
+def test_gate_failure_receipt_clears_when_digest_changes(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path, feature=True)
+    head, digest = _state_digest(repo)
+    receipt_dir = repo / ".l9" / "pr"
+    receipt_dir.mkdir(parents=True)
+    (receipt_dir / "gate-failure.json").write_text(
+        json.dumps(
+            {
+                "schema": "l9.pr_gate_failure.v1",
+                "head": head,
+                "worktree_digest": digest,
+                "pr_base": "main",
+                "failed_nodes": ["tests/x.py::test_x"],
+                "failed_hooks": [],
+                "recheck_command": "pytest tests/x.py::test_x",
+                "message": "STOP LOOPING",
+            }
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    (repo / "dirty.txt").write_text("changed\n", encoding="utf-8")
+    proc = _run(
+        ["bash", str(SCRIPTS / "run_pr_gate.sh")],
+        cwd=repo,
+        env={"WS": str(repo), "PR_BASE": "main", "PR_LOCK_WAIT_S": "1"},
+    )
+    output = proc.stdout + proc.stderr
+    assert "FAIL receipt matches unchanged state" not in output
+    assert proc.returncode != 2
+
+
 def test_precommit_reuses_changed_file(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
     listed = tmp_path / "changed.txt"
@@ -222,3 +336,54 @@ def test_precommit_missing_binary_fails_after_files(tmp_path: Path) -> None:
     assert proc.returncode == 1
     assert "INTERNAL leaf of make pr-check" in proc.stderr
     assert "Do not run 'pre-commit install'" in proc.stderr
+
+
+def test_precommit_repo_fails_closed_on_tracked_dirt(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path, feature=True)
+    (repo / "a.txt").write_text("dirty\n", encoding="utf-8")
+    listed = tmp_path / "changed.txt"
+    listed.write_text("a.txt\n", encoding="utf-8")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    stub = bin_dir / "pre-commit"
+    stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    stub.chmod(0o755)
+    proc = _run(
+        ["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)],
+        cwd=repo,
+        env={
+            "WS": str(repo),
+            "PR_BASE": "main",
+            "PR_CHANGED_FILE": str(listed),
+            "PATH": f"{bin_dir}:/usr/bin:/bin",
+        },
+    )
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "tracked files dirty after precommit-repo" in proc.stdout
+    assert "Do not auto-stage" in proc.stdout
+
+
+def test_pr_check_depends_on_precommit_repo() -> None:
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    assert "pr-check: precommit-repo" in makefile
+    assert "pr: precommit-repo" in makefile
+
+
+def test_gate_does_not_rerun_ruff() -> None:
+    gate = (ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text(encoding="utf-8")
+    precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    assert "--- ruff (changed Python) ---" not in gate
+    assert "--- lint-ruff (changed Python) ---" in precommit
+
+
+def test_workflow_action_pins() -> None:
+    proc = _run(
+        ["python3", str(SCRIPTS / "validate_workflow_action_pins.py")],
+        cwd=ROOT,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_baseline_ratchet_caller_is_absent() -> None:
+    assert not (ROOT / ".github" / "workflows" / "baseline-ratchet-caller.yml").exists()
+    assert not (ROOT / ".l9" / "baselines" / "test-quarantine.yml").exists()

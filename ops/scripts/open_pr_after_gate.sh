@@ -168,9 +168,17 @@ fi
 # endpoint that can be switched off — every GraphQL call below keeps a REST
 # fallback via `gh api repos/...`. GraphQL stays primary so behaviour is
 # unchanged wherever it works.
+# `|| true` between a failing gh call and a decision hides WHY the call failed
+# (INV-7). The audited surface answers every GraphQL query with HTTP 403 — a
+# fixed property of the session gateway, not a transient error — and the old
+# form turned that into a silently empty variable. Classify it once, name it,
+# and let the REST fallback take over deliberately rather than by accident.
+# shellcheck source=lib/gh_graphql.sh
+source "$GOV_ROOT/ops/scripts/lib/gh_graphql.sh"
+
 resolve_repo_slug() {
   local slug url
-  slug="$(gh repo view --json nameWithOwner -q .nameWithOwner 2>/dev/null || true)"
+  slug="$(gh_graphql repo view --json nameWithOwner -q .nameWithOwner || true)"
   if [[ -n "$slug" ]]; then
     printf '%s' "$slug"
     return 0
@@ -204,8 +212,8 @@ repo="$(resolve_repo_slug)"
 owner="${repo%/*}"
 name="${repo#*/}"
 
-pr_url="$(gh pr view --json url -q .url 2>/dev/null || true)"
-pr_number="$(gh pr view --json number -q .number 2>/dev/null || true)"
+pr_url="$(gh_graphql pr view --json url -q .url || true)"
+pr_number="$(gh_graphql pr view --json number -q .number || true)"
 
 if [[ -z "$pr_url" && -n "$owner" && -n "$name" ]]; then
   _existing="$(gh api "repos/${owner}/${name}/pulls?head=${owner}:${branch}&state=open" 2>/dev/null || true)"
@@ -286,7 +294,11 @@ EOF
   head_branch="$(git rev-parse --abbrev-ref HEAD)"
   if pr_url="$(gh pr create --head "$head_branch" --base "$BASE_REF" \
       --title "$title" --body "$body" 2>/dev/null)" && [[ -n "$pr_url" ]]; then
-    pr_number="$(gh pr view --json number -q .number 2>/dev/null || true)"
+    pr_number="$(gh_graphql pr view --json number -q .number || true)"
+    if [[ -z "$pr_number" && -n "$owner" && -n "$name" ]]; then
+      pr_number="$(gh api "repos/${owner}/${name}/pulls?head=${owner}:${head_branch}&state=open" \
+        2>/dev/null | _pr_field number)"
+    fi
   else
     # GraphQL unavailable — open the PR over REST instead of failing the gate.
     if [[ -z "$owner" || -z "$name" ]]; then
@@ -313,6 +325,20 @@ fi
 if [[ -z "$owner" || -z "$name" ]]; then
   echo "WARN: could not resolve owner/repo — skipping PR subscription"
   exit 0
+fi
+
+# Neither GraphQL nor REST produced a PR number. Continuing would build
+# `repos/o/n/issues//subscription` and report a warning that reads like a minor
+# notification problem, when in fact the publish path never established what it
+# opened (INV-7).
+if [[ -z "$pr_number" ]]; then
+  echo "ERROR: PR number unresolved after GraphQL and REST" >&2
+  if [[ "$GH_GRAPHQL_UNSUPPORTED" == "1" ]]; then
+    echo "ERROR:   classification=$GH_GRAPHQL_CLASSIFICATION (gateway refuses GitHub GraphQL)" >&2
+    echo "ERROR:   the REST fallback also failed — this is not a GraphQL-only outage" >&2
+  fi
+  echo "ERROR:   PR URL was: ${pr_url:-<none>}" >&2
+  exit 1
 fi
 
 echo "--- subscribe (GitHub notifications for PR #$pr_number) ---"

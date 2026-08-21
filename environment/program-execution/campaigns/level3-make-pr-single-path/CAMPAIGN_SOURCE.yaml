@@ -1,0 +1,673 @@
+schema: l9.program-execution.campaign-source.v2
+schema_version: 2.0.0
+
+metadata:
+  campaign_id: level3-make-pr-single-path
+  title: Level-3 Make and Single-Path PR Refactor
+  version: 1.0.0
+  created_at: "2026-08-16T05:34:00Z"
+  status: operator_intake
+  owner: Igor Beylin
+  intended_host: Quantum-L9/Cursor-Governance
+  intended_drop_path: >-
+    environment/program-execution/campaigns/level3-make-pr-single-path/CAMPAIGN_SOURCE.yaml
+  runtime_root: $HOME/.l9/programs/level3-make-pr-single-path
+  worktree_root: $HOME/.l9/program-worktrees/level3-make-pr-single-path
+  source_is_immutable: true
+  remote_mutation_during_admission: false
+  isolation:
+    clone: exclusive_worktree_from_origin_main
+    feature_branch: feat/level3-make-pr-single-path
+    integration_branch: campaign/level3-make-pr-single-path
+    dirty_primary_clone: forbidden
+
+integrity:
+  digest_algorithm: sha256
+  canonical_encoding: utf-8
+  canonical_line_endings: lf
+  digest_record_location: source-integrity-receipt.json
+  generated_counts_or_digests_may_be_hand_edited: false
+
+pipeline_contract:
+  pair: program-execution-system.v2
+  blueprint: program-execution-blueprint.v2
+  controller: program-execution-controller.v2
+  publish_model: four_commit_one_pr
+  compilation_sequence:
+    - preserve_immutable_campaign_source
+    - compile_source_into_complete_native_blueprint
+    - validate_blueprint_in_template_mode
+    - execute_four_local_commits_without_push
+    - publish_once_via_new_canonical_make_pr
+  authority_boundaries:
+    campaign_source_owns: operator_intent_and_campaign_semantics
+    makefile_candidate_owns: commit_1_makefile_bytes
+    blueprint_owns: accepted_program_definition
+    controller_owns: mutable_runtime_state_program_lock_and_gate_results
+    activation_prompt_owns: launch_mechanics_only
+
+operator_directive:
+  objective: >-
+    Install the operator-supplied Level-3 Makefile and make `make pr` the sole
+    agent/operator GitHub PR lifecycle for this repository: publish, remediate,
+    and bounded exact-head merge. Delete `pr-check`. Do not redesign the
+    supplied Makefile.
+  mode: controlled_autonomous_until_material_boundary
+  policy_profile: quantum-l9.safe-autonomy.v1
+  publish:
+    model: four_commit_one_pr
+    mid_execution_push: forbidden
+    pr_base: origin/campaign/level3-make-pr-single-path
+    command: PR_REMEDIATE=1 PR_AUTOMERGE=1 make pr
+    title_template: "[level3-make-pr-single-path] Level-3 Make and Single-Path PR Refactor"
+    after: TASK-004
+    remediation_owner: the_same_make_pr_invocation
+    second_remediation_worker: forbidden
+  makefile_candidate:
+    path: environment/program-execution/campaigns/level3-make-pr-single-path/Makefile.candidate
+    sha256: 9ecb01de462dc8343dcef72da4744f9ecaf10e981cffea20ffb4248670ef4b49
+    encoding: utf-8
+    note: File is a raw Makefile. Replace repository Makefile with these bytes.
+  auto_continue:
+    - read_only_inspection
+    - reversible_repo_local_work
+    - local_commits_for_the_four_planned_commits
+    - deterministic_local_validation
+    - independent_verification
+  pause_only_for:
+    - makefile_candidate_digest_mismatch
+    - material_scope_expansion
+    - failed_blocking_gate
+    - security_or_secret_boundary
+    - authority_ceiling_beyond_this_exact_pr
+  prohibited_actions:
+    - force_push
+    - admin_merge
+    - deploy
+    - weaken_validators
+    - delete_tests_for_pass
+    - make_pr_check
+    - OPEN_PR=0_make_pr_then_make_pr
+    - PR_REMEDIATE=0_make_pr
+    - bare_git_push
+    - bare_gh_pr_create
+    - bare_gh_pr_merge
+    - authorize_campaign_merge_py_plus_gh_pr_merge
+    - mid_execution_push
+    - reconstruct_makefile_from_memory
+    - hand_edit_generated_projections
+
+program:
+  id: level3-make-pr-single-path
+  name: Level-3 Make and Single-Path PR Refactor
+  version: 1.0.0
+  owner: Igor Beylin
+  definition_status: draft
+  snapshot_at: "2026-08-16"
+  objective: >-
+    Install the operator-supplied Level-3 Makefile and make `make pr` the sole
+    agent/operator GitHub PR lifecycle (publish, remediate, bounded exact-head
+    merge). Delete `pr-check`. Do not redesign the supplied Makefile.
+  problem_statement: >-
+    `make pr` currently depends on `pr-check`, and agents re-run overlapping
+    gates (`make pr-check`, `OPEN_PR=0 make pr`, bare pre-commit/Ruff) on an
+    unchanged tree. Standing campaign publish is `PR_REMEDIATE=0 make pr` with
+    human-only merge. That duplicates validation and leaves no bounded
+    exact-PR automerge.
+  target_state: >-
+    After exactly four local commits and one publication,
+    `PR_REMEDIATE=1 PR_AUTOMERGE=1 make pr` is the only shipping command for
+    this campaign PR. `pr-check` is gone. Changed-file resolution and
+    pre-commit each run once per repository state. Ruff, format, and
+    generated-artifact sync have one owner. Bounded automerge may merge only
+    this PR at the observed green mergeable head. Force-push, admin-merge, and
+    raw `git push` / `gh pr create` / `gh pr merge` remain forbidden. Live
+    doctrine for `pr-check` and `PR_REMEDIATE=0 make pr` is zero except
+    negative tests. Historical ADR/law may remain only when marked superseded.
+    AGENTS.md root-file edits are append-only supersession blocks.
+  scope:
+    include:
+      - Makefile
+      - ops/scripts/run_pr_gate.sh
+      - ops/scripts/run_pr_precommit.sh
+      - ops/scripts/open_pr_after_gate.sh
+      - .pre-commit-config.yaml
+      - ops/config/precommit-hook-contract.json
+      - ops/autonomy/merge_gate.py
+      - ops/autonomy/surface_profile.yaml
+      - environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json
+      - environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+      - environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml
+      - environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml
+      - environment/program-execution/README.md
+      - environment/program-execution/campaigns/README.md
+      - environment/agents/adapters/claude-code/settings.template.json
+      - AGENTS.md
+      - CANONICAL_LAW.md
+      - rules/48-make-pr-remediation.mdc
+      - rules/88-l4-local-autonomy.mdc
+      - skills/l9-bounded-autonomy/SKILL.md
+      - skills/l9-pe-campaign-activate/references/pipeline.md
+      - skills/l9-gmp-protocol/SKILL.md
+      - skills/l9-gmp-protocol/references/phase-contracts.md
+      - skills/l9-plan/references/plan-workflow.md
+      - skills/l9-plan/references/plan-quality-gates.md
+      - skills/l9-ci-ops/SKILL.md
+    exclude:
+      - new repositories
+      - force_push
+      - admin_merge
+      - deploy
+      - production migration
+      - skills/_archived
+      - environment/generated
+      - ops/generated
+      - historical campaign handoffs
+      - dirty_primary_clone
+  contracts:
+    pair: program-execution-system.v2
+    blueprint: program-execution-blueprint.v2
+    controller_minimum: program-execution-controller.v2
+  authority_order:
+    - applicable_safety_legal_security_requirements
+    - cursor_governance_canonical_law
+    - program_execution_interface_contract
+    - latest_explicit_operator_instruction
+    - accepted_program_definition
+    - implementation
+    - UNKNOWN
+  operating_rules:
+    - one_authority_per_responsibility
+    - mutable_runtime_state_remains_outside_git
+    - no_silent_scope_expansion
+    - worker_claim_is_not_verification
+    - four_local_commits_then_one_publish
+    - one_authoritative_validation_per_repository_state
+    - replace_makefile_by_digest_never_by_memory
+    - agents_md_root_edits_are_append_only
+  terminal_verdicts:
+    - CONVERGED
+    - CONVERGED_WITH_NON_BLOCKING_RISKS
+    - NOT_CONVERGED
+    - INCONCLUSIVE
+
+targets:
+  - id: TARGET-001
+    name: Quantum-L9/Cursor-Governance
+    kind: git_repository
+    authority_owner: Quantum-L9/Cursor-Governance
+    execution_mode: repo_local
+    repository_id: Quantum-L9/Cursor-Governance
+    source_of_truth: Makefile
+    adapter: git
+    environments:
+      - local
+      - ci
+    mutability: reversible
+    expected_revision: UNKNOWN
+
+authorities:
+  - id: AUTH-001
+    responsibility: campaign_owner
+    owner: Igor Beylin
+
+workstreams:
+  - id: WS-01
+    name: Level-3 Make and Single-Path PR Refactor
+    owner: AUTH-001
+    objective: >-
+      Four local commits, then one canonical `make pr` publication of this
+      campaign PR.
+
+decisions:
+  - id: DEC-001
+    question: How is this campaign published?
+    status: accepted
+    authority_id: AUTH-001
+    selected_option_id: four_commit_one_pr
+    required_evidence_ids:
+      - EVID-003
+    blocking_task_ids: []
+    options:
+      - id: four_commit_one_pr
+        description: >-
+          Four local commits with no mid-execution push, then one PR via
+          `PR_REMEDIATE=1 PR_AUTOMERGE=1 make pr` against
+          `origin/campaign/level3-make-pr-single-path`.
+      - id: four_stacked_implementation_prs
+        description: >-
+          One PR per commit, stacked bottom-up. Rejected: violates the
+          locked four-commit contract.
+    rationale: Operator locked four-commit one-PR on 2026-08-16.
+
+unknowns:
+  - id: UNK-001
+    statement: >-
+      SHA-256 of the live repository Makefile immediately before replacement
+      (not the candidate digest, which is already bound).
+    owner: AUTH-001
+    status: open
+    resolution_method: sha256_the_worktree_Makefile_immediately_before_replace
+    blocking_task_ids: []
+    resolution_evidence_ids:
+      - EVID-002
+
+risks:
+  - id: RISK-001
+    statement: Bounded automerge is a permission widening relative to standing campaign law.
+    likelihood: likely
+    severity: material
+    mitigation: >-
+      TASK-003/TASK-004 may merge only this campaign PR at the observed
+      green mergeable head. Standing unbounded merge remains forbidden.
+    owner: AUTH-001
+  - id: RISK-002
+    statement: Makefile is the public repository command API.
+    likelihood: possible
+    severity: material
+    mitigation: >-
+      Replace bytes from the bound candidate only. Prove `make help` and
+      that no public target is lost except the deliberately removed
+      `pr-check`.
+    owner: AUTH-001
+
+evidence_requirements:
+  - id: EVID-001
+    claim: operator_supplied_makefile_candidate_digest_is_bound
+    source_type: repository_inspection
+    source_location: environment/program-execution/campaigns/level3-make-pr-single-path/Makefile.candidate
+    collection_method: sha256_file
+    freshness: bound_at_source_authoring
+    producer: operator
+    digest_algorithm: sha256
+    digest: 9ecb01de462dc8343dcef72da4744f9ecaf10e981cffea20ffb4248670ef4b49
+    supports:
+      - TASK-001
+      - GATE-001
+    contradicts: []
+  - id: EVID-002
+    claim: live_repository_makefile_digest_immediately_before_replacement
+    source_type: repository_inspection
+    source_location: Makefile
+    collection_method: sha256_the_worktree_Makefile_immediately_before_replace
+    freshness: collect_at_task_001
+    producer: worker
+    digest: UNKNOWN
+    supports:
+      - TASK-001
+      - UNK-001
+    contradicts: []
+  - id: EVID-003
+    claim: operator_locked_publish_model_four_commit_one_pr
+    source_type: architecture_decision_records
+    source_location: DEC-001
+    collection_method: operator_lock_2026-08-16
+    freshness: bound_at_source_authoring
+    producer: operator
+    supports:
+      - DEC-001
+      - TASK-003
+      - TASK-004
+      - GATE-004
+    contradicts: []
+
+dependency_edges:
+  - from: TASK-001
+    to: TASK-002
+  - from: TASK-002
+    to: TASK-003
+  - from: TASK-003
+    to: TASK-004
+
+waves:
+  - id: W0
+    name: replace_makefile
+    task_ids:
+      - TASK-001
+    predecessor_wave_ids: []
+    exit_gate_ids:
+      - GATE-001
+  - id: W1
+    name: one_pass_pr_gate
+    task_ids:
+      - TASK-002
+    predecessor_wave_ids:
+      - W0
+    exit_gate_ids:
+      - GATE-002
+  - id: W2
+    name: bounded_automerge
+    task_ids:
+      - TASK-003
+    predecessor_wave_ids:
+      - W1
+    exit_gate_ids:
+      - GATE-003
+  - id: W3
+    name: doctrine_and_single_publish
+    task_ids:
+      - TASK-004
+    predecessor_wave_ids:
+      - W2
+    exit_gate_ids:
+      - GATE-004
+
+tasks:
+  - id: TASK-001
+    title: "Commit 1 — refactor(make): establish level-3 PR capability graph"
+    definition_status: ready
+    workstream_id: WS-01
+    wave_id: W0
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Replace repository Makefile with environment/program-execution/campaigns/level3-make-pr-single-path/Makefile.candidate
+      (sha256 9ecb01de462dc8343dcef72da4744f9ecaf10e981cffea20ffb4248670ef4b49)
+      byte-for-byte. Record the live Makefile digest first. After replace,
+      prove digest match, `make help`, absent `pr-check`, present `make pr`,
+      and no accidental public-target loss. Local commit only. Do not push.
+    authority_basis_ids:
+      - AUTH-001
+    required_decision_ids:
+      - DEC-001
+    blocking_unknown_ids: []
+    input_evidence_ids:
+      - EVID-001
+      - EVID-002
+    actions:
+      - record_live_makefile_digest
+      - replace_makefile_from_candidate_digest
+      - verify_working_makefile_digest_matches_candidate
+      - verify_make_help
+      - verify_pr_check_absent
+      - verify_make_pr_present
+      - local_commit_refactor_make
+    acceptance:
+      - id: AC-001
+        statement: >-
+          Working Makefile sha256 equals the bound candidate digest, `make help`
+          succeeds, `pr-check` is absent, and `make pr` is the canonical PR
+          target.
+        required_evidence_types:
+          - inspection
+          - test_result
+    negative_cases:
+      - reconstruct_makefile_from_memory
+      - stylistic_makefile_rewrite
+      - mid_execution_push
+      - scope_expansion
+    rollback:
+      strategy: restore_Makefile_to_pre_replace_bytes
+      trigger: digest_mismatch_or_help_failure
+      validation: worktree_Makefile_matches_EVID-002
+    risk:
+      tier: T1
+      reversibility: fully_reversible
+      blast_radius: Makefile
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-001
+
+  - id: TASK-002
+    title: "Commit 2 — refactor(pr): remove duplicate validation execution"
+    definition_status: blocked
+    workstream_id: WS-01
+    wave_id: W1
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Refactor the local PR gate into a one-pass execution DAG. Resolve the
+      changed-file set once per `make pr`. Execute pre-commit once per
+      repository state. Make `.pre-commit-config.yaml` authoritative for hooks
+      it declares. Remove outer-gate duplicate Ruff, Ruff-format, and
+      generated-artifact reconciliation. Keep genuinely PR-specific checks
+      outside pre-commit. Fail closed on missing or failed mandatory
+      validators. Prove execution count, not only source text. Local commit
+      only. Do not push.
+    authority_basis_ids:
+      - AUTH-001
+    required_decision_ids:
+      - DEC-001
+    blocking_unknown_ids: []
+    input_evidence_ids:
+      - EVID-001
+    actions:
+      - trace_make_pr_execution_dag
+      - resolve_changed_files_once
+      - execute_precommit_once
+      - remove_outer_duplicate_ruff_and_format
+      - remove_duplicate_generated_reconciliation
+      - retain_pr_specific_checks
+      - local_commit_refactor_pr
+    acceptance:
+      - id: AC-002
+        statement: >-
+          One `make pr` invocation resolves changed files once, runs
+          pre-commit once, and does not re-execute Ruff, format, or generated
+          reconciliation already owned by pre-commit.
+        required_evidence_types:
+          - inspection
+          - test_result
+    negative_cases:
+      - duplicate_ruff_execution
+      - cache_without_correctness_evidence
+      - weaken_validator_for_speed
+      - mid_execution_push
+      - scope_expansion
+    rollback:
+      strategy: revert_local_commit_for_TASK-002
+      trigger: validation_failure
+      validation: worktree_matches_TASK-001_head
+    risk:
+      tier: T1
+      reversibility: fully_reversible
+      blast_radius: declared_paths
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-002
+
+  - id: TASK-003
+    title: "Commit 3 — feat(autonomy): authorize bounded green-and-mergeable PR merge"
+    definition_status: blocked
+    workstream_id: WS-01
+    wave_id: W2
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Extend the canonical `make pr` lifecycle through post-PR remediation and
+      bounded automatic merge of this exact PR. Standing unbounded merge
+      remains forbidden. `PR_AUTOMERGE=1` allows the terminal transition only
+      when authorization belongs to this PR, the observed head matches, the
+      PR is not draft, required checks are green, GitHub reports mergeable,
+      and no blocking review remains. `PR_AUTOMERGE=0` remains a reliable
+      opt-out. Do not expose a general-purpose bare merge permission. Local
+      commit only. Do not push.
+    authority_basis_ids:
+      - AUTH-001
+    required_decision_ids:
+      - DEC-001
+    blocking_unknown_ids: []
+    input_evidence_ids:
+      - EVID-003
+    actions:
+      - add_exact_pr_exact_head_automerge
+      - keep_pr_automerge_zero_as_opt_out
+      - refuse_force_push_and_admin_merge
+      - remove_unconditional_never_merge_from_executable_policy
+      - local_commit_feat_autonomy
+    acceptance:
+      - id: AC-003
+        statement: >-
+          `PR_AUTOMERGE=1` can merge only this exact green mergeable PR head,
+          and `PR_AUTOMERGE=0` plus standing unbounded merge remain denied.
+        required_evidence_types:
+          - inspection
+          - test_result
+    negative_cases:
+      - standing_unbounded_merge
+      - force_push
+      - admin_merge
+      - authorize_campaign_merge_py_plus_gh_pr_merge
+      - mid_execution_push
+      - scope_expansion
+    rollback:
+      strategy: revert_local_commit_for_TASK-003
+      trigger: validation_failure
+      validation: worktree_matches_TASK-002_head
+    risk:
+      tier: T2
+      reversibility: fully_reversible
+      blast_radius: merge_authority
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: false
+      pull_request: false
+      merge: false
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-003
+
+  - id: TASK-004
+    title: "Commit 4 — docs(governance): migrate PR contract and regenerate projections"
+    definition_status: blocked
+    workstream_id: WS-01
+    wave_id: W3
+    target_id: TARGET-001
+    execution_kind: repo_local
+    objective: >-
+      Migrate live doctrine only, then regenerate projections from
+      authoritative sources. Delete active `pr-check` and
+      `PR_REMEDIATE=0 make pr` shipping instructions. Teach
+      failure → diagnose → fix → `make pr`. AGENTS.md changes are
+      append-only supersession. After the fourth local commit and a clean
+      tree, invoke `PR_REMEDIATE=1 PR_AUTOMERGE=1 make pr` once. Do not run
+      a preliminary full PR gate first.
+    authority_basis_ids:
+      - AUTH-001
+    required_decision_ids:
+      - DEC-001
+    blocking_unknown_ids: []
+    input_evidence_ids:
+      - EVID-003
+    actions:
+      - inventory_live_pr_check_and_remediate_zero_doctrine
+      - append_agents_md_supersession
+      - migrate_live_rules_skills_and_policy
+      - regenerate_projections_from_authoritative_sources
+      - residual_scan_live_surfaces_only
+      - local_commit_docs_governance
+      - publish_once_pr_remediate_1_pr_automerge_1_make_pr
+    acceptance:
+      - id: AC-004
+        statement: >-
+          Live doctrine no longer teaches `pr-check` or
+          `PR_REMEDIATE=0 make pr` as a shipping path, generated projections
+          match sources, and this campaign has exactly one PR opened by
+          `PR_REMEDIATE=1 PR_AUTOMERGE=1 make pr`.
+        required_evidence_types:
+          - inspection
+          - test_result
+    negative_cases:
+      - hand_edit_generated_projections
+      - rewrite_agents_md_instead_of_append
+      - edit_archived_or_historical_handoffs
+      - preliminary_full_gate_before_make_pr
+      - second_remediation_worker
+      - bare_git_push
+      - bare_gh_pr_create
+      - bare_gh_pr_merge
+      - scope_expansion
+    rollback:
+      strategy: revert_local_commit_for_TASK-004_and_close_unmerged_pr_if_opened
+      trigger: validation_failure_or_publish_failure
+      validation: worktree_matches_TASK-003_head_and_no_extra_prs
+    risk:
+      tier: T2
+      reversibility: fully_reversible
+      blast_radius: live_agent_doctrine_and_this_campaign_pr
+    authorization_ceiling:
+      inspect: true
+      local_write: true
+      commit: true
+      push: true
+      pull_request: true
+      merge: true
+      publish_or_release: false
+      deploy_or_migrate: false
+      destructive_change: false
+      external_message: false
+    completion_gate_ids:
+      - GATE-004
+
+gates:
+  - id: GATE-001
+    name: task_001_complete
+    gate_type: entry
+    blocking: true
+    owner_authority_id: AUTH-001
+    task_ids:
+      - TASK-001
+    required_evidence_ids:
+      - EVID-001
+    pass_criteria:
+      - Working Makefile digest matches the bound candidate.
+      - make help succeeds and pr-check is absent.
+    failure_effect: block_successor_tasks
+  - id: GATE-002
+    name: task_002_complete
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-001
+    task_ids:
+      - TASK-002
+    required_evidence_ids: []
+    pass_criteria:
+      - One-pass PR gate is proven by execution count, not source inspection only.
+    failure_effect: block_successor_tasks
+  - id: GATE-003
+    name: task_003_complete
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-001
+    task_ids:
+      - TASK-003
+    required_evidence_ids: []
+    pass_criteria:
+      - Bounded exact-PR automerge exists and unbounded merge remains denied.
+    failure_effect: block_successor_tasks
+  - id: GATE-004
+    name: task_004_complete
+    gate_type: completion
+    blocking: true
+    owner_authority_id: AUTH-001
+    task_ids:
+      - TASK-004
+    required_evidence_ids: []
+    pass_criteria:
+      - Live residual scan is clean and the single campaign PR was opened by the new make pr path.
+    failure_effect: block_successor_tasks

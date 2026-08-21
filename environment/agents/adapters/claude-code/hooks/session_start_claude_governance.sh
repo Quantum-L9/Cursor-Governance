@@ -56,22 +56,71 @@ LINES+=("workspace: $WORKSPACE")
 # environment artifact: refresh it from origin/main so every session starts on
 # the current tip, and record the exact revision. On a local developer
 # checkout (CLI / Desktop) NEVER reset — inspect and report only.
-CLOUD_REFRESH_LOG="$HOME/.l9/claude/gov-refresh.log"
+# The receipt is JSON with a UTC timestamp and a TTL (INV-2). It used to be the
+# single word `fresh` plus a short SHA — a claim with no expiry, so a receipt
+# written at environment-build time still read `fresh 941ab77` days later while
+# the clone sat four commits behind main (audit B-05). A receipt that cannot go
+# stale is a receipt that always reads healthy. `state` here is the AT-WRITE
+# value; every reader recomputes it from refreshed_at + ttl_seconds and from the
+# recorded SHAs (see ops/scripts/governance_refresh_receipt.py).
+CLOUD_REFRESH_RECEIPT="${L9_GOV_REFRESH_RECEIPT:-$HOME/.l9/claude/gov-refresh.json}"
+
+# Written with printf rather than through python3 on purpose: this hook must
+# still leave a trace on a runtime where no interpreter is usable, which is
+# precisely the runtime whose staleness we are trying to detect.
+# Any value interpolated below is squashed to a single token first. A receipt
+# writer must not be able to emit invalid JSON no matter what git hands it.
+json_token() { printf '%s' "$1" | tr -d '\n\r\t"\\' | head -c 64; }
+
+write_refresh_receipt() {
+  local outcome="$1" local_sha="$2" origin_sha="$3" behind="$4" state="$5" ts
+  outcome="$(json_token "$outcome")"
+  local_sha="$(json_token "$local_sha")"
+  origin_sha="$(json_token "$origin_sha")"
+  state="$(json_token "$state")"
+  case "$behind" in (''|*[!0-9-]*) behind=-1 ;; esac
+  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo 'unknown')"
+  mkdir -p "$(dirname "$CLOUD_REFRESH_RECEIPT")" 2>/dev/null || return 0
+  printf '{\n' > "$CLOUD_REFRESH_RECEIPT"
+  printf '  "schema": "l9.governance-refresh.v1",\n' >> "$CLOUD_REFRESH_RECEIPT"
+  printf '  "outcome": "%s",\n' "$outcome" >> "$CLOUD_REFRESH_RECEIPT"
+  printf '  "local_sha": "%s",\n' "$local_sha" >> "$CLOUD_REFRESH_RECEIPT"
+  printf '  "origin_sha": "%s",\n' "$origin_sha" >> "$CLOUD_REFRESH_RECEIPT"
+  printf '  "refreshed_at": "%s",\n' "$ts" >> "$CLOUD_REFRESH_RECEIPT"
+  printf '  "ttl_seconds": %s,\n' "${L9_GOV_REFRESH_TTL:-3600}" >> "$CLOUD_REFRESH_RECEIPT"
+  printf '  "commits_behind": %s,\n' "$behind" >> "$CLOUD_REFRESH_RECEIPT"
+  printf '  "state": "%s"\n' "$state" >> "$CLOUD_REFRESH_RECEIPT"
+  printf '}\n' >> "$CLOUD_REFRESH_RECEIPT"
+}
+
+# A depth-1 clone has no ancestry to walk, so a numeric distance is frequently
+# uncomputable. Report -1 for "unknown" rather than 0, which would read as
+# up-to-date — the same class of lie this section is removing.
+commits_behind() {
+  git -C "$1" rev-list --count "$2..$3" 2>/dev/null || echo -1
+}
+
 if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
   if GOV=$(resolve_governance_dir); then
-    mkdir -p "$(dirname "$CLOUD_REFRESH_LOG")"
     GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
     GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
     if git -C "$GOV" fetch --depth 1 origin "$GOV_BRANCH" >/dev/null 2>&1; then
+      remote_sha=$(git -C "$GOV" rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || echo 'unknown')
       if git -C "$GOV" checkout -f -B "$GOV_BRANCH" "origin/$GOV_BRANCH" >/dev/null 2>&1; then
-        echo "fresh $(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo '?')" > "$CLOUD_REFRESH_LOG"
+        local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
+        write_refresh_receipt fetched "$local_sha" "$remote_sha" \
+          "$(commits_behind "$GOV" HEAD FETCH_HEAD)" fresh
         LINES+=("governance refresh: cloud session — reset ephemeral clone to origin/$GOV_BRANCH")
       else
-        echo "reset-failed $(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo '?')" > "$CLOUD_REFRESH_LOG"
+        local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
+        write_refresh_receipt reset-failed "$local_sha" "$remote_sha" \
+          "$(commits_behind "$GOV" HEAD FETCH_HEAD)" stale
         LINES+=("governance refresh: WARN reset to origin/$GOV_BRANCH failed — reusing clone")
       fi
     else
-      echo "fetch-failed $(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo '?')" > "$CLOUD_REFRESH_LOG"
+      local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
+      # The fetch failed, so origin is genuinely unknown — not "equal to local".
+      write_refresh_receipt fetch-failed "$local_sha" unknown -1 unknown
       LINES+=("governance refresh: WARN fetch origin/$GOV_BRANCH failed — reusing clone (may be stale)")
     fi
     # Per-session, per-repository dependency work (consumer workspace toolchain
@@ -185,62 +234,77 @@ LINES+=("shared memory: Cursor Graphiti front door only (ops/graphiti inject / w
 # operator on mobile — sees what is actually available instead of discovering
 # bootstrap breakage when a later memory or publish operation fails.
 emit_bootstrap_status() {
-  local receipt="$HOME/.l9/claude/bootstrap-state.json"
-  if [ ! -f "$receipt" ]; then
-    LINES+=("L9 Claude environment: bootstrap receipt absent — run 'make claude-install' once")
+  local py="$1"
+  local reader="$GOV/ops/scripts/claude_bootstrap_receipt.py"
+  local refresh_reader="$GOV/ops/scripts/governance_refresh_receipt.py"
+
+  # The projection used to parse the receipt inline, with its own idea of what
+  # the fields mean. That second parser had no notion of an ABSENT receipt or an
+  # EXPIRED one, so it reported silence as nothing-to-say and a stale receipt as
+  # current — the same class of defect the receipt rewrite removed one layer
+  # down (B-04, B-05). One reader, one set of rules.
+  if [ -z "$py" ] || ! command -v "$py" >/dev/null 2>&1 || [ ! -f "$reader" ]; then
+    LINES+=("L9 Claude environment: receipt reader unavailable — state UNKNOWN")
     return 0
   fi
-  local py="$1"
-  if [ -n "$py" ] && command -v "$py" >/dev/null 2>&1; then
-    local block
-    block=$(CLAUDE_CODE_REMOTE="${CLAUDE_CODE_REMOTE:-false}" "$py" -c 'import json,sys,os
-try:
-    d = json.load(open(sys.argv[1], encoding="utf-8"))
-except (OSError, ValueError):
-    sys.exit(1)
-remote = os.environ.get("CLAUDE_CODE_REMOTE") == "true"
-print("surface: %s" % d.get("surface", "?"))
-print("execution: %s" % ("anthropic-cloud" if remote else "local"))
-# The receipt is written at INSTALL time and never refreshed, so its revision and
-# workspace can both be stale. Label the revision and compare it against live git;
-# compare the wired workspace against the project dir of this session. Without these
-# two lines a receipt written for another directory reports READY for artifacts that
-# Claude Code never loads.
-live = os.environ.get("LIVE_GOV_REV", "")
-rec = d.get("governance_revision", "?") or "?"
-stale = bool(live) and not rec.startswith(live)
-print("governance (at install): %s%s"
-      % (rec[:8], ("  STALE — live is %s" % live) if stale else ""))
-ws = d.get("workspace", "?")
-proj = os.environ.get("PROJECT_DIR", "") or ws
-if ws != proj:
-    print("WARN: bootstrap wired %s, but this project is %s — .claude mirrors may be missing"
-          % (ws, proj))
-print("bootstrap: %s" % d.get("shared_bootstrap", "?"))
-print("settings: %s" % d.get("settings", "?"))
-print("capability broker: %s" % d.get("capabilities", "?"))
-# "memory" here is the BROKERED MCP plane only. The Graphiti CLI front door is
-# reported separately by memory_prefetch.py and is frequently healthy while this
-# reads DEGRADED. Qualify the label so the two do not contradict each other.
-print("memory (brokered MCP): %s%s" % (d.get("memory", "?"),
-    " — no broker-authenticated cloud identity" if d.get("memory") == "DEGRADED" else ""))
-print("skills: %s" % d.get("skills", "?"))
-print("rules: %s" % d.get("rules", "?"))
-' "$receipt" 2>/dev/null || true)
-    if [ -n "$block" ]; then
-      LINES+=("--- L9 Claude environment ---")
-      while IFS= read -r line || [ -n "$line" ]; do
-        LINES+=("$line")
-      done <<< "$block"
-      return 0
-    fi
+
+  local block
+  block="$("$py" "$reader" --read 2>/dev/null || true)"
+  if [ -n "$block" ]; then
+    LINES+=("--- L9 Claude environment ---")
+    while IFS= read -r line || [ -n "$line" ]; do
+      LINES+=("$line")
+    done <<< "$block"
+  else
+    LINES+=("L9 Claude environment: bootstrap receipt unreadable — run 'make claude-install'")
   fi
-  LINES+=("L9 Claude environment: receipt unreadable — see $receipt")
+
+  if [ -f "$refresh_reader" ]; then
+    local refresh
+    refresh="$("$py" "$refresh_reader" --read 2>/dev/null || true)"
+    [ -n "$refresh" ] && LINES+=("$refresh")
+  fi
+
+  # A receipt written for a different directory reports READY for artifacts this
+  # session never loads, so compare the wired workspace against this project.
+  local wired
+  wired="$("$py" -c 'import json,sys
+try:
+    print(json.load(open(sys.argv[1], encoding="utf-8")).get("workspace",""))
+except Exception:
+    print("")' "$HOME/.l9/claude/bootstrap-state.json" 2>/dev/null || true)"
+  if [ -n "$wired" ] && [ "$wired" != "$WORKSPACE" ]; then
+    LINES+=("WARN: bootstrap wired $wired, but this project is $WORKSPACE — .claude mirrors may be missing")
+  fi
 }
 
-# PY was resolved above for the autonomy profile block; reuse it. LIVE_GOV_REV and
-# PROJECT_DIR let the projection flag a stale receipt / a wrong wired workspace.
-LIVE_GOV_REV="${sha:-}" PROJECT_DIR="$WORKSPACE" emit_bootstrap_status "$PY"
+# --- Account-field drift (WS-4.1) -------------------------------------------
+# The Setup script and Environment variables fields are copy-pasted and drift
+# from main invisibly — there is no way to read a field back from inside the
+# sandbox. The stub stamps its revision, so the comparison is possible; doing it
+# HERE is what makes it automatic rather than something an operator must
+# remember to run (audit B-06, B-07).
+emit_account_drift() {
+  local py="$1"
+  local verifier="$GOV/environment/agents/adapters/claude-code/verify_account_env.py"
+  [ -f "$verifier" ] || return 0
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
+
+  local out
+  out="$("$py" "$verifier" 2>/dev/null || true)"
+  # Report only when something is wrong; a matching environment stays quiet.
+  if printf '%s' "$out" | grep -q 'DRIFT:'; then
+    LINES+=("--- account field drift ---")
+    while IFS= read -r line || [ -n "$line" ]; do
+      case "$line" in
+        *DRIFT:*|*"    "*|*Repair:*) LINES+=("$line") ;;
+      esac
+    done <<< "$out"
+  fi
+}
+
+emit_bootstrap_status "$PY"
+emit_account_drift "$PY"
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"

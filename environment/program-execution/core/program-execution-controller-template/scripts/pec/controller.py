@@ -233,7 +233,9 @@ def bootstrap(
     admission_errors = _admission_errors(blueprint, admission_draft=admission_draft)
     if admission_errors:
         raise ControllerError("blueprint admission failed: " + "; ".join(admission_errors))
-    if workspace.exists() and any(workspace.iterdir()):
+    if workspace.exists() and any(
+        item.name != "telemetry" for item in workspace.iterdir()
+    ):
         raise ControllerError(f"workspace is not empty: {workspace}")
     for rel in [
         "config",
@@ -397,6 +399,9 @@ def relock_definitions(
             )
             for name in ("source", "rendered"):
                 (workspace / "contracts" / name / f"{task_id}.json").unlink(missing_ok=True)
+            lease = db.active_lease_for_task(task_id)
+            if lease is not None:
+                db.release_lease(str(lease["lease_id"]))
             if state not in {"BLOCKED", "ELIGIBLE"}:
                 # STALE is the state model's own word for "the definition this
                 # was working from was replaced", and unlike BLOCKED it is
@@ -1113,8 +1118,19 @@ def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
         task = db.task(task_id)
         if task is None:
             raise ControllerError(f"unknown task: {task_id}")
-        retrying = task["runtime_state"] == "FAILED" and bool(task.get("rendered_contract_path"))
-        if not retrying and task["runtime_state"] != "CONTRACTED":
+        state = str(task["runtime_state"] or "")
+        if state == "VERIFYING":
+            # verify() is synchronous. VERIFYING after a crashed or abandoned
+            # campaign process is residue, not an in-flight verifier. Land
+            # FAILED so a new attempt can start (VERIFYING → EXECUTING is
+            # not a legal edge).
+            db.transition_task(task_id, "FAILED", last_error="verify_interrupted")
+            task = db.task(task_id)
+            if task is None:
+                raise ControllerError(f"unknown task: {task_id}")
+            state = "FAILED"
+        retrying = state == "FAILED" and bool(task.get("rendered_contract_path"))
+        if not retrying and state != "CONTRACTED":
             raise ControllerError("task must be CONTRACTED")
         _require_stack_proof_reentry(workspace, str(task_id))
         _refuse_operator_memo_cwd(workspace)

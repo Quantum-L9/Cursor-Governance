@@ -6,6 +6,24 @@
       "mode": "read_only",
       "note": "upstream pre-commit-hooks scanner"
     },
+    "end-of-file-fixer": {
+      "mode": "writer",
+      "output_prefixes": [],
+      "note": "ensures a trailing newline; may rewrite any passed text file"
+    },
+    "trailing-whitespace": {
+      "mode": "writer",
+      "output_prefixes": [],
+      "note": "strips trailing whitespace; may rewrite any passed text file"
+    },
+    "check-added-large-files": {
+      "mode": "read_only",
+      "note": "rejects added files larger than --maxkb=1000"
+    },
+    "check-yaml": {
+      "mode": "read_only",
+      "note": "parses YAML (--allow-multiple-documents, no --unsafe)"
+    },
     "no-hardcoded-paths": {
       "mode": "read_only",
       "note": "validate_governance_no_hardcoded_paths.sh — greps only"

@@ -289,6 +289,7 @@ install_session_end_governance_hook() {
     "graphiti-gate-shell.sh:graphiti-gate-shell.sh" \
     "graphiti-gate-subagent.sh:graphiti-gate-subagent.sh" \
     "l4-local-execution-gate-shell.sh:l4-local-execution-gate-shell.sh" \
+    "pr_gate_failure_shell.sh:pr-gate-failure-shell.sh" \
     "session_end_repo_hygiene.sh:session-end-repo-hygiene.sh" \
     "before_submit_skill_router.py:before-submit-skill-router.py"; do
     src_name="${pair%%:*}"
