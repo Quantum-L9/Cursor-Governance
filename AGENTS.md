@@ -77,6 +77,9 @@ canonical activation mechanism.
 fire when an agent runs `git worktree add`. After creating a worktree:
 
 ```bash
+# Ordinary agent start: ops/scripts/agent_worktree_start.sh
+# PR_STACK=auto (Makefile default) bases on the unique open-PR stack tip.
+# Empty PR_STACK keeps origin/main. Do not invent a main fork and restack later.
 bash "$HOME/.cursor-governance/ops/scripts/worktree_add_wired.sh" -b feat/<id> /path/to/wt origin/main
 # or, if the worktree already exists:
 bash "$HOME/.cursor-governance/ops/scripts/ensure_workspace_wired.sh" /path/to/wt
@@ -269,10 +272,13 @@ check and `git push`. Default `PR_OVERLAP=block`. Generated artifacts
 are exempt and merge via `merge=l9-generated`.
 
 Overlap remedy: commit into the same-agent open PR, else wait, else
-renegotiate scope. `PR_STACK=auto` still exists as a knob but creates the
-topology squash-merge denies — use it only when the parent will merge with
-`--merge`. Fail-open on missing `gh` telemetry; fail-closed on a detected
-non-generated textual conflict.
+renegotiate scope. `PR_STACK=auto` is the start-time default: 
+`agent_worktree_start.sh` bases the worktree on the unique open-PR chain
+tip (implied `L9_TASK_BASE_AUTHORIZED` for that tip only). Do not invent
+an `origin/main` fork and restack at `make pr`. Empty `PR_STACK` keeps
+`origin/main`. Sibling open-PR chains still fail closed. Fail-open on
+missing `gh` telemetry; fail-closed on a detected non-generated textual
+conflict.
 
 After any merge touching generated paths, or while
 `.l9/pr/regen-required.txt` is non-empty, run
