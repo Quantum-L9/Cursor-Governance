@@ -56,6 +56,18 @@ policy:
           yaml.safe_load raised ParserError "expected <block end>, but found '?'"
           at the conflict_rule line. compile_time_results had asserted
           internal_consistency PASS, so that gate was declared rather than run.
+      - id: A7
+        summary: >
+          Recursive Alignment finding against this document's own output.
+          compile_time_results reported fourteen gates as PASS when only five had
+          been mechanically run, reproducing the defect A6 exposed. Results are
+          now split into mechanically_verified, asserted_by_review, and
+          known_violations, and internal_consistency is PARTIAL because ten tasks
+          still violate governance.require.
+        evidence: >
+          Only document_parses, amendments_present, forbidden_words_absent,
+          mutation_boundary_integrity and public_quality_gate were executed as
+          checks on 2026-08-20. The remaining gates were reasoned, not run.
     deferred:
       - restore failures on C2, C3, C4, C8, C10A, C11A, C12_CORE and V1
       - restore TODO to forbidden_markers
@@ -1205,21 +1217,46 @@ policy:
         - FIXME
         - PLACEHOLDER
 
+    # A7 (Recursive Alignment finding): v3.0.0 reported every gate as PASS while
+    # none had been mechanically run — the same defect A6 exposed, where an
+    # unparseable document claimed internal_consistency PASS. Results are now
+    # split by how they were established. Do not merge these two groups.
     compile_time_results:
-      internal_consistency: PASS
-      no_undefined_terms: PASS
-      no_conflicts: PASS
-      dependency_closure: PASS
-      outputs_have_done_conditions: PASS
-      mutation_boundary_integrity: PASS
-      session_boundary_integrity: PASS
-      optional_lane_isolation: PASS
-      shared_writer_serialization: PASS
-      rollback_coverage: PASS
-      machine_checkable_expectations: PASS
-      unattended_mutation_safety: PASS
-      measured_budget_coverage: PASS
-      objective_not_proxy_validation: PASS
+
+      mechanically_verified:
+        document_parses: PASS               # yaml.safe_load, 2026-08-20
+        amendments_present: PASS            # A1-A6 assertion script
+        forbidden_words_absent: PASS        # grep, excluding the gate's own list
+        mutation_boundary_integrity: PASS   # git status: one file, matches may_modify
+        public_quality_gate: PASS           # make pr-check exit 0
+
+      asserted_by_review:
+        note: >
+          Established by reading the document, not by a checker. Treat as a
+          reviewer's opinion until a validator exists for this contract shape.
+        no_undefined_terms: ASSERTED
+        no_conflicts: ASSERTED
+        dependency_closure: ASSERTED
+        outputs_have_done_conditions: ASSERTED
+        session_boundary_integrity: ASSERTED
+        optional_lane_isolation: ASSERTED
+        shared_writer_serialization: ASSERTED
+        rollback_coverage: ASSERTED
+        machine_checkable_expectations: ASSERTED
+        unattended_mutation_safety: ASSERTED
+        measured_budget_coverage: ASSERTED
+        objective_not_proxy_validation: ASSERTED
+
+      known_violations:
+        internal_consistency: PARTIAL
+        detail: >
+          governance.require lists `failures`, and ten tasks do not declare one:
+          C2, C3, C4, C8, C10A, C10B, C12_CORE_REGRESSION_SUITE,
+          C12_COMMAND_PARITY_REGRESSION, V1_FULL_CODE_VALIDATION, and
+          C11B_REBUILD_OBSERVATION (which uses failure_behavior instead).
+          Deferred by explicit scope decision, not resolved. internal_consistency
+          MUST NOT be reported as PASS while this holds.
+
       baseline_stability: EXECUTION_TIME_GATE
 
     evidence_record_schema:
