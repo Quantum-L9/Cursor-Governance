@@ -1,0 +1,205 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-template
+# engine: graph
+# layer: [ci, governance]
+# tags: [L9_TEMPLATE, ci, governance]
+# owner: platform
+# status: active
+# --- /L9_META ---
+#
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# Universal CI/CD Pack — PR Review Policy Enforcement
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# VERSION: 1.0.0
+# PURPOSE: Automated PR size limits and review policy enforcement
+# FEATURES: Configurable thresholds, auto-comments, merge blocking
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+name: PR Review Enforcement
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+concurrency:
+  group: pr-review-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  enforce-pr-policies:
+    name: Enforce PR Policies
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Load Configuration
+        id: config
+        shell: bash
+        run: |
+          CONFIG=".github/pr_review_config.yaml"
+          WARN=300
+          BLOCK=1000
+          MAX_FILES=50
+
+          if [ -f "$CONFIG" ]; then
+            config_value() {
+              awk -F: -v key="$1" '
+                $1 ~ "^[[:space:]]*" key "[[:space:]]*$" {
+                  gsub(/[[:space:]]/, "", $2)
+                  print $2
+                  exit
+                }
+              ' "$CONFIG"
+            }
+            CONFIG_WARN=$(config_value warn_threshold)
+            CONFIG_BLOCK=$(config_value block_threshold)
+            CONFIG_MAX_FILES=$(config_value max_files_changed)
+            [ -n "$CONFIG_WARN" ] && WARN="$CONFIG_WARN"
+            [ -n "$CONFIG_BLOCK" ] && BLOCK="$CONFIG_BLOCK"
+            [ -n "$CONFIG_MAX_FILES" ] && MAX_FILES="$CONFIG_MAX_FILES"
+          fi
+
+          [ -n "${{ vars.PR_WARN_LINES }}" ] && WARN="${{ vars.PR_WARN_LINES }}"
+          [ -n "${{ vars.PR_BLOCK_LINES }}" ] && BLOCK="${{ vars.PR_BLOCK_LINES }}"
+          [ -n "${{ vars.PR_MAX_FILES }}" ] && MAX_FILES="${{ vars.PR_MAX_FILES }}"
+
+          [[ "$WARN" =~ ^[0-9]+$ ]] || { echo "Invalid warn threshold: $WARN"; exit 1; }
+          [[ "$BLOCK" =~ ^[0-9]+$ ]] || { echo "Invalid block threshold: $BLOCK"; exit 1; }
+          [[ "$MAX_FILES" =~ ^[0-9]+$ ]] || { echo "Invalid max-files threshold: $MAX_FILES"; exit 1; }
+
+          echo "warn=$WARN" >> "$GITHUB_OUTPUT"
+          echo "block=$BLOCK" >> "$GITHUB_OUTPUT"
+          echo "max_files=$MAX_FILES" >> "$GITHUB_OUTPUT"
+
+      - name: Check PR Size and Policies
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const marker = '<!-- pr-review-enforcement -->';
+            const pr = context.payload.pull_request;
+            const ignoredPrefixes = ['.hypothesis/'];
+
+            const changedFiles = await github.paginate(github.rest.pulls.listFiles, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number,
+              per_page: 100
+            });
+            const reviewableFiles = changedFiles.filter(file =>
+              !ignoredPrefixes.some(prefix => file.filename.startsWith(prefix))
+            );
+            const ignoredFiles = changedFiles.length - reviewableFiles.length;
+            const additions = reviewableFiles.reduce((sum, file) => sum + file.additions, 0);
+            const deletions = reviewableFiles.reduce((sum, file) => sum + file.deletions, 0);
+            const total = additions + deletions;
+            const files = reviewableFiles.length;
+
+            const warn = Number('${{ steps.config.outputs.warn }}');
+            const block = Number('${{ steps.config.outputs.block }}');
+            const maxFiles = Number('${{ steps.config.outputs.max_files }}');
+
+            console.log(`Reviewable PR stats: +${additions} -${deletions} = ${total} lines, ${files} files`);
+            console.log(`Ignored generated/cache files: ${ignoredFiles}`);
+            console.log(`Thresholds: warn=${warn}, block=${block} (additions-only), maxFiles=${maxFiles}`);
+
+            const messages = [marker];
+            let shouldFail = false;
+            let shouldWarn = false;
+
+            if (ignoredFiles > 0) {
+              messages.push(`ℹ️ Ignored ${ignoredFiles} generated/cache file(s) from size accounting.`);
+              messages.push('');
+            }
+
+            if (files > maxFiles) {
+              shouldFail = true;
+              messages.push('❌ **Too Many Reviewable Files Changed**');
+              messages.push(`   Changed: ${files} files`);
+              messages.push(`   Limit: ${maxFiles} files`);
+              messages.push('   **Action Required:** Split into multiple focused PRs');
+              messages.push('');
+            }
+
+            // Block on additions only so deletion-heavy migrations (dead-code removal)
+            // are not penalized twice. Warn still uses additions+deletions.
+            if (additions > block) {
+              shouldFail = true;
+              messages.push('❌ **PR Too Large**');
+              messages.push(`   Reviewable additions: ${additions}`);
+              messages.push(`   Limit: ${block} added lines`);
+              messages.push(`   (deletions: ${deletions}; total churn ${total} is warn-only)`);
+              messages.push('   **Action Required:** Break into smaller, atomic PRs');
+              messages.push('');
+            } else if (total > warn) {
+              shouldWarn = true;
+              messages.push('⚠️ **Large PR Warning**');
+              messages.push(`   Reviewable lines changed: ${total}`);
+              messages.push(`   Warning threshold: ${warn} lines`);
+              messages.push('   Consider splitting for easier review');
+              messages.push('');
+            }
+
+            if (shouldFail || shouldWarn) {
+              messages.push('📋 Best Practices for Large Changes');
+              messages.push('');
+              messages.push('1. **Refactoring + Features**: Separate into 2 PRs');
+              messages.push('2. **Multiple Features**: One PR per feature');
+              messages.push('3. **Database + Code**: Separate migration from logic');
+              messages.push('4. **Generated Code**: Exclude it from reviewable-size accounting');
+              messages.push('');
+            }
+
+            if (shouldFail) {
+              messages.push('---', '', '🚫 **This PR is blocked until reviewable size limits are met.**', '');
+            } else if (shouldWarn) {
+              messages.push('---', '', '✅ **This PR passes the blocking limit but is larger than recommended.**', '');
+            } else {
+              messages.push('✅ **PR reviewable size is within recommended limits**', '');
+            }
+
+            const body = messages.join('\n');
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              per_page: 100
+            });
+            const botComment = [...comments].reverse().find(comment =>
+              comment.user.type === 'Bot' && (
+                comment.body.includes(marker) ||
+                comment.body.includes('Too Many Files Changed') ||
+                comment.body.includes('PR size is within recommended limits')
+              )
+            );
+
+            if (botComment) {
+              await github.rest.issues.updateComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                comment_id: botComment.id,
+                body
+              });
+            } else {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                body
+              });
+            }
+
+            if (shouldFail) {
+              core.setFailed('PR exceeds reviewable size policy limits');
+            }
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# END OF PR REVIEW ENFORCEMENT
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

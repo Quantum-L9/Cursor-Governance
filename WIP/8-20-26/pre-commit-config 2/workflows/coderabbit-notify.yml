@@ -1,0 +1,45 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-template
+# engine: enrichment
+# layer: [ci, integrations]
+# tags: [coderabbit]
+# owner: platform
+# status: active
+# --- /L9_META ---
+# CodeRabbit Review Notify
+#
+# Notification stub — Telegram integration has been removed (phase-1 platform
+# contract cleanup). Replace this job body with an alternative notification
+# channel (e.g. GitHub comment, Slack, webhook) if desired.
+#
+# To enable CodeRabbit request-changes alerts:
+#   1. Add a notification step below.
+#   2. Configure secrets/variables as needed.
+
+name: CodeRabbit Review Notify
+
+on:
+  pull_request_review:
+    types: [submitted]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    name: Review notify
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: >
+      github.event_name == 'pull_request_review'
+      && github.event.review.user.login == 'coderabbitai[bot]'
+      && github.event.review.state == 'changes_requested'
+
+    steps:
+      - name: Log review event
+        run: |
+          echo "CodeRabbit requested changes on PR #${{ github.event.pull_request.number }}"
+          echo "PR: ${{ github.event.pull_request.html_url }}"
+          echo "Add a notification step here to alert your team."

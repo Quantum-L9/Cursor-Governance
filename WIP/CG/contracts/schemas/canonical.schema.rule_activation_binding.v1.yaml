@@ -1,0 +1,302 @@
+schema_id: canonical.schema.rule_activation_binding.v1
+schema_name: Canonical Rule Activation Binding Schema
+schema_class: canonical_document_type_schema
+schema_family: l9_governance_contracts
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.rule_activation_binding.v1.yaml
+generated_at: "2026-08-14T17:33:00-04:00"
+purpose:
+  primary: >
+    Define the canonical intermediate representation between semantic governance
+    contracts and platform-specific Cursor rule projections. A binding selects
+    exact contract clauses, narrows delivery scope, declares faithfully
+    representable activation, constrains advisory guidance, establishes rendering
+    and context budgets, and identifies lifecycle state without acquiring
+    independent semantic authority.
+  output_level: schema_not_instance
+  intended_use:
+    - bind_contracts_to_cursor_rules
+    - derive_cursor_rule_projections
+    - validate_rule_activation
+    - validate_projection_scope
+    - derive_rule_impact_graphs
+    - derive_rule_manifest_entries
+  not_for:
+    - owning_shared_governance_semantics
+    - defining_new_normative_doctrine
+    - widening_contract_scope
+    - resolving_contract_conflicts
+    - expressing_unimplemented_activation_precision
+ontology:
+  parent_type: governance_projection_binding_schema
+  specialized_type: rule_activation_binding_schema
+  instance_type_generated_by_this_schema: rule_activation_binding
+  related_schema_types:
+    - canonical.schema.governance_contract.v1
+    - canonical.schema.contract_projection_binding.v1
+    - canonical.schema.contract_registry.v1
+    - canonical.schema.cursor_rules_manifest.v3
+inheritance:
+  extends:
+    - canonical.knowledge_object.schema.v1
+    - canonical.schema.contract_projection_binding.v1
+  provides:
+    - rule_identity_model
+    - cursor_activation_model
+    - clause_selection_model
+    - scope_narrowing_model
+    - advisory_guidance_model
+    - deterministic_render_model
+    - rule_context_budget_model
+    - rule_migration_state_model
+semantic_authority_law:
+  normative_owner: contract
+  rule_binding_may_redefine_semantics: false
+  rule_binding_may_widen_scope: false
+  rule_binding_may_resolve_conflict: false
+activation_law:
+  supported_v1_modes:
+    - always
+    - auto_attached
+    - agent_requested
+    - manual
+  rule: >
+    A binding may use only activation semantics that the current Cursor target can
+    faithfully represent. Unsupported narrowing MUST fail rather than degrade to
+    broader activation.
+  always_rule: >
+    always activation is reserved for justified bootstrap or globally applicable
+    governance and MUST declare a justification_ref.
+context_measurement_law:
+  canonical_measurement: utf8_bytes_v1
+  token_estimate:
+    algorithm: ceil_utf8_bytes_div_4
+    authoritative: false
+  rule: >
+    Hard rule budgets are enforced against deterministic UTF-8 rendered byte
+    counts. Token estimates are informational until a canonical tokenizer is
+    adopted.
+required_sections:
+  binding_identity:
+    required: true
+    fields:
+      binding_id:
+        type: string
+        pattern: "^RULE\\.CURSOR\\.[A-Z0-9_]+\\.\\d{3}$"
+        required: true
+      version:
+        type: semver
+        required: true
+      status:
+        enum:
+          - draft
+          - review
+          - active
+          - deprecated
+          - retired
+        required: true
+  target:
+    required: true
+    fields:
+      platform:
+        const: cursor
+      format:
+        const: mdc
+      output_path:
+        type: string
+        pattern: "^rules/[0-9]{2}-[a-z0-9][a-z0-9-]*\\.mdc$"
+        required: true
+  rule_identity:
+    required: true
+    fields:
+      rule_id:
+        type: string
+        pattern: "^l9\\.rule\\.[a-z0-9._-]+$"
+        required: true
+      rule_version:
+        type: semver
+        required: true
+      title:
+        type: string
+        required: true
+      description:
+        type: string
+        required: true
+      scope:
+        enum:
+          - global
+          - repository
+          - subtree
+          - personal
+        required: true
+      domain:
+        type: string
+        required: true
+  activation:
+    required: true
+    fields:
+      mode:
+        enum:
+          - always
+          - auto_attached
+          - agent_requested
+          - manual
+        required: true
+      globs:
+        type: list_string
+        required: false
+      justification_ref:
+        type: string_or_null
+        required: false
+      description:
+        type: string_or_null
+        required: false
+  contract_bindings:
+    required: true
+    type: list
+    min_items: 1
+    item_schema:
+      contract_id:
+        type: canonical_contract_id
+        required: true
+      version_constraint:
+        type: string
+        required: true
+      clauses:
+        type: list_string
+        min_items: 1
+        required: true
+      scope_narrowing:
+        type: map_or_null
+        required: false
+        fields:
+          paths:
+            type: list_string
+            required: false
+          environments:
+            type: list_string
+            required: false
+          operations:
+            type: list_string
+            required: false
+  guidance:
+    required: true
+    fields:
+      refs:
+        type: list_string
+        required: true
+      inline:
+        type: list
+        required: true
+        item_schema:
+          guidance_id:
+            type: string
+            required: true
+          text:
+            type: string
+            required: true
+          classification:
+            const: advisory
+  render:
+    required: true
+    fields:
+      renderer:
+        const: cursor_mdc_v1
+      include_rationale:
+        type: boolean
+        default: false
+      include_examples:
+        type: boolean
+        default: false
+      context_budget_bytes:
+        type: integer
+        minimum: 1
+        required: true
+  lifecycle:
+    required: true
+    fields:
+      migration_state:
+        enum:
+          - legacy
+          - extracted
+          - hybrid
+          - contract_bound
+          - generated
+          - retired
+        required: true
+      replacement_binding_ref:
+        type: string_or_null
+        required: false
+  integrity:
+    required: true
+    fields:
+      canonical_serialization:
+        const: deterministic_yaml_normalization_v1
+      binding_digest:
+        type: sha256_or_null
+        required: true
+validation_rules:
+  - id: RULE-BIND-001
+    severity: blocker
+    rule: Every active generated rule MUST resolve exactly one canonical binding.
+  - id: RULE-BIND-002
+    severity: blocker
+    rule: A binding MUST NOT own or redefine shared normative semantics.
+  - id: RULE-BIND-003
+    severity: blocker
+    rule: Every referenced active contract and clause MUST resolve.
+  - id: RULE-BIND-004
+    severity: blocker
+    rule: Binding scope may narrow but MUST NOT widen owning contract scope.
+  - id: RULE-BIND-005
+    severity: blocker
+    rule: always activation MUST declare a non-empty justification_ref.
+  - id: RULE-BIND-006
+    severity: blocker
+    rule: auto_attached activation MUST declare one or more globs.
+  - id: RULE-BIND-007
+    severity: blocker
+    rule: always activation MUST NOT declare globs because Cursor ignores them.
+  - id: RULE-BIND-008
+    severity: blocker
+    rule: Unsupported target activation lowering MUST fail closed.
+  - id: RULE-BIND-009
+    severity: blocker
+    rule: Inline advisory guidance MUST NOT introduce hard normative doctrine.
+  - id: RULE-BIND-010
+    severity: blocker
+    rule: Active output_path ownership MUST be unique.
+  - id: RULE-BIND-011
+    severity: blocker
+    rule: generated migration state requires active binding status.
+  - id: RULE-BIND-012
+    severity: blocker
+    rule: context_budget_bytes MUST be enforced against deterministic rendered UTF-8 bytes.
+derivation_targets:
+  can_generate:
+    - cursor_mdc_projection
+    - cursor_rule_manifest_entry
+    - contract_to_rule_impact_edge
+    - rule_context_budget_receipt
+    - rule_projection_validation_fixture
+anti_drift_rules:
+  - Binding configuration does not become semantic authority.
+  - Filename numeric prefix does not establish semantic precedence.
+  - Manifest order does not establish semantic precedence.
+  - Unsupported activation is never lowered to broader always activation.
+  - Advisory guidance never becomes implicit policy.
+  - Generated rule content is derived rather than hand maintained.
+  - Contract changes invalidate stale binding/projection digests.
+minimum_viable_instance_requirements:
+  required:
+    - binding_identity
+    - target
+    - rule_identity
+    - activation
+    - contract_bindings
+    - guidance
+    - render
+    - lifecycle
+    - integrity

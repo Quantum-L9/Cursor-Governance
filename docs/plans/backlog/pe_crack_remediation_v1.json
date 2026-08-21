@@ -1,0 +1,728 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "PE crack remediation: campaign compile, pec gates, honest PASS",
+  "objective": "Close the load-bearing Program Execution cracks so campaign source compiles through a repo-owned schema and compiler, pec refuses unvalidated draft locks by default, Cursor/ChatGPT cannot substitute PASS, and Make/conformance gate those contracts. Do not admit or accept bounded-replanning-v1, do not mutate its immutable CAMPAIGN_SOURCE.yaml bytes, do not add a DeepSeek PE provider, and do not land on the dirty fix/ci-required-contexts-wip-only branch.",
+  "success_criteria": [
+    "A campaign-source.v2 JSON Schema exists under environment/program-execution and validates all four existing CAMPAIGN_SOURCE.yaml files or reports exact field errors",
+    "A repo-owned compiler maps campaign-source.v2 onto Blueprint v2 using the locked remap table; validate_blueprint --mode template PASS on the compiled tree; instantiated FAIL remains only for definition_status=draft and planned evidence",
+    "Compiler emits TASK-007 authorization_ceiling.local_write=false while CAMPAIGN_SOURCE.yaml sha256 stays 7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619",
+    "pec bootstrap without --admission-draft exits nonzero on a draft or unvalidated Blueprint; with --admission-draft it prints definition_status=draft and does not mark tasks ready",
+    "cursor-foreground, cursor-background, and chatgpt map missing or non-PASS host status to CanonicalProviderResult FAIL or BLOCKED, never PASS; a unit test proves the FAIL path",
+    "normalize_blueprint lock JSON validates against program-lock.schema.json; verify_program_lock rejects extra-field drift and enforces DO_NOT_BUILD paths",
+    "Cursor and Claude probes MUST NOT emit PASS or READY from path-only checks when transport is file-drop or the claude executable is absent",
+    "Make PE targets compile only campaign ids listed in campaigns/COMPILE_ALLOWLIST.yaml; make program-execution-core-validate, make program-execution-adapters, make program-execution-conformance, and make pr-check PASS on the new-branch change set"
+  ],
+  "scope": {
+    "in": [
+      "environment/program-execution/ campaign-source schema, compiler, pec bootstrap gate, program-lock schema/writer alignment, DO_NOT_BUILD verify, source-contract placeholder reject, Blueprint untyped-property tightening, Cursor/ChatGPT result mapping, probe structural-vs-transport split, Make/conformance/CI wiring, campaign README honesty, PE README/ARCHITECTURE, campaigns/COMPILE_ALLOWLIST.yaml",
+      "Makefile PE targets and .github/workflows/peer-execution.yml only (append existing recipes; no deletion of existing lines)",
+      "New feature branch from origin/main for this PE overlay"
+    ],
+    "out": [
+      "Accepting or faking program.definition_status=accepted for bounded-replanning-v1",
+      "Mutating environment/program-execution/campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml bytes",
+      "Rewriting source-integrity-receipt.json producer or digest fields",
+      "Collecting EVID-001 through EVID-008 or implementing Replan Revision",
+      "Adding a DeepSeek Program Execution provider or changing ADR-0020 decision",
+      "Merging or re-executing leftover INCONCLUSIVE campaigns (intent-compiler, devpack, ecosystem-fix)",
+      "WIP/ overlay, legal evidence, current dirty branch fix/ci-required-contexts-wip-only",
+      "CANONICAL_LAW.md, pyproject.toml existing keys, sessionStart hook rewrite, memory-bank recreation",
+      "Adding git or git_repo_adapter as workers in EXECUTION_ADAPTER_REGISTRY.yaml",
+      "Auto-init of .l9/autonomy/campaigns from pec",
+      "Implementing program-execution.replan.v1 or pec relock CLI",
+      "Renaming peer_execution.autonomy to resolve the root autonomy import collision",
+      "Reconciling workspace vs $HOME/.cursor-governance dual-clone drift as a product change",
+      "Retiring or rewriting environment/program-execution-campaigns/ or adding l9-unified-campaign-compiler",
+      "Rewriting integrity receipts for leftover campaigns (README honesty only)",
+      "Force-push, hard-reset, admin-merge, autonomous_merge, secret commits"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind environment/program-execution plus 2026-08-14 crack audit and the three microscope audits (core, adapters, cross-repo)",
+      "pass_criteria": "on-disk paths still match the audit claims used by this plan; new lock/probe/CI cracks mapped to T13-T17",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "python3 scripts/route_plan.py --risk high --evidence sufficient --json",
+      "pass_criteria": "depth=deep; omit_gates=[]",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "git rev-parse origin/main",
+      "pass_criteria": "full SHA 1aba3592b094f8bd424479264e725ade585c018e resolved",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "confirm no campaign-source schema and no in-repo compile_campaign_source.py",
+      "pass_criteria": "zero schema files for l9.program-execution.campaign-source.v2; compile script absent",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "read bounded-replanning-v1 metadata.source_is_immutable and source-integrity-receipt.json",
+      "pass_criteria": "source_is_immutable is true; digest 7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619; producer is controller-admission",
+      "status": "passed"
+    },
+    {
+      "id": "P5",
+      "command_or_action": "read pec bootstrap() and ForegroundTransport.collect()",
+      "pass_criteria": "bootstrap writes program lock after normalize_blueprint only; collect returns any object and never reads status",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T0",
+      "task": "Open a clean worktree from origin/main; lock full SHA; refuse the dirty fix/ci-required-contexts-wip-only checkout as the landing tree",
+      "files": [
+        "environment/program-execution/"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new branch from origin/main per KERNEL_PACK_NEW_BRANCH_DEFAULT_V1",
+      "leverage_rank": 12
+    },
+    {
+      "id": "T1",
+      "task": "Add campaign-source.v2 JSON Schema covering the live CAMPAIGN_SOURCE dialect and a fixture that validates all four registered campaign files",
+      "files": [
+        "environment/program-execution/core/shared/schemas/campaign-source.schema.json",
+        "environment/program-execution/conformance/test_campaign_source_schema.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T0"
+      ],
+      "operation": "Create",
+      "anchor": "new schema beside shared PE contracts",
+      "leverage_rank": 1,
+      "shared_root_cause": "campaign source is an unbound dialect"
+    },
+    {
+      "id": "T2",
+      "task": "Add a repo-owned compiler that remaps campaign-source fields onto Blueprint v2 including authorities to AUTHORITY_REGISTRY, rewrites MANIFEST.yaml, and forces program_control local_write false without editing campaign source bytes",
+      "files": [
+        "environment/program-execution/scripts/compile_campaign_source.py",
+        "environment/program-execution/scripts/tests/test_compile_campaign_source.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Create",
+      "anchor": "new compiler next to validate_blueprint.py callers",
+      "leverage_rank": 2,
+      "shared_root_cause": "campaign source is an unbound dialect"
+    },
+    {
+      "id": "T3",
+      "task": "Make pec bootstrap call instantiated validate_blueprint before write_program_lock; add --admission-draft that cannot mark tasks ready",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_bootstrap_admission.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "bootstrap() before write_program_lock",
+      "leverage_rank": 3,
+      "shared_root_cause": "pec locks unvalidated drafts"
+    },
+    {
+      "id": "T4",
+      "task": "Replace untyped empty-object Blueprint schema properties with types taken from live blueprint-template YAML instances",
+      "files": [
+        "environment/program-execution/core/program-execution-blueprint-template/schemas/execution-waves.schema.json",
+        "environment/program-execution/core/program-execution-blueprint-template/schemas/current-state-delta.schema.json",
+        "environment/program-execution/core/program-execution-blueprint-template/schemas/observability-plan.schema.json",
+        "environment/program-execution/core/program-execution-blueprint-template/schemas/do-not-build.schema.json",
+        "environment/program-execution/core/program-execution-blueprint-template/schemas/cutover-and-rollback.schema.json",
+        "environment/program-execution/core/program-execution-blueprint-template/schemas/source-traceability.schema.json"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "properties currently typed as {}",
+      "leverage_rank": 6
+    },
+    {
+      "id": "T5",
+      "task": "Map optional host result status into CanonicalProviderResult; missing or non-PASS host status MUST become FAIL or BLOCKED, never PASS",
+      "files": [
+        "environment/program-execution/adapters/cursor-foreground/provider.py",
+        "environment/program-execution/adapters/cursor-background/provider.py",
+        "environment/program-execution/adapters/chatgpt/provider.py",
+        "environment/program-execution/adapters/cursor-foreground/tests/test_provider.py",
+        "environment/program-execution/adapters/cursor-background/tests/test_provider.py",
+        "environment/program-execution/adapters/chatgpt/tests/test_provider.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T0"
+      ],
+      "operation": "Replace",
+      "anchor": "poll() CanonicalProviderResult(status=\"PASS\")",
+      "leverage_rank": 4,
+      "shared_root_cause": "worker claim substituted for completion"
+    },
+    {
+      "id": "T6",
+      "task": "Bind campaign target adapter tokens git and git_repo_adapter in the campaign schema only; document that pec reconcile uses repository_id, not a worker adapter",
+      "files": [
+        "environment/program-execution/core/shared/schemas/campaign-source.schema.json",
+        "environment/program-execution/scripts/compile_campaign_source.py",
+        "environment/program-execution/README.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "targets[].adapter",
+      "leverage_rank": 7
+    },
+    {
+      "id": "T7",
+      "task": "Append campaign compile/validate, pec controller tests, validate_manifest, and COMPILE_ALLOWLIST into Make PE targets without deleting existing Makefile lines",
+      "files": [
+        "Makefile",
+        "environment/program-execution/scripts/run_conformance.py",
+        "environment/program-execution/scripts/validate_manifest.py",
+        "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T2",
+        "T3",
+        "T5"
+      ],
+      "operation": "Insert",
+      "anchor": "program-execution-conformance and program-execution-core-validate recipes",
+      "leverage_rank": 5
+    },
+    {
+      "id": "T8",
+      "task": "Correct campaign honesty in README only: leftover campaigns archival/inconclusive; receipt producer and path mismatches called out; do not rewrite receipt JSON or campaign source bytes",
+      "files": [
+        "environment/program-execution/campaigns/bounded-replanning-v1/README.md",
+        "environment/program-execution/campaigns/cc-pe-intent-compiler-v1/README.md",
+        "environment/program-execution/campaigns/l9-devpack-program-execution-hardening/README.md",
+        "environment/program-execution/campaigns/l9-ecosystem-fix-plan/README.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "campaign README honesty paragraphs",
+      "leverage_rank": 8
+    },
+    {
+      "id": "T9",
+      "task": "Record Claude backend_mode and model_hint as probe evidence only; keep DeepSeek out of the PE provider registry; T16 owns the executable-vs-path probe split",
+      "files": [
+        "environment/program-execution/adapters/claude-code/provider.py",
+        "environment/program-execution/README.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T0"
+      ],
+      "operation": "Replace",
+      "anchor": "_provider_metadata / probe evidence",
+      "leverage_rank": 10
+    },
+    {
+      "id": "T10",
+      "task": "Add a read-only dual-plane status line so pec status and autonomy bootstrap each name the other plane without writing campaign packets",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/peer_execution/autonomy/bootstrap.py",
+        "environment/program-execution/ARCHITECTURE.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T3"
+      ],
+      "operation": "Insert",
+      "anchor": "status() JSON and compile_context() result",
+      "leverage_rank": 9
+    },
+    {
+      "id": "T11",
+      "task": "Retitle PE ARCHITECTURE.md as Program Execution and document the compile then validate then bootstrap path in README",
+      "files": [
+        "environment/program-execution/ARCHITECTURE.md",
+        "environment/program-execution/README.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T2",
+        "T3",
+        "T10"
+      ],
+      "operation": "Replace",
+      "anchor": "ARCHITECTURE.md H1 and README mutable-runtime paragraph",
+      "leverage_rank": 11
+    },
+    {
+      "id": "T12",
+      "task": "Prove the stack: campaign compile fixture, immutable source digest, pec admission-draft negative test, Cursor FAIL mapping, Make PE targets, make pr-check",
+      "files": [
+        "environment/program-execution/scripts/tests/test_compile_campaign_source.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_bootstrap_admission.py",
+        "environment/program-execution/adapters/cursor-foreground/tests/test_provider.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T4",
+        "T6",
+        "T7",
+        "T8",
+        "T9",
+        "T11",
+        "T14",
+        "T15",
+        "T16",
+        "T17"
+      ],
+      "operation": "Create",
+      "anchor": "final validation commands",
+      "leverage_rank": 18
+    },
+    {
+      "id": "T13",
+      "task": "Align program-lock.schema.json with normalize_blueprint writer fields do_not_build and current_state; verify_program_lock MUST run JSON Schema",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/schemas/program-lock.schema.json",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/blueprint.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_program_lock_schema.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T3"
+      ],
+      "operation": "Replace",
+      "anchor": "normalize_blueprint body keys vs program-lock.schema.json properties",
+      "leverage_rank": 3,
+      "shared_root_cause": "pec locks unvalidated drafts"
+    },
+    {
+      "id": "T14",
+      "task": "Enforce Blueprint DO_NOT_BUILD prohibited paths at pec verify, not only Source Contract writable_paths",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_do_not_build_verify.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T13"
+      ],
+      "operation": "Insert",
+      "anchor": "verify path checks after writable_paths",
+      "leverage_rank": 6
+    },
+    {
+      "id": "T15",
+      "task": "Reject source-contract rollback strings that match REPLACE_WITH placeholder text at register time",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py",
+        "environment/program-execution/core/program-execution-controller-template/schemas/source-contract.schema.json",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_source_contract_placeholder.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T3"
+      ],
+      "operation": "Replace",
+      "anchor": "contracts.py rollback minLength-only check",
+      "leverage_rank": 8
+    },
+    {
+      "id": "T16",
+      "task": "Split Cursor and Claude probes into structural vs transport; path-only checks MUST NOT emit PASS or READY when transport is file-drop or claude is absent",
+      "files": [
+        "environment/program-execution/adapters/cursor-foreground/provider.py",
+        "environment/program-execution/adapters/cursor-background/provider.py",
+        "environment/program-execution/adapters/claude-code/provider.py",
+        "environment/program-execution/adapters/claude-code/tests/test_driver.py",
+        "environment/program-execution/adapters/cursor-foreground/tests/test_provider.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T5"
+      ],
+      "operation": "Replace",
+      "anchor": "probe() path-only PASS",
+      "leverage_rank": 4,
+      "shared_root_cause": "worker claim substituted for completion"
+    },
+    {
+      "id": "T17",
+      "task": "Append program-execution-core-validate and validate_thin_providers to peer-execution CI and peer-execution-conformance; ignore __pycache__ in pair and adapter validators",
+      "files": [
+        ".github/workflows/peer-execution.yml",
+        "Makefile",
+        "environment/program-execution/core/scripts/validate_pair.py",
+        "environment/program-execution/scripts/validate_execution_adapters.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T7"
+      ],
+      "operation": "Insert",
+      "anchor": "peer-execution.yml jobs and validate_pair debris check",
+      "leverage_rank": 5
+    }
+  ],
+  "critical_path": [
+    "T0",
+    "T1",
+    "T2",
+    "T3",
+    "T13",
+    "T7",
+    "T12"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "Clean origin/main worktree locked",
+      "unlocks": "all mutations"
+    },
+    {
+      "id": "M1",
+      "outcome": "Campaign source is a typed, compiled contract without mutating immutable seeds",
+      "unlocks": "honest pec admission"
+    },
+    {
+      "id": "M2",
+      "outcome": "pec and Cursor cannot lie about admission or PASS",
+      "unlocks": "Make gates and docs"
+    },
+    {
+      "id": "M3",
+      "outcome": "PE Make targets and pr-check PASS on the new branch",
+      "unlocks": "L4 release / PR"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C0",
+      "after": "M0",
+      "evidence_required": "git rev-parse HEAD equals 1aba3592b094f8bd424479264e725ade585c018e at branch start; worktree clean of legal/WIP dirt",
+      "no_go_action": "stop_and_replan; do not land on fix/ci-required-contexts-wip-only"
+    },
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "compile_campaign_source + validate_blueprint --mode template PASS; CAMPAIGN_SOURCE.yaml digest unchanged; compiled TASK-007 local_write is false",
+      "no_go_action": "do not change pec bootstrap until compiler is deterministic and source bytes are unchanged"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "negative tests: pec bootstrap draft without flag FAIL; Cursor host FAIL maps to canonical FAIL; program-lock JSON Schema accepts writer output",
+      "no_go_action": "block Make wiring and PR"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "make program-execution-conformance PASS and make pr-check PASS; leftover campaigns absent from COMPILE_ALLOWLIST.yaml",
+      "no_go_action": "do not authorize-release or open PR"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "environment/program-execution/README.md",
+      "action": "update",
+      "todo_ids": [
+        "T6",
+        "T9",
+        "T11"
+      ]
+    },
+    {
+      "surface": "environment/program-execution/ARCHITECTURE.md",
+      "action": "update",
+      "todo_ids": [
+        "T10",
+        "T11"
+      ]
+    },
+    {
+      "surface": "Makefile",
+      "action": "update",
+      "todo_ids": [
+        "T7",
+        "T17"
+      ]
+    },
+    {
+      "surface": ".github/workflows/peer-execution.yml",
+      "action": "update",
+      "todo_ids": [
+        "T17"
+      ]
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "Append-only PE and Claude-path corrections already exist; this landing does not rewrite AGENTS.md"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "No symlink-law or activation-hook change"
+    },
+    {
+      "surface": "campaigns/*/README.md",
+      "action": "update",
+      "todo_ids": [
+        "T8"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If pec already blocks ready tasks on planned evidence, does a bootstrap refuse-by-default create a worse operator loop than an explicit draft lock?",
+      "If campaign-source schema is written against the live four files, will required new fields force CAMPAIGN_SOURCE.yaml edits and violate source_is_immutable?",
+      "If Cursor result JSON has no status field today, does requiring status break every existing foreground transport fixture?",
+      "If Make compiles every campaign directory, do the three INCONCLUSIVE campaigns fail the new gate and block unrelated PRs?",
+      "If T4 types empty-object properties tighter than live blueprint-template YAML, does template-mode validate_pair fail on origin/main fixtures?"
+    ],
+    "assumed_false_ifs": [
+      "origin/main remains the only legal landing tip and stays fetchable",
+      "validate_blueprint instantiated continues to require accepted plus no placeholders",
+      "campaign-source schema can be a cover of the live dialect without adding required fields absent from the four files",
+      "Cursor transport result files can grow an optional status field without host-protocol redesign",
+      "CI compile allowlist can live outside CAMPAIGN_SOURCE.yaml",
+      "Blueprint untyped properties can be typed from live template YAML without inventing new required keys"
+    ],
+    "blast_radius": "PE admission, every pec bootstrap, Cursor/ChatGPT worker receipts, Make PE CI, four registered campaign seeds, and Blueprint template validation. A schema that requires new campaign fields forces an illegal source mutation. A bad compiler remap freezes future campaign landings. A bad PASS mapping can fail-close legitimate Cursor completions or restore silent success. A Makefile overwrite fails root-file-protection.",
+    "rollback": "Revert the feature-branch commits on the new branch only. pec --admission-draft remains available if default refuse is too tight. Do not rewrite campaign integrity history or CAMPAIGN_SOURCE.yaml bytes. No force-push. Runtime under $HOME/.l9 is disposable; git seeds are not."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T5",
+      "T13",
+      "T16",
+      "T7",
+      "T14",
+      "T17",
+      "T4",
+      "T6",
+      "T15",
+      "T8",
+      "T10",
+      "T9",
+      "T11",
+      "T0",
+      "T12"
+    ],
+    "shared_causes": [
+      "campaign source is an unbound dialect with no compiler",
+      "pec normalize_blueprint is treated as validation",
+      "worker claim is treated as completion",
+      "honesty edits were planned against an immutable seed",
+      "writer output is treated as schema-valid",
+      "path-probe success is treated as transport readiness"
+    ],
+    "deletions_or_consolidations": [
+      "Delete the ad-hoc $HOME/.l9/blueprints/_compile_bounded_replanning.py after the repo compiler exists",
+      "Do not add a git_repo_adapter worker to EXECUTION_ADAPTER_REGISTRY; alias the campaign token only",
+      "Do not auto-init .l9/autonomy/campaigns from pec",
+      "Do not mutate CAMPAIGN_SOURCE.yaml to flip TASK-007; compiler rewrite is the single honesty path",
+      "Do not add compile:true onto immutable campaign YAML; use campaigns/COMPILE_ALLOWLIST.yaml"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Schema written against one campaign breaks the other three",
+      "mitigation": "Fixture-gate all four CAMPAIGN_SOURCE.yaml files in T1 before T2 ships; schema MUST NOT add required fields absent from those files"
+    },
+    {
+      "risk": "Honesty edit mutates immutable campaign source and invalidates the integrity receipt",
+      "mitigation": "T8 is README-only; T2 compiler forces TASK-007 local_write false; T12 asserts source digest unchanged"
+    },
+    {
+      "risk": "Default pec refuse breaks in-flight $HOME/.l9/programs/bounded-replanning-v1",
+      "mitigation": "Keep --admission-draft; do not delete the existing lock; document it as non-admitted"
+    },
+    {
+      "risk": "Cursor hosts emit result JSON without status",
+      "mitigation": "Missing status maps to BLOCKED, not PASS; status remains optional on the transport object"
+    },
+    {
+      "risk": "CI compile of leftover campaigns fails the repo",
+      "mitigation": "COMPILE_ALLOWLIST.yaml outside campaign seeds; day-one id is bounded-replanning-v1 only"
+    },
+    {
+      "risk": "T4 typed schemas fail existing blueprint-template YAML",
+      "mitigation": "Type from live template instances; do not invent new required keys"
+    },
+    {
+      "risk": "Landing on the dirty workspace branch mixes legal/WIP",
+      "mitigation": "T0 new branch from origin/main is a hard stop"
+    },
+    {
+      "risk": "Makefile overwrite fails root-file-protection additive_only",
+      "mitigation": "T7 Insert-only; append recipe lines; no deletion of existing Makefile content"
+    },
+    {
+      "risk": "Adding do_not_build and current_state to the lock schema without verify enforcement leaves DNB documentary",
+      "mitigation": "T13 schema+schema-verify then T14 path enforcement; both required before T12"
+    },
+    {
+      "risk": "Tightening Cursor/Claude probes to BLOCKED without executable or host breaks current READY receipts and test_driver.py",
+      "mitigation": "T16 splits structural vs transport; existing path-only PASS tests MUST be rewritten to expect BLOCKED"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Must pec bootstrap refuse all drafts, or is --admission-draft the standing W0 path until evidence exists?",
+      "decision_effect": "Default refuse vs warn-only changes operator workflow for every new campaign",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Can Cursor result JSON gain a required status field without a host-protocol change outside PE?",
+      "decision_effect": "T5 maps optional result.status; missing or non-PASS becomes BLOCKED or FAIL. ForegroundTransport.collect returns any object and never reads status today.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U3",
+      "question": "Which of the four campaigns are compile-gated in CI on day one?",
+      "decision_effect": "Failing leftover campaigns would block unrelated PE PRs. Allowlist MUST live outside immutable CAMPAIGN_SOURCE.yaml.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "PYTHONPATH=environment/program-execution python3 -B environment/program-execution/conformance/test_campaign_source_schema.py",
+      "pass_criteria": "all four campaign sources parse; errors are field-exact",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 environment/program-execution/scripts/compile_campaign_source.py --source environment/program-execution/campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml --target $HOME/.l9/blueprints/bounded-replanning-v1 && python3 environment/program-execution/core/program-execution-blueprint-template/scripts/validate_blueprint.py $HOME/.l9/blueprints/bounded-replanning-v1 --mode template && shasum -a 256 environment/program-execution/campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",
+      "pass_criteria": "compiler exit 0; validate_blueprint mode=template PASS; source digest remains 7a71ede7fc3dd0272ceed5ce4cbaf62a5d66769f75b0fe21689d7eb6f8168619; compiled TASK-007 local_write is false",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "python3 environment/program-execution/core/program-execution-controller-template/scripts/pec.py bootstrap --workspace /tmp/pec-draft-refuse --blueprint $HOME/.l9/blueprints/bounded-replanning-v1",
+      "pass_criteria": "nonzero exit without --admission-draft on draft Blueprint",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "make program-execution-core-validate && make program-execution-adapters && make program-execution-conformance",
+      "pass_criteria": "all three PASS; leftover campaigns not compiled",
+      "status": "pending"
+    },
+    {
+      "id": "V5",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on the new-branch changed files",
+      "status": "pending"
+    },
+    {
+      "id": "V6",
+      "command": "python3 environment/program-execution/core/program-execution-controller-template/scripts/tests/test_program_lock_schema.py && python3 environment/program-execution/adapters/claude-code/tests/test_driver.py && python3 environment/program-execution/adapters/cursor-foreground/tests/test_provider.py",
+      "pass_criteria": "normalize_blueprint output validates against program-lock.schema.json; path-only Cursor/Claude probe is BLOCKED not PASS",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "l9-ynp",
+    "stop_reason": "Formal PLAN_DOCUMENT updated with microscope-audit delta T13-T17. U1/U2/U3 accepted-bounded. Implementation evidence V1-V6 remains pending until PE+autonomy execute. Do not implement from this chat."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "environment/program-execution/",
+      "Makefile",
+      ".github/workflows/peer-execution.yml"
+    ],
+    "must_not_modify": [
+      "CANONICAL_LAW.md",
+      "pyproject.toml",
+      "ops/hooks/session_start_bootstrap.sh",
+      "WIP/",
+      ".env.local",
+      "environment/program-execution/campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",
+      "environment/program-execution/campaigns/bounded-replanning-v1/source-integrity-receipt.json",
+      "docs/decisions/ADR-0020-provider-neutral-inference-routing-deepseek-deferred.md"
+    ],
+    "preserved_contracts": [
+      "program-execution-blueprint.v2",
+      "program-execution-controller.v2",
+      "program-execution-system.v2",
+      "PEER_EXECUTION_THIN_ADAPTER_LAW.yaml",
+      "ADR-0020 DeepSeek deferred as a PE provider",
+      "autonomous_merge false",
+      "no second scheduler",
+      "do not fake accepted",
+      "bounded-replanning-v1 source_is_immutable true"
+    ],
+    "validation_commands": [
+      "make program-execution-core-validate",
+      "make program-execution-adapters",
+      "make program-execution-conformance",
+      "make pr-check"
+    ]
+  },
+  "checklist": [
+    "new branch from origin/main",
+    "campaign-source schema + compiler",
+    "immutable campaign source bytes unchanged",
+    "pec bootstrap fail-closed",
+    "Cursor/ChatGPT honest PASS",
+    "COMPILE_ALLOWLIST outside campaign YAML",
+    "Makefile append-only",
+    "program-lock schema matches writer",
+    "probe path-only is not PASS",
+    "make pr-check"
+  ],
+  "estimate": "one PE overlay PR from origin/main; do not mix with bounded-replanning admission"
+}

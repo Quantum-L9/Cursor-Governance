@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "level3-make-pr-single-path",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9",
+  "bytes": 22582,
+  "pack_recorded_digest": "b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9",
+  "pack_recorded_bytes": 22582,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-16T05:34:00Z",
+  "collection_method": "hand-authored-gold-standard-activation-set",
+  "producer": "l9-pe-campaign-activate-example"
+}

@@ -8,8 +8,8 @@ metadata:
   tags: [l9, plan, audit, session-start, staleness, cursor-plans]
   owner: igor_beylin
   status: active
-  version: 1.0.0
-  updated: 2026-08-12
+  version: 1.1.0
+  updated: 2026-08-21
 ---
 
 # l9-plan-audit
@@ -18,9 +18,12 @@ metadata:
 
 Deterministically scan the machine-global Cursor plans directory for **unbuilt**
 plans modified in the last **7 days**, attach staleness flags, and emit a capped
-markdown/JSON report. SessionStart bootstrap inserts the markdown under
-`### Plan audit` in `additional_context`. Findings are **display-only** — do not
-auto-Build plans from this skill.
+markdown/JSON report. Scan **top-level** `*.plan.md` only — `built/`,
+`backlog/`, and `archive/` are out of session-start. Frontmatter `built: true`
+or `status` in `{built, completed, cancelled, superseded}` skips the plan even
+when leftover todos are `pending`. SessionStart bootstrap inserts the markdown
+under `### Plan audit` in `additional_context`. Findings are **display-only** —
+do not auto-Build plans from this skill.
 
 ## Authority
 
