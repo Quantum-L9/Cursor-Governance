@@ -1699,7 +1699,7 @@
     },
     {
       "path": "scripts/run_peer_task_pipeline.py",
-      "sha256": "97bf8d24162cb842645eae0ff471f24a4da6f831ffad9de20fa3b81030983d2d"
+      "sha256": "997f7e46c9be0002f8bb6e482c51c48256545348a5cf47995439b92d5a406646"
     },
     {
       "path": "scripts/tests/pe_prepare_bench.py",
@@ -1760,6 +1760,10 @@
     {
       "path": "scripts/tests/test_run_campaign.py",
       "sha256": "654ede738792578c39d6d86b9a7963f4f742db39d7c8d46599042c9aca89a29e"
+    },
+    {
+      "path": "scripts/tests/test_run_peer_task_pipeline.py",
+      "sha256": "0a465cdd767d959527688c9522564797e5b246c1978cd67dc3b9f9ff84b9690f"
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",
