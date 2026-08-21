@@ -107,7 +107,7 @@ _gate_on_exit() {
       --precommit "${precommit_log:-}" \
       --pytest "$GOV_ROOT/.venv/bin/pytest" || true
   fi
-  rm -f "${status_before:-}" "${changed_file:-}" "${precommit_log:-}"
+  rm -f "${status_before:-}" "${changed_file:-}" "${precommit_log:-}" "${py_list:-}"
   repo_write_lock_release
 }
 trap '_gate_on_exit' EXIT
@@ -131,6 +131,7 @@ echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / night
 status_before="$(mktemp)"
 changed_file="$(mktemp)"
 precommit_log="$(mktemp)"
+py_list="$(mktemp)"
 mkdir -p "$WS/.l9/pr"
 : >"$_GATE_LOG"
 trap '_gate_on_exit' EXIT
