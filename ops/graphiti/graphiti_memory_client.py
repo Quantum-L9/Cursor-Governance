@@ -232,6 +232,7 @@ def _mcp_post(payload: dict[str, Any], session_id: str | None, timeout: int) -> 
         method="POST",
     )
     _ssl_ctx = ssl.create_default_context()
+    _ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
     with _urlopen_http(req, timeout=timeout, context=_ssl_ctx) as resp:
         body = _parse_mcp_body(resp.read().decode())
         return body, resp.headers
@@ -400,6 +401,7 @@ def health_check() -> int:
         health_url = _require_http_url(mcp_url().replace("/mcp", "/health"))
         req = urllib.request.Request(health_url, headers=mcp_headers())
         _ssl_ctx = ssl.create_default_context()
+        _ssl_ctx.minimum_version = ssl.TLSVersion.TLSv1_2
         with _urlopen_http(req, timeout=10, context=_ssl_ctx) as resp:
             out["liveness"] = json.loads(resp.read().decode())
         out["liveness_ok"] = True

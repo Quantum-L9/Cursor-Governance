@@ -14,6 +14,15 @@ from email.message import Message
 from io import BytesIO
 from urllib.parse import urlparse
 
+_MAX_RESPONSE_BYTES = 8 * 1024 * 1024
+
+
+def tls12_context() -> ssl.SSLContext:
+    """Default HTTPS context that refuses TLS 1.0/1.1 (CodeQL py/insecure-protocol)."""
+    context = ssl.create_default_context()
+    context.minimum_version = ssl.TLSVersion.TLSv1_2
+    return context
+
 
 class HttpsResponse:
     def __init__(self, status: int, headers: Message, body: bytes) -> None:
@@ -181,7 +190,7 @@ def exchange(
     payload = req.data if isinstance(req.data, (bytes, bytearray)) else b""
     try:
         if parsed.scheme == "https":
-            context = ssl.create_default_context()
+            context = tls12_context()
             if context.verify_mode != ssl.CERT_REQUIRED or not context.check_hostname:
                 raise urllib.error.URLError("HTTPS requires CERT_REQUIRED and check_hostname")
             port = parsed.port or 443
@@ -208,10 +217,16 @@ def exchange(
     try:
         sock.sendall(blob)
         chunks: list[bytes] = []
+        received = 0
         while True:
             piece = sock.recv(65536)
             if not piece:
                 break
+            received += len(piece)
+            if received > _MAX_RESPONSE_BYTES:
+                raise urllib.error.URLError(
+                    f"{label} response exceeded {_MAX_RESPONSE_BYTES} bytes"
+                )
             chunks.append(piece)
     except OSError as exc:
         raise urllib.error.URLError(exc) from exc

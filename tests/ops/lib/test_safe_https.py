@@ -61,6 +61,17 @@ def test_require_https_url_accepts_allowlisted_https() -> None:
     assert url.startswith("https://api.github.com/")
 
 
+def test_tls12_context_refuses_legacy_protocols() -> None:
+    import ssl
+
+    from safe_https import tls12_context
+
+    ctx = tls12_context()
+    assert ctx.minimum_version == ssl.TLSVersion.TLSv1_2
+    assert ctx.verify_mode == ssl.CERT_REQUIRED
+    assert ctx.check_hostname is True
+
+
 def test_require_exchange_url_allows_loopback_http_only() -> None:
     assert require_exchange_url(
         "http://127.0.0.1:8100/mcp",
