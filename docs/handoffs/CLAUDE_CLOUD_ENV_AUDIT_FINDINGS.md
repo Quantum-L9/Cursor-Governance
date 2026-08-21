@@ -415,6 +415,68 @@ receipt instead of overwriting the session's bootstrap receipt.
 
 ---
 
+### F-14 · HIGH · repo · The publish-path rule's verdict depends on whether the command is piped, not on what it does
+
+`git push` is allowed. `git push | tail` is denied as an unsanctioned publish path.
+Same for `gh pr create`. The gate decides on shell plumbing that has no bearing on
+whether GitHub is reached.
+
+**Reproduce** (`ops/autonomy/local_execution_gate.py`, `claude` mode; identical results
+in `cursor-shell` mode):
+
+| Command | Verdict |
+|---|---|
+| `git push -u origin mybranch` | **allow** |
+| `git push -u origin mybranch 2>&1 \| tail -8` | **deny** — "Publish path: `git push` is not a sanctioned way to reach GitHub" |
+| `git push origin HEAD \| cat` | **deny** |
+| `gh pr create --fill` | **allow** |
+| `gh pr create --fill \| tee /tmp/x` | **deny** |
+| `git status \| tail -5` | allow (not a publish form) |
+
+**Found by:** attempting the push this audit's own session instructions prescribe
+(`git push -u origin <branch>`), piped to `tail -8`. It was denied. The unpiped form
+of the same push is allowed.
+
+**Cause:** `local_execution_gate.py:304` exempts the entire event when
+`event_is_git_or_gh()` is true, *before* the publish-path check at line 320.
+`git_execution_exemption.command_is_git_or_gh()` requires **every** segment head to be
+in `GIT_EXECUTABLES` or `NEUTRAL_HEADS`; a pipe to `tail` / `cat` / `tee` introduces a
+head that is neither, the exemption is lost, and the command falls through to
+`command_bypasses_publish_path()` and is denied. `main_cursor_shell` has the same
+shape via `payload_is_git_or_gh(raw)` at line 527, so both surfaces agree — the defect
+is not a surface asymmetry.
+
+**Consequences, both directions:**
+1. **The rule enforces nothing.** Anyone intending to bypass `make pr` simply does not
+   pipe. There is no evasion to detect — the plain form is the allowed form.
+2. **It produces confident false denials on ordinary usage,** with a message asserting
+   a prohibition the unpiped command does not obey.
+3. **Three-way documentation conflict**, none of which describes the actual behavior:
+   - `rules/zz-autonomy-surface-override` §2a: "Raw `git push`, `gh pr create` … are
+     denied at **every** phase."
+   - `CLAUDE.md`, under "The three things most often got wrong here": "Raw `git push` is
+     *not* denied by `ops/autonomy/local_execution_gate.py` … it will not [error]."
+   - Gate: denied if and only if piped.
+
+**Remediation — decide the intent first, then make the verdict plumbing-independent:**
+- If raw `git push` / `gh pr create` **should** be denied: evaluate
+  `command_bypasses_publish_path()` *before* the git/gh exemption, and correct
+  `CLAUDE.md`.
+- If they **should** be allowed (the position CANONICAL_LAW §6.2.4 and `CLAUDE.md`
+  take — git and gh answer to `git_guardrails.py` by effect, and `make pr` is preferred
+  because it runs the checkers, not because pushing errors): stop applying the
+  publish-path check to commands whose git/gh segments are the publishing ones, so a
+  pipe cannot change the answer. Then correct `rules/zz-autonomy-surface-override` §2a.
+
+Do not leave it split. Whichever way it resolves, the same push must get the same
+verdict piped and unpiped.
+
+**Verify:** a parametrized test asserting that for each of
+`git push`, `gh pr create`, `gh pr edit`, the bare form and the `| tail -1` form return
+the identical verdict.
+
+---
+
 ## 2. Remediation order
 
 F-01 first — it blocks the doctor that validates everything else, and it is a
@@ -422,14 +484,14 @@ two-key schema edit. F-02 next, so the fix cannot silently regress. Then F-04 an
 F-05 together (they are one story: hydration cannot resolve, and the receipt hides
 it). F-03 and F-10 together (both are presence-vs-verification in the same
 accumulator). F-06 needs a human with account-field access before anything is
-re-pasted. F-07, F-08, F-09 are independent and can run in parallel. F-11 → F-13
+re-pasted. F-14 is independent of all of the above and should be scheduled early: it is a correctness-of-enforcement question that needs a decision (deny or allow) before the code changes, and it currently misleads every agent reading either `CLAUDE.md` or `zz-autonomy-surface-override`. F-07, F-08, F-09 are independent and can run in parallel. F-11 → F-13
 are documentation/annotation and can be batched.
 
 ## 3. Checked and found sound — do not open work here
 
 | Area | Evidence |
 |---|---|
-| Publish-path gate | Probed directly: `make pr` → `permissionDecision: deny` with the L4 release instructions; `git push` / `gh pr create` / `git commit` → allowed. Exactly what CANONICAL_LAW §6.2.4 and `CLAUDE.md` document. |
+| L4 release gate (`make pr`) | Probed directly: `make pr` → `permissionDecision: deny` carrying the L4 release sequence; `git commit` → allowed. The L4 *timing* rule behaves as CANONICAL_LAW §6.2.4 documents. The publish-*path* rule layered on top of it does not — see F-14. |
 | PR overlap guardrail | `pr_overlap_check.py --base origin/main` → `PASS: no non-generated file overlap with open PRs`, exit 0. `gh_available()` correctly probes `gh --version`, not `gh auth status`, so the documented auth false-negative does not fail it closed. |
 | Generated artifacts | `sync_generated_artifacts.py --force --check --json` → `{"errors": [], "warnings": [], "wrote": []}`. No drift. |
 | Graphiti server | `health` → `mcp: healthy`, 9 tools reachable. The store is up; only group resolution is broken (F-04). |
