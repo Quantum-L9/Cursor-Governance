@@ -500,9 +500,9 @@ class RunCampaignTests(unittest.TestCase):
             )
             (root / "ops/autonomy").mkdir(parents=True)
             (root / "ops/autonomy/surface_profile.yaml").write_text("x: 1\n", encoding="utf-8")
-            (
-                root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
-            ).write_text("dirty: true\n", encoding="utf-8")
+            (root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml").write_text(
+                "dirty: true\n", encoding="utf-8"
+            )
             self.mod.commit_host_emit(root, "demo-activate-v1")
             status = subprocess.run(
                 ["git", "status", "--porcelain"],
@@ -525,7 +525,9 @@ class RunCampaignTests(unittest.TestCase):
     def test_adoptable_inferred_command_accepts_bash_n(self) -> None:
         self.assertTrue(self.mod.adoptable_inferred_command("bash -n ops/scripts/run_pr_gate.sh"))
         self.assertTrue(self.mod.adoptable_inferred_command("python3 -m unittest tests/x.py"))
-        self.assertTrue(self.mod.adoptable_inferred_command("python3 -m pytest tests/x.py --tb=short -q"))
+        self.assertTrue(
+            self.mod.adoptable_inferred_command("python3 -m pytest tests/x.py --tb=short -q")
+        )
         self.assertTrue(self.mod.adoptable_inferred_command("test -s 'ops/scripts/run_pr_gate.sh'"))
         self.assertTrue(self.mod.adoptable_inferred_command("ls -1 'a' 'b' >/dev/null"))
         self.assertFalse(self.mod.adoptable_inferred_command("true"))
@@ -580,9 +582,7 @@ class RunCampaignTests(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertFalse(self.mod.live_lock_missing_seed_paths(seed, workspace))
-            seed["tasks"].append(
-                {"id": "T2", "paths": ["ops/scripts/agent_worktree_start.sh"]}
-            )
+            seed["tasks"].append({"id": "T2", "paths": ["ops/scripts/agent_worktree_start.sh"]})
             self.assertFalse(
                 self.mod.live_lock_missing_seed_paths(seed, workspace),
                 "unrendered later tasks are not a live-lock mismatch",
