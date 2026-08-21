@@ -14,6 +14,7 @@ reported as `absent`, not raised.
 from __future__ import annotations
 
 import shutil
+import sqlite3
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,49 @@ PEC_BRANCH_PREFIX = "pec/"
 # `refs/heads/pec/*` does not fnmatch a nested name like `pec/w0/task-001`;
 # a literal prefix up to a slash does.
 PEC_BRANCH_REFSPEC = "refs/heads/pec"
+
+
+def workspace_owned_branches(workspace: Path, repo: Path) -> set[str]:
+    """Every `pec/...` branch this workspace can prove belongs to it.
+
+    Two campaigns may share one repository, so a `pec/` prefix says nothing
+    about ownership. The workspace's own runtime does: it recorded the branch it
+    created for each task and for each lease, and it knows which worktrees live
+    under its own `worktrees/` directory. A branch this workspace never recorded
+    is another campaign's, and deleting it is destroying someone else's work.
+    """
+    owned: set[str] = set()
+    db_path = workspace / "runtime" / "state.sqlite"
+    if db_path.is_file():
+        try:
+            conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+        except sqlite3.Error:
+            conn = None
+        if conn is not None:
+            try:
+                for table in ("tasks", "leases"):
+                    try:
+                        rows = conn.execute(
+                            f"SELECT branch FROM {table} WHERE branch IS NOT NULL"  # noqa: S608
+                        ).fetchall()
+                    except sqlite3.Error:
+                        continue
+                    owned.update(str(row[0]).strip() for row in rows if row and row[0])
+            finally:
+                conn.close()
+    # A worktree registered under this workspace's own directory is this
+    # workspace's, whatever the branch is called.
+    worktrees_dir = (workspace / "worktrees").resolve()
+    for path, branch in _registered_worktrees(repo).items():
+        if not branch:
+            continue
+        try:
+            resolved = Path(path).resolve()
+        except OSError:
+            continue
+        if resolved == worktrees_dir or worktrees_dir in resolved.parents:
+            owned.add(branch)
+    return {branch for branch in owned if branch}
 
 
 def _registered_worktrees(repo: Path) -> dict[str, str]:
@@ -91,8 +135,13 @@ def clean_task_execution(
     }
 
 
-def task_branches(repo: Path, task_id: str) -> list[str]:
-    """Every `pec/...` branch whose name ends in this task id."""
+def task_branches(repo: Path, task_id: str, owned: set[str] | None = None) -> list[str]:
+    """This workspace's `pec/...` branches whose name ends in this task id.
+
+    Matching by suffix alone reaches across campaigns: `pec/a/task-001` and
+    `pec/b/task-001` both end in `task-001`. `owned` restricts the answer to the
+    branches the calling workspace recorded as its own.
+    """
     listing = run_git(
         repo,
         "for-each-ref",
@@ -103,10 +152,11 @@ def task_branches(repo: Path, task_id: str) -> list[str]:
     if listing.returncode != 0:
         return []
     suffix = task_id.lower()
+    names = [name.strip() for name in listing.stdout.splitlines() if name.strip()]
     return [
-        name.strip()
-        for name in listing.stdout.splitlines()
-        if name.strip() and name.strip().lower().endswith(suffix)
+        name
+        for name in names
+        if name.lower().endswith(suffix) and (owned is None or name in owned)
     ]
 
 
@@ -132,9 +182,14 @@ def fresh_execution_workspace(
     else:
         discovered = list(task_ids)
 
+    # Ownership is resolved once, before anything is removed: the worktree
+    # registrations that prove it are about to be pruned.
+    owned = workspace_owned_branches(workspace, repo)
+
     cleaned: list[dict[str, Any]] = []
     for task_id in discovered:
-        for branch in task_branches(repo, task_id) or [None]:  # type: ignore[list-item]
+        branches = task_branches(repo, task_id, owned) or [None]  # type: ignore[list-item]
+        for branch in branches:
             cleaned.append(clean_task_execution(workspace, repo, task_id, branch=branch))
 
     # A worktree directory can survive with no git registration at all; sweep
@@ -145,21 +200,15 @@ def fresh_execution_workspace(
                 shutil.rmtree(item, ignore_errors=True)
     run_git(repo, "worktree", "prune", check=False)
 
-    # Any pec branch with no worktree left is residue by definition.
+    # Residue of *this* workspace with no worktree left. A `pec/` branch this
+    # workspace never recorded belongs to another campaign sharing the same
+    # repository: "no attached worktree" is not evidence it is abandoned, only
+    # that it is not checked out here, and deleting it destroys live work.
     orphaned: dict[str, str] = {}
     live = {branch for branch in _registered_worktrees(repo).values() if branch}
-    listing = run_git(
-        repo,
-        "for-each-ref",
-        "--format=%(refname:short)",
-        PEC_BRANCH_REFSPEC,
-        check=False,
-    )
-    if listing.returncode == 0:
-        for name in listing.stdout.splitlines():
-            branch = name.strip()
-            if branch and branch not in live:
-                orphaned[branch] = _delete_branch(repo, branch)
+    for branch in sorted(owned):
+        if branch and branch not in live:
+            orphaned[branch] = _delete_branch(repo, branch)
 
     released = 0
     if release_leases:

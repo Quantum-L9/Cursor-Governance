@@ -1767,7 +1767,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "21b43c639322499cf5f6e35416c7054b594616b0b51ce1c52bd2126ffde178ff"
+      "sha256": "ccc0f38d2076bdbc4f9c1d2901cfa8104df73f96f27283cd422c324528072673"
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",

@@ -2037,3 +2037,142 @@ def _load_yaml_file(path: Path) -> dict:
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WarmResumeIsLocalTest(unittest.TestCase):
+    """An unchanged warm resume must decide from local state before any network.
+
+    Order: existing checkout, correct repository, acceptable base, history
+    walkable, runtime compatible, fingerprints unchanged. All local. Fetching
+    first turned a resume that had nothing to learn into a network round trip.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.mod = _load("run_campaign_warm_resume", SCRIPT)
+        cls.activate = _load("compile_activation_warm", ACTIVATE)
+
+    def _armed(self, root: Path, l9: Path, target: Path) -> None:
+        runtime = l9 / "programs/demo-activate-v1/runtime"
+        runtime.mkdir(parents=True)
+        (runtime / "program-lock.json").write_text('{"tasks": []}\n', encoding="utf-8")
+        (runtime / "LAUNCH.json").write_text(
+            json.dumps(
+                {
+                    "schema": "l9.program-execution.launch-pointer.v1",
+                    "campaign_id": "demo-activate-v1",
+                    "runtime_status": "active",
+                    "host_lifecycle": "in_progress",
+                    "host_worktree": str(root),
+                    "target_worktree": str(target),
+                    "blueprint": str(l9 / "blueprints/demo-activate-v1"),
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        state = l9 / "primed/demo-activate-v1/PREPARE_STATE.json"
+        state.parent.mkdir(parents=True, exist_ok=True)
+        state.write_text(
+            json.dumps(
+                {
+                    "schema": "program-execution.prepare-state.v1",
+                    "campaign_id": "demo-activate-v1",
+                    "stages": {
+                        self.mod.DEFINITION_STAGE: {
+                            "key": self.mod.definition_fingerprint(READY_SEED, None),
+                            "reused": False,
+                        }
+                    },
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    def test_unchanged_warm_resume_performs_no_network_operation(self) -> None:
+        network: list[list[str]] = []
+        real_run_cmd = self.mod.run_cmd
+
+        def watching_run_cmd(cmd, **kwargs):  # noqa: ANN001, ANN202
+            argv = [str(item) for item in cmd]
+            if any(word in argv for word in ("fetch", "clone", "ls-remote", "pull")):
+                network.append(argv)
+            return real_run_cmd(cmd, **kwargs)
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
+            self._armed(root, l9, target)
+
+            with patch.object(self.mod, "run_cmd", watching_run_cmd):
+                report = self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="execute",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(execute=lambda space, campaign_id: {}),
+                )
+
+            self.assertEqual(report.stages_completed, ["resume", "execute"])
+            self.assertEqual(network, [], f"warm resume reached the network: {network}")
+
+    def test_warm_resume_never_runs_the_stack_proof(self) -> None:
+        """Context7 research is preparation. A resume has nothing new to prove."""
+        proved: list[str] = []
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
+            self._armed(root, l9, target)
+
+            self.mod.run_campaign(
+                root / "intent.yaml",
+                until="execute",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    context7_stack=lambda seed, primed_dir: proved.append("fetched") or {},
+                    execute=lambda space, campaign_id: {},
+                ),
+            )
+
+        self.assertEqual(proved, [], "warm resume re-ran external research")
+
+    def test_history_is_only_fetched_when_local_history_is_insufficient(self) -> None:
+        """The local answer is checked first; the fetch is the fallback."""
+        source = SCRIPT.read_text(encoding="utf-8")
+        body = source[source.index("def ensure_target_history(") :]
+        body = body[: body.index("\ndef ")]
+        walkable = body.index("history_walkable(dest) and not is_shallow_repo(dest)")
+        first_fetch = body.index('"fetch"')
+        self.assertLess(walkable, first_fetch, "a fetch precedes the local history check")
+        self.assertIn("return", body[walkable : walkable + 120])
+
+    def test_a_campaign_with_no_external_stack_fetches_nothing(self) -> None:
+        """Lazy external proof: no inferred tool, no network, no receipt cost."""
+        proof = _load("context7_stack_proof_lazy", PE_ROOT / "scripts/context7_stack_proof.py")
+        fetched: list[str] = []
+
+        with tempfile.TemporaryDirectory() as raw:
+            receipt = proof.prove_stack(
+                {
+                    "campaign_id": "demo-activate-v1",
+                    "objective": "Edit two declared files in this repository.",
+                    "problem_statement": "Local file edits only.",
+                    "tasks": [{"id": "TASK-001", "title": "Edit a declared path"}],
+                },
+                primed_dir=Path(raw),
+                fetch=lambda *args, **kwargs: fetched.append("network") or {},
+            )
+
+        self.assertEqual(fetched, [], "a purely local campaign reached the network")
+        self.assertEqual(receipt["status"], "pass")
+        self.assertEqual(receipt.get("skipped"), "no-external-stack")
