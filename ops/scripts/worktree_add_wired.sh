@@ -48,3 +48,11 @@ if [ ! -d "$path" ]; then
 fi
 
 bash "$SCRIPT_DIR/ensure_workspace_wired.sh" "$path"
+
+# Real locked venv in this tree. A symlink to another checkout's .venv fails
+# ensure_gov_python.sh (sys.prefix != this path). Consumer repos without
+# pyproject.toml + uv.lock are skipped.
+if [ -f "$path/pyproject.toml" ] && [ -f "$path/uv.lock" ]; then
+  echo "--- make venv (uv sync --locked --extra dev) ---"
+  bash "$SCRIPT_DIR/ensure_gov_python.sh" "$path"
+fi

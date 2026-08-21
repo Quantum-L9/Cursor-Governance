@@ -11,7 +11,9 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-GOV_ROOT="$(cd "${1:-$SCRIPT_DIR/../..}" && pwd)"
+# pwd -P: /tmp is a symlink to /private/tmp on macOS. uv/sys.prefix
+# report the real path; a lexical compare would fail a valid worktree venv.
+GOV_ROOT="$(cd "${1:-$SCRIPT_DIR/../..}" && pwd -P)"
 VENV="$GOV_ROOT/.venv"
 PYTHON="$VENV/bin/python"
 PYTHON3="$VENV/bin/python3"

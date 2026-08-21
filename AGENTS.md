@@ -280,6 +280,11 @@ an `origin/main` fork and restack at `make pr`. Empty `PR_STACK` keeps
 missing `gh` telemetry; fail-closed on a detected non-generated textual
 conflict.
 
+`make pr` defaults to `PR_STACK=auto` (stack on the overlapping open
+head). Opt out with `PR_STACK= make pr` to publish against `main`. A
+stack parent must merge with `--merge`, or children must land first —
+squash of a parent silently drops the child.
+
 After any merge touching generated paths, or while
 `.l9/pr/regen-required.txt` is non-empty, run
 `"$HOME/.cursor-governance/.venv/bin/python" ops/scripts/sync_generated_artifacts.py --force`,
@@ -663,3 +668,15 @@ as the live store):
 ## `make pr` capitalization (2026-08-20)
 
 `make pr` / `make PR` / `make Pr` / `make pR` all run the same gate.
+
+<!-- PRECOMMIT_REPO_OWNS_RUFF_V1 -->
+## `make precommit-repo` before `make pr` (2026-08-21)
+
+After every local commit, run `make precommit-repo` (changed-file hooks +
+locked `ruff check` / `ruff format --check`). If hooks rewrite files, commit
+the rewrite and re-run. Do not auto-stage. Then `PR_REMEDIATE=0 make pr`.
+
+`make pr-check` still runs pytest, wiring, and `run_pr_security.sh`. It does
+**not** run a second ruff pass. There is no git commit hook — do not run
+`pre-commit install`. Local autofix is `precommit-repo`. `.github/workflows/lint-autofix.yml`
+is a post-merge janitor on `main` only.

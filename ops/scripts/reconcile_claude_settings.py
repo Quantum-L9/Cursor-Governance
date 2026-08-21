@@ -126,14 +126,87 @@ def reconcile_gov_claude(root: Path, template: dict[str, Any], *, check: bool) -
     return {"wrote": wrote, "drift": drift}
 
 
+#: Records exactly which top-level keys L9 owns in ~/.claude/settings.json.
+#: Without it, uninstall is a guess: a later release that stops managing a key
+#: has no way to tell "L9 put this here" from "the user did", so it either
+#: strips a user's setting or leaves its own behind forever.
+USER_MANIFEST_NAME = "settings.l9-manifest.json"
+MANIFEST_SCHEMA = "l9.claude-user-settings-manifest.v1"
+
+
+def user_settings_path() -> Path:
+    return Path.home() / ".claude" / "settings.json"
+
+
+def user_manifest_path() -> Path:
+    return Path.home() / ".claude" / USER_MANIFEST_NAME
+
+
+def build_manifest(template: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "schema": MANIFEST_SCHEMA,
+        "managed_keys": sorted(key for key in MANAGED_TOP_LEVEL if key in template),
+        "preserved_user_keys": sorted(PRESERVE_USER_KEYS),
+        "note": (
+            "L9 owns managed_keys in ~/.claude/settings.json. "
+            "Remove them with reconcile_claude_settings.py --uninstall-user."
+        ),
+    }
+
+
 def reconcile_user(template: dict[str, Any], *, check: bool) -> dict[str, Any]:
+    """Project the managed key set into USER scope.
+
+    This is the floor that survives a session whose project directory is not a
+    repository. The audited session's project dir was the multi-repo parent
+    /home/user, so the committed per-repo .claude/settings.json was read only as
+    an additional-directory source — its hooks never executed and its env block
+    never applied (finding B-01). User scope is read regardless of project dir.
+    Repo-level settings remain authoritative when a session IS correctly scoped.
+    """
     wrote: list[str] = []
     drift: list[str] = []
-    user_path = Path.home() / ".claude" / "settings.json"
+    user_path = user_settings_path()
     existing = load_json(user_path) if user_path.is_file() else {}
     merged = merge_user_settings(template, existing)
     drift.extend(write_if_changed(user_path, dump_json(merged), check=check, wrote=wrote))
-    return {"wrote": wrote, "drift": drift, "preserved_plugins": "enabledPlugins" in merged}
+    drift.extend(
+        write_if_changed(
+            user_manifest_path(), dump_json(build_manifest(template)), check=check, wrote=wrote
+        )
+    )
+    return {
+        "wrote": wrote,
+        "drift": drift,
+        "preserved_plugins": "enabledPlugins" in merged,
+        "managed_keys": build_manifest(template)["managed_keys"],
+    }
+
+
+def uninstall_user(*, check: bool) -> dict[str, Any]:
+    """Remove exactly the manifest's key set from ~/.claude/settings.json.
+
+    Exactly, and nothing else: keys the user added stay, and if no manifest
+    exists we refuse rather than guess at what was ours.
+    """
+    wrote: list[str] = []
+    manifest_path = user_manifest_path()
+    user_path = user_settings_path()
+    if not manifest_path.is_file():
+        return {"wrote": [], "drift": [], "removed": [], "reason": "no manifest — nothing claimed"}
+    manifest = load_json(manifest_path)
+    managed = [k for k in manifest.get("managed_keys", []) if isinstance(k, str)]
+    if not user_path.is_file():
+        return {"wrote": [], "drift": [], "removed": [], "reason": "no user settings file"}
+
+    existing = load_json(user_path)
+    remaining = {k: v for k, v in existing.items() if k not in managed}
+    removed = [k for k in managed if k in existing]
+    drift = write_if_changed(user_path, dump_json(remaining), check=check, wrote=wrote)
+    if not check and manifest_path.is_file():
+        manifest_path.unlink()
+        wrote.append(str(manifest_path))
+    return {"wrote": wrote, "drift": drift, "removed": removed}
 
 
 def reconcile_workspace(
@@ -203,8 +276,24 @@ def main() -> int:
     parser.add_argument("--skip-user", action="store_true")
     parser.add_argument("--skip-gov", action="store_true")
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--uninstall-user",
+        action="store_true",
+        help="remove exactly the L9-managed keys from ~/.claude/settings.json",
+    )
     args = parser.parse_args()
     root = args.root.resolve()
+
+    if args.uninstall_user:
+        result = uninstall_user(check=args.check)
+        if args.json:
+            print(json.dumps(result, indent=2, sort_keys=True))
+        else:
+            removed = ", ".join(result.get("removed", [])) or "(nothing)"
+            print(f"uninstalled L9 user-scope keys: {removed}")
+            if result.get("reason"):
+                print(f"  {result['reason']}")
+        return 0
 
     try:
         result = run(

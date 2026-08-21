@@ -1,0 +1,31 @@
+# Exact host-registration appends for this campaign.
+# Apply these patches to the live host files when triggering execution.
+# Do not run compile_activation_files.py — it would overwrite the gold seed.
+
+COMPILE_ALLOWLIST.yaml:
+  append_under_campaign_ids:
+    - level3-make-pr-single-path
+
+CAMPAIGN_EXECUTION_POLICY.yaml:
+  append_under_campaigns:
+    - id: level3-make-pr-single-path
+      integration_branch: campaign/level3-make-pr-single-path
+      pr_base: campaign/level3-make-pr-single-path
+      execute_order: 6
+      lane: makefile
+      publish_model: four_commit_one_pr
+      publish_command: PR_REMEDIATE=1 PR_AUTOMERGE=1 make pr
+      mid_execution_push: false
+
+surface_profile.yaml:
+  append_under_campaign_execution_campaigns:
+    level3-make-pr-single-path:
+      integration_branch: campaign/level3-make-pr-single-path
+      publish_model: four_commit_one_pr
+      publish_command: PR_REMEDIATE=1 PR_AUTOMERGE=1 make pr
+
+CAMPAIGN_STATUS.yaml:
+  append_under_campaigns:
+    - id: level3-make-pr-single-path
+      lifecycle: planned
+      notes: four-commit one-PR gold-standard activation set; not yet executed

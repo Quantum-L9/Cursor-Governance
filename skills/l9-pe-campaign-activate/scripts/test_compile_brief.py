@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 import tempfile
 import unittest
@@ -90,6 +91,41 @@ class CompileBriefTests(unittest.TestCase):
             with self.assertRaises(BriefError) as ctx:
                 compile_brief(path, output=Path(raw) / "out.yaml")
             self.assertIn("program-execution.intent.v1", str(ctx.exception))
+
+    def test_companion_plan_document_files_become_task_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            companion = {
+                "mode": "plan",
+                "title": "Tip",
+                "objective": "Resolve the tip",
+                "todos": [
+                    {
+                        "id": "T1",
+                        "task": "Add resolver",
+                        "files": ["ops/scripts/resolve_stack_tip.py"],
+                    }
+                ],
+            }
+            (root / "companion.json").write_text(json.dumps(companion), encoding="utf-8")
+            plan = root / "demo.plan.md"
+            plan.write_text(
+                "---\n"
+                "name: Tip\n"
+                "overview: Resolve the tip\n"
+                "todos:\n"
+                "  - id: T1\n"
+                "    content: Add resolver\n"
+                "---\n\n"
+                "# PLAN: Tip\n\n"
+                "> Projected from validated PLAN_DOCUMENT `companion.json`\n",
+                encoding="utf-8",
+            )
+            result = compile_brief(plan, output=root / "out.yaml")
+            self.assertEqual(
+                result["seed"]["tasks"][0]["paths"],
+                ["ops/scripts/resolve_stack_tip.py"],
+            )
 
 
 if __name__ == "__main__":
