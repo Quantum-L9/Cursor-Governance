@@ -75,6 +75,15 @@ class Context7StackProofTests(unittest.TestCase):
         self.assertEqual(receipt.get("skipped"), "no-external-stack")
         self.assertEqual(receipt["status"], "pass")
 
+    def test_unrelated_prohibition_does_not_negate_later_product(self) -> None:
+        seed = {
+            "campaign_id": "docs-only",
+            "objective": ("Do not touch the local cache. Add Context7 to resolve library docs."),
+            "tasks": [{"title": "Docs", "objective": "prime Context7"}],
+        }
+        names = [item["name"].lower() for item in self.mod.infer_tools(seed)]
+        self.assertIn("context7", names)
+
     def test_positive_neo4j_integration_still_infers(self) -> None:
         seed = {
             "campaign_id": "neo4j-gds",

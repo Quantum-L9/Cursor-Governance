@@ -68,7 +68,7 @@ class LaunchabilityTest(unittest.TestCase):
             )
             self.assertEqual(
                 inferred,
-                ["python3 -m pytest tests/test_rule_loader.py --tb=short -q --no-cov"],
+                ["python3 -m pytest tests/test_rule_loader.py --tb=short -q -o addopts="],
             )
 
     def test_pytest_native_file_infers_pytest_not_unittest(self) -> None:
@@ -90,7 +90,7 @@ class LaunchabilityTest(unittest.TestCase):
                 inferred,
                 [
                     "python3 -m pytest "
-                    "tests/ops/scripts/test_multi_agent_main_bound.py --tb=short -q --no-cov"
+                    "tests/ops/scripts/test_multi_agent_main_bound.py --tb=short -q -o addopts="
                 ],
             )
 
@@ -114,7 +114,7 @@ class LaunchabilityTest(unittest.TestCase):
             self.assertTrue(report["launchable"])
             self.assertEqual(
                 report["synthesized_validations"]["TASK-001"],
-                ["python3 -m pytest pkg/tests/test_widget.py --tb=short -q --no-cov"],
+                ["python3 -m pytest pkg/tests/test_widget.py --tb=short -q -o addopts="],
             )
 
     def test_declared_validation_overrides_inference(self) -> None:
