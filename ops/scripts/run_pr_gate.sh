@@ -429,7 +429,9 @@ else
 fi
 
 echo "--- security ---"
-bash "$SCRIPT_DIR/run_pr_security.sh" "$WS"
+# Gate mode: on the publish path a missing scanner binary is a failure, not
+# a SKIP that reads as a pass (INV-5).
+bash "$SCRIPT_DIR/run_pr_security.sh" --mode gate "$WS"
 
 if [[ "$PR_MYPY_STRICT" = "1" ]]; then
   _mypy="$GOV_ROOT/.venv/bin/mypy"

@@ -239,9 +239,23 @@ claude-settings-check:
 
 ## Canonical Claude environment doctor: full adapter install check (read-only,
 ## reports drift per the health accumulator) + the structural/contract validator.
+## Exit 5 means the files are correct but the runtime never wired — the state
+## the mobile bootstrap audit found while the validator still printed PASS.
 claude-env:
 	$(MAKE) claude-install-check
 	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py
+	$(PYTHON) ops/secrets/validate_capability_hosts.py
+	$(PYTHON) environment/agents/adapters/claude-code/verify_account_env.py || true
+	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py --runtime
+
+## Diagnose why the capability plane is unavailable, and whether egress matches
+## the posture recorded in docs/NETWORK_POSTURE.md. Both report rather than fail:
+## on a hosted surface the primary blocker is platform-issued identity, which no
+## change in this repository can resolve (docs/DEGRADED_MODE_CONTRACT.md).
+.PHONY: claude-diagnose
+claude-diagnose:
+	$(PYTHON) ops/secrets/probe_broker.py || true
+	$(PYTHON) ops/scripts/probe_network_posture.py
 
 ## Fail-closed first-class autonomy family registry (environment/contracts/autonomy).
 autonomy-contracts-validate:

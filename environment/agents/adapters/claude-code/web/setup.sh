@@ -62,11 +62,17 @@ if [ -n "${GH_TOKEN:-}" ] && [ "$GH_TOKEN" != "proxy-injected" ]; then
   echo "WARN: GH_TOKEN looks like a real credential — PROHIBITED; unsetting"
   unset GH_TOKEN
 fi
-if have gh; then
-  log "GitHub CLI present (auth is the Anthropic git/gh proxy, not a pasted PAT)"
-  gh auth status 2>/dev/null || echo "NOTE: gh unauthenticated until the platform proxy injects credentials"
+# The probe lives in ops/scripts/lib so it is testable and shared; see that file
+# for why `gh auth status` alone is the wrong question on a proxied surface.
+_L9_SETUP_HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+_L9_SETUP_GOV="$(cd "$_L9_SETUP_HERE/../../../../.." && pwd)"
+if [ -f "$_L9_SETUP_GOV/ops/scripts/lib/gh_auth_probe.sh" ]; then
+  # shellcheck source=../../../../../ops/scripts/lib/gh_auth_probe.sh
+  source "$_L9_SETUP_GOV/ops/scripts/lib/gh_auth_probe.sh"
+  log "GitHub CLI auth posture"
+  gh_auth_probe || true
 else
-  echo "WARNING: gh missing — CI/review skills that shell out to gh will not work."
+  echo "WARN: ops/scripts/lib/gh_auth_probe.sh missing — cannot report gh auth posture"
 fi
 
 # 3) Governance SSOT — GitHub main only (Quantum-L9/Cursor-Governance).
@@ -144,43 +150,82 @@ fi
 # the project directory. Resolve the consumer repo explicitly and refuse rather
 # than guess: wiring the wrong directory produces a complete .claude/ tree that
 # Claude Code never loads, while the bootstrap receipt still reports READY.
-resolve_workspace() {
+# Resolve EVERY consumer repository this sandbox holds, not just one.
+#
+# The old resolver accepted exactly one git repo under cwd and returned failure
+# for anything else, on the reasoning that "zero or several is not unambiguous".
+# But a Claude Code cloud session routinely mounts several repositories side by
+# side under a non-repository parent — the audited session held five — so the
+# ambiguous case is the NORMAL case, and refusing it left the entire adapter
+# unwired while setup still exited 0 (audit B-02).
+#
+# Ambiguity was never the real hazard. Wiring the WRONG single directory was.
+# Wiring all of them is unambiguous by construction: each repo gets its own
+# .claude tree, and a repo that is not the session's project simply carries
+# wiring nobody reads.
+#
+# Emits one absolute path per line. Returns 1 only when there is nothing at all.
+resolve_workspaces() {
   if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ -d "$CLAUDE_PROJECT_DIR/.git" ]; then
-    printf '%s' "$CLAUDE_PROJECT_DIR"
+    printf '%s\n' "$CLAUDE_PROJECT_DIR"
     return 0
   fi
   local top
   if top=$(git rev-parse --show-toplevel 2>/dev/null) && [ -n "$top" ]; then
-    printf '%s' "$top"
+    printf '%s\n' "$top"
     return 0
   fi
-  # Exactly one git repo directly under cwd is unambiguous; zero or several is not.
-  local only="" d="" n=0
-  for d in ./*/; do
+  # Both globs: `./*/` alone skips dotfile directories, and `.github` is a real
+  # consumer repository that was therefore invisible to the old resolver.
+  local found=0 d
+  for d in ./*/ ./.*/; do
+    case "$d" in ././|./../) continue ;; esac
     [ -d "$d/.git" ] || continue
-    n=$((n + 1))
-    only="$d"
+    ( cd "$d" 2>/dev/null && pwd ) || continue
+    found=$((found + 1))
   done
-  if [ "$n" -eq 1 ]; then
-    ( cd "$only" && pwd )
-    return 0
-  fi
-  return 1
+  [ "$found" -gt 0 ] || return 1
+  return 0
 }
 
 ADAPTER_INSTALL="$GOV_DIR/environment/agents/adapters/claude-code/install.sh"
-if [ -f "$ADAPTER_INSTALL" ]; then
-  if ADAPTER_WS="$(resolve_workspace)"; then
-    echo "NOTE: adapter workspace resolved to $ADAPTER_WS"
-    bash "$ADAPTER_INSTALL" --governance "$GOV_DIR" --workspace "$ADAPTER_WS"
-    adapter_rc=$?
-    echo "NOTE: adapter install exited $adapter_rc (see ~/.l9/claude/bootstrap-state.json)"
-  else
-    echo "WARN: no git workspace resolvable from $(pwd) — adapter NOT wired"
-    echo "      (refusing to wire a non-repository directory; run 'make claude-install WS=<repo>' manually)"
+if [ ! -f "$ADAPTER_INSTALL" ]; then
+  echo "ERROR: missing environment/agents/adapters/claude-code/install.sh — adapter NOT wired" >&2
+  exit 1
+fi
+
+if ADAPTER_WS_LIST="$(resolve_workspaces)" && [ -n "$ADAPTER_WS_LIST" ]; then
+  wired=0
+  failed=0
+  while IFS= read -r ADAPTER_WS; do
+    [ -n "$ADAPTER_WS" ] || continue
+    log "Wiring adapter workspace: $ADAPTER_WS"
+    if bash "$ADAPTER_INSTALL" --governance "$GOV_DIR" --workspace "$ADAPTER_WS"; then
+      wired=$((wired + 1))
+      echo "NOTE: wired $ADAPTER_WS"
+    else
+      adapter_rc=$?
+      failed=$((failed + 1))
+      echo "ERROR: adapter install FAILED for $ADAPTER_WS (exit $adapter_rc)" >&2
+    fi
+  done <<EOF
+$ADAPTER_WS_LIST
+EOF
+  echo "NOTE: adapter wiring summary — wired=$wired failed=$failed"
+  if [ "$wired" -eq 0 ]; then
+    echo "ERROR: adapter NOT wired in ANY workspace — see ~/.l9/claude/bootstrap-state.json" >&2
+    exit 1
   fi
 else
-  echo "WARN: missing environment/agents/adapters/claude-code/install.sh — adapter NOT wired"
+  # Nothing resolvable. Run the installer once against cwd anyway: it refuses to
+  # wire a non-repository, but it DOES leave a receipt saying so, and it still
+  # provisions the shared toolchain. A silent environment with no receipt is the
+  # state that made this failure invisible for days (B-02, B-04).
+  echo "ERROR: no git repository at or under $(pwd) — adapter cannot be wired" >&2
+  echo "       recording a receipt, then failing the environment build" >&2
+  bash "$ADAPTER_INSTALL" --governance "$GOV_DIR" --workspace "$PWD" || true
+  echo "       (run 'make claude-install WS=<repo>' once a repository is present)" >&2
+  exit 1
 fi
 
 # NOT here: the consumer workspace's own language toolchain (uv/pip/npm) and
