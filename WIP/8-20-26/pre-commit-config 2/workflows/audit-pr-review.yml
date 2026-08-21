@@ -1,0 +1,381 @@
+# --- L9_META ---
+# l9_schema: 1
+# origin: l9-template
+# engine: enrichment
+# layer: [ci, governance]
+# tags: [L9_TEMPLATE, ci, audit, pr-review, tier-policy]
+# owner: platform
+# status: active
+# --- /L9_META ---
+# Audit PR Review - explicit advisory/blocking governance policy.
+
+name: Audit PR Review
+
+on:
+  pull_request:
+    branches:
+      - main
+      - develop
+    paths:
+      - '**/*.py'
+      - 'kb/**/*.yaml'
+      - 'kb/**/*.yml'
+      - '.github/workflows/audit-pr-review.yml'
+
+concurrency:
+  group: audit-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
+env:
+  PYTHON_VERSION: '3.12'
+  MAX_COMMENT_FINDINGS_PER_SECTION: '25'
+  MAX_COMMENT_LENGTH: '65536'
+
+jobs:
+  audit-review:
+    name: L9 Audit Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: 'pip'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyyaml
+
+      - name: Run Audit Engine
+        id: audit
+        env:
+          BASE_REF: ${{ github.event.pull_request.base.sha }}
+          HEAD_REF: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ ! -f "tools/audit_engine.py" ]; then
+            echo "audit_engine.py not found, skipping"
+            echo "has_findings=false" >> $GITHUB_OUTPUT
+            echo "should_block=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Running L9 27-rule audit..."
+          if ! PYTHONPATH=. python tools/audit_engine.py --json > audit_results.json 2>&1; then
+            echo "audit engine exited non-zero; results (if any) preserved for reporting" >&2
+          fi
+
+          python3 << 'PY'
+          import json
+          import os
+          import re
+          import subprocess
+          import sys
+          from pathlib import PurePosixPath
+
+          LEGACY_BASELINE = {
+              "app/score/score_explainer.py|flatcase_field|likely flatcase field 'recommendation'",
+              "app/score/score_explainer.py|flatcase_field|likely flatcase field 'recommendations'",
+              "app/score/score_models.py|flatcase_field|likely flatcase field 'recommendation'",
+              "app/agents/deal_risk.py|flatcase_field|likely flatcase field 'recommendations'",
+              "app/services/simulation_bridge.py|f_string_sql|f-string sql query -- injection risk",
+              "app/services/crm/salesforce_client.py|f_string_sql|f-string sql query -- injection risk",
+              "app/middleware/rate_limiter.py|fastapi_import_engine|fastapi import in engine module -- chassis isolation violation",
+              "app/core/auth.py|fastapi_import_engine|fastapi import in engine module -- chassis isolation violation",
+              "app/score/score_api.py|fastapi_import_engine|fastapi import in engine module -- chassis isolation violation",
+              "app/bootstrap/l9_contract_runtime.py|fastapi_import_engine|fastapi import in engine module -- chassis isolation violation",
+          }
+
+          ADVISORY_RULES = {
+              'flatcase_field',
+              'naming_smell',
+              'style_consistency',
+              'low_confidence_architecture_hint',
+          }
+          DANGEROUS_RULES = {
+              'f_string_sql',
+              'fastapi_import_engine',
+              'auth_boundary_violation',
+              'transport_boundary_violation',
+              'runtime_contract_violation',
+              'ingress_security_violation',
+              'secret_exposure',
+          }
+          DANGEROUS_TOKENS = (
+              'sql', 'injection', 'secret', 'auth', 'security',
+              'fastapi import', 'chassis', 'transport', 'ingress',
+              'contract', 'runtime',
+          )
+          ADVISORY_TOKENS = (
+              'flatcase', 'naming', 'style', 'low confidence',
+          )
+
+          def normalize_path(value: object) -> str:
+              text = str(value or '').replace('\\', '/').strip()
+              while text.startswith('./'):
+                  text = text[2:]
+              return str(PurePosixPath(text)) if text else ''
+
+          def normalize_text(value: object) -> str:
+              return re.sub(r'\s+', ' ', str(value or '').strip().lower())
+
+          def changed_files() -> set[str]:
+              base_ref = os.environ.get('BASE_REF')
+              head_ref = os.environ.get('HEAD_REF')
+              if not base_ref or not head_ref:
+                  print('ERROR: BASE_REF and HEAD_REF are required', file=sys.stderr)
+                  raise SystemExit(2)
+              output = subprocess.check_output(['git', 'diff', '--name-only', base_ref, head_ref], text=True)
+              return {normalize_path(path) for path in output.splitlines() if normalize_path(path)}
+
+          NUMERIC_RULE_NAMES = {
+              '2': 'flatcase_field',
+              '10': 'f_string_sql',
+              '11': 'fastapi_import_engine',
+          }
+
+          def finding_rule(finding: dict) -> str:
+              raw_rule = finding.get('rule')
+              if raw_rule is not None:
+                  token = normalize_text(str(raw_rule))
+                  if token.isdigit():
+                      mapped = NUMERIC_RULE_NAMES.get(token)
+                      if mapped:
+                          return mapped
+                      # Numeric rule the engine emitted but we don't map to a
+                      # dangerous/advisory category. Trust it as a benign rule
+                      # instead of inferring a category from the message below:
+                      # message-keyword inference matches identifier substrings
+                      # (e.g. 'authorize_tool' -> 'auth', 'validate_ingress_*' ->
+                      # 'ingress', 'build_runtime_attestation' -> 'runtime'),
+                      # which falsely promotes INFO docstring/complexity findings
+                      # to blocking dangerous findings.
+                      return f'rule_{token}'
+                  elif token:
+                      return token
+              message = normalize_text(finding.get('message'))
+              if 'f-string sql' in message or 'sql query' in message:
+                  return 'f_string_sql'
+              if 'fastapi import' in message or 'chassis isolation' in message:
+                  return 'fastapi_import_engine'
+              if 'flatcase field' in message:
+                  return 'flatcase_field'
+              if 'secret' in message:
+                  return 'secret_exposure'
+              if 'auth' in message:
+                  return 'auth_boundary_violation'
+              if 'transport' in message:
+                  return 'transport_boundary_violation'
+              if 'ingress' in message:
+                  return 'ingress_security_violation'
+              if 'runtime' in message or 'contract' in message:
+                  return 'runtime_contract_violation'
+              return 'unknown_rule'
+
+          def finding_key(finding: dict) -> str:
+              return '|'.join((normalize_path(finding.get('file')), finding_rule(finding), normalize_text(finding.get('message'))))
+
+          def is_advisory_category(finding: dict) -> bool:
+              rule = finding_rule(finding)
+              message = normalize_text(finding.get('message'))
+              return rule in ADVISORY_RULES or any(token in message for token in ADVISORY_TOKENS)
+
+          def is_dangerous_category(finding: dict) -> bool:
+              # Classify by resolved rule only. The previous implementation also
+              # OR'd in `any(token in message ...)` against DANGEROUS_TOKENS,
+              # which matched identifier substrings in benign messages (e.g.
+              # 'auth' inside "Public function 'authorize_tool' missing
+              # docstring") and promoted INFO findings to blocking. Real
+              # dangerous rules (f_string_sql, fastapi_import_engine, ...) resolve
+              # via finding_rule(); unknown CRITICAL/HIGH still fail closed below.
+              return finding_rule(finding) in DANGEROUS_RULES
+
+          try:
+              raw_findings = json.load(open('audit_results.json', encoding='utf-8'))
+          except Exception as exc:
+              print(f'ERROR: Failed to parse audit_results.json: {exc}', file=sys.stderr)
+              raise SystemExit(2)
+          if not isinstance(raw_findings, list):
+              print('ERROR: audit_results.json must be a list', file=sys.stderr)
+              raise SystemExit(2)
+
+          touched_files = changed_files()
+          enriched = []
+          for raw in raw_findings:
+              if not isinstance(raw, dict):
+                  print('ERROR: each audit finding must be an object', file=sys.stderr)
+                  raise SystemExit(2)
+              finding = dict(raw)
+              rule = finding_rule(finding)
+              severity = str(finding.get('severity', '')).upper()
+              key = finding_key(finding)
+              touched = normalize_path(finding.get('file')) in touched_files
+              inherited = key in LEGACY_BASELINE
+              dangerous = is_dangerous_category(finding)
+              advisory_category = is_advisory_category(finding)
+              unknown_high_critical = rule == 'unknown_rule' and severity in {'CRITICAL', 'HIGH'}
+              blocking_reason = ''
+
+              if touched and dangerous:
+                  blocking_reason = 'touched_dangerous_finding'
+              elif not inherited and dangerous:
+                  blocking_reason = 'new_dangerous_finding'
+              elif not inherited and severity in {'CRITICAL', 'HIGH'} and not advisory_category:
+                  blocking_reason = 'new_high_or_critical'
+              elif unknown_high_critical:
+                  blocking_reason = 'unknown_high_or_critical_fail_closed'
+
+              finding['_l9_rule'] = rule
+              finding['_l9_key'] = key
+              finding['_l9_touched'] = touched
+              finding['_l9_inherited'] = inherited
+              finding['_l9_dangerous'] = dangerous
+              finding['_l9_advisory_category'] = advisory_category
+              finding['_l9_blocking'] = bool(blocking_reason)
+              finding['_l9_blocking_reason'] = blocking_reason
+              enriched.append(finding)
+
+          blocking = [f for f in enriched if f['_l9_blocking']]
+          advisory = [f for f in enriched if not f['_l9_blocking']]
+          summary = {
+              'schema_version': 1,
+              'mode': 'explicit_advisory_blocking_tier_policy',
+              'changed_files': sorted(touched_files),
+              'finding_count': len(enriched),
+              'blocking_finding_count': len(blocking),
+              'advisory_finding_count': len(advisory),
+              'blocking_findings': blocking,
+              'advisory_findings': advisory,
+              'policy': {
+                  'advisory_rules': sorted(ADVISORY_RULES),
+                  'dangerous_rules': sorted(DANGEROUS_RULES),
+                  'unknown_high_critical': 'blocking',
+                  'flatcase_style': 'advisory',
+              },
+          }
+          json.dump(summary, open('audit_summary.json', 'w', encoding='utf-8'), indent=2)
+
+          with open(os.environ['GITHUB_OUTPUT'], 'a', encoding='utf-8') as handle:
+              handle.write(f"has_findings={'true' if enriched else 'false'}\n")
+              handle.write(f"finding_count={len(enriched)}\n")
+              handle.write(f"blocking_finding_count={len(blocking)}\n")
+              handle.write(f"advisory_finding_count={len(advisory)}\n")
+              handle.write(f"should_block={'true' if blocking else 'false'}\n")
+          PY
+
+      - name: Generate PR Comment
+        if: steps.audit.outputs.has_findings == 'true'
+        id: comment
+        run: |
+          python3 << 'EOF'
+          import json
+          import os
+
+          MAX_PER_SECTION = int(os.environ.get('MAX_COMMENT_FINDINGS_PER_SECTION', '25'))
+          MAX_COMMENT_LENGTH = int(os.environ.get('MAX_COMMENT_LENGTH', '65536'))
+          MAX_LINE_LENGTH = 500
+          payload = json.load(open('audit_summary.json', encoding='utf-8'))
+
+          def public(finding):
+              return {k: v for k, v in finding.items() if not k.startswith('_l9_')}
+
+          def append_section(lines, title, findings):
+              lines.append(f'### {title}')
+              lines.append('')
+              if not findings:
+                  lines.append('- none')
+                  lines.append('')
+                  return
+              for finding in findings[:MAX_PER_SECTION]:
+                  raw = public(finding)
+                  message = str(raw.get('message', ''))
+                  if len(message) > MAX_LINE_LENGTH:
+                      message = message[:MAX_LINE_LENGTH] + '...'
+                  reason = finding.get('_l9_blocking_reason') or 'advisory'
+                  lines.append(f"- `{raw.get('file')}:{raw.get('line')}` {message} — `{reason}`")
+              remaining = len(findings) - MAX_PER_SECTION
+              if remaining > 0:
+                  lines.append('')
+                  lines.append(f'... truncated {remaining} additional findings ...')
+              lines.append('')
+
+          lines = [
+              '<!-- l9-audit-marker: v1 -->',
+              '## L9 Audit Review',
+              '',
+              '### Status',
+              f"- Result: `{'blocking' if payload['blocking_finding_count'] else 'pass_with_advisories'}`",
+              '- Mode: `explicit_advisory_blocking_tier_policy`',
+              f"- Total findings visible: **{payload['finding_count']}**",
+              f"- Blocking findings: **{payload['blocking_finding_count']}**",
+              f"- Advisory findings: **{payload['advisory_finding_count']}**",
+              '',
+              '### Policy',
+              '- Flatcase/style findings are advisory.',
+              '- SQL/auth/security/chassis/transport/ingress/contract/runtime findings are blocking when new or touched.',
+              '- Unknown HIGH/CRITICAL findings fail closed as blocking.',
+              '',
+              '---',
+              '',
+          ]
+          append_section(lines, 'Blocking Findings', payload['blocking_findings'])
+          append_section(lines, 'Advisory Findings', payload['advisory_findings'])
+          lines.append('---')
+          lines.append('Generated by L9 Audit Engine (`tools/audit_engine.py`)')
+          body = '\n'.join(lines)
+          if len(body) > MAX_COMMENT_LENGTH:
+              body = body[:MAX_COMMENT_LENGTH - 120] + '\n\n... truncated due to GitHub comment limit ...\n---\nGenerated by L9 Audit Engine (`tools/audit_engine.py`)'
+          open('pr_comment.md', 'w', encoding='utf-8').write(body)
+          print(f'Generated tier-policy audit comment ({len(body)} chars)')
+          EOF
+
+      - name: Post PR Comment
+        if: steps.audit.outputs.has_findings == 'true'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+            const commentBody = fs.readFileSync('pr_comment.md', 'utf8');
+            const { data: comments } = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number });
+            const existingComment = comments.find(c => c.user.login === 'github-actions[bot]' && c.body.includes('<!-- l9-audit-marker: v1 -->'));
+            if (existingComment) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existingComment.id, body: commentBody });
+            } else {
+              await github.rest.issues.createComment({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number, body: commentBody });
+            }
+
+      - name: Clear stale audit comment
+        if: steps.audit.outputs.has_findings == 'false'
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const { data: comments } = await github.rest.issues.listComments({ owner: context.repo.owner, repo: context.repo.repo, issue_number: context.issue.number });
+            const existingComment = comments.find(c => c.user.login === 'github-actions[bot]' && c.body.includes('<!-- l9-audit-marker: v1 -->'));
+            if (existingComment) {
+              await github.rest.issues.updateComment({ owner: context.repo.owner, repo: context.repo.repo, comment_id: existingComment.id, body: '<!-- l9-audit-marker: v1 -->\n## L9 Audit Review\n\nAll audit rules pass. No findings remain.\n\nGenerated by L9 Audit Engine (`tools/audit_engine.py`)' });
+            }
+
+      - name: Fail on Blocking Issues
+        if: steps.audit.outputs.should_block == 'true'
+        run: |
+          echo "Blocking audit findings found"
+          echo "Blocking findings: ${{ steps.audit.outputs.blocking_finding_count }}"
+          exit 1
+
+      - name: Audit Passed
+        if: steps.audit.outputs.should_block != 'true'
+        run: |
+          echo "L9 Audit Review passed with explicit advisory/blocking policy"
+          echo "Total findings: ${{ steps.audit.outputs.finding_count }}"
+          echo "Advisory findings: ${{ steps.audit.outputs.advisory_finding_count }}"

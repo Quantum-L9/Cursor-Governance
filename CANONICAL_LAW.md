@@ -11,10 +11,10 @@ status: active
 /L9_META -->
 # L9 Governance — Canonical Law
 
-**Status:** authoritative  
-**Runtime:** L9 Governance  
-**Governance root (SSOT):** `$HOME/.cursor-governance/` — the GitHub clone  
-**GitHub origin (SSOT remote):** `Quantum-L9/Cursor-Governance`  
+**Status:** authoritative
+**Runtime:** L9 Governance
+**Governance root (SSOT):** `$HOME/.cursor-governance/` — the GitHub clone
+**GitHub origin (SSOT remote):** `Quantum-L9/Cursor-Governance`
 **Updated:** 2026-08-07 (integration-branch-first + local runtime discipline §13)
 
 ---
@@ -36,7 +36,7 @@ status: active
 | **Autonomy family** | `environment/contracts/autonomy/MANIFEST.yaml` | First-class subordinate primitive family (root `autonomy/` + `ops/autonomy` + Claude scheduler SSOTs); PE Controller remains authoritative; `owns_program_state: false`; validate via `make autonomy-contracts-validate` |
 | **Peer Execution thin-adapter law** | `environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml` | Binding provider-neutral execution architecture; validate via `make peer-execution-conformance` |
 
-**Law:** The governance repo appears **once** in each workspace: `.cursor-commands` → clone root.  
+**Law:** The governance repo appears **once** in each workspace: `.cursor-commands` → clone root.
 **Never** expose the governance root under `.cursor/governance/` — that path holds only the law file + README.
 
 ---
@@ -229,15 +229,17 @@ Do not fork Profile prose into SessionStart/README/ADR — cite the Profile.
 
 SSOT fragment: [`ops/autonomy/surface_profile.yaml`](ops/autonomy/surface_profile.yaml)
 (`l4_local_autonomy`). Mechanical gate:
-[`ops/autonomy/local_execution_gate.py`](ops/autonomy/local_execution_gate.py).
-Phase CLI: [`ops/autonomy/l4_local.py`](ops/autonomy/l4_local.py).
+[`ops/autonomy/local_execution_gate.py`](ops/autonomy/local_execution_gate.py) —
+**which does not gate `git` or `gh`; see §6.2.4**. Effect-plane gate:
+[`ops/autonomy/git_guardrails.py`](ops/autonomy/git_guardrails.py). Phase CLI:
+[`ops/autonomy/l4_local.py`](ops/autonomy/l4_local.py).
 
 Standing doctrine for program/contract execution (default **ON**;
 `L9_L4_LOCAL_AUTONOMY=1`):
 
 | Phase | Allowed | Denied |
 |--------|---------|--------|
-| Local execution on stacked feature branch | Local commits | `git push`, `gh pr create`, mid-exec remote |
+| Local execution on stacked feature branch | Local commits | `make push`, MCP `create_pull_request` / `push_files`, mid-exec remote (see §6.2.4 for `git`/`gh`) |
 | Post-finish kernels | Run `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md` | Claiming release without both kernels |
 | `release_authorized` (receipt) | Scoped push + PR using `PULL_REQUEST_TEMPLATE.md` | Mid-exec remote / force-push / secrets |
 | Post-push | `l9-pr-remediation` Converge; resolve review threads; merge when user-authorized | Standing merge without user auth; force-push |
@@ -273,8 +275,8 @@ auth: `L9_MERGE_AUTHORIZED=<reason>`.
 | Local cache | `intelligence/context-memory/sessions/*.json` | Fallback only |
 | MCP interface | `ops/graphiti/graphiti_memory_client.py` | L9-Ops-MCP |
 
-**Rules:** `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`, `99-graphiti-temporal.mdc`  
-**Skill:** `skills/l9-graphiti-memory/SKILL.md`  
+**Rules:** `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`, `99-graphiti-temporal.mdc`
+**Skill:** `skills/l9-graphiti-memory/SKILL.md`
 **Flags:** `GRAPHITI_MEMORY_ENABLED`, `GRAPHITI_WRITE_GATES`
 
 Session start prefetch: `ops/hooks/session_start_memory_orchestrator.sh`
@@ -467,6 +469,45 @@ reaches green + mergeable. Older open PRs: remediate and merge **bottom-up** by
 allows ordinary `gh pr merge` when a valid L4 release receipt authorizes the
 stack (or `L9_MERGE_AUTHORIZED=<reason>`). Force-push, hard-reset, and
 admin-merge remain forbidden.
+
+<!-- CONTEXT_SENSITIVE_GIT_GUARDRAILS_V1 -->
+## 6.2.4 Git is gated by effect, not by name (2026-08-21) — supersedes §6.2 push-denial phrasing
+
+`git` and `gh` are **not** denied by `ops/autonomy/local_execution_gate.py`, and
+have not been since 2026-08-18. Older text saying otherwise names an enforcement
+that does not exist; do not treat it as live.
+
+Two planes, and only one of them denies:
+
+1. **Workflow plane — preference, not enforcement.** `make pr` is the preferred
+   route to GitHub: it is the only one that runs the checkers. `git` and `gh` are
+   exempt from every workflow denial — publish-path, L4 phase, worktree isolation
+   — via [`ops/autonomy/git_execution_exemption.py`](ops/autonomy/git_execution_exemption.py).
+   The classifiers still *report* a raw publish, so a policy engine can say "you
+   bypassed `make pr`" after the fact. That report is not a block.
+2. **Effect plane — this one denies.** Every shell command is first evaluated by
+   [`ops/autonomy/git_guardrails.py`](ops/autonomy/git_guardrails.py) (contract
+   `l9-context-sensitive-git-guardrails`), which decides from the command's actual
+   effect, the sensitivity of its target, and provable recoverability. Read-only
+   git is allowed unconditionally; a destructive primitive over disposable state
+   is allowed; an unrecoverable mutation of sensitive state is denied — to a
+   human, not to a workflow phase.
+
+Still mechanically denied at every phase, including `release_authorized`, because
+they reach GitHub without the checkers: `make push`,
+`mcp__github__create_pull_request`, `mcp__github__push_files`. Force-push,
+hard-reset, admin-merge and secret exfiltration remain forbidden under §6.1.
+
+The permission layer must agree. `environment/agents/adapters/claude-code/validate_claude_env.py`
+**fails the build** if `permissions.deny` carries any `Bash(git …)` / `Bash(gh …)`
+entry, because blocking at the permission layer what enforcement deliberately
+allows is the same split-brain mirrored. Policy may discourage a command; the
+permission layer must not block it.
+
+Rationale: naming commands cannot distinguish `git push` to a feature branch from
+`git push --force` over a colleague's work. Effect can. Enforcing by name gave
+both a false sense of protection and, in this repository, a constitution that
+described a gate its own code had stopped implementing.
 
 <!-- GOVERNANCE_ACTIVATE_FRESH_SESSIONSTART_V1 -->
 ## 5.1 SessionStart tip activation + symlink notes (2026-08-12) — supersedes §2 / §5 rows

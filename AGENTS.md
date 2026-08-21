@@ -232,9 +232,14 @@ This repo does **not** use a git commit hook. Do not run `pre-commit install`.
    security / pytest). No L4. Empty changeset vs `PR_BASE` is PASS. A PASS
    writes `.l9/pr/gate-receipt.json`. The same HEAD + worktree + `PR_BASE` is
    not re-gated.
-3. Single path to GitHub = **`make pr`** after L4 release. Raw `git push` /
-   `gh pr create` / `gh pr edit` / MCP `create_pull_request` / `push_files`
-   are denied at every phase. `make pr` / `PR` / `Pr` / `pR` are equivalent.
+3. Preferred path to GitHub = **`make pr`** after L4 release — the only route
+   that runs the checkers. Mechanically denied at every phase: `make push`,
+   MCP `create_pull_request` / `push_files`. Raw `git push` / `gh pr create` /
+   `gh pr edit` are **off doctrine but not blocked**: git and gh are exempt
+   from the workflow plane and answer to `ops/autonomy/git_guardrails.py`,
+   which denies by effect (CANONICAL_LAW §6.2.4). Do not expect a denial
+   message to stop you — prefer `make pr` because it gates, not because the
+   alternative errors. `make pr` / `PR` / `Pr` / `pR` are equivalent.
 4. Failure loop: diagnose → fix → (`make improve` if kernels apply) →
    `make pr-check` → `make pr` **once**. Do not run a second full gate on an
    unchanged tree.
@@ -276,6 +281,12 @@ renegotiate scope. `PR_STACK=auto` still exists as a knob but creates the
 topology squash-merge denies — use it only when the parent will merge with
 `--merge`. Fail-open on missing `gh` telemetry; fail-closed on a detected
 non-generated textual conflict.
+
+`PR_STACK=auto` is also the start-time default:
+`agent_worktree_start.sh` bases the worktree on the unique open-PR chain
+tip (implied `L9_TASK_BASE_AUTHORIZED` for that tip only). Do not invent
+an `origin/main` fork and restack at `make pr`. Empty `PR_STACK` keeps
+`origin/main`. Sibling open-PR chains still fail closed.
 
 `make pr` defaults to `PR_STACK=auto` (stack on the overlapping open
 head). Opt out with `PR_STACK= make pr` to publish against `main`. A

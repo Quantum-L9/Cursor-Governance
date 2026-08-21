@@ -254,8 +254,8 @@ GENERATED_PATH_PREFIXES: tuple[str, ...] = (
 #: Paths the sync script regenerates but this gate must NOT call disposable.
 #: ``skills/AUTONOMY_MANIFEST.yaml`` is the hand-authored routing SSOT (rule 53
 #: keeps it off the generated merge driver for the same reason), and the PE
-#: manifest's auto-sync is suspended, so neither is reliably reproducible from
-#: a generator right now. Destroying a local edit to either would lose work.
+#: manifest is advisory and never auto-synced (TODO.md), so neither is produced
+#: by a gate-run generator. Destroying a local edit to either would lose work.
 DELIBERATELY_NOT_GENERATED: tuple[str, ...] = (
     "skills/AUTONOMY_MANIFEST.yaml",
     "environment/program-execution/MANIFEST.json",

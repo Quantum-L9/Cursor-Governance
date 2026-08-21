@@ -1,0 +1,413 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Make Program Execution start cleanly (gap only)",
+  "objective": "After merging #168/#169/#170, finish only the remaining Cursor sessionStart → shared bootstrap → runtime receipt → Graphiti lock identity → PE preflight → producer/consumer → clean-runtime smoke path. Do not recreate bootstrap_agent_environment.sh, Claude install delegation, pre-commit provisioning, publish-path probe truth, or the secrets capability plane.",
+  "success_criteria": [
+    "Cursor sessionStart live path (before exit 0) invokes ops/scripts/bootstrap_agent_environment.sh --surface cursor; a test fails if that call edge is removed",
+    "One machine-readable runtime readiness receipt answers which governance/runtime revisions and state roots a PE invocation will use; UNKNOWN is explicit; unverified mixed revisions fail before PE",
+    "Phase-lock acquire and governed mutation verify use the same session_id, namespace, workspace, and memory_state_root; mismatch prints both identities",
+    "pec preflight returns ready/blockers/next_action for draft-admission, reconcile, lease, holder, PREPARED, actor, writable paths, and phase-lock without first failing a controller command",
+    "draft-contract / compile cannot report success for an artifact the immediate consumer rejects",
+    "A clean-temp-state integration test reaches EXECUTING and records one schema-valid attempt receipt using real pec.py entrypoints",
+    "Existing Graphiti and controller safety gates remain enforced"
+  ],
+  "scope": {
+    "in": [
+      "ops/hooks/session_start_bootstrap.sh Cursor-specific orchestration only",
+      "ops/scripts/bootstrap_agent_environment.sh receipt + session identity stamp (extend, do not replace)",
+      "ops/scripts/write_runtime_readiness_receipt.py (new) + environment/agents/runtime_paths.py helper",
+      "environment/agents/adapters/claude-code/memory/memory_state.py workspace_root + session_id resolver",
+      "environment/agents/adapters/claude-code/memory/graphiti_bridge.py SET CURSOR_CONVERSATION_ID",
+      "environment/agents/adapters/claude-code/hooks/memory_lock.py and memory_gate.py identity diagnostics",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py preflight",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/preflight.py (new, extend pec)",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py draft materialization",
+      "tests: Cursor→shared-bootstrap edge, receipt/mixed-revision, lock/gate identity, pec preflight states, producer/consumer, clean PE smoke"
+    ],
+    "out": [
+      "Do not create a campaign, campaign sources, task cards, ledgers, or nested PE program for this work",
+      "Do not recreate ops/scripts/bootstrap_agent_environment.sh (landed #168)",
+      "Do not re-implement Claude install.sh shared-bootstrap delegation (landed #168)",
+      "Do not redo pre-commit provisioning, publish-path deny-reason probe, or L9_GOVERNANCE_SURFACE wiring skip (landed #169)",
+      "Do not redo secrets capability plane, broker, or .mcp.json bearer removal (landed #170)",
+      "Do not add a second bootstrap layer or orchestration framework",
+      "Do not weaken Graphiti gates, phase locks, controller admission, or schemas",
+      "Do not rewrite environment architecture or mix this onto the dirty primary checkout",
+      "Do not special-case historical incident data or hard-code one repository path"
+    ]
+  },
+  "code_in_scope": true,
+  "depth": "deep",
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git fetch origin main && git rev-parse origin/main",
+      "pass_criteria": "BOUND_HEAD=ab46dc8658daa125a7784ef3a94d3fe3059c0c4d (includes #168+#169+#170)",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "rg bootstrap_agent_environment.sh ops/hooks/session_start_bootstrap.sh",
+      "pass_criteria": "no match on origin/main — Cursor sessionStart does not yet call the shared bootstrap",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "inventory landed vs contract on origin/main",
+      "pass_criteria": "shared bootstrap exists and is called by Claude install.sh; receipt writer absent; pec has status/next but no preflight; draft-contract still emits REPLACE_WITH",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "confirm ~/.cursor/hooks.json sessionStart[0] is session-start-bootstrap.sh",
+      "pass_criteria": "live Cursor entrypoint is the installed copy of ops/hooks/session_start_bootstrap.sh",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Delegate Cursor sessionStart generic hydration to the existing shared bootstrap; keep only Cursor JSON/hydrate/plan-audit/wiring report in the hook; delete dead probe after exit 0; drop duplicated scratch_hold and inline uv sync that shared bootstrap already owns",
+      "files": [
+        "ops/hooks/session_start_bootstrap.sh",
+        "ops/scripts/tests/test_cursor_shared_bootstrap_edge.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "after GC resolve / before Cursor-specific reconcilers; must be before the live exit 0",
+      "leverage_rank": 1,
+      "shared_root_cause": "Cursor still independently implements generic environment hydration"
+    },
+    {
+      "id": "T2",
+      "task": "Materialize one runtime readiness receipt at shared-bootstrap time with required revision/state-root fields; UNKNOWN not omitted; mixed unverified revisions fail closed before PE",
+      "files": [
+        "ops/scripts/write_runtime_readiness_receipt.py",
+        "ops/scripts/bootstrap_agent_environment.sh",
+        "environment/agents/runtime_paths.py",
+        "ops/scripts/tests/test_runtime_readiness_receipt.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Create",
+      "anchor": "end of bootstrap_agent_environment.sh; reuse ~/.l9 receipt conventions",
+      "leverage_rank": 2,
+      "shared_root_cause": "mixed-source execution is not observable"
+    },
+    {
+      "id": "T3",
+      "task": "Unify Graphiti session/lock/gate identity: workspace_root honors CURSOR_PROJECT_DIR; phase-lock SET (not setdefault) CURSOR_CONVERSATION_ID; lock status and memory_gate print both identities/state roots on mismatch; add bind→acquire→query→mutation-precheck integration test",
+      "files": [
+        "environment/agents/adapters/claude-code/memory/memory_state.py",
+        "environment/agents/adapters/claude-code/memory/graphiti_bridge.py",
+        "environment/agents/adapters/claude-code/hooks/memory_lock.py",
+        "environment/agents/adapters/claude-code/hooks/memory_gate.py",
+        "environment/agents/adapters/claude-code/tests/test_lock_gate_identity.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "workspace_root() and run_graphiti() setdefault",
+      "leverage_rank": 3,
+      "shared_root_cause": "lock HELD vs gate NO VERIFIED LOCK from session_id/state-root skew"
+    },
+    {
+      "id": "T4",
+      "task": "Extend pec with preflight that inspects receipt, worktree, Blueprint/Source Contract admission, lease/holder/actor, writable paths, lock, controller state, and returns structured next_action for each historical friction state",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/preflight.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_preflight.py"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Create",
+      "anchor": "add preflight beside existing status/next; do not add a parallel PE framework",
+      "leverage_rank": 4,
+      "shared_root_cause": "agents discover PE prerequisites by failing controller commands"
+    },
+    {
+      "id": "T5",
+      "task": "Make draft-contract materialize consumer-required rollback/writable_paths from Blueprint task source and validate against validate_source_contract before reporting success; keep compile→template validate (already landed) and add register-contract consumer check",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_source_contract_placeholder.py",
+        "environment/program-execution/scripts/tests/test_producer_consumer_compat.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T4"
+      ],
+      "operation": "Replace",
+      "anchor": "draft_source_contract rollback REPLACE_WITH placeholder",
+      "leverage_rank": 5,
+      "shared_root_cause": "producer success for artifacts the immediate consumer rejects"
+    },
+    {
+      "id": "T6",
+      "task": "Add one clean-temp-state smoke that bootstraps environment, writes receipt, binds session, reconciles repo, lock, pec preflight, bootstrap, claim, prepare, start, and one valid attempt receipt via real entrypoints — no exploratory failures",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_pe_clean_startup.py"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5"
+      ],
+      "operation": "Create",
+      "anchor": "extend helpers.run_cli; do not import internals that bypass pec.py",
+      "leverage_rank": 6,
+      "shared_root_cause": "unit tests passing does not prove runtime wiring"
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T5",
+    "T6"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "PRs #168 #169 #170 merged; gap inventory bound to origin/main ab46dc86",
+      "unlocks": "implementation of remaining seams only"
+    },
+    {
+      "id": "M1",
+      "outcome": "Cursor sessionStart → shared bootstrap call edge + receipt exist",
+      "unlocks": "PE preflight can name the runtime actually in use"
+    },
+    {
+      "id": "M2",
+      "outcome": "Lock acquire and mutation gate share one session identity",
+      "unlocks": "preflight can report lock state without false HELD/deny"
+    },
+    {
+      "id": "M3",
+      "outcome": "pec preflight names the next legal operation; draft/compile cannot lie",
+      "unlocks": "clean-runtime smoke without trial-and-error"
+    },
+    {
+      "id": "M4",
+      "outcome": "Clean-temp smoke reaches EXECUTING + valid attempt receipt; make pr-check PASS",
+      "unlocks": "contract definition of done"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C0",
+      "after": "M0",
+      "evidence_required": "gh pr view 169/170 state=MERGED; git rev-parse origin/main == ab46dc8658daa125a7784ef3a94d3fe3059c0c4d",
+      "no_go_action": "do not implement remaining work against a stale tip"
+    },
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "test_cursor_shared_bootstrap_edge.py FAIL if bootstrap_agent_environment.sh call removed from live hook path; receipt file lists all required fields",
+      "no_go_action": "stop; do not add a second bootstrap script"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "test_lock_gate_identity.py: acquire then gate precheck recognizes the same lock; mismatch diagnostic contains both session_ids and state roots",
+      "no_go_action": "do not weaken GRAPHITI_WRITE_GATES or add ENFORCEMENT-off"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "pec preflight covers draft/reconcile/lease/holder/PREPARED/actor/writable/lock; draft-contract no longer succeeds with REPLACE_WITH",
+      "no_go_action": "do not add a parallel PE CLI"
+    },
+    {
+      "id": "C4",
+      "after": "M4",
+      "evidence_required": "test_pe_clean_startup.py PASS from clean temp state; make pr-check PASS",
+      "no_go_action": "continue implementation; do not declare the original contract done"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "SessionStart tip-activation and campaign-no-merge appendices stay authoritative; this plan only wires existing bootstrap into Cursor"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "No symlink-law or memory-plane change; Graphiti remains the sole episodic store"
+    },
+    {
+      "surface": "Makefile",
+      "action": "n_a",
+      "reason": "Capability targets already appended additively in #170; no further root Makefile rewrite"
+    },
+    {
+      "surface": ".mcp.json",
+      "action": "n_a",
+      "reason": "Bearer removal already landed in #170 with ALLOW-ROOT-DELETION"
+    },
+    {
+      "surface": "pyproject.toml",
+      "action": "n_a",
+      "reason": "cryptography pin already appended in #170; new tests should collect under existing testpaths"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does Claude install.sh already calling the shared bootstrap mean Cursor sessionStart is done? No — live hook still inlines uv/scratch_hold and never calls the script.",
+      "Would adding another bootstrap_*.sh finish the architecture? No — that violates do-not-create-another-layer.",
+      "Can pec status/next replace preflight? No — they require a bootstrapped workspace and do not emit exact next command+args before admission.",
+      "Is draft-contract REPLACE_WITH an intentional operator prompt rather than a defect? The contract forbids reporting success for a consumer-rejected artifact.",
+      "Will sessionStart timeout (60s) break if the full shared bootstrap runs foreground? Probe: --quiet path; keep Cursor Graphiti hydrate in the hook; do not re-download gitleaks every session."
+    ],
+    "assumed_false_ifs": [
+      "If shared bootstrap is treated as Cursor-complete because the file exists",
+      "If pec next is treated as preflight",
+      "If unit tests of pec internals are treated as runtime wiring proof"
+    ],
+    "blast_radius": "Cursor sessionStart, Graphiti mutation gates, and PE controller CLI. A bad session-id unify can deny all governed writes or falsely allow them. A bad receipt fail-closed can block all PE. Makefile/root files are out of this remaining scope.",
+    "rollback": "Revert the new feature branch from origin/main. Shared bootstrap and capability plane on main stay. Hook self-heal recopies session_start_bootstrap.sh from SSOT on next session."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T4",
+      "T5",
+      "T6"
+    ],
+    "shared_causes": [
+      "Cursor never finished delegating to the shared bootstrap landed in #168",
+      "No single revision/state-root receipt, so mixed SSOT vs workspace vs script roots stay invisible",
+      "Session identity keys differ across Cursor conversation_id, Claude session_id, and .l9/memory vs ~/.cursor/graphiti-state",
+      "PE prerequisites are encoded only as controller rejection messages"
+    ],
+    "deletions_or_consolidations": [
+      "Delete dead l9_session_runtime_probe after exit 0 in session_start_bootstrap.sh",
+      "Delete duplicated scratch_hold restore and inline uv sync from the Cursor hook once shared bootstrap is invoked",
+      "Do not add a second preflight framework beside pec",
+      "Do not recreate bootstrap_agent_environment.sh"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "sessionStart 60s timeout if shared bootstrap runs heavy install/probe work every session",
+      "mitigation": "Call existing --quiet path; keep Cursor hydrate/plan-audit in the hook; do not add a new bootstrap layer or --session-start fork unless timeout evidence appears"
+    },
+    {
+      "risk": "Unifying session identity could deny legitimate Cursor locks or allow Claude locks across sessions",
+      "mitigation": "Integration test bind→acquire→query→gate; mismatch must print both identities; do not fallback to default.json as a silent pass"
+    },
+    {
+      "risk": "Implementing on the dirty primary checkout scoops foreign WIP",
+      "mitigation": "New branch from origin/main in a dedicated worktree (KERNEL_PACK_NEW_BRANCH_DEFAULT_V1 + rule 49). Discard unused pe-start-cleanly worktree if it stayed at 136f38c."
+    },
+    {
+      "risk": "Redoing #168/#169/#170 while closing remaining gaps",
+      "mitigation": "This plan's scope.out lists those landings; T1 only adds a call edge to the existing script"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does live sessionStart stay under 60s after invoking the full shared bootstrap --quiet on a warm machine?",
+      "decision_effect": "If over budget, keep the same script and skip only already-proven-warm steps via existing --check/--quiet flags — do not create a second script",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "Should Cursor sessionStart write .l9/memory receipts (Claude shape) or only ~/.cursor/graphiti-state plus the new runtime receipt?",
+      "decision_effect": "T3 resolver must read one authoritative session_id; writing a second receipt format without a reader is waste",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "git rev-parse origin/main",
+      "pass_criteria": "ab46dc8658daa125a7784ef3a94d3fe3059c0c4d or a descendant that still contains #168+#169+#170",
+      "status": "passed"
+    },
+    {
+      "id": "V2",
+      "command": "python3 skills/l9-plan/scripts/validate_plan_document.py ~/.cursor/plans/pe_start_cleanly.plan.json",
+      "pass_criteria": "PASS",
+      "status": "passed"
+    },
+    {
+      "id": "V3",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on the new-from-origin/main implementation branch after T1–T6 (not on the dirty primary checkout)",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2"
+    ],
+    "next_skill": "l9-gmp-protocol",
+    "stop_reason": "Open PRs merged and remaining seams planned. Do not execute until the user Builds this plan or explicitly asks to implement. Land on a new branch from origin/main."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/hooks/session_start_bootstrap.sh",
+      "ops/scripts/bootstrap_agent_environment.sh",
+      "ops/scripts/write_runtime_readiness_receipt.py",
+      "ops/scripts/tests/",
+      "environment/agents/runtime_paths.py",
+      "environment/agents/adapters/claude-code/memory/",
+      "environment/agents/adapters/claude-code/hooks/memory_lock.py",
+      "environment/agents/adapters/claude-code/hooks/memory_gate.py",
+      "environment/agents/adapters/claude-code/tests/",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/",
+      "environment/program-execution/core/program-execution-controller-template/scripts/tests/",
+      "environment/program-execution/scripts/tests/"
+    ],
+    "must_not_modify": [
+      "ops/secrets/capability_broker.py",
+      "ops/secrets/capabilities.yaml",
+      ".mcp.json",
+      "Makefile",
+      "pyproject.toml",
+      "CANONICAL_LAW.md",
+      "environment/program-execution/campaigns/",
+      "WIP/"
+    ],
+    "preserved_contracts": [
+      "One shared bootstrap script — Cursor calls it, does not fork it",
+      "Graphiti remains the sole episodic memory store",
+      "No campaign artifacts for this work",
+      "Human merge only outside this already-completed PR merge request",
+      "Root additive-only files stay untouched"
+    ],
+    "validation_commands": [
+      "python3 ops/scripts/tests/test_cursor_shared_bootstrap_edge.py",
+      "python3 -m pytest environment/agents/adapters/claude-code/tests/test_lock_gate_identity.py environment/program-execution/core/program-execution-controller-template/scripts/tests/test_preflight.py environment/program-execution/core/program-execution-controller-template/scripts/tests/test_pe_clean_startup.py -q",
+      "make pr-check"
+    ]
+  },
+  "estimate": "one stacked branch from origin/main; no campaign"
+}

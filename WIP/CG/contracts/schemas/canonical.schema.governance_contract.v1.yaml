@@ -1,0 +1,240 @@
+schema_id: canonical.schema.governance_contract.v1
+schema_name: Canonical Governance Contract Schema
+schema_class: canonical_document_type_schema
+schema_family: l9_governance_contracts
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.governance_contract.v1.yaml
+purpose:
+  primary: >
+    Define the common identity, authority, scope, normative clause,
+    dependency, enforcement, evidence, projection, provenance, integrity,
+    and lifecycle model inherited by all first-class governance contracts.
+  output_level: schema_not_instance
+  intended_use:
+    - derive_governance_contracts
+    - normalize_extracted_doctrine
+    - resolve_contract_authority
+    - detect_contract_conflicts
+    - bind_contracts_to_enforcement
+    - derive_agent_contract_bundles
+  not_for:
+    - prose_documentation
+    - unowned_normative_statements
+    - runtime_capability_implementation
+    - execution_plans
+    - evidence_receipts
+ontology:
+  parent_type: canonical_contract_schema
+  specialized_type: governance_contract_schema
+  instance_type_generated_by_this_schema: governance_contract
+  related_schema_types:
+    - canonical.schema.invariant_contract.v1
+    - canonical.schema.policy_contract.v1
+    - canonical.schema.capability_contract.v1
+    - canonical.schema.workflow_contract.v1
+    - canonical.schema.evidence_contract.v1
+    - canonical.schema.contract_projection_binding.v1
+    - canonical.schema.contract_registry.v1
+inheritance:
+  extends:
+    - canonical.knowledge_object.schema.v1
+  provides:
+    - contract_identity_model
+    - authority_model
+    - scope_model
+    - normative_clause_model
+    - dependency_model
+    - enforcement_model
+    - evidence_obligation_model
+    - projection_reference_model
+    - provenance_model
+    - integrity_model
+    - lifecycle_model
+type_registry:
+  canonical_contract_id:
+    base: string
+    pattern: "^[A-Z][A-Z0-9]*(\\.[A-Z][A-Z0-9_]*)+\\.\\d{3}$"
+  semver:
+    base: string
+    pattern: "^(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$"
+  sha256:
+    base: string
+    pattern: "^(?:sha256:)?[0-9a-f]{64}$"
+  sha256_or_null:
+    any_of: [sha256, null]
+  full_commit_SHA:
+    base: string
+    pattern: "^[0-9a-f]{40}$"
+  datetime:
+    base: string
+    format: date-time
+  datetime_or_date:
+    any_of:
+      - {base: string, format: date-time}
+      - {base: string, format: date}
+  duration_or_null:
+    any_of:
+      - {base: string, pattern: "^P(?!$).+$"}
+      - null
+  number_0_to_1:
+    base: number
+    minimum: 0
+    maximum: 1
+  string_or_null:
+    any_of: [string, null]
+  integer_or_null:
+    any_of: [integer, null]
+  list_string:
+    base: list
+    items: string
+    unique_items: true
+collection_semantics:
+  rule: >
+    Required collection fields require key presence. Empty collections are
+    permitted only where the field explicitly sets allow_empty: true.
+  default_allow_empty: false
+contract_identity_law:
+  rule: >
+    contract_id is stable semantic identity and MUST NOT contain the contract
+    version. Version changes independently under semantic versioning.
+  grammar: "^[A-Z][A-Z0-9]*(\\.[A-Z][A-Z0-9_]*)+\\.\\d{3}$"
+  example: MEM.FRONTDOOR.001
+required_sections:
+  metadata:
+    required: true
+    fields:
+      contract_id: {type: canonical_contract_id, required: true}
+      version: {type: semver, required: true}
+      kind:
+        enum: [invariant, policy, capability, workflow, evidence]
+        required: true
+      status:
+        enum: [draft, review, active, deprecated, retired]
+        required: true
+      title: {type: string, required: true}
+      summary: {type: string, required: true}
+      owner: {type: string, required: true}
+      domain: {type: string, required: true}
+      tags: {type: list_string, required: false, allow_empty: true}
+  authority:
+    required: true
+    fields:
+      tier:
+        enum: [constitutional, execution, domain, skill_local]
+        required: true
+      semantic_owner: {type: string, required: true}
+      override_policy:
+        enum: [no_override, higher_authority_only, explicit_user_authorization, scope_more_restrictive_only]
+        required: true
+      lower_tier_redefinition: {const: forbidden}
+  scope:
+    required: true
+    fields:
+      actors: {type: list_string, required: true, min_items: 1}
+      operations: {type: list_string, required: true, min_items: 1}
+      resources: {type: list_string, required: true, min_items: 1}
+      environments: {type: list_string, required: true, min_items: 1}
+      triggers: {type: list_string, required: false, allow_empty: true}
+      paths: {type: list_string, required: false, allow_empty: true}
+      excludes: {type: list_string, required: false, allow_empty: true}
+  normative_clauses:
+    required: true
+    type: list
+    min_items: 1
+    item_schema:
+      clause_id: {type: string, required: true}
+      effect:
+        enum: [require, prohibit, permit, constrain, stop, route, attest]
+        required: true
+      subject: {type: string, required: true}
+      action: {type: string, required: true}
+      object: {type: string_or_null, required: false}
+      conditions: {type: list_string, required: false, allow_empty: true}
+      exceptions: {type: list, required: false, allow_empty: true}
+      parameters: {type: map, required: false}
+  dependencies:
+    required: true
+    fields:
+      requires_contracts: {type: list_string, required: true, allow_empty: true}
+      conflicts_with: {type: list_string, required: true, allow_empty: true}
+  enforcement:
+    required: true
+    fields:
+      class:
+        enum: [mechanical, runtime_probe, human_confirmation, mixed, advisory]
+        required: true
+      severity:
+        enum: [blocker, major, minor, advisory]
+        required: true
+      failure_mode:
+        enum: [fail_closed, stop, deny, block_transition, warn]
+        required: true
+      validators: {type: list_string, required: true, min_items: 1}
+      runtime_gates: {type: list_string, required: false, allow_empty: true}
+  evidence_obligations:
+    required: true
+    type: list
+    min_items: 1
+    item_schema:
+      property_id: {type: string, required: true}
+      evidence_contract_ref: {type: string_or_null, required: false}
+      proof: {type: string, required: true}
+      blocking: {type: boolean, required: true}
+      negative_proof_required: {type: boolean, default: false}
+  projections:
+    required: true
+    fields:
+      binding_refs: {type: list_string, required: true, allow_empty: true}
+  provenance:
+    required: true
+    fields:
+      origin:
+        enum: [authored, extracted, derived]
+        required: true
+      source_refs: {type: list, required: true, min_items: 1}
+      extraction_record_refs: {type: list_string, required: false, allow_empty: true}
+      rationale_refs: {type: list_string, required: false, allow_empty: true}
+  integrity:
+    required: true
+    fields:
+      canonical_serialization: {const: deterministic_yaml_normalization_v1}
+      content_digest: {type: sha256_or_null, required: true}
+  lifecycle:
+    required: true
+    fields:
+      introduced_at: {type: datetime_or_date, required: true}
+      effective_at: {type: datetime_or_date, required: false}
+      supersedes: {type: list_string, required: true, allow_empty: true}
+      deprecated_by: {type: string_or_null, required: false}
+      change_policy: {enum: [semantic_versioning], required: true}
+  unknowns:
+    required: false
+    type: list_string
+    allow_empty: true
+validation_rules:
+  - {id: GOV-CONTRACT-001, severity: blocker, rule: contract_id must satisfy canonical contract ID grammar.}
+  - {id: GOV-CONTRACT-002, severity: blocker, rule: contract_id must remain stable across contract version changes.}
+  - {id: GOV-CONTRACT-003, severity: blocker, rule: every normative clause must have a unique clause_id within its contract.}
+  - {id: GOV-CONTRACT-004, severity: blocker, rule: every active contract must declare authority scope enforcement and evidence obligations.}
+  - {id: GOV-CONTRACT-005, severity: blocker, rule: blocker or major enforcement may not use warning-only failure semantics.}
+  - {id: GOV-CONTRACT-006, severity: blocker, rule: lower-tier artifacts may reference or project a contract but may not redefine its semantics.}
+  - {id: GOV-CONTRACT-007, severity: blocker, rule: unresolved conflicts between simultaneously applicable contracts block activation.}
+  - {id: GOV-CONTRACT-008, severity: blocker, rule: active contracts require a deterministic content digest.}
+  - {id: GOV-CONTRACT-009, severity: blocker, rule: supersession relationships must be acyclic.}
+  - {id: GOV-CONTRACT-010, severity: major, rule: safety-relevant unknowns block promotion from review to active.}
+  - {id: GOV-CONTRACT-011, severity: blocker, rule: required collection fields without allow_empty true must contain at least one item.}
+derivation_targets:
+  can_generate: [specialized_contract, contract_validator, contract_dependency_graph, contract_projection_binding, contract_registry_entry, agent_contract_bundle, human_readable_contract_projection]
+anti_drift_rules:
+  - Normative behavior has exactly one owning contract.
+  - Contract version is not part of stable contract identity.
+  - Documentation rules skills prompts and workflows do not become alternate semantic owners.
+  - Capability does not imply permission.
+  - Evidence emission does not imply proof.
+  - Lower authority may narrow where allowed but may not silently widen authority.
+  - Conflicts are compiler errors until explicitly resolved.
+  - Warning-only handling is forbidden for blocking enforcement.
+minimum_viable_instance_requirements:
+  required: [metadata, authority, scope, normative_clauses, dependencies, enforcement, evidence_obligations, projections, provenance, integrity, lifecycle]

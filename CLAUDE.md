@@ -25,9 +25,14 @@ Highest first. A lower rung never overrides a higher one.
 
 ## The three things most often got wrong here
 
-- **`make pr` is the only sanctioned route to GitHub.** Raw `git push` is denied
-  by `ops/autonomy/local_execution_gate.py`. If `make pr` is what is denied,
-  that is a fault; if raw push is denied, that is the rule working.
+- **`make pr` is the sanctioned route to GitHub — and nothing blocks the
+  alternatives.** Raw `git push` is *not* denied by
+  `ops/autonomy/local_execution_gate.py`; git and gh are exempt from the
+  workflow plane and answer to `ops/autonomy/git_guardrails.py`, which denies by
+  effect (CANONICAL_LAW §6.2.4). Prefer `make pr` because it runs the checkers,
+  not because pushing errors — it will not. What *is* denied at every phase:
+  `make push` and the MCP `create_pull_request` / `push_files` tools. If
+  `make pr` is what is denied, that is a fault.
 - **This surface holds no credentials.** It is `model-controlled`: no Infisical
   import, no PAT, no bearer. Capabilities resolve through the broker, which
   keeps the credential on the far side. A capability reporting `DEGRADED` or

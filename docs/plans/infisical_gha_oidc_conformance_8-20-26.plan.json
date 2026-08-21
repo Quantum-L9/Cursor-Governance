@@ -1,0 +1,440 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Infisical GHA OIDC on existing secrets plane",
+  "objective": "Land the WIP OIDC intent as a GitHub Actions workload-identity binding on the existing Infisical client and capability broker, without a new Claude bootstrap path, without Infisical/secrets-action, and without injecting raw secrets into the live Claude install or SessionStart surfaces.",
+  "success_criteria": [
+    "No file named claude-code-bootstrap.yml exists under .github/workflows after the change",
+    "capability_broker.py oidc-auth/login and hydrate_infisical trusted-operator login share one helper in ops/secrets; Infisical/secrets-action is not added",
+    "infisical-cursor-governance.yaml plus infisical-protocol.md record the GHA OIDC identity; ops/secrets/INFISICAL_OIDC_SETUP.md is not introduced as a second SSOT",
+    "install.sh, bootstrap_agent_environment.sh, and setup_claude_code_plugins.sh still hydrate no raw secrets and still do not call Infisical OIDC",
+    "make pr-check PASS on the feature branch vs origin/main"
+  ],
+  "scope": {
+    "in": [
+      "ops/secrets/infisical-cursor-governance.yaml identity inventory extension",
+      "skills/l9-aws-secrets/references/infisical-protocol.md and ops/secrets/README.md",
+      "Shared Infisical OIDC login helper used by capability_broker.py and hydrate_infisical.py",
+      "Unit tests beside ops/secrets/test_aws_secrets.py",
+      "Comment alignment on Claude bootstrap scripts stating they are not Infisical consumers",
+      "Additive campaign row in CAMPAIGN_EXECUTION_POLICY.yaml",
+      "WIP/8-20-26/OIDC retained as intent corpus, not copied into live paths"
+    ],
+    "out": [
+      "New workflow .github/workflows/claude-code-bootstrap.yml",
+      "Infisical/secrets-action as a second Infisical client",
+      "New Infisical folder /claude-code or ANTHROPIC_API_KEY injection into any model-controlled surface",
+      "GitHub Environment named production (this repo has no protected Environment today)",
+      "Running setup_claude_code_plugins.sh or install.sh on GitHub-hosted runners",
+      "claude_code_env_contract_8-20-26.plan.md work (broker MCP facade, GH_TOKEN stripping, bootstrap-state.json)",
+      "Replacing Cursor Universal Auth chicken-egg in AWS",
+      "Changing memory-distill.yml AWS OIDC path",
+      "C1/VPS/broker-kubernetes live apply"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "Inspect owners: ops/secrets/README.md, capability_broker.py workload_identity, hydrate_infisical.py, install.sh, bootstrap_agent_environment.sh, setup_claude_code_plugins.sh",
+      "pass_criteria": "Claude bootstrap is capability-check plus vendor wiring; Infisical OIDC login already exists on the broker; hydrate login is Universal Auth only; no GHA workflow calls Infisical",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "gh api repos/Quantum-L9/Cursor-Governance/environments and actions/variables",
+      "pass_criteria": "Environments are copilot only with no protection; INFISICAL_IDENTITY_ID variable is absent",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "Confirm Infisical/secrets-action@d2c3d40 is not a real commit; live inventory path is / ; identity Cursor is Universal Auth",
+      "pass_criteria": "WIP pack is intent only; live SSOT remains infisical-cursor-governance.yaml",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "w0-worktree-branch",
+      "task": "Open an isolated worktree and branch from fetched origin/main named campaign/infisical-gha-oidc-v1. Do not mutate the dirty primary clone.",
+      "files": [
+        "ops/scripts/agent_worktree_start.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new worktree from origin/main",
+      "leverage_rank": 7
+    },
+    {
+      "id": "w1-register-campaign",
+      "task": "Add campaign infisical-gha-oidc-v1 to CAMPAIGN_EXECUTION_POLICY.yaml (additive row, lane secrets, integration_branch campaign/infisical-gha-oidc-v1). Do not edit the claude-code-env-contract-v1 row.",
+      "files": [
+        "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "w0-worktree-branch"
+      ],
+      "operation": "Insert",
+      "anchor": "campaigns: list after claude-code-env-contract-v1",
+      "leverage_rank": 6
+    },
+    {
+      "id": "w2-inventory-identity",
+      "task": "Extend infisical-cursor-governance.yaml with a gha_oidc identity block (name github-cursor-governance-ci, method oidc, issuer token.actions.githubusercontent.com, audience https://github.com/Quantum-L9, subject job_workflow_ref or ref main, identity_id filled after create). Update infisical-protocol.md and ops/secrets/README.md. Do not add ops/secrets/INFISICAL_OIDC_SETUP.md.",
+      "files": [
+        "ops/secrets/infisical-cursor-governance.yaml",
+        "skills/l9-aws-secrets/references/infisical-protocol.md",
+        "ops/secrets/README.md"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w1-register-campaign"
+      ],
+      "operation": "Insert",
+      "anchor": "identity_name / notes in infisical-cursor-governance.yaml",
+      "leverage_rank": 1,
+      "shared_root_cause": "OIDC identity had no inventory owner"
+    },
+    {
+      "id": "w3-shared-oidc-login",
+      "task": "Add one Infisical OIDC login helper next to port_aws_to_infisical.login. capability_broker SecretProvider._access_token oidc-workload-identity branch calls it. hydrate_infisical.bootstrap_config accepts INFISICAL_IDENTITY_ID plus INFISICAL_JWT_IDENTITY_TOKEN_FILE for trusted-operator only and still refuses Universal Auth fallback on model surfaces. Universal Auth login remains for operator chicken-egg.",
+      "files": [
+        "ops/secrets/port_aws_to_infisical.py",
+        "ops/secrets/capability_broker.py",
+        "ops/secrets/hydrate_infisical.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "w2-inventory-identity"
+      ],
+      "operation": "Wrap",
+      "anchor": "login() in port_aws_to_infisical.py; _access_token in capability_broker.py; bootstrap_config in hydrate_infisical.py",
+      "leverage_rank": 2,
+      "shared_root_cause": "OIDC login already exists on the broker and must not be copied into a third client"
+    },
+    {
+      "id": "w4-oidc-login-tests",
+      "task": "Add mocked tests for OIDC login helper (identityId plus jwt posted to /api/v1/auth/oidc-auth/login), hydrate trusted-operator OIDC config, model-surface refusal of JWT-file export, and broker still refusing INFISICAL_CLIENT_SECRET as runtime identity.",
+      "files": [
+        "ops/secrets/test_aws_secrets.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "w3-shared-oidc-login"
+      ],
+      "operation": "Insert",
+      "anchor": "existing surface_trust and hydrate tests in test_aws_secrets.py",
+      "leverage_rank": 3
+    },
+    {
+      "id": "w5-claude-bootstrap-comments",
+      "task": "Add short comments on install.sh, bootstrap_agent_environment.sh capability section, and setup_claude_code_plugins.sh stating they are not Infisical OIDC consumers and must not export ANTHROPIC_API_KEY. No behavior change. No new script.",
+      "files": [
+        "environment/agents/adapters/claude-code/install.sh",
+        "ops/scripts/bootstrap_agent_environment.sh",
+        "ops/scripts/setup_claude_code_plugins.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "w3-shared-oidc-login"
+      ],
+      "operation": "Insert",
+      "anchor": "header / capability bootstrap comments",
+      "leverage_rank": 4
+    },
+    {
+      "id": "w6-operator-create-identity",
+      "task": "Create the Infisical machine identity via Infisical API (preferred) or Infisical UI. Bind subject to repo Quantum-L9/Cursor-Governance and a job_workflow_ref once a real consumer workflow exists, otherwise ref refs/heads/main. Set short access-token TTL. Write identity_id into infisical-cursor-governance.yaml. Set GitHub Actions variable INFISICAL_IDENTITY_ID via gh api, not github.com Settings UI.",
+      "files": [
+        "ops/secrets/infisical-cursor-governance.yaml"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "w2-inventory-identity",
+        "w4-oidc-login-tests"
+      ],
+      "operation": "Replace",
+      "anchor": "gha_oidc.identity_id placeholder",
+      "leverage_rank": 5
+    },
+    {
+      "id": "w7-prove-and-pr-check",
+      "task": "Run locked pytest on ops/secrets/test_aws_secrets.py, make capability-contract-validate, make capability-broker-preflight, and make pr-check. Prove .github/workflows has no claude-code-bootstrap.yml and no Infisical/secrets-action pin.",
+      "files": [
+        "ops/secrets/test_aws_secrets.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "w4-oidc-login-tests",
+        "w5-claude-bootstrap-comments",
+        "w6-operator-create-identity"
+      ],
+      "operation": "Wrap",
+      "anchor": "existing make targets",
+      "leverage_rank": 8
+    }
+  ],
+  "critical_path": [
+    "w0-worktree-branch",
+    "w1-register-campaign",
+    "w2-inventory-identity",
+    "w3-shared-oidc-login",
+    "w4-oidc-login-tests",
+    "w6-operator-create-identity",
+    "w7-prove-and-pr-check"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "Isolated campaign branch exists",
+      "unlocks": "inventory and code edits without touching foreign dirty files"
+    },
+    {
+      "id": "M1",
+      "outcome": "GHA OIDC identity is recorded in the live Infisical inventory",
+      "unlocks": "shared login helper can name the identity"
+    },
+    {
+      "id": "M2",
+      "outcome": "One Infisical client owns OIDC and Universal Auth login",
+      "unlocks": "broker and hydrate stop drifting"
+    },
+    {
+      "id": "M3",
+      "outcome": "Claude bootstrap comments confirm no secret injection",
+      "unlocks": "WIP pack cannot be misread as a second install path"
+    },
+    {
+      "id": "M4",
+      "outcome": "pr-check PASS and no new Claude bootstrap workflow",
+      "unlocks": "L4 then PR_REMEDIATE=0 make pr"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "w2-inventory-identity",
+      "evidence_required": "rg INFISICAL_OIDC_SETUP.md ops/secrets returns no live SSOT file; yaml lists gha_oidc",
+      "no_go_action": "Stop; do not add a parallel markdown SSOT"
+    },
+    {
+      "id": "C2",
+      "after": "w3-shared-oidc-login",
+      "evidence_required": "Single helper referenced by broker and hydrate; no Infisical/secrets-action import",
+      "no_go_action": "Revert the helper; do not ship a second client"
+    },
+    {
+      "id": "C3",
+      "after": "w7-prove-and-pr-check",
+      "evidence_required": "make pr-check PASS; no claude-code-bootstrap.yml",
+      "no_go_action": "Do not authorize-release"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "ops/secrets/README.md",
+      "action": "update",
+      "todo_ids": [
+        "w2-inventory-identity"
+      ],
+      "reason": "Document GHA OIDC identity as inventory, not a new vault"
+    },
+    {
+      "surface": "skills/l9-aws-secrets/references/infisical-protocol.md",
+      "action": "update",
+      "todo_ids": [
+        "w2-inventory-identity"
+      ],
+      "reason": "Protocol SSOT for Infisical identities"
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "Secret inventory and Claude bootstrap ingress are already stated; this plan does not change activation"
+    },
+    {
+      "surface": "Makefile",
+      "action": "n_a",
+      "reason": "Existing capability-broker-preflight, hydrate --check, and claude-install targets remain the ingress"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "No symlink, memory, or publish-path law change"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does any live GHA job already need Infisical values, making a missing workflow step a functional gap rather than a conformance win?",
+      "Does extracting broker OIDC login into port_aws_to_infisical.py create an import cycle or let model-controlled code reach a value path?",
+      "Does binding Infisical subject to ref main allow a compromised workflow on main to mint the identity, which the WIP pack tried to prevent with environment production?",
+      "Does Claude CLI on this machine actually require ANTHROPIC_API_KEY in process env, so comments that forbid it conflict with a working local setup?",
+      "Is the Infisical org unable to create a second machine identity, forcing reuse of Cursor Universal Auth and collapsing least privilege?"
+    ],
+    "assumed_false_ifs": [
+      "No current GHA job reads Infisical; memory-distill uses AWS OIDC to Secrets Manager",
+      "Claude session bootstrap stays capability-check plus vendor wiring",
+      "Broker OIDC login body (identityId plus jwt) remains the Infisical contract",
+      "Cursor Universal Auth chicken-egg in AWS stays for local operator hydrate",
+      "WIP pack files are intent and are not copied into live paths"
+    ],
+    "blast_radius": "ops/secrets Infisical login, capability broker preflight, inventory docs, and comment-only Claude bootstrap scripts. Wrong implementation would inject raw API keys into model surfaces or add a second CI secrets client. GitHub Environment production is not created, so existing workflows keep current trust.",
+    "rollback": "Revert the campaign branch commits. Leave any unused Infisical identity unused (do not delete until confirmed unused). Unset the GitHub Actions variable via gh api. Do not revert Cursor Universal Auth. Do not restore a claude-code-bootstrap.yml."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "w2-inventory-identity",
+      "w3-shared-oidc-login",
+      "w4-oidc-login-tests",
+      "w5-claude-bootstrap-comments",
+      "w6-operator-create-identity",
+      "w1-register-campaign",
+      "w0-worktree-branch",
+      "w7-prove-and-pr-check"
+    ],
+    "shared_causes": [
+      "WIP pack invented a Claude bootstrap consumer that the live install path does not have",
+      "OIDC login already exists on the broker and was about to be duplicated via Infisical/secrets-action",
+      "Infisical UI state had no inventory owner except a new markdown file"
+    ],
+    "deletions_or_consolidations": [
+      "Do not land .github/workflows/claude-code-bootstrap.yml",
+      "Do not land scripts/claude_code_bootstrap_verify.sh",
+      "Do not land ops/secrets/INFISICAL_OIDC_SETUP.md as SSOT; fold facts into existing inventory and protocol"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Import cycle or trust-boundary leak when broker and hydrate share a login helper",
+      "mitigation": "Keep value-returning login behind surface_trust.require_trusted on hydrate CLI; broker remains the only model-adjacent caller and still never exports values to the agent"
+    },
+    {
+      "risk": "Infisical subject bound too loosely (any job on main)",
+      "mitigation": "Prefer job_workflow_ref of the first real consumer workflow. Until that workflow exists, record the intended subject in inventory and do not treat identity creation as complete for production secret reads"
+    },
+    {
+      "risk": "Collision with campaign/claude-code-env-contract-v1",
+      "mitigation": "Separate campaign id, branch, and file set. This plan does not edit mcp.template.json, web/setup.sh, or validate_claude_env.py contract tests"
+    },
+    {
+      "risk": "Operator creates GitHub Environment production and unprotected first-run auto-create",
+      "mitigation": "Out of scope. Do not create that Environment in this plan"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "What is the IAM trust policy on AWS_ROLE_TO_ASSUME used by memory-distill (repo plus ref vs environment)?",
+      "decision_effect": "If AWS already binds Environment, matching Infisical to that Environment is conformance. If AWS binds repo/ref, Infisical subject follows repo/ref or job_workflow_ref, not a new Environment.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "Does Infisical org infiscal-l9 already have a GitHub OIDC machine identity, or must one be created?",
+      "decision_effect": "Reuse an existing least-privilege CI identity if it matches the intended subject; do not create a duplicate.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "Does any live GHA job need Infisical secret values in the next milestone?",
+      "decision_effect": "If none, this plan stops at inventory plus shared login plus tests. A later plan adds one step to that existing job (JWT file plus hydrate --check), not a new workflow.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U4",
+      "question": "Does local Claude Code require ANTHROPIC_API_KEY in env, or is OAuth sufficient?",
+      "decision_effect": "This plan does not add ANTHROPIC_API_KEY to the bootstrap leak list. That list is owned by the Claude env-contract campaign.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "F1",
+      "command": "\"$HOME/.cursor-governance/.venv/bin/python\" -m pytest ops/secrets/test_aws_secrets.py -q",
+      "pass_criteria": "exit 0; new OIDC login cases pass; no secret values in output",
+      "status": "pending"
+    },
+    {
+      "id": "F2",
+      "command": "make capability-contract-validate && make capability-broker-preflight",
+      "pass_criteria": "contract validate PASS; preflight does not accept Universal Auth as broker runtime identity",
+      "status": "pending"
+    },
+    {
+      "id": "F3",
+      "command": "rg -n 'claude-code-bootstrap[.]yml|Infisical/secrets-action|INFISICAL_OIDC_SETUP[.]md' .github ops/secrets",
+      "pass_criteria": "no live workflow or SSOT matches; WIP pack may still contain the old names",
+      "status": "pending"
+    },
+    {
+      "id": "F4",
+      "command": "make pr-check",
+      "pass_criteria": "PASS vs PR_BASE=origin/main on the campaign branch",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "Plan is executable for inventory plus shared OIDC login. U1 and U2 must be probed before creating or binding the live Infisical identity. No new GHA workflow in this plan."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/secrets/infisical-cursor-governance.yaml",
+      "ops/secrets/README.md",
+      "ops/secrets/port_aws_to_infisical.py",
+      "ops/secrets/capability_broker.py",
+      "ops/secrets/hydrate_infisical.py",
+      "ops/secrets/test_aws_secrets.py",
+      "skills/l9-aws-secrets/references/infisical-protocol.md",
+      "environment/agents/adapters/claude-code/install.sh",
+      "ops/scripts/bootstrap_agent_environment.sh",
+      "ops/scripts/setup_claude_code_plugins.sh",
+      "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
+    ],
+    "must_not_modify": [
+      ".github/workflows/claude-code-bootstrap.yml",
+      ".github/workflows/memory-distill.yml",
+      "ops/secrets/INFISICAL_OIDC_SETUP.md",
+      "scripts/claude_code_bootstrap_verify.sh",
+      "environment/agents/adapters/claude-code/mcp.template.json",
+      "environment/agents/adapters/claude-code/web/setup.sh",
+      "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
+      "environment/agents/adapters/claude-code/validate_claude_env.py",
+      "CANONICAL_LAW.md",
+      "AGENTS.md",
+      "ops/hooks/session_start_bootstrap.sh",
+      "ops/secrets/deploy/broker-kubernetes.yaml"
+    ],
+    "preserved_contracts": [
+      "ADAPTER_CONTRACT.md capability carrier: model surfaces never receive raw secrets",
+      "bootstrap_agent_env.sh --check only on claude-code",
+      "One Infisical read client: hydrate_infisical.py plus port_aws_to_infisical.login",
+      "capability_broker workload_identity refuses INFISICAL_CLIENT_SECRET",
+      "Claude install ingress: make claude-install -> install.sh -> bootstrap_agent_environment.sh",
+      "openclaw-igorbot/infisical-cursor-governance remains chicken-egg Universal Auth in AWS"
+    ],
+    "validation_commands": [
+      "\"$HOME/.cursor-governance/.venv/bin/python\" -m pytest ops/secrets/test_aws_secrets.py -q",
+      "make capability-contract-validate",
+      "make capability-broker-preflight",
+      "make pr-check"
+    ]
+  },
+  "estimate": "One isolated worktree session for inventory plus helper plus tests; identity create is a short operator step after U1/U2 probe"
+}

@@ -5,6 +5,13 @@ import json
 import sys
 from pathlib import Path
 
+# Loaded as a bare script by `make program-execution-conformance` and by tests
+# that import it by path, so neither entry can rely on the package being on
+# sys.path. Bind the sibling module explicitly instead of restating its rules.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from generate_manifest import is_manifest_input  # noqa: E402
+
 
 def validate(root: Path) -> list[str]:
     manifest_path = root / "MANIFEST.json"
@@ -22,11 +29,7 @@ def validate(root: Path) -> list[str]:
     actual_paths = {
         path.relative_to(root).as_posix()
         for path in root.rglob("*")
-        if path.is_file()
-        and path.name != "MANIFEST.json"
-        and path.suffix not in {".pyc", ".pyo", ".sqlite", ".sqlite3"}
-        and path.relative_to(root).parts[0] != "core"
-        and "__pycache__" not in path.parts
+        if is_manifest_input(root, path)
     }
     if set(expected) != actual_paths:
         errors.append(

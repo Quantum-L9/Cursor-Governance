@@ -1611,7 +1611,7 @@
     },
     {
       "path": "scripts/campaign_input.py",
-      "sha256": "a2c0923e067472e6ea84cf596fa3108b7a7b91a306532fc88bdc0e31853b71bf"
+      "sha256": "12e5f589ee02775ff74db843c46da5ae1cf3092bd9c1bb22f33c7f1cbf1bf4c1"
     },
     {
       "path": "scripts/campaign_pr_copy.py",
@@ -1627,15 +1627,15 @@
     },
     {
       "path": "scripts/context7_stack_proof.py",
-      "sha256": "1eb985fbdc4c55dcbe1aa8d899d1a2bcf7fce8da2bd0c408f94a4e0a43ba348e"
+      "sha256": "13060d42923433d6ffca9066fa9dce0ee9012bffc7d32f4e0b39a09e3315ff21"
     },
     {
       "path": "scripts/generate_manifest.py",
-      "sha256": "9cdf86d3c3475a908f4eb4c12bc28eccab4f18bf9949a708f2a3b26603a4faff"
+      "sha256": "b07d9bfc8cbf39da6ff697430a9747b5f0f9a764042fd84bda0d21dba14c1b49"
     },
     {
       "path": "scripts/launchability.py",
-      "sha256": "4a8820ba855e7d0c92826afa5ec9eb9976c38b190cf65bdad2726a1184d7596d"
+      "sha256": "1dc3d9a6eda0903da1ca98d4231dc6e36474ecef3d1f557bb89f07e509b6a570"
     },
     {
       "path": "scripts/pe_prepare_state.py",
@@ -1651,7 +1651,7 @@
     },
     {
       "path": "scripts/pe_worker.py",
-      "sha256": "b1fad1901fae7bf9480b80a7622a5f3a93fdeea4e02219d0fc9cc88e35906c81"
+      "sha256": "0969a8216cef99d2d2f67dd921ad62a14d76887da167185853e4a43302edb791"
     },
     {
       "path": "scripts/peer_execution_cli.py",
@@ -1687,7 +1687,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "7f2dcd803463c314ce5f529a702d29e18116f89878004bfcd0e2996ac800f426"
+      "sha256": "5e64f22de7f2ab84181ab57fd69408d5fe91d4b2444f09f973dcf1f830997e01"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1719,11 +1719,11 @@
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
-      "sha256": "3a5d83aec55825d7a0f8705b10209130dd47f8e0b8e35dcf6b489aa003a280e8"
+      "sha256": "7ea1fbfb730a77a42d555c44ea110df2a07ec1e80546e64ae7624d8a4c0a12dc"
     },
     {
       "path": "scripts/tests/test_launchability.py",
-      "sha256": "8c68c14d3823c453a0b26fb9a13b5c73d101d8bfd71cdb7ecd9594312ce49af5"
+      "sha256": "0b60c4791989d5e54e1734dedd3cca8f297b3bf417083c18a17f9efe74b8dafa"
     },
     {
       "path": "scripts/tests/test_lazy_materialization.py",
@@ -1746,6 +1746,10 @@
       "sha256": "dafc51b650a2263511d866c90acb185ccf32f0e5807e6f2b205dbabdf08eb7bb"
     },
     {
+      "path": "scripts/tests/test_pe_worker.py",
+      "sha256": "518de93173b8998a0ccd0d58a178e253656e307110aad791a4359d54d83691cb"
+    },
+    {
       "path": "scripts/tests/test_prepare_benchmark.py",
       "sha256": "763969f9b52635da6dbaac11edbf655f3fb26499013a89354dce6f28fcddb95c"
     },
@@ -1759,7 +1763,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "654ede738792578c39d6d86b9a7963f4f742db39d7c8d46599042c9aca89a29e"
+      "sha256": "fb6c037d9d7d4563bc33b69015cfbfcb10b869b6bc99703c3b20354d89154ac2"
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",
@@ -1775,7 +1779,7 @@
     },
     {
       "path": "scripts/validate_manifest.py",
-      "sha256": "6b08d04d2d44ba5f87e0cd073f0c2f0ff1f00eabcb25fbfbb2efdcde619f470a"
+      "sha256": "52171ef5baec14408d768ebc1b57d7d95f336a056bb6dd639e2541975d0fe7b3"
     },
     {
       "path": "scripts/validate_thin_providers.py",

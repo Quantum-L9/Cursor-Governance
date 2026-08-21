@@ -15,6 +15,13 @@ venv/
 dist/
 build/
 
+# Python tool caches. Not merely noise: environment/program-execution/peer_execution
+# is a pytest rootdir, so an unignored .pytest_cache/ lands inside the Program
+# Execution manifest's input surface and shows up as an inventory entry.
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+
 # IDE
 .vscode/
 .idea/
@@ -117,6 +124,12 @@ ops/ui-operator/receipts/local/
 # Do not re-add negation exceptions for logs/ or transcripts/.
 WIP/Legal Defense/
 WIP/Legal Defense/**
+# Installed live pack is a local copy of the private skill. Keep it out of
+# skills/ (orphan heal would register case identifiers into public manifests).
+# Discovery paths are .claude/skills/defense-attorney (already ignored above)
+# and ~/.cursor/skills/defense-attorney.
+skills/defense-attorney/
+skills/defense-attorney
 
 # generated reports - CI artifacts, not source
 governance-health-report.json
@@ -129,4 +142,3 @@ docs/skills-inventory.md
 
 # retired harvest dump — repo-hygiene fail-closes if this directory reappears
 current_work/
-
