@@ -1,0 +1,357 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Scope make pr-check pytest and start agents on the stack tip",
+  "objective": "Cut make pr wall-clock by (1) running only the tests that cover changed Python on make pr-check, and (2) creating agent worktrees from the unambiguous open-PR stack tip when PR_STACK=auto, so the gate diffs a small delta instead of origin/main and never restacks after a four-minute suite.",
+  "success_criteria": [
+    "Given one open PR chain and default PR_STACK=auto, agent_worktree_start.sh records base_ref as that tip head and base_sha as the fetched tip SHA, not origin/main",
+    "Given two sibling open PRs both targeting main, worktree start exits nonzero and names both heads; it does not pick one",
+    "Given PR_STACK= (empty), worktree start still uses origin/main with no extra authorization flag",
+    "Given a changed-file list of only ops/autonomy/merge_gate.py and tests/ops/autonomy/test_merge_gate.py, make pr-check pytest argv does not include environment/program-execution or environment/agents/generated-data suites and does include those two paths (or the inferred test file)",
+    "make test, make pr-full, and CI profile argv still collect the full python-contract catalog including repo-root '.'",
+    "Existing tests/ops/scripts/test_pr_overlap_check.py and tests/ops/autonomy/test_merge_gate.py stay green",
+    "make pr-check PASS on the implementation branch"
+  ],
+  "scope": {
+    "in": [
+      "Cursor-Governance ops/scripts/run_pr_gate.sh pytest branch",
+      "ops/scripts/run_pytest_suites.sh and run_python_test_suites.py local-profile selection",
+      "New shared stack-tip resolver used by agent_worktree_start.sh and open_pr_after_gate.sh",
+      "ops/scripts/pr_overlap_check.py auto-stack when a unique chain exists even without file overlap",
+      "Tests under tests/ops/scripts/ and docs: AGENTS.md, surface_profile.yaml, rules/53-pr-overlap-guardrail.mdc",
+      "Optional same-gate ruff-format restage so a style-only follow-up does not replay the catalog"
+    ],
+    "out": [
+      "Weakening ruff, gitleaks, bandit, semgrep, or CI coverage",
+      "Changing merge_gate stack-parent squash denial or stack_safe_merge.py method selection",
+      "Rebasing or rewriting published PR history",
+      "Merging #240 #241 #242",
+      "Cognitive.Engine.Graphs engine/chassis product code",
+      "Flipping l9-bounded-autonomy to auto-invoke",
+      "Editing .github/workflows",
+      "Direct git push to Cursor-Governance main"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "Bind target Quantum-L9/Cursor-Governance; origin/main=a588f8b23212b176861dc5abf9f1172536943c77; PR #242 head dcb84112c4714705bbc60291223daa3e64b70ee3 on feat/stack-safe-merge",
+      "pass_criteria": "Single governance repo; CEG tree excluded from mutation",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "Read run_pr_gate.sh pytest branch, python-contract.json repo-root owned_paths='.', agent_worktree_start.sh default origin/main, pr_overlap_check.py auto_stack only on overlap blockers",
+      "pass_criteria": "Root causes named: any .py runs full catalog; start always main; STACK_BASE only after overlap",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "route_plan.py --risk high --evidence conflicting",
+      "pass_criteria": "depth=deep",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "make pr-check (execution phase only; plan mode does not run it)",
+      "pass_criteria": "Named as the public local gate; not executed from /l9-plan",
+      "status": "not_applicable"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Add a fail-closed stack-tip resolver: unique open-PR chain tip, else origin/main if none, else exit 2 on sibling chains. Same rule for start and publish. Do not require file overlap.",
+      "files": [
+        "ops/scripts/resolve_stack_tip.py",
+        "ops/scripts/tests/test_resolve_stack_tip.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new file beside pr_overlap_check.py",
+      "leverage_rank": 1,
+      "shared_root_cause": "stack tip chosen after the gate and only on overlap"
+    },
+    {
+      "id": "T2",
+      "task": "Default agent_worktree_start.sh base to the resolver tip when PR_STACK is auto (Makefile default). Empty PR_STACK keeps origin/main. Implied L9_TASK_BASE_AUTHORIZED for that auto tip only.",
+      "files": [
+        "ops/scripts/agent_worktree_start.sh",
+        "tests/ops/scripts/test_multi_agent_main_bound.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "base_ref origin/main block after identifier checks",
+      "leverage_rank": 2,
+      "shared_root_cause": "stack tip chosen after the gate and only on overlap"
+    },
+    {
+      "id": "T3",
+      "task": "Scope make pr-check pytest: never pass repo-root '.' for local profile. Select changed tests plus inferred tests/ops/.../test_<stem>.py. Run a non-dot suite only when changed paths sit under its owned_paths. If a changed impl file has no inferred test, run the smallest owning non-dot suite or fail-closed to that file plus its tests/ directory, not the full catalog. make pr-full and CI unchanged.",
+      "files": [
+        "ops/scripts/run_pr_gate.sh",
+        "ops/scripts/run_python_test_suites.py",
+        "ops/scripts/select_pr_pytest_paths.py",
+        "ops/config/python-contract.json"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "run_pr_gate.sh --- pytest --- block; repo-root owned_paths='.' trap",
+      "leverage_rank": 1,
+      "shared_root_cause": "any changed .py runs the full pytest catalog"
+    },
+    {
+      "id": "T4",
+      "task": "Prove both selectors with unit tests: tip vs main vs siblings; pytest path list excludes PE and generated-data for an autonomy-only change; full catalog still selected when a file under a non-dot owned_path changes.",
+      "files": [
+        "ops/scripts/tests/test_select_pr_pytest_paths.py",
+        "ops/scripts/tests/test_resolve_stack_tip.py",
+        "tests/ops/scripts/test_pr_overlap_check.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1",
+        "T3"
+      ],
+      "operation": "Create",
+      "anchor": "new tests next to test_pr_overlap_check.py",
+      "leverage_rank": 3
+    },
+    {
+      "id": "T5",
+      "task": "Align AGENTS.md interpreter/stack section, surface_profile session_start_block, and rules/53 so agents are told to start on the tip, not to invent a main branch and restack at make pr.",
+      "files": [
+        "AGENTS.md",
+        "ops/autonomy/surface_profile.yaml",
+        "rules/53-pr-overlap-guardrail.mdc"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T2",
+        "T4"
+      ],
+      "operation": "Replace",
+      "anchor": "AGENTS.md stack paragraph; surface_profile PR_STACK comment",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T6",
+      "task": "After ruff-format dirties only the files it just formatted, restage those exact paths in the same gate pass or write the receipt after format so a style-only second make pr reuses the receipt. Do not git add -A.",
+      "files": [
+        "ops/scripts/run_pr_gate.sh"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T3"
+      ],
+      "operation": "Replace",
+      "anchor": "gate dirtiness retry after ruff-format",
+      "leverage_rank": 3,
+      "shared_root_cause": "any changed .py runs the full pytest catalog"
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T3",
+    "T2",
+    "T4",
+    "T6",
+    "T5"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Stack tip and pytest path selectors exist with failing-then-passing unit tests",
+      "unlocks": "Worktree start and gate wiring"
+    },
+    {
+      "id": "M2",
+      "outcome": "Start + pr-check use the selectors; docs match",
+      "unlocks": "make pr-check on the implementation branch"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "pytest ops/scripts/tests/test_resolve_stack_tip.py ops/scripts/tests/test_select_pr_pytest_paths.py PASS; a fixture with only merge_gate.py does not emit generated-data or peer_execution autonomy tests",
+      "no_go_action": "Do not wire start/gate until selectors are proven"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "make pr-check PASS; worktree start dry-run or unit proof shows tip SHA when one chain exists",
+      "no_go_action": "Do not publish; revert the selector and keep full-catalog local gate"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": [
+        "T5"
+      ]
+    },
+    {
+      "surface": "ops/autonomy/surface_profile.yaml",
+      "action": "update",
+      "todo_ids": [
+        "T5"
+      ]
+    },
+    {
+      "surface": "rules/53-pr-overlap-guardrail.mdc",
+      "action": "update",
+      "todo_ids": [
+        "T5"
+      ]
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "No Claude-only gate contract; Makefile public verbs stay pr-check and pr"
+    },
+    {
+      "surface": "Cognitive.Engine.Graphs AGENTS.md",
+      "action": "n_a",
+      "reason": "Mutation target is Cursor-Governance; CEG has no make venv / PR_STACK surface"
+    }
+  ],
+  "stress_test": {
+      "disconfirming_questions": [
+        "Does intersecting changed files with owned_paths='.' still select the entire repo-root suite and leave wall-clock unchanged?",
+        "If agents start on the newest PR by createdAt when two siblings target main, does a later squash of the wrong parent delete the other child?",
+        "If a shared helper under ops/scripts/ changes and no test_<stem>.py exists, does the scoped gate ship with zero tests for that file?",
+        "Does implying L9_TASK_BASE_AUTHORIZED for auto tip also waive main-bound checks for an arbitrary --base the agent typed?"
+      ],
+      "assumed_false_ifs": [
+        "repo-root owned_paths '.' is treated as a wildcard that still dumps the catalog on pr-check",
+        "PR_STACK=auto remains publish-only and start stays origin/main",
+        "CI and make pr-full are pointed at the new local selector",
+        "gh is unavailable and the resolver silently guesses main while open PRs exist"
+      ],
+      "blast_radius": "Under-scoped pytest can merge a helper break. Auto-start on the wrong sibling can recreate the squash-parent orphan. A fail-open gh outage can fork main while a stack exists.",
+      "rollback": "Revert the commit(s) on the feature branch. Restore run_pr_gate.sh pytest to run_pytest_suites.sh with only the secrets ignore. Restore agent_worktree_start.sh origin/main default. Keep stack_safe_merge.py and merge_gate parent-squash denial untouched."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T3",
+      "T2",
+      "T6",
+      "T4",
+      "T5"
+    ],
+    "shared_causes": [
+      "stack tip chosen after the gate and only on overlap",
+      "any changed .py runs the full pytest catalog"
+    ],
+    "deletions_or_consolidations": [
+      "Remove the late-only STACK_BASE restack as the primary stacking mechanism; publish reuses the start tip",
+      "Remove the implicit repo-root '.' dump from the local pr-check profile"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Scoped pytest misses a regression in an unmapped helper",
+      "mitigation": "No inferred test plus no non-dot owning suite fails closed to that directory's tests/ or blocks the gate; CI/pr-full stay full-catalog"
+    },
+    {
+      "risk": "Starting on the wrong open PR orphans a sibling after squash",
+      "mitigation": "Sibling chains exit 2 at start; only a unique chain tip is used"
+    },
+    {
+      "risk": "Authorization leak: any non-main --base becomes auto-approved",
+      "mitigation": "Implied authorization applies only when the resolver selected the tip and the agent did not pass a conflicting --base"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "When gh cannot list open PRs at start, is the required behavior fail-closed (no worktree) or origin/main with a printed WARN?",
+      "decision_effect": "Fail-closed blocks all new tasks offline; WARN+main recreates the late-restack cost when the network returns",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 -m pytest ops/scripts/tests/test_resolve_stack_tip.py ops/scripts/tests/test_select_pr_pytest_paths.py tests/ops/scripts/test_pr_overlap_check.py -q",
+      "pass_criteria": "all passed",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on the implementation worktree; pytest log shows no generated-data or peer_execution dump for autonomy-only paths",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "Plan validated; implementation not started. U1 bounded: fail-closed when gh cannot list PRs (same polarity as merge_gate stack probe)."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/scripts/run_pr_gate.sh",
+      "ops/scripts/run_python_test_suites.py",
+      "ops/scripts/run_pytest_suites.sh",
+      "ops/scripts/select_pr_pytest_paths.py",
+      "ops/scripts/resolve_stack_tip.py",
+      "ops/scripts/agent_worktree_start.sh",
+      "ops/scripts/open_pr_after_gate.sh",
+      "ops/scripts/pr_overlap_check.py",
+      "ops/config/python-contract.json",
+      "ops/scripts/tests/",
+      "tests/ops/scripts/",
+      "AGENTS.md",
+      "ops/autonomy/surface_profile.yaml",
+      "rules/53-pr-overlap-guardrail.mdc"
+    ],
+    "must_not_modify": [
+      "engine/",
+      "chassis/",
+      ".github/workflows/",
+      "ops/autonomy/stack_safe_merge.py",
+      "ops/autonomy/merge_gate.py",
+      "environment/program-execution/core/"
+    ],
+    "preserved_contracts": [
+      "make pr-check is the public local gate; make pr publishes; no raw git push when Makefile pr exists",
+      "CI and make pr-full remain full-catalog",
+      "No ancestry-breaking merge of a stack parent",
+      "autonomous_merge false",
+      "Sibling open-PR chains fail closed"
+    ],
+    "validation_commands": [
+      "python3 -m pytest ops/scripts/tests/test_resolve_stack_tip.py ops/scripts/tests/test_select_pr_pytest_paths.py tests/ops/scripts/test_pr_overlap_check.py -q",
+      "make pr-check"
+    ]
+  },
+  "estimate": "one PE campaign, two waves",
+  "checklist": [
+    "stack-tip resolver",
+    "worktree start default",
+    "pr-check pytest path select",
+    "unit tests",
+    "docs",
+    "format-delta same gate"
+  ]
+}

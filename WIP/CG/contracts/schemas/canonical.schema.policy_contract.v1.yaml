@@ -1,0 +1,73 @@
+schema_id: canonical.schema.policy_contract.v1
+schema_name: Canonical Policy Contract Schema
+schema_class: canonical_document_type_schema
+schema_family: l9_governance_contracts
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.policy_contract.v1.yaml
+purpose:
+  primary: Define deterministic conditional governance decisions from explicit inputs ordered rules outcomes obligations and conflict semantics.
+  output_level: schema_not_instance
+  intended_use: [authorization_policy, mutation_policy, deployment_policy, approval_policy, routing_policy]
+  not_for: [unconditional_invariants, capability_discovery, procedural_state_machines]
+ontology:
+  parent_type: governance_contract_schema
+  specialized_type: policy_contract_schema
+  instance_type_generated_by_this_schema: policy_contract
+  related_schema_types: [canonical.schema.governance_contract.v1]
+inheritance:
+  extends: [canonical.schema.governance_contract.v1]
+  provides: [policy_input_model, policy_decision_model, decision_conflict_model]
+required_sections:
+  policy_inputs:
+    required: true
+    type: list
+    min_items: 1
+    item_schema:
+      name: {type: string, required: true}
+      type: {type: string, required: true}
+      required: {type: boolean, required: true}
+      source: {type: string, required: true}
+  decision_model:
+    required: true
+    fields:
+      default_decision: {enum: [permit, deny, stop, not_applicable], required: true}
+      conflict_strategy: {enum: [deny_wins, higher_authority_wins, explicit_priority, no_overlap_allowed], required: true}
+      priority_tiebreaker:
+        enum: [rule_id_ascending, none]
+        required: true
+      rules:
+        type: list
+        min_items: 1
+        item_schema:
+          rule_id: {type: string, required: true}
+          priority: {type: integer, required: true}
+          when: {type: list_string, required: true, min_items: 1}
+          decision: {enum: [permit, deny, require_gate, require_approval, constrain, stop, route], required: true}
+          obligations: {type: list_string, required: true, allow_empty: true}
+          reason_code: {type: string, required: true}
+conditional_rules:
+  - when: decision_model.conflict_strategy == explicit_priority
+    require:
+      - either rule priorities are unique or priority_tiebreaker == rule_id_ascending
+  - when: decision_model.conflict_strategy != explicit_priority
+    require:
+      - priority_tiebreaker == none
+validation_rules:
+  - {id: POLICY-CONTRACT-001, severity: blocker, rule: metadata.kind must equal policy.}
+  - {id: POLICY-CONTRACT-002, severity: blocker, rule: policy inputs must have explicit authoritative sources.}
+  - {id: POLICY-CONTRACT-003, severity: blocker, rule: explicit priority must be deterministic for every overlapping applicable rule set.}
+  - {id: POLICY-CONTRACT-004, severity: blocker, rule: overlapping rules require deterministic conflict semantics.}
+  - {id: POLICY-CONTRACT-005, severity: blocker, rule: missing required input may not silently evaluate to permit.}
+  - {id: POLICY-CONTRACT-006, severity: blocker, rule: policy decisions may narrow but may not widen higher-authority contracts.}
+  - {id: POLICY-CONTRACT-007, severity: blocker, rule: duplicate explicit priorities require the declared deterministic secondary ordering.}
+derivation_targets:
+  can_generate: [policy_contract, decision_table, policy_evaluator, policy_fixture_set, policy_projection]
+anti_drift_rules:
+  - Do not hide decision branches in prose.
+  - Do not infer missing policy inputs.
+  - Do not let default behavior silently widen authority.
+  - Do not duplicate policy decisions inside consuming skills.
+minimum_viable_instance_requirements:
+  required: [metadata, authority, scope, policy_inputs, decision_model, enforcement, evidence_obligations, provenance, lifecycle]

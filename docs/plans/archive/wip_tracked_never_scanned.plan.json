@@ -1,0 +1,313 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "standard",
+  "title": "WIP tracked in git, excluded from all scanners/CI",
+  "objective": "Keep repository-root WIP/ as a first-class committed draft corpus while ensuring no local gate, pre-commit hook, or GitHub Actions scanner treats WIP content as production source that can fail CI.",
+  "success_criteria": [
+    "Root .gitignore does not ignore the WIP/ tree; only credential-shaped WIP filenames remain denylisted, with an explicit tracked-corpus policy comment",
+    "Conflict-marker git grep in .github/workflows/l9-lint-test.yml pathspec-excludes WIP/** (and sibling scratch trees already excluded elsewhere)",
+    "Audit confirms existing WIP exclusions remain present and consistent across .pre-commit-config.yaml, .gitleaks.toml, pyproject.toml (ruff/mypy/pytest), sonar-project.properties, CodeQL config, workflow paths-ignore, resolve_changed_files.sh, and run_pr_security.sh",
+    "A WIP-only changed-files resolution yields empty scanner targets (make pr / security path); mixed PRs still lint live code without scanning WIP",
+    "No bulk WIP corpus commit is required to land the config change; config PR can merge independently"
+  ],
+  "scope": {
+    "in": [
+      ".gitignore — policy comment + keep WIP secret denylist; never add blanket WIP/",
+      ".github/workflows/l9-lint-test.yml — conflict-marker pathspec exclude for WIP/**",
+      "Scanner/config audit + gap-fill only if a missing WIP exclude is found during implementation",
+      "Optional consistency: add :!**/current_work/** :!**/C_GOV_FILES/** :!**/reports/** to the same conflict-marker pathspec if not already present"
+    ],
+    "out": [
+      "Bulk git add/commit of untracked WIP trees (README, backlog, quantum_animation_spec_pack_v3, etc.) — separate change after secret scrub",
+      "Deleting or restructuring WIP content",
+      "Changing CANONICAL_LAW.md / AGENTS.md / ORG_INVARIANTS.yaml protected doctrine",
+      "Weakening secret denylist under WIP/",
+      "Unrelated dirty-tree work (distill_queue, hydration, transcript_distiller, TODO.md)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "Inventory WIP tracking: git ls-files WIP; git check-ignore -v WIP/README.md; confirm .gitignore has no blanket WIP/",
+      "pass_criteria": "WIP tree not blanket-ignored; only WIP/*oauth*|credentials*|client_secret* denylisted; some WIP paths already tracked",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "Grep scanner configs for WIP excludes (.pre-commit-config.yaml, .gitleaks.toml, pyproject.toml, sonar-project.properties, .github/codeql/codeql-config.yml, workflow paths-ignore, ops/scripts/resolve_changed_files.sh, ops/scripts/run_pr_security.sh)",
+      "pass_criteria": "Majority already exclude WIP; only material gap identified is l9-lint-test conflict-marker git grep missing :!**/WIP/**",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "make pr-check (baseline before WIP-config edits)",
+      "pass_criteria": "Named for governed workspaces; observed FAIL from unrelated ruff format auto-fix on dirty tree — treat as environment noise, not WIP gap",
+      "status": "failed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Rewrite the WIP credential block in .gitignore to state WIP/ is intentionally tracked draft corpus; keep only oauth/credentials/client_secret denylist patterns; do not add WIP/",
+      "files": [
+        ".gitignore"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "# ── Credential-shaped files that must never be committed",
+      "leverage_rank": 1,
+      "shared_root_cause": "agents may add WIP/ to gitignore thinking scratch equals untracked"
+    },
+    {
+      "id": "T2",
+      "task": "Exclude WIP (and sibling scratch trees) from the conflict-marker git grep pathspec in l9-lint-test.yml so committed WIP drafts cannot trip the CI tripwire",
+      "files": [
+        ".github/workflows/l9-lint-test.yml"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "Conflict-marker scan (repo-wide fast-detection tripwire)",
+      "leverage_rank": 2,
+      "shared_root_cause": "paths-ignore only skips WIP-only PRs; mixed PRs still run full-tree scans"
+    },
+    {
+      "id": "T3",
+      "task": "Re-audit remaining scanner configs; touch only if a WIP exclude is missing or drifted (pre-commit, gitleaks, ruff/mypy/pytest, sonar, CodeQL, resolve_changed_files, run_pr_security)",
+      "files": [
+        ".pre-commit-config.yaml",
+        ".gitleaks.toml",
+        "pyproject.toml",
+        "sonar-project.properties",
+        ".github/codeql/codeql-config.yml",
+        "ops/scripts/resolve_changed_files.sh",
+        "ops/scripts/run_pr_security.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "WIP exclude lines already present in each file",
+      "leverage_rank": 3,
+      "shared_root_cause": "exclude lists drift across tools"
+    },
+    {
+      "id": "T4",
+      "task": "Validate: conflict-marker pathspec dry-run; confirm git check-ignore does not ignore WIP/README.md; confirm resolve_changed_files drops WIP prefixes; run make pr-check on config-only staged set if tree can be isolated",
+      "files": [
+        ".gitignore",
+        ".github/workflows/l9-lint-test.yml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T3"
+      ],
+      "operation": "Insert",
+      "anchor": "local verification commands only",
+      "leverage_rank": 4
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3",
+    "T4"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": ".gitignore encodes tracked-WIP policy without blanket ignore",
+      "unlocks": "safe WIP commits without CI policy confusion"
+    },
+    {
+      "id": "M2",
+      "outcome": "CI conflict-marker scan cannot fail on WIP content",
+      "unlocks": "committed WIP drafts stay CI-inert on mixed PRs"
+    },
+    {
+      "id": "M3",
+      "outcome": "Cross-tool WIP exclude audit closed with evidence",
+      "unlocks": "handoff to optional separate WIP corpus commit"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "git check-ignore -v WIP/README.md exits 1 (not ignored); credential patterns still match sample names",
+      "no_go_action": "revert any blanket WIP/ ignore line"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "workflow pathspec includes :!**/WIP/** on conflict-marker step",
+      "no_go_action": "do not claim CI-safe until pathspec landed"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "checklist of scanners shows WIP excluded or N/A with reason",
+      "no_go_action": "fill missing exclude before merge"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "WIP commit/scan policy is local ignore + scanner config; no activation contract change"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "symlink/memory law unchanged"
+    },
+    {
+      "surface": "WIP/README.md",
+      "action": "n_a",
+      "reason": "existing README already describes backlog role; config plan does not require README edit"
+    },
+    {
+      "surface": ".gitignore",
+      "action": "update",
+      "todo_ids": [
+        "T1"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If someone adds WIP/ to .gitignore, does that contradict 'to be committed' and silently drop backlog from the SSOT?",
+      "If a PR changes ops/scripts and WIP together, does paths-ignore: WIP/** still leave ruff/mypy/conflict-marker scanning WIP?",
+      "Could excluding WIP from the conflict-marker scan hide real unresolved merges that were accidentally pasted into WIP and later promoted without re-scan?"
+    ],
+    "assumed_false_ifs": [
+      "WIP remains non-runtime and is never imported by live CI test entrypoints",
+      "Credential denylist under WIP stays; agents do not commit oauth/client_secret JSON",
+      "Existing pyproject force-exclude and pre-commit exclude continue to apply when tools receive explicit paths"
+    ],
+    "blast_radius": "Wrong gitignore blankets the corpus out of git; wrong CI exclude lets draft kernels fail quality gates or, conversely, hides conflict markers until promotion",
+    "rollback": "git revert the config commit; restore prior .gitignore WIP block and prior l9-lint-test pathspec"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T4"
+    ],
+    "shared_causes": [
+      "confusion between 'scratch' (untracked/ignored) and 'draft corpus' (tracked, unscanned)",
+      "workflow paths-ignore only covers WIP-only events, not mixed-PR full-tree steps"
+    ],
+    "deletions_or_consolidations": [
+      "Do not invent a second WIP ignore SSOT; keep excludes co-located in each tool's native config and keep comments pointing at resolve_changed_files / pre-commit sync"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Agent adds blanket WIP/ to .gitignore during 'cleanup'",
+      "mitigation": "Explicit tracked-corpus comment in .gitignore; T1 forbids WIP/ pattern"
+    },
+    {
+      "risk": "Mixed PR still fails on WIP via an overlooked scanner",
+      "mitigation": "T3 audit matrix; T2 closes known conflict-marker gap"
+    },
+    {
+      "risk": "Unrelated dirty tree (distill/hydration) contaminates pr-check evidence",
+      "mitigation": "Stage only config files for validation; leave unrelated changes unstaged"
+    },
+    {
+      "risk": "Later WIP corpus commit introduces secrets that gitleaks allowlists under WIP/",
+      "mitigation": "Keep credential filename denylist; scrub before any corpus commit (out of scope here)"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Should the next change after this config PR git-add the currently untracked WIP trees (README, backlog/, quantum_animation_spec_pack_v3/, out-of-scope-hold/), or leave corpus commit to a human-curated follow-up?",
+      "decision_effect": "Affects PR size and secret-scrub obligation; does not block config work",
+      "resolution": "ask"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "git check-ignore -v WIP/README.md; test exit status 1",
+      "pass_criteria": "WIP/README.md is not ignored",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "rg -n ':!\\*\\*/WIP/\\*\\*' .github/workflows/l9-lint-test.yml",
+      "pass_criteria": "conflict-marker step pathspec includes WIP exclude",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "rg -n 'WIP' .pre-commit-config.yaml .gitleaks.toml pyproject.toml sonar-project.properties .github/codeql/codeql-config.yml ops/scripts/resolve_changed_files.sh ops/scripts/run_pr_security.sh",
+      "pass_criteria": "each listed scanner/config still names WIP exclude",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on staged config-only change set, or documented N/A if unrelated dirty tree blocks isolation",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1"
+    ],
+    "next_skill": "l9-gmp-protocol",
+    "stop_reason": "PLAN_DOCUMENT validated; implementation not started; U1 (corpus commit timing) optional ask before follow-up"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      ".gitignore",
+      ".github/workflows/l9-lint-test.yml",
+      ".pre-commit-config.yaml",
+      ".gitleaks.toml",
+      "pyproject.toml",
+      "sonar-project.properties",
+      ".github/codeql/codeql-config.yml",
+      "ops/scripts/resolve_changed_files.sh",
+      "ops/scripts/run_pr_security.sh"
+    ],
+    "must_not_modify": [
+      "CANONICAL_LAW.md",
+      "AGENTS.md",
+      "ORG_INVARIANTS.yaml",
+      "ops/hooks/session_start_bootstrap.sh",
+      "unrelated distill/hydration dirty files"
+    ],
+    "preserved_contracts": [
+      "WIP is commit-eligible draft corpus, not runtime SSOT",
+      "WIP credential-shaped filenames remain untrackable",
+      "Scanners never gate on WIP content",
+      "pyproject.toml append-only if touched (prefer no edit if excludes already present)"
+    ],
+    "validation_commands": [
+      "git check-ignore -v WIP/README.md",
+      "rg -n 'WIP' .pre-commit-config.yaml .gitleaks.toml pyproject.toml sonar-project.properties .github/codeql/codeql-config.yml ops/scripts/resolve_changed_files.sh ops/scripts/run_pr_security.sh .github/workflows/l9-lint-test.yml .gitignore",
+      "make pr-check"
+    ]
+  },
+  "checklist": [
+    "gitignore tracked-WIP policy",
+    "conflict-marker WIP pathspec",
+    "cross-scanner exclude audit",
+    "local verification"
+  ],
+  "estimate": "1 short GMP"
+}

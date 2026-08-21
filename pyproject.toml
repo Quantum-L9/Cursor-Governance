@@ -80,6 +80,7 @@ exclude = [
     "current_work/harvested",
     "C_GOV_FILES",
     "WIP",
+    "docs/plans",
     "**/.cursor-commands",
     "**/.cursor",
     "environment/generated/llm-rules",
