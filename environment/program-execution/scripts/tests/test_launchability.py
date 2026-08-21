@@ -246,10 +246,38 @@ class ExecutionEnvironmentTest(unittest.TestCase):
                 env=controller_side.env,
             ).stdout.strip()
             self.assertEqual(
-                Path(reported).resolve().parent,
+                Path(reported).parent,
                 controller_side.python.parent,
                 "a validation command resolved a different python3 than the controller",
             )
+
+    def test_venv_python_symlink_does_not_escape_to_base_interpreter(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw) / "base" / "bin"
+            base.mkdir(parents=True)
+            target = base / "python3.12"
+            target.write_text("#!/bin/sh\n", encoding="utf-8")
+            target.chmod(0o755)
+            venv = Path(raw) / "donor" / ".venv"
+            (venv / "bin").mkdir(parents=True)
+            (venv / "pyvenv.cfg").write_text("home = /usr\n", encoding="utf-8")
+            shim = venv / "bin" / "python3"
+            shim.symlink_to(target)
+            isolate = Path(raw) / "isolate"
+            isolate.mkdir()
+            env = {
+                "GOV_TOOLCHAIN_ROOT": str(venv.parent),
+                "L9_PE_PYTHON": "",
+                "VIRTUAL_ENV": "",
+            }
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(
+                    self.exec_env, "is_l9_isolate_workspace", return_value=True
+                ):
+                    resolved = self.exec_env.resolve_exec_env(isolate)
+            self.assertEqual(resolved.python, venv.resolve() / "bin" / "python3")
+            self.assertEqual(Path(resolved.env["PATH"].split(":")[0]), venv.resolve() / "bin")
+            self.assertEqual(Path(resolved.env["VIRTUAL_ENV"]), venv.resolve())
 
     def test_isolate_prefers_donor_toolchain_over_local_venv(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -275,7 +303,7 @@ class ExecutionEnvironmentTest(unittest.TestCase):
                     self.exec_env, "is_l9_isolate_workspace", return_value=True
                 ):
                     resolved = self.exec_env.resolve_exec_env(isolate)
-            self.assertEqual(resolved.python, donor_py.resolve())
+            self.assertEqual(resolved.python, (donor / ".venv").resolve() / "bin" / "python3")
 
     def test_an_active_venv_wins_over_the_launching_interpreter(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -288,9 +316,9 @@ class ExecutionEnvironmentTest(unittest.TestCase):
 
             with unittest.mock.patch.dict("os.environ", {"VIRTUAL_ENV": str(venv)}):
                 resolved = self.exec_env.resolve_exec_env(Path(raw))
-            self.assertEqual(resolved.python, fake.resolve())
+            self.assertEqual(resolved.python, venv.resolve() / "bin" / "python3")
             self.assertEqual(Path(resolved.env["VIRTUAL_ENV"]), venv.resolve())
-            self.assertEqual(Path(resolved.env["PATH"].split(":")[0]), (venv / "bin").resolve())
+            self.assertEqual(Path(resolved.env["PATH"].split(":")[0]), (venv.resolve() / "bin"))
 
     def test_validation_failure_reports_the_resolved_environment(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

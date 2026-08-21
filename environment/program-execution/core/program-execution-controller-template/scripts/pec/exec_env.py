@@ -37,6 +37,19 @@ def _venv_root(python: Path) -> Path | None:
     return root if (root / "pyvenv.cfg").is_file() else None
 
 
+def _keep_venv_shim(candidate: Path) -> Path:
+    """Keep the venv entrypoint. ``Path.resolve()`` follows it to Homebrew.
+
+    Invoking the Cellar interpreter drops ``pyvenv.cfg``, so ``import yaml``
+    and other locked extras disappear even though the donor venv has them.
+    """
+    absolute = candidate.absolute()
+    root = _venv_root(absolute)
+    if root is not None:
+        return root.resolve() / absolute.parent.name / absolute.name
+    return absolute.resolve()
+
+
 def is_l9_isolate_workspace(path: Path) -> bool:
     """Match ops/scripts/resolve_governance_paths.sh is_l9_isolate_workspace."""
     workspace = path.resolve()
@@ -63,7 +76,7 @@ def _donor_toolchain_python() -> Path | None:
         for exe in (".venv/bin/python3", ".venv/bin/python", ".venv/Scripts/python.exe"):
             candidate = resolved / exe
             if candidate.is_file():
-                return candidate.resolve()
+                return _keep_venv_shim(candidate)
     return None
 
 
@@ -73,10 +86,10 @@ def _discover_python(cwd: Path | None) -> Path:
     if override:
         candidate = Path(override)
         if candidate.is_file():
-            return candidate.resolve()
+            return _keep_venv_shim(candidate)
         located = shutil.which(override)
         if located:
-            return Path(located).resolve()
+            return _keep_venv_shim(Path(located))
     # Isolates are not uv projects. Their local .venv, if any, is pytest-less.
     # Validation must use the donor toolchain that owns the locked extras.
     if cwd is not None and is_l9_isolate_workspace(cwd):
@@ -90,14 +103,14 @@ def _discover_python(cwd: Path | None) -> Path:
         for name in ("bin/python3", "bin/python", "Scripts/python.exe"):
             candidate = Path(virtual_env) / name
             if candidate.is_file():
-                return candidate.resolve()
+                return _keep_venv_shim(candidate)
     if cwd is not None:
         for name in (".venv", "venv"):
             for exe in ("bin/python3", "bin/python", "Scripts/python.exe"):
                 candidate = cwd / name / exe
                 if candidate.is_file():
-                    return candidate.resolve()
-    return Path(sys.executable).resolve()
+                    return _keep_venv_shim(candidate)
+    return _keep_venv_shim(Path(sys.executable))
 
 
 @dataclass(frozen=True)
