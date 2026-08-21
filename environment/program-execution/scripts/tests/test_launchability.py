@@ -55,6 +55,25 @@ class LaunchabilityTest(unittest.TestCase):
             codes = {item["code"] for item in report["blockers"]}
             self.assertIn("verification_deadlock", codes)
 
+    def test_pytest_native_file_infers_pytest_not_unittest(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "tests/ops/scripts").mkdir(parents=True)
+            (root / "tests/ops/scripts/test_multi_agent_main_bound.py").write_text(
+                "import pytest\n\n@pytest.fixture\ndef repo():\n    return 1\n\ndef test_ok(repo):\n    assert repo\n",
+                encoding="utf-8",
+            )
+            inferred = launchability.infer_validation_commands(
+                {"writable_paths": ["tests/ops/scripts/test_multi_agent_main_bound.py"]},
+                root,
+            )
+            self.assertEqual(
+                inferred,
+                [
+                    "python3 -m pytest tests/ops/scripts/test_multi_agent_main_bound.py --tb=short -q"
+                ],
+            )
+
     def test_validation_is_inferred_from_the_nearest_existing_test(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -231,6 +250,32 @@ class ExecutionEnvironmentTest(unittest.TestCase):
                 controller_side.python.parent,
                 "a validation command resolved a different python3 than the controller",
             )
+
+    def test_isolate_prefers_donor_toolchain_over_local_venv(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            donor = Path(raw) / "donor"
+            (donor / ".venv" / "bin").mkdir(parents=True)
+            (donor / ".venv" / "pyvenv.cfg").write_text("home = /usr\n", encoding="utf-8")
+            donor_py = donor / ".venv" / "bin" / "python3"
+            donor_py.write_text("#!/bin/sh\n", encoding="utf-8")
+            donor_py.chmod(0o755)
+            isolate = Path(raw) / "isolate"
+            (isolate / ".venv" / "bin").mkdir(parents=True)
+            (isolate / ".venv" / "pyvenv.cfg").write_text("home = /usr\n", encoding="utf-8")
+            iso_py = isolate / ".venv" / "bin" / "python3"
+            iso_py.write_text("#!/bin/sh\n", encoding="utf-8")
+            iso_py.chmod(0o755)
+            env = {
+                "GOV_TOOLCHAIN_ROOT": str(donor),
+                "L9_PE_PYTHON": "",
+                "VIRTUAL_ENV": str(isolate / ".venv"),
+            }
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(
+                    self.exec_env, "is_l9_isolate_workspace", return_value=True
+                ):
+                    resolved = self.exec_env.resolve_exec_env(isolate)
+            self.assertEqual(resolved.python, donor_py.resolve())
 
     def test_an_active_venv_wins_over_the_launching_interpreter(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

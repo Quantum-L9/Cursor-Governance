@@ -37,6 +37,36 @@ def _venv_root(python: Path) -> Path | None:
     return root if (root / "pyvenv.cfg").is_file() else None
 
 
+def is_l9_isolate_workspace(path: Path) -> bool:
+    """Match ops/scripts/resolve_governance_paths.sh is_l9_isolate_workspace."""
+    workspace = path.resolve()
+    l9 = (Path.home() / ".l9").resolve()
+    try:
+        parts = workspace.relative_to(l9).parts
+    except ValueError:
+        return False
+    return len(parts) >= 2 and parts[0] in {"gov-worktrees", "programs"}
+
+
+def _donor_toolchain_python() -> Path | None:
+    roots: list[Path] = []
+    override = os.environ.get("GOV_TOOLCHAIN_ROOT", "").strip()
+    if override:
+        roots.append(Path(override))
+    roots.append(Path.home() / ".cursor-governance")
+    seen: set[Path] = set()
+    for root in roots:
+        resolved = root.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        for exe in (".venv/bin/python3", ".venv/bin/python", ".venv/Scripts/python.exe"):
+            candidate = resolved / exe
+            if candidate.is_file():
+                return candidate.resolve()
+    return None
+
+
 def _discover_python(cwd: Path | None) -> Path:
     """Resolve the interpreter validation commands must see as ``python3``."""
     override = os.environ.get(_ENV_OVERRIDE, "").strip()
@@ -47,6 +77,12 @@ def _discover_python(cwd: Path | None) -> Path:
         located = shutil.which(override)
         if located:
             return Path(located).resolve()
+    # Isolates are not uv projects. Their local .venv, if any, is pytest-less.
+    # Validation must use the donor toolchain that owns the locked extras.
+    if cwd is not None and is_l9_isolate_workspace(cwd):
+        donor = _donor_toolchain_python()
+        if donor is not None:
+            return donor
     # An active venv wins over sys.executable so a controller launched from the
     # system interpreter still validates against the project's dependencies.
     virtual_env = os.environ.get("VIRTUAL_ENV", "").strip()
