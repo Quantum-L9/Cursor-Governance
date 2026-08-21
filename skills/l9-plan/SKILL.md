@@ -1,6 +1,6 @@
 ---
 name: l9-plan
-description: create a machine-validated execution plan or implementation specification before building. use when scope is unclear, requirements need decomposition, or the next step should be planned before code changes. do not use when the user only wants to execute an already-settled plan or a trivial fully-specified one-line fix.
+description: create a machine-validated pe+autonomy execution plan or specification that runs through program-execution and make campaign. use when the user asks for /l9-plan, make campaign, program lock, campaign plan, or pe+autonomy. do not use for ordinary cursor plan mode or build-button plans (use l9-plan-simple).
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -8,15 +8,17 @@ metadata:
   tags: [l9, plan, spec, execution, requirements, validation, program-execution, autonomy]
   owner: igor_beylin
   status: active
-  version: 4.0.0
-  updated: 2026-08-14
+  version: 4.1.0
+  updated: 2026-08-21
 ---
 
 # Execution Planning
 
 ## Purpose
 
-Produce a deep, machine-validated plan or specification before implementation. Planning-only — no code edits unless the user explicitly chains to execution (`/autonomy` + `@environment/program-execution`) or `l9-gmp-protocol`.
+Produce a deep, machine-validated **PE+autonomy** plan or specification before implementation. Planning-only — no code edits unless the user explicitly chains to execution (`/autonomy` + `@environment/program-execution`) or `l9-gmp-protocol`.
+
+Ordinary Cursor Plan mode / Build-button plans belong to **`l9-plan-simple`** (same template, no PE wire).
 
 **Doctrine:** a minute of planning saves an hour of debugging. Skipping planning depth to save tokens creates rework and is forbidden. True efficiency is less rework.
 
@@ -28,7 +30,7 @@ Produce a deep, machine-validated plan or specification before implementation. P
 | spec | Full spec with the same validation gates | [references/spec-workflow.md](references/spec-workflow.md) |
 | ticket | Engineering ticket structure | [references/engineering-ticket-template.md](references/engineering-ticket-template.md) |
 
-Authoritative machine artifact: **PLAN_DOCUMENT** (JSON).  
+Authoritative machine artifact: **PLAN_DOCUMENT** (JSON).
 Default human/executable projection: **Cursor `.plan.md`** from the PE+autonomy template (not the legacy GMP-only markdown).
 
 Legacy projection kept in place: [references/plan-workflow.md](references/plan-workflow.md) + `scripts/render_plan_markdown.py` — do not delete; not the default deliverable.
@@ -45,9 +47,9 @@ Legacy projection kept in place: [references/plan-workflow.md](references/plan-w
 
 ## Activation / Reject
 
-**Activate** when scope is unclear, a plan/spec/ticket is requested, or work should be planned before code changes.
+**Activate** when the user asks for `/l9-plan`, `make campaign`, Program Lock, a campaign plan, or PE+autonomy execution.
 
-**Reject** when the user only wants to execute an already-settled plan, the change is a trivial fully-specified one-liner, or a more specific domain Skill already owns the planning contract.
+**Reject** ordinary Cursor Plan mode / Build-button plans — use `l9-plan-simple`. Reject when the user only wants to execute an already-settled plan, the change is a trivial fully-specified one-liner, or a more specific domain Skill already owns the planning contract.
 
 ## Compact Workflow
 

@@ -1,14 +1,18 @@
 #!/usr/bin/env python3
-"""Project PLAN_DOCUMENT JSON into a Cursor .plan.md (PE + autonomy template).
+"""Project PLAN_DOCUMENT JSON into a Cursor .plan.md (shared template).
 
 Keeps scripts/render_plan_markdown.py as the legacy GMP-section renderer.
-Default for l9-plan / /plan is this projector + first-class SSOT
+Default for l9-plan is this projector + first-class SSOT
 environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md
 (skill references/executable-plan.pe-autonomy.template.md is a symlink).
+
+--execute-via=pe-campaign (default) keeps the PE execute block.
+--execute-via=cursor-build swaps that block for Cursor Build (l9-plan-simple).
 """
 
 from __future__ import annotations
 
+import argparse
 import hashlib
 import json
 import re
@@ -16,6 +20,18 @@ import sys
 from pathlib import Path
 
 from paths import safe_cli_path
+
+EXECUTE_VIA_PE = "pe-campaign"
+EXECUTE_VIA_BUILD = "cursor-build"
+BUILD_EXECUTE_SECTION = """## Execute via Cursor Build
+
+Press **Build**. Work in the **current checkout**.
+
+- Do not run `make campaign`.
+- Do not admit a Program Lock or Controller lease.
+- Do not write `Lock: origin/main = <sha>`.
+- Do not open a new worktree from tip as a planning requirement.
+"""
 
 # Skill path is a symlink; prefer resolving the first-class git SSOT.
 TEMPLATE_REL = Path("references/executable-plan.pe-autonomy.template.md")
@@ -60,7 +76,7 @@ def _yaml_list(items: list[str]) -> str:
     return "[" + ", ".join(items) + "]"
 
 
-def _frontmatter(plan: dict) -> str:
+def _frontmatter(plan: dict, execute_via: str = EXECUTE_VIA_PE) -> str:
     title = str(plan.get("title") or "Untitled plan")
     overview = str(plan.get("objective") or title).replace("\n", " ").strip()
     if len(overview) > 400:
@@ -82,8 +98,87 @@ def _frontmatter(plan: dict) -> str:
         lines.append(f"    phase: {t['phase']}")
         lines.append(f"    depends_on: {_yaml_list(t['depends_on'])}")
     lines.append("isProject: false")
+    if execute_via == EXECUTE_VIA_BUILD:
+        lines.append("kind: simple")
+        lines.append(f"execute_via: {EXECUTE_VIA_BUILD}")
+    elif execute_via == EXECUTE_VIA_PE:
+        lines.append("kind: pe")
+        lines.append(f"execute_via: {EXECUTE_VIA_PE}")
     lines.append("---")
     return "\n".join(lines)
+
+
+_BUILD_EXECUTE_BLURB = (
+    "> **Execute:** when status is `executable`, press **Build** and work in the "
+    "**current checkout**. Do **not** run `make campaign`, admit a Program Lock, "
+    "or free-form mutate from this markdown alone."
+)
+_BUILD_TODOS_BLURB = (
+    "> **Cursor todos:** frontmatter `todos` project to Build todos. Body is the binding contract."
+)
+_BUILD_NEXT_ACTION = (
+    "| minimum_safe_next_action | When law holds and status=`executable`, "
+    "press **Build** and work in the current checkout — do not free-form execute |"
+)
+_BUILD_CONVERGENCE_VIA = "| execute_via | Cursor Build on the current checkout |"
+_BUILD_MACHINE_STUB = """execute_via:
+  pipeline: cursor-build
+  mention_program: "Cursor Build"
+  command_ref: current checkout
+  authority_order:
+    - plan_document
+    - cursor_build
+"""
+
+
+def _rewrite_pe_directives_for_build(body: str) -> str:
+    """Omit live PE-only run-path directives from a Cursor-Build projection."""
+    body = re.sub(
+        r"^> \*\*Execute:\*\* when status is `executable`, run through \*\*\[@environment/program-execution\].*$",
+        _BUILD_EXECUTE_BLURB,
+        body,
+        count=1,
+        flags=re.M,
+    )
+    body = re.sub(
+        r"^> \*\*Cursor todos:\*\* frontmatter `todos` project to PE Task Cards.*$",
+        _BUILD_TODOS_BLURB,
+        body,
+        count=1,
+        flags=re.M,
+    )
+    body = body.replace(
+        "| minimum_safe_next_action | When law holds and status=`executable`, attach [@environment/program-execution](environment/program-execution/) + [@autonomy](commands/autonomy.md); project→Lock→claim→render→autonomy lanes — do not free-form execute |",
+        _BUILD_NEXT_ACTION,
+    )
+    body = body.replace(
+        "| execute_via | `@environment/program-execution` → Program Lock/Controller → `@autonomy` (`/autonomy` → `l9-bounded-autonomy`) under Program lease → PE adapter |",
+        _BUILD_CONVERGENCE_VIA,
+    )
+    body = re.sub(
+        r"execute_via:\n(?:  .+\n)+",
+        _BUILD_MACHINE_STUB,
+        body,
+        count=1,
+    )
+    return body
+
+
+def _swap_execute_block(body: str, execute_via: str) -> str:
+    if execute_via != EXECUTE_VIA_BUILD:
+        return body
+    pattern = re.compile(
+        r"^## Execute via @environment/program-execution \+ autonomy.*?(?=^## |\Z)",
+        re.M | re.S,
+    )
+    swapped, n = pattern.subn(BUILD_EXECUTE_SECTION.rstrip() + "\n\n", body, count=1)
+    if not n:
+        swapped = BUILD_EXECUTE_SECTION.rstrip() + "\n\n" + body
+    swapped = swapped.replace(
+        "Execute via @environment/program-execution + subordinate @autonomy",
+        "Execute via Cursor Build on the current checkout",
+    )
+    return _rewrite_pe_directives_for_build(swapped)
 
 
 def _success_table(plan: dict) -> list[str]:
@@ -111,7 +206,7 @@ def _scope_out(plan: dict) -> list[str]:
     return [f"- {item}" for item in out]
 
 
-def render(plan: dict, template_text: str) -> str:
+def render(plan: dict, template_text: str, execute_via: str = EXECUTE_VIA_PE) -> str:
     """Fill a minimal executable head from JSON; append template body as fill guide."""
     title = str(plan.get("title") or "Untitled plan")
     scope = plan.get("scope") or {}
@@ -128,15 +223,28 @@ def render(plan: dict, template_text: str) -> str:
             body = parts[2].lstrip("\n")
 
     body = re.sub(r"^# PLAN:.*$", f"# PLAN: {title}", body, count=1, flags=re.M)
+    body = _swap_execute_block(body, execute_via)
+
+    if execute_via == EXECUTE_VIA_BUILD:
+        execute_blurb = "Press **Build**. Work in the current checkout. Do not run `make campaign`."
+        next_skill = "Build (current checkout)"
+        execute_via_line = f"- execute_via: {EXECUTE_VIA_BUILD}"
+    else:
+        execute_blurb = (
+            "`@environment/program-execution` → Program Lock/Controller → "
+            "`@autonomy` (subordinate)."
+        )
+        next_skill = conv.get("next_skill", "/autonomy + @environment/program-execution")
+        execute_via_line = "- execute_via: @environment/program-execution → @autonomy"
 
     head = [
-        _frontmatter(plan),
+        _frontmatter(plan, execute_via),
         "",
         f"# PLAN: {title}",
         "",
         "> **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.",
         "> **Template SSOT:** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`",
-        "> **Execute:** `@environment/program-execution` → Program Lock/Controller → `@autonomy` (subordinate).",
+        f"> **Execute:** {execute_blurb}",
         f"> **Suggested filename:** `{_slug(title)}_{_hex8(plan)}.plan.md`",
         "",
         "## Objective (from PLAN_DOCUMENT)",
@@ -166,9 +274,9 @@ def render(plan: dict, template_text: str) -> str:
         "## Convergence (seed)",
         "",
         f"- status: {conv.get('status', 'draft')}",
-        f"- next_skill: {conv.get('next_skill', '/autonomy + @environment/program-execution')}",
+        f"- next_skill: {next_skill}",
         f"- stop_reason: {conv.get('stop_reason', '')}",
-        "- execute_via: @environment/program-execution → @autonomy",
+        execute_via_line,
         "",
         "---",
         "",
@@ -180,18 +288,24 @@ def render(plan: dict, template_text: str) -> str:
 
 
 def main() -> int:
-    if len(sys.argv) < 2:
-        print(
-            "usage: render_plan_pe_autonomy.py <plan.json> [template.md]",
-            file=sys.stderr,
-        )
-        return 2
-    plan_path = safe_cli_path(sys.argv[1])
+    parser = argparse.ArgumentParser(
+        description="Project PLAN_DOCUMENT JSON into a Cursor .plan.md"
+    )
+    parser.add_argument("plan_json", help="validated PLAN_DOCUMENT JSON")
+    parser.add_argument("template", nargs="?", help="optional template override")
+    parser.add_argument(
+        "--execute-via",
+        choices=(EXECUTE_VIA_PE, EXECUTE_VIA_BUILD),
+        default=EXECUTE_VIA_PE,
+        help=f"execute path (default {EXECUTE_VIA_PE})",
+    )
+    args = parser.parse_args()
+    plan_path = safe_cli_path(args.plan_json)
     plan = json.loads(plan_path.read_text(encoding="utf-8"))
     skill_root = Path(__file__).resolve().parents[1]
     repo_root = skill_root.parents[1]
-    if len(sys.argv) > 2:
-        template_path = safe_cli_path(sys.argv[2])
+    if args.template:
+        template_path = safe_cli_path(args.template)
     else:
         ssot = (repo_root / SSOT_REL).resolve()
         if ssot.is_file() and repo_root.resolve() in ssot.parents:
@@ -200,7 +314,7 @@ def main() -> int:
             # Symlink under skill pack (confined to cwd when run from skill root)
             template_path = safe_cli_path(str(TEMPLATE_REL))
     template_text = template_path.read_text(encoding="utf-8")
-    sys.stdout.write(render(plan, template_text))
+    sys.stdout.write(render(plan, template_text, execute_via=args.execute_via))
     return 0
 
 

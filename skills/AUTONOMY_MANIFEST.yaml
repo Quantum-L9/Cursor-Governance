@@ -22,7 +22,9 @@ tiers:
   - skill: l9-gmp-protocol
     use_when: work must be phased, auditable, traceable, or touches protected/high-risk areas
   - skill: l9-plan
-    use_when: scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first
+    use_when: the user asks for /l9-plan, make campaign, program lock, campaign plan, or pe+autonomy
+  - skill: l9-plan-simple
+    use_when: scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes
   - skill: l9-code-analysis
     use_when: exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots
   - skill: l9-gap-analysis
@@ -174,6 +176,7 @@ claude_routing:
   - l9-structured-reasoning
   - l9-gmp-protocol
   - l9-plan
+  - l9-plan-simple
   - l9-code-analysis
   - l9-gap-analysis
   - l9-ynp
@@ -322,7 +325,7 @@ claude_routing:
     supporting:
     - l9-structured-reasoning
   - id: plan
-    primary: l9-plan
+    primary: l9-plan-simple
     signal_weight: 8
     positive_signals:
     - create an execution plan
@@ -338,6 +341,22 @@ claude_routing:
     - planning mode
     - execution plan
     - decompose requirements
+    - cursor plan mode
+    - build button plan
+    supporting:
+    - l9-structured-reasoning
+  - id: pe_plan
+    primary: l9-plan
+    signal_weight: 8
+    positive_signals:
+    - make campaign
+    - program-execution
+    - program lock
+    - /l9-plan
+    - PE+autonomy
+    - pe+autonomy
+    - campaign plan
+    - program execution campaign
     supporting:
     - l9-structured-reasoning
   - id: gmp_protocol
@@ -489,6 +508,7 @@ claude_routing:
     - /plan-audit
     - which plans are unbuilt
     supporting:
+    - l9-plan-simple
     - l9-plan
     - l9-ynp
   - id: performance_audit
