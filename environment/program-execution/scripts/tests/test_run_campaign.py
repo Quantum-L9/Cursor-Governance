@@ -526,13 +526,13 @@ class RunCampaignTests(unittest.TestCase):
         self.assertTrue(
             self.mod.stale_unittest_should_yield_to_pytest(
                 "python3 -m unittest tests/test_x.py",
-                "python3 -m pytest tests/test_x.py --tb=short -q --no-cov",
+                "python3 -m pytest tests/test_x.py --tb=short -q -o addopts=",
             )
         )
         self.assertFalse(
             self.mod.stale_unittest_should_yield_to_pytest(
                 "python3 -c 'print(0)'",
-                "python3 -m pytest tests/test_x.py --tb=short -q --no-cov",
+                "python3 -m pytest tests/test_x.py --tb=short -q -o addopts=",
             )
         )
 
@@ -585,7 +585,7 @@ class RunCampaignTests(unittest.TestCase):
             )
             inferred = launch.infer_validation_commands(contract, root)
             self.assertTrue(inferred[0].startswith("python3 -m pytest"))
-            self.assertIn("--no-cov", inferred[0])
+            self.assertIn("-o addopts=", inferred[0])
             self.assertIn("test_resolve_stack_tip.py", inferred[0])
 
     def test_live_lock_missing_seed_paths(self) -> None:

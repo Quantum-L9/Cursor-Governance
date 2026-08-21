@@ -92,11 +92,19 @@ def is_inspection_only(task: dict[str, Any]) -> bool:
     return str(task.get("execution_kind") or "").strip().lower() in INSPECTION_KINDS
 
 
+_WIRING_EXACT = frozenset(
+    {".cursor-commands", ".cursor", ".cursor/plans", ".cursor/governance/CANONICAL_LAW.md"}
+)
+_WIRING_PREFIXES = (".cursor/plans/",)
+
+
 def _is_workspace_wiring_status(line: str) -> bool:
-    """True for gitignored consumer links created by ensure_workspace_wired."""
+    """True for generated consumer links, not tracked ``.cursor/rules`` edits."""
     path = line[3:] if line[:2] in {"??", "!!"} or (len(line) > 3 and line[2] == " ") else line
     path = path.strip()
-    return path == ".cursor-commands" or path == ".cursor" or path.startswith(".cursor/")
+    if path in _WIRING_EXACT:
+        return True
+    return any(path.startswith(prefix) for prefix in _WIRING_PREFIXES)
 
 
 def worktree_already_implements(worktree: Path, contract: dict[str, Any]) -> bool:

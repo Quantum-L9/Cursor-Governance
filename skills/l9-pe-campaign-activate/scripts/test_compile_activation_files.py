@@ -320,7 +320,7 @@ class CompileActivationTests(unittest.TestCase):
             validation = source["tasks"][0]["validation"][0]
             self.assertEqual(validation["method"], "command")
             self.assertIn("pytest", validation["command_or_inspection"])
-            self.assertIn("--no-cov", validation["command_or_inspection"])
+            self.assertIn("-o addopts=", validation["command_or_inspection"])
             self.assertIn("test_resolve_stack_tip.py", validation["command_or_inspection"])
 
     def test_projects_shell_paths_as_bash_n_validation(self) -> None:

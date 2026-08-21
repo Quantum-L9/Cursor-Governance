@@ -102,6 +102,25 @@ class PeWorkerTests(unittest.TestCase):
             self.assertFalse(outcome.changed)
             self.assertEqual(outcome.reason, "no_worker_configured")
 
+    def test_tracked_cursor_rules_count_as_implementation(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            worktree = Path(raw) / "wt"
+            workspace = Path(raw) / "ws"
+            worktree.mkdir()
+            base = self._repo(worktree)
+            rules = worktree / ".cursor" / "rules"
+            rules.mkdir(parents=True)
+            (rules / "local.mdc").write_text("# consumer rule\n", encoding="utf-8")
+            outcome = self.mod.invoke_worker(
+                {"id": "TASK-001", "execution_kind": "repo_local"},
+                {"base_sha": base, "writable_paths": [".cursor/rules/local.mdc"]},
+                worktree,
+                workspace=workspace,
+                command="",
+            )
+            self.assertTrue(outcome.changed)
+            self.assertEqual(outcome.reason, "worktree_already_modified")
+
     def test_already_modified_tree_counts_as_work(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             worktree = Path(raw) / "wt"

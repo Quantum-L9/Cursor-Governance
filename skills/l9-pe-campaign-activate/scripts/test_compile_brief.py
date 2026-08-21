@@ -123,6 +123,26 @@ class CompileBriefTests(unittest.TestCase):
             ["alembic.ini", "migrations/versions/001_initial_schema.py"],
         )
 
+    def test_formatted_files_headings_bind_only_the_list(self) -> None:
+        text = (
+            "owner: Igor Beylin\n"
+            "target_repo: Quantum-L9/Enrichment.Inference.Engine\n\n"
+            "Final architectural judgment\n\n"
+            "It is:\n"
+            "a Wave-0 isolation campaign that restores RuleEngine inference.\n\n"
+            "1. Release A — Isolate inference\n\n"
+            "Restore the contract.\n\n"
+            "**Files:**\n\n"
+            "- `app/main.py`\n\n"
+            "See also `docs/guide.md` for operators.\n\n"
+            "2. Release B — Docs\n\n"
+            "### Files\n\n"
+            "- `alembic.ini`\n"
+        )
+        seed = brief_to_seed(text, filename="formatted-files.md")
+        self.assertEqual(seed["tasks"][0]["paths"], ["app/main.py"])
+        self.assertEqual(seed["tasks"][1]["paths"], ["alembic.ini"])
+
     def test_companion_plan_document_files_become_task_paths(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

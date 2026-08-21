@@ -94,16 +94,20 @@ def seed_text(seed: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
-def _prior_window(text: str, start: int, size: int = 96) -> str:
-    return text[max(0, start - size) : start]
-
-
-def _around_window(text: str, start: int, end: int, size: int = 48) -> str:
-    return text[max(0, start - size) : min(len(text), end + size)]
+def _containing_clause(text: str, start: int, end: int | None = None) -> str:
+    """Sentence/line containing ``start`` (optionally through ``end``)."""
+    prior = text[:start]
+    last_break = max(prior.rfind(ch) for ch in ".!?\n")
+    clause_start = last_break + 1
+    stop_at = start if end is None else end
+    after = text[stop_at:]
+    after_breaks = [idx for idx in (after.find(ch) for ch in ".!?\n") if idx >= 0]
+    clause_end = stop_at + (min(after_breaks) if after_breaks else len(after))
+    return text[clause_start:clause_end]
 
 
 def _is_negated(text: str, start: int) -> bool:
-    return bool(NEGATION_RE.search(_prior_window(text, start)))
+    return bool(NEGATION_RE.search(_containing_clause(text, start)))
 
 
 def infer_tools(seed: dict[str, Any]) -> list[dict[str, str]]:
@@ -124,7 +128,7 @@ def infer_tools(seed: dict[str, Any]) -> list[dict[str, str]]:
     for match in FRAMEWORK_PRODUCT_RE.finditer(text):
         if _is_negated(text, match.start()):
             continue
-        if FRAMEWORK_INTENT_RE.search(_around_window(text, match.start(), match.end())):
+        if FRAMEWORK_INTENT_RE.search(_containing_clause(text, match.start(), match.end())):
             add(match.group(0), "product")
     if API_RE.search(text):
         add("upstream-api", "api")

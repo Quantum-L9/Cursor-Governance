@@ -139,7 +139,10 @@ FILE_PATH_RE = re.compile(
     r"`((?:[A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+\.[A-Za-z0-9]+"
     r"|[A-Za-z0-9_.-]+\.(?:py|ini|ya?ml|md|sh|toml|json))`"
 )
-FILES_HEADING_RE = re.compile(r"^Files:\s*$", re.M)
+FILES_HEADING_RE = re.compile(
+    r"^(?:#{1,6}\s+)?(?:\*{1,2}|_{1,2})?Files:?\s*(?:\*{1,2}|_{1,2})?\s*$",
+    re.M | re.I,
+)
 RELEASE_BODY_STOP_RE = re.compile(r"^##\s+(Validation|Execute|Do not build)\b", re.M | re.I)
 SKIP_PATH_LINE_RE = re.compile(r"read-only|\borphan\b|do not import", re.I)
 

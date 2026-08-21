@@ -109,8 +109,10 @@ def infer_validation_commands(
     when nothing mechanical is derivable — the caller reports that.
 
     Python test files are run with pytest. Unittest TestCase classes still
-    collect under pytest; the reverse is not true. ``--no-cov`` prevents a
-    repo-wide ``--cov-fail-under`` addopts from failing a targeted subset.
+    collect under pytest; the reverse is not true. ``-o addopts=`` clears a
+    repo-wide ``--cov-fail-under`` addopts without requiring the optional
+    pytest-cov plugin (core pytest rejects ``--no-cov`` when the plugin is
+    absent).
     """
     paths = _writable_paths(task)
     tests: list[str] = []
@@ -125,7 +127,7 @@ def infer_validation_commands(
                     if probe not in tests:
                         tests.append(probe)
     if tests:
-        return [f"{python} -m pytest {' '.join(tests)} --tb=short -q --no-cov"]
+        return [f"{python} -m pytest {' '.join(tests)} --tb=short -q -o addopts="]
     shells = [path for path in paths if path.endswith((".sh", ".bash"))]
     if shells:
         return [f"bash -n {' '.join(shells)}"]
