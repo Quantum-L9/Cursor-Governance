@@ -61,6 +61,21 @@ def is_l9_isolate_workspace(path: Path) -> bool:
     return len(parts) >= 2 and parts[0] in {"gov-worktrees", "programs"}
 
 
+def is_consumer_task_worktree(path: Path) -> bool:
+    """True for $L9_ROOT/programs/<id>/worktrees/<task> consumer checkouts.
+
+    Those trees are the target repository, not a governance isolate. Validation
+    must use that project's interpreter, never the PE controller venv.
+    """
+    workspace = path.resolve()
+    l9 = (Path.home() / ".l9").resolve()
+    try:
+        parts = workspace.relative_to(l9).parts
+    except ValueError:
+        return False
+    return len(parts) >= 3 and parts[0] == "programs" and "worktrees" in parts
+
+
 def _donor_toolchain_python() -> Path | None:
     roots: list[Path] = []
     override = os.environ.get("GOV_TOOLCHAIN_ROOT", "").strip()
@@ -90,20 +105,25 @@ def _discover_python(cwd: Path | None) -> Path:
         located = shutil.which(override)
         if located:
             return _keep_venv_shim(Path(located))
-    # Isolates are not uv projects. Their local .venv, if any, is pytest-less.
-    # Validation must use the donor toolchain that owns the locked extras.
-    if cwd is not None and is_l9_isolate_workspace(cwd):
+    consumer = cwd is not None and is_consumer_task_worktree(cwd)
+    # Governance isolates are not uv projects. Their local .venv, if any, is
+    # pytest-less. Validation must use the donor toolchain that owns extras.
+    # Consumer task worktrees are the target repo — never the PE controller venv.
+    if cwd is not None and is_l9_isolate_workspace(cwd) and not consumer:
         donor = _donor_toolchain_python()
         if donor is not None:
             return donor
-    # An active venv wins over sys.executable so a controller launched from the
-    # system interpreter still validates against the project's dependencies.
-    virtual_env = os.environ.get("VIRTUAL_ENV", "").strip()
-    if virtual_env:
-        for name in ("bin/python3", "bin/python", "Scripts/python.exe"):
-            candidate = Path(virtual_env) / name
-            if candidate.is_file():
-                return _keep_venv_shim(candidate)
+    if consumer:
+        project = _consumer_project_python(cwd)
+        if project is not None:
+            return project
+    if not consumer:
+        virtual_env = os.environ.get("VIRTUAL_ENV", "").strip()
+        if virtual_env:
+            for name in ("bin/python3", "bin/python", "Scripts/python.exe"):
+                candidate = Path(virtual_env) / name
+                if candidate.is_file():
+                    return _keep_venv_shim(candidate)
     if cwd is not None:
         for name in (".venv", "venv"):
             for exe in ("bin/python3", "bin/python", "Scripts/python.exe"):
@@ -111,6 +131,36 @@ def _discover_python(cwd: Path | None) -> Path:
                 if candidate.is_file():
                     return _keep_venv_shim(candidate)
     return _keep_venv_shim(Path(sys.executable))
+
+
+def _consumer_project_python(cwd: Path) -> Path | None:
+    """Prefer the target repo lockfile environment over the PE controller venv."""
+    if not (cwd / "uv.lock").is_file() and not (cwd / "pyproject.toml").is_file():
+        return None
+    for name in (".venv", "venv"):
+        for exe in ("bin/python3", "bin/python", "Scripts/python.exe"):
+            candidate = cwd / name / exe
+            if candidate.is_file():
+                return _keep_venv_shim(candidate)
+    uv = shutil.which("uv")
+    if uv is None or not (cwd / "uv.lock").is_file():
+        return None
+    completed = subprocess.run(
+        [uv, "sync", "--frozen"],
+        cwd=str(cwd),
+        text=True,
+        capture_output=True,
+        check=False,
+        timeout=600,
+    )
+    if completed.returncode != 0:
+        return None
+    for name in (".venv", "venv"):
+        for exe in ("bin/python3", "bin/python", "Scripts/python.exe"):
+            candidate = cwd / name / exe
+            if candidate.is_file():
+                return _keep_venv_shim(candidate)
+    return None
 
 
 @dataclass(frozen=True)
@@ -218,6 +268,8 @@ def _empty_test_collection(command: str, stdout: str, stderr: str) -> bool:
     if "-m unittest" not in command and "-m pytest" not in command:
         return False
     output = f"{stdout}\n{stderr}"
+    if "collected 0 items /" in output:
+        return False
     return (
         "NO TESTS RAN" in output
         or "Ran 0 tests" in output
