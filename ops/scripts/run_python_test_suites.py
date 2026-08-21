@@ -446,7 +446,16 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     print(f"[runner] profile={profile} suites={len(suites)} repo_root={REPO_ROOT}")
-    return run_suites(suites, profile, user_args, mapping)
+    return run_suites(
+        suites,
+        profile,
+        user_args,
+        mapping,
+        scoped_paths=scoped_paths,
+        selector=selector,
+        changed=changed,
+        non_dot_roots=non_dot_roots,
+    )
 
 
 def run_suites(
@@ -454,13 +463,18 @@ def run_suites(
     profile: str,
     user_args: list[str],
     mapping: dict[str, str],
+    *,
+    scoped_paths: list[str] | None = None,
+    selector: Any | None = None,
+    changed: list[str] | None = None,
+    non_dot_roots: list[str] | None = None,
 ) -> int:
     """Run declared suites. Local profile stops at the first red suite."""
     results: list[tuple[str, int]] = []
     first_nonzero = 0
     for suite in suites:
         if scoped_paths is not None and selector is not None:
-            if not _suite_intersects(suite, scoped_paths, changed, selector):
+            if not _suite_intersects(suite, scoped_paths, changed or [], selector):
                 print(
                     f"[runner] SKIP  suite={suite['id']} "
                     "reason=owned_paths_do_not_intersect_changed"
