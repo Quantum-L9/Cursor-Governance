@@ -357,8 +357,8 @@ files:
   sha256: 3c93a82dfb4683dad795937130be998af79f0d6e90e8b5b9b3bd221d5a31a0b0
   bytes: 89093
 - path: program-execution-controller-template/scripts/pec/exec_env.py
-  sha256: 56fe5eb1114dda26f3e061de03580b788cfa5e654c117d0c0b65ac9083d15a10
-  bytes: 10917
+  sha256: 452acc83dc710414ea4be3cc0eca73117a70f2e76e42b9812f5513b22aedb8a8
+  bytes: 11317
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -568,4 +568,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 187
-  total_bytes: 636439
+  total_bytes: 636839

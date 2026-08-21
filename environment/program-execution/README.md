@@ -156,13 +156,17 @@ Measured timings and the reasoning behind these choices are in
 
 ### Worker configuration
 
-`L9_PE_WORKER_CMD` is a command template expanded with `{task_id}`,
+`L9_PE_WORKER_CMD` is optional. Unset means the bound Cursor peer
+(`cursor-foreground`): campaign initialization records that binding and does
+not invent a subprocess. Export the variable **before** `make campaign` only
+when you want a detached command template expanded with `{task_id}`,
 `{worktree}` and `{brief}`; the same values also arrive as `L9_PE_TASK_ID`,
 `L9_PE_WORKTREE`, `L9_PE_BRIEF` and `L9_PE_CONTRACT`. An implementation task
-that reaches verification with an unmodified worktree fails as an
-execution-path defect rather than verifying zero implementation. Tasks whose
-`execution_kind` is an inspection kind (`analysis`, `inspection`, `decision`,
-`program_control`, `review`) are exempt.
+that reaches verification with an unmodified worktree **errors** (not a
+warning): verifying would certify zero implementation. Implement in the task
+worktree and rerun `make campaign`. Tasks whose `execution_kind` is an
+inspection kind (`analysis`, `inspection`, `decision`, `program_control`,
+`review`) are exempt.
 
 ### Health check
 
