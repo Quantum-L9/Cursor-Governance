@@ -28,6 +28,11 @@ PR_SECURITY_ADVISORY ?= 0
 # Full-tree scans are nightly CI / `make precommit` / `make pr-full` — not make pr.
 PR_BASE ?= origin/main
 
+# Stack on an overlapping open PR head by default. Do not export this variable:
+# `make pr-check` pytest would inherit it and false-pass overlap tests.
+# Opt out (publish against main): PR_STACK= make pr
+PR_STACK ?= auto
+
 # When 1, `make pr` (any capitalization) push+open GitHub PR after gate PASS.
 # Gate-only: `make pr-check` or `OPEN_PR=0 make pr`.
 OPEN_PR ?= 1
@@ -234,9 +239,23 @@ claude-settings-check:
 
 ## Canonical Claude environment doctor: full adapter install check (read-only,
 ## reports drift per the health accumulator) + the structural/contract validator.
+## Exit 5 means the files are correct but the runtime never wired — the state
+## the mobile bootstrap audit found while the validator still printed PASS.
 claude-env:
 	$(MAKE) claude-install-check
 	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py
+	$(PYTHON) ops/secrets/validate_capability_hosts.py
+	$(PYTHON) environment/agents/adapters/claude-code/verify_account_env.py || true
+	$(PYTHON) environment/agents/adapters/claude-code/validate_claude_env.py --runtime
+
+## Diagnose why the capability plane is unavailable, and whether egress matches
+## the posture recorded in docs/NETWORK_POSTURE.md. Both report rather than fail:
+## on a hosted surface the primary blocker is platform-issued identity, which no
+## change in this repository can resolve (docs/DEGRADED_MODE_CONTRACT.md).
+.PHONY: claude-diagnose
+claude-diagnose:
+	$(PYTHON) ops/secrets/probe_broker.py || true
+	$(PYTHON) ops/scripts/probe_network_posture.py
 
 ## Fail-closed first-class autonomy family registry (environment/contracts/autonomy).
 autonomy-contracts-validate:
@@ -409,6 +428,8 @@ pr-check:
 
 # Additive prerequisite — do not rewrite the pr-check recipe line above.
 pr-check: capability-contract-validate
+pr-check: precommit-repo
+pr: precommit-repo
 
 ## Gate → open/reuse GitHub PR → subscribe → emit l9-pr-remediation agent handoff.
 ## `make pr` / `make PR` / `make Pr` / `make pR` are equivalent (case-insensitive).

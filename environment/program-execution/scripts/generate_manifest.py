@@ -14,25 +14,45 @@ EXCLUDED_NAMES = {
 }
 EXCLUDED_SUFFIXES = {".pyc", ".pyo", ".sqlite", ".sqlite3"}
 
+#: Top-level directories under the Program Execution root that the adapter-layer
+#: manifest does not describe. ``core/`` carries its own MANIFEST.yaml.
+EXCLUDED_TOP_LEVEL = {"core"}
+
+
+def is_manifest_input(root: Path, path: Path) -> bool:
+    """True when ``path`` belongs in the adapter-layer manifest.
+
+    Single source of truth for the manifest's input surface. ``validate_manifest``
+    imports this rather than restating it: when the generator skipped a name the
+    validator did not, an ordinary ``pytest`` run under
+    ``peer_execution/`` (a pytest rootdir) left a ``.pytest_cache/`` the
+    validator reported as an inventory mismatch the generator would never fix.
+    """
+    if not path.is_file():
+        return False
+    rel_parts = path.relative_to(root).parts
+    if not rel_parts:
+        return False
+    if rel_parts[0] in EXCLUDED_TOP_LEVEL:
+        return False
+    if path.suffix in EXCLUDED_SUFFIXES:
+        return False
+    return not any(part in EXCLUDED_NAMES for part in rel_parts)
+
+
+def manifest_inputs(root: Path) -> list[Path]:
+    """Every file the manifest must describe, in stable sorted order."""
+    return [path for path in sorted(root.rglob("*")) if is_manifest_input(root, path)]
+
 
 def generate(root: Path) -> dict[str, object]:
-    files = []
-    for path in sorted(root.rglob("*")):
-        if not path.is_file():
-            continue
-        rel_parts = path.relative_to(root).parts
-        if path.name in EXCLUDED_NAMES or path.suffix in EXCLUDED_SUFFIXES:
-            continue
-        if any(part in EXCLUDED_NAMES for part in rel_parts):
-            continue
-        if "core" in rel_parts[:1]:
-            continue
-        files.append(
-            {
-                "path": path.relative_to(root).as_posix(),
-                "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-            }
-        )
+    files = [
+        {
+            "path": path.relative_to(root).as_posix(),
+            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
+        }
+        for path in manifest_inputs(root)
+    ]
     return {
         "schema": "program-execution-adapter-layer.manifest.v1",
         "artifact": "program-execution-adapter-layer-v1.0.0",

@@ -29,6 +29,7 @@ except ImportError:  # pragma: no cover
     yaml = None  # type: ignore[assignment]
 
 CAMPAIGN_ID_RE = re.compile(r"^[a-z0-9][a-z0-9-]{2,62}$")
+TASK_ID_RE = re.compile(r"^TASK-[0-9]{3,}$")
 STUB_ACTION_RE = re.compile(r"^implement_task[_-]", re.I)
 STUB_ACCEPTANCE_RE = re.compile(r"is complete and locally verified\.?$", re.I)
 SEAL_PLAN_STATUSES = frozenset({"Ready", "ConditionallyReady"})
@@ -94,8 +95,123 @@ def _task_id(index: int) -> str:
     return f"TASK-{index:03d}"
 
 
+def _canonical_task_id(raw: str, index: int) -> str:
+    value = str(raw or "").strip()
+    if TASK_ID_RE.match(value):
+        return value
+    return _task_id(index)
+
+
 def _gate_id(index: int) -> str:
     return f"GATE-{index:03d}"
+
+
+def _slug_action(title: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", (title or "").lower()).strip("_")
+    return (slug[:80] or "apply_task_objective").strip("_")
+
+
+def project_conditionally_ready(intent: dict[str, Any]) -> dict[str, Any]:
+    """Fill kernel fields from declared plan/memo facts. Ready seeds stay untouched."""
+    if str(intent.get("plan_status") or "").strip() != "ConditionallyReady":
+        return intent
+    target = intent.get("target") if isinstance(intent.get("target"), dict) else {}
+    repository_id = str(target.get("repository_id") or "Quantum-L9/Cursor-Governance").strip()
+    projected = dict(intent)
+    raw_tasks = [item for item in (intent.get("tasks") or [])]
+    id_map: dict[str, str] = {}
+    for index, item in enumerate(raw_tasks, start=1):
+        if isinstance(item, dict):
+            original = str(item.get("id") or "").strip()
+            canonical = _canonical_task_id(original, index)
+            if original:
+                id_map[original] = canonical
+            id_map[canonical] = canonical
+    tasks: list[dict[str, Any]] = []
+    for index, item in enumerate(raw_tasks, start=1):
+        if not isinstance(item, dict):
+            tasks.append(item)
+            continue
+        task = dict(item)
+        original = str(task.get("id") or "").strip()
+        task["id"] = id_map.get(original, _canonical_task_id(original, index))
+        title = str(task.get("title") or "").strip()
+        objective = str(task.get("objective") or title).strip()
+        paths = [str(path) for path in (task.get("paths") or []) if path]
+        actions = [
+            str(action).strip() for action in (task.get("actions") or []) if str(action).strip()
+        ]
+        if not actions:
+            task["actions"] = ["edit_declared_paths"] if paths else [_slug_action(title)]
+        if not [
+            str(value).strip() for value in (task.get("consumers") or []) if str(value).strip()
+        ]:
+            task["consumers"] = paths or [repository_id]
+        if not [
+            str(value).strip() for value in (task.get("entrypoints") or []) if str(value).strip()
+        ]:
+            task["entrypoints"] = paths or ["make campaign"]
+        if not [entry for entry in (task.get("validation") or []) if isinstance(entry, dict)]:
+            tests = [
+                path
+                for path in paths
+                if path.endswith(".py")
+                and (
+                    Path(path).name.startswith("test_")
+                    or path.startswith("tests/")
+                    or "/tests/" in path
+                )
+            ]
+            shells = [path for path in paths if path.endswith(".sh") or path.endswith(".bash")]
+            if tests:
+                task["validation"] = [
+                    {
+                        "id": f"VAL-{index:03d}",
+                        "method": "command",
+                        "command_or_inspection": f"python3 -m unittest {' '.join(tests)}",
+                        "expected_result": "PASS",
+                    }
+                ]
+            elif shells:
+                task["validation"] = [
+                    {
+                        "id": f"VAL-{index:03d}",
+                        "method": "command",
+                        "command_or_inspection": f"bash -n {' '.join(shells)}",
+                        "expected_result": "PASS",
+                    }
+                ]
+            else:
+                task["validation"] = [
+                    {
+                        "id": f"VAL-{index:03d}",
+                        "method": "inspection",
+                        "command_or_inspection": objective or title,
+                        "expected_result": "PASS",
+                    }
+                ]
+        acceptance = task.get("acceptance")
+        if not (
+            (isinstance(acceptance, list) and acceptance)
+            or (isinstance(acceptance, str) and acceptance.strip())
+        ):
+            task["acceptance"] = [
+                {
+                    "id": f"AC-{index:03d}",
+                    "statement": objective or title,
+                    "required_evidence_types": ["inspection"],
+                }
+            ]
+        if not str(task.get("nugget_id") or "").strip():
+            task["nugget_id"] = f"NUG-{index:03d}"
+        if not str(task.get("kernel_profile") or "").strip():
+            task["kernel_profile"] = "CHANGE"
+        deps = task.get("depends_on") or task.get("dependencies")
+        if isinstance(deps, list) and deps:
+            task["depends_on"] = [id_map.get(str(dep), str(dep)) for dep in deps if dep]
+        tasks.append(task)
+    projected["tasks"] = tasks
+    return projected
 
 
 def refuse_stub_intent(intent: dict[str, Any]) -> None:
@@ -160,7 +276,7 @@ def build_source(intent: dict[str, Any], *, stamp: str) -> dict[str, Any]:
         task_objective = str(item.get("objective") or task_title).strip()
         if not task_title:
             raise CompileError(f"task {index} title is required")
-        task_id = str(item.get("id") or _task_id(index))
+        task_id = _canonical_task_id(str(item.get("id") or ""), index)
         gate_id = _gate_id(index)
         paths = [str(path) for path in (item.get("paths") or []) if path]
         actions = [
@@ -560,7 +676,7 @@ def compile_activation(
     *,
     stamp: str | None = None,
 ) -> dict[str, Any]:
-    intent = require_intent(load_yaml(intent_path))
+    intent = project_conditionally_ready(require_intent(load_yaml(intent_path)))
     refuse_stub_intent(intent)
     campaign_id = str(intent["campaign_id"]).strip()
     now = stamp or utc_now()

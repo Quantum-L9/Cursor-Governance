@@ -1,0 +1,364 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "PE scripts kernel align and prove",
+  "objective": "Run Recursive Alignment then Validate and Repair on Cursor-Governance environment/program-execution/scripts, isolate in a new origin/main worktree, then prove every script with scripts/tests plus designed make gates. Live SSOT stays the campaign runner.",
+  "success_criteria": [
+    "default_fetch refuses file://, http://, and non-https redirects; test_context7_stack_proof PASS; requests not added",
+    "python3 -m unittest discover -s environment/program-execution/scripts/tests -p 'test_*.py' exits 0",
+    "make program-execution-adapters program-execution-conformance program-execution-campaign-brief program-execution-campaign-compile program-execution-campaign-promotion pe-smoke exit 0",
+    "python3 environment/program-execution/scripts/validate_manifest.py PASS after generate_manifest.py",
+    "OPEN_PR=0 make pr-check PASS in the governance worktree",
+    "git -C ~/.cursor-governance rev-parse HEAD remains a7372ea6836cfb30f9c9437bb30fa32270a594d8 until an authorized publish; worktree feat/pe-scripts-kernel-align starts at that SHA"
+  ],
+  "scope": {
+    "in": [
+      "environment/program-execution/scripts/**",
+      "environment/program-execution/MANIFEST.json via generate_manifest.py only",
+      "environment/program-execution/README.md only if a documented command changes"
+    ],
+    "out": [
+      "Cognitive.Engine.Graphs product/engine/chassis/domains",
+      "live ~/.cursor-governance working tree mutation",
+      "environment/program-execution/core/** sealed templates",
+      "environment/program-execution/peer_execution/** implementation",
+      "nested PE script trees core/scripts controller-template/scripts campaigns/scripts",
+      "push PR merge remediator deploy",
+      "adding the requests library",
+      "performance rewrite of run_campaign.py"
+    ]
+  },
+  "code_in_scope": true,
+  "depth": "deep",
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git -C ~/.cursor-governance rev-parse HEAD",
+      "pass_criteria": "equals a588f8b23212b176861dc5abf9f1172536943c77",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "read-only grep urlopen/urllib.request in scripts/",
+      "pass_criteria": "only context7_stack_proof.py:135",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "python3 scripts/validate_plan_document.py this file",
+      "pass_criteria": "PASS",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "t0-isolate-baseline",
+      "task": "Create wired governance worktree feat/pe-scripts-kernel-align from origin/main; lock SHA; emit and validate this PLAN_DOCUMENT; run baseline make and unittest discover; record exact fails",
+      "files": [
+        "/Users/ib-mac/.l9/program-worktrees/pe-scripts-kernel-align"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "worktree_add_wired.sh",
+      "leverage_rank": 1,
+      "shared_root_cause": "live-SSOT-vs-worktree isolation"
+    },
+    {
+      "id": "t1-recursive-alignment",
+      "task": "Recursive Alignment audit-only on all 31 scripts plus scripts/tests; emit YAML report; do not mutate; do not re-prove CWE-939 uniqueness",
+      "files": [
+        "environment/program-execution/scripts"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "t0-isolate-baseline"
+      ],
+      "operation": "Create",
+      "anchor": "kernels/Recursive Alignment.md",
+      "leverage_rank": 3
+    },
+    {
+      "id": "sec-cwe939-urlopen",
+      "task": "Harden context7_stack_proof.default_fetch: https only, refuse file/http and non-https redirects; add regression tests; do not add requests",
+      "files": [
+        "environment/program-execution/scripts/context7_stack_proof.py",
+        "environment/program-execution/scripts/tests/test_context7_stack_proof.py"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": [
+        "t0-isolate-baseline"
+      ],
+      "operation": "Replace",
+      "anchor": "default_fetch",
+      "leverage_rank": 2,
+      "shared_root_cause": "unconstrained urllib sink"
+    },
+    {
+      "id": "t2-repair-front-door",
+      "task": "Validate and Repair Confirmed findings in run_campaign.py, campaign_input.py, compile_campaign_source.py, replay_campaign.py without changing make campaign routing unless the contract is the proven defect",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/campaign_input.py",
+        "environment/program-execution/scripts/compile_campaign_source.py",
+        "environment/program-execution/scripts/replay_campaign.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "t1-recursive-alignment"
+      ],
+      "operation": "Replace",
+      "anchor": "campaign front door",
+      "leverage_rank": 4
+    },
+    {
+      "id": "t3-repair-gates",
+      "task": "Validate and Repair validate_*.py, run_conformance.py, run_parity_gate.py, probe_*.py and add required regression tests for untested gate CLIs",
+      "files": [
+        "environment/program-execution/scripts/validate_manifest.py",
+        "environment/program-execution/scripts/validate_execution_adapters.py",
+        "environment/program-execution/scripts/validate_thin_providers.py",
+        "environment/program-execution/scripts/run_conformance.py",
+        "environment/program-execution/scripts/run_parity_gate.py",
+        "environment/program-execution/scripts/probe_execution_adapters.py",
+        "environment/program-execution/scripts/probe_executable_peers.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "t1-recursive-alignment"
+      ],
+      "operation": "Replace",
+      "anchor": "PE make gates",
+      "leverage_rank": 5
+    },
+    {
+      "id": "t4-repair-runtime-rest",
+      "task": "Validate and Repair pe_*.py, launchability.py, collect/accept/blueprint helpers, remaining CLIs; close required test gaps; do not change Makefile unless Wave A records a Critical or High finding naming program-execution-scripts-test",
+      "files": [
+        "environment/program-execution/scripts/pe_worker.py",
+        "environment/program-execution/scripts/pe_prepare_state.py",
+        "environment/program-execution/scripts/pe_timing.py",
+        "environment/program-execution/scripts/pe_trace.py",
+        "environment/program-execution/scripts/launchability.py"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "t1-recursive-alignment"
+      ],
+      "operation": "Replace",
+      "anchor": "runtime helpers",
+      "leverage_rank": 6
+    },
+    {
+      "id": "t5-manifest-and-prove",
+      "task": "Regenerate MANIFEST.json; run unittest discover, PE make gates, pe-smoke, validate_manifest, OPEN_PR=0 make pr-check; stop at local commits",
+      "files": [
+        "environment/program-execution/MANIFEST.json"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "sec-cwe939-urlopen",
+        "t2-repair-front-door",
+        "t3-repair-gates",
+        "t4-repair-runtime-rest"
+      ],
+      "operation": "Replace",
+      "anchor": "generate_manifest.py",
+      "leverage_rank": 7,
+      "shared_root_cause": "derived MANIFEST.json"
+    }
+  ],
+  "critical_path": [
+    "t0-isolate-baseline",
+    "t1-recursive-alignment",
+    "t2-repair-front-door",
+    "t5-manifest-and-prove"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "isolated worktree and validated PLAN_DOCUMENT",
+      "unlocks": "Wave A and CWE-939 repair"
+    },
+    {
+      "id": "M1",
+      "outcome": "RA report plus CWE-939 closed",
+      "unlocks": "Wave B batches"
+    },
+    {
+      "id": "M2",
+      "outcome": "scripts proven and MANIFEST regenerated",
+      "unlocks": "local-commit-only handoff"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C0",
+      "after": "M0",
+      "evidence_required": "worktree HEAD equals locked SHA and validate_plan_document.py PASS",
+      "no_go_action": "stop_and_replan; do not mutate scripts"
+    },
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "test_context7_stack_proof PASS and RA YAML exists",
+      "no_go_action": "do not start t2/t3/t4"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "discover + listed make gates + make pr-check PASS; SSOT SHA unchanged",
+      "no_go_action": "do not push or open a PR"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "environment/program-execution/README.md",
+      "action": "n_a",
+      "reason": "update only if a documented command or script responsibility changes during Wave B"
+    },
+    {
+      "surface": "Makefile",
+      "action": "n_a",
+      "reason": "default no write; append-only only if Wave A records a Critical or High finding naming program-execution-scripts-test"
+    },
+    {
+      "surface": "CEG AGENTS.md",
+      "action": "n_a",
+      "reason": "CEG product docs are out of scope"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If Wave A finds the root cause in peer_execution or sealed core, would this plan illegally absorb those trees?",
+      "If live SSOT make campaign cannot drive the worktree, would an agent edit SSOT in place?",
+      "If tests go green via skips or weakened asserts, would t5 still claim PASS?"
+    ],
+    "assumed_false_ifs": [
+      "live SSOT HEAD stays a588f8b23212b176861dc5abf9f1172536943c77",
+      "CEG dirty tree is never used as write_allow",
+      "make campaign input routing is not a defect unless Wave A Confirmed it"
+    ],
+    "blast_radius": "every consumer make campaign, PE conformance, and peer probe; a broken run_campaign.py in SSOT would halt all campaigns",
+    "rollback": "git restore scoped write_allow in the worktree; git worktree remove plus delete feat/pe-scripts-kernel-align; SSOT remains untouched; no force-push"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "t0-isolate-baseline",
+      "sec-cwe939-urlopen",
+      "t1-recursive-alignment",
+      "t2-repair-front-door",
+      "t3-repair-gates",
+      "t4-repair-runtime-rest",
+      "t5-manifest-and-prove"
+    ],
+    "shared_causes": [
+      "unconstrained urllib sink in default_fetch",
+      "fragmented Make coverage of scripts/tests",
+      "derived MANIFEST.json",
+      "live-SSOT-vs-worktree isolation"
+    ],
+    "deletions_or_consolidations": [
+      "do not add requests; keep stdlib urllib with scheme and redirect policy"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Mutating live SSOT via the CEG .cursor-commands symlink",
+      "mitigation": "all writes go to the dedicated governance worktree; SSOT is runner-only"
+    },
+    {
+      "risk": "Breaking make campaign front-door routing",
+      "mitigation": "t2 preserves classify cases in test_run_campaign.py; contract change requires Confirmed defect"
+    },
+    {
+      "risk": "CWE-939 file:// leak via urlopen redirects",
+      "mitigation": "https-only default_fetch plus redirect re-check and regression tests"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U-TIP-RELOCK",
+      "question": "origin/main moved from a588f8b to a7372ea (PR 240 https-close) between plan lock and t0",
+      "decision_effect": "re-lock baseline to the fetched origin/main tip; CWE-939 repair already landed in 356899a",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 -m unittest discover -s environment/program-execution/scripts/tests -p 'test_*.py'",
+      "pass_criteria": "exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "make program-execution-adapters program-execution-conformance program-execution-campaign-brief program-execution-campaign-compile program-execution-campaign-promotion pe-smoke",
+      "pass_criteria": "exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "OPEN_PR=0 make pr-check",
+      "pass_criteria": "PASS in the governance worktree",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "make pr-check",
+      "pass_criteria": "N/A on Cognitive.Engine.Graphs; no CEG product files in the change set; governance V3 is the gate",
+      "status": "not_applicable"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U-TIP-RELOCK"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "PLAN_DOCUMENT emitted; implementation of script repairs not yet complete"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "environment/program-execution/scripts/**",
+      "environment/program-execution/MANIFEST.json",
+      "environment/program-execution/README.md"
+    ],
+    "must_not_modify": [
+      "engine/",
+      "chassis/",
+      "domains/",
+      "environment/program-execution/core/",
+      "environment/program-execution/peer_execution/",
+      "live ~/.cursor-governance working tree"
+    ],
+    "preserved_contracts": [
+      "make campaign is the only live front door",
+      "local_commit_only through verify",
+      "autonomous_merge false",
+      "stdlib urllib; no requests dependency"
+    ],
+    "validation_commands": [
+      "python3 -m unittest discover -s environment/program-execution/scripts/tests -p 'test_*.py'",
+      "make program-execution-adapters",
+      "make program-execution-conformance",
+      "OPEN_PR=0 make pr-check"
+    ]
+  },
+  "checklist": [
+    "worktree isolated",
+    "CWE-939 closed",
+    "RA report",
+    "Wave B batches",
+    "MANIFEST regenerate",
+    "make pr-check"
+  ],
+  "estimate": "one PE overlay program, local-commit-only"
+}

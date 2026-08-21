@@ -1,0 +1,98 @@
+schema_id: canonical.schema.workflow_contract.v1
+schema_name: Canonical Workflow Contract Schema
+schema_class: canonical_document_type_schema
+schema_family: l9_governance_contracts
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.workflow_contract.v1.yaml
+purpose:
+  primary: Define executable governance workflows as explicit states transitions gates actions side effects retry semantics compensation and convergence.
+  output_level: schema_not_instance
+  intended_use: [session_workflows, PR_workflows, deployment_workflows, mutation_workflows, remediation_workflows]
+  not_for: [narrative_SOPs, policy_authorization, capability_grants]
+ontology:
+  parent_type: governance_contract_schema
+  specialized_type: workflow_contract_schema
+  instance_type_generated_by_this_schema: workflow_contract
+  related_schema_types: [canonical.schema.governance_contract.v1, canonical.schema.capability_contract.v1, canonical.schema.policy_contract.v1, canonical.schema.evidence_contract.v1]
+inheritance:
+  extends: [canonical.schema.governance_contract.v1]
+  provides: [workflow_state_model, transition_model, workflow_action_model, compensation_model, convergence_model]
+required_sections:
+  workflow:
+    required: true
+    fields:
+      initial_state: {type: string, required: true}
+      terminal_states: {type: list_string, required: true, min_items: 1}
+      failure_states: {type: list_string, required: true, min_items: 1}
+      cycle_policy: {enum: [forbidden, bounded, explicit], required: true}
+      cycle_bound: {type: integer_or_null, required: false, minimum: 1}
+      explicit_cycle_rules: {type: list_string, required: false, allow_empty: true}
+  states:
+    required: true
+    type: list
+    min_items: 2
+    item_schema:
+      state_id: {type: string, required: true}
+      purpose: {type: string, required: true}
+      entry_requirements: {type: list_string, required: true, allow_empty: true}
+      exit_properties: {type: list_string, required: true, min_items: 1}
+  transitions:
+    required: true
+    type: list
+    min_items: 1
+    item_schema:
+      transition_id: {type: string, required: true}
+      from: {type: string, required: true}
+      to: {type: string, required: true}
+      requires_contracts: {type: list_string, required: true, allow_empty: true}
+      gates: {type: list_string, required: true, allow_empty: true}
+      actions: {type: list_string, required: true, allow_empty: true}
+      on_failure: {type: string, required: true}
+  actions:
+    required: true
+    type: list
+    min_items: 1
+    item_schema:
+      action_id: {type: string, required: true}
+      capability_ref: {type: string_or_null, required: false}
+      side_effects: {type: list_string, required: true, allow_empty: true}
+      idempotency: {enum: [safe_to_repeat, safe_with_dedupe, unsafe_blind_repeat, non_idempotent], required: true}
+      retry: {enum: [none, retry_once, bounded_retry, manual_only], required: true}
+      retry_bound: {type: integer_or_null, required: false, minimum: 1}
+      compensation: {type: string_or_null, required: true}
+  convergence:
+    required: true
+    fields:
+      complete_when: {type: list_string, required: true, min_items: 1}
+      abort_when: {type: list_string, required: true, min_items: 1}
+conditional_rules:
+  - when: workflow.cycle_policy == bounded
+    require: [workflow.cycle_bound is integer >= 1]
+  - when: workflow.cycle_policy == explicit
+    require: [workflow.explicit_cycle_rules has at least 1 item]
+  - when: workflow.cycle_policy == forbidden
+    require: [workflow.cycle_bound is null or absent, workflow.explicit_cycle_rules is empty or absent]
+  - when: "actions[*].retry == bounded_retry"
+    require: [corresponding action.retry_bound is integer >= 1]
+  - when: "actions[*].retry != bounded_retry"
+    require: [corresponding action.retry_bound is null or absent]
+validation_rules:
+  - {id: WF-CONTRACT-001, severity: blocker, rule: metadata.kind must equal workflow.}
+  - {id: WF-CONTRACT-002, severity: blocker, rule: every transition must reference existing states and every action reference must resolve.}
+  - {id: WF-CONTRACT-003, severity: blocker, rule: workflow actions may consume capability and policy contracts but may not create authority.}
+  - {id: WF-CONTRACT-004, severity: blocker, rule: non-idempotent actions require explicit retry and compensation semantics.}
+  - {id: WF-CONTRACT-005, severity: blocker, rule: bounded cycles require an explicit positive bound and explicit cycles require cycle rules.}
+  - {id: WF-CONTRACT-006, severity: blocker, rule: command success alone may not satisfy behavioral convergence properties.}
+  - {id: WF-CONTRACT-007, severity: blocker, rule: bounded retry requires an explicit positive retry bound.}
+derivation_targets:
+  can_generate: [workflow_contract, executable_state_machine, transition_gate_matrix, workflow_test_plan, rollback_map]
+anti_drift_rules:
+  - Do not hide workflow transitions inside prose.
+  - Workflows consume authority; they do not own authorization policy.
+  - Retry semantics must not be inferred at runtime.
+  - Failure paths are first-class transitions.
+  - Convergence requires properties not merely completed commands.
+minimum_viable_instance_requirements:
+  required: [metadata, authority, scope, workflow, states, transitions, actions, convergence, enforcement, evidence_obligations]

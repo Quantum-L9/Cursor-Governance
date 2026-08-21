@@ -1,0 +1,348 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "l9-git-work-preserve",
+  "objective": "Ship diagnose-first skill l9-git-work-preserve with /git-work-preserve: inventory unpushed/dirty/orphan/stale/stash work with receipts, extract unique value safely, prune report-only by default; fix sync_cursor_plan_template home-symlink check; append CANONICAL_LAW section 11 Diagnose First path to WIP/backlog full kernel.",
+  "success_criteria": [
+    "skills/l9-git-work-preserve pack self_test.py and validate_pack_structure.py exit 0",
+    "commands/git-work-preserve.md registered in COMMANDS_MANIFEST.yaml commands-index.md and rules/02-slash-commands.mdc",
+    "inventory_git_work.py emits JSON covering unpushed dirty worktrees orphans stashes on fixture repo",
+    "skill refs bind WIP/backlog/kernels/diagnose-first/Diagnose First Kernel.md and forbid stash drop or branch delete without auth env plus receipt",
+    "l9-wire-skill-into-repo registers l9-git-work-preserve with SSOT symlink",
+    "python3 skills/l9-plan/scripts/sync_cursor_plan_template.py skills/l9-plan --check exits 0 with .cursor/plans home symlink",
+    "make pr-check PASS on changed files",
+    "Build runs only in dedicated worktree not dirty primary clone"
+  ],
+  "scope": {
+    "in": [
+      "skills/l9-git-work-preserve pack",
+      "skills/l9-plan/scripts/sync_cursor_plan_template.py symlink confinement fix",
+      "commands/git-work-preserve.md and COMMANDS_MANIFEST.yaml and commands-index.md",
+      "rules/02-slash-commands.mdc and rules/88-shared-worktree-isolation.mdc cross-link",
+      "CANONICAL_LAW.md append-only section 11 Diagnose First path",
+      "skill registries via l9-wire-skill-into-repo"
+    ],
+    "out": [
+      "worktree_isolation_gate semantics changes",
+      "backup or sessionEnd hook rewrites",
+      "landing untracked kernels/Diagnose First Kernel.md",
+      "section 1 /plan table cell rewrite",
+      "force-push hard-reset admin-merge"
+    ]
+  },
+  "code_in_scope": true,
+  "depth": "deep",
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git fetch origin main && git rev-parse origin/main",
+      "pass_criteria": "tip SHA recorded for worktree base",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "test -f 'WIP/backlog/kernels/diagnose-first/Diagnose First Kernel.md'",
+      "pass_criteria": "full Diagnose First kernel exists on tip",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "test ! -d skills/l9-git-work-preserve",
+      "pass_criteria": "skill absent before create",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-00c-fix-template-sync",
+      "task": "Fix sync_cursor_plan_template _under_repo so .cursor/plans home symlink mirror is allowed; --check PASS",
+      "files": ["skills/l9-plan/scripts/sync_cursor_plan_template.py"],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "_under_repo",
+      "leverage_rank": 1,
+      "shared_root_cause": "realpath escapes governed consumer symlink"
+    },
+    {
+      "id": "todo-01-baseline",
+      "task": "Create worktree fix/l9-git-work-preserve from origin/main; L4 begin; Program Lock; lock full SHA",
+      "files": [".l9/autonomy/"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new worktree",
+      "leverage_rank": 2
+    },
+    {
+      "id": "todo-02-design",
+      "task": "Write diagnose-first refs prune stash policy and receipt schema under skills/l9-git-work-preserve/references/",
+      "files": ["skills/l9-git-work-preserve/references/"],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["todo-01-baseline"],
+      "operation": "Create",
+      "anchor": "new pack references",
+      "leverage_rank": 3
+    },
+    {
+      "id": "todo-03-scripts",
+      "task": "Implement inventory_git_work.py diagnose_ref_value.py and fixture self_test",
+      "files": ["skills/l9-git-work-preserve/scripts/"],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": ["todo-02-design"],
+      "operation": "Create",
+      "anchor": "new pack scripts",
+      "leverage_rank": 4
+    },
+    {
+      "id": "todo-04-compile",
+      "task": "Compile SKILL.md and agents/meta.yaml zero-stub pack via l9-skill-compiler",
+      "files": ["skills/l9-git-work-preserve/SKILL.md", "skills/l9-git-work-preserve/agents/meta.yaml"],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["todo-02-design", "todo-03-scripts"],
+      "operation": "Create",
+      "anchor": "new pack root",
+      "leverage_rank": 5
+    },
+    {
+      "id": "todo-05-slash-docs",
+      "task": "Add /git-work-preserve command manifests index rule 02; append CANONICAL_LAW section 11 to backlog Diagnose First path",
+      "files": ["commands/git-work-preserve.md", "commands/COMMANDS_MANIFEST.yaml", "commands-index.md", "rules/02-slash-commands.mdc", "CANONICAL_LAW.md"],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["todo-04-compile"],
+      "operation": "Create",
+      "anchor": "commands + law append",
+      "leverage_rank": 6
+    },
+    {
+      "id": "todo-06-wire",
+      "task": "Run l9-wire-skill-into-repo for l9-git-work-preserve SSOT-only symlink",
+      "files": ["ops/generated/skill-registry.json", ".claude/skills/"],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["todo-05-slash-docs"],
+      "operation": "Replace",
+      "anchor": "wire skill registries",
+      "leverage_rank": 7
+    },
+    {
+      "id": "todo-07-prove",
+      "task": "Run pack self_test make pr-check dry-run audit and sync_cursor_plan_template --check",
+      "files": ["skills/l9-git-work-preserve/scripts/self_test.py"],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["todo-00c-fix-template-sync", "todo-06-wire"],
+      "operation": "Wrap",
+      "anchor": "validation commands",
+      "leverage_rank": 8
+    },
+    {
+      "id": "todo-08-converge",
+      "task": "Run Recursive Alignment and Validate Repair kernels; L4 authorize-release; make pr; l9-pr-remediation; merge per L4 Build",
+      "files": ["PULL_REQUEST_TEMPLATE.md", ".l9/pr/"],
+      "effort": "L",
+      "risk": "irreversible",
+      "dependencies": ["todo-07-prove"],
+      "operation": "Wrap",
+      "anchor": "PR converge",
+      "leverage_rank": 9
+    }
+  ],
+  "critical_path": [
+    "todo-01-baseline",
+    "todo-02-design",
+    "todo-03-scripts",
+    "todo-04-compile",
+    "todo-05-slash-docs",
+    "todo-06-wire",
+    "todo-07-prove",
+    "todo-08-converge"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "PE plan validated and clean worktree locked",
+      "unlocks": "pack authoring"
+    },
+    {
+      "id": "M1",
+      "outcome": "skill pack compiled with inventory scripts and slash",
+      "unlocks": "wire and prove"
+    },
+    {
+      "id": "M2",
+      "outcome": "pr-check green and PR mergeable",
+      "unlocks": "L4 merge"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C0",
+      "after": "M0",
+      "evidence_required": "validate_plan_document PASS and worktree HEAD equals locked origin/main SHA",
+      "no_go_action": "stop_and_replan"
+    },
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "pack self_test PASS and slash registered",
+      "no_go_action": "fix pack before wire"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "make pr-check PASS and CI green",
+      "no_go_action": "remediate before merge"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "update",
+      "todo_ids": ["todo-05-slash-docs"]
+    },
+    {
+      "surface": "commands/COMMANDS_MANIFEST.yaml",
+      "action": "update",
+      "todo_ids": ["todo-05-slash-docs"]
+    },
+    {
+      "surface": "ORG_INVARIANTS.yaml",
+      "action": "n_a",
+      "reason": "no org invariant change"
+    },
+    {
+      "surface": "pyproject.toml",
+      "action": "n_a",
+      "reason": "no dependency pin change"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Can an agent delete a stale branch that still has unique commits ahead of origin/main?",
+      "Does sync --check still fail when .cursor/plans is a home symlink?",
+      "Does section 11 still point at missing WIP/Diagnose First Kernel.md after append?"
+    ],
+    "assumed_false_ifs": [
+      "agents treat age as proof of zero value",
+      "realpath confinement must reject all paths outside repo realpath"
+    ],
+    "blast_radius": "skill misuse can delete local branches or stashes; sync fix affects all governed workspaces with home-linked .cursor/plans; law append changes Diagnose First pointer for all agents",
+    "rollback": "revert feature PR; unwire skill; restore sync_cursor_plan_template.py; law append remains (append-only) with clarifying follow-on if needed; recover deleted refs via reflog SHA in receipts"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-00c-fix-template-sync",
+      "todo-03-scripts",
+      "todo-02-design",
+      "todo-04-compile",
+      "todo-05-slash-docs",
+      "todo-06-wire",
+      "todo-07-prove",
+      "todo-08-converge",
+      "todo-01-baseline"
+    ],
+    "shared_causes": [
+      "agents delete git work without diagnose-first receipts",
+      "realpath path check rejects governed .cursor/plans home symlink"
+    ],
+    "deletions_or_consolidations": [
+      "do not rebuild isolation gate; consume existing",
+      "single PR for sync fix plus skill plus section 11 append"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "prune-execute deletes unique commits",
+      "mitigation": "default audit-only; prune-execute requires diagnosis receipt hash and L9_GIT_PRUNE_AUTHORIZED"
+    },
+    {
+      "risk": "stash drop without analysis",
+      "mitigation": "require stash-deep-analysis receipt and L9_GIT_STASH_DROP_AUTHORIZED"
+    },
+    {
+      "risk": "build thrash on dirty primary clone",
+      "mitigation": "dedicated worktree; isolation gate remains on"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Exact origin/main SHA at worktree create time",
+      "decision_effect": "immutable baseline for stop_and_replan",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 skills/l9-git-work-preserve/scripts/self_test.py",
+      "pass_criteria": "PASS exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 skills/l9-plan/scripts/sync_cursor_plan_template.py skills/l9-plan --check",
+      "pass_criteria": "exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "make pr-check",
+      "pass_criteria": "PASS",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1"],
+    "next_skill": "/autonomy + @environment/program-execution",
+    "stop_reason": "PLAN_DOCUMENT validated; implementation Build starting"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/l9-git-work-preserve/",
+      "skills/l9-plan/scripts/sync_cursor_plan_template.py",
+      "commands/",
+      "commands-index.md",
+      "rules/02-slash-commands.mdc",
+      "rules/88-shared-worktree-isolation.mdc",
+      "CANONICAL_LAW.md",
+      "ops/generated/",
+      ".claude/skills/",
+      ".l9/"
+    ],
+    "must_not_modify": [
+      "ops/autonomy/worktree_isolation_gate.py",
+      "ops/hooks/session_start_bootstrap.sh",
+      "pyproject.toml"
+    ],
+    "preserved_contracts": [
+      "Diagnose-First before destructive git",
+      "prune report-only default",
+      "PE+autonomy execute path",
+      "append-only CANONICAL_LAW"
+    ],
+    "validation_commands": [
+      "python3 skills/l9-plan/scripts/validate_plan_document.py",
+      "python3 skills/l9-git-work-preserve/scripts/self_test.py",
+      "python3 skills/l9-plan/scripts/sync_cursor_plan_template.py skills/l9-plan --check",
+      "make pr-check"
+    ]
+  },
+  "checklist": [
+    "template-sync fix",
+    "skill pack",
+    "slash",
+    "section-11 append",
+    "wire",
+    "pr-check"
+  ],
+  "estimate": "1 PE stack"
+}

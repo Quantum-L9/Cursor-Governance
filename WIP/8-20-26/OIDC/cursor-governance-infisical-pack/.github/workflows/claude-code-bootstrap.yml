@@ -1,0 +1,63 @@
+name: Claude Code Bootstrap (Infisical OIDC)
+
+on:
+  workflow_dispatch:
+    inputs:
+      env_slug:
+        description: "Infisical environment slug to pull secrets from"
+        required: true
+        default: "prod"
+  push:
+    branches: [main]
+    paths:
+      - ".claude/**"
+      - "environment/claude-code/**"
+      - "ops/secrets/**"
+
+permissions:
+  id-token: write   # required: allows GitHub to mint the OIDC JWT for this job
+  contents: read    # required: actions/checkout
+
+concurrency:
+  group: claude-bootstrap-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  bootstrap:
+    name: Bootstrap Claude Code session env
+    runs-on: ubuntu-latest
+    environment: production   # ties GitHub environment protection to the Infisical `sub` claim below
+    timeout-minutes: 10
+    steps:
+      - name: Checkout Cursor-Governance
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5
+
+      - name: Fetch secrets from Infisical via OIDC
+        id: infisical
+        uses: Infisical/secrets-action@d2c3d40ba8d4f9a97b8bbd57108cf51deca6b7ef # v1.0.9
+        with:
+          method: "oidc"
+          identity-id: ${{ vars.INFISICAL_MACHINE_IDENTITY_ID }}
+          domain: "https://app.infisical.com"
+          project-slug: "cursor-governance"
+          env-slug: ${{ inputs.env_slug || 'prod' }}
+          secret-path: "/claude-code"
+          export-type: "env"   # inject as job-scoped env vars, never write .env to disk
+
+      - name: Mask any derived secrets before use
+        run: |
+          echo "::add-mask::${ANTHROPIC_API_KEY}"
+
+      - name: Run Claude Code bootstrap
+        env:
+          ANTHROPIC_API_KEY: ${{ env.ANTHROPIC_API_KEY }}
+        run: |
+          bash ops/scripts/setup_claude_code_plugins.sh
+          bash scripts/claude_code_bootstrap_verify.sh
+
+      - name: Verify no secret leaked to disk
+        run: |
+          if [ -f ".env" ]; then
+            echo "::error::.env file present after bootstrap — secrets_action must not write to disk"
+            exit 1
+          fi

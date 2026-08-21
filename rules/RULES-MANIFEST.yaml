@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-20T19:26:25Z'
+generated_utc: '2026-08-21T13:52:10Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:04268c681be682b33bc6d6041e8a861d6ef9307bb9db9fbfe39d888104967e70
+source_tree_digest: sha256:0db3ccf6a2e622619aeec1c4dd4b1fc125ca1d3d3d23ae8500cded5eebb68a04
 summary:
   total_mdc_files: 66
   always_apply_true: 30
@@ -47,8 +47,8 @@ rules:
   globs: null
   first_heading: Slash Command Recognition
   has_yaml_frontmatter: true
-  line_count: 158
-  content_digest: sha256:f94369f58a21882238b553823a8edc13c8f4748fc75eae1b1f844b73fe8ca93a
+  line_count: 159
+  content_digest: sha256:aa69cbcfe95e0523258e2ed74c678b0e5b36630682fb27363a755c6134233eba
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -295,8 +295,8 @@ rules:
   globs: null
   first_heading: L9 skill routing (Cursor)
   has_yaml_frontmatter: true
-  line_count: 95
-  content_digest: sha256:e62389dfd475b0b203b2796805bba03032ff94153eb667cdc278033cb8c143c0
+  line_count: 99
+  content_digest: sha256:95deb4b6d9ba1b29c9725a8159e25e4e3e1e8131948dfac8b13a5f242bac1545
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -664,8 +664,8 @@ rules:
   globs: null
   first_heading: PR overlap guardrail (PR_OVERLAP_GUARDRAIL_V1)
   has_yaml_frontmatter: true
-  line_count: 85
-  content_digest: sha256:e65dba8873911e45fc1298201388a9dee7162769d9abf40fa6d9bc0320718be3
+  line_count: 89
+  content_digest: sha256:c1900fbe2e57be94d6bd26783db0e2357244ee162aa5a093f34b2d9cb606a8cc
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1300,8 +1300,8 @@ rules:
   globs: null
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
-  line_count: 57
-  content_digest: sha256:b85beb25cdf73ae367921ce1e1a1a4709cb8e88c21e138423bd19c9fc1833267
+  line_count: 60
+  content_digest: sha256:d8b6bc23f11a27bfd41df536eae728d15af972e0ed6b1666b63d07e8732f0dec
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -1543,7 +1543,7 @@ rules:
   first_heading: Git mutation gate (ask-first)
   has_yaml_frontmatter: true
   line_count: 41
-  content_digest: sha256:a66549b17594f12b71a4a1a6360b5eed005a058c570808a915a3de106447af10
+  content_digest: sha256:7e2c9947ea3ee2dabbe072b179edd6c701711f03df8886978de9848e2b2069c1
   authority: canonical_global
   context_cost: minimal
   deprecated: false

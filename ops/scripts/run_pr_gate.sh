@@ -16,6 +16,10 @@ cd "$WS"
 export WS PR_BASE PR_SECURITY_ADVISORY
 
 _GATE_RECEIPT="$WS/.l9/pr/gate-receipt.json"
+_GATE_FAILURE="$WS/.l9/pr/gate-failure.json"
+_GATE_LOG="$WS/.l9/pr/last-gate.log"
+_GATE_FAILURE_PY="$SCRIPT_DIR/pr_gate_failure.py"
+_gate_failed=0
 _gate_state_digest() {
   local head porcelain
   head="$(git rev-parse HEAD 2>/dev/null || echo none)"
@@ -36,10 +40,19 @@ raise SystemExit(0 if want == current else 1)
 PY
 }
 
+# PASS skip first. A matching FAIL receipt then refuses a second full gate
+# (STOP LOOPING) so agents cannot wait through the same red tree again.
 if _gate_receipt_matches; then
   echo "OK: gate receipt matches unchanged state — skipping full validation"
   echo "RESULT: PASS — local PR gate clean (receipt reuse)"
   exit 0
+fi
+if [[ -f "$_GATE_FAILURE_PY" ]]; then
+  _gate_refuse_rc=0
+  python3 "$_GATE_FAILURE_PY" refuse "$_GATE_FAILURE" "$(_gate_state_digest)" || _gate_refuse_rc=$?
+  if [[ "$_gate_refuse_rc" -eq 2 ]]; then
+    exit 2
+  fi
 fi
 
 # Isolates are not a uv project. Bind PATH/UV_PROJECT to the donor or
@@ -85,7 +98,19 @@ if repo_write_lock_acquire "$WS" "${PR_LOCK_WAIT_S:-30}"; then
 else
   echo "WARN: $(repo_write_lock_skip_note "$WS") — continuing; concurrent writes may be misattributed"
 fi
-trap 'repo_write_lock_release' EXIT
+_gate_failed=1
+_gate_on_exit() {
+  if [[ "${_gate_failed:-0}" = "1" && -f "$_GATE_FAILURE_PY" ]]; then
+    mkdir -p "$WS/.l9/pr"
+    python3 "$_GATE_FAILURE_PY" write "$_GATE_FAILURE" "$(_gate_state_digest)" \
+      --log "$_GATE_LOG" \
+      --precommit "${precommit_log:-}" \
+      --pytest "$GOV_ROOT/.venv/bin/pytest" || true
+  fi
+  rm -f "${status_before:-}" "${changed_file:-}" "${precommit_log:-}" "${py_list:-}"
+  repo_write_lock_release
+}
+trap '_gate_on_exit' EXIT
 
 # Always-run governance contract surface: cheap, changed-file-INDEPENDENT.
 # A Markdown/YAML/config-only mutation must never bypass the checks that prove
@@ -100,6 +125,9 @@ fi
 if [[ -f "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py" ]]; then
   python3 "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py"
 fi
+if [[ -f "$GOV_ROOT/ops/scripts/validate_git_denial_residue.py" ]]; then
+  python3 "$GOV_ROOT/ops/scripts/validate_git_denial_residue.py"
+fi
 
 echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / nightly) ==="
 
@@ -107,10 +135,14 @@ status_before="$(mktemp)"
 changed_file="$(mktemp)"
 precommit_log="$(mktemp)"
 py_list="$(mktemp)"
-trap 'rm -f "$status_before" "$changed_file" "$precommit_log" "$py_list"; repo_write_lock_release' EXIT
+mkdir -p "$WS/.l9/pr"
+: >"$_GATE_LOG"
+trap '_gate_on_exit' EXIT
 git status --porcelain >"$status_before"
 
 _gate_write_receipt() {
+  _gate_failed=0
+  rm -f "$_GATE_FAILURE"
   mkdir -p "$WS/.l9/pr"
   python3 - "$_GATE_RECEIPT" "$(_gate_state_digest)" <<'PY'
 import json, sys
@@ -180,6 +212,9 @@ _gate_run_precommit() {
   PR_CHANGED_FILE="$changed_file" bash "$SCRIPT_DIR/run_pr_precommit.sh" "$WS" 2>&1 | tee "$precommit_log"
   rc="${PIPESTATUS[0]}"
   set -e
+  if [[ -f "$precommit_log" ]]; then
+    cat "$precommit_log" >>"$_GATE_LOG" || true
+  fi
   return "$rc"
 }
 
@@ -246,26 +281,6 @@ if ! _gate_classify_dirtiness "pre-commit"; then
   fi
 fi
 
-echo "--- ruff (changed Python) ---"
-py_count=0
-grep -E '\.(py|pyi)$' "$changed_file" >"$py_list" || true
-py_count="$(grep -c . "$py_list" || true)"
-if [[ "${py_count:-0}" -eq 0 ]]; then
-  echo "OK: no changed Python files for ruff"
-else
-  echo "ruff (changed): ${py_count} file(s)"
-  _ruff="$GOV_ROOT/.venv/bin/ruff"
-  if [[ ! -x "$_ruff" && -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
-    _ruff="$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff"
-  fi
-  if [[ ! -x "$_ruff" ]]; then
-    echo "FAIL: locked ruff missing at $GOV_ROOT/.venv/bin/ruff (run: make venv)"
-    exit 1
-  fi
-  xargs "$_ruff" check <"$py_list"
-  xargs "$_ruff" format --check <"$py_list"
-fi
-
 echo "--- uv lock ---"
 if grep -Eq '^(uv\.lock|pyproject\.toml|requirements.*\.txt|constraints\.txt)$' "$changed_file"; then
   if [[ -f uv.lock ]]; then
@@ -278,16 +293,28 @@ else
 fi
 
 echo "--- pytest ---"
-if grep -Eq '\.py$' "$changed_file"; then
-  # Changed-files gate: only collect the secrets capability suite when that
-  # plane changed. Full-tree remains make pr-full / nightly. Avoids a host
-  # miniconda cryptography ABI break aborting unrelated PE/ops PRs.
+if [[ "${PR_SKIP_PYTEST:-0}" == "1" ]]; then
+  echo "OK: skip pytest (PR_SKIP_PYTEST=1)"
+elif grep -Eq '\.py$' "$changed_file"; then
+  # Local pr-check never passes repo-root '.' (SP-04 / SP-05). Full catalog
+  # remains make test / make pr-full / CI via run_pytest_suites.sh.
   pytest_args=(--tb=short -q)
   if ! grep -Eq '^(tests/ops/secrets/|ops/secrets/)' "$changed_file"; then
     pytest_args+=(--ignore=tests/ops/secrets)
     echo "OK: skip secrets capability suite (ops/secrets unchanged)"
   fi
-  bash "$SCRIPT_DIR/run_pytest_suites.sh" "${pytest_args[@]}"
+  _pytest_py="${GOV_TOOLCHAIN_ROOT:-$GOV_ROOT}/.venv/bin/python"
+  if [[ ! -x "$_pytest_py" ]]; then
+    _pytest_py="$(command -v python3)"
+  fi
+  if [[ ! -x "$_pytest_py" ]]; then
+    echo "FAIL: no python interpreter for scoped pytest"
+    exit 1
+  fi
+  "$_pytest_py" "$SCRIPT_DIR/run_python_test_suites.py" \
+    --profile local \
+    --changed-file "$changed_file" \
+    -- "${pytest_args[@]}"
 else
   echo "OK: skip pytest (no changed Python files)"
 fi
@@ -412,7 +439,9 @@ else
 fi
 
 echo "--- security ---"
-bash "$SCRIPT_DIR/run_pr_security.sh" "$WS"
+# Gate mode: on the publish path a missing scanner binary is a failure, not
+# a SKIP that reads as a pass (INV-5).
+bash "$SCRIPT_DIR/run_pr_security.sh" --mode gate "$WS"
 
 if [[ "$PR_MYPY_STRICT" = "1" ]]; then
   _mypy="$GOV_ROOT/.venv/bin/mypy"

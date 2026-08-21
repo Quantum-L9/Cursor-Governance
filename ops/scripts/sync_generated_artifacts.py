@@ -13,11 +13,12 @@ Covered artifacts:
   * commands/COMMANDS_MANIFEST.yaml
   * environment/program-execution/core/MANIFEST.yaml
 
-Suspended (2026-08-19, velocity window — see TODO.md):
+Advisory, never auto-synced (see TODO.md, "advisory by decision"):
   * environment/program-execution/MANIFEST.json — hashes the whole mutable
-    Program Execution tree, so ordinary PE edits rewrote it and produced
-    cross-branch churn. Automatic sync is opt-in via --pe-manifest; the
-    generator itself is untouched and still runs standalone.
+    Program Execution tree, so ordinary PE edits rewrite it. Writing it during
+    a gate run is what produced "files were modified by this hook", so sync is
+    opt-in via --pe-manifest and --force does not reach it. The generator runs
+    standalone; nothing gates on the result.
 """
 
 from __future__ import annotations

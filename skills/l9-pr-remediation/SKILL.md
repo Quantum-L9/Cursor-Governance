@@ -117,7 +117,7 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 9. **Validate suggestions against current code.** Comment snippets are not ground truth.
 10. **No gate weakening / suppressions.** No `NOSONAR`, blanket noqa/type-ignore/eslint-disable, CodeQL dismissals/exclusions, skipped tests, or lowered thresholds. Narrow documented suppression only for a *proven* false positive where a code fix is less safe.
 11. **Every conversation resolved.** Reply Fixed / Deferred / Acknowledged / Disagreed, then `resolveReviewThread` on **every** GraphQL `reviewThreads` node with `isResolved: false` — any author (`github-code-quality`, Copilot, `github-advanced-security`, CodeQL, humans, unknown bots). Paginate threads (`pageInfo.hasNextPage`). GitHub "a conversation must be resolved" **is** a merge blocker. HUMAN: name the decision in the reply (linked issue if Deferred), resolve the thread, **do not merge that PR** until the decision exists. Bots re-file on new lines after a push — those are **new** threads. Re-query after every publish and immediately before `gh pr merge`.
-12. **FIRST_MERGE_GATE + stack-safe oldest-first.** Never force-push, rewrite history, expose tokens, or `--admin` merge. Merge only after the open-PR inventory, overlap matrix, and merge-effect prediction exist, and after the required sequence is remediated and published. Do not merge the first green PR. Default order is **oldest `createdAt` first (bottom-up)**. Ordinary `gh pr merge --squash` is allowed only when that head is **not** the base of another open PR. If it is: merge the children first, retarget them, or use `--merge`. After a parent squash, never `gh pr update-branch` / merge main into the child — rebase `--onto` the new base. Revalidate CI only when HEAD changed. Do not declare merge-ready from publish status alone.
+12. **FIRST_MERGE_GATE + stack-safe oldest-first.** Never force-push, rewrite history, expose tokens, or `--admin` merge. Merge only after the open-PR inventory, overlap matrix, and merge-effect prediction exist, and after the required sequence is remediated and published. Do not merge the first green PR. Default order is **oldest `createdAt` first (bottom-up)**. Merge **only** via `ops/autonomy/stack_safe_merge.py --run` — never type `--squash` / `--merge` by hand. The helper emits `--merge` when the head is the base of another open PR and `--squash` only for a leaf. After a parent squash, never `gh pr update-branch` / merge main into the child — rebase `--onto` the new base. Revalidate CI only when HEAD changed. Do not declare merge-ready from publish status alone.
 13. **No invented evidence.** Do not invent check conclusions, SHAs, thread ids, or `Passed`. `{braces}` in this pack are templates until substituted from `gh` / Makefile / `file` output observed in this run.
 
 ## Hot Path (Converge)
@@ -146,10 +146,9 @@ Reuse a locked plan / `Remediation-Cycle:` trailer when files still match. If no
 9. **MERGE_TRAIN** only after FIRST_MERGE_GATE. Oldest `createdAt` first. Immediately before each `gh pr merge`, re-query `reviewThreads` and the stack probe (is this head the base of another open PR?). Zero `isResolved: false` required.
 
 ```bash
-# squash only when this head is not the base of another open PR
-gh pr merge {n} --repo {owner}/{repo} --squash --delete-branch
-# stacked parent: merge children first, retarget, or:
-# gh pr merge {n} --repo {owner}/{repo} --merge --delete-branch
+# NEVER type --squash yourself. The helper probes children and emits
+# --merge for a stack parent, --squash only for an unstacked leaf.
+"$GOV_PY" ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run
 ```
 
 Never `--admin`. Never unpack diffs. Never merge-as-you-go. Never `gh pr update-branch` after a squash of a parent. An unpredicted `CONFLICTING` after a merge means the overlap preflight failed — rebuild the remaining matrix before the next merge.
@@ -247,7 +246,7 @@ merge:
 
 ### Converge
 - Native-ext / cryptography import fail → `ENVIRONMENT`; run venv preflight once; do not edit source; do not unpin lock pins; do not symlink a failing SSOT venv; do not use `uv python find --system`
-- `git push` denied with `make pr` in the message → cache publish=`PR_REMEDIATE=0 make pr`; do not retry `git push`
+- `git push` is NOT denied in Cursor-Governance (CANONICAL_LAW §6.2.4) — a push will simply succeed and skip every checker. Cache publish=`PR_REMEDIATE=0 make pr` from `P_cmd`, not from a denial message. Elsewhere, if a push IS denied and the message names `make pr`, switch once and do not retry
 - `git add -u` / `reset --hard` denied → stage explicit paths only
 - CI logs missing → retry annotations/job logs once; if ownership unknown, note and continue other clusters
 - Rate limit → honor reset, retry once, continue

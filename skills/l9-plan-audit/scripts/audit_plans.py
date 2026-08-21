@@ -18,7 +18,13 @@ except ImportError:  # pragma: no cover - stdlib fallback for thin envs
     yaml = None  # type: ignore[assignment]
 
 TEMPLATE_NAME = "_TEMPLATE.plan.md"
-SLUG_RE = re.compile(r"^(?P<slug>.+)_(?P<hex>[0-9a-fA-F]{8})\.plan\.md$")
+SLUG_RE = re.compile(
+    r"^(?P<slug>.+)_(?P<id>"
+    r"[0-9]{4}-[0-9]{2}-[0-9]{2}"  # historical ISO
+    r"|[0-9]{1,2}-[0-9]{1,2}-[0-9]{2,4}"  # live US M-D-YY / M-D-YYYY
+    r"|[0-9a-fA-F]{8}"  # historical 8-hex
+    r")\.plan\.md$"
+)
 EXECUTE_NEEDLE = "Execute via @environment/program-execution"
 COMMIT_SHA_RE = re.compile(r"(?im)^\s*commit_sha\s*:\s*[`\"']?([0-9a-f]{7,40})[`\"']?\s*$")
 STATUS_SUPERSEDED_RE = re.compile(r"(?im)^\s*status\s*:\s*superseded\s*$")
@@ -98,7 +104,17 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     return data, body
 
 
-def is_unbuilt(todos: Any) -> bool:
+def frontmatter_marks_built(fm: dict[str, Any]) -> bool:
+    """Explicit built/stale markers win over todo inference."""
+    if fm.get("built") is True:
+        return True
+    status = str(fm.get("status", "")).strip().lower()
+    return status in {"built", "completed", "cancelled", "superseded"}
+
+
+def is_unbuilt(todos: Any, fm: dict[str, Any] | None = None) -> bool:
+    if fm and frontmatter_marks_built(fm):
+        return False
     if not isinstance(todos, list) or len(todos) == 0:
         return True
     for item in todos:
@@ -170,6 +186,22 @@ def sha_matches(plan_sha: str, head: str) -> bool:
     return a[:n] == b[:n]
 
 
+def is_simple_kind(frontmatter: dict[str, Any], body: str) -> bool:
+    """Cursor-Build plans are not required to carry the PE execute heading.
+
+    Leftover PE wiring (`make campaign` or a live PE execute heading) keeps
+    the plan PE-kind so audit can still see an incomplete swap.
+    """
+    kind = str(frontmatter.get("kind") or "").strip().lower()
+    execute_via = str(frontmatter.get("execute_via") or "").strip().lower()
+    marked_simple = kind == "simple" or execute_via == "cursor-build"
+    if not marked_simple:
+        return False
+    if "make campaign" in body or EXECUTE_NEEDLE in body:
+        return False
+    return True
+
+
 def flags_for(
     *,
     path: Path,
@@ -177,6 +209,7 @@ def flags_for(
     body: str,
     head: str | None,
     superseded_names: set[str],
+    frontmatter: dict[str, Any] | None = None,
 ) -> list[str]:
     flags: list[str] = []
     if not isinstance(todos, list) or len(todos) == 0:
@@ -189,7 +222,8 @@ def flags_for(
         flags.append("baseline_drift")
     if STATUS_SUPERSEDED_RE.search(body) or path.name in superseded_names:
         flags.append("superseded")
-    if EXECUTE_NEEDLE not in body:
+    fm = frontmatter or {}
+    if not is_simple_kind(fm, body) and EXECUTE_NEEDLE not in body:
         flags.append("missing_execute_section")
     return flags
 
@@ -245,7 +279,7 @@ def audit(
             continue
         fm, body = parse_frontmatter(text)
         todos = fm.get("todos")
-        if not is_unbuilt(todos):
+        if not is_unbuilt(todos, fm):
             continue
         meta["unbuilt"] += 1
         pending, in_prog, total = todo_counts(todos)
@@ -264,6 +298,7 @@ def audit(
                 body=body,
                 head=head,
                 superseded_names=superseded_names,
+                frontmatter=fm,
             ),
         )
         findings.append(finding)

@@ -86,13 +86,13 @@ jobs:
         run: |
           uv run --frozen --no-build python \
             environment/program-execution/scripts/probe_execution_adapters.py
-      # "Program Execution manifest integrity" (validate_manifest.py against
-      # environment/program-execution/MANIFEST.json) is suspended for the
-      # velocity window: the manifest hashes the whole mutable PE tree, so any
-      # ordinary PE edit failed this step until the manifest was regenerated.
-      # Re-enable together with automatic generation — see TODO.md. The
-      # validator itself is unchanged and still runs via
-      # `make program-execution-conformance`.
+      # There is deliberately no "Program Execution manifest integrity" step.
+      # environment/program-execution/MANIFEST.json is advisory by decision
+      # (TODO.md): it hashes the whole mutable PE tree, so any ordinary PE edit
+      # invalidates it until regenerated, and that churn is inherent to what it
+      # measures. validate_manifest.py runs under
+      # `make program-execution-conformance`; the generator/validator contract
+      # is pinned by tests/environment/program_execution/test_manifest_contract.py.
       - name: Executable peer contract (E1-E15, cross-registry)
         run: |
           uv run --frozen --no-build python \

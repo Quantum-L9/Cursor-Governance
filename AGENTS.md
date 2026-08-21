@@ -77,6 +77,9 @@ canonical activation mechanism.
 fire when an agent runs `git worktree add`. After creating a worktree:
 
 ```bash
+# Ordinary start is origin/main (CANONICAL_LAW task ancestry).
+# Stack-aware launcher: ops/scripts/agent_worktree_start.sh — only when
+# PR_STACK=auto is an explicit authorized exception, not this default.
 bash "$HOME/.cursor-governance/ops/scripts/worktree_add_wired.sh" -b feat/<id> /path/to/wt origin/main
 # or, if the worktree already exists:
 bash "$HOME/.cursor-governance/ops/scripts/ensure_workspace_wired.sh" /path/to/wt
@@ -229,9 +232,14 @@ This repo does **not** use a git commit hook. Do not run `pre-commit install`.
    security / pytest). No L4. Empty changeset vs `PR_BASE` is PASS. A PASS
    writes `.l9/pr/gate-receipt.json`. The same HEAD + worktree + `PR_BASE` is
    not re-gated.
-3. Single path to GitHub = **`make pr`** after L4 release. Raw `git push` /
-   `gh pr create` / `gh pr edit` / MCP `create_pull_request` / `push_files`
-   are denied at every phase. `make pr` / `PR` / `Pr` / `pR` are equivalent.
+3. Preferred path to GitHub = **`make pr`** after L4 release — the only route
+   that runs the checkers. Mechanically denied at every phase: `make push`,
+   MCP `create_pull_request` / `push_files`. Raw `git push` / `gh pr create` /
+   `gh pr edit` are **off doctrine but not blocked**: git and gh are exempt
+   from the workflow plane and answer to `ops/autonomy/git_guardrails.py`,
+   which denies by effect (CANONICAL_LAW §6.2.4). Do not expect a denial
+   message to stop you — prefer `make pr` because it gates, not because the
+   alternative errors. `make pr` / `PR` / `Pr` / `pR` are equivalent.
 4. Failure loop: diagnose → fix → (`make improve` if kernels apply) →
    `make pr-check` → `make pr` **once**. Do not run a second full gate on an
    unchanged tree.
@@ -273,6 +281,17 @@ renegotiate scope. `PR_STACK=auto` still exists as a knob but creates the
 topology squash-merge denies — use it only when the parent will merge with
 `--merge`. Fail-open on missing `gh` telemetry; fail-closed on a detected
 non-generated textual conflict.
+
+`PR_STACK=auto` is also the start-time default:
+`agent_worktree_start.sh` bases the worktree on the unique open-PR chain
+tip (implied `L9_TASK_BASE_AUTHORIZED` for that tip only). Do not invent
+an `origin/main` fork and restack at `make pr`. Empty `PR_STACK` keeps
+`origin/main`. Sibling open-PR chains still fail closed.
+
+`make pr` defaults to `PR_STACK=auto` (stack on the overlapping open
+head). Opt out with `PR_STACK= make pr` to publish against `main`. A
+stack parent must merge with `--merge`, or children must land first —
+squash of a parent silently drops the child.
 
 After any merge touching generated paths, or while
 `.l9/pr/regen-required.txt` is non-empty, run
@@ -657,3 +676,28 @@ as the live store):
 ## `make pr` capitalization (2026-08-20)
 
 `make pr` / `make PR` / `make Pr` / `make pR` all run the same gate.
+
+<!-- PRECOMMIT_REPO_OWNS_RUFF_V1 -->
+## `make precommit-repo` before `make pr` (2026-08-21)
+
+After every local commit, run `make precommit-repo` (changed-file hooks +
+locked `ruff check` / `ruff format --check`). If hooks rewrite files, commit
+the rewrite and re-run. Do not auto-stage. Then `PR_REMEDIATE=0 make pr`.
+
+`make pr-check` still runs pytest, wiring, and `run_pr_security.sh`. It does
+**not** run a second ruff pass. There is no git commit hook — do not run
+`pre-commit install`. Local autofix is `precommit-repo`. `.github/workflows/lint-autofix.yml`
+is a post-merge janitor on `main` only.
+
+<!-- L9_PLAN_SIMPLE_V1 -->
+## Two plan skills (2026-08-21)
+
+Ordinary Cursor Plan mode / Build uses **`l9-plan-simple`** (`/l9-plan-simple`).
+It fills the same first-class template
+(`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`)
+and executes with the **Build** button on the current checkout. It does **not**
+run `make campaign`, admit a Program Lock, or write `Lock: origin/main = <sha>`.
+
+**`l9-plan`** (`/l9-plan`) stays the PE/campaign planner: same template **and**
+the Program Execution execute path. Use it only when the user asks for
+`/l9-plan`, `make campaign`, Program Lock, or PE+autonomy.

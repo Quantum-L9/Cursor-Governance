@@ -1,0 +1,88 @@
+# --- L9_META ---
+# l9_schema: 2
+# origin: l9-template
+# engine: graph
+# layer: [ci]
+# tags: [delivery, harness]
+# status: active
+# --- /L9_META ---
+# L9 Contract Enforcement — 24 invariants / 27 docs as hard gates
+# Blocks merge on missing contract files or scanner violations.
+
+name: Contract Enforcement
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  action-refs:
+    name: Validate Action References
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      # Guard against malformed `@<sha>v<version>` "Frankenrefs" that make
+      # every job in an affected workflow unrunnable. Also warns (non-fatal)
+      # on third-party actions that are not SHA-pinned.
+      - run: python3 tools/check_action_refs.py
+
+  contract-files:
+    name: Verify Contract Files Exist
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-ci.txt
+      - run: python tools/verify_contracts.py
+
+  contract-scan:
+    name: Scan for Contract Violations
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-ci.txt
+      - run: python tools/contract_scanner.py
+
+  meta-headers:
+    name: Verify L9_META Headers
+    runs-on: ubuntu-latest
+    steps:
+      # fetch-depth is irrelevant here, but the checkout must be a real git repo:
+      # discovery enumerates via `git ls-files -z`, not a filesystem walk.
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install pyyaml
+      # Default mode is dry-run verification; there is no `check` subcommand.
+      - run: python tools/l9_meta_injector.py
+
+  lint:
+    name: Lint + Type Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-ci.txt
+      - run: ruff check . && ruff format --check .
+      # Keep type enforcement aligned with ci.yml, ci-quality.yml, and pyproject.toml.
+      - run: mypy engine/ --config-file=pyproject.toml --ignore-missing-imports --exclude chassis
+
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    needs: [contract-files, contract-scan, meta-headers, lint]
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-ci.txt && pip install -r requirements.txt
+      - run: PYTHONPATH=. pytest tests/ -v --tb=short

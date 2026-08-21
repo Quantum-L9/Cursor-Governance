@@ -42,7 +42,7 @@ This host (Cursor-Governance / Makefile capability graph):
 - verify: `UV_PYTHON=<native> make pr-check`
 - kernels (optional): `make improve`
 - publish: `UV_PYTHON=<native> PR_REMEDIATE=0 make pr`
-- merge: stack-safe `gh pr merge` — squash when unstacked; oldest `createdAt` first
+- merge: `ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run` (method chosen in code; oldest `createdAt` first)
 - interpreter: `$PWD/.venv/bin/python` (Makefile `$(PYTHON)`). Not Homebrew / system / miniconda base.
 - read-only git: allowed
 
@@ -59,7 +59,11 @@ Forbidden after `P_cmd` succeeds on a `pr` target:
 
 `PR_REMEDIATE=0` is mandatory so `make pr` does not spawn a poll worker. Poll workers never merge. Ignore `merge_eligible` whose SHA is older than HEAD or older than the last repo merge.
 
-If `git push` is denied and the message names `make pr`, switch once. Do not retry `git push`.
+Do not wait for a denial to route you. In Cursor-Governance `git push` is not
+denied at all (CANONICAL_LAW §6.2.4): it succeeds, silently bypassing the gate.
+The prohibition above is this skill's own discipline, enforced by `P_cmd`, not by
+a hook. Where a push IS denied and the message names `make pr`, switch once and
+do not retry.
 
 Repos without a `pr` target: fall back to the workflow `run:` list in [fix-engine.md](fix-engine.md). Record the fallback on the plan.
 
@@ -154,7 +158,7 @@ run_contract:
     verify: "make pr-check"
     publish: "PR_REMEDIATE=0 make pr"
     improve: "make improve"
-    merge: "gh pr merge --squash|--merge --delete-branch"
+    merge: "ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run"
     interpreter: "{repo}/.venv/bin/python"
     readonly_git: true
   venv:

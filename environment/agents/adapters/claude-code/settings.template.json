@@ -4,19 +4,19 @@
     "Committable .claude/settings.json for an L9 consumer repo. Copy to .claude/settings.json",
     "and commit it: on Claude Code Web/Mobile only git-tracked files survive the clone, so a",
     "committed settings.json is what makes governance boot with no manual step. On the CLI the",
-    "same file is picked up locally. Keep secrets OUT of this file \u2014 they belong in the account",
+    "same file is picked up locally. Keep secrets OUT of this file — they belong in the account",
     "environment (web/environment.env.example) or user-scope config, never in a repo.",
     "Field/event names track the Claude Code release; see https://code.claude.com/docs.",
     "permissions.allow lets the bounded-autonomy runtime complete work end to end: scoped git",
     "writes (branch/worktree/commit), CI inspection (gh run/pr checks), read-only GitHub",
-    "queries, PR monitoring (subscribe/unsubscribe), and `make pr` \u2014 so completed work",
+    "queries, PR monitoring (subscribe/unsubscribe), and `make pr` — so completed work",
     "opens a PR and is driven to green via the l9-pr-remediation loop WITHOUT a prompt.",
-    "PUBLISH PATH: `PR_REMEDIATE=0 make pr` remains the preferred route to GitHub \u2014 it runs",
+    "PUBLISH PATH: `PR_REMEDIATE=0 make pr` remains the preferred route to GitHub — it runs",
     "the Makefile checkers, then pushes and opens the PR. That preference is POLICY and is",
     "unchanged. It is no longer enforced by denying execution: `git` and `gh` commands are",
     "exempt from every governance gate (ops/autonomy/git_execution_exemption.py), so no deny",
     "entry for them belongs here either. `make push` and the MCP create_pull_request/",
-    "push_files tools are still denied \u2014 they are not git/gh executables and the gate still",
+    "push_files tools are still denied — they are not git/gh executables and the gate still",
     "blocks them. This allow/deny split must agree with ops/autonomy/local_execution_gate.py,",
     "and validate_claude_env.py fails when it does not, in both directions.",
     "An allow entry here is what an agent reads as 'approved, no prompt', so git/gh forms the",
@@ -34,12 +34,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'f=\"$CLAUDE_PROJECT_DIR/.claude/hooks/session_start_claude_governance.sh\"; [ -f \"$f\" ] && exec bash \"$f\" || exit 0'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer session_start_claude_governance.sh'",
             "timeout": 30
           },
           {
             "type": "command",
-            "command": "bash -c 'g=\"$HOME/.cursor-governance\"; h=\"$g/environment/agents/adapters/claude-code/hooks/memory_prefetch.py\"; [ -f \"$h\" ] || exit 0; p=\"$g/.venv/bin/python3\"; [ -x \"$p\" ] || p=\"$g/.venv/bin/python\"; if [ -x \"$p\" ]; then exec \"$p\" \"$h\"; fi; printf \"l9-hook: locked governance interpreter missing under %s/.venv; memory_prefetch.py did NOT run\\n\" \"$g\" >&2; exit 0'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer memory_prefetch.py'",
             "timeout": 25
           }
         ]
@@ -50,7 +50,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'g=\"$HOME/.cursor-governance\"; h=\"$g/environment/agents/adapters/claude-code/hooks/memory_writeback.py\"; [ -f \"$h\" ] || exit 0; p=\"$g/.venv/bin/python3\"; [ -x \"$p\" ] || p=\"$g/.venv/bin/python\"; if [ -x \"$p\" ]; then exec \"$p\" \"$h\"; fi; printf \"l9-hook: locked governance interpreter missing under %s/.venv; memory_writeback.py did NOT run\\n\" \"$g\" >&2; exit 0'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer memory_writeback.py'",
             "timeout": 20
           }
         ]
@@ -61,7 +61,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'g=\"$HOME/.cursor-governance\"; h=\"$g/environment/agents/adapters/claude-code/hooks/user_prompt_skill_router.py\"; [ -f \"$h\" ] || exit 0; p=\"$g/.venv/bin/python3\"; [ -x \"$p\" ] || p=\"$g/.venv/bin/python\"; if [ -x \"$p\" ]; then exec \"$p\" \"$h\"; fi; printf \"l9-hook: locked governance interpreter missing under %s/.venv; user_prompt_skill_router.py did NOT run\\n\" \"$g\" >&2; exit 0'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer user_prompt_skill_router.py'",
             "timeout": 5
           }
         ]
@@ -73,7 +73,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'g=\"$HOME/.cursor-governance\"; h=\"$g/environment/agents/adapters/claude-code/hooks/skill_usage_logger.py\"; [ -f \"$h\" ] || exit 0; p=\"$g/.venv/bin/python3\"; [ -x \"$p\" ] || p=\"$g/.venv/bin/python\"; if [ -x \"$p\" ]; then exec \"$p\" \"$h\"; fi; printf \"l9-hook: locked governance interpreter missing under %s/.venv; skill_usage_logger.py did NOT run\\n\" \"$g\" >&2; exit 0'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer skill_usage_logger.py'",
             "timeout": 5
           }
         ]
@@ -83,7 +83,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'g=\"$HOME/.cursor-governance\"; h=\"$g/environment/agents/adapters/claude-code/hooks/context7_stack_pretool.py\"; [ -f \"$h\" ] || exit 0; p=\"$g/.venv/bin/python3\"; [ -x \"$p\" ] || p=\"$g/.venv/bin/python\"; if [ -x \"$p\" ]; then exec \"$p\" \"$h\"; fi; printf \"l9-hook: locked governance interpreter missing under %s/.venv; context7_stack_pretool.py did NOT run\\n\" \"$g\" >&2; exit 0'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer context7_stack_pretool.py'",
             "timeout": 5
           }
         ]
@@ -93,12 +93,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'g=\"$HOME/.cursor-governance\"; h=\"$g/environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py\"; [ -f \"$h\" ] || exit 0; p=\"$g/.venv/bin/python3\"; [ -x \"$p\" ] || p=\"$g/.venv/bin/python\"; if [ -x \"$p\" ]; then exec \"$p\" \"$h\"; fi; printf \"l9-hook: locked governance interpreter missing under %s/.venv; merge_gate_wrap.py did NOT run\\n\" \"$g\" >&2; exit 0'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate merge_gate_wrap.py'",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash -c 'g=\"$HOME/.cursor-governance\"; h=\"$g/environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py\"; [ -f \"$h\" ] || exit 0; p=\"$g/.venv/bin/python3\"; [ -x \"$p\" ] || p=\"$g/.venv/bin/python\"; if [ -x \"$p\" ]; then exec \"$p\" \"$h\"; fi; printf \"l9-hook: locked governance interpreter missing under %s/.venv; local_execution_gate_wrap.py did NOT run\\n\" \"$g\" >&2; exit 0'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate local_execution_gate_wrap.py'",
             "timeout": 5
           }
         ]
@@ -108,7 +108,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'g=\"$HOME/.cursor-governance\"; h=\"$g/environment/agents/adapters/claude-code/hooks/memory_gate.py\"; [ -f \"$h\" ] || exit 0; p=\"$g/.venv/bin/python3\"; [ -x \"$p\" ] || p=\"$g/.venv/bin/python\"; if [ -x \"$p\" ]; then exec \"$p\" \"$h\"; fi; printf \"l9-hook: locked governance interpreter missing under %s/.venv; memory_gate.py did NOT run\\n\" \"$g\" >&2; exit 0'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate memory_gate.py'",
             "timeout": 12
           }
         ]
@@ -119,7 +119,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'g=\"$HOME/.cursor-governance\"; h=\"$g/environment/agents/adapters/claude-code/hooks/skill_usage_logger.py\"; [ -f \"$h\" ] || exit 0; p=\"$g/.venv/bin/python3\"; [ -x \"$p\" ] || p=\"$g/.venv/bin/python\"; if [ -x \"$p\" ]; then exec \"$p\" \"$h\"; fi; printf \"l9-hook: locked governance interpreter missing under %s/.venv; skill_usage_logger.py did NOT run\\n\" \"$g\" >&2; exit 0'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer skill_usage_logger.py'",
             "timeout": 5
           }
         ]
