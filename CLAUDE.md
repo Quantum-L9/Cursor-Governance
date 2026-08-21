@@ -23,6 +23,9 @@ Highest first. A lower rung never overrides a higher one.
 5. **Agent-invented contracts** — none. If you find yourself designing a rule,
    it belongs in one of the four rungs above, in a PR.
 
+Maps, not rungs: `ARCHITECTURE.md` and `INVARIANTS.md` index this repo; they do
+not outrank the chain above.
+
 ## The three things most often got wrong here
 
 - **`make pr` is the sanctioned route to GitHub — and nothing blocks the
@@ -56,3 +59,22 @@ exit 5 means specifically: the files are correct and nothing loaded them.
 
 `STRUCTURAL_PASS` means the files are correct. It says nothing about whether any
 of them were loaded into this session; `RUNTIME:` is the line that answers that.
+
+<!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->
+
+## Formatter ownership
+
+Workspace class: `biome_default` — Default for every governed workspace: Biome owns JS/TS/JSON, VS Code JSON language features owns JSONC (the Biome extension cannot format jsonc), Ruff owns Python, Prettier owns Markdown (format-on-save off so governance docs do not churn).
+
+Exactly one formatter owns each language. Do not reformat a file with a tool other than its owner, and do not add config for a competing formatter: the result is a diff that churns on every save.
+
+| Languages | Owner | Note |
+|---|---|---|
+| `javascript`, `javascriptreact`, `typescript`, `typescriptreact`, `json` | **biome** | bound by the governed IDE profile |
+| `jsonc` | **vscode-json** | bound by the governed IDE profile |
+| `python` | **ruff** | bound by the governed IDE profile |
+| `markdown` | **prettier** | bound by the governed IDE profile |
+
+Generated from `environment/ide/policy.json` in the governance clone by `ops/scripts/adapters/agentdocs.sh`. Edit the policy, not this block.
+
+<!-- END L9 FORMATTER OWNERSHIP -->

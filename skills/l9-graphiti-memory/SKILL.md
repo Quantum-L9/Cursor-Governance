@@ -62,7 +62,7 @@ Config: `~/.cursor/graphiti.env` (copy from `ops/graphiti/graphiti.env.example`)
 "$GRAPHITI_PY" "$CLIENT" health
 "$GRAPHITI_PY" "$CLIENT" resolve
 "$GRAPHITI_PY" "$CLIENT" search "query" --limit 5
-"$GRAPHITI_PY" "$CLIENT" conflicts
+"$GRAPHITI_PY" "$CLIENT" conflicts --task "current task"
 "$GRAPHITI_PY" "$CLIENT" inject "current task"
 "$GRAPHITI_PY" "$CLIENT" write "durable fact…" --kind lesson
 "$GRAPHITI_PY" "$CLIENT" write "PICKUP|date=…|task=…|files=…|next=…|blocker=…|gmps=…|outcome=…" --kind pickup_context
@@ -106,7 +106,7 @@ When a durable doctrine, lesson, or ADR delta lands in-repo, write it to Graphit
 Run `conflicts` to gather evidence before locking a plan:
 
 ```bash
-"$GRAPHITI_PY" "$CLIENT" conflicts
+"$GRAPHITI_PY" "$CLIENT" conflicts --task "current task"
 ```
 
 **Conflicts are evidence, never a repository mutex.** A reported conflict may
