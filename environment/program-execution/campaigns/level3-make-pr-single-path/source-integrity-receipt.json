@@ -1,0 +1,20 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "level3-make-pr-single-path",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "c4fbaccb0daa530bfbf41affeeffa64fe2481200a8291f0539792e7e883d1e4b",
+  "bytes": 22756,
+  "pack_recorded_digest": "c4fbaccb0daa530bfbf41affeeffa64fe2481200a8291f0539792e7e883d1e4b",
+  "pack_recorded_bytes": 22756,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-16T14:44:00Z",
+  "collection_method": "campaign-folder-trigger-pack-rebind",
+  "producer": "l9-pe-campaign-activate",
+  "makefile_candidate": {
+    "path": "environment/program-execution/campaigns/level3-make-pr-single-path/Makefile.candidate",
+    "digest_algorithm": "sha256",
+    "digest": "9ecb01de462dc8343dcef72da4744f9ecaf10e981cffea20ffb4248670ef4b49",
+    "bytes": 21175
+  }
+}

@@ -98,6 +98,17 @@ def _nearest_tests(repo_root: Path, module_path: str) -> list[str]:
     return found
 
 
+def _is_pytest_file(repo_root: Path, rel: str) -> bool:
+    path = repo_root / rel
+    if not path.is_file():
+        return False
+    try:
+        text = path.read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return "import pytest" in text or "from pytest" in text or "@pytest." in text
+
+
 def infer_validation_commands(
     task: dict[str, Any], repo_root: Path, *, python: str = "python3"
 ) -> list[str]:
@@ -107,6 +118,9 @@ def infer_validation_commands(
     next to a changed module, then the task's own declared test outputs, then a
     presence check on what the task promises to write. Returns an empty list
     when nothing mechanical is derivable — the caller reports that.
+
+    Pytest-native files must be run with pytest. Inferring unittest for those
+    either fails closed on ``import pytest`` or silently collects zero tests.
     """
     paths = _writable_paths(task)
     tests: list[str] = []
@@ -121,7 +135,12 @@ def infer_validation_commands(
                     if probe not in tests:
                         tests.append(probe)
     if tests:
-        return [f"{python} -m pytest -q {' '.join(tests)}"]
+        if any(_is_pytest_file(repo_root, item) for item in tests):
+            return [f"{python} -m pytest {' '.join(tests)} --tb=short -q"]
+        return [f"{python} -m unittest {' '.join(tests)}"]
+    shells = [path for path in paths if path.endswith((".sh", ".bash"))]
+    if shells:
+        return [f"bash -n {' '.join(shells)}"]
     if paths:
         quoted = " ".join(f"'{path}'" for path in paths)
         return [f"test -s {quoted}"] if len(paths) == 1 else [f"ls -1 {quoted} >/dev/null"]

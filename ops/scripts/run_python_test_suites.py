@@ -446,7 +446,16 @@ def main(argv: list[str] | None = None) -> int:
         )
 
     print(f"[runner] profile={profile} suites={len(suites)} repo_root={REPO_ROOT}")
+    return run_suites(suites, profile, user_args, mapping)
 
+
+def run_suites(
+    suites: list[dict[str, Any]],
+    profile: str,
+    user_args: list[str],
+    mapping: dict[str, str],
+) -> int:
+    """Run declared suites. Local profile stops at the first red suite."""
     results: list[tuple[str, int]] = []
     first_nonzero = 0
     for suite in suites:
@@ -474,6 +483,8 @@ def main(argv: list[str] | None = None) -> int:
         results.append((suite["id"], code))
         if code != 0 and first_nonzero == 0:
             first_nonzero = code
+            if profile == "local":
+                break
 
     print("[runner] ===== summary =====")
     for suite_id, code in results:
