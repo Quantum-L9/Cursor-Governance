@@ -7,11 +7,7 @@ import unittest
 from pathlib import Path
 
 _SSOT = (
-    Path(__file__).resolve().parents[3]
-    / "ops"
-    / "scripts"
-    / "tests"
-    / "test_pr_overlap_check.py"
+    Path(__file__).resolve().parents[3] / "ops" / "scripts" / "tests" / "test_pr_overlap_check.py"
 )
 
 
