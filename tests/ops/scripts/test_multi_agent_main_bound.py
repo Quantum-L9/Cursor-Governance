@@ -512,7 +512,10 @@ def test_task_start_empty_pr_stack_stays_on_origin_main(upstream: Path, tmp_path
     """Empty PR_STACK keeps origin/main and does not consult the resolver."""
     repo = clone_agent(upstream, tmp_path, "agent_empty_stack")
     stub = tmp_path / "refuse_if_called.py"
-    stub.write_text("raise SystemExit('resolver must not run when PR_STACK is empty')\n", encoding="utf-8")
+    stub.write_text(
+        "raise SystemExit('resolver must not run when PR_STACK is empty')\n",
+        encoding="utf-8",
+    )
     occupied = tmp_path / "occupied-empty"
     occupied.mkdir()
     result = subprocess.run(
@@ -565,7 +568,8 @@ def test_task_start_pr_stack_auto_siblings_exit_closed(upstream: Path, tmp_path:
     stub = tmp_path / "siblings.py"
     stub.write_text(
         "import sys\n"
-        "print('FAIL: sibling open-PR chains target main: #10:feat/one, #11:feat/two', file=sys.stderr)\n"
+        "print('FAIL: sibling open-PR chains target main: "
+        "#10:feat/one, #11:feat/two', file=sys.stderr)\n"
         "raise SystemExit(2)\n",
         encoding="utf-8",
     )
