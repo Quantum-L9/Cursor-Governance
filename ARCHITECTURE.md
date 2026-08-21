@@ -1,7 +1,7 @@
 # Cursor-Governance — architecture index
 
-**Version:** 1.0.0  
-**Updated:** 2026-08-21  
+**Version:** 1.0.0
+**Updated:** 2026-08-21
 **Role:** this-repo map. Not Program Execution architecture. Not the L9 Coding Control Plane kernel doc.
 
 This file indexes live trees and owners so an agent can find the right SSOT. It does **not** outrank the authority chain. Do not copy CI tables, skill registries, or PE Controller law here — refresh those from the cited files.

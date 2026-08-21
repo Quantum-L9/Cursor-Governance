@@ -1,7 +1,7 @@
 # Cursor-Governance — invariants index
 
-**Version:** 1.0.0  
-**Updated:** 2026-08-21  
+**Version:** 1.0.0
+**Updated:** 2026-08-21
 **Role:** this-repo operating-invariant index plus a CI enforcement map.
 
 This file does **not** replace [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml). That YAML is the machine-readable organization policy SSOT. The operator note for org policy is [`docs/governance/ORG_INVARIANTS.md`](docs/governance/ORG_INVARIANTS.md). Do not copy `L9-ORG-*` requirement bodies into this file.
