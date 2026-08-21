@@ -93,12 +93,65 @@ class SkillReconciliationTests(unittest.TestCase):
             self.assertIn(expected, skills)
 
     def test_installer_reconciles_skills_into_user_scope(self) -> None:
-        """Project scope alone is invisible when the project dir is not this repo."""
+        """Project scope alone is invisible when the project dir is not this repo.
+
+        Wiring only: this asserts install.sh PASSES the flags. That is not
+        sufficient on its own — see the runtime case below, which proves the
+        flags do what the wiring assumes.
+        """
         install = (REPO / "environment/agents/adapters/claude-code/install.sh").read_text(
             encoding="utf-8"
         )
         self.assertIn("--scope user", install)
         self.assertIn("--scope project", install)
+
+    def test_dual_scope_reconciliation_actually_populates_both(self) -> None:
+        """Runtime proof, because source-text matching is not behavioural evidence.
+
+        `--scope` is an `action="append"` argument, so passing it twice is a
+        contract assumption about the reconciler, not a fact about it. Grepping
+        install.sh would keep passing if the reconciler rejected the pair, or if
+        user scope resolved somewhere Claude Code never reads.
+        """
+        import os
+        import subprocess
+        import tempfile
+
+        reconciler = REPO / "ops" / "scripts" / "reconcile_claude_l9_skills.py"
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp)
+            workspace = home / "ws"
+            workspace.mkdir()
+            subprocess.run(["git", "init", "-q", str(workspace)], check=True)
+            env = dict(os.environ)
+            env["HOME"] = str(home)
+            result = subprocess.run(
+                ["python3", str(reconciler), "--root", str(REPO),
+                 "--scope", "user", "--scope", "project",
+                 "--workspace", str(workspace), "--quiet"],
+                capture_output=True, text=True, env=env, check=False,
+            )
+            self.assertEqual(result.returncode, 0, result.stderr[-1500:])
+
+            # The reconciler also drops its own .l9-managed-skills.json manifest
+            # into each scope; that is bookkeeping, not a skill.
+            def mounted(root: Path) -> list[str]:
+                return sorted(
+                    p.name for p in (root / ".claude" / "skills").iterdir()
+                    if not p.name.startswith(".")
+                )
+
+            user_skills = mounted(home)
+            project_skills = mounted(workspace)
+
+        ssot = sorted(
+            p.parent.name
+            for p in (REPO / "skills").glob("*/SKILL.md")
+            if "_archived" not in p.parts
+        )
+        self.assertEqual(user_skills, ssot, "user scope must carry the full SSOT set")
+        self.assertEqual(project_skills, ssot, "project scope must carry the full SSOT set")
+        self.assertGreater(len(ssot), 45)
 
 
 class AuthorityPointerTests(unittest.TestCase):

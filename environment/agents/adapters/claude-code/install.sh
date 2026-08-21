@@ -244,7 +244,7 @@ if [ -n "$GOV_PY" ] && [ -f "$RECONCILE_SKILLS" ]; then
   # Both scopes. Project scope is invisible when the session's project directory
   # is not this repository — the audited session read the whole repo only as an
   # additional directory — so user scope is the floor that always resolves
-  # (B-01, B-15). The SSOT's 53 skills replace the 8-skill account-sync copy.
+  # (B-01, B-15). The SSOT's 51 skills replace the 8-skill account-sync copy.
   skills_args=(--root "$GOV_DIR" --scope user --scope project --workspace "$WORKSPACE" --quiet)
   [ "$CHECK" = "1" ] && skills_args+=(--check)
   "$GOV_PY" "$RECONCILE_SKILLS" "${skills_args[@]}" \

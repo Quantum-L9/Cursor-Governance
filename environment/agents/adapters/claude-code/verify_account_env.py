@@ -67,6 +67,24 @@ DELIBERATELY_ABSENT = frozenset(
 #: for information, never as a deviation.
 RUNTIME_MANAGED = frozenset({"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"})
 
+#: Names whose VALUE must never be printed, whatever the example file says.
+#: The expected set is derived from environment.env.example, which by contract
+#: assigns no credential — but that contract is enforced elsewhere, and a tool
+#: that echoes live environment values should not depend on another file staying
+#: correct to remain safe (INV-6, defence in depth).
+_SECRETISH = re.compile(
+    r"(TOKEN|SECRET|PASSWORD|PASSWD|CREDENTIAL|_KEY$|APIKEY|API_KEY|BEARER|SESSION_ID)",
+    re.IGNORECASE,
+)
+
+REDACTED = "<redacted>"
+
+
+def safe_value(key: str, value: str) -> str:
+    """Return a value safe to print for this key."""
+    return REDACTED if _SECRETISH.search(key) else value
+
+
 _ASSIGNMENT = re.compile(r"^([A-Z][A-Z0-9_]*)=(.*)$")
 
 
@@ -203,7 +221,7 @@ def main(argv: list[str] | None = None) -> int:
     print("=== Account environment drift ===")
     for key in sorted(RUNTIME_MANAGED):
         if key in os.environ:
-            print(f"  INFO: {key}={os.environ[key]} (runtime-managed; not compared)")
+            print(f"  INFO: {key}={safe_value(key, os.environ[key])} (runtime-managed; not compared)")
     if result["stub_drift"]:
         print(
             f"  DRIFT: Setup script is revision "
@@ -220,7 +238,11 @@ def main(argv: list[str] | None = None) -> int:
 
     print(f"  DRIFT: {len(result['deviations'])} of {result['expected_keys']} variables")
     for row in result["deviations"]:
-        print(f"    {row['key']}: expected {row['expected']!r}, got {row['actual']!r}")
+        key = row["key"]
+        print(
+            f"    {key}: expected {safe_value(key, row['expected'])!r}, "
+            f"got {safe_value(key, row['actual'])!r}"
+        )
     print("\n  Repair: python3 environment/agents/adapters/claude-code/verify_account_env.py"
           " --emit-fields")
     print("          then paste docs/ACCOUNT_FIELDS.md section 1 into Environment variables")
