@@ -1627,7 +1627,7 @@
     },
     {
       "path": "scripts/context7_stack_proof.py",
-      "sha256": "38e668dc4edb35b045438703c7a287ba62fb49ccc0d85ccb9680120ca0e201fe"
+      "sha256": "a2bdc353361fabda65a8ed0e4fb88528b2bdeebb0eeae22bedd4c499ac26efbe"
     },
     {
       "path": "scripts/generate_manifest.py",
@@ -1635,7 +1635,7 @@
     },
     {
       "path": "scripts/launchability.py",
-      "sha256": "c1ff3c0041865afbd4eb40a8e19bf00aac1f5516a16817fc0c905c1611b32bc8"
+      "sha256": "57b702d20c2791b1ab145041351510391116ddb0790651faf029781d2c3686c8"
     },
     {
       "path": "scripts/pe_prepare_state.py",
@@ -1651,7 +1651,7 @@
     },
     {
       "path": "scripts/pe_worker.py",
-      "sha256": "6274f6cb64b271f5b74e08062b3379553e408c03e7040e7f988c0b593bf46003"
+      "sha256": "e94b5b194cc5ca6a1e52b9a3a0d579f6a20514b2808e439f829efa2bc4df9212"
     },
     {
       "path": "scripts/peer_execution_cli.py",
@@ -1719,11 +1719,11 @@
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
-      "sha256": "bd2fce6147c620b9cef42f87a2f55a0196f74507f81da7f94c707331cbe4a2bd"
+      "sha256": "e9b7dbc9af5d8bf6d92d17d0106029891d79ffcdb81318efd015366ca13127d1"
     },
     {
       "path": "scripts/tests/test_launchability.py",
-      "sha256": "186773f384fe7743cba86792a1dff6b1b4e6d8d9ec419a0aa211f678444501b1"
+      "sha256": "ad9900a63e1793ff67d2a8ec0a7d902106fcb28da972edee457c0910a38b9e5a"
     },
     {
       "path": "scripts/tests/test_lazy_materialization.py",
@@ -1747,7 +1747,7 @@
     },
     {
       "path": "scripts/tests/test_pe_worker.py",
-      "sha256": "814dd89e6f953af6e2c4c334bb98e5b43db9a9a7c99622ff4cd38b07711ba680"
+      "sha256": "2c6c91a1218c871dda262e37d6dcd8dd0e60cd0b007d80fe0ee728163d9dc33c"
     },
     {
       "path": "scripts/tests/test_prepare_benchmark.py",
@@ -1763,7 +1763,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "b73e6cfdd08c7c957e2165691b3717bddff0928d3bec131a20d66f2b7a408388"
+      "sha256": "24326c5d13756aafc648835c7776a04fd559afe190bce85af144b24dc7c3d1f5"
     },
     {
       "path": "scripts/tests/test_run_peer_task_pipeline.py",
