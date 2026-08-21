@@ -15,6 +15,13 @@ than editing it by hand.
 `mobile-bootstrap-fixes.readable.md` is a human-facing rendering of the same
 PLAN_DOCUMENT — narrative, not executable.
 
+## Superseded snapshots
+
+`WIP/claude-code-mobile-environment/claude-code-mobile-environment.plan.{json,md}`
+predate this directory and are **not** maintained. This directory is the plan of
+record for the Claude Code adapter workstream; resolve any divergence in favour
+of the plans above. See that directory's `README.md`.
+
 ## Regenerating
 
 ```bash

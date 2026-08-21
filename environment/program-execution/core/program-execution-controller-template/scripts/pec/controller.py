@@ -189,6 +189,8 @@ def _validate_blueprint(blueprint: Path, mode: str) -> list[str]:
         / "scripts"
         / "validate_blueprint.py"
     )
+    if not path.is_file():
+        raise ControllerError(f"validate_blueprint.py missing; refuse start: {path}")
     spec = importlib.util.spec_from_file_location("pec_validate_blueprint", path)
     if spec is None or spec.loader is None:
         raise ControllerError(f"cannot load validate_blueprint.py: {path}")

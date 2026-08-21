@@ -365,6 +365,19 @@ Re-opening this needs a stated consumer with an integrity requirement the
 advisory path does not meet — not merely the observation that CI does not check
 it.
 
+## Audit-trail note: duplicate PR titles #230 / #231 (2026-08-21)
+
+Not actionable — merged history is immutable. Recorded so the next forensic pass
+does not re-derive it.
+
+PRs #230 and #231 merged nine minutes apart on 2026-08-19 under the identical
+title `chore(ci): suspend PE manifest auto-sync and drift gate`, while touching
+fully disjoint file sets: #230 the workflow/manifest sync suspension, #231 the
+Claude adapter hook and install scripts. Searching commit titles for the
+manifest suspension therefore returns a second, unrelated change.
+
+Hygiene, not a defect: a PR title should describe the diff it carries.
+
 ## Claude Code startup/bootstrap — deferred items (2026-08-19)
 
 The startup/bootstrap forensic audit fixed the wiring and reporting defects
