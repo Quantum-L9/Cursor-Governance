@@ -165,7 +165,6 @@ class Context7StackProofTests(unittest.TestCase):
         with self.assertRaises(self.mod.StackProofError):
             self.mod.prove_stack(seed, primed_dir=Path(tempfile.mkdtemp()), fetch=fetch)
 
-
     def test_default_fetch_refuses_file_and_non_https_schemes(self) -> None:
         for url in (
             "file:///etc/passwd",
