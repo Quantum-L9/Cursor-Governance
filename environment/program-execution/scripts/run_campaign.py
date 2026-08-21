@@ -2317,6 +2317,8 @@ def fill_inferred_validation(
     existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
     if not inferred or existing == inferred:
         return contract
+    if "-m unittest" not in inferred[0] and "-m pytest" not in inferred[0]:
+        return contract
     workspace = contract_path.parents[2]
     task_id = str(contract.get("task_id") or "")
     lock_path = workspace / "runtime" / "program-lock.json"
@@ -2350,10 +2352,8 @@ def fill_inferred_validation(
     cards_path.write_text(yaml.safe_dump(cards, sort_keys=False), encoding="utf-8")
     if adopt_changed_definitions(workspace, [task_id]) is None:
         raise CampaignError(f"pec relock refused inferred validation for {task_id}")
-    log(f"inferred validation adopted for {task_id}: {inferred[0]}; retry is safe")
-    raise CampaignError(
-        f"{task_id} validation was adopted via relock; re-run make campaign to render it"
-    )
+    log(f"inferred validation adopted for {task_id}: {inferred[0]}")
+    return contract
 
 
 def run_worker_handoff(
