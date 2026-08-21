@@ -335,27 +335,52 @@ Keep shipping through `make improve` → `make pr-check` → `make pr`.
 - [ ] Later: retire `make push: precommit backup` and Claude `pre-commit install`
       teaching once the owner is yaml.
 
-## Program Execution MANIFEST.json — enforcement suspended (2026-08-19)
+## Program Execution MANIFEST.json — advisory by decision (2026-08-21)
 
-- [ ] **Re-design and restore Program Execution MANIFEST.json enforcement**
-      (deferred; post-velocity-window). Automatic generation and CI enforcement
-      of `environment/program-execution/MANIFEST.json` were temporarily disabled
-      on 2026-08-19 to remove PR merge friction. The current design hashes a
-      broad mutable Program Execution source tree, causing write amplification,
-      branch divergence, merge conflicts, and stale-generated-artifact failures.
-      Before re-enabling, identify the manifest's actual consumers and integrity
-      requirements; reduce or redefine its input surface, or move generation to
-      an explicit build/release boundary; add deterministic generation tests;
-      verify that normal source edits do not create unnecessary cross-branch
-      churn; then restore automatic generation and CI enforcement.
-      - Suspended surfaces: `sync_generated_artifacts.py` (now opt-in via
-        `--pe-manifest`), the `paths` list in
-        `.github/workflows/governance-self-check.yml`, and the
-        "Program Execution manifest integrity" step in
-        `.github/workflows/peer-execution.yml`.
-      - Still available: `environment/program-execution/scripts/generate_manifest.py`
-        and `validate_manifest.py` (the latter still runs under
-        `make program-execution-conformance`, which is manual, not the PR gate).
+Settled. This is no longer open work; it is recorded so the disposition is
+findable from the artifact.
+
+`environment/program-execution/MANIFEST.json` is **advisory**. Nothing in the PR
+gate and nothing in CI enforces it, and that is the intended design, not a
+suspension awaiting reversal.
+
+- **Why.** The manifest hashes 471 files across the Program Execution adapter
+  layer. `scripts/` alone changed 38 times in the three days before this
+  decision, so ordinary source edits invalidate it by construction — that churn
+  is what the artifact measures, not a defect in how it is scoped. Narrowing the
+  surface was considered and rejected: `campaigns/` (124 files) holds declarative
+  `CAMPAIGN_SOURCE.yaml` inputs rather than run output, so dropping it would
+  shed a real contract surface without removing the friction.
+- **Where it still runs.** `make program-execution-conformance` invokes
+  `validate_manifest.py`. That target is the manifest's home, deliberately
+  manual.
+- **Generation.** `generate_manifest.py` stays opt-in through
+  `sync_generated_artifacts.py --pe-manifest`. Auto-writing it during a gate run
+  was the original source of the merge friction (a hook that rewrites the tree
+  mid-gate reads as "files were modified by this hook"), so the gate never
+  writes it.
+- **What replaces CI enforcement.** `tests/environment/program_execution/test_manifest_contract.py`
+  pins determinism, the generate/validate round-trip, and the exclusion rules on
+  both sides. `git_guardrails.DELIBERATELY_NOT_GENERATED` keeps the manifest off
+  the disposable-generated list so the clean gate never destroys a local
+  regeneration.
+
+Re-opening this needs a stated consumer with an integrity requirement the
+advisory path does not meet — not merely the observation that CI does not check
+it.
+
+## Audit-trail note: duplicate PR titles #230 / #231 (2026-08-21)
+
+Not actionable — merged history is immutable. Recorded so the next forensic pass
+does not re-derive it.
+
+PRs #230 and #231 merged nine minutes apart on 2026-08-19 under the identical
+title `chore(ci): suspend PE manifest auto-sync and drift gate`, while touching
+fully disjoint file sets: #230 the workflow/manifest sync suspension, #231 the
+Claude adapter hook and install scripts. Searching commit titles for the
+manifest suspension therefore returns a second, unrelated change.
+
+Hygiene, not a defect: a PR title should describe the diff it carries.
 
 ## Claude Code startup/bootstrap — deferred items (2026-08-19)
 

@@ -1631,7 +1631,7 @@
     },
     {
       "path": "scripts/generate_manifest.py",
-      "sha256": "9cdf86d3c3475a908f4eb4c12bc28eccab4f18bf9949a708f2a3b26603a4faff"
+      "sha256": "b07d9bfc8cbf39da6ff697430a9747b5f0f9a764042fd84bda0d21dba14c1b49"
     },
     {
       "path": "scripts/launchability.py",
@@ -1779,7 +1779,7 @@
     },
     {
       "path": "scripts/validate_manifest.py",
-      "sha256": "6b08d04d2d44ba5f87e0cd073f0c2f0ff1f00eabcb25fbfbb2efdcde619f470a"
+      "sha256": "52171ef5baec14408d768ebc1b57d7d95f336a056bb6dd639e2541975d0fe7b3"
     },
     {
       "path": "scripts/validate_thin_providers.py",

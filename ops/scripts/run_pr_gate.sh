@@ -125,6 +125,9 @@ fi
 if [[ -f "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py" ]]; then
   python3 "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py"
 fi
+if [[ -f "$GOV_ROOT/ops/scripts/validate_git_denial_residue.py" ]]; then
+  python3 "$GOV_ROOT/ops/scripts/validate_git_denial_residue.py"
+fi
 
 echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / nightly) ==="
 
