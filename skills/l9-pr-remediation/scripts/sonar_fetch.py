@@ -38,11 +38,16 @@ from pathlib import Path
 # The capability plane lives in ops/secrets (the SSOT). Import it rather than
 # re-implementing a second client inside a skill.
 _OPS_SECRETS = Path(__file__).resolve().parents[3] / "ops" / "secrets"
-if str(_OPS_SECRETS) not in sys.path:
-    sys.path.insert(0, str(_OPS_SECRETS))
+_OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
+for _extra in (_OPS_SECRETS, _OPS_LIB):
+    if str(_extra) not in sys.path:
+        sys.path.insert(0, str(_extra))
 
 from capability_client import CapabilityClient  # noqa: E402
+from safe_https import https_exchange  # noqa: E402
 from surface_trust import classify, require_trusted  # noqa: E402
+
+_SONAR_HOSTS = frozenset({"sonarcloud.io"})
 
 MEASURE_METRICS = [
     "bugs",
@@ -82,7 +87,9 @@ class DirectTransport:
         if self._token:
             request.add_header("Authorization", f"Bearer {self._token}")
         try:
-            with urllib.request.urlopen(request, timeout=45) as response:  # noqa: S310 (https only)
+            with https_exchange(
+                request, timeout=45, allowed_hosts=_SONAR_HOSTS, label="SonarCloud URL"
+            ) as response:
                 return json.loads(response.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", "replace")[:400]

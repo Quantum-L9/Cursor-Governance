@@ -40,6 +40,12 @@ sys.path.insert(0, str(HERE))
 
 from capability_client import broker_url, session_identity  # noqa: E402
 
+_OPS_LIB = HERE.parent / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import exchange  # noqa: E402
+
 TIMEOUT = 10
 
 IDENTITY = "identity"
@@ -60,7 +66,10 @@ def dns_state(host: str) -> str:
 
 def health_state(url: str, timeout: int = TIMEOUT) -> str:
     try:
-        with urllib.request.urlopen(f"{url}/healthz", timeout=timeout) as response:  # noqa: S310
+        request = urllib.request.Request(f"{url}/healthz", method="GET")
+        with exchange(
+            request, timeout=timeout, allow_loopback_http=True, label="broker health URL"
+        ) as response:
             return f"http_{response.status}"
     except urllib.error.HTTPError as exc:
         return f"http_{exc.code}"

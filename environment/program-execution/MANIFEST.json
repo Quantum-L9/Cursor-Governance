@@ -1627,7 +1627,7 @@
     },
     {
       "path": "scripts/context7_stack_proof.py",
-      "sha256": "13060d42923433d6ffca9066fa9dce0ee9012bffc7d32f4e0b39a09e3315ff21"
+      "sha256": "fb399e62287b8b0a3560e2b083b35d540290bcaf0e5e027027c23b1133ce7897"
     },
     {
       "path": "scripts/generate_manifest.py",

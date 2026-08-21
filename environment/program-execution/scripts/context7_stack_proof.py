@@ -13,7 +13,7 @@ import hashlib
 import json
 import os
 import re
-import ssl
+import sys
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -21,6 +21,12 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+_OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import exchange  # noqa: E402
 
 SCHEMA = "l9.program-execution.stack-proof.v1"
 CONTEXT7_SEARCH = "https://context7.com/api/v2/libs/search"
@@ -130,15 +136,14 @@ def _headers() -> dict[str, str]:
 
 def default_fetch(url: str, headers: dict[str, str] | None = None) -> tuple[int, str]:
     req = urllib.request.Request(url, headers=headers or {"User-Agent": "l9-pe-stack-proof/1"})
-    context = ssl.create_default_context()
     try:
-        with urllib.request.urlopen(req, timeout=20, context=context) as resp:
+        with exchange(req, timeout=20, label="stack-proof URL") as resp:
             body = resp.read().decode("utf-8", errors="replace")
             return int(resp.status), body
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
         return int(exc.code), body
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
         raise StackProofError(f"GET failed for {url}: {exc}") from exc
 
 

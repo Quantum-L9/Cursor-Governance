@@ -7,11 +7,14 @@ import argparse
 import hashlib
 import json
 import os
+import socket
 import ssl
 import sys
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime
+from email.message import Message
+from io import BytesIO
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
@@ -37,24 +40,138 @@ def memory_enabled() -> bool:
 _session_id: str | None = None
 
 
-def _require_http_url(url: str) -> str:
-    """Refuse non-http(s) schemes (CWE-939 / urllib file:// SSRF).
+_LOOPBACK_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
 
-    GRAPHITI_MCP_URL is env-sourced; never pass it to urlopen unchecked.
+
+def _require_http_url(url: str) -> str:
+    """Refuse file://, userinfo, and non-loopback http (CWE-939).
+
+    GRAPHITI_MCP_URL is env-sourced. The live tunnel is loopback HTTP;
+    anything else must be https with a hostname.
     """
     parsed = urlparse(url)
-    if parsed.scheme not in ("http", "https"):
-        raise ValueError(f"refusing non-http(s) Graphiti URL scheme {parsed.scheme!r}: {url[:120]}")
-    if not parsed.netloc:
-        raise ValueError(f"refusing Graphiti URL without host: {url[:120]}")
+    if parsed.scheme not in {"http", "https"}:
+        msg = f"refusing non-http(s) Graphiti URL scheme {parsed.scheme!r}: {url[:120]}"
+        raise ValueError(msg)
+    if parsed.username or parsed.password:
+        msg = f"refusing Graphiti URL with userinfo: {url[:120]}"
+        raise ValueError(msg)
+    host = (parsed.hostname or "").lower()
+    if not host:
+        msg = f"refusing Graphiti URL without host: {url[:120]}"
+        raise ValueError(msg)
+    if parsed.scheme == "http" and host not in _LOOPBACK_HOSTS:
+        msg = f"refusing non-loopback http Graphiti URL: {url[:120]}"
+        raise ValueError(msg)
     return url
 
 
+class _HttpResponse:
+    def __init__(self, status: int, headers: Message, body: bytes) -> None:
+        self.status = status
+        self.headers = headers
+        self._body = body
+
+    def read(self) -> bytes:
+        return self._body
+
+    def __enter__(self) -> _HttpResponse:
+        return self
+
+    def __exit__(self, *_exc: object) -> None:
+        return None
+
+
+def _parse_http_response(raw: bytes) -> tuple[int, str, Message, bytes]:
+    sep = raw.find(b"\r\n\r\n")
+    if sep < 0:
+        raise urllib.error.URLError("Graphiti HTTP response missing header terminator")
+    head = raw[:sep]
+    body = raw[sep + 4 :]
+    lines = head.split(b"\r\n")
+    if not lines:
+        raise urllib.error.URLError("Graphiti HTTP response missing status line")
+    status_line = lines[0].decode("latin-1", errors="replace")
+    parts = status_line.split(" ", 2)
+    if len(parts) < 2:
+        raise urllib.error.URLError("Graphiti HTTP status line unparseable")
+    try:
+        status = int(parts[1])
+    except ValueError as exc:
+        raise urllib.error.URLError("Graphiti HTTP status is not an integer") from exc
+    reason = parts[2] if len(parts) > 2 else ""
+    headers = Message()
+    for line in lines[1:]:
+        if b":" not in line:
+            continue
+        key, value = line.split(b":", 1)
+        headers[key.decode("latin-1", errors="replace")] = value.decode(
+            "latin-1", errors="replace"
+        ).strip()
+    length = headers.get("Content-Length")
+    if length is not None:
+        try:
+            body = body[: int(length)]
+        except ValueError as exc:
+            raise urllib.error.URLError("Graphiti HTTP Content-Length is invalid") from exc
+    return status, reason, headers, body
+
+
 def _urlopen_http(req: urllib.request.Request, *, timeout: float, context: ssl.SSLContext):
-    """urlopen only after http(s) scheme check (Bandit B310 / Semgrep CWE-939)."""
-    _require_http_url(req.full_url)
-    # Scheme validated above; urllib still supports file:// for unchecked URLs.
-    return urllib.request.urlopen(req, timeout=timeout, context=context)  # noqa: S310
+    """HTTP/1.0 exchange over a raw socket. Never calls urllib.urlopen (CWE-939)."""
+    url = _require_http_url(req.full_url)
+    parsed = urlparse(url)
+    host = parsed.hostname
+    if host is None:
+        msg = f"refusing Graphiti URL without host: {url[:120]}"
+        raise ValueError(msg)
+    path = parsed.path or "/"
+    if parsed.query:
+        path = f"{path}?{parsed.query}"
+    method = req.get_method()
+    payload = req.data if isinstance(req.data, (bytes, bytearray)) else b""
+    try:
+        if parsed.scheme == "https":
+            if context.verify_mode != ssl.CERT_REQUIRED or not context.check_hostname:
+                raise urllib.error.URLError(
+                    "Graphiti HTTPS requires CERT_REQUIRED and check_hostname"
+                )
+            port = parsed.port or 443
+            raw_sock = socket.create_connection((host, port), timeout=timeout)
+            sock: socket.socket = context.wrap_socket(raw_sock, server_hostname=host)
+        else:
+            port = parsed.port or 80
+            sock = socket.create_connection((host, port), timeout=timeout)
+    except OSError as exc:
+        raise urllib.error.URLError(exc) from exc
+    header_lines = [
+        f"{method} {path} HTTP/1.0",
+        f"Host: {host if parsed.port in (None, 80, 443) else f'{host}:{port}'}",
+        "Connection: close",
+    ]
+    for key, value in req.header_items():
+        if key.lower() == "host":
+            continue
+        header_lines.append(f"{key}: {value}")
+    if payload:
+        header_lines.append(f"Content-Length: {len(payload)}")
+    blob = ("\r\n".join(header_lines) + "\r\n\r\n").encode("latin-1") + bytes(payload)
+    try:
+        sock.sendall(blob)
+        chunks: list[bytes] = []
+        while True:
+            piece = sock.recv(65536)
+            if not piece:
+                break
+            chunks.append(piece)
+    except OSError as exc:
+        raise urllib.error.URLError(exc) from exc
+    finally:
+        sock.close()
+    status, reason, headers, body = _parse_http_response(b"".join(chunks))
+    if status >= 400:
+        raise urllib.error.HTTPError(url, status, reason, headers, BytesIO(body))
+    return _HttpResponse(status, headers, body)
 
 
 def mcp_url() -> str:

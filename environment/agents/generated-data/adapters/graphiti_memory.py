@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -11,7 +12,13 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
-from urllib.request import Request, urlopen
+from urllib.request import Request
+
+_OPS_LIB = Path(__file__).resolve().parents[4] / "ops" / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import exchange  # noqa: E402
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
 _MEMORY_OUTBOX_DIR = _PACKAGE_ROOT / ".runtime" / "memory-outbox"
@@ -151,9 +158,10 @@ class HttpJsonTransport:
             method="POST",
         )
         try:
-            with urlopen(
+            with exchange(
                 request,
                 timeout=self.timeout_seconds,
+                label="Graphiti HTTP endpoint",
             ) as response:
                 body = response.read()
                 status_code = response.status
