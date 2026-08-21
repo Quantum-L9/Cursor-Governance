@@ -61,4 +61,51 @@ SKIP_LIST="sync-generated-artifacts"
 if should_skip_consumer_symlink_checks "$WS"; then
   SKIP_LIST="${SKIP_LIST},symlinks-check"
 fi
+
+# Hooks may rewrite (ruff --fix, format, eof, trailing-ws). Do not exit on
+# pre-commit's files_modified status until dirt is classified below.
+set +e
 SKIP="$SKIP_LIST" pre-commit run --files "${files[@]}"
+pc_rc=$?
+set -e
+
+GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+echo "--- lint-ruff (changed Python) ---"
+py_list="$(mktemp)"
+# Never delete a caller-owned PR_CHANGED_FILE. Only unlink temps we created.
+if [[ -n "${PR_CHANGED_FILE:-}" && "$tmp" == "$PR_CHANGED_FILE" ]]; then
+  trap 'rm -f "$py_list"' EXIT
+else
+  trap 'rm -f "$tmp" "$py_list"' EXIT
+fi
+grep -E '\.(py|pyi)$' "$tmp" >"$py_list" || true
+if [[ ! -s "$py_list" ]]; then
+  echo "OK: no changed Python files for ruff"
+else
+  echo "ruff (changed): $(grep -c . "$py_list") file(s)"
+  _ruff="$GOV_ROOT/.venv/bin/ruff"
+  if [[ ! -x "$_ruff" && -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
+    _ruff="$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff"
+  fi
+  if [[ ! -x "$_ruff" ]]; then
+    echo "FAIL: locked ruff missing at $GOV_ROOT/.venv/bin/ruff (run: make venv)" >&2
+    exit 1
+  fi
+  xargs "$_ruff" check <"$py_list"
+  xargs "$_ruff" format --check <"$py_list"
+fi
+
+# Fail closed on tracked dirt. Do not auto-stage — commit the rewrite, re-run.
+if git status --porcelain | grep -qvE '^\?\?'; then
+  echo "FAIL: tracked files dirty after precommit-repo — commit the rewrite, then re-run."
+  echo "      Do not auto-stage. Paths:"
+  git status --porcelain | grep -vE '^\?\?'
+  exit 1
+fi
+
+if [[ "$pc_rc" -ne 0 ]]; then
+  echo "FAIL: pre-commit exited ${pc_rc}" >&2
+  exit "$pc_rc"
+fi
+
+echo "OK: precommit-repo clean (hooks + lint-ruff, no tracked dirt)"

@@ -1,0 +1,7 @@
+# Human-owned test quarantine ledger. CI never writes this file.
+# Empty on purpose: Cursor-Governance has no quarantined tests.
+# Schema is the l9-ci-core `test-quarantine` kind consumed by
+# Quantum-L9/l9-ci-core baseline-ratchet.yml.
+schema: l9.test_quarantine.v1
+kind: test-quarantine
+entries: []

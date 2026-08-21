@@ -1,0 +1,35 @@
+# Baseline Ratchet — thin caller.
+#
+# All ratchet logic lives in Quantum-L9/l9-ci-core, pinned by immutable SHA.
+# This caller supplies repository-specific inputs only. CI never writes
+# ledgers — only humans do, in reviewed PRs.
+#
+# l9-ci-core still defaults deprecated ledger input keys. Those inputs are
+# omitted here on purpose. Do not add a CG file that teaches that deprecated
+# type. If core later requires those keys with no omit path, stop: core's
+# API is stale. Live wire name in this repo is TransportPacket.
+#
+# Branch-protection check names from the reusable workflow:
+#   Baseline Ratchet / Required Tests
+#   Baseline Ratchet / Quarantined Debt
+#   Baseline Ratchet / Workflow Integrity
+#   Baseline Ratchet / Ratchet Verdict
+
+name: Baseline Ratchet
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  ratchet:
+    name: Baseline Ratchet
+    uses: Quantum-L9/l9-ci-core/.github/workflows/baseline-ratchet.yml@c007415b72444442a87fd8210c19d15decd3810d
+    with:
+      core-revision: c007415b72444442a87fd8210c19d15decd3810d
+      python-version: "3.12"
+      pytest-paths: tests
+      test-quarantine-ledger: .l9/baselines/test-quarantine.yml
+      requirements-files: requirements.txt

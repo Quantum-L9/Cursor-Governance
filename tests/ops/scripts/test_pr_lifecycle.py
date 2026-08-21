@@ -222,3 +222,59 @@ def test_precommit_missing_binary_fails_after_files(tmp_path: Path) -> None:
     assert proc.returncode == 1
     assert "INTERNAL leaf of make pr-check" in proc.stderr
     assert "Do not run 'pre-commit install'" in proc.stderr
+
+
+def test_precommit_repo_fails_closed_on_tracked_dirt(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path, feature=True)
+    (repo / "a.txt").write_text("dirty\n", encoding="utf-8")
+    listed = tmp_path / "changed.txt"
+    listed.write_text("a.txt\n", encoding="utf-8")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    stub = bin_dir / "pre-commit"
+    stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    stub.chmod(0o755)
+    proc = _run(
+        ["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)],
+        cwd=repo,
+        env={
+            "WS": str(repo),
+            "PR_BASE": "main",
+            "PR_CHANGED_FILE": str(listed),
+            "PATH": f"{bin_dir}:/usr/bin:/bin",
+        },
+    )
+    assert proc.returncode == 1, proc.stdout + proc.stderr
+    assert "tracked files dirty after precommit-repo" in proc.stdout
+    assert "Do not auto-stage" in proc.stdout
+
+
+def test_pr_check_depends_on_precommit_repo() -> None:
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    assert "pr-check: precommit-repo" in makefile
+    assert "pr: precommit-repo" in makefile
+
+
+def test_gate_does_not_rerun_ruff() -> None:
+    gate = (ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text(encoding="utf-8")
+    precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    assert "--- ruff (changed Python) ---" not in gate
+    assert "--- lint-ruff (changed Python) ---" in precommit
+
+
+def test_workflow_action_pins() -> None:
+    proc = _run(
+        ["python3", str(SCRIPTS / "validate_workflow_action_pins.py")],
+        cwd=ROOT,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_ratchet_caller_omits_deprecated_ledger_inputs() -> None:
+    text = (ROOT / ".github" / "workflows" / "baseline-ratchet-caller.yml").read_text(
+        encoding="utf-8"
+    )
+    assert "packet-envelope" not in text
+    assert "PacketEnvelope" not in text
+    assert "test-quarantine-ledger" in text
+    assert "requirements-files: requirements.txt" in text
