@@ -128,11 +128,32 @@ def _headers() -> dict[str, str]:
     return headers
 
 
+ALLOWED_FETCH_SCHEMES = frozenset({"https"})
+
+
+def require_https_url(url: str) -> urllib.parse.SplitResult:
+    """Refuse file:// and every non-https scheme before urllib sees the URL."""
+    parsed = urllib.parse.urlsplit(url)
+    scheme = parsed.scheme.lower()
+    if scheme not in ALLOWED_FETCH_SCHEMES:
+        msg = f"refusing non-https URL scheme: {scheme or '<empty>'}"
+        raise StackProofError(msg)
+    if not parsed.netloc:
+        msg = "refusing URL without host"
+        raise StackProofError(msg)
+    if parsed.username or parsed.password:
+        msg = "refusing URL with embedded credentials"
+        raise StackProofError(msg)
+    return parsed
+
+
 def default_fetch(url: str, headers: dict[str, str] | None = None) -> tuple[int, str]:
+    require_https_url(url)
     req = urllib.request.Request(url, headers=headers or {"User-Agent": "l9-pe-stack-proof/1"})
     context = ssl.create_default_context()
+    opener = urllib.request.build_opener(urllib.request.HTTPSHandler(context=context))
     try:
-        with urllib.request.urlopen(req, timeout=20, context=context) as resp:
+        with opener.open(req, timeout=20) as resp:
             body = resp.read().decode("utf-8", errors="replace")
             return int(resp.status), body
     except urllib.error.HTTPError as exc:
