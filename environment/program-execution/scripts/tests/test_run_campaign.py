@@ -479,6 +479,27 @@ class RunCampaignTests(unittest.TestCase):
             self.mod.refuse_hash_campaign_id("pe-8c9f6de43b25")
         self.assertIn("intent.v1", str(ctx.exception))
 
+    def test_fill_inferred_validation_from_writable_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "ops/scripts/tests").mkdir(parents=True)
+            (root / "ops/scripts/tests/test_resolve_stack_tip.py").write_text(
+                "def test_ok():\n    assert True\n", encoding="utf-8"
+            )
+            contract_path = root / "TASK-001.json"
+            contract = {
+                "task_id": "TASK-001",
+                "writable_paths": [
+                    "ops/scripts/resolve_stack_tip.py",
+                    "ops/scripts/tests/test_resolve_stack_tip.py",
+                ],
+                "validation_commands": [],
+            }
+            filled = self.mod.fill_inferred_validation(contract_path, contract, root)
+            self.assertTrue(filled["validation_commands"])
+            self.assertIn("pytest", filled["validation_commands"][0])
+            self.assertIn("test_resolve_stack_tip.py", filled["validation_commands"][0])
+
     def test_live_lock_missing_seed_paths(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             workspace = Path(raw)

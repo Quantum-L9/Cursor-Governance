@@ -288,6 +288,39 @@ class CompileActivationTests(unittest.TestCase):
             self.assertEqual(task["kernel_profile"], "CHANGE")
             self.assertTrue(result["wrote"])
 
+    def test_projects_test_paths_as_command_validation(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _repo(Path(raw))
+            dump_yaml(
+                root / "intent.yaml",
+                {
+                    "campaign_id": "demo-activate-v1",
+                    "title": "Demo Activate",
+                    "objective": "Activate from a compiled plan.",
+                    "plan_status": "ConditionallyReady",
+                    "target": {"repository_id": "Quantum-L9/Cursor-Governance"},
+                    "tasks": [
+                        {
+                            "id": "T1",
+                            "title": "Add resolver",
+                            "objective": "Add resolver",
+                            "paths": [
+                                "ops/scripts/resolve_stack_tip.py",
+                                "ops/scripts/tests/test_resolve_stack_tip.py",
+                            ],
+                        }
+                    ],
+                },
+            )
+            compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
+            source = load_yaml(
+                root
+                / "environment/program-execution/campaigns/demo-activate-v1/CAMPAIGN_SOURCE.yaml"
+            )
+            validation = source["tasks"][0]["validation"][0]
+            self.assertEqual(validation["method"], "command")
+            self.assertIn("test_resolve_stack_tip.py", validation["command_or_inspection"])
+
     def test_refuses_plan_status_partial(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = _repo(Path(raw))

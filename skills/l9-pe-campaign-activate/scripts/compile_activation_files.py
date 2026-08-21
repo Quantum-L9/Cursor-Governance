@@ -152,14 +152,34 @@ def project_conditionally_ready(intent: dict[str, Any]) -> dict[str, Any]:
         ]:
             task["entrypoints"] = paths or ["make campaign"]
         if not [entry for entry in (task.get("validation") or []) if isinstance(entry, dict)]:
-            task["validation"] = [
-                {
-                    "id": f"VAL-{index:03d}",
-                    "method": "inspection",
-                    "command_or_inspection": objective or title,
-                    "expected_result": "PASS",
-                }
+            tests = [
+                path
+                for path in paths
+                if path.endswith(".py")
+                and (
+                    Path(path).name.startswith("test_")
+                    or path.startswith("tests/")
+                    or "/tests/" in path
+                )
             ]
+            if tests:
+                task["validation"] = [
+                    {
+                        "id": f"VAL-{index:03d}",
+                        "method": "command",
+                        "command_or_inspection": f"python3 -m pytest -q {' '.join(tests)}",
+                        "expected_result": "PASS",
+                    }
+                ]
+            else:
+                task["validation"] = [
+                    {
+                        "id": f"VAL-{index:03d}",
+                        "method": "inspection",
+                        "command_or_inspection": objective or title,
+                        "expected_result": "PASS",
+                    }
+                ]
         acceptance = task.get("acceptance")
         if not ((isinstance(acceptance, list) and acceptance) or (
             isinstance(acceptance, str) and acceptance.strip()

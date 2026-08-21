@@ -2289,6 +2289,32 @@ def measure_admission_evidence(target_path: Path) -> dict[str, Any]:
     return measured
 
 
+def fill_inferred_validation(
+    contract_path: Path, contract: dict[str, Any], worktree: Path
+) -> dict[str, Any]:
+    """Infer executable validation when a live contract still has none.
+
+    ConditionallyReady plan projection used to emit inspection-only entries.
+    pec verify then returns INCOMPLETE. Infer from writable test paths and
+    persist so the controller and the attempt receipt see the same commands.
+    """
+    existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
+    if existing:
+        return contract
+    launch = _load_script("launchability", PE_ROOT / "scripts/launchability.py")
+    inferred = launch.infer_validation_commands(
+        {"writable_paths": contract.get("writable_paths") or []},
+        worktree,
+    )
+    if not inferred:
+        return contract
+    updated = dict(contract)
+    updated["validation_commands"] = inferred
+    contract_path.write_text(json.dumps(updated, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    log(f"inferred validation for {contract.get('task_id')}: {inferred[0]}")
+    return updated
+
+
 def run_worker_handoff(
     workspace: Path,
     task: dict[str, Any],
@@ -2542,6 +2568,7 @@ def default_execute(
             metadata={"worktree": str(worktree)},
         )
         contract = json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
+        contract = fill_inferred_validation(Path(str(rendered["contract"])), contract, worktree)
         writable = [str(path) for path in (contract.get("writable_paths") or []) if path]
         if not writable:
             writable = task_output_locations(task)
