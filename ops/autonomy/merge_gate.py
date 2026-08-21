@@ -159,8 +159,7 @@ def _segment_is_pr_merge(segment: str) -> bool:
 def _command_is_pr_merge(command: str) -> bool:
     """True only for an executed ``gh pr merge``. Heredoc/commit text does not count."""
     return any(
-        _segment_is_pr_merge(segment)
-        for segment in split_segments(strip_heredoc_bodies(command))
+        _segment_is_pr_merge(segment) for segment in split_segments(strip_heredoc_bodies(command))
     )
 
 
