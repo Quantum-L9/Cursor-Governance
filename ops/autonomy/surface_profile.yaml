@@ -24,14 +24,22 @@ authorize:
 
 forbid:
   # Path rules: denied at EVERY phase, including release_authorized, because
-  # they bypass the Makefile checkers. Enforced by
+  # they reach GitHub without the Makefile checkers. Enforced by
   # ops/autonomy/local_execution_gate.py and mirrored into the adapter
   # settings deny-list (validate_claude_env.py fails if the two disagree).
-  - raw_git_push_outside_make_pr
-  - raw_gh_pr_create_outside_make_pr
-  - raw_gh_pr_edit_outside_make_pr
+  #
+  # `git` and `gh` are deliberately NOT on this list. They are exempt from the
+  # workflow plane (ops/autonomy/git_execution_exemption.py) and answer to the
+  # effect plane instead (ops/autonomy/git_guardrails.py), which denies an
+  # unrecoverable mutation of sensitive state whatever the command is called.
+  # See CANONICAL_LAW §6.2.4. Listing them here would restate an enforcement
+  # that does not exist — and validate_claude_env.py fails the build if the
+  # adapter deny-list blocks them.
+  - make_push_outside_make_pr
   - mcp_create_pull_request_or_push_files
-  # Timing rules: governed by the L4 release receipt.
+  # Timing rules: governed by the L4 release receipt. These bind the sanctioned
+  # publish path and the MCP write tools. A raw `git push` mid-execution is off
+  # doctrine but is not mechanically denied — see the git/gh note above.
   - mid_execution_push
   - mid_execution_pr_create
   - merge_pull_request_without_l9_pr_remediation
@@ -211,8 +219,11 @@ session_start_block: |
     (`campaign/<campaign_id>`). Set `PR_BASE` to that branch. Do **not**
     open campaign PRs against `main`. Do **not** mix campaign commits onto
     unrelated feature branches.
-  - Mid-execution `git push` / `gh pr create` / `make pr` are **denied** by
-    `ops/autonomy/local_execution_gate.py` until release_authorized.
+  - Mid-execution `make pr` and the MCP write tools are **denied** by
+    `ops/autonomy/local_execution_gate.py` until release_authorized. Raw
+    `git push` / `gh pr create` are off doctrine but NOT gate-denied — git and
+    gh answer to `ops/autonomy/git_guardrails.py` by effect. See
+    CANONICAL_LAW §6.2.4.
   - YOU MUST NOT force-push, hard-reset, admin-merge, or exfiltrate secrets.
   - Merge stays denied by `ops/autonomy/merge_gate.py` until
     `/l9-pr-remediation` writes the receipt (or `L9_MERGE_AUTHORIZED`).

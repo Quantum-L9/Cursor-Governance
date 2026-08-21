@@ -10,7 +10,10 @@ Default ON (`L9_L4_LOCAL_AUTONOMY=1`).
 ## MUST
 
 1. Execute programs/contracts on a **stacked feature branch** with **local commits only**.
-2. **Do not** `git push`, `gh pr create`, or `make pr` mid-execution.
+2. **Do not** `git push`, `gh pr create`, or `make pr` mid-execution. `make pr`
+   and the MCP write tools are mechanically denied until release; `git` and `gh`
+   are not blocked (CANONICAL_LAW §6.2.4), so mid-execution restraint on those
+   is doctrine you keep, not a gate that stops you.
 3. **Do not** stall for push-approval pacing during local execution.
 4. When the program/contract is finished locally, run:
    - `kernels/Recursive Alignment.md`

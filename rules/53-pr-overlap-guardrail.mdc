@@ -15,8 +15,9 @@ The only sanctioned publish path (`make pr` → `open_pr_after_gate.sh`) runs
 `ops/scripts/pr_overlap_check.py` between the L4 release check and `git push`.
 The gate detects whether the current branch textually conflicts with any
 already-open PR in the same repo, and blocks BEFORE the push with routing
-instructions. Raw `git push` / `gh pr create` are denied everywhere else, so
-this one choke point covers the whole publish surface.
+instructions. Raw `git push` / `gh pr create` bypass this check entirely and are
+NOT denied (CANONICAL_LAW §6.2.4) — the choke point covers the sanctioned path,
+not the whole publish surface, so overlap detection depends on using `make pr`.
 
 ## Overlap gate
 
