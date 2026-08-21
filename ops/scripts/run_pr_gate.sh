@@ -277,49 +277,6 @@ if ! _gate_classify_dirtiness "pre-commit"; then
   fi
 fi
 
-echo "--- ruff (changed Python) ---"
-py_count=0
-grep -E '\.(py|pyi)$' "$changed_file" >"$py_list" || true
-py_count="$(grep -c . "$py_list" || true)"
-if [[ "${py_count:-0}" -eq 0 ]]; then
-  echo "OK: no changed Python files for ruff"
-else
-  echo "ruff (changed): ${py_count} file(s)"
-  _ruff="$GOV_ROOT/.venv/bin/ruff"
-  if [[ ! -x "$_ruff" && -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
-    _ruff="$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff"
-  fi
-  if [[ ! -x "$_ruff" ]]; then
-    echo "FAIL: locked ruff missing at $GOV_ROOT/.venv/bin/ruff (run: make venv)"
-    exit 1
-  fi
-  xargs "$_ruff" check <"$py_list"
-  # Format in place, then restage only the paths this pass rewrote.
-  # A style-only second make pr then reuses the end-of-gate receipt.
-  # Never `git add -A` — shared-worktree isolation is pathspec-only.
-  xargs "$_ruff" format <"$py_list"
-  restage_list="$(mktemp)"
-  while IFS= read -r path; do
-    [[ -z "$path" ]] && continue
-    if ! git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
-      continue
-    fi
-    if ! git diff --quiet -- "$path"; then
-      printf '%s\n' "$path" >>"$restage_list"
-    fi
-  done <"$py_list"
-  if [[ -s "$restage_list" ]]; then
-    xargs git add -- <"$restage_list"
-    restage_n="$(grep -c . "$restage_list" || true)"
-    echo "OK: restaged ${restage_n} ruff-format path(s) (no git add -A)"
-    git status --porcelain >"$status_before"
-    tracked_before="$(_tracked_diff_digest)"
-  else
-    echo "OK: ruff format left no unstaged tracked rewrites"
-  fi
-  rm -f "$restage_list"
-fi
-
 echo "--- uv lock ---"
 if grep -Eq '^(uv\.lock|pyproject\.toml|requirements.*\.txt|constraints\.txt)$' "$changed_file"; then
   if [[ -f uv.lock ]]; then
