@@ -16,6 +16,9 @@
 # Non-main ancestry (stacked / campaign work) is an EXCEPTION and must be
 # authorized explicitly:
 #   L9_TASK_BASE_AUTHORIZED="<reason>" ... --base origin/campaign/foo
+#
+# PR_STACK=auto (no --base): resolve the unique open-PR chain tip and imply
+# L9_TASK_BASE_AUTHORIZED for that tip only. Empty/unset PR_STACK stays origin/main.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -23,6 +26,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 agent_id=""
 task_id=""
 base_ref="origin/main"
+base_explicit=0
+resolved_tip_sha=""
 worktree=""
 emit_json=0
 
@@ -32,7 +37,7 @@ while [ "$#" -gt 0 ]; do
   case "$1" in
     --agent-id) agent_id="${2:-}"; shift 2 ;;
     --task-id)  task_id="${2:-}";  shift 2 ;;
-    --base)     base_ref="${2:-}"; shift 2 ;;
+    --base)     base_ref="${2:-}"; base_explicit=1; shift 2 ;;
     --worktree) worktree="${2:-}"; shift 2 ;;
     --json)     emit_json=1; shift ;;
     -h|--help)
@@ -56,6 +61,40 @@ done
 repo_root="$(git rev-parse --show-toplevel 2>/dev/null)" || die "not inside a git work tree"
 cd "$repo_root"
 
+_resolve_auto_stack_tip() {
+  local resolver="${L9_STACK_TIP_RESOLVER:-$SCRIPT_DIR/resolve_stack_tip.py}"
+  local out rc tip sha reason
+  set +e
+  out="$(python3 "$resolver" --workspace "$repo_root" 2>&1)"
+  rc=$?
+  set -e
+  if [ "$rc" -ne 0 ]; then
+    printf '%s\n' "$out" >&2
+    die "PR_STACK=auto could not resolve a unique stack tip (exit ${rc})"
+  fi
+  tip="$(printf '%s\n' "$out" | sed -n 's/^STACK_TIP=//p' | head -n 1)"
+  sha="$(printf '%s\n' "$out" | sed -n 's/^STACK_TIP_SHA=//p' | head -n 1)"
+  reason="$(printf '%s\n' "$out" | sed -n 's/^REASON=//p' | head -n 1)"
+  [ -n "$tip" ] || die "stack-tip resolver returned no STACK_TIP"
+  case "$tip" in
+    origin/main|main) base_ref="origin/main" ;;
+    origin/*) base_ref="$tip" ;;
+    *) base_ref="origin/${tip}" ;;
+  esac
+  resolved_tip_sha="$sha"
+  if [ "$base_ref" != "origin/main" ] && [ -z "${L9_TASK_BASE_AUTHORIZED:-}" ]; then
+    export L9_TASK_BASE_AUTHORIZED="resolver stack tip (PR_STACK=auto reason=${reason:-unique_chain_tip})"
+  fi
+  echo "NOTE: PR_STACK=auto resolved stack tip ${base_ref} (reason=${reason:-unknown})"
+}
+
+# Default --base is origin/main. PR_STACK=auto replaces that default with the
+# unique chain tip. An explicit --base is never rewritten. Empty PR_STACK keeps
+# origin/main even when a unique open-PR chain exists.
+if [ "$base_explicit" -eq 0 ] && [ "${PR_STACK:-}" = "auto" ]; then
+  _resolve_auto_stack_tip
+fi
+
 # §2: ordinary work begins from the CURRENT fetched origin/main. Authorization
 # is an intent question, so settle it BEFORE spending a network round trip —
 # otherwise an unauthorized base fails with a fetch error that hides the real
@@ -75,6 +114,9 @@ echo "--- fetch origin $remote_ref ---"
 git fetch origin "$remote_ref" || die "cannot fetch origin/$remote_ref (ancestry unverifiable)"
 
 base_sha="$(git rev-parse "$base_ref")" || die "cannot resolve $base_ref"
+if [ -n "$resolved_tip_sha" ] && [ "$base_sha" != "$resolved_tip_sha" ]; then
+  die "resolved tip SHA ${resolved_tip_sha} does not match ${base_ref} (${base_sha})"
+fi
 
 branch="agent/${agent_id}/${task_id}"
 if git show-ref --verify --quiet "refs/heads/${branch}"; then

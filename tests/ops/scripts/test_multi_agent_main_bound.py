@@ -490,3 +490,95 @@ def test_task_start_requires_identity_and_main_ancestry(upstream: Path, tmp_path
     combined = authorized.stdout + authorized.stderr
     assert "non-main ancestry authorized" in combined
     assert "is not origin/main" not in combined
+
+
+def _write_tip_stub(path: Path, *, tip: str, sha: str, reason: str, exit_code: int = 0) -> None:
+    path.write_text(
+        "\n".join(
+            [
+                "import sys",
+                f"print('STACK_TIP={tip}')",
+                f"print('STACK_TIP_SHA={sha}')",
+                f"print('REASON={reason}')",
+                f"raise SystemExit({exit_code})",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+def test_task_start_empty_pr_stack_stays_on_origin_main(upstream: Path, tmp_path: Path) -> None:
+    """Empty PR_STACK keeps origin/main and does not consult the resolver."""
+    repo = clone_agent(upstream, tmp_path, "agent_empty_stack")
+    stub = tmp_path / "refuse_if_called.py"
+    stub.write_text("raise SystemExit('resolver must not run when PR_STACK is empty')\n", encoding="utf-8")
+    occupied = tmp_path / "occupied-empty"
+    occupied.mkdir()
+    result = subprocess.run(
+        [
+            "bash",
+            str(TASK_START),
+            "--agent-id",
+            "claude",
+            "--task-id",
+            "T-empty",
+            "--worktree",
+            str(occupied),
+        ],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PR_STACK": "", "L9_STACK_TIP_RESOLVER": str(stub)},
+    )
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "resolver must not run" not in combined
+    assert "already exists" in combined
+
+
+def test_task_start_pr_stack_auto_uses_resolver_tip(upstream: Path, tmp_path: Path) -> None:
+    """PR_STACK=auto without --base implies auth for the unique resolver tip."""
+    repo = clone_agent(upstream, tmp_path, "agent_auto_tip")
+    stub = tmp_path / "unique_tip.py"
+    _write_tip_stub(stub, tip="feat/stack-safe-merge", sha="cc" * 20, reason="unique_chain_tip")
+    result = subprocess.run(
+        ["bash", str(TASK_START), "--agent-id", "claude", "--task-id", "T-auto"],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PR_STACK": "auto", "L9_STACK_TIP_RESOLVER": str(stub)},
+    )
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "PR_STACK=auto resolved stack tip origin/feat/stack-safe-merge" in combined
+    assert "resolver stack tip (PR_STACK=auto" in combined
+    assert "is not origin/main" not in combined
+    assert "cannot fetch origin/feat/stack-safe-merge" in combined or "cannot fetch" in combined
+
+
+def test_task_start_pr_stack_auto_siblings_exit_closed(upstream: Path, tmp_path: Path) -> None:
+    """PR_STACK=auto with sibling chains fails closed and names both heads."""
+    repo = clone_agent(upstream, tmp_path, "agent_siblings")
+    stub = tmp_path / "siblings.py"
+    stub.write_text(
+        "import sys\n"
+        "print('FAIL: sibling open-PR chains target main: #10:feat/one, #11:feat/two', file=sys.stderr)\n"
+        "raise SystemExit(2)\n",
+        encoding="utf-8",
+    )
+    result = subprocess.run(
+        ["bash", str(TASK_START), "--agent-id", "claude", "--task-id", "T-sib"],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PR_STACK": "auto", "L9_STACK_TIP_RESOLVER": str(stub)},
+    )
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "feat/one" in combined
+    assert "feat/two" in combined
+    assert "could not resolve a unique stack tip" in combined
