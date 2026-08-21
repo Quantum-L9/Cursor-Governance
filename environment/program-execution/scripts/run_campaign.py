@@ -2570,7 +2570,14 @@ def default_execute(
                 raise CampaignError(f"{task_id} is SUBMITTED without a Rendered Contract")
             rendered = {"contract": str(contract_path)}
         else:
-            if state not in {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "FAILED"}:
+            if state not in {
+                "LEASED",
+                "PREPARED",
+                "CONTRACTED",
+                "EXECUTING",
+                "FAILED",
+                "VERIFYING",
+            }:
                 # Arming only rendered the frontier, and a claim is refused
                 # without a registered source contract. This is where a deferred
                 # task becomes concrete: at the moment it is actually started.
@@ -2597,7 +2604,7 @@ def default_execute(
                     rendered = pec_cmd(workspace, "render-contract", task_id)
             else:
                 rendered = {"contract": str(contract_path)}
-            if state in {"LEASED", "PREPARED", "CONTRACTED", "FAILED"}:
+            if state in {"LEASED", "PREPARED", "CONTRACTED", "FAILED", "VERIFYING"}:
                 pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
         ensure_workspace_wired(worktree)
         emit(

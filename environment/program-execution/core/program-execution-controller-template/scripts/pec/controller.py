@@ -1118,8 +1118,19 @@ def start_task(workspace: Path, task_id: str, actor: str) -> dict[str, Any]:
         task = db.task(task_id)
         if task is None:
             raise ControllerError(f"unknown task: {task_id}")
-        retrying = task["runtime_state"] == "FAILED" and bool(task.get("rendered_contract_path"))
-        if not retrying and task["runtime_state"] != "CONTRACTED":
+        state = str(task["runtime_state"] or "")
+        if state == "VERIFYING":
+            # verify() is synchronous. VERIFYING after a crashed or abandoned
+            # campaign process is residue, not an in-flight verifier. Land
+            # FAILED so a new attempt can start (VERIFYING → EXECUTING is
+            # not a legal edge).
+            db.transition_task(task_id, "FAILED", last_error="verify_interrupted")
+            task = db.task(task_id)
+            if task is None:
+                raise ControllerError(f"unknown task: {task_id}")
+            state = "FAILED"
+        retrying = state == "FAILED" and bool(task.get("rendered_contract_path"))
+        if not retrying and state != "CONTRACTED":
             raise ControllerError("task must be CONTRACTED")
         _require_stack_proof_reentry(workspace, str(task_id))
         _refuse_operator_memo_cwd(workspace)
