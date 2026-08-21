@@ -69,13 +69,13 @@ def _hydration_roots(workspace: Path) -> list[Path]:
     if (workspace / ".git").exists():
         return [workspace]
     try:
-        children = sorted(
-            child for child in workspace.iterdir() if (child / ".git").exists()
-        )
+        children = sorted(child for child in workspace.iterdir() if (child / ".git").exists())
     except OSError:
         children = []
     usable = [child for child in children if _resolves_to_own_group(child)]
     return usable[:_MAX_HYDRATION_ROOTS] or [workspace]
+
+
 sys.path.insert(0, str(MEM))
 
 import graphiti_bridge as gb  # noqa: E402
