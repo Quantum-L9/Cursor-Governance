@@ -387,16 +387,38 @@ def load_yaml(path: Path) -> Any:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
 
+# File paths only. Never interpolate a caller string into import_module.
+_PEC_MODULE_FILES: dict[str, Path] = {
+    "exec_env": PEC_SCRIPTS / "pec" / "exec_env.py",
+}
+
+
 def load_pec_module(name: str) -> Any:
-    """Import a `pec.*` module in-process so both sides share one implementation.
+    """Load an allowlisted pec module from its file.
 
     The controller normally runs as a subprocess, but validation-environment and
     workspace-recovery logic must be identical on the campaign side; copying it
-    is how the two drifted apart in the first place.
+    is how the two drifted apart in the first place. The name is a whitelist
+    key, not a package path — `import_module(f"pec.{name}")` is refused.
     """
-    if str(PEC_SCRIPTS) not in sys.path:
-        sys.path.insert(0, str(PEC_SCRIPTS))
-    return importlib.import_module(f"pec.{name}")
+    source = _PEC_MODULE_FILES.get(name)
+    if source is None:
+        raise CampaignError(f"refused pec module {name!r}; not in allowlist")
+    path = source.resolve()
+    pec_dir = (PEC_SCRIPTS / "pec").resolve()
+    if path.parent != pec_dir or path.suffix != ".py" or not path.is_file():
+        raise CampaignError(f"pec module is not an allowlisted file under pec/: {path}")
+    module_name = f"pec.{path.stem}"
+    cached = sys.modules.get(module_name)
+    if cached is not None and Path(getattr(cached, "__file__", "")).resolve() == path:
+        return cached
+    spec = importlib.util.spec_from_file_location(module_name, path)
+    if spec is None or spec.loader is None:
+        raise CampaignError(f"cannot load pec module {path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def dump_yaml(path: Path, value: Any) -> None:
@@ -583,6 +605,7 @@ def isolate_worktree(
             return worktree
         log(f"isolate quarantine dirty or unexpected worktree {worktree}")
         quarantine_occupied(worktree, trace=trace)
+        git("worktree", "prune")
     existing = run_cmd(
         ["git", "-C", str(primary), "rev-parse", "--verify", branch],
         timeout=GIT_TIMEOUT_S,
@@ -1773,7 +1796,10 @@ def should_run(until: str, stage: str) -> bool:
 
 def pec_cmd(workspace: Path, command: str, *rest: str) -> dict[str, Any]:
     cmd = [sys.executable, str(PEC), command, *rest, "--workspace", str(workspace)]
-    result = run_cmd(cmd, timeout=PEC_TIMEOUT_S)
+    # verify re-runs contract validation_commands. Those may be pytest suites
+    # that legitimately exceed the short controller RPC budget.
+    timeout = VALIDATION_TIMEOUT_S if command == "verify" else PEC_TIMEOUT_S
+    result = run_cmd(cmd, timeout=timeout)
     payload: dict[str, Any] = {}
     text = (result.stdout or "").strip()
     if text:
@@ -1843,6 +1869,41 @@ def is_stub_output(path: Path, title: str) -> bool:
         return True
     existing = path.read_text(encoding="utf-8")
     return existing.strip() == f"{path.stem} complete: {title}" or len(existing.strip()) < 40
+
+
+def live_lock_missing_seed_paths(seed: dict[str, Any], pec_workspace: Path) -> bool:
+    """True when compiled plan files are not in the live rendered contracts.
+
+    Resume must not skip emit/relock when a companion PLAN_DOCUMENT just
+    supplied writable paths the stub inspection fallback never had.
+    """
+    rendered = pec_workspace / "contracts" / "rendered"
+    if not rendered.is_dir():
+        return False
+    for index, item in enumerate(seed.get("tasks") or [], start=1):
+        if not isinstance(item, dict):
+            continue
+        declared = [str(path) for path in (item.get("paths") or []) if path]
+        if not declared:
+            continue
+        raw_id = str(item.get("id") or "").strip()
+        candidates = [name for name in (raw_id, f"TASK-{index:03d}") if name]
+        found: Path | None = None
+        for name in candidates:
+            candidate = rendered / f"{name}.json"
+            if candidate.is_file():
+                found = candidate
+                break
+        if found is None:
+            continue
+        try:
+            payload = json.loads(found.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return True
+        writable = {str(path) for path in (payload.get("writable_paths") or [])}
+        if any(path not in writable for path in declared):
+            return True
+    return False
 
 
 def resumable_workspace(workspace: Path) -> bool:
@@ -2231,6 +2292,111 @@ def measure_admission_evidence(target_path: Path) -> dict[str, Any]:
     return measured
 
 
+def _task_card_command(cards: dict[str, Any], task_id: str) -> str:
+    for task in cards.get("tasks") or []:
+        if not isinstance(task, dict) or str(task.get("id") or "") != task_id:
+            continue
+        for entry in task.get("validation") or []:
+            if isinstance(entry, dict) and entry.get("method") in {
+                "command",
+                "command_and_inspection",
+            }:
+                return str(entry.get("command_or_inspection") or "").strip()
+    return ""
+
+
+def adoptable_inferred_command(command: str) -> bool:
+    """Inferences the execute path may relock onto the rendered contract.
+
+    Includes last-resort presence checks. Those do not prove behavior; pec
+    verify still requires a modified worktree, exact changed-files, and scope.
+    Refusing them leaves docs and config tasks INCOMPLETE after a real write.
+    """
+    text = str(command).strip()
+    return (
+        "-m unittest" in text
+        or "-m pytest" in text
+        or text.startswith("bash -n ")
+        or text.startswith("test -s ")
+        or text.startswith("ls -1 ")
+    )
+
+
+def rematerialize_after_relock(workspace: Path, task_id: str) -> dict[str, Any]:
+    """Rebuild the rendered contract after relock returns the task to ELIGIBLE.
+
+    Reuses the existing task worktree. Does not invent a parallel execution path.
+    """
+    ensure_task_contract(workspace, task_id)
+    pec_cmd(
+        workspace,
+        "claim",
+        task_id,
+        "--holder",
+        "make-campaign",
+        "--ttl-minutes",
+        str(TASK_BUDGET_MINUTES),
+    )
+    pec_cmd(workspace, "prepare", task_id)
+    rendered = pec_cmd(workspace, "render-contract", task_id)
+    pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
+    return json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
+
+
+def fill_inferred_validation(
+    contract_path: Path, contract: dict[str, Any], worktree: Path
+) -> dict[str, Any]:
+    """Adopt inferred validation through pec relock, never by rewriting digests.
+
+    Hand-editing the rendered contract breaks the contract-digest gate.
+    """
+    launch = _load_script("launchability", PE_ROOT / "scripts/launchability.py")
+    inferred = launch.infer_validation_commands(
+        {"writable_paths": contract.get("writable_paths") or []},
+        worktree,
+    )
+    existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
+    if not inferred or existing == inferred:
+        return contract
+    if not adoptable_inferred_command(inferred[0]):
+        return contract
+    workspace = contract_path.parents[2]
+    task_id = str(contract.get("task_id") or "")
+    lock_path = workspace / "runtime" / "program-lock.json"
+    if not lock_path.is_file() or not task_id:
+        return contract
+    lock = json.loads(lock_path.read_text(encoding="utf-8"))
+    cards_path = Path(str(lock.get("blueprint_root") or "")) / "TASK_CARDS.yaml"
+    if not cards_path.is_file():
+        return contract
+    cards = load_yaml(cards_path)
+    if _task_card_command(cards, task_id) == inferred[0]:
+        return contract
+    changed = False
+    for task in cards.get("tasks") or []:
+        if not isinstance(task, dict) or str(task.get("id") or "") != task_id:
+            continue
+        task["validation"] = [
+            {
+                "id": "VAL-INFERRED-001",
+                "method": "command",
+                "command_or_inspection": inferred[0],
+                "expected_result": "PASS",
+            }
+        ]
+        changed = True
+        break
+    if not changed:
+        return contract
+    if yaml is None:
+        raise CampaignError("PyYAML required to persist inferred validation")
+    cards_path.write_text(yaml.safe_dump(cards, sort_keys=False), encoding="utf-8")
+    if adopt_changed_definitions(workspace, [task_id]) is None:
+        raise CampaignError(f"pec relock refused inferred validation for {task_id}")
+    log(f"inferred validation adopted for {task_id}: {inferred[0]}")
+    return rematerialize_after_relock(workspace, task_id)
+
+
 def run_worker_handoff(
     workspace: Path,
     task: dict[str, Any],
@@ -2445,7 +2611,14 @@ def default_execute(
                 raise CampaignError(f"{task_id} is SUBMITTED without a Rendered Contract")
             rendered = {"contract": str(contract_path)}
         else:
-            if state not in {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "FAILED"}:
+            if state not in {
+                "LEASED",
+                "PREPARED",
+                "CONTRACTED",
+                "EXECUTING",
+                "FAILED",
+                "VERIFYING",
+            }:
                 # Arming only rendered the frontier, and a claim is refused
                 # without a registered source contract. This is where a deferred
                 # task becomes concrete: at the moment it is actually started.
@@ -2472,7 +2645,7 @@ def default_execute(
                     rendered = pec_cmd(workspace, "render-contract", task_id)
             else:
                 rendered = {"contract": str(contract_path)}
-            if state in {"LEASED", "PREPARED", "CONTRACTED", "FAILED"}:
+            if state in {"LEASED", "PREPARED", "CONTRACTED", "FAILED", "VERIFYING"}:
                 pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
         ensure_workspace_wired(worktree)
         emit(
@@ -2484,6 +2657,7 @@ def default_execute(
             metadata={"worktree": str(worktree)},
         )
         contract = json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
+        contract = fill_inferred_validation(Path(str(rendered["contract"])), contract, worktree)
         writable = [str(path) for path in (contract.get("writable_paths") or []) if path]
         if not writable:
             writable = task_output_locations(task)
@@ -2709,15 +2883,24 @@ def commit_host_emit(worktree: Path, campaign_id: str) -> None:
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
-    dirty = run_cmd(
-        ["git", "-C", str(worktree), "status", "--porcelain"],
+    staged = run_cmd(
+        ["git", "-C", str(worktree), "diff", "--cached", "--name-only", "--", campaign_dir],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
-    if not (dirty.stdout or "").strip():
+    if not (staged.stdout or "").strip():
         return
     commit = run_cmd(
-        ["git", "-C", str(worktree), "commit", "-m", f"campaign: emit {campaign_id}"],
+        [
+            "git",
+            "-C",
+            str(worktree),
+            "commit",
+            "-m",
+            f"campaign: emit {campaign_id}",
+            "--",
+            campaign_dir,
+        ],
         timeout=GIT_TIMEOUT_S,
         env=git_env(),
     )
@@ -3063,7 +3246,12 @@ def _run_campaign_stages(
         classified["resolved_intent"] = str(resolved_intent)
     if trace is not None:
         trace.bind(l9_home / "programs" / campaign_id, campaign_id=campaign_id)
-    if should_run(until, "execute") and resumable_workspace(l9_home / "programs" / campaign_id):
+    pec_workspace = l9_home / "programs" / campaign_id
+    if (
+        should_run(until, "execute")
+        and resumable_workspace(pec_workspace)
+        and not live_lock_missing_seed_paths(seed, pec_workspace)
+    ):
         return resume_live_campaign(
             campaign_id=campaign_id,
             seed=seed,

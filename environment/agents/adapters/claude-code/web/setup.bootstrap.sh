@@ -23,6 +23,13 @@
 # exit non-zero explicitly.
 set -uo pipefail
 
+# Bump on EVERY change to this file. The Setup script field is a copy-paste, not
+# a live link, so the pasted stub silently drifts from main and there is no way
+# to see it from inside the sandbox. Recording the revision that actually ran
+# turns "is the pasted stub current?" from unanswerable into a comparison
+# (audit B-06). verify_account_env.py reads it back from cloud-session.env.
+L9_STUB_REVISION="2026-08-21.1"
+
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
 
@@ -75,10 +82,16 @@ for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
               INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD \
               GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID \
               AWS_SESSION_TOKEN GITHUB_TOKEN; do
-  if [ -n "${!leaked:-}" ]; then
-    warn "$leaked is set — PROHIBITED on this surface (Infisical/capability plane); unsetting"
-    unset "$leaked"
+  leaked_value="${!leaked:-}"
+  [ -n "$leaked_value" ] || continue
+  # `proxy-injected` is the platform's sentinel for a credential it proxies, not
+  # a credential. Unsetting it would break the very proxying it announces.
+  if [ "$leaked_value" = "proxy-injected" ]; then
+    note "$leaked holds the platform proxy sentinel (no credential material) — leaving it"
+    continue
   fi
+  warn "$leaked is set — PROHIBITED on this surface (Infisical/capability plane); unsetting"
+  unset "$leaked"
 done
 if [ -n "${GH_TOKEN:-}" ] && [ "$GH_TOKEN" != "proxy-injected" ]; then
   warn "GH_TOKEN is a real credential — PROHIBITED; unsetting (platform proxy authenticates)"
@@ -127,6 +140,13 @@ fi
 # (git repo, canonical files present, ref matches) and falls back to its own
 # synchronization if any check fails.
 L9_GOVERNANCE_BOOTSTRAPPED=1 bash "$SETUP"
+SETUP_RC=$?
+# The canonical setup's exit code is part of the contract. It used to be
+# discarded, so "adapter NOT wired in ANY workspace" still ended with
+# "cloud bootstrap complete" and exit 0 — Anthropic then cached that
+# environment as a successful build (audit B-02). The durable env below is
+# still written, because a half-built environment is easier to diagnose with
+# its variables in place than without them; the exit code carries the verdict.
 
 # --- 3) Durable exports for in-session Bash --------------------------------
 # CLAUDE_ENV_FILE is not present in every cloud runtime, so write our own env
@@ -136,6 +156,7 @@ L9_ENV_FILE="$HOME/.l9/cloud-session.env"
 mkdir -p "$(dirname "$L9_ENV_FILE")"
 {
   echo "# Written by L9 setup.bootstrap.sh — do not edit by hand."
+  echo "export L9_STUB_REVISION=$(printf %q "$L9_STUB_REVISION")"
   echo "export L9_GOVERNANCE_DIR=$(printf %q "$GOV_DIR")"
   echo "export L9_GOVERNANCE_SURFACE=claude-code"
   echo "export GRAPHITI_MCP_URL=$(printf %q "$GRAPHITI_MCP_URL")"
@@ -179,5 +200,10 @@ else
 fi
 note "memory front door URL: $GRAPHITI_MCP_URL (no bearer in this process)"
 
+if [ "$SETUP_RC" -ne 0 ]; then
+  warn "cloud bootstrap FAILED — web/setup.sh exited $SETUP_RC"
+  warn "  the adapter is not wired; see ~/.l9/claude/bootstrap-state.json"
+  exit "$SETUP_RC"
+fi
 note "cloud bootstrap complete — governance at $GOV_DIR ($GOV_BRANCH)"
 exit 0

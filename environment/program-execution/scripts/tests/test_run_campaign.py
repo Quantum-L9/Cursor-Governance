@@ -479,6 +479,123 @@ class RunCampaignTests(unittest.TestCase):
             self.mod.refuse_hash_campaign_id("pe-8c9f6de43b25")
         self.assertIn("intent.v1", str(ctx.exception))
 
+    def test_commit_host_emit_ignores_unrelated_isolate_dirt(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            _git_init(root)
+            campaign = root / "environment/program-execution/campaigns/demo-activate-v1"
+            campaign.mkdir(parents=True)
+            (campaign / "CAMPAIGN_SOURCE.yaml").write_text("schema: x\n", encoding="utf-8")
+            subprocess.run(
+                ["git", "add", "environment/program-execution/campaigns/demo-activate-v1"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            subprocess.run(
+                ["git", "commit", "-m", "emit once"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+            )
+            (root / "ops/autonomy").mkdir(parents=True)
+            (root / "ops/autonomy/surface_profile.yaml").write_text("x: 1\n", encoding="utf-8")
+            (
+                root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
+            ).write_text("dirty: true\n", encoding="utf-8")
+            self.mod.commit_host_emit(root, "demo-activate-v1")
+            status = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertIn("CAMPAIGN_STATUS.yaml", status.stdout)
+            self.assertIn("ops/", status.stdout)
+            log = subprocess.run(
+                ["git", "log", "-1", "--format=%s"],
+                cwd=root,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            self.assertEqual(log.stdout.strip(), "emit once")
+
+    def test_adoptable_inferred_command_accepts_bash_n(self) -> None:
+        self.assertTrue(self.mod.adoptable_inferred_command("bash -n ops/scripts/run_pr_gate.sh"))
+        self.assertTrue(self.mod.adoptable_inferred_command("python3 -m unittest tests/x.py"))
+        self.assertTrue(self.mod.adoptable_inferred_command("python3 -m pytest tests/x.py --tb=short -q"))
+        self.assertTrue(self.mod.adoptable_inferred_command("test -s 'ops/scripts/run_pr_gate.sh'"))
+        self.assertTrue(self.mod.adoptable_inferred_command("ls -1 'a' 'b' >/dev/null"))
+        self.assertFalse(self.mod.adoptable_inferred_command("true"))
+        self.assertFalse(self.mod.adoptable_inferred_command(""))
+
+    def test_fill_inferred_validation_from_writable_tests(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "ops/scripts/tests").mkdir(parents=True)
+            (root / "ops/scripts/tests/test_resolve_stack_tip.py").write_text(
+                "def test_ok():\n    assert True\n", encoding="utf-8"
+            )
+            contract_path = root / "TASK-001.json"
+            contract = {
+                "task_id": "TASK-001",
+                "writable_paths": [
+                    "ops/scripts/resolve_stack_tip.py",
+                    "ops/scripts/tests/test_resolve_stack_tip.py",
+                ],
+                "validation_commands": [],
+            }
+            filled = self.mod.fill_inferred_validation(contract_path, contract, root)
+            self.assertEqual(filled.get("validation_commands"), [])
+            launch = self.mod._load_script(
+                "launchability",
+                self.mod.PE_ROOT / "scripts/launchability.py",
+            )
+            inferred = launch.infer_validation_commands(contract, root)
+            self.assertTrue(inferred[0].startswith("python3 -m unittest"))
+            self.assertIn("test_resolve_stack_tip.py", inferred[0])
+
+    def test_live_lock_missing_seed_paths(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            rendered = workspace / "contracts" / "rendered"
+            rendered.mkdir(parents=True)
+            (rendered / "TASK-001.json").write_text(
+                json.dumps({"writable_paths": ["docs/program-execution/TASK-001.md"]}),
+                encoding="utf-8",
+            )
+            seed = {
+                "tasks": [
+                    {
+                        "id": "T1",
+                        "paths": ["ops/scripts/resolve_stack_tip.py"],
+                    }
+                ]
+            }
+            self.assertTrue(self.mod.live_lock_missing_seed_paths(seed, workspace))
+            (rendered / "TASK-001.json").write_text(
+                json.dumps({"writable_paths": ["ops/scripts/resolve_stack_tip.py"]}),
+                encoding="utf-8",
+            )
+            self.assertFalse(self.mod.live_lock_missing_seed_paths(seed, workspace))
+            seed["tasks"].append(
+                {"id": "T2", "paths": ["ops/scripts/agent_worktree_start.sh"]}
+            )
+            self.assertFalse(
+                self.mod.live_lock_missing_seed_paths(seed, workspace),
+                "unrendered later tasks are not a live-lock mismatch",
+            )
+
+    def test_load_pec_module_allowlists_file_not_import_path(self) -> None:
+        with self.assertRaises(self.mod.CampaignError) as ctx:
+            self.mod.load_pec_module("os")
+        self.assertIn("allowlist", str(ctx.exception))
+        loaded = self.mod.load_pec_module("exec_env")
+        self.assertTrue(hasattr(loaded, "resolve_exec_env"))
+        self.assertTrue(str(loaded.__file__).endswith("pec/exec_env.py"))
+
     def test_draft_bootstrap_is_not_a_live_path(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw) / "root"
@@ -1170,6 +1287,19 @@ class RunCampaignTests(unittest.TestCase):
             self.assertTrue(
                 any(item.get("cites") == "stack-proof.json" for item in payload["nuggets"])
             )
+
+    def test_pec_verify_uses_validation_timeout(self) -> None:
+        captured: list[int] = []
+
+        def fake_run_cmd(cmd, timeout=0, **_kwargs):  # noqa: ANN001
+            captured.append(int(timeout))
+            return subprocess.CompletedProcess(cmd, 0, stdout="{}", stderr="")
+
+        with patch.object(self.mod, "run_cmd", fake_run_cmd):
+            self.mod.pec_cmd(Path("."), "verify", "TASK-003")
+            self.mod.pec_cmd(Path("."), "status")
+        self.assertEqual(captured[0], self.mod.VALIDATION_TIMEOUT_S)
+        self.assertEqual(captured[1], self.mod.PEC_TIMEOUT_S)
 
     def test_incomplete_skips_change(self) -> None:
         decision = self.mod.dispatch_kernel_change(

@@ -12,9 +12,44 @@
 # (no nested GlobalCommands/ subfolder).
 # resolve_governance_paths() exports GOV_ROOT + GLOBAL_COMMANDS.
 
+# --- Session env for NON-LOGIN shells --------------------------------------
+# setup.bootstrap.sh writes ~/.l9/cloud-session.env and appends a source line to
+# ~/.bashrc and ~/.profile. Neither is read by a non-interactive, non-login
+# shell — which is exactly what an agent's Bash tool spawns — so
+# L9_GOVERNANCE_DIR resolved in a login shell and was unset in the tool's own
+# (audit B-18). BASH_ENV cannot fix it: it has to be present in the ALREADY
+# RUNNING agent process, and a setup script that ran at environment-build time
+# cannot reach back into it.
+#
+# This lives here, in the file that already owns "where is governance", rather
+# than in a second helper — two resolvers for one decision is a competing source
+# of truth, and the next drift between them would be silent.
+L9_DEFAULT_GOVERNANCE_DIR="$HOME/.cursor-governance"
+
+l9_load_session_env() {
+  if [ -z "${L9_GOVERNANCE_DIR:-}" ]; then
+    local env_file="${L9_SESSION_ENV_FILE:-$HOME/.l9/cloud-session.env}"
+    # shellcheck disable=SC1090
+    [ -f "$env_file" ] && . "$env_file"
+  fi
+  # An unexpanded literal '$HOME' arrives from .env-format fields, which perform
+  # no shell expansion. It names a directory that does not exist; refuse it.
+  case "${L9_GOVERNANCE_DIR:-}" in
+    *'$HOME'*|*'${HOME}'*) L9_GOVERNANCE_DIR="" ;;
+  esac
+  : "${L9_GOVERNANCE_DIR:=$L9_DEFAULT_GOVERNANCE_DIR}"
+  export L9_GOVERNANCE_DIR
+}
+
+l9_governance_dir() {
+  l9_load_session_env
+  printf '%s' "$L9_GOVERNANCE_DIR"
+}
+
 resolve_governance_paths() {
   GOV_ROOT=""
   GLOBAL_COMMANDS=""
+  l9_load_session_env
   local root="$HOME/.cursor-governance"
   if [ -d "$root/skills" ] && [ -f "$root/CANONICAL_LAW.md" ]; then
     GOV_ROOT="$root"

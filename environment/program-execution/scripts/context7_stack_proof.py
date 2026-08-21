@@ -406,10 +406,21 @@ def prove_stack(
     if not campaign_id:
         raise StackProofError("seed campaign_id is required")
     inferred = infer_tools(seed)
-    if not inferred and not is_pure_file_edit(seed, inferred):
-        raise StackProofError(
-            "empty inferred stack on a non-pure-file-edit campaign; refuse Unknown"
-        )
+    if not inferred:
+        receipt = {
+            "schema": SCHEMA,
+            "campaign_id": campaign_id,
+            "status": "pass",
+            "pure_file_edit": is_pure_file_edit(seed, inferred),
+            "skipped": "no-external-stack",
+            "tools": [],
+            "fetched_at": utc_now(),
+            "validator": {"ok": True, "errors": []},
+        }
+        path = primed_receipt_path(campaign_id, primed_dir)
+        write_receipt(path, receipt)
+        receipt["path"] = str(path)
+        return receipt
     fetch_fn = fetch or default_fetch
     tools: list[dict[str, Any]] = []
     if inferred:

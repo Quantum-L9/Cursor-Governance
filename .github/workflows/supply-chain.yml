@@ -1,0 +1,208 @@
+# Supply Chain Security — pack 2 v1.1.2 shape, Cursor-Governance toolchain.
+# VERSION: 1.1.2 (exact SPDX tokens; SBOM install fail-closed; no develop).
+# Toolchain: uv sync --locked --extra dev. No SDK_TOKEN rewrite.
+# License install uses pinned uvx tools, not unlocked pip -e ".[dev]".
+# pip-audit stays on make pr (run_pr_security.sh); this workflow is SBOM +
+# dependency-review + license report.
+
+name: Supply Chain Security
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: supply-chain-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  security-events: write
+  id-token: write
+  actions: read
+
+env:
+  PYTHON_VERSION: "3.12"
+
+jobs:
+  license-compliance:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install locked toolchain
+        run: |
+          set -euo pipefail
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
+
+      - name: Check License Compliance
+        run: |
+          set -euo pipefail
+          echo "License Compliance Report"
+          uvx --from 'pip-licenses==5.0.0' pip-licenses --format=plain --with-urls --order=license
+
+          ALLOWED="${{ vars.ALLOWED_LICENSES || 'MIT;BSD;Apache;ISC;PSF;MPL;LGPL;Unlicense;Public Domain' }}"
+          DENIED="${{ vars.DENIED_LICENSES || 'GPL-3.0;AGPL;SSPL;EUPL' }}"
+          echo "ALLOWED=${ALLOWED}"
+          echo "Checking for denied licenses..."
+
+          IFS=';' read -ra DENY_LIST <<< "$DENIED"
+          VIOLATIONS=0
+          for license in "${DENY_LIST[@]}"; do
+            if uvx --from 'pip-licenses==5.0.0' pip-licenses --format=csv | grep -qi "$license"; then
+              echo "Found denied license: $license"
+              uvx --from 'pip-licenses==5.0.0' pip-licenses --format=plain | grep -i "$license"
+              VIOLATIONS=$((VIOLATIONS + 1))
+            fi
+          done
+
+          if [ "$VIOLATIONS" -gt 0 ]; then
+            echo "$VIOLATIONS license violation(s) found"
+            exit 1
+          fi
+          echo "All licenses are compliant"
+
+      - name: Generate License Report
+        run: |
+          set -euo pipefail
+          uvx --from 'pip-licenses==5.0.0' pip-licenses --format=json --with-urls --order=license > license-report.json
+          uvx --from 'pip-licenses==5.0.0' pip-licenses --format=plain --with-urls --order=license > license-report.txt
+
+      - name: Upload License Report
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: license-report
+          path: |
+            license-report.json
+            license-report.txt
+          retention-days: 30
+
+  dependency-review:
+    name: Dependency Review
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+
+      - name: Dependency Review
+        uses: actions/dependency-review-action@1e966ba708e4b64bb0c9bfb7abb5a232840be16a  # main 2026-07-16
+        with:
+          fail-on-severity: high
+          deny-licenses: ${{ vars.PIP_LICENSES_DENY || 'GPL-3.0, AGPL-3.0' }}
+
+  cyclonedx-sbom:
+    name: CycloneDX SBOM (SOC 2 CC9.2)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      actions: read
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install locked toolchain + pinned cyclonedx-bom
+        run: |
+          set -euo pipefail
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
+          uvx --from 'cyclonedx-bom==7.3.0' cyclonedx-py --help >/dev/null
+
+      - name: Generate CycloneDX SBOM
+        run: |
+          set -euo pipefail
+          mkdir -p artifacts
+          uvx --from 'cyclonedx-bom==7.3.0' cyclonedx-py environment --of json -o artifacts/sbom-cursor-governance.json
+          echo "SBOM generated: artifacts/sbom-cursor-governance.json"
+          python3 -c "import json; d=json.load(open('artifacts/sbom-cursor-governance.json')); print('Component count:', len(d.get('components', [])))"
+
+      - name: GPL/AGPL license audit (hard fail)
+        run: |
+          set -euo pipefail
+          python3 - <<'PYEOF'
+          import json, sys, re
+
+          BANNED_SPDX = {
+              "GPL-2.0", "GPL-2.0-only", "GPL-2.0-or-later",
+              "GPL-3.0", "GPL-3.0-only", "GPL-3.0-or-later",
+              "AGPL-1.0", "AGPL-1.0-only", "AGPL-1.0-or-later",
+              "AGPL-3.0", "AGPL-3.0-only", "AGPL-3.0-or-later",
+          }
+          BANNED_PATTERN = re.compile(
+              r'(?<![A-Za-z-])(' + '|'.join(re.escape(t) for t in BANNED_SPDX) + r')(?![A-Za-z0-9.-])'
+          )
+
+          with open('artifacts/sbom-cursor-governance.json') as f:
+              sbom = json.load(f)
+
+          hits = []
+          for comp in sbom.get('components', []):
+              name = comp.get('name', '?')
+              for lic in comp.get('licenses', []):
+                  expr = lic.get('expression', '') or ''
+                  if BANNED_PATTERN.search(expr):
+                      hits.append(f"{name} — expression: {expr}")
+                      continue
+                  inner = lic.get('license', {})
+                  lic_id = inner.get('id', '') or ''
+                  if lic_id in BANNED_SPDX:
+                      hits.append(f"{name} — id: {lic_id}")
+                      continue
+                  lic_name = inner.get('name', '') or ''
+                  banned_name = re.search(
+                      r'\b(?:GNU\s+)?(?:Affero\s+)?General\s+Public\s+License\b',
+                      lic_name, re.IGNORECASE,
+                  )
+                  lesser_name = re.search(
+                      r'\b(?:LGPL|Lesser\s+General\s+Public\s+License)\b',
+                      lic_name, re.IGNORECASE,
+                  )
+                  if BANNED_PATTERN.search(lic_name) or (banned_name and not lesser_name):
+                      hits.append(f"{name} — name: {lic_name}")
+
+          if hits:
+              print("VIOLATIONS FOUND:")
+              for h in hits:
+                  print(f"  {h}")
+              sys.exit(1)
+
+          print(f"PASS: no GPL/AGPL detected ({len(sbom.get('components', []))} components scanned)")
+          PYEOF
+
+      - name: Upload SBOM artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: sbom-cursor-governance-${{ github.sha }}
+          path: artifacts/sbom-cursor-governance.json
+          retention-days: 90

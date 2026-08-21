@@ -21,11 +21,16 @@
 # vendor, it belongs in that adapter. If you are about to add something to an
 # adapter that every agent would need, it belongs HERE.
 #
-# Contract: FAIL-OPEN for optional components. Locked-interpreter imports
-# (pydantic / yaml) are FAIL-CLOSED — a missing .venv must not silently
-# degrade into system python3. Other degraded components are reported and
-# counted; exit is 0 unless arguments are invalid or the locked venv cannot
-# import the gate modules.
+# Contract: FAIL-OPEN for optional components — a degraded component never
+# blocks the session. Locked-interpreter imports (pydantic / yaml) are
+# FAIL-CLOSED: a missing .venv must not silently degrade into system python3.
+#
+# Exit codes are three-valued, so "usable but degraded" is machine-detectable
+# without being mistaken for a hard failure:
+#   0  every component satisfied
+#   6  session usable, one or more components DEGRADED (never the ready banner)
+#   1  arguments invalid, or the locked venv cannot import the gate modules
+#   2  unknown argument
 #
 # Usage:
 #   bootstrap_agent_environment.sh --surface <id> [--governance <dir>]
@@ -115,9 +120,34 @@ else
   DEGRADED=$((DEGRADED + 1))
 fi
 
+# The locked interpreter is verified, not assumed. This used to fall through to
+# whatever system python3 existed with no warning — on the audited runtime that
+# was 3.11.15 against a .python-version pin of 3.12, and the .venv was absent
+# entirely, so every hook's interpreter guard tripped in silence (B-03, B-22).
 GOV_PY="$GOV_DIR/.venv/bin/python3"
-[ -x "$GOV_PY" ] || GOV_PY="python3"
-say "interpreter: $GOV_PY ($("$GOV_PY" --version 2>&1))"
+[ -x "$GOV_PY" ] || GOV_PY="$GOV_DIR/.venv/bin/python"
+if [ -x "$GOV_PY" ]; then
+  say "locked interpreter: $GOV_PY ($("$GOV_PY" --version 2>&1))"
+  GOV_PY_PIN_FILE="$GOV_DIR/.python-version"
+  if [ -f "$GOV_PY_PIN_FILE" ]; then
+    gov_py_pin="$(tr -d '[:space:]' < "$GOV_PY_PIN_FILE")"
+    gov_py_have="$("$GOV_PY" -c 'import sys; print("%d.%d" % sys.version_info[:2])' 2>/dev/null)"
+    case "$gov_py_have" in
+      "$gov_py_pin"*) : ;;
+      *)
+        warn "locked interpreter is $gov_py_have but .python-version pins $gov_py_pin"
+        warn "  uv fetches the pinned CPython from astral.sh on first sync — allowlist it"
+        DEGRADED=$((DEGRADED + 1))
+        ;;
+    esac
+  fi
+else
+  warn "locked interpreter ABSENT under $GOV_DIR/.venv — every governed gate will fail closed"
+  warn "  repair: uv sync --locked in $GOV_DIR (needs pypi.org and astral.sh egress)"
+  DEGRADED=$((DEGRADED + 1))
+  GOV_PY="python3"
+  say "interpreter: $GOV_PY ($("$GOV_PY" --version 2>&1)) — UNLOCKED FALLBACK, reported not hidden"
+fi
 
 # --- 2) Canonical checker toolchain -----------------------------------------
 # No surface reimplements a check. ops/scripts/run_pr_security.sh owns
@@ -336,22 +366,53 @@ if [ -f "$CAP_BOOTSTRAP" ]; then
   # payload upstream. `>&2` redirects stdout to stderr; the script's own stderr
   # already lands there, so both streams stay diagnostic (F-08).
   bash "$CAP_BOOTSTRAP" --check --surface "$SURFACE" \
-    --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query >&2 \
-    || warn "capability plane DEGRADED — authenticated Sonar/Semgrep/Graphiti unavailable"
+    --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query >&2
+  cap_rc=$?
+  # INV-3: a capability-plane failure is a DEGRADED COMPONENT, not a warning the
+  # receipt may ignore. This section used to `|| warn` and move on, so a session
+  # with a totally dead capability plane still printed "Agent environment ready"
+  # and wrote --degraded-count 0 (audit B-08). Every other section in this file
+  # increments; this one now does too.
+  if [ "$cap_rc" -ne 0 ]; then
+    # Exit 4 is the platform-blocked class and is NOT a configuration error
+    # (INV-4). Reporting it as "no broker configured" misdirects the operator
+    # toward the account environment field, which cannot fix it (audit B-10).
+    if [ "$cap_rc" -eq 4 ]; then
+      warn "capability plane BLOCKED_BY_PLATFORM — this surface issues no broker-verifiable identity"
+      warn "  not repairable from the environment field; see docs/DEGRADED_MODE_CONTRACT.md"
+    else
+      warn "capability plane DEGRADED — authenticated Sonar/Semgrep/Graphiti unavailable"
+    fi
+    DEGRADED=$((DEGRADED + 1))
+  fi
 else
   warn "missing ops/secrets/bootstrap_agent_env.sh — no canonical capability resolution"
+  DEGRADED=$((DEGRADED + 1))
 fi
 
 # A surface that still carries raw downstream secrets has not been migrated.
 # Report it loudly here: this is the check that would have caught the old
 # posture, and it must fail visibly rather than be quietly tolerated.
+# The platform injects the literal string `proxy-injected` for credentials it
+# proxies on the session's behalf (GH_TOKEN, and on some runtimes the AWS names
+# too). That sentinel is the ABSENCE of credential material, not the presence of
+# it — `gh api user` succeeds through the proxy while the variable holds no
+# secret. Counting it as a leak produces a false DEGRADED, which is the same
+# class of lie as a false READY and just as expensive to chase. setup.sh already
+# made this exact carve-out for GH_TOKEN; the other names never got it.
+PROXY_SENTINEL="proxy-injected"
 for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN INFISICAL_CLIENT_SECRET \
-              INFISICAL_TOKEN INFISICAL_PASSWORD GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY; do
-  if [ -n "${!leaked:-}" ]; then
-    warn "$leaked is present in this model-controlled surface — PROHIBITED (contract S2/S3)"
-    warn "  remove it from the surface environment; capabilities replace it"
-    DEGRADED=$((DEGRADED + 1))
+              INFISICAL_TOKEN INFISICAL_PASSWORD GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY \
+              AWS_ACCESS_KEY_ID; do
+  leaked_value="${!leaked:-}"
+  [ -n "$leaked_value" ] || continue
+  if [ "$leaked_value" = "$PROXY_SENTINEL" ]; then
+    say "$leaked holds the platform proxy sentinel (no credential material) — not a leak"
+    continue
   fi
+  warn "$leaked is present in this model-controlled surface — PROHIBITED (contract S2/S3)"
+  warn "  remove it from the surface environment; capabilities replace it"
+  DEGRADED=$((DEGRADED + 1))
 done
 
 # --- 4) Repository-scoped identity ------------------------------------------
@@ -457,8 +518,24 @@ if [ -f "$GOV_DIR/ops/autonomy/l4_local.py" ] && git -C "$WORKSPACE" rev-parse -
   fi
 fi
 
+# Exit code contract (three states, not two):
+#
+#   0  every component satisfied            -> "Agent environment ready"
+#   6  session usable, components degraded  -> never the ready banner
+#   1  arguments invalid, or the locked venv cannot import the gate modules
+#
+# 6 exists to resolve a real tension. T-01 requires a degraded capability plane
+# to exit non-zero, but install.sh maps ANY non-zero shared-bootstrap exit to
+# STATUS_SHARED=BLOCKED — and on a hosted surface the capability plane is
+# permanently BLOCKED_BY_PLATFORM, which INV-4 says must stay distinct from a
+# failure. Collapsing the two would mark every install BLOCKED forever and erase
+# exactly the distinction WS-5 exists to draw. A dedicated code keeps the
+# session fail-open, keeps the degradation machine-detectable, and lets the
+# caller classify it as DEGRADED rather than BLOCKED.
+BOOTSTRAP_EXIT=0
 if [ "$DEGRADED" -gt 0 ]; then
   warn "agent bootstrap completed with $DEGRADED degraded component(s) on surface '$SURFACE'"
+  BOOTSTRAP_EXIT=6
 else
   log "Agent environment ready — surface=$SURFACE governance=$GOV_DIR"
 fi
@@ -472,4 +549,4 @@ if [ -f "$GOV_DIR/ops/scripts/write_runtime_readiness_receipt.py" ]; then
     --degraded-count "$DEGRADED" \
     >/dev/null 2>&1 || warn "runtime readiness receipt write failed"
 fi
-exit 0
+exit "$BOOTSTRAP_EXIT"

@@ -66,6 +66,12 @@
         "timeout": 10
       }
     ],
+    "afterShellExecution": [
+      {
+        "command": "./hooks/pr-gate-failure-shell.sh",
+        "timeout": 5
+      }
+    ],
     "beforeMCPExecution": [
       {
         "command": "./hooks/before-mcp-code-graph-gate.sh",

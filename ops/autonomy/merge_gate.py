@@ -21,11 +21,12 @@ ops/autonomy/authorize_merge.py. Campaigns and make pr do not merge.
 An L4 release receipt does NOT authorize merge. Agents still merge only
 after green + mergeable + review threads resolved (oldest first).
 
-Shell ``git``/``gh`` commands are exempt from this gate entirely — see
-``git_execution_exemption``. Policy still forbids force-push, hard-reset,
-destructive clean and admin-merge; this gate no longer blocks the shell forms.
-The never-waive set still applies to the MCP merge tool, which is not a shell
-command.
+Shell ``git``/``gh`` commands are exempt from *authorization* — see
+``git_execution_exemption``. Stack safety is not exempt: ``gh pr merge
+--squash|--rebase`` (or an unspecified method) of a stack parent is denied
+on Shell and MCP alike. Agents must use ``stack_safe_merge.py`` so the
+method is selected in code, not guessed. The never-waive set still applies
+to the MCP merge tool.
 
 Stack safety
 ------------
@@ -66,7 +67,13 @@ _HERE = Path(__file__).resolve().parent
 if str(_HERE) not in sys.path:
     sys.path.insert(0, str(_HERE))
 
-from git_execution_exemption import event_is_git_or_gh, payload_is_git_or_gh  # noqa: E402
+from command_parse import (  # noqa: E402
+    segment_words,
+    split_segments,
+    strip_heredoc_bodies,
+    wrapper_subcommands,
+)
+from git_execution_exemption import event_is_git_or_gh  # noqa: E402
 from l4_local import workspace_from_event  # noqa: E402
 
 DENY_TOOL_NAMES = {
@@ -99,7 +106,8 @@ MERGE_DENY_REASON = (
     "Autonomy Surface Profile forbids merge until L9_AUTONOMY_AUTONOMOUS_MERGE "
     "is true, /l9-pr-remediation is invoked, or L9_MERGE_AUTHORIZED=<reason>. "
     "Campaigns and make pr end at green + merge-ready. Then "
-    "gh pr merge --squash (no --admin) for each green mergeable PR, oldest first."
+    "ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --run "
+    "(no --admin) for each green mergeable PR, oldest first."
 )
 
 _TRUTHY = {"1", "true", "yes", "on"}
@@ -133,8 +141,41 @@ def _stack_unknown_reason(pr: str, repo: str, detail: str) -> str:
     )
 
 
+def _argv_skip_env(words: list[str]) -> list[str]:
+    index = 0
+    while index < len(words) and "=" in words[index] and not words[index].startswith(("-", "/")):
+        index += 1
+    return words[index:]
+
+
+def _segment_is_pr_merge(segment: str) -> bool:
+    """True when this segment *invokes* ``gh pr merge``, not when it mentions it."""
+    rest = _argv_skip_env(segment_words(segment))
+    if len(rest) >= 3 and rest[0] == "gh" and rest[1] == "pr" and rest[2] == "merge":
+        return True
+    return any(_segment_is_pr_merge(sub) for sub in wrapper_subcommands(segment))
+
+
+def _command_is_pr_merge(command: str) -> bool:
+    """True only for an executed ``gh pr merge``. Heredoc/commit text does not count."""
+    return any(
+        _segment_is_pr_merge(segment) for segment in split_segments(strip_heredoc_bodies(command))
+    )
+
+
 def _merge_method(command: str) -> str:
-    """Merge method named on a `gh pr merge` command line."""
+    """Merge method named on the executed `gh pr merge` argv, not on nearby text."""
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        if not _segment_is_pr_merge(segment):
+            continue
+        rest = _argv_skip_env(segment_words(segment))
+        if "--squash" in rest:
+            return "squash"
+        if "--rebase" in rest:
+            return "rebase"
+        if "--merge" in rest:
+            return "merge"
+        return "unspecified"
     if SQUASH_FLAG.search(command):
         return "squash"
     if REBASE_FLAG.search(command):
@@ -341,14 +382,25 @@ def evaluate(
 ) -> str | None:
     """Return deny reason or None if allowed to proceed (no decision).
 
-    Shell git/gh commands are exempt (``git_execution_exemption``) and are
-    checked first, so nothing below — merge authorization, the stack-safety
-    probe, or the never-waive command set — can block one. The MCP merge tool
-    is not a shell command and stays governed.
+    Shell git/gh commands skip *authorization* (``git_execution_exemption``).
+    Stack safety still runs: squash/rebase of a parent orphans children.
+    The MCP merge tool stays fully governed.
     """
     del root  # signature kept for hook callers
 
     if event_is_git_or_gh(tool_name, tool_input):
+        command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        if _command_is_pr_merge(command):
+            rest = []
+            for segment in split_segments(strip_heredoc_bodies(command)):
+                if _segment_is_pr_merge(segment):
+                    rest = _argv_skip_env(segment_words(segment))
+                    break
+            if "--admin" in rest:
+                return NEVER_WAIVE_REASON
+            if _human_breakglass():
+                return None
+            return _stack_safety_reason(command, tool_name, tool_input)
         return None
 
     if _never_waive_tool(tool_name, tool_input):
@@ -379,8 +431,6 @@ def evaluate(
 
 def main() -> int:
     raw = sys.stdin.read()
-    if payload_is_git_or_gh(raw):
-        return 0
     try:
         event = json.loads(raw)
     except (json.JSONDecodeError, ValueError):
