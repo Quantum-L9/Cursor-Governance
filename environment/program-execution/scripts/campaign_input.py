@@ -18,6 +18,7 @@ rejection that says why, how to fix it, and that nothing ran.
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -30,6 +31,7 @@ except ImportError:  # pragma: no cover - PyYAML is a hard dependency of the gat
 
 CAMPAIGN_SOURCE_SCHEMA = "l9.program-execution.campaign-source.v2"
 PROGRAM_INTENT_SCHEMA = "program-execution.intent.v1"
+FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", re.S)
 
 REJECTION_CODE = "PE_CAMPAIGN_INPUT_REJECTED"
 BYPASS_DIAGNOSTIC = "PUBLIC_CAMPAIGN_FRONT_DOOR_REJECTED"
@@ -42,6 +44,7 @@ BYPASS_FORBIDDEN = (
 
 class CampaignInputKind(Enum):
     BRIEF = "brief"
+    PLAN = "plan"
     ACTIVATE = "activate"
     CAMPAIGN_SOURCE_V2 = "campaign-source.v2"
     PROGRAM_INTENT_V1 = "program-execution.intent.v1"
@@ -51,12 +54,14 @@ class CampaignInputKind(Enum):
 SUPPORTED_KINDS = (
     CampaignInputKind.CAMPAIGN_SOURCE_V2,
     CampaignInputKind.ACTIVATE,
+    CampaignInputKind.PLAN,
     CampaignInputKind.BRIEF,
 )
 
 ROUTES = {
     CampaignInputKind.CAMPAIGN_SOURCE_V2: "campaign_source -> blueprint -> PEC",
     CampaignInputKind.ACTIVATE: "activate -> campaign_source -> blueprint -> PEC",
+    CampaignInputKind.PLAN: "plan -> activate -> campaign_source -> blueprint -> PEC",
     CampaignInputKind.BRIEF: "brief -> activate -> campaign_source -> blueprint -> PEC",
 }
 
@@ -167,6 +172,39 @@ def _is_activate_seed(doc: dict[str, Any]) -> bool:
     )
 
 
+def _parse_frontmatter(text: str) -> dict[str, Any] | None:
+    match = FRONTMATTER_RE.match(text)
+    if match is None or yaml is None:
+        return None
+    try:
+        raw = yaml.safe_load(match.group(1))
+    except Exception:
+        return None
+    return raw if isinstance(raw, dict) else None
+
+
+def _is_plan_intent(doc: dict[str, Any] | None) -> bool:
+    if not isinstance(doc, dict) or _is_activate_seed(doc):
+        return False
+    schema = str(doc.get("schema") or "").strip()
+    if schema == CAMPAIGN_SOURCE_SCHEMA or schema.endswith("campaign-source.v2"):
+        return False
+    if schema == PROGRAM_INTENT_SCHEMA:
+        return False
+    todos = doc.get("todos")
+    if not isinstance(todos, list) or not todos:
+        return False
+    if str(doc.get("mode") or "").strip() == "plan" and (
+        str(doc.get("title") or "").strip() or str(doc.get("objective") or "").strip()
+    ):
+        return True
+    if str(doc.get("name") or "").strip() and str(doc.get("overview") or "").strip():
+        return True
+    if str(doc.get("title") or "").strip() and str(doc.get("objective") or "").strip():
+        return True
+    return False
+
+
 def classify(path: Path) -> Classification:
     """Classify by content and schema, never by file extension alone.
 
@@ -182,9 +220,12 @@ def classify(path: Path) -> Classification:
             "activate YAML, or brief memo.",
             path=path,
         )
+    text = path.read_text(encoding="utf-8")
     doc = _load_document(path)
     if doc is None:
-        # Not a mapping document. A memo brief is the only supported text input.
+        frontmatter = _parse_frontmatter(text)
+        if _is_plan_intent(frontmatter):
+            return Classification(kind=CampaignInputKind.PLAN, path=path, document=frontmatter)
         if path.suffix.lower() in {".md", ".markdown", ".txt"}:
             return Classification(kind=CampaignInputKind.BRIEF, path=path)
         return Classification(kind=CampaignInputKind.UNKNOWN, path=path)
@@ -201,6 +242,15 @@ def classify(path: Path) -> Classification:
         return Classification(
             kind=CampaignInputKind.ACTIVATE, path=path, schema=schema, document=doc
         )
+    if _is_plan_intent(doc):
+        return Classification(kind=CampaignInputKind.PLAN, path=path, schema=schema, document=doc)
+    if path.suffix.lower() in {".md", ".markdown", ".txt"}:
+        frontmatter = _parse_frontmatter(text)
+        if _is_plan_intent(frontmatter):
+            return Classification(
+                kind=CampaignInputKind.PLAN, path=path, schema=schema, document=frontmatter
+            )
+        return Classification(kind=CampaignInputKind.BRIEF, path=path, schema=schema, document=doc)
     return Classification(kind=CampaignInputKind.UNKNOWN, path=path, schema=schema, document=doc)
 
 

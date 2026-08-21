@@ -26,6 +26,7 @@ are mirrored in requirements.txt; this runner never edits repository files.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import os
 import re
 import subprocess
@@ -257,11 +258,67 @@ def _normalize_exit(code: int, allow_exit_5: bool, suite_id: str) -> int:
     return code
 
 
+def _load_selector() -> Any:
+    script = Path(__file__).with_name("select_pr_pytest_paths.py")
+    spec = importlib.util.spec_from_file_location("select_pr_pytest_paths", script)
+    if spec is None or spec.loader is None:
+        msg = f"pytest path selector missing: {script}"
+        raise RegistryError(msg)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _read_changed(path: Path) -> list[str]:
+    return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+
+
+def _non_dot_roots(suites: list[dict[str, Any]], selector: Any) -> list[str]:
+    roots: list[str] = []
+    for suite in suites:
+        if selector.is_dot_owned(suite):
+            continue
+        for root in suite.get("owned_paths") or []:
+            text = str(root)
+            if text and text != "." and text not in roots:
+                roots.append(text)
+    return roots
+
+
+def _suite_intersects(
+    suite: dict[str, Any],
+    selected: list[str],
+    changed: list[str],
+    selector: Any,
+) -> bool:
+    if selector.is_dot_owned(suite):
+        return True
+    owned = [str(root) for root in (suite.get("owned_paths") or [])]
+    candidates = [*selected, *changed]
+    return any(
+        selector.path_under(item, root) or item == root or selector.path_under(root, item)
+        for item in candidates
+        for root in owned
+    )
+
+
+def _root_suite_paths(selected: list[str], non_dot_roots: list[str], selector: Any) -> list[str]:
+    return [
+        path
+        for path in selected
+        if not any(selector.path_under(path, root) or path == root for root in non_dot_roots)
+    ]
+
+
 def run_suite(
     suite: dict[str, Any],
     profile: str,
     user_args: list[str],
     mapping: dict[str, str],
+    *,
+    scoped_paths: list[str] | None = None,
+    selector: Any | None = None,
+    non_dot_roots: list[str] | None = None,
 ) -> int:
     suite_id = suite["id"]
     kind = suite["kind"]
@@ -275,9 +332,21 @@ def run_suite(
     )
 
     if kind == "pytest":
-        argv = [mapping["PYTHON"], "-m", "pytest", *[_substitute(a, mapping) for a in argv_spec]]
-        if suite["append_user_pytest_args"] and user_args:
-            argv.extend(user_args)
+        tokens = [_substitute(a, mapping) for a in argv_spec]
+        extra_args = list(user_args)
+        if scoped_paths is not None:
+            tokens = [token for token in tokens if token != "."]
+            if selector is not None and selector.is_dot_owned(suite):
+                paths = _root_suite_paths(scoped_paths, non_dot_roots or [], selector)
+                if not paths:
+                    print(f"[runner] SKIP  suite={suite_id} reason=no_scoped_root_paths")
+                    return 0
+                extra_args = [*user_args, *paths]
+            elif not extra_args:
+                extra_args = list(user_args)
+        argv = [mapping["PYTHON"], "-m", "pytest", *tokens]
+        if suite["append_user_pytest_args"] and extra_args:
+            argv.extend(extra_args)
         code = _run_subprocess(argv, cwd, env)
     elif kind == "command":
         argv = [_substitute(token, mapping) for token in argv_spec]
@@ -315,18 +384,27 @@ def _run_drift_validator() -> int:
     return completed.returncode
 
 
-def parse_args(argv: list[str] | None = None) -> tuple[str, list[str]]:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Run the canonical Cursor-Governance Python test suites.",
     )
     parser.add_argument("--profile", choices=PROFILES, default="local")
+    parser.add_argument(
+        "--changed-file",
+        type=Path,
+        default=None,
+        help="Local pr-check only: scope suites to this changed-file list. Never emits '.'.",
+    )
     parser.add_argument("pytest_args", nargs="*", help="pytest args after --")
-    namespace = parser.parse_args(argv)
-    return namespace.profile, namespace.pytest_args
+    return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
-    profile, user_args = parse_args(argv)
+    args = parse_args(argv)
+    profile, user_args = args.profile, args.pytest_args
+    if args.changed_file is not None and profile != "local":
+        print("[runner] FATAL: --changed-file is valid only with --profile local", file=sys.stderr)
+        return 2
 
     # Fail-closed drift gate before any suite runs. This is why make test,
     # make pr-full, and CI all receive the drift check through this one runner.
@@ -343,9 +421,41 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     mapping = {"REPO_ROOT": str(REPO_ROOT), "PYTHON": sys.executable}
+    scoped_paths: list[str] | None = None
+    selector: Any | None = None
+    non_dot_roots: list[str] = []
+    changed: list[str] = []
+    if args.changed_file is not None:
+        if not args.changed_file.is_file():
+            print(f"[runner] FATAL: changed-file missing: {args.changed_file}", file=sys.stderr)
+            return 2
+        try:
+            selector = _load_selector()
+            changed = _read_changed(args.changed_file)
+            scoped_paths = selector.select_pr_pytest_paths(changed)
+        except (OSError, SystemExit, RegistryError) as exc:
+            print(f"[runner] FATAL: scoped pytest selection failed: {exc}", file=sys.stderr)
+            return 2
+        if "." in scoped_paths:
+            print("[runner] FATAL: selector emitted repo-root '.'", file=sys.stderr)
+            return 2
+        non_dot_roots = _non_dot_roots(suites, selector)
+        print(
+            f"[runner] scoped_pr_check paths={scoped_paths or ['<none>']} "
+            f"never_pass_repo_root_dot=true"
+        )
 
     print(f"[runner] profile={profile} suites={len(suites)} repo_root={REPO_ROOT}")
-    return run_suites(suites, profile, user_args, mapping)
+    return run_suites(
+        suites,
+        profile,
+        user_args,
+        mapping,
+        scoped_paths=scoped_paths,
+        selector=selector,
+        changed=changed,
+        non_dot_roots=non_dot_roots,
+    )
 
 
 def run_suites(
@@ -353,13 +463,34 @@ def run_suites(
     profile: str,
     user_args: list[str],
     mapping: dict[str, str],
+    *,
+    scoped_paths: list[str] | None = None,
+    selector: Any | None = None,
+    changed: list[str] | None = None,
+    non_dot_roots: list[str] | None = None,
 ) -> int:
     """Run declared suites. Local profile stops at the first red suite."""
     results: list[tuple[str, int]] = []
     first_nonzero = 0
     for suite in suites:
+        if scoped_paths is not None and selector is not None:
+            if not _suite_intersects(suite, scoped_paths, changed or [], selector):
+                print(
+                    f"[runner] SKIP  suite={suite['id']} "
+                    "reason=owned_paths_do_not_intersect_changed"
+                )
+                results.append((suite["id"], 0))
+                continue
         try:
-            code = run_suite(suite, profile, user_args, mapping)
+            code = run_suite(
+                suite,
+                profile,
+                user_args,
+                mapping,
+                scoped_paths=scoped_paths,
+                selector=selector,
+                non_dot_roots=non_dot_roots,
+            )
         except RegistryError as exc:
             print(f"[runner] FATAL: {exc}", file=sys.stderr)
             code = 2
