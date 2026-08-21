@@ -108,6 +108,62 @@ def _frontmatter(plan: dict, execute_via: str = EXECUTE_VIA_PE) -> str:
     return "\n".join(lines)
 
 
+_BUILD_EXECUTE_BLURB = (
+    "> **Execute:** when status is `executable`, press **Build** and work in the "
+    "**current checkout**. Do **not** run `make campaign`, admit a Program Lock, "
+    "or free-form mutate from this markdown alone."
+)
+_BUILD_TODOS_BLURB = (
+    "> **Cursor todos:** frontmatter `todos` project to Build todos. Body is the binding contract."
+)
+_BUILD_NEXT_ACTION = (
+    "| minimum_safe_next_action | When law holds and status=`executable`, "
+    "press **Build** and work in the current checkout — do not free-form execute |"
+)
+_BUILD_CONVERGENCE_VIA = "| execute_via | Cursor Build on the current checkout |"
+_BUILD_MACHINE_STUB = """execute_via:
+  pipeline: cursor-build
+  mention_program: "Cursor Build"
+  command_ref: current checkout
+  authority_order:
+    - plan_document
+    - cursor_build
+"""
+
+
+def _rewrite_pe_directives_for_build(body: str) -> str:
+    """Omit live PE-only run-path directives from a Cursor-Build projection."""
+    body = re.sub(
+        r"^> \*\*Execute:\*\* when status is `executable`, run through \*\*\[@environment/program-execution\].*$",
+        _BUILD_EXECUTE_BLURB,
+        body,
+        count=1,
+        flags=re.M,
+    )
+    body = re.sub(
+        r"^> \*\*Cursor todos:\*\* frontmatter `todos` project to PE Task Cards.*$",
+        _BUILD_TODOS_BLURB,
+        body,
+        count=1,
+        flags=re.M,
+    )
+    body = body.replace(
+        "| minimum_safe_next_action | When law holds and status=`executable`, attach [@environment/program-execution](environment/program-execution/) + [@autonomy](commands/autonomy.md); project→Lock→claim→render→autonomy lanes — do not free-form execute |",
+        _BUILD_NEXT_ACTION,
+    )
+    body = body.replace(
+        "| execute_via | `@environment/program-execution` → Program Lock/Controller → `@autonomy` (`/autonomy` → `l9-bounded-autonomy`) under Program lease → PE adapter |",
+        _BUILD_CONVERGENCE_VIA,
+    )
+    body = re.sub(
+        r"execute_via:\n(?:  .+\n)+",
+        _BUILD_MACHINE_STUB,
+        body,
+        count=1,
+    )
+    return body
+
+
 def _swap_execute_block(body: str, execute_via: str) -> str:
     if execute_via != EXECUTE_VIA_BUILD:
         return body
@@ -122,7 +178,7 @@ def _swap_execute_block(body: str, execute_via: str) -> str:
         "Execute via @environment/program-execution + subordinate @autonomy",
         "Execute via Cursor Build on the current checkout",
     )
-    return swapped
+    return _rewrite_pe_directives_for_build(swapped)
 
 
 def _success_table(plan: dict) -> list[str]:

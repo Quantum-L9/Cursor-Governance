@@ -59,7 +59,7 @@ Press **Build**. Work in the **current checkout**.
 - Do not open a new worktree from tip as a planning requirement.
 ```
 
-A delivered simple plan that still contains `make campaign` or a live PE execute heading is not ready.
+A delivered simple plan that still contains a live (unnegated) `make campaign` command or a live PE execute heading is not ready. Required prohibition sentences such as `Do not run make campaign` are not live wiring.
 
 ## Required `.plan.md` sections
 
@@ -67,7 +67,7 @@ Same as the shared template / `plan-workflow-pe-autonomy.md` items 1–16, with 
 
 ## Forbidden execute wiring
 
-- `make campaign`
+- live `make campaign` (not a prohibition sentence)
 - Program Lock / Controller
 - campaign authorization packet
 - `@environment/program-execution` as the run path

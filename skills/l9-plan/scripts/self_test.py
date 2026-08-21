@@ -121,6 +121,12 @@ def main() -> int:
             errors.append("cursor-build render retained make campaign pipeline")
         if "## Execute via @environment/program-execution" in out:
             errors.append("cursor-build render retained PE execute heading")
+        if "run through **[@environment/program-execution]" in out:
+            errors.append("cursor-build render retained PE Execute blockquote")
+        if "pipeline: environment/program-execution" in out:
+            errors.append("cursor-build render retained PE machine-stub pipeline")
+        if "project→Lock→claim→render→autonomy lanes" in out:
+            errors.append("cursor-build render retained PE convergence next-action")
     else:
         errors.append(f"cursor-build render failed\n{build.stderr}")
 

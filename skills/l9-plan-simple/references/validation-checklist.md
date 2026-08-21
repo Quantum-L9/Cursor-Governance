@@ -26,5 +26,5 @@ updated: 2026-08-21
 - [ ] `.plan.md` projected with `--execute-via=cursor-build` (or hand-filled with the execute swap)
 - [ ] Frontmatter has `kind: simple` and `execute_via: cursor-build`
 - [ ] Body has **Execute via Cursor Build**
-- [ ] Body does **not** contain `make campaign` or a live PE execute heading
+- [ ] Body does **not** contain a live (unnegated) `make campaign` command or a live PE execute heading
 - [ ] Baseline records the current workspace; no `Lock: origin/main = <sha>`
