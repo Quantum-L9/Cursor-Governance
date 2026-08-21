@@ -2289,6 +2289,19 @@ def measure_admission_evidence(target_path: Path) -> dict[str, Any]:
     return measured
 
 
+def _task_card_command(cards: dict[str, Any], task_id: str) -> str:
+    for task in cards.get("tasks") or []:
+        if not isinstance(task, dict) or str(task.get("id") or "") != task_id:
+            continue
+        for entry in task.get("validation") or []:
+            if isinstance(entry, dict) and entry.get("method") in {
+                "command",
+                "command_and_inspection",
+            }:
+                return str(entry.get("command_or_inspection") or "").strip()
+    return ""
+
+
 def fill_inferred_validation(
     contract_path: Path, contract: dict[str, Any], worktree: Path
 ) -> dict[str, Any]:
@@ -2314,6 +2327,8 @@ def fill_inferred_validation(
     if not cards_path.is_file():
         return contract
     cards = load_yaml(cards_path)
+    if _task_card_command(cards, task_id) == inferred[0]:
+        return contract
     changed = False
     for task in cards.get("tasks") or []:
         if not isinstance(task, dict) or str(task.get("id") or "") != task_id:
@@ -2335,10 +2350,10 @@ def fill_inferred_validation(
     cards_path.write_text(yaml.safe_dump(cards, sort_keys=False), encoding="utf-8")
     if adopt_changed_definitions(workspace, [task_id]) is None:
         raise CampaignError(f"pec relock refused inferred validation for {task_id}")
-    pec_cmd(workspace, "render-contract", task_id)
-    reloaded = json.loads(contract_path.read_text(encoding="utf-8"))
-    log(f"inferred validation for {task_id}: {inferred[0]}")
-    return reloaded
+    log(f"inferred validation adopted for {task_id}: {inferred[0]}; retry is safe")
+    raise CampaignError(
+        f"{task_id} validation was adopted via relock; re-run make campaign to render it"
+    )
 
 
 def run_worker_handoff(
