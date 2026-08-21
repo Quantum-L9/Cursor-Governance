@@ -415,7 +415,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "a8b9784515b8705534e1f0e786c4b188817383fd738f84b5fda4ebe7b08b6b3e"
+      "sha256": "ba887dd7aacafe35f11da6a5f94f5fb408f0559e0eb3c4fde637ad45887d2b70"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
@@ -1243,7 +1243,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/README.md",
-      "sha256": "7002702294d3965c8c86640c5c0ae5ea3daaf2e03f179316feaeb91b0b5ae91c"
+      "sha256": "e7755ca071306c8261e6d673c102bad64a49c5e682b1a8dc4c8ef8903fa17af3"
     },
     {
       "path": "integrations/autonomy-control-plane/bridge.py",
@@ -1251,7 +1251,11 @@
     },
     {
       "path": "integrations/autonomy-control-plane/contract_mapper.py",
-      "sha256": "5d8f7251fae485a57b34f8efe03763576dfbd0b059ababf2dde142942ceb879f"
+      "sha256": "d69aa1cb7083db4227645d3faf8494d0a423e0eb0cf7aa7bf3087bd4effbc15e"
+    },
+    {
+      "path": "integrations/autonomy-control-plane/grant.py",
+      "sha256": "4f952329b611a9193ceca57a1bb876551b2c36d9e3fa43f6b0f458bf517726ea"
     },
     {
       "path": "integrations/autonomy-control-plane/receipt_mapper.py",
@@ -1259,7 +1263,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/tests/test_bridge.py",
-      "sha256": "6685663563ba8d5dec2985530f39fd8043f4f549f4812f22a78f959c117061be"
+      "sha256": "62080c1044ee5f5292e470af7cf0fea093d2bc651df0b6ee6ca43286cf35b649"
     },
     {
       "path": "integrations/bootstrap/README.md",
@@ -1683,7 +1687,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "a1948fb1d4c70b16080520b38b0ddaded678a9330ceec61df5ca141b559de0f5"
+      "sha256": "7f2dcd803463c314ce5f529a702d29e18116f89878004bfcd0e2996ac800f426"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1755,7 +1759,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "b29f6452df74ad4822e2d31bdf0729bbb392516e8655ecf96cb57725679ee3d5"
+      "sha256": "654ede738792578c39d6d86b9a7963f4f742db39d7c8d46599042c9aca89a29e"
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",
