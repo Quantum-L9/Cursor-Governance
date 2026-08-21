@@ -154,9 +154,7 @@ def task_branches(repo: Path, task_id: str, owned: set[str] | None = None) -> li
     suffix = task_id.lower()
     names = [name.strip() for name in listing.stdout.splitlines() if name.strip()]
     return [
-        name
-        for name in names
-        if name.lower().endswith(suffix) and (owned is None or name in owned)
+        name for name in names if name.lower().endswith(suffix) and (owned is None or name in owned)
     ]
 
 

@@ -54,7 +54,9 @@ def _workspace(root: Path, branches: dict[str, str]) -> Path:
 def _branches(repo: Path) -> set[str]:
     return {
         line.strip()
-        for line in _git(repo, "for-each-ref", "--format=%(refname:short)", "refs/heads").split("\n")
+        for line in _git(repo, "for-each-ref", "--format=%(refname:short)", "refs/heads").split(
+            "\n"
+        )
         if line.strip()
     }
 

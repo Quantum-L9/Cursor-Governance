@@ -750,7 +750,11 @@ def harvest_trace(workspace: Path) -> dict[str, Any]:
         if event_type == "OPERATION_STARTED" and operation == "campaign_run":
             if campaign_run_started is None and moment is not None:
                 campaign_run_started = moment
-        if event_type == "TASK_FIRST_OBSERVED_WRITE" and moment is not None and first_write_at is None:
+        if (
+            event_type == "TASK_FIRST_OBSERVED_WRITE"
+            and moment is not None
+            and first_write_at is None
+        ):
             first_write_at = moment
 
         if _terminal(event):
@@ -816,7 +820,10 @@ def harvest_trace(workspace: Path) -> dict[str, Any]:
                 task["attempts"] = max(task["attempts"], attempt)
             if event_type == "TASK_ELIGIBLE" and task["eligible_at"] is None:
                 task["eligible_at"] = event.get("timestamp")
-            if event_type == "TASK_FIRST_OBSERVED_WRITE" and task["first_observed_write_at"] is None:
+            if (
+                event_type == "TASK_FIRST_OBSERVED_WRITE"
+                and task["first_observed_write_at"] is None
+            ):
                 task["first_observed_write_at"] = event.get("timestamp")
             if event_type == "TASK_COMPLETED":
                 task["completed"] = True
@@ -933,7 +940,8 @@ def render_summary_markdown(summary: dict[str, Any]) -> str:
         "",
         "## Time to first code",
         "",
-        f"- campaign start to first observed write: {_ms(timing.get('time_to_first_observed_write_ms'))}",
+        f"- campaign start to first observed write: "
+        f"{_ms(timing.get('time_to_first_observed_write_ms'))}",
         "",
         "## Top 10 operations by duration",
         "",

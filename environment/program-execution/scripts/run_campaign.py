@@ -2712,9 +2712,7 @@ def default_execute(
             completed.append(task_id)
             continue
 
-        def note_eligible(
-            snapshot: dict[str, Any], task_id: str = task_id
-        ) -> None:
+        def note_eligible(snapshot: dict[str, Any], task_id: str = task_id) -> None:
             """Record eligibility when PEC says the task is eligible, once.
 
             `eligible` is the controller's own readiness verdict: it clears when

@@ -202,9 +202,7 @@ class CanonicalTaskLoadingTest(unittest.TestCase):
 
             self.assertEqual(report["task_count"], 1)
             self.assertFalse(report["launchable"])
-            self.assertIn(
-                "verification_deadlock", {item["code"] for item in report["blockers"]}
-            )
+            self.assertIn("verification_deadlock", {item["code"] for item in report["blockers"]})
 
     def test_invalid_task_cards_yaml_fails_launchability(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -566,9 +564,9 @@ class ExecEnvProvisioningTest(unittest.TestCase):
         self.assertNotIn("_provision_consumer_project", resolve, "resolution provisions")
         # `uv` may only be reached from the one function allowed to build.
         provision = source[source.index("def _provision_consumer_project(") :]
-        self.assertIn("shutil.which(\"uv\")", provision)
+        self.assertIn('shutil.which("uv")', provision)
         before_provision = source[: source.index("def _provision_consumer_project(")]
-        self.assertNotIn("shutil.which(\"uv\")", before_provision)
+        self.assertNotIn('shutil.which("uv")', before_provision)
 
     def test_exec_env_provisions_once_per_environment_fingerprint(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

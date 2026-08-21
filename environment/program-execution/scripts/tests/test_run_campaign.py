@@ -1013,7 +1013,7 @@ class RunCampaignTests(unittest.TestCase):
         seed["tasks"][0]["validation"] = [
             {
                 "command": (
-                    "python3 -c \"import pathlib,sys; "
+                    'python3 -c "import pathlib,sys; '
                     f"sys.exit(0 if '{marker}' in pathlib.Path('{rel}').read_text() else 1)\""
                 )
             }

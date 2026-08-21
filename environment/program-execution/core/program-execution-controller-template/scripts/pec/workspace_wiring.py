@@ -90,8 +90,4 @@ def relevant_changed_paths(
     unrelated commit already on the branch satisfies it. The intersection with
     the contract's writable paths is.
     """
-    return [
-        path
-        for path in product_paths(paths, worktree)
-        if within_writable_path(path, writable)
-    ]
+    return [path for path in product_paths(paths, worktree) if within_writable_path(path, writable)]

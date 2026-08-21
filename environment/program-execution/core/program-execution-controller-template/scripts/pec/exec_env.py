@@ -156,8 +156,13 @@ def environment_fingerprint(cwd: Path) -> str:
     environment, so the second one must not pay to build it again.
     """
     digest = hashlib.sha256()
-    for name in ("pyproject.toml", "uv.lock", "requirements.txt", "requirements-dev.txt",
-                 ".python-version"):
+    for name in (
+        "pyproject.toml",
+        "uv.lock",
+        "requirements.txt",
+        "requirements-dev.txt",
+        ".python-version",
+    ):
         path = cwd / name
         digest.update(name.encode())
         digest.update(path.read_bytes() if path.is_file() else b"\0")
