@@ -35,6 +35,7 @@ from .exec_env import resolve_exec_env, run_validation_command
 from .ledger import EventLedger
 from .state import StateDB
 from .workspace_reset import clean_task_execution
+from .workspace_wiring import product_paths
 
 CAMPAIGN_STATUS_SCHEMA = "program-execution-controller.campaign-status.v1"
 SOURCE_STATUSES = {"operator_intake", "registered", "withdrawn"}
@@ -1192,34 +1193,16 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
         db.close()
 
 
-WIRING_PATHS = frozenset({".cursor-commands", ".cursor/plans"})
-WIRING_PREFIXES = (
-    ".cursor-commands/",
-    ".cursor/plans/",
-    ".cursor/governance/",
-    ".cursor/rules/",
-    ".claude/",
-    ".vscode/",
-)
-
-
-def _is_wiring_path(path: str) -> bool:
-    normalized = path.replace("\\", "/")
-    if normalized.startswith("./"):
-        normalized = normalized[2:]
-    if normalized.rstrip("/") in WIRING_PATHS:
-        return True
-    return any(normalized.startswith(prefix) for prefix in WIRING_PREFIXES)
-
-
 def _changed_paths(worktree: Path, base_sha: str | None = None) -> list[str]:
     """Union of dirty working-tree changes and committed work since the base.
 
     The worker contract allows both styles: leave the worktree dirty, or
     commit on the task branch. Either way every touched path must be declared
     in the Attempt Receipt and stay inside the Source Contract's writable
-    paths. Governance wiring links created by ensure_workspace_wired are not
-    worker mutations.
+    paths. Only the links `ensure_workspace_wired` generated are excluded, and
+    `workspace_wiring` is the single definition of which those are -- suppressing
+    `.cursor/rules/`, `.claude/` and `.vscode/` wholesale hid tracked source the
+    scope gate exists to judge.
     """
     raw = run_git(worktree, "status", "--porcelain=v1", "-z", "--untracked-files=all").stdout
     paths: set[str] = set()
@@ -1244,7 +1227,7 @@ def _changed_paths(worktree: Path, base_sha: str | None = None) -> list[str]:
         for line in committed.splitlines():
             if line.strip():
                 paths.add(line.strip().replace("\\", "/"))
-    return sorted(path for path in paths if path and not _is_wiring_path(path))
+    return product_paths(paths, worktree)
 
 
 def _run_validation(command: str, worktree: Path) -> dict[str, Any]:

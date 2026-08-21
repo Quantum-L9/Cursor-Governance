@@ -15,6 +15,7 @@ before verification, with a message that says what to configure.
 
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import shlex
@@ -22,15 +23,38 @@ import shutil
 import subprocess
 import time
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
+
+PE_ROOT = Path(__file__).resolve().parents[1]
+_WIRING_MODULE = (
+    PE_ROOT / "core/program-execution-controller-template/scripts/pec/workspace_wiring.py"
+)
+
+
+@lru_cache(maxsize=1)
+def workspace_wiring() -> Any:
+    """The controller's own definition of what PE generated in a worktree.
+
+    Loaded from the controller template rather than restated here: the worker's
+    copy of this predicate and the controller's had already drifted, and a
+    handoff that disagrees with verification about what counts as a change is
+    the bug that produces both false refusals and false passes.
+    """
+    spec = importlib.util.spec_from_file_location("pec_workspace_wiring", _WIRING_MODULE)
+    if spec is None or spec.loader is None:  # pragma: no cover - packaging fault
+        raise WorkerError(f"cannot load workspace wiring contract: {_WIRING_MODULE}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
 
 WORKER_COMMAND_ENV = "L9_PE_WORKER_CMD"
 WORKER_TIMEOUT_ENV = "L9_PE_WORKER_TIMEOUT_S"
 DEFAULT_WORKER_TIMEOUT_S = 1800
 INSPECTION_KINDS = {"analysis", "inspection", "decision", "program_control", "review"}
 CURSOR_FOREGROUND_ADAPTER = "cursor-foreground"
-_WIRING_PATHS = (".cursor-commands", ".cursor")
 
 
 class WorkerError(RuntimeError):
@@ -92,36 +116,25 @@ def is_inspection_only(task: dict[str, Any]) -> bool:
     return str(task.get("execution_kind") or "").strip().lower() in INSPECTION_KINDS
 
 
-_WIRING_EXACT = frozenset(
-    {".cursor-commands", ".cursor", ".cursor/plans", ".cursor/governance/CANONICAL_LAW.md"}
-)
-_WIRING_PREFIXES = (".cursor/plans/",)
+def _status_path(line: str) -> str:
+    """The path out of one `git status --porcelain=v1` line."""
+    text = line.rstrip("\n")
+    if len(text) > 3 and text[2] == " ":
+        text = text[3:]
+    path = text.strip()
+    # Renames and copies report `old -> new`; the new path is the product.
+    if " -> " in path:
+        path = path.split(" -> ", 1)[1]
+    return path.strip().strip('"')
 
 
-def _is_workspace_wiring_status(line: str) -> bool:
-    """True for generated consumer links, not tracked ``.cursor/rules`` edits."""
-    path = line[3:] if line[:2] in {"??", "!!"} or (len(line) > 3 and line[2] == " ") else line
-    path = path.strip()
-    if path in _WIRING_EXACT:
-        return True
-    return any(path.startswith(prefix) for prefix in _WIRING_PREFIXES)
+def candidate_changed_paths(worktree: Path, base_sha: str) -> list[str]:
+    """Everything this tree shows as touched, generated wiring excluded.
 
-
-def worktree_already_implements(worktree: Path, contract: dict[str, Any]) -> bool:
-    """True when cursor-foreground (or any prior worker) already mutated this tree.
-
-    L9_PE_WORKER_CMD is a subprocess adapter. The bound Cursor peer is this
-    session, so a tree that already diverged from base_sha is work done, not
-    an unmodified implementation defect. Governance wiring links are not work.
+    Committed work since the contract base *and* uncommitted work, because the
+    worker contract allows either style.
     """
-    base = str(contract.get("base_sha") or "").strip()
-    head = subprocess.run(
-        ["git", "-C", str(worktree), "rev-parse", "HEAD"],
-        text=True,
-        capture_output=True,
-        check=False,
-        timeout=60,
-    )
+    paths: list[str] = []
     dirty = subprocess.run(
         ["git", "-C", str(worktree), "status", "--porcelain=v1", "--untracked-files=all"],
         text=True,
@@ -130,15 +143,42 @@ def worktree_already_implements(worktree: Path, contract: dict[str, Any]) -> boo
         timeout=120,
     )
     if dirty.returncode == 0:
-        product = [
-            line
-            for line in dirty.stdout.splitlines()
-            if line.strip() and not _is_workspace_wiring_status(line)
-        ]
-        if product:
-            return True
-    current = (head.stdout or "").strip()
-    return bool(base and current and current != base)
+        paths.extend(_status_path(line) for line in dirty.stdout.splitlines() if line.strip())
+    if base_sha:
+        committed = subprocess.run(
+            ["git", "-C", str(worktree), "diff", "--name-only", f"{base_sha}..HEAD"],
+            text=True,
+            capture_output=True,
+            check=False,
+            timeout=120,
+        )
+        if committed.returncode == 0:
+            paths.extend(line.strip() for line in committed.stdout.splitlines() if line.strip())
+    return workspace_wiring().product_paths(paths, worktree)
+
+
+def worktree_already_implements(worktree: Path, contract: dict[str, Any]) -> bool:
+    """True when a prior worker already implemented *this* task in this tree.
+
+    L9_PE_WORKER_CMD is a subprocess adapter; the bound Cursor peer is this
+    session, so a tree that already carries the task's work needs no second
+    handoff. But `HEAD != base_sha` was never evidence of that: an unrelated
+    commit already on the branch satisfies it just as well, and the task then
+    went to verification with nothing of its own written.
+
+    The evidence is the intersection of what changed with what the contract
+    authorized this task to write, under the same changed-path semantics the
+    controller verifies with. A task whose declared intent is to write nothing
+    is exempt -- there is no intersection to find.
+    """
+    base = str(contract.get("base_sha") or "").strip()
+    writable = [str(path) for path in (contract.get("writable_paths") or []) if str(path).strip()]
+    changed = candidate_changed_paths(worktree, base)
+    if not writable:
+        # Nothing declared: fall back to "did anything at all happen here",
+        # which is all the contract gives us to go on.
+        return bool(changed)
+    return bool(workspace_wiring().relevant_changed_paths(changed, writable, worktree))
 
 
 def worktree_fingerprint(worktree: Path) -> str:
