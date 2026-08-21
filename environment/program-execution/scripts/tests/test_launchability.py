@@ -665,3 +665,22 @@ class ExecEnvProvisioningTest(unittest.TestCase):
             source = path.read_text(encoding="utf-8")
             self.assertNotIn('"python3.12"', source, msg=f"{path} pins a machine interpreter")
             self.assertNotIn("python3 -> python3.1", source)
+
+
+class ControllerVerificationEnvironmentTest(unittest.TestCase):
+    """Controller verification resolves one environment, and ensures it exists."""
+
+    def test_controller_resolves_once_per_verification_not_per_command(self) -> None:
+        source = (PEC_SCRIPTS / "pec/controller.py").read_text(encoding="utf-8")
+        self.assertIn("def _run_validations(", source)
+        self.assertNotIn("_run_validation(command, worktree) for command", source)
+
+    def test_controller_ensures_the_environment_it_verifies_in(self) -> None:
+        """`pec verify` is also invoked directly, with nothing having prepared it.
+
+        Resolution alone would silently fall back to the launching interpreter
+        on a consumer worktree whose environment was never built.
+        """
+        source = (PEC_SCRIPTS / "pec/controller.py").read_text(encoding="utf-8")
+        self.assertIn("ensure_exec_env(worktree)", source)
+        self.assertNotIn("resolve_exec_env(worktree)", source)

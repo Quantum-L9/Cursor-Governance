@@ -31,7 +31,7 @@ from .common import (
     write_json,
 )
 from .contracts import ContractError, path_allowed, validate_source_contract
-from .exec_env import resolve_exec_env, run_validation_command
+from .exec_env import ensure_exec_env, run_validation_command
 from .ledger import EventLedger
 from .state import StateDB
 from .workspace_reset import clean_task_execution
@@ -1230,8 +1230,19 @@ def _changed_paths(worktree: Path, base_sha: str | None = None) -> list[str]:
     return product_paths(paths, worktree)
 
 
-def _run_validation(command: str, worktree: Path) -> dict[str, Any]:
-    return run_validation_command(command, worktree, exec_env=resolve_exec_env(worktree))
+def _run_validations(commands: list[str], worktree: Path) -> list[dict[str, Any]]:
+    """Run a verification's declared commands in one resolved environment.
+
+    Resolved once, not once per command: every command in a verification runs
+    against the same interpreter, which is the whole point of having one.
+
+    `ensure_exec_env` rather than `resolve_exec_env` because the controller is
+    also invoked directly, without the runner having prepared anything. It
+    provisions once per environment fingerprint and is free thereafter, so a
+    verification that follows the runner's own preparation installs nothing.
+    """
+    resolved = ensure_exec_env(worktree)
+    return [run_validation_command(command, worktree, exec_env=resolved) for command in commands]
 
 
 DOD_GATES = (
@@ -1531,7 +1542,9 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             )
             if required_commands:
                 gates.update(_preflight2_gates([str(command) for command in required_commands]))
-                validations = [_run_validation(command, worktree) for command in required_commands]
+                validations = _run_validations(
+                    [str(command) for command in required_commands], worktree
+                )
                 gates["validation"] = (
                     "PASS"
                     if validations and all(item["status"] == "PASS" for item in validations)
