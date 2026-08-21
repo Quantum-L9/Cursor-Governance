@@ -92,6 +92,37 @@ class CompileBriefTests(unittest.TestCase):
                 compile_brief(path, output=Path(raw) / "out.yaml")
             self.assertIn("program-execution.intent.v1", str(ctx.exception))
 
+    def test_memo_release_files_become_task_paths(self) -> None:
+        text = (
+            "owner: Igor Beylin\n"
+            "target_repo: Quantum-L9/Enrichment.Inference.Engine\n\n"
+            "Final architectural judgment\n\n"
+            "It is:\n"
+            "a Wave-0 isolation campaign that restores RuleEngine inference.\n\n"
+            "1. Release A — Deterministic RuleEngine inference\n\n"
+            "Restore the PlasticOS inference_rules contract.\n\n"
+            "Files:\n\n"
+            "- `app/main.py` (T4)\n"
+            "- `tests/test_inference_wiring.py` (create)\n"
+            "- `domains/plasticos/spec.yaml` (read-only fixture)\n\n"
+            "In `rule_loader.py`, keep load_rules(path).\n\n"
+            "2. Release B — One Alembic lineage\n\n"
+            "One migration tree.\n\n"
+            "Files:\n\n"
+            "- `alembic.ini`\n"
+            "- `migrations/versions/001_initial_schema.py`\n"
+            "- `alembic/versions/0002_perplexity_api_key_default.py` (orphan; do not import)\n"
+        )
+        seed = brief_to_seed(text, filename="eie-inference-isolation-v1.md")
+        self.assertEqual(
+            seed["tasks"][0]["paths"],
+            ["app/main.py", "tests/test_inference_wiring.py"],
+        )
+        self.assertEqual(
+            seed["tasks"][1]["paths"],
+            ["alembic.ini", "migrations/versions/001_initial_schema.py"],
+        )
+
     def test_companion_plan_document_files_become_task_paths(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
