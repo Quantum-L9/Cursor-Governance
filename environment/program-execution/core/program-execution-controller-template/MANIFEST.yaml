@@ -101,7 +101,7 @@ files:
 - path: scripts/pec/controller.py
   sha256: 3c93a82dfb4683dad795937130be998af79f0d6e90e8b5b9b3bd221d5a31a0b0
 - path: scripts/pec/exec_env.py
-  sha256: fec94d48722f6f9826dce971d127fb68ca42eea369ab2698383395e2939d1c3b
+  sha256: 452acc83dc710414ea4be3cc0eca73117a70f2e76e42b9812f5513b22aedb8a8
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
 - path: scripts/pec/preflight.py
