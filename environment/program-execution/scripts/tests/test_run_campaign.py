@@ -469,6 +469,9 @@ class RunCampaignTests(unittest.TestCase):
             brief.write_text(fixture.read_text(encoding="utf-8"), encoding="utf-8")
             other_primary = Path(raw) / "other-primary"
             other_primary.mkdir()
+            def _plan_keeps_partial(seed, primed_dir, stack_proof):
+                return {"plan_status": "Partial", "intent_path": ""}
+
             with self.assertRaises((self.mod.CampaignError, self.activate.CompileError)):
                 self.mod.run_campaign(
                     brief,
@@ -480,6 +483,7 @@ class RunCampaignTests(unittest.TestCase):
                         context7_stack=_stack_ok,
                         write_task_output=_write_task_output,
                         compile_activation=self.activate.compile_activation,
+                        plan_window=_plan_keeps_partial,
                     ),
                 )
             campaign_dir = root / "environment/program-execution/campaigns/pe-memory"

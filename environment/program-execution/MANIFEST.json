@@ -438,6 +438,10 @@
       "sha256": "efe890639bfe98adb3f54897935703139c99a6d09a52e7a95ad17e4ec63f21dc"
     },
     {
+      "path": "campaigns/adr-identity-integrity-v1/CAMPAIGN_SOURCE.yaml",
+      "sha256": "60e36422f563a302648ac1709dd9e616084cd0b9ca4897ff962fc47e3ff02074"
+    },
+    {
       "path": "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml",
       "sha256": "9528abeaf8117dd0598036216784593a62e88948800636c2eced9dc6262ae010"
     },
@@ -600,6 +604,30 @@
     {
       "path": "campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
       "sha256": "337329bdee7d6450131a7b04d0f0e3c0964c6054d5f30d83da6db94f6835d024"
+    },
+    {
+      "path": "campaigns/level3-make-pr-single-path/CAMPAIGN_SOURCE.yaml",
+      "sha256": "c4fbaccb0daa530bfbf41affeeffa64fe2481200a8291f0539792e7e883d1e4b"
+    },
+    {
+      "path": "campaigns/level3-make-pr-single-path/HOST_REGISTRATIONS.yaml",
+      "sha256": "77ca069ea9f1410f3a06425e05ae701527a4f4abeb7cb4465b7fd323f35e85af"
+    },
+    {
+      "path": "campaigns/level3-make-pr-single-path/INTENT.yaml",
+      "sha256": "da541c3dbee016c7fcf51368690cba63791fb0dc272e123585f603a970077518"
+    },
+    {
+      "path": "campaigns/level3-make-pr-single-path/Makefile.candidate",
+      "sha256": "9ecb01de462dc8343dcef72da4744f9ecaf10e981cffea20ffb4248670ef4b49"
+    },
+    {
+      "path": "campaigns/level3-make-pr-single-path/Prompt - Start Campaign.md",
+      "sha256": "e927d90d62713a4ae405729b1f44425dc20000bff8336486451f107af49b1706"
+    },
+    {
+      "path": "campaigns/level3-make-pr-single-path/source-integrity-receipt.json",
+      "sha256": "34791574b06840f0eda42467514edb19ebeb84a8c42d72a8566df42d17f120ae"
     },
     {
       "path": "campaigns/pe-router-capability-safety-v4/CAMPAIGN_SOURCE.yaml",
@@ -1595,7 +1623,7 @@
     },
     {
       "path": "scripts/context7_stack_proof.py",
-      "sha256": "44f19213fc1f376b195f565bb1dfab8297338a824b3ff5d04350b4068c223320"
+      "sha256": "1eb985fbdc4c55dcbe1aa8d899d1a2bcf7fce8da2bd0c408f94a4e0a43ba348e"
     },
     {
       "path": "scripts/generate_manifest.py",
@@ -1655,7 +1683,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "300c4f17bb973b359936acb882d4e73d11773d20d4efd562b8f7225b40a5dcd8"
+      "sha256": "a1948fb1d4c70b16080520b38b0ddaded678a9330ceec61df5ca141b559de0f5"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1687,7 +1715,7 @@
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
-      "sha256": "ac47c0ca887b9702b5e33f5fb19a241f2561f7072e501d06001f8e14c1e30dad"
+      "sha256": "3a5d83aec55825d7a0f8705b10209130dd47f8e0b8e35dcf6b489aa003a280e8"
     },
     {
       "path": "scripts/tests/test_launchability.py",
@@ -1727,7 +1755,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "b26ecf8921fa8f44c6262f4debc02e0b2c9789cc0bdad7773b14e818e2a28beb"
+      "sha256": "b29f6452df74ad4822e2d31bdf0729bbb392516e8655ecf96cb57725679ee3d5"
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",

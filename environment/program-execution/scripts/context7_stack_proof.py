@@ -136,9 +136,7 @@ def _require_https_url(url: str) -> urllib.parse.ParseResult:
         or parsed.password
         or parsed.port not in (None, 443)
     ):
-        raise StackProofError(
-            f"GET refused for non-https URL: {parsed.scheme or 'missing-scheme'}"
-        )
+        raise StackProofError(f"GET refused for non-https URL: {parsed.scheme or 'missing-scheme'}")
     return parsed
 
 
@@ -187,16 +185,15 @@ def default_fetch(url: str, headers: dict[str, str] | None = None) -> tuple[int,
     wire_headers = {
         key: value
         for key, value in (headers or {"User-Agent": "l9-pe-stack-proof/1"}).items()
-        if key.lower() != "host" and "\r" not in key and "\n" not in key
-        and "\r" not in value and "\n" not in value
+        if key.lower() != "host"
+        and "\r" not in key
+        and "\n" not in key
+        and "\r" not in value
+        and "\n" not in value
     }
     header_lines = "".join(f"{key}: {value}\r\n" for key, value in wire_headers.items())
     request = (
-        f"GET {path} HTTP/1.0\r\n"
-        f"Host: {host}\r\n"
-        f"{header_lines}"
-        f"Connection: close\r\n"
-        f"\r\n"
+        f"GET {path} HTTP/1.0\r\nHost: {host}\r\n{header_lines}Connection: close\r\n\r\n"
     ).encode("ascii")
     context = ssl.create_default_context()
     context.minimum_version = ssl.TLSVersion.TLSv1_2
