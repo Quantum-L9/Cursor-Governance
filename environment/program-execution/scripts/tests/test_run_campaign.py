@@ -581,6 +581,10 @@ class RunCampaignTests(unittest.TestCase):
             self.assertTrue(launch["pec_ready_empty_is_expected"])
             self.assertEqual(launch["max_task_minutes"], 15)
             self.assertIn("write_tree", launch)
+            self.assertFalse(launch["autonomy_packets_not_required"])
+            self.assertEqual(launch["autonomy_control_plane"], "root-autonomy-control-plane")
+            self.assertTrue(str(launch["autonomy_packet"]).endswith("autonomy-packet.json"))
+            self.assertTrue(str(launch["autonomy_grant"]).endswith("autonomy-grant.json"))
 
     def test_quarantine_moves_occupied_runtime(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
