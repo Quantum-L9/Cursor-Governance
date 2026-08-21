@@ -254,6 +254,9 @@ class ExecutionEnvironmentTest(unittest.TestCase):
             self.assertEqual(result["exit_code"], 3)
             self.assertIn("python", result["exec_env"])
             self.assertIn("path_head", result["exec_env"])
+            receipt = self.exec_env.to_attempt_result(result)
+            self.assertNotIn("exec_env", receipt)
+            self.assertEqual(receipt["exit_code"], 3)
 
     def test_validation_does_not_use_a_login_shell(self) -> None:
         """A login shell re-runs the profile and re-mutates PATH."""

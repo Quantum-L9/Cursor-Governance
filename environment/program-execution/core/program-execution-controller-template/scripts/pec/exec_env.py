@@ -167,6 +167,4 @@ def to_attempt_result(result: dict[str, Any]) -> dict[str, Any]:
         "exit_code": result["exit_code"],
         "evidence": evidence[-_EVIDENCE_TAIL:] or None,
     }
-    if result.get("exec_env"):
-        entry["exec_env"] = result["exec_env"]
     return entry
