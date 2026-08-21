@@ -92,9 +92,11 @@ silently.
 as fresh, never re-hydrated, and the session ran memory-blind for the full 24h TTL while
 every surface reported the precondition met.
 
-**Fix:** the receipt records what happened (`status: degraded`), and a degraded receipt
-is not fresh — which re-runs hydration and then **continues either way**. The gate stays
-non-blocking; rules/96 E7 and rules/98 require that and this does not change it.
+**Fix:** the receipt records what happened (`status: degraded`). `fresh_receipt()`
+stays false so SessionStart will hydrate again; `usable_receipt()` (session + TTL,
+including degraded) is what the write gate consults, so a degraded prefetch cannot
+permanently deny Edit/Write. The gate stays non-blocking; rules/96 E7 and rules/98
+require that and this does not change it.
 **Verified:** receipt now `status: prefetched, degraded: False` with four groups resolved.
 
 ### F-06 · The live stub is code that is in no commit
