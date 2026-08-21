@@ -2356,7 +2356,9 @@ def fill_inferred_validation(
         worktree,
     )
     existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
-    if not inferred or existing == inferred:
+    if existing:
+        return contract
+    if not inferred:
         return contract
     if not adoptable_inferred_command(inferred[0]):
         return contract
