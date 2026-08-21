@@ -2720,6 +2720,12 @@ def default_execute(
             if state in {"LEASED", "PREPARED", "CONTRACTED", "FAILED", "VERIFYING"}:
                 pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
         ensure_workspace_wired(worktree)
+        # Build the target repository's environment here, once, while the
+        # worktree is being prepared. Every validation and every controller
+        # verification afterwards resolves it without installing anything.
+        with traced(trace, "task_prepare", "ensure_exec_env", task_id=task_id) as provisioned:
+            resolved_env = load_pec_module("exec_env").ensure_exec_env(worktree)
+            provisioned["python"] = str(resolved_env.python)
         emit(
             trace,
             "TASK_WORKTREE_READY",
