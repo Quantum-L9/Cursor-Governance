@@ -88,6 +88,8 @@ files:
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
 - path: scripts/instantiate.py
   sha256: b8d702fc025d096668d063b02fafd7b6f393fcf4997b3dffa3fcf3fcbe34db02
+- path: scripts/pec.py
+  sha256: a06ff404d01ffaf0defa06e273897bb26f2464adf6d9507714c2d64749a25273
 - path: scripts/pec/__init__.py
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
 - path: scripts/pec/blueprint.py
@@ -99,9 +101,9 @@ files:
 - path: scripts/pec/contracts.py
   sha256: a9779fad92b5844ef01dba0d9daa746dc74635873a8ffa725f9ad5fef982cfa6
 - path: scripts/pec/controller.py
-  sha256: 3c93a82dfb4683dad795937130be998af79f0d6e90e8b5b9b3bd221d5a31a0b0
+  sha256: 492aa1af083c2bbbf91170a8bfe95994efa250ff06d9d999315522c04a0ac18c
 - path: scripts/pec/exec_env.py
-  sha256: fec94d48722f6f9826dce971d127fb68ca42eea369ab2698383395e2939d1c3b
+  sha256: 36ad654e42666c0af4b863249f3c10d78717bbea656066f58d8da4589c39ae07
 - path: scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
 - path: scripts/pec/preflight.py
@@ -111,9 +113,9 @@ files:
 - path: scripts/pec/state.py
   sha256: a52609cdff558ecda0ef69b316b22a041d1de2b6f8dbff098ee9c04dccd7995e
 - path: scripts/pec/workspace_reset.py
-  sha256: edf39052bd7f13cb79e946fa55cc2b6fecff50b96dfc0043943c007ab088a443
-- path: scripts/pec.py
-  sha256: a06ff404d01ffaf0defa06e273897bb26f2464adf6d9507714c2d64749a25273
+  sha256: c36cbb3c4b3cba36057b30d0d5a2e71628a31a2f9aef401d0fef112b88b82ca7
+- path: scripts/pec/workspace_wiring.py
+  sha256: d1c7e657c7abd73d827c7230642844f08bf0582d71f5c6f0fe2ff3876d16e1a7
 - path: scripts/run_negative_tests.py
   sha256: 16dd96536bac0b9c5b6cfcf78b5cc308a6493a819712c829ebeb64bff70f4d31
 - path: scripts/tests/helpers.py
@@ -176,6 +178,8 @@ files:
   sha256: 93ed81d61f51f0667b13edcac458fd269d16cf48fed04287fb2c2542203f8ad6
 - path: scripts/tests/test_wave_dependency.py
   sha256: 86f42e5a3d23a6a5e2c4087cdc6116160ac6d5e109629d7a67dbc1f9e03b88c7
+- path: scripts/tests/test_workspace_reset_ownership.py
+  sha256: ebdbb54c0cb3afde801a7db6851003fb30514772a285e9aa924950e332916b31
 - path: scripts/validate_controller.py
   sha256: 994efa39a7fac7828a99f23be5c5b255e04b47fa388684dc92cfbea6d3202ce1
 integrity:
