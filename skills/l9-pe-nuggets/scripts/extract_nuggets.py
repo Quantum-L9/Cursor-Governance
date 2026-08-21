@@ -31,9 +31,7 @@ def _task_ready(item: dict[str, Any]) -> bool:
 
 def _task_conditionally_ready(item: dict[str, Any]) -> bool:
     """Compiled memo/plan tasks carry title + objective. Kernel fields come later."""
-    return bool(
-        str(item.get("title") or "").strip() and str(item.get("objective") or "").strip()
-    )
+    return bool(str(item.get("title") or "").strip() and str(item.get("objective") or "").strip())
 
 
 def infer_plan_status(seed: dict[str, Any]) -> str:

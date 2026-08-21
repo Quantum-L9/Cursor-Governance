@@ -60,7 +60,10 @@ class LaunchabilityTest(unittest.TestCase):
             root = Path(raw)
             (root / "tests/ops/scripts").mkdir(parents=True)
             (root / "tests/ops/scripts/test_multi_agent_main_bound.py").write_text(
-                "import pytest\n\n@pytest.fixture\ndef repo():\n    return 1\n\ndef test_ok(repo):\n    assert repo\n",
+                (
+                    "import pytest\n\n@pytest.fixture\ndef repo():\n"
+                    "    return 1\n\ndef test_ok(repo):\n    assert repo\n"
+                ),
                 encoding="utf-8",
             )
             inferred = launchability.infer_validation_commands(
@@ -70,7 +73,8 @@ class LaunchabilityTest(unittest.TestCase):
             self.assertEqual(
                 inferred,
                 [
-                    "python3 -m pytest tests/ops/scripts/test_multi_agent_main_bound.py --tb=short -q"
+                    "python3 -m pytest "
+                    "tests/ops/scripts/test_multi_agent_main_bound.py --tb=short -q"
                 ],
             )
 
