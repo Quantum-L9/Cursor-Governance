@@ -263,7 +263,30 @@ else
     exit 1
   fi
   xargs "$_ruff" check <"$py_list"
-  xargs "$_ruff" format --check <"$py_list"
+  # Format in place, then restage only the paths this pass rewrote.
+  # A style-only second make pr then reuses the end-of-gate receipt.
+  # Never `git add -A` — shared-worktree isolation is pathspec-only.
+  xargs "$_ruff" format <"$py_list"
+  restage_list="$(mktemp)"
+  while IFS= read -r path; do
+    [[ -z "$path" ]] && continue
+    if ! git ls-files --error-unmatch -- "$path" >/dev/null 2>&1; then
+      continue
+    fi
+    if ! git diff --quiet -- "$path"; then
+      printf '%s\n' "$path" >>"$restage_list"
+    fi
+  done <"$py_list"
+  if [[ -s "$restage_list" ]]; then
+    xargs git add -- <"$restage_list"
+    restage_n="$(grep -c . "$restage_list" || true)"
+    echo "OK: restaged ${restage_n} ruff-format path(s) (no git add -A)"
+    git status --porcelain >"$status_before"
+    tracked_before="$(_tracked_diff_digest)"
+  else
+    echo "OK: ruff format left no unstaged tracked rewrites"
+  fi
+  rm -f "$restage_list"
 fi
 
 echo "--- uv lock ---"
