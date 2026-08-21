@@ -77,6 +77,9 @@ canonical activation mechanism.
 fire when an agent runs `git worktree add`. After creating a worktree:
 
 ```bash
+# Ordinary agent start: ops/scripts/agent_worktree_start.sh
+# PR_STACK=auto (Makefile default) bases on the unique open-PR stack tip.
+# Empty PR_STACK keeps origin/main. Do not invent a main fork and restack later.
 bash "$HOME/.cursor-governance/ops/scripts/worktree_add_wired.sh" -b feat/<id> /path/to/wt origin/main
 # or, if the worktree already exists:
 bash "$HOME/.cursor-governance/ops/scripts/ensure_workspace_wired.sh" /path/to/wt
@@ -273,6 +276,12 @@ renegotiate scope. `PR_STACK=auto` still exists as a knob but creates the
 topology squash-merge denies — use it only when the parent will merge with
 `--merge`. Fail-open on missing `gh` telemetry; fail-closed on a detected
 non-generated textual conflict.
+
+`PR_STACK=auto` is also the start-time default:
+`agent_worktree_start.sh` bases the worktree on the unique open-PR chain
+tip (implied `L9_TASK_BASE_AUTHORIZED` for that tip only). Do not invent
+an `origin/main` fork and restack at `make pr`. Empty `PR_STACK` keeps
+`origin/main`. Sibling open-PR chains still fail closed.
 
 `make pr` defaults to `PR_STACK=auto` (stack on the overlapping open
 head). Opt out with `PR_STACK= make pr` to publish against `main`. A

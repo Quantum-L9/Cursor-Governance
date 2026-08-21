@@ -55,6 +55,37 @@ class LaunchabilityTest(unittest.TestCase):
             codes = {item["code"] for item in report["blockers"]}
             self.assertIn("verification_deadlock", codes)
 
+    def test_pytest_native_file_infers_pytest_not_unittest(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "tests/ops/scripts").mkdir(parents=True)
+            (root / "tests/ops/scripts/test_multi_agent_main_bound.py").write_text(
+                (
+                    "import pytest\n\n@pytest.fixture\ndef repo():\n"
+                    "    return 1\n\ndef test_ok(repo):\n    assert repo\n"
+                ),
+                encoding="utf-8",
+            )
+            inferred = launchability.infer_validation_commands(
+                {"writable_paths": ["tests/ops/scripts/test_multi_agent_main_bound.py"]},
+                root,
+            )
+            self.assertEqual(
+                inferred,
+                [
+                    "python3 -m pytest "
+                    "tests/ops/scripts/test_multi_agent_main_bound.py --tb=short -q"
+                ],
+            )
+
+    def test_shell_writable_path_infers_bash_n(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            inferred = launchability.infer_validation_commands(
+                {"writable_paths": ["ops/scripts/run_pr_gate.sh"]},
+                Path(raw),
+            )
+            self.assertEqual(inferred, ["bash -n ops/scripts/run_pr_gate.sh"])
+
     def test_validation_is_inferred_from_the_nearest_existing_test(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -67,7 +98,7 @@ class LaunchabilityTest(unittest.TestCase):
             self.assertTrue(report["launchable"])
             self.assertEqual(
                 report["synthesized_validations"]["TASK-001"],
-                ["python3 -m pytest -q pkg/tests/test_widget.py"],
+                ["python3 -m unittest pkg/tests/test_widget.py"],
             )
 
     def test_declared_validation_overrides_inference(self) -> None:
@@ -227,10 +258,64 @@ class ExecutionEnvironmentTest(unittest.TestCase):
                 env=controller_side.env,
             ).stdout.strip()
             self.assertEqual(
-                Path(reported).resolve().parent,
+                Path(reported).parent,
                 controller_side.python.parent,
                 "a validation command resolved a different python3 than the controller",
             )
+
+    def test_venv_python_symlink_does_not_escape_to_base_interpreter(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            base = Path(raw) / "base" / "bin"
+            base.mkdir(parents=True)
+            target = base / "python3.12"
+            target.write_text("#!/bin/sh\n", encoding="utf-8")
+            target.chmod(0o755)
+            venv = Path(raw) / "donor" / ".venv"
+            (venv / "bin").mkdir(parents=True)
+            (venv / "pyvenv.cfg").write_text("home = /usr\n", encoding="utf-8")
+            shim = venv / "bin" / "python3"
+            shim.symlink_to(target)
+            isolate = Path(raw) / "isolate"
+            isolate.mkdir()
+            env = {
+                "GOV_TOOLCHAIN_ROOT": str(venv.parent),
+                "L9_PE_PYTHON": "",
+                "VIRTUAL_ENV": "",
+            }
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(
+                    self.exec_env, "is_l9_isolate_workspace", return_value=True
+                ):
+                    resolved = self.exec_env.resolve_exec_env(isolate)
+            self.assertEqual(resolved.python, venv.resolve() / "bin" / "python3")
+            self.assertEqual(Path(resolved.env["PATH"].split(":")[0]), venv.resolve() / "bin")
+            self.assertEqual(Path(resolved.env["VIRTUAL_ENV"]), venv.resolve())
+
+    def test_isolate_prefers_donor_toolchain_over_local_venv(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            donor = Path(raw) / "donor"
+            (donor / ".venv" / "bin").mkdir(parents=True)
+            (donor / ".venv" / "pyvenv.cfg").write_text("home = /usr\n", encoding="utf-8")
+            donor_py = donor / ".venv" / "bin" / "python3"
+            donor_py.write_text("#!/bin/sh\n", encoding="utf-8")
+            donor_py.chmod(0o755)
+            isolate = Path(raw) / "isolate"
+            (isolate / ".venv" / "bin").mkdir(parents=True)
+            (isolate / ".venv" / "pyvenv.cfg").write_text("home = /usr\n", encoding="utf-8")
+            iso_py = isolate / ".venv" / "bin" / "python3"
+            iso_py.write_text("#!/bin/sh\n", encoding="utf-8")
+            iso_py.chmod(0o755)
+            env = {
+                "GOV_TOOLCHAIN_ROOT": str(donor),
+                "L9_PE_PYTHON": "",
+                "VIRTUAL_ENV": str(isolate / ".venv"),
+            }
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(
+                    self.exec_env, "is_l9_isolate_workspace", return_value=True
+                ):
+                    resolved = self.exec_env.resolve_exec_env(isolate)
+            self.assertEqual(resolved.python, (donor / ".venv").resolve() / "bin" / "python3")
 
     def test_an_active_venv_wins_over_the_launching_interpreter(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -243,9 +328,9 @@ class ExecutionEnvironmentTest(unittest.TestCase):
 
             with unittest.mock.patch.dict("os.environ", {"VIRTUAL_ENV": str(venv)}):
                 resolved = self.exec_env.resolve_exec_env(Path(raw))
-            self.assertEqual(resolved.python, fake.resolve())
+            self.assertEqual(resolved.python, venv.resolve() / "bin" / "python3")
             self.assertEqual(Path(resolved.env["VIRTUAL_ENV"]), venv.resolve())
-            self.assertEqual(Path(resolved.env["PATH"].split(":")[0]), (venv / "bin").resolve())
+            self.assertEqual(Path(resolved.env["PATH"].split(":")[0]), (venv.resolve() / "bin"))
 
     def test_validation_failure_reports_the_resolved_environment(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -254,6 +339,9 @@ class ExecutionEnvironmentTest(unittest.TestCase):
             self.assertEqual(result["exit_code"], 3)
             self.assertIn("python", result["exec_env"])
             self.assertIn("path_head", result["exec_env"])
+            receipt = self.exec_env.to_attempt_result(result)
+            self.assertNotIn("exec_env", receipt)
+            self.assertEqual(receipt["exit_code"], 3)
 
     def test_validation_does_not_use_a_login_shell(self) -> None:
         """A login shell re-runs the profile and re-mutates PATH."""

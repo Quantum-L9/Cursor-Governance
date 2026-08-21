@@ -289,22 +289,28 @@ else
 fi
 
 echo "--- pytest ---"
-if grep -Eq '\.py$' "$changed_file"; then
-  # Changed-files gate: only collect the secrets capability suite when that
-  # plane changed. Full-tree remains make pr-full / nightly. Avoids a host
-  # miniconda cryptography ABI break aborting unrelated PE/ops PRs.
+if [[ "${PR_SKIP_PYTEST:-0}" == "1" ]]; then
+  echo "OK: skip pytest (PR_SKIP_PYTEST=1)"
+elif grep -Eq '\.py$' "$changed_file"; then
+  # Local pr-check never passes repo-root '.' (SP-04 / SP-05). Full catalog
+  # remains make test / make pr-full / CI via run_pytest_suites.sh.
   pytest_args=(--tb=short -q)
   if ! grep -Eq '^(tests/ops/secrets/|ops/secrets/)' "$changed_file"; then
     pytest_args+=(--ignore=tests/ops/secrets)
     echo "OK: skip secrets capability suite (ops/secrets unchanged)"
   fi
-  set +e
-  bash "$SCRIPT_DIR/run_pytest_suites.sh" "${pytest_args[@]}" 2>&1 | tee -a "$_GATE_LOG"
-  _pytest_rc="${PIPESTATUS[0]}"
-  set -e
-  if [[ "${_pytest_rc:-0}" -ne 0 ]]; then
-    exit "${_pytest_rc}"
+  _pytest_py="${GOV_TOOLCHAIN_ROOT:-$GOV_ROOT}/.venv/bin/python"
+  if [[ ! -x "$_pytest_py" ]]; then
+    _pytest_py="$(command -v python3)"
   fi
+  if [[ ! -x "$_pytest_py" ]]; then
+    echo "FAIL: no python interpreter for scoped pytest"
+    exit 1
+  fi
+  "$_pytest_py" "$SCRIPT_DIR/run_python_test_suites.py" \
+    --profile local \
+    --changed-file "$changed_file" \
+    -- "${pytest_args[@]}"
 else
   echo "OK: skip pytest (no changed Python files)"
 fi
