@@ -60,8 +60,10 @@ DENIAL_CLAIM = re.compile(
     r"(?=.*\b(?:denied|blocked|refused|rejected|prohibited)\b)"
 )
 
-#: The claim is fine when the line also says it is no longer true, states a
-#: condition, or is quoting the historical position.
+#: The claim is fine when the unit also says it is no longer true, states a
+#: condition, or is quoting the historical position. A bare §6.2.4 citation
+#: is not an exemption — that section is exactly where a false denial is
+#: likely to hide.
 ALLOW_LINE = re.compile(
     r"(?i)("
     # `not denied`, `is *not* denied`, `NOT gate-denied`, `not mechanically denied`
@@ -81,9 +83,7 @@ ALLOW_LINE = re.compile(
     r"if .*denied|"
     r"where .*denied|"
     r"elsewhere|"
-    r"off doctrine but|"
-    r"§6\.2\.4|"
-    r"6\.2\.4"
+    r"off doctrine but"
     r")"
 )
 
@@ -110,6 +110,31 @@ def _candidates() -> list[Path]:
     return seen
 
 
+def _paragraphs(text: str) -> list[tuple[int, str]]:
+    """Blank-line-separated paragraphs with the first source line of each.
+
+    Authority Markdown wraps mid-sentence. A denial split across two lines
+    (command on one line, "denied at every phase" on the next) must still
+    match. Location stays the paragraph start so the report is usable.
+    """
+    units: list[tuple[int, str]] = []
+    start: int | None = None
+    buf: list[str] = []
+    for number, line in enumerate(text.splitlines(), start=1):
+        if line.strip() == "":
+            if buf and start is not None:
+                units.append((start, " ".join(buf)))
+            buf = []
+            start = None
+            continue
+        if start is None:
+            start = number
+        buf.append(line)
+    if buf and start is not None:
+        units.append((start, " ".join(buf)))
+    return units
+
+
 def scan(paths: list[Path]) -> list[str]:
     findings = []
     for path in paths:
@@ -118,9 +143,9 @@ def scan(paths: list[Path]) -> list[str]:
         except (OSError, UnicodeDecodeError):
             continue
         rel = path.relative_to(ROOT).as_posix()
-        for number, line in enumerate(text.splitlines(), start=1):
-            if DENIAL_CLAIM.search(line) and not ALLOW_LINE.search(line):
-                findings.append(f"{rel}:{number}: {line.strip()[:160]}")
+        for number, unit in _paragraphs(text):
+            if DENIAL_CLAIM.search(unit) and not ALLOW_LINE.search(unit):
+                findings.append(f"{rel}:{number}: {unit.strip()[:160]}")
     return findings
 
 

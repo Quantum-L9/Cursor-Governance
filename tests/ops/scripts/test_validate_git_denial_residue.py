@@ -73,6 +73,28 @@ def test_truthful_and_self_imposed_lines_pass(tmp_path: Path, line: str) -> None
     assert _scan_line(tmp_path, line) == [], f"gate false-positived on: {line}"
 
 
+def test_wrapped_denial_across_lines_is_caught(tmp_path: Path) -> None:
+    """Markdown wrap must not hide a command + denial split across lines."""
+    path = tmp_path / "doctrine.md"
+    path.write_text(
+        "# Doctrine\n\nRaw `git push` / `gh pr create` are\ndenied at every phase.\n",
+        encoding="utf-8",
+    )
+    original = validator.ROOT
+    validator.ROOT = tmp_path
+    try:
+        hits = validator.scan([path])
+    finally:
+        validator.ROOT = original
+    assert hits, "wrapped denial claim was missed"
+
+
+def test_section_citation_alone_does_not_exempt(tmp_path: Path) -> None:
+    """Citing §6.2.4 must not wash a still-false denial claim."""
+    line = "`git push` is denied by the gate; see CANONICAL_LAW §6.2.4"
+    assert _scan_line(tmp_path, line), f"section citation exempted a denial: {line}"
+
+
 def test_repository_is_clean() -> None:
     """The tree this lands in must already satisfy the gate."""
     assert validator.scan(validator._candidates()) == []
