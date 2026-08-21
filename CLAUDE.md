@@ -23,6 +23,9 @@ Highest first. A lower rung never overrides a higher one.
 5. **Agent-invented contracts** — none. If you find yourself designing a rule,
    it belongs in one of the four rungs above, in a PR.
 
+Maps, not rungs: `ARCHITECTURE.md` and `INVARIANTS.md` index this repo; they do
+not outrank the chain above.
+
 ## The three things most often got wrong here
 
 - **`make pr` is the sanctioned route to GitHub — and nothing blocks the
