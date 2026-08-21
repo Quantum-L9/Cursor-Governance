@@ -1892,7 +1892,7 @@ def live_lock_missing_seed_paths(seed: dict[str, Any], pec_workspace: Path) -> b
                 found = candidate
                 break
         if found is None:
-            return True
+            continue
         try:
             payload = json.loads(found.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):

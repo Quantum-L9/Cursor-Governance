@@ -502,6 +502,13 @@ class RunCampaignTests(unittest.TestCase):
                 encoding="utf-8",
             )
             self.assertFalse(self.mod.live_lock_missing_seed_paths(seed, workspace))
+            seed["tasks"].append(
+                {"id": "T2", "paths": ["ops/scripts/agent_worktree_start.sh"]}
+            )
+            self.assertFalse(
+                self.mod.live_lock_missing_seed_paths(seed, workspace),
+                "unrendered later tasks are not a live-lock mismatch",
+            )
 
     def test_load_pec_module_allowlists_file_not_import_path(self) -> None:
         with self.assertRaises(self.mod.CampaignError) as ctx:
