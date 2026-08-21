@@ -258,6 +258,25 @@ class ExecutionEnvironmentTest(unittest.TestCase):
         cls.exec_env = exec_env
         cls.run_campaign = _load("run_campaign_env_test", PE_ROOT / "scripts/run_campaign.py")
 
+    def test_consumer_task_worktree_uses_project_venv_not_controller(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            project = Path(raw)
+            (project / ".venv/bin").mkdir(parents=True)
+            python = project / ".venv/bin/python3"
+            python.write_text("#!/bin/sh\n", encoding="utf-8")
+            python.chmod(0o755)
+            (project / "uv.lock").write_text("", encoding="utf-8")
+            env = {
+                "VIRTUAL_ENV": str(Path.home() / ".cursor-governance/.venv"),
+                "L9_PE_PYTHON": "",
+            }
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(
+                    self.exec_env, "is_consumer_task_worktree", return_value=True
+                ):
+                    resolved = self.exec_env.resolve_exec_env(project)
+            self.assertEqual(resolved.python, python.resolve())
+
     def test_empty_unittest_collection_is_fail(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             worktree = Path(raw)
