@@ -77,9 +77,9 @@ canonical activation mechanism.
 fire when an agent runs `git worktree add`. After creating a worktree:
 
 ```bash
-# Ordinary agent start: ops/scripts/agent_worktree_start.sh
-# PR_STACK=auto (Makefile default) bases on the unique open-PR stack tip.
-# Empty PR_STACK keeps origin/main. Do not invent a main fork and restack later.
+# Ordinary start is origin/main (CANONICAL_LAW task ancestry).
+# Stack-aware launcher: ops/scripts/agent_worktree_start.sh — only when
+# PR_STACK=auto is an explicit authorized exception, not this default.
 bash "$HOME/.cursor-governance/ops/scripts/worktree_add_wired.sh" -b feat/<id> /path/to/wt origin/main
 # or, if the worktree already exists:
 bash "$HOME/.cursor-governance/ops/scripts/ensure_workspace_wired.sh" /path/to/wt
