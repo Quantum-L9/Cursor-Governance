@@ -232,6 +232,17 @@ class RunCampaignTests(unittest.TestCase):
         with patch.dict(os.environ, {"L9_CAMPAIGN_UNTIL_DEBUG": "1"}):
             self.mod.refuse_live_until_shortcut("activate")
 
+    def test_load_pec_module_rejects_names_outside_allowlist(self) -> None:
+        with self.assertRaises(self.mod.CampaignError) as ctx:
+            self.mod.load_pec_module("os")
+        self.assertIn("not allowlisted", str(ctx.exception))
+        with self.assertRaises(self.mod.CampaignError):
+            self.mod.load_pec_module("exec_env.foo")
+        with self.assertRaises(self.mod.CampaignError):
+            self.mod.load_pec_module("../controller")
+        loaded = self.mod.load_pec_module("exec_env")
+        self.assertTrue(hasattr(loaded, "resolve_exec_env"))
+
     def test_rejects_intent_v1(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "intent.yaml"

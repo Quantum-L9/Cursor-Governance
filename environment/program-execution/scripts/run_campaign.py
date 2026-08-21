@@ -11,6 +11,7 @@ program-execution.intent.v1 and pe-<hash> workspaces are not this path.
 from __future__ import annotations
 
 import argparse
+import importlib
 import importlib.util
 import json
 import os
@@ -51,6 +52,21 @@ VALIDATE_BLUEPRINT = (
 )
 PEC = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 PEC_SCRIPTS = PEC.parent
+PEC_MODULE_ALLOWLIST = frozenset(
+    {
+        "blueprint",
+        "cli",
+        "common",
+        "contracts",
+        "controller",
+        "exec_env",
+        "ledger",
+        "preflight",
+        "replan",
+        "state",
+        "workspace_reset",
+    }
+)
 ALLOWED_CAMPAIGN_FILES = {"CAMPAIGN_SOURCE.yaml", "source-integrity-receipt.json"}
 UNTIL_STAGES = (
     "activate",
@@ -394,9 +410,33 @@ def load_pec_module(name: str) -> Any:
     workspace-recovery logic must be identical on the campaign side; copying it
     is how the two drifted apart in the first place.
     """
+    if name not in PEC_MODULE_ALLOWLIST:
+        raise CampaignError(f"pec module not allowlisted: {name}")
     if str(PEC_SCRIPTS) not in sys.path:
         sys.path.insert(0, str(PEC_SCRIPTS))
-    return importlib.import_module(f"pec.{name}")
+    if name == "blueprint":
+        return importlib.import_module("pec.blueprint")
+    if name == "cli":
+        return importlib.import_module("pec.cli")
+    if name == "common":
+        return importlib.import_module("pec.common")
+    if name == "contracts":
+        return importlib.import_module("pec.contracts")
+    if name == "controller":
+        return importlib.import_module("pec.controller")
+    if name == "exec_env":
+        return importlib.import_module("pec.exec_env")
+    if name == "ledger":
+        return importlib.import_module("pec.ledger")
+    if name == "preflight":
+        return importlib.import_module("pec.preflight")
+    if name == "replan":
+        return importlib.import_module("pec.replan")
+    if name == "state":
+        return importlib.import_module("pec.state")
+    if name == "workspace_reset":
+        return importlib.import_module("pec.workspace_reset")
+    raise CampaignError(f"pec module not allowlisted: {name}")
 
 
 def dump_yaml(path: Path, value: Any) -> None:
