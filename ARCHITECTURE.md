@@ -64,7 +64,7 @@ There is no git commit hook. Do not run `pre-commit install`. Live hook list and
 
 Index only. Job tables and pin versions live in the workflow files and `AGENTS.md`.
 
-**PR / merge-blocking callers** (required contexts; skip rules are inside each file):
+**PR-triggered workflow callers** (these files run on pull_request; they are not automatically required merge checks — required contexts are branch-protection names, not this index):
 
 - `l9-lint-test.yml` — jobs `scope`, `lint`, `test`
 - `governance-self-check.yml` — job `governance-self-check`

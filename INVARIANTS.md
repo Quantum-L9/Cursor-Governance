@@ -17,7 +17,7 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | One governance root; no Dropbox / cloud-storage fallback | [`CANONICAL_LAW.md`](CANONICAL_LAW.md) §1; [`ops/scripts/resolve_governance_paths.sh`](ops/scripts/resolve_governance_paths.sh) |
 | Cursor-primary capability; thin adapters wrap outward | `CANONICAL_LAW.md` §2.1 |
 | Symlink law (consumers `.cursor-commands` → clone; SSOT must not self-alias) | [`AGENTS.md`](AGENTS.md) §10; `CANONICAL_LAW.md` §1–3 |
-| Sole publish path is `make pr` (any capitalization); raw `git push` / `gh pr create` denied | `AGENTS.md` §4 |
+| Sole sanctioned publish path is `make pr` (any capitalization); raw `git push` / `gh pr create` skip the Makefile checkers (not a hook denial in this repo) | `AGENTS.md` §4; `CANONICAL_LAW.md` §6.2.4 |
 | L4: local commits only during execution; no mid-execution push | `AGENTS.md` §3.1; `ops/autonomy/surface_profile.yaml` |
 | Graphiti is the episodic resume SSOT; do not write `memory-bank/` | `AGENTS.md` §7; `ops/graphiti/MEMORY_BANK_POLICY.md` |
 | Secret values never in git, logs, receipts, or chat | `AGENTS.md` §8; `ops/secrets/` |
