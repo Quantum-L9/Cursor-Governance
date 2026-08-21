@@ -4,7 +4,7 @@ overview: Align Claude Code SessionStart with Cursor’s load card and per-sessi
 todos:
   - id: t0-isolate-baseline
     content: Create wired worktree feat/claude-session-parity from origin/main @ 577c482; lock SHA; do not mutate the dirty primary checkout
-    status: pending
+    status: in_progress
   - id: t1-shared-renderer
     content: "Add ops/hooks/render_session_state.py + tests: shared ## L9 session state keys; Claude omits plan-audit/IDE/tunnel/.cursor-commands"
     status: pending
@@ -40,13 +40,17 @@ isProject: false
 
 # Claude SessionStart parity (A+B)
 
+> **plan_id:** plan.claude-code.session-parity.v1
+> **status:** draft until t0 emits `docs/plans/claude_session_parity.plan.json` and `validate_plan_document.py` PASSes
+> **Execute:** `make -C "$HOME/.cursor-governance" campaign INTENT=` this file. Frontmatter `todos` are the work items. Do not invent a substitute memo.
+
 Align Claude Code startup with Cursor `/start-session`: the same **load verdict** (Layer A) and the same **loaded payload** (Layer B: governance tip, autonomy, skills, rules). Do **not** call `make start` / `session_start_bootstrap.sh` from the cloud setup paste.
 
 **Doctrine:** `CANONICAL_LAW` §2.1 — shared brain in `ops/`, Claude wraps it. `SESSION_START_SPEC.md` already forbids new brains under the adapter.
 
 **Depth:** deep (session-start, Graphiti, fail-open hooks, two surfaces). Router: `route_plan.py --risk high --evidence sufficient` → `deep`.
 
-**Branch:** new worktree from `origin/main` @ `577c482cac657403fb6fb66f7f7d89e2ad6994e1` (this checkout HEAD `714b930` is dirty/diverged — do not mix). Suggested: `feat/claude-session-parity`.
+**Branch:** new worktree from `origin/main` @ `577c482cac657403fb6fb66f7f7d89e2ad6994e1`. Suggested: `feat/claude-session-parity`. Do not mix onto an unrelated dirty checkout.
 
 ```mermaid
 flowchart TD
@@ -67,7 +71,7 @@ flowchart TD
 
 - Repository: Quantum-L9/Cursor-Governance
 - SSOT lock: `origin/main` = `577c482cac657403fb6fb66f7f7d89e2ad6994e1`
-- Workspace for execute: new wired worktree, not `/Users/ib-mac/Cursor-Governance` (dirty mixed WIP)
+- Workspace for execute: new wired worktree; do not mutate a mixed-WIP primary checkout
 - On drift: stop and replan
 - Overlap: stop if dirty overlaps `may_modify`
 
@@ -90,7 +94,7 @@ Claude sessions open with a Cursor-shaped `## L9 session state` card (tip match,
 - CP-01: `git rev-parse origin/main` equals locked SHA
 - CP-02: locked interpreter `$HOME/.cursor-governance/.venv/bin/python3` exists
 - CP-03: `ops/graphiti/hydration/compile_session_packet.py` `compile_and_format` importable
-- CP-04: `worktree_add_wired.sh` available (or `ensure_workspace_wired.sh` after `git worktree add`)
+- CP-04: `worktree_add_wired.sh` available; if the worktree already exists, `ensure_workspace_wired.sh`
 
 ## Execution envelope
 
@@ -198,11 +202,11 @@ Never `reconcile_claude_settings.py`. Generated `.claude/skills/` and `.claude/r
 - IDE profile, Cursor plugins, SSH tunnel, `.cursor-commands` on Claude
 - Full `install.sh` every session
 - Merging PRs; force-push; `CANONICAL_LAW` rewrite
-- Mixing this onto the dirty `Cursor-Governance` checkout
+- Mixing this onto a mixed-WIP `Cursor-Governance` checkout
 
 ## Execution DAG
 
-- W0 t0: isolate worktree + lock SHA + capability probes
+- W0 t0: isolate worktree + lock SHA + capability probes + emit `docs/plans/claude_session_parity.plan.json`
 - W1 t1: create shared renderer + unit tests (card keys, Claude omissions)
 - W1 t2: Cursor bootstrap calls renderer (depends t1)
 - W1 t3: Claude hook emits card first (depends t1)
@@ -218,10 +222,10 @@ Critical path: t0 → t1 → t3 → t6 → t8 → t10
 
 ## Convergence
 
-- status: `partial` (plan only; implementation not run)
-- next_skill: `l9-ynp` then `@environment/program-execution` + `/autonomy`
-- stop_reason: dual-artifact plan ready for execute; no product mutation from plan mode
-- execute_via: `.plan.md` → Program Lock → Controller → subordinate `@autonomy`; `autonomous_merge: false`; publish only `PR_REMEDIATE=0 make pr` after L4
+- status: `partial` (plan hardened; implementation not run)
+- next_skill: `@environment/program-execution` via the campaign Makefile target
+- stop_reason: dual-artifact JSON still required at t0; no product mutation from plan mode
+- execute_via: this `.plan.md` as campaign INTENT; `autonomous_merge: false`; publish only after L4 via the Makefile PR target
 
 ## Final validation (at execute)
 

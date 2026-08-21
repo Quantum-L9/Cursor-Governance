@@ -1,6 +1,6 @@
 ---
 name: l9-plan-audit
-description: audit ~/.cursor/plans for unbuilt plans from the last 7 days, flag staleness, and surface findings at session start or via /plan-audit. use when session context shows Plan audit, the user asks which plans are unbuilt or stale, or /plan-audit is invoked. do not use to author new plans (use l9-plan) or to auto-build plans.
+description: audit ~/.cursor/plans for unbuilt plans from the last 7 days, flag staleness, and surface findings at session start or via /plan-audit. use when session context shows Plan audit, the user asks which plans are unbuilt or stale, or /plan-audit is invoked. do not use to author new plans (use l9-plan-simple, or l9-plan for pe/campaign) or to auto-build plans.
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -37,8 +37,9 @@ do not auto-Build plans from this skill.
 **Activate** when session context includes Plan audit findings, the user asks
 about unbuilt/stale plans, or `/plan-audit` runs.
 
-**Reject** when the user wants a new plan (`l9-plan`), wants to execute a chosen
-plan (`@environment/program-execution` + `/autonomy`), or asks to remediate
+**Reject** when the user wants a new plan (`l9-plan-simple` for Cursor Build,
+`l9-plan` for PE/campaign), wants to execute a chosen plan (Build, or
+`@environment/program-execution` + `/autonomy`), or asks to remediate
 unrelated scanner drift outside the plans directory.
 
 ## Compact workflow
