@@ -36,12 +36,11 @@ GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
 4. Local verify is `UV_PYTHON=<native> make pr-check`. Publish is
    `UV_PYTHON=<native> PR_REMEDIATE=0 make pr`. Never raw `git push`.
 5. Remediate every open PR to green + mergeable (bounded cycles).
-6. Merge each green mergeable PR **oldest-first**, stack-safe:
+6. Merge each green mergeable PR **oldest-first**, stack-safe. Never type
+   `--squash` yourself:
 
 ```bash
-# squash only when this head is not the base of another open PR
-gh pr merge {n} --repo {owner}/{repo} --squash --delete-branch
-# stacked parent: children first, retarget, or --merge
+"$GOV_PY" ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run
 ```
 
 7. Never `--admin`, force-push, unpack diffs, or `gh pr update-branch` after

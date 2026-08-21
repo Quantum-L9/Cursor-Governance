@@ -139,6 +139,15 @@ def main() -> int:
         fail("hooks.json.template does not register Cursor beforeSubmitPrompt skill router")
     else:
         print("  OK: Cursor beforeSubmitPrompt skill router registered in template")
+    after_shell = hooks_template.get("hooks", {}).get("afterShellExecution", [])
+    if not any(
+        "pr-gate-failure-shell.sh" in str(entry.get("command", ""))
+        for entry in after_shell
+        if isinstance(entry, dict)
+    ):
+        fail("hooks.json.template does not register afterShellExecution gate-failure hook")
+    else:
+        print("  OK: Cursor afterShellExecution gate-failure hook registered in template")
 
     cursor_rule = CURSOR_RULE_PATH.read_text(encoding="utf-8")
     if "alwaysApply: true" not in cursor_rule:
