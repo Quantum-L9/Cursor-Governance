@@ -2305,6 +2305,33 @@ def _task_card_command(cards: dict[str, Any], task_id: str) -> str:
     return ""
 
 
+def adoptable_inferred_command(command: str) -> bool:
+    """Inferences the execute path may relock. Presence checks (`ls`/`test -s`) stay out."""
+    text = str(command).strip()
+    return "-m unittest" in text or "-m pytest" in text or text.startswith("bash -n ")
+
+
+def rematerialize_after_relock(workspace: Path, task_id: str) -> dict[str, Any]:
+    """Rebuild the rendered contract after relock returns the task to ELIGIBLE.
+
+    Reuses the existing task worktree. Does not invent a parallel execution path.
+    """
+    ensure_task_contract(workspace, task_id)
+    pec_cmd(
+        workspace,
+        "claim",
+        task_id,
+        "--holder",
+        "make-campaign",
+        "--ttl-minutes",
+        str(TASK_BUDGET_MINUTES),
+    )
+    pec_cmd(workspace, "prepare", task_id)
+    rendered = pec_cmd(workspace, "render-contract", task_id)
+    pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
+    return json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
+
+
 def fill_inferred_validation(
     contract_path: Path, contract: dict[str, Any], worktree: Path
 ) -> dict[str, Any]:
@@ -2320,7 +2347,7 @@ def fill_inferred_validation(
     existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
     if not inferred or existing == inferred:
         return contract
-    if "-m unittest" not in inferred[0] and "-m pytest" not in inferred[0]:
+    if not adoptable_inferred_command(inferred[0]):
         return contract
     workspace = contract_path.parents[2]
     task_id = str(contract.get("task_id") or "")
@@ -2356,7 +2383,7 @@ def fill_inferred_validation(
     if adopt_changed_definitions(workspace, [task_id]) is None:
         raise CampaignError(f"pec relock refused inferred validation for {task_id}")
     log(f"inferred validation adopted for {task_id}: {inferred[0]}")
-    return contract
+    return rematerialize_after_relock(workspace, task_id)
 
 
 def run_worker_handoff(

@@ -479,6 +479,13 @@ class RunCampaignTests(unittest.TestCase):
             self.mod.refuse_hash_campaign_id("pe-8c9f6de43b25")
         self.assertIn("intent.v1", str(ctx.exception))
 
+    def test_adoptable_inferred_command_accepts_bash_n(self) -> None:
+        self.assertTrue(self.mod.adoptable_inferred_command("bash -n ops/scripts/run_pr_gate.sh"))
+        self.assertTrue(self.mod.adoptable_inferred_command("python3 -m unittest tests/x.py"))
+        self.assertTrue(self.mod.adoptable_inferred_command("python3 -m pytest tests/x.py --tb=short -q"))
+        self.assertFalse(self.mod.adoptable_inferred_command("test -s 'ops/scripts/run_pr_gate.sh'"))
+        self.assertFalse(self.mod.adoptable_inferred_command("ls -1 'a' 'b' >/dev/null"))
+
     def test_fill_inferred_validation_from_writable_tests(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

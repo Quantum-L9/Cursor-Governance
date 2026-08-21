@@ -74,6 +74,14 @@ class LaunchabilityTest(unittest.TestCase):
                 ],
             )
 
+    def test_shell_writable_path_infers_bash_n(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            inferred = launchability.infer_validation_commands(
+                {"writable_paths": ["ops/scripts/run_pr_gate.sh"]},
+                Path(raw),
+            )
+            self.assertEqual(inferred, ["bash -n ops/scripts/run_pr_gate.sh"])
+
     def test_validation_is_inferred_from_the_nearest_existing_test(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)

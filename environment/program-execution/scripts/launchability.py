@@ -138,6 +138,9 @@ def infer_validation_commands(
         if any(_is_pytest_file(repo_root, item) for item in tests):
             return [f"{python} -m pytest {' '.join(tests)} --tb=short -q"]
         return [f"{python} -m unittest {' '.join(tests)}"]
+    shells = [path for path in paths if path.endswith((".sh", ".bash"))]
+    if shells:
+        return [f"bash -n {' '.join(shells)}"]
     if paths:
         quoted = " ".join(f"'{path}'" for path in paths)
         return [f"test -s {quoted}"] if len(paths) == 1 else [f"ls -1 {quoted} >/dev/null"]

@@ -162,12 +162,24 @@ def project_conditionally_ready(intent: dict[str, Any]) -> dict[str, Any]:
                     or "/tests/" in path
                 )
             ]
+            shells = [
+                path for path in paths if path.endswith(".sh") or path.endswith(".bash")
+            ]
             if tests:
                 task["validation"] = [
                     {
                         "id": f"VAL-{index:03d}",
                         "method": "command",
                         "command_or_inspection": f"python3 -m unittest {' '.join(tests)}",
+                        "expected_result": "PASS",
+                    }
+                ]
+            elif shells:
+                task["validation"] = [
+                    {
+                        "id": f"VAL-{index:03d}",
+                        "method": "command",
+                        "command_or_inspection": f"bash -n {' '.join(shells)}",
                         "expected_result": "PASS",
                     }
                 ]
