@@ -840,23 +840,29 @@ def main() -> int:
     check_memory_enforcement(failures)
     check_maximum_velocity_surface(failures)
     print()
-    if failures:
+    structural_ok = not failures
+    if structural_ok:
+        # INV-8: never a bare PASS. This validator checks FILES. Reporting "PASS"
+        # for a runtime where nothing was wired is the single most quotable
+        # false-healthy signal the audit found.
+        print("RESULT: STRUCTURAL_PASS (runtime readiness not asserted)")
+    else:
         print(f"RESULT: STRUCTURAL_FAIL — {len(failures)} issue(s)")
-        return EXIT_STRUCTURAL_FAIL
-    # INV-8: never a bare PASS. This validator checks FILES. Reporting "PASS" for
-    # a runtime where nothing was wired is the single most quotable false-healthy
-    # signal the audit found.
-    print("RESULT: STRUCTURAL_PASS (runtime readiness not asserted)")
 
     if not args.runtime:
-        print("        run with --runtime to assert what the session actually loaded")
-        return EXIT_OK
+        if structural_ok:
+            print("        run with --runtime to assert what the session actually loaded")
+        return EXIT_OK if structural_ok else EXIT_STRUCTURAL_FAIL
 
+    # The two verdicts are independent. Suppressing runtime state because a file
+    # check failed would couple them, and an operator debugging an unwired
+    # session needs the runtime line most precisely when something else is
+    # already wrong.
     runtime = report_runtime()
     print(f"\nRUNTIME: {runtime}")
-    if runtime == READY:
-        return EXIT_OK
-    return EXIT_RUNTIME_NOT_READY
+    if not structural_ok:
+        return EXIT_STRUCTURAL_FAIL
+    return EXIT_OK if runtime == READY else EXIT_RUNTIME_NOT_READY
 
 
 if __name__ == "__main__":

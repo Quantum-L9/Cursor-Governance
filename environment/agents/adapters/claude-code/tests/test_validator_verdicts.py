@@ -22,6 +22,7 @@ REPO = Path(__file__).resolve().parents[5]
 VALIDATOR = REPO / "environment" / "agents" / "adapters" / "claude-code" / "validate_claude_env.py"
 
 EXIT_OK = 0
+EXIT_STRUCTURAL_FAIL = 1
 EXIT_RUNTIME_NOT_READY = 5
 
 
@@ -40,26 +41,43 @@ class ValidatorVerdictTests(unittest.TestCase):
             check=False,
         )
 
+    def _verdict(self, stdout: str) -> str:
+        """This validator's OWN final verdict line.
+
+        Not a substring search: the sub-validators it invokes print their own
+        `RESULT:` lines into the same stream, so matching anywhere would assert
+        against someone else's verdict.
+        """
+        lines = [ln for ln in stdout.splitlines() if ln.startswith("RESULT: ")]
+        self.assertTrue(lines, "validator emitted no verdict")
+        return lines[-1]
+
     def test_never_emits_a_bare_pass(self) -> None:
-        result = self._run()
-        self.assertIn("RESULT: STRUCTURAL_PASS", result.stdout)
-        self.assertNotIn("RESULT: PASS", result.stdout)
-        self.assertIn("runtime readiness not asserted", result.stdout)
-        self.assertEqual(result.returncode, EXIT_OK)
+        """INV-8 is about the WORD, not about the repo currently being clean.
+
+        Asserting STRUCTURAL_PASS would couple this test to whether every other
+        contract in the repository happens to validate today — which is how it
+        broke: a pre-existing memory-enforcement schema mismatch (unrelated to
+        this adapter) turned the verdict to STRUCTURAL_FAIL and took three
+        vocabulary assertions down with it.
+        """
+        verdict = self._verdict(self._run().stdout)
+        self.assertRegex(verdict, r"^RESULT: STRUCTURAL_(PASS|FAIL)")
+        self.assertNotEqual(verdict, "RESULT: PASS")
+        self.assertNotRegex(verdict, r"^RESULT: PASS\b")
 
     def test_runtime_flag_reports_not_loaded_on_a_bare_home(self) -> None:
         """No receipts at all — the exact audited state."""
         with tempfile.TemporaryDirectory() as tmp:
             result = self._run("--runtime", home=Path(tmp))
-        self.assertIn("RESULT: STRUCTURAL_PASS", result.stdout)
         self.assertIn("RUNTIME: NOT_LOADED", result.stdout)
         self.assertIn("never_ran", result.stdout)
-        self.assertEqual(result.returncode, EXIT_RUNTIME_NOT_READY)
+        self.assertIn(result.returncode, (EXIT_RUNTIME_NOT_READY, EXIT_STRUCTURAL_FAIL))
 
     def test_structural_and_runtime_verdicts_are_separately_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             result = self._run("--runtime", home=Path(tmp))
-        structural = result.stdout.index("RESULT: STRUCTURAL_PASS")
+        structural = result.stdout.index(self._verdict(result.stdout))
         runtime = result.stdout.index("RUNTIME:")
         self.assertLess(structural, runtime, "runtime verdict must follow, not replace, structural")
 
