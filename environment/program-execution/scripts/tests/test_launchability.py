@@ -55,6 +55,22 @@ class LaunchabilityTest(unittest.TestCase):
             codes = {item["code"] for item in report["blockers"]}
             self.assertIn("verification_deadlock", codes)
 
+    def test_function_style_file_without_pytest_import_infers_pytest(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "tests").mkdir()
+            (root / "tests/test_rule_loader.py").write_text(
+                "def test_ok():\n    assert True\n", encoding="utf-8"
+            )
+            inferred = launchability.infer_validation_commands(
+                {"writable_paths": ["tests/test_rule_loader.py"]},
+                root,
+            )
+            self.assertEqual(
+                inferred,
+                ["python3 -m pytest tests/test_rule_loader.py --tb=short -q --no-cov"],
+            )
+
     def test_pytest_native_file_infers_pytest_not_unittest(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -74,7 +90,7 @@ class LaunchabilityTest(unittest.TestCase):
                 inferred,
                 [
                     "python3 -m pytest "
-                    "tests/ops/scripts/test_multi_agent_main_bound.py --tb=short -q"
+                    "tests/ops/scripts/test_multi_agent_main_bound.py --tb=short -q --no-cov"
                 ],
             )
 
@@ -98,7 +114,7 @@ class LaunchabilityTest(unittest.TestCase):
             self.assertTrue(report["launchable"])
             self.assertEqual(
                 report["synthesized_validations"]["TASK-001"],
-                ["python3 -m unittest pkg/tests/test_widget.py"],
+                ["python3 -m pytest pkg/tests/test_widget.py --tb=short -q --no-cov"],
             )
 
     def test_declared_validation_overrides_inference(self) -> None:
