@@ -12,6 +12,9 @@ Covered artifacts:
   * skills/AUTONOMY_MANIFEST.yaml (orphan skills → explicit_only)
   * commands/COMMANDS_MANIFEST.yaml
   * environment/program-execution/core/MANIFEST.yaml
+  * environment/program-execution/core/program-execution-{blueprint,controller}-template/
+    MANIFEST.yaml — each template's own integrity manifest, gated by
+    validate_pair.py in CI
 
 Advisory, never auto-synced (see TODO.md, "advisory by decision"):
   * environment/program-execution/MANIFEST.json — hashes the whole mutable
@@ -48,6 +51,8 @@ GENERATED_PATH_PREFIXES = (
     "commands/COMMANDS_MANIFEST.yaml",
     "skills/AUTONOMY_MANIFEST.yaml",
     "environment/program-execution/core/MANIFEST.yaml",
+    "environment/program-execution/core/program-execution-blueprint-template/MANIFEST.yaml",
+    "environment/program-execution/core/program-execution-controller-template/MANIFEST.yaml",
     # Auto-sync suspended (see module docstring), but the file is still a
     # generated artifact: it stays in this SSOT so .gitattributes keeps the
     # l9-generated merge driver and the PR overlap gate keeps its exemption.
@@ -380,6 +385,37 @@ def sync_pe_core(root: Path, wrote: list[str]) -> None:
         wrote.append(str(out.relative_to(root)))
 
 
+#: The two distributable templates under `core/`. Each carries its own manifest,
+#: hashed by its own validator, and both are gated by `validate_pair.py` in CI.
+PE_TEMPLATE_DIRS = (
+    "program-execution-blueprint-template",
+    "program-execution-controller-template",
+)
+
+
+def sync_pe_templates(root: Path, wrote: list[str]) -> None:
+    """Regenerate the blueprint and controller template manifests.
+
+    These were gated without being generated: `validate_pair.py` runs each
+    template's validator in CI, but nothing regenerated their manifests, so a
+    contributor who added a file to a template had to hand-write digest YAML.
+    The generator reads each manifest's own shape, so one call serves both.
+    """
+    pe_core = root / "environment" / "program-execution" / "core"
+    generator = pe_core / "scripts" / "generate_manifest.py"
+    if not generator.is_file():
+        return
+    for name in PE_TEMPLATE_DIRS:
+        template = pe_core / name
+        if not template.is_dir():
+            continue
+        out = template / "MANIFEST.yaml"
+        prior = out.read_bytes() if out.is_file() else None
+        run_generator([sys.executable, str(generator), str(template)], root)
+        if out.is_file() and out.read_bytes() != prior:
+            wrote.append(str(out.relative_to(root)))
+
+
 def sync_pe_adapters(root: Path, wrote: list[str]) -> None:
     """Regenerate environment/program-execution/MANIFEST.json.
 
@@ -454,6 +490,7 @@ def sync(
         pe_touched = should_run(changed, ("environment/program-execution/",))
         if pe_touched:
             sync_pe_core(root, wrote)
+            sync_pe_templates(root, wrote)
             # environment/program-execution/MANIFEST.json is opt-in only —
             # --force does not reach it. See the module docstring and TODO.md.
             if pe_manifest:

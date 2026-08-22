@@ -474,8 +474,8 @@ files:
   sha256: 994efa39a7fac7828a99f23be5c5b255e04b47fa388684dc92cfbea6d3202ce1
   bytes: 9638
 - path: scripts/generate_manifest.py
-  sha256: d2f1be14f99214a2a487011f80ac4c4d10aff93013690069e2884e469a19eff9
-  bytes: 1500
+  sha256: bd63ab3d3d3829ce8ccaf783825352abbefe03c23a541db6a24c586b63e60ec9
+  bytes: 4774
 - path: scripts/instantiate_pair.py
   sha256: c64acde6a55c676d34092989e0bccd9e929becd2e2653bef6d036644dbaa842e
   bytes: 3156
@@ -568,4 +568,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 187
-  total_bytes: 633561
+  total_bytes: 636835
