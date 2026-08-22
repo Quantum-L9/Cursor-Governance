@@ -155,3 +155,118 @@ def test_sync_force_no_churn_on_second_pass(tmp_path: Path) -> None:
     # Without skills/AUTONOMY etc., skill sync may error — force path should still return dict.
     assert "wrote" in result
     assert "errors" in result
+
+
+def test_pe_template_manifests_are_registered_generated_paths() -> None:
+    """Both template manifests are generated artifacts, not hand-authored files.
+
+    Registration here is the single SSOT that also drives the `l9-generated`
+    merge-driver attributes and the PR overlap-gate exemption. Before it, the two
+    template manifests hard-conflicted on every stacked merge that touched them.
+    """
+    for template in ("blueprint", "controller"):
+        rel = (
+            "environment/program-execution/core/"
+            f"program-execution-{template}-template/MANIFEST.yaml"
+        )
+        assert is_generated_path(rel), f"{rel} is gated in CI but not registered as generated"
+
+
+def test_pe_template_manifests_carry_the_generated_merge_driver() -> None:
+    """A registered generated path must also be attributed, or merges still conflict."""
+    attributes = (Path(__file__).resolve().parents[3] / ".gitattributes").read_text(
+        encoding="utf-8"
+    )
+    for template in ("blueprint", "controller"):
+        rel = (
+            "environment/program-execution/core/"
+            f"program-execution-{template}-template/MANIFEST.yaml"
+        )
+        assert f"{rel} merge=l9-generated" in attributes, f"{rel} is not attributed"
+
+
+def test_sync_regenerates_both_pe_template_manifests(tmp_path: Path) -> None:
+    """A file added to a template is picked up without hand-writing digest YAML."""
+    from sync_generated_artifacts import PE_TEMPLATE_DIRS, sync_pe_templates
+
+    repo = Path(__file__).resolve().parents[3]
+    core = tmp_path / "environment" / "program-execution" / "core"
+    (core / "scripts").mkdir(parents=True)
+    (core / "scripts" / "generate_manifest.py").write_bytes(
+        (repo / "environment/program-execution/core/scripts/generate_manifest.py").read_bytes()
+    )
+
+    for name in PE_TEMPLATE_DIRS:
+        template = core / name
+        template.mkdir()
+        (template / "README.md").write_text("readme\n", encoding="utf-8")
+        (template / "MANIFEST.yaml").write_text(
+            yaml.safe_dump(
+                {
+                    "schema": f"{name}.manifest.v2",
+                    "schema_version": "2.0.0",
+                    "template": name,
+                    "files": [{"path": "README.md", "sha256": "stale"}],
+                    "integrity": {"algorithm": "sha256", "self_excluded": True},
+                },
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
+
+    wrote: list[str] = []
+    sync_pe_templates(tmp_path, wrote)
+
+    assert len(wrote) == 2, f"expected both template manifests regenerated, got {wrote}"
+    for name in PE_TEMPLATE_DIRS:
+        doc = yaml.safe_load((core / name / "MANIFEST.yaml").read_text(encoding="utf-8"))
+        assert doc["template"] == name, "sync rewrote the manifest into another shape"
+        assert doc["files"][0]["sha256"] != "stale"
+        assert set(doc["files"][0]) == {"path", "sha256"}
+
+
+def test_sync_pe_templates_is_idempotent(tmp_path: Path) -> None:
+    """A second run reports no write, so the gate never sees mid-run churn."""
+    from sync_generated_artifacts import PE_TEMPLATE_DIRS, sync_pe_templates
+
+    repo = Path(__file__).resolve().parents[3]
+    core = tmp_path / "environment" / "program-execution" / "core"
+    (core / "scripts").mkdir(parents=True)
+    (core / "scripts" / "generate_manifest.py").write_bytes(
+        (repo / "environment/program-execution/core/scripts/generate_manifest.py").read_bytes()
+    )
+    for name in PE_TEMPLATE_DIRS:
+        template = core / name
+        template.mkdir()
+        (template / "README.md").write_text("readme\n", encoding="utf-8")
+        (template / "MANIFEST.yaml").write_text(
+            yaml.safe_dump(
+                {"schema": "s.v2", "schema_version": "2.0.0", "template": name, "files": []},
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
+
+    first: list[str] = []
+    sync_pe_templates(tmp_path, first)
+    second: list[str] = []
+    sync_pe_templates(tmp_path, second)
+
+    assert first, "first sync should have refreshed the stale manifests"
+    assert second == [], f"second sync rewrote unchanged manifests: {second}"
+
+
+def test_sync_pe_templates_tolerates_a_missing_template(tmp_path: Path) -> None:
+    from sync_generated_artifacts import sync_pe_templates
+
+    repo = Path(__file__).resolve().parents[3]
+    core = tmp_path / "environment" / "program-execution" / "core"
+    (core / "scripts").mkdir(parents=True)
+    (core / "scripts" / "generate_manifest.py").write_bytes(
+        (repo / "environment/program-execution/core/scripts/generate_manifest.py").read_bytes()
+    )
+
+    wrote: list[str] = []
+    sync_pe_templates(tmp_path, wrote)
+
+    assert wrote == []

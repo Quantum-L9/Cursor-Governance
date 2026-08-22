@@ -30,4 +30,6 @@ environment/agents/adapters/claude-code/generated/skill-registry.json merge=l9-g
 environment/agents/adapters/claude-code/settings.template.json merge=l9-generated
 commands/COMMANDS_MANIFEST.yaml merge=l9-generated
 environment/program-execution/core/MANIFEST.yaml merge=l9-generated
+environment/program-execution/core/program-execution-blueprint-template/MANIFEST.yaml merge=l9-generated
+environment/program-execution/core/program-execution-controller-template/MANIFEST.yaml merge=l9-generated
 environment/program-execution/MANIFEST.json merge=l9-generated
