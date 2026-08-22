@@ -53,6 +53,10 @@ not outrank the chain above.
 make claude-env      # structural validation + RUNTIME readiness (exit 5 = not wired)
 ```
 
+Every step of that target runs even when an earlier one fails, so the `RUNTIME:`
+line is always printed. A structural failure still decides the exit code, so
+exit 5 means specifically: the files are correct and nothing loaded them.
+
 `STRUCTURAL_PASS` means the files are correct. It says nothing about whether any
 of them were loaded into this session; `RUNTIME:` is the line that answers that.
 
