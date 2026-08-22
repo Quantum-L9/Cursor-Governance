@@ -27,7 +27,11 @@ class ValidateGhPackageDepsTests(unittest.TestCase):
     def test_shape_problems_flags_non_tarball_resolved(self) -> None:
         problems = deps.shape_problems(
             "@quantum-l9/foo",
-            {"version": "1.0.0", "resolved": "https://example.com/foo.tgz", "integrity": "sha512-x"},
+            {
+                "version": "1.0.0",
+                "resolved": "https://example.com/foo.tgz",
+                "integrity": "sha512-x",
+            },
         )
         self.assertTrue(problems)
 
