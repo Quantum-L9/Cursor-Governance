@@ -37,9 +37,12 @@ skill contract before improvising.
    mutating steps without the skill's required authority (packet / approve / explicit user).
 6. Skip skill load only for trivial edits / direct factual lookups where no skill
    would improve correctness or evidence.
-7. **Planning deliverables:** when producing an execution plan/spec (including Cursor
-   Plan mode), follow `l9-plan` → `references/plan-workflow.md` even if the skill was
-   not attached and even if `~/.cursor/l9/skill-route.json` is stale/absent.
+7. **Planning deliverables:** when producing an ordinary execution plan/spec
+   (including Cursor Plan mode), follow `l9-plan-simple` →
+   `references/plan-workflow-simple.md` (shared canonical template, Build execute)
+   even if the skill was not attached and even if `~/.cursor/l9/skill-route.json`
+   is stale/absent. Campaign / program-execution / `make campaign` / `/l9-plan`
+   still follow `l9-plan` → `references/plan-workflow-pe-autonomy.md`.
 
 ## Fail-closed
 
@@ -63,7 +66,8 @@ If the file is stale or absent, still select from available skills yourself.
 
 | User intent | Read first |
 |---|---|
-| Plan / unclear scope / decompose | `l9-plan` |
+| Plan / unclear scope / decompose / Cursor Plan mode | `l9-plan-simple` |
+| Campaign / PE / `make campaign` / `/l9-plan` | `l9-plan` |
 | Run e2e / clear e2e blockers / local-proof | `l9-e2e-blocker-resolution` |
 | Campaign / `/autonomy` / PR poll while continuing | `l9-bounded-autonomy` (hint; packet required) |
 | SaaS admin UI / cartridge / API insufficient | `l9-ui-operator` (hint; human approve for run) |

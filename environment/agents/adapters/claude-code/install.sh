@@ -89,7 +89,18 @@ downgrade() { # $1=step-var-name $2=new-status $3=reason
 #
 # Written in bash rather than through the locked interpreter deliberately: the
 # case that most needs a receipt is the case where that interpreter is missing.
-RECEIPT="${L9_CLAUDE_BOOTSTRAP_RECEIPT:-$HOME/.l9/claude/bootstrap-state.json}"
+# --check is a DIAGNOSIS, and a diagnosis that rewrites the thing it diagnoses
+# is not one. `make claude-env` documents itself as read-only, yet its first step
+# reconciled nothing and still overwrote this file — so a doctor run against a
+# different --workspace, or with a different environment, silently replaced the
+# session's own verdicts. Four components inverted between a SessionStart read
+# and a post-doctor read of the same path, for that reason alone. Check mode now
+# writes beside the real receipt; the session's stays whatever SessionStart left.
+if [ "${CHECK:-0}" = "1" ] && [ -z "${L9_CLAUDE_BOOTSTRAP_RECEIPT:-}" ]; then
+  RECEIPT="$HOME/.l9/claude/bootstrap-check.json"
+else
+  RECEIPT="${L9_CLAUDE_BOOTSTRAP_RECEIPT:-$HOME/.l9/claude/bootstrap-state.json}"
+fi
 RECEIPT_STAGE="startup"
 RECEIPT_REMEDIATION="bash $GOV_DIR/environment/agents/adapters/claude-code/install.sh"
 RECEIPT_WRITTEN=0
@@ -142,15 +153,45 @@ on_exit() {
 }
 trap on_exit EXIT
 
-# --- Workspace sanity: never wire a directory that is not a git repository ----
-# A caller that resolves the wrong workspace (e.g. the PARENT of the checkout)
-# would otherwise produce a complete .claude/ tree the editor never loads, and
+# --- Workspace sanity -------------------------------------------------------
+# A caller that resolves the wrong workspace (e.g. the PARENT of a lone
+# checkout) would produce a complete .claude/ tree the editor never loads, and
 # still report settings/skills/rules READY. Fail loud in the receipt instead.
-if ! git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
-  warn "workspace $WORKSPACE is not a git repository - refusing to wire project artifacts"
-  downgrade STATUS_SETTINGS BLOCKED "workspace is not a git repository"
-  downgrade STATUS_SKILLS BLOCKED "workspace is not a git repository"
-  downgrade STATUS_RULES BLOCKED "workspace is not a git repository"
+#
+# But "not a git repository" is not the same question. A cloud container holds
+# several repositories side by side and the harness roots the session at their
+# PARENT, which is exactly the tree Claude Code loads project scope from. The
+# old check refused precisely that directory. Two signals separate a real
+# multi-repo workspace from a stray parent, and neither is git-repo-ness:
+#   * the harness names it (CLAUDE_PROJECT_DIR), or
+#   * it directly contains two or more git repositories.
+# Anything else that is not a repository stays BLOCKED, as before. Git-specific
+# steps (shared excludes) already guard on rev-parse further down, so a non-repo
+# workspace skips them without any change here.
+workspace_is_repo() { git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; }
+
+workspace_is_multirepo_root() {
+  local n=0 d
+  for d in "$WORKSPACE"/*/ "$WORKSPACE"/.*/; do
+    case "$d" in *'/./'|*'/../') continue ;; esac
+    [ -d "$d/.git" ] || continue
+    n=$((n + 1))
+    [ "$n" -ge 2 ] && return 0
+  done
+  return 1
+}
+
+if ! workspace_is_repo; then
+  if [ -n "${CLAUDE_PROJECT_DIR:-}" ] && [ "$WORKSPACE" = "$CLAUDE_PROJECT_DIR" ]; then
+    say "workspace $WORKSPACE is the harness project directory - wiring project artifacts"
+  elif workspace_is_multirepo_root; then
+    say "workspace $WORKSPACE is a multi-repo container root - wiring project artifacts"
+  else
+    warn "workspace $WORKSPACE is not a git repository - refusing to wire project artifacts"
+    downgrade STATUS_SETTINGS BLOCKED "workspace is not a git repository"
+    downgrade STATUS_SKILLS BLOCKED "workspace is not a git repository"
+    downgrade STATUS_RULES BLOCKED "workspace is not a git repository"
+  fi
 fi
 
 # An unexpanded literal '$HOME' reaches us from .env-format environment fields,
@@ -298,12 +339,46 @@ else
   downgrade STATUS_MCP DEGRADED "mcp.template.json missing"
 fi
 
-# Capability plane + memory posture for the receipt. The brokered MCP path is
-# usable only where a broker endpoint is configured; without it, capabilities
-# and memory are DEGRADED — the honest posture, never a token-paste fix.
+# Capability plane + memory posture for the receipt.
+#
+# This used to read `[ -z "$L9_CAPABILITY_BROKER_URL" ]` and call the result the
+# honest posture. Defining a NAME is not evidence that a plane works: the
+# configured broker host has had no DNS record and the hosted surface issues no
+# session identity, and the receipt still said READY for both capabilities and
+# memory. A false green is worse than a red, because nobody goes looking.
+#
+# ops/secrets/probe_broker.py is the classifier that already knows the
+# difference (identity vs configuration vs reachability). Exit 0 means a usable
+# plane; anything else names its primary blocker. It answers in under a second
+# when DNS fails, which is the case it has to be fast for.
+stage "capability-plane"
+PROBE_BROKER="$GOV_DIR/ops/secrets/probe_broker.py"
 if [ -z "${L9_CAPABILITY_BROKER_URL:-}" ]; then
   downgrade STATUS_CAPABILITIES DEGRADED "L9_CAPABILITY_BROKER_URL unset"
   downgrade STATUS_MEMORY DEGRADED "no broker-authenticated identity path"
+elif [ -n "$GOV_PY" ] && [ -f "$PROBE_BROKER" ]; then
+  if probe_json="$(L9_PROBE_QUIET=1 "$GOV_PY" "$PROBE_BROKER" --json 2>/dev/null)"; then
+    say "capability broker: reachable and identified"
+  else
+    probe_blocker="$(printf '%s' "$probe_json" \
+      | sed -n 's/.*"primary_blocker": *"\([^"]*\)".*/\1/p' | head -n 1)"
+    : "${probe_blocker:=unavailable}"
+    downgrade STATUS_CAPABILITIES DEGRADED "broker probe: $probe_blocker"
+    downgrade STATUS_MEMORY DEGRADED "broker probe: $probe_blocker"
+  fi
+else
+  downgrade STATUS_CAPABILITIES DEGRADED "broker unprobeable (no interpreter or probe script)"
+  downgrade STATUS_MEMORY DEGRADED "broker unprobeable (no interpreter or probe script)"
+fi
+
+# The memory MCP front door resolves THROUGH the broker
+# (url: ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti), so a present .mcp.json says
+# nothing about whether that server can ever connect. When the file routes
+# through the broker and the broker is not READY, neither is the front door.
+if [ "$STATUS_CAPABILITIES" != "READY" ] \
+   && [ -f "$WORKSPACE/.mcp.json" ] \
+   && grep -q 'L9_CAPABILITY_BROKER_URL' "$WORKSPACE/.mcp.json" 2>/dev/null; then
+  downgrade STATUS_MCP DEGRADED "front door routes through an unavailable broker"
 fi
 
 # --- 3b) Marketplace plugins ------------------------------------------------

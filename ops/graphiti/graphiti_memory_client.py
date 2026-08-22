@@ -331,24 +331,29 @@ def _facts_from_search(data: Any) -> list[Any]:
     return []
 
 
-def _search_group(query: str, group_id: str, limit: int = 10) -> list[Any]:
+def _search_group_status(query: str, group_id: str, limit: int = 10) -> tuple[list[Any], list[str]]:
     errors: list[str] = []
     for tool, arg_key in (("search_memory_facts", "max_facts"), ("search_nodes", "max_nodes")):
         try:
             data = call_tool(tool, {"query": query, "group_ids": [group_id], arg_key: limit})
             facts = _facts_from_search(data)
             if facts:
-                return facts
+                return facts, []
         except Exception as exc:  # noqa: BLE001
             errors.append(f"{tool}: {exc}")
             continue
+    return [], errors
+
+
+def _search_group(query: str, group_id: str, limit: int = 10) -> list[Any]:
+    facts, errors = _search_group_status(query, group_id, limit=limit)
     # Distinguish a genuinely empty result from a transport/tool failure so the
     # problem is not silently hidden behind an empty list.
     if errors:
         print(
             f"WARN: search tool calls failed for {group_id}: {'; '.join(errors)}", file=sys.stderr
         )
-    return []
+    return facts
 
 
 def _is_already_seeded(group_id: str, seed_name: str) -> bool:
@@ -858,16 +863,85 @@ def _fresh_conflicts(data: list[Any], now: datetime | None = None) -> list[Any]:
     return fresh
 
 
+_CONFLICT_MARKERS = (
+    "conflicts_with",
+    "ConflictsWith",
+    "IS_CONFLICTED_WITH",
+    "conflicted_with",
+)
+
+
+def _conflicts_matching_task(data: list[Any], task: str) -> list[Any]:
+    """Keep only edges that mention the task signature and a conflict marker."""
+    tokens = [part.lower() for part in task.split() if len(part) >= 3]
+    if not tokens:
+        return []
+    matched: list[Any] = []
+    for item in data:
+        blob = json.dumps(item, default=str).lower()
+        if not any(marker.lower() in blob for marker in _CONFLICT_MARKERS):
+            continue
+        if any(token in blob for token in tokens):
+            matched.append(item)
+    return matched
+
+
 def cmd_conflicts(_args: argparse.Namespace) -> int:
     load_env()
     group_id = resolve_group_id(Path.cwd()).get("group_id")
     if not group_id:
         raise SystemExit("no group_id")
-    data = _search_group("conflicts_with", group_id, limit=20)
+    task = str(getattr(_args, "task", None) or "").strip()
+    namespace = str(getattr(_args, "namespace", None) or "").strip()
+    signature = " ".join(part for part in (namespace, task) if part)
+    if not signature:
+        print(
+            json.dumps(
+                {
+                    "group_id": group_id,
+                    "conflicts": [],
+                    "status": "unavailable",
+                    "reason": (
+                        "conflicts check requires --task (and optional --namespace); "
+                        "refusing to treat a literal conflicts_with token search as a conflict"
+                    ),
+                },
+                indent=2,
+            )
+        )
+        return 0
+    data, errors = _search_group_status(signature, group_id, limit=20)
+    if errors and not data:
+        print(
+            json.dumps(
+                {
+                    "group_id": group_id,
+                    "task": task or None,
+                    "namespace": namespace or None,
+                    "conflicts": [],
+                    "status": "unavailable",
+                    "reason": f"conflict search unreachable: {'; '.join(errors)}"[:500],
+                },
+                indent=2,
+            )
+        )
+        return 0
     if not getattr(_args, "include_expired", False):
         data = _fresh_conflicts(data)
     data = _conflicts_in_scope(data, group_id)
-    print(json.dumps({"group_id": group_id, "conflicts": data}, indent=2))
+    data = _conflicts_matching_task(data, signature)
+    print(
+        json.dumps(
+            {
+                "group_id": group_id,
+                "task": task or None,
+                "namespace": namespace or None,
+                "conflicts": data,
+                "status": "ok",
+            },
+            indent=2,
+        )
+    )
     return 0
 
 
@@ -948,7 +1022,16 @@ def main() -> int:
     p_conflicts.add_argument(
         "--include-expired", action="store_true", help="include expired/invalidated conflict edges"
     )
-    sub.add_parser("phase-lock")
+    p_conflicts.add_argument(
+        "--task", default="", help="task signature to evaluate conflicts against"
+    )
+    p_conflicts.add_argument("--namespace", default="", help="optional namespace/group hint")
+    p_phase = sub.add_parser("phase-lock")
+    p_phase.add_argument("--task", default="")
+    p_phase.add_argument("--namespace", default="")
+    p_phase.add_argument(
+        "--include-expired", action="store_true", help="include expired/invalidated conflict edges"
+    )
     p_autoseed = sub.add_parser("autoseed-check")
     p_autoseed.add_argument("--group-id", default=None)
     p_prune = sub.add_parser("prune")
