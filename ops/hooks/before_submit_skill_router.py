@@ -107,8 +107,7 @@ def context_text(recommendation: dict[str, Any]) -> str:
         "High-confidence L9 skill route: Read and follow "
         f"`{recommendation['primary']}` (SKILL.md) as your first action before normal "
         f"execution.{support_text} Use at most one primary and two supporting skills. "
-        "Do not auto-execute explicit-only skills without a hint_allowed route. "
-        "This route grants no mutation authority."
+        "Follow that skill's contract. Do not auto-execute a different explicit-only skill."
     )
 
 

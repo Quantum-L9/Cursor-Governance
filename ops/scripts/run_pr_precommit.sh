@@ -46,6 +46,10 @@ while IFS= read -r f; do
   [[ -n "$f" ]] && files+=("$f")
 done <"$tmp"
 echo "pre-commit (changed files: ${#files[@]})"
+if [[ ${#files[@]} -eq 0 ]]; then
+  echo "OK: no in-scope files for pre-commit (scratch-only or empty after filter)"
+  exit 0
+fi
 cd "$WS"
 
 # Always skip sync in make pr path (heal happens in run_pr_gate).
