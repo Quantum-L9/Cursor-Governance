@@ -229,7 +229,11 @@ class PeSmokeCampaignTests(unittest.TestCase):
                 {"compile", "launchability", "bootstrap", "arm", "execute"}, recorded
             )
             progress = json.loads((workspace / "runtime/PROGRESS.json").read_text("utf-8"))
-            self.assertEqual(progress["execution"], {"done": 2, "total": 2})
+            # Only COMPLETED counts as done; the other dimensions are reported
+            # beside it rather than folded into the same number.
+            self.assertEqual(progress["execution"]["done"], 2)
+            self.assertEqual(progress["execution"]["total"], 2)
+            self.assertEqual(progress["execution"]["in_progress"], 0)
             self.assertLess(elapsed, 300, "smoke campaign must stay fast enough to run in dev")
 
     def test_interrupted_task_worktree_can_be_reset_and_recreated(self) -> None:

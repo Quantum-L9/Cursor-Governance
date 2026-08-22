@@ -76,6 +76,19 @@ PE_MODE_ENV = "L9_PE_MODE"
 PE_RELEASE_ENV = "L9_PE_RELEASE_AUTHORIZED"
 AUTONOMOUS_LAST_STAGE = "execute"
 PUBLICATION_STAGES = ("pr", "close")
+# Not a preparation stage that does work: it records which campaign definitions
+# this runtime was prepared from, so the next invocation can decide whether
+# resuming it would resume stale ones.
+DEFINITION_STAGE = "definition"
+
+# PEC's own runtime states, as `pec status` reports them.
+PEC_IN_PROGRESS_STATES = frozenset(
+    {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING", "SUBMITTED", "VERIFYING", "PASSED_LOCAL"}
+)
+# States that mean an attempt already exists, as opposed to a task this run's
+# arm merely prepared. Only these are a resume.
+PEC_ATTEMPTED_STATES = frozenset({"EXECUTING", "SUBMITTED", "VERIFYING", "PASSED_LOCAL", "FAILED"})
+
 PREPARATION_STAGES = (
     "stack_proof",
     "isolate",
@@ -1906,6 +1919,49 @@ def live_lock_missing_seed_paths(seed: dict[str, Any], pec_workspace: Path) -> b
     return False
 
 
+def definition_fingerprint(seed: dict[str, Any], campaign_source_doc: dict[str, Any] | None) -> str:
+    """Identity of the campaign definitions this invocation was handed.
+
+    Whatever the operator passed -- a v2 campaign source or an activation seed --
+    is the document the tasks are compiled from, so its fingerprint is the
+    cheapest honest answer to "are these the same definitions the live runtime
+    was built from". Computed from the input in memory, before any stage has
+    emitted, compiled or bootstrapped anything.
+    """
+    return pe_trace.fingerprint(campaign_source_doc if campaign_source_doc is not None else seed)
+
+
+def recorded_definition_fingerprint(l9_home: Path, campaign_id: str) -> str:
+    """What the last preparation of this campaign was compiled from, if known."""
+    path = l9_home / "primed" / campaign_id / "PREPARE_STATE.json"
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    stages = doc.get("stages")
+    if not isinstance(stages, dict):
+        return ""
+    entry = stages.get(DEFINITION_STAGE)
+    return str((entry or {}).get("key") or "") if isinstance(entry, dict) else ""
+
+
+def live_runtime_matches_definitions(
+    *, l9_home: Path, campaign_id: str, definition_key: str
+) -> bool:
+    """True when attaching to the live runtime cannot resume stale definitions.
+
+    The fast resume path used to run before anything had been fingerprinted, so
+    a campaign whose task definitions had been edited attached to a runtime
+    still holding the old ones -- skipping compile, scoped invalidation and
+    relock entirely. Deciding this first is what makes the resume sound: an
+    unchanged definition set resumes, and anything else falls through to the
+    preparation path, which already knows how to relock the tasks that moved and
+    keep the ones that did not.
+    """
+    recorded = recorded_definition_fingerprint(l9_home, campaign_id)
+    return bool(recorded) and recorded == definition_key
+
+
 def resumable_workspace(workspace: Path) -> bool:
     """True when $L9_ROOT/programs/<id> is a live pec runtime, not a draft leftover."""
     launch_path = workspace / "runtime" / "LAUNCH.json"
@@ -2072,7 +2128,8 @@ def observe_first_write(worktree: Path, changed: list[str]) -> list[str]:
 
     Limitation: the runner drives the worker synchronously and has no
     watcher, so the earliest point at which it can observe a write is after
-    the worker returns. TASK_FIRST_WRITE therefore times the first write the
+    the worker returns. TASK_FIRST_OBSERVED_WRITE is named for exactly that:
+    it times the first write the
     runner can *see*, which is an upper bound on when the write happened.
     Contract PE-TRACE-001 §12 accepts this in place of a watcher daemon.
     """
@@ -2086,6 +2143,39 @@ def observe_first_write(worktree: Path, changed: list[str]) -> list[str]:
     if status.returncode != 0:
         return []
     return [line[3:].strip() for line in status.stdout.splitlines() if line.strip()]
+
+
+def pec_considers_runnable(snapshot: dict[str, Any]) -> bool:
+    """Does the controller regard this task as ready to run?
+
+    `eligible` is PEC's answer to "may this be claimed now", so it goes false
+    the moment the runner holds the task's own lease. A task blocked only by
+    the lease this runner just took, or by a runtime state this runner just
+    moved it into, is still a task PEC found ready -- it granted the claim.
+    Anything else in `blockers` (an unmet dependency, an unsatisfied gate, a
+    contract not yet materialized) means it did not.
+    """
+    if snapshot.get("eligible"):
+        return True
+    state = str(snapshot.get("runtime_state") or "")
+    if state not in PEC_IN_PROGRESS_STATES:
+        return False
+    blockers = [str(item) for item in (snapshot.get("blockers") or [])]
+    self_held = {"task_already_leased", f"runtime_state_not_claimable:{state}"}
+    return bool(blockers) and all(item in self_held for item in blockers)
+
+
+def task_readiness_snapshot(workspace: Path, task_id: str) -> dict[str, Any]:
+    """PEC's current readiness verdict for one task.
+
+    Read again after the contract is materialized, because that is what clears
+    `source_contract_incomplete` — a task deferred at arm time is not eligible
+    until then, and the arm-time snapshot cannot say so.
+    """
+    for item in pec_status_tasks(workspace):
+        if str(item.get("id") or "") == task_id:
+            return dict(item)
+    return {}
 
 
 def traced_verify(
@@ -2232,20 +2322,34 @@ def check_launchability(
     as an INCOMPLETE verdict or a post-bootstrap restart cycle.
     """
     module = _load_script("launchability", PE_ROOT / "scripts/launchability.py")
-    tasks = module.blueprint_tasks(blueprint)
+    try:
+        tasks = module.load_blueprint_tasks(blueprint)
+    except module.LaunchabilityError as exc:
+        raise CampaignError(f"{campaign_id} has unreadable task definitions: {exc}") from exc
+    source = module.blueprint_task_source(blueprint)
     if not tasks:
-        return {"launchable": True, "task_count": 0, "findings": [], "skipped": "no_task_cards"}
-    report = module.check_tasks(tasks, repo_root, infer=fast)
-    # Inference is only true if it lands in the artifact the contract is rendered
-    # from. Write it into the Task Cards now, while the blueprint is still ours
-    # to change -- after bootstrap freezes the lock it is too late, and the task
-    # would reach `pec verify` with nothing to run.
-    injected = module.apply_synthesized_validations(
-        blueprint, report.get("synthesized_validations") or {}
-    )
-    if injected:
-        report["injected_validations"] = injected
-        log(f"validations inferred and written into {len(injected)} task card(s)")
+        # "Nobody wrote any tasks" and "nobody read the tasks that are there" are
+        # different campaigns, and collapsing them is how a live campaign passed
+        # this check with task_count=0. Only the first may skip.
+        if source != module.SOURCE_NONE:
+            raise CampaignError(
+                f"{campaign_id} compiled {source} but it declares zero tasks; a campaign "
+                f"with no work to do must say so explicitly. Blueprint: {blueprint}"
+            )
+        return {
+            "launchable": True,
+            "task_count": 0,
+            "findings": [],
+            "task_source": source,
+            "skipped": "no_task_cards",
+        }
+    # Structural only. The concrete validation is inferred against the task's own
+    # worktree when that worktree exists -- see `fill_inferred_validation`. Doing
+    # it here would read the governance checkout instead of the target repository,
+    # and writing the result back would re-digest every Task Card before the
+    # first task has started.
+    report = module.check_tasks(tasks, repo_root, infer=fast, defer_inference=True)
+    report["task_source"] = source
     receipt = blueprint / "launchability-report.json"
     receipt.parent.mkdir(parents=True, exist_ok=True)
     receipt.write_text(json.dumps(report, indent=2, sort_keys=True) + "\n", encoding="utf-8")
@@ -2598,18 +2702,54 @@ def default_execute(
     by_stack = {str(item.get("task_id")): item for item in stack_items if item.get("task_id")}
     completed: list[str] = []
     first_write_seen: set[str] = set()
+    eligible_seen: set[str] = set()
     for task in tasks:
         task_id = str(task["id"])
         states = {str(item["id"]): item for item in pec_status_tasks(workspace)}
-        state = str((states.get(task_id) or {}).get("runtime_state") or "")
+        reported = states.get(task_id) or {}
+        state = str(reported.get("runtime_state") or "")
         if state == "COMPLETED":
             completed.append(task_id)
             continue
+
+        def note_eligible(snapshot: dict[str, Any], task_id: str = task_id) -> None:
+            """Record eligibility when PEC says the task is eligible, once.
+
+            `eligible` is the controller's own readiness verdict: it clears when
+            the dependency edges and gates that were holding the task clear.
+            Emitting on loop position instead made a blocked task look
+            schedulable and made "time to first eligible task" measure nothing.
+            """
+            if task_id in eligible_seen or not pec_considers_runnable(snapshot):
+                return
+            eligible_seen.add(task_id)
+            emit(
+                trace,
+                "TASK_ELIGIBLE",
+                "task",
+                "task_eligible",
+                task_id=task_id,
+                metadata={"runtime_state": str(snapshot.get("runtime_state") or "")},
+            )
+
+        note_eligible(reported)
+        if state in PEC_ATTEMPTED_STATES:
+            # Carries an attempt already: a resume. A task this run's arm merely
+            # contracted has not been executed, so it is not one.
+            emit(
+                trace,
+                "TASK_RESUMED",
+                "task",
+                "task_resumed",
+                task_id=task_id,
+                metadata={"runtime_state": state},
+            )
+        # Scheduling picked this task, whatever state it was in when we found it.
         emit(
             trace,
-            "TASK_ELIGIBLE",
+            "TASK_SELECTED",
             "task",
-            "task_eligible",
+            "task_selected",
             task_id=task_id,
             metadata={"runtime_state": state},
         )
@@ -2634,6 +2774,10 @@ def default_execute(
                 # task becomes concrete: at the moment it is actually started.
                 with traced(trace, "task_prepare", "materialize_contract", task_id=task_id):
                     ensure_task_contract(workspace, task_id)
+                # Materializing the contract is what clears
+                # `source_contract_incomplete`, so a task deferred at arm time
+                # only becomes eligible here.
+                note_eligible(task_readiness_snapshot(workspace, task_id))
                 with traced(trace, "task_prepare", "pec_claim", task_id=task_id):
                     pec_cmd(
                         workspace,
@@ -2645,7 +2789,6 @@ def default_execute(
                         str(TASK_BUDGET_MINUTES),
                     )
                 state = "LEASED"
-            emit(trace, "TASK_SELECTED", "task", "task_selected", task_id=task_id)
             if state == "LEASED":
                 with traced(trace, "task_prepare", "task_worktree_create", task_id=task_id):
                     prepared = pec_cmd(workspace, "prepare", task_id)
@@ -2658,6 +2801,12 @@ def default_execute(
             if state in {"LEASED", "PREPARED", "CONTRACTED", "FAILED", "VERIFYING"}:
                 pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
         ensure_workspace_wired(worktree)
+        # Build the target repository's environment here, once, while the
+        # worktree is being prepared. Every validation and every controller
+        # verification afterwards resolves it without installing anything.
+        with traced(trace, "task_prepare", "ensure_exec_env", task_id=task_id) as provisioned:
+            resolved_env = load_pec_module("exec_env").ensure_exec_env(worktree)
+            provisioned["python"] = str(resolved_env.python)
         emit(
             trace,
             "TASK_WORKTREE_READY",
@@ -2705,7 +2854,7 @@ def default_execute(
                 first_write_seen.add(task_id)
                 emit(
                     trace,
-                    "TASK_FIRST_WRITE",
+                    "TASK_FIRST_OBSERVED_WRITE",
                     "filesystem_write",
                     "task_first_write",
                     task_id=task_id,
@@ -2806,16 +2955,18 @@ def default_execute(
                 task_id=task_id,
                 attempt_number=attempt_number,
             ):
-                apply_fail_change(
+                change_result = apply_fail_change(
                     verification,
                     rewrite=repair_attempt,
                     reverify=lambda: traced_verify(
                         workspace, task_id, trace=trace, attempt_number=attempt_number
                     ),
                 )
-            verification = traced_verify(
-                workspace, task_id, trace=trace, attempt_number=attempt_number
-            )
+            # `apply_fail_change` owns the post-repair verification. Verifying
+            # again here made every repaired task cost three controller verifies
+            # instead of two, and the second one ran against a task PEC had
+            # already moved out of a verifiable state.
+            verification = change_result.get("reverify") or verification
             if verification.get("kernel_verdict") != "PASS":
                 raise CampaignError(
                     f"pec verify {task_id} after CHANGE did not PASS: "
@@ -3257,10 +3408,19 @@ def _run_campaign_stages(
     if trace is not None:
         trace.bind(l9_home / "programs" / campaign_id, campaign_id=campaign_id)
     pec_workspace = l9_home / "programs" / campaign_id
+    # Definition identity is decided before the runtime is, and cheaply: it is a
+    # fingerprint of the document already in memory. Resuming a live runtime is
+    # only sound when it was prepared from exactly these definitions; anything
+    # else goes through preparation, which relocks the tasks that moved and
+    # keeps the completed ones that did not.
+    definition_key = definition_fingerprint(seed, campaign_source_doc)
     if (
         should_run(until, "execute")
         and resumable_workspace(pec_workspace)
         and not live_lock_missing_seed_paths(seed, pec_workspace)
+        and live_runtime_matches_definitions(
+            l9_home=l9_home, campaign_id=campaign_id, definition_key=definition_key
+        )
     ):
         return resume_live_campaign(
             campaign_id=campaign_id,
@@ -3275,7 +3435,12 @@ def _run_campaign_stages(
             trace=trace,
         )
     primed_root = l9_home / "primed"
-    cache = timing.StageCache(primed_root / campaign_id, enabled=fast)
+    # Deterministic reuse is not a fast-mode favour. Compile, blueprint
+    # validation, the plan window and the stack proof are functions of their
+    # inputs in every mode; strict mode may verify a reused artifact harder, but
+    # making the compiler forget its own output because the operator asked for
+    # strictness is recomputation, not rigour.
+    cache = timing.StageCache(primed_root / campaign_id, enabled=True)
     # The cache and the prepare-state record live under `primed/`, deliberately
     # outside the pec workspace and the blueprint: those two get stepped aside on
     # rebuild, and evidence of what was already prepared must survive that.
@@ -3423,7 +3588,7 @@ def _run_campaign_stages(
     # most often, and stepping the runtime aside to rebuild it unconditionally is
     # what made the second run cost the same as the first. Step aside only when
     # the live runtime did not come from these inputs.
-    unchanged = fast and preparation_is_resumable(
+    unchanged = preparation_is_resumable(
         pec_workspace=Path(report.pec_workspace),
         blueprint=blueprint,
         state=reuse.state,
@@ -3435,12 +3600,7 @@ def _run_campaign_stages(
     # shape of the program the lock froze and cannot be absorbed at all.
     shape = campaign_source_shape(source)
     edited: list[str] | None = None
-    if (
-        fast
-        and not unchanged
-        and shape is not None
-        and resumable_workspace(Path(report.pec_workspace))
-    ):
+    if not unchanged and shape is not None and resumable_workspace(Path(report.pec_workspace)):
         edited = edited_task_ids(shape, (reuse.recorded_value("compile") or {}).get("source"))
     if unchanged:
         log(f"resume prepared runtime {report.pec_workspace} (compile inputs unchanged)")
@@ -3501,6 +3661,16 @@ def _run_campaign_stages(
                 f"resume prepared runtime {report.pec_workspace} (definitions relocked: {relocked})"
             )
 
+    # Stamp which definitions this runtime now holds. Recorded here, after the
+    # relock has either adopted the edits or stepped the runtime aside, so the
+    # stamp can never claim a runtime absorbed a change it refused. The next
+    # invocation reads it before deciding whether it may resume at all.
+    reuse.state.record(
+        DEFINITION_STAGE,
+        key=definition_key,
+        decision=prepare.Decision(False, "recorded"),
+    )
+
     # Validation is a pure function of blueprint content, so the compiled
     # fingerprint is the whole key. A blueprint that validated once does not
     # need re-validating until it changes.
@@ -3544,15 +3714,8 @@ def _run_campaign_stages(
                 blueprint, write_root, fast=fast, campaign_id=campaign_id
             )
             staged.value = dict(report.launchability)
-    if report.launchability.get("injected_validations"):
-        # Inference just edited the Task Cards that validation had already read.
-        # Re-validate rather than arm a blueprint in a state nothing checked.
-        validate = hooks.validate_blueprint or default_validate_blueprint
-        with timer.stage("validate_blueprint_reinjected") as entry:
-            errors = validate(blueprint)
-            entry["detail"] = {"tasks": list(report.launchability["injected_validations"])}
-        if errors:
-            raise CampaignError("inferred validations broke the blueprint: " + "; ".join(errors))
+    # Launchability no longer rewrites Task Cards, so the blueprint it just read
+    # is still the one validation passed. There is nothing to re-validate.
     report.stages_completed.append("blueprint")
     if not should_run(until, "admit"):
         write_launch_pointer(

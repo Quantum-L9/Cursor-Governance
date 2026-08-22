@@ -26,6 +26,10 @@ TIMINGS_SCHEMA = "program-execution.stage-timings.v1"
 PROGRESS_SCHEMA = "program-execution.progress.v1"
 CACHE_SCHEMA = "program-execution.stage-cache.v1"
 
+# Every state that means execution has started on a task. Reaching one of these
+# is not finishing: only COMPLETED is done, and reporting the whole set as
+# "Execution: n / total" is how a campaign with one task in flight and none
+# finished read as progress.
 EXECUTION_STATES = {
     "LEASED",
     "PREPARED",
@@ -36,6 +40,8 @@ EXECUTION_STATES = {
     "PASSED_LOCAL",
     "COMPLETED",
 }
+COMPLETED_STATE = "COMPLETED"
+IN_PROGRESS_STATES = EXECUTION_STATES - {COMPLETED_STATE}
 VERIFIED_STATES = {"PASSED_LOCAL", "COMPLETED"}
 
 
@@ -225,13 +231,16 @@ def progress(
     """Separate the dimensions that were previously collapsed into one number."""
     states = [str(task.get("runtime_state") or "") for task in tasks]
     total = len(states)
-    executed = sum(1 for state in states if state in EXECUTION_STATES)
+    completed = sum(1 for state in states if state == COMPLETED_STATE)
+    in_progress = sum(1 for state in states if state in IN_PROGRESS_STATES)
+    runnable = sum(1 for task in tasks if task.get("eligible"))
+    not_ready = total - completed - in_progress - runnable
     verified = sum(1 for state in states if state in VERIFIED_STATES)
     current = next(
         (
             {"task_id": str(task.get("id")), "state": str(task.get("runtime_state"))}
             for task in tasks
-            if str(task.get("runtime_state") or "") in EXECUTION_STATES - {"COMPLETED"}
+            if str(task.get("runtime_state") or "") in IN_PROGRESS_STATES
         ),
         None,
     )
@@ -239,7 +248,13 @@ def progress(
         "schema": PROGRESS_SCHEMA,
         "campaign_id": campaign_id,
         "preparation": preparation,
-        "execution": {"done": executed, "total": total},
+        "execution": {
+            "done": completed,
+            "total": total,
+            "in_progress": in_progress,
+            "runnable": runnable,
+            "not_ready": max(not_ready, 0),
+        },
         "verification": {"done": verified, "total": total},
         "exit_gates": {"done": gates_passed, "total": gates_total},
         "publish": published,
@@ -256,7 +271,10 @@ def format_progress(report: dict[str, Any]) -> str:
         f"Campaign: {report['campaign_id']}",
         "",
         f"Preparation:  {report['preparation']}",
-        f"Execution:    {execution['done']} / {execution['total']} tasks",
+        f"Execution:    {execution['done']} / {execution['total']} COMPLETED",
+        f"In progress:  {execution.get('in_progress', 0)}",
+        f"Runnable:     {execution.get('runnable', 0)}",
+        f"Blocked/not-ready: {execution.get('not_ready', 0)}",
         f"Verification: {verification['done']} / {verification['total']}",
         f"Exit gates:   {gates['done']} / {gates['total']}",
         f"Publish:      {report['publish']}",

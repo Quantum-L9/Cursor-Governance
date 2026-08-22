@@ -997,6 +997,92 @@ class RunCampaignTests(unittest.TestCase):
                 ["python3 -c 'print(0)'"],
             )
 
+    def test_failed_attempt_is_not_verified_twice_after_repair(self) -> None:
+        """FAIL -> repair -> PASS costs two controller verifies, never three.
+
+        `apply_fail_change` already reverifies. The caller used to verify again
+        on top of it, so every repaired task paid for a third `pec verify` --
+        against a task the controller had already moved past a verifiable state.
+        """
+        marker = "REPAIRED-BY-SECOND-ATTEMPT"
+        rel = "docs/program-execution/TASK-001.md"
+        seed = json.loads(json.dumps(READY_SEED))
+        # A validation that genuinely fails the first attempt and genuinely
+        # passes the repaired one -- no faked verdict, so PEC's own state
+        # machine stays honest about what happened.
+        seed["tasks"][0]["validation"] = [
+            {
+                "command": (
+                    'python3 -c "import pathlib,sys; '
+                    f"sys.exit(0 if '{marker}' in pathlib.Path('{rel}').read_text() else 1)\""
+                )
+            }
+        ]
+        attempts: dict[str, int] = {}
+
+        def failing_then_repaired(worktree: Path, rel_path: str, title: str) -> str:
+            count = attempts[title] = attempts.get(title, 0) + 1
+            suffix = marker if (title != "Lock current state" or count > 1) else "FIRST-ATTEMPT"
+            return _write_task_output(worktree, rel_path, f"{title} {suffix}")
+
+        verifies: list[str] = []
+        real_verify = self.mod.traced_verify
+
+        def counting_verify(workspace, task_id, **kwargs):  # noqa: ANN001, ANN202
+            verifies.append(task_id)
+            return real_verify(workspace, task_id, **kwargs)
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            _dump(root / "intent.yaml", seed)
+            l9 = Path(raw) / "l9"
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
+            with patch.object(self.mod, "traced_verify", counting_verify):
+                self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="execute",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        write_task_output=failing_then_repaired,
+                        compile_activation=self.activate.compile_activation,
+                    ),
+                )
+
+        self.assertGreaterEqual(attempts.get("Lock current state", 0), 2, "repair never ran")
+        self.assertEqual(
+            verifies.count("TASK-001"),
+            2,
+            f"expected one failed verify plus one reverify, got {verifies}",
+        )
+        self.assertEqual(
+            verifies.count("TASK-002"), 1, "an unrepaired task must verify exactly once"
+        )
+
+    def test_repaired_attempt_passes_with_single_reverify(self) -> None:
+        """The caller must adopt the reverify result rather than recompute it."""
+        result = self.mod.apply_fail_change(
+            {"kernel_verdict": "FAIL", "gates": {"validation": "FAIL"}},
+            rewrite=lambda: None,
+            reverify=lambda: {"kernel_verdict": "PASS", "verdict": "PASSED_LOCAL"},
+        )
+        self.assertEqual(result["reverify"]["verdict"], "PASSED_LOCAL")
+
+    def test_verify_failure_preserves_original_verification_receipt(self) -> None:
+        """A repair that does not fix anything reports the reverify, not the first FAIL."""
+        failed = {"kernel_verdict": "FAIL", "gates": {"validation": "FAIL"}}
+        result = self.mod.apply_fail_change(
+            failed,
+            rewrite=lambda: None,
+            reverify=lambda: {"kernel_verdict": "FAIL", "verdict": "FAILED", "attempt": 2},
+        )
+        self.assertEqual(result["reverify"]["attempt"], 2)
+        self.assertEqual(failed["kernel_verdict"], "FAIL")
+
     def test_blueprint_fingerprint_survives_recompilation(self) -> None:
         """A recompiled Blueprint must fingerprint alike, or no repeat is ever seen."""
         with tempfile.TemporaryDirectory() as raw:
@@ -1089,7 +1175,7 @@ class RunCampaignTests(unittest.TestCase):
                 "TASK_SELECTED",
                 "TASK_WORKTREE_READY",
                 "TASK_WORKER_STARTED",
-                "TASK_FIRST_WRITE",
+                "TASK_FIRST_OBSERVED_WRITE",
                 "TASK_VALIDATION_STARTED",
                 "TASK_VALIDATION_FINISHED",
                 "TASK_VERIFY_STARTED",
@@ -1101,7 +1187,7 @@ class RunCampaignTests(unittest.TestCase):
             summary = json.loads((workspace / "telemetry/run-summary.json").read_text())
             self.assertEqual(summary["campaign_id"], "demo-activate-v1")
             self.assertEqual(summary["task_counts"], {"completed": 2, "attempted": 2})
-            self.assertIsNotNone(summary["timing"]["time_to_first_write_ms"])
+            self.assertIsNotNone(summary["timing"]["time_to_first_observed_write_ms"])
             self.assertGreater(summary["timing"]["preparation_ms"], 0)
             # The campaign_run span is the wall clock, not a preparation cost.
             self.assertLess(summary["timing"]["preparation_ms"], summary["wall_clock_ms"])
@@ -1120,7 +1206,7 @@ class RunCampaignTests(unittest.TestCase):
                 task = summary["per_task"][task_id]
                 self.assertTrue(task["completed"])
                 self.assertEqual(task["attempts"], 1)
-                self.assertIsNotNone(task["eligible_to_first_write_ms"])
+                self.assertIsNotNone(task["eligible_to_first_observed_write_ms"])
 
     def test_default_repo_root_derives_write_root_from_l9(self) -> None:
         """`main()` runs with repo_root=None; the isolate stage must not crash.
@@ -1443,6 +1529,133 @@ class RunCampaignTests(unittest.TestCase):
             )
             self.assertTrue(self.mod.resumable_workspace(workspace))
 
+    def _armed_runtime(self, root: Path, l9: Path, *, seed: dict | None = None) -> Path:
+        """A live runtime with the definition provenance a prepared campaign has."""
+        workspace = l9 / "programs" / "demo-activate-v1"
+        runtime = workspace / "runtime"
+        runtime.mkdir(parents=True)
+        (runtime / "program-lock.json").write_text('{"tasks": []}\n', encoding="utf-8")
+        (runtime / "LAUNCH.json").write_text(
+            json.dumps(
+                {
+                    "schema": "l9.program-execution.launch-pointer.v1",
+                    "campaign_id": "demo-activate-v1",
+                    "runtime_status": "active",
+                    "host_lifecycle": "in_progress",
+                    "host_worktree": str(root),
+                    "target_worktree": str(l9 / "program-worktrees" / "demo-activate-v1"),
+                    "blueprint": str(l9 / "blueprints" / "demo-activate-v1"),
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        state = l9 / "primed" / "demo-activate-v1" / "PREPARE_STATE.json"
+        state.parent.mkdir(parents=True, exist_ok=True)
+        key = self.mod.definition_fingerprint(seed if seed is not None else READY_SEED, None)
+        state.write_text(
+            json.dumps(
+                {
+                    "schema": "program-execution.prepare-state.v1",
+                    "campaign_id": "demo-activate-v1",
+                    "stages": {self.mod.DEFINITION_STAGE: {"key": key, "reused": False}},
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return workspace
+
+    def test_unchanged_campaign_resumes_existing_runtime(self) -> None:
+        """Same definitions, live runtime: attach to it rather than rebuild."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            workspace = self._armed_runtime(root, l9)
+            executed: list[str] = []
+
+            report = self.mod.run_campaign(
+                root / "intent.yaml",
+                until="execute",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    execute=lambda space, campaign_id: executed.append(campaign_id) or {},
+                ),
+            )
+
+            self.assertEqual(report.stages_completed, ["resume", "execute"])
+            self.assertEqual(executed, ["demo-activate-v1"])
+            self.assertTrue((workspace / "runtime/program-lock.json").is_file())
+
+    def test_task_definition_change_does_not_take_unchanged_resume_path(self) -> None:
+        """An edited task definition must not attach straight to the old runtime.
+
+        The fast resume used to run before anything was fingerprinted, so an
+        edited campaign resumed a runtime still holding the definitions it had
+        replaced -- compile, scoped invalidation and relock all skipped.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            edited = json.loads(json.dumps(READY_SEED))
+            edited["tasks"][1]["objective"] = "Edit declared paths only, and say so."
+            _dump(root / "intent.yaml", edited)
+            # The runtime was prepared from the *unedited* definitions.
+            self._armed_runtime(root, l9, seed=READY_SEED)
+            executed: list[str] = []
+
+            report = self.mod.run_campaign(
+                root / "intent.yaml",
+                until="admit",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    compile_activation=self.activate.compile_activation,
+                    execute=lambda space, campaign_id: executed.append(campaign_id) or {},
+                ),
+            )
+
+            self.assertNotIn("resume", report.stages_completed)
+            self.assertIn("blueprint", report.stages_completed)
+            self.assertEqual(executed, [], "resume must not execute on stale definitions")
+
+    def test_global_definition_change_does_not_use_task_only_resume(self) -> None:
+        """A changed program body is not a per-task relock; it is a rebuild."""
+        recorded = {"body": "BODY-BEFORE", "tasks": {"TASK-001": "a"}}
+        current = {"body": "BODY-AFTER", "tasks": {"TASK-001": "a"}}
+
+        self.assertIsNone(self.mod.edited_task_ids(current, recorded))
+
+    def test_task_definition_change_relocks_only_affected_task(self) -> None:
+        recorded = {"body": "same", "tasks": {"TASK-001": "a", "TASK-002": "b"}}
+        current = {"body": "same", "tasks": {"TASK-001": "a", "TASK-002": "b-edited"}}
+
+        self.assertEqual(self.mod.edited_task_ids(current, recorded), ["TASK-002"])
+
+    def test_a_new_task_is_a_wider_change_than_a_relock(self) -> None:
+        recorded = {"body": "same", "tasks": {"TASK-001": "a"}}
+        current = {"body": "same", "tasks": {"TASK-001": "a", "TASK-002": "b"}}
+
+        self.assertIsNone(self.mod.edited_task_ids(current, recorded))
+
+    def test_a_runtime_with_no_recorded_definitions_is_not_fast_resumed(self) -> None:
+        """Unknown provenance is not proof of a match; prepare decides instead."""
+        self.assertFalse(
+            self.mod.live_runtime_matches_definitions(
+                l9_home=Path("/nonexistent"), campaign_id="x", definition_key="abc"
+            )
+        )
+
+    def test_deterministic_stage_reuse_is_not_fast_only(self) -> None:
+        """Strict mode may verify a cached artifact harder; it may not forget it."""
+        source = SCRIPT.read_text(encoding="utf-8")
+        self.assertNotIn("StageCache(primed_root / campaign_id, enabled=fast)", source)
+        self.assertIn("enabled=True", source)
+
     def test_active_runtime_resumes_instead_of_quarantine(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = _host_repo(Path(raw) / "host")
@@ -1450,6 +1663,24 @@ class RunCampaignTests(unittest.TestCase):
             workspace = l9 / "programs" / "demo-activate-v1"
             runtime = workspace / "runtime"
             runtime.mkdir(parents=True)
+            state = l9 / "primed" / "demo-activate-v1" / "PREPARE_STATE.json"
+            state.parent.mkdir(parents=True, exist_ok=True)
+            state.write_text(
+                json.dumps(
+                    {
+                        "schema": "program-execution.prepare-state.v1",
+                        "campaign_id": "demo-activate-v1",
+                        "stages": {
+                            self.mod.DEFINITION_STAGE: {
+                                "key": self.mod.definition_fingerprint(READY_SEED, None),
+                                "reused": False,
+                            }
+                        },
+                    }
+                )
+                + "\n",
+                encoding="utf-8",
+            )
             (runtime / "program-lock.json").write_text('{"tasks": []}\n', encoding="utf-8")
             (runtime / "LAUNCH.json").write_text(
                 json.dumps(
@@ -1806,3 +2037,142 @@ def _load_yaml_file(path: Path) -> dict:
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class WarmResumeIsLocalTest(unittest.TestCase):
+    """An unchanged warm resume must decide from local state before any network.
+
+    Order: existing checkout, correct repository, acceptable base, history
+    walkable, runtime compatible, fingerprints unchanged. All local. Fetching
+    first turned a resume that had nothing to learn into a network round trip.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.mod = _load("run_campaign_warm_resume", SCRIPT)
+        cls.activate = _load("compile_activation_warm", ACTIVATE)
+
+    def _armed(self, root: Path, l9: Path, target: Path) -> None:
+        runtime = l9 / "programs/demo-activate-v1/runtime"
+        runtime.mkdir(parents=True)
+        (runtime / "program-lock.json").write_text('{"tasks": []}\n', encoding="utf-8")
+        (runtime / "LAUNCH.json").write_text(
+            json.dumps(
+                {
+                    "schema": "l9.program-execution.launch-pointer.v1",
+                    "campaign_id": "demo-activate-v1",
+                    "runtime_status": "active",
+                    "host_lifecycle": "in_progress",
+                    "host_worktree": str(root),
+                    "target_worktree": str(target),
+                    "blueprint": str(l9 / "blueprints/demo-activate-v1"),
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        state = l9 / "primed/demo-activate-v1/PREPARE_STATE.json"
+        state.parent.mkdir(parents=True, exist_ok=True)
+        state.write_text(
+            json.dumps(
+                {
+                    "schema": "program-execution.prepare-state.v1",
+                    "campaign_id": "demo-activate-v1",
+                    "stages": {
+                        self.mod.DEFINITION_STAGE: {
+                            "key": self.mod.definition_fingerprint(READY_SEED, None),
+                            "reused": False,
+                        }
+                    },
+                }
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    def test_unchanged_warm_resume_performs_no_network_operation(self) -> None:
+        network: list[list[str]] = []
+        real_run_cmd = self.mod.run_cmd
+
+        def watching_run_cmd(cmd, **kwargs):  # noqa: ANN001, ANN202
+            argv = [str(item) for item in cmd]
+            if any(word in argv for word in ("fetch", "clone", "ls-remote", "pull")):
+                network.append(argv)
+            return real_run_cmd(cmd, **kwargs)
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
+            self._armed(root, l9, target)
+
+            with patch.object(self.mod, "run_cmd", watching_run_cmd):
+                report = self.mod.run_campaign(
+                    root / "intent.yaml",
+                    until="execute",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(execute=lambda space, campaign_id: {}),
+                )
+
+            self.assertEqual(report.stages_completed, ["resume", "execute"])
+            self.assertEqual(network, [], f"warm resume reached the network: {network}")
+
+    def test_warm_resume_never_runs_the_stack_proof(self) -> None:
+        """Context7 research is preparation. A resume has nothing new to prove."""
+        proved: list[str] = []
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "host")
+            l9 = Path(raw) / "l9"
+            target = l9 / "program-worktrees" / "demo-activate-v1"
+            target.mkdir(parents=True)
+            _git_init(target)
+            self._armed(root, l9, target)
+
+            self.mod.run_campaign(
+                root / "intent.yaml",
+                until="execute",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=l9,
+                hooks=self.mod.Hooks(
+                    context7_stack=lambda seed, primed_dir: proved.append("fetched") or {},
+                    execute=lambda space, campaign_id: {},
+                ),
+            )
+
+        self.assertEqual(proved, [], "warm resume re-ran external research")
+
+    def test_history_is_only_fetched_when_local_history_is_insufficient(self) -> None:
+        """The local answer is checked first; the fetch is the fallback."""
+        source = SCRIPT.read_text(encoding="utf-8")
+        body = source[source.index("def ensure_target_history(") :]
+        body = body[: body.index("\ndef ")]
+        walkable = body.index("history_walkable(dest) and not is_shallow_repo(dest)")
+        first_fetch = body.index('"fetch"')
+        self.assertLess(walkable, first_fetch, "a fetch precedes the local history check")
+        self.assertIn("return", body[walkable : walkable + 120])
+
+    def test_a_campaign_with_no_external_stack_fetches_nothing(self) -> None:
+        """Lazy external proof: no inferred tool, no network, no receipt cost."""
+        proof = _load("context7_stack_proof_lazy", PE_ROOT / "scripts/context7_stack_proof.py")
+        fetched: list[str] = []
+
+        with tempfile.TemporaryDirectory() as raw:
+            receipt = proof.prove_stack(
+                {
+                    "campaign_id": "demo-activate-v1",
+                    "objective": "Edit two declared files in this repository.",
+                    "problem_statement": "Local file edits only.",
+                    "tasks": [{"id": "TASK-001", "title": "Edit a declared path"}],
+                },
+                primed_dir=Path(raw),
+                fetch=lambda *args, **kwargs: fetched.append("network") or {},
+            )
+
+        self.assertEqual(fetched, [], "a purely local campaign reached the network")
+        self.assertEqual(receipt["status"], "pass")
+        self.assertEqual(receipt.get("skipped"), "no-external-stack")

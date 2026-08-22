@@ -710,7 +710,7 @@ def harvest_trace(workspace: Path) -> dict[str, Any]:
             "validation_ms": 0,
             "verification_ms": 0,
             "recovery_ms": 0,
-            "time_to_first_write_ms": None,
+            "time_to_first_observed_write_ms": None,
         },
         "top_time_consumers": [],
         "per_task": {},
@@ -750,7 +750,11 @@ def harvest_trace(workspace: Path) -> dict[str, Any]:
         if event_type == "OPERATION_STARTED" and operation == "campaign_run":
             if campaign_run_started is None and moment is not None:
                 campaign_run_started = moment
-        if event_type == "TASK_FIRST_WRITE" and moment is not None and first_write_at is None:
+        if (
+            event_type == "TASK_FIRST_OBSERVED_WRITE"
+            and moment is not None
+            and first_write_at is None
+        ):
             first_write_at = moment
 
         if _terminal(event):
@@ -799,12 +803,12 @@ def harvest_trace(workspace: Path) -> dict[str, Any]:
                 {
                     "attempts": 0,
                     "eligible_at": None,
-                    "first_write_at": None,
+                    "first_observed_write_at": None,
                     "completed": False,
                     "validation_executions": 0,
                     "verification_executions": 0,
                     "failures": 0,
-                    "eligible_to_first_write_ms": None,
+                    "eligible_to_first_observed_write_ms": None,
                     "implementation_ms": 0,
                     "validation_ms": 0,
                     "verification_ms": 0,
@@ -816,8 +820,11 @@ def harvest_trace(workspace: Path) -> dict[str, Any]:
                 task["attempts"] = max(task["attempts"], attempt)
             if event_type == "TASK_ELIGIBLE" and task["eligible_at"] is None:
                 task["eligible_at"] = event.get("timestamp")
-            if event_type == "TASK_FIRST_WRITE" and task["first_write_at"] is None:
-                task["first_write_at"] = event.get("timestamp")
+            if (
+                event_type == "TASK_FIRST_OBSERVED_WRITE"
+                and task["first_observed_write_at"] is None
+            ):
+                task["first_observed_write_at"] = event.get("timestamp")
             if event_type == "TASK_COMPLETED":
                 task["completed"] = True
             if _terminal(event):
@@ -838,15 +845,15 @@ def harvest_trace(workspace: Path) -> dict[str, Any]:
             round((max(timestamps) - min(timestamps)).total_seconds() * 1000)
         )
     if campaign_run_started is not None and first_write_at is not None:
-        summary["timing"]["time_to_first_write_ms"] = int(
+        summary["timing"]["time_to_first_observed_write_ms"] = int(
             round((first_write_at - campaign_run_started).total_seconds() * 1000)
         )
 
     for task_id, task in per_task.items():
         eligible = _parse_ts(task["eligible_at"])
-        wrote = _parse_ts(task["first_write_at"])
+        wrote = _parse_ts(task["first_observed_write_at"])
         if eligible is not None and wrote is not None:
-            task["eligible_to_first_write_ms"] = int(
+            task["eligible_to_first_observed_write_ms"] = int(
                 round((wrote - eligible).total_seconds() * 1000)
             )
         if task["attempts"] > 1:
@@ -933,7 +940,8 @@ def render_summary_markdown(summary: dict[str, Any]) -> str:
         "",
         "## Time to first code",
         "",
-        f"- campaign start to first write: {_ms(timing.get('time_to_first_write_ms'))}",
+        f"- campaign start to first observed write: "
+        f"{_ms(timing.get('time_to_first_observed_write_ms'))}",
         "",
         "## Top 10 operations by duration",
         "",
@@ -997,7 +1005,7 @@ def render_summary_markdown(summary: dict[str, Any]) -> str:
     ]
     for task_id, task in sorted((summary.get("per_task") or {}).items()):
         lines.append(
-            f"| {task_id} | {_ms(task.get('eligible_to_first_write_ms'))} | "
+            f"| {task_id} | {_ms(task.get('eligible_to_first_observed_write_ms'))} | "
             f"{_ms(task.get('implementation_ms', 0))} | {_ms(task.get('validation_ms', 0))} | "
             f"{_ms(task.get('verification_ms', 0))} | {task.get('attempts', 0)} | "
             f"{_ms(task.get('total_ms', 0))} |"
@@ -1046,7 +1054,7 @@ def render_terminal_summary(summary: dict[str, Any]) -> str:
         f"wall:     {_ms(summary.get('wall_clock_ms'))}",
         f"tasks:    {counts.get('completed', 0)} completed / "
         f"{counts.get('attempted', 0)} attempted",
-        f"first-write: {_ms(timing.get('time_to_first_write_ms'))}",
+        f"first-observed-write: {_ms(timing.get('time_to_first_observed_write_ms'))}",
         "time: "
         + "  ".join(
             f"{bucket}={_ms(timing.get(f'{bucket}_ms', 0))}"

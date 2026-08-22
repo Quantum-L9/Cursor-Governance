@@ -137,6 +137,18 @@ def infer_validation_commands(
     return []
 
 
+def validation_is_derivable(task: dict[str, Any]) -> bool:
+    """True when materializing this task will have something to infer from.
+
+    Deliberately structural: it asks whether the task declares anything a
+    validation could be derived from, not what that validation would be. The
+    answer to *what* depends on the target repository's own files, which only
+    exist once the task worktree does -- see `infer_validation_commands`, which
+    the execute path calls against that worktree.
+    """
+    return bool(_writable_paths(task))
+
+
 def _requires_controller_verification(task: dict[str, Any]) -> bool:
     kind = str(task.get("execution_kind") or "").strip().lower()
     if kind in _INSPECTION_KINDS:
@@ -150,8 +162,19 @@ def check_tasks(
     *,
     infer: bool = True,
     python: str = "python3",
+    defer_inference: bool = False,
 ) -> dict[str, Any]:
-    """Report launchability findings and any validations that were synthesized."""
+    """Report launchability findings and any validations that were synthesized.
+
+    `defer_inference` is what global (pre-bootstrap) launchability passes. At
+    that point the only repository on disk is the *governance* checkout, not the
+    task's target, so inferring a concrete command here would bind a validation
+    to the wrong repository -- and writing it into the Task Cards would churn
+    the compile digest of every task before the first one has started. In that
+    mode the check stays structural: a task that declares somewhere to write
+    will get a validation when it is materialized, and only a task that declares
+    nothing at all is a real deadlock.
+    """
     findings: list[dict[str, Any]] = []
     synthesized: dict[str, list[str]] = {}
     ids = {str(task.get("id")) for task in tasks}
@@ -161,6 +184,33 @@ def check_tasks(
         status = str(task.get("definition_status") or "")
 
         if _requires_controller_verification(task) and not declared_validation_commands(task):
+            if defer_inference:
+                if validation_is_derivable(task):
+                    findings.append(
+                        _finding(
+                            "validation_deferred",
+                            "info",
+                            task_id,
+                            "no executable validation declared; one will be inferred from the "
+                            "task's own repository when the task worktree is materialized",
+                            "declare a validation entry with method: command to override the "
+                            "inference",
+                        )
+                    )
+                else:
+                    findings.append(
+                        _finding(
+                            "verification_deadlock",
+                            "blocker",
+                            task_id,
+                            "task is controller-verified but declares no executable validation "
+                            "and no writable path to derive one from; pec verify would return "
+                            "INCOMPLETE after bootstrap",
+                            "declare a validation entry with method: command, or set "
+                            "execution_kind to an inspection kind",
+                        )
+                    )
+                continue
             inferred = infer_validation_commands(task, repo_root, python=python) if infer else []
             if inferred:
                 synthesized[task_id] = inferred
@@ -224,70 +274,104 @@ def check_tasks(
     }
 
 
-def apply_synthesized_validations(
-    blueprint_dir: Path, synthesized: dict[str, list[str]]
-) -> list[str]:
-    """Write inferred validations into the Task Cards they were inferred for.
+CANONICAL_TASK_CARDS = "TASK_CARDS.yaml"
+LEGACY_TASKS_JSON = "tasks.json"
+LEGACY_TASKS_DIR = "tasks"
 
-    Inference used to stop at the report: `--fast` said it would infer a
-    validation, the finding recorded what it inferred, and then the contract was
-    rendered from a task card that still declared none. The controller then
-    returned INCOMPLETE on a campaign whose own preparation had told the operator
-    it was handled -- the gap between the message and the artifact.
+SOURCE_TASK_CARDS = "task_cards"
+SOURCE_LEGACY_JSON = "legacy_tasks_json"
+SOURCE_LEGACY_DIR = "legacy_tasks_dir"
+SOURCE_NONE = "none"
 
-    The entry is written as an ordinary `method: command` validation, because
-    that is what the lock and the rendered contract read. Its `VAL-INFERRED-*`
-    id is the only provenance the Task Card schema has room for
-    (`additionalProperties: false`), and it is enough to tell an operator
-    reading the card that they did not write this line.
 
-    Returns the task ids that were changed, so a caller can re-validate.
+def blueprint_task_source(blueprint_dir: Path) -> str:
+    """Which representation answers for this Blueprint's tasks.
+
+    Reported so a caller can tell "this campaign declares no tasks" from "this
+    campaign's tasks are in a representation nobody read". The two used to be
+    the same empty list, and that is how a 39-task campaign passed launchability
+    as `no_task_cards`.
+    """
+    if (blueprint_dir / CANONICAL_TASK_CARDS).is_file():
+        return SOURCE_TASK_CARDS
+    if (blueprint_dir / LEGACY_TASKS_JSON).is_file():
+        return SOURCE_LEGACY_JSON
+    if any((blueprint_dir / LEGACY_TASKS_DIR).glob("*.json")):
+        return SOURCE_LEGACY_DIR
+    return SOURCE_NONE
+
+
+def _canonical_tasks(cards: Path) -> list[dict[str, Any]]:
+    """Parse the compiled Task Cards. Invalid structure fails loudly.
+
+    `compile_campaign_source` emits `TASK_CARDS.yaml`, so this is the only
+    representation an ordinary compiled campaign has. A card file that cannot be
+    parsed is a broken campaign, not a taskless one, and saying so here is much
+    cheaper than an INCOMPLETE verdict after bootstrap.
     """
     import yaml
 
-    cards = blueprint_dir / "TASK_CARDS.yaml"
-    if not synthesized or not cards.is_file():
-        return []
-    doc = yaml.safe_load(cards.read_text(encoding="utf-8")) or {}
-    changed: list[str] = []
-    for task in doc.get("tasks") or []:
-        commands = synthesized.get(str(task.get("id")))
-        if not commands or declared_validation_commands(task):
-            continue
-        entries = list(task.get("validation") or [])
-        for index, command in enumerate(commands, start=1):
-            entries.append(
-                {
-                    "id": f"VAL-INFERRED-{index:03d}",
-                    "method": "command",
-                    "command_or_inspection": command,
-                    "environment": "repo_local",
-                    "expected_result": "PASS",
-                }
-            )
-        task["validation"] = entries
-        changed.append(str(task.get("id")))
-    if changed:
-        cards.write_text(
-            yaml.safe_dump(doc, sort_keys=False, allow_unicode=True, width=100), encoding="utf-8"
+    try:
+        doc = yaml.safe_load(cards.read_text(encoding="utf-8"))
+    except (OSError, yaml.YAMLError) as exc:
+        raise LaunchabilityError(f"{cards} could not be read as YAML: {exc}") from exc
+    if not isinstance(doc, dict):
+        raise LaunchabilityError(
+            f"{cards} must be a mapping with a 'tasks' key, not {type(doc).__name__}"
         )
-    return sorted(changed)
+    if "tasks" not in doc:
+        raise LaunchabilityError(
+            f"{cards} declares no 'tasks' key; a campaign that really has no tasks "
+            "must say so explicitly with 'tasks: []'"
+        )
+    raw = doc["tasks"]
+    if raw is None:
+        raw = []
+    if not isinstance(raw, list):
+        raise LaunchabilityError(f"{cards} 'tasks' must be a list, not {type(raw).__name__}")
+    tasks: list[dict[str, Any]] = []
+    for index, item in enumerate(raw):
+        if not isinstance(item, dict):
+            raise LaunchabilityError(
+                f"{cards} task #{index} must be a mapping, not {type(item).__name__}"
+            )
+        if not str(item.get("id") or "").strip():
+            raise LaunchabilityError(f"{cards} task #{index} declares no id")
+        tasks.append(dict(item))
+    return tasks
 
 
-def blueprint_tasks(blueprint_dir: Path) -> list[dict[str, Any]]:
-    """Read compiled Task Cards without importing the blueprint toolchain."""
-    tasks_path = blueprint_dir / "tasks.json"
+def _legacy_tasks(blueprint_dir: Path) -> list[dict[str, Any]]:
+    """Compatibility only: representations that predate the Task Card compiler."""
+    tasks_path = blueprint_dir / LEGACY_TASKS_JSON
     if tasks_path.is_file():
         payload = json.loads(tasks_path.read_text(encoding="utf-8"))
         if isinstance(payload, dict):
             payload = payload.get("tasks") or []
         return [item for item in payload if isinstance(item, dict)]
     tasks: list[dict[str, Any]] = []
-    for path in sorted((blueprint_dir / "tasks").glob("*.json")):
+    for path in sorted((blueprint_dir / LEGACY_TASKS_DIR).glob("*.json")):
         item = json.loads(path.read_text(encoding="utf-8"))
         if isinstance(item, dict):
             tasks.append(item)
     return tasks
+
+
+def load_blueprint_tasks(blueprint_dir: Path) -> list[dict[str, Any]]:
+    """The one reader every launchability decision goes through.
+
+    `TASK_CARDS.yaml` is canonical whenever it exists, because that is what the
+    campaign-source compiler emits and what the lock and the rendered contract
+    are built from. The legacy JSON representations remain readable, but only as
+    a fallback for a Blueprint that has no Task Cards at all -- never as a
+    competing answer for one that does.
+    """
+    source = blueprint_task_source(blueprint_dir)
+    if source == SOURCE_TASK_CARDS:
+        return _canonical_tasks(blueprint_dir / CANONICAL_TASK_CARDS)
+    if source == SOURCE_NONE:
+        return []
+    return _legacy_tasks(blueprint_dir)
 
 
 def format_report(report: dict[str, Any]) -> str:
@@ -311,7 +395,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--no-infer", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
-    report = check_tasks(blueprint_tasks(args.blueprint), args.repo_root, infer=not args.no_infer)
+    report = check_tasks(
+        load_blueprint_tasks(args.blueprint), args.repo_root, infer=not args.no_infer
+    )
     print(json.dumps(report, indent=2, sort_keys=True) if args.json else format_report(report))
     return 0 if report["launchable"] else 2
 
