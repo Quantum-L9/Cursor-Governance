@@ -34,6 +34,8 @@
     { "path": ".gitleaks.toml", "tier": "canonical", "rule": "additive_only" },
     { "path": ".mcp.json", "tier": "canonical", "rule": "additive_only" },
     { "path": "README.md", "tier": "managed", "rule": "managed" },
+    { "path": "ARCHITECTURE.md", "tier": "managed", "rule": "managed" },
+    { "path": "INVARIANTS.md", "tier": "managed", "rule": "managed" },
     { "path": "CONTRIBUTING.md", "tier": "managed", "rule": "managed" },
     { "path": "CODE_OF_CONDUCT.md", "tier": "managed", "rule": "managed" },
     { "path": "SUPPORT.md", "tier": "managed", "rule": "managed" },

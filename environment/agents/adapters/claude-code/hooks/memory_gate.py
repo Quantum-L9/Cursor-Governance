@@ -138,7 +138,7 @@ def main() -> int:
         # Raises on any precondition beyond hydration (E7 fail-closed).
         requires = st.validate_requires(rule)
 
-        if "session_prefetch" in requires and not st.fresh_receipt(contract, session_id):
+        if "session_prefetch" in requires and not st.usable_receipt(contract, session_id):
             _deny(
                 f"Memory not hydrated this session. Governed write '{rule['id']}' requires the "
                 "SessionStart Graphiti prefetch (front door). Start a fresh session, or run "

@@ -1,3 +1,10 @@
+## Issue unblock (session reference)
+
+**Cluster:** Quantum-L9/Cursor-Governance#171
+**Owning fix:** `feat/cg-171-graphiti-gate-state` (hydration SearchFactsError + task-scoped conflicts)
+**Next:** hand the opened PR to `l9-pr-remediation`; do not start #172 until this PR is green
+**Pickup:** Graphiti PICKUP written 2026-08-21
+
 # GlobalCommands — Tech Debt (cleanup later)
 
 Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L9 skills, `.cursor/rules/*.mdc`, `AGENTS.md`, and active wiring scripts). `start-session.yaml` was deleted (2026-07-19) — it was never wired into any hook and had drifted from the archived pre-Graphiti learning pipeline. `ops/hooks/session_start_bootstrap.sh` is the real, live activation script: installed at `~/.cursor/hooks/session-start-bootstrap.sh`, registered in `~/.cursor/hooks.json` under `sessionStart`, runs automatically every session.

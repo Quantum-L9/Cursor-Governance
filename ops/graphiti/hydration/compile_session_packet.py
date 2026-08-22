@@ -47,20 +47,31 @@ def _hydration_budget() -> int:
         return 4000
 
 
+class SearchFactsError(RuntimeError):
+    """Graphiti search did not complete. This is not an empty-graph result."""
+
+
 def _search_facts(group_id: str, query: str, *, limit: int = 8) -> list[dict[str, Any]]:
-    """Search via graphiti client helpers when available; fail-open to []."""
+    """Search via graphiti client helpers.
+
+    A completed search with no rows returns ``[]``. Transport, auth, import, and
+    env failures raise ``SearchFactsError`` so callers can report
+    ``PICKUP search unreachable`` instead of ``empty PICKUP search``.
+    """
     try:
         import graphiti_memory_client as gmc
 
         gmc.load_env()
         results: list[dict[str, Any]] = []
+        errors: list[str] = []
         for gid in _read_groups(group_id):
             try:
                 found = gmc.call_tool(
                     "search_memory_facts",
                     {"query": query, "group_ids": [gid], "max_facts": limit},
                 )
-            except Exception:  # noqa: BLE001
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"{gid}: {exc}")
                 continue
             if isinstance(found, dict):
                 facts = found.get("facts") or found.get("results") or found.get("nodes") or []
@@ -68,9 +79,13 @@ def _search_facts(group_id: str, query: str, *, limit: int = 8) -> list[dict[str
                     results.extend(f for f in facts if isinstance(f, dict))
             elif isinstance(found, list):
                 results.extend(f for f in found if isinstance(f, dict))
+        if not results and errors:
+            raise SearchFactsError("; ".join(errors)[:400])
         return results[:limit]
-    except Exception:  # noqa: BLE001
-        return []
+    except SearchFactsError:
+        raise
+    except Exception as exc:  # noqa: BLE001
+        raise SearchFactsError(str(exc) or type(exc).__name__) from exc
 
 
 def _fact_text(fact: dict[str, Any]) -> str:
@@ -206,9 +221,12 @@ def compile_session_packet(
             if not facts:
                 search_queries_used += 1
                 facts = _search_facts(group_id, "session start pickup", limit=6)
+        except SearchFactsError as exc:
+            degraded = True
+            degrade_reason = f"PICKUP search unreachable: {exc}"[:500]
         except Exception as exc:  # noqa: BLE001
             degraded = True
-            degrade_reason = f"search failed: {exc}"[:500]
+            degrade_reason = f"PICKUP search unreachable: {exc}"[:500]
 
     pickup_parsed = False
     pickup = {
@@ -230,7 +248,7 @@ def compile_session_packet(
         )
     if not facts and not degraded:
         degraded = True
-        degrade_reason = degrade_reason or "hydration degraded: empty PICKUP search"
+        degrade_reason = degrade_reason or "empty PICKUP search"
 
     budget = _hydration_budget()
     context_parts = [pickup.get("context_slice") or ""]

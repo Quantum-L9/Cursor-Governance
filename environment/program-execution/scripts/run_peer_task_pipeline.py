@@ -54,12 +54,31 @@ def _run_json(argv: list[str], *, cwd: Path) -> dict[str, Any]:
     return value
 
 
+LIVE_FRONT_DOOR = (
+    "run_peer_task_pipeline is not a live campaign front door; "
+    'use make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md>'
+)
+
+
+def refuse_live_front_door(
+    *,
+    task_id: str | None = None,
+    workspace: Path | str | None = None,
+) -> dict[str, Any]:
+    return {
+        "schema": "l9.peer-execution.task-pipeline-receipt.v1",
+        "status": "ERROR",
+        "error": LIVE_FRONT_DOOR,
+        "error_code": "PE_CAMPAIGN_INPUT_REJECTED",
+        "task_id": task_id,
+        "workspace": str(workspace) if workspace is not None else None,
+        "nothing_executed": True,
+        "manual_stage_bypass_permitted": False,
+    }
+
+
 def _pec(workspace: Path, *args: str) -> dict[str, Any]:
-    entrypoint = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
-    return _run_json(
-        [sys.executable, str(entrypoint), *args, "--workspace", str(workspace)],
-        cwd=REPO_ROOT,
-    )
+    raise RuntimeError(LIVE_FRONT_DOOR)
 
 
 def _load_contract(path: str | Path) -> dict[str, Any]:
@@ -351,19 +370,9 @@ def parser() -> argparse.ArgumentParser:
 
 def main(argv: list[str] | None = None) -> int:
     args = parser().parse_args(argv)
-    try:
-        report = execute(args)
-    except Exception as exc:
-        report = {
-            "schema": "l9.peer-execution.task-pipeline-receipt.v1",
-            "status": "ERROR",
-            "task_id": getattr(args, "task_id", None),
-            "workspace": str(args.workspace) if getattr(args, "workspace", None) else None,
-            "error_type": type(exc).__name__,
-            "message": str(exc),
-        }
+    report = refuse_live_front_door(task_id=args.task_id, workspace=args.workspace)
     print(json.dumps(report, indent=2, sort_keys=True))
-    return 0 if report.get("status") in {"PASSED_LOCAL", "COMPLETED"} else 1
+    return 2
 
 
 if __name__ == "__main__":

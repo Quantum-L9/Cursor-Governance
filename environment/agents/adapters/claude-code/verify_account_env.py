@@ -67,6 +67,33 @@ DELIBERATELY_ABSENT = frozenset(
 #: for information, never as a deviation.
 RUNTIME_MANAGED = frozenset({"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"})
 
+#: Credentials the example file prohibits outright. Nothing on this surface
+#: legitimately sets them: the capability broker holds them on its own side, and
+#: setup.bootstrap.sh strips any that arrive. So finding one in the live runtime
+#: means it was pasted into the Environment variables field, or survived a stub
+#: that never ran — a persistent, reusable secret in a model-readable
+#: environment, which is the one thing the contract exists to prevent.
+#:
+#: DELIBERATELY_ABSENT is deliberately NOT reused here. It also holds names that
+#: are legitimately present at runtime — L9_GOVERNANCE_DIR is exported by the
+#: stub itself, GH_TOKEN is issued by the platform and required by `gh`, and
+#: GRAPHITI_GROUP_ID is a valid per-shell override — so reporting that set would
+#: be noise, and noise is how a real finding gets scrolled past.
+PROHIBITED_PRESENT = frozenset(
+    {
+        "GRAPHITI_MCP_TOKEN",
+        "INFISICAL_CLIENT_SECRET",
+        "INFISICAL_TOKEN",
+        "INFISICAL_PASSWORD",
+        "SONAR_TOKEN",
+        "SONARCLOUD_TOKEN",
+        "SEMGREP_APP_TOKEN",
+        "AWS_SECRET_ACCESS_KEY",
+        "AWS_ACCESS_KEY_ID",
+        "AWS_SESSION_TOKEN",
+    }
+)
+
 #: Names whose VALUE must never be printed, whatever the example file says.
 #: The expected set is derived from environment.env.example, which by contract
 #: assigns no credential — but that contract is enforced elsewhere, and a tool
@@ -120,6 +147,54 @@ def stub_revision_actual(env: dict[str, str] | None = None, session_env: Path | 
         re.MULTILINE,
     )
     return match.group(1) if match else ""
+
+
+_REVISION = re.compile(r"^(\d{4})-(\d{2})-(\d{2})\.(\d+)$")
+
+
+def revision_key(revision: str) -> tuple[int, int, int, int] | None:
+    """Sortable key for a `YYYY-MM-DD.N` stub revision, or None if unparseable."""
+    match = _REVISION.match(revision.strip())
+    if not match:
+        return None
+    year, month, day, seq = match.groups()
+    return (int(year), int(month), int(day), int(seq))
+
+
+def revision_direction(actual: str, expected: str) -> str:
+    """Which side is newer: `behind`, `ahead`, `same`, or `unknown`.
+
+    Direction decides the remediation, and the two are opposites. `behind` means
+    the pasted field is stale and re-pasting HEAD fixes it. `ahead` means the
+    field carries a stub revision that is in NO commit — re-pasting HEAD would
+    DOWNGRADE production and destroy the only copy of that code, because a field
+    cannot be read back from inside the sandbox. Treating both as "drift" and
+    printing one instruction is how the destructive case gets automated.
+    """
+    want, have = revision_key(expected), revision_key(actual)
+    if want is None or have is None:
+        return "unknown"
+    if have == want:
+        return "same"
+    return "ahead" if have > want else "behind"
+
+
+#: The platform's marker for a credential it proxies rather than hands over.
+#: `AWS_ACCESS_KEY_ID=proxy-injected` is an announcement, not a key, and
+#: setup.bootstrap.sh already skips it for the same reason. Reporting it as a
+#: leak would cry wolf on every hosted session and teach the reader to ignore
+#: the one line that matters.
+PROXY_SENTINEL = "proxy-injected"
+
+
+def prohibited_present(env: dict[str, str] | None = None) -> list[str]:
+    """Prohibited credential names carrying real material in the live runtime."""
+    live = os.environ if env is None else env
+    return sorted(
+        key
+        for key in PROHIBITED_PRESENT
+        if (live.get(key) or "").strip() and (live.get(key) or "").strip() != PROXY_SENTINEL
+    )
 
 
 def compare(expected: dict[str, str], env: dict[str, str] | None = None) -> list[dict[str, str]]:
@@ -180,18 +255,114 @@ records which posture this deployment chose and why.
 """
 
 
+def variables_field_markdown(expected: dict[str, str]) -> str:
+    """Standalone paste-ready document for the Environment variables field."""
+    body = "\n".join(f"{key}={value}" for key, value in sorted(expected.items()))
+    checksum = hashlib.sha256(body.encode("utf-8")).hexdigest()[:16]
+    return f"""# Environment variables — paste-ready
+
+**Field:** claude.ai/code → environment → **Environment variables**
+**Format:** literal `.env` text. Nothing here is shell-expanded: `FOO=$HOME/x`
+is stored as the characters `$HOME/x`.
+**Applies to:** NEW sessions only. Anthropic caches the environment after the
+first successful build, so a stale paste survives until a rebuild.
+**Checksum:** `{checksum}` ({len(expected)} variables)
+
+Generated from `environment/agents/adapters/claude-code/web/environment.env.example`
+by `verify_account_env.py --emit-fields`. Do not hand-edit this file; edit the
+example and regenerate, or the two disagree and the drift check trusts the example.
+
+## Carries no credentials, by contract
+
+No PAT, no Graphiti bearer, no Sonar or Semgrep token, no Infisical client
+secret, no AWS key. Everything in this field is readable by anything the model
+can run. A capability reporting DEGRADED is a broker-delivery problem; pasting a
+secret here to turn it green is a permanent compromise (contract S1/S2/S3).
+
+`verify_account_env.py` now reports a prohibited credential it finds in the live
+runtime, so a paste of one does not pass silently.
+
+## Paste this
+
+```dotenv
+{body}
+```
+
+## Verify the paste took
+
+```bash
+python3 environment/agents/adapters/claude-code/verify_account_env.py
+```
+
+`OK: all {len(expected)} expected variables match` means the field matches HEAD.
+Any `DRIFT:` line names the variable, what is set, and what was expected.
+"""
+
+
+def setup_script_markdown(revision: str) -> str:
+    """Standalone paste-ready document for the Setup script field."""
+    stub_body = STUB.read_text(encoding="utf-8")
+    checksum = hashlib.sha256(stub_body.encode("utf-8")).hexdigest()[:16]
+    return f"""# Setup script — paste-ready
+
+**Field:** claude.ai/code → environment → **Setup script**
+**Revision:** `{revision}` · **Checksum:** `{checksum}`
+**Applies to:** NEW sessions only.
+
+Source of truth: `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`.
+Paste the stub, never `web/setup.sh`. The field is a copy, not a live link, so a
+full script pasted into it drifts from `main` on every edit; the stub is stable
+and hands off to `web/setup.sh` from the governance clone, which means setup.sh
+changes reach every new session with no re-paste.
+
+## Before you paste — copy the current field out first
+
+A field cannot be read back from inside the sandbox, so whatever is in it now is
+the only copy. If `verify_account_env.py` reports the field is **ahead** of HEAD,
+it is running bootstrap code that exists in no commit: copy it out, diff it
+against the stub below, and commit anything it added. Pasting over an ahead field
+destroys that code silently.
+
+```bash
+python3 environment/agents/adapters/claude-code/verify_account_env.py   # names the direction
+```
+
+## Paste this
+
+```bash
+{stub_body.rstrip()}
+```
+
+## Verify the paste took
+
+Start a NEW session, then:
+
+```bash
+grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect {revision}
+make claude-env                                    # structural + RUNTIME verdicts
+```
+
+The stub records its own revision into `~/.l9/cloud-session.env` on every run, so
+a later session can answer "is the pasted stub current?" without reading the field.
+"""
+
+
 def run(env: dict[str, str] | None = None) -> dict[str, Any]:
     expected = parse_env_example()
     deviations = compare(expected, env)
     want_rev = stub_revision_expected()
     have_rev = stub_revision_actual(env)
+    drift = bool(want_rev) and have_rev != want_rev
+    leaked = prohibited_present(env)
     return {
         "expected_keys": len(expected),
         "deviations": deviations,
         "stub_revision_expected": want_rev,
         "stub_revision_actual": have_rev,
-        "stub_drift": bool(want_rev) and have_rev != want_rev,
-        "ok": not deviations and not (bool(want_rev) and have_rev != want_rev),
+        "stub_drift": drift,
+        "stub_drift_direction": revision_direction(have_rev, want_rev) if drift else "same",
+        "prohibited_present": leaked,
+        "ok": not deviations and not drift and not leaked,
     }
 
 
@@ -206,13 +377,23 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     if args.emit_fields:
-        target = REPO / "docs" / "ACCOUNT_FIELDS.md"
-        target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_text(
-            account_fields_markdown(parse_env_example(), stub_revision_expected()),
-            encoding="utf-8",
-        )
-        print(f"wrote {target}")
+        expected = parse_env_example()
+        revision = stub_revision_expected()
+        index = REPO / "docs" / "ACCOUNT_FIELDS.md"
+        index.parent.mkdir(parents=True, exist_ok=True)
+        index.write_text(account_fields_markdown(expected, revision), encoding="utf-8")
+        print(f"wrote {index}")
+        # One field per file as well as the combined index: these get handed to
+        # whoever pastes them, and that person needs the field they are pasting,
+        # not a document about three fields.
+        pane = REPO / "docs" / "account-fields"
+        pane.mkdir(parents=True, exist_ok=True)
+        for name, text in (
+            ("ENVIRONMENT_VARIABLES.md", variables_field_markdown(expected)),
+            ("SETUP_SCRIPT.md", setup_script_markdown(revision)),
+        ):
+            (pane / name).write_text(text, encoding="utf-8")
+            print(f"wrote {pane / name}")
         return 0
 
     result = run()
@@ -226,13 +407,23 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"  INFO: {key}={safe_value(key, os.environ[key])} (runtime-managed; not compared)"
             )
+    for key in result["prohibited_present"]:
+        print(f"  PROHIBITED: {key} is set in this environment (value not shown)")
+        print("              delete it from the Environment variables field; the broker")
+        print("              holds this credential on its own side (contract S1/S2/S3)")
     if result["stub_drift"]:
+        actual = result["stub_revision_actual"] or "<unrecorded>"
         print(
-            f"  DRIFT: Setup script is revision "
-            f"{result['stub_revision_actual'] or '<unrecorded>'}, "
+            f"  DRIFT: Setup script is revision {actual}, "
             f"HEAD is {result['stub_revision_expected']}"
         )
-        print("         re-paste web/setup.bootstrap.sh into the Setup script field")
+        if result["stub_drift_direction"] == "ahead":
+            print("         The FIELD is ahead of HEAD: it carries a stub revision that is")
+            print("         in no commit. Do NOT re-paste — that downgrades production and")
+            print("         destroys the only copy. Copy the field out, diff it against")
+            print("         web/setup.bootstrap.sh, and commit what it added.")
+        else:
+            print("         re-paste web/setup.bootstrap.sh into the Setup script field")
     elif result["stub_revision_actual"]:
         print(f"  OK: Setup script revision {result['stub_revision_actual']}")
 
