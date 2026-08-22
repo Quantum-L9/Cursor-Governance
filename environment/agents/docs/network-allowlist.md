@@ -20,6 +20,7 @@ shared memory and GitHub.
 | Host | Why |
 |---|---|
 | `memory.quantumaipartners.com` | Graphiti HTTPS MCP (`GRAPHITI_MCP_URL` …/graphiti/mcp) |
+| `broker.quantumaipartners.com` | L9 capability broker — every authenticated capability (`sonar.read_issues`, `semgrep.appsec_scan`, `graphiti.*`). The concrete default `web/environment.env.example` ships in `L9_CAPABILITY_BROKER_URL`; substitute your own broker hostname if you run one, but do not leave it unlisted — a denied broker does not fail loudly, it silently reports capabilities/memory/mcp as DEGRADED on every session |
 | `github.com`, `*.githubusercontent.com` | clone governance + consumer repos |
 | `api.github.com` | `gh` / GitHub API |
 | `pypi.org`, `files.pythonhosted.org` | Python toolchains when the surface installs packages |
