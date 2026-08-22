@@ -10,7 +10,6 @@
       "l9-structured-reasoning",
       "l9-gmp-protocol",
       "l9-plan",
-      "l9-plan-simple",
       "l9-code-analysis",
       "l9-gap-analysis",
       "l9-ynp",
@@ -178,27 +177,7 @@
           "write a plan",
           "planning mode",
           "execution plan",
-          "decompose requirements",
-          "cursor plan mode",
-          "build button plan"
-        ],
-        "primary": "l9-plan-simple",
-        "signal_weight": 8,
-        "supporting": [
-          "l9-structured-reasoning"
-        ]
-      },
-      {
-        "id": "pe_plan",
-        "positive_signals": [
-          "make campaign",
-          "program-execution",
-          "program lock",
-          "/l9-plan",
-          "PE+autonomy",
-          "pe+autonomy",
-          "campaign plan",
-          "program execution campaign"
+          "decompose requirements"
         ],
         "primary": "l9-plan",
         "signal_weight": 8,
@@ -399,7 +378,6 @@
         "primary": "l9-plan-audit",
         "signal_weight": 8,
         "supporting": [
-          "l9-plan-simple",
           "l9-plan",
           "l9-ynp"
         ]
@@ -556,7 +534,7 @@
           "/autonomy",
           "campaign authorization"
         ],
-        "note": "explicit_only + hint_allowed \u2014 Read/attach only. Recommendation names make campaign INTENT=; it does not grant pec, compile, or merge authority. Invoking the skill is merge authority for that one campaign after the runner reaches close.\n",
+        "note": "model_allowed \u2014 Read and follow. Invoking this skill authorizes make campaign INTENT= for the named seed. Publication and merge remain a separate governed release transition.\n",
         "positive_signals": [
           "make campaign",
           "make campaign INTENT",
@@ -1044,7 +1022,7 @@
       "invocation": "explicit_only",
       "name": "l9-pe-campaign-activate",
       "path": "skills/l9-pe-campaign-activate",
-      "reason": "Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door; invoking the skill is merge authority for the one campaign PR after the runner reaches close. Fleet merge of other open PRs is /l9-pr-remediation.",
+      "reason": "Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door; invoking the skill is merge authority for the one campaign PR after the runner reaches close. Fleet merge of other open PRs is /l9-pr-remediation. disable-model-invocation.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1068,7 +1046,7 @@
       "path": "skills/l9-plan",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "the user asks for /l9-plan, make campaign, program lock, campaign plan, or pe+autonomy"
+      "when_to_use": "scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first"
     },
     {
       "composition_role": "primary",
@@ -1082,15 +1060,15 @@
       "when_to_use": "session context shows Plan audit, auditing unbuilt or stale Cursor plans under .cursor/plans, or /plan-audit is invoked"
     },
     {
-      "composition_role": "primary",
+      "composition_role": "general",
       "description": "create a machine-validated cursor .plan.md from the shared executable-plan template and execute it with the build button on the current checkout. use when scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
-      "disable_model_invocation": false,
-      "invocation": "model_allowed",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
       "name": "l9-plan-simple",
       "path": "skills/l9-plan-simple",
-      "reason": "",
+      "reason": "auto-registered by sync_generated_artifacts (orphan \u2192 explicit_only)",
       "user_invocable": true,
-      "when_to_use": "scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes"
+      "when_to_use": ""
     },
     {
       "composition_role": "general",
@@ -1259,6 +1237,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "e63daf8151ce1c3dd905aa15dce249f54a3f102687a8ce76068bb9a1fe05c920",
-  "source_skill_corpus_sha256": "0494d3b5c96d55417fb9647d66c42adb85291a3701f2de4e5de44fc177d04043"
+  "source_manifest_sha256": "14672619c1d7f8f390d03a4f9daf721ee786444dcc2337f6a31a4697feba550f",
+  "source_skill_corpus_sha256": "1f570b944938691d3fd8173c7b0339d27c314f9fba4acc4f09998ec2cc88fcd4"
 }

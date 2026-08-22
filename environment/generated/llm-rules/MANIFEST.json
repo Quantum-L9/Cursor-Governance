@@ -249,9 +249,9 @@
       "alias": null,
       "class": "always",
       "output": "53-pr-overlap-guardrail.md",
-      "output_sha256": "8dc3ddbe0c401c77d8bd20b5e0e4a1889b8cf10456ff83f0b6f7ab93d4e4b01b",
+      "output_sha256": "70177539aad6945a7a249637b90eaa9ec440133db2fc936025301de4d795a1a2",
       "source": "rules/53-pr-overlap-guardrail.mdc",
-      "source_sha256": "c1900fbe2e57be94d6bd26783db0e2357244ee162aa5a093f34b2d9cb606a8cc",
+      "source_sha256": "f74a35cbddacef5e06662f2dc7f9d0aa6946a0074f068363ecc6a4275944b14a",
       "stem": "53-pr-overlap-guardrail"
     },
     {
@@ -614,5 +614,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 67
   },
-  "tree_sha256": "2e449323d0f29fa376654698ecebebb6a7aad289849d972f6f2cb3424f5c23d2"
+  "tree_sha256": "713164fa7cec6825f1b742de48346de5bb8b247df3250b452189969fd9e15427"
 }

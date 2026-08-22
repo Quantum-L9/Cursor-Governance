@@ -1,15 +1,27 @@
 ---
 name: l9-plan-simple
-description: create a machine-validated cursor .plan.md from the shared executable-plan template and execute it with the build button on the current checkout. use when scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.
+description: create a machine-validated cursor .plan.md from the shared executable-plan
+  template and execute it with the build button on the current checkout. use when
+  scope is unclear, requirements need decomposition, cursor plan mode is on, or the
+  next step should be planned before code changes. do not use when the user asks for
+  program-execution, make campaign, /l9-plan, or a pe campaign lock.
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, plan, spec, cursor-build, execution, requirements, validation]
+  tags:
+  - l9
+  - plan
+  - spec
+  - cursor-build
+  - execution
+  - requirements
+  - validation
   owner: igor_beylin
   status: active
   version: 1.0.0
   updated: 2026-08-21
+disable-model-invocation: true
 ---
 
 # Execution Planning (Cursor Build)

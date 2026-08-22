@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-21T13:52:10Z'
+generated_utc: '2026-08-22T01:39:51Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:0db3ccf6a2e622619aeec1c4dd4b1fc125ca1d3d3d23ae8500cded5eebb68a04
+source_tree_digest: sha256:a068ad989d21f29ec1e06e08ba040290b1e9af6918d6c02dd834f8490122ff2b
 summary:
   total_mdc_files: 66
   always_apply_true: 30
@@ -664,8 +664,8 @@ rules:
   globs: null
   first_heading: PR overlap guardrail (PR_OVERLAP_GUARDRAIL_V1)
   has_yaml_frontmatter: true
-  line_count: 89
-  content_digest: sha256:c1900fbe2e57be94d6bd26783db0e2357244ee162aa5a093f34b2d9cb606a8cc
+  line_count: 88
+  content_digest: sha256:f74a35cbddacef5e06662f2dc7f9d0aa6946a0074f068363ecc6a4275944b14a
   authority: canonical_global
   context_cost: moderate
   deprecated: false
