@@ -124,6 +124,11 @@ ops/ui-operator/receipts/local/
 # Do not re-add negation exceptions for logs/ or transcripts/.
 WIP/Legal Defense/
 WIP/Legal Defense/**
+
+# Claude Code mobile-environment snapshots — local only, not the plan of record
+WIP/claude-code-mobile-environment/
+WIP/claude-code-mobile-environment/**
+
 # Installed live pack is a local copy of the private skill. Keep it out of
 # skills/ (orphan heal would register case identifiers into public manifests).
 # Discovery paths are .claude/skills/defense-attorney (already ignored above)

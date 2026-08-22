@@ -10,7 +10,7 @@ metadata:
   owner: igor_beylin
   status: active
   version: 2.0.2
-  updated: 2026-08-06
+  updated: 2026-08-21
 ---
 
 # Update Agent Documentation (L9)
@@ -57,8 +57,9 @@ Load a **project adapter** when the repo has domain-specific docs (modules, doma
 
 Before Step 1, probe for adapters (first match wins):
 
-1. `.claude/adapters/{repo}-update-agent-docs.md`
-2. `.claude/adapters/plasticos-update-agent-docs.md` (PlasticOS / Odoo 19)
+1. `.claude/adapters/cursor-governance-update-agent-docs.md` (this repo)
+2. `.claude/adapters/{repo}-update-agent-docs.md`
+3. `.claude/adapters/plasticos-update-agent-docs.md` (PlasticOS / Odoo 19)
 
 Adapters add domain inventory steps, extra audit scripts, and domain-specific doc sections.
 
@@ -104,14 +105,14 @@ Search intentional exclusions across CI, pre-commit, lint config, and audit scri
 
 ### Step 7 — Write Agent Docs
 
-Update surgically (preserve structure). Typical targets when they exist:
+Update surgically (preserve structure). In Cursor-Governance, root `ARCHITECTURE.md` and `INVARIANTS.md` are **live indexes** (not optional, not competing SSOTs). Follow the Cursor-Governance adapter: pointer-not-dump.
 
 | File | Sections |
 |------|----------|
-| `AGENTS.md` | Project overview metrics, CI checklist, false positives, pre-commit table, lint config, skill/subagent tables |
-| `ARCHITECTURE.md` | Module/package index, CI/CD architecture, version bump |
-| `INVARIANTS.md` | Invariant list, CI enforcement map, false positives |
-| `CLAUDE.md` | Always/Never lists, references, imports |
+| `AGENTS.md` | Operating SSOT — additive only here; do not re-dump CI / hook / skill tables |
+| `ARCHITECTURE.md` | Module/package index, CI/CD architecture, version bump (pointer index) |
+| `INVARIANTS.md` | Invariant list, CI enforcement map, false positives (pointer index) |
+| `CLAUDE.md` | Stay a load pointer; no Always/Never or CI tables in this repo |
 
 Adapter defines extra sections (e.g. Odoo 19 pattern table, `plasticos_*` module index).
 
@@ -123,6 +124,7 @@ Sync skill tables from `.claude/README.md` (L9 global + project skills).
 
 No `references/` folder — protocol lives in this file. Load project adapters when present:
 
+- `.claude/adapters/cursor-governance-update-agent-docs.md`
 - `.claude/adapters/{repo}-update-agent-docs.md`
 - `.claude/adapters/plasticos-update-agent-docs.md` (PlasticOS / Odoo 19)
 

@@ -86,11 +86,50 @@ def test_compile_packet_fail_open(monkeypatch, tmp_path):
     assert "hydrate_stats" in packet
     assert packet["hydrate_stats"]["facts_returned"] == 0
     assert packet["hydrate_stats"]["search_queries_used"] >= 1
+    assert packet["hydrate_stats"]["degrade_reason"] == "empty PICKUP search"
     ctx = comp.format_additional_context(packet)
     assert "next=" in ctx
     assert "facts_returned=" in ctx
     assert "memory-bank" not in ctx
     assert "hydrate_stats" in ctx
+
+
+def test_compile_packet_transport_failure_is_not_empty_search(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        comp,
+        "resolve_group_id",
+        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    )
+
+    def _raise(*_a, **_k):
+        raise comp.SearchFactsError("connection refused")
+
+    monkeypatch.setattr(comp, "_search_facts", _raise)
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="sess-unreachable", agent_id="cursor"
+    )
+    reason = packet["hydrate_stats"]["degrade_reason"]
+    assert packet["degraded"] is True
+    assert reason.startswith("PICKUP search unreachable:")
+    assert "empty PICKUP search" not in reason
+    ctx = comp.format_additional_context(packet)
+    assert "PICKUP search unreachable" in ctx
+    assert "empty PICKUP search" not in ctx
+
+
+def test_search_facts_raising_client_is_unreachable(monkeypatch):
+    import types
+
+    def _boom(*_a, **_k):
+        raise ConnectionError("tunnel down")
+
+    fake = types.ModuleType("graphiti_memory_client")
+    fake.load_env = lambda: None  # type: ignore[attr-defined]
+    fake.call_tool = _boom  # type: ignore[attr-defined]
+    fake.resolve_read_groups = lambda group_id: [group_id]  # type: ignore[attr-defined]
+    monkeypatch.setitem(sys.modules, "graphiti_memory_client", fake)
+    with pytest.raises(comp.SearchFactsError, match="tunnel down"):
+        comp._search_facts("cursor-governance", "PICKUP", limit=2)
 
 
 def test_compile_packet_with_pickup(monkeypatch, tmp_path):

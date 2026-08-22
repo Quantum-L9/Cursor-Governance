@@ -211,10 +211,37 @@ def fresh_receipt(contract: dict[str, Any], session_id: str) -> bool:
     except (json.JSONDecodeError, OSError):
         return False
     ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
-    return (
-        data.get("session_id") == session_id
-        and (time.time() - float(data.get("created_at", 0))) < ttl
-    )
+    if data.get("session_id") != session_id:
+        return False
+    if (time.time() - float(data.get("created_at", 0))) >= ttl:
+        return False
+    # A receipt from a hydration that resolved no group and returned no facts is
+    # not a fresh hydration. Accepting it made the precondition self-satisfying:
+    # the "no -> hydrate, then continue" branch could never be taken again for
+    # the whole TTL. Returning False re-runs hydration; it does NOT block the
+    # write, which stays forbidden by rules/96 E7 and rules/98.
+    return not data.get("degraded", False)
+
+
+def usable_receipt(contract: dict[str, Any], session_id: str) -> bool:
+    """True when this session already ran SessionStart prefetch.
+
+    Degraded hydrations are still usable for the write gate: denying on
+    ``fresh_receipt() is False`` after a degraded receipt permanently blocked
+    every governed Edit/Write for the TTL. Prefetch retries on the next
+    SessionStart; the gate continues either way.
+    """
+    path = receipt_path(contract, session_id)
+    if not path.is_file():
+        return False
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (json.JSONDecodeError, OSError):
+        return False
+    ttl = int(contract.get("state", {}).get("session_ttl_seconds", 86400))
+    if data.get("session_id") != session_id:
+        return False
+    return (time.time() - float(data.get("created_at", 0))) < ttl
 
 
 # --- operator break-glass audit --------------------------------------------

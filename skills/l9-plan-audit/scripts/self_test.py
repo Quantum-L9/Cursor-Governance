@@ -195,6 +195,31 @@ isProject: false
             include_execute=False,
             mtime_age_days=0.3,
         )
+        simple_path = plans / "simple_build_cafecafe.plan.md"
+        simple_path.write_text(
+            """---
+name: simple-build
+overview: fixture
+todos:
+  - id: t1
+    content: x
+    status: pending
+isProject: false
+kind: simple
+execute_via: cursor-build
+---
+
+# PLAN: simple
+
+## Execute via Cursor Build
+
+Press Build on the current checkout.
+- Do not run `make campaign`.
+""",
+            encoding="utf-8",
+        )
+        when = time.time() - (0.15 * 86400.0)
+        os.utime(simple_path, (when, when))
         _write_plan(
             plans,
             "match_baseline_99999999.plan.md",
@@ -247,6 +272,11 @@ isProject: false
                 errors.append("missing_execute_section flag missing")
             if not noex or "in_progress" not in noex.get("flags", []):
                 errors.append("in_progress flag missing")
+            simple = by_name.get("simple_build_cafecafe.plan.md")
+            if not simple:
+                errors.append("simple-kind plan missing from findings")
+            elif "missing_execute_section" in simple.get("flags", []):
+                errors.append("simple-kind plan must not get missing_execute_section")
 
         missing = run_audit(Path(tmp) / "nope", workspace, "--format", "markdown")
         if missing.returncode != 0 or "no plans dir" not in missing.stdout:

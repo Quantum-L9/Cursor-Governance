@@ -28,7 +28,7 @@ set -uo pipefail
 # to see it from inside the sandbox. Recording the revision that actually ran
 # turns "is the pasted stub current?" from unanswerable into a comparison
 # (audit B-06). verify_account_env.py reads it back from cloud-session.env.
-L9_STUB_REVISION="2026-08-21.1"
+L9_STUB_REVISION="2026-08-21.3"
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
@@ -81,7 +81,7 @@ done
 for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
               INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD \
               GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID \
-              AWS_SESSION_TOKEN GITHUB_TOKEN; do
+              AWS_SESSION_TOKEN; do
   leaked_value="${!leaked:-}"
   [ -n "$leaked_value" ] || continue
   # `proxy-injected` is the platform's sentinel for a credential it proxies, not
@@ -93,14 +93,21 @@ for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
   warn "$leaked is set — PROHIBITED on this surface (Infisical/capability plane); unsetting"
   unset "$leaked"
 done
-if [ -n "${GH_TOKEN:-}" ] && [ "$GH_TOKEN" != "proxy-injected" ]; then
-  warn "GH_TOKEN is a real credential — PROHIBITED; unsetting (platform proxy authenticates)"
-  unset GH_TOKEN
-fi
-# Variables file contract: never a PAT. Anthropic's git proxy authenticates and
-# injects its own credential; this environment exports no GH_TOKEN at all. If a
-# self-hosted deployment supplies a real token under a different trust policy,
-# that is a separate mode and must not be persisted by this cloud bootstrap.
+# GH_TOKEN / GITHUB_TOKEN are NOT swept, and must not be. The earlier sweep read
+# "the platform proxy authenticates" as covering both tools. It does not:
+#
+#   git ls-remote  with no GH_TOKEN -> works   (the proxy authenticates git)
+#   gh api /user   with no GH_TOKEN -> refuses ("please run gh auth login")
+#
+# So clearing it disabled every `gh` path on the surface, including the REST
+# calls docs/DEGRADED_MODE_CONTRACT.md lists as working and the open-PR telemetry
+# ops/scripts/pr_overlap_check.py needs before `make pr` may push. On a hosted
+# session this value is issued by the platform, not pasted by a human.
+#
+# The contract that still holds is on the FIELD, not the process: never paste a
+# PAT into Environment variables. verify_account_env.py reports a prohibited
+# credential there. Unsetting at runtime was the wrong lever — it could not tell
+# a pasted PAT from the platform's own credential, and destroyed both.
 
 : "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
 export GRAPHITI_MCP_URL
@@ -163,12 +170,14 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   if [ -n "${L9_CAPABILITY_BROKER_URL:-}" ]; then
     echo "export L9_CAPABILITY_BROKER_URL=$(printf %q "$L9_CAPABILITY_BROKER_URL")"
   fi
-  # No GH_TOKEN export: the platform proxy injects its own credential.
+  # No GH_TOKEN export and no GH_TOKEN unset: the platform issues it, `gh` needs
+  # it, and ~/.profile sources this file unguarded, so an unset here would strip
+  # it from every login shell.
   # ADR-0006 + Infisical plane: keep vault credentials out of every in-session shell.
   echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
   echo "unset GRAPHITI_MCP_TOKEN INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD"
   echo "unset SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN"
-  echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN GITHUB_TOKEN GH_TOKEN"
+  echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN"
 } > "$L9_ENV_FILE"
 
 # NOTE: Sonar project identity is deliberately NOT written here. It is
