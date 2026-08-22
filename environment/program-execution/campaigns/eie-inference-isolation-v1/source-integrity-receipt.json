@@ -1,0 +1,14 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "eie-inference-isolation-v1",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "a6bfeec216ab4ad8a6b7cd6063a39746388222dd88e4a8638e5f79ef0ab7463b",
+  "bytes": 28448,
+  "pack_recorded_digest": "a6bfeec216ab4ad8a6b7cd6063a39746388222dd88e4a8638e5f79ef0ab7463b",
+  "pack_recorded_bytes": 28448,
+  "digest_matches_pack": true,
+  "collected_at": "2026-08-21T17:19:03Z",
+  "collection_method": "l9-pe-campaign-activate-compile",
+  "producer": "l9-pe-campaign-activate"
+}

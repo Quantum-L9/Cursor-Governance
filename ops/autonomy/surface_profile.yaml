@@ -154,7 +154,11 @@ campaign_execution:
       integration_branch: campaign/l9-ecosystem-fix-plan
     pe-router-capability-safety-v4:
       integration_branch: campaign/pe-router-capability-safety-v4
+    eie-inference-isolation-v1:
+      integration_branch: campaign/eie-inference-isolation-v1
 
+      lifecycle: in_progress
+      launched_by: make campaign
 authority_order:
   - CANONICAL_LAW.autonomy_velocity
   - CANONICAL_LAW.l4_local_autonomy

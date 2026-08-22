@@ -415,15 +415,15 @@
     },
     {
       "path": "campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
-      "sha256": "ba887dd7aacafe35f11da6a5f94f5fb408f0559e0eb3c4fde637ad45887d2b70"
+      "sha256": "d105a3240c05fe5acd05005261d76b44e557757bc6b8f840816454e8071e4c6a"
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
-      "sha256": "06acc60a8603a97463fd3dca4c7f01f0985a4f696b312c7a0fcf801e1d90c14f"
+      "sha256": "67b773cb5e9850b072f2ad78da71e56d1c3ce33c4c025842b457d2e5d10c7072"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
-      "sha256": "2e6e7efcb95b6551fef3c8991450b3668bac0cdcea409dce9c7ffb396629ffa2"
+      "sha256": "247584a763de89e915d23db54829a25de82cb51fe2562598f8113b8de32b0d36"
     },
     {
       "path": "campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
@@ -500,6 +500,14 @@
     {
       "path": "campaigns/cc-pe-intent-compiler-v1/source-integrity-receipt.json",
       "sha256": "ac6aabbd6df3fa9a112939512e02f7f08fea429417e0558aaa2f3f1d837b7259"
+    },
+    {
+      "path": "campaigns/eie-inference-isolation-v1/CAMPAIGN_SOURCE.yaml",
+      "sha256": "65176b0ffcb6eebf508c8c4f758c1ac2f9ffd71141e0e0def01e4540b547e97f"
+    },
+    {
+      "path": "campaigns/eie-inference-isolation-v1/source-integrity-receipt.json",
+      "sha256": "52d1ef15c0a79e2c16851ead1735dd8f139d2d92e50392489379e41c5fc1eb06"
     },
     {
       "path": "campaigns/l9-devpack-program-execution-hardening/AUTH-001-SUPERSESSION.yaml",
