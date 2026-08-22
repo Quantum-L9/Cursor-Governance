@@ -90,9 +90,7 @@ EXEMPT_SHELL = [
 def test_commit_message_mentioning_squash_is_not_a_merge() -> None:
     """Heredoc / -m text is data. Matching it as gh pr merge blocked commits."""
     command = (
-        "git commit -m \"$(cat <<'EOF'\n"
-        "fix: never gh pr merge --squash a stack parent\n"
-        "EOF\n)\""
+        "git commit -m \"$(cat <<'EOF'\nfix: never gh pr merge --squash a stack parent\nEOF\n)\""
     )
     code, out, err = _run({"tool_name": "Bash", "tool_input": {"command": command}})
     assert code == 0, err

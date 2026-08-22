@@ -2362,9 +2362,7 @@ def fill_inferred_validation(
     )
     existing = [str(item) for item in (contract.get("validation_commands") or []) if item]
     replace_stale_unittest = bool(
-        existing
-        and inferred
-        and stale_unittest_should_yield_to_pytest(existing[0], inferred[0])
+        existing and inferred and stale_unittest_should_yield_to_pytest(existing[0], inferred[0])
     )
     if existing and not replace_stale_unittest:
         return contract
