@@ -1,0 +1,43 @@
+name: deploy-with-provenance-gate
+on:
+  workflow_run:
+    workflows: ["artifact-provenance"]
+    types: [completed]
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: read
+
+jobs:
+  verify-then-deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Download built artifact from artifact-provenance run
+        uses: actions/download-artifact@v4
+        with:
+          name: build-artifact
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify provenance before any deploy step
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          python tools/verify_provenance.py --artifact artifact.txt --owner Quantum-L9
+
+      - name: Deploy (placeholder — replace with real deploy command)
+        run: |
+          echo "provenance verified; proceeding with deploy"
+          echo "replace this step with: vercel deploy --prod  (or your actual deploy command)"
+
+      - name: Fail closed if provenance step did not run
+        if: failure()
+        run: |
+          echo "::error::deploy blocked — artifact provenance could not be verified"
+          exit 1
