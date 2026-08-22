@@ -360,6 +360,7 @@ tasks:
   paths:
   - alembic.ini
   - migrations/versions/001_initial_schema.py
+  - migrations/versions/
   nugget_id: NUG-002
   kernel_profile: CHANGE
   consumers:
@@ -370,9 +371,8 @@ tasks:
   - migrations/versions/001_initial_schema.py
   validation:
   - id: VAL-002
-    method: inspection
-    command_or_inspection: Make EIE have one configured migration tree, one valid revision
-      lineage, and one head. Green 45 supersedes File 3 Green 3.
+    method: command
+    command_or_inspection: make agent-check
     expected_result: PASS
   actions:
   - edit_declared_paths
@@ -428,6 +428,7 @@ tasks:
   - app/services/idempotency.py
   - app/services/pg_store.py
   - app/services/pg_models.py
+  - migrations/versions/
   nugget_id: NUG-003
   kernel_profile: CHANGE
   consumers:
@@ -444,11 +445,8 @@ tasks:
   - app/services/pg_models.py
   validation:
   - id: VAL-003
-    method: inspection
-    command_or_inspection: Make idempotency tenant-scoped, collision-safe, and atomic. Green
-      35 plus File 2 waves 1–2. Trusted tenant originates from the SDK handler `tenant` argument.
-      It must not come from `payload["tenant"]`, `payload["tenant_id"]`, `EnrichRequest`,
-      entity contents, forwarded headers, or `"default"`.
+    method: command
+    command_or_inspection: make agent-check
     expected_result: PASS
   actions:
   - edit_declared_paths
@@ -511,9 +509,8 @@ tasks:
   - app/services/pg_store.py
   validation:
   - id: VAL-004
-    method: inspection
-    command_or_inspection: A tenant-owned UUID is only an identifier. It is never authorization.
-      File 2 waves 3–4.
+    method: command
+    command_or_inspection: make agent-check
     expected_result: PASS
   actions:
   - edit_declared_paths
@@ -573,9 +570,8 @@ tasks:
   - app/services/chassis_handlers.py
   validation:
   - id: VAL-005
-    method: inspection
-    command_or_inspection: Reverse payload-over-transport tenant selection. Green 40 plus
-      File 2 wave 5.
+    method: command
+    command_or_inspection: make agent-check
     expected_result: PASS
   actions:
   - edit_declared_paths

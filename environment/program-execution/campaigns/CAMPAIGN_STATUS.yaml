@@ -31,13 +31,15 @@ campaigns:
     lifecycle: planned
     notes: remaining-only v1.1.0 execution host is cryptoxdog/IB-Odoo_19#153
   - id: pe-router-capability-safety-v4
-    lifecycle: in_progress
-    notes: launched by make campaign; pec runtime_status=active; operator_ack.acknowledged_at requires a real acknowledgment from Igor Beylin; agents must stop and ask, never forge it
-    launched_by: make campaign
+    lifecycle: cancelled
+    closed_at: "2026-08-22T01:36:00Z"
+    verdict: SUPERSEDED
+    notes: closed before eie-inference-isolation-v1 (execute-order-10) so the ledger has one active campaign
+    closed_by: l9-pr-remediation
   - id: eie-inference-isolation-v1
     lifecycle: in_progress
     notes: launched by make campaign; pec runtime_status=active; operator_ack.acknowledged_at requires a real acknowledgment from Igor Beylin; agents must stop and ask, never forge it
     launched_by: make campaign
-    pec_workspace: /Users/ib-mac/.l9/programs/eie-inference-isolation-v1
-    blueprint: /Users/ib-mac/.l9/blueprints/eie-inference-isolation-v1
-    worktree: /Users/ib-mac/.l9/program-worktrees/eie-inference-isolation-v1
+    pec_workspace: $HOME/.l9/programs/eie-inference-isolation-v1
+    blueprint: $HOME/.l9/blueprints/eie-inference-isolation-v1
+    worktree: $HOME/.l9/program-worktrees/eie-inference-isolation-v1
