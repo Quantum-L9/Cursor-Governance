@@ -249,6 +249,8 @@ GENERATED_PATH_PREFIXES: tuple[str, ...] = (
     "environment/agents/adapters/claude-code/settings.template.json",
     "commands/COMMANDS_MANIFEST.yaml",
     "environment/program-execution/core/MANIFEST.yaml",
+    "environment/program-execution/core/program-execution-blueprint-template/MANIFEST.yaml",
+    "environment/program-execution/core/program-execution-controller-template/MANIFEST.yaml",
 )
 
 #: Paths the sync script regenerates but this gate must NOT call disposable.
