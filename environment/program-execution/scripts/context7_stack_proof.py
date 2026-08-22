@@ -161,7 +161,8 @@ class _HttpsOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
                 try:
                     new_req.remove_header(name)
                 except KeyError:
-                    pass
+                    # Header not present on this request; nothing to remove.
+                    continue
         return new_req
 
 
