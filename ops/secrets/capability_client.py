@@ -48,6 +48,12 @@ if str(HERE) not in sys.path:
 from capability_registry import CapabilityRegistry, load_registry  # noqa: E402
 from surface_trust import classify  # noqa: E402
 
+_OPS_LIB = HERE.parent / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import exchange  # noqa: E402
+
 #: Capability status vocabulary. Shared with the shell bootstrap so a surface
 #: reports the same words everywhere (contract R5).
 #:
@@ -251,7 +257,12 @@ class CapabilityClient:
         try:
             request = urllib.request.Request(f"{self.url}/healthz", method="GET")
             self._authorize(request)
-            with urllib.request.urlopen(request, timeout=BROKER_TIMEOUT_SECONDS) as response:  # noqa: S310
+            with exchange(
+                request,
+                timeout=BROKER_TIMEOUT_SECONDS,
+                allow_loopback_http=True,
+                label="broker health URL",
+            ) as response:
                 if response.status == 200:
                     return True, "broker healthy"
                 return False, f"broker health HTTP {response.status}"
@@ -289,8 +300,13 @@ class CapabilityClient:
         )
         self._authorize(request)
         try:
-            with urllib.request.urlopen(request, timeout=BROKER_TIMEOUT_SECONDS) as response:  # noqa: S310
-                body = response.read(spec.max_response_bytes + 1)
+            with exchange(
+                request,
+                timeout=BROKER_TIMEOUT_SECONDS,
+                allow_loopback_http=True,
+                label="broker capability URL",
+            ) as response:
+                body = response.read()[: spec.max_response_bytes + 1]
         except urllib.error.HTTPError as exc:
             detail = exc.read().decode("utf-8", "replace")[:400]
             raise RuntimeError(f"broker denied '{capability}' (HTTP {exc.code}): {detail}") from exc

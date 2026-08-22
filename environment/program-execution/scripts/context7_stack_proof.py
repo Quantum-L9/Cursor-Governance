@@ -13,7 +13,7 @@ import hashlib
 import json
 import os
 import re
-import ssl
+import sys
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -21,6 +21,12 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+_OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import tls12_context  # noqa: E402
 
 SCHEMA = "l9.program-execution.stack-proof.v1"
 CONTEXT7_SEARCH = "https://context7.com/api/v2/libs/search"
@@ -128,17 +134,62 @@ def _headers() -> dict[str, str]:
     return headers
 
 
+ALLOWED_FETCH_SCHEMES = frozenset({"https"})
+
+
+def require_https_url(url: str) -> urllib.parse.SplitResult:
+    """Refuse file:// and every non-https scheme before urllib sees the URL."""
+    parsed = urllib.parse.urlsplit(url)
+    scheme = parsed.scheme.lower()
+    if scheme not in ALLOWED_FETCH_SCHEMES:
+        msg = f"refusing non-https URL scheme: {scheme or '<empty>'}"
+        raise StackProofError(msg)
+    if not parsed.netloc:
+        msg = "refusing URL without host"
+        raise StackProofError(msg)
+    if parsed.username or parsed.password:
+        msg = "refusing URL with embedded credentials"
+        raise StackProofError(msg)
+    return parsed
+
+
+class _HttpsOnlyRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Follow https→https only; drop Authorization when the host changes."""
+
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        parsed = require_https_url(newurl)
+        new_req = super().redirect_request(req, fp, code, msg, headers, newurl)
+        if new_req is None:
+            return None
+        old_host = (urllib.parse.urlsplit(req.full_url).netloc or "").lower()
+        if (parsed.netloc or "").lower() != old_host:
+            for name in ("Authorization", "authorization"):
+                try:
+                    new_req.remove_header(name)
+                except KeyError:
+                    # Header not present on this request; nothing to remove.
+                    continue
+        return new_req
+
+
 def default_fetch(url: str, headers: dict[str, str] | None = None) -> tuple[int, str]:
+    require_https_url(url)
     req = urllib.request.Request(url, headers=headers or {"User-Agent": "l9-pe-stack-proof/1"})
-    context = ssl.create_default_context()
+    context = tls12_context()
+    opener = urllib.request.build_opener(
+        urllib.request.HTTPSHandler(context=context),
+        _HttpsOnlyRedirectHandler(),
+    )
     try:
-        with urllib.request.urlopen(req, timeout=20, context=context) as resp:
+        with opener.open(req, timeout=20) as resp:
             body = resp.read().decode("utf-8", errors="replace")
             return int(resp.status), body
     except urllib.error.HTTPError as exc:
         body = exc.read().decode("utf-8", errors="replace") if exc.fp else ""
         return int(exc.code), body
-    except (urllib.error.URLError, TimeoutError, OSError) as exc:
+    except StackProofError:
+        raise
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as exc:
         raise StackProofError(f"GET failed for {url}: {exc}") from exc
 
 

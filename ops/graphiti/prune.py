@@ -5,12 +5,18 @@ from __future__ import annotations
 
 import json
 import os
-import ssl
+import sys
 import urllib.error
 import urllib.request
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
+
+_OPS_LIB = Path(__file__).resolve().parent.parent / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import exchange  # noqa: E402
 
 STALE_EDGE_DAYS = int(os.environ.get("GRAPHITI_PRUNE_EDGE_DAYS", "90"))
 STALE_EPISODE_DAYS = int(os.environ.get("GRAPHITI_PRUNE_EPISODE_DAYS", "180"))
@@ -33,8 +39,7 @@ def _mcp_call(tool: str, params: dict[str, Any]) -> Any:
     if token:
         headers["Authorization"] = f"Bearer {token}"
     req = urllib.request.Request(url, data=payload, headers=headers, method="POST")
-    _ssl_ctx = ssl.create_default_context()
-    with urllib.request.urlopen(req, timeout=20, context=_ssl_ctx) as resp:
+    with exchange(req, timeout=20, allow_loopback_http=True, label="Graphiti MCP URL") as resp:
         body = json.loads(resp.read())
     if "error" in body:
         raise RuntimeError(json.dumps(body["error"]))
