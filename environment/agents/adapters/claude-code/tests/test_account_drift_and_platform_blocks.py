@@ -12,6 +12,8 @@ than being absorbed into a green banner or misreported as configuration gaps.
 
 from __future__ import annotations
 
+import os
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -232,6 +234,122 @@ class DegradedModeContractTests(unittest.TestCase):
         self.assertIn("never", self.body.lower())
         self.assertIn("SONAR_TOKEN", self.body)
         self.assertIn("INFISICAL_CLIENT_SECRET", self.body)
+
+
+class PasteIntegrityTests(unittest.TestCase):
+    """A fence-contaminated paste must fail loudly instead of executing prose.
+
+    docs/account-fields/SETUP_SCRIPT.md renders the stub inside a fenced code
+    block. Selecting the section rather than the fence body puts the fence lines
+    into the Setup script field. A fence is three backticks: bash reads an empty
+    command substitution plus one leftover backtick, which opens a substitution
+    that runs to the closing fence.
+
+    Measured 2026-08-22 with the pre-fix stub: the backticks in its own comments
+    closed and reopened that substitution, pushing comment prose out of comment
+    position so bash executed English as commands, ran git clone with an empty
+    target directory, and exited 127 with the environment half-built.
+
+    Two properties keep that from recurring, and both are asserted here rather
+    than trusted: the stub carries no backticks, and it detects being swallowed
+    into a substitution and refuses.
+    """
+
+    STUB = ADAPTER / "web" / "setup.bootstrap.sh"
+
+    def setUp(self) -> None:
+        self.body = self.STUB.read_text(encoding="utf-8")
+
+    def test_stub_contains_no_backticks(self) -> None:
+        """Every backtick here is markdown decoration and a live detonator."""
+        offenders = [
+            f"{n}: {line}" for n, line in enumerate(self.body.splitlines(), 1) if "`" in line
+        ]
+        self.assertEqual(
+            [],
+            offenders,
+            "setup.bootstrap.sh must stay backtick-free; a stray backtick lets a "
+            "pasted markdown fence execute the surrounding comment prose as shell:\n"
+            + "\n".join(offenders),
+        )
+
+    def test_stub_carries_both_paste_markers(self) -> None:
+        """The docs tell a human to select between these; they must exist."""
+        self.assertIn("L9-PASTE-BEGIN", self.body)
+        self.assertIn("L9-PASTE-END", self.body)
+
+    def test_stub_is_syntactically_valid(self) -> None:
+        proc = subprocess.run(["bash", "-n", str(self.STUB)], capture_output=True, text=True)
+        self.assertEqual(0, proc.returncode, proc.stderr)
+
+    def _run(self, script: str, env_extra: dict[str, str]) -> subprocess.CompletedProcess:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "init-script.sh"
+            path.write_text(script, encoding="utf-8")
+            home = Path(tmp) / "home"
+            home.mkdir()
+            env = {
+                "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+                "HOME": str(home),
+                # Deliberately unreachable: this test is about paste integrity,
+                # not about cloning, and it must not touch the network.
+                "L9_GOVERNANCE_REMOTE": str(Path(tmp) / "no-such-repo.git"),
+                **env_extra,
+            }
+            return subprocess.run(
+                ["bash", str(path)],
+                capture_output=True,
+                text=True,
+                env=env,
+                stdin=subprocess.DEVNULL,
+                timeout=120,
+            )
+
+    def test_fence_contaminated_paste_is_refused_by_name(self) -> None:
+        """The exact bad paste: heading, fences, stub, and trailing prose."""
+        fence = "`" * 3
+        contaminated = "\n".join(
+            [
+                "## Paste this",
+                "",
+                fence + "bash",
+                self.body.rstrip(),
+                fence,
+                "",
+                "## Verify the paste took",
+                "",
+                "Start a NEW session, then:",
+                "",
+            ]
+        )
+        proc = self._run(contaminated, {"CLAUDE_CODE_REMOTE": "true"})
+
+        self.assertIn("L9 bootstrap FATAL", proc.stderr)
+        self.assertIn("markdown fence", proc.stderr)
+        # The pre-fix signature: comment prose reaching the shell as commands.
+        # These words appear only inside comments, so seeing them reported as
+        # commands means the comment structure was destroyed again.
+        for prose in ("arrives:", "succeeds:", "unreliable"):
+            self.assertNotIn(
+                f"{prose} command not found",
+                proc.stderr,
+                "comment prose is being executed as shell again",
+            )
+        # And the guard must stop the run before it reaches the clone.
+        self.assertNotIn("governance clone FAILED", proc.stderr)
+
+    def test_clean_paste_is_not_flagged(self) -> None:
+        """The guard must not fire on the paste the documentation asks for."""
+        proc = self._run(self.body, {"CLAUDE_CODE_REMOTE": "true"})
+        self.assertNotIn("L9 bootstrap FATAL", proc.stderr)
+        # Proof it ran past the guard and down the real path.
+        self.assertIn("governance clone FAILED", proc.stderr)
+
+    def test_clean_paste_on_local_cli_exits_zero(self) -> None:
+        """Not a cloud session: the stub is a no-op, guard included."""
+        proc = self._run(self.body, {})
+        self.assertEqual(0, proc.returncode, proc.stderr)
+        self.assertNotIn("L9 bootstrap FATAL", proc.stderr)
 
 
 if __name__ == "__main__":

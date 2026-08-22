@@ -329,6 +329,29 @@ python3 environment/agents/adapters/claude-code/verify_account_env.py   # names 
 
 ## Paste this
 
+Copy **only** the script itself: the first line of the block below is
+`#!/usr/bin/env bash`, immediately followed by an `L9-PASTE-BEGIN` marker, and
+the last is an `L9-PASTE-END` marker just after `exit 0`. Do **not** include
+the triple-backtick fence lines that open and close the block, this heading, or
+the prose that follows the block.
+
+Selecting a rendered page accurately is fiddly, so prefer copying the raw file —
+it is byte-identical to the block below and carries no fence to catch:
+
+```bash
+cat environment/agents/adapters/claude-code/web/setup.bootstrap.sh
+```
+
+> **Why the fence lines matter.** A markdown fence is three backticks. Bash reads
+> that as an empty command substitution plus one leftover backtick, which opens a
+> substitution that swallows the entire stub. Measured on 2026-08-22, pasting the
+> fence executed the stub's English comments as shell commands, ran `git clone`
+> with an empty target directory, and ended in `exit 127` with the environment
+> half-built and no line naming the cause. The stub is now backtick-free and
+> detects the contaminated paste itself, refusing with a `FATAL` line that names
+> the fence — but the environment still will not build until you re-paste
+> without the fence lines.
+
 ```bash
 {stub_body.rstrip()}
 ```
@@ -341,6 +364,11 @@ Start a NEW session, then:
 grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect {revision}
 make claude-env                                    # structural + RUNTIME verdicts
 ```
+
+If `~/.l9/cloud-session.env` does not exist at all, the stub did not run to
+completion. Read the environment's setup log and look for a line beginning
+`L9 bootstrap FATAL:` — the paste-integrity guard names the fence contamination
+explicitly rather than leaving you to read a wall of "command not found".
 
 The stub records its own revision into `~/.l9/cloud-session.env` on every run, so
 a later session can answer "is the pasted stub current?" without reading the field.

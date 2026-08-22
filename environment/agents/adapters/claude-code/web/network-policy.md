@@ -27,6 +27,7 @@ registry.npmjs.org
 astral.sh
 *.astral.sh
 memory.quantumaipartners.com
+broker.quantumaipartners.com
 semgrep.dev
 *.semgrep.dev
 ```
@@ -48,7 +49,7 @@ a secret backend is one bad line away from using it.
 | `registry.npmjs.org` | consumer workspaces with `package.json` |
 | `memory.quantumaipartners.com` | Graphiti front door. Needed only where the broker is not yet fronting `/graphiti/mcp`; once `L9_CAPABILITY_BROKER_URL` is set, the broker reaches it and the agent does not |
 | `semgrep.dev`, `*.semgrep.dev` | Semgrep **registry rulesets** (`p/python`, `p/secrets`) for local CE only. Authenticated AppSec runs in the trusted worker, not here |
-| L9 capability broker host | every authenticated capability (`sonar.read_issues`, `semgrep.appsec_scan`, `graphiti.*`). Add your deployment's broker hostname |
+| `broker.quantumaipartners.com` | every authenticated capability (`sonar.read_issues`, `semgrep.appsec_scan`, `graphiti.*`). This is the concrete default `web/environment.env.example` ships in `L9_CAPABILITY_BROKER_URL`; substitute your own deployment's broker hostname if you run one, but do not leave it unlisted — a denied broker does not fail loudly, it silently reports capabilities/memory/mcp as DEGRADED on every session |
 
 ### Egress the agent must not need (contract §16)
 

@@ -1,7 +1,7 @@
 # Setup script — paste-ready
 
 **Field:** claude.ai/code → environment → **Setup script**
-**Revision:** `2026-08-21.3` · **Checksum:** `e0702860d71168ef`
+**Revision:** `2026-08-22.2` · **Checksum:** `6a40e65f0df1d371`
 **Applies to:** NEW sessions only.
 
 Source of truth: `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`.
@@ -24,10 +24,54 @@ python3 environment/agents/adapters/claude-code/verify_account_env.py   # names 
 
 ## Paste this
 
+Copy **only** the script itself: the first line of the block below is
+`#!/usr/bin/env bash`, immediately followed by an `L9-PASTE-BEGIN` marker, and
+the last is an `L9-PASTE-END` marker just after `exit 0`. Do **not** include
+the triple-backtick fence lines that open and close the block, this heading, or
+the prose that follows the block.
+
+Selecting a rendered page accurately is fiddly, so prefer copying the raw file —
+it is byte-identical to the block below and carries no fence to catch:
+
+```bash
+cat environment/agents/adapters/claude-code/web/setup.bootstrap.sh
+```
+
+> **Why the fence lines matter.** A markdown fence is three backticks. Bash reads
+> that as an empty command substitution plus one leftover backtick, which opens a
+> substitution that swallows the entire stub. Measured on 2026-08-22, pasting the
+> fence executed the stub's English comments as shell commands, ran `git clone`
+> with an empty target directory, and ended in `exit 127` with the environment
+> half-built and no line naming the cause. The stub is now backtick-free and
+> detects the contaminated paste itself, refusing with a `FATAL` line that names
+> the fence — but the environment still will not build until you re-paste
+> without the fence lines.
+
 ```bash
 #!/usr/bin/env bash
+# L9-PASTE-BEGIN — the Setup script field starts at the line above (#!/usr/bin/env bash).
 # ---------------------------------------------------------------------------
 # L9 Claude Code cloud Setup script — startup stub (Web · Mobile · --cloud).
+#
+# THIS FILE CONTAINS NO BACKTICKS, DELIBERATELY. Do not add any, and do not
+# "restore" markdown quoting to these comments. Reason, measured 2026-08-22:
+# docs/account-fields/SETUP_SCRIPT.md presents this stub inside a fenced
+# markdown code block. A human who selects the section rather than the fence body
+# pastes that fence into the field. A fence is THREE backticks, an odd count, so
+# bash opens a command substitution that never closes and swallows the rest of
+# the file. Every backtick that used to sit in these comments then closed or
+# reopened that substitution, which pushed the following prose out of comment
+# position and ran it as shell. The measured result was English executed as
+# commands, git clone invoked with an empty target directory, and exit 127 with
+# the environment half-built.
+#
+# With zero backticks in the file the damage is contained: the substitution
+# opened by the leading fence now runs to the CLOSING fence and no further, so
+# the stub is executed whole, in a subshell, instead of being shredded into
+# fragments of executable English. That is still wrong -- a subshell discards
+# every export and the exit code -- which is why the paste-integrity guard below
+# detects the fence and refuses outright. Both properties are enforced by
+# tests/test_account_drift_and_platform_blocks.py.
 #
 # Paste THIS into claude.ai/code -> environment -> Setup script. Do not paste
 # web/setup.sh: the field is a copy, not a live link, so the full script drifts
@@ -45,17 +89,64 @@ python3 environment/agents/adapters/claude-code/verify_account_env.py   # names 
 #
 # Docs: https://code.claude.com/docs/en/cloud-environments
 # ---------------------------------------------------------------------------
-# No `set -e`: a single failed probe must never abort the environment build.
+# No set -e: a single failed probe must never abort the environment build.
 # The two hard failures are the governance clone and a missing setup.sh, which
 # exit non-zero explicitly.
 set -uo pipefail
+
+# --- 0) Paste-integrity guard ----------------------------------------------
+# Fires when the Setup script field contains the markdown fence lines that wrap
+# this stub in docs/account-fields/SETUP_SCRIPT.md, not just the stub itself.
+#
+# A fence is three backticks. Bash reads that as backtick-pair (an empty command
+# substitution) plus one LEFTOVER backtick, which opens a command substitution
+# that runs until the closing fence closes it. Everything between the two fences
+# -- this entire file -- is then executed inside that substitution instead of at
+# top level, so every export, every variable and the exit code are discarded
+# into a subshell the environment build never sees, and this stub's own stdout
+# is handed back to the parent shell to execute as a command.
+#
+# Detection is on the CAUSE, not a symptom: read our own source and look for a
+# fence line. This file is backtick-free by contract (enforced by
+# tests/test_account_drift_and_platform_blocks.py), so a fence in it can only
+# have arrived with the paste. That is exact -- it cannot fire on a legitimate
+# invocation, however the platform chooses to launch the script.
+#
+# The fence pattern is built with printf octal escapes because writing three
+# literal backticks here would itself break the no-backtick contract above.
+#
+# BASH_SUBSHELL is the fallback for the case where the running script is not
+# readable: it is 0 at top level and non-zero inside a command substitution. It
+# is deliberately NOT the primary signal, because a platform that legitimately
+# wrapped this script in a subshell would trip it and block a healthy build.
+_l9_self="${BASH_SOURCE[0]:-$0}"
+_l9_fence="$(printf '\140\140\140')"
+if [ -r "$_l9_self" ]; then
+  if grep -qF "$_l9_fence" "$_l9_self"; then _l9_contaminated=1; else _l9_contaminated=0; fi
+else
+  if [ "${BASH_SUBSHELL:-0}" -ne 0 ]; then _l9_contaminated=1; else _l9_contaminated=0; fi
+fi
+unset _l9_self _l9_fence
+
+# Report to stderr, never stdout: in the contaminated case stdout is the
+# substitution's captured value, which the parent shell would then try to run.
+if [ "$_l9_contaminated" -ne 0 ]; then
+  printf '%s\n' \
+    'L9 bootstrap FATAL: the Setup script field contains markdown fence lines.' \
+    'L9 bootstrap FATAL:   You copied the code block MARKERS along with the code.' \
+    'L9 bootstrap FATAL:   Nothing below this point ran at top level; the environment is NOT built.' \
+    'L9 bootstrap FATAL:   Re-paste ONLY the lines from the L9-PASTE-BEGIN marker' \
+    'L9 bootstrap FATAL:   through the L9-PASTE-END marker -- no fence lines, no prose.' >&2
+  exit 2
+fi
+unset _l9_contaminated
 
 # Bump on EVERY change to this file. The Setup script field is a copy-paste, not
 # a live link, so the pasted stub silently drifts from main and there is no way
 # to see it from inside the sandbox. Recording the revision that actually ran
 # turns "is the pasted stub current?" from unanswerable into a comparison
 # (audit B-06). verify_account_env.py reads it back from cloud-session.env.
-L9_STUB_REVISION="2026-08-21.3"
+L9_STUB_REVISION="2026-08-22.2"
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
@@ -67,8 +158,8 @@ fi
 
 # --- 1) Normalize the account environment ---------------------------------
 # The Environment variables field is literal .env text: Anthropic does NOT
-# expand `$HOME`. A pasted `L9_GOVERNANCE_DIR=$HOME/.cursor-governance` arrives
-# as that literal string, which would clone into a directory named `$HOME` and
+# expand $HOME. A pasted L9_GOVERNANCE_DIR=$HOME/.cursor-governance arrives
+# as that literal string, which would clone into a directory named $HOME and
 # hand every consumer (skill router, oversight, Graphiti bridge) a path that
 # does not exist. The cloud SSOT is always the real $HOME path — pin it here
 # and re-export the expanded value.
@@ -83,8 +174,8 @@ if [ -n "${L9_GOVERNANCE_DIR:-}" ] && [ "$L9_GOVERNANCE_DIR" != "$GOV_DIR" ]; th
 fi
 export L9_GOVERNANCE_DIR="$GOV_DIR"
 
-# The Autonomy Surface Profile matches on the exact surface id. `claude-code-mobile`
-# is not in the allow-list (ops/autonomy/surface_profile.yaml `when:`), so a
+# The Autonomy Surface Profile matches on the exact surface id. claude-code-mobile
+# is not in the allow-list (ops/autonomy/surface_profile.yaml when:), so a
 # mobile-flavoured value silently drops the session out of standing A4.
 if [ -n "${L9_GOVERNANCE_SURFACE:-}" ] && [ "$L9_GOVERNANCE_SURFACE" != "claude-code" ]; then
   warn "L9_GOVERNANCE_SURFACE='${L9_GOVERNANCE_SURFACE}' is not the profile surface id; using claude-code"
@@ -111,7 +202,7 @@ for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
               AWS_SESSION_TOKEN; do
   leaked_value="${!leaked:-}"
   [ -n "$leaked_value" ] || continue
-  # `proxy-injected` is the platform's sentinel for a credential it proxies, not
+  # proxy-injected is the platform's sentinel for a credential it proxies, not
   # a credential. Unsetting it would break the very proxying it announces.
   if [ "$leaked_value" = "proxy-injected" ]; then
     note "$leaked holds the platform proxy sentinel (no credential material) — leaving it"
@@ -126,15 +217,33 @@ done
 #   git ls-remote  with no GH_TOKEN -> works   (the proxy authenticates git)
 #   gh api /user   with no GH_TOKEN -> refuses ("please run gh auth login")
 #
-# So clearing it disabled every `gh` path on the surface, including the REST
+# So clearing it disabled every gh path on the surface, including the REST
 # calls docs/DEGRADED_MODE_CONTRACT.md lists as working and the open-PR telemetry
-# ops/scripts/pr_overlap_check.py needs before `make pr` may push. On a hosted
+# ops/scripts/pr_overlap_check.py needs before make pr may push. On a hosted
 # session this value is issued by the platform, not pasted by a human.
 #
 # The contract that still holds is on the FIELD, not the process: never paste a
 # PAT into Environment variables. verify_account_env.py reports a prohibited
 # credential there. Unsetting at runtime was the wrong lever — it could not tell
 # a pasted PAT from the platform's own credential, and destroyed both.
+#
+# CAVEAT for tools that are NOT gh (observed 2026-08-22): the platform value is
+# accepted by gh because the agent proxy is preconfigured for it, and by git
+# because the proxy injects credentials. A tool that authenticates DIRECTLY to
+# api.github.com with the literal string gets 401. gh auth status also reports
+# "the token in GH_TOKEN is invalid" while gh api user succeeds — so treat
+# gh auth status as unreliable here and probe with a real REST call instead.
+#
+# The concrete casualty is zizmor in the l9-ci-sdk pre-commit/pre-push gate: its
+# artipacked audit lists tags for actions/checkout over the GitHub API and
+# 401s, failing make check on a diff that touches no workflow file at all.
+# Running that ONE hook with the variable unset is the correct repair — the hook
+# still runs and still fail-closes (AGENTS.md: "local zizmor is fail-closed"):
+#
+#   env -u GH_TOKEN -u GITHUB_TOKEN git push        # gate runs, and passes
+#
+# Do NOT reach for --no-verify, and do NOT unset it globally here: gh needs
+# it, and ~/.profile sources the durable env unguarded.
 
 : "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
 export GRAPHITI_MCP_URL
@@ -197,7 +306,7 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   if [ -n "${L9_CAPABILITY_BROKER_URL:-}" ]; then
     echo "export L9_CAPABILITY_BROKER_URL=$(printf %q "$L9_CAPABILITY_BROKER_URL")"
   fi
-  # No GH_TOKEN export and no GH_TOKEN unset: the platform issues it, `gh` needs
+  # No GH_TOKEN export and no GH_TOKEN unset: the platform issues it, gh needs
   # it, and ~/.profile sources this file unguarded, so an unset here would strip
   # it from every login shell.
   # ADR-0006 + Infisical plane: keep vault credentials out of every in-session shell.
@@ -230,6 +339,27 @@ fi
 # Do NOT paste GRAPHITI_MCP_TOKEN / Infisical UA / password to turn this green.
 if [ -n "${L9_CAPABILITY_BROKER_URL:-}" ]; then
   note "capability broker: $L9_CAPABILITY_BROKER_URL (credentials stay on the broker)"
+  # Reachability, not just presence. A broker host missing from the Network
+  # access allowlist is denied at CONNECT, and the old "is the var set?" check
+  # reported that as healthy — so every session came up with capabilities,
+  # memory, mcp and plugins DEGRADED and no line naming the cause. Report only;
+  # this must never block the environment build.
+  broker_host="${L9_CAPABILITY_BROKER_URL#*://}"
+  broker_host="${broker_host%%/*}"
+  if command -v curl >/dev/null 2>&1; then
+    # curl already prints 000 on a failed CONNECT and exits non-zero, so a
+    # || echo 000 fallback would concatenate into "000000" and never match.
+    broker_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
+                     "$L9_CAPABILITY_BROKER_URL" 2>/dev/null)"
+    case "$broker_code" in ''|000) broker_code=000 ;; esac
+    if [ "$broker_code" = "000" ]; then
+      warn "capability broker UNREACHABLE ($broker_host) — capabilities will run DEGRADED"
+      warn "  most likely: '$broker_host' is not in Network access (see web/network-policy.md)"
+      warn "  a proxied sandbox answers 502 to CONNECT for a non-allowlisted host"
+    else
+      note "capability broker reachable ($broker_host -> HTTP $broker_code)"
+    fi
+  fi
 else
   warn "L9_CAPABILITY_BROKER_URL unset — Sonar/Semgrep/Graphiti capabilities DEGRADED"
   warn "  Honest posture. Fix broker delivery; do not paste Infisical or Graphiti secrets."
@@ -243,6 +373,7 @@ if [ "$SETUP_RC" -ne 0 ]; then
 fi
 note "cloud bootstrap complete — governance at $GOV_DIR ($GOV_BRANCH)"
 exit 0
+# L9-PASTE-END — the Setup script field ends at the line above (exit 0).
 ```
 
 ## Verify the paste took
@@ -250,9 +381,14 @@ exit 0
 Start a NEW session, then:
 
 ```bash
-grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-08-21.3
+grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-08-22.2
 make claude-env                                    # structural + RUNTIME verdicts
 ```
+
+If `~/.l9/cloud-session.env` does not exist at all, the stub did not run to
+completion. Read the environment's setup log and look for a line beginning
+`L9 bootstrap FATAL:` — the paste-integrity guard names the fence contamination
+explicitly rather than leaving you to read a wall of "command not found".
 
 The stub records its own revision into `~/.l9/cloud-session.env` on every run, so
 a later session can answer "is the pasted stub current?" without reading the field.
