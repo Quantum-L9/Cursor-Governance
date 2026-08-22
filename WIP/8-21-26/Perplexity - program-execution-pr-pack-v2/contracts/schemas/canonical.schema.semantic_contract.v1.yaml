@@ -1,0 +1,8 @@
+schema_id: canonical.schema.semantic_contract.v1
+description: Declares a node's semantic test intent for trial-merge probing.
+required_fields: [node_id, direct_tests, invariants, affected_modules]
+field_definitions:
+  node_id: { type: string }
+  direct_tests: { type: array, items: { type: string } }
+  invariants: { type: array, items: { type: string } }
+  affected_modules: { type: array, items: { type: string } }

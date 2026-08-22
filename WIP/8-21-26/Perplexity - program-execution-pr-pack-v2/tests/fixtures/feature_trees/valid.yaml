@@ -1,0 +1,22 @@
+schema: canonical.schema.feature_tree.v1
+program_id: program-execution-control-plane
+stack_base: main
+nodes:
+  - id: PE-010
+    title: Foundation node
+    depends_on: []
+    branch: feat/pe-010
+    base: main
+    contract: tests/fixtures/feature_trees/PE-010.contract.md
+    file_scope: [tools/check_feature_tree.py]
+    gates: [feature-tree-gate, agent-git-guard]
+    state: planned
+  - id: PE-020
+    title: Dependent node
+    depends_on: [PE-010]
+    branch: feat/pe-020
+    base: feat/pe-010
+    contract: tests/fixtures/feature_trees/PE-020.contract.md
+    file_scope: [tools/generate_program_execution_artifacts.py]
+    gates: [policy-conftest]
+    state: planned

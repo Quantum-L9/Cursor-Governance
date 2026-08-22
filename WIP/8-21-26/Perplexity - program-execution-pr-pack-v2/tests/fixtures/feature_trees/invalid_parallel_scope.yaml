@@ -1,0 +1,22 @@
+schema: canonical.schema.feature_tree.v1
+program_id: scope-test
+stack_base: main
+nodes:
+  - id: BB-010
+    title: A
+    depends_on: []
+    branch: feat/bb-010
+    base: main
+    contract: tests/fixtures/feature_trees/PE-010.contract.md
+    file_scope: [shared/module.py]
+    gates: [g1, g2]
+    state: planned
+  - id: BB-020
+    title: B
+    depends_on: []
+    branch: feat/bb-020
+    base: main
+    contract: tests/fixtures/feature_trees/PE-010.contract.md
+    file_scope: [shared/module.py]
+    gates: [g1, g2]
+    state: planned
