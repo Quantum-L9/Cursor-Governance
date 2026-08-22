@@ -61,8 +61,6 @@ tiers:
     use_when: wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing
   - skill: l9-plan-audit
     use_when: session context shows Plan audit, auditing unbuilt or stale Cursor plans under .cursor/plans, or /plan-audit is invoked
-  - skill: l9-pe-campaign-activate
-    use_when: user asks to activate a campaign, run a pe campaign, compile campaign source, emit campaign seeds, or take a brief through COMPLETED
   explicit_only:
   - skill: l9-forge
     reason: zero-pause batch execution
@@ -95,16 +93,13 @@ tiers:
   - skill: l9-setting-up-terraform
     reason: infra-as-code bootstrap — high blast radius, explicit only
   - skill: l9-pr-remediation
-    reason: >-
-      Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge
-      remediates all open PRs in the target repo to green + mergeable via
-      make pr-check then PR_REMEDIATE=0 make pr, then merges them
-      oldest-first and stack-safe (squash only when unstacked).
-      Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
+    reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs in the target repo to green + mergeable via make pr-check then PR_REMEDIATE=0 make pr, then merges them oldest-first and stack-safe (squash only when unstacked). Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
   - skill: l9-issue-remediation
     reason: Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs — high blast radius, explicit only; hint_allowed for read-only Diagnose
   - skill: l9-bounded-autonomy
     reason: campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only
+  - skill: l9-pe-campaign-activate
+    reason: Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door; invoking the skill is merge authority for the one campaign PR after the runner reaches close. Fleet merge of other open PRs is /l9-pr-remediation. disable-model-invocation.
   - skill: l9-pe-nuggets
     reason: PLAN-window nugget extraction only; make campaign is the front door
   - skill: l9-cli-optimization
@@ -120,6 +115,8 @@ tiers:
   - skill: l9-mac-storage-triage
     reason: macOS disk reclaim; diagnose-first then HITL repair; disable-model-invocation, explicit only
   - skill: l9-git-work-preserve
+    reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
+  - skill: l9-plan-simple
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   do_not_migrate_to_skills:
   - item: commands/violation.md
