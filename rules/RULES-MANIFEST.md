@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-21T13:27:59Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-21T13:52:10Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -19,7 +19,7 @@ Generated: `2026-08-21T13:27:59Z`. Source: `rules/*.mdc`.
 | File | ID | Scope | Domain | Activation | Lines | Digest |
 |---|---|---|---|---|---:|---|
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 34 | `c5b2842185ac` |
-| `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 158 | `f94369f58a21` |
+| `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 159 | `aa69cbcfe95e` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 68 | `d3fca17315f9` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
@@ -30,7 +30,7 @@ Generated: `2026-08-21T13:27:59Z`. Source: `rules/*.mdc`.
 | `15-work-tracking.mdc` | `l9.rule.15.work.tracking` | global | general | agent_requested | 38 | `79c9306f7061` |
 | `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | agent_requested | 190 | `fa976f39b458` |
 | `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 65 | `d683a886480c` |
-| `23-l9-skill-routing.mdc` | `l9.rule.skill-routing` | global | governance | always | 95 | `e62389dfd475` |
+| `23-l9-skill-routing.mdc` | `l9.rule.skill-routing` | global | governance | always | 99 | `95deb4b6d9ba` |
 | `25-python-dora-header.mdc` | `l9.rule.25.python.dora.header` | global | python | auto_attached | 173 | `49302e69c080` |
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | agent_requested | 145 | `935829c0a8d1` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | agent_requested | 182 | `fbbfa0dc8cc4` |

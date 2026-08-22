@@ -1,0 +1,5 @@
+environment_lease:
+  default_ttl_seconds: 3600
+  reconcile_on: [pull_request.closed, pull_request.merged]
+  sweep_interval_minutes: 30
+  port_range_pool: [20000, 21000]

@@ -1,0 +1,37 @@
+name: feature-tree-gate
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  feature-tree-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - id: tree
+        run: |
+          TREE_PATH=$(find reports -type f -name 'feature_tree.v1.yaml' | sort | tail -n 1)
+          [ -n "$TREE_PATH" ] || { echo "::error::no feature_tree.v1.yaml found"; exit 1; }
+          echo "path=$TREE_PATH" >> "$GITHUB_OUTPUT"
+      - id: node
+        run: |
+          NODE_ID=$(printf '%s\n%s' "${{ github.event.pull_request.title }}" "${{ github.event.pull_request.body }}" | grep -oE '[A-Z]{2,6}-[0-9]{3}' | head -n 1)
+          [ -n "$NODE_ID" ] || { echo "::error::could not resolve node id"; exit 1; }
+          echo "node_id=$NODE_ID" >> "$GITHUB_OUTPUT"
+      - id: diff
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+          echo "files=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+      - run: |
+          python tools/check_feature_tree.py --tree "${{ steps.tree.outputs.path }}" \
+            --node "${{ steps.node.outputs.node_id }}" --diff-files ${{ steps.diff.outputs.files }} \
+            --json | tee feature_tree_verdict.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with: { name: feature-tree-verdict, path: feature_tree_verdict.json }

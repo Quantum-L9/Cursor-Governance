@@ -103,6 +103,26 @@ class MemoryGateTests(unittest.TestCase):
         )
         self.assertFalse(is_deny(out), "non-authority edit with a receipt needs only prefetch")
 
+    def test_allows_governed_write_when_receipt_is_degraded(self) -> None:
+        """A degraded SessionStart receipt must not permanently deny writes."""
+        st.write_receipt(
+            self.contract,
+            self.session,
+            {"namespaces": [], "degraded": True, "status": "degraded"},
+        )
+        self.assertFalse(st.fresh_receipt(self.contract, self.session))
+        self.assertTrue(st.usable_receipt(self.contract, self.session))
+        out, code = run_gate(
+            {
+                "tool_name": "Edit",
+                "tool_input": {"file_path": "skills/x/SKILL.md"},
+                "session_id": self.session,
+            },
+            self.env,
+        )
+        self.assertFalse(is_deny(out), "degraded hydration continues; it does not block")
+        self.assertEqual(code, 0)
+
     def test_allows_authority_edit_with_hydration_only(self) -> None:
         """E7: an authority-path edit needs hydration, and nothing more.
 

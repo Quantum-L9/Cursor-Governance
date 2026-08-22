@@ -80,6 +80,8 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 ├── ORG_INVARIANTS.yaml # Canonical Quantum-L9 org policy
 ├── CANONICAL_LAW.md   # Authoritative governance contract (read first)
 ├── AGENTS.md          # Activation contract + agent operating rules (read second)
+├── ARCHITECTURE.md    # This-repo map (index; does not outrank the law)
+├── INVARIANTS.md      # This-repo invariant index (YAML remains org-policy SSOT)
 └── README.md          # This file
 ```
 
@@ -105,6 +107,8 @@ tree was merged into top-level `ops/` (see `ops/operational-oversight.md`).
 - [`CANONICAL_LAW.md`](CANONICAL_LAW.md) — SSOT, symlink law, memory layer, anti-patterns
 - [`AGENTS.md`](AGENTS.md) — activation contract, change policy, agent operating rules
 - [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml) — canonical Quantum-L9 org policy
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — this-repo map (index)
+- [`INVARIANTS.md`](INVARIANTS.md) — this-repo invariant index (not a second org-policy SSOT)
 
 ### Skills
 - [`skills/l9-gmp-protocol/SKILL.md`](skills/l9-gmp-protocol/SKILL.md) — locked phase-0–6 execution
