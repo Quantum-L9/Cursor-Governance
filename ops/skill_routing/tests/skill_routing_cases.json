@@ -102,7 +102,7 @@
     },
     {
       "prompt": "Create an execution plan before building this feature",
-      "expected_primary": "l9-plan-simple",
+      "expected_primary": "l9-plan",
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
@@ -149,7 +149,7 @@
     },
     {
       "prompt": "plan this before coding",
-      "expected_primary": "l9-plan-simple",
+      "expected_primary": "l9-plan",
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
@@ -177,7 +177,7 @@
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
-      "expected_source": "explicit_hint"
+      "expected_source": "route"
     },
     {
       "prompt": "Configure GitHub Packages access via the admin UI cartridge when the API is insufficient",
@@ -191,14 +191,6 @@
       "forbidden": [
         "l9-cli-optimization"
       ]
-    },
-    {
-      "prompt": "Write a PE+autonomy /l9-plan with program lock before make campaign",
-      "expected_primary": "l9-plan",
-      "expected_supporting": [
-        "l9-structured-reasoning"
-      ],
-      "expected_source": "route"
     }
   ]
 }

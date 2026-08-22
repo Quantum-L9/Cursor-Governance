@@ -72,7 +72,9 @@ def grant_task_mutation(
     probe = bridge.probe()
     if probe.get("status") != "PASS":
         missing = ", ".join(probe.get("missing") or [])
-        raise AutonomyGrantError(f"root autonomy control plane is BLOCKED; missing={missing}")
+        raise AutonomyGrantError(
+            f"root autonomy control plane is BLOCKED; missing={missing}"
+        )
     mapped = map_program_contract(
         contract,
         adapter_id=adapter_id,
@@ -141,7 +143,9 @@ def grant_task_mutation(
             resource=_resource_for_capability(contract, capability),
         )
         if not decision.allowed:
-            raise AutonomyGrantError(f"{decision.code}: {decision.message} capability={capability}")
+            raise AutonomyGrantError(
+                f"{decision.code}: {decision.message} capability={capability}"
+            )
         authorized.append(capability)
     runtime_dir = pec / "runtime"
     runtime_dir.mkdir(parents=True, exist_ok=True)

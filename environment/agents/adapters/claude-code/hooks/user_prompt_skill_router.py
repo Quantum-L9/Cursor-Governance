@@ -98,8 +98,7 @@ def main() -> int:
                 "High-confidence L9 skill route: invoke "
                 f"`{recommendation['primary']}` through the Skill tool before normal execution."
                 f"{support_text} Use at most one primary and two supporting skills. "
-                "Do not auto-execute explicit-only skills without a hint_allowed route. "
-                "This route grants no mutation authority."
+                "Follow that skill's contract. Do not auto-execute a different explicit-only skill."
             )
         log_recommendation(payload, recommendation)
         print(

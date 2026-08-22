@@ -45,29 +45,6 @@ class ExtractNuggetsTests(unittest.TestCase):
             )
             self.assertTrue(result["stack_cited"])
 
-    def test_compiled_plan_tasks_are_conditionally_ready(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            primed = Path(raw) / "primed"
-            stack = primed / "stack-proof.json"
-            stack.parent.mkdir(parents=True)
-            stack.write_text("{}\n", encoding="utf-8")
-            result = project_plan_window(
-                {
-                    "campaign_id": "demo-plan-v1",
-                    "tasks": [
-                        {
-                            "id": "T1",
-                            "title": "Scope pytest",
-                            "objective": "Scope pytest",
-                            "paths": ["Makefile"],
-                        }
-                    ],
-                },
-                primed,
-                stack,
-            )
-            self.assertEqual(result["plan_status"], "ConditionallyReady")
-
     def test_hollow_seed_stays_partial(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             primed = Path(raw) / "primed"
@@ -82,6 +59,31 @@ class ExtractNuggetsTests(unittest.TestCase):
             self.assertEqual(result["plan_status"], "Partial")
             self.assertTrue(Path(result["path"]).is_file())
             self.assertTrue(Path(result["intent_path"]).is_file())
+
+    def test_title_objective_seed_seals_ready(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            primed = Path(raw) / "primed"
+            result = project_plan_window(
+                {
+                    "campaign_id": "demo-activate-v1",
+                    "tasks": [
+                        {
+                            "title": "Lock current state",
+                            "objective": "Record baseline SHA and refuse dirty overlap.",
+                            "paths": ["engine/handlers.py"],
+                        }
+                    ],
+                },
+                primed,
+                None,
+            )
+            self.assertEqual(result["plan_status"], "Ready")
+            task = result["seed"]["tasks"][0]
+            self.assertEqual(task["nugget_id"], "NUG-001")
+            self.assertTrue(task["actions"])
+            self.assertTrue(task["consumers"])
+            self.assertTrue(task["entrypoints"])
+            self.assertTrue(task["validation"])
 
 
 if __name__ == "__main__":

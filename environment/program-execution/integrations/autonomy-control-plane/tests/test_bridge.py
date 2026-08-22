@@ -15,10 +15,10 @@ if str(_GOV_ROOT) not in sys.path:
 if str(_PE_ROOT) not in sys.path:
     sys.path.insert(0, str(_PE_ROOT))
 
-from autonomy.compiler.graph_compiler import compile_graph  # noqa: E402
-from autonomy.models import CampaignAuthorization, DeploymentManifest  # noqa: E402
-from autonomy.policy_loader import load_policy  # noqa: E402
-from autonomy.validation.graph_linter import GraphLinter  # noqa: E402
+from autonomy.compiler.graph_compiler import compile_graph
+from autonomy.models import CampaignAuthorization, DeploymentManifest
+from autonomy.validation.graph_linter import GraphLinter
+from autonomy.policy_loader import load_policy
 
 
 def _mapper():

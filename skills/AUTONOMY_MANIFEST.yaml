@@ -22,9 +22,7 @@ tiers:
   - skill: l9-gmp-protocol
     use_when: work must be phased, auditable, traceable, or touches protected/high-risk areas
   - skill: l9-plan
-    use_when: the user asks for /l9-plan, make campaign, program lock, campaign plan, or pe+autonomy
-  - skill: l9-plan-simple
-    use_when: scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes
+    use_when: scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first
   - skill: l9-code-analysis
     use_when: exploring unfamiliar code, auditing structure, mapping flows, or identifying hotspots
   - skill: l9-gap-analysis
@@ -63,6 +61,8 @@ tiers:
     use_when: wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing
   - skill: l9-plan-audit
     use_when: session context shows Plan audit, auditing unbuilt or stale Cursor plans under .cursor/plans, or /plan-audit is invoked
+  - skill: l9-pe-campaign-activate
+    use_when: user asks to activate a campaign, run a pe campaign, compile campaign source, emit campaign seeds, or take a brief through COMPLETED
   explicit_only:
   - skill: l9-forge
     reason: zero-pause batch execution
@@ -105,12 +105,6 @@ tiers:
     reason: Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs — high blast radius, explicit only; hint_allowed for read-only Diagnose
   - skill: l9-bounded-autonomy
     reason: campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only
-  - skill: l9-pe-campaign-activate
-    reason: >-
-      Live PE campaigns go through make campaign INTENT= only. hint_allowed is
-      Read/attach so agents load that sealed front door; invoking the skill is
-      merge authority for the one campaign PR after the runner reaches close.
-      Fleet merge of other open PRs is /l9-pr-remediation.
   - skill: l9-pe-nuggets
     reason: PLAN-window nugget extraction only; make campaign is the front door
   - skill: l9-cli-optimization
@@ -176,7 +170,6 @@ claude_routing:
   - l9-structured-reasoning
   - l9-gmp-protocol
   - l9-plan
-  - l9-plan-simple
   - l9-code-analysis
   - l9-gap-analysis
   - l9-ynp
@@ -325,7 +318,7 @@ claude_routing:
     supporting:
     - l9-structured-reasoning
   - id: plan
-    primary: l9-plan-simple
+    primary: l9-plan
     signal_weight: 8
     positive_signals:
     - create an execution plan
@@ -341,22 +334,6 @@ claude_routing:
     - planning mode
     - execution plan
     - decompose requirements
-    - cursor plan mode
-    - build button plan
-    supporting:
-    - l9-structured-reasoning
-  - id: pe_plan
-    primary: l9-plan
-    signal_weight: 8
-    positive_signals:
-    - make campaign
-    - program-execution
-    - program lock
-    - /l9-plan
-    - PE+autonomy
-    - pe+autonomy
-    - campaign plan
-    - program execution campaign
     supporting:
     - l9-structured-reasoning
   - id: gmp_protocol
@@ -508,7 +485,6 @@ claude_routing:
     - /plan-audit
     - which plans are unbuilt
     supporting:
-    - l9-plan-simple
     - l9-plan
     - l9-ynp
   - id: performance_audit
@@ -651,7 +627,7 @@ claude_routing:
     supporting:
     - l9-structured-reasoning
     - l9-pe-nuggets
-    note: 'explicit_only + hint_allowed — Read/attach only. Recommendation names make campaign INTENT=; it does not grant pec, compile, or merge authority. Invoking the skill is merge authority for that one campaign after the runner reaches close.
+    note: 'model_allowed — Read and follow. Invoking this skill authorizes make campaign INTENT= for the named seed. Publication and merge remain a separate governed release transition.
 
       '
   - id: pe_nuggets
