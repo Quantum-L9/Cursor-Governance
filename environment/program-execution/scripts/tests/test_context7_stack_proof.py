@@ -52,6 +52,47 @@ class Context7StackProofTests(unittest.TestCase):
         self.assertEqual(receipt.get("skipped"), "no-external-stack")
         self.assertEqual(receipt["tools"], [])
 
+    def test_negated_and_inrepo_mentions_are_not_external_stack(self) -> None:
+        seed = {
+            "campaign_id": "eie-isolation",
+            "objective": (
+                "Restore RuleEngine inference and tenant-authoritative persistence. "
+                "Greens 30-34 are invariants (no new Neo4j, Redis/NATS bus). "
+                "Factor Pydantic validation into load_rules_data. "
+                "Transport tenant wins over payload tenant_id. SDK handler tenant is authoritative."
+            ),
+            "tasks": [
+                {
+                    "title": "Deterministic RuleEngine inference",
+                    "objective": "Wire DomainYamlReader; do not convert PlasticOS to v2.",
+                }
+            ],
+        }
+        self.assertEqual(self.mod.infer_tools(seed), [])
+        primed = Path(tempfile.mkdtemp())
+        os.environ.pop("CONTEXT7_API_KEY", None)
+        receipt = self.mod.prove_stack(seed, primed_dir=primed)
+        self.assertEqual(receipt.get("skipped"), "no-external-stack")
+        self.assertEqual(receipt["status"], "pass")
+
+    def test_unrelated_prohibition_does_not_negate_later_product(self) -> None:
+        seed = {
+            "campaign_id": "docs-only",
+            "objective": ("Do not touch the local cache. Add Context7 to resolve library docs."),
+            "tasks": [{"title": "Docs", "objective": "prime Context7"}],
+        }
+        names = [item["name"].lower() for item in self.mod.infer_tools(seed)]
+        self.assertIn("context7", names)
+
+    def test_positive_neo4j_integration_still_infers(self) -> None:
+        seed = {
+            "campaign_id": "neo4j-gds",
+            "objective": "Add a Neo4j GDS job from the domain YAML gds_jobs section.",
+            "tasks": [{"title": "GDS", "objective": "run the driver"}],
+        }
+        names = [item["name"].lower() for item in self.mod.infer_tools(seed)]
+        self.assertIn("neo4j", names)
+
     def test_forged_receipt_rejected(self) -> None:
         inferred = [{"name": "Context7", "kind": "product"}]
         forged = {

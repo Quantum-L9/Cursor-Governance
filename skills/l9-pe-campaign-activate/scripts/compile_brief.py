@@ -135,15 +135,65 @@ def _paragraph_after(text: str, start: int) -> str:
     return " ".join(lines).strip()
 
 
-def extract_release_tasks(text: str) -> list[dict[str, str]]:
+FILE_PATH_RE = re.compile(
+    r"`((?:[A-Za-z0-9_.-]+/)+[A-Za-z0-9_.-]+\.[A-Za-z0-9]+"
+    r"|[A-Za-z0-9_.-]+\.(?:py|ini|ya?ml|md|sh|toml|json))`"
+)
+FILES_HEADING_RE = re.compile(
+    r"^(?:#{1,6}\s+)?(?:\*{1,2}|_{1,2})?Files:?\s*(?:\*{1,2}|_{1,2})?\s*$",
+    re.M | re.I,
+)
+RELEASE_BODY_STOP_RE = re.compile(r"^##\s+(Validation|Execute|Do not build)\b", re.M | re.I)
+SKIP_PATH_LINE_RE = re.compile(r"read-only|\borphan\b|do not import", re.I)
+
+
+def extract_release_paths(body: str) -> list[str]:
+    """Bind file paths from a Release `Files:` list. Skip read-only or orphan entries."""
+    heading = FILES_HEADING_RE.search(body)
+    block = body[heading.end() :] if heading is not None else body
+    if heading is not None:
+        lines: list[str] = []
+        for line in block.splitlines():
+            stripped = line.strip()
+            if not stripped:
+                if lines:
+                    break
+                continue
+            if stripped.startswith("- ") or stripped.startswith("* "):
+                lines.append(stripped)
+                continue
+            if lines:
+                break
+        block = "\n".join(lines)
+    found: list[str] = []
+    for match in FILE_PATH_RE.finditer(block):
+        path = match.group(1)
+        line_start = block.rfind("\n", 0, match.start()) + 1
+        line_end = block.find("\n", match.end())
+        line = block[line_start : len(block) if line_end < 0 else line_end]
+        if SKIP_PATH_LINE_RE.search(line):
+            continue
+        if path not in found:
+            found.append(path)
+    return found
+
+
+def extract_release_tasks(text: str) -> list[dict[str, Any]]:
     matches = list(RELEASE_RE.finditer(text))
-    tasks: list[dict[str, str]] = []
+    tasks: list[dict[str, Any]] = []
     for index, match in enumerate(matches):
         title = match.group(2).strip()
         end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
         body = text[match.end() : end]
+        stopper = RELEASE_BODY_STOP_RE.search(body)
+        if stopper is not None:
+            body = body[: stopper.start()]
         objective = _paragraph_after(body, 0) or title
-        tasks.append({"title": title, "objective": objective})
+        task: dict[str, Any] = {"title": title, "objective": objective}
+        paths = extract_release_paths(body)
+        if paths:
+            task["paths"] = paths
+        tasks.append(task)
     return tasks
 
 
@@ -174,7 +224,7 @@ def extract_numbered_fallback_tasks(text: str) -> list[dict[str, str]]:
     return tasks
 
 
-def extract_tasks(text: str) -> list[dict[str, str]]:
+def extract_tasks(text: str) -> list[dict[str, Any]]:
     releases = extract_release_tasks(text)
     if releases:
         return releases

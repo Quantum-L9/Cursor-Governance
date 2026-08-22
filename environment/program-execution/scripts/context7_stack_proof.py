@@ -32,7 +32,7 @@ SECRET_RE = re.compile(
 )
 
 API_RE = re.compile(
-    r"\b(api|rest|graphql|openapi|endpoint|http(?:s)?://|payload|sdk)\b",
+    r"\b(rest\s+api|graphql|openapi|vendor\s+api|https?://)\b",
     re.I,
 )
 MCP_RE = re.compile(r"\b(mcp__|mcp server|mcp tool|model context protocol)\b", re.I)
@@ -41,8 +41,18 @@ INSTALL_RE = re.compile(
     re.I,
 )
 DOCKER_RE = re.compile(r"\b(docker(?:file| compose)?|container image)\b", re.I)
-PRODUCT_RE = re.compile(
-    r"\b(context7|dataforseo|fastapi|neo4j|semgrep|github actions|next\.js|pydantic)\b",
+EXTERNAL_PRODUCT_RE = re.compile(
+    r"\b(context7|dataforseo|semgrep|github actions|next\.js)\b",
+    re.I,
+)
+FRAMEWORK_PRODUCT_RE = re.compile(r"\b(fastapi|neo4j|pydantic)\b", re.I)
+FRAMEWORK_INTENT_RE = re.compile(
+    r"\b(install|upgrade|migrate|docker|driver|cypher|gds|openapi|new)\b",
+    re.I,
+)
+NEGATION_RE = re.compile(
+    r"\b(?:no(?:t)?\s+new|do\s+not|don't|never|without|"
+    r"not\s+(?:a\s+|the\s+)?(?:new|call|use|add|touch|implement))\b",
     re.I,
 )
 PURE_FILE_RE = re.compile(
@@ -84,6 +94,22 @@ def seed_text(seed: dict[str, Any]) -> str:
     return "\n".join(parts)
 
 
+def _containing_clause(text: str, start: int, end: int | None = None) -> str:
+    """Sentence/line containing ``start`` (optionally through ``end``)."""
+    prior = text[:start]
+    last_break = max(prior.rfind(ch) for ch in ".!?\n")
+    clause_start = last_break + 1
+    stop_at = start if end is None else end
+    after = text[stop_at:]
+    after_breaks = [idx for idx in (after.find(ch) for ch in ".!?\n") if idx >= 0]
+    clause_end = stop_at + (min(after_breaks) if after_breaks else len(after))
+    return text[clause_start:clause_end]
+
+
+def _is_negated(text: str, start: int) -> bool:
+    return bool(NEGATION_RE.search(_containing_clause(text, start)))
+
+
 def infer_tools(seed: dict[str, Any]) -> list[dict[str, str]]:
     text = seed_text(seed)
     found: list[dict[str, str]] = []
@@ -96,8 +122,14 @@ def infer_tools(seed: dict[str, Any]) -> list[dict[str, str]]:
         seen.add(key)
         found.append({"name": name, "kind": kind})
 
-    for match in PRODUCT_RE.finditer(text):
-        add(match.group(0), "product")
+    for match in EXTERNAL_PRODUCT_RE.finditer(text):
+        if not _is_negated(text, match.start()):
+            add(match.group(0), "product")
+    for match in FRAMEWORK_PRODUCT_RE.finditer(text):
+        if _is_negated(text, match.start()):
+            continue
+        if FRAMEWORK_INTENT_RE.search(_containing_clause(text, match.start(), match.end())):
+            add(match.group(0), "product")
     if API_RE.search(text):
         add("upstream-api", "api")
     if MCP_RE.search(text):

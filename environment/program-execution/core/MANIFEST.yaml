@@ -354,11 +354,11 @@ files:
   sha256: a9779fad92b5844ef01dba0d9daa746dc74635873a8ffa725f9ad5fef982cfa6
   bytes: 15915
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 3c93a82dfb4683dad795937130be998af79f0d6e90e8b5b9b3bd221d5a31a0b0
-  bytes: 89093
+  sha256: 492aa1af083c2bbbf91170a8bfe95994efa250ff06d9d999315522c04a0ac18c
+  bytes: 89411
 - path: program-execution-controller-template/scripts/pec/exec_env.py
-  sha256: fec94d48722f6f9826dce971d127fb68ca42eea369ab2698383395e2939d1c3b
-  bytes: 8039
+  sha256: 36ad654e42666c0af4b863249f3c10d78717bbea656066f58d8da4589c39ae07
+  bytes: 14383
 - path: program-execution-controller-template/scripts/pec/ledger.py
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
@@ -372,8 +372,11 @@ files:
   sha256: a52609cdff558ecda0ef69b316b22a041d1de2b6f8dbff098ee9c04dccd7995e
   bytes: 23456
 - path: program-execution-controller-template/scripts/pec/workspace_reset.py
-  sha256: edf39052bd7f13cb79e946fa55cc2b6fecff50b96dfc0043943c007ab088a443
-  bytes: 7158
+  sha256: c36cbb3c4b3cba36057b30d0d5a2e71628a31a2f9aef401d0fef112b88b82ca7
+  bytes: 9552
+- path: program-execution-controller-template/scripts/pec/workspace_wiring.py
+  sha256: d1c7e657c7abd73d827c7230642844f08bf0582d71f5c6f0fe2ff3876d16e1a7
+  bytes: 3892
 - path: program-execution-controller-template/scripts/pec.py
   sha256: a06ff404d01ffaf0defa06e273897bb26f2464adf6d9507714c2d64749a25273
   bytes: 180
@@ -470,6 +473,9 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_wave_dependency.py
   sha256: 86f42e5a3d23a6a5e2c4087cdc6116160ac6d5e109629d7a67dbc1f9e03b88c7
   bytes: 2609
+- path: program-execution-controller-template/scripts/tests/test_workspace_reset_ownership.py
+  sha256: ebdbb54c0cb3afde801a7db6851003fb30514772a285e9aa924950e332916b31
+  bytes: 6409
 - path: program-execution-controller-template/scripts/validate_controller.py
   sha256: 994efa39a7fac7828a99f23be5c5b255e04b47fa388684dc92cfbea6d3202ce1
   bytes: 9638
@@ -567,5 +573,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 187
-  total_bytes: 633561
+  file_count: 189
+  total_bytes: 652918

@@ -7,6 +7,7 @@ stage and only surface long after bootstrap had frozen the blueprint.
 from __future__ import annotations
 
 import importlib.util
+import json
 import subprocess
 import sys
 import tempfile
@@ -55,6 +56,22 @@ class LaunchabilityTest(unittest.TestCase):
             codes = {item["code"] for item in report["blockers"]}
             self.assertIn("verification_deadlock", codes)
 
+    def test_function_style_file_without_pytest_import_infers_pytest(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            (root / "tests").mkdir()
+            (root / "tests/test_rule_loader.py").write_text(
+                "def test_ok():\n    assert True\n", encoding="utf-8"
+            )
+            inferred = launchability.infer_validation_commands(
+                {"writable_paths": ["tests/test_rule_loader.py"]},
+                root,
+            )
+            self.assertEqual(
+                inferred,
+                ["python3 -m pytest tests/test_rule_loader.py --tb=short -q -o addopts="],
+            )
+
     def test_pytest_native_file_infers_pytest_not_unittest(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
@@ -74,7 +91,7 @@ class LaunchabilityTest(unittest.TestCase):
                 inferred,
                 [
                     "python3 -m pytest "
-                    "tests/ops/scripts/test_multi_agent_main_bound.py --tb=short -q"
+                    "tests/ops/scripts/test_multi_agent_main_bound.py --tb=short -q -o addopts="
                 ],
             )
 
@@ -98,7 +115,7 @@ class LaunchabilityTest(unittest.TestCase):
             self.assertTrue(report["launchable"])
             self.assertEqual(
                 report["synthesized_validations"]["TASK-001"],
-                ["python3 -m unittest pkg/tests/test_widget.py"],
+                ["python3 -m pytest pkg/tests/test_widget.py --tb=short -q -o addopts="],
             )
 
     def test_declared_validation_overrides_inference(self) -> None:
@@ -132,77 +149,174 @@ class LaunchabilityTest(unittest.TestCase):
             self.assertIn("dangling_dependency", codes)
 
 
-class InferenceReachesTheTaskCardTest(unittest.TestCase):
-    """An inferred validation only counts if the contract can be rendered from it."""
+def _cards(root: Path, tasks: list[dict], *, name: str = "TASK_CARDS.yaml") -> Path:
+    import yaml
 
-    def _cards(self, root: Path, tasks: list[dict]) -> Path:
-        import yaml
+    blueprint = root / "blueprint"
+    blueprint.mkdir(parents=True, exist_ok=True)
+    (blueprint / name).write_text(
+        yaml.safe_dump({"tasks": tasks}, sort_keys=False), encoding="utf-8"
+    )
+    return blueprint
 
-        blueprint = root / "blueprint"
-        blueprint.mkdir(parents=True, exist_ok=True)
-        cards = blueprint / "TASK_CARDS.yaml"
-        cards.write_text(yaml.safe_dump({"tasks": tasks}, sort_keys=False), encoding="utf-8")
-        return blueprint
 
-    def _written(self, blueprint: Path) -> list[dict]:
-        import yaml
+class CanonicalTaskLoadingTest(unittest.TestCase):
+    """TASK_CARDS.yaml is what the compiler emits, so it is what launchability reads.
 
-        doc = yaml.safe_load((blueprint / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
-        return list(doc["tasks"][0]["validation"] or [])
+    Reading `tasks.json` instead let a 39-task campaign report `task_count=0`,
+    `launchable=true`, `no_task_cards` -- a pass earned by not looking.
+    """
 
-    def test_the_inferred_command_is_written_into_the_card(self) -> None:
+    def test_launchability_reads_canonical_task_cards_yaml(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
-            root = Path(raw)
-            blueprint = self._cards(root, [_task(outputs=[{"location": "docs/result.md"}])])
+            blueprint = _cards(Path(raw), [_task(), _task(id="TASK-002")])
 
-            changed = launchability.apply_synthesized_validations(
-                blueprint, {"TASK-001": ["test -s 'docs/result.md'"]}
-            )
+            loaded = launchability.load_blueprint_tasks(blueprint)
 
-            self.assertEqual(changed, ["TASK-001"])
-            entry = self._written(blueprint)[0]
-            self.assertEqual(entry["method"], "command")
-            self.assertEqual(entry["command_or_inspection"], "test -s 'docs/result.md'")
-            # The lock reads `method: command` entries, so this is exactly what
-            # the rendered contract's validation_commands will contain.
+            self.assertEqual([task["id"] for task in loaded], ["TASK-001", "TASK-002"])
             self.assertEqual(
-                launchability.declared_validation_commands({"validation": [entry]}),
-                ["test -s 'docs/result.md'"],
+                launchability.blueprint_task_source(blueprint),
+                launchability.SOURCE_TASK_CARDS,
             )
 
-    def test_the_inferred_entry_is_marked_as_not_operator_written(self) -> None:
+    def test_compiled_campaign_task_count_matches_launchability_task_count(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
-            blueprint = self._cards(Path(raw), [_task()])
+            authored = [_task(id=f"TASK-{index:03d}") for index in range(1, 6)]
+            blueprint = _cards(Path(raw), authored)
 
-            launchability.apply_synthesized_validations(blueprint, {"TASK-001": ["make check"]})
-
-            self.assertTrue(self._written(blueprint)[0]["id"].startswith("VAL-INFERRED-"))
-
-    def test_a_declared_validation_is_never_overwritten(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            declared = {
-                "id": "VAL-001",
-                "method": "command",
-                "command_or_inspection": "make check",
-                "environment": "repo_local",
-                "expected_result": "PASS",
-            }
-            blueprint = self._cards(Path(raw), [_task(validation=[declared])])
-
-            changed = launchability.apply_synthesized_validations(
-                blueprint, {"TASK-001": ["python3 -m pytest -q"]}
+            report = launchability.check_tasks(
+                launchability.load_blueprint_tasks(blueprint), Path(raw), defer_inference=True
             )
 
-            self.assertEqual(changed, [])
-            self.assertEqual(self._written(blueprint), [declared])
+            self.assertEqual(report["task_count"], len(authored))
 
-    def test_nothing_is_written_when_nothing_was_inferred(self) -> None:
+    def test_missing_validation_in_task_cards_is_seen_by_launchability(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
-            blueprint = self._cards(Path(raw), [_task()])
+            # No validation and nothing to derive one from: a real deadlock the
+            # reader has to actually load the card to notice.
+            blueprint = _cards(Path(raw), [_task(outputs=[], validation=[])])
+
+            report = launchability.check_tasks(
+                launchability.load_blueprint_tasks(blueprint), Path(raw), defer_inference=True
+            )
+
+            self.assertEqual(report["task_count"], 1)
+            self.assertFalse(report["launchable"])
+            self.assertIn("verification_deadlock", {item["code"] for item in report["blockers"]})
+
+    def test_invalid_task_cards_yaml_fails_launchability(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            blueprint = Path(raw) / "blueprint"
+            blueprint.mkdir()
+            (blueprint / "TASK_CARDS.yaml").write_text("tasks: [: not: yaml\n", encoding="utf-8")
+
+            with self.assertRaises(launchability.LaunchabilityError):
+                launchability.load_blueprint_tasks(blueprint)
+
+    def test_task_cards_without_a_tasks_key_fails_loudly(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            blueprint = Path(raw) / "blueprint"
+            blueprint.mkdir()
+            (blueprint / "TASK_CARDS.yaml").write_text("schema: v1\n", encoding="utf-8")
+
+            with self.assertRaises(launchability.LaunchabilityError):
+                launchability.load_blueprint_tasks(blueprint)
+
+    def test_an_explicitly_taskless_campaign_is_allowed(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            blueprint = _cards(Path(raw), [])
+
+            self.assertEqual(launchability.load_blueprint_tasks(blueprint), [])
+
+    def test_legacy_task_loader_is_fallback_only(self) -> None:
+        import json as _json
+
+        with tempfile.TemporaryDirectory() as raw:
+            blueprint = _cards(Path(raw), [_task(id="FROM-CARDS")])
+            (blueprint / "tasks.json").write_text(
+                _json.dumps({"tasks": [{"id": "FROM-LEGACY"}]}), encoding="utf-8"
+            )
+
+            # Both representations present: the canonical one answers.
+            self.assertEqual(
+                [task["id"] for task in launchability.load_blueprint_tasks(blueprint)],
+                ["FROM-CARDS"],
+            )
+
+            (blueprint / "TASK_CARDS.yaml").unlink()
+            self.assertEqual(
+                [task["id"] for task in launchability.load_blueprint_tasks(blueprint)],
+                ["FROM-LEGACY"],
+            )
+            self.assertEqual(
+                launchability.blueprint_task_source(blueprint),
+                launchability.SOURCE_LEGACY_JSON,
+            )
+
+    def test_a_blueprint_with_no_task_representation_reports_none(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            blueprint = Path(raw) / "blueprint"
+            blueprint.mkdir()
+
+            self.assertEqual(
+                launchability.blueprint_task_source(blueprint), launchability.SOURCE_NONE
+            )
+            self.assertEqual(launchability.load_blueprint_tasks(blueprint), [])
+
+
+class GlobalLaunchabilityIsReadOnlyTest(unittest.TestCase):
+    """Preparation-time launchability inspects; it does not rewrite the campaign."""
+
+    def test_global_launchability_does_not_mutate_task_cards(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            blueprint = _cards(Path(raw), [_task(outputs=[{"location": "docs/result.md"}])])
             before = (blueprint / "TASK_CARDS.yaml").read_bytes()
 
-            self.assertEqual(launchability.apply_synthesized_validations(blueprint, {}), [])
+            report = launchability.check_tasks(
+                launchability.load_blueprint_tasks(blueprint), Path(raw), defer_inference=True
+            )
+
+            self.assertTrue(report["launchable"])
             self.assertEqual((blueprint / "TASK_CARDS.yaml").read_bytes(), before)
+            self.assertEqual(report["synthesized_validations"], {})
+
+    def test_no_global_task_card_mutator_remains(self) -> None:
+        source = (PE_ROOT / "scripts/launchability.py").read_text(encoding="utf-8")
+        self.assertNotIn("apply_synthesized_validations", source)
+
+    def test_future_task_validation_not_inferred_before_materialization(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            # A test file exists in *this* (governance) checkout at the path the
+            # task will write in its own repository. Global inference would bind
+            # to it; deferred inference must not even look.
+            (root / "pkg/tests").mkdir(parents=True)
+            (root / "pkg/widget.py").write_text("x = 1\n", encoding="utf-8")
+            (root / "pkg/tests/test_widget.py").write_text("def test_x(): pass\n", encoding="utf-8")
+            task = _task(outputs=[{"location": "pkg/widget.py"}])
+
+            report = launchability.check_tasks([task], root, defer_inference=True)
+
+            self.assertTrue(report["launchable"])
+            self.assertEqual(report["synthesized_validations"], {})
+            self.assertIn("validation_deferred", {item["code"] for item in report["findings"]})
+
+    def test_explicit_validation_wins_over_inference(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            task = _task(validation=[{"method": "command", "command_or_inspection": "make check"}])
+
+            report = launchability.check_tasks([task], Path(raw), defer_inference=True)
+
+            self.assertTrue(report["launchable"])
+            self.assertEqual(report["findings"], [])
+
+    def test_a_task_with_nowhere_to_write_is_still_a_deadlock(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            report = launchability.check_tasks(
+                [_task(outputs=[], validation=[])], Path(raw), defer_inference=True
+            )
+
+            self.assertFalse(report["launchable"])
 
 
 class DefinitionStatusNormalizationTest(unittest.TestCase):
@@ -241,6 +355,39 @@ class ExecutionEnvironmentTest(unittest.TestCase):
 
         cls.exec_env = exec_env
         cls.run_campaign = _load("run_campaign_env_test", PE_ROOT / "scripts/run_campaign.py")
+
+    def test_consumer_task_worktree_uses_project_venv_not_controller(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            project = Path(raw)
+            (project / ".venv/bin").mkdir(parents=True)
+            python = project / ".venv/bin/python3"
+            python.write_text("#!/bin/sh\n", encoding="utf-8")
+            python.chmod(0o755)
+            (project / "uv.lock").write_text("", encoding="utf-8")
+            env = {
+                "VIRTUAL_ENV": str(Path.home() / ".cursor-governance/.venv"),
+                "L9_PE_PYTHON": "",
+            }
+            with unittest.mock.patch.dict("os.environ", env, clear=False):
+                with unittest.mock.patch.object(
+                    self.exec_env, "is_consumer_task_worktree", return_value=True
+                ):
+                    resolved = self.exec_env.resolve_exec_env(project)
+            self.assertEqual(resolved.python, python.resolve())
+
+    def test_empty_unittest_collection_is_fail(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            worktree = Path(raw)
+            (worktree / "tests").mkdir()
+            (worktree / "tests/test_empty.py").write_text(
+                "def test_ok():\n    assert True\n", encoding="utf-8"
+            )
+            result = self.exec_env.run_validation_command(
+                "python3 -m unittest tests/test_empty.py",
+                worktree,
+            )
+            self.assertEqual(result["status"], "FAIL")
+            self.assertIn("zero tests", result["stderr"])
 
     def test_worker_and_controller_resolve_the_same_python(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -359,3 +506,181 @@ class ExecutionEnvironmentTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class ExecEnvProvisioningTest(unittest.TestCase):
+    """Resolution reads; only `ensure_exec_env` builds.
+
+    Resolution used to run `uv sync` / `uv venv` / `uv pip install`, so every
+    validation command and every controller verification reprovisioned the same
+    unchanged project: the campaign paid for its environment once per command
+    instead of once per environment.
+    """
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        if str(PEC_SCRIPTS) not in sys.path:
+            sys.path.insert(0, str(PEC_SCRIPTS))
+        from pec import exec_env  # noqa: PLC0415 - path is set above
+
+        cls.exec_env = exec_env
+
+    def _project(self, root: Path) -> Path:
+        """A consumer project that declares an environment but has none built."""
+        (root / "pyproject.toml").write_text(
+            "[project]\nname = 'demo'\nversion = '0.1.0'\n", encoding="utf-8"
+        )
+        (root / "uv.lock").write_text("version = 1\n", encoding="utf-8")
+        return root
+
+    def _fake_venv(self, root: Path) -> Path:
+        (root / ".venv/bin").mkdir(parents=True, exist_ok=True)
+        python = root / ".venv/bin/python3"
+        python.write_text("#!/bin/sh\n", encoding="utf-8")
+        python.chmod(0o755)
+        (root / ".venv/pyvenv.cfg").write_text("home = /usr\n", encoding="utf-8")
+        return python
+
+    def test_resolve_exec_env_has_no_provisioning_side_effect(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            project = self._project(Path(raw))
+            with unittest.mock.patch.object(
+                self.exec_env, "is_consumer_task_worktree", return_value=True
+            ):
+                with unittest.mock.patch.object(self.exec_env.subprocess, "run") as ran:
+                    self.exec_env.resolve_exec_env(project)
+            for call in ran.call_args_list:
+                argv = call.args[0] if call.args else []
+                self.assertNotIn(
+                    "uv", [Path(str(argv[0])).name] if argv else [], msg=f"resolution ran {argv}"
+                )
+            self.assertFalse((project / ".venv").exists(), "resolution created an environment")
+
+    def test_resolution_source_declares_no_installer(self) -> None:
+        """The resolution path spawns no subprocess at all, so it cannot install."""
+        source = (PEC_SCRIPTS / "pec/exec_env.py").read_text(encoding="utf-8")
+        resolve = source[source.index("def _discover_python(") : source.index("def _existing_venv")]
+        self.assertNotIn("subprocess.run", resolve, "resolution spawns a process")
+        self.assertNotIn("_provision_consumer_project", resolve, "resolution provisions")
+        # `uv` may only be reached from the one function allowed to build.
+        provision = source[source.index("def _provision_consumer_project(") :]
+        self.assertIn('shutil.which("uv")', provision)
+        before_provision = source[: source.index("def _provision_consumer_project(")]
+        self.assertNotIn('shutil.which("uv")', before_provision)
+
+    def test_exec_env_provisions_once_per_environment_fingerprint(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            project = self._project(Path(raw))
+            calls: list[int] = []
+
+            def fake_provision(cwd: Path):
+                calls.append(1)
+                return self._fake_venv(cwd)
+
+            with unittest.mock.patch.object(
+                self.exec_env, "is_consumer_task_worktree", return_value=True
+            ):
+                with unittest.mock.patch.object(
+                    self.exec_env, "_provision_consumer_project", fake_provision
+                ):
+                    # prepare, then validation x5, then controller verification x2
+                    for _ in range(8):
+                        self.exec_env.ensure_exec_env(project)
+
+            self.assertEqual(len(calls), 1, "environment was rebuilt for unchanged declarations")
+
+    def test_multiple_validations_reuse_provisioned_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            project = self._project(Path(raw))
+            python = self._fake_venv(project)
+            self.exec_env._provision_receipt(project).write_text(
+                json.dumps(
+                    {
+                        "schema": self.exec_env.ENV_RECEIPT_SCHEMA,
+                        "fingerprint": self.exec_env.environment_fingerprint(project),
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with unittest.mock.patch.object(
+                self.exec_env, "is_consumer_task_worktree", return_value=True
+            ):
+                with unittest.mock.patch.object(
+                    self.exec_env, "_provision_consumer_project"
+                ) as provision:
+                    for _ in range(5):
+                        resolved = self.exec_env.ensure_exec_env(project)
+
+            provision.assert_not_called()
+            self.assertEqual(resolved.python, python.resolve())
+
+    def test_controller_verification_reuses_worker_environment(self) -> None:
+        """Both sides resolve the same interpreter without either rebuilding it."""
+        with tempfile.TemporaryDirectory() as raw:
+            project = self._project(Path(raw))
+            python = self._fake_venv(project)
+            with unittest.mock.patch.object(
+                self.exec_env, "is_consumer_task_worktree", return_value=True
+            ):
+                with unittest.mock.patch.object(
+                    self.exec_env, "_provision_consumer_project"
+                ) as provision:
+                    worker_side = self.exec_env.resolve_exec_env(project)
+                    controller_side = self.exec_env.resolve_exec_env(project)
+
+            provision.assert_not_called()
+            self.assertEqual(worker_side.python, controller_side.python)
+            self.assertEqual(controller_side.python, python.resolve())
+
+    def test_lockfile_change_reprovisions_environment(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            project = self._project(Path(raw))
+            calls: list[str] = []
+
+            def fake_provision(cwd: Path):
+                calls.append(self.exec_env.environment_fingerprint(cwd))
+                return self._fake_venv(cwd)
+
+            with unittest.mock.patch.object(
+                self.exec_env, "is_consumer_task_worktree", return_value=True
+            ):
+                with unittest.mock.patch.object(
+                    self.exec_env, "_provision_consumer_project", fake_provision
+                ):
+                    self.exec_env.ensure_exec_env(project)
+                    self.exec_env.ensure_exec_env(project)
+                    (project / "uv.lock").write_text("version = 2\n", encoding="utf-8")
+                    self.exec_env.ensure_exec_env(project)
+
+            self.assertEqual(len(calls), 2, "a changed lockfile must rebuild the environment")
+            self.assertNotEqual(calls[0], calls[1])
+
+    def test_no_machine_specific_interpreter_rewrite(self) -> None:
+        """Commands stay repository-portable; the environment resolves python3."""
+        for path in (
+            PEC_SCRIPTS / "pec/exec_env.py",
+            PE_ROOT / "scripts/run_campaign.py",
+            PE_ROOT / "scripts/launchability.py",
+        ):
+            source = path.read_text(encoding="utf-8")
+            self.assertNotIn('"python3.12"', source, msg=f"{path} pins a machine interpreter")
+            self.assertNotIn("python3 -> python3.1", source)
+
+
+class ControllerVerificationEnvironmentTest(unittest.TestCase):
+    """Controller verification resolves one environment, and ensures it exists."""
+
+    def test_controller_resolves_once_per_verification_not_per_command(self) -> None:
+        source = (PEC_SCRIPTS / "pec/controller.py").read_text(encoding="utf-8")
+        self.assertIn("def _run_validations(", source)
+        self.assertNotIn("_run_validation(command, worktree) for command", source)
+
+    def test_controller_ensures_the_environment_it_verifies_in(self) -> None:
+        """`pec verify` is also invoked directly, with nothing having prepared it.
+
+        Resolution alone would silently fall back to the launching interpreter
+        on a consumer worktree whose environment was never built.
+        """
+        source = (PEC_SCRIPTS / "pec/controller.py").read_text(encoding="utf-8")
+        self.assertIn("ensure_exec_env(worktree)", source)
+        self.assertNotIn("resolve_exec_env(worktree)", source)

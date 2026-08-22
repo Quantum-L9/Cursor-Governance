@@ -31,10 +31,11 @@ from .common import (
     write_json,
 )
 from .contracts import ContractError, path_allowed, validate_source_contract
-from .exec_env import resolve_exec_env, run_validation_command
+from .exec_env import ensure_exec_env, run_validation_command
 from .ledger import EventLedger
 from .state import StateDB
 from .workspace_reset import clean_task_execution
+from .workspace_wiring import product_paths
 
 CAMPAIGN_STATUS_SCHEMA = "program-execution-controller.campaign-status.v1"
 SOURCE_STATUSES = {"operator_intake", "registered", "withdrawn"}
@@ -1192,34 +1193,16 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
         db.close()
 
 
-WIRING_PATHS = frozenset({".cursor-commands", ".cursor/plans"})
-WIRING_PREFIXES = (
-    ".cursor-commands/",
-    ".cursor/plans/",
-    ".cursor/governance/",
-    ".cursor/rules/",
-    ".claude/",
-    ".vscode/",
-)
-
-
-def _is_wiring_path(path: str) -> bool:
-    normalized = path.replace("\\", "/")
-    if normalized.startswith("./"):
-        normalized = normalized[2:]
-    if normalized.rstrip("/") in WIRING_PATHS:
-        return True
-    return any(normalized.startswith(prefix) for prefix in WIRING_PREFIXES)
-
-
 def _changed_paths(worktree: Path, base_sha: str | None = None) -> list[str]:
     """Union of dirty working-tree changes and committed work since the base.
 
     The worker contract allows both styles: leave the worktree dirty, or
     commit on the task branch. Either way every touched path must be declared
     in the Attempt Receipt and stay inside the Source Contract's writable
-    paths. Governance wiring links created by ensure_workspace_wired are not
-    worker mutations.
+    paths. Only the links `ensure_workspace_wired` generated are excluded, and
+    `workspace_wiring` is the single definition of which those are -- suppressing
+    `.cursor/rules/`, `.claude/` and `.vscode/` wholesale hid tracked source the
+    scope gate exists to judge.
     """
     raw = run_git(worktree, "status", "--porcelain=v1", "-z", "--untracked-files=all").stdout
     paths: set[str] = set()
@@ -1244,11 +1227,22 @@ def _changed_paths(worktree: Path, base_sha: str | None = None) -> list[str]:
         for line in committed.splitlines():
             if line.strip():
                 paths.add(line.strip().replace("\\", "/"))
-    return sorted(path for path in paths if path and not _is_wiring_path(path))
+    return product_paths(paths, worktree)
 
 
-def _run_validation(command: str, worktree: Path) -> dict[str, Any]:
-    return run_validation_command(command, worktree, exec_env=resolve_exec_env(worktree))
+def _run_validations(commands: list[str], worktree: Path) -> list[dict[str, Any]]:
+    """Run a verification's declared commands in one resolved environment.
+
+    Resolved once, not once per command: every command in a verification runs
+    against the same interpreter, which is the whole point of having one.
+
+    `ensure_exec_env` rather than `resolve_exec_env` because the controller is
+    also invoked directly, without the runner having prepared anything. It
+    provisions once per environment fingerprint and is free thereafter, so a
+    verification that follows the runner's own preparation installs nothing.
+    """
+    resolved = ensure_exec_env(worktree)
+    return [run_validation_command(command, worktree, exec_env=resolved) for command in commands]
 
 
 DOD_GATES = (
@@ -1548,7 +1542,9 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             )
             if required_commands:
                 gates.update(_preflight2_gates([str(command) for command in required_commands]))
-                validations = [_run_validation(command, worktree) for command in required_commands]
+                validations = _run_validations(
+                    [str(command) for command in required_commands], worktree
+                )
                 gates["validation"] = (
                     "PASS"
                     if validations and all(item["status"] == "PASS" for item in validations)
