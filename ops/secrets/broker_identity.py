@@ -33,15 +33,23 @@ from __future__ import annotations
 
 import base64
 import json
+import sys
 import time
 import urllib.request
 from dataclasses import dataclass
+from pathlib import Path
 from typing import Any
 
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.hazmat.primitives.asymmetric.utils import encode_dss_signature
 from cryptography.hazmat.primitives.hashes import SHA256
+
+_OPS_LIB = Path(__file__).resolve().parent.parent / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import exchange  # noqa: E402
 
 EXPECTED_ISSUER = "ccr"
 EXPECTED_ROLE = "session_worker"
@@ -103,7 +111,8 @@ class JWKSCache:
 
     def _refresh(self, now: float) -> None:
         try:
-            with urllib.request.urlopen(self.url, timeout=10) as response:  # noqa: S310 - https const
+            request = urllib.request.Request(self.url, method="GET")
+            with exchange(request, timeout=10, label="JWKS URL") as response:
                 document = json.loads(response.read().decode("utf-8"))
         except (OSError, ValueError) as exc:
             raise IdentityError(f"JWKS unavailable: {type(exc).__name__}") from exc

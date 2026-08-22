@@ -22,15 +22,23 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 import urllib.error
 import urllib.parse
 import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
+_OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import https_exchange  # noqa: E402
+
 PAGE_SIZE = 100
 MAX_PAGES = 50  # 100 * 50 = 5000 alerts; a repo above this needs an explicit wider run
 API_VERSION = "2022-11-28"
+_GITHUB_HOSTS = frozenset({"api.github.com"})
 
 
 def _request(
@@ -44,7 +52,9 @@ def _request(
     if token:
         request.add_header("Authorization", f"Bearer {token}")
     try:
-        with urllib.request.urlopen(request, timeout=45) as response:  # noqa: S310 (https only)
+        with https_exchange(
+            request, timeout=45, allowed_hosts=_GITHUB_HOSTS, label="CodeQL API URL"
+        ) as response:
             body = json.loads(response.read().decode("utf-8"))
             return body, response.headers.get("Link")
     except urllib.error.HTTPError as exc:
