@@ -248,7 +248,7 @@ class CompileActivationTests(unittest.TestCase):
     def test_fills_residue_for_title_objective_seed(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = _repo(Path(raw))
-            dump_yaml(root / "intent.yaml", STUB_INTENT)
+            dump_yaml(root / "intent.yaml", {**STUB_INTENT, "plan_status": "ConditionallyReady"})
             compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
             source_path = (
                 root
@@ -257,7 +257,7 @@ class CompileActivationTests(unittest.TestCase):
             from compile_activation_files import load_yaml  # noqa: PLC0415
 
             src = load_yaml(source_path)
-            self.assertEqual(src["program"]["plan_status"], "Ready")
+            self.assertEqual(src["program"]["plan_status"], "ConditionallyReady")
             self.assertEqual(src["tasks"][0]["nugget_id"], "NUG-001")
             self.assertTrue(src["tasks"][0]["actions"])
             self.assertTrue(src["tasks"][0]["consumers"])

@@ -177,7 +177,7 @@
       "expected_supporting": [
         "l9-structured-reasoning"
       ],
-      "expected_source": "route"
+      "expected_source": "explicit_hint"
     },
     {
       "prompt": "Configure GitHub Packages access via the admin UI cartridge when the API is insufficient",

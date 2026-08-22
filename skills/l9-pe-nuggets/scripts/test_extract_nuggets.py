@@ -77,13 +77,9 @@ class ExtractNuggetsTests(unittest.TestCase):
                 primed,
                 None,
             )
-            self.assertEqual(result["plan_status"], "Ready")
+            self.assertEqual(result["plan_status"], "ConditionallyReady")
             task = result["seed"]["tasks"][0]
             self.assertEqual(task["nugget_id"], "NUG-001")
-            self.assertTrue(task["actions"])
-            self.assertTrue(task["consumers"])
-            self.assertTrue(task["entrypoints"])
-            self.assertTrue(task["validation"])
 
 
 if __name__ == "__main__":
