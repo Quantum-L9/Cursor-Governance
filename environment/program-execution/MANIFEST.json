@@ -1627,7 +1627,7 @@
     },
     {
       "path": "scripts/context7_stack_proof.py",
-      "sha256": "13060d42923433d6ffca9066fa9dce0ee9012bffc7d32f4e0b39a09e3315ff21"
+      "sha256": "e440dbcdce0b296911eea41eafc15dccdb35c03794ec4c7f52bba0bfbd41ad7e"
     },
     {
       "path": "scripts/generate_manifest.py",
@@ -1719,7 +1719,7 @@
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
-      "sha256": "7ea1fbfb730a77a42d555c44ea110df2a07ec1e80546e64ae7624d8a4c0a12dc"
+      "sha256": "477495c911fd99958a7cff55cb90c722b913e6bde47b8934617063fecf90cc2f"
     },
     {
       "path": "scripts/tests/test_launchability.py",

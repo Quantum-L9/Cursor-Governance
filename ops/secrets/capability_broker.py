@@ -78,6 +78,12 @@ import broker_identity  # noqa: E402
 from capability_registry import CapabilitySpec, load_registry  # noqa: E402
 from surface_trust import detected_model_markers  # noqa: E402
 
+_OPS_LIB = HERE.parent / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import exchange  # noqa: E402
+
 UPSTREAM_TIMEOUT_SECONDS = 45
 
 # Credential-bearing response headers are dropped wholesale rather than
@@ -245,7 +251,7 @@ class SecretProvider:
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=20) as response:  # noqa: S310
+            with exchange(request, timeout=20, label="Infisical login URL") as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BrokerError(503, f"workload identity login failed: {type(exc).__name__}") from exc
@@ -273,7 +279,7 @@ class SecretProvider:
             headers={"Authorization": f"Bearer {self._access_token()}"},
         )
         try:
-            with urllib.request.urlopen(request, timeout=20) as response:  # noqa: S310
+            with exchange(request, timeout=20, label="Infisical secret URL") as response:
                 payload = json.loads(response.read().decode("utf-8"))
         except (urllib.error.URLError, OSError, ValueError) as exc:
             raise BrokerError(
@@ -540,8 +546,13 @@ class Broker:
         request = urllib.request.Request(url, method=method)
         request.add_header("Authorization", f"Bearer {values[0]}")
         try:
-            with urllib.request.urlopen(request, timeout=UPSTREAM_TIMEOUT_SECONDS) as response:  # noqa: S310
-                raw = response.read(spec.max_response_bytes + 1)
+            with exchange(
+                request,
+                timeout=UPSTREAM_TIMEOUT_SECONDS,
+                allowed_https_hosts=frozenset({spec.upstream_host}),
+                label="capability upstream URL",
+            ) as response:
+                raw = response.read()[: spec.max_response_bytes + 1]
         except (urllib.error.URLError, OSError, TimeoutError) as exc:
             raise BrokerError(502, f"upstream failed: {type(exc).__name__}") from exc
         if len(raw) > spec.max_response_bytes:

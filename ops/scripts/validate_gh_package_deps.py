@@ -23,6 +23,12 @@ import urllib.request
 from pathlib import Path
 from typing import Any
 
+_OPS_LIB = Path(__file__).resolve().parent.parent / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import https_exchange  # noqa: E402
+
 SCOPE = "@quantum-l9/"
 TARBALL_RE = re.compile(r"/download/(@quantum-l9/[\w.-]+)/([\d.]+(?:-[^/]+)?)/[0-9a-f]{20,}$")
 
@@ -96,7 +102,12 @@ def live_problems(name: str, version: str, integrity: str) -> list[str]:
             f"https://npm.pkg.github.com/@quantum-l9%2f{name.removeprefix(SCOPE)}",
             headers={"Accept": "application/vnd.npm.install-v1+json"},
         )
-        with urllib.request.urlopen(request, timeout=15) as response:  # noqa: S310
+        with https_exchange(
+            request,
+            timeout=15,
+            allowed_hosts=frozenset({"npm.pkg.github.com"}),
+            label="GitHub Packages URL",
+        ) as response:
             metadata = json.loads(response.read().decode("utf-8"))
     except Exception as exc:  # noqa: BLE001 — offline / private-registry reachability
         print(f"validate_gh_package_deps: live check skipped for {name} ({exc})", file=sys.stderr)

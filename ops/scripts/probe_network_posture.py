@@ -28,6 +28,13 @@ import json
 import sys
 import urllib.error
 import urllib.request
+from pathlib import Path
+
+_OPS_LIB = Path(__file__).resolve().parent.parent / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import https_exchange  # noqa: E402
 
 #: Reachability here is a policy violation, not a capability.
 MUST_NOT_REACH = ("app.infisical.com", "sonarcloud.io")
@@ -45,7 +52,13 @@ def reachable(host: str, timeout: int = TIMEOUT) -> bool:
     only a transport failure counts as blocked.
     """
     try:
-        urllib.request.urlopen(f"https://{host}/", timeout=timeout)  # noqa: S310
+        request = urllib.request.Request(f"https://{host}/", method="GET")
+        https_exchange(
+            request,
+            timeout=timeout,
+            allowed_hosts=frozenset(MUST_NOT_REACH + MUST_REACH),
+            label="posture probe URL",
+        )
     except urllib.error.HTTPError:
         return True
     except (TimeoutError, urllib.error.URLError, OSError, ValueError):

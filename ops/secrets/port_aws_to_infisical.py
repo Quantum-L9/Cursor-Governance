@@ -25,7 +25,14 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
 from typing import Any
+
+_OPS_LIB = Path(__file__).resolve().parent.parent / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import exchange  # noqa: E402
 
 AWS_PREFIX = "openclaw-igorbot/"
 AWS_REGION = "us-east-1"
@@ -248,7 +255,7 @@ def infisical_req(
     for attempt in range(retries):
         req = urllib.request.Request(f"{host}{path}", data=data, method=method, headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=60) as resp:
+            with exchange(req, timeout=60, label="Infisical URL") as resp:
                 raw = resp.read().decode()
                 return resp.status, json.loads(raw) if raw else {}
         except urllib.error.HTTPError as e:

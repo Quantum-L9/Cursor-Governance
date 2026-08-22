@@ -10,9 +10,17 @@ import argparse
 import json
 import os
 import re
+import sys
 import urllib.error
 import urllib.parse
 import urllib.request
+from pathlib import Path
+
+_OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import https_exchange  # noqa: E402
 
 _SECRETISH = re.compile(r"(?i)(token|secret|password|api[_-]?key)\s*[=:]\s*\S+")
 _ISSUE_RE = re.compile(r"^([A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+)#(\d+)$")
@@ -84,7 +92,12 @@ def _post_comment(owner: str, repo: str, number: int, body: str, token: str) -> 
     request.add_header("Content-Type", "application/json")
     try:
         # URL is allow-listed to https://api.github.com by _comments_url.
-        with urllib.request.urlopen(request, timeout=45) as response:  # noqa: S310
+        with https_exchange(
+            request,
+            timeout=45,
+            allowed_hosts=frozenset({API_HOST}),
+            label="GitHub comment URL",
+        ) as response:
             if response.status not in (200, 201):
                 raise SystemExit(f"BLOCKED: GitHub comment HTTP {response.status}")
     except urllib.error.HTTPError as exc:
