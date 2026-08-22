@@ -1,0 +1,12 @@
+schema_id: canonical.schema.test_impact_map.v1
+description: Maps modules to covering tests for selective/impact-based CI runs.
+required_fields: [entries]
+field_definitions:
+  entries:
+    type: array
+    items:
+      type: object
+      properties:
+        module_prefix: { type: string }
+        tests: { type: array, items: { type: string } }
+        transitive_dependents: { type: array, items: { type: string } }

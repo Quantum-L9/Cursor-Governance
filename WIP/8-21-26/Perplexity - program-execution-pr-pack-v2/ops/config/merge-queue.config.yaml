@@ -1,0 +1,6 @@
+merge_queue:
+  max_batch_size: 10
+  required_checks_source: feature_tree.gates.union
+  batch_timeout_minutes: 15
+  status_check_timeout_minutes: 20
+  require_all_queue_entries_pass: true

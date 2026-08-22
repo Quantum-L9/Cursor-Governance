@@ -1,0 +1,4 @@
+test_impact:
+  impact_map_path: reports/latest/test_impact_map.v1.yaml
+  fallback_on_missing_entry: full_suite
+  include_transitive_dependents: true
