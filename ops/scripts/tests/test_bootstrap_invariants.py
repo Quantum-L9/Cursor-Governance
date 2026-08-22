@@ -51,6 +51,29 @@ _SWALLOW = re.compile(r"\|\| *(true|echo|:)")
 #: with its failure erased. Must route through gh_graphql() instead.
 _RAW_GH_SWALLOW = re.compile(r"\bgh +(pr|repo) +[a-z-]+.*\|\| *true")
 
+
+def _is_full_line_comment(line: str) -> bool:
+    """A shell comment line swallows nothing — it is prose, not a code path.
+
+    The scans below look for an executable shape. A comment that NAMES that
+    shape in order to warn against it is the opposite of the defect, and
+    counting it was a false positive with a perverse incentive: the ratchet
+    fired at the author who documented why a fallback would be wrong, and the
+    cheapest way to green was to delete the explanation or to raise the
+    baseline, which blinds the file to a real swallow later.
+
+    Measured instance: setup.bootstrap.sh carries
+
+        # || echo 000 fallback would concatenate into "000000" and never match.
+
+    which is why the broker probe does NOT use that fallback.
+
+    Only FULL-line comments are exempt. A trailing comment cannot launder a
+    real swallow, so `foo || true  # justified` is still counted.
+    """
+    return line.lstrip().startswith("#")
+
+
 RECEIPT_WRITERS = (
     ("environment/agents/adapters/claude-code/install.sh", "bootstrap-state"),
     (
@@ -83,6 +106,8 @@ class SwallowedFailureTests(unittest.TestCase):
         offenders = []
         for rel in PROMOTION_PATH:
             for number, line in enumerate((REPO / rel).read_text(encoding="utf-8").splitlines(), 1):
+                if _is_full_line_comment(line):
+                    continue
                 if _RAW_GH_SWALLOW.search(line) and "gh_graphql" not in line:
                     offenders.append(f"{rel}:{number}: {line.strip()}")
         self.assertEqual(offenders, [], "route GraphQL calls through gh_graphql()")
@@ -100,11 +125,30 @@ class SwallowedFailureTests(unittest.TestCase):
         self.assertIn("cap_rc=$?", body)
         self.assertIn("DEGRADED=$((DEGRADED + 1))", body)
 
+    def test_comment_exemption_does_not_launder_a_real_swallow(self) -> None:
+        """The exemption is full-line comments only, and nothing wider."""
+        counted = lambda text: sum(  # noqa: E731
+            len(_SWALLOW.findall(line))
+            for line in text.splitlines()
+            if not _is_full_line_comment(line)
+        )
+        # Prose warning against the shape: not a code path, not counted.
+        self.assertEqual(0, counted("# || echo 000 fallback would concatenate"))
+        self.assertEqual(0, counted("    # never write foo || true here"))
+        # A real swallow stays counted, with or without a trailing excuse.
+        self.assertEqual(1, counted("git remote set-url origin x || true"))
+        self.assertEqual(1, counted("git remote set-url origin x || true  # justified"))
+        self.assertEqual(1, counted('printf "%s" "$x" || echo 000'))
+
     def test_swallow_count_does_not_grow(self) -> None:
         for rel, baseline in SWALLOW_BASELINE.items():
             with self.subTest(file=rel):
                 body = (REPO / rel).read_text(encoding="utf-8")
-                count = len(_SWALLOW.findall(body))
+                count = sum(
+                    len(_SWALLOW.findall(line))
+                    for line in body.splitlines()
+                    if not _is_full_line_comment(line)
+                )
                 self.assertLessEqual(
                     count,
                     baseline,
