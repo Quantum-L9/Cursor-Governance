@@ -1,36 +1,41 @@
-# L9 consumer lint + test workflow for Node.js / TypeScript
+# L9 Biome gate for this repository.
 #
-# Copy into the CONSUMER repo at `.github/workflows/l9-lint-test-node.yml`.
-# Org-distributed copy of Quantum-L9/l9-ci-core presets/typescript
-# `.github/workflows/l9-lint-test.yml`. Do not invent a second lint owner.
+# Org-distributed from Quantum-L9/.github as `l9-lint-test-node.yml`. The stock
+# template also ships a `tsc --noEmit` job and a Node `Test Suite` job. Both are
+# omitted here, deliberately:
 #
-# Formatter/linter ownership: Biome owns JS/TS/JSON (format + lint) via the
-# SDK-owned reusable workflow below. ESLint is NOT a second formatter owner
-# here. Type checking (tsc) and the repository test suite stay in this repo.
+#   - Cursor-Governance has no root `package.json`, no lockfile, no
+#     `tsconfig.json`, and ships no JS/TS sources. `actions/setup-node` with
+#     dependency caching hard-fails ("Dependencies lock file is not found")
+#     before either job reaches its own skip guard, so both jobs could only ever
+#     report red.
+#   - The template's test job is named `Test Suite`, which this repository maps
+#     exclusively to `.github/workflows/l9-lint-test.yml` as a required context
+#     (see `ops/scripts/test_required_contexts_report.py`). A second check run
+#     under that name makes required-status evaluation ambiguous.
+#
+# What remains is the part that does apply here: Biome owns JS/TS/JSON format +
+# lint per the root `biome.json`, which covers this repository's JSON files.
+# ESLint is NOT a second formatter owner here.
+#
+# Reinstate the template's `typecheck` / `test` jobs if this repository ever
+# grows a real Node package.
 #
 # Conventions:
-#   - Immutable event-revision checkout (no floating action ref)
 #   - SDK reusable workflow pinned to a full 40-char commit SHA
 #   - Least privilege (contents: read only)
-name: L9 Lint and Test (Node)
+name: L9 Biome (JSON/JS/TS)
 on:
   pull_request:
   push:
     branches: [main]
   workflow_dispatch:
 
-# ── CONFIGURABLE: agent sets these during activation ───────────────────────────
-env:
-  NODE_VERSION: "20"
-  PACKAGE_MANAGER: "npm"
-  SOURCE_DIR: "."
-  HAS_TYPESCRIPT: "true"
-
 permissions:
   contents: read
 
 concurrency:
-  group: l9-lint-test-node-${{ github.workflow }}-${{ github.ref }}
+  group: l9-biome-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -48,103 +53,3 @@ jobs:
       # Advisory-to-blocking rollout: false = full scan + annotate + exit 0.
       # Flip to true to make Biome findings blocking once the repo is clean.
       enforce-biome: false
-
-  typecheck:
-    name: Type Check (tsc --noEmit)
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout immutable event revision
-        env:
-          REPOSITORY: ${{ github.repository }}
-          REVISION: ${{ github.sha }}
-          TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git init .
-          git remote add origin "https://github.com/${REPOSITORY}.git"
-          # Authenticate with a per-fetch Authorization header instead of
-          # embedding the token in the remote URL, so the credential is never
-          # written to the remote URL or .git/config (mirrors actions/checkout).
-          auth_header="Authorization: Basic $(printf 'x-access-token:%s' "${TOKEN}" | base64 | tr -d '\n')"
-          git -c protocol.version=2 \
-            -c "http.https://github.com/.extraheader=${auth_header}" \
-            fetch --depth=1 origin "${REVISION}"
-          git checkout --detach FETCH_HEAD
-
-      - name: Set up Node
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444  # v5.0.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: ${{ env.PACKAGE_MANAGER }}
-
-      - name: Install dependencies
-        run: |
-          set -euo pipefail
-          case "${PACKAGE_MANAGER}" in
-            npm)  if [ -f package-lock.json ]; then npm ci; else npm install; fi ;;
-            pnpm) corepack enable && (if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install; fi) ;;
-            yarn) corepack enable && (if [ -f yarn.lock ]; then yarn install --frozen-lockfile; else yarn install; fi) ;;
-            *) echo "::error::unknown PACKAGE_MANAGER ${PACKAGE_MANAGER}" && exit 1 ;;
-          esac
-
-      - name: tsc --noEmit
-        if: env.HAS_TYPESCRIPT == 'true'
-        run: |
-          set -euo pipefail
-          if [ -f tsconfig.json ]; then
-            npx --yes tsc --noEmit -p tsconfig.json
-          else
-            echo "::notice::no tsconfig.json found, skipping type check"
-          fi
-
-  test:
-    name: Test Suite
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    permissions:
-      contents: read
-    steps:
-      - name: Checkout immutable event revision
-        env:
-          REPOSITORY: ${{ github.repository }}
-          REVISION: ${{ github.sha }}
-          TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          git init .
-          git remote add origin "https://github.com/${REPOSITORY}.git"
-          auth_header="Authorization: Basic $(printf 'x-access-token:%s' "${TOKEN}" | base64 | tr -d '\n')"
-          git -c protocol.version=2 \
-            -c "http.https://github.com/.extraheader=${auth_header}" \
-            fetch --depth=1 origin "${REVISION}"
-          git checkout --detach FETCH_HEAD
-
-      - name: Set up Node
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444  # v5.0.0
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: ${{ env.PACKAGE_MANAGER }}
-
-      - name: Install dependencies
-        run: |
-          set -euo pipefail
-          case "${PACKAGE_MANAGER}" in
-            npm)  if [ -f package-lock.json ]; then npm ci; else npm install; fi ;;
-            pnpm) corepack enable && (if [ -f pnpm-lock.yaml ]; then pnpm install --frozen-lockfile; else pnpm install; fi) ;;
-            yarn) corepack enable && (if [ -f yarn.lock ]; then yarn install --frozen-lockfile; else yarn install; fi) ;;
-            *) echo "::error::unknown PACKAGE_MANAGER ${PACKAGE_MANAGER}" && exit 1 ;;
-          esac
-
-      - name: Run test suite
-        env:
-          CI: "true"
-        run: |
-          set -euo pipefail
-          if [ -f package.json ] && node -e "process.exit(require('./package.json').scripts && require('./package.json').scripts.test ? 0 : 1)" 2>/dev/null; then
-            ${PACKAGE_MANAGER} test
-          else
-            echo "::notice::no test script defined in package.json, skipping"
-          fi

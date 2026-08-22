@@ -90,7 +90,10 @@ jobs:
         if: steps.gov.outputs.enabled == 'true'
         run: |
           set -euo pipefail
-          python -m pip install --upgrade pip semgrep
+          # AGENTS.md pins the supported Semgrep range; installing bare
+          # `semgrep` would float onto a future major and silently change
+          # findings/normalization between runs of the same commit.
+          python -m pip install --upgrade pip 'semgrep>=1.100.0,<2.0.0'
           mkdir -p "artifacts/raw/semgrep/${L9_MATRIX_ID}"
           # ── PER-LANGUAGE RULESETS ──────────────────────────────────────────
           # Python repo:   --config p/python
