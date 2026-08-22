@@ -19,6 +19,63 @@ import sys
 from pathlib import Path
 
 MEM = Path(__file__).resolve().parent.parent / "memory"
+
+#: Cloud containers put several repositories side by side. Hydrating each costs
+#: one packet of context, so the count is capped rather than unbounded — and the
+#: cap is reported in the emitted text, because a silent truncation reads as
+#: "everything was covered".
+_MAX_HYDRATION_ROOTS = 6
+
+
+def _repo_count(workspace: Path) -> int:
+    try:
+        return sum(1 for child in workspace.iterdir() if (child / ".git").exists())
+    except OSError:
+        return 0
+
+
+def _resolves_to_own_group(root: Path) -> bool:
+    """True when this repository resolves to a namespace of its OWN.
+
+    Two answers do not qualify. An unresolved match means there is nothing to
+    hydrate from. The shared cross-repo namespace (`workspace_group`, normally
+    `igor-workspace`) qualifies even less: rules/98 reserves it for the
+    bootstrap integration-edge mirror and `write` rejects it outright, so
+    hydrating a repository under it reads another repository's memory as if it
+    were this one's. Filtering here rather than after compiling also stops an
+    unusable root from consuming a slot under the cap.
+    """
+    try:
+        from ops.graphiti.group_resolver import load_registry, resolve_group_id
+
+        resolved = resolve_group_id(cwd=root)
+        shared = load_registry().get("workspace_group", "igor-workspace")
+    except Exception:  # noqa: BLE001 — a resolver fault must not lose hydration
+        return True
+    group_id = str(resolved.get("group_id") or "")
+    return bool(group_id) and group_id != shared
+
+
+def _hydration_roots(workspace: Path) -> list[Path]:
+    """Repository roots to hydrate, in resolution order.
+
+    A group_id identifies a REPOSITORY (rules/96, §3). Resolving one from a
+    multi-repo container root matches all of them and returns none, so the
+    session hydrated zero facts and every memory write was refused read-only —
+    while the store itself was healthy. When the workspace is a repository this
+    returns it unchanged; when it is a container of repositories it returns the
+    repositories that resolve to their own namespace, each hydrated under it.
+    """
+    if (workspace / ".git").exists():
+        return [workspace]
+    try:
+        children = sorted(child for child in workspace.iterdir() if (child / ".git").exists())
+    except OSError:
+        children = []
+    usable = [child for child in children if _resolves_to_own_group(child)]
+    return usable[:_MAX_HYDRATION_ROOTS] or [workspace]
+
+
 sys.path.insert(0, str(MEM))
 
 import graphiti_bridge as gb  # noqa: E402
@@ -68,49 +125,94 @@ def main() -> int:
     if str(root) not in sys.path:
         sys.path.insert(0, str(root))
 
+    # AFTER the governance root joins sys.path: _hydration_roots imports the group
+    # resolver from it, and its except-branch fails OPEN so a resolver fault can
+    # never cost the session its memory. Called before the path was set, that
+    # open failure was silent and unconditional — every root looked eligible.
+    roots = _hydration_roots(workspace)
+
     try:
         from ops.graphiti.hydration.compile_session_packet import compile_and_format
 
-        compiled = compile_and_format(
-            project_dir=workspace,
-            conversation_id=session_id,
-            agent_id="claude-code",
-        )
-        packet = compiled.get("packet") or {}
-        group_id = str(packet.get("group_id") or "")
-        # Gate receipt via inject (hash / memory_satisfied_for)
-        try:
-            result = gb.inject(
-                f"Claude Code session in {workspace.name}",
-                workspace=workspace,
-                session_id=session_id,
+        contexts: list[str] = []
+        group_ids: list[str] = []
+        packet_ids: list[str] = []
+        degraded_any = False
+
+        for root in roots:
+            compiled = compile_and_format(
+                project_dir=root,
+                conversation_id=session_id,
+                agent_id="claude-code",
             )
-            group_id = group_id or str(result.get("group_id") or "")
-        except Exception:  # noqa: BLE001 — hydrate facts still useful
-            pass
+            packet = compiled.get("packet") or {}
+            group_id = str(packet.get("group_id") or "")
+            # Gate receipt via inject (hash / memory_satisfied_for)
+            try:
+                result = gb.inject(
+                    f"Claude Code session in {root.name}",
+                    workspace=root,
+                    session_id=session_id,
+                )
+                group_id = group_id or str(result.get("group_id") or "")
+            except Exception:  # noqa: BLE001 — hydrate facts still useful
+                pass
+            if group_id:
+                group_ids.append(group_id)
+            else:
+                degraded_any = True
+            if packet.get("degraded"):
+                degraded_any = True
+            if packet.get("packet_id"):
+                packet_ids.append(str(packet["packet_id"]))
+            body = compiled.get("additional_context") or ""
+            if body:
+                header = f"### {root.name} (group_id={group_id or 'unresolved'})"
+                contexts.append(header + "\n" + body if len(roots) > 1 else body)
+
+        degraded = degraded_any or not group_ids
         st.write_receipt(
             contract,
             session_id,
             {
                 "namespaces": namespaces,
                 "transport": "cursor-graphiti-hydrate",
-                "group_id": group_id,
-                "packet_id": packet.get("packet_id"),
-                "status": "prefetched",
-                "degraded": bool(packet.get("degraded")),
+                "group_id": group_ids[0] if len(group_ids) == 1 else "",
+                "group_ids": group_ids,
+                "hydrated_roots": [str(r) for r in roots],
+                "packet_id": packet_ids[0] if packet_ids else None,
+                "packet_ids": packet_ids,
+                # A receipt records what HAPPENED, not what was attempted. Writing
+                # "prefetched" over a hydration that resolved no group and returned
+                # no facts made the precondition self-satisfying: the gate saw a
+                # fresh receipt, never re-hydrated, and the session ran memory-blind
+                # for the full TTL while every surface reported it satisfied.
+                "status": "degraded" if degraded else "prefetched",
+                "degraded": degraded,
             },
         )
+        resolved = ", ".join(group_ids) if group_ids else "unresolved"
         lines = [
             "L9 memory: ENFORCED via Cursor Graphiti hydrate "
-            f"(group_id={group_id or 'unknown'}; namespaces {', '.join(namespaces)}). "
+            f"(group_id={resolved}; namespaces {', '.join(namespaces)}). "
             "Rule 03-graphiti-memory; skill l9-graphiti-memory; CANONICAL_LAW §8.",
-            compiled.get("additional_context") or "",
+            *contexts,
             "Governed writes require this hydration only. Repository isolation is a "
             "dedicated worktree (ops/scripts/agent_worktree_start.sh), history isolation a "
             "branch off fetched origin/main, and collision safety the publication gate. "
             "No phase-lock is required or accepted for repository mutation.",
         ]
-        _emit("\n".join(lines))
+        if len(roots) > 1:
+            lines.insert(
+                1,
+                f"Multi-repo container: hydrated {len(roots)} of "
+                f"{_repo_count(workspace)} repositories under {workspace} "
+                f"(cap {_MAX_HYDRATION_ROOTS}; repositories with no namespace of their "
+                "own are skipped). A group_id is repository identity, never container "
+                "identity — resolving one from the container root matches every repo "
+                "and returns none.",
+            )
+        _emit("\n".join(line for line in lines if line))
     except Exception as exc:  # fail-open
         _emit(
             "L9 memory: prefetch DEGRADED ("

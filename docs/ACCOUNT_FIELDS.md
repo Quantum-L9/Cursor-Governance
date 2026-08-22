@@ -9,7 +9,7 @@ rebuilt — which is the failure this file exists to make detectable.
 
 ## 1. Environment variables
 
-Checksum `8142a17f26a978af` — `verify_account_env.py` confirms a paste by comparing
+Checksum `935cefd14141ff6e` — `verify_account_env.py` confirms a paste by comparing
 the live runtime against this set.
 
 ```dotenv
@@ -17,10 +17,9 @@ CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS=480
 CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=3
 GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
 GRAPHITI_MEMORY_ENABLED=1
-GRAPHITI_WRITE_GATES=1
 L9_AGENT_ROLE=implementation-agent
 L9_AUTONOMY_AUTHORITY=A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE
-L9_AUTONOMY_AUTONOMOUS_MERGE=true
+L9_AUTONOMY_AUTONOMOUS_MERGE=false
 L9_AUTONOMY_ENABLED=true
 L9_AUTONOMY_MATURITY=M4_ASSURANCE_GOVERNED
 L9_AUTONOMY_MAX_MUTATION_LANES=128
@@ -35,8 +34,6 @@ L9_GOVERNANCE_REMOTE=https://github.com/Quantum-L9/Cursor-Governance.git
 L9_GOVERNANCE_SURFACE=claude-code
 L9_L4_LOCAL_AUTONOMY=1
 L9_MEMORY_AGENT_ID=claude-code
-L9_MEMORY_FAIL_CLOSED=true
-L9_MEMORY_REQUIRED=true
 L9_MEMORY_SOURCE=claude-code
 L9_PROACTIVE_SKILLS=true
 L9_REQUIRE_EXACT_SHA_GREEN=true
@@ -55,8 +52,8 @@ USER_ID=claude_code_agent
 
 Paste `environment/agents/adapters/claude-code/web/setup.bootstrap.sh` verbatim.
 
-- Revision: `2026-08-21.1`
-- Checksum: `dab9e0f5b29ef135`
+- Revision: `2026-08-21.3`
+- Checksum: `e0702860d71168ef`
 
 The stub records its own revision into `~/.l9/cloud-session.env`, so a later
 session can tell whether the pasted copy is current without reading the field.

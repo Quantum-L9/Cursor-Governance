@@ -185,6 +185,14 @@ resolve_workspaces() {
     found=$((found + 1))
   done
   [ "$found" -gt 0 ] || return 1
+  # The container ROOT is a workspace in its own right, and the one that matters
+  # most: when several repositories sit side by side, the harness roots the
+  # session here, not in any of them. It is not a git repository, so the old
+  # resolver never emitted it and `$ROOT/.claude` was the one tree never wired —
+  # every repo nobody's session opened got skills and rules, and the directory
+  # the session actually loaded from got none. Emitted LAST so the single
+  # bootstrap receipt ends up describing the session's own project directory.
+  printf '%s\n' "$(pwd)"
   return 0
 }
 

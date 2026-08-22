@@ -256,38 +256,23 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
       break
     fi
   done
-  if [[ -n "$template_file" ]]; then
-    body="$(
-      {
-        if [[ -n "${campaign_body:-}" ]]; then
-          printf '%s\n\n' "$campaign_body"
-        fi
-        cat "$template_file"
-        echo ""
-        echo "## Commits"
-        git log "${PR_BASE}..HEAD" --format='- %s' --reverse
-        echo ""
-        echo "## Test plan"
-        echo "- [x] \`make pr-check\` (local changed-files gate) PASS before open"
-        echo "- [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)"
-        echo "- [ ] CI green; agent PR remediation subscribed after open"
-      }
-    )"
+  compose_py="$SCRIPT_DIR/compose_pr_body.py"
+  if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
+    compose_python="$GOV_ROOT/.venv/bin/python"
   else
-    body="$(
-      cat <<EOF
-${campaign_body:+$campaign_body
-
-}## Summary
-$(git log "${PR_BASE}..HEAD" --format='- %s' --reverse)
-
-## Test plan
-- [x] \`make pr-check\` (local changed-files gate) PASS before open
-- [x] L4 kernels: Recursive Alignment + Validate & Repair (release authorized)
-- [ ] CI green; agent PR remediation subscribed after open
-EOF
-    )"
+    compose_python="python3"
   fi
+  mkdir -p "$WS/.l9/pr"
+  compose_handoff="$WS/.l9/pr/pr-body-completion.json"
+  compose_args=(--workspace "$WS" --pr-base "$PR_BASE" --handoff "$compose_handoff")
+  if [[ -n "$template_file" ]]; then
+    compose_args+=(--template "$template_file")
+  fi
+  if [[ -n "${campaign_body:-}" ]]; then
+    printf '%s\n' "$campaign_body" > "$WS/.l9/pr/campaign-body.md"
+    compose_args+=(--campaign-body-file "$WS/.l9/pr/campaign-body.md")
+  fi
+  body="$("$compose_python" "$compose_py" "${compose_args[@]}")"
   # Explicit --head: gh otherwise aborts with "must first push the current
   # branch" in worktree/CI contexts where upstream tracking is not visible
   # (2026-08-15 factory repair).
@@ -317,6 +302,21 @@ EOF
     fi
   fi
   echo "Opened: $pr_url"
+  if [[ -f "${compose_handoff:-}" ]]; then
+    "$compose_python" - "$compose_handoff" "${pr_number:-0}" <<'PY'
+import json, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+doc = json.loads(path.read_text(encoding="utf-8"))
+number = int(sys.argv[2] or 0)
+doc["pr_number"] = number or None
+path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+needs = doc.get("needs_completion") or []
+if needs:
+    print("PR body requires completion: " + "; ".join(needs))
+print(f"Handoff: {path}")
+PY
+  fi
 else
   echo "PR already open: $pr_url"
 fi
