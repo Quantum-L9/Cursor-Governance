@@ -340,6 +340,14 @@
           "items": {
             "type": "string"
           }
+        },
+        "gate_shape": {
+          "type": "string",
+          "description": "The permitted shape of this precondition as a gate, stated so the contract carries it rather than relying on prose elsewhere."
+        },
+        "note": {
+          "type": "string",
+          "description": "Binding clarification of what this precondition may and may not gate."
         }
       }
     }

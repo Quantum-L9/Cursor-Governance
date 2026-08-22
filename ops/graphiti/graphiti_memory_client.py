@@ -82,6 +82,32 @@ class _HttpResponse:
         return None
 
 
+def _dechunk(body: bytes) -> bytes:
+    """Reassemble a chunked HTTP/1.1 body.
+
+    Only reachable since the request became HTTP/1.1. Returning the raw bytes
+    instead would splice chunk-size lines through the payload, turning a loud
+    transport failure into a silent corruption of every response.
+    """
+    out = bytearray()
+    rest = body
+    while True:
+        head, sep, rest = rest.partition(b"\r\n")
+        if not sep:
+            raise urllib.error.URLError("Graphiti chunked body ended mid-header")
+        size_token = head.split(b";", 1)[0].strip()
+        try:
+            size = int(size_token, 16)
+        except ValueError as exc:
+            raise urllib.error.URLError("Graphiti chunked body has an unparseable size") from exc
+        if size == 0:
+            return bytes(out)
+        if len(rest) < size + 2:
+            raise urllib.error.URLError("Graphiti chunked body is truncated")
+        out += rest[:size]
+        rest = rest[size + 2 :]
+
+
 def _parse_http_response(raw: bytes) -> tuple[int, str, Message, bytes]:
     sep = raw.find(b"\r\n\r\n")
     if sep < 0:
@@ -108,6 +134,8 @@ def _parse_http_response(raw: bytes) -> tuple[int, str, Message, bytes]:
         headers[key.decode("latin-1", errors="replace")] = value.decode(
             "latin-1", errors="replace"
         ).strip()
+    if "chunked" in (headers.get("Transfer-Encoding") or "").lower():
+        return status, reason, headers, _dechunk(body)
     length = headers.get("Content-Length")
     if length is not None:
         try:
@@ -118,7 +146,15 @@ def _parse_http_response(raw: bytes) -> tuple[int, str, Message, bytes]:
 
 
 def _urlopen_http(req: urllib.request.Request, *, timeout: float, context: ssl.SSLContext):
-    """HTTP/1.0 exchange over a raw socket. Never calls urllib.urlopen (CWE-939)."""
+    """Single-shot HTTP/1.1 exchange over a raw socket. Never calls urllib.urlopen (CWE-939).
+
+    The request is HTTP/1.1 because the reverse proxy in front of the hosted
+    Graphiti server answers HTTP/1.0 with ``426 Upgrade Required``, which
+    surfaced as a permanently unhealthy memory plane while the server itself was
+    fine. ``Connection: close`` keeps the single-shot, read-to-EOF semantics this
+    function relies on; 1.1 additionally permits a chunked body, which
+    :func:`_parse_http_response` de-frames.
+    """
     url = _require_http_url(req.full_url)
     parsed = urlparse(url)
     host = parsed.hostname
@@ -145,7 +181,7 @@ def _urlopen_http(req: urllib.request.Request, *, timeout: float, context: ssl.S
     except OSError as exc:
         raise urllib.error.URLError(exc) from exc
     header_lines = [
-        f"{method} {path} HTTP/1.0",
+        f"{method} {path} HTTP/1.1",
         f"Host: {host if parsed.port in (None, 80, 443) else f'{host}:{port}'}",
         "Connection: close",
     ]
