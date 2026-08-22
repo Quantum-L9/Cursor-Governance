@@ -6,7 +6,9 @@ Doctrine:
   * auto_invoke / model_allowed — may force-route (source: route | advisory_route | description)
   * explicit_only + route.hint_allowed — may surface Read/attach only (source: explicit_hint)
   * explicit_only without hint_allowed — never scored
-  * Recommendation never grants mutation authority
+  * Recommendation is routing evidence; an auto_invoke / model_allowed skill
+    contract is the authority for that skill's declared actions
+  * explicit_hint still grants no mutation authority by itself
 """
 
 from __future__ import annotations
