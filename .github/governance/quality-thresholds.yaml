@@ -2,20 +2,20 @@
   "schema": "l9.quality-threshold-selection/v1",
   "profiles": {
     "pr_fast": {
-      "sdk_policy": ""
+      "sdk_policy": ".github/governance/semgrep-finding-policy.yaml"
     },
     "merge": {
-      "sdk_policy": ""
+      "sdk_policy": ".github/governance/semgrep-finding-policy.yaml"
     },
     "nightly": {
-      "sdk_policy": ""
+      "sdk_policy": ".github/governance/semgrep-finding-policy.yaml"
     },
     "release": {
-      "sdk_policy": ""
+      "sdk_policy": ".github/governance/semgrep-finding-policy.yaml"
     },
     "supply_chain": {
-      "sdk_policy": ""
+      "sdk_policy": ".github/governance/semgrep-finding-policy.yaml"
     }
   },
-  "note": "Core selects an SDK policy file but never evaluates finding thresholds itself. Point sdk_policy at a policy file the pinned SDK understands to raise/lower gates."
+  "note": "Core selects an SDK policy file but never evaluates finding thresholds itself. sdk_policy points at semgrep-finding-policy.yaml, which the pinned SDK reads; strict profiles reject a run whose findings that policy does not classify. The companion semgrep-identity-map.yaml is passed by .github/workflows/l9-analysis.yml."
 }

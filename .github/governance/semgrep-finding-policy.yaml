@@ -1,0 +1,33 @@
+# How much each Semgrep finding counts in this repository.
+#
+# Consumed by the pinned l9-ci-sdk, selected through the `sdk_policy` field of
+# quality-thresholds.yaml (Core resolves the path; the SDK owns the semantics).
+# Schema and conventions follow the SDK's `.l9/semgrep-policy.example.yaml`.
+#
+# Rules are keyed by native Semgrep check_id, the same key used in
+# semgrep-identity-map.yaml. `policy_key` mirrors that file's canonical_rule_id
+# so a finding reads the same in the bundle and in the published check.
+#
+# `defaults.mode: unresolved` is deliberate and fail-closed: a rule with no
+# entry below is not silently defaulted to some mode, it fails the strict run
+# and asks for a decision. Pair every identity-map addition with an entry here.
+#
+# Mode does not decide whether the analysis job passes. The pinned Core
+# publication maps a successful `analyze` job to a successful check regardless
+# of mode; mode drives the check body, annotations, and promotion tracking.
+# Promotion between modes is governed by promotion-policy.yaml.
+schema: l9.finding-policy/v1
+metadata:
+  version: 1.0.0
+  status: authoritative
+defaults:
+  mode: unresolved
+rules:
+  # Fires on ops/scripts/reconcile_llm_skill_adapters.py, which builds an argv
+  # list from resolved paths and calls subprocess.run WITHOUT shell=True, so
+  # the injection this audit rule looks for is not reachable there. Kept
+  # blocking rather than demoted: the pattern is worth a human look wherever
+  # else it appears, and blocking does not redden the check on its own.
+  python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args:
+    policy_key: L9-PYTHON-DANGEROUS-SUBPROCESS-USE-TAINTED-ENV-ARGS
+    mode: blocking

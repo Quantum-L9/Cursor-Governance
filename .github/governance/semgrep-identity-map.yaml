@@ -1,0 +1,34 @@
+# Canonical rule identity for Semgrep findings in this repository.
+#
+# Consumed by the pinned l9-ci-sdk (`semgrep normalize --identity-map`), wired
+# from `.github/workflows/l9-analysis.yml`. Schema and conventions follow the
+# SDK's own `.l9/semgrep-identity-map.yaml`.
+#
+# WHY THIS FILE IS REQUIRED, NOT OPTIONAL
+#
+# The `pr_fast` profile in execution-profiles.yaml sets `strict: true`. Under
+# strict the SDK refuses to emit a finding bundle while any finding still has
+# `canonical_rule_id: null` ("strict identity resolution failed for findings:
+# fn_semgrep_..."). There is no default: identity comes from trusted provider
+# metadata or from an explicit entry here, and Semgrep's registry rulesets
+# supply no canonical ID. So every rule that actually fires needs a line below.
+#
+# MAINTENANCE OBLIGATION — read this before deleting a "noisy" entry
+#
+# A rule that starts firing and is absent here turns `Analyze (semgrep -> SDK)`
+# red until someone adds it. That is the intended fail-closed behavior: a new
+# class of finding gets a human decision instead of silently averaging into a
+# score. Add the rule here AND in semgrep-finding-policy.yaml (identity says
+# what it is; policy says how much it counts). Do not disable strict to make a
+# new rule go away.
+#
+# Canonical IDs are reviewed, not derived. Do not generate them from severity,
+# confidence, message text, or provider name.
+schema: l9.identity-map/v1
+metadata:
+  provider_id: semgrep
+  version: 1.0.0
+  status: authoritative
+rules:
+  python.lang.security.audit.dangerous-subprocess-use-tainted-env-args.dangerous-subprocess-use-tainted-env-args:
+    canonical_rule_id: L9-PYTHON-DANGEROUS-SUBPROCESS-USE-TAINTED-ENV-ARGS
