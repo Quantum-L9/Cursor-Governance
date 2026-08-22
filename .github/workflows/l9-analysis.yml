@@ -129,6 +129,13 @@ jobs:
           strict: ${{ steps.gov.outputs.strict }}
           required: ${{ steps.gov.outputs.required-provider }}
           policy: ${{ steps.gov.outputs.sdk-policy }}
+          # Core resolves the policy path from governance, but has no output
+          # for the identity map, so the caller names it. Under `strict` the
+          # SDK fails the run rather than emit a finding whose canonical rule
+          # identity is unknown, and Semgrep's registry rulesets carry no
+          # canonical ID — without this the job cannot pass on any commit that
+          # produces a finding.
+          identity-map: .github/governance/semgrep-identity-map.yaml
 
       - name: Validate canonical bundle
         if: steps.gov.outputs.enabled == 'true'
