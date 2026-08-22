@@ -1,0 +1,55 @@
+# L9 Biome gate for this repository.
+#
+# Org-distributed from Quantum-L9/.github as `l9-lint-test-node.yml`. The stock
+# template also ships a `tsc --noEmit` job and a Node `Test Suite` job. Both are
+# omitted here, deliberately:
+#
+#   - Cursor-Governance has no root `package.json`, no lockfile, no
+#     `tsconfig.json`, and ships no JS/TS sources. `actions/setup-node` with
+#     dependency caching hard-fails ("Dependencies lock file is not found")
+#     before either job reaches its own skip guard, so both jobs could only ever
+#     report red.
+#   - The template's test job is named `Test Suite`, which this repository maps
+#     exclusively to `.github/workflows/l9-lint-test.yml` as a required context
+#     (see `ops/scripts/test_required_contexts_report.py`). A second check run
+#     under that name makes required-status evaluation ambiguous.
+#
+# What remains is the part that does apply here: Biome owns JS/TS/JSON format +
+# lint per the root `biome.json`, which covers this repository's JSON files.
+# ESLint is NOT a second formatter owner here.
+#
+# Reinstate the template's `typecheck` / `test` jobs if this repository ever
+# grows a real Node package.
+#
+# Conventions:
+#   - SDK reusable workflow pinned to a full 40-char commit SHA
+#   - Least privilege (contents: read only)
+name: L9 Biome (JSON/JS/TS)
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: l9-biome-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Biome (format + lint + import organization) is owned by the SDK reusable
+  # workflow — a single read-only gate with a checksum-verified biome binary
+  # and zero external actions. Reusable-workflow inputs cannot read `env:`, so
+  # scan-path and the rollout flag are set literally here.
+  biome:
+    name: Biome (format + lint) — SDK-owned
+    permissions:
+      contents: read
+    uses: Quantum-L9/l9-ci-sdk/.github/workflows/l9-biome-scan.yml@f546f122d33601ea5a4b2592e3482c5c39eddd82
+    with:
+      scan-path: "."
+      # Advisory-to-blocking rollout: false = full scan + annotate + exit 0.
+      # Flip to true to make Biome findings blocking once the repo is clean.
+      enforce-biome: false
