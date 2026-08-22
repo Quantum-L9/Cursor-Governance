@@ -10,3 +10,4 @@ campaign_ids:
   - l9-ecosystem-fix-plan
   - pe-v3-hardening
   - pe-router-capability-safety-v4
+  - eie-inference-isolation-v1
