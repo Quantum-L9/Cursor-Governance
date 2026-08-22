@@ -186,6 +186,22 @@ def sha_matches(plan_sha: str, head: str) -> bool:
     return a[:n] == b[:n]
 
 
+def is_simple_kind(frontmatter: dict[str, Any], body: str) -> bool:
+    """Cursor-Build plans are not required to carry the PE execute heading.
+
+    Leftover PE wiring (`make campaign` or a live PE execute heading) keeps
+    the plan PE-kind so audit can still see an incomplete swap.
+    """
+    kind = str(frontmatter.get("kind") or "").strip().lower()
+    execute_via = str(frontmatter.get("execute_via") or "").strip().lower()
+    marked_simple = kind == "simple" or execute_via == "cursor-build"
+    if not marked_simple:
+        return False
+    if "make campaign" in body or EXECUTE_NEEDLE in body:
+        return False
+    return True
+
+
 def flags_for(
     *,
     path: Path,
@@ -193,6 +209,7 @@ def flags_for(
     body: str,
     head: str | None,
     superseded_names: set[str],
+    frontmatter: dict[str, Any] | None = None,
 ) -> list[str]:
     flags: list[str] = []
     if not isinstance(todos, list) or len(todos) == 0:
@@ -205,7 +222,8 @@ def flags_for(
         flags.append("baseline_drift")
     if STATUS_SUPERSEDED_RE.search(body) or path.name in superseded_names:
         flags.append("superseded")
-    if EXECUTE_NEEDLE not in body:
+    fm = frontmatter or {}
+    if not is_simple_kind(fm, body) and EXECUTE_NEEDLE not in body:
         flags.append("missing_execute_section")
     return flags
 
@@ -280,6 +298,7 @@ def audit(
                 body=body,
                 head=head,
                 superseded_names=superseded_names,
+                frontmatter=fm,
             ),
         )
         findings.append(finding)

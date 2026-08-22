@@ -55,7 +55,7 @@ superseded copy, does not appear in session-start Plan audit.
 | `in_progress` | at least one todo `status: in_progress` |
 | `baseline_drift` | body contains `immutable_baseline` / `commit_sha` and the SHA ≠ open workspace `HEAD` (when HEAD available) |
 | `superseded` | body Metadata `status: superseded`, **or** a newer same-slug `name_M-D-YY.plan.md` (historical ISO `name_YYYY-MM-DD` and `name_<8hex>` still match) exists in the plans dir |
-| `missing_execute_section` | body lacks a heading containing `Execute via @environment/program-execution` |
+| `missing_execute_section` | **PE-kind only:** body lacks a heading containing `Execute via @environment/program-execution`. PE-kind is the default. Simple-kind (`kind: simple` or `execute_via: cursor-build` in frontmatter, and body has no `make campaign` / live PE execute heading) must not get this flag. |
 
 ## Output budget
 

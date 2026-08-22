@@ -103,6 +103,27 @@ def main() -> int:
     else:
         errors.append(f"PE autonomy render failed\n{pe.stderr}")
 
+    build = run(
+        [
+            sys.executable,
+            "scripts/render_plan_pe_autonomy.py",
+            "fixtures/plan_pass.json",
+            "--execute-via=cursor-build",
+        ]
+    )
+    if build.returncode == 0:
+        out = build.stdout
+        if "Execute via Cursor Build" not in out:
+            errors.append("cursor-build render missing Execute via Cursor Build")
+        if "kind: simple" not in out or "execute_via: cursor-build" not in out:
+            errors.append("cursor-build render missing kind/execute_via frontmatter")
+        if "make -C" in out and "campaign INTENT" in out:
+            errors.append("cursor-build render retained make campaign pipeline")
+        if "## Execute via @environment/program-execution" in out:
+            errors.append("cursor-build render retained PE execute heading")
+    else:
+        errors.append(f"cursor-build render failed\n{build.stderr}")
+
     # Local Cursor mirror: optional, but fail-closed when present and drifted.
     sync = run([sys.executable, "scripts/sync_cursor_plan_template.py", ".", "--check"])
     if sync.returncode not in {0, 1}:

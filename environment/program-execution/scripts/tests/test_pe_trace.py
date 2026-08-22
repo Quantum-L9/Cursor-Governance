@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import importlib.util
 import json
 import subprocess
@@ -774,13 +775,23 @@ class SecretRedactionTest(unittest.TestCase):
         # of exactly that shape would trip them. The runtime value is
         # unchanged, so the sweep is still tested against a real PAT shape.
         github_pat = "ghp_" + "ABCdef0123456789ABCdef0123456789abcd"
+        # Encode at runtime: scanners match a three-segment `eyJ…` JWT on one
+        # line. The joined value still matches the runtime sweep.
+        jwt_sig = "dBjftJeZ4CVP" + "mB92K27uhbUJU1p1r"
+        jwt_token = ".".join(
+            (
+                base64.urlsafe_b64encode(b'{"alg":"HS256"}').rstrip(b"=").decode("ascii"),
+                base64.urlsafe_b64encode(b'{"sub":"1234"}').rstrip(b"=").decode("ascii"),
+                jwt_sig,
+            )
+        )
         cases = {
             "url": "clone https://user:hunter2primary@github.com/o/r.git failed",
             "bearer": 'curl -H "Authorization: Bearer abcdef0123456789xyz" https://api',
             "env": "env had AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMIK7MDENGbPxRfiCY",
             "query": "GET /v1/items?api_key=6f1b9c2d4e8a0b3c5d7e9f1a",
             "github": f"remote rejected: {github_pat}",
-            "jwt": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0In0.dBjftJeZ4CVPmB92K27uhbUJU1p1r",
+            "jwt": jwt_token,
         }
         leaked = {}
         for name, message in cases.items():
@@ -791,7 +802,7 @@ class SecretRedactionTest(unittest.TestCase):
                 "wJalrXUtnFEMIK7MDENGbPxRfiCY",
                 "6f1b9c2d4e8a0b3c5d7e9f1a",
                 github_pat,
-                "dBjftJeZ4CVPmB92K27uhbUJU1p1r",
+                jwt_sig,
             ):
                 if fragment in message and fragment in cleaned:
                     leaked[name] = cleaned

@@ -41,7 +41,9 @@ artifacts:
       - canonical.schema.plan_document.v1
     consumed_by:
       - skills/l9-plan
+      - skills/l9-plan-simple
       - commands/l9-plan.md
+      - commands/l9-plan-simple.md
       - environment/program-execution
     execute_via:
       - environment/program-execution
@@ -52,6 +54,8 @@ artifacts:
       - free_form_mutation_without_program_lease
 projections:
   - path: skills/l9-plan/references/executable-plan.pe-autonomy.template.md
+    relation: symlink_to_ssot
+  - path: skills/l9-plan-simple/references/executable-plan.template.md
     relation: symlink_to_ssot
   - path: .cursor/plans/_TEMPLATE.plan.md
     relation: local_mirror_not_git_ssot
