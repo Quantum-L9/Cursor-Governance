@@ -1,7 +1,7 @@
 # Setup script — paste-ready
 
 **Field:** claude.ai/code → environment → **Setup script**
-**Revision:** `2026-08-21.3` · **Checksum:** `e0702860d71168ef`
+**Revision:** `2026-08-22.1` · **Checksum:** `38d842194a6a33e9`
 **Applies to:** NEW sessions only.
 
 Source of truth: `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`.
@@ -55,7 +55,7 @@ set -uo pipefail
 # to see it from inside the sandbox. Recording the revision that actually ran
 # turns "is the pasted stub current?" from unanswerable into a comparison
 # (audit B-06). verify_account_env.py reads it back from cloud-session.env.
-L9_STUB_REVISION="2026-08-21.3"
+L9_STUB_REVISION="2026-08-22.1"
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
@@ -135,6 +135,24 @@ done
 # PAT into Environment variables. verify_account_env.py reports a prohibited
 # credential there. Unsetting at runtime was the wrong lever — it could not tell
 # a pasted PAT from the platform's own credential, and destroyed both.
+#
+# CAVEAT for tools that are NOT `gh` (observed 2026-08-22): the platform value is
+# accepted by `gh` because the agent proxy is preconfigured for it, and by git
+# because the proxy injects credentials. A tool that authenticates DIRECTLY to
+# api.github.com with the literal string gets 401. `gh auth status` also reports
+# "the token in GH_TOKEN is invalid" while `gh api user` succeeds — so treat
+# `gh auth status` as unreliable here and probe with a real REST call instead.
+#
+# The concrete casualty is zizmor in the l9-ci-sdk pre-commit/pre-push gate: its
+# `artipacked` audit lists tags for `actions/checkout` over the GitHub API and
+# 401s, failing `make check` on a diff that touches no workflow file at all.
+# Running that ONE hook with the variable unset is the correct repair — the hook
+# still runs and still fail-closes (AGENTS.md: "local zizmor is fail-closed"):
+#
+#   env -u GH_TOKEN -u GITHUB_TOKEN git push        # gate runs, and passes
+#
+# Do NOT reach for `--no-verify`, and do NOT unset it globally here: `gh` needs
+# it, and ~/.profile sources the durable env unguarded.
 
 : "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
 export GRAPHITI_MCP_URL
@@ -230,6 +248,27 @@ fi
 # Do NOT paste GRAPHITI_MCP_TOKEN / Infisical UA / password to turn this green.
 if [ -n "${L9_CAPABILITY_BROKER_URL:-}" ]; then
   note "capability broker: $L9_CAPABILITY_BROKER_URL (credentials stay on the broker)"
+  # Reachability, not just presence. A broker host missing from the Network
+  # access allowlist is denied at CONNECT, and the old "is the var set?" check
+  # reported that as healthy — so every session came up with capabilities,
+  # memory, mcp and plugins DEGRADED and no line naming the cause. Report only;
+  # this must never block the environment build.
+  broker_host="${L9_CAPABILITY_BROKER_URL#*://}"
+  broker_host="${broker_host%%/*}"
+  if command -v curl >/dev/null 2>&1; then
+    # curl already prints 000 on a failed CONNECT and exits non-zero, so a
+    # `|| echo 000` fallback would concatenate into "000000" and never match.
+    broker_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
+                     "$L9_CAPABILITY_BROKER_URL" 2>/dev/null)"
+    case "$broker_code" in ''|000) broker_code=000 ;; esac
+    if [ "$broker_code" = "000" ]; then
+      warn "capability broker UNREACHABLE ($broker_host) — capabilities will run DEGRADED"
+      warn "  most likely: '$broker_host' is not in Network access (see web/network-policy.md)"
+      warn "  a proxied sandbox answers 502 to CONNECT for a non-allowlisted host"
+    else
+      note "capability broker reachable ($broker_host -> HTTP $broker_code)"
+    fi
+  fi
 else
   warn "L9_CAPABILITY_BROKER_URL unset — Sonar/Semgrep/Graphiti capabilities DEGRADED"
   warn "  Honest posture. Fix broker delivery; do not paste Infisical or Graphiti secrets."
@@ -250,7 +289,7 @@ exit 0
 Start a NEW session, then:
 
 ```bash
-grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-08-21.3
+grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-08-22.1
 make claude-env                                    # structural + RUNTIME verdicts
 ```
 
