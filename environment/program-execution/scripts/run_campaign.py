@@ -2434,6 +2434,7 @@ def _peer_identity() -> tuple[str, str, str | None]:
 def _peer_imports():
     if str(PE_ROOT) not in sys.path:
         sys.path.insert(0, str(PE_ROOT))
+    import provider_loader  # noqa: PLC0415
     from peer_execution.autonomy.models import (  # noqa: PLC0415
         ActionRuntime,
         ActionSpec,
@@ -2446,7 +2447,6 @@ def _peer_imports():
     from peer_execution.bindings import resolve_peer_binding  # noqa: PLC0415
     from peer_execution.models import ProbeContext  # noqa: PLC0415
     from peer_execution.runner import run_to_terminal  # noqa: PLC0415
-    import provider_loader  # noqa: PLC0415
 
     return {
         "ActionRuntime": ActionRuntime,

@@ -1,40 +1,24 @@
-run_id=32614022523
+run_id=32614088639
 run_attempt=1
-head=e0996c4a03bfd0921356a28b341d8dc12d34856b
+head=a4b105dadee48db5b771e3c33c0dd9082ce2c9d3
 --- git status ---
  M .github/pe-executor-failure.txt
- M .github/scripts/pe_remediation_apply.py
- M TODO.md
+ M environment/agents/adapters/claude-code/generated/skill-registry.json
+ M environment/generated/llm-rules/MANIFEST.json
+ M environment/program-execution/MANIFEST.json
  M environment/program-execution/peer_execution/base.py
- M environment/program-execution/scripts/pe_worker.py
  M environment/program-execution/scripts/run_campaign.py
- M environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
- M environment/program-execution/scripts/tests/test_pe_local_commit_only.py
- M environment/program-execution/scripts/tests/test_pe_smoke_campaign.py
- M environment/program-execution/scripts/tests/test_run_campaign.py
  M environment/program-execution/scripts/tests/test_validate_campaign_promotion.py
  M environment/program-execution/scripts/validate_campaign_promotion.py
- M ops/autonomy/surface_profile.yaml
- M skills/l9-pe-campaign-activate/SKILL.md
- M skills/l9-pe-campaign-activate/references/merge-authority.md
- M skills/l9-pe-campaign-activate/references/pipeline.md
- M skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py
+ M ops/generated/skill-registry.json
 --- diff stat ---
- .github/pe-executor-failure.txt                    |  23 ++-
- .github/scripts/pe_remediation_apply.py            |  14 +-
- TODO.md                                            |   2 +
- .../program-execution/peer_execution/base.py       |  56 ++++---
- environment/program-execution/scripts/pe_worker.py |  15 +-
- .../program-execution/scripts/run_campaign.py      |  15 +-
- .../scripts/tests/test_campaign_tunnel_airtight.py |   8 +
- .../scripts/tests/test_pe_local_commit_only.py     |   6 +-
- .../scripts/tests/test_pe_smoke_campaign.py        | 144 +++++++++++++----
- .../scripts/tests/test_run_campaign.py             |  12 +-
- .../tests/test_validate_campaign_promotion.py      |  21 ++-
- .../scripts/validate_campaign_promotion.py         |  36 -----
- ops/autonomy/surface_profile.yaml                  |   2 +-
- skills/l9-pe-campaign-activate/SKILL.md            | 176 +++++++--------------
- .../references/merge-authority.md                  |  94 ++---------
- .../l9-pe-campaign-activate/references/pipeline.md |  15 +-
- .../scripts/authorize_campaign_merge.py            |  36 ++---
- 17 files changed, 309 insertions(+), 366 deletions(-)
+ .github/pe-executor-failure.txt                    | 38 ++++------------------
+ .../claude-code/generated/skill-registry.json      |  2 +-
+ environment/generated/llm-rules/MANIFEST.json      |  2 +-
+ environment/program-execution/MANIFEST.json        | 18 +++++-----
+ .../program-execution/peer_execution/base.py       |  1 -
+ .../program-execution/scripts/run_campaign.py      |  2 +-
+ .../tests/test_validate_campaign_promotion.py      |  1 +
+ .../scripts/validate_campaign_promotion.py         |  2 --
+ ops/generated/skill-registry.json                  |  2 +-
+ 9 files changed, 20 insertions(+), 48 deletions(-)

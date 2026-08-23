@@ -13,7 +13,6 @@ from .receipts import ReceiptChain
 from .runtime_store import RuntimeStore
 from .schema_registry import SchemaRegistry
 
-
 _RECEIPT_CHAIN_LOCK = threading.RLock()
 
 

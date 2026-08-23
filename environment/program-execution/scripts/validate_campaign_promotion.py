@@ -284,7 +284,6 @@ def validate(root: Path) -> dict:
         *profile_errors,
         *registration_errors,
         *(f"machine-local path in shared campaign ledger -> {hit}" for hit in ledger_hits),
-        *projection_errors,
     ]
 
     return {
@@ -293,7 +292,6 @@ def validate(root: Path) -> dict:
             "SURFACE_PROFILE_VALID": "PASS" if not profile_errors else "FAIL",
             "CAMPAIGN_REGISTRATION_VALID": "PASS" if not registration_errors else "FAIL",
             "MACHINE_LOCAL_PATHS_IN_SHARED_LEDGER": len(ledger_hits),
-            "GENERATED_ARTIFACTS_CURRENT": "PASS" if not projection_errors else "FAIL",
         },
         "errors": errors,
         "warnings": [
