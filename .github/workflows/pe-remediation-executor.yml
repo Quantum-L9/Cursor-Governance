@@ -161,3 +161,24 @@ jobs:
           git commit -m "fix(pe): finish local-only Peer Core cutover"
           git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
           git push origin "HEAD:${BRANCH_NAME}"
+
+      - name: Capture failed executor state
+        if: ${{ failure() }}
+        env:
+          TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          {
+            echo "run_id=${GITHUB_RUN_ID}"
+            echo "run_attempt=${GITHUB_RUN_ATTEMPT}"
+            echo "head=${GITHUB_SHA}"
+            echo "--- git status ---"
+            git status --short
+            echo "--- diff stat ---"
+            git diff --stat
+          } > .github/pe-executor-failure.txt
+          git add -A
+          git commit -m "chore(pe): capture remediation executor failure" || true
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git push origin "HEAD:${BRANCH_NAME}" || true
