@@ -81,13 +81,22 @@ gh workflow run seed-governance.yml --repo Quantum-L9/.github \
   -f mode=seed -f repo_filter="<repo-name>" -f categories=l9-ci-pack
 ```
 
-The seeder is **missing-only**. It will add absent files and leave existing
-ones untouched. After a seed PR merges, expected JS/TS files:
+The seeder is **missing-only**. Default `categories=all` is the DEFAULT set:
+`codeowners`, `dependabot` (github-actions only), `governance`,
+`community-health` (`CODE_OF_CONDUCT.md`, `CONTRIBUTING.md`, `SECURITY.md`),
+`issue-templates` (numbered chooser + ci/seed-ci/gov + config),
+`pr-templates` (human + `PULL_REQUEST_TEMPLATE/agent.md`), `l9-ci-pack`.
+**Not** in default `all`: `LICENSE`, `FUNDING.yml`, `SUPPORT.md`,
+`labels.yml` (org `sync-labels-all`), `on-org-update.yml`, duplicate
+`bug_report.yml` / `feature_request.yml`. Python `l9-lint-test.yml` is
+written only when `pyproject.toml` or `requirements.txt` exists.
+
+After a seed PR merges, expected JS/TS files:
 
 - `biome.json`, `.biomeignore`, `.editorconfig`, `.vscode/extensions.json`
 - `.github/workflows/l9-analysis.yml`
 - `.github/workflows/l9-lint-test-node.yml` (SDK Biome job, `enforce-biome: false`)
-- `.github/governance/*.yaml`
+- `.github/governance/*.yaml` (including Semgrep identity/policy maps)
 
 If those files are already present, stop inventing more CI. Tune only the
 `env:` block in the Node lint workflow (`NODE_VERSION`, `PACKAGE_MANAGER`,
