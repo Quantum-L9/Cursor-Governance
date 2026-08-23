@@ -1,0 +1,115 @@
+name: PE PR Pack Exporter
+
+on:
+  push:
+    branches:
+      - fix/pe-confirmed-remediation-cutover
+
+permissions:
+  contents: write
+
+env:
+  BASE_SHA: "fda7f5fee17ff3f6318942f2826cc3517f1c85b4"
+  BRANCH_NAME: "fix/pe-confirmed-remediation-cutover"
+
+jobs:
+  export:
+    if: ${{ !contains(github.event.head_commit.message, '[pe-pack-receipt]') }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout exact branch revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch --depth=128 origin "${REVISION}" "${BASE_SHA}"
+          git checkout -B "${BRANCH_NAME}" "${REVISION}"
+          git config user.name "l9-pe-pr-pack-exporter"
+          git config user.email "l9-pe-pr-pack-exporter@users.noreply.github.com"
+          git merge-base --is-ancestor "${BASE_SHA}" HEAD
+
+      - name: Build exact PR pack
+        run: |
+          set -euo pipefail
+          mkdir -p pr-pack/repo-files
+          git diff --name-only "${BASE_SHA}..HEAD" -- \
+            . \
+            ':(exclude).github/workflows/pe-pr-pack.yml' \
+            ':(exclude).github/pe-pack-artifact-id.txt' \
+            > pr-pack/CHANGED_FILES.txt
+          while IFS= read -r path; do
+            [ -n "$path" ] || continue
+            [ -f "$path" ] || continue
+            mkdir -p "pr-pack/repo-files/$(dirname "$path")"
+            cp "$path" "pr-pack/repo-files/$path"
+          done < pr-pack/CHANGED_FILES.txt
+          git diff --binary "${BASE_SHA}..HEAD" -- \
+            . \
+            ':(exclude).github/workflows/pe-pr-pack.yml' \
+            ':(exclude).github/pe-pack-artifact-id.txt' \
+            > pr-pack/PE_CONFIRMED_REMEDIATION.patch
+          cat > pr-pack/PR_BODY.md <<'EOF'
+          # PE confirmed remediation cutover
+
+          ## Scope
+          - Make `make campaign` permanently local-commit-only; no PE environment flag can widen publication or merge authority.
+          - Route live campaign execution through the existing Peer Execution Core and its binding/profile/context/provider lifecycle.
+          - Make top-level `environment/program-execution/MANIFEST.json` advisory for campaign promotion while retaining explicit standalone generation/validation.
+          - Converge the campaign skill and autonomy prose on publication via separate `PR_REMEDIATE=0 make pr` and merge via `/l9-pr-remediation`.
+
+          ## Explicitly excluded
+          PE-STATE-001 is not part of this change. The campaign `execute_order` correction remains unresolved and no policy/status/close_campaign file is included.
+
+          ## Validation truth
+          The implementation went through repeated GitHub-hosted focused repair cycles. The temporary remediation executor did not reach a final all-green `make pr-check` run before handoff, so this pack does not claim a fabricated PASS. Run the normal repository PR gates on the final branch head before merge.
+          EOF
+          cat > pr-pack/BASELINE.txt <<EOF
+          repository=Quantum-L9/Cursor-Governance
+          base_sha=${BASE_SHA}
+          branch=${BRANCH_NAME}
+          packaged_head=$(git rev-parse HEAD)
+          excluded_unknown=PE-STATE-001_execute_order
+          EOF
+          cat > pr-pack/VALIDATION_STATUS.md <<'EOF'
+          # Validation status
+
+          - Source branch is pushed.
+          - Temporary remediation executor files were removed before this export.
+          - The export contains only the intended remediation diff relative to the locked baseline plus PR metadata.
+          - No claim of final full-suite PASS is made.
+          - Required before merge: normal repository `make pr-check` / PR CI on the final head.
+          EOF
+          (cd pr-pack && zip -qr ../pe-confirmed-remediation-pr-pack.zip .)
+
+      - name: Upload exact PR pack
+        id: upload
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: pe-confirmed-remediation-pr-pack
+          path: pe-confirmed-remediation-pr-pack.zip
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Record artifact locator
+        env:
+          TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          ARTIFACT_ID: ${{ steps.upload.outputs.artifact-id }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          set -euo pipefail
+          printf '%s\n' \
+            "run_id=${GITHUB_RUN_ID}" \
+            "artifact_id=${ARTIFACT_ID}" \
+            "artifact_url=${ARTIFACT_URL}" \
+            "packaged_head=${GITHUB_SHA}" \
+            > .github/pe-pack-artifact-id.txt
+          git add .github/pe-pack-artifact-id.txt
+          git commit -m "chore(pe): record PR pack artifact [pe-pack-receipt]"
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git push origin "HEAD:${BRANCH_NAME}"
