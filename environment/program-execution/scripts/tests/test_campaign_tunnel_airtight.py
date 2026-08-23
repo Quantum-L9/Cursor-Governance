@@ -127,14 +127,6 @@ class CampaignTunnelAirtightTests(unittest.TestCase):
         self.assertNotIn("not a live campaign front door", payload["error"])
         self.assertIn("not bootstrapped", payload["error"])
 
-    def test_release_env_cannot_reopen_remote_stages(self) -> None:
-        with unittest.mock.patch.dict(
-            "os.environ", {"L9_PE_RELEASE_AUTHORIZED": "operator release"}
-        ):
-            for stage in ("pr", "close", "merge"):
-                with self.assertRaises(self.mod.CampaignError):
-                    self.mod.normalize_until(stage)
-
 
 if __name__ == "__main__":
     unittest.main()

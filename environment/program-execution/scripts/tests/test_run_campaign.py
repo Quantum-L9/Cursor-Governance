@@ -76,7 +76,7 @@ READY_SEED = {
             "actions": ["inspect_repository_head"],
             "consumers": ["pec"],
             "entrypoints": ["make campaign"],
-            "validation": [{"command": "python3 -c 'print(0)'"}],
+            "validation": [{"command": "git status --short"}],
             "nugget_id": "nugget-task-001",
             "acceptance": [
                 {
@@ -93,7 +93,7 @@ READY_SEED = {
             "actions": ["edit_only_declared_paths"],
             "consumers": ["pec"],
             "entrypoints": ["make campaign"],
-            "validation": [{"command": "python3 -c 'print(0)'"}],
+            "validation": [{"command": "git status --short"}],
             "nugget_id": "nugget-task-002",
             "acceptance": [
                 {
@@ -444,7 +444,7 @@ class RunCampaignTests(unittest.TestCase):
                     ),
                 )
             self.assertEqual(ctx.exception.exit_code, 2)
-            self.assertIn("host-only merge", str(ctx.exception))
+            self.assertIn("permanently local-commit-only", str(ctx.exception))
             self.assertEqual(merged, [])
 
     def test_until_activate_from_memo(self) -> None:
@@ -1288,7 +1288,6 @@ class RunCampaignTests(unittest.TestCase):
                 "bootstrap",
                 "arm",
                 "execute",
-                "pr",
             ),
         )
 

@@ -250,7 +250,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
                     receipt["observed_changed_files"],
                     msg=f"{task_id} verified with an unmodified worktree",
                 )
-                attempts = list((workspace / "attempts").rglob(f"*{task_id}*.json"))
+                attempts = list((workspace / "attempts" / task_id).glob("*.json"))
                 self.assertTrue(attempts, msg=f"no typed Peer Core attempt receipt for {task_id}")
 
             status = _pec(workspace, "status")["tasks"]

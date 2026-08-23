@@ -3603,7 +3603,7 @@ def resume_live_campaign(
     with traced(trace, "commit", "commit_host_emit"):
         commit_host_emit(write_root, campaign_id)
     if not should_run(until, "pr"):
-        log("campaign complete: local commits only; publication is a release transition")
+        log("campaign complete: local commits only; publish separately with PR_REMEDIATE=0 make pr")
         return report
     if not executed:
         raise CampaignError("refuse host-only merge before all tasks COMPLETED", exit_code=2)
@@ -4268,7 +4268,7 @@ def _run_campaign_stages(
     with traced(trace, "commit", "commit_host_emit"):
         commit_host_emit(write_root, campaign_id)
     if not should_run(until, "pr"):
-        log("campaign complete: local commits only; publication is a release transition")
+        log("campaign complete: local commits only; publish separately with PR_REMEDIATE=0 make pr")
         return report
 
     if not executed:
