@@ -118,7 +118,9 @@ jobs:
             environment/program-execution/scripts/tests/test_validate_campaign_promotion.py \
             environment/program-execution/scripts/tests/test_run_campaign.py \
             environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py \
-            environment/program-execution/scripts/tests/test_run_peer_task_pipeline.py \
+            environment/program-execution/scripts/tests/test_run_peer_task_pipeline.py
+          PYTHONPATH=environment/program-execution/peer_execution \
+            uv run --frozen --no-build python -m unittest \
             environment/program-execution/peer_execution/autonomy/tests/test_scheduler.py
 
       - name: Peer Core and adapter conformance

@@ -81,6 +81,10 @@ def clean_run_campaign_test(text: str) -> str:
         '"validation": [{"command": "git status --short"}],',
     )
     text = text.replace(
+        '["python3 -c \'print(0)\'"]',
+        '["git status --short"]',
+    )
+    text = text.replace(
         'self.assertIn("host-only merge", str(ctx.exception))',
         'self.assertIn("permanently local-commit-only", str(ctx.exception))',
     )
@@ -104,11 +108,22 @@ def clean_runner_message(text: str) -> str:
     )
 
 
+def clean_peer_verdict_gate(text: str) -> str:
+    old = '''    decision = dispatch_kernel_change(verification)\n    if decision["action"] != "pass":\n        raise CampaignError(\n            f"Diagnose First: Peer Core attempt for {task_id} did not verify cleanly; "\n            f"action={decision['action']} reason={decision['reason']}"\n        )\n    if verification.get("verdict") != "PASSED_LOCAL":\n        raise CampaignError(\n            f"pec verify {task_id} did not PASS: {verification.get('verdict')}; "\n            f"failed gates={json.dumps(failed_gates(verification), sort_keys=True)}"\n        )\n'''
+    new = '''    if verification.get("verdict") != "PASSED_LOCAL":\n        decision = dispatch_kernel_change(verification)\n        reason = str(\n            decision.get("reason")\n            or verification.get("kernel_verdict")\n            or verification.get("verdict")\n            or "UNKNOWN"\n        )\n        raise CampaignError(\n            f"Diagnose First: Peer Core attempt for {task_id} did not verify cleanly; "\n            f"action={decision.get('action', 'unknown')} reason={reason}; "\n            f"failed gates={json.dumps(failed_gates(verification), sort_keys=True)}; "\n            f"incomplete gates={json.dumps(incomplete_gates(verification), sort_keys=True)}"\n        )\n'''
+    if old in text:
+        return text.replace(old, new, 1)
+    if 'if verification.get("verdict") != "PASSED_LOCAL":\n        decision = dispatch_kernel_change(verification)' in text:
+        return text
+    raise SystemExit("post-apply: Peer verdict gate anchor missing")
+
+
 update("environment/program-execution/scripts/tests/test_validate_campaign_promotion.py", clean_promotion_test)
 update("environment/program-execution/scripts/tests/test_pe_local_commit_only.py", clean_local_only_test)
 update("environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py", clean_tunnel_test)
 update("environment/program-execution/scripts/tests/test_run_campaign.py", clean_run_campaign_test)
 update("environment/program-execution/scripts/tests/test_pe_smoke_campaign.py", clean_smoke_test)
 update("environment/program-execution/scripts/run_campaign.py", clean_runner_message)
+update("environment/program-execution/scripts/run_campaign.py", clean_peer_verdict_gate)
 Path(".github/pe-executor-failure.txt").unlink(missing_ok=True)
 print("post-apply behavioral/test repair complete")
