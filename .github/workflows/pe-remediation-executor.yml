@@ -1,0 +1,163 @@
+name: PE Confirmed Remediation Executor
+
+on:
+  push:
+    branches:
+      - fix/pe-confirmed-remediation-cutover
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.12"
+  LOCKED_BASE_SHA: "fda7f5fee17ff3f6318942f2826cc3517f1c85b4"
+  BRANCH_NAME: "fix/pe-confirmed-remediation-cutover"
+
+jobs:
+  execute:
+    name: Execute approved PE remediation
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact branch revision
+        env:
+          REPOSITORY: ${{ github.repository }}
+          REVISION: ${{ github.sha }}
+          TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git init .
+          git remote add origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git -c protocol.version=2 fetch --depth=64 origin "${REVISION}" main
+          git checkout -B "${BRANCH_NAME}" "${REVISION}"
+          git config user.name "l9-pe-remediation-executor"
+          git config user.email "l9-pe-remediation-executor@users.noreply.github.com"
+
+      - name: Revalidate immutable baseline
+        run: |
+          set -euo pipefail
+          main_sha="$(git rev-parse origin/main)"
+          test "${main_sha}" = "${LOCKED_BASE_SHA}" || {
+            echo "BASELINE_DRIFT: locked=${LOCKED_BASE_SHA} current=${main_sha}" >&2
+            exit 42
+          }
+          git merge-base --is-ancestor "${LOCKED_BASE_SHA}" HEAD
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install locked toolchain
+        run: |
+          set -euo pipefail
+          command -v uv >/dev/null 2>&1 || python -m pip install --only-binary=:all: uv==0.12.1
+          uv sync --locked --no-build --extra dev
+
+      - name: Apply approved anchored remediation
+        run: |
+          set -euo pipefail
+          python .github/scripts/pe_remediation_apply.py
+          python -m py_compile \
+            environment/program-execution/scripts/run_campaign.py \
+            environment/program-execution/scripts/pe_worker.py \
+            environment/program-execution/peer_execution/base.py \
+            environment/program-execution/scripts/validate_campaign_promotion.py
+
+      - name: Format and lint changed Python surfaces
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build ruff format \
+            environment/program-execution/scripts/run_campaign.py \
+            environment/program-execution/scripts/pe_worker.py \
+            environment/program-execution/peer_execution/base.py \
+            environment/program-execution/scripts/validate_campaign_promotion.py \
+            environment/program-execution/scripts/tests/test_pe_local_commit_only.py \
+            environment/program-execution/scripts/tests/test_pe_smoke_campaign.py \
+            environment/program-execution/scripts/tests/test_validate_campaign_promotion.py \
+            environment/program-execution/scripts/tests/test_run_campaign.py \
+            environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+          uv run --frozen --no-build ruff check \
+            environment/program-execution/scripts/run_campaign.py \
+            environment/program-execution/scripts/pe_worker.py \
+            environment/program-execution/peer_execution/base.py \
+            environment/program-execution/scripts/validate_campaign_promotion.py \
+            environment/program-execution/scripts/tests/test_pe_local_commit_only.py \
+            environment/program-execution/scripts/tests/test_pe_smoke_campaign.py \
+            environment/program-execution/scripts/tests/test_validate_campaign_promotion.py \
+            environment/program-execution/scripts/tests/test_run_campaign.py \
+            environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+
+      - name: Synchronize generated projections
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python ops/scripts/sync_generated_artifacts.py --root . --force
+          uv run --frozen --no-build python \
+            environment/program-execution/scripts/generate_manifest.py \
+            environment/program-execution
+          uv run --frozen --no-build python ops/scripts/sync_generated_artifacts.py --root . --force --check
+
+      - name: Focused PE remediation tests
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python -m unittest \
+            environment/program-execution/scripts/tests/test_pe_local_commit_only.py \
+            environment/program-execution/scripts/tests/test_pe_smoke_campaign.py \
+            environment/program-execution/scripts/tests/test_validate_campaign_promotion.py \
+            environment/program-execution/scripts/tests/test_run_campaign.py \
+            environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py \
+            environment/program-execution/scripts/tests/test_run_peer_task_pipeline.py \
+            environment/program-execution/peer_execution/autonomy/tests/test_scheduler.py
+
+      - name: Peer Core and adapter conformance
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python environment/program-execution/scripts/run_conformance.py
+          uv run --frozen --no-build python environment/program-execution/scripts/validate_execution_adapters.py
+          uv run --frozen --no-build python environment/program-execution/scripts/validate_thin_providers.py
+          uv run --frozen --no-build python environment/program-execution/core/scripts/validate_pair.py \
+            environment/program-execution/core --mode template
+
+      - name: Promotion and standalone manifest proof
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python environment/program-execution/scripts/validate_campaign_promotion.py
+          uv run --frozen --no-build python environment/program-execution/scripts/validate_manifest.py \
+            environment/program-execution
+
+      - name: Full local PR mirror
+        run: |
+          set -euo pipefail
+          make pr-check
+
+      - name: Enforce excluded unknown-state surface
+        run: |
+          set -euo pipefail
+          forbidden='environment/program-execution/campaigns/(CAMPAIGN_EXECUTION_POLICY.yaml|CAMPAIGN_STATUS.yaml|scripts/close_campaign.py)'
+          if git diff --name-only | grep -E "${forbidden}"; then
+            echo "PE-STATE-001 surface changed even though execute_order remains UNKNOWN" >&2
+            exit 43
+          fi
+
+      - name: Remove temporary executor and commit tested implementation
+        env:
+          TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          rm -f .github/scripts/pe_remediation_apply.py .github/workflows/pe-remediation-executor.yml
+          git add -A
+          test -z "$(git diff --cached --name-only | grep -E '^environment/program-execution/campaigns/(CAMPAIGN_EXECUTION_POLICY.yaml|CAMPAIGN_STATUS.yaml|scripts/close_campaign.py)$' || true)"
+          git diff --cached --check
+          git commit -m "fix(pe): finish local-only Peer Core cutover"
+          git remote set-url origin "https://x-access-token:${TOKEN}@github.com/${REPOSITORY}.git"
+          git push origin "HEAD:${BRANCH_NAME}"
