@@ -57,8 +57,13 @@ jobs:
       - name: Apply approved anchored remediation
         run: |
           set -euo pipefail
-          python .github/scripts/pe_remediation_resume.py
-          python .github/scripts/pe_remediation_apply.py
+          if grep -q 'Legacy direct-worker compatibility shim' environment/program-execution/scripts/pe_worker.py; then
+            echo "approved source patch already present; continuing from validation repair"
+          else
+            python .github/scripts/pe_remediation_resume.py
+            python .github/scripts/pe_remediation_apply.py
+          fi
+          python .github/scripts/pe_remediation_post_apply.py
           python -m py_compile \
             environment/program-execution/scripts/run_campaign.py \
             environment/program-execution/scripts/pe_worker.py \
@@ -78,6 +83,9 @@ jobs:
             environment/program-execution/scripts/tests/test_validate_campaign_promotion.py \
             environment/program-execution/scripts/tests/test_run_campaign.py \
             environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+          uv run --frozen --no-build ruff check --fix --select I001 \
+            environment/program-execution/scripts/run_campaign.py \
+            environment/program-execution/peer_execution/base.py
           uv run --frozen --no-build ruff check \
             environment/program-execution/scripts/run_campaign.py \
             environment/program-execution/scripts/pe_worker.py \
@@ -155,7 +163,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          rm -f .github/pe-executor-failure.txt .github/scripts/pe_remediation_apply.py .github/scripts/pe_remediation_resume.py .github/workflows/pe-remediation-executor.yml
+          rm -f .github/pe-executor-failure.txt .github/scripts/pe_remediation_apply.py .github/scripts/pe_remediation_resume.py .github/scripts/pe_remediation_post_apply.py .github/workflows/pe-remediation-executor.yml
           git add -A
           test -z "$(git diff --cached --name-only | grep -E '^environment/program-execution/campaigns/(CAMPAIGN_EXECUTION_POLICY.yaml|CAMPAIGN_STATUS.yaml|scripts/close_campaign.py)$' || true)"
           git diff --cached --check
