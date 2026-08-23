@@ -1,4 +1,0 @@
-run_id=32638402011
-artifact_id=9492921519
-artifact_url=https://github.com/Quantum-L9/Cursor-Governance/actions/runs/32638402011/artifacts/9492921519
-packaged_head=ce2e9ec876a18c7f35b8e5e90745f78237d0ce9a
