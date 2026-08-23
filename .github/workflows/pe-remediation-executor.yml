@@ -57,6 +57,7 @@ jobs:
       - name: Apply approved anchored remediation
         run: |
           set -euo pipefail
+          python .github/scripts/pe_remediation_resume.py
           python .github/scripts/pe_remediation_apply.py
           python -m py_compile \
             environment/program-execution/scripts/run_campaign.py \
@@ -154,7 +155,7 @@ jobs:
           REPOSITORY: ${{ github.repository }}
         run: |
           set -euo pipefail
-          rm -f .github/scripts/pe_remediation_apply.py .github/workflows/pe-remediation-executor.yml
+          rm -f .github/pe-executor-failure.txt .github/scripts/pe_remediation_apply.py .github/scripts/pe_remediation_resume.py .github/workflows/pe-remediation-executor.yml
           git add -A
           test -z "$(git diff --cached --name-only | grep -E '^environment/program-execution/campaigns/(CAMPAIGN_EXECUTION_POLICY.yaml|CAMPAIGN_STATUS.yaml|scripts/close_campaign.py)$' || true)"
           git diff --cached --check
