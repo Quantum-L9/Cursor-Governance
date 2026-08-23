@@ -375,11 +375,21 @@ a later session can answer "is the pasted stub current?" without reading the fie
 """
 
 
-def run(env: dict[str, str] | None = None) -> dict[str, Any]:
+def run(
+    env: dict[str, str] | None = None,
+    session_env: Path | None = None,
+) -> dict[str, Any]:
+    """Audit an environment. `session_env` overrides the session-env fallback.
+
+    `stub_revision_actual` falls back to reading the machine's session env when
+    the supplied environment carries no revision. Without a way to point that
+    fallback somewhere explicit, a caller auditing a synthetic environment
+    silently reads this machine's real revision instead.
+    """
     expected = parse_env_example()
     deviations = compare(expected, env)
     want_rev = stub_revision_expected()
-    have_rev = stub_revision_actual(env)
+    have_rev = stub_revision_actual(env, session_env)
     drift = bool(want_rev) and have_rev != want_rev
     leaked = prohibited_present(env)
     return {

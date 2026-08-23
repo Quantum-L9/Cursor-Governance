@@ -41,12 +41,40 @@ def _load_gate() -> Any:
 gate = _load_gate()
 
 
+#: Human/ops breakglass switches. Each one is designed to turn a denial into an
+#: allow, so a test asserting a denial must not inherit them: a governed session
+#: exports L9_PUBLISH_PATH_OVERRIDE, which made the gate skip publish-path
+#: classification entirely and answer from a later, unrelated branch. These are
+#: policy inputs, so the tests control them rather than reading the machine's.
+GATE_OVERRIDE_ENV = (
+    "L9_PUBLISH_PATH_OVERRIDE",
+    "L9_LOCAL_PUSH_AUTHORIZED",
+    "L9_L4_LOCAL_AUTONOMY",
+    "L9_WORKTREE_ISOLATION",
+    "L9_MERGE_AUTHORIZED",
+    "L9_GIT_DESTRUCTIVE_AUTHORIZED",
+    "L9_GIT_REVERT_AUTHORIZED",
+    "L9_GIT_BROAD_ADD_AUTHORIZED",
+    "L9_GIT_SWITCH_AUTHORIZED",
+    "L9_GIT_RESET_AUTHORIZED",
+    "L9_WORKTREE_ADD_AUTHORIZED",
+)
+
+
+def _gate_env(**overrides: str) -> dict[str, str]:
+    """The ambient environment with every gate breakglass removed."""
+    env = {k: v for k, v in os.environ.items() if k not in GATE_OVERRIDE_ENV}
+    env.update(overrides)
+    return env
+
+
 def _run(event: dict[str, Any], mode: str = "claude") -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         [sys.executable, str(GATE_PATH), mode],
         input=json.dumps(event),
         capture_output=True,
         text=True,
+        env=_gate_env(),
         timeout=60,
         check=False,
     )
@@ -124,7 +152,7 @@ class FailClosedTests(unittest.TestCase):
         # exports WS -- so inheriting the ambient environment let the workspace
         # resolve, the gate reach publish-path classification, and this test fail
         # under `make pr` while passing in a bare shell. Control the inputs.
-        env = {k: v for k, v in os.environ.items() if k not in ("WS", "L9_L4_WORKSPACE")}
+        env = {k: v for k, v in _gate_env().items() if k not in ("WS", "L9_L4_WORKSPACE")}
         with tempfile.TemporaryDirectory() as non_repo:
             proc = subprocess.run(
                 [sys.executable, str(GATE_PATH), "claude"],
