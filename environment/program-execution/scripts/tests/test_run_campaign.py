@@ -556,10 +556,10 @@ class RunCampaignTests(unittest.TestCase):
             contract = {
                 "task_id": "TASK-001",
                 "writable_paths": ["docs/program-execution/TASK-001.md"],
-                "validation_commands": ["python3 -c 'print(0)'"],
+                "validation_commands": ["git status --short"],
             }
             filled = self.mod.fill_inferred_validation(contract_path, contract, root)
-            self.assertEqual(filled.get("validation_commands"), ["python3 -c 'print(0)'"])
+            self.assertEqual(filled.get("validation_commands"), ["git status --short"])
 
     def test_fill_inferred_validation_from_writable_tests(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
@@ -994,7 +994,7 @@ class RunCampaignTests(unittest.TestCase):
             )
             self.assertEqual(
                 [item["command"] for item in receipt["validations"]],
-                ["python3 -c 'print(0)'"],
+                ["git status --short"],
             )
 
     def test_blueprint_fingerprint_survives_recompilation(self) -> None:

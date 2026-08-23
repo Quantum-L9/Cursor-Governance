@@ -2739,16 +2739,19 @@ def _finish_peer_unit(
 
     with timer.stage("task_verify", task_id=task_id):
         verification = traced_verify(workspace, task_id, trace=trace, attempt_number=attempt_number)
-    decision = dispatch_kernel_change(verification)
-    if decision["action"] != "pass":
+    if verification.get("verdict") != "PASSED_LOCAL":
+        decision = dispatch_kernel_change(verification)
+        reason = str(
+            decision.get("reason")
+            or verification.get("kernel_verdict")
+            or verification.get("verdict")
+            or "UNKNOWN"
+        )
         raise CampaignError(
             f"Diagnose First: Peer Core attempt for {task_id} did not verify cleanly; "
-            f"action={decision['action']} reason={decision['reason']}"
-        )
-    if verification.get("verdict") != "PASSED_LOCAL":
-        raise CampaignError(
-            f"pec verify {task_id} did not PASS: {verification.get('verdict')}; "
-            f"failed gates={json.dumps(failed_gates(verification), sort_keys=True)}"
+            f"action={decision.get('action', 'unknown')} reason={reason}; "
+            f"failed gates={json.dumps(failed_gates(verification), sort_keys=True)}; "
+            f"incomplete gates={json.dumps(incomplete_gates(verification), sort_keys=True)}"
         )
     # Commit only the exact work the Controller just verified. Provider execution
     # owns mutation; PE retains the local commit boundary.
