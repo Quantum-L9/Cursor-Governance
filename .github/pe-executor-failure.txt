@@ -1,22 +1,8 @@
-run_id=32614294513
+run_id=32614529076
 run_attempt=1
-head=91f7ba2b299eb447baa4a6919c403ff69c614dfd
+head=fb3a82838bbbf683cc4729ab6a41476768379be3
 --- git status ---
  M .github/pe-executor-failure.txt
- M environment/program-execution/MANIFEST.json
- M environment/program-execution/scripts/run_campaign.py
- M environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
- M environment/program-execution/scripts/tests/test_pe_local_commit_only.py
- M environment/program-execution/scripts/tests/test_pe_smoke_campaign.py
- M environment/program-execution/scripts/tests/test_run_campaign.py
- M environment/program-execution/scripts/tests/test_validate_campaign_promotion.py
 --- diff stat ---
- .github/pe-executor-failure.txt                    | 23 ++------
- environment/program-execution/MANIFEST.json        | 12 ++--
- .../program-execution/scripts/run_campaign.py      |  4 +-
- .../scripts/tests/test_campaign_tunnel_airtight.py |  8 ---
- .../scripts/tests/test_pe_local_commit_only.py     | 20 ++++---
- .../scripts/tests/test_pe_smoke_campaign.py        |  2 +-
- .../scripts/tests/test_run_campaign.py             |  7 +--
- .../tests/test_validate_campaign_promotion.py      | 67 +++++-----------------
- 8 files changed, 43 insertions(+), 100 deletions(-)
+ .github/pe-executor-failure.txt | 20 ++------------------
+ 1 file changed, 2 insertions(+), 18 deletions(-)
