@@ -16,6 +16,13 @@ def update(path: str, fn) -> None:
 
 def clean_promotion_test(text: str) -> str:
     text = text.replace("import hashlib\n", "")
+    if (
+        "def test_stale_top_level_pe_manifest_is_advisory" in text
+        and "def test_missing_top_level_pe_manifest_is_advisory" in text
+        and "PE_MANIFEST_ROOT" not in text
+        and "regenerate_manifest(" not in text
+    ):
+        return text
     text = re.sub(
         r"\n\ndef regenerate_manifest\(root: Path\) -> None:\n.*?(?=\n\nclass PromotionValidatorTest)",
         "",
@@ -33,20 +40,6 @@ def clean_promotion_test(text: str) -> str:
         count=1,
         flags=re.S,
     )
-    text = re.sub(
-        r"\n    def test_stale_top_level_pe_manifest_is_advisory\(self\) -> None:\n.*?(?=\n\nif __name__ == \"__main__\":)",
-        "",
-        text,
-        count=1,
-        flags=re.S,
-    )
-    if (
-        "def test_stale_top_level_pe_manifest_is_advisory" in text
-        and "def test_missing_top_level_pe_manifest_is_advisory" in text
-        and "PE_MANIFEST_ROOT" not in text
-        and "regenerate_manifest(" not in text
-    ):
-        return text
     advisory = '''\n    # -- top-level PE MANIFEST is advisory by settled policy ----------------\n\n    def test_stale_top_level_pe_manifest_is_advisory(self) -> None:\n        manifest = self.root / "environment/program-execution/MANIFEST.json"\n        manifest.parent.mkdir(parents=True, exist_ok=True)\n        manifest.write_text('{"generated": "stale"}\\n', encoding="utf-8")\n        report = validator.validate(self.root)\n        self.assertEqual(report["status"], "PASS", report["errors"])\n        self.assertNotIn("GENERATED_ARTIFACTS_CURRENT", report["summary"])\n\n    def test_missing_top_level_pe_manifest_is_advisory(self) -> None:\n        manifest = self.root / "environment/program-execution/MANIFEST.json"\n        if manifest.exists():\n            manifest.unlink()\n        report = validator.validate(self.root)\n        self.assertEqual(report["status"], "PASS", report["errors"])\n        self.assertNotIn("GENERATED_ARTIFACTS_CURRENT", report["summary"])\n'''
     marker = "\n\nclass RealRepositoryTest"
     if marker not in text:
