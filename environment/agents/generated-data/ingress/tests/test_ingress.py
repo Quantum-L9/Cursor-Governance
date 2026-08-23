@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 import tempfile
@@ -38,7 +39,15 @@ class IngressTests(unittest.TestCase):
 
     def test_safe_capture_and_idempotent(self):
         acc = {"status": "ACCEPTED", "receipt_digest": "acc2"}
-        packet = {"units": [{"class": "repository_fact"}], "notes": "clean"}
+        # Accepted ingress now hands the packet to the orchestration processor
+        # and the packet validator, so this uses the repository's canonical
+        # valid packet rather than a stub the new pipeline would reject.
+        packet = json.loads(
+            (
+                Path(__file__).resolve().parents[1].parent
+                / "tests/fixtures/valid-recon-packet.json"
+            ).read_text(encoding="utf-8")
+        )
         a = ingest.ingest_accepted_result(
             accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc
         )
@@ -47,6 +56,18 @@ class IngressTests(unittest.TestCase):
         )
         self.assertEqual(a["outcome"], "CAPTURED")
         self.assertEqual(a["receipt_digest"], b["receipt_digest"])
+
+    def test_unprocessable_packet_fails_closed_with_a_receipt(self):
+        """Ingress is a boundary: an unusable packet is FAILED, not an exception."""
+        acc = {"status": "ACCEPTED", "receipt_digest": "acc4"}
+        packet = {"units": [{"class": "repository_fact"}], "notes": "no identity"}
+        out = ingest.ingest_accepted_result(
+            accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc
+        )
+        self.assertEqual(out["outcome"], "FAILED")
+        self.assertEqual(out["processing_status"], "FAILED")
+        self.assertIsNone(out["processor_job_id"])
+        self.assertIn("not processable", out["reason"])
 
     def test_no_reusable(self):
         acc = {"status": "ACCEPTED", "receipt_digest": "acc3"}

@@ -57,6 +57,8 @@ class DeliveryExecutionResult:
     attempted: int
     accepted: int
     enqueued: int
+    deduplicated: int
+    quarantined: int
     rejected: int
     retried: int
     dead_lettered: int
@@ -69,6 +71,8 @@ class DeliveryExecutionResult:
             "attempted": self.attempted,
             "accepted": self.accepted,
             "enqueued": self.enqueued,
+            "deduplicated": self.deduplicated,
+            "quarantined": self.quarantined,
             "rejected": self.rejected,
             "retried": self.retried,
             "dead_lettered": self.dead_lettered,
@@ -78,17 +82,9 @@ class DeliveryExecutionResult:
 
 
 class JsonCommandTransport:
-    """
-    Delegate to an existing command.
-    The command receives canonical JSON on stdin. It must return a JSON object
-    containing at least a ``status`` field.
-    """
+    """Delegate a delivery envelope to an existing JSON command."""
 
-    def __init__(
-        self,
-        command: tuple[str, ...],
-        timeout_seconds: int,
-    ) -> None:
+    def __init__(self, command: tuple[str, ...], timeout_seconds: int) -> None:
         if not command:
             raise ValueError("Command transport requires a command")
         self.command = command
@@ -99,33 +95,35 @@ class JsonCommandTransport:
         delivery: Mapping[str, Any],
         packet: Mapping[str, Any],
     ) -> Mapping[str, Any]:
-        payload = {
-            "delivery": dict(delivery),
-            "packet": dict(packet),
-        }
+        payload = {"delivery": dict(delivery), "packet": dict(packet)}
         completed = subprocess.run(
             list(self.command),
-            input=json.dumps(
-                payload,
-                sort_keys=True,
-                separators=(",", ":"),
-            ),
+            input=json.dumps(payload, sort_keys=True, separators=(",", ":")),
             capture_output=True,
             text=True,
             timeout=self.timeout_seconds,
             check=False,
         )
-        if completed.returncode != 0:
-            raise DeliveryError(
-                f"Command failed with exit {completed.returncode}: {completed.stderr.strip()}"
-            )
         try:
             response = json.loads(completed.stdout or "{}")
         except json.JSONDecodeError as exc:
             raise DeliveryError("Destination command returned invalid JSON") from exc
         if not isinstance(response, Mapping):
             raise DeliveryError("Destination command response must be an object")
-        return response
+        status = str(response.get("status", "unknown")).lower()
+        if completed.returncode != 0 and status not in {
+            "rejected",
+            "denied",
+            "quarantined",
+        }:
+            raise DeliveryError(
+                f"Command failed with exit {completed.returncode}: {completed.stderr.strip()}"
+            )
+        return {
+            **dict(response),
+            "exit_code": completed.returncode,
+            "stderr": completed.stderr.strip(),
+        }
 
 
 class RouteOutboxTransport:
@@ -151,14 +149,7 @@ class RouteOutboxTransport:
             "packet_identity": dict(packet["identity"]),
             "packet_id": packet["packet_id"],
         }
-        encoded = (
-            json.dumps(
-                payload,
-                indent=2,
-                sort_keys=True,
-            ).encode("utf-8")
-            + b"\n"
-        )
+        encoded = json.dumps(payload, indent=2, sort_keys=True).encode("utf-8") + b"\n"
         if target.exists():
             if target.read_bytes() != encoded:
                 raise DeliveryError(f"Outbox collision for {delivery_id}")
@@ -185,7 +176,7 @@ class RouteOutboxTransport:
 
 
 class MemoryTransport:
-    """Reuse the Wave 3 governed-candidate adapter."""
+    """Reuse the governed Graphiti candidate adapter."""
 
     def __init__(
         self,
@@ -199,22 +190,10 @@ class MemoryTransport:
     ) -> None:
         loader = PriorWaveModuleLoader(repository_root)
         module = loader.load_adapter_module("graphiti_memory.py")
-        GraphitiMemoryAdapter = getattr(
-            module,
-            "GraphitiMemoryAdapter",
-        )
-        FileOutboxTransport = getattr(
-            module,
-            "FileOutboxTransport",
-        )
-        HttpJsonTransport = getattr(
-            module,
-            "HttpJsonTransport",
-        )
-        CommandTransport = getattr(
-            module,
-            "CommandTransport",
-        )
+        GraphitiMemoryAdapter = getattr(module, "GraphitiMemoryAdapter")
+        FileOutboxTransport = getattr(module, "FileOutboxTransport")
+        HttpJsonTransport = getattr(module, "HttpJsonTransport")
+        CommandTransport = getattr(module, "CommandTransport")
         if mode == "outbox":
             transport = FileOutboxTransport(outbox)
         elif mode == "http":
@@ -228,10 +207,7 @@ class MemoryTransport:
         elif mode == "command":
             if not command:
                 raise ValueError("memory_command is required for command mode")
-            transport = CommandTransport(
-                list(command),
-                timeout_seconds=timeout_seconds,
-            )
+            transport = CommandTransport(list(command), timeout_seconds=timeout_seconds)
         else:
             raise ValueError(f"Unsupported memory transport mode: {mode}")
         self.adapter = GraphitiMemoryAdapter(transport)
@@ -250,9 +226,12 @@ class MemoryTransport:
         result = self.adapter.deliver(candidate)
         payload = result.to_dict()
         payload["candidate"] = candidate.to_dict()
-        payload["destination_acceptance_proven"] = result.status not in {
-            "enqueued",
-            "already_enqueued",
+        payload["destination_acceptance_proven"] = result.status in {
+            "accepted",
+            "deduplicated",
+            "quarantined",
+            "contested",
+            "merged",
         }
         return payload
 
@@ -299,22 +278,42 @@ class DeliveryWorker:
             item["payload"]
             for item in self.store.list_stage_snapshots(
                 job_id=job.job_id,
-                stage="DELIVERY_PENDING",
+                stage=PipelineState.DELIVERY_PENDING.value,
             )
         ]
+        if not deliveries:
+            closed = self.store.transition(
+                job_id=job.job_id,
+                expected_state=PipelineState.DELIVERING,
+                target_state=PipelineState.LEARNING_CLOSED,
+                actor=actor,
+                payload={"reason": "no deliveries"},
+            )
+            self.store.recalculate_campaign_state(closed.campaign_id)
+            return DeliveryExecutionResult(
+                job_id=job.job_id,
+                attempted=0,
+                accepted=0,
+                enqueued=0,
+                deduplicated=0,
+                quarantined=0,
+                rejected=0,
+                retried=0,
+                dead_lettered=0,
+                final_state=PipelineState.LEARNING_CLOSED.value,
+                details=(),
+            )
         packet = self.store.load_packet(job.job_id)
         details: list[Mapping[str, Any]] = []
         accepted = 0
         enqueued = 0
+        deduplicated = 0
+        quarantined = 0
         rejected = 0
         for delivery in deliveries:
             route = str(delivery["route"])
             unit_id = str(delivery["unit_id"])
-            attempt_number = self._next_attempt_number(
-                job.job_id,
-                unit_id,
-                route,
-            )
+            attempt_number = self._next_attempt_number(job.job_id, unit_id, route)
             attempt = self.store.record_delivery_attempt(
                 job_id=job.job_id,
                 unit_id=unit_id,
@@ -323,27 +322,17 @@ class DeliveryWorker:
                 idempotency_key=str(delivery["idempotency_key"]),
             )
             try:
-                response = self._transport_for(route).deliver(
-                    delivery,
-                    packet,
-                )
-                status = str(response.get("status", "unknown"))
-                if status in {
-                    "accepted",
-                    "merged",
-                    "contested",
-                    "quarantined",
-                }:
+                response = self._transport_for(route).deliver(delivery, packet)
+                status = str(response.get("status", "unknown")).lower()
+                if status in {"accepted", "admitted", "merged"}:
                     accepted += 1
-                elif status in {
-                    "enqueued",
-                    "already_enqueued",
-                }:
+                elif status in {"duplicate", "deduplicated", "already_exists"}:
+                    deduplicated += 1
+                elif status in {"quarantined", "contested"}:
+                    quarantined += 1
+                elif status in {"enqueued", "already_enqueued", "submitted"}:
                     enqueued += 1
-                elif status in {
-                    "rejected",
-                    "denied",
-                }:
+                elif status in {"rejected", "denied"}:
                     raise DestinationRejected(f"Destination rejected delivery: {response}")
                 else:
                     raise DeliveryError(f"Unsupported destination status: {status}")
@@ -362,8 +351,11 @@ class DeliveryWorker:
                         response.get(
                             "destination_reference",
                             response.get(
-                                "memory_id",
-                                response.get("path", ""),
+                                "record_id",
+                                response.get(
+                                    "memory_id",
+                                    response.get("path", ""),
+                                ),
                             ),
                         )
                     )
@@ -413,17 +405,19 @@ class DeliveryWorker:
                     )
                     self.receipts.append_receipt(
                         job_id=job.job_id,
-                        stage="RETRY_WAIT",
+                        stage=PipelineState.RETRY_WAIT.value,
                         event_type="delivery_retry_scheduled",
                         actor=actor,
                         payload=decision.to_dict(),
-                        event_identity=(f"retry:{unit_id}:{route}:{attempt_number}"),
+                        event_identity=f"retry:{unit_id}:{route}:{attempt_number}",
                     )
                     return DeliveryExecutionResult(
                         job_id=job.job_id,
                         attempted=len(details) + 1,
                         accepted=accepted,
                         enqueued=enqueued,
+                        deduplicated=deduplicated,
+                        quarantined=quarantined,
                         rejected=rejected,
                         retried=1,
                         dead_lettered=0,
@@ -449,12 +443,15 @@ class DeliveryWorker:
                     attempted=len(details) + 1,
                     accepted=accepted,
                     enqueued=enqueued,
+                    deduplicated=deduplicated,
+                    quarantined=quarantined,
                     rejected=rejected + 1,
                     retried=0,
                     dead_lettered=1,
                     final_state=PipelineState.DEAD_LETTERED.value,
                     details=tuple(details),
                 )
+
         current = self.store.get_job(job.job_id)
         current = self.store.transition(
             job_id=job.job_id,
@@ -464,37 +461,55 @@ class DeliveryWorker:
             payload={
                 "accepted": accepted,
                 "enqueued": enqueued,
+                "deduplicated": deduplicated,
+                "quarantined": quarantined,
                 "rejected": rejected,
             },
         )
-        destination_acceptance_proven = accepted == len(deliveries) and len(deliveries) > 0
-        target = (
-            PipelineState.DESTINATION_ACCEPTED
-            if destination_acceptance_proven
-            else PipelineState.DESTINATION_REJECTED
-        )
+        accepted_or_existing = accepted + deduplicated
+        destination_acceptance_proven = accepted_or_existing == len(deliveries)
+        if enqueued and not rejected:
+            target = PipelineState.DESTINATION_SUBMITTED
+        elif quarantined and not rejected and not enqueued:
+            target = PipelineState.DESTINATION_DEFERRED
+        elif destination_acceptance_proven:
+            target = PipelineState.DESTINATION_ACCEPTED
+        else:
+            target = PipelineState.DESTINATION_REJECTED
         current = self.store.transition(
             job_id=job.job_id,
             expected_state=current.state,
             target_state=target,
             actor=actor,
             payload={
-                "destination_acceptance_proven": (destination_acceptance_proven),
+                "destination_acceptance_proven": destination_acceptance_proven,
                 "accepted": accepted,
                 "enqueued": enqueued,
+                "deduplicated": deduplicated,
+                "quarantined": quarantined,
+                "rejected": rejected,
             },
         )
         self.receipts.append_receipt(
             job_id=job.job_id,
             stage=target.value,
-            event_type="delivery_batch_completed",
+            event_type=(
+                "delivery_batch_submitted"
+                if target is PipelineState.DESTINATION_SUBMITTED
+                else "delivery_batch_deferred"
+                if target is PipelineState.DESTINATION_DEFERRED
+                else "delivery_batch_completed"
+            ),
             actor=actor,
             payload={
                 "accepted": accepted,
                 "enqueued": enqueued,
-                "destination_acceptance_proven": (destination_acceptance_proven),
+                "deduplicated": deduplicated,
+                "quarantined": quarantined,
+                "rejected": rejected,
+                "destination_acceptance_proven": destination_acceptance_proven,
             },
-            event_identity=(f"delivery-batch:{current.version}"),
+            event_identity=f"delivery-batch:{current.version}",
         )
         self.store.recalculate_campaign_state(current.campaign_id)
         return DeliveryExecutionResult(
@@ -502,6 +517,8 @@ class DeliveryWorker:
             attempted=len(deliveries),
             accepted=accepted,
             enqueued=enqueued,
+            deduplicated=deduplicated,
+            quarantined=quarantined,
             rejected=rejected,
             retried=0,
             dead_lettered=0,
@@ -535,10 +552,7 @@ class DeliveryWorker:
             )
         return RouteOutboxTransport(self.configuration.route_outbox_root)
 
-    def _select_job(
-        self,
-        job_id: str | None,
-    ) -> ProcessingJob | None:
+    def _select_job(self, job_id: str | None) -> ProcessingJob | None:
         if job_id:
             job = self.store.get_job(job_id)
             if job.state not in {
@@ -556,26 +570,16 @@ class DeliveryWorker:
                     state = 'DELIVERY_PENDING'
                     OR (
                         state = 'RETRY_WAIT'
-                        AND (
-                            next_attempt_at IS NULL
-                            OR next_attempt_at <= ?
-                        )
+                        AND (next_attempt_at IS NULL OR next_attempt_at <= ?)
                     )
                 ORDER BY created_at
                 LIMIT 1
                 """,
                 (utc_now_text(),),
             ).fetchone()
-        if row is None:
-            return None
-        return self.store.get_job(row["job_id"])
+        return None if row is None else self.store.get_job(row["job_id"])
 
-    def _next_attempt_number(
-        self,
-        job_id: str,
-        unit_id: str,
-        route: str,
-    ) -> int:
+    def _next_attempt_number(self, job_id: str, unit_id: str, route: str) -> int:
         with self.store.connect() as connection:
             row = connection.execute(
                 """
@@ -600,11 +604,7 @@ def main() -> int:
         default="outbox",
     )
     parser.add_argument("--memory-endpoint")
-    parser.add_argument(
-        "--memory-command",
-        nargs="+",
-        default=[],
-    )
+    parser.add_argument("--memory-command", nargs="+", default=[])
     parser.add_argument("--limit", type=int, default=1)
     args = parser.parse_args()
     root = Path(args.root).resolve()
@@ -622,19 +622,10 @@ def main() -> int:
     )
     worker = DeliveryWorker(configuration)
     if args.job_id:
-        result = worker.run_once(
-            actor=args.actor,
-            job_id=args.job_id,
-        )
+        result = worker.run_once(actor=args.actor, job_id=args.job_id)
         payload: Any = result.to_dict() if result is not None else {"processed": False}
     else:
-        payload = [
-            item.to_dict()
-            for item in worker.run_batch(
-                actor=args.actor,
-                limit=args.limit,
-            )
-        ]
+        payload = [item.to_dict() for item in worker.run_batch(actor=args.actor, limit=args.limit)]
     print(json.dumps(payload, indent=2, sort_keys=True))
     return 0
 

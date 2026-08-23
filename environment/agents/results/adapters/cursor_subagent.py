@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import sys
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
@@ -21,14 +22,55 @@ def _load_bridge():
 result_bridge = _load_bridge()
 
 
-def normalize(surface_result: dict[str, Any]) -> dict[str, Any]:
-    for name in ("validate_and_project", "project_result", "normalize_result"):
-        fn = getattr(result_bridge, name, None)
-        if callable(fn):
-            return fn(surface_result)
-    schema = getattr(result_bridge, "RESULT_SCHEMA", "l9.cursor-subagent.result.v1")
-    if surface_result.get("schema") != schema:
-        if surface_result.get("status") in getattr(result_bridge, "VALID_STATUSES", {"completed"}):
-            return {**surface_result, "schema": schema}
-        raise ValueError("unsupported cursor result schema")
-    return surface_result
+def normalize(
+    surface_result: dict[str, Any],
+    *,
+    assignment: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Validate and digest-bind one Cursor result document.
+
+    The former adapter probed for APIs that the canonical bridge never exposed
+    and then fell back to changing only the schema string. This function calls
+    the actual bridge contract. Assignment correlation remains optional because
+    older lifecycle receipts may not carry every exact result-role field; the
+    result gateway independently correlates all identities it does have.
+    """
+
+    if not isinstance(surface_result, dict):
+        raise ValueError("cursor subagent result must be a JSON object")
+    normalized = result_bridge.with_artifact_digest(surface_result)
+    if assignment is None:
+        return normalized
+
+    # Use the stronger bridge correlation only when the lifecycle assignment
+    # contains the exact fields its contract requires.
+    document_assignment = normalized["assignment"]
+    required = {
+        "campaign_id",
+        "graph_id",
+        "action_id",
+        "agent_id",
+        "lease_id",
+        "base_sha",
+    }
+    if required.issubset(assignment) and all(assignment.get(key) for key in required):
+        exact = {key: assignment[key] for key in required}
+        exact.update(
+            {
+                "role": assignment.get("result_role") or document_assignment["role"],
+                "allowed_paths": list(
+                    assignment.get("allowed_paths")
+                    or document_assignment.get("allowed_paths")
+                    or []
+                ),
+                "forbidden_paths": list(
+                    assignment.get("forbidden_paths")
+                    or document_assignment.get("forbidden_paths")
+                    or []
+                ),
+            }
+        )
+        if document_assignment["role"] == "verifier_reviewer":
+            exact["subject_agent_id"] = document_assignment.get("subject_agent_id")
+        return result_bridge.validate_result_against_assignment(normalized, exact)
+    return normalized

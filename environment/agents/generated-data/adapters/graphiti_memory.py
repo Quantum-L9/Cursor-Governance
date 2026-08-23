@@ -8,7 +8,6 @@ import sys
 import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
 from urllib.error import HTTPError, URLError
@@ -73,10 +72,7 @@ class MemoryDeliveryResult:
 
 
 class MemoryTransport(Protocol):
-    def deliver(
-        self,
-        candidate: Mapping[str, Any],
-    ) -> Mapping[str, Any]:
+    def deliver(self, candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         """Deliver one governed memory candidate."""
 
 
@@ -87,10 +83,7 @@ class FileOutboxTransport:
         self.outbox_dir = Path(outbox_dir) if outbox_dir else _MEMORY_OUTBOX_DIR
         self.outbox_dir.mkdir(parents=True, exist_ok=True)
 
-    def deliver(
-        self,
-        candidate: Mapping[str, Any],
-    ) -> Mapping[str, Any]:
+    def deliver(self, candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         candidate_id = str(candidate["candidate_id"])
         target = self.outbox_dir / f"{candidate_id}.json"
         payload = canonical_json(candidate)
@@ -125,7 +118,7 @@ class FileOutboxTransport:
 
 
 class HttpJsonTransport:
-    """Submit governed candidates to an HTTP JSON endpoint."""
+    """Submit governed candidates to an HTTPS JSON endpoint."""
 
     def __init__(
         self,
@@ -140,10 +133,7 @@ class HttpJsonTransport:
         self.bearer_token = bearer_token
         self.timeout_seconds = timeout_seconds
 
-    def deliver(
-        self,
-        candidate: Mapping[str, Any],
-    ) -> Mapping[str, Any]:
+    def deliver(self, candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         headers = {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -166,10 +156,17 @@ class HttpJsonTransport:
                 body = response.read()
                 status_code = response.status
         except HTTPError as exc:
-            body = exc.read().decode(
-                "utf-8",
-                errors="replace",
-            )
+            body = exc.read().decode("utf-8", errors="replace")
+            try:
+                parsed = json.loads(body)
+            except json.JSONDecodeError:
+                parsed = None
+            if isinstance(parsed, Mapping) and str(parsed.get("status", "")).lower() in {
+                "rejected",
+                "denied",
+                "quarantined",
+            }:
+                return {**dict(parsed), "http_status": exc.code}
             raise GraphitiAdapterError(
                 f"Graphiti endpoint rejected candidate: HTTP {exc.code}: {body}"
             ) from exc
@@ -178,46 +175,26 @@ class HttpJsonTransport:
         if not 200 <= status_code < 300:
             raise GraphitiAdapterError(f"Unexpected Graphiti status: {status_code}")
         if not body:
-            return {
-                "status": "accepted",
-                "http_status": status_code,
-            }
+            return {"status": "accepted", "http_status": status_code}
         try:
             parsed = json.loads(body)
         except json.JSONDecodeError:
-            parsed = {
-                "raw_response": body.decode(
-                    "utf-8",
-                    errors="replace",
-                )
-            }
+            parsed = {"raw_response": body.decode("utf-8", errors="replace")}
         if not isinstance(parsed, Mapping):
             parsed = {"response": parsed}
-        return {
-            "status": "accepted",
-            "http_status": status_code,
-            **dict(parsed),
-        }
+        return {"status": "accepted", "http_status": status_code, **dict(parsed)}
 
 
 class CommandTransport:
     """Invoke an explicit Graphiti ingestion command with JSON on stdin."""
 
-    def __init__(
-        self,
-        command: list[str],
-        *,
-        timeout_seconds: int = 30,
-    ) -> None:
+    def __init__(self, command: list[str], *, timeout_seconds: int = 30) -> None:
         if not command:
             raise ValueError("Graphiti command transport requires a command")
         self.command = command
         self.timeout_seconds = timeout_seconds
 
-    def deliver(
-        self,
-        candidate: Mapping[str, Any],
-    ) -> Mapping[str, Any]:
+    def deliver(self, candidate: Mapping[str, Any]) -> Mapping[str, Any]:
         completed = subprocess.run(
             self.command,
             input=canonical_json(candidate),
@@ -225,35 +202,37 @@ class CommandTransport:
             timeout=self.timeout_seconds,
             check=False,
         )
-        stdout = completed.stdout.decode(
-            "utf-8",
-            errors="replace",
-        )
-        stderr = completed.stderr.decode(
-            "utf-8",
-            errors="replace",
-        )
-        if completed.returncode != 0:
-            raise GraphitiAdapterError(
-                f"Graphiti command rejected candidate: exit={completed.returncode}; stderr={stderr}"
-            )
+        stdout = completed.stdout.decode("utf-8", errors="replace")
+        stderr = completed.stderr.decode("utf-8", errors="replace")
         if not stdout.strip():
-            response: Mapping[str, Any] = {"status": "accepted"}
+            response: Mapping[str, Any] = {
+                "status": "accepted" if completed.returncode == 0 else "unknown"
+            }
         else:
             try:
                 parsed = json.loads(stdout)
             except json.JSONDecodeError:
                 parsed = {
-                    "status": "accepted",
+                    "status": "accepted" if completed.returncode == 0 else "unknown",
                     "stdout": stdout,
                 }
-            if not isinstance(parsed, Mapping):
-                response = {
-                    "status": "accepted",
+            response = (
+                parsed
+                if isinstance(parsed, Mapping)
+                else {
+                    "status": "accepted" if completed.returncode == 0 else "unknown",
                     "response": parsed,
                 }
-            else:
-                response = parsed
+            )
+        response_status = str(response.get("status", "unknown")).lower()
+        if completed.returncode != 0 and response_status not in {
+            "rejected",
+            "denied",
+            "quarantined",
+        }:
+            raise GraphitiAdapterError(
+                f"Graphiti command failed: exit={completed.returncode}; stderr={stderr}"
+            )
         return {
             **dict(response),
             "stderr": stderr,
@@ -263,6 +242,23 @@ class CommandTransport:
 
 class GraphitiMemoryAdapter:
     """Compile approved memory-route units into governed candidates."""
+
+    STATUS_ALIASES = {
+        "admitted": "accepted",
+        "duplicate": "deduplicated",
+        "already_exists": "deduplicated",
+    }
+    TERMINAL_STATUSES = {
+        "accepted",
+        "deduplicated",
+        "enqueued",
+        "already_enqueued",
+        "merged",
+        "contested",
+        "quarantined",
+        "rejected",
+        "denied",
+    }
 
     def __init__(self, transport: MemoryTransport) -> None:
         self.transport = transport
@@ -293,7 +289,17 @@ class GraphitiMemoryAdapter:
             "statement_hash": harvested_unit["statement_hash"],
         }
         candidate_hash = hashlib.sha256(canonical_json(candidate_seed)).hexdigest()
-        generated_at = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+        freshness = original.get("freshness") if isinstance(original, Mapping) else None
+        generated_at = str(
+            packet.get("generated_at")
+            or provenance.get("generated_at")
+            or (freshness or {}).get("observed_at")
+            or ""
+        ).strip()
+        if not generated_at:
+            raise GraphitiAdapterError(
+                "candidate generated_at must derive from stable packet provenance"
+            )
         return MemoryCandidate(
             schema_version="1.0.0",
             kind="MemoryCandidate",
@@ -308,6 +314,8 @@ class GraphitiMemoryAdapter:
                 "repository": identity["repository"],
                 "repository_class": identity["repository_class"],
                 "base_sha": identity["base_sha"],
+                "freshness_sha": identity["base_sha"],
+                "visibility": original.get("visibility", "repository_local"),
                 "packet_id": packet["packet_id"],
                 "primary_artifact_id": packet["primary_result"]["artifact_id"],
             },
@@ -329,15 +337,13 @@ class GraphitiMemoryAdapter:
                 "promotion_id": promotion_result["promotion_id"],
                 "promotion_decision": promotion_result["decision"],
                 "risk_class": promotion_result["risk_class"],
-                "visibility": original.get(
-                    "visibility",
-                    "repository_local",
-                ),
+                "visibility": original.get("visibility", "repository_local"),
                 "may_override_repository_state": False,
                 "may_override_canonical_authority": False,
             },
             provenance={
                 **dict(provenance),
+                "source_agent_id": identity["agent_id"],
                 "source_evidence": original["source_evidence"],
                 "statement_hash": harvested_unit["statement_hash"],
                 "packet_hash": packet.get("packet_hash"),
@@ -345,42 +351,39 @@ class GraphitiMemoryAdapter:
             generated_at=generated_at,
         )
 
-    def deliver(
-        self,
-        candidate: MemoryCandidate,
-    ) -> MemoryDeliveryResult:
-        payload = candidate.to_dict()
-        response = self.transport.deliver(payload)
-        response_status = str(response.get("status", "unknown"))
-        accepted_statuses = {
-            "accepted",
-            "enqueued",
-            "already_enqueued",
-            "merged",
-            "contested",
-            "quarantined",
-        }
-        if response_status not in accepted_statuses:
+    def deliver(self, candidate: MemoryCandidate) -> MemoryDeliveryResult:
+        response = self.transport.deliver(candidate.to_dict())
+        raw_status = str(response.get("status", "unknown")).lower()
+        response_status = self.STATUS_ALIASES.get(raw_status, raw_status)
+        if response_status not in self.TERMINAL_STATUSES:
             raise GraphitiAdapterError(
-                f"Graphiti transport returned unsupported status: {response_status!r}"
+                f"Graphiti transport returned unsupported status: {raw_status!r}"
             )
         destination_reference = str(
             response.get(
-                "memory_id",
+                "record_id",
                 response.get(
-                    "path",
+                    "memory_id",
                     response.get(
-                        "candidate_id",
-                        candidate.candidate_id,
+                        "write_receipt_id",
+                        response.get(
+                            "path",
+                            response.get("candidate_id", candidate.candidate_id),
+                        ),
                     ),
                 ),
             )
         )
+        normalized_response = {
+            **dict(response),
+            "destination_status": raw_status,
+            "status": response_status,
+        }
         receipt_payload = {
             "candidate_id": candidate.candidate_id,
             "status": response_status,
             "destination_reference": destination_reference,
-            "response": dict(response),
+            "response": normalized_response,
         }
         receipt_hash = hashlib.sha256(canonical_json(receipt_payload)).hexdigest()
         return MemoryDeliveryResult(
@@ -389,7 +392,7 @@ class GraphitiMemoryAdapter:
             transport=type(self.transport).__name__,
             destination_reference=destination_reference,
             receipt_hash=receipt_hash,
-            response=dict(response),
+            response=normalized_response,
         )
 
     @staticmethod
@@ -435,10 +438,7 @@ def select_transport(
             timeout_seconds=timeout_seconds,
         )
     if command:
-        return CommandTransport(
-            command,
-            timeout_seconds=timeout_seconds,
-        )
+        return CommandTransport(command, timeout_seconds=timeout_seconds)
     return FileOutboxTransport()
 
 

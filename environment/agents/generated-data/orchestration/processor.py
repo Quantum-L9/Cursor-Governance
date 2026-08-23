@@ -1,10 +1,10 @@
-"""Persisted processing of one subagent data packet through the runtime pipeline.
+"""Persisted generated-data processing with resumable stage snapshots.
 
-Runs validate -> harvest -> classify -> route -> promotion-gate against the
-Wave 1-3 runtime, persisting each stage as an explicit state transition and a
-hash-chained receipt, then queues one delivery per promoted unit. Delivery
-itself is performed asynchronously by the delivery worker; this processor stops
-at DELIVERY_PENDING so dispatch stays a separate, independently retryable step.
+The processor owns validate -> harvest/classify -> route -> promotion -> delivery
+queueing. The raw packet is committed by ``PipelineStateStore.create_job`` before
+validation. Every lossy stage stores its complete output before advancing state,
+so a retry resumes from durable data rather than silently treating an incomplete
+job as finished.
 """
 
 from __future__ import annotations
@@ -51,7 +51,20 @@ class ProcessingResult:
 
 
 class GeneratedDataProcessor:
-    """Deterministic, persisted execution of the generated-data pipeline."""
+    """Deterministic, persisted and resumable generated-data pipeline."""
+
+    TERMINAL_STATES = {
+        PipelineState.DELIVERY_PENDING,
+        PipelineState.DESTINATION_SUBMITTED,
+        PipelineState.DESTINATION_DEFERRED,
+        PipelineState.DELIVERING,
+        PipelineState.DELIVERED,
+        PipelineState.DESTINATION_ACCEPTED,
+        PipelineState.DESTINATION_REJECTED,
+        PipelineState.RETRY_WAIT,
+        PipelineState.DEAD_LETTERED,
+        PipelineState.LEARNING_CLOSED,
+    }
 
     def __init__(
         self,
@@ -63,6 +76,27 @@ class GeneratedDataProcessor:
         self.store = store or PipelineStateStore(configuration.database_path)
         self.receipts = ProcessingReceiptChain(self.store)
         self.loader = PriorWaveModuleLoader(configuration.repository_root)
+
+    @staticmethod
+    def job_id_for_packet(packet: Mapping[str, Any]) -> str:
+        identity = packet.get("identity")
+        if not isinstance(identity, Mapping):
+            raise ProcessingError("packet.identity must be an object")
+        packet_id = str(packet.get("packet_id", "")).strip()
+        if not packet_id:
+            raise ProcessingError("packet.packet_id is required")
+        campaign_id = str(identity.get("campaign_id") or "").strip()
+        if not campaign_id:
+            raise ProcessingError("packet.identity.campaign_id is required")
+        return deterministic_id(
+            "job",
+            {
+                "campaign_id": campaign_id,
+                "action_id": identity.get("action_id"),
+                "packet_id": packet_id,
+                "base_sha": identity.get("base_sha"),
+            },
+        )
 
     def process_packet(
         self,
@@ -90,72 +124,114 @@ class GeneratedDataProcessor:
             )
 
         campaign_id = str(identity["campaign_id"])
-        job_id = deterministic_id(
-            "job",
-            {
-                "campaign_id": campaign_id,
-                "action_id": identity.get("action_id"),
-                "packet_id": packet_id,
-                "base_sha": identity.get("base_sha"),
-            },
-        )
-        job = self.store.create_job(
+        job_id = self.job_id_for_packet(packet)
+        self.store.create_job(
             job_id=job_id,
             campaign_id=campaign_id,
             graph_id=identity.get("graph_id"),
             packet_id=packet_id,
             packet=packet,
         )
-        if job.state is not PipelineState.RECEIVED:
-            # Idempotent reprocessing: the packet was already processed for this
-            # deterministic job id; return the existing job without re-running.
-            existing_deliveries = self.store.list_stage_snapshots(
-                job_id=job_id, stage=PipelineState.DELIVERY_PENDING.value
-            )
-            return ProcessingResult(
-                job=job,
-                delivery_count=len(existing_deliveries),
-                promotions=(),
-            )
-
         runtime = self._load_runtime()
-        self._validate(runtime, packet, job_id, actor)
-        harvested = self._harvest(runtime, packet, job_id, actor)
-        harvested_dicts = [unit.to_dict() for unit in harvested]
-        self._transition(job_id, PipelineState.HARVESTED, PipelineState.CLASSIFIED, actor)
-        routing_dicts = self._route(runtime, harvested_dicts, job_id, actor)
-        promotions = self._promote(
-            runtime,
-            harvested_dicts,
-            routing_dicts,
-            job_id,
-            actor,
-            independent_validation_present=independent_validation_present,
-            designated_authority_approval=designated_authority_approval,
-            recurrence_counts=dict(recurrence_counts or {}),
+        recurrence = dict(recurrence_counts or {})
+
+        while True:
+            job = self.store.get_job(job_id)
+            if job.state is PipelineState.REJECTED:
+                raise ProcessingError(f"packet {job_id} is rejected")
+            if job.state in self.TERMINAL_STATES:
+                return self._existing_result(job)
+
+            if job.state is PipelineState.RECEIVED:
+                self._validate(runtime, packet, job_id, actor)
+                continue
+            if job.state is PipelineState.VALIDATED:
+                self._harvest(runtime, packet, job_id, actor)
+                continue
+            if job.state is PipelineState.HARVESTED:
+                harvested = self._stage_payloads(job_id, PipelineState.HARVESTED)
+                self._transition(
+                    job_id,
+                    PipelineState.HARVESTED,
+                    PipelineState.CLASSIFIED,
+                    actor,
+                    payload={"classified": len(harvested)},
+                )
+                continue
+            if job.state is PipelineState.CLASSIFIED:
+                harvested = self._stage_payloads(job_id, PipelineState.HARVESTED)
+                self._route(runtime, harvested, job_id, actor)
+                continue
+            if job.state is PipelineState.ROUTED:
+                harvested = self._stage_payloads(job_id, PipelineState.HARVESTED)
+                routing = self._stage_payloads(job_id, PipelineState.ROUTED)
+                self._promote(
+                    runtime,
+                    harvested,
+                    routing,
+                    job_id,
+                    actor,
+                    independent_validation_present=independent_validation_present,
+                    designated_authority_approval=designated_authority_approval,
+                    recurrence_counts=recurrence,
+                )
+                continue
+            if job.state is PipelineState.PROMOTION_DECIDED:
+                harvested = self._stage_payloads(job_id, PipelineState.HARVESTED)
+                routing = self._stage_payloads(job_id, PipelineState.ROUTED)
+                promotions = self._stage_payloads(job_id, PipelineState.PROMOTION_DECIDED)
+                delivery_count = self._queue_deliveries(
+                    job_id=job_id,
+                    packet_id=packet_id,
+                    harvested_dicts=harvested,
+                    routing_dicts=routing,
+                    promotions=promotions,
+                )
+                target = (
+                    PipelineState.DELIVERY_PENDING
+                    if delivery_count
+                    else PipelineState.LEARNING_CLOSED
+                )
+                self._transition(
+                    job_id,
+                    PipelineState.PROMOTION_DECIDED,
+                    target,
+                    actor,
+                    payload={
+                        "delivery_count": delivery_count,
+                        "reason": (
+                            "promoted deliveries queued"
+                            if delivery_count
+                            else "no promoted delivery; learning lifecycle closed"
+                        ),
+                    },
+                )
+                self.store.recalculate_campaign_state(campaign_id)
+                return ProcessingResult(
+                    job=self.store.get_job(job_id),
+                    delivery_count=delivery_count,
+                    promotions=tuple(promotions),
+                )
+            raise ProcessingError(f"unsupported processing state: {job.state.value}")
+
+    def _existing_result(self, job: ProcessingJob) -> ProcessingResult:
+        deliveries = self.store.list_stage_snapshots(
+            job_id=job.job_id,
+            stage=PipelineState.DELIVERY_PENDING.value,
         )
-        delivery_count = self._queue_deliveries(
-            job_id=job_id,
-            packet_id=packet_id,
-            harvested_dicts=harvested_dicts,
-            routing_dicts=routing_dicts,
-            promotions=promotions,
-        )
-        self._transition(
-            job_id,
-            PipelineState.PROMOTION_DECIDED,
-            PipelineState.DELIVERY_PENDING,
-            actor,
-            payload={"delivery_count": delivery_count},
-        )
-        self.store.recalculate_campaign_state(campaign_id)
+        promotions = self._stage_payloads(job.job_id, PipelineState.PROMOTION_DECIDED)
         return ProcessingResult(
-            job=self.store.get_job(job_id),
-            delivery_count=delivery_count,
+            job=job,
+            delivery_count=len(deliveries),
             promotions=tuple(promotions),
         )
 
-    # ---- pipeline stages -------------------------------------------------
+    def _stage_payloads(self, job_id: str, stage: PipelineState) -> list[Mapping[str, Any]]:
+        return [
+            item["payload"]
+            for item in self.store.list_stage_snapshots(job_id=job_id, stage=stage.value)
+        ]
+
     def _load_runtime(self) -> dict[str, Any]:
         return {
             "PacketValidator": self.loader.load_runtime_module("packet_validator").PacketValidator,
@@ -175,12 +251,13 @@ class GeneratedDataProcessor:
     ) -> None:
         report = runtime["PacketValidator"]().validate(packet)
         if not report.valid:
+            findings = [finding.to_dict() for finding in report.findings]
             self._transition(
                 job_id,
                 PipelineState.RECEIVED,
                 PipelineState.REJECTED,
                 actor,
-                payload={"findings": [finding.to_dict() for finding in report.findings]},
+                payload={"findings": findings},
             )
             raise ProcessingError(f"packet {job_id} failed validation")
         self._transition(
@@ -197,16 +274,26 @@ class GeneratedDataProcessor:
         packet: Mapping[str, Any],
         job_id: str,
         actor: str,
-    ) -> list[Any]:
+    ) -> None:
         result = runtime["SubagentDataHarvester"]().harvest(packet)
+        harvested = [unit.to_dict() for unit in result.harvested_units]
+        for unit in harvested:
+            self.store.add_stage_snapshot(
+                job_id=job_id,
+                stage=PipelineState.HARVESTED.value,
+                payload=unit,
+            )
         self._transition(
             job_id,
             PipelineState.VALIDATED,
             PipelineState.HARVESTED,
             actor,
-            payload={"harvested": len(result.harvested_units)},
+            payload={
+                "harvested": len(harvested),
+                "duplicates": len(result.duplicate_unit_ids),
+                "rejected": len(result.rejected_units),
+            },
         )
-        return list(result.harvested_units)
 
     def _route(
         self,
@@ -214,10 +301,15 @@ class GeneratedDataProcessor:
         harvested_dicts: list[Mapping[str, Any]],
         job_id: str,
         actor: str,
-    ) -> list[Mapping[str, Any]]:
-        engine = runtime["RoutingEngine"]()
-        decisions = engine.route_many(harvested_dicts)
+    ) -> None:
+        decisions = runtime["RoutingEngine"]().route_many(harvested_dicts)
         routing_dicts = [decision.to_dict() for decision in decisions]
+        for decision in routing_dicts:
+            self.store.add_stage_snapshot(
+                job_id=job_id,
+                stage=PipelineState.ROUTED.value,
+                payload=decision,
+            )
         self._transition(
             job_id,
             PipelineState.CLASSIFIED,
@@ -225,7 +317,6 @@ class GeneratedDataProcessor:
             actor,
             payload={"decisions": len(routing_dicts)},
         )
-        return routing_dicts
 
     def _promote(
         self,
@@ -238,9 +329,8 @@ class GeneratedDataProcessor:
         independent_validation_present: bool,
         designated_authority_approval: bool,
         recurrence_counts: Mapping[str, int],
-    ) -> list[Mapping[str, Any]]:
-        gate = runtime["PromotionGate"]()
-        results = gate.evaluate_many(
+    ) -> None:
+        results = runtime["PromotionGate"]().evaluate_many(
             harvested_units=harvested_dicts,
             routing_decisions=routing_dicts,
             independent_validation_present=independent_validation_present,
@@ -248,6 +338,12 @@ class GeneratedDataProcessor:
             recurrence_counts=recurrence_counts,
         )
         promotions = [result.to_dict() for result in results]
+        for promotion in promotions:
+            self.store.add_stage_snapshot(
+                job_id=job_id,
+                stage=PipelineState.PROMOTION_DECIDED.value,
+                payload=promotion,
+            )
         self._transition(
             job_id,
             PipelineState.ROUTED,
@@ -255,10 +351,12 @@ class GeneratedDataProcessor:
             actor,
             payload={
                 "promoted": sum(1 for item in promotions if item["decision"] == "promote"),
+                "deferred": sum(1 for item in promotions if item["decision"] == "defer"),
+                "retained": sum(1 for item in promotions if item["decision"] == "retain"),
+                "rejected": sum(1 for item in promotions if item["decision"] == "reject"),
                 "total": len(promotions),
             },
         )
-        return promotions
 
     def _queue_deliveries(
         self,
@@ -283,7 +381,9 @@ class GeneratedDataProcessor:
             routing_decision = routing_by_key.get((unit_id, route))
             harvested_unit = harvested_by_id.get(unit_id)
             if routing_decision is None or harvested_unit is None:
-                continue
+                raise ProcessingError(
+                    f"promotion references missing route or harvested unit: {unit_id}/{route}"
+                )
             delivery = {
                 "delivery_id": deterministic_id(
                     "delivery",
@@ -312,7 +412,6 @@ class GeneratedDataProcessor:
             delivery_count += 1
         return delivery_count
 
-    # ---- helpers ---------------------------------------------------------
     def _transition(
         self,
         job_id: str,
