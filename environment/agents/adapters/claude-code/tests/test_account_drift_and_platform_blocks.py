@@ -105,10 +105,19 @@ class StubRevisionTests(unittest.TestCase):
         self.assertEqual(result["stub_revision_expected"], stub_revision_expected())
 
     def test_unrecorded_revision_is_drift(self) -> None:
-        """The audited state: a stub cached before the stamp existed."""
+        """The audited state: a stub cached before the stamp existed.
+
+        The premise is that no revision is recorded anywhere, so the session-env
+        fallback has to be pointed at an absent file. Letting it read the real
+        `~/.l9/cloud-session.env` made this pass only on a machine that has no
+        such file — green in CI, red on any governed session that stamps one.
+        """
         with tempfile.TemporaryDirectory() as tmp:
-            self.assertEqual(stub_revision_actual({}, Path(tmp) / "absent.env"), "")
-        self.assertTrue(run(dict(AUDITED_ENV))["stub_drift"])
+            absent = Path(tmp) / "absent.env"
+            self.assertEqual(stub_revision_actual({}, absent), "")
+            result = run(dict(AUDITED_ENV), session_env=absent)
+        self.assertTrue(result["stub_drift"])
+        self.assertEqual(result["stub_revision_actual"], "")
 
     def test_matching_revision_is_not_drift(self) -> None:
         env = {**parse_env_example(), "L9_STUB_REVISION": stub_revision_expected()}

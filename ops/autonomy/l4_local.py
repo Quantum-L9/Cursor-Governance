@@ -171,11 +171,34 @@ def _git(root: Path, *args: str) -> str:
 
 
 def current_branch(root: Path) -> str:
-    return _git(root, "rev-parse", "--abbrev-ref", "HEAD")
+    """The checked-out branch, including on a repository with no commits.
+
+    `rev-parse --abbrev-ref HEAD` cannot answer for an unborn HEAD -- it fails
+    with "ambiguous argument 'HEAD'". A freshly `git init`-ed repository is a
+    legitimate state, and this runs inside the execution gate, so raising there
+    turned every policy question in such a repository into an
+    INTERNAL_EVALUATION_ERROR denial. `branch --show-current` answers without a
+    commit; `rev-parse` stays the fallback for a detached HEAD, which
+    `--show-current` reports as empty.
+    """
+    try:
+        branch = _git(root, "branch", "--show-current")
+    except RuntimeError:
+        branch = ""
+    if branch:
+        return branch
+    try:
+        return _git(root, "rev-parse", "--abbrev-ref", "HEAD")
+    except RuntimeError:
+        return ""
 
 
 def current_head(root: Path) -> str:
-    return _git(root, "rev-parse", "HEAD")
+    """The HEAD sha, or "" when HEAD is unborn or unreadable."""
+    try:
+        return _git(root, "rev-parse", "HEAD")
+    except RuntimeError:
+        return ""
 
 
 def load_json(path: Path) -> dict[str, Any] | None:
