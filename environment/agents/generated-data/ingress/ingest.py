@@ -313,6 +313,19 @@ def ingest_packet(
         )
 
 
+#: Ingress states from which no further work will happen on its own. Anything
+#: else describes a run still in flight, which a repeat call may resume.
+_UNSETTLED_PROCESSING = frozenset({"PENDING", "UNKNOWN"})
+
+
+def _is_settled(receipt: Mapping[str, Any]) -> bool:
+    """True when a recorded ingress receipt is a final answer for its input."""
+    if str(receipt.get("outcome") or "") != "CAPTURED":
+        # NO_REUSABLE_DATA, QUARANTINED, REJECTED and FAILED are all terminal.
+        return True
+    return str(receipt.get("processing_status") or "UNKNOWN") not in _UNSETTLED_PROCESSING
+
+
 def ingest_accepted_result(
     *,
     accepted_result: dict[str, Any],
@@ -338,9 +351,19 @@ def ingest_accepted_result(
                 "processing_status": "NOT_STARTED",
             }
         )
+    acceptance_digest = str(acceptance_receipt["receipt_digest"])
+    existing = ingress_receipts.load_ingress(acceptance_digest)
+    if existing is not None and _is_settled(existing):
+        # Re-ingesting one accepted result is a no-op that returns the receipt
+        # already on record. Without this the pipeline re-runs and writes a
+        # second receipt whose digest differs only by `observed_at`, so the
+        # same input yields two identities. A non-settled receipt is not
+        # returned: a run that stopped mid-pipeline must be allowed to finish
+        # rather than being certified from its own PENDING record.
+        return existing
     return ingest_packet(
         generated_data_packet=generated_data_packet,
-        source_receipt_digest=str(acceptance_receipt["receipt_digest"]),
+        source_receipt_digest=acceptance_digest,
         source_kind="accepted_subagent_result",
         actor=actor,
         repository_root=repository_root,
