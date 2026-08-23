@@ -1,0 +1,9 @@
+run_id=32613859316
+run_attempt=1
+head=36b2b0e647b97ca805e1f3caeca6f69a44f20daf
+--- git status ---
+ M environment/program-execution/scripts/run_campaign.py
+?? .github/pe-executor-failure.txt
+--- diff stat ---
+ .../program-execution/scripts/run_campaign.py      | 540 +++++++++++++++++++--
+ 1 file changed, 513 insertions(+), 27 deletions(-)

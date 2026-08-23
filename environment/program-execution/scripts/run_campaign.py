@@ -2,8 +2,8 @@
 """Operator front door for PE campaign activation.
 
 Sealed stages: isolate → emit → blueprint → collect → accept →
-pec bootstrap (no draft) → pec reconcile → contract/claim TASK-001 →
-execute every task → stacked task PRs → pec+host close → COMPLETED/.
+pec bootstrap (no draft) → pec reconcile → contract/claim →
+Peer Execution → Controller verify → local commits → STOP.
 
 program-execution.intent.v1 and pe-<hash> workspaces are not this path.
 """
@@ -59,20 +59,23 @@ UNTIL_STAGES = (
     "bootstrap",
     "arm",
     "execute",
-    "pr",
-    "close",
 )
-UNTIL_ALIASES = {"merge": "close", "bootstrap": "arm"}
-STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES)}
+UNTIL_ALIASES = {"bootstrap": "arm"}
+# Kept only so unreachable compatibility helpers can compare their historical
+# stages without becoming public runner stages again.
+LEGACY_PUBLICATION_STAGES = ("pr", "close", "merge")
+STAGE_INDEX = {
+    name: index for index, name in enumerate(UNTIL_STAGES + ("pr", "close"))
+}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
 HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 FIRST_TASK_ID = "TASK-001"
 PE_MODE_ENV = "L9_PE_MODE"
-# Autonomous Program Execution is local-commit-only. It prepares, executes,
-# validates, verifies, and commits — then stops. Pushing a branch, opening or
-# updating a pull request, and merging are release actions, not campaign
-# stages, and only run under an explicit governed release transition.
+# Program Execution is permanently local-commit-only. The historical
+# release variable is retained as a diagnostic compatibility name only; it can
+# never widen runner authority. Publication belongs to root `make pr`; merge
+# belongs to /l9-pr-remediation.
 PE_RELEASE_ENV = "L9_PE_RELEASE_AUTHORIZED"
 AUTONOMOUS_LAST_STAGE = "execute"
 PUBLICATION_STAGES = ("pr", "close")
@@ -118,24 +121,17 @@ class CampaignError(RuntimeError):
 
 
 def release_authorized() -> bool:
-    """True only under an explicit governed release transition.
-
-    Publication is deliberately not a campaign stage. An autonomous run leaves
-    the work as local commits; a human or `/l9-pr-remediation` carries it to the
-    remote under its own authority.
-    """
-    return bool(os.environ.get(PE_RELEASE_ENV, "").strip())
+    """Compatibility probe: Program Execution never owns release authority."""
+    return False
 
 
 def refuse_publication(action: str) -> None:
-    """Fail closed on any remote publication outside a release transition."""
-    if release_authorized():
-        return
+    """Fail closed on every remote publication attempt from Program Execution."""
     raise CampaignError(
-        f"autonomous Program Execution is local-commit-only; refusing to {action}. "
-        f"Campaign execution ends at '{AUTONOMOUS_LAST_STAGE}' with local commits. "
-        f"Publication is a separate governed release transition (set "
-        f"{PE_RELEASE_ENV}=<reason>); merge authority belongs to /l9-pr-remediation."
+        f"Program Execution is permanently local-commit-only; refusing to {action}. "
+        f"Campaign execution ends at '{AUTONOMOUS_LAST_STAGE}' with verified local commits. "
+        "Publish separately with `PR_REMEDIATE=0 make pr`; merge only through "
+        "/l9-pr-remediation. L9_PE_RELEASE_AUTHORIZED cannot widen PE authority."
     )
 
 
@@ -1783,7 +1779,9 @@ def default_program_blockers(
 
 def normalize_until(until: str) -> str:
     mapped = UNTIL_ALIASES.get(until, until)
-    if mapped not in STAGE_INDEX:
+    if until in LEGACY_PUBLICATION_STAGES or mapped in PUBLICATION_STAGES:
+        refuse_publication(f"run campaign stage {until!r}")
+    if mapped not in UNTIL_STAGES:
         raise CampaignError(
             "until must be one of " + ", ".join(UNTIL_STAGES + tuple(UNTIL_ALIASES))
         )
@@ -2407,6 +2405,465 @@ def fill_inferred_validation(
     return rematerialize_after_relock(workspace, task_id)
 
 
+def _peer_identity() -> tuple[str, str, str | None]:
+    """Resolve the live agent/surface identity without inventing a provider."""
+    agent_ref = os.environ.get("L9_PE_AGENT_REF", "").strip()
+    surface = os.environ.get("L9_PE_SURFACE", "").strip()
+    provider_ref = os.environ.get("L9_PE_PROVIDER_REF", "").strip() or None
+    if agent_ref and surface:
+        return agent_ref, surface, provider_ref
+    governance_surface = os.environ.get("L9_GOVERNANCE_SURFACE", "").strip().lower()
+    aliases = {
+        "claude-code": ("claude-code", "claude-cli"),
+        "claude-cli": ("claude-code", "claude-cli"),
+        "claude-web": ("claude-code", "claude-web"),
+        "claude-mobile": ("claude-code", "claude-mobile"),
+        "cursor": ("cursor", "cursor-ide"),
+        "cursor-ide": ("cursor", "cursor-ide"),
+        "codex": ("codex", "codex-cli"),
+        "gemini": ("gemini", "gemini-cli"),
+        "manus": ("manus", "manus-web"),
+    }
+    identity = aliases.get(governance_surface)
+    if identity is None:
+        raise CampaignError(
+            "Peer Execution requires a canonical runtime binding. Set L9_PE_AGENT_REF and "
+            "L9_PE_SURFACE, or run from a recognized L9_GOVERNANCE_SURFACE."
+        )
+    return identity[0], identity[1], provider_ref
+
+
+def _peer_imports():
+    if str(PE_ROOT) not in sys.path:
+        sys.path.insert(0, str(PE_ROOT))
+    from peer_execution.autonomy.models import (  # noqa: PLC0415
+        ActionRuntime,
+        ActionSpec,
+        ActionStatus,
+        CampaignState,
+        ConcurrencyBudget,
+        ResourceLock,
+    )
+    from peer_execution.autonomy.scheduler import plan_ready_set  # noqa: PLC0415
+    from peer_execution.bindings import resolve_peer_binding  # noqa: PLC0415
+    from peer_execution.models import ProbeContext  # noqa: PLC0415
+    from peer_execution.runner import run_to_terminal  # noqa: PLC0415
+    import provider_loader  # noqa: PLC0415
+
+    return {
+        "ActionRuntime": ActionRuntime,
+        "ActionSpec": ActionSpec,
+        "ActionStatus": ActionStatus,
+        "CampaignState": CampaignState,
+        "ConcurrencyBudget": ConcurrencyBudget,
+        "ResourceLock": ResourceLock,
+        "plan_ready_set": plan_ready_set,
+        "resolve_peer_binding": resolve_peer_binding,
+        "ProbeContext": ProbeContext,
+        "run_to_terminal": run_to_terminal,
+        "provider_loader": provider_loader,
+    }
+
+
+def _peer_concurrency_budget():
+    modules = _peer_imports()
+    policy = load_yaml(PE_ROOT / "registry/EXECUTION_CONCURRENCY_POLICY.yaml")
+    limits = dict((policy or {}).get("limits") or {})
+    return modules["ConcurrencyBudget"](
+        total_lanes=int(limits.get("max_active_dispatches") or 1),
+        mutation_lanes=int(limits.get("max_mutating_dispatches") or 1),
+    )
+
+
+def _task_target_lineage(task: dict[str, Any]) -> tuple[str, ...]:
+    candidates = task.get("target_ids") or task.get("target_id") or task.get("target") or ()
+    if isinstance(candidates, str):
+        values = [candidates]
+    elif isinstance(candidates, (list, tuple)):
+        values = [str(item) for item in candidates if item]
+    else:
+        values = []
+    return tuple(values or ["TARGET-001"])
+
+
+def _plan_peer_task_batch(
+    campaign_id: str,
+    tasks: list[dict[str, Any]],
+    task_states: dict[str, str],
+) -> list[str]:
+    """Use the canonical scheduler to choose the next non-conflicting ready set."""
+    modules = _peer_imports()
+    specs: dict[str, Any] = {}
+    runtime: dict[str, Any] = {}
+    for index, task in enumerate(tasks):
+        task_id = str(task["id"])
+        resources = [
+            modules["ResourceLock"](key=f"target-lineage:{target}", mode="write")
+            for target in _task_target_lineage(task)
+        ]
+        resources.extend(
+            modules["ResourceLock"](key=f"path:{path}", mode="write")
+            for path in task_output_locations(task)
+        )
+        specs[task_id] = modules["ActionSpec"](
+            action_id=task_id,
+            objective=str(task.get("title") or task.get("objective") or task_id),
+            depends_on=tuple(
+                str(item)
+                for item in (task.get("dependencies") or task.get("depends_on") or [])
+            ),
+            resources=tuple(resources),
+            mutation=True,
+            authority_granted=True,
+            preconditions_satisfied=task_states.get(task_id) not in {"STALE", "CANCELLED"},
+            priority=max(0, len(tasks) - index),
+        )
+        status = task_states.get(task_id)
+        runtime[task_id] = modules["ActionRuntime"](
+            status=(
+                modules["ActionStatus"].COMPLETED
+                if status == "COMPLETED"
+                else modules["ActionStatus"].PENDING
+            )
+        )
+    state = modules["CampaignState"](
+        campaign_id=campaign_id,
+        objective=f"Execute {campaign_id} through Peer Execution Core",
+        action_specs=specs,
+        action_runtime=runtime,
+    )
+    plan = modules["plan_ready_set"](state, _peer_concurrency_budget())
+    return list(plan.selected)
+
+
+def _run_peer_execution(
+    workspace: Path,
+    contract: dict[str, Any],
+) -> dict[str, Any]:
+    """Execute one rendered contract through binding → profile → probe → provider."""
+    modules = _peer_imports()
+    agent_ref, surface, provider_override = _peer_identity()
+    binding = modules["resolve_peer_binding"](
+        GOV_ROOT,
+        agent_ref=agent_ref,
+        surface=surface,
+        provider_ref=provider_override,
+    )
+    runtime_root = workspace / "runtime" / "peer-execution"
+    adapter = modules["provider_loader"].instantiate(
+        binding.provider_ref,
+        runtime_root,
+        execution_profile_ref=binding.execution_profile_ref,
+        binding_context=binding.to_dict(),
+    )
+    requested = tuple(str(item) for item in (contract.get("requested_actions") or []))
+    probe = adapter.probe(
+        modules["ProbeContext"](
+            repository_root=str(GOV_ROOT),
+            runtime_root=str(runtime_root),
+            program_lock_digest=str(contract["program_digest"]),
+            requested_capabilities=requested,
+            metadata=binding.to_dict(),
+        )
+    )
+    if probe.status != "PASS":
+        raise CampaignError(
+            f"Peer Execution capability probe blocked {contract.get('task_id')}: "
+            f"{probe.blocked_reason or 'UNKNOWN'}"
+        )
+    prepared = adapter.prepare(contract)
+    dispatched = adapter.dispatch(prepared.to_dict())
+    dispatch_id = str(dispatched.dispatch_id or prepared.dispatch_id or "")
+    terminal = modules["run_to_terminal"](adapter, dispatch_id, dispatched.status)
+    if terminal.status != "PASS":
+        raise CampaignError(
+            f"Peer Execution provider failed {contract.get('task_id')}: {terminal.status}"
+        )
+    receipt = dict(adapter.collect(dispatch_id))
+    adapter.cleanup(dispatch_id)
+    return {
+        "receipt": receipt,
+        "dispatch_id": dispatch_id,
+        "provider_ref": binding.provider_ref,
+        "execution_profile_ref": binding.execution_profile_ref,
+        "agent_ref": binding.agent_ref,
+        "surface": binding.surface,
+    }
+
+
+def _dispatch_peer_batch(
+    workspace: Path,
+    units: list[dict[str, Any]],
+) -> dict[str, dict[str, Any]]:
+    """Run provider windows concurrently and harvest every child before returning."""
+    from concurrent.futures import ThreadPoolExecutor, as_completed  # noqa: PLC0415
+
+    if not units:
+        return {}
+    outcomes: dict[str, dict[str, Any]] = {}
+    failures: dict[str, str] = {}
+    with ThreadPoolExecutor(max_workers=len(units), thread_name_prefix="pe-peer") as pool:
+        futures = {
+            pool.submit(_run_peer_execution, workspace, unit["contract"]): str(unit["task_id"])
+            for unit in units
+        }
+        for future in as_completed(futures):
+            task_id = futures[future]
+            try:
+                outcomes[task_id] = future.result()
+            except Exception as exc:  # harvest all child outcomes before failing the batch
+                failures[task_id] = f"{type(exc).__name__}: {exc}"
+    if failures:
+        raise CampaignError("Peer Execution batch failed: " + json.dumps(failures, sort_keys=True))
+    return outcomes
+
+
+def _prepare_peer_unit(
+    workspace: Path,
+    task: dict[str, Any],
+    *,
+    trace: pe_trace.ExecutionTrace | None,
+) -> dict[str, Any]:
+    task_id = str(task["id"])
+    states = {str(item["id"]): item for item in pec_status_tasks(workspace)}
+    state = str((states.get(task_id) or {}).get("runtime_state") or "")
+    if state in {"STALE", "CANCELLED", "FAILED"}:
+        raise CampaignError(f"{task_id} is {state}; Peer Core does not blind-retry failed attempts")
+    contract_path = workspace / "contracts" / "rendered" / f"{task_id}.json"
+    worktree = workspace / "worktrees" / task_id
+    already_submitted = state in {"SUBMITTED", "VERIFYING"}
+    if already_submitted:
+        if not contract_path.is_file():
+            raise CampaignError(f"{task_id} is {state} without a Rendered Contract")
+        rendered = {"contract": str(contract_path)}
+    else:
+        if state not in {"LEASED", "PREPARED", "CONTRACTED", "EXECUTING"}:
+            with traced(trace, "task_prepare", "materialize_contract", task_id=task_id):
+                ensure_task_contract(workspace, task_id)
+            with traced(trace, "task_prepare", "pec_claim", task_id=task_id):
+                pec_cmd(
+                    workspace,
+                    "claim",
+                    task_id,
+                    "--holder",
+                    "make-campaign",
+                    "--ttl-minutes",
+                    str(TASK_BUDGET_MINUTES),
+                )
+            state = "LEASED"
+        emit(trace, "TASK_SELECTED", "task", "task_selected", task_id=task_id)
+        if state == "LEASED":
+            with traced(trace, "task_prepare", "task_worktree_create", task_id=task_id):
+                prepared = pec_cmd(workspace, "prepare", task_id)
+            worktree = Path(str(prepared.get("worktree") or worktree))
+        if state in {"LEASED", "PREPARED"} or not contract_path.is_file():
+            with traced(trace, "task_prepare", "render_contract", task_id=task_id):
+                rendered = pec_cmd(workspace, "render-contract", task_id)
+        else:
+            rendered = {"contract": str(contract_path)}
+        if state in {"LEASED", "PREPARED", "CONTRACTED"}:
+            pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
+    ensure_workspace_wired(worktree)
+    emit(
+        trace,
+        "TASK_WORKTREE_READY",
+        "task",
+        "task_worktree_ready",
+        task_id=task_id,
+        metadata={"worktree": str(worktree)},
+    )
+    contract = json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
+    contract = fill_inferred_validation(Path(str(rendered["contract"])), contract, worktree)
+    writable = [str(path) for path in (contract.get("writable_paths") or []) if path]
+    if not writable:
+        writable = task_output_locations(task)
+    return {
+        "task": task,
+        "task_id": task_id,
+        "worktree": worktree,
+        "contract": contract,
+        "writable": writable,
+        "rel": writable[0],
+        "title": str(task.get("title") or task_id),
+        "already_submitted": already_submitted,
+    }
+
+
+def _finish_peer_unit(
+    workspace: Path,
+    unit: dict[str, Any],
+    outcome: dict[str, Any] | None,
+    *,
+    trace: pe_trace.ExecutionTrace | None,
+    timer: Any,
+) -> None:
+    task = unit["task"]
+    task_id = unit["task_id"]
+    worktree = unit["worktree"]
+    contract = unit["contract"]
+    writable = unit["writable"]
+    attempt_number: int | None = None
+    if not unit["already_submitted"]:
+        if outcome is None:
+            raise CampaignError(f"missing Peer Execution outcome for {task_id}")
+        receipt = dict(outcome["receipt"])
+        changed = [str(path) for path in (receipt.get("changed_files") or [])]
+        observed = observe_first_write(worktree, changed)
+        if observed:
+            emit(
+                trace,
+                "TASK_FIRST_WRITE",
+                "filesystem_write",
+                "task_first_write",
+                task_id=task_id,
+                metadata={"path": observed[0], "changed_paths": observed[:50]},
+            )
+        validations = [dict(item) for item in (receipt.get("validation_results") or [])]
+        emit(
+            trace,
+            "TASK_VALIDATION_FINISHED",
+            "validation",
+            "task_validation_finished",
+            task_id=task_id,
+            metadata={
+                "failed": sum(1 for item in validations if item.get("status") != "PASS"),
+                "total": len(validations),
+                "provider_ref": outcome["provider_ref"],
+                "execution_profile_ref": outcome["execution_profile_ref"],
+            },
+        )
+        receipt_path = Path(str(contract["attempt_receipt_path"]))
+        if not receipt_path.is_file():
+            raise CampaignError(f"Peer Core did not persist attempt receipt for {task_id}")
+        with traced(trace, "commit", "record_attempt", task_id=task_id):
+            recorded = pec_cmd(workspace, "record-attempt", task_id, "--receipt", str(receipt_path))
+        if isinstance(recorded.get("attempt"), int):
+            attempt_number = int(recorded["attempt"])
+
+    with timer.stage("task_verify", task_id=task_id):
+        verification = traced_verify(
+            workspace, task_id, trace=trace, attempt_number=attempt_number
+        )
+    decision = dispatch_kernel_change(verification)
+    if decision["action"] != "pass":
+        raise CampaignError(
+            f"Diagnose First: Peer Core attempt for {task_id} did not verify cleanly; "
+            f"action={decision['action']} reason={decision['reason']}"
+        )
+    if verification.get("verdict") != "PASSED_LOCAL":
+        raise CampaignError(
+            f"pec verify {task_id} did not PASS: {verification.get('verdict')}; "
+            f"failed gates={json.dumps(failed_gates(verification), sort_keys=True)}"
+        )
+    # Commit only the exact work the Controller just verified. Provider execution
+    # owns mutation; PE retains the local commit boundary.
+    candidate = write_and_commit_output(
+        worktree,
+        unit["rel"],
+        unit["title"],
+        writable=writable,
+    )
+    emit(
+        trace,
+        "TASK_LOCAL_COMMIT",
+        "commit",
+        "task_local_commit",
+        task_id=task_id,
+        metadata={"candidate_sha": candidate},
+    )
+    evidence_id = str(verification["evidence_id"])
+    for gate_id in task.get("completion_gates") or task.get("completion_gate_ids") or []:
+        pec_cmd(
+            workspace,
+            "evaluate-gate",
+            str(gate_id),
+            "PASS",
+            "--evidence-id",
+            evidence_id,
+            "--method",
+            "inspection",
+            "--actor",
+            "make-campaign",
+        )
+    pec_cmd(
+        workspace,
+        "complete",
+        task_id,
+        "--actor",
+        "make-campaign",
+        "--evidence-id",
+        evidence_id,
+    )
+    emit(
+        trace,
+        "TASK_COMPLETED",
+        "task",
+        "task_completed",
+        task_id=task_id,
+        attempt_number=attempt_number,
+        metadata={"evidence_id": evidence_id},
+    )
+
+
+def _default_execute_peer(
+    workspace: Path,
+    campaign_id: str,
+    *,
+    hooks: Hooks,
+    live_prs: bool,
+    trace: pe_trace.ExecutionTrace | None = None,
+    timer: Any | None = None,
+) -> dict[str, Any]:
+    if live_prs:
+        refuse_publication("open task pull requests from the live PE runner")
+    timing = _load_script("pe_timing", PE_ROOT / "scripts/pe_timing.py")
+    timer = timer if timer is not None else timing.StageTimer(workspace)
+    tasks = locked_tasks(workspace)
+    completed: list[str] = []
+    while len(completed) < len(tasks):
+        status_rows = pec_status_tasks(workspace)
+        task_states = {str(item["id"]): str(item.get("runtime_state") or "") for item in status_rows}
+        completed = [task_id for task_id, state in task_states.items() if state == "COMPLETED"]
+        if len(completed) == len(tasks):
+            break
+        selected = _plan_peer_task_batch(campaign_id, tasks, task_states)
+        # A resumed SUBMITTED/VERIFYING task needs verification before any new dispatch.
+        resumable = [
+            str(task["id"])
+            for task in tasks
+            if task_states.get(str(task["id"])) in {"SUBMITTED", "VERIFYING"}
+        ]
+        if resumable:
+            selected = [resumable[0]]
+        if not selected:
+            raise CampaignError(
+                "Peer scheduler found no runnable task while the program is incomplete: "
+                + json.dumps(task_states, sort_keys=True)
+            )
+        by_id = {str(task["id"]): task for task in tasks}
+        units = [_prepare_peer_unit(workspace, by_id[task_id], trace=trace) for task_id in selected]
+        dispatch_units = [unit for unit in units if not unit["already_submitted"]]
+        for unit in dispatch_units:
+            emit(
+                trace,
+                "TASK_WORKER_STARTED",
+                "worker",
+                "peer_execution_started",
+                task_id=unit["task_id"],
+            )
+        with timer.stage("task_worker"):
+            outcomes = _dispatch_peer_batch(workspace, dispatch_units)
+        for unit in units:
+            _finish_peer_unit(
+                workspace,
+                unit,
+                outcomes.get(unit["task_id"]),
+                trace=trace,
+                timer=timer,
+            )
+    return {"completed": sorted(completed)}
+
+
 def run_worker_handoff(
     workspace: Path,
     task: dict[str, Any],
@@ -2578,7 +3035,7 @@ def maybe_open_task_pr(
     return {"output": created.stdout.strip()}
 
 
-def default_execute(
+def _default_execute_legacy(
     workspace: Path,
     campaign_id: str,
     *,
@@ -2882,6 +3339,35 @@ def default_execute(
                 )
         completed.append(task_id)
     return {"completed": completed}
+
+
+def default_execute(
+    workspace: Path,
+    campaign_id: str,
+    *,
+    hooks: Hooks,
+    live_prs: bool,
+    trace: pe_trace.ExecutionTrace | None = None,
+    timer: Any | None = None,
+) -> dict[str, Any]:
+    """Execute through Peer Core; hook-owned writes retain the legacy test seam only."""
+    if hooks.write_task_output is not None:
+        return _default_execute_legacy(
+            workspace,
+            campaign_id,
+            hooks=hooks,
+            live_prs=live_prs,
+            trace=trace,
+            timer=timer,
+        )
+    return _default_execute_peer(
+        workspace,
+        campaign_id,
+        hooks=hooks,
+        live_prs=live_prs,
+        trace=trace,
+        timer=timer,
+    )
 
 
 def commit_host_emit(worktree: Path, campaign_id: str) -> None:
@@ -3887,7 +4373,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 def refuse_live_until_shortcut(until: str) -> None:
     resolved = UNTIL_ALIASES.get(until, until)
-    if resolved in PUBLICATION_STAGES:
+    if until in LEGACY_PUBLICATION_STAGES or resolved in PUBLICATION_STAGES:
         # Reaching a publication stage at all requires the release transition.
         refuse_publication(f"run the campaign through '{resolved}'")
         return
