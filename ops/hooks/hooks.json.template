@@ -54,6 +54,12 @@
         "command": "./hooks/graphiti-gate-edits.sh",
         "matcher": "Write|StrReplace|search_replace|EditNotebook|ApplyPatch|Delete|Task",
         "timeout": 10
+      },
+      {
+        "command": "./hooks/lifecycle-subagent-start.sh pre_tool_use",
+        "matcher": "Task",
+        "timeout": 15,
+        "failClosed": true
       }
     ],
     "beforeShellExecution": [
@@ -80,14 +86,16 @@
     ],
     "subagentStart": [
       {
-        "command": "./hooks/lifecycle-subagent-start.sh",
-        "timeout": 15
+        "command": "./hooks/lifecycle-subagent-start.sh subagent_start",
+        "timeout": 15,
+        "failClosed": true
       }
     ],
     "subagentStop": [
       {
         "command": "./hooks/lifecycle-subagent-stop.sh",
-        "timeout": 15
+        "timeout": 15,
+        "failClosed": true
       }
     ]
   }

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -108,9 +109,51 @@ def compose_subagent_start(
     return _allow(dispatch)
 
 
+def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
+    """Fail closed until a canonical parent admission producer is verified.
+
+    Cursor supplies ``tool_use_id`` at preToolUse, but current repository code has
+    no canonical owner that can bind that host id to a root-Autonomy lease without
+    inferring identity from task prose. The audit explicitly forbids that inference.
+    """
+    if str(payload.get("tool_name") or "") != "Task":
+        return _deny("native lifecycle preToolUse only accepts Task")
+    tool_use_id = str(payload.get("tool_use_id") or "").strip()
+    if not tool_use_id:
+        return _deny("native Task missing tool_use_id")
+    return _deny(
+        "native Task admission is fail-closed until the canonical adapter-session "
+        "producer binds tool_use_id to a root-Autonomy lease"
+    )
+
+
+def compose_host_subagent_start(payload: dict[str, Any]) -> dict[str, Any]:
+    """Reject an uncorrelated host child rather than manufacturing L9 identity."""
+    subagent_id = str(payload.get("subagent_id") or "").strip()
+    tool_call_id = str(payload.get("tool_call_id") or "").strip()
+    if not subagent_id or not tool_call_id:
+        return _deny("native subagentStart missing subagent_id or tool_call_id")
+    return _deny(
+        "native subagentStart has no verified L9 assignment correlation; "
+        "adapter-session activation remains blocked"
+    )
+
+
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--mode",
+        choices=("synthetic", "pre_tool_use", "subagent_start"),
+        default="synthetic",
+    )
+    args = parser.parse_args()
     payload = json.load(sys.stdin)
-    result = compose_subagent_start(payload)
+    if args.mode == "pre_tool_use":
+        result = compose_host_pre_tool_use(payload)
+    elif args.mode == "subagent_start":
+        result = compose_host_subagent_start(payload)
+    else:
+        result = compose_subagent_start(payload)
     json.dump(result, sys.stdout)
     print()
     return 0 if result.get("permission") == "allow" else 1
