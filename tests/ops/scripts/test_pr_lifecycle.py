@@ -363,10 +363,45 @@ def test_precommit_repo_fails_closed_on_tracked_dirt(tmp_path: Path) -> None:
     assert "Do not auto-stage" in proc.stdout
 
 
-def test_pr_check_depends_on_precommit_repo() -> None:
+def test_pr_check_does_not_double_run_precommit_repo() -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
-    assert "pr-check: precommit-repo" in makefile
-    assert "pr: precommit-repo" in makefile
+    assert "pr-check: precommit-repo" not in makefile
+    assert "pr: precommit-repo" not in makefile
+    assert "pr-check: capability-contract-validate" not in makefile
+    assert "push: precommit-repo backup" in makefile
+    assert "push: precommit backup" not in makefile
+
+
+def test_pr_full_owns_corpus_validators() -> None:
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    assert "pr-full: capability-contract-validate" in makefile
+    for name in (
+        "validate_legacy_doctrine_residue.py",
+        "validate_workflow_action_pins.py",
+        "validate_governance_contract_surface.py",
+        "validate_git_denial_residue.py",
+    ):
+        assert name in makefile
+
+
+def test_precommit_skip_list_drops_corpus_hooks() -> None:
+    precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    for hook in (
+        "repo-hygiene",
+        "legacy-doctrine-residue",
+        "rules-check",
+        "skills-check",
+    ):
+        assert hook in precommit
+    assert "SKIP_LIST=" in precommit
+
+
+def test_gate_domain_gates_corpus_validators() -> None:
+    gate = (ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text(encoding="utf-8")
+    assert "=== governance contract surface (always-run) ===" not in gate
+    assert "domain-gated" in gate
+    assert "validate_capability_contract.py" in gate
+    assert "make pr-full owns corpus" in gate
 
 
 def test_gate_does_not_rerun_ruff() -> None:
