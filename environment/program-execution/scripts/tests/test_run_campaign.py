@@ -964,7 +964,7 @@ class RunCampaignTests(unittest.TestCase):
             with patch.dict(os.environ, {"L9_PE_RELEASE_AUTHORIZED": "test release transition"}):
                 report = self.mod.run_campaign(
                     root / "intent.yaml",
-                    until="close",
+                    until="execute",
                     primary=Path(raw) / "primary",
                     repo_root=root,
                     l9_root=l9,
@@ -978,9 +978,9 @@ class RunCampaignTests(unittest.TestCase):
                         ),
                     ),
                 )
-            self.assertEqual(opened, ["demo-activate-v1"])
+            self.assertEqual(opened, [])
             self.assertIn("execute", report.stages_completed)
-            self.assertIn("close", report.stages_completed)
+            self.assertNotIn("close", report.stages_completed)
             receipt = json.loads(
                 (l9 / "programs/demo-activate-v1/receipts/verification/TASK-001.json").read_text(
                     encoding="utf-8"
@@ -1048,7 +1048,7 @@ class RunCampaignTests(unittest.TestCase):
             with patch.dict(os.environ, {"L9_PE_RELEASE_AUTHORIZED": "test release transition"}):
                 self.mod.run_campaign(
                     root / "intent.yaml",
-                    until="close",
+                    until="execute",
                     primary=Path(raw) / "primary",
                     repo_root=root,
                     l9_root=l9,
@@ -1078,7 +1078,6 @@ class RunCampaignTests(unittest.TestCase):
                 "pec_bootstrap",
                 "arm",
                 "execute",
-                "close",
                 "validation_command",
                 "pec_verify",
             ):
@@ -1229,7 +1228,7 @@ class RunCampaignTests(unittest.TestCase):
             with self.assertRaises(RuntimeError):
                 self.mod.run_campaign(
                     root / "intent.yaml",
-                    until="close",
+                    until="execute",
                     primary=Path(raw) / "primary",
                     repo_root=root,
                     l9_root=l9,
@@ -1290,7 +1289,6 @@ class RunCampaignTests(unittest.TestCase):
                 "arm",
                 "execute",
                 "pr",
-                "close",
             ),
         )
 

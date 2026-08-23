@@ -433,3 +433,5 @@ findings were deliberately left open:
       connects. Decide whether cloud sessions must carry it; if it stays
       optional, name the concrete lost capabilities in the startup banner rather
       than reporting a bare `DEGRADED`.
+
+- [x] PE top-level `environment/program-execution/MANIFEST.json` is advisory/manual; campaign promotion no longer blocks on its freshness. Standalone manifest validation remains strict.

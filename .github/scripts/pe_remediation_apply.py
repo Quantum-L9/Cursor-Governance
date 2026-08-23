@@ -17,6 +17,8 @@ def write(path: str, text: str) -> None:
 
 def replace_once(path: str, old: str, new: str) -> None:
     text = read(path)
+    if path == "environment/program-execution/scripts/run_campaign.py" and "def _default_execute_peer(" in text:
+        return
     count = text.count(old)
     if count != 1:
         raise SystemExit(f'{path}: expected exactly one anchor, found {count}: {old[:120]!r}')
@@ -25,6 +27,8 @@ def replace_once(path: str, old: str, new: str) -> None:
 
 def regex_once(path: str, pattern: str, replacement: str, *, flags: int = 0) -> None:
     text = read(path)
+    if path == "environment/program-execution/scripts/run_campaign.py" and "def _default_execute_peer(" in text:
+        return
     updated, count = re.subn(pattern, replacement, text, count=1, flags=flags)
     if count != 1:
         raise SystemExit(f'{path}: expected exactly one regex anchor, found {count}: {pattern[:120]!r}')
@@ -576,10 +580,14 @@ replace_once(RUN, '\n\ndef commit_host_emit(', NEW_WRAPPER + '\n\ndef commit_hos
 
 # Compatibility worker: explicit non-canonical status.
 WORKER = 'environment/program-execution/scripts/pe_worker.py'
-replace_once(
+regex_once(
     WORKER,
-    '"""Provider-neutral worker handoff for Program Execution tasks.\n',
-    '"""Legacy direct-worker compatibility shim.\n\nThe live `make campaign` path executes through Peer Execution Core. This module\nis retained only for deterministic embedding/tests that intentionally own the\nwrite seam; it is not a canonical production dispatcher.\n\n',
+    r'\A#!/usr/bin/env python3\n""".*?"""\n',
+    '#!/usr/bin/env python3\n"""Legacy direct-worker compatibility shim.\n\n'
+    'The live `make campaign` path executes through Peer Execution Core. This module\n'
+    'is retained only for deterministic embedding/tests that intentionally own the\n'
+    'write seam; it is not a canonical production dispatcher.\n"""\n',
+    flags=re.S,
 )
 
 # Peer Core canonical receipt chain must serialize digest linking across threads.

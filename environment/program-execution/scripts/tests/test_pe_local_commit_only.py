@@ -38,7 +38,7 @@ if str(_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_TESTS_DIR))
 
 from test_pe_smoke_campaign import (  # type: ignore[import-not-found]  # noqa: E402
-    _worker_command,
+    _peer_test_env,
 )
 from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     READY_SEED,
@@ -135,9 +135,9 @@ class LocalCommitOnlyTests(unittest.TestCase):
             _install_shims(bin_dir)
 
             env = {
-                "L9_PE_WORKER_CMD": _worker_command(tmp),
+                **_peer_test_env(tmp),
                 "L9_TEST_SUBPROCESS_LOG": str(log),
-                "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+                "PATH": f"{bin_dir}{os.pathsep}{_peer_test_env(tmp)['PATH']}",
             }
             # No release transition is open: this is a plain autonomous run.
             env.pop("L9_PE_RELEASE_AUTHORIZED", None)

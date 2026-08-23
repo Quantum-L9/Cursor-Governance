@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 import json
 import tempfile
@@ -294,6 +293,26 @@ class RealRepositoryTest(unittest.TestCase):
         self.assertIn("pe-router-capability-safety-v4", campaigns)
         for campaign_id, entry in campaigns.items():
             self.assertEqual(entry["integration_branch"], f"campaign/{campaign_id}")
+
+    def test_stale_top_level_pe_manifest_is_advisory(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = self.build_repo(Path(raw))
+            manifest = root / "environment/program-execution/MANIFEST.json"
+            manifest.parent.mkdir(parents=True, exist_ok=True)
+            manifest.write_text('{"generated": "stale"}\n', encoding="utf-8")
+            result = self.mod.validate(root)
+            self.assertEqual(result["errors"], [])
+            self.assertTrue(result["summary"]["all_passed"])
+
+    def test_missing_top_level_pe_manifest_is_advisory(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = self.build_repo(Path(raw))
+            manifest = root / "environment/program-execution/MANIFEST.json"
+            if manifest.exists():
+                manifest.unlink()
+            result = self.mod.validate(root)
+            self.assertEqual(result["errors"], [])
+            self.assertTrue(result["summary"]["all_passed"])
 
 
 if __name__ == "__main__":

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 import uuid
 from collections.abc import Mapping
 from pathlib import Path
@@ -11,6 +12,9 @@ from .models import CapabilityReceipt, LifecycleReceipt, ProbeContext
 from .receipts import ReceiptChain
 from .runtime_store import RuntimeStore
 from .schema_registry import SchemaRegistry
+
+
+_RECEIPT_CHAIN_LOCK = threading.RLock()
 
 
 class BaseExecutionAdapter:
@@ -37,30 +41,34 @@ class BaseExecutionAdapter:
         adapter_error_code: str | None = None,
         program_lock_digest: str | None = None,
     ) -> LifecycleReceipt:
-        lock_digest = program_lock_digest
-        if binding is not None:
-            lock_digest = binding.program_lock_digest
-        if lock_digest is None:
-            raise ValueError("Program Lock digest is required")
-        receipt = LifecycleReceipt.create(
-            adapter_id=self.adapter_id,
-            adapter_version=self.adapter_version,
-            phase=phase,
-            program_lock_digest=lock_digest,
-            rendered_contract_digest=(binding.rendered_contract_digest if binding else None),
-            task_id=binding.task_id if binding else None,
-            dispatch_id=dispatch_id,
-            status=status,
-            canonical_error_code=canonical_error_code,
-            adapter_error_code=adapter_error_code,
-            evidence=evidence,
-            previous_receipt_digest=self.chain.last_digest(),
-        )
-        errors = self.schemas.validate_lifecycle(receipt.to_dict())
-        if errors:
-            raise ValueError(f"lifecycle receipt schema errors: {errors}")
-        self.chain.append(receipt)
-        return receipt
+        # Lifecycle receipts form one hash-linked chain per runtime root. The
+        # scheduler may execute provider lanes concurrently, so predecessor read
+        # + receipt construction + append must be one critical section.
+        with _RECEIPT_CHAIN_LOCK:
+            lock_digest = program_lock_digest
+            if binding is not None:
+                lock_digest = binding.program_lock_digest
+            if lock_digest is None:
+                raise ValueError("Program Lock digest is required")
+            receipt = LifecycleReceipt.create(
+                adapter_id=self.adapter_id,
+                adapter_version=self.adapter_version,
+                phase=phase,
+                program_lock_digest=lock_digest,
+                rendered_contract_digest=(binding.rendered_contract_digest if binding else None),
+                task_id=binding.task_id if binding else None,
+                dispatch_id=dispatch_id,
+                status=status,
+                canonical_error_code=canonical_error_code,
+                adapter_error_code=adapter_error_code,
+                evidence=evidence,
+                previous_receipt_digest=self.chain.last_digest(),
+            )
+            errors = self.schemas.validate_lifecycle(receipt.to_dict())
+            if errors:
+                raise ValueError(f"lifecycle receipt schema errors: {errors}")
+            self.chain.append(receipt)
+            return receipt
 
     def _probe_status(self, context: ProbeContext) -> tuple[str, str | None, list[dict[str, Any]]]:
         return "PASS", None, []

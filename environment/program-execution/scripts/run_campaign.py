@@ -64,9 +64,7 @@ UNTIL_ALIASES = {"bootstrap": "arm"}
 # Kept only so unreachable compatibility helpers can compare their historical
 # stages without becoming public runner stages again.
 LEGACY_PUBLICATION_STAGES = ("pr", "close", "merge")
-STAGE_INDEX = {
-    name: index for index, name in enumerate(UNTIL_STAGES + ("pr", "close"))
-}
+STAGE_INDEX = {name: index for index, name in enumerate(UNTIL_STAGES + ("pr", "close"))}
 HOST_REPO_DEFAULT = "Quantum-L9/Cursor-Governance"
 HASH_PROGRAM_RE = re.compile(r"^pe-[0-9a-f]{8,}$")
 ENV_ASSIGN_RE = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
@@ -2509,8 +2507,7 @@ def _plan_peer_task_batch(
             action_id=task_id,
             objective=str(task.get("title") or task.get("objective") or task_id),
             depends_on=tuple(
-                str(item)
-                for item in (task.get("dependencies") or task.get("depends_on") or [])
+                str(item) for item in (task.get("dependencies") or task.get("depends_on") or [])
             ),
             resources=tuple(resources),
             mutation=True,
@@ -2741,9 +2738,7 @@ def _finish_peer_unit(
             attempt_number = int(recorded["attempt"])
 
     with timer.stage("task_verify", task_id=task_id):
-        verification = traced_verify(
-            workspace, task_id, trace=trace, attempt_number=attempt_number
-        )
+        verification = traced_verify(workspace, task_id, trace=trace, attempt_number=attempt_number)
     decision = dispatch_kernel_change(verification)
     if decision["action"] != "pass":
         raise CampaignError(
@@ -2822,7 +2817,9 @@ def _default_execute_peer(
     completed: list[str] = []
     while len(completed) < len(tasks):
         status_rows = pec_status_tasks(workspace)
-        task_states = {str(item["id"]): str(item.get("runtime_state") or "") for item in status_rows}
+        task_states = {
+            str(item["id"]): str(item.get("runtime_state") or "") for item in status_rows
+        }
         completed = [task_id for task_id, state in task_states.items() if state == "COMPLETED"]
         if len(completed) == len(tasks):
             break

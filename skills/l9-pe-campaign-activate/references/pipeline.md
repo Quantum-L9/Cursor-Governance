@@ -36,9 +36,7 @@ Order inside `run_campaign.py` only (not an operator checklist):
 | admit | EVID-001 on reconciled target HEAD; accept blueprint |
 | bootstrap | pec bootstrap with no draft flag; quarantine leftovers |
 | arm | draft/register every task; claim TASK-001; STACK.json. No push: execution is local |
-| execute | pec prepare worktree; write/commit/verify/complete; claim next. **Autonomous execution ends here** |
-| pr | release transition only: stacked task PRs; never `PR_BASE=main`; host `make pr` |
-| close | release transition only: pec close + host ledger + `campaigns/COMPLETED/<id>/` |
+| execute | pec prepares isolated task worktrees; Peer Core resolves binding/profile, probes, compiles context, dispatches thin providers; Controller verifies; runner commits locally; **STOP** |
 
 Autonomous campaign execution is **local-commit-only**:
 
@@ -46,17 +44,12 @@ Autonomous campaign execution is **local-commit-only**:
 prepare → execute → validate → verify → local commits → STOP
 ```
 
-It never pushes a branch, opens or updates a PR, or merges. The `pr` and
-`close` stages are a separate governed release transition, entered only with
-`L9_PE_RELEASE_AUTHORIZED=<reason>`; merge authority remains
-`/l9-pr-remediation`'s alone. The boundary is enforced at the stage machine, at
+It never pushes a branch, opens or updates a PR, writes merge authority, or merges. `L9_PE_RELEASE_AUTHORIZED` cannot widen PE authority. After the PE handoff, root `PR_REMEDIATE=0 make pr` owns publication and `/l9-pr-remediation` owns merge. The boundary is enforced at the stage machine, at
 the `run_cmd` subprocess choke point, and in each publication function.
 
 `program-execution.intent.v1` and `pe-<hash>` workspaces are refused.
 `--admission-draft` is not a live path. Host-only merge is not program close.
-`CAMPAIGN_UNTIL` other than `execute` is refused unless
-`L9_CAMPAIGN_UNTIL_DEBUG=1` (runner unit tests only) or the release
-transition is open.
+`CAMPAIGN_UNTIL` other than `execute` is refused on the live path; `L9_CAMPAIGN_UNTIL_DEBUG=1` exists only for early-stage runner tests. Publication stages are not PE stages.
 `make campaign` is the Phase 0 admission act; `acknowledged_at` stays null
 and `program_deploying` stays false. Do not forge the timestamp.
 
@@ -79,4 +72,4 @@ Do not attach to a leftover `pe-<intent-hash>` workspace.
 - Runner FAIL → report; do not retry with `--admission-draft`
 - Dirty primary or dirty target → runner refuses; do not `git switch`
 - Memo with no numbered tasks → runner STOP; do not invent tasks
-- Stacked PR red → remediate that STACK.json PR only; do not leave the tunnel
+- Provider or Controller verification failure → stop and report; do not publish from PE

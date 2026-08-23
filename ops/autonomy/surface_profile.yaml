@@ -129,7 +129,7 @@ pr_stacking:
 campaign_execution:
   # Autonomous campaign execution is local-commit-only: prepare, execute,
   # validate, verify, local commits, STOP. Publication is a separate governed
-  # release transition (L9_PE_RELEASE_AUTHORIZED), never a campaign stage.
+  # release transition (L9_PE_RELEASE_AUTHORIZED (diagnostic compatibility only; never authority)), never a campaign stage.
   local_commit_only: true
   completion_boundary: execute
   push: forbidden

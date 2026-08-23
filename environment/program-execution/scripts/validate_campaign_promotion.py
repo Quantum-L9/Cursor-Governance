@@ -21,7 +21,6 @@ receipt path would falsify that evidence, so those files are reported as
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import re
 from pathlib import Path
@@ -41,7 +40,6 @@ STATUS_LEDGER = f"{CAMPAIGNS_DIR}/CAMPAIGN_STATUS.yaml"
 SHARED_LEDGERS = (SURFACE_PROFILE, EXECUTION_POLICY, COMPILE_ALLOWLIST, STATUS_LEDGER)
 
 # Generated projections whose digests must agree with their sources.
-PE_MANIFEST_ROOT = "environment/program-execution"
 
 # Absolute machine-local runtime locations. Ordered so the message names the
 # most specific form that matched.
@@ -275,45 +273,11 @@ def scan_archive_paths(root: Path) -> list[str]:
     return scan_machine_local_paths(root, tuple(relatives))
 
 
-def check_generated_projections(root: Path) -> list[str]:
-    """Condition 6 — generated projections agree with their source."""
-    manifest_root = root / PE_MANIFEST_ROOT
-    manifest_path = manifest_root / "MANIFEST.json"
-    if not manifest_path.is_file():
-        return [f"{PE_MANIFEST_ROOT}/MANIFEST.json: missing"]
-
-    try:
-        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-    except json.JSONDecodeError as exc:
-        return [f"{PE_MANIFEST_ROOT}/MANIFEST.json: does not parse: {exc}"]
-
-    files = manifest.get("files")
-    if not isinstance(files, list):
-        return [f"{PE_MANIFEST_ROOT}/MANIFEST.json: files must be a list"]
-
-    errors: list[str] = []
-    for item in files:
-        relative = item.get("path")
-        expected = item.get("sha256")
-        target = manifest_root / relative
-        if not target.is_file():
-            errors.append(f"{PE_MANIFEST_ROOT}/MANIFEST.json: missing file {relative}")
-            continue
-        actual = hashlib.sha256(target.read_bytes()).hexdigest()
-        if actual != expected:
-            errors.append(
-                f"{PE_MANIFEST_ROOT}/MANIFEST.json: stale digest for {relative} "
-                "(regenerate generated artifacts)"
-            )
-    return errors
-
-
 def validate(root: Path) -> dict:
     """Run every promotion condition and return a structured report."""
     profile_errors, profile = check_surface_profile(root)
     registration_errors, _ = check_registrations(root, profile)
     ledger_hits = scan_machine_local_paths(root, SHARED_LEDGERS)
-    projection_errors = check_generated_projections(root)
     warnings = scan_archive_paths(root)
 
     errors = [
