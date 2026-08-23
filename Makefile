@@ -371,8 +371,8 @@ precommit-repo:
 backup:
 	bash ops/scripts/backup_to_github.sh
 
-## Gate push behind the full pre-commit pipeline: fails (no push) if precommit fails
-push: precommit backup
+## Gate push behind changed-file precommit-repo (not --all-files). Corpus = make precommit / pr-full.
+push: precommit-repo backup
 
 ## Check Graphiti tunnel + MCP tool-plane health (degraded MCP is expected pre-full-wiring)
 graphiti-health: venv
@@ -436,10 +436,9 @@ pr-check:
 	PR_MYPY_STRICT="$(PR_MYPY_STRICT)" WS="$(WS)" \
 		bash ops/scripts/run_pr_gate.sh
 
-# Additive prerequisite — do not rewrite the pr-check recipe line above.
-pr-check: capability-contract-validate
-pr-check: precommit-repo
-pr: precommit-repo
+# Velocity path: run_pr_gate.sh owns precommit (run_pr_precommit.sh) once.
+# Do not re-add a Make prereq that double-runs precommit-repo on pr-check or pr.
+# capability-contract is domain-gated inside the gate; corpus lives on pr-full.
 
 ## Gate → open/reuse GitHub PR → subscribe → emit l9-pr-remediation agent handoff.
 ## `make pr` / `make PR` / `make Pr` / `make pR` are equivalent (case-insensitive).
@@ -461,6 +460,16 @@ PR Pr pR: pr
 pr-full: venv precommit lint-ruff-full uv-lock-check test rules-validate
 	@echo "NOTE: corpus security remains nightly CI; pr-full runs local full lint/test/precommit"
 	@echo "RESULT: PASS — full local gate (lint/test/precommit)"
+
+# Additive: validators skipped on the velocity path (make pr / pr-check).
+.PHONY: pr-full-corpus
+pr-full: capability-contract-validate
+pr-full: pr-full-corpus
+pr-full-corpus: venv
+	$(PYTHON) ops/scripts/validate_legacy_doctrine_residue.py
+	$(PYTHON) ops/scripts/validate_workflow_action_pins.py
+	$(PYTHON) ops/scripts/validate_governance_contract_surface.py
+	$(PYTHON) ops/scripts/validate_git_denial_residue.py
 
 ## Read-only drift check: does the committed rules/RULES-MANIFEST.* still match the
 ## live rules/*.mdc corpus? Writes nothing. Exit 1 (with a findings list) on drift.

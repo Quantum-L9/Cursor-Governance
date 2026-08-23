@@ -53,7 +53,9 @@ fi
 cd "$WS"
 
 # Always skip sync in make pr path (heal happens in run_pr_gate).
-SKIP_LIST="sync-generated-artifacts"
+# Corpus hooks (hygiene, residue, rules/skills ratchet) belong to
+# make precommit / make pr-full, not the velocity path.
+SKIP_LIST="sync-generated-artifacts,repo-hygiene,legacy-doctrine-residue,rules-check,skills-check"
 # symlinks-check asserts Cursor desktop activation. Skip it in CI, on a partial
 # clone, and on any non-cursor surface: a headless adapter surface (claude-code,
 # codex, …) can hold a FULL governance clone while having no Cursor install at
