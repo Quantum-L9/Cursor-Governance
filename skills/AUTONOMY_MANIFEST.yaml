@@ -99,7 +99,7 @@ tiers:
   - skill: l9-bounded-autonomy
     reason: campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only
   - skill: l9-pe-campaign-activate
-    reason: Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door; invoking the skill is merge authority for the one campaign PR after the runner reaches close. Fleet merge of other open PRs is /l9-pr-remediation. disable-model-invocation.
+    reason: Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door. The run is local-commit-only and invoking the skill is not merge authority; publication is PR_REMEDIATE=0 make pr and merge of open PRs is /l9-pr-remediation. disable-model-invocation.
   - skill: l9-pe-nuggets
     reason: PLAN-window nugget extraction only; make campaign is the front door
   - skill: l9-cli-optimization

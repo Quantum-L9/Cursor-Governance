@@ -19,7 +19,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(SCRIPT_DIR))
 
-from authorize_campaign_merge import write_authorization  # noqa: E402
+import authorize_campaign_merge  # noqa: E402
 from compile_activation_files import (  # noqa: E402
     ALLOWED_CAMPAIGN_FILES,
     FORBIDDEN_CAMPAIGN_FILES,
@@ -282,43 +282,28 @@ class CompileActivationTests(unittest.TestCase):
             )
 
 
-class AuthorizeMergeTests(unittest.TestCase):
-    def test_writes_scoped_entry(self) -> None:
-        with tempfile.TemporaryDirectory() as raw:
-            path = Path(raw) / "merge-authorization.json"
-            entry = write_authorization(
-                repo="Quantum-L9/Cursor-Governance",
-                pr="42",
-                reason="l9-pe-campaign-activate remediation complete",
-                path=path,
-                now=1_000_000,
-                ttl_seconds=100,
-            )
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            self.assertEqual(entry["pr"], 42)
-            self.assertEqual(entry["expires_at"], 1_000_100)
-            self.assertEqual(len(payload["authorizations"]), 1)
+class CampaignMergeAuthorityTests(unittest.TestCase):
+    """Program Execution owns no merge authority.
 
-    def test_replaces_same_pr(self) -> None:
+    The wrapper used to re-export `write_authorization` from
+    `ops/autonomy/authorize_merge.py`, which is where that behavior is still
+    owned and tested (`tests/ops/autonomy/test_authorize_merge.py`). The campaign
+    wrapper must now be fail-closed instead.
+    """
+
+    def test_wrapper_exports_no_authorization_writer(self) -> None:
+        for name in ("write_authorization", "auth_path", "REPO_SCOPE"):
+            self.assertFalse(
+                hasattr(authorize_campaign_merge, name),
+                msg=f"campaign wrapper still re-exports {name}",
+            )
+
+    def test_wrapper_fails_closed_and_writes_nothing(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
-            path = Path(raw) / "merge-authorization.json"
-            write_authorization(
-                repo="Quantum-L9/Cursor-Governance",
-                pr="42",
-                reason="first",
-                path=path,
-                now=1,
-            )
-            write_authorization(
-                repo="Quantum-L9/Cursor-Governance",
-                pr="42",
-                reason="second",
-                path=path,
-                now=2,
-            )
-            payload = json.loads(path.read_text(encoding="utf-8"))
-            self.assertEqual(len(payload["authorizations"]), 1)
-            self.assertEqual(payload["authorizations"][0]["reason"], "second")
+            root = Path(raw)
+            before = sorted(item.name for item in root.iterdir())
+            self.assertNotEqual(authorize_campaign_merge.main(), 0)
+            self.assertEqual(sorted(item.name for item in root.iterdir()), before)
 
 
 if __name__ == "__main__":

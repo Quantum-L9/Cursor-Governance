@@ -127,9 +127,11 @@ pr_stacking:
 # Program Execution campaigns — one integration branch each; PRs land there.
 # SSOT companion: environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
 campaign_execution:
-  # Autonomous campaign execution is local-commit-only: prepare, execute,
-  # validate, verify, local commits, STOP. Publication is a separate governed
-  # release transition (L9_PE_RELEASE_AUTHORIZED), never a campaign stage.
+  # Campaign execution is permanently local-commit-only: prepare, execute,
+  # validate, verify, local commits, STOP. Publication is never a campaign
+  # stage; it is root `PR_REMEDIATE=0 make pr`, and merge is /l9-pr-remediation.
+  # L9_PE_RELEASE_AUTHORIZED survives as a diagnostic compatibility name only
+  # and cannot widen Program Execution authority.
   local_commit_only: true
   completion_boundary: execute
   push: forbidden

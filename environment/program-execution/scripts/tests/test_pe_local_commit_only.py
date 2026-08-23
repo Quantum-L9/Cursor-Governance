@@ -38,7 +38,7 @@ if str(_TESTS_DIR) not in sys.path:
     sys.path.insert(0, str(_TESTS_DIR))
 
 from test_pe_smoke_campaign import (  # type: ignore[import-not-found]  # noqa: E402
-    _worker_command,
+    _peer_test_env,
 )
 from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     READY_SEED,
@@ -135,9 +135,9 @@ class LocalCommitOnlyTests(unittest.TestCase):
             _install_shims(bin_dir)
 
             env = {
-                "L9_PE_WORKER_CMD": _worker_command(tmp),
+                **_peer_test_env(tmp),
                 "L9_TEST_SUBPROCESS_LOG": str(log),
-                "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+                "PATH": f"{bin_dir}{os.pathsep}{_peer_test_env(tmp)['PATH']}",
             }
             # No release transition is open: this is a plain autonomous run.
             env.pop("L9_PE_RELEASE_AUTHORIZED", None)
@@ -271,20 +271,22 @@ class LocalCommitOnlyTests(unittest.TestCase):
         self.assertNotIn("push {campaign_id} integration branch before execute", source)
         self.assertIn("No pre-execution push", source)
 
-    # ---- the release transition still works (authority preserved) -----------
+    # ---- legacy release env cannot widen authority -------------------------
 
-    def test_release_transition_reopens_publication(self) -> None:
-        """Publication is moved, not deleted: a governed release still runs it."""
+    def test_release_environment_never_reopens_publication(self) -> None:
         with unittest.mock.patch.dict(
             "os.environ", {"L9_PE_RELEASE_AUTHORIZED": "operator release"}
         ):
-            self.assertTrue(self.mod.release_authorized())
-            # No raise: the gate is open.
-            self.mod.refuse_publication("push a branch")
-            self.mod.refuse_live_until_shortcut("close")
-        with unittest.mock.patch.dict("os.environ", {}, clear=False):
-            os.environ.pop("L9_PE_RELEASE_AUTHORIZED", None)
             self.assertFalse(self.mod.release_authorized())
+            for call in (
+                lambda: self.mod.refuse_publication("push a branch"),
+                lambda: self.mod.refuse_live_until_shortcut("pr"),
+                lambda: self.mod.refuse_live_until_shortcut("close"),
+                lambda: self.mod.refuse_live_until_shortcut("merge"),
+            ):
+                with self.assertRaises(self.mod.CampaignError) as ctx:
+                    call()
+                self.assertIn("permanently local-commit-only", str(ctx.exception))
 
 
 class FastModeDoesNotWidenAuthorityTests(unittest.TestCase):
