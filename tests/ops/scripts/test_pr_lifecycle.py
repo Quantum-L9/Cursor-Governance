@@ -385,9 +385,7 @@ def test_pr_full_owns_corpus_validators() -> None:
 
 
 def test_precommit_skip_list_drops_corpus_hooks() -> None:
-    precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(
-        encoding="utf-8"
-    )
+    precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
     for hook in (
         "repo-hygiene",
         "legacy-doctrine-residue",
