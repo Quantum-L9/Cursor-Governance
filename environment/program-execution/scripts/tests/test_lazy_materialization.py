@@ -11,6 +11,7 @@ tests pin both halves -- what arming skips, and where the skipped work reappears
 
 from __future__ import annotations
 
+import re
 import sys
 import tempfile
 import unittest
@@ -126,6 +127,13 @@ class FrontierTests(unittest.TestCase):
         self.assertEqual(frontier, ["TASK-001"])
 
 
+def _function_body(source: str, name: str) -> str:
+    """The source of one top-level function, up to the next top-level statement."""
+    start = source.index(f"def {name}(")
+    match = re.search(r"\n(?=(?:def |class |@))", source[start:])
+    return source[start : start + match.start()] if match else source[start:]
+
+
 class OnDemandMaterializationTests(unittest.TestCase):
     """Where the work arming skipped reappears."""
 
@@ -155,16 +163,23 @@ class OnDemandMaterializationTests(unittest.TestCase):
             register.assert_not_called()
 
     def test_claiming_a_task_materializes_its_contract_first(self) -> None:
-        """The safety property: a claim is refused without a source contract."""
+        """The safety property: a claim is refused without a source contract.
+
+        `default_execute` is a dispatcher; the claim lives in the Peer Core path
+        and in the retained hook-owned path. Both must materialize first, so the
+        property is asserted against each body rather than one function name.
+        """
         source = SCRIPT.read_text(encoding="utf-8")
-        body = source[source.index("def default_execute(") :]
-        materialize = body.index("ensure_task_contract(workspace, task_id)")
-        claim = body.index('"claim",')
-        self.assertLess(
-            materialize,
-            claim,
-            "default_execute claims a task before materializing its contract",
-        )
+        for name in ("_prepare_peer_unit", "_default_execute_legacy"):
+            with self.subTest(function=name):
+                body = _function_body(source, name)
+                materialize = body.index("ensure_task_contract(workspace, task_id)")
+                claim = body.index('"claim",')
+                self.assertLess(
+                    materialize,
+                    claim,
+                    f"{name} claims a task before materializing its contract",
+                )
 
 
 if __name__ == "__main__":

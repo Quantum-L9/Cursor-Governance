@@ -1017,12 +1017,12 @@
     },
     {
       "composition_role": "general",
-      "description": "invoke make campaign INTENT= as the only live PE campaign front door. use when the user asks to activate a campaign, run a pe campaign, compile campaign source, emit campaign seeds, or take a brief through COMPLETED. do not call pec, the intent compiler, or inner compile/accept scripts as a substitute.",
+      "description": "invoke make campaign INTENT= as the only live PE campaign front door. use when the user asks to activate a campaign, run a pe campaign, compile campaign source, emit campaign seeds, or take a brief through verified local commits. the run ends at verified local commits, so publication stays PR_REMEDIATE=0 make pr and merge stays /l9-pr-remediation. do not call pec, the intent compiler, or inner compile/accept scripts as a substitute.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pe-campaign-activate",
       "path": "skills/l9-pe-campaign-activate",
-      "reason": "Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door; invoking the skill is merge authority for the one campaign PR after the runner reaches close. Fleet merge of other open PRs is /l9-pr-remediation. disable-model-invocation.",
+      "reason": "Live PE campaigns go through make campaign INTENT= only. hint_allowed is Read/attach so agents load that sealed front door. The run is local-commit-only and invoking the skill is not merge authority; publication is PR_REMEDIATE=0 make pr and merge of open PRs is /l9-pr-remediation. disable-model-invocation.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1237,6 +1237,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "14672619c1d7f8f390d03a4f9daf721ee786444dcc2337f6a31a4697feba550f",
-  "source_skill_corpus_sha256": "dd76035d9840bbe0b44ac6dc4f7b30c1d6305183038cd9d640f38c951d42cffe"
+  "source_manifest_sha256": "4fd41603e1d2b0425fc3231fd6aa0b79703cefe0dfefec839fa06c9700e07ed5",
+  "source_skill_corpus_sha256": "30cf811f3158a76cb7994d9ffb4190bfb69319f169a0cc7730849455f4aa8e90"
 }

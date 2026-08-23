@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import importlib.util
 import json
 import tempfile
@@ -70,29 +69,11 @@ def build_repo(root: Path) -> None:
     write(root / validator.EXECUTION_POLICY, EXECUTION_POLICY)
     write(root / validator.COMPILE_ALLOWLIST, COMPILE_ALLOWLIST)
     write(root / validator.STATUS_LEDGER, STATUS_LEDGER)
-    regenerate_manifest(root)
 
 
 def write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
-
-
-def regenerate_manifest(root: Path) -> None:
-    """Write a MANIFEST.json whose digests match the tree on disk."""
-    manifest_root = root / validator.PE_MANIFEST_ROOT
-    manifest_root.mkdir(parents=True, exist_ok=True)
-    files = [
-        {
-            "path": path.relative_to(manifest_root).as_posix(),
-            "sha256": hashlib.sha256(path.read_bytes()).hexdigest(),
-        }
-        for path in sorted(manifest_root.rglob("*"))
-        if path.is_file() and path.name != "MANIFEST.json"
-    ]
-    (manifest_root / "MANIFEST.json").write_text(
-        json.dumps({"files": files}, indent=2, sort_keys=True) + "\n", encoding="utf-8"
-    )
 
 
 class PromotionValidatorTest(unittest.TestCase):
@@ -118,7 +99,6 @@ class PromotionValidatorTest(unittest.TestCase):
                 "SURFACE_PROFILE_VALID": "PASS",
                 "CAMPAIGN_REGISTRATION_VALID": "PASS",
                 "MACHINE_LOCAL_PATHS_IN_SHARED_LEDGER": 0,
-                "GENERATED_ARTIFACTS_CURRENT": "PASS",
             },
         )
 
@@ -193,7 +173,6 @@ class PromotionValidatorTest(unittest.TestCase):
             self.root / validator.STATUS_LEDGER,
             STATUS_LEDGER + "  - id: alpha-v1\n    lifecycle: planned\n",
         )
-        regenerate_manifest(self.root)
         self.assertFailsWith(validator.validate(self.root), "duplicate campaign id")
 
     # -- condition 4: integration_branch matches the id --------------------
@@ -233,7 +212,6 @@ class PromotionValidatorTest(unittest.TestCase):
             self.root / validator.STATUS_LEDGER,
             STATUS_LEDGER + "    worktree: /Users/macm2/.l9/program-worktrees/beta-v1\n",
         )
-        regenerate_manifest(self.root)
         report = validator.validate(self.root)
         self.assertFailsWith(report, "machine-local path in shared campaign ledger")
         self.assertEqual(report["summary"]["MACHINE_LOCAL_PATHS_IN_SHARED_LEDGER"], 1)
@@ -244,7 +222,6 @@ class PromotionValidatorTest(unittest.TestCase):
             STATUS_LEDGER
             + "    blueprint: ~/.l9/blueprints/beta-v1\n    cache: C:\\Users\\l9\\cache\n",
         )
-        regenerate_manifest(self.root)
         report = validator.validate(self.root)
         self.assertEqual(report["summary"]["MACHINE_LOCAL_PATHS_IN_SHARED_LEDGER"], 2)
 
@@ -259,24 +236,28 @@ class PromotionValidatorTest(unittest.TestCase):
             self.root / validator.CAMPAIGNS_DIR / "alpha-v1/history/v1.0.0/handoff.json",
             json.dumps({"receipt": "/home/user/.l9/programs/alpha-v1/receipt.json"}),
         )
-        regenerate_manifest(self.root)
         report = validator.validate(self.root)
         self.assertEqual(report["status"], "PASS", report["errors"])
         self.assertEqual(len(report["warnings"]), 1)
         self.assertIn("immutable campaign evidence", report["warnings"][0])
 
-    # -- condition 6: generated projections are current --------------------
+    # -- top-level PE MANIFEST is advisory by settled policy ----------------
 
-    def test_stale_manifest_digest_fails(self) -> None:
-        ledger = self.root / validator.STATUS_LEDGER
-        ledger.write_text(STATUS_LEDGER + "# edited after manifest\n", encoding="utf-8")
+    def test_stale_top_level_pe_manifest_is_advisory(self) -> None:
+        manifest = self.root / "environment/program-execution/MANIFEST.json"
+        manifest.parent.mkdir(parents=True, exist_ok=True)
+        manifest.write_text('{"generated": "stale"}\n', encoding="utf-8")
         report = validator.validate(self.root)
-        self.assertFailsWith(report, "stale digest")
-        self.assertEqual(report["summary"]["GENERATED_ARTIFACTS_CURRENT"], "FAIL")
+        self.assertEqual(report["status"], "PASS", report["errors"])
+        self.assertNotIn("GENERATED_ARTIFACTS_CURRENT", report["summary"])
 
-    def test_missing_manifest_fails(self) -> None:
-        (self.root / validator.PE_MANIFEST_ROOT / "MANIFEST.json").unlink()
-        self.assertFailsWith(validator.validate(self.root), "MANIFEST.json: missing")
+    def test_missing_top_level_pe_manifest_is_advisory(self) -> None:
+        manifest = self.root / "environment/program-execution/MANIFEST.json"
+        if manifest.exists():
+            manifest.unlink()
+        report = validator.validate(self.root)
+        self.assertEqual(report["status"], "PASS", report["errors"])
+        self.assertNotIn("GENERATED_ARTIFACTS_CURRENT", report["summary"])
 
 
 class RealRepositoryTest(unittest.TestCase):

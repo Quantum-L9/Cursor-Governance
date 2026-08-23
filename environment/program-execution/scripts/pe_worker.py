@@ -1,16 +1,9 @@
 #!/usr/bin/env python3
-"""The step between claiming a task and verifying it: something writes code.
+"""Legacy direct-worker compatibility shim.
 
-`default_execute` used to go claim → worktree → commit-whatever-is-there →
-verify. For an implementation task nothing had written anything, so the commit
-step raised `refuse stub output` and the campaign stopped — or, worse, an
-already-satisfied tree verified with zero implementation.
-
-This module is the handoff. It is intentionally an adapter, not an
-orchestration framework: it renders a concise worker contract, invokes whatever
-worker the operator configured, and reports whether the worktree actually
-changed. When no worker is configured, an implementation task fails *here*,
-before verification, with a message that says what to configure.
+The live `make campaign` path executes through Peer Execution Core. This module
+is retained only for deterministic embedding/tests that intentionally own the
+write seam; it is not a canonical production dispatcher.
 """
 
 from __future__ import annotations

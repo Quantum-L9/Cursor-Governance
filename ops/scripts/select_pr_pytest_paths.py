@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import sys
 from pathlib import Path
@@ -50,6 +51,64 @@ def infer_test_path(changed: str, *, repo_root: Path = REPO_ROOT) -> str | None:
     return None
 
 
+def root_collect_ignores(repo_root: Path = REPO_ROOT) -> list[str]:
+    """`collect_ignore` from the root conftest — what the repo-root suite never collects.
+
+    Read rather than restated so there is one list, not two that drift. The
+    conftest assigns a literal, so the value is taken from the AST instead of
+    importing the module.
+    """
+    conftest = repo_root / "conftest.py"
+    if not conftest.is_file():
+        return []
+    try:
+        tree = ast.parse(conftest.read_text(encoding="utf-8"))
+    except (OSError, SyntaxError):
+        return []
+    for node in tree.body:
+        targets = node.targets if isinstance(node, ast.Assign) else []
+        if not any(isinstance(item, ast.Name) and item.id == "collect_ignore" for item in targets):
+            continue
+        try:
+            value = ast.literal_eval(node.value)
+        except ValueError:
+            return []
+        return [str(item) for item in value if isinstance(item, str)]
+    return []
+
+
+def _has_pytest_owner(path: str, suites: list[dict]) -> bool:
+    return any(
+        not is_dot_owned(suite)
+        and any(
+            path_under(path, str(root)) or path_under(str(root), path) or path == str(root)
+            for root in (suite.get("owned_paths") or [])
+        )
+        for suite in suites
+    )
+
+
+def _drop_unrunnable(selected: list[str], suites: list[dict]) -> tuple[list[str], list[str]]:
+    """Split off targets no pytest suite can actually collect.
+
+    A path the root conftest excludes belongs to a non-pytest loader (the
+    Program Execution adapter layer runs under `make program-execution-conformance`).
+    Handing it to the repo-root suite as an explicit argument overrides that
+    exclusion and fails on import, so it is not a valid pr-check target unless a
+    non-root suite owns it.
+    """
+    ignores = root_collect_ignores()
+    keep: list[str] = []
+    dropped: list[str] = []
+    for path in selected:
+        ignored = any(path_under(path, root) or path == root for root in ignores)
+        if ignored and not _has_pytest_owner(path, suites):
+            dropped.append(path)
+        else:
+            keep.append(path)
+    return keep, dropped
+
+
 def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH) -> list[str]:
     """Return explicit pytest targets for the local pr-check profile."""
     py_changed = [path for path in changed if path.endswith(".py")]
@@ -86,11 +145,20 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
         missing.append(path)
     if "." in selected:
         raise SystemExit("select_pr_pytest_paths refused to emit repo-root '.'")
+    selected, unrunnable = _drop_unrunnable(selected, suites)
     if missing:
+        still_missing = [path for path in missing if path not in unrunnable]
+        if still_missing:
+            print(
+                "NOTE: no inferred test for "
+                + ", ".join(still_missing)
+                + "; scoped to that tests/ directory, not the catalog",
+                file=sys.stderr,
+            )
+    if unrunnable:
         print(
-            "NOTE: no inferred test for "
-            + ", ".join(missing)
-            + "; scoped to that tests/ directory, not the catalog",
+            "NOTE: not a repo-root pytest target (excluded by root conftest, owned by a "
+            "non-pytest loader): " + ", ".join(unrunnable),
             file=sys.stderr,
         )
     return selected

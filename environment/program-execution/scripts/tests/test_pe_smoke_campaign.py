@@ -4,11 +4,15 @@ Every other PE test drives the runner with `Hooks.write_task_output`, which
 substitutes the test for the step where something writes code. That is exactly
 the step that was missing in production, so it could not catch it.
 
-This fixture runs a real worker process against a real task worktree and
-asserts the full chain: compile → launchability → admission → bootstrap →
-claim → worker handoff → modification → validation → verify → complete →
-dependency advance → TASK-002. Then it interrupts execution, resets, and
-asserts the same campaign runs again.
+This fixture drives the live path instead — Peer Execution Core against a real
+task worktree — and asserts the full chain: compile → launchability →
+admission → bootstrap → claim → runtime binding → capability probe → context
+manifest → thin provider → typed attempt receipt → verify → local commit →
+complete → dependency advance → TASK-002. Then it interrupts execution, resets,
+and asserts the same campaign runs again.
+
+Only the `claude` executable is faked, so the binding, execution profile, probe,
+context manifest, adapter, and receipt schemas are all really exercised.
 
 It is the basic PE health check. It is meant to be fast enough to run during
 development, so its validation commands are trivially deterministic.
@@ -41,28 +45,61 @@ SCRIPT = PE_ROOT / "scripts/run_campaign.py"
 ACTIVATE = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
 PEC = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 
-# A worker is any command that edits the worktree and exits 0. This one writes
-# the brief's declared output, which is the smallest thing a real worker does.
-SMOKE_WORKER = """#!/usr/bin/env python3
-import os, pathlib, json
-contract = json.loads(os.environ["L9_PE_CONTRACT"])
-worktree = pathlib.Path(os.environ["L9_PE_WORKTREE"])
-task_id = os.environ["L9_PE_TASK_ID"]
+# Deterministic fake Claude CLI. The live runner still traverses the real
+# runtime binding, execution profile, capability probe, context manifest,
+# PeerExecutionAdapter, thin claude-code provider, and typed attempt receipt.
+FAKE_CLAUDE = r"""#!/usr/bin/env python3
+import json, pathlib, subprocess, sys
+prompt = sys.argv[sys.argv.index("-p") + 1]
+contract = json.loads(prompt.strip().splitlines()[-1])
+worktree = pathlib.Path.cwd()
+changed = []
 for rel in contract.get("writable_paths") or []:
     target = worktree / rel
     target.parent.mkdir(parents=True, exist_ok=True)
     target.write_text(
-        f"{task_id} implemented by the smoke worker.\\n" + ("verified " * 8) + "\\n",
+        f"{contract['task_id']} implemented through Peer Core.\n" + ("verified " * 8) + "\n",
         encoding="utf-8",
     )
+    changed.append(rel)
+validations = []
+for command in contract.get("validation_commands") or []:
+    completed = subprocess.run(command, cwd=worktree, shell=True, text=True, capture_output=True)
+    validations.append({
+        "command": command,
+        "status": "PASS" if completed.returncode == 0 else "FAIL",
+        "exit_code": completed.returncode,
+        "evidence": (completed.stdout + completed.stderr)[-4000:] or None,
+    })
+payload = {
+    "candidate_sha": None,
+    "changed_files": changed,
+    "validation_results": validations,
+    "residual_unknowns": [],
+    "claimed_status": "completed",
+}
+print(json.dumps({
+    "is_error": False,
+    "session_id": "smoke-peer-session",
+    "num_turns": 1,
+    "usage": {},
+    "result": payload,
+}))
 """
 
 
-def _worker_command(tmp: Path) -> str:
-    script = tmp / "smoke_worker.py"
-    script.write_text(SMOKE_WORKER, encoding="utf-8")
-    script.chmod(0o755)
-    return f"{sys.executable} {script}"
+def _peer_test_env(tmp: Path) -> dict[str, str]:
+    bin_dir = tmp / "peer-bin"
+    bin_dir.mkdir(parents=True, exist_ok=True)
+    claude = bin_dir / "claude"
+    claude.write_text(FAKE_CLAUDE, encoding="utf-8")
+    claude.chmod(0o755)
+    return {
+        "PATH": f"{bin_dir}{os.pathsep}{os.environ.get('PATH', '')}",
+        "L9_GOVERNANCE_SURFACE": "claude-code",
+        "L9_PE_AGENT_REF": "claude-code",
+        "L9_PE_SURFACE": "claude-cli",
+    }
 
 
 def _pec(workspace: Path, *args: str) -> dict:
@@ -168,7 +205,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
         """
         with tempfile.TemporaryDirectory() as raw:
             tmp = Path(raw)
-            with unittest.mock.patch.dict("os.environ", {"L9_PE_WORKER_CMD": _worker_command(tmp)}):
+            with unittest.mock.patch.dict("os.environ", _peer_test_env(tmp)):
                 report, l9, elapsed = self._run_smoke(tmp, campaign_source=True)
 
             self.assertIn("execute", report.stages_completed)
@@ -178,9 +215,11 @@ class PeSmokeCampaignTests(unittest.TestCase):
             }
             self.assertEqual(states["TASK-001"], "COMPLETED")
             self.assertEqual(states["TASK-002"], "COMPLETED", msg="dependency did not advance")
-            for task_id in ("TASK-001", "TASK-002"):
-                brief = workspace / "runtime/worker" / f"{task_id}.BRIEF.md"
-                self.assertTrue(brief.is_file(), msg=f"{task_id} never reached a worker")
+            contexts = list((workspace / "runtime/peer-execution/contexts").glob("*.json"))
+            self.assertGreaterEqual(len(contexts), 2)
+            for context in contexts:
+                payload = json.loads(context.read_text(encoding="utf-8"))
+                self.assertEqual(payload["schema"], "l9.peer-execution.context-manifest.v1")
             # The source the compiler read must be the operator's, not a rebuild.
             # A closed campaign is archived under COMPLETED/, so accept either.
             campaigns = Path(report.worktree) / "environment/program-execution/campaigns"
@@ -199,7 +238,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
     def test_two_task_campaign_executes_end_to_end_through_a_real_worker(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             tmp = Path(raw)
-            with unittest.mock.patch.dict("os.environ", {"L9_PE_WORKER_CMD": _worker_command(tmp)}):
+            with unittest.mock.patch.dict("os.environ", _peer_test_env(tmp)):
                 report, l9, elapsed = self._run_smoke(tmp)
 
             self.assertIn("execute", report.stages_completed)
@@ -215,8 +254,18 @@ class PeSmokeCampaignTests(unittest.TestCase):
                     receipt["observed_changed_files"],
                     msg=f"{task_id} verified with an unmodified worktree",
                 )
-                brief = workspace / "runtime/worker" / f"{task_id}.BRIEF.md"
-                self.assertTrue(brief.is_file(), msg=f"no worker brief rendered for {task_id}")
+                # pec renders attempt_receipt_path as
+                # attempts/<task>/attempt-NNN/attempt-receipt.json.
+                attempts = list(
+                    (workspace / "attempts" / task_id).glob("attempt-*/attempt-receipt.json")
+                )
+                self.assertTrue(attempts, msg=f"no typed Peer Core attempt receipt for {task_id}")
+                for attempt in attempts:
+                    payload = json.loads(attempt.read_text(encoding="utf-8"))
+                    self.assertEqual(
+                        payload["schema"],
+                        "program-execution-controller.attempt-receipt.v2",
+                    )
 
             status = _pec(workspace, "status")["tasks"]
             states = {item["id"]: item["runtime_state"] for item in status}
@@ -238,7 +287,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
             tmp = Path(raw)
             with unittest.mock.patch.dict(
                 "os.environ",
-                {"L9_PE_WORKER_CMD": _worker_command(tmp), "L9_CAMPAIGN_UNTIL_DEBUG": "1"},
+                {**_peer_test_env(tmp), "L9_CAMPAIGN_UNTIL_DEBUG": "1"},
             ):
                 _, l9, _ = self._run_smoke(tmp, until="arm")
             workspace = l9 / "programs/demo-activate-v1"
@@ -268,17 +317,75 @@ class PeSmokeCampaignTests(unittest.TestCase):
                 "task worktree could not be recreated after reset",
             )
 
-    def test_implementation_task_without_a_worker_fails_before_verification(self) -> None:
-        """Zero implementation must be an execution-path defect, not a PASS."""
+    def test_missing_bound_provider_fails_before_verification(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             tmp = Path(raw)
-            env = {key: value for key, value in os.environ.items() if key != "L9_PE_WORKER_CMD"}
+            env = {
+                key: value
+                for key, value in os.environ.items()
+                if key not in {"L9_PE_AGENT_REF", "L9_PE_SURFACE", "L9_PE_PROVIDER_REF"}
+            }
+            env["L9_GOVERNANCE_SURFACE"] = "claude-code"
+            # Hide every real claude executable. Filtering on the directory
+            # *name* misses an install such as /opt/node22/bin/claude, so drop
+            # exactly the entries `shutil.which` would resolve from.
+            env["PATH"] = os.pathsep.join(
+                part
+                for part in env.get("PATH", "").split(os.pathsep)
+                if part and not (Path(part) / "claude").exists()
+            )
+            self.assertIsNone(shutil.which("claude", path=env["PATH"]))
             with unittest.mock.patch.dict("os.environ", env, clear=True):
                 with self.assertRaises(self.mod.CampaignError) as ctx:
                     self._run_smoke(tmp)
-            message = str(ctx.exception)
-            self.assertIn("no worker is configured", message)
-            self.assertIn("L9_PE_WORKER_CMD", message)
+            self.assertIn("capability probe blocked", str(ctx.exception))
+
+    def test_scheduler_serializes_same_lineage_and_selects_distinct_lineages(self) -> None:
+        tasks = [
+            {
+                "id": "TASK-001",
+                "title": "A",
+                "target_ids": ["TARGET-A"],
+                "source": {"outputs": [{"location": "a.txt"}]},
+            },
+            {
+                "id": "TASK-002",
+                "title": "B",
+                "target_ids": ["TARGET-A"],
+                "source": {"outputs": [{"location": "b.txt"}]},
+            },
+            {
+                "id": "TASK-003",
+                "title": "C",
+                "target_ids": ["TARGET-B"],
+                "source": {"outputs": [{"location": "c.txt"}]},
+            },
+        ]
+        selected = self.mod._plan_peer_task_batch(
+            "scheduler-smoke", tasks, {task["id"]: "ELIGIBLE" for task in tasks}
+        )
+        self.assertIn("TASK-001", selected)
+        self.assertIn("TASK-003", selected)
+        self.assertNotIn("TASK-002", selected)
+
+    def test_peer_batch_harvests_every_parallel_child(self) -> None:
+        import time as time_module
+
+        units = [
+            {"task_id": "TASK-A", "contract": {"task_id": "TASK-A"}},
+            {"task_id": "TASK-B", "contract": {"task_id": "TASK-B"}},
+        ]
+
+        def fake_peer(_workspace, contract):
+            time_module.sleep(0.2)
+            return {"receipt": {"task_id": contract["task_id"]}}
+
+        started = time_module.monotonic()
+        with unittest.mock.patch.object(self.mod, "_run_peer_execution", side_effect=fake_peer):
+            outcomes = self.mod._dispatch_peer_batch(Path("."), units)
+        elapsed = time_module.monotonic() - started
+        self.assertEqual(set(outcomes), {"TASK-A", "TASK-B"})
+        self.assertLess(elapsed, 0.35, msg=f"provider windows did not overlap: {elapsed}")
 
 
 if __name__ == "__main__":
