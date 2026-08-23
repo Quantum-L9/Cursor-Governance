@@ -26,6 +26,7 @@ repos:
         entry: bash ops/scripts/validate_governance_no_hardcoded_paths.sh
         language: system
         pass_filenames: false
+        files: ^(ops/scripts/validate_governance_no_hardcoded_paths\.sh|ops/hooks/session_end_governance_backup\.sh|ops/scripts/resolve_governance_paths\.sh|ops/scripts/backup_to_github\.sh|ops/scripts/setup_workspace_symlinks\.sh|ops/scripts/validate_governance_symlinks\.sh|ops/scripts/install_ide_profile\.sh|ops/scripts/backup_gate\.sh)$
 
       - id: symlinks-check
         name: Governance symlink wiring is healthy

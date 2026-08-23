@@ -112,22 +112,11 @@ _gate_on_exit() {
 }
 trap '_gate_on_exit' EXIT
 
-# Always-run governance contract surface: cheap, changed-file-INDEPENDENT.
-# A Markdown/YAML/config-only mutation must never bypass the checks that prove
-# its semantics (P2-12). These validate the governance repo (GOV_ROOT).
-echo "=== governance contract surface (always-run) ==="
-if [[ -f "$GOV_ROOT/ops/scripts/validate_governance_contract_surface.py" ]]; then
-  python3 "$GOV_ROOT/ops/scripts/validate_governance_contract_surface.py"
-fi
-if [[ -f "$GOV_ROOT/ops/scripts/validate_legacy_doctrine_residue.py" ]]; then
-  python3 "$GOV_ROOT/ops/scripts/validate_legacy_doctrine_residue.py"
-fi
-if [[ -f "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py" ]]; then
-  python3 "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py"
-fi
-if [[ -f "$GOV_ROOT/ops/scripts/validate_git_denial_residue.py" ]]; then
-  python3 "$GOV_ROOT/ops/scripts/validate_git_denial_residue.py"
-fi
+# P2-12 corpus scans on every make pr are retired. Markdown-only mutations
+# no longer pay full-tree residue/pin/contract-surface scans on the velocity
+# path. Corpus ownership is make pr-full / make precommit. Do not restore a
+# changed-file-independent validator block — that is the velocity contract,
+# not a missing check. Domain-gated validators run after resolve (below).
 
 echo "=== make pr (changed files vs ${PR_BASE}; full-tree = make pr-full / nightly) ==="
 
@@ -227,6 +216,19 @@ if [[ ! -s "$changed_file" ]]; then
   echo "RESULT: PASS — local PR gate clean (nothing to gate)"
   exit 0
 fi
+
+echo "=== governance validators (domain-gated) ==="
+if grep -Eq '^\.github/workflows/|^ops/scripts/validate_workflow_action_pins\.py$' "$changed_file"; then
+  python3 "$GOV_ROOT/ops/scripts/validate_workflow_action_pins.py"
+else
+  echo "OK: skip workflow pins (workflows unchanged)"
+fi
+if grep -Eq '^(ops/secrets/|environment/agents/)' "$changed_file"; then
+  python3 "$GOV_ROOT/ops/secrets/validate_capability_contract.py"
+else
+  echo "OK: skip capability-contract (ops/secrets and environment/agents unchanged)"
+fi
+echo "OK: skip doctrine residue / contract surface / git-denial (make pr-full owns corpus)"
 
 _gate_run_precommit && precommit_rc=0 || precommit_rc=$?
 

@@ -703,3 +703,22 @@ run `make campaign`, admit a Program Lock, or write `Lock: origin/main = <sha>`.
 **`l9-plan`** (`/l9-plan`) stays the PE/campaign planner: same template **and**
 the Program Execution execute path. Use it only when the user asks for
 `/l9-plan`, `make campaign`, Program Lock, or PE+autonomy.
+
+<!-- PR_GATE_VELOCITY_V1 -->
+## PR-gate velocity vs `make pr-full` (2026-08-22)
+
+`make pr` / `make pr-check` is the **velocity path**: changed-file pre-commit
+hooks (filename + ruff) plus the landed scoped pytest selector
+(`select_pr_pytest_paths.py` / `run_python_test_suites.py --changed-file`).
+Corpus hooks (`repo-hygiene`, `legacy-doctrine-residue`, `rules-check`,
+`skills-check`), residue / contract-surface / git-denial always-run, and the
+full pytest catalog belong to `make pr-full` / `make precommit`
+(nightly-adjacent).
+
+Makefile `push` is `precommit-repo backup` (changed files), not `--all-files`.
+sessionEnd (`backup_to_github.sh`) is unchanged and is not this path.
+
+capability-contract runs on `make pr` only when the change set matches
+`^(ops/secrets/|environment/agents/)`. Workflow pins run only when
+`.github/workflows/` or `ops/scripts/validate_workflow_action_pins.py`
+changed.
