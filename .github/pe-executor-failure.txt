@@ -1,8 +1,8 @@
-run_id=32614529076
+run_id=32614565115
 run_attempt=1
-head=fb3a82838bbbf683cc4729ab6a41476768379be3
+head=36aa9bb0568db44c3fd7ab0f10319dc96587193b
 --- git status ---
  M .github/pe-executor-failure.txt
 --- diff stat ---
- .github/pe-executor-failure.txt | 20 ++------------------
- 1 file changed, 2 insertions(+), 18 deletions(-)
+ .github/pe-executor-failure.txt | 6 ++----
+ 1 file changed, 2 insertions(+), 4 deletions(-)
