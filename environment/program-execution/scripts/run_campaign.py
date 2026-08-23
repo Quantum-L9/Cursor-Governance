@@ -2691,8 +2691,138 @@ def _prepare_peer_unit(
     }
 
 
+def publish_task_outcome(
+    workspace: Path,
+    campaign_id: str,
+    task: dict[str, Any],
+    task_id: str,
+    contract: dict[str, Any],
+    verification: dict[str, Any],
+    evidence_id: str,
+    *,
+    trace: pe_trace.ExecutionTrace | None,
+) -> None:
+    """Publish one verified task outcome through the canonical ingress.
+
+    Both completion paths call this — the live Peer Core path and the retained
+    hook-owned path. One function is what keeps the live path from silently
+    skipping publication, which is what anchoring on a single call site would
+    have done.
+    """
+    # Publish the verified PE outcome through the canonical generated-data
+    # ingress. Learning remains non-blocking for campaign success, but the
+    # exact source payload and any failure are persisted beside the attempt.
+    source_path = workspace / "runtime" / f"{task_id}.generated-data.source.json"
+    publication_path = workspace / "runtime" / f"{task_id}.generated-data.json"
+    try:
+        publisher_module = _load_script(
+            "pe_generated_data_outcome_publisher",
+            PE_ROOT / "integrations/subagent-generated-data/outcome_publisher.py",
+        )
+        if source_path.is_file():
+            outcome_payload = json.loads(source_path.read_text(encoding="utf-8"))
+        else:
+            attempt_path = workspace / "runtime" / f"{task_id}.attempt.json"
+            attempt_payload = (
+                json.loads(attempt_path.read_text(encoding="utf-8"))
+                if attempt_path.is_file()
+                else {}
+            )
+            outcome_payload = {
+                **attempt_payload,
+                "campaign_id": campaign_id,
+                "graph_id": str(task.get("graph_id") or f"{campaign_id}-graph"),
+                "task_id": task_id,
+                "evidence_id": evidence_id,
+                "verdict": verification.get("verdict"),
+                "generated_at": verification.get("verified_at") or utc_now(),
+                "generated_data_units": list(task.get("generated_data_units") or []),
+                "reuse_assessment": task.get("reuse_assessment")
+                or {
+                    "reusable_data_found": bool(task.get("generated_data_units")),
+                    "confidence": 1.0 if task.get("generated_data_units") else 0.0,
+                    "reason": "PE task supplied reusable findings"
+                    if task.get("generated_data_units")
+                    else "PE task supplied no reusable findings",
+                },
+            }
+            source_path.parent.mkdir(parents=True, exist_ok=True)
+            temporary = source_path.with_name(f".{source_path.name}.{os.getpid()}.tmp")
+            try:
+                temporary.write_text(
+                    json.dumps(outcome_payload, indent=2, sort_keys=True) + "\n",
+                    encoding="utf-8",
+                )
+                os.replace(temporary, source_path)
+            finally:
+                temporary.unlink(missing_ok=True)
+        runtime_root = Path(
+            os.environ.get("L9_RUNTIME_ROOT", str(Path.home() / ".l9"))
+        ).expanduser()
+        publisher = publisher_module.OutcomePublisher(
+            GOV_ROOT, runtime_root / "generated-data" / "pipeline.sqlite3"
+        )
+        published = publisher.publish(
+            outcome_payload,
+            repository=str(
+                contract.get("repository")
+                or contract.get("repository_id")
+                or task.get("repository_id")
+                or HOST_REPO_DEFAULT
+            ),
+            base_sha=str(contract["base_sha"]),
+            agent_id="make-campaign",
+            campaign_id=campaign_id,
+            graph_id=str(task.get("graph_id") or f"{campaign_id}-graph"),
+            independent_validation_present=(verification.get("verdict") == "PASSED_LOCAL"),
+            designated_authority_approval=False,
+            recurrence_counts=(
+                task.get("recurrence_counts")
+                if isinstance(task.get("recurrence_counts"), dict)
+                else None
+            ),
+        )
+        publication_path.write_text(
+            json.dumps(published, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        emit(
+            trace,
+            "PE_OUTCOME_PUBLISHED",
+            "evidence",
+            "generated_data_outcome_publish",
+            task_id=task_id,
+            metadata={"count": 1},
+        )
+    except Exception as exc:  # noqa: BLE001 - learning must not mask task success
+        failure = {
+            "schema": "l9.pe.generated-data-publication-failure.v1",
+            "campaign_id": campaign_id,
+            "task_id": task_id,
+            "source_path": str(source_path),
+            "error_type": type(exc).__name__,
+            "error": str(exc),
+        }
+        publication_path.write_text(
+            json.dumps(failure, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        emit(
+            trace,
+            "PE_OUTCOME_PUBLISH_FAILED",
+            "evidence",
+            "generated_data_outcome_publish",
+            status=pe_trace.STATUS_FAILED,
+            task_id=task_id,
+            error_code="PE_OUTCOME_PUBLISH_FAILED",
+            error_message=str(exc),
+        )
+        log(f"generated-data publication failed for {task_id}: {exc}")
+
+
 def _finish_peer_unit(
     workspace: Path,
+    campaign_id: str,
     unit: dict[str, Any],
     outcome: dict[str, Any] | None,
     *,
@@ -2806,6 +2936,16 @@ def _finish_peer_unit(
         attempt_number=attempt_number,
         metadata={"evidence_id": evidence_id},
     )
+    publish_task_outcome(
+        workspace,
+        campaign_id,
+        task,
+        task_id,
+        contract,
+        verification,
+        evidence_id,
+        trace=trace,
+    )
 
 
 def _default_execute_peer(
@@ -2861,6 +3001,7 @@ def _default_execute_peer(
         for unit in units:
             _finish_peer_unit(
                 workspace,
+                campaign_id,
                 unit,
                 outcomes.get(unit["task_id"]),
                 trace=trace,
@@ -3328,6 +3469,16 @@ def _default_execute_legacy(
             task_id=task_id,
             attempt_number=attempt_number,
             metadata={"evidence_id": evidence_id},
+        )
+        publish_task_outcome(
+            workspace,
+            campaign_id,
+            task,
+            task_id,
+            contract,
+            verification,
+            evidence_id,
+            trace=trace,
         )
         if live_prs:
             item = by_stack.get(task_id) or {
@@ -4320,7 +4471,41 @@ def _run_campaign_stages(
 def render_report(report: CampaignReport) -> None:
     log(f"activation blockers: {', '.join(report.activation_blockers) or 'none'}")
     log(f"program blockers: {', '.join(report.program_blockers) or 'none'}")
-    print(json.dumps(report.to_dict(), indent=2))
+    structured = report.to_dict()
+    try:
+        summary_module = _load_script(
+            "pe_generated_data_campaign_summary",
+            PE_ROOT / "integrations/subagent-generated-data/campaign_summary.py",
+        )
+        workspace = Path(report.pec_workspace)
+        trace_summary = workspace / "telemetry" / pe_trace.SUMMARY_JSON_FILENAME
+        if trace_summary.is_file():
+            trace_payload = json.loads(trace_summary.read_text(encoding="utf-8"))
+            counts = trace_payload.get("task_counts") or {}
+            structured["task_counts"] = {
+                "completed": counts.get("completed"),
+                "total": counts.get("attempted"),
+                "failed": sum(
+                    int(item.get("count", 0))
+                    for item in (trace_payload.get("failure_counts") or {}).values()
+                    if isinstance(item, dict)
+                ),
+            }
+        runtime_root = Path(
+            os.environ.get("L9_RUNTIME_ROOT", str(Path.home() / ".l9"))
+        ).expanduser()
+        summary, json_path, md_path = summary_module.write_summary(
+            workspace=workspace,
+            database_path=runtime_root / "generated-data" / "pipeline.sqlite3",
+            campaign_id=report.campaign_id,
+            campaign_report=structured,
+        )
+        print(summary_module.render_brief(summary))
+        print(f"Evidence: {json_path}")
+        print(f"Brief: {md_path}")
+    except Exception as exc:  # noqa: BLE001 - reporting never masks the campaign
+        print(f"generated-data brief unavailable: {exc}", file=sys.stderr)
+    print(json.dumps(structured, indent=2))
 
 
 def build_parser() -> argparse.ArgumentParser:

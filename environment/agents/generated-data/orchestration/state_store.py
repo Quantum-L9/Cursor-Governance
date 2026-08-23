@@ -30,6 +30,8 @@ class PipelineState(StrEnum):
     DELIVERY_PENDING = "DELIVERY_PENDING"
     DELIVERING = "DELIVERING"
     DELIVERED = "DELIVERED"
+    DESTINATION_SUBMITTED = "DESTINATION_SUBMITTED"
+    DESTINATION_DEFERRED = "DESTINATION_DEFERRED"
     DESTINATION_ACCEPTED = "DESTINATION_ACCEPTED"
     DESTINATION_REJECTED = "DESTINATION_REJECTED"
     RETRY_WAIT = "RETRY_WAIT"
@@ -786,16 +788,19 @@ class PipelineStateStore:
             ).fetchall()
             states = {row["state"] for row in rows}
             terminal = {
+                PipelineState.DESTINATION_DEFERRED.value,
                 PipelineState.DESTINATION_ACCEPTED.value,
                 PipelineState.DESTINATION_REJECTED.value,
                 PipelineState.LEARNING_CLOSED.value,
-                PipelineState.DEAD_LETTERED.value,
+                PipelineState.REJECTED.value,
             }
-            if states and states <= terminal:
-                state = "completed"
-            elif PipelineState.DEAD_LETTERED.value in states:
+            if PipelineState.DEAD_LETTERED.value in states:
                 state = "attention"
+            elif states and states <= terminal:
+                state = "completed"
             else:
+                # DESTINATION_SUBMITTED remains active until an authoritative
+                # downstream acceptance, deferral, or rejection receipt exists.
                 state = "active"
             connection.execute(
                 """

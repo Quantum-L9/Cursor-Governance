@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sys
 import tempfile
@@ -38,7 +39,15 @@ class IngressTests(unittest.TestCase):
 
     def test_safe_capture_and_idempotent(self):
         acc = {"status": "ACCEPTED", "receipt_digest": "acc2"}
-        packet = {"units": [{"class": "repository_fact"}], "notes": "clean"}
+        # Accepted ingress now hands the packet to the orchestration processor
+        # and the packet validator, so this uses the repository's canonical
+        # valid packet rather than a stub the new pipeline would reject.
+        packet = json.loads(
+            (
+                Path(__file__).resolve().parents[1].parent
+                / "tests/fixtures/valid-recon-packet.json"
+            ).read_text(encoding="utf-8")
+        )
         a = ingest.ingest_accepted_result(
             accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc
         )
@@ -47,6 +56,54 @@ class IngressTests(unittest.TestCase):
         )
         self.assertEqual(a["outcome"], "CAPTURED")
         self.assertEqual(a["receipt_digest"], b["receipt_digest"])
+        # `observed_at` has one-second resolution, so comparing digests alone
+        # passes whenever both calls land inside the same second regardless of
+        # whether the repeat re-ran. Pin the whole receipt: a genuine re-run
+        # produces a new observation time and this catches it on a fast clock.
+        self.assertEqual(a, b)
+        self.assertEqual(a["observed_at"], b["observed_at"])
+
+    def test_repeat_ingest_does_not_reprocess(self):
+        """Idempotency is a property of the pipeline, not of the wall clock."""
+        acc = {"status": "ACCEPTED", "receipt_digest": "acc5"}
+        packet = json.loads(
+            (
+                Path(__file__).resolve().parents[1].parent
+                / "tests/fixtures/valid-recon-packet.json"
+            ).read_text(encoding="utf-8")
+        )
+        first = ingest.ingest_accepted_result(
+            accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc
+        )
+        self.assertEqual(first["outcome"], "CAPTURED")
+        calls: list[str] = []
+        original = ingest.ingest_packet
+
+        def _record(**kwargs):
+            calls.append(str(kwargs.get("source_receipt_digest")))
+            return original(**kwargs)
+
+        ingest.ingest_packet = _record  # type: ignore[assignment]
+        try:
+            repeat = ingest.ingest_accepted_result(
+                accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc
+            )
+        finally:
+            ingest.ingest_packet = original  # type: ignore[assignment]
+        self.assertEqual(calls, [], "settled receipt was re-processed")
+        self.assertEqual(repeat, first)
+
+    def test_unprocessable_packet_fails_closed_with_a_receipt(self):
+        """Ingress is a boundary: an unusable packet is FAILED, not an exception."""
+        acc = {"status": "ACCEPTED", "receipt_digest": "acc4"}
+        packet = {"units": [{"class": "repository_fact"}], "notes": "no identity"}
+        out = ingest.ingest_accepted_result(
+            accepted_result={}, generated_data_packet=packet, acceptance_receipt=acc
+        )
+        self.assertEqual(out["outcome"], "FAILED")
+        self.assertEqual(out["processing_status"], "FAILED")
+        self.assertIsNone(out["processor_job_id"])
+        self.assertIn("not processable", out["reason"])
 
     def test_no_reusable(self):
         acc = {"status": "ACCEPTED", "receipt_digest": "acc3"}

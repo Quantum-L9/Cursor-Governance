@@ -47,7 +47,29 @@ def completion_evidence_ok(
         "NO_REUSABLE_DATA",
         "QUARANTINED",
         "REJECTED",
+        "FAILED",
     }:
         return {"allowed": False, "reason": "missing GeneratedDataIngressReceipt"}
-    # NO_REUSABLE_DATA still allows execution completion
-    return {"allowed": True, "reason": "evidence chain complete"}
+    outcome = str(ingress_receipt.get("outcome") or "UNKNOWN")
+    if outcome == "FAILED":
+        return {"allowed": False, "reason": "generated-data handoff failed"}
+    if outcome == "CAPTURED":
+        state = str(
+            ingress_receipt.get("processing_status")
+            or ingress_receipt.get("processing_state")
+            or "UNKNOWN"
+        )
+        if not ingress_receipt.get("processor_job_id"):
+            return {
+                "allowed": False,
+                "reason": "generated data captured without processor job identity",
+            }
+        if state in {"PENDING", "FAILED", "UNKNOWN"}:
+            return {
+                "allowed": False,
+                "reason": f"generated-data processor not converged: {state}",
+            }
+    return {
+        "allowed": True,
+        "reason": "execution evidence captured; downstream memory status is explicit",
+    }

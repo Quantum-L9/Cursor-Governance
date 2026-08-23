@@ -102,6 +102,7 @@ def run_health(
         for name in (
             "L9_SGD_GRAPHITI_INGEST_COMMAND",
             "L9_SGD_GRAPHITI_SEARCH_COMMAND",
+            "L9_SGD_GRAPHITI_HYDRATE_COMMAND",
             "L9_SGD_GRAPHITI_REUSE_COMMAND",
             "L9_SGD_GRAPHITI_INVALIDATE_COMMAND",
         )
@@ -120,7 +121,9 @@ def run_health(
     )
     if live:
         for variable in (
+            "L9_SGD_GRAPHITI_INGEST_COMMAND",
             "L9_SGD_GRAPHITI_SEARCH_COMMAND",
+            "L9_SGD_GRAPHITI_HYDRATE_COMMAND",
             "L9_SGD_GRAPHITI_REUSE_COMMAND",
             "L9_SGD_GRAPHITI_INVALIDATE_COMMAND",
         ):
