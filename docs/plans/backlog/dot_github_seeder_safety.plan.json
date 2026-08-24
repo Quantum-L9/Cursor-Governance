@@ -1,0 +1,358 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Stop seeder clobber and residual seed lint",
+  "objective": "Close Quantum-L9/.github issues 60 and residual 61 by porting the existing seeder branch-safety gate onto a fresh origin/main worktree and fixing both Code of Conduct copies. Leave issues 20, 6, 19, and 47 breadcrumbed and unclosed.",
+  "success_criteria": [
+    "ops/test-seed-workflow-branch-guard.js fails against the pre-fix workflow body and passes against the ported body: open seed PR plus extra commit produces no updateRef",
+    "After the port, neither seeder workflow file contains createRef, updateRef, or force: true",
+    "make validate PASS in the Quantum-L9/.github worktree",
+    "Root CODE_OF_CONDUCT.md and templates/community-health/CODE_OF_CONDUCT.md have no trailing whitespace and keep three separate enforcement-tier lines",
+    "One PR open on Quantum-L9/.github against main; comments on issues 60 and 61; issues 20, 6, 19, and 47 noted as out of this close-out"
+  ],
+  "scope": {
+    "in": [
+      "Quantum-L9/.github issue 60 seeder force-clobber on chore/auto-seed-governance",
+      "Quantum-L9/.github residual issue 61 Code of Conduct trailing whitespace in root and templates copies",
+      "ops/seed-branch-safety.js plus unit and workflow-guard tests wired into ops/validate-starters.sh"
+    ],
+    "out": [
+      "Live seed-governance.yml mode=seed go-ahead (issue 20)",
+      "Org community-health cascade and LICENSE inheritance (issue 6)",
+      "Weekly advisory posture report (issue 19)",
+      "Org-wide SHA-pin findings across consumer repos (issue 47)",
+      "Edits in consumer repositories",
+      "Merging the resulting PR",
+      "Disabling the auto-seed cron without a code merge"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "Bind target repository Quantum-L9/.github and classify depth deep via route_plan.py --risk high",
+      "pass_criteria": "depth=deep; target is Quantum-L9/.github not Cursor-Governance",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "Diagnose ingest of open issues plus live main workflow inspection",
+      "pass_criteria": "Issue 60 live with cron */15 and force true; both CoC copies retain trailing spaces; labels.yml already one-space safe",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "Compare claude/github-org-config-q8l5lu at 74336bc73e41988d1a018cae88504b938952ba11 against origin/main",
+      "pass_criteria": "Donor ahead 2 behind 5; no open PR; helpers and tests exist on donor",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-01-baseline-preflight",
+      "task": "Create a dedicated Quantum-L9/.github worktree from origin/main, lock the full SHA, confirm issue 60 still live and both CoC copies still have trailing spaces, fetch 74336bc as read-only donor",
+      "files": [
+        ".github/workflows/auto-seed-new-repo.yml",
+        "CODE_OF_CONDUCT.md",
+        "templates/community-health/CODE_OF_CONDUCT.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new worktree from origin/main",
+      "leverage_rank": 3,
+      "shared_root_cause": "seeder rebuilds consumer branches from default plus one seed commit"
+    },
+    {
+      "id": "todo-02-port-safety-gate",
+      "task": "Port seed-branch-safety helpers, tests, both seeder workflows, validate-starters wiring, and AGENTS.md contract from 74336bc onto feat/seed-branch-safety cut from current main",
+      "files": [
+        "ops/seed-branch-safety.js",
+        "ops/test-seed-branch-safety.js",
+        "ops/test-seed-workflow-branch-guard.js",
+        ".github/workflows/auto-seed-new-repo.yml",
+        ".github/workflows/seed-governance.yml",
+        "ops/validate-starters.sh",
+        "AGENTS.md"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "todo-01-baseline-preflight"
+      ],
+      "operation": "Replace",
+      "anchor": "updateRef force true in auto-seed-new-repo.yml",
+      "leverage_rank": 1,
+      "shared_root_cause": "seeder rebuilds consumer branches from default plus one seed commit"
+    },
+    {
+      "id": "todo-03-fix-coc-templates",
+      "task": "Restructure enforcement tiers in root CODE_OF_CONDUCT.md and templates/community-health/CODE_OF_CONDUCT.md so no trailing whitespace is load-bearing; add .yamllint.yml if cheap",
+      "files": [
+        "CODE_OF_CONDUCT.md",
+        "templates/community-health/CODE_OF_CONDUCT.md",
+        ".yamllint.yml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-01-baseline-preflight"
+      ],
+      "operation": "Replace",
+      "anchor": "enforcement tier lines with trailing double spaces",
+      "leverage_rank": 4
+    },
+    {
+      "id": "todo-04-local-verify",
+      "task": "Run node guard suites so the incident scenario fails on the pre-fix body and passes on the port; run make validate",
+      "files": [
+        "ops/validate-starters.sh",
+        "Makefile"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "todo-02-port-safety-gate",
+        "todo-03-fix-coc-templates"
+      ],
+      "operation": "Wrap",
+      "anchor": "make validate target",
+      "leverage_rank": 2
+    },
+    {
+      "id": "todo-05-publish-pr",
+      "task": "Publish via PR_REMEDIATE=0 make pr from the wired .github worktree after local verify; do not merge",
+      "files": [
+        "Makefile"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "todo-04-local-verify"
+      ],
+      "operation": "Create",
+      "anchor": "open_pr_after_gate.sh via make pr",
+      "leverage_rank": 5
+    },
+    {
+      "id": "todo-06-breadcrumb",
+      "task": "Comment on issues 60 and 61 with the fix PR; note issues 20, 6, 19, and 47 as out of this close-out; write Graphiti PICKUP",
+      "files": [
+        "skills/l9-issue-remediation/scripts/post_issue_comment.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-05-publish-pr"
+      ],
+      "operation": "Create",
+      "anchor": "canonical unblock breadcrumb template",
+      "leverage_rank": 6
+    }
+  ],
+  "critical_path": [
+    "todo-01-baseline-preflight",
+    "todo-02-port-safety-gate",
+    "todo-04-local-verify",
+    "todo-05-publish-pr",
+    "todo-06-breadcrumb"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Fresh .github worktree locked to origin/main with donor available",
+      "unlocks": "Port of the branch-safety gate"
+    },
+    {
+      "id": "M2",
+      "outcome": "Both seeders fail-closed around open or dirty seed branches; CoC copies lint-clean",
+      "unlocks": "Local validate and publish"
+    },
+    {
+      "id": "M3",
+      "outcome": "PR open against main with issue breadcrumbs",
+      "unlocks": "Human merge and post-merge seeder observation"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "Full SHA of origin/main; force true and */15 still present; dual CoC trailing spaces confirmed",
+      "no_go_action": "stop_and_replan if main already contains the gate or CoC residual is gone"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "Workflow-guard incident scenario passes on port and fails on pre-fix body; make validate PASS",
+      "no_go_action": "do not publish; restore scoped paths and re-port"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "PR URL on Quantum-L9/.github; comments on issues 60 and 61",
+      "no_go_action": "do not close any issue; do not merge"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "Cursor-Governance AGENTS.md",
+      "action": "n_a",
+      "reason": "Mutations land in Quantum-L9/.github only; Cursor-Governance root files stay unchanged except planning artifacts under docs/plans/"
+    },
+    {
+      "surface": "Quantum-L9/.github AGENTS.md",
+      "action": "update",
+      "todo_ids": [
+        "todo-02-port-safety-gate"
+      ]
+    },
+    {
+      "surface": "Quantum-L9/.github CODE_OF_CONDUCT.md",
+      "action": "update",
+      "todo_ids": [
+        "todo-03-fix-coc-templates"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Is 74336bc logic incompatible with the issue 58/59/62 payload so the guard test cannot wrap the live script body?",
+      "Will skip-on-open-PR freeze seed updates on existing chore/auto-seed-governance PRs until those PRs merge?",
+      "Could hourly cron plus a 15-minute timeout still overlap without a concurrency group?",
+      "Would fixing only the root CoC leave consumers red because the seeder ships templates/community-health/CODE_OF_CONDUCT.md?"
+    ],
+    "assumed_false_ifs": [
+      "Org GH_TOKEN remains present on the governance-distribution environment",
+      "Donor commits remain fetchable on Quantum-L9/.github",
+      "No second seeder exists outside auto-seed-new-repo.yml and seed-governance.yml"
+    ],
+    "blast_radius": "Every non-archived non-fork Quantum-L9 repository. A wrong gate continues data loss or halts org-wide seeding.",
+    "rollback": "Revert the Quantum-L9/.github PR. Emergency HUMAN: gh workflow disable auto-seed-new-repo.yml. Do not force-push consumer seed branches."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-02-port-safety-gate",
+      "todo-04-local-verify",
+      "todo-01-baseline-preflight",
+      "todo-03-fix-coc-templates",
+      "todo-05-publish-pr",
+      "todo-06-breadcrumb"
+    ],
+    "shared_causes": [
+      "Both seeders rebuild chore/auto-seed-governance from default-branch plus one seed commit and move the ref with force true",
+      "Already-seeded check resolves against the default branch, so an open unmerged seed PR is re-seeded forever",
+      "Distributed CoC uses Markdown hard-break trailing spaces that consumer trailing-whitespace hooks reject"
+    ],
+    "deletions_or_consolidations": [
+      "Inline createRef/updateRef/force true in both workflow script bodies; replace with shared assessSeedBranch and moveSeedBranch"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Porting the stale donor onto five newer main commits conflicts with the current seed payload script body",
+      "mitigation": "Port helpers onto a fresh origin/main snapshot and re-integrate the current workflow text rather than cherry-pick the two donor commits"
+    },
+    {
+      "risk": "Safety gate too aggressive and new repos never get seeded",
+      "mitigation": "Skip only when a seed PR is open or the branch holds foreign commits; create the branch when absent"
+    },
+    {
+      "risk": "Safety gate too loose and clobber continues",
+      "mitigation": "Workflow-guard incident scenario plus grep that workflows no longer name createRef, updateRef, or force true"
+    },
+    {
+      "risk": "Cron still running every 15 minutes until the PR merges",
+      "mitigation": "Document remaining clobber until merge; do not edit consumer seed PRs while the loop is live"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Which consumer repo fails every auto-seed run today?",
+      "decision_effect": "Does not change the gate design; core.error on the ported workflows makes the next run name it",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Does a Quantum-L9/.github worktree accept make -C Cursor-Governance pr WS= that worktree?",
+      "decision_effect": "If wiring fails, stop_and_replan rather than raw gh pr create",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "make validate",
+      "pass_criteria": "PASS in the Quantum-L9/.github worktree",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "make pr-check",
+      "pass_criteria": "PASS via make -C $HOME/.cursor-governance pr-check WS=<github-worktree> when wiring holds, else stop_and_replan",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "PR_REMEDIATE=0 make pr",
+      "pass_criteria": "PR opened against main; no merge",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2"
+    ],
+    "next_skill": "l9-bounded-autonomy",
+    "stop_reason": "PLAN_DOCUMENT validated; implementation runs in a Quantum-L9/.github worktree after this artifact lands"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      ".github/workflows/auto-seed-new-repo.yml",
+      ".github/workflows/seed-governance.yml",
+      "ops/seed-branch-safety.js",
+      "ops/test-seed-branch-safety.js",
+      "ops/test-seed-workflow-branch-guard.js",
+      "ops/validate-starters.sh",
+      "AGENTS.md",
+      "CODE_OF_CONDUCT.md",
+      "templates/community-health/CODE_OF_CONDUCT.md",
+      ".yamllint.yml"
+    ],
+    "must_not_modify": [
+      "l9-ci-pack/",
+      "workflow-templates/",
+      ".github/labels.yml",
+      "templates/labels.yml",
+      "consumer repositories",
+      "org secrets",
+      "branch protection",
+      "Cursor-Governance product files"
+    ],
+    "preserved_contracts": [
+      "Missing-only seed; never push directly to consumer main",
+      "autonomous_merge false",
+      "No force-push of consumer seed branches from this close-out",
+      "Issues 20, 6, 19, and 47 stay open"
+    ],
+    "validation_commands": [
+      "make validate",
+      "make pr-check",
+      "PR_REMEDIATE=0 make pr"
+    ]
+  },
+  "checklist": [
+    "Dedicated .github worktree from origin/main",
+    "Ported branch-safety gate",
+    "Both CoC copies lint-clean",
+    "make validate PASS",
+    "PR open, no merge",
+    "Issue breadcrumbs plus Graphiti PICKUP"
+  ],
+  "estimate": "one campaign wave plus one publish"
+}

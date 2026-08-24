@@ -1,0 +1,52 @@
+---
+id: l9.rule.55.ff.only.ssot.sync
+version: 1.2.0
+description: Sync or fast-forward a Cursor-Governance clone only via /ff and
+  l9-repo-sync (in-place ff). Never governance_activate_fresh swap. Never delete unique work.
+scope: global
+domain: git
+activation: always
+authority: canonical_global
+alwaysApply: true
+---
+
+# Fast-forward only (no SSOT clobber)
+
+SessionStart does **not** auto-update or auto-sync the SSOT. Inbound tip
+activation (`governance_activate_fresh.sh`) is skipped unless
+`L9_GOVERNANCE_AUTO_UPDATE=1` (breakglass). Catch up only via **`/ff`**.
+
+When the user asks to sync, fast-forward, or “update the SSOT / this
+governance clone,” use **`/ff`** — nothing else.
+
+| Link | Role |
+|---|---|
+| [`commands/ff.md`](../commands/ff.md) | Slash protocol `/ff` (thin caller) |
+| [`skills/l9-repo-sync/SKILL.md`](../skills/l9-repo-sync/SKILL.md) | Skill contract |
+| [`skills/l9-repo-sync/scripts/ff.sh`](../skills/l9-repo-sync/scripts/ff.sh) | Park unique work, then `reset --keep` |
+
+An in-place catch-up leaves `.venv` **and unique untracked files**. Unique
+commits and dirty tracked bytes are parked (preserve branch, dirty ref,
+`$HOME/.cursor/l9-ff-hold/`). That is the success test. Do not call
+`governance_sync.sh` (it stashes untracked). Do not delete files to unblock.
+
+## MUST
+
+- Name the clone (`ssot` = `$HOME/.cursor-governance`, or `workspace`)
+- Set `GOVERNANCE_SYNC_PUSH=0` and `GOVERNANCE_SYNC_HARD_RESET=0`
+- Set `CURSOR_GOVERNANCE_DIR` to that clone
+- Run `skills/l9-repo-sync/scripts/ff.sh`
+- Verify `.venv` and unique untracked paths still exist (or are held) after the run
+
+## MUST NOT
+
+- Run `ops/scripts/governance_activate_fresh.sh` as a sync (shallow clone +
+  atomic swap **replaces** the live directory and drops `.venv`)
+- Use `make start` / sessionStart activate as a stand-in for `/ff`
+- Treat `make sync` as `/ff` (`make sync` is still `governance_sync.sh`)
+- `git stash -u` / `git reset --hard` / `git pull` / `git switch` /
+  `git checkout` / `git clone` to “catch up”
+- Delete dirty or untracked files so `reset --keep` can proceed
+
+If `reset --keep` aborts, unique bytes are still in the tree or on a
+preserve/hold ref. Re-run `/ff`. Do not swap. Do not delete.

@@ -23,13 +23,27 @@ Highest first. A lower rung never overrides a higher one.
 5. **Agent-invented contracts** — none. If you find yourself designing a rule,
    it belongs in one of the four rungs above, in a PR.
 
-Maps, not rungs: `ARCHITECTURE.md` and `INVARIANTS.md` index this repo; they do
-not outrank the chain above.
+This file is not a rung. It only names them.
+
+Maps, not rungs — live at **this repo's root**, not org-seeded, not competing
+SSOTs:
+
+- [`ARCHITECTURE.md`](ARCHITECTURE.md) — this-repo module / CI index
+- [`INVARIANTS.md`](INVARIANTS.md) — this-repo invariant + CI enforcement index
+- [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml) — machine org-policy SSOT
+  (`INVARIANTS.md` points at it; do not copy `L9-ORG-*` bodies here)
+
+Resume SSOT is Graphiti (`inject` / PICKUP). Do not write `memory-bank/`.
+Activation is SessionStart only (`AGENTS.md` §2). Publish is
+`PR_REMEDIATE=0 make pr` (`make PR` / `Pr` / `pR` are the same target).
+Consumers do not inherit this file from the Quantum-L9/.github seeder; they
+keep their own `CLAUDE.md` if they have one (`agentdocs.sh` only maintains
+the formatter block).
 
 ## The three things most often got wrong here
 
-- **`make pr` is the sanctioned route to GitHub — and nothing blocks the
-  alternatives.** Raw `git push` is *not* denied by
+- **`make pr` (any capitalization) is the sanctioned route to GitHub — and
+  nothing blocks the alternatives.** Raw `git push` is *not* denied by
   `ops/autonomy/local_execution_gate.py`; git and gh are exempt from the
   workflow plane and answer to `ops/autonomy/git_guardrails.py`, which denies by
   effect (CANONICAL_LAW §6.2.4). Prefer `make pr` because it runs the checkers,
@@ -59,6 +73,11 @@ exit 5 means specifically: the files are correct and nothing loaded them.
 
 `STRUCTURAL_PASS` means the files are correct. It says nothing about whether any
 of them were loaded into this session; `RUNTIME:` is the line that answers that.
+
+This file is `managed` (rewrite allowed, no `ALLOW-ROOT-DELETION`). PRs that
+touch `additive_only` root files (`Makefile`, `AGENTS.md`, …) must use
+`.github/PULL_REQUEST_TEMPLATE/protected-root.md` (`<!-- L9_PROTECTED_ROOT_PR -->`).
+`make pr` injects it. CI fails without the stamp. See `AGENTS.md` §14.
 
 <!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->
 

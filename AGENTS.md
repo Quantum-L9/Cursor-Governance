@@ -77,11 +77,10 @@ canonical activation mechanism.
 fire when an agent runs `git worktree add`. After creating a worktree:
 
 ```bash
-# Ordinary start is origin/main (CANONICAL_LAW task ancestry).
-# Stack-aware launcher: ops/scripts/agent_worktree_start.sh — only when
-# PR_STACK=auto is an explicit authorized exception, not this default.
-bash "$HOME/.cursor-governance/ops/scripts/worktree_add_wired.sh" -b feat/<id> /path/to/wt origin/main
-# or, if the worktree already exists:
+# Default is PR_STACK=auto (Makefile): start on the unique open-PR tip.
+# Opt out (origin/main): PR_STACK=  before the launcher.
+bash "$HOME/.cursor-governance/ops/scripts/agent_worktree_start.sh" --agent-id <id> --task-id <task>
+# Existing worktree (already created):
 bash "$HOME/.cursor-governance/ops/scripts/ensure_workspace_wired.sh" /path/to/wt
 ```
 
@@ -162,7 +161,8 @@ subdirectory. Cloud Web/Mobile memory uses HTTPS Graphiti
 (`GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp`);
 see ADR-0006 + ADR-0007.
 
-**Cursor** remains ask-first except campaign packet / explicit L4 program.
+**Cursor** scoped-commits locally without asking (pathspecs; rule 49).
+Ask-first applies to push / `make pr` only.
 Adapter surfaces (`claude-code`, `codex`, `gemini`, `manus`) with
 `L9_AUTONOMY_ENABLED=true` may scoped-commit locally without per-action ask.
 They still publish only via `make pr`. Install settings:
@@ -277,21 +277,19 @@ check and `git push`. Default `PR_OVERLAP=block`. Generated artifacts
 are exempt and merge via `merge=l9-generated`.
 
 Overlap remedy: commit into the same-agent open PR, else wait, else
-renegotiate scope. `PR_STACK=auto` still exists as a knob but creates the
-topology squash-merge denies — use it only when the parent will merge with
-`--merge`. Fail-open on missing `gh` telemetry; fail-closed on a detected
-non-generated textual conflict.
+renegotiate scope. `PR_STACK=auto` is the default at start and at
+`make pr` — not an opt-in exception. Empty `PR_STACK` keeps
+`origin/main`. Fail-open on missing `gh` telemetry; fail-closed on a
+detected non-generated textual conflict.
 
-`PR_STACK=auto` is also the start-time default:
 `agent_worktree_start.sh` bases the worktree on the unique open-PR chain
 tip (implied `L9_TASK_BASE_AUTHORIZED` for that tip only). Do not invent
-an `origin/main` fork and restack at `make pr`. Empty `PR_STACK` keeps
-`origin/main`. Sibling open-PR chains still fail closed.
+an `origin/main` fork and restack at `make pr`. Sibling open-PR chains
+still fail closed.
 
-`make pr` defaults to `PR_STACK=auto` (stack on the overlapping open
-head). Opt out with `PR_STACK= make pr` to publish against `main`. A
-stack parent must merge with `--merge`, or children must land first —
-squash of a parent silently drops the child.
+Opt out with `PR_STACK= make pr` to publish against `main`. A stack
+parent must merge with `--merge`, or children must land first — squash
+of a parent silently drops the child.
 
 After any merge touching generated paths, or while
 `.l9/pr/regen-required.txt` is non-empty, run
@@ -558,6 +556,23 @@ gate is itself a protected-path change (`ORG_INVARIANTS.yaml`
 This file is `additive_only`. A whole-file fold (this revision) is authorized
 only when the commit includes `ALLOW-ROOT-DELETION: AGENTS.md — …`.
 
+<!-- PROTECTED_ROOT_PR_TEMPLATE_V1 -->
+
+PRs that touch any `additive_only` root file (`Makefile`, `AGENTS.md`,
+`CANONICAL_LAW.md`, `pyproject.toml`, `requirements.txt`, `conftest.py`,
+`.pre-commit-config.yaml`, `.gitleaks.toml`, `.mcp.json`, `CODEOWNERS`,
+`LICENSE`, `SECURITY.md`, `ORG_INVARIANTS.yaml`) **MUST** use
+`.github/PULL_REQUEST_TEMPLATE/protected-root.md`. The body must contain the
+stamp `<!-- L9_PROTECTED_ROOT_PR -->`. `make pr` injects that template.
+The Root-file append-only gate fails CI without the stamp. Prefer
+append-only so `ALLOW-ROOT-DELETION` is unnecessary; a rewrite still needs
+that marker in a commit message.
+
+Review threads (GitHub Code Quality, Copilot, Codex, humans) stay in scope
+for `/l9-pr-remediation`. Inspect each proposed fix against current source
+and apply it when justified. A finding whose **only** path is under `WIP/**`
+cannot fail CI and is not a merge-blocking code defect.
+
 ---
 
 ## 15. WIP corpus on main
@@ -722,3 +737,73 @@ capability-contract runs on `make pr` only when the change set matches
 `^(ops/secrets/|environment/agents/)`. Workflow pins run only when
 `.github/workflows/` or `ops/scripts/validate_workflow_action_pins.py`
 changed.
+
+<!-- PLAN_KERNEL_AUTO_PASS_V1 -->
+## Plan kernel pass (2026-08-21)
+
+Hooks plus a hashed receipt force Improve then Validate & Repair on **one**
+Cursor `.plan.md` in the machine plans store (`realpath($HOME/.cursor/plans)`).
+
+1. `postToolUse` writes `$WS/.l9/plan/kernel-pass-required.json` when a store
+   `.plan.md` fails `skills/l9-plan/scripts/validate_plan_kernel_receipt.py`.
+2. `beforeSubmitPrompt` (existing skill router) prepends the inject block.
+3. `beforeShellExecution` denies `make campaign` / `run_campaign.py` when that
+   latch or an argv `.plan.md` still FAILs. `pec.py` and `make pr-check` stay
+   allowed.
+4. SessionStart plan audit may flag `kernel_unfired` (display-only).
+5. Canonical sha is SHA-256 of the file after every `body_sha256` scalar is
+   replaced with 64 zeros. Empty `deltas` is FAIL. Do not create a second plan.
+
+<!-- ROOT_DOC_AUTHORITY_MAP_V1 -->
+## Root-doc authority map (2026-08-21)
+
+Do **not** fold this file into a thin pointer. `AGENTS.md` remains the
+operating-instruction SSOT. This section is additive only.
+
+| File | Role |
+|---|---|
+| `CLAUDE.md` | Load pointer — authority chain only; no doctrine dump |
+| `AGENTS.md` | Operating-instruction SSOT (this file). Additive-only. Do not fold. |
+| `README.md` | Index pointing at `CANONICAL_LAW.md` and this file |
+| `CANONICAL_LAW.md` | Constitution. Not edited by the root-docs skill. |
+| `skills/l9-*` | Task procedures. Cite kernels by path; do not wrap kernels. |
+
+When refreshing root docs, use skill `l9-update-agent-docs`. That skill **reads**
+`kernels/Recursive Alignment.md` for the audit and must not embed or compress
+the kernel. Do not invent root `ARCHITECTURE.md` or `INVARIANTS.md`. Generated
+formatter-ownership blocks are companions owned by `environment/ide/policy.json`.
+
+<!-- ROOT_DOC_VR_REPAIR_V1 -->
+## Root-doc repair citation (2026-08-21)
+
+When `l9-update-agent-docs` repairs a confirmed pointer defect, it **reads**
+`kernels/Validate & Repair.md` by path. It must not embed or compress that
+kernel. Repairs stay the smallest source-aligned edit; report only validation
+that ran (Passed / Failed / Skipped / Unknown / NotApplicable).
+
+<!-- L9_FF_REPO_SYNC_V1 -->
+## `/ff` in-place catch-up (2026-08-22)
+
+Catch a named Cursor-Governance clone up to `origin/main` **in place** via
+`/ff` or `make ff` (`skills/l9-repo-sync/scripts/ff.sh`). Unique commits,
+dirty tracked bytes, and untracked copies that main now tracks are **parked**
+(never deleted). `.venv` stays. Do not run `governance_activate_fresh.sh` as
+sync. `make sync` remains `governance_sync.sh` and is not `/ff`.
+
+<!-- L9_CURSOR_AUTO_COMMIT_V1 -->
+## Cursor local commits (2026-08-22)
+
+Agents **must** scoped-commit work they authored this session without asking.
+Ask only before push / `make pr` / other remote mutation. Rule:
+`rules/99-no-auto-commit.mdc`.
+
+<!-- L9_AUDIT_PLANS_V1 -->
+## Plans-store audit slash (2026-08-23)
+
+On-demand shelf audit/organize is **`/l9-audit-plans`**
+(`commands/l9-audit-plans.md`). Root stays current unbuilt only;
+`partially-built/`, `built/`, `backlog/`, and `archive/superseded/` hold the
+rest. `/plan-audit` is a compatibility alias of that command.
+
+Skill **`l9-plan-audit`** is still the sessionStart 7-day live-queue scanner
+(§16). It does not move files. Do not treat it as `/l9-audit-plans`.
