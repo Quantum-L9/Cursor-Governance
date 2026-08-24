@@ -144,17 +144,17 @@ def _resolve_runtime_database(payload: dict[str, Any]) -> Path | None:
     return None
 
 
-def _extract_admission_token(payload: dict[str, Any]) -> str | None:
-    """Extract only the opaque admission token from the Task input.
+def _admission_from_payload(payload: dict[str, Any]) -> str | None:
+    """Extract only the opaque admission key from the Task input.
 
-    The token is a lookup key for authority already persisted in root
+    The key is a lookup for authority already persisted in root
     Autonomy; nothing else in the Task text participates in admission.
     """
     tool_input = payload.get("tool_input")
     if isinstance(tool_input, dict):
-        token = str(tool_input.get("l9_admission_token") or "").strip()
-        if token:
-            return token
+        key = str(tool_input.get("l9_admission_token") or "").strip()
+        if key:
+            return key
         haystack = json.dumps(tool_input)
     else:
         haystack = str(tool_input or "")
@@ -189,13 +189,13 @@ def compose_host_pre_tool_use(payload: dict[str, Any]) -> dict[str, Any]:
             "no root Autonomy runtime database for this workspace; "
             "native Task admission stays fail-closed"
         )
-    token = _extract_admission_token(payload)
-    if not token:
+    admission = _admission_from_payload(payload)
+    if not admission:
         return _deny(
             "native Task carries no admission token; root authority must exist "
             "before launch and is never inferred from Task prose"
         )
-    decision = _host_bridge().host_bind_pre_tool_use(database, token, tool_use_id)
+    decision = _host_bridge().host_bind_pre_tool_use(database, admission, tool_use_id)
     if not decision.get("allowed"):
         return _deny(str(decision.get("reason") or "admission denied"))
     admission = decision["admission"]
