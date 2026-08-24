@@ -25,7 +25,7 @@ from collections import Counter
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from autonomy.runtime.claims import claims_collide
+from autonomy.runtime.claims import claim_scopes_conflict
 from autonomy.runtime.store import RuntimeStore
 from autonomy.runtime.timeutil import utc_now_text
 from autonomy.runtime.types import ScheduledAction, SchedulingCycle
@@ -393,8 +393,8 @@ class Scheduler:
             kind=str(row["kind"]),
         )
 
-    def _active_claims(self, campaign_id: str) -> dict[str, list[tuple[str, bool]]]:
-        held: dict[str, list[tuple[str, bool]]] = {}
+    def _active_claims(self, campaign_id: str) -> list[tuple[str, str, bool]]:
+        held: list[tuple[str, str, bool]] = []
         with self.store.connect() as connection:
             rows = connection.execute(
                 """
@@ -404,10 +404,9 @@ class Scheduler:
                 """,
                 (campaign_id,),
             )
-            for row in rows:
-                held.setdefault(row["resource_key"], []).append(
-                    (str(row["mode"]), bool(row["exclusive"]))
-                )
+            held.extend(
+                (str(row["resource_key"]), str(row["mode"]), bool(row["exclusive"])) for row in rows
+            )
         return held
 
     @staticmethod
@@ -420,21 +419,24 @@ class Scheduler:
     def _claims_conflict(
         self,
         claims: Sequence[Mapping[str, Any]],
-        held: Mapping[str, list[tuple[str, bool]]],
+        held: Sequence[tuple[str, str, bool]],
     ) -> bool:
         """Pre-filter admission with the registry's own compatibility rule.
 
-        Claim keys are opaque identifiers: two actions collide when they name
-        the same key and `claims_collide` says so. The registry re-checks this
-        transactionally at lease time and remains authoritative.
+        Overlap is scope-aware through `claim_scopes_conflict` — the same
+        primitive the registry enforces transactionally at lease time. The
+        registry remains authoritative; this prefilter may never diverge
+        from it.
         """
 
         for claim in claims:
             key, mode, exclusive = self._claim_shape(claim)
-            for existing_mode, existing_exclusive in held.get(key, ()):
-                if claims_collide(
+            for existing_key, existing_mode, existing_exclusive in held:
+                if claim_scopes_conflict(
+                    key=key,
                     mode=mode,
                     exclusive=exclusive,
+                    other_key=existing_key,
                     other_mode=existing_mode,
                     other_exclusive=existing_exclusive,
                 ):
@@ -444,11 +446,11 @@ class Scheduler:
     def _hold_claims(
         self,
         claims: Sequence[Mapping[str, Any]],
-        held: dict[str, list[tuple[str, bool]]],
+        held: list[tuple[str, str, bool]],
     ) -> None:
         for claim in claims:
             key, mode, exclusive = self._claim_shape(claim)
-            held.setdefault(key, []).append((mode, exclusive))
+            held.append((key, mode, exclusive))
 
     def _condition_satisfied(
         self,
