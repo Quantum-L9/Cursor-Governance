@@ -31,6 +31,7 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/ynp` | Highest-leverage next action |
 | `/l9-plan` | Deep PE+autonomy `.plan.md` via first-class template |
 | `/l9-plan-simple` | Same template, Cursor Build on the current checkout (not `make campaign`) |
+| `/l9-audit-plans` | Shelf the plans store: root = current unbuilt; partial/built/superseded/parked in subfolders (`/plan-audit` alias) |
 | `/git-work-preserve` | Diagnose-first git work audit / extract / prune-propose (`l9-git-work-preserve`) |
 | `/ff` | In-place catch-up of a named Cursor-Governance clone (`l9-repo-sync`) |
 | `/analyze` | Explore structure, flows, hotspots (`l9-code-analysis`; probe mode via `l9-component-verification`) |

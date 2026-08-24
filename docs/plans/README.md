@@ -18,13 +18,15 @@ Companion `.plan.json` / `.activate.yaml` files stay next to their `.plan.md`.
 ## Shelves (existing mechanics)
 
 Only **top-level** `*.plan.md` files are live for Cursor Build and session-start
-`l9-plan-audit` (root glob only). Folders hold everything else.
+`l9-plan-audit` (root glob only). Folders hold everything else. On-demand
+organize is `/l9-audit-plans` (not the sessionStart skill).
 
 | Location | Meaning |
 |---|---|
-| *(root)* | Live queue — scored below. New work lands here. |
-| `built/` | All todos `completed` or `cancelled` |
-| `backlog/` | Open work, parked — not this session's queue |
+| *(root)* | Live queue — **current unbuilt** plans only (all todos still `pending`). New work lands here. |
+| `partially-built/` | Started but not finished — at least one todo `completed` or `in_progress` |
+| `built/` | All todos `completed` or `cancelled`, or frontmatter `built: true` / `status: completed` |
+| `backlog/` | Open unbuilt work, parked — not current |
 | `archive/` | Non-plan harvest and other dead weight |
 | `archive/superseded/` | Older same-slug copy or body `status: superseded` |
 
@@ -43,18 +45,22 @@ Do not invent a second score schema. Do not make `pe/`, `ci/`, or date folders.
 
 ## Live queue (highest first)
 
+Current unbuilt only. Partial work is in `partially-built/` (`pe_fast_002_prepare_8-20-26`, `tier2-schema-proposer-tests_8-20-26`, `plan_kernel_auto-pass_3d1d3ae4`).
+
 1. `worktree_parent_clone_8-20-26` — shared isolation root cause (parent ≠ live SSOT)
 2. `make-program-execution-start-cleanly-gap-only_8-15-26` — PE start still open
-3. `pe_fast_002_prepare_8-20-26` — in_progress prepare/resume
-4. `in-flight_pr_census_8-20-26` — one collision engine for sessionStart + `make pr`
-5. `l4_publish_allow_8-20-26` — sole publish path
-6. `pe_unified_loop_8-20-26` — loop seams on what already landed (JSON companion now dated)
-7. `pe_pipeline_fix_program_8-20-26` — factory friction (JSON companion now dated)
-8. `claude_code_env_contract_8-20-26` — one session contract
-9. `toolchain_lock_percolation_8-20-26` — pins percolate without per-repo edits
-10. `core-identical_toolchain_locks_8-20-26` — same lock family
-11. `tier2-schema-proposer-tests_8-20-26` — in_progress validation (narrower)
+3. `in-flight_pr_census_8-20-26` — one collision engine for sessionStart + `make pr`
+4. `l4_publish_allow_8-20-26` — sole publish path
+5. `pe_unified_loop_8-20-26` — loop seams on what already landed (JSON companion now dated)
+6. `pe_pipeline_fix_program_8-20-26` — factory friction (JSON companion now dated)
+7. `claude_code_env_contract_8-20-26` — one session contract
+8. `toolchain_lock_percolation_8-20-26` — pins percolate without per-repo edits
+9. `core-identical_toolchain_locks_8-20-26` — same lock family
+10. `plan_template_org_fields_8-20-26` — project leverage fields into plan frontmatter
+11. `infisical_gha_oidc_conformance_8-20-26` — OIDC on the existing secrets plane
+12. `ra_root-docs_pointer_09ff9571` — Recursive Alignment pointer, not dump
+13. `pe_eie_scoped_campaign_5469bc8f` — EIE scoped campaign
 
-`pipeline_assembly_fill` moved to `built/` — audit `overall_autonomy_percent: 100` and every GAP id `Resolved` on this tree. Cursor todos were never flipped.
+`pipeline_assembly_fill` is in `built/`.
 
 Next play: `/ynp` against this list. Do not auto-Build from the shelf.

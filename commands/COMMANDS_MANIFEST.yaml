@@ -110,6 +110,11 @@ commands:
 - slash: /issues
   file: commands/issues.md
   enabled: true
+- slash: /l9-audit-plans
+  file: commands/l9-audit-plans.md
+  enabled: true
+  aliases:
+  - /plan-audit
 - slash: /l9-plan
   file: commands/l9-plan.md
   enabled: true

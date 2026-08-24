@@ -22,8 +22,9 @@ Subfolders are out of the session-start set (see `docs/plans/README.md`):
 
 | Folder | Meaning |
 |---|---|
-| *(root)* | Live queue — last-7-day unbuilt plans |
-| `backlog/` | Open work, parked |
+| *(root)* | Live queue — current unbuilt plans |
+| `partially-built/` | Started but not finished (`completed` / `in_progress` todos remain) |
+| `backlog/` | Open unbuilt work, parked |
 | `built/` | Executed plans |
 | `archive/` | Non-plan harvest and other dead weight |
 | `archive/superseded/` | Older same-slug copies or body `status: superseded` |
