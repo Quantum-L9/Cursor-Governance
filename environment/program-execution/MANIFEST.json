@@ -1699,7 +1699,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "66360a8819b0f2f71a3b476ce94493355b1a56770bb509c64781d9e80635314d"
+      "sha256": "4ec71068d2f50a44431dd5edd78c2e8105cf274d087ffbc964181328d0917266"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1775,7 +1775,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "0e49e3c7a10d29eb99d6b2214e0fdebfabacdf9b947acb4e31cec5695677c794"
+      "sha256": "2b22fba75ceafd577bb47f8e6075fe6a98749927d68d40afff31a22dd179b168"
     },
     {
       "path": "scripts/tests/test_run_peer_task_pipeline.py",

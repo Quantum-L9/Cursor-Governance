@@ -2,6 +2,20 @@
 
 Embed the **campaign authorization packet** fields in every template. Never use the word “envelope” for authority.
 
+On a governed native-Cursor host, every launched Task prompt additionally
+carries one admission marker line obtained from the root-Autonomy host bridge
+**before** the launch:
+
+```text
+L9_ADMISSION_TOKEN={{admission_token}}
+```
+
+The token is opaque and single-use: it identifies an adapter session, READY
+action, and ACTIVE root lease already persisted in the root Autonomy runtime.
+The lifecycle preToolUse hook denies any native Task without a valid token —
+no other prompt text participates in admission, and none of these template
+fields grant authority by themselves.
+
 ---
 
 ## poll_worker

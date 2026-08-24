@@ -21,6 +21,7 @@ from .controller import (
     complete_task,
     evaluate_gate,
     export_handoff,
+    fail_task,
     next_tasks,
     open_runtime,
     prepare_worktree,
@@ -152,6 +153,12 @@ def parser() -> argparse.ArgumentParser:
     cmd.add_argument("--actor", required=True)
     cmd.add_argument("--evidence-id", action="append", default=[])
 
+    cmd = sub.add_parser("fail")
+    cmd.add_argument("task_id")
+    cmd.add_argument("--workspace", required=True, type=Path)
+    cmd.add_argument("--reason", required=True)
+    cmd.add_argument("--actor", required=True)
+
     cmd = sub.add_parser("release-lease")
     cmd.add_argument("task_id")
     cmd.add_argument("--workspace", required=True, type=Path)
@@ -276,6 +283,7 @@ _TUNNEL_COMMANDS = frozenset(
         "record-attempt",
         "verify",
         "complete",
+        "fail",
         "release-lease",
         "recover",
         "add-approval",
@@ -416,6 +424,8 @@ def main(argv: list[str] | None = None, *, template_root: Path) -> int:
             value = verify_attempt(args.workspace, args.task_id)
         elif args.command == "complete":
             value = complete_task(args.workspace, args.task_id, args.actor, args.evidence_id)
+        elif args.command == "fail":
+            value = fail_task(args.workspace, args.task_id, args.reason, args.actor)
         elif args.command == "release-lease":
             value = release_lease(args.workspace, args.task_id, args.reason, args.actor)
         elif args.command == "recover":

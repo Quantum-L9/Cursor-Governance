@@ -358,6 +358,18 @@ PY
   fi
 fi
 
+# Native subagent lifecycle hooks are referenced by hooks.json and must exist
+# as executable installed commands. A configured-but-missing command is a
+# fail-open host boundary, not a valid installation.
+for lifecycle_cmd in lifecycle-subagent-start.sh lifecycle-subagent-stop.sh; do
+  if grep -q "$lifecycle_cmd" "$HOOKS_JSON" 2>/dev/null \
+    && { [ -x "$HOME/.cursor/hooks/$lifecycle_cmd" ] || [ -L "$HOME/.cursor/hooks/$lifecycle_cmd" ]; }; then
+    pass "$lifecycle_cmd installed and registered"
+  else
+    fail "$lifecycle_cmd missing or not registered in hooks.json"
+  fi
+done
+
 CURRENT_FAIL_CLASS=graphiti
 echo ""
 echo "=== Graphiti memory (GLOBAL-001) ==="
