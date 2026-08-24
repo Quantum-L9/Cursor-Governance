@@ -95,7 +95,7 @@ files:
 - path: scripts/pec/cli.py
   sha256: 4e95cb40a81e25d8d4949d44d16884cfaf06dc54590b181aefda80f4f0d05b8c
 - path: scripts/pec/common.py
-  sha256: 871aa8a77da5abcdfd1ee29156b2df42085a09bcf119ad209bc755142a6ad2f1
+  sha256: df55978ff7841bf6db5b05f3e937c3d682c956b0992d9e02022cdb277f0fa104
 - path: scripts/pec/contracts.py
   sha256: a9779fad92b5844ef01dba0d9daa746dc74635873a8ffa725f9ad5fef982cfa6
 - path: scripts/pec/controller.py
@@ -125,7 +125,7 @@ files:
 - path: scripts/tests/test_bootstrap_admission.py
   sha256: b480c969090f1b58c7b6f60934947749e09c14cf59a0a08faac8c92dcba51a72
 - path: scripts/tests/test_campaign_fan_in.py
-  sha256: 82b4e5e6ebd7a596689bc3fb8a5fa4f9feec170b1941f3de62a601414d31e24f
+  sha256: 935760a69ed57106ad73ba5be739e7b8f732071de444749b97cbd39e8e77cf91
 - path: scripts/tests/test_campaign_status.py
   sha256: 8b0531577ad3013259051c90706d5fec624b7a47ee19da4be56b60c55061ba85
 - path: scripts/tests/test_changed_files.py
