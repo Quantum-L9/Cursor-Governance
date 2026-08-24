@@ -2,20 +2,23 @@
 # Canonical mutating-agent task start (L9 Multi-Agent Main-Bound Execution
 # Contract §2, §3; invariants E1, E2).
 #
-# One mutating agent = one dedicated wired worktree. Default base is
-# PR_STACK=auto: unique open-PR chain tip when one exists, else origin/main.
-# It fetches that base, pins the SHA, creates a unique agent branch, a wired
-# worktree, and the task metadata the publication gate later verifies.
+# One mutating agent = one dedicated wired worktree, branched from the *fetched*
+# origin/main. This is the only sanctioned way to begin ordinary repository work:
+# it fetches main, pins the exact base SHA, creates a unique agent branch from
+# that SHA, creates a wired worktree, and records the task metadata that the
+# publication gate later verifies.
 #
 # Usage:
 #   bash ops/scripts/agent_worktree_start.sh --agent-id claude --task-id T1
 #   bash ops/scripts/agent_worktree_start.sh --agent-id claude --task-id T1 \
 #        --worktree /path/to/wt --json
 #
-# Default base follows PR_STACK (same as make pr): unset or auto resolves the
-# unique open-PR chain tip. Empty PR_STACK= keeps origin/main. An explicit
-# --base is never rewritten. Other non-main --base still needs:
+# Non-main ancestry (stacked / campaign work) is an EXCEPTION and must be
+# authorized explicitly:
 #   L9_TASK_BASE_AUTHORIZED="<reason>" ... --base origin/campaign/foo
+#
+# PR_STACK=auto (no --base): resolve the unique open-PR chain tip and imply
+# L9_TASK_BASE_AUTHORIZED for that tip only. Empty/unset PR_STACK stays origin/main.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -85,18 +88,17 @@ _resolve_auto_stack_tip() {
   echo "NOTE: PR_STACK=auto resolved stack tip ${base_ref} (reason=${reason:-unknown})"
 }
 
-# Default --base is origin/main. Unset PR_STACK and PR_STACK=auto replace that
-# default with the unique chain tip (Makefile default). An explicit --base is
-# never rewritten. Empty PR_STACK= keeps origin/main even when a unique open-PR
-# chain exists.
-if [ "$base_explicit" -eq 0 ] && [ "${PR_STACK-auto}" = "auto" ]; then
+# Default --base is origin/main. PR_STACK=auto replaces that default with the
+# unique chain tip. An explicit --base is never rewritten. Empty PR_STACK keeps
+# origin/main even when a unique open-PR chain exists.
+if [ "$base_explicit" -eq 0 ] && [ "${PR_STACK:-}" = "auto" ]; then
   _resolve_auto_stack_tip
 fi
 
-# §2: after auto-stack resolution, ancestry is the resolved base (stack tip or
-# origin/main). Authorization is an intent question, so settle it BEFORE the
-# fetch — otherwise an unauthorized --base fails with a fetch error that hides
-# the real reason.
+# §2: ordinary work begins from the CURRENT fetched origin/main. Authorization
+# is an intent question, so settle it BEFORE spending a network round trip —
+# otherwise an unauthorized base fails with a fetch error that hides the real
+# reason.
 if [ "$base_ref" != "origin/main" ]; then
   if [ -z "${L9_TASK_BASE_AUTHORIZED:-}" ]; then
     die "base '$base_ref' is not origin/main. Ordinary agent tasks MUST branch from
