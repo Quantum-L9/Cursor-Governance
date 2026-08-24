@@ -19,6 +19,7 @@ is read-only and never edits repository files.
 
 Usage:
     validate_root_file_protection.py [--base <ref>] [--head <ref>] [--repo <path>]
+        [--pr-body-file <path>] [--require-pr-body] [--list-touched-additive-only]
 
 Exit 0 = compliant. Nonzero = at least one protected root file was rewritten/deleted
 without a justification marker (or the invocation was malformed — fail closed).
@@ -37,6 +38,10 @@ from pathlib import Path
 DEFAULT_BASE = os.environ.get("ROOT_PROTECT_BASE", "origin/main")
 CONFIG_RELPATH = "ops/config/root-file-protection.json"
 GIT_TIMEOUT_SECONDS = 120
+# Machine stamp. Required in the PR body when any additive_only root file is in
+# the diff. make pr injects .github/PULL_REQUEST_TEMPLATE/protected-root.md.
+PROTECTED_ROOT_PR_STAMP = "<!-- L9_PROTECTED_ROOT_PR -->"
+PROTECTED_ROOT_PR_TEMPLATE = ".github/PULL_REQUEST_TEMPLATE/protected-root.md"
 
 # ALLOW-ROOT-DELETION: <path> — <reason>   (em-dash or " - " separator; reason required)
 _MARKER_RE = re.compile(
@@ -131,6 +136,56 @@ def numstat(repo: Path, base: str, head: str, path: str) -> tuple[int, int] | st
     if added == "-" or deleted == "-":
         return "binary"
     return int(added), int(deleted)
+
+
+def additive_only_touched(repo: Path, config: dict, base: str, head: str) -> list[str]:
+    """additive_only protected paths that differ in base..head (any delta)."""
+    mb = merge_base(repo, base, head)
+    touched: list[str] = []
+    for entry in config["protected_files"]:
+        if entry["rule"] != "additive_only":
+            continue
+        if numstat(repo, mb, head, entry["path"]) is None:
+            continue
+        touched.append(entry["path"])
+    return touched
+
+
+def load_pr_body(*, body_file: str | None = None) -> str | None:
+    """PR body from --pr-body-file, L9_PR_BODY, or GITHUB_EVENT_PATH.
+
+    Returns None when no source is present (local make pr-check). Empty string
+    means a source existed but the body was blank.
+    """
+    if body_file:
+        path = Path(body_file)
+        if not path.is_file():
+            msg = f"--pr-body-file is not a file: {body_file}"
+            raise ProtectionError(msg)
+        return path.read_text(encoding="utf-8")
+    env_body = os.environ.get("L9_PR_BODY")
+    if env_body is not None:
+        return env_body
+    event_path = os.environ.get("GITHUB_EVENT_PATH")
+    if event_path:
+        path = Path(event_path)
+        if path.is_file():
+            try:
+                event = json.loads(path.read_text(encoding="utf-8"))
+            except json.JSONDecodeError as exc:
+                msg = f"GITHUB_EVENT_PATH is not valid JSON: {exc}"
+                raise ProtectionError(msg) from exc
+            if isinstance(event, dict):
+                pr = event.get("pull_request")
+                if isinstance(pr, dict):
+                    body = pr.get("body")
+                    return body if isinstance(body, str) else ""
+            return ""
+    return None
+
+
+def has_protected_template_stamp(body: str) -> bool:
+    return PROTECTED_ROOT_PR_STAMP in body
 
 
 def collect_justified_paths(repo: Path, base: str, head: str) -> set[str]:
@@ -230,6 +285,21 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--base", default=DEFAULT_BASE)
     parser.add_argument("--head", default="HEAD")
     parser.add_argument("--repo", default=None)
+    parser.add_argument(
+        "--pr-body-file",
+        default=None,
+        help="PR body to check for the protected-root template stamp",
+    )
+    parser.add_argument(
+        "--require-pr-body",
+        action="store_true",
+        help="Fail when additive_only files changed and no PR body source exists",
+    )
+    parser.add_argument(
+        "--list-touched-additive-only",
+        action="store_true",
+        help="Print additive_only paths in the range and exit 0",
+    )
     ns = parser.parse_args(argv)
 
     try:
@@ -244,6 +314,10 @@ def main(argv: list[str] | None = None) -> int:
         else:
             repo = Path(run_git(Path.cwd(), ["rev-parse", "--show-toplevel"]).strip())
         config = load_config(repo)
+        if ns.list_touched_additive_only:
+            for path in additive_only_touched(repo, config, base, head):
+                print(path)
+            return 0
         findings = check(repo, config, base, head)
         # Complete-inventory reconciliation (authoritative; not delta-based).
         inv_unregistered, inv_stale = reconcile_root_inventory(repo, config)
@@ -271,7 +345,32 @@ def main(argv: list[str] | None = None) -> int:
     for name in inv_stale:
         print(f"[root-protect]   FAIL {name}: registry entry references a non-tracked root file")
 
-    failures = len(violations) + len(unregistered) + len(inv_stale)
+    require_body = bool(ns.require_pr_body) or os.environ.get("GITHUB_ACTIONS") == "true"
+    template_missing = False
+    touched_additive = additive_only_touched(repo, config, base, head)
+    if touched_additive:
+        try:
+            pr_body = load_pr_body(body_file=ns.pr_body_file)
+        except ProtectionError as exc:
+            print(f"[root-protect] FATAL: {exc}", file=sys.stderr)
+            return 2
+        if pr_body is None and not require_body:
+            print(
+                "[root-protect] NOTE: additive_only touched "
+                f"({', '.join(touched_additive)}); PR-body template check skipped "
+                "(no body source; CI / --require-pr-body enforces "
+                f"{PROTECTED_ROOT_PR_STAMP})"
+            )
+        elif pr_body is None or not has_protected_template_stamp(pr_body):
+            template_missing = True
+            print(
+                "[root-protect]   FAIL PR body: touches additive_only "
+                f"{', '.join(touched_additive)} but is missing "
+                f"{PROTECTED_ROOT_PR_STAMP} — use {PROTECTED_ROOT_PR_TEMPLATE} "
+                "(make pr injects it)"
+            )
+
+    failures = len(violations) + len(unregistered) + len(inv_stale) + int(template_missing)
     if failures:
         print(f"[root-protect] FAILED: {failures} issue(s)")
         if violations:
@@ -288,6 +387,12 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 "[root-protect] For a stale entry: remove it from "
                 f"{CONFIG_RELPATH} (runtime/gitignored artifacts must not be registered)."
+            )
+        if template_missing:
+            print(
+                "[root-protect] For a PR that touches additive_only root files: "
+                f"use {PROTECTED_ROOT_PR_TEMPLATE} so the body contains "
+                f"{PROTECTED_ROOT_PR_STAMP}. make pr injects this template."
             )
         return 1
     print(

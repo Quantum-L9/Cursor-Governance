@@ -19,7 +19,7 @@
 - [ ] **Symlinks validated** — `ls -la .cursor/rules .cursor/skills .cursor/commands` all resolve
 - [ ] **All CI gates green** — no required checks failing or bypassed
 - [ ] **Anti-patterns checked** — reviewed [CANONICAL_LAW.md §7](https://github.com/Quantum-L9/Cursor-Governance/blob/main/CANONICAL_LAW.md#7-anti-patterns) — none violated
-- [ ] **Protected-path changes authorized** — ownership mode is `solo_ruleset` (CODEOWNERS auto-request is disabled; see `CODEOWNERS`). Protected-root rewrites carry an `ALLOW-ROOT-DELETION:` marker and pass the repo gates; CODEOWNERS review applies only when owners are re-enabled
+- [ ] **Protected-path changes authorized** — ownership mode is `solo_ruleset` (CODEOWNERS auto-request is disabled; see `CODEOWNERS`). Protected-root rewrites carry an `ALLOW-ROOT-DELETION:` marker and pass the repo gates; CODEOWNERS review applies only when owners are re-enabled. If this PR touches any `additive_only` root file (`Makefile`, `AGENTS.md`, …), **stop** and use `.github/PULL_REQUEST_TEMPLATE/protected-root.md` (`<!-- L9_PROTECTED_ROOT_PR -->`); `make pr` injects it and CI fails without the stamp
 - [ ] **Workspace wiring intact** — [§8](https://github.com/Quantum-L9/Cursor-Governance/blob/main/CANONICAL_LAW.md#8) wiring requirements satisfied
 - [ ] **TRACEABILITY_MAP.yaml updated** — if this PR resolves an open unknown, mark as RESOLVED
 - [ ] **Kernel ref discipline** — thin callers use `@v1`, never `@main` or bare SHA

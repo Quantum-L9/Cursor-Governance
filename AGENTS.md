@@ -558,6 +558,23 @@ gate is itself a protected-path change (`ORG_INVARIANTS.yaml`
 This file is `additive_only`. A whole-file fold (this revision) is authorized
 only when the commit includes `ALLOW-ROOT-DELETION: AGENTS.md — …`.
 
+<!-- PROTECTED_ROOT_PR_TEMPLATE_V1 -->
+
+PRs that touch any `additive_only` root file (`Makefile`, `AGENTS.md`,
+`CANONICAL_LAW.md`, `pyproject.toml`, `requirements.txt`, `conftest.py`,
+`.pre-commit-config.yaml`, `.gitleaks.toml`, `.mcp.json`, `CODEOWNERS`,
+`LICENSE`, `SECURITY.md`, `ORG_INVARIANTS.yaml`) **MUST** use
+`.github/PULL_REQUEST_TEMPLATE/protected-root.md`. The body must contain the
+stamp `<!-- L9_PROTECTED_ROOT_PR -->`. `make pr` injects that template.
+The Root-file append-only gate fails CI without the stamp. Prefer
+append-only so `ALLOW-ROOT-DELETION` is unnecessary; a rewrite still needs
+that marker in a commit message.
+
+Review threads (GitHub Code Quality, Copilot, Codex, humans) stay in scope
+for `/l9-pr-remediation`. Inspect each proposed fix against current source
+and apply it when justified. A finding whose **only** path is under `WIP/**`
+cannot fail CI and is not a merge-blocking code defect.
+
 ---
 
 ## 15. WIP corpus on main
