@@ -77,6 +77,9 @@ commands:
   enabled: true
   aliases:
   - /extract+align
+- slash: /ff
+  file: commands/ff.md
+  enabled: true
 - slash: /forge
   file: commands/forge.md
   enabled: true

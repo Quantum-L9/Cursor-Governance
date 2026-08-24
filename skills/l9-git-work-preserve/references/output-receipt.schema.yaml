@@ -18,5 +18,14 @@ properties:
   confidence: {enum: [high, medium, low, unknown]}
   unique_commits: {type: integer}
   unique_paths: {type: array, items: {type: string}}
+  baseline_resolved: {type: boolean, description: "false ⇒ novelty unprovable, keep the ref"}
+  baseline_tip: {type: string}
+  fetched: {type: boolean, description: "origin refreshed before judging; false is not an error"}
+  fetch_error: {type: string}
+  cherry_available: {type: boolean, description: "git cherry answered; false ⇒ unproven, not novel"}
+  cherry_novel: {type: integer, description: "patches with no equivalent upstream patch id"}
+  cherry_dup: {type: integer, description: "patches already upstream by patch id"}
+  content_contained: {type: boolean, description: "every line this ref changed is absorbed upstream"}
+  redundancy_basis: {enum: ["", patch_id, content_superset], description: "evidence behind archive_ref"}
   auth_env: {type: string, description: "name of auth env if mutation"}
   rollback: {type: string, description: "reflog or tip SHA recovery hint"}

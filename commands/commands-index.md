@@ -31,6 +31,7 @@ Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml).
 | `/l9-plan` | Deep PE+autonomy `.plan.md` via first-class `canonical.template.executable_plan.v1` |
 | `/l9-plan-simple` | Same template, Cursor Build on the current checkout (not `make campaign`) |
 | `/git-work-preserve` | Diagnose-first git work audit / extract / prune-propose (`l9-git-work-preserve`) |
+| `/ff` | Prove novelty, publish novel work via `make pr`, fast-forward, prune redundant (`l9-git-work-preserve`) |
 | `/analyze` | Explore structure, flows, hotspots |
 | `/evaluate` | Deep readiness / compliance audit |
 | `/analyze_evaluate` | Analyze + evaluate in one pass |

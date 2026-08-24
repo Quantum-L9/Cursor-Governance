@@ -885,7 +885,7 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose-first audit extract and prune-propose for unpushed dirty orphan stale and stash git work. use when cleaning branches worktrees or stashes never lose unique commits without receipts and auth.",
+      "description": "diagnose-first audit extract fast-forward and prune for unpushed dirty orphan stale and stash git work. proves novelty by patch id and absorption, not commit counts. use when cleaning branches worktrees stashes or fast-forwarding a clone.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-git-work-preserve",
@@ -1238,5 +1238,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "4fd41603e1d2b0425fc3231fd6aa0b79703cefe0dfefec839fa06c9700e07ed5",
-  "source_skill_corpus_sha256": "9ed0780f80eba1570bc71e1e9f396b9457c5c91e3bc1a9655ca8299f783792b8"
+  "source_skill_corpus_sha256": "25a6bc2b272c5966f446ff9caaaac1ab302cd445ace8d24028efd74fe37617bf"
 }

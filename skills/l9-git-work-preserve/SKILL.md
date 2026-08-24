@@ -1,6 +1,6 @@
 ---
 name: l9-git-work-preserve
-description: diagnose-first audit extract and prune-propose for unpushed dirty orphan stale and stash git work. use when cleaning branches worktrees or stashes never lose unique commits without receipts and auth.
+description: diagnose-first audit extract fast-forward and prune for unpushed dirty orphan stale and stash git work. proves novelty by patch id and absorption, not commit counts. use when cleaning branches worktrees stashes or fast-forwarding a clone.
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -28,6 +28,14 @@ Inventory git work with evidence receipts; extract unique value safely; propose 
 | `extract` | Local only | New branch/worktree + surgical commits; never deletes source ref |
 | `prune-propose` | No | Delete candidates + required receipts + copy-paste commands |
 | `prune-execute` | Yes | Only with user auth **and** `L9_GIT_PRUNE_AUTHORIZED=<reason>` |
+| `ff` (`/ff`) | Local only | Fetch → classify every branch → fast-forward the baseline → safe-delete the proven-redundant. Never pushes; publishing is `make pr` |
+
+**Novelty is proved, not counted.** A branch whose work already landed still
+reports commits ahead, so `unique_commits` alone will call it unique forever.
+Two signals settle it: `git cherry` patch ids (exact, sees cherry-picks and
+rebases) and line absorption vs the merge base (heuristic, sees work that landed
+reimplemented). Both are judged against a **fetched** baseline — see
+[references/value-diagnosis.md](references/value-diagnosis.md).
 
 Load detail: [references/audit-workflow.md](references/audit-workflow.md), [references/value-diagnosis.md](references/value-diagnosis.md), [references/extract-workflow.md](references/extract-workflow.md), [references/prune-policy.md](references/prune-policy.md), [references/stash-deep-analysis.md](references/stash-deep-analysis.md).
 
@@ -41,10 +49,15 @@ Load detail: [references/audit-workflow.md](references/audit-workflow.md), [refe
 
 ## Compact Workflow
 
-1. **Discovery (RO)** — `scripts/inventory_git_work.py --repo <path>`.
-2. **Diagnosis (RO)** — `scripts/diagnose_ref_value.py` for each stale/orphan candidate.
+1. **Discovery (RO)** — `scripts/inventory_git_work.py --repo <path> --fetch`.
+2. **Diagnosis (RO)** — `scripts/diagnose_ref_value.py --fetch` for each stale/orphan candidate.
 3. **Plan** — extract and/or prune-propose with rollback (reflog SHA in receipt).
 4. **Execute** — extract first; prune-execute last and auth-gated; stash drop only with `L9_GIT_STASH_DROP_AUTHORIZED`.
+
+Whole-repo sweep: `scripts/ff_pipeline.py --mode plan` classifies every branch in
+one pass and `--mode apply` fast-forwards then safe-deletes. It refuses a dirty
+tree (that is `/clean`'s job) and never force-deletes — anything `git branch -d`
+rejects lands in `needs_human[]` with its tip SHA.
 
 ## Forbidden
 
@@ -60,8 +73,13 @@ Load detail: [references/audit-workflow.md](references/audit-workflow.md), [refe
 - [references/output-receipt.schema.yaml](references/output-receipt.schema.yaml)
 - [scripts/inventory_git_work.py](scripts/inventory_git_work.py)
 - [scripts/diagnose_ref_value.py](scripts/diagnose_ref_value.py)
+- [scripts/git_fetch.py](scripts/git_fetch.py)
+- [scripts/ff_pipeline.py](scripts/ff_pipeline.py)
 - [scripts/validate_pack_structure.py](scripts/validate_pack_structure.py)
 - [scripts/pack_self_test.py](scripts/pack_self_test.py)
+
+Commands that load this skill: `/git-work-preserve` (audit / extract / prune),
+`/ff` (fetch → prove → publish-handoff → fast-forward → prune).
 
 ## Validation
 

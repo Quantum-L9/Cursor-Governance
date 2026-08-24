@@ -20,6 +20,8 @@ REQUIRED = [
     "references/output-receipt.schema.yaml",
     "scripts/inventory_git_work.py",
     "scripts/diagnose_ref_value.py",
+    "scripts/git_fetch.py",
+    "scripts/ff_pipeline.py",
     "scripts/pack_self_test.py",
     "scripts/validate_pack_structure.py",
 ]
