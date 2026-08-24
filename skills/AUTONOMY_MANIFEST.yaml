@@ -60,7 +60,7 @@ tiers:
   - skill: l9-claude-code-deepseek
     use_when: wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing
   - skill: l9-plan-audit
-    use_when: session context shows Plan audit, auditing unbuilt or stale Cursor plans under .cursor/plans, or /plan-audit is invoked
+    use_when: session context shows Plan audit or the 7-day live-queue scanner; not /l9-audit-plans (store shelf organize)
   explicit_only:
   - skill: l9-forge
     reason: zero-pause batch execution
@@ -481,8 +481,8 @@ claude_routing:
     - unbuilt plans
     - stale plans
     - audit .cursor/plans
-    - /plan-audit
     - which plans are unbuilt
+    - sessionStart plan audit
     supporting:
     - l9-plan
     - l9-ynp

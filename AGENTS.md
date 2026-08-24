@@ -796,3 +796,14 @@ sync. `make sync` remains `governance_sync.sh` and is not `/ff`.
 Agents **must** scoped-commit work they authored this session without asking.
 Ask only before push / `make pr` / other remote mutation. Rule:
 `rules/99-no-auto-commit.mdc`.
+
+<!-- L9_AUDIT_PLANS_V1 -->
+## Plans-store audit slash (2026-08-23)
+
+On-demand shelf audit/organize is **`/l9-audit-plans`**
+(`commands/l9-audit-plans.md`). Root stays current unbuilt only;
+`partially-built/`, `built/`, `backlog/`, and `archive/superseded/` hold the
+rest. `/plan-audit` is a compatibility alias of that command.
+
+Skill **`l9-plan-audit`** is still the sessionStart 7-day live-queue scanner
+(§16). It does not move files. Do not treat it as `/l9-audit-plans`.
