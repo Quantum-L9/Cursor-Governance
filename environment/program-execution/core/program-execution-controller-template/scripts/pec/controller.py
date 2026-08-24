@@ -563,32 +563,52 @@ def _current_work(tasks: list[dict[str, Any]]) -> dict[str, str] | None:
     return None
 
 
+def _campaign_integration_branch(workspace: Path) -> str | None:
+    status = read_campaign_status(workspace) or {}
+    campaign_id = str(status.get("campaign_id") or "").strip()
+    if not campaign_id or campaign_id == "unknown":
+        return None
+    return f"campaign/{campaign_id}"
+
+
 def _lease_base_sha(workspace: Path, repo: dict[str, Any], task_id: str) -> str:
+    """Local execution lineage comes from the campaign integration branch.
+
+    STACK.json and PR bases describe publication topology only; they never
+    choose a local task execution base. When the reconciled repository carries
+    the campaign integration branch (`campaign/<campaign_id>`), every task
+    worktree fans out from that branch's current clean HEAD — dependent tasks
+    see accumulated fan-in because verified candidates are integrated back
+    into the branch before their task COMPLETEs. Without an integration
+    branch (a standalone Controller runtime), the reconciled repository head
+    remains the base.
+    """
+    del task_id  # lineage is per-campaign, never per-task publication routing
     repo_path = Path(repo["local_path"])
-    stack_path = workspace / "runtime" / "STACK.json"
-    if not stack_path.is_file():
+    branch = _campaign_integration_branch(workspace)
+    if branch is None:
         return str(repo["head_sha"])
-    stack = load_json(stack_path)
-    item = next(
-        (row for row in (stack.get("stack") or []) if row.get("task_id") == task_id),
-        None,
-    )
-    if item is None:
-        return str(repo["head_sha"])
-    pr_base = str(item.get("pr_base") or "")
-    if not pr_base:
-        return str(repo["head_sha"])
-    resolved = run_git(repo_path, "rev-parse", "--verify", pr_base, check=False)
+    resolved = run_git(repo_path, "rev-parse", "--verify", f"refs/heads/{branch}", check=False)
     if resolved.returncode != 0:
-        raise ControllerError(f"STACK.json pr_base {pr_base} is not a git ref")
+        # No integration branch in this repository: campaign lineage is not in
+        # force here (standalone Controller runtimes never create one).
+        return str(repo["head_sha"])
     sha = resolved.stdout.strip()
-    main = run_git(repo_path, "rev-parse", "--verify", "origin/main", check=False)
-    if main.returncode != 0:
-        main = run_git(repo_path, "rev-parse", "--verify", "main", check=False)
-    if pr_base.startswith("pec/") and main.returncode == 0 and sha == main.stdout.strip():
+    kind = run_git(repo_path, "cat-file", "-t", sha, check=False)
+    if kind.returncode != 0 or kind.stdout.strip() != "commit":
+        raise ControllerError(f"campaign integration head is not a commit: {branch}={sha}")
+    if run_git(repo_path, "status", "--porcelain").stdout.strip():
         raise ControllerError(
-            f"refuse lease.base_sha equal to origin/main; predecessor {pr_base} has no commit"
+            "repository must be clean before leasing from the campaign integration branch"
         )
+    recorded = str(repo.get("head_sha") or "")
+    if recorded and recorded != sha:
+        ancestry = run_git(repo_path, "merge-base", "--is-ancestor", recorded, sha, check=False)
+        if ancestry.returncode != 0:
+            raise ControllerError(
+                f"campaign integration branch {branch} does not descend from the "
+                f"reconciled repository record {recorded}; reconcile before leasing"
+            )
     return sha
 
 
@@ -974,9 +994,11 @@ def claim_task(
         try:
             db.create_lease(lease)
         except Exception as exc:
-            raise ControllerError(
-                f"repository already has an active writer lease: {task['repository_id']}"
-            ) from exc
+            # Same-repository tasks may hold concurrent leases: dependency,
+            # resource, path, root-Autonomy claim, worktree, and provider
+            # constraints decide parallelism. Only a duplicate active lease
+            # for the *same task* is denied here.
+            raise ControllerError(f"task already has an active lease: {task_id}") from exc
         db.update_task(
             task_id, base_sha=base_sha, branch=branch, lease_id=lease_id, last_error=None
         )
@@ -1019,13 +1041,24 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         if current_dirty:
             db.transition_task(task_id, "STALE", last_error="repository_state_changed")
             raise ControllerError("repository state changed after reconciliation")
-        stacked = (workspace / "runtime" / "STACK.json").is_file()
+        # Campaign lineage (an existing campaign/<id> integration branch) means
+        # task bases come from that branch, not the checked-out HEAD — the
+        # equality check below only applies to standalone runtimes. STACK.json
+        # is publication topology and never decides execution lineage.
+        integration_branch = _campaign_integration_branch(workspace)
+        campaign_lineage = bool(
+            integration_branch
+            and run_git(
+                repo_path, "rev-parse", "--verify", f"refs/heads/{integration_branch}", check=False
+            ).returncode
+            == 0
+        )
         current_head = run_git(repo_path, "rev-parse", "HEAD").stdout.strip()
         has_base = run_git(repo_path, "cat-file", "-t", lease["base_sha"], check=False)
         if has_base.returncode != 0 or has_base.stdout.strip() != "commit":
             db.transition_task(task_id, "STALE", last_error="lease_base_missing")
             raise ControllerError("lease base_sha is not a commit in the repository")
-        if not stacked and current_head != lease["base_sha"]:
+        if not campaign_lineage and current_head != lease["base_sha"]:
             db.transition_task(task_id, "STALE", last_error="repository_state_changed")
             raise ControllerError("repository state changed after reconciliation")
         worktree = workspace / "worktrees" / task_id
@@ -1629,6 +1662,73 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         db.close()
 
 
+FAILABLE_RUNTIME_STATES = {
+    "LEASED",
+    "PREPARED",
+    "CONTRACTED",
+    "EXECUTING",
+    "SUBMITTED",
+    "VERIFYING",
+}
+
+
+def fail_task(workspace: Path, task_id: str, reason: str, actor: str) -> dict[str, Any]:
+    """Canonical failure path for a task that dies after claim.
+
+    One operation, whatever stage the failure happened at (LEASED through
+    VERIFYING): record the failure reason, append the ledger event, land the
+    task in FAILED (retryable), and release the Controller writer lease.
+    The task worktree and every attempt/grant receipt are preserved as
+    evidence — nothing is cleaned up here. Root-Autonomy lease revocation is
+    the caller's obligation through the task's grant receipt; the Controller
+    owns program state only.
+    """
+    db, ledger = open_runtime(workspace)
+    try:
+        task = db.task(task_id)
+        if task is None:
+            raise ControllerError(f"unknown task: {task_id}")
+        state = str(task["runtime_state"] or "")
+        transitioned = False
+        if state in FAILABLE_RUNTIME_STATES:
+            db.transition_task(task_id, "FAILED", last_error=reason)
+            transitioned = True
+        elif state != "FAILED":
+            raise ControllerError(
+                f"task {task_id} is {state}; canonical failure applies only to "
+                f"{sorted(FAILABLE_RUNTIME_STATES)} or an already-FAILED task"
+            )
+        lease = db.active_lease_for_task(task_id)
+        lease_id = None
+        if lease is not None:
+            lease_id = str(lease["lease_id"])
+            db.release_lease(lease_id)
+            db.update_task(task_id, lease_id=None)
+        ledger.append(
+            "TASK_FAILED",
+            actor,
+            {
+                "task_id": task_id,
+                "reason": reason,
+                "previous_state": state,
+                "lease_id": lease_id,
+                "lease_released": lease_id is not None,
+                "worktree_preserved": task.get("worktree"),
+            },
+        )
+        return {
+            "status": "FAILED",
+            "task_id": task_id,
+            "reason": reason,
+            "previous_state": state,
+            "transitioned": transitioned,
+            "lease_released": lease_id is not None,
+            "lease_id": lease_id,
+        }
+    finally:
+        db.close()
+
+
 def release_lease(workspace: Path, task_id: str, reason: str, actor: str) -> dict[str, Any]:
     db, ledger = open_runtime(workspace)
     try:
@@ -1879,6 +1979,144 @@ def evaluate_gate(
         db.close()
 
 
+def _integration_receipt_path(workspace: Path, task_id: str) -> Path:
+    return workspace / "receipts" / "integration" / f"{task_id}.json"
+
+
+def _integration_checkout(workspace: Path, repo_path: Path, branch: str) -> tuple[Path, bool]:
+    """A working tree whose HEAD is the campaign integration branch.
+
+    When the primary checkout is already on the branch, integrate there.
+    Otherwise use a dedicated integration worktree (a branch cannot be
+    checked out twice), created once and reused.
+    """
+    current = run_git(repo_path, "branch", "--show-current", check=False).stdout.strip()
+    if current == branch:
+        return repo_path, False
+    integration_root = workspace / "integration" / branch.replace("/", "__")
+    if integration_root.is_dir() and (integration_root / ".git").exists():
+        checked = run_git(integration_root, "rev-parse", "--abbrev-ref", "HEAD", check=False)
+        if checked.returncode == 0 and checked.stdout.strip() == branch:
+            return integration_root, True
+        raise ControllerError(f"integration worktree is not on {branch}: {integration_root}")
+    integration_root.parent.mkdir(parents=True, exist_ok=True)
+    added = run_git(repo_path, "worktree", "add", str(integration_root), branch, check=False)
+    if added.returncode != 0:
+        raise ControllerError(
+            f"cannot create integration worktree for {branch}: "
+            f"{added.stderr.strip() or added.stdout.strip()}"
+        )
+    return integration_root, True
+
+
+def _integrate_candidate(
+    db: StateDB,
+    ledger: EventLedger,
+    workspace: Path,
+    task: dict[str, Any],
+) -> dict[str, Any] | None:
+    """Integrate a verified candidate into the campaign integration branch.
+
+    PASSED_LOCAL is not COMPLETED for repo_local work until the verified
+    candidate commit range is part of campaign/<campaign_id>. Deterministic
+    order (ancestry order of the candidate range), abort-on-conflict with the
+    partial git operation rolled back, an idempotency receipt binding the
+    candidate SHA to the resulting campaign SHA, and a Controller repository
+    record that tracks the accumulated integration head.
+
+    Returns the integration receipt, or ``None`` when no campaign integration
+    branch is in force (standalone runtimes keep their existing semantics).
+    """
+    task_id = str(task["id"])
+    branch = _campaign_integration_branch(workspace)
+    if branch is None or not task.get("repository_id"):
+        return None
+    repo = db.repository(task["repository_id"])
+    if repo is None:
+        raise ControllerError("repository not reconciled")
+    repo_path = Path(repo["local_path"])
+    if (
+        run_git(repo_path, "rev-parse", "--verify", f"refs/heads/{branch}", check=False).returncode
+        != 0
+    ):
+        return None
+    task_branch = str(task.get("branch") or "")
+    base_sha = str(task.get("base_sha") or "")
+    if not task_branch or not base_sha:
+        raise ControllerError(f"task {task_id} has no branch/base lineage to integrate")
+    candidate = run_git(
+        repo_path, "rev-parse", "--verify", f"refs/heads/{task_branch}", check=False
+    )
+    if candidate.returncode != 0:
+        raise ControllerError(f"verified candidate branch missing: {task_branch}")
+    candidate_sha = candidate.stdout.strip()
+    receipt_path = _integration_receipt_path(workspace, task_id)
+    if receipt_path.is_file():
+        receipt = load_json(receipt_path)
+        if receipt.get("candidate_sha") == candidate_sha:
+            # Already integrated: replay safely without duplicating commits.
+            return receipt
+    descends = run_git(
+        repo_path, "merge-base", "--is-ancestor", base_sha, candidate_sha, check=False
+    )
+    if descends.returncode != 0:
+        raise ControllerError(
+            f"candidate {candidate_sha} does not descend from task base {base_sha}"
+        )
+    tree, _ = _integration_checkout(workspace, repo_path, branch)
+    if run_git(tree, "status", "--porcelain").stdout.strip():
+        raise ControllerError(
+            f"campaign integration worktree is dirty; refuse fan-in for {task_id}"
+        )
+    commits = [
+        line.strip()
+        for line in run_git(
+            tree, "rev-list", "--reverse", f"{base_sha}..{candidate_sha}"
+        ).stdout.splitlines()
+        if line.strip()
+    ]
+    integrated: list[str] = []
+    for commit in commits:
+        picked = run_git(tree, "cherry-pick", "--allow-empty-message", commit, check=False)
+        if picked.returncode != 0:
+            porcelain = run_git(tree, "status", "--porcelain", check=False).stdout.strip()
+            if not porcelain:
+                # The change is already present on the branch (a replay after a
+                # crash between cherry-pick and receipt): skip, don't duplicate.
+                skipped = run_git(tree, "cherry-pick", "--skip", check=False)
+                if skipped.returncode == 0:
+                    continue
+            run_git(tree, "cherry-pick", "--abort", check=False)
+            failure = {
+                "task_id": task_id,
+                "candidate_sha": candidate_sha,
+                "base_sha": base_sha,
+                "conflicting_commit": commit,
+                "error": (picked.stderr or picked.stdout).strip()[:2000],
+            }
+            ledger.append("TASK_INTEGRATION_FAILED", "controller", failure)
+            raise ControllerError(
+                f"integration conflict for {task_id} at {commit}; candidate branch and "
+                "worktree preserved, task remains PASSED_LOCAL"
+            )
+        integrated.append(commit)
+    campaign_sha = run_git(tree, "rev-parse", "HEAD").stdout.strip()
+    receipt = {
+        "schema": "program-execution-controller.integration-receipt.v1",
+        "task_id": task_id,
+        "integration_branch": branch,
+        "base_sha": base_sha,
+        "candidate_sha": candidate_sha,
+        "integrated_commits": integrated,
+        "campaign_sha": campaign_sha,
+        "integrated_at": utc_now(),
+    }
+    write_json(receipt_path, receipt)
+    db.upsert_repository(str(task["repository_id"]), str(repo["target_id"]), head_sha=campaign_sha)
+    ledger.append("TASK_INTEGRATED", "controller", receipt)
+    return receipt
+
+
 def complete_task(
     workspace: Path, task_id: str, actor: str, evidence_ids: list[str]
 ) -> dict[str, Any]:
@@ -1893,6 +2131,7 @@ def complete_task(
             gate = db.gate(gate_id)
             if gate is None or not _gate_satisfied(db, gate):
                 raise ControllerError(f"completion gate not satisfied: {gate_id}")
+        integration: dict[str, Any] | None = None
         if task["execution_kind"] == "program_control":
             if task["runtime_state"] == "BLOCKED":
                 ok, blockers = task_readiness(db, task, workspace)
@@ -1911,13 +2150,21 @@ def complete_task(
                 raise ControllerError(
                     "PASSED_LOCAL is not Done; Definition of Done required before complete"
                 )
+            # Verified fan-in first: a repo_local task is not COMPLETED until
+            # its candidate range is integrated into the campaign integration
+            # branch. An integration conflict raises here and leaves the task
+            # PASSED_LOCAL with its candidate branch and worktree preserved.
+            integration = _integrate_candidate(db, ledger, workspace, task)
             db.transition_task(task_id, "COMPLETED")
             lease = db.active_lease_for_task(task_id)
             if lease:
                 db.release_lease(lease["lease_id"])
                 db.update_task(task_id, lease_id=None)
         ledger.append("TASK_COMPLETED", actor, {"task_id": task_id, "evidence_ids": evidence_ids})
-        return {"status": "COMPLETED", "task_id": task_id, "evidence_ids": evidence_ids}
+        result = {"status": "COMPLETED", "task_id": task_id, "evidence_ids": evidence_ids}
+        if integration is not None:
+            result["integration"] = integration
+        return result
     finally:
         db.close()
 
