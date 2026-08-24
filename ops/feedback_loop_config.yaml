@@ -28,7 +28,7 @@ updated: 2026-01-02
 
 improvement_loop:
   objective: "Drive iterative optimization by applying lessons from System Reflection and Adaptive Reasoning"
-  
+
   cycle:
     step_1_observe:
       action: "Observe current performance metrics"
@@ -36,26 +36,26 @@ improvement_loop:
         - reasoning_metrics
         - violation_counts
         - lesson_effectiveness
-    
+
     step_2_compare:
       action: "Compare against previous success patterns"
       reference: "governance_memory_engine"
       threshold_confidence: 0.85
-    
+
     step_3_apply:
       action: "Apply micro-patches or re-weight reasoning parameters"
       methods:
         - lesson_reinforcement
         - rule_weight_adjustment
         - pattern_deprecation
-    
+
     step_4_validate:
       action: "Validate outcomes via reasoning metrics"
       reference: ".cursor-commands/ops/reasoning-metrics.md"
       success_criteria:
         improvement_rate: ">= 0.10"
         optimization_effectiveness: ">= 0.85"
-    
+
     step_5_document:
       action: "Document all changes in meta-audit"
       reference: ".cursor-commands/intelligence/meta-audit.md"
@@ -73,7 +73,7 @@ improvement_loop:
 
 meta_audit:
   objective: "Maintain historical record of all self-modifications, reasoning adjustments, and detected anomalies"
-  
+
   entry_schema:
     timestamp_utc: "required"
     change_type:
@@ -102,28 +102,28 @@ meta_audit:
 
 reasoning_metrics:
   objective: "Track cognitive performance, success rates, and correction accuracy across the reasoning engine"
-  
+
   metrics:
     confidence_index:
       range: [0, 100]
       description: "Overall confidence in reasoning output"
       threshold_warning: 70
       threshold_critical: 50
-    
+
     correction_success_rate:
       range: [0.0, 1.0]
       description: "Rate of successful corrections after errors"
       target: ">= 0.90"
-    
+
     adaptive_depth_efficiency:
       range: [0.0, 1.0]
       description: "Efficiency of adaptive reasoning depth"
       target: ">= 0.85"
-    
+
     latency_to_accuracy_ratio:
       description: "Trade-off between response time and accuracy"
       ideal: "minimize while maintaining accuracy >= 0.90"
-    
+
     lesson_violation_rate:
       range: [0.0, 1.0]
       description: "Rate of repeated mistakes despite lessons"
@@ -139,18 +139,18 @@ reasoning_metrics:
 
 violation_tracking:
   enabled: true
-  
+
   sources:
     lessons_file: ".cursor-commands/learning/failures/repeated-mistakes.md"
     audit_log: ".cursor-commands/learning/failures/audit_log.jsonl"
-  
+
   storage:
     local: ".cursor-commands/learning/failures/violations.jsonl"
     mcp_memory:
       enabled: true
       kind: "lesson_violation"
       scope: "cursor"
-  
+
   detection:
     # Patterns that indicate a potential violation
     triggers:
@@ -172,14 +172,14 @@ violation_tracking:
       - pattern: "Library/Application Support/Cursor"
         lesson_id: "lesson-012-dropbox-not-library"
         severity: "ultra-critical"
-  
+
   response:
     on_violation:
       - log_to_audit
       - increment_violation_count
       - emit_mcp_memory_entry
       - update_lesson_effectiveness
-    
+
     escalation:
       threshold: 3  # violations of same lesson
       action: "alert_igor"
@@ -193,12 +193,12 @@ mcp_memory:
   endpoints:
     save: "/tools/save_memory"
     search: "/tools/search_memory"
-  
+
   lesson_sync:
     enabled: true
     kind: "lesson"
     scope: "cursor"
-  
+
   violation_sync:
     enabled: true
     kind: "lesson_violation"
@@ -211,13 +211,13 @@ mcp_memory:
 
 feedback_collector:
   script: ".cursor-commands/ops/scripts/feedback_collector.py"
-  
+
   inputs:
     - violations
     - user_corrections
     - lesson_updates
     - effectiveness_scores
-  
+
   outputs:
     - improvement_recommendations
     - lesson_deprecation_candidates
@@ -237,7 +237,7 @@ wiring:
       purpose: "Archived slash; live path is /governance report-violation"
     - path: ".cursor-commands/ops/scripts/feedback_collector.py"
       purpose: "Feedback aggregation"
-  
+
   integration_tests:
     - name: "violation_to_mcp"
       trigger: "/governance report-violation lesson-001"
@@ -245,8 +245,3 @@ wiring:
     - name: "audit_log_append"
       trigger: "any violation"
       expected: "audit_log.jsonl updated"
-
-
-
-
-
