@@ -240,7 +240,9 @@
           "refresh agent docs",
           "update claude.md",
           "update invariants.md",
-          "update architecture.md"
+          "update architecture.md",
+          "create claude.md",
+          "create invariants.md"
         ],
         "primary": "l9-update-agent-docs",
         "signal_weight": 8,
@@ -1193,14 +1195,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change.",
+      "description": "audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes"
+      "when_to_use": "refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
     {
       "composition_role": "general",
@@ -1237,6 +1239,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "4fd41603e1d2b0425fc3231fd6aa0b79703cefe0dfefec839fa06c9700e07ed5",
-  "source_skill_corpus_sha256": "30cf811f3158a76cb7994d9ffb4190bfb69319f169a0cc7730849455f4aa8e90"
+  "source_manifest_sha256": "448c8596c9fe08e410e4375bc0430f571bd03d57e53b1c7c3c34709abac2f46b",
+  "source_skill_corpus_sha256": "af7b884b5fc4910e0e6cdd92a40d662048c1207b68dd10d41e99db77c5883932"
 }

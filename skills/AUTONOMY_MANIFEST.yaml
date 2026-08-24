@@ -34,7 +34,7 @@ tiers:
   - skill: l9-wire-skill-into-repo
     use_when: registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads
   - skill: l9-update-agent-docs
-    use_when: refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes
+    use_when: refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing
   - skill: l9-code-graph-rag-mcp
     use_when: code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed
   - skill: l9-api-smoke-testing
@@ -378,6 +378,8 @@ claude_routing:
     - update claude.md
     - update invariants.md
     - update architecture.md
+    - create claude.md
+    - create invariants.md
     supporting: []
   - id: context7_docs
     primary: l9-context7-docs

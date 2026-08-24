@@ -1,6 +1,6 @@
 ---
 name: l9-update-agent-docs
-description: audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change.
+description: audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change.
 paths: "AGENTS.md, docs/**, README.md"
 metadata:
   skill_schema: 1
@@ -9,8 +9,8 @@ metadata:
   tags: [l9, docs, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 2.0.2
-  updated: 2026-08-21
+  version: 2.1.0
+  updated: 2026-08-24
 ---
 
 # Update Agent Documentation (L9)
@@ -29,7 +29,7 @@ Regenerate root-level agent instruction files so coding agents write CI-passing 
 | 4 Domain patterns | Adapter scripts | Odoo/domain checks when wired |
 | 5 Lint config | `pyproject.toml`, etc. | Rules, ignores, line length |
 | 6 False positives | CI + pre-commit + lint | Documented exclusions |
-| 7 Write | `AGENTS.md`, `ARCHITECTURE.md`, `INVARIANTS.md`, `CLAUDE.md` | Preserve structure |
+| 7 Write | `AGENTS.md`, `ARCHITECTURE.md`, `INVARIANTS.md`, `CLAUDE.md` | Preserve structure; create root `CLAUDE.md` / `INVARIANTS.md` if missing (Step 7a) |
 
 ## Authority Order
 
@@ -45,6 +45,7 @@ Regenerate root-level agent instruction files so coding agents write CI-passing 
 - Pre-commit hooks (`.pre-commit-config.yaml`) changed
 - Lint/type config (`pyproject.toml`, `ruff.toml`, etc.) changed
 - Agent skill registry changed (new skills, unwired/deprecated skills, subagent preload lists)
+- Root `CLAUDE.md` or `INVARIANTS.md` is missing (bootstrap creation — Step 7a)
 - Periodic refresh (monthly or after large PRs)
 
 Skill **wire / unwire / deprecate / deregister** is owned by `l9-wire-skill-into-repo`
@@ -120,6 +121,37 @@ When skills change, verify **`l9-wire-skill-into-repo`** gates were followed (`.
 
 Sync skill tables from `.claude/README.md` (L9 global + project skills).
 
+### Step 7a — Create Missing Root Docs (`CLAUDE.md`, `INVARIANTS.md`)
+
+Applies only when the file is **absent at repo root**. Never overwrite an existing
+file from this step — an existing file falls through to the Step 7 update contract.
+
+**Root `CLAUDE.md` (create as load pointer):**
+
+- Shape it on the Cursor-Governance root `CLAUDE.md`: an **authority pointer**,
+  not a doctrine copy. State where doctrine lives and what outranks what.
+- Contents: repo authority chain (highest first), pointers to the operating SSOT
+  (`AGENTS.md` or equivalent) and to `INVARIANTS.md` / `ARCHITECTURE.md` as maps,
+  and at most a short list of the mistakes agents most often make in that repo.
+- Forbidden: Always/Never lists, CI / hook / skill-registry tables, or any body
+  text copied from the docs it points at. Keep it short enough to always load.
+
+**Root `INVARIANTS.md` (create as invariant index):**
+
+- Sections: invariant list, CI enforcement map (which workflow job or pre-commit
+  hook enforces each invariant), known false positives.
+- Every invariant and metric comes from the Step 2–6 audits — workflows, hooks,
+  lint config, adapter scripts. Unverifiable entries are `Unknown`, never invented.
+- Each false positive cites **where** the exclusion lives (file + key/flag).
+- Pointer-not-dump: cite the enforcing file; do not copy rule bodies, org
+  invariant bodies, or tables that already live in the operating SSOT.
+
+**Both files:**
+
+- Where the repo tracks root files (e.g. `ops/config/root-file-protection.json`),
+  register the new file as `managed` in the same change.
+- A project adapter's write rules outrank these defaults when present.
+
 ## Resource Map
 
 No `references/` folder — protocol lives in this file. Load project adapters when present:
@@ -132,7 +164,7 @@ Wiring verification: `.claude/adapters/plasticos-repo-wiring.md` when skills cha
 
 ## Validation
 
-After updating, verify counts match repo state (modules, hooks, jobs). Cross-reference `AGENTS.md`, `CLAUDE.md`, `INVARIANTS.md`, `ARCHITECTURE.md`. Documented false positives MUST cite exclusion location.
+After updating, verify counts match repo state (modules, hooks, jobs). Cross-reference `AGENTS.md`, `CLAUDE.md`, `INVARIANTS.md`, `ARCHITECTURE.md`. Documented false positives MUST cite exclusion location. Files created by Step 7a meet the same bar: no fabricated counts, `CLAUDE.md` stays pointer-shaped, and new root files are registered in the repo's root-file protection config when one exists.
 
 ## Failure Handling
 
