@@ -111,8 +111,8 @@ Re-run the step-1 CLI. Root must be current unbuilt only (plus `_TEMPLATE`).
 
 ### Ready For
 
-→ `/ynp` — pick the next **root** plan  
-→ `/l9-plan-simple` or `/l9-plan` — author a new plan (not this command)  
+→ `/ynp` — pick the next **root** plan
+→ `/l9-plan-simple` or `/l9-plan` — author a new plan (not this command)
 → Build a listed root plan only when the user names it
 
 ---
