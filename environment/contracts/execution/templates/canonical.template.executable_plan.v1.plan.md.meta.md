@@ -5,9 +5,9 @@ artifact_filename: canonical.template.executable_plan.v1.plan.md
 first_class_artifact: true
 schema_family: l9_execution_architecture
 schema_class: canonical_document_type_template
-version: 1.0.0
+version: 1.0.1
 status: active
-updated: 2026-08-12
+updated: 2026-08-21
 owner: platform
 layer: control_plane
 role: executable_plan_template

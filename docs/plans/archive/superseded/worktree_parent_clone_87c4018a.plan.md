@@ -1,5 +1,7 @@
 ---
 name: Worktree parent clone
+status: superseded
+built: true
 overview: Stop agents from attaching worktrees to the disposable `~/.cursor-governance` SSOT. Script home, git ancestry, and parent clone are three different authorities. Enforce parent ≠ live SSOT (escape hatch for SSOT-only machines) and append the law without rewriting additive_only root files.
 todos:
   - id: T0

@@ -1,5 +1,7 @@
 ---
 name: Toolchain lock percolation
+status: superseded
+built: true
 overview: Lock ruff 0.16.2, mypy 2.3.0, pytest 9.1.1, and Biome 2.5.8 in l9-ci-core as a composite action, then make Quantum-L9/.github and Website-Bot callers so a Core bump percolates without per-repo version edits. Four repos, four PRs, never mixed.
 todos:
   - id: todo-01-preflight

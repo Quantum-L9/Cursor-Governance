@@ -541,6 +541,27 @@ def test_task_start_empty_pr_stack_stays_on_origin_main(upstream: Path, tmp_path
     assert "already exists" in combined
 
 
+def test_task_start_unset_pr_stack_defaults_to_auto(upstream: Path, tmp_path: Path) -> None:
+    """Unset PR_STACK matches Makefile default auto and consults the resolver."""
+    repo = clone_agent(upstream, tmp_path, "agent_unset_stack")
+    stub = tmp_path / "unique_tip_unset.py"
+    _write_tip_stub(stub, tip="feat/stack-safe-merge", sha="dd" * 20, reason="unique_chain_tip")
+    env = {**os.environ, "L9_STACK_TIP_RESOLVER": str(stub)}
+    env.pop("PR_STACK", None)
+    result = subprocess.run(
+        ["bash", str(TASK_START), "--agent-id", "claude", "--task-id", "T-unset"],
+        cwd=str(repo),
+        capture_output=True,
+        text=True,
+        check=False,
+        env=env,
+    )
+    combined = result.stdout + result.stderr
+    assert result.returncode != 0
+    assert "PR_STACK=auto resolved stack tip origin/feat/stack-safe-merge" in combined
+    assert "is not origin/main" not in combined
+
+
 def test_task_start_pr_stack_auto_uses_resolver_tip(upstream: Path, tmp_path: Path) -> None:
     """PR_STACK=auto without --base implies auth for the unique resolver tip."""
     repo = clone_agent(upstream, tmp_path, "agent_auto_tip")

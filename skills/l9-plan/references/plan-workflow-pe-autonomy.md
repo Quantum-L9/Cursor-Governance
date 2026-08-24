@@ -37,7 +37,7 @@ python3 scripts/render_plan_pe_autonomy.py <plan.json> > .cursor/plans/<snake_sl
 
 3. Ensure frontmatter `todos` are atomic, verb-led, `status: pending`, with `depends_on` matching the execution DAG.
 4. Ensure the **Execute via @environment/program-execution + autonomy** section is present and not stripped.
-5. Set plan `status` to `executable` only when the template’s executability law holds.
+5. Set plan `status` to `executable` only when the template’s executability law holds **and** `scripts/validate_plan_kernel_receipt.py` PASSes on the bound `.plan.md`.
 
 ## Execution pipeline (required next-skill path)
 

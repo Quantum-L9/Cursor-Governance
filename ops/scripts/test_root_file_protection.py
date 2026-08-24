@@ -262,6 +262,62 @@ class RootProtectionTests(unittest.TestCase):
             self.assertIn("notes.md", unreg)  # tracked, lowercase, unregistered
             self.assertIn("Notes.md", stale)  # registered, mixed-case, not tracked
 
+    def test_list_touched_additive_only(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_repo(Path(tmp))
+            (repo / "AAA.md").write_text("alpha\nbeta\ngamma\nMORE\n", encoding="utf-8")
+            commit(repo, "append AAA")
+            self.assertEqual(
+                rp.additive_only_touched(repo, CONFIG, base, "HEAD"),
+                ["AAA.md"],
+            )
+            self.assertEqual(
+                rp.main(["--base", base, "--repo", str(repo), "--list-touched-additive-only"]),
+                0,
+            )
+
+    def test_template_stamp_required_when_body_present(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_repo(Path(tmp))
+            (repo / "AAA.md").write_text("alpha\nbeta\ngamma\nMORE\n", encoding="utf-8")
+            commit(repo, "append AAA")
+            body = Path(tmp) / "body.md"
+            body.write_text("## Summary\nno stamp\n", encoding="utf-8")
+            self.assertEqual(
+                rp.main(["--base", base, "--repo", str(repo), "--pr-body-file", str(body)]),
+                1,
+            )
+            body.write_text(
+                f"{rp.PROTECTED_ROOT_PR_STAMP}\n## Protected-root PR\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                rp.main(["--base", base, "--repo", str(repo), "--pr-body-file", str(body)]),
+                0,
+            )
+
+    def test_template_not_required_without_additive_only_touch(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_repo(Path(tmp))
+            (repo / "MMM.md").write_text("keep\nedit\nCHANGED\n", encoding="utf-8")
+            commit(repo, "managed only")
+            body = Path(tmp) / "body.md"
+            body.write_text("ordinary PR body\n", encoding="utf-8")
+            self.assertEqual(
+                rp.main(["--base", base, "--repo", str(repo), "--pr-body-file", str(body)]),
+                0,
+            )
+
+    def test_require_pr_body_fails_when_missing_source(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            repo, base = init_repo(Path(tmp))
+            (repo / "AAA.md").write_text("alpha\nbeta\ngamma\nMORE\n", encoding="utf-8")
+            commit(repo, "append AAA")
+            self.assertEqual(
+                rp.main(["--base", base, "--repo", str(repo), "--require-pr-body"]),
+                1,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -1,85 +1,21 @@
 ---
 name: clean_compress
-version: "1.0.0"
-description: "Clean and compress code/files"
+version: "2.0.0"
+description: "Clean and compress code via l9-code-maintenance"
 auto_chain: ynp
 ---
 
-# /clean_compress — Code Cleanup
+# /clean_compress — Clean / compress
 
-## WHAT IT DOES
-
-Clean and compress code:
-
-1. Remove dead code
-2. Remove unused imports
-3. Compress verbose patterns
-4. Standardize formatting
-
----
+Delegates to skill **`l9-code-maintenance`** (mode `clean_compress`).
 
 ## EXECUTION
 
-### 1. FIND DEAD CODE
+1. Read and follow skill `l9-code-maintenance` in mode `clean_compress`.
+2. Dry-run first. Do not auto-run mutating cleanup without user intent.
+3. Auto-chain `/ynp`.
 
-```bash
-vulture . --min-confidence 80
-```
+## FORBIDDEN
 
-### 2. FIND UNUSED IMPORTS
-
-```bash
-ruff check --select F401 .
-```
-
-### 3. AUTO-FIX
-
-```bash
-ruff check --fix .
-```
-
-### 4. FORMAT
-
-```bash
-ruff format .
-```
-
----
-
-## CLEANUP TARGETS
-
-| Target | Tool |
-|--------|------|
-| Dead code | vulture |
-| Unused imports | ruff F401 |
-| Formatting | ruff format |
-| Type stubs | ruff |
-
----
-
-## OUTPUT
-
-```markdown
-## 🧹 CLEANUP: {scope}
-
-### Found
-| Issue | Count |
-|-------|-------|
-| Dead code | N |
-| Unused imports | N |
-| Format issues | N |
-
-### Fixed
-| Fix | Files |
-|-----|-------|
-| Imports removed | N |
-| Formatted | N |
-
-### Remaining (manual)
-| Issue | Location |
-|-------|----------|
-```
-
-→ **Auto-chains to /ynp**
-
---- End Command ---
+- Auto-running ruff/vulture without the skill's dry-run
+- Auto-commit

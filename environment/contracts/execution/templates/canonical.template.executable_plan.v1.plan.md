@@ -28,6 +28,18 @@ todos:
     depends_on: [todo-03-prove]
     evidence_property_refs: [SP-03]
 isProject: false
+kernel_pass:
+  bound_path: ""
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: ""
+    body_sha256:
+    deltas: []
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: ""
+    body_sha256:
+    deltas: []
 ---
 
 # PLAN: Short plan title

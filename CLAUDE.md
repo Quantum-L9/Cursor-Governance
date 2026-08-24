@@ -60,6 +60,10 @@ exit 5 means specifically: the files are correct and nothing loaded them.
 `STRUCTURAL_PASS` means the files are correct. It says nothing about whether any
 of them were loaded into this session; `RUNTIME:` is the line that answers that.
 
+PRs that touch `additive_only` root files (`Makefile`, `AGENTS.md`, …) must use
+`.github/PULL_REQUEST_TEMPLATE/protected-root.md` (`<!-- L9_PROTECTED_ROOT_PR -->`).
+`make pr` injects it. CI fails without the stamp. See `AGENTS.md` §14.
+
 <!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->
 
 ## Formatter ownership

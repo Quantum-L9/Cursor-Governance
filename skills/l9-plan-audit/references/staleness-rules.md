@@ -56,6 +56,7 @@ superseded copy, does not appear in session-start Plan audit.
 | `baseline_drift` | body contains `immutable_baseline` / `commit_sha` and the SHA ≠ open workspace `HEAD` (when HEAD available) |
 | `superseded` | body Metadata `status: superseded`, **or** a newer same-slug `name_M-D-YY.plan.md` (historical ISO `name_YYYY-MM-DD` and `name_<8hex>` still match) exists in the plans dir |
 | `missing_execute_section` | **PE-kind only:** body lacks a heading containing `Execute via @environment/program-execution`. PE-kind is the default. Simple-kind (`kind: simple` or `execute_via: cursor-build` in frontmatter, and body has no *live* `make campaign` command / live PE execute heading) must not get this flag. Required prohibition sentences such as `Do not run make campaign` are not live wiring. |
+| `kernel_unfired` | `validate_plan_kernel_receipt.py` FAILs on this unbuilt `.plan.md` |
 
 ## Output budget
 

@@ -71,6 +71,7 @@ When a command needs generator scripts:
 | `/extract-chat` | `commands/extract-chat.md` | Extract insights from chat transcripts |
 | `/extract-from-chat` | `commands/extract-from-chat.md` | Extract from chat (alternate) |
 | `/extract_align` | `commands/extract_align.md` | Extract and align patterns |
+| `/ff` | `commands/ff.md` | In-place catch-up of a named clone (`l9-repo-sync`) |
 | `/forge` | `commands/forge.md` | Forge mode — rapid multi-GMP execution |
 | `/gap-analysis` | `commands/gap-analysis.md` | Gap analysis for PRs/features |
 | `/gap-analysis-new` | `commands/gap-analysis-new.md` | Gap analysis (alternate protocol) |

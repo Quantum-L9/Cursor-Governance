@@ -1,35 +1,37 @@
 ---
 name: Scope make pr-check pytest and start agents on the stack tip
+status: completed
+built: true
 overview: "Cut make pr wall-clock by scoping local pytest to changed Python and by creating agent worktrees from the unambiguous open-PR stack tip when PR_STACK=auto."
 todos:
   - id: T1
     content: "Add a fail-closed stack-tip resolver: unique open-PR chain tip, else origin/main if none, else exit 2 on sibling chains. Same rule for start and publish. Do not require file overlap."
-    status: pending
+    status: completed
     phase: execute
     depends_on: []
   - id: T3
     content: "Scope make pr-check pytest: never pass repo-root '.' for local profile. Select changed tests plus inferred test_<stem>.py. Non-dot suites only when owned_paths intersect. No inferred test fails closed to that tests/ directory, not the catalog."
-    status: pending
+    status: completed
     phase: execute
     depends_on: []
   - id: T2
     content: "Default agent_worktree_start.sh base to the resolver tip when PR_STACK is auto. Empty PR_STACK keeps origin/main. Implied L9_TASK_BASE_AUTHORIZED for that auto tip only."
-    status: pending
+    status: completed
     phase: execute
     depends_on: [T1]
   - id: T4
     content: "Prove both selectors with unit tests (tip vs main vs siblings; autonomy-only change excludes PE and generated-data; non-dot owned_path still runs that suite)."
-    status: pending
+    status: completed
     phase: validate
     depends_on: [T1, T3]
   - id: T6
     content: "After ruff-format dirties only the files it formatted, restage those paths in the same gate pass or write the receipt after format. Do not git add -A."
-    status: pending
+    status: completed
     phase: execute
     depends_on: [T3]
   - id: T5
     content: "Align AGENTS.md, surface_profile.yaml, and rules/53 so agents start on the tip instead of inventing a main branch and restacking at make pr."
-    status: pending
+    status: completed
     phase: converge
     depends_on: [T2, T4]
 isProject: false
@@ -48,6 +50,10 @@ kernel_pass:
     deltas:
       - applied Validate & Repair.md and stamped kernel_pass
 ---
+# Built — landed on origin/main
+
+Stack-tip resolver is `ops/scripts/resolve_stack_tip.py` (wired from `agent_worktree_start.sh`). Pytest scoping landed via `select_pr_pytest_paths.py` / `--changed-file`. Do not Build this packet again.
+
 # PLAN: Scope make pr-check pytest and start agents on the stack tip
 
 > **Projected from** validated PLAN_DOCUMENT `pr_check_scope_and_stack_tip_start.json` (validate_plan_document.py PASS).

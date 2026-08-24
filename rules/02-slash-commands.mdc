@@ -59,55 +59,55 @@ When a command needs generator scripts:
 
 ## Available Slash Commands (enabled)
 
+Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not second primary rows: `/readme` → `/docs`, `/lint-fix` → `/lint`, `/violation` → `/governance`. Folded verify-ladder slashes (`/probe`, `/audit-component`, `/verify-component`) are modes on the analyze family. Retired with no alias: `/rules`, `/git-work-preserve`, `/harvest2`.
+
 | Command | File | Description |
 |---------|------|-------------|
-| `/analyze` | `commands/analyze.md` | Codebase analysis |
-| `/autonomy` | `commands/autonomy.md` | Bounded autonomy — parallel Tasks + background PR poll |
+| `/analyze` | `commands/analyze.md` | Rapid exploration (`l9-code-analysis`) |
 | `/analyze_evaluate` | `commands/analyze_evaluate.md` | Combined analysis + evaluation |
-| `/audit-component` | `commands/audit-component.md` | Audit component exports, wiring, API instantiation |
+| `/autonomy` | `commands/autonomy.md` | Bounded autonomy — parallel Tasks + background PR poll |
 | `/ci` | `commands/ci.md` | CI/CD operations |
 | `/ci-policy` | `commands/ci-policy.md` | CI policy / gate authoring |
+| `/clean` | `commands/clean.md` | Cleanup command |
 | `/clean_compress` | `commands/clean_compress.md` | Clean and compress code |
-| `/confirm-wiring` | `commands/confirm-wiring.md` | Integration audit — verify fully wired |
-| `/consolidate` | `commands/consolidate.md` | Consolidate code/files |
+| `/confirm-wiring` | `commands/confirm-wiring.md` | Verify workspace or component is wired |
+| `/consolidate` | `commands/consolidate.md` | Consolidate scattered code |
 | `/dag-authoring` | `commands/dag-authoring.md` | Create/update DAGs the proper way |
+| `/docs` | `commands/docs.md` | Agent-docs update (`l9-update-agent-docs`; not the README DAG) |
 | `/e2e-blockers` | `commands/e2e-blockers.md` | E2E / local-proof blockers + brief |
 | `/end-session` | `commands/end-session.md` | Close session — save context, handoff |
-| `/evaluate` | `commands/evaluate.md` | Code quality evaluation |
+| `/evaluate` | `commands/evaluate.md` | Deep evaluation (`l9-code-analysis`) |
 | `/extract-chat` | `commands/extract-chat.md` | Extract insights from chat transcripts |
 | `/extract-from-chat` | `commands/extract-from-chat.md` | Extract from chat (alternate) |
 | `/extract_align` | `commands/extract_align.md` | Extract and align patterns |
+| `/ff` | `commands/ff.md` | In-place catch-up of a named clone (`l9-repo-sync`) |
 | `/forge` | `commands/forge.md` | Forge mode — rapid multi-GMP execution |
-| `/gap-analysis` | `commands/gap-analysis.md` | Gap analysis for PRs/features |
+| `/gap-analysis` | `commands/gap-analysis.md` | Gap analysis vs target state |
 | `/gap-analysis-new` | `commands/gap-analysis-new.md` | Gap analysis (alternate protocol) |
 | `/gmp` | `commands/gmp.md` | Governance Managed Process — phased execution |
-| `/governance` | `commands/governance.md` | Governance check and enforcement |
+| `/governance` | `commands/governance.md` | Governance check + report-violation mode |
 | `/governance-backup` | `commands/governance-backup.md` | Push governance SSOT to GitHub |
 | `/harvest` | `commands/harvest.md` | Harvest patterns from code/conversation |
-| `/harvest2` | `commands/harvest2.md` | Harvest v2 — read source, write target |
 | `/index` | `commands/index.md` | Export repo indexes |
 | `/inspect` | `commands/inspect.md` | Code gate — validate external code before import |
+| `/issues` | `commands/issues.md` | GitHub issues Diagnose / Converge |
+| `/l9-plan` | `commands/l9-plan.md` | Create PE+autonomy execution plan (`l9-plan` skill) |
+| `/l9-plan-simple` | `commands/l9-plan-simple.md` | Shared executable-plan template, Cursor Build |
+| `/l9-pr-remediation` | `commands/l9-pr-remediation.md` | Converge all open PRs to green, then merge |
 | `/lcto` | `commands/lcto.md` | L CTO mode — strategic technical decisions |
-| `/lint-fix` | `commands/lint-fix.md` | Systematic lint fixes |
+| `/lint` | `commands/lint.md` | Systematic lint fixes (no commit) |
 | `/mem` | `commands/mem.md` | Memory-aware execution |
 | `/migrate` | `commands/migrate.md` | Autonomous code migration |
-| `/l9-plan` | `commands/l9-plan.md` | Create PE+autonomy execution plan (`l9-plan` skill) |
-| `/l9-plan-simple` | `commands/l9-plan-simple.md` | Shared executable-plan template, Cursor Build (`l9-plan-simple`) |
+| `/plan-audit` | `commands/plan-audit.md` | Audit unbuilt Cursor plans |
 | `/pr` | `commands/pr.md` | PR Diagnose (readiness / blockers) via l9-pr-remediation |
-| `/l9-pr-remediation` | `commands/l9-pr-remediation.md` | Converge all open PRs to green, then merge |
-| `/probe` | `commands/probe.md` | Import & wiring verification (safe) |
 | `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |
 | `/refactor` | `commands/refactor.md` | Systematic refactoring/migration |
 | `/refactor-sweep` | `commands/refactor-sweep.md` | Broad refactor sweep |
-| `/rules` | `commands/rules.md` | List and manage rules |
 | `/spec` | `commands/spec.md` | Generate specification |
 | `/start-session` | `commands/start-session.md` | Run L9 sessionStart bootstrap (`make start`) |
 | `/update-command` | `commands/update-command.md` | Slim slash commands to DAG triggers |
 | `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan |
-| `/verify-component` | `commands/verify-component.md` | Component verification ladder |
-| `/violation` | `commands/violation.md` | Report governance violation |
-| `/wire` | `commands/wire.md` | Wire/integrate components or governance |
-| `/readme` | `commands/readme-dag.md` | README generation pipeline via DAG |
+| `/wire` | `commands/wire.md` | Wire governance workspace or a code component |
 | `/ynp` | `commands/ynp.md` | Yes No Proceed — decision framework |
 
 Full map: `commands/COMMANDS_MANIFEST.yaml`. Human index: `commands/commands-index.md`.
@@ -132,7 +132,7 @@ For commands with `dag_file:` in their header:
 # 1. .cursor/workflows-synced/dags/{dag_name}.py
 # 2. .cursor-commands/workflows/dags/{dag_name}.py
 
-# Example for /readme:
+# Example for a command with dag_file:
 dag_path = ".cursor/workflows-synced/dags/readme_pipeline_dag.py"
 # Load and execute DAG nodes in sequence
 ```

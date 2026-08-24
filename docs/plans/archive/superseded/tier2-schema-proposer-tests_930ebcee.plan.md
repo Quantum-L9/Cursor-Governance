@@ -1,5 +1,7 @@
 ---
 name: tier2-schema-proposer-tests
+status: superseded
+built: true
 overview: Add Tier-2 behavioral tests for `schema_proposer` and a kernel-aligned field-name invariant guard so the only engine path that introduces field names from runtime data fails closed against L9 Master Kernel §3.1, §5.1, §5.2.
 todos:
   - id: switch_to_agent
