@@ -61,6 +61,7 @@ Current unbuilt only. Partial work is in `partially-built/` (`pe_fast_002_prepar
 12. `ra_root-docs_pointer_09ff9571` — Recursive Alignment pointer, not dump
 13. `pe_eie_scoped_campaign_5469bc8f` — EIE scoped campaign
 
-`pipeline_assembly_fill` is in `built/`.
+`pipeline_assembly_fill_8-20-26` is in `BUILT/`. The still-open
+`pipeline_assembly_fill_25e09ac8` stays in `backlog/` (todos still pending).
 
 Next play: `/ynp` against this list. Do not auto-Build from the shelf.

@@ -61,9 +61,10 @@ python3 "$GOV/skills/l9-plan-audit/scripts/audit_plans.py" \
 
 Present that stdout as the live-queue report. Do not invent plans it omitted.
 
-### 2. Shelf hygiene (root + backlog)
+### 2. Shelf hygiene (root + backlog + partially-built)
 
-Classify every top-level and `backlog/*.plan.md` (skip `_TEMPLATE.plan.md`):
+Classify every top-level, `backlog/*.plan.md`, and `partially-built/*.plan.md`
+(skip `_TEMPLATE.plan.md`):
 
 1. `status: superseded` or older same-slug → `archive/superseded/`
 2. `built: true` / `status: completed` / all todos done → `built/`
