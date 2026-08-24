@@ -372,8 +372,8 @@
           "unbuilt plans",
           "stale plans",
           "audit .cursor/plans",
-          "/plan-audit",
-          "which plans are unbuilt"
+          "which plans are unbuilt",
+          "sessionStart plan audit"
         ],
         "primary": "l9-plan-audit",
         "signal_weight": 8,
@@ -1081,14 +1081,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "audit ~/.cursor/plans for unbuilt plans from the last 7 days, flag staleness, and surface findings at session start or via /plan-audit. use when session context shows Plan audit, the user asks which plans are unbuilt or stale, or /plan-audit is invoked. do not use to author new plans (use l9-plan-simple, or l9-plan for pe/campaign) or to auto-build plans.",
+      "description": "sessionStart scanner for unbuilt plans in the last 7 days under the live plans-store root. use when session context shows Plan audit. do not use to author plans (l9-plan-simple / l9-plan) or to shelf the store (that is /l9-audit-plans). do not auto-build plans.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-plan-audit",
       "path": "skills/l9-plan-audit",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "session context shows Plan audit, auditing unbuilt or stale Cursor plans under .cursor/plans, or /plan-audit is invoked"
+      "when_to_use": "session context shows Plan audit or the 7-day live-queue scanner; not /l9-audit-plans (store shelf organize)"
     },
     {
       "composition_role": "general",
@@ -1279,6 +1279,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "213dc4b631f17b6ebb7b47374c1bbba1a8b99193f99b7925598d249fb5ac8e88",
-  "source_skill_corpus_sha256": "1b067559c75234e22be76975aab0f73c6f4f3ea385f6adef1030877fce8f4f70"
+  "source_manifest_sha256": "c995cc41d9cf184b5b6837cbb6a92af1358d086664f493ef38c130ab8971e2cf",
+  "source_skill_corpus_sha256": "c3a6abf99a1bf534cf3d6aea3ed49fe964da5569b99dd49bec259ef7c13195b3"
 }
