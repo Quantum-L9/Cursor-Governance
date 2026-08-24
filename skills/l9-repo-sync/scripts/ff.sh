@@ -39,7 +39,11 @@ UNTRACKED_BEFORE="$(git -C "$CLONE" ls-files --others --exclude-standard | LC_AL
 echo "ff: clone=$CLONE branch=$BRANCH_BEFORE push=0 hard_reset=0 stash_u=0"
 echo "ff: keeping .venv and untracked; unique commits and dirty tracked get preserve refs"
 
-git -C "$CLONE" fetch --quiet origin "$TARGET_BRANCH"
+# A bare `fetch origin main` can leave origin/main stale (FETCH_HEAD only)
+# on some CI git/refspec layouts; then behind=0 and colliding untracked
+# files are never overwritten.
+git -C "$CLONE" fetch --quiet origin \
+  "+refs/heads/${TARGET_BRANCH}:refs/remotes/origin/${TARGET_BRANCH}"
 if ! git -C "$CLONE" rev-parse --verify "origin/$TARGET_BRANCH" >/dev/null 2>&1; then
   echo "FAIL: origin/${TARGET_BRANCH} missing after fetch." >&2
   exit 1
