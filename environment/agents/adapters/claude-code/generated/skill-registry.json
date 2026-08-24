@@ -239,8 +239,8 @@
           "update agents.md",
           "refresh agent docs",
           "update claude.md",
-          "update invariants.md",
-          "update architecture.md"
+          "root doc pointer",
+          "pointer stack"
         ],
         "primary": "l9-update-agent-docs",
         "signal_weight": 8,
@@ -640,6 +640,37 @@
         "supporting": [
           "l9-structured-reasoning"
         ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "repo_sync_ff",
+        "negative_signals": [
+          "activate_fresh",
+          "swap the ssot",
+          "hard reset"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Read/attach only. Mutation is /ff or make ff via scripts/ff.sh. Never activate_fresh. Never delete unique work.\n",
+        "positive_signals": [
+          "/ff",
+          "make ff",
+          "fast-forward the ssot",
+          "catch up origin/main",
+          "in-place ff",
+          "sync cursor-governance"
+        ],
+        "primary": "l9-repo-sync",
+        "required_any": [
+          "/ff",
+          "make ff",
+          "fast-forward",
+          "fast forward",
+          "sync the ssot",
+          "sync this clone"
+        ],
+        "signal_weight": 8,
+        "supporting": [
+          "l9-git-work-preserve"
+        ]
       }
     ],
     "supporting_skills": [
@@ -885,7 +916,7 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose-first audit extract and prune-propose for unpushed dirty orphan stale and stash git work. use when cleaning branches worktrees or stashes never lose unique commits without receipts and auth.",
+      "description": "diagnose-first audit extract harvest and prune-propose for unpushed dirty orphan stale stash and leftover worktree dirt. use when cleaning branches worktrees or stashes or harvesting misplaced dirty/untracked/WIP across worktrees into a PR. never lose unique commits without receipts and auth.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-git-work-preserve",
@@ -1127,6 +1158,17 @@
     },
     {
       "composition_role": "general",
+      "description": "Catch a named clone to origin/main in place. Parks unique work; keeps .venv. Use when /ff or make ff. Do not use for activate_fresh or feature-branch reset.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-repo-sync",
+      "path": "skills/l9-repo-sync",
+      "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "audit, reconcile, and renovate a real software repository from fragmented manifests, duplicated automation, stale configuration, dead wiring, ignored tests, documentation drift, and ambiguous ownership into a coherent, validated implementation delivered through a governed pull request. use when the user asks to fix a messy repo end to end, align pyproject/package manifests with actual capabilities, collapse competing dependency or test authorities, turn an audit into full production files, modernize repository control planes, or continue remediation until the pr is green. do not use for audit-only commentary, isolated feature development, cosmetic refactors, or repositories the user has not authorized for modification.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -1193,14 +1235,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change.",
+      "description": "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) against live authority. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change. do not invent architecture.md or invariants.md.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes"
+      "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes"
     },
     {
       "composition_role": "general",
@@ -1237,6 +1279,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "a87aeda547043884ad7ee04b07c2c789c9056c3c1c463c79664f2ea594800440",
-  "source_skill_corpus_sha256": "c5cd2e4933187d203e78ddf5979d8f205a4ef3d452c73f41cde3575274ff578f"
+  "source_manifest_sha256": "213dc4b631f17b6ebb7b47374c1bbba1a8b99193f99b7925598d249fb5ac8e88",
+  "source_skill_corpus_sha256": "1b067559c75234e22be76975aab0f73c6f4f3ea385f6adef1030877fce8f4f70"
 }
