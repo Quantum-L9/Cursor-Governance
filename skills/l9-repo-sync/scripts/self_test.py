@@ -103,8 +103,14 @@ def test_behind_with_colliding_and_hold() -> int:
             return _fail(".venv was removed")
         if (clone / "notes.untracked").read_text(encoding="utf-8") != "keep me\n":
             return _fail("untracked file lost or changed")
-        if (clone / "landed.md").read_text(encoding="utf-8") != "now tracked on main\n":
-            return _fail("landed.md was not caught up from origin/main")
+        landed = (clone / "landed.md").read_text(encoding="utf-8")
+        if landed != "now tracked on main\n":
+            return _fail(
+                "landed.md was not caught up from origin/main got="
+                + repr(landed)
+                + " stdout="
+                + repr(proc.stdout)
+            )
         if (clone / "tracked.txt").read_text(encoding="utf-8") != "v2\n":
             return _fail("did not catch up tracked.txt")
         if "local-dirty" in (clone / "tracked.txt").read_text(encoding="utf-8"):

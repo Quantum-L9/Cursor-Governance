@@ -133,14 +133,19 @@ if [ -n "$DIRTY_TRACKED" ]; then
 fi
 
 # origin/main may now track a path that is still untracked here. reset --keep
-# refuses rather than overwrite. Park those copies outside the clone, then
-# catch up. The hold keeps the local bytes; the worktree gets the tracked tip.
-# Include ignored untracked — --exclude-standard hides collisions that
-# reset --keep will not replace, leaving the local copy in the worktree.
-OVERWRITE_UNTRACKED="$(comm -12 \
-  <(git -C "$CLONE" ls-files --others | LC_ALL=C sort) \
-  <(git -C "$CLONE" ls-tree -r --name-only "origin/${TARGET_BRANCH}" | LC_ALL=C sort) \
-  | sed '/^$/d' || true)"
+# may leave that worktree copy untouched. Walk origin's tree — do not depend
+# on `comm` + `ls-files --others` (untracked-cache / excludesfile miss paths
+# on some CI images).
+OVERWRITE_UNTRACKED=""
+while IFS= read -r rel; do
+  [ -z "$rel" ] && continue
+  if git -C "$CLONE" ls-files --error-unmatch -- "$rel" >/dev/null 2>&1; then
+    continue
+  fi
+  if [ -e "$CLONE/$rel" ] || [ -L "$CLONE/$rel" ]; then
+    OVERWRITE_UNTRACKED="${OVERWRITE_UNTRACKED}${rel}"$'\n'
+  fi
+done < <(git -C "$CLONE" ls-tree -r --name-only "origin/${TARGET_BRANCH}")
 if [ -n "$OVERWRITE_UNTRACKED" ]; then
   HOLD="${HOLD:-$HOLD_ROOT}"
   mkdir -p "$HOLD"
@@ -163,13 +168,10 @@ else
   fi
 fi
 
-# reset --keep may leave a previously untracked colliding path untouched.
-# Force those paths to the origin blob after HEAD has moved.
-if [ -n "$OVERWRITE_UNTRACKED" ]; then
-  while IFS= read -r rel; do
-    [ -z "$rel" ] && continue
-    git -C "$CLONE" checkout -f "origin/${TARGET_BRANCH}" -- "$rel"
-  done <<<"$OVERWRITE_UNTRACKED"
+# Force origin blobs onto every colliding path and the rest of the tip.
+# `reset --keep` plus an empty OVERWRITE list left CI with the local copy.
+if [ "$BEHIND" -gt 0 ] || [ "$AHEAD" -gt 0 ] || [ -n "$OVERWRITE_UNTRACKED" ]; then
+  git -C "$CLONE" checkout -f "origin/${TARGET_BRANCH}" -- .
 fi
 
 GITDIR_AFTER="$(git -C "$CLONE" rev-parse --git-common-dir)"
