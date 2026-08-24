@@ -22,44 +22,46 @@ Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml).
 
 ## Quick reference
 
+Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary rows): `/readme` → `/docs`, `/lint-fix` → `/lint`, `/violation` → `/governance`. Verify-ladder work is a mode on `/analyze` / `/evaluate` / `/analyze_evaluate`. Retired with no alias: `/rules`, `/git-work-preserve`, `/harvest2`. A consumer overlay `.cursor/commands/{old}.md` still wins resolution order 1st — do not recreate the retired live file.
+
 | Command | What it does |
 |---------|--------------|
 | `/start-session` | Run L9 sessionStart bootstrap (`make start`) |
 | `/autonomy` | Bounded autonomy — parallel Tasks + background PR poll (packet) |
 | `/ynp` | Highest-leverage next action |
-| `/rules` | Load governance rules / project state |
-| `/l9-plan` | Deep PE+autonomy `.plan.md` via first-class `canonical.template.executable_plan.v1` |
+| `/l9-plan` | Deep PE+autonomy `.plan.md` via first-class template |
 | `/l9-plan-simple` | Same template, Cursor Build on the current checkout (not `make campaign`) |
-| `/git-work-preserve` | Diagnose-first git work audit / extract / prune-propose (`l9-git-work-preserve`) |
-| `/analyze` | Explore structure, flows, hotspots |
+| `/analyze` | Explore structure, flows, hotspots (`l9-code-analysis`; probe mode via `l9-component-verification`) |
 | `/evaluate` | Deep readiness / compliance audit |
 | `/analyze_evaluate` | Analyze + evaluate in one pass |
 | `/reasoning` | Multi-modal reasoning stack |
 | `/gmp` | Phased, auditable execution |
 | `/forge` | Fast autonomous batch execution |
-| `/harvest` / `/harvest2` | Extract code from docs (sed / copy — no rewrite) |
+| `/harvest` | Extract code from docs (sed / copy — no rewrite) |
 | `/use-harvest` | Deploy harvested artifacts via plan |
 | `/wire` | Governance wiring or component wire-up |
 | `/confirm-wiring` | Verify full wiring |
 | `/pr` | PR analysis, gaps, merge blockers (Diagnose only) |
 | `/l9-pr-remediation` | Converge via make pr-check / make pr, then stack-safe oldest-first merge |
 | `/gap-analysis` | Gaps vs target state |
+| `/gap-analysis-new` | Gap analysis (alternate protocol) |
 | `/inspect` | External code gate before import |
 | `/index` | Export repo indexes |
-| `/readme` | README DAG pipeline |
+| `/docs` | Agent-docs update (`l9-update-agent-docs`; not the README DAG) |
 | `/end-session` | Session handoff + Graphiti PICKUP (memory-bank retired) |
 | `/e2e-blockers` | E2E / local-proof blockers + brief |
 | `/mem` | Memory operations |
-| `/violation` | Report governance violation |
-| `/governance` | Compliance validation |
+| `/governance` | Compliance validation + report-violation mode |
 | `/governance-backup` | Push SSOT to GitHub |
 | `/ci` / `/ci-policy` | CI operations / policy |
-| `/lint-fix` | Systematic lint fixes |
+| `/lint` | Systematic lint fixes (no commit) |
 | `/migrate` / `/refactor` / `/refactor-sweep` | Migration / refactor sweeps |
 | `/consolidate` / `/clean_compress` | Cleanup / densify |
+| `/clean` | Cleanup command |
 | `/extract-chat` / `/extract-from-chat` / `/extract_align` | Chat / pattern extraction |
 | `/spec` / `/dag-authoring` / `/update-command` | Spec / DAG / command meta |
-| `/probe` / `/audit-component` / `/verify-component` | Component verify ladder |
+| `/issues` | GitHub issues Diagnose / Converge |
+| `/plan-audit` | Audit unbuilt Cursor plans |
 | `/lcto` | L CTO strategic mode |
 
 ---

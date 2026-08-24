@@ -119,7 +119,7 @@ tiers:
   - skill: l9-plan-simple
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   do_not_migrate_to_skills:
-  - item: commands/violation.md
+  - item: commands/_archived/violation.md
     reason: violation handling belongs in always-applied rules or hooks, not optional skill context
   - item: commands/mem.md
     reason: memory plumbing belongs in MCP/client workflow documentation, not a model-selected skill

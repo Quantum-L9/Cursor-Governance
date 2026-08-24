@@ -9,7 +9,7 @@
 #
 # Integration:
 #   - violation_tracker.py reads this config
-#   - /violation command logs violations per this spec
+#   - /governance report-violation mode logs violations per this spec
 #   - MCP Memory stores violations with lesson_id references
 #
 # ============================================================================
@@ -233,14 +233,14 @@ wiring:
       purpose: "Lesson database"
     - path: ".cursor-commands/ops/scripts/violation_tracker.py"
       purpose: "Violation logging"
-    - path: ".cursor-commands/commands/violation.md"
-      purpose: "Slash command"
+    - path: ".cursor-commands/commands/_archived/violation.md"
+      purpose: "Archived slash; live path is /governance report-violation"
     - path: ".cursor-commands/ops/scripts/feedback_collector.py"
       purpose: "Feedback aggregation"
   
   integration_tests:
     - name: "violation_to_mcp"
-      trigger: "/violation lesson-001"
+      trigger: "/governance report-violation lesson-001"
       expected: "MCP memory entry created"
     - name: "audit_log_append"
       trigger: "any violation"
