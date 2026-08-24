@@ -72,6 +72,26 @@ def parse_time(value: str) -> dt.datetime:
     return parsed.astimezone(dt.UTC)
 
 
+_GIT_HOST_LEAKS = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_COMMON_DIR",
+    "GIT_PREFIX",
+)
+
+
+def isolated_git_env() -> dict[str, str]:
+    """Honor ``git -C <repo>`` even when the host exported GIT_DIR."""
+    env = os.environ.copy()
+    for key in _GIT_HOST_LEAKS:
+        env.pop(key, None)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    return env
+
+
 def run_git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
     completed = subprocess.run(
         ["git", "-C", str(repo), *args],
@@ -79,7 +99,7 @@ def run_git(repo: Path, *args: str, check: bool = True) -> subprocess.CompletedP
         capture_output=True,
         check=False,
         timeout=120,
-        env={**os.environ, "GIT_TERMINAL_PROMPT": "0"},
+        env=isolated_git_env(),
     )
     if check and completed.returncode != 0:
         raise RuntimeError(

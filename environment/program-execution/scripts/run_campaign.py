@@ -341,6 +341,16 @@ def auto_harvest(trace: pe_trace.ExecutionTrace | None) -> None:
 
 def git_env() -> dict[str, str]:
     env = os.environ.copy()
+    for key in (
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_PREFIX",
+    ):
+        env.pop(key, None)
     env["GIT_TERMINAL_PROMPT"] = "0"
     env["GIT_ASKPASS"] = "echo"
     env["GCM_INTERACTIVE"] = "never"

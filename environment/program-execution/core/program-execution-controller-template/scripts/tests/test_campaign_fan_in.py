@@ -9,6 +9,7 @@ integrated back into that branch.
 from __future__ import annotations
 
 import json
+import os
 import subprocess
 import unittest
 from pathlib import Path
@@ -238,6 +239,46 @@ class CampaignFanInTests(unittest.TestCase):
                 db.close()
             self.assertEqual(replay["candidate_sha"], integration["candidate_sha"])
             self.assertEqual(_git(repo, "rev-parse", CAMPAIGN_BRANCH), after_first)
+
+    def test_run_git_ignores_host_git_dir(self) -> None:
+        """``git -C`` must win when the host exported GIT_DIR (GHA/CI)."""
+        import sys
+
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+        from pec.common import run_git
+
+        with TemporaryDirectory() as raw:
+            decoy = Path(raw) / "decoy"
+            target = Path(raw) / "target"
+            identity = (
+                "-c",
+                "user.email=test@example.com",
+                "-c",
+                "user.name=Test",
+            )
+            for path in (decoy, target):
+                path.mkdir()
+                subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True)
+                (path / "README.md").write_text(f"{path.name}\n", encoding="utf-8")
+                subprocess.run(
+                    ["git", "add", "README.md"], cwd=path, check=True, capture_output=True
+                )
+                subprocess.run(
+                    ["git", *identity, "commit", "-m", "init"],
+                    cwd=path,
+                    check=True,
+                    capture_output=True,
+                )
+            previous = os.environ.get("GIT_DIR")
+            os.environ["GIT_DIR"] = str((decoy / ".git").resolve())
+            try:
+                shown = run_git(target, "rev-parse", "--show-toplevel").stdout.strip()
+            finally:
+                if previous is None:
+                    os.environ.pop("GIT_DIR", None)
+                else:
+                    os.environ["GIT_DIR"] = previous
+            self.assertEqual(Path(shown).resolve(), target.resolve())
 
 
 if __name__ == "__main__":
