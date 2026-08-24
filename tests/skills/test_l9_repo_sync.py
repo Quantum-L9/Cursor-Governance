@@ -6,7 +6,9 @@ import subprocess
 import sys
 from pathlib import Path
 
-SELF_TEST = Path(__file__).resolve().parents[2] / "skills" / "l9-repo-sync" / "scripts" / "self_test.py"
+SELF_TEST = (
+    Path(__file__).resolve().parents[2] / "skills" / "l9-repo-sync" / "scripts" / "self_test.py"
+)
 
 
 def test_l9_repo_sync_self_test() -> None:

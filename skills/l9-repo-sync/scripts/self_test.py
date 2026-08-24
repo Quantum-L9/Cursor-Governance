@@ -78,7 +78,9 @@ def test_behind_with_colliding_and_hold() -> int:
             env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
         )
         if proc.returncode != 0:
-            print(f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr)
+            print(
+                f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr
+            )
             return 1
         if not (clone / ".venv" / "pyvenv.cfg").is_file():
             return _fail(".venv was removed")
@@ -140,7 +142,9 @@ def test_non_overlapping_dirty_still_parks() -> int:
             env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
         )
         if proc.returncode != 0:
-            print(f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr)
+            print(
+                f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr
+            )
             return 1
         if (clone / "a.txt").read_text(encoding="utf-8") != "a2\n":
             return _fail("did not catch up a.txt")
@@ -175,7 +179,9 @@ def test_already_at_tip_leaves_dirty() -> int:
             env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
         )
         if proc.returncode != 0:
-            print(f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr)
+            print(
+                f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr
+            )
             return 1
         if (clone / "tracked.txt").read_text(encoding="utf-8") != "unique-at-tip\n":
             return _fail("already-at-tip dirty unique work was discarded")
@@ -218,7 +224,9 @@ def test_unrelated_history_with_dirty() -> int:
             env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
         )
         if proc.returncode != 0:
-            print(f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr)
+            print(
+                f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}", file=sys.stderr
+            )
             return 1
         if (clone / "tracked.txt").read_text(encoding="utf-8") != "origin\n":
             return _fail("unrelated-history clone did not land on origin/main content")

@@ -229,7 +229,7 @@ One paragraph: residual defect or feature; system bound; non-negotiable preserve
 
 ## Capability preflight
 
-`schema_ref:` `canonical.schema.capability_preflight.v1`  
+`schema_ref:` `canonical.schema.capability_preflight.v1`
 `instance_binding:` `capability_preflight_ref` → fill path or inline id below.
 
 | Field | Value |
@@ -281,7 +281,7 @@ Mutations outside this envelope are forbidden (PLAN-SCHEMA-004).
 
 ### Autonomous merge
 
-`autonomous_merge:` `false` always in packet + PE `COMPATIBILITY.yaml` (forbidden).  
+`autonomous_merge:` `false` always in packet + PE `COMPATIBILITY.yaml` (forbidden).
 **Merge for this plan** only after PE verify/handoff path + [@autonomy](commands/autonomy.md) join on this L4 plan/PE stack, green+mergeable (see Execute section). Outside that stack → denied.
 
 ## Side effects and idempotency
@@ -305,7 +305,7 @@ Required for every destructive / external-write TODO (PLAN-SCHEMA-005).
 
 ## Rollback
 
-`schema_ref:` `canonical.schema.rollback_contract.v1`  
+`schema_ref:` `canonical.schema.rollback_contract.v1`
 `instance_binding:` `rollback_contract_ref`
 
 | Field | Value |
@@ -370,8 +370,8 @@ Required for every destructive / external-write TODO (PLAN-SCHEMA-005).
 
 ## Execution DAG
 
-`schema_ref:` `canonical.schema.dependency_topology.v1`  
-`instance_binding:` `dependency_topology_ref` / `execution_DAG_ref`  
+`schema_ref:` `canonical.schema.dependency_topology.v1`
+`instance_binding:` `dependency_topology_ref` / `execution_DAG_ref`
 Must be acyclic before status may become `executable` (PLAN-SCHEMA-007).
 
 | Field | Value |
@@ -395,8 +395,8 @@ Must be acyclic before status may become `executable` (PLAN-SCHEMA-007).
 
 ## Property evidence matrix
 
-`schema_ref:` `canonical.schema.validation_evidence.v1`  
-`instance_binding:` `validation_evidence_refs` / `property_evidence_matrix_ref`  
+`schema_ref:` `canonical.schema.validation_evidence.v1`
+`instance_binding:` `validation_evidence_refs` / `property_evidence_matrix_ref`
 Exit-0 alone is insufficient when property needs structural/runtime proof (PLAN-SCHEMA-008).
 
 | evidence_id | claim_id / SP | evidence_kind | method | command | expected_positive | status |
@@ -447,8 +447,8 @@ Exit-0 alone is insufficient when property needs structural/runtime proof (PLAN-
 
 ## Convergence
 
-`schema_ref:` `canonical.schema.convergence_contract.v1`  
-`instance_binding:` `convergence_contract_ref`  
+`schema_ref:` `canonical.schema.convergence_contract.v1`
+`instance_binding:` `convergence_contract_ref`
 Convergence requires all blocking evidence + gates (PLAN-SCHEMA-015).
 
 | Field | Value |
