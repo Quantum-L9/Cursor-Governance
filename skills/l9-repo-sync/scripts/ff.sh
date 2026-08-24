@@ -5,6 +5,9 @@
 # Never stash -u. Never activate_fresh. Never reset --hard as the catch-up.
 set -euo pipefail
 
+# Inherit no host git dir — `git -C` is ignored when GIT_DIR is set.
+unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_COMMON_DIR GIT_PREFIX
+
 CLONE="${CURSOR_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
 CLONE="$(cd "$CLONE" && pwd)"
 TARGET_BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
@@ -132,8 +135,10 @@ fi
 # origin/main may now track a path that is still untracked here. reset --keep
 # refuses rather than overwrite. Park those copies outside the clone, then
 # catch up. The hold keeps the local bytes; the worktree gets the tracked tip.
+# Include ignored untracked — --exclude-standard hides collisions that
+# reset --keep will not replace, leaving the local copy in the worktree.
 OVERWRITE_UNTRACKED="$(comm -12 \
-  <(git -C "$CLONE" ls-files --others --exclude-standard | LC_ALL=C sort) \
+  <(git -C "$CLONE" ls-files --others | LC_ALL=C sort) \
   <(git -C "$CLONE" ls-tree -r --name-only "origin/${TARGET_BRANCH}" | LC_ALL=C sort) \
   | sed '/^$/d' || true)"
 if [ -n "$OVERWRITE_UNTRACKED" ]; then
@@ -156,6 +161,15 @@ else
     echo "Work is still in the worktree. Unique commits: ${PRESERVE_BRANCH:-none}. Dirty park: ${DIRTY_REF:-none}. Hold: ${HOLD:-none}." >&2
     exit 1
   fi
+fi
+
+# reset --keep may leave a previously untracked colliding path untouched.
+# Force those paths to the origin blob after HEAD has moved.
+if [ -n "$OVERWRITE_UNTRACKED" ]; then
+  while IFS= read -r rel; do
+    [ -z "$rel" ] && continue
+    git -C "$CLONE" checkout -f "origin/${TARGET_BRANCH}" -- "$rel"
+  done <<<"$OVERWRITE_UNTRACKED"
 fi
 
 GITDIR_AFTER="$(git -C "$CLONE" rev-parse --git-common-dir)"

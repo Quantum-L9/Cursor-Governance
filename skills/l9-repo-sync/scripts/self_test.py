@@ -13,10 +13,27 @@ ROOT = Path(__file__).resolve().parents[1]
 FF = ROOT / "scripts" / "ff.sh"
 
 
+_HOST_LEAKS = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_COMMON_DIR",
+    "GIT_PREFIX",
+    "GITHUB_ACTIONS",
+    "GITHUB_EVENT_PATH",
+    "GITHUB_WORKSPACE",
+    "GOVERNANCE_GITHUB_BRANCH",
+    "CURSOR_GOVERNANCE_DIR",
+)
+
+
 def run(
     cmd: list[str], cwd: Path | None = None, env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     merged = dict(os.environ)
+    for key in _HOST_LEAKS:
+        merged.pop(key, None)
     if env:
         merged.update(env)
     return subprocess.run(

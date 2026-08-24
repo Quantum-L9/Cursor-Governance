@@ -795,7 +795,7 @@
     },
     {
       "composition_role": "general",
-      "description": "Identify underutilized, verified repository-owned capabilities and enable their full utilization \u2014 activating dormant or miswired code, off-by-default features, unread config, and unused signals \u2014 then package the exact change as a deployable PR commit bundle (changed files, binary-safe patch, revision synthesis, adaptive route, evidence and decision ledger, before-and-after performance evidence, deploy and rollback playbooks, successor-agent handoff). Removing a verified CLI throughput bottleneck is one branch of the same mission. Use when a repository or CLI audit, benchmark, dead-wiring finding, capability brief, patch, or prior sandbox artifact must become production code that safely raises utilization of latent capability the repository already owns. Do not use for audit-only output, non-repository targets, manufacturing capability that does not already exist, new throttling systems, or bypassing provider quotas, billing limits, licensing, authorization, abuse controls, or external service limits.",
+      "description": "Enable verified repository-owned capabilities that are dormant or miswired, or remove a verified CLI bottleneck, and ship the change as a PR. Use when an audit, benchmark, or dead-wiring finding must become production code. Do not use for audit-only output, invented capability, or bypassing quotas, licenses, or authorization.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-cli-optimization",
@@ -1169,7 +1169,7 @@
     },
     {
       "composition_role": "general",
-      "description": "audit, reconcile, and renovate a real software repository from fragmented manifests, duplicated automation, stale configuration, dead wiring, ignored tests, documentation drift, and ambiguous ownership into a coherent, validated implementation delivered through a governed pull request. use when the user asks to fix a messy repo end to end, align pyproject/package manifests with actual capabilities, collapse competing dependency or test authorities, turn an audit into full production files, modernize repository control planes, or continue remediation until the pr is green. do not use for audit-only commentary, isolated feature development, cosmetic refactors, or repositories the user has not authorized for modification.",
+      "description": "Audit, reconcile, and renovate a messy repository into a coherent, validated implementation delivered as a governed PR. Use when manifests, automation, tests, or ownership are fragmented and the user authorized a full renovation. Do not use for audit-only commentary, isolated features, or unauthorized repos.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-repository-renovation",
@@ -1213,7 +1213,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "Adaptive evidence-based reasoning for difficult planning, plan review, architecture, debugging, multi-document corpus analysis, and multi-option decisions. Use when the user explicitly needs trade-off analysis, root-cause reasoning, architecture choices, a plan stress test, corpus gap/coherence/dependency work, or a decision record grounded in evidence. Route only the proof obligations needed for the task, risk, evidence state, and available capabilities. Do not activate for simple factual answers, direct rewrites, deterministic file operations, trivial reversible fixes, or when a more specific domain Skill already supplies a complete reasoning contract.",
+      "description": "Adaptive evidence-based reasoning for hard planning, architecture, debugging, corpus analysis, and multi-option decisions. Use when the user needs trade-offs, root-cause reasoning, or an evidence-grounded decision record. Do not activate for simple facts, direct rewrites, or when a more specific domain Skill already owns the contract.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-structured-reasoning",
@@ -1280,5 +1280,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "c995cc41d9cf184b5b6837cbb6a92af1358d086664f493ef38c130ab8971e2cf",
-  "source_skill_corpus_sha256": "c3a6abf99a1bf534cf3d6aea3ed49fe964da5569b99dd49bec259ef7c13195b3"
+  "source_skill_corpus_sha256": "414c9cd852991e7a84a1f868beef6b628cf673b46c33eb4856abee5878b9a4a0"
 }
