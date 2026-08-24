@@ -2076,28 +2076,47 @@ def _integrate_candidate(
         if line.strip()
     ]
     integrated: list[str] = []
+    # Controller worktrees carry no committer identity and CI runners have no
+    # global one; integration commits are Controller-owned, so bind the
+    # Controller identity per invocation rather than inheriting ambient config.
+    identity = (
+        "-c",
+        "user.name=Program Execution Controller",
+        "-c",
+        "user.email=pec-controller@l9.invalid",
+    )
     for commit in commits:
-        picked = run_git(tree, "cherry-pick", "--allow-empty-message", commit, check=False)
+        picked = run_git(
+            tree, *identity, "cherry-pick", "--allow-empty-message", commit, check=False
+        )
         if picked.returncode != 0:
             porcelain = run_git(tree, "status", "--porcelain", check=False).stdout.strip()
             if not porcelain:
                 # The change is already present on the branch (a replay after a
                 # crash between cherry-pick and receipt): skip, don't duplicate.
-                skipped = run_git(tree, "cherry-pick", "--skip", check=False)
+                skipped = run_git(tree, *identity, "cherry-pick", "--skip", check=False)
                 if skipped.returncode == 0:
                     continue
+            unmerged = any(
+                line[:2] in {"UU", "AA", "DD", "AU", "UA", "DU", "UD"}
+                for line in porcelain.splitlines()
+            )
             run_git(tree, "cherry-pick", "--abort", check=False)
+            git_error = (picked.stderr or picked.stdout).strip()[:2000]
             failure = {
                 "task_id": task_id,
                 "candidate_sha": candidate_sha,
                 "base_sha": base_sha,
                 "conflicting_commit": commit,
-                "error": (picked.stderr or picked.stdout).strip()[:2000],
+                "conflict": unmerged,
+                "error": git_error,
             }
             ledger.append("TASK_INTEGRATION_FAILED", "controller", failure)
+            kind = "integration conflict" if unmerged else "integration failure"
+            first_line = git_error.splitlines()[0] if git_error else "no git output"
             raise ControllerError(
-                f"integration conflict for {task_id} at {commit}; candidate branch and "
-                "worktree preserved, task remains PASSED_LOCAL"
+                f"{kind} for {task_id} at {commit} ({first_line}); "
+                "candidate branch and worktree preserved, task remains PASSED_LOCAL"
             )
         integrated.append(commit)
     campaign_sha = run_git(tree, "rev-parse", "HEAD").stdout.strip()
