@@ -17,4 +17,8 @@ if [ "$MODE" = "subagent_start" ]; then
   fi
 fi
 
-printf '%s\n' "$INPUT" | "$PY" -m environment.agents.lifecycle.compose_start --mode "$MODE"
+# PYTHONPATH (not cd): the module must import from the governance root while
+# the hook's working directory stays the host workspace — it is one of the
+# fail-closed resolution roots for the root Autonomy runtime database.
+printf '%s\n' "$INPUT" | PYTHONPATH="$ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+  "$PY" -m environment.agents.lifecycle.compose_start --mode "$MODE"
