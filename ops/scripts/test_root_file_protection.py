@@ -11,11 +11,16 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
 from typing import Any
+
+# CI inherits these; the gate then reads the live PR body and the missing-source
+# test would pass. Isolate every case so local and Actions agree.
+_CI_BODY_LEAKS = ("GITHUB_ACTIONS", "GITHUB_EVENT_PATH", "L9_PR_BODY")
 
 _SCRIPTS = Path(__file__).resolve().parent
 
@@ -78,6 +83,14 @@ def commit(repo: Path, message: str) -> None:
 
 
 class RootProtectionTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self._saved_ci_env = {
+            key: os.environ.pop(key) for key in _CI_BODY_LEAKS if key in os.environ
+        }
+
+    def tearDown(self) -> None:
+        os.environ.update(self._saved_ci_env)
+
     def _findings(self, repo: Path, base: str) -> dict[str, str]:
         findings = rp.check(repo, CONFIG, base, "HEAD")
         return {f["path"]: f["verdict"] for f in findings}
