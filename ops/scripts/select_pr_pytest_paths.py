@@ -118,6 +118,10 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
     selected: list[str] = []
     missing: list[str] = []
     for path in py_changed:
+        if Path(path).name == "conftest.py":
+            # Fixture module, not a collectable test. Passing it as an explicit
+            # target collides with tests/**/conftest.py (import file mismatch).
+            continue
         inferred = infer_test_path(path)
         if inferred:
             if inferred not in selected:

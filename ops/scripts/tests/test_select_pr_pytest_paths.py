@@ -116,6 +116,10 @@ class UncollectableTargetTests(unittest.TestCase):
         selected = select_pr_pytest_paths([f"{self.PEER_CORE}/autonomy/scheduler.py"])
         self.assertIn(f"{self.PEER_CORE}/autonomy/tests/test_scheduler.py", selected)
 
+    def test_root_conftest_change_is_not_a_collect_target(self) -> None:
+        selected = select_pr_pytest_paths(["conftest.py"])
+        self.assertNotIn("conftest.py", selected)
+
 
 if __name__ == "__main__":
     unittest.main()
