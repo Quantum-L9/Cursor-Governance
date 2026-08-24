@@ -120,9 +120,57 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
             self.assertEqual(grant["authorized"], ["repository.write_scoped", "git.commit_local"])
             self.assertIn("merge", grant["forbidden"])
             self.assertFalse(grant["owns_program_state"])
-            packet = (workspace / "runtime" / "autonomy-packet.json").read_text(encoding="utf-8")
+            packet_path = _grant().grant_receipt_path(workspace, "TASK-1", 1, kind="packet")
+            packet = packet_path.read_text(encoding="utf-8")
             self.assertIn("pes-program-a-task-1-attempt-1", packet)
-            self.assertTrue((workspace / "runtime" / "autonomy-grant.json").is_file())
+            grant_path = _grant().grant_receipt_path(workspace, "TASK-1", 1, kind="grant")
+            self.assertTrue(grant_path.is_file())
+            self.assertEqual(grant["task_id"], "TASK-1")
+            self.assertEqual(grant["attempt_number"], 1)
+            # Concurrent PE tasks must not overwrite each other's authority
+            # evidence through a mutable workspace-global receipt pair.
+            self.assertFalse((workspace / "runtime" / "autonomy-grant.json").exists())
+            self.assertFalse((workspace / "runtime" / "autonomy-packet.json").exists())
+
+    def test_two_parallel_grants_do_not_overwrite_each_other(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract_a = _mutating_contract()
+            contract_b = dict(_mutating_contract())
+            contract_b["task_id"] = "TASK-2"
+            contract_b["writable_paths"] = ["docs/other.md"]
+            grant_a = _grant().grant_task_mutation(
+                _GOV_ROOT, workspace, contract_a, attempt_number=1
+            )
+            grant_b = _grant().grant_task_mutation(
+                _GOV_ROOT, workspace, contract_b, attempt_number=1
+            )
+            path_a = _grant().grant_receipt_path(workspace, "TASK-1", 1, kind="grant")
+            path_b = _grant().grant_receipt_path(workspace, "TASK-2", 1, kind="grant")
+            self.assertNotEqual(path_a, path_b)
+            self.assertTrue(path_a.is_file())
+            self.assertTrue(path_b.is_file())
+            self.assertNotEqual(grant_a["lease_id"], grant_b["lease_id"])
+            self.assertNotEqual(grant_a["campaign_id"], grant_b["campaign_id"])
+
+    def test_revoked_grant_lease_cannot_stay_active(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            grant = _grant().grant_task_mutation(
+                _GOV_ROOT, workspace, _mutating_contract(), attempt_number=1
+            )
+            result = _grant().revoke_task_grant(grant, reason="child failed before completion")
+            self.assertTrue(result["revoked"])
+            from autonomy.runtime.engine import AutonomyRuntime
+
+            runtime = AutonomyRuntime.from_repository(
+                repository_root=_GOV_ROOT,
+                database_path=Path(grant["runtime_database"]),
+            )
+            lease = runtime.leases.get(grant["lease_id"])
+            self.assertEqual(lease.status.value, "REVOKED")
+            # Idempotent: revoking again is a no-op, not an error.
+            _grant().revoke_task_grant(grant, reason="replay")
 
     def test_bridge_only_reuses_existing_files(self) -> None:
         source = (_HERE / "bridge.py").read_text(encoding="utf-8")
