@@ -32,13 +32,18 @@ refuses it**, correctly.
 Clearing one therefore needs `git branch -D`, which is force-delete, and that
 requires everything `prune-execute` requires plus:
 
-- receipt class `archive_ref` with a non-empty `redundancy_basis`
+- receipt class `archive_ref` with **`redundancy_basis: patch_id`**
 - `fetched: true` when the repo has a remote — redundancy judged against a stale
   baseline is not judged at all
 - the tip SHA recorded, so `git branch <name> <sha>` restores it
 
-Weigh the basis. `patch_id` is exact. `content_superset` is a heuristic that a
-rename defeats, so it warrants a look at the receipt's paths before forcing.
+**`content_superset` never authorises a delete.** Absorption fires while
+`git cherry` still reports the commits novel — that disagreement is why it is
+consulted — so a single added line that happens to exist somewhere upstream
+classifies the ref `archive_ref` while its commit is genuinely unlanded. That is
+a claim worth reporting and not a claim worth deleting on. Such refs are for
+human review; if you conclude the work really did land, re-diagnose after the
+fact or delete deliberately, but not on this evidence alone.
 
 ## `/ff` boundary
 

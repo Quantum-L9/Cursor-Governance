@@ -30,9 +30,15 @@ commit count — see [value-diagnosis.md](../skills/l9-git-work-preserve/referen
 | Bucket | Class | Meaning |
 |--------|-------|---------|
 | `novel` | `keep_push` | Holds work not accounted for upstream → publish |
-| `superseded` | `archive_ref` | Work landed by patch id or line absorption → prune |
 | `merged` | `prune_candidate` | Zero commits ahead → prune |
+| `superseded` | `archive_ref` (`patch_id`) | Every patch already upstream, exactly → prune |
+| `review` | `archive_ref` (`content_superset`) | Lines look absorbed, patch ids disagree → **report only** |
 | `unproven` | `unknown` | Baseline unresolvable → keep, report |
+
+`review` exists because line absorption fires while `git cherry` still calls the
+commits novel. One added line that happens to exist somewhere upstream is enough
+to land a branch there, so those are printed for a human and never deleted, and
+no force-delete command is offered for them.
 
 ## EXECUTION
 

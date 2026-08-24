@@ -29,25 +29,43 @@ by hundreds of commits holds a stale copy of nearly everything; comparing file
 contents would report all that stale text as "work the baseline is missing." A
 rename, a reindent, or a coincidentally-matching line will still fool it.
 
-So absorption may only ever argue that a ref is **redundant**. It is never
-evidence that a ref is unique, and it never overrides a `+` into a keep.
+Absorption may only ever argue that a ref is **redundant** — it is never evidence
+that a ref is unique. But be precise about what that does and does not buy:
+
+By construction, absorption fires **while `git cherry` is still reporting `+`**.
+Reimplemented work has different patch ids; that disagreement is the whole reason
+absorption is consulted. So absorption *does* move a ref cherry called novel into
+`archive_ref`, and a single added line that happens to exist somewhere upstream is
+enough to do it. The classification is therefore a **claim about content, not a
+licence to delete**. Safety comes from what consumers do with `redundancy_basis`,
+not from the class alone: only `patch_id` may authorise removal.
 
 ## Classification
 
-| Class | Rule | Confidence |
-|-------|------|------------|
-| `unknown` | Baseline does not resolve — novelty unprovable | `unknown` |
-| `archive_ref` | Commits ahead, every patch already upstream by id | `high` (`patch_id`) |
-| `archive_ref` | Commits ahead, every changed line absorbed upstream | `medium` (`content_superset`) |
-| `prune_candidate` | Zero commits ahead, empty unique path set | `high` |
-| `extract` | Zero commits ahead but unique paths present | `medium` |
-| `keep_push` | Any commit ahead that is not accounted for above | `high` |
+| Class | Rule | Confidence | Basis |
+|-------|------|------------|-------|
+| `unknown` | Baseline does not resolve — novelty unprovable | `unknown` | — |
+| `archive_ref` | Commits ahead, every patch already upstream by id | `high` | `patch_id` |
+| `archive_ref` | Commits ahead, every changed line absorbed upstream | `medium` | `content_superset` |
+| `prune_candidate` | Zero commits ahead | `high` | — |
+| `keep_push` | Any commit ahead not accounted for above | `high` | — |
 
-A mixed ref — some patches upstream, some not — stays `keep_push`. One
-unaccounted patch is enough to keep a branch.
+A mixed ref — some patches upstream, some not — stays `keep_push` unless *every*
+line it touched is absorbed. One unaccounted line is enough to keep a branch.
 
 Never classify `prune_candidate` when confidence is unknown, and never let an
 unresolvable baseline fall through to a prune class: no baseline means keep.
+
+## What consumers must do with the basis
+
+| Basis | May authorise delete? | Why |
+|-------|----------------------|-----|
+| `patch_id` | Yes, under `prune-policy.md` | Patch ids match exactly |
+| `content_superset` | **No** — report for review only | A coincidental line match is indistinguishable from real absorption |
+
+`/ff` implements this split: `patch_id` refs go to its `superseded` bucket,
+`content_superset` refs to `review`, which is printed and never deleted nor
+offered a force-delete command.
 
 ## Known blind spot
 

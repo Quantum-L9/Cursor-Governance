@@ -60,6 +60,12 @@ def _changed_lines(repo: Path, base: str, ref: str, path: str) -> tuple[list[str
     for line in diff.stdout.splitlines():
         if line.startswith("Binary files"):
             return [], [], False
+        if line.startswith(("old mode ", "new mode ")):
+            # A permission change carries no lines, so a line comparison would
+            # "verify" it by finding nothing to check. Refuse to judge instead.
+            # Only true mode flips qualify: "new file mode" and "deleted file
+            # mode" head an ordinary diff whose lines are present and checkable.
+            return [], [], False
         if line.startswith("+++") or line.startswith("---"):
             continue
         if line.startswith("+") and line[1:].strip():
@@ -129,20 +135,21 @@ def _classify(
     if cherry_available and unique_commits > 0 and not cherry_novel and cherry_dup:
         # Commits ahead, but every one is already upstream by patch id. Exact.
         return "archive_ref", "high"
-    if unique_commits == 0 and not paths:
+    if unique_commits == 0:
+        # An empty commit range means the ref is an ancestor of the baseline, so
+        # the three-dot diff is empty too: there is no "no commits but new paths"
+        # state to distinguish here.
         return "prune_candidate", "high"
-    if unique_commits == 0 and paths:
-        return "extract", "medium"
-    if unique_commits > 0 and contained:
-        # Patch ids differ -- cherry calls every commit novel here -- yet the
-        # baseline already carries every touched path as a superset, so the work
-        # landed reimplemented. Containment is what overrules cherry in this one
-        # direction; it can only ever argue redundant. Heuristic, hence medium.
+    if contained:
+        # Every line this ref touched is accounted for upstream, so the work
+        # landed reimplemented. Cherry disagrees by construction in this case --
+        # the patch ids differ, which is exactly why absorption is consulted --
+        # so this is the weaker of the two signals and is graded accordingly.
+        # `redundancy_basis` records which signal fired; prune-policy.md only
+        # lets `patch_id` authorise a delete.
         return "archive_ref", "medium"
-    if unique_commits > 0:
-        # Includes the mixed case: one novel patch is enough to keep the branch.
-        return "keep_push", "high"
-    return "unknown", "unknown"
+    # Includes the mixed case: one unaccounted patch is enough to keep the ref.
+    return "keep_push", "high"
 
 
 def _basis(

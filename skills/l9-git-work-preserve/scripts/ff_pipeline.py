@@ -74,6 +74,7 @@ def build_plan(repo: Path, baseline: str, do_fetch: bool = True) -> dict:
         "blocked": None,
         "novel": [],
         "superseded": [],
+        "review": [],
         "merged": [],
         "held_elsewhere": sorted(_held_elsewhere(repo)),
         "unproven": [],
@@ -110,7 +111,15 @@ def build_plan(repo: Path, baseline: str, do_fetch: bool = True) -> dict:
         if cls == "keep_push":
             plan["novel"].append(entry)
         elif cls == "archive_ref":
-            plan["superseded"].append(entry)
+            # Only patch-id evidence is exact enough to put a branch on the prune
+            # path. Absorption is a line comparison: a one-line addition that
+            # happens to exist elsewhere upstream reads as absorbed while the
+            # commit is genuinely unlanded. Those go to `review`, which is
+            # reported and never deleted or suggested for force-delete.
+            if receipt["redundancy_basis"] == "patch_id":
+                plan["superseded"].append(entry)
+            else:
+                plan["review"].append(entry)
         elif cls == "prune_candidate":
             plan["merged"].append(entry)
         else:
@@ -126,10 +135,12 @@ def apply_plan(repo: Path, baseline: str, prune_superseded: bool = False) -> dic
         "repo": str(repo.resolve()),
         "baseline": baseline,
         "fetched": plan["fetched"],
+        "fetch_error": plan["fetch_error"],
         "blocked": plan["blocked"],
         "ff": {},
         "pruned": [],
         "needs_human": [],
+        "review": plan.get("review", []),
         "skipped": [],
         "errors": [],
     }
@@ -139,8 +150,8 @@ def apply_plan(repo: Path, baseline: str, prune_superseded: bool = False) -> dic
     local = baseline.split("/", 1)[1] if "/" in baseline else baseline
     before = _run(repo, "rev-parse", "--short", "HEAD").stdout.strip()
 
-    on = _run(repo, "branch", "--show-current").stdout.strip()
-    if on != local:
+    started_on = _run(repo, "branch", "--show-current").stdout.strip()
+    if started_on != local:
         if local in set(plan["held_elsewhere"]):
             receipt["errors"].append(f"{local} is checked out in another worktree")
             return receipt
@@ -152,6 +163,12 @@ def apply_plan(repo: Path, baseline: str, prune_superseded: bool = False) -> dic
     merge = _run(repo, "merge", "--ff-only", baseline)
     if merge.returncode != 0:
         receipt["errors"].append(f"fast-forward refused: {merge.stderr.strip()}")
+        # Put the checkout back. Failing here must leave no trace, or the caller
+        # resumes on a branch it never asked to be on.
+        if started_on and started_on != local:
+            back = _run(repo, "switch", started_on)
+            if back.returncode != 0:
+                receipt["errors"].append(f"could not return to {started_on}: {back.stderr.strip()}")
         return receipt
     receipt["ff"] = {
         "branch": local,
@@ -172,17 +189,25 @@ def apply_plan(repo: Path, baseline: str, prune_superseded: bool = False) -> dic
             receipt["pruned"].append({**entry, "method": "branch -d"})
             continue
         # Safe delete refuses anything not reachable from HEAD. A branch whose work
-        # landed reimplemented or squashed is exactly that shape: provably
+        # landed squashed or on a different parent is exactly that shape: provably
         # redundant, yet not an ancestor. Forcing it is a separate authority.
-        receipt["needs_human"].append(
-            {
-                **entry,
-                "reason": delete.stderr.strip() or "git refused the safe delete",
-                "force_command": f"git -C {repo} branch -D {branch}",
-                "rollback": f"git branch {branch} {entry['tip_sha']}",
-                "authorized": authorized and prune_superseded,
-            }
-        )
+        stale = not plan["fetched"] and _run(repo, "remote", "get-url", "origin").returncode == 0
+        item = {
+            **entry,
+            "reason": delete.stderr.strip() or "git refused the safe delete",
+            "rollback": f"git branch {branch} {entry['tip_sha']}",
+            "stale_evidence": stale,
+            "authorized": authorized and prune_superseded and not stale,
+        }
+        if stale:
+            # prune-policy.md: redundancy judged against a baseline we could not
+            # refresh is not judged. Withhold the command rather than hand over a
+            # force-delete backed by evidence we know is out of date.
+            item["force_command"] = None
+            item["reason"] += " (fetch failed -- evidence stale, no command offered)"
+        else:
+            item["force_command"] = f"git -C {repo} branch -D {branch}"
+        receipt["needs_human"].append(item)
     return receipt
 
 

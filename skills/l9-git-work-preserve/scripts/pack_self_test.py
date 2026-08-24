@@ -230,11 +230,17 @@ def check_ff_pipeline(repo: Path, errors: list[str]) -> None:
     buckets = {
         "novel": {e["branch"] for e in data["novel"]},
         "superseded": {e["branch"] for e in data["superseded"]},
+        "review": {e["branch"] for e in data["review"]},
     }
     if "feature/novel" not in buckets["novel"]:
         errors.append("ff plan should route feature/novel to novel")
-    if not {"feature/dup", "feature/superseded"} <= buckets["superseded"]:
-        errors.append(f"ff plan should route both redundant branches, got {buckets['superseded']}")
+    # Exact patch-id evidence may prune; heuristic absorption may only be reported.
+    if "feature/dup" not in buckets["superseded"]:
+        errors.append(f"patch_id branch belongs in superseded, got {buckets['superseded']}")
+    if "feature/superseded" not in buckets["review"]:
+        errors.append(f"content_superset branch belongs in review, got {buckets['review']}")
+    if "feature/superseded" in buckets["superseded"]:
+        errors.append("heuristic absorption must never reach the prune bucket")
 
     # Safe delete cannot remove a redundant-but-unmerged branch. The pipeline must
     # say so with a rollback sha rather than force it.
@@ -252,11 +258,60 @@ def check_ff_pipeline(repo: Path, errors: list[str]) -> None:
     )
     receipt = json.loads(applied.stdout)
     needs = {e["branch"] for e in receipt["needs_human"]}
-    if "feature/superseded" not in needs:
-        errors.append(f"superseded branch should need a human, got needs_human={needs}")
+    if "feature/dup" not in needs:
+        errors.append(f"redundant-but-unmerged branch should need a human, got {needs}")
+    if "feature/superseded" in needs:
+        errors.append("review-bucket branch must not be offered for force-delete")
     for entry in receipt["needs_human"]:
         if not entry.get("rollback") or not entry.get("tip_sha"):
             errors.append(f"needs_human entry missing recovery data: {entry.get('branch')}")
+
+
+def check_mode_change(tmp: Path, errors: list[str]) -> None:
+    """A permission-only change has no lines, so absorption must refuse to judge it."""
+    repo = _init(tmp / "modechange")
+    _commit(repo, "s.sh", "#!/bin/sh\necho hi\n", "add script")
+    _git(repo, "checkout", "-b", "feature/exec")
+    (repo / "s.sh").chmod(0o755)
+    _git(repo, "add", "s.sh")
+    _git(repo, "commit", "-m", "make executable")
+    receipt = _diagnose(repo, "feature/exec")
+    if receipt.get("content_contained"):
+        errors.append("mode-only change must not read as absorbed")
+    if receipt.get("classification") != "keep_push":
+        errors.append(f"mode-only change expected keep_push got {receipt.get('classification')}")
+
+
+def check_ff_failure_restores_branch(tmp: Path, errors: list[str]) -> None:
+    """A refused fast-forward must leave the checkout where it found it."""
+    repo = _init(tmp / "fffail")
+    _git(repo, "branch", "origin/main")
+    # Give main and its baseline divergent commits so --ff-only cannot succeed.
+    _commit(repo, "local.txt", "local\n", "local only")
+    _git(repo, "checkout", "origin/main")
+    _commit(repo, "remote.txt", "remote\n", "remote only")
+    _git(repo, "checkout", "-b", "feature/elsewhere", "main")
+
+    before = subprocess.run(
+        ["git", "-C", str(repo), "branch", "--show-current"], text=True, capture_output=True
+    ).stdout.strip()
+    run(
+        [
+            sys.executable,
+            str(SCRIPTS / "ff_pipeline.py"),
+            "--repo",
+            str(repo),
+            "--baseline",
+            "origin/main",
+            "--mode",
+            "apply",
+        ]
+    )
+    after = subprocess.run(
+        ["git", "-C", str(repo), "branch", "--show-current"], text=True, capture_output=True
+    ).stdout.strip()
+    if before != after:
+        errors.append(f"failed fast-forward moved the checkout: {before} -> {after}")
 
 
 def main() -> int:
@@ -272,6 +327,8 @@ def main() -> int:
         check_baseline_cases(repo, errors)
         check_redundancy(build_redundancy_fixture(root), errors)
         check_real_fetch(build_remote_fixture(root), errors)
+        check_mode_change(root, errors)
+        check_ff_failure_restores_branch(root, errors)
         check_ff_pipeline(build_redundancy_fixture(root / "ff"), errors)
 
     if errors:
