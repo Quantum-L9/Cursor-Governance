@@ -221,6 +221,20 @@ if [[ -z "$pr_url" && -n "$owner" && -n "$name" ]]; then
   pr_number="$(printf '%s' "$_existing" | _pr_field number)"
 fi
 
+# The head-branch lookup above can surface a PR that already landed: once a
+# PR is MERGED (or CLOSED) it can never carry new branch commits, so treating
+# it as "already open" strands the work on the branch. Re-check the resolved
+# PR state over REST (this gateway may refuse GraphQL) and fall through to PR
+# creation when it is not OPEN.
+if [[ -n "$pr_url" && -n "$pr_number" && -n "$owner" && -n "$name" ]]; then
+  pr_state="$(gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq '.state' 2>/dev/null || true)"
+  if [[ -n "$pr_state" && "$pr_state" != "OPEN" ]]; then
+    echo "NOTE: PR #${pr_number} for this branch is ${pr_state} (not OPEN) — opening a new PR"
+    pr_url=""
+    pr_number=""
+  fi
+fi
+
 if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   title="$(git log "${PR_BASE}..HEAD" --format='%s' --reverse | head -1)"
   if [[ -z "$title" ]]; then
