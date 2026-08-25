@@ -424,13 +424,19 @@ def test_baseline_ratchet_caller_is_absent() -> None:
     assert not (ROOT / ".l9" / "baselines" / "test-quarantine.yml").exists()
 
 
-def test_open_pr_after_gate_skips_merged_pr() -> None:
+def test_open_pr_after_gate_handles_landed_pr() -> None:
     script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
-    # A MERGED/CLOSED PR found by head-branch lookup can never carry new branch
-    # commits — the gate must clear it and fall through to fresh PR creation.
-    # REST returns the state lowercase ("open"/"closed"), so the keeper branch
-    # matches case-insensitively and never clears an actually-open PR.
-    assert "gh api \"repos/${owner}/${name}/pulls/${pr_number}\" --jq '.state'" in script
+    # A landed PR found by head-branch lookup can never carry new branch
+    # commits. REST returns the state lowercase ("open"/"closed"), so the
+    # keeper branch matches case-insensitively and never clears an
+    # actually-open PR.
     assert 'case "$pr_state" in' in script
     assert "open | OPEN) ;;" in script
+    # merged_at distinguishes the two landed outcomes: a MERGED PR means the
+    # branch name is spent (AGENTS.md §17 reused_after_merge) and the gate
+    # fails with move-to-a-new-branch instructions; only a closed-but-unmerged
+    # PR falls through to fresh PR creation.
+    assert '[.state, (.merged_at // "")] | @tsv' in script
+    assert "never reused after its PR merges" in script
+    assert "closed, not merged" in script
     assert "opening a new PR" in script
