@@ -83,6 +83,8 @@ __pycache__/
 .claude/skills
 .claude/rules/
 .claude/rules
+.claude/commands/
+.claude/commands
 
 # ── WIP/ is a dated tracked corpus on main (hygiene via ops/scripts/wip_corpus.py)
 # Do NOT add a blanket `WIP/` gitignore — the tree stays commit-eligible.

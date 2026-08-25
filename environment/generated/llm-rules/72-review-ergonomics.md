@@ -31,7 +31,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/): `type(scope): 
 | `chore` | Maintenance |
 
 - Breaking changes: `type!:` prefix or `BREAKING CHANGE:` footer.
-- Commit messages describe **intent** only — they do not authorize `git commit` or `git push` (see `99-no-auto-commit.mdc`).
+- Commit messages describe **intent** only — they do not authorize `git push` (see `99-no-auto-commit.mdc`).
 
 ---
 

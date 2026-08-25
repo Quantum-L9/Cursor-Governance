@@ -3,7 +3,9 @@
 
 1. Sync governance committed `.claude/settings.json` + hooks from template
 2. Merge-patch `~/.claude/settings.json` (preserve enabledPlugins / theme / extras)
-3. Install consumer `<workspace>/.claude/{settings.json,hooks/*}` as real files
+3. Merge-patch consumer `<workspace>/.claude/settings.json` (template-managed
+   keys win; consumer-owned keys such as `enabledPlugins` survive) and install
+   `<workspace>/.claude/hooks/*` as real files
 
 Usage:
   python3 ops/scripts/reconcile_claude_settings.py --root "$HOME/.cursor-governance"
@@ -84,6 +86,27 @@ def merge_user_settings(
 def consumer_settings(template: dict[str, Any]) -> dict[str, Any]:
     """Committed consumer settings: template minus private comments."""
     out = {k: v for k, v in template.items() if not str(k).startswith("_")}
+    return out
+
+
+def merge_workspace_settings(
+    template: dict[str, Any], existing: dict[str, Any] | None
+) -> dict[str, Any]:
+    """Managed keys from the template; every consumer-owned key survives.
+
+    Ordering is template-first so a workspace file that carries no consumer
+    keys is byte-identical to `consumer_settings(template)` — the historical
+    whole-file output — and reconciliation stays churn-free. Consumer keys
+    (notably `enabledPlugins`, written by `claude plugin install -s project`)
+    are appended, never dropped: the old whole-file write silently deleted
+    them on every settings reconcile that ran after a plugin install.
+    """
+    base = dict(existing or {})
+    out = consumer_settings(template)
+    for key, value in base.items():
+        if key in out or str(key).startswith("_"):
+            continue
+        out[key] = value
     return out
 
 
@@ -216,9 +239,13 @@ def reconcile_workspace(
     drift: list[str] = []
     claude = workspace / ".claude"
     settings_path = claude / "settings.json"
+    existing = load_json(settings_path) if settings_path.is_file() else None
     drift.extend(
         write_if_changed(
-            settings_path, dump_json(consumer_settings(template)), check=check, wrote=wrote
+            settings_path,
+            dump_json(merge_workspace_settings(template, existing)),
+            check=check,
+            wrote=wrote,
         )
     )
     hooks_src = root / HOOKS_SRC_REL
@@ -257,10 +284,22 @@ def run(
         all_wrote.extend(user_result["wrote"])
 
     if workspace is not None:
-        ws_result = reconcile_workspace(root, workspace.resolve(), template, check=check)
-        results["workspace"] = ws_result
-        all_drift.extend(ws_result["drift"])
-        all_wrote.extend(ws_result["wrote"])
+        ws_resolved = workspace.resolve()
+        if gov and ws_resolved == root.resolve():
+            # The governance clone as its own workspace: reconcile_gov_claude
+            # already owns <root>/.claude — a second writer with merge ordering
+            # would only churn the same file.
+            results["workspace"] = {
+                "wrote": [],
+                "drift": [],
+                "workspace": str(ws_resolved),
+                "skipped": "workspace-is-governance-root",
+            }
+        else:
+            ws_result = reconcile_workspace(root, ws_resolved, template, check=check)
+            results["workspace"] = ws_result
+            all_drift.extend(ws_result["drift"])
+            all_wrote.extend(ws_result["wrote"])
 
     results["drift"] = all_drift
     results["wrote"] = all_wrote

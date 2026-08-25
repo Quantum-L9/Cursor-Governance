@@ -1,71 +1,20 @@
 ---
 name: gap-analysis
-version: "1.1.0"
+version: "2.0.0"
 description: "Identify gaps vs target state"
-before_chain: rules
 auto_chain: ynp
 ---
 
-# /gap-analysis — Gap Identification
+# /gap-analysis — Gap analysis
 
-## WHAT IT DOES
-
-Compare current state vs target → identify gaps.
-
----
+Delegates to skill **`l9-gap-analysis`**.
 
 ## EXECUTION
 
-### 1. DEFINE TARGET
+1. Read and follow skill `l9-gap-analysis`.
+2. Auto-chain `/ynp`.
 
-```
-TARGET STATE:
-├── All L9 patterns
-├── No anti-patterns
-├── Tests exist
-├── Docs complete
-├── GMP phases done
-```
+## FORBIDDEN
 
-### 2. ASSESS CURRENT
-
-| Dimension | Current | Target | Gap |
-|-----------|---------|--------|-----|
-| Patterns | 80% | 100% | 20% |
-| Tests | 60% | 100% | 40% |
-| Docs | 50% | 100% | 50% |
-
-### 3. PRIORITIZE GAPS
-
-| Priority | Gap | Impact | Effort |
-|----------|-----|--------|--------|
-| 🔴 | Missing tests | High | Medium |
-| 🟠 | Anti-patterns | Medium | Low |
-
----
-
-## OUTPUT
-
-```markdown
-## 📊 GAP ANALYSIS: {scope}
-
-### Current vs Target
-| Dimension | Current | Target | Gap |
-|-----------|---------|--------|-----|
-
-### Gaps (Prioritized)
-| # | Gap | Priority | Fix |
-|---|-----|----------|-----|
-
-### Effort Estimate
-**Total gaps:** N
-**Effort:** {estimate}
-
-### Recommended GMPs
-| GMP | Scope | Gaps Addressed |
-|-----|-------|----------------|
-```
-
-→ **Auto-chains to /ynp**
-
---- End Command ---
+- Inventing a second gap protocol beside the skill
+- Slimming or deleting `/gap-analysis-new` (out of scope)

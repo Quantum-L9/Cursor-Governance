@@ -387,7 +387,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
 
         def fake_peer(_workspace, contract):
             time_module.sleep(0.2)
-            return {"receipt": {"task_id": contract["task_id"]}}
+            return {"status": "PASS", "receipt": {"task_id": contract["task_id"]}}
 
         started = time_module.monotonic()
         with unittest.mock.patch.object(self.mod, "_run_peer_execution", side_effect=fake_peer):
@@ -406,7 +406,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
         def fake_peer(_workspace, contract):
             if contract["task_id"] == "TASK-B":
                 raise RuntimeError("provider window died")
-            return {"receipt": {"task_id": contract["task_id"]}}
+            return {"status": "PASS", "receipt": {"task_id": contract["task_id"]}}
 
         with unittest.mock.patch.object(self.mod, "_run_peer_execution", side_effect=fake_peer):
             outcomes, failures = self.mod._dispatch_peer_batch(Path("."), units)
@@ -459,8 +459,20 @@ class PeSmokeCampaignTests(unittest.TestCase):
         canonically, and only then does the campaign-level failure surface."""
         events: list[tuple[str, str]] = []
         units = [
-            {"task_id": "TASK-A", "already_submitted": False, "grant": {"lease_id": "a"}},
-            {"task_id": "TASK-B", "already_submitted": False, "grant": {"lease_id": "b"}},
+            {
+                "task_id": "TASK-A",
+                "already_submitted": False,
+                "grant": {"lease_id": "a"},
+                "task": {"id": "TASK-A"},
+                "contract": {"task_id": "TASK-A"},
+            },
+            {
+                "task_id": "TASK-B",
+                "already_submitted": False,
+                "grant": {"lease_id": "b"},
+                "task": {"id": "TASK-B"},
+                "contract": {"task_id": "TASK-B"},
+            },
         ]
 
         def fake_prepare(_workspace, task, *, trace):
@@ -468,7 +480,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
 
         def fake_dispatch(_workspace, dispatched):
             return (
-                {"TASK-A": {"receipt": {}}},
+                {"TASK-A": {"status": "PASS", "receipt": {}}},
                 {"TASK-B": "RuntimeError: provider window died"},
             )
 
@@ -477,6 +489,9 @@ class PeSmokeCampaignTests(unittest.TestCase):
 
         def fake_record(_workspace, unit, task_id, reason):
             events.append(("record_failure", task_id))
+
+        def fake_publish(_workspace, _campaign, _task, task_id, *_args, **_kwargs):
+            events.append(("publish_failure", task_id))
 
         status_rows = [
             {"id": "TASK-A", "runtime_state": "ELIGIBLE", "attempts": 0},
@@ -495,6 +510,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
             unittest.mock.patch.object(
                 self.mod, "_record_canonical_failure", side_effect=fake_record
             ),
+            unittest.mock.patch.object(self.mod, "publish_task_outcome", side_effect=fake_publish),
             unittest.mock.patch.object(self.mod, "_load_script") as loader,
         ):
             loader.return_value.StageTimer.return_value.stage = unittest.mock.MagicMock()
@@ -508,7 +524,7 @@ class PeSmokeCampaignTests(unittest.TestCase):
         self.assertIn("TASK-B", str(caught.exception))
         self.assertEqual(
             events,
-            [("finish", "TASK-A"), ("record_failure", "TASK-B")],
+            [("finish", "TASK-A"), ("record_failure", "TASK-B"), ("publish_failure", "TASK-B")],
             msg="successful sibling must finish before the failure is recorded and raised",
         )
 

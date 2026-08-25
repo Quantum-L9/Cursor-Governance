@@ -1,0 +1,27 @@
+{
+  "$schema_note": "l9.claude-plugins-desired.v1 — the ONLY declaration of Claude Code plugin desired state. setup_claude_code_plugins.sh (imperative fallback) and the claude_projection engine both read this file; neither carries its own plugin list. Class ids come from environment/plugins/exceptions.yaml via workspace_open_plugin_loader.py --classify.",
+  "schema": "l9.claude-plugins-desired.v1",
+  "core": {
+    "marketplaces": ["anthropics/claude-plugins-official"],
+    "plugins": [
+      "hookify@claude-plugins-official",
+      "pr-review-toolkit@claude-plugins-official",
+      "desktop-commander@claude-plugins-official",
+      "context7@claude-plugins-official"
+    ]
+  },
+  "classes": {
+    "aws_infra": {
+      "marketplaces": ["anthropics/claude-plugins-official"],
+      "plugins": ["aws-core@claude-plugins-official"]
+    },
+    "zep_memory": {
+      "marketplaces": ["getzep/zep"],
+      "plugins": ["building-with-zep@zep"]
+    }
+  },
+  "retired_user_scope": [
+    "aws-core@claude-plugins-official",
+    "building-with-zep@zep"
+  ]
+}

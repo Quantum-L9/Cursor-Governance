@@ -293,7 +293,9 @@ install_session_end_governance_hook() {
     "l4-local-execution-gate-shell.sh:l4-local-execution-gate-shell.sh" \
     "pr_gate_failure_shell.sh:pr-gate-failure-shell.sh" \
     "session_end_repo_hygiene.sh:session-end-repo-hygiene.sh" \
-    "before_submit_skill_router.py:before-submit-skill-router.py"; do
+    "before_submit_skill_router.py:before-submit-skill-router.py" \
+    "plan_kernel_gate.py:plan-kernel-gate.py" \
+    "plan-kernel-execute-gate.sh:plan-kernel-execute-gate.sh"; do
     src_name="${pair%%:*}"
     link_name="${pair##*:}"
     src_path="$GLOBAL_COMMANDS/ops/hooks/$src_name"
@@ -406,49 +408,17 @@ ensure_global_git_ignores
 echo ""
 bash "$SCRIPT_DIR/validate_governance_symlinks.sh" "$WORKSPACE_DIR"
 
-# Claude Code plugins: core set is user-scoped ($HOME/.claude); class-gated addons
-# (environment/plugins/) install at project scope into $WORKSPACE_DIR/.claude/. Pass
-# --workspace explicitly so classification targets this workspace, not some other cwd.
+# Claude projection engine: one entrypoint for skills, commands, rules mount,
+# settings triad, hooks, and declarative plugin state (imperative plugin setup
+# runs only as the engine's fallback). Writes the projection receipt to
+# ~/.l9/claude/projection-receipt.json.
 echo ""
-if [ -x "$SCRIPT_DIR/setup_claude_code_plugins.sh" ]; then
-  bash "$SCRIPT_DIR/setup_claude_code_plugins.sh" --quiet --workspace "$WORKSPACE_DIR" \
-    || echo "WARN: Claude Code plugin reconcile failed (non-blocking)"
+if [ -f "$SCRIPT_DIR/claude_projection.py" ]; then
+  python3 "$SCRIPT_DIR/claude_projection.py" \
+    --root "$GOV_ROOT" --workspace "$WORKSPACE_DIR" --summary \
+    || echo "WARN: Claude projection engine reported drift or conflicts (non-blocking)"
 else
-  echo "HINT: setup_claude_code_plugins.sh missing — skip Claude plugin reconcile"
-fi
-
-# Move any skill packs misplaced under .claude/ (outside .claude/skills/) into
-# .claude/skills/, and rename legacy agents/openai.yaml → agents/meta.yaml.
-echo ""
-if [ -f "$SCRIPT_DIR/migrate_claude_orphan_skills.py" ]; then
-  python3 "$SCRIPT_DIR/migrate_claude_orphan_skills.py" \
-    --workspace "$WORKSPACE_DIR" --json \
-    || echo "WARN: Claude orphan skill migration reported conflicts (non-blocking)"
-else
-  echo "HINT: migrate_claude_orphan_skills.py missing — skip orphan skill migration"
-fi
-
-# Claude rules: whole-dir symlink → environment/generated/llm-rules/ (.md peers)
-echo ""
-if [ -f "$SCRIPT_DIR/reconcile_llm_rule_adapters.py" ]; then
-  python3 "$SCRIPT_DIR/project_llm_rules.py" --root "$GOV_ROOT" --quiet \
-    || echo "WARN: llm-rules projection failed (non-blocking)"
-  python3 "$SCRIPT_DIR/reconcile_llm_rule_adapters.py" \
-    --root "$GOV_ROOT" --workspace "$WORKSPACE_DIR" \
-    || echo "WARN: LLM rule adapter reconcile failed (non-blocking)"
-else
-  echo "HINT: reconcile_llm_rule_adapters.py missing — skip Claude rules link"
-fi
-
-# All LLM skill adapters: per-skill symlinks → governance skills/ SSOT
-# (.cursor-commands/skills). Manifest/registry is the only inventory to maintain.
-echo ""
-if [ -f "$SCRIPT_DIR/reconcile_llm_skill_adapters.py" ]; then
-  python3 "$SCRIPT_DIR/reconcile_llm_skill_adapters.py" \
-    --root "$GOV_ROOT" --workspace "$WORKSPACE_DIR" \
-    || echo "WARN: LLM skill adapter reconcile failed (non-blocking)"
-else
-  echo "HINT: reconcile_llm_skill_adapters.py missing — skip multi-adapter skill links"
+  echo "HINT: claude_projection.py missing — skip Claude projection"
 fi
 
 # IDE profile: extensions are machine-scoped, .vscode/settings.json is workspace-scoped.

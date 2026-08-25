@@ -10,7 +10,7 @@ supersedes_for_default_plan_mode: plan-workflow.md
 
 # Plan Workflow — PE + Autonomy Executable Projection (default)
 
-**Default for `/l9-plan` and skill `l9-plan` plan mode.**  
+**Default for `/l9-plan` and skill `l9-plan` plan mode.**
 Legacy human projection (GMP-section markdown only) remains at [plan-workflow.md](plan-workflow.md) — do not delete; do not use as the default deliverable. `/plan` slash is retired.
 
 ## Dual artifact law
@@ -37,7 +37,7 @@ python3 scripts/render_plan_pe_autonomy.py <plan.json> > .cursor/plans/<snake_sl
 
 3. Ensure frontmatter `todos` are atomic, verb-led, `status: pending`, with `depends_on` matching the execution DAG.
 4. Ensure the **Execute via @environment/program-execution + autonomy** section is present and not stripped.
-5. Set plan `status` to `executable` only when the template’s executability law holds.
+5. Set plan `status` to `executable` only when the template’s executability law holds **and** `scripts/validate_plan_kernel_receipt.py` PASSes on the bound `.plan.md`.
 
 ## Execution pipeline (required next-skill path)
 
@@ -50,7 +50,7 @@ When the user executes (Build / `/autonomy` / explicit run), the plan **MUST** f
   → PE adapter (default Cursor: cursor-foreground)
 ```
 
-Authority order: `environment/agents/PEER_EXECUTION.md`.  
+Authority order: `environment/agents/PEER_EXECUTION.md`.
 Program lease is authoritative; autonomy packet must not widen Task Card ceilings or outlive the Program lease.
 
 **Do not** free-form mutate from plan chat. **Do not** treat legacy `plan-workflow.md` sections as sufficient execution authority.

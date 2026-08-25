@@ -585,8 +585,12 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             dict(record.get("provider_state") or {}),
         )
         status, evidence = self._apply_invocation(record, request, invocation)
-        if status not in _TERMINAL_PROVIDER_STATUSES:
+        if status not in _TERMINAL_PROVIDER_STATUSES and status != "RUNNING":
             status = "UNSUPPORTED"
+        # A RUNNING cancel means the request was accepted but termination is
+        # not yet acknowledged by the owning host: keep the record RUNNING so
+        # status() keeps polling for the real terminal acknowledgement instead
+        # of freezing a false UNSUPPORTED/CANCELLED verdict.
         record["status"] = status
         record["evidence"] = evidence
         self.runtime.save(dispatch_id, record)

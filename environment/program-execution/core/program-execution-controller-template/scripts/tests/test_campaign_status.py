@@ -88,10 +88,105 @@ class CampaignStatusTest(unittest.TestCase):
             )
             cleanup_worktree(repo, workspace)
 
+    def test_pec_close_refuses_live_children(self) -> None:
+        # RC-01: a terminal verdict must never close over live canonical
+        # child state. A fresh bootstrap has a non-terminal TASK-001, so
+        # every terminal verdict is refused with the blockers named.
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            for verdict in ("CONVERGED", "NOT_CONVERGED"):
+                refused = run_cli(
+                    "close",
+                    "--workspace",
+                    str(workspace),
+                    "--actor",
+                    "AUTH-001",
+                    "--verdict",
+                    verdict,
+                    expect=2,
+                )
+                self.assertIn("campaign close refused", refused["error"])
+                self.assertIn("TASK-001", refused["error"])
+            status = json.loads((workspace / "runtime" / "campaign-status.json").read_text())
+            self.assertNotEqual(status["runtime_status"], "completed")
+            cleanup_worktree(repo, workspace)
+
+    def test_pec_close_not_converged_permits_failed_children(self) -> None:
+        # RC-01: NOT_CONVERGED permits terminal failed/cancelled children but
+        # a successful verdict still refuses them.
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            run_cli("claim", "TASK-001", "--workspace", str(workspace), "--holder", "worker")
+            run_cli(
+                "fail",
+                "TASK-001",
+                "--workspace",
+                str(workspace),
+                "--reason",
+                "provider failed",
+                "--actor",
+                "worker",
+            )
+            refused = run_cli(
+                "close",
+                "--workspace",
+                str(workspace),
+                "--actor",
+                "AUTH-001",
+                "--verdict",
+                "CONVERGED",
+                expect=2,
+            )
+            self.assertIn("campaign close refused", refused["error"])
+            closed = run_cli(
+                "close",
+                "--workspace",
+                str(workspace),
+                "--actor",
+                "AUTH-001",
+                "--verdict",
+                "NOT_CONVERGED",
+                "--evidence",
+                "reason=child failed terminally",
+            )
+            self.assertEqual(closed["runtime_status"], "completed")
+            self.assertEqual(closed["verdict"], "NOT_CONVERGED")
+            cleanup_worktree(repo, workspace)
+
     def test_pec_close_marks_completed(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)
             _, repo, workspace = bootstrap_repo(temp)
+            register_contract(temp, workspace)
+            prepare_attempt(temp, workspace)
+            verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
+            evidence_id = verification["evidence_id"]
+            run_cli(
+                "evaluate-gate",
+                "GATE-001",
+                "PASS",
+                "--workspace",
+                str(workspace),
+                "--evidence-id",
+                evidence_id,
+                "--method",
+                "independent verification",
+                "--actor",
+                "controller",
+            )
+            run_cli(
+                "complete",
+                "TASK-001",
+                "--workspace",
+                str(workspace),
+                "--actor",
+                "operator",
+                "--evidence-id",
+                evidence_id,
+            )
             closed = run_cli(
                 "close",
                 "--workspace",

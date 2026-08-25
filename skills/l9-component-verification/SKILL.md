@@ -1,6 +1,6 @@
 ---
 name: l9-component-verification
-description: component audit, deterministic verify, and runtime probe escalation ladder. use for /audit-component, /verify-component, or /probe wiring checks.
+description: component audit, deterministic verify, and runtime probe escalation ladder. use from /analyze, /evaluate, or /analyze_evaluate when the user names a component, import, or wiring check.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -17,7 +17,7 @@ metadata:
 
 ## Purpose
 
-Prove components are correctly defined, imported, wired, and loadable — via audit DAG, read-only verify, or runtime probe.
+Prove components are correctly defined, imported, wired, and loadable — via audit DAG, read-only verify, or runtime probe. Invoke from `/analyze`, `/evaluate`, or `/analyze_evaluate` (the retired `/probe` / `/audit-component` / `/verify-component` slashes are gone).
 
 ## Core Contract
 

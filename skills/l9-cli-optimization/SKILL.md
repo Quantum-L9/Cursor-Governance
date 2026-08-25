@@ -1,6 +1,6 @@
 ---
 name: l9-cli-optimization
-description: Identify underutilized, verified repository-owned capabilities and enable their full utilization — activating dormant or miswired code, off-by-default features, unread config, and unused signals — then package the exact change as a deployable PR commit bundle (changed files, binary-safe patch, revision synthesis, adaptive route, evidence and decision ledger, before-and-after performance evidence, deploy and rollback playbooks, successor-agent handoff). Removing a verified CLI throughput bottleneck is one branch of the same mission. Use when a repository or CLI audit, benchmark, dead-wiring finding, capability brief, patch, or prior sandbox artifact must become production code that safely raises utilization of latent capability the repository already owns. Do not use for audit-only output, non-repository targets, manufacturing capability that does not already exist, new throttling systems, or bypassing provider quotas, billing limits, licensing, authorization, abuse controls, or external service limits.
+description: Enable verified repository-owned capabilities that are dormant or miswired, or remove a verified CLI bottleneck, and ship the change as a PR. Use when an audit, benchmark, or dead-wiring finding must become production code. Do not use for audit-only output, invented capability, or bypassing quotas, licenses, or authorization.
 disable-model-invocation: true
 metadata:
   skill_schema: 1

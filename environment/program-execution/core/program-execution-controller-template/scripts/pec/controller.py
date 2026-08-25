@@ -41,6 +41,40 @@ SOURCE_STATUSES = {"operator_intake", "registered", "withdrawn"}
 RUNTIME_STATUSES = {"operator_intake", "active", "halted", "completed"}
 TERMINAL_RUNTIME = {"halted", "completed"}
 TERMINAL_VERDICTS = {"CONVERGED", "CONVERGED_WITH_NON_BLOCKING_RISKS", "NOT_CONVERGED"}
+SUCCESS_VERDICTS = {"CONVERGED", "CONVERGED_WITH_NON_BLOCKING_RISKS"}
+TERMINAL_TASK_STATES = {"COMPLETED", "FAILED", "CANCELLED"}
+
+
+def _campaign_completion_blockers(db: StateDB, verdict: str) -> dict[str, list[str]]:
+    """Canonical task/lease/gate truth that refuses a premature campaign close.
+
+    A successful verdict requires every task COMPLETED; NOT_CONVERGED permits
+    terminal failed/cancelled children but never live children or active
+    leases. Blocking gates are only a success-side requirement.
+    """
+    success = verdict in SUCCESS_VERDICTS
+    tasks = db.tasks()
+    if success:
+        unfinished = [str(item["id"]) for item in tasks if item["runtime_state"] != "COMPLETED"]
+    else:
+        unfinished = [
+            str(item["id"]) for item in tasks if item["runtime_state"] not in TERMINAL_TASK_STATES
+        ]
+    blockers: dict[str, list[str]] = {}
+    if unfinished:
+        blockers["tasks"] = unfinished
+    active = db.active_leases()
+    if active:
+        blockers["active_leases"] = [str(item["lease_id"]) for item in active]
+    if success:
+        blocked_gates = [
+            str(item["id"])
+            for item in db.gates()
+            if bool(item.get("blocking")) and item.get("result") != "PASS"
+        ]
+        if blocked_gates:
+            blockers["blocking_gates"] = blocked_gates
+    return blockers
 
 
 def campaign_status_path(workspace: Path) -> Path:
@@ -103,6 +137,12 @@ def complete_campaign(
         raise ControllerError(f"closeout requires a terminal verdict, got {verdict}")
     db, ledger = open_runtime(workspace)
     try:
+        blockers = _campaign_completion_blockers(db, verdict)
+        if blockers:
+            raise ControllerError(
+                "campaign close refused; canonical child/gate/lease state is not terminal: "
+                + json.dumps(blockers, sort_keys=True)
+            )
         current = read_campaign_status(workspace) or db.get_meta("campaign_status") or {}
         payload = write_campaign_status(
             workspace,

@@ -420,6 +420,26 @@ if [ -f "$GRAPHITI_CLI" ]; then
   else
     fail "pr-gate-failure-shell.sh missing under ~/.cursor/hooks"
   fi
+  if grep -q "plan-kernel-gate.py" "$HOOKS_JSON" 2>/dev/null; then
+    pass "postToolUse plan kernel gate registered"
+  else
+    fail "postToolUse plan-kernel-gate.py missing from hooks.json"
+  fi
+  if grep -q "plan-kernel-execute-gate.sh" "$HOOKS_JSON" 2>/dev/null; then
+    pass "beforeShellExecution plan kernel execute gate registered"
+  else
+    fail "beforeShellExecution plan-kernel-execute-gate.sh missing from hooks.json"
+  fi
+  if [ -x "$HOME/.cursor/hooks/plan-kernel-gate.py" ] || [ -L "$HOME/.cursor/hooks/plan-kernel-gate.py" ]; then
+    pass "plan-kernel-gate.py installed under ~/.cursor/hooks"
+  else
+    fail "plan-kernel-gate.py missing under ~/.cursor/hooks"
+  fi
+  if [ -x "$HOME/.cursor/hooks/plan-kernel-execute-gate.sh" ] || [ -L "$HOME/.cursor/hooks/plan-kernel-execute-gate.sh" ]; then
+    pass "plan-kernel-execute-gate.sh installed under ~/.cursor/hooks"
+  else
+    fail "plan-kernel-execute-gate.sh missing under ~/.cursor/hooks"
+  fi
   # The gate must NOT deny on a memory marker: repository-write authority comes
   # from worktree/branch isolation and the publication gate, never from a
   # phase-lock (rules/96-multi-agent-main-bound-execution, E7). This check used

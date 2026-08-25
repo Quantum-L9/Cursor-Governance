@@ -2552,7 +2552,6 @@ def _plan_peer_task_batch(
             ),
             resources=tuple(resources),
             mutation=True,
-            authority_granted=True,
             preconditions_satisfied=task_states.get(task_id) not in {"STALE", "CANCELLED"},
             priority=max(0, len(tasks) - index),
         )
@@ -2623,13 +2622,13 @@ def _run_peer_execution(
         adapter=adapter,
         probe=probe,
     )
-    if outcome.get("status") != "PASS":
-        raise CampaignError(
-            f"Peer Execution provider failed {task_id}: {outcome.get('status')}"
-            + (f" ({outcome['reason']})" if outcome.get("reason") else "")
-        )
+    # A non-PASS provider outcome is preserved, not thrown away: the terminal
+    # failure result is evidence the batch reconciler must keep so the failed
+    # child can be published durably after canonical failure is recorded.
     return {
-        "receipt": dict(outcome["terminal_result"]),
+        "status": str(outcome.get("status") or "UNKNOWN"),
+        "reason": str(outcome.get("reason") or ""),
+        "receipt": dict(outcome.get("terminal_result") or {}),
         "dispatch_id": str((outcome.get("dispatch") or {}).get("dispatch_id") or ""),
         "provider_ref": binding.provider_ref,
         "execution_profile_ref": binding.execution_profile_ref,
@@ -2756,7 +2755,12 @@ def _dispatch_peer_batch(
         for future in as_completed(futures):
             task_id = futures[future]
             try:
-                outcomes[task_id] = future.result()
+                outcome = future.result()
+                outcomes[task_id] = outcome
+                if outcome.get("status") != "PASS":
+                    failures[task_id] = f"provider status={outcome.get('status') or 'UNKNOWN'}" + (
+                        f" ({outcome['reason']})" if outcome.get("reason") else ""
+                    )
             except Exception as exc:  # harvest all child outcomes before failing the batch
                 failures[task_id] = f"{type(exc).__name__}: {exc}"
     return outcomes, failures
@@ -2859,10 +2863,12 @@ def publish_task_outcome(
     task: dict[str, Any],
     task_id: str,
     contract: dict[str, Any],
-    verification: dict[str, Any],
-    evidence_id: str,
+    verification: dict[str, Any] | None,
+    evidence_id: str | None,
     *,
     trace: pe_trace.ExecutionTrace | None,
+    terminal_receipt: dict[str, Any] | None = None,
+    failure_reason: str | None = None,
 ) -> None:
     """Publish one verified task outcome through the canonical ingress.
 
@@ -2890,15 +2896,22 @@ def publish_task_outcome(
                 if attempt_path.is_file()
                 else {}
             )
+            source_receipt = dict(terminal_receipt or attempt_payload)
+            reusable_units = source_receipt.get("generated_data_units")
+            if not isinstance(reusable_units, list):
+                reusable_units = list(task.get("generated_data_units") or [])
+            verdict = verification.get("verdict") if verification else "FAILED"
+            generated_at = (verification.get("verified_at") if verification else None) or utc_now()
             outcome_payload = {
-                **attempt_payload,
+                **source_receipt,
                 "campaign_id": campaign_id,
                 "graph_id": str(task.get("graph_id") or f"{campaign_id}-graph"),
                 "task_id": task_id,
                 "evidence_id": evidence_id,
-                "verdict": verification.get("verdict"),
-                "generated_at": verification.get("verified_at") or utc_now(),
-                "generated_data_units": list(task.get("generated_data_units") or []),
+                "verdict": verdict,
+                "generated_at": generated_at,
+                "generated_data_units": reusable_units,
+                **({"failure_reason": failure_reason} if failure_reason else {}),
                 "reuse_assessment": task.get("reuse_assessment")
                 or {
                     "reusable_data_found": bool(task.get("generated_data_units")),
@@ -2936,7 +2949,9 @@ def publish_task_outcome(
             agent_id="make-campaign",
             campaign_id=campaign_id,
             graph_id=str(task.get("graph_id") or f"{campaign_id}-graph"),
-            independent_validation_present=(verification.get("verdict") == "PASSED_LOCAL"),
+            independent_validation_present=(
+                bool(verification) and verification.get("verdict") == "PASSED_LOCAL"
+            ),
             designated_authority_approval=False,
             recurrence_counts=(
                 task.get("recurrence_counts")
@@ -3190,7 +3205,23 @@ def _default_execute_peer(
                 failures[task_id] = str(exc)
         if failures:
             for task_id, reason in sorted(failures.items()):
-                _record_canonical_failure(workspace, units_by_id.get(task_id), task_id, reason)
+                unit = units_by_id.get(task_id)
+                _record_canonical_failure(workspace, unit, task_id, reason)
+                # Durable failed-child evidence goes through the same canonical
+                # outcome publisher once the canonical failure is recorded.
+                if unit is not None:
+                    publish_task_outcome(
+                        workspace,
+                        campaign_id,
+                        unit["task"],
+                        task_id,
+                        unit["contract"],
+                        None,
+                        None,
+                        trace=trace,
+                        terminal_receipt=dict((outcomes.get(task_id) or {}).get("receipt") or {}),
+                        failure_reason=reason,
+                    )
             raise CampaignError(
                 "Peer Execution batch failed: " + json.dumps(failures, sort_keys=True)
             )

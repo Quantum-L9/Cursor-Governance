@@ -277,6 +277,9 @@ Press Build on the current checkout.
                 errors.append("simple-kind plan missing from findings")
             elif "missing_execute_section" in simple.get("flags", []):
                 errors.append("simple-kind plan must not get missing_execute_section")
+            recent = by_name.get("recent_unbuilt_aaaaaaaa.plan.md")
+            if not recent or "kernel_unfired" not in recent.get("flags", []):
+                errors.append("kernel_unfired flag missing on unhardened unbuilt plan")
 
         missing = run_audit(Path(tmp) / "nope", workspace, "--format", "markdown")
         if missing.returncode != 0 or "no plans dir" not in missing.stdout:

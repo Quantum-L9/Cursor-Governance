@@ -1,6 +1,6 @@
 # Diagnose-First binding
 
-**Full kernel SSOT:** `kernels/Diagnose First Kernel.md`  
+**Full kernel SSOT:** `kernels/Diagnose First Kernel.md`
 **Law:** `CANONICAL_LAW.md` §11 (append may correct the source-kernel path).
 
 ## Binding rules for this skill
@@ -17,5 +17,6 @@
 |-------|---------|
 | `keep_push` | Unique commits; push or open PR |
 | `extract` | Unique paths/commits should be moved to a new branch |
+| `harvest` | Unique dirty/untracked/WIP across sibling worktrees; classify then port |
 | `archive_ref` | Preserve tip SHA in receipt; optional tag; do not delete yet |
 | `prune_candidate` | No unique commits vs `origin/main` **and** diagnosis receipt says so |

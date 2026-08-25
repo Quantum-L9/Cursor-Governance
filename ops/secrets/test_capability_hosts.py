@@ -95,15 +95,30 @@ class SkillReconciliationTests(unittest.TestCase):
     def test_installer_reconciles_skills_into_user_scope(self) -> None:
         """Project scope alone is invisible when the project dir is not this repo.
 
-        Wiring only: this asserts install.sh PASSES the flags. That is not
-        sufficient on its own — see the runtime case below, which proves the
-        flags do what the wiring assumes.
+        Wiring only: install.sh now drives skill reconciliation through the one
+        projection engine (claude_projection.py), which reconciles BOTH the
+        claude-code user and project scopes declared in SKILL_ADAPTER_ROOTS.yaml
+        — user scope is the floor that resolves even when the project dir is not
+        this repo. This asserts the wiring; the runtime case below proves both
+        scopes actually populate.
         """
         install = (REPO / "environment/agents/adapters/claude-code/install.sh").read_text(
             encoding="utf-8"
         )
-        self.assertIn("--scope user", install)
-        self.assertIn("--scope project", install)
+        self.assertIn("claude_projection.py", install)
+
+        import yaml
+
+        adapters = yaml.safe_load(
+            (REPO / "environment/skill-adapters/SKILL_ADAPTER_ROOTS.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        kinds = {
+            a.get("kind") for a in adapters.get("adapters", []) if a.get("surface") == "claude-code"
+        }
+        self.assertIn("user", kinds)
+        self.assertIn("project", kinds)
 
     def test_dual_scope_reconciliation_actually_populates_both(self) -> None:
         """Runtime proof, because source-text matching is not behavioural evidence.
