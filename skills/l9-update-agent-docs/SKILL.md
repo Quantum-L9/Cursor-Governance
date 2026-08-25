@@ -1,7 +1,7 @@
 ---
 name: l9-update-agent-docs
-description: audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change.
-paths: "AGENTS.md, docs/**, README.md"
+description: "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) against live authority. use when the user says update agent docs, refresh repo docs, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change. creates those two only when absent; never invents other root files."
+paths: "AGENTS.md, CLAUDE.md, README.md, INVARIANTS.md"
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -9,144 +9,206 @@ metadata:
   tags: [l9, docs, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 2.0.2
-  updated: 2026-08-21
+  version: 2.3.0
+  updated: 2026-08-24
+  when_to_use: "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
 ---
 
 # Update Agent Documentation (L9)
 
 ## Purpose
 
-Regenerate root-level agent instruction files so coding agents write CI-passing code and review agents flag real issues (not false positives). Surgical edits only — every metric from repo ground truth.
+Keep the **root-doc pointer stack** aligned with live authority. This skill is a
+pointer maintainer, not a second doctrine author. Surgical edits only — every
+metric from repo ground truth.
 
-## Core Contract
+Live files on this host (do not invent others):
 
-| Step | Target files | Source |
-|------|--------------|--------|
-| 1 Inventory | Modules/packages | Project adapter if present |
-| 2 CI audit | `.github/workflows/*` | Blocking vs non-blocking tables |
-| 3 Pre-commit | `.pre-commit-config.yaml` | Hook count and exclusions |
-| 4 Domain patterns | Adapter scripts | Odoo/domain checks when wired |
-| 5 Lint config | `pyproject.toml`, etc. | Rules, ignores, line length |
-| 6 False positives | CI + pre-commit + lint | Documented exclusions |
-| 7 Write | `AGENTS.md`, `ARCHITECTURE.md`, `INVARIANTS.md`, `CLAUDE.md` | Preserve structure |
+| File | Role |
+|------|------|
+| `CLAUDE.md` | Load pointer. Authority chain only. Must stay short. |
+| `AGENTS.md` | Operating-instruction SSOT. Additive-only on this repo. |
+| `README.md` | Index that points at `CANONICAL_LAW.md` and `AGENTS.md`. |
+| `INVARIANTS.md` / `ARCHITECTURE.md` | Live indexes **where present** (maps, not rungs; adapter-managed on this repo). |
+
+Bind targets from `ops/config/root-file-protection.json` before any write.
+When root `CLAUDE.md` or `INVARIANTS.md` is **absent**, create it via
+Step 3a — those two only. Never invent any other root file to satisfy a
+template.
 
 ## Authority Order
 
-1. Actual repo files — workflows, hooks, manifests, module counts.
-2. Project adapter (`.claude/adapters/*-update-agent-docs.md`) when present.
-3. `.claude/README.md` for skill registry sync.
-4. This skill's execution protocol below.
-5. `Unknown` — mark metric as `TBD`; never fabricate counts.
+1. `CANONICAL_LAW.md`
+2. `ops/autonomy/surface_profile.yaml`
+3. `AGENTS.md`
+4. This skill's write contract
+5. `Unknown` — mark unverified counts `Unknown`; never fabricate
+
+When the audit needs the full alignment auditor, **read**
+`kernels/Recursive Alignment.md` by that path. When a confirmed pointer defect
+needs repair, **read** `kernels/Validate & Repair.md` by that path. Do not copy,
+compress, wrap, or distill either kernel into this skill (no compressed-kernel
+table, no kernel YAML in `references/`). Each kernel file remains the only full
+auditor or repairer.
+
+## Named write rules (harvested; not a kernel dump)
+
+1. **Target bind** — inventory files that exist. Skip and record `Unknown` for
+   missing paths. Never invent a root file to satisfy a template.
+2. **Authority map** — skills do not author doctrine. Point at the live owner.
+3. **One owner** — `CLAUDE.md` stays a pointer; `AGENTS.md` stays the operating
+   SSOT; generated formatter blocks stay companions owned by
+   `environment/ide/policy.json` via `ops/scripts/adapters/agentdocs.sh`.
+4. **No competing SSOT** — do not dump CI, pre-commit, toolchain, or skill-registry
+   tables that already live in `AGENTS.md` §§4–6 or generated registries.
+5. **Evidence + Unknown** — every number from repo files.
+6. **Audit-only default** — inspect before write; modify only files that exist
+   and that the user (or a locked plan) authorized.
+
+## Named repair rules (Validate & Repair; not a kernel dump)
+
+1. **Inspect before edit** — finish target bind + evidence before any write.
+2. **Root cause before patch** — fix the stale pointer or invented write-target;
+   do not hide it by dumping CI tables into `CLAUDE.md`.
+3. **Smallest source-aligned change** — one additive `AGENTS.md` line or one
+   `CLAUDE.md` pointer correction. No fold, no rewrite, no extra files.
+4. **Honest validation** — report only checks that ran as Passed / Failed /
+   Skipped / Unknown / NotApplicable. Local `make pr-check` is not remote CI.
+   Do not claim a gate from inspection or grep alone.
+5. **No stubs or fake validation** — no TODO-as-done, no invented root files,
+   no claimed PASS without the command output.
+6. **Edit authority, regenerate companions** — do not hand-edit the generated
+   formatter block; do not treat generated skill-registry JSON as doctrine.
+
+## Forbidden
+
+- Wrapping or compressing `kernels/Recursive Alignment.md` or
+  `kernels/Validate & Repair.md` into this pack
+- Always/Never lists, CI tables, or skill-registry dumps in `CLAUDE.md`
+- Folding `AGENTS.md` into a thin pointer (requires `ALLOW-ROOT-DELETION`)
+- Creating any root file outside Step 3a's contract (`CLAUDE.md` /
+  `INVARIANTS.md`, only when absent); root `ARCHITECTURE.md` is never
+  created by this skill
+- Editing `CANONICAL_LAW.md` or either kernel file
+- Rewriting generated formatter-ownership blocks by hand
 
 ## When to Use
 
-- CI workflows (`.github/workflows/*`) changed
-- Pre-commit hooks (`.pre-commit-config.yaml`) changed
-- Lint/type config (`pyproject.toml`, `ruff.toml`, etc.) changed
-- Agent skill registry changed (new skills, unwired/deprecated skills, subagent preload lists)
-- Periodic refresh (monthly or after large PRs)
+- User says update agent docs / refresh repo docs / sync agent files
+- After CI, pre-commit, or skill-registry changes that make a **pointer** stale
+- After `l9-wire-skill-into-repo` when docs still name a skill incorrectly
+- Root `CLAUDE.md` or `INVARIANTS.md` is missing (bootstrap creation — Step 3a)
 
-Skill **wire / unwire / deprecate / deregister** is owned by `l9-wire-skill-into-repo`
-(archive out of live `skills/`, clear autonomy tiers + adapter symlinks). Use this
-skill afterward only to refresh docs that still list skills.
-
-Load a **project adapter** when the repo has domain-specific docs (modules, domain pattern scripts, custom invariants).
+Skill **wire / unwire** is owned by `l9-wire-skill-into-repo`. Use this skill
+afterward only to keep pointers honest.
 
 ## Project Adapters
 
-Before Step 1, probe for adapters (first match wins):
+Before writing, probe (first match wins) — adapters may add domain inventory,
+never invented root files:
 
 1. `.claude/adapters/cursor-governance-update-agent-docs.md` (this repo)
 2. `.claude/adapters/{repo}-update-agent-docs.md`
 3. `.claude/adapters/plasticos-update-agent-docs.md` (PlasticOS / Odoo 19)
 
-Adapters add domain inventory steps, extra audit scripts, and domain-specific doc sections.
-
 ## Execution Protocol
 
-Follow all steps. Do not skip generic steps; run adapter steps when an adapter exists.
+### Step 1 — Bind live targets
 
-### Step 1 — Domain Inventory (adapter or skip)
+Read `ops/config/root-file-protection.json`. Confirm which of `AGENTS.md`,
+`CLAUDE.md`, `README.md` exist. If an adapter names additional **existing**
+files, include those. Record excluded or missing paths as `Unknown`.
 
-If an adapter defines module/package inventory, run it. Otherwise skip.
+### Step 2 — Audit (read-only)
 
-### Step 2 — Audit CI Pipeline
+If ownership or source-of-truth is in doubt, load
+`kernels/Recursive Alignment.md` (audit_only). Otherwise inspect:
 
-Read every workflow file under `.github/workflows/`.
+- `CLAUDE.md` still opens as an authority pointer
+- `AGENTS.md` still owns operating instructions; append-only on this repo
+- `README.md` still points at law + `AGENTS.md`
+- Counts you intend to cite (hooks, jobs) match the files that own them
 
-For each workflow, extract:
+Do not produce CI/pre-commit tables for pasting into `CLAUDE.md`.
 
-- **Job names** and what they check
-- **Blocking vs non-blocking**: `continue-on-error: true` or `|| true`
-- **Baselines**: threshold env vars or documented limits
-- **Exclusions**: `--exclude`, `paths-ignore`, `grep -v`
+If a pointer is stale or a write target was invented, load
+`kernels/Validate & Repair.md` before editing.
 
-Produce two tables:
+### Step 3 — Write
 
-1. **Blocking jobs** — must pass for merge
-2. **Non-blocking jobs** — informational only
+| File | Allowed write |
+|------|----------------|
+| `CLAUDE.md` | Fix a stale pointer or a factual error in the existing short bullets. Do not add Always/Never, CI, or registry sections. |
+| `AGENTS.md` | Surgical additive update of an existing operating section, or a new marked append. Do not fold. Do not delete lines without `ALLOW-ROOT-DELETION`. |
+| `README.md` | Fix an index pointer that names a missing or invented file. |
 
-### Step 3 — Audit Pre-commit Hooks
+Preserve generated `<!-- BEGIN L9 FORMATTER OWNERSHIP -->` blocks. If
+`install_ide_profile` dirtied only that block, restore from HEAD unless
+`environment/ide/policy.json` changed.
 
-Read `.pre-commit-config.yaml` (or equivalent). For each hook: type, blocking status, global exclusions. Count total hooks.
+### Step 3a — Create Missing Root Docs (`CLAUDE.md`, `INVARIANTS.md`)
 
-### Step 4 — Domain Pattern Scripts (adapter or skip)
+Applies only when the file is **absent at repo root**. Never overwrite an existing
+file from this step — an existing file falls through to the Step 3 write contract.
 
-If an adapter references domain lint/pattern scripts (e.g. Odoo pattern checks), audit them per adapter instructions.
+**Root `CLAUDE.md` (create as load pointer):**
 
-### Step 5 — Audit Lint/Type Config
+- Shape it on the Cursor-Governance root `CLAUDE.md`: an **authority pointer**,
+  not a doctrine copy. State where doctrine lives and what outranks what.
+- Contents: repo authority chain (highest first), pointers to the operating SSOT
+  (`AGENTS.md` or equivalent) and to `INVARIANTS.md` / `ARCHITECTURE.md` as maps,
+  and at most a short list of the mistakes agents most often make in that repo.
+- Forbidden: Always/Never lists, CI / hook / skill-registry tables, or any body
+  text copied from the docs it points at. Keep it short enough to always load.
 
-Read `pyproject.toml` / `ruff.toml` / `mypy.ini` and extract line length, rules, per-file ignores, complexity limits.
+**Root `INVARIANTS.md` (create as invariant index):**
 
-### Step 6 — Audit Known False Positives
+- Sections: invariant list, CI enforcement map (which workflow job or pre-commit
+  hook enforces each invariant), known false positives.
+- Every invariant and metric comes from the Step 2–6 audits — workflows, hooks,
+  lint config, adapter scripts. Unverifiable entries are `Unknown`, never invented.
+- Each false positive cites **where** the exclusion lives (file + key/flag).
+- Pointer-not-dump: cite the enforcing file; do not copy rule bodies, org
+  invariant bodies, or tables that already live in the operating SSOT.
 
-Search intentional exclusions across CI, pre-commit, lint config, and audit scripts. Record **where**, **what**, **why**.
+**Both files:**
 
-### Step 7 — Write Agent Docs
+- Where the repo tracks root files (e.g. `ops/config/root-file-protection.json`),
+  register the new file as `managed` in the same change.
+- A project adapter's write rules outrank these defaults when present.
 
-Update surgically (preserve structure). In Cursor-Governance, root `ARCHITECTURE.md` and `INVARIANTS.md` are **live indexes** (not optional, not competing SSOTs). Follow the Cursor-Governance adapter: pointer-not-dump.
+### Step 4 — Report
 
-| File | Sections |
-|------|----------|
-| `AGENTS.md` | Operating SSOT — additive only here; do not re-dump CI / hook / skill tables |
-| `ARCHITECTURE.md` | Module/package index, CI/CD architecture, version bump (pointer index) |
-| `INVARIANTS.md` | Invariant list, CI enforcement map, false positives (pointer index) |
-| `CLAUDE.md` | Stay a load pointer; no Always/Never or CI tables in this repo |
-
-Adapter defines extra sections (e.g. Odoo 19 pattern table, `plasticos_*` module index).
-
-When skills change, verify **`l9-wire-skill-into-repo`** gates were followed (`.claude/adapters/plasticos-repo-wiring.md` in PlasticOS).
-
-Sync skill tables from `.claude/README.md` (L9 global + project skills).
+List files changed, evidence for each metric, and any `Unknown`. For every
+check that ran, record Passed / Failed / Skipped / Unknown / NotApplicable.
+Do not claim either kernel was wrapped into this skill.
 
 ## Resource Map
 
-No `references/` folder — protocol lives in this file. Load project adapters when present:
-
-- `.claude/adapters/cursor-governance-update-agent-docs.md`
-- `.claude/adapters/{repo}-update-agent-docs.md`
-- `.claude/adapters/plasticos-update-agent-docs.md` (PlasticOS / Odoo 19)
-
-Wiring verification: `.claude/adapters/plasticos-repo-wiring.md` when skills changed.
+- Auditor (load, do not copy): `kernels/Recursive Alignment.md`
+- Repairer (load, do not copy): `kernels/Validate & Repair.md`
+- Root inventory: `ops/config/root-file-protection.json`
+- Formatter companion: `ops/scripts/adapters/agentdocs.sh`
+- Skill registry wire: `l9-wire-skill-into-repo`
+- No-wrap check: `scripts/self_test.py`
 
 ## Validation
 
-After updating, verify counts match repo state (modules, hooks, jobs). Cross-reference `AGENTS.md`, `CLAUDE.md`, `INVARIANTS.md`, `ARCHITECTURE.md`. Documented false positives MUST cite exclusion location.
+- `CLAUDE.md` first heading remains an authority pointer
+- This pack contains no compressed-kernel table and no kernel YAML dump
+- Write targets exist — or were created only through Step 3a's
+  create-when-missing contract, never by overwrite
+- Documented counts match repo files
+- Step 3a creations carry no fabricated counts, stay pointer/index-shaped,
+  and are registered in the repo's root-file protection config when one exists
 
 ## Failure Handling
 
-- Adapter missing for domain repo → run generic steps; note domain gaps in summary.
-- Count mismatch after edit → re-audit source files; do not ship stale numbers.
-- User asked to commit → present diff for review; do not commit unless explicitly requested.
-- Skill registry drift → run **`l9-wire-skill-into-repo`** checklist before updating skill tables.
+- Adapter missing → run generic steps; note domain gaps
+- Count unverified → `Unknown`; do not ship a guessed number
+- User asked to commit → present diff; do not commit unless requested
+- Urge to embed either kernel → refuse; keep the path citation
 
 ## Stop Condition
 
-All targeted files updated. Documented counts match actual repo files. Present summary with lines changed and key metrics.
-
-## Constraints
-
-- Surgical edits only — do not rewrite from scratch
-- No fabricated data — every number from repo files
-- Do not commit — present for user review
+Pointer stack is honest. Invented files were not created. Neither kernel was wrapped.

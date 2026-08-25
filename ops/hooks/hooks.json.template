@@ -42,6 +42,11 @@
         "command": "./hooks/graphiti-mark-ok.sh",
         "matcher": "graphiti|add_episode|search_facts|search_nodes",
         "timeout": 5
+      },
+      {
+        "command": "./hooks/plan-kernel-gate.py",
+        "matcher": "Write|StrReplace|search_replace|ApplyPatch",
+        "timeout": 10
       }
     ],
     "preToolUse": [
@@ -69,6 +74,10 @@
       },
       {
         "command": "./hooks/l4-local-execution-gate-shell.sh",
+        "timeout": 10
+      },
+      {
+        "command": "./hooks/plan-kernel-execute-gate.sh",
         "timeout": 10
       }
     ],

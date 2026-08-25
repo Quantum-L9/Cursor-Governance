@@ -90,6 +90,33 @@ def persist_recommendation(
         pass
 
 
+def load_plan_kernel_gate():
+    path = Path(__file__).resolve().parent / "plan_kernel_gate.py"
+    spec = importlib.util.spec_from_file_location("l9_plan_kernel_gate", path)
+    if not spec or not spec.loader:
+        raise RuntimeError(f"cannot load plan kernel gate: {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def kernel_pass_inject(payload: dict[str, Any]) -> str:
+    try:
+        gate = load_plan_kernel_gate()
+        workspace = gate.workspace_from_event(payload)
+        return gate.inject_block(workspace)
+    except Exception as exc:
+        return f"kernel_pass checker degraded; treat plan as unhardened ({exc})"
+
+
+def merge_context(inject: str, route: str) -> str:
+    inject = inject.strip()
+    route = route.strip()
+    if inject and route:
+        return inject + "\n\n" + route
+    return inject or route
+
+
 def context_text(recommendation: dict[str, Any]) -> str:
     supporting = recommendation["supporting"]
     support_text = (
@@ -112,41 +139,57 @@ def context_text(recommendation: dict[str, Any]) -> str:
 
 
 def main() -> int:
+    raw = sys.stdin.read()
+    try:
+        payload: dict[str, Any] = json.loads(raw) if raw.strip() else {}
+    except json.JSONDecodeError:
+        payload = {}
+    inject = kernel_pass_inject(payload)
     if os.environ.get("L9_PROACTIVE_SKILLS", "true").lower() != "true":
-        print(json.dumps({"continue": True}))
+        out: dict[str, Any] = {"continue": True}
+        if inject:
+            out["additional_context"] = inject
+        print(json.dumps(out))
         return 0
     try:
-        raw = sys.stdin.read()
-        payload: dict[str, Any] = json.loads(raw) if raw.strip() else {}
         prompt = extract_prompt(payload)
-        if not prompt:
-            print(json.dumps({"continue": True}))
-            return 0
-        root = resolve_root()
-        routing = load_routing(root)
-        root = routing.resolve_root(Path(__file__))
-        registry = routing.load_registry(root)
-        recommendation = routing.route_prompt(prompt, registry)
-        if recommendation is None:
-            print(json.dumps({"continue": True}))
-            return 0
-        persist_recommendation(recommendation, payload, root)
-        # additional_context is forward-compatible: Cursor docs currently document
-        # only continue/user_message for beforeSubmitPrompt; unknown fields are ignored.
-        print(
-            json.dumps(
-                {
-                    "continue": True,
-                    "additional_context": context_text(recommendation),
-                }
-            )
-        )
+        route = ""
+        if prompt:
+            root = resolve_root()
+            routing = load_routing(root)
+            root = routing.resolve_root(Path(__file__))
+            registry = routing.load_registry(root)
+            recommendation = routing.route_prompt(prompt, registry)
+            if recommendation is not None:
+                persist_recommendation(recommendation, payload, root)
+                route = context_text(recommendation)
+        combined = merge_context(inject, route)
+        out = {"continue": True}
+        if combined:
+            out["additional_context"] = combined
+        print(json.dumps(out))
         return 0
-    except Exception as exc:  # fail-open by contract
+    except Exception as exc:  # routing fail-open; inject still emitted
         print(f"WARN: Cursor L9 skill router degraded: {exc}", file=sys.stderr)
-        print(json.dumps({"continue": True}))
+        out = {"continue": True}
+        if inject:
+            out["additional_context"] = inject
+        print(json.dumps(out))
         return 0
+
+
+def _self_test() -> int:
+    if merge_context("INJECT", "ROUTE") != "INJECT\n\nROUTE":
+        print("FAIL: merge_context prepend", file=sys.stderr)
+        return 1
+    if merge_context("", "ROUTE") != "ROUTE":
+        print("FAIL: merge_context route-only", file=sys.stderr)
+        return 1
+    print("PASS: before_submit_skill_router prepend")
+    return 0
 
 
 if __name__ == "__main__":
+    if "--self-test" in sys.argv:
+        raise SystemExit(_self_test())
     raise SystemExit(main())

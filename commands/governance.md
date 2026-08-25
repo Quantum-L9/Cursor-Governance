@@ -1,79 +1,23 @@
 ---
 name: governance
-version: "1.0.0"
-description: "Check and enforce governance rules"
+version: "2.0.0"
+description: "Governance check, wiring, and violation report"
 auto_chain: ynp
 ---
 
-# /governance — Governance Check
+# /governance — Governance check
 
-## WHAT IT DOES
+Delegates to skill **`l9-governance-wiring`** (mode `governance check`).
 
-Verify compliance with L9 governance:
+`/violation` is an alias of this command. Report-violation is a **mode**, not a second slash.
 
-1. Protected files respected
-2. GMP phases followed
-3. Approval gates passed
-4. Audit trail exists
+## EXECUTION
 
----
+1. Read and follow skill `l9-governance-wiring` in mode `governance check`.
+2. If the user asked to report a violation (`/violation` or explicit report), emit the report format from archived `commands/_archived/violation.md` and follow that skill's logging path. Do not recreate `/violation`.
+3. Auto-chain `/ynp`.
 
-## CHECKS
+## FORBIDDEN
 
-### Protected Files
-
-```
-PROTECTED:
-├── core/agents/executor.py
-├── runtime/websocket_orchestrator.py
-├── memory/substrate_service.py
-├── docker-compose.yml
-└── core/singleton_registry.py
-```
-
-Any modification → Requires KERNEL GMP
-
-### GMP Compliance
-
-| Requirement | Check |
-|-------------|-------|
-| Phase 0 plan locked | ✅ |
-| No scope drift | ✅ |
-| Validation passed | ✅ |
-| Report generated | ✅ |
-
-### Approval Gates
-
-| Operation | Approval |
-|-----------|----------|
-| Protected file | Igor explicit |
-| Destructive action | Igor explicit |
-| Production deploy | Igor explicit |
-
----
-
-## OUTPUT
-
-```markdown
-## 🛡️ GOVERNANCE CHECK
-
-### Status: ✅ COMPLIANT | ❌ VIOLATIONS
-
-### Protected Files
-| File | Status |
-|------|--------|
-| executor.py | ✅ Untouched |
-
-### GMP Compliance
-| Check | Status |
-|-------|--------|
-| Plan locked | ✅ |
-
-### Violations (if any)
-| Violation | Location | Fix |
-|-----------|----------|-----|
-```
-
-→ **Auto-chains to /ynp**
-
---- End Command ---
+- Recreating `/violation` as a live command file
+- Weakening protected-path or approval gates

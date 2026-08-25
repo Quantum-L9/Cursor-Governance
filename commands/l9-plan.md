@@ -38,6 +38,7 @@ Follow skill `l9-plan` (**plan mode default = PE+autonomy workflow**). Required 
 1. Validated `PLAN_DOCUMENT` JSON (`scripts/validate_plan_document.py` PASS)
 2. Cursor `.plan.md` under `.cursor/plans/<slug>_<8hex>.plan.md` filled from the first-class template
 3. Sections listed in `plan-workflow-pe-autonomy.md` (frontmatter todos, baseline, envelope, DAG, evidence, convergence, **Execute via @environment/program-execution + autonomy**)
+4. `scripts/validate_plan_kernel_receipt.py` PASS on that bound `.plan.md` (hooks enforce; this is the pointer)
 
 ### Gate commands (governed workspaces)
 
