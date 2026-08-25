@@ -715,3 +715,8 @@ wip-inventory:
 # OPEN_PR=0 make pr remains gate-only (script is not invoked). Do not rewrite the
 # existing pr recipe — GNU Make 3.81 exports PUSH_ONLY from the invoking env.
 PUSH_ONLY ?= 0
+
+.PHONY: ff
+## In-place /ff catch-up (l9-repo-sync). Parks unique work. Never activate_fresh. Never stash -u.
+ff:
+	CURSOR_GOVERNANCE_DIR="$(CURDIR)" bash skills/l9-repo-sync/scripts/ff.sh

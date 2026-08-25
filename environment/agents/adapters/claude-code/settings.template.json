@@ -228,6 +228,7 @@
     "l9-pr-remediation": "user-invocable-only",
     "l9-python-tdd-with-uv": "user-invocable-only",
     "l9-repo-index": "user-invocable-only",
+    "l9-repo-sync": "user-invocable-only",
     "l9-repository-renovation": "user-invocable-only",
     "l9-setting-up-terraform": "user-invocable-only",
     "l9-ui-operator": "user-invocable-only",
