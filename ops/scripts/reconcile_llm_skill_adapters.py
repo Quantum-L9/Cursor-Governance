@@ -188,7 +188,12 @@ def main() -> int:
         ]
         if args.check:
             rules_cmd.append("--check")
-        rules_proc = subprocess.run(rules_cmd, capture_output=True, text=True)
+        # argv is sys.executable + a repo-resolved script path + fixed flags (no
+        # shell=True, no caller string), so the dangerous-subprocess-use-tainted-
+        # env-args injection is unreachable. Authoritative rationale:
+        # .github/governance/semgrep-finding-policy.yaml documents this finding
+        # on this file as non-reachable; suppressed at the site to match.
+        rules_proc = subprocess.run(rules_cmd, capture_output=True, text=True)  # nosemgrep
         try:
             payload["llm_rule_adapters"] = json.loads(rules_proc.stdout or "{}")
         except json.JSONDecodeError:
