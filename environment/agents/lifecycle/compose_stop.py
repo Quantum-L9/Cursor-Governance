@@ -88,6 +88,17 @@ def _pipeline_result(
 
 def compose_subagent_stop(payload: dict[str, Any]) -> dict[str, Any]:
     assignment_id = payload.get("assignment_id")
+    if not assignment_id and payload.get("subagent_id"):
+        subagent_id = str(payload.get("subagent_id") or "").strip()
+        host_stop = receipts.write_host_stop(subagent_id, payload)
+        correlation = receipts.load_host_correlation(subagent_id)
+        if correlation is None:
+            return {
+                "status": "QUARANTINED",
+                "reason": "native subagentStop captured without verified L9 assignment correlation",
+                "host_stop_receipt": host_stop,
+            }
+        assignment_id = correlation.get("assignment_id")
     if not assignment_id:
         return {"status": "QUARANTINED", "reason": "orphan subagentStop: missing assignment_id"}
 

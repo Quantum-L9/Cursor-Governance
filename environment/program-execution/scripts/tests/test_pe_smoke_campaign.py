@@ -49,9 +49,18 @@ PEC = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 # runtime binding, execution profile, capability probe, context manifest,
 # PeerExecutionAdapter, thin claude-code provider, and typed attempt receipt.
 FAKE_CLAUDE = r"""#!/usr/bin/env python3
-import json, pathlib, subprocess, sys
+import json, os, pathlib, subprocess, sys
 prompt = sys.argv[sys.argv.index("-p") + 1]
 contract = json.loads(prompt.strip().splitlines()[-1])
+if os.environ.get("SMOKE_FAIL_TASK") == contract.get("task_id"):
+    print(json.dumps({
+        "is_error": True,
+        "session_id": "smoke-peer-session",
+        "num_turns": 1,
+        "usage": {},
+        "result": "simulated provider failure for reconciliation testing",
+    }))
+    raise SystemExit(0)
 worktree = pathlib.Path.cwd()
 changed = []
 for rel in contract.get("writable_paths") or []:
@@ -372,8 +381,8 @@ class PeSmokeCampaignTests(unittest.TestCase):
         import time as time_module
 
         units = [
-            {"task_id": "TASK-A", "contract": {"task_id": "TASK-A"}},
-            {"task_id": "TASK-B", "contract": {"task_id": "TASK-B"}},
+            {"task_id": "TASK-A", "contract": {"task_id": "TASK-A"}, "grant": {"lease_id": "a"}},
+            {"task_id": "TASK-B", "contract": {"task_id": "TASK-B"}, "grant": {"lease_id": "b"}},
         ]
 
         def fake_peer(_workspace, contract):
@@ -382,10 +391,135 @@ class PeSmokeCampaignTests(unittest.TestCase):
 
         started = time_module.monotonic()
         with unittest.mock.patch.object(self.mod, "_run_peer_execution", side_effect=fake_peer):
-            outcomes = self.mod._dispatch_peer_batch(Path("."), units)
+            outcomes, failures = self.mod._dispatch_peer_batch(Path("."), units)
         elapsed = time_module.monotonic() - started
         self.assertEqual(set(outcomes), {"TASK-A", "TASK-B"})
+        self.assertEqual(failures, {})
         self.assertLess(elapsed, 0.35, msg=f"provider windows did not overlap: {elapsed}")
+
+    def test_peer_batch_reports_mixed_outcomes_without_raising(self) -> None:
+        units = [
+            {"task_id": "TASK-A", "contract": {"task_id": "TASK-A"}, "grant": {"lease_id": "a"}},
+            {"task_id": "TASK-B", "contract": {"task_id": "TASK-B"}, "grant": {"lease_id": "b"}},
+        ]
+
+        def fake_peer(_workspace, contract):
+            if contract["task_id"] == "TASK-B":
+                raise RuntimeError("provider window died")
+            return {"receipt": {"task_id": contract["task_id"]}}
+
+        with unittest.mock.patch.object(self.mod, "_run_peer_execution", side_effect=fake_peer):
+            outcomes, failures = self.mod._dispatch_peer_batch(Path("."), units)
+        self.assertEqual(set(outcomes), {"TASK-A"})
+        self.assertEqual(set(failures), {"TASK-B"})
+        self.assertIn("provider window died", failures["TASK-B"])
+
+    def test_failed_child_lands_canonically_with_no_live_authority(self) -> None:
+        """The reconciliation chain, live: provider failure -> Controller FAILED,
+        writer lease released, root-Autonomy lease revoked, evidence preserved."""
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            env = _peer_test_env(tmp)
+            env["SMOKE_FAIL_TASK"] = "TASK-001"
+            with unittest.mock.patch.dict("os.environ", env):
+                with self.assertRaises(self.mod.CampaignError) as caught:
+                    self._run_smoke(tmp)
+            self.assertIn("TASK-001", str(caught.exception))
+            l9 = tmp / "l9"
+            workspace = l9 / "programs/demo-activate-v1"
+            status = _pec(workspace, "status")
+            states = {item["id"]: item["runtime_state"] for item in status["tasks"]}
+            self.assertEqual(states["TASK-001"], "FAILED")
+            self.assertFalse(
+                status.get("active_leases"), msg="failed child left an active Controller lease"
+            )
+            # The failed child's root-Autonomy lease is terminal: no live
+            # mutation authority survives the failure.
+            grants = sorted((workspace / "runtime" / "autonomy-grants").glob("*.grant.json"))
+            self.assertTrue(grants, msg="task-scoped grant receipt missing")
+            grant = json.loads(grants[-1].read_text(encoding="utf-8"))
+            self.assertEqual(grant["task_id"], "TASK-001")
+            import sqlite3
+
+            connection = sqlite3.connect(grant["runtime_database"])
+            try:
+                row = connection.execute(
+                    "SELECT status FROM leases WHERE lease_id=?", (grant["lease_id"],)
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertIsNotNone(row)
+            self.assertNotEqual(row[0], "ACTIVE")
+            # Evidence preserved: the task worktree survives for diagnosis.
+            self.assertTrue((workspace / "worktrees" / "TASK-001").is_dir())
+
+    def test_mixed_batch_reconciles_every_child_before_raising(self) -> None:
+        """Caller-order contract for a mixed [PASS, FAIL] parallel batch:
+        successful siblings finish first, failed siblings are recorded
+        canonically, and only then does the campaign-level failure surface."""
+        events: list[tuple[str, str]] = []
+        units = [
+            {"task_id": "TASK-A", "already_submitted": False, "grant": {"lease_id": "a"}},
+            {"task_id": "TASK-B", "already_submitted": False, "grant": {"lease_id": "b"}},
+        ]
+
+        def fake_prepare(_workspace, task, *, trace):
+            return next(unit for unit in units if unit["task_id"] == str(task["id"]))
+
+        def fake_dispatch(_workspace, dispatched):
+            return (
+                {"TASK-A": {"receipt": {}}},
+                {"TASK-B": "RuntimeError: provider window died"},
+            )
+
+        def fake_finish(_workspace, _campaign, unit, outcome, *, trace, timer):
+            events.append(("finish", unit["task_id"]))
+
+        def fake_record(_workspace, unit, task_id, reason):
+            events.append(("record_failure", task_id))
+
+        status_rows = [
+            {"id": "TASK-A", "runtime_state": "ELIGIBLE", "attempts": 0},
+            {"id": "TASK-B", "runtime_state": "ELIGIBLE", "attempts": 0},
+        ]
+        tasks = [{"id": "TASK-A"}, {"id": "TASK-B"}]
+        with (
+            unittest.mock.patch.object(self.mod, "locked_tasks", return_value=tasks),
+            unittest.mock.patch.object(self.mod, "pec_status_tasks", return_value=status_rows),
+            unittest.mock.patch.object(
+                self.mod, "_plan_peer_task_batch", return_value=["TASK-A", "TASK-B"]
+            ),
+            unittest.mock.patch.object(self.mod, "_prepare_peer_unit", side_effect=fake_prepare),
+            unittest.mock.patch.object(self.mod, "_dispatch_peer_batch", side_effect=fake_dispatch),
+            unittest.mock.patch.object(self.mod, "_finish_peer_unit", side_effect=fake_finish),
+            unittest.mock.patch.object(
+                self.mod, "_record_canonical_failure", side_effect=fake_record
+            ),
+            unittest.mock.patch.object(self.mod, "_load_script") as loader,
+        ):
+            loader.return_value.StageTimer.return_value.stage = unittest.mock.MagicMock()
+            with self.assertRaises(self.mod.CampaignError) as caught:
+                self.mod._default_execute_peer(
+                    Path("."),
+                    "demo",
+                    hooks=self.mod.Hooks(),
+                    live_prs=False,
+                )
+        self.assertIn("TASK-B", str(caught.exception))
+        self.assertEqual(
+            events,
+            [("finish", "TASK-A"), ("record_failure", "TASK-B")],
+            msg="successful sibling must finish before the failure is recorded and raised",
+        )
+
+    def test_peer_batch_refuses_dispatch_without_root_grant(self) -> None:
+        units = [{"task_id": "TASK-A", "contract": {"task_id": "TASK-A"}, "grant": None}]
+        with unittest.mock.patch.object(
+            self.mod, "_run_peer_execution", side_effect=AssertionError("must not dispatch")
+        ):
+            outcomes, failures = self.mod._dispatch_peer_batch(Path("."), units)
+        self.assertEqual(outcomes, {})
+        self.assertIn("no root autonomy grant", failures["TASK-A"])
 
 
 if __name__ == "__main__":

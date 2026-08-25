@@ -12,7 +12,7 @@ from autonomy.models import (
     DeploymentManifest,
     Role,
 )
-from autonomy.runtime.claims import claims_collide
+from autonomy.runtime.claims import claim_scopes_conflict
 
 
 @dataclass(frozen=True)
@@ -444,20 +444,24 @@ class GraphLinter:
 
 
 def _claims_conflict(left: Action, right: Action) -> bool:
-    """Whether two actions contend for the same resource key."""
+    """Whether two actions contend for overlapping resource scopes.
 
-    right_claims = {claim.key: claim for claim in right.claims}
+    Delegates to the canonical `claim_scopes_conflict` primitive so the linter
+    agrees with the scheduler prefilter and the transactional registry about
+    what counts as a real ordering constraint.
+    """
+
     for claim in left.claims:
-        other = right_claims.get(claim.key)
-        if other is None:
-            continue
-        if claims_collide(
-            mode=claim.mode,
-            exclusive=claim.exclusive,
-            other_mode=other.mode,
-            other_exclusive=other.exclusive,
-        ):
-            return True
+        for other in right.claims:
+            if claim_scopes_conflict(
+                key=claim.key,
+                mode=claim.mode,
+                exclusive=claim.exclusive,
+                other_key=other.key,
+                other_mode=other.mode,
+                other_exclusive=other.exclusive,
+            ):
+                return True
     return False
 
 

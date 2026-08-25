@@ -130,6 +130,24 @@ _GIT_IDENTITY = (
     "user.name=Test",
 )
 
+_GIT_HOST_LEAKS = (
+    "GIT_DIR",
+    "GIT_WORK_TREE",
+    "GIT_INDEX_FILE",
+    "GIT_OBJECT_DIRECTORY",
+    "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+    "GIT_COMMON_DIR",
+    "GIT_PREFIX",
+)
+
+
+def _isolated_git_env() -> dict[str, str]:
+    env = os.environ.copy()
+    for key in _GIT_HOST_LEAKS:
+        env.pop(key, None)
+    env["GIT_TERMINAL_PROMPT"] = "0"
+    return env
+
 
 def _write_task_output(worktree: Path, rel: str, title: str) -> str:
     path = worktree / rel
@@ -138,7 +156,13 @@ def _write_task_output(worktree: Path, rel: str, title: str) -> str:
         f"{Path(rel).stem} implemented for tests: {title}\n" + ("x" * 48) + "\n",
         encoding="utf-8",
     )
-    subprocess.run(["git", "-C", str(worktree), "add", "--", rel], check=True, capture_output=True)
+    git_env = _isolated_git_env()
+    subprocess.run(
+        ["git", "-C", str(worktree), "add", "--", rel],
+        check=True,
+        capture_output=True,
+        env=git_env,
+    )
     subprocess.run(
         [
             "git",
@@ -155,12 +179,14 @@ def _write_task_output(worktree: Path, rel: str, title: str) -> str:
         ],
         check=True,
         capture_output=True,
+        env=git_env,
     )
     sha = subprocess.run(
         ["git", "-C", str(worktree), "rev-parse", "HEAD"],
         check=True,
         capture_output=True,
         text=True,
+        env=git_env,
     )
     return sha.stdout.strip()
 
@@ -200,12 +226,17 @@ def _host_repo(tmp: Path) -> Path:
 
 
 def _git_init(path: Path) -> None:
-    subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True)
-    subprocess.run(["git", "config", "user.email", "test@example.com"], cwd=path, check=True)
-    subprocess.run(["git", "config", "user.name", "Test"], cwd=path, check=True)
+    env = _isolated_git_env()
+    subprocess.run(["git", "init"], cwd=path, check=True, capture_output=True, env=env)
+    subprocess.run(
+        ["git", "config", "user.email", "test@example.com"], cwd=path, check=True, env=env
+    )
+    subprocess.run(["git", "config", "user.name", "Test"], cwd=path, check=True, env=env)
     (path / "README.md").write_text("x\n", encoding="utf-8")
-    subprocess.run(["git", "add", "README.md"], cwd=path, check=True, capture_output=True)
-    subprocess.run(["git", "commit", "-m", "init"], cwd=path, check=True, capture_output=True)
+    subprocess.run(["git", "add", "README.md"], cwd=path, check=True, capture_output=True, env=env)
+    subprocess.run(
+        ["git", "commit", "-m", "init"], cwd=path, check=True, capture_output=True, env=env
+    )
 
 
 class RunCampaignTests(unittest.TestCase):
@@ -1139,24 +1170,38 @@ class RunCampaignTests(unittest.TestCase):
             # The production primary's main contains the whole host repo, so the
             # isolated worktree inherits the policy files the compile step
             # patches. Include them in the init commit.
-            subprocess.run(["git", "add", "-A"], cwd=primary, check=True, capture_output=True)
+            git_env = _isolated_git_env()
+            subprocess.run(
+                ["git", "add", "-A"], cwd=primary, check=True, capture_output=True, env=git_env
+            )
             subprocess.run(
                 ["git", "commit", "-m", "init", "--amend", "--no-edit"],
                 cwd=primary,
                 check=True,
                 capture_output=True,
+                env=git_env,
             )
             origin = Path(raw) / "origin.git"
             origin.mkdir()
-            subprocess.run(["git", "init", "--bare", str(origin)], check=True, capture_output=True)
+            subprocess.run(
+                ["git", "init", "--bare", str(origin)],
+                check=True,
+                capture_output=True,
+                env=git_env,
+            )
             subprocess.run(
                 ["git", "remote", "add", "origin", str(origin)],
                 cwd=primary,
                 check=True,
                 capture_output=True,
+                env=git_env,
             )
             subprocess.run(
-                ["git", "push", "origin", "HEAD:main"], cwd=primary, check=True, capture_output=True
+                ["git", "push", "origin", "HEAD:main"],
+                cwd=primary,
+                check=True,
+                capture_output=True,
+                env=git_env,
             )
             l9 = Path(raw) / "l9"
             report = self.mod.run_campaign(

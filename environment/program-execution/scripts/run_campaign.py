@@ -341,6 +341,16 @@ def auto_harvest(trace: pe_trace.ExecutionTrace | None) -> None:
 
 def git_env() -> dict[str, str]:
     env = os.environ.copy()
+    for key in (
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_OBJECT_DIRECTORY",
+        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
+        "GIT_COMMON_DIR",
+        "GIT_PREFIX",
+    ):
+        env.pop(key, None)
     env["GIT_TERMINAL_PROMPT"] = "0"
     env["GIT_ASKPASS"] = "echo"
     env["GCM_INTERACTIVE"] = "never"
@@ -2411,6 +2421,9 @@ def _peer_identity() -> tuple[str, str, str | None]:
     if agent_ref and surface:
         return agent_ref, surface, provider_ref
     governance_surface = os.environ.get("L9_GOVERNANCE_SURFACE", "").strip().lower()
+    # Surfaces here must exist in the topology SSOT
+    # (environment/agents/PEER_RUNTIME_BINDINGS.yaml); a default that names a
+    # surface the SSOT does not declare can never resolve a provider.
     aliases = {
         "claude-code": ("claude-code", "claude-cli"),
         "claude-cli": ("claude-code", "claude-cli"),
@@ -2418,9 +2431,9 @@ def _peer_identity() -> tuple[str, str, str | None]:
         "claude-mobile": ("claude-code", "claude-mobile"),
         "cursor": ("cursor", "cursor-ide"),
         "cursor-ide": ("cursor", "cursor-ide"),
-        "codex": ("codex", "codex-cli"),
+        "codex": ("codex", "codex-cloud"),
         "gemini": ("gemini", "gemini-cli"),
-        "manus": ("manus", "manus-web"),
+        "manus": ("manus", "manus-cloud"),
     }
     identity = aliases.get(governance_surface)
     if identity is None:
@@ -2466,10 +2479,35 @@ def _peer_pipeline() -> Any:
     return _load_script("run_peer_task_pipeline", PE_ROOT / "scripts/run_peer_task_pipeline.py")
 
 
+ENFORCED_CONCURRENCY_LIMITS = frozenset(
+    {
+        # ConcurrencyBudget lanes (plan_ready_set):
+        "max_active_dispatches",
+        "max_mutating_dispatches",
+        # target-lineage write locks admit exactly one mutating holder:
+        "max_mutating_dispatches_per_target_lineage",
+    }
+)
+
+
 def _peer_concurrency_budget():
     modules = _peer_imports()
     policy = load_yaml(PE_ROOT / "registry/EXECUTION_CONCURRENCY_POLICY.yaml")
     limits = dict((policy or {}).get("limits") or {})
+    # Silent no-op policy fields are forbidden: every declared limit must be
+    # runtime-enforced or the policy is rejected as unsupported.
+    unsupported = sorted(set(limits) - ENFORCED_CONCURRENCY_LIMITS)
+    if unsupported:
+        raise CampaignError(
+            "EXECUTION_CONCURRENCY_POLICY declares limits nothing enforces: "
+            + ", ".join(unsupported)
+        )
+    lineage_limit = limits.get("max_mutating_dispatches_per_target_lineage")
+    if lineage_limit is not None and int(lineage_limit) != 1:
+        raise CampaignError(
+            "max_mutating_dispatches_per_target_lineage is enforced by exclusive "
+            f"target-lineage write locks; only 1 is enforceable, got {lineage_limit}"
+        )
     return modules["ConcurrencyBudget"](
         total_lanes=int(limits.get("max_active_dispatches") or 1),
         mutation_lanes=int(limits.get("max_mutating_dispatches") or 1),
@@ -2549,12 +2587,22 @@ def _run_peer_execution(
     pipeline = _peer_pipeline()
     agent_ref, surface, provider_override = _peer_identity()
     task_id = contract.get("task_id")
-    binding, adapter, runtime_root = pipeline._resolve_provider(
-        workspace=workspace,
-        agent_ref=agent_ref,
-        surface=surface,
-        provider_ref=provider_override,
-    )
+    try:
+        binding, adapter, runtime_root = pipeline._resolve_provider(
+            workspace=workspace,
+            agent_ref=agent_ref,
+            surface=surface,
+            provider_ref=provider_override,
+        )
+    except ValueError as exc:
+        # Never guess among multiple provider bindings for one surface (e.g.
+        # cursor-ide has cursor-foreground and cursor-background): the topology
+        # SSOT resolves uniquely or the operator must say which provider.
+        raise CampaignError(
+            f"Peer provider resolution failed for {agent_ref}/{surface}: {exc}. "
+            "Set L9_PE_PROVIDER_REF to the intended provider_ref from "
+            "environment/agents/PEER_RUNTIME_BINDINGS.yaml."
+        ) from exc
     probe = pipeline._probe_provider(
         binding=binding,
         adapter=adapter,
@@ -2590,24 +2638,120 @@ def _run_peer_execution(
     }
 
 
+def _grant_module() -> Any:
+    """The root-autonomy grant integration (single authorization owner)."""
+    return _load_script(
+        "pe_root_autonomy_grant",
+        PE_ROOT / "integrations/autonomy-control-plane/grant.py",
+    )
+
+
+def _grant_root_authority(
+    workspace: Path,
+    task_id: str,
+    contract: dict[str, Any],
+    *,
+    trace: pe_trace.ExecutionTrace | None,
+) -> dict[str, Any]:
+    """Obtain the root-Autonomy mutation grant before any provider dispatch.
+
+    Peer-scheduler readiness is never mutation authority: the only thing that
+    authorizes a provider window to write is this grant. A grant failure is
+    recorded through the canonical Controller failure path so the Controller
+    writer lease is never orphaned.
+    """
+    grants = _grant_module()
+    attempt_number = int(contract.get("attempt_number") or 1)
+    try:
+        with traced(trace, "task_prepare", "root_autonomy_grant", task_id=task_id):
+            grant = grants.grant_task_mutation(
+                GOV_ROOT,
+                workspace,
+                contract,
+                attempt_number=attempt_number,
+                adapter_id=_peer_identity()[1],
+            )
+    except Exception as exc:
+        reason = f"root autonomy grant refused: {type(exc).__name__}: {exc}"
+        try:
+            pec_cmd(workspace, "fail", task_id, "--reason", reason, "--actor", "make-campaign")
+        except CampaignError as fail_exc:
+            log(f"canonical failure record for {task_id} also failed: {fail_exc}")
+        raise CampaignError(f"{task_id}: {reason}") from exc
+    emit(
+        trace,
+        "TASK_AUTHORITY_GRANTED",
+        "authority",
+        "root_autonomy_grant",
+        task_id=task_id,
+        metadata={
+            "campaign_id": grant.get("campaign_id"),
+            "action_id": grant.get("action_id"),
+            "lease_id": grant.get("lease_id"),
+            "capability_id": grant.get("capability_id"),
+            "agent_id": grant.get("agent_id"),
+        },
+    )
+    return grant
+
+
+def _record_canonical_failure(
+    workspace: Path,
+    unit: dict[str, Any] | None,
+    task_id: str,
+    reason: str,
+) -> None:
+    """One canonical cleanup for a failed child: Controller FAILED + root revoke.
+
+    Failure evidence (worktree, attempt receipts, grant receipts) is preserved;
+    only live authority is retired so the failed child cannot keep mutating.
+    """
+    try:
+        pec_cmd(workspace, "fail", task_id, "--reason", reason[:2000], "--actor", "make-campaign")
+    except CampaignError as exc:
+        log(f"canonical Controller failure record for {task_id} failed: {exc}")
+    grant = (unit or {}).get("grant")
+    if grant:
+        try:
+            _grant_module().revoke_task_grant(grant, reason=f"child failed: {reason[:500]}")
+        except Exception as exc:  # noqa: BLE001 — revocation must not mask the root failure
+            log(f"root autonomy revoke for {task_id} failed: {type(exc).__name__}: {exc}")
+
+
 def _dispatch_peer_batch(
     workspace: Path,
     units: list[dict[str, Any]],
-) -> dict[str, dict[str, Any]]:
-    """Run provider windows concurrently and harvest every child before returning."""
+) -> tuple[dict[str, dict[str, Any]], dict[str, str]]:
+    """Run provider windows concurrently and harvest every child before returning.
+
+    Returns ``(outcomes, failures)`` — one entry per dispatched task either
+    way. Raising here would strand successful siblings mid-flight, so batch
+    reconciliation (finish the passes, canonically fail the failures, then
+    surface the campaign error) belongs to the caller.
+    """
     from concurrent.futures import ThreadPoolExecutor, as_completed  # noqa: PLC0415
 
     if not units:
-        return {}
+        return {}, {}
+    outcomes: dict[str, dict[str, Any]] = {}
+    failures: dict[str, str] = {}
+    dispatchable: list[dict[str, Any]] = []
+    for unit in units:
+        if unit.get("grant"):
+            dispatchable.append(unit)
+        else:
+            # Fail closed: peer-scheduler readiness without a root-Autonomy
+            # grant is not mutation authority.
+            failures[str(unit["task_id"])] = "no root autonomy grant; provider dispatch refused"
+    if not dispatchable:
+        return outcomes, failures
     # Load the pipeline module once on this thread: `_load_script` caches through
     # sys.modules, and a concurrent first import would execute it twice.
     _peer_pipeline()
-    outcomes: dict[str, dict[str, Any]] = {}
-    failures: dict[str, str] = {}
-    with ThreadPoolExecutor(max_workers=len(units), thread_name_prefix="pe-peer") as pool:
+    with ThreadPoolExecutor(max_workers=len(dispatchable), thread_name_prefix="pe-peer") as pool:
         futures = {
             pool.submit(_run_peer_execution, workspace, unit["contract"]): str(unit["task_id"])
-            for unit in units
+            for unit in dispatchable
         }
         for future in as_completed(futures):
             task_id = futures[future]
@@ -2615,9 +2759,7 @@ def _dispatch_peer_batch(
                 outcomes[task_id] = future.result()
             except Exception as exc:  # harvest all child outcomes before failing the batch
                 failures[task_id] = f"{type(exc).__name__}: {exc}"
-    if failures:
-        raise CampaignError("Peer Execution batch failed: " + json.dumps(failures, sort_keys=True))
-    return outcomes
+    return outcomes, failures
 
 
 def _prepare_peer_unit(
@@ -2663,8 +2805,6 @@ def _prepare_peer_unit(
                 rendered = pec_cmd(workspace, "render-contract", task_id)
         else:
             rendered = {"contract": str(contract_path)}
-        if state in {"LEASED", "PREPARED", "CONTRACTED"}:
-            pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
     ensure_workspace_wired(worktree)
     emit(
         trace,
@@ -2676,6 +2816,27 @@ def _prepare_peer_unit(
     )
     contract = json.loads(Path(str(rendered["contract"])).read_text(encoding="utf-8"))
     contract = fill_inferred_validation(Path(str(rendered["contract"])), contract, worktree)
+    grant: dict[str, Any] | None = None
+    if not already_submitted:
+        # Required prepare sequence: contract → claim → worktree → render →
+        # fill/lock validation → root-Autonomy grant → start → dispatch. The
+        # peer scheduler's readiness decision is never mutation authority.
+        grant = _grant_root_authority(workspace, task_id, contract, trace=trace)
+        # Re-read the live state: the inferred-validation relock path re-claims
+        # and restarts the task itself, and starting twice is an illegal edge.
+        live_state = str(
+            next(
+                (
+                    item.get("runtime_state")
+                    for item in pec_status_tasks(workspace)
+                    if str(item["id"]) == task_id
+                ),
+                "",
+            )
+            or ""
+        )
+        if live_state in {"LEASED", "PREPARED", "CONTRACTED"}:
+            pec_cmd(workspace, "start", task_id, "--actor", "make-campaign")
     writable = [str(path) for path in (contract.get("writable_paths") or []) if path]
     if not writable:
         writable = task_output_locations(task)
@@ -2688,6 +2849,7 @@ def _prepare_peer_unit(
         "rel": writable[0],
         "title": str(task.get("title") or task_id),
         "already_submitted": already_submitted,
+        "grant": grant,
     }
 
 
@@ -2989,23 +3151,48 @@ def _default_execute_peer(
         units = [_prepare_peer_unit(workspace, by_id[task_id], trace=trace) for task_id in selected]
         dispatch_units = [unit for unit in units if not unit["already_submitted"]]
         for unit in dispatch_units:
+            grant = unit.get("grant") or {}
             emit(
                 trace,
                 "TASK_WORKER_STARTED",
                 "worker",
                 "peer_execution_started",
                 task_id=unit["task_id"],
+                metadata={
+                    "root_campaign_id": grant.get("campaign_id"),
+                    "root_action_id": grant.get("action_id"),
+                    "root_lease_id": grant.get("lease_id"),
+                    "root_agent_id": grant.get("agent_id"),
+                },
             )
         with timer.stage("task_worker"):
-            outcomes = _dispatch_peer_batch(workspace, dispatch_units)
+            outcomes, failures = _dispatch_peer_batch(workspace, dispatch_units)
+        # Reconcile the whole batch: every successful sibling finishes first,
+        # every failed sibling is recorded canonically (Controller FAILED +
+        # root-Autonomy revoke), and only then does the campaign-level error
+        # surface. A mixed batch must never strand a passing child EXECUTING
+        # or leave a failing child holding live authority.
+        units_by_id = {str(unit["task_id"]): unit for unit in units}
         for unit in units:
-            _finish_peer_unit(
-                workspace,
-                campaign_id,
-                unit,
-                outcomes.get(unit["task_id"]),
-                trace=trace,
-                timer=timer,
+            task_id = str(unit["task_id"])
+            if task_id in failures:
+                continue
+            try:
+                _finish_peer_unit(
+                    workspace,
+                    campaign_id,
+                    unit,
+                    outcomes.get(task_id),
+                    trace=trace,
+                    timer=timer,
+                )
+            except CampaignError as exc:
+                failures[task_id] = str(exc)
+        if failures:
+            for task_id, reason in sorted(failures.items()):
+                _record_canonical_failure(workspace, units_by_id.get(task_id), task_id, reason)
+            raise CampaignError(
+                "Peer Execution batch failed: " + json.dumps(failures, sort_keys=True)
             )
     return {"completed": sorted(completed)}
 

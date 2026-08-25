@@ -85,6 +85,14 @@ class LifecycleTests(unittest.TestCase):
         out = compose_stop.compose_subagent_stop({"assignment_id": "missing", "output": "x"})
         self.assertEqual(out["status"], "QUARANTINED")
 
+    def test_host_stop_without_correlation_is_quarantined_with_evidence(self):
+        out = compose_stop.compose_subagent_stop(
+            {"subagent_id": "sub-orphan", "status": "FAILED", "error": "boom"}
+        )
+        self.assertEqual(out["status"], "QUARANTINED")
+        stop_path = receipts.host_stop_path("sub-orphan")
+        self.assertTrue(stop_path.is_file())
+
     def test_pr_assignment(self):
         body = receipts.write_pr_remediation_assignment(
             {

@@ -11,7 +11,13 @@ must not outlive the Program lease.
 3. Compile and bootstrap the graph in the PEC workspace SQLite store.
 4. Complete synthesis (the already-rendered contract) so the executor is READY.
 5. Issue, acknowledge, and authorize `repository.write_scoped` + `git.commit_local`.
-6. Write `runtime/autonomy-packet.json` and `runtime/autonomy-grant.json`.
+6. Write task/attempt-scoped receipts under `runtime/autonomy-grants/`
+   (`<task>.attempt-<n>.grant.json` + `<task>.attempt-<n>.packet.json`).
+   Workspace-global `autonomy-grant.json`/`autonomy-packet.json` are retired:
+   concurrent tasks must never overwrite each other's authority evidence.
+
+On child failure, `revoke_task_grant()` revokes the root lease and releases its
+resource claims so a failed child never retains live mutation authority.
 
 Push, pull request, and merge stay forbidden on this autonomous path.
 `owns_program_state` remains false.

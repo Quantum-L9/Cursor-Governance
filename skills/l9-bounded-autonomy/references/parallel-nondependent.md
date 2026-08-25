@@ -13,6 +13,11 @@ Execute independent ready work concurrently via Cursor `Task` subagents without 
 5. Conflicting write locks serialize. Distinct `isolation_key` values permit isolated mutation lanes (`best-of-n-runner` or worktree-scoped prompts).
 6. **Launch all ready `work` Tasks in a single assistant message.** Serializing independent ready work is a protocol violation.
 7. Each Task prompt includes: exact objective, allowed files, forbidden files, validation command, return schema.
+   On a governed native-Cursor host it MUST also carry the opaque admission
+   marker (`L9_ADMISSION_TOKEN=<token>`) obtained from the root-Autonomy host
+   bridge **before** the launch — the lifecycle preToolUse hook denies a Task
+   without one. The token is a lookup key for persisted root authority (adapter
+   session, READY action, ACTIVE lease); Task prose itself is never authority.
 8. Return schema (required):
 
 ```yaml

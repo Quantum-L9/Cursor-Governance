@@ -288,6 +288,8 @@ install_session_end_governance_hook() {
     "graphiti-gate-edits.sh:graphiti-gate-edits.sh" \
     "graphiti-gate-shell.sh:graphiti-gate-shell.sh" \
     "graphiti-gate-subagent.sh:graphiti-gate-subagent.sh" \
+    "lifecycle-subagent-start.sh:lifecycle-subagent-start.sh" \
+    "lifecycle-subagent-stop.sh:lifecycle-subagent-stop.sh" \
     "l4-local-execution-gate-shell.sh:l4-local-execution-gate-shell.sh" \
     "pr_gate_failure_shell.sh:pr-gate-failure-shell.sh" \
     "session_end_repo_hygiene.sh:session-end-repo-hygiene.sh" \

@@ -1,11 +1,14 @@
 schema: l9.peer-execution.concurrency-policy.v1
+# Every limit declared here is runtime-enforced; silent no-op policy fields
+# are forbidden and rejected by the runner and validate_autonomy.py.
+#   max_active_dispatches / max_mutating_dispatches -> ConcurrencyBudget lanes
+#   max_mutating_dispatches_per_target_lineage -> target-lineage write locks
+#     (the lock mechanism admits exactly one mutating holder, so 1 is the only
+#      enforceable value)
 limits:
   max_active_dispatches: 4
   max_mutating_dispatches: 2
   max_mutating_dispatches_per_target_lineage: 1
-  max_remote_action_dispatches: 1
-  max_deployment_dispatches: 1
-  max_github_actions_verifications: 4
 profile_weights:
   worker-default:
     dispatch: 1
