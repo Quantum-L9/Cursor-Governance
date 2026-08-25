@@ -34,6 +34,12 @@ def run(
     merged = dict(os.environ)
     for key in _HOST_LEAKS:
         merged.pop(key, None)
+    # The fixtures assume `git init --bare` yields HEAD -> refs/heads/main; on a
+    # host where init.defaultBranch is unset git uses master, the bare remote's
+    # HEAD dangles, and clones land on an unborn branch instead of main.
+    merged["GIT_CONFIG_COUNT"] = "1"
+    merged["GIT_CONFIG_KEY_0"] = "init.defaultBranch"
+    merged["GIT_CONFIG_VALUE_0"] = "main"
     if env:
         merged.update(env)
     return subprocess.run(
