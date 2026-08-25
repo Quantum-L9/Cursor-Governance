@@ -63,7 +63,8 @@ Legacy projection kept in place: [references/plan-workflow.md](references/plan-w
 8. **Emit PLAN_DOCUMENT** — write JSON conforming to the schema.
 9. **Validate** — `python3 scripts/validate_plan_document.py <plan.json>`. FAIL → not ready.
 10. **Project (default)** — `python3 scripts/render_plan_pe_autonomy.py <plan.json> > .cursor/plans/<slug>_<8hex>.plan.md` (or hand-fill [executable-plan.pe-autonomy.template.md](references/executable-plan.pe-autonomy.template.md)). Must retain **Execute via @environment/program-execution + autonomy**.
-11. **Handoff** — execution path is `@environment/program-execution` → Program Lock/Controller → `@autonomy` (`/autonomy` → `l9-bounded-autonomy`) under Program lease. Optional `python3 scripts/emit_gmp_phase0.py <plan.json>` when also chaining GMP. Recommend `l9-ynp` for next skill.
+11. **Kernel receipt** — ready only when `python3 scripts/validate_plan_kernel_receipt.py <bound.plan.md>` PASSes. Hooks enforce this; this step is the pointer.
+12. **Handoff** — execution path is `@environment/program-execution` → Program Lock/Controller → `@autonomy` (`/autonomy` → `l9-bounded-autonomy`) under Program lease. Optional `python3 scripts/emit_gmp_phase0.py <plan.json>` when also chaining GMP. Recommend `l9-ynp` for next skill.
 
 ## Depth Classifier (escalate-only)
 
@@ -82,6 +83,7 @@ Legacy projection kept in place: [references/plan-workflow.md](references/plan-w
 - **[references/plan-workflow-pe-autonomy.md](references/plan-workflow-pe-autonomy.md)** — **default** plan-mode projection + execute pipeline
 - **[`environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`](../../environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md)** — **first-class** Cursor `.plan.md` fill-in SSOT (`MANIFEST.yaml`)
 - [references/executable-plan.pe-autonomy.template.md](references/executable-plan.pe-autonomy.template.md) — symlink projection of the SSOT (do not fork)
+- [scripts/validate_plan_kernel_receipt.py](scripts/validate_plan_kernel_receipt.py) — hashed Improve then V&R receipt on the bound `.plan.md`
 - [scripts/sync_cursor_plan_template.py](scripts/sync_cursor_plan_template.py) — write/check local `.cursor/plans/_TEMPLATE.plan.md` mirror (gitignored)
 - [references/plan-workflow.md](references/plan-workflow.md) — **legacy** GMP-section markdown projection (kept)
 - [references/spec-workflow.md](references/spec-workflow.md) — specification mode
@@ -103,10 +105,11 @@ python3 scripts/validate_pack_structure.py .
 python3 scripts/validate_exemplary_skill.py .
 python3 scripts/route_plan.py --self-test
 python3 scripts/validate_plan_document.py fixtures/plan_pass.json
+python3 scripts/validate_plan_kernel_receipt.py fixtures/plan_kernel_pass.plan.md
 python3 scripts/self_test.py
 ```
 
-A delivered plan is incomplete (fail-closed) unless `validate_plan_document.py` PASSes **and** the PE+autonomy `.plan.md` projection exists with the execute pipeline section. Heading-complete legacy markdown alone is not ready.
+A delivered plan is incomplete (fail-closed) unless `validate_plan_document.py` PASSes, the PE+autonomy `.plan.md` projection exists with the execute pipeline section, **and** `validate_plan_kernel_receipt.py` PASSes on that `.plan.md`. Heading-complete legacy markdown alone is not ready.
 
 ## Failure Handling
 

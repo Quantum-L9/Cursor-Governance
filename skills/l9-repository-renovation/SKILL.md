@@ -1,6 +1,6 @@
 ---
 name: l9-repository-renovation
-description: audit, reconcile, and renovate a real software repository from fragmented manifests, duplicated automation, stale configuration, dead wiring, ignored tests, documentation drift, and ambiguous ownership into a coherent, validated implementation delivered through a governed pull request. use when the user asks to fix a messy repo end to end, align pyproject/package manifests with actual capabilities, collapse competing dependency or test authorities, turn an audit into full production files, modernize repository control planes, or continue remediation until the pr is green. do not use for audit-only commentary, isolated feature development, cosmetic refactors, or repositories the user has not authorized for modification.
+description: Audit, reconcile, and renovate a messy repository into a coherent, validated implementation delivered as a governed PR. Use when manifests, automation, tests, or ownership are fragmented and the user authorized a full renovation. Do not use for audit-only commentary, isolated features, or unauthorized repos.
 disable-model-invocation: true
 ---
 

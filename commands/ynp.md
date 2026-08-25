@@ -46,7 +46,7 @@ Apply multi-modal reasoning:
 | RUNTIME | `/gmp`, `/wire`, `/refactor-sweep` |
 | INFRA | `/gmp` (docker, deploy) |
 | UX | `/gmp`, quick edits |
-| GOVERNANCE | `/rules`, `/governance` |
+| GOVERNANCE | `/governance` |
 
 ### 4. CONFIDENCE SCORING
 

@@ -34,6 +34,8 @@ collect_ignore = [
     "skills/l9-plan/scripts/self_test.py",
     "skills/l9-code-maintenance/scripts/self_test.py",
     "skills/l9-plan-audit/scripts/self_test.py",
+    "skills/l9-repo-sync/scripts/self_test.py",
+    "skills/l9-update-agent-docs/scripts/self_test.py",
     # Local PE/PR worktrees must never enter root discovery (import collisions).
     ".l9",
 ]

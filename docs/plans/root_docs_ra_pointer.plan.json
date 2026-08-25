@@ -1,0 +1,446 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Port Recursive Alignment and Validate & Repair to root docs (pointer, no kernel wrap)",
+  "objective": "Keep the root agent-doc pointer stack honest and make l9-update-agent-docs maintain and repair that stack by citing kernels/Recursive Alignment.md and kernels/Validate & Repair.md, without wrapping or compressing either kernel into the skill.",
+  "success_criteria": [
+    "CLAUDE.md first heading remains authority pointer and the skill write table does not add Always/Never or CI sections to CLAUDE.md",
+    "AGENTS.md gain is append-only (ROOT_DOC_AUTHORITY_MAP_V1 and ROOT_DOC_VR_REPAIR_V1) with no ALLOW-ROOT-DELETION marker",
+    "skills/l9-update-agent-docs contains path citations to kernels/Recursive Alignment.md and kernels/Validate & Repair.md and rg finds no Kernel-bind or artifact_type kernel YAML",
+    "skill write targets are existing AGENTS.md, CLAUDE.md, README.md only",
+    "self_test requires both kernel path citations and honest-validation status names",
+    "make pr-check PASS in the isolated worktree"
+  ],
+  "scope": {
+    "in": [
+      "skills/l9-update-agent-docs/SKILL.md write contract",
+      "skills/l9-update-agent-docs/scripts/self_test.py",
+      "AGENTS.md additive root-doc authority map",
+      "skills/AUTONOMY_MANIFEST.yaml use_when and routing signals",
+      "generated skill-registry companions"
+    ],
+    "out": [
+      "Wrapping or compressing either kernel into any skill",
+      "Editing kernels/Recursive Alignment.md, kernels/Validate & Repair.md, or CANONICAL_LAW.md",
+      "Folding AGENTS.md into a thin pointer",
+      "Creating root ARCHITECTURE.md or INVARIANTS.md",
+      "Claude SessionStart parity work and primary-checkout dirt",
+      "Merge, raw push, workflow edits"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse origin/main after fetch",
+      "pass_criteria": "worktree branched from live origin/main tip (8bc5781d; plan lock 577c482 was stale)",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "test -f kernels/Recursive Alignment.md && test -f skills/l9-update-agent-docs/SKILL.md",
+      "pass_criteria": "both files exist",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "worktree_add_wired.sh -b feat/root-docs-ra-pointer",
+      "pass_criteria": "wired ssot_checkout worktree; primary checkout untouched",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "t0-isolate",
+      "task": "Create wired worktree feat/root-docs-ra-pointer from fetched origin/main",
+      "files": [
+        "ops/scripts/worktree_add_wired.sh"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new worktree path $HOME/.l9/gov-worktrees/root-docs-ra-pointer",
+      "leverage_rank": 1
+    },
+    {
+      "id": "t1-audit",
+      "task": "Read the kernel by path; bind live root files vs skill write targets; record invented-file and competing-SSOT findings",
+      "files": [
+        "kernels/Recursive Alignment.md",
+        "skills/l9-update-agent-docs/SKILL.md",
+        "ops/config/root-file-protection.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "t0-isolate"
+      ],
+      "operation": "Wrap",
+      "anchor": "audit-only; no copy of kernel YAML",
+      "leverage_rank": 2,
+      "shared_root_cause": "skill invented missing root files and dumped doctrine"
+    },
+    {
+      "id": "t2-skill",
+      "task": "Rewrite l9-update-agent-docs as pointer maintainer with named write rules and a path citation",
+      "files": [
+        "skills/l9-update-agent-docs/SKILL.md",
+        "skills/l9-update-agent-docs/scripts/self_test.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "t1-audit"
+      ],
+      "operation": "Replace",
+      "anchor": "skills/l9-update-agent-docs/SKILL.md frontmatter",
+      "leverage_rank": 3,
+      "shared_root_cause": "skill invented missing root files and dumped doctrine"
+    },
+    {
+      "id": "t3-agents-append",
+      "task": "Append-only AGENTS.md root-doc authority map; do not fold",
+      "files": [
+        "AGENTS.md"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": [
+        "t2-skill"
+      ],
+      "operation": "Insert",
+      "anchor": "after PRECOMMIT_REPO_OWNS_RUFF_V1",
+      "leverage_rank": 4
+    },
+    {
+      "id": "t4-companions",
+      "task": "Align AUTONOMY_MANIFEST and regenerate skill-registry companions",
+      "files": [
+        "skills/AUTONOMY_MANIFEST.yaml",
+        "ops/generated/skill-registry.json",
+        "environment/agents/adapters/claude-code/generated/skill-registry.json"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "t2-skill"
+      ],
+      "operation": "Replace",
+      "anchor": "tiers.auto_invoke l9-update-agent-docs use_when",
+      "leverage_rank": 5
+    },
+    {
+      "id": "t5-prove",
+      "task": "Prove no-wrap and pointer invariants; make pr-check PASS",
+      "files": [
+        "skills/l9-update-agent-docs/scripts/self_test.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "t3-agents-append",
+        "t4-companions"
+      ],
+      "operation": "Wrap",
+      "anchor": "self_test.py PASS plus make pr-check",
+      "leverage_rank": 6
+    },
+    {
+      "id": "t6-plan-json",
+      "task": "Emit validated PLAN_DOCUMENT JSON under docs/plans/",
+      "files": [
+        "docs/plans/root_docs_ra_pointer.plan.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "t5-prove"
+      ],
+      "operation": "Create",
+      "anchor": "docs/plans/root_docs_ra_pointer.plan.json",
+      "leverage_rank": 7
+    },
+    {
+      "id": "t7-vr-audit",
+      "task": "Read kernels/Validate & Repair.md without copying; harvest named repair rules",
+      "files": [
+        "kernels/Validate & Repair.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "t6-plan-json"
+      ],
+      "operation": "Wrap",
+      "anchor": "named V&R repair rules",
+      "leverage_rank": 8
+    },
+    {
+      "id": "t8-vr-skill",
+      "task": "Add V&R path citation and named repair rules to l9-update-agent-docs without wrapping the kernel",
+      "files": [
+        "skills/l9-update-agent-docs/SKILL.md"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "t7-vr-audit"
+      ],
+      "operation": "Wrap",
+      "anchor": "Named repair rules (Validate & Repair",
+      "leverage_rank": 9
+    },
+    {
+      "id": "t9-vr-agents",
+      "task": "Append-only AGENTS.md V&R path-citation marker; do not fold",
+      "files": [
+        "AGENTS.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "t8-vr-skill"
+      ],
+      "operation": "Insert",
+      "anchor": "ROOT_DOC_VR_REPAIR_V1",
+      "leverage_rank": 10
+    },
+    {
+      "id": "t10-vr-prove",
+      "task": "Extend self_test for both kernel path citations; make pr-check PASS",
+      "files": [
+        "skills/l9-update-agent-docs/scripts/self_test.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "t9-vr-agents"
+      ],
+      "operation": "Wrap",
+      "anchor": "self_test.py both kernel citations",
+      "leverage_rank": 11
+    },
+    {
+      "id": "t11-vr-plan-json",
+      "task": "Update PLAN_DOCUMENT JSON and PE projection for V&R scope",
+      "files": [
+        "docs/plans/root_docs_ra_pointer.plan.json",
+        "docs/plans/root_docs_ra_pointer.plan.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "t10-vr-prove"
+      ],
+      "operation": "Wrap",
+      "anchor": "docs/plans/root_docs_ra_pointer.plan.json",
+      "leverage_rank": 12
+    }
+  ],
+  "critical_path": [
+    "t0-isolate",
+    "t1-audit",
+    "t2-skill",
+    "t3-agents-append",
+    "t4-companions",
+    "t5-prove",
+    "t6-plan-json",
+    "t7-vr-audit",
+    "t8-vr-skill",
+    "t9-vr-agents",
+    "t10-vr-prove",
+    "t11-vr-plan-json"
+  ],
+  "milestones": [
+    {
+      "id": "M-isolate",
+      "outcome": "wired worktree on live origin/main",
+      "unlocks": "audit and mutation"
+    },
+    {
+      "id": "M-pointer",
+      "outcome": "skill and AGENTS.md encode pointer doctrine without a kernel wrap",
+      "unlocks": "registry companions and proof"
+    },
+    {
+      "id": "M-prove",
+      "outcome": "self_test and make pr-check PASS",
+      "unlocks": "validated PLAN_DOCUMENT"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C-bind",
+      "after": "M-isolate",
+      "evidence_required": "HEAD is origin/main tip; kernel and skill files exist",
+      "no_go_action": "stop and replan on unrelated conflicting tip drift"
+    },
+    {
+      "id": "C-nowrap",
+      "after": "M-pointer",
+      "evidence_required": "self_test.py PASS and pack grep for wrap tokens empty",
+      "no_go_action": "remove wrap tokens; do not add a compressed-kernel reference"
+    },
+    {
+      "id": "C-gate",
+      "after": "M-prove",
+      "evidence_required": "make pr-check PASS without ALLOW-ROOT-DELETION for AGENTS.md",
+      "no_go_action": "fix additive-only or gate failure; do not fold AGENTS.md"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": [
+        "t3-agents-append",
+        "t9-vr-agents"
+      ]
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "preserve existing authority-pointer shape; skill must not enlarge it"
+    },
+    {
+      "surface": "README.md",
+      "action": "n_a",
+      "reason": "index already points at CANONICAL_LAW.md and AGENTS.md; no invented root files"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "constitution stays the pointed-at authority; out of envelope"
+    },
+    {
+      "surface": "skills/l9-update-agent-docs/SKILL.md",
+      "action": "update",
+      "todo_ids": [
+        "t2-skill",
+        "t8-vr-skill"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does a later update-agent-docs run add CI tables to CLAUDE.md?",
+      "Does execute copy either kernel YAML into references because the compiler allows compressed kernels?",
+      "Does the V&R increment become a compressed Kernel bind table instead of a path citation?",
+      "Does the AGENTS.md append get treated as a fold instruction that strips operating sections?"
+    ],
+    "assumed_false_ifs": [
+      "origin/main tip stays a safe KERNEL landing for this branch",
+      "AGENTS.md remains additive_only without a fold authorization",
+      "l9-update-agent-docs remains the root-docs skill rather than being retired"
+    ],
+    "blast_radius": "every Claude and Cursor session that loads CLAUDE.md or AGENTS.md; every later root-doc refresh",
+    "rollback": "revert the feature-branch commits in the worktree; do not rewrite CANONICAL_LAW.md"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "t1-audit",
+      "t2-skill",
+      "t3-agents-append",
+      "t4-companions",
+      "t0-isolate",
+      "t5-prove",
+      "t6-plan-json"
+    ],
+    "shared_causes": [
+      "root-docs skill authored doctrine and invented missing files instead of maintaining pointers"
+    ],
+    "deletions_or_consolidations": [
+      "drop ARCHITECTURE.md and INVARIANTS.md write targets",
+      "drop CLAUDE.md Always/Never and CI-table dump"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "AGENTS.md additive-only gate fails if any existing line is rewritten",
+      "mitigation": "append after PRECOMMIT_REPO_OWNS_RUFF_V1 only"
+    },
+    {
+      "risk": "skill-compiler permits compressed kernels in references/",
+      "mitigation": "write contract and self_test forbid wrap tokens; kernel stays a path citation"
+    },
+    {
+      "risk": "generated skill-registry stays stale and still names invented files",
+      "mitigation": "rebuild via ops/scripts/build_claude_skill_registry.py and mirror to the Claude adapter"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "UNK-001",
+      "question": "Does SKILL.md stay short enough without a separate write-contract reference?",
+      "decision_effect": "a references/ file is only allowed as a write contract, not a kernel wrap",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "UNK-002",
+      "question": "What regenerates ops/generated/skill-registry.json after description change?",
+      "decision_effect": "wrong generator leaves invented-file when_to_use in companions",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V-self-test",
+      "command": ".venv/bin/python skills/l9-update-agent-docs/scripts/self_test.py",
+      "pass_criteria": "prints PASS",
+      "status": "passed"
+    },
+    {
+      "id": "V-pr-check",
+      "command": "make pr-check",
+      "pass_criteria": "PASS in the isolated worktree",
+      "status": "passed"
+    }
+  ],
+  "convergence": {
+    "status": "converged",
+    "remaining_unknown_ids": [],
+    "next_skill": "l9-ynp",
+    "stop_reason": "pointer stack landed; both kernels cited by path; self_test and make pr-check PASS; neither kernel wrapped"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/l9-update-agent-docs/SKILL.md",
+      "skills/l9-update-agent-docs/scripts/self_test.py",
+      "AGENTS.md",
+      "skills/AUTONOMY_MANIFEST.yaml",
+      "ops/generated/skill-registry.json",
+      "environment/agents/adapters/claude-code/generated/skill-registry.json",
+      "docs/plans/root_docs_ra_pointer.plan.json"
+    ],
+    "must_not_modify": [
+      "CANONICAL_LAW.md",
+      "kernels/Recursive Alignment.md",
+      "kernels/Validate & Repair.md",
+      "skills/l9-pr-remediation/",
+      "skills/l9-recursive-optimization/",
+      "pyproject.toml",
+      ".github/workflows/"
+    ],
+    "preserved_contracts": [
+      "AGENTS.md additive_only",
+      "CLAUDE.md authority pointer",
+      "kernel path citation without wrap",
+      "generated formatter blocks owned by environment/ide/policy.json"
+    ],
+    "validation_commands": [
+      ".venv/bin/python skills/l9-update-agent-docs/scripts/self_test.py",
+      "make pr-check"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "target bind",
+    "no kernel wrap",
+    "Validate & Repair path citation",
+    "additive AGENTS.md",
+    "registry companions",
+    "make pr-check"
+  ],
+  "estimate": "one local worktree pass"
+}

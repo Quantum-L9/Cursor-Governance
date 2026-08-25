@@ -1,6 +1,6 @@
 ---
 name: l9-structured-reasoning
-description: Adaptive evidence-based reasoning for difficult planning, plan review, architecture, debugging, multi-document corpus analysis, and multi-option decisions. Use when the user explicitly needs trade-off analysis, root-cause reasoning, architecture choices, a plan stress test, corpus gap/coherence/dependency work, or a decision record grounded in evidence. Route only the proof obligations needed for the task, risk, evidence state, and available capabilities. Do not activate for simple factual answers, direct rewrites, deterministic file operations, trivial reversible fixes, or when a more specific domain Skill already supplies a complete reasoning contract.
+description: Adaptive evidence-based reasoning for hard planning, architecture, debugging, corpus analysis, and multi-option decisions. Use when the user needs trade-offs, root-cause reasoning, or an evidence-grounded decision record. Do not activate for simple facts, direct rewrites, or when a more specific domain Skill already owns the contract.
 ---
 
 # L9 Structured Reasoning

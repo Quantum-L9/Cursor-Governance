@@ -29,3 +29,13 @@ Gate IDs are enforced by `scripts/validate_plan_document.py`.
 | G_LEVERAGE | leverage.ranked_todo_ids empty |
 | G_GMP_LOCK | handoff missing may/must-not-modify when code_in_scope |
 | G_SCHEMA | JSON Schema validation failure |
+| G_PLAN_KERNEL_PASS | `.plan.md` missing `kernel_pass` / improve / validate_repair |
+| G_PLAN_BOUND | `kernel_pass.bound_path` basename does not match the file |
+| G_PLAN_SHA | `validate_repair.body_sha256` unset or not the canonical file sha |
+| G_PLAN_DELTAS | a kernel pass has empty `deltas` |
+| G_PLAN_RAN_AT | `ran_at` missing or unparseable |
+| G_PLAN_ORDER | Improve `ran_at` is not earlier than Validate & Repair |
+| G_PLAN_ETC | `etc.` / ellipsis / `and similar` on an exclusive / owned_paths line |
+| G_PLAN_EITHER_OR | `either` / `drop or keep` / `fold or exempt` without a `blocker` |
+| G_PLAN_SUPERSEDED | a newer same-slug plan is the live target |
+| G_PLAN_EXECUTABLE | `status: executable` while the receipt checker FAILs |

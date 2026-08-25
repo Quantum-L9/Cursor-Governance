@@ -91,7 +91,7 @@ Same bootstrap; agent may skip re-printing full Graphiti prefetch bodies (still 
 
 ### Ready For
 → `/ynp` — next action
-→ `/plan-audit` — re-run plan audit on demand
+→ `/l9-audit-plans` — shelf the plans store (root = current unbuilt; alias `/plan-audit`)
 → `/gmp "{task}"` — phased work
 → `/commands-index` or read `commands/commands-index.md` — full slash library
 ```
@@ -103,6 +103,6 @@ Same bootstrap; agent may skip re-printing full Graphiti prefetch bodies (still 
 - Cursor also runs this bootstrap automatically on `sessionStart` via `~/.cursor/hooks.json`. `/start-session` is the **manual / repair / new-window** entry that uses the identical script.
 - Slash commands activate when governance is wired: `~/.cursor/plugins/local/l9-governance` → SSOT (discovers `commands/`), plus repo `.cursor-commands` symlink. Bootstrap/`make start` ensures that wiring.
 - Resume stack is Graphiti only (`ops/graphiti/MEMORY_BANK_POLICY.md`).
-- Plan audit findings come from `skills/l9-plan-audit` (display-only). Do not invent plans the scanner did not list; do not auto-Build from session context.
+- SessionStart Plan audit findings come from skill `l9-plan-audit` (display-only, no moves). On-demand organize is `/l9-audit-plans`. Do not invent plans the scanner did not list; do not auto-Build from session context.
 
 --- End Command ---

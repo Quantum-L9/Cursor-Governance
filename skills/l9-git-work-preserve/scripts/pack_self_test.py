@@ -114,6 +114,45 @@ def main() -> int:
                 got = r2.get("classification")
                 errors.append(f"main vs main expected prune_candidate got {got}")
 
+        extra = Path(tmp) / "wts"
+        extra.mkdir()
+        wt = extra / "unique"
+        _git(repo, "worktree", "add", str(wt), "main")
+        (wt / "WIP").mkdir()
+        (wt / "WIP" / "note.md").write_text("wip leftover\n", encoding="utf-8")
+        skill = wt / ".claude" / "skills" / "l9-fake"
+        skill.mkdir(parents=True)
+        (skill / "SKILL.md").write_text("wiring\n", encoding="utf-8")
+        (wt / "feat.py").write_text("print(1)\n", encoding="utf-8")
+        harvest = run(
+            [
+                sys.executable,
+                str(SCRIPTS / "harvest_worktree_dirt.py"),
+                "--repo",
+                str(repo),
+                "--baseline",
+                "main",
+                "--extra-root",
+                str(extra),
+                "--include-wip",
+                "--json",
+            ]
+        )
+        if harvest.returncode != 0:
+            errors.append(f"harvest failed: {harvest.stderr or harvest.stdout}")
+        else:
+            plan = json.loads(harvest.stdout)
+            by_class = {row["class"] for row in plan.get("harvestable", [])}
+            if "unique_wip" not in by_class:
+                errors.append("expected unique_wip in harvestable")
+            if "unique_product" not in by_class:
+                errors.append("expected unique_product in harvestable")
+            skipped_classes = {row["class"] for row in plan.get("skipped", [])}
+            if "wiring_noise" not in skipped_classes:
+                errors.append("expected wiring_noise skipped")
+            if plan.get("schema") != "l9.git_work_preserve.harvest/v1":
+                errors.append("expected harvest schema")
+
     if errors:
         for e in errors:
             print(f"FAIL: {e}", file=sys.stderr)

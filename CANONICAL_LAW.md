@@ -221,7 +221,10 @@ When `L9_AUTONOMY_ENABLED=true` and `L9_GOVERNANCE_SURFACE` is an LLM adapter
 **Authority order (adapters):** CANONICAL_LAW (this section + Profile) → ADR-0001 →
 settings allow/deny + merge_gate → AGENTS.md → skills → **agent-invented contracts (lowest)**.
 
-Cursor remains ask-first except campaign packet / `make pr` remediation.
+<!-- CURSOR_AUTO_LOCAL_COMMIT_V1 -->
+Cursor **must** scoped-commit authored work without asking (pathspecs;
+rule 49; `99-no-auto-commit`). Ask-first applies to **push / PR open**
+only. Operator 2026-08-22.
 Deploy settings via `ops/scripts/reconcile_claude_settings.py` (`make claude-settings`).
 Do not fork Profile prose into SessionStart/README/ADR — cite the Profile.
 
