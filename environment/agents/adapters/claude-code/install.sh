@@ -316,18 +316,22 @@ fi
 # the MCP handshake and maps search_memory/write_governed to
 # graphiti.query/graphiti.write_governed.
 stage "mcp-front-door"
-MCP_TEMPLATE="$GOV_DIR/environment/agents/adapters/claude-code/mcp.template.json"
-if [ -f "$WORKSPACE/.mcp.json" ]; then
-  say ".mcp.json already present — left as the repo committed it"
-elif [ "$CHECK" = "1" ]; then
-  downgrade STATUS_MCP DEGRADED ".mcp.json missing (check mode: not writing)"
-elif [ -f "$MCP_TEMPLATE" ]; then
-  cp "$MCP_TEMPLATE" "$WORKSPACE/.mcp.json" && say "installed .mcp.json from mcp.template.json" \
-    || downgrade STATUS_MCP DEGRADED "could not install .mcp.json"
+# .mcp.json is a PROJECTION of mcp.template.json (the single MCP authority),
+# already rendered in the claude-projection stage above. The old `cp only if
+# absent` left a committed, diverged .mcp.json untouched forever — the exact
+# parallel-authority hazard the projection domain removes. Here we only classify
+# the result: confirm the render matches the template, never re-copy.
+if command -v domain_status >/dev/null 2>&1; then
+  MCP_STATUS="$(domain_status mcp)"
 else
-  warn "missing mcp.template.json — memory front door not wired"
-  downgrade STATUS_MCP DEGRADED "mcp.template.json missing"
+  MCP_STATUS=""
 fi
+case "$MCP_STATUS" in
+  ok) say ".mcp.json is a current projection of mcp.template.json" ;;
+  "") downgrade STATUS_MCP DEGRADED "mcp projection did not run (engine unavailable)" ;;
+  drift) downgrade STATUS_MCP DEGRADED ".mcp.json drifted from mcp.template.json (check mode)" ;;
+  *) downgrade STATUS_MCP DEGRADED "mcp projection: $MCP_STATUS" ;;
+esac
 
 # Capability plane + memory posture for the receipt.
 #
