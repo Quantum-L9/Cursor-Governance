@@ -23,9 +23,9 @@ TASK_STATES = {
 ALLOWED_TRANSITIONS = {
     "BLOCKED": {"ELIGIBLE", "CANCELLED", "STALE"},
     "ELIGIBLE": {"BLOCKED", "LEASED", "COMPLETED", "CANCELLED", "STALE"},
-    "LEASED": {"PREPARED", "STALE", "CANCELLED"},
-    "PREPARED": {"CONTRACTED", "STALE", "CANCELLED"},
-    "CONTRACTED": {"EXECUTING", "SUBMITTED", "STALE", "CANCELLED"},
+    "LEASED": {"PREPARED", "STALE", "FAILED", "CANCELLED"},
+    "PREPARED": {"CONTRACTED", "STALE", "FAILED", "CANCELLED"},
+    "CONTRACTED": {"EXECUTING", "SUBMITTED", "STALE", "FAILED", "CANCELLED"},
     "EXECUTING": {"SUBMITTED", "STALE", "FAILED", "CANCELLED"},
     "SUBMITTED": {"VERIFYING", "STALE", "FAILED"},
     "VERIFYING": {"PASSED_LOCAL", "FAILED", "STALE"},
@@ -135,8 +135,9 @@ class StateDB:
               expires_at TEXT NOT NULL,
               active INTEGER NOT NULL
             );
-            CREATE UNIQUE INDEX IF NOT EXISTS active_repo_lease
-              ON leases(repository_id) WHERE active = 1;
+            DROP INDEX IF EXISTS active_repo_lease;
+            CREATE UNIQUE INDEX IF NOT EXISTS active_task_lease
+              ON leases(task_id) WHERE active = 1;
             CREATE TABLE IF NOT EXISTS attempts (
               id INTEGER PRIMARY KEY AUTOINCREMENT,
               task_id TEXT NOT NULL,

@@ -39,9 +39,49 @@ REQUIRED_FILES = (
 UNFINISHED_MARKERS = ("TODO", "FIXME", "NotImplementedError", "raise NotImplemented")
 
 
+# Concurrency-policy truthfulness: every declared limit must be runtime
+# enforced (ConcurrencyBudget lanes, or exclusive target-lineage write locks),
+# or the policy is rejected here — silent no-op fields are forbidden.
+ENFORCED_CONCURRENCY_LIMITS = frozenset(
+    {
+        "max_active_dispatches",
+        "max_mutating_dispatches",
+        "max_mutating_dispatches_per_target_lineage",
+    }
+)
+
+
+def _concurrency_policy_failures() -> list[str]:
+    policy_path = HERE.parents[1] / "registry" / "EXECUTION_CONCURRENCY_POLICY.yaml"
+    if not policy_path.is_file():
+        return [f"missing concurrency policy: {policy_path}"]
+    try:
+        import yaml
+
+        policy = yaml.safe_load(policy_path.read_text(encoding="utf-8")) or {}
+    except Exception as exc:  # noqa: BLE001 — a broken registry file is one finding
+        return [f"unreadable concurrency policy {policy_path}: {exc}"]
+    limits = dict(policy.get("limits") or {})
+    failures: list[str] = []
+    unsupported = sorted(set(limits) - ENFORCED_CONCURRENCY_LIMITS)
+    if unsupported:
+        failures.append(
+            "concurrency policy declares limits nothing enforces "
+            f"(silent no-op fields are forbidden): {unsupported}"
+        )
+    lineage = limits.get("max_mutating_dispatches_per_target_lineage")
+    if lineage is not None and int(lineage) != 1:
+        failures.append(
+            "max_mutating_dispatches_per_target_lineage is enforced by exclusive "
+            f"target-lineage write locks; only 1 is enforceable, got {lineage}"
+        )
+    return failures
+
+
 def main() -> int:
     failures: list[str] = []
     print("=== Peer Execution autonomy runtime validation ===")
+    failures.extend(_concurrency_policy_failures())
     for rel in REQUIRED_FILES:
         path = HERE / rel
         if not path.is_file():

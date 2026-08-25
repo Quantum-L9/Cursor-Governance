@@ -11,6 +11,8 @@ from typing import Any
 from environment.agents.lifecycle.schemas import (
     ASSIGNMENT_SCHEMA,
     DISPATCH_SCHEMA,
+    HOST_CORRELATION_SCHEMA,
+    HOST_RAW_STOP_SCHEMA,
     PR_ASSIGNMENT_SCHEMA,
     RETURN_SCHEMA,
 )
@@ -91,6 +93,44 @@ def return_path(assignment_id: str) -> Path:
 
 def raw_result_path(assignment_id: str) -> Path:
     return agent_runtime_root() / "results" / "raw" / f"{assignment_id}.json"
+
+
+def host_correlation_path(subagent_id: str) -> Path:
+    return subagent_receipt_root() / "host-correlation" / f"{subagent_id}.json"
+
+
+def host_stop_path(subagent_id: str) -> Path:
+    return subagent_receipt_root() / "host-stop" / f"{subagent_id}.json"
+
+
+def write_host_correlation(fields: dict[str, Any]) -> dict[str, Any]:
+    subagent_id = str(fields.get("subagent_id") or "").strip()
+    assignment_id = str(fields.get("assignment_id") or "").strip()
+    if not subagent_id or not assignment_id:
+        raise ValueError("host correlation requires subagent_id and assignment_id")
+    body = {
+        "schema": HOST_CORRELATION_SCHEMA,
+        "observed_at": _now(),
+        "status": "CORRELATED",
+        **fields,
+    }
+    return write_json(host_correlation_path(subagent_id), body)
+
+
+def load_host_correlation(subagent_id: str) -> dict[str, Any] | None:
+    path = host_correlation_path(subagent_id)
+    return json.loads(path.read_text(encoding="utf-8")) if path.is_file() else None
+
+
+def write_host_stop(subagent_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    body = {
+        "schema": HOST_RAW_STOP_SCHEMA,
+        "observed_at": _now(),
+        "status": str(payload.get("status") or "UNKNOWN"),
+        "subagent_id": subagent_id,
+        "payload": payload,
+    }
+    return write_json(host_stop_path(subagent_id), body)
 
 
 def write_raw_result(assignment_id: str, result: Any) -> dict[str, Any]:

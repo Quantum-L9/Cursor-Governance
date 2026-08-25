@@ -10,6 +10,7 @@ Push, pull request, and merge stay forbidden.
 from __future__ import annotations
 
 import json
+import re
 import sys
 import uuid
 from collections.abc import Mapping
@@ -143,32 +144,92 @@ def grant_task_mutation(
         if not decision.allowed:
             raise AutonomyGrantError(f"{decision.code}: {decision.message} capability={capability}")
         authorized.append(capability)
-    runtime_dir = pec / "runtime"
-    runtime_dir.mkdir(parents=True, exist_ok=True)
-    packet_path = runtime_dir / "autonomy-packet.json"
-    grant_path = runtime_dir / "autonomy-grant.json"
+    # Receipts are task/attempt-scoped: one mutable workspace-global
+    # autonomy-grant.json pair would let two concurrent PE tasks overwrite
+    # each other's authority evidence.
+    task_id = str(contract.get("task_id") or contract.get("id") or "task")
+    packet_path = grant_receipt_path(pec, task_id, attempt_number, kind="packet")
+    grant_path = grant_receipt_path(pec, task_id, attempt_number, kind="grant")
+    packet_path.parent.mkdir(parents=True, exist_ok=True)
     packet_path.write_text(
         json.dumps(campaign_payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
     grant = {
-        "schema": "l9.program-execution.autonomy-grant.v1",
+        "schema": "l9.program-execution.autonomy-grant.v2",
         "provider": "root-autonomy-control-plane",
         "owns_program_state": False,
+        "task_id": task_id,
+        "attempt_number": int(attempt_number),
         "campaign_id": campaign.campaign_id,
         "graph_id": graph_payload["graph_id"],
         "action_id": work_action,
         "agent_id": work_agent,
         "lease_id": lease["lease_id"],
         "capability_id": lease["capability_id"],
+        "base_sha": str(campaign.base_state["commit_sha"]),
         "mutation": bool(mapped["mutation"]),
         "authorized": authorized,
         "forbidden": list(campaign.scope.get("forbidden_operations") or []),
         "packet": str(packet_path),
+        "runtime_database": str(database),
         "program_lease_id": contract.get("lease_id"),
     }
     grant_path.write_text(json.dumps(grant, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return grant
+
+
+def grant_receipt_path(
+    workspace: str | Path,
+    task_id: str,
+    attempt_number: int,
+    *,
+    kind: str = "grant",
+) -> Path:
+    """Task/attempt-scoped receipt location; never a workspace-global file."""
+    if kind not in {"grant", "packet"}:
+        msg = f"unknown grant receipt kind: {kind}"
+        raise ValueError(msg)
+    safe_task = _slugify_receipt(task_id)
+    return (
+        Path(workspace).resolve()
+        / "runtime"
+        / "autonomy-grants"
+        / f"{safe_task}.attempt-{int(attempt_number):03d}.{kind}.json"
+    )
+
+
+def _slugify_receipt(value: str) -> str:
+    cleaned = re.sub(r"[^a-zA-Z0-9._-]+", "-", value).strip("-")
+    return cleaned or "task"
+
+
+def revoke_task_grant(
+    grant: Mapping[str, Any],
+    *,
+    reason: str,
+    actor: str = "program-controller",
+) -> dict[str, Any]:
+    """Revoke a previously issued root-Autonomy lease for a failed task.
+
+    Revocation releases every resource claim the lease held; a failed child
+    must never retain live mutation authority. Idempotent: a lease that is
+    already terminal stays terminal.
+    """
+    database = Path(str(grant.get("runtime_database") or ""))
+    lease_id = str(grant.get("lease_id") or "")
+    if not lease_id or not database.is_file():
+        return {
+            "revoked": False,
+            "reason": "grant carries no live runtime binding",
+            "lease_id": lease_id or None,
+        }
+    runtime = AutonomyRuntime.from_repository(
+        repository_root=Path.cwd(),
+        database_path=database,
+    )
+    runtime.leases.revoke(lease_id=lease_id, reason=reason, actor=actor)
+    return {"revoked": True, "lease_id": lease_id, "reason": reason}
 
 
 def _first_writable(contract: Mapping[str, Any]) -> str | None:
