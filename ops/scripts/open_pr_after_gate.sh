@@ -224,17 +224,27 @@ fi
 # The head-branch lookup above can surface a PR that already landed: once a
 # PR is MERGED (or CLOSED) it can never carry new branch commits, so treating
 # it as "already open" strands the work on the branch. Re-check the resolved
-# PR state over REST (this gateway may refuse GraphQL) and fall through to PR
-# creation when it is not OPEN.
+# PR state over REST (this gateway may refuse GraphQL). A merged PR means the
+# branch name is spent (AGENTS.md §17: a branch name is never reused after its
+# PR merges — reused_after_merge), so fail with move-to-a-new-branch
+# instructions; only a closed-but-unmerged PR falls through to fresh creation.
 if [[ -n "$pr_url" && -n "$pr_number" && -n "$owner" && -n "$name" ]]; then
   # REST returns the state lowercase ("open"/"closed") — match case-insensitively
-  # so an actually-open PR is kept and only a MERGED/CLOSED one is cleared.
-  pr_state="$(gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq '.state' 2>/dev/null || true)"
+  # so an actually-open PR is kept. merged_at distinguishes merged from closed.
+  pr_state_row="$(gh api "repos/${owner}/${name}/pulls/${pr_number}" \
+    --jq '[.state, (.merged_at // "")] | @tsv' 2>/dev/null || true)"
+  pr_state="${pr_state_row%%$'\t'*}"
+  pr_merged_at="${pr_state_row#*$'\t'}"
   case "$pr_state" in
     open | OPEN) ;; # genuinely open — keep it
     *)
-      if [[ -n "$pr_state" ]]; then
-        echo "NOTE: PR #${pr_number} for this branch is ${pr_state} (not open) — opening a new PR"
+      if [[ -n "$pr_state" && -n "$pr_merged_at" ]]; then
+        echo "FAIL: PR #${pr_number} for branch ${branch} is MERGED — a branch name is never reused after its PR merges (reused_after_merge)." >&2
+        echo "Move the new commits to a fresh branch and publish from there:" >&2
+        echo "  git checkout -b ${branch}-followup && PR_REMEDIATE=0 make pr" >&2
+        exit 1
+      elif [[ -n "$pr_state" ]]; then
+        echo "NOTE: PR #${pr_number} for this branch is ${pr_state} (closed, not merged) — opening a new PR"
         pr_url=""
         pr_number=""
       fi
