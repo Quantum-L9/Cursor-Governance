@@ -28,9 +28,6 @@ commands:
   aliases:
   - /analyze+evaluate
   - /analyze-evaluate
-- slash: /audit-component
-  file: commands/audit-component.md
-  enabled: true
 - slash: /autonomy
   file: commands/autonomy.md
   enabled: true
@@ -57,6 +54,9 @@ commands:
 - slash: /dag-authoring
   file: commands/dag-authoring.md
   enabled: true
+- slash: /docs
+  file: commands/docs.md
+  enabled: true
 - slash: /e2e-blockers
   file: commands/e2e-blockers.md
   enabled: true
@@ -77,6 +77,9 @@ commands:
   enabled: true
   aliases:
   - /extract+align
+- slash: /ff
+  file: commands/ff.md
+  enabled: true
 - slash: /forge
   file: commands/forge.md
   enabled: true
@@ -85,9 +88,6 @@ commands:
   enabled: true
 - slash: /gap-analysis-new
   file: commands/gap-analysis-new.md
-  enabled: true
-- slash: /git-work-preserve
-  file: commands/git-work-preserve.md
   enabled: true
 - slash: /gmp
   file: commands/gmp.md
@@ -101,9 +101,6 @@ commands:
 - slash: /harvest
   file: commands/harvest.md
   enabled: true
-- slash: /harvest2
-  file: commands/harvest2.md
-  enabled: true
 - slash: /index
   file: commands/index.md
   enabled: true
@@ -113,6 +110,11 @@ commands:
 - slash: /issues
   file: commands/issues.md
   enabled: true
+- slash: /l9-audit-plans
+  file: commands/l9-audit-plans.md
+  enabled: true
+  aliases:
+  - /plan-audit
 - slash: /l9-plan
   file: commands/l9-plan.md
   enabled: true
@@ -125,8 +127,8 @@ commands:
 - slash: /lcto
   file: commands/lcto.md
   enabled: true
-- slash: /lint-fix
-  file: commands/lint-fix.md
+- slash: /lint
+  file: commands/lint.md
   enabled: true
 - slash: /mem
   file: commands/mem.md
@@ -140,12 +142,6 @@ commands:
 - slash: /pr
   file: commands/pr.md
   enabled: true
-- slash: /probe
-  file: commands/probe.md
-  enabled: true
-- slash: /readme
-  file: commands/readme-dag.md
-  enabled: true
 - slash: /reasoning
   file: commands/reasoning.md
   enabled: true
@@ -154,9 +150,6 @@ commands:
   enabled: true
 - slash: /refactor-sweep
   file: commands/refactor-sweep.md
-  enabled: true
-- slash: /rules
-  file: commands/rules.md
   enabled: true
 - slash: /spec
   file: commands/spec.md
@@ -169,12 +162,6 @@ commands:
   enabled: true
 - slash: /use-harvest
   file: commands/use-harvest.md
-  enabled: true
-- slash: /verify-component
-  file: commands/verify-component.md
-  enabled: true
-- slash: /violation
-  file: commands/violation.md
   enabled: true
 - slash: /wire
   file: commands/wire.md

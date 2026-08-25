@@ -34,7 +34,7 @@ tiers:
   - skill: l9-wire-skill-into-repo
     use_when: registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads
   - skill: l9-update-agent-docs
-    use_when: refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes
+    use_when: refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing
   - skill: l9-code-graph-rag-mcp
     use_when: code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed
   - skill: l9-api-smoke-testing
@@ -60,7 +60,7 @@ tiers:
   - skill: l9-claude-code-deepseek
     use_when: wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing
   - skill: l9-plan-audit
-    use_when: session context shows Plan audit, auditing unbuilt or stale Cursor plans under .cursor/plans, or /plan-audit is invoked
+    use_when: session context shows Plan audit or the 7-day live-queue scanner; not /l9-audit-plans (store shelf organize)
   explicit_only:
   - skill: l9-forge
     reason: zero-pause batch execution
@@ -118,8 +118,10 @@ tiers:
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   - skill: l9-plan-simple
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
+  - skill: l9-repo-sync
+    reason: in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach
   do_not_migrate_to_skills:
-  - item: commands/violation.md
+  - item: commands/_archived/violation.md
     reason: violation handling belongs in always-applied rules or hooks, not optional skill context
   - item: commands/mem.md
     reason: memory plumbing belongs in MCP/client workflow documentation, not a model-selected skill
@@ -378,6 +380,10 @@ claude_routing:
     - update claude.md
     - update invariants.md
     - update architecture.md
+    - create claude.md
+    - create invariants.md
+    - root doc pointer
+    - pointer stack
     supporting: []
   - id: context7_docs
     primary: l9-context7-docs
@@ -479,8 +485,8 @@ claude_routing:
     - unbuilt plans
     - stale plans
     - audit .cursor/plans
-    - /plan-audit
     - which plans are unbuilt
+    - sessionStart plan audit
     supporting:
     - l9-plan
     - l9-ynp
@@ -693,6 +699,33 @@ claude_routing:
     supporting:
     - l9-structured-reasoning
     note: 'explicit_only + hint_allowed — recommendation is routing evidence only (source: explicit_hint); requires /autonomy or explicit user campaign authority (campaign authorization packet). Never mutate from a hint alone.
+
+      '
+  - id: repo_sync_ff
+    primary: l9-repo-sync
+    signal_weight: 8
+    hint_allowed: true
+    required_any:
+    - /ff
+    - make ff
+    - fast-forward
+    - fast forward
+    - sync the ssot
+    - sync this clone
+    positive_signals:
+    - /ff
+    - make ff
+    - fast-forward the ssot
+    - catch up origin/main
+    - in-place ff
+    - sync cursor-governance
+    negative_signals:
+    - activate_fresh
+    - swap the ssot
+    - hard reset
+    supporting:
+    - l9-git-work-preserve
+    note: 'explicit_only + hint_allowed — Read/attach only. Mutation is /ff or make ff via scripts/ff.sh. Never activate_fresh. Never delete unique work.
 
       '
 slash_commands:

@@ -358,26 +358,19 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
     fi
     echo "OK: llm-rules projection matches rules/*.mdc"
   fi
-  python3 "$GOV_ROOT/ops/scripts/reconcile_llm_skill_adapters.py" \
-    --root "$WS" --workspace "$WS" --quiet || true
-  if ! python3 "$GOV_ROOT/ops/scripts/reconcile_llm_skill_adapters.py" \
-    --root "$WS" --workspace "$WS" --check --quiet; then
-    echo "FAIL: LLM skill adapter reconcile --check drifted — re-run sync_generated_artifacts / reconcile_llm_skill_adapters"
-    python3 "$GOV_ROOT/ops/scripts/reconcile_llm_skill_adapters.py" \
-      --root "$WS" --workspace "$WS" --check
+  # One projection entrypoint: apply skills/commands/rules, then verify clean.
+  python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
+    --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
+    --quiet --no-receipt || true
+  if ! python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
+    --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
+    --check --quiet --no-receipt; then
+    echo "FAIL: Claude projection --check drifted — re-run: python3 ops/scripts/claude_projection.py --root \"$WS\" --workspace \"$WS\""
+    python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
+      --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp --check --summary --no-receipt
     exit 1
   fi
-  echo "OK: LLM skill adapters reconciled to skills/ SSOT"
-  if [[ -f "$GOV_ROOT/ops/scripts/reconcile_llm_rule_adapters.py" ]]; then
-    if ! python3 "$GOV_ROOT/ops/scripts/reconcile_llm_rule_adapters.py" \
-      --root "$WS" --workspace "$WS" --check --quiet; then
-      echo "FAIL: LLM rule adapter reconcile --check drifted — re-run reconcile_llm_rule_adapters"
-      python3 "$GOV_ROOT/ops/scripts/reconcile_llm_rule_adapters.py" \
-        --root "$WS" --workspace "$WS" --check
-      exit 1
-    fi
-    echo "OK: LLM rule adapters reconciled to environment/generated/llm-rules/"
-  fi
+  echo "OK: Claude projection (skills, commands, rules) reconciled to SSOT"
   # check_governance_wiring.sh asserts Cursor DESKTOP activation (plugin symlink,
   # .cursor-commands, .cursor/plans, ~/.cursor/hooks.json). The enclosing guard uses
   # "~/.cursor exists and is writable" as a proxy for "this is a Cursor machine", but

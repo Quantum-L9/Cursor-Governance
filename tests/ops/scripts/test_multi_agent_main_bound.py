@@ -34,9 +34,30 @@ def git_in(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def run_gate(script: Path, repo: Path, base: str, **env: str) -> subprocess.CompletedProcess[str]:
+_SESSION_AUTH_LEAKS = (
+    "L9_TASK_BASE_AUTHORIZED",
+    "L9_WORKTREE_ADD_AUTHORIZED",
+    "L9_GIT_SWITCH_AUTHORIZED",
+    "L9_GIT_BROAD_ADD_AUTHORIZED",
+    "L9_GIT_DESTRUCTIVE_AUTHORIZED",
+)
+
+
+def _env_without_session_auth(**overrides: str) -> dict[str, str]:
+    """Copy the process env without inherited task-base / git-auth flags."""
     environ = {**os.environ, "PATH": os.environ.get("PATH", "")}
-    environ.update(env)
+    for key in _SESSION_AUTH_LEAKS:
+        environ.pop(key, None)
+    for key, value in overrides.items():
+        if value == "":
+            environ.pop(key, None)
+        else:
+            environ[key] = value
+    return environ
+
+
+def run_gate(script: Path, repo: Path, base: str, **env: str) -> subprocess.CompletedProcess[str]:
+    environ = _env_without_session_auth(**env)
     return subprocess.run(
         [sys.executable, str(script), "--workspace", str(repo), "--base", base],
         capture_output=True,
@@ -427,6 +448,7 @@ def test_task_start_refuses_an_existing_worktree_path(upstream: Path, tmp_path: 
         capture_output=True,
         text=True,
         check=False,
+        env=_env_without_session_auth(),
     )
     assert result.returncode != 0
     assert "already exists" in (result.stdout + result.stderr)
@@ -442,6 +464,7 @@ def test_task_start_requires_identity_and_main_ancestry(upstream: Path, tmp_path
         capture_output=True,
         text=True,
         check=False,
+        env=_env_without_session_auth(),
     )
     assert missing.returncode != 0
     assert "--task-id is required" in (missing.stdout + missing.stderr)
@@ -461,7 +484,7 @@ def test_task_start_requires_identity_and_main_ancestry(upstream: Path, tmp_path
         capture_output=True,
         text=True,
         check=False,
-        env={**os.environ, "L9_TASK_BASE_AUTHORIZED": ""},
+        env=_env_without_session_auth(L9_TASK_BASE_AUTHORIZED=""),
     )
     assert unauthorized.returncode != 0
     # The refusal must be about ancestry authorization, not an incidental fetch
@@ -485,7 +508,7 @@ def test_task_start_requires_identity_and_main_ancestry(upstream: Path, tmp_path
         capture_output=True,
         text=True,
         check=False,
-        env={**os.environ, "L9_TASK_BASE_AUTHORIZED": "stacked campaign"},
+        env=_env_without_session_auth(L9_TASK_BASE_AUTHORIZED="stacked campaign"),
     )
     combined = authorized.stdout + authorized.stderr
     assert "non-main ancestry authorized" in combined
@@ -533,7 +556,7 @@ def test_task_start_empty_pr_stack_stays_on_origin_main(upstream: Path, tmp_path
         capture_output=True,
         text=True,
         check=False,
-        env={**os.environ, "PR_STACK": "", "L9_STACK_TIP_RESOLVER": str(stub)},
+        env=_env_without_session_auth(PR_STACK="", L9_STACK_TIP_RESOLVER=str(stub)),
     )
     combined = result.stdout + result.stderr
     assert result.returncode != 0
@@ -552,7 +575,7 @@ def test_task_start_pr_stack_auto_uses_resolver_tip(upstream: Path, tmp_path: Pa
         capture_output=True,
         text=True,
         check=False,
-        env={**os.environ, "PR_STACK": "auto", "L9_STACK_TIP_RESOLVER": str(stub)},
+        env=_env_without_session_auth(PR_STACK="auto", L9_STACK_TIP_RESOLVER=str(stub)),
     )
     combined = result.stdout + result.stderr
     assert result.returncode != 0
@@ -579,7 +602,7 @@ def test_task_start_pr_stack_auto_siblings_exit_closed(upstream: Path, tmp_path:
         capture_output=True,
         text=True,
         check=False,
-        env={**os.environ, "PR_STACK": "auto", "L9_STACK_TIP_RESOLVER": str(stub)},
+        env=_env_without_session_auth(PR_STACK="auto", L9_STACK_TIP_RESOLVER=str(stub)),
     )
     combined = result.stdout + result.stderr
     assert result.returncode != 0

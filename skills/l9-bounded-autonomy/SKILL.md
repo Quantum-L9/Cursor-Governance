@@ -56,7 +56,7 @@ Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent
 - Merge without `/l9-pr-remediation` (or `L9_MERGE_AUTHORIZED`); force-push, admin merge, weaken tests for green, commit secrets, expand scope without approval.
 - Mid-execution `git push` / `gh pr create` / `make pr` before L4 `release_authorized`.
 - Main and poll both pushing the same PR branch.
-- Silent waiver of commit/push outside the packet.
+- Silent waiver of **push/merge** outside the packet. Local commit is standing.
 - Rewrite `environment/program-execution/peer_execution/autonomy/*.py` or settings allow/deny as part of this skill’s job.
 
 ## Authority Order

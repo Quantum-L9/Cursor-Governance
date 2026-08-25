@@ -1,0 +1,4 @@
+interface:
+  display_name: "L9 Repo Sync (in-place ff)"
+  short_description: "Fast-forward a named Cursor-Governance clone in place. Park unique work. Never swap. Never clobber .venv."
+  brand_color: "#1F4E79"

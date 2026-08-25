@@ -21,6 +21,7 @@ INVOKED = [
     "validate_exemplary_skill.py",
     "route_plan.py",
     "validate_plan_document.py",
+    "validate_plan_kernel_receipt.py",
     "self_test.py",
 ]
 
@@ -55,12 +56,32 @@ def main() -> int:
         [sys.executable, "scripts/validate_exemplary_skill.py", "."],
         [sys.executable, "scripts/route_plan.py", "--self-test"],
         [sys.executable, "scripts/validate_plan_document.py", "fixtures/plan_pass.json"],
+        [
+            sys.executable,
+            "scripts/validate_plan_kernel_receipt.py",
+            "fixtures/plan_kernel_pass.plan.md",
+        ],
     ]
     for cmd in checks:
         proc = run(cmd)
         if proc.returncode != 0:
             errors.append(
                 f"command failed ({proc.returncode}): {' '.join(cmd)}\n{proc.stdout}\n{proc.stderr}"
+            )
+
+    kernel_fail_cases = [
+        ("fixtures/plan_kernel_fail_etc.plan.md", "G_PLAN_ETC"),
+        ("fixtures/plan_kernel_fail_either.plan.md", "G_PLAN_EITHER_OR"),
+        ("fixtures/plan_kernel_fail_empty_deltas.plan.md", "G_PLAN_DELTAS"),
+        ("fixtures/plan_kernel_fail_sha.plan.md", "G_PLAN_SHA"),
+    ]
+    for rel, needle in kernel_fail_cases:
+        proc = run([sys.executable, "scripts/validate_plan_kernel_receipt.py", rel])
+        if proc.returncode == 0:
+            errors.append(f"expected FAIL for {rel}")
+        elif needle not in proc.stdout and needle not in proc.stderr:
+            errors.append(
+                f"expected {needle} in failure output for {rel}\n{proc.stdout}\n{proc.stderr}"
             )
 
     # Fail fixtures must fail

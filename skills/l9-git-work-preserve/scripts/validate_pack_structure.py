@@ -15,11 +15,13 @@ REQUIRED = [
     "references/audit-workflow.md",
     "references/value-diagnosis.md",
     "references/extract-workflow.md",
+    "references/harvest-workflow.md",
     "references/prune-policy.md",
     "references/stash-deep-analysis.md",
     "references/output-receipt.schema.yaml",
     "scripts/inventory_git_work.py",
     "scripts/diagnose_ref_value.py",
+    "scripts/harvest_worktree_dirt.py",
     "scripts/pack_self_test.py",
     "scripts/validate_pack_structure.py",
 ]
@@ -32,7 +34,12 @@ def main() -> int:
             print(f"FAIL: missing {m}", file=sys.stderr)
         return 1
     text = (ROOT / "SKILL.md").read_text(encoding="utf-8")
-    for needle in ("L9_GIT_PRUNE_AUTHORIZED", "L9_GIT_STASH_DROP_AUTHORIZED", "diagnose-first"):
+    for needle in (
+        "L9_GIT_PRUNE_AUTHORIZED",
+        "L9_GIT_STASH_DROP_AUTHORIZED",
+        "diagnose-first",
+        "harvest",
+    ):
         if needle not in text and needle.replace("-", " ") not in text.lower():
             if needle.startswith("L9_"):
                 if needle not in text:

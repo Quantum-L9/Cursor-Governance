@@ -247,15 +247,45 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
     fi
   fi
   template_file=""
-  for candidate in \
-    "$WS/PULL_REQUEST_TEMPLATE.md" \
-    "$WS/.github/PULL_REQUEST_TEMPLATE.md" \
-    "$GOV_ROOT/PULL_REQUEST_TEMPLATE.md"; do
-    if [[ -f "$candidate" ]]; then
-      template_file="$candidate"
-      break
+  _root_protect_py="$GOV_ROOT/ops/scripts/validate_root_file_protection.py"
+  _gov_python="${GOV_ROOT}/.venv/bin/python"
+  [[ -x "$_gov_python" ]] || _gov_python="python3"
+  _touched_additive=""
+  if [[ -f "$_root_protect_py" ]]; then
+    _touched_additive="$(
+      "$_gov_python" "$_root_protect_py" \
+        --list-touched-additive-only --base "$PR_BASE" --head HEAD --repo "$WS" \
+        2>/dev/null || true
+    )"
+  fi
+  if [[ -n "$_touched_additive" ]]; then
+    for candidate in \
+      "$WS/.github/PULL_REQUEST_TEMPLATE/protected-root.md" \
+      "$GOV_ROOT/.github/PULL_REQUEST_TEMPLATE/protected-root.md"; do
+      if [[ -f "$candidate" ]]; then
+        template_file="$candidate"
+        break
+      fi
+    done
+    if [[ -z "$template_file" ]]; then
+      echo "ERROR: PR touches additive_only root files but .github/PULL_REQUEST_TEMPLATE/protected-root.md is missing" >&2
+      printf '%s\n' "$_touched_additive" >&2
+      exit 1
     fi
-  done
+    echo "NOTE: additive_only root files in this PR — using protected-root template:"
+    printf '%s\n' "$_touched_additive"
+  fi
+  if [[ -z "$template_file" ]]; then
+    for candidate in \
+      "$WS/PULL_REQUEST_TEMPLATE.md" \
+      "$WS/.github/PULL_REQUEST_TEMPLATE.md" \
+      "$GOV_ROOT/PULL_REQUEST_TEMPLATE.md"; do
+      if [[ -f "$candidate" ]]; then
+        template_file="$candidate"
+        break
+      fi
+    done
+  fi
   compose_py="$SCRIPT_DIR/compose_pr_body.py"
   if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
     compose_python="$GOV_ROOT/.venv/bin/python"

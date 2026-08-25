@@ -39,7 +39,7 @@
 # --- Core-owned consumer CI toolchain (exact pins) ---------------------------
 ruff==0.16.1
 mypy==2.3.0
-types-PyYAML==6.0.12.20260724
+types-PyYAML==6.0.12.20260815
 types-jsonschema==4.26.0.20260518
 pytest==9.1.1
 pytest-cov==7.1.0

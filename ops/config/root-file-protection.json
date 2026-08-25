@@ -13,6 +13,12 @@
     "applies_to": "additive_only files only",
     "note": "The marker authorizes the gate only; it never replaces human CODEOWNERS approval."
   },
+  "pr_template": {
+    "path": ".github/PULL_REQUEST_TEMPLATE/protected-root.md",
+    "stamp": "<!-- L9_PROTECTED_ROOT_PR -->",
+    "required_when": "any additive_only protected_files path is in the PR diff",
+    "enforced_by": "validate_root_file_protection.py on pull_request (GITHUB_EVENT_PATH / --pr-body-file); make pr injects the template"
+  },
   "tiers": {
     "canonical": "Governance, legal, dependency, gate/security, and environment-modifying surface. rule=additive_only.",
     "managed": "Living/operational/community docs and low-risk config. rule=managed (review-only).",
@@ -32,7 +38,7 @@
     { "path": "conftest.py", "tier": "canonical", "rule": "additive_only" },
     { "path": ".pre-commit-config.yaml", "tier": "canonical", "rule": "additive_only" },
     { "path": ".gitleaks.toml", "tier": "canonical", "rule": "additive_only" },
-    { "path": ".mcp.json", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".mcp.json", "tier": "regenerable", "rule": "regenerable" },
     { "path": "README.md", "tier": "managed", "rule": "managed" },
     { "path": "ARCHITECTURE.md", "tier": "managed", "rule": "managed" },
     { "path": "INVARIANTS.md", "tier": "managed", "rule": "managed" },
