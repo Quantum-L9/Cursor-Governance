@@ -136,8 +136,7 @@ def main() -> int:
 
     payloads = [migrate_claude_root(root.resolve(), check=args.check) for root in roots]
     summary = {"check": args.check, "roots": payloads}
-    if args.json or True:
-        print(json.dumps(summary, indent=2, sort_keys=True))
+    print(json.dumps(summary, indent=2, sort_keys=True))
 
     conflicts = any(
         item.get("status") == "conflict" for payload in payloads for item in payload["results"]

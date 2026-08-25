@@ -50,6 +50,44 @@ class CursorBackgroundProviderTests(unittest.TestCase):
         self.assertEqual(invocation.status, "BLOCKED")
         self.assertEqual(invocation.result.status, "BLOCKED")
 
+    def test_cancel_without_handle_is_unsupported(self) -> None:
+        module = _load_provider()
+        repo_root = Path(__file__).resolve().parents[5]
+        with tempfile.TemporaryDirectory() as raw:
+            provider = module.CursorBackgroundProvider(raw, repo_root)
+            request = SimpleNamespace(execution_id="exec-no-handle")
+            invocation = provider.cancel(request, {})
+        self.assertEqual(invocation.status, "UNSUPPORTED")
+        self.assertEqual(invocation.evidence[0]["type"], "cancellation_unsupported")
+
+    def test_cancel_request_acceptance_is_not_terminal_cancelled(self) -> None:
+        # T-004 (cursor-background): a cancel request marker alone must never
+        # yield terminal CANCELLED. Only the host writing cancelled.json is
+        # termination acknowledgement.
+        module = _load_provider()
+        repo_root = Path(__file__).resolve().parents[5]
+        with tempfile.TemporaryDirectory() as raw:
+            provider = module.CursorBackgroundProvider(raw, repo_root)
+            execution_id = "exec-cancel-request"
+            drop = Path(raw) / "cursor-tasks" / "background"
+            drop.mkdir(parents=True, exist_ok=True)
+            (drop / f"{execution_id}.handle.json").write_text(
+                json.dumps({"pid": 4242}) + "\n", encoding="utf-8"
+            )
+            request = SimpleNamespace(execution_id=execution_id)
+            invocation = provider.cancel(request, {})
+            self.assertEqual(invocation.status, "RUNNING")
+            self.assertEqual(invocation.evidence[0]["type"], "cancellation_requested")
+            self.assertTrue((drop / f"{execution_id}.cancel.request.json").is_file())
+            # The requester never synthesizes the host acknowledgement.
+            self.assertFalse((drop / f"{execution_id}.cancelled.json").is_file())
+            self.assertEqual(provider.transport.status(execution_id), "RUNNING")
+            # Host terminates its owned process, then acknowledges.
+            (drop / f"{execution_id}.cancelled.json").write_text(
+                json.dumps({"terminated": True}) + "\n", encoding="utf-8"
+            )
+            self.assertEqual(provider.transport.status(execution_id), "CANCELLED")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -634,7 +634,24 @@ class _Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
         if self.path == "/healthz":
+            # Unauthenticated LIVENESS only: proves the process answers. It is
+            # deliberately NOT an authorization signal — a 200 here says nothing
+            # about whether a caller's identity is verifiable. Use /whoami for
+            # that (contract: TCP reachability is not health).
             self._send(200, {"status": "ok", "capabilities": len(self.broker.registry)})
+            return
+        if self.path == "/whoami":
+            # Authenticated READINESS. Requires a verifiable session assertion;
+            # returns only the audit-safe identifiers the caller already owns —
+            # never a secret. A health check that PASSES on this proves identity
+            # + broker authorization, not merely reachability. Auth failure is an
+            # honest 401, so authentication failure is observable.
+            try:
+                claims = self.broker.authenticate(self.headers.get("Authorization"))
+            except BrokerError as exc:
+                self._send(exc.status, {"error": exc.message})
+                return
+            self._send(200, {"status": "authenticated", "identity": claims.audit_record()})
             return
         # Every other GET, including anything shaped like /secret/<name>, is a
         # 404 because no such route is defined anywhere in this service.

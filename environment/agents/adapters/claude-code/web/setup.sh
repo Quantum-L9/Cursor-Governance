@@ -106,6 +106,7 @@ governance_handoff_valid() {
     CANONICAL_LAW.md \
     AGENTS.md \
     ops/scripts/ensure_uv_environment.sh \
+    ops/scripts/claude_projection.py \
     ops/scripts/reconcile_claude_settings.py \
     environment/agents/adapters/claude-code/install.sh
   do

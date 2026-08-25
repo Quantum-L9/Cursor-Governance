@@ -68,7 +68,6 @@ class ActionSpec:
     depends_on: tuple[str, ...] = ()
     resources: tuple[ResourceLock, ...] = ()
     mutation: bool = False
-    authority_granted: bool = True
     preconditions_satisfied: bool = True
     priority: int = 0
     critical_path_weight: int = 0
@@ -97,7 +96,6 @@ class ActionSpec:
             depends_on=tuple(str(item) for item in raw.get("depends_on", [])),
             resources=resources,
             mutation=mutation,
-            authority_granted=bool(raw.get("authority_granted", True)),
             preconditions_satisfied=bool(raw.get("preconditions_satisfied", True)),
             priority=int(raw.get("priority", 0)),
             critical_path_weight=int(raw.get("critical_path_weight", 0)),

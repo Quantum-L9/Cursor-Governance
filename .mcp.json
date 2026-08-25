@@ -1,21 +1,5 @@
 {
-  "_comment": [
-    "AUTHORITATIVE memory MCP for Claude Code — brokered Cursor Graphiti front door.",
-    "Same store/lifecycle as ops/graphiti/graphiti_memory_client.py (CANONICAL_LAW §8 / ADR-0006).",
-    "NO BEARER IN THIS FILE. GRAPHITI_MCP_TOKEN is prohibited in a model-controlled",
-    "surface (contract S3/§12): anything Claude can execute could read it. The URL",
-    "points at the local/trusted L9 broker endpoint, which resolves the Graphiti",
-    "credential on its own side and proxies to memory.quantumaipartners.com/graphiti/mcp.",
-    "Claude receives MCP responses, never the bearer.",
-    "L9_CAPABILITY_BROKER_URL selects the broker; when it is unset this server does",
-    "not resolve and memory runs DEGRADED — which is the honest posture, not a reason",
-    "to paste a token back in.",
-    "group_id stays repository-aware: the broker resolves it from the active workspace",
-    "via group_registry.yaml and REFUSES a caller-supplied override, so repositories",
-    "are never collapsed into one memory namespace.",
-    "FORBIDDEN: retired HTTP l9-shared-memory side door and L9_MEMORY_HTTP_* lifecycle env.",
-    "Do not register claude mcp add-json l9-shared-memory; adapters must not reintroduce a second plane."
-  ],
+  "_generated": "Rendered from environment/agents/adapters/claude-code/mcp.template.json by ops/scripts/claude_projection.py (domain: mcp). Do not edit \u2014 edit the template. Consumer-owned servers not defined by the template are preserved.",
   "mcpServers": {
     "graphiti-memory": {
       "type": "http",

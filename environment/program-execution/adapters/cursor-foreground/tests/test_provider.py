@@ -71,6 +71,17 @@ class CursorForegroundProviderTests(unittest.TestCase):
         self.assertEqual(invocation.status, "PASS")
         self.assertEqual(invocation.result.status, "PASS")
 
+    def test_cancellation_remains_truthfully_unsupported(self) -> None:
+        # T-004: no real host termination primitive exists for the foreground
+        # surface; cancellation must stay UNSUPPORTED, never optimistic.
+        module = _load_provider()
+        repo_root = Path(__file__).resolve().parents[5]
+        with tempfile.TemporaryDirectory() as raw:
+            provider = module.CursorForegroundProvider(raw, repo_root)
+            request = SimpleNamespace(execution_id="exec-cancel")
+            invocation = provider.cancel(request, {})
+        self.assertEqual(invocation.status, "UNSUPPORTED")
+
 
 if __name__ == "__main__":
     unittest.main()
