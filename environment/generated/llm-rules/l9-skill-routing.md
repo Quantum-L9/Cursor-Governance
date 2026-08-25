@@ -85,6 +85,7 @@ If the file is stale or absent, still select from available skills yourself.
 | Security / secrets exposure | `l9-auditing-security` |
 | Performance / slow app | `l9-auditing-performance` |
 | Active incident | `l9-incident-response` |
+| Sync / fast-forward / `/ff` a named governance clone | `l9-repo-sync` (hint; `/ff` mutates) |
 
 Authority: `skills/AUTONOMY_MANIFEST.yaml` (`claude_routing`) +
 `ops/generated/skill-registry.json`. Shared scorer: `ops/skill_routing/`.

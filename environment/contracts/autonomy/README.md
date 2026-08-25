@@ -14,4 +14,9 @@ No provider adapter owns an autonomy or scheduler runtime. The former Claude
 bounded scheduler has been promoted upstream into shared Peer Execution
 infrastructure and no longer receives an adapter exemption.
 
+SessionStart already injects `ops/autonomy/surface_profile.yaml`
+`session_start_block` (this registry's surface-doctrine artifact). That block
+is the wire: scoped local commit without asking; ask only before push /
+`make pr`. Do not add a second activation path.
+
 Validate with `make autonomy-contracts-validate` or `make autonomy-validate`.

@@ -12,7 +12,7 @@ dag_file: .cursor-commands/workflows/dags/slash_command_update_dag.py
 ## Usage
 
 ```
-/update-command readme     # Reduce /readme command
+/update-command docs       # Reduce /docs command
 /update-command wire       # Reduce /wire command
 /update-command --all      # Audit all DAG-trigger commands
 ```

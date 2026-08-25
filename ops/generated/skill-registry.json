@@ -239,8 +239,8 @@
           "update agents.md",
           "refresh agent docs",
           "update claude.md",
-          "update invariants.md",
-          "update architecture.md"
+          "root doc pointer",
+          "pointer stack"
         ],
         "primary": "l9-update-agent-docs",
         "signal_weight": 8,
@@ -372,8 +372,8 @@
           "unbuilt plans",
           "stale plans",
           "audit .cursor/plans",
-          "/plan-audit",
-          "which plans are unbuilt"
+          "which plans are unbuilt",
+          "sessionStart plan audit"
         ],
         "primary": "l9-plan-audit",
         "signal_weight": 8,
@@ -640,6 +640,37 @@
         "supporting": [
           "l9-structured-reasoning"
         ]
+      },
+      {
+        "hint_allowed": true,
+        "id": "repo_sync_ff",
+        "negative_signals": [
+          "activate_fresh",
+          "swap the ssot",
+          "hard reset"
+        ],
+        "note": "explicit_only + hint_allowed \u2014 Read/attach only. Mutation is /ff or make ff via scripts/ff.sh. Never activate_fresh. Never delete unique work.\n",
+        "positive_signals": [
+          "/ff",
+          "make ff",
+          "fast-forward the ssot",
+          "catch up origin/main",
+          "in-place ff",
+          "sync cursor-governance"
+        ],
+        "primary": "l9-repo-sync",
+        "required_any": [
+          "/ff",
+          "make ff",
+          "fast-forward",
+          "fast forward",
+          "sync the ssot",
+          "sync this clone"
+        ],
+        "signal_weight": 8,
+        "supporting": [
+          "l9-git-work-preserve"
+        ]
       }
     ],
     "supporting_skills": [
@@ -764,7 +795,7 @@
     },
     {
       "composition_role": "general",
-      "description": "Identify underutilized, verified repository-owned capabilities and enable their full utilization \u2014 activating dormant or miswired code, off-by-default features, unread config, and unused signals \u2014 then package the exact change as a deployable PR commit bundle (changed files, binary-safe patch, revision synthesis, adaptive route, evidence and decision ledger, before-and-after performance evidence, deploy and rollback playbooks, successor-agent handoff). Removing a verified CLI throughput bottleneck is one branch of the same mission. Use when a repository or CLI audit, benchmark, dead-wiring finding, capability brief, patch, or prior sandbox artifact must become production code that safely raises utilization of latent capability the repository already owns. Do not use for audit-only output, non-repository targets, manufacturing capability that does not already exist, new throttling systems, or bypassing provider quotas, billing limits, licensing, authorization, abuse controls, or external service limits.",
+      "description": "Enable verified repository-owned capabilities that are dormant or miswired, or remove a verified CLI bottleneck, and ship the change as a PR. Use when an audit, benchmark, or dead-wiring finding must become production code. Do not use for audit-only output, invented capability, or bypassing quotas, licenses, or authorization.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-cli-optimization",
@@ -808,7 +839,7 @@
     },
     {
       "composition_role": "general",
-      "description": "component audit, deterministic verify, and runtime probe escalation ladder. use for /audit-component, /verify-component, or /probe wiring checks.",
+      "description": "component audit, deterministic verify, and runtime probe escalation ladder. use from /analyze, /evaluate, or /analyze_evaluate when the user names a component, import, or wiring check.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-component-verification",
@@ -885,7 +916,7 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose-first audit extract and prune-propose for unpushed dirty orphan stale and stash git work. use when cleaning branches worktrees or stashes never lose unique commits without receipts and auth.",
+      "description": "diagnose-first audit extract harvest and prune-propose for unpushed dirty orphan stale stash and leftover worktree dirt. use when cleaning branches worktrees or stashes or harvesting misplaced dirty/untracked/WIP across worktrees into a PR. never lose unique commits without receipts and auth.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-git-work-preserve",
@@ -1050,14 +1081,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "audit ~/.cursor/plans for unbuilt plans from the last 7 days, flag staleness, and surface findings at session start or via /plan-audit. use when session context shows Plan audit, the user asks which plans are unbuilt or stale, or /plan-audit is invoked. do not use to author new plans (use l9-plan-simple, or l9-plan for pe/campaign) or to auto-build plans.",
+      "description": "sessionStart scanner for unbuilt plans in the last 7 days under the live plans-store root. use when session context shows Plan audit. do not use to author plans (l9-plan-simple / l9-plan) or to shelf the store (that is /l9-audit-plans). do not auto-build plans.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-plan-audit",
       "path": "skills/l9-plan-audit",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "session context shows Plan audit, auditing unbuilt or stale Cursor plans under .cursor/plans, or /plan-audit is invoked"
+      "when_to_use": "session context shows Plan audit or the 7-day live-queue scanner; not /l9-audit-plans (store shelf organize)"
     },
     {
       "composition_role": "general",
@@ -1127,7 +1158,18 @@
     },
     {
       "composition_role": "general",
-      "description": "audit, reconcile, and renovate a real software repository from fragmented manifests, duplicated automation, stale configuration, dead wiring, ignored tests, documentation drift, and ambiguous ownership into a coherent, validated implementation delivered through a governed pull request. use when the user asks to fix a messy repo end to end, align pyproject/package manifests with actual capabilities, collapse competing dependency or test authorities, turn an audit into full production files, modernize repository control planes, or continue remediation until the pr is green. do not use for audit-only commentary, isolated feature development, cosmetic refactors, or repositories the user has not authorized for modification.",
+      "description": "Catch a named clone to origin/main in place. Parks unique work; keeps .venv. Use when /ff or make ff. Do not use for activate_fresh or feature-branch reset.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-repo-sync",
+      "path": "skills/l9-repo-sync",
+      "reason": "in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "Audit, reconcile, and renovate a messy repository into a coherent, validated implementation delivered as a governed PR. Use when manifests, automation, tests, or ownership are fragmented and the user authorized a full renovation. Do not use for audit-only commentary, isolated features, or unauthorized repos.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-repository-renovation",
@@ -1171,7 +1213,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "Adaptive evidence-based reasoning for difficult planning, plan review, architecture, debugging, multi-document corpus analysis, and multi-option decisions. Use when the user explicitly needs trade-off analysis, root-cause reasoning, architecture choices, a plan stress test, corpus gap/coherence/dependency work, or a decision record grounded in evidence. Route only the proof obligations needed for the task, risk, evidence state, and available capabilities. Do not activate for simple factual answers, direct rewrites, deterministic file operations, trivial reversible fixes, or when a more specific domain Skill already supplies a complete reasoning contract.",
+      "description": "Adaptive evidence-based reasoning for hard planning, architecture, debugging, corpus analysis, and multi-option decisions. Use when the user needs trade-offs, root-cause reasoning, or an evidence-grounded decision record. Do not activate for simple facts, direct rewrites, or when a more specific domain Skill already owns the contract.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-structured-reasoning",
@@ -1193,14 +1235,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "audit the repo and update agents.md, architecture.md, invariants.md, and claude.md with current ci pipeline rules, known false positives, pre-commit hooks, and agent skill registries. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change.",
+      "description": "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) against live authority. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change. do not invent architecture.md or invariants.md.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "refreshing AGENTS.md, ARCHITECTURE.md, INVARIANTS.md, or CLAUDE.md after CI, hook, or registry changes"
+      "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes"
     },
     {
       "composition_role": "general",
@@ -1237,6 +1279,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "4fd41603e1d2b0425fc3231fd6aa0b79703cefe0dfefec839fa06c9700e07ed5",
-  "source_skill_corpus_sha256": "9ed0780f80eba1570bc71e1e9f396b9457c5c91e3bc1a9655ca8299f783792b8"
+  "source_manifest_sha256": "c995cc41d9cf184b5b6837cbb6a92af1358d086664f493ef38c130ab8971e2cf",
+  "source_skill_corpus_sha256": "9124393fbf8474e7fc508c55c13c5c8be38314f1e4a796773f08ca2edffda710"
 }
