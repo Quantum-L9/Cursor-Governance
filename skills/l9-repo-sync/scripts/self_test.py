@@ -77,6 +77,11 @@ def test_behind_with_colliding_and_hold() -> int:
         git(clone, "commit", "-m", "base")
         git(clone, "branch", "-M", "main")
         git(clone, "push", "-u", "origin", "main")
+        # A fresh bare repo points HEAD at the host's init.defaultBranch
+        # (often master); a second clone would then check out nothing and
+        # push its "ahead" commit to the wrong branch, silently voiding the
+        # behind-origin premise of this scenario.
+        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
 
         other = Path(tmp) / "other"
         run(["git", "clone", str(remote), str(other)])
@@ -153,6 +158,9 @@ def test_non_overlapping_dirty_still_parks() -> int:
         git(clone, "commit", "-m", "base")
         git(clone, "branch", "-M", "main")
         git(clone, "push", "-u", "origin", "main")
+        # Same defaultBranch pitfall as above: pin the bare remote's HEAD so
+        # the second clone lands on main and its push really advances it.
+        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
 
         other = Path(tmp) / "other"
         run(["git", "clone", str(remote), str(other)])
