@@ -14,9 +14,8 @@
 # their own --surface id. Nothing below may duplicate it.
 #
 # What is genuinely Claude-specific, and therefore lives here:
-#   - the .claude settings triad          (reconcile_claude_settings.py)
-#   - Claude skill discovery              (reconcile_claude_l9_skills.py)
-#   - the .claude/rules LLM rules mount   (project_llm_rules.py + reconcile_llm_rule_adapters.py)
+#   - the Claude projection engine        (ops/scripts/claude_projection.py:
+#     settings triad, skills, commands, rules mount, hooks, plugins)
 #   - the .mcp.json memory front door     (mcp.template.json)
 #   - excludes for the GENERATED .claude mirrors
 #
@@ -254,70 +253,61 @@ fi
 log "Claude Code vendor wiring"
 say "governance=$GOV_DIR workspace=$WORKSPACE"
 
-# --- 1) Settings triad (Claude-specific) ------------------------------------
-# reconcile_claude_settings.py is the SSOT reconciler: it syncs the governance
-# copy, merge-patches ~/.claude/settings.json without clobbering user keys, and
-# installs the consumer workspace triad as real files. Same call on CLI, Desktop,
-# Web and Mobile — never hand-roll `cp settings.template.json`.
-stage "settings-triad"
-RECONCILE_SETTINGS="$GOV_DIR/ops/scripts/reconcile_claude_settings.py"
-if [ -n "$GOV_PY" ] && [ -f "$RECONCILE_SETTINGS" ]; then
-  settings_args=(--root "$GOV_DIR" --workspace "$WORKSPACE")
-  [ "$CHECK" = "1" ] && settings_args+=(--check)
-  "$GOV_PY" "$RECONCILE_SETTINGS" "${settings_args[@]}"
-  settings_rc=$?
-  if [ "$settings_rc" -ne 0 ]; then
-    if [ "$CHECK" = "1" ]; then
-      downgrade STATUS_SETTINGS DEGRADED "reconcile reported drift (check mode)"
-    else
-      downgrade STATUS_SETTINGS BLOCKED "settings triad reconciliation failed (exit $settings_rc)"
-    fi
+# --- 1) Claude projection engine (settings, hooks, skills, commands, rules,
+#         plugins) ------------------------------------------------------------
+# ops/scripts/claude_projection.py is the one projection entrypoint: it drives
+# the settings triad (merge-patching ~/.claude and the workspace without
+# clobbering consumer keys), per-skill and per-command symlinks, the generated
+# llm-rules mount, and declarative plugin state, then writes the projection
+# receipt (~/.l9/claude/projection-receipt.json). Same call on CLI, Desktop,
+# Web and Mobile — and from SessionStart, so cached environments self-repair.
+stage "claude-projection"
+PROJECTION_ENGINE="$GOV_DIR/ops/scripts/claude_projection.py"
+if [ -n "$GOV_PY" ] && [ -f "$PROJECTION_ENGINE" ]; then
+  projection_args=(--root "$GOV_DIR" --workspace "$WORKSPACE" --summary)
+  [ "$CHECK" = "1" ] && projection_args+=(--check)
+  projection_out="$("$GOV_PY" "$PROJECTION_ENGINE" "${projection_args[@]}" 2>&1)"
+  projection_rc=$?
+  printf '%s\n' "$projection_out"
+  if ! printf '%s' "$projection_out" | grep -q '^projection='; then
+    # The engine crashed before emitting a summary — nothing was classified,
+    # so no domain can claim health from silence.
+    downgrade STATUS_SETTINGS BLOCKED "projection engine failed (exit $projection_rc)"
+    downgrade STATUS_SKILLS DEGRADED "projection engine failed (exit $projection_rc)"
+    downgrade STATUS_RULES DEGRADED "projection engine failed (exit $projection_rc)"
+    downgrade STATUS_PLUGINS DEGRADED "projection engine failed (exit $projection_rc)"
   fi
+  domain_status() {
+    printf '%s\n' "$projection_out" \
+      | sed -n "s/^domain=$1 status=\([a-z]*\).*/\1/p" | head -n 1
+  }
+  for pair in \
+    "settings STATUS_SETTINGS" \
+    "skills STATUS_SKILLS" \
+    "rules STATUS_RULES" \
+    "plugins STATUS_PLUGINS"; do
+    domain="${pair%% *}"
+    var="${pair##* }"
+    dstatus="$(domain_status "$domain")"
+    case "$dstatus" in
+      ok|skipped|"") : ;;
+      drift|conflict)
+        downgrade "$var" DEGRADED "projection $domain: $dstatus" ;;
+      error)
+        if [ "$domain" = "settings" ]; then
+          downgrade "$var" BLOCKED "projection settings failed"
+        else
+          downgrade "$var" DEGRADED "projection $domain failed"
+        fi
+        ;;
+    esac
+  done
 elif [ -n "$GOV_PY" ]; then
-  warn "missing ops/scripts/reconcile_claude_settings.py"
-  downgrade STATUS_SETTINGS BLOCKED "reconciler missing"
-fi
-
-# --- 2) Claude skill discovery ----------------------------------------------
-stage "skill-discovery"
-RECONCILE_SKILLS="$GOV_DIR/ops/scripts/reconcile_claude_l9_skills.py"
-if [ -n "$GOV_PY" ] && [ -f "$RECONCILE_SKILLS" ]; then
-  # Both scopes. Project scope is invisible when the session's project directory
-  # is not this repository — the audited session read the whole repo only as an
-  # additional directory — so user scope is the floor that always resolves
-  # (B-01, B-15). The SSOT's 51 skills replace the 8-skill account-sync copy.
-  skills_args=(--root "$GOV_DIR" --scope user --scope project --workspace "$WORKSPACE" --quiet)
-  [ "$CHECK" = "1" ] && skills_args+=(--check)
-  "$GOV_PY" "$RECONCILE_SKILLS" "${skills_args[@]}" \
-    || downgrade STATUS_SKILLS DEGRADED "skill reconciliation drift or local name conflict"
-elif [ -n "$GOV_PY" ]; then
-  warn "missing ops/scripts/reconcile_claude_l9_skills.py"
-  downgrade STATUS_SKILLS DEGRADED "skill reconciler missing"
-fi
-
-# --- 2b) LLM rules mount (Claude .claude/rules) -----------------------------
-# The generated rules (rules/*.mdc -> environment/generated/llm-rules) are the
-# static governance layer every peer loads: Cursor via the l9-governance plugin,
-# Claude CLI via setup_workspace_symlinks.sh. The cloud path reaches only this
-# installer, so project + reconcile here too — web/mobile sessions get the same
-# generated-rule mount as their CLI and Cursor peers. Both scripts import yaml,
-# so run them on the locked interpreter, not the sandbox's system python3.
-stage "llm-rules-mount"
-PROJECT_RULES="$GOV_DIR/ops/scripts/project_llm_rules.py"
-RECONCILE_RULES="$GOV_DIR/ops/scripts/reconcile_llm_rule_adapters.py"
-if [ -n "$GOV_PY" ] && [ -f "$PROJECT_RULES" ] && [ -f "$RECONCILE_RULES" ]; then
-  if [ "$CHECK" = "1" ]; then
-    "$GOV_PY" "$RECONCILE_RULES" --root "$GOV_DIR" --workspace "$WORKSPACE" --check --quiet \
-      || downgrade STATUS_RULES DEGRADED "LLM rules adapter reconcile reported drift"
-  else
-    "$GOV_PY" "$PROJECT_RULES" --root "$GOV_DIR" --quiet \
-      || downgrade STATUS_RULES DEGRADED "llm-rules projection failed (non-blocking)"
-    "$GOV_PY" "$RECONCILE_RULES" --root "$GOV_DIR" --workspace "$WORKSPACE" --quiet \
-      || downgrade STATUS_RULES DEGRADED "LLM rules adapter reconcile failed (non-blocking)"
-  fi
-elif [ -n "$GOV_PY" ]; then
-  warn "missing ops/scripts/project_llm_rules.py or reconcile_llm_rule_adapters.py"
-  downgrade STATUS_RULES DEGRADED "rules projector missing"
+  warn "missing ops/scripts/claude_projection.py"
+  downgrade STATUS_SETTINGS BLOCKED "projection engine missing"
+  downgrade STATUS_SKILLS DEGRADED "projection engine missing"
+  downgrade STATUS_RULES DEGRADED "projection engine missing"
+  downgrade STATUS_PLUGINS DEGRADED "projection engine missing"
 fi
 
 # --- 3) Memory MCP front door (Claude .mcp.json format) ---------------------
@@ -382,25 +372,17 @@ if [ "$STATUS_CAPABILITIES" != "READY" ] \
 fi
 
 # --- 3b) Marketplace plugins ------------------------------------------------
-# The PreToolUse matcher references mcp__plugin_context7_context7__.*, so the
-# settings triad expects the context7 plugin to exist. Nothing installed it:
-# install.sh never invoked setup_claude_code_plugins.sh, and the audited runtime
-# also had SKIP_PLUGIN_MARKETPLACE=true. A matcher pointing at a guaranteed-
-# absent plugin is a dangling reference either way, so resolve it here rather
-# than leaving the two halves disagreeing.
+# Plugin convergence is a projection-engine domain (declarative desired state
+# in plugins.desired.json; setup_claude_code_plugins.sh only as fallback) and
+# already ran in stage claude-projection. What remains here is the honest
+# posture: a platform-disabled marketplace, or a missing claude CLI, still
+# means the PreToolUse matcher's context7 plugin cannot exist.
 stage "marketplace-plugins"
-PLUGINS_SCRIPT="$GOV_DIR/ops/scripts/setup_claude_code_plugins.sh"
 if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
   say "plugin marketplace disabled by the platform (SKIP_PLUGIN_MARKETPLACE=true)"
   downgrade STATUS_PLUGINS DEGRADED "marketplace disabled by the platform"
-elif [ "$CHECK" = "1" ]; then
-  say "plugins: check mode, not installing"
-elif [ -f "$PLUGINS_SCRIPT" ]; then
-  bash "$PLUGINS_SCRIPT" ${WORKSPACE:+--workspace "$WORKSPACE"} \
-    || downgrade STATUS_PLUGINS DEGRADED "plugin install reported failure"
-else
-  warn "missing ops/scripts/setup_claude_code_plugins.sh — marketplace plugins NOT installed"
-  downgrade STATUS_PLUGINS DEGRADED "plugin installer missing"
+elif ! command -v claude >/dev/null 2>&1; then
+  downgrade STATUS_PLUGINS DEGRADED "claude CLI unavailable — plugins not converged"
 fi
 
 # --- 4) Excludes for the GENERATED .claude mirrors --------------------------
@@ -412,7 +394,7 @@ if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&
   case "$exclude_file" in /*) : ;; *) exclude_file="$WORKSPACE/$exclude_file" ;; esac
   mkdir -p "$(dirname "$exclude_file")"
   touch "$exclude_file"
-  for glob in ".claude/skills/" ".claude/rules/"; do
+  for glob in ".claude/skills/" ".claude/rules/" ".claude/commands/"; do
     grep -qxF "$glob" "$exclude_file" 2>/dev/null || printf '%s\n' "$glob" >> "$exclude_file"
   done
   say "excluded generated .claude mirrors (local, uncommitted)"

@@ -49,8 +49,11 @@ This repo does **not** own:
    (`action` / `sha` / `remote_sha` / `detail`).
    `governance_sync.sh` is **on-demand** bidirectional reconcile only — it is
    **not** the sessionStart tip-activation step.
-2. Backgrounds `setup_claude_code_plugins.sh --quiet --workspace "$REPO"`
-   (core user-scope plugins plus class-gated project addons — see
+2. Backgrounds `claude_projection.py --root "$GC" --workspace "$REPO" --quiet`
+   — the one Claude projection engine (skills, commands, rules mount, settings
+   triad, hooks, and declarative plugin state from
+   `environment/agents/adapters/claude-code/plugins.desired.json`;
+   `setup_claude_code_plugins.sh` runs only as the engine's fallback — see
    `environment/plugins/README.md`).
 3. Auto-wires consumer `.cursor-commands`, `.cursor/plans` → `~/.cursor/plans`,
    and the `l9-governance` plugin when missing. SSOT must **not** self-alias
@@ -124,7 +127,9 @@ bash "$HOME/.cursor-governance/ops/scripts/governance_sync.sh"
 bash "$HOME/.cursor-governance/ops/scripts/check_governance_wiring.sh" "$(pwd)"
 bash "$HOME/.cursor-governance/ops/scripts/setup_workspace_symlinks.sh"
 bash "$HOME/.cursor-governance/ops/scripts/validate_governance_symlinks.sh"
-bash "$HOME/.cursor-governance/ops/scripts/setup_claude_code_plugins.sh" --workspace "$(pwd)"
+"$HOME/.cursor-governance/.venv/bin/python" \
+  "$HOME/.cursor-governance/ops/scripts/claude_projection.py" \
+  --root "$HOME/.cursor-governance" --workspace "$(pwd)" --summary
 bash "$HOME/.cursor-governance/ops/scripts/install_ide_profile.sh" "$(pwd)"
 "$HOME/.cursor-governance/.venv/bin/python" \
   "$HOME/.cursor-governance/ops/graphiti/graphiti_memory_client.py" health

@@ -211,13 +211,20 @@ SETUP="$GC/ops/scripts/setup_workspace_symlinks.sh"
 ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
 GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
 
-# Background plugins only (activate already ran foreground)
-PLUGIN_SETUP="$GC/ops/scripts/setup_claude_code_plugins.sh"
-if [ -x "$PLUGIN_SETUP" ]; then
-  if [ -n "$REPO" ]; then
-    run_reconciler bash "$PLUGIN_SETUP" --quiet --workspace "$REPO"
+# Background Claude projection (one engine: skills, commands, rules, settings,
+# hooks, declarative plugins — the imperative plugin setup runs only as the
+# engine's fallback). Activate already ran foreground.
+PROJECTION_ENGINE="$GC/ops/scripts/claude_projection.py"
+if [ -f "$PROJECTION_ENGINE" ]; then
+  if [ -x "$GC/.venv/bin/python3" ]; then
+    PROJ_PY="$GC/.venv/bin/python3"
   else
-    run_reconciler bash "$PLUGIN_SETUP" --quiet
+    PROJ_PY="python3"
+  fi
+  if [ -n "$REPO" ]; then
+    run_reconciler "$PROJ_PY" "$PROJECTION_ENGINE" --root "$GC" --workspace "$REPO" --quiet
+  else
+    run_reconciler "$PROJ_PY" "$PROJECTION_ENGINE" --root "$GC" --quiet
   fi
 fi
 

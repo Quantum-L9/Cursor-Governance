@@ -173,6 +173,25 @@ if GOV=$(resolve_governance_dir); then
   else
     PY="python3"
   fi
+  # --- Claude projection engine (repair stale managed state; fail-open) ----
+  # SessionStart runs the SAME engine as install.sh (setup), so a cached
+  # environment whose bootstrap never ran — or ran against an older governance
+  # revision — reconciles here: skills/commands symlinks repaired, settings
+  # merge-patched, rules mount retargeted, stale managed projections removed.
+  # The engine writes ~/.l9/claude/projection-receipt.json. Fail-open: a
+  # projection failure degrades to a WARN line, never blocks the session.
+  PROJECTION_ENGINE="$GOV/ops/scripts/claude_projection.py"
+  if [ "${L9_SKIP_SESSION_PROJECTION:-}" != "1" ] \
+     && [ -f "$PROJECTION_ENGINE" ] && command -v "$PY" >/dev/null 2>&1; then
+    PROJECTION_LINE=$("$PY" "$PROJECTION_ENGINE" --root "$GOV" --workspace "$WORKSPACE" \
+      --summary 2>/dev/null | tail -1)
+    case "${PROJECTION_LINE:-}" in
+      projection=ok) LINES+=("claude projection: ok (receipt ~/.l9/claude/projection-receipt.json)") ;;
+      projection=*)  LINES+=("claude projection: WARN ${PROJECTION_LINE#projection=} — see ~/.l9/claude/projection-receipt.json") ;;
+      *)             LINES+=("claude projection: WARN engine produced no summary — run 'make claude-install'") ;;
+    esac
+  fi
+
   if [ -f "$PROFILE_LOADER" ] && command -v "$PY" >/dev/null 2>&1; then
     PROFILE_BLOCK=$("$PY" "$PROFILE_LOADER" 2>/dev/null || true)
     if [ -n "$PROFILE_BLOCK" ]; then
