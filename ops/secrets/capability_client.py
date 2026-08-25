@@ -253,19 +253,31 @@ class CapabilityClient:
         )
 
     def _probe(self) -> tuple[bool, str]:
-        """Ask the broker whether it is alive. Returns no secret-derived data."""
+        """Make an AUTHENTICATED broker call and return no secret-derived data.
+
+        This hits ``/whoami``, not ``/healthz``: a capability is ENABLED only
+        when the broker VERIFIES this session's identity, never on mere
+        reachability. An unauthenticated ``/healthz`` 200 proves the process is
+        up, which is exactly the reachability-is-not-health failure this probe
+        must not repeat. A 401 here is the honest, observable authentication
+        failure — the caller degrades, it does not fall back to a static secret.
+        """
         try:
-            request = urllib.request.Request(f"{self.url}/healthz", method="GET")
+            request = urllib.request.Request(f"{self.url}/whoami", method="GET")
             self._authorize(request)
             with exchange(
                 request,
                 timeout=BROKER_TIMEOUT_SECONDS,
                 allow_loopback_http=True,
-                label="broker health URL",
+                label="broker whoami URL",
             ) as response:
                 if response.status == 200:
-                    return True, "broker healthy"
-                return False, f"broker health HTTP {response.status}"
+                    return True, "broker verified this session identity"
+                return False, f"broker readiness HTTP {response.status}"
+        except urllib.error.HTTPError as exc:
+            if exc.code == 401:
+                return False, "broker rejected this session identity (401)"
+            return False, f"broker readiness HTTP {exc.code}"
         except (urllib.error.URLError, OSError, TimeoutError, ValueError) as exc:
             return False, f"broker unreachable: {type(exc).__name__}"
 

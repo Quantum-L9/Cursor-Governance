@@ -107,40 +107,75 @@ classify_workspace_class() {
 
 WORKSPACE_CLASS="$(classify_workspace_class "$WORKSPACE_DIR")"
 
-# --- Desired state (edit here to add/remove plugins) -----------------------
-# Parallel arrays (not associative — macOS ships bash 3.2, no `declare -A` support):
+# --- Desired state (declarative SSOT) ---------------------------------------
+# The desired plugin state is DECLARED in plugins.desired.json (schema
+# l9.claude-plugins-desired.v1) next to the Claude adapter — this script is the
+# imperative fallback that converges the machine onto that declaration. Do not
+# add plugin ids here; edit the JSON. Parallel arrays (not associative — macOS
+# ships bash 3.2, no `declare -A` support).
+DESIRED_JSON="$SCRIPT_DIR/../../environment/agents/adapters/claude-code/plugins.desired.json"
 
-# Always installed at `-s user` — every governed workspace, regardless of class.
-CORE_MARKETPLACE_REPOS=(
-  "anthropics/claude-plugins-official"
-)
-CORE_PLUGINS=(
-  "hookify@claude-plugins-official"
-  "pr-review-toolkit@claude-plugins-official"
-  "desktop-commander@claude-plugins-official"
-  "context7@claude-plugins-official"
-)
+read_desired() {
+  # Emits sections separated by markers so bash 3.2 can split them.
+  python3 - "$DESIRED_JSON" "$WORKSPACE_CLASS" <<'PYEOF'
+import json, sys
+path, cls = sys.argv[1], sys.argv[2]
+data = json.load(open(path, encoding="utf-8"))
+core = data.get("core") or {}
+class_cfg = (data.get("classes") or {}).get(cls) or {}
+def emit(tag, values):
+    print(f"##{tag}")
+    for value in values:
+        print(value)
+emit("CORE_MARKETPLACES", core.get("marketplaces") or [])
+emit("CORE_PLUGINS", core.get("plugins") or [])
+emit("CLASS_MARKETPLACES", class_cfg.get("marketplaces") or [])
+emit("CLASS_PLUGINS", class_cfg.get("plugins") or [])
+emit("RETIRED_USER_SCOPE", data.get("retired_user_scope") or [])
+PYEOF
+}
 
-# Class-gated: installed at `-s project` (writes <workspace>/.claude/settings.json),
-# only when WORKSPACE_CLASS matches. Parallel arrays, index-aligned.
-CLASS_NAMES=("aws_infra" "zep_memory")
-CLASS_MARKETPLACE_REPOS=("anthropics/claude-plugins-official" "getzep/zep")
-CLASS_PLUGIN_ENTRIES=("aws-core@claude-plugins-official" "building-with-zep@zep")
-# odoo_plasticos has no Claude-side addon modeled (environment/plugins/README.md)
-# -- intentionally absent from CLASS_NAMES, not a placeholder gap.
+if [ ! -f "$DESIRED_JSON" ] || ! command -v python3 >/dev/null 2>&1; then
+  if [ "$QUIET" -eq 1 ]; then
+    echo "claude-plugins: skipped (plugins.desired.json or python3 unavailable)"
+    exit 0
+  fi
+  echo "ERROR: cannot read plugin desired state: $DESIRED_JSON" >&2
+  exit 1
+fi
 
-# One-time migration: before Phase 7, CLASS_PLUGIN_ENTRIES above were installed
-# unconditionally at `-s user` for every workspace (the exact problem this rewrite
-# fixes -- a pure-Python repo with zero AWS/Zep surface still got aws-core and
-# building-with-zep). Scoping new installs to `-s project` does not retroactively
-# remove a pre-existing `-s user` install, so it must be uninstalled explicitly or
-# every workspace keeps it forever regardless of class. Always retire these from
-# user scope, unconditionally -- the correct location going forward is `-s project`,
-# installed per-workspace-class below, never `-s user`.
-RETIRED_USER_SCOPE_PLUGINS=(
-  "aws-core@claude-plugins-official"
-  "building-with-zep@zep"
-)
+CORE_MARKETPLACE_REPOS=()
+CORE_PLUGINS=()
+CLASS_MARKETPLACES=()
+CLASS_PLUGINS=()
+RETIRED_USER_SCOPE_PLUGINS=()
+section=""
+while IFS= read -r line; do
+  case "$line" in
+    "##"*) section="${line##\#\#}" ;;
+    "") ;;
+    *)
+      case "$section" in
+        CORE_MARKETPLACES) CORE_MARKETPLACE_REPOS+=("$line") ;;
+        CORE_PLUGINS) CORE_PLUGINS+=("$line") ;;
+        CLASS_MARKETPLACES) CLASS_MARKETPLACES+=("$line") ;;
+        CLASS_PLUGINS) CLASS_PLUGINS+=("$line") ;;
+        RETIRED_USER_SCOPE) RETIRED_USER_SCOPE_PLUGINS+=("$line") ;;
+      esac
+      ;;
+  esac
+done <<EOF
+$(read_desired)
+EOF
+
+if [ "${#CORE_PLUGINS[@]}" -eq 0 ]; then
+  if [ "$QUIET" -eq 1 ]; then
+    echo "claude-plugins: skipped (empty desired state)"
+    exit 0
+  fi
+  echo "ERROR: plugin desired state parsed empty from $DESIRED_JSON" >&2
+  exit 1
+fi
 # -----------------------------------------------------------------------------
 
 # marketplace short name (last path segment) for `marketplace update`
@@ -153,20 +188,18 @@ plugin_name() {
   echo "${1%%@*}"
 }
 
-# Resolve the marketplaces + plugins actually desired for WORKSPACE_CLASS.
+# Resolve the marketplaces actually desired for WORKSPACE_CLASS (class plugins
+# were already filtered by read_desired).
 MARKETPLACE_REPOS=("${CORE_MARKETPLACE_REPOS[@]}")
-CLASS_PLUGINS=()
-for i in "${!CLASS_NAMES[@]}"; do
-  if [ "${CLASS_NAMES[$i]}" = "$WORKSPACE_CLASS" ]; then
-    CLASS_PLUGINS+=("${CLASS_PLUGIN_ENTRIES[$i]}")
-    mp="${CLASS_MARKETPLACE_REPOS[$i]}"
+if [ "${#CLASS_MARKETPLACES[@]}" -gt 0 ]; then
+  for mp in "${CLASS_MARKETPLACES[@]}"; do
     known=0
     for existing in "${MARKETPLACE_REPOS[@]}"; do
       [ "$existing" = "$mp" ] && known=1
     done
     [ "$known" -eq 0 ] && MARKETPLACE_REPOS+=("$mp")
-  fi
-done
+  done
+fi
 # bash 3.2 (macOS default) treats "${empty_array[@]}" as unbound under `set -u`,
 # so CLASS_PLUGINS (often empty, e.g. core_default) is appended conditionally.
 PLUGINS=("${CORE_PLUGINS[@]}")
@@ -240,16 +273,8 @@ log "Claude Code CLI: $(command -v claude) ($(claude --version 2>/dev/null || ec
 log "Workspace: $WORKSPACE_DIR (class: $WORKSPACE_CLASS)"
 
 
-# Reconcile the governance skill corpus into Claude Code's native discovery
-# locations. This happens before the plugin stamp fast path because skill state
-# changes independently of marketplace plugin state.
-GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-if [ -f "$SCRIPT_DIR/reconcile_claude_l9_skills.py" ]; then
-  python3 "$SCRIPT_DIR/reconcile_claude_l9_skills.py" \
-    --root "$GOV_ROOT" --scope user --scope project \
-    --workspace "$WORKSPACE_DIR" --quiet \
-    || echo "WARN: L9 Claude skill reconciliation reported drift or a local name conflict" >&2
-fi
+# Skill projection is owned by the claude_projection engine
+# (ops/scripts/claude_projection.py) — this script converges plugins only.
 
 # Migration cleanup runs unconditionally, ahead of the per-class stamp fast path
 # below, so a stamped/already-correct workspace can't mask a stale user-scope
