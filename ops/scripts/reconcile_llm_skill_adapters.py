@@ -98,7 +98,6 @@ def reconcile_adapters(
             check,
             target_override=target,
             replace_l9_duplicates=replace_dupes,
-            install_project_rule=False,
         )
         payload = result.as_dict()
         payload["adapter_id"] = adapter_id
