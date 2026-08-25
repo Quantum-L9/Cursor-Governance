@@ -422,3 +422,12 @@ def test_workflow_action_pins() -> None:
 def test_baseline_ratchet_caller_is_absent() -> None:
     assert not (ROOT / ".github" / "workflows" / "baseline-ratchet-caller.yml").exists()
     assert not (ROOT / ".l9" / "baselines" / "test-quarantine.yml").exists()
+
+
+def test_open_pr_after_gate_skips_merged_pr() -> None:
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    # A MERGED/CLOSED PR found by head-branch lookup can never carry new branch
+    # commits — the gate must clear it and fall through to fresh PR creation.
+    assert 'gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq \'.state\'' in script
+    assert 'pr_state" != "OPEN"' in script
+    assert "opening a new PR" in script
