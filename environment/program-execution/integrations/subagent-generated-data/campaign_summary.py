@@ -39,7 +39,10 @@ def build_summary(
             "packets_validated": 0,
             "packets_rejected": 0,
             "signals_harvested": 0,
-            "distilled_units": 0,
+            # Downstream distillation is not observed by this summary; None
+            # renders as UNKNOWN rather than claiming a count that was never
+            # measured.
+            "distilled_units": None,
             "route_counts_by_destination": {},
         },
         "memory": {
@@ -50,7 +53,11 @@ def build_summary(
             "memory_candidates_rejected": 0,
             "memory_candidates_deduplicated": 0,
             "memory_candidates_quarantined": 0,
-            "memory_units_persisted": 0,
+            # Delivery acceptance is not persistence, retrieval, or
+            # distillation: those downstream states are UNKNOWN (None) until a
+            # real persistence/retrieval probe proves them.
+            "memory_units_persisted": None,
+            "memory_units_retrievable": None,
             "memory_failures": 0,
         },
         "receipt_refs": [],
@@ -179,16 +186,11 @@ def build_summary(
                 summary["memory"]["memory_candidates_submitted"] += 1
             elif status in {"accepted", "admitted", "merged"}:
                 summary["memory"]["memory_candidates_accepted"] += 1
-                summary["memory"]["memory_units_persisted"] += 1
-                summary["generated_data"]["distilled_units"] += 1
             elif status in {"duplicate", "deduplicated", "already_exists"}:
                 summary["memory"]["memory_candidates_deduplicated"] += 1
-                summary["memory"]["memory_units_persisted"] += 1
-                summary["generated_data"]["distilled_units"] += 1
             elif status in {"quarantined", "contested", "deferred"}:
                 summary["memory"]["memory_candidates_quarantined"] += 1
                 summary["memory"]["memory_candidates_deferred"] += 1
-                summary["generated_data"]["distilled_units"] += 1
             elif status in {"rejected", "denied"}:
                 summary["memory"]["memory_candidates_rejected"] += 1
 
@@ -228,7 +230,7 @@ def render_brief(summary: dict[str, Any]) -> str:
         ),
         (
             f"Harvested: {generated['signals_harvested']} signals; "
-            f"distilled: {generated['distilled_units']} units"
+            f"distilled: {_display(generated['distilled_units'])} units"
         ),
         "Routes: "
         + (
@@ -248,7 +250,8 @@ def render_brief(summary: dict[str, Any]) -> str:
             f"{memory['memory_candidates_rejected']} rejected"
         ),
         (
-            f"Memory persisted: {memory['memory_units_persisted']}; "
+            f"Memory persisted: {_display(memory['memory_units_persisted'])}; "
+            f"retrievable: {_display(memory['memory_units_retrievable'])}; "
             f"failures: {memory['memory_failures']}"
         ),
     ]
