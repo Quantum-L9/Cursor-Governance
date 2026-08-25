@@ -11,6 +11,8 @@ canonical sources in this repository, across all managed domains:
   hooks     consumer hook files installed beside settings
   plugins   declarative state from plugins.desired.json; the imperative
             setup_claude_code_plugins.sh runs only as fallback
+  mcp       project .mcp.json rendered from mcp.template.json (single MCP
+            authority), unmanaged consumer servers preserved
 
 Setup (install.sh) and SessionStart both call this entrypoint, so a cached
 environment reconciles even when the bootstrap never ran. Every run emits a
@@ -44,9 +46,10 @@ if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
 RECEIPT_SCHEMA = "l9.claude-projection.v1"
-ALL_DOMAINS = ("skills", "commands", "rules", "settings", "hooks", "plugins")
+ALL_DOMAINS = ("skills", "commands", "rules", "settings", "hooks", "plugins", "mcp")
 PLUGINS_DESIRED_REL = Path("environment/agents/adapters/claude-code/plugins.desired.json")
 PLUGIN_CLASSIFIER_REL = Path("ops/hooks/workspace_open_plugin_loader.py")
+MCP_TEMPLATE_REL = Path("environment/agents/adapters/claude-code/mcp.template.json")
 
 
 def default_receipt_path() -> Path:
@@ -347,6 +350,80 @@ def project_plugins(root: Path, workspace: Path, check: bool) -> DomainOutcome:
     return outcome
 
 
+def render_mcp(template: dict[str, Any], existing: dict[str, Any] | None) -> dict[str, Any]:
+    """Render the project .mcp.json from the canonical template.
+
+    The template is the single MCP authority; .mcp.json is its projection. The
+    private ``_comment`` block is documentation and never ships. Consumer-owned
+    servers already present in .mcp.json — any key the template does not define —
+    are preserved, so a repo may add its own MCP server without the projection
+    clobbering it. A managed server always takes the template's definition.
+    """
+    managed = template.get("mcpServers") or {}
+    servers: dict[str, Any] = {}
+    for name, spec in (existing or {}).get("mcpServers", {}).items():
+        if name not in managed:
+            servers[name] = spec
+    servers.update(managed)
+    return {
+        "_generated": (
+            "Rendered from environment/agents/adapters/claude-code/mcp.template.json "
+            "by ops/scripts/claude_projection.py (domain: mcp). Do not edit — edit the "
+            "template. Consumer-owned servers not defined by the template are preserved."
+        ),
+        "mcpServers": servers,
+    }
+
+
+def project_mcp(root: Path, workspace: Path, check: bool) -> DomainOutcome:
+    """Project .mcp.json from the canonical mcp.template.json (contract owner).
+
+    Eliminates the parallel-authority hazard: before this, a hand-authored root
+    .mcp.json diverged from the template and neither install path re-synced it.
+    Now .mcp.json is a render of the template, committed (cloud sessions read it
+    from the repo) and drift-checked here.
+    """
+    outcome = DomainOutcome("mcp")
+    template_path = root / MCP_TEMPLATE_REL
+    target = workspace / ".mcp.json"
+    if not template_path.is_file():
+        outcome.status = "error"
+        outcome.failures.append(f"missing MCP template: {template_path}")
+        return outcome
+    try:
+        template = json.loads(template_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        outcome.status = "error"
+        outcome.failures.append(f"template-unreadable: {exc}")
+        return outcome
+
+    existing = None
+    if target.is_file():
+        try:
+            existing = json.loads(target.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            existing = None
+    rendered = render_mcp(template, existing)
+    content = json.dumps(rendered, indent=2) + "\n"
+
+    managed_names = sorted((template.get("mcpServers") or {}).keys())
+    unmanaged = sorted(set((rendered.get("mcpServers") or {}).keys()) - set(managed_names))
+    outcome.detail["managed_servers"] = managed_names
+    outcome.detail["preserved_unmanaged"] = unmanaged
+    outcome.projected = len(managed_names)
+
+    current = target.read_text(encoding="utf-8") if target.is_file() else None
+    if current == content:
+        return outcome
+    if check:
+        outcome.status = "drift"
+        outcome.detail["drift"] = str(target)
+        return outcome
+    atomic_write(target, content)
+    outcome.detail["wrote"] = str(target)
+    return outcome
+
+
 def atomic_write(path: Path, content: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=path.name, dir=path.parent)
@@ -400,6 +477,8 @@ def run(
             outcomes.append(hooks_outcome)
     if "plugins" in wanted:
         outcomes.append(project_plugins(root, workspace, check))
+    if "mcp" in wanted:
+        outcomes.append(project_mcp(root, workspace, check))
 
     status = overall_status(outcomes)
     receipt = {

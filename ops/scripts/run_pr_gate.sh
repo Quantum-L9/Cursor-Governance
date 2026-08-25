@@ -360,14 +360,14 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
   fi
   # One projection entrypoint: apply skills/commands/rules, then verify clean.
   python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
-    --root "$WS" --workspace "$WS" --domains skills,commands,rules \
+    --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
     --quiet --no-receipt || true
   if ! python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
-    --root "$WS" --workspace "$WS" --domains skills,commands,rules \
+    --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
     --check --quiet --no-receipt; then
     echo "FAIL: Claude projection --check drifted — re-run: python3 ops/scripts/claude_projection.py --root \"$WS\" --workspace \"$WS\""
     python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
-      --root "$WS" --workspace "$WS" --domains skills,commands,rules --check --summary --no-receipt
+      --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp --check --summary --no-receipt
     exit 1
   fi
   echo "OK: Claude projection (skills, commands, rules) reconciled to SSOT"

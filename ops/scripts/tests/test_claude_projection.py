@@ -157,6 +157,24 @@ def make_root(base: Path) -> Path:
         ),
         encoding="utf-8",
     )
+
+    # MCP template (single MCP authority; .mcp.json is its projection).
+    (adapter_dir / "mcp.template.json").write_text(
+        json.dumps(
+            {
+                "_comment": ["test fixture"],
+                "mcpServers": {
+                    "graphiti-memory": {
+                        "type": "http",
+                        "url": "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti",
+                        "timeout": 120000,
+                        "alwaysLoad": True,
+                    }
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
     return root
 
 
@@ -205,8 +223,9 @@ class ClaudeProjectionEngineTests(unittest.TestCase):
         self.assertEqual(receipt["status"], "ok")
         self.assertEqual(
             receipt["managed_domains"],
-            ["commands", "hooks", "plugins", "rules", "settings", "skills"],
+            ["commands", "hooks", "mcp", "plugins", "rules", "settings", "skills"],
         )
+        self.assertTrue((self.ws / ".mcp.json").is_file())
         self.assertEqual(receipt["collisions"], ["command-skill-collision:l9-demo"])
         self.assertEqual(receipt["failures"], [])
         self.assertGreater(receipt["projected_count_by_domain"]["skills"], 0)
