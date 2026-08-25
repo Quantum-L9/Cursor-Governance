@@ -227,12 +227,19 @@ fi
 # PR state over REST (this gateway may refuse GraphQL) and fall through to PR
 # creation when it is not OPEN.
 if [[ -n "$pr_url" && -n "$pr_number" && -n "$owner" && -n "$name" ]]; then
+  # REST returns the state lowercase ("open"/"closed") — match case-insensitively
+  # so an actually-open PR is kept and only a MERGED/CLOSED one is cleared.
   pr_state="$(gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq '.state' 2>/dev/null || true)"
-  if [[ -n "$pr_state" && "$pr_state" != "OPEN" ]]; then
-    echo "NOTE: PR #${pr_number} for this branch is ${pr_state} (not OPEN) — opening a new PR"
-    pr_url=""
-    pr_number=""
-  fi
+  case "$pr_state" in
+    open | OPEN) ;; # genuinely open — keep it
+    *)
+      if [[ -n "$pr_state" ]]; then
+        echo "NOTE: PR #${pr_number} for this branch is ${pr_state} (not open) — opening a new PR"
+        pr_url=""
+        pr_number=""
+      fi
+      ;;
+  esac
 fi
 
 if [[ -z "$pr_url" || -z "$pr_number" ]]; then
