@@ -239,6 +239,10 @@
           "update agents.md",
           "refresh agent docs",
           "update claude.md",
+          "update invariants.md",
+          "update architecture.md",
+          "create claude.md",
+          "create invariants.md",
           "root doc pointer",
           "pointer stack"
         ],
@@ -1235,14 +1239,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) against live authority. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change. do not invent architecture.md or invariants.md.",
+      "description": "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) against live authority. use when the user says update agent docs, refresh repo docs, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change. creates those two only when absent; never invents other root files.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes"
+      "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
     {
       "composition_role": "general",
@@ -1279,6 +1283,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "c995cc41d9cf184b5b6837cbb6a92af1358d086664f493ef38c130ab8971e2cf",
-  "source_skill_corpus_sha256": "9124393fbf8474e7fc508c55c13c5c8be38314f1e4a796773f08ca2edffda710"
+  "source_manifest_sha256": "2fff03d3179f1ab77e593356709d9acc3e231aba7e39bbfe98e4acd87c4eb7f8",
+  "source_skill_corpus_sha256": "1bbdd55cd5ecfd8a87a1280a6357a5f6f08f319a8bcd4ad84d630b35c24ede79"
 }

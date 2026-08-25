@@ -1,7 +1,7 @@
 ---
 name: l9-update-agent-docs
-description: "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) against live authority. use when the user says update agent docs, refresh repo docs, sync agent files, or after ci checks or pre-commit hooks change. do not invent architecture.md or invariants.md."
-paths: "AGENTS.md, CLAUDE.md, README.md"
+description: "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) against live authority. use when the user says update agent docs, refresh repo docs, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change. creates those two only when absent; never invents other root files."
+paths: "AGENTS.md, CLAUDE.md, README.md, INVARIANTS.md"
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -9,9 +9,9 @@ metadata:
   tags: [l9, docs, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 2.2.0
-  updated: 2026-08-21
-  when_to_use: "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes"
+  version: 2.3.0
+  updated: 2026-08-24
+  when_to_use: "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
 ---
 
 # Update Agent Documentation (L9)
@@ -29,10 +29,12 @@ Live files on this host (do not invent others):
 | `CLAUDE.md` | Load pointer. Authority chain only. Must stay short. |
 | `AGENTS.md` | Operating-instruction SSOT. Additive-only on this repo. |
 | `README.md` | Index that points at `CANONICAL_LAW.md` and `AGENTS.md`. |
+| `INVARIANTS.md` / `ARCHITECTURE.md` | Live indexes **where present** (maps, not rungs; adapter-managed on this repo). |
 
 Bind targets from `ops/config/root-file-protection.json` before any write.
-There is no root `ARCHITECTURE.md` or `INVARIANTS.md` in this repository.
-Do not create them.
+When root `CLAUDE.md` or `INVARIANTS.md` is **absent**, create it via
+Step 3a — those two only. Never invent any other root file to satisfy a
+template.
 
 ## Authority Order
 
@@ -84,7 +86,9 @@ auditor or repairer.
   `kernels/Validate & Repair.md` into this pack
 - Always/Never lists, CI tables, or skill-registry dumps in `CLAUDE.md`
 - Folding `AGENTS.md` into a thin pointer (requires `ALLOW-ROOT-DELETION`)
-- Creating root `ARCHITECTURE.md` or `INVARIANTS.md`
+- Creating any root file outside Step 3a's contract (`CLAUDE.md` /
+  `INVARIANTS.md`, only when absent); root `ARCHITECTURE.md` is never
+  created by this skill
 - Editing `CANONICAL_LAW.md` or either kernel file
 - Rewriting generated formatter-ownership blocks by hand
 
@@ -93,6 +97,7 @@ auditor or repairer.
 - User says update agent docs / refresh repo docs / sync agent files
 - After CI, pre-commit, or skill-registry changes that make a **pointer** stale
 - After `l9-wire-skill-into-repo` when docs still name a skill incorrectly
+- Root `CLAUDE.md` or `INVARIANTS.md` is missing (bootstrap creation — Step 3a)
 
 Skill **wire / unwire** is owned by `l9-wire-skill-into-repo`. Use this skill
 afterward only to keep pointers honest.
@@ -141,6 +146,37 @@ Preserve generated `<!-- BEGIN L9 FORMATTER OWNERSHIP -->` blocks. If
 `install_ide_profile` dirtied only that block, restore from HEAD unless
 `environment/ide/policy.json` changed.
 
+### Step 3a — Create Missing Root Docs (`CLAUDE.md`, `INVARIANTS.md`)
+
+Applies only when the file is **absent at repo root**. Never overwrite an existing
+file from this step — an existing file falls through to the Step 3 write contract.
+
+**Root `CLAUDE.md` (create as load pointer):**
+
+- Shape it on the Cursor-Governance root `CLAUDE.md`: an **authority pointer**,
+  not a doctrine copy. State where doctrine lives and what outranks what.
+- Contents: repo authority chain (highest first), pointers to the operating SSOT
+  (`AGENTS.md` or equivalent) and to `INVARIANTS.md` / `ARCHITECTURE.md` as maps,
+  and at most a short list of the mistakes agents most often make in that repo.
+- Forbidden: Always/Never lists, CI / hook / skill-registry tables, or any body
+  text copied from the docs it points at. Keep it short enough to always load.
+
+**Root `INVARIANTS.md` (create as invariant index):**
+
+- Sections: invariant list, CI enforcement map (which workflow job or pre-commit
+  hook enforces each invariant), known false positives.
+- Every invariant and metric comes from the Step 2–6 audits — workflows, hooks,
+  lint config, adapter scripts. Unverifiable entries are `Unknown`, never invented.
+- Each false positive cites **where** the exclusion lives (file + key/flag).
+- Pointer-not-dump: cite the enforcing file; do not copy rule bodies, org
+  invariant bodies, or tables that already live in the operating SSOT.
+
+**Both files:**
+
+- Where the repo tracks root files (e.g. `ops/config/root-file-protection.json`),
+  register the new file as `managed` in the same change.
+- A project adapter's write rules outrank these defaults when present.
+
 ### Step 4 — Report
 
 List files changed, evidence for each metric, and any `Unknown`. For every
@@ -160,8 +196,11 @@ Do not claim either kernel was wrapped into this skill.
 
 - `CLAUDE.md` first heading remains an authority pointer
 - This pack contains no compressed-kernel table and no kernel YAML dump
-- Write targets are only files that exist
+- Write targets exist — or were created only through Step 3a's
+  create-when-missing contract, never by overwrite
 - Documented counts match repo files
+- Step 3a creations carry no fabricated counts, stay pointer/index-shaped,
+  and are registered in the repo's root-file protection config when one exists
 
 ## Failure Handling
 
