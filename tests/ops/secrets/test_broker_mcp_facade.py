@@ -31,17 +31,25 @@ except ImportError as exc:
     pytest.skip(f"capability broker imports unavailable: {exc}", allow_module_level=True)
 
 
+class StubClaims:
+    """Minimal SessionClaims stand-in with the audit-safe record only."""
+
+    def audit_record(self) -> dict[str, Any]:
+        return {"ccr:session_id": "s-test", "ccr:org_id": "o-test", "ccr:role": "session_worker"}
+
+
 class StubBroker:
     """Records capability invocations; authentication is toggleable."""
 
     def __init__(self, authenticated: bool = True) -> None:
         self.authenticated = authenticated
         self.calls: list[dict[str, Any]] = []
+        self.registry: list[Any] = []  # len() only, for /healthz
 
     def authenticate(self, authorization: str | None):
         if not self.authenticated or not authorization:
             raise cb.BrokerError(401, "missing session assertion")
-        return {"session_id": "s-test", "org_id": "o-test"}
+        return StubClaims()
 
     def handle(self, claims: Any, body: dict[str, Any]) -> dict[str, Any]:
         self.calls.append(body)
@@ -86,8 +94,60 @@ def post(
     return status, payload
 
 
+def get(
+    stub: StubBroker, path: str, headers: dict[str, str] | None = None
+) -> tuple[int, dict[str, Any] | None]:
+    handler = make_handler(stub, path, None, headers)
+    handler.requestline = f"GET {path} HTTP/1.1"
+    handler.do_GET()
+    raw = handler.wfile.getvalue().decode("utf-8")  # type: ignore[union-attr]
+    status = int(raw.split(" ", 2)[1])
+    payload_part = raw.split("\r\n\r\n", 1)
+    payload = None
+    if len(payload_part) == 2 and payload_part[1].strip():
+        payload = json.loads(payload_part[1])
+    return status, payload
+
+
 def rpc(method: str, params: dict[str, Any] | None = None, request_id: Any = 1) -> dict[str, Any]:
     return {"jsonrpc": "2.0", "id": request_id, "method": method, "params": params or {}}
+
+
+# --- authenticated readiness (/whoami vs /healthz) ---------------------------
+
+
+def test_healthz_is_unauthenticated_liveness_only() -> None:
+    # No Authorization header, yet 200: /healthz proves the process answers and
+    # nothing about identity. It must never be used as an authorization signal.
+    status, payload = get(StubBroker(authenticated=False), "/healthz")
+    assert status == 200
+    assert payload["status"] == "ok"
+
+
+def test_whoami_requires_verified_identity() -> None:
+    # Reachable broker, but no/invalid identity → honest 401. This is the signal
+    # a health check must gate on, so reachability alone is never READY.
+    status, payload = get(StubBroker(authenticated=False), "/whoami")
+    assert status == 401
+    assert "identity" not in (payload or {})
+
+
+def test_whoami_returns_only_audit_safe_identity() -> None:
+    status, payload = get(
+        StubBroker(authenticated=True), "/whoami", headers={"Authorization": "Bearer s.jwt"}
+    )
+    assert status == 200
+    assert payload["status"] == "authenticated"
+    # Only the audit-safe identifiers the caller already owns — never a secret,
+    # never the assertion itself.
+    assert payload["identity"] == {
+        "ccr:session_id": "s-test",
+        "ccr:org_id": "o-test",
+        "ccr:role": "session_worker",
+    }
+    serialized = json.dumps(payload)
+    assert "Bearer" not in serialized
+    assert "s.jwt" not in serialized
 
 
 # --- handshake ---------------------------------------------------------------
