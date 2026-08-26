@@ -5,7 +5,7 @@ profiles:
   worker-default:
     permission_profile_ref: repo-local-bounded
     inference_budget:
-      max_turns: 12
+      max_turns: 24
     timeout_budget:
       dispatch_seconds: 1800
       poll_seconds: 30
