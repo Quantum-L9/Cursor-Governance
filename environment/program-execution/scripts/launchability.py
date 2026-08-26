@@ -17,6 +17,9 @@ B. unreachable definition state — `definition_status: blocked` on a task whose
 C. admission evidence ordering — mechanical evidence the first execution
    frontier needs, which cannot be collected once bootstrap has frozen the
    blueprint.
+D. inadmissible validation command — a declared command the peer permission
+   ceiling will refuse. Reported here rather than at provider dispatch, which
+   is the other side of isolation, compile, bootstrap and arm.
 
 Explicit configuration always wins over inference.
 """
@@ -26,8 +29,18 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shlex
+import sys
 from pathlib import Path
 from typing import Any
+
+# Sibling import safety: this module is also loaded via importlib (tests) and
+# run directly, so the PE root may not be on sys.path.
+_PE_ROOT = Path(__file__).resolve().parents[1]
+if str(_PE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_PE_ROOT))
+
+from peer_execution.validation_command import validation_command_error  # noqa: E402
 
 SEVERITY_ORDER = {"blocker": 0, "warning": 1, "info": 2}
 _PY_MODULE = re.compile(r"^(?P<pkg>[\w./-]+)\.py$")
@@ -125,14 +138,36 @@ def infer_validation_commands(
                     if probe not in tests:
                         tests.append(probe)
     if tests:
-        return [f"{python} -m pytest {' '.join(tests)} --tb=short -q --no-cov"]
+        joined = " ".join(shlex.quote(path) for path in tests)
+        return _admissible([f"{python} -m pytest {joined} --tb=short -q --no-cov"])
     shells = [path for path in paths if path.endswith((".sh", ".bash"))]
     if shells:
-        return [f"bash -n {' '.join(shells)}"]
+        joined = " ".join(shlex.quote(path) for path in shells)
+        return _admissible([f"bash -n {joined}"])
     if paths:
-        quoted = " ".join(f"'{path}'" for path in paths)
-        return [f"test -s {quoted}"] if len(paths) == 1 else [f"ls -1 {quoted} >/dev/null"]
+        # One command per path. The old multi-path form was
+        # `ls -1 'a' 'b' >/dev/null`, whose redirect composes two shell
+        # operations and is refused by the peer permission ceiling — after
+        # isolation, compile, bootstrap and arm.
+        return _admissible([f"test -s {shlex.quote(path)}" for path in paths])
     return []
+
+
+def _admissible(commands: list[str]) -> list[str]:
+    """Synthesis may never emit a command the peer permission ceiling refuses.
+
+    This is an internal invariant, not operator input validation: reaching it
+    means launchability itself produced inadmissible shell, which is a defect
+    here rather than a defect in the campaign source.
+    """
+    for command in commands:
+        reason = validation_command_error(command)
+        if reason is not None:
+            raise LaunchabilityError(
+                f"launchability synthesized an inadmissible validation command "
+                f"{command!r}: {reason}"
+            )
+    return commands
 
 
 def _requires_controller_verification(task: dict[str, Any]) -> bool:
@@ -157,6 +192,21 @@ def check_tasks(
     for task in tasks:
         task_id = str(task.get("id") or "UNKNOWN")
         status = str(task.get("definition_status") or "")
+
+        for command in declared_validation_commands(task):
+            reason = validation_command_error(command)
+            if reason is not None:
+                findings.append(
+                    _finding(
+                        "invalid_validation_command",
+                        "blocker",
+                        task_id,
+                        f"declared validation command {command!r} is not admissible: {reason}",
+                        "declare one shell operation per validation entry; the peer permission "
+                        "ceiling refuses composed commands, redirects, command substitution and "
+                        "inline interpreter code",
+                    )
+                )
 
         if _requires_controller_verification(task) and not declared_validation_commands(task):
             inferred = infer_validation_commands(task, repo_root, python=python) if infer else []
