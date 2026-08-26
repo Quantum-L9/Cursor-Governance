@@ -331,7 +331,7 @@ class GoldenSemanticTests(unittest.TestCase):
         self.assertEqual(provenance["source"]["sha256"], self.receipt["source"]["sha256"])
         unit_ids = {unit["id"] for unit in provenance["source_units"]}
         for item in provenance["semantic_items"]:
-            self.assertTrue(set(item["source_refs"]) <= unit_ids)
+            self.assertLessEqual(set(item["source_refs"]), unit_ids)
 
     def test_reported_counts_match_the_artifacts(self) -> None:
         self.assertEqual(self.receipt["task_count"], len(self.source["tasks"]))

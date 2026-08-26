@@ -445,7 +445,9 @@ class RunCampaignTests(unittest.TestCase):
             other_primary.mkdir()
             report = self.mod.run_campaign(
                 root / "arch.md",
-                forced_kind=self.mod.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1,
+                forced_kind=(
+                    self.mod.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
+                ),
                 until="activate",
                 primary=other_primary,
                 repo_root=root,

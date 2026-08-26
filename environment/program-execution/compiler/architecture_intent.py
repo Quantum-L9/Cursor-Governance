@@ -260,7 +260,6 @@ def segment(text: str) -> tuple[SourceUnit, ...]:
         fence = FENCE_RE.match(line)
         if fence:
             marker = fence.group(1)[0] * 3
-            close = index
             for probe in range(index + 1, total):
                 if lines[probe].lstrip().startswith(marker):
                     close = probe

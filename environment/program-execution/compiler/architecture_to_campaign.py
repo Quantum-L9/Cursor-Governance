@@ -687,7 +687,7 @@ def lower(
             "operating_rules": [
                 "Every obligation carries a source unit citation back to the architecture source.",
                 "Ordering is expressed by dependencies, waves, and gates; never by "
-                "definition status.",
+                + "definition status.",
                 "Local work only: no remote mutation inside campaign execution.",
                 "Repository evidence grounds implementation; it does not overrule operator intent.",
             ],
