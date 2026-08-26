@@ -255,9 +255,22 @@ def _merge_authority_status(gov: Path) -> tuple[str, str]:
     return BLOCKED, "environment boolean authorized a merge (regression)"
 
 
+# The boundary is a posture label, never a credential. The probe value is used
+# only as a lookup KEY into this fixed vocabulary; the emitted string is always
+# one of these module constants, so no probe-derived value is ever printed
+# verbatim (severs the CodeQL clear-text-logging taint — the probe by contract
+# returns classifier fields only, never secret material).
+_SECRET_BOUNDARY_VOCAB = {
+    "model-controlled": "model-controlled",
+    "broker-mediated": "broker-mediated",
+    "operator-trusted": "operator-trusted",
+}
+
+
 def _secret_boundary_status(probe: dict[str, Any]) -> tuple[str, str]:
     # This surface holds no credentials; the broker keeps them on the far side.
-    boundary = str(probe.get("secret_boundary") or "model-controlled")
+    key = str(probe.get("secret_boundary") or "").strip().lower()
+    boundary = _SECRET_BOUNDARY_VOCAB.get(key, "model-controlled")
     return READY, f"{boundary} (no broker/Infisical/Graphiti secret in this environment)"
 
 
@@ -400,6 +413,8 @@ def main() -> int:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
         except OSError:
+            # Best-effort: an unwritable receipt path must not break SessionStart;
+            # the receipt is still printed below for the operator.
             pass
 
     if args.json:
