@@ -334,6 +334,22 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
     compose_args+=(--campaign-body-file "$WS/.l9/pr/campaign-body.md")
   fi
   body="$("$compose_python" "$compose_py" "${compose_args[@]}")"
+  # Prove the body satisfies the protected-root contract BEFORE the PR exists.
+  # The stamp check is CI-enforced (`--require-pr-body` / GITHUB_ACTIONS), so a
+  # body missing it used to be discovered only after the PR was open — a red
+  # check on a PR that had to be edited or republished. Checking the body we
+  # are about to send costs nothing and keeps the failure local.
+  if [[ -n "$_touched_additive" && -f "$_root_protect_py" ]]; then
+    printf '%s' "$body" > "$WS/.l9/pr/pr-body.md"
+    if ! "$_gov_python" "$_root_protect_py" \
+        --base "$PR_BASE" --head HEAD --repo "$WS" \
+        --pr-body-file "$WS/.l9/pr/pr-body.md" --require-pr-body; then
+      echo "FAIL: composed PR body does not satisfy the protected-root contract" >&2
+      echo "      body draft: $WS/.l9/pr/pr-body.md" >&2
+      echo "      nothing was opened; fix the body or the template, then re-run make pr" >&2
+      exit 1
+    fi
+  fi
   # Explicit --head: gh otherwise aborts with "must first push the current
   # branch" in worktree/CI contexts where upstream tracking is not visible
   # (2026-08-15 factory repair).
