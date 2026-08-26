@@ -112,6 +112,8 @@ campaign:
 ## TARGET=owner/repo required unless the document declares its own `target:`.
 ## Route: architecture -> campaign_source -> blueprint -> PEC.
 ## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|execute (default execute), same as make campaign.
+## TARGET_CHECKOUT=path to an existing local clone (optional, read-only) so generated
+## validations resolve to that repository's own test/lint commands.
 campaign-architecture:
 	@test -n "$(INTENT)" || (echo "INTENT= path to the architecture document is required" >&2; exit 2)
 	TARGET="$(TARGET)" $(PYTHON) environment/program-execution/scripts/run_campaign.py \
@@ -119,6 +121,7 @@ campaign-architecture:
 	  --intent "$(INTENT)" \
 	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
 	  $(if $(TARGET),--target "$(TARGET)") \
+	  $(if $(TARGET_CHECKOUT),--target-checkout "$(TARGET_CHECKOUT)") \
 	  $(CAMPAIGN_ARGS)
 
 .PHONY: campaign-architecture-check

@@ -665,6 +665,15 @@ def classify_campaign_input(path: Path, *, forced_kind: Any | None = None) -> An
     return found
 
 
+def existing_target_checkout(candidate: Path | str | None) -> Path | None:
+    """A local clone to inspect read-only, or None. Never creates one."""
+    raw = str(candidate or os.environ.get("TARGET_CHECKOUT") or "").strip()
+    if not raw:
+        return None
+    path = Path(raw).expanduser()
+    return path.resolve() if path.is_dir() else None
+
+
 def architecture_module() -> Any:
     return _load_script(
         "compile_architecture_intent", PE_ROOT / "scripts/compile_architecture_intent.py"
@@ -4069,6 +4078,7 @@ def run_campaign(
     hooks: Hooks | None = None,
     fast: bool | None = None,
     forced_kind: Any | None = None,
+    target_checkout: Path | None = None,
 ) -> CampaignReport:
     """Run the campaign and leave a forensic execution trace behind it.
 
@@ -4101,6 +4111,7 @@ def run_campaign(
                 fast=fast,
                 trace=trace,
                 forced_kind=forced_kind,
+                target_checkout=target_checkout,
             )
     finally:
         auto_harvest(trace)
@@ -4120,6 +4131,7 @@ def _run_campaign_stages(
     fast: bool | None = None,
     trace: pe_trace.ExecutionTrace | None = None,
     forced_kind: Any | None = None,
+    target_checkout: Path | None = None,
 ) -> CampaignReport:
     requested_until = until
     until = normalize_until(until)
@@ -4152,7 +4164,11 @@ def _run_campaign_stages(
                     target=target_override or os.environ.get("TARGET"),
                     repo_root=host_root,
                     primed_dir=l9_home / "primed",
-                    target_checkout=None,
+                    # Read-only grounding against an existing local clone, when
+                    # the operator names one. Nothing is created here: this stage
+                    # runs before any side effect, and materializing a checkout
+                    # to inspect it would be one.
+                    target_checkout=existing_target_checkout(target_checkout),
                 )
             except architecture_module().ArchitectureCompileError as exc:
                 # Presented the same way whoever raised it: the refusal already
@@ -4814,6 +4830,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Classify a campaign input and print its route. Runs no campaign stage.",
     )
     parser.add_argument(
+        "--target-checkout",
+        type=Path,
+        default=None,
+        help=(
+            "Existing local clone of the target repository, inspected read-only so "
+            "architecture validations resolve to repository-native commands "
+            "(also TARGET_CHECKOUT=)"
+        ),
+    )
+    parser.add_argument(
         "--architecture",
         action="store_true",
         help=(
@@ -4943,6 +4969,7 @@ def main(argv: list[str] | None = None) -> int:
                 module.CampaignInputKind.ARCHITECTURE_INTENT_V1 if args.architecture else None
             ),
             until=args.until,
+            target_checkout=args.target_checkout,
             primary=args.primary,
             worktree=args.worktree,
             repo_root=args.repo_root,
