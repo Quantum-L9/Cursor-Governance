@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# l9 — the one thin L9 command facade over the canonical Governance Makefile.
+#
+# It contains NO build logic and NO second target registry. It resolves the
+# Governance runtime clone, asks the canonical Makefile which targets are
+# CONSUMER_SAFE (the Makefile is the single classification authority), and
+# delegates:
+#
+#     l9 <target> [make-args...]   ->   make -C "$GOV" <target> WS="$PWD" [args...]
+#
+# CURDIR (inside make -C) is always the Governance implementation root; WS is
+# the consumer workspace the caller invoked l9 from. Only targets the Makefile
+# lists as CONSUMER_SAFE are accepted, so a Governance-only target cannot be run
+# against a consumer workspace by path confusion.
+#
+# Repo-owned source:
+#   environment/agents/adapters/claude-code/bin/l9
+# Installed to (ops/scripts/install_l9_dispatcher.sh):
+#   $HOME/.local/bin/l9
+set -euo pipefail
+
+GOV="${L9_GOV_ROOT:-$HOME/.cursor-governance}"
+
+die() {
+	printf 'l9: %s\n' "$1" >&2
+	exit "${2:-1}"
+}
+
+usage() {
+	local safe="${1:-}"
+	cat >&2 <<EOF
+l9 — thin facade over the Governance Makefile (make -C "$GOV" <target> WS="\$PWD")
+
+Usage:
+  l9 <target> [VAR=value ...]     run a CONSUMER_SAFE Governance target against \$PWD
+  l9 --list                       print the CONSUMER_SAFE target allowlist
+  l9 --help                       this help
+
+Governance runtime clone: $GOV
+EOF
+	if [ -n "$safe" ]; then
+		printf '\nCONSUMER_SAFE targets:\n' >&2
+		# shellcheck disable=SC2086
+		printf '  %s\n' $safe >&2
+	fi
+}
+
+# The Governance runtime clone is the sole build authority. Absent = fail closed.
+[ -d "$GOV" ] || die "Governance runtime clone not found at $GOV (set L9_GOV_ROOT)" 3
+[ -f "$GOV/Makefile" ] || die "no Makefile in Governance runtime clone $GOV" 3
+
+# The Makefile owns target classification. Ask it, never guess.
+consumer_safe_list() {
+	make -C "$GOV" --no-print-directory l9-consumer-safe-list 2>/dev/null || true
+}
+
+if [ "$#" -eq 0 ]; then
+	usage "$(consumer_safe_list)"
+	exit 2
+fi
+
+case "$1" in
+-h | --help | help)
+	usage "$(consumer_safe_list)"
+	exit 0
+	;;
+--list)
+	consumer_safe_list
+	exit 0
+	;;
+esac
+
+target="$1"
+shift
+
+SAFE="$(consumer_safe_list)"
+[ -n "$SAFE" ] || die "Makefile did not report its CONSUMER_SAFE target list (l9-consumer-safe-list); refusing to guess" 3
+
+is_safe=0
+for t in $SAFE; do
+	if [ "$t" = "$target" ]; then
+		is_safe=1
+		break
+	fi
+done
+
+if [ "$is_safe" -ne 1 ]; then
+	printf 'l9: "%s" is not a CONSUMER_SAFE target and cannot be run cross-repo.\n' "$target" >&2
+	printf 'l9: run a Governance-only target directly with: make -C "%s" %s\n' "$GOV" "$target" >&2
+	usage "$SAFE"
+	exit 2
+fi
+
+# Delegate. WS is the consumer workspace ($PWD); CURDIR stays $GOV via -C.
+# exec propagates the Makefile's exit status; "$@" preserves argument quoting.
+exec make -C "$GOV" "$target" WS="$PWD" "$@"

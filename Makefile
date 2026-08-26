@@ -720,3 +720,30 @@ PUSH_ONLY ?= 0
 ## In-place /ff catch-up (l9-repo-sync). Parks unique work. Never activate_fresh. Never stash -u.
 ff:
 	CURSOR_GOVERNANCE_DIR="$(CURDIR)" bash skills/l9-repo-sync/scripts/ff.sh
+
+# L9_DISPATCHER_FACADE_V1
+# Single classification authority for the thin `l9` cross-repo facade
+# (environment/agents/adapters/claude-code/bin/l9). A CONSUMER_SAFE target is
+# WS-aware: it acts on the consumer workspace ($(WS)) and never mutates
+# Governance by path confusion (Governance work uses $(CURDIR) via `make -C`).
+# The dispatcher exposes exactly these; every other target is GOVERNANCE_ONLY
+# and must be run directly with `make -C "$$HOME/.cursor-governance" <target>`.
+# See docs/L9_DISPATCHER.md. Keep in sync with any new WS-aware target.
+L9_CONSUMER_SAFE_TARGETS := start pr pr-check pr-security improve wiring-check \
+  claude-projection claude-projection-check claude-skills claude-settings \
+  claude-settings-check claude-install claude-install-check claude-plugins \
+  claude-env ide-profile l4-status l4-begin l4-record-kernels l4-authorize \
+  clean workspace-clean
+
+.PHONY: l9-consumer-safe-list l9-dispatcher-install l9-dispatcher-check
+## Print the CONSUMER_SAFE target allowlist (the dispatcher's classification source).
+l9-consumer-safe-list:
+	@echo $(L9_CONSUMER_SAFE_TARGETS)
+
+## Install/reconcile the thin l9 dispatcher to $$HOME/.local/bin/l9.
+l9-dispatcher-install:
+	bash "$(CURDIR)/ops/scripts/install_l9_dispatcher.sh"
+
+## Report l9 dispatcher drift without writing anything.
+l9-dispatcher-check:
+	bash "$(CURDIR)/ops/scripts/install_l9_dispatcher.sh" --check
