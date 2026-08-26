@@ -4187,6 +4187,10 @@ def _run_campaign_stages(
             classified["architecture_source_sha256"] = str(architecture_receipt["source"]["sha256"])
             classified["coverage_status"] = str(architecture_receipt["coverage"]["status"])
         elif classification.kind is kinds.CAMPAIGN_SOURCE_V2:
+            # Same preflight authority as `campaign-check-input`, called here so a
+            # deterministic source defect cannot reach `isolate worktree`. Not a
+            # second copy of the rules: one function, two callers.
+            campaign_input_module().preflight(classification)
             campaign_source_doc = classification.document
             resolved_intent = classification.path
             seed = campaign_input_module().seed_view(campaign_source_doc or {})

@@ -71,6 +71,7 @@ READY_SEED = {
     "tasks": [
         {
             "id": "TASK-001",
+            "paths": ["docs/program-execution/demo/baseline.md"],
             "title": "Lock current state",
             "objective": "Record baseline.",
             "actions": ["inspect_repository_head"],
@@ -88,6 +89,7 @@ READY_SEED = {
         },
         {
             "id": "TASK-002",
+            "paths": ["docs/program-execution/demo/change.md"],
             "title": "Implement change",
             "objective": "Edit declared paths only.",
             "actions": ["edit_only_declared_paths"],
@@ -222,6 +224,11 @@ Budget downgrade MUST remain within the capability family.
 
 
 SEEN_TARGET_CHECKOUTS: list[object] = []
+
+
+def _architecture_kind(module):
+    """The forced-architecture classification, named once so call sites fit."""
+    return module.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
 
 
 def _architecture_hook(intent, *, target, repo_root, primed_dir, target_checkout=None):
@@ -445,9 +452,7 @@ class RunCampaignTests(unittest.TestCase):
             other_primary.mkdir()
             report = self.mod.run_campaign(
                 root / "arch.md",
-                forced_kind=(
-                    self.mod.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
-                ),
+                forced_kind=_architecture_kind(self.mod),
                 until="activate",
                 primary=other_primary,
                 repo_root=root,
@@ -549,9 +554,7 @@ class RunCampaignTests(unittest.TestCase):
             with self.assertRaises(self.mod.CampaignError) as ctx:
                 self.mod.run_campaign(
                     root / "arch.md",
-                    forced_kind=(
-                        self.mod.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
-                    ),
+                    forced_kind=_architecture_kind(self.mod),
                     until="activate",
                     primary=other_primary,
                     repo_root=root,
@@ -2097,7 +2100,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
 
     def test_direct_campaign_source_explicit_blocked_still_refuses_seal(self) -> None:
         """Omission defaults to Ready; an explicit non-ready state never does."""
-        for declared in ("Blocked", "Partial", "Failed", "", None):
+        for declared in ("Blocked", "Partial", "Failed"):
             with self.subTest(plan_status=declared):
                 source = self._source()
                 source["plan_status"] = declared
@@ -2125,6 +2128,166 @@ class CampaignInputRoutingTests(unittest.TestCase):
                         )
                 self.assertIn("refuse seal", str(ctx.exception))
                 self.assertEqual(invoked, [], msg="compile_source ran on a refused seal")
+
+    def test_direct_campaign_source_malformed_plan_status_is_refused_before_isolation(
+        self,
+    ) -> None:
+        """A declared-but-malformed status is a source defect, not a default.
+
+        Source preflight now runs before isolation, so an empty or null
+        `plan_status` is refused as a schema violation rather than reaching the
+        seal check. Either way it never becomes Ready — and now nothing is
+        created before it is caught.
+        """
+        for declared in ("", None):
+            with self.subTest(plan_status=declared):
+                source = self._source()
+                source["plan_status"] = declared
+                git_calls: list[object] = []
+                compiled: list[object] = []
+
+                with tempfile.TemporaryDirectory() as raw:
+                    root = _host_repo(Path(raw))
+                    l9 = Path(raw) / "l9"
+                    path = root / "CAMPAIGN_SOURCE.yaml"
+                    _dump(path, source)
+                    with self.assertRaises(self.ci.CampaignInputRejected) as ctx:
+                        self.mod.run_campaign(
+                            path,
+                            until="blueprint",
+                            primary=Path(raw) / "primary",
+                            repo_root=root,
+                            l9_root=l9,
+                            hooks=self.mod.Hooks(
+                                context7_stack=_stack_ok,
+                                git=lambda *a, **k: git_calls.append(a) or "",
+                                compile_source=lambda source, target: compiled.append(source),
+                                validate_blueprint=lambda target: [],
+                            ),
+                        )
+                    payload = ctx.exception.to_dict()
+                    self.assertTrue(payload["nothing_executed"])
+                    self.assertFalse(payload["workspace_created"])
+                    self.assertEqual(payload["tasks_started"], 0)
+                    self.assertIn("plan_status", payload["reason"])
+                    self.assertEqual(git_calls, [], msg="isolation ran on a refused source")
+                    self.assertEqual(compiled, [], msg="compile ran on a refused source")
+                    self.assertFalse(l9.exists(), msg="rejection created runtime state")
+
+    # --- source preflight: deterministic defects die before isolation ------
+
+    def _refuse_before_isolation(self, source: dict) -> dict:
+        """Run a bad source through the front door; prove nothing was created."""
+        git_calls: list[object] = []
+        compiled: list[object] = []
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            l9 = Path(raw) / "l9"
+            path = root / "CAMPAIGN_SOURCE.yaml"
+            _dump(path, source)
+
+            # 1. campaign-check-input refuses, and runs no stage.
+            self.assertEqual(self.mod.main(["--check-input", str(path)]), 2)
+
+            # 2. run_campaign refuses at the same boundary.
+            with self.assertRaises(self.ci.CampaignInputRejected) as ctx:
+                self.mod.run_campaign(
+                    path,
+                    until="blueprint",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=l9,
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        git=lambda *a, **k: git_calls.append(a) or "",
+                        compile_source=lambda source, target: compiled.append(source),
+                        validate_blueprint=lambda target: [],
+                    ),
+                )
+            payload = ctx.exception.to_dict()
+            self.assertTrue(payload["nothing_executed"])
+            self.assertFalse(payload["workspace_created"])
+            self.assertEqual(payload["tasks_started"], 0)
+            self.assertEqual(git_calls, [], msg="isolate ran on a refused source")
+            self.assertEqual(compiled, [], msg="compile ran on a refused source")
+            self.assertFalse(l9.exists(), msg="refused source created runtime state")
+        return payload
+
+    def test_illegal_task_and_gate_ids_fail_check_input_before_execution(self) -> None:
+        """The v3 failure: TASK-001A classified SUPPORTED, then died at template validation."""
+        source = self._source()
+        source["tasks"][0]["id"] = "TASK-001A"
+        payload = self._refuse_before_isolation(source)
+        self.assertIn("TASK-001A", payload["reason"])
+
+    def test_illegal_gate_id_fails_check_input_before_execution(self) -> None:
+        source = self._source()
+        gates = source.get("gates") or []
+        if not gates:
+            self.skipTest("fixture declares no gates")
+        gates[0]["id"] = "GATE-001A"
+        payload = self._refuse_before_isolation(source)
+        self.assertIn("GATE-001A", payload["reason"])
+
+    def test_mutating_task_without_writable_scope_fails_check_input(self) -> None:
+        source = self._source()
+        task = next(
+            item
+            for item in source["tasks"]
+            if (item.get("authorization_ceiling") or {}).get("local_write")
+            and item.get("execution_kind") != "program_control"
+        )
+        task["paths"] = []
+        task.pop("outputs", None)
+        payload = self._refuse_before_isolation(source)
+        self.assertIn(task["id"], payload["reason"])
+        self.assertIn("local_write", payload["reason"])
+
+    def test_composed_validation_command_fails_before_isolation(self) -> None:
+        """Reproduces the v3 permission-render failure at the correct boundary."""
+        source = self._source()
+        task = source["tasks"][0]
+        task["validation"] = [
+            {
+                "id": "VAL-001",
+                "method": "command",
+                "command_or_inspection": "grep -q x a.py && grep -q x b.py",
+            }
+        ]
+        payload = self._refuse_before_isolation(source)
+        self.assertIn("VAL-001", payload["reason"])
+
+    def test_valid_source_still_passes_check_input_and_reaches_blueprint(self) -> None:
+        """The preflight must not be so strict that a good campaign stops compiling."""
+        source = self._source()
+        landed: dict[str, object] = {}
+
+        def compile_source(source_path: Path, target: Path) -> None:
+            landed["doc"] = _load_yaml_file(Path(source_path))
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            path = root / "CAMPAIGN_SOURCE.yaml"
+            _dump(path, source)
+            self.assertEqual(self.mod.main(["--check-input", str(path)]), 0)
+            report = self.mod.run_campaign(
+                path,
+                until="blueprint",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    compile_source=compile_source,
+                    validate_blueprint=lambda target: [],
+                ),
+            )
+        self.assertIn("blueprint", report.stages_completed)
+        doc = landed.get("doc")
+        self.assertIsNotNone(doc, msg="compile_source was never invoked")
+        # Explicit writable scope survives intake verbatim.
+        task = next(item for item in doc["tasks"] if item["id"] == "TASK-001")
+        self.assertEqual(task["paths"], ["docs/program-execution/demo/baseline.md"])
 
     def test_check_input_reports_route_and_runs_no_stage(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

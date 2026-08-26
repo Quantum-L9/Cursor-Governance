@@ -517,10 +517,30 @@ class TamperTests(unittest.TestCase):
         self.assertIn("unknown source units", str(ctx.exception))
 
     def test_a_legacy_source_without_provenance_still_compiles(self) -> None:
-        legacy = PE_ROOT / "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml"
+        """No intent_provenance is not a defect; missing writable scope is.
+
+        The legacy fixture predates the rule that a mutating task must name what
+        it may write, so its tasks are given explicit scope here. What this test
+        asserts is that a source carrying no architecture lineage still compiles,
+        not that a task may omit its scope.
+        """
+        legacy = yaml.safe_load(
+            (PE_ROOT / "campaigns/bounded-replanning-v1/CAMPAIGN_SOURCE.yaml").read_text(
+                encoding="utf-8"
+            )
+        )
+        for task in legacy.get("tasks") or []:
+            ceiling = task.get("authorization_ceiling") or {}
+            mutating = (
+                ceiling.get("local_write") and task.get("execution_kind") != "program_control"
+            )
+            if mutating and not task.get("paths") and not task.get("outputs"):
+                task["paths"] = [f"docs/program-execution/{task['id']}.md"]
+        source = self.root / "legacy-source.yaml"
+        source.write_text(yaml.safe_dump(legacy, sort_keys=False), encoding="utf-8")
         target = self.root / "legacy"
         COMPILER.compile_source(
-            legacy,
+            source,
             target,
             stack_proof=_pass_proof(self.root / "legacy-proof.json", "bounded-replanning-v1"),
         )

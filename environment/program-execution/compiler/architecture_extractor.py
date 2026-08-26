@@ -185,8 +185,8 @@ def chunk_units(
 
 _PATH_RE = re.compile(r"(?<![\w/])((?:[\w.-]+/)+[\w.-]+\.[A-Za-z0-9]{1,6})")
 _COMMAND_RE = re.compile(
-    r"^\s*(?:\$\s*)?((?:npm|npx|make|pytest|python3?|node|uv|ruff|mypy|yarn|pnpm"
-    r"|go|cargo|bash)\b[^\n]*)"
+    r"^\s*(?:\$\s*)?((?:npm|npx|make|pytest|python3?|node|uv|ruff|mypy"
+    r"|yarn|pnpm|go|cargo|bash)\b[^\n]*)"
 )
 _SENTENCE_RE = re.compile(r"(?<=[.!?])\s+")
 _PROBE_RE = re.compile(

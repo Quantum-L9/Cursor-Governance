@@ -1025,6 +1025,15 @@ def _task(
     target_id: str,
     workstream_id: str,
 ) -> dict[str, Any]:
+    declared_paths = list(paths)
+    if not read_only and not declared_paths:
+        # A mutating task must name what it may write. When the architecture
+        # names no file for this section, the one location the compiler can
+        # honestly declare is the task's own record — under-scoped rather than
+        # over-scoped, and widened by naming paths in the source. Emitting an
+        # empty scope instead would ask the worker to accept write authority
+        # over files nobody named.
+        declared_paths = [f"docs/program-execution/{task_id}.md"]
     return {
         "id": task_id,
         "title": title,
@@ -1039,7 +1048,7 @@ def _task(
         "required_decision_ids": [],
         "blocking_unknown_ids": [],
         "input_evidence_ids": list(input_evidence_ids),
-        "paths": list(paths),
+        "paths": declared_paths,
         "actions": list(actions),
         "acceptance": list(acceptance),
         "validation": list(validation),

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import importlib.util
 import json
+import re
 import sys
 from datetime import UTC, datetime
 from pathlib import Path
@@ -29,6 +30,12 @@ from blueprint_ops import (  # noqa: E402
 from blueprint_ops import (  # noqa: E402
     validate_blueprint as validate_blueprint_artifact,
 )
+
+_PE_ROOT_FOR_IMPORT = Path(__file__).resolve().parents[1]
+if str(_PE_ROOT_FOR_IMPORT) not in sys.path:
+    sys.path.insert(0, str(_PE_ROOT_FOR_IMPORT))
+
+from peer_execution.validation_command import validation_command_error  # noqa: E402
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = PE_ROOT / "core/shared/schemas/campaign-source.schema.json"
@@ -355,6 +362,11 @@ def _admission_evidence(src: dict[str, Any]) -> list[dict[str, Any]]:
 VALIDATION_METHODS = frozenset(
     {"command", "inspection", "command_and_inspection", "external_adapter"}
 )
+# Methods whose `command_or_inspection` is shell. `inspection` is prose and is
+# never handed to the shell-command grammar.
+_EXECUTABLE_VALIDATION_METHODS = frozenset(
+    {"command", "command_and_inspection", "external_adapter"}
+)
 
 
 def _task_validations(item: dict[str, Any], suffix: str) -> list[dict[str, Any]]:
@@ -399,6 +411,129 @@ def _task_validations(item: dict[str, Any], suffix: str) -> list[dict[str, Any]]
     return entries
 
 
+# The Blueprint template schemas are the ID law. Reading the patterns from them
+# keeps preflight and the instantiated validator from drifting into two
+# competing grammars — the drift that let TASK-001A reach template validation.
+TASK_ID_SCHEMA = BLUEPRINT_TEMPLATE / "schemas/task-cards.schema.json"
+GATE_ID_SCHEMA = BLUEPRINT_TEMPLATE / "schemas/convergence-gates.schema.json"
+
+
+def _schema_id_pattern(path: Path, collection: str) -> str:
+    """The canonical `id` pattern the instantiated Blueprint validator enforces."""
+    schema = json.loads(path.read_text(encoding="utf-8"))
+    node = schema.get("properties", {}).get(collection, {})
+    pattern = node.get("items", {}).get("properties", {}).get("id", {}).get("pattern")
+    if not pattern:
+        raise CompileError(
+            f"{path.name} declares no {collection}[].id pattern; the Blueprint ID grammar "
+            "cannot be sourced and preflight would be guessing"
+        )
+    return str(pattern)
+
+
+def blueprint_task_id_pattern() -> str:
+    return _schema_id_pattern(TASK_ID_SCHEMA, "tasks")
+
+
+def blueprint_gate_id_pattern() -> str:
+    return _schema_id_pattern(GATE_ID_SCHEMA, "gates")
+
+
+def _is_mutating_task(item: dict[str, Any]) -> bool:
+    """Does this task's effective ceiling permit writing repository content?
+
+    `program_control` has its local_write removed at compile time regardless of
+    what the source declared, so the effective ceiling — not the declared one —
+    decides.
+    """
+    if str(item.get("execution_kind") or "").strip() == "program_control":
+        return False
+    ceiling = item.get("authorization_ceiling") or {}
+    return bool(ceiling.get("local_write")) if isinstance(ceiling, dict) else False
+
+
+def _declared_writable_locations(item: dict[str, Any]) -> list[str]:
+    """Writable scope the source actually declared. Never inferred from prose."""
+    found: list[str] = []
+    for output in item.get("outputs") or []:
+        if isinstance(output, dict):
+            text = str(output.get("location") or "").strip()
+            if text and not text.startswith("receipts/"):
+                found.append(text)
+    for path in item.get("paths") or []:
+        text = str(path or "").strip()
+        if text and not text.startswith("receipts/"):
+            found.append(text)
+    return found
+
+
+def preflight_campaign_source_document(src: dict[str, Any]) -> list[str]:
+    """Deterministic source defects, found before anything is created.
+
+    Pure and read-only: no worktree, no PEC state, no mutation authority, no
+    provider execution, no remote call, and the source document is never
+    modified. Returns compile warnings; raises CompileError on a defect that
+    has no valid compiled representation.
+
+    This is the single authority `campaign-check-input` and `run_campaign`
+    both call, so a source cannot pass the check and then fail the run.
+    """
+    errors = validate_campaign_source(src)
+    if errors:
+        raise CompileError(
+            "campaign source failed schema validation:\n  - " + "\n  - ".join(errors)
+        )
+    warnings = _semantic_precheck(src)
+
+    task_pattern = re.compile(blueprint_task_id_pattern())
+    gate_pattern = re.compile(blueprint_gate_id_pattern())
+
+    for task in src.get("tasks") or []:
+        task_id = str(task.get("id") or "")
+        if not task_pattern.match(task_id):
+            raise CompileError(
+                f"task id {task_id!r} does not match the Blueprint task grammar "
+                f"{task_pattern.pattern!r}; the instantiated Blueprint validator would "
+                "refuse it after isolation and compile. Renumber the task in the source "
+                "— ids are never rewritten for you"
+            )
+        if _is_mutating_task(task) and not _declared_writable_locations(task):
+            raise CompileError(
+                f"task {task_id!r} permits local_write but declares no outputs[].location "
+                "or paths[]; refuse to fabricate writable scope. Declare the exact "
+                "repository paths the worker may modify"
+            )
+        for entry in task.get("validation") or []:
+            if not isinstance(entry, dict):
+                continue
+            method = str(entry.get("method") or "").strip()
+            if method not in _EXECUTABLE_VALIDATION_METHODS:
+                # Inspection text is prose for a human or the controller to read.
+                # It is not shell and must never reach the shell parser.
+                continue
+            command = str(entry.get("command_or_inspection") or entry.get("command") or "").strip()
+            if not command:
+                continue
+            reason = validation_command_error(command)
+            if reason is not None:
+                raise CompileError(
+                    f"task {task_id!r} validation {entry.get('id')!r} declares command "
+                    f"{command!r}, which the peer permission ceiling refuses: {reason}. "
+                    "Declare one shell operation per validation entry"
+                )
+
+    for gate in src.get("gates") or []:
+        gate_id = str(gate.get("id") or "")
+        if not gate_pattern.match(gate_id):
+            raise CompileError(
+                f"gate id {gate_id!r} does not match the Blueprint gate grammar "
+                f"{gate_pattern.pattern!r}; the instantiated Blueprint validator would "
+                "refuse it after isolation and compile. Renumber the gate in the source"
+            )
+
+    return warnings
+
+
 def _task_output_locations(item: dict[str, Any]) -> list[str]:
     """Every declared writable path for pec draft-contract.
 
@@ -418,6 +553,20 @@ def _task_output_locations(item: dict[str, Any]) -> list[str]:
     for path in item.get("paths") or []:
         add(path)
     if not locations:
+        if _is_mutating_task(item):
+            # Fabricating a path here would hand the provider write authority
+            # over a file the source never named, and bury the source defect
+            # under a plausible-looking receipt. `preflight_campaign_source_document`
+            # catches this before isolation; raising here keeps a direct
+            # compile_source() call from emitting an empty outputs[] and failing
+            # later as an opaque template-schema violation.
+            raise CompileError(
+                f"task {item['id']!r} permits local_write but declares no "
+                "outputs[].location or paths[]; refuse to fabricate writable scope. "
+                "Declare the exact repository paths the worker may modify"
+            )
+        # An inspection/program-control task writes no repository content, so a
+        # receipt location is a truthful description of what it produces.
         locations.append(f"docs/program-execution/{item['id']}.md")
     return locations
 
