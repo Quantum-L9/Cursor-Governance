@@ -404,6 +404,22 @@ if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&
   say "excluded generated .claude mirrors (local, uncommitted)"
 fi
 
+# --- 5) Thin l9 dispatcher --------------------------------------------------
+# One facade over the canonical Governance Makefile (make -C "$GOV" <target>
+# WS="$PWD"). Installed to $HOME/.local/bin/l9 as a real file so it survives a
+# runtime-clone refresh. Not a receipt dimension — reported, never fatal.
+stage "l9-dispatcher"
+DISPATCHER_INSTALLER="$GOV_DIR/ops/scripts/install_l9_dispatcher.sh"
+if [ -f "$DISPATCHER_INSTALLER" ]; then
+  if [ "$CHECK" = "1" ]; then
+    L9_GOV_ROOT="$GOV_DIR" bash "$DISPATCHER_INSTALLER" --check || warn "l9 dispatcher drift (make l9-dispatcher-install)"
+  else
+    L9_GOV_ROOT="$GOV_DIR" bash "$DISPATCHER_INSTALLER" || warn "l9 dispatcher install failed"
+  fi
+else
+  warn "missing ops/scripts/install_l9_dispatcher.sh — l9 facade not installed"
+fi
+
 # --- Receipt + final classification -----------------------------------------
 OVERALL="READY"
 for st in "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_RULES" \
