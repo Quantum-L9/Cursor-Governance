@@ -81,10 +81,28 @@ def _git(gov: Path, *args: str) -> str:
     return out.strip() if code == 0 else ""
 
 
+def _sanitize_remote(url: str) -> str:
+    """Strip any embedded credential from a remote URL before it is recorded.
+
+    A token-authenticated clone carries the credential in the URL userinfo
+    (https://x-access-token:<token>@github.com/owner/repo). The receipt is
+    printed, so the userinfo must never survive into it — drop everything
+    between '//' and the last '@' of the authority component.
+    """
+    if "://" not in url:
+        return url
+    scheme, _, rest = url.partition("://")
+    authority, slash, path = rest.partition("/")
+    if "@" in authority:
+        authority = authority.rsplit("@", 1)[1]
+    return f"{scheme}://{authority}{slash}{path}"
+
+
 def _governance_identity(gov: Path) -> dict[str, Any]:
     """Repository, default branch, HEAD SHA, and freshness vs origin/<default>."""
     result: dict[str, Any] = {
-        "governance_repository": _git(gov, "remote", "get-url", "origin") or UNKNOWN,
+        "governance_repository": _sanitize_remote(_git(gov, "remote", "get-url", "origin"))
+        or UNKNOWN,
         "governance_default_branch": UNKNOWN,
         "governance_SHA": UNKNOWN,
         "_sha_status": UNKNOWN,
@@ -181,13 +199,29 @@ def _broker_probe(gov: Path) -> dict[str, Any]:
         return {}
 
 
+# The broker probe is the capability/secret plane; CodeQL models its output as
+# sensitive. Never interpolate a probe value into printed output — map the
+# blocker to a fixed vocabulary of non-secret labels (lookup KEY only), so the
+# emitted note is always a module constant (severs the clear-text-logging taint).
+_BLOCKER_VOCAB = {
+    "identity": "identity",
+    "dns": "dns",
+    "reachability": "reachability",
+    "config": "config",
+    "broker_auth": "broker_auth",
+    "network": "network",
+    "none": "none",
+}
+
+
 def _graphiti_health(probe: dict[str, Any]) -> tuple[str, str]:
     if not probe:
         return UNKNOWN, "broker probe unavailable"
     if probe.get("ok"):
         return READY, "authenticated"
-    blocker = str(probe.get("primary_blocker") or "unknown")
-    # TCP reachable is not authenticated: report DEGRADED with the real blocker.
+    key = str(probe.get("primary_blocker") or "").strip().lower()
+    blocker = _BLOCKER_VOCAB.get(key, "unknown")
+    # TCP reachable is not authenticated: report DEGRADED with the blocker class.
     return DEGRADED, f"not authenticated (blocker: {blocker})"
 
 
