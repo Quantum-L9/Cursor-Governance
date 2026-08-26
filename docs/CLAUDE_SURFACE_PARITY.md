@@ -29,7 +29,7 @@ Expected, per `l9.claude_operational_parity_convergence.v1`:
 | Graphiti capability | authenticated Graphiti when the platform issues identity | broker plane; `probe_broker.py` |
 | Secret boundary | `model-controlled` — no broker/Infisical/Graphiti secret on the surface | `verify_account_env.py` prohibited set |
 | Makefile facade | one Governance Makefile; `l9` dispatcher exposes CONSUMER_SAFE targets | `L9_CONSUMER_SAFE_TARGETS`; `docs/L9_DISPATCHER.md` |
-| PR validation | `make pr` → `open_pr_after_gate.sh` (REST); changed-files gate | Makefile `pr` / `pr-check` |
+| PR validation | governance Makefile `pr` via `l9 pr` / `make -C "$GOV" pr WS="$PWD"` → `open_pr_after_gate.sh` (REST); changed-files gate; consumer repo needs no local `pr` target | governance Makefile `pr` / `pr-check` (`docs/L9_DISPATCHER.md`) |
 | Push authority | available when repo release law + L4 release receipt allow | `l4_local.py`; `open_pr_after_gate.sh` |
 | Merge authority | no standing env boolean; scoped, expiring receipt or human breakglass | `merge_gate.py`; `authorize_merge.py` |
 | Readiness schema | `l9.claude-readiness.v1` (this repo) | `emit_claude_readiness.py` |

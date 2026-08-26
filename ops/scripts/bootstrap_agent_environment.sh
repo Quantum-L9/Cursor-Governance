@@ -205,7 +205,13 @@ fi
 # at all. That makes this the one checker whose absence is never quietly tolerable:
 # retry it (activation runs seconds after container boot, before egress is warm),
 # report the real installer error instead of discarding it, and count DEGRADED loudly.
-if [ -f "$WORKSPACE/.pre-commit-config.yaml" ] || [ -f "$GOV_DIR/.pre-commit-config.yaml" ]; then
+#
+# CI-008 governance-always: the publish gate binds the GOVERNANCE pre-commit
+# config ($GOV_DIR/.pre-commit-config.yaml), not the workspace's own, so
+# pre-commit is required whenever the governance config exists — independent of
+# whether the consumer workspace ships a .pre-commit-config.yaml. The workspace
+# copy is no longer consulted for the gate.
+if [ -f "$GOV_DIR/.pre-commit-config.yaml" ]; then
   if ! command -v pre-commit >/dev/null 2>&1 && [ "$CHECK" != "1" ]; then
     say "installing pre-commit (make pr gate)"
     pc_dest="$HOME/.local/bin"
