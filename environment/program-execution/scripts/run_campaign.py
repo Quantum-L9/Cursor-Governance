@@ -4202,10 +4202,18 @@ def _run_campaign_stages(
     compile_activation = hooks.compile_activation or default_compile_activation
     if campaign_source_doc is not None:
         # A campaign source is already the fully projected artifact the plan
-        # window exists to produce, and it declares its own plan_status. Running
-        # it through projection and the activation compiler would rebuild it
-        # from a weaker representation — the exact loss this route avoids.
-        plan_status = str(campaign_source_doc.get("plan_status") or "")
+        # window exists to produce. Running it through projection and the
+        # activation compiler would rebuild it from a weaker representation —
+        # the exact loss this route avoids. `plan_status` is optional in
+        # campaign-source.schema.json, so an omitted property is admitted as
+        # Ready. An explicitly declared value is read as written: a malformed
+        # or non-ready declaration still refuses the seal rather than falling
+        # back to the default.
+        if "plan_status" not in campaign_source_doc:
+            log("campaign: direct campaign source omits plan_status; defaulting admission to Ready")
+            plan_status = "Ready"
+        else:
+            plan_status = str(campaign_source_doc.get("plan_status") or "").strip()
         if plan_status not in {"Ready", "ConditionallyReady"}:
             raise CampaignError(
                 f"plan_status {plan_status!r} is not Ready or ConditionallyReady; refuse seal"
