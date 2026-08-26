@@ -48,9 +48,9 @@ def test_refuse_prints_stop_looping(tmp_path: Path) -> None:
     path.write_text(
         json.dumps(
             {
-                "schema": "l9.pr_gate_failure.v1",
-                "head": "abc",
-                "worktree_digest": "123",
+                "schema": "l9.pr_gate_failure.v2",
+                "paths_digest": "abc",
+                "content_digest": "123",
                 "pr_base": "origin/main",
                 "failed_nodes": ["tests/x.py::test_x"],
                 "failed_hooks": [],
@@ -78,9 +78,9 @@ def test_refuse_miss_is_zero(tmp_path: Path) -> None:
     path.write_text(
         json.dumps(
             {
-                "schema": "l9.pr_gate_failure.v1",
-                "head": "abc",
-                "worktree_digest": "123",
+                "schema": "l9.pr_gate_failure.v2",
+                "paths_digest": "abc",
+                "content_digest": "123",
                 "pr_base": "origin/main",
             }
         )
@@ -103,9 +103,9 @@ def test_after_shell_emits_stop_looping(tmp_path: Path) -> None:
     receipt.write_text(
         json.dumps(
             {
-                "schema": "l9.pr_gate_failure.v1",
-                "head": "h",
-                "worktree_digest": "d",
+                "schema": "l9.pr_gate_failure.v2",
+                "paths_digest": "h",
+                "content_digest": "d",
                 "pr_base": "origin/main",
                 "failed_nodes": ["tests/x.py::test_x"],
                 "failed_hooks": [],
