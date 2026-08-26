@@ -495,3 +495,72 @@ def test_autonomous_merge_flag_never_waives_admin_merge() -> None:
     )
     assert code == 0, err
     assert "deny" in out
+
+
+def test_github_mcp_owner_repo_shape_is_authorized(tmp_path: Path) -> None:
+    """The GitHub MCP server splits identity across ``owner`` + ``repo``.
+
+    It also spells the number ``pullNumber``. Parsing only ``repo``/``pull_number``
+    produced the bare name ``SEO-Bot`` with no PR number, which no receipt can
+    match -- ``authorize_merge.py`` refuses to write a repo without an owner --
+    so a valid, in-scope receipt was rejected.
+    """
+    auth = _auth_file(tmp_path)
+    code, out, err = _run(
+        _mcp(owner="Quantum-L9", repo="SEO-Bot", pullNumber=53, merge_method="squash"),
+        env={
+            "L9_MERGE_AUTHORIZATION_FILE": str(auth),
+            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
+        },
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_github_mcp_owner_repo_shape_wrong_repo_still_denies(tmp_path: Path) -> None:
+    """Joining owner + repo must not widen scope: a receipt for another repo still denies."""
+    auth = _auth_file(tmp_path, repo="Quantum-L9/Website-Bot")
+    code, out, err = _run(
+        _mcp(owner="Quantum-L9", repo="SEO-Bot", pullNumber=53, merge_method="squash"),
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_github_mcp_owner_does_not_rewrite_explicit_owner_name(tmp_path: Path) -> None:
+    """An explicit ``owner/name`` in ``repo`` wins; ``owner`` is never prepended twice."""
+    auth = _auth_file(tmp_path)
+    code, out, err = _run(
+        _mcp(
+            owner="Some-Other-Org",
+            repo="Quantum-L9/SEO-Bot",
+            pullNumber=53,
+            merge_method="squash",
+        ),
+        env={
+            "L9_MERGE_AUTHORIZATION_FILE": str(auth),
+            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
+        },
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_github_mcp_shape_stack_parent_squash_still_denied(tmp_path: Path) -> None:
+    """The stack probe short-circuits on an empty PR number.
+
+    With the owner/repo shape unparsed the probe never ran, so squashing a stack
+    parent was silently permitted. It must be denied once the number is read.
+    """
+    auth = _auth_file(tmp_path)
+    probe = _probe_file(tmp_path, STACKED)
+    code, out, err = _run(
+        _mcp(owner="Quantum-L9", repo="SEO-Bot", pullNumber=53, merge_method="squash"),
+        env={
+            "L9_MERGE_AUTHORIZATION_FILE": str(auth),
+            "L9_STACK_PROBE_FILE": str(probe),
+        },
+    )
+    assert code == 0, err
+    assert "deny" in out
