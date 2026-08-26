@@ -123,7 +123,7 @@
     },
     {
       "path": "adapters/claude-code/permission_renderer.py",
-      "sha256": "706ed2f0259a53c809146904f5671bc8a3679b1adf7329d7cd3c394ddaa6798b"
+      "sha256": "c4416e2a4b99de3cf53210787dadb3428b8a9a03d1a48079b74598c530aeaa05"
     },
     {
       "path": "adapters/claude-code/provider.py",
@@ -136,6 +136,10 @@
     {
       "path": "adapters/claude-code/tests/test_driver.py",
       "sha256": "8964f51d75ac5fcefc25dde2069888a559248b75adb21acc36ced3297e6ac008"
+    },
+    {
+      "path": "adapters/claude-code/tests/test_turn_budget.py",
+      "sha256": "68b3492c6ef646f06aae4dcecf4620624fd862066dc87b924077ef2fcee5800b"
     },
     {
       "path": "adapters/codex/ADAPTER.yaml",
@@ -943,7 +947,7 @@
     },
     {
       "path": "compiler/architecture_to_campaign.py",
-      "sha256": "8544a38eaac0bf9df111a1ca5ec0a710555f9ad4219ad785278964f89ab67ca1"
+      "sha256": "5385b6dfda11575daf58efa736bd95d87c2bde8415ac8ef938c859bb6e198a6f"
     },
     {
       "path": "compiler/blueprint_validate.py",
@@ -1634,6 +1638,14 @@
       "sha256": "ec7d380a88e3d671b3b7c89f802de47894880a1f920d51194f46bcda9781eb12"
     },
     {
+      "path": "peer_execution/tests/test_validation_command.py",
+      "sha256": "c5f0843a6e4cbe29542e50cc03400d8eb0370602cfea897a28583805b55af630"
+    },
+    {
+      "path": "peer_execution/validation_command.py",
+      "sha256": "0ed5b0998872fbc603b30ffd720012ef8a7b5008b1e550e49c63530c80d7c028"
+    },
+    {
       "path": "registry/EXECUTION_ADAPTER_HEALTH.yaml",
       "sha256": "582fc9abd771f928f60bc6dea08f81cdab68c054e20b884942b46028c4f8837a"
     },
@@ -1659,7 +1671,7 @@
     },
     {
       "path": "registry/EXECUTION_PROFILE_REGISTRY.yaml",
-      "sha256": "84e22c36e0e19a3e59032455f20c0954538d44abbdcb07ed3d5f715f9a66ddb9"
+      "sha256": "6d8acc6d8f598ea64dc6f38010f4c2c07c4c6c398d7ada0c0cfc4dcce94117e2"
     },
     {
       "path": "registry/EXECUTION_ROUTING_POLICY.yaml",
@@ -1687,7 +1699,7 @@
     },
     {
       "path": "scripts/campaign_input.py",
-      "sha256": "f912f816af2967d26546243a27d97646c97fc6f809b9deb9831648014fc892dc"
+      "sha256": "b366021f98edb0963509b30262b496b4d4cc4e187ae42a9a9a7abbaae326726d"
     },
     {
       "path": "scripts/campaign_pr_copy.py",
@@ -1703,7 +1715,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "c9b0e9ad82e33f0f13f0eafd4ad372d04cf88260136db53162470af64c077ebe"
+      "sha256": "fb3ce612dfae8bd14f5e10066d7f1450ab3b1e37691c9f8aaf5b0f0f7122e8b9"
     },
     {
       "path": "scripts/context7_stack_proof.py",
@@ -1715,7 +1727,7 @@
     },
     {
       "path": "scripts/launchability.py",
-      "sha256": "c1ff3c0041865afbd4eb40a8e19bf00aac1f5516a16817fc0c905c1611b32bc8"
+      "sha256": "e400915aa2117cf7d1bdba9ea252c33630519f40fbedbffffbeb0a5ec6c9599a"
     },
     {
       "path": "scripts/pe_prepare_state.py",
@@ -1767,7 +1779,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "7ff023db5b3afa1045de98c1a43ccda40199c4c695cdc938f1c0c82e3d7b5fe4"
+      "sha256": "6bb338c6b0639dbe34dfdfa432b18f1c32b9067de165e48884ac45ee76e4ed3c"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1787,7 +1799,7 @@
     },
     {
       "path": "scripts/tests/pe_prepare_bench.py",
-      "sha256": "bf1ccddef741fdf9dc9b35e716be31eb26ed6e295c175fc27e97e6f6422ecd26"
+      "sha256": "95a9f4c319fe3ed9c1e693794af1a7e84d4a0eceddfbb3e19a9cd8454989c18f"
     },
     {
       "path": "scripts/tests/test_campaign_pr_copy.py",
@@ -1799,11 +1811,11 @@
     },
     {
       "path": "scripts/tests/test_compile_architecture_intent.py",
-      "sha256": "5bc596d719b19e9e6722c41ba3fe49d8a21ffd4170812ca6512a6f49c4aeae3a"
+      "sha256": "994b649a0ef8cb9e79f886317c1549bce9c78074fc4e07d4da210c5149a1af2b"
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
-      "sha256": "283a6654fcd9928531a4b09409f07d27fd9fce00afbf04ba8ef3e7d45c06ac75"
+      "sha256": "fcf7ddff5bc971780bb8ed1c8aa795bc22126a31ba3d674f1192ef12d4321b80"
     },
     {
       "path": "scripts/tests/test_context7_stack_proof.py",
@@ -1855,7 +1867,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "60d2dd97ee66deb6ee005885bdb3cc1c765a90095fa70b9b0da9f5b75df57a78"
+      "sha256": "ba97beb4067d581a9a2e4d21be1c8e42582f7521ba135d5aa3f29cf8d6a59ce7"
     },
     {
       "path": "scripts/tests/test_run_peer_task_pipeline.py",
