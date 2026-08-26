@@ -186,6 +186,7 @@
     "l9-end-session": "user-invocable-only",
     "l9-forge": "user-invocable-only",
     "l9-git-work-preserve": "user-invocable-only",
+    "l9-global-architect": "user-invocable-only",
     "l9-governance-symlinks": "user-invocable-only",
     "l9-governance-wiring": "user-invocable-only",
     "l9-harvest-pipeline": "user-invocable-only",
