@@ -36,7 +36,12 @@ PROMOTION_PATH = (
 #: Ratchet, measured after the remediation. A file may shed occurrences freely;
 #: gaining one requires justifying it here, which is the point.
 SWALLOW_BASELINE = {
-    "ops/scripts/open_pr_after_gate.sh": 17,
+    # 18 since 9ecfc823 ("fail closed on merged-branch reuse"): the added
+    # `gh api ... --jq ... 2>/dev/null || true` reads whether the branch's
+    # existing PR is merged/closed; a failed read falls through to opening a
+    # fresh PR (fail-safe), so the swallow is justified. The commit added the
+    # occurrence without bumping this baseline, leaving the ratchet red on main.
+    "ops/scripts/open_pr_after_gate.sh": 18,
     "ops/scripts/run_pr_gate.sh": 10,
     "ops/scripts/run_pr_security.sh": 3,
     "ops/scripts/bootstrap_agent_environment.sh": 3,
