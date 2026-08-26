@@ -50,12 +50,18 @@ def _auth_file(
     repo: str = "Quantum-L9/SEO-Bot",
     pr: int | str = 53,
     expires_at: float | None = None,
+    head_sha: str | None = None,
+    no_expiry: bool = False,
     extra: str = "",
 ) -> Path:
     import time
 
-    entries = [{"repo": repo, "pr": pr, "expires_at": expires_at or (time.time() + 3600)}]
-    payload = json.dumps({"authorizations": entries}) + extra
+    entry: dict = {"repo": repo, "pr": pr}
+    if not no_expiry:
+        entry["expires_at"] = expires_at or (time.time() + 3600)
+    if head_sha is not None:
+        entry["head_sha"] = head_sha
+    payload = json.dumps({"authorizations": [entry]}) + extra
     path = tmp_path / "merge-authorization.json"
     path.write_text(payload, encoding="utf-8")
     return path
@@ -230,6 +236,69 @@ def test_human_file_authorization_malformed_denies(tmp_path: Path) -> None:
     )
     assert code == 0, err
     assert "deny" in out
+
+
+# --- Receipt hardening: expiry required, optional immutable head_sha binding ---
+
+
+def test_receipt_without_expiry_denies(tmp_path: Path) -> None:
+    """A receipt that never expires is not a valid authorization (expiry required)."""
+    auth = _auth_file(tmp_path, no_expiry=True)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53),
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_receipt_bound_to_head_sha_allows_matching_head(tmp_path: Path) -> None:
+    sha = "a" * 40
+    auth = _auth_file(tmp_path, head_sha=sha)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash", sha=sha),
+        env={
+            "L9_MERGE_AUTHORIZATION_FILE": str(auth),
+            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
+        },
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_receipt_bound_to_head_sha_denies_moved_head(tmp_path: Path) -> None:
+    auth = _auth_file(tmp_path, head_sha="a" * 40)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash", sha="b" * 40),
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_receipt_bound_to_head_sha_denies_when_head_unnamed(tmp_path: Path) -> None:
+    """A revision-bound receipt requires the merge to name that head; silence is denial."""
+    auth = _auth_file(tmp_path, head_sha="a" * 40)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_unbound_receipt_ignores_named_head(tmp_path: Path) -> None:
+    """A receipt with no head_sha stays repo/PR-scoped even when a head is named."""
+    auth = _auth_file(tmp_path)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash", sha="c" * 40),
+        env={
+            "L9_MERGE_AUTHORIZATION_FILE": str(auth),
+            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
+        },
+    )
+    assert code == 0, err
+    assert out.strip() == ""
 
 
 def test_repo_scope_authorization_allows_any_pr_in_repo(tmp_path: Path) -> None:
