@@ -51,7 +51,7 @@ repos:
       # with WARN+continue so digest churn never blocks the PR gate.
       - id: sync-generated-artifacts
         name: Sync generated manifests, registries, and overrides
-        entry: python3 ops/scripts/sync_generated_artifacts.py --force
+        entry: python3 ops/scripts/sync_generated_artifacts.py --force --pe-manifest
         language: system
         files: ^(rules/|skills/|commands/|environment/agents/adapters/claude-code/|environment/program-execution/)
         pass_filenames: false
