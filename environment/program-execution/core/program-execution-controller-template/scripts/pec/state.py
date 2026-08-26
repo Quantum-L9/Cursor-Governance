@@ -300,8 +300,10 @@ class StateDB:
                 "last_error",
             }
         )
+        # Identifiers come from the hardcoded payload keys above; values are
+        # bound parameters.
         self.conn.execute(
-            f"INSERT INTO tasks({columns}) VALUES({placeholders}) ON CONFLICT(id) DO UPDATE SET {updates}",  # noqa: E501
+            f"INSERT INTO tasks({columns}) VALUES({placeholders}) ON CONFLICT(id) DO UPDATE SET {updates}",  # noqa: E501  # nosec B608
             payload,
         )
         self.conn.commit()
@@ -356,7 +358,12 @@ class StateDB:
         if not fields:
             return
         sets = ",".join(f"{name}=?" for name in fields)
-        self.conn.execute(f"UPDATE tasks SET {sets} WHERE id=?", [*fields.values(), task_id])
+        # Column names are validated against the `allowed` set above; values
+        # are bound parameters.
+        self.conn.execute(
+            f"UPDATE tasks SET {sets} WHERE id=?",  # nosec B608
+            [*fields.values(), task_id],
+        )
         self.conn.commit()
 
     def upsert_gate(self, gate: dict[str, Any]) -> None:
@@ -538,8 +545,11 @@ class StateDB:
         if set(fields) - allowed:
             raise ValueError("unsupported lease update")
         sets = ",".join(f"{name}=?" for name in fields)
+        # Column names are validated against the `allowed` set above; values
+        # are bound parameters.
         self.conn.execute(
-            f"UPDATE leases SET {sets} WHERE lease_id=?", [*fields.values(), lease_id]
+            f"UPDATE leases SET {sets} WHERE lease_id=?",  # nosec B608
+            [*fields.values(), lease_id],
         )
         self.conn.commit()
 
