@@ -114,8 +114,7 @@ def _governance_identity(gov: Path) -> dict[str, Any]:
             # Stale runtime SHA prevents READY (truth rule).
             result["_sha_status"] = DEGRADED
             result["_sha_note"] = (
-                f"HEAD {head[:8]} != origin/{default} {origin_sha[:8]} "
-                "(run SessionStart refresh)"
+                f"HEAD {head[:8]} != origin/{default} {origin_sha[:8]} (run SessionStart refresh)"
             )
     return result
 
