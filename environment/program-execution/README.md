@@ -90,7 +90,15 @@ Classify without running anything:
 
 ```bash
 make campaign-check-input INTENT=/path/to/CAMPAIGN_SOURCE.yaml
-make campaign-check-input INTENT=/tmp/architecture.md ARCHITECTURE=1
+```
+
+A document that declares the architecture schema in its frontmatter classifies
+as `architecture-intent.v1` here with no extra flag. To classify an *unmarked*
+document as architecture intent, use the compile-only target, which writes the
+campaign source into the compiler cache and creates no workspace:
+
+```bash
+make campaign-architecture-check INTENT=/tmp/architecture.md TARGET=owner/repo
 ```
 
 ### Long-form architecture intent
