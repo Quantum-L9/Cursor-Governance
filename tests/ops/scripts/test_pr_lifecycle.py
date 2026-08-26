@@ -184,7 +184,8 @@ def _state_digest(repo: Path, pr_base: str = "main") -> tuple[str, str]:
     """Mirror run_pr_gate.sh's content digest: paths, then worktree contents."""
     script = (
         'list="$(mktemp)"; '
-        "{ git ls-files -z; git ls-files --others --exclude-standard -z; } >\"$list\" 2>/dev/null || true; "
+        "{ git ls-files -z; git ls-files --others --exclude-standard -z; } "
+        '>"$list" 2>/dev/null || true; '
         "cksum <\"$list\" | awk '{print $1}'; "
         "xargs -0 -r git hash-object <\"$list\" 2>/dev/null | cksum | awk '{print $1}'; "
         'rm -f "$list"'
