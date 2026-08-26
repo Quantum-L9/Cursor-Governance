@@ -9,7 +9,7 @@ rebuilt — which is the failure this file exists to make detectable.
 
 ## 1. Environment variables
 
-Checksum `935cefd14141ff6e` — `verify_account_env.py` confirms a paste by comparing
+Checksum `de3f0ce160307b2f` — `verify_account_env.py` confirms a paste by comparing
 the live runtime against this set.
 
 ```dotenv
@@ -19,7 +19,6 @@ GRAPHITI_MCP_URL=https://memory.quantumaipartners.com/graphiti/mcp
 GRAPHITI_MEMORY_ENABLED=1
 L9_AGENT_ROLE=implementation-agent
 L9_AUTONOMY_AUTHORITY=A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE
-L9_AUTONOMY_AUTONOMOUS_MERGE=false
 L9_AUTONOMY_ENABLED=true
 L9_AUTONOMY_MATURITY=M4_ASSURANCE_GOVERNED
 L9_AUTONOMY_MAX_MUTATION_LANES=128
