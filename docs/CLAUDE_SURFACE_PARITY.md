@@ -84,6 +84,8 @@ reference:
 - `merge_authority_status = READY` (no environment boolean authorizes merge);
 - `secret_boundary_status = READY` (`model-controlled`);
 - `Makefile_facade_status = READY` and `dispatcher_status = READY`;
+- `interpreter_importable_status = READY` (the governance locked interpreter
+  imports the core deps — an unimportable environment is DEGRADED, never READY);
 - `schema_version = l9.claude-readiness.v1`.
 
 Capability dimensions (`MCP_status`, `Graphiti_authenticated_health`) may read

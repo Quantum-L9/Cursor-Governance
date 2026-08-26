@@ -98,11 +98,26 @@ def test_graphiti_blocker_is_a_constant_label() -> None:
 # --- Integration: build a fake governance clone + fake $HOME -------------------
 
 
-def _init_fake_gov(tmp_path: Path, *, merge_denies: bool = True) -> Path:
+def _init_fake_gov(
+    tmp_path: Path, *, merge_denies: bool = True, interpreter_ok: bool = True
+) -> Path:
     gov = tmp_path / "gov"
     (gov / "ops" / "scripts").mkdir(parents=True)
     (gov / "ops" / "secrets").mkdir(parents=True)
     (gov / "ops" / "autonomy").mkdir(parents=True)
+
+    # CI-009 importability probe: readiness runs gov/.venv/bin/python3 to import
+    # the core deps. A working interpreter execs the real test-runner python (a
+    # symlink would relocate sys.prefix into the empty fake .venv and break
+    # imports); a broken one exits non-zero on import.
+    venv_bin = gov / ".venv" / "bin"
+    venv_bin.mkdir(parents=True)
+    fake_py = venv_bin / "python3"
+    if interpreter_ok:
+        fake_py.write_text(f'#!/usr/bin/env bash\nexec "{sys.executable}" "$@"\n', encoding="utf-8")
+    else:
+        fake_py.write_text("#!/usr/bin/env bash\nexit 1\n", encoding="utf-8")
+    fake_py.chmod(0o755)
 
     (gov / "Makefile").write_text(
         "l9-consumer-safe-list:\n\t@echo start pr pr-check improve\n", encoding="utf-8"
@@ -178,6 +193,7 @@ def test_ready_only_when_all_components_pass(tmp_path: Path, monkeypatch) -> Non
     assert receipt["Makefile_facade_status"] == READY
     assert receipt["dispatcher_status"] == READY
     assert receipt["Graphiti_authenticated_health"] == READY
+    assert receipt["interpreter_importable_status"] == READY
     assert receipt["overall_readiness"] == READY, receipt["warnings"]
     # Required fields present.
     for field in (
@@ -199,6 +215,26 @@ def test_blocked_when_merge_authority_regresses(tmp_path: Path, monkeypatch) -> 
     assert receipt["merge_authority_status"] == BLOCKED
     assert receipt["overall_readiness"] == BLOCKED
     assert any("merge_authority" in f for f in receipt["failures"])
+
+
+def test_degraded_when_interpreter_cannot_import(tmp_path: Path, monkeypatch) -> None:
+    # CI-009: an environment whose interpreter cannot import core deps must not
+    # report READY — the importability dimension is DEGRADED and drags overall.
+    gov = _init_fake_gov(tmp_path, merge_denies=True, interpreter_ok=False)
+    home = _fake_home(tmp_path, mcp="READY")
+    receipt = _build(gov, home, monkeypatch)
+    assert receipt["interpreter_importable_status"] == DEGRADED
+    assert receipt["overall_readiness"] != READY
+
+
+def test_unknown_when_venv_interpreter_missing(tmp_path: Path, monkeypatch) -> None:
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    # Remove the fake interpreter so the probe cannot determine importability.
+    (gov / ".venv" / "bin" / "python3").unlink()
+    home = _fake_home(tmp_path, mcp="READY")
+    receipt = _build(gov, home, monkeypatch)
+    assert receipt["interpreter_importable_status"] == UNKNOWN
+    assert receipt["overall_readiness"] != READY
 
 
 def test_degraded_when_mcp_not_loaded(tmp_path: Path, monkeypatch) -> None:

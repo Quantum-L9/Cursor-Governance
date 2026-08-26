@@ -359,6 +359,33 @@ def _aggregate(statuses: dict[str, str]) -> str:
     return DEGRADED if worst == UNKNOWN else worst
 
 
+# CI-009: readiness must prove the environment is importable, not merely that a
+# "toolchain ready" banner was printed. Probe the governance locked interpreter
+# for the core deps governance tooling imports (the same set
+# bootstrap_agent_environment.sh requires). A missing interpreter is UNKNOWN (we
+# cannot determine importability); an import failure is DEGRADED (the exact
+# defect: an unimportable environment must not report READY); success is READY.
+# No probe-derived string is printed verbatim — the note is a fixed label.
+_IMPORT_CORE = ("yaml", "jsonschema", "pydantic")
+
+
+def _interpreter_importable_status(gov: Path) -> tuple[str, str]:
+    for name in ("python3", "python"):
+        venv_py = gov / ".venv" / "bin" / name
+        if venv_py.is_file():
+            break
+    else:
+        return UNKNOWN, "governance .venv interpreter not found"
+    probe = "import " + ", ".join(_IMPORT_CORE)
+    try:
+        code, _out, _err = _run([str(venv_py), "-c", probe], timeout=20)
+    except Exception:  # noqa: BLE001 - a probe never crashes the emitter
+        return UNKNOWN, "interpreter import probe could not run"
+    if code == 0:
+        return READY, "governance interpreter imports core deps"
+    return DEGRADED, "governance interpreter cannot import core deps"
+
+
 def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> dict[str, Any]:
     gov = gov or _gov_root()
     workspace = workspace or os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd()
@@ -375,6 +402,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     facade_status, facade_note = _makefile_facade(gov)
     disp_status, disp_note = _dispatcher_status(gov)
     merge_status, merge_note = _merge_authority_status(gov)
+    interp_status, interp_note = _interpreter_importable_status(gov)
     # Deliberately not named with "secret": these hold constant posture labels,
     # but a "secret"-named local is a clear-text-logging source by CodeQL's
     # name heuristic once the receipt is printed. The value carries no credential.
@@ -398,10 +426,12 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         "Makefile_facade_status": facade_status,
         "dispatcher_status": disp_status,
         "merge_authority_status": merge_status,
+        "interpreter_importable_status": interp_status,
         _BOUNDARY_FIELD: boundary_status,
     }
 
     notes = {
+        "interpreter_importable_status": interp_note,
         "governance_freshness": sha_note,
         "MCP_status": mcp_note,
         "Graphiti_authenticated_health": graphiti_note,
