@@ -117,8 +117,7 @@ def _init_fake_gov(tmp_path: Path, *, merge_denies: bool = True) -> Path:
     # authorizing a merge (evaluate returns None).
     reason = "None" if not merge_denies else '"env boolean is not an authority"'
     (gov / "ops" / "autonomy" / "merge_gate.py").write_text(
-        "def evaluate(tool_name, tool_input, *, root=None):\n"
-        f"    return {reason}\n",
+        f"def evaluate(tool_name, tool_input, *, root=None):\n    return {reason}\n",
         encoding="utf-8",
     )
     (gov / "ops" / "scripts" / "install_l9_dispatcher.sh").write_text(
