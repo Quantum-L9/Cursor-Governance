@@ -135,14 +135,30 @@ def _stack_deny_reason(pr: str, head: str, children: list[int], method: str) -> 
     )
 
 
-def _stack_unknown_reason(pr: str, repo: str, detail: str) -> str:
+def _stack_unknown_reason(pr: str, repo: str, detail: str, kind: str = "unknown") -> str:
+    """Fail-closed message. The DECISION never varies on `kind`; the advice does.
+
+    Naming the obstacle matters because the old message sent operators to
+    `gh pr list`, which on a GraphQL-restricted surface is refused by the same
+    policy that just broke the probe -- advice that cannot be followed.
+    """
     target = f"{repo}#{pr}" if repo else f"#{pr}"
+    slug = repo or "<owner/name>"
+    head = (
+        "Stack safety: both probe transports were refused by this session "
+        if kind == "transport_blocked"
+        else "Stack safety: cannot determine whether "
+    )
+    body = f"for {target}" if kind == "transport_blocked" else f"{target} is the base of an open PR"
+    verify = (
+        f"`gh api 'repos/{slug}/pulls?state=open' --jq '.[]|\"#\\(.number) base=\\(.base.ref)\"'`"
+    )
     return (
-        f"Stack safety: cannot determine whether {target} is the base of an open PR "
-        f"({detail}). A squash/rebase merge of a stacked head silently destroys the "
-        "child PR's content, so this is fail-closed. Verify with "
-        f"`gh pr list --repo <owner/name> --state open --base <head-branch>`, then "
-        "re-run with --merge, or set L9_STACK_CHECK_BYPASS=<reason>."
+        f"{head}{body} ({detail}). A squash/rebase merge of a stacked head "
+        "silently destroys the child PR's content, so this is fail-closed. "
+        f"Verify over REST with {verify} -- no open PR may name this PR's head as "
+        "its base -- then re-run with --merge, or set "
+        "L9_STACK_CHECK_BYPASS=<reason> in the gate process environment."
     )
 
 
@@ -212,6 +228,93 @@ def _gh_json(args: list[str]) -> Any:
         raise RuntimeError(f"gh emitted non-JSON: {exc}") from exc
 
 
+class ProbeError(RuntimeError):
+    """A stack probe that could not answer, tagged with WHY it could not.
+
+    The deny decision never varies on the kind: an unanswerable probe is
+    fail-closed regardless. The kind exists so the operator-facing message can
+    name the actual obstacle. A transport that is switched off for the whole
+    session and a genuinely ambiguous repository topology are different
+    problems with different remedies, and reporting both as "unknown" sent
+    people to verify with a command that was also switched off.
+    """
+
+    def __init__(self, detail: str, kind: str = "unknown") -> None:
+        super().__init__(detail)
+        self.kind = kind
+
+
+def _transport_blocked(detail: str) -> bool:
+    """True when the failure looks like the transport, not the repository."""
+    low = detail.lower()
+    return any(
+        marker in low
+        for marker in (
+            "graphql query is not enabled",
+            "not enabled for this session",
+            "http 403",
+            "403 forbidden",
+            "gh not on path",
+        )
+    )
+
+
+def _gh_rest_json(path: str) -> Any:
+    """GET a REST path through gh. Raises ProbeError tagged by failure kind.
+
+    REST is the surface that stays available when the session gateway serves
+    only a pinned set of GraphQL operations, which is what every `gh pr`
+    subcommand is built on.
+    """
+    try:
+        return _gh_json(["api", path])
+    except RuntimeError as exc:
+        detail = str(exc)
+        kind = "transport_blocked" if _transport_blocked(detail) else "probe_failed"
+        raise ProbeError(detail, kind) from exc
+
+
+def _stacked_children_rest(repo: str, pr: str) -> tuple[str, list[int]]:
+    """Resolve (head, children) over REST only.
+
+    `GET /repos/{owner}/{repo}/pulls/{n}` carries `head.ref`, and
+    `GET /repos/{owner}/{repo}/pulls?state=open&base=<head>` lists exactly the
+    open pull requests based on it. That is everything the stack probe needs,
+    with no GraphQL.
+    """
+    view = _gh_rest_json(f"repos/{repo}/pulls/{pr}")
+    head = str(((view or {}).get("head") or {}).get("ref") or "")
+    if not head:
+        raise ProbeError("REST did not report a head branch", "probe_failed")
+    listing = _gh_rest_json(f"repos/{repo}/pulls?state=open&base={head}&per_page=100")
+    children = [
+        int(item["number"])
+        for item in (listing or [])
+        if isinstance(item, dict) and "number" in item
+    ]
+    return head, [c for c in children if str(c) != pr]
+
+
+def _stacked_children_cli(repo: str, pr: str) -> tuple[str, list[int]]:
+    """Resolve (head, children) through `gh pr`, which is GraphQL-backed."""
+    try:
+        view = _gh_json(["pr", "view", pr, "--repo", repo, "--json", "headRefName"])
+        head = str((view or {}).get("headRefName") or "")
+        if not head:
+            raise ProbeError("gh did not report a head branch", "probe_failed")
+        listing = _gh_json(
+            ["pr", "list", "--repo", repo, "--state", "open", "--base", head, "--json", "number"]
+        )
+    except ProbeError:
+        raise
+    except RuntimeError as exc:
+        detail = str(exc)
+        kind = "transport_blocked" if _transport_blocked(detail) else "probe_failed"
+        raise ProbeError(detail, kind) from exc
+    children = [int(item["number"]) for item in (listing or []) if "number" in item]
+    return head, [c for c in children if str(c) != pr]
+
+
 def _probe_file_entry(repo: str, pr: str) -> dict[str, Any] | None:
     """Injected probe result, so the gate is deterministic offline and in tests."""
     override = os.environ.get("L9_STACK_PROBE_FILE", "").strip()
@@ -234,23 +337,54 @@ def _probe_file_entry(repo: str, pr: str) -> dict[str, Any] | None:
 
 
 def _stacked_children(repo: str, pr: str) -> tuple[str, list[int]]:
-    """Return (head branch, open PR numbers based on it). Raises RuntimeError if unknown."""
+    """Return (head branch, open PR numbers based on it). Raises ProbeError if unknown.
+
+    Two transports, tried in order, first answer wins:
+
+      1. REST  -- `gh api repos/{o}/{r}/pulls...`
+      2. `gh pr view` / `gh pr list` -- GraphQL-backed
+
+    REST leads because it is the transport that survives a session gateway
+    serving only a pinned set of GraphQL operations; on such a surface every
+    `gh pr` subcommand returns 403 and this gate denied every squash merge it
+    was asked about, including of leaf pull requests that were provably safe.
+
+    The fallback exists so a surface where the reverse holds still gets an
+    answer. If BOTH transports fail the probe still raises, and the caller
+    still fails closed -- this widens how the question can be answered, never
+    what happens when it cannot be.
+    """
     entry = _probe_file_entry(repo, pr)
     if entry is not None:
         children = [int(c) for c in entry.get("children") or []]
         return str(entry.get("head") or ""), children
 
     if not repo:
-        raise RuntimeError("no --repo on the command and no probe file")
-    view = _gh_json(["pr", "view", pr, "--repo", repo, "--json", "headRefName"])
-    head = str((view or {}).get("headRefName") or "")
-    if not head:
-        raise RuntimeError("gh did not report a head branch")
-    listing = _gh_json(
-        ["pr", "list", "--repo", repo, "--state", "open", "--base", head, "--json", "number"]
-    )
-    children = [int(item["number"]) for item in (listing or []) if "number" in item]
-    return head, [c for c in children if str(c) != pr]
+        raise ProbeError("no --repo on the command and no probe file", "no_repo")
+
+    failures: list[str] = []
+    kinds: list[str] = []
+    for label, resolver in (("rest", _stacked_children_rest), ("gh pr", _stacked_children_cli)):
+        try:
+            return resolver(repo, pr)
+        except ProbeError as exc:
+            failures.append(f"{label}: {exc}")
+            kinds.append(getattr(exc, "kind", "unknown"))
+
+    # Only call it a transport problem when EVERY transport was refused that
+    # way. One blocked transport plus one real repository error is a repository
+    # error, and saying otherwise would send the operator to the wrong remedy.
+    # A substantive failure therefore outranks a blocked one, whichever
+    # transport happened to run last.
+    detail = "; ".join(failures)
+    substantive = [k for k in kinds if k != "transport_blocked"]
+    if substantive:
+        kind = substantive[0]
+    elif kinds:
+        kind = "transport_blocked"
+    else:
+        kind = "unknown"
+    raise ProbeError(detail, kind)
 
 
 def _stack_safety_reason(command: str, tool_name: str, tool_input: dict[str, Any]) -> str | None:
@@ -265,7 +399,7 @@ def _stack_safety_reason(command: str, tool_name: str, tool_input: dict[str, Any
         head, children = _stacked_children(repo, pr)
     except RuntimeError as exc:
         if method in ANCESTRY_BREAKING:
-            return _stack_unknown_reason(pr, repo, str(exc))
+            return _stack_unknown_reason(pr, repo, str(exc), getattr(exc, "kind", "unknown"))
         return None
     if not children:
         return None
