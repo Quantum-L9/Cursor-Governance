@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import ast
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -109,6 +110,35 @@ def _drop_unrunnable(selected: list[str], suites: list[dict]) -> tuple[list[str]
     return keep, dropped
 
 
+def tests_referencing(changed: str, tests_dir: Path, *, repo_root: Path = REPO_ROOT) -> list[str]:
+    """Test files that actually name this module.
+
+    A source file with no `test_<stem>.py` twin used to pull in its entire
+    sibling tests/ directory. One unmatched file under
+    environment/program-execution/scripts/ therefore selected every PE script
+    test — smoke campaigns and worker lifecycles included — for a change that
+    touched none of them. Tests that mention the module by name are the ones
+    that can plausibly break; when none do, the caller keeps the whole
+    directory, so this only ever narrows a guess, never a certainty.
+    """
+    stem = Path(changed).stem
+    if not stem:
+        return []
+    # Leading boundary only. A trailing \b would miss `campaign_input_module`,
+    # which is exactly how the tests that exercise `campaign_input` name it —
+    # and missing them is what sends the whole directory back into the run.
+    needle = re.compile(rf"(?<![A-Za-z0-9_]){re.escape(stem)}")
+    found: list[str] = []
+    for path in sorted(tests_dir.rglob("test_*.py")):
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        if needle.search(text):
+            found.append(path.relative_to(repo_root).as_posix())
+    return found
+
+
 def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH) -> list[str]:
     """Return explicit pytest targets for the local pr-check profile."""
     py_changed = [path for path in changed if path.endswith(".py")]
@@ -140,15 +170,28 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
                     if text and text != "." and text not in selected:
                         selected.append(text)
             continue
-        tests_dir = str(Path(path).parent / "tests")
-        fallback = tests_dir if (REPO_ROOT / tests_dir).is_dir() else str(Path(path).parent)
-        if fallback not in selected:
-            selected.append(fallback)
-        if path not in selected:
-            selected.append(path)
+        tests_dir = Path(path).parent / "tests"
+        if (REPO_ROOT / tests_dir).is_dir():
+            referencing = tests_referencing(path, REPO_ROOT / tests_dir)
+            fallbacks = referencing or [tests_dir.as_posix()]
+        else:
+            fallbacks = [str(Path(path).parent)]
+        for target in fallbacks:
+            if target not in selected:
+                selected.append(target)
+        # The source file itself is not a pytest target: collecting a
+        # non-test module yields nothing and only lengthens the command.
         missing.append(path)
     if "." in selected:
         raise SystemExit("select_pr_pytest_paths refused to emit repo-root '.'")
+    # A directory target already collects everything beneath it; listing the
+    # files too just makes the command longer than the work it describes.
+    directories = [item for item in selected if not item.endswith(".py")]
+    selected = [
+        item
+        for item in selected
+        if item in directories or not any(path_under(item, root) for root in directories)
+    ]
     selected, unrunnable = _drop_unrunnable(selected, suites)
     if missing:
         still_missing = [path for path in missing if path not in unrunnable]
