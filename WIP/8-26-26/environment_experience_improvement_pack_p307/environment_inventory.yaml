@@ -1,0 +1,165 @@
+schema: l9.environment_experience_inventory.canonical/v1
+generated_at: '2026-08-25T02:03:03Z'
+family_id: environment_experience_improvement_pack
+scope_note: This is a cross-session reconciliation. Values that varied by session are represented as observed states, not
+  collapsed into a single current host claim.
+stable_cross_session_surfaces:
+- surface: governance
+  finding: A governance SSOT under /root/.cursor-governance is repeatedly used; additional /home/user governance clones can
+    coexist at other revisions.
+  sources:
+  - P1
+  - P3
+  - P4
+  - P6
+  - P7
+  - P8
+  - P9
+- surface: github_transport
+  finding: gh/REST availability and GraphQL reachability are independent; GraphQL-backed PR/auth paths are repeatedly blocked
+    even when REST works. Token validity itself varies by session.
+  sources:
+  - P1
+  - P3
+  - P4
+  - P6
+  - P7
+  - P8
+  - P9
+- surface: bootstrap
+  finding: Rules/skills/settings can report READY while other components are DEGRADED; receipt freshness and projection ownership
+    are recurring failure surfaces.
+  sources:
+  - P1
+  - P3
+  - P4
+  - P6
+  - P7
+  - P8
+  - P9
+- surface: toolchain
+  finding: System Python/PATH and project interpreter/toolchain frequently differ; later images can contain the full CLI set
+    while the repo remains non-importable until the project env is resolved.
+  sources:
+  - P2
+  - P3
+  - P4
+  - P5
+  - P7
+  - P8
+  - P9
+- surface: memory
+  finding: Graphiti transport health, writeback success, and hydration usefulness must be represented separately; aggregate
+    memory labels are not reliable enough.
+  sources:
+  - P1
+  - P4
+  - P6
+  - P7
+  - P9
+- surface: guardrails
+  finding: Destructive/staging gates are intentionally fail-closed but their literal-target rules, escape reachability, and
+    error detail repeatedly impose friction.
+  sources:
+  - P1
+  - P3
+  - P4
+  - P7
+  - P8
+  - P9
+observed_session_metadata:
+- pack_id: P1
+  archive_hash: 2473a4542a9fb31fefd45ea62b5ca4682e55b9808f99193fb4a5e3d91efce8d1
+  generated_at: '2026-08-24T01:03:00Z'
+  manifest_schema: l9.environment_experience_manifest
+- pack_id: P2
+  archive_hash: 11864027b9e27d40d830df50cef541e0644c4216a4f13d5f1ea8c2b89813db73
+  generated_at: '2026-08-24T01:17:55Z'
+  manifest_schema: l9.environment-experience/v1
+- pack_id: P3
+  archive_hash: 8641bab7955d451fdf0ad6981cced960822482bb80fb7d63caec841024b69b1e
+  generated_at: '2026-08-24T01:18:29Z'
+  manifest_schema: l9.environment_experience_pack/v1
+- pack_id: P4
+  archive_hash: ae64fb271f12cc330e4557dc23ce082b2df8f56d81c322da21bd53e3f4b8efad
+  generated_at: '2026-08-24T01:15:00Z'
+  manifest_schema: l9.environment-experience-pack/v1
+- pack_id: P5
+  archive_hash: 71094975db096a6b0c3300616a80e9aa818cb27a9ace69a1c3caed3b57c33f5f
+  generated_at: '2026-08-23'
+  manifest_schema: l9.environment_experience_pack/v1
+- pack_id: P6
+  archive_hash: 9fa6519fa617914d7f818b4bf39cd16e3f9f5883bcf68dc3e5935e6a3aca676c
+  generated_at: '2026-08-25T01:17:31Z'
+  manifest_schema: l9.experience-pack.manifest.v1
+- pack_id: P7
+  archive_hash: 1aaf8557866b004f9759b472e2ab11ad54c58d9b559cbae49424791f62387bee
+  generated_at: 2026-08-24T01:11Z/11:41Z
+  manifest_schema: l9.environment-experience.manifest.v1
+- pack_id: P8
+  archive_hash: 2e8eb604fc26ef5ea1d9810b8a8b02e3b277b35525cf607132a81a9f6146c679
+  generated_at: '2026-08-25T01:36:26Z'
+  manifest_schema: l9.experience-pack-manifest/v1
+- pack_id: P9
+  archive_hash: 77226266e6bede7b100f6e1492699bd755e675a2d2596203ab15436f54485599
+  generated_at: '2026-08-25T01:38:00Z'
+  manifest_schema: l9.environment_experience_pack/v2
+variable_or_open_state:
+- id: OD-001
+  title: Authoritative value for L9_AUTONOMY_AUTONOMOUS_MERGE
+  state: OPEN
+  question: Should the governed account/session value be true or false?
+  why_open: The verifier expects false while live sources repeatedly report true; no explicit policy lock in the corpus decides
+    the intended value.
+  sources:
+  - C-002
+  - CI-006
+- id: OD-002
+  title: Canonical publish command contract
+  state: OPEN
+  question: Must every governed consumer implement make pr, or should doctrine define a supported fallback?
+  why_open: Both states exist in source material and no later convergence decision chooses one.
+  sources:
+  - C-003
+  - CI-008
+- id: OD-003
+  title: Capability broker failure cause
+  state: UNKNOWN
+  question: Is broker.quantumaipartners.com unreachable because of proxy policy or upstream availability?
+  why_open: CONNECT 502 cannot discriminate the cause.
+  sources:
+  - C-005
+  - CI-010
+- id: OD-004
+  title: CLAUDE_SESSION_JWT provisioning failure
+  state: UNKNOWN
+  question: Why is CLAUDE_SESSION_JWT unset on the surface that declares broker-authenticated MCP endpoints?
+  why_open: Pack 9 observes the variable missing but cannot observe the provisioning owner/cause.
+  sources:
+  - P9/MANIFEST.json#U-01
+  - CI-010
+- id: OD-005
+  title: Memory writeback warning
+  state: UNKNOWN
+  question: What produced the single warning in the zero-write memory writeback receipt?
+  why_open: The warning count is observed but its cause is not present in the accessible pack evidence.
+  sources:
+  - P9/MANIFEST.json#U-03
+  - CI-005
+- id: OD-006
+  title: Exact identity of Pack 9 predecessor
+  state: UNKNOWN
+  question: Is accessible Pack 3 exactly the 01:18 predecessor Pack 9 says it supersedes, or a neighboring regenerated export?
+  why_open: Timestamp/workload match strongly; reported archive byte size does not.
+  sources:
+  - C-008
+- id: OD-007
+  title: Origin and lifecycle of standing publish override
+  state: UNKNOWN
+  question: Which component issued L9_PUBLISH_PATH_OVERRIDE and what consumes/expires it?
+  why_open: The value persisted across restarts without issuer or expiry metadata.
+  sources:
+  - P9/MANIFEST.json#U-04
+  - CI-007
+secrets_policy: No secret values were intentionally copied; source packs state names-only/redacted policies where applicable,
+  and final output is scanned for common secret token patterns.
