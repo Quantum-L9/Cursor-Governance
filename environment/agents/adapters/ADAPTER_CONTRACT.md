@@ -24,15 +24,28 @@ execution machinery.
 
 ## Memory carrier
 
-Cloud Graphiti endpoint:
+Brokered Graphiti front door:
 
 ```text
-https://memory.quantumaipartners.com/graphiti/mcp
+${L9_CAPABILITY_BROKER_URL}/mcp/graphiti
 ```
 
-Authentication uses `GRAPHITI_MCP_TOKEN`. Writer identity is separate and comes
-from `agent_registry.yaml` through `USER_ID`, `L9_MEMORY_AGENT_ID`, and
-`L9_MEMORY_SOURCE`. Surface adapters never invent a second `agent_id`.
+**No adapter MCP template carries a bearer.** `GRAPHITI_MCP_TOKEN` is resolved
+by the broker on its own side of the trust boundary, never by a surface and
+never from an adapter config file — the same rule the capability carrier states
+below, applied to memory. An adapter template that interpolates
+`Authorization: Bearer ${GRAPHITI_MCP_TOKEN}` is a contract violation, not a
+fallback: when the broker URL is unset or the broker is not deployed, the
+server returns an honest 401 and memory runs DEGRADED.
+
+The direct cloud endpoint `https://memory.quantumaipartners.com/graphiti/mcp`
+is now reachable only from behind the broker. `ops/graphiti/mcp.json.example`
+is the separate trusted-operator (Cursor SSH tunnel) shape and is not an
+adapter template.
+
+Writer identity is separate and comes from `agent_registry.yaml` through
+`USER_ID`, `L9_MEMORY_AGENT_ID`, and `L9_MEMORY_SOURCE`. Surface adapters never
+invent a second `agent_id`.
 
 ## Publish path
 
