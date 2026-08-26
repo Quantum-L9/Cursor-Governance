@@ -24,7 +24,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
 import uuid
 from collections.abc import Sequence
 from dataclasses import dataclass, field
@@ -488,32 +487,42 @@ class ClaudeCodeExtractor:
         return argv
 
     def extract(self, request: ArchitectureExtractorRequest) -> ArchitectureExtractorResponse:
+        """Run one extraction through Program Execution's hardened argv runner.
+
+        The document never reaches argv: the request travels on stdin, and every
+        argv element is a constant from this module or a PATH-resolved
+        executable. `run_argv` is the runner the rest of Program Execution
+        already uses — argv normalization, a timeout with a process-group kill,
+        output truncation, and a secret-masked environment fingerprint — so this
+        adapter stays thin instead of re-implementing any of it.
+        """
+        # Imported here so the compiler package stays importable on its own; the
+        # runner is only needed when a live extraction actually happens.
+        from peer_execution.subprocess_runner import run_argv  # noqa: PLC0415
+
         payload = json.dumps(request.to_dict(), ensure_ascii=False, sort_keys=True)
         argv = self._argv(request.mode)
         try:
-            completed = subprocess.run(  # noqa: S603 - argv list, never a shell string
+            result = run_argv(
                 argv,
-                input=payload,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout_seconds,
-                cwd=str(self.cwd) if self.cwd else None,
-                env=self._env(),
-                check=False,
+                cwd=self.cwd or Path.cwd(),
+                timeout_seconds=self.timeout_seconds,
+                environment=self._env(),
+                stdin=payload,
             )
-        except subprocess.TimeoutExpired as exc:
+        except (OSError, ValueError) as exc:
+            raise ExtractorError(f"semantic extractor could not be started: {exc}") from exc
+        if result.timed_out:
             raise ExtractorError(
                 f"semantic extractor timed out after {self.timeout_seconds}s "
                 f"(request {request.request_id}, mode {request.mode})"
-            ) from exc
-        except OSError as exc:
-            raise ExtractorError(f"semantic extractor could not be started: {exc}") from exc
-        if completed.returncode != 0:
-            raise ExtractorError(
-                f"semantic extractor exited {completed.returncode} "
-                f"(request {request.request_id}): {_sanitize(completed.stderr)}"
             )
-        stdout = completed.stdout or ""
+        if result.exit_code != 0:
+            raise ExtractorError(
+                f"semantic extractor exited {result.exit_code} "
+                f"(request {request.request_id}): {_sanitize(result.stderr)}"
+            )
+        stdout = result.stdout or ""
         if len(stdout.encode("utf-8", "ignore")) > self.max_output_bytes:
             raise ExtractorError(
                 f"semantic extractor output exceeded {self.max_output_bytes} bytes"
@@ -522,10 +531,8 @@ class ClaudeCodeExtractor:
 
     @staticmethod
     def _env() -> dict[str, str]:
-        env = dict(os.environ)
         # A nested interactive/telemetry session would fight the parent one.
-        env["CLAUDE_CODE_SIMPLE"] = "1"
-        return env
+        return {"CLAUDE_CODE_SIMPLE": "1"}
 
 
 def parse_cli_payload(stdout: str) -> dict[str, Any]:
