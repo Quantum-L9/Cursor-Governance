@@ -218,6 +218,18 @@ session_start_block: |
     checkers the release receipt was granted on. Being authorized to publish
     is not permission to publish a different way. Do not reach for a raw push
     when `make pr` fails — fix what it reported, or say what is blocking.
+  - **`make pr` runs the GOVERNANCE Makefile, regardless of the repo worked in
+    or its Makefile.** The environment always uses the
+    `Quantum-L9/Cursor-Governance` Makefile as the publish authority; the repo
+    you are working in is the *workspace* (`WS=$PWD`), never the source of the
+    `pr` target. The dispatcher already binds this: `l9 pr` is
+    `make -C "$GOV" pr WS="$PWD"` (`environment/agents/adapters/claude-code/bin/l9`).
+    From a consumer checkout with no local `pr` target, publish with
+    `l9 pr` (equivalently `make -C "$GOV" pr WS="$PWD"`) — **not** a bare
+    `make pr` that would read the consumer's own Makefile, and **not** a raw
+    `git push` fallback. A consumer repo needs **no** `pr`/`pr-check` target;
+    do not add one. There is no "no pr target → fall back" branch: the
+    governance Makefile is always present.
   - After the PR is open, campaign/make-pr work ends green and merge-ready.
     Do **not** merge from the campaign path. Invoking `/l9-pr-remediation`
     authorizes merge of **all open PRs** in the target repo: write
@@ -269,7 +281,10 @@ llm_rules_override: |
      is not permission to publish a different way. When `make pr` fails, fix
      what it reported or state the blocker — never route around it.
      Enforced by `ops/autonomy/local_execution_gate.py`; the adapter
-     permission deny-lists must agree with it.
+     permission deny-lists must agree with it. That `pr` target is the
+     **governance** Makefile's, reached via `l9 pr` / `make -C "$GOV" pr
+     WS="$PWD"` regardless of the workspace repo's own Makefile — a consumer
+     needs no `pr` target and there is no raw-push fallback.
   3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
   4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
      campaign PRs against `main`. Do not mix with other feature branches.

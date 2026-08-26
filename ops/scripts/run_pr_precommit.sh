@@ -17,6 +17,24 @@ WS="${1:-${WS:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-}"
 
+# CI-008 governance-always: the publish gate runs the GOVERNANCE pre-commit
+# config as its authority, named explicitly rather than picked up from the
+# workspace cwd. Resolve the governance clone root now (this script lives in
+# $GOV/ops/scripts) and pass it as `--config` below. When the workspace IS the
+# governance clone (WS == GOV_ROOT) the named config is byte-identical to the
+# cwd config, so this is a strict no-op and the governance repo's own `make pr`
+# is unchanged.
+#
+# NOTE (scoped follow-up): running this governance config against a *consumer*
+# workspace (WS != GOV_ROOT) additionally needs cwd=$GOV_ROOT so the config's
+# repo-local `entry: ops/scripts/...` hooks resolve, absolute --files paths, and
+# a governance-only-local-hook skip subset. That path requires validation
+# against a real consumer checkout (not available in this environment), so it is
+# not enabled here; the explicit config binding is the safe, in-repo-validated
+# half of §8b.
+GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+GOV_PRECOMMIT_CONFIG="$GOV_ROOT/.pre-commit-config.yaml"
+
 # Resolve first. An empty list is PASS without the pre-commit CLI — CI Test
 # Suite does not install it, and this repo does not use a git commit hook.
 if [[ -n "${PR_CHANGED_FILE:-}" && -f "$PR_CHANGED_FILE" ]]; then
@@ -71,11 +89,10 @@ fi
 # Hooks may rewrite (ruff --fix, format, eof, trailing-ws). Do not exit on
 # pre-commit's files_modified status until dirt is classified below.
 set +e
-SKIP="$SKIP_LIST" pre-commit run --files "${files[@]}"
+SKIP="$SKIP_LIST" pre-commit run --config "$GOV_PRECOMMIT_CONFIG" --files "${files[@]}"
 pc_rc=$?
 set -e
 
-GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 echo "--- lint-ruff (changed Python) ---"
 py_list="$(mktemp)"
 # Never delete a caller-owned PR_CHANGED_FILE. Only unlink temps we created.

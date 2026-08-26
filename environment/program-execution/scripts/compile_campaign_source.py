@@ -340,30 +340,46 @@ def _bind_stack_proof(src: dict[str, Any], stack_proof: Path | None) -> dict[str
 
 
 def normalize_definition_status(src: dict[str, Any]) -> list[str]:
-    """Compile ordering-blocked tasks as `ready` and let dependencies gate them.
+    """Canonicalize legacy ordering-blocked tasks as `ready` (ADR-0023).
 
-    `definition_status: blocked` describes an authoring intent — "this runs
-    after something else" — but the controller reads it as a runtime property
-    with no transition back to `ready`. Runtime dependency edges already decide
-    eligibility, so a task that is only waiting on a predecessor compiles as
-    `ready`; one that is blocked with nothing to wait for keeps its status,
-    because that is a real authoring gap rather than sequencing.
+    `definition_status: blocked` combined with dependencies is legacy ordering
+    misuse: dependency/wave edges are the ordering authority, and the
+    controller has no `blocked → ready` definition transition. Such tasks
+    compile as `ready` with their dependencies preserved, and the runtime
+    reports the wait as waiting, never as a blocker.
+
+    `blocked` with no dependency to wait on is a runtime dead-end — no
+    controller path will ever make the task claimable — so compilation fails
+    instead of emitting a permanently unclaimable Task Card.
     """
     notes: list[str] = []
+    inbound: dict[str, list[str]] = {}
+    for edge in src.get("dependency_edges") or []:
+        if isinstance(edge, dict) and edge.get("from") and edge.get("to"):
+            inbound.setdefault(str(edge["to"]), []).append(str(edge["from"]))
     for task in src.get("tasks") or []:
         if task.get("definition_status") != "blocked":
             continue
-        dependencies = task.get("dependency_ids") or task.get("dependencies") or []
+        dependencies = (
+            task.get("dependency_ids")
+            or task.get("dependencies")
+            or inbound.get(str(task.get("id")))
+            or []
+        )
         if not dependencies:
-            notes.append(
-                f"task {task['id']!r}: definition_status 'blocked' with no dependencies has no "
-                "controller transition to 'ready'; it can never be claimed"
+            raise CompileError(
+                f"task {task['id']!r}: definition_status 'blocked' with no dependencies would "
+                "compile into a permanently unclaimable Task Card (the controller has no "
+                "blocked → ready definition transition). A complete task definition is "
+                "'ready' (ADR-0023); express sequencing through dependencies/waves, and "
+                "express real runtime blockers through blocking_unknown_ids, "
+                "required_decision_ids, input_evidence_ids, or blocking gates"
             )
-            continue
         task["definition_status"] = "ready"
         notes.append(
-            f"task {task['id']!r}: definition_status 'blocked' normalized to 'ready'; "
-            f"ordering is enforced by dependencies {list(dependencies)!r}"
+            f"task {task['id']!r}: legacy ordering misuse canonicalized — definition_status "
+            f"'blocked' compiled as 'ready'; ordering is enforced by dependencies "
+            f"{list(dependencies)!r} (ADR-0023)"
         )
     return notes
 
