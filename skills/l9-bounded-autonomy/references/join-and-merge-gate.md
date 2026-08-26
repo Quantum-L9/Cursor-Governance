@@ -1,6 +1,6 @@
 # Protocol C — Join and merge gate
 
-Mirrors `environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json` `merge_gate` and join barrier. After `/l9-pr-remediation` reaches green + mergeable + resolved threads, ordinary squash merge is authorized (`L9_AUTONOMY_AUTONOMOUS_MERGE=true`).
+Mirrors `environment/program-execution/peer_execution/autonomy/profiles/pr-convergence.json` `merge_gate` and join barrier. After `/l9-pr-remediation` reaches green + mergeable + resolved threads, ordinary squash merge is authorized by the scoped, expiring receipt that `/l9-pr-remediation` writes (or a human `L9_MERGE_AUTHORIZED=<reason>`); `merge_gate.py` consults no environment boolean.
 
 ## Join barrier
 
@@ -28,7 +28,7 @@ Copy from profile — all required for “merge_eligible”:
 
 ## Autonomous ordinary merge after remediation
 
-- `autonomous_merge: true` in `pr-convergence.json`. `merge_gate.py` reads `L9_AUTONOMY_AUTONOMOUS_MERGE`.
+- `autonomous_merge: true` in `pr-convergence.json` declares the campaign's terminal intent (merge after green), not a gate authority. `merge_gate.py` reads no environment boolean: it authorizes merge only from the scoped, expiring receipt `/l9-pr-remediation` writes (or a human `L9_MERGE_AUTHORIZED=<reason>`).
 - After this checklist: `gh pr merge --squash` oldest first. Never `--admin`, never force-push.
 - Campaigns and `make pr` still stop at green + merge-ready. They do not merge.
 

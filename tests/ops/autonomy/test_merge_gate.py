@@ -382,14 +382,17 @@ def test_stack_bypass_env_allows_squash(tmp_path: Path) -> None:
     assert out.strip() == ""
 
 
-# --- Standing autonomous-merge flag -------------------------------------------
+# --- Retired standing autonomous-merge flag -----------------------------------
 #
-# The flag grants merge authority. It is deliberately not routed through
-# _human_breakglass(), so it does not also waive stack safety: unattended
-# merging is exactly when an orphaned child PR would go unnoticed.
+# L9_AUTONOMY_AUTONOMOUS_MERGE is no longer a merge authority. A standing
+# environment boolean set once in the Claude account/session configuration must
+# never grant unattended merge, so the gate does not consult it: merge requires
+# the human per-session breakglass (L9_MERGE_AUTHORIZED) or a scoped, expiring
+# receipt bound to the repo (and PR). Setting the flag has no effect.
 
 
-def test_autonomous_merge_flag_allows_ordinary_merge(tmp_path: Path) -> None:
+def test_autonomous_merge_flag_no_longer_authorizes(tmp_path: Path) -> None:
+    # Even for an unstacked PR the flag grants nothing; the merge stays denied.
     code, out, err = _run(
         _mcp(repo="Quantum-L9/SEO-Bot", pull_number=12, merge_method="squash"),
         env={
@@ -398,10 +401,12 @@ def test_autonomous_merge_flag_allows_ordinary_merge(tmp_path: Path) -> None:
         },
     )
     assert code == 0, err
-    assert out.strip() == ""
+    reason = json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "not an authority" in reason
 
 
-def test_autonomous_merge_flag_still_denies_stacked_squash(tmp_path: Path) -> None:
+def test_autonomous_merge_flag_does_not_authorize_stacked_squash(tmp_path: Path) -> None:
+    # Flag set, but merge authority fails first: denied on authority, not stack.
     code, out, err = _run(
         _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
         env={
@@ -410,7 +415,8 @@ def test_autonomous_merge_flag_still_denies_stacked_squash(tmp_path: Path) -> No
         },
     )
     assert code == 0, err
-    assert "#54" in json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+    reason = json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "not an authority" in reason
 
 
 def test_autonomous_merge_flag_never_waives_admin_merge() -> None:
