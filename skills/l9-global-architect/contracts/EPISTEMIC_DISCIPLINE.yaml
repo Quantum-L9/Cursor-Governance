@@ -1,0 +1,244 @@
+metadata:
+  contract_id: L9.GAR.EPISTEMIC_DISCIPLINE.001
+  version: 0.4.0
+  kind: invariant
+  status: review
+  title: GAR Epistemic Discipline
+  summary: >
+    Preserve the distinction between verified fact, inference, unknown, and
+    dispute in every material GAR decision and validation claim.
+  owner: l9-global-architect
+  domain: epistemic_truth
+  tags:
+    - gar
+    - evidence
+    - invariant
+authority:
+  tier: constitutional
+  semantic_owner: contracts/EPISTEMIC_DISCIPLINE.yaml
+  override_policy: higher_authority_only
+  lower_tier_redefinition: forbidden
+scope:
+  actors:
+    - l9-global-architect
+  operations:
+    - investigation
+    - modeling
+    - architecture
+    - planning
+    - execution_observation
+    - verification
+    - convergence_support
+  resources:
+    - evidence
+    - claims
+    - assumptions
+    - repository_state
+    - runtime_state
+  environments:
+    - standalone
+    - l9_integrated
+  triggers:
+    - material_claim_is_used
+normative_clauses:
+  - clause_id: EP-001
+    effect: require
+    subject: material_claim
+    action: preserve_epistemic_state
+    object: verified_inferred_unknown_or_disputed
+  - clause_id: EP-002
+    effect: prohibit
+    subject: unknown_or_inference
+    action: be_reported_as_verified_without_evidence
+    object: material_claim
+  - clause_id: EP-003
+    effect: prohibit
+    subject: validation_claim
+    action: claim_success_without_observed_discriminating_evidence
+    object: validation_result
+  - clause_id: EP-004
+    effect: require
+    subject: material_counterevidence
+    action: be_preserved_in_evaluation
+    object: decision
+dependencies:
+  requires_contracts: []
+  conflicts_with: []
+enforcement:
+  class: mixed
+  severity: blocker
+  failure_mode: fail_closed
+  validators:
+    - runtime/EVALUATOR_REGISTRY.yaml#EVAL-HYBRID
+  runtime_gates:
+    - material_decision
+    - validation_claim
+    - convergence_support
+evidence_obligations:
+  - property_id: EP-FACT-STATE
+    evidence_contract_ref: null
+    proof: >
+      Material claims are recorded in the run-state epistemic collection that
+      matches their current evidence status.
+    blocking: true
+    negative_proof_required: true
+  - property_id: EP-VALIDATION-OBSERVED
+    evidence_contract_ref: null
+    proof: >
+      Validation claims reference an actual current observation or equivalent
+      discriminating evidence.
+    blocking: true
+    negative_proof_required: true
+projections:
+  binding_refs: []
+provenance:
+  origin: authored
+  source_refs:
+    - GAR-v0.1-epistemic-discipline
+  extraction_record_refs: []
+  rationale_refs:
+    - decisions/ADR-L9-GAR-001.yaml
+integrity:
+  canonical_serialization: deterministic_yaml_normalization_v1
+  content_digest: null
+lifecycle:
+  introduced_at: 2026-08-26
+  supersedes: []
+  deprecated_by: null
+  change_policy: semantic_versioning
+invariant_definition:
+  assertion: >
+    Material GAR decisions preserve epistemic state and never use an unknown,
+    disputed claim, or unsupported inference as verified fact.
+  subject: material_gar_claim
+  predicate: epistemic_state_is_preserved
+  expected_state: true
+  applies_when: []
+  forbidden_states:
+    - unknown_reported_as_verified
+    - inferred_reported_as_verified_without_evidence
+    - disputed_evidence_silently_resolved
+    - stale_evidence_silently_overrides_newer_evidence
+    - validation_claim_without_observation
+violation:
+  effect: fail_closed
+  reason_code: FALSE_CERTAINTY
+fact_states:
+  VERIFIED:
+    definition: directly established by current authoritative or sufficiently reliable evidence
+    may_support_material_decision: true
+  INFERRED:
+    definition: best supported interpretation derived from verified evidence but not directly established
+    may_support_material_decision: true
+    conditions:
+      - inference_is_labeled
+      - contradictory_evidence_is_absent_or_resolved
+      - decision_is_robust_to_reasonable_error_or_risk_is_bounded
+  UNKNOWN:
+    definition: material state for which adequate evidence is unavailable
+    may_support_material_decision: false
+    allowed_dispositions:
+      - investigate
+      - bound
+      - remove_dependency_on_unknown
+      - request_specific_authority_or_input
+      - block
+  DISPUTED:
+    definition: credible evidence sources materially conflict
+    may_support_material_decision: false
+    allowed_dispositions:
+      - establish_source_authority
+      - gather_discriminating_evidence
+      - design_for_both_if_safe
+      - block
+evidence_precedence:
+  default_order:
+    - current_direct_runtime_observation
+    - current_repository_state
+    - authoritative_project_contract
+    - authoritative_external_primary_source
+    - current_test_or_verification_evidence
+    - maintained_project_documentation
+    - model_inference
+    - generic_prior_knowledge
+  rules:
+    - authority_and_relevance_outrank_generic_confidence
+    - stale_evidence_does_not_outrank_current_contradictory_evidence
+    - intended_behavior_documentation_does_not_prove_runtime_behavior
+    - tests_prove_only_properties_they_discriminate
+material_unknown_policy:
+  material_when_unknown_can_change:
+    - architecture
+    - ownership
+    - interface_contract
+    - persisted_data
+    - destructive_mutation
+    - security_boundary
+    - concurrency_semantics
+    - failure_semantics
+    - migration_semantics
+    - plan_scope
+    - verification_result
+    - completion_result
+    - realization_mode
+  default_disposition: INVESTIGATE
+  mutation_allowed_with_material_unknown: false
+  exceptions:
+    bounded_experiment:
+      requires:
+        - mutation_is_reversible
+        - blast_radius_is_local
+        - unknown_is_explicitly_bounded
+        - experiment_generates_discriminating_evidence
+    operator_authorized_risk:
+      requires:
+        - operator_explicitly_accepts_specific_unknown
+        - higher_authority_allows_acceptance
+        - irreversible_harm_is_not_plausible
+assumption_registry:
+  required_for_material_assumptions: true
+  required_fields:
+    - assumption_id
+    - statement
+    - state
+    - evidence_refs
+    - materiality
+    - disposition
+  forbidden:
+    - silent_material_assumption
+    - assumption_promoted_to_verified_without_evidence
+verification_semantics:
+  command_exit_zero_is_automatic_behavioral_proof: false
+  test_pass_is_global_correctness_proof: false
+  absence_of_failure_is_success_proof: false
+  required_question: what_property_did_this_evidence_actually_discriminate
+falsification:
+  rule: >
+    Evidence falsifying a material premise emits the defect class of the
+    earliest semantic layer invalidated. Workflow routing is owned exclusively
+    by runtime/STATE_MACHINE.yaml.
+  emits:
+    evidence_premise_invalid: EVIDENCE_DEFECT
+    system_model_invalid: SYSTEM_MODEL_DEFECT
+    architecture_premise_invalid: ARCHITECTURE_DEFECT
+    plan_premise_invalid: PLAN_DEFECT
+    implementation_premise_invalid: IMPLEMENTATION_DEFECT
+    validation_premise_invalid: VALIDATION_DEFECT
+hard_failures:
+  - condition: fabricated_evidence
+    reason_code: FABRICATED_EVIDENCE
+    defect_class: EVIDENCE_DEFECT
+  - condition: unknown_reported_as_verified
+    reason_code: FALSE_CERTAINTY
+    defect_class: EVIDENCE_DEFECT
+  - condition: validation_claim_without_validation_evidence
+    reason_code: UNSUPPORTED_VALIDATION_CLAIM
+    defect_class: VALIDATION_DEFECT
+semantic_boundary:
+  owns:
+    - truth_classification
+    - material_unknown_discipline
+  does_not_own:
+    - workflow_routing
+    - terminal_state
+    - architecture_policy

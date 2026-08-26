@@ -17,6 +17,10 @@ Default publish path is `PR_REMEDIATE=0 make pr` (Autonomy Surface Profile
 Agents MUST:
 
 1. Use `make pr` (any capitalization) so Makefile checkers run before push.
+   The `pr` target is the **governance** Makefile's, always — reach it with
+   `l9 pr` / `make -C "$GOV" pr WS="$PWD"` regardless of the workspace repo's
+   own Makefile. A consumer repo needs **no** `pr`/`pr-check` target; do not
+   add one, and do not fall back to a raw `git push` where one is absent.
 2. Pass `PR_REMEDIATE=0` (this is now the script default).
 3. For Program Execution campaigns, set `PR_BASE` to
    `origin/campaign/<campaign_id>` — never open those PRs against `main`.

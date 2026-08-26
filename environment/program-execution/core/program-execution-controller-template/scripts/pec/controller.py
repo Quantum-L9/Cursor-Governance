@@ -442,7 +442,7 @@ def relock_definitions(
             lease = db.active_lease_for_task(task_id)
             if lease is not None:
                 db.release_lease(str(lease["lease_id"]))
-            if state not in {"BLOCKED", "ELIGIBLE"}:
+            if state not in {"WAITING", "BLOCKED", "ELIGIBLE"}:
                 # STALE is the state model's own word for "the definition this
                 # was working from was replaced", and unlike BLOCKED it is
                 # reachable from every active state. Land on ELIGIBLE from
@@ -746,17 +746,49 @@ def lock_trusted_for_task(workspace: Path, task_id: str) -> bool:
     return task_id not in stale
 
 
-def task_readiness(
+# Readiness reason kinds (ADR-0023). "waiting" is ordinary sequencing or a
+# setup step the runtime can deterministically progress toward; "blocking" is
+# a genuine inability to proceed; "state" is a runtime lifecycle position
+# (already executing, terminal) that is neither waiting nor blocked.
+_WAITING = "waiting"
+_BLOCKING = "blocking"
+_STATE = "state"
+
+
+def _gate_prerequisite_kind(gate: dict[str, Any] | None) -> str:
+    """Classify an unsatisfied gate prerequisite (ADR-0023).
+
+    A gate that has not yet been evaluated (result UNKNOWN) is an ordering
+    condition: waiting. A missing gate, an authoritative FAIL/BLOCKED result,
+    or an evaluated waiver that no longer holds is a real blocker.
+    """
+    if gate is None:
+        return _BLOCKING
+    result = str(gate.get("result") or "UNKNOWN")
+    if result in {"FAIL", "BLOCKED", "NOT_APPLICABLE_WITH_REASON"}:
+        return _BLOCKING
+    return _WAITING
+
+
+def task_readiness_detail(
     db: StateDB, task: dict[str, Any], workspace: Path | None = None
-) -> tuple[bool, list[str]]:
-    blockers: list[str] = []
+) -> dict[str, Any]:
+    """One authoritative readiness evaluation, with classified reasons.
+
+    Every check below is preserved from the pre-ADR-0023 evaluation; the only
+    change is that each reason is classified as waiting (sequencing / setup
+    not yet prepared), blocking (genuine inability to proceed), or state
+    (runtime lifecycle position). Eligibility itself is unchanged: any reason
+    at all refuses a claim.
+    """
+    entries: list[tuple[str, str]] = []
     adaptation: dict[str, Any] = {
         "dependency_overrides": {},
         "scoped_unknowns": [],
     }
     if workspace is not None:
         if not lock_trusted_for_task(workspace, str(task["id"])):
-            blockers.append("program_lock_stale_or_invalid")
+            entries.append((_BLOCKING, "program_lock_stale_or_invalid"))
         try:
             from .replan import plan_adaptation
 
@@ -766,9 +798,9 @@ def task_readiness(
             # readiness falls back to the locked plan alone.
             pass
     if db.get_meta("global_halt", False):
-        blockers.append("global_halt")
+        entries.append((_BLOCKING, "global_halt"))
     if task["definition_status"] != "ready":
-        blockers.append(f"definition_not_ready:{task['definition_status']}")
+        entries.append((_BLOCKING, f"definition_not_ready:{task['definition_status']}"))
     if task["runtime_state"] in {
         "LEASED",
         "PREPARED",
@@ -780,7 +812,7 @@ def task_readiness(
         "COMPLETED",
         "CANCELLED",
     }:
-        blockers.append(f"runtime_state_not_claimable:{task['runtime_state']}")
+        entries.append((_STATE, f"runtime_state_not_claimable:{task['runtime_state']}"))
     override = adaptation["dependency_overrides"].get(task["id"])
     effective_dependencies = list(task["dependencies"])
     if override:
@@ -792,11 +824,11 @@ def task_readiness(
     for dep in effective_dependencies:
         dependency = db.task(dep)
         if dependency is None or dependency["runtime_state"] not in {"PASSED_LOCAL", "COMPLETED"}:
-            blockers.append(f"dependency_not_complete:{dep}")
+            entries.append((_WAITING, f"dependency_not_complete:{dep}"))
     for decision_id in task["required_decisions"]:
         decision = db.decision(decision_id)
         if decision is None or decision["status"] != "accepted" or not decision["evidence_ids"]:
-            blockers.append(f"required_decision_not_accepted:{decision_id}")
+            entries.append((_BLOCKING, f"required_decision_not_accepted:{decision_id}"))
     for unknown_id in task["blocking_unknowns"]:
         item = db.unknown(unknown_id)
         if (
@@ -804,13 +836,13 @@ def task_readiness(
             or item["status"] not in {"resolved", "accepted_risk", "superseded"}
             or not item["evidence_ids"]
         ):
-            blockers.append(f"blocking_unknown:{unknown_id}")
+            entries.append((_BLOCKING, f"blocking_unknown:{unknown_id}"))
     for scoped in adaptation["scoped_unknowns"]:
         if task["id"] in (scoped.get("blocked_task_ids") or []) and scoped.get("unknown_id"):
-            blockers.append(f"scoped_runtime_unknown:{scoped['unknown_id']}")
+            entries.append((_BLOCKING, f"scoped_runtime_unknown:{scoped['unknown_id']}"))
     for evidence_id in task["required_evidence"]:
         if not _evidence_valid(db, evidence_id):
-            blockers.append(f"required_evidence_missing_or_invalid:{evidence_id}")
+            entries.append((_BLOCKING, f"required_evidence_missing_or_invalid:{evidence_id}"))
     waves = {wave["id"]: wave for wave in db.get_meta("waves", [])}
     wave = waves.get(task["wave_id"])
     gates = {gate["id"]: gate for gate in db.gates()}
@@ -818,34 +850,45 @@ def task_readiness(
         for predecessor_id in wave.get("depends_on") or []:
             predecessor = waves.get(predecessor_id)
             if predecessor is None:
-                blockers.append(f"unknown_predecessor_wave:{predecessor_id}")
+                entries.append((_BLOCKING, f"unknown_predecessor_wave:{predecessor_id}"))
                 continue
             for predecessor_task_id in predecessor.get("task_ids") or []:
                 predecessor_task = db.task(predecessor_task_id)
                 if predecessor_task is None or predecessor_task["runtime_state"] != "COMPLETED":
-                    blockers.append(
-                        f"predecessor_wave_task_not_completed:{predecessor_id}:{predecessor_task_id}"
+                    entries.append(
+                        (
+                            _WAITING,
+                            "predecessor_wave_task_not_completed:"
+                            f"{predecessor_id}:{predecessor_task_id}",
+                        )
                     )
             for gate_id in predecessor.get("exit_gate_ids") or []:
                 gate = gates.get(gate_id)
                 if gate is None or not _gate_satisfied(db, gate):
-                    blockers.append(
-                        f"predecessor_wave_exit_gate_not_satisfied:{predecessor_id}:{gate_id}"
+                    entries.append(
+                        (
+                            _gate_prerequisite_kind(gate),
+                            f"predecessor_wave_exit_gate_not_satisfied:{predecessor_id}:{gate_id}",
+                        )
                     )
         for gate_id in wave.get("entry_gate_ids") or []:
             gate = gates.get(gate_id)
             if gate is None or not _gate_satisfied(db, gate):
-                blockers.append(f"entry_gate_not_satisfied:{gate_id}")
+                entries.append(
+                    (_gate_prerequisite_kind(gate), f"entry_gate_not_satisfied:{gate_id}")
+                )
     repo = None
     requested_actions: list[str] = []
     if task["execution_kind"] == "repo_local":
         repo = db.repository(task["repository_id"])
         if repo is None or not repo.get("head_sha"):
-            blockers.append("repository_not_reconciled")
+            # Setup not prepared yet; `pec reconcile` deterministically clears it.
+            entries.append((_WAITING, "repository_not_reconciled"))
         elif repo.get("dirty"):
-            blockers.append("repository_dirty")
+            entries.append((_BLOCKING, "repository_dirty"))
         if task["scope_status"] != "exact" or not task.get("source_contract_path"):
-            blockers.append("source_contract_incomplete")
+            # Setup not prepared yet; draft/register-contract deterministically clears it.
+            entries.append((_WAITING, "source_contract_incomplete"))
         else:
             try:
                 contract = validate_source_contract(
@@ -856,14 +899,41 @@ def task_readiness(
                     action not in {"inspect", "local_write", "destructive_change"}
                     for action in requested_actions
                 ):
-                    blockers.append("requested_action_requires_uninstalled_adapter")
+                    entries.append((_BLOCKING, "requested_action_requires_uninstalled_adapter"))
             except Exception as exc:
-                blockers.append(f"source_contract_invalid:{exc}")
+                entries.append((_BLOCKING, f"source_contract_invalid:{exc}"))
         if db.active_lease_for_task(task["id"]) is not None:
-            blockers.append("task_already_leased")
+            entries.append((_STATE, "task_already_leased"))
     if not _approval_valid(db, task, repo, requested_actions):
-        blockers.append("required_approval_missing_or_invalid")
-    return not blockers, blockers
+        entries.append((_BLOCKING, "required_approval_missing_or_invalid"))
+    return {
+        "eligible": not entries,
+        "waiting_reasons": [reason for kind, reason in entries if kind == _WAITING],
+        "blocking_reasons": [reason for kind, reason in entries if kind == _BLOCKING],
+        "state_reasons": [reason for kind, reason in entries if kind == _STATE],
+        "reasons": [reason for _, reason in entries],
+    }
+
+
+def task_readiness(
+    db: StateDB, task: dict[str, Any], workspace: Path | None = None
+) -> tuple[bool, list[str]]:
+    detail = task_readiness_detail(db, task, workspace)
+    return detail["eligible"], detail["reasons"]
+
+
+def _task_classification(task: dict[str, Any], detail: dict[str, Any]) -> str:
+    """ready / waiting / blocked / in_progress / terminal (ADR-0023)."""
+    state = str(task.get("runtime_state") or "")
+    if state in ACTIVE_RUNTIME_STATES:
+        return "in_progress"
+    if state in {"COMPLETED", "CANCELLED"}:
+        return "terminal"
+    if detail["eligible"]:
+        return "ready"
+    if detail["blocking_reasons"]:
+        return "blocked"
+    return "waiting"
 
 
 def status(workspace: Path) -> dict[str, Any]:
@@ -871,7 +941,7 @@ def status(workspace: Path) -> dict[str, Any]:
     try:
         tasks = []
         for task in db.tasks():
-            ready, blockers = task_readiness(db, task, workspace)
+            detail = task_readiness_detail(db, task, workspace)
             tasks.append(
                 {
                     "id": task["id"],
@@ -879,8 +949,14 @@ def status(workspace: Path) -> dict[str, Any]:
                     "definition_status": task["definition_status"],
                     "target_id": task["target_id"],
                     "repository_id": task.get("repository_id"),
-                    "eligible": ready,
-                    "blockers": blockers,
+                    "eligible": detail["eligible"],
+                    "classification": _task_classification(task, detail),
+                    "waiting_reasons": detail["waiting_reasons"],
+                    "blocking_reasons": detail["blocking_reasons"],
+                    # Genuine blocking reasons only; sequencing lives in
+                    # waiting_reasons and the full set in reasons (ADR-0023).
+                    "blockers": detail["blocking_reasons"],
+                    "reasons": detail["reasons"],
                 }
             )
         ledger_ok, ledger_message = ledger.verify()
@@ -938,25 +1014,50 @@ def status(workspace: Path) -> dict[str, Any]:
 def next_tasks(workspace: Path) -> dict[str, Any]:
     db, _ = open_runtime(workspace)
     try:
-        ready, blocked = [], []
+        ready: list[dict[str, Any]] = []
+        waiting: list[dict[str, Any]] = []
+        blocked: list[dict[str, Any]] = []
+        in_progress: list[dict[str, Any]] = []
+        terminal: list[dict[str, Any]] = []
         admission_draft = bool(db.get_meta("admission_draft", False))
         for task in db.tasks():
-            ok, blockers = task_readiness(db, task, workspace)
+            detail = task_readiness_detail(db, task, workspace)
+            classification = _task_classification(task, detail)
             item = {
                 "id": task["id"],
                 "title": task["title"],
                 "wave_id": task["wave_id"],
                 "target_id": task["target_id"],
                 "repository_id": task.get("repository_id"),
-                "blockers": blockers,
+                "waiting_reasons": detail["waiting_reasons"],
+                "blocking_reasons": detail["blocking_reasons"],
+                # Genuine blocking reasons only (ADR-0023); ordering waits are
+                # never blockers. The full machine-readable set is `reasons`.
+                "blockers": detail["blocking_reasons"],
+                "reasons": detail["reasons"],
             }
             if admission_draft:
-                item["blockers"] = list(blockers) + ["admission_draft"]
+                # An unadmitted draft cannot execute anything: that is a
+                # genuine blocker on every task, not sequencing.
+                item["blocking_reasons"] = detail["blocking_reasons"] + ["admission_draft"]
+                item["blockers"] = item["blocking_reasons"]
+                item["reasons"] = detail["reasons"] + ["admission_draft"]
                 blocked.append(item)
-            elif ok:
+            elif classification == "in_progress":
+                # Already claimed or executing: not claimable, but neither
+                # waiting nor blocked (ADR-0023).
+                item["runtime_state"] = task["runtime_state"]
+                in_progress.append(item)
+            elif classification == "terminal":
+                # COMPLETED/CANCELLED work is done, not blocked.
+                item["runtime_state"] = task["runtime_state"]
+                terminal.append(item)
+            elif classification == "ready":
                 ready.append(item)
-            else:
+            elif classification == "blocked":
                 blocked.append(item)
+            else:
+                waiting.append(item)
         children: list[dict[str, Any]] = []
         try:
             from .replan import plan_adaptation
@@ -981,7 +1082,10 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
                 )
         return {
             "ready": ready,
+            "waiting": waiting,
             "blocked": blocked,
+            "in_progress": in_progress,
+            "terminal": terminal,
             "current": _current_work(db.tasks()),
             "runtime_split_children": children,
             "definition_status": "draft" if admission_draft else None,
@@ -1474,6 +1578,10 @@ def _verify_state_error(task: dict[str, Any] | None, task_id: str) -> Controller
         )
     state = task["runtime_state"]
     guidance = {
+        "WAITING": (
+            "runtime prerequisites (dependencies, waves, gates) have not yet been "
+            "satisfied; run `pec next` to see waiting reasons"
+        ),
         "BLOCKED": "dependencies or definition readiness are unmet; run `pec next` to see blockers",
         "ELIGIBLE": "the task was never claimed; run `pec claim` then prepare/render/start",
         "LEASED": "the worktree is not prepared; run `pec prepare`",
@@ -2192,10 +2300,15 @@ def complete_task(
                 raise ControllerError(f"completion gate not satisfied: {gate_id}")
         integration: dict[str, Any] | None = None
         if task["execution_kind"] == "program_control":
-            if task["runtime_state"] == "BLOCKED":
-                ok, blockers = task_readiness(db, task, workspace)
+            # New complete tasks initialize WAITING (ADR-0023); legacy
+            # persisted runtimes may still hold BLOCKED. Both promote through
+            # the same readiness check.
+            if task["runtime_state"] in {"WAITING", "BLOCKED"}:
+                ok, reasons = task_readiness(db, task, workspace)
                 if not ok:
-                    raise ControllerError("program-control task is blocked: " + ", ".join(blockers))
+                    raise ControllerError(
+                        "program-control task is not eligible: " + ", ".join(reasons)
+                    )
                 db.transition_task(task_id, "ELIGIBLE")
             if task["runtime_state"] != "ELIGIBLE":
                 task = db.task(task_id)

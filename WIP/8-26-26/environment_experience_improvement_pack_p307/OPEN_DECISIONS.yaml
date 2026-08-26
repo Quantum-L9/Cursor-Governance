@@ -1,0 +1,59 @@
+schema: l9.environment_experience.open_decisions/v1
+generated_at: '2026-08-25T02:03:03Z'
+open_decisions:
+- id: OD-001
+  title: Authoritative value for L9_AUTONOMY_AUTONOMOUS_MERGE
+  state: OPEN
+  question: Should the governed account/session value be true or false?
+  why_open: The verifier expects false while live sources repeatedly report true; no explicit policy lock in the corpus decides
+    the intended value.
+  sources:
+  - C-002
+  - CI-006
+- id: OD-002
+  title: Canonical publish command contract
+  state: OPEN
+  question: Must every governed consumer implement make pr, or should doctrine define a supported fallback?
+  why_open: Both states exist in source material and no later convergence decision chooses one.
+  sources:
+  - C-003
+  - CI-008
+- id: OD-003
+  title: Capability broker failure cause
+  state: UNKNOWN
+  question: Is broker.quantumaipartners.com unreachable because of proxy policy or upstream availability?
+  why_open: CONNECT 502 cannot discriminate the cause.
+  sources:
+  - C-005
+  - CI-010
+- id: OD-004
+  title: CLAUDE_SESSION_JWT provisioning failure
+  state: UNKNOWN
+  question: Why is CLAUDE_SESSION_JWT unset on the surface that declares broker-authenticated MCP endpoints?
+  why_open: Pack 9 observes the variable missing but cannot observe the provisioning owner/cause.
+  sources:
+  - P9/MANIFEST.json#U-01
+  - CI-010
+- id: OD-005
+  title: Memory writeback warning
+  state: UNKNOWN
+  question: What produced the single warning in the zero-write memory writeback receipt?
+  why_open: The warning count is observed but its cause is not present in the accessible pack evidence.
+  sources:
+  - P9/MANIFEST.json#U-03
+  - CI-005
+- id: OD-006
+  title: Exact identity of Pack 9 predecessor
+  state: UNKNOWN
+  question: Is accessible Pack 3 exactly the 01:18 predecessor Pack 9 says it supersedes, or a neighboring regenerated export?
+  why_open: Timestamp/workload match strongly; reported archive byte size does not.
+  sources:
+  - C-008
+- id: OD-007
+  title: Origin and lifecycle of standing publish override
+  state: UNKNOWN
+  question: Which component issued L9_PUBLISH_PATH_OVERRIDE and what consumes/expires it?
+  why_open: The value persisted across restarts without issuer or expiry metadata.
+  sources:
+  - P9/MANIFEST.json#U-04
+  - CI-007

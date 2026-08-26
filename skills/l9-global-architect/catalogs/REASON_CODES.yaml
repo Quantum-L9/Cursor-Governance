@@ -1,0 +1,231 @@
+catalog:
+  catalog_id: L9.GAR.REASON_CODES.001
+  version: 0.4.0
+  artifact_class: reason_code_catalog
+  status: experimental
+  semantic_owner: catalogs/REASON_CODES.yaml
+  normative_routing_owner: runtime/STATE_MACHINE.yaml
+purpose:
+  assertion: >
+    Provide one canonical taxonomy for GAR reason codes and defect classes
+    without owning runtime routing.
+severity_domain: [INFO, WARNING, BLOCKER, FATAL]
+recoverability_domain: [recoverable, conditionally_recoverable, terminal_candidate, terminal]
+reason_codes:
+  - code: OUTCOME_POLICY_APPLIED
+    category: execution
+    severity: INFO
+    recoverability: recoverable
+    meaning: Outcome accountability and realization policy were successfully derived for the current objective.
+  - code: REALIZATION_MODE_UNRESOLVED
+    category: planning
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: The explicit user objective cannot yet be deterministically classified into a realization mode without changing obligations.
+  - code: MUTATION_AUTHORITY_UNRESOLVED
+    category: authority
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Mutation is objective-required but permission is not yet resolved.
+  - code: DELIVERY_NOT_COMPLETED
+    category: convergence
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Objective-derived delivery has not been observed in the required delivery mode.
+  - code: VALID_BLOCK_RECEIPT_INVALID
+    category: runtime
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: A proposed terminal block lacks the required typed receipt, supporting evidence, or satisfied type legitimacy predicate.
+  - code: FALSE_BLOCKING
+    category: convergence
+    severity: FATAL
+    recoverability: recoverable
+    meaning: A terminal block was claimed while a materially distinct remediation class or discriminating evidence path remained available under current authority and capability.
+  - code: INTEGRATION_DEGRADED
+    category: runtime
+    severity: BLOCKER
+    recoverability: conditionally_recoverable
+    meaning: A bound integrated runtime with transferred orchestration authority lost a required activation predicate; repair, explicit release, or a valid block is required and silent STANDALONE fallback is illegal.
+  - code: AUTHORITY_CONFLICT
+    category: authority
+    severity: BLOCKER
+    recoverability: conditionally_recoverable
+    meaning: Applicable authority sources materially conflict and precedence has not resolved the conflict.
+  - code: AUTHORITY_BLOCK
+    category: authority
+    severity: BLOCKER
+    recoverability: terminal_candidate
+    meaning: A required action is outside granted authority.
+  - code: HIGHER_AUTHORITY_ABORT
+    category: authority
+    severity: FATAL
+    recoverability: terminal
+    meaning: Higher authority explicitly requires termination.
+  - code: CAPABILITY_BLOCK
+    category: capability
+    severity: BLOCKER
+    recoverability: terminal_candidate
+    meaning: A required action cannot be performed because the host lacks the necessary capability.
+  - code: OBSERVATION_CAPABILITY_UNAVAILABLE
+    category: capability
+    severity: BLOCKER
+    recoverability: conditionally_recoverable
+    meaning: Evidence required for an observation cannot be obtained with current host capabilities.
+  - code: EVALUATOR_UNRESOLVED
+    category: runtime
+    severity: BLOCKER
+    recoverability: conditionally_recoverable
+    meaning: A referenced evaluator is absent from the closed evaluator registry.
+  - code: DETERMINISTIC_INPUT_MISSING
+    category: epistemic
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: A deterministic predicate cannot be evaluated because a material input is missing.
+  - code: DETERMINISTIC_INPUT_CONFLICT
+    category: epistemic
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Deterministic evaluation inputs conflict.
+  - code: CONTRACT_EVALUATION_CYCLE
+    category: runtime
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Contract evaluation encountered a cyclic dependency.
+  - code: FABRICATED_EVIDENCE
+    category: epistemic
+    severity: FATAL
+    recoverability: recoverable
+    meaning: A claim relied on evidence that was not actually observed or available.
+  - code: FALSE_CERTAINTY
+    category: epistemic
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: An inference unknown or dispute was represented as verified fact.
+  - code: DISPUTED_EVIDENCE
+    category: epistemic
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Credible evidence materially conflicts.
+  - code: EVIDENCE_BLOCK
+    category: epistemic
+    severity: BLOCKER
+    recoverability: terminal_candidate
+    meaning: A material evidence gap cannot currently be resolved or safely bounded.
+  - code: UNSUPPORTED_ASSUMPTION
+    category: epistemic
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: A material decision depends on an unsupported assumption.
+  - code: MATERIAL_ASSUMPTION_UNRESOLVED
+    category: epistemic
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: A material assumption remains unknown and can change the decision.
+  - code: UNSUPPORTED_VALIDATION_CLAIM
+    category: epistemic
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Validation success was claimed without corresponding observation.
+  - code: UNEARNED_COMPLEXITY
+    category: architecture
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Structural complexity lacks an evidenced responsibility over a materially simpler credible alternative.
+  - code: COMPLEXITY_JUSTIFICATION_UNKNOWN
+    category: architecture
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Available evidence is insufficient to establish that introduced complexity is earned.
+  - code: FUZZY_OWNERSHIP
+    category: architecture
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Authoritative state responsibility mutation authority or lifecycle ownership is ambiguous or duplicated.
+  - code: OWNERSHIP_UNRESOLVED
+    category: architecture
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Canonical ownership cannot yet be established from the current system model.
+  - code: ARCHITECTURE_NOT_COHERENT
+    category: architecture
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: The selected architecture violates global coherence required invariants boundaries or failure semantics.
+  - code: SCOPE_EXPANSION_UNJUSTIFIED
+    category: planning
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Proposed work expands beyond the smallest coherent scope without a forcing requirement or invariant.
+  - code: PLAN_NOT_READY
+    category: planning
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: The execution plan or depth-appropriate plan-readiness proof fails required properties.
+  - code: MUTATION_NOT_OBSERVED
+    category: execution
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: A required mutation or artifact realization was intended or proposed but actual artifact state does not establish that it occurred.
+  - code: EXTERNAL_DEPENDENCY_BLOCK
+    category: execution
+    severity: BLOCKER
+    recoverability: terminal_candidate
+    meaning: Progress requires an inaccessible external dependency that cannot be safely bypassed.
+  - code: VALIDATION_INSUFFICIENT
+    category: verification
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Available validation does not discriminate success from a material failure mode.
+  - code: OBJECTIVE_NOT_SATISFIED
+    category: convergence
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: The requested outcome is not yet established.
+  - code: COMPLETION_NOT_PROVEN
+    category: convergence
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: Required convergence properties have not all been proven.
+  - code: FALSE_COMPLETION
+    category: convergence
+    severity: FATAL
+    recoverability: recoverable
+    meaning: Completion was claimed while required convergence properties remained unsatisfied or unproven.
+  - code: NO_PROGRESS_WITH_CURRENT_CAPABILITIES
+    category: runtime
+    severity: BLOCKER
+    recoverability: terminal_candidate
+    meaning: Bounded recursive repair repeated the same material defect without new evidence or state change and no current capability can break the deadlock.
+defect_classes:
+  - class: EVIDENCE_DEFECT
+    meaning: Evidence is missing stale contradictory fabricated or insufficient for a material premise.
+  - class: SYSTEM_MODEL_DEFECT
+    meaning: The runtime representation of ownership dependencies state invariants lifecycle or failure behavior is materially wrong.
+  - class: ARCHITECTURE_DEFECT
+    meaning: The selected architectural approach is materially wrong despite the available system model.
+  - class: PLAN_DEFECT
+    meaning: Architecture may be sound but the executable mutation plan is incomplete excessive unsafe or incoherent.
+  - class: IMPLEMENTATION_DEFECT
+    meaning: The plan remains valid but the realized mutation does not implement it correctly.
+  - class: VALIDATION_DEFECT
+    meaning: Implementation may be correct but available verification does not adequately prove required behavior.
+  - class: AUTHORITY_DEFECT
+    meaning: Required progress exceeds current authority.
+  - class: CAPABILITY_DEFECT
+    meaning: Required progress exceeds current host capability.
+taxonomy_invariants:
+  - id: RC-001
+    rule: Reason codes classify why a condition exists and MUST NOT independently define workflow routing.
+  - id: RC-002
+    rule: Defect classes identify the earliest semantic layer believed invalid and runtime/STATE_MACHINE.yaml owns the resulting transition.
+  - id: RC-003
+    rule: A reason code MUST have one stable meaning per major version.
+  - id: RC-004
+    rule: Aliasing multiple meanings behind one code is forbidden.
+  - id: RC-005
+    rule: New reason codes require evidence that an existing code cannot represent the condition without semantic loss.
+anti_drift:
+  duplicate_reason_definition_allowed: false
+  routing_logic_allowed_here: false
+  host_specific_reason_codes_allowed: false
