@@ -83,14 +83,30 @@ class CursorBackgroundProvider:
 
     def cancel(self, request, state) -> ProviderInvocation:
         accepted = bool(self.transport.cancel(request.execution_id))
+        if not accepted:
+            return ProviderInvocation(
+                status="UNSUPPORTED",
+                state=state,
+                evidence=(
+                    {
+                        "type": "cancellation_unsupported",
+                        "execution_id": request.execution_id,
+                        "accepted": False,
+                    },
+                ),
+            )
+        # Request acceptance is not termination confirmation: the Cursor host
+        # that owns the handle must terminate its process and write
+        # <dispatch>.cancelled.json before terminal CANCELLED is observable
+        # through status(). Never synthesize that acknowledgement here.
         return ProviderInvocation(
-            status="CANCELLED" if accepted else "UNSUPPORTED",
+            status="RUNNING",
             state=state,
             evidence=(
                 {
-                    "type": "cursor_cancel_request",
+                    "type": "cancellation_requested",
                     "execution_id": request.execution_id,
-                    "accepted": accepted,
+                    "accepted": True,
                 },
             ),
         )

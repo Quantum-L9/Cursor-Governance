@@ -53,8 +53,6 @@ def action_readiness(state: CampaignState, action_id: str) -> ReadinessDecision:
         ActionStatus.RETRYABLE,
     }:
         return ReadinessDecision(False, f"status={runtime.status.value}")
-    if not spec.authority_granted:
-        return ReadinessDecision(False, "authority_not_granted")
     if not spec.preconditions_satisfied:
         return ReadinessDecision(False, "preconditions_not_satisfied")
     if spec.operation_id and spec.operation_id in state.completed_operations:

@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import Any
 
 REGISTRY_REL = Path("ops/generated/skill-registry.json")
-RULE_REL = Path("environment/generated/llm-rules/l9-skill-routing.md")
 STATE_NAME = ".l9-managed-skills.json"
 
 
@@ -152,7 +151,6 @@ def reconcile_scope(
     *,
     target_override: Path | None = None,
     replace_l9_duplicates: bool = True,
-    install_project_rule: bool = False,
 ) -> Result:
     if mode != "symlink":
         # L9 law: adapters never hold skill copies. Keep flag for tests only.
@@ -234,31 +232,13 @@ def reconcile_scope(
             remove_managed(stale_path)
             result.removed.append(stale)
 
-    managed_rules: list[str] = []
-    if scope == "project" and install_project_rule:
-        rule_source = root / RULE_REL
-        rule_target = workspace / ".claude" / "rules" / rule_source.name
-        if rule_source.is_file():
-            if same_link(rule_target, rule_source):
-                managed_rules.append(str(rule_target))
-            elif rule_target.exists() or rule_target.is_symlink():
-                previous_rules = set(str(item) for item in old_state.get("rules", []))
-                if str(rule_target) in previous_rules:
-                    if check:
-                        result.drift.append("stale-managed-rule")
-                    else:
-                        remove_managed(rule_target)
-                        install_entry(rule_source, rule_target, mode)
-                        managed_rules.append(str(rule_target))
-                else:
-                    result.conflicts.append("unmanaged-conflict:l9-skill-routing.md")
-            elif check:
-                result.drift.append("missing-rule:l9-skill-routing.md")
-            else:
-                install_entry(rule_source, rule_target, mode)
-                managed_rules.append(str(rule_target))
-
-    if not check and not result.conflicts:
+    if not check:
+        # Record exactly the names this run manages. A conflicted name is NOT
+        # claimed (we never touched it), but the state file is still written:
+        # gating the whole write on zero conflicts froze the recorded skill
+        # list, which silently stopped the obsolete sweep above from ever
+        # reclaiming removed skills for the entire scope.
+        conflicted = {entry.split(":", 1)[1] for entry in result.conflicts if ":" in entry}
         atomic_json(
             state_path,
             {
@@ -266,8 +246,8 @@ def reconcile_scope(
                 "governance_root": str(root),
                 "registry_manifest_sha256": registry.get("source_manifest_sha256", ""),
                 "mode": mode,
-                "skills": sorted(desired),
-                "rules": managed_rules,
+                "skills": sorted(set(desired) - conflicted),
+                "rules": [],
             },
         )
     return result

@@ -1,4 +1,4 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-projection claude-projection-check claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
 .PHONY: improve pr-preflight
 .PHONY: repo-write-lock-test precommit-hook-contract
@@ -65,7 +65,7 @@ $(_GOV_PYTHON_REQ): gov-python
 endif
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-projection claude-projection-check claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
 	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
@@ -178,10 +178,24 @@ symlinks-check:
 symlinks-install:
 	bash ops/scripts/setup_workspace_symlinks.sh
 
-## Reconcile Claude Code plugins to the desired state declared in setup_claude_code_plugins.sh.
+## Reconcile Claude Code plugins to the desired state declared in
+## environment/agents/adapters/claude-code/plugins.desired.json (imperative
+## fallback path — the claude-projection engine is the standing route).
 ## Usage: make claude-plugins WS=/path/to/repo (defaults to cwd if WS omitted)
 claude-plugins:
 	bash ops/scripts/setup_claude_code_plugins.sh $(if $(WS),--workspace "$(WS)",)
+
+## One Claude projection engine: skills, commands, rules mount, settings triad,
+## hooks, declarative plugins. Writes ~/.l9/claude/projection-receipt.json.
+## Usage: make claude-projection WS=/path/to/repo (WS defaults to this clone)
+## Check: make claude-projection-check WS=/path/to/repo
+claude-projection: claude-skill-registry
+	$(PYTHON) ops/scripts/claude_projection.py --root "$(CURDIR)" \
+		--workspace "$(if $(WS),$(WS),$(CURDIR))" --summary
+
+claude-projection-check:
+	$(PYTHON) ops/scripts/claude_projection.py --root "$(CURDIR)" \
+		--workspace "$(if $(WS),$(WS),$(CURDIR))" --check --summary
 
 ## Build the deterministic Claude runtime registry from the canonical skill manifest.
 claude-skill-registry:
@@ -193,9 +207,10 @@ sync-generated:
 	$(PYTHON) ops/scripts/sync_generated_artifacts.py --root "$(CURDIR)" --force --check
 
 ## Reconcile L9 skills into Claude native user + project discovery paths.
+## (Skills-only view of the claude-projection engine.)
 claude-skills: claude-skill-registry
-	$(PYTHON) ops/scripts/reconcile_claude_l9_skills.py --root "$(CURDIR)" \
-		--scope user --scope project --workspace "$(WS)"
+	$(PYTHON) ops/scripts/claude_projection.py --root "$(CURDIR)" \
+		--workspace "$(WS)" --domains skills --summary --no-receipt
 
 ## Read-only registry/frontmatter/hook/routing drift validation.
 claude-skills-check:
@@ -705,3 +720,39 @@ PUSH_ONLY ?= 0
 ## In-place /ff catch-up (l9-repo-sync). Parks unique work. Never activate_fresh. Never stash -u.
 ff:
 	CURSOR_GOVERNANCE_DIR="$(CURDIR)" bash skills/l9-repo-sync/scripts/ff.sh
+
+# L9_DISPATCHER_FACADE_V1
+# Single classification authority for the thin `l9` cross-repo facade
+# (environment/agents/adapters/claude-code/bin/l9). A CONSUMER_SAFE target is
+# WS-aware: it acts on the consumer workspace ($(WS)) and never mutates
+# Governance by path confusion (Governance work uses $(CURDIR) via `make -C`).
+# The dispatcher exposes exactly these; every other target is GOVERNANCE_ONLY
+# and must be run directly with `make -C "$$HOME/.cursor-governance" <target>`.
+# See docs/L9_DISPATCHER.md. Keep in sync with any new WS-aware target.
+L9_CONSUMER_SAFE_TARGETS := start pr pr-check pr-security improve wiring-check \
+  claude-projection claude-projection-check claude-skills claude-settings \
+  claude-settings-check claude-install claude-install-check claude-plugins \
+  claude-env ide-profile l4-status l4-begin l4-record-kernels l4-authorize \
+  clean workspace-clean
+
+.PHONY: l9-consumer-safe-list l9-dispatcher-install l9-dispatcher-check
+## Print the CONSUMER_SAFE target allowlist (the dispatcher's classification source).
+l9-consumer-safe-list:
+	@echo $(L9_CONSUMER_SAFE_TARGETS)
+
+## Install/reconcile the thin l9 dispatcher to $$HOME/.local/bin/l9.
+l9-dispatcher-install:
+	bash "$(CURDIR)/ops/scripts/install_l9_dispatcher.sh"
+
+## Report l9 dispatcher drift without writing anything.
+l9-dispatcher-check:
+	bash "$(CURDIR)/ops/scripts/install_l9_dispatcher.sh" --check
+
+.PHONY: claude-readiness
+## Emit + print the machine-readable Claude readiness receipt (schema
+## l9.claude-readiness.v1 → ~/.l9/claude/readiness-receipt.json). Truthful:
+## a missing/skipped required check, an unloaded MCP, a TCP-only Graphiti, or a
+## stale governance SHA cannot report READY. Usage: make claude-readiness WS=/path
+claude-readiness:
+	$(PYTHON) ops/scripts/emit_claude_readiness.py --root "$(CURDIR)" \
+		--workspace "$(if $(WS),$(WS),$(CURDIR))" --read

@@ -173,6 +173,25 @@ if GOV=$(resolve_governance_dir); then
   else
     PY="python3"
   fi
+  # --- Claude projection engine (repair stale managed state; fail-open) ----
+  # SessionStart runs the SAME engine as install.sh (setup), so a cached
+  # environment whose bootstrap never ran — or ran against an older governance
+  # revision — reconciles here: skills/commands symlinks repaired, settings
+  # merge-patched, rules mount retargeted, stale managed projections removed.
+  # The engine writes ~/.l9/claude/projection-receipt.json. Fail-open: a
+  # projection failure degrades to a WARN line, never blocks the session.
+  PROJECTION_ENGINE="$GOV/ops/scripts/claude_projection.py"
+  if [ "${L9_SKIP_SESSION_PROJECTION:-}" != "1" ] \
+     && [ -f "$PROJECTION_ENGINE" ] && command -v "$PY" >/dev/null 2>&1; then
+    PROJECTION_LINE=$("$PY" "$PROJECTION_ENGINE" --root "$GOV" --workspace "$WORKSPACE" \
+      --summary 2>/dev/null | tail -1)
+    case "${PROJECTION_LINE:-}" in
+      projection=ok) LINES+=("claude projection: ok (receipt ~/.l9/claude/projection-receipt.json)") ;;
+      projection=*)  LINES+=("claude projection: WARN ${PROJECTION_LINE#projection=} — see ~/.l9/claude/projection-receipt.json") ;;
+      *)             LINES+=("claude projection: WARN engine produced no summary — run 'make claude-install'") ;;
+    esac
+  fi
+
   if [ -f "$PROFILE_LOADER" ] && command -v "$PY" >/dev/null 2>&1; then
     PROFILE_BLOCK=$("$PY" "$PROFILE_LOADER" 2>/dev/null || true)
     if [ -n "$PROFILE_BLOCK" ]; then
@@ -303,8 +322,78 @@ emit_account_drift() {
   fi
 }
 
+# --- Capability plane readiness (authenticated; never a secret) -------------
+# The bootstrap receipt above carries the coarse capabilities/memory/mcp words;
+# this section names the DISTINCT dimensions an operator needs to tell apart —
+# configuration vs identity vs DNS vs reachability vs broker-auth vs authorized
+# Graphiti. It is driven by ops/secrets/probe_broker.py, whose --json output
+# carries identity METHOD names only, never a token or a secret value. On a
+# hosted surface with no session identity the probe short-circuits before any
+# network call, so this stays fast and fail-open.
+emit_capability_readiness() {
+  local py="$1"
+  local probe="$GOV/ops/secrets/probe_broker.py"
+  [ -f "$probe" ] || return 0
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
+
+  local out
+  out="$(L9_PROBE_QUIET=1 "$py" "$probe" --json 2>/dev/null || true)"
+  [ -n "$out" ] || return 0
+
+  # Parse only non-secret classifier fields. python one-liner keeps this robust
+  # to formatting; it prints "key=value" lines and never echoes a token.
+  local parsed
+  parsed="$("$py" - "$out" <<'PY' 2>/dev/null || true
+import json, sys
+try:
+    d = json.loads(sys.argv[1])
+except Exception:
+    sys.exit(0)
+blocker = d.get("primary_blocker", "unknown")
+ident_ok = d.get("identity_available")
+ready = d.get("authenticated_readiness", "")
+print(f"broker_reachability={d.get('dns','n/a')}/{d.get('health','n/a')}")
+print(f"broker_identity_status={d.get('identity_method','none')}:"
+      f"{'available' if ident_ok else d.get('identity_reason','unavailable')}")
+print(f"MCP_authentication_status={'verified' if str(ready).startswith('http_2') else ('rejected' if ready else 'not_attempted')}")
+print(f"graphiti_authenticated_health={'PASS' if d.get('ok') else 'DEGRADED'}")
+print(f"primary_blocker={blocker}")
+PY
+)"
+  [ -n "$parsed" ] || return 0
+  LINES+=("--- capability plane readiness ---")
+  # secret_boundary_status is a positive statement: this surface holds no
+  # credentials (see verify_account_env prohibited set); the broker keeps them.
+  LINES+=("secret_boundary_status=model-controlled (no broker/Infisical/Graphiti secret in this environment)")
+  while IFS= read -r line || [ -n "$line" ]; do
+    [ -n "$line" ] && LINES+=("$line")
+  done <<< "$parsed"
+  LINES+=("mcp_configuration=.mcp.json is a projection of mcp.template.json (single MCP authority)")
+}
+
+# --- Final machine-readable readiness receipt (Phase 7) ---------------------
+# One truthful receipt (schema l9.claude-readiness.v1) aggregating projection,
+# MCP, Graphiti, Makefile facade, dispatcher, merge-authority posture, secret
+# boundary, and governance-SHA freshness. Written to
+# ~/.l9/claude/readiness-receipt.json; a compact block is surfaced here so the
+# operator sees the real contract, not a symlink-existence guess.
+emit_readiness_receipt() {
+  local py="$1"
+  local emitter="$GOV/ops/scripts/emit_claude_readiness.py"
+  [ -f "$emitter" ] || return 0
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
+  local block
+  block="$("$py" "$emitter" --root "$GOV" --workspace "$WORKSPACE" --read 2>/dev/null || true)"
+  [ -n "$block" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    LINES+=("$line")
+  done <<< "$block"
+}
+
 emit_bootstrap_status "$PY"
 emit_account_drift "$PY"
+emit_capability_readiness "$PY"
+emit_readiness_receipt "$PY"
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"

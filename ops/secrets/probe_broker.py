@@ -77,6 +77,27 @@ def health_state(url: str, timeout: int = TIMEOUT) -> str:
         return f"unreachable_{type(exc).__name__}"
 
 
+def readiness_state(url: str, token: str, timeout: int = TIMEOUT) -> str:
+    """AUTHENTICATED readiness: does the broker VERIFY this session's identity?
+
+    Reachability (`/healthz`) is not health. This attaches the session assertion
+    and calls `/whoami`, which the broker answers only for a verified identity.
+    `http_200` means the identity was accepted; `http_401` means it was rejected
+    (an expired/wrong-audience/forged token that `/healthz` would have hidden).
+    """
+    try:
+        request = urllib.request.Request(f"{url}/whoami", method="GET")
+        request.add_header("Authorization", f"Bearer {token}")
+        with exchange(
+            request, timeout=timeout, allow_loopback_http=True, label="broker whoami URL"
+        ) as response:
+            return f"http_{response.status}"
+    except urllib.error.HTTPError as exc:
+        return f"http_{exc.code}"
+    except (urllib.error.URLError, OSError, ValueError) as exc:
+        return f"unreachable_{type(exc).__name__}"
+
+
 def run(env: dict[str, str] | None = None, *, timeout: int = TIMEOUT) -> dict:
     source = os.environ if env is None else env
     identity = session_identity(source)
@@ -117,7 +138,30 @@ def run(env: dict[str, str] | None = None, *, timeout: int = TIMEOUT) -> dict:
             if result["primary_blocker"] == NONE:
                 result["primary_blocker"] = REACHABILITY
 
-    result["ok"] = result["primary_blocker"] == NONE
+        # Authenticated readiness is the last gate, and only meaningful once the
+        # broker is actually reachable and an identity was obtainable. A reachable
+        # broker that REJECTS the identity (/whoami 401) is not READY — reporting
+        # it green on /healthz alone is the reachability-is-not-health defect.
+        if (
+            identity.available
+            and identity.token
+            and result["dns"] == "resolves"
+            and result["health"].startswith("http_2")
+        ):
+            result["authenticated_readiness"] = readiness_state(url, identity.token, timeout)
+            if not result["authenticated_readiness"].startswith("http_2"):
+                result["reachability_note"] = (
+                    "broker is reachable but rejected this session's identity "
+                    f"({result['authenticated_readiness']}) — not authorized"
+                )
+                if result["primary_blocker"] == NONE:
+                    result["primary_blocker"] = IDENTITY
+
+    # A health PASS requires an authenticated capability call, never reachability
+    # alone: ok demands no blocker AND, when a broker is configured, a verified
+    # /whoami. Absent that positive proof, this is not READY.
+    authenticated_ok = (str(result.get("authenticated_readiness") or "")).startswith("http_2")
+    result["ok"] = result["primary_blocker"] == NONE and (not url or authenticated_ok)
     return result
 
 

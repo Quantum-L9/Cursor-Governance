@@ -4,17 +4,28 @@
 Claude Code PreToolUse adapter: environment/agents/adapters/claude-code/hooks/merge_gate_wrap.py
 calls this module. Brain lives under ops/ per CANONICAL_LAW §2.1.
 
-Ordinary `gh pr merge` is allowed when any of these is true:
+Ordinary `gh pr merge` is allowed when either of these is true:
 
-  L9_AUTONOMY_AUTONOMOUS_MERGE=true|1|yes|on            # standing owner flag
-  L9_MERGE_AUTHORIZED=<nonempty reason string>          # session env
-  ~/.l9/autonomy/merge-authorization.json               # receipt file
+  L9_MERGE_AUTHORIZED=<nonempty reason string>          # human session breakglass
+  ~/.l9/autonomy/merge-authorization.json               # scoped, expiring receipt
     {"authorizations": [{"repo": "org/repo", "pr": "*" | 53,
                           "source": "l9-pr-remediation",
-                          "expires_at": <unix-seconds>, "reason": "..."}]}
-    Overridable for tests via L9_MERGE_AUTHORIZATION_FILE. An entry matches
-    when repo matches and pr is "*" (all open PRs in that repo) or the
-    exact PR number, and expires_at is in the future.
+                          "expires_at": <unix-seconds>, "reason": "...",
+                          "head_sha": "<40-hex>"      # optional revision binding
+                          }]}
+    Overridable for tests via L9_MERGE_AUTHORIZATION_FILE. An entry authorizes
+    only when: repo matches; pr is "*" (all open PRs in that repo) or the exact
+    PR number; expires_at is a positive number in the future (a receipt with no
+    valid expiry never authorizes — expiry is required); and, when the entry
+    carries a head_sha, the merge names that same head revision (a receipt bound
+    to a revision is rejected once HEAD moves, or when the caller does not name
+    the head at all).
+
+A standing environment boolean is NOT a merge authority. An env var set once in
+the Claude account/session configuration must never grant unattended merge, so
+the retired L9_AUTONOMY_AUTONOMOUS_MERGE flag authorizes nothing here: merge
+requires the human per-session breakglass or a scoped, expiring receipt bound to
+the repo (and PR). Setting the flag has no effect on this gate.
 
 Invoking /l9-pr-remediation writes that receipt via
 ops/autonomy/authorize_merge.py. Campaigns and make pr do not merge.
@@ -46,8 +57,7 @@ of an open PR and the method is squash/rebase (or unspecified). Merge with
   gh pr view / gh pr list          # live probe, fail-closed on error
 
 L9_MERGE_AUTHORIZED (session env, human-set per merge) also skips the probe. A
-receipt written by an agent does not, and neither does the standing
-L9_AUTONOMY_AUTONOMOUS_MERGE flag -- unattended merging is exactly when an
+receipt written by an agent does not -- unattended merging is exactly when an
 orphaned child PR would go unnoticed.
 """
 
@@ -103,18 +113,13 @@ NEVER_WAIVE_REASON = (
 )
 
 MERGE_DENY_REASON = (
-    "Autonomy Surface Profile forbids merge until L9_AUTONOMY_AUTONOMOUS_MERGE "
-    "is true, /l9-pr-remediation is invoked, or L9_MERGE_AUTHORIZED=<reason>. "
-    "Campaigns and make pr end at green + merge-ready. Then "
-    "ops/autonomy/stack_safe_merge.py --repo <owner/name> --pr <n> --run "
-    "(no --admin) for each green mergeable PR, oldest first."
+    "Autonomy Surface Profile forbids merge until /l9-pr-remediation writes a "
+    "scoped, expiring authorization receipt, or a human sets "
+    "L9_MERGE_AUTHORIZED=<reason> for this session. A standing environment "
+    "boolean is not an authority. Campaigns and make pr end at green + "
+    "merge-ready. Then ops/autonomy/stack_safe_merge.py --repo <owner/name> "
+    "--pr <n> --run (no --admin) for each green mergeable PR, oldest first."
 )
-
-_TRUTHY = {"1", "true", "yes", "on"}
-
-
-def _autonomous_merge_enabled() -> bool:
-    return os.environ.get("L9_AUTONOMY_AUTONOMOUS_MERGE", "").strip().lower() in _TRUTHY
 
 
 def _stack_deny_reason(pr: str, head: str, children: list[int], method: str) -> str:
@@ -292,8 +297,15 @@ def _target_from_input(tool_name: str, tool_input: dict[str, Any]) -> tuple[str,
     return repo, pr
 
 
-def _file_authorizes(repo: str, pr: str) -> bool:
-    """True when a fresh matching repo-scoped or PR-scoped authorization exists."""
+def _file_authorizes(repo: str, pr: str, head_sha: str = "") -> bool:
+    """True when a fresh, in-scope, unexpired authorization matches.
+
+    Expiry is required: a receipt with no positive future ``expires_at`` never
+    authorizes. When a receipt carries ``head_sha`` it is bound to that immutable
+    revision -- the merge must name the same head (``head_sha`` argument),
+    otherwise a moved HEAD (or a caller that does not name the head) is rejected.
+    Receipts without ``head_sha`` stay repo/PR-scoped as before.
+    """
     path = _auth_file_path()
     if not path.is_file():
         return False
@@ -303,24 +315,25 @@ def _file_authorizes(repo: str, pr: str) -> bool:
     except (json.JSONDecodeError, OSError):
         return False
     now = time.time()
+    live_sha = head_sha.strip().lower()
     for entry in entries:
         if not isinstance(entry, dict):
             continue
-        expires = entry.get("expires_at") or 0
-        if isinstance(expires, (int, float)) and 0 < expires < now:
+        # Require expiry: missing / non-numeric / already-past never authorizes.
+        expires = entry.get("expires_at")
+        if not isinstance(expires, (int, float)) or isinstance(expires, bool) or expires <= now:
             continue
         entry_repo = str(entry.get("repo") or "")
+        if not entry_repo or not repo or entry_repo != repo:
+            continue
         entry_pr = str(entry.get("pr") or entry.get("number") or "")
-        if not entry_repo:
+        if entry_pr not in REPO_SCOPE and not (pr and entry_pr == pr):
             continue
-        if repo and entry_repo != repo:
+        # Optional immutable-revision binding.
+        entry_sha = str(entry.get("head_sha") or "").strip().lower()
+        if entry_sha and (not live_sha or live_sha != entry_sha):
             continue
-        if not repo:
-            continue
-        if entry_pr in REPO_SCOPE:
-            return True
-        if pr and entry_pr == pr:
-            return True
+        return True
     return False
 
 
@@ -329,17 +342,35 @@ def _human_breakglass() -> bool:
     return bool(os.environ.get("L9_MERGE_AUTHORIZED", "").strip())
 
 
+_SHA_INPUT_KEYS = ("sha", "head_sha", "expected_head_sha", "expected_head_oid", "match_head_commit")
+_MATCH_HEAD_BASH = re.compile(r"--match-head-commit[= ]+([0-9a-fA-F]{7,40})")
+
+
+def _head_sha_from_input(tool_name: str, tool_input: dict[str, Any]) -> str:
+    """The head revision the caller names for this merge, or '' when unnamed."""
+    for key in _SHA_INPUT_KEYS:
+        value = tool_input.get(key)
+        if value:
+            return str(value)
+    if tool_name in {"Bash", "bash", "Shell", "shell"}:
+        command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        match = _MATCH_HEAD_BASH.search(command)
+        if match:
+            return match.group(1)
+    return ""
+
+
 def _merge_authorized(tool_name: str, tool_input: dict[str, Any]) -> bool:
-    # Authority only. Stack safety is evaluated separately in evaluate(), so a
-    # standing autonomous-merge flag grants the merge without also waiving the
-    # check against orphaning an open child PR -- unattended merging is exactly
-    # when that failure would go unnoticed.
-    if _autonomous_merge_enabled():
-        return True
+    # Authority only; stack safety is evaluated separately in evaluate(). Merge
+    # authority is the human per-session breakglass or a scoped, expiring receipt
+    # bound to the repo (and PR, and optionally the head revision). A standing
+    # environment boolean is deliberately not consulted: an env var set once in
+    # the account/session configuration must never grant unattended merge.
     if _human_breakglass():
         return True
     repo, pr = _target_from_input(tool_name, tool_input)
-    return _file_authorizes(repo, pr)
+    head_sha = _head_sha_from_input(tool_name, tool_input)
+    return _file_authorizes(repo, pr, head_sha)
 
 
 def _never_waive_command(command: str) -> bool:

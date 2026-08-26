@@ -87,3 +87,46 @@ def test_rejects_bad_repo(tmp_path: Path) -> None:
             reason="x",
             path=tmp_path / "auth.json",
         )
+
+
+def test_head_sha_binding_recorded_lowercased(tmp_path: Path) -> None:
+    path = tmp_path / "auth.json"
+    entry = write_authorization(
+        repo="Quantum-L9/Cursor-Governance",
+        pr="42",
+        reason="bound",
+        path=path,
+        head_sha="ABCDEF1234567890abcdef1234567890abcdef12",
+        now=1,
+    )
+    assert entry["head_sha"] == "abcdef1234567890abcdef1234567890abcdef12"
+
+
+def test_no_head_sha_leaves_receipt_unbound(tmp_path: Path) -> None:
+    entry = write_authorization(
+        repo="Quantum-L9/Cursor-Governance",
+        reason="unbound",
+        path=tmp_path / "auth.json",
+        now=1,
+    )
+    assert "head_sha" not in entry
+
+
+def test_rejects_non_hex_head_sha(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="hex commit id"):
+        write_authorization(
+            repo="Quantum-L9/Cursor-Governance",
+            reason="x",
+            path=tmp_path / "auth.json",
+            head_sha="zzzz",
+        )
+
+
+def test_rejects_non_positive_ttl(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="must expire"):
+        write_authorization(
+            repo="Quantum-L9/Cursor-Governance",
+            reason="x",
+            path=tmp_path / "auth.json",
+            ttl_seconds=0,
+        )

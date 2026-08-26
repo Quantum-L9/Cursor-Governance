@@ -163,7 +163,7 @@ def _next_action(
 def _extra_task_blockers(db: Any, task: dict[str, Any]) -> list[str]:
     extra: list[str] = []
     state = task.get("runtime_state")
-    if state in {"BLOCKED", "ELIGIBLE"} and task.get("scope_status") == "exact":
+    if state in {"WAITING", "BLOCKED", "ELIGIBLE"} and task.get("scope_status") == "exact":
         if db.active_lease_for_task(task["id"]) is None:
             extra.append("lease_missing")
     if state == "LEASED":

@@ -50,12 +50,18 @@ def _auth_file(
     repo: str = "Quantum-L9/SEO-Bot",
     pr: int | str = 53,
     expires_at: float | None = None,
+    head_sha: str | None = None,
+    no_expiry: bool = False,
     extra: str = "",
 ) -> Path:
     import time
 
-    entries = [{"repo": repo, "pr": pr, "expires_at": expires_at or (time.time() + 3600)}]
-    payload = json.dumps({"authorizations": entries}) + extra
+    entry: dict = {"repo": repo, "pr": pr}
+    if not no_expiry:
+        entry["expires_at"] = expires_at or (time.time() + 3600)
+    if head_sha is not None:
+        entry["head_sha"] = head_sha
+    payload = json.dumps({"authorizations": [entry]}) + extra
     path = tmp_path / "merge-authorization.json"
     path.write_text(payload, encoding="utf-8")
     return path
@@ -232,6 +238,69 @@ def test_human_file_authorization_malformed_denies(tmp_path: Path) -> None:
     assert "deny" in out
 
 
+# --- Receipt hardening: expiry required, optional immutable head_sha binding ---
+
+
+def test_receipt_without_expiry_denies(tmp_path: Path) -> None:
+    """A receipt that never expires is not a valid authorization (expiry required)."""
+    auth = _auth_file(tmp_path, no_expiry=True)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53),
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_receipt_bound_to_head_sha_allows_matching_head(tmp_path: Path) -> None:
+    sha = "a" * 40
+    auth = _auth_file(tmp_path, head_sha=sha)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash", sha=sha),
+        env={
+            "L9_MERGE_AUTHORIZATION_FILE": str(auth),
+            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
+        },
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_receipt_bound_to_head_sha_denies_moved_head(tmp_path: Path) -> None:
+    auth = _auth_file(tmp_path, head_sha="a" * 40)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash", sha="b" * 40),
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_receipt_bound_to_head_sha_denies_when_head_unnamed(tmp_path: Path) -> None:
+    """A revision-bound receipt requires the merge to name that head; silence is denial."""
+    auth = _auth_file(tmp_path, head_sha="a" * 40)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
+        env={"L9_MERGE_AUTHORIZATION_FILE": str(auth)},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_unbound_receipt_ignores_named_head(tmp_path: Path) -> None:
+    """A receipt with no head_sha stays repo/PR-scoped even when a head is named."""
+    auth = _auth_file(tmp_path)
+    code, out, err = _run(
+        _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash", sha="c" * 40),
+        env={
+            "L9_MERGE_AUTHORIZATION_FILE": str(auth),
+            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path)),
+        },
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
 def test_repo_scope_authorization_allows_any_pr_in_repo(tmp_path: Path) -> None:
     auth = _auth_file(tmp_path, pr="*")
     code, out, err = _run(
@@ -382,14 +451,17 @@ def test_stack_bypass_env_allows_squash(tmp_path: Path) -> None:
     assert out.strip() == ""
 
 
-# --- Standing autonomous-merge flag -------------------------------------------
+# --- Retired standing autonomous-merge flag -----------------------------------
 #
-# The flag grants merge authority. It is deliberately not routed through
-# _human_breakglass(), so it does not also waive stack safety: unattended
-# merging is exactly when an orphaned child PR would go unnoticed.
+# L9_AUTONOMY_AUTONOMOUS_MERGE is no longer a merge authority. A standing
+# environment boolean set once in the Claude account/session configuration must
+# never grant unattended merge, so the gate does not consult it: merge requires
+# the human per-session breakglass (L9_MERGE_AUTHORIZED) or a scoped, expiring
+# receipt bound to the repo (and PR). Setting the flag has no effect.
 
 
-def test_autonomous_merge_flag_allows_ordinary_merge(tmp_path: Path) -> None:
+def test_autonomous_merge_flag_no_longer_authorizes(tmp_path: Path) -> None:
+    # Even for an unstacked PR the flag grants nothing; the merge stays denied.
     code, out, err = _run(
         _mcp(repo="Quantum-L9/SEO-Bot", pull_number=12, merge_method="squash"),
         env={
@@ -398,10 +470,12 @@ def test_autonomous_merge_flag_allows_ordinary_merge(tmp_path: Path) -> None:
         },
     )
     assert code == 0, err
-    assert out.strip() == ""
+    reason = json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "not an authority" in reason
 
 
-def test_autonomous_merge_flag_still_denies_stacked_squash(tmp_path: Path) -> None:
+def test_autonomous_merge_flag_does_not_authorize_stacked_squash(tmp_path: Path) -> None:
+    # Flag set, but merge authority fails first: denied on authority, not stack.
     code, out, err = _run(
         _mcp(repo="Quantum-L9/SEO-Bot", pull_number=53, merge_method="squash"),
         env={
@@ -410,7 +484,8 @@ def test_autonomous_merge_flag_still_denies_stacked_squash(tmp_path: Path) -> No
         },
     )
     assert code == 0, err
-    assert "#54" in json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+    reason = json.loads(out)["hookSpecificOutput"]["permissionDecisionReason"]
+    assert "not an authority" in reason
 
 
 def test_autonomous_merge_flag_never_waives_admin_merge() -> None:

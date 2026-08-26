@@ -38,7 +38,7 @@
     { "path": "conftest.py", "tier": "canonical", "rule": "additive_only" },
     { "path": ".pre-commit-config.yaml", "tier": "canonical", "rule": "additive_only" },
     { "path": ".gitleaks.toml", "tier": "canonical", "rule": "additive_only" },
-    { "path": ".mcp.json", "tier": "canonical", "rule": "additive_only" },
+    { "path": ".mcp.json", "tier": "regenerable", "rule": "regenerable" },
     { "path": "README.md", "tier": "managed", "rule": "managed" },
     { "path": "ARCHITECTURE.md", "tier": "managed", "rule": "managed" },
     { "path": "INVARIANTS.md", "tier": "managed", "rule": "managed" },

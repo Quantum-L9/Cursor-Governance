@@ -25,7 +25,6 @@
             "items": {"$ref": "resource-contract.schema.json#/$defs/resourceLock"}
           },
           "mutation": {"type": "boolean"},
-          "authority_granted": {"type": "boolean", "default": true},
           "preconditions_satisfied": {"type": "boolean", "default": true},
           "priority": {"type": "integer", "default": 0},
           "critical_path_weight": {"type": "integer", "default": 0},

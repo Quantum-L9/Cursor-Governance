@@ -162,9 +162,15 @@ def runtime(tmp_path: Path):
 
 
 def _blockers(view: dict, task_id: str) -> list[str]:
-    for item in view["blocked"]:
-        if item["id"] == task_id:
-            return item["blockers"]
+    """Full readiness reason set for a not-ready task.
+
+    Ordering waits report under `waiting` and genuine blockers under `blocked`
+    (ADR-0023); both carry the complete machine-readable set in `reasons`.
+    """
+    for bucket in ("waiting", "blocked"):
+        for item in view[bucket]:
+            if item["id"] == task_id:
+                return item["reasons"]
     return []
 
 
@@ -295,6 +301,7 @@ def test_crash_resume_reconstructs_same_authority_from_durable_state(runtime):
     assert resumed_plan["plan_revision"] == in_process["plan_revision"]
     assert resumed_plan["active_replan_revision_id"] == in_process["active"]
     assert resumed_next["ready"] == in_process["next"]["ready"]
+    assert resumed_next["waiting"] == in_process["next"]["waiting"]
     assert resumed_next["blocked"] == in_process["next"]["blocked"]
     assert resumed_next["runtime_split_children"] == in_process["next"]["runtime_split_children"]
 
