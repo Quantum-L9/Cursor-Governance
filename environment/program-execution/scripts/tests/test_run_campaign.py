@@ -224,6 +224,11 @@ Budget downgrade MUST remain within the capability family.
 SEEN_TARGET_CHECKOUTS: list[object] = []
 
 
+def _architecture_kind(module):
+    """The forced-architecture classification, named once so call sites fit."""
+    return module.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
+
+
 def _architecture_hook(intent, *, target, repo_root, primed_dir, target_checkout=None):
     """Run the real architecture compiler with the deterministic extractor.
 
@@ -445,7 +450,7 @@ class RunCampaignTests(unittest.TestCase):
             other_primary.mkdir()
             report = self.mod.run_campaign(
                 root / "arch.md",
-                forced_kind=self.mod.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1,
+                forced_kind=_architecture_kind(self.mod),
                 until="activate",
                 primary=other_primary,
                 repo_root=root,
@@ -547,9 +552,7 @@ class RunCampaignTests(unittest.TestCase):
             with self.assertRaises(self.mod.CampaignError) as ctx:
                 self.mod.run_campaign(
                     root / "arch.md",
-                    forced_kind=(
-                        self.mod.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
-                    ),
+                    forced_kind=_architecture_kind(self.mod),
                     until="activate",
                     primary=other_primary,
                     repo_root=root,

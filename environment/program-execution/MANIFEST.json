@@ -931,7 +931,7 @@
     },
     {
       "path": "compiler/architecture_extractor.py",
-      "sha256": "0960f231b429a476732e31c40afc97c833f4a8850edbd58202d88deb5e88bd9f"
+      "sha256": "25bbf8306aaf40b87f658065a197e01a8a9124ef2bc45dd513a6eedd8f69deda"
     },
     {
       "path": "compiler/architecture_intent.py",
@@ -1855,7 +1855,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "67da8a83680dd8f3dfca17bb085f5597ef1f06298289d101f5bfd4756d1b284f"
+      "sha256": "60d2dd97ee66deb6ee005885bdb3cc1c765a90095fa70b9b0da9f5b75df57a78"
     },
     {
       "path": "scripts/tests/test_run_peer_task_pipeline.py",
