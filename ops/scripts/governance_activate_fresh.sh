@@ -89,7 +89,7 @@ layout_ok() {
 expected_remote_ok() {
   # Accept https/ssh forms of Quantum-L9/Cursor-Governance
   local url="$1"
-  echo "$url" | grep -qiE 'github\.com[:/]+Quantum-L9/Cursor-Governance(\.git)?/?$' 
+  echo "$url" | grep -qiE 'github\.com[:/]+Quantum-L9/Cursor-Governance(\.git)?/?$'
 }
 
 acquire_lock() {

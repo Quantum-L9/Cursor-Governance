@@ -95,7 +95,9 @@ def test_behind_with_colliding_and_hold() -> int:
 
         (clone / ".venv").mkdir()
         (clone / ".venv" / "pyvenv.cfg").write_text("home = /tmp\n", encoding="utf-8")
-        (clone / ".env.local").write_text("DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n", encoding="utf-8")
+        (clone / ".env.local").write_text(
+            "DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n", encoding="utf-8"
+        )
         (clone / ".claude").mkdir()
         (clone / ".claude" / "settings.local.json").write_text("{}\n", encoding="utf-8")
         (clone / "notes.untracked").write_text("keep me\n", encoding="utf-8")
@@ -115,7 +117,9 @@ def test_behind_with_colliding_and_hold() -> int:
             return 1
         if not (clone / ".venv" / "pyvenv.cfg").is_file():
             return _fail(".venv was removed")
-        if (clone / ".env.local").read_text(encoding="utf-8") != "DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n":
+        if (clone / ".env.local").read_text(
+            encoding="utf-8"
+        ) != "DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n":
             return _fail(".env.local was removed or changed")
         if (clone / ".claude" / "settings.local.json").read_text(encoding="utf-8") != "{}\n":
             return _fail(".claude/settings.local.json was removed or changed")
@@ -305,12 +309,16 @@ def test_origin_tracked_env_local_does_not_clobber() -> int:
         git(other, "config", "user.email", "test@example.com")
         git(other, "config", "user.name", "Test")
         (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
-        (other / ".env.local").write_text("DEEPSEEK_API_KEY=sk-ORIGIN-SHOULD-NOT-WIN\n", encoding="utf-8")
+        (other / ".env.local").write_text(
+            "DEEPSEEK_API_KEY=sk-ORIGIN-SHOULD-NOT-WIN\n", encoding="utf-8"
+        )
         git(other, "add", "tracked.txt", ".env.local")
         git(other, "commit", "-m", "origin tracks env.local")
         git(other, "push")
 
-        (clone / ".env.local").write_text("DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n", encoding="utf-8")
+        (clone / ".env.local").write_text(
+            "DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n", encoding="utf-8"
+        )
         home = Path(tmp) / "home"
         home.mkdir()
         proc = run(
@@ -323,7 +331,9 @@ def test_origin_tracked_env_local_does_not_clobber() -> int:
                 file=sys.stderr,
             )
             return 1
-        if (clone / ".env.local").read_text(encoding="utf-8") != "DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n":
+        if (clone / ".env.local").read_text(
+            encoding="utf-8"
+        ) != "DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n":
             return _fail("local .env.local was clobbered by origin")
         if (clone / "tracked.txt").read_text(encoding="utf-8") != "v2\n":
             return _fail("did not catch up tracked.txt")
