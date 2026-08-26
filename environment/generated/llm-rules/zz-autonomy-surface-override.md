@@ -26,7 +26,10 @@ AND `L9_AUTONOMY_ENABLED=true`:
    is not permission to publish a different way. When `make pr` fails, fix
    what it reported or state the blocker — never route around it.
    Enforced by `ops/autonomy/local_execution_gate.py`; the adapter
-   permission deny-lists must agree with it.
+   permission deny-lists must agree with it. That `pr` target is the
+   **governance** Makefile's, reached via `l9 pr` / `make -C "$GOV" pr
+   WS="$PWD"` regardless of the workspace repo's own Makefile — a consumer
+   needs no `pr` target and there is no raw-push fallback.
 3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
 4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
    campaign PRs against `main`. Do not mix with other feature branches.
