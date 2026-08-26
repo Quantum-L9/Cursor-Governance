@@ -1,0 +1,345 @@
+schema: l9.environment_experience.progress/v1
+assessed_against: main@post-#307-merge
+assessed_at: '2026-08-26'
+counts:
+  done: 2
+  partial: 9
+  not_started: 25
+total: 36
+next_slice:
+  id: slice-ownership-aware-writes
+  title: Ownership-aware writes (extend PR#307's is_tracked guard)
+  why: 'PR#307 landed the is_tracked() ownership guard on ONE write site (the rule-adapter reconciler)
+    and left the same-shape defect on the others. Finishing it is the highest-value, lowest-risk next
+    move: it reuses the helper just shipped, is fully validatable in-repo with git fixtures, closes the
+    biggest open P0 residual (CI-002), and folds in a P1 (CI-003) that shares the exact root cause — automation
+    treating repository-owned or generated content as dirt.'
+  records:
+  - 'CI-002 residual (P0): apply is_tracked() before the remaining projection writes — claude_projection.py:422
+    (.mcp.json), reconcile_claude_l9_skills.py, reconcile_claude_commands.py, reconcile_claude_settings.py
+    — and add Phase 2b (project to a non-owned sibling when the target is tracked). Verify the 8-fixture
+    git-status-clean done_when.'
+  - 'CI-003 (P1): make the Stop hook ownership-aware instead of residue-blind — do not demand pushing
+    repository-owned or generated/untracked bootstrap artifacts (.claude/**, .mcp.json, .l9/**); classify
+    by ownership, the same signal CI-002 now computes.'
+  - 'CI-031 (P3, opportunistic): keep tracked-path/gitignore hygiene synchronized as the guard and the
+    ignore stanzas move together.'
+  excluded: CI-002 Phase 2c (L9_AUTONOMY_STATE_DIR relocation) touches l4_local.py + local_execution_gate.py
+    + make pr together — sequence it as its own change, not inside this slice.
+  alternative: Toolchain slice — CI-009 residual (session-deps import smoke) + CI-023 (collapse variable-loading
+    authorities into one loader) + CI-018 (local CI parity/hooks provisioning). Coherent and in-repo,
+    but does not reuse just-shipped code and has no open P0.
+records:
+- id: CI-001
+  priority: 1
+  title: Publish and enforce the real GitHub REST/GraphQL capability boundary
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Owner is the Anthropic remote-session prompt (harness), not this repo. The make-pr path already falls
+    back to REST, but the prompt wording fix is external.
+- id: CI-002
+  priority: 0
+  title: Make bootstrap projection ownership-aware and non-destructive to tracked repo content
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: PR#304 (Contract 1, merged) + Quantum-L9/Cursor-Governance PR#307 (open — CI-008/CI-009/CI-002
+    execution slice)
+  residual:
+  - 'The is_tracked guard covers only the rule-adapter reconciler (the measured 9-deletion defect). It
+    must extend to the other write sites: claude_projection.py:422 (.mcp.json), reconcile_claude_l9_skills.py,
+    reconcile_claude_commands.py, reconcile_claude_settings.py.'
+  - Phase 2b (project governance rules to a non-owned sibling when the target is tracked), 2c (L9_AUTONOMY_STATE_DIR
+    outside the worktree), and 2d (per-repo gitignore propagation) are not yet built; the 8-fixture git-status-clean
+    done_when is not yet fully verified.
+- id: CI-003
+  priority: 1
+  title: Make the Stop hook ownership-aware instead of residue-blind
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - 'Stop-hook ownership-awareness: not started.'
+- id: CI-004
+  priority: 0
+  title: Regenerate bootstrap receipts on lifecycle/revision changes and re-probe degraded components
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - It is a separate receipt, not the bootstrap-state.json regenerated on container/session lifecycle;
+    no per-component log path; stale-receipt invalidation on lifecycle not wired.
+- id: CI-005
+  priority: 1
+  title: Make memory health transport-specific and continuity task-bearing
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - 'Memory health transport-specificity + continuity tasks: not started.'
+- id: CI-006
+  priority: 0
+  title: Resolve authority-sensitive environment drift at the actual source
+  original_status: OPEN_DECISION
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - General mechanism (separate authority-widening drift from cosmetic drift, make repair reachable/human-only,
+    record governing value) is not built.
+  - 'done_when ''0 of 33 in exactly one layer'': live account still carries the inert stray var; delete
+    it to reach the exact-one-layer end state.'
+- id: CI-007
+  priority: 0
+  title: Replace standing breakglass environment strings with scoped expiring receipts
+  original_status: ACTIVE
+  progress: done
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - 'done_when literal ''variable absent from a fresh session'': the live account still holds an inert
+    stray L9_AUTONOMY_AUTONOMOUS_MERGE=true — delete that env line to fully satisfy it (no functional
+    effect; the flag authorizes nothing).'
+  - 'KNOWN BUG (separate follow-up): the readiness merge_authority probe crashes here (runs merge_gate
+    CLI with a non-git cwd) and false-reports ''regression''. The authority itself is correct.'
+- id: CI-008
+  priority: 0
+  title: Reconcile make pr doctrine with consumer-repository command contracts
+  original_status: OPEN_DECISION
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#307 (open — CI-008/CI-009/CI-002 execution slice)
+  residual:
+  - Running the governance pre-commit config against a *consumer* workspace (cwd=$GOV, absolute --files,
+    governance-only-local-hook skip subset) needs real-consumer validation and is scoped in-script, not
+    enabled. The done_when's consumer-side leg is unverified.
+- id: CI-009
+  priority: 0
+  title: Establish one project interpreter/toolchain authority and verify importability before READY
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#307 (open — CI-008/CI-009/CI-002 execution slice)
+  residual:
+  - session_deps_cloud.sh still asserts 'toolchain ready' without an import smoke — the readiness dimension
+    now catches an unimportable env, but the deps banner itself is unchanged (lower-value, cloud-only,
+    scoped follow-up).
+  - 'A sourceable scripts/env.sh (IMP-E1) was deliberately NOT added: this repo already has one interpreter
+    authority (Makefile + ensure_gov_python.sh + gov-python prereq); a second loader would violate the
+    one-authority goal. Container-image items (A2-A5) are external (SC-IMG): default python3 floor, distro
+    cryptography, uv/UV_PYTHON, mypy split.'
+- id: CI-010
+  priority: 0
+  title: Make broker authentication and reachability diagnosable
+  original_status: ACTIVE_WITH_UNKNOWN
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - CONNECT cannot succeed (no platform-issued identity — external).
+  - Broker states not fully split into proxy-denied vs upstream-error for allowlist remediation decisions.
+- id: CI-011
+  priority: 2
+  title: Bound large MCP responses with field projection/pagination
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-012
+  priority: 1
+  title: Gate rules and MCP config on actual surface capabilities
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-013
+  priority: 1
+  title: Preserve fail-closed destructive/staging gates while making denials actionable
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-014
+  priority: 2
+  title: Make target repository/cwd explicit for governance CLIs
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - Covers the make-target facade only; many ops/scripts governance CLIs still depend on persistent shell
+    cwd.
+- id: CI-015
+  priority: 1
+  title: Name and enforce the authoritative governance checkout
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - done_when 'read the SSOT's issues without add_repo' is not met; non-authoritative clones are not relabeled/removed.
+- id: CI-016
+  priority: 1
+  title: Make L4/release receipts resolve paths, branch, and head dynamically
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - 'The L4/release receipt''s dynamic path/branch/template resolution and stale-binding visibility (done_when:
+    names .github/pull_request_template.md or null) were not reworked.'
+- id: CI-017
+  priority: 1
+  title: Validate generated-artifact membership and report all drift in one pass
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-018
+  priority: 1
+  title: Make local CI parity and hooks first-class provisioning
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-019
+  priority: 2
+  title: Coordinate concurrent writers on shared PR branches
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-020
+  priority: 3
+  title: Expose notification age when queued state is delivered
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-021
+  priority: 2
+  title: Make session-experience and skill-usage logging observable
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-022
+  priority: 2
+  title: Provision or explicitly declare service-backed integration-test dependencies
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-023
+  priority: 1
+  title: Collapse variable-loading authorities into one reproducible loader contract
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-024
+  priority: 2
+  title: Repair or remove foreign/stale bootstrap and deploy entrypoints
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-025
+  priority: 2
+  title: Provide sanctioned cleanup of generated/cache residue
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-026
+  priority: 3
+  title: Support safe on-disk aliases for dot-prefixed repositories
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-027
+  priority: 3
+  title: Correct rule rationale that no longer matches container reality
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-028
+  priority: 2
+  title: Improve dependency provisioning evidence and determinism
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-029
+  priority: 3
+  title: Persist repeatable cross-repo E2E fixtures
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-030
+  priority: 3
+  title: Improve receipt CLI ergonomics without multiplying state owners
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-031
+  priority: 3
+  title: Keep repo documentation and tracked-path hygiene synchronized
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-032
+  priority: 3
+  title: Give slow validation units explicit headroom without weakening total proof
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+- id: CI-033
+  priority: 99
+  title: Use pipefail in push/retry helpers
+  original_status: COMPLETED
+  progress: done
+  delivered_by: Pre-existing (already COMPLETED at pack generation)
+  residual: []
+- id: CI-100
+  priority: 4
+  title: 'Investigate why PR #70''s workflow runs were gated in action_required'
+  original_status: ACTIVE_CONTEXT_SPECIFIC
+  progress: not_started
+  delivered_by: null
+  residual:
+  - 'Context-specific investigation (PR #70 action_required): not started.'
+- id: CI-101
+  priority: 4
+  title: Align the branch directive with the repository actually worked in
+  original_status: ACTIVE_CONTEXT_SPECIFIC
+  progress: not_started
+  delivered_by: null
+  residual:
+  - 'Context-specific (branch directive vs repo worked in): not started.'
+- id: CI-102
+  priority: 4
+  title: Valid GH_TOKEN or formal surface exemption from gh-dependent gates
+  original_status: ACTIVE_CONTEXT_SPECIFIC
+  progress: not_started
+  delivered_by: null
+  residual:
+  - 'Context-specific (valid GH_TOKEN / gh-gate exemption): not started.'

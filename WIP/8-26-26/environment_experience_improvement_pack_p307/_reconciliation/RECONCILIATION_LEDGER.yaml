@@ -1,0 +1,1143 @@
+schema: l9.environment_experience.reconciliation_ledger/v1
+generated_at: '2026-08-25T02:03:03Z'
+method: evidence-first semantic reconciliation; recurring concepts merged only when root mechanism/scope matched; ungrouped
+  source records retained as context-specific canonical records
+actions:
+- canonical_id: CF-001
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P1/failures/FAIL-01
+  - P1/failures/FAIL-02
+  - P1/failures/FAIL-03
+  - P3/failures/FAIL-01
+  - P4/failures/F-10
+  - P7/failures/F-05
+  - P8/failures/F-02
+  - P9/failures/F-11
+  - P9/failures/F-20
+  rationale: 'The environment repeatedly exposes a transport split: REST can work while GraphQL-backed gh operations, auth
+    probes, PR commands, or merge helpers fail. Health checks and doctrine that collapse these into one GitHub state produce
+    false diagnoses.'
+- canonical_id: CF-002
+  action: MERGE
+  final_state: ACTIVE_CRITICAL
+  source_records:
+  - P3/failures/FAIL-02
+  - P6/failures/FA-4
+  - P9/failures/F-01
+  rationale: Session bootstrap can write, symlink, or project machine-local material into paths that a consumer repository
+    already tracks. Pack 9 proves this can overwrite nine tracked .claude/rules files and leave a permanently dirty tree.
+- canonical_id: CF-003
+  action: MERGE
+  final_state: ACTIVE_OPEN_DECISION
+  source_records:
+  - P3/failures/FAIL-06
+  - P6/failures/FA-3
+  - P8/failures/F-01
+  - P9/failures/F-12
+  rationale: L9_AUTONOMY_AUTONOMOUS_MERGE repeatedly differs from the verifier expectation and the advertised repair path
+    is not executable by the session. The intended value itself is not established by the corpus.
+- canonical_id: CF-004
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P6/failures/FA-2
+  - P8/failures/F-03
+  - P9/failures/F-06
+  rationale: Bootstrap readiness can be structurally valid while runtime components remain degraded, and receipts can expire
+    or survive restarts without regeneration or component re-probe.
+- canonical_id: CF-005
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P6/failures/FA-5
+  - P6/failures/FA-6
+  - P9/failures/F-04
+  - P9/failures/F-07
+  rationale: Hydration can carry no task-bearing state, writeback can produce zero durable writes, and aggregate memory health
+    can disagree with the sanctioned Graphiti path.
+- canonical_id: CF-006
+  action: MERGE
+  final_state: ACTIVE_OPEN_UNKNOWN
+  source_records:
+  - P1/failures/FAIL-05
+  - P9/failures/F-08
+  rationale: Broker access fails at the network/proxy boundary, but the observed CONNECT failure does not distinguish proxy
+    denial from upstream unavailability.
+- canonical_id: CF-007
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P1/failures/FAIL-06
+  - P2/failures/FAIL-09
+  - P7/failures/F-09
+  rationale: Several MCP methods return payloads too large for the response budget, forcing diversion or loss of direct usability.
+- canonical_id: CF-008
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P4/failures/F-01
+  - P7/failures/F-07
+  rationale: Independent shell invocations reset cwd, so relative commands can silently target the wrong place unless every
+    governance/repo action receives an explicit target path.
+- canonical_id: CF-009
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P1/failures/FAIL-07
+  - P3/failures/FAIL-07
+  - P4/failures/F-04
+  - P4/failures/F-05
+  - P7/failures/F-06
+  - P8/failures/F-05
+  - P8/failures/F-07
+  - P9/failures/F-05
+  - P9/failures/F-14
+  rationale: Safety gates correctly fail closed in ambiguous cases, but legitimate scoped cleanup/staging/compound operations
+    can be rejected, diagnostic granularity is weak, and documented escape variables may be unreachable to the agent.
+- canonical_id: CF-010
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P3/failures/FAIL-04
+  - P3/failures/FAIL-05
+  - P4/failures/F-03
+  - P5/failures/FAIL-004
+  - P7/failures/F-04
+  - P9/failures/F-15
+  rationale: PATH, system Python, project virtualenvs, pinned checker versions, and readiness banners can disagree. A tool
+    being installed is not proof that the repository is importable or that CI-equivalent tools are selected.
+- canonical_id: CF-011
+  action: MERGE
+  final_state: ACTIVE_OPEN_DECISION
+  source_records:
+  - P3/failures/FAIL-09
+  - P5/failures/FAIL-001
+  - P5/failures/FAIL-003
+  - P9/failures/F-10
+  rationale: The operating contract can name a mandatory local or publish entrypoint that the target repository does not implement,
+    forcing off-doctrine workarounds or dead targets.
+- canonical_id: CF-012
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P2/failures/FAIL-04
+  - P7/failures/F-02
+  rationale: Shared PR head branches can receive concurrent writes, invalidating local assumptions and causing repeated non-fast-forward
+    push rejection.
+- canonical_id: CF-013
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P2/failures/FAIL-02
+  - P2/failures/FAIL-08
+  - P8/failures/F-04
+  rationale: Generated validation artifacts and manifests can fail on index/worktree mismatch, conflict during merge, or make
+    release-readiness fail whenever files are added.
+- canonical_id: CF-014
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P4/failures/F-06
+  - P6/failures/FA-7
+  - P9/failures/F-03
+  - P9/failures/F-16
+  - P9/failures/F-18
+  rationale: Declared MCP integrations can disappear, churn identities, fail schema parsing, require impossible interactive
+    approval, or be loaded redundantly.
+- canonical_id: CF-100
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P1/failures/FAIL-04
+  rationale:
+    statement: Clone-directory name is derived from the repo name; no on-disk alias exists.
+    confidence: fact
+- canonical_id: CF-101
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/failures/FAIL-01
+  rationale: Piping `git push` into `tail` masked a rejected push and reported success
+- canonical_id: CF-102
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/failures/FAIL-03
+  rationale: '`git stash` / `git stash pop` silently discarded index staging'
+- canonical_id: CF-103
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/failures/FAIL-05
+  rationale: '`ruff format --check` failed on a file introduced by PR #64'
+- canonical_id: CF-104
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/failures/FAIL-06
+  rationale: 'pytest: 5 failures, from two unrelated causes'
+- canonical_id: CF-105
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/failures/FAIL-07
+  rationale: 'PR #70''s CI never ran: every workflow was gated in `action_required`'
+- canonical_id: CF-106
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/failures/FAIL-10
+  rationale: Bash quoting error passed a multi-word string as a single path
+- canonical_id: CF-107
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/failures/FAIL-11
+  rationale: 'Negative-control methodology error: `git stash` reverted the tests along with the fixes'
+- canonical_id: CF-108
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/failures/FAIL-12
+  rationale: A regression test passed for the wrong reason because of an optional dependency
+- canonical_id: CF-109
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P3/failures/FAIL-03
+  rationale: UNKNOWN
+- canonical_id: CF-110
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P3/failures/FAIL-08
+  rationale: Governance SSOT outside the session's GitHub scope while its rules are in force
+- canonical_id: CF-111
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/failures/F-02
+  rationale:
+    classification: usage_defect_enabled_by_environment
+    statement: l4_local.py derives the branch from its process working directory. Run from the governance clone it inspects
+      that clone (branch main) instead of the target repository, and refuses. The tool lives in one tree and must act on another,
+      with nothing in the invocation making that explicit.
+    proof:
+    - cwd=/root/.cursor-governance -> workspace reported as /root/.cursor-governance, branch main, refused
+    - cwd=/home/user/l9-meta-injector -> workspace /home/user/l9-meta-injector, branch claude/..., accepted
+- canonical_id: CF-112
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/failures/F-07
+  rationale:
+    classification: harness_guard_working_as_designed
+    statement: Heredoc payloads containing raw control bytes are refused before execution. Encountered when writing file content
+      through a shell heredoc rather than through a file-writing tool.
+- canonical_id: CF-113
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/failures/F-08
+  rationale:
+    classification: harness_guard_working_as_designed
+    statement: Foreground `sleep` is prohibited; polling must use the Monitor tool or a scheduled wake.
+- canonical_id: CF-114
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/failures/F-09
+  rationale:
+    classification: usage_defect
+    statement: Editing by exact-string replacement in a python heredoc fails when the anchor is stale. One instance was caused
+      by a literal byte in the target file (\x89 in a PNG placeholder) that the anchor did not reproduce.
+    measured_rate: 2 anchor misses across 298 python-heredoc invocations (0.7%)
+- canonical_id: CF-115
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P5/failures/FAIL-002
+  rationale: bootstrap.sh aborts on its first copy
+- canonical_id: CF-116
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P6/failures/FA-1
+  rationale: GH_TOKEN invalid — sanctioned publish path cannot authenticate
+- canonical_id: CF-117
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P7/failures/F-01
+  rationale: 'FACT: the new Controller fan-in cherry-pick was the Controller''s first commit-creating git operation; Controller-created
+    worktrees carry no repo-local committer identity; GitHub runners have no global identity; the container DID have one (user.name=Claude),
+    so every local run passed. The failed cherry-pick left a dirty tree that the abort path mislabeled as an "integration
+    conflict". A second independent cause (host GIT_DIR export leaking into `git -C`) was found and fixed by the operator''s
+    Cursor session in parallel (commit f574c4d).
+
+    '
+- canonical_id: CF-118
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P7/failures/F-03
+  rationale: 'FACT: running pytest inside environment/program-execution/peer_execution created .pytest_cache; the adapters
+    validator treats any cache debris as a failure and nothing in the flow pre-cleans it.
+
+    '
+- canonical_id: CF-119
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P7/failures/F-08
+  rationale: 'FACT: deferred tools must have schemas fetched via ToolSearch before first call'
+- canonical_id: CF-120
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P8/failures/F-06
+  rationale: FACT - the bundle sink treats an existing destination as an immutable bundle. An empty directory created by mkdir
+    -p is indistinguishable from a committed bundle to that check.
+- canonical_id: CF-121
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P9/failures/F-02
+  rationale:
+    type: inference
+    statement: The hook cannot distinguish agent-authored work from bootstrap projection artifacts. Given F-01 the trigger
+      condition is permanently true, so the hook fires on every turn.
+    grounded_in: F-01 evidence plus the hook source quoted above
+- canonical_id: CF-122
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P9/failures/F-09
+  rationale:
+    type: UNKNOWN
+    statement: Unresolved - see U-01. The issuing component is outside this container and nothing local logs a mint attempt.
+- canonical_id: CF-123
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P9/failures/F-13
+  rationale:
+    type: fact
+    statement: The receipt binds to the SHA at authorization time; any later commit invalidates it silently.
+- canonical_id: CF-124
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P9/failures/F-17
+  rationale:
+    type: fact
+    statement: The grant is expressed as a durable environment variable and carries no expiry.
+- canonical_id: CF-125
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P9/failures/F-19
+  rationale:
+    type: UNKNOWN
+    statement: Cannot distinguish "the router only fired once" from "logging silently dropped events". The PreToolUse matcher
+      for the logger is Skill|mcp__context7__.*|mcp__plugin_context7_context7__.*, and per F-03 no context7 tool namespace
+      existed, so two of its three match arms were dead.
+- canonical_id: CR-001
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P1/friction/FRICTION-01
+  - P3/friction/FRIC-02
+  - P9/friction/FR-10
+  rationale: The turn-ending hook treats bootstrap-owned residue as author work and repeatedly asks for commits that would
+    violate repository ownership or delete tracked content.
+- canonical_id: CR-002
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P1/friction/FRICTION-03
+  - P3/friction/FRIC-10
+  - P6/friction/FR-5
+  rationale: Prompt/rule text can claim gh is unavailable while the CLI and REST path work, or otherwise disagree with the
+    observed tool surface.
+- canonical_id: CR-003
+  action: MERGE
+  final_state: ACTIVE_OPEN_DECISION
+  source_records:
+  - P1/friction/FRICTION-04
+  - P6/friction/FR-2
+  rationale: An absolute publish-path rule and consumer repository Makefiles are not contractually aligned.
+- canonical_id: CR-004
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P1/friction/FRICTION-06
+  - P4/friction/FR-07
+  - P6/friction/FR-6
+  - P7/friction/FR-05
+  - P9/friction/FR-02
+  rationale: Hydration can skip the target repo, omit the skipped set, or return only generic resume statements rather than
+    actionable task state.
+- canonical_id: CR-005
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P1/friction/FRICTION-10
+  - P3/friction/FRIC-06
+  - P7/friction/FR-01
+  - P8/friction/R-05
+  - P9/friction/FR-03
+  rationale: Degraded states recur without per-component cause, logs, or automatic re-probe/remediation, forcing raw receipt
+    archaeology.
+- canonical_id: CR-006
+  action: MERGE
+  final_state: ACTIVE_ENVIRONMENT_CONSTRAINT
+  source_records:
+  - P1/friction/FRICTION-07
+  - P3/friction/FRIC-01
+  rationale: The harness resets cwd between shell calls. This is documented behavior but becomes correctness friction when
+    procedures assume persistent cd state.
+- canonical_id: CR-007
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P1/friction/FRICTION-08
+  - P6/friction/FR-4
+  rationale: A value explicitly described as one-time survives across sessions, making exceptional authority indistinguishable
+    from baseline policy.
+- canonical_id: CR-008
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P1/friction/FRICTION-13
+  - P2/friction/FRIC-01
+  - P2/friction/FRIC-02
+  - P2/friction/FRIC-09
+  - P3/friction/FRIC-03
+  - P3/friction/FRIC-04
+  - P5/friction/FR-003
+  - P7/friction/FR-04
+  - P8/friction/R-02
+  - P9/friction/FR-05
+  rationale: Multiple Python/checker versions and non-durable PYTHONPATH/PATH requirements create repeated setup cost and
+    ambiguous validation authority.
+- canonical_id: CR-009
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P1/friction/FRICTION-12
+  - P9/friction/FR-07
+  rationale: The guardrail evaluates command text and rejects same-line variable expansions even when the runtime value would
+    be scoped. This is a usability constraint around an intentionally fail-closed boundary.
+- canonical_id: CR-010
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P7/friction/FR-03
+  - P8/friction/R-01
+  - P9/friction/FR-04
+  rationale: Two governance clones at different revisions coexist, making it easy to inspect or edit a non-authoritative tree.
+- canonical_id: CR-011
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P8/friction/R-08
+  - P8/friction/R-09
+  - P9/friction/FR-06
+  rationale: Delayed notification/check-in delivery can present obsolete work as current without an obvious age signal.
+- canonical_id: CR-012
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P4/friction/FR-05
+  - P9/friction/FR-01
+  - P9/friction/FR-08
+  rationale: The projected rule corpus can mandate unavailable MCPs or mechanisms, leaving the rule in force but its prescribed
+    execution path impossible.
+- canonical_id: CR-013
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P2/friction/FRIC-11
+  - P4/friction/FR-01
+  - P8/friction/R-03
+  rationale: Tracked generated output and clean-tree-before-validate policies create regenerate/commit/revalidate loops and
+    conflict risk.
+- canonical_id: CR-014
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P4/friction/FR-09
+  - P4/friction/FR-10
+  - P5/friction/FR-005
+  - P6/friction/FR-7
+  rationale: Resolver scripts, interactive shell state, and multiple env authority files make effective values hard to reproduce
+    and easy to lose in non-interactive commands.
+- canonical_id: CR-015
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P2/friction/FRIC-06
+  - P2/friction/FRIC-08
+  - P5/friction/FR-001
+  - P9/friction/FR-09
+  rationale: Hooks may be absent, local checker lists incomplete, or service-backed integration tests unavailable, so local
+    green is not equivalent to merge-ready green.
+- canonical_id: CR-016
+  action: MERGE
+  final_state: ACTIVE_RECURRING
+  source_records:
+  - P2/friction/FRIC-10
+  - P4/friction/FR-02
+  - P7/friction/FR-06
+  - P7/friction/FR-07
+  rationale: Foreground waits may be blocked and first-run gates can be slow, creating repeated polling or harness-specific
+    workarounds.
+- canonical_id: CR-100
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P1/friction/FRICTION-02
+  rationale:
+    statement: The stanza was authored once, in one repo, and never propagated.
+    confidence: fact
+- canonical_id: CR-101
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P1/friction/FRICTION-05
+  rationale:
+    statement: The field is resolved against the governance clone, not the released repo.
+    confidence: inference
+- canonical_id: CR-102
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P1/friction/FRICTION-09
+  rationale:
+    statement: The reporter assumes the account layer without checking settings.json.
+    confidence: fact
+- canonical_id: CR-103
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P1/friction/FRICTION-11
+  rationale:
+    statement: Server IDs are per-session identifiers, not stable names.
+    confidence: fact
+- canonical_id: CR-104
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/friction/FRIC-03
+  rationale: No variable-load script exists in this repository
+- canonical_id: CR-105
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/friction/FRIC-04
+  rationale: GH_TOKEN and GITHUB_TOKEN are set, but no gh CLI exists to consume them
+- canonical_id: CR-106
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/friction/FRIC-05
+  rationale: The repository's documented bootstrap path was never exercised; a parallel path was used instead
+- canonical_id: CR-107
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/friction/FRIC-07
+  rationale: CLAUDE.md's 'Live CI facts' understates the pre-commit hook set by 7 hooks
+- canonical_id: CR-108
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P2/friction/FRIC-12
+  rationale: Stale and obsolete paths encountered
+- canonical_id: CR-109
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P3/friction/FRIC-05
+  rationale: Two receipt scopes with no shared index
+- canonical_id: CR-110
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P3/friction/FRIC-07
+  rationale: L4 receipt stores a branch name that can go stale
+- canonical_id: CR-111
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P3/friction/FRIC-08
+  rationale: pytest summary line absent from captured stdout
+- canonical_id: CR-112
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P3/friction/FRIC-09
+  rationale: Governance revision moves mid-session
+- canonical_id: CR-113
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/friction/FR-03
+  rationale:
+    classification: environment_defect
+    statement: The bootstrap receipt records the governance revision it was produced against but is not invalidated when that
+      revision changes. It expires only on wall-clock TTL, which is 24x longer than the refresh TTL.
+- canonical_id: CR-114
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/friction/FR-04
+  rationale:
+    classification: process_gap
+    statement: The account Environment Variables panel is the highest-precedence source and is writable only through a UI.
+      The verifier can detect drift and emit the correct fields but cannot apply them.
+- canonical_id: CR-115
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/friction/FR-06
+  rationale:
+    classification: environment_interaction
+    statement: Two correct behaviours combine badly. The harness resets the working directory to the container root; the memory
+      client resolves repository identity from the working directory and refuses to guess when several repositories match.
+- canonical_id: CR-116
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/friction/FR-08
+  rationale:
+    classification: policy_environment_mismatch
+    statement: A Bash-first editing instruction meets a Bash tool that rejects control characters in its payload. For content
+      containing such bytes the fallback is a file-writing tool, so the policy has an exception it does not state.
+- canonical_id: CR-117
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/friction/FR-11
+  rationale:
+    classification: expected_behaviour_with_cost
+    statement: A long single-repository contract exceeded one context window.
+- canonical_id: CR-118
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/friction/FR-12
+  rationale:
+    classification: stale_path
+    statement: Two copies exist because the workspace and HOME are different trees. Their content agrees; only key ordering
+      differs, so they were written by two serialisers or two versions of one.
+- canonical_id: CR-119
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P4/friction/FR-13
+  rationale:
+    classification: housekeeping_gap
+    statement: Stamps are written per toolchain fingerprint and never reclaimed.
+- canonical_id: CR-120
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P5/friction/FR-002
+  rationale: No .env or .env.local; 0 of 49 Settings fields present in OS env
+- canonical_id: CR-121
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P5/friction/FR-004
+  rationale: bootstrap.sh self-identifies as 'Venture Forge Toolbox'; 12 of 15 copy sources absent
+- canonical_id: CR-122
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P5/friction/FR-006
+  rationale: Directive names 7 repos; all work occurred in enrichment.inference.engine which is not among them
+- canonical_id: CR-123
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P5/friction/FR-007
+  rationale: Set by 3 workflows; read by no Python in the repo
+- canonical_id: CR-124
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P5/friction/FR-008
+  rationale: gh, gitleaks, semgrep, pre-commit not installed
+- canonical_id: CR-125
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P5/friction/FR-009
+  rationale: Caches and generated reports sit alongside sources
+- canonical_id: CR-126
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P6/friction/FR-1
+  rationale: pip dependency backtracking during session-deps editable install
+- canonical_id: CR-127
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P6/friction/FR-3
+  rationale: Receipt CLI ergonomics — required --read flag is the only verb; 'status' rejected
+- canonical_id: CR-128
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P7/friction/FR-02
+  rationale: persistent account-field drift warning that a session cannot repair
+- canonical_id: CR-129
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P7/friction/FR-08
+  rationale: session wake resets create verification overhead for branch state
+- canonical_id: CR-130
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P8/friction/R-04
+  rationale: GitHub API scope excludes repositories the task must read
+- canonical_id: CR-131
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P8/friction/R-06
+  rationale: Scratchpad artifacts needed for a repeatable run are not durable
+- canonical_id: CR-132
+  action: KEEP
+  final_state: OBSERVED_CONTEXT_SPECIFIC
+  source_records:
+  - P8/friction/R-07
+  rationale: TypeScript helpers need an import rewrite before Node can execute them
+- canonical_id: CI-001
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P1/improvements/IMP-01
+  - P1/improvements/IMP-02
+  - P1/improvements/IMP-11
+  - P1/improvements/IMP-12
+  - P2/improvements/IMP-A1
+  - P3/improvements/C1
+  - P3/improvements/A6
+  - P4/improvements/IMP-11
+  - P7/improvements/IMP-02
+  - P8/improvements/I-WT-02
+  - P9/improvements/I-EL-04
+  rationale: Document REST and GraphQL independently; use a REST auth probe; give merge/PR helpers REST-capable probe/execution
+    paths; report probe-blocked separately from stack/auth unknown.
+- canonical_id: CI-002
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P1/improvements/IMP-06
+  - P1/improvements/IMP-07
+  - P3/improvements/B1
+  - P3/improvements/B2
+  - P6/improvements/BOOT-3
+  - P9/improvements/I-BS-01
+  rationale: Detect repository-owned tracked paths before projection. Project machine-local rules/hooks/state only to non-repo-owned
+    locations; ignore only genuinely generated/untracked paths. Never blanket-ignore or replace a repository-owned .claude
+    tree.
+- canonical_id: CI-003
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P1/improvements/IMP-08
+  - P3/improvements/B3
+  - P9/improvements/I-BS-02
+  rationale: Scope stop-hook checks to authored changes in the active repo and explicitly exclude bootstrap-owned paths without
+    masking tracked authored content.
+- canonical_id: CI-004
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P1/improvements/IMP-10
+  - P3/improvements/B5
+  - P4/improvements/IMP-03
+  - P4/improvements/IMP-04
+  - P6/improvements/BOOT-1
+  - P7/improvements/IMP-07
+  - P8/improvements/I-BF-01
+  - P8/improvements/I-BF-02
+  - P8/improvements/I-BF-03
+  - P9/improvements/I-BS-04
+  rationale: Bind receipts to container/session lifecycle and governance revision; invalidate stale receipts; re-probe DEGRADED
+    components; retain per-component reason, evidence, log path, and retry/remediation state.
+- canonical_id: CI-005
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P1/improvements/IMP-09
+  - P4/improvements/IMP-05
+  - P6/improvements/BOOT-2
+  - P6/improvements/BOOT-4
+  - P6/improvements/BOOT-7
+  - P7/improvements/IMP-09
+  - P9/improvements/I-BS-05
+  - P9/improvements/I-BS-06
+  rationale: Use one authoritative probe per memory transport, distinguish nothing-to-write from failed writes, write a task-bearing
+    completion PICKUP, prioritize the target repo in hydration, and name skipped repos/empty state explicitly.
+- canonical_id: CI-006
+  action: MERGE
+  final_state: OPEN_DECISION
+  source_records:
+  - P1/improvements/IMP-03
+  - P3/improvements/A1
+  - P4/improvements/IMP-08
+  - P6/improvements/ENV-1
+  - P7/improvements/IMP-03
+  - P8/improvements/I-EL-01
+  - P8/improvements/I-EL-02
+  - P9/improvements/I-EL-03
+  rationale: Trace each effective value to its source, separate authority-widening drift from cosmetic drift, make repair
+    reachable or explicitly human-only, and record the governing value. The intended AUTONOMOUS_MERGE value remains an open
+    decision.
+- canonical_id: CI-007
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P1/improvements/IMP-04
+  - P6/improvements/ENV-2
+  - P9/improvements/I-EL-06
+  rationale: Represent exceptional publish authority with issuer, reason, scope, issuance time, expiry/consumption semantics,
+    and session-start visibility; do not normalize a one-time grant into silent permanent configuration.
+- canonical_id: CI-008
+  action: MERGE
+  final_state: OPEN_DECISION
+  source_records:
+  - P1/improvements/IMP-13
+  - P3/improvements/C4
+  - P6/improvements/BOOT-6
+  - P9/improvements/I-BS-08
+  rationale: 'Choose one canonical contract: ship a functioning pr target into every governed consumer or relax the absolute
+    doctrine to a defined supported fallback. Do not retain contradictory absolutes.'
+- canonical_id: CI-009
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P2/improvements/IMP-E1
+  - P2/improvements/IMP-E2
+  - P2/improvements/IMP-E3
+  - P3/improvements/A2
+  - P3/improvements/A3
+  - P3/improvements/A4
+  - P3/improvements/A5
+  - P5/improvements/IMP-003
+  - P5/improvements/IMP-008
+  - P7/improvements/IMP-04
+  - P9/improvements/I-EL-05
+  rationale: Resolve the project interpreter/venv deterministically, pin checker versions to the same authority, export durable
+    PATH/PYTHONPATH only through one loader, and make readiness end with repository import/command smoke tests.
+- canonical_id: CI-010
+  action: MERGE
+  final_state: ACTIVE_WITH_UNKNOWN
+  source_records:
+  - P1/improvements/IMP-05
+  - P9/improvements/I-EL-01
+  - P9/improvements/I-EL-02
+  rationale: Ensure CLAUDE_SESSION_JWT is issued or its absence is a hard named prerequisite failure; split broker states
+    into DNS/unreachable, proxy-denied, and upstream-error before deciding allowlist remediation.
+- canonical_id: CI-011
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P1/improvements/IMP-15
+  - P2/improvements/IMP-A2
+  rationale: Add projection, pagination, or bounded summaries to large file/job methods so tool responses remain inside the
+    interaction envelope.
+- canonical_id: CI-012
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P4/improvements/IMP-07
+  - P9/improvements/I-BS-03
+  - P9/improvements/I-BS-12
+  rationale: Validate MCP config schema before session start and annotate projected rules with capability preconditions when
+    their mechanism is unavailable, while preserving the rule intent.
+- canonical_id: CI-013
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P3/improvements/B4
+  - P3/improvements/C3
+  - P7/improvements/IMP-10
+  - P9/improvements/I-BS-07
+  - P9/improvements/I-BS-10
+  rationale: Keep unresolved/empty destructive targets fail-closed. Add literal scoped cleanup paths, reachable authorization
+    where policy permits, hook stderr, and per-stage denial reporting for compound commands. Do not weaken the unresolved-expansion
+    invariant.
+- canonical_id: CI-014
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P4/improvements/IMP-06
+  rationale: Pass the target repository explicitly to governance commands and avoid procedures whose correctness depends on
+    persistent shell cwd.
+- canonical_id: CI-015
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P3/improvements/C2
+  - P8/improvements/I-WT-01
+  - P9/improvements/I-BS-13
+  rationale: When multiple governance trees exist, print both revisions, name the one from which rules resolve, and remove/relabel
+    non-authoritative clones where possible.
+- canonical_id: CI-016
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P1/improvements/IMP-14
+  - P3/improvements/B6
+  - P9/improvements/I-BS-09
+  rationale: Bind receipts to the released repository, current branch/head, and actual template path; make stale SHA/branch
+    bindings visible before they block publication.
+- canonical_id: CI-017
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P2/improvements/IMP-B1
+  - P4/improvements/IMP-09
+  - P8/improvements/I-WT-03
+  rationale: Make validation tolerate legitimate index/worktree states, catch missing manifest membership at file creation,
+    and report every generated artifact out of step in one run.
+- canonical_id: CI-018
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P2/improvements/IMP-B2
+  - P2/improvements/IMP-R2
+  - P5/improvements/IMP-001
+  - P7/improvements/IMP-01
+  rationale: Install the actual hooks/gates, define one local CI-parity command, and keep its blocker list aligned with remote
+    CI so local green means something.
+- canonical_id: CI-019
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P7/improvements/IMP-06
+  rationale: Detect/serialize or otherwise coordinate cross-machine writers before push so shared head branches do not repeatedly
+    non-fast-forward.
+- canonical_id: CI-020
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P9/improvements/I-BS-14
+  rationale: Stamp queued notifications with age at delivery so superseded instructions are recognizable before action.
+- canonical_id: CI-021
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P5/improvements/IMP-011
+  - P9/improvements/I-BS-11
+  rationale: Fix logging matchers/paths and emit enough session-start evidence to distinguish inactivity from a broken collector.
+- canonical_id: CI-022
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P9/improvements/I-EL-07
+  rationale: Provision declared services such as Neo4j when integration proof is expected, otherwise surface the unavailable
+    coverage before tests run.
+- canonical_id: CI-023
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P4/improvements/IMP-01
+  - P4/improvements/IMP-02
+  - P5/improvements/IMP-002
+  - P5/improvements/IMP-005
+  - P5/improvements/IMP-006
+  - P6/improvements/LOADER-2
+  rationale: Define one loader/precedence contract that works in non-interactive shells, fails fast on missing required configuration,
+    guards source-without-call misuse, and removes inert/documented-but-unused variables.
+- canonical_id: CI-024
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P2/improvements/IMP-B3
+  - P5/improvements/IMP-004
+  - P5/improvements/IMP-009
+  rationale: Choose one documented provisioning path and ensure bootstrap/deploy targets belong to and execute against the
+    actual repository instead of missing or foreign scripts.
+- canonical_id: CI-025
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P5/improvements/IMP-010
+  - P7/improvements/IMP-05
+  - P7/improvements/IMP-08
+  rationale: Keep generated/cache debris out of gate inputs and provide a permission-safe cleanup path that does not weaken
+    general destructive-command policy.
+- canonical_id: CI-026
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P1/improvements/IMP-16
+  rationale: Allow repositories such as .github to be attached under an explicit safe alias rather than blocking the entire
+    org-governance class.
+- canonical_id: CI-027
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P1/improvements/IMP-17
+  rationale: Preserve the pinned-interpreter requirement but remove or correct stale rationale that system Python lacks PyYAML
+    when that premise is false.
+- canonical_id: CI-028
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P6/improvements/BOOT-5
+  - P8/improvements/I-EL-03
+  rationale: Use constraints or equivalent deterministic dependency resolution, timestamp dependency logs, and make the provisioning
+    step emit a real exit status/readiness result.
+- canonical_id: CI-029
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P8/improvements/I-WT-04
+  rationale: Move scratchpad-only fixture builders required for repeatable validation into an owned repository surface.
+- canonical_id: CI-030
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P6/improvements/LOADER-1
+  rationale: Give receipt CLIs a default/status-style read action while retaining one canonical receipt store and schema.
+- canonical_id: CI-031
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P2/improvements/IMP-R1
+  - P2/improvements/IMP-R3
+  rationale: Correct stale hook counts and prevent case-only duplicate tracked paths that make documentation/checkout behavior
+    platform-dependent.
+- canonical_id: CI-032
+  action: MERGE
+  final_state: ACTIVE
+  source_records:
+  - P4/improvements/IMP-10
+  rationale: Adjust per-file RPC/test ceilings for known slow tests while keeping aggregate validation coverage intact.
+- canonical_id: CI-033
+  action: MERGE
+  final_state: COMPLETED
+  source_records:
+  - P2/improvements/IMP-A3
+  rationale: Ensure a failed git push cannot be masked by a successful downstream pipe command.
+- canonical_id: CI-100
+  action: KEEP
+  final_state: ACTIVE_CONTEXT_SPECIFIC
+  source_records:
+  - P2/improvements/IMP-C1
+  rationale: Read the repository and org Actions approval settings and determine whether bot-authored branches require manual
+    approval by policy.
+- canonical_id: CI-101
+  action: KEEP
+  final_state: ACTIVE_CONTEXT_SPECIFIC
+  source_records:
+  - P5/improvements/IMP-007
+  rationale: Align the branch directive with the repository actually worked in
+- canonical_id: CI-102
+  action: KEEP
+  final_state: ACTIVE_CONTEXT_SPECIFIC
+  source_records:
+  - P6/improvements/ENV-3
+  rationale: (a) provision openclaw PAT per rule 62 via secret plane; or (b) amend surface_profile + rules 53/62 to sanction
+    MCP path for claude-cloud
+- canonical_id: CI-002/P1-IMP-06
+  action: RESTRICT
+  final_state: MERGED_WITH_LATER_CORRECTION
+  source_records:
+  - P1/improvements/IMP-06
+  - P9/improvements/I-BS-01
+  rationale: Do not blanket-propagate .claude ignore rules; later direct evidence proves some repos own tracked .claude content.
+- canonical_id: CI-013/P3-C3
+  action: RESTRICT
+  final_state: SAFETY_BOUNDARY_PRESERVED
+  source_records:
+  - P3/improvements/C3
+  - P1/friction/FRICTION-12
+  - P9/friction/FR-07
+  rationale: Preserve fail-closed unresolved-target safety; solve scratch cleanup through literal scoped paths/authorized
+    channels.
+- canonical_id: CI-007/P1-IMP-04
+  action: SUPERSEDE
+  final_state: STRONGER_RECEIPT_MODEL
+  source_records:
+  - P1/improvements/IMP-04
+  - P9/improvements/I-EL-06
+  rationale: Later evidence supports expiring issuer/scope receipts rather than normalizing a one-time grant into standing
+    config.
+passes:
+- pass: 1
+  name: artifact_family_discovery_and_corpus_binding
+  status: PASS
+  result: 11 accessible archive copies classified; 9 unique included; 2 byte-identical duplicates collapsed.
+- pass: 2
+  name: recursive_unpack_inventory_and_lineage_reconstruction
+  status: PASS
+  result: 93 unique source objects inventoried; no nested archives; explicit P9 supersession captured without overclaiming
+    P3 identity.
+- pass: 3
+  name: structural_and_semantic_diff
+  status: PASS
+  result: Shared first-class artifact contract identified; recurring failures/friction/improvements grouped; all unmatched
+    records retained separately.
+- pass: 4
+  name: duplicate_overlap_conflict_and_deleted_content_analysis
+  status: PASS
+  result: Byte duplicates collapsed; older unique content preserved; .claude and guardrail false-supersession risks corrected.
+- pass: 5
+  name: converged_architecture_and_information_architecture_reconstruction
+  status: PASS
+  result: Canonical boundaries and derived invariants compiled without treating parallel observations as one host snapshot.
+- pass: 6
+  name: schemas_contracts_roadmap_and_cross_reference_reconciliation
+  status: PASS
+  result: Five recurring machine artifact types compiled to canonical v1 forms; completed work excluded from forward roadmap;
+    open policy choices isolated.
+- pass: 7
+  name: completeness_provenance_and_adversarial_loss_review
+  status: PASS
+  result: Every source file receives a disposition; every source record is grouped or retained; open conflicts/unknowns explicit.
+- pass: 8
+  name: final_pack_build_validation_and_archive_integrity
+  status: PASS
+  result: All canonical YAML parsed; every final artifact has a source map; all 93 source objects and 297 structured source
+    records are accounted for; no common secret patterns or forbidden junk/source ZIPs detected; archive root/integrity verified.
+convergence_block:
+  convergence_status: converged_with_open_decisions
+  recursive_passes_run: 8
+  material_changes_after_final_pass: false
+  improvement_estimate_remaining_percent: UNKNOWN - remaining items require implementation/external decisions, not more reconciliation
+  final_confidence: 0.94
+  unresolved_unknowns:
+  - OD-001
+  - OD-002
+  - OD-003
+  - OD-004
+  - OD-005
+  - OD-006
+  - OD-007
+  stop_condition_triggered: canonical artifact set stable; all source objects mapped; remaining uncertainty is explicit
+final_recheck:
+  additional_version_discovery_repeated: true
+  new_confirmed_versions_found: 0
+  confirmed_version_omitted: false
+  unique_older_content_loss_found: false
+  duplicate_current_authority_found: false
+  superseded_architecture_presented_as_current: false
+  hidden_conflict_found: false
+  completeness_matrix_covers_every_source_object: true
+  source_map_covers_every_final_artifact: true
+  readme_matches_pack: true
+  final_two_pass_no_material_delta: verified_after_this_receipt_without further mutation
