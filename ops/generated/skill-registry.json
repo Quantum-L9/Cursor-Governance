@@ -930,6 +930,17 @@
       "when_to_use": ""
     },
     {
+      "composition_role": "general",
+      "description": "principal architect-engineer runtime (GAR) with outcome accountability \u2014 machine-readable contracts, state machine, evaluators, and convergence law for repository, archive, module, system-design, refactor, debugging, implementation, or review work on tool-capable hosts. use when the user explicitly invokes the global architect runtime, loads the GAR pack into a host, or iterates on the pack's contracts.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-global-architect",
+      "path": "skills/l9-global-architect",
+      "reason": "experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load only when the user explicitly invokes the global architect runtime or iterates on the pack; disable-model-invocation",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
       "composition_role": "primary",
       "description": "execute deterministic repo changes through locked gmp phases 0-6 with a modification lock and a signed evidence report. use when a change must be traceable and drift-free \u2014 adding/refactoring/fixing modules, gated edits, or any task that needs a locked todo plan, phase-by-phase execution, and an evidence report in reports/.",
       "disable_model_invocation": false,
@@ -1283,6 +1294,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "2fff03d3179f1ab77e593356709d9acc3e231aba7e39bbfe98e4acd87c4eb7f8",
-  "source_skill_corpus_sha256": "1bbdd55cd5ecfd8a87a1280a6357a5f6f08f319a8bcd4ad84d630b35c24ede79"
+  "source_manifest_sha256": "bf67da7b1df4a9572eb2683c3833a50ad44042b9b51ce33add4c84443fc10404",
+  "source_skill_corpus_sha256": "ed4424a1d3c638c4096055115af9b83abc5c78deecf676a8ca50a6b865aed784"
 }

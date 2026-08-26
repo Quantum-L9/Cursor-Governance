@@ -1,0 +1,336 @@
+run_state_model:
+  model_id: L9.GAR.RUN_STATE.001
+  version: 0.4.0
+  artifact_class: runtime_state_template
+  status: experimental
+  semantic_owner: runtime/RUN_STATE.yaml
+purpose:
+  assertion: >
+    Define the minimal explicit state required to execute inspect recover
+    deliver and converge one GAR run without storing private chain-of-thought.
+template_semantics:
+  this_file_is_live_run_state: false
+  instantiate_as:
+    logical_name: GAR_RUN_STATE
+    preferred_pattern: runtime_state/GAR_RUN_STATE.<run_id>.yaml
+  persistence:
+    required: false
+    host_dependent: true
+  mutation_authority:
+    owner: runtime_state_machine
+  rule: >
+    A host may hold this state in memory rather than on disk, but the logical
+    fields and transition invariants remain applicable.
+runtime_compatibility:
+  runtime_id: L9.GLOBAL_ARCHITECT.RUNTIME.001
+  requires: ">=0.4.0 <0.5.0"
+instance_template:
+  run:
+    run_id: null
+    created_at: null
+    updated_at: null
+    current_state: INTAKE
+    terminal_state: null
+    depth_profile: null
+    integration_mode: STANDALONE
+  objective:
+    raw_user_intent_ref: null
+    requested_outcome: null
+    requested: null
+    task_kind: null
+    realization_mode: null
+    realization_mode_source: null
+    validation_required: null
+    derivation_rule_ids: []
+    explicit_constraints: []
+    acceptance_conditions: []
+    out_of_scope: []
+  authority:
+    resolved: false
+    authority_sources: []
+    mutation_permission: unknown
+    external_action_permission: unknown
+    higher_authority_stop: false
+    conflicts: []
+  capabilities:
+    census_complete: false
+    inspect:
+      state: unknown
+      evidence_refs: []
+    mutate:
+      state: unknown
+      evidence_refs: []
+    validate:
+      state: unknown
+      evidence_refs: []
+    deliver:
+      state: unknown
+      evidence_refs: []
+    external_side_effect:
+      state: unknown
+      evidence_refs: []
+  integration:
+    discovered: false
+    binding_state: UNBOUND
+    repository_markers_observed: []
+    active_runtime_binding_observed: false
+    compatible_runtime_version: null
+    orchestration_authority_transferred: false
+    execution_path_available: false
+    activation_evidence_refs: []
+    degradation_evidence_refs: []
+    authority_release_evidence_refs: []
+  epistemic:
+    verified_facts: []
+    inferences: []
+    unknowns: []
+    disputes: []
+    material_assumptions: []
+  evidence:
+    refs: []
+    latest_observation_at: null
+    stale_refs: []
+    invalidated_refs: []
+  system_model:
+    status: absent
+    responsibilities: []
+    owners: []
+    authoritative_state: []
+    boundaries: []
+    dependencies: []
+    invariants: []
+    lifecycle_semantics: []
+    failure_semantics: []
+    temporal_semantics: []
+    scale_constraints: []
+    operability_constraints: []
+  architecture:
+    status: absent
+    candidate_refs: []
+    rejected_candidate_refs: []
+    selected_candidate_ref: null
+    decision_summary: null
+    integrity_evaluation_refs: []
+    unresolved_architecture_defects: []
+  plan:
+    status: absent
+    plan_ref: null
+    readiness_level: null
+    readiness_evaluation_ref: null
+    scope: []
+    mutations: []
+    invariants_to_preserve: []
+    validation_obligations: []
+    attack_findings: []
+  execution:
+    required: null
+    authorized: null
+    attempted: false
+    mutation_receipts: []
+    changed_artifacts: []
+    deleted_artifacts: []
+    execution_failures: []
+  delivery:
+    required: null
+    mode: NONE
+    derivation_rule_id: null
+    completed: false
+    artifact_refs: []
+    receipt_ref: null
+    observed_at: null
+  policy_compliance:
+    outcome_policy:
+      decision_ref: null
+      decision: null
+      matched_rule_id: null
+      required_obligations: []
+      satisfied_obligations: []
+      unresolved_obligations: []
+      evidence_refs: []
+  verification:
+    attempted: false
+    required_obligations: []
+    evaluated_obligation_refs: []
+    all_required_obligations_evaluated: false
+    evidence_refs: []
+    validation_results: []
+    architectural_review_result: null
+    behavioral_review_result: null
+    blocking_evaluation_refs: []
+    unresolved_failures: []
+  defects:
+    open: []
+    resolved: []
+  block:
+    candidate: false
+    receipt: null
+  progress:
+    cycle_number: 0
+    state_visit_counts: {}
+    last_material_progress_at: null
+    last_material_progress_kind: null
+    repeated_defect_fingerprints: {}
+    progress_fingerprint: null
+  convergence:
+    evaluated: false
+    evaluation_ref: null
+    status: NOT_EVALUATED
+    blocking_properties: []
+    residual_risks: []
+    receipt: null
+  events: []
+state_enums:
+  capability_state: [available, unavailable, unknown]
+  integration_binding_state: [UNBOUND, DISCOVERED, BOUND, ACTIVE, ACTIVE_DEGRADED, RELEASED]
+  realization_mode: [MUTATION, ARTIFACT, ANALYSIS, DECISION, UNKNOWN]
+  delivery_mode: [IN_PLACE_WORKSPACE, RETURNED_FILES, RETURNED_ARCHIVE, PERSISTED_REPOSITORY, NONE]
+  artifact_status: [absent, partial, candidate, accepted, invalidated]
+  convergence_status: [NOT_EVALUATED, NOT_CONVERGED, CONVERGED, BLOCKED, ABORTED]
+event_model:
+  append_only: true
+  required_fields: [event_id, occurred_at, event_type, state, summary]
+  optional_fields:
+    - evidence_refs
+    - reason_codes
+    - defect_ref
+    - transition_ref
+    - artifact_refs
+    - delivery_ref
+  permitted_event_types:
+    - RUN_CREATED
+    - CAPABILITY_OBSERVED
+    - AUTHORITY_RESOLVED
+    - REALIZATION_MODE_DERIVED
+    - OBJECTIVE_DERIVED
+    - POLICY_DECISION_RECORDED
+    - OBLIGATION_RESOLVED
+    - INTEGRATION_DISCOVERED
+    - INTEGRATION_ACTIVATED
+    - INTEGRATION_DEGRADED
+    - INTEGRATION_AUTHORITY_RELEASED
+    - EVIDENCE_ADDED
+    - EVIDENCE_INVALIDATED
+    - ASSUMPTION_ADDED
+    - ASSUMPTION_RESOLVED
+    - DISPUTE_ADDED
+    - SYSTEM_MODEL_UPDATED
+    - ARCHITECTURE_CANDIDATE_ADDED
+    - ARCHITECTURE_SELECTED
+    - PLAN_CREATED
+    - PLAN_REJECTED
+    - PLAN_PROMOTED
+    - MUTATION_ATTEMPTED
+    - MUTATION_OBSERVED
+    - DELIVERY_ATTEMPTED
+    - DELIVERY_OBSERVED
+    - VALIDATION_OBSERVED
+    - DEFECT_OPENED
+    - DEFECT_RESOLVED
+    - BLOCK_RECEIPT_CREATED
+    - STATE_TRANSITIONED
+    - CONVERGENCE_EVALUATED
+    - RUN_BLOCKED
+    - RUN_CONVERGED
+    - RUN_ABORTED
+transition_invariants:
+  - id: RS-001
+    assertion: current_state changes only through a legal transition declared by runtime/STATE_MACHINE.yaml
+  - id: RS-002
+    assertion: terminal_state may be populated only when the corresponding terminal entry gate passes
+  - id: RS-003
+    assertion: evidence.invalidated_refs MUST NOT satisfy later gates
+  - id: RS-004
+    assertion: material assumptions MUST NOT silently migrate into verified_facts
+  - id: RS-005
+    assertion: selected architecture is invalidated when a material supporting premise is falsified
+  - id: RS-006
+    assertion: plan readiness is invalidated when architecture or a material plan premise changes
+  - id: RS-007
+    assertion: convergence is invalidated by any new blocking defect invalidated evidence post-evaluation mutation or delivery regression
+  - id: RS-008
+    assertion: mutation_receipts record observed mutations not intended mutations
+  - id: RS-009
+    assertion: validation_results record observed validation not proposed commands
+  - id: RS-010
+    assertion: delivery.completed may be true only when delivery evidence proves the objective-derived mode
+  - id: RS-011
+    assertion: outcome accountability persists when execution is blocked
+  - id: RS-012
+    assertion: private chain-of-thought MUST NOT be required or stored as runtime evidence
+  - id: RS-013
+    assertion: once integration.orchestration_authority_transferred is true, integration_mode MUST NOT return to STANDALONE without explicit release or revocation evidence recorded in authority_release_evidence_refs
+  - id: RS-014
+    assertion: objective-derived realization validation and delivery obligations may be narrowed only by new explicit user instruction, never by runtime re-derivation
+  - id: RS-015
+    assertion: a block receipt MUST NOT satisfy VALID_BLOCK_RECEIPT unless its type legitimacy predicate is SATISFIED on current-run evidence
+material_progress:
+  accepted_kinds:
+    - new_discriminating_evidence
+    - material_unknown_resolved
+    - material_dispute_resolved
+    - system_model_corrected
+    - architecture_changed
+    - plan_materially_improved
+    - implementation_changed
+    - delivery_completed
+    - validation_strengthened
+    - blocking_defect_resolved
+    - authority_resolved
+    - capability_state_resolved
+    - integration_state_resolved
+  non_progress:
+    - repeat_same_reasoning_without_new_input
+    - rerun_same_validation_without_state_change
+    - rewrite_same_plan_without_answering_defect
+    - repeated_patch_without_new_evidence
+    - additional_narration
+defect_record:
+  required_fields: [defect_id, defect_class, summary, opened_in_state, evidence_refs, status]
+  optional_fields: [reason_codes, invalidates, resolved_by_refs, fingerprint]
+  status_values: [open, resolved, superseded]
+block_receipt_model:
+  required_fields:
+    - block_type
+    - reason_code
+    - specific_required_action
+    - evidence_refs
+    - completed_work_refs
+    - remaining_action
+    - legitimacy_evidence_refs
+  block_type_values: [AUTHORITY, CAPABILITY, EVIDENCE, EXTERNAL_DEPENDENCY, NO_PROGRESS]
+  legitimacy_predicates_ref: contracts/OUTCOME_OWNERSHIP.yaml#block_receipt_requirements
+  validation_owner: contracts/OUTCOME_OWNERSHIP.yaml
+  routing_owner: runtime/STATE_MACHINE.yaml
+decision_record:
+  purpose: Preserve auditable decision output without requiring hidden reasoning.
+  may_store:
+    - selected_candidate
+    - rejected_candidate
+    - material_decision_factors
+    - evidence_refs
+    - counterevidence_refs
+    - unresolved_unknowns
+    - compact_rationale
+  must_not_require:
+    - private_chain_of_thought
+    - token_level_reasoning_trace
+convergence_receipt_model:
+  required_fields:
+    - terminal_state
+    - objective_status
+    - realization_mode
+    - artifact_changes
+    - validation_performed
+    - architectural_integrity_status
+    - remaining_material_unknowns
+    - delivery_status
+    - residual_risks
+  conditional_fields:
+    blocked_reason:
+      required_when:
+        - terminal_state == BLOCKED
+anti_drift:
+  - live_run_state_MUST_NOT_become_source_of_architectural_law
+  - state_records_evidence_and_decisions_but_does_not_redefine_contracts
+  - host_adapters_MUST_NOT_maintain_independent_shadow_run_state
+  - persisted_and_in_memory_representations_MUST_preserve_equivalent_semantics

@@ -1,0 +1,276 @@
+kernel:
+  kernel_id: L9.GLOBAL_ARCHITECT.KERNEL.001
+  version: 0.4.0
+  semantic_owner: kernels/ARCHITECT_KERNEL.yaml
+  function: architectural_judgment
+objective:
+  select_and_realize: >
+    Select the smallest coherent architecture that satisfies the objective and
+    applicable normative contracts while preserving clear ownership bounded
+    failure adequate operability and justified complexity.
+normative_constraints:
+  refs:
+    - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-001
+    - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-002
+    - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-003
+    - contracts/EPISTEMIC_DISCIPLINE.yaml
+    - contracts/OUTCOME_OWNERSHIP.yaml
+  rule: >
+    This kernel applies and evaluates referenced law. It does not restate or
+    become an alternate owner of those normative semantics.
+decision_semantics:
+  method:
+    - eliminate_invalid_candidates
+    - falsify_surviving_candidates
+    - compare_surviving_candidates
+    - simplify_selected_candidate
+    - verify_repository_fit
+    - compile_execution_plan_when_required
+    - adversarially_attack_plan_when_required
+    - emit_depth_appropriate_plan_readiness_evidence
+  blockers_are_scored: false
+  invalid_candidate_if_any:
+    - violates_higher_authority
+    - violates_required_invariant
+    - creates_unresolved_duplicate_authority
+    - depends_on_material_unknown_without_bound
+    - violates_contract_AI-001
+    - has_unbounded_material_failure_mode
+    - cannot_define_success_evidence
+  lexicographic_priority:
+    - correctness
+    - invariant_preservation
+    - ownership_coherence
+    - boundary_coherence
+    - failure_semantics
+    - simplicity
+    - reversibility
+    - operability
+    - performance_fit
+    - evolutionary_optionality
+    - implementation_convenience
+    - aesthetic_preference
+analysis_lenses:
+  OWNERSHIP:
+    activate_when_any:
+      - state_exists
+      - mutation_exists
+      - lifecycle_exists
+      - responsibility_moves
+      - authority_is_duplicated
+    obligations:
+      - identify_canonical_owner
+      - identify_mutation_owner
+      - identify_lifecycle_owner
+      - identify_shadow_owners
+      - verify_coordination_if_multi_owner
+  BOUNDARY:
+    activate_when_any:
+      - module_boundary_changes
+      - dependency_added
+      - cross_layer_call_added
+      - adapter_changes
+      - shared_component_changes
+    obligations:
+      - dependency_direction
+      - information_flow
+      - mutation_direction
+      - public_contract
+      - coupling_delta
+  STATE:
+    activate_when_any:
+      - persisted_state
+      - cache
+      - registry
+      - queue
+      - replicated_state
+      - session_state
+    obligations:
+      - source_of_truth
+      - consistency_model
+      - invalidation_or_reconciliation
+      - lifecycle
+      - recovery
+  TEMPORAL:
+    activate_when_any:
+      - concurrency
+      - async_execution
+      - retry
+      - scheduling
+      - lease
+      - expiration
+      - ordering_dependency
+    obligations:
+      - happens_before_assumptions
+      - idempotency
+      - duplicate_handling
+      - stale_state_behavior
+      - retry_semantics
+      - race_analysis
+  FAILURE:
+    activate_when:
+      - material_change_or_material_decision
+    obligations:
+      - dependency_failure
+      - partial_failure
+      - restart_behavior
+      - timeout_behavior
+      - rollback_or_forward_recovery
+      - blast_radius
+      - degraded_mode
+  SCALE:
+    activate_when_any:
+      - throughput_material
+      - cardinality_material
+      - latency_material
+      - storage_growth_material
+      - global_distribution
+    obligations:
+      - scale_dimension
+      - expected_envelope
+      - bottleneck
+      - backpressure
+      - partitioning_or_locality_if_needed
+      - overload_behavior
+  OPERABILITY:
+    activate_when_any:
+      - production_runtime
+      - background_processing
+      - distributed_component
+      - persistent_state
+      - external_dependency
+    obligations:
+      - observability
+      - actionable_failure_signal
+      - recovery_path
+      - deployment_impact
+      - rollback_or_migration
+  EVOLUTION:
+    activate_when_any:
+      - public_interface
+      - persisted_schema
+      - compatibility_requirement
+      - provider_interface
+      - long_lived_abstraction
+    obligations:
+      - migration_path
+      - compatibility_boundary
+      - reversibility
+      - replacement_cost
+      - extension_pressure
+  SIMPLICITY:
+    activate_when:
+      - always
+    obligations:
+      - existing_mechanism_search
+      - deletion_candidate
+      - consolidation_candidate
+      - simpler_candidate
+      - new_abstraction_responsibility
+candidate_protocol:
+  minimum_candidates:
+    RAPID: 1
+    STANDARD: 1
+    DEEP: 2
+  single_candidate_allowed_when:
+    - existing_architecture_already_determines_solution
+    - alternative_would_be_artificial
+    - task_is_local_and_low_risk
+  comparison_dimensions:
+    - invariant_fit
+    - ownership_fit
+    - boundary_fit
+    - failure_fit
+    - complexity_delta
+    - operational_fit
+    - migration_cost
+    - reversibility
+    - scale_fit
+  anti_pattern:
+    forced_option_theater: forbidden
+complexity_analysis:
+  normative_rule_ref: contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-001
+  additions_requiring_evaluation:
+    - new_abstraction
+    - new_state_store
+    - new_cache
+    - new_queue
+    - new_registry
+    - new_service
+    - new_scheduler
+    - new_coordination_protocol
+    - new_framework
+    - new_compatibility_layer
+    - new_generic_interface
+  evidence_fields:
+    - responsibility
+    - current_driver
+    - why_existing_mechanism_is_insufficient
+    - simpler_alternative
+    - lifecycle_owner
+    - removal_or_migration_story
+full_plan_promotion_gate:
+  applies_to_depth:
+    - STANDARD
+    - DEEP
+  all_required:
+    - objective_is_represented
+    - material_invariants_are_protected
+    - ownership_is_unambiguous
+    - dependency_direction_is_understood
+    - material_unknowns_are_resolved_or_bounded
+    - material_failure_behavior_is_acceptable
+    - required_complexity_is_earned
+    - simpler_credible_candidate_is_not_superior
+    - verification_can_discriminate_success_from_failure
+    - blast_radius_is_understood
+    - execution_scope_is_coherent
+  on_failure_output:
+    required_fields:
+      - defect_class
+      - reason_codes
+      - evidence_refs
+    routing_owner: runtime/STATE_MACHINE.yaml
+adversarial_plan_attack:
+  checks:
+    - identify_strongest_counterexample
+    - identify_hidden_owner
+    - identify_duplicate_authority
+    - identify_unmodeled_failure
+    - identify_temporal_assumption
+    - identify_simpler_solution
+    - identify_scope_leak
+    - identify_test_that_could_pass_while_requirement_fails
+    - identify_irreversible_commitment
+    - identify_future_maintenance_burden
+  terminate_when:
+    - no_blocking_defect_found
+    - full_plan_promotion_gate_passes
+  do_not_terminate_because:
+    - review_count_reached_arbitrary_number
+    - plan_feels_detailed
+    - implementation_is_eager_to_start
+output_contract:
+  emits:
+    - system_model_findings
+    - architecture_candidates
+    - selected_architecture
+    - compact_decision_summary
+    - evidence_refs
+    - counterevidence_refs
+    - plan_readiness_evidence
+    - typed_defects
+  does_not_emit:
+    - workflow_route
+    - terminal_state
+    - private_chain_of_thought
+semantic_boundary:
+  owns:
+    - architectural_judgment_procedures
+    - analysis_lenses
+    - candidate_falsification
+    - plan_attack_procedure
+  does_not_own:
+    - architectural_law
+    - completion_law
+    - workflow_routing

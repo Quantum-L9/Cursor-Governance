@@ -120,6 +120,8 @@ tiers:
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   - skill: l9-repo-sync
     reason: in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach
+  - skill: l9-global-architect
+    reason: experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load only when the user explicitly invokes the global architect runtime or iterates on the pack; disable-model-invocation
   do_not_migrate_to_skills:
   - item: commands/_archived/violation.md
     reason: violation handling belongs in always-applied rules or hooks, not optional skill context

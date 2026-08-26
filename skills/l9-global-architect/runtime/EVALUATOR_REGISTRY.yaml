@@ -1,0 +1,331 @@
+registry:
+  registry_id: L9.GAR.EVALUATOR_REGISTRY.001
+  version: 0.4.0
+  artifact_class: evaluator_registry
+  status: experimental
+  semantic_owner: runtime/EVALUATOR_REGISTRY.yaml
+purpose:
+  assertion: >
+    Define the closed set of evaluator mechanics permitted by the L9 Global
+    Architect Runtime without owning policy, routing, or terminal semantics.
+  non_goals:
+    - define_architectural_policy
+    - grant_authority
+    - grant_host_capability
+    - own_workflow_transitions
+    - own_completion_semantics
+closed_world:
+  enabled: true
+  rule: Runtime artifacts MUST NOT invent evaluator semantics outside this registry.
+  unknown_evaluator:
+    result: UNKNOWN
+    reason_code: EVALUATOR_UNRESOLVED
+result_domain:
+  values:
+    SATISFIED:
+      meaning: Available evidence establishes the evaluated property.
+    VIOLATED:
+      meaning: Available evidence establishes that the evaluated property is false.
+    UNKNOWN:
+      meaning: Available evidence is insufficient to establish satisfaction or violation.
+    DISPUTED:
+      meaning: Credible evidence materially conflicts and is unresolved.
+    NOT_APPLICABLE:
+      meaning: A deterministic applicability rule establishes that the property is outside scope.
+  blocking_semantics:
+    SATISFIED: false
+    VIOLATED: true
+    UNKNOWN: true
+    DISPUTED: true
+    NOT_APPLICABLE: false
+result_normalization:
+  purpose: >
+    Canonical evidence contracts record results in the family
+    pass/fail/blocked/unknown. Evaluators emit the domain above. This map is
+    the single declared bridge; no other artifact may define a competing
+    translation, and gates never compare across vocabularies without it.
+  evaluator_to_evidence:
+    SATISFIED: pass
+    VIOLATED: fail
+    DISPUTED: blocked
+    UNKNOWN: unknown
+  not_applicable_handling: >
+    NOT_APPLICABLE is excluded by deterministic applicability before
+    aggregation and never appears as a recorded evidence result. An aggregate
+    evaluator (EVAL-CONTRACT, EVAL-CONVERGENCE) therefore emits only the four
+    mapped values.
+  laws:
+    - pass_is_the_only_success_state_in_either_vocabulary
+    - normalization_is_bijective_over_the_four_mapped_values
+    - a_result_missing_from_this_map_fails_closed_as_unknown
+evaluation_request:
+  required_fields:
+    - evaluation_id
+    - evaluator_id
+    - property_ref
+    - evidence_refs
+    - authority_context
+    - capability_context
+  optional_fields:
+    - contract_ref
+    - expected_state
+    - forbidden_states
+    - scope
+    - freshness_requirement
+    - materiality
+    - prior_evaluation_ref
+evaluation_result:
+  required_fields:
+    - evaluation_id
+    - evaluator_id
+    - property_ref
+    - result
+    - evidence_refs
+    - reason_codes
+    - observed_at
+  optional_fields:
+    - counterevidence_refs
+    - disputed_refs
+    - unknowns
+    - falsified_claims
+    - semantic_summary
+    - confidence_band
+  confidence_band:
+    values: [HIGH, MEDIUM, LOW]
+    authority_effect: none
+    rule: Confidence MUST NOT convert UNKNOWN DISPUTED or VIOLATED into SATISFIED.
+evidence_rules:
+  - id: EVR-EVIDENCE-001
+    rule: Evaluators may consume only evidence available to the current run or loaded authoritative contracts.
+  - id: EVR-EVIDENCE-002
+    rule: An evaluator MUST NOT fabricate an observation required to satisfy a property.
+  - id: EVR-EVIDENCE-003
+    rule: Semantic judgment may interpret evidence but MUST NOT silently promote UNKNOWN to VERIFIED fact.
+  - id: EVR-EVIDENCE-004
+    rule: Material counterevidence MUST NOT be omitted.
+  - id: EVR-EVIDENCE-005
+    rule: Stale evidence MUST NOT silently override newer contradictory evidence.
+applicability_rules:
+  authoritative_source: contracts/CONVERGENCE.yaml#applicability_model
+  laws:
+    - evaluator_does_not_invent_applicability_predicates
+    - missing_applicability_input_returns_UNKNOWN
+    - occurrence_or_nonoccurrence_of_execution_cannot_change_objective_derived_applicability
+    - capability_state_cannot_erase_a_required_property
+evaluators:
+  - evaluator_id: EVAL-DETERMINISTIC-PREDICATE
+    aliases: [deterministic, deterministic_predicate]
+    class: deterministic
+    semantic_judgment: false
+    host_observation_required: false
+    accepts:
+      - typed_value_comparison
+      - set_membership
+      - exact_match
+      - subset_relation
+      - graph_property
+      - path_property
+      - count_property
+      - digest_match
+      - explicit_boolean_property
+      - state_ref_applicability
+    state_ref_resolution:
+      syntax: jsonpath_subset
+      root: GAR_RUN_STATE
+      missing_path:
+        result: UNKNOWN
+        reason_code: DETERMINISTIC_INPUT_MISSING
+    procedure:
+      - resolve_all_declared_inputs
+      - reject_missing_material_input
+      - evaluate_predicate_without_model_inference
+      - emit_result_with_input_evidence_refs
+    missing_material_input:
+      result: UNKNOWN
+      reason_code: DETERMINISTIC_INPUT_MISSING
+    contradiction:
+      result: DISPUTED
+      reason_code: DETERMINISTIC_INPUT_CONFLICT
+    forbidden:
+      - infer_missing_value
+      - reinterpret_contract_semantics
+      - weaken_expected_state
+      - derive_applicability_from_missing_execution
+  - evaluator_id: EVAL-HOST-OBSERVATION
+    aliases: [host_observation]
+    class: observational
+    semantic_judgment: false
+    host_observation_required: true
+    accepts:
+      - filesystem_observation
+      - archive_observation
+      - repository_observation
+      - tool_result
+      - test_result
+      - lint_result
+      - typecheck_result
+      - diff_observation
+      - generated_artifact_observation
+      - delivery_observation
+    procedure:
+      - verify_required_host_capability_is_available
+      - perform_or_consume_actual_observation
+      - bind_observation_to_current_run
+      - record_freshness
+      - emit_result
+    unavailable_capability:
+      result: UNKNOWN
+      reason_code: OBSERVATION_CAPABILITY_UNAVAILABLE
+    forbidden:
+      - simulate_unavailable_tool
+      - report_unexecuted_test_as_passed
+      - report_uncreated_file_as_created
+      - report_undelivered_artifact_as_delivered
+      - infer_filesystem_state_from_intent
+  - evaluator_id: EVAL-CONTRACT
+    aliases: [contract]
+    class: compositional
+    semantic_judgment: conditional
+    host_observation_required: conditional
+    purpose: Evaluate a referenced contract through registered evaluators.
+    applicable_contract_kinds:
+      - invariant
+      - evidence
+      - workflow
+    policy_contract_rule: >
+      A policy contract is never a satisfaction target: its decision model
+      returns decisions (permit, deny, require_gate, ...) and obligations, not
+      SATISFIED/VIOLATED. Compliance with a policy is proven by evaluating its
+      recorded compliance packet (decision plus obligation fulfillment) with
+      EVAL-DETERMINISTIC-PREDICATE or EVAL-HYBRID, never by evaluating the
+      policy itself through this evaluator.
+    procedure:
+      - resolve_contract
+      - validate_contract_is_applicable
+      - build_dependency_set
+      - reject_evaluation_cycles
+      - evaluate_required_properties
+      - preserve_blocking_results
+      - aggregate_without_numeric_override
+    aggregation:
+      SATISFIED_when:
+        - all_required_properties in [SATISFIED, NOT_APPLICABLE]
+      VIOLATED_when:
+        - any_required_property == VIOLATED
+      DISPUTED_when:
+        - no_required_property == VIOLATED
+        - any_required_property == DISPUTED
+      UNKNOWN_when:
+        - no_required_property in [VIOLATED, DISPUTED]
+        - any_required_property == UNKNOWN
+    cycle_policy:
+      allowed: false
+      reason_code: CONTRACT_EVALUATION_CYCLE
+    forbidden:
+      - average_blockers
+      - let_optional_success_cancel_required_failure
+      - invent_missing_contract
+      - choose_workflow_route
+      - evaluate_a_policy_contract_as_a_satisfaction_target
+  - evaluator_id: EVAL-EVIDENCE-BOUND-MODEL
+    aliases: [evidence_bound_model]
+    class: semantic
+    semantic_judgment: true
+    host_observation_required: false
+    purpose: Apply principal-level semantic judgment where a property is not mechanically decidable.
+    permitted_properties:
+      - complexity_is_earned
+      - ownership_is_coherent
+      - boundary_is_coherent
+      - failure_behavior_is_acceptable
+      - architecture_matches_objective
+      - plan_is_coherent
+      - implementation_matches_architecture
+      - simpler_candidate_is_materially_superior
+      - blast_radius_is_acceptable
+      - objective_is_satisfied
+      - residual_risk_is_material
+      - nonmutating_outcome_is_realized
+    input_boundary:
+      may_use:
+        - current_user_objective
+        - current_run_state
+        - verified_evidence_refs
+        - labeled_inferences
+        - loaded_authoritative_contracts
+        - repository_or_artifact_evidence
+      must_not_use_as_fact:
+        - unsupported_memory
+        - fabricated_repository_state
+        - unstated_host_capability
+        - guessed_tool_result
+    procedure:
+      - identify_property
+      - resolve_material_evidence
+      - identify_counterevidence
+      - identify_material_unknowns
+      - evaluate_property
+      - emit_compact_semantic_summary
+      - preserve_unknown_or_disputed_state_when_not_proven
+    satisfaction_requirements:
+      - evidence_refs_nonempty_when_property_depends_on_external_state
+      - no_unresolved_blocking_counterevidence
+      - no_material_unknown_that_can_flip_result
+    forbidden:
+      - output_private_chain_of_thought
+      - fabricate_evidence
+      - convert_aesthetic_preference_into_architectural_requirement
+      - use_confidence_as_substitute_for_evidence
+      - choose_terminal_state
+  - evaluator_id: EVAL-HYBRID
+    aliases: [hybrid]
+    class: composite
+    semantic_judgment: true
+    host_observation_required: conditional
+    order:
+      - deterministic_and_host_evidence
+      - contract_constraints
+      - evidence_bound_semantic_judgment
+    laws:
+      - deterministic_violation_cannot_be_overridden_by_model_judgment
+      - contract_violation_cannot_be_averaged_away
+      - semantic_judgment_may_classify_but_not_rewrite_observations
+      - material_unknown_remains_blocking_until_resolved_or_bounded
+    result_precedence: [VIOLATED, DISPUTED, UNKNOWN, SATISFIED, NOT_APPLICABLE]
+  - evaluator_id: EVAL-CONVERGENCE
+    aliases: [convergence]
+    class: composite
+    semantic_judgment: true
+    host_observation_required: conditional
+    evaluator_of: contracts/CONVERGENCE.yaml
+    returns: [SATISFIED, VIOLATED, UNKNOWN, DISPUTED]
+    procedure:
+      - resolve_convergence_contract
+      - resolve_deterministic_applicability
+      - evaluate_all_applicable_required_properties
+      - preserve_blocking_results
+      - emit_convergence_evaluation_result
+    forbidden:
+      - choose_terminal_state
+      - route_defect
+      - redefine_completion_property
+      - treat_partial_success_as_satisfaction
+model_evaluation_governance:
+  semantic_evaluator_output_is:
+    type: evidence_bound_judgment
+    durable_truth_by_itself: false
+  durable_claim_requires:
+    - evidence_binding
+    - applicable_contract_satisfaction
+    - no_higher_authority_conflict
+  private_reasoning:
+    required_to_store: false
+    required_to_expose: false
+    forbidden_as_completion_evidence: true
+anti_drift:
+  - evaluator_aliases_resolve_to_one_evaluator_id
+  - evaluator_semantics_are_not_copied_into_host_adapters
+  - workflow_files_reference_evaluators_but_do_not_redefine_them
+  - contracts_select_evaluators_but_do_not_invent_evaluator_classes
+  - evaluator_registry_does_not_own_routing_or_terminal_states
+  - unknown_evaluator_ids_fail_closed

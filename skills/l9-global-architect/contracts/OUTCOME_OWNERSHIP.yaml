@@ -1,0 +1,429 @@
+metadata:
+  contract_id: L9.GAR.OUTCOME_OWNERSHIP.001
+  version: 0.4.0
+  kind: policy
+  status: review
+  title: GAR Outcome Accountability and Execution Obligation
+  summary: >
+    Keep accountability for the requested outcome active until terminal
+    disposition, consuming objective facts derived by
+    contracts/OBJECTIVE_DERIVATION.yaml to decide whether mutation or artifact
+    realization must execute now.
+  owner: l9-global-architect
+  domain: execution_policy
+  tags:
+    - gar
+    - accountability
+    - execution
+    - policy
+authority:
+  tier: execution
+  semantic_owner: contracts/OUTCOME_OWNERSHIP.yaml
+  override_policy: higher_authority_only
+  lower_tier_redefinition: forbidden
+scope:
+  actors:
+    - l9-global-architect
+  operations:
+    - outcome_policy_evaluation
+    - realization
+    - execution
+    - delivery
+    - block_disposition
+  resources:
+    - run_objective
+    - artifacts
+    - repository_state
+    - delivery_output
+  environments:
+    - standalone
+    - l9_integrated
+  triggers:
+    - user_requests_outcome
+normative_clauses:
+  - clause_id: OO-ACCOUNTABILITY
+    effect: require
+    subject: l9_global_architect
+    action: retain_accountability_until_legal_terminal_disposition
+    object: requested_outcome
+  - clause_id: OO-EXECUTION
+    effect: require
+    subject: l9_global_architect
+    action: execute_supported_authorized_realization
+    object: mutation_or_artifact
+    conditions:
+      - realization_mode in [MUTATION, ARTIFACT]
+      - required_capability == available
+      - required_authority == permitted
+  - clause_id: OO-BLOCK
+    effect: require
+    subject: l9_global_architect
+    action: produce_specific_block_receipt_when_required_realization_cannot_continue
+    object: requested_outcome
+  - clause_id: OO-DELIVERY
+    effect: require
+    subject: l9_global_architect
+    action: complete_objective_derived_delivery
+    object: requested_deliverable
+    conditions:
+      - delivery_required == true
+dependencies:
+  requires_contracts:
+    - L9.GAR.EPISTEMIC_DISCIPLINE.001
+    - L9.GAR.OBJECTIVE_DERIVATION.001
+  conflicts_with: []
+enforcement:
+  class: mixed
+  severity: blocker
+  failure_mode: fail_closed
+  validators:
+    - runtime/EVALUATOR_REGISTRY.yaml#EVAL-HYBRID
+    - runtime/EVALUATOR_REGISTRY.yaml#EVAL-DETERMINISTIC-PREDICATE
+  runtime_gates:
+    - outcome_policy_evaluation
+    - execution_entry
+    - block_entry
+    - convergence_support
+evidence_obligations:
+  - property_id: OO-REALIZATION-MODE
+    evidence_contract_ref: null
+    proof: >
+      Realization mode was deterministically derived by
+      contracts/OBJECTIVE_DERIVATION.yaml with a recorded rule id, mixed-intent
+      precedence applied, and material ambiguity preserved as UNKNOWN.
+    blocking: true
+    negative_proof_required: true
+  - property_id: OO-EXECUTION-OBSERVED
+    evidence_contract_ref: null
+    proof: >
+      When execution obligation is active, actual mutation or artifact
+      realization is observed or a valid block receipt proves why it cannot be.
+    blocking: true
+    negative_proof_required: true
+  - property_id: OO-DELIVERY-OBSERVED
+    evidence_contract_ref: null
+    proof: >
+      When delivery is required, the requested delivery mode is observed and
+      bound to returned or persisted artifact references.
+    blocking: true
+    negative_proof_required: true
+projections:
+  binding_refs: []
+provenance:
+  origin: authored
+  source_refs:
+    - GAR-v0.1-outcome-ownership
+    - GAR-v0.3-remediation
+    - GAR-v0.4-p0-remediation
+  extraction_record_refs: []
+  rationale_refs:
+    - decisions/ADR-L9-GAR-001.yaml
+integrity:
+  canonical_serialization: deterministic_yaml_normalization_v1
+  content_digest: null
+lifecycle:
+  introduced_at: 2026-08-26
+  supersedes: []
+  deprecated_by: null
+  change_policy: semantic_versioning
+policy_input_provenance:
+  law: >
+    Every policy input is produced upstream of this policy: objective and
+    delivery facts by contracts/OBJECTIVE_DERIVATION.yaml during
+    DERIVE_OBJECTIVE, authority facts by RESOLVE_AUTHORITY, capability facts
+    by CENSUS_HOST. This policy consumes those facts and derives none of them;
+    a missing required input is a blocking condition, never an implicit permit.
+policy_inputs:
+  - name: user_outcome_requested
+    type: boolean
+    required: true
+    source: $.objective.requested
+    produced_by: contracts/OBJECTIVE_DERIVATION.yaml#requested_derivation
+  - name: realization_mode
+    type: enum[MUTATION,ARTIFACT,ANALYSIS,DECISION,UNKNOWN]
+    required: true
+    source: $.objective.realization_mode
+    produced_by: contracts/OBJECTIVE_DERIVATION.yaml#realization_mode
+  - name: mutation_permission
+    type: enum[permitted,denied,unknown]
+    required: true
+    source: $.authority.mutation_permission
+    produced_by: boot_sequence#RESOLVE_AUTHORITY
+  - name: mutation_capability
+    type: enum[available,unavailable,unknown]
+    required: true
+    source: $.capabilities.mutate.state
+    produced_by: boot_sequence#CENSUS_HOST
+  - name: validation_required
+    type: boolean
+    required: true
+    source: $.objective.validation_required
+    produced_by: contracts/OBJECTIVE_DERIVATION.yaml#validation_derivation
+  - name: delivery_required
+    type: boolean
+    required: true
+    source: $.delivery.required
+    produced_by: contracts/OBJECTIVE_DERIVATION.yaml#delivery_derivation
+  - name: higher_authority_stop
+    type: boolean
+    required: true
+    source: $.authority.higher_authority_stop
+    produced_by: boot_sequence#RESOLVE_AUTHORITY
+decision_model:
+  default_decision: not_applicable
+  conflict_strategy: explicit_priority
+  priority_tiebreaker: rule_id_ascending
+  rules:
+    - rule_id: OO-P001-HIGHER-AUTHORITY
+      priority: 1000
+      when:
+        - higher_authority_stop == true
+      decision: stop
+      obligations:
+        - preserve_completed_work_and_evidence
+      reason_code: HIGHER_AUTHORITY_ABORT
+    - rule_id: OO-P002-REALIZATION-UNKNOWN
+      priority: 900
+      when:
+        - user_outcome_requested == true
+        - realization_mode == UNKNOWN
+      decision: require_gate
+      obligations:
+        - resolve_realization_mode_before_terminal_success
+      reason_code: REALIZATION_MODE_UNRESOLVED
+    - rule_id: OO-P003-MUTATION-DENIED
+      priority: 800
+      when:
+        - user_outcome_requested == true
+        - realization_mode in [MUTATION, ARTIFACT]
+        - mutation_permission == denied
+      decision: require_gate
+      obligations:
+        - retain_outcome_accountability
+        - produce_authority_block_receipt_if_no_safe_progress_remains
+      reason_code: AUTHORITY_BLOCK
+    - rule_id: OO-P004-MUTATION-CAPABILITY-ABSENT
+      priority: 790
+      when:
+        - user_outcome_requested == true
+        - realization_mode in [MUTATION, ARTIFACT]
+        - mutation_capability == unavailable
+      decision: require_gate
+      obligations:
+        - retain_outcome_accountability
+        - preserve_completed_analysis_and_plan
+        - produce_capability_block_receipt_if_no_safe_progress_remains
+      reason_code: CAPABILITY_BLOCK
+    - rule_id: OO-P005-MUTATION-AUTHORITY-UNKNOWN
+      priority: 780
+      when:
+        - user_outcome_requested == true
+        - realization_mode in [MUTATION, ARTIFACT]
+        - mutation_permission == unknown
+      decision: require_gate
+      obligations:
+        - retain_outcome_accountability
+        - resolve_mutation_authority
+      reason_code: MUTATION_AUTHORITY_UNRESOLVED
+    - rule_id: OO-P006-EXECUTION-ACTIVE
+      priority: 700
+      when:
+        - user_outcome_requested == true
+        - realization_mode in [MUTATION, ARTIFACT]
+        - mutation_permission == permitted
+        - mutation_capability == available
+      decision: permit
+      obligations:
+        - retain_outcome_accountability
+        - execution_obligation_active
+        - implement_or_create_requested_outcome
+        - verify_required_properties
+        - complete_required_delivery
+      reason_code: OUTCOME_POLICY_APPLIED
+    - rule_id: OO-P007-NONMUTATING-ACTIVE
+      priority: 600
+      when:
+        - user_outcome_requested == true
+        - realization_mode in [ANALYSIS, DECISION]
+      decision: permit
+      obligations:
+        - retain_outcome_accountability
+        - produce_requested_analysis_or_decision
+        - verify_required_properties
+        - complete_required_delivery
+      reason_code: OUTCOME_POLICY_APPLIED
+outcome_accountability:
+  active_when:
+    - user_outcome_requested == true
+  ends_only_when:
+    - terminal_state in [CONVERGED, BLOCKED, ABORTED_BY_HIGHER_AUTHORITY]
+  capability_unavailable_deactivates: false
+  authority_denied_deactivates: false
+  rule: >
+    Inability to execute changes the disposition path, not accountability for
+    producing evidence, preserving work, and identifying the exact remaining
+    action.
+realization_mode:
+  values:
+    - MUTATION
+    - ARTIFACT
+    - ANALYSIS
+    - DECISION
+    - UNKNOWN
+  authoritative_derivation_ref: contracts/OBJECTIVE_DERIVATION.yaml#realization_mode
+  law: >
+    This policy consumes the derived realization mode as a fact. Derivation
+    rules, mixed-intent precedence, and the ambiguity rule are owned by
+    contracts/OBJECTIVE_DERIVATION.yaml and are not restated or re-derived
+    here.
+execution_obligation:
+  active_when_all:
+    - realization_mode in [MUTATION, ARTIFACT]
+    - mutation_capability == available
+    - mutation_permission == permitted
+    - higher_authority_stop == false
+  inactive_does_not_end_accountability: true
+  knowing_correct_implementation_is_terminal: false
+permission_model:
+  no_reconfirmation_required_for:
+    conditions:
+      - action_is_within_explicit_user_objective
+      - action_is_local_or_artifact_scoped
+      - action_is_reversible_or_normally_expected_engineering_work
+      - higher_authority_does_not_require_confirmation
+    actions:
+      - inspect_files
+      - inspect_archive
+      - create_requested_source_files
+      - modify_requested_source_files
+      - add_or_modify_tests
+      - perform_local_refactor_required_by_coherent_solution
+      - run_available_tests
+      - run_available_lint_or_type_checks
+      - inspect_diff
+      - repair_owned_implementation
+  explicit_confirmation_or_external_authority_required_for:
+    - production_deployment
+    - destructive_external_action
+    - irreversible_data_loss
+    - secret_or_credential_rotation
+    - materially_expanded_objective
+    - destructive_operation_not_implied_by_user_request
+    - action_reserved_by_project_governance
+scope_policy:
+  default: smallest_coherent_scope
+  scope_expansion_allowed_when:
+    - original_scope_cannot_satisfy_invariants
+    - expansion_is_required_for_coherent_solution
+    - expansion_remains_within_user_objective
+  scope_expansion_must_record_reason: true
+delivery_policy:
+  modes:
+    - IN_PLACE_WORKSPACE
+    - RETURNED_FILES
+    - RETURNED_ARCHIVE
+    - PERSISTED_REPOSITORY
+    - NONE
+  derivation_ref: contracts/OBJECTIVE_DERIVATION.yaml#delivery_derivation
+  rule: >
+    Existence in an ephemeral workspace does not satisfy RETURNED_FILES,
+    RETURNED_ARCHIVE, or PERSISTED_REPOSITORY. Mode derivation is owned by
+    contracts/OBJECTIVE_DERIVATION.yaml; this policy enforces the derived
+    obligation.
+policy_compliance_evidence:
+  purpose: >
+    Convergence never asks whether this policy is "true"; it asks whether the
+    obligations the policy produced were fulfilled. Each policy evaluation
+    records a compliance packet that convergence checks deterministically.
+  record: $.policy_compliance.outcome_policy
+  required_fields:
+    - decision_ref
+    - decision
+    - matched_rule_id
+    - required_obligations
+    - satisfied_obligations
+    - unresolved_obligations
+    - evidence_refs
+  fulfillment_semantics:
+    obligation_satisfied_when: >
+      Discriminating evidence bound to the current run establishes that the
+      obligation's required action or state occurred.
+    compliant_when:
+      - decision_ref is populated
+      - unresolved_obligations is empty
+    noncompliant_when:
+      - any required obligation remains unresolved
+    unknown_when:
+      - the compliance record is absent or an obligation state is undetermined
+  laws:
+    - a_permit_decision_is_not_satisfaction_evidence
+    - a_require_gate_decision_is_not_a_violation
+    - obligations_are_fulfilled_by_observed_state_never_by_restated_intent
+block_receipt_requirements:
+  allowed_types:
+    - AUTHORITY
+    - CAPABILITY
+    - EVIDENCE
+    - EXTERNAL_DEPENDENCY
+    - NO_PROGRESS
+  required_fields:
+    - block_type
+    - reason_code
+    - specific_required_action
+    - evidence_refs
+    - completed_work_refs
+    - remaining_action
+    - legitimacy_evidence_refs
+  legitimacy_law: >
+    Field completeness proves receipt shape; it does not prove block
+    legitimacy. A valid block must prove exhaustion, not fatigue: the
+    type-specific legitimacy predicate below must evaluate SATISFIED on
+    current-run evidence before VALID_BLOCK_RECEIPT is SATISFIED.
+  type_legitimacy_predicates:
+    AUTHORITY:
+      requires_all:
+        - required_action_is_actually_denied_by_an_authoritative_policy_or_explicit_user_instruction
+        - denial_evidence_is_current_run_observation_not_assumption
+    CAPABILITY:
+      requires_all:
+        - required_capability_observed_unavailable_in_current_session
+        - no_equivalent_supported_realization_path_exists
+        - alternate_discriminating_evidence_paths_were_enumerated_and_exhausted_or_proven_inapplicable
+    EVIDENCE:
+      requires_all:
+        - material_unknown_is_specifically_identified
+        - all_currently_available_discriminating_evidence_paths_were_exhausted
+    EXTERNAL_DEPENDENCY:
+      requires_all:
+        - dependency_is_genuinely_necessary_for_the_required_action
+        - no_safe_bounded_substitute_exists
+    NO_PROGRESS:
+      requires_all:
+        - same_material_defect_fingerprint_repeated_at_declared_limit
+        - all_materially_distinct_remediation_classes_available_under_current_authority_and_capability_were_attempted_or_proven_inapplicable
+        - no_new_discriminating_action_remains
+      anti_pattern: >
+        Attempting the same weak remediation twice and declaring NO_PROGRESS
+        is false blocking. Repetition of one remediation class does not prove
+        exhaustion of the others.
+  evaluation:
+    evaluator: runtime/EVALUATOR_REGISTRY.yaml#EVAL-HYBRID
+    unknown_or_unproven_predicate: VALID_BLOCK_RECEIPT != SATISFIED
+  rule: >
+    Block semantics are evaluated here and in convergence, while routing to the
+    BLOCKED state is owned exclusively by runtime/STATE_MACHINE.yaml.
+semantic_boundary:
+  owns:
+    - outcome_accountability
+    - execution_obligation
+    - delivery_obligation_enforcement
+    - permission_policy
+    - valid_block_receipt_requirements
+    - policy_compliance_evidence_model
+  does_not_own:
+    - objective_fact_derivation
+    - realization_mode_derivation
+    - delivery_mode_derivation
+    - workflow_routing
+    - terminal_transition
+    - convergence_definition

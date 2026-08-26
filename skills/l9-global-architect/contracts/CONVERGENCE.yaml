@@ -1,0 +1,358 @@
+metadata:
+  contract_id: L9.GAR.CONVERGENCE.001
+  version: 0.4.0
+  kind: evidence
+  status: review
+  title: GAR Convergence Evidence Contract
+  summary: >
+    Define the positive, fail-closed evidence required to establish that the
+    requested outcome is complete and delivered without false completion.
+  owner: l9-global-architect
+  domain: completion
+  tags:
+    - gar
+    - convergence
+    - completion
+    - evidence
+authority:
+  tier: constitutional
+  semantic_owner: contracts/CONVERGENCE.yaml
+  override_policy: higher_authority_only
+  lower_tier_redefinition: forbidden
+scope:
+  actors:
+    - l9-global-architect
+  operations:
+    - convergence_evaluation
+    - completion_claim
+  resources:
+    - run_state
+    - objective
+    - artifacts
+    - validation_evidence
+    - delivery_state
+  environments:
+    - standalone
+    - l9_integrated
+  triggers:
+    - convergence_check
+normative_clauses:
+  - clause_id: CV-N001
+    effect: require
+    subject: completion_claim
+    action: satisfy_every_applicable_blocking_convergence_property
+    object: requested_outcome
+  - clause_id: CV-N002
+    effect: prohibit
+    subject: capability_absence
+    action: erase_objective_derived_requirement
+    object: validation_or_realization_obligation
+  - clause_id: CV-N003
+    effect: prohibit
+    subject: missing_mutation_or_delivery
+    action: convert_corresponding_evidence_obligation_to_not_applicable
+    object: convergence_property
+  - clause_id: CV-N004
+    effect: require
+    subject: verification
+    action: positively_evaluate_all_required_obligations
+    object: convergence
+  - clause_id: CV-N005
+    effect: require
+    subject: requested_delivery
+    action: be_observed_in_required_delivery_mode
+    object: operator_outcome
+dependencies:
+  requires_contracts:
+    - L9.GAR.EPISTEMIC_DISCIPLINE.001
+    - L9.GAR.ARCHITECTURAL_INTEGRITY.001
+    - L9.GAR.OBJECTIVE_DERIVATION.001
+    - L9.GAR.OUTCOME_OWNERSHIP.001
+  conflicts_with: []
+enforcement:
+  class: mixed
+  severity: blocker
+  failure_mode: fail_closed
+  validators:
+    - runtime/EVALUATOR_REGISTRY.yaml#EVAL-CONVERGENCE
+  runtime_gates:
+    - terminal_success
+evidence_obligations:
+  - property_id: GAR_RUN_CONVERGENCE
+    evidence_contract_ref: null
+    proof: >
+      Every objective-derived and always-required convergence property has a
+      nonblocking evaluation result, all required verification obligations were
+      evaluated, and required delivery is observed.
+    blocking: true
+    negative_proof_required: true
+projections:
+  binding_refs: []
+provenance:
+  origin: authored
+  source_refs:
+    - GAR-v0.1-convergence
+    - GAR-v0.3-false-completion-remediation
+    - GAR-v0.4-p0-remediation
+  extraction_record_refs: []
+  rationale_refs:
+    - decisions/ADR-L9-GAR-001.yaml
+integrity:
+  canonical_serialization: deterministic_yaml_normalization_v1
+  content_digest: null
+lifecycle:
+  introduced_at: 2026-08-26
+  supersedes: []
+  deprecated_by: null
+  change_policy: semantic_versioning
+property:
+  property_id: GAR_RUN_CONVERGENCE
+  statement: >
+    The requested GAR outcome, required realization, architectural integrity,
+    epistemic obligations, validation, failure closure, scope, and delivery are
+    all satisfied by current discriminating evidence.
+  evidence_type: proof_receipt
+  blocking: true
+observation:
+  producer: runtime/EVALUATOR_REGISTRY.yaml#EVAL-CONVERGENCE
+  setup: evaluate the current logical GAR run state and referenced evidence
+  check: evaluate every required convergence property and preserve blocking results
+  expected_positive: all applicable required properties are SATISFIED and no blocking result remains
+  expected_negative: any required property is VIOLATED UNKNOWN or DISPUTED
+  command_exit_zero_sufficient: false
+binding:
+  source_commit_required: false
+  contract_digest_required: false
+  artifact_hash_required: false
+freshness:
+  policy: current_execution_only
+  max_age: null
+result:
+  valid_states:
+    - pass
+    - fail
+    - blocked
+    - unknown
+  unknown_is_pass: false
+  normalization_ref: runtime/EVALUATOR_REGISTRY.yaml#result_normalization
+  normalization_rule: >
+    EVAL-CONVERGENCE emits evaluator-domain results (SATISFIED, VIOLATED,
+    DISPUTED, UNKNOWN). The recorded evidence result is produced through the
+    declared normalization map: SATISFIED records pass, VIOLATED records fail,
+    DISPUTED records blocked, UNKNOWN records unknown. pass is the sole
+    success state; runtime gates that test convergence_contract == SATISFIED
+    are testing exactly the condition that records pass.
+terminal_states:
+  CONVERGED:
+    success: true
+  BLOCKED:
+    success: false
+  ABORTED_BY_HIGHER_AUTHORITY:
+    success: false
+applicability_model:
+  mode: deterministic_state_ref
+  rules:
+    - id: APP-REALIZATION-MUTATION
+      source_state_ref: $.objective.realization_mode
+      operator: equals
+      expected: MUTATION
+      enables:
+        - CV-002-MUTATION-OBSERVED
+        - CV-008-COHERENT-MUTATION-SCOPE
+    - id: APP-REALIZATION-ARTIFACT
+      source_state_ref: $.objective.realization_mode
+      operator: equals
+      expected: ARTIFACT
+      enables:
+        - CV-003-ARTIFACT-OBSERVED
+        - CV-008-COHERENT-MUTATION-SCOPE
+    - id: APP-REALIZATION-NONMUTATING
+      source_state_ref: $.objective.realization_mode
+      operator: in
+      expected: [ANALYSIS, DECISION]
+      enables:
+        - CV-004-NONMUTATING-OUTCOME-REALIZED
+    - id: APP-VALIDATION
+      source_state_ref: $.objective.validation_required
+      operator: equals
+      expected: true
+      enables:
+        - CV-007-VALIDATION-OBLIGATION-SATISFIED
+    - id: APP-DELIVERY
+      source_state_ref: $.delivery.required
+      operator: equals
+      expected: true
+      enables:
+        - CV-011-REQUESTED-DELIVERY-COMPLETED
+  laws:
+    - applicability_inputs_are_required_and_must_not_be_inferred_from_missing_execution
+    - capability_state_never_changes_whether_an_objective_derived_requirement_exists
+    - missing_required_realization_never_disables_its_own_evidence_obligation
+    - unresolved_applicability_input_is_blocking_unknown
+convergence_gate:
+  aggregation: all_applicable_required_properties
+  pass_states:
+    - SATISFIED
+    - NOT_APPLICABLE
+  blocking_states:
+    - VIOLATED
+    - UNKNOWN
+    - DISPUTED
+  required_properties:
+    - id: CV-001-OBJECTIVE-SATISFIED
+      property: objective_satisfied
+      evaluator: EVAL-EVIDENCE-BOUND-MODEL
+      applicability: always
+      evidence_ref: $.objective.acceptance_conditions
+      failure_reason_code: OBJECTIVE_NOT_SATISFIED
+    - id: CV-002-MUTATION-OBSERVED
+      property: required_mutation_observed
+      evaluator: EVAL-HOST-OBSERVATION
+      applicability_ref: APP-REALIZATION-MUTATION
+      evidence_ref: $.execution.mutation_receipts
+      failure_reason_code: MUTATION_NOT_OBSERVED
+    - id: CV-003-ARTIFACT-OBSERVED
+      property: required_artifact_realization_observed
+      evaluator: EVAL-HOST-OBSERVATION
+      applicability_ref: APP-REALIZATION-ARTIFACT
+      evidence_ref: $.execution.changed_artifacts
+      failure_reason_code: MUTATION_NOT_OBSERVED
+    - id: CV-004-NONMUTATING-OUTCOME-REALIZED
+      property: requested_analysis_or_decision_realized
+      evaluator: EVAL-EVIDENCE-BOUND-MODEL
+      applicability_ref: APP-REALIZATION-NONMUTATING
+      evidence_ref: $.objective.acceptance_conditions
+      failure_reason_code: OBJECTIVE_NOT_SATISFIED
+    - id: CV-005-ARCHITECTURAL-INTEGRITY
+      property: architectural_integrity_satisfied
+      evaluator: EVAL-CONTRACT
+      contract_ref: contracts/ARCHITECTURAL_INTEGRITY.yaml
+      applicability: always
+      failure_reason_code: ARCHITECTURE_NOT_COHERENT
+    - id: CV-006-MATERIAL-UNKNOWNS-CLOSED
+      property: material_unknowns_resolved_or_bounded
+      evaluator: EVAL-CONTRACT
+      contract_ref: contracts/EPISTEMIC_DISCIPLINE.yaml
+      applicability: always
+      evidence_ref: $.epistemic.unknowns
+      failure_reason_code: MATERIAL_ASSUMPTION_UNRESOLVED
+    - id: CV-007-VALIDATION-OBLIGATION-SATISFIED
+      property: validation_obligation_satisfied
+      evaluator: EVAL-HYBRID
+      applicability_ref: APP-VALIDATION
+      evidence_ref: $.verification.validation_results
+      failure_reason_code: VALIDATION_INSUFFICIENT
+      capability_absence_semantics: >
+        Seek alternate discriminating evidence when allowed; otherwise emit a
+        capability block candidate. Do not return NOT_APPLICABLE.
+    - id: CV-008-COHERENT-MUTATION-SCOPE
+      property: realized_scope_is_coherent
+      evaluator: EVAL-EVIDENCE-BOUND-MODEL
+      applicability_any:
+        - APP-REALIZATION-MUTATION
+        - APP-REALIZATION-ARTIFACT
+      evidence_ref: $.execution.changed_artifacts
+      failure_reason_code: SCOPE_EXPANSION_UNJUSTIFIED
+    - id: CV-009-MATERIAL-FAILURES-RESOLVED
+      property: known_material_failures_resolved
+      evaluator: EVAL-HYBRID
+      applicability: always
+      evidence_ref: $.defects.open
+      failure_reason_code: COMPLETION_NOT_PROVEN
+    - id: CV-010-OUTCOME-POLICY-OBLIGATIONS-FULFILLED
+      property: outcome_policy_obligations_fulfilled
+      evaluator: EVAL-DETERMINISTIC-PREDICATE
+      applicability: always
+      evidence_ref: $.policy_compliance.outcome_policy
+      compliance_model_ref: contracts/OUTCOME_OWNERSHIP.yaml#policy_compliance_evidence
+      satisfied_when:
+        - $.policy_compliance.outcome_policy.decision_ref is populated
+        - $.policy_compliance.outcome_policy.unresolved_obligations is empty
+      failure_reason_code: COMPLETION_NOT_PROVEN
+      semantics: >
+        The outcome policy is not a satisfaction target. This property checks
+        the recorded policy compliance packet: the policy was evaluated, its
+        decision was recorded, and every obligation it produced was fulfilled
+        with bound evidence. An absent packet or undetermined obligation state
+        is blocking UNKNOWN.
+    - id: CV-011-REQUESTED-DELIVERY-COMPLETED
+      property: requested_delivery_completed
+      evaluator: EVAL-HOST-OBSERVATION
+      applicability_ref: APP-DELIVERY
+      evidence_ref: $.delivery.receipt_ref
+      failure_reason_code: DELIVERY_NOT_COMPLETED
+    - id: CV-012-VERIFICATION-OBLIGATIONS-EVALUATED
+      property: all_required_verification_obligations_evaluated
+      evaluator: EVAL-DETERMINISTIC-PREDICATE
+      applicability: always
+      evidence_ref: $.verification.required_obligations
+      failure_reason_code: VALIDATION_INSUFFICIENT
+    - id: CV-013-NO-BLOCKING-EVALUATION-RESULT
+      property: no_blocking_evaluation_result
+      evaluator: EVAL-DETERMINISTIC-PREDICATE
+      applicability: always
+      evidence_ref: $.verification.blocking_evaluation_refs
+      failure_reason_code: COMPLETION_NOT_PROVEN
+false_completion_checks:
+  - id: FC-001
+    detect: objective_requires_MUTATION_but_observed_mutation_is_absent
+    reason_code: MUTATION_NOT_OBSERVED
+  - id: FC-002
+    detect: objective_requires_ARTIFACT_but_observed_artifact_is_absent
+    reason_code: MUTATION_NOT_OBSERVED
+  - id: FC-003
+    detect: validation_claim_has_no_discriminating_observation
+    reason_code: UNSUPPORTED_VALIDATION_CLAIM
+  - id: FC-004
+    detect: known_architectural_blocker_remains
+    reason_code: ARCHITECTURE_NOT_COHERENT
+  - id: FC-005
+    detect: known_material_unknown_is_silently_ignored
+    reason_code: MATERIAL_ASSUMPTION_UNRESOLVED
+  - id: FC-006
+    detect: only_partial_objective_satisfied
+    reason_code: OBJECTIVE_NOT_SATISFIED
+  - id: FC-007
+    detect: required_delivery_not_observed
+    reason_code: DELIVERY_NOT_COMPLETED
+  - id: FC-008
+    detect: verification_obligations_not_all_evaluated
+    reason_code: VALIDATION_INSUFFICIENT
+  - id: FC-009
+    detect: blocking_evaluation_result_present
+    reason_code: COMPLETION_NOT_PROVEN
+nonconvergence_output:
+  required_fields:
+    - defect_class
+    - reason_codes
+    - evidence_refs
+    - invalidated_properties
+  routing_owner: runtime/STATE_MACHINE.yaml
+completion_receipt:
+  required_fields:
+    - terminal_state
+    - objective_status
+    - realization_mode
+    - artifact_changes
+    - validation_performed
+    - architectural_integrity_status
+    - remaining_material_unknowns
+    - delivery_status
+    - residual_risks
+  conditional_fields:
+    blocked_reason:
+      required_when:
+        - terminal_state == BLOCKED
+  style:
+    concise: true
+    evidence_over_narrative: true
+    private_reasoning_exposed: false
+semantic_boundary:
+  owns:
+    - success_definition
+    - false_completion_detection
+    - convergence_evidence_requirements
+  does_not_own:
+    - architectural_integrity_law
+    - workflow_routing
+    - evaluator_terminal_semantics

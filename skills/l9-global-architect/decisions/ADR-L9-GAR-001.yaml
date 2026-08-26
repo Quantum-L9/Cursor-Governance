@@ -1,0 +1,250 @@
+adr:
+  id: ADR-L9-GAR-001
+  title: Adopt a machine-readable Global Architect Runtime with outcome ownership
+  status: proposed
+  date: 2026-08-26
+  decision_class: architectural
+  scope: L9_agent_cognition_and_execution
+  normative: false
+context:
+  problem: 'High-capability coding agents can generate substantial implementation volume, but architectural judgment,
+    evidence discipline, coherent planning, and completion verification remain scarce. A principal-architect reasoning
+    model that cannot directly create or modify artifacts becomes a serial advisory bottleneck.
+
+    '
+  observed_gap:
+    cognition_available:
+    - repository_investigation
+    - architectural_judgment
+    - adversarial_analysis
+    - invariant_reasoning
+    - plan_improvement
+    - verification_reasoning
+    missing_in_some_hosts:
+    - filesystem_mutation
+    - archive_manipulation
+    - local_execution
+  key_insight: 'The architectural cognition should be portable independently of the host. A capable host may then
+    supply file, archive, repository, and validation tools without embedding architectural intelligence into provider-specific
+    adapters.
+
+    '
+drivers:
+- preserve_principal_architect_quality
+- gain_direct_implementation_ownership
+- minimize_prompt_drift
+- support_future_true_runtime_execution
+- keep_host_adapters_thin
+- make_completion_machine_governable
+- preserve_evidence_discipline
+- support_recursive_recovery_from_bad_premises
+decision:
+  identity: principal_architect_engineer_with_outcome_accountability
+  architecture:
+  - use_minimal_SKILL_md_as_host_bootloader
+  - store_runtime_semantics_in_machine_readable_single_owner_artifacts
+  - author_core_governance_contracts_in_native_L9_schema_aligned_shapes_where_one_file_can_legitimately_own_one_contract
+  - assign_one_semantic_owner_per_runtime_concern
+  - use_guarded_recursive_state_machine_as_sole_GAR_routing_owner
+  - separate_outcome_accountability_from_execution_obligation
+  - separate_objective_derivation_from_outcome_policy
+  - separate_integration_discovery_from_runtime_activation
+  - derive_realization_validation_and_delivery_obligations_from_objective_state
+  - make_convergence_the_only_success_definition
+  - make_requested_delivery_part_of_outcome_truth
+  - make_host_specific_tooling_non_authoritative
+  architectural_integrity_law:
+    semantic_owner: contracts/ARCHITECTURAL_INTEGRITY.yaml
+    blocking_properties:
+    - unearned_complexity
+    - fuzzy_ownership
+    - unsupported_material_assumptions
+    constitutional_doctrine_includes_false_completion: true
+    false_completion_semantic_owner: contracts/CONVERGENCE.yaml
+  execution_law:
+    outcome_accountability: active_for_every_user_requested_outcome_until_legal_terminal_disposition
+    execution_obligation: active_when_realization_requires_mutation_or_artifact_and_authority_and_capability_allow
+    blocked_execution_does_not_end_accountability: true
+  future_runtime_direction:
+    authoring_format: yaml
+    normalized_execution_format: canonical_json
+    canonicalization: deterministic
+    semantic_digest: sha256
+    prose_projection: generated_non_authoritative
+  integration_law:
+    repository_presence_proves: discovery_only
+    integrated_activation_requires:
+    - active_runtime_binding_observed
+    - compatible_runtime_version
+    - orchestration_authority_transferred
+    - execution_path_available
+    - activation_evidence
+    default: STANDALONE
+  completion_law:
+    semantic_owner: contracts/CONVERGENCE.yaml
+    requirements_include:
+    - positive_verification_closure
+    - objective_derived_realization
+    - objective_derived_validation
+    - objective_derived_delivery
+    capability_absence_cannot_erase_requirement: true
+  schema_direction:
+    core_contracts:
+      contracts/ARCHITECTURAL_INTEGRITY.yaml: canonical.schema.invariant_contract.v1
+      contracts/EPISTEMIC_DISCIPLINE.yaml: canonical.schema.invariant_contract.v1
+      contracts/OUTCOME_OWNERSHIP.yaml: canonical.schema.policy_contract.v1
+      contracts/CONVERGENCE.yaml: canonical.schema.evidence_contract.v1
+      runtime/STATE_MACHINE.yaml: canonical.schema.workflow_contract.v1
+    custom_GAR_formats_reserved_for:
+    - evaluator_registry
+    - run_state
+    - objective_derivation
+    - architect_kernel
+    - kill_patterns
+    - integration_binding
+    - behavior_evals
+    gar_to_canonical_compiler_claimed: false
+alternatives_considered:
+- id: ALT-001
+  name: prose_heavy_skill
+  disposition: rejected
+  reason:
+  - semantics_drift_across_prompt_edits
+  - difficult_to_validate_mechanically
+  - difficult_to_compile_into_future_runtime
+  - encourages_duplicate_explanations_of_same_rule
+- id: ALT-002
+  name: auditor_only_skill
+  disposition: rejected
+  reason:
+  - preserves_current_execution_bottleneck
+  - fails_to_add_outcome_ownership
+  - produces_advice_instead_of_artifacts
+- id: ALT-003
+  name: builder_first_agent
+  disposition: rejected
+  reason:
+  - privileges_mutation_before_understanding
+  - increases_probability_of_local_optimum_global_damage
+  - underuses_principal_architect_cognition
+- id: ALT-004
+  name: custom_chatgpt_execution_transport_first
+  disposition: deferred
+  reason:
+  - unnecessary_before_testing_cognition_on_existing_file_capable_hosts
+  - adds_transport_architecture_before_proving_need
+  - violates_complexity_must_be_earned
+- id: ALT-005
+  name: fixed_investigate_verify_analyze_plan_build_pipeline
+  disposition: rejected
+  reason:
+  - imposes_same_ceremony_on_different_risk_profiles
+  - handles_recursive_failure_poorly
+  - cannot_reopen_earliest_invalid_state_cleanly
+consequences:
+  positive:
+  - architecture_and_implementation_become_one_owned_lifecycle
+  - plain_tool_capable_chat_hosts_can_execute_the_same_cognition
+  - semantic_contracts_can_be_consumed_by_future_runtime_engines
+  - host_specific_adapters_remain_thin
+  - completion_becomes_explicit_and_fail_closed
+  - architectural_defects_cannot_be_averaged_away_by_local_benefits
+  - false_certainty_and_false_completion_receive_explicit_runtime_states
+  negative:
+  - machine_contracts_require_schema_and_eval_discipline
+  - semantic_predicates_still_require_model_judgment_in_v0
+  - YAML_interpretation_requires_future_normalization_for_strict_execution
+  - runtime_can_be_more_expensive_than_naive_code_generation_on_hard_tasks
+  accepted_costs:
+  - additional_pre_mutation_reasoning_on_material_changes
+  - explicit_evidence_tracking
+  - recursive_replanning_when_premises_fail
+constraints:
+- skill_must_not_grant_capabilities
+- capability_must_not_grant_authority
+- machine_semantics_must_not_be_duplicated_in_SKILL_md
+- generated_human_docs_must_not_become_semantic_owners
+- host_adapters_must_not_copy_architectural_brain
+- terminal_success_must_require_convergence
+- private_chain_of_thought_must_not_be_required_for_auditability
+promotion:
+  candidates:
+  - artifact: contracts/ARCHITECTURAL_INTEGRITY.yaml
+    target: L9_architecture_law
+  - artifact: contracts/OUTCOME_OWNERSHIP.yaml
+    target: L9_execution_policy
+  - artifact: runtime/STATE_MACHINE.yaml
+    target: canonical_workflow_contract
+  required_before_binding:
+  - native_schema_shape_validation
+  - contract_dependency_acyclicity_check
+  - state_transition_reachability_check
+  - evaluator_and_reason_reference_check
+  - trigger_evals
+  - behavior_evals
+  - repository_zip_build_eval
+  - escape_route_eval_set_15_through_26
+  - false_completion_eval
+  - delivery_eval
+  - tool_capability_degradation_eval
+confirmation:
+  hypothesis: 'Loading this runtime into a ChatGPT host with repository or archive input, file mutation, and validation
+    tools should produce materially more architecturally coherent autonomous implementation than a normal coding
+    assistant while preserving the Global Architect Mentor reasoning style.
+
+    '
+  falsifiers:
+  - runtime_becomes_auditor_and_fails_to_build
+  - runtime_builds_before_sufficient_investigation
+  - runtime_adds_more_complexity_than_baseline_agent
+  - runtime_repeatedly_asks_permission_for_authorized_local_work
+  - runtime_claims_capabilities_not_present
+  - runtime_stops_at_plan_despite_available_authorized_mutation
+  - runtime_reports_success_without_convergence
+  - runtime_cannot_recover_when_its_initial_architecture_is_wrong
+  success_signals:
+  - investigates_before_material_mutation
+  - identifies_existing_ownership_before_adding_structure
+  - improves_or_rejects_weak_initial_plan
+  - creates_actual_requested_files
+  - repairs_own_failed_implementation
+  - reports_specific_blocks_only_when_real
+  - converges_without_false_completion
+  - maintains_lower_complexity_than_equivalent_naive_solution
+remediation_v0_4:
+  trigger: adversarial_self_attack_of_v0.3
+  resolved_blockers:
+  - boot_sequence_wrote_run_state_before_instantiating_it
+  - outcome_policy_consumed_inputs_it_was_also_deriving
+  - user_outcome_requested_input_typed_boolean_but_sourced_from_outcome_text
+  - verification_action_required_validate_capability
+  - policy_contract_evaluated_as_generic_satisfaction_target
+  - integration_fell_back_to_standalone_after_authority_transfer
+  - block_receipts_proved_shape_not_legitimacy
+  - evaluator_and_evidence_result_vocabularies_had_no_declared_normalization
+  - objective_derivation_was_open_to_obligation_manipulation
+  ownership_corrections:
+  - objective_derivation_is_a_separate_semantic_owner_from_outcome_policy
+  - verification_owns_the_proof_question_while_host_validation_only_produces_evidence
+  - convergence_checks_policy_compliance_evidence_not_policy_truth
+  - authority_transfer_is_hysteretic_with_explicit_release_only
+  - evaluator_registry_owns_the_sole_result_normalization_map
+  new_artifacts:
+  - contracts/OBJECTIVE_DERIVATION.yaml
+remediation_v0_3:
+  trigger: adversarial_self_attack_of_v0.2
+  resolved_blockers:
+  - convergence_dependency_cycle
+  - outcome_ownership_deactivation_on_block
+  - repository_presence_runtime_activation
+  - RAPID_unprovable_plan_gate
+  - nonmutating_terminal_gap
+  - incomplete_block_routing
+  - exploitable_convergence_applicability
+  - missing_delivery_truth
+  ownership_corrections:
+  - state_machine_is_sole_routing_owner
+  - convergence_is_sole_completion_owner
+  - evaluator_registry_has_no_terminal_semantics
+  - architect_kernel_references_law_without_owning_it
+  - SKILL_md_is_bootloader_only

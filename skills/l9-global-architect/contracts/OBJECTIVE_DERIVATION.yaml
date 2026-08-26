@@ -1,0 +1,259 @@
+derivation:
+  derivation_id: L9.GAR.OBJECTIVE_DERIVATION.001
+  version: 0.4.0
+  artifact_class: objective_derivation_contract
+  status: review
+  semantic_owner: contracts/OBJECTIVE_DERIVATION.yaml
+purpose:
+  assertion: >
+    Deterministically derive normalized objective facts from raw current user
+    intent so that contracts/OUTCOME_OWNERSHIP.yaml can consume them as
+    authoritative policy inputs. Derivation and policy are distinct
+    responsibilities: this contract produces facts; the outcome policy
+    produces decisions and obligations from those facts.
+  non_goals:
+    - grant_or_deny_execution_permission
+    - own_outcome_accountability
+    - own_workflow_routing
+    - own_convergence_semantics
+inputs:
+  - name: raw_user_intent
+    source: $.objective.raw_user_intent_ref
+    truth_source: current_explicit_user_turn
+    required: true
+  - name: requested_outcome
+    source: $.objective.requested_outcome
+    truth_source: current_explicit_user_turn
+    required: true
+outputs:
+  state_targets:
+    - $.objective.requested
+    - $.objective.realization_mode
+    - $.objective.realization_mode_source
+    - $.objective.validation_required
+    - $.objective.acceptance_conditions
+    - $.delivery.required
+    - $.delivery.mode
+  law: >
+    Every output is written exactly once per derivation and stamped with the
+    rule id that produced it. An output without a recorded rule id is not a
+    derived fact and MUST NOT satisfy a policy input.
+requested_derivation:
+  output: $.objective.requested
+  type: boolean
+  rules:
+    - id: RQ-001
+      when: current_user_turn_expresses_an_outcome_to_produce_or_a_question_to_answer
+      result: true
+    - id: RQ-002
+      when: current_user_turn_contains_no_actionable_outcome
+      result: false
+  law: >
+    $.objective.requested is a derived boolean flag. It is never the requested
+    outcome text itself; the outcome text lives in
+    $.objective.requested_outcome.
+realization_mode:
+  output: $.objective.realization_mode
+  values:
+    - MUTATION
+    - ARTIFACT
+    - ANALYSIS
+    - DECISION
+    - UNKNOWN
+  closed_rule_set: true
+  mixed_intent_precedence:
+    - MUTATION
+    - ARTIFACT
+    - DECISION
+    - ANALYSIS
+  rules:
+    - id: RM-001
+      when_user_explicitly_requests_any:
+        - fix
+        - repair
+        - implement
+        - modify
+        - update
+        - refactor
+        - delete
+        - change_repository_or_existing_artifact
+      result: MUTATION
+    - id: RM-002
+      when_user_requests_new_deliverable_without_target_state_mutation:
+        - create_file
+        - create_archive
+        - create_pack
+        - generate_artifact
+      result: ARTIFACT
+    - id: RM-003
+      when_user_requests_architectural_selection_or_design_without_mutation_or_artifact:
+        - decide
+        - select_architecture
+        - design_interface
+      result: DECISION
+    - id: RM-004
+      when_user_requests_only_nonmutating_understanding:
+        - analyze
+        - explain
+        - review
+        - identify_root_cause
+      result: ANALYSIS
+    - id: RM-005
+      when: no_rule_above_matches_deterministically
+      result: UNKNOWN
+  ambiguity_rule: >
+    If current explicit intent cannot be deterministically classified and the
+    classification changes execution, validation, or delivery obligations,
+    set UNKNOWN and investigate rather than selecting the cheaper mode.
+  mixed_intent_rule: >
+    A prompt such as analyze_and_repair retains MUTATION because analysis is
+    preparatory to the explicitly requested change.
+validation_derivation:
+  output: $.objective.validation_required
+  type: boolean
+  fail_closed: true
+  rules:
+    - id: VD-001
+      when:
+        - realization_mode in [MUTATION, ARTIFACT]
+      result: true
+    - id: VD-002
+      when:
+        - realization_mode in [ANALYSIS, DECISION]
+        - acceptance_conditions_reference_verifiable_properties == true
+      result: true
+    - id: VD-003
+      when:
+        - user_explicitly_waives_validation == true
+        - higher_authority_does_not_require_validation == true
+      result: false
+    - id: VD-004
+      when: validation_requirement_cannot_be_deterministically_derived
+      result: true
+  law: >
+    Validation requirement defaults closed. Capability state, effort cost,
+    and tool availability are forbidden inputs to this derivation.
+delivery_derivation:
+  outputs:
+    - $.delivery.required
+    - $.delivery.mode
+  modes:
+    - IN_PLACE_WORKSPACE
+    - RETURNED_FILES
+    - RETURNED_ARCHIVE
+    - PERSISTED_REPOSITORY
+    - NONE
+  closed_rule_set: true
+  rules:
+    - id: DL-001
+      when:
+        - user_requests_archive_or_pack
+      mode: RETURNED_ARCHIVE
+      required: true
+    - id: DL-002
+      when:
+        - user_requests_files_for_download
+      mode: RETURNED_FILES
+      required: true
+    - id: DL-003
+      when:
+        - authorized_repository_write_is_the_requested_terminal_location
+      mode: PERSISTED_REPOSITORY
+      required: true
+    - id: DL-004
+      when:
+        - user_explicitly_requests_workspace_only_outcome
+      mode: IN_PLACE_WORKSPACE
+      required: true
+    - id: DL-005
+      when:
+        - realization_mode in [MUTATION, ARTIFACT]
+        - realized_outcome_would_exist_only_in_an_ephemeral_workspace_the_operator_cannot_reach
+      mode: RETURNED_FILES
+      required: true
+    - id: DL-006
+      when:
+        - no_deliverable_or_persisted_change_is_deterministically_part_of_objective
+      mode: NONE
+      required: false
+    - id: DL-007
+      when: delivery_requirement_cannot_be_deterministically_derived
+      mode: null
+      required: null
+      disposition: blocking_unknown
+  law: >
+    Existence in an ephemeral workspace does not satisfy RETURNED_FILES,
+    RETURNED_ARCHIVE, or PERSISTED_REPOSITORY. An underivable delivery
+    requirement is a blocking unknown, never NONE.
+acceptance_conditions_derivation:
+  output: $.objective.acceptance_conditions
+  rules:
+    - id: AC-001
+      rule: >
+        Record every explicit user acceptance condition verbatim as a
+        condition entry with an evidence reference to the user turn.
+    - id: AC-002
+      rule: >
+        Record objective-implied conditions (requested behavior observable,
+        requested artifact present, requested delivery observed) as derived
+        entries stamped with this rule id.
+    - id: AC-003
+      rule: >
+        Acceptance conditions may be added by new explicit user input at any
+        time; they may never be removed or weakened by the runtime.
+closure_laws:
+  - id: OD-001
+    rule: >
+      Derivation consumes only current explicit user intent, recorded
+      objective evidence, and loaded authoritative contracts. Agent
+      preference, effort cost, capability state, tool availability, and
+      convenience are forbidden derivation inputs.
+  - id: OD-002
+    rule: >
+      Derived obligations may be narrowed only by new explicit user
+      instruction. Reclassification after work has begun requires new
+      explicit user input; the runtime MUST NOT re-derive a cheaper
+      realization, validation, or delivery obligation on its own initiative.
+  - id: OD-003
+    rule: >
+      Every derived output records the producing rule id in
+      $.objective.derivation_rule_ids (or $.delivery.derivation_rule_id for
+      delivery outputs) so the derivation is auditable and replayable.
+  - id: OD-004
+    rule: >
+      An UNKNOWN or blocking-unknown derivation result is preserved as
+      blocking state; it MUST NOT silently evaluate to the permissive value
+      of any downstream policy input.
+  - id: OD-005
+    rule: >
+      contracts/OUTCOME_OWNERSHIP.yaml consumes these outputs as policy
+      inputs and MUST NOT re-derive them. This contract does not read any
+      value that it also writes.
+enforcement:
+  validators:
+    - runtime/EVALUATOR_REGISTRY.yaml#EVAL-DETERMINISTIC-PREDICATE
+    - runtime/EVALUATOR_REGISTRY.yaml#EVAL-HYBRID
+  runtime_gates:
+    - boot_DERIVE_OBJECTIVE
+    - objective_rederivation_on_new_user_input
+provenance:
+  origin: authored
+  source_refs:
+    - GAR-v0.3-outcome-ownership-realization-derivation
+    - GAR-v0.4-p0-remediation
+  rationale_refs:
+    - decisions/ADR-L9-GAR-001.yaml
+semantic_boundary:
+  owns:
+    - raw_intent_to_objective_fact_derivation
+    - realization_mode_derivation
+    - validation_requirement_derivation
+    - delivery_requirement_derivation
+    - acceptance_condition_normalization
+  does_not_own:
+    - outcome_accountability
+    - execution_obligation
+    - permission_policy
+    - block_receipt_semantics
+    - workflow_routing
+    - convergence_definition

@@ -1,0 +1,287 @@
+catalog:
+  catalog_id: L9.ARCHITECTURE.KILL_PATTERNS.001
+  version: 0.1.0
+  normative: false
+  semantic_owner: catalogs/KILL_PATTERNS.yaml
+usage:
+  purpose: >
+    High-signal architectural defect hypotheses that trigger investigation.
+    Presence of a signal is not automatic proof of a defect.
+  rule:
+    - detect_signal
+    - gather_counterevidence
+    - classify
+    - remediate_only_if_confirmed
+patterns:
+  - id: KP-001
+    name: duplicate_source_of_truth
+    category: ownership
+    default_severity: critical
+    signals:
+      - same_authoritative_fact_stored_in_multiple_places
+      - independent_writers_for_same_truth
+      - reconciliation_required_without_explicit_coordination_model
+    defect_when:
+      - no_single_canonical_owner
+      - no_explicit_consistency_protocol
+    counterevidence:
+      - one_copy_is_derived_non_authoritative
+      - explicit_replication_protocol_exists
+    preferred_response:
+      - establish_canonical_owner
+      - derive_or_project_secondary_views
+      - remove_shadow_authority
+  - id: KP-002
+    name: shadow_ownership
+    category: ownership
+    default_severity: critical
+    signals:
+      - adapter_or_helper_decides_shared_policy
+      - lifecycle_decisions_duplicated_across_modules
+      - hidden_mutation_outside_declared_owner
+    defect_when:
+      - component_can_change_shared_truth_without_owner_contract
+    counterevidence:
+      - explicit_delegation_contract
+      - bounded_transactional_coordination
+    preferred_response:
+      - move_decision_to_canonical_owner
+      - reduce_adapter_to_translation_or_transport
+  - id: KP-003
+    name: copied_brain
+    category: architecture
+    default_severity: high
+    signals:
+      - same_policy_reimplemented_for_multiple_providers
+      - copied_scheduler_logic
+      - copied_validation_logic
+      - copied_context_compilation
+    defect_when:
+      - reusable_behavior_has_multiple_semantic_owners
+    counterevidence:
+      - implementations_are_intentionally_independent_domains
+    preferred_response:
+      - move_reusable_behavior_upstream
+      - leave_provider_specific_binding_thin
+  - id: KP-004
+    name: speculative_abstraction
+    category: complexity
+    default_severity: high
+    signals:
+      - generic_interface_with_one_real_consumer
+      - extension_points_without_evidenced_extension
+      - plugin_system_without_plugins
+      - future_proofing_as_primary_rationale
+    defect_when:
+      - abstraction_has_no_stable_current_responsibility
+    counterevidence:
+      - committed_near_term_multi_consumer_requirement
+      - abstraction_encodes_real_domain_boundary
+    preferred_response:
+      - inline
+      - simplify
+      - defer_until_pressure_exists
+  - id: KP-005
+    name: cross_boundary_mutation
+    category: boundary
+    default_severity: critical
+    signals:
+      - module_writes_another_modules_internal_state
+      - direct_database_write_bypasses_domain_owner
+      - shared_object_mutated_from_unrelated_layer
+    defect_when:
+      - mutation_bypasses_canonical_owner_or_contract
+    counterevidence:
+      - explicit_shared_transaction_owner
+    preferred_response:
+      - route_mutation_through_owner
+      - expose_narrow_command_contract
+  - id: KP-006
+    name: retry_without_idempotency
+    category: temporal
+    default_severity: critical
+    signals:
+      - automatic_retry
+      - message_redelivery
+      - network_timeout_retry
+      - worker_replay
+    defect_when:
+      - repeated_operation_can_duplicate_irreversible_effect
+    counterevidence:
+      - operation_is_proven_idempotent
+      - deduplication_key_and_semantics_exist
+      - transaction_guarantees_single_effect
+    preferred_response:
+      - define_idempotency_key
+      - deduplicate_at_authoritative_boundary
+      - redesign_retry_semantics
+  - id: KP-007
+    name: queue_without_backpressure
+    category: scale
+    default_severity: high
+    signals:
+      - unbounded_producer
+      - queue_growth_not_bounded
+      - worker_capacity_lower_than_possible_input_rate
+    defect_when:
+      - overload_behavior_is_undefined
+    counterevidence:
+      - bounded_input_envelope
+      - upstream_admission_control
+      - durable_capacity_with_explicit_operational_limit
+    preferred_response:
+      - define_admission_control
+      - define_queue_bound
+      - define_shedding_or_degradation
+  - id: KP-008
+    name: cache_without_invalidation_owner
+    category: state
+    default_severity: high
+    signals:
+      - cached_mutable_data
+      - no_staleness_contract
+      - multiple_cache_writers
+      - cache_treated_as_truth
+    defect_when:
+      - invalidation_or_freshness_semantics_are_undefined
+    counterevidence:
+      - immutable_content_addressed_cache
+      - bounded_staleness_is_explicitly_acceptable
+    preferred_response:
+      - assign_invalidation_owner
+      - define_freshness_contract
+      - remove_cache_if_not_earned
+  - id: KP-009
+    name: distributed_lock_as_ownership_patch
+    category: coordination
+    default_severity: high
+    signals:
+      - lock_added_to_coordinate_competing_authorities
+      - lock_used_before_owner_is_identified
+    defect_when:
+      - lock_masks_duplicate_ownership_or_split_authority
+    counterevidence:
+      - single_logical_owner_requires_mutual_exclusion_across_instances
+      - lease_semantics_are_explicit_and_failure_safe
+    preferred_response:
+      - fix_ownership_first
+      - use_coordination_only_if_still_required
+  - id: KP-010
+    name: silent_semantic_fallback
+    category: failure
+    default_severity: critical
+    signals:
+      - exception_causes_different_behavior_without_surface_signal
+      - missing_dependency_switches_algorithm
+      - failed_validation_defaults_to_success
+      - unsupported_capability_emulated_incompletely
+    defect_when:
+      - fallback_changes_required_semantics_without_explicit_contract
+    counterevidence:
+      - degraded_mode_is_documented_and_acceptable
+      - caller_can_observe_and_handle_degradation
+    preferred_response:
+      - fail_closed
+      - expose_degraded_state
+      - define_explicit_fallback_contract
+  - id: KP-011
+    name: tautological_verification
+    category: verification
+    default_severity: high
+    signals:
+      - test_repeats_implementation_logic
+      - mocked_system_cannot_fail_in_target_way
+      - test_asserts_internal_call_instead_of_requirement
+      - snapshot_only_proves_generated_shape
+    defect_when:
+      - evidence_cannot_discriminate_requirement_failure
+    counterevidence:
+      - independent_behavioral_or_structural_check_exists
+    preferred_response:
+      - test_external_contract
+      - add_negative_case
+      - reproduce_original_failure
+  - id: KP-012
+    name: false_completion
+    category: execution
+    default_severity: critical
+    signals:
+      - recommendation_given_when_mutation_was_required_and_possible
+      - files_described_but_not_created
+      - tests_claimed_but_not_run
+      - known_failure_left_unresolved_without_block
+      - partial_objective_reported_as_done
+    defect_when:
+      - convergence_contract_not_satisfied
+    counterevidence:
+      - explicit_capability_block
+      - explicit_authority_block
+      - user_requested_analysis_only
+    preferred_response:
+      - resume_earliest_incomplete_runtime_state
+  - id: KP-013
+    name: local_optimum_global_damage
+    category: architecture
+    default_severity: critical
+    signals:
+      - module_becomes_cleaner_by_exporting_complexity_to_neighbors
+      - dependency_cycle_created_for_local_convenience
+      - new_local_state_duplicates_global_state
+      - shared_invariant_broken_to_simplify_single_component
+    defect_when:
+      - local_improvement_reduces_system_coherence
+    counterevidence:
+      - global_boundary_intentionally_changed_and_migration_is_complete
+    preferred_response:
+      - optimize_system_boundary
+      - reject_local_convenience
+  - id: KP-014
+    name: abstraction_by_noun
+    category: complexity
+    default_severity: medium
+    signals:
+      - manager_factory_service_controller_added_without_distinct_responsibility
+      - class_exists_only_to_rename_calls
+      - wrapper_adds_no_policy_translation_or_isolation
+    defect_when:
+      - abstraction_does_not_own_a_real_decision_or_boundary
+    counterevidence:
+      - wrapper_is_required_adapter
+      - wrapper_enforces_boundary_or_policy
+      - wrapper_is_stable_domain_interface
+    preferred_response:
+      - remove_wrapper
+      - merge_with_actual_owner
+  - id: KP-015
+    name: temporal_coupling_without_contract
+    category: temporal
+    default_severity: high
+    signals:
+      - operation_requires_undocumented_call_order
+      - state_valid_only_after_hidden_initialization
+      - asynchronous_side_effect_assumed_complete
+      - cleanup_depends_on_untracked_prior_action
+    defect_when:
+      - correctness_requires_ordering_not_enforced_or_declared
+    counterevidence:
+      - state_machine_or_transaction_enforces_order
+    preferred_response:
+      - encode_transition
+      - make_precondition_explicit
+      - remove_order_dependency
+  - id: KP-016
+    name: config_as_architecture
+    category: complexity
+    default_severity: medium
+    signals:
+      - many_flags_select_incompatible_system_shapes
+      - configuration_owns_policy_that_should_have_single_authority
+      - toggles_compensate_for_unclear_boundary
+    defect_when:
+      - configuration_creates_multiple_implicit_architectures
+    counterevidence:
+      - variability_is_real_supported_product_requirement
+      - each_mode_has_explicit_contract_and_owner
+    preferred_response:
+      - collapse_invalid_variants
+      - promote_true_policy_to_canonical_owner
