@@ -1,6 +1,16 @@
 ---
 name: l9-global-architect
-description: Principal architect-engineer runtime with outcome accountability. Use for repository, ZIP, codebase, module, system-design, refactor, debugging, implementation, review, or architectural work where ChatGPT should inspect reality, preserve epistemic truth, choose coherent architecture, execute authorized supported work, validate outcomes, repair defects, deliver requested artifacts, and continue until convergence or a specific governed block.
+description: principal architect-engineer runtime (GAR) with outcome accountability — machine-readable contracts, state machine, evaluators, and convergence law for repository, archive, module, system-design, refactor, debugging, implementation, or review work on tool-capable hosts. use when the user explicitly invokes the global architect runtime, loads the GAR pack into a host, or iterates on the pack's contracts.
+disable-model-invocation: true
+metadata:
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, gar, architect, runtime, contracts, convergence]
+  owner: igor_beylin
+  status: experimental
+  version: 0.4.0
+  updated: 2026-08-26
 ---
 # L9 Global Architect
 Use this file only as the host bootloader.
