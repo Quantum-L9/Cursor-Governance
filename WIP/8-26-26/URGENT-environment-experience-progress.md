@@ -1,9 +1,10 @@
 # 🔴 URGENT — Environment Experience Improvement Pack: progress + next slice
 
 **Assessed:** 2026-08-26, against `main` after PR #307 merged.
-**Artifact:** [`URGENT-environment-experience-progress-p307.zip`](./URGENT-environment-experience-progress-p307.zip)
-(full annotated pack; `PROGRESS.md` inside is the human view, `progress.yaml` the machine view).
-Unzipped alongside at [`environment_experience_improvement_pack_p307/`](./environment_experience_improvement_pack_p307/).
+**Artifact (expanded, no zip):** [`environment_experience_improvement_pack_p307/`](./environment_experience_improvement_pack_p307/)
+— [`PROGRESS.md`](./environment_experience_improvement_pack_p307/PROGRESS.md) is the human view,
+[`progress.yaml`](./environment_experience_improvement_pack_p307/progress.yaml) the machine view,
+per-record progress under each entry's `progress:` key in `improvements.yaml`.
 
 ## Status: 2 done · 9 partial · 25 not started (of 36)
 
