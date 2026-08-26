@@ -927,7 +927,7 @@
     },
     {
       "path": "compiler/architecture_extractor.py",
-      "sha256": "c6fe5162e18704472db9f0cce938e230863fd6ac50ddd4d48d28088795197d2e"
+      "sha256": "6cb4d6c72641eafea101bfd8d60b4a1c0a5570b412e4632ec95c1d160f4a6557"
     },
     {
       "path": "compiler/architecture_intent.py",

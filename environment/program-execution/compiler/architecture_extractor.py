@@ -19,12 +19,12 @@ import json
 import os
 import re
 import shutil
-import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Protocol
 
 from jsonschema import Draft202012Validator
+from peer_execution.subprocess_runner import run_argv
 
 from .architecture_coverage import CoverageResult, audit_coverage
 from .architecture_intent import SourceDocument, SourceUnit
@@ -582,26 +582,30 @@ class ClaudeCodeExtractor:
         if self.model:
             argv.extend(["--model", self.model])
         payload = json.dumps(request.to_dict(), ensure_ascii=False)
+        # Invocation goes through the canonical validated subprocess boundary
+        # (argv normalization, no shell, stdin payload, process-group kill on
+        # timeout). Home is the cwd so no repository content shapes the run.
         try:
-            result = subprocess.run(  # noqa: S603 - fixed argv, stdin payload
+            result = run_argv(
                 argv,
-                input=payload,
-                capture_output=True,
-                text=True,
-                timeout=self.timeout_s,
+                cwd=Path.home(),
+                timeout_seconds=self.timeout_s,
+                stdin=payload,
             )
-        except subprocess.TimeoutExpired as exc:
+        except FileNotFoundError as exc:
+            raise ExtractorUnavailable(f"claude executable not found: {exc}") from exc
+        except (ValueError, NotADirectoryError, OSError) as exc:
+            raise ExtractorError(f"claude extractor could not start: {exc}") from exc
+        if result.timed_out:
             raise ExtractorError(
                 f"claude extractor timed out after {self.timeout_s}s "
                 f"(role={request.role}, units={len(request.units)})"
-            ) from exc
-        except OSError as exc:
-            raise ExtractorError(f"claude extractor could not start: {exc.strerror}") from exc
+            )
         if len(result.stdout.encode("utf-8", "replace")) > self.max_output_bytes:
             raise ExtractorError("claude extractor output exceeded the size bound")
-        if result.returncode != 0:
+        if result.exit_code != 0:
             detail = (result.stderr or result.stdout or "").strip()[:400]
-            raise ExtractorError(f"claude extractor exited {result.returncode}: {detail}")
+            raise ExtractorError(f"claude extractor exited {result.exit_code}: {detail}")
         return ArchitectureExtractorResponse.from_dict(self._parse_reply(result.stdout))
 
     @staticmethod
