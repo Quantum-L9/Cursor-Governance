@@ -943,7 +943,7 @@
     },
     {
       "path": "compiler/architecture_to_campaign.py",
-      "sha256": "7144420a7d7904d2b0bc3e8e6c3919b8696d5f5dd8fe0678878593ad8eadc35b"
+      "sha256": "8544a38eaac0bf9df111a1ca5ec0a710555f9ad4219ad785278964f89ab67ca1"
     },
     {
       "path": "compiler/blueprint_validate.py",
@@ -1767,7 +1767,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "a7829918460202d6877acd99e9eaee47845f4c72a3c5c3576d23f2d3c08180d1"
+      "sha256": "b94cb67b9ca68042b9cbfeed3a0dcc6a8e741317b18735601df1ab1032b924f8"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1799,7 +1799,7 @@
     },
     {
       "path": "scripts/tests/test_compile_architecture_intent.py",
-      "sha256": "cc6bfc81941a8d937d019bd8642ddfff44074fc93563c0536ae8eae57b4168b7"
+      "sha256": "5bc596d719b19e9e6722c41ba3fe49d8a21ffd4170812ca6512a6f49c4aeae3a"
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
@@ -1855,7 +1855,7 @@
     },
     {
       "path": "scripts/tests/test_run_campaign.py",
-      "sha256": "9ee08bede71be1144512297850567eed527d47c052827c2738710a7e9dd858fa"
+      "sha256": "5de708feb78a7d18d1b4e95b098c00b619cf956393e0fa2dfef42edf21a9223d"
     },
     {
       "path": "scripts/tests/test_run_peer_task_pipeline.py",

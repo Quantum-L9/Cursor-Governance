@@ -221,12 +221,16 @@ Budget downgrade MUST remain within the capability family.
 """
 
 
+SEEN_TARGET_CHECKOUTS: list[object] = []
+
+
 def _architecture_hook(intent, *, target, repo_root, primed_dir, target_checkout=None):
     """Run the real architecture compiler with the deterministic extractor.
 
     Real compilation, no live model: the route under test is the wiring, and a
     test that needed a model could not assert on it.
     """
+    SEEN_TARGET_CHECKOUTS.append(target_checkout)
     module = _load(
         "compile_architecture_intent_route_test",
         SCRIPT.parent / "compile_architecture_intent.py",
@@ -467,6 +471,65 @@ class RunCampaignTests(unittest.TestCase):
             self.assertEqual({task["definition_status"] for task in source["tasks"]}, {"ready"})
             self.assertEqual(source["intent_provenance"]["coverage"]["status"], "PASS")
             self.assertTrue(source["prohibited_paths"])
+
+    def test_an_existing_target_checkout_reaches_the_architecture_compiler(self) -> None:
+        """Repository grounding is unreachable if the route never passes a checkout."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            (root / "arch.md").write_text(ARCHITECTURE_DOC, encoding="utf-8")
+            checkout = Path(raw) / "target-clone"
+            (checkout / "src").mkdir(parents=True)
+            (checkout / "package.json").write_text(
+                json.dumps({"scripts": {"test": "vitest run", "lint": "eslint src/"}}),
+                encoding="utf-8",
+            )
+            other_primary = Path(raw) / "other-primary"
+            other_primary.mkdir()
+            SEEN_TARGET_CHECKOUTS.clear()
+            report = self.mod.run_campaign(
+                root / "arch.md",
+                forced_kind=(
+                    self.mod.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
+                ),
+                until="activate",
+                primary=other_primary,
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                target_override="Quantum-L9/LLM-Router",
+                target_checkout=checkout,
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_architecture=_architecture_hook,
+                ),
+            )
+            self.assertEqual(SEEN_TARGET_CHECKOUTS, [checkout.resolve()])
+            source = yaml.safe_load(
+                (
+                    root
+                    / "environment/program-execution/campaigns"
+                    / report.campaign_id
+                    / "CAMPAIGN_SOURCE.yaml"
+                ).read_text(encoding="utf-8")
+            )
+            commands = {
+                entry.get("command")
+                for task in source["tasks"]
+                for entry in task["validation"]
+                if entry.get("command")
+            }
+            self.assertIn("npm test", commands)
+
+    def test_a_missing_target_checkout_is_never_created(self) -> None:
+        """Grounding is read-only; a path that does not exist resolves to None."""
+        with tempfile.TemporaryDirectory() as raw:
+            absent = Path(raw) / "not-there"
+            self.assertIsNone(self.mod.existing_target_checkout(absent))
+            self.assertFalse(absent.exists())
+            self.assertIsNone(self.mod.existing_target_checkout(None))
+            present = Path(raw) / "there"
+            present.mkdir()
+            self.assertEqual(self.mod.existing_target_checkout(present), present.resolve())
 
     def test_architecture_compile_failure_creates_no_workspace(self) -> None:
         """A source that cannot be compiled must never mint a program."""

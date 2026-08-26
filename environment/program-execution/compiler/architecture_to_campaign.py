@@ -45,7 +45,6 @@ DEFAULT_OWNER = "Igor Beylin"
 GOVERNANCE_HOST = "Quantum-L9/Cursor-Governance"
 
 TASK_KINDS = frozenset({"requirement", "constraint", "implementation_seam", "objective"})
-CONTEXT_KINDS = frozenset({"informational"})
 
 _SECTION_TITLE_LIMIT = 72
 _STATEMENT_LIMIT = 400
@@ -79,7 +78,6 @@ class RepositoryFacts:
     default_branch: str = "main"
     validation_commands: tuple[str, ...] = ()
     package_manager: str = ""
-    known_paths: frozenset[str] = frozenset()
     evidence: tuple[dict[str, str], ...] = ()
 
     def path_exists(self, candidate: str) -> bool:
@@ -138,7 +136,6 @@ def inspect_repository(root: Path | None, repository_id: str) -> RepositoryFacts
         default_branch=branch or "main",
         validation_commands=tuple(dict.fromkeys(commands)),
         package_manager=package_manager,
-        known_paths=frozenset(),
         evidence=tuple(evidence),
     )
 
@@ -372,6 +369,11 @@ def lower(
     tasks: list[dict[str, Any]] = []
     evidence_requirements: list[dict[str, Any]] = []
     discovery_by_section: dict[int, str] = {}
+    # Recorded as each task is actually created. Deriving it positionally
+    # instead — zipping ordered sections against the task list — silently
+    # shifts by one for every section that produces no task of its own, which
+    # edged a discovery task to the wrong dependent.
+    impl_by_section: dict[int, dict[str, Any]] = {}
     counter = 0
 
     def next_task_id() -> str:
@@ -502,11 +504,12 @@ def lower(
         for item in group:
             if item.kind in {"dependency", "ordering"}:
                 map_item(item.id, "task", task_id=task_id)
+        impl_by_section[section_index] = tasks[-1]
 
     if not tasks:
         raise LoweringError("architecture source produced no executable tasks")
 
-    _adopt_orphans(items, mappings, tasks, task_items, by_unit, map_item)
+    _adopt_orphans(items, mappings, tasks, impl_by_section, by_unit, map_item)
 
     # Any evidence_requirement item the source stated directly.
     for item in [entry for entry in material if entry.kind == "evidence_requirement"]:
@@ -543,7 +546,7 @@ def lower(
         )
 
     # ---- ordering ------------------------------------------------------
-    edges = _dependency_edges(tasks, discovery_by_section, task_items, by_unit)
+    edges = _dependency_edges(discovery_by_section, impl_by_section, tasks)
     for item in [entry for entry in material if entry.kind in {"dependency", "ordering"}]:
         if mappings.get(item.id):
             map_item(item.id, "dependency_edge")
@@ -810,7 +813,7 @@ def build_provenance(
             "title": intent.title,
         },
         "extractor": {
-            "id": getattr(extraction, "extractor_id", "") or "unknown",
+            "id": extraction.extractor_id or "unknown",
             "protocol": "l9.program-execution.architecture-extractor-response.v1",
             "chunks": extraction.chunks,
             "repair_rounds": extraction.repair_rounds,
@@ -1071,7 +1074,7 @@ def _adopt_orphans(
     items: Sequence[SemanticItem],
     mappings: dict[str, list[dict[str, Any]]],
     tasks: Sequence[dict[str, Any]],
-    task_items: dict[int, list[SemanticItem]],
+    impl_by_section: dict[int, dict[str, Any]],
     by_unit: dict[str, int],
     map_item: Any,
 ) -> None:
@@ -1084,19 +1087,17 @@ def _adopt_orphans(
     """
     if not tasks:
         return
-    implementation = [task for task in tasks if task["workstream_id"] != "WS-02"] or list(tasks)
-    ordered_sections = sorted(task_items)
-    section_task: dict[int, dict[str, Any]] = {}
-    for position, section_index in enumerate(ordered_sections):
-        if position < len(implementation):
-            section_task[section_index] = implementation[position]
+    fallback = next(
+        (task for task in tasks if task["workstream_id"] != "WS-02"),
+        tasks[0],
+    )
 
     def nearest(item: SemanticItem) -> dict[str, Any]:
+        if not impl_by_section:
+            return fallback
         target_section = _section_of(item, by_unit)
-        if not section_task:
-            return implementation[0]
-        best = min(section_task, key=lambda index: (abs(index - target_section), index))
-        return section_task[best]
+        best = min(impl_by_section, key=lambda index: (abs(index - target_section), index))
+        return impl_by_section[best]
 
     for item in items:
         if not item.executable or mappings.get(item.id):
@@ -1139,42 +1140,46 @@ def _adopt_orphans(
 
 
 def _dependency_edges(
-    tasks: Sequence[dict[str, Any]],
     discovery_by_section: dict[int, str],
-    task_items: dict[int, list[SemanticItem]],
-    by_unit: dict[str, int],
+    impl_by_section: dict[int, dict[str, Any]],
+    tasks: Sequence[dict[str, Any]],
 ) -> list[dict[str, str]]:
     """Discovery precedes the work that consumes it; sections stay ordered.
 
     This is where "we must first determine X" becomes a ready evidence task with
-    the implementation edged behind it, instead of a task marked blocked.
+    the implementation edged behind it, instead of a task marked blocked. The
+    edge is drawn from the section the question was asked in to the task that
+    section produced — never from a positional guess, which pointed the evidence
+    at whichever task happened to sit at the same index.
     """
-    implementation = [task for task in tasks if task["workstream_id"] != "WS-02"]
     edges: list[dict[str, str]] = []
-    impl_by_section: dict[int, str] = {}
-    ordered_sections = sorted(task_items)
-    for position, section_index in enumerate(ordered_sections):
-        if position < len(implementation):
-            impl_by_section[section_index] = implementation[position]["id"]
+    ordered_sections = sorted(impl_by_section)
+    first_impl = impl_by_section[ordered_sections[0]]["id"] if ordered_sections else None
     for section_index, discovery_id in sorted(discovery_by_section.items()):
-        dependent = impl_by_section.get(section_index)
-        if dependent is None:
-            dependent = implementation[0]["id"] if implementation else None
+        owner = impl_by_section.get(section_index)
+        if owner is None:
+            # The question was asked in a section that produced no task of its
+            # own; the nearest following section that did is what consumes it.
+            following = [index for index in ordered_sections if index > section_index]
+            dependent = impl_by_section[following[0]]["id"] if following else first_impl
+        else:
+            dependent = owner["id"]
         if dependent and dependent != discovery_id:
             edges.append({"from": discovery_id, "to": dependent})
     previous: str | None = None
     for section_index in ordered_sections:
-        current = impl_by_section.get(section_index)
-        if current is None:
-            continue
+        current = impl_by_section[section_index]["id"]
         if previous is not None:
             edges.append({"from": previous, "to": current})
         previous = current
+    known = {task["id"] for task in tasks}
     seen: set[tuple[str, str]] = set()
     unique: list[dict[str, str]] = []
     for edge in edges:
         key = (edge["from"], edge["to"])
         if key in seen or edge["from"] == edge["to"]:
+            continue
+        if edge["from"] not in known or edge["to"] not in known:
             continue
         seen.add(key)
         unique.append(edge)

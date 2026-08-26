@@ -394,6 +394,49 @@ class RepairTests(unittest.TestCase):
             for unknown in source["unknowns"]:
                 self.assertEqual(unknown["blocking_task_ids"], [])
 
+    def test_the_evidence_edge_points_at_the_task_that_consumes_it(self) -> None:
+        """A driverless section must not shift the section-to-task mapping.
+
+        Alpha states only a prohibition and a seam, so it produces no task of its
+        own. Deriving the mapping positionally shifted every later section by
+        one, and the Beta question ended up edged to Gamma — the evidence a task
+        needs, scheduled after it.
+        """
+        doc = textwrap.dedent(
+            """\
+            # Head
+
+            ## Alpha
+
+            The seam is src/alpha.ts and it MUST NOT be renamed.
+
+            ## Beta
+
+            We need to determine whether beta already holds.
+
+            Beta MUST hold.
+
+            ## Gamma
+
+            Gamma MUST hold.
+            """
+        )
+        with TemporaryDirectory() as raw:
+            path = Path(raw) / "sections.md"
+            path.write_text(doc, encoding="utf-8")
+            source = _source(_compile(Path(raw), intent=path))
+            by_id = {task["id"]: task for task in source["tasks"]}
+            discovery = next(
+                task for task in source["tasks"] if task["execution_kind"] == "read_only"
+            )
+            self.assertIn("Beta", discovery["title"])
+            dependents = [
+                by_id[edge["to"]]["title"]
+                for edge in source["dependency_edges"]
+                if edge["from"] == discovery["id"]
+            ]
+            self.assertEqual(dependents, ["Beta"])
+
     def test_a_deferred_feature_becomes_an_exclusion_not_a_stalled_task(self) -> None:
         doc = textwrap.dedent(
             """\
