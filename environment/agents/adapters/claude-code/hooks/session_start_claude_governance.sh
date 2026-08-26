@@ -371,9 +371,29 @@ PY
   LINES+=("mcp_configuration=.mcp.json is a projection of mcp.template.json (single MCP authority)")
 }
 
+# --- Final machine-readable readiness receipt (Phase 7) ---------------------
+# One truthful receipt (schema l9.claude-readiness.v1) aggregating projection,
+# MCP, Graphiti, Makefile facade, dispatcher, merge-authority posture, secret
+# boundary, and governance-SHA freshness. Written to
+# ~/.l9/claude/readiness-receipt.json; a compact block is surfaced here so the
+# operator sees the real contract, not a symlink-existence guess.
+emit_readiness_receipt() {
+  local py="$1"
+  local emitter="$GOV/ops/scripts/emit_claude_readiness.py"
+  [ -f "$emitter" ] || return 0
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
+  local block
+  block="$("$py" "$emitter" --root "$GOV" --workspace "$WORKSPACE" --read 2>/dev/null || true)"
+  [ -n "$block" ] || return 0
+  while IFS= read -r line || [ -n "$line" ]; do
+    LINES+=("$line")
+  done <<< "$block"
+}
+
 emit_bootstrap_status "$PY"
 emit_account_drift "$PY"
 emit_capability_readiness "$PY"
+emit_readiness_receipt "$PY"
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"

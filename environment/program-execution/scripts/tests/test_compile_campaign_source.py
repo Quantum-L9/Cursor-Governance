@@ -333,6 +333,68 @@ class CompileCampaignSourceTests(unittest.TestCase):
         self.assertEqual(entries[0]["method"], "inspection")
         self.assertEqual(entries[0]["command_or_inspection"], "the deliverable exists")
 
+    def test_legacy_blocked_with_dependencies_canonicalizes_to_ready(self) -> None:
+        """ADR-0023 A1: sequencing-only legacy `blocked` compiles as `ready`."""
+        source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+        task = next(item for item in source["tasks"] if item["id"] == "TASK-002")
+        task["definition_status"] = "blocked"
+        task["dependencies"] = ["TASK-001"]
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+            target = Path(raw) / "blueprint"
+            result = self.compiler.compile_source(
+                path, target, stack_proof=_pass_proof(Path(raw) / "stack-proof.json")
+            )
+            cards = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+            compiled = next(item for item in cards["tasks"] if item["id"] == "TASK-002")
+            self.assertEqual(compiled["definition_status"], "ready")
+            graph = yaml.safe_load((target / "DEPENDENCY_GRAPH.yaml").read_text(encoding="utf-8"))
+            self.assertIn(
+                ("TASK-001", "TASK-002"),
+                {(edge["from"], edge["to"]) for edge in graph["edges"]},
+            )
+            self.assertTrue(
+                any("TASK-002" in note and "canonicalized" in note for note in result["warnings"]),
+                result["warnings"],
+            )
+
+    def test_blocked_without_dependencies_refuses_compilation(self) -> None:
+        """ADR-0023 A2: `blocked` with nothing to wait on is a runtime dead-end."""
+        source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+        task = next(item for item in source["tasks"] if item["id"] == "TASK-001")
+        task["definition_status"] = "blocked"
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self.compiler.compile_source(
+                    path,
+                    Path(raw) / "out",
+                    stack_proof=_pass_proof(Path(raw) / "stack-proof.json"),
+                )
+            message = str(ctx.exception)
+            self.assertIn("unclaimable", message)
+            self.assertIn("dependencies/waves", message)
+            self.assertIn("blocking_unknown_ids", message)
+
+    def test_ordering_alias_statuses_cannot_become_task_cards(self) -> None:
+        """ADR-0023 A3: approval-shaped statuses are not task-ordering states."""
+        for alias in ("pending", "advisory", "awaiting_approval", "not_approved"):
+            with self.subTest(alias=alias):
+                source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+                source["tasks"][1]["definition_status"] = alias
+                with tempfile.TemporaryDirectory() as raw:
+                    path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+                    path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+                    with self.assertRaises(self.compiler.CompileError) as ctx:
+                        self.compiler.compile_source(
+                            path,
+                            Path(raw) / "out",
+                            stack_proof=_pass_proof(Path(raw) / "stack-proof.json"),
+                        )
+                    self.assertIn(alias, str(ctx.exception))
+
     def test_compiled_blueprint_requires_the_declared_command(self) -> None:
         source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
         task = source["tasks"][0]

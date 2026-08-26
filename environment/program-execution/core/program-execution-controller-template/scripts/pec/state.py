@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 TASK_STATES = {
+    "WAITING",
     "BLOCKED",
     "ELIGIBLE",
     "LEASED",
@@ -21,8 +22,13 @@ TASK_STATES = {
     "COMPLETED",
 }
 ALLOWED_TRANSITIONS = {
+    # WAITING: definition complete, runtime prerequisites not yet resolved into
+    # a claim (ADR-0023). Not a failure state. BLOCKED stays in the enum for
+    # legacy persisted runtimes and genuine-blocker representation, but it is
+    # no longer the initialization state for a complete task.
+    "WAITING": {"ELIGIBLE", "STALE", "CANCELLED"},
     "BLOCKED": {"ELIGIBLE", "CANCELLED", "STALE"},
-    "ELIGIBLE": {"BLOCKED", "LEASED", "COMPLETED", "CANCELLED", "STALE"},
+    "ELIGIBLE": {"WAITING", "BLOCKED", "LEASED", "COMPLETED", "CANCELLED", "STALE"},
     "LEASED": {"PREPARED", "STALE", "FAILED", "CANCELLED"},
     "PREPARED": {"CONTRACTED", "STALE", "FAILED", "CANCELLED"},
     "CONTRACTED": {"EXECUTING", "SUBMITTED", "STALE", "FAILED", "CANCELLED"},
@@ -257,7 +263,7 @@ class StateDB:
             ),
             "risk_tier": task["risk_tier"],
             "definition_status": task["definition_status"],
-            "runtime_state": current["runtime_state"] if current else "BLOCKED",
+            "runtime_state": current["runtime_state"] if current else "WAITING",
             "scope_status": current["scope_status"]
             if current
             else ("not_required" if task["execution_kind"] == "program_control" else "intent_only"),
@@ -294,8 +300,10 @@ class StateDB:
                 "last_error",
             }
         )
+        # Identifiers come from the hardcoded payload keys above; values are
+        # bound parameters.
         self.conn.execute(
-            f"INSERT INTO tasks({columns}) VALUES({placeholders}) ON CONFLICT(id) DO UPDATE SET {updates}",  # noqa: E501
+            f"INSERT INTO tasks({columns}) VALUES({placeholders}) ON CONFLICT(id) DO UPDATE SET {updates}",  # noqa: E501  # nosec B608
             payload,
         )
         self.conn.commit()
@@ -350,7 +358,12 @@ class StateDB:
         if not fields:
             return
         sets = ",".join(f"{name}=?" for name in fields)
-        self.conn.execute(f"UPDATE tasks SET {sets} WHERE id=?", [*fields.values(), task_id])
+        # Column names are validated against the `allowed` set above; values
+        # are bound parameters.
+        self.conn.execute(
+            f"UPDATE tasks SET {sets} WHERE id=?",  # nosec B608
+            [*fields.values(), task_id],
+        )
         self.conn.commit()
 
     def upsert_gate(self, gate: dict[str, Any]) -> None:
@@ -532,8 +545,11 @@ class StateDB:
         if set(fields) - allowed:
             raise ValueError("unsupported lease update")
         sets = ",".join(f"{name}=?" for name in fields)
+        # Column names are validated against the `allowed` set above; values
+        # are bound parameters.
         self.conn.execute(
-            f"UPDATE leases SET {sets} WHERE lease_id=?", [*fields.values(), lease_id]
+            f"UPDATE leases SET {sets} WHERE lease_id=?",  # nosec B608
+            [*fields.values(), lease_id],
         )
         self.conn.commit()
 

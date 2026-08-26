@@ -14,9 +14,16 @@ class DecisionUnknownTest(unittest.TestCase):
             temp = Path(raw)
             _, _, workspace = bootstrap_repo(temp, with_decision_unknown=True)
             register_contract(temp, workspace)
-            joined = json.dumps(run_cli("next", "--workspace", str(workspace)))
+            view = run_cli("next", "--workspace", str(workspace))
+            joined = json.dumps(view)
             self.assertIn("required_decision_not_accepted:DEC-001", joined)
             self.assertIn("blocking_unknown:UNK-001", joined)
+            # These are genuine blockers (ADR-0023): the task is blocked, not
+            # merely waiting, and both reasons survive in the blockers output.
+            blocked = next(item for item in view["blocked"] if item["id"] == "TASK-001")
+            self.assertIn("required_decision_not_accepted:DEC-001", blocked["blockers"])
+            self.assertIn("blocking_unknown:UNK-001", blocked["blockers"])
+            self.assertNotIn("TASK-001", [item["id"] for item in view["waiting"]])
             run_cli(
                 "set-decision",
                 "DEC-001",

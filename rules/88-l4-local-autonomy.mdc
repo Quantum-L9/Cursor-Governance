@@ -36,6 +36,12 @@ python3 ops/autonomy/l4_local.py authorize-release
 PR_REMEDIATE=0 make pr
 ```
 
+`make pr` runs the **governance** Makefile's `pr` target regardless of the
+workspace repo or its Makefile — reach it with `l9 pr` /
+`make -C "$GOV" pr WS="$PWD"` from a consumer checkout with no local `pr`
+target. A consumer needs no `pr`/`pr-check` target; there is no raw-push
+fallback where one is absent.
+
 6. Do **not** merge from the campaign / `make pr` path. Campaign end state
    is green + merge-ready. Merge only after the user invokes
    `/l9-pr-remediation` (see `rules/48-make-pr-remediation.mdc`).

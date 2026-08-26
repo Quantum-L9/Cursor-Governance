@@ -100,3 +100,16 @@ ordinary `gh pr merge --squash`. Force-push, hard-reset, destructive clean, and
 merge only after `/l9-pr-remediation` reaches green + mergeable + resolved
 review threads, oldest first. PE campaign packets still must not declare
 `autonomous_merge` (`COMPATIBILITY.yaml`).
+
+## 2026-08-26 supersession — autonomous-merge environment boolean retired
+
+Supersedes the 2026-08-17 note above. `ops/autonomy/merge_gate.py` no longer
+reads any environment boolean for merge authority: a standing variable set once
+in the account/session configuration must never grant unattended merge. The
+`L9_AUTONOMY_AUTONOMOUS_MERGE` flag is retired — it is removed from the Claude
+Code settings template and account-field SSOT (`environment.env.example`), and
+setting it has no effect. Merge is authorized only by a scoped, expiring receipt
+that `/l9-pr-remediation` writes for the target repo (and PR), or by a human
+per-session breakglass `L9_MERGE_AUTHORIZED=<reason>`. All other constraints
+above (no force-push, no `--admin`, campaigns/`make pr` do not merge, merge only
+after green + mergeable + resolved threads, oldest first) are unchanged.

@@ -16,11 +16,38 @@ import argparse
 import json
 import os
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
 
 import yaml
+
+
+def is_tracked(path: Path) -> bool:
+    """True when `path` is a git-tracked file/dir in its own repository.
+
+    CI-002 ownership guard: a repository-owned (committed) ``.claude/rules`` tree
+    must never be replaced by a generated symlink — doing so deletes the tracked
+    files and dirties the checkout. Tracked status is asked of git, never
+    inferred from cwd, branch, or mtime. A path outside any repo, or git being
+    unavailable, is "not tracked" (the reconciler then behaves as before).
+    """
+    parent = path.parent
+    if not parent.exists():
+        return False
+    try:
+        proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            ["git", "-C", str(parent), "ls-files", "--error-unmatch", path.name],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return False
+    return proc.returncode == 0
+
 
 ADAPTER_CONFIG_REL = Path("environment/skill-adapters/LLM_RULE_ADAPTER_ROOTS.yaml")
 
@@ -109,6 +136,19 @@ def reconcile_one(target: Path, ssot: Path, *, root: Path, check: bool) -> dict[
 
     if same_link(target, ssot):
         result["action"] = "current"
+        return result
+
+    # CI-002 ownership guard: never replace a repository-owned (git-tracked)
+    # target with a generated symlink. A consumer that commits its own
+    # `.claude/rules` keeps it; the governance mount is not forced over tracked
+    # content. (In this repo `.claude/rules` is gitignored, so this never fires
+    # and behavior is unchanged.)
+    if is_tracked(target):
+        result["status"] = "blocked"
+        result["action"] = (
+            "refusing to replace repository-tracked path with generated symlink "
+            "(repository-owned .claude tree — project rules to a non-owned path instead)"
+        )
         return result
 
     if check:
@@ -202,7 +242,7 @@ def main() -> int:
     # parse it even when --quiet is set for human-facing wrappers.
     print(json.dumps(payload, indent=2, sort_keys=True))
 
-    bad = any(r["status"] in {"error", "drift"} for r in payload["results"])
+    bad = any(r["status"] in {"error", "drift", "blocked"} for r in payload["results"])
     return 1 if bad else 0
 
 

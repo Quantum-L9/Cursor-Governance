@@ -22,11 +22,13 @@
     "An allow entry here is what an agent reads as 'approved, no prompt', so git/gh forms the",
     "workflow discourages are simply absent from both lists: permitted to execute, not",
     "advertised as approved.",
-    "Standing autonomous merge is ON (L9_AUTONOMY_AUTONOMOUS_MERGE=true).",
-    "merge_gate.py reads that flag and allows the MCP merge tool after remediation.",
-    "Campaigns and make pr still do not merge. Merge only after /l9-pr-remediation",
-    "reaches green + mergeable + resolved threads, oldest first. Force pushes, hard resets,",
-    "destructive cleanup, and admin-merge remain forbidden by policy."
+    "There is no standing autonomous-merge grant. merge_gate.py does not consult any",
+    "environment boolean; a flag set once in this configuration cannot authorize merge.",
+    "Merge is allowed only by a human per-session breakglass (L9_MERGE_AUTHORIZED) or a",
+    "scoped, expiring receipt that /l9-pr-remediation writes for the target repo (and PR).",
+    "Campaigns and make pr still do not merge, and only reach green + mergeable + resolved",
+    "threads, oldest first. Force pushes, hard resets, destructive cleanup, and admin-merge",
+    "remain forbidden by policy."
   ],
   "hooks": {
     "SessionStart": [
@@ -191,7 +193,6 @@
     "L9_AUTONOMY_AUTHORITY": "A4_CAMPAIGN_BOUNDED_EXTERNAL_WRITE",
     "L9_AUTONOMY_MATURITY": "M4_ASSURANCE_GOVERNED",
     "L9_AUTONOMY_PROFILE": "pr-convergence",
-    "L9_AUTONOMY_AUTONOMOUS_MERGE": "true",
     "L9_AUTONOMY_REMEDIATION_SKILL": "l9-pr-remediation",
     "L9_AUTONOMY_MAX_PARALLEL": "480",
     "L9_AUTONOMY_MAX_MUTATION_LANES": "128",

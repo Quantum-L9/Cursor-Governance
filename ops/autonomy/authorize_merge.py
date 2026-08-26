@@ -53,13 +53,19 @@ def write_authorization(
     pr: str | int = REPO_SCOPE,
     source: str = DEFAULT_SOURCE,
     ttl_seconds: int = DEFAULT_TTL_SECONDS,
+    head_sha: str = "",
     now: float | None = None,
 ) -> dict[str, Any]:
     if not repo or "/" not in repo:
         raise ValueError("repo must be owner/name")
     if not reason.strip():
         raise ValueError("reason is required")
+    if ttl_seconds <= 0:
+        raise ValueError("ttl_seconds must be positive (merge receipts must expire)")
     normalized_pr = _normalize_pr(pr)
+    sha = head_sha.strip().lower()
+    if sha and not (7 <= len(sha) <= 40 and all(c in "0123456789abcdef" for c in sha)):
+        raise ValueError("head_sha must be a hex commit id (7-40 chars)")
     current: dict[str, Any] = {"authorizations": []}
     if path.is_file():
         try:
@@ -76,6 +82,8 @@ def write_authorization(
         "expires_at": int(stamp) + ttl_seconds,
         "reason": reason.strip(),
     }
+    if sha:
+        entry["head_sha"] = sha
     entries = [
         item
         for item in current.get("authorizations", [])
@@ -109,6 +117,11 @@ def main() -> int:
     parser.add_argument("--source", default=DEFAULT_SOURCE)
     parser.add_argument("--auth-file", default="")
     parser.add_argument("--ttl-seconds", type=int, default=DEFAULT_TTL_SECONDS)
+    parser.add_argument(
+        "--head-sha",
+        default="",
+        help="Bind the receipt to this immutable head revision; a moved HEAD is then rejected",
+    )
     args = parser.parse_args()
     pr: str | int = REPO_SCOPE
     if args.pr and not args.all_open:
@@ -120,6 +133,7 @@ def main() -> int:
         source=args.source,
         path=auth_path(args.auth_file),
         ttl_seconds=args.ttl_seconds,
+        head_sha=args.head_sha,
     )
     print(json.dumps(entry, indent=2))
     return 0

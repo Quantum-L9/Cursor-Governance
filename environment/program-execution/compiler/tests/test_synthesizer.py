@@ -52,6 +52,19 @@ def test_minimal_intent_produces_complete_required_source_set(tmp_path: Path) ->
     assert (root / "schemas").is_dir(), "official schemas must ship with the Blueprint"
 
 
+def test_complete_task_definitions_are_emitted_ready(tmp_path: Path) -> None:
+    """ADR-0023: the synthesizer emits every complete task as ready; ordering
+    lives in the dependency graph and waves, never in definition status."""
+    root = _synthesize(tmp_path)
+    cards = yaml.safe_load((root / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+    assert cards["tasks"], "synthesizer produced no tasks"
+    for task in cards["tasks"]:
+        assert task["definition_status"] == "ready", (
+            f"{task['id']} emitted {task['definition_status']!r}; complete "
+            "definitions must be ready"
+        )
+
+
 def test_task_ceilings_are_exact_and_non_widening(tmp_path: Path) -> None:
     root = _synthesize(tmp_path)
     cards = yaml.safe_load((root / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
