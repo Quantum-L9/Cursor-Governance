@@ -354,8 +354,8 @@ files:
   sha256: a9779fad92b5844ef01dba0d9daa746dc74635873a8ffa725f9ad5fef982cfa6
   bytes: 15915
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: f340307892c3bc2bd72201ca3bebd865b0495e956118fb01d351ef14c6580118
-  bytes: 102694
+  sha256: a775ee1a6a05e73901c8c809f7f6f8d74f1f819fc5811c3a23643daf7ea034c4
+  bytes: 108215
 - path: program-execution-controller-template/scripts/pec/exec_env.py
   sha256: 56fe5eb1114dda26f3e061de03580b788cfa5e654c117d0c0b65ac9083d15a10
   bytes: 10917
@@ -363,14 +363,14 @@ files:
   sha256: b805256c42a3bb57b12297128160685a12edf48fa0352a0b0b60ff66b505e252
   bytes: 2284
 - path: program-execution-controller-template/scripts/pec/preflight.py
-  sha256: 1729d0ac106874adf2f7e2b63196766fad1ed1f124990036cdf4fbce3e8d54e0
-  bytes: 9392
+  sha256: 9b0dc41eb54b59b872b9d59b412bd3218de146d3a71c6424dbd13feef33392e9
+  bytes: 9403
 - path: program-execution-controller-template/scripts/pec/replan.py
   sha256: cf1c947f1a138695dc8b8d6dc17398fb864a58f0512471fa8454fcb9c40c7fff
   bytes: 14495
 - path: program-execution-controller-template/scripts/pec/state.py
-  sha256: 4167ea88af25b2a2dcf606ee33f1d0cf6c20dc3fdf0f8a83626b51d74756ccf3
-  bytes: 23532
+  sha256: 324051c62160dcfdd590b57335549a680d8395601b43e4531db83f2f38a81a46
+  bytes: 23906
 - path: program-execution-controller-template/scripts/pec/workspace_reset.py
   sha256: edf39052bd7f13cb79e946fa55cc2b6fecff50b96dfc0043943c007ab088a443
   bytes: 7158
@@ -405,8 +405,8 @@ files:
   sha256: 77fd8817dbeb512ef455dc72acb1a82d9de173c5b835e652aacae848911fa78f
   bytes: 1983
 - path: program-execution-controller-template/scripts/tests/test_decision_unknown.py
-  sha256: 1534779aa307ad0c4c22f856e6fcc8993fc231695c150d87238e15c03bb3ac2e
-  bytes: 1537
+  sha256: b564797fadb1a16ba35d6d08c71bd742e81e03ca29ec11c86c3e8a44139012bd
+  bytes: 2054
 - path: program-execution-controller-template/scripts/tests/test_do_not_build_verify.py
   sha256: 6462b98713377b893eca74b633ee7868c30b749a5eb054577663ee32fab51513
   bytes: 2083
@@ -462,8 +462,11 @@ files:
   sha256: a51020a3b8e516611bae2962f658876fe364604ff96e2a9c72e33a54b1a9595c
   bytes: 3299
 - path: program-execution-controller-template/scripts/tests/test_state_transition.py
-  sha256: b1b048e85761666b5571a7c7653a7c626fb89acb689b22202589568638080cee
-  bytes: 1649
+  sha256: b130770fe995539a3eae45b0345a183b06fff4844e56722ea2309cea9e7b2ef9
+  bytes: 2711
+- path: program-execution-controller-template/scripts/tests/test_task_readiness_semantics.py
+  sha256: 00acd7272a820111d4605f9ef3eb668f08514fe78214be65253e76f4d9012c3e
+  bytes: 10048
 - path: program-execution-controller-template/scripts/tests/test_verify_committed_work.py
   sha256: c8cc87f837178654df0aa58f2f8c893546c87cc8c793bf45223a4d93a05fda56
   bytes: 1882
@@ -474,8 +477,8 @@ files:
   sha256: 93ed81d61f51f0667b13edcac458fd269d16cf48fed04287fb2c2542203f8ad6
   bytes: 2866
 - path: program-execution-controller-template/scripts/tests/test_wave_dependency.py
-  sha256: 86f42e5a3d23a6a5e2c4087cdc6116160ac6d5e109629d7a67dbc1f9e03b88c7
-  bytes: 2609
+  sha256: 271268dca078c50de977eb2b940d96c224c79bd62d76140de216591b36399538
+  bytes: 3351
 - path: program-execution-controller-template/scripts/validate_controller.py
   sha256: 994efa39a7fac7828a99f23be5c5b255e04b47fa388684dc92cfbea6d3202ce1
   bytes: 9638
@@ -549,8 +552,8 @@ files:
   sha256: 93816e89cdd1b6d4ed14bf608d66a38ec04bfd5e4202fc8005702991b4eab13f
   bytes: 5042
 - path: tests/test_replan_integration.py
-  sha256: a468e2bff4028c444fb9261d2dc5fac029fa357c4ec451bf65ea1719548d4831
-  bytes: 10519
+  sha256: d952bf5bb37602119d98bd579fe9dcf91f7cb626db53af21df418d5c542a04e2
+  bytes: 10855
 - path: tests/test_replan_lifecycle.py
   sha256: 1dac7417c1cc4c83a7344001f3df43a73e98394d3dec5a8f7e60041fbd130ada
   bytes: 10284
@@ -573,5 +576,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 189
-  total_bytes: 678129
+  file_count: 190
+  total_bytes: 696740

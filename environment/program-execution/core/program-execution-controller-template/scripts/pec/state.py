@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 TASK_STATES = {
+    "WAITING",
     "BLOCKED",
     "ELIGIBLE",
     "LEASED",
@@ -21,8 +22,13 @@ TASK_STATES = {
     "COMPLETED",
 }
 ALLOWED_TRANSITIONS = {
+    # WAITING: definition complete, runtime prerequisites not yet resolved into
+    # a claim (ADR-0023). Not a failure state. BLOCKED stays in the enum for
+    # legacy persisted runtimes and genuine-blocker representation, but it is
+    # no longer the initialization state for a complete task.
+    "WAITING": {"ELIGIBLE", "STALE", "CANCELLED"},
     "BLOCKED": {"ELIGIBLE", "CANCELLED", "STALE"},
-    "ELIGIBLE": {"BLOCKED", "LEASED", "COMPLETED", "CANCELLED", "STALE"},
+    "ELIGIBLE": {"WAITING", "BLOCKED", "LEASED", "COMPLETED", "CANCELLED", "STALE"},
     "LEASED": {"PREPARED", "STALE", "FAILED", "CANCELLED"},
     "PREPARED": {"CONTRACTED", "STALE", "FAILED", "CANCELLED"},
     "CONTRACTED": {"EXECUTING", "SUBMITTED", "STALE", "FAILED", "CANCELLED"},
@@ -257,7 +263,7 @@ class StateDB:
             ),
             "risk_tier": task["risk_tier"],
             "definition_status": task["definition_status"],
-            "runtime_state": current["runtime_state"] if current else "BLOCKED",
+            "runtime_state": current["runtime_state"] if current else "WAITING",
             "scope_status": current["scope_status"]
             if current
             else ("not_required" if task["execution_kind"] == "program_control" else "intent_only"),

@@ -237,13 +237,15 @@ class DefinitionStatusNormalizationTest(unittest.TestCase):
         }
         notes = compile_source.normalize_definition_status(src)
         self.assertEqual(src["tasks"][1]["definition_status"], "ready")
-        self.assertTrue(any("normalized to 'ready'" in note for note in notes))
+        self.assertTrue(any("compiled as 'ready'" in note for note in notes))
 
-    def test_blocked_without_dependencies_is_left_alone_and_reported(self) -> None:
+    def test_blocked_without_dependencies_refuses_compilation(self) -> None:
+        # ADR-0023: a blocked task with nothing to wait on is a runtime
+        # dead-end; the compiler fails instead of emitting it.
         src = {"tasks": [{"id": "TASK-001", "definition_status": "blocked"}]}
-        notes = compile_source.normalize_definition_status(src)
-        self.assertEqual(src["tasks"][0]["definition_status"], "blocked")
-        self.assertTrue(any("can never be claimed" in note for note in notes))
+        with self.assertRaises(compile_source.CompileError) as ctx:
+            compile_source.normalize_definition_status(src)
+        self.assertIn("unclaimable", str(ctx.exception))
 
 
 class ExecutionEnvironmentTest(unittest.TestCase):
