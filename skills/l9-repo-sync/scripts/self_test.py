@@ -95,6 +95,9 @@ def test_behind_with_colliding_and_hold() -> int:
 
         (clone / ".venv").mkdir()
         (clone / ".venv" / "pyvenv.cfg").write_text("home = /tmp\n", encoding="utf-8")
+        (clone / ".env.local").write_text("DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n", encoding="utf-8")
+        (clone / ".claude").mkdir()
+        (clone / ".claude" / "settings.local.json").write_text("{}\n", encoding="utf-8")
         (clone / "notes.untracked").write_text("keep me\n", encoding="utf-8")
         (clone / "landed.md").write_text("local untracked copy\n", encoding="utf-8")
         (clone / "tracked.txt").write_text("local-dirty\n", encoding="utf-8")
@@ -112,6 +115,10 @@ def test_behind_with_colliding_and_hold() -> int:
             return 1
         if not (clone / ".venv" / "pyvenv.cfg").is_file():
             return _fail(".venv was removed")
+        if (clone / ".env.local").read_text(encoding="utf-8") != "DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n":
+            return _fail(".env.local was removed or changed")
+        if (clone / ".claude" / "settings.local.json").read_text(encoding="utf-8") != "{}\n":
+            return _fail(".claude/settings.local.json was removed or changed")
         if (clone / "notes.untracked").read_text(encoding="utf-8") != "keep me\n":
             return _fail("untracked file lost or changed")
         landed = (clone / "landed.md").read_text(encoding="utf-8")
@@ -277,6 +284,52 @@ def test_unrelated_history_with_dirty() -> int:
     return 0
 
 
+def test_origin_tracked_env_local_does_not_clobber() -> int:
+    """If origin starts tracking .env.local, /ff must not move or overwrite the local copy."""
+    with tempfile.TemporaryDirectory() as tmp:
+        remote = Path(tmp) / "remote.git"
+        clone = Path(tmp) / "clone"
+        run(["git", "init", "--bare", str(remote)])
+        run(["git", "clone", str(remote), str(clone)])
+        git(clone, "config", "user.email", "test@example.com")
+        git(clone, "config", "user.name", "Test")
+        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
+        git(clone, "add", "tracked.txt")
+        git(clone, "commit", "-m", "base")
+        git(clone, "branch", "-M", "main")
+        git(clone, "push", "-u", "origin", "main")
+        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
+
+        other = Path(tmp) / "other"
+        run(["git", "clone", str(remote), str(other)])
+        git(other, "config", "user.email", "test@example.com")
+        git(other, "config", "user.name", "Test")
+        (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
+        (other / ".env.local").write_text("DEEPSEEK_API_KEY=sk-ORIGIN-SHOULD-NOT-WIN\n", encoding="utf-8")
+        git(other, "add", "tracked.txt", ".env.local")
+        git(other, "commit", "-m", "origin tracks env.local")
+        git(other, "push")
+
+        (clone / ".env.local").write_text("DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n", encoding="utf-8")
+        home = Path(tmp) / "home"
+        home.mkdir()
+        proc = run(
+            ["bash", str(FF)],
+            env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
+        )
+        if proc.returncode != 0:
+            print(
+                f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}",
+                file=sys.stderr,
+            )
+            return 1
+        if (clone / ".env.local").read_text(encoding="utf-8") != "DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL\n":
+            return _fail("local .env.local was clobbered by origin")
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "v2\n":
+            return _fail("did not catch up tracked.txt")
+    return 0
+
+
 def main() -> int:
     struct = run([sys.executable, str(ROOT / "scripts" / "validate_pack_structure.py")])
     if struct.returncode != 0:
@@ -288,6 +341,7 @@ def main() -> int:
         ("non_overlapping_dirty", test_non_overlapping_dirty_still_parks),
         ("already_at_tip", test_already_at_tip_leaves_dirty),
         ("unrelated_history", test_unrelated_history_with_dirty),
+        ("keep_env_local", test_origin_tracked_env_local_does_not_clobber),
     ):
         rc = fn()
         if rc != 0:

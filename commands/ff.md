@@ -19,6 +19,8 @@ Catch the named clone up to `origin/main` **in place**. Unique work is
 **parked, never deleted**:
 
 - `.venv` stays at the same path
+- `.env.local`, `env.local`, `.env.*.local`, and `.claude/settings.local.json`
+  stay (same keep-list as sessionStart swap)
 - unique untracked files stay in the tree
 - unique local commits are parked on `l9/ff-preserve-<stamp>`
 - every dirty tracked path is classified, copied to
@@ -44,8 +46,9 @@ CURSOR_GOVERNANCE_DIR="<absolute-named-clone>" \
   bash skills/l9-repo-sync/scripts/ff.sh
 ```
 
-5. Verify same gitdir, same branch, `.venv` still present, unique untracked
-   still present or held, no new `~/.cursor-governance.bak.*`.
+5. Verify same gitdir, same branch, `.venv` and env.local keep-list still
+   present, unique untracked still present or held, no new
+   `~/.cursor-governance.bak.*`.
 6. Auto-chain `/ynp`.
 
 ## FORBIDDEN

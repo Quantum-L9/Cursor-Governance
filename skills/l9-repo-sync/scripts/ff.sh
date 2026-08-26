@@ -10,6 +10,29 @@ unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_COMMON_DIR G
 
 CLONE="${CURSOR_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
 CLONE="$(cd "$CLONE" && pwd)"
+_FF_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+_SSOT_KEEP_LIB=""
+for _ssot_keep_cand in \
+  "${_FF_ROOT}/ops/scripts/lib/ssot_machine_local_keep.sh" \
+  "${CLONE}/ops/scripts/lib/ssot_machine_local_keep.sh" \
+  "$HOME/.cursor-governance/ops/scripts/lib/ssot_machine_local_keep.sh"; do
+  if [ -f "$_ssot_keep_cand" ]; then
+    _SSOT_KEEP_LIB="$_ssot_keep_cand"
+    break
+  fi
+done
+if [ -n "$_SSOT_KEEP_LIB" ]; then
+  # shellcheck source=../../../ops/scripts/lib/ssot_machine_local_keep.sh
+  . "$_SSOT_KEEP_LIB"
+else
+  ssot_is_machine_local_keep() {
+    case "${1#./}" in
+      .venv|.venv/*|.env.local|env.local|.claude/settings.local.json|.env.*.local) return 0 ;;
+    esac
+    return 1
+  }
+fi
+unset _ssot_keep_cand
 TARGET_BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
 
 export GOVERNANCE_SYNC_PUSH=0
@@ -34,10 +57,22 @@ if [ -e "$CLONE/.venv" ]; then
   VENV_BEFORE="$(cd "$CLONE/.venv" && pwd -P)"
 fi
 
+KEEP_BEFORE=""
+for _keep_rel in .venv .env.local env.local .claude/settings.local.json; do
+  if [ -e "$CLONE/$_keep_rel" ] || [ -L "$CLONE/$_keep_rel" ]; then
+    KEEP_BEFORE="${KEEP_BEFORE}${_keep_rel}"$'\n'
+  fi
+done
+for _keep_f in "$CLONE"/.env.*.local; do
+  [ -e "$_keep_f" ] || continue
+  KEEP_BEFORE="${KEEP_BEFORE}$(basename "$_keep_f")"$'\n'
+done
+unset _keep_rel _keep_f
+
 UNTRACKED_BEFORE="$(git -C "$CLONE" ls-files --others --exclude-standard | LC_ALL=C sort)"
 
 echo "ff: clone=$CLONE branch=$BRANCH_BEFORE push=0 hard_reset=0 stash_u=0"
-echo "ff: keeping .venv and untracked; unique commits and dirty tracked get preserve refs"
+echo "ff: keeping .venv, env.local files, and untracked; unique commits and dirty tracked get preserve refs"
 
 # A bare `fetch origin main` can leave origin/main stale (FETCH_HEAD only)
 # on some CI git/refspec layouts; then behind=0 and colliding untracked
@@ -57,6 +92,17 @@ DIRTY_REF=""
 HOLD=""
 CLONE_KEY="$(printf '%s' "$CLONE" | shasum -a 256 | awk '{print substr($1,1,12)}')"
 HOLD_ROOT="${HOME}/.cursor/l9-ff-hold/${CLONE_KEY}/${STAMP}"
+
+if [ -n "$KEEP_BEFORE" ]; then
+  mkdir -p "$HOLD_ROOT/machine-local"
+  while IFS= read -r rel; do
+    [ -z "$rel" ] && continue
+    [ "$rel" = ".venv" ] && continue
+    dest="$HOLD_ROOT/machine-local/$rel"
+    mkdir -p "$(dirname "$dest")"
+    cp -a "$CLONE/$rel" "$dest"
+  done <<<"$KEEP_BEFORE"
+fi
 
 if [ "$AHEAD" -gt 0 ]; then
   PRESERVE_REF="refs/l9/preserved/ff/${STAMP}"
@@ -178,6 +224,19 @@ if [ "$BEHIND" -gt 0 ] || [ "$AHEAD" -gt 0 ] || [ -n "$OVERWRITE_UNTRACKED" ]; t
   git -C "$CLONE" checkout -f "origin/${TARGET_BRANCH}" -- .
 fi
 
+if [ -d "$HOLD_ROOT/machine-local" ] && [ -n "$KEEP_BEFORE" ]; then
+  while IFS= read -r rel; do
+    [ -z "$rel" ] && continue
+    [ "$rel" = ".venv" ] && continue
+    src="$HOLD_ROOT/machine-local/$rel"
+    [ -e "$src" ] || [ -L "$src" ] || continue
+    mkdir -p "$(dirname "$CLONE/$rel")"
+    cp -a "$src" "$CLONE/$rel"
+    chmod go-rwx "$CLONE/$rel" 2>/dev/null || true
+    echo "OK: restored machine-local $rel after catch-up"
+  done <<<"$KEEP_BEFORE"
+fi
+
 GITDIR_AFTER="$(git -C "$CLONE" rev-parse --git-common-dir)"
 BRANCH_AFTER="$(git -C "$CLONE" rev-parse --abbrev-ref HEAD)"
 if [ "$GITDIR_BEFORE" != "$GITDIR_AFTER" ] || [ "$BRANCH_BEFORE" != "$BRANCH_AFTER" ]; then
@@ -196,6 +255,17 @@ if [ -n "$VENV_BEFORE" ]; then
     exit 2
   fi
   echo "OK: .venv still at $CLONE/.venv"
+fi
+
+if [ -n "$KEEP_BEFORE" ]; then
+  while IFS= read -r rel; do
+    [ -z "$rel" ] && continue
+    if [ ! -e "$CLONE/$rel" ] && [ ! -L "$CLONE/$rel" ]; then
+      echo "FAIL: machine-local keep path missing after catch-up: $rel" >&2
+      exit 2
+    fi
+    echo "OK: kept $rel"
+  done <<<"$KEEP_BEFORE"
 fi
 
 UNTRACKED_AFTER="$(git -C "$CLONE" ls-files --others --exclude-standard | LC_ALL=C sort)"

@@ -795,6 +795,16 @@ dirty tracked bytes, and untracked copies that main now tracks are **parked**
 (never deleted). `.venv` stays. Do not run `governance_activate_fresh.sh` as
 sync. `make sync` remains `governance_sync.sh` and is not `/ff`.
 
+<!-- L9_SSOT_MACHINE_LOCAL_KEEP_V1 -->
+## Machine-local keep across `/ff` and sessionStart (2026-08-26)
+
+`/ff` and `governance_activate_fresh.sh` (sessionStart / `/start-session`)
+must not clobber `.venv`, `.env.local`, `env.local`, `.env.*.local`, or
+`.claude/settings.local.json`. A shallow-clone swap carries those paths
+from the bak onto the new live tree before bak prune. `/ff` parks and
+restores the same keep-list around `reset --keep` / checkout. Values are
+never printed. Lib: `ops/scripts/lib/ssot_machine_local_keep.sh`.
+
 <!-- L9_CURSOR_AUTO_COMMIT_V1 -->
 ## Cursor local commits (2026-08-22)
 
