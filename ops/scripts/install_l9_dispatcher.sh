@@ -14,7 +14,8 @@ set -euo pipefail
 
 GOV="${L9_GOV_ROOT:-$HOME/.cursor-governance}"
 # Allow running from a workspace clone (this repo) as well as the runtime clone.
-SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# This script lives at <repo>/ops/scripts/, so the repo root is two levels up.
+SELF_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 SRC_REL="environment/agents/adapters/claude-code/bin/l9"
 
 # Resolve the source: prefer the governance runtime clone, fall back to the

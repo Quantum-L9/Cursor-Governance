@@ -747,3 +747,12 @@ l9-dispatcher-install:
 ## Report l9 dispatcher drift without writing anything.
 l9-dispatcher-check:
 	bash "$(CURDIR)/ops/scripts/install_l9_dispatcher.sh" --check
+
+.PHONY: claude-readiness
+## Emit + print the machine-readable Claude readiness receipt (schema
+## l9.claude-readiness.v1 → ~/.l9/claude/readiness-receipt.json). Truthful:
+## a missing/skipped required check, an unloaded MCP, a TCP-only Graphiti, or a
+## stale governance SHA cannot report READY. Usage: make claude-readiness WS=/path
+claude-readiness:
+	$(PYTHON) ops/scripts/emit_claude_readiness.py --root "$(CURDIR)" \
+		--workspace "$(if $(WS),$(WS),$(CURDIR))" --read
