@@ -41,13 +41,6 @@ campaigns:
     execute_order: 2
 """
 
-COMPILE_ALLOWLIST = """\
-schema: l9.program-execution.campaign-compile-allowlist.v1
-campaign_ids:
-  - alpha-v1
-  - beta-v1
-"""
-
 STATUS_LEDGER = """\
 schema: l9.program-execution.campaign-status-ledger.v1
 campaigns:
@@ -67,7 +60,6 @@ def build_repo(root: Path) -> None:
     """Materialize a minimal, fully valid promotion surface."""
     write(root / validator.SURFACE_PROFILE, SURFACE_PROFILE)
     write(root / validator.EXECUTION_POLICY, EXECUTION_POLICY)
-    write(root / validator.COMPILE_ALLOWLIST, COMPILE_ALLOWLIST)
     write(root / validator.STATUS_LEDGER, STATUS_LEDGER)
 
 
@@ -164,10 +156,6 @@ class PromotionValidatorTest(unittest.TestCase):
         )
         self.assertFailsWith(validator.validate(self.root), "duplicate campaign id")
 
-    def test_duplicate_allowlist_id_fails(self) -> None:
-        write(self.root / validator.COMPILE_ALLOWLIST, COMPILE_ALLOWLIST + "  - alpha-v1\n")
-        self.assertFailsWith(validator.validate(self.root), "duplicate campaign id")
-
     def test_duplicate_ledger_id_fails(self) -> None:
         write(
             self.root / validator.STATUS_LEDGER,
@@ -198,12 +186,28 @@ class PromotionValidatorTest(unittest.TestCase):
         )
         self.assertFailsWith(validator.validate(self.root), "absent from policy")
 
-    def test_promoted_campaign_absent_from_allowlist_fails(self) -> None:
+    def test_new_campaign_id_needs_no_preregistration(self) -> None:
+        # A new governed campaign compiles by validity, not list membership:
+        # registering gamma-v1 in the shared ledgers alone must validate with
+        # no compile-allowlist file anywhere in the tree.
         write(
-            self.root / validator.COMPILE_ALLOWLIST,
-            COMPILE_ALLOWLIST.replace("  - beta-v1\n", ""),
+            self.root / validator.SURFACE_PROFILE,
+            SURFACE_PROFILE.replace(
+                "    beta-v1:\n      integration_branch: campaign/beta-v1\n",
+                "    beta-v1:\n      integration_branch: campaign/beta-v1\n"
+                "    gamma-v1:\n      integration_branch: campaign/gamma-v1\n",
+            ),
         )
-        self.assertFailsWith(validator.validate(self.root), "absent from allowlist")
+        write(
+            self.root / validator.EXECUTION_POLICY,
+            EXECUTION_POLICY
+            + "  - id: gamma-v1\n"
+            + "    integration_branch: campaign/gamma-v1\n"
+            + "    pr_base: campaign/gamma-v1\n"
+            + "    execute_order: 3\n",
+        )
+        report = validator.validate(self.root)
+        self.assertEqual(report["status"], "PASS", report["errors"])
 
     # -- condition 5: machine-local paths ----------------------------------
 

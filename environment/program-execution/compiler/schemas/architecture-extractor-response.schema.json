@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.program-execution.architecture-extractor-response.v1",
+  "title": "Architecture extractor response (candidate interpretation only)",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema", "items"],
+  "properties": {
+    "schema": {
+      "const": "l9.program-execution.architecture-extractor-response.v1"
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["id", "kind", "statement", "source_refs"],
+        "properties": {
+          "id": { "type": "string", "minLength": 1 },
+          "kind": {
+            "enum": [
+              "objective",
+              "requirement",
+              "constraint",
+              "prohibition",
+              "decision",
+              "assumption",
+              "unknown",
+              "risk",
+              "scope_include",
+              "scope_exclude",
+              "evidence_requirement",
+              "implementation_seam",
+              "file_seam",
+              "acceptance",
+              "validation",
+              "negative_case",
+              "dependency",
+              "ordering",
+              "deferral",
+              "informational"
+            ]
+          },
+          "statement": { "type": "string", "minLength": 1 },
+          "source_refs": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "materiality": { "enum": ["material", "informational"] },
+          "confidence": { "enum": ["high", "medium", "low"] },
+          "related_semantic_ids": { "type": "array", "items": { "type": "string" } },
+          "conflicts_with": { "type": "array", "items": { "type": "string" } },
+          "suggested_paths": { "type": "array", "items": { "type": "string" } },
+          "suggested_tests": { "type": "array", "items": { "type": "string" } },
+          "predecessor_ids": { "type": "array", "items": { "type": "string" } },
+          "successor_ids": { "type": "array", "items": { "type": "string" } },
+          "probeable": { "type": "boolean" },
+          "options": { "type": "array", "items": { "type": "string" } },
+          "selected_option": { "type": "string" },
+          "command": { "type": "string" },
+          "target": { "type": "string" },
+          "rationale": { "type": "string" },
+          "risk": { "type": "string" },
+          "implementation_hint": { "type": "string" }
+        }
+      }
+    },
+    "notes": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

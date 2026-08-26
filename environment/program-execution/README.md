@@ -41,10 +41,22 @@ The only live campaign path is:
 make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
 ```
 
-`run_campaign.py` compiles allowlisted seeds, admits the Blueprint, boots
+`run_campaign.py` compiles valid seeds (admission is by validity plus
+real-state campaign-id collision detection — there is no compile
+allowlist), admits the Blueprint, boots
 pec without a draft flag, executes every task, stacks PRs, and closes into
 `campaigns/COMPLETED/<id>/`. Do not call `compile_campaign_source.py`,
 `pec bootstrap`, or `program-execution intent` as a substitute.
+
+Long-form architecture prose (a design, microscope audit, or technical
+review) has its own forced front door and needs no manual rewrite into
+Release blocks, numbered tasks, or activation YAML:
+
+```bash
+make -C "$HOME/.cursor-governance" campaign-architecture \
+  INTENT=/path/to/architecture.md \
+  TARGET=Quantum-L9/SomeRepo
+```
 `--admission-draft` is not a live path (`L9_ALLOW_ADMISSION_DRAFT=1` is
 controller unit tests only). Host-only merge is not program close.
 
@@ -68,6 +80,7 @@ no third outcome.
 | Input | Route |
 |---|---|
 | `l9.program-execution.campaign-source.v2` | straight to `compile_campaign_source` → blueprint → PEC |
+| architecture intent (frontmatter `l9.program-execution.architecture-intent.v1`, or any document via `make campaign-architecture`) | architecture → campaign source → blueprint → PEC |
 | activate seed (`campaign_id`, `title`, `objective`, `tasks`) | activate → campaign source → blueprint → PEC |
 | brief memo (`.md`) | brief → activate → campaign source → blueprint → PEC |
 | `program-execution.intent.v1` | **rejected** — design-time compiler input, no live adapter |
@@ -77,6 +90,34 @@ A supplied campaign source is written verbatim to the path the compiler reads.
 It is never rebuilt through the activation compiler, because that regenerates it
 from a weaker seed and drops task validations, dependencies, writable paths,
 gates, evidence requirements, and authority data.
+
+### Architecture intent (semantic compilation)
+
+`make campaign-architecture` accepts unchanged assistant/audit Markdown — no
+frontmatter, no numbered tasks, no activation YAML. The compiler
+(`scripts/compile_architecture_intent.py` over `compiler/architecture_*.py`)
+deterministically segments and hashes the source, runs a typed semantic
+extractor (candidate interpretation only — a Claude Code CLI adapter by
+default, a deterministic lexical extractor for tests/offline), audits
+machine-verifiable coverage with bounded repair rounds plus a critic pass,
+and lowers straight into a full `campaign-source.v2` with embedded
+`intent_provenance`. `compile_campaign_source.py` revalidates that
+provenance, so a hand-edited generated source fails canonical compilation.
+
+Forward-execution rules: every complete generated task is
+`definition_status: ready` (ordering lives in dependency edges and waves),
+probeable unknowns become READY discovery tasks dependents wait on,
+prohibitions become enforceable `prohibited_paths`, deferrals become scope
+exclusions, and validations resolve from source commands → repository truth
+→ inspection assertions. A source that genuinely cannot compile (unreadable,
+no target, unreconcilable contradictions, coverage cannot converge) fails
+**before** any worktree, blueprint, or PEC side effect — never as a
+Blueprint full of blocked tasks. Compiler artifacts land under
+`$L9_ROOT/primed/architecture/<campaign-id>/`.
+
+Unmarked Markdown passed to ordinary `make campaign` keeps the existing
+brief route; self-describing documents with architecture frontmatter work
+through `make campaign INTENT=…` directly.
 
 Classify without running anything:
 

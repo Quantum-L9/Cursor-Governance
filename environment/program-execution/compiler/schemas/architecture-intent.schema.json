@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.program-execution.architecture-intent.v1",
+  "title": "Architecture Intent v1 frontmatter",
+  "description": "Optional self-describing frontmatter for a long-form architecture document. The document body is free prose; only this routing envelope is schematized. A raw document with no frontmatter is equally valid through the forced campaign-architecture route.",
+  "type": "object",
+  "additionalProperties": true,
+  "required": ["schema"],
+  "properties": {
+    "schema": {
+      "const": "l9.program-execution.architecture-intent.v1"
+    },
+    "target": {
+      "type": "string",
+      "description": "owner/repo the architecture applies to",
+      "pattern": "^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$"
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1
+    },
+    "campaign_id": {
+      "type": "string",
+      "pattern": "^[a-z0-9][a-z0-9-]{2,62}$"
+    }
+  }
+}

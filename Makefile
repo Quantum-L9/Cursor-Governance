@@ -70,6 +70,7 @@ help:
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
 	@echo "  make campaign INTENT=path — PE activate seed → worktree emit → blueprint → pec → host PR → merge-if-green"
+	@echo "  make campaign-architecture INTENT=arch.md TARGET=owner/repo — long architecture prose → semantic compile → campaign-source.v2 → blueprint → PEC"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
 	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
 	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
@@ -102,6 +103,22 @@ campaign:
 	@test -n "$(INTENT)" || (echo "INTENT= path to activate seed is required" >&2; exit 2)
 	$(PYTHON) environment/program-execution/scripts/run_campaign.py \
 	  --intent "$(INTENT)" \
+	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
+	  $(CAMPAIGN_ARGS)
+
+.PHONY: campaign-architecture
+## Compile a long-form architecture document (design, microscope audit, technical
+## review) straight into a PE campaign: semantic compilation → campaign-source.v2
+## → Blueprint v2 → PEC. INTENT= required (raw Markdown/text, unchanged assistant
+## output is fine). TARGET=owner/repo required unless the document declares
+## `target:` in l9.program-execution.architecture-intent.v1 frontmatter.
+## CAMPAIGN_UNTIL defaults to execute, exactly like the normal campaign path.
+campaign-architecture:
+	@test -n "$(INTENT)" || (echo "INTENT= path to an architecture document is required" >&2; exit 2)
+	$(PYTHON) environment/program-execution/scripts/run_campaign.py \
+	  --intent "$(INTENT)" \
+	  --input-kind architecture \
+	  $(if $(TARGET),--target "$(TARGET)") \
 	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
 	  $(CAMPAIGN_ARGS)
 
@@ -568,6 +585,7 @@ program-execution-core-validate:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B $(PE_ROOT)/core/scripts/validate_pair.py 		$(PE_ROOT)/core --mode template
 	$(MAKE) program-execution-campaign-schema
 	$(MAKE) program-execution-campaign-compile
+	$(MAKE) program-execution-architecture
 	$(MAKE) program-execution-campaign-promotion
 
 program-execution-adapters:
@@ -655,6 +673,17 @@ program-execution-campaign-schema:
 program-execution-campaign-compile:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B -m unittest \
 		$(PE_ROOT)/scripts/tests/test_compile_campaign_source.py
+
+.PHONY: program-execution-architecture
+## Architecture-intent compiler: segmentation, extractor boundary, coverage,
+## lowering, golden fixture, and the live entrypoint. Deterministic extractor
+## only — no model call.
+program-execution-architecture:
+	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B -m unittest \
+		$(PE_ROOT)/compiler/tests/test_architecture_intent.py \
+		$(PE_ROOT)/compiler/tests/test_architecture_extractor.py \
+		$(PE_ROOT)/compiler/tests/test_architecture_coverage.py \
+		$(PE_ROOT)/scripts/tests/test_compile_architecture_intent.py
 
 .PHONY: program-execution-campaign-brief
 program-execution-campaign-brief:

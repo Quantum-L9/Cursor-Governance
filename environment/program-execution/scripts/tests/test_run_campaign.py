@@ -18,12 +18,6 @@ PE_ROOT = Path(__file__).resolve().parents[2]
 SCRIPT = PE_ROOT / "scripts/run_campaign.py"
 ACTIVATE = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
 
-HOST_ALLOWLIST = """schema: l9.program-execution.campaign-compile-allowlist.v1
-schema_version: 1.0.0
-campaign_ids:
-  - bounded-replanning-v1
-"""
-
 HOST_POLICY = """schema: l9.program-execution.campaign-execution-policy.v1
 campaigns:
   - id: bounded-replanning-v1
@@ -211,9 +205,6 @@ def _dump(path: Path, value: object) -> None:
 def _host_repo(tmp: Path) -> Path:
     (tmp / "environment/program-execution/campaigns").mkdir(parents=True)
     (tmp / "ops/autonomy").mkdir(parents=True)
-    (tmp / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml").write_text(
-        HOST_ALLOWLIST, encoding="utf-8"
-    )
     (tmp / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml").write_text(
         HOST_POLICY, encoding="utf-8"
     )
@@ -1843,6 +1834,139 @@ class CampaignInputRoutingTests(unittest.TestCase):
 
 def _load_yaml_file(path: Path) -> dict:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
+
+
+ARCH_DOC = """# Router hardening microscope
+
+The router MUST fail closed on unsigned requests.
+"""
+
+ARCH_CAMPAIGN_SOURCE = {
+    "schema": "l9.program-execution.campaign-source.v2",
+    "schema_version": "2.0.0",
+    "plan_status": "Ready",
+    "metadata": {"campaign_id": "arch-route-v1", "title": "Router hardening"},
+    "program": {
+        "id": "arch-route-v1",
+        "name": "Router hardening",
+        "definition_status": "ready",
+        "objective": "Fail closed on unsigned requests.",
+        "problem_statement": "Unsigned requests are currently served.",
+    },
+    "tasks": [
+        {
+            "id": "TASK-001",
+            "title": "Fail closed on unsigned requests",
+            "definition_status": "ready",
+            "objective": "Reject unsigned requests at intake.",
+        }
+    ],
+}
+
+
+class ArchitectureRouteTests(unittest.TestCase):
+    """The forced architecture front door: semantic compile → direct
+    campaign-source placement, with compile failure strictly pre-side-effect."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.mod = _load("run_campaign_architecture_under_test", SCRIPT)
+
+    def test_forced_architecture_enters_direct_campaign_source_route(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "root")
+            doc = Path(raw) / "microscope.md"
+            doc.write_text(ARCH_DOC, encoding="utf-8")
+            calls: list[dict] = []
+
+            def fake_compile_architecture(source, *, target, host_root, l9_home, **_):
+                calls.append({"source": Path(source), "target": target})
+                return {
+                    "campaign_source": dict(ARCH_CAMPAIGN_SOURCE),
+                    "campaign_source_path": str(Path(raw) / "primed/CAMPAIGN_SOURCE.yaml"),
+                    "coverage": {"status": "PASS"},
+                    "task_count": 1,
+                }
+
+            report = self.mod.run_campaign(
+                doc,
+                until="activate",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                target_override="Quantum-L9/LLM-Router",
+                input_kind="architecture",
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    compile_architecture=fake_compile_architecture,
+                ),
+            )
+            self.assertEqual(report.campaign_id, "arch-route-v1")
+            self.assertIn("activate", report.stages_completed)
+            self.assertEqual(calls[0]["source"], doc)
+            self.assertEqual(calls[0]["target"], "Quantum-L9/LLM-Router")
+            campaign_dir = root / "environment/program-execution/campaigns/arch-route-v1"
+            emitted = yaml.safe_load(
+                (campaign_dir / "CAMPAIGN_SOURCE.yaml").read_text(encoding="utf-8")
+            )
+            # The generated source lands verbatim on the direct route — no
+            # brief/activate rebuild that would flatten its representation.
+            self.assertEqual(emitted, ARCH_CAMPAIGN_SOURCE)
+            self.assertTrue((campaign_dir / "source-integrity-receipt.json").is_file())
+
+    def test_architecture_compile_failure_is_pre_side_effect(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw) / "root")
+            doc = Path(raw) / "microscope.md"
+            doc.write_text(ARCH_DOC, encoding="utf-8")
+
+            def broken_compile(source, **_):
+                raise self.mod.CampaignError(
+                    "semantic coverage cannot converge",
+                    error_code="PE_ARCHITECTURE_COMPILE_FAILED",
+                )
+
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.run_campaign(
+                    doc,
+                    until="execute",
+                    primary=Path(raw) / "primary",
+                    repo_root=root,
+                    l9_root=Path(raw) / "l9",
+                    input_kind="architecture",
+                    hooks=self.mod.Hooks(
+                        context7_stack=_stack_ok,
+                        compile_architecture=broken_compile,
+                    ),
+                )
+            self.assertIn("coverage", str(ctx.exception))
+            campaigns = root / "environment/program-execution/campaigns"
+            created = [path.name for path in campaigns.iterdir() if path.is_dir()]
+            self.assertEqual(created, [], "no campaign directory before compile success")
+            self.assertFalse((Path(raw) / "l9" / "programs").exists())
+            self.assertFalse((Path(raw) / "l9" / "gov-worktrees").exists())
+
+    def test_classification_keeps_brief_and_recognizes_frontmatter(self) -> None:
+        module = self.mod.campaign_input_module()
+        with tempfile.TemporaryDirectory() as raw:
+            plain = Path(raw) / "memo.md"
+            plain.write_text("# Memo\n\n1. Do the thing.\n", encoding="utf-8")
+            self.assertEqual(module.classify(plain).kind, module.CampaignInputKind.BRIEF)
+            marked = Path(raw) / "arch.md"
+            marked.write_text(
+                "---\nschema: l9.program-execution.architecture-intent.v1\n"
+                "target: Quantum-L9/LLM-Router\n---\n\n# Doc\n\nProse.\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(
+                module.classify(marked).kind,
+                module.CampaignInputKind.ARCHITECTURE_INTENT_V1,
+            )
+            forced = module.classify(plain, assume_architecture=True)
+            self.assertEqual(forced.kind, module.CampaignInputKind.ARCHITECTURE_INTENT_V1)
+            self.assertEqual(forced.route, "architecture -> campaign_source -> blueprint -> PEC")
+            # The forced route never rewrites the operator's source file.
+            self.assertEqual(plain.read_text(encoding="utf-8"), "# Memo\n\n1. Do the thing.\n")
 
 
 if __name__ == "__main__":

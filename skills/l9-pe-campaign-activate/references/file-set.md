@@ -27,7 +27,6 @@ Do not create any other file in this directory.
 
 | File | Patch |
 |---|---|
-| `environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml` | append `<id>` |
 | `environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml` | append campaign row (`integration_branch`, `pr_base`, `execute_order`) |
 | `ops/autonomy/surface_profile.yaml` | append `campaign_execution.campaigns.<id>` |
 | `environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml` | append `lifecycle: planned`; `make campaign` immediately promotes to `in_progress` |

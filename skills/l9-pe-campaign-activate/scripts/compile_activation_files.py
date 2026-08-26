@@ -576,18 +576,6 @@ def write_receipt(source_path: Path, campaign_id: str, *, stamp: str) -> dict[st
     return receipt
 
 
-def patch_allowlist(path: Path, campaign_id: str) -> bool:
-    text = path.read_text(encoding="utf-8")
-    if re.search(rf"^\s*-\s+{re.escape(campaign_id)}\s*$", text, re.M):
-        return False
-    if "campaign_ids:" not in text:
-        raise CompileError(f"{path} missing campaign_ids")
-    if not text.endswith("\n"):
-        text += "\n"
-    path.write_text(text + f"  - {campaign_id}\n", encoding="utf-8")
-    return True
-
-
 def patch_execution_policy(path: Path, campaign_id: str) -> bool:
     raw = load_yaml(path)
     campaigns = list((raw or {}).get("campaigns") or [])
@@ -695,11 +683,9 @@ def compile_activation(
         str((campaign_dir / "source-integrity-receipt.json").relative_to(repo_root)),
     ]
     patched: list[str] = []
+    # No compile-allowlist patching: campaign-id admission is by validity and
+    # real-state collision detection, never preregistration.
     hosts = (
-        (
-            repo_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml",
-            patch_allowlist,
-        ),
         (
             repo_root / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
             patch_execution_policy,

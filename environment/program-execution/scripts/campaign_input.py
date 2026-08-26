@@ -31,6 +31,7 @@ except ImportError:  # pragma: no cover - PyYAML is a hard dependency of the gat
 
 CAMPAIGN_SOURCE_SCHEMA = "l9.program-execution.campaign-source.v2"
 PROGRAM_INTENT_SCHEMA = "program-execution.intent.v1"
+ARCHITECTURE_INTENT_SCHEMA = "l9.program-execution.architecture-intent.v1"
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*(?:\n|\Z)", re.S)
 
 REJECTION_CODE = "PE_CAMPAIGN_INPUT_REJECTED"
@@ -47,12 +48,14 @@ class CampaignInputKind(Enum):
     PLAN = "plan"
     ACTIVATE = "activate"
     CAMPAIGN_SOURCE_V2 = "campaign-source.v2"
+    ARCHITECTURE_INTENT_V1 = "architecture-intent.v1"
     PROGRAM_INTENT_V1 = "program-execution.intent.v1"
     UNKNOWN = "unknown"
 
 
 SUPPORTED_KINDS = (
     CampaignInputKind.CAMPAIGN_SOURCE_V2,
+    CampaignInputKind.ARCHITECTURE_INTENT_V1,
     CampaignInputKind.ACTIVATE,
     CampaignInputKind.PLAN,
     CampaignInputKind.BRIEF,
@@ -60,6 +63,9 @@ SUPPORTED_KINDS = (
 
 ROUTES = {
     CampaignInputKind.CAMPAIGN_SOURCE_V2: "campaign_source -> blueprint -> PEC",
+    CampaignInputKind.ARCHITECTURE_INTENT_V1: (
+        "architecture -> campaign_source -> blueprint -> PEC"
+    ),
     CampaignInputKind.ACTIVATE: "activate -> campaign_source -> blueprint -> PEC",
     CampaignInputKind.PLAN: "plan -> activate -> campaign_source -> blueprint -> PEC",
     CampaignInputKind.BRIEF: "brief -> activate -> campaign_source -> blueprint -> PEC",
@@ -205,11 +211,24 @@ def _is_plan_intent(doc: dict[str, Any] | None) -> bool:
     return False
 
 
-def classify(path: Path) -> Classification:
+def _is_architecture_frontmatter(frontmatter: dict[str, Any] | None) -> bool:
+    if not isinstance(frontmatter, dict):
+        return False
+    return str(frontmatter.get("schema") or "").strip() == ARCHITECTURE_INTENT_SCHEMA
+
+
+def classify(path: Path, *, assume_architecture: bool = False) -> Classification:
     """Classify by content and schema, never by file extension alone.
 
     A `.yaml` suffix says nothing about which of three YAML dialects this is,
     and the campaign source dialect is the one that was being misrouted.
+
+    ``assume_architecture`` is the `campaign-architecture` front door: the
+    operator explicitly selected the architecture route, so an unchanged
+    assistant/audit document classifies as architecture intent with no
+    frontmatter and no content heuristics — the source file is never
+    rewritten. Unmarked Markdown on the ordinary route keeps the existing
+    BRIEF behavior.
     """
     path = Path(path)
     if not path.is_file():
@@ -217,19 +236,37 @@ def classify(path: Path) -> Classification:
             detected=CampaignInputKind.UNKNOWN,
             reason=f"no such campaign input file: {path}",
             fix="Pass INTENT=<path> pointing at an existing campaign source, "
-            "activate YAML, or brief memo.",
+            "activate YAML, brief memo, or architecture document.",
             path=path,
         )
     text = path.read_text(encoding="utf-8")
+    if assume_architecture:
+        return Classification(
+            kind=CampaignInputKind.ARCHITECTURE_INTENT_V1,
+            path=path,
+            schema=ARCHITECTURE_INTENT_SCHEMA,
+            document=_parse_frontmatter(text),
+        )
     doc = _load_document(path)
     if doc is None:
         frontmatter = _parse_frontmatter(text)
+        if _is_architecture_frontmatter(frontmatter):
+            return Classification(
+                kind=CampaignInputKind.ARCHITECTURE_INTENT_V1,
+                path=path,
+                schema=ARCHITECTURE_INTENT_SCHEMA,
+                document=frontmatter,
+            )
         if _is_plan_intent(frontmatter):
             return Classification(kind=CampaignInputKind.PLAN, path=path, document=frontmatter)
         if path.suffix.lower() in {".md", ".markdown", ".txt"}:
             return Classification(kind=CampaignInputKind.BRIEF, path=path)
         return Classification(kind=CampaignInputKind.UNKNOWN, path=path)
     schema = str(doc.get("schema") or "").strip()
+    if schema == ARCHITECTURE_INTENT_SCHEMA:
+        return Classification(
+            kind=CampaignInputKind.ARCHITECTURE_INTENT_V1, path=path, schema=schema, document=doc
+        )
     if schema == CAMPAIGN_SOURCE_SCHEMA or schema.endswith("campaign-source.v2"):
         return Classification(
             kind=CampaignInputKind.CAMPAIGN_SOURCE_V2, path=path, schema=schema, document=doc
@@ -246,6 +283,13 @@ def classify(path: Path) -> Classification:
         return Classification(kind=CampaignInputKind.PLAN, path=path, schema=schema, document=doc)
     if path.suffix.lower() in {".md", ".markdown", ".txt"}:
         frontmatter = _parse_frontmatter(text)
+        if _is_architecture_frontmatter(frontmatter):
+            return Classification(
+                kind=CampaignInputKind.ARCHITECTURE_INTENT_V1,
+                path=path,
+                schema=ARCHITECTURE_INTENT_SCHEMA,
+                document=frontmatter,
+            )
         if _is_plan_intent(frontmatter):
             return Classification(
                 kind=CampaignInputKind.PLAN, path=path, schema=schema, document=frontmatter
@@ -283,7 +327,9 @@ def reject(classification: Classification) -> CampaignInputRejected:
         ),
         fix=(
             "Supply a campaign-source.v2 "
-            f"(schema: {CAMPAIGN_SOURCE_SCHEMA}), an activate seed, or a brief memo."
+            f"(schema: {CAMPAIGN_SOURCE_SCHEMA}), an activate seed, a brief memo, "
+            "or run a long-form architecture document through "
+            "`make campaign-architecture INTENT=<doc> TARGET=<owner/repo>`."
         ),
     )
 
@@ -324,9 +370,14 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="classify a PE campaign input")
     parser.add_argument("path", type=Path)
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--architecture",
+        action="store_true",
+        help="classify as architecture intent (the forced campaign-architecture route)",
+    )
     args = parser.parse_args(argv)
     try:
-        found = classify(args.path)
+        found = classify(args.path, assume_architecture=args.architecture)
     except CampaignInputRejected as exc:
         print(json.dumps(exc.to_dict(), indent=2) if args.json else exc.render())
         return exc.exit_code

@@ -33,11 +33,12 @@ REPO_ROOT = Path(__file__).resolve().parents[3]
 SURFACE_PROFILE = "ops/autonomy/surface_profile.yaml"
 CAMPAIGNS_DIR = "environment/program-execution/campaigns"
 EXECUTION_POLICY = f"{CAMPAIGNS_DIR}/CAMPAIGN_EXECUTION_POLICY.yaml"
-COMPILE_ALLOWLIST = f"{CAMPAIGNS_DIR}/COMPILE_ALLOWLIST.yaml"
 STATUS_LEDGER = f"{CAMPAIGNS_DIR}/CAMPAIGN_STATUS.yaml"
 
 # Committed shared campaign state. Machine-local paths here are a hard failure.
-SHARED_LEDGERS = (SURFACE_PROFILE, EXECUTION_POLICY, COMPILE_ALLOWLIST, STATUS_LEDGER)
+# There is deliberately no compile allowlist: campaign-id admission is by
+# validity plus real-state collision detection, never list preregistration.
+SHARED_LEDGERS = (SURFACE_PROFILE, EXECUTION_POLICY, STATUS_LEDGER)
 
 # Generated projections whose digests must agree with their sources.
 
@@ -134,7 +135,6 @@ def check_registrations(root: Path, profile: dict | None) -> tuple[list[str], se
             )
 
     errors.extend(_check_policy(root, profile_ids))
-    errors.extend(_check_allowlist(root, profile_ids))
     errors.extend(_check_status_ledger(root))
     return errors, profile_ids
 
@@ -187,31 +187,6 @@ def _check_policy(root: Path, profile_ids: set[str]) -> list[str]:
     missing = sorted(profile_ids - seen)
     if missing:
         errors.append(f"{EXECUTION_POLICY}: promoted campaigns absent from policy: {missing}")
-    return errors
-
-
-def _check_allowlist(root: Path, profile_ids: set[str]) -> list[str]:
-    errors: list[str] = []
-    allowlist = _load_or_error(root, COMPILE_ALLOWLIST, errors)
-    if not isinstance(allowlist, dict):
-        return errors
-
-    ids = allowlist.get("campaign_ids")
-    if not isinstance(ids, list):
-        return errors + [f"{COMPILE_ALLOWLIST}: campaign_ids must be a list"]
-
-    seen: set[str] = set()
-    for campaign_id in ids:
-        if not isinstance(campaign_id, str) or not campaign_id.strip():
-            errors.append(f"{COMPILE_ALLOWLIST}: campaign id must be a non-empty string")
-            continue
-        if campaign_id in seen:
-            errors.append(f"{COMPILE_ALLOWLIST}: duplicate campaign id {campaign_id!r}")
-        seen.add(campaign_id)
-
-    missing = sorted(profile_ids - seen)
-    if missing:
-        errors.append(f"{COMPILE_ALLOWLIST}: promoted campaigns absent from allowlist: {missing}")
     return errors
 
 

@@ -28,12 +28,6 @@ from compile_activation_files import (  # noqa: E402
     dump_yaml,
 )
 
-HOST_ALLOWLIST = """schema: l9.program-execution.campaign-compile-allowlist.v1
-schema_version: 1.0.0
-campaign_ids:
-  - bounded-replanning-v1
-"""
-
 HOST_POLICY = """schema: l9.program-execution.campaign-execution-policy.v1
 campaigns:
   - id: bounded-replanning-v1
@@ -121,9 +115,6 @@ INTENT = {
 def _repo(tmp: Path) -> Path:
     (tmp / "environment/program-execution/campaigns").mkdir(parents=True)
     (tmp / "ops/autonomy").mkdir(parents=True)
-    (tmp / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml").write_text(
-        HOST_ALLOWLIST, encoding="utf-8"
-    )
     (tmp / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml").write_text(
         HOST_POLICY, encoding="utf-8"
     )
@@ -155,7 +146,6 @@ class CompileActivationTests(unittest.TestCase):
             self.assertEqual(
                 set(result["patched"]),
                 {
-                    "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml",
                     "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
                     "ops/autonomy/surface_profile.yaml",
                     "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml",
@@ -199,10 +189,10 @@ class CompileActivationTests(unittest.TestCase):
             compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
             second = compile_activation(root / "intent.yaml", root, stamp="2026-08-15T00:00:00Z")
             self.assertEqual(second["patched"], [])
-            allow = (
-                root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
+            policy = (
+                root / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml"
             ).read_text(encoding="utf-8")
-            self.assertEqual(allow.count("demo-activate-v1"), 1)
+            self.assertEqual(policy.count("id: demo-activate-v1"), 1)
 
     def test_refuses_stub_actions_and_unsealed_plan(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

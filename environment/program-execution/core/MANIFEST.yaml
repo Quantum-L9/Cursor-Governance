@@ -522,8 +522,8 @@ files:
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
 - path: shared/schemas/campaign-source.schema.json
-  sha256: 835949215dbaa735f7636c82d39b6462d38be98e00d9465b690350d7813732a3
-  bytes: 5611
+  sha256: 82f9ae46f173093d53e3cd31866801273cd85e7eabf9ef6096e425afa9ce159b
+  bytes: 6047
 - path: shared/schemas/evidence-reference.schema.json
   sha256: a40c5ddc764d4c99bfe0c501def26ac26ad025d5cc799e9aa0bf412cdf125ba8
   bytes: 2076
@@ -533,6 +533,9 @@ files:
 - path: shared/schemas/handoff-receipt.schema.json
   sha256: a6c86bbe6a586809a82d76a5963ae0de5a476d7b161771a55fee517911c28f82
   bytes: 1918
+- path: shared/schemas/intent-provenance.schema.json
+  sha256: f3cf3574b7d4489e9f2468273ff0db0b8cccf445139c01b0ea39fa33c15770dd
+  bytes: 4560
 - path: shared/schemas/replan-revision.schema.json
   sha256: 89546ee78fc22a01b71f53a975d232a8b69a8c09f994dc1bc3df491a9708cbba
   bytes: 5166
@@ -573,5 +576,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 189
-  total_bytes: 678129
+  file_count: 190
+  total_bytes: 683125

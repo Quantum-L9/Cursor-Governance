@@ -166,23 +166,29 @@ class CompileCampaignSourceTests(unittest.TestCase):
                 self.compiler.compile_source(source, Path(raw) / "out", stack_proof=proof)
             self.assertIn("language_name", str(ctx.exception))
 
-    def test_unknown_campaign_is_rejected(self) -> None:
+    def test_new_campaign_id_compiles_without_preregistration(self) -> None:
+        """Admission is by validity, never list membership: a brand-new
+        campaign id with a valid schema and bound stack proof compiles."""
         with tempfile.TemporaryDirectory() as raw:
             source = Path(raw) / "CAMPAIGN_SOURCE.yaml"
             source.write_text(
                 SOURCE.read_text(encoding="utf-8").replace(
-                    "campaign_id: bounded-replanning-v1",
-                    "campaign_id: not-allowlisted-v1",
-                    1,
+                    "bounded-replanning-v1",
+                    "never-preregistered-v1",
                 ),
                 encoding="utf-8",
             )
-            with self.assertRaises(self.compiler.CompileError):
-                self.compiler.compile_source(
-                    source,
-                    Path(raw) / "out",
-                    stack_proof=_pass_proof(Path(raw) / "stack-proof.json"),
-                )
+            target = Path(raw) / "out"
+            result = self.compiler.compile_source(
+                source,
+                target,
+                stack_proof=_pass_proof(
+                    Path(raw) / "stack-proof.json", campaign_id="never-preregistered-v1"
+                ),
+            )
+            self.assertEqual(result["campaign_id"], "never-preregistered-v1")
+            errors = self.validator.validate(target, "template")
+            self.assertEqual(errors, [], msg="\n".join(errors))
 
     def test_decisions_without_options_fail_loudly(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

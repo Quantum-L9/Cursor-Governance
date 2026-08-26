@@ -32,7 +32,7 @@ from blueprint_ops import (  # noqa: E402
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = PE_ROOT / "core/shared/schemas/campaign-source.schema.json"
-ALLOWLIST_PATH = PE_ROOT / "campaigns/COMPILE_ALLOWLIST.yaml"
+PROVENANCE_SCHEMA_PATH = PE_ROOT / "core/shared/schemas/intent-provenance.schema.json"
 BLUEPRINT_TEMPLATE = PE_ROOT / "core/program-execution-blueprint-template"
 ADAPTER_REMAP = {"git_repo_adapter": "git"}
 LIKELIHOOD = {"possible": "medium", "likely": "high", "unlikely": "low"}
@@ -67,12 +67,171 @@ def validate_campaign_source(data: dict[str, Any]) -> list[str]:
     ]
 
 
-def load_allowlist(path: Path | None = None) -> set[str]:
-    raw = load_yaml(path or ALLOWLIST_PATH)
-    ids = raw.get("campaign_ids") if isinstance(raw, dict) else None
-    if not isinstance(ids, list) or not ids:
-        raise CompileError("COMPILE_ALLOWLIST.yaml has no campaign_ids")
-    return {str(item) for item in ids}
+# Campaign-id admission is by validity, not list membership: there is no
+# compile allowlist. Collision detection against real campaign state happens
+# at generation/placement time (see compile_architecture_intent.py and
+# run_campaign.py), never as preregistration authority here.
+
+# Mapping kinds that reference per-task inner entries rather than top-level ids.
+_TASK_SCOPED_MAPPINGS = frozenset(
+    {"task", "task_action", "task_acceptance", "task_validation", "task_negative_case", "task_path"}
+)
+
+
+def _validate_intent_provenance(src: dict[str, Any]) -> None:
+    """Revalidate the architecture provenance a generated source carries.
+
+    A campaign source with `intent_provenance` claims machine-verified semantic
+    coverage. Re-prove the claim here so a hand-edited copy — one deleted task,
+    one dropped semantic item, one doctored count — fails canonical compilation
+    instead of silently bypassing architecture coverage. Sources without
+    provenance are untouched: direct and legacy campaign sources stay valid.
+    """
+    provenance = src.get("intent_provenance")
+    if provenance is None:
+        return
+    if not isinstance(provenance, dict):
+        raise CompileError("intent_provenance must be an object")
+    schema = json.loads(PROVENANCE_SCHEMA_PATH.read_text(encoding="utf-8"))
+    errors = sorted(
+        Draft202012Validator(schema).iter_errors(provenance),
+        key=lambda item: list(item.path),
+    )
+    if errors:
+        details = "; ".join(
+            f"{'.'.join(str(part) for part in err.path) or '<root>'}: {err.message}"
+            for err in errors[:5]
+        )
+        raise CompileError(f"intent_provenance schema: {details}")
+
+    units = provenance.get("source_units") or []
+    unit_ids = [str(unit.get("id")) for unit in units]
+    if len(set(unit_ids)) != len(unit_ids):
+        raise CompileError("intent_provenance: duplicate source unit ids")
+    unit_set = set(unit_ids)
+    coverage = provenance.get("coverage") or {}
+    if coverage.get("status") != "PASS":
+        raise CompileError(f"intent_provenance coverage status is {coverage.get('status')!r}")
+    if int(coverage.get("total_units") or 0) != len(unit_ids):
+        raise CompileError(
+            "intent_provenance coverage total_units does not match the source-unit ledger"
+        )
+    if int(coverage.get("unmapped_material_units") or 0) != 0:
+        raise CompileError("intent_provenance records unmapped material units")
+    if int(coverage.get("mapped_material_units") or -1) != int(coverage.get("material_units") or 0):
+        raise CompileError("intent_provenance mapped/material unit counts disagree")
+
+    tasks = {str(task.get("id")): task for task in src.get("tasks") or []}
+    top_level: dict[str, set[str]] = {
+        "prohibited_path": {str(item.get("id")) for item in src.get("prohibited_paths") or []},
+        "decision": {str(item.get("id")) for item in src.get("decisions") or []},
+        "risk": {str(item.get("id")) for item in src.get("risks") or []},
+        "evidence_requirement": {
+            str(item.get("id")) for item in src.get("evidence_requirements") or []
+        },
+        "wave": {str(item.get("id")) for item in src.get("waves") or []},
+        "gate": {str(item.get("id")) for item in src.get("gates") or []},
+    }
+    edge_count = len(src.get("dependency_edges") or [])
+    scope = (src.get("program") or {}).get("scope") or {}
+    include_count = len(scope.get("include") or [])
+    exclude_count = len(scope.get("exclude") or [])
+
+    def _indexed_ok(ref: str, prefix: str, count: int) -> bool:
+        if not ref.startswith(prefix):
+            return False
+        try:
+            return 1 <= int(ref[len(prefix) :]) <= count
+        except ValueError:
+            return False
+
+    def _mapping_ok(mapping: dict[str, Any]) -> bool:
+        kind = str(mapping.get("kind") or "")
+        ref = str(mapping.get("id") or "")
+        if kind in _TASK_SCOPED_MAPPINGS:
+            task = tasks.get(str(mapping.get("task_id") or (ref if kind == "task" else "")))
+            if task is None:
+                return False
+            if kind == "task":
+                return True
+            if kind == "task_acceptance":
+                return ref in {str(entry.get("id")) for entry in task.get("acceptance") or []}
+            if kind == "task_validation":
+                return bool(task.get("validation"))
+            if kind == "task_negative_case":
+                return ref in [str(case) for case in task.get("negative_cases") or []]
+            if kind == "task_path":
+                return ref in [str(path) for path in task.get("paths") or []]
+            if kind == "task_action":
+                return ref in [str(action) for action in task.get("actions") or []]
+            return False
+        if kind in top_level:
+            return ref in top_level[kind]
+        if kind == "dependency_edge":
+            return _indexed_ok(ref, "EDGE-", edge_count)
+        if kind == "scope_include":
+            return _indexed_ok(ref, "SCOPE-IN-", include_count)
+        if kind == "scope_exclude":
+            return _indexed_ok(ref, "SCOPE-EX-", exclude_count)
+        if kind == "program_objective":
+            return bool((src.get("program") or {}).get("objective"))
+        return False
+
+    material_item_units: set[str] = set()
+    mapped_entity_refs: set[tuple[str, str]] = set()
+    for item in provenance.get("semantic_items") or []:
+        item_id = str(item.get("id"))
+        refs = [str(ref) for ref in item.get("source_refs") or []]
+        unknown = [ref for ref in refs if ref not in unit_set]
+        if unknown:
+            raise CompileError(f"intent_provenance: {item_id} cites unknown source units {unknown}")
+        material = (
+            str(item.get("materiality") or "material") == "material"
+            and str(item.get("kind")) != "informational"
+        )
+        mappings = [
+            entry for entry in item.get("campaign_mappings") or [] if isinstance(entry, dict)
+        ]
+        for mapping in mappings:
+            if not _mapping_ok(mapping):
+                raise CompileError(
+                    f"intent_provenance: {item_id} mapping {mapping.get('kind')}:"
+                    f"{mapping.get('id')} references nothing in the campaign source"
+                )
+            kind = str(mapping.get("kind") or "")
+            if kind in _TASK_SCOPED_MAPPINGS:
+                mapped_entity_refs.add(("task", str(mapping.get("task_id") or mapping.get("id"))))
+            elif kind == "prohibited_path":
+                mapped_entity_refs.add(("prohibited_path", str(mapping.get("id"))))
+        if material:
+            material_item_units.update(refs)
+            if str(item.get("kind")) not in {"implementation_seam", "file_seam"} and not mappings:
+                raise CompileError(
+                    f"intent_provenance: material semantic item {item_id} has no campaign mapping"
+                )
+    for unit in units:
+        if str(unit.get("materiality") or "") != "material":
+            continue
+        if str(unit.get("id")) not in material_item_units:
+            raise CompileError(
+                f"intent_provenance: material source unit {unit.get('id')} is no longer "
+                "covered by any material semantic item"
+            )
+    # No orphan campaign entities: in a generated source every task and every
+    # prohibition exists because a semantic item mapped to it. An entity whose
+    # mapping (or whole semantic item) was deleted is evidence of tampering.
+    for task_id in tasks:
+        if ("task", task_id) not in mapped_entity_refs:
+            raise CompileError(
+                f"intent_provenance: task {task_id} has no semantic mapping; the "
+                "architecture lineage for it was removed"
+            )
+    for dnb_id in top_level["prohibited_path"]:
+        if ("prohibited_path", dnb_id) not in mapped_entity_refs:
+            raise CompileError(
+                f"intent_provenance: prohibited path {dnb_id} has no semantic mapping; "
+                "the architecture lineage for it was removed"
+            )
 
 
 def _load_instantiate() -> Any:
@@ -373,7 +532,6 @@ def compile_source(
     target: Path,
     *,
     stamp: str | None = None,
-    allowlist_path: Path | None = None,
     stack_proof: Path | None = None,
 ) -> dict[str, Any]:
     source = source.resolve()
@@ -385,9 +543,7 @@ def compile_source(
     if schema_errors:
         raise CompileError("campaign source schema: " + "; ".join(schema_errors))
     campaign_id = src["metadata"]["campaign_id"]
-    allowed = load_allowlist(allowlist_path)
-    if campaign_id not in allowed:
-        raise CompileError(f"campaign {campaign_id} is not in COMPILE_ALLOWLIST.yaml")
+    _validate_intent_provenance(src)
     stack_receipt = _bind_stack_proof(src, stack_proof)
     warnings = _semantic_precheck(src)
     warnings.extend(normalize_definition_status(src))
@@ -945,6 +1101,78 @@ def compile_source(
         },
     )
 
+    traceability_sources: list[dict[str, Any]] = [
+        {
+            "id": "SRC-001",
+            "source": repo_rel or source.name,
+            "revision": src.get("integrity", {}).get("digest_algorithm", "sha256"),
+            "authority_class": "governing",
+            "evidence_id": evidence[0]["id"],
+            "claims": [
+                "Campaign source is the immutable operator intent.",
+                "Stack-proof receipt bound before compile.",
+            ],
+            "stack_proof": {
+                "path": str(stack_proof),
+                "status": stack_receipt.get("status"),
+                "tools": [
+                    item.get("name")
+                    for item in (stack_receipt.get("tools") or [])
+                    if isinstance(item, dict)
+                ],
+                "constraints": [
+                    constraint
+                    for item in (stack_receipt.get("tools") or [])
+                    if isinstance(item, dict)
+                    for constraint in (item.get("constraints") or [])
+                ],
+            },
+            "target_ids": [first_target],
+            "workstream_ids": [item["id"] for item in workstreams],
+            "task_ids": [item["id"] for item in tasks],
+            "gate_ids": [item["id"] for item in gates],
+            "status": "active",
+        }
+    ]
+    provenance = src.get("intent_provenance")
+    if isinstance(provenance, dict):
+        # Clause-level architecture lineage rides the existing extensible
+        # sources payload: no second traceability artifact.
+        provenance_source = provenance.get("source") or {}
+        mapping_ids = [
+            f"{mapping.get('kind')}:{mapping.get('id')}"
+            for item in provenance.get("semantic_items") or []
+            for mapping in item.get("campaign_mappings") or []
+        ]
+        traceability_sources.append(
+            {
+                "id": f"SRC-{len(traceability_sources) + 1:03d}",
+                "source": str(provenance_source.get("path") or "architecture-intent"),
+                "revision": f"sha256:{provenance_source.get('sha256')}",
+                "authority_class": "governing",
+                "evidence_id": evidence[0]["id"],
+                "claims": [
+                    "Operator architecture intent compiled with machine-verified "
+                    "semantic coverage (intent_provenance).",
+                ],
+                "architecture_intent": {
+                    "source_sha256": provenance_source.get("sha256"),
+                    "source_unit_count": len(provenance.get("source_units") or []),
+                    "semantic_item_ids": [
+                        str(item.get("id")) for item in provenance.get("semantic_items") or []
+                    ],
+                    "campaign_mapping_ids": mapping_ids,
+                    "coverage": dict(provenance.get("coverage") or {}),
+                    "extractor": dict(provenance.get("extractor") or {}),
+                    "repair_rounds": provenance.get("repair_rounds", 0),
+                },
+                "target_ids": [first_target],
+                "workstream_ids": [item["id"] for item in workstreams],
+                "task_ids": [item["id"] for item in tasks],
+                "gate_ids": [item["id"] for item in gates],
+                "status": "active",
+            }
+        )
     dump_yaml(
         target / "SOURCE_TRACEABILITY.yaml",
         {
@@ -958,39 +1186,7 @@ def compile_source(
                 "historical",
                 "inferred",
             ],
-            "sources": [
-                {
-                    "id": "SRC-001",
-                    "source": repo_rel or source.name,
-                    "revision": src.get("integrity", {}).get("digest_algorithm", "sha256"),
-                    "authority_class": "governing",
-                    "evidence_id": evidence[0]["id"],
-                    "claims": [
-                        "Campaign source is the immutable operator intent.",
-                        "Stack-proof receipt bound before compile.",
-                    ],
-                    "stack_proof": {
-                        "path": str(stack_proof),
-                        "status": stack_receipt.get("status"),
-                        "tools": [
-                            item.get("name")
-                            for item in (stack_receipt.get("tools") or [])
-                            if isinstance(item, dict)
-                        ],
-                        "constraints": [
-                            constraint
-                            for item in (stack_receipt.get("tools") or [])
-                            if isinstance(item, dict)
-                            for constraint in (item.get("constraints") or [])
-                        ],
-                    },
-                    "target_ids": [first_target],
-                    "workstream_ids": [item["id"] for item in workstreams],
-                    "task_ids": [item["id"] for item in tasks],
-                    "gate_ids": [item["id"] for item in gates],
-                    "status": "active",
-                }
-            ],
+            "sources": traceability_sources,
         },
     )
 
@@ -1044,14 +1240,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="compile_campaign_source")
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--target", required=True, type=Path)
-    parser.add_argument("--allowlist", type=Path, default=None)
     parser.add_argument("--stack-proof", type=Path, default=None)
     args = parser.parse_args(argv)
     try:
         result = compile_source(
             args.source,
             args.target,
-            allowlist_path=args.allowlist,
             stack_proof=args.stack_proof,
         )
     except CompileError as exc:
