@@ -210,6 +210,7 @@ class Hooks:
     context7_stack: Callable[[dict[str, Any], Path], dict[str, Any]] | None = None
     write_task_output: Callable[[Path, str, str], str] | None = None
     plan_window: Callable[[dict[str, Any], Path, Path], dict[str, Any]] | None = None
+    compile_architecture: Callable[..., dict[str, Any]] | None = None
 
 
 @dataclass
@@ -467,11 +468,19 @@ def load_activate_seed(path: Path) -> dict[str, Any]:
 
 
 def host_campaign_ids(root: Path) -> set[str]:
+    """Ids that already exist, read from real state.
+
+    This answers "is this id taken", never "is this id permitted". Campaign
+    directories, the status ledger, and the completed archive are evidence of
+    what exists; none of them is an admission list, and a new id needs no entry
+    in any of them to compile.
+    """
     ids: set[str] = set()
-    allow = root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
-    if allow.is_file():
-        for item in (load_yaml(allow) or {}).get("campaign_ids") or []:
-            ids.add(str(item))
+    campaigns = root / "environment/program-execution/campaigns"
+    if campaigns.is_dir():
+        for path in campaigns.iterdir():
+            if path.is_dir() and path.name not in {"COMPLETED", "scripts", "stale"}:
+                ids.add(path.name)
     status = root / "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml"
     if status.is_file():
         for item in (load_yaml(status) or {}).get("campaigns") or []:
@@ -642,7 +651,7 @@ def campaign_input_module() -> Any:
     return _load_script("campaign_input", CAMPAIGN_INPUT)
 
 
-def classify_campaign_input(path: Path) -> Any:
+def classify_campaign_input(path: Path, *, forced_kind: Any | None = None) -> Any:
     """Classify the operator's input once, before anything can have side effects.
 
     Supported kinds return a classification; unsupported kinds raise the
@@ -650,10 +659,46 @@ def classify_campaign_input(path: Path) -> Any:
     receive "unsupported, but here is a partial route" and improvise the rest.
     """
     module = campaign_input_module()
-    found = module.classify(Path(path))
+    found = module.classify(Path(path), forced_kind=forced_kind)
     if not found.supported:
         raise module.reject(found)
     return found
+
+
+def architecture_module() -> Any:
+    return _load_script(
+        "compile_architecture_intent", PE_ROOT / "scripts/compile_architecture_intent.py"
+    )
+
+
+def default_compile_architecture(
+    intent: Path,
+    *,
+    target: str | None,
+    repo_root: Path,
+    primed_dir: Path,
+    target_checkout: Path | None = None,
+) -> dict[str, Any]:
+    """Compile architecture prose into a campaign-source.v2, before side effects.
+
+    Deliberately *not* routed through brief → activate afterwards: the compiler
+    has already produced the rich representation, and rebuilding it from an
+    activate seed would flatten exactly the tasks, validations, dependencies,
+    and prohibitions this route exists to carry. The emitted source enters the
+    same direct placement path an operator-supplied campaign-source.v2 uses.
+    """
+    module = architecture_module()
+    try:
+        return module.compile_architecture_intent(
+            Path(intent),
+            target=target,
+            forced=True,
+            repo_root=repo_root,
+            target_checkout=target_checkout,
+            cache_root=primed_dir,
+        )
+    except module.ArchitectureCompileError as exc:
+        raise CampaignError(exc.render(), exit_code=exc.exit_code) from exc
 
 
 def place_campaign_source(source_doc: dict[str, Any], repo_root: Path, campaign_id: str) -> None:
@@ -672,10 +717,9 @@ def place_campaign_source(source_doc: dict[str, Any], repo_root: Path, campaign_
     dump_yaml(source_path, source_doc)
     module.write_receipt(source_path, campaign_id, stamp=module.utc_now())
     hosts = (
-        (
-            repo_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml",
-            module.patch_allowlist,
-        ),
+        # No allowlist patch: compilation no longer admits by list membership,
+        # so registering into one would only recreate the preregistration step
+        # under a different name.
         (
             repo_root / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
             module.patch_execution_policy,
@@ -786,7 +830,6 @@ def default_compile_source(
     source: Path,
     target: Path,
     *,
-    allowlist_path: Path | None = None,
     stack_proof: Path | None = None,
 ) -> None:
     cmd = [
@@ -797,8 +840,6 @@ def default_compile_source(
         "--target",
         str(target),
     ]
-    if allowlist_path is not None:
-        cmd.extend(["--allowlist", str(allowlist_path)])
     if stack_proof is not None:
         cmd.extend(["--stack-proof", str(stack_proof)])
     result = run_cmd(cmd, timeout=COMPILE_TIMEOUT_S, cwd=GOV_ROOT)
@@ -4027,6 +4068,7 @@ def run_campaign(
     target_override: str | None = None,
     hooks: Hooks | None = None,
     fast: bool | None = None,
+    forced_kind: Any | None = None,
 ) -> CampaignReport:
     """Run the campaign and leave a forensic execution trace behind it.
 
@@ -4058,6 +4100,7 @@ def run_campaign(
                 hooks=hooks,
                 fast=fast,
                 trace=trace,
+                forced_kind=forced_kind,
             )
     finally:
         auto_harvest(trace)
@@ -4076,6 +4119,7 @@ def _run_campaign_stages(
     hooks: Hooks | None = None,
     fast: bool | None = None,
     trace: pe_trace.ExecutionTrace | None = None,
+    forced_kind: Any | None = None,
 ) -> CampaignReport:
     requested_until = until
     until = normalize_until(until)
@@ -4092,9 +4136,41 @@ def _run_campaign_stages(
         # Classify once, before any stage can create a worktree, mutate a blueprint,
         # or touch PEC state. An unsupported input fails here in milliseconds.
         kinds = campaign_input_module().CampaignInputKind
-        classification = classify_campaign_input(intent_path)
+        classification = classify_campaign_input(intent_path, forced_kind=forced_kind)
         campaign_source_doc: dict[str, Any] | None = None
-        if classification.kind is kinds.CAMPAIGN_SOURCE_V2:
+        architecture_receipt: dict[str, Any] | None = None
+        if classification.kind is kinds.ARCHITECTURE_INTENT_V1:
+            # Semantic compilation runs here, in the classification stage, for
+            # the same reason classification does: a source that cannot be
+            # compiled must fail before a worktree, a Blueprint, or any PEC
+            # state exists. Its only output is a compiler artifact under
+            # primed/, which is not an executing workspace.
+            compile_architecture = hooks.compile_architecture or default_compile_architecture
+            try:
+                architecture_receipt = compile_architecture(
+                    classification.path,
+                    target=target_override or os.environ.get("TARGET"),
+                    repo_root=host_root,
+                    primed_dir=l9_home / "primed",
+                    target_checkout=None,
+                )
+            except architecture_module().ArchitectureCompileError as exc:
+                # Presented the same way whoever raised it: the refusal already
+                # states that nothing ran, and it is written to be pasted to an
+                # operator rather than summarized.
+                raise CampaignError(exc.render(), exit_code=exc.exit_code) from exc
+            resolved_intent = Path(str(architecture_receipt["campaign_source"]))
+            campaign_source_doc = load_yaml(resolved_intent)
+            seed = campaign_input_module().seed_view(campaign_source_doc or {})
+            log(
+                "architecture compiled: "
+                f"{architecture_receipt['coverage']['status']} coverage, "
+                f"{architecture_receipt['task_count']} tasks, "
+                f"{architecture_receipt['blocked_task_count']} blocked"
+            )
+            classified["architecture_source_sha256"] = str(architecture_receipt["source"]["sha256"])
+            classified["coverage_status"] = str(architecture_receipt["coverage"]["status"])
+        elif classification.kind is kinds.CAMPAIGN_SOURCE_V2:
             campaign_source_doc = classification.document
             resolved_intent = classification.path
             seed = campaign_input_module().seed_view(campaign_source_doc or {})
@@ -4277,8 +4353,10 @@ def _run_campaign_stages(
 
     source = campaign_source_path(write_root, campaign_id)
     blueprint = Path(report.blueprint)
-    allowlist = write_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
-    compile_input = pe_trace.fingerprint(source, allowlist, stack_proof_path)
+    # Fingerprint the campaign's own inputs only. Folding a shared registry in
+    # meant registering an unrelated campaign invalidated this one's prepared
+    # runtime and forced a full rebuild.
+    compile_input = pe_trace.fingerprint(source, stack_proof_path)
     # Preparing an already-prepared campaign is the operation an operator repeats
     # most often, and stepping the runtime aside to rebuild it unconditionally is
     # what made the second run cost the same as the first. Step aside only when
@@ -4319,7 +4397,6 @@ def _run_campaign_stages(
                     default_compile_source(
                         source,
                         blueprint,
-                        allowlist_path=allowlist,
                         stack_proof=stack_proof_path,
                     )
             annotate_phase0_without_forging_ack(blueprint)
@@ -4737,6 +4814,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Classify a campaign input and print its route. Runs no campaign stage.",
     )
     parser.add_argument(
+        "--architecture",
+        action="store_true",
+        help=(
+            "Read INTENT as long-form architecture intent "
+            "(l9.program-execution.architecture-intent.v1). The operator's choice, so an "
+            "unchanged assistant transcript needs no frontmatter edit."
+        ),
+    )
+    parser.add_argument(
         "--until",
         choices=list(UNTIL_STAGES) + list(UNTIL_ALIASES),
         default=AUTONOMOUS_LAST_STAGE,
@@ -4840,7 +4926,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(raw)
     if args.check_input is not None:
-        return campaign_input_module().main([str(args.check_input)])
+        forced = (
+            ["--as", campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1.value]
+            if args.architecture
+            else []
+        )
+        return campaign_input_module().main([str(args.check_input), *forced])
     if args.intent is None:
         parser.error("--intent is required (or use --check-input PATH)")
     module = campaign_input_module()
@@ -4848,6 +4939,9 @@ def main(argv: list[str] | None = None) -> int:
         refuse_live_until_shortcut(args.until)
         report = run_campaign(
             args.intent.resolve(),
+            forced_kind=(
+                module.CampaignInputKind.ARCHITECTURE_INTENT_V1 if args.architecture else None
+            ),
             until=args.until,
             primary=args.primary,
             worktree=args.worktree,

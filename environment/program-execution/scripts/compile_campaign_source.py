@@ -32,7 +32,8 @@ from blueprint_ops import (  # noqa: E402
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 SCHEMA_PATH = PE_ROOT / "core/shared/schemas/campaign-source.schema.json"
-ALLOWLIST_PATH = PE_ROOT / "campaigns/COMPILE_ALLOWLIST.yaml"
+PROVENANCE_SCHEMA_PATH = PE_ROOT / "compiler/schemas/architecture-resolution.schema.json"
+INTENT_PROVENANCE_SCHEMA = "l9.program-execution.intent-provenance.v1"
 BLUEPRINT_TEMPLATE = PE_ROOT / "core/program-execution-blueprint-template"
 ADAPTER_REMAP = {"git_repo_adapter": "git"}
 LIKELIHOOD = {"possible": "medium", "likely": "high", "unlikely": "low"}
@@ -67,12 +68,175 @@ def validate_campaign_source(data: dict[str, Any]) -> list[str]:
     ]
 
 
-def load_allowlist(path: Path | None = None) -> set[str]:
-    raw = load_yaml(path or ALLOWLIST_PATH)
-    ids = raw.get("campaign_ids") if isinstance(raw, dict) else None
-    if not isinstance(ids, list) or not ids:
-        raise CompileError("COMPILE_ALLOWLIST.yaml has no campaign_ids")
-    return {str(item) for item in ids}
+def validate_intent_provenance(src: dict[str, Any]) -> list[str]:
+    """Re-derive the architecture mapping rather than trusting the record of it.
+
+    Without this, the architecture route is bypassable by hand: compile a valid
+    architecture campaign, delete one mapped requirement from the emitted YAML,
+    and hand the edited file straight to this compiler. The Blueprint would
+    still validate — schema validity says nothing about intent fidelity — and
+    the deleted obligation would be gone with a PASS coverage record still
+    attached, claiming otherwise.
+
+    So every count and every reference is recomputed here. Sources with no
+    `intent_provenance` are untouched: legacy and hand-authored campaign sources
+    are not architecture-intent sources and are not required to become one.
+    """
+    provenance = src.get("intent_provenance")
+    if provenance is None:
+        return []
+    if not isinstance(provenance, dict):
+        raise CompileError("intent_provenance must be a mapping")
+    schema = str(provenance.get("schema") or "")
+    if schema != INTENT_PROVENANCE_SCHEMA:
+        raise CompileError(f"intent_provenance.schema {schema!r} is not {INTENT_PROVENANCE_SCHEMA}")
+    errors = sorted(
+        Draft202012Validator(
+            json.loads(PROVENANCE_SCHEMA_PATH.read_text(encoding="utf-8"))
+        ).iter_errors(provenance),
+        key=lambda item: list(item.path),
+    )
+    if errors:
+        detail = "; ".join(
+            f"{'.'.join(str(part) for part in err.path) or '<root>'}: {err.message}"
+            for err in errors[:5]
+        )
+        raise CompileError(f"intent_provenance schema: {detail}")
+
+    units = provenance.get("source_units") or []
+    unit_ids = {str(unit.get("id")) for unit in units}
+    if len(unit_ids) != len(units):
+        raise CompileError("intent_provenance.source_units contains duplicate unit ids")
+    items = provenance.get("semantic_items") or []
+    item_ids = {str(item.get("id")) for item in items}
+    if len(item_ids) != len(items):
+        raise CompileError("intent_provenance.semantic_items contains duplicate ids")
+
+    known = _campaign_construct_ids(src)
+    material_items = 0
+    mapped_material = 0
+    for item in items:
+        refs = [str(ref) for ref in item.get("source_refs") or []]
+        if not refs:
+            raise CompileError(f"semantic item {item.get('id')!r} has no source provenance")
+        missing = sorted(set(refs) - unit_ids)
+        if missing:
+            raise CompileError(
+                f"semantic item {item.get('id')!r} cites unknown source units: {missing}"
+            )
+        if str(item.get("materiality") or "material") != "material":
+            continue
+        material_items += 1
+        mappings = item.get("campaign_mappings") or []
+        if mappings:
+            mapped_material += 1
+        for mapping in mappings:
+            _require_mapping_target(item, mapping, known)
+
+    coverage = provenance.get("coverage") or {}
+    recorded_status = str(coverage.get("status") or "")
+    if recorded_status != "PASS":
+        raise CompileError(
+            f"intent_provenance.coverage.status is {recorded_status!r}; a campaign source "
+            "compiled from architecture intent must carry PASS coverage"
+        )
+    if int(coverage.get("total_units") or 0) != len(units):
+        raise CompileError(
+            "intent_provenance.coverage.total_units does not match the source unit ledger"
+        )
+    material_units = [unit for unit in units if unit.get("signals")]
+    if int(coverage.get("material_units") or 0) != len(material_units):
+        raise CompileError(
+            "intent_provenance.coverage.material_units does not match the unit ledger"
+        )
+    ungoverned = [
+        str(unit.get("id"))
+        for unit in material_units
+        if str(unit.get("disposition") or "") in {"", "mapped_context"}
+    ]
+    if ungoverned:
+        raise CompileError(
+            "source units carrying normative signals have no governed disposition: "
+            + ", ".join(sorted(ungoverned)[:12])
+        )
+    if int(coverage.get("unmapped_material_units") or 0) != 0:
+        raise CompileError("intent_provenance.coverage records unmapped material source units")
+    recorded_material = coverage.get("material_semantic_items")
+    if recorded_material is not None and int(recorded_material) != material_items:
+        raise CompileError(
+            "intent_provenance.coverage.material_semantic_items does not match the item ledger "
+            f"(recorded {recorded_material}, present {material_items})"
+        )
+    recorded_mapped = coverage.get("mapped_material_semantic_items")
+    if recorded_mapped is not None and int(recorded_mapped) > mapped_material:
+        raise CompileError(
+            "intent_provenance.coverage claims more mapped material items than the source "
+            f"carries (recorded {recorded_mapped}, present {mapped_material})"
+        )
+    chunks_expected = int(coverage.get("chunks_expected") or 1)
+    chunks_extracted = int(coverage.get("chunks_extracted") or 1)
+    if chunks_extracted < chunks_expected:
+        raise CompileError(
+            f"intent_provenance records {chunks_extracted} of {chunks_expected} source chunks "
+            "extracted; no chunk may be omitted"
+        )
+    return []
+
+
+_MAPPING_LOOKUP = {
+    "task": "tasks",
+    "task_action": "tasks",
+    "task_acceptance": "tasks",
+    "task_validation": "tasks",
+    "task_negative_case": "tasks",
+    "task_path": "tasks",
+    "prohibited_path": "prohibited_paths",
+    "decision": "decisions",
+    "risk": "risks",
+    "unknown": "unknowns",
+    "evidence_requirement": "evidence_requirements",
+    "gate": "gates",
+    "wave": "waves",
+}
+
+
+def _campaign_construct_ids(src: dict[str, Any]) -> dict[str, set[str]]:
+    known: dict[str, set[str]] = {}
+    for key in (
+        "tasks",
+        "gates",
+        "waves",
+        "decisions",
+        "risks",
+        "unknowns",
+        "prohibited_paths",
+        "evidence_requirements",
+    ):
+        known[key] = {
+            str(entry.get("id"))
+            for entry in (src.get(key) or [])
+            if isinstance(entry, dict) and entry.get("id")
+        }
+    return known
+
+
+def _require_mapping_target(
+    item: dict[str, Any], mapping: dict[str, Any], known: dict[str, set[str]]
+) -> None:
+    kind = str(mapping.get("kind") or "")
+    bucket = _MAPPING_LOOKUP.get(kind)
+    if bucket is None:
+        return
+    identifier = str(mapping.get("task_id") or mapping.get("id") or "")
+    if not identifier:
+        raise CompileError(
+            f"semantic item {item.get('id')!r} maps to {kind} without naming which one"
+        )
+    if identifier not in known.get(bucket, set()):
+        raise CompileError(
+            f"semantic item {item.get('id')!r} maps to {kind} {identifier!r}, which the campaign "
+            f"source does not contain; the mapped obligation was removed"
+        )
 
 
 def _load_instantiate() -> Any:
@@ -384,12 +548,49 @@ def normalize_definition_status(src: dict[str, Any]) -> list[str]:
     return notes
 
 
+def _architecture_lineage(src: dict[str, Any]) -> dict[str, Any]:
+    """Project clause-level architecture lineage into the existing traceability source.
+
+    The `sources` items are already `additionalProperties: true`, so lineage
+    rides in the artifact the Blueprint already has rather than in a second,
+    competing traceability file.
+    """
+    provenance = src.get("intent_provenance")
+    if not isinstance(provenance, dict):
+        return {}
+    items = provenance.get("semantic_items") or []
+    return {
+        "architecture_intent": {
+            "schema": str(provenance.get("schema") or ""),
+            "source_sha256": str((provenance.get("source") or {}).get("sha256") or ""),
+            "source_path": str((provenance.get("source") or {}).get("path") or ""),
+            "extractor": provenance.get("extractor") or {},
+            "coverage": provenance.get("coverage") or {},
+            "source_unit_ids": [
+                str(unit.get("id")) for unit in provenance.get("source_units") or []
+            ],
+            "clauses": [
+                {
+                    "semantic_id": str(item.get("id")),
+                    "kind": str(item.get("kind") or ""),
+                    "source_refs": [str(ref) for ref in item.get("source_refs") or []],
+                    "campaign_mappings": [
+                        str(mapping.get("task_id") or mapping.get("id") or mapping.get("kind"))
+                        for mapping in item.get("campaign_mappings") or []
+                    ],
+                }
+                for item in items
+                if str(item.get("materiality") or "material") == "material"
+            ],
+        }
+    }
+
+
 def compile_source(
     source: Path,
     target: Path,
     *,
     stamp: str | None = None,
-    allowlist_path: Path | None = None,
     stack_proof: Path | None = None,
 ) -> dict[str, Any]:
     source = source.resolve()
@@ -401,11 +602,13 @@ def compile_source(
     if schema_errors:
         raise CompileError("campaign source schema: " + "; ".join(schema_errors))
     campaign_id = src["metadata"]["campaign_id"]
-    allowed = load_allowlist(allowlist_path)
-    if campaign_id not in allowed:
-        raise CompileError(f"campaign {campaign_id} is not in COMPILE_ALLOWLIST.yaml")
+    # No preregistration. A campaign compiles because it is valid, not because
+    # its id was listed somewhere first; identity collisions are answered from
+    # real state at id allocation, which is a different question from admission.
+    provenance_warnings = validate_intent_provenance(src)
     stack_receipt = _bind_stack_proof(src, stack_proof)
     warnings = _semantic_precheck(src)
+    warnings.extend(provenance_warnings)
     warnings.extend(normalize_definition_status(src))
     now = stamp or utc_now()
     ensure_instantiated(target, src, now)
@@ -1005,6 +1208,7 @@ def compile_source(
                     "task_ids": [item["id"] for item in tasks],
                     "gate_ids": [item["id"] for item in gates],
                     "status": "active",
+                    **_architecture_lineage(src),
                 }
             ],
         },
@@ -1060,14 +1264,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="compile_campaign_source")
     parser.add_argument("--source", required=True, type=Path)
     parser.add_argument("--target", required=True, type=Path)
-    parser.add_argument("--allowlist", type=Path, default=None)
     parser.add_argument("--stack-proof", type=Path, default=None)
     args = parser.parse_args(argv)
     try:
         result = compile_source(
             args.source,
             args.target,
-            allowlist_path=args.allowlist,
             stack_proof=args.stack_proof,
         )
     except CompileError as exc:

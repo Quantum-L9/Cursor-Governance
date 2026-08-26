@@ -525,8 +525,8 @@ files:
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
 - path: shared/schemas/campaign-source.schema.json
-  sha256: 835949215dbaa735f7636c82d39b6462d38be98e00d9465b690350d7813732a3
-  bytes: 5611
+  sha256: af1f3296d1abe7ad633087894466c945f891b90c5aee54f35def662243e1ec65
+  bytes: 10125
 - path: shared/schemas/evidence-reference.schema.json
   sha256: a40c5ddc764d4c99bfe0c501def26ac26ad025d5cc799e9aa0bf412cdf125ba8
   bytes: 2076
@@ -577,4 +577,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 190
-  total_bytes: 697153
+  total_bytes: 701667
