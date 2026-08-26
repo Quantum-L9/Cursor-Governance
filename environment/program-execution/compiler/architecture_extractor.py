@@ -154,7 +154,8 @@ class ArchitectureExtractor(Protocol):
 
     id: str
 
-    def extract(self, request: ArchitectureExtractorRequest) -> ArchitectureExtractorResponse: ...
+    def extract(self, request: ArchitectureExtractorRequest) -> ArchitectureExtractorResponse:
+        raise NotImplementedError
 
 
 def chunk_units(

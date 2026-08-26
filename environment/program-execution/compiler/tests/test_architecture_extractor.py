@@ -78,7 +78,7 @@ class DeterministicExtractorTests(unittest.TestCase):
             self.assertIn("prohibition", kinds)
             unit_ids = {unit.id for unit in intent.units}
             for item in response.items:
-                self.assertTrue(set(item["source_refs"]) <= unit_ids)
+                self.assertLessEqual(set(item["source_refs"]), unit_ids)
 
     def test_its_own_statements_are_grounded_in_their_cited_units(self) -> None:
         """A self-inflicted ungrounded statement would be silently rejected."""
