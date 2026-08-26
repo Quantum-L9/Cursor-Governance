@@ -25,10 +25,12 @@ governance clone,” use **`/ff`** — nothing else.
 | [`skills/l9-repo-sync/SKILL.md`](../skills/l9-repo-sync/SKILL.md) | Skill contract |
 | [`skills/l9-repo-sync/scripts/ff.sh`](../skills/l9-repo-sync/scripts/ff.sh) | Park unique work, then `reset --keep` |
 
-An in-place catch-up leaves `.venv` **and unique untracked files**. Unique
-commits and dirty tracked bytes are parked (preserve branch, dirty ref,
-`$HOME/.cursor/l9-ff-hold/`). That is the success test. Do not call
-`governance_sync.sh` (it stashes untracked). Do not delete files to unblock.
+An in-place catch-up leaves `.venv`, **env.local keep-list files**, and
+unique untracked files. Unique commits and dirty tracked bytes are parked
+(preserve branch, dirty ref, `$HOME/.cursor/l9-ff-hold/`). That is the
+success test. Do not call `governance_sync.sh` (it stashes untracked). Do
+not delete files to unblock. Keep-list: `.env.local`, `env.local`,
+`.env.*.local`, `.claude/settings.local.json` (same as sessionStart swap).
 
 ## MUST
 
@@ -36,7 +38,7 @@ commits and dirty tracked bytes are parked (preserve branch, dirty ref,
 - Set `GOVERNANCE_SYNC_PUSH=0` and `GOVERNANCE_SYNC_HARD_RESET=0`
 - Set `CURSOR_GOVERNANCE_DIR` to that clone
 - Run `skills/l9-repo-sync/scripts/ff.sh`
-- Verify `.venv` and unique untracked paths still exist (or are held) after the run
+- Verify `.venv`, env.local keep-list files, and unique untracked paths still exist (or are held) after the run
 
 ## MUST NOT
 

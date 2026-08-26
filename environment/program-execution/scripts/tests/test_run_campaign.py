@@ -2029,6 +2029,101 @@ class CampaignInputRoutingTests(unittest.TestCase):
         task1 = next(item for item in doc["tasks"] if item["id"] == "TASK-001")
         self.assertEqual(task1["paths"], {"writable": ["docs/program-execution/marker.md"]})
 
+    def test_direct_campaign_source_without_plan_status_defaults_to_ready(self) -> None:
+        """plan_status is optional in the schema; omission must not refuse the seal."""
+        source = self._source()
+        source.pop("plan_status", None)
+        program = source.get("program")
+        if isinstance(program, dict):
+            program.pop("plan_status", None)
+        landed: dict[str, object] = {}
+
+        def compile_source(source_path: Path, target: Path) -> None:
+            landed["compiled"] = _load_yaml_file(Path(source_path))
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            path = root / "CAMPAIGN_SOURCE.yaml"
+            _dump(path, source)
+            report = self.mod.run_campaign(
+                path,
+                until="blueprint",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    compile_source=compile_source,
+                    validate_blueprint=lambda target: [],
+                ),
+            )
+        self.assertIn("blueprint", report.stages_completed)
+        compiled = landed.get("compiled")
+        self.assertIsNotNone(compiled, msg="compile_source was never invoked")
+        self.assertEqual(compiled["schema"], self.ci.CAMPAIGN_SOURCE_SCHEMA)
+        # The runtime derives an effective Ready; it must not rewrite the source.
+        self.assertNotIn("plan_status", compiled)
+        self.assertNotIn("plan_status", compiled["program"])
+
+    def test_direct_campaign_source_explicit_conditionally_ready_still_routes(self) -> None:
+        source = self._source()
+        source["plan_status"] = "ConditionallyReady"
+        landed: dict[str, object] = {}
+
+        def compile_source(source_path: Path, target: Path) -> None:
+            landed["compiled"] = _load_yaml_file(Path(source_path))
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            path = root / "CAMPAIGN_SOURCE.yaml"
+            _dump(path, source)
+            self.mod.run_campaign(
+                path,
+                until="blueprint",
+                primary=Path(raw) / "primary",
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    compile_source=compile_source,
+                    validate_blueprint=lambda target: [],
+                ),
+            )
+        compiled = landed.get("compiled")
+        self.assertIsNotNone(compiled, msg="compile_source was never invoked")
+        self.assertEqual(compiled["plan_status"], "ConditionallyReady")
+
+    def test_direct_campaign_source_explicit_blocked_still_refuses_seal(self) -> None:
+        """Omission defaults to Ready; an explicit non-ready state never does."""
+        for declared in ("Blocked", "Partial", "Failed", "", None):
+            with self.subTest(plan_status=declared):
+                source = self._source()
+                source["plan_status"] = declared
+                invoked: list[Path] = []
+
+                def compile_source(source_path: Path, target: Path) -> None:
+                    invoked.append(Path(source_path))
+
+                with tempfile.TemporaryDirectory() as raw:
+                    root = _host_repo(Path(raw))
+                    path = root / "CAMPAIGN_SOURCE.yaml"
+                    _dump(path, source)
+                    with self.assertRaises(self.mod.CampaignError) as ctx:
+                        self.mod.run_campaign(
+                            path,
+                            until="blueprint",
+                            primary=Path(raw) / "primary",
+                            repo_root=root,
+                            l9_root=Path(raw) / "l9",
+                            hooks=self.mod.Hooks(
+                                context7_stack=_stack_ok,
+                                compile_source=compile_source,
+                                validate_blueprint=lambda target: [],
+                            ),
+                        )
+                self.assertIn("refuse seal", str(ctx.exception))
+                self.assertEqual(invoked, [], msg="compile_source ran on a refused seal")
+
     def test_check_input_reports_route_and_runs_no_stage(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "CAMPAIGN_SOURCE.yaml"

@@ -18,8 +18,10 @@ metadata:
 ## Purpose
 
 Catch a **named** Cursor-Governance clone up to `origin/main` **in place**.
-`.venv` and unique untracked files stay. Unique local commits and every
-dirty tracked path are parked first. Nothing unique is deleted.
+`.venv`, env.local keep-list files (`.env.local`, `env.local`,
+`.env.*.local`, `.claude/settings.local.json`), and unique untracked files
+stay. Unique local commits and every dirty tracked path are parked first.
+Nothing unique is deleted.
 Slash entry: [`/ff`](../../commands/ff.md). Rule:
 [`rules/55-ff-only-ssot-sync.mdc`](../../rules/55-ff-only-ssot-sync.mdc).
 
@@ -59,8 +61,9 @@ stashes untracked). `GOVERNANCE_SYNC_PUSH=0`. `GOVERNANCE_SYNC_HARD_RESET=0`.
    needs switch, clone, swap, or push.
 4. **Execute** — [references/execute.md](references/execute.md) via
    `scripts/ff.sh`. Dirt and unique commits are **not** a stop.
-5. **Verify** — same `gitdir`, same branch, `.venv` still present at the same
-   path, no new `~/.cursor-governance.bak.*` from this run.
+5. **Verify** — same `gitdir`, same branch, `.venv` and env.local keep-list
+   still present at the same paths, no new `~/.cursor-governance.bak.*`
+   from this run.
 
 ## Failure Handling
 

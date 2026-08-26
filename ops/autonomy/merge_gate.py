@@ -282,10 +282,27 @@ def _auth_file_path() -> Path:
 
 
 def _target_from_input(tool_name: str, tool_input: dict[str, Any]) -> tuple[str, str]:
-    """Return (repo, pr) parsed conservatively from the tool input; ('', '') when unknown."""
+    """Return (repo, pr) parsed conservatively from the tool input; ('', '') when unknown.
+
+    Two MCP argument shapes reach this gate. Some servers pass a single
+    ``repo="owner/name"`` with ``pull_number``; the GitHub MCP server splits the
+    identity across ``owner`` + ``repo`` and spells the number ``pullNumber``.
+    Parsing only the first shape yielded ``("name", "")`` for the second, which
+    no receipt can match (``authorize_merge.py`` refuses a repo without an
+    owner) and which silently disabled the stack-safety probe, since that probe
+    returns early on an empty PR number.
+    """
     repo = str(tool_input.get("repo") or tool_input.get("repository") or "")
+    owner = str(tool_input.get("owner") or "")
+    # Only join when the repo is a bare name: never rewrite an explicit owner/name.
+    if owner and repo and "/" not in repo:
+        repo = f"{owner}/{repo}"
     pr = str(
-        tool_input.get("pull_number") or tool_input.get("pr") or tool_input.get("number") or ""
+        tool_input.get("pull_number")
+        or tool_input.get("pullNumber")
+        or tool_input.get("pr")
+        or tool_input.get("number")
+        or ""
     )
     if not (repo and pr) and tool_name in {"Bash", "bash", "Shell", "shell"}:
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
