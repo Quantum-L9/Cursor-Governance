@@ -65,7 +65,7 @@ class ComposePrBodyTests(unittest.TestCase):
             changed_files=["M\tops/scripts/open_pr_after_gate.sh"],
             issue_closes=[172],
             gate_receipt={
-                "schema": "l9.pr_gate_receipt.v1",
+                "schema": "l9.pr_gate_receipt.v2",
                 "head": "abc",
                 "passed_at": "2026-08-21T00:00:00Z",
             },
@@ -99,7 +99,7 @@ class ComposePrBodyTests(unittest.TestCase):
             commits=["fix: compose PR body"],
             changed_files=["M\tops/scripts/compose_pr_body.py"],
             issue_closes=[172],
-            gate_receipt={"schema": "l9.pr_gate_receipt.v1", "head": "abc", "passed_at": "t"},
+            gate_receipt={"schema": "l9.pr_gate_receipt.v2", "head": "abc", "passed_at": "t"},
             l4_receipt={"phase": "release_authorized", "head_sha": "abc"},
         )
         result = compose_pr_body(facts, root)

@@ -1,0 +1,183 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9.program-execution.architecture-resolution.v1",
+  "title": "Architecture resolution (semantic IR + coverage)",
+  "description": "The compiler's own record of what the architecture source means, how each source unit was disposed of, and which campaign construct carries each obligation. Also the body of campaign-source.v2 `intent_provenance`.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "source", "source_units", "semantic_items", "coverage"],
+  "properties": {
+    "schema": {
+      "enum": [
+        "l9.program-execution.architecture-resolution.v1",
+        "l9.program-execution.intent-provenance.v1"
+      ]
+    },
+    "target": { "type": "string" },
+    "campaign_id": { "type": "string" },
+    "source": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["sha256", "media_type"],
+      "properties": {
+        "path": { "type": "string" },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "media_type": { "type": "string" },
+        "title": { "type": "string" }
+      }
+    },
+    "extractor": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "id": { "type": "string" },
+        "protocol": { "type": "string" },
+        "chunks": { "type": "integer", "minimum": 1 },
+        "repair_rounds": { "type": "integer", "minimum": 0 },
+        "critic_rounds": { "type": "integer", "minimum": 0 },
+        "grounding_threshold": { "type": "number" }
+      }
+    },
+    "source_units": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["id", "line_start", "line_end", "sha256", "disposition"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^SRC-[0-9]{4,}$" },
+          "kind": { "type": "string" },
+          "line_start": { "type": "integer", "minimum": 1 },
+          "line_end": { "type": "integer", "minimum": 1 },
+          "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+          "signals": { "type": "array", "items": { "type": "string" } },
+          "disposition": {
+            "enum": [
+              "mapped_requirement",
+              "mapped_prohibition",
+              "mapped_decision",
+              "mapped_acceptance",
+              "mapped_validation",
+              "mapped_risk",
+              "mapped_deferral",
+              "mapped_scope",
+              "mapped_evidence_requirement",
+              "mapped_context",
+              "explicitly_non_normative_with_reason"
+            ]
+          },
+          "reason": { "type": "string" },
+          "semantic_ids": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "semantic_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["id", "kind", "statement", "source_refs"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^SEM-[0-9]{3,}$" },
+          "kind": { "type": "string", "minLength": 1 },
+          "statement": { "type": "string", "minLength": 1 },
+          "materiality": { "enum": ["material", "informational"] },
+          "confidence": { "enum": ["high", "medium", "low"] },
+          "source_refs": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "type": "string", "pattern": "^SRC-[0-9]{4,}$" }
+          },
+          "campaign_mappings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": true,
+              "required": ["kind"],
+              "properties": {
+                "kind": {
+                  "enum": [
+                    "program_objective",
+                    "program_scope_include",
+                    "program_scope_exclude",
+                    "task",
+                    "task_action",
+                    "task_acceptance",
+                    "task_validation",
+                    "task_negative_case",
+                    "task_path",
+                    "prohibited_path",
+                    "decision",
+                    "risk",
+                    "unknown",
+                    "evidence_requirement",
+                    "dependency_edge",
+                    "wave",
+                    "gate",
+                    "assumption",
+                    "informational"
+                  ]
+                },
+                "id": { "type": "string" },
+                "task_id": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "rejected_items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["reason"],
+        "properties": {
+          "kind": { "type": "string" },
+          "statement": { "type": "string" },
+          "reason": { "type": "string" },
+          "source_refs": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    },
+    "contradictions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "properties": {
+          "left": { "type": "string" },
+          "right": { "type": "string" },
+          "reason": { "type": "string" },
+          "resolution": { "type": "string" }
+        }
+      }
+    },
+    "coverage": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": [
+        "total_units",
+        "classified_units",
+        "material_units",
+        "mapped_material_units",
+        "unmapped_material_units",
+        "status"
+      ],
+      "properties": {
+        "total_units": { "type": "integer", "minimum": 1 },
+        "classified_units": { "type": "integer", "minimum": 0 },
+        "material_units": { "type": "integer", "minimum": 0 },
+        "mapped_material_units": { "type": "integer", "minimum": 0 },
+        "unmapped_material_units": { "type": "integer", "minimum": 0 },
+        "material_semantic_items": { "type": "integer", "minimum": 0 },
+        "mapped_material_semantic_items": { "type": "integer", "minimum": 0 },
+        "chunks_extracted": { "type": "integer", "minimum": 0 },
+        "chunks_expected": { "type": "integer", "minimum": 0 },
+        "status": { "enum": ["PASS", "FAIL"] },
+        "failures": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  }
+}

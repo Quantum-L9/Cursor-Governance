@@ -10,8 +10,10 @@ updated: 2026-08-22
 # Execute (only this)
 
 `/ff` catches a **named** clone up to `origin/main` **in place** while keeping
-`.venv` and every unique untracked path. Unique work is parked first. Nothing
-unique is deleted.
+`.venv`, env.local keep-list files, and every unique untracked path. Unique
+work is parked first. Nothing unique is deleted. Keep-list:
+`.env.local`, `env.local`, `.env.*.local`, `.claude/settings.local.json`
+(same lib as `governance_activate_fresh.sh` swap carry).
 
 The only mutate path is the wrapper:
 
@@ -51,5 +53,5 @@ reading the FAIL line. Do not delete files to unblock.
 ## After success
 
 Same gitdir, same branch, `.venv` still at `<clone>/.venv` when it existed
-before, unique untracked still present or held, no new
-`~/.cursor-governance.bak.*`.
+before, env.local keep-list still present, unique untracked still present
+or held, no new `~/.cursor-governance.bak.*`.

@@ -14,6 +14,24 @@
 set -uo pipefail
 
 CLONE="${CURSOR_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+_SSOT_KEEP_LIB=""
+for _ssot_keep_cand in \
+  "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/ssot_machine_local_keep.sh" \
+  "${CLONE}/ops/scripts/lib/ssot_machine_local_keep.sh" \
+  "$HOME/.cursor-governance/ops/scripts/lib/ssot_machine_local_keep.sh"; do
+  if [ -f "$_ssot_keep_cand" ]; then
+    _SSOT_KEEP_LIB="$_ssot_keep_cand"
+    break
+  fi
+done
+if [ -n "$_SSOT_KEEP_LIB" ]; then
+  # shellcheck source=lib/ssot_machine_local_keep.sh
+  . "$_SSOT_KEEP_LIB"
+else
+  ssot_carry_machine_local() { :; }
+  ssot_is_machine_local_keep() { return 1; }
+fi
+unset _ssot_keep_cand
 BRANCH="${GOVERNANCE_GITHUB_BRANCH:-main}"
 REMOTE="${GOVERNANCE_GITHUB_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
 REPO="${CURSOR_PROJECT_DIR:-${REPO:-}}"
@@ -71,7 +89,7 @@ layout_ok() {
 expected_remote_ok() {
   # Accept https/ssh forms of Quantum-L9/Cursor-Governance
   local url="$1"
-  echo "$url" | grep -qiE 'github\.com[:/]+Quantum-L9/Cursor-Governance(\.git)?/?$' 
+  echo "$url" | grep -qiE 'github\.com[:/]+Quantum-L9/Cursor-Governance(\.git)?/?$'
 }
 
 acquire_lock() {
@@ -258,9 +276,10 @@ do_swap() {
       REMOTE_SHA="${again:-$REMOTE_SHA}"
     fi
   fi
+  local bak=""
   if ssot_valid; then
     pre_swap_backup
-    local bak="${CLONE}.bak.$(date -u +%Y%m%dT%H%M%SZ)"
+    bak="${CLONE}.bak.$(date -u +%Y%m%dT%H%M%SZ)"
     if ! mv "$CLONE" "$bak" 2>/dev/null; then
       DETAIL="mv_live_to_bak_failed"
       rm -rf "$STAGING" 2>/dev/null || true
@@ -271,6 +290,11 @@ do_swap() {
     DETAIL="mv_staging_to_live_failed"
     # Best-effort: leave staging for manual recovery; do not delete last bak.
     return 1
+  fi
+  # Carry .venv + gitignored env.local files off the bak before prune_baks
+  # can delete it. Same contract as /ff: machine-local keep, never printed.
+  if [ -n "$bak" ] && [ -d "$bak" ]; then
+    ssot_carry_machine_local "$bak" "$CLONE"
   fi
   # Clone may have recorded an insteadOf-rewritten URL — force canonical remote.
   git -C "$CLONE" remote set-url origin "$REMOTE" 2>/dev/null || true

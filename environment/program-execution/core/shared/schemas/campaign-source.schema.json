@@ -259,6 +259,177 @@
         "type": "object",
         "additionalProperties": true
       }
+    },
+    "intent_provenance": {
+      "type": "object",
+      "additionalProperties": true,
+      "description": "Architecture-intent lineage (l9.program-execution.intent-provenance.v1). Present only on campaign sources compiled from long-form architecture intent; validated and re-derived by compile_campaign_source.py rather than trusted.",
+      "required": [
+        "schema",
+        "source",
+        "source_units",
+        "semantic_items",
+        "coverage"
+      ],
+      "properties": {
+        "schema": {
+          "const": "l9.program-execution.intent-provenance.v1"
+        },
+        "campaign_id": {
+          "type": "string"
+        },
+        "target": {
+          "type": "string"
+        },
+        "source": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "sha256"
+          ],
+          "properties": {
+            "sha256": {
+              "type": "string",
+              "pattern": "^[0-9a-f]{64}$"
+            },
+            "path": {
+              "type": "string"
+            },
+            "media_type": {
+              "type": "string"
+            },
+            "title": {
+              "type": "string"
+            }
+          }
+        },
+        "extractor": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "source_units": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "id",
+              "sha256",
+              "disposition"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^SRC-[0-9]{4,}$"
+              },
+              "sha256": {
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "disposition": {
+                "type": "string"
+              },
+              "line_start": {
+                "type": "integer"
+              },
+              "line_end": {
+                "type": "integer"
+              }
+            }
+          }
+        },
+        "semantic_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true,
+            "required": [
+              "id",
+              "kind",
+              "statement",
+              "source_refs"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^SEM-[0-9]{3,}$"
+              },
+              "kind": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_refs": {
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "type": "string",
+                  "pattern": "^SRC-[0-9]{4,}$"
+                }
+              },
+              "campaign_mappings": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": true,
+                  "required": [
+                    "kind"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "rejected_items": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "contradictions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        },
+        "coverage": {
+          "type": "object",
+          "additionalProperties": true,
+          "required": [
+            "total_units",
+            "material_units",
+            "mapped_material_units",
+            "unmapped_material_units",
+            "status"
+          ],
+          "properties": {
+            "status": {
+              "enum": [
+                "PASS",
+                "FAIL"
+              ]
+            },
+            "total_units": {
+              "type": "integer"
+            },
+            "material_units": {
+              "type": "integer"
+            },
+            "mapped_material_units": {
+              "type": "integer"
+            },
+            "unmapped_material_units": {
+              "type": "integer"
+            }
+          }
+        }
+      }
     }
   }
 }

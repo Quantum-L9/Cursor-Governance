@@ -577,6 +577,12 @@ def write_receipt(source_path: Path, campaign_id: str, *, stamp: str) -> dict[st
 
 
 def patch_allowlist(path: Path, campaign_id: str) -> bool:
+    """Append an id to the legacy compile allowlist.
+
+    Retained for the historical ledger only. Compilation no longer admits by
+    list membership, so activation does not call this; nothing needs to be
+    registered before it can compile.
+    """
     text = path.read_text(encoding="utf-8")
     if re.search(rf"^\s*-\s+{re.escape(campaign_id)}\s*$", text, re.M):
         return False
@@ -696,10 +702,9 @@ def compile_activation(
     ]
     patched: list[str] = []
     hosts = (
-        (
-            repo_root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml",
-            patch_allowlist,
-        ),
+        # The compile allowlist is no longer admission authority, so activation
+        # does not register into it. Auto-patching a list that nothing consults
+        # would only preserve the preregistration step it replaced.
         (
             repo_root / "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
             patch_execution_policy,

@@ -21,6 +21,11 @@ Canonical implementation (single source of truth):
 
 Do **not** re-implement wiring / Graphiti steps in this command. The bootstrap owns them.
 
+`governance_activate_fresh.sh` (called by this command) must **not** drop
+`.venv`, `.env.local`, `env.local`, `.env.*.local`, or
+`.claude/settings.local.json` on a shallow-clone swap. Those paths are
+carried from the bak onto the new live tree (`ops/scripts/lib/ssot_machine_local_keep.sh`).
+
 ---
 
 ## EXECUTION (MANDATORY)

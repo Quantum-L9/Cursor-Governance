@@ -180,6 +180,46 @@ else
   fail "T4 unexpected $OUT"
 fi
 
+# ── T7: swap carries .venv + env.local files (never printed) ────────────────
+HOME7="$TMP/h7"
+mkdir -p "$HOME7"
+GIT_CONFIG_GLOBAL7="$HOME7/gitconfig"
+git config --file "$GIT_CONFIG_GLOBAL7" "url.$BARE1.insteadof" "https://github.com/Quantum-L9/Cursor-Governance.git"
+CLONE7="$HOME7/.cursor-governance"
+git clone -q "$BARE1" "$CLONE7"
+if git -C "$CLONE7" rev-parse HEAD~1 >/dev/null 2>&1; then
+  git -C "$CLONE7" reset --hard -q HEAD~1
+fi
+echo dirty-for-swap >>"$CLONE7/CANONICAL_LAW.md"
+mkdir -p "$CLONE7/.venv/bin" "$CLONE7/.claude"
+printf '%s\n' 'home = /tmp' >"$CLONE7/.venv/pyvenv.cfg"
+printf '%s\n' 'DEEPSEEK_API_KEY=sk-TEST-KEEP-NOT-REAL' >"$CLONE7/.env.local"
+chmod 600 "$CLONE7/.env.local"
+printf '%s\n' '{"env":{"ANTHROPIC_BASE_URL":"https://api.deepseek.com/anthropic"}}' \
+  >"$CLONE7/.claude/settings.local.json"
+chmod 600 "$CLONE7/.claude/settings.local.json"
+ENV_SUM="$(sha256sum "$CLONE7/.env.local" | awk '{print $1}')"
+SET_SUM="$(sha256sum "$CLONE7/.claude/settings.local.json" | awk '{print $1}')"
+OUT="$(
+  HOME="$HOME7" \
+  GIT_CONFIG_GLOBAL="$GIT_CONFIG_GLOBAL7" \
+  CURSOR_GOVERNANCE_DIR="$CLONE7" \
+  GOVERNANCE_GITHUB_REMOTE="$REMOTE_URL" \
+  GOVERNANCE_GITHUB_BRANCH=main \
+  GOVERNANCE_ACTIVATE_DEADLINE_SECS=60 \
+  bash "$ACTIVATE" 2>/dev/null | tail -n 1
+)"
+ACTION="$(status_field "$OUT" action)"
+[ "$ACTION" = "swapped" ] || fail "T7 expected swapped got $OUT"
+[ -f "$CLONE7/.venv/pyvenv.cfg" ] || fail "T7 .venv not carried"
+[ -f "$CLONE7/.env.local" ] || fail "T7 .env.local not carried"
+[ -f "$CLONE7/.claude/settings.local.json" ] || fail "T7 settings.local.json not carried"
+AFTER_ENV="$(sha256sum "$CLONE7/.env.local" | awk '{print $1}')"
+AFTER_SET="$(sha256sum "$CLONE7/.claude/settings.local.json" | awk '{print $1}')"
+[ "$ENV_SUM" = "$AFTER_ENV" ] || fail "T7 .env.local bytes changed"
+[ "$SET_SUM" = "$AFTER_SET" ] || fail "T7 settings.local.json bytes changed"
+pass "swap carries .venv and env.local files"
+
 # ── T5: failed clone leaves live intact ──────────────────────────────────────
 HOME5="$TMP/h5"
 mkdir -p "$HOME5"

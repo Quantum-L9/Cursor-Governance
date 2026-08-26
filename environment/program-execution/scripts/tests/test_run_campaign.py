@@ -210,6 +210,49 @@ def _dump(path: Path, value: object) -> None:
     path.write_text(yaml.safe_dump(value, sort_keys=False), encoding="utf-8")
 
 
+ARCHITECTURE_DOC = """\
+# Router reasoning capability
+
+DeepSeek MUST be the primary governed reasoning provider.
+
+Perplexity is research only and MUST NOT serve reasoning traffic.
+
+## Budget
+
+Budget downgrade MUST remain within the capability family.
+"""
+
+
+SEEN_TARGET_CHECKOUTS: list[object] = []
+
+
+def _architecture_kind(module):
+    """The forced-architecture classification, named once so call sites fit."""
+    return module.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
+
+
+def _architecture_hook(intent, *, target, repo_root, primed_dir, target_checkout=None):
+    """Run the real architecture compiler with the deterministic extractor.
+
+    Real compilation, no live model: the route under test is the wiring, and a
+    test that needed a model could not assert on it.
+    """
+    SEEN_TARGET_CHECKOUTS.append(target_checkout)
+    module = _load(
+        "compile_architecture_intent_route_test",
+        SCRIPT.parent / "compile_architecture_intent.py",
+    )
+    return module.compile_architecture_intent(
+        Path(intent),
+        target=target,
+        forced=True,
+        repo_root=repo_root,
+        target_checkout=target_checkout,
+        cache_root=primed_dir,
+        extractor_name="deterministic",
+    )
+
+
 def _host_repo(tmp: Path) -> Path:
     (tmp / "environment/program-execution/campaigns").mkdir(parents=True)
     (tmp / "ops/autonomy").mkdir(parents=True)
@@ -389,6 +432,186 @@ class RunCampaignTests(unittest.TestCase):
             )
             prow = next(item for item in policy["campaigns"] if item["id"] == "demo-activate-v1")
             self.assertEqual(prow["lifecycle"], "in_progress")
+
+    def test_architecture_intent_routes_to_the_direct_campaign_source_path(self) -> None:
+        """Architecture prose enters via the rich route, not brief → activate.
+
+        `compile_activation` is passed as a hook that fails if called: routing
+        the compiled source back through activation would rebuild the campaign
+        from a weaker seed and flatten the tasks, validations, dependencies, and
+        prohibitions the architecture compiler just recovered.
+        """
+
+        def _refuse_activation(*args, **kwargs):
+            raise AssertionError("architecture route must not rebuild through activation")
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            (root / "arch.md").write_text(ARCHITECTURE_DOC, encoding="utf-8")
+            other_primary = Path(raw) / "other-primary"
+            other_primary.mkdir()
+            report = self.mod.run_campaign(
+                root / "arch.md",
+                forced_kind=_architecture_kind(self.mod),
+                until="activate",
+                primary=other_primary,
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                target_override="Quantum-L9/LLM-Router",
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_activation=_refuse_activation,
+                    compile_architecture=_architecture_hook,
+                ),
+            )
+            self.assertEqual(report.campaign_id, "router-reasoning-capability-v1")
+            source = yaml.safe_load(
+                (
+                    root
+                    / "environment/program-execution/campaigns"
+                    / report.campaign_id
+                    / "CAMPAIGN_SOURCE.yaml"
+                ).read_text(encoding="utf-8")
+            )
+            self.assertEqual(source["schema"], "l9.program-execution.campaign-source.v2")
+            self.assertEqual({task["definition_status"] for task in source["tasks"]}, {"ready"})
+            self.assertEqual(source["intent_provenance"]["coverage"]["status"], "PASS")
+            self.assertTrue(source["prohibited_paths"])
+
+    def test_an_existing_target_checkout_reaches_the_architecture_compiler(self) -> None:
+        """Repository grounding is unreachable if the route never passes a checkout."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            (root / "arch.md").write_text(ARCHITECTURE_DOC, encoding="utf-8")
+            checkout = Path(raw) / "target-clone"
+            (checkout / "src").mkdir(parents=True)
+            (checkout / "package.json").write_text(
+                json.dumps({"scripts": {"test": "vitest run", "lint": "eslint src/"}}),
+                encoding="utf-8",
+            )
+            other_primary = Path(raw) / "other-primary"
+            other_primary.mkdir()
+            SEEN_TARGET_CHECKOUTS.clear()
+            report = self.mod.run_campaign(
+                root / "arch.md",
+                forced_kind=(
+                    self.mod.campaign_input_module().CampaignInputKind.ARCHITECTURE_INTENT_V1
+                ),
+                until="activate",
+                primary=other_primary,
+                repo_root=root,
+                l9_root=Path(raw) / "l9",
+                target_override="Quantum-L9/LLM-Router",
+                target_checkout=checkout,
+                hooks=self.mod.Hooks(
+                    context7_stack=_stack_ok,
+                    write_task_output=_write_task_output,
+                    compile_architecture=_architecture_hook,
+                ),
+            )
+            self.assertEqual(SEEN_TARGET_CHECKOUTS, [checkout.resolve()])
+            source = yaml.safe_load(
+                (
+                    root
+                    / "environment/program-execution/campaigns"
+                    / report.campaign_id
+                    / "CAMPAIGN_SOURCE.yaml"
+                ).read_text(encoding="utf-8")
+            )
+            commands = {
+                entry.get("command")
+                for task in source["tasks"]
+                for entry in task["validation"]
+                if entry.get("command")
+            }
+            self.assertIn("npm test", commands)
+
+    def test_a_missing_target_checkout_is_never_created(self) -> None:
+        """Grounding is read-only; a path that does not exist resolves to None."""
+        with tempfile.TemporaryDirectory() as raw:
+            absent = Path(raw) / "not-there"
+            self.assertIsNone(self.mod.existing_target_checkout(absent))
+            self.assertFalse(absent.exists())
+            self.assertIsNone(self.mod.existing_target_checkout(None))
+            present = Path(raw) / "there"
+            present.mkdir()
+            self.assertEqual(self.mod.existing_target_checkout(present), present.resolve())
+
+    def test_architecture_compile_failure_creates_no_workspace(self) -> None:
+        """A source that cannot be compiled must never mint a program."""
+
+        def _fail(*args, **kwargs):
+            module = self.mod.architecture_module()
+            raise module.ArchitectureCompileError("semantic coverage did not converge")
+
+        with tempfile.TemporaryDirectory() as raw:
+            root = _host_repo(Path(raw))
+            (root / "arch.md").write_text(ARCHITECTURE_DOC, encoding="utf-8")
+            other_primary = Path(raw) / "other-primary"
+            other_primary.mkdir()
+            l9_root = Path(raw) / "l9"
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.run_campaign(
+                    root / "arch.md",
+                    forced_kind=_architecture_kind(self.mod),
+                    until="activate",
+                    primary=other_primary,
+                    repo_root=root,
+                    l9_root=l9_root,
+                    target_override="Quantum-L9/LLM-Router",
+                    hooks=self.mod.Hooks(context7_stack=_stack_ok, compile_architecture=_fail),
+                )
+            self.assertIn("nothing_executed: true", str(ctx.exception))
+            self.assertFalse((l9_root / "programs").exists())
+            self.assertFalse((l9_root / "blueprints").exists())
+            campaigns = root / "environment/program-execution/campaigns"
+            self.assertEqual(
+                [path.name for path in campaigns.iterdir() if path.is_dir()],
+                [],
+                msg="no campaign directory may exist after a failed architecture compile",
+            )
+
+    def test_unmarked_markdown_still_routes_to_the_brief_compiler(self) -> None:
+        module = self.mod.campaign_input_module()
+        with tempfile.TemporaryDirectory() as raw:
+            memo = Path(raw) / "memo.md"
+            memo.write_text(ARCHITECTURE_DOC, encoding="utf-8")
+            self.assertIs(module.classify(memo).kind, module.CampaignInputKind.BRIEF)
+            self.assertIs(
+                module.classify(
+                    memo, forced_kind=module.CampaignInputKind.ARCHITECTURE_INTENT_V1
+                ).kind,
+                module.CampaignInputKind.ARCHITECTURE_INTENT_V1,
+            )
+
+    def test_self_describing_architecture_markdown_needs_no_force(self) -> None:
+        module = self.mod.campaign_input_module()
+        with tempfile.TemporaryDirectory() as raw:
+            doc = Path(raw) / "declared.md"
+            doc.write_text(
+                "---\n"
+                "schema: l9.program-execution.architecture-intent.v1\n"
+                "target: Quantum-L9/LLM-Router\n"
+                "---\n\n" + ARCHITECTURE_DOC,
+                encoding="utf-8",
+            )
+            found = module.classify(doc)
+            self.assertIs(found.kind, module.CampaignInputKind.ARCHITECTURE_INTENT_V1)
+            self.assertEqual(found.route, "architecture -> campaign_source -> blueprint -> PEC")
+
+    def test_compile_fingerprint_ignores_unrelated_campaign_registrations(self) -> None:
+        """Registering another campaign must not invalidate this one's compile."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            source = root / "CAMPAIGN_SOURCE.yaml"
+            source.write_text("schema: x\n", encoding="utf-8")
+            proof = root / "stack-proof.json"
+            proof.write_text("{}\n", encoding="utf-8")
+            before = self.mod.pe_trace.fingerprint(source, proof)
+            allowlist = root / "COMPILE_ALLOWLIST.yaml"
+            allowlist.write_text("campaign_ids:\n  - unrelated-v1\n", encoding="utf-8")
+            self.assertEqual(self.mod.pe_trace.fingerprint(source, proof), before)
 
     def test_phase0_ack_is_not_forged(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

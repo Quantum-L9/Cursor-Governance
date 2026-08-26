@@ -16,12 +16,18 @@ Covered artifacts:
     MANIFEST.yaml — each template's own integrity manifest, gated by
     validate_pair.py in CI
 
-Advisory, never auto-synced (see TODO.md, "advisory by decision"):
+Opt-in via --pe-manifest (--force alone does not reach it):
   * environment/program-execution/MANIFEST.json — hashes the whole mutable
     Program Execution tree, so ordinary PE edits rewrite it. Writing it during
-    a gate run is what produced "files were modified by this hook", so sync is
-    opt-in via --pe-manifest and --force does not reach it. The generator runs
-    standalone; nothing gates on the result.
+    a *gate* run is what produced "files were modified by this hook", so the PR
+    gate still never reaches it.
+
+    It is not advisory, whatever an earlier note here claimed:
+    `make program-execution-conformance` runs validate_manifest.py and fails on
+    a digest mismatch. Left unsynced, every PE edit therefore failed conformance
+    with a regenerate-by-hand-and-retry loop. The commit-time hook opts in
+    (pre-commit is the heal path; make pr SKIPs it), so the manifest tracks the
+    tree it hashes instead of being reconciled by a human after the fact.
 """
 
 from __future__ import annotations
