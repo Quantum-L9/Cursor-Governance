@@ -48,6 +48,7 @@ def is_tracked(path: Path) -> bool:
         return False
     return proc.returncode == 0
 
+
 ADAPTER_CONFIG_REL = Path("environment/skill-adapters/LLM_RULE_ADAPTER_ROOTS.yaml")
 
 
