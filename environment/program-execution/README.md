@@ -41,7 +41,14 @@ The only live campaign path is:
 make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
 ```
 
-`run_campaign.py` compiles allowlisted seeds, admits the Blueprint, boots
+For a long-form architecture document, the front door is:
+
+```bash
+make -C "$HOME/.cursor-governance" campaign-architecture \
+  INTENT=<architecture.md> TARGET=<owner/repo>
+```
+
+`run_campaign.py` compiles seeds, admits the Blueprint, boots
 pec without a draft flag, executes every task, stacks PRs, and closes into
 `campaigns/COMPLETED/<id>/`. Do not call `compile_campaign_source.py`,
 `pec bootstrap`, or `program-execution intent` as a substitute.
@@ -68,6 +75,7 @@ no third outcome.
 | Input | Route |
 |---|---|
 | `l9.program-execution.campaign-source.v2` | straight to `compile_campaign_source` → blueprint → PEC |
+| `l9.program-execution.architecture-intent.v1` (declared, or `make campaign-architecture`) | architecture → campaign source → blueprint → PEC |
 | activate seed (`campaign_id`, `title`, `objective`, `tasks`) | activate → campaign source → blueprint → PEC |
 | brief memo (`.md`) | brief → activate → campaign source → blueprint → PEC |
 | `program-execution.intent.v1` | **rejected** — design-time compiler input, no live adapter |
@@ -82,7 +90,59 @@ Classify without running anything:
 
 ```bash
 make campaign-check-input INTENT=/path/to/CAMPAIGN_SOURCE.yaml
+make campaign-check-input INTENT=/tmp/architecture.md ARCHITECTURE=1
 ```
+
+### Long-form architecture intent
+
+A dense operator document — an architecture design, a microscope audit, a
+technical review, an implementation plan — compiles straight through:
+
+```bash
+make -C "$HOME/.cursor-governance" campaign-architecture \
+  INTENT=/tmp/llm-router-microscope.md \
+  TARGET=Quantum-L9/LLM-Router
+```
+
+No rewriting the architecture into releases, program ordering, numbered tasks,
+an activate YAML, or a campaign source first. The document is segmented into
+hashed source units, interpreted into a semantic IR whose every item must cite
+and be grounded in the units it claims to read, audited for coverage, and
+lowered into a full `campaign-source.v2` carrying `intent_provenance`. That
+source then enters the same direct placement path an operator-supplied campaign
+source uses — never brief → activate, which would rebuild it from a weaker
+representation.
+
+Two input modes: an unchanged assistant transcript passed to
+`campaign-architecture` (the operator's choice of route is the signal), or a
+document that declares `schema: l9.program-execution.architecture-intent.v1`
+and `target:` in frontmatter and takes the ordinary `make campaign` route.
+Unmarked Markdown handed to `make campaign` still goes to the brief compiler.
+
+Every complete generated task is `definition_status: ready`; ordering is the
+dependency graph, and a probeable open question becomes a ready read-only
+evidence task with its dependents edged behind it (ADR-0023). Compilation fails
+before any side effect when the source cannot be compiled at all — an
+unreadable document, an unresolvable target, coverage that will not converge, a
+contradiction of equal authority the source does not settle. It never mints a
+Blueprint of BLOCKED tasks.
+
+`compile_campaign_source.py` re-derives `intent_provenance` rather than trusting
+it, so hand-deleting a mapped obligation from a generated campaign source fails
+compilation instead of quietly shipping with a PASS coverage record attached.
+Sources without `intent_provenance` are unaffected.
+
+Details: `compiler/README.md`.
+
+### Campaign ids are not preregistered
+
+A campaign compiles because it is valid, not because its id appears in
+`campaigns/COMPILE_ALLOWLIST.yaml`. That file is a historical ledger; nothing
+admits against it, activation no longer patches it, and no campaign's compile
+fingerprint depends on another campaign's registration. Id **collisions** are
+still detected, from real state — existing campaign directories, the status
+ledger, and the completed archive — which answers "does this id already exist",
+never "is this id permitted to exist".
 
 ### When the front door rejects an input
 

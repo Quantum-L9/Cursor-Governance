@@ -70,6 +70,7 @@ help:
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
 	@echo "  make campaign INTENT=path — PE activate seed → worktree emit → blueprint → pec → host PR → merge-if-green"
+	@echo "  make campaign-architecture INTENT=arch.md TARGET=owner/repo — long-form architecture → campaign_source → blueprint → PEC"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
 	@echo "  make sync-generated — heal RULES/COMMANDS/PE manifests, skill-registry, skillOverrides (idempotent)"
 	@echo "  make pr-security  — gitleaks/bandit/semgrep/pip-audit on changed files only (WS-aware)"
@@ -105,11 +106,40 @@ campaign:
 	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
 	  $(CAMPAIGN_ARGS)
 
+.PHONY: campaign-architecture
+## Compile a long-form architecture design, microscope audit, or technical review
+## straight into an executable campaign. INTENT= required (raw .md needs no edits),
+## TARGET=owner/repo required unless the document declares its own `target:`.
+## Route: architecture -> campaign_source -> blueprint -> PEC.
+## CAMPAIGN_UNTIL=activate|blueprint|bootstrap|execute (default execute), same as make campaign.
+campaign-architecture:
+	@test -n "$(INTENT)" || (echo "INTENT= path to the architecture document is required" >&2; exit 2)
+	TARGET="$(TARGET)" $(PYTHON) environment/program-execution/scripts/run_campaign.py \
+	  --architecture \
+	  --intent "$(INTENT)" \
+	  --until "$(or $(CAMPAIGN_UNTIL),execute)" \
+	  $(if $(TARGET),--target "$(TARGET)") \
+	  $(CAMPAIGN_ARGS)
+
+.PHONY: campaign-architecture-check
+## Compile architecture intent to a campaign source and stop. Writes only the
+## compiler cache under $L9_ROOT/primed/; creates no worktree and no PEC state.
+campaign-architecture-check:
+	@test -n "$(INTENT)" || (echo "INTENT= path to the architecture document is required" >&2; exit 2)
+	$(PYTHON) environment/program-execution/scripts/compile_architecture_intent.py \
+	  --intent "$(INTENT)" \
+	  --repo-root "$(CURDIR)" \
+	  $(if $(TARGET),--target "$(TARGET)") \
+	  $(if $(TARGET_CHECKOUT),--target-checkout "$(TARGET_CHECKOUT)") \
+	  $(ARCHITECTURE_ARGS)
+
 .PHONY: campaign-check-input
 ## Classify a PE campaign input and print its route. Runs no campaign stage. INTENT= required.
+## ARCHITECTURE=1 forces the architecture reading, the way campaign-architecture does.
 campaign-check-input:
 	@test -n "$(INTENT)" || (echo "INTENT= path to classify is required" >&2; exit 2)
-	$(PYTHON) environment/program-execution/scripts/run_campaign.py --check-input "$(INTENT)"
+	$(PYTHON) environment/program-execution/scripts/run_campaign.py --check-input "$(INTENT)" \
+	  $(if $(ARCHITECTURE),--architecture)
 
 .PHONY: campaign-stack-base
 ## Print the next campaign PR base from $L9_ROOT/programs/$CAMPAIGN_ID/runtime/STACK.json.

@@ -166,23 +166,40 @@ class CompileCampaignSourceTests(unittest.TestCase):
                 self.compiler.compile_source(source, Path(raw) / "out", stack_proof=proof)
             self.assertIn("language_name", str(ctx.exception))
 
-    def test_unknown_campaign_is_rejected(self) -> None:
+    def test_new_campaign_id_compiles_without_preregistration(self) -> None:
+        """A campaign compiles because it is valid, not because it was listed.
+
+        This test used to assert the opposite: an unlisted id was refused even
+        when the source was entirely valid. That made every new campaign wait on
+        an edit to a shared registry, and made one campaign's registration a
+        compile input of every other campaign.
+        """
         with tempfile.TemporaryDirectory() as raw:
             source = Path(raw) / "CAMPAIGN_SOURCE.yaml"
             source.write_text(
                 SOURCE.read_text(encoding="utf-8").replace(
-                    "campaign_id: bounded-replanning-v1",
-                    "campaign_id: not-allowlisted-v1",
-                    1,
+                    "bounded-replanning-v1",
+                    "never-preregistered-v1",
                 ),
                 encoding="utf-8",
             )
-            with self.assertRaises(self.compiler.CompileError):
-                self.compiler.compile_source(
-                    source,
-                    Path(raw) / "out",
-                    stack_proof=_pass_proof(Path(raw) / "stack-proof.json"),
-                )
+            target = Path(raw) / "out"
+            result = self.compiler.compile_source(
+                source,
+                target,
+                stack_proof=_pass_proof(Path(raw) / "stack-proof.json", "never-preregistered-v1"),
+            )
+            self.assertEqual(result["campaign_id"], "never-preregistered-v1")
+            self.assertEqual(self.validator.validate(target, "template"), [])
+
+    def test_compiler_has_no_allowlist_surface(self) -> None:
+        """The preregistration path is gone, not merely unused."""
+        self.assertFalse(hasattr(self.compiler, "load_allowlist"))
+        self.assertFalse(hasattr(self.compiler, "ALLOWLIST_PATH"))
+        source = (
+            Path(__file__).resolve().parents[2] / "scripts/compile_campaign_source.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("--allowlist", source)
 
     def test_decisions_without_options_fail_loudly(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

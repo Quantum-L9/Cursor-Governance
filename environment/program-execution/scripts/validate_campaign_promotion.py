@@ -134,7 +134,7 @@ def check_registrations(root: Path, profile: dict | None) -> tuple[list[str], se
             )
 
     errors.extend(_check_policy(root, profile_ids))
-    errors.extend(_check_allowlist(root, profile_ids))
+    errors.extend(_check_allowlist(root))
     errors.extend(_check_status_ledger(root))
     return errors, profile_ids
 
@@ -190,7 +190,7 @@ def _check_policy(root: Path, profile_ids: set[str]) -> list[str]:
     return errors
 
 
-def _check_allowlist(root: Path, profile_ids: set[str]) -> list[str]:
+def _check_allowlist(root: Path) -> list[str]:
     errors: list[str] = []
     allowlist = _load_or_error(root, COMPILE_ALLOWLIST, errors)
     if not isinstance(allowlist, dict):
@@ -209,9 +209,11 @@ def _check_allowlist(root: Path, profile_ids: set[str]) -> list[str]:
             errors.append(f"{COMPILE_ALLOWLIST}: duplicate campaign id {campaign_id!r}")
         seen.add(campaign_id)
 
-    missing = sorted(profile_ids - seen)
-    if missing:
-        errors.append(f"{COMPILE_ALLOWLIST}: promoted campaigns absent from allowlist: {missing}")
+    # Deliberately no "promoted campaigns absent from allowlist" check: the
+    # allowlist stopped being compile admission authority, so requiring
+    # membership here would reinstate preregistration through the back door.
+    # Duplicate and type checks stay: it is still a ledger, and a broken ledger
+    # is still worth reporting.
     return errors
 
 

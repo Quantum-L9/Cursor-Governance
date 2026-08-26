@@ -9,6 +9,18 @@ Authority: `environment/program-execution/campaigns/PE_COMPILER_MODULE_ALIGNMENT
 (AUTH-001, 2026-08-14). Build contract:
 `campaigns/cc-pe-intent-compiler-v1/CONTRACT_SOURCE.md` (Quality Gates A–F).
 
+## Two input contracts, deliberately not one
+
+| Contract | Shape | Route |
+| --- | --- | --- |
+| `program-execution.intent.v1` | a **minimal** goal: one objective, optional targets and policy. Prescribing tasks, files, waves, or worker prompts is a schema violation. | design-time: Intent Resolver → Synthesizer |
+| `l9.program-execution.architecture-intent.v1` | a **dense** operator document: architecture design, microscope audit, technical review, implementation plan. Prose, tables, code fences, deferrals, tests. | live: architecture → campaign-source.v2 → Blueprint → PEC |
+
+They are opposite problems and share no schema. Widening the minimal intent to
+accept task lists would destroy the property that makes it useful, and asking an
+operator to boil a 2,000-line audit down to one sentence destroys everything the
+audit said. So the architecture route is its own contract end to end.
+
 ## Pipeline
 
 ```
@@ -20,6 +32,73 @@ The compiler emits **design-time definitions only**. The existing Program
 Execution Controller remains the exclusive runtime authority for mutable
 execution state, task attempts, verification results, gate results, leases,
 recovery state, and handoff receipts.
+
+## Architecture route
+
+```
+architecture prose
+    → normalize / hash / segment          architecture_intent.py
+    → candidate semantic extraction        architecture_extractor.py
+    → provenance + grounding admission     architecture_ir.py
+    → coverage audit, critic, repair       architecture_coverage.py
+    → campaign-source.v2 + provenance      architecture_to_campaign.py
+    → Blueprint v2 → PEC → execute         scripts/compile_campaign_source.py
+```
+
+Operator entry:
+
+```bash
+make -C "$HOME/.cursor-governance" campaign-architecture \
+  INTENT=/tmp/llm-router-microscope.md \
+  TARGET=Quantum-L9/LLM-Router
+```
+
+The document needs no edits. A document that declares its own frontmatter
+(`schema: l9.program-execution.architecture-intent.v1`, `target: owner/repo`)
+takes the ordinary `make campaign` route instead. Unmarked Markdown handed to
+`make campaign` still goes to the brief compiler — this route never steals
+generic memo traffic.
+
+### What is authority and what is not
+
+| Layer | Owns | Never owns |
+| --- | --- | --- |
+| Source units | what the document says, addressably | interpretation |
+| Extractor (LLM or lexical) | candidate interpretation | authority, coverage PASS, write access |
+| Admission + grounding | which candidates the source vouches for | what the candidate means |
+| Coverage audit | whether anything material fell out | repairing it |
+| Lowering | campaign constructs and their ordering | inventing obligations |
+
+An extracted item enters the campaign only if it cites source units that exist
+*and* its statement is grounded in the text of those units. A fluent invention
+that cites a real unit id shares the id but not the vocabulary, and dies at
+admission. Confidence is reported and consulted nowhere.
+
+### Forward progress
+
+Every complete generated task is `definition_status: ready` (ADR-0023).
+Ordering is `dependencies`, `dependency_edges`, `waves`, and gates. A probeable
+open question ("we need to determine whether …") becomes a **ready** read-only
+evidence task with the work that consumes it edged behind it — never a blocked
+task, because a blocked task with no `blocked → ready` transition is
+permanently unclaimable.
+
+Compilation fails, before any side effect, only for conditions more rounds
+cannot fix: an unreadable source, an unresolvable target, coverage that will not
+converge, or a contradiction between equal-authority obligations that the source
+itself does not settle. The alternative — minting a Blueprint full of BLOCKED
+tasks — looks like a program and can never run.
+
+### Extractors
+
+`resolve_extractor()` picks by explicit selection, then a live Claude Code CLI,
+then the deterministic lexical reader. `L9_ARCHITECTURE_EXTRACTOR=deterministic`
+forces the lexical one; tests always do, so no unit test needs a live model.
+
+The Claude Code adapter is thin by construction: argv only (never a shell
+string), a timeout, an output-size bound, `--permission-mode plan`, and a
+tool deny-list. Source text reaches it as data; it holds no write authority and
+cannot widen its own.
 
 ## Components
 
@@ -37,6 +116,12 @@ recovery state, and handoff receipts.
 | Official validator adapter | `blueprint_validate.py` | §13, Gate D |
 | Front door | `cli.py` | §15, Gate E |
 | Test matrix (13 §18 scenarios) | `tests/` | §18, Gate F |
+| Architecture Intent contract | `architecture_intent.py`, `schemas/architecture-intent.schema.json` | segmentation, hashing, normative signals |
+| Architecture semantic IR | `architecture_ir.py` | provenance, grounding, dedupe, contradictions |
+| Extractor boundary + adapters | `architecture_extractor.py`, `schemas/architecture-extractor-{request,response}.schema.json` | chunking, Claude Code adapter, lexical extractor |
+| Coverage, critic, repair | `architecture_coverage.py`, `schemas/architecture-resolution.schema.json` | dispositions, PASS semantics, bounded repair |
+| Campaign lowering + provenance | `architecture_to_campaign.py` | campaign-source.v2, `intent_provenance` |
+| Architecture front door | `../scripts/compile_architecture_intent.py` | pre-side-effect compilation |
 
 ## Front door
 

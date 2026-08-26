@@ -152,10 +152,11 @@ class CompileActivationTests(unittest.TestCase):
                     "environment/program-execution/campaigns/demo-activate-v1/source-integrity-receipt.json",
                 ],
             )
+            # No COMPILE_ALLOWLIST entry: compilation admits by validity, so
+            # activation does not preregister the campaign anywhere.
             self.assertEqual(
                 set(result["patched"]),
                 {
-                    "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml",
                     "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
                     "ops/autonomy/surface_profile.yaml",
                     "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml",
@@ -202,7 +203,7 @@ class CompileActivationTests(unittest.TestCase):
             allow = (
                 root / "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml"
             ).read_text(encoding="utf-8")
-            self.assertEqual(allow.count("demo-activate-v1"), 1)
+            self.assertEqual(allow.count("demo-activate-v1"), 0)
 
     def test_refuses_stub_actions_and_unsealed_plan(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
