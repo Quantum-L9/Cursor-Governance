@@ -1683,7 +1683,7 @@
     },
     {
       "path": "scripts/campaign_input.py",
-      "sha256": "6748d466bbd6f8b90e963348e5f615492712326a630e31beac908de1a24032ac"
+      "sha256": "b1342181de04f429789f3ba27d74414fec9a97bb6f099aa3a4989ac3ba4e9c8c"
     },
     {
       "path": "scripts/campaign_pr_copy.py",
