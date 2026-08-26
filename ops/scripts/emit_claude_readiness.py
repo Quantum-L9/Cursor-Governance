@@ -267,31 +267,66 @@ def _dispatcher_status(gov: Path) -> tuple[str, str]:
     return DEGRADED, line or "not installed (make l9-dispatcher-install)"
 
 
-def _merge_authority_status(gov: Path) -> tuple[str, str]:
-    """Live probe: the standing env boolean must not authorize a merge."""
+def _load_merge_gate(gov: Path):
+    """Import the governance merge_gate module from the passed gov clone.
+
+    Loaded by path so the probe uses the same clone the receipt is scoped to
+    (and so tests can point at a fake gov), never a copy on sys.path.
+    """
+    import importlib.util
+
     gate = gov / "ops" / "autonomy" / "merge_gate.py"
     if not gate.is_file():
-        return UNKNOWN, "merge_gate.py missing"
-    event = json.dumps(
-        {
-            "tool_name": "mcp__github__merge_pull_request",
-            "tool_input": {"repo": "Quantum-L9/Cursor-Governance", "pull_number": 999999},
-        }
-    )
+        return None
+    spec = importlib.util.spec_from_file_location("_l9_readiness_merge_gate", str(gate))
+    if spec is None or spec.loader is None:
+        return None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _merge_authority_status(gov: Path) -> tuple[str, str]:
+    """Live probe: the retired env boolean must not authorize a merge.
+
+    Calls ``merge_gate.evaluate()`` in-process rather than the CLI, which
+    requires a git work tree it does not have here. The env-boolean case is
+    isolated: the retired flag is set, while the human breakglass is cleared and
+    the authorization file is pointed at a nonexistent path, so a DENY proves the
+    flag alone authorizes nothing. A probe that cannot run is UNKNOWN, never a
+    false BLOCKED.
+    """
     try:
-        proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
-            [sys.executable, str(gate)],
-            input=event,
-            capture_output=True,
-            text=True,
-            timeout=20,
-            env={**os.environ, "L9_AUTONOMY_AUTONOMOUS_MERGE": "true"},
-            check=False,
+        gate = _load_merge_gate(gov)
+    except Exception as exc:  # noqa: BLE001 - a probe never crashes the emitter
+        return UNKNOWN, f"probe failed to load merge_gate: {exc}"
+    if gate is None or not hasattr(gate, "evaluate"):
+        return UNKNOWN, "merge_gate.evaluate unavailable"
+
+    isolated_keys = (
+        "L9_AUTONOMY_AUTONOMOUS_MERGE",
+        "L9_MERGE_AUTHORIZED",
+        "L9_MERGE_AUTHORIZATION_FILE",
+    )
+    saved = {key: os.environ.get(key) for key in isolated_keys}
+    try:
+        os.environ["L9_AUTONOMY_AUTONOMOUS_MERGE"] = "true"
+        os.environ.pop("L9_MERGE_AUTHORIZED", None)
+        os.environ["L9_MERGE_AUTHORIZATION_FILE"] = str(gov / ".l9" / "_no_such_authorization.json")
+        reason = gate.evaluate(
+            "mcp__github__merge_pull_request",
+            {"repo": "Quantum-L9/Cursor-Governance", "pull_number": 0},
         )
-    except (OSError, subprocess.SubprocessError) as exc:
+    except Exception as exc:  # noqa: BLE001 - fail open to UNKNOWN, never BLOCKED
         return UNKNOWN, f"probe failed: {exc}"
-    denied = '"permissionDecision": "deny"' in proc.stdout or '"deny"' in proc.stdout
-    if denied:
+    finally:
+        for key, value in saved.items():
+            if value is None:
+                os.environ.pop(key, None)
+            else:
+                os.environ[key] = value
+
+    if reason is not None:
         return READY, "env boolean does not authorize merge; receipt/breakglass required"
     return BLOCKED, "environment boolean authorized a merge (regression)"
 

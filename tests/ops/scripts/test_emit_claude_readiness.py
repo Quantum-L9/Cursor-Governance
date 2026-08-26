@@ -111,10 +111,14 @@ def _init_fake_gov(tmp_path: Path, *, merge_denies: bool = True) -> Path:
         "import json\nprint(json.dumps({'ok': True, 'secret_boundary': 'model-controlled'}))\n",
         encoding="utf-8",
     )
-    decision = "deny" if merge_denies else "allow"
+    # The emitter imports merge_gate.evaluate() in-process (the CLI needs a git
+    # work tree it does not have). A deny is a returned reason string; an allow
+    # is None. merge_denies=False models the regression: the env boolean alone
+    # authorizing a merge (evaluate returns None).
+    reason = "None" if not merge_denies else '"env boolean is not an authority"'
     (gov / "ops" / "autonomy" / "merge_gate.py").write_text(
-        "import json\n"
-        f'print(json.dumps({{"hookSpecificOutput": {{"permissionDecision": "{decision}"}}}}))\n',
+        "def evaluate(tool_name, tool_input, *, root=None):\n"
+        f"    return {reason}\n",
         encoding="utf-8",
     )
     (gov / "ops" / "scripts" / "install_l9_dispatcher.sh").write_text(
