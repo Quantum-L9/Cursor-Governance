@@ -20,11 +20,28 @@ _GATE_FAILURE="$WS/.l9/pr/gate-failure.json"
 _GATE_LOG="$WS/.l9/pr/last-gate.log"
 _GATE_FAILURE_PY="$SCRIPT_DIR/pr_gate_failure.py"
 _gate_failed=0
+# Key the receipt on tree CONTENT, not on history.
+#
+# The old digest was HEAD + `git status --porcelain`. Both change when you
+# stage and commit, while the bytes the gate just validated do not — so the
+# one sequence every operator actually runs (pr-check -> add -> commit -> pr)
+# was guaranteed to miss its own cache and re-run the full suite, twice.
+# Hashing the worktree instead is invariant across `git add` and `git commit`
+# and changes the moment a file's content does. Costs ~0.7s over ~3.7k files
+# against the ~5.5 minutes it saves.
 _gate_state_digest() {
-  local head porcelain
-  head="$(git rev-parse HEAD 2>/dev/null || echo none)"
-  porcelain="$(git status --porcelain | cksum | awk '{print $1}')"
-  printf '%s %s %s' "$head" "$porcelain" "$PR_BASE"
+  local list paths content
+  list="$(mktemp)"
+  {
+    git ls-files -z
+    git ls-files --others --exclude-standard -z
+  } >"$list" 2>/dev/null || true
+  # Paths and contents are digested separately: a rename that preserves both
+  # content and sort position would otherwise slip through as unchanged.
+  paths="$(cksum <"$list" | awk '{print $1}')"
+  content="$(xargs -0 -r git hash-object <"$list" 2>/dev/null | cksum | awk '{print $1}')"
+  rm -f "$list"
+  printf '%s %s %s' "$paths" "$content" "$PR_BASE"
 }
 _gate_receipt_matches() {
   [[ -f "$_GATE_RECEIPT" ]] || return 1
@@ -35,7 +52,7 @@ try:
     doc = json.loads(open(path, encoding="utf-8").read())
 except (OSError, json.JSONDecodeError):
     raise SystemExit(1)
-want = f"{doc.get('head', '')} {doc.get('worktree_digest', '')} {doc.get('pr_base', '')}"
+want = f"{doc.get('paths_digest', '')} {doc.get('content_digest', '')} {doc.get('pr_base', '')}"
 raise SystemExit(0 if want == current else 1)
 PY
 }
@@ -138,11 +155,11 @@ import json, sys
 from datetime import datetime, timezone
 
 path = sys.argv[1]
-head, digest, pr_base = sys.argv[2].split(" ", 2)
+paths, content, pr_base = sys.argv[2].split(" ", 2)
 doc = {
-    "schema": "l9.pr_gate_receipt.v1",
-    "head": head,
-    "worktree_digest": digest,
+    "schema": "l9.pr_gate_receipt.v2",
+    "paths_digest": paths,
+    "content_digest": content,
     "pr_base": pr_base,
     "passed_at": datetime.now(timezone.utc)
     .replace(microsecond=0)
@@ -333,6 +350,21 @@ if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
   echo "FAIL: unexpected non-generated dirtiness after sync"
   git status --short
   exit 1
+fi
+
+echo "--- root-file protection ---"
+# Ran only in CI until now, which meant an additive_only violation on a root
+# file (Makefile, AGENTS.md, ...) was undiscoverable until after the PR was
+# already open — costing a fix commit and a second full publish cycle. It is a
+# ~0.7s git-diff analysis; there was never a reason for it to be remote-only.
+# The policy lives with the repo it protects, so the check applies exactly
+# where that config exists — consumer workspaces have no root inventory to
+# reconcile and must not be failed against the governance one.
+_root_protect_py="$GOV_ROOT/ops/scripts/validate_root_file_protection.py"
+if [[ -f "$_root_protect_py" && -f "$WS/ops/config/root-file-protection.json" ]]; then
+  python3 "$_root_protect_py" --base "$PR_BASE" --head HEAD --repo "$WS"
+else
+  echo "OK: skip root-file protection (no ops/config/root-file-protection.json in this workspace)"
 fi
 
 echo "--- skill-activation ---"

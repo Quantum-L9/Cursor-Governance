@@ -156,20 +156,15 @@ def test_improve_begin_then_record(tmp_path: Path) -> None:
 
 def test_gate_receipt_skip_on_unchanged_state(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
-    head = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
-    digest = subprocess.check_output(
-        ["bash", "-c", "git status --porcelain | cksum | awk '{print $1}'"],
-        cwd=str(repo),
-        text=True,
-    ).strip()
+    paths, content = _state_digest(repo)
     receipt_dir = repo / ".l9" / "pr"
     receipt_dir.mkdir(parents=True)
     (receipt_dir / "gate-receipt.json").write_text(
         json.dumps(
             {
-                "schema": "l9.pr_gate_receipt.v1",
-                "head": head,
-                "worktree_digest": digest,
+                "schema": "l9.pr_gate_receipt.v2",
+                "paths_digest": paths,
+                "content_digest": content,
                 "pr_base": "main",
             }
         )
@@ -186,18 +181,21 @@ def test_gate_receipt_skip_on_unchanged_state(tmp_path: Path) -> None:
 
 
 def _state_digest(repo: Path, pr_base: str = "main") -> tuple[str, str]:
-    head = subprocess.check_output(["git", "-C", str(repo), "rev-parse", "HEAD"], text=True).strip()
-    digest = subprocess.check_output(
-        ["bash", "-c", "git status --porcelain | cksum | awk '{print $1}'"],
-        cwd=str(repo),
-        text=True,
-    ).strip()
-    return head, digest
+    """Mirror run_pr_gate.sh's content digest: paths, then worktree contents."""
+    script = (
+        'list="$(mktemp)"; '
+        "{ git ls-files -z; git ls-files --others --exclude-standard -z; } >\"$list\" 2>/dev/null || true; "
+        "cksum <\"$list\" | awk '{print $1}'; "
+        "xargs -0 -r git hash-object <\"$list\" 2>/dev/null | cksum | awk '{print $1}'; "
+        'rm -f "$list"'
+    )
+    out = subprocess.check_output(["bash", "-c", script], cwd=str(repo), text=True).split()
+    return out[0], out[1]
 
 
 def test_gate_failure_receipt_refuses_second_full_gate(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
-    head, digest = _state_digest(repo)
+    paths, content = _state_digest(repo)
     node = (
         "environment/program-execution/scripts/tests/test_run_campaign.py::"
         "RunCampaignTests::test_until_activate_from_memo"
@@ -207,9 +205,9 @@ def test_gate_failure_receipt_refuses_second_full_gate(tmp_path: Path) -> None:
     (receipt_dir / "gate-failure.json").write_text(
         json.dumps(
             {
-                "schema": "l9.pr_gate_failure.v1",
-                "head": head,
-                "worktree_digest": digest,
+                "schema": "l9.pr_gate_failure.v2",
+                "paths_digest": paths,
+                "content_digest": content,
                 "pr_base": "main",
                 "failed_nodes": [node],
                 "failed_hooks": [],
@@ -235,18 +233,18 @@ def test_gate_failure_receipt_refuses_second_full_gate(tmp_path: Path) -> None:
 
 def test_gate_pass_receipt_wins_over_stale_failure(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
-    head, digest = _state_digest(repo)
+    paths, content = _state_digest(repo)
     receipt_dir = repo / ".l9" / "pr"
     receipt_dir.mkdir(parents=True)
-    payload = {"head": head, "worktree_digest": digest, "pr_base": "main"}
+    payload = {"paths_digest": paths, "content_digest": content, "pr_base": "main"}
     (receipt_dir / "gate-receipt.json").write_text(
-        json.dumps({"schema": "l9.pr_gate_receipt.v1", **payload}) + "\n",
+        json.dumps({"schema": "l9.pr_gate_receipt.v2", **payload}) + "\n",
         encoding="utf-8",
     )
     (receipt_dir / "gate-failure.json").write_text(
         json.dumps(
             {
-                "schema": "l9.pr_gate_failure.v1",
+                "schema": "l9.pr_gate_failure.v2",
                 **payload,
                 "failed_nodes": ["tests/x.py::test_x"],
                 "failed_hooks": [],
@@ -269,15 +267,15 @@ def test_gate_pass_receipt_wins_over_stale_failure(tmp_path: Path) -> None:
 
 def test_gate_failure_receipt_clears_when_digest_changes(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
-    head, digest = _state_digest(repo)
+    paths, content = _state_digest(repo)
     receipt_dir = repo / ".l9" / "pr"
     receipt_dir.mkdir(parents=True)
     (receipt_dir / "gate-failure.json").write_text(
         json.dumps(
             {
-                "schema": "l9.pr_gate_failure.v1",
-                "head": head,
-                "worktree_digest": digest,
+                "schema": "l9.pr_gate_failure.v2",
+                "paths_digest": paths,
+                "content_digest": content,
                 "pr_base": "main",
                 "failed_nodes": ["tests/x.py::test_x"],
                 "failed_hooks": [],

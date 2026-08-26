@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-SCHEMA = "l9.pr_gate_failure.v1"
+SCHEMA = "l9.pr_gate_failure.v2"
 STOP = "STOP LOOPING"
 FAILED_NODE_RE = re.compile(r"^FAILED\s+(\S+)", re.M)
 HOOK_ID_RE = re.compile(r"^- hook id:\s+(\S+)", re.M)
@@ -33,12 +33,13 @@ def utc_now() -> str:
 
 
 def parse_digest(raw: str) -> tuple[str, str, str]:
-    head, digest, pr_base = raw.split(" ", 2)
-    return head, digest, pr_base
+    """(paths digest, content digest, PR base) — the gate's content identity."""
+    paths, content, pr_base = raw.split(" ", 2)
+    return paths, content, pr_base
 
 
 def digest_matches(doc: dict[str, Any], current: str) -> bool:
-    want = f"{doc.get('head', '')} {doc.get('worktree_digest', '')} {doc.get('pr_base', '')}"
+    want = f"{doc.get('paths_digest', '')} {doc.get('content_digest', '')} {doc.get('pr_base', '')}"
     return want == current
 
 
@@ -91,7 +92,7 @@ def build_failure_doc(
     pytest_bin: str,
     log_hint: str,
 ) -> dict[str, Any]:
-    head, digest, pr_base = parse_digest(current)
+    paths, content, pr_base = parse_digest(current)
     command = recheck_command(nodes, pytest_bin)
     if nodes:
         message = (
@@ -105,8 +106,8 @@ def build_failure_doc(
         message = f"{STOP}: do not re-run the full gate."
     return {
         "schema": SCHEMA,
-        "head": head,
-        "worktree_digest": digest,
+        "paths_digest": paths,
+        "content_digest": content,
         "pr_base": pr_base,
         "failed_at": utc_now(),
         "failed_nodes": nodes,
