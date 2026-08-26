@@ -66,9 +66,18 @@ def _seed(task_count: int, *, campaign_id: str = "demo-activate-v1") -> dict[str
             "title": f"Task {index}",
             "objective": f"Do the {index}th unit of declared work.",
             "actions": ["edit_only_declared_paths"],
+            # A mutating task must name the scope it may write, and its
+            # validation must be one operation the peer permission ceiling
+            # admits — `python3 -c` is inline code and is refused.
+            "paths": [f"docs/program-execution/bench/task-{index:03d}.md"],
             "consumers": ["pec"],
             "entrypoints": ["make campaign"],
-            "validation": [{"command": "python3 -c 'print(0)'"}],
+            "validation": [
+                {
+                    "method": "command",
+                    "command": f"test -s docs/program-execution/bench/task-{index:03d}.md",
+                }
+            ],
             "nugget_id": f"nugget-task-{index:03d}",
             "acceptance": [
                 {

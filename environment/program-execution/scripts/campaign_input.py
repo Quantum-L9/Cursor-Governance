@@ -282,6 +282,62 @@ def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Cla
     return Classification(kind=CampaignInputKind.UNKNOWN, path=path, schema=schema, document=doc)
 
 
+def _compile_module() -> Any:
+    """Load the campaign-source compiler, which owns source preflight.
+
+    Imported lazily so `classify()` stays a pure routing decision with no
+    jsonschema/Blueprint dependency — a caller that only wants the route pays
+    nothing for the preflight machinery.
+    """
+    import importlib.util
+
+    path = Path(__file__).resolve().parent / "compile_campaign_source.py"
+    spec = importlib.util.spec_from_file_location("pe_compile_campaign_source", path)
+    if spec is None or spec.loader is None:  # pragma: no cover - defensive
+        raise CampaignInputRejected(
+            detected=CampaignInputKind.CAMPAIGN_SOURCE_V2,
+            reason=f"cannot load the campaign-source compiler at {path}",
+            fix="Restore environment/program-execution/scripts/compile_campaign_source.py.",
+            path=path,
+        )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def preflight(classification: Classification) -> list[str]:
+    """Prove a direct campaign source is executable, not merely well-named.
+
+    Classification answers "which route"; it does not answer "will this run".
+    A source with `TASK-001A`, a local_write task that names no writable path,
+    or a composed validation command used to classify as SUPPORTED and fail
+    after isolation, compile and bootstrap. Those are deterministic source
+    defects, so they are decided here, where nothing has been created yet.
+
+    Read-only. Returns compile warnings for supported non-direct kinds (none)
+    and for a clean direct source. Raises the terminal refusal otherwise.
+    """
+    if classification.kind is not CampaignInputKind.CAMPAIGN_SOURCE_V2:
+        return []
+    document = classification.document
+    if not isinstance(document, dict):  # pragma: no cover - classify guarantees this
+        return []
+    module = _compile_module()
+    try:
+        return list(module.preflight_campaign_source_document(document))
+    except Exception as exc:  # noqa: BLE001 - re-raised as the terminal refusal
+        if isinstance(exc, CampaignInputRejected):
+            raise
+        raise CampaignInputRejected(
+            detected=classification.kind,
+            schema=classification.schema,
+            reason=str(exc),
+            fix="Fix the campaign source at the identified task/gate/field. Nothing was "
+            "executed and no workspace was created.",
+            path=classification.path,
+        ) from exc
+
+
 def reject(classification: Classification) -> CampaignInputRejected:
     """Build the terminal refusal for an unsupported classification."""
     if classification.kind is CampaignInputKind.PROGRAM_INTENT_V1:
@@ -370,10 +426,19 @@ def main(argv: list[str] | None = None) -> int:
         exc = reject(found)
         print(json.dumps(exc.to_dict(), indent=2) if args.json else exc.render())
         return exc.exit_code
+    try:
+        warnings = preflight(found)
+    except CampaignInputRejected as exc:
+        print(json.dumps(exc.to_dict(), indent=2) if args.json else exc.render())
+        return exc.exit_code
     if args.json:
-        print(json.dumps(found.to_dict(), indent=2))
+        payload = found.to_dict()
+        payload["preflight"] = {"passed": True, "warnings": warnings}
+        print(json.dumps(payload, indent=2))
     else:
         print(f"SUPPORTED\nkind: {found.kind.value}\nroute: {found.route}")
+        for warning in warnings:
+            print(f"warning: {warning}")
     return 0
 
 

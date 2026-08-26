@@ -41,6 +41,38 @@ def _pass_proof(
     return path
 
 
+# bounded-replanning-v1 declares six repo_local tasks that permit local_write and
+# name no writable path. That shape used to compile, silently receiving a
+# fabricated `docs/program-execution/TASK-00N.md` output; it is now refused, so
+# these tests declare the scope the fixture omits. The checked-in source is
+# digest-pinned and is deliberately left alone.
+_FIXTURE_WRITABLE_PATHS = {
+    "TASK-001": ["docs/program-execution/notes/task-001.md"],
+    "TASK-002": ["docs/program-execution/notes/task-002.md"],
+    "TASK-003": ["docs/program-execution/notes/task-003.md"],
+    "TASK-004": ["docs/program-execution/notes/task-004.md"],
+    "TASK-005": ["docs/program-execution/notes/task-005.md"],
+    "TASK-006": ["docs/program-execution/notes/task-006.md"],
+}
+
+
+def _with_declared_scope(source: dict) -> dict:
+    """Give every mutating fixture task the explicit writable scope it lacks."""
+    for task in source.get("tasks") or []:
+        declared = _FIXTURE_WRITABLE_PATHS.get(str(task.get("id")))
+        if declared and not task.get("paths") and not task.get("outputs"):
+            task["paths"] = list(declared)
+    return source
+
+
+def _scoped_source(directory: Path) -> Path:
+    """Materialize the fixture with declared writable scope."""
+    source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+    path = directory / "CAMPAIGN_SOURCE.yaml"
+    path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+    return path
+
+
 def _load(name: str, path: Path):
     spec = importlib.util.spec_from_file_location(name, path)
     if spec is None or spec.loader is None:
@@ -69,9 +101,11 @@ class CompileCampaignSourceTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             target = Path(raw) / "blueprint"
             proof = _pass_proof(Path(raw) / "stack-proof.json")
-            self.compiler.compile_source(SOURCE, target, stack_proof=proof)
-            digest = hashlib.sha256(SOURCE.read_bytes()).hexdigest()
-            self.assertEqual(digest, EXPECTED_DIGEST)
+            scoped = _scoped_source(Path(raw))
+            before = hashlib.sha256(scoped.read_bytes()).hexdigest()
+            self.compiler.compile_source(scoped, target, stack_proof=proof)
+            self.assertEqual(hashlib.sha256(scoped.read_bytes()).hexdigest(), before)
+            self.assertEqual(hashlib.sha256(SOURCE.read_bytes()).hexdigest(), EXPECTED_DIGEST)
             tasks = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))[
                 "tasks"
             ]
@@ -175,9 +209,13 @@ class CompileCampaignSourceTests(unittest.TestCase):
         compile input of every other campaign.
         """
         with tempfile.TemporaryDirectory() as raw:
-            source = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            # Through _scoped_source: the legacy fixture declares no writable
+            # scope, which is now a source defect in its own right. The identity
+            # under test is the campaign id, not the scope.
+            scoped = _scoped_source(Path(raw))
+            source = Path(raw) / "renamed.yaml"
             source.write_text(
-                SOURCE.read_text(encoding="utf-8").replace(
+                scoped.read_text(encoding="utf-8").replace(
                     "bounded-replanning-v1",
                     "never-preregistered-v1",
                 ),
@@ -221,7 +259,9 @@ class CompileCampaignSourceTests(unittest.TestCase):
             tmp = Path(raw)
             target = tmp / "blueprint"
             self.compiler.compile_source(
-                SOURCE, target, stack_proof=_pass_proof(tmp / "stack-proof.json")
+                _scoped_source(tmp),
+                target,
+                stack_proof=_pass_proof(tmp / "stack-proof.json"),
             )  # self-validates template mode
 
             collect = _load("collect_evidence_test", PE_ROOT / "scripts/collect_evidence.py")
@@ -301,7 +341,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
         )
 
     def test_compiled_task_cards_keep_multi_path_outputs(self) -> None:
-        source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+        source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
         task = source["tasks"][0]
         task["paths"] = ["docs/one.md", "docs/two.md"]
         with tempfile.TemporaryDirectory() as raw:
@@ -352,7 +392,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
 
     def test_legacy_blocked_with_dependencies_canonicalizes_to_ready(self) -> None:
         """ADR-0023 A1: sequencing-only legacy `blocked` compiles as `ready`."""
-        source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+        source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
         task = next(item for item in source["tasks"] if item["id"] == "TASK-002")
         task["definition_status"] = "blocked"
         task["dependencies"] = ["TASK-001"]
@@ -378,7 +418,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
 
     def test_blocked_without_dependencies_refuses_compilation(self) -> None:
         """ADR-0023 A2: `blocked` with nothing to wait on is a runtime dead-end."""
-        source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+        source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
         task = next(item for item in source["tasks"] if item["id"] == "TASK-001")
         task["definition_status"] = "blocked"
         with tempfile.TemporaryDirectory() as raw:
@@ -399,7 +439,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
         """ADR-0023 A3: approval-shaped statuses are not task-ordering states."""
         for alias in ("pending", "advisory", "awaiting_approval", "not_approved"):
             with self.subTest(alias=alias):
-                source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+                source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
                 source["tasks"][1]["definition_status"] = alias
                 with tempfile.TemporaryDirectory() as raw:
                     path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
@@ -413,7 +453,7 @@ class CompileCampaignSourceTests(unittest.TestCase):
                     self.assertIn(alias, str(ctx.exception))
 
     def test_compiled_blueprint_requires_the_declared_command(self) -> None:
-        source = yaml.safe_load(SOURCE.read_text(encoding="utf-8"))
+        source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
         task = source["tasks"][0]
         task["validation"] = [
             {
@@ -442,3 +482,156 @@ class CompileCampaignSourceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SourcePreflightTests(unittest.TestCase):
+    """Deterministic source defects, caught before anything is created."""
+
+    def setUp(self) -> None:
+        self.compiler = _load(
+            "compile_campaign_source_preflight",
+            PE_ROOT / "scripts/compile_campaign_source.py",
+        )
+
+    def _source(self) -> dict:
+        return _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+
+    def _mutating_task(self, source: dict) -> dict:
+        return next(
+            item
+            for item in source["tasks"]
+            if (item.get("authorization_ceiling") or {}).get("local_write")
+            and item.get("execution_kind") != "program_control"
+        )
+
+    # --- Repair A: truthful mutation scope -------------------------------
+
+    def test_mutating_task_without_writable_paths_fails_preflight(self) -> None:
+        source = self._source()
+        task = self._mutating_task(source)
+        task["paths"] = []
+        task.pop("outputs", None)
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        message = str(ctx.exception)
+        self.assertIn(task["id"], message)
+        self.assertIn("local_write", message)
+        self.assertIn("no outputs[].location or paths[]", message)
+
+    def test_no_docs_path_is_fabricated_for_a_mutating_task(self) -> None:
+        with self.assertRaises(self.compiler.CompileError):
+            self.compiler._task_output_locations(
+                {
+                    "id": "TASK-001",
+                    "execution_kind": "repo_local",
+                    "authorization_ceiling": {"local_write": True},
+                }
+            )
+
+    def test_explicit_writable_scope_passes_and_is_carried_through(self) -> None:
+        source = self._source()
+        task = self._mutating_task(source)
+        task["paths"] = ["ops/scripts/claude_projection.py"]
+        task.pop("outputs", None)
+        self.compiler.preflight_campaign_source_document(source)
+        self.assertEqual(
+            self.compiler._task_output_locations(task),
+            ["ops/scripts/claude_projection.py"],
+        )
+
+    def test_program_control_keeps_the_receipt_fallback(self) -> None:
+        """Non-mutating compatibility: local_write is removed at compile time."""
+        self.assertEqual(
+            self.compiler._task_output_locations(
+                {
+                    "id": "TASK-007",
+                    "execution_kind": "program_control",
+                    "authorization_ceiling": {"local_write": True},
+                }
+            ),
+            ["docs/program-execution/TASK-007.md"],
+        )
+
+    def test_inspection_task_keeps_the_receipt_fallback(self) -> None:
+        self.assertEqual(
+            self.compiler._task_output_locations({"id": "TASK-009"}),
+            ["docs/program-execution/TASK-009.md"],
+        )
+
+    # --- ID grammar, sourced from the Blueprint schemas -------------------
+
+    def test_task_and_gate_id_patterns_come_from_the_blueprint_schemas(self) -> None:
+        self.assertEqual(self.compiler.blueprint_task_id_pattern(), "^TASK-[0-9]{3,}$")
+        self.assertEqual(self.compiler.blueprint_gate_id_pattern(), "^GATE-[0-9]{3,}$")
+
+    def test_illegal_task_id_fails_preflight_without_renumbering(self) -> None:
+        source = self._source()
+        original = source["tasks"][0]["id"]
+        source["tasks"][0]["id"] = "TASK-001A"
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        self.assertIn("TASK-001A", str(ctx.exception))
+        # The offending id is named, never silently rewritten.
+        self.assertEqual(source["tasks"][0]["id"], "TASK-001A")
+        self.assertNotEqual(source["tasks"][0]["id"], original)
+
+    def test_illegal_gate_id_fails_preflight(self) -> None:
+        source = self._source()
+        gates = source.get("gates") or []
+        if not gates:
+            self.skipTest("fixture declares no gates")
+        gates[0]["id"] = "GATE-001A"
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        self.assertIn("GATE-001A", str(ctx.exception))
+
+    def test_numeric_ids_of_three_or_more_digits_pass(self) -> None:
+        import re
+
+        pattern = re.compile(self.compiler.blueprint_task_id_pattern())
+        for task_id in ("TASK-001", "TASK-008", "TASK-1000"):
+            self.assertTrue(pattern.match(task_id), msg=task_id)
+        for task_id in ("TASK-001A", "TASK-A01", "TASK-01"):
+            self.assertFalse(pattern.match(task_id), msg=task_id)
+
+    # --- Validation-command grammar --------------------------------------
+
+    def test_composed_source_validation_command_fails_preflight(self) -> None:
+        source = self._source()
+        task = self._mutating_task(source)
+        task["validation"] = [
+            {
+                "id": "VAL-001",
+                "method": "command",
+                "command_or_inspection": "grep -q x a.py && grep -q x b.py",
+            }
+        ]
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        message = str(ctx.exception)
+        self.assertIn("VAL-001", message)
+        self.assertIn("compose multiple shell operations", message)
+
+    def test_inspection_text_is_never_parsed_as_shell(self) -> None:
+        """Prose is not a command; it must not reach the shell grammar."""
+        source = self._source()
+        task = self._mutating_task(source)
+        task["validation"] = [
+            {
+                "id": "VAL-001",
+                "method": "inspection",
+                "command_or_inspection": "Reviewer confirms A && B, then checks > 3 cases",
+            }
+        ]
+        self.compiler.preflight_campaign_source_document(source)
+
+    def test_clean_source_passes_preflight(self) -> None:
+        self.compiler.preflight_campaign_source_document(self._source())
+
+    def test_preflight_does_not_mutate_the_source(self) -> None:
+        import copy
+
+        source = self._source()
+        before = copy.deepcopy(source)
+        self.compiler.preflight_campaign_source_document(source)
+        self.assertEqual(source, before)
