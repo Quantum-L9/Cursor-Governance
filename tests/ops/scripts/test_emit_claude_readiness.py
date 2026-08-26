@@ -72,6 +72,29 @@ def test_configured_mcp_is_not_loaded_mcp() -> None:
     assert status == DEGRADED
 
 
+def test_sanitize_remote_strips_embedded_credential() -> None:
+    # A token-authenticated clone must never leak its credential into the receipt.
+    got = er._sanitize_remote("https://x-access-token:ghs_SECRET@github.com/o/r.git")
+    assert got == "https://github.com/o/r.git"
+    assert "ghs_SECRET" not in got
+    assert "x-access-token" not in got
+
+
+def test_sanitize_remote_passes_clean_urls() -> None:
+    assert er._sanitize_remote("https://github.com/o/r.git") == "https://github.com/o/r.git"
+    assert er._sanitize_remote("git@github.com:o/r.git") == "git@github.com:o/r.git"
+
+
+def test_graphiti_blocker_is_a_constant_label() -> None:
+    # Only known blocker classes are emitted; an unknown value is mapped away so
+    # no probe-derived string is printed verbatim.
+    _, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
+    assert "identity" in note
+    _, other = er._graphiti_health({"ok": False, "primary_blocker": "ghs_leaked_token_value"})
+    assert "ghs_leaked_token_value" not in other
+    assert "unknown" in other
+
+
 # --- Integration: build a fake governance clone + fake $HOME -------------------
 
 
