@@ -54,6 +54,16 @@ class WaveDependencyTest(unittest.TestCase):
             )
             self.assertIn("predecessor_wave_task_not_completed:W0:TASK-001", result["error"])
             self.assertIn("predecessor_wave_exit_gate_not_satisfied:W0:GATE-001", result["error"])
+            # The refusal is ordering, not a blocked definition (ADR-0023):
+            # the claim error says "not eligible", the definition stays ready,
+            # and the successor reports as waiting, never as blocked.
+            self.assertIn("not eligible", result["error"])
+            status = run_cli("status", "--workspace", str(workspace))
+            task_002 = next(item for item in status["tasks"] if item["id"] == "TASK-002")
+            self.assertEqual(task_002["definition_status"], "ready")
+            view = run_cli("next", "--workspace", str(workspace))
+            self.assertIn("TASK-002", [item["id"] for item in view["waiting"]])
+            self.assertNotIn("TASK-002", [item["id"] for item in view["blocked"]])
 
 
 if __name__ == "__main__":
