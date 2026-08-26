@@ -209,9 +209,13 @@ class CompileCampaignSourceTests(unittest.TestCase):
         compile input of every other campaign.
         """
         with tempfile.TemporaryDirectory() as raw:
-            source = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            # Through _scoped_source: the legacy fixture declares no writable
+            # scope, which is now a source defect in its own right. The identity
+            # under test is the campaign id, not the scope.
+            scoped = _scoped_source(Path(raw))
+            source = Path(raw) / "renamed.yaml"
             source.write_text(
-                SOURCE.read_text(encoding="utf-8").replace(
+                scoped.read_text(encoding="utf-8").replace(
                     "bounded-replanning-v1",
                     "never-preregistered-v1",
                 ),
