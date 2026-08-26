@@ -1,0 +1,234 @@
+metadata:
+  contract_id: L9.GAR.ARCHITECTURAL_INTEGRITY.001
+  version: 0.4.0
+  kind: invariant
+  status: review
+  title: GAR Architectural Integrity
+  summary: >
+    Require architectural complexity to be earned, ownership to be explicit,
+    and material assumptions to be supported whenever GAR evaluates or changes
+    architecture.
+  owner: l9-global-architect
+  domain: architectural_integrity
+  tags:
+    - gar
+    - architecture
+    - invariant
+authority:
+  tier: constitutional
+  semantic_owner: contracts/ARCHITECTURAL_INTEGRITY.yaml
+  override_policy: higher_authority_only
+  lower_tier_redefinition: forbidden
+scope:
+  actors:
+    - l9-global-architect
+  operations:
+    - architecture_selection
+    - architecture_review
+    - plan_promotion
+    - implementation_review
+    - convergence_support
+  resources:
+    - repository_architecture
+    - artifact_architecture
+    - runtime_architecture
+  environments:
+    - standalone
+    - l9_integrated
+  triggers:
+    - architecture_is_material
+    - structural_change_is_material
+normative_clauses:
+  - clause_id: AI-001
+    effect: require
+    subject: structural_complexity
+    action: be_earned_by_evidenced_responsibility
+    object: architecture
+    conditions:
+      - simpler_credible_alternative_is_considered
+  - clause_id: AI-002
+    effect: require
+    subject: authoritative_state_and_responsibility
+    action: have_explicit_canonical_ownership
+    object: architecture
+    conditions:
+      - multi_owner_semantics_require_explicit_coordination_contract
+  - clause_id: AI-003
+    effect: prohibit
+    subject: material_decision
+    action: depend_on_unsupported_assumption
+    object: architecture_plan_implementation_or_verification
+    conditions:
+      - assumption_can_change_material_outcome
+dependencies:
+  requires_contracts:
+    - L9.GAR.EPISTEMIC_DISCIPLINE.001
+  conflicts_with: []
+enforcement:
+  class: mixed
+  severity: blocker
+  failure_mode: fail_closed
+  validators:
+    - runtime/EVALUATOR_REGISTRY.yaml#EVAL-CONTRACT
+    - runtime/EVALUATOR_REGISTRY.yaml#EVAL-EVIDENCE-BOUND-MODEL
+  runtime_gates:
+    - architecture_acceptance
+    - plan_readiness
+    - convergence_support
+evidence_obligations:
+  - property_id: AI-001
+    evidence_contract_ref: null
+    proof: >
+      Name the structural responsibility, current evidenced driver, simpler
+      credible alternative, rejection reason, owner, and lifecycle cost.
+    blocking: true
+    negative_proof_required: true
+  - property_id: AI-002
+    evidence_contract_ref: null
+    proof: >
+      Establish canonical state owner, mutation owner, lifecycle owner,
+      dependency direction, and any explicit coordination protocol.
+    blocking: true
+    negative_proof_required: true
+  - property_id: AI-003
+    evidence_contract_ref: null
+    proof: >
+      Bind every material assumption to verified evidence, a bounded design,
+      explicit operator-authorized risk, or a typed block.
+    blocking: true
+    negative_proof_required: true
+projections:
+  binding_refs: []
+provenance:
+  origin: authored
+  source_refs:
+    - ADR-L9-GAR-001
+    - GAR-v0.1-architectural-integrity
+  extraction_record_refs: []
+  rationale_refs:
+    - decisions/ADR-L9-GAR-001.yaml
+integrity:
+  canonical_serialization: deterministic_yaml_normalization_v1
+  content_digest: null
+lifecycle:
+  introduced_at: 2026-08-26
+  supersedes: []
+  deprecated_by: null
+  change_policy: semantic_versioning
+invariant_definition:
+  assertion: >
+    Every applicable GAR architectural decision satisfies all three blocking
+    integrity properties: complexity is earned, ownership is explicit, and
+    material assumptions are supported.
+  subject: applicable_gar_architectural_decision
+  predicate: blocking_architectural_integrity_properties
+  expected_state:
+    AI-001: SATISFIED
+    AI-002: SATISFIED
+    AI-003: SATISFIED
+  applies_when: []
+  forbidden_states:
+    - property_id: AI-001
+      states: [VIOLATED, UNKNOWN, DISPUTED]
+    - property_id: AI-002
+      states: [VIOLATED, UNKNOWN, DISPUTED]
+    - property_id: AI-003
+      states: [VIOLATED, UNKNOWN, DISPUTED]
+violation:
+  effect: fail_closed
+  reason_code: ARCHITECTURE_NOT_COHERENT
+integrity_properties:
+  AI-001:
+    name: complexity_must_be_earned
+    evaluator: EVAL-EVIDENCE-BOUND-MODEL
+    required_proof:
+      - named_responsibility
+      - evidenced_driver
+      - simpler_alternative_considered
+      - simpler_alternative_rejection_reason
+      - ownership_location
+      - lifecycle_cost_considered
+    forbidden_states:
+      - speculative_abstraction
+      - future_proofing_without_evidenced_driver
+      - duplicate_mechanism
+      - unused_indirection
+      - abstraction_without_stable_responsibility
+      - complexity_added_to_avoid_understanding_existing_system
+    violation_reason_code: UNEARNED_COMPLEXITY
+    unresolved_reason_code: COMPLEXITY_JUSTIFICATION_UNKNOWN
+  AI-002:
+    name: ownership_must_be_explicit
+    evaluator: EVAL-EVIDENCE-BOUND-MODEL
+    required_proof:
+      - authoritative_state_owner
+      - mutation_owner
+      - lifecycle_owner
+      - dependency_direction
+      - coordination_protocol_if_multi_owner
+    forbidden_states:
+      - duplicate_source_of_truth
+      - shadow_authority
+      - implicit_ownership
+      - split_lifecycle_ownership
+      - cross_boundary_mutation_without_contract
+      - adapter_owned_shared_brain
+      - cache_treated_as_authoritative_without_ownership_rule
+    violation_reason_code: FUZZY_OWNERSHIP
+    unresolved_reason_code: OWNERSHIP_UNRESOLVED
+  AI-003:
+    name: material_assumptions_require_support
+    evaluator: EVAL-HYBRID
+    material_when_can_change:
+      - selected_architecture
+      - public_contract
+      - ownership
+      - persistence_semantics
+      - failure_behavior
+      - security_boundary
+      - migration_strategy
+      - implementation_scope
+      - acceptance_result
+      - terminal_disposition
+    allowed_dispositions:
+      - verify
+      - bound
+      - constrain_design_to_remove_dependency
+      - explicitly_accept_operator_authorized_risk
+      - block
+    forbidden_states:
+      - inferred_as_verified
+      - unknown_as_verified
+      - stale_evidence_as_current
+      - fabricated_repository_state
+      - fabricated_runtime_behavior
+      - undocumented_material_assumption
+    violation_reason_code: UNSUPPORTED_ASSUMPTION
+    unresolved_reason_code: MATERIAL_ASSUMPTION_UNRESOLVED
+cross_rules:
+  - id: AI-X001
+    rule: blocking integrity violations cannot be numerically averaged away
+  - id: AI-X002
+    rule: existing implementation is evidence of history not proof of correctness
+  - id: AI-X003
+    rule: minimal change means smallest coherent change not smallest textual diff
+  - id: AI-X004
+    rule: local correctness is insufficient when global coherence is damaged
+  - id: AI-X005
+    rule: deletion consolidation and removal are first-class architectural outcomes
+promotion_gate:
+  pass_when:
+    - AI-001 in [SATISFIED, NOT_APPLICABLE]
+    - AI-002 in [SATISFIED, NOT_APPLICABLE]
+    - AI-003 in [SATISFIED, NOT_APPLICABLE]
+  fail_closed_on:
+    - VIOLATED
+    - UNKNOWN
+    - DISPUTED
+semantic_boundary:
+  owns:
+    - architectural_integrity_blockers
+  does_not_own:
+    - completion_definition
+    - terminal_state
+    - workflow_routing

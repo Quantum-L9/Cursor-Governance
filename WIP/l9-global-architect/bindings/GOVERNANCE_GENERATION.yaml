@@ -1,0 +1,143 @@
+generation_spec:
+  spec_id: L9.GAR.GOVERNANCE_GENERATION.001
+  version: 0.4.0
+  artifact_class: governance_generation_binding
+  status: dormant
+  semantic_owner: bindings/GOVERNANCE_GENERATION.yaml
+purpose:
+  assertion: >
+    Bind schema-aligned GAR governance contracts to external L9 registry and
+    projection-generation tooling when that tooling is actually available.
+    This file does not claim that a GAR-to-canonical compiler exists.
+canonical_schema_refs:
+  contract_registry:
+    schema_id: canonical.schema.contract_registry.v1
+    external_path: contracts/schemas/canonical.schema.contract_registry.v1.yaml
+  projection_binding:
+    schema_id: canonical.schema.contract_projection_binding.v1
+    external_path: contracts/schemas/canonical.schema.contract_projection_binding.v1.yaml
+  invariant:
+    schema_id: canonical.schema.invariant_contract.v1
+    external_path: contracts/schemas/canonical.schema.invariant_contract.v1.yaml
+  policy:
+    schema_id: canonical.schema.policy_contract.v1
+    external_path: contracts/schemas/canonical.schema.policy_contract.v1.yaml
+  workflow:
+    schema_id: canonical.schema.workflow_contract.v1
+    external_path: contracts/schemas/canonical.schema.workflow_contract.v1.yaml
+  evidence:
+    schema_id: canonical.schema.evidence_contract.v1
+    external_path: contracts/schemas/canonical.schema.evidence_contract.v1.yaml
+source_authority:
+  rule: >
+    The listed GAR core contracts are authored directly in schema-aligned L9
+    contract shapes. No intermediate rich-IR projection is required or claimed.
+  registration_does_not_change_semantic_owner: true
+schema_aligned_sources:
+  - path: contracts/ARCHITECTURAL_INTEGRITY.yaml
+    schema_ref: canonical.schema.invariant_contract.v1
+  - path: contracts/EPISTEMIC_DISCIPLINE.yaml
+    schema_ref: canonical.schema.invariant_contract.v1
+  - path: contracts/OUTCOME_OWNERSHIP.yaml
+    schema_ref: canonical.schema.policy_contract.v1
+  - path: contracts/CONVERGENCE.yaml
+    schema_ref: canonical.schema.evidence_contract.v1
+  - path: runtime/STATE_MACHINE.yaml
+    schema_ref: canonical.schema.workflow_contract.v1
+external_tooling_requirement:
+  required_for_generation: true
+  must_observe_all:
+    - canonical_schema_validator_available
+    - contract_registry_generator_available
+    - digest_canonicalizer_available
+  projection_binding_generation_additionally_requires:
+    - projection_parity_validator_available
+  if_missing:
+    generation_allowed: false
+    disposition: CAPABILITY_BLOCK
+    reason_code: CAPABILITY_BLOCK
+registration_gate:
+  all_required:
+    - source_file_exists
+    - source_parses
+    - source_validates_against_declared_canonical_schema
+    - contract_id_is_stable
+    - contract_version_is_semver
+    - authority_tier_is_resolved
+    - semantic_owner_is_resolved
+    - dependencies_resolve
+    - canonical_content_digest_is_computed_by_external_canonicalizer
+  on_failure:
+    register_contract: false
+    fail_closed: true
+contract_registry_output:
+  path: generated/governance/CONTRACT_REGISTRY.yaml
+  schema_ref: canonical.schema.contract_registry.v1
+  generation:
+    generated: true
+    hand_edit_allowed: false
+    deterministic: true
+    implementation_owner: external_l9_governance_tooling
+  metadata_resolution:
+    source_commit_sha:
+      source: git_HEAD
+      requirement: full_commit_sha
+    generated_at:
+      source: source_commit_timestamp_utc
+  digest:
+    algorithm: sha256
+    source: canonicalized_contract_content
+    placeholders_allowed: false
+  graph:
+    require_dependency_graph_acyclic: true
+    require_supersession_graph_acyclic: true
+    unresolved_refs_allowed: false
+    unresolved_conflicts_allowed: false
+projection_binding_generation:
+  default_requested: false
+  generate_only_when:
+    - explicit_projection_work_requested
+    - projection_target_exists
+    - projection_parity_validator_available
+  output_root: generated/governance/projections
+  schema_ref: canonical.schema.contract_projection_binding.v1
+  contract_digest:
+    source: generated_contract_registry
+    placeholders_allowed: false
+  projected_content_sha256:
+    algorithm: sha256
+    source: actual_target_projection_content
+    placeholders_allowed: false
+  drift_policy: fail_closed
+current_pack_projection_state:
+  normative_SKILL_projection_required: false
+  rationale: >
+    SKILL.md is intentionally a minimal bootloader and does not restate core
+    contract law, so no normative contract-to-SKILL projection binding is
+    required for this pack state.
+generation_order:
+  - verify_external_tooling_capability
+  - validate_schema_aligned_sources
+  - compute_contract_digests_with_external_canonicalizer
+  - build_dependency_and_supersession_graphs
+  - generate_contract_registry
+  - optionally_resolve_projection_targets
+  - optionally_validate_projection_parity
+  - optionally_compute_projected_content_digests
+  - optionally_generate_projection_binding_instances
+  - validate_generated_outputs
+  - fail_if_any_unresolved_reference_or_drift
+forbidden:
+  - fake_sha256
+  - zero_digest_placeholder
+  - fake_commit_sha
+  - claim_unimplemented_generator_exists
+  - hand_edit_generated_registry
+  - hand_edit_generated_projection_binding
+  - generate_projection_without_parity_validation
+  - let_projection_become_normative_owner
+anti_drift:
+  - generated_registry_describes_contracts_but_never_owns_semantics
+  - schema_alignment_is_validated_not_assumed_when_generation_is_requested
+  - projections_never_widen_source_authority
+  - regeneration_from_identical_committed_input_is_reproducible

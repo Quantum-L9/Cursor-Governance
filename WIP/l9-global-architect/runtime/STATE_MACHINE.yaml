@@ -1,0 +1,1025 @@
+metadata:
+  contract_id: L9.GAR.WORKFLOW.001
+  version: 0.4.0
+  kind: workflow
+  status: review
+  title: GAR Principal Architect Engineer Workflow
+  summary: Own all GAR semantic routing from intake through realization verification delivery convergence block
+    or higher-authority abort.
+  owner: l9-global-architect
+  domain: runtime_workflow
+  tags:
+  - gar
+  - workflow
+  - state-machine
+authority:
+  tier: execution
+  semantic_owner: runtime/STATE_MACHINE.yaml
+  override_policy: higher_authority_only
+  lower_tier_redefinition: forbidden
+scope:
+  actors:
+  - l9-global-architect
+  operations:
+  - investigate
+  - model
+  - architect
+  - plan
+  - execute
+  - verify
+  - deliver
+  - converge
+  - block
+  resources:
+  - GAR_RUN_STATE
+  - repository_or_artifact_target
+  - evidence
+  environments:
+  - standalone
+  - l9_integrated
+  triggers:
+  - user_outcome_requested
+normative_clauses:
+- clause_id: WF-ROUTING-001
+  effect: require
+  subject: gar_state_change
+  action: use_declared_transition
+  object: runtime/STATE_MACHINE.yaml
+- clause_id: WF-ROUTING-002
+  effect: require
+  subject: typed_defect
+  action: route_only_through_state_machine
+  object: earliest_invalid_semantic_state
+- clause_id: WF-BLOCK-001
+  effect: require
+  subject: terminal_block
+  action: consume_valid_typed_block_receipt
+  object: BLOCKED
+- clause_id: WF-VERIFY-001
+  effect: require
+  subject: verification_to_convergence_transition
+  action: prove_all_required_obligations_evaluated_and_no_blocking_result
+  object: CONVERGENCE_CHECK
+dependencies:
+  requires_contracts:
+  - L9.GAR.EPISTEMIC_DISCIPLINE.001
+  - L9.GAR.ARCHITECTURAL_INTEGRITY.001
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  - L9.GAR.CONVERGENCE.001
+  conflicts_with: []
+enforcement:
+  class: mixed
+  severity: blocker
+  failure_mode: block_transition
+  validators:
+  - runtime/EVALUATOR_REGISTRY.yaml#EVAL-DETERMINISTIC-PREDICATE
+  - runtime/EVALUATOR_REGISTRY.yaml#EVAL-CONTRACT
+  runtime_gates:
+  - state_transition
+  - terminal_entry
+evidence_obligations:
+- property_id: WF-LEGAL-TRANSITION
+  evidence_contract_ref: null
+  proof: Every state change records a transition_id declared by this workflow.
+  blocking: true
+  negative_proof_required: true
+- property_id: WF-PLAN-READY
+  evidence_contract_ref: null
+  proof: Execution entry references depth-appropriate PLAN_READY evidence rather than an asserted shortcut.
+  blocking: true
+  negative_proof_required: true
+- property_id: WF-BLOCK-RECEIPT
+  evidence_contract_ref: null
+  proof: BLOCKED entry references a valid block receipt satisfying OUTCOME_OWNERSHIP.
+  blocking: true
+  negative_proof_required: true
+projections:
+  binding_refs: []
+provenance:
+  origin: authored
+  source_refs:
+  - GAR-v0.1-state-machine
+  - GAR-v0.3-remediation
+  - GAR-v0.4-p0-remediation
+  extraction_record_refs: []
+  rationale_refs:
+  - decisions/ADR-L9-GAR-001.yaml
+integrity:
+  canonical_serialization: deterministic_yaml_normalization_v1
+  content_digest: null
+lifecycle:
+  introduced_at: '2026-08-26'
+  supersedes: []
+  deprecated_by: null
+  change_policy: semantic_versioning
+workflow:
+  initial_state: INTAKE
+  terminal_states:
+  - CONVERGED
+  - BLOCKED
+  - ABORTED_BY_HIGHER_AUTHORITY
+  failure_states:
+  - BLOCKED
+  - ABORTED_BY_HIGHER_AUTHORITY
+  cycle_policy: explicit
+  explicit_cycle_rules:
+  - Repair recursion is permitted only with material progress; the same material defect fingerprint without progress
+    may repeat at most twice before a NO_PROGRESS block receipt is required.
+states:
+- state_id: INTAKE
+  purpose: Normalize objective, derive realization mode, and discover host constraints
+  entry_requirements: []
+  exit_properties:
+  - objective_actionable_or_typed_block
+  - capability_census_observed
+  - realization_mode_resolved_or_UNKNOWN_recorded
+- state_id: INVESTIGATE
+  purpose: Establish relevant reality before material decisions
+  entry_requirements:
+  - INTAKE_complete
+  exit_properties:
+  - evidence_sufficient_for_depth
+  - no_silent_material_unknown
+- state_id: MODEL
+  purpose: Reconstruct responsibilities, ownership, boundaries, invariants, state, and failure semantics
+  entry_requirements:
+  - investigation_exit_properties_satisfied
+  exit_properties:
+  - system_model_coherent
+  - ownership_model_explicit
+  - material_model_claims_supported
+- state_id: ARCHITECT
+  purpose: Select the smallest coherent architectural change or decision
+  entry_requirements:
+  - system_model_exit_properties_satisfied
+  exit_properties:
+  - architectural_integrity_satisfied
+  - selected_candidate_exists
+- state_id: PLAN
+  purpose: Compile architecture into bounded executable realization
+  entry_requirements:
+  - realization_mode in [MUTATION, ARTIFACT]
+  - architecture_or_existing_contract_ready
+  exit_properties:
+  - plan_inputs_complete
+- state_id: PLAN_ATTACK
+  purpose: Adversarially falsify the executable plan
+  entry_requirements:
+  - plan_inputs_complete
+  exit_properties:
+  - depth_appropriate_plan_readiness_evaluated
+- state_id: EXECUTE
+  purpose: Realize objective-required mutation or artifact through actual host capabilities
+  entry_requirements:
+  - execution_obligation_active
+  - PLAN_READY == SATISFIED
+  exit_properties:
+  - realization_attempted
+  - actual_realization_state_known
+- state_id: VERIFY
+  purpose: Positively evaluate every required verification obligation and search for false success
+  entry_requirements:
+  - realized_or_nonmutating_result_available
+  exit_properties:
+  - all_required_verification_obligations_evaluated
+  - verification_result_classified
+- state_id: CONVERGENCE_CHECK
+  purpose: Evaluate the sole success contract without activity-based shortcuts
+  entry_requirements:
+  - all_required_verification_obligations_evaluated
+  exit_properties:
+  - convergence_result_classified
+- state_id: CONVERGED
+  purpose: Successful terminal disposition
+  entry_requirements:
+  - contracts/CONVERGENCE.yaml == SATISFIED
+  exit_properties:
+  - terminal
+- state_id: BLOCKED
+  purpose: Legitimate terminal inability to complete current objective
+  entry_requirements:
+  - VALID_BLOCK_RECEIPT == SATISFIED
+  exit_properties:
+  - terminal
+- state_id: ABORTED_BY_HIGHER_AUTHORITY
+  purpose: Terminal stop required by higher authority
+  entry_requirements:
+  - higher_authority_stop == true
+  exit_properties:
+  - terminal
+transitions:
+- transition_id: T-001
+  from: INTAKE
+  to: INVESTIGATE
+  requires_contracts: []
+  gates:
+  - objective_actionable
+  - no_higher_authority_stop
+  actions:
+  - ACT-INTAKE
+  on_failure: INTAKE
+- transition_id: T-002
+  from: INVESTIGATE
+  to: MODEL
+  requires_contracts: []
+  gates:
+  - depth_profile in [STANDARD, DEEP]
+  - investigation_exit_properties_satisfied
+  actions:
+  - ACT-INVESTIGATE
+  on_failure: INVESTIGATE
+- transition_id: T-003
+  from: INVESTIGATE
+  to: EXECUTE
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - depth_profile == RAPID
+  - realization_mode in [MUTATION, ARTIFACT]
+  - RAPID_PLAN_READY == SATISFIED
+  - execution_obligation_active
+  actions:
+  - ACT-INVESTIGATE
+  - ACT-EXECUTE
+  on_failure: INVESTIGATE
+- transition_id: T-004
+  from: INVESTIGATE
+  to: VERIFY
+  requires_contracts: []
+  gates:
+  - depth_profile == RAPID
+  - realization_mode in [ANALYSIS, DECISION]
+  - nonmutating_result_ready == true
+  actions:
+  - ACT-INVESTIGATE
+  - ACT-VERIFY
+  on_failure: INVESTIGATE
+- transition_id: T-005
+  from: MODEL
+  to: INVESTIGATE
+  requires_contracts: []
+  gates:
+  - defect_class == EVIDENCE_DEFECT
+  actions:
+  - ACT-INVESTIGATE
+  on_failure: MODEL
+- transition_id: T-006
+  from: MODEL
+  to: ARCHITECT
+  requires_contracts: []
+  gates:
+  - architectural_choice_required == true
+  - system_model_exit_properties_satisfied
+  actions:
+  - ACT-MODEL
+  - ACT-ARCHITECT
+  on_failure: MODEL
+- transition_id: T-007
+  from: MODEL
+  to: PLAN
+  requires_contracts: []
+  gates:
+  - realization_mode in [MUTATION, ARTIFACT]
+  - architecture_already_settled == true
+  - system_model_exit_properties_satisfied
+  actions:
+  - ACT-MODEL
+  - ACT-PLAN
+  on_failure: MODEL
+- transition_id: T-008
+  from: MODEL
+  to: VERIFY
+  requires_contracts: []
+  gates:
+  - realization_mode in [ANALYSIS, DECISION]
+  - architectural_choice_required == false
+  - system_model_exit_properties_satisfied
+  - nonmutating_result_ready == true
+  actions:
+  - ACT-MODEL
+  - ACT-VERIFY
+  on_failure: MODEL
+- transition_id: T-009
+  from: ARCHITECT
+  to: MODEL
+  requires_contracts: []
+  gates:
+  - defect_class == SYSTEM_MODEL_DEFECT
+  actions:
+  - ACT-MODEL
+  on_failure: ARCHITECT
+- transition_id: T-010
+  from: ARCHITECT
+  to: INVESTIGATE
+  requires_contracts: []
+  gates:
+  - defect_class == EVIDENCE_DEFECT
+  actions:
+  - ACT-INVESTIGATE
+  on_failure: ARCHITECT
+- transition_id: T-011
+  from: ARCHITECT
+  to: PLAN
+  requires_contracts:
+  - L9.GAR.ARCHITECTURAL_INTEGRITY.001
+  gates:
+  - realization_mode in [MUTATION, ARTIFACT]
+  - architectural_integrity_satisfied
+  - selected_candidate_exists
+  actions:
+  - ACT-ARCHITECT
+  - ACT-PLAN
+  on_failure: ARCHITECT
+- transition_id: T-012
+  from: ARCHITECT
+  to: VERIFY
+  requires_contracts:
+  - L9.GAR.ARCHITECTURAL_INTEGRITY.001
+  gates:
+  - realization_mode in [ANALYSIS, DECISION]
+  - architectural_integrity_satisfied
+  - requested_decision_or_analysis_ready == true
+  actions:
+  - ACT-ARCHITECT
+  - ACT-VERIFY
+  on_failure: ARCHITECT
+- transition_id: T-013
+  from: PLAN
+  to: PLAN_ATTACK
+  requires_contracts: []
+  gates:
+  - plan_inputs_complete
+  actions:
+  - ACT-PLAN
+  - ACT-PLAN-ATTACK
+  on_failure: PLAN
+- transition_id: T-014
+  from: PLAN_ATTACK
+  to: INVESTIGATE
+  requires_contracts: []
+  gates:
+  - defect_class == EVIDENCE_DEFECT
+  actions:
+  - ACT-INVESTIGATE
+  on_failure: PLAN_ATTACK
+- transition_id: T-015
+  from: PLAN_ATTACK
+  to: MODEL
+  requires_contracts: []
+  gates:
+  - defect_class == SYSTEM_MODEL_DEFECT
+  actions:
+  - ACT-MODEL
+  on_failure: PLAN_ATTACK
+- transition_id: T-016
+  from: PLAN_ATTACK
+  to: ARCHITECT
+  requires_contracts: []
+  gates:
+  - defect_class == ARCHITECTURE_DEFECT
+  actions:
+  - ACT-ARCHITECT
+  on_failure: PLAN_ATTACK
+- transition_id: T-017
+  from: PLAN_ATTACK
+  to: PLAN
+  requires_contracts: []
+  gates:
+  - defect_class == PLAN_DEFECT
+  actions:
+  - ACT-PLAN
+  on_failure: PLAN_ATTACK
+- transition_id: T-018
+  from: PLAN_ATTACK
+  to: EXECUTE
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - realization_mode in [MUTATION, ARTIFACT]
+  - PLAN_READY == SATISFIED
+  - execution_obligation_active
+  actions:
+  - ACT-EXECUTE
+  on_failure: PLAN_ATTACK
+- transition_id: T-019
+  from: PLAN_ATTACK
+  to: VERIFY
+  requires_contracts: []
+  gates:
+  - realization_mode in [ANALYSIS, DECISION]
+  - PLAN_READY == SATISFIED
+  - nonmutating_result_ready == true
+  actions:
+  - ACT-VERIFY
+  on_failure: PLAN_ATTACK
+- transition_id: T-020
+  from: EXECUTE
+  to: VERIFY
+  requires_contracts: []
+  gates:
+  - realization_attempted == true
+  - actual_realization_state_known == true
+  actions:
+  - ACT-VERIFY
+  on_failure: EXECUTE
+- transition_id: T-021
+  from: VERIFY
+  to: EXECUTE
+  requires_contracts: []
+  gates:
+  - defect_class == IMPLEMENTATION_DEFECT
+  - execution_obligation_active
+  actions:
+  - ACT-EXECUTE
+  on_failure: VERIFY
+- transition_id: T-022
+  from: VERIFY
+  to: PLAN
+  requires_contracts: []
+  gates:
+  - defect_class == PLAN_DEFECT
+  actions:
+  - ACT-PLAN
+  on_failure: VERIFY
+- transition_id: T-023
+  from: VERIFY
+  to: ARCHITECT
+  requires_contracts: []
+  gates:
+  - defect_class == ARCHITECTURE_DEFECT
+  actions:
+  - ACT-ARCHITECT
+  on_failure: VERIFY
+- transition_id: T-024
+  from: VERIFY
+  to: MODEL
+  requires_contracts: []
+  gates:
+  - defect_class == SYSTEM_MODEL_DEFECT
+  actions:
+  - ACT-MODEL
+  on_failure: VERIFY
+- transition_id: T-025
+  from: VERIFY
+  to: INVESTIGATE
+  requires_contracts: []
+  gates:
+  - defect_class == EVIDENCE_DEFECT
+  actions:
+  - ACT-INVESTIGATE
+  on_failure: VERIFY
+- transition_id: T-026
+  from: VERIFY
+  to: VERIFY
+  requires_contracts: []
+  gates:
+  - defect_class == VALIDATION_DEFECT
+  - new_discriminating_validation_possible == true
+  actions:
+  - ACT-VERIFY
+  on_failure: VERIFY
+- transition_id: T-027
+  from: VERIFY
+  to: CONVERGENCE_CHECK
+  requires_contracts:
+  - L9.GAR.CONVERGENCE.001
+  gates:
+  - all_required_verification_obligations_evaluated == true
+  - no_blocking_evaluation_result == true
+  actions:
+  - ACT-CONVERGENCE
+  on_failure: VERIFY
+- transition_id: T-028
+  from: CONVERGENCE_CHECK
+  to: CONVERGED
+  requires_contracts:
+  - L9.GAR.CONVERGENCE.001
+  gates:
+  - convergence_contract == SATISFIED
+  - requested_delivery_completed_or_not_required == true
+  actions:
+  - ACT-CONVERGENCE
+  on_failure: CONVERGENCE_CHECK
+- transition_id: T-029
+  from: CONVERGENCE_CHECK
+  to: INVESTIGATE
+  requires_contracts: []
+  gates:
+  - convergence_defect == EVIDENCE_DEFECT
+  actions:
+  - ACT-INVESTIGATE
+  on_failure: CONVERGENCE_CHECK
+- transition_id: T-030
+  from: CONVERGENCE_CHECK
+  to: MODEL
+  requires_contracts: []
+  gates:
+  - convergence_defect == SYSTEM_MODEL_DEFECT
+  actions:
+  - ACT-MODEL
+  on_failure: CONVERGENCE_CHECK
+- transition_id: T-031
+  from: CONVERGENCE_CHECK
+  to: ARCHITECT
+  requires_contracts: []
+  gates:
+  - convergence_defect == ARCHITECTURE_DEFECT
+  actions:
+  - ACT-ARCHITECT
+  on_failure: CONVERGENCE_CHECK
+- transition_id: T-032
+  from: CONVERGENCE_CHECK
+  to: PLAN
+  requires_contracts: []
+  gates:
+  - convergence_defect == PLAN_DEFECT
+  actions:
+  - ACT-PLAN
+  on_failure: CONVERGENCE_CHECK
+- transition_id: T-033
+  from: CONVERGENCE_CHECK
+  to: EXECUTE
+  requires_contracts: []
+  gates:
+  - convergence_defect == IMPLEMENTATION_DEFECT
+  - execution_obligation_active
+  actions:
+  - ACT-EXECUTE
+  on_failure: CONVERGENCE_CHECK
+- transition_id: T-034
+  from: CONVERGENCE_CHECK
+  to: VERIFY
+  requires_contracts: []
+  gates:
+  - convergence_defect == VALIDATION_DEFECT
+  actions:
+  - ACT-VERIFY
+  on_failure: CONVERGENCE_CHECK
+- transition_id: T-035
+  from: CONVERGENCE_CHECK
+  to: VERIFY
+  requires_contracts: []
+  gates:
+  - reason_code == DELIVERY_NOT_COMPLETED
+  - delivery_capability_available == true
+  actions:
+  - ACT-DELIVER
+  - ACT-VERIFY
+  on_failure: CONVERGENCE_CHECK
+- transition_id: T-BLOCK-01
+  from: INTAKE
+  to: BLOCKED
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - VALID_BLOCK_RECEIPT == SATISFIED
+  actions:
+  - ACT-BLOCK
+  on_failure: INTAKE
+- transition_id: T-BLOCK-02
+  from: INVESTIGATE
+  to: BLOCKED
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - VALID_BLOCK_RECEIPT == SATISFIED
+  actions:
+  - ACT-BLOCK
+  on_failure: INVESTIGATE
+- transition_id: T-BLOCK-03
+  from: MODEL
+  to: BLOCKED
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - VALID_BLOCK_RECEIPT == SATISFIED
+  actions:
+  - ACT-BLOCK
+  on_failure: MODEL
+- transition_id: T-BLOCK-04
+  from: ARCHITECT
+  to: BLOCKED
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - VALID_BLOCK_RECEIPT == SATISFIED
+  actions:
+  - ACT-BLOCK
+  on_failure: ARCHITECT
+- transition_id: T-BLOCK-05
+  from: PLAN
+  to: BLOCKED
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - VALID_BLOCK_RECEIPT == SATISFIED
+  actions:
+  - ACT-BLOCK
+  on_failure: PLAN
+- transition_id: T-BLOCK-06
+  from: PLAN_ATTACK
+  to: BLOCKED
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - VALID_BLOCK_RECEIPT == SATISFIED
+  actions:
+  - ACT-BLOCK
+  on_failure: PLAN_ATTACK
+- transition_id: T-BLOCK-07
+  from: EXECUTE
+  to: BLOCKED
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - VALID_BLOCK_RECEIPT == SATISFIED
+  actions:
+  - ACT-BLOCK
+  on_failure: EXECUTE
+- transition_id: T-BLOCK-08
+  from: VERIFY
+  to: BLOCKED
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - VALID_BLOCK_RECEIPT == SATISFIED
+  actions:
+  - ACT-BLOCK
+  on_failure: VERIFY
+- transition_id: T-BLOCK-09
+  from: CONVERGENCE_CHECK
+  to: BLOCKED
+  requires_contracts:
+  - L9.GAR.OUTCOME_OWNERSHIP.001
+  gates:
+  - VALID_BLOCK_RECEIPT == SATISFIED
+  actions:
+  - ACT-BLOCK
+  on_failure: CONVERGENCE_CHECK
+- transition_id: T-ABORT-01
+  from: INTAKE
+  to: ABORTED_BY_HIGHER_AUTHORITY
+  requires_contracts: []
+  gates:
+  - higher_authority_stop == true
+  actions:
+  - ACT-ABORT
+  on_failure: INTAKE
+- transition_id: T-ABORT-02
+  from: INVESTIGATE
+  to: ABORTED_BY_HIGHER_AUTHORITY
+  requires_contracts: []
+  gates:
+  - higher_authority_stop == true
+  actions:
+  - ACT-ABORT
+  on_failure: INVESTIGATE
+- transition_id: T-ABORT-03
+  from: MODEL
+  to: ABORTED_BY_HIGHER_AUTHORITY
+  requires_contracts: []
+  gates:
+  - higher_authority_stop == true
+  actions:
+  - ACT-ABORT
+  on_failure: MODEL
+- transition_id: T-ABORT-04
+  from: ARCHITECT
+  to: ABORTED_BY_HIGHER_AUTHORITY
+  requires_contracts: []
+  gates:
+  - higher_authority_stop == true
+  actions:
+  - ACT-ABORT
+  on_failure: ARCHITECT
+- transition_id: T-ABORT-05
+  from: PLAN
+  to: ABORTED_BY_HIGHER_AUTHORITY
+  requires_contracts: []
+  gates:
+  - higher_authority_stop == true
+  actions:
+  - ACT-ABORT
+  on_failure: PLAN
+- transition_id: T-ABORT-06
+  from: PLAN_ATTACK
+  to: ABORTED_BY_HIGHER_AUTHORITY
+  requires_contracts: []
+  gates:
+  - higher_authority_stop == true
+  actions:
+  - ACT-ABORT
+  on_failure: PLAN_ATTACK
+- transition_id: T-ABORT-07
+  from: EXECUTE
+  to: ABORTED_BY_HIGHER_AUTHORITY
+  requires_contracts: []
+  gates:
+  - higher_authority_stop == true
+  actions:
+  - ACT-ABORT
+  on_failure: EXECUTE
+- transition_id: T-ABORT-08
+  from: VERIFY
+  to: ABORTED_BY_HIGHER_AUTHORITY
+  requires_contracts: []
+  gates:
+  - higher_authority_stop == true
+  actions:
+  - ACT-ABORT
+  on_failure: VERIFY
+- transition_id: T-ABORT-09
+  from: CONVERGENCE_CHECK
+  to: ABORTED_BY_HIGHER_AUTHORITY
+  requires_contracts: []
+  gates:
+  - higher_authority_stop == true
+  actions:
+  - ACT-ABORT
+  on_failure: CONVERGENCE_CHECK
+actions:
+- action_id: ACT-INTAKE
+  capability_ref: null
+  side_effects:
+  - update_run_objective
+  - record_capability_and_authority_observations
+  idempotency: safe_to_repeat
+  retry: none
+  compensation: null
+- action_id: ACT-INVESTIGATE
+  capability_ref: inspect
+  side_effects:
+  - add_current_evidence
+  - update_epistemic_state
+  idempotency: safe_to_repeat
+  retry: bounded_retry
+  retry_bound: 2
+  compensation: null
+- action_id: ACT-MODEL
+  capability_ref: null
+  side_effects:
+  - update_system_model
+  idempotency: safe_to_repeat
+  retry: none
+  compensation: null
+- action_id: ACT-ARCHITECT
+  capability_ref: null
+  side_effects:
+  - evaluate_candidates
+  - record_architecture_decision
+  idempotency: safe_to_repeat
+  retry: none
+  compensation: null
+- action_id: ACT-PLAN
+  capability_ref: null
+  side_effects:
+  - create_or_update_plan_state
+  idempotency: safe_to_repeat
+  retry: none
+  compensation: null
+- action_id: ACT-PLAN-ATTACK
+  capability_ref: null
+  side_effects:
+  - record_plan_attack_findings
+  - record_plan_readiness_evaluation
+  idempotency: safe_to_repeat
+  retry: none
+  compensation: null
+- action_id: ACT-EXECUTE
+  capability_ref: mutate
+  side_effects:
+  - mutate_authorized_target
+  - record_observed_mutation_receipts
+  idempotency: unsafe_blind_repeat
+  retry: manual_only
+  compensation: use_plan_defined_rollback_or_forward_repair
+- action_id: ACT-VERIFY
+  capability_ref: null
+  semantics: >
+    Verification is cognition plus evidence adjudication; it owns the proof
+    question and requires no host capability. It may invoke any available
+    evidence producer, including ACT-HOST-VALIDATE when the validate
+    capability is available, and may adjudicate alternate discriminating
+    evidence when it is not. Capability absence changes which evidence
+    producers exist, never whether verification can run.
+  side_effects:
+  - evaluate_required_verification_obligations
+  - adjudicate_available_discriminating_evidence
+  - record_validation_and_negative_evidence
+  idempotency: safe_to_repeat
+  retry: bounded_retry
+  retry_bound: 2
+  compensation: null
+- action_id: ACT-HOST-VALIDATE
+  capability_ref: validate
+  invoked_by: ACT-VERIFY_when_validate_capability_is_available_and_material
+  semantics: >
+    Optional capability-backed evidence production (tests, lint, typecheck,
+    runtime checks). Produces observations for ACT-VERIFY to adjudicate; it
+    does not own the proof question and its unavailability does not make
+    verification impossible.
+  side_effects:
+  - execute_available_host_validation
+  - record_observed_validation_results
+  idempotency: safe_to_repeat
+  retry: bounded_retry
+  retry_bound: 2
+  compensation: null
+- action_id: ACT-CONVERGENCE
+  capability_ref: null
+  side_effects:
+  - evaluate_convergence_contract
+  - record_convergence_receipt
+  idempotency: safe_to_repeat
+  retry: none
+  compensation: null
+- action_id: ACT-BLOCK
+  capability_ref: null
+  side_effects:
+  - validate_block_receipt
+  - preserve_completed_work
+  - record_terminal_block
+  idempotency: safe_to_repeat
+  retry: none
+  compensation: null
+- action_id: ACT-ABORT
+  capability_ref: null
+  side_effects:
+  - preserve_completed_work
+  - record_higher_authority_abort
+  idempotency: safe_to_repeat
+  retry: none
+  compensation: null
+- action_id: ACT-DELIVER
+  capability_ref: deliver
+  side_effects:
+  - perform_objective_derived_delivery
+  - record_delivery_receipt
+  idempotency: safe_with_dedupe
+  retry: bounded_retry
+  retry_bound: 2
+  compensation: retain_previous_valid_delivery_receipt
+convergence:
+  complete_when:
+  - contracts/CONVERGENCE.yaml evaluates SATISFIED
+  - requested delivery is completed or deterministically not required
+  abort_when:
+  - higher authority requires stop
+  - a valid block receipt proves no safe local progress remains
+result_vocabulary:
+  normalization_ref: runtime/EVALUATOR_REGISTRY.yaml#result_normalization
+  rule: >
+    Gates in this workflow evaluate evaluator-domain results (SATISFIED,
+    VIOLATED, UNKNOWN, DISPUTED). Evidence contracts record the canonical
+    result family (pass, fail, blocked, unknown). The declared normalization
+    map is the only bridge between the two vocabularies:
+    convergence_contract == SATISFIED holds exactly when the recorded
+    canonical evidence result is pass.
+state_bindings:
+  objective: $.objective
+  depth_profile: $.run.depth_profile
+  capabilities: $.capabilities
+  authority: $.authority
+  integration: $.integration
+  evidence: $.evidence
+  epistemic: $.epistemic
+  system_model: $.system_model
+  architecture: $.architecture
+  plan: $.plan
+  execution: $.execution
+  delivery: $.delivery
+  verification: $.verification
+  defects: $.defects
+  block: $.block
+  convergence: $.convergence
+realization_model:
+  source: contracts/OUTCOME_OWNERSHIP.yaml#realization_mode
+  values:
+  - MUTATION
+  - ARTIFACT
+  - ANALYSIS
+  - DECISION
+  - UNKNOWN
+  rule: Routing consumes the derived realization mode and must not reclassify mixed user intent.
+plan_readiness:
+  property_id: PLAN_READY
+  RAPID:
+    evaluator: EVAL-HYBRID
+    required:
+    - bounded_scope
+    - required_realization_known
+    - acceptance_evidence_known
+    - material_unknowns_absent
+    - architecture_decision_required == false
+    does_not_require:
+    - PLAN_state
+    - PLAN_ATTACK_state
+    - full_plan_promotion_gate
+  STANDARD:
+    evaluator: EVAL-HYBRID
+    required:
+    - kernels/ARCHITECT_KERNEL.yaml#full_plan_promotion_gate == SATISFIED
+    - PLAN_ATTACK_completed
+  DEEP:
+    evaluator: EVAL-HYBRID
+    required:
+    - kernels/ARCHITECT_KERNEL.yaml#full_plan_promotion_gate == SATISFIED
+    - adversarial_plan_attack_completed
+    - material_failure_model_completed
+  law: Depth changes proof strength, not the semantic property required for execution.
+verification_closure:
+  required_positive_properties:
+  - $.verification.all_required_obligations_evaluated == true
+  - $.verification.blocking_evaluation_refs is empty
+  forbidden_shortcut: no_known_material_defect
+block_receipt_gate:
+  property_id: VALID_BLOCK_RECEIPT
+  contract_ref: contracts/OUTCOME_OWNERSHIP.yaml#block_receipt_requirements
+  allowed_types:
+  - AUTHORITY
+  - CAPABILITY
+  - EVIDENCE
+  - EXTERNAL_DEPENDENCY
+  - NO_PROGRESS
+  satisfaction_requires_all:
+  - receipt_shape_complete
+  - type_legitimacy_predicate == SATISFIED
+  evaluator: EVAL-HYBRID
+  routing_rule: All nonterminal states use this same gate; no state owns custom block semantics.
+  legitimacy_rule: A shape-complete receipt whose type legitimacy predicate is UNKNOWN or VIOLATED does not satisfy this gate.
+defect_routing:
+  owner: runtime/STATE_MACHINE.yaml
+  map:
+    EVIDENCE_DEFECT: INVESTIGATE
+    SYSTEM_MODEL_DEFECT: MODEL
+    ARCHITECTURE_DEFECT: ARCHITECT
+    PLAN_DEFECT: PLAN
+    IMPLEMENTATION_DEFECT: EXECUTE
+    VALIDATION_DEFECT: VERIFY
+    AUTHORITY_DEFECT: BLOCKED_when_VALID_BLOCK_RECEIPT
+    CAPABILITY_DEFECT: BLOCKED_when_VALID_BLOCK_RECEIPT
+progress_control:
+  progress_indicators:
+  - new_discriminating_evidence
+  - material_unknown_resolved
+  - system_model_corrected
+  - architecture_changed
+  - plan_changed
+  - implementation_changed
+  - delivery_completed
+  - verification_strengthened
+  same_material_defect_without_progress_limit: 2
+  on_limit:
+    block_type: NO_PROGRESS
+    reason_code: NO_PROGRESS_WITH_CURRENT_CAPABILITIES
+    requires_valid_block_receipt: true
+    limit_reached_is_necessary_not_sufficient: >
+      Reaching the repetition limit permits proposing a NO_PROGRESS block; it
+      does not validate one. The receipt must additionally prove, per
+      contracts/OUTCOME_OWNERSHIP.yaml type legitimacy, that every materially
+      distinct remediation class available under current authority and
+      capability was attempted or proven inapplicable and that no new
+      discriminating action remains.
+  forbidden:
+  - repeat_same_patch_without_new_evidence
+  - repeat_same_plan_without_answering_prior_defect
+  - rerun_same_validation_without_state_change
+  - repeat_one_weak_remediation_class_to_manufacture_a_NO_PROGRESS_block
+semantic_boundary:
+  owns:
+  - all_GAR_workflow_routing
+  - terminal_transition_edges
+  - defect_class_to_state_mapping
+  does_not_own:
+  - outcome_policy
+  - architectural_law
+  - evaluator_semantics
+  - completion_definition
+depth_profiles:
+  RAPID:
+    use_when_all:
+    - blast_radius == local
+    - architectural_choice == absent
+    - authoritative_state_change == absent
+    - material_unknowns == none
+    - reversibility == high
+    - failure_impact in [low, bounded]
+    readiness_proof: plan_readiness.RAPID
+  STANDARD:
+    default: true
+    readiness_proof: plan_readiness.STANDARD
+  DEEP:
+    use_when_any:
+    - blast_radius in [cross_module, repository_wide, system_wide, external]
+    - authoritative_state_change == present
+    - distributed_semantics == present
+    - concurrency_semantics == material
+    - migration_or_compatibility == material
+    - security_boundary == material
+    - irreversible_change == material
+    - data_loss_risk == material
+    - failure_domain_change == material
+    - architectural_ambiguity == high
+    readiness_proof: plan_readiness.DEEP
+  selection_rule: Choose the shallowest profile whose conditions remain sufficient; profile selection changes proof
+    depth but never removes objective-derived realization validation or delivery obligations.

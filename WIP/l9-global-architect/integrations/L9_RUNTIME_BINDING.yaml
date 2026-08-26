@@ -1,0 +1,351 @@
+integration:
+  integration_id: L9.GAR.L9_COGNITIVE_RUNTIME_BINDING.001
+  version: 0.4.0
+  artifact_class: runtime_integration_binding
+  status: experimental
+  semantic_owner: integrations/L9_RUNTIME_BINDING.yaml
+purpose:
+  assertion: >
+    Bind GAR cognition into an actively observed compatible l9-cognitive-runtime
+    without duplicating intent compilation kernel planning universal execution
+    contracts execution graphs validation handoff or adapter rendering.
+external_runtime:
+  name: l9-cognitive-runtime
+  repository_markers:
+    required:
+      - runtime/intent_compiler/INTENT_COMPILER.yaml
+      - runtime/kernel_pipeline/KERNEL_PIPELINE.yaml
+      - runtime/contract_compiler/compile_execution_contract.py
+      - runtime/contract_compiler/compile_validation_contract.py
+      - runtime/contract_compiler/compile_handoff_contract.py
+      - runtime/execution_graph/graph_validator.py
+  known_pipeline:
+    - HUMAN_INTENT
+    - INTENT_CONTRACT
+    - KERNEL_ACTIVATION_PLAN
+    - UNIVERSAL_EXECUTION_CONTRACT
+    - EXECUTION_GRAPH
+    - VALIDATION
+    - ADAPTER_RENDER
+integration_discovery:
+  installed_when:
+    - external_runtime.repository_markers == satisfied
+  output:
+    installed: boolean
+  law: >
+    Repository markers prove only that compatible-looking source is present.
+    They do not prove that the runtime is active authorized or capable of
+    orchestrating the current host session.
+integration_activation:
+  default: STANDALONE
+  requires_all:
+    - integration_discovery.installed == true
+    - $.integration.active_runtime_binding_observed == true
+    - $.integration.compatible_runtime_version == true
+    - $.integration.orchestration_authority_transferred == true
+    - $.integration.execution_path_available == true
+    - $.integration.activation_evidence_refs is nonempty
+  on_satisfied: L9_INTEGRATED
+  pre_transfer_failure_semantics:
+    applies_when: $.integration.orchestration_authority_transferred != true
+    on_unknown_or_unsatisfied: STANDALONE
+  post_transfer_failure_semantics:
+    applies_when: $.integration.orchestration_authority_transferred == true
+    on_unknown_or_unsatisfied: ACTIVE_DEGRADED
+    rule: >
+      Once orchestration authority has been transferred, a failed activation
+      predicate is a degradation of the active binding, never a reversal of
+      the transfer. GAR MUST NOT reclaim orchestration authority because the
+      new authority malfunctioned; capability failure does not imply
+      authority reversal.
+  repository_presence_alone_activates: false
+  laws:
+    - existence_is_not_activation
+    - source_code_being_inspected_cannot_assume_orchestration_authority
+    - orchestration_transfer_must_be_current_run_evidence
+    - missing_activation_evidence_preserves_standalone_outcome_accountability
+    - transferred_authority_returns_only_through_explicit_release_or_revocation
+binding_lifecycle:
+  state_field: $.integration.binding_state
+  states:
+    UNBOUND:
+      meaning: No compatible runtime discovered.
+    DISCOVERED:
+      meaning: Repository markers observed; discovery only, no authority effect.
+    BOUND:
+      meaning: Active runtime binding observed and compatible; authority not yet transferred.
+    ACTIVE:
+      meaning: All activation predicates satisfied and orchestration authority transferred; integration_mode is L9_INTEGRATED.
+    ACTIVE_DEGRADED:
+      meaning: Authority remains transferred but a required activation predicate (for example execution_path_available) is now false or unknown.
+    RELEASED:
+      meaning: Transferred authority explicitly released or revoked with recorded evidence; STANDALONE may resume.
+  legal_transitions:
+    - UNBOUND -> DISCOVERED
+    - DISCOVERED -> BOUND
+    - BOUND -> ACTIVE
+    - ACTIVE -> ACTIVE_DEGRADED
+    - ACTIVE_DEGRADED -> ACTIVE
+    - ACTIVE_DEGRADED -> RELEASED
+    - ACTIVE -> RELEASED
+    - RELEASED -> STANDALONE_operation
+  hysteresis_law: >
+    ACTIVE and ACTIVE_DEGRADED MUST NOT transition to STANDALONE operation
+    directly. The only exit from transferred authority is RELEASED, which
+    requires explicit release or revocation evidence recorded in
+    $.integration.authority_release_evidence_refs (run-state invariant
+    RS-013). A silent fallback that lets GAR reclaim orchestration authority
+    is illegal.
+  degraded_dispositions:
+    ACTIVE_DEGRADED_must_choose_one:
+      - repair_the_degraded_predicate_and_return_to_ACTIVE
+      - obtain_explicit_release_or_revocation_then_record_RELEASED
+      - produce_a_valid_typed_block_receipt_and_terminate_BLOCKED
+    forbidden:
+      - silently_resume_STANDALONE_orchestration
+      - continue_claiming_L9_INTEGRATED_execution_through_a_dead_execution_path
+mode_selection:
+  STANDALONE:
+    when:
+      - integration_activation != satisfied
+  L9_INTEGRATED:
+    when:
+      - integration_activation == satisfied
+  default: STANDALONE
+ownership_matrix:
+  human_intent:
+    owner: operator
+  intent_normalization:
+    owner: l9-cognitive-runtime_when_integrated
+    gar_may_redefine: false
+  kernel_activation_planning:
+    owner: l9-cognitive-runtime_when_integrated
+    gar_may_redefine: false
+  architectural_judgment:
+    owner: l9-global-architect
+    external_runtime_may_redefine: false
+  epistemic_discipline:
+    owner: l9-global-architect
+  architectural_integrity:
+    owner: l9-global-architect
+  outcome_accountability_policy:
+    owner: l9-global-architect
+    transferred_to_external_runtime: false
+  execution_contract_compilation:
+    owner: l9-cognitive-runtime_when_integrated
+    gar_may_redefine: false
+  execution_graph_construction:
+    owner: l9-cognitive-runtime_when_integrated
+    gar_may_redefine: false
+  execution_graph_ordering:
+    owner: l9-cognitive-runtime_when_integrated
+    gar_may_redefine: false
+  actual_side_effect_authority:
+    owner: host_and_applicable_execution_governance
+    gar_may_grant: false
+  validation_contract_compilation:
+    owner: l9-cognitive-runtime_when_integrated
+    gar_role: contribute_required_properties
+  convergence_semantics:
+    gar_owner: contracts/CONVERGENCE.yaml
+    integrated_runtime_role: enforce_selected_outer_transition_without_redefining_success
+  handoff_contract:
+    owner: l9-cognitive-runtime_when_integrated
+    gar_may_redefine: false
+  adapter_rendering:
+    owner: l9-cognitive-runtime_when_integrated
+    gar_may_redefine: false
+integrated_mode:
+  activation_precondition: integration_activation == satisfied
+  outer_orchestration:
+    owner: l9-cognitive-runtime
+  gar_state_machine_role:
+    type: semantic_subworkflow
+    rule: >
+      GAR STATE_MACHINE owns GAR semantic routing and emits the required GAR
+      transition. The active outer runtime may project that selected transition
+      into its execution graph but may not remap GAR defect classes or weaken
+      GAR gates.
+  graph_projection:
+    owner: l9-cognitive-runtime
+    gar_may_contribute:
+      - required_architecture_properties
+      - plan_readiness_gates
+      - evidence_obligations
+      - typed_defects
+      - selected_gar_transition
+      - convergence_properties
+    gar_must_not:
+      - mutate_execution_graph_outside_runtime_contract
+      - reorder_external_runtime_phases
+      - bypass_validation_contract
+      - bypass_handoff_contract
+      - invent_adapter_specific_execution_logic
+pipeline_bindings:
+  P0_UNPACK:
+    gar:
+      activate:
+        - capability_census
+        - artifact_inventory
+      prohibit:
+        - architectural_commitment
+  P1_CONSTITUTIONAL_PREFLIGHT:
+    gar:
+      activate:
+        - contracts/EPISTEMIC_DISCIPLINE.yaml
+        - contracts/ARCHITECTURAL_INTEGRITY.yaml
+        - contracts/OUTCOME_OWNERSHIP.yaml
+  P2_TASK_ROUTING:
+    gar:
+      contribute:
+        - depth_profile_signal
+        - architecture_materiality_signal
+        - realization_mode
+      owner_of_outer_route: l9-cognitive-runtime
+      owner_of_gar_route: runtime/STATE_MACHINE.yaml
+  P3_ARCHITECTURE_DECISION:
+    gar:
+      activate:
+        - kernels/ARCHITECT_KERNEL.yaml
+        - catalogs/KILL_PATTERNS.yaml
+      required_outputs:
+        - GAR_SYSTEM_MODEL
+        - GAR_ARCHITECTURE_DECISION
+        - GAR_ARCHITECTURE_INTEGRITY_RESULT
+  P4_ALIGNMENT_AND_STUB_GATE:
+    gar:
+      contribute:
+        - plan_readiness_properties
+        - false_completion_preconditions
+        - unresolved_material_unknowns
+  P5_RECURSIVE_IMPROVEMENT:
+    gar:
+      activate:
+        - adversarial_plan_attack
+        - typed_defect_classification
+      output:
+        - GAR_TYPED_DEFECT_OR_PROMOTION_RESULT
+  P6_LEVERAGE_COMPRESSION:
+    gar:
+      contribute:
+        - simpler_credible_candidate_check
+        - unnecessary_complexity_elimination
+        - scope_compression
+  P7_FLAWLESS_VICTORY:
+    gar:
+      activate:
+        - contracts/CONVERGENCE.yaml
+      contribute:
+        - architectural_integrity_status
+        - objective_satisfaction_status
+        - remaining_material_unknowns
+        - false_completion_check
+        - delivery_status
+        - residual_risk_summary
+runtime_contract_binding:
+  intent_contract:
+    GAR_consumes:
+      - mission
+      - task_type
+      - constraints
+      - desired_outputs
+      - known_context
+      - unknowns
+    GAR_must_not:
+      - silently_rewrite_operator_intent
+  universal_execution_contract:
+    GAR_contributes:
+      - architecture_decision
+      - invariant_obligations
+      - prohibited_mutations
+      - required_validation_properties
+      - outcome_accountability_obligations
+      - delivery_obligations
+    compiler_owner: l9-cognitive-runtime
+  execution_graph:
+    GAR_contributes:
+      - semantic_dependencies
+      - selected_gar_transition
+      - gate_requirements
+    builder_owner: l9-cognitive-runtime
+  validation_contract:
+    GAR_contributes:
+      - convergence_properties
+      - architectural_integrity_properties
+      - negative_evidence_requirements
+      - false_completion_checks
+      - delivery_evidence_requirement
+    compiler_owner: l9-cognitive-runtime
+adapter_policy:
+  adapters_are:
+    - serializers
+    - transport_projections
+    - host_capability_bindings
+  adapters_are_not:
+    - architects
+    - planners
+    - semantic_owners
+    - convergence_owners
+    - defect_routers
+  chatgpt:
+    external_adapter_path: runtime/contract_compiler/adapters/chatgpt.md
+    rule: >
+      ChatGPT rendering preserves GAR obligations unknowns evidence requirements
+      delivery requirements and execution constraints without copying GAR
+      cognition into adapter-local policy.
+host_capability_binding:
+  source_priority:
+    - actual_current_host_observation
+    - execution_contract_declared_capability
+    - adapter_declared_capability
+  conflict_rule: Actual observed host capability outranks a stale adapter capability claim.
+  missing_capability:
+    action: preserve_requirement_and_emit_capability_evidence
+    may_fake_execution: false
+repair_projection:
+  source_of_route: runtime/STATE_MACHINE.yaml
+  rule: >
+    GAR evaluators and contracts emit typed defects. The GAR state machine owns
+    the target semantic state. In integrated mode the outer runtime projects
+    that already-selected transition into its own graph; it does not derive a
+    separate repair mapping.
+standalone_mode:
+  outer_orchestration:
+    owner: runtime/STATE_MACHINE.yaml
+  run_state:
+    template: runtime/RUN_STATE.yaml
+  evaluator_registry:
+    source: runtime/EVALUATOR_REGISTRY.yaml
+  actual_execution:
+    owner: available_host_tools
+    constrained_by:
+      - user_authority
+      - host_policy
+      - contracts/OUTCOME_OWNERSHIP.yaml
+forbidden_duplication:
+  - custom_intent_compiler_inside_gar
+  - custom_execution_contract_compiler_inside_gar
+  - custom_execution_graph_engine_inside_gar
+  - custom_validation_engine_inside_gar
+  - custom_handoff_engine_inside_gar
+  - chatgpt_specific_architecture_brain
+  - provider_specific_copy_of_architect_kernel
+  - integration_local_defect_router
+integration_invariants:
+  - id: L9B-001
+    rule: GAR owns architectural cognition while an actively bound l9-cognitive-runtime owns outer compiler/runtime mechanics.
+  - id: L9B-002
+    rule: Neither layer may silently absorb the other's semantic authority.
+  - id: L9B-003
+    rule: Integrated mode preserves GAR architectural law and outcome accountability even when outer orchestration differs.
+  - id: L9B-004
+    rule: Adapter-specific limitations may constrain execution but MUST NOT weaken architectural integrity or falsify completion.
+  - id: L9B-005
+    rule: If integration cannot preserve a GAR blocker selected transition or delivery obligation integration fails closed - to STANDALONE before orchestration authority transfer, and to ACTIVE_DEGRADED with repair, explicit release, or BLOCKED after transfer.
+  - id: L9B-006
+    rule: Transferred orchestration authority is hysteretic - it returns to GAR only through explicit release or revocation evidence, never through malfunction of the new authority.
+anti_drift:
+  external_runtime_paths_are_discovery_markers_not_activation_proof: true
+  copied_compiler_logic_allowed: false
+  copied_adapter_brain_allowed: false
+  copied_defect_routing_allowed: false
