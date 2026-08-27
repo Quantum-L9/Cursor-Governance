@@ -1339,7 +1339,7 @@
     },
     {
       "path": "integrations/bootstrap/peer_readiness.py",
-      "sha256": "d637a124d933e4862a95bb0d827cc1ba44aa8f8adda57861af32d1f59a437088"
+      "sha256": "8cda50e025035ed7d40ed91a93088738cb65f4a6462f3d4df1770813eb4426b9"
     },
     {
       "path": "integrations/bootstrap/status_probe.py",

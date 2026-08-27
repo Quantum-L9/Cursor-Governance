@@ -146,7 +146,7 @@ _POLICIES: dict[str, Any] = json.loads(
       },
       {
         "continuous": true,
-        "description": "No campaign may execute with a failed root-autonomy client conformance check.",
+        "description": "No campaign may execute with a failed root-autonomy conformance check.",
         "id": "PIPE-010",
         "severity": "blocking"
       }

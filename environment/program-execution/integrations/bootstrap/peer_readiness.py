@@ -34,7 +34,9 @@ def _profile_exists(subsystem_root: Path, profile_ref: str) -> bool:
     return isinstance((registry.get("profiles") or {}).get(profile_ref), dict)
 
 
-def _autonomy_facts(subsystem_root: Path, repo_root: Path, autonomy_provider_ref: str) -> dict[str, Any]:
+def _autonomy_facts(
+    subsystem_root: Path, repo_root: Path, autonomy_provider_ref: str
+) -> dict[str, Any]:
     provider_path = subsystem_root / "integrations/autonomy-control-plane/PROVIDER.yaml"
     compat_path = subsystem_root / "COMPATIBILITY.yaml"
     provider = _load_yaml(provider_path) if provider_path.is_file() else {}

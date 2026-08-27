@@ -38,7 +38,9 @@ class PeerNeutralAutonomyBindingTests(unittest.TestCase):
         del model.peers["codex"]["autonomy"]
         errors: list[str] = []
         module._check_autonomy(model, errors)
-        self.assertTrue(any("[E13] codex: autonomy binding missing" in item for item in errors), errors)
+        self.assertTrue(
+            any("[E13] codex: autonomy binding missing" in item for item in errors), errors
+        )
 
     def test_execution_required_remains_independent_of_autonomy_required(self) -> None:
         module = _load_validator()

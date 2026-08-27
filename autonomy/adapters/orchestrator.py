@@ -74,7 +74,9 @@ class AdapterOrchestrator:
                 "ADAPTER_CONFORMANCE_FAILED: campaign execution is blocked for this adapter session"
             )
         if not row["peer_ref"] or not row["surface"]:
-            raise PolicyViolation("ADAPTER_SESSION_UNBOUND: canonical peer/surface identity required")
+            raise PolicyViolation(
+                "ADAPTER_SESSION_UNBOUND: canonical peer/surface identity required"
+            )
         with self.runtime.store.transaction() as connection:
             connection.execute(
                 "UPDATE adapter_sessions SET last_seen_at = ? WHERE session_id = ?",
@@ -200,7 +202,9 @@ class AdapterOrchestrator:
             raise PolicyViolation(
                 "ADAPTER_SESSION_MISMATCH: lease was issued through a different adapter session"
             )
-        role_capabilities = set(self.runtime.role_policy["roles"][lease.role].get("capabilities", []))
+        role_capabilities = set(
+            self.runtime.role_policy["roles"][lease.role].get("capabilities", [])
+        )
         accepted = set(accepted_capabilities)
         if accepted != role_capabilities:
             missing = sorted(role_capabilities - accepted)
@@ -352,7 +356,10 @@ class AdapterOrchestrator:
                 """
             )
             columns = {
-                row[1] for row in connection.execute("PRAGMA table_info(adapter_sessions)").fetchall()
+                row[1]
+                for row in connection.execute(
+                    "PRAGMA table_info(adapter_sessions)"
+                ).fetchall()
             }
             if "peer_ref" not in columns:
                 connection.execute("ALTER TABLE adapter_sessions ADD COLUMN peer_ref TEXT")

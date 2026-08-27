@@ -16,7 +16,6 @@ from autonomy.adapters.protocol import (
 )
 from autonomy.versioning import Version
 
-
 _CHECK_IDS = {
     "tool_mediation_mode": "ADAPTER-003",
     "direct_tool_access": "ADAPTER-004",
@@ -146,7 +145,9 @@ class AdapterConformance:
             raise ValueError("adapter requirements mandatory policy must be an object")
         for field_name, expected in mandatory.items():
             if field_name not in _CHECK_IDS:
-                raise ValueError(f"adapter requirements contains unknown mandatory field: {field_name}")
+                raise ValueError(
+                    f"adapter requirements contains unknown mandatory field: {field_name}"
+                )
             actual = getattr(config, field_name)
             passed = actual == expected and type(actual) is type(expected)
             checks.append(
@@ -162,13 +163,16 @@ class AdapterConformance:
             raise ValueError("adapter requirements optional_capabilities must be an object")
         for field_name, capability_name in optional.items():
             if field_name not in _CHECK_IDS:
-                raise ValueError(f"adapter requirements contains unknown optional field: {field_name}")
+                raise ValueError(
+                    f"adapter requirements contains unknown optional field: {field_name}"
+                )
             actual = getattr(config, field_name)
             checks.append(
                 ConformanceCheck(
                     _CHECK_IDS[field_name],
                     bool(actual),
-                    f"Optional surface capability {capability_name}: {'available' if actual else 'unavailable'}",
+                    f"Optional surface capability {capability_name}: "
+                    f"{'available' if actual else 'unavailable'}",
                     blocking=False,
                 )
             )
@@ -203,7 +207,9 @@ class AdapterConformance:
 
     def _gateway_installed(self) -> ConformanceCheck:
         path = self.repository_root / "autonomy/runtime/capability_gateway.py"
-        return ConformanceCheck("ADAPTER-014", path.is_file(), f"Capability gateway present: {path}")
+        return ConformanceCheck(
+            "ADAPTER-014", path.is_file(), f"Capability gateway present: {path}"
+        )
 
     def _policy_installed(self) -> ConformanceCheck:
         path = self.repository_root / "autonomy/policies/role-capabilities.json"
