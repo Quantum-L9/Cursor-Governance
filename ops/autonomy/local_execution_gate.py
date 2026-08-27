@@ -439,7 +439,15 @@ def main_claude() -> int:
         tool_input = event.get("tool_input") or {}
         if not isinstance(tool_input, dict):
             tool_input = {}
-        reason = evaluate(tool_name, tool_input, root=workspace_from_event(event))
+        # Same resolution main_cursor_shell() performs. Without it this surface
+        # judged a `cd <worktree> && make pr` against the reported project root,
+        # so the worktree's L4 receipt was never the one consulted and no
+        # worktree could publish from Claude Code at all.
+        command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        root = workspace_from_event(event)
+        if command:
+            root = effective_root(command, root)
+        reason = evaluate(tool_name, tool_input, root=root)
     except Exception as exc:  # noqa: BLE001 - security boundary: deny on any fault
         # Workspace resolution, policy loading and command evaluation all land
         # here. Previously an exception propagated as a traceback and a non-zero

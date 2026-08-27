@@ -161,3 +161,37 @@ def test_repo_root_still_refuses_an_unrelated_repo(main_repo: Path, tmp_path: Pa
     """
     other = make_repo(tmp_path / "other")
     assert effective_root(f'cd "{other}" && make pr', main_repo) == main_repo
+
+
+# --- The Claude entry point must use this resolution too ---------------------
+#
+# effective_root() was wired into main_cursor_shell() only. main_claude()
+# passed workspace_from_event(event) straight to evaluate(), so on the Claude
+# surface the leading-cd resolution never ran at all and a worktree could never
+# publish -- the whole reason this function exists, unreached for one surface.
+
+
+def test_claude_entrypoint_resolves_the_leading_cd(
+    monkeypatch: pytest.MonkeyPatch, main_repo: Path, linked_worktree: Path
+) -> None:
+    import io
+    import json
+
+    import local_execution_gate as gate
+
+    seen: dict[str, Path] = {}
+
+    def fake_evaluate(tool_name, tool_input, *, root=None):  # noqa: ANN001, ANN202
+        seen["root"] = root
+        return None
+
+    monkeypatch.setattr(gate, "evaluate", fake_evaluate)
+    monkeypatch.setattr(gate, "workspace_from_event", lambda event: main_repo)
+    event = {
+        "tool_name": "Bash",
+        "tool_input": {"command": f'cd "{linked_worktree}" && PR_REMEDIATE=0 make pr'},
+    }
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(event)))
+
+    assert gate.main_claude() == 0
+    assert seen["root"] == linked_worktree.resolve()
