@@ -477,6 +477,73 @@ def scrub(spec: CapabilitySpec, payload: Any, known_values: list[str]) -> Any:
 
 
 # ---------------------------------------------------------------------------
+# 4b. Declared preconditions and the rate ceiling — both enforced, not parsed
+# ---------------------------------------------------------------------------
+#
+# `requires` and `limits.max_requests_per_minute` used to be read off the
+# registry into `CapabilitySpec` and then never consulted. A declared guard that
+# no code evaluates is worse than an absent one: the registry advertises a
+# precondition, an auditor reads it as enforced, and the capability executes
+# unconditionally. Both are enforced here, before `_execute` touches a
+# credential (issue #303 item 2).
+
+#: Preconditions this broker can actually evaluate. A capability may declare
+#: only these. The set is deliberately empty: `phase_lock_held` — the one
+#: precondition the registry ever carried — was removed because a memory
+#: phase-lock is not an authorization construct in this system
+#: (rules 96 E7/E8, 98). Adding an entry here means adding the code that
+#: evaluates it, in the same change.
+EVALUABLE_REQUIREMENTS: frozenset[str] = frozenset()
+
+
+class RateLimiter:
+    """Sliding-window request ceiling, keyed by (session, capability).
+
+    The registry declares `limits.max_requests_per_minute` as a capability's
+    bulk-exfiltration ceiling. Without a limiter that number is documentation.
+    The window is per session identity so one session cannot spend another's
+    budget, and per capability so a cheap advisory read cannot exhaust the
+    ceiling of an authority-bearing write.
+    """
+
+    WINDOW_SECONDS = 60.0
+
+    def __init__(self) -> None:
+        self._hits: dict[tuple[str, str], list[float]] = {}
+
+    def check(
+        self,
+        session_id: str,
+        capability: str,
+        limit: int,
+        *,
+        now: float | None = None,
+    ) -> bool:
+        """Record one request; return False when it exceeds the declared ceiling."""
+        if limit <= 0:
+            return False
+        current = time.time() if now is None else now
+        cutoff = current - self.WINDOW_SECONDS
+        key = (session_id, capability)
+        recent = [stamp for stamp in self._hits.get(key, ()) if stamp > cutoff]
+        # Prune idle keys so a long-lived broker does not accumulate one list
+        # per session it has ever served.
+        idle = [
+            stale
+            for stale, stamps in self._hits.items()
+            if stale != key and not any(stamp > cutoff for stamp in stamps)
+        ]
+        for stale_key in idle:
+            del self._hits[stale_key]
+        if len(recent) >= limit:
+            self._hits[key] = recent
+            return False
+        recent.append(current)
+        self._hits[key] = recent
+        return True
+
+
+# ---------------------------------------------------------------------------
 # 5. Execution
 # ---------------------------------------------------------------------------
 
@@ -493,6 +560,7 @@ class Broker:
         )
         self._provider: SecretProvider | None = None
         self.audit: list[dict[str, Any]] = []
+        self.rate_limiter = RateLimiter()
 
     @property
     def provider(self) -> SecretProvider:
@@ -519,6 +587,29 @@ class Broker:
         if spec is None:
             self._record(claims, capability_id, "DENY", "unregistered capability")
             raise BrokerError(404, f"capability '{capability_id}' is not registered")
+
+        unevaluable = [req for req in spec.requires if req not in EVALUABLE_REQUIREMENTS]
+        if unevaluable:
+            # A precondition the broker cannot evaluate must deny, never pass.
+            # Executing anyway would let the registry advertise a guard that no
+            # code applies, which is how `requires: [phase_lock_held]` sat
+            # unenforced on an authority-bearing write.
+            self._record(claims, capability_id, "DENY", "unevaluable precondition")
+            raise BrokerError(
+                403,
+                f"capability '{capability_id}' declares a precondition the broker "
+                f"cannot evaluate: {', '.join(sorted(unevaluable))}",
+            )
+
+        if not self.rate_limiter.check(
+            claims.session_id, capability_id, spec.max_requests_per_minute
+        ):
+            self._record(claims, capability_id, "DENY", "rate ceiling exceeded")
+            raise BrokerError(
+                429,
+                f"capability '{capability_id}' exceeded its declared ceiling of "
+                f"{spec.max_requests_per_minute} requests per minute",
+            )
 
         params = validate_params(spec, body.get("params") or {})
         try:
@@ -605,8 +696,9 @@ _GRAPHITI_MCP_TOOLS_LIST: list[dict[str, Any]] = [
     {
         "name": "write_governed",
         "description": (
-            "Governed memory write through the brokered front door; requires a "
-            "held conflict-checked phase-lock (graphiti.write_governed)."
+            "Governed memory write through the brokered front door "
+            "(graphiti.write_governed). Authority-bearing: its absence is a "
+            "denial, never a silent pass."
         ),
         "inputSchema": {
             "type": "object",

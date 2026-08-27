@@ -6,20 +6,14 @@
     "layer": "adapter-config",
     "owner": "governance-control-plane",
     "status": "active",
-    "version": "1.0.0",
-    "updated": "2026-07-31",
-    "note": "HTTP MCP block for Codex (cloud settings or CLI). Env-refs only — never hardcode tokens. Peer of environment/agents/adapters/claude-code/mcp.template.json."
+    "version": "1.1.0",
+    "updated": "2026-08-26",
+    "note": "HTTP MCP block for Codex (cloud settings or CLI). Brokered Graphiti front door. NO bearer in this file: the broker resolves GRAPHITI_MCP_TOKEN on its own side of the trust boundary and authenticates the session against its verifiable identity (ADAPTER_CONTRACT.md, capability carrier). When the broker URL is unset or the broker is not deployed this server returns an honest 401 and memory runs DEGRADED \u2014 never a reason to paste a token. Peer of environment/agents/adapters/claude-code/mcp.template.json."
   },
   "mcpServers": {
     "graphiti-memory": {
       "type": "http",
-      "url": "${GRAPHITI_MCP_URL:-https://memory.quantumaipartners.com/graphiti/mcp}",
-      "headers": {
-        "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}",
-        "X-L9-User-Id": "codex_agent",
-        "X-L9-Agent-Id": "codex",
-        "X-L9-Source": "codex"
-      },
+      "url": "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti",
       "timeout": 120000
     }
   }
