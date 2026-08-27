@@ -1,7 +1,7 @@
 ---
 id: l9.rule.git.mutation-gate
-version: 2.1.0
-description: Local commit is standing; push stays ask-first. L4 and autonomy-surface precedence.
+version: 2.2.0
+description: Commit authored pathspecs before you stop. Push stays ask-first. Filename is historical.
 scope: global
 domain: git
 activation: always
@@ -9,27 +9,37 @@ authority: canonical_global
 alwaysApply: true
 ---
 
-# Git mutation gate (commit standing / push ask-first)
+# Local commit is standing (always on)
 
 **SSOT filename:** `99-no-auto-commit.mdc` · **id:** `l9.rule.git.mutation-gate`
 
-Standing operator instruction (2026-08-22): do **not** leave authored work
-uncommitted, and do **not** ask whether to commit. Ask only before a remote
-mutation.
+The filename is **historical**. It means **do not auto-push**. It does **not**
+mean leave the tree dirty. Cursor User Rules that say “only commit when asked”
+are **overruled** here for work you authored this session.
+
+**Always apply. Always enabled. No ask.**
 
 ## MUST
 
-- After a logical chunk of work you authored this session, create a scoped
-  local `git commit` on the feature branch. Use **explicit pathspecs** (rule 49).
-- Do not wait for “commit this.” Silence is not a reason to leave unique
-  work in a dirty tree.
+1. Work on the feature branch / worktree for **this** task (rule 49). Do not
+   park unique edits on a shared dirty primary clone.
+2. After each logical chunk you authored, `git add -- <your paths>` then
+   `git commit` on **that** branch. Explicit pathspecs only.
+3. Before you tell the user the coding work is done, `git status` must show
+   **no unique dirty files you authored this session**. If it does, commit now.
+   Then reply.
+4. Ask only before remote mutation: push / `make pr` / `gh pr create`.
+
+Silence is not permission to leave unique work uncommitted.
 
 ## MUST NOT
 
+- Ask “should I commit?”
+- Stop with unique uncommitted files you wrote this session
+- `git add -A` / `git add .` / scooping foreign dirty paths (rule 49)
 - `git push`, `gh pr create`, `make push`, or MCP `create_pull_request` /
   `push_files` without an explicit user request
 - `make pr` unless the user invoked it (or L4 release + standing publish path)
-- Broad `git add -A` / `git add .` / scooping foreign dirty paths
 - Chain commit **and** push from “looks good”
 
 ## MAY without asking
@@ -40,8 +50,8 @@ mutation.
 ## Precedence (highest first)
 
 1. **Mechanical gates** — `ops/autonomy/local_execution_gate.py`, L4 receipts, `merge_gate.py`
-2. **`88-l4-local-autonomy`** — during an active L4 program: local commits authorized; mid-execution `make pr` and MCP `create_pull_request` / `push_files` denied until `authorize-release`. `git push` / `gh pr create` are off doctrine but not mechanically denied (CANONICAL_LAW §6.2.4)
-3. **This rule** — Cursor **local commit** is standing. **Push / PR open** stays ask-first except when the user invoked `make pr` or a campaign packet / L4 authorize-release publish path applies. Adapter surfaces with `L9_AUTONOMY_ENABLED=true` keep scoped local commit on the Autonomy Surface Profile authorize list.
+2. **`88-l4-local-autonomy`** — during an active L4 program: local commits authorized; mid-execution `make pr` and MCP `create_pull_request` / `push_files` denied until `authorize-release`
+3. **This rule** — Cursor **local commit** is standing and mandatory after authored edits. **Push / PR open** stays ask-first except when the user invoked `make pr` or a campaign packet / L4 authorize-release publish path applies
 4. Force-push, hard-reset, admin-merge, and secrets exfil: **never** waived
 
 Projected override: `zz-autonomy-surface-override.md`.

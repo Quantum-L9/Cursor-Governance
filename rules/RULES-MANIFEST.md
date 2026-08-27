@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-27T01:58:21Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-27T21:47:30Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -18,7 +18,7 @@ Generated: `2026-08-27T01:58:21Z`. Source: `rules/*.mdc`.
 
 | File | ID | Scope | Domain | Activation | Lines | Digest |
 |---|---|---|---|---|---:|---|
-| `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 34 | `c5b2842185ac` |
+| `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 36 | `ceaafbc51009` |
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 160 | `795e96cd2221` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 68 | `d3fca17315f9` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
@@ -85,7 +85,7 @@ Generated: `2026-08-27T01:58:21Z`. Source: `rules/*.mdc`.
 | `96-multi-agent-main-bound-execution.mdc` | `l9.rule.96.multi.agent.main.bound.execution` | global | git | always | 129 | `4c3da47effd7` |
 | `97-graph-layer-boundary.mdc` | `l9.rule.graph-layer-boundary` | global | memory | always | 37 | `381364ee74a4` |
 | `98-graphiti-memory-gate.mdc` | `l9.rule.graphiti.memory.gate` | global | memory | always | 48 | `557a495cb0ca` |
-| `99-no-auto-commit.mdc` | `l9.rule.git.mutation-gate` | global | git | always | 52 | `c005a2cf7f0a` |
+| `99-no-auto-commit.mdc` | `l9.rule.git.mutation-gate` | global | git | always | 62 | `f40fb8497a18` |
 
 ## Notes
 

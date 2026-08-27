@@ -228,6 +228,11 @@ only. Operator 2026-08-22.
 Deploy settings via `ops/scripts/reconcile_claude_settings.py` (`make claude-settings`).
 Do not fork Profile prose into SessionStart/README/ADR — cite the Profile.
 
+<!-- CURSOR_COMMIT_BEFORE_STOP_V1 -->
+`99-no-auto-commit` is always on. Filename = no auto-push. Unique dirty
+files the agent authored this session are a rule failure. Ask only before
+push / `make pr`. Operator 2026-08-27.
+
 ## 6.2 L4 Local Autonomy (no mid-execution push)
 
 SSOT fragment: [`ops/autonomy/surface_profile.yaml`](ops/autonomy/surface_profile.yaml)
