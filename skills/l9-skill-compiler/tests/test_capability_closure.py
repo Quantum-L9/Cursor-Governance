@@ -76,9 +76,7 @@ def test_bounded_unknown_blocks():
 
 def test_unbounded_unknown_fails():
     data = ir()
-    data["capabilities"].append(
-        {"id": "sloppy", "required": True, "binding": {"kind": "UNKNOWN"}}
-    )
+    data["capabilities"].append({"id": "sloppy", "required": True, "binding": {"kind": "UNKNOWN"}})
     for node in data["workflow"]["nodes"]:
         if node["id"] == "COMPILE_REQUEST":
             node["capabilities"] = ["sloppy"]

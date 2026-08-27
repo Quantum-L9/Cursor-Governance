@@ -91,9 +91,7 @@ def main(argv):
         {
             "stage": "SELF_TEST",
             "status": "FAIL" if failed else "PASS",
-            "checks": [
-                {"id": name, "status": "pass" if ok else "fail"} for name, ok in steps
-            ],
+            "checks": [{"id": name, "status": "pass" if ok else "fail"} for name, ok in steps],
             "failed": failed,
             "capability_closure_result": closure["result"],
             "activation_status": activation["status"],
