@@ -162,3 +162,73 @@ def test_hook_script_fail_open_without_receipt(tmp_path: Path) -> None:
     )
     assert proc.returncode == 0
     assert json.loads(proc.stdout) == {}
+
+
+def _receipt(path: Path, *, head_sha: str | None) -> str:
+    """A FAIL receipt naming a hook rewrite, as run_pr_gate.sh writes one."""
+
+    doc = {
+        "schema": "l9.pr_gate_failure.v2",
+        "paths_digest": "abc",
+        "content_digest": "123",
+        "pr_base": "origin/main",
+        "failed_nodes": [],
+        "failed_hooks": ["end-of-file-fixer"],
+        "recheck_command": "",
+        "message": "STOP LOOPING",
+    }
+    if head_sha is not None:
+        doc["head_sha"] = head_sha
+    path.write_text(json.dumps(doc) + "\n", encoding="utf-8")
+    return "abc 123 origin/main"
+
+
+def _refuse(path: Path, digest: str, *, head_sha: str | None) -> subprocess.CompletedProcess[str]:
+    argv = ["python3", str(HELPER), "refuse", str(path), digest]
+    if head_sha is not None:
+        argv += ["--head-sha", head_sha]
+    return subprocess.run(argv, check=False, capture_output=True, text=True)
+
+
+def test_refuse_still_blocks_when_head_is_unchanged(tmp_path: Path) -> None:
+    """The loop-breaker must keep refusing a genuinely unchanged tree."""
+
+    path = tmp_path / "gate-failure.json"
+    digest = _receipt(path, head_sha="deadbeef")
+    proc = _refuse(path, digest, head_sha="deadbeef")
+    assert proc.returncode == 2
+    assert "STOP LOOPING" in proc.stdout
+
+
+def test_committing_a_hook_rewrite_releases_the_loop_breaker(tmp_path: Path) -> None:
+    """Regression: the gate's own instruction must be reachable.
+
+    A pre-commit hook rewrites a tracked file *before* the receipt is written,
+    so the receipt already holds the rewritten bytes. The gate then says
+    "commit the rewrite, then re-run". Committing moves HEAD but leaves the
+    working tree byte-identical, so the content digest still matches. Without a
+    recorded head sha the loop-breaker refused that instructed re-run forever,
+    and the only escape was deleting the receipt by hand.
+    """
+
+    path = tmp_path / "gate-failure.json"
+    digest = _receipt(path, head_sha="head-before-commit")
+    proc = _refuse(path, digest, head_sha="head-after-commit")
+    assert proc.returncode == 0, "committing the rewrite must release the loop-breaker"
+    assert "STOP LOOPING" not in proc.stdout
+
+
+def test_legacy_receipt_without_head_sha_keeps_digest_only_behavior(tmp_path: Path) -> None:
+    """A receipt from before this change must be no weaker than it was."""
+
+    path = tmp_path / "gate-failure.json"
+    digest = _receipt(path, head_sha=None)
+    assert _refuse(path, digest, head_sha="any-head").returncode == 2
+    assert _refuse(path, digest, head_sha=None).returncode == 2
+
+
+def test_content_change_still_releases_regardless_of_head(tmp_path: Path) -> None:
+    path = tmp_path / "gate-failure.json"
+    _receipt(path, head_sha="same-head")
+    proc = _refuse(path, "different 456 origin/main", head_sha="same-head")
+    assert proc.returncode == 0
