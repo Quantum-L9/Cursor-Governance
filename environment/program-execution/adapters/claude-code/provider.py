@@ -98,6 +98,10 @@ class ClaudeCodeProvider:
                 "L9_PROGRAM_LOCK_DIGEST": request.program_lock_digest,
             },
         )
+        excerpts = load_module(
+            Path(__file__).with_name("excerpts.py"),
+            "pes_claude_excerpts",
+        )
         parser = load_module(
             Path(__file__).with_name("stream_parser.py"),
             "pes_claude_stream_parser",
@@ -185,6 +189,34 @@ class ClaudeCodeProvider:
         except Exception:
             pass
         # #endregion
+        denials = host.get("permission_denials")
+        denial_tools = (
+            [
+                item.get("tool_name")
+                for item in denials
+                if isinstance(item, dict) and item.get("tool_name")
+            ]
+            if isinstance(denials, list)
+            else []
+        )
+        host_errors = host.get("errors") if isinstance(host.get("errors"), list) else None
+        diagnostics = {
+            "type": "claude_code_execution",
+            "stdout_digest": result.stdout_digest,
+            "stderr_digest": result.stderr_digest,
+            "num_turns": host.get("num_turns"),
+            "is_error": host.get("is_error"),
+            "subtype": host.get("subtype"),
+            "stop_reason": host.get("stop_reason"),
+            "terminal_reason": host.get("terminal_reason"),
+            "host_errors": host_errors,
+            "permission_denial_tools": denial_tools,
+            "result_type": type(host.get("result")).__name__,
+            "payload_keys": sorted(payload.keys()),
+            "changed_files_type": type(payload.get("changed_files")).__name__,
+            "stdout_excerpt": excerpts.redacted_excerpt(result.stdout),
+            "stderr_excerpt": excerpts.redacted_excerpt(result.stderr),
+        }
         provider_result = CanonicalProviderResult(
             execution_id=request.execution_id,
             status=status,
@@ -205,6 +237,10 @@ class ClaudeCodeProvider:
                         "exit_code": result.exit_code,
                         "stderr_digest": result.stderr_digest,
                         "parse_error": parse_error,
+                        "subtype": host.get("subtype"),
+                        "host_errors": host_errors,
+                        "stdout_excerpt": diagnostics["stdout_excerpt"],
+                        "stderr_excerpt": diagnostics["stderr_excerpt"],
                     },
                 )
             ),
@@ -212,14 +248,7 @@ class ClaudeCodeProvider:
         )
         return ProviderInvocation(
             status=status,
-            evidence=(
-                {
-                    "type": "claude_code_execution",
-                    "stdout_digest": result.stdout_digest,
-                    "stderr_digest": result.stderr_digest,
-                    "num_turns": host.get("num_turns"),
-                },
-            ),
+            evidence=(diagnostics,),
             result=provider_result,
         )
 
