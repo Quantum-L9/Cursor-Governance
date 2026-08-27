@@ -396,6 +396,37 @@ PY
   fi
 else
   echo "PR already open: $pr_url"
+  # The protected-root contract is proven when the PR is CREATED, from the diff
+  # as it stood then. A later push can add an additive_only root file to a PR
+  # whose body was composed from the default template, and nothing re-checks it
+  # -- the Root-file append-only gate then fails on a body no one was told to
+  # update. Re-check here and name the remedy, rather than letting CI discover it.
+  #
+  # A warning, not a failure: the body of an open PR may be human-authored, and
+  # refusing to push someone's work over a template stamp would be worse than
+  # the red check this prevents.
+  _reopen_protect_py="$GOV_ROOT/ops/scripts/validate_root_file_protection.py"
+  _reopen_python="${GOV_ROOT}/.venv/bin/python"
+  [[ -x "$_reopen_python" ]] || _reopen_python="python3"
+  if [[ -f "$_reopen_protect_py" && -n "${owner:-}" && -n "${name:-}" ]]; then
+    _reopen_touched="$(
+      "$_reopen_python" "$_reopen_protect_py" \
+        --list-touched-additive-only --base "$PR_BASE" --head HEAD --repo "$WS" \
+        2>/dev/null || true
+    )"
+    if [[ -n "$_reopen_touched" ]]; then
+      _reopen_body="$(gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq .body 2>/dev/null || true)"
+      if [[ "$_reopen_body" != *"<!-- L9_PROTECTED_ROOT_PR -->"* ]]; then
+        echo "WARN: this PR now touches additive_only root file(s):"
+        printf '  %s\n' $_reopen_touched
+        echo "      but its body predates them and lacks <!-- L9_PROTECTED_ROOT_PR -->."
+        echo "      The Root-file append-only gate WILL fail until the body uses"
+        echo "      .github/PULL_REQUEST_TEMPLATE/protected-root.md."
+        echo "      A rewrite (not append-only) additionally needs a commit line:"
+        echo "        ALLOW-ROOT-DELETION: <path> — <reason>"
+      fi
+    fi
+  fi
 fi
 
 # owner/name already resolved above via resolve_repo_slug (GraphQL, then remote).
