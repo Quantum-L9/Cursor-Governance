@@ -244,16 +244,13 @@ def ensure_probe_history(repo: Path) -> None:
         print("WARN: could not unshallow the clone — textual probe may be unavailable")
 
 
-def merge_tree_conflicts(repo: Path, pr_number: int) -> list[str] | None:
-    """Fetch pull/<N>/head and probe with git merge-tree --write-tree (needs
-    git >= 2.38). Returns conflicting paths, [] for a clean merge, or None when
-    the probe is unavailable (fetch/unsupported git) — callers degrade to
-    filename-overlap blocking."""
-    ensure_probe_history(repo)
-    fetch = git(repo, "fetch", "--quiet", "origin", f"pull/{pr_number}/head")
-    if fetch.returncode != 0:
-        return None
-    result = git(repo, "merge-tree", "--write-tree", "--name-only", "HEAD", "FETCH_HEAD")
+def probe_ref_conflicts(repo: Path, ref: str) -> list[str] | None:
+    """Probe HEAD against an already-fetched ref with git merge-tree --write-tree.
+
+    Returns conflicting paths, [] for a clean merge, or None when the probe is
+    unavailable (git < 2.38, unrelated histories).
+    """
+    result = git(repo, "merge-tree", "--write-tree", "--name-only", "HEAD", ref)
     if result.returncode == 0:
         return []
     if result.returncode == 1:
@@ -270,6 +267,40 @@ def merge_tree_conflicts(repo: Path, pr_number: int) -> list[str] | None:
             conflicts.append(line)
         return conflicts
     return None
+
+
+def merge_tree_conflicts(repo: Path, pr_number: int) -> list[str] | None:
+    """Fetch pull/<N>/head and probe with git merge-tree --write-tree (needs
+    git >= 2.38). Returns conflicting paths, [] for a clean merge, or None when
+    the probe is unavailable (fetch/unsupported git) — callers degrade to
+    filename-overlap blocking."""
+    ensure_probe_history(repo)
+    fetch = git(repo, "fetch", "--quiet", "origin", f"pull/{pr_number}/head")
+    if fetch.returncode != 0:
+        return None
+    return probe_ref_conflicts(repo, "FETCH_HEAD")
+
+
+def base_conflicts(repo: Path, base: str) -> list[str] | None:
+    """Conflicting non-generated paths between HEAD and its own PR base.
+
+    The open-PR probe cannot see this class at all: work that already merged
+    into the base is not an open PR any more, so a branch re-implementing it
+    passes every open-PR check and only fails later, at merge time or in
+    review. PR #319 was exactly that — a second architecture compiler built in
+    parallel, add/add-conflicting with its base on 28 paths, published clean.
+
+    Unlike the open-PR probe there is no "paths we changed" filter to apply. A
+    conflict against the base is by construction one this branch's own side
+    caused; the only paths merge-tree can name outside the three-dot diff are
+    directory/file collisions, which are exactly the ones that must block.
+    Generated paths stay exempt — the keep-ours driver resolves those.
+    """
+    ensure_probe_history(repo)
+    conflicts = probe_ref_conflicts(repo, base)
+    if conflicts is None:
+        return None
+    return sorted({path for path in conflicts if not is_generated_prefix_path(path)})
 
 
 def stack_chain(entries: list[dict]) -> list[dict] | None:
@@ -322,6 +353,30 @@ def main() -> int:
     changed = changed_files(repo, args.base)
     if changed is None:
         return telemetry_failure(f"cannot compute changed files vs {args.base}")
+
+    # (b0) Base probe. Runs BEFORE any open-PR reasoning, because the open-PR
+    # path returns PASS early when nothing else is open — which is precisely the
+    # state a branch duplicating already-merged work arrives in.
+    base_hits = base_conflicts(repo, args.base)
+    if base_hits is None:
+        rc = telemetry_failure(f"textual merge probe unavailable against base {args.base}")
+        if rc:
+            return rc
+    elif base_hits:
+        print(f"{'FAIL' if mode == 'block' else 'WARN'}: this branch conflicts with its own base")
+        print(f"  base: {args.base}")
+        print(f"  conflicting paths ({len(base_hits)}):")
+        for path in base_hits[:20]:
+            print(f"    {path}")
+        if len(base_hits) > 20:
+            print(f"    ... and {len(base_hits) - 20} more")
+        print("")
+        print("  This is what already-merged work looks like from a stale branch:")
+        print("  the feature landed on the base while this branch was being built,")
+        print("  so both sides add the same files. Refresh from the base and")
+        print("  resolve, or close this branch if the work is already merged.")
+        if mode == "block":
+            return 1
 
     slug = resolve_repo_slug(repo)
     if not slug:

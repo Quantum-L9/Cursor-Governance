@@ -204,9 +204,9 @@
       "alias": null,
       "class": "always",
       "output": "48-make-pr-remediation.md",
-      "output_sha256": "0ed3f7256dfe5a90f90d0f3f11ec9cdc97da5a6ab21f00dcd2c368a2ef4e28a4",
+      "output_sha256": "18921c51e04ebed8e1ac948166446d44a19fcc4094a907e755bef951df28e38f",
       "source": "rules/48-make-pr-remediation.mdc",
-      "source_sha256": "b3373fe41a97c4aafaa8f79e0a1203f5d1b2c415563a85a053985fea0c9cb536",
+      "source_sha256": "c8d86cbbf77d8af7ce1c2115efde135c6bebfe568924c2c6412ba223e83f971d",
       "stem": "48-make-pr-remediation"
     },
     {
@@ -249,9 +249,9 @@
       "alias": null,
       "class": "always",
       "output": "53-pr-overlap-guardrail.md",
-      "output_sha256": "70177539aad6945a7a249637b90eaa9ec440133db2fc936025301de4d795a1a2",
+      "output_sha256": "c934474ce6f1c1d85030cdd1ac72406777c90e5633e401da4f3eecc4378c0725",
       "source": "rules/53-pr-overlap-guardrail.mdc",
-      "source_sha256": "f74a35cbddacef5e06662f2dc7f9d0aa6946a0074f068363ecc6a4275944b14a",
+      "source_sha256": "043137b8e8a57e7238bb5349bc4aac002fa67ec7c00cd7eb95e4270b7d3b85b1",
       "stem": "53-pr-overlap-guardrail"
     },
     {
@@ -623,5 +623,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 68
   },
-  "tree_sha256": "4d6e02f6eaf62034cc4c43c86ecff26943275186dd71a7ffe839735324f31d0f"
+  "tree_sha256": "073ac84bdec64b739b97f55dde0ed3bb3080810d8fc2e76e53f8ee3bb327b0e9"
 }

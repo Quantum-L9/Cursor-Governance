@@ -463,5 +463,89 @@ class PrOverlapCheckTests(unittest.TestCase):
         self.assertIn("PASS", result.stdout)
 
 
+class BaseConflictProbeTests(unittest.TestCase):
+    """The #319 class: a branch duplicating work already merged into its base.
+
+    The open-PR probe is structurally blind to it — merged work is not an open
+    PR, so with nothing else open the gate returned PASS before ever comparing
+    the branch against its own base. These fail on the open-PRs-only gate.
+    """
+
+    @staticmethod
+    def _duplicate_feature_world() -> tuple[Path, dict[str, str]]:
+        """main gains feature.txt; a stale branch adds the same path differently."""
+        _bare, work, env = _init_world()
+        # Fork BEFORE the feature lands — the stale-fork condition.
+        _run(["git", "checkout", "-q", "-b", "feat-ours"], work, env)
+        # Meanwhile the feature merges into main.
+        _run(["git", "checkout", "-q", "main"], work, env)
+        (work / "feature.txt").write_text("their implementation\n", encoding="utf-8")
+        _commit(work, env, "feature lands on main")
+        _run(["git", "push", "-q", "origin", "main"], work, env)
+        # The stale branch independently implements the same file.
+        _run(["git", "checkout", "-q", "feat-ours"], work, env)
+        (work / "feature.txt").write_text("our parallel implementation\n", encoding="utf-8")
+        _commit(work, env, "our parallel implementation")
+        _run(["git", "fetch", "-q", "origin"], work, env)
+        return work, env
+
+    def test_duplicate_of_already_merged_work_blocks(self) -> None:
+        work, env = self._duplicate_feature_world()
+        fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={})
+        result = _gate(work, fake.env(env))
+        self.assertEqual(result.returncode, 1, result.stdout)
+        self.assertIn("conflicts with its own base", result.stdout)
+        self.assertIn("feature.txt", result.stdout)
+
+    def test_base_conflict_warns_without_blocking_in_warn_mode(self) -> None:
+        work, env = self._duplicate_feature_world()
+        fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={})
+        result = _gate(work, fake.env(env), {"PR_OVERLAP": "warn"})
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("conflicts with its own base", result.stdout)
+
+    def test_branch_disjoint_from_base_still_passes(self) -> None:
+        """No false positive: ordinary work on a moved base must not block."""
+        _bare, work, env = _init_world()
+        _run(["git", "checkout", "-q", "-b", "feat-ours"], work, env)
+        (work / "ours.txt").write_text("ours\n", encoding="utf-8")
+        _commit(work, env, "ours")
+        _run(["git", "checkout", "-q", "main"], work, env)
+        (work / "theirs.txt").write_text("theirs\n", encoding="utf-8")
+        _commit(work, env, "unrelated work lands on main")
+        _run(["git", "push", "-q", "origin", "main"], work, env)
+        _run(["git", "checkout", "-q", "feat-ours"], work, env)
+        _run(["git", "fetch", "-q", "origin"], work, env)
+        fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={})
+        result = _gate(work, fake.env(env))
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertIn("PASS", result.stdout)
+
+    def test_generated_only_base_conflict_does_not_block(self) -> None:
+        """Generated paths self-resolve via the keep-ours driver at the base too.
+
+        Same add/add shape as the blocking case, on a GENERATED_PATH_PREFIXES
+        path — the base probe must exempt it exactly as the open-PR probe does.
+        """
+        generated = "environment/generated/llm-rules/00-global.md"
+        _bare, work, env = _init_world()
+        _run(["git", "checkout", "-q", "-b", "feat-ours"], work, env)
+        _run(["git", "checkout", "-q", "main"], work, env)
+        target = work / generated
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("regenerated on main\n", encoding="utf-8")
+        _commit(work, env, "generated artifact lands on main")
+        _run(["git", "push", "-q", "origin", "main"], work, env)
+        _run(["git", "checkout", "-q", "feat-ours"], work, env)
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text("regenerated on our branch\n", encoding="utf-8")
+        _commit(work, env, "our regeneration of the same artifact")
+        _run(["git", "fetch", "-q", "origin"], work, env)
+        fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={})
+        result = _gate(work, fake.env(env))
+        self.assertEqual(result.returncode, 0, result.stdout)
+        self.assertNotIn("conflicts with its own base", result.stdout)
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -99,13 +99,20 @@ def test_non_merges_are_not_gated(command: str) -> None:
 # --- method default -----------------------------------------------------------
 
 
-def test_rest_without_merge_method_reports_merge_not_unspecified() -> None:
-    """GitHub defaults an omitted merge_method to a merge commit.
+def test_rest_without_merge_method_is_treated_as_ancestry_breaking() -> None:
+    """An omitted merge_method must NOT be read as GitHub's documented default.
 
-    Reporting "unspecified" would understate what the call actually does, and
-    the ancestry-safe reading happens to be the truthful one.
+    GitHub defaults the omitted field to a merge commit, and an earlier draft of
+    this test asserted exactly that. It was wrong in the direction that matters:
+    "merge" is not in ANCESTRY_BREAKING, so a REST merge with no explicit method
+    against a stack parent would have passed the stack-safety check on the
+    strength of a server-side default the command never stated.
+
+    "unspecified" is the safer and the honest reading -- the argv did not say --
+    and it is ANCESTRY_BREAKING, so that merge is denied instead.
     """
-    assert mg._merge_method(f"{API} --method PUT {PATH}") == "merge"
+    assert mg._merge_method(f"{API} --method PUT {PATH}") == "unspecified"
+    assert "unspecified" in mg.ANCESTRY_BREAKING
 
 
 # --- branch deletion parity ---------------------------------------------------

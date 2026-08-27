@@ -102,3 +102,96 @@ def test_subdirectory_of_worktree_resolves_to_its_toplevel(
     sub = linked_worktree / "nested"
     sub.mkdir()
     assert effective_root(f'cd "{sub}" && make pr', main_repo) == linked_worktree.resolve()
+
+
+# --- Container root: the reported project dir is not a repository at all -----
+#
+# The case above is "project root is repo A, cd into a worktree of repo A".
+# A cloud session reports a *container root* holding many clones side by side
+# which is itself no repository (`/home/user`). _common_dir() returns None
+# there, so the same-repository comparison could never succeed and the gate
+# resolved the L4 receipt under a path that cannot hold one -- making
+# publication from a worktree impossible, the exact outcome this function
+# exists to prevent.
+#
+# With no repository context at the root there is nothing to be steered away
+# FROM, so a cd into a real work tree is the only signal available. This
+# relaxes nothing about authorization: the receipt must still exist at the
+# resolved root and bind the head SHA.
+
+
+@pytest.fixture
+def container_root(tmp_path: Path) -> Path:
+    """A plain directory holding checkouts, like a cloud session's project dir."""
+    root = tmp_path / "container"
+    root.mkdir()
+    return root
+
+
+def test_cd_into_a_repo_redirects_when_root_is_not_a_repo(
+    container_root: Path, main_repo: Path
+) -> None:
+    assert effective_root(f'cd "{main_repo}" && make pr', container_root) == main_repo.resolve()
+
+
+def test_cd_into_a_linked_worktree_redirects_when_root_is_not_a_repo(
+    container_root: Path, linked_worktree: Path
+) -> None:
+    """The live case: container root, worktree holding the release receipt."""
+    command = f'cd "{linked_worktree}" && PR_REMEDIATE=0 make pr'
+    assert effective_root(command, container_root) == linked_worktree.resolve()
+
+
+def test_non_repo_root_without_a_leading_cd_is_unchanged(container_root: Path) -> None:
+    assert effective_root("make pr", container_root) == container_root
+
+
+def test_non_repo_root_cd_into_non_repo_is_unchanged(container_root: Path, tmp_path: Path) -> None:
+    """Only a real work tree may redirect; a plain directory must not."""
+    plain = tmp_path / "plain"
+    plain.mkdir()
+    assert effective_root(f'cd "{plain}" && make pr', container_root) == container_root
+
+
+def test_repo_root_still_refuses_an_unrelated_repo(main_repo: Path, tmp_path: Path) -> None:
+    """Regression guard: the same-repository rule is untouched when root IS a repo.
+
+    The container-root branch must not become a way to reach an unrelated
+    repository from a session whose project dir is a real checkout.
+    """
+    other = make_repo(tmp_path / "other")
+    assert effective_root(f'cd "{other}" && make pr', main_repo) == main_repo
+
+
+# --- The Claude entry point must use this resolution too ---------------------
+#
+# effective_root() was wired into main_cursor_shell() only. main_claude()
+# passed workspace_from_event(event) straight to evaluate(), so on the Claude
+# surface the leading-cd resolution never ran at all and a worktree could never
+# publish -- the whole reason this function exists, unreached for one surface.
+
+
+def test_claude_entrypoint_resolves_the_leading_cd(
+    monkeypatch: pytest.MonkeyPatch, main_repo: Path, linked_worktree: Path
+) -> None:
+    import io
+    import json
+
+    import local_execution_gate as gate
+
+    seen: dict[str, Path] = {}
+
+    def fake_evaluate(tool_name, tool_input, *, root=None):  # noqa: ANN001, ANN202
+        seen["root"] = root
+        return None
+
+    monkeypatch.setattr(gate, "evaluate", fake_evaluate)
+    monkeypatch.setattr(gate, "workspace_from_event", lambda event: main_repo)
+    event = {
+        "tool_name": "Bash",
+        "tool_input": {"command": f'cd "{linked_worktree}" && PR_REMEDIATE=0 make pr'},
+    }
+    monkeypatch.setattr("sys.stdin", io.StringIO(json.dumps(event)))
+
+    assert gate.main_claude() == 0
+    assert seen["root"] == linked_worktree.resolve()
