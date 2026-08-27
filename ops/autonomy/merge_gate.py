@@ -169,10 +169,38 @@ def _argv_skip_env(words: list[str]) -> list[str]:
     return words[index:]
 
 
+# A merge reaches GitHub by two transports, and the gate has to know both.
+# The CLI subcommand is GraphQL-backed, and a session gateway that serves only a
+# pinned set of operations refuses it, so the sanctioned helper falls back to
+# REST -- PUT /repos/{owner}/{repo}/pulls/{n}/merge. Recognising only the CLI
+# spelling left that REST call completely ungated: measured, _command_is_pr_merge
+# returned False for the exact REST invocation the helper now emits. Transport is
+# not authority; both spellings are the same effect.
+_REST_MERGE_PATH = re.compile(
+    r"""(?:^|[\s'"=])(?:https?://[^\s'"]*?/)?repos/[^/\s'"]+/[^/\s'"]+/pulls/\d+/merge(?:$|[\s'"?])"""
+)
+
+
+def _segment_is_rest_pr_merge(segment: str) -> bool:
+    """True when this segment invokes the REST merge endpoint through the API verb.
+
+    Deliberately method-agnostic. A read of this path is meaningless, so the cost
+    of treating one as a merge is a receipt requirement, while the cost of missing
+    a PUT is an ungated merge. A safety gate takes the first trade every time.
+    """
+    rest = _argv_skip_env(segment_words(segment))
+    if len(rest) >= 2 and rest[0] == "gh" and rest[1] == "api":
+        if any(_REST_MERGE_PATH.search(word) for word in rest[2:]):
+            return True
+    return False
+
+
 def _segment_is_pr_merge(segment: str) -> bool:
-    """True when this segment *invokes* ``gh pr merge``, not when it mentions it."""
+    """True when this segment *invokes* a merge, not when it mentions one."""
     rest = _argv_skip_env(segment_words(segment))
     if len(rest) >= 3 and rest[0] == "gh" and rest[1] == "pr" and rest[2] == "merge":
+        return True
+    if _segment_is_rest_pr_merge(segment):
         return True
     return any(_segment_is_pr_merge(sub) for sub in wrapper_subcommands(segment))
 
@@ -195,6 +223,17 @@ def _merge_method(command: str) -> str:
         if "--rebase" in rest:
             return "rebase"
         if "--merge" in rest:
+            return "merge"
+        # REST names the method in a field, not a flag. GitHub's documented
+        # default when merge_method is omitted is a merge commit, so report that
+        # rather than "unspecified": the ancestry-safe answer is also the
+        # truthful one, and "unspecified" would understate what will happen.
+        if _segment_is_rest_pr_merge(segment):
+            for word in rest[2:]:
+                if "merge_method=" in word:
+                    value = word.split("merge_method=", 1)[1].strip("'\"")
+                    if value in {"squash", "rebase", "merge"}:
+                        return value
             return "merge"
         return "unspecified"
     if SQUASH_FLAG.search(command):
