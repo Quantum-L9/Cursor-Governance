@@ -24,6 +24,11 @@
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer memory_writeback.py'",
             "timeout": 20
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate session_debt_wrap.py'",
+            "timeout": 30
           }
         ]
       }
@@ -186,6 +191,7 @@
     "l9-end-session": "user-invocable-only",
     "l9-forge": "user-invocable-only",
     "l9-git-work-preserve": "user-invocable-only",
+    "l9-global-architect": "user-invocable-only",
     "l9-governance-symlinks": "user-invocable-only",
     "l9-governance-wiring": "user-invocable-only",
     "l9-harvest-pipeline": "user-invocable-only",

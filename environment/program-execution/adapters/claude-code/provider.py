@@ -113,6 +113,81 @@ class ClaudeCodeProvider:
             payload = {}
         status = "PASS" if result.exit_code == 0 and not host.get("is_error") else "FAIL"
         usage = host.get("usage") if isinstance(host.get("usage"), dict) else {}
+        # #region agent log
+        try:
+            import json as _json
+            import time as _time
+
+            _raw_result = host.get("result")
+            _err_obj = (
+                {
+                    "type": "claude_code_error",
+                    "exit_code": result.exit_code,
+                    "stderr_digest": result.stderr_digest,
+                    "parse_error": parse_error,
+                }
+                if status != "PASS"
+                else None
+            )
+            with open(
+                "/Users/macm2/Cursor-Governance/Cursor-Governance/.cursor/debug-65906b.log",
+                "a",
+                encoding="utf-8",
+            ) as _dbg:
+                _dbg.write(
+                    _json.dumps(
+                        {
+                            "sessionId": "65906b",
+                            "runId": "pre-fix",
+                            "hypothesisId": "A",
+                            "location": "adapters/claude-code/provider.py:invoke",
+                            "message": "claude-code-direct invoke host result",
+                            "data": {
+                                "exit_code": result.exit_code,
+                                "timed_out": result.timed_out,
+                                "status": status,
+                                "max_turns_requested": int(
+                                    request.inference_budget.get("max_turns") or 12
+                                ),
+                                "num_turns": host.get("num_turns"),
+                                "is_error": host.get("is_error"),
+                                "subtype": host.get("subtype"),
+                                "host_keys": sorted(host.keys()),
+                                "result_type": type(_raw_result).__name__,
+                                "result_is_str": isinstance(_raw_result, str),
+                                "result_preview": (
+                                    _raw_result[:400]
+                                    if isinstance(_raw_result, str)
+                                    else None
+                                ),
+                                "payload_keys": sorted(payload.keys()),
+                                "changed_files_len": (
+                                    len(payload.get("changed_files") or [])
+                                    if isinstance(payload.get("changed_files"), list)
+                                    else None
+                                ),
+                                "parse_error": parse_error,
+                                "stderr_len": len(result.stderr or ""),
+                                "stdout_len": len(result.stdout or ""),
+                                "stderr_empty": not (result.stderr or "").strip(),
+                                "stderr_preview": (
+                                    (result.stderr or "")[-500:]
+                                    .replace("sk-", "sk-REDACTED")
+                                ),
+                                "persisted_error_keys": (
+                                    sorted(_err_obj.keys()) if _err_obj else []
+                                ),
+                                "allowed_tools": permissions.get("allowed"),
+                                "denied_tools": permissions.get("denied"),
+                            },
+                            "timestamp": int(_time.time() * 1000),
+                        }
+                    )
+                    + "\n"
+                )
+        except Exception:
+            pass
+        # #endregion
         provider_result = CanonicalProviderResult(
             execution_id=request.execution_id,
             status=status,
