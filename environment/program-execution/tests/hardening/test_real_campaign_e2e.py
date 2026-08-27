@@ -58,6 +58,9 @@ for _path in (
         sys.path.insert(0, _path)
 
 from peer_execution.autonomy.worker_lane import GitWorktreeLane  # noqa: E402
+from test_concurrent_worktree_isolation import (  # noqa: E402
+    create_lanes_concurrently,
+)
 
 BASE_SHA = "abc1234"
 LANE_CAMPAIGN = "rc7-real-campaign-e2e"
@@ -301,6 +304,9 @@ def test_two_disjoint_children_are_admitted_in_one_bounded_cycle(campaign: Any) 
     # Bounded, not unbounded: admission stays inside the declared ceiling.
     assert cycle.selected_count <= campaign.scheduler.worker_concurrency_ceiling
 
+    # Every ready action reached a disposition; none vanished.
+    assert cycle.selected_count + cycle.blocked_claim == cycle.ready
+
 
 # ----------------------------------------------------------------------
 # 3. mutation authority is granted before dispatch, never after
@@ -352,23 +358,26 @@ def test_acknowledged_executor_may_mutate_but_never_publish(campaign: Any) -> No
 
 
 def test_children_execute_in_distinct_worktrees(sandbox: tuple[Path, Path]) -> None:
-    repo, lane_root = sandbox
-    lanes = {
-        action_id: GitWorktreeLane(
-            repo=repo,
-            lane_root=lane_root,
-            campaign_id=LANE_CAMPAIGN,
-            action_id=action_id,
-        )
-        for action_id in ("mutate-000", "mutate-001")
-    }
-    paths = {name: lane.create(branch=f"lane-{name}") for name, lane in lanes.items()}
+    """Reuses the concurrent two-child fixture proven for RC-6.
 
-    assert paths["mutate-000"] != paths["mutate-001"]
-    assert all(path.is_dir() for path in paths.values())
+    The E2E asserts the isolation property as one stage of the whole scenario;
+    `test_concurrent_worktree_isolation` owns the exhaustive proof. Sharing the
+    barrier-released creation helper keeps the two from drifting apart.
+    """
+
+    repo, lane_root = sandbox
+    lanes, created, errors = create_lanes_concurrently(
+        repo,
+        lane_root,
+        ("mutate-000", "mutate-001"),
+        campaign_id=LANE_CAMPAIGN,
+    )
+    assert not errors, f"concurrent lane creation failed: {errors}"
+    assert created["mutate-000"] != created["mutate-001"]
+    assert all(path.is_dir() for path in created.values())
 
     git_dirs = set()
-    for path in paths.values():
+    for path in created.values():
         pointer = (path / ".git").read_text(encoding="utf-8").strip()
         assert pointer.startswith("gitdir:")
         git_dirs.add(Path(pointer.split(":", 1)[1].strip()).resolve())
@@ -415,7 +424,9 @@ def test_one_child_failure_does_not_take_down_its_sibling(campaign: Any) -> None
     _execution_result(campaign, healthy_lease, "mutate-000", "executor-a")
 
     # The failing child submits an artifact missing the required base_sha.
-    with pytest.raises(Exception):
+    from autonomy.errors import AutonomyError
+
+    with pytest.raises(AutonomyError):
         campaign.artifacts.submit(
             lease_id=failing_lease.lease_id,
             agent_id="executor-b",
@@ -488,14 +499,25 @@ def test_valid_generated_data_packet_is_admitted_and_harvested(tmp_path: Path) -
     )
     assert result.job.job_id
 
-    # Raw evidence must survive validation, not be replaced by a verdict.
-    snapshots = store.get_job(result.job.job_id)
-    assert snapshots is not None
+    # Raw evidence must survive validation, not be replaced by a verdict: the
+    # per-stage snapshots are the preserved evidence, so assert them by stage
+    # rather than merely asserting the job row exists.
+    with store.connect() as connection:
+        stages = {
+            row["stage"]
+            for row in connection.execute(
+                "SELECT stage FROM stage_snapshots WHERE job_id = ?",
+                (result.job.job_id,),
+            )
+        }
+    assert {"HARVESTED", "ROUTED", "PROMOTION_DECIDED", "DELIVERY_PENDING"} <= stages
 
 
 def test_invalid_generated_data_packet_is_refused(tmp_path: Path) -> None:
+    from processor import ProcessingError
+
     processor, _, _ = _pipeline(tmp_path)
-    with pytest.raises(Exception):
+    with pytest.raises(ProcessingError):
         processor.process_packet(
             _invalid_packet(),
             actor="rc7-e2e",

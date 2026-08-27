@@ -71,28 +71,42 @@ def sandbox() -> Any:
         yield repo, root / "lanes"
 
 
-def _lane(repo: Path, lane_root: Path, action_id: str) -> GitWorktreeLane:
+def _lane(
+    repo: Path,
+    lane_root: Path,
+    action_id: str,
+    *,
+    campaign_id: str = CAMPAIGN,
+) -> GitWorktreeLane:
     return GitWorktreeLane(
         repo=repo,
         lane_root=lane_root,
-        campaign_id=CAMPAIGN,
+        campaign_id=campaign_id,
         action_id=action_id,
     )
 
 
-def _create_concurrently(
+def create_lanes_concurrently(
     repo: Path,
     lane_root: Path,
     action_ids: tuple[str, ...],
+    *,
+    campaign_id: str = CAMPAIGN,
 ) -> tuple[dict[str, GitWorktreeLane], dict[str, Path], dict[str, BaseException]]:
     """Create every lane on its own thread, released by one barrier.
 
     The barrier is what makes this a concurrency proof: without it the threads
     would almost certainly serialize on scheduling alone and the test would pass
     for the wrong reason.
+
+    Public because `test_real_campaign_e2e` reuses this exact fixture as its
+    concurrent-children stage rather than re-implementing lane setup.
     """
 
-    lanes = {action_id: _lane(repo, lane_root, action_id) for action_id in action_ids}
+    lanes = {
+        action_id: _lane(repo, lane_root, action_id, campaign_id=campaign_id)
+        for action_id in action_ids
+    }
     created: dict[str, Path] = {}
     errors: dict[str, BaseException] = {}
     barrier = threading.Barrier(len(action_ids))
@@ -138,7 +152,7 @@ def _resolved_git_dir(worktree: Path) -> Path:
 
 def test_two_children_hold_distinct_worktrees_simultaneously(sandbox: Any) -> None:
     repo, lane_root = sandbox
-    lanes, created, errors = _create_concurrently(repo, lane_root, ("child-a", "child-b"))
+    lanes, created, errors = create_lanes_concurrently(repo, lane_root, ("child-a", "child-b"))
     assert not errors, f"concurrent lane creation failed: {errors}"
     assert set(created) == {"child-a", "child-b"}
 
@@ -157,7 +171,7 @@ def test_two_children_hold_distinct_worktrees_simultaneously(sandbox: Any) -> No
 
 def test_concurrent_children_never_share_a_git_index(sandbox: Any) -> None:
     repo, lane_root = sandbox
-    lanes, created, errors = _create_concurrently(repo, lane_root, ("child-a", "child-b"))
+    lanes, created, errors = create_lanes_concurrently(repo, lane_root, ("child-a", "child-b"))
     assert not errors, f"concurrent lane creation failed: {errors}"
 
     git_dirs = {name: _resolved_git_dir(path) for name, path in created.items()}
@@ -177,7 +191,7 @@ def test_concurrent_children_never_share_a_git_index(sandbox: Any) -> None:
 
 def test_concurrent_children_mutate_without_cross_contamination(sandbox: Any) -> None:
     repo, lane_root = sandbox
-    lanes, created, errors = _create_concurrently(repo, lane_root, ("child-a", "child-b"))
+    lanes, created, errors = create_lanes_concurrently(repo, lane_root, ("child-a", "child-b"))
     assert not errors, f"concurrent lane creation failed: {errors}"
 
     barrier = threading.Barrier(len(created))
@@ -307,10 +321,7 @@ def test_overlapping_child_claim_is_attributed_not_silently_dropped(tmp_path: Pa
     assert len(mutations) == 1
     assert cycle.blocked_claim == 1
 
-    # Nothing may vanish between READY and a terminal disposition.
-    accounted = cycle.selected_count + sum(
-        getattr(cycle, name)
-        for name in dir(cycle)
-        if name.startswith("blocked_") and isinstance(getattr(cycle, name), int)
-    )
-    assert accounted >= cycle.ready
+    # Nothing may vanish between READY and a terminal disposition. Only the
+    # claim counter is summed: `blocked_dependency` counts actions that were
+    # never READY this cycle, so including it would make this vacuous.
+    assert cycle.selected_count + cycle.blocked_claim == cycle.ready
