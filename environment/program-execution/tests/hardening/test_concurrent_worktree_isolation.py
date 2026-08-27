@@ -92,7 +92,7 @@ def create_lanes_concurrently(
     action_ids: tuple[str, ...],
     *,
     campaign_id: str = CAMPAIGN,
-) -> tuple[dict[str, GitWorktreeLane], dict[str, Path], dict[str, BaseException]]:
+) -> tuple[dict[str, GitWorktreeLane], dict[str, Path], dict[str, Exception]]:
     """Create every lane on its own thread, released by one barrier.
 
     The barrier is what makes this a concurrency proof: without it the threads
@@ -101,6 +101,11 @@ def create_lanes_concurrently(
 
     Public because `test_real_campaign_e2e` reuses this exact fixture as its
     concurrent-children stage rather than re-implementing lane setup.
+
+    Worker threads record `Exception`, not `BaseException`: every failure this
+    proof cares about (git errors, `FileExistsError`, a broken barrier, a failed
+    assertion) is an `Exception`, while `KeyboardInterrupt` and `SystemExit`
+    must propagate rather than be filed as a lane-creation failure.
     """
 
     lanes = {
@@ -108,7 +113,7 @@ def create_lanes_concurrently(
         for action_id in action_ids
     }
     created: dict[str, Path] = {}
-    errors: dict[str, BaseException] = {}
+    errors: dict[str, Exception] = {}
     barrier = threading.Barrier(len(action_ids))
     guard = threading.Lock()
 
@@ -116,7 +121,7 @@ def create_lanes_concurrently(
         try:
             barrier.wait(timeout=30)
             path = lanes[action_id].create(branch=f"lane-{action_id}")
-        except BaseException as exc:  # noqa: BLE001 - recorded, re-raised by caller
+        except Exception as exc:  # noqa: BLE001 - recorded, asserted by the caller
             with guard:
                 errors[action_id] = exc
             return
@@ -195,7 +200,7 @@ def test_concurrent_children_mutate_without_cross_contamination(sandbox: Any) ->
     assert not errors, f"concurrent lane creation failed: {errors}"
 
     barrier = threading.Barrier(len(created))
-    failures: dict[str, BaseException] = {}
+    failures: dict[str, Exception] = {}
     guard = threading.Lock()
 
     def mutate(action_id: str) -> None:
@@ -205,7 +210,7 @@ def test_concurrent_children_mutate_without_cross_contamination(sandbox: Any) ->
             barrier.wait(timeout=30)
             _git(worktree, "add", f"{action_id}.txt")
             _git(worktree, "commit", "-m", f"{action_id} write")
-        except BaseException as exc:  # noqa: BLE001 - recorded, asserted by caller
+        except Exception as exc:  # noqa: BLE001 - recorded, asserted by the caller
             with guard:
                 failures[action_id] = exc
 
