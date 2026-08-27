@@ -86,7 +86,14 @@ if [[ "${1:-}" == "--print-state-digest" ]]; then
   exit 0
 fi
 _gate_head_sha() {
-  git rev-parse HEAD 2>/dev/null || true
+  # A repository with no commits has no HEAD to record. That is the documented
+  # "no head recorded" case, not a failure to swallow: pr_gate_failure.py then
+  # falls back to digest-only matching. Handled explicitly rather than with
+  # `|| true`, which the swallowed-failure ratchet counts and rightly so.
+  local head
+  if head="$(git rev-parse HEAD 2>/dev/null)"; then
+    printf '%s' "$head"
+  fi
 }
 
 _gate_receipt_matches() {
