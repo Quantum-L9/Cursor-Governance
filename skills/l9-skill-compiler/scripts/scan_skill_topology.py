@@ -5,7 +5,6 @@ import re
 import sys
 
 import yaml
-
 from _common import REPO, emit, fail, load_json
 
 
