@@ -2,6 +2,7 @@
 """Operator CLI behavior: normalization, typed failures, and DAG invocation."""
 
 import ast
+import importlib.util
 import json
 import os
 import subprocess
@@ -16,6 +17,18 @@ import compile_skill as cli
 FIX = os.path.join(HERE, "fixtures")
 REPO = os.path.abspath(os.path.join(HERE, "..", "..", ".."))
 CLI_PATH = os.path.join(SCRIPTS, "compile_skill.py")
+
+
+def _write_capable_nodes():
+    """Node ids the DAG itself marks as write-capable."""
+    runner_path = os.path.join(REPO, "workflows", "dags", "skill_compiler_runner.py")
+    spec = importlib.util.spec_from_file_location("skill_compiler_runner_cli_test", runner_path)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    dag, _, _ = module.load_canonical_dag()
+    return {node["id"] for node in dag.NODES if node.get("writes")}
+
 
 STAGE_MODULES = {
     "bind_inputs",
@@ -232,12 +245,13 @@ def test_dry_run_skips_every_write_capable_stage():
         ]
     )
     assert code == 0
-    skipped = {
-        stage["node"]
-        for stage in payload["stages"]
-        if stage["status"] == "skipped_dry_run_would_write"
-    }
-    assert "NORMALIZE_SKILL_IR" in skipped or not skipped
+    write_nodes = _write_capable_nodes()
+    assert write_nodes, "the DAG declares no write-capable node to check"
+    statuses = {stage["node"]: stage["status"] for stage in payload["stages"]}
+    # Every write-capable node was reached and every one of them was skipped.
+    assert write_nodes <= set(statuses)
+    for node in sorted(write_nodes):
+        assert statuses[node] == "skipped_dry_run_would_write", node
     assert payload["artifacts"] == []
 
 
