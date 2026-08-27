@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-26T20:01:05Z'
+generated_utc: '2026-08-27T00:43:17Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:76fa9e271f11e4aaed6425f0f1a3ea6b9418ea5a50898037f17ef1a5d2738a89
+source_tree_digest: sha256:e454f9f3d18e646017e5041209103ae835627b1749a2dd91c3a5b5df33b33b05
 summary:
   total_mdc_files: 67
   always_apply_true: 31
@@ -654,8 +654,8 @@ rules:
 - file: 53-pr-overlap-guardrail.mdc
   id: l9.rule.53.pr.overlap.guardrail
   id_source: explicit
-  version: 1.0.0
-  description: Before opening any PR, the pre-open overlap gate must pass; overlapping work routes into the existing open PR or stacks on its head, never a sibling PR that conflicts.
+  version: 1.1.0
+  description: Before opening any PR, the pre-open overlap gate must pass; a branch conflicting with its own base is blocked outright, and work overlapping an open PR routes into that PR or stacks on its head, never a sibling PR that conflicts.
   scope: global
   domain: git
   activation: always
@@ -664,8 +664,8 @@ rules:
   globs: null
   first_heading: PR overlap guardrail (PR_OVERLAP_GUARDRAIL_V1)
   has_yaml_frontmatter: true
-  line_count: 88
-  content_digest: sha256:f74a35cbddacef5e06662f2dc7f9d0aa6946a0074f068363ecc6a4275944b14a
+  line_count: 112
+  content_digest: sha256:043137b8e8a57e7238bb5349bc4aac002fa67ec7c00cd7eb95e4270b7d3b85b1
   authority: canonical_global
   context_cost: moderate
   deprecated: false

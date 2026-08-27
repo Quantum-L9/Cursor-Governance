@@ -1,7 +1,7 @@
 ---
 id: l9.rule.53.pr.overlap.guardrail
-version: 1.0.0
-description: Before opening any PR, the pre-open overlap gate must pass; overlapping work routes into the existing open PR or stacks on its head, never a sibling PR that conflicts.
+version: 1.1.0
+description: Before opening any PR, the pre-open overlap gate must pass; a branch conflicting with its own base is blocked outright, and work overlapping an open PR routes into that PR or stacks on its head, never a sibling PR that conflicts.
 scope: global
 domain: git
 activation: always
@@ -13,11 +13,35 @@ alwaysApply: true
 
 The only sanctioned publish path (`make pr` → `open_pr_after_gate.sh`) runs
 `ops/scripts/pr_overlap_check.py` between the L4 release check and `git push`.
-The gate detects whether the current branch textually conflicts with any
-already-open PR in the same repo, and blocks BEFORE the push with routing
-instructions. Raw `git push` / `gh pr create` are off doctrine but not blocked
-(CANONICAL_LAW §6.2.4); prefer `make pr` because it runs this gate, not because
-the alternative errors.
+The gate detects whether the current branch textually conflicts with its own
+base or with any already-open PR in the same repo, and blocks BEFORE the push
+with routing instructions. Raw `git push` / `gh pr create` are off doctrine but
+not blocked (CANONICAL_LAW §6.2.4); prefer `make pr` because it runs this gate,
+not because the alternative errors.
+
+## Base probe (runs first)
+
+Before any open-PR reasoning, `base_conflicts()` probes HEAD against the
+freshly fetched `PR_BASE` with the same `git merge-tree --write-tree` test and
+blocks on non-generated conflicts.
+
+It runs **first** because the open-PR path short-circuits: with nothing else
+open the gate used to print `PASS: no other open PRs to overlap` and return —
+and that is exactly the state a branch duplicating already-merged work arrives
+in. Merged work is not an open PR any more, so the open-PR probe is
+structurally blind to it. PR #319 was that case: a second architecture compiler
+built in parallel with the one already on `main`, add/add-conflicting with its
+base on 28 paths, published clean and caught only by reading the diff by hand.
+
+Unlike the open-PR probe there is no changed-files filter. A conflict against
+the base is by construction one this branch's own side caused; the only paths
+merge-tree can name outside the three-dot diff are directory/file collisions,
+which must block too. Generated paths stay exempt.
+
+`PR_OVERLAP` governs it identically (`block` / `warn` / `ignore`), and an
+unavailable probe is a telemetry failure under the same policy below. On a hit:
+refresh from the base and resolve, or close the branch if the work is already
+merged. Do not route around it — a base conflict is not a stacking candidate.
 
 ## Overlap gate
 

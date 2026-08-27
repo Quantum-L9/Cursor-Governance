@@ -28,6 +28,7 @@ environment/generated/llm-rules/** merge=l9-generated
 ops/generated/skill-registry.json merge=l9-generated
 environment/agents/adapters/claude-code/generated/skill-registry.json merge=l9-generated
 environment/agents/adapters/claude-code/settings.template.json merge=l9-generated
+.claude/settings.json merge=l9-generated
 commands/COMMANDS_MANIFEST.yaml merge=l9-generated
 environment/program-execution/core/MANIFEST.yaml merge=l9-generated
 environment/program-execution/core/program-execution-blueprint-template/MANIFEST.yaml merge=l9-generated
