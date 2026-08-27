@@ -99,6 +99,24 @@ def save_ledger(root: Path, payload: dict[str, Any]) -> Path:
     return path
 
 
+def _was_published(root: Path, branch: str) -> bool:
+    """True when this branch was pushed at some point, even if it is gone now.
+
+    `git push -u` writes branch.<name>.remote; a branch that was never pushed
+    carries none. That is the only offline evidence separating "merged and
+    deleted upstream" from "never published", because a squash merge leaves the
+    branch's commits unreachable from main and the deleted ref leaves nothing to
+    compare against.
+
+    Residual, stated rather than hidden: a branch whose upstream was set by hand
+    without ever pushing reads as published here. That requires a deliberate
+    `--set-upstream-to`, and the alternative — treating every deleted branch as
+    unpushed work — misfires on every merged branch in every session.
+    """
+    code, remote = _git(root, "config", "--get", f"branch.{branch}.remote")
+    return code == 0 and bool(remote.strip())
+
+
 def publish_debt(root: Path) -> dict[str, Any] | None:
     """Commits on a publishable branch that the remote does not have.
 
@@ -142,6 +160,18 @@ def publish_debt(root: Path) -> dict[str, Any] | None:
 
     remote_sha = out.split("\t", 1)[0].strip() if out.strip() else ""
     if remote_sha == head:
+        return None
+    if not remote_sha and _was_published(root, branch):
+        # Merged and deleted upstream. A squash merge gives the branch's commits
+        # no ancestry to main by design, so no reachability test can find them,
+        # and the branch itself is gone -- absence upstream looks identical to
+        # never having been pushed. The distinguisher is that pushing writes
+        # upstream config and a branch that was never pushed has none.
+        #
+        # Not a soft call: the remedy attached to publish debt is "push it", and
+        # pushing here recreates a branch the merge deleted. An instruction that
+        # is wrong to follow is worse than silence -- the same satisfiability
+        # rule that governs the two cases above.
         return None
     if remote_sha:
         # HEAD reachable from the remote tip means the work is published and

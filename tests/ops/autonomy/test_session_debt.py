@@ -146,6 +146,55 @@ def test_checkout_behind_the_remote_tip_is_not_debt(origin: Path, tmp_path: Path
     assert session_debt.publish_debt(second) is None
 
 
+def test_merged_and_deleted_branch_is_not_debt(clone: Path) -> None:
+    """CI-036's own case, reproduced inside the checker.
+
+    A squash merge gives the branch's commits no ancestry to main by design, and
+    the merge deletes the branch, so absence upstream is indistinguishable from
+    never-pushed by reachability alone. Reporting it would attach the remedy
+    "push it" to a branch the merge deleted.
+    """
+    commit_on_branch(clone, "feat/x")
+    git(clone, "push", "-q", "-u", "origin", "feat/x")
+    # Squash-merge into main and delete the branch, exactly as GitHub does.
+    git(clone, "checkout", "-q", "main")
+    git(clone, "merge", "-q", "--squash", "feat/x")
+    git(clone, "commit", "-q", "-m", "feat: squashed (#1)")
+    git(clone, "push", "-q", "origin", "main")
+    git(clone, "push", "-q", "origin", "--delete", "feat/x")
+    git(clone, "checkout", "-q", "feat/x")
+
+    assert git(clone, "ls-remote", "--heads", "origin", "feat/x") == ""
+    head = git(clone, "rev-parse", "HEAD")
+    unreachable = subprocess.run(
+        ["git", "-C", str(clone), "merge-base", "--is-ancestor", head, "origin/main"],
+        capture_output=True,
+        check=False,
+    )
+    assert unreachable.returncode != 0, "squash merge must leave HEAD unreachable from main"
+    assert session_debt.publish_debt(clone) is None
+
+
+def test_never_pushed_branch_is_still_debt_when_absent_upstream(clone: Path) -> None:
+    """The direction that matters: absence upstream must still catch real debt.
+
+    Both cases look identical to ls-remote. Only upstream config separates them,
+    so this pins that a branch with none is not excused by the check above.
+    """
+    commit_on_branch(clone, "feat/never")
+    # `config --get` exits 1 on a missing key, so this cannot use the checked helper.
+    upstream = subprocess.run(
+        ["git", "-C", str(clone), "config", "--get", "branch.feat/never.remote"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert upstream.returncode != 0 and upstream.stdout.strip() == ""
+    debt = session_debt.publish_debt(clone)
+    assert debt is not None
+    assert debt["branch"] == "feat/never"
+
+
 def test_feature_branch_merely_ahead_of_main_is_not_debt(clone: Path) -> None:
     """Being ahead of origin/main is what a feature branch IS, not debt."""
     commit_on_branch(clone, "feat/x")
