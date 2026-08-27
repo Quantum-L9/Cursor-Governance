@@ -5,14 +5,16 @@
 #   layer: registry
 #   owner: governance-control-plane
 #   status: active
-#   version: 2.0.0
-#   updated: 2026-08-12
+#   version: 3.0.0
+#   updated: 2026-08-26
 #
 # Sole topology SSOT for peer identity -> surface -> provider -> execution profile.
 # Provider descriptors never carry agent_ref. Runtime health remains receipt-backed.
+# Every peer is bound to the one canonical root-autonomy authorization provider,
+# regardless of whether its execution provider is currently routable.
 
-schema: l9.peer-runtime-bindings.v2
-schema_version: 2.0.0
+schema: l9.peer-runtime-bindings.v3
+schema_version: 3.0.0
 peers:
   cursor:
     agent_ref: cursor
@@ -72,6 +74,9 @@ peers:
         - surface: codex-cloud
           provider_ref: codex-cloud
           execution_profile_ref: worker-default
+    autonomy:
+      required: true
+      provider_id: root-autonomy-control-plane
     subagents:
       enabled: false
     results:
@@ -88,6 +93,9 @@ peers:
         - surface: gemini-cli
           provider_ref: gemini-review
           execution_profile_ref: reviewer-default
+    autonomy:
+      required: true
+      provider_id: root-autonomy-control-plane
     subagents:
       enabled: false
     results:
@@ -104,6 +112,9 @@ peers:
         - surface: manus-cloud
           provider_ref: manus-cloud
           execution_profile_ref: worker-read-only
+    autonomy:
+      required: true
+      provider_id: root-autonomy-control-plane
     subagents:
       enabled: false
     results:

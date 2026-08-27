@@ -18,7 +18,6 @@ BOOTSTRAP_GLOBS = (
     "gemini-block.md",
     "bootstrap.template.md",
 )
-PREEXISTING_SURFACES = {"cursor", "claude-code"}
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -83,10 +82,7 @@ class ExecutablePeerModel:
 def _check_schema(model: ExecutablePeerModel, errors: list[str]) -> None:
     for err in sorted(model.bindings_validator.iter_errors(model.bindings_doc), key=str):
         errors.append(f"[E2] bindings schema: {err.message}")
-    for err in sorted(
-        model.profile_validator.iter_errors(model.profile_registry),
-        key=str,
-    ):
+    for err in sorted(model.profile_validator.iter_errors(model.profile_registry), key=str):
         errors.append(f"[E2] profile registry schema: {err.message}")
 
 
@@ -160,27 +156,42 @@ def _check_autonomy(model: ExecutablePeerModel, errors: list[str]) -> None:
     provider = _load_yaml(provider_path) if provider_path.is_file() else {}
     compat = _load_yaml(compat_path) if compat_path.is_file() else {}
     compat_path_value = ((compat.get("providers") or {}).get("root_autonomy") or {}).get("path")
+
+    if provider.get("provider_id") != ROOT_AUTONOMY_PROVIDER_ID:
+        errors.append("[E13] canonical root autonomy provider missing")
+    if provider.get("owns_program_state") is not False:
+        errors.append("[E13] autonomy must not own Program state")
+    canonical = provider.get("canonical_path")
+    if not canonical or not (model.repo_root / str(canonical)).is_dir():
+        errors.append("[E13] canonical autonomy path does not resolve")
+    if compat_path_value and canonical != compat_path_value:
+        errors.append("[E13] autonomy provider path disagrees with compatibility")
+
     for key, peer in model.peers.items():
         autonomy = peer.get("autonomy") if isinstance(peer, dict) else None
-        if not isinstance(autonomy, dict) or autonomy.get("required") is not True:
+        if not isinstance(autonomy, dict):
+            errors.append(f"[E13] {key}: autonomy binding missing")
             continue
-        if autonomy.get("provider_id") != provider.get("provider_id"):
+        if autonomy.get("required") is not True:
+            errors.append(f"[E13] {key}: root autonomy must be required")
+        if autonomy.get("provider_id") != ROOT_AUTONOMY_PROVIDER_ID:
             errors.append(f"[E13] {key}: autonomy provider mismatch")
-    if any(
-        isinstance(peer, dict)
-        and isinstance(peer.get("autonomy"), dict)
-        and peer["autonomy"].get("required") is True
-        for peer in model.peers.values()
-    ):
-        if provider.get("provider_id") != ROOT_AUTONOMY_PROVIDER_ID:
-            errors.append("[E13] canonical root autonomy provider missing")
-        if provider.get("owns_program_state") is not False:
-            errors.append("[E13] autonomy must not own Program state")
-        canonical = provider.get("canonical_path")
-        if not canonical or not (model.repo_root / str(canonical)).is_dir():
-            errors.append("[E13] canonical autonomy path does not resolve")
-        if compat_path_value and canonical != compat_path_value:
-            errors.append("[E13] autonomy provider path disagrees with compatibility")
+
+
+def _has_bootstrap_carrier(model: ExecutablePeerModel, adapter: str) -> bool:
+    """True when the adapter carries session bootstrap by some mechanical means.
+
+    A surface either ships a bootstrap document under environment/agents/adapters/,
+    or it is rendered by a root-autonomy surface renderer. Root autonomy names its
+    renderer packages as Python modules, so the kebab adapter id is normalized to
+    the module spelling (claude-code -> autonomy/adapters/claude_code/adapter.py).
+    """
+    surface_root = model.agents_root / "adapters" / adapter
+    if any((surface_root / name).is_file() for name in BOOTSTRAP_GLOBS):
+        return True
+    module_name = adapter.replace("-", "_")
+    root_adapter = model.repo_root / "autonomy/adapters" / module_name / "adapter.py"
+    return root_adapter.is_file()
 
 
 def _check_carriers(model: ExecutablePeerModel, errors: list[str]) -> None:
@@ -196,10 +207,7 @@ def _check_carriers(model: ExecutablePeerModel, errors: list[str]) -> None:
     for key, peer in model.required_peers().items():
         agent = model.agents.get(peer.get("agent_ref")) or {}
         adapter = str(agent.get("adapter", key))
-        if adapter in PREEXISTING_SURFACES:
-            continue
-        root = model.agents_root / "adapters" / adapter
-        if not any((root / name).is_file() for name in BOOTSTRAP_GLOBS):
+        if not _has_bootstrap_carrier(model, adapter):
             errors.append(f"[E14] {key}: missing bootstrap carrier")
     for key, agent in model.agents.items():
         if isinstance(agent, dict) and "execution" in agent:
@@ -248,11 +256,7 @@ def validate(repo_root: Path) -> dict[str, Any]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument(
-        "--repo-root",
-        type=Path,
-        default=Path(__file__).resolve().parents[3],
-    )
+    parser.add_argument("--repo-root", type=Path, default=Path(__file__).resolve().parents[3])
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--schema-only", action="store_true")
     args = parser.parse_args(argv)

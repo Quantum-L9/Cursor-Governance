@@ -11,8 +11,9 @@ class AdapterBypassTests(unittest.TestCase):
             {
                 "adapter_id": "unsafe",
                 "adapter_type": "cursor",
+                "peer_ref": "cursor",
+                "surface": "cursor-ide",
                 "protocol_version": "1.0.0",
-                "executable": "cursor",
                 "tool_mediation_mode": "optional",
                 "direct_tool_access": True,
                 "autonomous_merge": True,

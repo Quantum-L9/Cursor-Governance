@@ -1,6 +1,10 @@
 {
   "adapter_id": "claude-code-local",
   "adapter_type": "claude-code",
+  "peer_ref": "claude-code",
+  "surface": "claude-cli",
+  "provider_ref": "claude-code-direct",
+  "execution_profile_ref": "worker-default",
   "protocol_version": "1.0.0",
   "executable": "claude",
   "tool_mediation_mode": "mandatory",

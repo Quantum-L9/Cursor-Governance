@@ -76,7 +76,7 @@ class ProbeCommandTests(unittest.TestCase):
                 {
                     "status": "BLOCKED",
                     "checks": {
-                        "identity_binding": "PASS",
+                        "canonical_binding": "PASS",
                         "provider_conformance": "PASS",
                         "execution_profile": "PASS",
                         "provider_routable": "PASS",
@@ -95,7 +95,7 @@ class ProbeCommandTests(unittest.TestCase):
                 {
                     "status": "BLOCKED",
                     "checks": {
-                        "identity_binding": "FAIL",
+                        "canonical_binding": "FAIL",
                         "provider_probe": "BLOCKED",
                     },
                 }

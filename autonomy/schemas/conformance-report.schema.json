@@ -1,12 +1,14 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://quantum-l9.dev/schemas/conformance-report.schema.json",
-  "title": "L9 Adapter Conformance Report",
+  "title": "L9 Root Autonomy Conformance Report",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "adapter_id",
     "adapter_type",
+    "peer_ref",
+    "surface",
     "protocol_version",
     "status",
     "checks"
@@ -18,10 +20,15 @@
     },
     "adapter_type": {
       "type": "string",
-      "enum": [
-        "cursor",
-        "claude-code"
-      ]
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "peer_ref": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
+    },
+    "surface": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9]*(-[a-z0-9]+)*$"
     },
     "protocol_version": {
       "type": "string",

@@ -20,6 +20,9 @@ metadata:
 
 # Bounded Autonomy (Cursor SOP)
 
+> This is a Cursor host/presentation SOP. Root `autonomy/` is peer-neutral and
+> authorization is bound through canonical peer topology.
+
 ## Purpose
 
 Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent work and deploy background PR-poll subagents while the main agent continues — without autonomous merge.
