@@ -173,7 +173,7 @@ norecursedirs = [
 # doesn't fail on a dormant, currently-unused code path; the underlying gap is
 # untouched.
 # skills/*/scripts/self_test.py files are skill self-check scripts, not pytest tests.
-addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=skills/l9-plan/scripts/self_test.py --ignore=skills/l9-repository-renovation/scripts/self_test.py --ignore=skills/l9-structured-reasoning/scripts/self_test.py"
+addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=skills/l9-plan/scripts/self_test.py --ignore=skills/l9-repository-renovation/scripts/self_test.py --ignore=skills/l9-structured-reasoning/scripts/self_test.py --ignore=skills/l9-skill-compiler/scripts/self_test.py"
 
 [build-system]
 requires = ["setuptools>=68"]
