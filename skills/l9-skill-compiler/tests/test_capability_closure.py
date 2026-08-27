@@ -70,7 +70,7 @@ def test_bounded_unknown_blocks():
     )
     for node in data["workflow"]["nodes"]:
         if node["id"] == "COMPILE_REQUEST":
-            node["capabilities"] = ["future_thing"]
+            node["capabilities"] = node.get("capabilities", []) + ["future_thing"]
     assert cc.check(data, REPO, live_skills=LIVE)["result"] == "BLOCKED"
 
 
@@ -79,7 +79,7 @@ def test_unbounded_unknown_fails():
     data["capabilities"].append({"id": "sloppy", "required": True, "binding": {"kind": "UNKNOWN"}})
     for node in data["workflow"]["nodes"]:
         if node["id"] == "COMPILE_REQUEST":
-            node["capabilities"] = ["sloppy"]
+            node["capabilities"] = node.get("capabilities", []) + ["sloppy"]
     assert cc.check(data, REPO, live_skills=LIVE)["result"] == "FAIL"
 
 
@@ -94,7 +94,7 @@ def test_external_capability_requires_probe():
     )
     for node in data["workflow"]["nodes"]:
         if node["id"] == "COMPILE_REQUEST":
-            node["capabilities"] = ["ext"]
+            node["capabilities"] = node.get("capabilities", []) + ["ext"]
     assert cc.check(data, REPO, live_skills=LIVE)["result"] == "FAIL"
 
 
@@ -114,5 +114,5 @@ def test_external_capability_with_probe_is_runtime_bound():
     )
     for node in data["workflow"]["nodes"]:
         if node["id"] == "COMPILE_REQUEST":
-            node["capabilities"] = ["ext"]
+            node["capabilities"] = node.get("capabilities", []) + ["ext"]
     assert cc.check(data, REPO, live_skills=LIVE)["result"] == "RUNTIME_BOUND"

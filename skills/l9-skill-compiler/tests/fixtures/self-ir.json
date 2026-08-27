@@ -133,6 +133,30 @@
   ],
   "capabilities": [
     {
+      "id": "dag_invocation",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "workflows/dags/skill_compiler_runner.py",
+        "success_condition": "resolves the canonical graph and returns a terminal state from TERMINAL_STATES",
+        "failure_behavior": "raises before execution when the graph does not validate",
+        "depends_on": []
+      }
+    },
+    {
+      "id": "operator_cli",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "skills/l9-skill-compiler/scripts/compile_skill.py",
+        "success_condition": "normalizes operator input into a canonical CompileRequest and reports the DAG terminal state",
+        "failure_behavior": "typed error class with its mapped exit code; never reports a dry run as a build",
+        "depends_on": [
+          "dag_invocation"
+        ]
+      }
+    },
+    {
       "id": "bind_inputs",
       "required": true,
       "binding": {
@@ -320,7 +344,10 @@
         "id": "COMPILE_REQUEST",
         "kind": "deterministic",
         "impl": "bind_and_validate_inputs",
-        "capabilities": [],
+        "capabilities": [
+          "operator_cli",
+          "dag_invocation"
+        ],
         "next": [
           "BIND_INPUTS"
         ]

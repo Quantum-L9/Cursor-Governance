@@ -36,12 +36,62 @@ default outcome. Most-specific existing owner wins.
 
 - Canonical typed graph: `workflows/dags/skill_compiler_dag.py`
 - Registry id: `skill-compiler-v2`, bound through the repo's existing `SessionDAG` registry and `workflows/dags/__init__.py` auto-discovery surface
+- Programmatic invocation: `workflows/dags/skill_compiler_runner.py`. It derives execution order, each stage's argv, guard entry, and terminal state from the graph itself, so it carries no stage list of its own.
 - DAG authoring mechanics and registration conventions are owned by `l9-dag-authoring`. This Skill consumes them and does not invent a parallel registry.
 
 Logical stages: COMPILE_REQUEST, BIND_INPUTS, SCAN_SKILL_TOPOLOGY, CLASSIFY_SKILL_PROFILE,
 EXTRACT_SOURCE_INTELLIGENCE, NORMALIZE_SKILL_IR, DESIGN_RUNTIME, RENDER_TARGET_PROFILE,
 STATIC_VALIDATE, CAPABILITY_CLOSURE, ACTIVATION_EVAL, BEHAVIOR_EVAL, PACKAGE,
 HANDOFF_TO_WIRING, PASS_BLOCKED_FAIL.
+
+## Operator entrypoint
+
+`scripts/compile_skill.py` is a thin facade over the same DAG. It normalizes operator
+input into a canonical CompileRequest and invokes `skill-compiler-v2`; it owns no
+compilation semantics and never sequences stages itself.
+
+```bash
+python skills/l9-skill-compiler/scripts/compile_skill.py optimize l9-existing-skill
+python skills/l9-skill-compiler/scripts/compile_skill.py rebuild skills/l9-existing-skill
+python skills/l9-skill-compiler/scripts/compile_skill.py compile request.yaml
+python skills/l9-skill-compiler/scripts/compile_skill.py create \
+  --name l9-new-skill --source ./source.md --profile portable --profile l9
+```
+
+| Mode | Canonical intent | Subject |
+|---|---|---|
+| `optimize <skill>` | `evolve` | resolved live Skill, its pack as source material |
+| `rebuild <skill>` | `rebuild` | resolved live Skill, identity preserved |
+| `compile <file>` | intent from the request | JSON or YAML request file |
+| `create --name --source` | `create` | proposed name plus source material |
+
+YAML is an input adapter only: it normalizes into the same object as the equivalent
+JSON and is validated by the one `contracts/compile-request.schema.json`. There is no
+second schema, and a key the canonical schema does not allow fails closed.
+
+Flags: `--dry-run`, `--output-json`, `--request-id`, `--profile`, `--objective`,
+`--receipt-path`, `--output-dir`, `--no-package`, `--ir`, `--skills-root`.
+
+`--dry-run` parses, resolves the Skill or source, scans topology, classifies the
+profile, and prints the normalized request and planned node order. It writes no pack,
+performs no wiring or registration, and never reports a build.
+
+The convenience verb never decides ownership. `create` still passes through the
+topology stage, so `EXTEND_EXISTING`, `COMPOSE_EXISTING`, `REPLACE_EXISTING`, and
+`REJECT_NEW_SKILL` remain possible answers and are surfaced as given.
+
+Bounded-LLM nodes have no deterministic substitute. A terminal-only run stops at the
+first such node and reports `BOUNDED_LLM_REQUIRED` with the node and its contract; the
+agent executes that node under the contract and re-invokes with `--ir` to drive the
+deterministic tail. A blocked run is never reported as a build.
+
+Exit codes: `0` PASS, `2` invalid operator input, `3` BLOCKED, `4` compilation or
+runtime FAIL, `5` validation FAIL, `10` unclassified. Failures are typed
+(`REQUEST_SCHEMA_INVALID`, `SKILL_NOT_FOUND`, `TOPOLOGY_BLOCKED`, `DAG_NOT_AVAILABLE`,
+`COMPILATION_BLOCKED`, `VALIDATION_FAILED`, …) and `--output-json` emits the
+request, topology decision, skill profile, DAG terminal state, stage records,
+artifacts, unknowns, and errors. The executable and the contracts remain
+authoritative over this section.
 
 ## Machine contracts
 
