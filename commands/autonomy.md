@@ -10,7 +10,7 @@ required**. Recommendation ≠ mutation authority.
 
 **First-class family registry:**
 [`environment/contracts/autonomy/MANIFEST.yaml`](../environment/contracts/autonomy/MANIFEST.yaml)
-(SSOT map for root `autonomy/`, `ops/autonomy`, Claude scheduler). PE Controller
+(SSOT map for root `autonomy/`, `ops/autonomy`, and peer-execution integration). PE Controller
 remains authoritative; autonomy stays `owns_program_state: false`.
 
 ## Steps

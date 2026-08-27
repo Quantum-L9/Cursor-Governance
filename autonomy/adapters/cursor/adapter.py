@@ -51,7 +51,7 @@ def _result_contract(role: str) -> dict[str, Any] | None:
 
 def load_cursor_config(payload: Mapping[str, Any]) -> AdapterConfig:
     config = AdapterConfig.from_dict(payload)
-    if config.adapter_type.value != "cursor":
+    if config.surface != "cursor-ide":
         raise ValueError("Cursor adapter requires adapter_type='cursor'")
     return config
 

@@ -1,6 +1,10 @@
 {
   "adapter_id": "cursor-local",
   "adapter_type": "cursor",
+  "peer_ref": "cursor",
+  "surface": "cursor-ide",
+  "provider_ref": "cursor-foreground",
+  "execution_profile_ref": "worker-default",
   "protocol_version": "1.0.0",
   "executable": "cursor",
   "tool_mediation_mode": "mandatory",

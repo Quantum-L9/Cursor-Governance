@@ -1,16 +1,13 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from enum import StrEnum
 from typing import Any
 
 ADAPTER_PROTOCOL_VERSION = "1.0.0"
-
-
-class AdapterType(StrEnum):
-    CURSOR = "cursor"
-    CLAUDE_CODE = "claude-code"
+IDENTIFIER_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
 
 
 class ConformanceStatus(StrEnum):
@@ -18,12 +15,38 @@ class ConformanceStatus(StrEnum):
     FAIL = "FAIL"
 
 
+def _identifier(value: Mapping[str, Any], field_name: str) -> str:
+    raw = value.get(field_name)
+    if not isinstance(raw, str) or not IDENTIFIER_RE.fullmatch(raw.strip()):
+        raise ValueError(
+            f"Adapter field {field_name!r} must be a non-empty kebab-case identifier"
+        )
+    return raw.strip()
+
+
+def _optional_identifier(value: Mapping[str, Any], field_name: str) -> str | None:
+    raw = value.get(field_name)
+    if raw is None:
+        return None
+    return _identifier(value, field_name)
+
+
+def _required_bool(value: Mapping[str, Any], field_name: str) -> bool:
+    if field_name not in value:
+        raise ValueError(f"Adapter field {field_name!r} is required and must be boolean")
+    raw = value[field_name]
+    if type(raw) is not bool:
+        raise ValueError(f"Adapter field {field_name!r} must be boolean")
+    return raw
+
+
 @dataclass(frozen=True)
 class AdapterConfig:
     adapter_id: str
-    adapter_type: AdapterType
+    adapter_type: str
+    peer_ref: str
+    surface: str
     protocol_version: str
-    executable: str
     tool_mediation_mode: str
     direct_tool_access: bool
     autonomous_merge: bool
@@ -35,43 +58,55 @@ class AdapterConfig:
     supports_independent_review: bool
     supports_human_gate: bool
     metadata: Mapping[str, Any]
+    executable: str | None = None
+    provider_ref: str | None = None
+    execution_profile_ref: str | None = None
 
     @classmethod
     def from_dict(cls, value: Mapping[str, Any]) -> AdapterConfig:
-        required_strings = (
-            "adapter_id",
-            "adapter_type",
-            "protocol_version",
-            "executable",
-            "tool_mediation_mode",
-        )
-        for field_name in required_strings:
+        adapter_id = _identifier(value, "adapter_id")
+        adapter_type = _identifier(value, "adapter_type")
+        peer_ref = _identifier(value, "peer_ref")
+        surface = _identifier(value, "surface")
+        provider_ref = _optional_identifier(value, "provider_ref")
+        execution_profile_ref = _optional_identifier(value, "execution_profile_ref")
+        for field_name in ("protocol_version", "tool_mediation_mode"):
             raw = value.get(field_name)
             if not isinstance(raw, str) or not raw.strip():
                 raise ValueError(f"Adapter field {field_name!r} must be a non-empty string")
-        try:
-            adapter_type = AdapterType(value["adapter_type"])
-        except ValueError as exc:
-            raise ValueError(f"Unsupported adapter type: {value['adapter_type']!r}") from exc
+        executable = value.get("executable")
+        if executable is not None and (not isinstance(executable, str) or not executable.strip()):
+            raise ValueError("Adapter field 'executable' must be a non-empty string when present")
         metadata = value.get("metadata", {})
         if not isinstance(metadata, Mapping):
             raise ValueError("Adapter metadata must be an object")
         return cls(
-            adapter_id=value["adapter_id"].strip(),
+            adapter_id=adapter_id,
             adapter_type=adapter_type,
-            protocol_version=value["protocol_version"].strip(),
-            executable=value["executable"].strip(),
-            tool_mediation_mode=value["tool_mediation_mode"].strip(),
-            direct_tool_access=bool(value.get("direct_tool_access", True)),
-            autonomous_merge=bool(value.get("autonomous_merge", True)),
-            supports_background_agents=bool(value.get("supports_background_agents", False)),
-            supports_agent_identity=bool(value.get("supports_agent_identity", False)),
-            supports_lease_propagation=bool(value.get("supports_lease_propagation", False)),
-            supports_heartbeat=bool(value.get("supports_heartbeat", False)),
-            supports_typed_artifacts=bool(value.get("supports_typed_artifacts", False)),
-            supports_independent_review=bool(value.get("supports_independent_review", False)),
-            supports_human_gate=bool(value.get("supports_human_gate", False)),
+            peer_ref=peer_ref,
+            surface=surface,
+            provider_ref=provider_ref,
+            execution_profile_ref=execution_profile_ref,
+            protocol_version=str(value["protocol_version"]).strip(),
+            executable=executable.strip() if isinstance(executable, str) else None,
+            tool_mediation_mode=str(value["tool_mediation_mode"]).strip(),
+            direct_tool_access=_required_bool(value, "direct_tool_access"),
+            autonomous_merge=_required_bool(value, "autonomous_merge"),
+            supports_background_agents=_required_bool(value, "supports_background_agents"),
+            supports_agent_identity=_required_bool(value, "supports_agent_identity"),
+            supports_lease_propagation=_required_bool(value, "supports_lease_propagation"),
+            supports_heartbeat=_required_bool(value, "supports_heartbeat"),
+            supports_typed_artifacts=_required_bool(value, "supports_typed_artifacts"),
+            supports_independent_review=_required_bool(value, "supports_independent_review"),
+            supports_human_gate=_required_bool(value, "supports_human_gate"),
             metadata=dict(metadata),
+        )
+
+    def surface_capabilities(self) -> frozenset[str]:
+        return frozenset(
+            name
+            for name in ("supports_background_agents", "supports_independent_review")
+            if getattr(self, name)
         )
 
 
@@ -87,6 +122,8 @@ class ConformanceCheck:
 class ConformanceReport:
     adapter_id: str
     adapter_type: str
+    peer_ref: str
+    surface: str
     protocol_version: str
     status: ConformanceStatus
     checks: tuple[ConformanceCheck, ...]
@@ -99,6 +136,8 @@ class ConformanceReport:
         return {
             "adapter_id": self.adapter_id,
             "adapter_type": self.adapter_type,
+            "peer_ref": self.peer_ref,
+            "surface": self.surface,
             "protocol_version": self.protocol_version,
             "status": self.status.value,
             "checks": [

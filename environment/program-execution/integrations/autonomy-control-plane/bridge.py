@@ -1,22 +1,25 @@
 from __future__ import annotations
 
-from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from adapters.common.imports import load_module
-
 
 class AutonomyControlPlaneBridge:
+    """Provider-neutral probe of the canonical root autonomy control plane.
+
+    Surface/provider rendering belongs to Peer Execution Core and its thin
+    adapters. This bridge only answers whether the shared authorization plane
+    exists and is structurally available.
+    """
+
     def __init__(self, repository_root: str | Path) -> None:
         self.root = Path(repository_root).resolve()
 
     def probe(self) -> dict[str, Any]:
         required = [
             self.root / "autonomy/runtime/engine.py",
+            self.root / "autonomy/adapters/protocol.py",
             self.root / "autonomy/adapters/orchestrator.py",
-            self.root / "autonomy/adapters/cursor/adapter.py",
-            self.root / "autonomy/adapters/claude_code/adapter.py",
         ]
         missing = [str(path.relative_to(self.root)) for path in required if not path.is_file()]
         return {
@@ -24,17 +27,3 @@ class AutonomyControlPlaneBridge:
             "missing": missing,
             "provider": "root_autonomy",
         }
-
-    def build_cursor_task(self, deployment: Mapping[str, Any]) -> dict[str, Any]:
-        module = load_module(
-            self.root / "autonomy/adapters/cursor/adapter.py",
-            "l9_root_autonomy_cursor_adapter",
-        )
-        return dict(module.build_cursor_task(deployment))
-
-    def build_claude_task(self, deployment: Mapping[str, Any]) -> dict[str, Any]:
-        module = load_module(
-            self.root / "autonomy/adapters/claude_code/adapter.py",
-            "l9_root_autonomy_claude_adapter",
-        )
-        return dict(module.build_claude_task(deployment))

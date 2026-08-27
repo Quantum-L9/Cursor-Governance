@@ -43,9 +43,7 @@ class Wave3Tests(unittest.TestCase):
             deployment_payload=self.deployment_payload,
             graph_payload=self.graph_payload,
         )
-        # Override in-memory only — do not mutate tracked policy files (pytest-xdist safe).
         requirements = load_policy("adapter-requirements")
-        requirements["allow_missing_executable_in_test"] = True
         self.orchestrator = AdapterOrchestrator(
             self.runtime,
             repository_root=ROOT,

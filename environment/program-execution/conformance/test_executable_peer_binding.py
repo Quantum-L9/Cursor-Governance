@@ -33,9 +33,12 @@ class ExecutablePeerBindingTests(unittest.TestCase):
             "cursor-foreground",
             "worker-default",
         )
-        self.assertEqual(readiness["schema"], "l9.executable-peer-readiness.v2")
-        self.assertEqual(readiness["identity"]["principal_id"], "cursor-memory-client")
-        self.assertEqual(readiness["checks"]["identity_binding"], "PASS")
+        self.assertEqual(readiness["schema"], "l9.executable-peer-readiness.v3")
+        self.assertEqual(readiness["binding"]["status"], "PASS")
+        self.assertEqual(
+            readiness["binding"]["autonomy_provider_ref"], "root-autonomy-control-plane"
+        )
+        self.assertEqual(readiness["checks"]["canonical_binding"], "PASS")
         self.assertEqual(readiness["checks"]["provider_conformance"], "PASS")
         self.assertEqual(readiness["checks"]["execution_profile"], "PASS")
         self.assertEqual(readiness["checks"]["provider_routable"], "PASS")
@@ -52,7 +55,7 @@ class ExecutablePeerBindingTests(unittest.TestCase):
             "codex-cloud",
             "worker-default",
         )
-        self.assertEqual(readiness["schema"], "l9.executable-peer-readiness.v2")
+        self.assertEqual(readiness["schema"], "l9.executable-peer-readiness.v3")
         self.assertEqual(readiness["status"], "BLOCKED")
         self.assertEqual(readiness["checks"]["provider_routable"], "FAIL")
 
@@ -84,10 +87,14 @@ class ExecutablePeerBindingTests(unittest.TestCase):
         context = _context_module().build_context(
             SUBSYSTEM, REPO_ROOT, "cursor", "cursor-ide", "cursor-foreground"
         )
-        self.assertEqual(context["schema"], "l9.executable-peer-context.v1")
+        self.assertEqual(context["schema"], "l9.executable-peer-context.v2")
         self.assertEqual(context["agent"]["role"], "orchestrator")
         self.assertEqual(
             context["program_execution"]["contract_family"], "program-execution-system.v2"
+        )
+        self.assertEqual(context["program_execution"]["adapter_id"], "cursor-foreground")
+        self.assertEqual(
+            context["program_execution"]["execution_profile_ref"], "worker-default"
         )
         self.assertTrue(context["autonomy"]["canonical"])
         self.assertIn(context["readiness"]["status"], {"READY", "BLOCKED"})

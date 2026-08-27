@@ -32,7 +32,7 @@ MUTATION_ROLES = frozenset({"executor", "remediator"})
 
 def load_claude_code_config(payload: Mapping[str, Any]) -> AdapterConfig:
     config = AdapterConfig.from_dict(payload)
-    if config.adapter_type.value != "claude-code":
+    if config.surface not in {"claude-cli", "claude-web", "claude-mobile"}:
         raise ValueError("Claude Code adapter requires adapter_type='claude-code'")
     return config
 
