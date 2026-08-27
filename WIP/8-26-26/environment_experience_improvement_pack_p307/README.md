@@ -49,8 +49,8 @@ Every final artifact maps back to source versions/paths in `_reconciliation/SOUR
 
 ---
 
-## Progress overlay (2026-08-26)
+## Progress overlay (2026-08-27)
 
-This is a **revised** pack: every improvement record now carries a `progress` block (done / partial / not_started), assessed against **main@post-#307-merge**. See [`PROGRESS.md`](PROGRESS.md) (human) and [`progress.yaml`](progress.yaml) (machine); per-record detail is under each entry's `progress:` key in `improvements.yaml`.
+This is a **revised** pack: every improvement record now carries a `progress` block (done / partial / not_started), assessed against **main@498dcaa (post-#307-merge + 47 commits) + PR#320 open**. See [`PROGRESS.md`](PROGRESS.md) (human) and [`progress.yaml`](progress.yaml) (machine); per-record detail is under each entry's `progress:` key in `improvements.yaml`.
 
-Totals: **2 done · 9 partial · 25 not started** of 36.
+Totals: **3 done · 14 partial · 19 not started** of 36. Two new records (CI-034, CI-035) and one progress-schema change are proposed, not yet adopted — see `PROGRESS.md`. Two new records (CI-034, CI-035) and one progress-schema change are proposed, not yet adopted — see `PROGRESS.md`.
