@@ -97,16 +97,15 @@ class AdapterOrchestrator:
     ) -> dict[str, Any]:
         session = self.require_conformant_session(session_id)
         if required_surface_capabilities:
-            config_payload = json.loads(session["config_json"])
-            config = AdapterConfig.from_dict(config_payload)
+            # Decode inside the guard: a session row this method cannot re-read
+            # as a valid config must deny the lease, not escape as a raw error.
             try:
+                config = AdapterConfig.from_dict(json.loads(session["config_json"]))
                 self.conformance.assert_surface_capabilities(
                     config, tuple(required_surface_capabilities)
                 )
-            except ValueError as exc:
-                raise PolicyViolation(
-                    f"SURFACE_CAPABILITY_UNAVAILABLE: {exc}"
-                ) from exc
+            except (ValueError, TypeError) as exc:
+                raise PolicyViolation(f"SURFACE_CAPABILITY_UNAVAILABLE: {exc}") from exc
         ready = self.runtime.scheduler.next_actions(campaign_id)
         selected = None
         if action_id:
