@@ -1,13 +1,21 @@
 from __future__ import annotations
 
+import json
 import unittest
 from pathlib import Path
+
+from jsonschema import Draft202012Validator
 
 from autonomy.adapters.conformance import AdapterConformance
 from autonomy.adapters.protocol import AdapterConfig
 from autonomy.policy_loader import load_example, load_policy
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _schema(name: str) -> Draft202012Validator:
+    path = ROOT / "autonomy/schemas" / name
+    return Draft202012Validator(json.loads(path.read_text(encoding="utf-8")))
 
 
 class PeerNeutralAutonomyTests(unittest.TestCase):
@@ -69,6 +77,16 @@ class PeerNeutralAutonomyTests(unittest.TestCase):
         heartbeat = next(c for c in report.checks if c.check_id == "ADAPTER-009")
         self.assertFalse(heartbeat.passed)
         self.assertEqual(report.status.value, "FAIL")
+
+    def test_examples_and_reports_match_their_declared_schemas(self) -> None:
+        config_schema = _schema("adapter-config.schema.json")
+        report_schema = _schema("conformance-report.schema.json")
+        for name in ("adapters/cursor.json", "adapters/claude-code.json"):
+            with self.subTest(example=name):
+                payload = load_example(name)
+                self.assertEqual(sorted(config_schema.iter_errors(payload), key=str), [])
+                report = self._report(payload).to_dict()
+                self.assertEqual(sorted(report_schema.iter_errors(report), key=str), [])
 
     def test_unregistered_peer_fails_closed(self) -> None:
         payload = load_example("adapters/cursor.json")
