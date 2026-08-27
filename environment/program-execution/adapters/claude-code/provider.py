@@ -156,9 +156,7 @@ class ClaudeCodeProvider:
                                 "result_type": type(_raw_result).__name__,
                                 "result_is_str": isinstance(_raw_result, str),
                                 "result_preview": (
-                                    _raw_result[:400]
-                                    if isinstance(_raw_result, str)
-                                    else None
+                                    _raw_result[:400] if isinstance(_raw_result, str) else None
                                 ),
                                 "payload_keys": sorted(payload.keys()),
                                 "changed_files_len": (
@@ -171,8 +169,7 @@ class ClaudeCodeProvider:
                                 "stdout_len": len(result.stdout or ""),
                                 "stderr_empty": not (result.stderr or "").strip(),
                                 "stderr_preview": (
-                                    (result.stderr or "")[-500:]
-                                    .replace("sk-", "sk-REDACTED")
+                                    (result.stderr or "")[-500:].replace("sk-", "sk-REDACTED")
                                 ),
                                 "persisted_error_keys": (
                                     sorted(_err_obj.keys()) if _err_obj else []

@@ -25,9 +25,7 @@ def parse_claude_json(output: str) -> dict[str, Any]:
         import time as _time
         from pathlib import Path as _Path
 
-        _log = _Path(
-            "/Users/macm2/Cursor-Governance/Cursor-Governance/.cursor/debug-65906b.log"
-        )
+        _log = _Path("/Users/macm2/Cursor-Governance/Cursor-Governance/.cursor/debug-65906b.log")
         _log.parent.mkdir(parents=True, exist_ok=True)
         with _log.open("a", encoding="utf-8") as _dbg:
             _dbg.write(

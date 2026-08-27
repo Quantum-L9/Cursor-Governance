@@ -175,12 +175,8 @@ def run_argv(
                             "stdout_len": len(stdout or ""),
                             "stderr_len": len(stderr or ""),
                             "stderr_empty": not (stderr or "").strip(),
-                            "stderr_preview": (stderr or "")[-500:].replace(
-                                "sk-", "sk-REDACTED"
-                            ),
-                            "stdout_is_json_object": (stdout or "").lstrip().startswith(
-                                "{"
-                            ),
+                            "stderr_preview": (stderr or "")[-500:].replace("sk-", "sk-REDACTED"),
+                            "stdout_is_json_object": (stdout or "").lstrip().startswith("{"),
                         },
                         "timestamp": int(time.time() * 1000),
                     }
