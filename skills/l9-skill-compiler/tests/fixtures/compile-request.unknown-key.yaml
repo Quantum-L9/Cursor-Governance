@@ -1,0 +1,9 @@
+request_id: unknown-key
+intent: rebuild
+subject:
+  proposed_name: l9-skill-compiler
+source_material: []
+target_profiles:
+  - portable
+  - l9
+yaml_only_field: not representable by the canonical schema

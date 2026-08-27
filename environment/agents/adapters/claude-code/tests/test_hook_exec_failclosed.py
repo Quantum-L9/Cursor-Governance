@@ -25,7 +25,12 @@ LAUNCHER = (
 )
 HOOKS_REL = Path("environment/agents/adapters/claude-code/hooks")
 
-GATES = ("merge_gate_wrap.py", "local_execution_gate_wrap.py", "memory_gate.py")
+GATES = (
+    "merge_gate_wrap.py",
+    "local_execution_gate_wrap.py",
+    "memory_gate.py",
+    "session_debt_wrap.py",
+)
 OBSERVERS = (
     "skill_usage_logger.py",
     "user_prompt_skill_router.py",

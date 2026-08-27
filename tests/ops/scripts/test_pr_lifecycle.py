@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -181,16 +182,20 @@ def test_gate_receipt_skip_on_unchanged_state(tmp_path: Path) -> None:
 
 
 def _state_digest(repo: Path, pr_base: str = "main") -> tuple[str, str]:
-    """Mirror run_pr_gate.sh's content digest: paths, then worktree contents."""
-    script = (
-        'list="$(mktemp)"; '
-        "{ git ls-files -z; git ls-files --others --exclude-standard -z; } "
-        '>"$list" 2>/dev/null || true; '
-        "cksum <\"$list\" | awk '{print $1}'; "
-        "xargs -0 -r git hash-object <\"$list\" 2>/dev/null | cksum | awk '{print $1}'; "
-        'rm -f "$list"'
-    )
-    out = subprocess.check_output(["bash", "-c", script], cwd=str(repo), text=True).split()
+    """Ask the gate for its own digest instead of reimplementing it.
+
+    This helper used to carry a shell copy of the algorithm. That duplication is
+    what made the digest expensive to correct: every change had to be made twice,
+    in two languages, and a drifting copy would let these tests pass while the
+    real gate did something else. The digest now also covers the gate's own
+    code, which a copy could not have known to include.
+    """
+    out = subprocess.check_output(
+        ["bash", str(SCRIPTS / "run_pr_gate.sh"), "--print-state-digest"],
+        cwd=str(repo),
+        text=True,
+        env={**os.environ, "WS": str(repo), "PR_BASE": pr_base},
+    ).split()
     return out[0], out[1]
 
 
@@ -416,6 +421,43 @@ def test_workflow_action_pins() -> None:
         cwd=ROOT,
     )
     assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_gate_code_change_invalidates_the_receipt(tmp_path: Path) -> None:
+    """A receipt must not survive a change to the gate that issued it.
+
+    The digest hashed the workspace tree. When $WS is a linked worktree the gate
+    runs from $GOV_ROOT, a different checkout, so editing run_pr_gate.sh left the
+    digest identical and the previous version's verdict was reused against the
+    new one. Validating a gate fix then required deleting the receipt by hand.
+
+    Isolated on a copied gate tree so the real repository is never mutated:
+    GOV_ROOT is derived as <script dir>/../.., which makes the copy authoritative.
+    """
+    gov = tmp_path / "gov"
+    (gov / "ops").mkdir(parents=True)
+    shutil.copytree(SCRIPTS, gov / "ops" / "scripts")
+    shutil.copytree(ROOT / "ops" / "config", gov / "ops" / "config")
+    gate = gov / "ops" / "scripts" / "run_pr_gate.sh"
+
+    repo = _init_repo(tmp_path, feature=True)
+
+    def digest() -> list[str]:
+        return subprocess.check_output(
+            ["bash", str(gate), "--print-state-digest"],
+            cwd=str(repo),
+            text=True,
+            env={**os.environ, "WS": str(repo), "PR_BASE": "main"},
+        ).split()
+
+    before = digest()
+    target = gov / "ops" / "scripts" / "run_python_test_suites.py"
+    target.write_text(target.read_text(encoding="utf-8") + "\n# behaviour change\n", "utf-8")
+    after = digest()
+
+    assert before[0] == after[0], "workspace paths did not change"
+    assert before[1] != after[1], "gate-code change must change the content digest"
+    assert before[2] == after[2] == "main"
 
 
 def test_baseline_ratchet_caller_is_absent() -> None:

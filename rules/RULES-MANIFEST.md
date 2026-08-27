@@ -1,16 +1,16 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-27T00:53:29Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-27T01:58:21Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
 | Bucket | Count |
 |---|---:|
-| Total MDC files | **67** |
-| `alwaysApply: true` | **31** |
+| Total MDC files | **68** |
+| `alwaysApply: true` | **32** |
 | `alwaysApply: false` | **36** |
 | No boolean `alwaysApply` | **0** |
-| Explicit stable IDs | **67** |
+| Explicit stable IDs | **68** |
 | Derived compatibility IDs | **0** |
 | Deprecated rules | **0** |
 
@@ -35,6 +35,7 @@ Generated: `2026-08-27T00:53:29Z`. Source: `rules/*.mdc`.
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | agent_requested | 145 | `935829c0a8d1` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | agent_requested | 182 | `fbbfa0dc8cc4` |
 | `41-graph-engine-architecture.mdc` | `l9.rule.41.graph.engine.architecture` | global | security | agent_requested | 104 | `db87e22cdb8a` |
+| `42-no-abandoned-work.mdc` | `l9.rule.42.no.abandoned.work` | global | git | always | 83 | `0faf271f6403` |
 | `43-lang-postgresql.mdc` | `l9.rule.43.lang.postgresql` | global | security | agent_requested | 54 | `3a3ff21bfdec` |
 | `44-recursive-execution-kernel.mdc` | `l9.rule.recursive-execution-kernel` | global | execution | agent_requested | 39 | `4c064ea19ce3` |
 | `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 87 | `2d4e738329b0` |
