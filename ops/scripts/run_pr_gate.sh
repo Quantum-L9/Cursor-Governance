@@ -341,7 +341,10 @@ elif grep -Eq '\.py$' "$changed_file"; then
   # this branch. classify_workspace_kind is available here: resolve_governance_
   # paths.sh sources lib/workspace_kind.sh at the top of this script.
   _pytest_repo_root_args=()
-  _pytest_ws_kind="$(classify_workspace_kind "$WS" 2>/dev/null || echo unknown)"
+  # No guard: the existing call site at the wiring check does not swallow this
+  # either, and a classifier that cannot answer is information the gate should
+  # surface rather than paper over with a default.
+  _pytest_ws_kind="$(classify_workspace_kind "$WS")"
   if [ "$_pytest_ws_kind" = "ssot" ] || [ "$_pytest_ws_kind" = "ssot_checkout" ]; then
     if [ "$(cd "$WS" && pwd -P)" != "$(cd "$GOV_ROOT" && pwd -P)" ]; then
       _pytest_repo_root_args=(--repo-root "$WS")
