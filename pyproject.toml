@@ -173,7 +173,10 @@ norecursedirs = [
 # doesn't fail on a dormant, currently-unused code path; the underlying gap is
 # untouched.
 # skills/*/scripts/self_test.py files are skill self-check scripts, not pytest tests.
-addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=skills/l9-plan/scripts/self_test.py --ignore=skills/l9-repository-renovation/scripts/self_test.py --ignore=skills/l9-structured-reasoning/scripts/self_test.py"
+# Every skill that adds one MUST be listed below AND in ops/config/python-contract.json:
+# they all resolve to the module name `self_test` under rootdir-relative import mode,
+# so an unregistered file collides with the first sibling collected and errors the run.
+addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=skills/l9-plan/scripts/self_test.py --ignore=skills/l9-repository-renovation/scripts/self_test.py --ignore=skills/l9-structured-reasoning/scripts/self_test.py --ignore=skills/l9-skill-compiler/scripts/self_test.py"
 
 [build-system]
 requires = ["setuptools>=68"]

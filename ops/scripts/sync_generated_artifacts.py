@@ -54,6 +54,9 @@ GENERATED_PATH_PREFIXES = (
     "ops/generated/skill-registry.json",
     "environment/agents/adapters/claude-code/generated/skill-registry.json",
     "environment/agents/adapters/claude-code/settings.template.json",
+    # Projection of settings.template.json, rewritten by the sessionStart
+    # reconciler in whichever workspace is open — see sync_claude_settings().
+    ".claude/settings.json",
     "commands/COMMANDS_MANIFEST.yaml",
     "skills/AUTONOMY_MANIFEST.yaml",
     "environment/program-execution/core/MANIFEST.yaml",
@@ -333,6 +336,45 @@ def sync_skill_registry(root: Path, wrote: list[str]) -> None:
             wrote.append(str(mirror.relative_to(root)))
 
 
+def sync_claude_settings(root: Path, wrote: list[str], warnings: list[str]) -> None:
+    """Regenerate the governance clone's .claude/settings.json from the template.
+
+    That file is a projection of environment/agents/adapters/claude-code/
+    settings.template.json, and the sessionStart reconciler rewrites it in
+    whatever workspace happens to be open. Before it was registered here it was
+    a generated artifact nothing in this SSOT regenerated, so every session that
+    landed after a template change wrote the same one-line delta into whichever
+    agent's worktree opened next — the identical `l9-global-architect` hunk
+    reached both PR #317 and #318 that way. Registering it without a regenerator
+    would be worse than leaving it out: the keep-ours merge driver would pin a
+    stale projection with nothing able to refresh it.
+
+    Gov scope only. --skip-user leaves ~/.claude/settings.json alone (it holds
+    PRESERVE_USER_KEYS this SSOT must not own), and no --workspace is passed
+    because consumer workspaces are reconciled at their own sessionStart.
+    """
+    script = SCRIPTS / "reconcile_claude_settings.py"
+    if not script.is_file():
+        warnings.append("reconcile_claude_settings.py missing — skip Claude settings projection")
+        return
+    target = root / ".claude" / "settings.json"
+    prior = target.read_bytes() if target.is_file() else None
+    result = subprocess.run(
+        [sys.executable, str(script), "--root", str(root), "--skip-user"],
+        cwd=root,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        detail = (result.stdout or result.stderr or "").strip()
+        warnings.append(
+            "Claude settings reconcile reported drift/conflicts" + (f": {detail}" if detail else "")
+        )
+        return
+    if target.is_file() and target.read_bytes() != prior:
+        wrote.append(str(target.relative_to(root)))
+
+
 def reconcile_llm_adapters(
     root: Path,
     warnings: list[str],
@@ -482,6 +524,7 @@ def sync(
                 "ops/generated/skill-registry.json",
                 "ops/skill_routing/",
                 "environment/agents/adapters/claude-code/settings.template.json",
+                ".claude/settings.json",
                 "environment/skill-adapters/",
             ),
         )
@@ -490,6 +533,9 @@ def sync(
             heal_orphan_skills(root, wrote, warnings)
             sync_skill_registry(root, wrote)
             sync_skill_overrides(root, wrote)
+            # After sync_skill_overrides, never before: settings.json is a
+            # projection of the template that call regenerates.
+            sync_claude_settings(root, wrote, warnings)
             reconcile_llm_adapters(root, warnings, workspace=workspace)
         if should_run(changed, ("commands/",)):
             sync_commands(root, wrote)

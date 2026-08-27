@@ -29,6 +29,34 @@ _gate_failed=0
 # Hashing the worktree instead is invariant across `git add` and `git commit`
 # and changes the moment a file's content does. Costs ~0.7s over ~3.7k files
 # against the ~5.5 minutes it saves.
+#
+# The digest must also cover the GATE'S OWN code, which the worktree hash above
+# cannot reach. When $WS is a linked worktree the gate executes from $GOV_ROOT —
+# a different checkout — so editing run_pr_gate.sh changed nothing the receipt
+# could see. A green or red verdict from the previous gate version was then
+# reused against the new one, and the only way to validate a gate fix was to
+# delete the receipt by hand. Folding these bytes into the content digest
+# invalidates the receipt exactly when the verdict could differ.
+_GATE_CODE_FILES=(
+  "ops/scripts/run_pr_gate.sh"
+  "ops/scripts/run_python_test_suites.py"
+  "ops/scripts/pr_gate_failure.py"
+  "ops/config/python-contract.json"
+  ".pre-commit-config.yaml"
+)
+_gate_code_digest() {
+  local rel present=()
+  for rel in "${_GATE_CODE_FILES[@]}"; do
+    [[ -f "$GOV_ROOT/$rel" ]] && present+=("$GOV_ROOT/$rel")
+  done
+  if [[ ${#present[@]} -eq 0 ]]; then
+    # No gate code readable: do not fabricate a stable digest, or a receipt
+    # would survive a change this function failed to observe.
+    printf 'unreadable-%s' "$RANDOM"
+    return
+  fi
+  cat "${present[@]}" 2>/dev/null | cksum | awk '{print $1}'
+}
 _gate_state_digest() {
   local list paths content
   list="$(mktemp)"
@@ -39,10 +67,24 @@ _gate_state_digest() {
   # Paths and contents are digested separately: a rename that preserves both
   # content and sort position would otherwise slip through as unchanged.
   paths="$(cksum <"$list" | awk '{print $1}')"
-  content="$(xargs -0 -r git hash-object <"$list" 2>/dev/null | cksum | awk '{print $1}')"
+  content="$(
+    {
+      xargs -0 -r git hash-object <"$list" 2>/dev/null
+      _gate_code_digest
+    } | cksum | awk '{print $1}'
+  )"
   rm -f "$list"
   printf '%s %s %s' "$paths" "$content" "$PR_BASE"
 }
+
+# One seam, so callers never reimplement the algorithm. The lifecycle test used
+# to carry its own shell copy of this digest, which is precisely why changing it
+# was expensive enough to defer.
+if [[ "${1:-}" == "--print-state-digest" ]]; then
+  _gate_state_digest
+  printf '\n'
+  exit 0
+fi
 _gate_receipt_matches() {
   [[ -f "$_GATE_RECEIPT" ]] || return 1
   python3 - "$_GATE_RECEIPT" "$(_gate_state_digest)" <<'PY'
@@ -312,8 +354,23 @@ else
 fi
 
 echo "--- pytest ---"
+# run_python_test_suites.py runs the GOVERNANCE suite registry
+# (ops/config/python-contract.json) and derives REPO_ROOT from its own location,
+# so it only ever describes this repository. Handing it a consumer workspace's
+# changed files made the selector emit paths such as src/<consumer_pkg>/ that do
+# not exist under REPO_ROOT, so the repo-root suite matched nothing and pytest
+# exited 4 -- failing the gate before any push, for every consumer repo with a
+# changed .py file. Scope it to the workspaces it actually describes, the same
+# way this file already gates the wiring check below.
+_pytest_ws_kind="$(classify_workspace_kind "$WS")"
 if [[ "${PR_SKIP_PYTEST:-0}" == "1" ]]; then
   echo "OK: skip pytest (PR_SKIP_PYTEST=1)"
+elif [[ "$_pytest_ws_kind" != "ssot" && "$_pytest_ws_kind" != "ssot_checkout" ]]; then
+  # Not a silent pass: this gate does not run a consumer's tests, and a green
+  # gate here must not be read as "the consumer suite ran".
+  echo "OK: skip governance pytest registry (workspace kind=$_pytest_ws_kind)"
+  echo "NOTE: consumer tests are owned by the consumer repository and its CI;" \
+       "this gate did not run them"
 elif grep -Eq '\.py$' "$changed_file"; then
   # Local pr-check never passes repo-root '.' (SP-04 / SP-05). Full catalog
   # remains make test / make pr-full / CI via run_pytest_suites.sh.
@@ -330,8 +387,30 @@ elif grep -Eq '\.py$' "$changed_file"; then
     echo "FAIL: no python interpreter for scoped pytest"
     exit 1
   fi
+  # Selection above read $WS; execution must name the same tree. Publishing from
+  # a second governance clone (rule 49 §7) runs this Makefile from $GOV while the
+  # changed files and their tests live in $WS, so a test added in the workspace
+  # collects as "no tests ran" and the gate fails exit 4 on work that is present
+  # and passing. Measured 2026-08-27.
+  #
+  # `:=` rather than a fresh assignment: PR #323 declares _pytest_ws_kind above
+  # the if/elif chain to skip this registry for consumer workspaces. Where that
+  # has landed this reuses its value; where it has not, this computes it. Either
+  # way there is one value and one declaration.
+  #
+  # Consumers keep $GOV as their root, byte for byte as before: they do not own
+  # these suites.
+  : "${_pytest_ws_kind:=$(classify_workspace_kind "$WS")}"
+  _pytest_repo_root_args=()
+  if [ "$_pytest_ws_kind" = "ssot" ] || [ "$_pytest_ws_kind" = "ssot_checkout" ]; then
+    if [ "$(cd "$WS" && pwd -P)" != "$(cd "$GOV_ROOT" && pwd -P)" ]; then
+      _pytest_repo_root_args=(--repo-root "$WS")
+      echo "OK: pytest root -> workspace ($_pytest_ws_kind; governance clone, \$GOV differs)"
+    fi
+  fi
   "$_pytest_py" "$SCRIPT_DIR/run_python_test_suites.py" \
     --profile local \
+    "${_pytest_repo_root_args[@]}" \
     --changed-file "$changed_file" \
     -- "${pytest_args[@]}"
 else

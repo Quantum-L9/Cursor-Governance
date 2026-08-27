@@ -1,8 +1,10 @@
 # Environment Experience Improvement Pack — Progress
 
-Assessed against **main@498dcaa (post-#307-merge + 47 commits) + PR#320 open** on 2026-08-27.
+Assessed against **main@8f73be9 (post-#320/#321 merge)** on 2026-08-27. Both #320 and #321 have merged.
+**CI-036** is new this pass (unpushed-count honesty across merged-and-deleted branches), and
+**CI-001** now carries the merge-verb transport plus its gate recognition.
 
-**3 done · 14 partial · 19 not started** (of 36 records).
+**3 done · 15 partial · 19 not started** (of 37 records).
 
 Previous pass (2026-08-26, main@78f122a (merged) + PR#307 open (CI-008/CI-009/CI-002 slice)): 2 done · 9 partial · 25 not started. Six records moved; none moved backwards.
 
@@ -14,7 +16,7 @@ Legend — **done**: merged and verified; **partial**: merged/open progress with
 |---|---|---|---|
 | CI-026 | not started | **done** | `Quantum-L9/.github` is attached: the clone is at `/home/user/.github` and the repo is in the session scope list. Was already true at 78f122a — the last pass did not check. |
 | CI-001 | not started | **partial** | `5612f6b` gave `merge_gate._stacked_children` a REST transport and made the deny text name the blocked transport (IMP-11 + IMP-12, 229-line test). `gh_auth_probe.sh` (IMP-02) already existed at 78f122a. Only IMP-01, the session prompt, is left — and it is external. |
-| CI-012 | not started | **partial** | Open PR#320 makes an unevaluable `requires` precondition deny the capability instead of passing silently, and moves the generic adapter to the brokered front door. The `type` discriminator (I-BS-03) was already in the templates. |
+| CI-012 | not started | **partial** | PR#320 (merged 2026-08-27 as `c3ddeea`) makes an unevaluable `requires` precondition deny the capability instead of passing silently, and moves the generic adapter to the brokered front door. The `type` discriminator (I-BS-03) was already in the templates. |
 | CI-017 | not started | **partial** | `7dc7e4f` moved the PE manifest from gate-time failure to commit-time heal — I-WT-03's shape, in the governance repo. The three named targets are untouched. |
 | CI-029 | not started | **partial** | `tests/corpus_fixtures.py` persists a two-root corpus builder in l9-constellation-topology. Not proven to be I-WT-04's builder: `build_corpus.mjs` is absent and the committed fixture declares six formats, not eight. |
 | CI-102 | not started | **partial** | `gh api user` returns `cryptoxdog` here and the stack probe answers over REST, so the blocked gate is unblocked — but by a third route that neither option (a) nor (b) records in any rule or profile. |
@@ -36,7 +38,7 @@ Legend — **done**: merged and verified; **partial**: merged/open progress with
 
 ### CI-034 (P1) — Bind the progress overlay to a governance SHA and invalidate it on drift
 
-**Why.** assessed_against was the prose label 'main@post-#307-merge'. main advanced 47 commits to 498dcaa and PR#320 opened; nothing marked the overlay stale, and six records were re-judged by hand to find it. This is CI-004's defect class — a receipt not bound to the revision it describes — applied to the pack itself.
+**Why.** assessed_against was the prose label 'main@post-#307-merge'. main advanced 47 commits to 498dcaa and PR#320 opened; nothing marked the overlay stale, and six records were re-judged by hand to find it. This is CI-004's defect class — a receipt not bound to the revision it describes — applied to the pack itself. It recurred within the hour: this pack was rewritten at 498dcaa naming PR#320 as open, and PR#320 merged as c3ddeea before the overlay was published — stale again, by the same mechanism, on its second day.
 
 **Change.** Record assessed_against_sha alongside the label, and add a check that compares it to the governance HEAD and reports the overlay stale when they differ.
 
@@ -87,9 +89,9 @@ Unchanged and now overdue: PR#307 merged the is_tracked() ownership guard on ONE
 | 🟡 partial | CI-006 | 0 | Resolve authority-sensitive environment drift at the actual source ✱ | Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main |
 | 🟡 partial | CI-008 | 0 | Reconcile make pr doctrine with consumer-repository command contracts ✱ | Quantum-L9/Cursor-Governance PR#307 (merged into main) |
 | 🟡 partial | CI-009 | 0 | Establish one project interpreter/toolchain authority and verify importability before READY ✱ | Quantum-L9/Cursor-Governance PR#307 (merged into main) |
-| 🟡 partial | CI-010 | 0 | Make broker authentication and reachability diagnosable ✱ | PR#305 (+ predecessor PR#304), merged into main; PR#320 open |
+| 🟡 partial | CI-010 | 0 | Make broker authentication and reachability diagnosable ✱ | PR#305 (+ predecessor PR#304) and PR#320, all merged into main |
 | 🟡 partial | CI-001 _ext_ | 1 | Publish and enforce the real GitHub REST/GraphQL capability boundary ✱ | Quantum-L9/Cursor-Governance 5612f6b (merged) + pre-existing ops/scripts/lib/gh_auth_probe.sh |
-| 🟡 partial | CI-012 | 1 | Gate rules and MCP config on actual surface capabilities ✱ | Quantum-L9/Cursor-Governance PR#320 (open) + pre-existing adapter templates |
+| 🟡 partial | CI-012 | 1 | Gate rules and MCP config on actual surface capabilities ✱ | Quantum-L9/Cursor-Governance PR#320 (merged as c3ddeea) + pre-existing adapter templates |
 | 🟡 partial | CI-015 | 1 | Name and enforce the authoritative governance checkout ✱ | Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main |
 | 🟡 partial | CI-016 | 1 | Make L4/release receipts resolve paths, branch, and head dynamically ✱ | Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main |
 | 🟡 partial | CI-017 | 1 | Validate generated-artifact membership and report all drift in one pass ✱ | Quantum-L9/Cursor-Governance 7dc7e4f (merged) |
@@ -174,9 +176,9 @@ _ext_ = the record's named target is owned outside this org CI-001: IMP-01 leg o
 - residual: A sourceable scripts/env.sh (IMP-E1) was deliberately NOT added: this repo already has one interpreter authority (Makefile + ensure_gov_python.sh + gov-python prereq). Container-image items (A2-A5) are external (SC-IMG).
 
 ### 🟡 partial — CI-010: Make broker authentication and reachability diagnosable
-- delivered_by: PR#305 (+ predecessor PR#304), merged into main; PR#320 open
+- delivered_by: PR#305 (+ predecessor PR#304) and PR#320, all merged into main
 - evidence: live capability plane: broker_reachability=no_dns_record/unreachable_URLError, broker_identity_status=none:hosted_surface_issues_no_session_identity, primary_blocker=identity — the states are named, not collapsed
-- evidence: PR#320 (open) moves every adapter's memory front door to the broker URL with no inline bearer, so an unset broker returns an honest 401 and memory runs DEGRADED
+- evidence: PR#320 (merged) moves every adapter's memory front door to the broker URL with no inline bearer, so an unset broker returns an honest 401 and memory runs DEGRADED
 - residual: CONNECT cannot succeed (no platform-issued identity — external; tracked as Quantum-L9/Cursor-Governance issues #301, #302).
 - residual: Broker states not fully split into proxy-denied vs upstream-error for allowlist remediation decisions.
 
@@ -190,7 +192,7 @@ _ext_ = the record's named target is owned outside this org CI-001: IMP-01 leg o
 - residual: IMP-01 only: the Anthropic remote-session prompt still tells agents they have no gh access. Harness-owned; no in-repo lever. See the external-owner note in PROGRESS.md.
 
 ### 🟡 partial — CI-012: Gate rules and MCP config on actual surface capabilities
-- delivered_by: Quantum-L9/Cursor-Governance PR#320 (open) + pre-existing adapter templates
+- delivered_by: Quantum-L9/Cursor-Governance PR#320 (merged as c3ddeea) + pre-existing adapter templates
 - evidence: PR#320 ops/secrets/capabilities.yaml: `requires` may name only capability_broker.EVALUABLE_REQUIREMENTS — a precondition no code evaluates now denies the capability instead of passing silently; unevaluable phase_lock_held removed
 - evidence: PR#320 ops/secrets/capability_broker.py +96, tests/ops/secrets/test_capability_plane.py +110
 - evidence: PR#320 environment/agents/adapters/generic/mcp.template.json moved to the brokered front door (no inline bearer), matching the claude-code peer
