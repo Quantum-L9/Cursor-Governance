@@ -179,9 +179,7 @@ class ClaudeProviderSourceTests(unittest.TestCase):
             "requested_actions": ["inspect", "local_write"],
         }
         manifest = build_context_manifest(contract)
-        permission = resolve_permission_profile(
-            "repo-local-bounded", ["inspect", "local_write"]
-        )
+        permission = resolve_permission_profile("repo-local-bounded", ["inspect", "local_write"])
         request = CanonicalExecutionRequest(
             execution_id="exec-excerpt",
             task_id="task-1",
