@@ -121,8 +121,12 @@ def test_missing_source_fails_cleanly():
     assert exc.code == "SOURCE_NOT_FOUND"
 
 
-def test_malformed_yaml_fails_cleanly():
-    exc = _error(["compile", os.path.join(FIX, "compile-request.malformed.yaml")])
+def test_malformed_yaml_fails_cleanly(tmp_path):
+    # Written at run time rather than committed: a file the repository's own
+    # check-yaml hook cannot parse has no business sitting in the tree.
+    broken = tmp_path / "compile-request.malformed.yaml"
+    broken.write_text("request_id: broken\nintent: [rebuild\nsubject:\n  proposed_name: x\n")
+    exc = _error(["compile", str(broken)])
     assert exc.code == "REQUEST_PARSE_FAILED"
 
 
