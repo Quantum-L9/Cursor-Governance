@@ -3,6 +3,7 @@ name: l9-skill-compiler
 version: 2.0.0
 updated: 2026-08-26
 description: compile, rebuild, evolve, or validate reusable L9 Skills by deciding topology ownership before creation, classifying one primary family plus orthogonal traits, normalizing canonical Skill IR, rendering target profiles, and enforcing Capability Closure. use when creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided.
+when_to_use: creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided
 role: skill_compiler_runtime
 tags: [l9, compiler, skill, ir, capability-closure, dag]
 owner: igor_beylin

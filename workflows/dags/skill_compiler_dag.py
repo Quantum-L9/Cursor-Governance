@@ -15,66 +15,128 @@ from workflows.session.registry import register_session_dag
 
 SCRIPTS = "skills/l9-skill-compiler/scripts"
 
-# kind: deterministic nodes bind to executable code or a typed handoff action.
-# kind: bounded_llm nodes bind to a constrained reference contract.
 NODES = [
-    {"id": "COMPILE_REQUEST", "kind": "deterministic",
-     "impl": "bind_and_validate_inputs", "exec": None,
-     "next": ["BIND_INPUTS"]},
-    {"id": "BIND_INPUTS", "kind": "deterministic",
-     "impl": "bind_and_validate_inputs", "exec": SCRIPTS + "/bind_inputs.py",
-     "next": ["SCAN_SKILL_TOPOLOGY"]},
-    {"id": "SCAN_SKILL_TOPOLOGY", "kind": "deterministic",
-     "impl": "enumerate_live_skill_topology", "exec": SCRIPTS + "/scan_skill_topology.py",
-     "next": ["TOPOLOGY_OWNERSHIP_JUDGMENT", "CLASSIFY_SKILL_PROFILE"]},
-    {"id": "TOPOLOGY_OWNERSHIP_JUDGMENT", "kind": "bounded_llm",
-     "impl": "ambiguous_topology_ownership_decision",
-     "contract": "references/runtime-design-contract.md",
-     "guard": "entered only when scan emits ESCALATE_TO_BOUNDED_LLM",
-     "next": ["CLASSIFY_SKILL_PROFILE"]},
-    {"id": "CLASSIFY_SKILL_PROFILE", "kind": "deterministic",
-     "impl": "deterministic_profile_rules", "exec": SCRIPTS + "/classify_skill_profile.py",
-     "next": ["PROFILE_JUDGMENT", "EXTRACT_SOURCE_INTELLIGENCE"]},
-    {"id": "PROFILE_JUDGMENT", "kind": "bounded_llm",
-     "impl": "ambiguous_skill_profile_classification",
-     "contract": "references/runtime-design-contract.md",
-     "guard": "entered only when classification escalates",
-     "next": ["EXTRACT_SOURCE_INTELLIGENCE"]},
-    {"id": "EXTRACT_SOURCE_INTELLIGENCE", "kind": "bounded_llm",
-     "impl": "source_intelligence_extraction",
-     "contract": "references/source-intelligence-contract.md",
-     "next": ["NORMALIZE_SKILL_IR"]},
-    {"id": "NORMALIZE_SKILL_IR", "kind": "deterministic",
-     "impl": "normalize_and_schema_validate_IR", "exec": SCRIPTS + "/normalize_skill_ir.py",
-     "next": ["DESIGN_RUNTIME"]},
-    {"id": "DESIGN_RUNTIME", "kind": "bounded_llm",
-     "impl": "semantic_runtime_design",
-     "contract": "references/runtime-design-contract.md",
-     "next": ["RENDER_TARGET_PROFILE"]},
-    {"id": "RENDER_TARGET_PROFILE", "kind": "deterministic",
-     "impl": "render_target_profiles", "exec": SCRIPTS + "/render_target_profile.py",
-     "next": ["STATIC_VALIDATE"]},
-    {"id": "STATIC_VALIDATE", "kind": "deterministic",
-     "impl": "structural_and_static_validation", "exec": SCRIPTS + "/static_validate.py",
-     "next": ["CAPABILITY_CLOSURE"]},
-    {"id": "CAPABILITY_CLOSURE", "kind": "deterministic",
-     "impl": "capability_graph_resolution", "exec": SCRIPTS + "/check_capability_closure.py",
-     "next": ["ACTIVATION_EVAL"]},
-    {"id": "ACTIVATION_EVAL", "kind": "deterministic",
-     "impl": "activation_fixture_execution", "exec": SCRIPTS + "/evaluate_activation.py",
-     "next": ["BEHAVIOR_EVAL"]},
-    {"id": "BEHAVIOR_EVAL", "kind": "bounded_llm",
-     "impl": "family_specific_behavior_judgment_when_not_deterministically_testable",
-     "contract": "references/evaluation-contract.md",
-     "next": ["PACKAGE"]},
-    {"id": "PACKAGE", "kind": "deterministic",
-     "impl": "package_integrity", "exec": SCRIPTS + "/package_skill.py",
-     "next": ["HANDOFF_TO_WIRING"]},
-    {"id": "HANDOFF_TO_WIRING", "kind": "deterministic",
-     "impl": "build_receipt_generation", "exec": None,
-     "delegates_to": ["l9-wire-skill-into-repo", "l9-dag-authoring"],
-     "next": ["PASS_BLOCKED_FAIL"]},
-    {"id": "PASS_BLOCKED_FAIL", "kind": "terminal", "impl": None, "next": []},
+    {
+        "id": "COMPILE_REQUEST",
+        "kind": "deterministic",
+        "impl": "bind_and_validate_inputs",
+        "exec": None,
+        "next": ["BIND_INPUTS"],
+    },
+    {
+        "id": "BIND_INPUTS",
+        "kind": "deterministic",
+        "impl": "bind_and_validate_inputs",
+        "exec": SCRIPTS + "/bind_inputs.py",
+        "next": ["SCAN_SKILL_TOPOLOGY"],
+    },
+    {
+        "id": "SCAN_SKILL_TOPOLOGY",
+        "kind": "deterministic",
+        "impl": "enumerate_live_skill_topology",
+        "exec": SCRIPTS + "/scan_skill_topology.py",
+        "next": ["TOPOLOGY_OWNERSHIP_JUDGMENT", "CLASSIFY_SKILL_PROFILE"],
+    },
+    {
+        "id": "TOPOLOGY_OWNERSHIP_JUDGMENT",
+        "kind": "bounded_llm",
+        "impl": "ambiguous_topology_ownership_decision",
+        "contract": "references/runtime-design-contract.md",
+        "guard": "entered only when scan emits ESCALATE_TO_BOUNDED_LLM",
+        "next": ["CLASSIFY_SKILL_PROFILE"],
+    },
+    {
+        "id": "CLASSIFY_SKILL_PROFILE",
+        "kind": "deterministic",
+        "impl": "deterministic_profile_rules",
+        "exec": SCRIPTS + "/classify_skill_profile.py",
+        "next": ["PROFILE_JUDGMENT", "EXTRACT_SOURCE_INTELLIGENCE"],
+    },
+    {
+        "id": "PROFILE_JUDGMENT",
+        "kind": "bounded_llm",
+        "impl": "ambiguous_skill_profile_classification",
+        "contract": "references/runtime-design-contract.md",
+        "guard": "entered only when classification escalates",
+        "next": ["EXTRACT_SOURCE_INTELLIGENCE"],
+    },
+    {
+        "id": "EXTRACT_SOURCE_INTELLIGENCE",
+        "kind": "bounded_llm",
+        "impl": "source_intelligence_extraction",
+        "contract": "references/source-intelligence-contract.md",
+        "next": ["NORMALIZE_SKILL_IR"],
+    },
+    {
+        "id": "NORMALIZE_SKILL_IR",
+        "kind": "deterministic",
+        "impl": "normalize_and_schema_validate_IR",
+        "exec": SCRIPTS + "/normalize_skill_ir.py",
+        "next": ["DESIGN_RUNTIME"],
+    },
+    {
+        "id": "DESIGN_RUNTIME",
+        "kind": "bounded_llm",
+        "impl": "semantic_runtime_design",
+        "contract": "references/runtime-design-contract.md",
+        "next": ["RENDER_TARGET_PROFILE"],
+    },
+    {
+        "id": "RENDER_TARGET_PROFILE",
+        "kind": "deterministic",
+        "impl": "render_target_profiles",
+        "exec": SCRIPTS + "/render_target_profile.py",
+        "next": ["STATIC_VALIDATE"],
+    },
+    {
+        "id": "STATIC_VALIDATE",
+        "kind": "deterministic",
+        "impl": "structural_and_static_validation",
+        "exec": SCRIPTS + "/static_validate.py",
+        "next": ["CAPABILITY_CLOSURE"],
+    },
+    {
+        "id": "CAPABILITY_CLOSURE",
+        "kind": "deterministic",
+        "impl": "capability_graph_resolution",
+        "exec": SCRIPTS + "/check_capability_closure.py",
+        "next": ["ACTIVATION_EVAL"],
+    },
+    {
+        "id": "ACTIVATION_EVAL",
+        "kind": "deterministic",
+        "impl": "activation_fixture_execution",
+        "exec": SCRIPTS + "/evaluate_activation.py",
+        "next": ["BEHAVIOR_EVAL"],
+    },
+    {
+        "id": "BEHAVIOR_EVAL",
+        "kind": "bounded_llm",
+        "impl": "family_specific_behavior_judgment_when_not_deterministically_testable",
+        "contract": "references/evaluation-contract.md",
+        "next": ["PACKAGE"],
+    },
+    {
+        "id": "PACKAGE",
+        "kind": "deterministic",
+        "impl": "package_integrity",
+        "exec": SCRIPTS + "/package_skill.py",
+        "next": ["HANDOFF_TO_WIRING"],
+    },
+    {
+        "id": "HANDOFF_TO_WIRING",
+        "kind": "deterministic",
+        "impl": "build_receipt_generation",
+        "exec": None,
+        "delegates_to": ["l9-wire-skill-into-repo", "l9-dag-authoring"],
+        "next": ["PASS_BLOCKED_FAIL"],
+    },
+    {
+        "id": "PASS_BLOCKED_FAIL",
+        "kind": "terminal",
+        "impl": None,
+        "next": [],
+    },
 ]
 
 SKILL_COMPILER_V2 = {
@@ -88,21 +150,21 @@ SKILL_COMPILER_V2 = {
 
 
 def graph():
-    return {n["id"]: n.get("next", []) for n in NODES}
+    return {node["id"]: node.get("next", []) for node in NODES}
 
 
 def validate_graph():
-    ids = {n["id"] for n in NODES}
+    ids = {node["id"] for node in NODES}
     errors = []
     if SKILL_COMPILER_V2["entrypoint"] not in ids:
         errors.append("entrypoint does not resolve to a node")
-    for n in NODES:
-        for nxt in n.get("next", []):
-            if nxt not in ids:
-                errors.append("dangling edge %s -> %s" % (n["id"], nxt))
-        if n["kind"] == "bounded_llm" and not n.get("contract"):
-            errors.append("bounded_llm node %s has no contract" % n["id"])
-    if not any(n["kind"] == "terminal" for n in NODES):
+    for node in NODES:
+        for target in node.get("next", []):
+            if target not in ids:
+                errors.append(f"dangling edge {node['id']} -> {target}")
+        if node["kind"] == "bounded_llm" and not node.get("contract"):
+            errors.append(f"bounded_llm node {node['id']} has no contract")
+    if not any(node["kind"] == "terminal" for node in NODES):
         errors.append("no terminal node")
     return errors
 
@@ -112,7 +174,13 @@ def _session_node_type(node):
         return NodeType.START
     if node["kind"] == "terminal":
         return NodeType.END
-    if node["id"] in {"STATIC_VALIDATE", "CAPABILITY_CLOSURE", "ACTIVATION_EVAL", "BEHAVIOR_EVAL"}:
+    validation_nodes = {
+        "STATIC_VALIDATE",
+        "CAPABILITY_CLOSURE",
+        "ACTIVATION_EVAL",
+        "BEHAVIOR_EVAL",
+    }
+    if node["id"] in validation_nodes:
         return NodeType.VALIDATE
     if node["kind"] == "bounded_llm":
         return NodeType.ANALYZE
@@ -122,22 +190,31 @@ def _session_node_type(node):
 def _session_action(node):
     if node.get("exec"):
         return (
-            "Execute this stage deterministically via `python " + node["exec"] + "` "
-            "using the bound stage inputs. Do not substitute prose execution for the executable."
+            "Execute this stage deterministically via `python "
+            + node["exec"]
+            + "` using the bound stage inputs. Do not substitute prose execution "
+            "for the executable."
         )
     if node.get("contract"):
         return (
-            "Execute only the bounded semantic operation `" + node["impl"] + "` under "
-            "`skills/l9-skill-compiler/" + node["contract"] + "`. Emit only contract-conforming output."
+            "Execute only the bounded semantic operation `"
+            + node["impl"]
+            + "` under `skills/l9-skill-compiler/"
+            + node["contract"]
+            + "`. Emit only contract-conforming output."
         )
     if node.get("delegates_to"):
         return (
-            "Emit the typed build/wiring handoff receipt, then delegate registry/discovery work to "
+            "Emit the typed build/wiring handoff receipt, then delegate registry/discovery "
+            "work to "
             + ", ".join(node["delegates_to"])
             + ". This node does not invent or mutate foreign registries directly."
         )
     if node["kind"] == "terminal":
-        return "Resolve the run to PASS, BLOCKED, or FAIL from machine receipts; material UNKNOWN blocks success."
+        return (
+            "Resolve the run to PASS, BLOCKED, or FAIL from machine receipts; material "
+            "UNKNOWN blocks success."
+        )
     return "Bind and validate the compile request against the compiler contracts before advancing."
 
 
@@ -171,8 +248,8 @@ SKILL_COMPILER_SESSION_DAG = SessionDAG(
     version="2.0.0",
     description=(
         "Repository-bound session discovery adapter for the l9-skill-compiler v2 typed graph. "
-        "The compiler's NODES graph remains canonical; this adapter makes the same graph discoverable "
-        "through Cursor-Governance's existing SessionDAG registry."
+        "The compiler's NODES graph remains canonical; this adapter makes the same graph "
+        "discoverable through Cursor-Governance's existing SessionDAG registry."
     ),
     nodes=SESSION_NODES,
     edges=SESSION_EDGES,
@@ -186,9 +263,8 @@ def register():
     """Register the compiler in Cursor-Governance's canonical session registry."""
     errors = validate_graph() + SKILL_COMPILER_SESSION_DAG.validate()
     if errors:
-        raise ValueError("skill-compiler-v2 DAG validation failed: %s" % errors)
+        raise ValueError(f"skill-compiler-v2 DAG validation failed: {errors}")
     register_session_dag(SKILL_COMPILER_SESSION_DAG)
 
 
-# workflows.dags is the canonical auto-discovery import surface.
 register()
