@@ -330,8 +330,27 @@ elif grep -Eq '\.py$' "$changed_file"; then
     echo "FAIL: no python interpreter for scoped pytest"
     exit 1
   fi
+  # Selection above read $WS. Execution must name the same tree or the gate
+  # judges a different one: publishing from a second governance clone (rule 49
+  # §7) runs this Makefile from $GOV while the changed files and their tests live
+  # in $WS, so a test added in the workspace collects as "no tests ran" and the
+  # gate fails on work that is present and passing.
+  #
+  # Only ssot-family workspaces get this. A consumer repo does not own these
+  # suites, so its root must stay $GOV -- unchanged, byte for byte, from before
+  # this branch. classify_workspace_kind is available here: resolve_governance_
+  # paths.sh sources lib/workspace_kind.sh at the top of this script.
+  _pytest_repo_root_args=()
+  _pytest_ws_kind="$(classify_workspace_kind "$WS" 2>/dev/null || echo unknown)"
+  if [ "$_pytest_ws_kind" = "ssot" ] || [ "$_pytest_ws_kind" = "ssot_checkout" ]; then
+    if [ "$(cd "$WS" && pwd -P)" != "$(cd "$GOV_ROOT" && pwd -P)" ]; then
+      _pytest_repo_root_args=(--repo-root "$WS")
+      echo "OK: pytest root -> workspace ($_pytest_ws_kind; \$WS is a governance clone, \$GOV differs)"
+    fi
+  fi
   "$_pytest_py" "$SCRIPT_DIR/run_python_test_suites.py" \
     --profile local \
+    "${_pytest_repo_root_args[@]}" \
     --changed-file "$changed_file" \
     -- "${pytest_args[@]}"
 else
