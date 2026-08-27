@@ -1,0 +1,12 @@
+{
+  "request_id": "",
+  "intent": "rebuild",
+  "subject": {
+    "proposed_name": "x",
+    "bogus_field": 1
+  },
+  "source_material": [],
+  "target_profiles": [
+    "cursor"
+  ]
+}

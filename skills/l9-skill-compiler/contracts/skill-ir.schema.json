@@ -1,0 +1,371 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9/skill-compiler/skill-ir",
+  "title": "SkillIR",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "identity",
+    "objective",
+    "activation",
+    "non_activation",
+    "primary_family",
+    "traits",
+    "authority",
+    "inputs",
+    "outputs",
+    "invariants",
+    "workflow",
+    "capabilities",
+    "resources",
+    "dependencies",
+    "risks",
+    "evidence",
+    "unknowns",
+    "target_profiles",
+    "activation_evals",
+    "behavior_evals"
+  ],
+  "properties": {
+    "identity": {
+      "type": "object",
+      "required": [
+        "name",
+        "version",
+        "updated"
+      ],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "version": {
+          "type": "string"
+        },
+        "updated": {
+          "type": "string"
+        }
+      }
+    },
+    "objective": {
+      "type": "string",
+      "minLength": 1
+    },
+    "activation": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "non_activation": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "primary_family": {
+      "enum": [
+        "advisory",
+        "diagnostic",
+        "operator",
+        "orchestrator",
+        "compiler",
+        "adapter",
+        "lifecycle"
+      ]
+    },
+    "traits": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "determinism",
+        "mutation_scope",
+        "state_model",
+        "risk_class",
+        "externality",
+        "evidence_mode",
+        "execution_shape"
+      ],
+      "properties": {
+        "determinism": {
+          "enum": [
+            "llm",
+            "code",
+            "mixed"
+          ]
+        },
+        "mutation_scope": {
+          "enum": [
+            "none",
+            "artifact_only",
+            "repo_scoped",
+            "external"
+          ]
+        },
+        "state_model": {
+          "enum": [
+            "stateless",
+            "ephemeral",
+            "resumable",
+            "durable"
+          ]
+        },
+        "risk_class": {
+          "enum": [
+            "reversible",
+            "guarded",
+            "irreversible"
+          ]
+        },
+        "externality": {
+          "enum": [
+            "local",
+            "repo",
+            "network",
+            "third_party"
+          ]
+        },
+        "evidence_mode": {
+          "enum": [
+            "none",
+            "source_grounded",
+            "runtime_observed",
+            "mixed"
+          ]
+        },
+        "execution_shape": {
+          "enum": [
+            "direct",
+            "pipeline",
+            "dag",
+            "state_machine"
+          ]
+        }
+      }
+    },
+    "authority": {
+      "type": "object"
+    },
+    "inputs": {
+      "type": "array"
+    },
+    "outputs": {
+      "type": "array"
+    },
+    "invariants": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string"
+      }
+    },
+    "workflow": {
+      "type": "object",
+      "required": [
+        "entrypoint",
+        "nodes"
+      ],
+      "properties": {
+        "entrypoint": {
+          "type": "string"
+        },
+        "nodes": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": [
+              "id",
+              "kind",
+              "next"
+            ],
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "kind": {
+                "enum": [
+                  "deterministic",
+                  "bounded_llm",
+                  "terminal"
+                ]
+              },
+              "impl": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "capabilities": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "next": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "required",
+          "binding"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "binding": {
+            "type": "object",
+            "required": [
+              "kind"
+            ],
+            "properties": {
+              "kind": {
+                "enum": [
+                  "MODEL_INSTRUCTION",
+                  "EXECUTABLE",
+                  "DAG_NODE",
+                  "DELEGATED_SKILL",
+                  "EXTERNAL_CAPABILITY",
+                  "UNKNOWN"
+                ]
+              },
+              "target": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "probe": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "success_condition": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "failure_behavior": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "depends_on": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "bounded_unknown": {
+                "type": "boolean"
+              }
+            }
+          }
+        }
+      }
+    },
+    "resources": {
+      "type": "array"
+    },
+    "dependencies": {
+      "type": "array"
+    },
+    "risks": {
+      "type": "array"
+    },
+    "evidence": {
+      "type": "array"
+    },
+    "unknowns": {
+      "type": "array"
+    },
+    "target_profiles": {
+      "type": "array",
+      "minItems": 1
+    },
+    "activation_evals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "class",
+          "prompt",
+          "expect"
+        ],
+        "properties": {
+          "class": {
+            "enum": [
+              "positive",
+              "negative",
+              "boundary",
+              "sibling_collision"
+            ]
+          },
+          "prompt": {
+            "type": "string"
+          },
+          "expect": {
+            "enum": [
+              "activate",
+              "no_activate",
+              "route_elsewhere"
+            ]
+          },
+          "route_to": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "behavior_evals": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "family",
+          "assertion"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "family": {
+            "type": "string"
+          },
+          "assertion": {
+            "type": "string"
+          },
+          "deterministic": {
+            "type": "boolean"
+          }
+        }
+      }
+    }
+  }
+}

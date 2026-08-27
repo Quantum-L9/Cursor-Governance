@@ -312,8 +312,23 @@ else
 fi
 
 echo "--- pytest ---"
+# run_python_test_suites.py runs the GOVERNANCE suite registry
+# (ops/config/python-contract.json) and derives REPO_ROOT from its own location,
+# so it only ever describes this repository. Handing it a consumer workspace's
+# changed files made the selector emit paths such as src/<consumer_pkg>/ that do
+# not exist under REPO_ROOT, so the repo-root suite matched nothing and pytest
+# exited 4 -- failing the gate before any push, for every consumer repo with a
+# changed .py file. Scope it to the workspaces it actually describes, the same
+# way this file already gates the wiring check below.
+_pytest_ws_kind="$(classify_workspace_kind "$WS")"
 if [[ "${PR_SKIP_PYTEST:-0}" == "1" ]]; then
   echo "OK: skip pytest (PR_SKIP_PYTEST=1)"
+elif [[ "$_pytest_ws_kind" != "ssot" && "$_pytest_ws_kind" != "ssot_checkout" ]]; then
+  # Not a silent pass: this gate does not run a consumer's tests, and a green
+  # gate here must not be read as "the consumer suite ran".
+  echo "OK: skip governance pytest registry (workspace kind=$_pytest_ws_kind)"
+  echo "NOTE: consumer tests are owned by the consumer repository and its CI;" \
+       "this gate did not run them"
 elif grep -Eq '\.py$' "$changed_file"; then
   # Local pr-check never passes repo-root '.' (SP-04 / SP-05). Full catalog
   # remains make test / make pr-full / CI via run_pytest_suites.sh.

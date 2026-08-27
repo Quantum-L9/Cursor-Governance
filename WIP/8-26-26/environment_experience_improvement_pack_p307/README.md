@@ -40,7 +40,11 @@ Start with ownership-safe bootstrap projection (`CI-002`), fresh/re-probed boots
 
 ## Open decisions
 
-See `OPEN_DECISIONS.yaml`. The material open decisions are the authoritative `AUTONOMOUS_MERGE` value, the canonical `make pr` contract, broker failure cause, missing session JWT cause, memory writeback warning, exact identity of the Pack 9 predecessor, and publish-override origin/lifecycle.
+See `OPEN_DECISIONS.yaml`. Re-checked 2026-08-27 against `main@498dcaa`:
+
+- **OD-002, the canonical `make pr` contract — RESOLVED** by PR#307 (CI-008), and neither branch of the original question won: the governance Makefile is the publish authority regardless of the repo worked in, a consumer needs no `pr` target, and there is no raw-push fallback.
+- **OD-001, the authoritative `AUTONOMOUS_MERGE` value — NARROWED.** The contradiction that opened it cleared (the live value is now `false`, which is what the verifier expects); what remains is the narrower policy question of whether the variable should exist at all.
+- Still open: broker failure cause, missing session JWT cause, memory writeback warning, exact identity of the Pack 9 predecessor, and publish-override origin/lifecycle.
 
 ## Provenance
 
@@ -49,8 +53,8 @@ Every final artifact maps back to source versions/paths in `_reconciliation/SOUR
 
 ---
 
-## Progress overlay (2026-08-26)
+## Progress overlay (2026-08-27)
 
-This is a **revised** pack: every improvement record now carries a `progress` block (done / partial / not_started), assessed against **main@post-#307-merge**. See [`PROGRESS.md`](PROGRESS.md) (human) and [`progress.yaml`](progress.yaml) (machine); per-record detail is under each entry's `progress:` key in `improvements.yaml`.
+This is a **revised** pack: every improvement record now carries a `progress` block (done / partial / not_started), assessed against **main@498dcaa (post-#307-merge + 47 commits) + PR#320 open**. See [`PROGRESS.md`](PROGRESS.md) (human) and [`progress.yaml`](progress.yaml) (machine); per-record detail is under each entry's `progress:` key in `improvements.yaml`.
 
-Totals: **2 done · 9 partial · 25 not started** of 36.
+Totals: **3 done · 14 partial · 19 not started** of 36. Two new records (CI-034, CI-035) and one progress-schema change are proposed, not yet adopted — see `PROGRESS.md`. Two new records (CI-034, CI-035) and one progress-schema change are proposed, not yet adopted — see `PROGRESS.md`.

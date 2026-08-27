@@ -1,0 +1,51 @@
+# Deterministic vs bounded-LLM partition. Enforced by scripts/static_validate.py.
+version: 1
+deterministic_code:
+  - bind_and_validate_inputs
+  - enumerate_live_skill_topology
+  - parse_skill_metadata
+  - build_topology_candidate_set
+  - deterministic_profile_rules
+  - normalize_and_schema_validate_IR
+  - render_target_profiles
+  - structural_and_static_validation
+  - capability_graph_resolution
+  - dependency_cycle_detection
+  - artifact_and_reference_resolution
+  - activation_fixture_execution
+  - package_integrity
+  - build_receipt_generation
+bounded_llm:
+  - ambiguous_topology_ownership_decision
+  - source_intelligence_extraction
+  - ambiguous_skill_profile_classification
+  - semantic_runtime_design
+  - semantic_activation_judgment_when_fixtures_are_not_deterministic
+  - family_specific_behavior_judgment_when_not_deterministically_testable
+forbidden_llm_work:
+  - file_existence_checks
+  - yaml_or_json_parsing
+  - dangling_reference_detection
+  - dependency_cycle_detection
+  - package_enumeration
+  - deterministic_metadata_rendering
+  - registry_mutation
+  - pretending_a_command_or_script_ran
+topology_decision:
+  enum: [EXTEND_EXISTING, COMPOSE_EXISTING, REPLACE_EXISTING, REJECT_NEW_SKILL, CREATE_NEW]
+  invariant: most_specific_existing_owner_wins
+  creation_is_not_default: true
+  escalate_to_llm_only_when: deterministic_evidence_does_not_resolve_ownership
+# Compiler-scoped policy mined from l9-structured-reasoning.
+# That Skill remains the owner of generic reasoning methodology.
+retained_invariants:
+  - most_specific_domain_owner_wins
+  - independent_routing_dimensions
+  - activate_only_decision_changing_proof_obligations
+  - every_material_claim_has_evidence_or_explicit_UNKNOWN
+  - use_smallest_discriminating_probe
+  - verify_capability_before_tool_strategy
+  - scale_action_to_risk_and_evidence
+  - stop_when_material_uncertainty_is_resolved
+  - do_not_invent_confidence_percentages
+  - use_machine_ledger_only_when_traceability_materially_helps

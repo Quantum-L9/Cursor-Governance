@@ -1217,14 +1217,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "compile prompts, sops, workflows, kernels, operating protocols, review systems, artifact generators, and domain playbooks into standalone zero-stub skill packs. use when the user asks to create, design, analyze, rebuild, validate, package, or improve reusable agent skills, chatgpt-compatible skill folders, model-agnostic skill packs, or tool-using agent workflows.",
+      "description": "compile, rebuild, evolve, or validate reusable L9 Skills by deciding topology ownership before creation, classifying one primary family plus orthogonal traits, normalizing canonical Skill IR, rendering target profiles, and enforcing Capability Closure. use when creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-skill-compiler",
       "path": "skills/l9-skill-compiler",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "compiling prompts, SOPs, kernels, or workflows into standalone zero-stub skill packs"
+      "when_to_use": "creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided"
     },
     {
       "composition_role": "primary",
@@ -1294,6 +1294,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "bf67da7b1df4a9572eb2683c3833a50ad44042b9b51ce33add4c84443fc10404",
-  "source_skill_corpus_sha256": "c443332da14ca6efca7f8ddfa2d452feb1e83db3c98beed7f91c8dcb38ac6760"
+  "source_manifest_sha256": "18881b692dec7572f2a737dac6bd330f2e72c6a8bc33d8fb9410fdd5d5f64798",
+  "source_skill_corpus_sha256": "28ed9ef23440ec3b72d5c63aa0b8a97e2769c8dbdbf4138df2da70ecc8938efd"
 }

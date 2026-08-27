@@ -1,0 +1,572 @@
+{
+  "identity": {
+    "name": "l9-skill-compiler",
+    "version": "2.0.0",
+    "updated": "2026-08-26"
+  },
+  "objective": "Compile, rebuild, evolve, or validate reusable L9 Skills through a topology-aware, type-aware DAG runtime with deterministic validation and Capability Closure.",
+  "activation": [
+    "Creating, compiling, materially rebuilding, evolving, or validating a reusable Skill",
+    "Deciding whether to extend, compose, replace, reject, or create a Skill",
+    "Designing a Skill runtime, capability bindings, or target profile rendering",
+    "Producing activation or behavior evaluation evidence for a Skill"
+  ],
+  "non_activation": [
+    "Merely wiring an existing pack into a repo",
+    "Authoring a generic L9 DAG",
+    "Performing generic reasoning methodology",
+    "Producing next-prompt behavior",
+    "Executing a domain task already owned by a more specific Skill"
+  ],
+  "primary_family": "compiler",
+  "traits": {
+    "determinism": "mixed",
+    "mutation_scope": "artifact_only",
+    "state_model": "ephemeral",
+    "risk_class": "guarded",
+    "externality": "repo",
+    "evidence_mode": "mixed",
+    "execution_shape": "dag"
+  },
+  "authority": {
+    "role": "skill_compiler_runtime",
+    "owner": "igor_beylin",
+    "tags": [
+      "l9",
+      "compiler",
+      "skill",
+      "ir",
+      "capability-closure",
+      "dag"
+    ],
+    "canonical_dag": "workflows/dags/skill_compiler_dag.py",
+    "dag_registry_id": "skill-compiler-v2",
+    "dag_authority_owner": "l9-dag-authoring",
+    "activation_triggers": [
+      "compile a skill",
+      "rebuild the skill",
+      "create a new skill",
+      "validate a skill pack",
+      "evolve a skill"
+    ],
+    "non_activation_triggers": [
+      "wire the skill",
+      "author a dag",
+      "reasoning methodology",
+      "next prompt"
+    ]
+  },
+  "inputs": [
+    {
+      "id": "compile_request",
+      "schema": "contracts/compile-request.schema.json"
+    }
+  ],
+  "outputs": [
+    {
+      "id": "skill_ir",
+      "schema": "contracts/skill-ir.schema.json"
+    },
+    {
+      "id": "build_receipt",
+      "schema": "contracts/build-receipt.schema.json"
+    },
+    {
+      "id": "closure_result",
+      "schema": "contracts/capability-closure.schema.json"
+    }
+  ],
+  "invariants": [
+    "Source material compiles into Skill IR before any file is rendered",
+    "Deterministic work is executable code and never LLM narration",
+    "One primary family plus orthogonal traits determines runtime and required evals",
+    "Platform conventions live in target profiles, never in universal Skill semantics",
+    "Every required capability is closed or explicitly runtime-bound",
+    "Fail closed on material UNKNOWN",
+    "Repo wiring remains owned by l9-wire-skill-into-repo",
+    "DAG authoring mechanics remain owned by l9-dag-authoring"
+  ],
+  "resources": [
+    {
+      "kind": "policy",
+      "ref": "policies/capability-closure.yaml"
+    },
+    {
+      "kind": "policy",
+      "ref": "policies/target-profiles.yaml"
+    }
+  ],
+  "dependencies": [
+    {
+      "skill": "l9-dag-authoring",
+      "relation": "consumes"
+    },
+    {
+      "skill": "l9-wire-skill-into-repo",
+      "relation": "delegates_to"
+    },
+    {
+      "skill": "l9-structured-reasoning",
+      "relation": "mines_invariants_only"
+    }
+  ],
+  "risks": [
+    {
+      "id": "scope_drift",
+      "mitigation": "static_validate rejects out-of-partition nodes"
+    },
+    {
+      "id": "platform_rule_leak",
+      "mitigation": "unverified profiles are gated by policy"
+    }
+  ],
+  "evidence": [
+    {
+      "claim": "canonical DAG dir is workflows/dags",
+      "source_ref": "skills/l9-dag-authoring/SKILL.md + observed workflows/dags layout"
+    }
+  ],
+  "unknowns": [],
+  "target_profiles": [
+    "portable",
+    "l9"
+  ],
+  "capabilities": [
+    {
+      "id": "bind_inputs",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "skills/l9-skill-compiler/scripts/bind_inputs.py",
+        "success_condition": "exit 0 and status PASS",
+        "failure_behavior": "exit 2 with error list",
+        "depends_on": []
+      }
+    },
+    {
+      "id": "scan_topology",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "skills/l9-skill-compiler/scripts/scan_skill_topology.py",
+        "success_condition": "emits decision from closed enum",
+        "failure_behavior": "exit 2",
+        "depends_on": [
+          "bind_inputs"
+        ]
+      }
+    },
+    {
+      "id": "classify_profile",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "skills/l9-skill-compiler/scripts/classify_skill_profile.py",
+        "success_condition": "one primary family or explicit escalation",
+        "failure_behavior": "exit 2",
+        "depends_on": [
+          "scan_topology"
+        ]
+      }
+    },
+    {
+      "id": "normalize_ir",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "skills/l9-skill-compiler/scripts/normalize_skill_ir.py",
+        "success_condition": "IR validates and round-trips",
+        "failure_behavior": "exit 2",
+        "depends_on": [
+          "classify_profile"
+        ]
+      }
+    },
+    {
+      "id": "render_profiles",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "skills/l9-skill-compiler/scripts/render_target_profile.py",
+        "success_condition": "portable and l9 render deterministically",
+        "failure_behavior": "exit 2",
+        "depends_on": [
+          "normalize_ir"
+        ]
+      }
+    },
+    {
+      "id": "static_validate",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "skills/l9-skill-compiler/scripts/static_validate.py",
+        "success_condition": "zero errors",
+        "failure_behavior": "exit 2",
+        "depends_on": [
+          "render_profiles"
+        ]
+      }
+    },
+    {
+      "id": "capability_closure",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "skills/l9-skill-compiler/scripts/check_capability_closure.py",
+        "success_condition": "result CLOSED or RUNTIME_BOUND",
+        "failure_behavior": "exit 2 on FAIL, exit 3 on BLOCKED",
+        "depends_on": [
+          "static_validate"
+        ]
+      }
+    },
+    {
+      "id": "activation_eval",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "skills/l9-skill-compiler/scripts/evaluate_activation.py",
+        "success_condition": "all fixtures pass and no missing class",
+        "failure_behavior": "exit 2",
+        "depends_on": [
+          "capability_closure"
+        ]
+      }
+    },
+    {
+      "id": "package",
+      "required": true,
+      "binding": {
+        "kind": "EXECUTABLE",
+        "target": "skills/l9-skill-compiler/scripts/package_skill.py",
+        "success_condition": "no missing or empty artifacts",
+        "failure_behavior": "exit 2",
+        "depends_on": [
+          "activation_eval"
+        ]
+      }
+    },
+    {
+      "id": "source_intelligence",
+      "required": true,
+      "binding": {
+        "kind": "MODEL_INSTRUCTION",
+        "target": "skills/l9-skill-compiler/references/source-intelligence-contract.md",
+        "success_condition": "every extracted claim carries a source_ref",
+        "failure_behavior": "emit bounded UNKNOWN",
+        "depends_on": [
+          "bind_inputs"
+        ]
+      }
+    },
+    {
+      "id": "runtime_design",
+      "required": true,
+      "binding": {
+        "kind": "MODEL_INSTRUCTION",
+        "target": "skills/l9-skill-compiler/references/runtime-design-contract.md",
+        "success_condition": "graph conforms to skill-ir schema",
+        "failure_behavior": "emit bounded UNKNOWN",
+        "depends_on": [
+          "classify_profile"
+        ]
+      }
+    },
+    {
+      "id": "behavior_judgment",
+      "required": true,
+      "binding": {
+        "kind": "MODEL_INSTRUCTION",
+        "target": "skills/l9-skill-compiler/references/evaluation-contract.md",
+        "success_condition": "non-deterministic evals judged with rationale and evidence",
+        "failure_behavior": "report unknown, never pass",
+        "depends_on": [
+          "activation_eval"
+        ]
+      }
+    },
+    {
+      "id": "wiring_handoff",
+      "required": true,
+      "binding": {
+        "kind": "DELEGATED_SKILL",
+        "target": "l9-wire-skill-into-repo",
+        "success_condition": "typed handoff accepted by owner",
+        "failure_behavior": "stop and report unwired",
+        "depends_on": [
+          "package"
+        ]
+      }
+    },
+    {
+      "id": "dag_registration",
+      "required": true,
+      "binding": {
+        "kind": "DELEGATED_SKILL",
+        "target": "l9-dag-authoring",
+        "success_condition": "DAG registered in workflows/session/registry.py by owner",
+        "failure_behavior": "stop, do not self-register",
+        "depends_on": [
+          "package"
+        ]
+      }
+    }
+  ],
+  "workflow": {
+    "entrypoint": "COMPILE_REQUEST",
+    "nodes": [
+      {
+        "id": "COMPILE_REQUEST",
+        "kind": "deterministic",
+        "impl": "bind_and_validate_inputs",
+        "capabilities": [],
+        "next": [
+          "BIND_INPUTS"
+        ]
+      },
+      {
+        "id": "BIND_INPUTS",
+        "kind": "deterministic",
+        "impl": "bind_and_validate_inputs",
+        "capabilities": [
+          "bind_inputs"
+        ],
+        "next": [
+          "SCAN_SKILL_TOPOLOGY"
+        ]
+      },
+      {
+        "id": "SCAN_SKILL_TOPOLOGY",
+        "kind": "deterministic",
+        "impl": "enumerate_live_skill_topology",
+        "capabilities": [
+          "scan_topology"
+        ],
+        "next": [
+          "TOPOLOGY_OWNERSHIP_JUDGMENT",
+          "CLASSIFY_SKILL_PROFILE"
+        ]
+      },
+      {
+        "id": "TOPOLOGY_OWNERSHIP_JUDGMENT",
+        "kind": "bounded_llm",
+        "impl": "ambiguous_topology_ownership_decision",
+        "capabilities": [],
+        "next": [
+          "CLASSIFY_SKILL_PROFILE"
+        ]
+      },
+      {
+        "id": "CLASSIFY_SKILL_PROFILE",
+        "kind": "deterministic",
+        "impl": "deterministic_profile_rules",
+        "capabilities": [
+          "classify_profile"
+        ],
+        "next": [
+          "PROFILE_JUDGMENT",
+          "EXTRACT_SOURCE_INTELLIGENCE"
+        ]
+      },
+      {
+        "id": "PROFILE_JUDGMENT",
+        "kind": "bounded_llm",
+        "impl": "ambiguous_skill_profile_classification",
+        "capabilities": [],
+        "next": [
+          "EXTRACT_SOURCE_INTELLIGENCE"
+        ]
+      },
+      {
+        "id": "EXTRACT_SOURCE_INTELLIGENCE",
+        "kind": "bounded_llm",
+        "impl": "source_intelligence_extraction",
+        "capabilities": [
+          "source_intelligence"
+        ],
+        "next": [
+          "NORMALIZE_SKILL_IR"
+        ]
+      },
+      {
+        "id": "NORMALIZE_SKILL_IR",
+        "kind": "deterministic",
+        "impl": "normalize_and_schema_validate_IR",
+        "capabilities": [
+          "normalize_ir"
+        ],
+        "next": [
+          "DESIGN_RUNTIME"
+        ]
+      },
+      {
+        "id": "DESIGN_RUNTIME",
+        "kind": "bounded_llm",
+        "impl": "semantic_runtime_design",
+        "capabilities": [
+          "runtime_design"
+        ],
+        "next": [
+          "RENDER_TARGET_PROFILE"
+        ]
+      },
+      {
+        "id": "RENDER_TARGET_PROFILE",
+        "kind": "deterministic",
+        "impl": "render_target_profiles",
+        "capabilities": [
+          "render_profiles"
+        ],
+        "next": [
+          "STATIC_VALIDATE"
+        ]
+      },
+      {
+        "id": "STATIC_VALIDATE",
+        "kind": "deterministic",
+        "impl": "structural_and_static_validation",
+        "capabilities": [
+          "static_validate"
+        ],
+        "next": [
+          "CAPABILITY_CLOSURE"
+        ]
+      },
+      {
+        "id": "CAPABILITY_CLOSURE",
+        "kind": "deterministic",
+        "impl": "capability_graph_resolution",
+        "capabilities": [
+          "capability_closure"
+        ],
+        "next": [
+          "ACTIVATION_EVAL"
+        ]
+      },
+      {
+        "id": "ACTIVATION_EVAL",
+        "kind": "deterministic",
+        "impl": "activation_fixture_execution",
+        "capabilities": [
+          "activation_eval"
+        ],
+        "next": [
+          "BEHAVIOR_EVAL"
+        ]
+      },
+      {
+        "id": "BEHAVIOR_EVAL",
+        "kind": "bounded_llm",
+        "impl": "family_specific_behavior_judgment_when_not_deterministically_testable",
+        "capabilities": [
+          "behavior_judgment"
+        ],
+        "next": [
+          "PACKAGE"
+        ]
+      },
+      {
+        "id": "PACKAGE",
+        "kind": "deterministic",
+        "impl": "package_integrity",
+        "capabilities": [
+          "package"
+        ],
+        "next": [
+          "HANDOFF_TO_WIRING"
+        ]
+      },
+      {
+        "id": "HANDOFF_TO_WIRING",
+        "kind": "deterministic",
+        "impl": "build_receipt_generation",
+        "capabilities": [
+          "wiring_handoff",
+          "dag_registration"
+        ],
+        "next": [
+          "PASS_BLOCKED_FAIL"
+        ]
+      },
+      {
+        "id": "PASS_BLOCKED_FAIL",
+        "kind": "terminal",
+        "impl": null,
+        "capabilities": [],
+        "next": []
+      }
+    ]
+  },
+  "activation_evals": [
+    {
+      "class": "positive",
+      "prompt": "create a new skill for kubernetes drift detection",
+      "expect": "activate"
+    },
+    {
+      "class": "positive",
+      "prompt": "rebuild the skill compiler runtime as v2",
+      "expect": "activate"
+    },
+    {
+      "class": "boundary",
+      "prompt": "validate a skill pack before release",
+      "expect": "activate"
+    },
+    {
+      "class": "negative",
+      "prompt": "give me a generic reasoning methodology for triage",
+      "expect": "no_activate"
+    },
+    {
+      "class": "negative",
+      "prompt": "run a security audit of this repository",
+      "expect": "no_activate"
+    },
+    {
+      "class": "sibling_collision",
+      "prompt": "wire the skill into the repo and update discovery",
+      "expect": "route_elsewhere",
+      "route_to": "l9-wire-skill-into-repo"
+    },
+    {
+      "class": "sibling_collision",
+      "prompt": "author a dag for the session pipeline",
+      "expect": "route_elsewhere",
+      "route_to": "l9-dag-authoring"
+    },
+    {
+      "class": "sibling_collision",
+      "prompt": "apply reasoning methodology to this decision",
+      "expect": "route_elsewhere",
+      "route_to": "l9-structured-reasoning"
+    }
+  ],
+  "behavior_evals": [
+    {
+      "id": "schema_round_trip",
+      "family": "compiler",
+      "assertion": "normalize(normalize(ir)) == normalize(ir)",
+      "deterministic": true
+    },
+    {
+      "id": "deterministic_render",
+      "family": "compiler",
+      "assertion": "two renders of the same IR are byte-identical",
+      "deterministic": true
+    },
+    {
+      "id": "capability_closure",
+      "family": "compiler",
+      "assertion": "own pack returns CLOSED or RUNTIME_BOUND",
+      "deterministic": true
+    },
+    {
+      "id": "profile_specific_validation",
+      "family": "compiler",
+      "assertion": "l9 profile emits DAG metadata and portable profile does not",
+      "deterministic": true
+    }
+  ]
+}
