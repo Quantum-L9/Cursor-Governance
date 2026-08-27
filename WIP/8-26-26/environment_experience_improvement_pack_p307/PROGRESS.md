@@ -1,19 +1,33 @@
 # Environment Experience Improvement Pack — Progress
 
-Assessed against **main@8f73be9 (post-#320/#321 merge)** on 2026-08-27. Both #320 and #321 have merged.
-**CI-036** is new this pass (unpushed-count honesty across merged-and-deleted branches), and
-**CI-001** now carries the merge-verb transport plus its gate recognition.
+Assessed against **main@30c6ecd4 (post-#324/#325/#326/#327/#328 merge)** on 2026-08-27.
+**CI-037** is new this pass (abandoned work fails closed instead of relying on doctrine).
+**CI-001** and **CI-036** now name merge SHAs instead of "this branch" — both PRs landed.
 
-**3 done · 15 partial · 19 not started** (of 37 records).
+**4 done · 15 partial · 19 not started** (of 38 records).
 
-Previous pass (2026-08-26, main@78f122a (merged) + PR#307 open (CI-008/CI-009/CI-002 slice)): 2 done · 9 partial · 25 not started. Six records moved; none moved backwards.
+Previous pass (2026-08-27, main@8f73be9 (post-#320/#321 merge)): 3 done · 15 partial · 19 not started (of 37).
+Pass before that (2026-08-26, main@78f122a (merged) + PR#307 open): 2 done · 9 partial · 25 not started.
 
-Legend — **done**: merged and verified; **partial**: merged/open progress with a named residual; **not started**: not addressed yet. Rows marked _ext_ name a surface this org does not own (see *Proposed additions*). Rows marked ✱ were verified against the tree or the live container this pass; the rest carry their 2026-08-26 assessment forward unchanged.
+> **Scope of this pass — targeted, not a re-assessment.** Only the records touched by #324
+> and #325 were re-verified against the tree at `30c6ecd4`. Every other record carries its
+> `main@8f73be9` judgement forward unchanged, and #326/#327/#328 were **not** assessed.
+>
+> The overlay was stale on arrival by **CI-034's own criterion** — it named `main@8f73be9`
+> while main had advanced five merges. Third occurrence of that defect class, so
+> `assessed_against_sha` is now recorded in `progress.yaml` rather than left proposed.
+> CI-034 stays open: the drift *check* is still unbuilt, and recording the SHA without it
+> only makes the staleness legible to a reader who thinks to compare.
+
+Legend — **done**: merged and verified; **partial**: merged/open progress with a named residual; **not started**: not addressed yet. Rows marked _ext_ name a surface this org does not own (see *Proposed additions*). Rows marked ✱ were verified against the tree or the live container this pass; the rest carry their earlier assessment forward unchanged.
 
 ## What moved this pass
 
 | Item | Was | Now | What changed |
 |---|---|---|---|
+| CI-037 | — | **done** ✱ | New. `rules/42-no-abandoned-work.mdc` + `ops/autonomy/session_debt.py` on the Stop hook as `--class gate`: exit 2 blocks a turn from ending over unpushed commits or open findings. Three standing rules that were doctrine only, and each of which failed on 2026-08-27, are now mechanical. `7ceeef38` (#324). |
+| CI-001 | partial | **partial** ✱ | Unchanged in status; `delivered_by` resolved from the placeholder "this branch" to `be3f01c9` (#325, merge verb) + `7ceeef38` (#324, gate recognition of the REST merge). Residual is still IMP-01 only, still external. |
+| CI-036 | partial | **partial** ✱ | Same: "This branch" resolved to `be3f01c9` (#325). A second, independent mechanism landed in #324 — a checker that does not trust local remote-tracking refs to *clear* it, because a cloud clone's single-branch refspec means `refs/remotes/origin/<feature>` never exists. Residuals unchanged. |
 | CI-026 | not started | **done** | `Quantum-L9/.github` is attached: the clone is at `/home/user/.github` and the repo is in the session scope list. Was already true at 78f122a — the last pass did not check. |
 | CI-001 | not started | **partial** | `5612f6b` gave `merge_gate._stacked_children` a REST transport and made the deny text name the blocked transport (IMP-11 + IMP-12, 229-line test). `gh_auth_probe.sh` (IMP-02) already existed at 78f122a. Only IMP-01, the session prompt, is left — and it is external. |
 | CI-012 | not started | **partial** | PR#320 (merged 2026-08-27 as `c3ddeea`) makes an unevaluable `requires` precondition deny the capability instead of passing silently, and moves the generic adapter to the brokered front door. The `type` discriminator (I-BS-03) was already in the templates. |
@@ -90,7 +104,9 @@ Unchanged and now overdue: PR#307 merged the is_tracked() ownership guard on ONE
 | 🟡 partial | CI-008 | 0 | Reconcile make pr doctrine with consumer-repository command contracts ✱ | Quantum-L9/Cursor-Governance PR#307 (merged into main) |
 | 🟡 partial | CI-009 | 0 | Establish one project interpreter/toolchain authority and verify importability before READY ✱ | Quantum-L9/Cursor-Governance PR#307 (merged into main) |
 | 🟡 partial | CI-010 | 0 | Make broker authentication and reachability diagnosable ✱ | PR#305 (+ predecessor PR#304) and PR#320, all merged into main |
-| 🟡 partial | CI-001 _ext_ | 1 | Publish and enforce the real GitHub REST/GraphQL capability boundary ✱ | Quantum-L9/Cursor-Governance 5612f6b (merged) + pre-existing ops/scripts/lib/gh_auth_probe.sh |
+| 🟡 partial | CI-001 _ext_ | 1 | Publish and enforce the real GitHub REST/GraphQL capability boundary ✱ | `5612f6b` (probe) + `be3f01c9` (#325, merge verb) + `7ceeef38` (#324, gate recognition) + pre-existing ops/scripts/lib/gh_auth_probe.sh |
+| 🟡 partial | CI-036 _ext_ | 2 | Keep unpushed-commit counts honest across merged-and-deleted branches ✱ | `be3f01c9` (#325, bootstrap prune + origin/HEAD) + `7ceeef38` (#324, checker independent of local refs) |
+| ✅ done | CI-037 | 1 | Make abandoned work fail closed instead of relying on doctrine ✱ | `7ceeef38` (#324) — rule 42 + `ops/autonomy/session_debt.py` on the Stop hook as `--class gate` |
 | 🟡 partial | CI-012 | 1 | Gate rules and MCP config on actual surface capabilities ✱ | Quantum-L9/Cursor-Governance PR#320 (merged as c3ddeea) + pre-existing adapter templates |
 | 🟡 partial | CI-015 | 1 | Name and enforce the authoritative governance checkout ✱ | Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main |
 | 🟡 partial | CI-016 | 1 | Make L4/release receipts resolve paths, branch, and head dynamically ✱ | Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main |
