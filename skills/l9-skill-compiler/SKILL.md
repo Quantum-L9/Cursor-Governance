@@ -1,115 +1,71 @@
 ---
 name: l9-skill-compiler
-description: compile prompts, sops, workflows, kernels, operating protocols, review systems, artifact generators, and domain playbooks into standalone zero-stub skill packs. use when the user asks to create, design, analyze, rebuild, validate, package, or improve reusable agent skills, chatgpt-compatible skill folders, model-agnostic skill packs, or tool-using agent workflows.
-paths: "skills/**"
+description: compile, rebuild, evolve, or validate reusable L9 Skills by deciding topology ownership before creation, classifying one primary family plus orthogonal traits, normalizing canonical Skill IR, rendering target profiles, and enforcing Capability Closure. use when creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided.
 metadata:
-  skill_schema: 1
-  layer: control_plane
-  role: skill_entrypoint
-  tags: [l9, skill, compiler, control_plane, zero_stub, standalone]
+  version: "2.0.0"
+  updated: "2026-08-26"
+  role: skill_compiler_runtime
+  tags: [l9, compiler, skill, ir, capability-closure, dag]
   owner: igor_beylin
-  status: active
-  version: 1.3.0
-  updated: 2026-08-06
 ---
 
-# Strict Skill Compiler
+# l9-skill-compiler v2.0.0
 
-## Purpose
+**Thin bootloader. No generic doctrine is duplicated here.**
 
-Compile prompts, SOPs, workflows, kernels, operating protocols, review systems, artifact generators, and domain playbooks into clean reusable Skill packs.
+**DAG-ENFORCED.** Execute the `skill-compiler-v2` DAG. Do not run this Skill as a prose sequence.
 
-The generated Skill must stand alone. Do not assume the executing agent has any external Skill creator protocol, hidden conventions, prior memory, or platform-specific build workflow unless the user explicitly supplies it.
+## Activate when
 
-## Core Contract
+Creating, compiling, materially rebuilding, evolving, or validating a reusable Skill where
+topology ownership, runtime design, capability bindings, target profile rendering, or
+activation/behavior evaluation must be decided.
 
-| Mode | Output | Load |
-|------|--------|------|
-| discuss | Options, trade-offs | [references/output-modes.md](references/output-modes.md) |
-| design | File tree, resource map | [references/file-contract.md](references/file-contract.md) |
-| analyze | Gap report vs contract | [references/skill-pack-contract.md](references/skill-pack-contract.md) |
-| build / rebuild | Complete skill pack | all refs + [validation-checklist.md](references/validation-checklist.md) |
-| package | Archive-ready pack | validation-checklist |
+**First decide whether to extend, compose, replace, reject, or create.** Creation is not the
+default outcome. Most-specific existing owner wins.
 
-Mandatory final step: **`l9-wire-skill-into-repo`**.
+## Do not activate
 
-## Authority Order
+- Merely wiring an existing pack into a repo -> `l9-wire-skill-into-repo`
+- Authoring a generic L9 DAG -> `l9-dag-authoring`
+- Generic reasoning methodology -> `l9-structured-reasoning`
+- Next-prompt behavior -> `l9-ynp`
+- A domain task already owned by a more specific Skill -> that Skill
 
-1. Source material and explicit user objective.
-2. [references/skill-pack-contract.md](references/skill-pack-contract.md) — standalone protocol.
-3. [references/meta-standard.md](references/meta-standard.md) — metadata and frontmatter.
-4. Kernel references for reasoning, zero-stub, and leverage filters.
-5. `Unknown` — fail closed; do not fabricate paths, tools, or assets.
+## Runtime
 
-## Operating Rules
+- Canonical typed graph: `workflows/dags/skill_compiler_dag.py`
+- Registry id: `skill-compiler-v2`, bound through the repo's existing `SessionDAG` registry and `workflows/dags/__init__.py` auto-discovery surface
+- DAG authoring mechanics and registration conventions are owned by `l9-dag-authoring`. This Skill consumes them and does not invent a parallel registry.
 
-- Preserve source intent, required outputs, scope, and constraints.
-- Compress source material into operational behavior, not archived prose.
-- Keep `SKILL.md` lean as the control plane.
-- Formalize the complete base Skill protocol only in `references/skill-pack-contract.md`.
-- Keep kernels modular and compressed in `references/`.
-- Treat prompts, kernels, contracts, checklists, and output modes as first-class operational primitives.
-- Use scripts only when deterministic repeatable execution is explicitly useful.
-- Use assets only for reusable final-output material.
-- Do not invent connectors, tools, file paths, assets, commands, or dependencies.
-- Do not ship dummy scaffolds, unfinished sections, unlinked files, or partial artifacts.
-- Always create `agents/meta.yaml` on build/rebuild (adapter display metadata). Never create `agents/openai.yaml`. If a legacy `agents/openai.yaml` exists, rename it to `agents/meta.yaml`.
-- Wire new skills via global **`l9-wire-skill-into-repo`** (mandatory final step), then ensure Claude discovery is under `.claude/skills/` (symlink or pack) — never leave a skill pack as a sibling under `.claude/`.
-- Fail closed when correctness requires information that is missing and cannot be safely labeled `Unknown`.
+Logical stages: COMPILE_REQUEST, BIND_INPUTS, SCAN_SKILL_TOPOLOGY, CLASSIFY_SKILL_PROFILE,
+EXTRACT_SOURCE_INTELLIGENCE, NORMALIZE_SKILL_IR, DESIGN_RUNTIME, RENDER_TARGET_PROFILE,
+STATIC_VALIDATE, CAPABILITY_CLOSURE, ACTIVATION_EVAL, BEHAVIOR_EVAL, PACKAGE,
+HANDOFF_TO_WIRING, PASS_BLOCKED_FAIL.
 
-## Compact Workflow
+## Machine contracts
 
-1. Parse the source into objective, scope, triggers, workflow, constraints, outputs, resources, risks, and unknowns.
-2. Apply first-order and compounding-leverage filters to choose the smallest structure with durable reuse.
-3. Select mode: discuss, design, analyze, build, rebuild, or package.
-4. Design the file tree and resource map before writing files.
-5. Build or revise complete files only — including `agents/meta.yaml` from [references/agents-meta.template.yaml](references/agents-meta.template.yaml).
-6. **Wire into repo registries** — load and execute global **`l9-wire-skill-into-repo`**. Pass `skill-name`, `skill-path`, `description`, and `scope`. Load `.claude/adapters/plasticos-repo-wiring.md` when present in PlasticOS repos.
-7. Place or symlink the pack under `.claude/skills/{name}/` for Claude discovery. Migrate any orphan skill dirs sitting under `.claude/` (but not under `.claude/skills/`) into `.claude/skills/`.
-8. Validate metadata, structure, references, repo wiring, zero-stub gates, and package readiness.
-9. Deliver the requested artifact and, when useful, one highest-leverage next prompt or next action.
+`contracts/compile-request.schema.json`, `contracts/skill-profile.schema.json`,
+`contracts/skill-ir.schema.json`, `contracts/capability-closure.schema.json`,
+`contracts/build-receipt.schema.json`
 
-For the full standalone creation protocol, load `references/skill-pack-contract.md`.
+Policies: `policies/skill-families.yaml`, `policies/runtime-routing.yaml`,
+`policies/capability-closure.yaml`, `policies/target-profiles.yaml`,
+`policies/behavior-evals.yaml`
 
-## Metadata Discipline
+Bounded LLM contracts: `references/source-intelligence-contract.md`,
+`references/runtime-design-contract.md`, `references/evaluation-contract.md`
 
-`SKILL.md` uses a **single YAML frontmatter block** for discovery + audit (see `references/meta-standard.md`).
+## Invariants
 
-Reference files in `references/` may use HTML-comment metadata blocks. Do not duplicate metadata across frontmatter and comments on `SKILL.md`.
+- Source material compiles into Skill IR first. Files render only from validated IR.
+- Deterministic work is executable code. LLM nodes are explicit, bounded, schema-constrained.
+- One primary family plus orthogonal traits determines runtime, validation, and required evals.
+- A platform convention belongs to a target profile, never to universal Skill semantics.
+- Every required capability is closed, or explicitly runtime-bound with probe and failure behavior.
+- Fail closed on material UNKNOWN. Never downgrade a blocking failure to success.
 
-For the metadata contract, load `references/meta-standard.md`.
+## Handoff
 
-## Resource Map
-
-Load references only when relevant:
-
-- [references/project-adapters.md](references/project-adapters.md): repo-local wiring adapters — loaded by **`l9-wire-skill-into-repo`** Step 3.
-- [references/skill-pack-contract.md](references/skill-pack-contract.md): complete standalone Skill creation, analysis, rebuild, validation, and packaging protocol.
-- [references/agents-meta.template.yaml](references/agents-meta.template.yaml): required `agents/meta.yaml` scaffold (replaces deprecated `agents/openai.yaml`).
-- [references/meta-standard.md](references/meta-standard.md): file metadata and first-class primitive rules.
-- [references/file-contract.md](references/file-contract.md): file and folder responsibilities, routing, and resource placement rules.
-- [references/output-modes.md](references/output-modes.md): response contracts for discuss, design, analyze, build, rebuild, and package modes.
-- [references/validation-checklist.md](references/validation-checklist.md): final validation gates before presenting or packaging a Skill.
-- [references/kernel-agent-state.md](references/kernel-agent-state.md): deterministic output discipline, no drift, fail-closed behavior, and explicit-write rules.
-- [references/kernel-first-order-thinking.md](references/kernel-first-order-thinking.md): highest-leverage sequencing and five gates.
-- [references/kernel-compounding-leverage.md](references/kernel-compounding-leverage.md): compounding leverage scoring and decision thresholds.
-- [references/kernel-ynp-next-prompt.md](references/kernel-ynp-next-prompt.md): one-next-prompt discipline for reducing turns after deliverables.
-- [references/kernel-zero-stub-build.md](references/kernel-zero-stub-build.md): complete-artifact enforcement and anti-scaffold checks.
-- [references/kernel-reasoning-think-strategy.md](references/kernel-reasoning-think-strategy.md): objective-to-delivery reasoning flow.
-- [references/kernel-igoros-insights.md](references/kernel-igoros-insights.md): scoped hydration, bounded execution, meaning compression, and operational convergence.
-
-## Validation
-
-Before final delivery, validate against `references/validation-checklist.md` and confirm **`l9-wire-skill-into-repo`** completed successfully.
-
-A Skill may not be considered complete unless required files exist (`SKILL.md` + `agents/meta.yaml`), metadata is present, references are linked, **repo registries are updated via `l9-wire-skill-into-repo`**, the pack is discoverable under `.claude/skills/`, trigger logic is strong, kernels are compressed, no dummy scaffolds remain, no `agents/openai.yaml` remains, and package readiness is confirmed.
-
-## Failure Handling
-
-When blocked:
-
-- State the exact blocker.
-- Label missing or unverifiable information as `Unknown`.
-- Do not fabricate missing resources.
-- Provide the smallest safe next action.
-- If a complete artifact was requested but cannot be validated, do not present it as complete.
+Discovery, registry updates, autonomy manifest tier, adapter symlinks, and deprecation are
+owned by `l9-wire-skill-into-repo`. This Skill emits a typed handoff and invokes the owner.
