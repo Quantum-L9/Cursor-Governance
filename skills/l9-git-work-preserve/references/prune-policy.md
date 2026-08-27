@@ -20,6 +20,45 @@ Requires **all** of:
 
 Local branch delete only by default. Remote `git push --delete` requires the reason to include `remote_delete=1` and a second explicit user confirmation.
 
+## `archive_ref`
+
+A redundant branch is not a merged branch, and the difference decides what can
+delete it. `prune_candidate` means zero commits ahead — `git branch -d` removes
+it, because every commit is reachable from HEAD. `archive_ref` means the *work*
+landed while the *commits* did not: reimplemented, squashed, or cherry-picked
+onto a different parent. Its tip is not an ancestor, so **`git branch -d`
+refuses it**, correctly.
+
+Clearing one therefore needs `git branch -D`, which is force-delete, and that
+requires everything `prune-execute` requires plus:
+
+- receipt class `archive_ref` with **`redundancy_basis: patch_id`**
+- `fetched: true` when the repo has a remote — redundancy judged against a stale
+  baseline is not judged at all
+- the tip SHA recorded, so `git branch <name> <sha>` restores it
+
+**`content_superset` never authorises a delete.** Absorption fires while
+`git cherry` still reports the commits novel — that disagreement is why it is
+consulted — so a single added line that happens to exist somewhere upstream
+classifies the ref `archive_ref` while its commit is genuinely unlanded. That is
+a claim worth reporting and not a claim worth deleting on. Such refs are for
+human review; if you conclude the work really did land, re-diagnose after the
+fact or delete deliberately, but not on this evidence alone.
+
+## Triage boundary
+
+`/ff` belongs to `l9-repo-sync`: it parks unique work on preserve refs and
+deletes nothing. This pack triages what `/ff` parked
+(`triage_preserved_refs.py`, see `triage-handoff.md`) and it deletes nothing
+either — triage reports classes and evidence, and every removal still comes
+back through this policy.
+
+So a `patch_id` verdict does not delete a preserve ref; it makes the ref
+*eligible* for a `prune-execute` that still needs its own authorisation and
+receipt hash. Refs whose basis is `content_superset` are printed for human
+review with their tip SHA, and no force-delete command is offered for them.
+Git's own merged-into-HEAD check stays the last line of defence.
+
 ## Never auto
 
 - Force-push, hard-reset, admin-merge
