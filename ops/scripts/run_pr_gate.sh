@@ -345,8 +345,30 @@ elif grep -Eq '\.py$' "$changed_file"; then
     echo "FAIL: no python interpreter for scoped pytest"
     exit 1
   fi
+  # Selection above read $WS; execution must name the same tree. Publishing from
+  # a second governance clone (rule 49 §7) runs this Makefile from $GOV while the
+  # changed files and their tests live in $WS, so a test added in the workspace
+  # collects as "no tests ran" and the gate fails exit 4 on work that is present
+  # and passing. Measured 2026-08-27.
+  #
+  # `:=` rather than a fresh assignment: PR #323 declares _pytest_ws_kind above
+  # the if/elif chain to skip this registry for consumer workspaces. Where that
+  # has landed this reuses its value; where it has not, this computes it. Either
+  # way there is one value and one declaration.
+  #
+  # Consumers keep $GOV as their root, byte for byte as before: they do not own
+  # these suites.
+  : "${_pytest_ws_kind:=$(classify_workspace_kind "$WS")}"
+  _pytest_repo_root_args=()
+  if [ "$_pytest_ws_kind" = "ssot" ] || [ "$_pytest_ws_kind" = "ssot_checkout" ]; then
+    if [ "$(cd "$WS" && pwd -P)" != "$(cd "$GOV_ROOT" && pwd -P)" ]; then
+      _pytest_repo_root_args=(--repo-root "$WS")
+      echo "OK: pytest root -> workspace ($_pytest_ws_kind; governance clone, \$GOV differs)"
+    fi
+  fi
   "$_pytest_py" "$SCRIPT_DIR/run_python_test_suites.py" \
     --profile local \
+    "${_pytest_repo_root_args[@]}" \
     --changed-file "$changed_file" \
     -- "${pytest_args[@]}"
 else

@@ -1,6 +1,7 @@
 # 🔴 URGENT — Environment Experience Improvement Pack: progress + next slice
 
-**Assessed:** 2026-08-27, against `main@498dcaa` (post-#307-merge + 47 commits) with PR #320 open.
+**Assessed:** 2026-08-27, against `main@498dcaa` (post-#307-merge + 47 commits). PR #320 has since
+merged as `c3ddeea` — a second live instance of CI-034 inside one hour.
 **Supersedes:** the 2026-08-26 assessment, which was stamped `main@post-#307-merge` — a prose label,
 not a SHA. `main` moved 47 commits underneath it and nothing marked it stale.
 **Artifact (expanded, no zip):** [`environment_experience_improvement_pack_p307/`](./environment_experience_improvement_pack_p307/)
@@ -8,9 +9,10 @@ not a SHA. `main` moved 47 commits underneath it and nothing marked it stale.
 [`progress.yaml`](./environment_experience_improvement_pack_p307/progress.yaml) the machine view,
 per-record progress under each entry's `progress:` key in `improvements.yaml`.
 
-## Status: 3 done · 14 partial · 19 not started (of 36)
+## Status: 3 done · 15 partial · 19 not started (of 37)
 
-Previously 2 · 9 · 25. Six records moved, none backwards.
+Previously 2 · 9 · 25, then 3 · 14 · 19. Six records moved on re-assessment; **CI-036** was
+added after a live defect, and **CI-001** advanced when its merge-verb leg was built.
 
 ### Moved on re-assessment (2026-08-27)
 - **CI-026 → done** — `Quantum-L9/.github` is attached (`/home/user/.github`, in the session scope
@@ -18,8 +20,9 @@ Previously 2 · 9 · 25. Six records moved, none backwards.
 - **CI-001 → partial** — `5612f6b` gave `merge_gate._stacked_children` a REST transport and made the
   deny text name the blocked transport (IMP-11 + IMP-12). `gh_auth_probe.sh` (IMP-02) also predates
   the 08-26 pass. Only IMP-01 — the Anthropic session prompt — remains, and it is external.
-- **CI-012 → partial** — PR #320 (open) makes an unevaluable `requires` precondition deny the
-  capability instead of passing silently, and moves the generic adapter to the brokered front door.
+- **CI-012 → partial** — PR #320 (merged as `c3ddeea`) makes an unevaluable `requires` precondition
+  deny the capability instead of passing silently, and moves the generic adapter to the brokered front
+  door. Its residuals (rule 22 vs actually-exposed servers, I-BS-12) are untouched, so it stays partial.
 - **CI-017 → partial** — `7dc7e4f` moved the PE manifest from gate-time failure to commit-time heal.
 - **CI-029 → partial** — `tests/corpus_fixtures.py` persists a two-root corpus builder in
   l9-constellation-topology. Not proven to be I-WT-04's builder (`build_corpus.mjs` is absent; six
