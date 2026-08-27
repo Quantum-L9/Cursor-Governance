@@ -29,6 +29,34 @@ _gate_failed=0
 # Hashing the worktree instead is invariant across `git add` and `git commit`
 # and changes the moment a file's content does. Costs ~0.7s over ~3.7k files
 # against the ~5.5 minutes it saves.
+#
+# The digest must also cover the GATE'S OWN code, which the worktree hash above
+# cannot reach. When $WS is a linked worktree the gate executes from $GOV_ROOT —
+# a different checkout — so editing run_pr_gate.sh changed nothing the receipt
+# could see. A green or red verdict from the previous gate version was then
+# reused against the new one, and the only way to validate a gate fix was to
+# delete the receipt by hand. Folding these bytes into the content digest
+# invalidates the receipt exactly when the verdict could differ.
+_GATE_CODE_FILES=(
+  "ops/scripts/run_pr_gate.sh"
+  "ops/scripts/run_python_test_suites.py"
+  "ops/scripts/pr_gate_failure.py"
+  "ops/config/python-contract.json"
+  ".pre-commit-config.yaml"
+)
+_gate_code_digest() {
+  local rel present=()
+  for rel in "${_GATE_CODE_FILES[@]}"; do
+    [[ -f "$GOV_ROOT/$rel" ]] && present+=("$GOV_ROOT/$rel")
+  done
+  if [[ ${#present[@]} -eq 0 ]]; then
+    # No gate code readable: do not fabricate a stable digest, or a receipt
+    # would survive a change this function failed to observe.
+    printf 'unreadable-%s' "$RANDOM"
+    return
+  fi
+  cat "${present[@]}" 2>/dev/null | cksum | awk '{print $1}'
+}
 _gate_state_digest() {
   local list paths content
   list="$(mktemp)"
@@ -39,10 +67,24 @@ _gate_state_digest() {
   # Paths and contents are digested separately: a rename that preserves both
   # content and sort position would otherwise slip through as unchanged.
   paths="$(cksum <"$list" | awk '{print $1}')"
-  content="$(xargs -0 -r git hash-object <"$list" 2>/dev/null | cksum | awk '{print $1}')"
+  content="$(
+    {
+      xargs -0 -r git hash-object <"$list" 2>/dev/null
+      _gate_code_digest
+    } | cksum | awk '{print $1}'
+  )"
   rm -f "$list"
   printf '%s %s %s' "$paths" "$content" "$PR_BASE"
 }
+
+# One seam, so callers never reimplement the algorithm. The lifecycle test used
+# to carry its own shell copy of this digest, which is precisely why changing it
+# was expensive enough to defer.
+if [[ "${1:-}" == "--print-state-digest" ]]; then
+  _gate_state_digest
+  printf '\n'
+  exit 0
+fi
 _gate_receipt_matches() {
   [[ -f "$_GATE_RECEIPT" ]] || return 1
   python3 - "$_GATE_RECEIPT" "$(_gate_state_digest)" <<'PY'
