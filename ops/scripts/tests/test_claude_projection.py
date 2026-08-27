@@ -393,5 +393,80 @@ class SkillStateUnfreezeTests(unittest.TestCase):
             self.assertFalse((target / "l9-a").exists())
 
 
+class ClaudeSettingsGeneratedContractTests(unittest.TestCase):
+    """<root>/.claude/settings.json is a projection of settings.template.json.
+
+    The sessionStart reconciler rewrites that file in whichever workspace is
+    open. While it was unregistered, nothing in the generated-artifact SSOT
+    regenerated it, so a template change turned into an incidental one-line
+    diff in the next agent's branch — the identical `l9-global-architect` hunk
+    reached PR #317 and #318 that way, and dirtied a third worktree on
+    creation.
+
+    Three properties close that, and they only work together: registering the
+    path without a regenerator would be strictly worse than leaving it out,
+    because the keep-ours merge driver would then pin a stale projection with
+    nothing able to refresh it. Each test below owns one, and the last one
+    proves the regenerator is wired rather than merely defined.
+    """
+
+    @staticmethod
+    def _sync_module():
+        import sync_generated_artifacts  # noqa: PLC0415 — path set at module import
+
+        return sync_generated_artifacts
+
+    def test_registered_as_a_generated_path(self) -> None:
+        self.assertTrue(self._sync_module().is_generated_path(".claude/settings.json"))
+
+    def test_attributed_to_the_keep_ours_merge_driver(self) -> None:
+        attributes = (GOV_ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
+        self.assertIn(".claude/settings.json merge=l9-generated", attributes)
+
+    def test_regenerator_restores_a_mangled_projection(self) -> None:
+        """The anti-orphan proof: sync_claude_settings() rewrites the file.
+
+        Runs against a temp root holding only what reconcile_gov_claude reads,
+        so the real clone is never mutated by the test.
+        """
+        sync = self._sync_module()
+        template_rel = Path("environment/agents/adapters/claude-code/settings.template.json")
+        hooks_rel = Path("environment/agents/adapters/claude-code/hooks")
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp) / "gov"
+            (root / template_rel.parent).mkdir(parents=True)
+            shutil.copy2(GOV_ROOT / template_rel, root / template_rel)
+            shutil.copytree(GOV_ROOT / hooks_rel, root / hooks_rel)
+            settings = root / ".claude" / "settings.json"
+            settings.parent.mkdir(parents=True)
+            settings.write_text(json.dumps({"stale": True}), encoding="utf-8")
+
+            wrote: list[str] = []
+            warnings: list[str] = []
+            sync.sync_claude_settings(root, wrote, warnings)
+
+            self.assertEqual(warnings, [])
+            self.assertIn(".claude/settings.json", wrote)
+            rebuilt = json.loads(settings.read_text(encoding="utf-8"))
+            self.assertNotIn("stale", rebuilt)
+            template = json.loads((root / template_rel).read_text(encoding="utf-8"))
+            self.assertEqual(rebuilt.get("skillOverrides"), template.get("skillOverrides"))
+
+            # Idempotent: a second pass reports no further write.
+            wrote_again: list[str] = []
+            sync.sync_claude_settings(root, wrote_again, warnings)
+            self.assertEqual(wrote_again, [])
+            self.assertEqual(warnings, [])
+
+    def test_regenerator_is_wired_into_the_sync_dispatch(self) -> None:
+        """Defined but uncalled is the orphan case this whole class exists for."""
+        sync = self._sync_module()
+        source = (SCRIPTS / "sync_generated_artifacts.py").read_text(encoding="utf-8")
+        self.assertTrue(hasattr(sync, "sync_claude_settings"))
+        self.assertIn("sync_claude_settings(root, wrote, warnings)", source)
+        # And a direct edit to the projection re-triggers the branch that calls it.
+        self.assertTrue(sync.should_run({".claude/settings.json"}, (".claude/settings.json",)))
+
+
 if __name__ == "__main__":
     unittest.main()

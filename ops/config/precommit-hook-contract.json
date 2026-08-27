@@ -47,6 +47,7 @@
         "environment/generated/llm-rules/",
         "ops/generated/skill-registry.json",
         "environment/agents/adapters/claude-code/settings.template.json",
+        ".claude/settings.json",
         "commands/COMMANDS_MANIFEST.yaml",
         "skills/AUTONOMY_MANIFEST.yaml",
         "environment/program-execution/core/MANIFEST.yaml",

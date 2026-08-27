@@ -34,6 +34,22 @@ gh pr merge <n> --repo <owner/name> --squash --delete-branch
 receipt (or `L9_MERGE_AUTHORIZED`). Force-push, hard-reset, and
 `--admin` stay denied.
 
+**Both merge transports are governed.** `gh pr merge` is a GraphQL call; where
+GraphQL is unavailable (a session gateway serving only a pinned set of
+PR-review operations 403s it) the merge that runs is the REST endpoint:
+
+```bash
+gh api -X PUT repos/<owner>/<name>/pulls/<n>/merge -f merge_method=merge
+```
+
+The gate recognises that form — and the `curl` spelling of it — as a merge,
+resolving owner/name/number from the endpoint path so the receipt check and the
+stack-safety probe both apply. Name `merge_method` explicitly: an unspecified
+method is treated as ancestry-breaking and is denied for a stack parent, which
+is why `stack_safe_merge.py` selects it in code rather than leaving it to a
+server-side default. A transport that the gate cannot see is not a licence to
+use it — reach for `stack_safe_merge.py` first.
+
 Stacked PRs (operator default 2026-08-15):
 
 - When a PR is already open for the workstream, the next PR **stacks on the

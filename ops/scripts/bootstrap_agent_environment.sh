@@ -475,6 +475,36 @@ if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&
     grep -qxF "$glob" "$exclude_file" 2>/dev/null || printf '%s\n' "$glob" >> "$exclude_file"
   done
   say "excluded shared activation artifacts via $exclude_file (local, uncommitted)"
+
+  # Stale remote-tracking refs make every "unpushed commits" count wrong, in
+  # both directions. A branch deleted upstream on merge leaves refs/remotes/
+  # origin/<branch> behind, so a checker that resolves origin/$current_branch
+  # finds a dead ref and counts <last-pushed-tip>..HEAD -- every commit that
+  # landed on main since the merge, reported as this branch's unpushed work.
+  # Measured: 16 reported where 2 were real.
+  #
+  # Pruning alone converts that overcount into silence: the fallback is
+  # origin/HEAD, which a fetch-only checkout never sets, so rev-list fails and
+  # the count reads 0 with genuinely unpushed commits in the tree. A false
+  # negative on a real condition is worse than an inflated one, so the two
+  # halves ship together and neither is optional.
+  #
+  # Both are fail-soft: they need the remote, and a session with no network is
+  # not a reason to abort activation.
+  if git -C "$WORKSPACE" remote get-url origin >/dev/null 2>&1; then
+    if git -C "$WORKSPACE" remote prune origin >/dev/null 2>&1; then
+      say "pruned remote-tracking refs for branches deleted upstream"
+    else
+      warn "could not prune stale remote-tracking refs (remote unreachable) — unpushed counts may overcount"
+    fi
+    if git -C "$WORKSPACE" symbolic-ref --quiet refs/remotes/origin/HEAD >/dev/null 2>&1; then
+      say "origin/HEAD -> $(git -C "$WORKSPACE" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)"
+    elif git -C "$WORKSPACE" remote set-head origin -a >/dev/null 2>&1; then
+      say "set origin/HEAD -> $(git -C "$WORKSPACE" symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null)"
+    else
+      warn "origin/HEAD unset and could not be resolved — a deleted branch leaves unpushed counts unreportable"
+    fi
+  fi
 fi
 
 # --- 6) Readiness preflight (report only; never blocks) ---------------------

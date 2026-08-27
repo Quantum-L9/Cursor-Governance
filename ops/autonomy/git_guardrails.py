@@ -247,6 +247,12 @@ GENERATED_PATH_PREFIXES: tuple[str, ...] = (
     "ops/generated/skill-registry.json",
     "environment/agents/adapters/claude-code/generated/skill-registry.json",
     "environment/agents/adapters/claude-code/settings.template.json",
+    # Wholesale projection of that template (reconcile_gov_claude writes the
+    # whole file; no PRESERVE_USER_KEYS survive at governance scope), so
+    # sync_claude_settings() is the "deterministic regeneration contract" rule
+    # 54 accepts as proof of disposability. Generated, not carved out: the
+    # carve-out below is for paths no gate-run generator produces.
+    ".claude/settings.json",
     "commands/COMMANDS_MANIFEST.yaml",
     "environment/program-execution/core/MANIFEST.yaml",
     "environment/program-execution/core/program-execution-blueprint-template/MANIFEST.yaml",
