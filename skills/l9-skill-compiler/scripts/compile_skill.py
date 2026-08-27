@@ -196,14 +196,12 @@ def skill_description(pack_dir):
 
 
 def _profiles(selected):
+    """Selected profiles, deduplicated, with the required pair ordered first."""
     if not selected:
         return list(DEFAULT_PROFILES)
     ordered = []
     for profile in list(DEFAULT_PROFILES) + list(selected):
         if profile in selected and profile not in ordered:
-            ordered.append(profile)
-    for profile in selected:
-        if profile not in ordered:
             ordered.append(profile)
     return ordered
 
