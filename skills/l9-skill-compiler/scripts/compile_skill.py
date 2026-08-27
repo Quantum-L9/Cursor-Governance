@@ -522,8 +522,10 @@ def main(argv=None):
 
 
 def _run(args, machine_stdout):
-    request, resolution, result, dag = None, {}, None, None
-    request_path, workdir = None, None
+    # Only these two are read on the exception path below. result, dag,
+    # request_path and workdir come back from invoke() and are read only after
+    # it returns, so pre-initializing them would be dead.
+    request, resolution = None, {}
     try:
         request, resolution = normalize_request(args)
         result, dag, request_path, workdir = invoke(args, request, resolution)
