@@ -237,7 +237,8 @@ surface renderers, the JSON-line bridge, and negative/chaos validation.
 
 # Wave 3 — Mandatory Peer Deployment and Conformance
 
-Wave 3 makes every canonically bound peer surface a constrained orchestration client. Provider availability remains a Program Execution readiness concern.
+Wave 3 makes every canonically bound peer surface a constrained orchestration
+client. Provider availability remains a Program Execution readiness concern.
 
 ## Enforcement boundary
 
@@ -256,7 +257,10 @@ A peer surface may not start autonomous work unless:
 
 ## Supported adapter control surface
 
-The legacy `autonomy.validation.doctor` and `autonomy.wave3_cli` file-path CLIs are retired. Use `AdapterConformance.run()` in-process or the JSON-line bridge below. Registration and deployment must resolve canonical peer bindings; provider reachability is checked by Program Execution readiness.
+The legacy `autonomy.validation.doctor` and `autonomy.wave3_cli` file-path CLIs
+are retired stubs. Use `AdapterConformance.run()` in-process or the JSON-line
+bridge below. Registration and deployment must resolve canonical peer bindings;
+provider reachability is checked by Program Execution readiness.
 
 ## JSON-line bridge and tool hooks
 
