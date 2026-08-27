@@ -409,13 +409,20 @@ else
   _reopen_python="${GOV_ROOT}/.venv/bin/python"
   [[ -x "$_reopen_python" ]] || _reopen_python="python3"
   if [[ -f "$_reopen_protect_py" && -n "${owner:-}" && -n "${name:-}" ]]; then
-    _reopen_touched="$(
+    # `if !` rather than `|| true`: an advisory path must not abort the publish,
+    # but erasing the failure would also hide it from the swallowed-failure
+    # ratchet. Handling it explicitly keeps both properties.
+    if ! _reopen_touched="$(
       "$_reopen_python" "$_reopen_protect_py" \
         --list-touched-additive-only --base "$PR_BASE" --head HEAD --repo "$WS" \
-        2>/dev/null || true
-    )"
+        2>/dev/null
+    )"; then
+      _reopen_touched=""
+    fi
     if [[ -n "$_reopen_touched" ]]; then
-      _reopen_body="$(gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq .body 2>/dev/null || true)"
+      if ! _reopen_body="$(gh api "repos/${owner}/${name}/pulls/${pr_number}" --jq .body 2>/dev/null)"; then
+        _reopen_body=""
+      fi
       if [[ "$_reopen_body" != *"<!-- L9_PROTECTED_ROOT_PR -->"* ]]; then
         echo "WARN: this PR now touches additive_only root file(s):"
         printf '  %s\n' $_reopen_touched
