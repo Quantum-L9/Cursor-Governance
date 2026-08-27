@@ -103,6 +103,8 @@ Policies: `policies/skill-families.yaml`, `policies/runtime-routing.yaml`,
 `policies/capability-closure.yaml`, `policies/target-profiles.yaml`,
 `policies/behavior-evals.yaml`
 
+First qualification run and defect classification: `QUALIFICATION.md`
+
 Bounded LLM contracts: `references/source-intelligence-contract.md`,
 `references/runtime-design-contract.md`, `references/evaluation-contract.md`
 

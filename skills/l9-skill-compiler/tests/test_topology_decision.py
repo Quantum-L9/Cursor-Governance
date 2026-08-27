@@ -56,6 +56,26 @@ def test_create_new_when_no_candidates():
     assert "no_ownership_candidates" in evidence
 
 
+def test_namespace_prefix_is_not_ownership_evidence():
+    """Every live skill is named l9-*, so the prefix proves nothing about ownership."""
+    assert st.uninformative_tokens(live()) == {"l9"}
+    unrelated = {"domain": "unrelated", "stated_objective": "xyzzy plugh"}
+    bare, _, _, _ = st.decide({"proposed_name": "zzz-quantum-widget", **unrelated}, live())
+    prefixed, _, _, _ = st.decide({"proposed_name": "l9-zzz-quantum-widget", **unrelated}, live())
+    assert prefixed == bare == "CREATE_NEW"
+
+
+def test_a_single_real_token_match_does_not_deterministically_claim_ownership():
+    rows = st.candidates(
+        {"proposed_name": "l9-dag-authoring", "domain": "", "stated_objective": ""},
+        live(),
+    )
+    by_skill = {row["skill"]: row for row in rows}
+    # "dag" and "authoring" are real evidence; "l9" must not add a free point.
+    assert by_skill["l9-dag-authoring"]["capability_overlap"] == 2
+    assert "l9-structured-reasoning" not in by_skill
+
+
 def test_trigger_overlap_is_distinguished_from_capability_overlap():
     rows = st.candidates(
         {
