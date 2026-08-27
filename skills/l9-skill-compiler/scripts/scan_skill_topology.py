@@ -4,31 +4,27 @@ import os
 import re
 import sys
 
+import yaml
+
 from _common import REPO, emit, fail, load_json
 
 
 def parse_skill_metadata(skill_md):
-    meta = {}
-    lines = []
-    inside = False
     with open(skill_md, encoding="utf-8") as handle:
-        for line in handle:
-            if line.strip() == "---":
-                if inside:
-                    break
-                inside = True
-                continue
-            if inside:
-                lines.append(line.rstrip("\n"))
-    key = None
-    for line in lines:
-        match = re.match(r"^([a-z_]+):\s*(.*)$", line)
-        if match:
-            key = match.group(1)
-            meta[key] = match.group(2).strip()
-        elif key and line.startswith(" "):
-            meta[key] = (meta.get(key, "") + " " + line.strip()).strip()
-    return meta
+        text = handle.read()
+    if not text.startswith("---"):
+        return {}
+    end = text.find("\n---", 3)
+    if end == -1:
+        return {}
+    parsed = yaml.safe_load(text[4:end]) or {}
+    if not isinstance(parsed, dict):
+        return {}
+    nested = parsed.get("metadata")
+    if isinstance(nested, dict):
+        for key, value in nested.items():
+            parsed.setdefault(key, value)
+    return parsed
 
 
 def enumerate_live_skills(skills_dir=None):

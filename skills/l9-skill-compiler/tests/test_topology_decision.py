@@ -18,6 +18,10 @@ def test_fixture_repo_enumerates():
     assert set(live()) >= {"l9-skill-compiler", "l9-dag-authoring", "l9-wire-skill-into-repo"}
 
 
+def test_nested_metadata_role_is_visible():
+    assert live()["l9-dag-authoring"]["role"] == "l9_dag_authoring"
+
+
 def test_replace_existing_when_named():
     decision, _, _, decided_by = st.decide(
         {"proposed_name": "l9-skill-compiler", "existing_skill": "l9-skill-compiler"},
