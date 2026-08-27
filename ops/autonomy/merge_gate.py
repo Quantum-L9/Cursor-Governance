@@ -92,6 +92,16 @@ DENY_TOOL_NAMES = {
 }
 
 MERGE_BASH = re.compile(r"\bgh\s+pr\s+merge\b", re.I)
+#: The REST merge endpoint, reached by `gh api` or curl. `gh pr merge` is a
+#: GraphQL call; where GraphQL is unavailable this path is the merge, so the
+#: gate must recognise it as one. Matched against argv words, method checked
+#: separately (GET on this path only reports whether the PR is merged).
+REST_MERGE_PATH = re.compile(r"(?:^|/)repos/[^/\s]+/[^/\s]+/pulls/\d+/merge/?$", re.I)
+#: Same endpoint, capturing owner / name / number so the stack probe and the
+#: authorization receipt can resolve a REST merge's target.
+#: \b, not (?:^|/): this one is searched in the whole command line, where the
+#: path is preceded by a space rather than a slash or the string start.
+REST_MERGE_TARGET = re.compile(r"\brepos/([\w.-]+)/([\w.-]+)/pulls/(\d+)/merge\b", re.I)
 ADMIN_MERGE_BASH = re.compile(r"\bgh\s+pr\s+merge\b.*--admin\b", re.I)
 FORCE_PUSH_BASH = re.compile(r"\bgit\s+push\s+.*(--force|-f)\b", re.I)
 HARD_RESET_BASH = re.compile(r"\bgit\s+reset\s+--hard\b", re.I)
@@ -169,27 +179,93 @@ def _argv_skip_env(words: list[str]) -> list[str]:
     return words[index:]
 
 
-def _segment_is_pr_merge(segment: str) -> bool:
+def _segment_is_cli_pr_merge(segment: str) -> bool:
     """True when this segment *invokes* ``gh pr merge``, not when it mentions it."""
     rest = _argv_skip_env(segment_words(segment))
     if len(rest) >= 3 and rest[0] == "gh" and rest[1] == "pr" and rest[2] == "merge":
         return True
-    return any(_segment_is_pr_merge(sub) for sub in wrapper_subcommands(segment))
+    return any(_segment_is_cli_pr_merge(sub) for sub in wrapper_subcommands(segment))
+
+
+def _segment_is_rest_pr_merge(segment: str) -> bool:
+    """True when this segment merges a PR over REST rather than the ``pr`` verb.
+
+    ``gh pr merge`` is a GraphQL call. Where GraphQL is unavailable — this
+    Claude surface serves only a pinned set of PR-review operations and 403s
+    the rest — the working transport is the REST endpoint:
+
+        gh api -X PUT repos/<owner>/<name>/pulls/<n>/merge -f merge_method=squash
+
+    Matching the literal words ``gh pr merge`` therefore recognised only the
+    transport that does not work here, and the one that does slipped past
+    every check this module performs — stack safety included, which is the
+    check that keeps a squash of a stack parent from silently dropping a
+    child PR's content. The verb is not the merge; the effect is.
+
+    Transport-agnostic on purpose: ``gh api`` and ``curl`` reach the same
+    endpoint, and the curl form skipped even *authorization*, since it is not
+    a git/gh event and the old ``MERGE_BASH`` regex looked for the CLI verb.
+    A PUT to that path is a merge whatever binary issues it. GET on the same
+    path only asks whether the PR is merged, so the method is required.
+    """
+    rest = _argv_skip_env(segment_words(segment))
+    if rest:
+        method = ""
+        for index, word in enumerate(rest):
+            if word in ("-X", "--method", "--request") and index + 1 < len(rest):
+                method = rest[index + 1].strip("'\"").upper()
+            elif word.startswith(("--method=", "--request=", "-X=")):
+                method = word.split("=", 1)[1].strip("'\"").upper()
+        if method == "PUT" and any(REST_MERGE_PATH.search(word.strip("'\"")) for word in rest):
+            return True
+    return any(_segment_is_rest_pr_merge(sub) for sub in wrapper_subcommands(segment))
+
+
+def _segment_is_pr_merge(segment: str) -> bool:
+    """True for either transport: the ``gh pr merge`` verb or a REST merge."""
+    return _segment_is_cli_pr_merge(segment) or _segment_is_rest_pr_merge(segment)
 
 
 def _command_is_pr_merge(command: str) -> bool:
-    """True only for an executed ``gh pr merge``. Heredoc/commit text does not count."""
+    """True only for an executed merge. Heredoc/commit text does not count."""
     return any(
         _segment_is_pr_merge(segment) for segment in split_segments(strip_heredoc_bodies(command))
     )
 
 
+def _rest_merge_method(rest: list[str]) -> str:
+    """merge_method named on a `gh api` argv via -f/-F/--field/--raw-field.
+
+    Unspecified stays "unspecified" — ANCESTRY_BREAKING, so a REST merge that
+    does not name its method is treated as unsafe for a stack parent. That is
+    deliberate and needs no claim about the endpoint's server-side default:
+    this module's own contract is that the method is "selected in code, not
+    guessed", and naming it costs the caller one flag.
+    """
+    field_flags = ("-f", "-F", "--field", "--raw-field")
+    for index, word in enumerate(rest):
+        value = ""
+        if word in field_flags and index + 1 < len(rest):
+            value = rest[index + 1]
+        elif any(word.startswith(f"{flag}=") for flag in field_flags):
+            value = word.split("=", 1)[1]
+        elif word.startswith("merge_method="):
+            value = word
+        if value.startswith("merge_method="):
+            method = value.split("=", 1)[1].strip().strip("'\"").lower()
+            if method in ("squash", "rebase", "merge"):
+                return method
+    return "unspecified"
+
+
 def _merge_method(command: str) -> str:
-    """Merge method named on the executed `gh pr merge` argv, not on nearby text."""
+    """Merge method named on the executed merge argv, not on nearby text."""
     for segment in split_segments(strip_heredoc_bodies(command)):
         if not _segment_is_pr_merge(segment):
             continue
         rest = _argv_skip_env(segment_words(segment))
+        if _segment_is_rest_pr_merge(segment) and not _segment_is_cli_pr_merge(segment):
+            return _rest_merge_method(rest)
         if "--squash" in rest:
             return "squash"
         if "--rebase" in rest:
@@ -445,6 +521,16 @@ def _target_from_input(tool_name: str, tool_input: dict[str, Any]) -> tuple[str,
             pr = match.group(1)
             repo_match = re.search(r"--repo\s+([\w.-]+/[\w.-]+)", command, re.I)
             repo = repo_match.group(1) if repo_match else ""
+        else:
+            # A REST merge carries both identifiers in the endpoint path, and
+            # nowhere else. Without parsing them the stack probe returns early
+            # on an empty PR number and every REST merge reads as safe -- so
+            # recognising the transport in _segment_is_rest_pr_merge only
+            # matters if the target can be resolved from it too.
+            rest_match = REST_MERGE_TARGET.search(command)
+            if rest_match:
+                repo = f"{rest_match.group(1)}/{rest_match.group(2)}"
+                pr = rest_match.group(3)
     return repo, pr
 
 
@@ -592,7 +678,9 @@ def evaluate(
         command = str(tool_input.get("command") or tool_input.get("cmd") or "")
         if _never_waive_command(command):
             return NEVER_WAIVE_REASON
-        if MERGE_BASH.search(command):
+        # _command_is_pr_merge covers the REST endpoint reached by curl, which
+        # is not a git/gh event and so lands here — where authorization runs.
+        if MERGE_BASH.search(command) or _command_is_pr_merge(command):
             if not _merge_authorized(tool_name, tool_input):
                 return MERGE_DENY_REASON
             if _human_breakglass():

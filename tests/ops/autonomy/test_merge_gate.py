@@ -564,3 +564,124 @@ def test_github_mcp_shape_stack_parent_squash_still_denied(tmp_path: Path) -> No
     )
     assert code == 0, err
     assert "deny" in out
+
+
+# --- REST transport: the same merge, a different verb -------------------------
+#
+# `gh pr merge` is GraphQL. Where GraphQL is unavailable -- this Claude surface
+# serves only a pinned set of PR-review operations and 403s everything else --
+# the REST endpoint is the merge that actually runs:
+#
+#   gh api -X PUT repos/<owner>/<name>/pulls/<n>/merge -f merge_method=squash
+#
+# The gate recognised a merge by matching the literal words `gh pr merge`, so it
+# saw only the transport that does not work here. Closing it takes two halves:
+# recognising the command, and resolving owner/name/number from the endpoint
+# path -- the stack probe returns early on an empty PR number, so detection
+# alone would still have read every REST merge as safe.
+
+REST_SQUASH = "gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/merge -f merge_method=squash"
+REST_MERGE_COMMIT = "gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/merge -f merge_method=merge"
+REST_UNSPECIFIED = "gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/merge"
+CURL_SQUASH = (
+    "curl -X PUT https://api.github.com/repos/Quantum-L9/SEO-Bot/pulls/53/merge "
+    "-f merge_method=squash"
+)
+
+
+def _shell(command: str) -> dict:
+    return {"tool_name": "Bash", "tool_input": {"command": command}}
+
+
+@pytest.mark.parametrize("command", [REST_SQUASH, REST_UNSPECIFIED])
+def test_rest_squash_of_a_stack_parent_is_denied(tmp_path: Path, command: str) -> None:
+    """The transport changes; the ancestry damage does not.
+
+    REST_UNSPECIFIED is included deliberately: an unnamed method stays
+    ANCESTRY_BREAKING, so the gate needs no claim about the endpoint's
+    server-side default to stay correct.
+    """
+    code, out, err = _run(
+        _shell(command),
+        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
+    )
+    assert code == 0, err
+    assert "deny" in out, command
+    assert "#54" in out, command
+
+
+def test_curl_rest_merge_requires_authorization(tmp_path: Path) -> None:
+    """curl is not a git/gh event, so it lands where authorization is enforced.
+
+    That is stricter than the gh spelling, not weaker: the git/gh exemption
+    covers `gh`, and a bare HTTP client was never exempt -- it was simply
+    unrecognised, so it reached neither check.
+    """
+    code, out, err = _run(
+        _shell(CURL_SQUASH),
+        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
+    )
+    assert code == 0, err
+    assert "deny" in out
+
+
+def test_curl_rest_squash_of_a_stack_parent_denied_even_with_a_receipt(
+    tmp_path: Path,
+) -> None:
+    """Past authorization, the same ancestry check must still fire."""
+    code, out, err = _run(
+        _shell(CURL_SQUASH),
+        env={
+            "L9_MERGE_AUTHORIZATION_FILE": str(_auth_file(tmp_path, pr="*")),
+            "L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED)),
+        },
+    )
+    assert code == 0, err
+    assert "deny" in out
+    assert "#54" in out
+
+
+def test_rest_merge_commit_of_a_stack_parent_stays_allowed(tmp_path: Path) -> None:
+    """--merge's REST spelling keeps the head's commits, so the child survives."""
+    code, out, err = _run(
+        _shell(REST_MERGE_COMMIT),
+        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+def test_rest_squash_of_a_leaf_is_allowed(tmp_path: Path) -> None:
+    """No false positive: the REST path must not block a safe leaf merge."""
+    code, out, err = _run(
+        _shell(REST_SQUASH),
+        env={
+            "L9_STACK_PROBE_FILE": str(
+                _probe_file(
+                    tmp_path,
+                    {"Quantum-L9/SEO-Bot#53": {"head": "fix/leaf", "children": []}},
+                )
+            )
+        },
+    )
+    assert code == 0, err
+    assert out.strip() == ""
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "gh api repos/Quantum-L9/SEO-Bot/pulls/53/merge",
+        "gh api -X GET repos/Quantum-L9/SEO-Bot/pulls/53/merge",
+        "gh api -X PUT repos/Quantum-L9/SEO-Bot/pulls/53/reviews",
+    ],
+)
+def test_rest_non_merges_are_not_treated_as_merges(tmp_path: Path, command: str) -> None:
+    """GET on the merge path only asks whether the PR is merged, and PUT
+    elsewhere is not a merge at all. Neither may be blocked."""
+    code, out, err = _run(
+        _shell(command),
+        env={"L9_STACK_PROBE_FILE": str(_probe_file(tmp_path, STACKED))},
+    )
+    assert code == 0, err
+    assert out.strip() == "", command
