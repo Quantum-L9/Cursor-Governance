@@ -143,6 +143,16 @@ def publish_debt(root: Path) -> dict[str, Any] | None:
     remote_sha = out.split("\t", 1)[0].strip() if out.strip() else ""
     if remote_sha == head:
         return None
+    if remote_sha:
+        # HEAD reachable from the remote tip means the work is published and
+        # this checkout is merely behind -- a second worktree left on an older
+        # commit, say. Debt is unpushed *work*, not a stale checkout, and
+        # reporting it here would be unclearable: pushing does nothing when the
+        # remote is already ahead. Exit 0 is the only proof accepted; a missing
+        # object exits 128 and correctly leaves the debt standing.
+        code, _ = _git(root, "merge-base", "--is-ancestor", head, remote_sha)
+        if code == 0:
+            return None
     return {
         "kind": "publish",
         "workspace": str(root),

@@ -120,6 +120,32 @@ def test_new_commit_after_a_push_is_debt_again(clone: Path) -> None:
     assert debt["remote_sha"]
 
 
+def test_checkout_behind_the_remote_tip_is_not_debt(origin: Path, tmp_path: Path) -> None:
+    """A second worktree left on an older commit has no unpushed work.
+
+    Debt is unpushed *work*, not a stale checkout. Reporting it would also be
+    unclearable: pushing does nothing when the remote is already ahead.
+    """
+    first = make_clone(origin, tmp_path / "first")
+    commit_on_branch(first, "feat/x")
+    git(first, "push", "-q", "origin", "feat/x")
+    behind = git(first, "rev-parse", "HEAD")
+
+    (first / "later.txt").write_text("later", encoding="utf-8")
+    git(first, "add", "-A")
+    git(first, "commit", "-q", "-m", "later work")
+    git(first, "push", "-q", "origin", "feat/x")
+
+    second = tmp_path / "second"
+    subprocess.run(
+        ["git", "clone", "-q", str(origin), str(second)], check=True, capture_output=True
+    )
+    git(second, "fetch", "-q", "origin", "feat/x")
+    git(second, "checkout", "-q", "-b", "feat/x", behind)
+    assert git(second, "rev-parse", "HEAD") == behind
+    assert session_debt.publish_debt(second) is None
+
+
 def test_feature_branch_merely_ahead_of_main_is_not_debt(clone: Path) -> None:
     """Being ahead of origin/main is what a feature branch IS, not debt."""
     commit_on_branch(clone, "feat/x")
