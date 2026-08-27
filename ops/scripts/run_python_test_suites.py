@@ -395,12 +395,43 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Local pr-check only: scope suites to this changed-file list. Never emits '.'.",
     )
+    parser.add_argument(
+        "--root",
+        type=Path,
+        default=None,
+        help=(
+            "Checkout to run against. Defaults to this file's own repository, "
+            "which is wrong whenever the workspace is a different checkout of it."
+        ),
+    )
     parser.add_argument("pytest_args", nargs="*", help="pytest args after --")
     return parser.parse_args(argv)
 
 
+def _rebind_root(root: Path) -> None:
+    """Point the runner at the workspace under test, not at its own checkout.
+
+    REPO_ROOT is derived from this file's location -- the governance clone.
+    Every neighbouring gate step already takes ``--root "$WS"``; this runner was
+    the outlier, so when the workspace was a *different* checkout of this
+    repository (a linked worktree, the per-agent isolation rule 49 mandates) the
+    scoped path list came from the workspace diff while pytest ran in the clone.
+
+    A test file added in the worktree does not exist in the clone, so pytest was
+    handed a nonexistent path and exited 4 -- a usage error, which
+    ``allow_exit_5`` deliberately does not forgive. Publication then failed on
+    precisely the file the author had correctly added: the more tests written,
+    the more certainly the gate broke.
+    """
+    global REPO_ROOT, REGISTRY_PATH
+    REPO_ROOT = root.resolve()
+    REGISTRY_PATH = REPO_ROOT / "ops" / "config" / "python-contract.json"
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    if args.root is not None:
+        _rebind_root(args.root)
     profile, user_args = args.profile, args.pytest_args
     if args.changed_file is not None and profile != "local":
         print("[runner] FATAL: --changed-file is valid only with --profile local", file=sys.stderr)

@@ -330,8 +330,13 @@ elif grep -Eq '\.py$' "$changed_file"; then
     echo "FAIL: no python interpreter for scoped pytest"
     exit 1
   fi
+  # --root "$WS" for the same reason every neighbouring step already takes it:
+  # the scoped paths come from the workspace diff, so they must resolve in the
+  # workspace. Without it a worktree's newly added test file is a nonexistent
+  # path in the governance clone and pytest exits 4 (usage error).
   "$_pytest_py" "$SCRIPT_DIR/run_python_test_suites.py" \
     --profile local \
+    --root "$WS" \
     --changed-file "$changed_file" \
     -- "${pytest_args[@]}"
 else
