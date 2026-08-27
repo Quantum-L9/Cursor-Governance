@@ -34,8 +34,47 @@ import sys
 from pathlib import Path
 from typing import Any
 
+# Default: the governance root this script was loaded from. That is correct when
+# the tree being tested is the tree the runner lives in, which is every consumer
+# publish and every CI run.
+#
+# It is wrong in exactly one shape, and that shape is supported doctrine (rule 49
+# §7): publishing from a second clone of the governance repo. There `make pr`
+# runs the Makefile from $GOV while the changed files -- and their tests -- live
+# in $WS. Selection then reads one tree and execution runs in another, so a test
+# added in the workspace is reported as "no tests ran" and the gate fails on work
+# that is present and passing. Measured 2026-08-27: three selected test files,
+# repo_root=$GOV, exit 4.
+#
+# --repo-root closes that gap by letting the caller name the tree, the same way
+# sync_generated_artifacts.py already takes --root "$WS" from the same gate.
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = REPO_ROOT / "ops" / "config" / "python-contract.json"
+
+
+def _rebind_repo_root(root: Path) -> str | None:
+    """Point the runner at `root`. Returns an error string, or None on success.
+
+    Fails closed rather than falling back: a caller that names a root which is
+    not a governance tree has a wiring bug, and silently testing a different
+    tree than the one requested is the failure mode this whole change exists to
+    remove.
+    """
+    global REPO_ROOT, REGISTRY_PATH  # noqa: PLW0603 - module-level contract, set once at startup
+
+    resolved = root.expanduser().resolve()
+    if not resolved.is_dir():
+        return f"--repo-root is not a directory: {resolved}"
+    registry = resolved / "ops" / "config" / "python-contract.json"
+    if not registry.is_file():
+        return (
+            f"--repo-root is not a governance root (no ops/config/python-contract.json): {resolved}"
+        )
+
+    REPO_ROOT = resolved
+    REGISTRY_PATH = registry
+    return None
+
 
 PROFILES = ("local", "ci")
 SUITE_KINDS = ("pytest", "command", "command_sequence")
@@ -390,48 +429,36 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument("--profile", choices=PROFILES, default="local")
     parser.add_argument(
+        "--repo-root",
+        type=Path,
+        default=None,
+        help=(
+            "Repository root to test. Defaults to the tree this script lives in. "
+            "Pass the workspace when publishing from a second governance clone, "
+            "so suite selection and suite execution name the same tree."
+        ),
+    )
+    parser.add_argument(
         "--changed-file",
         type=Path,
         default=None,
         help="Local pr-check only: scope suites to this changed-file list. Never emits '.'.",
     )
-    parser.add_argument(
-        "--root",
-        type=Path,
-        default=None,
-        help=(
-            "Checkout to run against. Defaults to this file's own repository, "
-            "which is wrong whenever the workspace is a different checkout of it."
-        ),
-    )
     parser.add_argument("pytest_args", nargs="*", help="pytest args after --")
     return parser.parse_args(argv)
 
 
-def _rebind_root(root: Path) -> None:
-    """Point the runner at the workspace under test, not at its own checkout.
-
-    REPO_ROOT is derived from this file's location -- the governance clone.
-    Every neighbouring gate step already takes ``--root "$WS"``; this runner was
-    the outlier, so when the workspace was a *different* checkout of this
-    repository (a linked worktree, the per-agent isolation rule 49 mandates) the
-    scoped path list came from the workspace diff while pytest ran in the clone.
-
-    A test file added in the worktree does not exist in the clone, so pytest was
-    handed a nonexistent path and exited 4 -- a usage error, which
-    ``allow_exit_5`` deliberately does not forgive. Publication then failed on
-    precisely the file the author had correctly added: the more tests written,
-    the more certainly the gate broke.
-    """
-    global REPO_ROOT, REGISTRY_PATH
-    REPO_ROOT = root.resolve()
-    REGISTRY_PATH = REPO_ROOT / "ops" / "config" / "python-contract.json"
-
-
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    if args.root is not None:
-        _rebind_root(args.root)
+
+    # Before the drift validator, the registry read, or any path confinement --
+    # all of which resolve against REPO_ROOT.
+    if args.repo_root is not None:
+        rebind_error = _rebind_repo_root(args.repo_root)
+        if rebind_error is not None:
+            print(f"[runner] FATAL: {rebind_error}", file=sys.stderr)
+            return 2
+
     profile, user_args = args.profile, args.pytest_args
     if args.changed_file is not None and profile != "local":
         print("[runner] FATAL: --changed-file is valid only with --profile local", file=sys.stderr)
