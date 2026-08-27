@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9/skill-compiler/capability-closure",
+  "title": "CapabilityClosureResult",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "result",
+    "checks",
+    "capabilities",
+    "generated_at"
+  ],
+  "properties": {
+    "result": {
+      "enum": [
+        "CLOSED",
+        "RUNTIME_BOUND",
+        "BLOCKED",
+        "FAIL"
+      ]
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "checks": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "fail",
+              "block",
+              "skip"
+            ]
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "binding_kind",
+          "status"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "binding_kind": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "closed",
+              "runtime_bound",
+              "unresolved",
+              "placeholder"
+            ]
+          },
+          "detail": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "unreachable": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "cycles": {
+      "type": "array"
+    }
+  }
+}

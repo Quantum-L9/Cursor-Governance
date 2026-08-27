@@ -1,8 +1,15 @@
 {
   "_comment": [
-    "AUTHORITATIVE Graphiti MCP shape (Cursor + Claude adapters).",
-    "Front door: graphiti-memory @ 127.0.0.1:8100 via SSH tunnel + GRAPHITI_MCP_TOKEN.",
-    "Claude Code copies the same block from environment/agents/adapters/claude-code/mcp.template.json.",
+    "Cursor TRUSTED-OPERATOR Graphiti MCP shape \u2014 local SSH tunnel only.",
+    "Front door: graphiti-memory @ 127.0.0.1:8100 via the operator's SSH tunnel.",
+    "The bearer here is a local-tunnel credential on a trusted-operator surface,",
+    "read from ~/.cursor/graphiti.env. It is NOT the retired cloud side door.",
+    "",
+    "This file is NOT the shape for agent adapters and never was authoritative",
+    "for Claude Code. Model-controlled surfaces hold no credential: they point at",
+    "the brokered front door ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti with no",
+    "in-file bearer. See environment/agents/adapters/claude-code/mcp.template.json",
+    "(canonical) and environment/agents/adapters/ADAPTER_CONTRACT.md.",
     "Retired: l9-shared-memory @ https://memory.quantumaipartners.com (HTTP side door)."
   ],
   "mcpServers": {

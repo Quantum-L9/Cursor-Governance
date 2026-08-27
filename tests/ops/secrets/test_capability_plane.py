@@ -456,6 +456,83 @@ def test_advisory_and_authority_capabilities_declare_distinct_semantics() -> Non
 
 
 # ---------------------------------------------------------------------------
+# #303 item 2 — declared guards are enforced, not merely parsed
+# ---------------------------------------------------------------------------
+
+
+def _stub_claims() -> broker_identity.SessionClaims:
+    return broker_identity.SessionClaims(
+        session_id="sess-rate",
+        jti="jti-rate",
+        org_id="org-1",
+        account_id="acct-1",
+        audience="ccpool_l9-prod",
+        role="session_worker",
+        expires_at=int(time.time()) + 600,
+    )
+
+
+def _broker() -> cb.Broker:
+    return cb.Broker("ccpool_l9-prod", env={"L9_BROKER_EXPECTED_ORG": "org-1"})
+
+
+def test_every_declared_requirement_is_one_the_broker_can_evaluate() -> None:
+    """A registry precondition no code evaluates is a guard in name only."""
+    registry = load_registry()
+    undecidable = {
+        f"{spec_id}:{req}"
+        for spec_id in registry.ids()
+        for req in registry.get(spec_id).requires
+        if req not in cb.EVALUABLE_REQUIREMENTS
+    }
+    assert undecidable == set(), (
+        "capabilities.yaml declares preconditions the broker cannot evaluate; "
+        "either implement them in EVALUABLE_REQUIREMENTS or remove them: "
+        f"{sorted(undecidable)}"
+    )
+
+
+def test_unevaluable_precondition_denies_rather_than_passing_silently() -> None:
+    """The failure mode #303 names: declared `requires`, executed anyway."""
+    broker = _broker()
+    spec = broker.registry.get("graphiti.query")
+    object.__setattr__(spec, "requires", ("phase_lock_held",))
+    with pytest.raises(cb.BrokerError) as excinfo:
+        broker.handle(_stub_claims(), {"capability": "graphiti.query", "params": {}})
+    assert excinfo.value.status == 403
+    assert broker.audit[-1]["decision"] == "DENY"
+    assert broker.audit[-1]["detail"] == "unevaluable precondition"
+
+
+def test_rate_ceiling_is_enforced_per_session_and_capability() -> None:
+    limiter = cb.RateLimiter()
+    assert all(limiter.check("sess-a", "cap.one", 3, now=1000.0) for _ in range(3))
+    # Fourth call inside the window is refused...
+    assert not limiter.check("sess-a", "cap.one", 3, now=1000.0)
+    # ...but a different capability and a different session keep their own budget.
+    assert limiter.check("sess-a", "cap.two", 3, now=1000.0)
+    assert limiter.check("sess-b", "cap.one", 3, now=1000.0)
+    # ...and the window slides.
+    assert limiter.check("sess-a", "cap.one", 3, now=1061.0)
+
+
+def test_declared_rate_ceiling_denies_the_over_limit_request() -> None:
+    broker = _broker()
+    spec = broker.registry.get("graphiti.query")
+    object.__setattr__(spec, "max_requests_per_minute", 1)
+    body = {"capability": "graphiti.query", "params": {"query": "x"}}
+    # First request gets past the ceiling and fails later, at the upstream call
+    # (no network here) — what matters is that it is not a rate denial.
+    with pytest.raises(cb.BrokerError) as first:
+        broker.handle(_stub_claims(), body)
+    assert first.value.status != 429
+    with pytest.raises(cb.BrokerError) as second:
+        broker.handle(_stub_claims(), body)
+    assert second.value.status == 429
+    assert broker.audit[-1]["detail"] == "rate ceiling exceeded"
+
+
+# ---------------------------------------------------------------------------
 # T1 / T2 / §23 — no credentials in surface environments or examples
 # ---------------------------------------------------------------------------
 
@@ -499,6 +576,39 @@ def test_mcp_config_carries_no_bearer() -> None:
     server = config["mcpServers"]["graphiti-memory"]
     assert "GRAPHITI_MCP_TOKEN" not in json.dumps(server)
     assert "headers" not in server
+
+
+def test_no_adapter_mcp_template_carries_a_graphiti_bearer() -> None:
+    """#303 item 3: every adapter, not just Claude, uses the brokered front door.
+
+    Scoped to adapter templates. `ops/graphiti/mcp.json.example` is the
+    trusted-operator (Cursor SSH tunnel) shape and is deliberately not an
+    adapter template — see its own header.
+    """
+    adapters = REPO_ROOT / "environment" / "agents" / "adapters"
+    offenders: list[str] = []
+    checked = 0
+    for path in sorted(adapters.rglob("*.json")):
+        try:
+            config = json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            continue
+        if not isinstance(config, dict):
+            continue
+        # `_comment` / `_l9_meta` carry prose that names the token precisely to
+        # forbid it. Configuration is everything else.
+        wiring = {k: v for k, v in config.items() if not k.startswith("_")}
+        if "mcpServers" not in wiring and "transport" not in wiring:
+            continue
+        checked += 1
+        rendered = json.dumps(wiring)
+        if "GRAPHITI_MCP_TOKEN" in rendered or "Authorization" in rendered:
+            offenders.append(str(path.relative_to(REPO_ROOT)))
+    assert checked >= 5, f"adapter template discovery found only {checked} configs"
+    assert offenders == [], (
+        "adapter MCP templates must point at ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti "
+        f"with no in-file bearer: {offenders}"
+    )
 
 
 # ---------------------------------------------------------------------------

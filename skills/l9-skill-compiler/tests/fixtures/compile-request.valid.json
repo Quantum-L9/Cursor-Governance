@@ -1,0 +1,25 @@
+{
+  "request_id": "l9-skill-compiler-v2",
+  "intent": "rebuild",
+  "subject": {
+    "proposed_name": "l9-skill-compiler",
+    "existing_skill": "l9-skill-compiler",
+    "domain": "skill compilation",
+    "stated_objective": "rebuild the compiler that renders skill artifacts"
+  },
+  "source_material": [
+    {
+      "kind": "dir",
+      "ref": "skills/l9-skill-compiler"
+    }
+  ],
+  "target_profiles": [
+    "portable",
+    "l9"
+  ],
+  "authority": {
+    "lease_id": null,
+    "autonomy_tier": null,
+    "gateway": null
+  }
+}

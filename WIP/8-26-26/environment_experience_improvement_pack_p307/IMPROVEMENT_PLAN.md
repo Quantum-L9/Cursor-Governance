@@ -1,6 +1,14 @@
 # Improvement Plan — Current Forward Work
 
-Only unresolved/current work appears in the active roadmap. Completed source work is retained below for provenance but is not scheduled again.
+Only unresolved/current work appears in the active roadmap. Completed source work is retained below
+for provenance but is not scheduled again.
+
+> **Delivery overlay (2026-08-27, `main@498dcaa`).** The `**Status:**` line on each entry is the
+> record's *roadmap classification at pack generation*, not its delivery state. Delivery state
+> lives in [`PROGRESS.md`](PROGRESS.md) / [`progress.yaml`](progress.yaml) and is authoritative.
+> **CI-007** and **CI-026** are `done` and are no longer scheduled, despite the `ACTIVE` line
+> below. Fourteen further records are `partial` with named residuals — read the overlay before
+> scheduling any entry here.
 
 ## Execution order
 
@@ -35,6 +43,8 @@ Trace each effective value to its source, separate authority-widening drift from
 **Status:** ACTIVE  
 **Priority band:** 0  
 **Depends on:** none
+
+✅ **Delivered** (PR#304/#305, and PR#306 for the readiness probe). Not scheduled — see `PROGRESS.md`.
 
 Represent exceptional publish authority with issuer, reason, scope, issuance time, expiry/consumption semantics, and session-start visibility; do not normalize a one-time grant into silent permanent configuration.
 
@@ -242,6 +252,8 @@ Stamp queued notifications with age at delivery so superseded instructions are r
 **Status:** ACTIVE  
 **Priority band:** 3  
 **Depends on:** none
+
+✅ **Delivered** — `Quantum-L9/.github` is attached as a session source. Not scheduled — see `PROGRESS.md`.
 
 Allow repositories such as .github to be attached under an explicit safe alias rather than blocking the entire org-governance class.
 

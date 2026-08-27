@@ -1,9 +1,12 @@
 ## Issue unblock (session reference)
 
-**Cluster:** Quantum-L9/Cursor-Governance#171
-**Owning fix:** `feat/cg-171-graphiti-gate-state` (hydration SearchFactsError + task-scoped conflicts)
-**Next:** hand the opened PR to `l9-pr-remediation`; do not start #172 until this PR is green
-**Pickup:** Graphiti PICKUP written 2026-08-21
+**Cluster:** Quantum-L9/Cursor-Governance#303 (context: #301 EXTERNAL, #302 INFRA)
+**Owning fix:** PR #320 — broker enforces `requires` + `max_requests_per_minute`; codex/gemini/manus/generic MCP templates brokered and bearer-free
+**Next:** watch PR #320 to green, then take #303 item 1 (k8s broker manifest divergence) as an authorized infra change — `ops/secrets/deploy/**` and `ops/secrets/k8s/**` are protected under rule 90
+**Pickup:** Graphiti PICKUP written 2026-08-26
+
+Prior cluster #171 (memory gates reporting unmeasured state) is closed: PR #264
+landed both fixes and they were re-verified against `main@498dcaa` this session.
 
 # GlobalCommands — Tech Debt (cleanup later)
 
