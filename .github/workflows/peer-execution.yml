@@ -126,3 +126,22 @@ jobs:
         run: |
           uv run --frozen --no-build python \
             environment/program-execution/scripts/validate_thin_providers.py
+      # PE hardening suite. Previously collected by nothing: root pytest ignores
+      # environment/program-execution/tests (conftest.py collect_ignore) and
+      # run_conformance.py globs `tests/test_*.py` non-recursively, so the
+      # `tests/hardening/` subdirectory was orphaned. This step is the only
+      # thing that runs it.
+      #
+      # Deliberately NOT path-scoped to environment/program-execution/** or
+      # autonomy/**: this workflow gates every pull request except WIP-only
+      # changes, and the real-campaign E2E crosses into
+      # environment/agents/generated-data/**, so a narrower selector would
+      # silently drop coverage the suite exists to provide.
+      - name: Program Execution hardening suite (real-campaign E2E)
+        env:
+          PYTHONDONTWRITEBYTECODE: "1"
+          PYTHONPATH: environment/program-execution
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python -m pytest \
+            environment/program-execution/tests/hardening -q
