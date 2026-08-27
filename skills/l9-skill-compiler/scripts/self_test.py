@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
 # Compiler self-host validation. Runs the compiler against its own pack.
+import ast
+import contextlib
+import importlib.util
 import json
 import os
 import sys
@@ -20,6 +23,44 @@ LIVE_SKILLS = {
     "l9-structured-reasoning",
     "l9-wire-skill-into-repo",
 }
+CLI = os.path.join(str(PACK), "scripts", "compile_skill.py")
+RUNNER = os.path.join(str(PACK.parent.parent), "workflows", "dags", "skill_compiler_runner.py")
+# Stage modules the operator CLI must never import: importing them would let it
+# sequence compilation itself instead of invoking the DAG.
+STAGE_MODULES = {
+    "bind_inputs",
+    "scan_skill_topology",
+    "classify_skill_profile",
+    "normalize_skill_ir",
+    "render_target_profile",
+    "static_validate",
+    "check_capability_closure",
+    "evaluate_activation",
+    "package_skill",
+}
+
+
+def _load_runner():
+    spec = importlib.util.spec_from_file_location("skill_compiler_runner_selftest", RUNNER)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    # Registering the DAG logs; keep that off this harness's result stream.
+    with contextlib.redirect_stdout(sys.stderr):
+        spec.loader.exec_module(module)
+    return module
+
+
+def cli_imports():
+    """Module names the operator CLI imports, read statically from its source."""
+    with open(CLI, encoding="utf-8") as handle:
+        tree = ast.parse(handle.read(), CLI)
+    names = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names.add(node.module.split(".")[0])
+    return names
 
 
 def _load_ir():
@@ -70,6 +111,40 @@ def run():
 
     profile = classify_skill_profile.classify("rebuild a compiler that renders skill artifacts")
     steps.append(("classification_compiler", profile["primary_family"] == "compiler"))
+
+    runner = _load_runner()
+    dag, _, _ = runner.load_canonical_dag()
+    steps.append(
+        ("dag_runner_resolves_canonical_graph", dag.SKILL_COMPILER_V2["id"] == "skill-compiler-v2")
+    )
+    order = runner.execution_order(dag.NODES, dag.SKILL_COMPILER_V2["entrypoint"])
+    reachable = runner.reachable(dag.NODES, dag.SKILL_COMPILER_V2["entrypoint"])
+    position = {node_id: index for index, node_id in enumerate(order)}
+    edges_respected = all(
+        position[node["id"]] < position[target]
+        for node in dag.NODES
+        if node["id"] in position
+        for target in node.get("next", [])
+        if target in position
+    )
+    steps.append(
+        (
+            "execution_order_derived_from_graph",
+            set(order) == reachable and edges_respected and not dag.validate_graph(),
+        )
+    )
+    steps.append(
+        (
+            "terminal_state_mapping_exists",
+            set(dag.TERMINAL_STATES) >= {"PASS", "BLOCKED", "FAIL", "DRY_RUN"}
+            and dag.TERMINAL_STATES["DRY_RUN"]["build_succeeded"] is False
+            and dag.TERMINAL_STATES["PASS"]["build_succeeded"] is True,
+        )
+    )
+    steps.append(("operator_cli_is_executable", os.path.isfile(CLI) and os.access(CLI, os.X_OK)))
+    steps.append(
+        ("operator_cli_does_not_import_stage_modules", not (cli_imports() & STAGE_MODULES))
+    )
 
     live = scan_skill_topology.enumerate_live_skills(REPO_FIXTURE)
     decision, _, _, _ = scan_skill_topology.decide(

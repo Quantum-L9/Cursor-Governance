@@ -42,6 +42,33 @@ def test_dead_delegated_skill_fails():
     assert cc.check(data, REPO, live_skills=LIVE)["result"] == "FAIL"
 
 
+def test_model_instruction_target_path_must_resolve():
+    data = ir()
+    for capability in data["capabilities"]:
+        if capability["binding"]["kind"] == "MODEL_INSTRUCTION":
+            capability["binding"]["target"] = "skills/l9-skill-compiler/references/gone.md"
+            break
+    assert cc.check(data, REPO, live_skills=LIVE)["result"] == "FAIL"
+
+
+def test_inline_model_instruction_has_nothing_to_resolve():
+    data = ir()
+    for capability in data["capabilities"]:
+        if capability["binding"]["kind"] == "MODEL_INSTRUCTION":
+            capability["binding"]["target"] = "inline instruction text with no path"
+            break
+    assert cc.check(data, REPO, live_skills=LIVE)["result"] in ("CLOSED", "RUNTIME_BOUND")
+
+
+def test_model_instruction_without_a_target_fails():
+    data = ir()
+    for capability in data["capabilities"]:
+        if capability["binding"]["kind"] == "MODEL_INSTRUCTION":
+            capability["binding"].pop("target")
+            break
+    assert cc.check(data, REPO, live_skills=LIVE)["result"] == "FAIL"
+
+
 def test_cycle_detected():
     data = ir()
     by_id = {capability["id"]: capability for capability in data["capabilities"]}
@@ -70,7 +97,7 @@ def test_bounded_unknown_blocks():
     )
     for node in data["workflow"]["nodes"]:
         if node["id"] == "COMPILE_REQUEST":
-            node["capabilities"] = ["future_thing"]
+            node["capabilities"] = node.get("capabilities", []) + ["future_thing"]
     assert cc.check(data, REPO, live_skills=LIVE)["result"] == "BLOCKED"
 
 
@@ -79,7 +106,7 @@ def test_unbounded_unknown_fails():
     data["capabilities"].append({"id": "sloppy", "required": True, "binding": {"kind": "UNKNOWN"}})
     for node in data["workflow"]["nodes"]:
         if node["id"] == "COMPILE_REQUEST":
-            node["capabilities"] = ["sloppy"]
+            node["capabilities"] = node.get("capabilities", []) + ["sloppy"]
     assert cc.check(data, REPO, live_skills=LIVE)["result"] == "FAIL"
 
 
@@ -94,7 +121,7 @@ def test_external_capability_requires_probe():
     )
     for node in data["workflow"]["nodes"]:
         if node["id"] == "COMPILE_REQUEST":
-            node["capabilities"] = ["ext"]
+            node["capabilities"] = node.get("capabilities", []) + ["ext"]
     assert cc.check(data, REPO, live_skills=LIVE)["result"] == "FAIL"
 
 
@@ -114,5 +141,5 @@ def test_external_capability_with_probe_is_runtime_bound():
     )
     for node in data["workflow"]["nodes"]:
         if node["id"] == "COMPILE_REQUEST":
-            node["capabilities"] = ["ext"]
+            node["capabilities"] = node.get("capabilities", []) + ["ext"]
     assert cc.check(data, REPO, live_skills=LIVE)["result"] == "RUNTIME_BOUND"

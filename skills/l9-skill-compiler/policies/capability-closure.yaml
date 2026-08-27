@@ -8,6 +8,7 @@ checks:
   - {id: binding_kind_is_known, severity: fail}
   - {id: local_binding_targets_exist, severity: fail}
   - {id: executable_bindings_resolve, severity: fail}
+  - {id: MODEL_INSTRUCTION_bindings_resolve, severity: fail}
   - {id: DAG_NODE_bindings_resolve_to_real_nodes, severity: fail}
   - {id: DELEGATED_SKILL_bindings_resolve_to_live_owned_skills, severity: fail}
   - {id: EXTERNAL_CAPABILITY_bindings_define_probe_and_failure_behavior, severity: fail}

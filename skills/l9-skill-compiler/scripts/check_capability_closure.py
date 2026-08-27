@@ -116,6 +116,7 @@ def check(ir, repo_root=None, live_skills=None):
 
     local_missing = []
     executable_missing = []
+    instruction_missing = []
     dag_missing = []
     skill_missing = []
     external_bad = []
@@ -129,7 +130,8 @@ def check(ir, repo_root=None, live_skills=None):
         status = "closed"
         detail = None
 
-        if kind in ("EXECUTABLE", "DAG_NODE", "DELEGATED_SKILL") and not target:
+        needs_target = ("EXECUTABLE", "DAG_NODE", "DELEGATED_SKILL", "MODEL_INSTRUCTION")
+        if kind in needs_target and not target:
             local_missing.append(capability["id"])
             status = "unresolved"
             detail = "no target"
@@ -141,6 +143,16 @@ def check(ir, repo_root=None, live_skills=None):
             dag_missing.append(capability["id"])
             status = "unresolved"
             detail = "no node " + str(target)
+        elif (
+            kind == "MODEL_INSTRUCTION"
+            and "/" in target
+            and not os.path.exists(os.path.join(repo_root, target))
+        ):
+            # A target naming a path must resolve. A bare string is inline
+            # instruction text and has nothing to resolve.
+            instruction_missing.append(capability["id"])
+            status = "unresolved"
+            detail = "missing " + str(target)
         elif kind == "DELEGATED_SKILL" and target not in live:
             skill_missing.append(capability["id"])
             status = "unresolved"
@@ -190,6 +202,11 @@ def check(ir, repo_root=None, live_skills=None):
         "executable_bindings_resolve",
         "fail" if executable_missing else "pass",
         ",".join(executable_missing) or None,
+    )
+    add(
+        "MODEL_INSTRUCTION_bindings_resolve",
+        "fail" if instruction_missing else "pass",
+        ",".join(instruction_missing) or None,
     )
     add(
         "DAG_NODE_bindings_resolve_to_real_nodes",

@@ -935,11 +935,11 @@
     },
     {
       "path": "compiler/architecture_extractor.py",
-      "sha256": "25bbf8306aaf40b87f658065a197e01a8a9124ef2bc45dd513a6eedd8f69deda"
+      "sha256": "eaddce8dffd386bad3a59e25b2b20ea66ea0f5adca97953e4387e26d344a3834"
     },
     {
       "path": "compiler/architecture_intent.py",
-      "sha256": "3b56909808d994c634fb53aedcf711a5208615359347c9578d86e9afe7737eb7"
+      "sha256": "0480b4774f5e6b4742b98ce85e85ad9a2247692002834a82ac90074aca651d78"
     },
     {
       "path": "compiler/architecture_ir.py",
@@ -947,7 +947,7 @@
     },
     {
       "path": "compiler/architecture_to_campaign.py",
-      "sha256": "5385b6dfda11575daf58efa736bd95d87c2bde8415ac8ef938c859bb6e198a6f"
+      "sha256": "c28a568d5464d0ead6b88a33728aa1c6d6cc49887358e2a96cfa313eecca64d0"
     },
     {
       "path": "compiler/blueprint_validate.py",
@@ -1031,7 +1031,7 @@
     },
     {
       "path": "compiler/tests/test_architecture_extractor.py",
-      "sha256": "4fdaeba9c67546f54b30c78593fc64f4df8874d4bdde8313abecb3edaaa73fde"
+      "sha256": "addd24b2733c5619eceeabb5c71cb850c88dbdd1bfd8992eb196d4d19a5d49fa"
     },
     {
       "path": "compiler/tests/test_architecture_intent.py",
@@ -1811,7 +1811,7 @@
     },
     {
       "path": "scripts/tests/test_compile_architecture_intent.py",
-      "sha256": "994b649a0ef8cb9e79f886317c1549bce9c78074fc4e07d4da210c5149a1af2b"
+      "sha256": "62bafdc15ff68d73aba63b2bf06241b2c440248076bac790b7bb6403ecf616c4"
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",

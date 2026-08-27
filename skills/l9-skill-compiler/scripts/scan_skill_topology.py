@@ -44,12 +44,26 @@ def tokens(text):
     return set(re.findall(r"[a-z0-9]+", (text or "").lower()))
 
 
+def uninformative_tokens(live):
+    """Tokens every live skill shares, which therefore prove no ownership.
+
+    A namespace prefix is the common case: every skill in this repository is
+    named ``l9-*``, so counting ``l9`` as capability evidence gives every
+    candidate a free point and biases the decision toward EXTEND_EXISTING on no
+    real overlap. Derived from the live corpus rather than a hardcoded list.
+    """
+    if len(live) < 2:
+        return set()
+    sets = [tokens(meta.get("role", "")) | tokens(name) for name, meta in live.items()]
+    return set.intersection(*sets)
+
+
 def candidates(subject, live):
     wanted = (
         tokens(subject.get("proposed_name", ""))
         | tokens(subject.get("domain", ""))
         | tokens(subject.get("stated_objective", ""))
-    )
+    ) - uninformative_tokens(live)
     scored = []
     for name, meta in live.items():
         trigger_tokens = tokens(meta.get("description", ""))
