@@ -19,8 +19,11 @@ capability bindings. Structure only, never execution.
 
 ## Output contract
 Return `{workflow: {entrypoint, nodes[]}, capabilities: []}` conforming to
-`contracts/skill-ir.schema.json`. Preserve the fifteen logical stages named in
-`SKILL.md`; splitting is allowed, silent removal is not.
+`contracts/skill-ir.schema.json`. Preserve every logical stage the subject Skill's own profile and source
+require; splitting a stage is allowed, silent removal is not. Those stages come
+from the subject, never from this compiler: the fifteen stages named in
+`SKILL.md` are this compiler's own graph and apply only when the subject is
+this compiler.
 
 ## Failure behavior
 If a required capability cannot be bound to a real implementation, emit

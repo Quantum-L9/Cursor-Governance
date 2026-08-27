@@ -28,6 +28,8 @@ NODES = [
         "kind": "deterministic",
         "impl": "bind_and_validate_inputs",
         "exec": SCRIPTS + "/bind_inputs.py",
+        "args": ["request"],
+        "writes": False,
         "next": ["SCAN_SKILL_TOPOLOGY"],
     },
     {
@@ -35,6 +37,8 @@ NODES = [
         "kind": "deterministic",
         "impl": "enumerate_live_skill_topology",
         "exec": SCRIPTS + "/scan_skill_topology.py",
+        "args": ["request", "skills_dir"],
+        "writes": False,
         "next": ["TOPOLOGY_OWNERSHIP_JUDGMENT", "CLASSIFY_SKILL_PROFILE"],
     },
     {
@@ -43,6 +47,11 @@ NODES = [
         "impl": "ambiguous_topology_ownership_decision",
         "contract": "references/runtime-design-contract.md",
         "guard": "entered only when scan emits ESCALATE_TO_BOUNDED_LLM",
+        "guard_when": {
+            "stage": "SCAN_SKILL_TOPOLOGY",
+            "field": "decision",
+            "equals": "ESCALATE_TO_BOUNDED_LLM",
+        },
         "next": ["CLASSIFY_SKILL_PROFILE"],
     },
     {
@@ -50,6 +59,8 @@ NODES = [
         "kind": "deterministic",
         "impl": "deterministic_profile_rules",
         "exec": SCRIPTS + "/classify_skill_profile.py",
+        "args": ["request"],
+        "writes": False,
         "next": ["PROFILE_JUDGMENT", "EXTRACT_SOURCE_INTELLIGENCE"],
     },
     {
@@ -58,6 +69,11 @@ NODES = [
         "impl": "ambiguous_skill_profile_classification",
         "contract": "references/runtime-design-contract.md",
         "guard": "entered only when classification escalates",
+        "guard_when": {
+            "stage": "CLASSIFY_SKILL_PROFILE",
+            "field": "status",
+            "equals": "ESCALATE_TO_BOUNDED_LLM",
+        },
         "next": ["EXTRACT_SOURCE_INTELLIGENCE"],
     },
     {
@@ -65,6 +81,7 @@ NODES = [
         "kind": "bounded_llm",
         "impl": "source_intelligence_extraction",
         "contract": "references/source-intelligence-contract.md",
+        "satisfied_by": "ir",
         "next": ["NORMALIZE_SKILL_IR"],
     },
     {
@@ -72,6 +89,8 @@ NODES = [
         "kind": "deterministic",
         "impl": "normalize_and_schema_validate_IR",
         "exec": SCRIPTS + "/normalize_skill_ir.py",
+        "args": ["ir", "ir_out"],
+        "writes": True,
         "next": ["DESIGN_RUNTIME"],
     },
     {
@@ -79,6 +98,7 @@ NODES = [
         "kind": "bounded_llm",
         "impl": "semantic_runtime_design",
         "contract": "references/runtime-design-contract.md",
+        "satisfied_by": "ir",
         "next": ["RENDER_TARGET_PROFILE"],
     },
     {
@@ -86,6 +106,9 @@ NODES = [
         "kind": "deterministic",
         "impl": "render_target_profiles",
         "exec": SCRIPTS + "/render_target_profile.py",
+        "args": ["ir", "profile", "render_outdir"],
+        "fan_out": "profile",
+        "writes": True,
         "next": ["STATIC_VALIDATE"],
     },
     {
@@ -93,6 +116,8 @@ NODES = [
         "kind": "deterministic",
         "impl": "structural_and_static_validation",
         "exec": SCRIPTS + "/static_validate.py",
+        "args": ["ir", "pack"],
+        "writes": False,
         "next": ["CAPABILITY_CLOSURE"],
     },
     {
@@ -100,6 +125,8 @@ NODES = [
         "kind": "deterministic",
         "impl": "capability_graph_resolution",
         "exec": SCRIPTS + "/check_capability_closure.py",
+        "args": ["ir", "repo_root"],
+        "writes": False,
         "next": ["ACTIVATION_EVAL"],
     },
     {
@@ -107,6 +134,8 @@ NODES = [
         "kind": "deterministic",
         "impl": "activation_fixture_execution",
         "exec": SCRIPTS + "/evaluate_activation.py",
+        "args": ["ir"],
+        "writes": False,
         "next": ["BEHAVIOR_EVAL"],
     },
     {
@@ -121,6 +150,8 @@ NODES = [
         "kind": "deterministic",
         "impl": "package_integrity",
         "exec": SCRIPTS + "/package_skill.py",
+        "args": ["pack"],
+        "writes": False,
         "next": ["HANDOFF_TO_WIRING"],
     },
     {
@@ -138,6 +169,32 @@ NODES = [
         "next": [],
     },
 ]
+
+# Symbolic stage-input tokens. A runner resolves each token from its own run
+# context; the DAG owns which tokens a stage consumes so no runner has to carry
+# per-stage invocation knowledge of its own.
+ARG_TOKENS = {
+    "request",
+    "skills_dir",
+    "ir",
+    "ir_out",
+    "profile",
+    "render_outdir",
+    "pack",
+    "repo_root",
+}
+
+# Terminal-state mapping. The DAG is authoritative for terminal state, so every
+# runner and operator surface resolves an outcome through this table instead of
+# inventing its own success vocabulary. ``build_succeeded`` is deliberately
+# false for DRY_RUN: a non-mutating plan is never a build.
+TERMINAL_STATES = {
+    "PASS": {"status": "PASS", "build_succeeded": True},
+    "BLOCKED": {"status": "BLOCKED", "build_succeeded": False},
+    "FAIL": {"status": "FAIL", "build_succeeded": False},
+    "BOUNDED_LLM_REQUIRED": {"status": "BLOCKED", "build_succeeded": False},
+    "DRY_RUN": {"status": "PASS", "build_succeeded": False},
+}
 
 SKILL_COMPILER_V2 = {
     "id": "skill-compiler-v2",
@@ -164,6 +221,30 @@ def validate_graph():
                 errors.append(f"dangling edge {node['id']} -> {target}")
         if node["kind"] == "bounded_llm" and not node.get("contract"):
             errors.append(f"bounded_llm node {node['id']} has no contract")
+        if node.get("exec"):
+            if "args" not in node:
+                errors.append(f"executable node {node['id']} declares no args")
+            if "writes" not in node:
+                errors.append(f"executable node {node['id']} does not declare writes")
+        satisfied_by = node.get("satisfied_by")
+        if satisfied_by is not None:
+            if node["kind"] != "bounded_llm":
+                errors.append(f"{node['id']}: satisfied_by is only valid on a bounded_llm node")
+            if satisfied_by not in ARG_TOKENS:
+                errors.append(f"{node['id']}: unknown satisfied_by token {satisfied_by}")
+        if node.get("exec"):
+            for token in node.get("args", []):
+                if token not in ARG_TOKENS:
+                    errors.append(f"{node['id']}: unknown arg token {token}")
+            fan_out = node.get("fan_out")
+            if fan_out is not None and fan_out not in node.get("args", []):
+                errors.append(f"{node['id']}: fan_out {fan_out} is not one of its args")
+        if node.get("guard") and not node.get("guard_when"):
+            errors.append(f"guarded node {node['id']} has no machine-evaluable guard_when")
+    for node in NODES:
+        guard_when = node.get("guard_when")
+        if guard_when and guard_when.get("stage") not in ids:
+            errors.append(f"{node['id']}: guard_when stage does not resolve to a node")
     if not any(node["kind"] == "terminal" for node in NODES):
         errors.append("no terminal node")
     return errors
@@ -230,6 +311,11 @@ SESSION_NODES = [
             "exec": node.get("exec"),
             "contract": node.get("contract"),
             "guard": node.get("guard"),
+            "guard_when": node.get("guard_when"),
+            "satisfied_by": node.get("satisfied_by"),
+            "args": node.get("args"),
+            "fan_out": node.get("fan_out"),
+            "writes": node.get("writes"),
             "delegates_to": node.get("delegates_to", []),
         },
     )
