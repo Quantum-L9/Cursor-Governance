@@ -1,18 +1,28 @@
 # 🔴 URGENT — Environment Experience Improvement Pack: progress + next slice
 
-**Assessed:** 2026-08-27, against `main@498dcaa` (post-#307-merge + 47 commits). PR #320 has since
-merged as `c3ddeea` — a second live instance of CI-034 inside one hour.
-**Supersedes:** the 2026-08-26 assessment, which was stamped `main@post-#307-merge` — a prose label,
-not a SHA. `main` moved 47 commits underneath it and nothing marked it stale.
+**Assessed:** 2026-08-27, against `main@30c6ecd4` (post-#324/#325/#326/#327/#328 merge).
+**Scope:** targeted — only records touched by #324 and #325 were re-verified. #326/#327/#328 were
+not assessed; every other record carries its earlier judgement forward.
+**Supersedes:** the 2026-08-26 assessment stamped `main@post-#307-merge` (a prose label, not a SHA),
+then `main@498dcaa`, then `main@8f73be9`.
+
+> **The three pack files disagreed with each other.** On arrival this file said `498dcaa` while
+> `PROGRESS.md` and `README.md` both said `8f73be9` — three stores, two answers, one pack, and
+> nothing compared them. CI-034 is about an overlay going stale against the world; this is
+> **CI-035's** shape, concurrent stores disagreeing, inside the artifact that proposed both.
+> All three now name `30c6ecd4` and `progress.yaml` carries `assessed_against_sha`, but nothing
+> yet *enforces* the agreement — so this recurs until CI-034's drift check is built.
 **Artifact (expanded, no zip):** [`environment_experience_improvement_pack_p307/`](./environment_experience_improvement_pack_p307/)
 — [`PROGRESS.md`](./environment_experience_improvement_pack_p307/PROGRESS.md) is the human view,
 [`progress.yaml`](./environment_experience_improvement_pack_p307/progress.yaml) the machine view,
 per-record progress under each entry's `progress:` key in `improvements.yaml`.
 
-## Status: 3 done · 15 partial · 19 not started (of 37)
+## Status: 4 done · 15 partial · 19 not started (of 38)
 
-Previously 2 · 9 · 25, then 3 · 14 · 19. Six records moved on re-assessment; **CI-036** was
-added after a live defect, and **CI-001** advanced when its merge-verb leg was built.
+Previously 2 · 9 · 25, then 3 · 14 · 19, then 3 · 15 · 19 (of 37). **CI-037** is new and done —
+abandoned work now fails closed on the Stop hook instead of resting on doctrine. **CI-001** and
+**CI-036** kept their status but stopped saying "this branch": both PRs landed, as `be3f01c9`
+(#325) and `7ceeef38` (#324).
 
 ### Moved on re-assessment (2026-08-27)
 - **CI-026 → done** — `Quantum-L9/.github` is attached (`/home/user/.github`, in the session scope
