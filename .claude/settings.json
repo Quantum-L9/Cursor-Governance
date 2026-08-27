@@ -27,7 +27,7 @@
           },
           {
             "type": "command",
-            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-debt: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate session_debt_wrap.py'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate session_debt_wrap.py'",
             "timeout": 30
           }
         ]
