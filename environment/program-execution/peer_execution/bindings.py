@@ -91,9 +91,7 @@ def resolve_peer_binding(
     if provider_ref is not None:
         provider_ref = _require_string("provider_ref", provider_ref)
     if execution_profile_ref is not None:
-        execution_profile_ref = _require_string(
-            "execution_profile_ref", execution_profile_ref
-        )
+        execution_profile_ref = _require_string("execution_profile_ref", execution_profile_ref)
 
     doc = load_peer_bindings(repository_root)
     peer = (doc.get("peers") or {}).get(agent_ref)
@@ -127,8 +125,7 @@ def resolve_peer_binding(
         candidates.append(dict(binding))
     if len(candidates) != 1:
         refs = sorted(
-            f"{item.get('provider_ref')}:{item.get('execution_profile_ref')}"
-            for item in candidates
+            f"{item.get('provider_ref')}:{item.get('execution_profile_ref')}" for item in candidates
         )
         raise ValueError(
             "peer binding must resolve uniquely: "

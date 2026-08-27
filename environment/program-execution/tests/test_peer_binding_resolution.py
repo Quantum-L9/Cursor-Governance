@@ -27,9 +27,7 @@ class PeerBindingResolutionTests(unittest.TestCase):
 
     def test_cross_wired_profile_fails(self) -> None:
         with self.assertRaises(ValueError):
-            resolve_peer_binding(
-                ROOT, "gemini", "gemini-cli", "gemini-review", "worker-default"
-            )
+            resolve_peer_binding(ROOT, "gemini", "gemini-cli", "gemini-review", "worker-default")
 
     def test_surface_only_must_resolve_uniquely(self) -> None:
         with self.assertRaises(ValueError):

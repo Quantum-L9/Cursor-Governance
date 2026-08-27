@@ -93,9 +93,7 @@ class ExecutablePeerBindingTests(unittest.TestCase):
             context["program_execution"]["contract_family"], "program-execution-system.v2"
         )
         self.assertEqual(context["program_execution"]["adapter_id"], "cursor-foreground")
-        self.assertEqual(
-            context["program_execution"]["execution_profile_ref"], "worker-default"
-        )
+        self.assertEqual(context["program_execution"]["execution_profile_ref"], "worker-default")
         self.assertTrue(context["autonomy"]["canonical"])
         self.assertIn(context["readiness"]["status"], {"READY", "BLOCKED"})
         self.assertTrue(context["readiness"]["receipt_digest"])

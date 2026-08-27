@@ -18,9 +18,7 @@ class ConformanceStatus(StrEnum):
 def _identifier(value: Mapping[str, Any], field_name: str) -> str:
     raw = value.get(field_name)
     if not isinstance(raw, str) or not IDENTIFIER_RE.fullmatch(raw.strip()):
-        raise ValueError(
-            f"Adapter field {field_name!r} must be a non-empty kebab-case identifier"
-        )
+        raise ValueError(f"Adapter field {field_name!r} must be a non-empty kebab-case identifier")
     return raw.strip()
 
 

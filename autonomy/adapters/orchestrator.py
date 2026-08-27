@@ -356,9 +356,7 @@ class AdapterOrchestrator:
             )
             columns = {
                 row[1]
-                for row in connection.execute(
-                    "PRAGMA table_info(adapter_sessions)"
-                ).fetchall()
+                for row in connection.execute("PRAGMA table_info(adapter_sessions)").fetchall()
             }
             if "peer_ref" not in columns:
                 connection.execute("ALTER TABLE adapter_sessions ADD COLUMN peer_ref TEXT")
