@@ -500,6 +500,18 @@ def effective_root(command: str, root: Path) -> Path:
     Only a worktree of the *same* repository is accepted, verified by comparing
     `git rev-parse --git-common-dir`. A cd into an unrelated repository leaves
     the root untouched, so this cannot be used to escape the gate.
+
+    A cloud session reports something different again: a *container root* that
+    holds many clones side by side and is itself no repository (`/home/user`).
+    `_common_dir` is None there, so the same-repository test could never
+    succeed and every worktree resolved back to a path that cannot hold an L4
+    receipt -- reproducing, for a whole surface, the impossibility described
+    above. With no repository at the root there is nothing to be steered away
+    from, so a cd into a real work tree is the only signal available and is
+    accepted. Authorization is unchanged: the receipt must still exist at the
+    resolved root and bind the head SHA. When the root *is* a repository the
+    same-repository rule still applies, so this is not a way to reach an
+    unrelated checkout from a real one.
     """
     match = _LEADING_CD.match(command)
     if not match:
@@ -512,7 +524,12 @@ def effective_root(command: str, root: Path) -> Path:
     if not candidate.is_absolute() or not candidate.is_dir():
         return root
 
-    if _common_dir(root) is None or _common_dir(root) != _common_dir(candidate):
+    root_common = _common_dir(root)
+    if root_common is None:
+        # Container root: accept any real work tree, reject a plain directory.
+        if _common_dir(candidate) is None:
+            return root
+    elif root_common != _common_dir(candidate):
         return root
 
     toplevel = _git_out(candidate, "rev-parse", "--show-toplevel")
