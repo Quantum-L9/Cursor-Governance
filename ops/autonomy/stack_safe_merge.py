@@ -130,20 +130,21 @@ def _execute(selection: dict[str, Any], *, delete_branch: bool) -> int:
     head = str(selection.get("head") or "")
 
     rc = _run(merge_rest_argv(repo, pr, method))
-    transport = "rest"
     if rc != 0:
         print(
             f"NOTE: REST merge returned {rc}; retrying over the gh pr merge subcommand",
             file=sys.stderr,
         )
+        # The CLI carries --delete-branch itself, so this path needs no explicit
+        # ref delete and returns either way -- which is why the block below runs
+        # only after a REST merge.
         rc = _run(merge_argv(repo, pr, delete_branch=delete_branch, selection=selection))
-        transport = "cli"
         if rc == 0:
             return 0
         print(f"FAIL: merge failed on both transports (last exit {rc})", file=sys.stderr)
         return rc
 
-    if delete_branch and transport == "rest":
+    if delete_branch:
         if not head:
             print(
                 "WARN: merged, but the head branch name is unknown so it was not deleted",
