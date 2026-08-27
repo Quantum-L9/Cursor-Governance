@@ -9,9 +9,10 @@ not a SHA. `main` moved 47 commits underneath it and nothing marked it stale.
 [`progress.yaml`](./environment_experience_improvement_pack_p307/progress.yaml) the machine view,
 per-record progress under each entry's `progress:` key in `improvements.yaml`.
 
-## Status: 3 done · 14 partial · 19 not started (of 36)
+## Status: 3 done · 15 partial · 19 not started (of 37)
 
-Previously 2 · 9 · 25. Six records moved, none backwards.
+Previously 2 · 9 · 25, then 3 · 14 · 19. Six records moved on re-assessment; **CI-036** was
+added after a live defect, and **CI-001** advanced when its merge-verb leg was built.
 
 ### Moved on re-assessment (2026-08-27)
 - **CI-026 → done** — `Quantum-L9/.github` is attached (`/home/user/.github`, in the session scope

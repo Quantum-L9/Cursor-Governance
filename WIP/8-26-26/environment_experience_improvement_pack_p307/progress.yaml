@@ -1,11 +1,11 @@
 schema: l9.environment_experience.progress/v1
-assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
+assessed_against: main@8f73be9 (post-#320/#321 merge)
 assessed_at: '2026-08-27'
 counts:
   done: 3
-  partial: 14
+  partial: 15
   not_started: 19
-total: 36
+total: 37
 next_slice:
   id: slice-ownership-aware-writes
   title: Ownership-aware writes (extend PR#307's is_tracked guard)
@@ -33,20 +33,23 @@ records:
   title: Publish and enforce the real GitHub REST/GraphQL capability boundary
   original_status: ACTIVE
   progress: partial
-  delivered_by: Quantum-L9/Cursor-Governance 5612f6b (merged) + pre-existing ops/scripts/lib/gh_auth_probe.sh
+  delivered_by: Quantum-L9/Cursor-Governance 5612f6b (probe, merged) + this branch (merge verb + gate
+    recognition) + pre-existing ops/scripts/lib/gh_auth_probe.sh
   residual:
   - 'IMP-01 only: the Anthropic remote-session prompt still tells agents they have no gh access. Harness-owned;
-    no in-repo lever. See the external-owner note in PROGRESS.md.'
+    no in-repo lever. Classified external.'
   evidence:
-  - 'ops/autonomy/merge_gate.py: _gh_rest_json / _stacked_children_rest resolve head and children over
-    GET repos/{o}/{r}/pulls, gh pr view|list kept as fallback (IMP-11)'
-  - merge_gate.py _transport_blocked + the 'both probe transports were refused' deny text names the transport
-    instead of 'unknown' (IMP-12)
-  - tests/ops/autonomy/test_merge_gate_rest_probe.py (229 lines) drives both transports and the both-failed
-    fail-closed path
-  - ops/scripts/lib/gh_auth_probe.sh probes `gh api user` and outranks a failing `gh auth status` (IMP-02)
-    — present at 78f122a, so the 2026-08-26 not_started was wrong
-  - 'live: `gh api user --jq .login` -> cryptoxdog on this surface'
+  - 'ops/autonomy/merge_gate.py: _gh_rest_json / _stacked_children_rest resolve the stack probe over REST,
+    CLI kept as fallback (IMP-11); _transport_blocked names the transport in the deny text instead of
+    ''unknown'' (IMP-12)'
+  - ops/scripts/lib/gh_auth_probe.sh probes the REST identity endpoint and outranks a failing auth-status
+    check (IMP-02) — present at 78f122a, so the 2026-08-26 not_started was wrong
+  - 'THIS BRANCH: stack_safe_merge.py gained a REST execution transport for the merge verb, and merge_gate
+    gained recognition of it in the same commit. Measured before the change: _command_is_pr_merge returned
+    False for the REST merge invocation, so a REST merge was ungated. 25 tests bind the emitted argv to
+    the gated argv; 384 in tests/ops/autonomy pass.'
+  - 'live: the CLI merge verb returns 403 on this session gateway; a human merged #320 and #321 by hand
+    because the sanctioned helper could not execute'
 - id: CI-002
   priority: 0
   title: Make bootstrap projection ownership-aware and non-destructive to tracked repo content
@@ -499,6 +502,32 @@ records:
   - 'live: `gh api user --jq .login` -> cryptoxdog with GH_TOKEN=proxy-injected'
   - merge_gate.py answers the stack probe over REST, so the gh-dependent gate that was exit-2 blocked
     on this surface now returns an answer
+- id: CI-036
+  priority: 2
+  title: Keep unpushed-commit counts honest across merged-and-deleted branches
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: This branch (bootstrap prune + origin/HEAD)
+  residual:
+  - The checker that surfaced this is the harness stop hook under /root/.claude/, which resolves origin/$current_branch
+    without confirming the branch still exists upstream. That file is harness-owned; this repo fixed the
+    cause it owns (stale refs, unset origin/HEAD), not the checker's resolution logic. Classified external,
+    same bucket as CI-003.
+  - repo_hygiene.py already ran fetch --prune, but only at session end — too late for a count read during
+    the session. Not consolidated with the new session-start prune.
+  evidence:
+  - 'Observed live 2026-08-27: after #321 merged and its branch was deleted upstream, the session''s unpushed-commit
+    check reported 16 where 2 were real. refs/remotes/origin/<branch> survived locally at the pre-merge
+    tip, so <that tip>..HEAD counted every commit main had gained since the merge as this branch''s unpushed
+    work.'
+  - 'Pruning alone is not the fix and would have been worse: the fallback is origin/HEAD, which a fetch-built
+    checkout never sets, so rev-list fails and the count reads 0 with real unpushed commits present. Measured:
+    prune alone took this repo from 16 to silence.'
+  - ops/scripts/bootstrap_agent_environment.sh now prunes stale remote-tracking refs and ensures origin/HEAD
+    resolves, both fail-soft and guarded on an origin remote existing.
+  - 'ops/scripts/tests/test_stale_remote_ref_counts.sh reproduces the defect over a real bare upstream:
+    overcount 7 vs 2, prune-only silence at 0, prune+set-head correct at 2, idempotence, and no-remote
+    fail-soft. 6/6 pass.'
 previous_assessment:
   assessed_against: main@78f122a (merged) + PR#307 open (CI-008/CI-009/CI-002 slice)
   assessed_at: '2026-08-26'

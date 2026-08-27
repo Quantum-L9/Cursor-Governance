@@ -1,9 +1,10 @@
 # Environment Experience Improvement Pack — Progress
 
-Assessed against **main@498dcaa (post-#307-merge + 47 commits)** on 2026-08-27. PR#320 has since
-merged as `c3ddeea`; CI-012 and CI-010 are restamped, counts unchanged.
+Assessed against **main@8f73be9 (post-#320/#321 merge)** on 2026-08-27. Both #320 and #321 have merged.
+**CI-036** is new this pass (unpushed-count honesty across merged-and-deleted branches), and
+**CI-001** now carries the merge-verb transport plus its gate recognition.
 
-**3 done · 14 partial · 19 not started** (of 36 records).
+**3 done · 15 partial · 19 not started** (of 37 records).
 
 Previous pass (2026-08-26, main@78f122a (merged) + PR#307 open (CI-008/CI-009/CI-002 slice)): 2 done · 9 partial · 25 not started. Six records moved; none moved backwards.
 
