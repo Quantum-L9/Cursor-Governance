@@ -1,0 +1,78 @@
+---
+description: Committed work must be pushed, an identified bug must be fixed, and a pre-existing error is in scope the moment it is identified; enforced by a Stop-hook gate that fails closed on unpushed commits and open findings.
+---
+
+# No abandoned work
+
+Three operator rules (2026-08-27). Each was already true in spirit and each
+failed in practice, because narrating a blocker in chat *feels* like
+discharging it.
+
+1. **If you commit, you must push.** A local commit is not a deliverable.
+2. **If a bug exists, you must fix it.** Reporting it and asking is not fixing.
+3. **A pre-existing error is in scope the moment it is identified.** "Not mine",
+   "pre-existing on main", and "out of scope for this branch" are not exits.
+
+## Mechanism
+
+`ops/autonomy/session_debt.py`, registered on the Claude `Stop` hook as
+`--class gate`. Exit 2 blocks the turn from ending and returns the reason to
+the model, so a session cannot close over abandoned work.
+
+| Debt | Source | Cleared by |
+|---|---|---|
+| `publish` | detected from git, never declared | pushing |
+| `finding` | declared by whoever observed it | `close --evidence`, or `defer --reason` |
+
+```bash
+python3 ops/autonomy/session_debt.py status          # what is open
+python3 ops/autonomy/session_debt.py check           # exit 2 when anything is
+python3 ops/autonomy/session_debt.py record <id> --detail "..."
+python3 ops/autonomy/session_debt.py close  <id> --evidence "..."
+python3 ops/autonomy/session_debt.py defer  <id> --reason "..."
+```
+
+`defer` is deliberately weaker than `close`. It records that the thing is *not*
+fixed and keeps it open, so the next session inherits it instead of
+rediscovering it. That is what stops rule 3 from decaying back into "someone
+else's problem".
+
+## MUST
+
+- Push a feature branch you committed on, via `PR_REMEDIATE=0 l9 pr`, before
+  the turn ends.
+- Record a defect you identify — yours or inherited — the moment you identify
+  it, then fix it or defer it with a reason that survives you.
+- Treat a failing validator as a finding, including one that fails identically
+  on `main`.
+
+## MUST NOT
+
+- End a turn with committed, unpushed work and an explanation instead.
+- Ask permission to fix a bug that is already in the tree you are working.
+- Close a finding without evidence, or use `defer` to mean "done".
+- Weaken a gate to clear debt. Publication still runs the sanctioned path
+  (`48-make-pr-remediation`), merge authority is untouched
+  (`88-l4-local-autonomy`), and destruction still answers
+  `54-context-sensitive-git-guardrails`.
+
+## Not a licence
+
+This rule creates an obligation to finish, never new authority. It does not
+authorize merge, force-push, admin-merge, or a publish route other than
+`make pr` / `l9 pr`. When finishing requires authority the session does not
+have, `defer` with the blocker named is the correct discharge — the item stays
+open and visible rather than dissolving into chat.
+
+## Satisfiability
+
+A gate that cannot be cleared is worse than no gate: it teaches bypassing. The
+publish check therefore consults the remote when local refs cannot prove
+publication — a cloud clone's single-branch refspec means
+`refs/remotes/origin/<feature>` never exists however many times the branch is
+pushed. An unreachable remote leaves the debt standing but marks it unverified:
+fail closed on the decision, honest about the evidence.
+
+Suite: `tests/ops/autonomy/test_session_debt.py`.
+
+<!-- generated-from: rules/42-no-abandoned-work.mdc; do-not-edit -->

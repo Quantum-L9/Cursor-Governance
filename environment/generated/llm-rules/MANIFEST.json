@@ -157,6 +157,15 @@
     },
     {
       "alias": null,
+      "class": "always",
+      "output": "42-no-abandoned-work.md",
+      "output_sha256": "f548c50042bce295ee9fb599c2518325fc69d863cce70e3beedc547edc4fbcad",
+      "source": "rules/42-no-abandoned-work.mdc",
+      "source_sha256": "0faf271f64038c1ef63d070a52df2fb94320e329a7a626bc59abe4b5c05e4bb3",
+      "stem": "42-no-abandoned-work"
+    },
+    {
+      "alias": null,
       "class": "paths",
       "output": "43-lang-postgresql.md",
       "output_sha256": "af98bbc160a9890376f422471dd21be6e3ae64ae72a894c44f2f345139993753",
@@ -619,9 +628,9 @@
   "source_relative": "rules",
   "summary": {
     "denied": 1,
-    "projected": 50,
+    "projected": 51,
     "skipped_agent_requested": 17,
-    "source_mdc": 68
+    "source_mdc": 69
   },
-  "tree_sha256": "073ac84bdec64b739b97f55dde0ed3bb3080810d8fc2e76e53f8ee3bb327b0e9"
+  "tree_sha256": "dd992e34e9847d59bae77f13753d4a2244957afe142e151c5fd9c78d6de567d9"
 }
