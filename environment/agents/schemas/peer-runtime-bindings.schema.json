@@ -7,6 +7,7 @@
           "$ref": "#/$defs/kebabId"
         },
         "required": {
+          "const": true,
           "type": "boolean"
         }
       },
@@ -139,6 +140,7 @@
       "required": [
         "agent_ref",
         "execution",
+        "autonomy",
         "subagents",
         "results",
         "generated_data"
@@ -176,10 +178,10 @@
       "type": "object"
     }
   },
-  "$id": "https://quantum-l9.dev/schemas/peer-runtime-bindings.v2.json",
+  "$id": "https://quantum-l9.dev/schemas/peer-runtime-bindings.v3.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "Sole topology SSOT for peer, provider, and execution-profile bindings.",
+  "description": "Sole topology SSOT for peer, provider, execution-profile, and canonical root-autonomy bindings.",
   "properties": {
     "peers": {
       "additionalProperties": false,
@@ -192,7 +194,7 @@
       "type": "object"
     },
     "schema": {
-      "const": "l9.peer-runtime-bindings.v2"
+      "const": "l9.peer-runtime-bindings.v3"
     },
     "schema_version": {
       "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",

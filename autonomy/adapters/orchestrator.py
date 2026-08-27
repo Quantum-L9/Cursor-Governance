@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from collections.abc import Mapping
 from pathlib import Path
@@ -27,16 +28,10 @@ class AdapterOrchestrator:
         self.requirements = (
             dict(requirements) if requirements is not None else self._load_requirements()
         )
-        self.conformance = AdapterConformance(
-            self.requirements,
-            self.repository_root,
-        )
+        self.conformance = AdapterConformance(self.requirements, self.repository_root)
         self._initialize_extension_tables()
 
-    def register(
-        self,
-        config_payload: Mapping[str, Any],
-    ) -> dict[str, Any]:
+    def register(self, config_payload: Mapping[str, Any]) -> dict[str, Any]:
         config = AdapterConfig.from_dict(config_payload)
         report = self.conformance.run(config)
         session_id = f"adapter-session-{uuid.uuid4().hex}"
@@ -45,21 +40,17 @@ class AdapterOrchestrator:
             connection.execute(
                 """
                 INSERT INTO adapter_sessions (
-                    session_id,
-                    adapter_id,
-                    adapter_type,
-                    protocol_version,
-                    status,
-                    config_json,
-                    conformance_json,
-                    created_at,
-                    last_seen_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    session_id, adapter_id, adapter_type, peer_ref, surface,
+                    protocol_version, status, config_json, conformance_json,
+                    created_at, last_seen_at
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     session_id,
                     config.adapter_id,
-                    config.adapter_type.value,
+                    config.adapter_type,
+                    config.peer_ref,
+                    config.surface,
                     config.protocol_version,
                     report.status.value,
                     canonical_dump(dict(config_payload)),
@@ -68,19 +59,12 @@ class AdapterOrchestrator:
                     now,
                 ),
             )
-        return {
-            "session_id": session_id,
-            "conformance": report.to_dict(),
-        }
+        return {"session_id": session_id, "conformance": report.to_dict()}
 
     def require_conformant_session(self, session_id: str):
         with self.runtime.store.connect() as connection:
             row = connection.execute(
-                """
-                SELECT *
-                FROM adapter_sessions
-                WHERE session_id = ?
-                """,
+                "SELECT * FROM adapter_sessions WHERE session_id = ?",
                 (session_id,),
             ).fetchone()
         if row is None:
@@ -89,13 +73,13 @@ class AdapterOrchestrator:
             raise PolicyViolation(
                 "ADAPTER_CONFORMANCE_FAILED: campaign execution is blocked for this adapter session"
             )
+        if not row["peer_ref"] or not row["surface"]:
+            raise PolicyViolation(
+                "ADAPTER_SESSION_UNBOUND: canonical peer/surface identity required"
+            )
         with self.runtime.store.transaction() as connection:
             connection.execute(
-                """
-                UPDATE adapter_sessions
-                SET last_seen_at = ?
-                WHERE session_id = ?
-                """,
+                "UPDATE adapter_sessions SET last_seen_at = ? WHERE session_id = ?",
                 (utc_now_text(), session_id),
             )
         return row
@@ -109,15 +93,23 @@ class AdapterOrchestrator:
         action_id: str | None = None,
         requested_role: str | None = None,
         ttl_seconds: int | None = None,
+        required_surface_capabilities: list[str] | tuple[str, ...] | None = None,
     ) -> dict[str, Any]:
         session = self.require_conformant_session(session_id)
+        if required_surface_capabilities:
+            # Decode inside the guard: a session row this method cannot re-read
+            # as a valid config must deny the lease, not escape as a raw error.
+            try:
+                config = AdapterConfig.from_dict(json.loads(session["config_json"]))
+                self.conformance.assert_surface_capabilities(
+                    config, tuple(required_surface_capabilities)
+                )
+            except (ValueError, TypeError) as exc:
+                raise PolicyViolation(f"SURFACE_CAPABILITY_UNAVAILABLE: {exc}") from exc
         ready = self.runtime.scheduler.next_actions(campaign_id)
         selected = None
         if action_id:
-            selected = next(
-                (item for item in ready if item.action_id == action_id),
-                None,
-            )
+            selected = next((item for item in ready if item.action_id == action_id), None)
             if selected is None:
                 raise PolicyViolation(f"ACTION_NOT_RUNNABLE: {action_id!r}")
         else:
@@ -129,10 +121,7 @@ class AdapterOrchestrator:
                 raise PolicyViolation(
                     f"NO_RUNNABLE_ACTION: no ready action matches requested role {requested_role!r}"
                 )
-        action = self.runtime.store.decode_action(
-            campaign_id,
-            selected.action_id,
-        )
+        action = self.runtime.store.decode_action(campaign_id, selected.action_id)
         campaign = self.runtime.store.decode_campaign(campaign_id)
         campaign_row = self.runtime.store.get_campaign(campaign_id)
         lease = self.runtime.leases.issue(
@@ -144,14 +133,13 @@ class AdapterOrchestrator:
                 "adapter_session_id": session_id,
                 "adapter_id": session["adapter_id"],
                 "adapter_type": session["adapter_type"],
+                "peer_ref": session["peer_ref"],
+                "surface": session["surface"],
             },
         )
         role_config = self.runtime.role_policy["roles"][action["role"]]
         capabilities = sorted(set(role_config.get("capabilities", [])))
-        dependency_artifacts = self._dependency_artifacts(
-            campaign_id=campaign_id,
-            action=action,
-        )
+        dependency_artifacts = self._dependency_artifacts(campaign_id=campaign_id, action=action)
         lease_payload = {
             "lease_id": lease.lease_id,
             "agent_id": lease.agent_id,
@@ -165,10 +153,7 @@ class AdapterOrchestrator:
             action=action,
             lease=lease_payload,
             capabilities=capabilities,
-            globally_forbidden=self.runtime.role_policy.get(
-                "globally_forbidden_capabilities",
-                [],
-            ),
+            globally_forbidden=self.runtime.role_policy.get("globally_forbidden_capabilities", []),
             dependency_artifacts=dependency_artifacts,
         )
         self.runtime.receipts.append(
@@ -183,6 +168,8 @@ class AdapterOrchestrator:
                 "agent_id": agent_id,
                 "role": action["role"],
                 "adapter_type": session["adapter_type"],
+                "peer_ref": session["peer_ref"],
+                "surface": session["surface"],
             },
         )
         return {
@@ -190,13 +177,13 @@ class AdapterOrchestrator:
                 "session_id": session_id,
                 "adapter_id": session["adapter_id"],
                 "adapter_type": session["adapter_type"],
+                "peer_ref": session["peer_ref"],
+                "surface": session["surface"],
                 "agent_id": agent_id,
                 "action_id": selected.action_id,
             },
             "lease": lease_payload,
-            "required_acknowledgment": {
-                "capabilities": capabilities,
-            },
+            "required_acknowledgment": {"capabilities": capabilities},
             "agent_contract": contract,
         }
 
@@ -210,8 +197,7 @@ class AdapterOrchestrator:
     ) -> dict[str, Any]:
         self.require_conformant_session(session_id)
         lease = self.runtime.leases.get(lease_id)
-        expected_session = lease.metadata.get("adapter_session_id")
-        if expected_session != session_id:
+        if lease.metadata.get("adapter_session_id") != session_id:
             raise PolicyViolation(
                 "ADAPTER_SESSION_MISMATCH: lease was issued through a different adapter session"
             )
@@ -248,7 +234,7 @@ class AdapterOrchestrator:
         resource: str | None = None,
         metadata: Mapping[str, Any] | None = None,
     ) -> dict[str, Any]:
-        self.require_conformant_session(session_id)
+        session = self.require_conformant_session(session_id)
         lease = self.runtime.leases.get(lease_id)
         if lease.metadata.get("adapter_session_id") != session_id:
             raise PolicyViolation("ADAPTER_SESSION_MISMATCH")
@@ -259,6 +245,8 @@ class AdapterOrchestrator:
             resource=resource,
             metadata={
                 "adapter_session_id": session_id,
+                "peer_ref": session["peer_ref"],
+                "surface": session["surface"],
                 **dict(metadata or {}),
             },
         )
@@ -292,11 +280,7 @@ class AdapterOrchestrator:
             status=status,
             progress=progress,
         )
-        return {
-            "accepted": True,
-            "lease_id": lease_id,
-            "status": status,
-        }
+        return {"accepted": True, "lease_id": lease_id, "status": status}
 
     def submit_artifact(
         self,
@@ -322,33 +306,22 @@ class AdapterOrchestrator:
             "campaign_status": self.runtime.status(lease.campaign_id),
         }
 
-    def status(
-        self,
-        *,
-        session_id: str,
-        campaign_id: str,
-    ) -> dict[str, Any]:
+    def status(self, *, session_id: str, campaign_id: str) -> dict[str, Any]:
         session = self.require_conformant_session(session_id)
         status = self.runtime.status(campaign_id)
         status["adapter"] = {
             "session_id": session_id,
             "adapter_id": session["adapter_id"],
             "adapter_type": session["adapter_type"],
+            "peer_ref": session["peer_ref"],
+            "surface": session["surface"],
             "conformance": session["status"],
         }
         errors = self.runtime.verify_receipts(campaign_id)
-        status["receipt_chain"] = {
-            "valid": not errors,
-            "errors": errors,
-        }
+        status["receipt_chain"] = {"valid": not errors, "errors": errors}
         return status
 
-    def _dependency_artifacts(
-        self,
-        *,
-        campaign_id: str,
-        action: Mapping[str, Any],
-    ) -> list[str]:
+    def _dependency_artifacts(self, *, campaign_id: str, action: Mapping[str, Any]) -> list[str]:
         result: list[str] = []
         for dependency_id in action.get("depends_on", []):
             row = self.runtime.store.get_action(campaign_id, dependency_id)
@@ -368,6 +341,8 @@ class AdapterOrchestrator:
                     session_id TEXT PRIMARY KEY,
                     adapter_id TEXT NOT NULL,
                     adapter_type TEXT NOT NULL,
+                    peer_ref TEXT,
+                    surface TEXT,
                     protocol_version TEXT NOT NULL,
                     status TEXT NOT NULL,
                     config_json TEXT NOT NULL,
@@ -375,8 +350,15 @@ class AdapterOrchestrator:
                     created_at TEXT NOT NULL,
                     last_seen_at TEXT NOT NULL
                 );
-                CREATE INDEX IF NOT EXISTS
-                    idx_adapter_sessions_adapter
+                CREATE INDEX IF NOT EXISTS idx_adapter_sessions_adapter
                     ON adapter_sessions(adapter_id, created_at);
                 """
             )
+            columns = {
+                row[1]
+                for row in connection.execute("PRAGMA table_info(adapter_sessions)").fetchall()
+            }
+            if "peer_ref" not in columns:
+                connection.execute("ALTER TABLE adapter_sessions ADD COLUMN peer_ref TEXT")
+            if "surface" not in columns:
+                connection.execute("ALTER TABLE adapter_sessions ADD COLUMN surface TEXT")

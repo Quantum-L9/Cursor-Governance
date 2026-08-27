@@ -62,7 +62,6 @@ class HostBridgeTestCase(unittest.TestCase):
         )
         self.runtime.scheduler.refresh_readiness(CAMPAIGN_ID)
         requirements = load_policy("adapter-requirements")
-        requirements["allow_missing_executable_in_test"] = True
         self.orchestrator = AdapterOrchestrator(
             self.runtime, repository_root=ROOT, requirements=requirements
         )

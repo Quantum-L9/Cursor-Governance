@@ -12,33 +12,33 @@ _POLICIES: dict[str, Any] = json.loads(
     """
 {
   "adapter-requirements": {
-    "allow_missing_executable_in_test": false,
+    "canonical_autonomy_provider": "root-autonomy-control-plane",
     "fail_closed_on": [
       "adapter_protocol_mismatch",
+      "canonical_peer_binding_invalid",
       "runtime_unavailable",
       "gateway_unavailable",
-      "direct_tool_access_enabled",
-      "autonomous_merge_enabled",
-      "lease_propagation_missing",
-      "heartbeat_missing",
-      "typed_artifacts_missing",
-      "reviewer_independence_missing",
-      "human_gate_missing"
+      "policy_unavailable",
+      "database_unwritable",
+      "mandatory_policy_mismatch",
+      "required_surface_capability_missing"
     ],
     "mandatory": {
       "autonomous_merge": false,
       "direct_tool_access": false,
       "supports_agent_identity": true,
-      "supports_background_agents": true,
       "supports_heartbeat": true,
       "supports_human_gate": true,
-      "supports_independent_review": true,
       "supports_lease_propagation": true,
       "supports_typed_artifacts": true,
       "tool_mediation_mode": "mandatory"
     },
+    "optional_capabilities": {
+      "supports_background_agents": "background_agent",
+      "supports_independent_review": "independent_review"
+    },
     "protocol_version": "1.0.0",
-    "schema_version": "1.0.0"
+    "schema_version": "2.0.0"
   },
   "operation-aliases": {
     "capability_to_operation": {
@@ -146,7 +146,7 @@ _POLICIES: dict[str, Any] = json.loads(
       },
       {
         "continuous": true,
-        "description": "No campaign may execute with a failed IDE adapter conformance check.",
+        "description": "No campaign may execute with a failed root-autonomy conformance check.",
         "id": "PIPE-010",
         "severity": "blocking"
       }
@@ -437,6 +437,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
     "autonomous_merge": false,
     "direct_tool_access": false,
     "executable": "claude",
+    "execution_profile_ref": "worker-default",
     "metadata": {
       "database_path": ".l9/autonomy/runtime.sqlite3",
       "merge_protocol": "human-only",
@@ -444,7 +445,9 @@ _EXAMPLES: dict[str, Any] = json.loads(
       "pre_tool_hook_required": true,
       "task_transport": "claude-code-task"
     },
+    "peer_ref": "claude-code",
     "protocol_version": "1.0.0",
+    "provider_ref": "claude-code-direct",
     "supports_agent_identity": true,
     "supports_background_agents": true,
     "supports_heartbeat": true,
@@ -452,6 +455,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
     "supports_independent_review": true,
     "supports_lease_propagation": true,
     "supports_typed_artifacts": true,
+    "surface": "claude-cli",
     "tool_mediation_mode": "mandatory"
   },
   "adapters/cursor.json": {
@@ -460,13 +464,16 @@ _EXAMPLES: dict[str, Any] = json.loads(
     "autonomous_merge": false,
     "direct_tool_access": false,
     "executable": "cursor",
+    "execution_profile_ref": "worker-default",
     "metadata": {
       "database_path": ".l9/autonomy/runtime.sqlite3",
       "merge_protocol": "human-only",
       "poll_protocol": "protocol-b",
       "task_transport": "cursor-task"
     },
+    "peer_ref": "cursor",
     "protocol_version": "1.0.0",
+    "provider_ref": "cursor-foreground",
     "supports_agent_identity": true,
     "supports_background_agents": true,
     "supports_heartbeat": true,
@@ -474,6 +481,7 @@ _EXAMPLES: dict[str, Any] = json.loads(
     "supports_independent_review": true,
     "supports_lease_propagation": true,
     "supports_typed_artifacts": true,
+    "surface": "cursor-ide",
     "tool_mediation_mode": "mandatory"
   },
   "w7-actions.json": {

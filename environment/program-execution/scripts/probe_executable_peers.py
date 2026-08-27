@@ -14,7 +14,7 @@ from peer_execution.models import ProbeContext
 from scripts.provider_loader import instantiate
 
 _STRUCTURAL_CHECKS = (
-    "identity_binding",
+    "canonical_binding",
     "provider_conformance",
     "execution_profile",
     "provider_routable",

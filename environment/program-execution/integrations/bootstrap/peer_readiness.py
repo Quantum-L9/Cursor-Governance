@@ -7,10 +7,11 @@ from pathlib import Path
 from typing import Any
 
 import yaml
+from peer_execution.bindings import resolve_peer_binding
 from peer_execution.digests import digest_object
 from peer_execution.models import CapabilityReceipt
 
-READINESS_SCHEMA = "l9.executable-peer-readiness.v2"
+READINESS_SCHEMA = "l9.executable-peer-readiness.v3"
 
 
 def _load_yaml(path: Path) -> dict[str, Any]:
@@ -33,7 +34,9 @@ def _profile_exists(subsystem_root: Path, profile_ref: str) -> bool:
     return isinstance((registry.get("profiles") or {}).get(profile_ref), dict)
 
 
-def _autonomy_facts(subsystem_root: Path, repo_root: Path) -> dict[str, Any]:
+def _autonomy_facts(
+    subsystem_root: Path, repo_root: Path, autonomy_provider_ref: str
+) -> dict[str, Any]:
     provider_path = subsystem_root / "integrations/autonomy-control-plane/PROVIDER.yaml"
     compat_path = subsystem_root / "COMPATIBILITY.yaml"
     provider = _load_yaml(provider_path) if provider_path.is_file() else {}
@@ -41,7 +44,10 @@ def _autonomy_facts(subsystem_root: Path, repo_root: Path) -> dict[str, Any]:
     canonical_path = provider.get("canonical_path")
     compat_path_value = ((compat.get("providers") or {}).get("root_autonomy") or {}).get("path")
     gateway = bool(canonical_path) and (repo_root / str(canonical_path)).is_dir()
-    provider_ok = provider.get("owns_program_state") is False and bool(provider.get("provider_id"))
+    provider_ok = (
+        provider.get("owns_program_state") is False
+        and provider.get("provider_id") == autonomy_provider_ref
+    )
     conformance_ok = bool(canonical_path) and canonical_path == compat_path_value
     return {
         "provider_id": provider.get("provider_id"),
@@ -65,20 +71,32 @@ def build_readiness(
     now: dt.datetime | None = None,
     ttl_seconds: int = 900,
 ) -> dict[str, Any]:
-    """Build one binding-level readiness receipt.
+    """Build one canonical binding-level readiness receipt.
 
-    Identity comes from PEER_RUNTIME_BINDINGS, provider capability comes from the
-    Program Execution registry, and policy comes from the execution-profile
-    registry. Provider descriptors never resolve agent identity.
+    The full peer/surface/provider/profile tuple is resolved against
+    PEER_RUNTIME_BINDINGS before any provider or autonomy checks proceed.
     """
     subsystem_root = Path(subsystem_root).resolve()
     repo_root = Path(repo_root).resolve()
     if ttl_seconds <= 0:
         raise ValueError("readiness ttl_seconds must be positive")
     observed = (now or dt.datetime.now(dt.UTC)).replace(microsecond=0)
-    agents = _load_yaml(repo_root / "environment/agents/agent_registry.yaml").get("agents") or {}
-    agent = agents.get(agent_id) or {}
-    principal_id = agent.get("principal_id")
+
+    try:
+        binding = resolve_peer_binding(
+            repo_root,
+            agent_id,
+            surface,
+            provider_ref,
+            execution_profile_ref,
+        )
+        binding_ok = True
+        binding_error = None
+    except (OSError, ValueError, TypeError) as exc:
+        binding = None
+        binding_ok = False
+        binding_error = str(exc)
+
     entry = _registry_entry(subsystem_root, provider_ref)
     descriptor: dict[str, Any] = {}
     descriptor_digest: str | None = None
@@ -87,8 +105,12 @@ def build_readiness(
         if descriptor_path.is_file():
             descriptor = _load_yaml(descriptor_path)
             descriptor_digest = hashlib.sha256(descriptor_path.read_bytes()).hexdigest()
-    autonomy = _autonomy_facts(subsystem_root, repo_root)
-    identity_ok = bool(principal_id) and surface in (agent.get("surfaces") or [])
+
+    autonomy = _autonomy_facts(
+        subsystem_root,
+        repo_root,
+        binding.autonomy_provider_ref if binding is not None else "<invalid-binding>",
+    )
     provider_identity = descriptor.get("identity") or {}
     provider_conformance_ok = (
         bool(descriptor)
@@ -102,6 +124,7 @@ def build_readiness(
         and entry.get("status") not in {"dormant", "non_routable"}
         and entry.get("adapter_kind") in {"worker_host", "verifier"}
     )
+
     probe_value = dict(provider_probe or {})
     probe_status = str(probe_value.get("status") or "UNKNOWN")
     probe_integrity_ok = False
@@ -118,8 +141,9 @@ def build_readiness(
         probe_integrity_ok = True
     if probe_status == "PASS" and not probe_integrity_ok:
         probe_status = "FAIL"
+
     checks = {
-        "identity_binding": "PASS" if identity_ok else "FAIL",
+        "canonical_binding": "PASS" if binding_ok else "FAIL",
         "provider_conformance": "PASS" if provider_conformance_ok else "FAIL",
         "execution_profile": "PASS" if profile_ok else "FAIL",
         "provider_routable": "PASS" if routable else "FAIL",
@@ -138,14 +162,18 @@ def build_readiness(
         "surface": surface,
         "provider_ref": provider_ref,
         "execution_profile_ref": execution_profile_ref,
-        "identity": {
-            "status": "PASS" if identity_ok else "FAIL",
-            "principal_id": principal_id,
+        "binding": {
+            "status": "PASS" if binding_ok else "FAIL",
+            "error": binding_error,
+            "autonomy_provider_ref": (
+                binding.autonomy_provider_ref if binding is not None else None
+            ),
         },
         "program_execution": {
             "status": (
                 "PASS"
-                if provider_conformance_ok
+                if binding_ok
+                and provider_conformance_ok
                 and profile_ok
                 and routable
                 and probe_status == "PASS"

@@ -230,18 +230,19 @@ Do not commit it. `.l9/` is already gitignored.
 
 Wave 2 mediates capability decisions in the runtime. The IDE must still be
 wired so every relevant tool invocation calls the gateway before execution.
-Wave 3 supplies the Cursor and Claude Code adapters, conformance checks,
-deployment handshake, pipeline simulator, and negative/chaos validation.
+Wave 3 supplies peer-neutral root-autonomy conformance, the deployment handshake,
+surface renderers, the JSON-line bridge, and negative/chaos validation.
 
 ---
 
-# Wave 3 — Mandatory IDE Deployment and Conformance
+# Wave 3 — Mandatory Peer Deployment and Conformance
 
-Wave 3 makes Cursor and Claude Code constrained orchestration clients.
+Wave 3 makes every canonically bound peer surface a constrained orchestration
+client. Provider availability remains a Program Execution readiness concern.
 
 ## Enforcement boundary
 
-An IDE may not start autonomous work unless:
+A peer surface may not start autonomous work unless:
 
 1. its adapter configuration passes every blocking conformance check;
 2. the requested action is READY in the compiled DAG;
@@ -254,45 +255,12 @@ An IDE may not start autonomous work unless:
 9. required verifier and reviewer dependencies complete;
 10. human authorization and merge gates remain outside autonomy.
 
-## Adapter doctor
+## Supported adapter control surface
 
-```bash
-python -m autonomy.validation.doctor \
-  --root . \
-  --adapter autonomy/examples/adapters/cursor.json
-
-python -m autonomy.validation.doctor \
-  --root . \
-  --adapter autonomy/examples/adapters/claude-code.json
-```
-
-A missing executable is a blocking failure in production. Do not set
-`allow_missing_executable_in_test` outside tests.
-
-## Register an adapter
-
-```bash
-python -m autonomy.wave3_cli \
-  --root . \
-  register-adapter \
-  --config autonomy/examples/adapters/cursor.json
-```
-
-## Deploy / ack / authorize / heartbeat / submit / status
-
-See `python -m autonomy.wave3_cli --help` for `deploy`, `ack`, `authorize`,
-`heartbeat`, `submit`, and `status`. Deploy supports `--render cursor` or
-`--render claude-code` and injects `L9_ADAPTER_SESSION_ID`.
-
-## Simulate before execution
-
-```bash
-python -m autonomy.wave3_cli \
-  --root . \
-  simulate \
-  --graph .l9/autonomy/w7-compiled-graph.json \
-  --output .l9/autonomy/w7-simulation.json
-```
+The legacy `autonomy.validation.doctor` and `autonomy.wave3_cli` file-path CLIs
+are retired stubs. Use `AdapterConformance.run()` in-process or the JSON-line
+bridge below. Registration and deployment must resolve canonical peer bindings;
+provider reachability is checked by Program Execution readiness.
 
 ## JSON-line bridge and tool hooks
 
@@ -311,7 +279,7 @@ fail closed.
 Do not expose direct repository mutation tools alongside the mediated adapter.
 
 ```text
-IDE task → adapter session → runtime lease → capability gateway → tool
+peer task → canonical peer binding → adapter session → runtime lease → capability gateway → tool
 ```
 
 A direct side channel around the gateway is a deployment defect and must block

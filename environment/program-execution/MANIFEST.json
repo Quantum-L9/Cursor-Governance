@@ -1231,7 +1231,7 @@
     },
     {
       "path": "conformance/test_executable_peer_binding.py",
-      "sha256": "4c16f18a6c1bffac84226d40ac6635863f7fa84515dbac1e5fd290e8c0cbf466"
+      "sha256": "67632d6c323b42c3978d14eea8c5bce885018e49ff74a10cf06c402487ede57a"
     },
     {
       "path": "conformance/test_failure_mapping.py",
@@ -1307,7 +1307,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/bridge.py",
-      "sha256": "bb60b19fdbfbdf320852c152d1a0d39e5a3963e27126ab819fc0189e3683454b"
+      "sha256": "9684152730fa5e124a8774f318d8ee65f7b67fb418843bffd41e51b707a630b9"
     },
     {
       "path": "integrations/autonomy-control-plane/contract_mapper.py",
@@ -1335,11 +1335,11 @@
     },
     {
       "path": "integrations/bootstrap/peer_context.py",
-      "sha256": "ecb3e779e8a35446ad228b0ccc6e9f71c6ea648d5d7b2382a81cb1877b129f52"
+      "sha256": "ce197b6e82ad7a7fda347bbe2fec59e0022ec2978a108f09ddd17287c8ecfab1"
     },
     {
       "path": "integrations/bootstrap/peer_readiness.py",
-      "sha256": "87a9119316edb456d098c653f0a84226c7f037e56d0ad832d5630de9d0c47d4b"
+      "sha256": "8cda50e025035ed7d40ed91a93088738cb65f4a6462f3d4df1770813eb4426b9"
     },
     {
       "path": "integrations/bootstrap/status_probe.py",
@@ -1535,7 +1535,7 @@
     },
     {
       "path": "peer_execution/bindings.py",
-      "sha256": "36d4fbbe38f4c7bed41e9e82252ef74af05c7a2303d0577a3a99aeeffb0569cc"
+      "sha256": "274db9dfd4c5c73c4643cf8b34137e8115f6abf5f9dcea63ab8af801537cfda4"
     },
     {
       "path": "peer_execution/context.py",
@@ -1751,7 +1751,7 @@
     },
     {
       "path": "scripts/probe_executable_peers.py",
-      "sha256": "6345e13e777dc6eec9ca34a1003795a50c511ea009c7a63928f6ef30363900a9"
+      "sha256": "0c2edec65aac887366468269842cb50291e8706943e505dca2841e9b2dff3416"
     },
     {
       "path": "scripts/probe_execution_adapters.py",
@@ -1919,7 +1919,7 @@
     },
     {
       "path": "tests/test_existing_runtime_boundaries.py",
-      "sha256": "cea8675ba80a870c154349b594a4439700c8bb475185c82098748c0d45e9d739"
+      "sha256": "41a44bd8eab0959a14b2e7cf68a10beb73dce61c4315c2593aa165ab869bf0a1"
     },
     {
       "path": "tests/test_full_adapter_matrix.py",
@@ -1942,8 +1942,12 @@
       "sha256": "80c97c9aed3e443d4cf339cc5d03cb512a2367c683a26a2e230302f43d279710"
     },
     {
+      "path": "tests/test_peer_binding_resolution.py",
+      "sha256": "12706170d2b356c80ecf34c65d054858a92724df4b6596684a70e325c33ebc98"
+    },
+    {
       "path": "tests/test_probe_command.py",
-      "sha256": "51827563729563cbe3eb0124fd4abbcbdeffa4c1395bf75f358c130cd0078b68"
+      "sha256": "0458ffa3bc78facfefa6366ceae95b7b03fb0ae0383aceb789ec6939bab4effb"
     },
     {
       "path": "tests/test_registry_alignment.py",

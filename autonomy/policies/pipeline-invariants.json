@@ -57,7 +57,7 @@
     },
     {
       "id": "PIPE-010",
-      "description": "No campaign may execute with a failed IDE adapter conformance check.",
+      "description": "No campaign may execute with a failed root-autonomy conformance check.",
       "severity": "blocking",
       "continuous": true
     }

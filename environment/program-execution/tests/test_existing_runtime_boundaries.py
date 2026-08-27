@@ -20,6 +20,15 @@ class ExistingRuntimeBoundaryTests(unittest.TestCase):
         self.assertNotIn("class LeaseManager", text)
         self.assertIn("autonomy/adapters/orchestrator.py", text)
 
+    def test_root_autonomy_bridge_is_provider_neutral(self) -> None:
+        root = Path(__file__).resolve().parents[1]
+        text = (root / "integrations/autonomy-control-plane/bridge.py").read_text(encoding="utf-8")
+        self.assertNotIn("build_cursor_task", text)
+        self.assertNotIn("build_claude_task", text)
+        self.assertNotIn("autonomy/adapters/cursor/adapter.py", text)
+        self.assertNotIn("autonomy/adapters/claude_code/adapter.py", text)
+        self.assertIn("autonomy/adapters/protocol.py", text)
+
 
 if __name__ == "__main__":
     unittest.main()

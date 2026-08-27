@@ -58,6 +58,9 @@ class JsonLineBridge:
             action_id=arguments.get("action_id"),
             requested_role=arguments.get("requested_role"),
             ttl_seconds=arguments.get("ttl_seconds"),
+            required_surface_capabilities=list(
+                arguments.get("required_surface_capabilities") or []
+            ),
         )
 
     def _acknowledge_agent(self, arguments: dict[str, Any]) -> Any:
