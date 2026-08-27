@@ -1,5 +1,5 @@
 schema: l9.environment_experience.progress/v1
-assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
 assessed_at: '2026-08-27'
 counts:
   done: 3
@@ -186,7 +186,7 @@ records:
   title: Make broker authentication and reachability diagnosable
   original_status: ACTIVE_WITH_UNKNOWN
   progress: partial
-  delivered_by: PR#305 (+ predecessor PR#304), merged into main; PR#320 open
+  delivered_by: PR#305 (+ predecessor PR#304) and PR#320, all merged into main
   residual:
   - 'CONNECT cannot succeed (no platform-issued identity — external; tracked as Quantum-L9/Cursor-Governance
     issues #301, #302).'
@@ -194,7 +194,7 @@ records:
   evidence:
   - 'live capability plane: broker_reachability=no_dns_record/unreachable_URLError, broker_identity_status=none:hosted_surface_issues_no_session_identity,
     primary_blocker=identity — the states are named, not collapsed'
-  - PR#320 (open) moves every adapter's memory front door to the broker URL with no inline bearer, so
+  - PR#320 (merged) moves every adapter's memory front door to the broker URL with no inline bearer, so
     an unset broker returns an honest 401 and memory runs DEGRADED
 - id: CI-011
   priority: 2
@@ -210,22 +210,23 @@ records:
   title: Gate rules and MCP config on actual surface capabilities
   original_status: ACTIVE
   progress: partial
-  delivered_by: Quantum-L9/Cursor-Governance PR#320 (open) + pre-existing adapter templates
+  delivered_by: Quantum-L9/Cursor-Governance PR#320 (merged into main as c3ddeea) + pre-existing adapter
+    templates
   residual:
   - 'IMP-07: rule 22 still mandates Context7 on every surface. This surface exposes no context7 MCP server
     (live tool roster carries graphiti-memory, github, Vercel, Tavily, Google Calendar — no context7),
     so the rule names a mechanism the surface lacks.'
   - 'I-BS-12: projected always-on rules still carry no capability precondition annotation.'
-  - PR#320 is open, not merged.
   evidence:
-  - 'PR#320 ops/secrets/capabilities.yaml: `requires` may name only capability_broker.EVALUABLE_REQUIREMENTS
+  - 'PR#320 (merged) ops/secrets/capabilities.yaml: `requires` may name only capability_broker.EVALUABLE_REQUIREMENTS
     — a precondition no code evaluates now denies the capability instead of passing silently; unevaluable
     phase_lock_held removed'
-  - PR#320 ops/secrets/capability_broker.py +96, tests/ops/secrets/test_capability_plane.py +110
-  - PR#320 environment/agents/adapters/generic/mcp.template.json moved to the brokered front door (no
-    inline bearer), matching the claude-code peer
+  - PR#320 (merged) ops/secrets/capability_broker.py +96, tests/ops/secrets/test_capability_plane.py +110
+  - PR#320 (merged) environment/agents/adapters/generic/mcp.template.json moved to the brokered front
+    door (no inline bearer), matching the claude-code peer
   - 'I-BS-03 already satisfied at 78f122a: claude-code and codex mcp.template.json both carry the `type`
     discriminator, and so does the live /home/user/.mcp.json'
+  - PR#320 merged 2026-08-27T00:38Z as c3ddeea; it did not touch the Context7 stack-proof path or CONTEXT7_API_KEY
 - id: CI-013
   priority: 1
   title: Preserve fail-closed destructive/staging gates while making denials actionable
@@ -509,10 +510,12 @@ proposed_records:
 - id: CI-034
   priority: 1
   title: Bind the progress overlay to a governance SHA and invalidate it on drift
-  why: assessed_against was the prose label 'main@post-#307-merge'. main advanced 47 commits to 498dcaa
+  why: 'assessed_against was the prose label ''main@post-#307-merge''. main advanced 47 commits to 498dcaa
     and PR#320 opened; nothing marked the overlay stale, and six records were re-judged by hand to find
-    it. This is CI-004's defect class — a receipt not bound to the revision it describes — applied to
-    the pack itself.
+    it. This is CI-004''s defect class — a receipt not bound to the revision it describes — applied to
+    the pack itself. It recurred within the hour: this pack was rewritten at 498dcaa naming PR#320 as
+    open, and PR#320 merged as c3ddeea before the overlay was published — stale again, by the same mechanism,
+    on its second day.'
   change: Record assessed_against_sha alongside the label, and add a check that compares it to the governance
     HEAD and reports the overlay stale when they differ.
   done_when: A pack read at a governance revision other than assessed_against_sha reports itself stale

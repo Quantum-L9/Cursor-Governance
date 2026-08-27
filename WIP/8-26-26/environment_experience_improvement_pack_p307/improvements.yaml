@@ -284,7 +284,7 @@ records:
     residual:
     - 'IMP-01 only: the Anthropic remote-session prompt still tells agents they have no gh access. Harness-owned;
       no in-repo lever. See the external-owner note in PROGRESS.md.'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-002
   title: Make bootstrap projection ownership-aware and non-destructive to tracked repo content
@@ -472,7 +472,7 @@ records:
     - Phase 2b (project to a non-owned sibling when the target is tracked), 2c (L9_AUTONOMY_STATE_DIR
       outside the worktree), and 2d (per-repo gitignore propagation) are not built; the 8-fixture git-status-clean
       done_when is unverified.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-003
   title: Make the Stop hook ownership-aware instead of residue-blind
@@ -562,7 +562,7 @@ records:
     - 'OWNERSHIP NOTE: the named target /root/.claude/stop-hook-git-check.sh is harness-owned and not
       editable from this repo. The in-repo lever is the .git/info/exclude glob list in ops/scripts/bootstrap_agent_environment.sh
       — re-scope the record to that, or mark it external.'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-004
   title: Regenerate bootstrap receipts on lifecycle/revision changes and re-probe degraded components
@@ -822,7 +822,7 @@ records:
     - Per-component log paths exist only for deps; the other components (capabilities, memory, mcp, plugins)
       report a bare DEGRADED with no evidence path.
     - No cross-check between the three receipt stores — see the proposed CI-035.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-005
   title: Make memory health transport-specific and continuity task-bearing
@@ -1020,7 +1020,7 @@ records:
       does not enumerate skipped repo names with per-repo reasons (BOOT-7)
     residual:
     - 'Memory health transport-specificity + continuity tasks: not started.'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-006
   title: Resolve authority-sensitive environment drift at the actual source
@@ -1224,7 +1224,7 @@ records:
     - 'done_when ''0 of 33 in exactly one layer'': the stray var is still present, now valued false rather
       than true, so it no longer even nominally widens authority. Delete it to reach the exact-one-layer
       end state.'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-007
   title: Replace standing breakglass environment strings with scoped expiring receipts
@@ -1310,7 +1310,7 @@ records:
     - 'done_when literal ''variable absent from a fresh session'' still unmet, but the value changed:
       the live account now carries L9_AUTONOMY_AUTONOMOUS_MERGE=false, not =true. Still inert, still authorizes
       nothing; delete the env line to satisfy the literal.'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-008
   title: Reconcile make pr doctrine with consumer-repository command contracts
@@ -1420,7 +1420,7 @@ records:
     - Running the governance pre-commit config against a *consumer* workspace (cwd=$GOV, absolute --files,
       governance-only-local-hook skip subset) needs real-consumer validation and is scoped in-script,
       not enabled. The done_when's consumer-side leg is unverified.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-009
   title: Establish one project interpreter/toolchain authority and verify importability before READY
@@ -1689,7 +1689,7 @@ records:
     - 'A sourceable scripts/env.sh (IMP-E1) was deliberately NOT added: this repo already has one interpreter
       authority (Makefile + ensure_gov_python.sh + gov-python prereq). Container-image items (A2-A5) are
       external (SC-IMG).'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-010
   title: Make broker authentication and reachability diagnosable
@@ -1771,17 +1771,17 @@ records:
   reconciliation_action: MERGE
   progress:
     status: partial
-    delivered_by: PR#305 (+ predecessor PR#304), merged into main; PR#320 open
+    delivered_by: PR#305 (+ predecessor PR#304) and PR#320, all merged into main
     evidence:
     - 'live capability plane: broker_reachability=no_dns_record/unreachable_URLError, broker_identity_status=none:hosted_surface_issues_no_session_identity,
       primary_blocker=identity — the states are named, not collapsed'
-    - PR#320 (open) moves every adapter's memory front door to the broker URL with no inline bearer, so
-      an unset broker returns an honest 401 and memory runs DEGRADED
+    - PR#320 (merged) moves every adapter's memory front door to the broker URL with no inline bearer,
+      so an unset broker returns an honest 401 and memory runs DEGRADED
     residual:
     - 'CONNECT cannot succeed (no platform-issued identity — external; tracked as Quantum-L9/Cursor-Governance
       issues #301, #302).'
     - Broker states not fully split into proxy-denied vs upstream-error for allowlist remediation decisions.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-011
   title: Bound large MCP responses with field projection/pagination
@@ -1843,7 +1843,7 @@ records:
     evidence: []
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-012
   title: Gate rules and MCP config on actual surface capabilities
@@ -1933,23 +1933,25 @@ records:
   reconciliation_action: MERGE
   progress:
     status: partial
-    delivered_by: Quantum-L9/Cursor-Governance PR#320 (open) + pre-existing adapter templates
+    delivered_by: Quantum-L9/Cursor-Governance PR#320 (merged into main as c3ddeea) + pre-existing adapter
+      templates
     evidence:
-    - 'PR#320 ops/secrets/capabilities.yaml: `requires` may name only capability_broker.EVALUABLE_REQUIREMENTS
+    - 'PR#320 (merged) ops/secrets/capabilities.yaml: `requires` may name only capability_broker.EVALUABLE_REQUIREMENTS
       — a precondition no code evaluates now denies the capability instead of passing silently; unevaluable
       phase_lock_held removed'
-    - PR#320 ops/secrets/capability_broker.py +96, tests/ops/secrets/test_capability_plane.py +110
-    - PR#320 environment/agents/adapters/generic/mcp.template.json moved to the brokered front door (no
-      inline bearer), matching the claude-code peer
+    - PR#320 (merged) ops/secrets/capability_broker.py +96, tests/ops/secrets/test_capability_plane.py
+      +110
+    - PR#320 (merged) environment/agents/adapters/generic/mcp.template.json moved to the brokered front
+      door (no inline bearer), matching the claude-code peer
     - 'I-BS-03 already satisfied at 78f122a: claude-code and codex mcp.template.json both carry the `type`
       discriminator, and so does the live /home/user/.mcp.json'
+    - PR#320 merged 2026-08-27T00:38Z as c3ddeea; it did not touch the Context7 stack-proof path or CONTEXT7_API_KEY
     residual:
     - 'IMP-07: rule 22 still mandates Context7 on every surface. This surface exposes no context7 MCP
       server (live tool roster carries graphiti-memory, github, Vercel, Tavily, Google Calendar — no context7),
       so the rule names a mechanism the surface lacks.'
     - 'I-BS-12: projected always-on rules still carry no capability precondition annotation.'
-    - PR#320 is open, not merged.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-013
   title: Preserve fail-closed destructive/staging gates while making denials actionable
@@ -2072,7 +2074,7 @@ records:
     evidence: []
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-014
   title: Make target repository/cwd explicit for governance CLIs
@@ -2122,7 +2124,7 @@ records:
     residual:
     - Covers the make-target facade only; many ops/scripts governance CLIs still depend on persistent
       shell cwd.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-015
   title: Name and enforce the authoritative governance checkout
@@ -2203,7 +2205,7 @@ records:
     - 'CLOSED since 2026-08-26: ''read the SSOT''s issues without add_repo'' (C2) is now met.'
     - 'Non-authoritative clones are still not relabelled or removed: /root/.cursor-governance and /home/user/Cursor-Governance
       both sit at 498dcaa, and the session banner names only the first (I-WT-01, I-BS-13).'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-016
   title: Make L4/release receipts resolve paths, branch, and head dynamically
@@ -2287,7 +2289,7 @@ records:
     residual:
     - The L4/release receipt's pr_template resolution is still hardcoded, so the done_when (a receipt
       written in org-github-defaults names .github/pull_request_template.md or null) remains unmet.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-017
   title: Validate generated-artifact membership and report all drift in one pass
@@ -2389,7 +2391,7 @@ records:
       7 on a staged-but-deleted path (IMP-B1); l9-meta-injector still reports manifest staleness and dist
       divergence in separate passes (IMP-09); CEG validate_release_readiness.py still only fails at the
       gate on missing MANIFEST.md membership, with no --fix and no pre-commit surface (I-WT-03).'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-018
   title: Make local CI parity and hooks first-class provisioning
@@ -2500,7 +2502,7 @@ records:
     evidence: []
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-019
   title: Coordinate concurrent writers on shared PR branches
@@ -2544,7 +2546,7 @@ records:
     evidence: []
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-020
   title: Expose notification age when queued state is delivered
@@ -2580,7 +2582,7 @@ records:
     evidence: []
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-021
   title: Make session-experience and skill-usage logging observable
@@ -2641,7 +2643,7 @@ records:
     - 'live: /root/.claude/l9/ does not exist — skill-usage logging still reaches no disk'
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-022
   title: Provision or explicitly declare service-backed integration-test dependencies
@@ -2680,7 +2682,7 @@ records:
     evidence: []
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-023
   title: Collapse variable-loading authorities into one reproducible loader contract
@@ -2845,7 +2847,7 @@ records:
     - ops/scripts/resolve_governance_paths.sh carries no source-without-call guard (LOADER-2)
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-024
   title: Repair or remove foreign/stale bootstrap and deploy entrypoints
@@ -2927,7 +2929,7 @@ records:
     evidence: []
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-025
   title: Provide sanctioned cleanup of generated/cache residue
@@ -3010,7 +3012,7 @@ records:
     evidence: []
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-026
   title: Support safe on-disk aliases for dot-prefixed repositories
@@ -3055,7 +3057,7 @@ records:
       and ships no skills/ tree — the clause is moot rather than unmet. Its .claude/ tree is present.'
     - Attachment predates this assessment; the 2026-08-26 pass recorded not_started without checking the
       on-disk clone.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-027
   title: Correct rule rationale that no longer matches container reality
@@ -3095,7 +3097,7 @@ records:
       yaml'` succeeds on this container
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-028
   title: Improve dependency provisioning evidence and determinism
@@ -3153,7 +3155,7 @@ records:
       bytes (I-EL-03)
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-029
   title: Persist repeatable cross-repo E2E fixtures
@@ -3200,7 +3202,7 @@ records:
       Whether the real producer/consumer qualification now runs off this fixture, or still off a scratchpad
       builder, is unverified.'
     - '''importing the producer''s fixture helpers rather than duplicating them'' is unconfirmed.'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-030
   title: Improve receipt CLI ergonomics without multiplying state owners
@@ -3238,7 +3240,7 @@ records:
       read action
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-031
   title: Keep repo documentation and tracked-path hygiene synchronized
@@ -3295,7 +3297,7 @@ records:
       l9-make-check)
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-032
   title: Give slow validation units explicit headroom without weakening total proof
@@ -3337,7 +3339,7 @@ records:
     evidence: []
     residual:
     - Not addressed by the merged work.
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-033
   title: Use pipefail in push/retry helpers
@@ -3376,7 +3378,7 @@ records:
     evidence:
     - Marked COMPLETED in the source pack (pipefail in push/retry helpers).
     residual: []
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-100
   title: 'Investigate why PR #70''s workflow runs were gated in action_required'
@@ -3419,7 +3421,7 @@ records:
     evidence: []
     residual:
     - 'Context-specific investigation (PR #70 action_required): not started.'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-101
   title: Align the branch directive with the repository actually worked in
@@ -3460,7 +3462,7 @@ records:
       identically across all 10 in-scope repositories'
     residual:
     - 'Context-specific (branch directive vs repo worked in): not started, and still recurring.'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 - id: CI-102
   title: Valid GH_TOKEN or formal surface exemption from gh-dependent gates
@@ -3503,7 +3505,7 @@ records:
       / rules 53 / rules 62 amendment sanctioning the MCP path for claude-cloud (option b). The gates
       work by a third route — REST-capable probes — that no rule or profile records, so the next gh-dependent
       gate written will reproduce the original block.'
-    assessed_against: main@498dcaa (post-#307-merge + 47 commits) + PR#320 open
+    assessed_against: main@498dcaa (post-#307-merge + 47 commits); PR#320 has since merged as c3ddeea
     assessed_at: '2026-08-27'
 progress_meta:
   assessed_against: main@post-#307-merge
