@@ -105,7 +105,7 @@ nodes:
     description: Verify READMEs were generated correctly
     commands:
       - python scripts/generate_subsystem_readmes.py --validate
-      - head -10 memory/README.md
+      - python scripts/generate_subsystem_readmes.py --validate-sections
     outputs:
       - validation_passed
       - validation_errors
