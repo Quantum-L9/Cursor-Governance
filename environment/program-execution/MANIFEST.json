@@ -1879,7 +1879,7 @@
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",
-      "sha256": "02b66338db751139ea8a8b71247e0702347539a1a52619fc7fba7bf17bf8a623"
+      "sha256": "7c5c60451a251117172eeee536a3ddbd0a5482218aee13b455dbca2c568ee5e5"
     },
     {
       "path": "scripts/validate_campaign_promotion.py",
