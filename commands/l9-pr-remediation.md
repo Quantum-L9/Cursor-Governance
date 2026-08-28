@@ -1,7 +1,7 @@
 ---
 name: l9-pr-remediation
 version: "1.1.0"
-description: "PR Converge — makefile pr-check then pr, remediate all open PRs, stack-safe oldest-first merge"
+description: "PR Converge — precommit-repo then git push, remediate all open PRs, stack-safe oldest-first merge"
 before_chain: rules
 strict_mode: true
 ---
@@ -10,7 +10,7 @@ strict_mode: true
 
 Delegates to skill **`l9-pr-remediation`** in **Converge** intent.
 
-Invoking this command **is** merge authorization for **all open PRs** in the
+Invoking this command is merge authorization for **all open PRs** in the
 target repo. Campaigns, `make pr`, and `/pr` (Diagnose) do not merge.
 
 ## Usage
@@ -33,9 +33,10 @@ GOV_PY="${GOV_PY:-$PWD/.venv/bin/python}"
 ```
 
 3. Fingerprint venv (`UV_PYTHON` = uv-managed native CPython; reject miniconda / `--system`).
-4. Local verify is `UV_PYTHON=<native> make pr-check`. Publish is
-   `UV_PYTHON=<native> PR_REMEDIATE=0 make pr`. Never raw `git push`.
-5. Remediate every open PR to green + mergeable (bounded cycles).
+4. Local verify is `PR_BASE=origin/main make precommit-repo` (hooks plus ruff).
+   Publish is `git push` of the already-open PR branch. Do not run `make pr`
+   or `make pr-check`. Pytest and conformance stay on CI.
+5. Remediate every open PR (bounded cycles). Do not wait for CI.
 6. Merge each green mergeable PR **oldest-first**, stack-safe. Never type
    `--squash` yourself:
 

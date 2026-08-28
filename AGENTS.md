@@ -847,3 +847,23 @@ Publishing is **ask-first**: `/ff` catches a clone up, it does not authorize
 carries so repeat runs do not re-shelve the same bytes.
 Secret globs and `WIP/Legal Defense/` stay out. Dirty-preserve refs stay
 until `l9-git-work-preserve` triage + prune-policy.
+
+<!-- L9_PR_REMEDIATE_SPEED_V1 -->
+## `/l9-pr-remediation` publish is not `make pr` (2026-08-28)
+
+§3.2 merge authority is unchanged: invoking **`/l9-pr-remediation` (Converge)**
+**is** merge authorization for all open PRs. Campaigns and `make pr` stay
+no-merge.
+
+Remediator **publish** is a different path from the ceremony:
+
+- Local verify is `PR_BASE=origin/main make precommit-repo` (changed-file
+  hooks plus locked ruff). No pytest. No conformance. CI owns those.
+- Publish is `git push` of the already-open PR branch. Pathspecs only.
+- Do not run `make pr` or `make pr-check` from this skill.
+- Do not poll CI after push. Continue the next independent PR, then
+  MERGE_TRAIN. If merge is blocked by required checks, record the blocker
+  and finish.
+
+`make pr` / `make pr-check` remain the campaign / feature ceremony. This
+section does not rewrite §4.

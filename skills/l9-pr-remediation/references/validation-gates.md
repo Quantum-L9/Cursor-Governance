@@ -6,8 +6,8 @@ role: validation_gates
 tags: [pr, validation, enforcement, checkpoints, artifacts, makefile]
 owner: igor_beylin
 status: active
-version: 3.4.0
-updated: 2026-08-18
+version: 3.5.0
+updated: 2026-08-28
 /L9_META -->
 
 # Validation Gates (Enforcement Layer)
@@ -20,8 +20,8 @@ Prevent protocol violations with lightweight **inline** proofs at each step (log
 
 ```text
 P_cmd ──→ [GATE A] ──→ ingest/classify ──→ [GATE B] ──→ fix ──→ [GATE C]
-  ──→ make pr-check ──→ [GATE D] ──→ commit + make pr ──→ [GATE E]
-  ──→ replies ──→ [GATE F] ──→ poll (no merge)
+  ──→ make precommit-repo ──→ [GATE D] ──→ commit + git push ──→ [GATE E]
+  ──→ replies ──→ [GATE F] ──→ next PR / MERGE_TRAIN (no CI poll)
 ```
 
 Each gate requires a specific artifact. If the artifact is missing or invalid, the agent MUST NOT proceed.
@@ -35,18 +35,19 @@ Required artifact:
 gate_registry:
   makefile: true
   public:
-    verify: "make pr-check"
-    publish: "PR_REMEDIATE=0 make pr"
+    verify: "make precommit-repo"
+    publish: "git push"
     improve: "make improve"   # optional
-  leftover_workflow_run: []   # only when makefile pr-check is absent
+  leftover_workflow_run: []   # only when makefile precommit-repo is absent
 ```
 
 Validation:
-- [ ] When a Makefile exists, `verify` is `make pr-check` and `publish` is `PR_REMEDIATE=0 make pr`
+- [ ] `verify` is `make precommit-repo` and remediator `publish` is `git push`
+- [ ] Ceremony `make pr-check` / `PR_REMEDIATE=0 make pr` are named only as do-not-run
 - [ ] INTERNAL targets (`pr-preflight`, `precommit`, `pr-full`) are not the cached shipping verbs
-- [ ] Workflow `run:` leftover is empty when `pr-check` exists
+- [ ] Workflow `run:` leftover is empty when `precommit-repo` exists
 
-**STOP if:** Makefile has `pr` but the agent cached `git push`.
+**STOP if:** the agent cached ceremony `make pr` / `make pr-check` as this skill's verbs.
 
 Repos with no Makefile and no workflows: ask whether CI is configured; record `Unknown`.
 
@@ -66,8 +67,8 @@ classified_findings:
 execution_plan:
   cycle_scope: ["{finding-id}", ...]
   estimated_files: ["{file_path}", ...]
-  local_verify_commands: ["UV_PYTHON=… make pr-check"]
-  makefile_targets: ["pr-check"]
+  local_verify_commands: ["PR_BASE=origin/main make precommit-repo"]
+  makefile_targets: ["precommit-repo"]
   cited_paths: ["{file_path}", ...]
 ```
 
@@ -78,7 +79,7 @@ Validation:
 - [ ] If `total == 0` and CI is green: conversation-only path — skip to replies / MERGE_TRAIN, **do not** treat as “already merged”
 - [ ] `cycle_scope` is non-empty **or** all dispositions are reply/defer/note
 - [ ] `cited_paths` lists every finding path (verified even if the default toolchain excludes it)
-- [ ] `makefile_targets` is `pr-check` when a Makefile exists
+- [ ] `makefile_targets` is `precommit-repo` when a Makefile exists
 - [ ] No file edits have been made yet
 
 **STOP if:** Plan is incomplete — do not patch.
@@ -103,14 +104,14 @@ Validation:
 
 ## Gate D: Local Verify Passed (CRITICAL GATE)
 
-**After `make pr-check`**
+**After `make precommit-repo`**
 
 Required artifact:
 ```yaml
 local_verify_log:
   iteration: {integer}  # which attempt (1-5)
   timestamp: "{ISO}"
-  command: "UV_PYTHON=<native> make pr-check"
+  command: "PR_BASE=origin/main make precommit-repo"
   exit_code: 0
   cited_paths_checked: true
   result: Passed | Failed | Unknown
@@ -119,7 +120,7 @@ local_verify_log:
 Validation:
 - [ ] `result: Passed` before commit on a code-changing PR
 - [ ] Remote CI is not recorded here (independent later)
-- [ ] Makefile `pr-check` ran when a Makefile exists (cached `UV_PYTHON`)
+- [ ] `make precommit-repo` ran (hooks plus ruff). Did **not** run `make pr-check`
 - [ ] cited/planned paths were checked even if the default toolchain excludes them
 - [ ] `iteration <= 5`
 - [ ] Commit will not use `--no-verify`
@@ -131,7 +132,7 @@ Validation:
 
 ## Gate E: Single Commit, Single Publish
 
-**After commit + `PR_REMEDIATE=0 make pr`**
+**After commit + remediator `git push`**
 
 Required artifact:
 ```yaml
@@ -140,7 +141,7 @@ push_record:
   commit_message: "fix(pr-remediation): resolve {count} findings"
   files_in_commit: {integer}
   publish_count_this_cycle: 1
-  publish_command: "PR_REMEDIATE=0 make pr"
+  publish_command: "git push"
   branch: "{branch_name}"
   published_at: "{ISO timestamp}"
 ```
@@ -150,7 +151,7 @@ Validation:
 - [ ] `commit_sha` is a valid 40-char hex string
 - [ ] Commit message follows `fix(pr-remediation): resolve {count} findings` plus `Remediation-Cycle:` trailer
 - [ ] `git log --oneline HEAD~1..HEAD` returns exactly 1 line
-- [ ] Publish was not raw `git push`
+- [ ] Publish was remediator `git push` of the already-open PR branch, not `make pr`
 
 **STOP if:** Publish failed → check auth, remote, branch protection. Ask user if needed.
 
@@ -191,8 +192,8 @@ If at ANY point the agent:
 - Makes more than 1 publish per cycle → **VIOLATION: multi-push**
 - Commits per-finding or publishes to probe CI → **VIOLATION: not-one-and-done**
 - Edits before the plan gate → **VIOLATION: patch-before-plan**
-- Skips `make pr-check`, cited-path verify, or uses `--no-verify` → **VIOLATION: skipped-local-verify**
-- Uses `make precommit` / `--all-files` as the public gate → **VIOLATION: wrong-makefile-verb**
+- Skips `make precommit-repo` or uses `--no-verify` → **VIOLATION: skipped-local-verify**
+- Uses `make pr-check` / `make pr` / `make precommit` / `--all-files` as the remediator gate → **VIOLATION: wrong-makefile-verb**
 - Merges from Diagnose or emits `gh pr merge` in Diagnose YNP → **VIOLATION: diagnose-merge**
 - Squash-merges a stack parent or `update-branch` after parent squash → **VIOLATION: stack-unsafe**
 - Leaves threads unresolved after Step 7.5 → **VIOLATION: silent-fix**

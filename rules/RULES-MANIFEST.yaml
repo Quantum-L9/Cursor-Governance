@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-28T19:24:25Z'
+generated_utc: '2026-08-28T20:06:36Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:5d280b8f07397f0861fc5fe8d2234f6a30c3c793fc36e66d2d1bbabb37d4a5ad
+source_tree_digest: sha256:e17b360a9917535873f75ac05b116371bee0178699a01daaa88c5bcfd4cb4e0a
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -545,8 +545,8 @@ rules:
 - file: 48-make-pr-remediation.mdc
   id: l9.rule.48.make.pr.remediation
   id_source: explicit
-  version: 1.3.0
-  description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge of all open PRs
+  version: 1.4.0
+  description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge and publishes via precommit-repo plus git push
   scope: global
   domain: general
   activation: always
@@ -555,8 +555,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
-  line_count: 122
-  content_digest: sha256:c8d86cbbf77d8af7ce1c2115efde135c6bebfe568924c2c6412ba223e83f971d
+  line_count: 125
+  content_digest: sha256:7a8c21f0e965b23c482642794695d02d186f20789cacae80fa1f24b87bbb87e9
   authority: canonical_global
   context_cost: moderate
   deprecated: false

@@ -25,7 +25,7 @@ Apply fixes for classified **codebase** findings. Independent clusters run concu
 - MUST NOT invent a fix when `root_cause` is `Unknown` or confidence is `low`.
 - MUST NOT introduce new warnings or errors.
 - MUST NOT edit until the [remediation plan](remediation-plan.md) has a disposition for every census finding.
-- MUST NOT commit or push until ALL planned codebase fixes are applied AND `make pr-check` (when a Makefile exists) plus cited/planned path checks passed.
+- MUST NOT commit or push until ALL planned codebase fixes are applied AND `make precommit-repo` passed.
 - MUST use the smallest diff that resolves the finding.
 - MUST parallelize independent clusters by default; serialize only on conflicting file ownership.
 - When a fix would require changes outside the PR's file scope, mark as deferred.
@@ -58,7 +58,7 @@ test -f Makefile && { grep -E '^(pr-check|pr|improve):' Makefile || true; }
 ```yaml
 local_verify_commands:
   - name: "pr-check"
-    command: "UV_PYTHON=<native> make pr-check"
+    command: "PR_BASE=origin/main make precommit-repo"
     source: "Makefile:pr-check"
 ```
 
@@ -141,7 +141,7 @@ After applying ALL planned fixes, run the verify stack in [remediation-plan.md](
 
 ```bash
 # 1) Makefile public gate with cached UV_PYTHON (required when Makefile exists)
-UV_PYTHON="$UV_PYTHON" make pr-check
+PR_BASE=origin/main make precommit-repo
 
 # 2) Cited/planned paths (even if the default toolchain excludes them)
 # 3) Workflow run: leftover ONLY when no Makefile pr-check exists
@@ -158,7 +158,7 @@ UV_PYTHON="$UV_PYTHON" make pr-check
 
 ### What "locally" means
 
-- When a Makefile exists, run `make pr-check` — not a reconstructed list of CI `run:` lines.
+- Run `make precommit-repo` — not a reconstructed list of CI `run:` lines. Do not run `make pr-check`.
 - Use the locked `.venv` interpreter / cached native `UV_PYTHON`.
 - If a command requires env vars that are secrets (API keys), check if it has a `--ci` or `--skip-secrets` flag.
 - If a command requires external services (database, API), check if it has a dry-run or mock mode.
@@ -171,18 +171,18 @@ UV_PYTHON="$UV_PYTHON" make pr-check
 │                                                          │
 │  0. RUN_CONTRACT + this PR's plan (no edits)             │
 │  1. Apply fix for every planned cluster + companions     │
-│  2. UV_PYTHON=… make pr-check                            │
+│  2. make precommit-repo (hooks plus ruff)                │
 │  3. Verify cited/planned paths                           │
 │  4. Fix any new failures from 2-3                        │
 │  5. Re-run 2-3 until green                               │
 │  6. git add <planned files only>; git commit (hooks ON)  │
-│  7. sanctioned publish (ONE) — PR_REMEDIATE=0 make pr    │
+│  7. remediator sanctioned publish (ONE) — git push       │
 │                                                          │
 │  ❌ NEVER: edit before the plan is complete              │
 │  ❌ NEVER: commit after each fix                         │
 │  ❌ NEVER: publish to see what CI says                   │
 │  ❌ NEVER: git commit --no-verify                        │
-│  ❌ NEVER: raw git push when Makefile pr exists          │
+│  ❌ NEVER: make pr / make pr-check (ceremony)            │
 │  ❌ NEVER: git add -u / -A or git reset --hard           │
 │  ❌ NEVER: merge this PR because it is now green         │
 └─────────────────────────────────────────────────────────┘
@@ -199,7 +199,7 @@ Fixes:
 - {finding-id}: {one-line description}
 - {finding-id}: {one-line description}
 
-Local verify: make pr-check + cited-path checks passed
+Local verify: make precommit-repo passed
 Deferred:
 - {finding-id}: {reason}
 
@@ -213,6 +213,6 @@ If a fix introduces a NEW local-verify failure that didn't exist before (still u
 1. `git diff` (working tree vs HEAD) — identify the problematic hunk. Do not use `HEAD~1` unless that commit was this cycle's single remediation commit.
 2. Revert only that specific change.
 3. Mark the original finding as `deferred` with reason: "fix causes regression".
-4. Re-run `make pr-check` to confirm revert is clean.
+4. Re-run `make precommit-repo` to confirm revert is clean.
 5. Continue with remaining planned fixes.
 6. Report the regression in the convergence block. Never `--no-verify`. Never invent a passing result.

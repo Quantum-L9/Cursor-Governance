@@ -1,5 +1,5 @@
 ---
-description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge of all open PRs
+description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge and publishes via precommit-repo plus git push
 ---
 
 # make pr → green merge-ready; /l9-pr-remediation → merge
@@ -21,7 +21,10 @@ Agents MUST:
    merge-ready**. Do **not** merge from that path.
 5. When the user invokes **`/l9-pr-remediation`** (or attaches the skill
    with Converge intent): merge **is** authorized for **all open PRs** in
-   the target repo. Write the receipt, converge each PR, then merge
+   the target repo. Remediator publish is **not** `make pr`. Local verify
+   is `make precommit-repo` (hooks plus ruff). Publish is `git push` of the
+   already-open PR branch. Do not run `make pr-check`, pytest, or
+   conformance. Write the receipt, converge each PR, then merge
    bottom-up:
 
 ```bash

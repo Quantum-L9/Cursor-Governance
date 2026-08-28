@@ -6,8 +6,8 @@ role: run_contract
 tags: [pr, preflight, venv, command-surface, topology, cache, makefile]
 owner: igor_beylin
 status: active
-version: 1.2.0
-updated: 2026-08-18
+version: 1.3.0
+updated: 2026-08-28
 /L9_META -->
 
 # Run Contract (min preflight + cache)
@@ -22,14 +22,14 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 
 | Id | Check | Fail |
 |----|-------|------|
-| `P_cmd` | Parse Makefile PUBLIC verbs: `pr-check` (verify), `pr` (publish), `improve` (kernels). INTERNAL: `pr-preflight`, `precommit`, `precommit-repo`, `pr-full`. | If `pr` exists, raw `git push` is a skill defect. Cache `verify: make pr-check` and `publish: PR_REMEDIATE=0 make pr`. |
+| `P_cmd` | Cache remediator verify=`make precommit-repo` and remediator publish=`git push` of an already-open PR branch. Name ceremony verbs `make pr-check` and `PR_REMEDIATE=0 make pr` only as **do not run**. INTERNAL: `pr-preflight`, `precommit`, `pr-full`. | Caching `make pr` / `make pr-check` as this skill's publish/verify is a skill defect. |
 | `P_venv` | `.python-version`, `.venv/pyvenv.cfg` `home`, `file` + `platform.machine()` of `.venv/bin/python`, `cryptography` + `pytest` import | Arch mismatch, miniconda `home`, or import fail → set `UV_PYTHON` to uv-managed **native** CPython matching requires-python. Never `uv python find --system` (conda `base` wins). Do not loop. |
 | `P_prs` | `gh pr list` + `gh pr view --json files` for each open PR | Overlap nonempty → FIRST_MERGE_GATE. Do not merge the first green PR. |
 | `P_stack` | For each open PR, is `headRefName` the `baseRefName` of another open PR? | Stacked parent: squash/rebase denied. Children first, retarget, or `--merge`. |
-| `P_wire` | Worktree not detached; required symlinks | Wire; `checkout -B`; do not commit wire / `AGENTS.md`. |
+| `P_wire` | `git worktree list` first; reuse the worktree that already holds the branch | `worktree_add_wired.sh` only when none exists. Do not commit wire / `AGENTS.md`. |
 | `P_blockers` | Known HUMAN / CI_PIPELINE / ENVIRONMENT | Note; continue independent CODEBASE work. |
 | `P_diag` | For the PR about to be edited: head SHA, `gh pr checks`, paginated `reviewThreads`, cited-file read at that SHA | Missing evidence → `Unknown`; do not edit. `disposition: fix` requires a verified root cause. |
-| `P_verify` | Makefile `pr-check` + cited-path hook list | `make pr-check` is the gate. Record `Passed` / `Failed` / `Unknown`. Cited paths still get a real check. Do not replay every workflow `run:`. Do not treat local `Passed` as remote CI `Passed`. |
+| `P_verify` | `make precommit-repo` (changed-file hooks plus ruff) | `make precommit-repo` is the remediator gate. Record `Passed` / `Failed` / `Unknown`. Do not run `make pr-check`. Do not run pytest or conformance. Do not treat local `Passed` as remote CI `Passed`. |
 
 Stop cataloging when `RUN_CONTRACT` is filled and the next PR to edit has a finding list sufficient to patch without predictable rework.
 
@@ -39,33 +39,31 @@ Resume discovery when: unexpected failure, scope change, new dependency, environ
 
 This host (Cursor-Governance / Makefile capability graph):
 
-- verify: `UV_PYTHON=<native> make pr-check`
+- verify: `PR_BASE=origin/main make precommit-repo`
 - kernels (optional): `make improve`
-- publish: `UV_PYTHON=<native> PR_REMEDIATE=0 make pr`
+- publish: `git push` of the already-open PR branch
 - merge: `ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run` (method chosen in code; oldest `createdAt` first)
 - interpreter: `$PWD/.venv/bin/python` (Makefile `$(PYTHON)`). Not Homebrew / system / miniconda base.
 - read-only git: allowed
 
-Forbidden after `P_cmd` succeeds on a `pr` target:
+Forbidden during Converge (this skill):
 
-- `git push`
-- `git push` with `L9_PUBLISH_PATH_OVERRIDE`
-- `gh pr create` when `make pr` opens the PR
+- `make pr` / `make pr-check` / `PR_REMEDIATE=0 make pr` (ceremony — do not run)
+- `make pr-full` / pytest / peer-execution conformance
+- L4 `begin` / `record-kernels` / `authorize-release` as a publish ritual
 - `git add -u` / `git add -A`
 - `git reset --hard`
 - `make precommit` / `pre-commit run --all-files` / `pre-commit install` as the public gate
 - `make pr-preflight` as a shipping command
 - `make pr-check && make pr` as a second full gate on an unchanged tree
 
-`PR_REMEDIATE=0` is mandatory so `make pr` does not spawn a poll worker. Poll workers never merge. Ignore `merge_eligible` whose SHA is older than HEAD or older than the last repo merge.
+Campaign / feature work that is **not** this skill still must not treat raw `git push` as its publish path when `make pr` exists. Remediator `git push` of an already-open PR is this skill's publish.
 
-Do not wait for a denial to route you. In Cursor-Governance `git push` is not
-denied at all (CANONICAL_LAW §6.2.4): it succeeds, silently bypassing the gate.
-The prohibition above is this skill's own discipline, enforced by `P_cmd`, not by
-a hook. Where a push IS denied and the message names `make pr`, switch once and
-do not retry.
+Poll workers never merge. Ignore `merge_eligible` whose SHA is older than HEAD or older than the last repo merge.
 
-Repos without a `pr` target: fall back to the workflow `run:` list in [fix-engine.md](fix-engine.md). Record the fallback on the plan.
+In Cursor-Governance `git push` is not denied (CANONICAL_LAW §6.2.4). That is why remediator publish can be `git push`. Do not switch to `make pr` when a push fails — fix the denial.
+
+If no PR number exists: same verify, `git push` the branch, then `gh pr create` only to obtain a number.
 
 Brace tokens in this file (`{owner}`, `{path}`, `{native}`) are templates. An action is executable only after those values are substituted from observed `gh`, Makefile, or `file` / `platform.machine()` output in this run.
 
@@ -79,7 +77,7 @@ Discovery bias (2026-08-16 / 2026-08-18): `conda init` activates `base`. Then `u
 
 `.cursor-commands/.venv` is not a third authority. In a wired worktree `.cursor-commands` → `$GOV_ROOT`, so `.cursor-commands/.venv` **is** `$GOV_ROOT/.venv`. If `pyvenv.cfg` `home` is miniconda / x86_64 on an arm64 Mac, reject it. The 2026-08-16 failure was Rosetta miniconda 3.12.11 + cryptography 50 (`_BIO_ADDR_free` / `_EVP_DigestSqueeze`).
 
-`ensure_gov_python.sh` only checks `sys.prefix == .venv`. A venv whose `home` is miniconda **passes** that probe. `make pr` / `run_pytest_suites.sh` resync via `uv sync --locked --extra dev` with no `--python`. Export `UV_PYTHON` on **every** subsequent `make pr-check` / `make pr` or the SSOT `.venv` rebinds to miniconda. A pip-downgrade of cryptography will not persist.
+`ensure_gov_python.sh` only checks `sys.prefix == .venv`. A venv whose `home` is miniconda **passes** that probe. `make pr` / `run_pytest_suites.sh` resync via `uv sync --locked --extra dev` with no `--python`. Export `UV_PYTHON` on **every** subsequent `make precommit-repo` or the SSOT `.venv` rebinds to miniconda. A pip-downgrade of cryptography will not persist.
 
 Fingerprint: `python_path`, `version`, `arch`, `pyvenv_home`, `cryptography_import`, `pytest_import`, `UV_PYTHON`.
 
@@ -92,11 +90,11 @@ A Makefile that **hard-pins** `UV_PYTHON` to a non-native interpreter is a host 
 ## Worktree bootstrap
 
 ```text
-git worktree add -B {branch} {path} origin/{branch}
+# git worktree list first — reuse the worktree that already holds the branch
+# worktree_add_wired.sh only when none exists
 # not detached HEAD
-# setup_workspace_symlinks when the host requires it
 # do not commit AGENTS.md / registry churn from wiring
-# L4 begin/record/authorize after the remediation commit when the host requires L4
+# do not run L4 begin/record/authorize as remediator publish
 # export cached UV_PYTHON for every make invocation
 ```
 
@@ -124,7 +122,7 @@ FIRST_MERGE_GATE forbids `gh pr merge` until:
 - expected merge effect on remaining PRs known
 - merge strategy selected (squash if unstacked; `--merge` or children-first if stacked)
 
-Then MERGE_TRAIN: **oldest `createdAt` first (bottom-up)**. After each merge, do **not** `gh pr update-branch` on a child whose parent was squash-merged. Use `git rebase --onto <new-base> <old-parent-tip> <child>` when the child must move. Revalidate CI only when HEAD changed.
+Then MERGE_TRAIN: **oldest `createdAt` first (bottom-up)**. After each merge, do **not** `gh pr update-branch` on a child whose parent was squash-merged. Use `git rebase --onto <new-base> <old-parent-tip> <child>` when the child must move. Do not wait for CI.
 
 Forbidden: remediate A → merge A → discover B conflicts → remediate B → rerun CI → repeat.
 
@@ -155,8 +153,8 @@ A companion miss is a plan-gate failure, not a remote-CI discovery.
 ```yaml
 run_contract:
   command_surface:
-    verify: "make pr-check"
-    publish: "PR_REMEDIATE=0 make pr"
+    verify: "make precommit-repo"
+    publish: "git push"
     improve: "make improve"
     merge: "ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run"
     interpreter: "{repo}/.venv/bin/python"
