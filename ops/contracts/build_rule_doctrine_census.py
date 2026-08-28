@@ -36,6 +36,11 @@ from extract_doctrine import (  # noqa: E402
 )
 
 CENSUS_SCHEMA = "l9.rule-doctrine-census/v1"
+# Provenance fields that describe WHEN/WHERE the census ran, not WHAT it observed.
+# They are excluded from ``integrity_digest`` so the digest is a semantic content
+# digest: identical rule corpora yield identical digests, and writing the census
+# (which dirties the workspace) cannot change the next run's digest.
+VOLATILE_SOURCE_KEYS = ("commit_sha", "commit_timestamp", "workspace_dirty")
 BASELINE_SCHEMA = "l9.rule-doctrine-ratchet-baseline/v1"
 DEFAULT_CENSUS = Path("generated/governance/rule-doctrine-census.yaml")
 DEFAULT_BASELINE = Path("ops/config/doctrine-baseline.rules.yaml")
@@ -245,10 +250,19 @@ def build_rule_census(
         "potential_conflict_clusters": clustering["conflict_clusters"],
         "quality_findings": ownership["findings"],
     }
-    result["integrity_digest"] = stable_digest(
-        {key: value for key, value in result.items() if key != "integrity_digest"}
-    )
+    result["integrity_digest"] = stable_digest(_semantic_payload(result))
     return result
+
+
+def _semantic_payload(census: dict[str, Any]) -> dict[str, Any]:
+    """Census content with the digest itself and volatile provenance removed."""
+    payload = {key: value for key, value in census.items() if key != "integrity_digest"}
+    source = payload.get("source")
+    if isinstance(source, dict):
+        payload["source"] = {
+            key: value for key, value in source.items() if key not in VOLATILE_SOURCE_KEYS
+        }
+    return payload
 
 
 def _baseline_digest(baseline: dict[str, Any]) -> str:

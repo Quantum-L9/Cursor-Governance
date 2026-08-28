@@ -539,3 +539,48 @@ def test_manual_rule_semantics_are_not_used_for_resolution(repo: Path) -> None:
     )
     _, outputs = build_projection_index(repo)
     assert "do the opposite" not in outputs["rules/40-test-contract.mdc"]
+
+
+def test_census_digest_ignores_volatile_provenance() -> None:
+    """ADR-0011: the census digest is semantic content, not run provenance.
+
+    ``workspace_dirty`` flips as soon as the census writes itself, so folding it
+    into ``integrity_digest`` made two consecutive runs over an unchanged rule
+    corpus disagree.
+    """
+    from build_rule_doctrine_census import VOLATILE_SOURCE_KEYS, _semantic_payload
+    from cursor_rules import stable_digest
+
+    census = {
+        "$schema": "l9.rule-doctrine-census/v1",
+        "source": {
+            "repository": "github.com/Quantum-L9/Cursor-Governance",
+            "commit_sha": "a" * 40,
+            "commit_timestamp": "2026-08-14T20:58:06-04:00",
+            "workspace_dirty": False,
+        },
+        "summary": {"rule_count": 1},
+        "integrity_digest": None,
+    }
+    baseline = stable_digest(_semantic_payload(census))
+
+    volatile = copy.deepcopy(census)
+    volatile["source"].update(
+        commit_sha="b" * 40,
+        commit_timestamp="2026-08-28T11:09:06-10:00",
+        workspace_dirty=True,
+    )
+    assert stable_digest(_semantic_payload(volatile)) == baseline
+
+    semantic = copy.deepcopy(census)
+    semantic["summary"]["rule_count"] = 2
+    assert stable_digest(_semantic_payload(semantic)) != baseline
+
+    payload = _semantic_payload(census)
+    assert "integrity_digest" not in payload
+    assert payload["source"] == {"repository": census["source"]["repository"]}
+    assert set(VOLATILE_SOURCE_KEYS) == {
+        "commit_sha",
+        "commit_timestamp",
+        "workspace_dirty",
+    }
