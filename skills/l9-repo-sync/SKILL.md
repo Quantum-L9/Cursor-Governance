@@ -50,7 +50,24 @@ stashes untracked). `GOVERNANCE_SYNC_PUSH=0`. `GOVERNANCE_SYNC_HARD_RESET=0`.
 
 1. User-named target clone (`ssot` vs `workspace`).
 2. This skill + rule `55-ff-only-ssot-sync`.
-3. `l9-git-work-preserve` when a parked ref needs later extract.
+3. `l9-git-work-preserve` when a parked ref needs later triage or extract.
+
+## Handoff — what becomes of what `/ff` parked
+
+`/ff` parks and never deletes, which is correct and also means the preserve refs
+accumulate: nothing in this skill reads them again. Sorting them is
+`l9-git-work-preserve`'s job, and it decides by evidence rather than by age:
+
+```bash
+python3 skills/l9-git-work-preserve/scripts/triage_preserved_refs.py \
+  --repo "$(pwd)" --fetch
+```
+
+It classifies `refs/l9/preserved/ff/*`, `refs/l9/preserved/ff-dirty/*`, and
+`l9/ff-preserve-*` into `novel` / `superseded` / `review` / `merged` /
+`unproven`, and deletes nothing. Contract:
+`skills/l9-git-work-preserve/references/triage-handoff.md`. Removing a ref stays
+`prune-policy.md`'s call — never `/ff`'s, and never triage's.
 
 ## Compact Workflow
 

@@ -29,6 +29,8 @@ def test_llm_override_outranks_ask_first() -> None:
     assert "claude-code" in text
     assert "L4 Local Autonomy" in text
     assert "local_execution_gate.py" in text
+    assert "MUST scoped-commit locally" in text
+    assert "Unique dirty files you authored are a rule" in text
 
 
 def test_session_start_emits_profile(tmp_path: Path) -> None:

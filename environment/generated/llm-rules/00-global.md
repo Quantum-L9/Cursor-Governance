@@ -11,10 +11,12 @@ description: Global non-negotiable agent behavior for governed Cursor workspaces
 - Fail closed on protected paths, secrets, and irreversible remote actions
 - Keep responses concise; put long procedures in skills/commands
 - Use Graphiti for episodic resume — not Cursor native Memories for repo facts
+- Scoped-commit authored pathspecs on this branch before you finish a coding turn (`99-no-auto-commit`). Do not ask.
 
 ## MUST NOT
 
-- Commit/push without satisfying `99-no-auto-commit` / L4 / surface_profile precedence
+- Leave unique dirty files you authored this session
+- Push / `make pr` without satisfying `99-no-auto-commit` / L4 / surface_profile precedence
 - Deploy, mutate production, or edit C1/VPS without explicit approval (`93-c1`, `94-deployment-prohibition`)
 - Create a second governance tree or duplicate `.cursor/commands` / skills
 - Hand-edit generated manifests (`RULES-MANIFEST.*`, `environment/generated/llm-rules/**`)

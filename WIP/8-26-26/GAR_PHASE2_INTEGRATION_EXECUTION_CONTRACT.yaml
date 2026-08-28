@@ -1,0 +1,1255 @@
+metadata:
+  contract_id: L9CR.GAR.PHASE2.INTEGRATION.001
+  version: 1.0.0
+  status: execution_ready
+  contract_type: governed_repository_transformation
+  title: GAR Phase 2 Cognitive Runtime Integration
+  owner: l9-cognitive-runtime
+  target_repository: Quantum-L9/l9-cognitive-runtime
+  source_branch_expectation: main
+  schema_status: self_describing_execution_contract_v1
+
+mission:
+  objective: >
+    Promote the proven Global Architect Runtime cognition and outcome-accountability
+    primitives into the live L9 Cognitive Runtime so they participate in the actual
+    compiler path, execution graph, validation model, adapter packet, deployment pack,
+    CLI, MCP, and convergence semantics.
+
+  completion_definition: >
+    GAR is integrated only when qualifying intent deterministically activates its
+    architectural cognition, every resulting obligation survives the complete runtime
+    compilation spine, GAR output is consumed by downstream gates, missing GAR fails
+    closed, semantic changes affect bundle provenance, and no public runtime surface
+    can bypass the live compiler path.
+
+  governing_principles:
+    - ruthlessness_over_poetry
+    - execution_over_theater
+    - no_semantic_object_without_consumer
+    - no_obligation_without_terminal_disposition
+    - no_kernel_activation_without_liveness
+    - no_adapter_semantic_weakening
+    - no_static_fixture_as_fresh_runtime_truth
+    - no_silent_fallback
+    - no_false_completion
+
+non_goals:
+  - copy_l9_global_architect_skill_into_runtime
+  - copy_GAR_STATE_MACHINE_wholesale
+  - copy_GAR_RUN_STATE_wholesale
+  - make_MCP_execute_shell_or_mutate_repositories
+  - create_provider_specific_architectural_brains
+  - preserve_legacy_compile_paths_as_parallel_authorities
+  - introduce_a_second_execution_graph_compiler
+  - introduce_a_second_validation_engine
+
+authority:
+  order:
+    - platform_and_repository_safety
+    - explicit_operator_intent
+    - canonical_repository_contracts
+    - this_execution_contract
+    - implementation_convenience
+
+  mutation_scope:
+    repository_local: permitted
+    tests: permitted
+    schemas: permitted
+    runtime_contracts: permitted
+    package_models: permitted
+    deployment_pack: permitted
+    MCP_read_only_surface: permitted_to_modify_semantics_not_execution_authority
+    production_deployment: forbidden
+    external_side_effects: forbidden
+
+  fail_closed: true
+
+verified_baseline:
+  - id: BASE-001
+    path: src/l9_cognitive_runtime/service.py
+    observation: >
+      compile_runtime creates IntentContract from the request, then loads
+      FINAL_EXECUTION_CONTRACT.yaml, VALIDATION_CONTRACT.yaml, and
+      HANDOFF_CONTRACT.yaml from the pack before deriving the graph.
+
+  - id: BASE-002
+    path: runtime/kernel_pipeline/planner/plan_activation.py
+    observation: >
+      Planner accepts raw task text and performs substring-based routing instead
+      of consuming canonical typed intent.
+
+  - id: BASE-003
+    path: src/l9_cognitive_runtime/graph/__init__.py
+    observation: >
+      Execution graph derivation maps known string steps through a hard-coded phase
+      map; the selected task-and-architecture step maps to prompt_compiler_kernel,
+      while unknown steps use only contract.kernel_activation[:1].
+
+  - id: BASE-004
+    path: contracts/execution_contract.schema.json
+    observation: >
+      Execution sequence, kernel activation, validation requirements, output
+      contract, and authority order are primarily string arrays.
+
+  - id: BASE-005
+    path: contracts/validation_contract.schema.json
+    observation: >
+      Validation contract expresses ladders and evidence requirements but does not
+      bind validation properties to stable execution obligations.
+
+  - id: BASE-006
+    path: src/l9_cognitive_runtime/models/artifacts.py
+    observation: >
+      Typed runtime models mirror the current limited schemas.
+
+  - id: BASE-007
+    path: src/l9_cognitive_runtime/models/base.py
+    observation: >
+      Artifact models fail closed on unknown fields through extra=forbid.
+
+  - id: BASE-008
+    path: runtime/kernel_pipeline/KERNEL_ROLE_MAP.yaml
+    observation: >
+      Architecture activation scope is presently limited to repository taxonomy,
+      dependency, and bundle-boundary work.
+
+  - id: BASE-009
+    path: runtime/kernel_pipeline/validators/validate_kernel_roles.py
+    observation: >
+      Architecture role cardinality is hard-coded to exactly three files.
+
+  - id: BASE-010
+    path: src/l9_cognitive_runtime/deployment.py
+    observation: >
+      Deployment pack construction reads static FINAL_EXECUTION_CONTRACT.yaml and
+      copies only its preselected activated kernels.
+
+  - id: BASE-011
+    path: src/l9_cognitive_runtime/mcp/__init__.py
+    observation: >
+      MCP uses CognitiveRuntimeService and is intentionally read-only; compile_runtime
+      exposes primarily digests and identifiers rather than a full executable packet.
+
+  - id: BASE-012
+    path: pyproject.toml
+    observation: >
+      The wheel packages src/l9_cognitive_runtime only; runtime/ remains external pack
+      material.
+
+core_invariants:
+
+  - invariant_id: INV-001-SINGLE-COMPILE-SPINE
+    assertion: >
+      Exactly one authoritative live compilation spine exists for fresh missions.
+    expected_path:
+      - CompileRequest
+      - ObjectiveDeriver
+      - IntentContract
+      - ActivationPlanner
+      - KernelResolver
+      - ExecutionContractCompiler
+      - ValidationContractCompiler
+      - ExecutionGraphCompiler
+      - BundleSemanticValidator
+      - AdapterRenderer
+      - RuntimeBundle
+    forbidden:
+      - service_loads_static_final_contract_as_fresh_mission_result
+      - CLI_uses_alternate_compiler
+      - MCP_uses_alternate_compiler
+      - legacy_script_has_independent_semantic_compiler
+
+  - invariant_id: INV-002-OBJECTIVE-DERIVATION-ONE-OWNER
+    assertion: >
+      Realization, validation, delivery, acceptance, and outcome-accountability
+      requirements are derived once from current explicit intent and are not
+      independently reinterpreted downstream.
+
+  - invariant_id: INV-003-OBLIGATION-CONSERVATION
+    assertion: >
+      Every objective-derived or architecture-derived required obligation has a stable
+      obligation_id and remains accounted for through every downstream IR until a
+      legal disposition is recorded.
+    legal_dispositions:
+      - SATISFIED
+      - VALID_BLOCK
+      - SUPERSEDED_BY_HIGHER_AUTHORITY
+      - NOT_APPLICABLE_WITH_DETERMINISTIC_PROOF
+    forbidden_disposition:
+      - disappeared
+
+  - invariant_id: INV-004-KERNEL-LIVENESS
+    assertion: >
+      Every activated kernel is invoked, produces declared output, and has at least
+      one downstream consumer or gate.
+    required_chain:
+      - activation
+      - binding
+      - invocation
+      - output
+      - consumption
+
+  - invariant_id: INV-005-GAR-FAILS-CLOSED
+    assertion: >
+      If Global Architect is required by architectural materiality and its source,
+      binding, invocation, output, or consumer is absent, compilation fails.
+
+  - invariant_id: INV-006-STRUCTURED-EXECUTION-IR
+    assertion: >
+      Runtime graph semantics derive from structured execution steps rather than
+      natural-language execution_sequence decoding.
+
+  - invariant_id: INV-007-OBJECTIVE-DERIVED-VALIDATION
+    assertion: >
+      Validation requirements derive from the actual intent, architecture, and
+      execution obligations rather than a task-independent static ladder.
+
+  - invariant_id: INV-008-TERMINAL-OWNERSHIP
+    assertion: >
+      Flawless Victory or successor terminal doctrine owns final convergence only;
+      task kernels and architectural kernels cannot claim run-level completion.
+
+  - invariant_id: INV-009-STATIC-ARTIFACT-NONAUTHORITY
+    assertion: >
+      FINAL_EXECUTION_CONTRACT.yaml, VALIDATION_CONTRACT.yaml,
+      HANDOFF_CONTRACT.yaml, and EXECUTION_GRAPH.json may remain only as generated
+      artifacts, examples, fixtures, or goldens and are never fresh-mission truth.
+
+  - invariant_id: INV-010-SEMANTIC-DIFFERENCE-PROPAGATION
+    assertion: >
+      Operationally material intent differences propagate through all affected runtime
+      IRs.
+    required_when_material:
+      - intent_digest_changes
+      - activation_digest_changes
+      - execution_digest_changes
+      - graph_digest_changes
+      - validation_digest_changes
+      - adapter_packet_digest_changes
+
+  - invariant_id: INV-011-DEPLOYMENT-SEMANTIC-CLOSURE
+    assertion: >
+      A sealed deployment pack contains everything required to dynamically compile
+      every supported mission route without repository checkout or static-plan authority.
+
+  - invariant_id: INV-012-READONLY-MCP-BOUNDARY
+    assertion: >
+      Cognitive Runtime MCP remains a compiler/control-plane surface and does not gain
+      repository mutation, shell, or graph execution authority from GAR integration.
+
+  - invariant_id: INV-013-ADAPTER-NO-WEAKENING
+    assertion: >
+      Adapter serialization preserves every blocking obligation, Unknown, validation
+      requirement, delivery requirement, and architectural constraint.
+
+  - invariant_id: INV-014-PROVENANCE-SENSITIVITY
+    assertion: >
+      Changing the semantic content of an active GAR kernel or other required semantic
+      source changes compiled bundle provenance or digest.
+
+obligation_model:
+  required_fields:
+    - obligation_id
+    - kind
+    - source_ref
+    - required
+    - owner
+    - consumer_refs
+    - evidence_requirements
+    - disposition
+
+  kinds:
+    - REALIZATION
+    - ARCHITECTURE
+    - VALIDATION
+    - DELIVERY
+    - AUTHORITY
+    - EPISTEMIC
+    - CONVERGENCE
+
+  conservation_check:
+    rule: >
+      For every required obligation in parent IR, exactly one corresponding obligation
+      with the same obligation_id exists in the child IR unless a legal terminal
+      disposition is explicitly recorded.
+    duplicate_ids: fail
+    missing_ids: fail
+    silent_renaming: fail
+
+kernel_liveness_model:
+  required_fields:
+    - kernel_id
+    - source_ref
+    - source_digest
+    - activation_reasons
+    - input_refs
+    - obligation_refs
+    - output_refs
+    - consumer_refs
+
+  invalid_states:
+    - ACTIVATED_NOT_BOUND
+    - BOUND_NOT_INVOKED
+    - INVOKED_NO_OUTPUT
+    - OUTPUT_NO_CONSUMER
+    - CONSUMER_NOT_GATE_RELEVANT
+
+architecture_materiality:
+  global_architect_required_when_any:
+    - ownership_change
+    - authoritative_state_change
+    - cross_module_responsibility_change
+    - new_abstraction
+    - new_state_store
+    - public_interface_change
+    - dependency_direction_change
+    - distributed_semantics
+    - concurrency_material
+    - temporal_semantics_material
+    - failure_domain_change
+    - migration_material
+    - security_boundary_material
+    - operability_material
+    - scale_model_material
+    - irreversible_change
+    - architectural_ambiguity_high
+
+  global_architect_not_required_when_all:
+    - change_is_local
+    - architecture_choice_absent
+    - ownership_unchanged
+    - public_contract_unchanged
+    - failure_semantics_unchanged
+    - material_unknowns_absent
+
+execution_phases:
+
+  - phase_id: PHASE-00-BASELINE
+    objective: >
+      Freeze current behavior and create tests that prove the existing museum seams
+      before changing them.
+
+    actions:
+      - action_id: A0001
+        type: test
+        instruction: >
+          Add a regression test proving two semantically different missions currently
+          share static execution artifacts where applicable.
+
+      - action_id: A0002
+        type: test
+        instruction: >
+          Add a regression test proving graph derivation can substitute
+          prompt_compiler_kernel for selected task-and-architecture execution.
+
+      - action_id: A0003
+        type: test
+        instruction: >
+          Add a regression test proving an unknown execution-sequence string currently
+          collapses to the first kernel activation entry.
+
+    gate:
+      all:
+        - baseline_tests_reproduce_current_behavior
+        - no_production_behavior_changed
+
+  - phase_id: PHASE-01-SINGLE-COMPILER-SPINE
+    requires:
+      - PHASE-00-BASELINE
+
+    objective: >
+      Make CognitiveRuntimeService the sole live composition root and eliminate static
+      contract loading as fresh-mission compilation.
+
+    mutate:
+      - src/l9_cognitive_runtime/service.py
+      - src/l9_cognitive_runtime/models/
+      - runtime/intent_compiler/
+      - runtime/kernel_pipeline/planner/
+      - runtime/contract_compiler/
+      - runtime/execution_graph/
+
+    actions:
+      - action_id: A0101
+        type: create_or_promote
+        logical_component: ObjectiveDeriver
+        responsibility: >
+          Derive canonical objective facts from CompileRequest before policy, routing,
+          or kernel selection.
+
+      - action_id: A0102
+        type: refactor
+        target: CognitiveRuntimeService.compile_runtime
+        requirement: >
+          Replace _load_execution, _load_validation, and _load_handoff fresh-mission
+          authority with live compilation.
+
+      - action_id: A0103
+        type: unify
+        requirement: >
+          Legacy compiler scripts become thin wrappers around the same typed compiler
+          services used by CognitiveRuntimeService.
+
+      - action_id: A0104
+        type: prohibit
+        requirement: >
+          No second semantic compiler implementation remains reachable.
+
+    gate:
+      all:
+        - service_invokes_live_intent_compiler
+        - service_invokes_live_activation_planner
+        - service_invokes_live_execution_compiler
+        - service_invokes_live_validation_compiler
+        - service_invokes_live_graph_compiler
+        - static_final_contracts_not_loaded_as_fresh_truth
+        - CLI_uses_service
+        - MCP_uses_service
+        - equivalent_inputs_produce_equivalent_IRs_across_all_public_surfaces
+
+  - phase_id: PHASE-02-INTENT-AND-OBJECTIVE
+    requires:
+      - PHASE-01-SINGLE-COMPILER-SPINE
+
+    objective: >
+      Strengthen IntentContract so outcome obligations become canonical runtime state.
+
+    mutate:
+      - contracts/intent_contract.schema.json
+      - src/l9_cognitive_runtime/models/artifacts.py
+      - runtime/intent_compiler/
+      - tests/
+
+    intent_required_shape:
+      objective:
+        requested: boolean
+        realization_mode:
+          enum:
+            - MUTATION
+            - ARTIFACT
+            - ANALYSIS
+            - DECISION
+            - UNKNOWN
+        acceptance_conditions: array
+        validation_required: boolean
+        delivery_required: boolean
+        delivery_mode:
+          enum:
+            - RETURNED_ARCHIVE
+            - RETURNED_FILES
+            - PERSISTED_REPOSITORY
+            - IN_PLACE_WORKSPACE
+            - NONE
+
+      accountability:
+        required: boolean
+
+      obligations:
+        type: array
+        items: obligation_model
+
+    actions:
+      - action_id: A0201
+        type: derive
+        requirement: >
+          Analyze-and-fix or audit-and-repair mixed intent deterministically retains
+          MUTATION.
+
+      - action_id: A0202
+        type: derive
+        requirement: >
+          Delivery obligation derives from explicit requested outcome and cannot be
+          inferred away because delivery has not yet happened.
+
+      - action_id: A0203
+        type: preserve
+        requirement: >
+          UNKNOWN realization remains blocking when its resolution changes execution,
+          validation, or delivery obligations.
+
+      - action_id: A0204
+        type: preserve
+        requirement: >
+          Keep Pydantic extra=forbid behavior.
+
+    gate:
+      all:
+        - typed_model_matches_schema
+        - intent_derivation_has_single_owner
+        - no_downstream_kernel_rederives_realization_mode
+        - no_downstream_kernel_rederives_delivery_required
+        - no_downstream_kernel_rederives_validation_required
+
+  - phase_id: PHASE-03-OBLIGATION-CONSERVATION
+    requires:
+      - PHASE-02-INTENT-AND-OBJECTIVE
+
+    objective: >
+      Introduce stable obligations as conserved semantic state across every runtime IR.
+
+    mutate:
+      - contracts/execution_contract.schema.json
+      - contracts/validation_contract.schema.json
+      - contracts/handoff_contract.schema.json
+      - src/l9_cognitive_runtime/models/artifacts.py
+      - runtime/contract_compiler/
+      - tests/
+
+    actions:
+      - action_id: A0301
+        type: schema
+        requirement: Add typed obligation structures to ExecutionContract.
+
+      - action_id: A0302
+        type: schema
+        requirement: >
+          Bind ValidationContract properties to obligation_id rather than only textual
+          evidence requirements.
+
+      - action_id: A0303
+        type: schema
+        requirement: >
+          HandoffContract preserves every unresolved obligation and its current
+          disposition.
+
+      - action_id: A0304
+        type: validator
+        requirement: >
+          Implement obligation-conservation validation between Intent -> Activation ->
+          Execution -> Graph -> Validation -> Handoff/Adapter.
+
+    gate:
+      all:
+        - no_required_obligation_disappears
+        - no_duplicate_obligation_id
+        - all_obligation_owners_resolve
+        - all_required_obligations_have_consumer
+        - all_terminal_obligations_have_legal_disposition
+
+  - phase_id: PHASE-04-GLOBAL-ARCHITECT-LIVENESS
+    requires:
+      - PHASE-03-OBLIGATION-CONSERVATION
+
+    objective: >
+      Integrate Global Architect as live P3 cognition rather than a present-but-unused
+      kernel.
+
+    mutate:
+      - runtime/kernels/architecture/
+      - runtime/kernel_pipeline/KERNEL_PIPELINE.yaml
+      - runtime/kernel_pipeline/KERNEL_ROLE_MAP.yaml
+      - runtime/kernel_pipeline/planner/TASK_ROUTING_RULES.yaml
+      - runtime/kernel_pipeline/planner/ACTIVATION_PLAN_SCHEMA.yaml
+      - runtime/kernel_pipeline/planner/plan_activation.py
+      - runtime/kernel_pipeline/validators/
+      - tests/
+
+    create:
+      - path: runtime/kernels/architecture/global_architect_kernel.yaml
+        source_semantics:
+          - GAR_architectural_judgment
+          - ownership_lens
+          - boundary_lens
+          - state_lens
+          - temporal_lens
+          - failure_lens
+          - scale_lens
+          - operability_lens
+          - evolution_lens
+          - simplicity_lens
+          - candidate_falsification
+          - adversarial_plan_attack
+
+    actions:
+      - action_id: A0401
+        type: planner_refactor
+        requirement: >
+          Planner consumes typed IntentContract plus verified context signals rather
+          than raw task text as sole semantic input.
+
+      - action_id: A0402
+        type: routing
+        requirement: >
+          Global Architect activates from architecture_materiality rules.
+
+      - action_id: A0403
+        type: validator_refactor
+        requirement: >
+          Remove fixed architecture file count from validate_kernel_roles.py.
+          Validate role declaration, identity uniqueness, dependency resolution, and
+          ownership topology instead.
+
+      - action_id: A0404
+        type: output_binding
+        requirement: >
+          GAR invocation emits typed system-model, architecture-decision,
+          architecture-integrity-evidence, plan-readiness, and typed-defect outputs.
+
+      - action_id: A0405
+        type: liveness
+        requirement: >
+          Every GAR output required by the route has a named downstream consumer.
+
+    gar_required_outputs:
+      - GAR_SYSTEM_MODEL
+      - GAR_ARCHITECTURE_DECISION
+      - GAR_ARCHITECTURAL_INTEGRITY_EVIDENCE
+      - GAR_PLAN_READINESS
+      - GAR_TYPED_DEFECTS
+
+    gate:
+      all:
+        - qualifying_intent_activates_GAR
+        - nonqualifying_intent_does_not_activate_GAR
+        - GAR_source_digest_bound
+        - GAR_appears_in_activation_plan
+        - GAR_appears_in_execution_contract
+        - GAR_appears_in_execution_graph
+        - GAR_outputs_have_consumers
+        - missing_required_GAR_source_fails_compile
+
+  - phase_id: PHASE-05-STRUCTURED-EXECUTION-GRAPH
+    requires:
+      - PHASE-04-GLOBAL-ARCHITECT-LIVENESS
+
+    objective: >
+      Replace prose execution-sequence decoding and hard-coded kernel substitution
+      with structured steps compiled mechanically into graph nodes.
+
+    mutate:
+      - contracts/execution_contract.schema.json
+      - runtime/execution_graph/graph.schema.json
+      - src/l9_cognitive_runtime/models/artifacts.py
+      - src/l9_cognitive_runtime/graph/__init__.py
+      - runtime/execution_graph/build_execution_graph.py
+      - tests/
+
+    execution_step_shape:
+      required_fields:
+        - step_id
+        - phase
+        - kernel_refs
+        - obligation_refs
+        - input_refs
+        - output_refs
+        - entry_gates
+        - exit_gates
+        - evidence_requirements
+        - failure_routes
+
+    graph_node_shape:
+      required_fields:
+        - id
+        - phase
+        - kernel_refs
+        - obligation_refs
+        - inputs
+        - outputs
+        - entry_gates
+        - exit_gates
+        - evidence_requirements
+        - failure_routes
+
+    actions:
+      - action_id: A0501
+        type: delete_semantic_fallback
+        target: src/l9_cognitive_runtime/graph/__init__.py
+        remove:
+          - _DEFAULT_PHASE_META_as_kernel_authority
+          - contract.kernel_activation_first_entry_fallback
+
+      - action_id: A0502
+        type: unify
+        requirement: >
+          runtime/execution_graph/build_execution_graph.py becomes a thin wrapper around
+          the package graph compiler or is removed.
+
+      - action_id: A0503
+        type: terminals
+        requirement: >
+          Graph represents CONVERGED, BLOCKED, and ABORTED dispositions rather than one
+          generic terminal node where required by the runtime model.
+
+    gate:
+      all:
+        - no_graph_kernel_substitution
+        - no_unknown_step_first_kernel_fallback
+        - every_graph_kernel_ref_originates_from_execution_contract
+        - every_required_obligation_has_graph_realization_path
+        - graph_acyclic
+        - graph_all_required_nodes_reachable
+        - graph_no_orphan_required_output
+
+  - phase_id: PHASE-06-VALIDATION-AND-CONVERGENCE
+    requires:
+      - PHASE-05-STRUCTURED-EXECUTION-GRAPH
+
+    objective: >
+      Derive validation from actual runtime obligations and reduce terminal doctrine to
+      final convergence rather than late-stage outcome ownership.
+
+    mutate:
+      - contracts/validation_contract.schema.json
+      - runtime/contract_compiler/compile_validation_contract.py
+      - runtime/kernels/terminal/flawless_victory.contract.yaml
+      - src/l9_cognitive_runtime/models/artifacts.py
+      - tests/
+
+    validation_property_shape:
+      required_fields:
+        - property_id
+        - obligation_ref
+        - evaluator
+        - evidence_type
+        - required
+        - status
+        - evidence_refs
+
+    actions:
+      - action_id: A0601
+        type: split
+        requirement: >
+          Separate runtime-integrity validation from objective validation.
+
+      - action_id: A0602
+        type: compile
+        requirement: >
+          Objective validation derives from IntentContract and ExecutionContract
+          obligations.
+
+      - action_id: A0603
+        type: terminal_refactor
+        requirement: >
+          Remove duplicated outcome-accountability semantics from Flawless Victory;
+          retain terminal evidence closure, convergence evaluation, and receipt
+          generation.
+
+      - action_id: A0604
+        type: prohibit
+        requirement: >
+          Kernel-local convergence metadata may not be interpreted as run-level
+          convergence.
+
+    terminal_success_gate:
+      all:
+        - all_required_obligations_have_legal_disposition
+        - no_required_obligation_is_UNKNOWN
+        - no_blocking_validation_failed
+        - architectural_integrity_satisfied_when_applicable
+        - requested_delivery_satisfied
+        - no_false_completion_condition
+
+    gate:
+      all:
+        - validation_changes_when_objective_semantics_change
+        - GAR_architectural_obligations_reach_validation
+        - delivery_obligation_reaches_validation
+        - no_static_task_independent_validation_only
+        - terminal_success_requires_obligation_closure
+
+  - phase_id: PHASE-07-ADAPTER-PROVIDER-BOUNDARY
+    requires:
+      - PHASE-06-VALIDATION-AND-CONVERGENCE
+
+    objective: >
+      Make runtime outputs executable by downstream capable hosts without moving
+      filesystem or shell authority into Cognitive Runtime MCP.
+
+    mutate:
+      - runtime/contract_compiler/adapters/
+      - src/l9_cognitive_runtime/mcp/
+      - contracts/adapter_render.schema.json
+      - tests/
+
+    execution_packet_shape:
+      required_fields:
+        - intent
+        - active_kernel_bindings
+        - execution_steps
+        - required_obligations
+        - validation_properties
+        - delivery_obligations
+        - unknowns
+        - block_semantics
+        - convergence_contract
+        - provenance
+
+    provider_acceptance_shape:
+      required_fields:
+        - provider_id
+        - accepted_obligation_ids
+        - unsupported_obligation_ids
+        - capabilities
+        - authority_limits
+        - receipt_digest
+
+    actions:
+      - action_id: A0701
+        type: renderer
+        requirement: >
+          Adapters become deterministic projections of canonical execution packet
+          semantics.
+
+      - action_id: A0702
+        type: prohibit
+        requirement: >
+          Adapter cannot omit or weaken blocking GAR architecture obligations.
+
+      - action_id: A0703
+        type: MCP
+        requirement: >
+          Expose resolvable full compiled execution packet or equivalent immutable
+          per-run artifact resources while keeping MCP read-only.
+
+      - action_id: A0704
+        type: provider_contract
+        requirement: >
+          Define provider capability/obligation acceptance receipt. Required unsupported
+          obligations prevent execution or create governed handoff/block.
+
+    gate:
+      all:
+        - adapter_packet_preserves_all_required_obligation_ids
+        - adapter_packet_preserves_GAR_outputs_or_resolvable_refs
+        - adapter_packet_preserves_validation_properties
+        - adapter_packet_preserves_delivery_requirements
+        - MCP_writes_false
+        - MCP_execution_false
+        - MCP_shell_false
+
+  - phase_id: PHASE-08-DEPLOYMENT-CLOSURE
+    requires:
+      - PHASE-07-ADAPTER-PROVIDER-BOUNDARY
+
+    objective: >
+      Ensure sealed deployment packs can dynamically compile supported missions and
+      cannot accidentally freeze one static activation.
+
+    mutate:
+      - src/l9_cognitive_runtime/deployment.py
+      - pyproject.toml_if_required
+      - deployment_manifest_contract
+      - tests/
+
+    deployment_pack_must_contain:
+      - routing_rules
+      - pipeline_definition
+      - kernel_role_registry
+      - all_dynamically_selectable_kernels
+      - objective_derivation_inputs
+      - compiler_required_contracts
+      - schemas
+      - convergence_definition
+      - validation_semantics
+      - provenance_manifest
+
+    actions:
+      - action_id: A0801
+        type: remove_static_activation_authority
+        requirement: >
+          Deployment selection must not originate from static
+          FINAL_EXECUTION_CONTRACT.kernel_activation.
+
+      - action_id: A0802
+        type: semantic_closure_validator
+        requirement: >
+          Before sealing, prove every supported route resolves every required kernel,
+          compiler input, schema, evaluator, and obligation path.
+
+      - action_id: A0803
+        type: isolation_test
+        requirement: >
+          Installed wheel + sealed deployment pack + arbitrary empty working directory
+          can compile mission-derived bundles without repository checkout.
+
+    gate:
+      all:
+        - dynamic_routes_compile_from_sealed_pack
+        - missing_required_kernel_fails_pack_validation
+        - missing_routing_source_fails_pack_validation
+        - no_repository_relative_hidden_dependency
+        - identical_pack_and_intent_produce_deterministic_bundle
+
+  - phase_id: PHASE-09-SEMANTIC-LIVENESS
+    requires:
+      - PHASE-08-DEPLOYMENT-CLOSURE
+
+    objective: >
+      Prove the integration is alive rather than present.
+
+    create_or_extend_tests:
+      - tests/integration/test_semantic_propagation.py
+      - tests/integration/test_obligation_conservation.py
+      - tests/integration/test_kernel_liveness.py
+      - tests/integration/test_gar_activation.py
+      - tests/integration/test_graph_semantics.py
+      - tests/integration/test_validation_derivation.py
+      - tests/integration/test_adapter_packet.py
+      - tests/integration/test_deployment_dynamic_compile.py
+      - tests/integration/test_museum_artifact_guards.py
+
+    required_adversarial_cases:
+
+      - case_id: LIVE-001
+        A: "Audit this repository."
+        B: "Audit and fix this repository."
+        assert:
+          - A.realization_mode == ANALYSIS
+          - B.realization_mode == MUTATION
+          - A.execution_digest != B.execution_digest
+          - A.graph_digest != B.graph_digest
+          - A.adapter_packet_digest != B.adapter_packet_digest
+
+      - case_id: LIVE-002
+        mission: "Add safe retry behavior to this asynchronous payment worker."
+        context:
+          - message_redelivery_possible
+          - external_side_effect
+          - multiple_workers
+        assert:
+          - global_architect_active
+          - temporal_lens_active
+          - failure_lens_active
+          - ownership_lens_active
+          - developer_execution_active
+          - validation_contains_idempotency_property
+
+      - case_id: LIVE-003
+        setup: remove_required_global_architect_kernel
+        mission: same_as_LIVE-002
+        assert:
+          - compilation_fails
+        forbidden:
+          - generic_fallback_execution_plan
+
+      - case_id: LIVE-004
+        setup: modify_global_architect_semantic_content
+        assert:
+          - bundle_semantic_digest_changes
+
+      - case_id: LIVE-005
+        setup: activate_global_architect_but_remove_downstream_consumer
+        assert:
+          - liveness_validation_fails
+
+      - case_id: LIVE-006
+        setup: drop_one_required_obligation_between_execution_and_graph
+        assert:
+          - obligation_conservation_fails
+
+      - case_id: LIVE-007
+        setup: adapter_omits_architectural_integrity_obligation
+        assert:
+          - adapter_validation_fails
+
+      - case_id: LIVE-008
+        setup: validation_tool_unavailable_but_alternate_discriminating_evidence_exists
+        assert:
+          - validation_requirement_remains
+          - alternate_evidence_can_satisfy_property
+        forbidden:
+          - requirement_becomes_not_applicable
+
+      - case_id: LIVE-009
+        setup: static_FINAL_EXECUTION_CONTRACT_contains_old_kernel_route
+        mission: requires_different_route
+        assert:
+          - fresh_compile_ignores_static_route
+
+      - case_id: LIVE-010
+        setup: sealed_deployment_pack
+        assert:
+          - repo_checkout_not_required
+          - CLI_and_MCP_compile_same_semantics
+
+museum_artifact_detectors:
+
+  - detector_id: MUSEUM-001
+    condition: required_kernel_file_exists_and_never_activates
+    result: FAIL
+
+  - detector_id: MUSEUM-002
+    condition: kernel_activates_but_no_graph_node_references_it
+    result: FAIL
+
+  - detector_id: MUSEUM-003
+    condition: graph_node_references_kernel_but_kernel_declared_output_absent
+    result: FAIL
+
+  - detector_id: MUSEUM-004
+    condition: kernel_output_exists_but_has_no_downstream_consumer
+    result: FAIL
+
+  - detector_id: MUSEUM-005
+    condition: kernel_output_never_reaches_validation_or_execution_gate
+    result: FAIL
+
+  - detector_id: MUSEUM-006
+    condition: semantic_kernel_change_does_not_change_bundle_semantic_digest
+    result: FAIL
+
+  - detector_id: MUSEUM-007
+    condition: semantically_distinct_realization_modes_produce_same_execution_semantics
+    result: FAIL
+
+  - detector_id: MUSEUM-008
+    condition: public_surface_bypasses_live_compiler
+    result: FAIL
+
+  - detector_id: MUSEUM-009
+    condition: required_obligation_disappears_without_legal_disposition
+    result: FAIL
+
+  - detector_id: MUSEUM-010
+    condition: static_fixture_influences_fresh_mission_as_authority
+    result: FAIL
+
+compile_time_liveness_validator:
+  proposed_name: validate_runtime_semantic_liveness
+
+  checks:
+    - every_required_intent_obligation_is_accounted_for
+    - every_activated_kernel_is_bound
+    - every_bound_kernel_is_present
+    - every_activated_kernel_has_graph_invocation
+    - every_required_kernel_output_exists
+    - every_required_kernel_output_has_consumer
+    - every_required_execution_obligation_has_realization_path
+    - every_required_validation_obligation_has_evidence_path
+    - every_required_delivery_obligation_has_delivery_path
+    - every_terminal_success_path_crosses_convergence
+    - every_terminal_block_requires_valid_block_evidence
+    - no_orphan_required_graph_node
+    - no_unresolved_kernel_reference
+    - no_semantic_field_reset_to_default_downstream
+    - no_adapter_drops_blocking_obligation
+    - no_required_obligation_disappears
+
+  failure_mode: fail_closed
+
+provenance_contract:
+  bundle_semantic_digest_inputs:
+    - intent_digest
+    - objective_deriver_digest
+    - routing_rules_digest
+    - pipeline_digest
+    - active_kernel_digests
+    - execution_compiler_digest
+    - validation_compiler_digest
+    - graph_compiler_digest
+    - adapter_renderer_digest
+    - obligation_set_digest
+
+  laws:
+    - active_kernel_semantic_change_changes_bundle_digest
+    - inactive_kernel_semantic_change_need_not_change_bundle_digest
+    - semantic_input_order_canonicalized
+    - provenance_placeholders_forbidden
+
+legacy_artifact_policy:
+  FINAL_EXECUTION_CONTRACT.yaml:
+    allowed_roles:
+      - generated_example
+      - golden_fixture
+      - debug_output
+    fresh_runtime_authority: false
+
+  VALIDATION_CONTRACT.yaml:
+    allowed_roles:
+      - generated_example
+      - golden_fixture
+      - debug_output
+    fresh_runtime_authority: false
+
+  HANDOFF_CONTRACT.yaml:
+    allowed_roles:
+      - generated_example
+      - golden_fixture
+      - debug_output
+    fresh_runtime_authority: false
+
+  EXECUTION_GRAPH.json:
+    allowed_roles:
+      - generated_example
+      - golden_fixture
+      - debug_output
+    fresh_runtime_authority: false
+
+global_forbidden_behaviors:
+  - silently_fallback_to_generic_kernel_set
+  - silently_select_first_kernel_when_graph_mapping_unknown
+  - route_from_raw_text_after_typed_intent_exists
+  - infer_runtime_activation_from_kernel_file_presence
+  - let_auditor_default_override_MUTATION_realization
+  - let_kernel_local_convergence_claim_run_completion
+  - let_validation_tool_absence_erase_validation_obligation
+  - let_adapter_omit_required_obligation
+  - let_provider_accept_partial_required_obligation_set_without_block
+  - load_static_final_contract_as_fresh_mission_truth
+  - preserve_parallel_semantic_compilers
+  - loosen_typed_models_to_extra_allow_to_avoid_migration_work
+
+verification_commands:
+  mandatory:
+    - command: python runtime/kernel_pipeline/run_validators.py
+      property: declarative_pack_integrity
+
+    - command: pytest
+      property: full_behavioral_regression
+
+    - command: ruff check src tests
+      property: python_static_quality
+
+    - command: mypy
+      property: typed_model_integrity
+
+    - command: python -m build
+      property: installable_package_build
+
+  mandatory_isolated_runtime_test:
+    property: sealed_pack_installability
+    assertion: >
+      Built wheel plus sealed deployment pack compiles a mission-derived runtime
+      successfully from a working directory that is not the source repository.
+
+progress_policy:
+  material_progress:
+    - failing_baseline_test_created
+    - semantic_owner_consolidated
+    - obligation_propagation_added
+    - kernel_liveness_edge_added
+    - silent_fallback_removed
+    - public_surface_switched_to_live_compiler
+    - objective_specific_validation_added
+    - museum_detector_converted_to_passing_test
+
+  non_progress:
+    - documentation_only_change_without_runtime_effect
+    - adding_kernel_file_without_activation_test
+    - adding_schema_field_without_typed_model_propagation
+    - adding_model_field_without_compiler_propagation
+    - adding_contract_field_without_graph_or_validation_consumer
+    - updating_golden_static_contract_only
+
+blocking_policy:
+  valid_block_types:
+    - AUTHORITY
+    - CAPABILITY
+    - IRREDUCIBLE_REPOSITORY_CONTRADICTION
+
+  invalid_block_reasons:
+    - scope_is_large
+    - refactor_is_difficult
+    - tests_need_many_changes
+    - existing_architecture_is_legacy
+    - static_contracts_are_easier
+    - compatibility_requires_parallel_compiler
+    - GAR_file_exists_so_integration_is_good_enough
+
+terminal_gate:
+  name: GAR_FULLY_INSTANTIATED
+
+  all_required:
+
+    - id: DONE-001
+      assertion: exactly_one_live_compilation_spine
+
+    - id: DONE-002
+      assertion: typed_objective_derivation_is_canonical
+
+    - id: DONE-003
+      assertion: obligation_conservation_validator_passes
+
+    - id: DONE-004
+      assertion: qualifying_intent_activates_GAR
+
+    - id: DONE-005
+      assertion: nonqualifying_intent_skips_GAR
+
+    - id: DONE-006
+      assertion: GAR_activation_has_evidence
+
+    - id: DONE-007
+      assertion: GAR_execution_contract_binding_exists
+
+    - id: DONE-008
+      assertion: GAR_graph_invocation_exists
+
+    - id: DONE-009
+      assertion: GAR_outputs_have_downstream_consumers
+
+    - id: DONE-010
+      assertion: GAR_architecture_obligations_reach_validation
+
+    - id: DONE-011
+      assertion: missing_required_GAR_fails_closed
+
+    - id: DONE-012
+      assertion: semantic_GAR_change_changes_bundle_provenance
+
+    - id: DONE-013
+      assertion: material_intent_difference_changes_runtime_semantics
+
+    - id: DONE-014
+      assertion: CLI_and_MCP_use_identical_compiler_semantics
+
+    - id: DONE-015
+      assertion: sealed_deployment_pack_supports_dynamic_compilation
+
+    - id: DONE-016
+      assertion: no_static_FINAL_artifact_is_fresh_runtime_authority
+
+    - id: DONE-017
+      assertion: adapter_packet_preserves_all_required_obligations
+
+    - id: DONE-018
+      assertion: execution_provider_acceptance_contract_is_defined_and_tested
+
+    - id: DONE-019
+      assertion: MCP_remains_read_only
+
+    - id: DONE-020
+      assertion: all_museum_artifact_detectors_pass
+
+    - id: DONE-021
+      assertion: all_mandatory_verification_commands_pass
+
+  success_state: CONVERGED
+
+  failure_states:
+    - NOT_INTEGRATED
+    - BLOCKED
+
+  forbidden_success_claims:
+    - GAR_file_added
+    - GAR_listed_in_pipeline
+    - GAR_schema_valid
+    - GAR_mentioned_in_execution_contract
+    - GAR_tests_exist
+    - all_files_present
+    - validators_green_without_liveness_tests
+
+completion_receipt:
+  required_fields:
+    - source_commit
+    - changed_files
+    - new_files
+    - removed_parallel_authorities
+    - intent_semantic_diff_evidence
+    - obligation_conservation_evidence
+    - GAR_activation_evidence
+    - GAR_graph_liveness_evidence
+    - GAR_output_consumption_evidence
+    - validation_propagation_evidence
+    - deployment_closure_evidence
+    - adapter_preservation_evidence
+    - museum_detector_results
+    - test_results
+    - lint_result
+    - typecheck_result
+    - build_result
+    - residual_unknowns
+
+  completion_statement_allowed_only_when:
+    - terminal_gate == CONVERGED

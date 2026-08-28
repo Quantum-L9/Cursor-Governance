@@ -83,7 +83,10 @@ COMMIT=$(git log -1 --format="%h %s")
 UNCOMMITTED=$(git status --short | wc -l | tr -d ' ')
 ```
 
-If `UNCOMMITTED > 0`, surface it in the confirmation output and ask whether to commit before closing.
+If `UNCOMMITTED > 0`, scoped-commit the paths you authored this session — explicit
+pathspecs, never `git add -A` (rules `99-no-auto-commit` and `49-shared-worktree-isolation`).
+Do not ask. Surface any remaining dirty paths you did **not** author so their owner
+can claim them, and never push or open a PR without an explicit request.
 
 ### Phase 4 — GOVERNANCE GITHUB BACKUP (required)
 

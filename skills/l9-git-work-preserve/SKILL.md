@@ -27,10 +27,35 @@ Inventory git work with evidence receipts; extract unique value safely; propose 
 | `diagnose-value` | No | Per-ref diagnosis receipt vs `origin/main` |
 | `extract` | Local only | New branch/worktree + surgical commits; never deletes source ref |
 | `harvest` | Report, then local extract | Classify leftover dirty/untracked/WIP across sibling worktrees; port unique paths onto a fresh `origin/main` worktree |
+| `triage-preserved` | No | Classify the refs `/ff` parked; **deletes nothing** |
 | `prune-propose` | No | Delete candidates + required receipts + copy-paste commands |
 | `prune-execute` | Yes | Only with user auth **and** `L9_GIT_PRUNE_AUTHORIZED=<reason>` |
 
-Load detail: [references/audit-workflow.md](references/audit-workflow.md), [references/value-diagnosis.md](references/value-diagnosis.md), [references/extract-workflow.md](references/extract-workflow.md), [references/harvest-workflow.md](references/harvest-workflow.md), [references/prune-policy.md](references/prune-policy.md), [references/stash-deep-analysis.md](references/stash-deep-analysis.md).
+Load detail: [references/audit-workflow.md](references/audit-workflow.md), [references/value-diagnosis.md](references/value-diagnosis.md), [references/extract-workflow.md](references/extract-workflow.md), [references/harvest-workflow.md](references/harvest-workflow.md), [references/triage-handoff.md](references/triage-handoff.md), [references/prune-policy.md](references/prune-policy.md), [references/stash-deep-analysis.md](references/stash-deep-analysis.md).
+
+## Novelty is evidence, not a commit count
+
+A branch whose work already landed still reports commits ahead, so counting them
+calls redundant work unique and stale work worthless. Diagnosis instead asks
+`git cherry` whether each patch id is already upstream, and whether every line
+the ref touched has been absorbed. `redundancy_basis` records which answered:
+`patch_id` is exact and may authorise a prune, `content_superset` is a heuristic
+that may only be reported. See [references/value-diagnosis.md](references/value-diagnosis.md).
+
+## `/ff` handoff
+
+`/ff` is **`l9-repo-sync`'s** command and stays there: it catches a clone up to
+`origin/main` in place and *parks* unique work instead of deleting it. Those
+preserve refs then accumulate unread. This pack is the other half — it triages
+what `/ff` parked, and it deletes nothing either:
+
+```bash
+python3 scripts/triage_preserved_refs.py --repo "$(pwd)" --fetch
+```
+
+Buckets: `novel` (still unlanded), `superseded` (`patch_id` — eligible for a
+later prune-execute), `review` (`content_superset` — human reads it), `merged`,
+`unproven`. Contract: [references/triage-handoff.md](references/triage-handoff.md).
 
 ## Authority Order
 
@@ -42,8 +67,12 @@ Load detail: [references/audit-workflow.md](references/audit-workflow.md), [refe
 
 ## Compact Workflow
 
-1. **Discovery (RO)** — `scripts/inventory_git_work.py --repo <path>`.
-2. **Diagnosis (RO)** — `scripts/diagnose_ref_value.py` for each stale/orphan candidate.
+1. **Discovery (RO)** — `scripts/inventory_git_work.py --repo <path> --fetch`.
+2. **Diagnosis (RO)** — `scripts/diagnose_ref_value.py --fetch` for each stale/orphan
+   candidate. Judge against a *fetched* baseline: a stale `origin/main` overstates
+   how much work is unpushed.
+2a. **Triage (RO)** — `scripts/triage_preserved_refs.py` when `/ff` preserve refs
+   have piled up (see `/ff` handoff above).
 3. **Harvest classify (RO)** — when leftover worktree dirt / WIP is in scope:
    `scripts/harvest_worktree_dirt.py --repo <path> --include-wip --json`.
 4. **Plan** — harvest/extract and/or prune-propose with rollback (reflog SHA in receipt).
@@ -64,10 +93,13 @@ Load detail: [references/audit-workflow.md](references/audit-workflow.md), [refe
 
 - [references/diagnose-first-binding.md](references/diagnose-first-binding.md)
 - [references/harvest-workflow.md](references/harvest-workflow.md)
+- [references/triage-handoff.md](references/triage-handoff.md)
 - [references/output-receipt.schema.yaml](references/output-receipt.schema.yaml)
 - [scripts/inventory_git_work.py](scripts/inventory_git_work.py)
 - [scripts/diagnose_ref_value.py](scripts/diagnose_ref_value.py)
+- [scripts/git_fetch.py](scripts/git_fetch.py)
 - [scripts/harvest_worktree_dirt.py](scripts/harvest_worktree_dirt.py)
+- [scripts/triage_preserved_refs.py](scripts/triage_preserved_refs.py)
 - [scripts/validate_pack_structure.py](scripts/validate_pack_structure.py)
 - [scripts/pack_self_test.py](scripts/pack_self_test.py)
 
