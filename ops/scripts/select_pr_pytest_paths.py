@@ -139,14 +139,61 @@ def tests_referencing(changed: str, tests_dir: Path, *, repo_root: Path = REPO_R
     return found
 
 
+def tests_naming_path(changed: str, *, repo_root: Path = REPO_ROOT) -> list[str]:
+    """Test files that name a non-Python changed file.
+
+    A shell script, workflow, or config file has no `test_<stem>.py` twin, so
+    stem inference finds nothing and the file used to contribute no targets at
+    all. Tests still assert *about* such files by naming them — the swallowed
+    failure ratchet keys SWALLOW_BASELINE on 'ops/scripts/run_pr_gate.sh', and
+    a change to that script is exactly what it exists to catch. Scanning the
+    295 test modules for the literal name costs ~20ms, so the whole tree is
+    searched rather than a guessed subdirectory.
+
+    Both the repository-relative path and the bare filename count as naming the
+    file: a test that says `run_pr_gate.sh` asserts about it just as much as one
+    that spells the full path, and dropping the second kind loses real coverage.
+    Path matches are listed first only so the most specific targets lead.
+    """
+
+    target = changed.strip()
+    if not target:
+        return []
+    basename = Path(target).name
+    by_path: list[str] = []
+    by_name: list[str] = []
+    for path in sorted(repo_root.rglob("test_*.py")):
+        if any(part in {".venv", ".git", "node_modules"} for part in path.parts):
+            continue
+        try:
+            text = path.read_text(encoding="utf-8", errors="ignore")
+        except OSError:
+            continue
+        relative = path.relative_to(repo_root).as_posix()
+        if target in text:
+            by_path.append(relative)
+        elif basename and basename in text:
+            by_name.append(relative)
+    return by_path + [item for item in by_name if item not in by_path]
+
+
 def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH) -> list[str]:
     """Return explicit pytest targets for the local pr-check profile."""
     py_changed = [path for path in changed if path.endswith(".py")]
-    if not py_changed:
+    # A non-Python change is not an untested change. Shell scripts, workflows
+    # and config files are asserted about by name, so they select the tests
+    # that name them; without this a `.sh` edit selected nothing and shipped
+    # straight to CI.
+    other_changed = [path for path in changed if not path.endswith(".py")]
+    if not py_changed and not other_changed:
         return []
     suites = _load_suites(registry)
     selected: list[str] = []
     missing: list[str] = []
+    for path in other_changed:
+        for target in tests_naming_path(path):
+            if target not in selected:
+                selected.append(target)
     for path in py_changed:
         if Path(path).name == "conftest.py":
             # Fixture module, not a collectable test. Passing it as an explicit

@@ -18,9 +18,43 @@ from __future__ import annotations
 
 import re
 
-_HEREDOC_OPEN_RE = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1\s*$")
+# Opener only — no repeating optional-quantifier group. CodeQL 410/412 flagged
+# both `\S+` and `[^\s>|&;]+` after `[0-9]?>>?` inside `*`: `>a>a…` / `!0>`
+# have exponentially many decompositions. Redirects after the delimiter are
+# checked in Python so the engine never backtracks.
+_HEREDOC_OPEN_RE = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1")
+_REDIRECT_OP_RE = re.compile(r"[0-9]?>>?")
 _SEPARATOR_PAIRS = ("&&", "||")
 _SEPARATOR_SINGLES = ";|"
+
+
+def _remainder_is_redirects(rest: str) -> bool:
+    """True when REST is only whitespace and redirect clauses (`> file`, `2>err`)."""
+    tokens = rest.split()
+    index = 0
+    while index < len(tokens):
+        token = tokens[index]
+        if _REDIRECT_OP_RE.fullmatch(token):
+            if index + 1 >= len(tokens):
+                return False
+            index += 2
+            continue
+        glued = _REDIRECT_OP_RE.match(token)
+        if glued is not None and glued.end() < len(token):
+            index += 1
+            continue
+        return False
+    return True
+
+
+def _heredoc_delimiter(line: str) -> str | None:
+    """Return the terminator word when LINE opens a heredoc, else None."""
+    match = _HEREDOC_OPEN_RE.search(line)
+    if match is None:
+        return None
+    if not _remainder_is_redirects(line[match.end() :]):
+        return None
+    return match.group(2)
 
 
 def strip_heredoc_bodies(command: str) -> str:
@@ -34,9 +68,9 @@ def strip_heredoc_bodies(command: str) -> str:
                 terminators.pop()
             continue
         out.append(line)
-        match = _HEREDOC_OPEN_RE.search(line)
-        if match:
-            terminators.append(match.group(2))
+        delimiter = _heredoc_delimiter(line)
+        if delimiter is not None:
+            terminators.append(delimiter)
     return "\n".join(out)
 
 

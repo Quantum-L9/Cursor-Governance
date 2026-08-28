@@ -246,6 +246,16 @@ session_start_block: |
     `git push` / `gh pr create` are off doctrine but NOT gate-denied — git and
     gh answer to `ops/autonomy/git_guardrails.py` by effect. See
     CANONICAL_LAW §6.2.4.
+  - **`make pr-check` is the local validation path — a whole-catalog pytest
+    run belongs to CI, not to a chat turn.** `pr-check` runs precommit once
+    and selects pytest targets from your changed set
+    (`ops/scripts/select_pr_pytest_paths.py`), including tests that name a
+    changed shell script or config file. It is both faster and better scoped
+    than a hand-picked directory list, which is how a CI-only failure gets
+    missed. `pytest .`, a bare `pytest`, `make test` and `make pr-full` are
+    **denied** by `ops/autonomy/local_execution_gate.py`; a targeted
+    `pytest path/to/test_x.py` stays allowed for debugging. Human/ops
+    override: `L9_FULL_PYTEST_AUTHORIZED=<reason>`.
   - YOU MUST NOT force-push, hard-reset, admin-merge, or exfiltrate secrets.
   - Merge stays denied by `ops/autonomy/merge_gate.py` until
     `/l9-pr-remediation` writes the receipt (or `L9_MERGE_AUTHORIZED`).

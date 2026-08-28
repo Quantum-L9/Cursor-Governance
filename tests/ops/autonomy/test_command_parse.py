@@ -24,6 +24,19 @@ def test_strip_heredoc_bodies_removes_data():
     assert stripped.strip().endswith("git status")
 
 
+def test_strip_heredoc_bodies_allows_redirect_after_delimiter():
+    command = "cat <<'EOF' > notes.md\ngit revert foo\nEOF\necho done"
+    stripped = strip_heredoc_bodies(command)
+    assert "git revert" not in stripped
+    assert "echo done" in stripped
+
+
+def test_shift_expression_is_not_a_heredoc_opener():
+    command = "print(1 << SHIFT)\ngit revert foo"
+    stripped = strip_heredoc_bodies(command)
+    assert "git revert" in stripped
+
+
 def test_strip_heredoc_bodies_handles_nested_terminator_words():
     # A data line that equals the terminator closes early → we match MORE text
     # afterwards (fail-closed direction), never hide the tail.
