@@ -1,0 +1,11 @@
+schema: l9.program-execution.campaign-closeout.v1
+id: level3-make-pr-single-path
+lifecycle: complete
+closed_at: '2026-08-28T19:26:19Z'
+verdict: CONVERGED_WITH_NON_BLOCKING_RISKS
+evidence:
+  pull_request: https://github.com/Quantum-L9/Cursor-Governance/pull/187
+  merge_sha: e5a3f9f6564974f84f2ab06926491f8897e6ed4f
+  shadow_inputs_removed: Makefile.candidate,Prompt - Start Campaign.md
+  live_makefile: unchanged
+closed_by: AUTH-001

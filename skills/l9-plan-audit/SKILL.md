@@ -21,7 +21,8 @@ plans modified in the last **7 days**, attach staleness flags, and emit a capped
 markdown/JSON report. Scan **top-level** `*.plan.md` only — `built/`,
 `partially-built/`, `backlog/`, and `archive/` are out of session-start. Frontmatter `built: true`
 or `status` in `{built, completed, cancelled, superseded}` skips the plan even
-when leftover todos are `pending`. SessionStart bootstrap inserts the markdown
+when leftover todos are `pending`. `compiled: true` is not a skip. Mixed
+`harvestable` findings are display-only. SessionStart bootstrap inserts the markdown
 under `### Plan audit` in `additional_context`. Findings are **display-only** —
 do not auto-Build plans from this skill.
 

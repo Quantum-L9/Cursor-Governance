@@ -27,6 +27,7 @@ from select_pr_pytest_paths import (  # noqa: E402
 WORKFLOW = ROOT / ".github" / "workflows" / "l9-lint-test.yml"
 RULE_48 = ROOT / "rules" / "48-make-pr-remediation.mdc"
 SURFACE = ROOT / "ops" / "autonomy" / "surface_profile.yaml"
+REMEDIATOR_SKILL = ROOT / "skills" / "l9-pr-remediation" / "SKILL.md"
 
 
 def test_workflow_scope_exports_files_and_test_suite_does_not_recall_gh() -> None:
@@ -50,8 +51,17 @@ def test_runner_help_names_local_and_pull_request() -> None:
 
 
 def test_standing_remediate_zero_string_gone_from_live_surfaces() -> None:
+    """Rule 48 is remediator doctrine: it must not prescribe ceremony publish.
+
+    Campaign ceremony still names ``PR_REMEDIATE=0 make pr`` in
+    surface_profile.yaml. Remediator SKILL.md may mention that string only as
+    do-not-run.
+    """
     assert "PR_REMEDIATE=0 make pr" not in RULE_48.read_text(encoding="utf-8")
-    assert "PR_REMEDIATE=0 make pr" not in SURFACE.read_text(encoding="utf-8")
+    assert "PR_REMEDIATE=0 make pr" in SURFACE.read_text(encoding="utf-8")
+    skill = REMEDIATOR_SKILL.read_text(encoding="utf-8")
+    assert "make precommit-repo" in skill
+    assert "git push" in skill
 
 
 def test_foo_py_maps_to_named_test_not_dot(tmp_path: Path) -> None:

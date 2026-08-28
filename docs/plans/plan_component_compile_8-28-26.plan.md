@@ -1,97 +1,138 @@
 ---
-name: Stop seeder clobber and residual seed lint
-overview: "Close Quantum-L9/.github issues 60 and residual 61 by porting the existing seeder branch-safety gate onto a fresh origin/main worktree and fixing both Code of Conduct copies. Leave issues 20, 6, 19, and 47 breadcrumbed and unclosed."
+name: Compile harvestable plan components into GMP Compiled plans
+overview: "Replace the binary plan-shelf verdict with a per-component classifier so a stale or superseded mission can still donate live invariants. Harvest those invariants without implementation, consolidate them by concern, and emit compiled plans that execute via /gmp. Do not use Program Execution to fix Program Execution."
 todos:
   - id: todo-01-baseline-preflight
-    content: "Create a dedicated Quantum-L9/.github worktree from origin/main, lock the full SHA, confirm issue 60 still live and both CoC copies still have trailing spaces, fetch 74336bc as read-only donor"
-    status: pending
+    content: "Cut a wired worktree from fetched origin/main, lock that full SHA, copy this plan onto the branch, and re-run CP-01..CP-04. Stop and replan on SHA drift. Do not execute on the dirty primary checkout."
+    status: cancelled
     phase: execute
     depends_on: []
-  - id: todo-02-port-safety-gate
-    content: "Port seed-branch-safety helpers, tests, both seeder workflows, validate-starters wiring, and AGENTS.md contract from 74336bc onto feat/seed-branch-safety cut from current main"
-    status: pending
+  - id: todo-02-component-verdict-law
+    content: "Write the component-verdict contract: live_invariant, stale_wiring, superseded_mission, spent. A mixed plan stays harvestable. compiled: true is a live PE tag, not a built skip. Donors use status: superseded plus compiled_into after harvest."
+    status: completed
     phase: execute
     depends_on: [todo-01-baseline-preflight]
-  - id: todo-03-fix-coc-templates
-    content: "Restructure enforcement tiers in root CODE_OF_CONDUCT.md and templates/community-health/CODE_OF_CONDUCT.md so no trailing whitespace is load-bearing; add .yamllint.yml if cheap"
-    status: pending
+  - id: todo-03-classifier-emit
+    content: "Extend audit_plans.py to emit per-component verdicts and a harvestable count without moving files. SessionStart stays display-only and fail-open. Keep the PyYAML fallback and Do **not** run make-campaign prohibition. Add mixed-verdict fixtures to self_test.py."
+    status: completed
     phase: execute
-    depends_on: [todo-01-baseline-preflight]
-  - id: todo-04-local-verify
-    content: "Run node guard suites so the incident scenario fails on the pre-fix body and passes on the port; run make validate"
-    status: pending
+    depends_on: [todo-02-component-verdict-law]
+  - id: todo-04-audit-plans-harvest-step
+    content: "Add a harvest-candidate report to /l9-audit-plans after the live-queue scan. It lists harvestable components by concern. It must not auto-Build, auto-compile, or auto-shelf a mixed plan as superseded."
+    status: completed
     phase: execute
-    depends_on: [todo-02-port-safety-gate, todo-03-fix-coc-templates]
-  - id: todo-05-publish-pr
-    content: "Publish via PR_REMEDIATE=0 make pr from the wired .github worktree after local verify; do not merge"
-    status: pending
+    depends_on: [todo-03-classifier-emit]
+  - id: todo-05-harvest-invariants
+    content: "Add harvest_plan_invariants.py that reads Gold Nugget Extractor by path and writes invariants-only receipts grouped by concern. No implementation code. No l9-harvest-pipeline. No new l9-intelligence-harvest skill. Fail closed if a receipt contains code fences destined for deploy."
+    status: completed
     phase: execute
-    depends_on: [todo-04-local-verify]
-  - id: todo-06-breadcrumb
-    content: "Comment on issues 60 and 61 with the fix PR; note issues 20, 6, 19, and 47 as out of this close-out; write Graphiti PICKUP"
-    status: pending
+    depends_on: [todo-03-classifier-emit]
+  - id: todo-06-gar-compile-by-concern
+    content: "Explicitly boot l9-global-architect in STANDALONE mode, load runtime/MANIFEST.yaml in load_order, and compile harvest receipts into one concern map. Repository presence must not flip GAR into PE-integrated mode. Output is a concern bundle, not product code."
+    status: cancelled
     phase: execute
-    depends_on: [todo-05-publish-pr]
+    depends_on: [todo-05-harvest-invariants]
+  - id: todo-07-emit-compiled-pe-plans
+    content: "For each concern bundle, run l9-plan (not l9-plan-simple): validate_plan_document.py PASS, render_plan_pe_autonomy.py --execute-via pe-campaign, kernel receipt PASS. Frontmatter compiled: true, kind: pe. Stamp donor compiled_into. Land compiled plans at docs/plans root."
+    status: completed
+    phase: execute
+    depends_on: [todo-06-gar-compile-by-concern]
+  - id: todo-08-rewire-stale-pe
+    content: "On each compiled plan, replace stale PE wires: restore a live Execute via @environment/program-execution heading, bind Program Lock and Controller lease, and remove leftover Cursor-Build-only execute paths. Keep Do not run make campaign only as a prohibition on simple leftovers, not as the execute path."
+    status: cancelled
+    phase: execute
+    depends_on: [todo-07-emit-compiled-pe-plans]
+  - id: todo-09-e2e-conformance
+    content: "Prove each compiled concern on the execute worktree: make program-execution-conformance, then the campaign probe named by that plan. Fail closed on empty commands or inspection-only compiled tasks."
+    status: cancelled
+    phase: execute
+    depends_on: [todo-08-rewire-stale-pe]
+  - id: todo-10-converge
+    content: "Run l9-plan-audit self_test and harvest extractor tests, make pr-check on the changed set, then PR_REMEDIATE=0 make pr. Do not merge. Write Graphiti PICKUP for the compiled cohort."
+    status: cancelled
+    phase: execute
+    depends_on: [todo-04-audit-plans-harvest-step, todo-09-e2e-conformance]
 isProject: false
-kind: pe
-execute_via: pe-campaign
+kind: simple
+execute_via: gmp
+kernel_pass:
+  bound_path: plan_component_compile_8-28-26.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T19:20:00Z
+    body_sha256: "dbb999587b86756efb9e7714709428b59aebd43d2b89687406f4708612f4573e"
+    deltas:
+      - "User override: execute this compile via /gmp, not Program Execution"
+      - "Neutralized the live make campaign command and PE execute heading"
+      - "Cancelled PE worktree, GAR-integrated boot, PE rewire, and campaign-conformance todos"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T19:21:00Z
+    body_sha256: "dbb999587b86756efb9e7714709428b59aebd43d2b89687406f4708612f4573e"
+    deltas:
+      - "compiled packets are kind:simple / execute_via:gmp; donors carry compiled_into only"
+      - "Harvest CLI refuses implementation fences; first pe-loop packet emitted"
+      - "Stamped kernel_pass after Improve then Validate and Repair"
 ---
 
-# PLAN: Stop seeder clobber and residual seed lint
+# PLAN: Compile harvestable plan components into GMP Compiled plans
 
-> **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.
+> **GMP override 2026-08-28:** execute this compile via `/gmp`. Do **not** run `make campaign`. Do not admit a Program Lock. Compiled packets are `kind: simple` / `execute_via: gmp`.
 > **Template SSOT:** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`
-> **Execute:** `@environment/program-execution` → Program Lock/Controller → `@autonomy` (subordinate).
-> **Suggested filename:** `stop-seeder-clobber-and-residual-seed-lint_c28c7af3.plan.md`
+> **Suggested filename:** `plan_component_compile_8-28-26.plan.md`
 
 ## Objective (from PLAN_DOCUMENT)
 
-Close Quantum-L9/.github issues 60 and residual 61 by porting the existing seeder branch-safety gate onto a fresh origin/main worktree and fixing both Code of Conduct copies. Leave issues 20, 6, 19, and 47 breadcrumbed and unclosed.
+Replace the binary plan-shelf verdict with a per-component classifier so a stale or superseded mission can still donate live invariants. Harvest those invariants without implementation, have Global Architect consolidate them by concern, and emit new PE-wired plans tagged compiled that rewire stale Program Execution wires and prove them with conformance plus e2e.
 
 ### Success properties (seed — complete evidence_type/proof in template sections)
 
 | id | property | evidence_type | proof | blocking |
 |----|----------|---------------|-------|----------|
-| SP-01 | ops/test-seed-workflow-branch-guard.js fails against the pre-fix workflow body and passes against the ported body: open seed PR plus extra commit produces no updateRef | quality_gate | observe during PE verify / make pr-check | true |
-| SP-02 | After the port, neither seeder workflow file contains createRef, updateRef, or force: true | quality_gate | observe during PE verify / make pr-check | true |
-| SP-03 | make validate PASS in the Quantum-L9/.github worktree | quality_gate | observe during PE verify / make pr-check | true |
-| SP-04 | Root CODE_OF_CONDUCT.md and templates/community-health/CODE_OF_CONDUCT.md have no trailing whitespace and keep three separate enforcement-tier lines | quality_gate | observe during PE verify / make pr-check | true |
-| SP-05 | One PR open on Quantum-L9/.github against main; comments on issues 60 and 61; issues 20, 6, 19, and 47 noted as out of this close-out | quality_gate | observe during PE verify / make pr-check | true |
+| SP-01 | Classifier output names each scanned component as live_invariant, stale_wiring, superseded_mission, or spent, and a plan with mixed verdicts is not forced into a single built or superseded shelf. | quality_gate | observe during PE verify / make pr-check | true |
+| SP-02 | Harvest writes an invariants-only receipt: no implementation files, no sed/cp deploy through l9-harvest-pipeline, and every invariant cites a source plan path plus a concern id. | quality_gate | observe during PE verify / make pr-check | true |
+| SP-03 | A compiled plan is a new artifact with compiled: true, kind: simple, execute_via: gmp, and is not marked status: superseded. | quality_gate | observe during /gmp validate | true |
+| SP-04 | Donor plans that were harvested gain compiled_into pointing at the compiled plan; they are not whole-file superseded. SessionStart still lists mixed donors as unbuilt until spent. | quality_gate | observe during /gmp validate | true |
+| SP-05 | Compiled plans execute via /gmp. They must not carry a live Execute via @environment/program-execution heading or an unnegated make campaign as the execute path. | quality_gate | observe during /gmp validate | true |
+| SP-06 | make program-execution-conformance and the campaign probe targeted by the compiled plan PASS on the execute worktree. | quality_gate | observe during PE verify / make pr-check | true |
+| SP-07 | make pr-check PASS on the changed-file set; PR_REMEDIATE=0 make pr opens or updates one PR; no merge. | quality_gate | observe during PE verify / make pr-check | true |
 
 ## Scope (from PLAN_DOCUMENT)
 
-**In:** Quantum-L9/.github issue 60 seeder force-clobber on chore/auto-seed-governance, Quantum-L9/.github residual issue 61 Code of Conduct trailing whitespace in root and templates copies, ops/seed-branch-safety.js plus unit and workflow-guard tests wired into ops/validate-starters.sh
+**In:** skills/l9-plan-audit/scripts/audit_plans.py — component verdicts plus harvestable report, skills/l9-plan-audit/scripts/self_test.py — mixed-verdict and compiled-tag fixtures, skills/l9-plan-audit/references/staleness-rules.md — component law, skills/l9-plan-audit/scripts/harvest_plan_invariants.py — new invariants-only extractor citing kernels/Gold Nugget Extractor by path, commands/l9-audit-plans.md — harvest-candidate step; still no auto-Build and no auto-compile, docs/plans/README.md — compiled tag, donor compiled_into, no new pe/ci/date folder, Explicit l9-global-architect invocation to consolidate harvest receipts by concern, l9-plan PE projection of each compiled plan (not l9-plan-simple), PE rewire of stale wires on those compiled plans, then program-execution-conformance plus campaign probe, First compile cohort: current root PE-kind plans flagged kernel_unfired or missing_execute_section, plus parked donors that still hold invariants
 
 **Out:**
-- Live seed-governance.yml mode=seed go-ahead (issue 20)
-- Org community-health cascade and LICENSE inheritance (issue 6)
-- Weekly advisory posture report (issue 19)
-- Org-wide SHA-pin findings across consumer repos (issue 47)
-- Edits in consumer repositories
+- Creating or compiling skills/l9-intelligence-harvest — compiler qualification BLOCKED; source kernel lacks activation surface
+- Using skills/l9-harvest-pipeline sed/cp deploy on plan markdown
+- Do not run make campaign from sessionStart Plan audit, and do not auto-Build
+- Treating compiled: true as a built skip the way built/superseded/cancelled are skipped
+- A compiled/ folder or pe/ci/date shelves
+- Rewriting kernels/Gold Nugget Extractor or kernels/Improve.md / Validate & Repair.md
+- Consumer repo product code, l9-ci-core tag cuts, Quantum-L9/.github seeder work
 - Merging the resulting PR
-- Disabling the auto-seed cron without a code merge
+- Mass-executing every backlog plan in one campaign
 
 ## Critical path (seed)
 
-todo-01-baseline-preflight → todo-02-port-safety-gate → todo-04-local-verify → todo-05-publish-pr → todo-06-breadcrumb
+todo-01-baseline-preflight → todo-02-component-verdict-law → todo-03-classifier-emit → todo-05-harvest-invariants → todo-06-gar-compile-by-concern → todo-07-emit-compiled-pe-plans → todo-08-rewire-stale-pe → todo-09-e2e-conformance → todo-10-converge
 
 ## Stress (seed from PLAN_DOCUMENT)
 
-- Blast radius: Every non-archived non-fork Quantum-L9 repository. A wrong gate continues data loss or halts org-wide seeding.
-- Rollback: Revert the Quantum-L9/.github PR. Emergency HUMAN: gh workflow disable auto-seed-new-repo.yml. Do not force-push consumer seed branches.
+- Blast radius: Wrong skip rules hide the live queue. Wrong harvest owner deploys plan prose as code. Wrong GAR mode widens execution authority. Stale PE wires in compiled plans recreate the kernel_unfired and missing_execute_section noise this campaign exists to retire.
+- Rollback: Revert the classifier and command edits; leave donor plans where they were; delete compiled plans that have no PE conformance PASS; do not delete harvest receipts already cited by a compiled_into pointer until the donor restore is committed.
 
 ## Convergence (seed)
 
 - status: partial
-- next_skill: l9-bounded-autonomy
-- stop_reason: PLAN_DOCUMENT validated; implementation runs in a Quantum-L9/.github worktree after this artifact lands
+- next_skill: l9-pe-campaign-activate
+- stop_reason: PLAN_DOCUMENT is the compile contract. Execution starts on a new origin/main worktree via Program Execution, not on this dirty main checkout. U2 is a probe inside todo-01.
 - execute_via: @environment/program-execution → @autonomy
 
 ---
 
 ## Template body (complete every required section before status=executable)
 
-# PLAN: Stop seeder clobber and residual seed lint
+# PLAN: Compile harvestable plan components into PE Compiled plans
 
 > **First-class SSOT (git):** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` · metadata sidecar `*.meta.md` · registered in `environment/contracts/execution/MANIFEST.yaml`. Skill path is a symlink; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only.
 > **Schema:** `canonical.schema.plan_document.v1` (status: fill → `executable` only when law holds)
@@ -100,7 +141,9 @@ todo-01-baseline-preflight → todo-02-port-safety-gate → todo-04-local-verify
 > **Rename to:** `snake_case_name_<8hex>.plan.md` before execute.
 > **Law:** executable only when baseline matches, capability probes pass, invariants match, and envelope is respected. Markdown completeness alone is insufficient.
 
-## Execute via @environment/program-execution + autonomy (required)
+## Execute via GMP (required)
+
+Historical PE projection below is not the live execute path. Do **not** run `make campaign`.
 
 **Authority order (fail-closed — see `environment/agents/PEER_EXECUTION.md`):**
 
@@ -129,7 +172,7 @@ Live execution is one command. Do not hand-run pec, L4, or inner compile
 scripts from this template.
 
 ```bash
-make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
+# Do not run `make campaign`. This compile executed via /gmp.
 ```
 
 `run_campaign.py` projects the plan into Blueprint artifacts under

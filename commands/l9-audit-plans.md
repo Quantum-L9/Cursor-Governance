@@ -61,6 +61,27 @@ python3 "$GOV/skills/l9-plan-audit/scripts/audit_plans.py" \
 
 Present that stdout as the live-queue report. Do not invent plans it omitted.
 
+### 1b. Harvest-candidate report (display)
+
+From the same scan, list findings flagged `harvestable`. Group by concern
+(`pe-execute`, `baseline`, `mission`). Those plans have live invariants **and**
+stale wiring or a superseded mission.
+
+Do **not** auto-Build. Do **not** auto-compile. Do **not** `git mv` a mixed
+plan to `archive/superseded/`.
+
+To port invariants (no implementation):
+
+```bash
+.venv/bin/python skills/l9-plan-audit/scripts/harvest_plan_invariants.py \
+  --out "$REPO/docs/plans/<concern>_compiled_M-D-YY.harvest.json" \
+  --emit-plan "$REPO/docs/plans/<concern>_compiled_M-D-YY.plan.md" \
+  --concern <concern> \
+  <harvestable.plan.md> [...]
+```
+
+Then `/gmp` the compiled packet. Do not `make campaign`.
+
 ### 2. Shelf hygiene (root + backlog + partially-built)
 
 Classify every top-level, `backlog/*.plan.md`, and `partially-built/*.plan.md`

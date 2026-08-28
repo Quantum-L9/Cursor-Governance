@@ -93,6 +93,53 @@ def workspace_head(workspace: Path) -> str | None:
     return None
 
 
+def _parse_frontmatter_fallback(raw: str) -> dict[str, Any]:
+    """Stdlib parse when PyYAML is missing or the name: line has an unquoted colon."""
+    data: dict[str, Any] = {}
+    name_m = re.search(r"(?m)^name:\s*(.+?)\s*$", raw)
+    if name_m:
+        data["name"] = name_m.group(1).strip().strip("\"'")
+    status_m = re.search(r"(?m)^status:\s*(\S+)", raw)
+    if status_m:
+        data["status"] = status_m.group(1).strip().strip("\"'")
+    if re.search(r"(?m)^built:\s*true\s*$", raw, re.I):
+        data["built"] = True
+    if re.search(r"(?m)^compiled:\s*true\s*$", raw, re.I):
+        data["compiled"] = True
+    kind_m = re.search(r"(?m)^kind:\s*(\S+)", raw)
+    if kind_m:
+        data["kind"] = kind_m.group(1).strip().strip("\"'")
+    via_m = re.search(r"(?m)^execute_via:\s*(\S+)", raw)
+    if via_m:
+        data["execute_via"] = via_m.group(1).strip().strip("\"'")
+    todos: list[dict[str, str]] = []
+    current: dict[str, str] | None = None
+    in_todos = False
+    for line in raw.splitlines():
+        if re.match(r"^todos:\s*$", line):
+            in_todos = True
+            continue
+        if in_todos and re.match(r"^[A-Za-z]", line):
+            break
+        if not in_todos:
+            continue
+        id_m = re.match(r"^\s+-\s+id:\s*(\S+)\s*$", line)
+        if id_m:
+            if current:
+                todos.append(current)
+            current = {"id": id_m.group(1).strip().strip("\"'"), "status": "pending"}
+            continue
+        if current:
+            st_m = re.match(r"^\s+status:\s*(\S+)\s*$", line)
+            if st_m:
+                current["status"] = st_m.group(1).strip().strip("\"'")
+    if current:
+        todos.append(current)
+    if todos:
+        data["todos"] = todos
+    return data
+
+
 def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
     match = FRONTMATTER_RE.match(text)
     if not match:
@@ -107,6 +154,20 @@ def parse_frontmatter(text: str) -> tuple[dict[str, Any], str]:
                 data = loaded
         except Exception:
             data = {}
+    if not data or "todos" not in data:
+        fallback = _parse_frontmatter_fallback(raw)
+        if fallback:
+            # Prefer fallback todos when PyYAML missed them or failed entirely.
+            if not data:
+                data = fallback
+            elif "todos" not in data and "todos" in fallback:
+                data["todos"] = fallback["todos"]
+                data.setdefault("name", fallback.get("name"))
+                data.setdefault("status", fallback.get("status"))
+                data.setdefault("built", fallback.get("built"))
+                data.setdefault("compiled", fallback.get("compiled"))
+                data.setdefault("kind", fallback.get("kind"))
+                data.setdefault("execute_via", fallback.get("execute_via"))
     return data, body
 
 
@@ -196,7 +257,10 @@ def has_live_campaign_command(body: str) -> bool:
     """True when body contains an actionable `make campaign`, not a prohibition."""
     for match in re.finditer(r"make campaign", body):
         prefix = body[max(0, match.start() - CAMPAIGN_WINDOW) : match.start()]
-        if LIVE_CAMPAIGN_PREFIX_RE.search(prefix.rstrip()):
+        # Template lines use `Do **not** run`; strip markdown so the
+        # prohibition still matches.
+        stripped = re.sub(r"[*_`]", "", prefix).rstrip()
+        if LIVE_CAMPAIGN_PREFIX_RE.search(stripped):
             continue
         return True
     return False
@@ -232,6 +296,35 @@ def kernel_unfired(path: Path) -> bool:
         return False
 
 
+def classify_components(
+    *,
+    frontmatter: dict[str, Any],
+    body: str,
+    flags: list[str],
+    todos: Any,
+) -> list[dict[str, str]]:
+    """Per-component verdicts. A file may be mixed; that is harvestable, not fail."""
+    components: list[dict[str, str]] = []
+    pending, in_prog, _total = todo_counts(todos)
+    if pending or in_prog or frontmatter.get("compiled") is True:
+        components.append({"id": "live_work", "verdict": "live_invariant", "concern": "execute"})
+    if "missing_execute_section" in flags or "kernel_unfired" in flags:
+        if not is_simple_kind(frontmatter, body):
+            components.append({"id": "pe_wire", "verdict": "stale_wiring", "concern": "pe-execute"})
+    if "baseline_drift" in flags:
+        components.append({"id": "baseline", "verdict": "stale_wiring", "concern": "baseline"})
+    if "superseded" in flags:
+        components.append({"id": "mission", "verdict": "superseded_mission", "concern": "mission"})
+    return components
+
+
+def is_harvestable(components: list[dict[str, str]]) -> bool:
+    verdicts = {str(item.get("verdict") or "") for item in components}
+    live = "live_invariant" in verdicts
+    stale = bool(verdicts & {"stale_wiring", "superseded_mission"})
+    return live and stale
+
+
 def flags_for(
     *,
     path: Path,
@@ -257,6 +350,9 @@ def flags_for(
         flags.append("missing_execute_section")
     if kernel_unfired(path):
         flags.append("kernel_unfired")
+    components = classify_components(frontmatter=fm, body=body, flags=flags, todos=todos)
+    if is_harvestable(components):
+        flags.append("harvestable")
     return flags
 
 

@@ -1,129 +1,118 @@
 ---
-name: PE unified-loop seam wiring: worker dispatch, receipt-to-distill signals, Graphiti evidence intake, autonomy projection (clean branch off main)
-overview: "Close the Program Execution development loop end-to-end by wiring the four verified-but-unconnected seams on top of what already landed on Quantum-L9/Cursor-Governance main: (1) controller-side worker dispatch through the Peer Execution Core to thin providers (claude-code-direct / codex / cursor-background / ci) under EXECUTION_ROUTING_POLICY; (2) program receipts into the subagent-signal publi..."
+name: Stop seeder clobber and residual seed lint
+overview: "Close Quantum-L9/.github issues 60 and residual 61 by porting the existing seeder branch-safety gate onto a fresh origin/main worktree and fixing both Code of Conduct copies. Leave issues 20, 6, 19, and 47 breadcrumbed and unclosed."
 todos:
-  - id: todo-01
-    content: "Baseline + clean branch: lock origin/main full SHA; create pe/unified-loop from it in a dedicated worktree (rule 46); record baseline receipt"
+  - id: todo-01-baseline-preflight
+    content: "Create a dedicated Quantum-L9/.github worktree from origin/main, lock the full SHA, confirm issue 60 still live and both CoC copies still have trailing spaces, fetch 74336bc as read-only donor"
     status: pending
     phase: execute
     depends_on: []
-  - id: todo-02
-    content: "Re-land the 8 unmerged admission/gate fixes on the clean branch (re-cut from the clean 6c65557 content with explicit pathspecs; NOT from the contaminated branch tip; verify each against main before landing)"
+  - id: todo-02-port-safety-gate
+    content: "Port seed-branch-safety helpers, tests, both seeder workflows, validate-starters wiring, and AGENTS.md contract from 74336bc onto feat/seed-branch-safety cut from current main"
     status: pending
     phase: execute
-    depends_on: [todo-01]
-  - id: todo-03
-    content: "Dispatch seam: new pec/dispatch.py — at render-contract, resolve execution profile via identity_binding/peer_readiness, consult EXECUTION_ROUTING_POLICY + capability probes, invoke peer_execution.runner (subprocess thin providers: claude-code-direct, codex, cursor-background) with Worker Brief + context manifest; map CanonicalProviderResult into attempt-receipt pre-submission; worker_cannot_self_verify invariant preserved; fallback to manual worker brief when CAPABILITY_UNSUPPORTED"
+    depends_on: [todo-01-baseline-preflight]
+  - id: todo-03-fix-coc-templates
+    content: "Restructure enforcement tiers in root CODE_OF_CONDUCT.md and templates/community-health/CODE_OF_CONDUCT.md so no trailing whitespace is load-bearing; add .yamllint.yml if cheap"
     status: pending
     phase: execute
-    depends_on: [todo-02]
-  - id: todo-04
-    content: "Signal seam: call outcome_publisher at record-attempt, verify, evaluate-gate, export-handoff — receipt_projection — distill_queue enqueue (dry-run observable); agent-scoped atomic facts only"
+    depends_on: [todo-01-baseline-preflight]
+  - id: todo-04-local-verify
+    content: "Run node guard suites so the incident scenario fails on the pre-fix body and passes on the port; run make validate"
     status: pending
     phase: execute
-    depends_on: [todo-03]
-  - id: todo-05
-    content: "Evidence intake: collect_evidence.py memory-lookup flag using integrations/graphiti/context_reader (read-only; fails closed offline; never writes memory from admission)"
+    depends_on: [todo-02-port-safety-gate, todo-03-fix-coc-templates]
+  - id: todo-05-publish-pr
+    content: "Publish via PR_REMEDIATE=0 make pr from the wired .github worktree after local verify; do not merge"
     status: pending
     phase: execute
-    depends_on: [todo-02]
-  - id: todo-06
-    content: "Autonomy projection: claim-time autonomy_action_id + campaign-packet skeleton emission via autonomy-control-plane contract_mapper (emission only — no autonomy-side mutation)"
+    depends_on: [todo-04-local-verify]
+  - id: todo-06-breadcrumb
+    content: "Comment on issues 60 and 61 with the fix PR; note issues 20, 6, 19, and 47 as out of this close-out; write Graphiti PICKUP"
     status: pending
     phase: execute
-    depends_on: [todo-02]
-  - id: todo-07
-    content: "Routing + conformance: add codex preference row to EXECUTION_ROUTING_POLICY for tightly-scoped mechanical work; golden vectors: policy enforcement, no-match returns CAPABILITY_UNSUPPORTED, worker_cannot_self_verify; extend shared peer-execution lifecycle test with the dispatch path"
-    status: pending
-    phase: execute
-    depends_on: [todo-03, todo-06]
-  - id: todo-08
-    content: "Converge: make sync-generated + template manifest regen; full suites (PE conformance, controller, autonomy, compile, campaign-schema); kernels; L4 authorize-release; open PR into main via the governance publish flow; remediate via l9-pr-remediation; merge per operator override (bottom-up); export handoff"
-    status: pending
-    phase: execute
-    depends_on: [todo-04, todo-05, todo-07]
+    depends_on: [todo-05-publish-pr]
 isProject: false
-compiled_into: pe_loop_compiled_8-28-26
+kind: pe
+execute_via: pe-campaign
 kernel_pass:
-  bound_path: pe_unified_loop_8-20-26.plan.md
+  bound_path: stop_seeder_clobber_and_residual_seed_lint_c28c7af3.plan.md
   improve:
     kernel: kernels/Improve.md
     ran_at: 2026-08-28T21:06:00Z
-    body_sha256: "33802ce84fdba1852ba237641fa7d442439924fe161a78b936cd21cc32361a09"
+    body_sha256: "876ee6ea85e751e61bfd27ab7764512866361a0845612f206a2ed9fbb017488a"
     deltas:
       - "Stamped kernel_pass so this harvested plan can pass the plan gate"
       - "Kept existing todos and body; no second plan created"
   validate_repair:
     kernel: kernels/Validate & Repair.md
     ran_at: 2026-08-28T21:06:30Z
-    body_sha256: "33802ce84fdba1852ba237641fa7d442439924fe161a78b936cd21cc32361a09"
+    body_sha256: "876ee6ea85e751e61bfd27ab7764512866361a0845612f206a2ed9fbb017488a"
     deltas:
       - "Re-ran Validate & Repair on the same bound path; no second plan created"
       - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
 ---
-# PLAN: PE unified-loop seam wiring: worker dispatch, receipt-to-distill signals, Graphiti evidence intake, autonomy projection (clean branch off main)
+# PLAN: Stop seeder clobber and residual seed lint
 
 > **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.
 > **Template SSOT:** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`
 > **Execute:** `@environment/program-execution` → Program Lock/Controller → `@autonomy` (subordinate).
-> **Suggested filename:** `pe-unified-loop-seam-wiring-worker-dispatch-receipt-to-distill-signals-graphiti-evidence-intake-autonomy-projection-clean-branch-off-main_3036b0a8.plan.md`
+> **Suggested filename:** `stop-seeder-clobber-and-residual-seed-lint_c28c7af3.plan.md`
 
 ## Objective (from PLAN_DOCUMENT)
 
-Close the Program Execution development loop end-to-end by wiring the four verified-but-unconnected seams on top of what already landed on Quantum-L9/Cursor-Governance main: (1) controller-side worker dispatch through the Peer Execution Core to thin providers (claude-code-direct / codex / cursor-background / ci) under EXECUTION_ROUTING_POLICY; (2) program receipts into the subagent-signal publisher and Graphiti distill queue; (3) admission evidence intake from Graphiti via context_reader; (4) claim-time autonomy projection via the merged autonomy-control-plane mappers. ALL WORK LANDS ON A NEW CLEAN BRANCH CREATED FROM origin/main (Quantum-L9/Cursor-Governance) — never on main directly, never on the contaminated pe/pipeline-fixes branch, never in any other repo.
+Close Quantum-L9/.github issues 60 and residual 61 by porting the existing seeder branch-safety gate onto a fresh origin/main worktree and fixing both Code of Conduct copies. Leave issues 20, 6, 19, and 47 breadcrumbed and unclosed.
 
 ### Success properties (seed — complete evidence_type/proof in template sections)
 
 | id | property | evidence_type | proof | blocking |
 |----|----------|---------------|-------|----------|
-| SP-01 | SC-01: baseline locked: origin/main full SHA recorded at execution start; new branch pe/unified-loop created from that SHA with a clean tree (no foreign files). | quality_gate | observe during PE verify / make pr-check | true |
-| SP-02 | SC-02: re-land of the 8 unmerged admission/gate fixes (blueprint_ops, accept/collect tools, union-diff verify, L4 named-roots, heredoc-safe matching, memory session-id flags) verified present on the branch with the golden admission loop test passing (main was verified NOT to contain them). | quality_gate | observe during PE verify / make pr-check | true |
-| SP-03 | SC-03: dispatch integration test passes: render-contract resolves an execution profile and probes a provider and invokes it; the provider result maps to an attempt-receipt pre-submission; worker_cannot_self_verify invariant holds. | quality_gate | observe during PE verify / make pr-check | true |
-| SP-04 | SC-04: record-attempt/verify/evaluate-gate/export-handoff call outcome_publisher and enqueue distill jobs (observable via dry-run queue listing). | quality_gate | observe during PE verify / make pr-check | true |
-| SP-05 | SC-05: collect_evidence memory-lookup flag returns Graphiti context read-only and fails closed when Graphiti is unreachable (no memory mutation from admission). | quality_gate | observe during PE verify / make pr-check | true |
-| SP-06 | SC-06: claim emits per-task autonomy_action_id plus packet skeleton via contract_mapper; unit test asserts the mapping without any autonomy-side mutation. | quality_gate | observe during PE verify / make pr-check | true |
-| SP-07 | SC-07: EXECUTION_ROUTING_POLICY extended with codex for tightly-scoped mechanical work; no-match routing returns CAPABILITY_UNSUPPORTED; routing golden vectors pass. | quality_gate | observe during PE verify / make pr-check | true |
-| SP-08 | SC-08: all existing suites stay green: PE conformance (142+), controller (25+), autonomy (56+), compile (5+), campaign-schema (2), plus the shared peer-execution lifecycle test. | quality_gate | observe during PE verify / make pr-check | true |
+| SP-01 | ops/test-seed-workflow-branch-guard.js fails against the pre-fix workflow body and passes against the ported body: open seed PR plus extra commit produces no updateRef | quality_gate | observe during PE verify / make pr-check | true |
+| SP-02 | After the port, neither seeder workflow file contains createRef, updateRef, or force: true | quality_gate | observe during PE verify / make pr-check | true |
+| SP-03 | make validate PASS in the Quantum-L9/.github worktree | quality_gate | observe during PE verify / make pr-check | true |
+| SP-04 | Root CODE_OF_CONDUCT.md and templates/community-health/CODE_OF_CONDUCT.md have no trailing whitespace and keep three separate enforcement-tier lines | quality_gate | observe during PE verify / make pr-check | true |
+| SP-05 | One PR open on Quantum-L9/.github against main; comments on issues 60 and 61; issues 20, 6, 19, and 47 noted as out of this close-out | quality_gate | observe during PE verify / make pr-check | true |
 
 ## Scope (from PLAN_DOCUMENT)
 
-**In:** environment/program-execution/core/program-execution-controller-template/scripts/pec/ (dispatch.py new; contracts.py + controller.py call sites; tests/), environment/program-execution/integrations/worker-dispatch/ (new thin module if controller-internal placement proves insufficient), environment/program-execution/registry/EXECUTION_ROUTING_POLICY.yaml (additive preference row for codex), environment/program-execution/scripts/collect_evidence.py (optional Graphiti intake flag), environment/program-execution/scripts/tests/ + core controller-template scripts/tests/ (new tests), re-landed admission/gate fixes: environment/program-execution/scripts/{blueprint_ops,accept_blueprint,collect_evidence,compile_campaign_source}.py + tests, core template RUNBOOK + MANIFEST regenerations, ops/autonomy/{command_parse,local_execution_gate,worktree_isolation_gate}.py, environment/agents/adapters/claude-code/hooks/memory_*.py, tests/ops/autonomy/*, regenerated manifests via make sync-generated + template write_manifest (canonical generators only)
+**In:** Quantum-L9/.github issue 60 seeder force-clobber on chore/auto-seed-governance, Quantum-L9/.github residual issue 61 Code of Conduct trailing whitespace in root and templates copies, ops/seed-branch-safety.js plus unit and workflow-guard tests wired into ops/validate-starters.sh
 
 **Out:**
-- Schema changes to Program Lock / Blueprint v2 required fields (no relaxation, no new required fields)
-- Model-level inference routing (ADR-0020 defers provider-neutral model routing — out of scope)
-- Autonomy-side mutation (this plan only PROJECTS to autonomy; packets/lanes are emitted, not executed here)
-- The contaminated origin/pe/pipeline-fixes branch (abandoned; re-cut from clean commit content)
-- Any repo other than Quantum-L9/Cursor-Governance
-- Direct commits to main
+- Live seed-governance.yml mode=seed go-ahead (issue 20)
+- Org community-health cascade and LICENSE inheritance (issue 6)
+- Weekly advisory posture report (issue 19)
+- Org-wide SHA-pin findings across consumer repos (issue 47)
+- Edits in consumer repositories
+- Merging the resulting PR
+- Disabling the auto-seed cron without a code merge
 
 ## Critical path (seed)
 
-todo-01 → todo-02 → todo-03 → todo-04 → todo-07 → todo-08
+todo-01-baseline-preflight → todo-02-port-safety-gate → todo-04-local-verify → todo-05-publish-pr → todo-06-breadcrumb
 
 ## Stress (seed from PLAN_DOCUMENT)
 
-- Blast radius: Controller call sites (contracts/controller.py) are the execution heart of every future program; mitigations: additive call sites, manual-worker fallback preserved, full controller suite before PR.
-- Rollback: git restore scoped paths on the pe/unified-loop branch; dispatch + signal call sites are additive — removal restores prior behavior; PR closable; no schema changes.
+- Blast radius: Every non-archived non-fork Quantum-L9 repository. A wrong gate continues data loss or halts org-wide seeding.
+- Rollback: Revert the Quantum-L9/.github PR. Emergency HUMAN: gh workflow disable auto-seed-new-repo.yml. Do not force-push consumer seed branches.
 
 ## Convergence (seed)
 
 - status: partial
-- next_skill: l9-ynp
-- stop_reason: U1 (codex capability receipt) resolves at preflight PV-05; plan is execution-ready on the verified seam evidence
+- next_skill: l9-bounded-autonomy
+- stop_reason: PLAN_DOCUMENT validated; implementation runs in a Quantum-L9/.github worktree after this artifact lands
 - execute_via: @environment/program-execution → @autonomy
 
 ---
 
 ## Template body (complete every required section before status=executable)
 
-# PLAN: PE unified-loop seam wiring: worker dispatch, receipt-to-distill signals, Graphiti evidence intake, autonomy projection (clean branch off main)
+# PLAN: Stop seeder clobber and residual seed lint
 
 > **First-class SSOT (git):** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` · metadata sidecar `*.meta.md` · registered in `environment/contracts/execution/MANIFEST.yaml`. Skill path is a symlink; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only.
 > **Schema:** `canonical.schema.plan_document.v1` (status: fill → `executable` only when law holds)
 > **Execute:** when status is `executable`, run through **[@environment/program-execution](environment/program-execution/)** with autonomy as the subordinate orchestration plane — **[@autonomy](commands/autonomy.md)** / `l9-bounded-autonomy` under a Program lease. Do **not** free-form mutate from this markdown alone.
 > **Cursor todos:** frontmatter `todos` project to PE Task Cards + Phase-0 autonomy actions. Body is the binding contract.
-> **Rename to:** `snake_case_name_YYYY-MM-DD.plan.md` before execute.
+> **Rename to:** `snake_case_name_<8hex>.plan.md` before execute.
 > **Law:** executable only when baseline matches, capability probes pass, invariants match, and envelope is respected. Markdown completeness alone is insufficient.
 
 ## Execute via @environment/program-execution + autonomy (required)
@@ -151,36 +140,31 @@ Program leases are authoritative. Autonomy leases are subordinate and **must not
 
 ### Pipeline steps
 
-1. **Attach** [@environment/program-execution](environment/program-execution/) + [@autonomy](commands/autonomy.md).
-2. **Project this plan → Blueprint artifacts** (instantiate under `$HOME/.l9/programs/<program_id>/` — never mutate sealed `environment/program-execution/core/` templates in place):
-
-   | Plan section | PE Blueprint / Controller artifact |
-   |--------------|-------------------------------------|
-   | metadata / objective | `PROGRAM.yaml` / program identity |
-   | immutable_baseline | `CURRENT_STATE_DELTA` + reconcile exact SHA |
-   | execution_envelope + architecture_impact | Task Card `authorization_ceiling` + Source/Rendered Contract paths |
-   | execution_DAG / todos | `DEPENDENCY_GRAPH.yaml` + `TASK_CARDS.yaml` + `EXECUTION_WAVES.yaml` |
-   | capability_preflight | Controller reconcile + gate probes before claim |
-   | property_evidence_matrix | Task Card `validation` / evidence catalog refs |
-   | rollback | Task Card `rollback` + recovery receipts |
-   | convergence | `CONVERGENCE_GATES.yaml` + Handoff Receipt (owner accepts verdict) |
-
-3. **Validate + bootstrap Controller** (from controller template RUNBOOK):
+Live execution is one command. Do not hand-run pec, L4, or inner compile
+scripts from this template.
 
 ```bash
-# from instantiated controller workspace (paths illustrative)
-python scripts/pec.py bootstrap --workspace "$HOME/.l9/programs/<program_id>/runtime" \
-  --blueprint "$HOME/.l9/programs/<program_id>/blueprint"
-python scripts/pec.py reconcile --workspace … --repository <repository_id>=$(pwd)
-python scripts/pec.py status --workspace …
-python scripts/pec.py next --workspace …
+make -C "$HOME/.cursor-governance" campaign INTENT=<brief.md|activate.yaml>
 ```
 
-4. **Admit exact task scope** — draft/register Source Contract ⊂ Task Card ceiling; then `claim` → `prepare` → `render-contract`. Worker receives **only** Rendered Contract + Worker Brief + worktree.
-5. **Map Program task → autonomy campaign** via `environment/program-execution/integrations/autonomy-control-plane/` (`map_program_contract` / bridge). Set each mutating Task Card `autonomy_action_id` (e.g. `pes.<wave>.<task>`).
-6. **Orchestrate under [@autonomy](commands/autonomy.md)** — load `l9-bounded-autonomy` Protocols A–D; campaign authorization **packet** aligned to Program Lock digest + declared branches/PRs (see AUTONOMY_BRIDGE vocabulary). Spawn ready `work` Tasks / background `poll` Tasks; main continues (no `AwaitShell` on poll).
-7. **L4 local autonomy** inside the Program lease: local commits only until `ops/autonomy/l4_local.py authorize-release` → scoped push/PR → `l9-pr-remediation` Converge. Launching this plan through PE+`/autonomy` **or** clicking Build **is** merge authorization for this stack after green+mergeable (bottom-up older PRs first).
-8. **Record + verify + handoff** — `pec.py record-attempt` → `verify` → `export-handoff`. Controller recommends; program owner accepts terminal verdict. Graphiti PICKUP on close (Protocol D) — observability only, never competing task claim.
+`run_campaign.py` projects the plan into Blueprint artifacts under
+`$HOME/.l9/programs/<id>/`, admits the lock, executes every task, stacks
+PRs, and closes into `campaigns/COMPLETED/<id>/`. Never mutate sealed
+`environment/program-execution/core/` templates in place.
+
+| Plan section | Runner-owned Blueprint / Controller artifact |
+|--------------|-------------------------------------|
+| metadata / objective | `PROGRAM.yaml` / program identity |
+| immutable_baseline | `CURRENT_STATE_DELTA` + reconcile exact SHA |
+| execution_envelope + architecture_impact | Task Card `authorization_ceiling` + Source/Rendered Contract paths |
+| execution_DAG / todos | `DEPENDENCY_GRAPH.yaml` + `TASK_CARDS.yaml` + `EXECUTION_WAVES.yaml` |
+| capability_preflight | Controller reconcile + gate probes before claim |
+| property_evidence_matrix | Task Card `validation` / evidence catalog refs |
+| rollback | Task Card `rollback` + recovery receipts |
+| convergence | `CONVERGENCE_GATES.yaml` + Handoff Receipt (owner accepts verdict) |
+
+If the runner exits nonzero, stop and report. Do not continue with
+`pec.py bootstrap`, `claim`, `record-attempt`, or a second scheduler.
 
 ### Adapter routing (from `registry/EXECUTION_ROUTING_POLICY.yaml`)
 

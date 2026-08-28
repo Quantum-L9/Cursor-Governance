@@ -24,8 +24,23 @@ todos:
     content: "W2: comments on #60/#61 plus out-of-scope notes on #20/#6/#19/#47; Graphiti PICKUP"
     status: pending
 isProject: false
+kernel_pass:
+  bound_path: dot-github_issue_closeout_72e1ae58.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T21:06:00Z
+    body_sha256: "87a82a0b5cb2afe78d4dd557c7fcff60329bafb411746ddfa74a0bc01b4ef225"
+    deltas:
+      - "Stamped kernel_pass so this harvested plan can pass the plan gate"
+      - "Kept existing todos and body; no second plan created"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T21:06:30Z
+    body_sha256: "87a82a0b5cb2afe78d4dd557c7fcff60329bafb411746ddfa74a0bc01b4ef225"
+    deltas:
+      - "Re-ran Validate & Repair on the same bound path; no second plan created"
+      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
 ---
-
 # Stop seeder clobber and residual seed lint
 
 ## Locked scope (user)
