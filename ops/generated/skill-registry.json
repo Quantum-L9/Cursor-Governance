@@ -865,7 +865,7 @@
     },
     {
       "composition_role": "general",
-      "description": "Author, update, validate, register, discover, and optionally bind thin command triggers to L9 DAGs through the canonical SessionDAG architecture while preventing DAG-related Skill sprawl and preserving domain workflow ownership. Use when creating or changing an L9 DAG, repairing SessionDAG registration/discovery, or making a command a thin DAG trigger. Do not use for domain workflow semantics, Skill wiring, Skill compilation, GMP execution, or generic component audits.",
+      "description": "Author, update, validate, register, discover, and optionally bind thin command triggers to L9 workflow graphs, keeping SessionDAG guidance graphs and executable LangGraph runtimes as distinct first-class kinds. Use when creating or changing an L9 graph, repairing SessionDAG registration/discovery, validating a LangGraph runtime shape, or making a command a thin graph trigger. Do not use for domain workflow semantics, Skill wiring, Skill compilation, GMP execution, or generic component audits.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-dag-authoring",
@@ -1262,5 +1262,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "bd2a82a8faf0aa4841b867e7ee2669aedbe8f08be7f0ec6759e85fbfa16d400a",
-  "source_skill_corpus_sha256": "15d8967ce643404ad4eb266a6a42920da0f2565effe98ccc15f0c97d270d34d4"
+  "source_skill_corpus_sha256": "06ce1e0212d1f5ace982ac71f382cf21f3ef445ab5e91e3640ccd3f5b8c5686a"
 }

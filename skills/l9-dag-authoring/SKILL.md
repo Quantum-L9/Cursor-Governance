@@ -6,7 +6,7 @@ disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
-  role: graph_lifecycle_owner
+  role: dag_lifecycle_owner
   tags: [l9, dag, workflow, authoring, registry, langgraph, command-binding]
   owner: igor_beylin
   status: active
