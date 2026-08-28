@@ -260,10 +260,7 @@ def test_cursor_shell_allows_remediator_git_push(
 
     class _Stdin:
         def read(self) -> str:
-            return (
-                '{"command": "PR_BASE=origin/main make precommit-repo '
-                '&& git push origin HEAD"}'
-            )
+            return '{"command": "PR_BASE=origin/main make precommit-repo && git push origin HEAD"}'
 
     class _Capture:
         def __init__(self) -> None:
