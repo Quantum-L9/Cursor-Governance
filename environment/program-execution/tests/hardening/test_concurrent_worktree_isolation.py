@@ -174,6 +174,46 @@ def test_two_children_hold_distinct_worktrees_simultaneously(sandbox: Any) -> No
         lane.remove(force=True)
 
 
+def test_many_children_create_lanes_without_racing_the_worktree_registry(
+    sandbox: Any,
+) -> None:
+    """`git worktree add` must not race itself, at any width.
+
+    The two-child proof above hits the window rarely enough to look green
+    locally and fail in CI -- it did exactly that on PR #346, with
+
+        fatal: failed to read .git/worktrees/child-a/commondir: Success
+
+    `Success` is errno 0: a short read of a `commondir` another `git worktree
+    add` had created but not yet written, not an I/O error. Eight children
+    reproduced it in 6 of 60 unlocked trials while two reproduced it in none of
+    8, which is why the narrow proof read as a flake.
+
+    This is not a slower restatement of the two-child test. That one asserts
+    the lanes are *distinct*; this one asserts lane creation *succeeds at all*
+    under contention, which is the property `_worktree_registry_lock` exists to
+    hold. Kept at eight rather than two so a regression fails loudly instead of
+    intermittently.
+    """
+
+    repo, lane_root = sandbox
+    action_ids = tuple(f"child-{index}" for index in range(8))
+    lanes, created, errors = create_lanes_concurrently(repo, lane_root, action_ids)
+
+    assert not errors, f"concurrent lane creation failed: {errors}"
+    assert set(created) == set(action_ids)
+
+    # Distinct paths, and every one of them registered with git.
+    assert len({str(path) for path in created.values()}) == len(action_ids)
+    listed = _git(repo, "worktree", "list", "--porcelain")
+    for path in created.values():
+        assert path.is_dir()
+        assert str(path.resolve()) in listed
+
+    for lane in lanes.values():
+        lane.remove(force=True)
+
+
 def test_concurrent_children_never_share_a_git_index(sandbox: Any) -> None:
     repo, lane_root = sandbox
     lanes, created, errors = create_lanes_concurrently(repo, lane_root, ("child-a", "child-b"))

@@ -11,8 +11,6 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
-
 from .blueprint import (
     BlueprintError,
     relock_tasks,
@@ -198,6 +196,12 @@ def load_json_or_yaml(path: Path) -> Any:
 
 
 def _validate_schema(workspace: Path, schema_name: str, value: Any) -> None:
+    # Imported here, not at module scope: jsonschema costs ~0.19s to import and
+    # every `pec.py` CLI invocation paid it whether or not it validated anything.
+    # The conformance suite spawns that CLI ~14 times per campaign test, so the
+    # import alone was minutes of the suite's wall clock.
+    from jsonschema import Draft202012Validator  # noqa: PLC0415 - deferred: see above
+
     config = _runtime_config(workspace)
     schema_path = Path(config["template_root"]) / "schemas" / schema_name
     schema = load_json(schema_path)

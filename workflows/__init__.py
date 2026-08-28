@@ -1,42 +1,54 @@
 """
-L9 Workflows — DAG-Based Workflow Orchestration
-================================================
+L9 Workflows — Graph Orchestration
+==================================
 
-Production-grade workflow orchestration with two complementary systems:
+`workflows/` is the single runtime root for L9 workflow graphs. It hosts two
+distinct first-class graph kinds. They are not two generations of one thing, and
+neither supersedes the other.
 
-1. **Session DAGs** (workflows.session)
-   - Python-defined workflow graphs
-   - Human-readable, self-documenting
-   - Mermaid diagram generation
-   - Step-by-step execution guides
+1. **SESSION_GUIDANCE** — `SessionDAG` (workflows.session)
+   - Guides an agent through a workflow; not an executable runtime
+   - Registered with `register_session_dag()`, resolved with `get_session_dag()`
+   - Discovered by importing `workflows.dags`
+   - Permits revision loops, because a guided workflow may legitimately
+     return to an earlier step (see `SessionDAG.validate`)
+   - Renders to Mermaid and Markdown for human review
 
-2. **LangGraph Execution** (workflows.harvest_deploy)
-   - StateGraph-based runtime
-   - Async execution
-   - State persistence
-   - Programmatic API
+2. **LANGGRAPH_RUNTIME** — `StateGraph` (langgraph.graph)
+   - Executable state machine with async execution and state persistence
+   - Never registered in the SessionDAG registry; reached through its own
+     module or a domain-owned runtime entrypoint
+   - Exemplars: `workflows/dags/gmp/`, `workflows/dags/inspect_dag.py`,
+     `workflows/harvest_deploy.py`
+
+Graph kind is a property of the graph, not a quality judgement. Classification
+and lifecycle mechanics are owned by the `l9-dag-authoring` Skill; this package
+owns implementation and execution.
 
 Structure:
     workflows/
-    ├── session/              # Session DAG definitions
+    ├── session/              # SESSION_GUIDANCE contract
     │   ├── interface.py      # SessionDAG, SessionNode, SessionEdge
-    │   ├── registry.py       # DAG registry
-    │   └── dags/             # DAG definitions
-    │       ├── refactoring_dag.py
-    │       └── harvest_deploy_dag.py
+    │   └── registry.py       # SessionDAG registry
+    ├── dags/                 # Graph definitions of both kinds
+    │   ├── __init__.py       # Discovery boundary (import to auto-register)
+    │   ├── refactoring_dag.py        # SESSION_GUIDANCE
+    │   ├── harvest_deploy_dag.py     # SESSION_GUIDANCE
+    │   ├── inspect_dag.py            # LANGGRAPH_RUNTIME
+    │   └── gmp/                      # LANGGRAPH_RUNTIME (graph/state/routing/nodes)
     ├── state.py              # LangGraph state schemas
     ├── nodes/                # LangGraph reusable nodes
-    ├── harvest_deploy.py     # LangGraph StateGraph
+    ├── harvest_deploy.py     # LANGGRAPH_RUNTIME
     ├── runner.py             # YAML-based CLI runner
     └── defs/                 # Simple YAML definitions
 
 Usage:
-    # Session DAG (documentation/planning)
+    # SESSION_GUIDANCE (agent guidance)
     from workflows.session import get_session_dag
     dag = get_session_dag("harvest-deploy-v1")
     print(dag.to_mermaid())  # noqa: ADR-0019
 
-    # LangGraph Execution (runtime)
+    # LANGGRAPH_RUNTIME (execution)
     from workflows.harvest_deploy import run_harvest_deploy
     result = await run_harvest_deploy(source_document="...", ...)
 

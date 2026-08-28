@@ -1,0 +1,4 @@
+interface:
+  display_name: "L9 DAG Authoring"
+  short_description: "Author, validate, and register L9 workflow graphs"
+  brand_color: "#7C3AED"

@@ -1,17 +1,23 @@
 """
-Session DAGs - Auto-Discovery
-=============================
+Workflow Graphs — Discovery Boundary
+====================================
 
-Import this module to auto-register all session DAGs.
+Importing this module registers every `SESSION_GUIDANCE` graph in the package.
 
-DAGs are being migrated from fake dataclass-based "documentation DAGs"
-to real executable LangGraph DAGs.
+Two distinct graph kinds live here. Both are first-class; neither is a legacy
+generation of the other, and neither is "fake".
 
-REAL LangGraph DAGs (executable):
-- inspect_dag: Unified first-touch analysis + evaluation + routing
+SESSION_GUIDANCE (`SessionDAG`, workflows.session.interface):
+    Guides an agent through a workflow. Registered with `register_session_dag()`
+    at import time and resolved with `get_session_dag()`. Not an executable
+    runtime, and not intended to be one.
 
-LEGACY dataclass DAGs (documentation only - TO BE MIGRATED):
-- dag_authoring_dag, gmp_execution_dag, harvest_deploy_dag, etc.
+LANGGRAPH_RUNTIME (`StateGraph`, langgraph.graph):
+    Executable state machine. Reached through its own module or a domain-owned
+    runtime entrypoint, never through the SessionDAG registry.
+
+See `workflows/__init__.py` for the package-level taxonomy and the
+`l9-dag-authoring` Skill for graph-kind classification and lifecycle rules.
 """
 
 # ============================================================================
@@ -35,12 +41,12 @@ __dora_meta__ = {
 }
 # ============================================================================
 
-# Legacy DAGs (dataclass-based documentation)
+# SESSION_GUIDANCE graphs — registered on import
 from workflows.dags.dag_authoring_dag import DAG_AUTHORING_DAG
 from workflows.dags.gmp_execution_dag import GMP_EXECUTION_DAG
 from workflows.dags.harvest_deploy_dag import HARVEST_DEPLOY_DAG
 
-# Real LangGraph DAGs (executable)
+# LANGGRAPH_RUNTIME graphs — executable, not registry-backed
 from workflows.dags.inspect_dag import (
     INSPECT_DAG,
     InspectState,
@@ -55,12 +61,12 @@ from workflows.dags.test_pipeline_dag import TEST_PIPELINE_DAG
 from workflows.dags.wire_dag import WIRE_DAG
 
 __all__ = [
-    # Real LangGraph (use these)
+    # LANGGRAPH_RUNTIME
     "INSPECT_DAG",
     "InspectState",
     "build_inspect_graph",
     "run_inspect",
-    # Legacy (to be migrated)
+    # SESSION_GUIDANCE
     "DAG_AUTHORING_DAG",
     "GMP_EXECUTION_DAG",
     "HARVEST_DEPLOY_DAG",

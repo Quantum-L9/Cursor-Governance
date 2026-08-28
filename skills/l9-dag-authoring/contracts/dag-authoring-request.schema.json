@@ -1,0 +1,68 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "l9/dag-authoring/request-v2.1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "operation",
+    "repo_root"
+  ],
+  "properties": {
+    "operation": {
+      "enum": [
+        "CREATE",
+        "UPDATE",
+        "VALIDATE",
+        "REGISTER",
+        "COMMAND_BIND"
+      ]
+    },
+    "repo_root": {
+      "type": "string",
+      "minLength": 1
+    },
+    "dag_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "dag_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "dag_symbol": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "command_path": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "domain_owner": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "allow_mutation": {
+      "type": "boolean",
+      "default": false
+    },
+    "graph_kind": {
+      "enum": [
+        "AUTO",
+        "SESSION_GUIDANCE",
+        "LANGGRAPH_RUNTIME",
+        "UNKNOWN"
+      ],
+      "default": "AUTO"
+    }
+  }
+}

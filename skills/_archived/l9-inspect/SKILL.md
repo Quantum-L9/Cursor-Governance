@@ -1,17 +1,33 @@
 ---
 name: l9-inspect
-description: inspect code before it enters l9 — external code gate and existing file audit via inspect-v1 dag. use when validating markdown with code blocks, proposed files not yet in repo, or auditing existing repo files before import/refactor.
+description: deprecated — do not activate. the inspect capability runs directly from its canonical DAG (workflows/dags/inspect_dag.py) via /inspect. archived out of live skills discovery.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, inspect, validation, external-code, audit, dag]
+  tags: [l9, inspect, dag, deprecated]
   owner: igor_beylin
-  status: active
-  version: 3.0.1
-  updated: 2026-06-06
+  status: deprecated
+  version: 9.0.0
+  updated: 2026-08-28
 ---
+
+# l9-inspect (Deprecated)
+
+**Deprecated. Do not activate this pack.**
+
+The inspect capability is **not** retired — its Skill wrapper is. `/inspect` triggers
+the canonical LangGraph DAG at `workflows/dags/inspect_dag.py` directly.
+
+The existence of a DAG does not justify a Skill. This pack was a wrapper around an
+execution graph that already carried the whole protocol.
+
+Archived under `skills/_archived/l9-inspect/` for history only. The body below is the
+retired pack, retained verbatim for comparison.
+
+---
+
 
 # Inspect
 

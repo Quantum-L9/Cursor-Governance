@@ -1,3 +1,15 @@
+<!-- RETIRED 2026-08-28 -->
+# /update-command — RETIRED
+
+Superseded by `/dag-authoring --bind-command` (skill `l9-dag-authoring`, operation
+`COMMAND_BIND`). Thin command-to-DAG binding is a DAG-lifecycle operation, not a
+capability of its own.
+
+The runtime DAG `workflows/dags/slash_command_update_dag.py` is retained until a
+reference search proves zero callers. Retained below for history only.
+
+---
+
 name: update-command
 version: "1.0.0"
 description: "Update slash commands to be minimal triggers"

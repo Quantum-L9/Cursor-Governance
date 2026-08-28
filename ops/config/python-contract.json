@@ -186,15 +186,10 @@
               "template"
             ],
             [
-              "${PYTHON}",
-              "-m",
-              "unittest",
-              "discover",
-              "-s",
-              "scripts/tests",
-              "-p",
-              "test_*.py",
-              "-v"
+              "bash",
+              "-c",
+              "find scripts/tests -maxdepth 1 -name 'test_*.py' -print0 | sort -z | xargs -0 -P \"${PES_CONTROLLER_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}\" -I{} \"$0\" -B {} -v",
+              "${PYTHON}"
             ],
             [
               "${PYTHON}",
@@ -212,15 +207,10 @@
               "template"
             ],
             [
-              "${PYTHON}",
-              "-m",
-              "unittest",
-              "discover",
-              "-s",
-              "scripts/tests",
-              "-p",
-              "test_*.py",
-              "-v"
+              "bash",
+              "-c",
+              "find scripts/tests -maxdepth 1 -name 'test_*.py' -print0 | sort -z | xargs -0 -P \"${PES_CONTROLLER_JOBS:-$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}\" -I{} \"$0\" -B {} -v",
+              "${PYTHON}"
             ],
             [
               "${PYTHON}",
@@ -229,7 +219,7 @@
           ]
         }
       },
-      "rationale": "Program Execution controller validation. Its VALIDATION.md states fresh-process isolation is intentional because several fixtures create and intentionally abandon or fail Git worktrees; therefore this suite is a command_sequence run in fresh processes and is NOT collected by root pytest or run through xdist. The three commands run sequentially from the controller-template directory; execution stops on the first failed command and preserves its exact exit status. PYTHONDONTWRITEBYTECODE=1 is required because validate_controller.py rejects any __pycache__/.pyc under the template as 'compiled Python debris'; without it the unittest-discover step would leave bytecode that the negative-test step's controller validation then fails on (matches the subsystem's own PYTHONDONTWRITEBYTECODE=1 Makefile convention)."
+      "rationale": "Program Execution controller validation. Its VALIDATION.md states fresh-process isolation is intentional because several fixtures create and intentionally abandon or fail Git worktrees; therefore this suite is a command_sequence run in fresh processes and is NOT collected by root pytest or run through xdist. The three commands run sequentially from the controller-template directory; execution stops on the first failed command and preserves its exact exit status. PYTHONDONTWRITEBYTECODE=1 is required because validate_controller.py rejects any __pycache__/.pyc under the template as 'compiled Python debris'; without it the per-file test step would leave bytecode that the negative-test step's controller validation then fails on (matches the subsystem's own PYTHONDONTWRITEBYTECODE=1 Makefile convention). The middle command runs one fresh process per test file concurrently rather than `unittest discover` in a single process: VALIDATION.md prescribes exactly that per-file isolation (fixtures abandon or fail Git worktrees), and discover was both slower (96s -> 27s measured on 4 cores) and weaker isolation than the documented matrix. The same 105 tests run either way; xargs exits non-zero if any file fails. Concurrency is $PES_CONTROLLER_JOBS, else the online CPU count."
     }
   ]
 }
