@@ -4,13 +4,13 @@ overview: "Promote the surviving PLAN_DOCUMENT into a PE+autonomy executable pla
 todos:
   - id: emit-pe-artifacts
     content: Refresh companion PLAN_DOCUMENT JSON and project the missing PE+autonomy .plan.md; validate_plan_document.py + validate_plan_kernel_receipt.py PASS
-    status: pending
+    status: completed
   - id: scope-pr-self-check
     content: "Split governance-self-check: pull_request uses --changed-file (plus --pe-manifest only when PE sources listed); push to main keeps --force --pe-manifest"
-    status: pending
+    status: in_progress
   - id: keep-parent-ref
     content: stack_safe_merge.py skips DELETE / omits --delete-branch when selection.children is nonempty; extend test_stack_safe_merge.py
-    status: pending
+    status: in_progress
   - id: janitor-main-generated
     content: Add --force --pe-manifest step to lint-autofix.yml; reuse existing create-pull-request path; never push to main
     status: pending
@@ -24,22 +24,6 @@ todos:
     content: Scoped self-check fixture + parent-ref test; make pr-check on the new-branch worktree; no merge from this path
     status: pending
 isProject: false
-kernel_pass:
-  bound_path: stop_generated_collisions_b4203c61.plan.md
-  improve:
-    kernel: kernels/Improve.md
-    ran_at: 2026-08-28T23:03:00Z
-    body_sha256: "d7e191b87f633d11920235a650a3426ac61605721146b7dbdbce40434c8216f3"
-    deltas:
-      - "Keep pull_request self-check scoped to changed sources; full snapshot stays on main."
-      - "stack_safe_merge must not delete a parent ref a child still uses."
-  validate_repair:
-    kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-28T23:03:30Z
-    body_sha256: "d7e191b87f633d11920235a650a3426ac61605721146b7dbdbce40434c8216f3"
-    deltas:
-      - "Todos stay pending; this stamp does not execute the PE campaign."
-      - "Do not rewrite session_start_block or whole run_pr_gate.sh from this path."
 ---
 
 # Stop generated snapshot collisions (PE+autonomy)
