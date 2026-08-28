@@ -1,0 +1,88 @@
+{
+  "schema_version": "1.1.0",
+  "request": {
+    "request_id": "fixture-1",
+    "donor": "repo-A",
+    "beneficiary": "repo-B",
+    "harvest_target": "validation gates",
+    "access_mode": "read-only",
+    "depth": "standard",
+    "secrets_policy": "redact",
+    "language": "as-donor",
+    "brief": true
+  },
+  "source_identity": {
+    "kind": "repository"
+  },
+  "inventory": [],
+  "system": {
+    "identity": "fixture donor system",
+    "workflows": [],
+    "control_flow": [],
+    "ownership_boundaries": [],
+    "dependencies": [],
+    "must_not_own": []
+  },
+  "surfaces": [],
+  "drift": [],
+  "evidence": [
+    {
+      "id": "e1",
+      "epistemic": "CONFIRMED",
+      "source": "repo-A",
+      "locator": {
+        "kind": "symbol",
+        "value": "validate()"
+      },
+      "claim": "A deterministic validation gate exists.",
+      "secret_redacted": false
+    }
+  ],
+  "concepts": [
+    {
+      "id": "n1",
+      "name": "Deterministic validation gate",
+      "problem": "Prevent invalid outputs",
+      "description": "Validate before handoff",
+      "disposition": "PORT",
+      "beneficiary_destination": "validation layer",
+      "evidence_ids": [
+        "e1"
+      ],
+      "risks": [
+        "schema mismatch"
+      ],
+      "acceptance_tests": [
+        {
+          "given": "invalid output",
+          "when": "validation runs",
+          "then": "handoff is blocked",
+          "must_not": "silently pass"
+        }
+      ],
+      "nugget": false,
+      "leverage": 5,
+      "compounding": 5,
+      "rank_score": null,
+      "semantic_contract": "Reject invalid output before handoff regardless of donor implementation.",
+      "portability": {
+        "donor_identity_independent": true,
+        "donor_execution_authority_independent": true,
+        "donor_infrastructure_independent": true,
+        "incidental_implementation_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null
+      },
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "existing_owner": "repo-B validation layer",
+        "merge_decision": "adopt semantic validation contract without donor implementation",
+        "compatibility_risk": "schema mismatch"
+      }
+    }
+  ],
+  "safety": [],
+  "unknowns": [],
+  "highest_leverage_nugget": null,
+  "status": "PASS"
+}

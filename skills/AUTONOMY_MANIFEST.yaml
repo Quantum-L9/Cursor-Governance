@@ -120,6 +120,12 @@ tiers:
     reason: auto-registered by sync_generated_artifacts (orphan → explicit_only)
   - skill: l9-repo-sync
     reason: in-place /ff catch-up mutates a named clone (park unique work, then reset --keep); explicit only, hint_allowed for Read/attach
+  - skill: l9-claude-coding-contract-compiler
+    reason: compiles scoped coding-contract chains that hardwire git workflow, commit cadence, and a terminal make pr delivery; its broad "coding contract" surface would hijack ordinary planning routing if auto-invoked; disable-model-invocation
+  - skill: l9-intelligence-harvest
+    reason: donor-to-beneficiary semantic mining is a deliberate operation with a large read surface over a foreign repo; keeps the harvest family (l9-harvest-pipeline, l9-pe-nuggets) explicit; disable-model-invocation
+  - skill: l9-pipeline-orchestrator
+    reason: drives fresh sessions per contract, applies GitHub branch protection, and gates auto-merge with no human tap — high blast radius; merge authority still comes from /l9-pr-remediation, never from this pack; disable-model-invocation
   - skill: l9-global-architect
     reason: experimental GAR runtime bootloader whose broad architect-engineer description would hijack ordinary routing if auto-invoked; load only when the user explicitly invokes the global architect runtime or iterates on the pack; disable-model-invocation
   do_not_migrate_to_skills:

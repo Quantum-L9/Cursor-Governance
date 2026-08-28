@@ -1,0 +1,11 @@
+# .github/CODEOWNERS — makes the code-review agent a REQUIRED approver.
+# With branch protection require_code_owner_reviews:true + required_approving_review_count:1,
+# the agent's approval is required and NO human approval is needed.
+#
+# Replace the login/app-slug with your actual review agent (must equal review_agent_owner in
+# branch_protection.example.yaml). App bots are referenced by their [bot] login.
+
+*   @coderabbitai
+# or, e.g.:
+# *   @qodo-merge-pro
+# *   @your-claude-review-app

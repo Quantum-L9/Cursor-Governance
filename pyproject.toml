@@ -102,6 +102,12 @@ select = ["E", "F", "I", "UP"]
 "skills/l9-repository-renovation/scripts/**" = ["E501"]
 "skills/l9-plan/scripts/**" = ["E501"]
 "skills/l9-structured-reasoning/scripts/**" = ["E501"]
+# Contract-compiler, harvest, and orchestrator scripts emit contract/evidence
+# prose and operator messages as literal strings; wrapping them corrupts the
+# emitted artifact. Same rationale as the skill packs above — F/I/UP stay on.
+"skills/l9-claude-coding-contract-compiler/scripts/**" = ["E501"]
+"skills/l9-intelligence-harvest/scripts/**" = ["E501"]
+"skills/l9-pipeline-orchestrator/*.py" = ["E501"]
 # subagent-generated-data runtime/adapters/tests bootstrap sys.path before
 # importing sibling modules (the packages are not installed), so imports
 # legitimately follow executable statements — E402 is expected here.

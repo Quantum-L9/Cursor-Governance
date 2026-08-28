@@ -1,0 +1,174 @@
+# L9META
+# parent: l9-claude-coding-contract-compiler
+# layer: intelligence
+# role: skill_intelligence_report
+# version: 2.7.0
+# updated: 2026-08-27
+# source: compiled by l9-skill-compiler v3.3.0 (Gate E); provenance in PROVENANCE_MAP.yaml
+# /L9META
+# skill_intelligence_report.yaml — l9-claude-coding-contract-compiler
+# Compiled by l9-skill-compiler v3.3.0 (smart/exemplary mode). Gate E artifact.
+skill_intelligence_report:
+  skill: "l9-claude-coding-contract-compiler"
+  skill_version: "2.7.0"
+  compiled_by: "l9-skill-compiler v3.3.0"
+
+  activation_model:
+    strong_signals:
+      - "author/revise/harden/validate a coding or PR contract for Claude Code execution"
+      - "a change will be built by Claude Code and needs enforceable, bounded scope"
+      - "a multi-PR campaign needs an ordered, resumable sub-contract chain"
+      - "compile a supplied campaign spec or nuclear contracts into instances"
+      - "validate seams / chain / digest of existing contracts"
+    weak_signals:
+      - "mentions scope creep, drift, or a runaway agent diff"
+      - "asks how to make an agent build safely"
+    reject_signals:
+      - "no target repo"
+      - "freeform unbounded refactor with no scope boundary"
+      - "wants code written directly, no contract"
+      - "executor is not Claude Code (use perplexity sibling)"
+      - "request is direct push/merge/publish outside the compiler's terminal make-pr protocol"
+    false_positive_risks:
+      - "generic 'write me a spec' with no repo or executor — reject_signal catches it"
+      - "confusion with the perplexity sibling — executor check disambiguates"
+    specificity_score: 5          # measured: 5 concrete strong signals, each naming a distinct compile/validate intent
+    false_positive_risk_score: 1  # measured: 5 reject signals cover every observed false-trigger path
+    pass_thresholds:
+      specificity_score: ">=4"
+      false_positive_risk_score: "<=1"
+      reject_signals_present: true
+
+  authority_model:
+    order:
+      - "resume-from precondition (cold session may be true)"
+      - "prerequisite contract state"
+      - "scope lock"
+      - "fail-closed evaluator + DPK red lines"
+      - "permission-mapped halt boundary"
+      - "commit plan"
+      - "validation report"
+      - "definition of done"
+    dpk_overlay: "For DPK-managed repos the AGENTS.md cascade (security > task-contract > architecture > interfaces > ADRs > tests) supersedes the contract-internal order."
+
+  expert_heuristics:
+    - condition: "the mandate's diff + tests + evidence will not fit one focused session"
+      judgment: "the context window will degrade mid-run and resume cold"
+      action: "emit an ordered sub-contract chain; never compress scope to force one fit"
+    - condition: "a forbidden item names a concrete existing file"
+      judgment: "it is a preservation guarantee, not a capability ban"
+      action: "route it to preserved_files (behavior_unchanged), not hard_out_of_scope"
+    - condition: "a determinism-critical value is needed (hash, seam, id, plan digest)"
+      judgment: "the model is a weak deterministic function"
+      action: "compute it in a bundled script the agent invokes, never by reasoning"
+    - condition: "verify_proof is written as prose or is used as the current contract's own preflight"
+      judgment: "verify_proof is completion evidence for this item; the next cold session re-runs only that predecessor proof, not its repository-wide commit gate"
+      action: "require a runnable command; gate the current commit with it and re-run it only from the next contract preflight"
+    - condition: "the repo carries a DPK .ai/manifest"
+      judgment: "manifest ownership is the outer bound of scope"
+      action: "enforce in_scope ⊆ owns and inject does_not_own into hard_out_of_scope"
+    - condition: "each contract validates green individually"
+      judgment: "green parts can still compose a broken chain"
+      action: "run validate_chain over the whole chain before declaring converged"
+    - condition: "the chain reaches its terminal contract"
+      judgment: "remote delivery is permitted exactly once through the repository's make pr wrapper"
+      action: "keep direct git push/gh pr create denied; authorize only terminal command make pr"
+
+  doctrine:
+    - "Claude decides WHAT; scripts decide the HASH — emit via compile_contract.py, never hand-type sections."
+    - "One campaign spec is the single ingress; instances/CLAUDE.md/settings/preflight are derived outputs."
+    - "Halt boundaries are denied tools, never prose; DRY_RUN maps to plan mode."
+    - "Decompose, never compress oversized mandates."
+    - "One checkpointed local commit per contract survives cold resume; contract N+1 re-proves N."
+    - "Internal seam tokens are bare '<id> committed_and_validated'; predecessor HEAD proof plus only the predecessor dedicated completion proof go to verify_before_starting."
+    - "promotion_ready stays false; approval is a permission prompt, not a flag."
+    - "in_scope ⊆ owns; hard_out_of_scope ⊇ does_not_own."
+    - "Never fabricate DPK readiness."
+    - "Fail closed on any missing/malformed/mismatched/unknown result."
+
+  invariants:
+    - "exactly 30 sections (0–29)"
+    - "denied_tools >= 5"
+    - "if_assumption_false is a known HALT code"
+    - "internal handoff green tokens end with ' committed_and_validated'"
+    - "chain_digest = sha256(ordered contract-id list)"
+    - "exactly one source_commit ordinal per contract; ordinals are contiguous 1..N"
+    - "one repo + one shared branch per chain; exactly one terminal make pr authority"
+    - "promotion_ready false; agent_self_approval_forbidden true"
+    - "dpk operational_owner + rollback_target present"
+    - "every in_scope path matches an owns glob"
+
+  adapter_map:
+    core_default: "domain-agnostic contract skeleton (repo-neutral, no live writes)"
+    adapters:
+      - name: "dpk_managed_repo"
+        when: "repo carries .ai/manifest.yaml"
+        behavior_change: "adopt manifest ownership as scope bound + AGENTS.md authority cascade"
+      - name: "oversized_mandate"
+        when: "sizing exceeds plan_decomposition thresholds"
+        behavior_change: "decompose into ordered Bn sub-contracts; fail closed with DECOMPOSE_REQUIRED"
+      - name: "ai_feature_repo"
+        when: "has_ai_feature is true"
+        behavior_change: "require evaluation_suite or DPK readiness forced to zero"
+    adapter_rule: "create only when domain law materially changes decision rules"
+
+  failure_modes:
+    - mode: "hand-wired seams drift (HANDOFF_SEAM_MISMATCH)"
+      prevention_rule: "derive seam tokens in compile_contract.py from item order"
+    - mode: "hand-computed digest wrong (CHAIN_DIGEST_MISMATCH)"
+      prevention_rule: "import compute_chain_digest; never re-derive by reasoning"
+    - mode: "fabricated readiness score"
+      prevention_rule: "require real readiness.categories; red-line on blank owner/rollback"
+    - mode: "implicit ecosystem validation or unbounded remote delivery"
+      prevention_rule: "require campaign.validation; keep direct remote commands denied; terminal make pr only"
+    - mode: "shipping 'converged' on per-contract green only"
+      prevention_rule: "run validate_chain over the whole chain before promotion"
+
+  leverage_points:
+    - point: "single-ingress spec: edit one YAML, regenerate the whole validated chain"
+      scores: {future_action_acceleration: 5, output_quality_gain: 4, drift_reduction: 5, reuse_across_tasks: 5, implementation_simplicity: 3}
+      total: 22
+    - point: "determinism-in-scripts removes the model from the emit failure path"
+      scores: {future_action_acceleration: 5, output_quality_gain: 5, drift_reduction: 5, reuse_across_tasks: 4, implementation_simplicity: 3}
+      total: 22
+    - point: "fail-closed self-gate blocks broken packs at emit time"
+      scores: {future_action_acceleration: 4, output_quality_gain: 5, drift_reduction: 5, reuse_across_tasks: 4, implementation_simplicity: 4}
+      total: 22
+
+  leverage_model:
+    exemplary_threshold: "at least one leverage point scores >=18/25"
+    threshold_met: true
+
+  evidence_hierarchy:
+    - "confirmed_by_test (validate_contract.py / validate_chain.py exit 0)"
+    - "confirmed_by_file (schema + reference contents)"
+    - "inferred_from_multiple_artifacts"
+    - "user_stated"
+    - "unknown → fail closed"
+
+  self_improvement_hook:
+    capture_only_when_user_reports_bad_run_or_requests_iteration: true
+    capture:
+      - missed_trigger
+      - false_trigger
+      - recurring_user_correction
+      - output_that_required_manual_rework
+
+  exemplary_gate_results:
+    activation_precision: {status: pass, evidence: "5 strong + 5 reject signals; specificity 5, fp-risk 1"}
+    adapter_architecture: {status: pass, evidence: "3 adapters, each gated on a real domain law; core stays domain-agnostic"}
+    evidence_hierarchy: {status: pass, evidence: "test > file > inferred > stated > unknown, fail-closed"}
+    doctrine_extraction: {status: pass, evidence: "10 behavior-changing rules, not summaries"}
+    expert_heuristics: {status: pass, evidence: "7 condition→judgment→action heuristics"}
+    failure_modes: {status: pass, evidence: "5 modes each with a prevention rule tied to a validator"}
+    leverage_model: {status: pass, evidence: "3 leverage points, each 22/25 (>=18 threshold met)"}
+    self_improvement_hook: {status: pass, evidence: "after-use capture hook defined in SKILL.md"}
+    compiler_enforcement_gates: {status: pass, evidence: "references/enforcement-gates.md present and linked"}
+    skill_intelligence_report: {status: pass, evidence: "this document; all required fields present"}
+
+  tier_decision:
+    tier: exemplary
+    validator: "scripts/validate_exemplary_skill.py (l9-skill-compiler)"
+    rationale: "All 10 exemplary gates pass; intelligence extracted (not summarized); activation scores measured; leverage >=18/25."
+    caveats:
+      - "l9-wire-skill-into-repo is not available in this environment; repo-registry wiring (Gate F) is not_applicable, not fabricated."

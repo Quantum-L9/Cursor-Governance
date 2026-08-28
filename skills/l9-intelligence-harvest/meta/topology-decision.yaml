@@ -1,0 +1,9 @@
+decision: CREATE_NEW
+decided_by: bounded_llm
+evidence:
+  - no existing skill owns donor-to-beneficiary semantic transfer
+  - evidence-review-engine overlaps evidence-backed inspection but not transfer disposition and beneficiary-fit ownership
+  - l9-skill-compiler owns compilation, not donor mining runtime
+sibling_boundary:
+  evidence-review-engine: generic artifact review, audit, scoring, hardening
+  l9-intelligence-harvest: donor-to-beneficiary semantic transfer mining and disposition

@@ -1,0 +1,85 @@
+# L9META
+# parent: l9-claude-coding-contract-compiler
+# layer: provenance
+# role: provenance_map
+# version: 2.7.0
+# updated: 2026-08-27
+# /L9META
+
+provenance_map:
+  flow: "repository evidence -> campaign_spec -> emitter -> contract instances -> validators -> Claude artifacts"
+
+  canonical_ingress:
+    path: "campaign-spec.yaml"
+    governed_by:
+      schema: "schemas/campaign-spec.schema.json"
+      rules: "references/canonical-spec.md"
+    authored_facts:
+      - "target_repo"
+      - "target_branch (shared campaign branch)"
+      - "campaign.validation.cold_resume.commands"
+      - "campaign.validation.commit_gate.commands"
+      - "ordered item scopes"
+      - "items[].verify_proof (current-item completion proof)"
+      - "items[].sizing.commits = 1"
+      - "DPK manifest/readiness evidence"
+
+  emitter:
+    path: "scripts/compile_contract.py"
+    derives:
+      - "contract_id = <id_prefix>-PR-<key>-v<contract_version>"
+      - "executable target-branch equality assertion"
+      - "internal seam token '<id> committed_and_validated'"
+      - "internal prerequisite required_state committed_and_validated"
+      - "one source_commit ordinal per contract"
+      - "commit_subject = contract_id"
+      - "commit_command = git commit -m <contract_id>"
+      - "contract N+1 predecessor HEAD assertion"
+      - "contract N+1 predecessor completion proof from N.git_workflow.completion_proof"
+      - "terminal_delivery authorized only on final contract with command make pr"
+      - "handoff.chain_digest from validate_chain.compute_chain_digest"
+      - "scope_lock from allowed/forbidden inputs"
+      - "DPK readiness block"
+    forbidden_inference:
+      - "language"
+      - "package manager"
+      - "dependency bootstrap command"
+      - "test runner"
+      - "validation command"
+      - "ecosystem fallback"
+
+  validation_projection:
+    cold_resume:
+      source: "campaign.validation.cold_resume.commands"
+      output: "contract.resume_from.verify_before_starting"
+      surrounding_compiler_checks:
+        - "branch equality"
+        - "previous HEAD subject for contract 2+"
+        - "previous required-before-commit gate for contract 2+"
+    commit_gate:
+      source: "campaign.validation.commit_gate.commands + current items[].verify_proof"
+      output: "contract.commit_gate.required_before_commit"
+
+  outputs:
+    contracts: "<out>/PR-*.contract.json"
+    artifacts:
+      - "<out>/artifacts/PR-*/<contract-id>/.claude/settings.json"
+      - "<out>/artifacts/PR-*/<contract-id>/CLAUDE.md"
+      - "<out>/artifacts/PR-*/<contract-id>/preflight.sh"
+
+  gates:
+    per_instance:
+      script: "scripts/validate_contract.py"
+      proves: "schema + Claude-fit + DPK + git-workflow invariants"
+    chain:
+      script: "scripts/validate_chain.py"
+      proves: "same repo/branch, exact seams, predecessor proof reachability, one commit per contract, stable digest, one terminal make pr"
+    regression:
+      script: "scripts/test_target_validation.py"
+      proves: "Node explicit npm, Python/Go neutrality, fail-closed negatives, real Git preflight, determinism, terminal delivery"
+
+  invariants:
+    - "campaign spec is the only hand-authored compile ingress; generated instances are never hand-edited"
+    - "validation commands are explicit target facts, never compiler ecosystem guesses"
+    - "regenerating unchanged input produces byte-identical contract JSON and the same chain digest"
+    - "all local contract commits accumulate on one branch; no push occurs before terminal make pr"

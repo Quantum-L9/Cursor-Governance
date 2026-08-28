@@ -81,3 +81,21 @@ def test_empty_paths_fails(tmp_path: Path) -> None:
     )
     errs, _warns, _live, _arch, _disc = check_skills(tmp_path)
     assert any("empty `paths`" in e for e in errs)
+
+
+def test_pack_test_fixtures_are_not_live_skills(tmp_path: Path) -> None:
+    desc = "demo skill used only in unit tests. use when checking the discovery gate."
+    _write_skill(tmp_path, "l9-demo", f"name: l9-demo\ndescription: {desc}\n")
+
+    fixture = tmp_path / "skills" / "l9-demo" / "tests" / "fixtures" / "repo" / "skills" / "l9-fake"
+    fixture.mkdir(parents=True)
+    (fixture / "SKILL.md").write_text(
+        "---\nname: l9-fake\ndescription: fixture pack.\n---\n\n# l9-fake\n",
+        encoding="utf-8",
+    )
+
+    errs, warns, live, _arch, disc = check_skills(tmp_path)
+    assert errs == []
+    assert live == 1
+    assert disc == len(b"l9-demo") + len(desc.encode())
+    assert not any("l9-fake" in w for w in warns)
