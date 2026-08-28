@@ -802,4 +802,6 @@ claude-readiness:
 # Ceremony phase 2 — early overlap on `make pr` only. Inherited by the
 # `pr-check` prerequisite when the user typed `make pr`. Direct
 # `make pr-check` / Diagnose leaves PR_EARLY_OVERLAP unset.
-pr: PR_EARLY_OVERLAP = 1
+# GNU Make 3.81 does not put an unexported target-specific var in the
+# recipe environment; export so run_pr_gate.sh sees it.
+pr: export PR_EARLY_OVERLAP = 1

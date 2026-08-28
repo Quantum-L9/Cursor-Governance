@@ -497,7 +497,7 @@ def test_early_overlap_is_pr_goal_only() -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
     gate = (ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text(encoding="utf-8")
     open_pr = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
-    assert "pr: PR_EARLY_OVERLAP = 1" in makefile
+    assert "pr: export PR_EARLY_OVERLAP = 1" in makefile
     pr_check = makefile.split("pr-check:", 1)[1].split("\n\n", 1)[0]
     assert "PR_EARLY_OVERLAP" not in pr_check
     assert "PR_EARLY_OVERLAP:-0" in gate
