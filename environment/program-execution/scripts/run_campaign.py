@@ -3122,6 +3122,7 @@ def _finish_peer_unit(
         unit["rel"],
         unit["title"],
         writable=writable,
+        commit_authorized=contract_allows_commit(contract),
     )
     emit(
         trace,
@@ -3308,10 +3309,32 @@ def run_worker_handoff(
     return outcome.to_dict()
 
 
+def contract_allows_commit(contract: dict[str, Any]) -> bool:
+    """Does this rendered contract actually carry commit authority?"""
+    return "commit" in {str(item) for item in (contract.get("requested_actions") or [])}
+
+
 def write_and_commit_output(
-    worktree: Path, rel: str, title: str, writable: list[str] | None = None
+    worktree: Path,
+    rel: str,
+    title: str,
+    writable: list[str] | None = None,
+    *,
+    commit_authorized: bool,
 ) -> str:
-    """Commit every declared writable file that holds real work, not one stub."""
+    """Commit every declared writable file that holds real work, not one stub.
+
+    The commit boundary is where PE's terminal effect happens, so authority is
+    checked here rather than at each caller: a task whose rendered contract does
+    not request `commit` never reaches `git add`. `local_write` is not commit
+    authority and never implies it.
+    """
+    if not commit_authorized:
+        raise CampaignError(
+            f"refusing to commit {rel}: the rendered contract does not request the 'commit' "
+            "action. Local write authority is not commit authority -- the task's "
+            "authorization ceiling must permit commit for its work to be committed"
+        )
     declared = list(dict.fromkeys([*(writable or []), rel]))
     to_add = [item for item in declared if item and not is_stub_output(worktree / item, title)]
     if not to_add:
@@ -3553,7 +3576,13 @@ def _default_execute_legacy(
             writable: list[str] = writable,
         ) -> str:
             if hooks.write_task_output is None:
-                return write_and_commit_output(worktree, rel, title, writable=writable)
+                return write_and_commit_output(
+                    worktree,
+                    rel,
+                    title,
+                    writable=writable,
+                    commit_authorized=contract_allows_commit(contract),
+                )
             return writer(worktree, rel, title)
 
         attempt_number: int | None = None

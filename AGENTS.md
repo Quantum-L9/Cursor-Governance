@@ -812,6 +812,16 @@ Agents **must** scoped-commit work they authored this session without asking.
 Ask only before push / `make pr` / other remote mutation. Rule:
 `rules/99-no-auto-commit.mdc`.
 
+<!-- L9_CURSOR_COMMIT_BEFORE_STOP_V1 -->
+## Commit before you stop (2026-08-27)
+
+`99-no-auto-commit.mdc` is **always on**. The filename means **do not auto-push**,
+not leave the tree dirty. After each authored chunk, scoped-commit on **this**
+branch (pathspecs; rule 49). Before you tell the user coding work is done,
+`git status` must show **no unique dirty files you authored**. Asking “should I
+commit?” is a rule failure. Cursor User Rules that say “only commit when asked”
+are overruled here for authored work. Push / `make pr` stay ask-first.
+
 <!-- L9_AUDIT_PLANS_V1 -->
 ## Plans-store audit slash (2026-08-23)
 

@@ -29,13 +29,22 @@ def _grant():
     return load_module(_HERE / "grant.py", "pes_test_autonomy_grant")
 
 
+def _write_only_contract() -> dict[str, object]:
+    """Mutation without commit: the shape that used to receive commit anyway."""
+    contract = _mutating_contract()
+    contract["requested_actions"] = ["inspect", "local_write"]
+    contract["task_id"] = "TASK-2"
+    contract["contract_digest"] = "digest-write-only"
+    return contract
+
+
 def _mutating_contract() -> dict[str, object]:
     return {
         "program_id": "Program A",
         "task_id": "TASK-1",
         "objective": "Edit the declared path",
         "base_sha": "a" * 40,
-        "requested_actions": ["inspect", "local_write"],
+        "requested_actions": ["inspect", "local_write", "commit"],
         "writable_paths": ["docs/result.txt"],
         "contract_digest": "digest-1",
         "program_digest": "program-digest-1",
@@ -83,6 +92,29 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
         self.assertIn("commit_local", campaign.scope["allowed_operations"])
         self.assertIn("merge", campaign.scope["forbidden_operations"])
         self.assertNotIn("push_non_force_declared_branch", campaign.scope["allowed_operations"])
+
+    def test_local_write_without_commit_does_not_allow_commit_local(self) -> None:
+        """`mutation` is not one permission: commit is never inferred from write."""
+        campaign = _mapper().map_program_contract(
+            _write_only_contract(),
+            adapter_id="cursor-foreground",
+            attempt_number=1,
+        )["campaign"]
+        allowed = campaign["scope"]["allowed_operations"]
+        self.assertIn("edit_scoped", allowed)
+        self.assertNotIn("commit_local", allowed)
+
+    def test_local_write_without_commit_grant_withholds_commit_capability(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            grant = _grant().grant_task_mutation(
+                _GOV_ROOT,
+                Path(raw),
+                _write_only_contract(),
+                attempt_number=1,
+            )
+            self.assertTrue(grant["mutation"])
+            self.assertEqual(grant["authorized"], ["repository.write_scoped"])
+            self.assertNotIn("git.commit_local", grant["authorized"])
 
     def test_inspect_only_grant_does_not_authorize_write(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

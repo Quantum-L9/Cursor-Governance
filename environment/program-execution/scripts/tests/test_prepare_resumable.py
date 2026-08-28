@@ -210,7 +210,7 @@ class ScopedInvalidationTests(PrepareFixture):
         doc = yaml.safe_load(entry.read_text(encoding="utf-8"))
         for task in doc["tasks"]:
             if task["id"] == task_id:
-                task["validation"] = [{"command": "python3 -c 'print(2)'"}]
+                task["validation"] = [{"command": "git status --porcelain"}]
         _dump(entry, doc)
 
     def _prepare_across_an_edit(self, tmp: Path, task_id: str) -> tuple[Path, Path]:
@@ -241,7 +241,7 @@ class ScopedInvalidationTests(PrepareFixture):
                 )
             )
             edited = next(task for task in lock["tasks"] if task["id"] == "TASK-002")
-            self.assertEqual(edited["required_validation_commands"], ["python3 -c 'print(2)'"])
+            self.assertEqual(edited["required_validation_commands"], ["git status --porcelain"])
 
     def test_a_change_outside_the_tasks_still_rebuilds_the_runtime(self) -> None:
         """The safety half: task-scoped adoption must not absorb a new program."""

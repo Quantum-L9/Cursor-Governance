@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import tempfile
 from collections.abc import Mapping
 from pathlib import Path
@@ -27,6 +28,20 @@ log = structlog.get_logger("peer_execution")
 
 _TERMINAL_PROVIDER_STATUSES = {"PASS", "FAIL", "BLOCKED", "CANCELLED"}
 _CLAIMED_STATUSES = {"completed", "failed", "blocked", "stopped"}
+#: Actions Program Execution performs at its own boundary instead of delegating.
+#: A Rendered Contract's `requested_actions` states the *task's* authority; the
+#: provider is asked only for the part of it the worker actually carries out.
+#: The worker mutates the worktree and PE stages and commits exactly the work
+#: the Controller verified, so `commit` is never a provider capability -- every
+#: adapter descriptor and every provider probe declares inspect / local_write /
+#: artifact_production and none declares commit. Declaring it there would assert
+#: a capability that does not exist and widen what the worker may do.
+PE_RETAINED_ACTIONS = frozenset({"commit"})
+
+
+def delegated_actions(requested: tuple[str, ...] | list[str]) -> tuple[str, ...]:
+    """The subset of a contract's actions the provider is actually asked for."""
+    return tuple(action for action in requested if action not in PE_RETAINED_ACTIONS)
 
 
 def _required_string(name: str, value: object) -> str:
@@ -37,6 +52,8 @@ def _required_string(name: str, value: object) -> str:
 
 def _string_list(payload: Mapping[str, Any], key: str, *, required: bool) -> list[str]:
     value = payload.get(key)
+    if isinstance(value, str) and value.strip():
+        value = [value.strip()]
     if value is None and not required:
         return []
     if not isinstance(value, list):
@@ -47,6 +64,44 @@ def _string_list(payload: Mapping[str, Any], key: str, *, required: bool) -> lis
     if len(set(output)) != len(output):
         raise ValueError(f"provider payload {key} must contain unique values")
     return output
+
+
+def _observe_worktree_changes(contract: Mapping[str, Any]) -> list[str]:
+    worktree = contract.get("worktree")
+    if not isinstance(worktree, str) or not worktree.strip():
+        return []
+    root = Path(worktree).expanduser()
+    if not root.is_dir():
+        return []
+    completed = subprocess.run(
+        ["git", "-C", str(root), "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    if completed.returncode != 0:
+        return []
+    # NUL-delimited, parsed exactly as pec/controller.py::_changed_paths does.
+    # Without -z git quotes any path containing a space, and the quotes end up
+    # in the recorded filename, so verification against the controller's
+    # NUL-parsed set fails changed_files_exact on an otherwise valid attempt.
+    paths: set[str] = set()
+    parts = completed.stdout.split("\0")
+    index = 0
+    while index < len(parts):
+        entry = parts[index]
+        if not entry:
+            index += 1
+            continue
+        status_code = entry[:2]
+        path = entry[3:]
+        if status_code[0] in {"R", "C"} and index + 1 < len(parts):
+            index += 1
+            path = parts[index]
+        if path:
+            paths.add(path.replace("\\", "/"))
+        index += 1
+    return sorted(paths)
 
 
 def _mapping_list(
@@ -146,7 +201,8 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         expected = contract.get("program_lock_digest") or contract.get("program_digest")
         binding = validate_contract(contract, expected_program_lock_digest=expected)
         probe = self._require_fresh_probe(binding.program_lock_digest)
-        unsupported = sorted(set(binding.requested_actions) - set(probe.capabilities))
+        delegated = delegated_actions(binding.requested_actions)
+        unsupported = sorted(set(delegated) - set(probe.capabilities))
         if unsupported:
             raise AdapterFailure(
                 CanonicalErrorCode.CAPABILITY_UNSUPPORTED,
@@ -158,11 +214,9 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
                 "permission_profile_ref",
                 self.execution_profile.get("permission_profile_ref"),
             ),
-            binding.requested_actions,
+            delegated,
         )
-        denied = sorted(
-            set(binding.requested_actions) - set(permission_profile.get("allowed_actions") or [])
-        )
+        denied = sorted(set(delegated) - set(permission_profile.get("allowed_actions") or []))
         if denied:
             raise AdapterFailure(
                 CanonicalErrorCode.AUTHORIZATION_INFLATION,
@@ -195,7 +249,7 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
                 "permission_profile_ref",
                 profile.get("permission_profile_ref"),
             ),
-            binding.requested_actions,
+            delegated_actions(binding.requested_actions),
         )
         return CanonicalExecutionRequest(
             execution_id=dispatch_id,
@@ -219,7 +273,7 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             permission_profile=permission_profile,
             inference_budget=dict(profile.get("inference_budget") or {}),
             timeout_budget=dict(profile.get("timeout_budget") or {}),
-            requested_capabilities=tuple(binding.requested_actions),
+            requested_capabilities=delegated_actions(binding.requested_actions),
             telemetry_context={
                 "provider_ref": self.adapter_id,
                 "execution_profile_ref": profile["profile_ref"],
@@ -272,7 +326,7 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         for key, expected_value in expected.items():
             if getattr(request, key) != expected_value:
                 raise ValueError(f"canonical execution request {key} drift")
-        if request.requested_capabilities != binding.requested_actions:
+        if request.requested_capabilities != delegated_actions(binding.requested_actions):
             raise ValueError("canonical execution request requested_capabilities drift")
         if dict(request.inference_budget) != dict(
             self.execution_profile.get("inference_budget") or {}
@@ -297,7 +351,7 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             raise ValueError("canonical execution request worker_instruction drift")
         expected_permission = resolve_permission_profile(
             request.permission_profile_ref,
-            binding.requested_actions,
+            delegated_actions(binding.requested_actions),
         )
         if dict(request.permission_profile) != expected_permission:
             raise ValueError("canonical execution request permission_profile drift")
@@ -343,22 +397,37 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         candidate_sha = payload.get("candidate_sha")
         if candidate_sha is not None and not isinstance(candidate_sha, str):
             raise ValueError("provider payload candidate_sha must be a string or null")
-        required = result.status == "PASS"
+        residuals = _string_list(payload, "residual_unknowns", required=False)
+        raw_changed = payload.get("changed_files")
+        if isinstance(raw_changed, str) and raw_changed.strip():
+            payload["changed_files"] = [raw_changed.strip()]
+            residuals.append("changed_files_coerced_from_string")
+        try:
+            changed_files = _string_list(payload, "changed_files", required=False)
+        except ValueError:
+            changed_files = []
+            residuals.append("changed_files_unusable_shape")
+        if not changed_files:
+            observed = _observe_worktree_changes(contract)
+            if observed:
+                changed_files = observed
+                residuals.append("changed_files_recovered_from_worktree")
+        try:
+            validation_results = _mapping_list(
+                payload,
+                "validation_results",
+                required=False,
+            )
+        except ValueError:
+            validation_results = []
+            residuals.append("validation_results_unusable_shape")
         return attempt_receipt(
             contract,
             candidate_sha=candidate_sha,
-            changed_files=_string_list(payload, "changed_files", required=required),
-            validation_results=_mapping_list(
-                payload,
-                "validation_results",
-                required=required,
-            ),
+            changed_files=changed_files,
+            validation_results=validation_results,
             produced_evidence=[self._provider_evidence(result)],
-            residual_unknowns=_string_list(
-                payload,
-                "residual_unknowns",
-                required=required,
-            ),
+            residual_unknowns=residuals,
             claimed_status=claimed_status,
         )
 
@@ -463,7 +532,24 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             ]
             self.runtime.save(request.execution_id, record)
             raise
-        return self._apply_invocation(record, request, invocation)
+        try:
+            return self._apply_invocation(record, request, invocation)
+        except ValueError as exc:
+            record["status"] = "FAIL"
+            evidence = [dict(item) for item in invocation.evidence]
+            if invocation.result is not None:
+                record["provider_result"] = invocation.result.to_dict()
+                evidence.append(self._provider_evidence(invocation.result))
+            evidence.append(
+                {
+                    "type": "payload_shape_error",
+                    "error_type": type(exc).__name__,
+                    "message": str(exc)[:500],
+                }
+            )
+            record["evidence"] = evidence
+            self.runtime.save(request.execution_id, record)
+            raise
 
     def status(self, dispatch_id: str):
         record = self.runtime.load(dispatch_id)
