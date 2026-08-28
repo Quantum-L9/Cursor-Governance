@@ -24,6 +24,7 @@ from verification_bypass_gate import (  # noqa: E402
     briefing_lines,
     command_bypasses_verification,
     load_contract,
+    verification_status,
 )
 
 CONTRACT = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
@@ -128,3 +129,32 @@ def test_contract_shape_is_validated() -> None:
 def test_briefing_lines_are_non_empty() -> None:
     lines = briefing_lines()
     assert lines and all(line.strip() for line in lines)
+
+
+def test_status_reports_an_unhooked_checkout(tmp_path) -> None:
+    """An absent shim must be reported, not mistaken for a passing hook."""
+    import subprocess
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+    status = verification_status(repo)
+    assert status["armed"] is False
+    assert "no local verification" in status["reason"].lower()
+
+
+def test_status_reports_an_armed_checkout(tmp_path) -> None:
+    import subprocess
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+    shim = repo / ".git" / "hooks" / "pre-commit"
+    shim.parent.mkdir(parents=True, exist_ok=True)
+    shim.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    shim.chmod(0o755)
+    assert verification_status(repo)["armed"] is True
+
+
+def test_status_on_a_non_repository_is_not_a_crash(tmp_path) -> None:
+    assert verification_status(tmp_path)["armed"] is False

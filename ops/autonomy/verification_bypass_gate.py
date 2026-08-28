@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 from collections.abc import Mapping, Sequence
 from functools import lru_cache
@@ -331,6 +332,80 @@ def command_bypasses_verification(
     return None
 
 
+def verification_status(root: Path | None = None) -> dict[str, Any]:
+    """Whether local verification is actually armed in this checkout.
+
+    The bypass gate answers "did the agent try to skip the hooks?". It cannot
+    answer "were there hooks?" — and an absent hook shim produces the same
+    clean commit as a passing one. A cloud session's ephemeral clone typically
+    has no hooks installed at all, so an agent that treats a green commit as
+    evidence of local verification is wrong in exactly the way this whole plane
+    exists to prevent.
+
+    Deliberately a report, never a denial. Denying every commit in every
+    unhooked checkout would break legitimate sessions whose verification is CI,
+    and a gate that blocks ordinary work is a gate someone turns off.
+    """
+    base = Path(root) if root else Path.cwd()
+    try:
+        common = subprocess.run(
+            ["git", "-C", str(base), "rev-parse", "--git-common-dir"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError) as exc:
+        return {"armed": False, "reason": f"git unavailable ({type(exc).__name__})"}
+    if common.returncode != 0:
+        return {"armed": False, "reason": "not a git work tree"}
+    git_dir = Path(common.stdout.strip())
+    if not git_dir.is_absolute():
+        git_dir = base / git_dir
+
+    configured = subprocess.run(
+        ["git", "-C", str(base), "config", "--get", "core.hooksPath"],
+        capture_output=True,
+        text=True,
+        timeout=10,
+        check=False,
+    )
+    hooks_dir = (
+        Path(configured.stdout.strip())
+        if configured.returncode == 0 and configured.stdout.strip()
+        else git_dir / "hooks"
+    )
+    if not hooks_dir.is_absolute():
+        hooks_dir = base / hooks_dir
+    shim = hooks_dir / "pre-commit"
+    if not shim.is_file():
+        return {
+            "armed": False,
+            "hooks_dir": str(hooks_dir),
+            "reason": (
+                "no pre-commit shim installed — commits in this checkout run NO local "
+                "verification. A clean commit here is not evidence that hooks passed; "
+                "run `pre-commit install`, or treat CI as the only verification and say so."
+            ),
+        }
+    return {"armed": True, "hooks_dir": str(hooks_dir), "shim": str(shim)}
+
+
+def _main() -> int:
+    """`--status` reports whether local verification is armed in this checkout."""
+    if "--status" in sys.argv[1:]:
+        status = verification_status()
+        print(json.dumps(status, indent=2))
+        return 0 if status.get("armed") else 1
+    command = " ".join(sys.argv[1:])
+    reason = command_bypasses_verification(command)
+    if reason:
+        print(reason, file=sys.stderr)
+        return 1
+    print("allowed: no commit-verification bypass detected")
+    return 0
+
+
 __all__ = [
     "CONTRACT_ID",
     "CONTRACT_PATH",
@@ -338,4 +413,9 @@ __all__ = [
     "briefing_lines",
     "command_bypasses_verification",
     "load_contract",
+    "verification_status",
 ]
+
+
+if __name__ == "__main__":
+    raise SystemExit(_main())

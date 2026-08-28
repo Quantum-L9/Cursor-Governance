@@ -9,21 +9,57 @@
   "breakglass": {
     "env": "L9_VERIFY_BYPASS_AUTHORIZED",
     "requires_reason": true,
-    "rejected_reasons": ["1", "0", "y", "yes", "no", "true", "false", "ok", "please"],
+    "rejected_reasons": [
+      "1",
+      "0",
+      "y",
+      "yes",
+      "no",
+      "true",
+      "false",
+      "ok",
+      "please"
+    ],
     "note": "Human/ops only. An agent MUST NOT set this for itself: exporting it inside the same turn that runs the commit is the bypass, one level up."
   },
   "git_value_flags": {
     "$comment": "Flags whose value is a SEPARATE word, so a scanner must skip that word before reading the next flag. Without this, `git commit -m -n` (a message of '-n') reads as a bypass. Flags taking an attached-only optional value (-uno, -S<key>, --cleanup=<mode>) are deliberately absent: they never consume the next word.",
-    "commit": ["-m", "--message", "-c", "--reedit-message", "-C", "--reuse-message", "-F", "--file", "--author", "--date", "--fixup", "--squash", "--trailer", "--pathspec-from-file"],
-    "push": ["--repo", "--receive-pack", "--exec", "-o", "--push-option", "--refspec"]
+    "commit": [
+      "-m",
+      "--message",
+      "-c",
+      "--reedit-message",
+      "-C",
+      "--reuse-message",
+      "-F",
+      "--file",
+      "--author",
+      "--date",
+      "--fixup",
+      "--squash",
+      "--trailer",
+      "--pathspec-from-file"
+    ],
+    "push": [
+      "--repo",
+      "--receive-pack",
+      "--exec",
+      "-o",
+      "--push-option",
+      "--refspec"
+    ]
   },
   "forms": [
     {
       "id": "git-commit-no-verify",
       "detector": "git_flag",
       "subcommand": "commit",
-      "flags": ["--no-verify"],
-      "short_flags": ["n"],
+      "flags": [
+        "--no-verify"
+      ],
+      "short_flags": [
+        "n"
+      ],
       "label": "git commit --no-verify",
       "why": "skips every pre-commit and commit-msg hook for this commit, which is the entire local verification plane"
     },
@@ -31,7 +67,9 @@
       "id": "git-push-no-verify",
       "detector": "git_flag",
       "subcommand": "push",
-      "flags": ["--no-verify"],
+      "flags": [
+        "--no-verify"
+      ],
       "short_flags": [],
       "$comment": "No short form: `git push -n` is --dry-run, which is read-only and must stay allowed.",
       "label": "git push --no-verify",
@@ -40,7 +78,9 @@
     {
       "id": "git-hookspath-override",
       "detector": "git_global_config",
-      "keys": ["core.hookspath"],
+      "keys": [
+        "core.hookspath"
+      ],
       "label": "git -c core.hooksPath=… <command>",
       "why": "repoints the hook directory for this invocation, disabling every hook without naming --no-verify"
     },
@@ -48,15 +88,26 @@
       "id": "git-config-hookspath",
       "detector": "git_subcommand_args",
       "subcommand": "config",
-      "match_args": ["core.hookspath"],
+      "match_args": [
+        "core.hookspath"
+      ],
       "label": "git config core.hooksPath …",
       "why": "durably repoints the hook directory, so every later commit in this clone is unverified"
     },
     {
       "id": "hook-suppressing-env",
       "detector": "env_prefix",
-      "vars": ["SKIP", "HUSKY", "HUSKY_SKIP_HOOKS", "PRE_COMMIT_ALLOW_NO_CONFIG", "NO_VERIFY"],
-      "applies_to_subcommands": ["commit", "push"],
+      "vars": [
+        "SKIP",
+        "HUSKY",
+        "HUSKY_SKIP_HOOKS",
+        "PRE_COMMIT_ALLOW_NO_CONFIG",
+        "NO_VERIFY"
+      ],
+      "applies_to_subcommands": [
+        "commit",
+        "push"
+      ],
       "$comment": "Scoped to a git commit/push segment on purpose. `SKIP=<ids> pre-commit run` is how ops/scripts/run_pr_precommit.sh legitimately narrows the sanctioned gate, and must not be caught here.",
       "label": "hook-suppressing environment variable on a git commit/push",
       "why": "disables hooks through the environment instead of a flag; the commit is just as unverified"
@@ -65,7 +116,9 @@
       "id": "pre-commit-uninstall",
       "detector": "argv",
       "head": "pre-commit",
-      "args": ["uninstall"],
+      "args": [
+        "uninstall"
+      ],
       "label": "pre-commit uninstall",
       "why": "removes the hook shim from the clone, so verification stops for every later commit, not just this one"
     },
@@ -78,6 +131,7 @@
   ],
   "briefing_lines": [
     "`git commit --no-verify` / `-n`, `git push --no-verify`, `core.hooksPath` overrides, hook-suppressing env vars (`SKIP=`, `HUSKY=0`), `pre-commit uninstall`, and edits to `.git/hooks/**` are DENIED at PreToolUse by `ops/autonomy/verification_bypass_gate.py`. Declaration: `ops/config/commit-verification-contract.json`.",
-    "A failing hook is evidence, not an obstacle: repair the narrowest true cause (rule 95), or record it with `session_debt.py`. Do not reach for a bypass when a hook fails — there is no form of it that this gate allows."
+    "A failing hook is evidence, not an obstacle: repair the narrowest true cause (rule 95), or record it with `session_debt.py`. Do not reach for a bypass when a hook fails — there is no form of it that this gate allows.",
+    "A clean commit is not proof the hooks ran: an unhooked checkout commits clean. Check with `python3 ops/autonomy/verification_bypass_gate.py --status` before claiming local verification; `armed: false` means CI is the only gate."
   ]
 }
