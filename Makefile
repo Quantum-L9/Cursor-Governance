@@ -4,6 +4,7 @@
 .PHONY: repo-write-lock-test precommit-hook-contract
 .PHONY: capability-contract-validate capability-check capability-broker-preflight
 .PHONY: broker-serve
+.PHONY: kernel-precommit
 
 # Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
 # (GNU Make matches goals case-sensitively; remap any non-canonical casing to `pr`.)
@@ -69,6 +70,7 @@ help:
 	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
+	@echo "  make kernel-precommit — kernel hook (before precommit-repo hooks/tests; not L4)"
 	@echo "  make campaign INTENT=path — PE activate seed → worktree emit → blueprint → pec → host PR → merge-if-green"
 	@echo "  make campaign-architecture INTENT=arch.md TARGET=owner/repo — long-form architecture → campaign_source → blueprint → PEC"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
@@ -347,6 +349,9 @@ l4-record-kernels:
 
 l4-authorize:
 	$(PYTHON) ops/autonomy/l4_local.py --workspace "$(WS)" authorize-release
+
+kernel-precommit:
+	$(PYTHON) ops/autonomy/kernel_gate.py precommit --workspace "$(WS)"
 
 # PUBLIC: kernel revision phase. Composes l4-begin / l4-record-kernels / l4-authorize.
 # INTERNAL leaves stay callable; agents use make improve.

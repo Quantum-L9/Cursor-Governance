@@ -90,23 +90,14 @@ def persist_recommendation(
         pass
 
 
-def load_plan_kernel_gate():
-    path = Path(__file__).resolve().parent / "plan_kernel_gate.py"
-    spec = importlib.util.spec_from_file_location("l9_plan_kernel_gate", path)
-    if not spec or not spec.loader:
-        raise RuntimeError(f"cannot load plan kernel gate: {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
 def kernel_pass_inject(payload: dict[str, Any]) -> str:
-    try:
-        gate = load_plan_kernel_gate()
-        workspace = gate.workspace_from_event(payload)
-        return gate.inject_block(workspace)
-    except Exception as exc:
-        return f"kernel_pass checker degraded; treat plan as unhardened ({exc})"
+    """Plan/tree kernels fire in kernel_gate.py before precommit, not here.
+
+    Mid-session inject applied kernels too early and re-ran checks later.
+    Keep the payload argument so callers and tests stay stable.
+    """
+    del payload
+    return ""
 
 
 def merge_context(inject: str, route: str) -> str:

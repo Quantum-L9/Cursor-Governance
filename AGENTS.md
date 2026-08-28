@@ -832,3 +832,14 @@ rest. `/plan-audit` is a compatibility alias of that command.
 
 Skill **`l9-plan-audit`** is still the sessionStart 7-day live-queue scanner
 (§16). It does not move files. Do not treat it as `/l9-audit-plans`.
+
+<!-- KERNEL_PRECOMMIT_HOOK_V1 -->
+## Kernel hook before precommit (2026-08-28)
+
+Tree kernels (Recursive Alignment + Validate & Repair) and plan `kernel_pass`
+are **not** an L4 phase and are **not** a mid-session inject. They fire as
+the first step of `make precommit-repo` (`ops/autonomy/kernel_gate.py`) so
+hooks and tests run **once** on the post-kernel tree. L4 is begin +
+authorize-release only. If the hook fails: apply the named kernels, commit,
+`kernel_gate.py record`, re-run the same `make pr`. Do not run precommit or
+pytest first.

@@ -11,6 +11,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "ops" / "scripts"
 L4 = ROOT / "ops" / "autonomy" / "l4_local.py"
+KERNEL_GATE = ROOT / "ops" / "autonomy" / "kernel_gate.py"
 
 
 def git_in(repo: Path, *args: str) -> None:
@@ -342,8 +343,53 @@ def test_precommit_missing_binary_fails_after_files(tmp_path: Path) -> None:
     assert "Do not run 'pre-commit install'" in proc.stderr
 
 
+def _stamp_kernel(repo: Path) -> None:
+    assert (
+        _run(
+            [
+                "python3",
+                str(KERNEL_GATE),
+                "record",
+                "--workspace",
+                str(repo),
+                "--gov-root",
+                str(ROOT),
+            ],
+            cwd=repo,
+        ).returncode
+        == 0
+    )
+
+
+def test_precommit_repo_kernel_hook_fails_before_hooks(tmp_path: Path) -> None:
+    repo = _init_repo(tmp_path, feature=True)
+    listed = tmp_path / "changed.txt"
+    listed.write_text("a.txt\n", encoding="utf-8")
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    stub = bin_dir / "pre-commit"
+    stub.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    stub.chmod(0o755)
+    proc = _run(
+        ["bash", str(SCRIPTS / "run_pr_precommit.sh"), str(repo)],
+        cwd=repo,
+        env={
+            "WS": str(repo),
+            "PR_BASE": "main",
+            "PR_CHANGED_FILE": str(listed),
+            "PATH": f"{bin_dir}:/usr/bin:/bin",
+        },
+    )
+    assert proc.returncode == 2, proc.stdout + proc.stderr
+    combined = proc.stdout + proc.stderr
+    assert "apply_kernels_then_precommit" in combined
+    assert "tracked files dirty after precommit-repo" not in combined
+    assert "lint-ruff" not in combined
+
+
 def test_precommit_repo_fails_closed_on_tracked_dirt(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
+    _stamp_kernel(repo)
     (repo / "a.txt").write_text("dirty\n", encoding="utf-8")
     listed = tmp_path / "changed.txt"
     listed.write_text("a.txt\n", encoding="utf-8")
@@ -386,6 +432,15 @@ def test_pr_full_owns_corpus_validators() -> None:
         "validate_git_denial_residue.py",
     ):
         assert name in makefile
+
+
+def test_precommit_script_runs_kernel_hook_first() -> None:
+    precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    kernel_at = precommit.find("kernel_gate.py")
+    hook_at = precommit.find("pre-commit run")
+    ruff_at = precommit.find("--- lint-ruff")
+    assert kernel_at != -1
+    assert kernel_at < hook_at < ruff_at
 
 
 def test_precommit_skip_list_drops_corpus_hooks() -> None:

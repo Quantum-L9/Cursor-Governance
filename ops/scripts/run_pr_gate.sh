@@ -39,9 +39,11 @@ _gate_failed=0
 # invalidates the receipt exactly when the verdict could differ.
 _GATE_CODE_FILES=(
   "ops/scripts/run_pr_gate.sh"
+  "ops/scripts/run_pr_precommit.sh"
   "ops/scripts/run_python_test_suites.py"
   "ops/scripts/pr_gate_failure.py"
   "ops/config/python-contract.json"
+  "ops/autonomy/kernel_gate.py"
   ".pre-commit-config.yaml"
 )
 _gate_code_digest() {

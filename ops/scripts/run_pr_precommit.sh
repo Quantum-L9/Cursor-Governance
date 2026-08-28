@@ -70,6 +70,18 @@ if [[ ${#files[@]} -eq 0 ]]; then
 fi
 cd "$WS"
 
+# Kernel hook FIRST. Fail closed before any pre-commit hook, ruff, or test.
+# Kernels are not an L4 phase — see ops/autonomy/kernel_gate.py.
+_kernel_py="$GOV_ROOT/.venv/bin/python"
+if [[ ! -x "$_kernel_py" ]]; then
+  _kernel_py="$(command -v python3)"
+fi
+if [[ -f "$GOV_ROOT/ops/autonomy/kernel_gate.py" ]]; then
+  echo "--- kernel hook (before pre-commit / ruff) ---"
+  "$_kernel_py" "$GOV_ROOT/ops/autonomy/kernel_gate.py" precommit \
+    --workspace "$WS" --gov-root "$GOV_ROOT" --changed-file "$tmp" || exit $?
+fi
+
 # Always skip sync in make pr path (heal happens in run_pr_gate).
 # Corpus hooks (hygiene, residue, rules/skills ratchet) belong to
 # make precommit / make pr-full, not the velocity path.

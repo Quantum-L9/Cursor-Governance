@@ -259,6 +259,13 @@ reviews → merge when user authorizes. Older open PRs: remediate and merge
 `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`. Explicit merge
 auth: `L9_MERGE_AUTHORIZED=<reason>`.
 
+<!-- KERNEL_PRECOMMIT_HOOK_V1 -->
+Post-finish kernels are **not** an L4 phase. `authorize-release` does not
+require kernel stamps. `ops/autonomy/kernel_gate.py precommit` is the first
+step of `make precommit-repo` / `make pr-check` and fails closed before any
+other hook or test. Apply Alignment then Validate & Repair only when that
+hook says so; then re-run the same gate once.
+
 ---
 
 ## 7. Anti-Patterns
