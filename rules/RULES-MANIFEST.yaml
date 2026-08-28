@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-28T19:40:28Z'
+generated_utc: '2026-08-28T20:38:05Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:d08e762e9fc676ac675bf4da92a305a1374926d571e9f8043f6249ba951410a3
+source_tree_digest: sha256:d900c49947ee1544979c893d7eecfbd6ccbcb378920afec3df4f360bfd47be97
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -556,7 +556,7 @@ rules:
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
   line_count: 122
-  content_digest: sha256:c8d86cbbf77d8af7ce1c2115efde135c6bebfe568924c2c6412ba223e83f971d
+  content_digest: sha256:214932b7d148f37c01d620e04fd534f7f503acea3d1b1e84e2373687db903981
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1335,7 +1335,7 @@ rules:
   id: l9.rule.l4.local-autonomy
   id_source: explicit
   version: 1.0.0
-  description: L4 local autonomy — stacked local commits, no mid-execution push, kernels then PR template.
+  description: L4 local autonomy — stacked local commits, no mid-execution push, then PR template. Kernels fire before precommit, not as L4.
   scope: global
   domain: git
   activation: always
@@ -1344,8 +1344,8 @@ rules:
   globs: null
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
-  line_count: 66
-  content_digest: sha256:ec6dfa6cb1e3655f0ca94d2315b8132496dc91a8bdc730ebc3e2686cbeb937f2
+  line_count: 69
+  content_digest: sha256:88a6bc6c681c483e4b451017a2292e2a45b0c34e8b6a7cafa9878b048f4669de
   authority: canonical_global
   context_cost: minimal
   deprecated: false

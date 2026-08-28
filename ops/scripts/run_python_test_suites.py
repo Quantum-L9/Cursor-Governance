@@ -265,8 +265,27 @@ def validate_registry(registry: Any) -> list[dict[str, Any]]:
     return suites
 
 
+# Host `make pr` may export these. A poisoned parent must not skip overlap
+# tests or change remediates/stacking mid-suite. Empty is not unset: the
+# checker treats empty PR_OVERLAP as block, but ignore must be dropped.
+CEREMONY_KNOBS: tuple[str, ...] = (
+    "PR_OVERLAP",
+    "PR_OVERLAP_TELEMETRY",
+    "PR_STACK",
+    "PR_REMEDIATE",
+)
+
+
+def strip_ceremony_knobs(env: dict[str, str]) -> dict[str, str]:
+    """Return a copy with publish-path knobs removed (not set empty)."""
+    out = dict(env)
+    for key in CEREMONY_KNOBS:
+        out.pop(key, None)
+    return out
+
+
 def _suite_env(suite: dict[str, Any], mapping: dict[str, str]) -> dict[str, str]:
-    env = os.environ.copy()
+    env = strip_ceremony_knobs(os.environ)
     for key, value in suite["env"].items():
         env[key] = _substitute(value, mapping)
     return env
@@ -442,7 +461,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--changed-file",
         type=Path,
         default=None,
-        help="Local pr-check only: scope suites to this changed-file list. Never emits '.'.",
+        help="changed-file selector for local make pr and pull_request CI. Never emits '.'.",
     )
     parser.add_argument("pytest_args", nargs="*", help="pytest args after --")
     return parser.parse_args(argv)

@@ -40,6 +40,8 @@ therefore opt-in only: under ordinary main-bound execution the base stays main.
 from __future__ import annotations
 
 import argparse
+import hashlib
+import json
 import os
 import subprocess
 import sys
@@ -303,6 +305,59 @@ def base_conflicts(repo: Path, base: str) -> list[str] | None:
     return sorted({path for path in conflicts if not is_generated_prefix_path(path)})
 
 
+OVERLAP_RECEIPT_SCHEMA = "l9.pr_overlap_receipt.v1"
+
+
+def overlap_receipt_keys(
+    repo: Path, base: str, changed: list[str], open_numbers: list[int]
+) -> dict[str, object]:
+    base_sha = git(repo, "rev-parse", base).stdout.strip()
+    head = git(repo, "rev-parse", "HEAD").stdout.strip()
+    digest = hashlib.sha256("\n".join(changed).encode("utf-8")).hexdigest()
+    return {
+        "schema": OVERLAP_RECEIPT_SCHEMA,
+        "base_sha": base_sha,
+        "head": head,
+        "changed_digest": digest,
+        "pr_stack": os.environ.get("PR_STACK", ""),
+        "pr_overlap": os.environ.get("PR_OVERLAP", "block"),
+        "open_pr_numbers": sorted(open_numbers),
+    }
+
+
+def load_overlap_receipt(path: Path) -> dict[str, object] | None:
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return data if isinstance(data, dict) else None
+
+
+def overlap_receipt_matches(stored: dict[str, object], keys: dict[str, object]) -> bool:
+    for field in (
+        "schema",
+        "base_sha",
+        "head",
+        "changed_digest",
+        "pr_stack",
+        "pr_overlap",
+        "open_pr_numbers",
+    ):
+        if stored.get(field) != keys.get(field):
+            return False
+    return True
+
+
+def write_overlap_receipt(path: Path, keys: dict[str, object], stack_base: str = "") -> None:
+    doc = dict(keys)
+    if stack_base:
+        doc["stack_base"] = stack_base
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps(doc, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+
+
 def stack_chain(entries: list[dict]) -> list[dict] | None:
     """Bottom-up chain over the blocking PR set; None when ambiguous (siblings
     or a partial chain). One entry is trivially a chain."""
@@ -332,6 +387,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--workspace", type=Path, default=Path.cwd(), help="Repo to gate")
     parser.add_argument("--base", default="origin/main", help="PR base ref (PR_BASE)")
+    parser.add_argument(
+        "--write-receipt",
+        type=Path,
+        default=None,
+        help="Write overlap receipt after a successful check",
+    )
+    parser.add_argument(
+        "--reuse-receipt",
+        type=Path,
+        default=None,
+        help="Skip probes when receipt keys still match",
+    )
     args = parser.parse_args()
 
     mode = os.environ.get("PR_OVERLAP", "block").strip().lower() or "block"
@@ -354,9 +421,34 @@ def main() -> int:
     if changed is None:
         return telemetry_failure(f"cannot compute changed files vs {args.base}")
 
+    slug = resolve_repo_slug(repo)
+    if not slug:
+        return telemetry_failure("cannot resolve repository identity (owner/repo)")
+
+    prs = open_prs(slug)
+    if prs is None:
+        return telemetry_failure("could not enumerate open PRs (gh api failed)")
+
+    open_numbers = [int(pr["number"]) for pr in prs]
+    keys = overlap_receipt_keys(repo, args.base, changed, open_numbers)
+    if args.reuse_receipt is not None:
+        stored = load_overlap_receipt(args.reuse_receipt)
+        if stored is not None and overlap_receipt_matches(stored, keys):
+            print("OK: overlap receipt reused (inputs unchanged)")
+            stack_base = str(stored.get("stack_base") or "")
+            if stack_base:
+                print(f"STACK_BASE={stack_base}")
+            return 0
+
+    def _write_ok(stack_base: str = "") -> None:
+        if args.write_receipt is not None:
+            write_overlap_receipt(args.write_receipt, keys, stack_base)
+
     # (b0) Base probe. Runs BEFORE any open-PR reasoning, because the open-PR
     # path returns PASS early when nothing else is open — which is precisely the
-    # state a branch duplicating already-merged work arrives in.
+    # state a branch duplicating already-merged work arrives in. Receipt reuse
+    # above already keyed on base_sha + open_pr_numbers, so a moved base or a
+    # new open PR is a new input and reaches this probe.
     base_hits = base_conflicts(repo, args.base)
     if base_hits is None:
         rc = telemetry_failure(f"textual merge probe unavailable against base {args.base}")
@@ -378,17 +470,10 @@ def main() -> int:
         if mode == "block":
             return 1
 
-    slug = resolve_repo_slug(repo)
-    if not slug:
-        return telemetry_failure("cannot resolve repository identity (owner/repo)")
-
-    prs = open_prs(slug)
-    if prs is None:
-        return telemetry_failure("could not enumerate open PRs (gh api failed)")
-
     candidates = [pr for pr in prs if pr["head"] != branch]
     if not candidates:
         print("PASS: no other open PRs to overlap")
+        _write_ok()
         return 0
 
     # (c)+(d) filename intersection minus generated paths.
@@ -409,6 +494,7 @@ def main() -> int:
 
     if not overlap_by_pr:
         print("PASS: no non-generated file overlap with open PRs")
+        _write_ok()
         return 0
 
     # (e) textual probe: distinguish same-file/disjoint-hunks from real conflict.
@@ -450,6 +536,7 @@ def main() -> int:
 
     if not blockers:
         print("PASS: overlapping files merge cleanly (disjoint hunks)")
+        _write_ok()
         return 0
 
     if auto_stack:
@@ -461,6 +548,7 @@ def main() -> int:
                 f"NOTE: PR_STACK=auto — stacking on open PR #{top['number']} "
                 f"head '{top['head']}' (never main)"
             )
+            _write_ok(str(top["head"]))
             return 0
         print("NOTE: PR_STACK=auto — no unambiguous single chain to stack on; blocking instead")
 
@@ -482,7 +570,10 @@ def main() -> int:
     print("  1) commit this work into the overlapping open PR branch instead of a sibling PR")
     print("  2) stack on the open PR head: PR_STACK=auto (or PR_BASE=origin/<open-pr-head>)")
     print("  3) bypass with stated justification: PR_OVERLAP=ignore")
-    return 0 if mode == "warn" else 1
+    if mode == "warn":
+        _write_ok()
+        return 0
+    return 1
 
 
 if __name__ == "__main__":

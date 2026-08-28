@@ -11,8 +11,9 @@ alwaysApply: true
 
 # make pr → green merge-ready; /l9-pr-remediation → merge
 
-Default publish path is `PR_REMEDIATE=0 make pr` (Autonomy Surface Profile
-`campaign_execution` / `l4_local_autonomy.post_push`).
+Default publish path is `make pr` (Autonomy Surface Profile
+`campaign_execution` / `l4_local_autonomy.post_push`). Remediates defaults
+to 1 after the PR opens. `PR_REMEDIATE=0` is opt-out only.
 
 Agents MUST:
 
@@ -21,7 +22,8 @@ Agents MUST:
    `l9 pr` / `make -C "$GOV" pr WS="$PWD"` regardless of the workspace repo's
    own Makefile. A consumer repo needs **no** `pr`/`pr-check` target; do not
    add one, and do not fall back to a raw `git push` where one is absent.
-2. Pass `PR_REMEDIATE=0` (this is now the script default).
+2. Do **not** force `PR_REMEDIATE=0`. Unset remediates is 1 (poll to green
+   + merge-ready). Pass `PR_REMEDIATE=0` only to skip the poll worker.
 3. For Program Execution campaigns, set `PR_BASE` to
    `origin/campaign/<campaign_id>` — never open those PRs against `main`.
 4. Campaign / `make pr` end state: every published PR is **green and
@@ -67,10 +69,11 @@ Stacked PRs (operator default 2026-08-15):
 - One feature branch per program; exclusive worktree lease per mutating agent
   (`surface_profile.pr_stacking`, `CAMPAIGN_EXECUTION_POLICY.pr_stacking`).
 
-If a human explicitly sets `PR_REMEDIATE=1` and `make pr` writes
-`.l9/pr/pr-remediation-handoff.json` plus `L9_AGENT_REQUIRED`, follow that
-human override. Standing campaign contract is green + merge-ready, no merge.
-`/l9-pr-remediation` is the merge path.
+`make pr` writes `.l9/pr/pr-remediation-handoff.json` plus
+`L9_AGENT_REQUIRED` when remediates=1 (the default). Follow that handoff:
+poll to green + merge-ready. Standing campaign contract is still no merge.
+`/l9-pr-remediation` Converge / `authorize_merge.py` is the merge path.
+`PR_REMEDIATE=0` skips the handoff marker.
 
 **Push authorization:** when the user invokes `make pr` (any capitalization),
 that counts as explicit approval for the push + PR open performed by
@@ -105,17 +108,14 @@ abort-on-any-non-zero behavior.
 
 ## Failure loop and gate receipt (2026-08-17)
 
-Do **not** treat `make pr-check && make pr` as two full gates. `pr-check`
-writes `.l9/pr/gate-receipt.json`; `make pr` reuses it when HEAD, the
-worktree porcelain digest, and `PR_BASE` are unchanged.
-
-Happy path:
+Do **not** treat `make pr-check` then `make pr` as the happy path. That
+sequence is a teaching failure: on an unchanged tree the receipt skip
+prevents a second pytest, but agents must not type the extra command.
+Happy path: finish → scoped-commit → `make pr`. `pr-check` /
+`OPEN_PR=0 make pr` remain diagnose-only. `make precommit-repo` is an
+internal leaf of the gate, not a post-commit ritual.
 
 ```bash
-make improve
-# apply kernels; commit revisions
-make improve IMPROVE_RECORD=1
-make pr-check
 make pr
 ```
 

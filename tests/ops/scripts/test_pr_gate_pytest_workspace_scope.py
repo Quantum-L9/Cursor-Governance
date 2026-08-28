@@ -100,6 +100,7 @@ def test_pytest_block_dispatches_on_workspace_kind() -> None:
     assert 'classify_workspace_kind "$WS"' in after, "pytest block no longer classifies $WS"
     assert invocation in after, "pytest block no longer invokes the suite runner"
     assert after.index('classify_workspace_kind "$WS"') < after.index(invocation)
+    assert '${_pytest_repo_root_args[@]+"${_pytest_repo_root_args[@]}"}' in after
 
 
 @pytest.mark.parametrize("kind", ["ssot", "ssot_checkout"])

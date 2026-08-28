@@ -11,10 +11,10 @@ AND `L9_AUTONOMY_ENABLED=true`:
    for scoped feature-branch **local commits**. Remote push/PR remain gated
    by L4 local autonomy (below), not by per-action chat pacing.
 2. Completing reversible work MUST proceed L4-local: stacked-branch commits
-   with **no mid-execution push** → finish program/contract → run
-   `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
-   `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr` (checkers,
-   then push + PR). Campaign/make-pr end state is green + merge-ready.
+   with **no mid-execution push** → finish program/contract →
+   `l4_local.py authorize-release` → `make pr` (kernel hook first, then
+   checkers once, then push + PR; remediates=1). Campaign/make-pr end
+   state is green + merge-ready. `PR_REMEDIATE=0` is opt-out only.
    Invoking `/l9-pr-remediation` then remediates **and merges** all open
    PRs in the target repo (bottom-up). Do **not** merge from the campaign
    path alone.
@@ -58,12 +58,14 @@ AND `L9_AUTONOMY_ENABLED=true`:
   agents' dirty files (2026-08-12 plan.md + branch-thrash incident).
 - Enforcement: `ops/autonomy/local_execution_gate.py` +
   `worktree_isolation_gate.py` (Claude PreToolUse + Cursor beforeShellExecution).
-- CLI: `python3 ops/autonomy/l4_local.py {begin|record-kernels|authorize-release|status}`.
+- CLI: `python3 ops/autonomy/l4_local.py {begin|authorize-release|status}`.
+  Kernels: `python3 ops/autonomy/kernel_gate.py {record|precommit}`
+  (first step of precommit-repo, not an L4 phase).
 - Breakglass: `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`;
   isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
   `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
   `L9_WORKTREE_ISOLATION=0`.
-- Post-push: `PR_REMEDIATE=0 make pr` to a green merge-ready PR. Merge
+- Post-push: `make pr` (remediates=1) to a green merge-ready PR. Merge
   only after `/l9-pr-remediation` writes
   `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
   mergeable. Force-push / admin-merge stay forbidden.

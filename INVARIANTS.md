@@ -1,7 +1,7 @@
 # Cursor-Governance — invariants index
 
 **Version:** 1.0.0
-**Updated:** 2026-08-21
+**Updated:** 2026-08-28
 **Role:** this-repo operating-invariant index plus a CI enforcement map.
 
 This file does **not** replace [`ORG_INVARIANTS.yaml`](ORG_INVARIANTS.yaml). That YAML is the machine-readable organization policy SSOT. The operator note for org policy is [`docs/governance/ORG_INVARIANTS.md`](docs/governance/ORG_INVARIANTS.md). Do not copy `L9-ORG-*` requirement bodies into this file.
@@ -24,6 +24,8 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | Root files are classified; new root files must be registered; `additive_only` files are append-only | `AGENTS.md` §14; [`ops/config/root-file-protection.json`](ops/config/root-file-protection.json) |
 | One mutating agent per worktree; stage explicit pathspecs only | `AGENTS.md` + `rules/49-shared-worktree-isolation.mdc` |
 | Org repository birth under `Quantum-L9` | `ORG_INVARIANTS.yaml` `invariants:`; `docs/governance/ORG_INVARIANTS.md` |
+| Tests run once locally (same worktree digest + `PR_BASE`); full corpus is `make pr-full` / nightly / push-to-`main` | `AGENTS.md` `TESTS_ONCE_AND_PUBLISH_V1`; `CANONICAL_LAW.md` §6.2.5 |
+| Commit finished work when done, then `make pr` (remediates=1; `PR_REMEDIATE=0` opt-out) | `AGENTS.md` `TESTS_ONCE_AND_PUBLISH_V1`; `rules/48-make-pr-remediation.mdc` |
 
 Org-policy invariant IDs and enforcement text live only in the YAML `invariants:` block. Point there; do not duplicate.
 
