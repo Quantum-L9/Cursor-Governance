@@ -65,6 +65,21 @@ class ProfileRegistryTurnBudgetTests(unittest.TestCase):
                 _request(value)
 
 
+AUTHORITY = {
+    # A mutating window must carry root authority: the provider now refuses to
+    # launch one that cannot authorize its own effects.
+    "schema": "l9.program-execution.autonomy-authority.v1",
+    "owns_program_state": False,
+    "task_id": "TASK-001",
+    "adapter_session_id": "adapter-session-fixture",
+    "lease_id": "lease-fixture",
+    "agent_id": "agent-fixture",
+    "runtime_database": "/tmp/autonomy-runtime.sqlite3",
+    "repository_root": "/tmp",
+    "workspace": "/tmp/workspace",
+}
+
+
 def _request(max_turns: int) -> CanonicalExecutionRequest:
     return CanonicalExecutionRequest(
         execution_id="EXEC-001",
@@ -89,6 +104,7 @@ def _request(max_turns: int) -> CanonicalExecutionRequest:
         telemetry_context={},
         provider_ref="claude-code",
         execution_profile_ref="worker-default",
+        autonomy_authority=dict(AUTHORITY),
     )
 
 
