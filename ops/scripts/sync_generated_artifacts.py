@@ -18,16 +18,29 @@ Covered artifacts:
 
 Opt-in via --pe-manifest (--force alone does not reach it):
   * environment/program-execution/MANIFEST.json — hashes the whole mutable
-    Program Execution tree, so ordinary PE edits rewrite it. Writing it during
-    a *gate* run is what produced "files were modified by this hook", so the PR
-    gate still never reaches it.
+    Program Execution tree, so ordinary PE edits rewrite it. It is not
+    advisory: `make program-execution-conformance` runs validate_manifest.py
+    and fails on a digest mismatch.
 
-    It is not advisory, whatever an earlier note here claimed:
-    `make program-execution-conformance` runs validate_manifest.py and fails on
-    a digest mismatch. Left unsynced, every PE edit therefore failed conformance
-    with a regenerate-by-hand-and-retry loop. The commit-time hook opts in
-    (pre-commit is the heal path; make pr SKIPs it), so the manifest tracks the
-    tree it hashes instead of being reconciled by a human after the fact.
+    The flag stays opt-in so a caller that only wants the cheap artifacts does
+    not pay for hashing ~500 files, but two callers now pass it, and between
+    them the manifest is healed and enforced:
+
+      * ops/scripts/run_pr_gate.sh — regenerates on the sanctioned publish
+        path, scoped by --changed-file to branches that touched the PE tree.
+        The old objection (writing during a gate run reads as "files were
+        modified by this hook") no longer holds: this path is in
+        GENERATED_PATH_PREFIXES, and classify_generated_dirtiness.sh resolves
+        classes through is_generated_path, so the churn is WARN + stage.
+      * .github/workflows/governance-self-check.yml — regenerates in CI and
+        fails the PR on drift, the same treatment every other generated
+        artifact gets.
+
+    .pre-commit-config.yaml also passes it, but that hook is inert: this repo
+    has no git commit hook (run_pr_precommit.sh), and the make pr path SKIPs
+    the hook by name. Until the gate opted in, the "commit-time heal" that
+    earlier notes here described ran nowhere at all, which is why the manifest
+    drifted until a human regenerated it by hand.
 """
 
 from __future__ import annotations
@@ -62,9 +75,9 @@ GENERATED_PATH_PREFIXES = (
     "environment/program-execution/core/MANIFEST.yaml",
     "environment/program-execution/core/program-execution-blueprint-template/MANIFEST.yaml",
     "environment/program-execution/core/program-execution-controller-template/MANIFEST.yaml",
-    # Auto-sync suspended (see module docstring), but the file is still a
-    # generated artifact: it stays in this SSOT so .gitattributes keeps the
-    # l9-generated merge driver and the PR overlap gate keeps its exemption.
+    # Opt-in to write (--pe-manifest), but generated for every other purpose:
+    # membership here is what gives it the l9-generated merge driver, the PR
+    # overlap exemption, and the gate's WARN-not-FAIL dirtiness class.
     "environment/program-execution/MANIFEST.json",
 )
 
@@ -468,7 +481,8 @@ def sync_pe_adapters(root: Path, wrote: list[str]) -> None:
     """Regenerate environment/program-execution/MANIFEST.json.
 
     Reached only when a caller opts in (``sync(..., pe_manifest=True)`` /
-    ``--pe-manifest``). Ordinary pre-commit and PR-gate runs skip it.
+    ``--pe-manifest``): the PR gate and the governance-self-check drift job.
+    A plain ``--force`` still skips it -- see the module docstring.
     """
     pe = root / "environment" / "program-execution"
     if not pe.is_dir():
@@ -544,7 +558,7 @@ def sync(
             sync_pe_core(root, wrote)
             sync_pe_templates(root, wrote)
             # environment/program-execution/MANIFEST.json is opt-in only —
-            # --force does not reach it. See the module docstring and TODO.md.
+            # --force does not reach it. See the module docstring.
             if pe_manifest:
                 sync_pe_adapters(root, wrote)
     except Exception as exc:  # noqa: BLE001 — surface as structured error to gate
@@ -605,7 +619,13 @@ def validate_after_sync(root: Path) -> list[str]:
     return errors
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI contract, callable without running a sync.
+
+    Extracted so callers of this script can be checked against the real parser
+    rather than a second copy of the flag list -- see
+    tests/ops/scripts/test_pe_manifest_heal.py.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument(
@@ -624,7 +644,7 @@ def main() -> int:
         "--pe-manifest",
         action="store_true",
         help="Also regenerate environment/program-execution/MANIFEST.json "
-        "(suspended from automatic sync; explicit maintenance only)",
+        "(opt-in: it hashes the whole PE tree, so --force alone skips it)",
     )
     parser.add_argument("--check", action="store_true", help="Validate after sync")
     parser.add_argument("--json", action="store_true", help="Print machine-readable result")
@@ -634,7 +654,11 @@ def main() -> int:
         default=None,
         help="Consumer workspace for project-scoped LLM skill adapters",
     )
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
     root = args.root.resolve()
 
     if args.print_generated_prefixes:

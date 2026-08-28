@@ -12,7 +12,12 @@ repos:
     hooks:
       - id: check-merge-conflict
       - id: end-of-file-fixer
+        # Committed dist/ is tsc output, verified byte-identical by the consumer's
+        # own check:dist gate. tsc emits no trailing newline, so appending one here
+        # makes that gate fail and the rewrite can never be committed clean.
+        exclude: "^dist/"
       - id: trailing-whitespace
+        exclude: "^dist/"
       - id: check-added-large-files
         args: ["--maxkb=1000"]
       - id: check-yaml
@@ -47,8 +52,12 @@ repos:
         pass_filenames: false
         files: '(^|/)(package\.json|package-lock\.json)$'
 
-      # Commit-time heal. make pr SKIPs this hook and runs sync in run_pr_gate
-      # with WARN+continue so digest churn never blocks the PR gate.
+      # Inert on the make pr path: run_pr_precommit.sh SKIPs this hook by name,
+      # and this repo has no git commit hook, so nothing here executes during
+      # ordinary work. The heal that matters runs in run_pr_gate.sh, which calls
+      # the same script with --pe-manifest and classifies the churn as generated
+      # (WARN + stage) rather than letting it block the gate. Kept so a manual
+      # `pre-commit run` still reproduces the gate's sync.
       - id: sync-generated-artifacts
         name: Sync generated manifests, registries, and overrides
         entry: python3 ops/scripts/sync_generated_artifacts.py --force --pe-manifest

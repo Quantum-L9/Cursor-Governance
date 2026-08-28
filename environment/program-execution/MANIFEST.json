@@ -1315,11 +1315,11 @@
     },
     {
       "path": "integrations/autonomy-control-plane/contract_mapper.py",
-      "sha256": "ed4ed7cc2bbda5a0a90a38039ddfc1db413f8503e942ebc41921b31092bc4ba7"
+      "sha256": "953323f83ef4c984c470870f367a3078e048ce1763bce0974b34aea2aa442ae3"
     },
     {
       "path": "integrations/autonomy-control-plane/grant.py",
-      "sha256": "5f5c3a3e379b1c4c509ef35663c7386c07eaeedc62ed99d07d995fd99204ccc8"
+      "sha256": "a84772fab792af474c49a176b1d8aa6eb94d345bfef2f42e374499895bac8950"
     },
     {
       "path": "integrations/autonomy-control-plane/receipt_mapper.py",
@@ -1327,7 +1327,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/tests/test_bridge.py",
-      "sha256": "2d5c315155030e33927043b4a563960f8026f267508647a720fcc9d0733d2494"
+      "sha256": "5eb58403cf26fa7a87cd01ed1e680e8fbc3cfa9530858d65858a1a88cf6794cd"
     },
     {
       "path": "integrations/bootstrap/README.md",
@@ -1879,11 +1879,11 @@
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",
-      "sha256": "02b66338db751139ea8a8b71247e0702347539a1a52619fc7fba7bf17bf8a623"
+      "sha256": "7c5c60451a251117172eeee536a3ddbd0a5482218aee13b455dbca2c568ee5e5"
     },
     {
       "path": "scripts/validate_campaign_promotion.py",
-      "sha256": "176fb77adb6783f5da300b177846c02bfa97e4794eec53aadc2366efb91712f9"
+      "sha256": "141b2564e8f89ae0b06a990bf4cab75c2085921e1c5408e45285d2228a1bb74e"
     },
     {
       "path": "scripts/validate_execution_adapters.py",

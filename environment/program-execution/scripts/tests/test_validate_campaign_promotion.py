@@ -255,9 +255,15 @@ class PromotionValidatorTest(unittest.TestCase):
         self.assertEqual(len(report["warnings"]), 1)
         self.assertIn("immutable campaign evidence", report["warnings"][0])
 
-    # -- top-level PE MANIFEST is advisory by settled policy ----------------
+    # -- the top-level PE MANIFEST is not this validator's business ---------
+    #
+    # It is not advisory: sync_generated_artifacts.py --pe-manifest regenerates
+    # it on the PR gate, governance-self-check.yml fails on drift, and
+    # validate_manifest.py enforces it under make program-execution-conformance.
+    # Promotion validity is a separate question, and coupling the two once made
+    # every ordinary PE edit fail promotion. These pin the decoupling.
 
-    def test_stale_top_level_pe_manifest_is_advisory(self) -> None:
+    def test_stale_top_level_pe_manifest_does_not_fail_promotion(self) -> None:
         manifest = self.root / "environment/program-execution/MANIFEST.json"
         manifest.parent.mkdir(parents=True, exist_ok=True)
         manifest.write_text('{"generated": "stale"}\n', encoding="utf-8")
@@ -265,7 +271,7 @@ class PromotionValidatorTest(unittest.TestCase):
         self.assertEqual(report["status"], "PASS", report["errors"])
         self.assertNotIn("GENERATED_ARTIFACTS_CURRENT", report["summary"])
 
-    def test_missing_top_level_pe_manifest_is_advisory(self) -> None:
+    def test_missing_top_level_pe_manifest_does_not_fail_promotion(self) -> None:
         manifest = self.root / "environment/program-execution/MANIFEST.json"
         if manifest.exists():
             manifest.unlink()

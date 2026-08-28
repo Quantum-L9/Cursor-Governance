@@ -86,13 +86,13 @@ jobs:
         run: |
           uv run --frozen --no-build python \
             environment/program-execution/scripts/probe_execution_adapters.py
-      # There is deliberately no "Program Execution manifest integrity" step.
-      # environment/program-execution/MANIFEST.json is advisory by decision
-      # (TODO.md): it hashes the whole mutable PE tree, so any ordinary PE edit
-      # invalidates it until regenerated, and that churn is inherent to what it
-      # measures. validate_manifest.py runs under
-      # `make program-execution-conformance`; the generator/validator contract
-      # is pinned by tests/environment/program_execution/test_manifest_contract.py.
+      # There is deliberately no "Program Execution manifest integrity" step
+      # here. environment/program-execution/MANIFEST.json is enforced once, in
+      # governance-self-check.yml, which regenerates it (--pe-manifest) and
+      # fails on drift like every other generated artifact. validate_manifest.py
+      # also runs under `make program-execution-conformance`; the
+      # generator/validator contract is pinned by
+      # tests/environment/program_execution/test_manifest_contract.py.
       - name: Executable peer contract (E1-E15, cross-registry)
         run: |
           uv run --frozen --no-build python \
