@@ -115,6 +115,22 @@ def _contained(repo: Path, baseline: str, ref: str, paths: list[str]) -> bool:
     return True
 
 
+def _unexamined_merges(repo: Path, baseline: str, ref: str) -> int:
+    """Count merge commits in baseline..ref, which ``git cherry`` never reports.
+
+    ``git cherry`` compares patch ids of non-merge commits only. A merge whose
+    conflict resolution introduced changes of its own therefore leaves no trace
+    in either bucket, so a range of otherwise-duplicate commits looks completely
+    absorbed and earns the exact ``patch_id`` verdict -- the one basis
+    prune-policy lets authorise a delete. Counting them lets `_classify`
+    withhold that verdict on evidence it does not actually have.
+    """
+    proc = _run(repo, "rev-list", "--merges", f"{baseline}..{ref}")
+    if proc.returncode != 0:
+        return 0
+    return len([ln for ln in proc.stdout.splitlines() if ln.strip()])
+
+
 def _classify(
     baseline_ok: bool,
     unique_commits: int,
@@ -123,6 +139,7 @@ def _classify(
     cherry_novel: list[str],
     cherry_dup: list[str],
     contained: bool,
+    unexamined_merges: int = 0,
 ) -> tuple[str, str]:
     """Pick a classification, biased toward keeping the ref whenever proof is thin."""
     if not baseline_ok:
@@ -130,8 +147,18 @@ def _classify(
         # counters would read zero commits and zero paths and call the ref a prune
         # candidate -- the exact inversion SKILL.md forbids.
         return "unknown", "unknown"
-    if cherry_available and unique_commits > 0 and not cherry_novel and cherry_dup:
+    if (
+        cherry_available
+        and unique_commits > 0
+        and not cherry_novel
+        and cherry_dup
+        and not unexamined_merges
+    ):
         # Commits ahead, but every one is already upstream by patch id. Exact.
+        # Only exact while git cherry saw the whole range: it skips merges, and a
+        # merge can carry conflict resolution that landed nowhere else, so any
+        # unexamined merge drops through to the weaker signals below rather than
+        # granting a basis that authorises deletion.
         return "archive_ref", "high"
     if unique_commits == 0:
         # An empty commit range means the ref is an ancestor of the baseline, so
@@ -192,8 +219,16 @@ def diagnose(repo: Path, ref: str, baseline: str, do_fetch: bool = False) -> dic
     contained = _contained(repo, baseline, ref, paths) if baseline_ok else False
 
     unique_commits = len(commits)
+    unexamined_merges = _unexamined_merges(repo, baseline, ref) if baseline_ok else 0
     classification, confidence = _classify(
-        baseline_ok, unique_commits, paths, cherry_available, cherry_novel, cherry_dup, contained
+        baseline_ok,
+        unique_commits,
+        paths,
+        cherry_available,
+        cherry_novel,
+        cherry_dup,
+        contained,
+        unexamined_merges,
     )
 
     body = {
@@ -217,6 +252,7 @@ def diagnose(repo: Path, ref: str, baseline: str, do_fetch: bool = False) -> dic
         "cherry_dup": len(cherry_dup),
         "cherry_novel_commits": cherry_novel[:50],
         "cherry_dup_commits": cherry_dup[:50],
+        "merge_commits_unexamined": unexamined_merges,
         "content_contained": contained,
         "redundancy_basis": _basis(classification, cherry_novel, cherry_dup, contained),
         "commit_subjects": commits[:50],

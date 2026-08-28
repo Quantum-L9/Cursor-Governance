@@ -90,6 +90,34 @@ def build_redundancy_fixture(tmp: Path) -> Path:
     _git(repo, "checkout", "main")
     _commit(repo, "impl.py", "def f():\n    return 1\n\ndef g():\n    return 2\n", "fuller impl")
 
+    # The case git cherry structurally cannot see: every ordinary commit on the
+    # branch is patch-duplicated upstream, but a merge commit carries resolution
+    # content that landed nowhere. cherry skips merges, so the range reads as
+    # fully absorbed. The merge is of a side branch, not of main -- merging main
+    # would make all of main reachable and leave cherry nothing to compare
+    # against, which reports every commit novel and hides this case instead.
+    _git(repo, "checkout", "-b", "feature/dup-merge", "main")
+    _commit(repo, "m.txt", "m\n", "dup-merge: ordinary commit")
+    msha = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True, capture_output=True
+    ).stdout.strip()
+    _git(repo, "checkout", "-b", "feature/dup-side", "main")
+    _commit(repo, "s.txt", "s\n", "dup-merge: side commit")
+    ssha = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", "HEAD"], text=True, capture_output=True
+    ).stdout.strip()
+    _git(repo, "checkout", "feature/dup-merge")
+    _git(repo, "merge", "--no-ff", "feature/dup-side", "-m", "merge side branch")
+    # Fold unique content into the merge commit itself.
+    (repo / "resolution.txt").write_text("resolution only on this merge\n", encoding="utf-8")
+    _git(repo, "add", "resolution.txt")
+    _git(repo, "commit", "--amend", "--no-edit")
+    # Main independently acquires both ordinary patches, but never the merge's
+    # resolution.
+    _git(repo, "checkout", "main")
+    _git(repo, "cherry-pick", msha)
+    _git(repo, "cherry-pick", ssha)
+
     # Genuinely novel: nothing on main carries this.
     _git(repo, "checkout", "-b", "feature/novel", "main")
     _commit(repo, "new.txt", "brand new\n", "novel work")
@@ -178,6 +206,17 @@ def check_redundancy(repo: Path, errors: list[str]) -> None:
         )
     if sup.get("cherry_novel", 0) < 1:
         errors.append("superseded branch should still look novel to git cherry")
+
+    # A merge git cherry never examined must not earn the exact patch_id basis:
+    # prune-policy lets that basis authorise a delete, and the merge resolution
+    # has not landed anywhere.
+    dm = _diagnose(repo, "feature/dup-merge")
+    if dm.get("merge_commits_unexamined", 0) < 1:
+        errors.append("dup-merge fixture should carry an unexamined merge commit")
+    if dm.get("redundancy_basis") == "patch_id":
+        errors.append("unexamined merge must not yield the patch_id basis")
+    if dm.get("classification") == "archive_ref" and dm.get("redundancy_basis") == "patch_id":
+        errors.append("unexamined merge must not be auto-prunable")
 
     novel = _diagnose(repo, "feature/novel")
     if novel.get("classification") != "keep_push":
