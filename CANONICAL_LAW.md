@@ -485,7 +485,7 @@ admin-merge remain forbidden.
 have not been since 2026-08-18. Older text saying otherwise names an enforcement
 that does not exist; do not treat it as live.
 
-Three planes, and two of them deny:
+Two planes, and only one of them denies:
 
 1. **Workflow plane — preference, not enforcement.** `make pr` is the preferred
    route to GitHub: it is the only one that runs the checkers. `git` and `gh` are
@@ -500,6 +500,11 @@ Three planes, and two of them deny:
    git is allowed unconditionally; a destructive primitive over disposable state
    is allowed; an unrecoverable mutation of sensitive state is denied — to a
    human, not to a workflow phase.
+**Correction (2026-08-28): read "two planes" above as THREE, two of which deny.**
+A third plane was added below. The count in the sentence above is preserved
+rather than edited, because this document supersedes by appending — the same way
+§6.2.4 supersedes §6.2's push-denial phrasing without rewriting it.
+
 3. **Verification plane — this one denies too.** Every shell command is also
    evaluated by [`ops/autonomy/verification_bypass_gate.py`](ops/autonomy/verification_bypass_gate.py)
    (contract `l9-commit-verification-integrity`), which denies commands that skip
