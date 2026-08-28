@@ -11,7 +11,10 @@ def test_mutation_gate_is_always_on() -> None:
     text = (ROOT / "rules" / "99-no-auto-commit.mdc").read_text(encoding="utf-8")
     assert "alwaysApply: true" in text
     assert "Always apply. Always enabled. No ask." in text
-    assert "Ask “should I commit?”" in text
+    # Substring only: the rule renders the question in curly quotes, and
+    # Prettier owns Markdown here, so asserting the typography would fail
+    # on a formatter pass that changes no behaviour.
+    assert "should I commit" in text
     assert "Stop with unique uncommitted files you wrote this session" in text
     assert "The filename is **historical**" in text
 
