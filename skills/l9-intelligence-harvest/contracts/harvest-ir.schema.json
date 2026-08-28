@@ -1,0 +1,571 @@
+{
+  "$id": "l9/intelligence-harvest/ir",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "concepts": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "acceptance_tests": {
+            "items": {
+              "properties": {
+                "given": {
+                  "type": "string"
+                },
+                "must_not": {
+                  "type": "string"
+                },
+                "then": {
+                  "type": "string"
+                },
+                "when": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "given",
+                "when",
+                "then",
+                "must_not"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "beneficiary_destination": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "compounding": {
+            "maximum": 5,
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "description": {
+            "type": "string"
+          },
+          "disposition": {
+            "enum": [
+              "PORT",
+              "PORT_WITH_HARDENING",
+              "CONFIGURE",
+              "MERGE_WITH_EXISTING",
+              "KEEP_LOCAL",
+              "MIGRATION_CONTEXT",
+              "REJECT",
+              "UNKNOWN"
+            ]
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "leverage": {
+            "maximum": 5,
+            "minimum": 1,
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "name": {
+            "type": "string"
+          },
+          "nugget": {
+            "default": false,
+            "type": "boolean"
+          },
+          "portability": {
+            "additionalProperties": false,
+            "properties": {
+              "donor_execution_authority_independent": {
+                "type": "boolean"
+              },
+              "donor_identity_independent": {
+                "type": "boolean"
+              },
+              "donor_infrastructure_independent": {
+                "type": "boolean"
+              },
+              "donor_runtime_required": {
+                "type": "boolean"
+              },
+              "external_dependency": {
+                "additionalProperties": false,
+                "properties": {
+                  "failure_behavior": {
+                    "type": "string"
+                  },
+                  "probe": {
+                    "type": "string"
+                  },
+                  "target": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "target",
+                  "probe",
+                  "failure_behavior"
+                ],
+                "type": [
+                  "object",
+                  "null"
+                ]
+              },
+              "incidental_implementation_independent": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "donor_identity_independent",
+              "donor_execution_authority_independent",
+              "donor_infrastructure_independent",
+              "incidental_implementation_independent",
+              "donor_runtime_required",
+              "external_dependency"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "problem": {
+            "type": "string"
+          },
+          "rank_score": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "risks": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "semantic_contract": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "beneficiary_fit": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "comparison": {
+                "enum": [
+                  "DONOR_STRONGER",
+                  "BENEFICIARY_STRONGER",
+                  "EQUIVALENT",
+                  "STANDALONE",
+                  "UNKNOWN"
+                ]
+              },
+              "existing_owner": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "merge_decision": {
+                "type": "string"
+              },
+              "compatibility_risk": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "comparison",
+              "existing_owner",
+              "merge_decision",
+              "compatibility_risk"
+            ]
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "problem",
+          "disposition",
+          "evidence_ids",
+          "risks",
+          "acceptance_tests"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "drift": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "evidence": {
+      "items": {
+        "$id": "l9/intelligence-harvest/evidence",
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "additionalProperties": false,
+        "properties": {
+          "claim": {
+            "type": "string"
+          },
+          "epistemic": {
+            "enum": [
+              "CONFIRMED",
+              "INFERENCE",
+              "UNKNOWN"
+            ]
+          },
+          "id": {
+            "minLength": 1,
+            "type": "string"
+          },
+          "locator": {
+            "properties": {
+              "kind": {
+                "enum": [
+                  "path_lines",
+                  "symbol",
+                  "url",
+                  "artifact",
+                  "unknown"
+                ]
+              },
+              "value": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "kind",
+              "value"
+            ],
+            "type": "object"
+          },
+          "secret_redacted": {
+            "default": false,
+            "type": "boolean"
+          },
+          "source": {
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "epistemic",
+          "source",
+          "locator"
+        ],
+        "title": "Evidence",
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "highest_leverage_nugget": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "inventory": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "classification": {
+            "enum": [
+              "canonical",
+              "active",
+              "candidate",
+              "duplicate",
+              "legacy",
+              "generated",
+              "archive",
+              "sensitive",
+              "unknown"
+            ]
+          },
+          "owner": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "consumers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "importance": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "maximum": 5
+          },
+          "action": {
+            "enum": [
+              "keep",
+              "merge",
+              "migrate",
+              "archive",
+              "delete",
+              "unknown"
+            ]
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "path",
+          "classification",
+          "action",
+          "evidence_ids"
+        ]
+      }
+    },
+    "request": {
+      "$id": "l9/intelligence-harvest/request",
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "additionalProperties": false,
+      "properties": {
+        "access_mode": {
+          "default": "read-only",
+          "enum": [
+            "read-only",
+            "dry-run-allowed"
+          ]
+        },
+        "beneficiary": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "brief": {
+          "default": false,
+          "type": "boolean"
+        },
+        "depth": {
+          "default": "exhaustive",
+          "enum": [
+            "sample",
+            "standard",
+            "exhaustive"
+          ]
+        },
+        "donor": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "harvest_target": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "language": {
+          "default": "as-donor",
+          "type": "string"
+        },
+        "request_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "secrets_policy": {
+          "default": "redact",
+          "enum": [
+            "redact",
+            "forbid-mention"
+          ]
+        }
+      },
+      "required": [
+        "request_id",
+        "donor",
+        "beneficiary",
+        "harvest_target"
+      ],
+      "title": "HarvestRequest",
+      "type": "object"
+    },
+    "safety": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.1.0"
+    },
+    "source_identity": {
+      "type": "object"
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "PARTIAL",
+        "BLOCKED",
+        "FAIL"
+      ]
+    },
+    "surfaces": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "item": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source": {
+            "type": "string",
+            "minLength": 1
+          },
+          "visibility": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "is_wrapper": {
+            "type": "boolean"
+          },
+          "resolved_target": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "dependencies": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mutations": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "evidence_ids": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "item",
+          "source",
+          "is_wrapper",
+          "resolved_target",
+          "evidence_ids"
+        ]
+      }
+    },
+    "system": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "identity": {
+          "type": [
+            "string",
+            "object"
+          ]
+        },
+        "workflows": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "control_flow": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "ownership_boundaries": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "dependencies": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "must_not_own": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "identity",
+        "workflows",
+        "control_flow",
+        "ownership_boundaries",
+        "dependencies",
+        "must_not_own"
+      ]
+    },
+    "unknowns": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "request",
+    "source_identity",
+    "inventory",
+    "system",
+    "surfaces",
+    "drift",
+    "evidence",
+    "concepts",
+    "safety",
+    "unknowns",
+    "highest_leverage_nugget",
+    "status"
+  ],
+  "title": "HarvestIR",
+  "type": "object"
+}

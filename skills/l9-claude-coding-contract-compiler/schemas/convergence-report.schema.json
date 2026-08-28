@@ -1,0 +1,117 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ConvergenceReport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "passes_run",
+    "pass_summaries",
+    "cumulative_improvement_estimate",
+    "remaining_known_defects",
+    "unresolved_unknowns",
+    "stop_condition_triggered",
+    "final_recommendation"
+  ],
+  "properties": {
+    "passes_run": {
+      "type": "integer",
+      "minimum": 2
+    },
+    "pass_summaries": {
+      "type": "array",
+      "minItems": 2,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "pass_id",
+          "focus",
+          "changes_count",
+          "improvement_estimate",
+          "scorecard_delta"
+        ],
+        "properties": {
+          "pass_id": {
+            "type": "integer"
+          },
+          "focus": {
+            "type": "string"
+          },
+          "changes_count": {
+            "type": "integer"
+          },
+          "improvement_estimate": {
+            "description": "Estimated improvement this pass. UNKNOWN if unverifiable.",
+            "oneOf": [
+              {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 100
+              },
+              {
+                "type": "string",
+                "const": "UNKNOWN"
+              }
+            ]
+          },
+          "scorecard_delta": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "improvement_ratio_by_pass": {
+      "type": "array",
+      "items": {
+        "type": "number",
+        "minimum": 0
+      }
+    },
+    "cumulative_improvement_estimate": {
+      "oneOf": [
+        {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        {
+          "type": "string",
+          "const": "UNKNOWN"
+        }
+      ]
+    },
+    "remaining_known_defects": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "unresolved_unknowns": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "stop_condition_triggered": {
+      "type": "string",
+      "enum": [
+        "no_material_defects_remain",
+        "next_pass_gain_below_5_percent",
+        "improvement_requires_new_scope",
+        "all_hard_gates_pass",
+        "two_consecutive_passes_same_output",
+        "BLOCKED"
+      ]
+    },
+    "final_recommendation": {
+      "type": "string",
+      "enum": [
+        "IMPROVED_EXECUTION_READY",
+        "IMPROVED_WITH_FINDINGS",
+        "BLOCKED_ON_IMPROVEMENT",
+        "REJECTED_CHANGE_SET",
+        "MINE_FOR_FUTURE"
+      ]
+    }
+  }
+}

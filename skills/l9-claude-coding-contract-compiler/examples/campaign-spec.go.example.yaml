@@ -1,0 +1,47 @@
+# Go neutrality fixture. Compiler must project Go validation and inject no npm or Python fallback.
+campaign:
+  id_prefix: "GO-NEUTRAL"
+  contract_version: "2.7.0"
+  target_repo: "ExampleOrg/go-service"
+  target_branch: "claude/go-neutrality"
+  validation:
+    cold_resume:
+      commands:
+        - "go test ./..."
+    commit_gate:
+      commands:
+        - "go test ./..."
+  dpk:
+    rollback_target: "git revert HEAD"
+    has_ai_feature: false
+    manifest:
+      schema_version: "dpk-1.0"
+      repository:
+        id: "go-service"
+        name: "go-service"
+        type: "go-service"
+        lifecycle: "beta"
+        criticality: "tier-2"
+        description: "Compiler ecosystem-neutrality fixture."
+      ownership:
+        accountable_team: "ExampleOrg"
+        technical_owner: "platform"
+        operational_owner: "platform"
+      boundaries:
+        owns: ["internal/**", "tests/**"]
+        does_not_own: ["remote deployment"]
+      interfaces:
+        inbound: []
+        outbound: []
+items:
+  - key: "001"
+    title: "Add worker"
+    allowed_files:
+      - {deliverable: "Add worker", path: "internal/worker.go"}
+      - {deliverable: "Add worker tests", path: "internal/worker_test.go"}
+    forbidden_capabilities: ["remote deployment"]
+    verify_proof: "go test ./internal/..."
+    sizing: {new_files: 2, modified_files: 0, test_cases: 5, commits: 1}
+    readiness:
+      categories: {repo_clarity: 10, arch_mapping: 15, local_reproducibility: 10, test_eval_coverage: 15,
+                   security_boundaries: 10, observability_integrity: 10, deploy_rollback: 10, transition_clarity: 15}

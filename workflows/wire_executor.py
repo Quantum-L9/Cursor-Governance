@@ -585,7 +585,11 @@ class WireExecutor:
         commit_msg = f"wire({component}): {actions_summary}"
 
         # Commit
-        cmd = f'git commit -m "{commit_msg}" --no-verify 2>&1 || true'
+        # Hooks run. A commit that cannot pass local verification is a
+        # finding to repair, not a flag to add (contract
+        # l9-commit-verification-integrity); a hook failure lands in the
+        # `else` below and is reported rather than silently committed.
+        cmd = f'git commit -m "{commit_msg}" 2>&1 || true'
         code, stdout, _stderr = self._run_shell(cmd)
 
         if "nothing to commit" in stdout.lower():

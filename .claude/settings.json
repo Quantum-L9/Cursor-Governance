@@ -40,6 +40,11 @@
             "type": "command",
             "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer user_prompt_skill_router.py'",
             "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer root_file_advisory_wrap.py'",
+            "timeout": 5
           }
         ]
       }
@@ -183,6 +188,7 @@
     "l9-bounded-autonomy": "user-invocable-only",
     "l9-chat-extraction": "user-invocable-only",
     "l9-ci-ops": "user-invocable-only",
+    "l9-claude-coding-contract-compiler": "user-invocable-only",
     "l9-cli-optimization": "user-invocable-only",
     "l9-code-maintenance": "user-invocable-only",
     "l9-component-verification": "user-invocable-only",
@@ -194,11 +200,13 @@
     "l9-global-architect": "user-invocable-only",
     "l9-governance-symlinks": "user-invocable-only",
     "l9-governance-wiring": "user-invocable-only",
+    "l9-intelligence-harvest": "user-invocable-only",
     "l9-issue-remediation": "user-invocable-only",
     "l9-kubernetes-deploying": "user-invocable-only",
     "l9-mac-storage-triage": "user-invocable-only",
     "l9-pe-campaign-activate": "user-invocable-only",
     "l9-pe-nuggets": "user-invocable-only",
+    "l9-pipeline-orchestrator": "user-invocable-only",
     "l9-plan-simple": "user-invocable-only",
     "l9-pr-remediation": "user-invocable-only",
     "l9-python-tdd-with-uv": "user-invocable-only",

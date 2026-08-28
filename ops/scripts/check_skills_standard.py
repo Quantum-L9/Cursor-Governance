@@ -37,6 +37,11 @@ def _load_frontmatter(text: str) -> tuple[dict, str] | tuple[None, str]:
     return fm, body
 
 
+def is_test_fixture(path: Path) -> bool:
+    """True for a SKILL.md that belongs to a pack's test fixtures, not discovery."""
+    return "fixtures" in path.parts
+
+
 def check_skills(root: Path) -> tuple[list[str], list[str], int, int, int]:
     """Return (errors, warnings, live, archived, discovery_bytes)."""
     skills_dir = root / "skills"
@@ -49,6 +54,12 @@ def check_skills(root: Path) -> tuple[list[str], list[str], int, int, int]:
     live = 0
     arch = 0
     for path in sorted(skills_dir.rglob("SKILL.md")):
+        if is_test_fixture(path):
+            # A pack's own test fixtures are never registered in
+            # AUTONOMY_MANIFEST.yaml, never symlinked into an adapter, and so
+            # cost nothing per turn. Counting them spends the discovery budget
+            # on files no agent can ever discover.
+            continue
         rel = path.relative_to(root).as_posix()
         is_arch = "_archived" in path.parts
         text = path.read_text(encoding="utf-8", errors="replace")

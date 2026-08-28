@@ -1,0 +1,26 @@
+{
+  "negative": [
+    "literal code extraction",
+    "generic code analysis",
+    "percentage gap analysis",
+    "chat memory extraction",
+    "PE campaign nuggets",
+    "recursive artifact rewrite"
+  ],
+  "positive": [
+    "mine repo A for reusable patterns to strengthen repo B",
+    "decide what to port merge configure or reject",
+    "identify highest value transferable intelligence",
+    "donor to beneficiary architecture harvest"
+  ],
+  "sibling_collision": [
+    {
+      "prompt": "audit this skill pack for contradictions and score findings",
+      "route": "evidence-review-engine"
+    },
+    {
+      "prompt": "mine this donor repo for reusable architecture to strengthen another repo",
+      "route": "l9-intelligence-harvest"
+    }
+  ]
+}

@@ -1,0 +1,17 @@
+# Gate B Expertise Model, version 3.8.0
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: GateB_ExpertiseModel
+type: object
+required: [experts, doctrine, invariants, authority_hierarchy, activation_signals, reject_signals, expert_heuristics, adapters, failure_modes, leverage_points]
+additionalProperties: false
+properties:
+  experts: {type: array, minItems: 1, maxItems: 5}
+  doctrine: {type: array, minItems: 1, maxItems: 10}
+  invariants: {type: array, minItems: 1, maxItems: 10}
+  authority_hierarchy: {type: array, minItems: 1, maxItems: 7}
+  activation_signals: {type: array, minItems: 1, maxItems: 5}
+  reject_signals: {type: array, minItems: 1, maxItems: 5}
+  expert_heuristics: {type: array, minItems: 1, maxItems: 7}
+  adapters: {type: array, maxItems: 3}
+  failure_modes: {type: array, minItems: 1, maxItems: 5}
+  leverage_points: {type: array, minItems: 1, maxItems: 5}

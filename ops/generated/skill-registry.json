@@ -799,6 +799,17 @@
     },
     {
       "composition_role": "general",
+      "description": "compile, revise, and validate scoped Claude Code coding-contract chains from campaign specs. use for coding contracts, PR or execution specs, and cold-resumable multi-contract campaigns; not for other executors.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-claude-coding-contract-compiler",
+      "path": "skills/l9-claude-coding-contract-compiler",
+      "reason": "compiles scoped coding-contract chains that hardwire git workflow, commit cadence, and a terminal make pr delivery; its broad \"coding contract\" surface would hijack ordinary planning routing if auto-invoked; disable-model-invocation",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "Enable verified repository-owned capabilities that are dormant or miswired, or remove a verified CLI bottleneck, and ship the change as a PR. Use when an audit, benchmark, or dead-wiring finding must become production code. Do not use for audit-only output, invented capability, or bypassing quotas, licenses, or authorization.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -997,6 +1008,17 @@
     },
     {
       "composition_role": "general",
+      "description": "mine reusable semantic intelligence from a donor, compare it against a beneficiary, classify transfer dispositions, and emit harvest.json. use for donor-to-beneficiary harvests and pattern mining, not literal code extraction.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-intelligence-harvest",
+      "path": "skills/l9-intelligence-harvest",
+      "reason": "donor-to-beneficiary semantic mining is a deliberate operation with a large read surface over a foreign repo; keeps the harvest family (l9-harvest-pipeline, l9-pe-nuggets) explicit; disable-model-invocation",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "diagnose or converge open github issues across all non-archived quantum-l9 repos \u2014 inventory and rank blockers, fix at the obvious owning repo, hand prs to l9-pr-remediation, and leave graphiti pickup plus issue comment plus conditional root session-reference markdown so the next agent can resume. use when reviewing org issue readiness or blockers, or when the user asks to fix, remediate, unblock, or converge open issues across repos.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -1058,6 +1080,17 @@
       "name": "l9-pe-nuggets",
       "path": "skills/l9-pe-nuggets",
       "reason": "PLAN-window nugget extraction only; make campaign is the front door",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
+      "description": "drive a compiled contract chain as one fresh Claude Code session per contract, in dependency order. use when running an emitted multi-PR chain that needs an advance driver, auto-merge gate, and branch protection.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-pipeline-orchestrator",
+      "path": "skills/l9-pipeline-orchestrator",
+      "reason": "drives fresh sessions per contract, applies GitHub branch protection, and gates auto-merge with no human tap \u2014 high blast radius; merge authority still comes from /l9-pr-remediation, never from this pack; disable-model-invocation",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1195,14 +1228,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "compile, rebuild, evolve, or validate reusable L9 Skills by deciding topology ownership before creation, classifying one primary family plus orthogonal traits, normalizing canonical Skill IR, rendering target profiles, and enforcing Capability Closure. use when creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided.",
+      "description": "compile, rebuild, validate, and package prompts, SOPs, workflows, kernels, and existing agent skills into standalone exemplary skill packs. use when the user asks to create or improve a reusable skill, make a skill portable across Claude Code, Manus, Cursor, or other agents, sharpen activation and reject signals, extract expert heuristics, enforce authority and evidence rules, eliminate drift or stubs, or produce a validated ZIP.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-skill-compiler",
       "path": "skills/l9-skill-compiler",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided"
+      "when_to_use": "creating or improving a reusable skill, making a skill portable across Claude Code, Manus, or Cursor, sharpening activation and reject signals, extracting expert heuristics, eliminating drift or stubs, or producing a validated ZIP"
     },
     {
       "composition_role": "primary",
@@ -1261,6 +1294,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "bd2a82a8faf0aa4841b867e7ee2669aedbe8f08be7f0ec6759e85fbfa16d400a",
-  "source_skill_corpus_sha256": "6e9274eb11b17dde8b6e8ae03a749efef248cca5fe9d2b60461306d1ce34d143"
+  "source_manifest_sha256": "89ad518e436d62e99327908110fae18f5cfcdb462f78ac48fb205dabde8517be",
+  "source_skill_corpus_sha256": "198ee5735a64b8ad2197a4c4dd5f72dbcfa5c3e43196d72948d7ffddb4239db2"
 }

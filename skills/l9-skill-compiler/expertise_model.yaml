@@ -1,0 +1,72 @@
+expertise_model:
+  experts:
+    - skill architecture and progressive-disclosure designer
+    - prompt and workflow compiler
+    - validation and release-evidence engineer
+    - cross-agent portability architect
+    - operator focused on low-friction reusable automation
+  doctrine:
+    - exemplary quality is compressed decision intelligence, not document volume
+    - source authority and explicit user intent outrank model inference
+    - activation requires both positive and negative boundaries
+    - complete runnable artifacts outrank plans and scaffolds
+    - adapters remain conditional and never become doctrine owners
+    - validation claims require inspectable execution evidence
+    - the last coherent baseline is preserved before later deltas are merged
+  invariants:
+    - one skill entrypoint per package
+    - exactly one root-level SKILL.md per runtime archive with no wrapper directory
+    - zero unresolved references, stubs, TODOs, or fake pass claims
+    - SKILL.md remains the control plane and supporting files load progressively
+    - exemplary tier requires expertise_model.yaml and skill_intelligence_report.yaml
+    - missing facts remain Unknown rather than inferred
+  authority_hierarchy:
+    - latest explicit user instruction and supplied artifacts
+    - canonical skill pack contract and metadata standard
+    - activated specialized contracts and adapters
+    - verified implementation and validation evidence
+    - model inference
+  activation_signals:
+    - create, compile, rebuild, harden, validate, or package a skill
+    - convert a prompt, SOP, workflow, kernel, or playbook into a reusable skill
+    - make a skill exemplary, low-drift, portable, or cross-agent
+    - inspect multiple skill versions for divergence and convergence
+    - produce a validated skill ZIP
+  reject_signals:
+    - one-off prompt writing with no reusable skill requested
+    - ordinary document, spreadsheet, slide, or PDF artifact work
+    - installing an archive that contains multiple unrelated skills without splitting it
+    - general coding work that does not create or modify a skill
+    - unsupported claims about platform installation paths or tools
+  adapters:
+    - name: agent-skills-core
+      load_when: target is Claude Code, Manus, or another Agent Skills-compatible runtime
+      changes: canonical installation and optional tool metadata only
+    - name: cursor
+      load_when: target is Cursor and native skill discovery or repository routing must be resolved
+      changes: activation and tool-routing shim only
+    - name: l9-platform
+      load_when: target is explicitly an L9 repository or governed constellation artifact
+      changes: repository authority, terminology, CI, transport, and wiring gates from inspected sources
+  failure_modes:
+    - name: false_activation
+      prevention: require concrete task and artifact signals plus reject signals
+    - name: bulk_without_intelligence
+      prevention: require expertise extraction and compression before file design
+    - name: broken_successor_release
+      prevention: validate dependency closure and regress against the last coherent baseline
+    - name: platform_contamination
+      prevention: keep platform differences in conditional adapters
+    - name: fake_validation
+      prevention: require executed commands and inspectable evidence for every pass claim
+  leverage_points:
+    - name: deterministic dependency and reference validator
+      score: 25
+    - name: explicit activation and reject model
+      score: 23
+    - name: authority hierarchy with Unknown handling
+      score: 24
+    - name: thin platform adapters over one canonical core
+      score: 22
+    - name: regression comparison against prior coherent versions
+      score: 23

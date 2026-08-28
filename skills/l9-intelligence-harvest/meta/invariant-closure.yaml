@@ -1,0 +1,157 @@
+version: 1.1.0
+status: PASS
+invariants:
+- id: evidence_precedence
+  law: observable current behavior outranks conflicting description; wrappers must
+    resolve to actual targets
+  integrations:
+  - policies/harvest-policy.yaml
+  - references/system-reconstruction-contract.md
+  - scripts/validate_harvest.py
+  enforcement:
+  - test_evidence_precedence_and_wrapper_resolution
+- id: system_reconstruction_not_file_summary
+  law: reconstruct identity, workflows, control flow, ownership, dependencies, and
+    must-not-own boundaries
+  integrations:
+  - contracts/harvest-ir.schema.json
+  - references/system-reconstruction-contract.md
+  enforcement:
+  - test_system_reconstruction_shape_is_required
+- id: explicit_epistemics
+  law: every material claim is CONFIRMED, INFERENCE, or UNKNOWN
+  integrations:
+  - contracts/evidence.schema.json
+  - contracts/harvest-ir.schema.json
+  - scripts/validate_harvest.py
+  enforcement:
+  - test_epistemics_are_closed_enum
+- id: canonicality_distinctions
+  law: canonical, active, candidate, duplicate, legacy, generated, archive, sensitive,
+    and unknown remain distinct
+  integrations:
+  - policies/harvest-policy.yaml
+  - contracts/harvest-ir.schema.json
+  - scripts/validate_harvest.py
+  enforcement:
+  - test_canonicality_states_are_closed
+- id: nugget_qualification
+  law: a concept is not a nugget until stable problem, semantic contract, evidence,
+    destination, risks, tests, beneficiary fit, and portability close
+  integrations:
+  - policies/harvest-policy.yaml
+  - scripts/qualify_nuggets.py
+  enforcement:
+  - test_qualification_contract_is_complete
+- id: singular_disposition
+  law: every concept has exactly one disposition from the fixed taxonomy
+  integrations:
+  - contracts/harvest-ir.schema.json
+  - policies/disposition-policy.yaml
+  enforcement:
+  - test_disposition_taxonomy_is_exact
+- id: beneficiary_stronger_wins
+  law: stronger beneficiary semantics retain ownership and cannot be overwritten by
+    PORT
+  integrations:
+  - references/beneficiary-fit-contract.md
+  - scripts/qualify_nuggets.py
+  - scripts/validate_harvest.py
+  enforcement:
+  - test_beneficiary_stronger_blocks_port
+- id: harvest_not_implementation
+  law: beneficiary implementation is outside harvest authority
+  integrations:
+  - policies/harvest-policy.yaml
+  - references/beneficiary-fit-contract.md
+  enforcement:
+  - test_no_beneficiary_implementation_authority
+- id: fail_before_state_advancement
+  law: failed validation forbids downstream output advancement
+  integrations:
+  - scripts/validate_harvest.py
+  - scripts/render_brief.py
+  enforcement:
+  - test_renderer_refuses_invalid_harvest
+- id: validation_precedes_durable_output
+  law: renderer validates before writing any human-readable derivative
+  integrations:
+  - scripts/render_brief.py
+  enforcement:
+  - test_renderer_refuses_invalid_harvest
+- id: no_unobserved_runtime_claims
+  law: CONFIRMED or INFERENCE claims require a resolvable evidence locator
+  integrations:
+  - scripts/validate_harvest.py
+  enforcement:
+  - test_unobserved_claims_fail_closure
+- id: secret_protection
+  law: donor secrets never become harvest output values
+  integrations:
+  - policies/harvest-policy.yaml
+  - contracts/evidence.schema.json
+  enforcement:
+  - test_secret_policy_is_closed
+- id: deterministic_highest_leverage
+  law: highest-leverage selection is deterministic with stable tie breakers
+  integrations:
+  - policies/harvest-policy.yaml
+  - scripts/rank_nuggets.py
+  enforcement:
+  - test_ranking_policy_is_deterministic
+- id: authority_boundaries_survive_transfer
+  law: portable nuggets are independent of donor execution authority and infrastructure
+  integrations:
+  - contracts/harvest-ir.schema.json
+  - scripts/qualify_nuggets.py
+  enforcement:
+  - test_portability_requires_authority_and_infrastructure_independence
+- id: infrastructure_weight_not_smuggled
+  law: semantic value transfers without donor infrastructure unless explicitly retained
+    as a bounded runtime dependency
+  integrations:
+  - references/concept-extraction-contract.md
+  - scripts/qualify_nuggets.py
+  enforcement:
+  - test_runtime_dependency_requires_explicit_closure
+- id: legacy_is_migration_evidence
+  law: legacy material is lower-precedence evidence and does not regain authority
+    by age or availability
+  integrations:
+  - policies/harvest-policy.yaml
+  - references/system-reconstruction-contract.md
+  enforcement:
+  - test_legacy_is_lower_precedence
+- id: literal_code_extraction_is_sibling_scope
+  law: literal code extraction must not activate semantic harvest
+  integrations:
+  - SKILL.md
+  - tests/fixtures/activation.json
+  enforcement:
+  - test_literal_code_extraction_is_negative_activation
+- id: deployment_commit_push_out_of_scope
+  law: harvesting never wires, commits, pushes, deploys, or mutates beneficiary artifacts
+  integrations:
+  - references/beneficiary-fit-contract.md
+  - tests/test_security_and_activation.py
+  enforcement:
+  - test_deployment_and_commit_authority_absent
+- id: meaning_compression
+  law: preserve donor semantic law without archiving donor prompt prose as runtime
+    doctrine
+  integrations:
+  - SKILL.md
+  - references/concept-extraction-contract.md
+  enforcement:
+  - test_source_prompt_is_not_embedded
+- id: retained_runtime_dependency_closure
+  law: retained donor runtime dependencies require target, probe, and failure behavior
+  integrations:
+  - contracts/harvest-ir.schema.json
+  - scripts/qualify_nuggets.py
+  - scripts/validate_harvest.py
+  enforcement:
+  - test_runtime_dependency_requires_explicit_closure
+closed_count: 20
+expected_count: 20
+all_identified_nuggets_closed: true

@@ -1,0 +1,177 @@
+{
+  "capabilities": [
+    {
+      "binding_kind": "MODEL_INSTRUCTION",
+      "detail": null,
+      "id": "acceptance_test_derivation",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "MODEL_INSTRUCTION",
+      "detail": null,
+      "id": "beneficiary_comparison",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "EXECUTABLE",
+      "detail": null,
+      "id": "bind_request",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "EXTERNAL_CAPABILITY",
+      "detail": "declared external runtime binding",
+      "id": "canonical_dag_registration",
+      "status": "runtime_bound"
+    },
+    {
+      "binding_kind": "MODEL_INSTRUCTION",
+      "detail": null,
+      "id": "canonicality_interpretation",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "MODEL_INSTRUCTION",
+      "detail": null,
+      "id": "concept_extraction",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "MODEL_INSTRUCTION",
+      "detail": null,
+      "id": "disposition_selection",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "EXECUTABLE",
+      "detail": null,
+      "id": "evidence_closure",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "EXECUTABLE",
+      "detail": null,
+      "id": "inventory_source",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "EXECUTABLE",
+      "detail": null,
+      "id": "probe_capabilities",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "EXECUTABLE",
+      "detail": null,
+      "id": "qualify_nuggets",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "EXECUTABLE",
+      "detail": null,
+      "id": "rank_nuggets",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "EXECUTABLE",
+      "detail": null,
+      "id": "render_output",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "MODEL_INSTRUCTION",
+      "detail": null,
+      "id": "risk_identification",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "MODEL_INSTRUCTION",
+      "detail": null,
+      "id": "semantic_surface_mapping",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "EXECUTABLE",
+      "detail": null,
+      "id": "source_identity",
+      "status": "closed"
+    },
+    {
+      "binding_kind": "MODEL_INSTRUCTION",
+      "detail": null,
+      "id": "system_reconstruction",
+      "status": "closed"
+    }
+  ],
+  "checks": [
+    {
+      "detail": "emitted per capability-closure.schema.json",
+      "id": "closure_result_is_machine_readable",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "required_capabilities_have_bindings",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "binding_kind_is_known",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "local_binding_targets_exist",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "executable_bindings_resolve",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "DAG_NODE_bindings_resolve_to_real_nodes",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "DELEGATED_SKILL_bindings_resolve_to_live_owned_skills",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "EXTERNAL_CAPABILITY_bindings_define_probe_and_failure_behavior",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "required_capabilities_are_reachable_from_entrypoint",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "dependency_graph_is_acyclic",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "no_required_capability_is_satisfied_by_placeholder",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "no_unresolved_reference_is_silently_accepted",
+      "status": "pass"
+    },
+    {
+      "detail": null,
+      "id": "UNKNOWN_is_only_valid_when_explicitly_bounded",
+      "status": "pass"
+    }
+  ],
+  "cycles": [],
+  "generated_at": "2026-08-28T14:30:58.852696Z",
+  "result": "RUNTIME_BOUND",
+  "unreachable": []
+}
