@@ -38,7 +38,7 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/analyze` | Explore structure, flows, hotspots (`l9-code-analysis`; probe mode via `l9-component-verification`) |
 | `/evaluate` | Deep readiness / compliance audit |
 | `/analyze_evaluate` | Analyze + evaluate in one pass |
-| `/reasoning` | Multi-modal reasoning stack |
+| `/reasoning` | Structured reasoning (`l9-structured-reasoning`; stance enums, then `/ynp`) |
 | `/gmp` | Phased, auditable execution |
 | `/forge` | Fast autonomous batch execution |
 | `/harvest` | Extract code from docs (sed / copy — no rewrite) |

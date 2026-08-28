@@ -1,0 +1,45 @@
+schema_version: 1
+stated_probability: forbidden
+calibration_status:
+  - none
+  - uncalibrated
+  - calibrated
+calibrated_requires:
+  - window
+  - n
+  - ece
+n_min: 50
+ece_is_not_a_gate: true
+legacy_percent_alias: display_only
+action_source: evidence_quality x decision_risk
+allow_set:
+  high:
+    reversible:
+      - proceed
+      - proceed_with_validation
+    guarded:
+      - proceed_with_validation
+    irreversible:
+      - proceed_with_validation
+      - block
+  medium:
+    reversible:
+      - proceed_with_validation
+    guarded:
+      - bounded_probe
+    irreversible:
+      - block
+  low:
+    reversible:
+      - bounded_probe
+    guarded:
+      - bounded_probe
+    irreversible:
+      - block
+  unknown:
+    reversible:
+      - bounded_probe
+    guarded:
+      - block
+    irreversible:
+      - block

@@ -22,6 +22,10 @@ ledger:
   selected_option: OPT-001 | null
   selection_rationale: string
   action: proceed | proceed_with_validation | bounded_probe | block
+  evidence_quality: high | medium | low | unknown
+  decision_risk: reversible | guarded | irreversible
+  calibration_status: none | uncalibrated | calibrated
+  stated_probability: null | number
   next_probe: string | null
   stop_condition: string
 rules:
