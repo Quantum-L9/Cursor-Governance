@@ -1,4 +1,4 @@
-# Gate D Build Manifest, version 3.7.0
+# Gate D Build Manifest, version 3.8.0
 $schema: "https://json-schema.org/draft/2020-12/schema"
 title: GateD_BuildManifest
 type: object

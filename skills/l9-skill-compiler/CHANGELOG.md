@@ -3,11 +3,23 @@ schema: 1
 parent: l9-skill-compiler
 layer: release
 role: changelog
-version: 3.7.0
+version: 3.8.0
 status: active
 -->
 
 # Changelog
+
+## 3.8.0 - 2026-08-28
+
+### Corrected
+- Frontmatter contract is now the L9 native key set: `name`, `description`, `paths`, `disable-model-invocation`, `metadata`. `license` and `allowed-tools` move under `metadata:`. They were previously permitted at top level, which is why compiled packs — this one included — arrived at a governed repository needing hand repair before they could be installed.
+- `references/meta-standard.md` and `references/file-contract.md` no longer show audit fields or `license` as top-level keys.
+- `name` must equal the pack directory. The previous "only when the target platform requires one" carve-out did not match any discovery surface the compiler targets.
+
+### Added
+- `validate_skill_pack.py` enforces description length 150-500 with a `use when`/`use for` trigger clause, non-empty `paths`, and `disable-model-invocation: true` on archived packs.
+- `--frontmatter-profile agent-skills` for packs published outside a governed repository, where top-level `license` and `allowed-tools` are valid. Never the default.
+- The validator is a required gate in step 6 of the mandatory workflow rather than an optional check.
 
 ## 3.7.0 - 2026-08-13
 

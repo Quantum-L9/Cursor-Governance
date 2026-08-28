@@ -8,7 +8,7 @@ metadata:
   tags: [l9, compiler, skill, exemplary, portability, packaging]
   owner: igor_beylin
   status: active
-  version: "3.7.0"
+  version: "3.8.0"
   updated: "2026-08-28"
   license: Proprietary
   supersedes: l9-skill-compiler v2.0.0 (skill-compiler-v2 DAG runtime)
@@ -52,8 +52,8 @@ Use this skill for creation, conversion, audit, rebuild, hardening, validation, 
 2. Parse the source and produce Gate A using `schemas/gate-a-source-parse.schema.yaml`.
 3. For exemplary work, extract and compress expertise before designing files. Produce `expertise_model.yaml` and Gate B.
 4. Select the minimum high-leverage structure. Produce Gate C and lock files in scope.
-5. Build complete files only. Produce Gate D with zero stubs, TODOs, placeholders, or unverified pass claims.
-6. Validate structural, contract, execution, evidence, operator, and regression classes. Produce Gate E.
+5. Build complete files only. Produce Gate D with zero stubs, TODOs, placeholders, or unverified pass claims. Write `SKILL.md` frontmatter to the five permitted top-level keys in `references/meta-standard.md` — `name`, `description`, `paths`, `disable-model-invocation`, `metadata` — with everything else nested under `metadata:`. A pack that emits `license` or `allowed-tools` at top level is rejected by the install gate of every governed repository and has to be repaired by hand before it can be wired.
+6. Validate structural, contract, execution, evidence, operator, and regression classes. Produce Gate E. `scripts/validate_skill_pack.py <pack>` is a required gate here, not an optional check: it is the executable form of the frontmatter contract and fails the build on a non-native top-level key, a name that does not match the pack directory, a description outside 150-500 characters or with no trigger clause, an empty `paths`, or an archived pack that is not `disable-model-invocation: true`.
 7. Create platform adapters only when they change installation, tool binding, activation, or output routing. Produce Gate F when wiring is in scope.
 8. Package only after validation passes. Produce Gate G and the actual archive.
 

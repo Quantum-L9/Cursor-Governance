@@ -1,4 +1,4 @@
-# Gate E Validation Report, version 3.7.0
+# Gate E Validation Report, version 3.8.0
 $schema: "https://json-schema.org/draft/2020-12/schema"
 title: GateE_ValidationReport
 type: object

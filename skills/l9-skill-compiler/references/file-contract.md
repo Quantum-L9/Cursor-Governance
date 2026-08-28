@@ -43,7 +43,7 @@ Avoid:
 - full kernel prose
 - repeated reference content
 
-`SKILL.md` also carries audit fields in the same YAML frontmatter block (`skill_schema`, `layer`, `role`, `tags`, `owner`, `status`, `version`, `updated`).
+`SKILL.md` also carries audit fields in the same YAML frontmatter block, nested under `metadata:` and never as top-level keys (`skill_schema`, `layer`, `role`, `tags`, `owner`, `status`, `version`, `updated`) — see [meta-standard.md](meta-standard.md).
 
 Do **not** create `agents/openai.yaml` or duplicate metadata in HTML comments on `SKILL.md`.
 
@@ -119,7 +119,7 @@ Rules:
 | Content type | Destination |
 |---|---|
 | trigger logic | `SKILL.md` frontmatter description |
-| version/audit metadata | `SKILL.md` YAML frontmatter (same block as `name`/`description`) |
+| version/audit metadata | `SKILL.md` YAML frontmatter, nested under `metadata:` |
 | repo registration | `.claude/README.md`, `AGENTS.md`, `.claude/agents/` |
 | short operating rule | `SKILL.md` |
 | smart exemplary spec template | `references/canonical-smart-exemplary-spec.yaml` |

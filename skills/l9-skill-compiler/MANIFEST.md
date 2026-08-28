@@ -3,7 +3,7 @@ schema: 1
 parent: l9-skill-compiler
 layer: release
 role: manifest
-version: 3.7.0
+version: 3.8.0
 status: active
 -->
 
@@ -12,7 +12,7 @@ status: active
 ## Release
 
 - Name: `l9-skill-compiler`
-- Version: `3.7.0`
+- Version: `3.8.0`
 - Tier: `exemplary`
 - Canonical baseline: v3.3.0
 - Release date: 2026-08-13

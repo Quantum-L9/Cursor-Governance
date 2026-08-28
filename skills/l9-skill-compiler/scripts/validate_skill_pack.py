@@ -15,7 +15,27 @@ try:
 except Exception as exc:  # pragma: no cover
     raise SystemExit(f"PyYAML is required: {exc}")
 
-ALLOWED_FRONTMATTER = {"name", "description", "license", "allowed-tools", "metadata"}
+#: L9 frontmatter contract (docs/skills-standard.md in Cursor-Governance, enforced
+#: by ops/scripts/check_skills_standard.py). This is the DEFAULT and the one a
+#: compiled pack must satisfy: a pack that ships `license` or `allowed-tools` at
+#: top level is rejected by that gate on install, which is exactly how three packs
+#: reached this repository needing hand repair.
+L9_FRONTMATTER = {"name", "description", "paths", "disable-model-invocation", "metadata"}
+
+#: Anthropic Agent Skills accept two further top-level keys. Opt in per build with
+#: --frontmatter-profile agent-skills; never the default, so portability can never
+#: silently produce a pack the L9 gate rejects.
+AGENT_SKILLS_EXTRA = {"license", "allowed-tools"}
+
+FRONTMATTER_PROFILES = {
+    "l9": L9_FRONTMATTER,
+    "agent-skills": L9_FRONTMATTER | AGENT_SKILLS_EXTRA,
+}
+
+#: docs/skills-standard.md §3. Under the floor the triggers are missing; over the
+#: ceiling the body is leaking into the routing signal.
+DESC_MIN, DESC_MAX = 150, 500
+TRIGGER_CLAUSES = ("use when", "use for")
 UNFINISHED = re.compile(
     r"(?im)^\s*(?:[-*]\s*)?(?:TODO|FIXME|TBD|PLACEHOLDER|LOREM IPSUM|COMING SOON)\b\s*[:\[]?"
 )
@@ -43,7 +63,7 @@ def local_links(path: Path) -> list[str]:
     return links
 
 
-def validate(root: Path) -> list[str]:
+def validate(root: Path, profile: str = "l9") -> list[str]:
     errors: list[str] = []
     skill = root / "SKILL.md"
     if not skill.exists():
@@ -52,17 +72,48 @@ def validate(root: Path) -> list[str]:
         fm, body = load_frontmatter(skill)
     except Exception as exc:
         return [str(exc)]
-    extra = set(fm) - ALLOWED_FRONTMATTER
+    allowed = FRONTMATTER_PROFILES.get(profile)
+    if allowed is None:
+        return [f"unknown frontmatter profile: {profile!r}"]
+    extra = set(fm) - allowed
     if extra:
-        errors.append(f"unsupported frontmatter keys: {sorted(extra)}")
+        errors.append(
+            f"unsupported top-level frontmatter keys: {sorted(extra)} "
+            f"(profile {profile!r}) - nest them under `metadata:`"
+        )
     name = fm.get("name")
     if not isinstance(name, str) or not re.fullmatch(r"[a-z0-9]+(?:-[a-z0-9]+)*", name):
         errors.append("name must be lowercase hyphen-case")
+    elif name != root.name:
+        # Not "only when the platform requires it": the folder IS the identity for
+        # every discovery surface this compiler targets, and a mismatch makes the
+        # pack undiscoverable rather than merely untidy.
+        errors.append(f"name {name!r} must match the pack directory {root.name!r}")
     desc = fm.get("description")
     if not isinstance(desc, str) or not desc.strip():
         errors.append("description is required")
-    elif len(desc) > 1024:
-        errors.append("description exceeds 1024 characters")
+    else:
+        if len(desc) < DESC_MIN:
+            errors.append(
+                f"description is {len(desc)} chars, under {DESC_MIN} - triggers are missing"
+            )
+        elif len(desc) > DESC_MAX:
+            errors.append(
+                f"description is {len(desc)} chars, over {DESC_MAX} - body leaking into frontmatter"
+            )
+        if not any(clause in desc.lower() for clause in TRIGGER_CLAUSES):
+            errors.append(
+                "description states no trigger - it must say "
+                f"{' or '.join(repr(c) for c in TRIGGER_CLAUSES)}"
+            )
+    if "paths" in fm and not fm.get("paths"):
+        errors.append("empty `paths` hides the skill from discovery; omit the key instead")
+    archived = "_archived" in root.parts or root.name.endswith("-deprecated")
+    if archived and fm.get("disable-model-invocation") is not True:
+        errors.append(
+            "an archived pack needs `disable-model-invocation: true` - "
+            "prose saying 'do not activate' is not a mechanism"
+        )
     if len(body.splitlines()) > 500:
         errors.append("SKILL.md exceeds 500 lines")
 
@@ -101,12 +152,22 @@ def validate(root: Path) -> list[str]:
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("skill_folder")
+    parser.add_argument(
+        "--frontmatter-profile",
+        choices=sorted(FRONTMATTER_PROFILES),
+        default="l9",
+        help=(
+            "Top-level frontmatter keys to accept. 'l9' (default) is the contract "
+            "every governed repository enforces; 'agent-skills' also permits "
+            "license/allowed-tools for a pack published outside L9."
+        ),
+    )
     args = parser.parse_args()
     root = Path(args.skill_folder).resolve()
     if not root.is_dir():
         print(f"FAIL: not a directory: {root}", file=sys.stderr)
         return 2
-    errors = validate(root)
+    errors = validate(root, profile=args.frontmatter_profile)
     if errors:
         for error in errors:
             print(f"FAIL: {error}", file=sys.stderr)

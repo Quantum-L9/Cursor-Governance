@@ -3,7 +3,7 @@ schema: 1
 parent: l9-skill-compiler
 layer: reference
 role: enforcement-gates
-version: 3.7.0
+version: 3.8.0
 status: active
 -->
 
