@@ -24,6 +24,24 @@ todos:
     content: Scoped self-check fixture + parent-ref test; make pr-check on the new-branch worktree; no merge from this path
     status: pending
 isProject: false
+kernel_pass:
+  bound_path: stop_generated_collisions_b4203c61.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T23:22:00Z
+    body_sha256: "8c364baa249c1c7e34d1508cc669040163a7bb25dddba1a449d9e0a02b80e8f9"
+    deltas:
+      - "Restored kernel_pass after plan-todo sync stripped the receipt"
+      - "Kept live todo statuses; this pass does not Build or rewrite product files"
+      - "Locked execute to a new origin/main worktree; dirty primary stays out"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T23:23:00Z
+    body_sha256: "8c364baa249c1c7e34d1508cc669040163a7bb25dddba1a449d9e0a02b80e8f9"
+    deltas:
+      - "Companion PLAN_DOCUMENT JSON remains the machine SSOT"
+      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
+      - "Confirmed no l9-generated GitHub merge driver; .gitattributes stays out of scope"
 ---
 
 # Stop generated snapshot collisions (PE+autonomy)
