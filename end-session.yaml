@@ -99,10 +99,10 @@ phase_1_pickup_context:
 
   template: |
     PICKUP|date={YYYY-MM-DD}|task={current_task}|files={file1,file2,file3}|next={next_action}|blocker={blocker_or_none}|gmps={GMP-XX,GMP-YY}|outcome={success|partial|blocked}
-  
+
   example: |
     PICKUP|date=2026-01-16|task=WMToGraphSync bidirectional sync|files=api/server.py,core/integration/wm_to_graph_sync.py,runtime/Dockerfile|next=Deploy container detection fix to VPS|blocker=none|gmps=GMP-68|outcome=success
-  
+
   command: |
     # Primary (default path when GRAPHITI_MEMORY_ENABLED=1):
     python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py health
@@ -110,7 +110,7 @@ phase_1_pickup_context:
       "PICKUP|date={DATE}|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|gmps={GMPS}|outcome={OUTCOME}" \
       --kind pickup_context
     # If health/write fails: WARN only — do not write memory-bank/ (retired).
-  
+
   fields:
     date: "YYYY-MM-DD format"
     task: "What was being worked on (single phrase)"
@@ -119,7 +119,7 @@ phase_1_pickup_context:
     blocker: "What's blocking progress, or 'none'"
     gmps: "GMP IDs completed this session (comma-separated)"
     outcome: "success|partial|blocked"
-  
+
   search_at_resume: |
     # Graphiti only (memory-bank retired)
     python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|" --limit 3
@@ -132,24 +132,24 @@ phase_2_lessons:
   priority: 2
   required: false
   description: "Only write if significant lessons or errors occurred"
-  
+
   lesson_template: |
     LESSON|topic={topic}|learned={what_was_learned}|context={when_this_applies}
-  
+
   error_template: |
     ERROR|type={error_type}|cause={root_cause}|fix={how_fixed}
-  
+
   commands:
     lesson: |
       python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
         "LESSON|topic={TOPIC}|learned={LEARNED}|context={CONTEXT}" \
         --kind lesson
-    
+
     error: |
       python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
         "ERROR|type={TYPE}|cause={CAUSE}|fix={FIX}" \
         --kind error
-  
+
   examples:
     lesson: "LESSON|topic=governance|learned=ContextVar must be set via async context manager before handler calls|context=FastAPI routes with RLS"
     error: "ERROR|type=container_detection|cause=/.dockerenv missing in slim images|fix=Use L9_CONTAINER_ENV=true env var"
@@ -163,21 +163,21 @@ phase_3_git_state:
   required: true
   auto: true
   description: "Automatically capture git state for context"
-  
+
   command: |
     # Run these commands to gather git state:
     BRANCH=$(git branch --show-current)
     COMMIT=$(git log -1 --format="%h %s")
     UNCOMMITTED=$(git status --short | wc -l | tr -d ' ')
     STAGED=$(git diff --cached --name-only | wc -l | tr -d ' ')
-    
+
     # Write to memory if uncommitted changes exist
     if [ "$UNCOMMITTED" -gt 0 ]; then
       python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
         "GIT|branch=$BRANCH|commit=$COMMIT|uncommitted=$UNCOMMITTED|staged=$STAGED" \
         --kind git_state
     fi
-  
+
   display: |
     IF uncommitted > 0:
       ⚠️ Uncommitted changes: {count} files
@@ -223,30 +223,30 @@ phase_5_confirmation:
   priority: 5
   required: true
   auto: true
-  
+
   output_template: |
     ╔═══════════════════════════════════════════════════════════╗
     ║           ✅ SESSION CLOSED - HANDOFF COMPLETE           ║
     ╚═══════════════════════════════════════════════════════════╝
-    
+
     📦 PICKUP CONTEXT STORED
     ├─ Task: {task}
     ├─ Files: {files}
     ├─ Next: {next_action}
     ├─ GMPs: {gmps}
     └─ Outcome: {outcome}
-    
+
     📝 LESSONS: {lesson_count} written
     🔧 ERRORS: {error_count} documented
-    
+
     📂 GIT STATE
     ├─ Branch: {branch}
     ├─ Uncommitted: {uncommitted_count} files
     └─ Last commit: {commit}
-    
+
     🎯 NEXT SESSION RESUME:
        python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|"
-    
+
     👋 Ready to resume anytime.
 
 # ═══════════════════════════════════════════════════════════
@@ -262,11 +262,11 @@ quick_reference:
     python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py write \
       "PICKUP|date=$(date +%Y-%m-%d)|task=TASK|files=FILES|next=NEXT|blocker=none|gmps=none|outcome=success" \
       --kind pickup_context
-  
+
   resume_search: |
     # At next session start
     python3 .cursor-commands/ops/graphiti/graphiti_memory_client.py search "PICKUP|" --limit 3
-  
+
   memory_kinds:
     - pickup_context: "Session handoff (MOST IMPORTANT)"
     - lesson: "What was learned"
@@ -277,11 +277,12 @@ quick_reference:
 # ANTI-PATTERNS
 # ═══════════════════════════════════════════════════════════
 anti_patterns:
-  - "❌ DON'T write free-form text (hard to search)"
-  - "❌ DON'T skip pickup_context (breaks resume)"
-  - "❌ DON'T skip cache_set_session_context (breaks cross-window resume)"
-  - "❌ DON'T forget uncommitted changes"
-  
+  dont:
+    - "❌ DON'T write free-form text (hard to search)"
+    - "❌ DON'T skip pickup_context (breaks resume)"
+    - "❌ DON'T skip cache_set_session_context (breaks cross-window resume)"
+    - "❌ DON'T forget uncommitted changes"
+
   do:
     - "✅ DO use structured PICKUP| format"
     - "✅ DO keep task/next to single phrases"
