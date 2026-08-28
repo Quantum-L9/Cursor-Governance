@@ -55,3 +55,20 @@ reading the FAIL line. Do not delete files to unblock.
 Same gitdir, same branch, `.venv` still at `<clone>/.venv` when it existed
 before, env.local keep-list still present, unique untracked still present
 or held, no new `~/.cursor-governance.bak.*`.
+
+## After success — shelf WIP and plans
+
+`ff.sh` is finished. The slash/`make ff` caller then shelves leftover
+**untracked** `WIP/` and `docs/plans/` so the named clone is not a dump:
+
+1. List untracked under `WIP/` and `docs/plans/` (respect `.gitignore`).
+2. Skip `WIP/Legal Defense/`, `WIP/*oauth*.json`, `WIP/*credentials*.json`,
+   `WIP/*client_secret*.json`, and any file that looks like a live secret.
+3. If the list is empty, stop. If not, add a sibling worktree from the new
+   `origin/main` tip: `feat/ff-shelf-<stamp>`.
+4. Pathspec-add **only** those files. Scoped commit. `PR_REMEDIATE=0 make pr`.
+5. Leave the copies in the named clone. Do not `git stash -u`. Do not run
+   `make pr` from inside `ff.sh`.
+
+`refs/l9/preserved/ff-dirty/<stamp>` stays until `l9-git-work-preserve` triage
+plus `prune-policy` say otherwise. `/ff` never deletes it.

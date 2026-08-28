@@ -1,6 +1,6 @@
 ---
 name: ff
-version: "1.2.0"
+version: "1.3.0"
 description: "In-place catch-up of a named Cursor-Governance clone — parks unique work, keeps .venv; never activate_fresh"
 auto_chain: ynp
 aliases:
@@ -49,7 +49,14 @@ CURSOR_GOVERNANCE_DIR="<absolute-named-clone>" \
 5. Verify same gitdir, same branch, `.venv` and env.local keep-list still
    present, unique untracked still present or held, no new
    `~/.cursor-governance.bak.*`.
-6. Auto-chain `/ynp`.
+6. **Shelf leftover `WIP/` and `docs/plans/`** — if any untracked files remain
+   under those trees (skip gitignored secret globs, `WIP/Legal Defense/`,
+   credential filenames), cut a sibling worktree from the new `origin/main`
+   tip (`feat/ff-shelf-<stamp>`), pathspec-add **only** those files, scoped
+   commit, then `PR_REMEDIATE=0 make pr`. Do **not** put `make pr` inside
+   `ff.sh`. Do not scoop other untracked paths. Do not delete the copies in
+   the named clone.
+7. Auto-chain `/ynp`.
 
 ## FORBIDDEN
 

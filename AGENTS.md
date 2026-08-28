@@ -832,3 +832,12 @@ rest. `/plan-audit` is a compatibility alias of that command.
 
 Skill **`l9-plan-audit`** is still the sessionStart 7-day live-queue scanner
 (§16). It does not move files. Do not treat it as `/l9-audit-plans`.
+
+<!-- FF_SHELF_WIP_PLANS_V1 -->
+## `/ff` shelves leftover WIP and plans (2026-08-28)
+
+After `skills/l9-repo-sync/scripts/ff.sh` succeeds, leftover **untracked**
+`WIP/` and `docs/plans/` are a sibling PR (`feat/ff-shelf-<stamp>`,
+pathspecs only, `PR_REMEDIATE=0 make pr`). `ff.sh` stays push-off.
+Secret globs and `WIP/Legal Defense/` stay out. Dirty-preserve refs stay
+until `l9-git-work-preserve` triage + prune-policy.
