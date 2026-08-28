@@ -1,12 +1,17 @@
-# Front-door intent for campaign level3-make-pr-single-path.
-# This directory is the only trigger pack. Do not read operator scratch trees.
+# CLOSED 2026-08-28. Do not execute this pack. Do not replace the live root
+# Makefile. Makefile.candidate and Prompt - Start Campaign.md were deleted so
+# they cannot be read as a live install SSOT. Keep CAMPAIGN_SOURCE.yaml and
+# source-integrity-receipt.json as historical seed only.
+#
+# Front-door intent for campaign level3-make-pr-single-path (historical).
+# This directory is the sealed pack. Do not read operator scratch trees.
 #
 # MUST NOT run compile_activation_files.py against this file. That compiler
 # emits a thin two-wave seed and would overwrite the gold CAMPAIGN_SOURCE.yaml.
 # The gold seed and receipt in this directory are already the activation pair.
 #
-# Bound Makefile candidate (byte-for-byte replace of repository Makefile):
-#   environment/program-execution/campaigns/level3-make-pr-single-path/Makefile.candidate
+# Makefile.candidate is gone. Live command-surface SSOT is the repository
+# root Makefile. Do not reconstruct the candidate from this INTENT.
 #
 # Future agents must keep this seed shape, not the thin activator default:
 #   - distinct objective / problem_statement / target_state

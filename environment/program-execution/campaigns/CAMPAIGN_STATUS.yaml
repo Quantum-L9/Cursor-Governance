@@ -1,45 +1,61 @@
 schema: l9.program-execution.campaign-status-ledger.v1
-updated: "2026-08-21T17:19:05Z"
+updated: '2026-08-28T19:26:19Z'
 # Mutable live ledger. Does not rewrite CAMPAIGN_SOURCE.yaml.
 # Agents MUST close a campaign here before starting the next execute_order.
 campaigns:
-  - id: bounded-replanning-v1
-    lifecycle: complete
-    closed_at: "2026-08-15T00:52:49Z"
-    verdict: CONVERGED
-    evidence:
-      pull_request: "https://github.com/Quantum-L9/Cursor-Governance/pull/149"
-      merge_sha: 63efde4fdb6f99b0e7e7834211a803b564673351
-    closed_by: AUTH-001
-  - id: l9-devpack-program-execution-hardening
-    lifecycle: complete
-    closed_at: "2026-08-15T00:55:13Z"
-    verdict: CONVERGED
-    evidence:
-      pull_request: "https://github.com/Quantum-L9/Cursor-Governance/pull/150"
-      merge_sha: 233787697a7b430666801e14d6dc945decf73e62
-    closed_by: AUTH-001
-  - id: cc-pe-intent-compiler-v1
-    lifecycle: complete
-    closed_at: "2026-08-15T00:56:57Z"
-    verdict: CONVERGED
-    evidence:
-      pull_request: "https://github.com/Quantum-L9/Cursor-Governance/pull/151"
-      merge_sha: ccb2fa112f97a6fcafd669e34be18e2bd9cb1355
-    closed_by: AUTH-001
-  - id: l9-ecosystem-fix-plan
-    lifecycle: planned
-    notes: remaining-only v1.1.0 execution host is cryptoxdog/IB-Odoo_19#153
-  - id: pe-router-capability-safety-v4
-    lifecycle: cancelled
-    closed_at: "2026-08-22T01:36:00Z"
-    verdict: SUPERSEDED
-    notes: closed before eie-inference-isolation-v1 (execute-order-10) so the ledger has one active campaign
-    closed_by: l9-pr-remediation
-  - id: eie-inference-isolation-v1
-    lifecycle: in_progress
-    notes: launched by make campaign; pec runtime_status=active; operator_ack.acknowledged_at requires a real acknowledgment from Igor Beylin; agents must stop and ask, never forge it
-    launched_by: make campaign
-    pec_workspace: $HOME/.l9/programs/eie-inference-isolation-v1
-    blueprint: $HOME/.l9/blueprints/eie-inference-isolation-v1
-    worktree: $HOME/.l9/program-worktrees/eie-inference-isolation-v1
+- id: bounded-replanning-v1
+  lifecycle: complete
+  closed_at: '2026-08-15T00:52:49Z'
+  verdict: CONVERGED
+  evidence:
+    pull_request: https://github.com/Quantum-L9/Cursor-Governance/pull/149
+    merge_sha: 63efde4fdb6f99b0e7e7834211a803b564673351
+  closed_by: AUTH-001
+- id: l9-devpack-program-execution-hardening
+  lifecycle: complete
+  closed_at: '2026-08-15T00:55:13Z'
+  verdict: CONVERGED
+  evidence:
+    pull_request: https://github.com/Quantum-L9/Cursor-Governance/pull/150
+    merge_sha: 233787697a7b430666801e14d6dc945decf73e62
+  closed_by: AUTH-001
+- id: cc-pe-intent-compiler-v1
+  lifecycle: complete
+  closed_at: '2026-08-15T00:56:57Z'
+  verdict: CONVERGED
+  evidence:
+    pull_request: https://github.com/Quantum-L9/Cursor-Governance/pull/151
+    merge_sha: ccb2fa112f97a6fcafd669e34be18e2bd9cb1355
+  closed_by: AUTH-001
+- id: l9-ecosystem-fix-plan
+  lifecycle: planned
+  notes: remaining-only v1.1.0 execution host is cryptoxdog/IB-Odoo_19#153
+- id: pe-router-capability-safety-v4
+  lifecycle: cancelled
+  closed_at: '2026-08-22T01:36:00Z'
+  verdict: SUPERSEDED
+  notes: closed before eie-inference-isolation-v1 (execute-order-10) so the ledger
+    has one active campaign
+  closed_by: l9-pr-remediation
+- id: eie-inference-isolation-v1
+  lifecycle: in_progress
+  notes: launched by make campaign; pec runtime_status=active; operator_ack.acknowledged_at
+    requires a real acknowledgment from Igor Beylin; agents must stop and ask, never
+    forge it
+  launched_by: make campaign
+  pec_workspace: $HOME/.l9/programs/eie-inference-isolation-v1
+  blueprint: $HOME/.l9/blueprints/eie-inference-isolation-v1
+  worktree: $HOME/.l9/program-worktrees/eie-inference-isolation-v1
+- id: level3-make-pr-single-path
+  lifecycle: complete
+  closed_at: '2026-08-28T19:26:19Z'
+  verdict: CONVERGED_WITH_NON_BLOCKING_RISKS
+  evidence:
+    pull_request: https://github.com/Quantum-L9/Cursor-Governance/pull/187
+    merge_sha: e5a3f9f6564974f84f2ab06926491f8897e6ed4f
+    shadow_inputs_removed: Makefile.candidate,Prompt - Start Campaign.md
+    live_makefile: unchanged
+  closed_by: AUTH-001
+  notes: PR 187 merged to campaign branch only; live root Makefile kept. Makefile.candidate
+    and Prompt - Start Campaign.md deleted so agents do not treat Aug 16 pack files
+    as the next install.

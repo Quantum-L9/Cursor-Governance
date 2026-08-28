@@ -1,42 +1,65 @@
 ---
 name: Make Program Execution start cleanly (gap only)
-overview: "After merging #168/#169/#170, finish only the remaining Cursor sessionStart → shared bootstrap → runtime receipt → Graphiti lock identity → PE preflight → producer/consumer → clean-runtime smoke path. Do not recreate bootstrap_agent_environment.sh, Claude install delegation, pre-commit provisioning, publish-path probe truth, or the secrets capability plane."
+overview: "Harvested donor. Execute todos are cancelled. T1 already lives in ops/hooks/session_start_bootstrap.sh (shared-bootstrap delegation). Remaining invariants belong to docs/plans/pe_loop_compiled_8-28-26.plan.md. Do not Build this file as a new PE campaign."
 todos:
   - id: T1
     content: "Delegate Cursor sessionStart generic hydration to the existing shared bootstrap; keep only Cursor JSON/hydrate/plan-audit/wiring report in the hook; delete dead probe after exit 0; drop duplicated scratch_hold and inline uv sync that shared bootstrap already owns"
-    status: pending
+    status: cancelled
     phase: execute
     depends_on: []
   - id: T2
     content: "Materialize one runtime readiness receipt at shared-bootstrap time with required revision/state-root fields; UNKNOWN not omitted; mixed unverified revisions fail closed before PE"
-    status: pending
+    status: cancelled
     phase: execute
     depends_on: [T1]
   - id: T3
     content: "Unify Graphiti session/lock/gate identity: workspace_root honors CURSOR_PROJECT_DIR; phase-lock SET (not setdefault) CURSOR_CONVERSATION_ID; lock status and memory_gate print both identities/state roots on mismatch; add bind→acquire→query→mutation-precheck integration test"
-    status: pending
+    status: cancelled
     phase: execute
     depends_on: [T2]
   - id: T4
     content: "Extend pec with preflight that inspects receipt, worktree, Blueprint/Source Contract admission, lease/holder/actor, writable paths, lock, controller state, and returns structured next_action for each historical friction state"
-    status: pending
+    status: cancelled
     phase: execute
     depends_on: [T2]
   - id: T5
     content: "Make draft-contract materialize consumer-required rollback/writable_paths from Blueprint task source and validate against validate_source_contract before reporting success; keep compile→template validate (already landed) and add register-contract consumer check"
-    status: pending
+    status: cancelled
     phase: execute
     depends_on: [T4]
   - id: T6
     content: "Add one clean-temp-state smoke that bootstraps environment, writes receipt, binds session, reconciles repo, lock, pec preflight, bootstrap, claim, prepare, start, and one valid attempt receipt via real entrypoints — no exploratory failures"
-    status: pending
+    status: cancelled
     phase: execute
     depends_on: [T1, T2, T3, T4, T5]
 isProject: false
+kind: simple
+execute_via: cursor-build
 compiled_into: pe_loop_compiled_8-28-26
+status: superseded
+kernel_pass:
+  bound_path: make-program-execution-start-cleanly-gap-only_8-15-26.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T19:30:00Z
+    body_sha256: "d26403ec73345edfda569db2c4c831d75431acb0baace671ee1266e8f4d98206"
+    deltas:
+      - "Cancelled T1-T6 execute todos; this file is a harvested donor not a live campaign"
+      - "Bound remaining work to pe_loop_compiled_8-28-26; T1 already in session_start_bootstrap.sh"
+      - "Set kind:simple execute_via:cursor-build so this file cannot be read as make campaign"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T19:31:00Z
+    body_sha256: "d26403ec73345edfda569db2c4c831d75431acb0baace671ee1266e8f4d98206"
+    deltas:
+      - "Added superseded banner; kept historical body as evidence not as next install"
+      - "No new plan file; no Program Lock; no PE campaign for this donor"
+      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
 ---
 
 # PLAN: Make Program Execution start cleanly (gap only)
+
+> **SUPERSEDED 2026-08-28.** Do not execute this plan. `compiled_into: pe_loop_compiled_8-28-26`. T1 is already in `ops/hooks/session_start_bootstrap.sh` (shared bootstrap owns generic hydration). Remaining live invariants are on [`pe_loop_compiled_8-28-26.plan.md`](pe_loop_compiled_8-28-26.plan.md). Body below is historical donor text.
 
 > **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.
 > **Template SSOT:** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`
