@@ -1,0 +1,8 @@
+./tests/ops/graphiti/test_graphiti_conflicts_freshness.py:72:        _edge(uuid="off-tree", path="/tmp/unrelated/file.py"),
+./tests/ops/graphiti/test_graphiti_conflicts_freshness.py:73:        _edge(uuid="rel-path", path="ops/secrets/authed_npm.sh"),
+./ops/scripts/tests/test_compose_pr_body.py:73:            template_path=".github/PULL_REQUEST_TEMPLATE.md",
+./ops/scripts/tests/test_compose_pr_body.py:140:            template_path="PULL_REQUEST_TEMPLATE.md",
+./foundation/_archived/logic/probabilistic_engine.py:678:        file_path="foundation/logic/new-rule.json",
+./foundation/_archived/logic/probabilistic_engine.py:699:        file_path="Work Files/notes.md",
+./skills/l9-skill-compiler/scripts/bind_inputs.py:8:def structural_validate(obj, schema, path="$"):
+./environment/agents/generated-data/integration/end_to_end_golden.py:227:                path="uv.lock",

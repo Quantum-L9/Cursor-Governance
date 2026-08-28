@@ -103,7 +103,10 @@ WIP/*client_secret*.json
 # GMP receipts, audits, validation dumps. Pre-commit already excludes reports/;
 # git must too so agents cannot stage them. Historical blobs may remain in git
 # history; the working tree must stay untracked going forward.
-reports/
+# Exception: reports/repo-index/ is the /index output and is tracked.
+reports/*
+!reports/repo-index/
+!reports/repo-index/**
 
 # ── Bounded-autonomy durable state (per-consumer-workspace, never committed) ──
 # environment/claude-code/autonomy/ writes campaign state, leases, and locks
