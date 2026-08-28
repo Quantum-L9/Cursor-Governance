@@ -9,7 +9,7 @@ WS="${1:-${WS:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-origin/main}"
 BASE_REF="${PR_BASE#origin/}"
-PR_REMEDIATE="${PR_REMEDIATE:-0}"
+PR_REMEDIATE="${PR_REMEDIATE:-1}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"

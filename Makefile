@@ -85,6 +85,7 @@ help:
 	@echo "  make clean / workspace-clean — ship leftover work to scoped PRs by repo, prune merged locals, prime main (CLEAN_MODE=plan to preview; CLEAN_REMOTE=0 to stay local)"
 	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" clean WS=\"\$$(pwd)\""
 	@echo "  make gov-python — fail-closed .venv interpreter + runtime import probe"
+	@echo "  Happy path: finish → scoped-commit → make pr (tests once; remediates=1; PR_REMEDIATE=0 to opt out)"
 
 ## Run the FULL session-start pipeline against WS, synchronously, with visible output.
 ## Same script Cursor runs on sessionStart — one implementation, no drift.

@@ -55,6 +55,8 @@ jobs:
       pull-requests: read
     outputs:
       run: ${{ steps.decide.outputs.run }}
+      files: ${{ steps.decide.outputs.files }}
+      files_unusable: ${{ steps.decide.outputs.files_unusable }}
     steps:
       - name: Any change outside WIP/?
         id: decide
@@ -65,8 +67,14 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
+          # files = added + modified + renamed vs PR base (gh filename list).
+          # WIP/** dropped. Empty when run=false. GitHub job-output size is 1MB;
+          # if the list is unusable or oversized, fail open to --profile ci
+          # (do not skip tests). Test Suite must not re-call gh api.
           if [ "${EVENT_NAME}" != "pull_request" ]; then
             echo "run=true" >> "${GITHUB_OUTPUT}"
+            echo "files=" >> "${GITHUB_OUTPUT}"
+            echo "files_unusable=false" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
           # The API file list needs no checkout, so a WIP-only PR never even clones.
@@ -75,15 +83,34 @@ jobs:
           if ! files="$(gh api "repos/${REPOSITORY}/pulls/${PR_NUMBER}/files" \
               --paginate --jq '.[].filename')"; then
             echo "run=true" >> "${GITHUB_OUTPUT}"
-            echo "::warning::could not list PR files — running the full suite"
+            echo "files=" >> "${GITHUB_OUTPUT}"
+            echo "files_unusable=true" >> "${GITHUB_OUTPUT}"
+            echo "::warning::could not list PR files — fail open to --profile ci"
             exit 0
           fi
-          if printf '%s\n' "${files}" | grep -qvE '^(WIP/|$)'; then
-            echo "run=true" >> "${GITHUB_OUTPUT}"
-          else
+          filtered="$(printf '%s\n' "${files}" | grep -vE '^WIP/' || true)"
+          if ! printf '%s\n' "${filtered}" | grep -qvE '^$'; then
             echo "run=false" >> "${GITHUB_OUTPUT}"
+            echo "files=" >> "${GITHUB_OUTPUT}"
+            echo "files_unusable=false" >> "${GITHUB_OUTPUT}"
             echo "::notice::WIP-only diff — lint/test steps skipped, contexts still report."
+            exit 0
           fi
+          bytes="$(printf '%s\n' "${filtered}" | wc -c | tr -d ' ')"
+          if [ "${bytes}" -gt 800000 ]; then
+            echo "run=true" >> "${GITHUB_OUTPUT}"
+            echo "files=" >> "${GITHUB_OUTPUT}"
+            echo "files_unusable=true" >> "${GITHUB_OUTPUT}"
+            echo "::warning::scope.outputs.files exceeds GitHub output size — fail open to --profile ci"
+            exit 0
+          fi
+          echo "run=true" >> "${GITHUB_OUTPUT}"
+          echo "files_unusable=false" >> "${GITHUB_OUTPUT}"
+          {
+            echo "files<<L9_FILES_EOF"
+            printf '%s\n' "${filtered}"
+            echo "L9_FILES_EOF"
+          } >> "${GITHUB_OUTPUT}"
 
   lint:
     name: Lint and Type Check
@@ -224,12 +251,32 @@ jobs:
         if: needs.scope.outputs.run == 'true'
         env:
           TESTING: "true"
+          EVENT_NAME: ${{ github.event_name }}
+          FILES_UNUSABLE: ${{ needs.scope.outputs.files_unusable }}
+          SCOPE_FILES: ${{ needs.scope.outputs.files }}
         run: |
           # Single canonical entrypoint: the registry-driven runner executes every
           # active suite (root, Claude Code autonomy, subagent-generated-data Wave 3,
           # Program Execution controller) with the correct per-suite PYTHONPATH,
           # profiles, coverage, and exit-5 handling. Suite topology lives in
           # ops/config/python-contract.json — never duplicated here. The runner also
-          # runs the fail-closed drift validator before any suite. The ci profile
-          # keeps root coverage.xml + term-missing and the advisory 0% threshold.
-          uv run --frozen --no-build python ops/scripts/run_python_test_suites.py --profile ci
+          # runs the fail-closed drift validator before any suite.
+          # pull_request: --profile local --changed-file from scope.outputs.files
+          # (does not re-list PR files). Deleted paths missing on this depth-1 HEAD are
+          # skipped. Empty mapped set → runner PASS (skip pytest).
+          # push to main / workflow_dispatch, or files_unusable: --profile ci.
+          set -euo pipefail
+          profile=ci
+          changed_args=()
+          if [ "${EVENT_NAME}" = "pull_request" ] && [ "${FILES_UNUSABLE}" != "true" ]; then
+            keep="$(mktemp)"
+            printf '%s\n' "${SCOPE_FILES}" | while IFS= read -r path || [ -n "${path}" ]; do
+              [ -z "${path}" ] && continue
+              if [ -e "${path}" ]; then
+                printf '%s\n' "${path}" >> "${keep}"
+              fi
+            done
+            profile=local
+            changed_args=(--changed-file "${keep}")
+          fi
+          uv run --frozen --no-build python ops/scripts/run_python_test_suites.py --profile "${profile}" "${changed_args[@]}"

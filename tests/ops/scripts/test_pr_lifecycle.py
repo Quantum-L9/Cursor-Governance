@@ -536,3 +536,9 @@ def test_open_pr_after_gate_handles_landed_pr() -> None:
     assert "never reused after its PR merges" in script
     assert "closed, not merged" in script
     assert "opening a new PR" in script
+
+
+def test_open_pr_after_gate_remediates_defaults_to_one() -> None:
+    script = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    assert 'PR_REMEDIATE="${PR_REMEDIATE:-1}"' in script
+    assert 'PR_REMEDIATE="${PR_REMEDIATE:-0}"' not in script

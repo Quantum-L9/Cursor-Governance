@@ -83,7 +83,7 @@ l4_local_autonomy:
     - begin_on_stacked_feature_branch
     - commit_locally_through_program_or_contract # no remote
     - authorize_release
-    - push_and_open_pr_via_make_pr # PR_REMEDIATE=0; checkers in Makefile
+    - push_and_open_pr_via_make_pr # remediates=1; checkers in Makefile
   kernel_hook:
     owner: ops/autonomy/kernel_gate.py
     fires: first_step_of_precommit_repo
@@ -97,7 +97,7 @@ l4_local_autonomy:
       id: validate_repair
   pr_template: PULL_REQUEST_TEMPLATE.md
   post_push:
-    required_command: PR_REMEDIATE=0 make pr
+    required_command: make pr
     remediation_skill: l9-pr-remediation
     max_cycles: 5
     resolve_review_threads: true
@@ -133,7 +133,7 @@ pr_stacking:
 campaign_execution:
   # Campaign execution is permanently local-commit-only: prepare, execute,
   # validate, verify, local commits, STOP. Publication is never a campaign
-  # stage; it is root `PR_REMEDIATE=0 make pr`, and merge is /l9-pr-remediation.
+  # stage; it is root `make pr` (remediates=1), and merge is /l9-pr-remediation.
   # L9_PE_RELEASE_AUTHORIZED survives as a diagnostic compatibility name only
   # and cannot widen Program Execution authority.
   local_commit_only: true
@@ -141,7 +141,7 @@ campaign_execution:
   push: forbidden
   pull_request: forbidden
   require_make_pr: false # publication left the campaign path entirely
-  pr_remediate: 0
+  pr_remediate: 1
   merge: forbidden # merge authority belongs to /l9-pr-remediation
   open_pr_against_main: forbidden
   mix_with_other_feature_branches: forbidden
@@ -213,8 +213,8 @@ session_start_block: |
     `authorize-release`. Tree kernels are not an L4 phase. They fire as
     the first step of `make precommit-repo`
     (`ops/autonomy/kernel_gate.py`) so hooks and tests run once.
-  - Only then: `PR_REMEDIATE=0 make pr` (Makefile checkers, then push + open
-    PR).
+  - Only then: `make pr` (Makefile checkers, then push + open PR;
+    remediates=1). `PR_REMEDIATE=0` is opt-out only.
   - **`make pr` is the ONLY way to reach GitHub — this is a path rule, not a
     timing rule.** Raw `git push`, `gh pr create`, `gh pr edit`, `make push`
     and the MCP `create_pull_request` / `push_files` tools are denied at every
@@ -271,9 +271,9 @@ llm_rules_override: |
      by L4 local autonomy (below), not by per-action chat pacing.
   2. Completing reversible work MUST proceed L4-local: stacked-branch commits
      with **no mid-execution push** → finish program/contract →
-     `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr` (kernel hook
-     first, then checkers once, then push + PR). Campaign/make-pr end state
-     is green + merge-ready.
+     `l4_local.py authorize-release` → `make pr` (kernel hook first, then
+     checkers once, then push + PR; remediates=1). Campaign/make-pr end
+     state is green + merge-ready. `PR_REMEDIATE=0` is opt-out only.
      Invoking `/l9-pr-remediation` then remediates **and merges** all open
      PRs in the target repo (bottom-up). Do **not** merge from the campaign
      path alone.
@@ -316,7 +316,7 @@ llm_rules_override: |
     isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
     `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
     `L9_WORKTREE_ISOLATION=0`.
-  - Post-push: `PR_REMEDIATE=0 make pr` to a green merge-ready PR. Merge
+  - Post-push: `make pr` (remediates=1) to a green merge-ready PR. Merge
     only after `/l9-pr-remediation` writes
     `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
     mergeable. Force-push / admin-merge stay forbidden.

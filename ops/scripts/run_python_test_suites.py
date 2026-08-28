@@ -442,7 +442,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--changed-file",
         type=Path,
         default=None,
-        help="Local pr-check only: scope suites to this changed-file list. Never emits '.'.",
+        help="changed-file selector for local make pr and pull_request CI. Never emits '.'.",
     )
     parser.add_argument("pytest_args", nargs="*", help="pytest args after --")
     return parser.parse_args(argv)

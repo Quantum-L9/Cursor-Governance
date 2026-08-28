@@ -716,3 +716,22 @@ as the live store):
 4. `.cursor/plans/_TEMPLATE.plan.md` still syncs via
    `skills/l9-plan/scripts/sync_cursor_plan_template.py`; it now lands in
    `docs/plans/` through the home symlink.
+
+<!-- TESTS_ONCE_AND_PUBLISH_V1 -->
+## 6.2.5 Tests once, then `make pr` remediates (2026-08-28)
+
+Append-only. Supersedes §6.2.2 item 1 (`PR_REMEDIATE=0 make pr`) and the
+standing “no remediate” campaign phrasing for publish only. Merge still
+requires `/l9-pr-remediation` (§6.2.3). Do not edit the older lines.
+
+1. **Tests run once locally.** Same worktree digest + `PR_BASE` → one pytest
+   pass. `make pr` runs the gate. `make pr-check` then `make pr` on an
+   unchanged tree is a teaching failure; receipt skip is the mechanical
+   once-only. Full corpus stays `make pr-full` / nightly / push-to-`main`.
+2. **Commit finished work when it is completed.** Same as
+   `CURSOR_COMMIT_BEFORE_STOP_V1`. Intermediate commits do not start the
+   publish gate.
+3. **If the work is done and committed, `make pr`.** Default remediates is
+   1, including campaign PRs. `PR_REMEDIATE=0` is opt-out only. Remediates
+   means poll to green + merge-ready. Merge still requires
+   `/l9-pr-remediation` Converge / `authorize_merge.py`.
