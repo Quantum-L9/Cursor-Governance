@@ -89,7 +89,7 @@ class SkillReconciliationTests(unittest.TestCase):
         self.assertGreaterEqual(
             len(skills), 50, "the SSOT should carry the full l9-* skill set, not a subset"
         )
-        for expected in ("l9-pr-remediation", "l9-bounded-autonomy", "l9-inspect"):
+        for expected in ("l9-pr-remediation", "l9-bounded-autonomy", "l9-dag-authoring"):
             self.assertIn(expected, skills)
 
     def test_installer_reconciles_skills_into_user_scope(self) -> None:

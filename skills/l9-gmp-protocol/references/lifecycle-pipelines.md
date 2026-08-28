@@ -53,11 +53,11 @@ What do you need?
 |-------|-------------------|
 | **Discover** | `l9-code-analysis` + `l9-gap-analysis`; optional `make audit` |
 | **Build** | `l9-plan` / `l9-structured-reasoning` → implement → local `make pr-check` |
-| **Ship** | `make push` (runs pr-check) → PR to Staging → CI green |
+| **Ship** | `PR_REMEDIATE=0 make pr` / `l9 pr` (runs the checkers, then push + PR) → CI green |
 | **Check** | `make audit`; advisory security scans; review open PRs/CI |
 | **Fix** | `l9-incident-response`; git revert; Odoo `make update` rollback path |
 
-Generic repos: swap `make pr-check` / `make push` / `make audit` for equivalent CI gates.
+Generic repos: swap `make pr-check` / `make audit` for equivalent CI gates. The publish path does not vary: `make pr` runs the governance Makefile's target from any workspace.
 
 ---
 
@@ -113,7 +113,7 @@ Generic repos: swap `make pr-check` / `make push` / `make audit` for equivalent 
 | 1. Pre-flight | Confirm pr-check passed; review diff | Stop — fix locally |
 | 2. Security | `l9-auditing-security` or CI secret scan | Stop on critical |
 | 3. Backup | Commit pushed; tag or note SHA for rollback | Required before merge |
-| 4. Push / PR | `make push` or `make push pr=1` | Never raw `git push` (PlasticOS) |
+| 4. Push / PR | `PR_REMEDIATE=0 make pr` (`l9 pr`) | `make push` is denied at every phase; fix what `make pr` reported, never route around it |
 | 5. Verify | CI green; smoke test if applicable | Rollback per playbook |
 
 **Auto-rollback / abort triggers:**

@@ -157,9 +157,6 @@ commands:
 - slash: /start-session
   file: commands/start-session.md
   enabled: true
-- slash: /update-command
-  file: commands/update-command.md
-  enabled: true
 - slash: /use-harvest
   file: commands/use-harvest.md
   enabled: true

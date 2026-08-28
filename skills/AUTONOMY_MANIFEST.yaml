@@ -64,14 +64,10 @@ tiers:
   explicit_only:
   - skill: l9-forge
     reason: zero-pause batch execution
-  - skill: l9-harvest-pipeline
-    reason: sed/cp harvest deployment pipeline
   - skill: l9-governance-wiring
     reason: symlinks, hooks, and governance backup
   - skill: l9-end-session
     reason: session lifecycle boundary
-  - skill: l9-update-command
-    reason: meta tooling that changes command/skill structure
   - skill: l9-code-maintenance
     reason: lint-fix/migrate/consolidate/refactor sweeps with code-mutating executors; use --dry-run CLI before mutate
   - skill: l9-ci-ops
@@ -82,8 +78,6 @@ tiers:
     reason: extracts chat content to memory or structured output
   - skill: l9-dag-authoring
     reason: creates/updates DAGs — structural meta tooling
-  - skill: l9-inspect
-    reason: external code gate and file audit before code enters L9
   - skill: l9-repo-index
     reason: repo index export — on-demand only
   - skill: l9-python-tdd-with-uv
@@ -139,6 +133,12 @@ tiers:
     reason: superseded by skills/l9-pr-remediation/; archived out of live skills/ discovery — never auto-invoke or reconcile
   - item: skills/_archived/l9-pr-remediation-deprecated/
     reason: superseded by skills/l9-pr-remediation/; archived out of live skills/ discovery — never auto-invoke or reconcile
+  - item: skills/_archived/l9-update-command/
+    reason: superseded by skills/l9-dag-authoring/ (COMMAND_BIND operation); archived out of live skills/ discovery — never auto-invoke or reconcile
+  - item: skills/_archived/l9-inspect/
+    reason: Skill wrapper retired; the capability runs from workflows/dags/inspect_dag.py via /inspect — archived out of live skills/ discovery, never auto-invoke or reconcile
+  - item: skills/_archived/l9-harvest-pipeline/
+    reason: Skill wrapper retired; the capability runs from workflows/dags/harvest_deploy_dag.py and workflows/use_harvest_executor.py via /harvest and /use-harvest — archived out of live skills/ discovery, never auto-invoke or reconcile
 reasoning_routing:
   purpose: Which l9-structured-reasoning reference applies to which task class.
   sources:

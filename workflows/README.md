@@ -4,9 +4,16 @@ dora:
   type: subsystem_readme
   generated: "2026-01-29 03:05:45 UTC"
   generator: scripts/generate_subsystem_readmes.py
+  generator_present: false
   config: config/subsystems/readme_config.yaml
+  config_present: false
   time_verified: "system clock (verification skipped)"
-  auto_generated: true
+  auto_generated: false
+  maintenance: >-
+    Originally generated, now hand-maintained. Neither the generator nor its
+    config is present in this repository, so nothing regenerates this file and
+    a hand edit cannot be clobbered. Restore the generator before reinstating
+    auto_generated: true.
 ---
 
 # Workflow Engine
@@ -78,22 +85,32 @@ DAG-based workflow execution engine with session management
 ```
 workflows/
 ├── __init__.py
-├── harvest_deploy.py
-├── nodes/__init__.py
-├── nodes/checkpoint.py
-├── nodes/deploy.py
-├── nodes/extract.py
-├── nodes/inject.py
-├── nodes/report.py
-├── nodes/validate.py
+├── state.py
 ├── runner.py
-├── session/__init__.py
-├── session/dags/__init__.py
-├── session/dags/harvest_deploy_dag.py
-├── session/dags/readme_pipeline_dag.py
-├── session/dags/refactoring_dag.py
-└── ... (3 more files)
+├── harvest_deploy.py               # LANGGRAPH_RUNTIME
+├── nodes/                          # LangGraph reusable nodes
+│   ├── checkpoint.py
+│   ├── deploy.py
+│   ├── extract.py
+│   ├── inject.py
+│   ├── report.py
+│   └── validate.py
+├── session/                        # SESSION_GUIDANCE contract
+│   ├── interface.py                # SessionDAG, SessionNode, SessionEdge
+│   └── registry.py                 # SessionDAG registry
+├── dags/                           # Graph definitions of both kinds
+│   ├── __init__.py                 # Discovery boundary (import to register)
+│   ├── dag_authoring_dag.py        # SESSION_GUIDANCE
+│   ├── refactoring_dag.py          # SESSION_GUIDANCE
+│   ├── inspect_dag.py              # LANGGRAPH_RUNTIME
+│   └── gmp/                        # LANGGRAPH_RUNTIME (graph/state/routing)
+└── defs/                           # YAML workflow definitions
 ```
+
+Graph definitions live in `workflows/dags/`, not `workflows/session/dags/`.
+Two first-class kinds share that directory: `SESSION_GUIDANCE` (`SessionDAG`,
+registered via `register_session_dag()`) and `LANGGRAPH_RUNTIME` (`StateGraph`,
+executable, never registry-backed). Neither is a legacy generation of the other.
 
 | File                          | Purpose                                               |
 | ----------------------------- | ----------------------------------------------------- |
@@ -106,8 +123,9 @@ workflows/
 | `nodes/inject.py`             | Context injection node                                |
 | `nodes/checkpoint.py`         | Checkpoint node for state persistence                 |
 | `nodes/report.py`             | Report generation node                                |
-| `session/interface.py`        | Session interface definition                          |
-| `session/registry.py`         | Session registry and discovery                        |
+| `session/interface.py`        | SessionDAG / SessionNode / SessionEdge contract       |
+| `session/registry.py`         | SessionDAG registry and lookup                        |
+| `dags/__init__.py`            | Graph discovery boundary (import registers SessionDAGs) |
 | `defs/harvest-deploy.yaml`    | Harvest-deploy workflow definition                    |
 | `defs/workflow-template.yaml` | Template for new workflows                            |
 
@@ -116,7 +134,7 @@ workflows/
 - **Workflow defs:** kebab-case YAML files (e.g., `harvest-deploy.yaml`)
 - **Node modules:** snake_case Python files (e.g., `extract.py`)
 - **Node functions:** `execute_<action>()` pattern
-- **DAG classes:** `<Name>DAG` (e.g., `RefactoringDAG`)
+- **Graph constants:** `<NAME>_DAG` module-level constant (e.g., `REFACTORING_DAG`)
 
 ---
 

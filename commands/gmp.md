@@ -1,99 +1,52 @@
 ---
 name: gmp
-version: "8.2.0"
-description: "TRIGGER ONLY — Invokes gmp_executor.py for enforced phased execution"
+version: "9.0.0"
+description: "TRIGGER ONLY — enforced phased GMP execution via the LangGraph GMP package"
 before_chain: rules
 auto_chain: ynp
 dag: gmp-execution-v1
-dag_executor: .cursor/workflows-synced/gmp_executor.py
+dag_file: workflows/dags/gmp/graph.py
 ---
 
-# /gmp — Governance Managed Process (v8.1.0)
+# /gmp — Governance Managed Process
 
-## THIS IS A TRIGGER ONLY
+**TRIGGER ONLY.** All logic lives in the graph.
 
-`/gmp` invokes the GMP Executor DAG. All logic lives in the executor.
+Semantics (when GMP is required, scope lock, evidence, terminal states) are owned
+by skill **`l9-gmp-protocol`**. Runtime is owned by `workflows/dags/gmp/`.
 
 ## INVOCATION
 
 ```bash
-python3 .cursor/workflows-synced/gmp_executor.py "task description" --tier RUNTIME
+python3 -m workflows.dags.gmp.executor "task description" --tier RUNTIME
 ```
 
-## WHAT THE DAG DOES (AUTONOMOUS)
+`workflows/dags/gmp_langgraph_executor.py` is a backwards-compatibility shim over
+the same package.
 
-```
-┌─────────────────────────────────────────────────────────┐
-│  MEMORY_READ      │ Load context from memory substrate │
-├─────────────────────────────────────────────────────────┤
-│  SCOPE_LOCK       │ Lock TODO plan (Phase 0)           │
-├─────────────────────────────────────────────────────────┤
-│  USER_GATE        │ Confirm scope before proceeding    │
-├─────────────────────────────────────────────────────────┤
-│  BASELINE         │ Phase 1 — Verify current state     │
-├─────────────────────────────────────────────────────────┤
-│  IMPLEMENT        │ Phase 2 — Execute changes          │
-├─────────────────────────────────────────────────────────┤
-│  GENERATE_TESTS   │ Phase 3 — Auto-generate tests      │
-├─────────────────────────────────────────────────────────┤
-│  VALIDATE         │ Phase 4 — Run tests + lint         │
-├─────────────────────────────────────────────────────────┤
-│  MEMORY_WRITE     │ Phase 5 — Record lessons learned   │
-├─────────────────────────────────────────────────────────┤
-│  GENERATE_REPORT  │ Phase 6 — Create GMP report        │
-├─────────────────────────────────────────────────────────┤
-│  COMMIT_GATE      │ Stage + commit (NO PUSH)           │
-└─────────────────────────────────────────────────────────┘
-```
+## WHAT THE GRAPH ENFORCES
 
-## FEATURES
+`start → memory_read → scope_lock → [user gate] → baseline → implement → validate
+→ [user gate] → memory_write → finalize → end`
 
-- **Phased execution** — Enforced GMP v1.7 phases 0-6
-- **Memory integration** — Reads context, writes lessons
-- **Tier classification** — KERNEL, RUNTIME, INFRA, UX
-- **Auto-report** — Uses canonical report generator
-- **Safe commit** — Commits locally, does NOT push
-
-## USAGE
-
-```bash
-# Start new GMP
-python3 .cursor/workflows-synced/gmp_executor.py "add validation to registry" --tier RUNTIME
-
-# Resume interrupted GMP
-python3 .cursor/workflows-synced/gmp_executor.py --resume
-
-# Check current status
-python3 .cursor/workflows-synced/gmp_executor.py --status
-
-# Reset state (start fresh)
-python3 .cursor/workflows-synced/gmp_executor.py --reset
-```
+- Memory read and memory write are mandatory nodes, not advisory steps.
+- Two explicit user gates: scope confirmation and validation confirmation.
+- A failed validation routes back into `implement`; a declined gate routes to `aborted`.
+- State is `GMPState` with MemorySaver checkpointing, so a run is resumable.
 
 ## TIERS
 
-| Tier | Scope | Examples |
-|---|---|---|
-| KERNEL | Core execution, safety | executor.py, kernel_loader.py |
-| RUNTIME | Services, tools, agents | task_queue.py, tool_registry.py |
-| INFRA | Deployment, docker, k8s | docker-compose.yml, Dockerfile |
-| UX | Frontend, docs, scripts | React components, README |
-
-## STATE FILE
-
-Execution state is persisted to `.gmp_executor_state.json`
-
-If interrupted, resume with `--resume`.
+`KERNEL` (core execution, safety) · `RUNTIME` (services, tools, agents) ·
+`INFRA` (deployment, containers) · `UX` (frontend, docs, scripts)
 
 ## OUTPUT
 
-The executor produces:
-1. Terminal progress for each step
-2. GMP report at `reports/GMP-Report-*.md`
-3. Local commit (no push)
+Terminal progress per node, plus a GMP report at `reports/GMP-Report-*.md`.
 
-## ENFORCEMENT
+## FORBIDDEN
 
-The DAG is MANDATORY. The slash command is just a trigger.
-
-All step ordering, validation, and reporting is handled by the executor.
+- **Committing or pushing from this graph.** It owns neither. Publication is
+  `PR_REMEDIATE=0 make pr` (`l9 pr`), separately authorized. Any older contract
+  describing a GMP `COMMIT_GATE` is superseded.
+- Skipping a node or a user gate.
+- Pasting phase logic into this file.
