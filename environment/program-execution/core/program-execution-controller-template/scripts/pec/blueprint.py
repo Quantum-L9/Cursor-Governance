@@ -5,8 +5,6 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
-
 from .common import digest_object, load_yaml, sha256_file, utc_now, write_json
 
 LOCK_SCHEMA = Path(__file__).resolve().parents[2] / "schemas" / "program-lock.schema.json"
@@ -178,6 +176,12 @@ def relock_tasks(lock_path: Path, task_ids: Iterable[str]) -> dict[str, Any]:
 
 
 def validate_program_lock_schema(lock: dict[str, Any]) -> list[str]:
+    # Imported here, not at module scope: jsonschema costs ~0.19s to import and
+    # every `pec.py` CLI invocation paid it whether or not it validated anything.
+    # The conformance suite spawns that CLI ~14 times per campaign test, so the
+    # import alone was minutes of the suite's wall clock.
+    from jsonschema import Draft202012Validator  # noqa: PLC0415 - deferred: see above
+
     schema = json.loads(LOCK_SCHEMA.read_text(encoding="utf-8"))
     errors = sorted(
         Draft202012Validator(schema).iter_errors(lock),

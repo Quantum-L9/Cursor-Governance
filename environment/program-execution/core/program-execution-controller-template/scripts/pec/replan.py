@@ -6,8 +6,6 @@ import json
 from pathlib import Path
 from typing import Any
 
-from jsonschema import Draft202012Validator
-
 from .common import ControllerError, digest_object, load_json, utc_now, write_json
 
 FORBIDDEN = {
@@ -55,6 +53,12 @@ def _revision_schema() -> dict[str, Any]:
 
 
 def _validate_revision_payload(payload: dict[str, Any]) -> None:
+    # Imported here, not at module scope: jsonschema costs ~0.19s to import and
+    # every `pec.py` CLI invocation paid it whether or not it validated anything.
+    # The conformance suite spawns that CLI ~14 times per campaign test, so the
+    # import alone was minutes of the suite's wall clock.
+    from jsonschema import Draft202012Validator  # noqa: PLC0415 - deferred: see above
+
     errors = sorted(
         Draft202012Validator(_revision_schema()).iter_errors(payload),
         key=lambda error: list(error.path),

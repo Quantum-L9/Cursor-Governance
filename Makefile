@@ -694,10 +694,17 @@ program-execution-campaign-brief:
 		$(PE_ROOT)/scripts/tests/test_replay_campaign.py \
 		$(CURDIR)/skills/l9-pe-campaign-activate/scripts/test_compile_brief.py
 
+# One fresh process per test file, run concurrently. This is the matrix the
+# template's own VALIDATION.md prescribes -- "run each lifecycle fixture in a
+# fresh process", because several fixtures create and intentionally abandon or
+# fail Git worktrees. `unittest discover` ran all 33 files in ONE process, which
+# is both slower (96s -> 27s measured) and weaker isolation than the documented
+# requirement. Same 105 tests either way; xargs exits non-zero if any file fails.
 program-execution-controller-tests:
-	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B -m unittest discover \
-		-s $(PE_ROOT)/core/program-execution-controller-template/scripts/tests \
-		-p 'test_*.py'
+	cd $(PE_ROOT)/core/program-execution-controller-template && \
+	find scripts/tests -maxdepth 1 -name 'test_*.py' -print0 | sort -z | \
+		PYTHONDONTWRITEBYTECODE=1 xargs -0 -P "$${PES_CONTROLLER_JOBS:-$$(getconf _NPROCESSORS_ONLN 2>/dev/null || echo 4)}" \
+		-I{} $(PYTHON) -B {}
 
 .PHONY: rules-check
 ## Cursor-native rules frontmatter + always-apply ratchet (docs/rules-standard.md).
