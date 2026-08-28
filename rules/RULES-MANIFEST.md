@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-28T20:10:04Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-28T20:38:05Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -19,7 +19,7 @@ Generated: `2026-08-28T20:10:04Z`. Source: `rules/*.mdc`.
 | File | ID | Scope | Domain | Activation | Lines | Digest |
 |---|---|---|---|---|---:|---|
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 36 | `ceaafbc51009` |
-| `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 160 | `795e96cd2221` |
+| `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 159 | `29cc0743d1a6` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 68 | `d3fca17315f9` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
@@ -78,7 +78,7 @@ Generated: `2026-08-28T20:10:04Z`. Source: `rules/*.mdc`.
 | `89-constellation-gate-workspace-session.mdc` | `l9.rule.89.constellation.gate.workspace.session` | global | governance | agent_requested | 40 | `3b1b5e0cfd03` |
 | `90-protected-core.mdc` | `l9.rule.90.protected.core` | global | governance | always | 106 | `0e67f1cc2c17` |
 | `91-existing-code-source-of-truth.mdc` | `l9.rule.91.existing.code.source.of.truth` | global | general | always | 70 | `5043e3374dca` |
-| `92-learned-lessons.mdc` | `l9.rule.learned.lessons` | global | general | always | 30 | `320bf13f04a1` |
+| `92-learned-lessons.mdc` | `l9.rule.learned.lessons` | global | general | always | 30 | `a90cefaa4b6d` |
 | `93-c1-server-protection.mdc` | `l9.rule.93.c1.server.protection` | global | git | always | 88 | `a89e589b42cb` |
 | `94-deployment-prohibition.mdc` | `l9.rule.94.deployment.prohibition` | global | deployment | always | 23 | `95043be2ba11` |
 | `95-test-fix-policy.mdc` | `l9.rule.testing.integrity` | global | testing | always | 57 | `cbf9a0e89a3d` |
