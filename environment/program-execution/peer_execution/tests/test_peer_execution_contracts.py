@@ -15,7 +15,11 @@ from peer_execution.context import (
 from peer_execution.contracts import validate_contract
 from peer_execution.core_receipts import verification_receipt
 from peer_execution.digests import digest_object
-from peer_execution.execution import PeerExecutionAdapter
+from peer_execution.execution import (
+    PE_RETAINED_ACTIONS,
+    PeerExecutionAdapter,
+    delegated_actions,
+)
 from peer_execution.permissions import resolve_permission_profile
 from peer_execution.profiles import load_profile
 from peer_execution.provider import (
@@ -71,6 +75,29 @@ class PeerExecutionContractTests(unittest.TestCase):
             "required_evidence_ids": [],
             "requested_actions": ["inspect"],
         }
+
+    def test_commit_is_retained_by_pe_and_never_asked_of_the_provider(self) -> None:
+        """A contract's actions are the task's authority, not the worker's job.
+
+        The worker mutates the worktree; Program Execution stages and commits
+        exactly what the Controller verified. No adapter descriptor and no
+        provider probe declares `commit`, so asking the provider to prove it
+        would block every commit-authorized task -- and declaring it on the
+        adapters would assert a capability that does not exist while widening
+        what the worker is permitted to do.
+        """
+        self.assertEqual(
+            delegated_actions(("inspect", "local_write", "commit")),
+            ("inspect", "local_write"),
+        )
+        self.assertEqual(
+            delegated_actions(("inspect", "local_write")),
+            ("inspect", "local_write"),
+        )
+        self.assertIn("commit", PE_RETAINED_ACTIONS)
+        # Retaining commit is not a way to smuggle a remote action past the
+        # provider plane: everything else is still delegated and still judged.
+        self.assertEqual(delegated_actions(("inspect", "push")), ("inspect", "push"))
 
     def test_permission_profile_denies_remote_mutation(self) -> None:
         remote_actions = (

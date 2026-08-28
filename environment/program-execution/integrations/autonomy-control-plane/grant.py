@@ -37,22 +37,41 @@ SYNTHESIS_CAPABILITIES = [
     "artifact.write_execution_brief",
     "graphiti.read",
 ]
-EXECUTOR_CAPABILITIES = [
+EXECUTOR_WRITE_CAPABILITIES = [
     "repository.read",
     "repository.write_scoped",
     "test.run",
     "git.diff",
-    "git.commit_local",
     "artifact.write_execution_result",
 ]
+COMMIT_CAPABILITIES = ["git.commit_local"]
 RECON_CAPABILITIES = [
     "repository.read",
     "repository.search",
     "graphiti.read",
     "artifact.write_recon_report",
 ]
-MUTATION_AUTHORIZATIONS = ("repository.write_scoped", "git.commit_local")
+WRITE_AUTHORIZATIONS = ("repository.write_scoped",)
+COMMIT_AUTHORIZATIONS = ("git.commit_local",)
 INSPECT_AUTHORIZATIONS = ("repository.read",)
+
+
+def _executor_authority(contract: Mapping[str, Any]) -> tuple[list[str], tuple[str, ...]]:
+    """Capabilities to acknowledge and authorize, from the requested actions.
+
+    Defense in depth against an upstream contract that should never exist: a
+    contract requesting local_write without commit never receives
+    `git.commit_local`, so the capability is absent from the lease as well as
+    from the campaign's allowed operations. commit is never inferred from
+    local_write, and neither is inferred from a "mutation" boolean.
+    """
+    requested = {str(item) for item in (contract.get("requested_actions") or [])}
+    capabilities = list(EXECUTOR_WRITE_CAPABILITIES)
+    authorize = WRITE_AUTHORIZATIONS
+    if "commit" in requested:
+        capabilities = capabilities + COMMIT_CAPABILITIES
+        authorize = authorize + COMMIT_AUTHORIZATIONS
+    return capabilities, authorize
 
 
 class AutonomyGrantError(RuntimeError):
@@ -119,8 +138,7 @@ def grant_task_mutation(
         runtime.scheduler.refresh_readiness(campaign.campaign_id)
         work_action = ids["action_id"]
         work_agent = ids["agent_id"]
-        work_capabilities = EXECUTOR_CAPABILITIES
-        authorize = MUTATION_AUTHORIZATIONS
+        work_capabilities, authorize = _executor_authority(contract)
     else:
         work_action = ids["action_id"]
         work_agent = ids["agent_id"]

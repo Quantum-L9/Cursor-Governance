@@ -30,7 +30,12 @@ from .common import (
     utc_now,
     write_json,
 )
-from .contracts import ContractError, path_allowed, validate_source_contract
+from .contracts import (
+    LOCALLY_EXECUTABLE_ACTIONS,
+    ContractError,
+    path_allowed,
+    validate_source_contract,
+)
 from .exec_env import resolve_exec_env, run_validation_command
 from .ledger import EventLedger
 from .state import StateDB
@@ -896,8 +901,7 @@ def task_readiness_detail(
                 )
                 requested_actions = contract["requested_actions"]
                 if any(
-                    action not in {"inspect", "local_write", "destructive_change"}
-                    for action in requested_actions
+                    action not in set(LOCALLY_EXECUTABLE_ACTIONS) for action in requested_actions
                 ):
                     entries.append((_BLOCKING, "requested_action_requires_uninstalled_adapter"))
             except Exception as exc:

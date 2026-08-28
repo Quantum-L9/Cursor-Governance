@@ -5,11 +5,17 @@ provenance:
     digest: fa3a19475a8b3206f210a2eb4b20adcdef01e696b798922b3aa0d91b08bcc7b3
     default_owner: Igor Beylin
     note: >
-      AUTH-001 owner ceiling expansion (2026-08-14, verdict CONVERGED) resealed the
-      contract so commit/push/pull_request are allowed on campaign integration
-      branches; merge remains denied. This profile mirrors the resealed ceilings
-      and never widens them. default_owner is recorded from the AUTH-001
-      supersession receipts (owner: Igor Beylin), not inferred.
+      Program Execution is sealed at a verified local commit: the runner has no
+      push and no pull-request path, and remote mutation is denied in the
+      universal Controller core. This profile mirrors that effective ceiling
+      rather than the historical campaign-branch publication semantics, because
+      a profile advertising push/pull_request grants authority nothing
+      downstream can exercise. The AUTH-001 owner ceiling expansion (2026-08-14,
+      verdict CONVERGED) kept commit; push and pull_request are recorded false
+      here to match what the runner actually reaches. Publication remains the
+      sanctioned make pr path, outside campaign execution. default_owner is
+      recorded from the AUTH-001 supersession receipts (owner: Igor Beylin), not
+      inferred.
 execution:
   continue_until: blocking_authority_boundary
 planning:
@@ -31,8 +37,8 @@ authorization_ceiling:
   inspect: true
   local_write: true
   commit: true
-  push: true
-  pull_request: true
+  push: false
+  pull_request: false
   merge: false
   publish_or_release: false
   deploy_or_migrate: false

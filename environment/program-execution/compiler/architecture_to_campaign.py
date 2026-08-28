@@ -231,10 +231,16 @@ def lower(
     owner: str = DEFAULT_OWNER,
     repository: RepositoryFacts | None = None,
     stamp: str | None = None,
-    host: str = GOVERNANCE_HOST,
+    host: str | None = None,
 ) -> LoweredCampaign:
     now = stamp or utc_now()
     facts = repository or RepositoryFacts(root=None, repository_id=intent.target)
+    # `intended_host` names the repository the campaign executes against -- both
+    # its consumers read it that way, and EVID-001 binds the campaign source to
+    # that repository's origin/main. Defaulting it to the governance repo while
+    # `targets[].repository_id` named another emitted a source that contradicted
+    # itself, which the compiler now refuses. An explicit host still wins.
+    host = str(host or facts.repository_id or GOVERNANCE_HOST).strip()
     items = list(extraction.items)
     sections, by_unit = sections_for(intent)
     mappings: dict[str, list[dict[str, Any]]] = {item.id: [] for item in items}

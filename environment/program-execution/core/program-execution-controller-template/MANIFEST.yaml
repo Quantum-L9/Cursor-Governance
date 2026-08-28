@@ -97,9 +97,9 @@ files:
 - path: scripts/pec/common.py
   sha256: df55978ff7841bf6db5b05f3e937c3d682c956b0992d9e02022cdb277f0fa104
 - path: scripts/pec/contracts.py
-  sha256: a9779fad92b5844ef01dba0d9daa746dc74635873a8ffa725f9ad5fef982cfa6
+  sha256: acc86ed2260ba6a048b40dca0cf589345796830e4d58a970b377113f2ac1e14b
 - path: scripts/pec/controller.py
-  sha256: a775ee1a6a05e73901c8c809f7f6f8d74f1f819fc5811c3a23643daf7ea034c4
+  sha256: 4185011b686cea1e1d3d5a0e6d364abdb911cf9e5fd19bc00a7dfd6d36e7fb06
 - path: scripts/pec/exec_env.py
   sha256: 56fe5eb1114dda26f3e061de03580b788cfa5e654c117d0c0b65ac9083d15a10
 - path: scripts/pec/ledger.py
@@ -117,9 +117,11 @@ files:
 - path: scripts/run_negative_tests.py
   sha256: 16dd96536bac0b9c5b6cfcf78b5cc308a6493a819712c829ebeb64bff70f4d31
 - path: scripts/tests/helpers.py
-  sha256: e1401ed452b6e4c98a2fed7e0e664a8357c38bf910dd320236a831205f85d5c7
+  sha256: 9f166995e094c3fb288476c431f621642b012b958eaa5c09cc883108f770833b
 - path: scripts/tests/test_approval.py
   sha256: fe0af2376fe8d861074474c1f586a9a7c1f8abc06c85aadc320bb6d35e09f1bb
+- path: scripts/tests/test_authority_and_kernel_lineage.py
+  sha256: cdc39025be7585734fbd82409a6487069a5273c5704fc75dda09bb729782e0bb
 - path: scripts/tests/test_authority_inflation.py
   sha256: 9af0d1fff94883ede8b15a109f76d591ea84f092c26edc80c8bf5e1e71abced4
 - path: scripts/tests/test_bootstrap_admission.py

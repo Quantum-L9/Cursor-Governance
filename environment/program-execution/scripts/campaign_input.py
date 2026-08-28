@@ -382,12 +382,12 @@ def seed_view(source: dict[str, Any]) -> dict[str, Any]:
     """
     metadata = source.get("metadata") or {}
     program = source.get("program") or {}
-    repository_id = str(
-        program.get("target_repository_id") or metadata.get("intended_host") or ""
-    ).strip()
     target = dict(source.get("target") or {})
-    if repository_id and not target.get("repository_id"):
-        target["repository_id"] = repository_id
+    # `targets[]` owns execution target identity for a direct campaign source.
+    # Resolving the runner's repository from `program.target_repository_id` /
+    # `metadata.intended_host` instead let the runner bind one repository while
+    # the compiler built the Blueprint against another.
+    target["repository_id"] = _compile_module().resolve_campaign_target_repository(source)
     return {
         "campaign_id": str(metadata.get("campaign_id") or program.get("id") or "").strip(),
         "title": str(metadata.get("title") or program.get("name") or "").strip(),

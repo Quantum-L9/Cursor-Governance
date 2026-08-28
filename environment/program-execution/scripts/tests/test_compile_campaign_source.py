@@ -390,12 +390,22 @@ class CompileCampaignSourceTests(unittest.TestCase):
         self.assertEqual(entries[0]["method"], "inspection")
         self.assertEqual(entries[0]["command_or_inspection"], "the deliverable exists")
 
-    def test_legacy_blocked_with_dependencies_canonicalizes_to_ready(self) -> None:
-        """ADR-0023 A1: sequencing-only legacy `blocked` compiles as `ready`."""
+    def test_legacy_blocked_canonicalizes_to_ready_from_dependency_edges_alone(self) -> None:
+        """ADR-0023 A1: sequencing-only legacy `blocked` compiles as `ready`.
+
+        The predecessor is expressed only as a top-level `dependency_edges`
+        entry and the task carries no ordering alias, so the canonicalization
+        is proved to follow the canonical DAG and nothing else.
+        """
         source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
         task = next(item for item in source["tasks"] if item["id"] == "TASK-002")
         task["definition_status"] = "blocked"
-        task["dependencies"] = ["TASK-001"]
+        self.assertNotIn("dependencies", task)
+        self.assertNotIn("dependency_ids", task)
+        self.assertIn(
+            ("TASK-001", "TASK-002"),
+            {(edge["from"], edge["to"]) for edge in source["dependency_edges"]},
+        )
         with tempfile.TemporaryDirectory() as raw:
             path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
             path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
@@ -416,6 +426,49 @@ class CompileCampaignSourceTests(unittest.TestCase):
                 result["warnings"],
             )
 
+    def test_task_local_dependency_aliases_are_refused(self) -> None:
+        """`dependency_edges` is the sole DAG authority; an alias fails closed.
+
+        The equivalent top-level edge is removed first, so the refusal cannot
+        be satisfied by an edge the fixture already carried -- the alias is the
+        only remaining statement of the ordering.
+        """
+        for alias in ("dependencies", "dependency_ids"):
+            with self.subTest(alias=alias):
+                source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+                source["dependency_edges"] = [
+                    edge
+                    for edge in source["dependency_edges"]
+                    if not (edge["from"] == "TASK-001" and edge["to"] == "TASK-002")
+                ]
+                self.assertNotIn(
+                    ("TASK-001", "TASK-002"),
+                    {(edge["from"], edge["to"]) for edge in source["dependency_edges"]},
+                )
+                task = next(item for item in source["tasks"] if item["id"] == "TASK-002")
+                task["definition_status"] = "blocked"
+                task[alias] = ["TASK-001"]
+                with self.assertRaises(self.compiler.CompileError) as ctx:
+                    self.compiler.preflight_campaign_source_document(source)
+                message = str(ctx.exception)
+                self.assertIn(alias, message)
+                self.assertIn("dependency_edges", message)
+
+    def test_dependency_alias_is_refused_on_the_compile_path_too(self) -> None:
+        """Preflight is not the only door; compile refuses the same shape."""
+        source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+        source["tasks"][1]["dependency_ids"] = ["TASK-001"]
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+            target = Path(raw) / "out"
+            with self.assertRaises(self.compiler.CompileError) as ctx:
+                self.compiler.compile_source(
+                    path, target, stack_proof=_pass_proof(Path(raw) / "stack-proof.json")
+                )
+            self.assertIn("dependency_ids", str(ctx.exception))
+            self.assertFalse(target.exists(), "refused before the Blueprint tree was created")
+
     def test_blocked_without_dependencies_refuses_compilation(self) -> None:
         """ADR-0023 A2: `blocked` with nothing to wait on is a runtime dead-end."""
         source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
@@ -434,6 +487,76 @@ class CompileCampaignSourceTests(unittest.TestCase):
             self.assertIn("unclaimable", message)
             self.assertIn("dependencies/waves", message)
             self.assertIn("blocking_unknown_ids", message)
+
+    def test_declared_remote_authority_narrows_to_false_in_the_task_card(self) -> None:
+        """A legacy source declaring push/pull_request still compiles -- as false.
+
+        The sealed runner reaches neither, so a Task Card advertising them
+        would hand every downstream surface an authority nothing can exercise.
+        """
+        source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+        declared = source["tasks"][0]["authorization_ceiling"]
+        self.assertTrue(declared["push"], "fixture must declare the legacy shape")
+        self.assertTrue(declared["pull_request"])
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+            target = Path(raw) / "blueprint"
+            self.compiler.compile_source(
+                path, target, stack_proof=_pass_proof(Path(raw) / "stack-proof.json")
+            )
+            cards = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+        for card in cards["tasks"]:
+            ceiling = card["authorization_ceiling"]
+            for action in self.compiler.PE_FORBIDDEN_ACTIONS:
+                self.assertFalse(ceiling[action], msg=f"{card['id']}.{action}")
+
+    def test_program_control_loses_commit_as_well_as_local_write(self) -> None:
+        ceiling = self.compiler.effective_authorization_ceiling(
+            {
+                "id": "TASK-007",
+                "execution_kind": "program_control",
+                "authorization_ceiling": {
+                    "inspect": True,
+                    "local_write": True,
+                    "commit": True,
+                },
+            }
+        )
+        self.assertFalse(ceiling["local_write"])
+        self.assertFalse(ceiling["commit"])
+
+    def test_kernel_profile_round_trips_into_the_task_card(self) -> None:
+        """BUILD / CHANGE / AUDIT survive lowering; omission defaults once."""
+        for declared, expected in (
+            ("BUILD", "BUILD"),
+            ("CHANGE", "CHANGE"),
+            ("AUDIT", "AUDIT"),
+            (None, "BUILD"),
+        ):
+            with self.subTest(kernel_profile=declared):
+                source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+                if declared is not None:
+                    source["tasks"][0]["kernel_profile"] = declared
+                with tempfile.TemporaryDirectory() as raw:
+                    path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+                    path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+                    target = Path(raw) / "blueprint"
+                    self.compiler.compile_source(
+                        path, target, stack_proof=_pass_proof(Path(raw) / "stack-proof.json")
+                    )
+                    cards = yaml.safe_load((target / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
+                    errors = self.validator.validate(target, "template")
+                    self.assertEqual(errors, [], msg="\n".join(errors))
+                card = next(item for item in cards["tasks"] if item["id"] == "TASK-001")
+                self.assertEqual(card["kernel_profile"], expected)
+
+    def test_unknown_kernel_profile_is_refused(self) -> None:
+        source = _with_declared_scope(yaml.safe_load(SOURCE.read_text(encoding="utf-8")))
+        source["tasks"][0]["kernel_profile"] = "RELEASE"
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        self.assertIn("RELEASE", str(ctx.exception))
 
     def test_ordering_alias_statuses_cannot_become_task_cards(self) -> None:
         """ADR-0023 A3: approval-shaped statuses are not task-ordering states."""
@@ -594,6 +717,115 @@ class SourcePreflightTests(unittest.TestCase):
         for task_id in ("TASK-001A", "TASK-A01", "TASK-01"):
             self.assertFalse(pattern.match(task_id), msg=task_id)
 
+    # --- Authority intersection ------------------------------------------
+
+    def test_local_write_without_commit_fails_preflight(self) -> None:
+        """PE has no terminal dirty-worktree mode, so the shape is unexecutable."""
+        source = self._source()
+        task = self._mutating_task(source)
+        task["authorization_ceiling"]["commit"] = False
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        message = str(ctx.exception)
+        self.assertIn(task["id"], message)
+        self.assertIn("local_write", message)
+        self.assertIn("commit", message)
+
+    def test_local_write_without_commit_is_refused_before_any_side_effect(self) -> None:
+        source = self._source()
+        self._mutating_task(source)["authorization_ceiling"]["commit"] = False
+        with tempfile.TemporaryDirectory() as raw:
+            path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
+            path.write_text(yaml.safe_dump(source, sort_keys=False), encoding="utf-8")
+            target = Path(raw) / "out"
+            with self.assertRaises(self.compiler.CompileError):
+                self.compiler.compile_source(
+                    path, target, stack_proof=_pass_proof(Path(raw) / "stack-proof.json")
+                )
+            self.assertFalse(target.exists())
+
+    def test_commit_without_local_write_fails_preflight(self) -> None:
+        """The commit boundary stages the task's own work; commit cannot float free."""
+        source = self._source()
+        task = self._mutating_task(source)
+        task["authorization_ceiling"]["local_write"] = False
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        self.assertIn("commit", str(ctx.exception))
+
+    def test_program_control_ceiling_is_never_checked_for_consistency(self) -> None:
+        """Compatibility: program_control loses both, so it can never conflict."""
+        source = self._source()
+        control = next(
+            item for item in source["tasks"] if item["execution_kind"] == "program_control"
+        )
+        control["authorization_ceiling"]["local_write"] = True
+        control["authorization_ceiling"]["commit"] = False
+        self.compiler.preflight_campaign_source_document(source)
+
+    # --- Target identity --------------------------------------------------
+
+    def test_targets_array_owns_the_execution_repository(self) -> None:
+        self.assertEqual(
+            self.compiler.resolve_campaign_target_repository(self._source()),
+            "Quantum-L9/Cursor-Governance",
+        )
+
+    def test_zero_declared_targets_is_refused(self) -> None:
+        source = self._source()
+        source["targets"] = []
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        self.assertIn("targets[].repository_id", str(ctx.exception))
+
+    def test_multiple_distinct_repository_targets_are_refused(self) -> None:
+        source = self._source()
+        second = dict(source["targets"][0])
+        second["id"] = "TARGET-002"
+        second["repository_id"] = "Quantum-L9/l9-ci-core"
+        source["targets"].append(second)
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        message = str(ctx.exception)
+        self.assertIn("multiple distinct", message)
+        self.assertIn("Quantum-L9/l9-ci-core", message)
+
+    def test_a_contradicting_target_alias_is_refused_naming_both_values(self) -> None:
+        for alias, mutate in (
+            (
+                "program.target_repository_id",
+                lambda src: src["program"].update({"target_repository_id": "other/repo"}),
+            ),
+            (
+                "metadata.intended_host",
+                lambda src: src["metadata"].update({"intended_host": "other/repo"}),
+            ),
+            (
+                "target.repository_id",
+                lambda src: src.update({"target": {"repository_id": "other/repo"}}),
+            ),
+        ):
+            with self.subTest(alias=alias):
+                source = self._source()
+                mutate(source)
+                with self.assertRaises(self.compiler.CompileError) as ctx:
+                    self.compiler.preflight_campaign_source_document(source)
+                message = str(ctx.exception)
+                self.assertIn(alias, message)
+                self.assertIn("other/repo", message)
+                self.assertIn("Quantum-L9/Cursor-Governance", message)
+
+    def test_an_empty_repository_id_target_is_not_a_second_identity(self) -> None:
+        """program_control targets carry no repository and must not collide."""
+        source = self._source()
+        source["targets"].append(
+            {"id": "TARGET-002", "kind": "program_control", "repository_id": None}
+        )
+        self.assertEqual(
+            self.compiler.resolve_campaign_target_repository(source),
+            "Quantum-L9/Cursor-Governance",
+        )
+
     # --- Validation-command grammar --------------------------------------
 
     def test_composed_source_validation_command_fails_preflight(self) -> None:
@@ -611,6 +843,51 @@ class SourcePreflightTests(unittest.TestCase):
         message = str(ctx.exception)
         self.assertIn("VAL-001", message)
         self.assertIn("compose multiple shell operations", message)
+
+    def test_command_with_omitted_method_is_grammar_checked_at_preflight(self) -> None:
+        """The seam: lowering executes it as shell, so preflight must read it as shell."""
+        source = self._source()
+        task = self._mutating_task(source)
+        task["validation"] = [{"id": "VAL-001", "command": "grep -q x a.py && grep -q x b.py"}]
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        message = str(ctx.exception)
+        self.assertIn("VAL-001", message)
+        self.assertIn("compose multiple shell operations", message)
+        # And the ledger lowering would have carried says the same thing.
+        self.assertEqual(
+            self.compiler.normalize_task_validation(task, "001")[0]["method"], "command"
+        )
+
+    def test_bare_command_or_inspection_without_method_is_also_shell(self) -> None:
+        source = self._source()
+        task = self._mutating_task(source)
+        task["validation"] = [{"id": "VAL-001", "command_or_inspection": "python3 -c 'import os'"}]
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        self.assertIn("VAL-001", str(ctx.exception))
+
+    def test_an_unknown_validation_method_is_refused_not_coerced(self) -> None:
+        source = self._source()
+        task = self._mutating_task(source)
+        task["validation"] = [
+            {"id": "VAL-001", "method": "shell", "command_or_inspection": "git status --short"}
+        ]
+        with self.assertRaises(self.compiler.CompileError) as ctx:
+            self.compiler.preflight_campaign_source_document(source)
+        message = str(ctx.exception)
+        self.assertIn("shell", message)
+        self.assertIn("never coerced", message)
+
+    def test_preflight_and_lowering_agree_on_every_normalized_entry(self) -> None:
+        """One ledger, two readers: the two stages cannot reach different answers."""
+        source = self._source()
+        for task in source["tasks"]:
+            suffix = task["id"].split("-")[-1]
+            self.assertEqual(
+                self.compiler.normalize_task_validation(task, suffix),
+                self.compiler._task_validations(task, suffix),
+            )
 
     def test_inspection_text_is_never_parsed_as_shell(self) -> None:
         """Prose is not a command; it must not reach the shell grammar."""

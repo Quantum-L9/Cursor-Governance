@@ -21,6 +21,14 @@ ACTIONS = {
     "destructive_change",
     "external_message",
 }
+# The only actions a repo-local Source Contract may request. Remote mutation is
+# denied in the universal Controller core, so no remote action is projectable.
+REPO_LOCAL_ACTIONS = ("inspect", "local_write", "commit")
+# Actions the sealed local runner performs itself. Anything outside this set
+# needs an adapter this core does not install, so a task requesting it is not
+# eligible to claim. `commit` belongs here: a verified local commit is the
+# runner's terminal effect, not an external capability.
+LOCALLY_EXECUTABLE_ACTIONS = ("inspect", "local_write", "commit", "destructive_change")
 RISK_ORDER = {"T0": 0, "T1": 1, "T2": 2, "T3": 3, "T4": 4}
 
 
@@ -178,10 +186,17 @@ def draft_source_contract(
         for item in (source.get("outputs") or [])
         if isinstance(item, dict) and item.get("location")
     ]
+    # commit is a first-class action and the runner reaches a local commit, so
+    # omitting it here drafted a contract that understated what the task would
+    # actually do -- and left every downstream surface deriving commit authority
+    # from something other than the locked ceiling. Projected when, and only
+    # when, the locked task ceiling permits it; every remote action stays out of
+    # the repo-local Source Contract, and `validate_source_contract` still
+    # refuses anything the ceiling does not carry.
     requested = [
         action
         for action, allowed in task["authorization_ceiling"].items()
-        if allowed and action in {"inspect", "local_write"}
+        if allowed and action in REPO_LOCAL_ACTIONS
     ]
     payload = {
         "schema": "program-execution-controller.source-contract.v2",

@@ -5,14 +5,14 @@ from collections.abc import Mapping
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-LOCAL_MUTATION_OPERATIONS = (
+LOCAL_WRITE_OPERATIONS = (
     "read",
     "search",
     "create_worktree",
     "edit_scoped",
     "run_tests",
-    "commit_local",
 )
+COMMIT_OPERATIONS = ("commit_local",)
 INSPECT_OPERATIONS = ("read", "search")
 FORBIDDEN_OPERATIONS = (
     "merge",
@@ -63,9 +63,30 @@ def _iso_text(value: datetime) -> str:
     return value.strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def requested_actions(contract: Mapping[str, Any]) -> set[str]:
+    return {str(item) for item in (contract.get("requested_actions") or [])}
+
+
 def _mutation_requested(contract: Mapping[str, Any]) -> bool:
-    requested = list(contract.get("requested_actions") or [])
-    return any(item in {"local_write", "destructive_change", "commit"} for item in requested)
+    return bool(requested_actions(contract) & {"local_write", "destructive_change", "commit"})
+
+
+def allowed_operations(contract: Mapping[str, Any]) -> list[str]:
+    """Operations derived from the actions actually requested.
+
+    "Mutation" is not one permission. A contract requesting local_write without
+    commit used to receive the whole local-mutation set, including
+    `commit_local`, because a single boolean stood in for both -- root autonomy
+    inferred an authority the Program contract never asked for. Each operation
+    now traces to the action that justifies it.
+    """
+    requested = requested_actions(contract)
+    if not requested & {"local_write", "destructive_change", "commit"}:
+        return list(INSPECT_OPERATIONS)
+    operations = list(LOCAL_WRITE_OPERATIONS)
+    if "commit" in requested:
+        operations.extend(COMMIT_OPERATIONS)
+    return operations
 
 
 def _write_claims(contract: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -141,9 +162,7 @@ def map_program_contract(
                 "**/*.pem",
                 "**/*.key",
             ],
-            "allowed_operations": list(
-                LOCAL_MUTATION_OPERATIONS if mutation else INSPECT_OPERATIONS
-            ),
+            "allowed_operations": allowed_operations(contract),
             "forbidden_operations": list(FORBIDDEN_OPERATIONS),
         },
         "budgets": {

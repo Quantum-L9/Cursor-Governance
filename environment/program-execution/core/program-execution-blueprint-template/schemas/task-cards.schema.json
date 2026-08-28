@@ -82,6 +82,14 @@
               "read_only"
             ]
           },
+          "kernel_profile": {
+            "type": "string",
+            "enum": [
+              "BUILD",
+              "CHANGE",
+              "AUDIT"
+            ]
+          },
           "objective": {
             "type": "string",
             "minLength": 1
