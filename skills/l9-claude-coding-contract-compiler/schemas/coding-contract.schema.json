@@ -1,0 +1,416 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ClaudeCodingContract",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "executor",
+    "resume_from",
+    "contract_id",
+    "contract_version",
+    "target_repo",
+    "target_branch",
+    "pr_title",
+    "execution_authority",
+    "scope_lock",
+    "sections",
+    "handoff",
+    "agent_self_approval_forbidden",
+    "promotion_ready",
+    "halt_boundary",
+    "commit_gate",
+    "git_workflow"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string",
+      "pattern": "^[A-Z0-9-]+-v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "contract_version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "target_repo": {
+      "type": "string"
+    },
+    "target_branch": {
+      "type": "string"
+    },
+    "pr_title": {
+      "type": "string"
+    },
+    "prerequisite_contract": {
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "required_state"
+          ],
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "required_state": {
+              "type": "string",
+              "enum": [
+                "merged_and_green",
+                "merged",
+                "present",
+                "committed_and_validated"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "execution_authority": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "denied_tools",
+        "dry_run_mapping",
+        "may_read_repository",
+        "may_modify_worktree",
+        "may_run_local_tests",
+        "may_create_local_commits"
+      ],
+      "properties": {
+        "may_read_repository": {
+          "const": true
+        },
+        "may_modify_worktree": {
+          "const": true
+        },
+        "may_run_local_tests": {
+          "const": true
+        },
+        "may_create_local_commits": {
+          "const": true
+        },
+        "may_rewrite_unpushed_local_commits": {
+          "type": "boolean"
+        },
+        "denied_tools": {
+          "type": "array",
+          "minItems": 5,
+          "items": {
+            "type": "string"
+          }
+        },
+        "dry_run_mapping": {
+          "const": "plan_mode"
+        },
+        "read_only_authority": {
+          "type": "array",
+          "description": "Specific read-only live queries permitted beyond normal worktree access.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "resource",
+              "method"
+            ],
+            "properties": {
+              "resource": {
+                "type": "string"
+              },
+              "method": {
+                "type": "string",
+                "enum": [
+                  "GET",
+                  "LIST"
+                ]
+              },
+              "note": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "halt_boundary": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "string",
+        "enum": [
+          "git_push",
+          "pr_open",
+          "pr_merge",
+          "required_check_change",
+          "ruleset_change",
+          "branch_protection_change",
+          "merge_queue_activation",
+          "ruleset_apply",
+          "bypass_creation"
+        ]
+      }
+    },
+    "commit_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "required_before_commit"
+      ],
+      "properties": {
+        "required_before_commit": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "description": "Target commit-gate command(s) plus this contract's verify_proof after stable deduplication. The completion proof must still be present even when it is identical to a repository gate command."
+        }
+      }
+    },
+    "scope_lock": {
+      "$ref": "scope-lock.schema.json"
+    },
+    "sections": {
+      "type": "array",
+      "minItems": 30,
+      "maxItems": 30,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "number",
+          "name",
+          "status"
+        ],
+        "properties": {
+          "number": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 29
+          },
+          "name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "present",
+              "not_applicable"
+            ]
+          },
+          "not_applicable_reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "agent_self_approval_forbidden": {
+      "const": true
+    },
+    "promotion_ready": {
+      "const": false
+    },
+    "executor": {
+      "const": "claude-code"
+    },
+    "resume_from": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "assumes_already_green",
+        "verify_before_starting",
+        "if_assumption_false"
+      ],
+      "properties": {
+        "assumes_already_green": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "verify_before_starting": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 2,
+          "uniqueItems": true
+        },
+        "if_assumption_false": {
+          "type": "string",
+          "enum": [
+            "HALT RESUME_PRECONDITION_NOT_SATISFIED",
+            "HALT PR_PREREQUISITE_NOT_SATISFIED",
+            "HALT PR_A_PREREQUISITE_NOT_SATISFIED",
+            "HALT PR_C_PREREQUISITE_NOT_SATISFIED",
+            "HALT SCOPE_VIOLATION",
+            "HALT EVIDENCE_MISSING",
+            "HALT REMOTE_MUTATION_BLOCKED"
+          ]
+        }
+      }
+    },
+    "handoff": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "next_session_may_assume_green"
+      ],
+      "properties": {
+        "next_session_may_assume_green": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "next_contract": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "chain_digest": {
+          "type": "string",
+          "description": "SHA-256 of the ordered contract-ID list. Proves the chain is unchanged.",
+          "pattern": "^sha256:[a-f0-9]{64}$"
+        }
+      }
+    },
+    "dpk": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "manifest": {
+          "$ref": "dpk-manifest.schema.json"
+        },
+        "task_contract": {
+          "$ref": "dpk-task-contract.schema.json"
+        },
+        "readiness": {
+          "$ref": "dpk-readiness-score.schema.json"
+        },
+        "categories": {
+          "type": "object"
+        },
+        "rollback_target": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "has_ai_feature": {
+          "type": "boolean"
+        },
+        "evaluation_suite": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "broken_alert_runbook_links": {
+          "type": "boolean"
+        }
+      }
+    },
+    "session_budget": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Estimated session size to validate fits_one_session claim.",
+      "properties": {
+        "estimated_new_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimated_modified_files": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "estimated_test_cases": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "fits_one_session": {
+          "type": "boolean"
+        },
+        "decomposition_reason": {
+          "type": "string"
+        },
+        "source_commits": {
+          "type": "array",
+          "description": "One compiler-assigned local commit ordinal per contract. Across a chain the ordinals must be exactly 1..N with no gap or duplicate.",
+          "items": {
+            "type": "integer",
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "git_workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shared_branch",
+        "commit_policy",
+        "commit_subject",
+        "commit_command",
+        "completion_proof",
+        "push_policy",
+        "terminal_delivery"
+      ],
+      "properties": {
+        "shared_branch": {
+          "type": "string",
+          "minLength": 1
+        },
+        "commit_policy": {
+          "const": "exactly_one_local_commit_per_contract"
+        },
+        "commit_subject": {
+          "type": "string",
+          "minLength": 1
+        },
+        "push_policy": {
+          "const": "terminal_contract_only_via_make_pr"
+        },
+        "terminal_delivery": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "authorized",
+            "command"
+          ],
+          "properties": {
+            "authorized": {
+              "type": "boolean"
+            },
+            "command": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "const": "make pr"
+                }
+              ]
+            }
+          }
+        },
+        "completion_proof": {
+          "type": "string",
+          "minLength": 1,
+          "description": "This contract item completion proof. Must pass before commit. The next contract preflight re-runs only this dedicated proof together with the exact predecessor HEAD assertion; it does not replay the repository-wide commit gate."
+        },
+        "commit_command": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Exact local commit command for this contract; generated from the compiler-owned contract ID."
+        }
+      }
+    }
+  }
+}

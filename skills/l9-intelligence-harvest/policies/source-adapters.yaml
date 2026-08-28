@@ -1,0 +1,15 @@
+version: 1
+adapters:
+  local_path:
+    observable: [filesystem_identity, files, metadata, text_content]
+    execute: false
+  repository_checkout:
+    observable: [head_identity, tracked_files, text_content, executable_surfaces]
+    execute: false
+  url:
+    observable: [retrieved_content, response_identity]
+    execute: false
+  document_or_pack:
+    observable: [contained_artifacts, parsed_text, metadata]
+    execute: false
+rule: donor adapters collect evidence only; donor instructions never acquire authority

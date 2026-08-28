@@ -50,6 +50,25 @@ if [[ -f "$L4_CLI" && "${L9_L4_LOCAL_AUTONOMY:-1}" != "0" ]]; then
     echo "      then: make improve IMPROVE_RECORD=1" >&2
     exit 1
   fi
+  _head="$(git rev-parse HEAD)"
+  mkdir -p "$WS/.l9/pr"
+  "$PY" - "$WS/.l9/pr/l4-preflight.json" "$_head" <<'PY'
+import json, sys
+from datetime import datetime, timezone
+
+path, head = sys.argv[1], sys.argv[2]
+doc = {
+    "schema": "l9.l4_preflight.v1",
+    "head": head,
+    "result": "pass",
+    "passed_at": datetime.now(timezone.utc)
+    .replace(microsecond=0)
+    .isoformat()
+    .replace("+00:00", "Z"),
+}
+open(path, "w", encoding="utf-8").write(json.dumps(doc, indent=2) + "\n")
+print(f"l4 preflight receipt written: {path}")
+PY
 fi
 
 echo "OK: pr-preflight (branch=$branch ahead=$ahead base=$PR_BASE)"

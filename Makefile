@@ -4,6 +4,7 @@
 .PHONY: repo-write-lock-test precommit-hook-contract
 .PHONY: capability-contract-validate capability-check capability-broker-preflight
 .PHONY: broker-serve
+.PHONY: kernel-precommit
 
 # Case-insensitive `pr` goal: Make PR / Pr / pR / make pr all run the same target.
 # (GNU Make matches goals case-sensitively; remap any non-canonical casing to `pr`.)
@@ -69,6 +70,7 @@ help:
 	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
+	@echo "  make kernel-precommit — kernel hook (before precommit-repo hooks/tests; not L4)"
 	@echo "  make campaign INTENT=path — PE activate seed → worktree emit → blueprint → pec → host PR → merge-if-green"
 	@echo "  make campaign-architecture INTENT=arch.md TARGET=owner/repo — long-form architecture → campaign_source → blueprint → PEC"
 	@echo "  make pr (any case) — gate → open PR → subscribe → agent spawns l9-pr-remediation (OPEN_PR=0 / PR_REMEDIATE=0 / pr-check to skip)"
@@ -83,6 +85,7 @@ help:
 	@echo "  make clean / workspace-clean — ship leftover work to scoped PRs by repo, prune merged locals, prime main (CLEAN_MODE=plan to preview; CLEAN_REMOTE=0 to stay local)"
 	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" clean WS=\"\$$(pwd)\""
 	@echo "  make gov-python — fail-closed .venv interpreter + runtime import probe"
+	@echo "  Happy path: finish → scoped-commit → make pr (tests once; remediates=1; PR_REMEDIATE=0 to opt out)"
 
 ## Run the FULL session-start pipeline against WS, synchronously, with visible output.
 ## Same script Cursor runs on sessionStart — one implementation, no drift.
@@ -347,6 +350,9 @@ l4-record-kernels:
 
 l4-authorize:
 	$(PYTHON) ops/autonomy/l4_local.py --workspace "$(WS)" authorize-release
+
+kernel-precommit:
+	$(PYTHON) ops/autonomy/kernel_gate.py precommit --workspace "$(WS)"
 
 # PUBLIC: kernel revision phase. Composes l4-begin / l4-record-kernels / l4-authorize.
 # INTERNAL leaves stay callable; agents use make improve.
@@ -799,3 +805,10 @@ l9-dispatcher-check:
 claude-readiness:
 	$(PYTHON) ops/scripts/emit_claude_readiness.py --root "$(CURDIR)" \
 		--workspace "$(if $(WS),$(WS),$(CURDIR))" --read
+
+# Ceremony phase 2 — early overlap on `make pr` only. Inherited by the
+# `pr-check` prerequisite when the user typed `make pr`. Direct
+# `make pr-check` / Diagnose leaves PR_EARLY_OVERLAP unset.
+# GNU Make 3.81 does not put an unexported target-specific var in the
+# recipe environment; export so run_pr_gate.sh sees it.
+pr: export PR_EARLY_OVERLAP = 1

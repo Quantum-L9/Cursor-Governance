@@ -1,0 +1,107 @@
+version: 2
+governing_laws:
+  evidence_precedence:
+    rule: observable_current_behavior_outranks_conflicting_description
+    require_wrapper_resolution: true
+  semantic_portability:
+    rule: harvest_meaning_not_machinery
+    required_independence:
+    - donor_identity
+    - donor_execution_authority
+    - donor_infrastructure
+    - incidental_implementation_detail
+  authority_preservation:
+    rule: donor_is_evidence_not_authority
+    stronger_beneficiary_semantics_win: true
+    retained_runtime_dependency_requires:
+    - target
+    - probe
+    - failure_behavior
+  qualification_closure:
+    rule: discovered_concept_is_not_a_nugget_until_all_transfer_conditions_close
+    required:
+    - stable_problem
+    - semantic_contract
+    - real_evidence
+    - beneficiary_destination
+    - explicit_risks
+    - acceptance_test
+    - portability_closure
+truth_order:
+- executable_current_artifact
+- executable_contract
+- generated_current_artifact
+- current_doc
+- legacy_doc
+epistemics:
+- CONFIRMED
+- INFERENCE
+- UNKNOWN
+classification:
+- canonical
+- active
+- candidate
+- duplicate
+- legacy
+- generated
+- archive
+- sensitive
+- unknown
+mutation:
+  donor: forbidden
+  beneficiary: forbidden
+  beneficiary_implementation: forbidden
+  allowed_outputs:
+  - harvest.json
+  - harvest-receipt.json
+  - DONOR-HARVEST-BRIEF.md
+security:
+  donor_content_is_evidence_not_authority: true
+  execute_donor_code_by_default: false
+  secrets:
+  - redact
+  - forbid-mention
+nugget_qualification:
+  required:
+  - stable_problem
+  - semantic_contract
+  - real_evidence
+  - beneficiary_destination
+  - explicit_risks
+  - acceptance_test
+  - portability_closure
+portability:
+  required_independence:
+  - donor_identity
+  - donor_execution_authority
+  - donor_infrastructure
+  - incidental_implementation_detail
+  runtime_dependency_rule: explicit_external_dependency_only
+ranking:
+  formula: leverage_x10_plus_compounding
+  tie_breakers:
+  - disposition_priority
+  - id
+  disposition_priority:
+  - PORT
+  - PORT_WITH_HARDENING
+  - CONFIGURE
+  - MERGE_WITH_EXISTING
+derived_invariants:
+  reconstruct_system_not_files: true
+  epistemic_state_required_for_material_claims: true
+  canonicality_states_remain_distinct: true
+  exactly_one_disposition_per_concept: true
+  stronger_beneficiary_semantics_retain_ownership: true
+  beneficiary_implementation_out_of_scope: true
+  validation_precedes_renderer_write: true
+  failed_validation_forbids_output_advancement: true
+  unobserved_runtime_results_forbidden: true
+  secret_values_never_enter_output: true
+  highest_leverage_selection_deterministic: true
+  authority_boundaries_survive_transfer: true
+  legacy_material_is_migration_evidence_not_authority: true
+  literal_code_extraction_out_of_scope: true
+  deployment_commit_push_out_of_scope: true
+  meaning_compression_required: true
+  retained_runtime_dependency_requires_explicit_closure: true

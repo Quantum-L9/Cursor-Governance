@@ -1,0 +1,20 @@
+# Illustrative chain state. Generate the real one with:
+#   python make_state.py <out_dir_from_compile_contract> state.yaml [--chain-on green|merged]
+# out_dir is the directory compile_contract.py emitted (contains PR-*.contract.json).
+campaign:
+  target_repo: acme/api
+  target_branch: feature/ratelimit-health
+  out_dir: ./out                     # where PR-*/ artifacts live
+chain_on: green                      # green = hands-off; merged = per-PR gate
+merge_policy: auto                   # auto = automerge_gate promotes green->merged on ELIGIBLE
+items:
+  - key: "001"
+    contract_id: ACME-API-PR-001-v1.0.0
+    title: "PR-001 — Add per-tenant sliding-window rate limiter"
+    prerequisite: null
+    status: pending
+  - key: "002"
+    contract_id: ACME-API-PR-002-v1.0.0
+    title: "PR-002 — Add GET /health handler wired into app entry"
+    prerequisite: ACME-API-PR-001-v1.0.0
+    status: pending

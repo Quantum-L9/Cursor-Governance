@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
-"""L4 local autonomy — stacked local commits, no mid-execution push, kernel gate.
+"""L4 local autonomy — stacked local commits, no mid-execution push.
 
 SSOT doctrine: ops/autonomy/surface_profile.yaml (l4_local_autonomy).
 State + receipts live under <workspace>/.l9/autonomy/ (gitignored).
 
+Tree kernels are owned by ops/autonomy/kernel_gate.py (first step of
+precommit-repo). They are not an L4 phase.
+
 Phases:
   executing          — local commits on stacked branch; push/PR denied
-  kernels_recorded   — Recursive Alignment + Validate & Repair recorded
+  kernels_recorded   — compat only; record-kernels still stamps kernel_gate
   release_authorized — scoped push + PR using PULL_REQUEST_TEMPLATE allowed
 """
 
@@ -295,6 +298,12 @@ def record_kernels(
     if ra == "passed" and vr == "passed":
         state["phase"] = PHASE_KERNELS
         state.pop("blockers", None)
+        try:
+            from kernel_gate import record as stamp_kernel_hook
+
+            stamp_kernel_hook(root, gov=Path(__file__).resolve().parents[2])
+        except Exception as exc:
+            state["kernel_hook_stamp"] = f"failed:{exc}"
     else:
         state["phase"] = PHASE_EXECUTING
         state["blockers"] = ["kernel_gate_failed"]
@@ -306,17 +315,6 @@ def authorize_release(root: Path) -> dict[str, Any]:
     state = load_phase(root)
     if state is None:
         raise RuntimeError("no L4 phase — run: python3 ops/autonomy/l4_local.py begin")
-    kernels = state.get("kernels") or {}
-    ra = (kernels.get("recursive_alignment") or {}).get("status")
-    vr = (kernels.get("validate_repair") or {}).get("status")
-    if ra != "passed" or vr != "passed":
-        raise RuntimeError(
-            "release denied — record both kernels as passed first "
-            f"(recursive_alignment={ra}, validate_repair={vr}). "
-            "Run kernels/Recursive Alignment.md then kernels/Validate & Repair.md "
-            "on the finished local tree, then: "
-            "python3 ops/autonomy/l4_local.py record-kernels"
-        )
     branch = current_branch(root)
     if branch != state.get("stacked_branch"):
         raise RuntimeError(
@@ -385,10 +383,10 @@ def _allow_from_phase(state: dict[str, Any] | None) -> tuple[bool, str]:
         return False, (
             "L4 local autonomy: mid-execution remote denied. "
             "Commit locally on a stacked branch, finish the program/contract, "
-            "run kernels/Recursive Alignment.md then kernels/Validate & Repair.md, "
             "then: python3 ops/autonomy/l4_local.py begin && "
-            "python3 ops/autonomy/l4_local.py record-kernels && "
-            "python3 ops/autonomy/l4_local.py authorize-release"
+            "python3 ops/autonomy/l4_local.py authorize-release. "
+            "Kernels fire as the first precommit-repo hook "
+            "(ops/autonomy/kernel_gate.py), not as an L4 phase."
         )
     phase = state.get("phase")
     if phase == PHASE_RELEASE:
@@ -399,8 +397,8 @@ def _allow_from_phase(state: dict[str, Any] | None) -> tuple[bool, str]:
             "python3 ops/autonomy/l4_local.py authorize-release"
         )
     return False, (
-        f"L4 phase={phase}: no mid-execution push/PR. Finish locally, run "
-        "Recursive Alignment + Validate & Repair, then authorize-release."
+        f"L4 phase={phase}: no mid-execution push/PR. Finish locally, then "
+        "authorize-release. Kernels fire in kernel_gate.py before precommit."
     )
 
 

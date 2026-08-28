@@ -1,0 +1,43 @@
+{
+  "$id": "l9/intelligence-harvest/receipt",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "checks": {
+      "items": {
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "outputs": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "request_id": {
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "PASS",
+        "PARTIAL",
+        "BLOCKED",
+        "FAIL"
+      ]
+    },
+    "unknowns": {
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "request_id",
+    "status",
+    "checks",
+    "outputs"
+  ],
+  "type": "object"
+}

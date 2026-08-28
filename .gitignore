@@ -151,3 +151,11 @@ docs/skills-inventory.md
 
 # retired harvest dump — repo-hygiene fail-closes if this directory reappears
 current_work/
+
+# coverage artifacts from the canonical runner
+# ops/scripts/run_python_test_suites.py --profile ci passes --cov=. --cov-report=xml
+# (ops/config/python-contract.json), so both land at the repo root on every
+# sanctioned local run and in CI. Regenerable output, never committed.
+.coverage
+.coverage.*
+coverage.xml

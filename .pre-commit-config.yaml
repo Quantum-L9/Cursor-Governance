@@ -39,6 +39,12 @@ repos:
         language: system
         pass_filenames: false
 
+      - id: commit-verification-contract
+        name: Commit verification is declared, briefed, enforced, and unemitted
+        entry: python3 ops/scripts/validate_commit_verification_contract.py
+        language: system
+        pass_filenames: false
+
       - id: legacy-doctrine-residue
         name: No active Dropbox SSOT or L9_MEMORY_HTTP side-door teaching
         entry: python3 ops/scripts/validate_legacy_doctrine_residue.py

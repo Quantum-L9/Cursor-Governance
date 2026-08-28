@@ -1,0 +1,61 @@
+{
+  "$id": "l9/intelligence-harvest/request",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "access_mode": {
+      "default": "read-only",
+      "enum": [
+        "read-only",
+        "dry-run-allowed"
+      ]
+    },
+    "beneficiary": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "brief": {
+      "default": false,
+      "type": "boolean"
+    },
+    "depth": {
+      "default": "exhaustive",
+      "enum": [
+        "sample",
+        "standard",
+        "exhaustive"
+      ]
+    },
+    "donor": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "harvest_target": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "language": {
+      "default": "as-donor",
+      "type": "string"
+    },
+    "request_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "secrets_policy": {
+      "default": "redact",
+      "enum": [
+        "redact",
+        "forbid-mention"
+      ]
+    }
+  },
+  "required": [
+    "request_id",
+    "donor",
+    "beneficiary",
+    "harvest_target"
+  ],
+  "title": "HarvestRequest",
+  "type": "object"
+}

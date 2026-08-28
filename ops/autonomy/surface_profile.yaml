@@ -86,10 +86,14 @@ l4_local_autonomy:
   flow:
     - begin_on_stacked_feature_branch
     - commit_locally_through_program_or_contract # no remote
-    - run_kernel_recursive_alignment # kernels/Recursive Alignment.md
-    - run_kernel_validate_repair # kernels/Validate & Repair.md
-    - record_kernels_and_authorize_release
-    - push_and_open_pr_via_make_pr # PR_REMEDIATE=0; checkers in Makefile
+    - authorize_release
+    - push_and_open_pr_via_make_pr # remediates=1; checkers in Makefile
+  kernel_hook:
+    owner: ops/autonomy/kernel_gate.py
+    fires: first_step_of_precommit_repo
+    note: >-
+      Not an L4 phase. Fail-closed before any other hook or test so
+      checkers run once on the post-kernel tree.
   required_kernels:
     - path: kernels/Recursive Alignment.md
       id: recursive_alignment
@@ -97,7 +101,7 @@ l4_local_autonomy:
       id: validate_repair
   pr_template: PULL_REQUEST_TEMPLATE.md
   post_push:
-    required_command: PR_REMEDIATE=0 make pr
+    required_command: make pr
     remediation_skill: l9-pr-remediation
     max_cycles: 5
     resolve_review_threads: true
@@ -133,7 +137,7 @@ pr_stacking:
 campaign_execution:
   # Campaign execution is permanently local-commit-only: prepare, execute,
   # validate, verify, local commits, STOP. Publication is never a campaign
-  # stage; it is root `PR_REMEDIATE=0 make pr`, and merge is /l9-pr-remediation.
+  # stage; it is root `make pr` (remediates=1), and merge is /l9-pr-remediation.
   # L9_PE_RELEASE_AUTHORIZED survives as a diagnostic compatibility name only
   # and cannot widen Program Execution authority.
   local_commit_only: true
@@ -141,7 +145,7 @@ campaign_execution:
   push: forbidden
   pull_request: forbidden
   require_make_pr: false # publication left the campaign path entirely
-  pr_remediate: 0
+  pr_remediate: 1
   merge: forbidden # merge authority belongs to /l9-pr-remediation
   open_pr_against_main: forbidden
   mix_with_other_feature_branches: forbidden
@@ -208,11 +212,11 @@ session_start_block: |
   - YOU ARE AUTHORIZED to scoped local `git commit` without per-action ask
     on **every** surface, including Cursor. Ask only before push / `make pr`.
     Registry: `environment/contracts/autonomy/MANIFEST.yaml`.
-  - After the program/contract finishes locally, you MUST run
-    `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md` on
-    the finished tree, then:
+    - After the program/contract finishes locally:
     `python3 ops/autonomy/l4_local.py begin` (if not begun) →
-    `record-kernels` → `authorize-release`.
+    `authorize-release`. Tree kernels are not an L4 phase. They fire as
+    the first step of `make precommit-repo`
+    (`ops/autonomy/kernel_gate.py`) so hooks and tests run once.
   - Only then: `PR_REMEDIATE=0 make pr` (Makefile checkers, then push + open
     PR).
   - **Campaign first publish is `make pr`.** That is a path rule for opening
@@ -263,6 +267,33 @@ session_start_block: |
     `pytest path/to/test_x.py` stays allowed for debugging. Human/ops
     override: `L9_FULL_PYTEST_AUTHORIZED=<reason>`.
   - YOU MUST NOT force-push, hard-reset, admin-merge, or exfiltrate secrets.
+  - **Commit verification cannot be skipped.** `git commit --no-verify` / `-n`,
+    `git push --no-verify`, `core.hooksPath` overrides, hook-suppressing env
+    vars (`SKIP=`, `HUSKY=0`), `pre-commit uninstall`, and edits to
+    `.git/hooks/**` are **denied at PreToolUse** by
+    `ops/autonomy/verification_bypass_gate.py`. This is a real gate, not
+    guidance: it answers before the git/gh workflow exemption, so a git
+    command earns this denial. A failing hook is evidence (rule 95) — repair
+    the narrowest true cause, or record it with `session_debt.py`. Do not
+    reach for a bypass; no form of one is allowed. Forms are declared in
+    `ops/config/commit-verification-contract.json`; human/ops breakglass is
+    `L9_VERIFY_BYPASS_AUTHORIZED=<reason>` and an agent MUST NOT set it for
+    itself.
+  - **This workspace has NO commit hook, by design — do not install one.**
+    A raw `.git/hooks/pre-commit` runs the whole catalog without the
+    surface-aware SKIP list `ops/scripts/run_pr_precommit.sh` applies, so
+    `symlinks-check` would reject every commit on a non-cursor surface.
+    `pre-commit install` is forbidden and asserted against by
+    `validate_claude_env.py`. Verification lives at **`make pr-check` /
+    `make pr`**, not at commit time. So a clean commit here proves nothing was
+    verified — run the gate and say which one you ran. Check the model with
+    `python3 ops/autonomy/verification_bypass_gate.py --status`
+    (`model: governed_gate` = correct, not a deficiency). To ALSO verify at
+    commit time, install the governed shim once per clone:
+    `bash ops/scripts/install_commit_hook.sh` — it delegates to
+    `run_pr_precommit.sh --staged`, keeping the SKIP list a raw
+    `pre-commit install` would drop. That is the supported way to close the
+    window; installing a raw hook is still forbidden.
   - Merge stays denied by `ops/autonomy/merge_gate.py` until
     `/l9-pr-remediation` writes the receipt (or `L9_MERGE_AUTHORIZED`).
     An L4 release receipt does **not** authorize merge.
@@ -282,10 +313,10 @@ llm_rules_override: |
      for scoped feature-branch **local commits**. Remote push/PR remain gated
      by L4 local autonomy (below), not by per-action chat pacing.
   2. Completing reversible work MUST proceed L4-local: stacked-branch commits
-     with **no mid-execution push** → finish program/contract → run
-     `kernels/Recursive Alignment.md` + `kernels/Validate & Repair.md` →
-     `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr` (checkers,
-     then push + PR). Campaign/make-pr end state is green + merge-ready.
+     with **no mid-execution push** → finish program/contract →
+     `l4_local.py authorize-release` → `make pr` (kernel hook first, then
+     checkers once, then push + PR; remediates=1). Campaign/make-pr end
+     state is green + merge-ready. `PR_REMEDIATE=0` is opt-out only.
      Invoking `/l9-pr-remediation` then remediates **and merges** all open
      PRs in the target repo (bottom-up). Do **not** merge from the campaign
      path alone.
@@ -301,6 +332,14 @@ llm_rules_override: |
      target; there is no raw-push fallback for first publish.
      Enforced by `ops/autonomy/local_execution_gate.py`.
   3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
+  3a. Commit verification is not skippable. `git commit --no-verify` / `-n`,
+     `git push --no-verify`, `core.hooksPath` overrides, `SKIP=` / `HUSKY=0`
+     on a commit, `pre-commit uninstall`, and `.git/hooks/**` edits are
+     denied at PreToolUse by `ops/autonomy/verification_bypass_gate.py`
+     (contract `l9-commit-verification-integrity`, declared in
+     `ops/config/commit-verification-contract.json`). Repair what the hook
+     reported; breakglass `L9_VERIFY_BYPASS_AUTHORIZED=<reason>` is human/ops
+     only.
   4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
      campaign PRs against `main`. Do not mix with other feature branches.
   5. Cursor surface MUST scoped-commit locally after each authored chunk
@@ -320,12 +359,14 @@ llm_rules_override: |
     agents' dirty files (2026-08-12 plan.md + branch-thrash incident).
   - Enforcement: `ops/autonomy/local_execution_gate.py` +
     `worktree_isolation_gate.py` (Claude PreToolUse + Cursor beforeShellExecution).
-  - CLI: `python3 ops/autonomy/l4_local.py {begin|record-kernels|authorize-release|status}`.
+  - CLI: `python3 ops/autonomy/l4_local.py {begin|authorize-release|status}`.
+    Kernels: `python3 ops/autonomy/kernel_gate.py {record|precommit}`
+    (first step of precommit-repo, not an L4 phase).
   - Breakglass: `L9_LOCAL_PUSH_AUTHORIZED=<reason>` or `L9_L4_LOCAL_AUTONOMY=0`;
     isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
     `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
     `L9_WORKTREE_ISOLATION=0`.
-  - Post-push: `PR_REMEDIATE=0 make pr` to a green merge-ready PR. Merge
+  - Post-push: `make pr` (remediates=1) to a green merge-ready PR. Merge
     only after `/l9-pr-remediation` writes
     `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
     mergeable. Force-push / admin-merge stay forbidden.

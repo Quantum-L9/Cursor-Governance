@@ -53,12 +53,9 @@ from workflows.dags.inspect_dag import (
     build_inspect_graph,
     run_inspect,
 )
+from workflows.dags.intelligence_harvest_dag import INTELLIGENCE_HARVEST_V1
 from workflows.dags.readme_pipeline_dag import README_PIPELINE_DAG
 from workflows.dags.refactoring_dag import REFACTORING_DAG
-from workflows.dags.skill_compiler_dag import (
-    SKILL_COMPILER_SESSION_DAG,
-    SKILL_COMPILER_V2,
-)
 from workflows.dags.slash_command_update_dag import SLASH_COMMAND_UPDATE_DAG
 from workflows.dags.test_pipeline_dag import TEST_PIPELINE_DAG
 from workflows.dags.wire_dag import WIRE_DAG
@@ -73,10 +70,9 @@ __all__ = [
     "DAG_AUTHORING_DAG",
     "GMP_EXECUTION_DAG",
     "HARVEST_DEPLOY_DAG",
+    "INTELLIGENCE_HARVEST_V1",
     "README_PIPELINE_DAG",
     "REFACTORING_DAG",
-    "SKILL_COMPILER_SESSION_DAG",
-    "SKILL_COMPILER_V2",
     "SLASH_COMMAND_UPDATE_DAG",
     "TEST_PIPELINE_DAG",
     "WIRE_DAG",

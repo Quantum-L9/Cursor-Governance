@@ -2,7 +2,7 @@
 id: l9.rule.l4.local-autonomy
 version: 1.0.0
 description: "L4 local autonomy \u2014 stacked local commits, no mid-execution push,\
-  \ kernels then PR template."
+  \ then PR template. Kernels fire before precommit, not as L4."
 scope: global
 domain: git
 activation: always
@@ -23,18 +23,21 @@ Default ON (`L9_L4_LOCAL_AUTONOMY=1`).
    are not blocked (CANONICAL_LAW §6.2.4), so mid-execution restraint on those
    is doctrine you keep, not a gate that stops you.
 3. **Do not** stall for push-approval pacing during local execution.
-4. When the program/contract is finished locally, run:
-   - `kernels/Recursive Alignment.md`
-   - then `kernels/Validate & Repair.md`
-   on the finished tree.
+4. When the program/contract is finished locally, authorize release.
+   Tree kernels are **not** an L4 phase. They fire as the first step of
+   `make precommit-repo` via `ops/autonomy/kernel_gate.py` so hooks and
+   tests run once on the post-kernel tree.
 5. Authorize release, then publish **only** via Makefile checkers:
 
 ```bash
 python3 ops/autonomy/l4_local.py begin --contract-id "<id>"   # if not begun
-python3 ops/autonomy/l4_local.py record-kernels
 python3 ops/autonomy/l4_local.py authorize-release
 PR_REMEDIATE=0 make pr
 ```
+
+If the kernel hook fails, apply `kernels/Recursive Alignment.md` then
+`kernels/Validate & Repair.md`, commit, `kernel_gate.py record`, and
+re-run the same `make pr`. Do not run precommit or pytest first.
 
 `make pr` runs the **governance** Makefile's `pr` target regardless of the
 workspace repo or its Makefile — reach it with `l9 pr` /
@@ -59,7 +62,7 @@ fallback where one is absent.
 ## MUST NOT
 
 - Mid-execution remote mutation
-- Skipping post-exec kernels before first push/PR
+- Skipping the kernel hook by running pytest / pre-commit before `kernel_gate.py`
 - Inventing "wait for push approval" contracts that recreate pacing stalls
 - Merging from the campaign / `make pr` path (merge is `/l9-pr-remediation`)
 - Force-push, admin-merge, or hard-reset

@@ -1,0 +1,11 @@
+version: 1
+dispositions:
+  PORT: cross-context, deterministic, bounded, directly valuable
+  PORT_WITH_HARDENING: valuable but missing safety, portability, validation, or ownership hardening
+  CONFIGURE: common interface with context-specific implementation that belongs in declarative configuration
+  MERGE_WITH_EXISTING: overlaps beneficiary ownership; preserve stronger semantics and avoid duplicate ownership
+  KEEP_LOCAL: useful only to donor context
+  MIGRATION_CONTEXT: superseded but useful for compatibility or historical understanding
+  REJECT: unsafe, obsolete, over-implicit, duplicative, or misplaced
+  UNKNOWN: insufficient evidence
+viable_for_nugget: [PORT, PORT_WITH_HARDENING, CONFIGURE, MERGE_WITH_EXISTING]

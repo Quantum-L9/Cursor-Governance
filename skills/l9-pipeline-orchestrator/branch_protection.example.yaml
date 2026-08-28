@@ -1,0 +1,33 @@
+# Belt-and-suspenders — desired branch-protection state. REPO-AGNOSTIC by default.
+# Nothing here is hardcoded to a repo. owner/repo/branch, the required checks, and the review-agent
+# CODEOWNER are AUTO-DISCOVERED at apply time (git remote, .github/workflows, .github/CODEOWNERS).
+# Every field below is an OPTIONAL override — missing values are discovered or degrade with a warning,
+# never a blocker. apply_branch_protection.py runs with zero args inside any repo.
+
+auto_discover_checks: true          # merge discovered workflow job-names into required contexts
+
+branch_protection:
+  required_status_checks:
+    strict: true                    # branch must be up to date before merge
+    contexts: []                    # [] = auto-discover from .github/workflows; or list explicit check names
+  required_pull_request_reviews:
+    required_approving_review_count: 1
+    require_code_owner_reviews: true   # honored ONLY if a CODEOWNERS '*' owner exists; else auto-disabled + warned
+    dismiss_stale_reviews: true
+  required_conversation_resolution: true
+  enforce_admins: false
+  allow_force_pushes: false
+  allow_deletions: false
+  restrictions: null
+
+repository:
+  allow_auto_merge: true            # repo-level prerequisite for native auto-merge
+
+# Optional. null/absent => auto-discovered from .github/CODEOWNERS; if none found, code-owner review is
+# simply not required (protection still enforces checks + 1 approval + conversation resolution).
+review_agent_owner: null
+
+# Optional explicit target. null/absent => auto-discovered from `git remote` / current branch.
+owner: null
+repo: null
+branch: null
