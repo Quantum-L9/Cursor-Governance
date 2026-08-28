@@ -75,8 +75,10 @@ def build_context_manifest(contract: Mapping[str, Any]) -> dict[str, Any]:
         [
             "Execute this exact Program Execution Rendered Contract.",
             "Stay inside its worktree, requested actions, writable paths, and stop conditions.",
-            "Return only JSON containing candidate_sha, changed_files, validation_results,",
-            "and residual_unknowns. Do not claim independent verification or program convergence.",
+            "Return only JSON. changed_files MUST be a JSON array of repo-relative paths.",
+            "candidate_sha MUST be JSON null — do not git add or git commit; PE commits later.",
+            "Also include validation_results (array) and residual_unknowns (array).",
+            "Do not claim independent verification or program convergence.",
             compact_contract,
         ]
     )

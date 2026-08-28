@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import subprocess
 import tempfile
 import unittest
 from pathlib import Path
@@ -14,6 +15,7 @@ from peer_execution.context import (
 from peer_execution.contracts import validate_contract
 from peer_execution.core_receipts import verification_receipt
 from peer_execution.digests import digest_object
+from peer_execution.execution import PeerExecutionAdapter
 from peer_execution.permissions import resolve_permission_profile
 from peer_execution.profiles import load_profile
 from peer_execution.provider import (
@@ -324,6 +326,95 @@ class PeerExecutionContractTests(unittest.TestCase):
         )
         with self.assertRaisesRegex(ValueError, "must equal"):
             ProviderInvocation(status="PASS", result=result)
+
+    def test_worker_instruction_requires_array_changed_files_and_null_sha(self) -> None:
+        instruction = str(build_context_manifest(self._context_contract())["worker_instruction"])
+        self.assertIn("changed_files MUST be a JSON array", instruction)
+        self.assertIn("candidate_sha MUST be JSON null", instruction)
+
+    def _attempt_adapter(self, worktree: Path) -> PeerExecutionAdapter:
+        descriptor = {
+            "adapter_id": "synthetic-a",
+            "adapter_version": "1.0.0",
+            "adapter_kind": "worker_host",
+            "capabilities": {"actions": ["inspect"], "cancellation": "unsupported"},
+            "receipts": {"terminal_core_receipt": "attempt"},
+        }
+        profile = {
+            "profile_ref": "worker-read-only",
+            "permission_profile_ref": "read-only",
+            "inference_budget": {"max_turns": 4},
+            "timeout_budget": {"dispatch_seconds": 60, "poll_seconds": 1},
+            "retry_policy": {"max_attempts": 1, "backoff_seconds": 0},
+            "context_policy_ref": "contract-minimal-v1",
+        }
+
+        class _Provider:
+            provider_id = "synthetic-a"
+
+        return PeerExecutionAdapter(
+            worktree / "runtime" / "peer-execution",
+            descriptor=descriptor,
+            provider=_Provider(),
+            execution_profile=profile,
+        )
+
+    def test_attempt_receipt_coerces_string_changed_files(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            adapter = self._attempt_adapter(root)
+            contract = {
+                "task_id": "TASK-1",
+                "program_digest": "a" * 64,
+                "contract_digest": "b" * 64,
+                "base_sha": "c" * 40,
+                "worktree": str(root),
+            }
+            result = CanonicalProviderResult(
+                execution_id="exec-1",
+                status="PASS",
+                structured_payload={
+                    "candidate_sha": None,
+                    "changed_files": "ops/scripts/claude_projection.py",
+                    "validation_results": [],
+                    "residual_unknowns": [],
+                    "claimed_status": "completed",
+                },
+            )
+            receipt = adapter._attempt_receipt(contract, result)
+        self.assertEqual(receipt["changed_files"], ["ops/scripts/claude_projection.py"])
+        self.assertIn("changed_files_coerced_from_string", receipt["residual_unknowns"])
+
+    def test_attempt_receipt_recovers_changed_files_from_worktree(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            subprocess.run(["git", "init"], cwd=root, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "add", "-A"],
+                cwd=root,
+                check=False,
+                capture_output=True,
+            )
+            (root / "edited.py").write_text("hello\n", encoding="utf-8")
+            adapter = self._attempt_adapter(root)
+            contract = {
+                "task_id": "TASK-1",
+                "program_digest": "a" * 64,
+                "contract_digest": "b" * 64,
+                "base_sha": "c" * 40,
+                "worktree": str(root),
+            }
+            result = CanonicalProviderResult(
+                execution_id="exec-1",
+                status="PASS",
+                structured_payload={
+                    "candidate_sha": None,
+                    "claimed_status": "completed",
+                },
+            )
+            receipt = adapter._attempt_receipt(contract, result)
+        self.assertIn("edited.py", receipt["changed_files"])
+        self.assertIn("changed_files_recovered_from_worktree", receipt["residual_unknowns"])
 
 
 if __name__ == "__main__":

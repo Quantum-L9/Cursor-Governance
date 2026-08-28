@@ -1,11 +1,19 @@
 schema: l9.environment_experience.progress/v1
-assessed_against: main@8f73be9 (post-#320/#321 merge)
+assessed_against: main@30c6ecd4 (post-#324/#325/#326/#327/#328 merge)
+assessed_against_sha: 30c6ecd4
 assessed_at: '2026-08-27'
+assessment_scope: targeted
+assessment_scope_note: 'Not a full re-assessment. Records touched by #324 and #325 were
+  verified against the tree at 30c6ecd4; every other record carries its main@8f73be9
+  assessment forward unchanged. The overlay was stale on arrival by CI-034''s own
+  criterion — it named main@8f73be9 while main had advanced five merges — so
+  assessed_against_sha is recorded here rather than left proposed. That is the change
+  CI-034 asks for, minus its drift check, which is still unbuilt.'
 counts:
-  done: 3
+  done: 4
   partial: 15
   not_started: 19
-total: 37
+total: 38
 next_slice:
   id: slice-ownership-aware-writes
   title: Ownership-aware writes (extend PR#307's is_tracked guard)
@@ -33,8 +41,8 @@ records:
   title: Publish and enforce the real GitHub REST/GraphQL capability boundary
   original_status: ACTIVE
   progress: partial
-  delivered_by: Quantum-L9/Cursor-Governance 5612f6b (probe, merged) + this branch (merge verb + gate
-    recognition) + pre-existing ops/scripts/lib/gh_auth_probe.sh
+  delivered_by: Quantum-L9/Cursor-Governance 5612f6b (probe, merged) + be3f01c9 (#325, merge verb) +
+    7ceeef38 (#324, gate recognition of the REST merge) + pre-existing ops/scripts/lib/gh_auth_probe.sh
   residual:
   - 'IMP-01 only: the Anthropic remote-session prompt still tells agents they have no gh access. Harness-owned;
     no in-repo lever. Classified external.'
@@ -44,10 +52,15 @@ records:
     ''unknown'' (IMP-12)'
   - ops/scripts/lib/gh_auth_probe.sh probes the REST identity endpoint and outranks a failing auth-status
     check (IMP-02) — present at 78f122a, so the 2026-08-26 not_started was wrong
-  - 'THIS BRANCH: stack_safe_merge.py gained a REST execution transport for the merge verb, and merge_gate
-    gained recognition of it in the same commit. Measured before the change: _command_is_pr_merge returned
-    False for the REST merge invocation, so a REST merge was ungated. 25 tests bind the emitted argv to
-    the gated argv; 384 in tests/ops/autonomy pass.'
+  - 'be3f01c9 (#325): stack_safe_merge.py gained a REST execution transport for the merge verb. 7ceeef38
+    (#324): merge_gate recognises it — _segment_is_rest_pr_merge matches a PUT to repos/*/pulls/N/merge
+    from gh api or curl, and _target_from_input resolves owner/name/number from the endpoint path, without
+    which the stack probe returns early on an empty PR number and every REST merge reads as safe. Measured
+    against the unmodified gate: four REST forms unrecognised, gh pr merge and a REST GET unchanged.'
+  - 'Landed as two independent PRs rather than one. #325 was stacked on #324 and disclosed the overlap in
+    its own body; both merged and the composition is intact on main. Recorded because the pack''s counts
+    are read as delivery evidence, and "one record, two authors, two PRs" is the shape that produced the
+    #319 duplication this same slice was opened to close.'
   - 'live: the CLI merge verb returns 403 on this session gateway; a human merged #320 and #321 by hand
     because the sanctioned helper could not execute'
 - id: CI-002
@@ -507,7 +520,8 @@ records:
   title: Keep unpushed-commit counts honest across merged-and-deleted branches
   original_status: ACTIVE
   progress: partial
-  delivered_by: This branch (bootstrap prune + origin/HEAD)
+  delivered_by: be3f01c9 (#325, bootstrap prune + origin/HEAD) + 7ceeef38 (#324, an in-repo checker that
+    does not depend on local remote-tracking refs at all)
   residual:
   - The checker that surfaced this is the harness stop hook under /root/.claude/, which resolves origin/$current_branch
     without confirming the branch still exists upstream. That file is harness-owned; this repo fixed the
@@ -525,9 +539,48 @@ records:
     prune alone took this repo from 16 to silence.'
   - ops/scripts/bootstrap_agent_environment.sh now prunes stale remote-tracking refs and ensures origin/HEAD
     resolves, both fail-soft and guarded on an origin remote existing.
+  - '7ceeef38 (#324) added ops/autonomy/session_debt.py, which answers the same question without trusting
+    local refs to CLEAR it: a cloud clone is built +refs/heads/main:refs/remotes/origin/main, so
+    refs/remotes/origin/<feature> never exists however many times the branch is pushed. Its first cut
+    reported this very branch unpushed minutes after it opened #324; it now consults the remote when local
+    refs cannot prove publication, and treats a HEAD that is an ancestor of the remote tip as published
+    rather than behind. Both false positives were unclearable by pushing, which is the failure mode this
+    record is about.'
+  - 'Two independent mechanisms now cover this record — a prune that makes local refs trustworthy (#325)
+    and a checker that does not need them to be (#324). Neither was written knowing about the other.'
   - 'ops/scripts/tests/test_stale_remote_ref_counts.sh reproduces the defect over a real bare upstream:
     overcount 7 vs 2, prune-only silence at 0, prune+set-head correct at 2, idempotence, and no-remote
     fail-soft. 6/6 pass.'
+- id: CI-037
+  priority: 1
+  title: Make abandoned work fail closed instead of relying on doctrine
+  original_status: NEW
+  progress: done
+  delivered_by: 7ceeef38 (#324) — rules/42-no-abandoned-work.mdc + ops/autonomy/session_debt.py, registered
+    on the Claude Stop hook as --class gate
+  why: 'Three standing operator rules — commit implies push, an identified bug must be fixed, a pre-existing
+    error is in scope once identified — were doctrine only, and each failed in practice on 2026-08-27:
+    five local commits sat unpushed behind a narrated blocker, a found bug became a request for permission,
+    and allowlist drift was deferred as "pre-existing, not mine". Narrating a blocker reads as discharging
+    it, so the rules were reduced to debt a gate can refuse to end a turn over.'
+  evidence:
+  - 'Two debt kinds. publish is detected from git and never declared, cleared only by pushing. finding is
+    declared by whoever observed it and cleared by close --evidence; defer --reason is deliberately weaker
+    and keeps the item OPEN, so the next session inherits it instead of rediscovering it. That is what
+    stops "pre-existing, not mine" from staying an exit.'
+  - 'Exit 2 on the Stop hook blocks the turn from ending and returns the reason to the model. Registered
+    through l9_hook_exec.sh --class gate, the same fail-closed path as the other three gates.'
+  - 'Self-demonstrating: the gate flagged its own commit as unpushed, then flagged a false positive in its
+    own detector (a second worktree behind the remote tip), which was fixed rather than waived.'
+  - 'tests/ops/autonomy/test_session_debt.py: 16 tests, including the unsatisfiable-gate trap — a gate that
+    fires on already-published work teaches bypassing, so publication must be provable from a
+    single-branch-refspec clone.'
+  residual:
+  - 'Registration was incomplete on first landing: two sibling contracts still described three gates and
+    the hook command used a third message shape. Repaired by a3d91aa5 before the merge. The record is done;
+    the lesson is that a gate count lives in more than one contract and all of them are the invariant.'
+  - 'The ledger is per-workspace under .l9/autonomy/. A finding recorded in one worktree is not visible from
+    another, so cross-workspace inheritance is by convention, not mechanism.'
 previous_assessment:
   assessed_against: main@78f122a (merged) + PR#307 open (CI-008/CI-009/CI-002 slice)
   assessed_at: '2026-08-26'
