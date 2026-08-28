@@ -17,11 +17,25 @@ domains:
     owner: program owner
     values: [CONVERGED, CONVERGED_WITH_NON_BLOCKING_RISKS, NOT_CONVERGED, INCONCLUSIVE]
     law: Controller recommendations are advisory until explicitly accepted.
+  mission_lifecycle_state:
+    owner: mission_owner
+    values: [PROPOSED, ACTIVE, WAITING, SATISFIED, FAILED, CANCELLED, SUPERSEDED]
+    law: >-
+      Mutable status concerning an exact immutable Mission Revision, never embedded in it. SATISFIED requires a
+      SATISFIED Mission verdict; FAILED requires explicit authorized Mission termination of a Mission that is not
+      satisfied; CANCELLED requires authorized Mission cancellation; SUPERSEDED requires a successor Mission
+      Revision. INCONCLUSIVE does not imply a terminal state and NOT_SATISFIED alone does not imply FAILED. A
+      Mission state change never directly mutates Program runtime, and supersession never rebinds existing
+      Programs.
   replan_revision_state:
     owner: Program Execution Controller
     values: [proposed, verified, activated, rejected, stale]
     law: A Replan Revision may change future execution only inside the immutable Program Lock. Historical receipts stay append-only.
 forbidden_collapses:
+- mission_revision_as_mutable_lifecycle_state
+- mission_lifecycle_state_as_program_or_runtime_task_state
+- mission_lifecycle_state_as_evidence_result_or_program_verdict
+- program_verdict_as_mission_verdict
 - task_status_as_both_definition_and_runtime
 - gate_status_inside_blueprint_definition
 - local_verification_as_program_convergence

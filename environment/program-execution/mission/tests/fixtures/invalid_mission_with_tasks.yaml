@@ -1,0 +1,29 @@
+# Identical to valid_mission.yaml except that it prescribes execution.
+# `tasks` is structurally forbidden Mission semantics: Mission declares
+# outcomes and ceilings, never Task Cards or runtime work.
+schema: l9.program-execution.mission.v1
+mission_id: MISSION-PE-MISSION-FOUNDATION
+mission_revision: 1
+mission_owner: L9 architecture
+objective: >-
+  Establish Mission as durable parent intent above one or more Execution
+  Programs without introducing a second execution-control plane.
+acceptance_criteria:
+  - criterion_id: MAC-MISSION-CONTRACT-SURFACE
+    statement: >-
+      The repository can represent an exact Mission Revision distinct from
+      mutable Mission lifecycle state.
+authority_ceiling:
+  inspect: true
+  local_write: true
+  commit: true
+  push: false
+  pull_request: false
+  merge: false
+  publish_or_release: false
+  deploy_or_migrate: false
+  destructive_change: false
+  external_message: false
+tasks:
+  - task_id: TASK-001
+    title: Write the mission parser

@@ -1,0 +1,193 @@
+schema: program-execution-system.mission-model.v1
+schema_version: 1.0.0
+status: active
+authority:
+  adr:
+    - environment/contracts/execution/adr/ADR-0024-mission-parent-intent-and-controller-boundary.md
+    - environment/contracts/execution/adr/ADR-0025-mission-revision-immutability-and-lifecycle-separation.md
+  contracts:
+    - MISSION_DEFINITION_BOUNDARY_CONTRACT
+    - MISSION_REVISION_LIFECYCLE_CONTRACT
+  json_schema: schemas/mission.schema.json
+
+# ---------------------------------------------------------------------------
+# Mission Definition and Runtime Boundary  (MISSION_DEFINITION_BOUNDARY_CONTRACT)
+# ---------------------------------------------------------------------------
+
+mission_is:
+  - durable_intent
+  - cross_program_continuity
+  - mission_acceptance_authority
+  - resource_and_authority_ceiling
+
+mission_is_not:
+  - an Execution Program
+  - a Program Execution Blueprint
+  - a Program Lock
+  - a Program Execution Controller
+  - a Task Card
+  - a Runtime Task
+  - a task scheduler
+  - a worker
+  - a lease authority
+  - a provider
+  - an agent conversation
+
+canonical_identity:
+  mission_id:
+    format: "MISSION-[A-Z0-9-]+"
+    pattern: "^MISSION-[A-Z0-9-]+$"
+    immutable: true
+  mission_revision:
+    type: integer
+    minimum: 1
+    immutable_per_revision: true
+  schema_discriminator: l9.program-execution.mission.v1
+  acceptance_criterion_id_pattern: "^MAC-[A-Z0-9-]+$"
+
+ownership:
+  mission_definition:
+    canonical_owner: mission_owner
+  mission_revision:
+    canonical_owner: mission_owner
+  program_runtime:
+    canonical_owner: Program Execution Controller
+  task_runtime:
+    canonical_owner: Program Execution Controller
+  program_verdict:
+    canonical_owner: program_owner
+  mission_verdict:
+    canonical_owner: mission_owner
+
+mission_owner_law:
+  required: true
+  non_empty_after_normalization: true
+  authoritative: true
+  part_of_digest_identity: true
+  change_requires: superseding_mission_revision
+
+required_instance_fields:
+  - schema
+  - mission_id
+  - mission_revision
+  - mission_owner
+  - objective
+  - acceptance_criteria
+  - authority_ceiling
+
+top_level_additional_properties: false
+
+# Rejected structurally, not merely discouraged. These are invalid Mission
+# semantics and must not be retained as metadata either.
+forbidden_planning_and_runtime_fields:
+  - tasks
+  - task_cards
+  - waves
+  - worktrees
+  - files_to_edit
+  - worker_prompts
+  - leases
+  - provider
+  - provider_ref
+  - execution_profile
+  - runtime_task_state
+
+# ---------------------------------------------------------------------------
+# Mission Revision and Lifecycle  (MISSION_REVISION_LIFECYCLE_CONTRACT)
+# ---------------------------------------------------------------------------
+
+# Mission Revision is immutable contract identity.
+# Mission Lifecycle State is mutable status concerning that immutable revision.
+# They are not the same object and must not be collapsed.
+revision_lifecycle_separation:
+  mission_revision:
+    nature: immutable digest-bound contract
+    owner: mission_owner
+    embedded_in_revision: true
+  mission_lifecycle_state:
+    nature: mutable status concerning an exact revision
+    owner: mission_owner
+    embedded_in_revision: false
+
+mission_lifecycle_state:
+  values:
+    - PROPOSED
+    - ACTIVE
+    - WAITING
+    - SATISFIED
+    - FAILED
+    - CANCELLED
+    - SUPERSEDED
+  transitions:
+    PROPOSED: [ACTIVE, CANCELLED, SUPERSEDED]
+    ACTIVE: [WAITING, SATISFIED, FAILED, CANCELLED, SUPERSEDED]
+    WAITING: [ACTIVE, SATISFIED, FAILED, CANCELLED, SUPERSEDED]
+    SATISFIED: []
+    FAILED: []
+    CANCELLED: []
+    SUPERSEDED: []
+  terminal_values:
+    - SATISFIED
+    - FAILED
+    - CANCELLED
+    - SUPERSEDED
+  constraints:
+    SATISFIED:
+      requires:
+        - mission_verdict_SATISFIED
+    FAILED:
+      requires:
+        - explicit_authorized_Mission_termination
+        - Mission_not_satisfied
+    CANCELLED:
+      requires:
+        - authorized_Mission_cancellation
+    SUPERSEDED:
+      requires:
+        - successor_Mission_revision_exists
+
+lifecycle_laws:
+  - INCONCLUSIVE_does_not_imply_terminal_state
+  - NOT_SATISFIED_does_not_by_itself_imply_FAILED
+  - Mission_state_change_does_not_directly_mutate_Program_runtime
+  - Mission_supersession_does_not_rebind_existing_Programs
+
+# Mission lifecycle must not substitute for any of these.
+lifecycle_must_not_substitute_for:
+  - program_definition_state
+  - runtime_task_state
+  - evidence_result
+  - program_verdict
+  - controller_verification_state
+
+# ---------------------------------------------------------------------------
+# First-PR boundary
+# ---------------------------------------------------------------------------
+
+non_runtime_scope:
+  defines_state_domain_and_laws: true
+  creates_lifecycle_runtime_service: false
+
+forbidden_concepts:
+  - MissionController
+  - MissionScheduler
+  - MissionLease
+  - MissionWorkItem
+  - MissionTaskState
+  - MissionWorker
+  - MissionRuntimeTask
+
+# Governed by later contracts in this pack; deliberately absent here.
+deferred_to_later_contracts:
+  MISSION_AUTHORITY_SCOPE_BUDGET_CONTRACT:
+    - authority_ceiling total-map semantics and intersection law
+    - constraints.scope selector grammar
+    - Mission-wide aggregate budgets
+    - termination modes
+  MISSION_DIGEST_IMMUTABILITY_CONTRACT:
+    - mission_digest computation
+    - deep-immutability parser (mission.py)
+  MISSION_PROGRAM_BINDING_CONTRACT:
+    - Mission Program Binding
+  MISSION_ACCEPTANCE_EVIDENCE_CONTRACT:
+    - Mission acceptance evidence and verdict model

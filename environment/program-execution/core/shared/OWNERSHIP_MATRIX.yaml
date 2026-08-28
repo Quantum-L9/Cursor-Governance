@@ -5,6 +5,22 @@ rules:
   runtime_projection_does_not_transfer_definition_authority: true
   controller_may_narrow_never_widen: true
 concerns:
+- concern: mission_definition
+  canonical_owner: mission_owner
+  controller_projection: none; the Controller never resolves live Mission state
+  mutation_path: superseding Mission Revision accepted by the mission owner
+- concern: mission_revision_identity
+  canonical_owner: mission_owner
+  controller_projection: immutable Mission projection pinned into Program Lock
+  mutation_path: superseding Mission Revision; history is append-only
+- concern: mission_lifecycle_state
+  canonical_owner: mission_owner
+  controller_projection: none; a Mission state change never mutates Program runtime
+  mutation_path: authorized Mission lifecycle transition
+- concern: mission_verdict
+  canonical_owner: mission_owner
+  controller_projection: none; Program acceptance is evidence toward it, never implies it
+  mutation_path: explicit Mission acceptance decision
 - concern: program_identity_target_state_and_scope
   canonical_owner: Program Execution Blueprint
   controller_projection: immutable Program Lock

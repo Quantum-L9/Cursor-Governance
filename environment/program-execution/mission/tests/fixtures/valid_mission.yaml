@@ -1,0 +1,31 @@
+# Minimal-plus Mission Revision that satisfies the definition/boundary contract.
+schema: l9.program-execution.mission.v1
+mission_id: MISSION-PE-MISSION-FOUNDATION
+mission_revision: 1
+mission_owner: L9 architecture
+objective: >-
+  Establish Mission as durable parent intent above one or more Execution
+  Programs without introducing a second execution-control plane.
+acceptance_criteria:
+  - criterion_id: MAC-MISSION-CONTRACT-SURFACE
+    statement: >-
+      The repository can represent an exact Mission Revision distinct from
+      mutable Mission lifecycle state.
+  - criterion_id: MAC-NO-SECOND-CONTROL-PLANE
+    statement: >-
+      Runtime Task state remains owned by the Program Execution Controller.
+authority_ceiling:
+  inspect: true
+  local_write: true
+  commit: true
+  push: false
+  pull_request: false
+  merge: false
+  publish_or_release: false
+  deploy_or_migrate: false
+  destructive_change: false
+  external_message: false
+targets:
+  - environment/program-execution/mission
+metadata:
+  note: Non-authoritative annotation; cannot change authorization or acceptance.

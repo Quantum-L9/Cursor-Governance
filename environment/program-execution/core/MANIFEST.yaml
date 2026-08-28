@@ -9,8 +9,8 @@ files:
   sha256: 81200312df8937dd955d337de2e63dac4631f1808ae0fb7acc4303d2bf936bdd
   bytes: 2340
 - path: CANONICAL_VOCABULARY.yaml
-  sha256: 42242e604dd95a879d1e745ba74cc79c9d2aff13336464f0845bf547cdb14f9a
-  bytes: 2044
+  sha256: 8517e9397bfcf3c4f317c8488f629521bb10c37d749dc78ac231129534f3083f
+  bytes: 3272
 - path: CHANGELOG.md
   sha256: 88c5fafd37497bd9d0bf412e157c482b547dadb7f940f44040943d15e542a7c5
   bytes: 709
@@ -522,14 +522,14 @@ files:
   sha256: bd20035664e3c3474b0a039d8c5abf13b19621d19cb137a9474042829202987a
   bytes: 3104
 - path: shared/OWNERSHIP_MATRIX.yaml
-  sha256: 936389561ac91db740279b4ff09d2c94cb440303b292d4ab42f456db97c2ca08
-  bytes: 1978
+  sha256: 4a46b26046e42d4a1d64141fd5b67b2f110ba8e0143453b46ffd3d18ba1d1bc0
+  bytes: 2829
 - path: shared/REPLAN_CONTRACT.yaml
   sha256: 6d081f36eb88055270e93f23dceb06b158003688f386d6e2dd1ae9f61aeb00fb
   bytes: 1306
 - path: shared/STATE_MODEL.yaml
-  sha256: e8b785723f49e8942f0ae4d95774d722ffdfd196877164f48e00bd2705c44452
-  bytes: 1521
+  sha256: a68382cbaf20537ab57e08267e717428208ca0b91e74a2b2842a049cbec4d080
+  bytes: 2441
 - path: shared/schemas/action-authorization.schema.json
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
@@ -586,4 +586,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 193
-  total_bytes: 717280
+  total_bytes: 720279

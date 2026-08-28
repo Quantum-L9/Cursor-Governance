@@ -1410,6 +1410,30 @@
       "sha256": "a6a5bdf507128ebb9b5dee1b991b86ba5a15ff96a1fae39ad1444ed0ea943c1d"
     },
     {
+      "path": "mission/MISSION_MODEL.yaml",
+      "sha256": "fe8f3a5087bb991fb8bbb648e2ef4dd30115f9eb95807be2785a0e050e4c68e0"
+    },
+    {
+      "path": "mission/README.md",
+      "sha256": "4961a6237db6c7a1a6c5d4942a1c4acdad1185e94c04dbee5e6427c2df00131f"
+    },
+    {
+      "path": "mission/schemas/mission.schema.json",
+      "sha256": "16bf4b19bb78f9a4e71f1cae9baec9c9a9c02c932af824747dbd1b61ee10dde4"
+    },
+    {
+      "path": "mission/tests/fixtures/invalid_mission_with_tasks.yaml",
+      "sha256": "bca253e9e0044a782f9170e5c79a7e5a3a2e0f56271feb410f13fdd5711ea713"
+    },
+    {
+      "path": "mission/tests/fixtures/valid_mission.yaml",
+      "sha256": "c180aafa48c04cd2af1e584c0c9f2f87bad264bb156b25c4418cb4bb5656bb27"
+    },
+    {
+      "path": "mission/tests/test_mission.py",
+      "sha256": "1268cf27be1e2398e7fda0aa9c35115f8d272fb1f41bfdef89d40bad0a36f0bf"
+    },
+    {
       "path": "peer_execution/README.md",
       "sha256": "8494397945f6d85e03cf97ed8f2d4730149cbba3962e049ec4f27382f2bd12e0"
     },
