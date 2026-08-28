@@ -15,8 +15,12 @@ SCRIPTS = ROOT / "ops" / "scripts"
 for directory in (CONTRACTS, ADAPTERS, SCRIPTS):
     if str(directory) not in sys.path:
         sys.path.insert(0, str(directory))
+from build_rule_doctrine_census import (  # noqa: E402
+    VOLATILE_SOURCE_KEYS,
+    _semantic_payload,
+)
 from build_rules import build_projection_index  # noqa: E402
-from cursor_rules import load_rule_binding  # noqa: E402
+from cursor_rules import load_rule_binding, stable_digest  # noqa: E402
 from render_cursor_rule import (  # noqa: E402
     enforce_context_budget,
     render_cursor_rule,
@@ -548,9 +552,6 @@ def test_census_digest_ignores_volatile_provenance() -> None:
     into ``integrity_digest`` made two consecutive runs over an unchanged rule
     corpus disagree.
     """
-    from build_rule_doctrine_census import VOLATILE_SOURCE_KEYS, _semantic_payload
-    from cursor_rules import stable_digest
-
     census = {
         "$schema": "l9.rule-doctrine-census/v1",
         "source": {
