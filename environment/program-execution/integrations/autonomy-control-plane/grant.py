@@ -25,7 +25,11 @@ for _path in (_HERE, _PE_ROOT, _GOV_ROOT):
         sys.path.insert(0, str(_path))
 
 from bridge import AutonomyControlPlaneBridge  # noqa: E402
-from contract_mapper import map_program_contract  # noqa: E402
+from contract_mapper import (  # noqa: E402
+    ContractActionError,
+    map_program_contract,
+    require_coherent_actions,
+)
 
 from autonomy.compiler.graph_compiler import compile_graph  # noqa: E402
 from autonomy.models import CampaignAuthorization, DeploymentManifest  # noqa: E402
@@ -37,13 +41,15 @@ SYNTHESIS_CAPABILITIES = [
     "artifact.write_execution_brief",
     "graphiti.read",
 ]
-EXECUTOR_WRITE_CAPABILITIES = [
+# What an executor holds regardless of what it may change. None of these
+# mutate the repository, so none of them depend on a mutating action.
+EXECUTOR_BASE_CAPABILITIES = [
     "repository.read",
-    "repository.write_scoped",
     "test.run",
     "git.diff",
     "artifact.write_execution_result",
 ]
+WRITE_CAPABILITIES = ["repository.write_scoped"]
 COMMIT_CAPABILITIES = ["git.commit_local"]
 RECON_CAPABILITIES = [
     "repository.read",
@@ -59,15 +65,22 @@ INSPECT_AUTHORIZATIONS = ("repository.read",)
 def _executor_authority(contract: Mapping[str, Any]) -> tuple[list[str], tuple[str, ...]]:
     """Capabilities to acknowledge and authorize, from the requested actions.
 
-    Defense in depth against an upstream contract that should never exist: a
-    contract requesting local_write without commit never receives
-    `git.commit_local`, so the capability is absent from the lease as well as
-    from the campaign's allowed operations. commit is never inferred from
-    local_write, and neither is inferred from a "mutation" boolean.
+    Each capability traces to the single action that justifies it:
+    `repository.write_scoped` to `local_write`, `git.commit_local` to `commit`.
+    Neither is inferred from the other, and neither is inferred from a
+    "mutation" boolean. So local_write without commit never receives
+    `git.commit_local`, and commit without local_write is refused outright
+    rather than quietly handed the write capability it did not request.
+
+    This is the authority owner, so it re-derives the invariant itself instead
+    of trusting the caller to have already enforced it.
     """
-    requested = {str(item) for item in (contract.get("requested_actions") or [])}
-    capabilities = list(EXECUTOR_WRITE_CAPABILITIES)
-    authorize = WRITE_AUTHORIZATIONS
+    requested = require_coherent_actions(contract)
+    capabilities = list(EXECUTOR_BASE_CAPABILITIES)
+    authorize: tuple[str, ...] = ()
+    if "local_write" in requested:
+        capabilities = capabilities + WRITE_CAPABILITIES
+        authorize = authorize + WRITE_AUTHORIZATIONS
     if "commit" in requested:
         capabilities = capabilities + COMMIT_CAPABILITIES
         authorize = authorize + COMMIT_AUTHORIZATIONS
@@ -86,6 +99,13 @@ def grant_task_mutation(
     attempt_number: int = 1,
     adapter_id: str = "cursor-foreground",
 ) -> dict[str, Any]:
+    # Refuse an incoherent action set before the runtime is touched at all --
+    # before bootstrap, before graph compile, before any lease is issued or
+    # acknowledged. Nothing downstream should have to undo a bad grant.
+    try:
+        require_coherent_actions(contract)
+    except ContractActionError as exc:
+        raise AutonomyGrantError(str(exc)) from exc
     root = Path(repository_root).resolve()
     pec = Path(workspace).resolve()
     bridge = AutonomyControlPlaneBridge(root)
