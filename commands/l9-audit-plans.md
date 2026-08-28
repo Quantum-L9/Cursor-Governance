@@ -70,17 +70,10 @@ stale wiring or a superseded mission.
 Do **not** auto-Build. Do **not** auto-compile. Do **not** `git mv` a mixed
 plan to `archive/superseded/`.
 
-To port invariants (no implementation):
-
-```bash
-.venv/bin/python skills/l9-plan-audit/scripts/harvest_plan_invariants.py \
-  --out "$REPO/docs/plans/<concern>_compiled_M-D-YY.harvest.json" \
-  --emit-plan "$REPO/docs/plans/<concern>_compiled_M-D-YY.plan.md" \
-  --concern <concern> \
-  <harvestable.plan.md> [...]
-```
-
-Then `/gmp` the compiled packet. Do not `make campaign`.
+Harvest owner is skill `l9-intelligence-harvest`, invoked through
+`/l9-pipeline-audit` (plans + WIP + campaigns). Do not call
+`l9-harvest-pipeline`. Then `/gmp` the compiled packet. Do not
+`make campaign`.
 
 ### 2. Shelf hygiene (root + backlog + partially-built)
 
@@ -142,5 +135,5 @@ Re-run the step-1 CLI. Root must be current unbuilt only (plus `_TEMPLATE`).
 ## NOTES
 
 - SessionStart `### Plan audit` stays the `l9-plan-audit` skill (display-only, no moves).
-- `/plan-audit` is a compatibility alias of this command.
+- `/plan-audit` is a compatibility alias of `/l9-pipeline-audit`, not this command.
 - Slash: `commands/l9-audit-plans.md`

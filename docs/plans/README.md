@@ -19,7 +19,8 @@ Companion `.plan.json` / `.activate.yaml` files stay next to their `.plan.md`.
 
 Only **top-level** `*.plan.md` files are live for Cursor Build and session-start
 `l9-plan-audit` (root glob only). Folders hold everything else. On-demand
-organize is `/l9-audit-plans` (not the sessionStart skill).
+organize is `/l9-audit-plans`. Multi-surface harvest (plans + WIP +
+campaigns) is `/l9-pipeline-audit`. Neither is the sessionStart skill.
 
 | Location | Meaning |
 |---|---|

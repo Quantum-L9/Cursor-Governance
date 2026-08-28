@@ -96,7 +96,8 @@ Same bootstrap; agent may skip re-printing full Graphiti prefetch bodies (still 
 
 ### Ready For
 → `/ynp` — next action
-→ `/l9-audit-plans` — shelf the plans store (root = current unbuilt; alias `/plan-audit`)
+→ `/l9-audit-plans` — shelf the plans store (root = current unbuilt)
+→ `/l9-pipeline-audit` — plans + WIP + PE campaigns (`/plan-audit` alias)
 → `/gmp "{task}"` — phased work
 → `/commands-index` or read `commands/commands-index.md` — full slash library
 ```
