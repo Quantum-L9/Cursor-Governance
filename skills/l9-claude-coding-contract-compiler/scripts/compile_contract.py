@@ -19,23 +19,53 @@ Single source of truth for the digest: imported `compute_chain_digest` from vali
 """
 
 import argparse
+import importlib.util
 import json
 import pathlib
 import re
 import shlex
 import sys
+from types import ModuleType
 
 HERE = pathlib.Path(__file__).resolve().parent
 SCHEMA_DIR = HERE.parent / "schemas"
-sys.path.insert(0, str(HERE))
-import generate_claude_settings as gcs  # noqa: E402 - sys.path bootstrap above; optional artifacts
-import generate_preflight as gpf  # noqa: E402 - sys.path bootstrap above
-import plan_decomposition as pdc  # noqa: E402 - sys.path bootstrap above; fits_one, thresholds
-import validate_contract as vc  # noqa: E402 - sys.path bootstrap above; per-instance gate
-from validate_chain import (  # noqa: E402 - sys.path bootstrap above; single digest + seam source
-    compute_chain_digest,
-    validate_chain,
-)
+
+#: Namespace for this pack's sibling scripts in ``sys.modules``.
+_PACK = "l9_ccc"
+
+
+def _sibling(name: str) -> ModuleType:
+    """Import a sibling script by path, under a pack-unique module name.
+
+    Several L9 skill packs ship scripts with identical basenames —
+    ``validate_contract.py``, ``_common.py``, ``self_test.py``. A bare
+    ``import validate_contract`` after ``sys.path.insert`` resolves through the
+    flat ``sys.modules`` namespace, so whichever pack imported first wins. That
+    is not theoretical: on 2026-08-28 two packs' ``_common.py`` collided and
+    broke test collection, and CodeQL read this module's ``vc.main(argv)``
+    against ``skills/l9-repository-renovation/scripts/validate_contract.py``,
+    whose ``main()`` takes no arguments — a false "too many arguments" alert
+    produced by exactly this ambiguity.
+
+    Loading by explicit file location under ``l9_ccc.*`` makes the resolution
+    exact for the interpreter and for any reader or analyzer.
+    """
+    spec = importlib.util.spec_from_file_location(f"{_PACK}.{name}", HERE / f"{name}.py")
+    if spec is None or spec.loader is None:  # pragma: no cover - packaging fault
+        raise ImportError(f"cannot load sibling script: {name}.py")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+gcs = _sibling("generate_claude_settings")  # optional artifacts
+gpf = _sibling("generate_preflight")
+pdc = _sibling("plan_decomposition")  # fits_one, thresholds
+vc = _sibling("validate_contract")  # per-instance gate; its main() takes argv
+_validate_chain_mod = _sibling("validate_chain")  # single digest + seam source
+compute_chain_digest = _validate_chain_mod.compute_chain_digest
+validate_chain = _validate_chain_mod.validate_chain
 
 DEFAULT_DENIED = [
     "Bash(git push:*)",
