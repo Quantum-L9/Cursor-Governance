@@ -1,6 +1,6 @@
 ---
 name: Port Recursive Alignment and Validate & Repair to root docs (pointer, no kernel wrap)
-overview: "Keep the root agent-doc pointer stack honest and make l9-update-agent-docs maintain and repair that stack by citing kernels/Recursive Alignment.md and kernels/Validate & Repair.md, without wrapping or compressing either kernel into the skill."
+overview: "Keep the root agent-doc pointer stack honest and make l9-update-agent-docs maintain and repair that stack by citing kernels/Recursive Alignment.md and kernels/Validate & Repair.md, without wrapping or compressing those kernels into the skill."
 todos:
   - id: t0-isolate
     content: "Create wired worktree feat/root-docs-ra-pointer from fetched origin/main"
@@ -63,6 +63,22 @@ todos:
     phase: execute
     depends_on: [t10-vr-prove]
 isProject: false
+kernel_pass:
+  bound_path: root_docs_ra_pointer.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T21:05:00Z
+    body_sha256: "90b469e534fe80fc14f1fc6448e202294d13202d003b41a59da889c9b878928d"
+    deltas:
+      - "Replaced exclusive either-kernel phrasing with those kernels"
+      - "Stamped kernel_pass so the harvested backlog copy can pass the plan gate"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T21:05:30Z
+    body_sha256: "90b469e534fe80fc14f1fc6448e202294d13202d003b41a59da889c9b878928d"
+    deltas:
+      - "Re-ran Validate & Repair on the same bound path; no second plan created"
+      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
 ---
 
 # PLAN: Port Recursive Alignment and Validate & Repair to root docs (pointer, no kernel wrap)
@@ -74,7 +90,7 @@ isProject: false
 
 ## Objective (from PLAN_DOCUMENT)
 
-Keep the root agent-doc pointer stack honest and make l9-update-agent-docs maintain and repair that stack by citing kernels/Recursive Alignment.md and kernels/Validate & Repair.md, without wrapping or compressing either kernel into the skill.
+Keep the root agent-doc pointer stack honest and make l9-update-agent-docs maintain and repair that stack by citing kernels/Recursive Alignment.md and kernels/Validate & Repair.md, without wrapping or compressing those kernels into the skill.
 
 ### Success properties (seed — complete evidence_type/proof in template sections)
 
@@ -92,7 +108,7 @@ Keep the root agent-doc pointer stack honest and make l9-update-agent-docs maint
 **In:** skills/l9-update-agent-docs/SKILL.md write contract, skills/l9-update-agent-docs/scripts/self_test.py, AGENTS.md additive root-doc authority map, skills/AUTONOMY_MANIFEST.yaml use_when and routing signals, generated skill-registry companions
 
 **Out:**
-- Wrapping or compressing either kernel into any skill
+- Wrapping or compressing those kernels into any skill
 - Editing kernels/Recursive Alignment.md, kernels/Validate & Repair.md, or CANONICAL_LAW.md
 - Folding AGENTS.md into a thin pointer
 - Creating root ARCHITECTURE.md or INVARIANTS.md

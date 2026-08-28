@@ -89,13 +89,13 @@ kernel_pass:
   improve:
     kernel: kernels/Improve.md
     ran_at: 2026-08-28T19:22:00Z
-    body_sha256: "4590067ef950389be8f3a4ad43bcd60ae0a93a7726f0901cbb9c64e01cc93fba"
+    body_sha256: "e4957adba077a66b5aef5f3bda439ed7f560195319bf4b9520fc52f86a54d269"
     deltas:
       - "Emitted compiled:true / kind:simple / execute_via:gmp from harvest_plan_invariants.py"
   validate_repair:
     kernel: kernels/Validate & Repair.md
     ran_at: 2026-08-28T19:23:00Z
-    body_sha256: "4590067ef950389be8f3a4ad43bcd60ae0a93a7726f0901cbb9c64e01cc93fba"
+    body_sha256: "e4957adba077a66b5aef5f3bda439ed7f560195319bf4b9520fc52f86a54d269"
     deltas:
       - "Confirmed no live make campaign heading and Gold Nugget-only harvest"
       - "Stamped kernel_pass after Improve then Validate and Repair"
@@ -117,4 +117,3 @@ Harvested without implementation. Gold Nugget kernel cited by path.
 Run `/gmp` on this packet. Do not run `make campaign`.
 Do not admit a Program Lock. Donors stay on the shelf until they
 carry `compiled_into`; this file does not whole-file supersede them.
-

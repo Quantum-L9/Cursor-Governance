@@ -60,7 +60,7 @@ kernel_pass:
   improve:
     kernel: kernels/Improve.md
     ran_at: 2026-08-28T19:20:00Z
-    body_sha256: "7eb4a5984eeae4a46f1351819d5f9e84f0cb04ea451d03bb8f60201941218607"
+    body_sha256: "dbb999587b86756efb9e7714709428b59aebd43d2b89687406f4708612f4573e"
     deltas:
       - "User override: execute this compile via /gmp, not Program Execution"
       - "Neutralized the live make campaign command and PE execute heading"
@@ -68,7 +68,7 @@ kernel_pass:
   validate_repair:
     kernel: kernels/Validate & Repair.md
     ran_at: 2026-08-28T19:21:00Z
-    body_sha256: "7eb4a5984eeae4a46f1351819d5f9e84f0cb04ea451d03bb8f60201941218607"
+    body_sha256: "dbb999587b86756efb9e7714709428b59aebd43d2b89687406f4708612f4573e"
     deltas:
       - "compiled packets are kind:simple / execute_via:gmp; donors carry compiled_into only"
       - "Harvest CLI refuses implementation fences; first pe-loop packet emitted"
@@ -681,4 +681,3 @@ todos:
     content: …
     status: pending
 ```
-

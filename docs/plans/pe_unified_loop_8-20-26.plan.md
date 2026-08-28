@@ -44,8 +44,23 @@ todos:
     depends_on: [todo-04, todo-05, todo-07]
 isProject: false
 compiled_into: pe_loop_compiled_8-28-26
+kernel_pass:
+  bound_path: pe_unified_loop_8-20-26.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T21:06:00Z
+    body_sha256: "33802ce84fdba1852ba237641fa7d442439924fe161a78b936cd21cc32361a09"
+    deltas:
+      - "Stamped kernel_pass so this harvested plan can pass the plan gate"
+      - "Kept existing todos and body; no second plan created"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T21:06:30Z
+    body_sha256: "33802ce84fdba1852ba237641fa7d442439924fe161a78b936cd21cc32361a09"
+    deltas:
+      - "Re-ran Validate & Repair on the same bound path; no second plan created"
+      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
 ---
-
 # PLAN: PE unified-loop seam wiring: worker dispatch, receipt-to-distill signals, Graphiti evidence intake, autonomy projection (clean branch off main)
 
 > **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.

@@ -427,7 +427,7 @@
     },
     {
       "path": "campaigns/CAMPAIGN_STATUS.yaml",
-      "sha256": "67b773cb5e9850b072f2ad78da71e56d1c3ce33c4c025842b457d2e5d10c7072"
+      "sha256": "25758380f203b47332d974c069b5fbaac89d48b8cc26a46563d3d025fb5be8b4"
     },
     {
       "path": "campaigns/COMPILE_ALLOWLIST.yaml",
@@ -631,15 +631,11 @@
     },
     {
       "path": "campaigns/level3-make-pr-single-path/INTENT.yaml",
-      "sha256": "da541c3dbee016c7fcf51368690cba63791fb0dc272e123585f603a970077518"
+      "sha256": "093b1092a520b9284b24afbdf7eccf61166975126f11ee1a20af1eb2a7371e6e"
     },
     {
-      "path": "campaigns/level3-make-pr-single-path/Makefile.candidate",
-      "sha256": "9ecb01de462dc8343dcef72da4744f9ecaf10e981cffea20ffb4248670ef4b49"
-    },
-    {
-      "path": "campaigns/level3-make-pr-single-path/Prompt - Start Campaign.md",
-      "sha256": "e927d90d62713a4ae405729b1f44425dc20000bff8336486451f107af49b1706"
+      "path": "campaigns/level3-make-pr-single-path/handoff/CLOSEOUT.yaml",
+      "sha256": "2d9d2cb851d1177f16d05947e74ce6a2b1d020ff742c34ac2e7d2c23f97bd69e"
     },
     {
       "path": "campaigns/level3-make-pr-single-path/source-integrity-receipt.json",

@@ -35,8 +35,23 @@ todos:
 isProject: false
 kind: pe
 execute_via: pe-campaign
+kernel_pass:
+  bound_path: stop_seeder_clobber_and_residual_seed_lint_c28c7af3.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T21:06:00Z
+    body_sha256: "876ee6ea85e751e61bfd27ab7764512866361a0845612f206a2ed9fbb017488a"
+    deltas:
+      - "Stamped kernel_pass so this harvested plan can pass the plan gate"
+      - "Kept existing todos and body; no second plan created"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T21:06:30Z
+    body_sha256: "876ee6ea85e751e61bfd27ab7764512866361a0845612f206a2ed9fbb017488a"
+    deltas:
+      - "Re-ran Validate & Repair on the same bound path; no second plan created"
+      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
 ---
-
 # PLAN: Stop seeder clobber and residual seed lint
 
 > **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.

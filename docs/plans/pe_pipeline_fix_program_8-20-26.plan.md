@@ -64,8 +64,23 @@ todos:
     depends_on: [todo-11-prove]
 isProject: false
 compiled_into: pe_loop_compiled_8-28-26
+kernel_pass:
+  bound_path: pe_pipeline_fix_program_8-20-26.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T21:06:00Z
+    body_sha256: "5057fca22994e28e6a24ba4767107bb246107d3b87227a99996e05aa2e8c9c23"
+    deltas:
+      - "Stamped kernel_pass so this harvested plan can pass the plan gate"
+      - "Kept existing todos and body; no second plan created"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T21:06:30Z
+    body_sha256: "5057fca22994e28e6a24ba4767107bb246107d3b87227a99996e05aa2e8c9c23"
+    deltas:
+      - "Re-ran Validate & Repair on the same bound path; no second plan created"
+      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
 ---
-
 # PLAN: PE Factory Repair: pipeline friction fixes + bounded-autonomy defaults
 
 > **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.
@@ -119,7 +134,7 @@ todo-01-baseline-preflight → todo-02-merge-gate-human-channel → todo-11-prov
 
 ## Stress (seed from PLAN_DOCUMENT)
 
-- Blast radius: merge_gate + surface_profile govern every agent session on this machine — a regression either locks out all merges (fail-closed, recoverable) or widens autonomy (dangerous). Both directions unit-tested; default deny preserved.
+- Blast radius: merge_gate + surface_profile govern every agent session on this machine — a regression can lock out all merges (fail-closed, recoverable) or widens autonomy (dangerous). Both directions unit-tested; default deny preserved.
 - Rollback: git_restore_scoped_paths per changed file from baseline SHA; receipts recorded; no force-push/hard-reset; policy YAML rollback = restore previous file versions.
 
 ## Convergence (seed)

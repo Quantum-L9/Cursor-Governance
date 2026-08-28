@@ -50,7 +50,7 @@ kernel_pass:
   improve:
     kernel: kernels/Improve.md
     ran_at: 2026-08-28T20:40:00Z
-    body_sha256: "f639ad80f188968fb4bd14ad37515b87bf36d762fc62d08c9808a3990363406d"
+    body_sha256: "a21f4e09d04d7b0a67f839549352446a319ef1f08d4bfa4215c8da48fe79e85c"
     deltas:
       - "Locked YNP-first exclusive order so /reasoning auto_chain cannot invent a percent or AUTO-EXECUTE."
       - "Ledger fields stay optional; ECE is not a /reasoning field and is not a gate."
@@ -58,7 +58,7 @@ kernel_pass:
   validate_repair:
     kernel: kernels/Validate & Repair.md
     ran_at: 2026-08-28T20:40:30Z
-    body_sha256: "f639ad80f188968fb4bd14ad37515b87bf36d762fc62d08c9808a3990363406d"
+    body_sha256: "a21f4e09d04d7b0a67f839549352446a319ef1f08d4bfa4215c8da48fe79e85c"
     deltas:
       - "Exclusive lock: do not edit commands/reasoning.md until YNP self_test PASS (checkpoint C1)."
       - "U1 accept_bounded: uncalibrated alias allowed; number must not select action."
@@ -67,7 +67,7 @@ kernel_pass:
 
 # PLAN: Harden structured-reasoning and thin /reasoning
 
-**kind:** `simple` · **execute_via:** `cursor-build` · **skill:** `l9-plan-simple`  
+**kind:** `simple` · **execute_via:** `cursor-build` · **skill:** `l9-plan-simple`
 **plan_id:** `plan.skills.reasoning_slash_harden.v1` · **schema_version:** `1.0.0` · **status:** `executable`
 
 Machine SSOT: [`docs/plans/reasoning_skill_slash_harden_2b4d2283.plan.json`](reasoning_skill_slash_harden_2b4d2283.plan.json) (`validate_plan_document.py` PASS).
