@@ -290,3 +290,34 @@ def test_command_trigger_rejects_stale_cursor_commands_path(tmp_path):
     result = validate_command(stale, "dag-authoring-v1")
     assert result["status"] == "FAIL"
     assert any("stale" in error for error in result["errors"])
+
+
+# --------------------------------------------------------------------------
+# Subsystem README states the same taxonomy as the code
+# --------------------------------------------------------------------------
+
+
+def test_workflows_readme_points_at_the_real_tree():
+    """The README documented workflows/session/dags/, which has never existed."""
+    text = (REPO_ROOT / "workflows" / "README.md").read_text(encoding="utf-8")
+    layout = text.split("## Directory Layout")[1].split("```")[1]
+    assert "session/dags/" not in layout
+    assert "dags/" in layout
+
+    for path in ("workflows/dags", "workflows/session/interface.py"):
+        assert (REPO_ROOT / path).exists()
+    assert not (REPO_ROOT / "workflows" / "session" / "dags").exists()
+
+
+def test_workflows_readme_declares_both_graph_kinds():
+    text = (REPO_ROOT / "workflows" / "README.md").read_text(encoding="utf-8")
+    assert "SESSION_GUIDANCE" in text
+    assert "LANGGRAPH_RUNTIME" in text
+
+
+def test_workflows_readme_does_not_claim_an_absent_generator():
+    """auto_generated: true invites deferral; nothing here regenerates the file."""
+    text = (REPO_ROOT / "workflows" / "README.md").read_text(encoding="utf-8")
+    front = text.split("---")[1]
+    assert "auto_generated: false" in front
+    assert not (REPO_ROOT / "scripts" / "generate_subsystem_readmes.py").exists()
