@@ -1289,7 +1289,7 @@
     },
     {
       "composition_role": "primary",
-      "description": "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) against live authority. use when the user says update agent docs, refresh repo docs, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change. creates those two only when absent; never invents other root files.",
+      "description": "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) and generate module READMEs via readme-pipeline-v1. use when the user says update agent docs, refresh repo docs, generate module readmes, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change. creates those two only when absent; never invents other root files.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-update-agent-docs",
@@ -1322,6 +1322,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "320e700b00dfd0e87b58d6e3a88ccebc6c8e64307743364a88f43525ce59dd38",
-  "source_skill_corpus_sha256": "02b452569233f78e683487468bae50e3f3ec30faed9817ea5106dd491c511722"
+  "source_manifest_sha256": "788452df425c73f3e5bc18f9044458164e553d6488c940f7ded52b5c0f0ff985",
+  "source_skill_corpus_sha256": "a3154636b0ec3884d4402eb6356b903a9285a1fb2c99406426e34bdaaacb2654"
 }
