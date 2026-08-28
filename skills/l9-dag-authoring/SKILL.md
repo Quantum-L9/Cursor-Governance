@@ -67,8 +67,9 @@ literal, not a construction.
 - Never claim `SessionDAG` and `StateGraph` are equivalent runtime types.
 - Keep domain semantics with the domain owner. Do not become a generic workflow
   god-skill.
-- Author graph artifacts under current canonical `workflows/` surfaces. Do not
-  create a parallel workflow root.
+- Author canonical graphs under `workflows/dags/` unless current repository ground
+  truth proves another canonical location — a `LANGGRAPH_RUNTIME` may legitimately
+  live elsewhere under `workflows/`. Never create a parallel workflow root.
 - Register only `SESSION_GUIDANCE` graphs through `register_session_dag()`. Never
   invent `ACTIVE_DAGS`, dict-only registries, or a parallel registration layer.
 - Never register a `LANGGRAPH_RUNTIME` graph in the SessionDAG registry unless a
@@ -85,8 +86,8 @@ literal, not a construction.
   workflow instructions.
 - Do not own Skill discovery or autonomy wiring. Hand that to
   `l9-wire-skill-into-repo` only when Skill wiring is requested.
-- Do not claim imports, registration, compilation, tests, or runtime behavior that
-  were not actually checked.
+- Do not claim commands, imports, registration, compilation, tests, or runtime
+  behavior that were not actually checked.
 
 ## Operation routing
 
