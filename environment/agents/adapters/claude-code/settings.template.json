@@ -236,6 +236,7 @@
     "l9-mac-storage-triage": "user-invocable-only",
     "l9-pe-campaign-activate": "user-invocable-only",
     "l9-pe-nuggets": "user-invocable-only",
+    "l9-pipeline-audit": "user-invocable-only",
     "l9-pipeline-orchestrator": "user-invocable-only",
     "l9-plan-simple": "user-invocable-only",
     "l9-pr-remediation": "user-invocable-only",
