@@ -28,14 +28,22 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import re
 import subprocess
 import sys
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
+from typing import Any
 
 import structlog
+
+try:
+    import yaml
+except ImportError:  # pragma: no cover
+    yaml = None  # type: ignore[assignment]
 
 # ============================================================================
 
@@ -70,7 +78,105 @@ MEMORY_CLIENT = REPO_ROOT / "ops" / "graphiti" / "graphiti_memory_client.py"
 REPORT_GENERATOR = REPO_ROOT / "scripts" / "generate_gmp_report.py"
 TEST_GENERATOR_MODULE = "core.testing"
 README_GENERATOR = REPO_ROOT / "scripts" / "generate_readme.py"
-STATE_FILE = REPO_ROOT / ".gmp_executor_state.json"
+STATE_FILE = REPO_ROOT / ".l9" / "gmp" / "executor-state.json"
+L4_LOCAL = REPO_ROOT / "ops" / "autonomy" / "l4_local.py"
+LEGACY_STATE_FILE = REPO_ROOT / ".gmp_executor_state.json"
+
+EXIT_NO_SCOPE = 2
+EXIT_NO_TASK = 2
+READY_FOR_BUILD = "READY_FOR_BUILD"
+NO_PLAN = "NO_PLAN"
+NO_SCOPE = "NO_SCOPE"
+NO_TASK = "NO_TASK"
+
+FILES_HEADING_RE = re.compile(r"^##\s+Files\b", re.I)
+NEXT_HEADING_RE = re.compile(r"^##\s+")
+MD_LINK_RE = re.compile(r"^-\s+\[([^\]]+)\]\(([^)]+)\)")
+MD_TICK_RE = re.compile(r"^-\s+`([^`]+)`")
+MD_PATH_RE = re.compile(r"^-\s+(\S+)")
+FILES_IN_CONTENT_RE = re.compile(r"Files:\s*(.+)$")
+
+
+def l4_enabled() -> bool:
+    return os.environ.get("L9_L4_LOCAL_AUTONOMY", "1").strip().lower() not in {
+        "0",
+        "false",
+        "off",
+        "no",
+    }
+
+
+def dry_run() -> bool:
+    return os.environ.get("L9_GMP_DRY_RUN", "").strip() == "1"
+
+
+def parse_plan_scope(plan_path: Path) -> list[dict[str, str]]:
+    """Lock todos from plan frontmatter, else from a ## Files heading."""
+    text = plan_path.read_text(encoding="utf-8")
+    body = text
+    fm: Any = {}
+    if text.startswith("---"):
+        end = text.find("\n---\n", 3)
+        if end > 0:
+            raw = text[4:end]
+            body = text[end + 5 :]
+            if yaml is not None:
+                loaded = yaml.safe_load(raw)
+                fm = loaded if isinstance(loaded, dict) else {}
+    todos: list[dict[str, str]] = []
+    raw_todos = fm.get("todos") if isinstance(fm, dict) else None
+    if isinstance(raw_todos, list):
+        for i, item in enumerate(raw_todos, 1):
+            if not isinstance(item, dict):
+                continue
+            description = str(item.get("content") or item.get("description") or "")
+            file_path = str(item.get("file") or "").strip()
+            if not file_path:
+                match = FILES_IN_CONTENT_RE.search(description)
+                if match:
+                    file_path = match.group(1).split(",")[0].strip().split()[0]
+            todos.append(
+                {
+                    "id": str(item.get("id") or f"T{i}"),
+                    "file": file_path,
+                    "lines": str(item.get("lines") or "all"),
+                    "action": str(item.get("action") or "REPLACE"),
+                    "description": description,
+                }
+            )
+    if todos:
+        return todos
+    files: list[str] = []
+    in_files = False
+    for line in body.splitlines():
+        if FILES_HEADING_RE.match(line):
+            in_files = True
+            continue
+        if in_files and NEXT_HEADING_RE.match(line):
+            break
+        if not in_files:
+            continue
+        link = MD_LINK_RE.match(line)
+        if link:
+            files.append(link.group(2).strip())
+            continue
+        tick = MD_TICK_RE.match(line)
+        if tick:
+            files.append(tick.group(1).strip())
+            continue
+        path = MD_PATH_RE.match(line)
+        if path:
+            files.append(path.group(1).strip())
+    return [
+        {
+            "id": f"T{i}",
+            "file": name,
+            "lines": "all",
+            "action": "REPLACE",
+            "description": name,
+        }
+        for i, name in enumerate(files, 1)
+    ]
 
 
 # =============================================================================
@@ -171,14 +277,21 @@ class GMPExecutor:
 
     def __init__(self):
         self.state: GMPState | None = None
+        self.authorized = False
+        self.commit_when_done = False
+        self.plan_path: Path | None = None
+        self.mode = "full"
+        self.subprocess_log: list[str] = []
 
     def _save_state(self):
         if self.state:
+            STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
             STATE_FILE.write_text(json.dumps(self.state.to_dict(), indent=2))
 
     def _load_state(self) -> bool:
-        if STATE_FILE.exists():
-            data = json.loads(STATE_FILE.read_text())
+        path = STATE_FILE if STATE_FILE.exists() else LEGACY_STATE_FILE
+        if path.exists():
+            data = json.loads(path.read_text())
             self.state = GMPState.from_dict(data)
             return True
         return False
@@ -186,10 +299,19 @@ class GMPExecutor:
     def _clear_state(self):
         if STATE_FILE.exists():
             STATE_FILE.unlink()
+        if LEGACY_STATE_FILE.exists():
+            LEGACY_STATE_FILE.unlink()
         self.state = None
+
+    def _record_subprocess(self, cmd: str) -> None:
+        self.subprocess_log.append(cmd)
+        print(f"SUBPROCESS: {cmd}")  # noqa: ADR-0019
 
     def _run_shell(self, cmd: str, capture: bool = True) -> tuple[int, str, str]:
         """Run shell command."""
+        self._record_subprocess(cmd)
+        if dry_run() and any(token in cmd for token in ("make pr", "git add", "git commit")):
+            return 0, "", ""
         result = subprocess.run(
             cmd,
             shell=True,
@@ -198,6 +320,49 @@ class GMPExecutor:
             text=True,
         )
         return result.returncode, result.stdout, result.stderr
+
+    def _run_argv(self, argv: list[str]) -> tuple[int, str, str]:
+        rendered = " ".join(argv)
+        self._record_subprocess(rendered)
+        if dry_run():
+            return 0, "", ""
+        result = subprocess.run(
+            argv,
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        return result.returncode, result.stdout, result.stderr
+
+    def _maybe_l4_begin(self) -> None:
+        if not l4_enabled():
+            return
+        if not L4_LOCAL.is_file():
+            return
+        assert self.state is not None
+        argv = [
+            sys.executable,
+            str(L4_LOCAL),
+            "begin",
+            "--contract-id",
+            f"gmp-{self.state.gmp_id}",
+            "--workspace",
+            str(REPO_ROOT),
+        ]
+        code, stdout, stderr = self._run_argv(argv)
+        if code != 0:
+            print(f"L4 begin skipped or failed: {stderr or stdout}")  # noqa: ADR-0019
+
+    def _maybe_l4_release(self) -> None:
+        if not l4_enabled():
+            return
+        if not L4_LOCAL.is_file():
+            return
+        for sub in ("record-kernels", "authorize-release"):
+            argv = [sys.executable, str(L4_LOCAL), sub, "--workspace", str(REPO_ROOT)]
+            code, stdout, stderr = self._run_argv(argv)
+            if code != 0:
+                print(f"L4 {sub} failed: {stderr or stdout}")  # noqa: ADR-0019
 
     def _print_header(self, title: str):
         print(f"\n{'=' * 60}")  # noqa: ADR-0019
@@ -218,7 +383,12 @@ class GMPExecutor:
     # STEP: Memory Read
     # =========================================================================
     def _step_memory_read(self) -> StepResult:
-        self._print_header("🧠 MEMORY READ (MANDATORY)")
+        self._print_header("MEMORY READ (MANDATORY)")
+        assert self.state is not None
+
+        if dry_run():
+            self.state.memory_context = "dry-run"
+            return StepResult(success=True, output="dry-run")
 
         print("Searching L9 memory for context...\n")  # noqa: ADR-0019
 
@@ -255,11 +425,24 @@ class GMPExecutor:
     # =========================================================================
     def _step_scope_lock(self) -> StepResult:
         self._print_header("SCOPE LOCK (Phase 0)")
+        assert self.state is not None
 
         print(f"GMP ID: {self.state.gmp_id}")  # noqa: ADR-0019
         print(f"Tier: {self.state.tier}")  # noqa: ADR-0019
         print(f"Task: {self.state.task}")  # noqa: ADR-0019
         print()  # noqa: ADR-0019
+
+        if self.authorized and self.plan_path is not None:
+            todos = parse_plan_scope(self.plan_path)
+            if not todos:
+                print(NO_SCOPE)  # noqa: ADR-0019
+                return StepResult(success=False, error=NO_SCOPE)
+            self.state.todo_plan = todos
+            print("TODO PLAN LOCKED FROM PLAN")  # noqa: ADR-0019
+            for t in todos:
+                print(f"  {t['id']}: {t['file']} {t['action']}")  # noqa: ADR-0019
+            return StepResult(success=True, output=f"{len(todos)} TODOs from plan")
+
         print("Memory Context Applied:")  # noqa: ADR-0019
         print(self.state.memory_context[:500] if self.state.memory_context else "None")  # noqa: ADR-0019
         print()  # noqa: ADR-0019
@@ -312,6 +495,9 @@ class GMPExecutor:
     # =========================================================================
     def _step_user_gate(self) -> StepResult:
         self._print_header("USER CONFIRMATION GATE")
+        if self.authorized:
+            print("Authorized by slash-gmp — skipping USER_GATE")  # noqa: ADR-0019
+            return StepResult(success=True, user_input="CONFIRM")
 
         print("Scope is locked. Review the TODO plan above.")  # noqa: ADR-0019
         print()  # noqa: ADR-0019
@@ -375,10 +561,14 @@ class GMPExecutor:
         print("Or type ABORT to cancel.")  # noqa: ADR-0019
         print("-" * 40)  # noqa: ADR-0019
 
-        try:
-            response = input("Press ENTER when done (or ABORT): ").strip().upper()
-        except EOFError:
+        if self.authorized:
+            print("Authorized mode: implementation is owned by Build / skill phases.")  # noqa: ADR-0019
             response = ""
+        else:
+            try:
+                response = input("Press ENTER when done (or ABORT): ").strip().upper()
+            except EOFError:
+                response = ""
 
         if response == "ABORT":
             return StepResult(success=False, error="User aborted implementation")
@@ -411,11 +601,12 @@ class GMPExecutor:
         ]
         if py_files and not self.state.needs_tests:
             print("\n💡 Detected new Python files. Consider generating tests.")  # noqa: ADR-0019
-            try:
-                resp = input("   Generate tests automatically? [y/N]: ").strip().lower()
-                self.state.needs_tests = resp == "y"
-            except EOFError:
-                pass
+            if not self.authorized:
+                try:
+                    resp = input("   Generate tests automatically? [y/N]: ").strip().lower()
+                    self.state.needs_tests = resp == "y"
+                except EOFError:
+                    pass
 
         return StepResult(
             success=True,
@@ -620,6 +811,10 @@ from {module_path} import ...
     # =========================================================================
     def _step_validate(self) -> StepResult:
         self._print_header("VALIDATION (Phase 4-5)")
+        if self.authorized:
+            print("Authorized finalize: tests once belong to Build; skipping pytest.")  # noqa: ADR-0019
+            self.state.validations = [{"gate": "tests_once", "result": "owned_by_build"}]
+            return StepResult(success=True, output="Skipped pytest (tests once)")
 
         print("Running validation checks...\n")  # noqa: ADR-0019
 
@@ -678,45 +873,67 @@ from {module_path} import ...
     # =========================================================================
     # STEP: Generate Report
     # =========================================================================
+    def _write_local_report(self) -> Path:
+        assert self.state is not None
+        reports = REPO_ROOT / "reports"
+        reports.mkdir(parents=True, exist_ok=True)
+        slug = re.sub(r"[^a-z0-9]+", "-", self.state.task.lower())[:40].strip("-") or "gmp"
+        path = reports / f"{self.state.gmp_id}-{slug}.md"
+        lines = [
+            f"# {self.state.gmp_id}",
+            "",
+            f"**Task:** {self.state.task}",
+            f"**Tier:** {self.state.tier}",
+            "",
+            "## TODOs",
+            "",
+        ]
+        for todo in self.state.todo_plan:
+            desc = todo.get("description", "")
+            lines.append(f"- {todo['id']}: {todo['file']} {todo['action']} {desc}")
+        lines.append("")
+        path.write_text("\n".join(lines), encoding="utf-8")
+        return path
+
     def _step_generate_report(self) -> StepResult:
         self._print_header("GENERATE GMP REPORT (MANDATORY)")
+        assert self.state is not None
 
-        print("Generating canonical GMP report...\n")  # noqa: ADR-0019
+        if dry_run():
+            self.state.report_path = ".l9/gmp/dry-run-report.md"
+            print("Report saved: .l9/gmp/dry-run-report.md")  # noqa: ADR-0019
+            return StepResult(success=True, output=self.state.report_path)
 
-        # Build command
-        todo_args = []
-        for t in self.state.todo_plan:
-            desc = t.get("description", "")
-            todo_args.append(f'--todo "{t["id"]}|{t["file"]}|{t["lines"]}|{t["action"]}|{desc}"')
+        if REPORT_GENERATOR.is_file():
+            print("Generating canonical GMP report...\n")  # noqa: ADR-0019
+            todo_args = []
+            for t in self.state.todo_plan:
+                desc = t.get("description", "")
+                todo_args.append(
+                    f'--todo "{t["id"]}|{t["file"]}|{t["lines"]}|{t["action"]}|{desc}"'
+                )
+            val_args = []
+            for v in self.state.validations:
+                val_args.append(f'--validation "{v["gate"]}|{v["result"]}"')
+            cmd = (
+                f'python3 {REPORT_GENERATOR} --task "{self.state.task}" '
+                f"--tier {self.state.tier}_TIER {' '.join(todo_args)} {' '.join(val_args)} "
+                '--summary "GMP execution via DAG executor" --skip-verify'
+            )
+            code, stdout, stderr = self._run_shell(cmd)
+            if code == 0:
+                for line in stdout.split("\n"):
+                    if "Report saved:" in line or "reports/" in line:
+                        self.state.report_path = line.strip()
+                        break
+                print(stdout)  # noqa: ADR-0019
+                return StepResult(success=True, output=stdout)
+            print(f"Report generator failed, writing local report: {stderr}")  # noqa: ADR-0019
 
-        val_args = []
-        for v in self.state.validations:
-            val_args.append(f'--validation "{v["gate"]}|{v["result"]}"')
-
-        cmd = f"""python3 {REPORT_GENERATOR} \
-            --task "{self.state.task}" \
-            --tier {self.state.tier}_TIER \
-            {" ".join(todo_args)} \
-            {" ".join(val_args)} \
-            --summary "GMP execution via DAG executor" \
-            --update-workflow \
-            --skip-verify"""
-
-        print("Running: python3 scripts/generate_gmp_report.py ...")  # noqa: ADR-0019
-        code, stdout, stderr = self._run_shell(cmd)
-
-        if code != 0:
-            print(f"❌ Report generation failed: {stderr}")  # noqa: ADR-0019
-            return StepResult(success=False, error=f"Report generation failed: {stderr}")
-
-        # Extract report path from output
-        for line in stdout.split("\n"):
-            if "Report saved:" in line or "reports/" in line:
-                self.state.report_path = line.strip()
-                break
-
-        print(stdout)  # noqa: ADR-0019
-        return StepResult(success=True, output=stdout)
+        path = self._write_local_report()
+        self.state.report_path = str(path.relative_to(REPO_ROOT))
+        print(f"Report saved: {self.state.report_path}")  # noqa: ADR-0019
+        return StepResult(success=True, output=self.state.report_path)
 
     # =========================================================================
     # STEP: Commit Gate
@@ -732,10 +949,15 @@ from {module_path} import ...
         print("  DIFF - Show git diff first")  # noqa: ADR-0019
         print()  # noqa: ADR-0019
 
-        try:
-            response = input("Commit? [YES/NO/DIFF]: ").strip().upper()
-        except EOFError:
+        if self.authorized and self.commit_when_done:
+            response = "YES"
+        elif self.authorized:
             response = "NO"
+        else:
+            try:
+                response = input("Commit? [YES/NO/DIFF]: ").strip().upper()
+            except EOFError:
+                response = "NO"
 
         if response == "DIFF":
             code, stdout, stderr = self._run_shell("git diff --stat")
@@ -746,17 +968,25 @@ from {module_path} import ...
                 response = "NO"
 
         if response == "YES":
-            # Stage and commit
-            files = " ".join(t["file"] for t in self.state.todo_plan)
+            paths = [t["file"] for t in self.state.todo_plan if t.get("file")]
+            if self.state.report_path:
+                report_rel = self.state.report_path
+                if report_rel.startswith(str(REPO_ROOT)):
+                    report_rel = str(Path(report_rel).relative_to(REPO_ROOT))
+                if "reports/" in report_rel:
+                    # Keep only the reports/... suffix when the generator printed a sentence.
+                    idx = report_rel.find("reports/")
+                    report_rel = report_rel[idx:]
+                paths.append(report_rel.split()[0])
             commit_msg = f"{self.state.gmp_id}: {self.state.task}"
-
-            self._run_shell(f"git add {files}")
-            code, stdout, stderr = self._run_shell(f'git commit -m "{commit_msg}"')
+            add_argv = ["git", "add", "--"] + paths
+            self._run_argv(add_argv)
+            code, stdout, stderr = self._run_argv(["git", "commit", "-m", commit_msg])
 
             if code == 0:
-                print("✅ Changes committed")  # noqa: ADR-0019
+                print("Changes committed")  # noqa: ADR-0019
                 return StepResult(success=True, output="Committed", user_input="YES")
-            print(f"⚠️  Commit failed: {stderr}")  # noqa: ADR-0019
+            print(f"Commit failed: {stderr}")  # noqa: ADR-0019
             return StepResult(
                 success=True,
                 output="Commit failed but GMP complete",
@@ -813,36 +1043,135 @@ from {module_path} import ...
             else:
                 self._print_step(step, "pending")
 
+    def _next_gmp_id(self) -> str:
+        gmp_num = 129
+        reports_dirs = [REPO_ROOT / "reports" / "GMP Reports", REPO_ROOT / "reports"]
+        for reports_dir in reports_dirs:
+            if not reports_dir.is_dir():
+                continue
+            for path in reports_dir.glob("GMP-Report-*.md"):
+                match = re.search(r"GMP-Report-(\d+)", path.name)
+                if match:
+                    gmp_num = max(gmp_num, int(match.group(1)) + 1)
+            for path in reports_dir.glob("GMP-*.md"):
+                match = re.search(r"GMP-(\d+)", path.name)
+                if match:
+                    gmp_num = max(gmp_num, int(match.group(1)) + 1)
+        return f"GMP-{gmp_num}"
+
+    def _init_state(self, task: str, tier: str) -> None:
+        self.state = GMPState(
+            gmp_id=self._next_gmp_id(),
+            tier=tier,
+            task=task,
+            started_at=datetime.now().isoformat(),
+            current_step=STEP_ORDER[0],
+        )
+        self._save_state()
+
+    def _publish_pr(self) -> None:
+        self._maybe_l4_release()
+        env_prefix = "PR_REMEDIATE=1 make pr"
+        self._record_subprocess(env_prefix)
+        if dry_run():
+            return
+        env = os.environ.copy()
+        env["PR_REMEDIATE"] = "1"
+        result = subprocess.run(
+            ["make", "pr"],
+            cwd=REPO_ROOT,
+            env=env,
+            capture_output=True,
+            text=True,
+        )
+        print(result.stdout)  # noqa: ADR-0019
+        if result.returncode != 0:
+            print(result.stderr)  # noqa: ADR-0019
+
+    def run_authorized_start(self, task: str, tier: str) -> int:
+        if self.plan_path is None or not self.plan_path.is_file():
+            print(NO_SCOPE)  # noqa: ADR-0019
+            return EXIT_NO_SCOPE
+        self._init_state(task, tier)
+        self._print_header(f"GMP EXECUTOR: {self.state.gmp_id}")
+        self._step_memory_read()
+        self.state.completed_steps.append(StepType.MEMORY_READ.value)
+        scope = self._step_scope_lock()
+        if not scope.success:
+            print(NO_SCOPE)  # noqa: ADR-0019
+            self._clear_state()
+            return EXIT_NO_SCOPE
+        self.state.completed_steps.append(StepType.SCOPE_LOCK.value)
+        self._step_user_gate()
+        self.state.completed_steps.append(StepType.USER_GATE.value)
+        self._maybe_l4_begin()
+        self._save_state()
+        print(READY_FOR_BUILD)  # noqa: ADR-0019
+        return 0
+
+    def run_authorized_full(self, task: str, tier: str) -> int:
+        if not task.strip():
+            print(NO_TASK)  # noqa: ADR-0019
+            return EXIT_NO_TASK
+        self._init_state(task, tier)
+        self._print_header(f"GMP EXECUTOR: {self.state.gmp_id}")
+        self._step_memory_read()
+        self.state.completed_steps.append(StepType.MEMORY_READ.value)
+        self._maybe_l4_begin()
+        self._save_state()
+        print(NO_PLAN)  # noqa: ADR-0019
+        return 0
+
+    def run_authorized_finalize(self) -> int:
+        if not self._load_state() or self.state is None:
+            print("No GMP to resume")  # noqa: ADR-0019
+            return 1
+        self.authorized = True
+        self._print_header(f"GMP FINALIZE: {self.state.gmp_id}")
+        # Skip implement wait; mark remaining ceremony steps.
+        for step in (
+            StepType.BASELINE,
+            StepType.IMPLEMENT,
+            StepType.GENERATE_TESTS,
+            StepType.GENERATE_README,
+        ):
+            if step.value not in self.state.completed_steps:
+                self.state.completed_steps.append(step.value)
+        self.state.needs_tests = False
+        self.state.needs_readme = False
+        for step in (
+            StepType.VALIDATE,
+            StepType.MEMORY_WRITE,
+            StepType.GENERATE_REPORT,
+            StepType.COMMIT_GATE,
+        ):
+            if step.value in self.state.completed_steps:
+                continue
+            executor = self._get_step_executor(step)
+            assert executor is not None
+            result = executor()
+            if not result.success:
+                print(f"Step failed: {step.value}: {result.error}")  # noqa: ADR-0019
+                self._save_state()
+                return 1
+            self.state.completed_steps.append(step.value)
+            self._save_state()
+        self._publish_pr()
+        print(f"COMPLETE {self.state.gmp_id}: {self.state.task}")  # noqa: ADR-0019
+        self._clear_state()
+        return 0
+
     def run(self, task: str, tier: str = "RUNTIME", resume: bool = False):
         """Execute the GMP DAG."""
-        # Initialize or resume
         if resume and self._load_state():
             print(f"Resuming GMP: {self.state.gmp_id}")  # noqa: ADR-0019
         else:
-            # Find next GMP ID
-            gmp_num = 129  # Default
-            reports_dir = REPO_ROOT / "reports" / "GMP Reports"
-            for f in reports_dir.glob("GMP-Report-*.md"):
-                import re
-
-                match = re.search(r"GMP-Report-(\d+)", f.name)
-                if match:
-                    gmp_num = max(gmp_num, int(match.group(1)) + 1)
-
-            self.state = GMPState(
-                gmp_id=f"GMP-{gmp_num}",
-                tier=tier,
-                task=task,
-                started_at=datetime.now().isoformat(),
-                current_step=STEP_ORDER[0],
-            )
-            self._save_state()
+            self._init_state(task, tier)
 
         self._print_header(f"GMP EXECUTOR: {self.state.gmp_id}")
         print(f"Task: {self.state.task}")  # noqa: ADR-0019
         print(f"Tier: {self.state.tier}")  # noqa: ADR-0019
 
-        # Execute steps in order
         while True:
             next_step = self._next_step()
             if not next_step:
@@ -853,7 +1182,7 @@ from {module_path} import ...
 
             executor = self._get_step_executor(next_step)
             if not executor:
-                print(f"❌ No executor for step: {next_step}")  # noqa: ADR-0019
+                print(f"No executor for step: {next_step}")  # noqa: ADR-0019
                 break
 
             result = executor()
@@ -862,17 +1191,14 @@ from {module_path} import ...
                 self.state.completed_steps.append(next_step.value)
                 self._save_state()
             else:
-                print(f"\n❌ Step failed: {next_step.value}")  # noqa: ADR-0019
+                print(f"\nStep failed: {next_step.value}")  # noqa: ADR-0019
                 print(f"   Error: {result.error}")  # noqa: ADR-0019
                 print("\nResume with: python3 workflows/gmp_executor.py --resume")  # noqa: ADR-0019
                 return False
 
-        # Complete
         self._print_header("GMP COMPLETE")
-        print(f"✅ {self.state.gmp_id}: {self.state.task}")  # noqa: ADR-0019
+        print(f"{self.state.gmp_id}: {self.state.task}")  # noqa: ADR-0019
         print(f"   Report: {self.state.report_path}")  # noqa: ADR-0019
-
-        # Clean up state
         self._clear_state()
         return True
 
@@ -888,10 +1214,9 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-    python3 workflows/gmp_executor.py "add validation to registry"
-    python3 workflows/gmp_executor.py "fix bug" --tier KERNEL
-    python3 workflows/gmp_executor.py --resume
-    python3 workflows/gmp_executor.py --status
+    workflows/gmp_executor.py "add validation to registry"
+    workflows/gmp_executor.py --authorized-by slash-gmp --plan path.plan.md --mode start "task"
+    workflows/gmp_executor.py --resume --mode finalize --commit-when-done
         """,
     )
 
@@ -900,27 +1225,43 @@ Examples:
     parser.add_argument("--resume", action="store_true", help="Resume interrupted GMP")
     parser.add_argument("--status", action="store_true", help="Show current status")
     parser.add_argument("--reset", action="store_true", help="Clear state and start fresh")
+    parser.add_argument("--authorized-by", choices=["slash-gmp"], default=None)
+    parser.add_argument("--plan", type=Path, default=None)
+    parser.add_argument("--mode", choices=["start", "finalize", "full"], default=None)
+    parser.add_argument("--commit-when-done", action="store_true")
 
     args = parser.parse_args()
 
     executor = GMPExecutor()
+    executor.authorized = args.authorized_by == "slash-gmp"
+    executor.commit_when_done = bool(args.commit_when_done)
+    if args.plan is not None:
+        plan = args.plan if args.plan.is_absolute() else REPO_ROOT / args.plan
+        executor.plan_path = plan
+    executor.mode = args.mode or "full"
 
     if args.reset:
-        if STATE_FILE.exists():
-            STATE_FILE.unlink()
-        print("✅ State cleared")  # noqa: ADR-0019
+        executor._clear_state()
+        print("State cleared")  # noqa: ADR-0019
         return
 
     if args.status:
         executor.status()
         return
 
+    if executor.authorized:
+        if executor.mode == "start":
+            sys.exit(executor.run_authorized_start(args.task or "", args.tier))
+        if executor.mode == "finalize" or args.resume:
+            sys.exit(executor.run_authorized_finalize())
+        sys.exit(executor.run_authorized_full(args.task or "", args.tier))
+
     if args.resume:
-        if not STATE_FILE.exists():
+        if not STATE_FILE.exists() and not LEGACY_STATE_FILE.exists():
             print("No GMP to resume")  # noqa: ADR-0019
             sys.exit(1)
-        executor.run("", resume=True)
-        return
+        success = executor.run("", resume=True)
+        sys.exit(0 if success else 1)
 
     if not args.task:
         parser.print_help()
