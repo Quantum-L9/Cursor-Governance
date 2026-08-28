@@ -155,15 +155,15 @@ reasoning_routing:
   note: Advisory routing context for the model, not an execution order. No orchestrator process exists.
   routes:
   - task_class: L9 platform work — kernel, executor, memory substrate, tool dispatch, approval gates
-    reference: l9-structured-reasoning/references/reasoning-protocol.md#l9-platform-invariants
+    reference: l9-structured-reasoning/references/reasoning-router.yaml
   - task_class: Tool, library, API, or architecture selection
-    reference: l9-structured-reasoning/references/technical-operations-reasoning.md
+    reference: l9-structured-reasoning/references/risk-and-autonomy-policy.md
   - task_class: Multi-document corpus analysis — gaps, coherence, dependency mapping
     reference: l9-structured-reasoning/references/document-corpus-reasoning.md
   - task_class: Depth selection for a single problem
-    reference: l9-structured-reasoning/references/reasoning-modes.md
+    reference: l9-structured-reasoning/references/reasoning-router.yaml
   - task_class: Strategic angle, only when the user explicitly requests one
-    reference: l9-structured-reasoning/references/persona-lenses.md
+    reference: l9-structured-reasoning/references/document-corpus-reasoning.md
 claude_routing:
   version: 2
   purpose: 'Cross-surface proactive skill routing for Claude Code (UserPromptSubmit) and Cursor (beforeSubmitPrompt + always-apply rule). High-confidence routes reinforce native skill selection while preserving model judgment, explicit-only boundaries, and narrow composition. Recommendation never grants mutation authority.

@@ -1,6 +1,6 @@
 ---
 name: ynp
-version: "8.1.0"
+version: "8.2.0"
 description: "Your Next Play — synthesize highest-leverage next action"
 auto_chain: null
 scope: "local_cursor_only"
@@ -8,18 +8,21 @@ scope: "local_cursor_only"
 
 # /ynp — Your Next Play
 
-## WHAT IT DOES
+Delegates to skill **`l9-ynp`**.
 
 Synthesizes the **single highest-leverage next action** from current context.
 
 **Rules:**
-- If confidence ≥90% → AUTO-EXECUTE (don't just recommend)
+- Recommend only. Do not auto-execute unless the user explicitly asks to run the play.
+- `action:` is required. A bare percent is uncalibrated and must not select the play.
 - Batch related TODOs (3 in one GMP > 3 separate runs)
 - Harvest context first (check what's already in chat)
 
 ---
 
 ## EXECUTION
+
+Read `skills/l9-ynp/SKILL.md` and [references/ynp-workflow.md](../skills/l9-ynp/references/ynp-workflow.md).
 
 ### 1. CONTEXT HARVEST
 
@@ -48,23 +51,28 @@ Apply multi-modal reasoning:
 | UX | `/gmp`, quick edits |
 | GOVERNANCE | `/governance` |
 
-### 4. CONFIDENCE SCORING
+### 4. STANCE
 
-| Score | Action |
-|-------|--------|
-| ≥90% | **AUTO-EXECUTE** |
-| 80-89% | Recommend, ask confirmation |
-| 70-79% | Recommend with caveats |
-| <70% | Need more info, ask questions |
+Emit:
+
+```yaml
+evidence_quality: high | medium | low | unknown
+decision_risk: reversible | guarded | irreversible
+action: proceed | proceed_with_validation | bounded_probe | block
+calibration_status: none
+```
 
 ---
 
 ## OUTPUT FORMAT
 
 ```markdown
-## 🎯 YNP: {action_title}
+## YNP: {action_title}
 
-**Confidence:** {score}% {AUTO-EXECUTE if ≥90}
+**action:** {proceed | proceed_with_validation | bounded_probe | block}
+**evidence_quality:** {high | medium | low | unknown}
+**decision_risk:** {reversible | guarded | irreversible}
+**calibration_status:** none
 **Time:** {estimate}
 **Tier:** KERNEL | RUNTIME | INFRA | UX
 
@@ -84,8 +92,8 @@ Apply multi-modal reasoning:
 
 ## SCOPE BOUNDARY
 
-| ✅ IN SCOPE | ❌ OUT OF SCOPE |
-|-------------|-----------------|
+| IN SCOPE | OUT OF SCOPE |
+|----------|--------------|
 | Local file ops | VPS/SSH |
 | Local tests | Docker management |
 | GMP execution | Production deploys |
@@ -98,6 +106,4 @@ Apply multi-modal reasoning:
 - Ambiguous context → Ask clarifying question
 - Multiple equal-priority items → Present options
 - Protected file without approval → Route to KERNEL GMP
-- Confidence <70% → Gather more info first
-
---- End Command ---
+- `action: block` → Gather more info first

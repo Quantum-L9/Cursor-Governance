@@ -1,9 +1,9 @@
 <!-- L9_META
 l9_schema: 1
 parent: l9-ynp
-origin: migrated-from ynp command v8.1.0
+origin: migrated-from ynp command v8.2.0
 sources: [profiles/ynp_mode.md]
-tags: [ynp, next-action, confidence, batching, packet-completeness]
+tags: [ynp, next-action, action-enum, batching, packet-completeness]
 status: active
 /L9_META -->
 
@@ -14,6 +14,7 @@ status: active
 - Recommend the next play; do not auto-execute unless the user explicitly asks.
 - Batch related TODOs (3 in one GMP > 3 separate runs).
 - Harvest context first (check what's already in chat).
+- `action:` is required. A bare percent is `uncalibrated` and must not select the play.
 
 ## Step 1 — Context harvest
 
@@ -41,21 +42,27 @@ SCAN:
 | UX | gmp, quick edits |
 | GOVERNANCE | rules, governance |
 
-## Step 4 — Confidence scoring
+## Step 4 — Stance (not a percent)
 
-| Score | Action |
-|-------|--------|
-| ≥90% | Strong recommendation |
-| 80–89% | Recommend, ask confirmation |
-| 70–79% | Recommend with caveats |
-| <70% | Need more info, ask questions |
+| evidence_quality × decision_risk | Typical action |
+|----------------------------------|----------------|
+| high × reversible | proceed |
+| high × guarded | proceed_with_validation |
+| medium × reversible | proceed_with_validation |
+| low or unknown × reversible | bounded_probe |
+| unknown or low × irreversible | block |
+
+A leftover `Confidence: N%` line, if present, is `calibration_status: uncalibrated` and must not choose `action`.
 
 ## Output format
 
 ```markdown
 ## YNP: {action_title}
 
-**Confidence:** {score}%
+**action:** proceed | proceed_with_validation | bounded_probe | block
+**evidence_quality:** high | medium | low | unknown
+**decision_risk:** reversible | guarded | irreversible
+**calibration_status:** none
 **Time:** {estimate}
 **Tier:** KERNEL | RUNTIME | INFRA | UX
 
@@ -76,14 +83,14 @@ SCAN:
 When operating in YNP mode, end the response with a next-prompt block the user can accept verbatim:
 
 ```markdown
-## 🚀 Your Next Prompt
+## Your Next Prompt
 
 {next prompt, batching the related steps into one runnable instruction}
 
 Reply Y to use this as your next prompt!
 ```
 
-The prompt SHOULD batch related steps into a single instruction — that is the same batching rule as
+The prompt batches related steps into a single instruction — that is the same batching rule as
 above (3 TODOs in one GMP beats 3 runs), expressed as a prompt rather than a plan. It MUST reference
 the specific files or deliverables it acts on.
 
@@ -132,4 +139,4 @@ Ship complete packages, not fragments. Note which packet elements were intention
 - Ambiguous context → Ask clarifying question
 - Multiple equal-priority items → Present options
 - Protected file without approval → Route to KERNEL GMP
-- Confidence <70% → Gather more info first
+- `action: block` or unnamed missing evidence → Gather more info first

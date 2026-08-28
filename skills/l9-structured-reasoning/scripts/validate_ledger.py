@@ -19,10 +19,34 @@ REQUIRED = {
 TASKS = {"plan", "review", "architecture", "debug", "decision", "corpus"}
 ACTIONS = {"proceed", "proceed_with_validation", "bounded_probe", "block"}
 GRADES = {"direct", "corroborated", "inferred", "unknown"}
+QUALITIES = {"high", "medium", "low", "unknown"}
+RISKS = {"reversible", "guarded", "irreversible"}
+CALIBRATION = {"none", "uncalibrated", "calibrated"}
+ROOT = Path(__file__).resolve().parents[1]
+POLICY_PATH = ROOT / "references" / "confidence-policy.yaml"
+
+
+def load_allow_set() -> dict[str, dict[str, list[str]]]:
+    try:
+        import yaml
+    except ImportError:
+        return {}
+    if not POLICY_PATH.is_file():
+        return {}
+    data = yaml.safe_load(POLICY_PATH.read_text(encoding="utf-8")) or {}
+    raw = data.get("allow_set") or {}
+    if not isinstance(raw, dict):
+        return {}
+    return raw
 
 
 def validate(data: dict) -> list[str]:
     errors = []
+    if not isinstance(data, dict):
+        return ["ledger must be an object"]
+    envelope = str(data.get("envelope") or "")
+    if "Confidence: 85%" in envelope or "Confidence: {score}%" in envelope:
+        errors.append("uncalibrated percent envelope is forbidden")
     missing = sorted(REQUIRED - set(data))
     if missing:
         errors.append(f"missing fields: {missing}")
@@ -45,6 +69,33 @@ def validate(data: dict) -> list[str]:
         c.get("decision_effect") == "blocks" for c in data.get("claims", []) if isinstance(c, dict)
     ):
         errors.append("cannot proceed with a blocking claim")
+
+    quality = data.get("evidence_quality")
+    risk = data.get("decision_risk")
+    if quality is not None and quality not in QUALITIES:
+        errors.append("invalid evidence_quality")
+    if risk is not None and risk not in RISKS:
+        errors.append("invalid decision_risk")
+    if quality in QUALITIES and risk in RISKS:
+        allow = load_allow_set()
+        allowed = (allow.get(quality) or {}).get(risk)
+        if allowed is not None and data.get("action") not in set(allowed):
+            errors.append(
+                f"action {data.get('action')!r} not in allow_set[{quality}][{risk}]={allowed}"
+            )
+
+    status = data.get("calibration_status", "none")
+    if status is None:
+        status = "none"
+    if status not in CALIBRATION:
+        errors.append("invalid calibration_status")
+    stated = data.get("stated_probability", None)
+    if stated is not None and status != "calibrated":
+        errors.append("stated_probability requires calibration_status=calibrated")
+    if status == "calibrated":
+        for key in ("window", "n", "ece"):
+            if data.get(key) in (None, ""):
+                errors.append(f"calibrated status requires {key}")
     return errors
 
 
@@ -52,7 +103,8 @@ def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("ledger")
     args = parser.parse_args()
-    data = json.loads(Path(args.ledger).read_text(encoding="utf-8"))
+    raw = Path(args.ledger).read_text(encoding="utf-8")
+    data = json.loads(raw)
     errors = validate(data)
     if errors:
         for error in errors:
