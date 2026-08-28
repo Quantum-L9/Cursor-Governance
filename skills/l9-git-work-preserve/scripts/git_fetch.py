@@ -6,6 +6,10 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
+#: The receipt shape when no fetch was attempted. Callers that skip the fetch
+#: copy this rather than each restating the same literal.
+NO_FETCH: dict = {"fetched": False, "error": None, "baseline_tip": ""}
+
 
 def _run(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -26,7 +30,7 @@ def fetch_origin(repo: Path, baseline: str = "origin/main") -> dict:
     whichever local ref it already had. A False is never fatal on its own -- the
     receipt records it, and the baseline-resolution guard decides what it means.
     """
-    result: dict = {"fetched": False, "error": None, "baseline_tip": ""}
+    result: dict = dict(NO_FETCH)
 
     if _run(repo, "remote", "get-url", "origin").returncode != 0:
         return result

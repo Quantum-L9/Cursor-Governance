@@ -27,5 +27,10 @@ properties:
   cherry_dup: {type: integer, description: "patches already upstream by patch id"}
   content_contained: {type: boolean, description: "every line this ref changed is absorbed upstream"}
   redundancy_basis: {enum: ["", patch_id, content_superset], description: "evidence behind archive_ref"}
+  cherry_novel_commits: {type: array, items: {type: string}, description: "shas behind cherry_novel"}
+  cherry_dup_commits: {type: array, items: {type: string}, description: "shas behind cherry_dup"}
+  archive_ref: {type: boolean, description: "ref is archivable on the evidence in redundancy_basis"}
+  commit_subjects: {type: array, items: {type: string}, description: "subjects of the unique commits"}
+  error: {type: string, description: "receipt could not be produced; other fields unreliable"}
   auth_env: {type: string, description: "name of auth env if mutation"}
   rollback: {type: string, description: "reflog or tip SHA recovery hint"}

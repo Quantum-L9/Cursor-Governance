@@ -10,9 +10,7 @@ import subprocess
 from datetime import UTC, datetime
 from pathlib import Path
 
-from git_fetch import fetch_origin
-
-NO_FETCH: dict = {"fetched": False, "error": None, "baseline_tip": ""}
+from git_fetch import NO_FETCH, fetch_origin
 
 
 def _run(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:

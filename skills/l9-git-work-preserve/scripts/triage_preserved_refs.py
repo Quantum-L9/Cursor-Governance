@@ -22,9 +22,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from diagnose_ref_value import _run, diagnose
-from git_fetch import fetch_origin
-
-NO_FETCH: dict = {"fetched": False, "error": None, "baseline_tip": ""}
+from git_fetch import NO_FETCH, fetch_origin
 
 # Written by skills/l9-repo-sync/scripts/ff.sh. Unique commits are parked at
 # both a ref and a branch pointing at the same commit; the dirty tree is parked
