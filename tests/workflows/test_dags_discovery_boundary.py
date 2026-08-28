@@ -47,6 +47,8 @@ def test_langgraph_only_modules_are_importable_even_though_unregistered():
     import workflows.dags
 
     assert hasattr(workflows.dags.inspect_dag, "compliance_node")
+    assert hasattr(workflows.dags.pr_train_dag, "ff_node")
+    assert workflows.dags.PR_TRAIN_DAG is not None
 
 
 def test_validators_availability_is_reported_not_assumed():

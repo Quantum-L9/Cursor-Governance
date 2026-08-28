@@ -46,6 +46,7 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/wire` | Governance wiring or component wire-up |
 | `/confirm-wiring` | Verify full wiring |
 | `/pr` | PR analysis, gaps, merge blockers (Diagnose only) |
+| `/pr-train` | Open stacked PRs, remediator Converge, then `/ff` when `open_pr=0` |
 | `/l9-pr-remediation` | Converge via make pr-check / make pr, then stack-safe oldest-first merge |
 | `/gap-analysis` | Gaps vs target state |
 | `/gap-analysis-new` | Gap analysis (alternate protocol) |
