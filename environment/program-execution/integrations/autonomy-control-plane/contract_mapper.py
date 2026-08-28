@@ -14,6 +14,11 @@ LOCAL_WRITE_OPERATIONS = (
 )
 COMMIT_OPERATIONS = ("commit_local",)
 INSPECT_OPERATIONS = ("read", "search")
+# Actions that justify repository write operations. `commit` is deliberately
+# absent: committing is not writing, and a contract that asks only to commit has
+# nothing of its own to commit.
+WRITE_ACTIONS = frozenset({"local_write", "destructive_change"})
+MUTATION_ACTIONS = WRITE_ACTIONS | {"commit"}
 FORBIDDEN_OPERATIONS = (
     "merge",
     "merge_pull_request",
@@ -31,6 +36,10 @@ FAIL_CLOSED = {
     "self_review": True,
     "unverified_completion": True,
 }
+
+
+class ContractActionError(ValueError):
+    """The requested action set has no coherent operation mapping."""
 
 
 def _slug(value: str) -> str:
@@ -68,25 +77,48 @@ def requested_actions(contract: Mapping[str, Any]) -> set[str]:
 
 
 def _mutation_requested(contract: Mapping[str, Any]) -> bool:
-    return bool(requested_actions(contract) & {"local_write", "destructive_change", "commit"})
+    return bool(requested_actions(contract) & MUTATION_ACTIONS)
+
+
+def require_coherent_actions(contract: Mapping[str, Any]) -> set[str]:
+    """Refuse an action set that has no honest operation mapping.
+
+    `commit` without `local_write` is the one incoherent shape. The commit
+    boundary stages the worker's *own* verified mutations, so a commit-only
+    contract has nothing of its own to commit -- and granting it would have to
+    hand over repository write authority the contract never requested.
+
+    This is enforced here, at the authority owner, rather than relied upon
+    upstream. The compiler already rejects the shape for direct campaign
+    sources, but a lower authority owner that trusts its caller to stay honest
+    is not fail-closed; it just has not been asked dishonestly yet.
+    """
+    requested = requested_actions(contract)
+    if "commit" in requested and "local_write" not in requested:
+        raise ContractActionError(
+            "contract requests 'commit' without 'local_write'. The commit "
+            "boundary stages the worker's own verified writes, so this shape "
+            "could only be honoured by granting repository write authority the "
+            "contract never asked for. Request local_write, or drop commit."
+        )
+    return requested
 
 
 def allowed_operations(contract: Mapping[str, Any]) -> list[str]:
     """Operations derived from the actions actually requested.
 
-    "Mutation" is not one permission. A contract requesting local_write without
-    commit used to receive the whole local-mutation set, including
-    `commit_local`, because a single boolean stood in for both -- root autonomy
-    inferred an authority the Program contract never asked for. Each operation
-    now traces to the action that justifies it.
+    "Mutation" is not one permission. Every operation traces to the single
+    action that justifies it: write operations to `local_write` (or
+    `destructive_change`), `commit_local` to `commit`, and nothing to a bare
+    boolean standing in for both.
     """
-    requested = requested_actions(contract)
-    if not requested & {"local_write", "destructive_change", "commit"}:
-        return list(INSPECT_OPERATIONS)
-    operations = list(LOCAL_WRITE_OPERATIONS)
+    requested = require_coherent_actions(contract)
+    operations: list[str] = []
+    if requested & WRITE_ACTIONS:
+        operations.extend(LOCAL_WRITE_OPERATIONS)
     if "commit" in requested:
         operations.extend(COMMIT_OPERATIONS)
-    return operations
+    return operations or list(INSPECT_OPERATIONS)
 
 
 def _write_claims(contract: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -132,6 +164,7 @@ def map_program_contract(
     adapter_id: str,
     attempt_number: int,
 ) -> dict[str, Any]:
+    require_coherent_actions(contract)
     ids = deterministic_ids(
         str(contract.get("program_id") or contract.get("program_digest") or "program"),
         str(contract.get("task_id") or contract.get("id")),

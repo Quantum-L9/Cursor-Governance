@@ -423,8 +423,8 @@ files:
   sha256: f5a1b853b0bf1bd3c77c0688e759742937b593c9ca1e1b82882af34b915855f4
   bytes: 5904
 - path: program-execution-controller-template/scripts/tests/test_import_graph.py
-  sha256: 232251da918ffe10633aee2308e431238b9a2274330075819e002bede9ff26c8
-  bytes: 5206
+  sha256: ca6bcfa79727f80b322e47f5fdaa228eaabf96e758e3ba13897aefcbdd734e01
+  bytes: 6768
 - path: program-execution-controller-template/scripts/tests/test_kernel_verdict.py
   sha256: 3795183a949fa416f0ba4838f58cd40f0ef0ec78e005f332429363b3b4805c18
   bytes: 6345
@@ -586,4 +586,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 193
-  total_bytes: 714689
+  total_bytes: 716251
