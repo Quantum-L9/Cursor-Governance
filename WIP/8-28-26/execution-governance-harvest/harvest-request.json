@@ -1,0 +1,11 @@
+{
+  "request_id": "harvest-execution-governance-2026-08-28",
+  "donor": "execution-governance/",
+  "beneficiary": "https://github.com/Quantum-L9/Cursor-Governance",
+  "harvest_target": "governance validation, compliance monitoring, registry query, and self-audit semantics worth preserving before the Tier-A1 delete",
+  "access_mode": "read-only",
+  "depth": "exhaustive",
+  "secrets_policy": "redact",
+  "language": "as-donor",
+  "brief": true
+}
