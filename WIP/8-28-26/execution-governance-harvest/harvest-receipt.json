@@ -1,0 +1,21 @@
+{
+  "checks": [
+    {
+      "errors": [],
+      "id": "harvest_schema_evidence_portability_authority_closure",
+      "status": "PASS"
+    }
+  ],
+  "outputs": [
+    "harvest.json"
+  ],
+  "request_id": "harvest-execution-governance-2026-08-28",
+  "status": "PASS",
+  "unknowns": [
+    "Whether the compliance-rate time series in governance-metrics.db was ever populated with more than a handful of rows is unknown; the database lives under telemetry/logs/, which is not present in this checkout, so no historical trend was observable.",
+    "Whether any other machine that consumed this governance clone still has the com.cursor.governance-monitor LaunchAgent loaded is unknown; only the current host was observed.",
+    "The size and content of the live rules corpus that a ported C3 coverage audit would read is unknown at harvest time; the donor's declared rules_enforced field has no live equivalent, so the enforcer-set extraction is unspecified rather than merely unimplemented.",
+    "Whether the two other LaunchAgents named in the same built plan, com.tenx.learning-processor and com.cursor.context.processor, carry the same Dropbox fallback pattern was not inspected; only the governance-monitor agent was in the harvest target.",
+    "Whether the three Suite-3 numbered ancestors cited in the donor migration notes still exist anywhere is unknown and was not searched, so the lineage claim rests on the donor's own header assertions rather than on observed artifacts."
+  ]
+}
