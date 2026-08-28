@@ -421,9 +421,10 @@ elif grep -Eq '\.py$' "$changed_file"; then
       echo "OK: pytest root -> workspace ($_pytest_ws_kind; governance clone, \$GOV differs)"
     fi
   fi
+  # macOS /bin/bash 3.2 + set -u treats an empty array [@] as unbound.
   "$_pytest_py" "$SCRIPT_DIR/run_python_test_suites.py" \
     --profile local \
-    "${_pytest_repo_root_args[@]}" \
+    ${_pytest_repo_root_args[@]+"${_pytest_repo_root_args[@]}"} \
     --changed-file "$changed_file" \
     -- "${pytest_args[@]}"
 else
