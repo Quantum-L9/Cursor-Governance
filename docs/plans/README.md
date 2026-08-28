@@ -57,18 +57,18 @@ Current unbuilt only. Partial work is in `partially-built/` (`pe_fast_002_prepar
 2. `memory_outbox_drain_7c4a1e93` — RC-3 outbox drain (this-week hex; Cursor Build)
 3. `worktree_parent_clone_8-20-26` — shared isolation root cause (parent ≠ live SSOT)
 4. `in-flight_pr_census_8-20-26` — one collision engine for sessionStart + `make pr`
-6. `l4_publish_allow_8-20-26` — sole publish path
-7. `pe_unified_loop_8-20-26` — loop seams on what already landed (`compiled_into` stamped; not whole-file superseded)
-8. `pe_pipeline_fix_program_8-20-26` — factory friction (`compiled_into` stamped; not whole-file superseded)
-9. `claude_code_env_contract_8-20-26` — one session contract
-10. `toolchain_lock_percolation_8-20-26` — pins percolate without per-repo edits
-11. `core-identical_toolchain_locks_8-20-26` — same lock family
-12. `plan_template_org_fields_8-20-26` — project leverage fields into plan frontmatter
-13. `infisical_gha_oidc_conformance_8-20-26` — OIDC on the existing secrets plane
-14. `ra_root-docs_pointer_09ff9571` — Recursive Alignment pointer, not dump
-15. `pe_eie_scoped_campaign_5469bc8f` — EIE scoped campaign (`compiled_into` stamped; not whole-file superseded)
+5. `l4_publish_allow_8-20-26` — sole publish path
+6. `pe_unified_loop_8-20-26` — loop seams on what already landed (`compiled_into` stamped; not whole-file superseded)
+7. `pe_pipeline_fix_program_8-20-26` — factory friction (`compiled_into` stamped; not whole-file superseded)
+8. `claude_code_env_contract_8-20-26` — one session contract
+9. `toolchain_lock_percolation_8-20-26` — pins percolate without per-repo edits
+10. `core-identical_toolchain_locks_8-20-26` — same lock family
+11. `plan_template_org_fields_8-20-26` — project leverage fields into plan frontmatter
+12. `infisical_gha_oidc_conformance_8-20-26` — OIDC on the existing secrets plane
+13. `ra_root-docs_pointer_09ff9571` — Recursive Alignment pointer, not dump
+14. `pe_eie_scoped_campaign_5469bc8f` — EIE scoped campaign (`compiled_into` stamped; not whole-file superseded)
 
-Executed this GMP (spent, still at root until `/l9-audit-plans`): `plan_component_compile_8-28-26`.
+Spent this session (sessionStart archive → `built/`): `plan_component_compile_8-28-26`, `make-program-execution-start-cleanly-gap-only_8-15-26`.
 
 Parked same-theme draft: `backlog/root_docs_ra_pointer` (do not compete with item 15).
 Superseded: `archive/superseded/l9_ci_core_v2_release_8-23-26` — do not Build; consumers SHA-pin.
