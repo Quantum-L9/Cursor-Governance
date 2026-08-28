@@ -16,14 +16,35 @@ todos:
     status: completed
   - id: qualify-rank
     content: Run qualify_nuggets.py then rank_nuggets.py to close qualification and set highest_leverage_nugget
-    status: in_progress
+    status: completed
   - id: validate-render
     content: Run validate_harvest.py to emit harvest-receipt.json, then render_brief.py to emit DONOR-HARVEST-BRIEF.md; do not advance on a failing receipt
-    status: pending
+    status: completed
   - id: commit
     content: Scoped commit of the four WIP artifacts with explicit pathspecs
-    status: pending
+    status: completed
 isProject: false
+kind: simple
+execute_via: /gmp
+kernel_pass:
+  bound_path: execution-governance_harvest_1ea3bede.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T22:57:00Z
+    body_sha256: "b9b36a7a28b3645101820a12bad47acac54fab3a414f635c77b7c995f82aa5e9"
+    deltas:
+      - "Locked execute_via to /gmp; Build and make campaign stay out"
+      - "Recorded the four WIP artifacts as already written; do not re-harvest"
+      - "Named PORT as forbidden; disposition is MERGE_WITH_EXISTING, KEEP_LOCAL, REJECT, or UNKNOWN"
+      - "Bound every harvest script to the locked venv interpreter"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T22:58:00Z
+    body_sha256: "b9b36a7a28b3645101820a12bad47acac54fab3a414f635c77b7c995f82aa5e9"
+    deltas:
+      - "Confirmed harvest-receipt.json status PASS and all four allowed WIP outputs on disk"
+      - "No exclusive either-or without a blocker; PORT stays forbidden"
+      - "kernel_pass bound to this path only; todos remain completed"
 ---
 
 # Intelligence harvest: execution-governance to Cursor-Governance
@@ -31,6 +52,8 @@ isProject: false
 ## Execute via
 
 `/gmp`. Do not press Build. Do not run `make campaign`. Do not admit a Program Lock.
+
+This harvest already ran. The four allowed outputs exist under `WIP/8-28-26/execution-governance-harvest/`. Re-invoking `/gmp` would re-run analysis only; it does not authorize a second harvest or the Tier-A1 delete.
 
 ## Scope and authority
 
@@ -127,6 +150,8 @@ Write only these four files under `WIP/8-28-26/execution-governance-harvest/`:
 - `harvest.json`
 - `harvest-receipt.json`
 - `DONOR-HARVEST-BRIEF.md`
+
+Present on disk after this harvest: all four. Falsifiable success is `validate_harvest.py` exit 0 plus those four paths existing. Do not add a fifth output.
 
 ## Out of scope
 

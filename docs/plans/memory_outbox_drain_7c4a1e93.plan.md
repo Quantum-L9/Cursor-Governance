@@ -40,6 +40,23 @@ todos:
 isProject: false
 kind: simple
 execute_via: cursor-build
+kernel_pass:
+  bound_path: memory_outbox_drain_7c4a1e93.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T23:00:00Z
+    body_sha256: "66d73f8da8efd98f4a326839ebfa16f8701a436571a2a28624cc3d9a61978a0b"
+    deltas:
+      - "Locked write_allow to delivery_worker, graphiti_memory, runtime_paths, ingest, campaign_summary, drain tests, and the RC-3 findings doc"
+      - "Locked path unification to alias both writers through memory_outbox_root(); legacy files are adopted once, not deleted in this plan"
+      - "Locked execute_via to cursor-build; make campaign and Program Lock stay out"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T23:04:00Z
+    body_sha256: "66d73f8da8efd98f4a326839ebfa16f8701a436571a2a28624cc3d9a61978a0b"
+    deltas:
+      - "Todos stay pending; this stamp does not implement the drain."
+      - "FileOutboxTransport stays forbidden as a drain target (self-loop)."
 ---
 
 # PLAN: Memory outbox drain: give DESTINATION_SUBMITTED an owner
@@ -114,6 +131,18 @@ Press **Build**. Work in the **current checkout**.
 - Do not admit a Program Lock or Controller lease.
 - Do not write `Lock: origin/main = <sha>`.
 - Do not open a new worktree from tip as a planning requirement.
+
+### Kernel-locked write_allow
+
+- `environment/agents/generated-data/orchestration/delivery_worker.py`
+- `environment/agents/generated-data/adapters/graphiti_memory.py`
+- `environment/agents/runtime_paths.py`
+- `environment/agents/generated-data/ingress/ingest.py`
+- `environment/program-execution/integrations/subagent-generated-data/campaign_summary.py`
+- drain tests under `environment/agents/generated-data/` and `environment/program-execution/tests/hardening/test_real_campaign_e2e.py`
+- `docs/handoffs/PE_SWARM_MEMORY_REMEDIATION_FINDINGS.md`
+
+Path unification: both writers and the drain resolve through `memory_outbox_root()`. Legacy candidates are adopted once and logged; this plan does not delete the legacy directory.
 
 ## Metadata
 

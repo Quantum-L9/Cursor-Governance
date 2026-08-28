@@ -70,7 +70,7 @@ Current unbuilt only. Partial work is in `partially-built/` (`pe_fast_002_prepar
 
 Spent this session (sessionStart archive → `built/`): `plan_component_compile_8-28-26`, `make-program-execution-start-cleanly-gap-only_8-15-26`.
 
-Parked same-theme draft: `backlog/root_docs_ra_pointer` (do not compete with item 15).
+Parked same-theme draft: `backlog/root_docs_ra_pointer` (do not compete with item 14).
 Superseded: `archive/superseded/l9_ci_core_v2_release_8-23-26` — do not Build; consumers SHA-pin.
 
 `pipeline_assembly_fill_8-20-26` is in `BUILT/`. The still-open

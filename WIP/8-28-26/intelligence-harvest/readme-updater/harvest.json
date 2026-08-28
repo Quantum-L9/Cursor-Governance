@@ -1,0 +1,678 @@
+{
+  "concepts": [
+    {
+      "acceptance_tests": [
+        {
+          "given": "a live README whose declared required index headings are missing",
+          "must_not": "overwrite the README from a template or invent missing root files",
+          "then": "the run reports the missing headings and does not treat the index as honest",
+          "when": "the beneficiary README step runs"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-update-agent-docs Step 3 README write plus Validation",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "Donor required sections conflict with pointer-not-dump unless rebound.",
+        "existing_owner": "skills/l9-update-agent-docs Step 3 README pointer write",
+        "merge_decision": "Adopt fail-closed required-heading validation only after rebinding required headings to the pointer stack; do not adopt donor section names or generation."
+      },
+      "compounding": 4,
+      "description": "Validate existing README headings against a declarative required-section map and fail closed on missing required headings.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-validator-required-sections",
+        "e-config-defaults",
+        "e-ssot-config",
+        "e-beneficiary-pointer-write"
+      ],
+      "id": "c-required-section-validation",
+      "leverage": 5,
+      "name": "Declarative required-section validation",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "A README can drift so required headings disappear while the file still looks complete.",
+      "rank_score": 54,
+      "risks": [
+        "Importing donor section names (overview, airules, apisurface) would turn the root README into a competing contract.",
+        "A generator that overwrites README.md would violate pointer-only write rules."
+      ],
+      "semantic_contract": "A documentation index is invalid when headings required by a live declarative map are absent. The map is rebound to the beneficiary pointer stack, not donor subsystem templates."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a declared README path that does not exist",
+          "must_not": "create a root README to satisfy a template",
+          "then": "the path is recorded Unknown and is not created",
+          "when": "the skill binds targets"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-update-agent-docs Step 1 Bind live targets",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "None if donor generate/create steps stay out.",
+        "existing_owner": "skills/l9-update-agent-docs Step 1",
+        "merge_decision": "Keep the existing bind-and-Unknown rule; treat donor gap analysis as confirming evidence only."
+      },
+      "compounding": 3,
+      "description": "Compare declared targets to paths that exist; skip or Unknown missing ones.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-dag-keys",
+        "e-beneficiary-bind"
+      ],
+      "id": "c-bind-before-write",
+      "leverage": 3,
+      "name": "Inventory live README targets before write",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Writes that assume a README or subsystem exists invent files.",
+      "rank_score": 33,
+      "risks": [
+        "Restating donor gap-analysis commands would duplicate Step 1."
+      ],
+      "semantic_contract": "Only existing documentation paths are write targets; missing paths are Unknown."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a proposal to make root README.md a binding AI-scope contract",
+          "must_not": "move operating rules from AGENTS.md into README.md",
+          "then": "the concept is rejected and pointer-only README ownership remains",
+          "when": "beneficiary fit is applied"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "Competing SSOT if adopted.",
+        "existing_owner": "AGENTS.md plus CLAUDE.md pointer stack",
+        "merge_decision": "Reject. README stays an index."
+      },
+      "compounding": 1,
+      "description": "Treat README as a 3-layer binding contract carrying AI usage rules.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-codegen-binding-contract",
+        "e-beneficiary-pointer-write",
+        "e-beneficiary-adapter"
+      ],
+      "id": "c-readme-as-binding-contract",
+      "leverage": 2,
+      "name": "README as binding contract with AI scopes",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": false
+      },
+      "problem": "Agents need explicit allowed/restricted/forbidden scopes.",
+      "rank_score": null,
+      "risks": [
+        "Would compete with AGENTS.md and CANONICAL_LAW.md as operating/authority SSOTs.",
+        "Would dump Always/Never-style lists into the root index."
+      ],
+      "semantic_contract": null
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "this harvest",
+          "must_not": "copy generate_subsystem_readmes.py into the skill pack",
+          "then": "the generator and backup overwrite stay donor-local",
+          "when": "transfer is considered"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "Overwrite vs pointer-only is a direct conflict.",
+        "existing_owner": "skills/l9-update-agent-docs surgical README write",
+        "merge_decision": "Keep local to donor L9 OS subsystem corpus."
+      },
+      "compounding": 1,
+      "description": "Regenerate README.md from YAML plus AST and keep README.md.bak.",
+      "disposition": "KEEP_LOCAL",
+      "evidence_ids": [
+        "e-generator-overwrite",
+        "e-generator-ssot",
+        "e-beneficiary-pointer-write"
+      ],
+      "id": "c-config-driven-overwrite",
+      "leverage": 2,
+      "name": "Config-driven README overwrite with backup",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": false,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": false,
+        "donor_runtime_required": true,
+        "external_dependency": {
+          "failure_behavior": "Do not generate; concept stays KEEP_LOCAL.",
+          "probe": "test -f scripts/generate_subsystem_readmes.py && test -f config/subsystems/readme_config.yaml",
+          "target": "scripts/generate_subsystem_readmes.py plus readme_config.yaml"
+        },
+        "incidental_implementation_independent": false
+      },
+      "problem": "Subsystem READMEs go stale relative to code facts.",
+      "rank_score": null,
+      "risks": [
+        "Overwrite of root README.md is forbidden by the beneficiary write table.",
+        "Donor time-verify talks to external clocks."
+      ],
+      "semantic_contract": null
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "readme-pipeline-v1 already registered under workflows/",
+          "must_not": "move or re-own readme-pipeline-v1 inside the skill pack",
+          "then": "DAG ownership is rejected for this skill",
+          "when": "beneficiary destination is l9-update-agent-docs"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "Duplicate DAG ownership.",
+        "existing_owner": "workflows/dags/readme_pipeline_dag.py",
+        "merge_decision": "Reject for this skill. Workflows keep the DAG."
+      },
+      "compounding": 1,
+      "description": "Own the generation DAG inside l9-update-agent-docs.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-dag-keys",
+        "e-beneficiary-dag-projection"
+      ],
+      "id": "c-pipeline-dag-ownership",
+      "leverage": 1,
+      "name": "readme-pipeline-v1 DAG as skill capability",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": false,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": false
+      },
+      "problem": "Operators want a sequenced generate/validate workflow.",
+      "rank_score": null,
+      "risks": [
+        "DAG already lives under workflows/ and names files this skill must not own."
+      ],
+      "semantic_contract": null
+    }
+  ],
+  "drift": [
+    {
+      "behavior": "Two ReadmeGenerator modules exist with different sha256 (8304bb11 vs 4656b575).",
+      "canonical_candidate": "core/agents/codegenagent/readme_generator.py",
+      "evidence_ids": [
+        "e-generator-duplicate",
+        "e-test-imports-core"
+      ],
+      "resolution": "Tests import the core path; agents/ copy is duplicate."
+    },
+    {
+      "behavior": "Beneficiary already has readme-pipeline-v1 DAG text that names generate_subsystem_readmes.py and readme_config.yaml, but those files are absent locally.",
+      "canonical_candidate": "donor scripts/generate_subsystem_readmes.py plus config SSOT",
+      "evidence_ids": [
+        "e-beneficiary-dag-projection",
+        "e-dag-keys"
+      ],
+      "resolution": "DAG projection without generator is stale wiring, not an l9-update-agent-docs ownership claim."
+    }
+  ],
+  "evidence": [
+    {
+      "claim": "The generator file states SINGLE SOURCE OF TRUTH: config/subsystems/readme_config.yaml.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ssot-config",
+      "locator": {
+        "kind": "path_lines",
+        "value": "scripts/generate_subsystem_readmes.py:5"
+      },
+      "secret_redacted": false,
+      "source": "/tmp/l9-ih-readme-updater-donor/scripts/generate_subsystem_readmes.py"
+    },
+    {
+      "claim": "Validator fails when required section keys from readme_config.yaml are missing from README h2 headings.",
+      "epistemic": "CONFIRMED",
+      "id": "e-validator-required-sections",
+      "locator": {
+        "kind": "symbol",
+        "value": "validate_readme_for_subsystem"
+      },
+      "secret_redacted": false,
+      "source": "/tmp/l9-ih-readme-updater-donor/.github/scripts/validate-readme-sections.py"
+    },
+    {
+      "claim": "Defaults mark overview, responsibilities, components, datamodels, apisurface, and airules as required.",
+      "epistemic": "CONFIRMED",
+      "id": "e-config-defaults",
+      "locator": {
+        "kind": "path_lines",
+        "value": "config/subsystems/readme_config.yaml:8-26"
+      },
+      "secret_redacted": false,
+      "source": "/tmp/l9-ih-readme-updater-donor/config/subsystems/readme_config.yaml"
+    },
+    {
+      "claim": "Generator CONFIG_PATH is config/subsystems/readme_config.yaml.",
+      "epistemic": "CONFIRMED",
+      "id": "e-generator-ssot",
+      "locator": {
+        "kind": "symbol",
+        "value": "CONFIG_PATH"
+      },
+      "secret_redacted": false,
+      "source": "/tmp/l9-ih-readme-updater-donor/scripts/generate_subsystem_readmes.py"
+    },
+    {
+      "claim": "Generator can overwrite existing README.md after copying it to README.md.bak.",
+      "epistemic": "CONFIRMED",
+      "id": "e-generator-overwrite",
+      "locator": {
+        "kind": "symbol",
+        "value": "backup_existing_readme"
+      },
+      "secret_redacted": false,
+      "source": "/tmp/l9-ih-readme-updater-donor/scripts/generate_subsystem_readmes.py"
+    },
+    {
+      "claim": "CodeGenAgent generator documents READMEs as binding contracts with a 3-layer architecture and explicit AI usage rules.",
+      "epistemic": "CONFIRMED",
+      "id": "e-codegen-binding-contract",
+      "locator": {
+        "kind": "path_lines",
+        "value": "core/agents/codegenagent/readme_generator.py:9-12"
+      },
+      "secret_redacted": false,
+      "source": "/tmp/l9-ih-readme-updater-donor/core/agents/codegenagent/readme_generator.py"
+    },
+    {
+      "claim": "Tests import ReadmeGenerator from core.agents.codegenagent.readme_generator.",
+      "epistemic": "CONFIRMED",
+      "id": "e-test-imports-core",
+      "locator": {
+        "kind": "path_lines",
+        "value": "tests/core/agents/codegenagent/test_readme_generator.py:14-19"
+      },
+      "secret_redacted": false,
+      "source": "/tmp/l9-ih-readme-updater-donor/tests/core/agents/codegenagent/test_readme_generator.py"
+    },
+    {
+      "claim": "The two readme_generator.py files are not byte-identical.",
+      "epistemic": "CONFIRMED",
+      "id": "e-generator-duplicate",
+      "locator": {
+        "kind": "artifact",
+        "value": "agents/codegenagent/readme_generator.py sha256=8304bb11; core/agents/codegenagent/readme_generator.py sha256=4656b575"
+      },
+      "secret_redacted": false,
+      "source": "inventory_source.py"
+    },
+    {
+      "claim": "DAG KEY FILES name config/subsystems/readme_config.yaml and scripts/generate_subsystem_readmes.py.",
+      "epistemic": "CONFIRMED",
+      "id": "e-dag-keys",
+      "locator": {
+        "kind": "path_lines",
+        "value": "workflows/dags/readme_pipeline_dag.py:70-73"
+      },
+      "secret_redacted": false,
+      "source": "/tmp/l9-ih-readme-updater-donor/workflows/dags/readme_pipeline_dag.py"
+    },
+    {
+      "claim": "Beneficiary README write is limited to fixing an index pointer that names a missing or invented file.",
+      "epistemic": "CONFIRMED",
+      "id": "e-beneficiary-pointer-write",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-update-agent-docs/SKILL.md:143"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-update-agent-docs/SKILL.md"
+    },
+    {
+      "claim": "Beneficiary adapter treats README.md as a human index with surgical pointers only.",
+      "epistemic": "CONFIRMED",
+      "id": "e-beneficiary-adapter",
+      "locator": {
+        "kind": "path_lines",
+        "value": ".claude/adapters/cursor-governance-update-agent-docs.md:13"
+      },
+      "secret_redacted": false,
+      "source": ".claude/adapters/cursor-governance-update-agent-docs.md"
+    },
+    {
+      "claim": "Beneficiary already binds live targets, records Unknown for missing paths, and never invents a root file.",
+      "epistemic": "CONFIRMED",
+      "id": "e-beneficiary-bind",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-update-agent-docs/SKILL.md:56-57"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-update-agent-docs/SKILL.md"
+    },
+    {
+      "claim": "Beneficiary repo already contains a readme-pipeline-v1 DAG that names the donor generator and config paths, which are not present in this checkout.",
+      "epistemic": "CONFIRMED",
+      "id": "e-beneficiary-dag-projection",
+      "locator": {
+        "kind": "path_lines",
+        "value": "workflows/dags/readme_pipeline_dag.py:71-72"
+      },
+      "secret_redacted": false,
+      "source": "workflows/dags/readme_pipeline_dag.py"
+    },
+    {
+      "claim": "Whether validate-readme-sections.py is invoked by donor CI was not observed.",
+      "epistemic": "UNKNOWN",
+      "id": "e-validator-ci-wiring",
+      "locator": {
+        "kind": "unknown",
+        "value": "donor CI workflows not in sparse inventory"
+      },
+      "secret_redacted": false,
+      "source": "Quantum-L9/L9_Original_Repo"
+    }
+  ],
+  "highest_leverage_nugget": "c-required-section-validation",
+  "inventory": [
+    {
+      "action": "keep",
+      "classification": "canonical",
+      "consumers": [
+        "scripts/generate_subsystem_readmes.py",
+        ".github/scripts/validate-readme-sections.py"
+      ],
+      "evidence_ids": [
+        "e-ssot-config"
+      ],
+      "importance": 5,
+      "owner": "donor readme pipeline",
+      "path": "config/subsystems/readme_config.yaml",
+      "purpose": "Declared single source of truth for subsystem README required sections, tiers, scopes, and invariants."
+    },
+    {
+      "action": "keep",
+      "classification": "canonical",
+      "consumers": [],
+      "evidence_ids": [
+        "e-validator-required-sections"
+      ],
+      "importance": 5,
+      "owner": "donor readme pipeline",
+      "path": ".github/scripts/validate-readme-sections.py",
+      "purpose": "Fail closed when a subsystem README lacks headings required by the config SSOT."
+    },
+    {
+      "action": "keep",
+      "classification": "canonical",
+      "consumers": [
+        "workflows/dags/readme_pipeline_dag.py"
+      ],
+      "evidence_ids": [
+        "e-generator-ssot",
+        "e-generator-overwrite"
+      ],
+      "importance": 4,
+      "owner": "donor readme pipeline",
+      "path": "scripts/generate_subsystem_readmes.py",
+      "purpose": "Config-driven generator that overwrites subsystem README.md from YAML plus AST facts."
+    },
+    {
+      "action": "keep",
+      "classification": "canonical",
+      "consumers": [
+        "tests/core/agents/codegenagent/test_readme_generator.py"
+      ],
+      "evidence_ids": [
+        "e-codegen-binding-contract",
+        "e-test-imports-core"
+      ],
+      "importance": 3,
+      "owner": "CodeGenAgent",
+      "path": "core/agents/codegenagent/readme_generator.py",
+      "purpose": "CodeGenAgent template generator; tests import this path."
+    },
+    {
+      "action": "merge",
+      "classification": "duplicate",
+      "consumers": [],
+      "evidence_ids": [
+        "e-generator-duplicate"
+      ],
+      "importance": 2,
+      "owner": "CodeGenAgent",
+      "path": "agents/codegenagent/readme_generator.py",
+      "purpose": "Near-duplicate of the core CodeGenAgent generator; different sha256."
+    },
+    {
+      "action": "keep",
+      "classification": "active",
+      "consumers": [],
+      "evidence_ids": [
+        "e-test-imports-core"
+      ],
+      "importance": 3,
+      "owner": "CodeGenAgent",
+      "path": "tests/core/agents/codegenagent/test_readme_generator.py",
+      "purpose": "Unit tests asserting Overview, API Reference, and AI Usage Rules headings."
+    },
+    {
+      "action": "keep",
+      "classification": "active",
+      "consumers": [],
+      "evidence_ids": [
+        "e-dag-keys",
+        "e-beneficiary-dag-projection"
+      ],
+      "importance": 3,
+      "owner": "workflows/",
+      "path": "workflows/dags/readme_pipeline_dag.py",
+      "purpose": "readme-pipeline-v1 orchestration; already projected into the beneficiary repo."
+    }
+  ],
+  "request": {
+    "access_mode": "read-only",
+    "beneficiary": "skills/l9-update-agent-docs",
+    "brief": true,
+    "depth": "exhaustive",
+    "donor": "/tmp/l9-ih-readme-updater-donor",
+    "harvest_target": "readme updater",
+    "language": "as-donor",
+    "request_id": "ih-readme-updater-2026-08-28",
+    "secrets_policy": "redact"
+  },
+  "safety": [
+    {
+      "claim": "Donor code was inventoried and read, not executed.",
+      "epistemic": "CONFIRMED"
+    },
+    {
+      "claim": "No files under skills/l9-update-agent-docs were created or edited.",
+      "epistemic": "CONFIRMED"
+    },
+    {
+      "claim": "CodeGenAgent templates, DORA footers, and worldtime verification were not treated as transferable machinery.",
+      "epistemic": "CONFIRMED"
+    }
+  ],
+  "schema_version": "1.1.0",
+  "source_identity": {
+    "file_count": 7,
+    "git_sha": "b785c41599f0b6336c30c55d4a4d746be7dc6bb0",
+    "inventory_status": "PASS",
+    "kind": "directory",
+    "path": "/private/tmp/l9-ih-readme-updater-donor",
+    "ref": "main",
+    "remote": "Quantum-L9/L9_Original_Repo"
+  },
+  "status": "PARTIAL",
+  "surfaces": [
+    {
+      "dependencies": [
+        "config/subsystems/readme_config.yaml",
+        "PyYAML"
+      ],
+      "evidence_ids": [
+        "e-generator-ssot",
+        "e-generator-overwrite"
+      ],
+      "is_wrapper": false,
+      "item": "scripts/generate_subsystem_readmes.py",
+      "mutations": [
+        "subsystem README.md",
+        "README.md.bak",
+        "readme_config.yaml last_updated"
+      ],
+      "resolved_target": "scripts/generate_subsystem_readmes.py:main",
+      "source": "/tmp/l9-ih-readme-updater-donor/scripts/generate_subsystem_readmes.py",
+      "visibility": "cli"
+    },
+    {
+      "dependencies": [
+        "config/subsystems/readme_config.yaml"
+      ],
+      "evidence_ids": [
+        "e-validator-required-sections"
+      ],
+      "is_wrapper": false,
+      "item": ".github/scripts/validate-readme-sections.py",
+      "mutations": [],
+      "resolved_target": ".github/scripts/validate-readme-sections.py:main",
+      "source": "/tmp/l9-ih-readme-updater-donor/.github/scripts/validate-readme-sections.py",
+      "visibility": "cli"
+    },
+    {
+      "dependencies": [
+        "config/subsystems/readme_config.yaml"
+      ],
+      "evidence_ids": [
+        "e-dag-keys"
+      ],
+      "is_wrapper": true,
+      "item": "workflows/dags/readme_pipeline_dag.py",
+      "mutations": [],
+      "resolved_target": "scripts/generate_subsystem_readmes.py",
+      "source": "/tmp/l9-ih-readme-updater-donor/workflows/dags/readme_pipeline_dag.py",
+      "visibility": "session-dag"
+    },
+    {
+      "dependencies": [],
+      "evidence_ids": [
+        "e-codegen-binding-contract"
+      ],
+      "is_wrapper": false,
+      "item": "core/agents/codegenagent/readme_generator.py",
+      "mutations": [],
+      "resolved_target": "ReadmeGenerator.generate_module_readme",
+      "source": "/tmp/l9-ih-readme-updater-donor/core/agents/codegenagent/readme_generator.py",
+      "visibility": "library"
+    }
+  ],
+  "system": {
+    "control_flow": [
+      {
+        "from": "config/subsystems/readme_config.yaml",
+        "relation": "SSOT input",
+        "to": "scripts/generate_subsystem_readmes.py"
+      },
+      {
+        "from": "config/subsystems/readme_config.yaml",
+        "relation": "required-section contract",
+        "to": ".github/scripts/validate-readme-sections.py"
+      },
+      {
+        "from": "scripts/generate_subsystem_readmes.py",
+        "relation": "overwrite after optional .bak",
+        "to": "subsystem README.md"
+      },
+      {
+        "from": "core/agents/codegenagent/readme_generator.py",
+        "relation": "in-memory template render; not the pipeline SSOT",
+        "to": "GeneratedReadme"
+      }
+    ],
+    "dependencies": [
+      {
+        "name": "PyYAML",
+        "used_by": "generator and validator"
+      },
+      {
+        "name": "worldtimeapi.org / timeapi.io",
+        "note": "donor infrastructure; not harvested",
+        "used_by": "verify_system_time in generator"
+      }
+    ],
+    "identity": "Donor readme-updater cluster on Quantum-L9/L9_Original_Repo@b785c415: a config-SSOT pipeline that generates and validates subsystem README.md files, plus a separate CodeGenAgent template generator.",
+    "must_not_own": [
+      "CodeGenAgent runtime",
+      "DORA metadata blocks",
+      "donor worldtime verification",
+      "wholesale README generation inside l9-update-agent-docs",
+      "readme-pipeline-v1 DAG ownership (already under workflows/)"
+    ],
+    "ownership_boundaries": [
+      {
+        "owner": "readme_config.yaml",
+        "owns": "required sections, tiers, forbidden/allowed scopes, invariants"
+      },
+      {
+        "owner": "generate_subsystem_readmes.py",
+        "owns": "live generate/list/validate CLI for subsystem READMEs"
+      },
+      {
+        "owner": "ReadmeGenerator",
+        "owns": "CodeGenAgent module/subsystem/metadata templates"
+      },
+      {
+        "owner": "skills/l9-update-agent-docs",
+        "owns": "root pointer-stack writes; not subsystem README generation"
+      }
+    ],
+    "workflows": [
+      {
+        "evidence_ids": [
+          "e-dag-keys"
+        ],
+        "id": "readme-pipeline-v1",
+        "steps": [
+          "gap analysis of config vs directories",
+          "config enrichment",
+          "template update",
+          "generate via scripts/generate_subsystem_readmes.py",
+          "validate required sections",
+          "report"
+        ]
+      }
+    ]
+  },
+  "unknowns": [
+    "Whether .github/scripts/validate-readme-sections.py is invoked by donor CI; workflows were outside the sparse inventory.",
+    "The exact semantic delta between the two readme_generator.py copies beyond unequal sha256.",
+    "Which headings a hardened pointer-stack required-section map should name; beneficiary README live headings were not re-audited as a count in this harvest."
+  ]
+}
