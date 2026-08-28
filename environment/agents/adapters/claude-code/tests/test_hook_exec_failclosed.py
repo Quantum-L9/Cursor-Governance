@@ -13,11 +13,18 @@ gates.
 
 from __future__ import annotations
 
+import importlib.util
+import io
+import json
 import os
+import sqlite3
 import subprocess
+import sys
 import tempfile
 import unittest
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
+from unittest import mock
 
 REPO = Path(__file__).resolve().parents[5]
 LAUNCHER = (
@@ -189,6 +196,322 @@ class SettingsRegistrationTests(unittest.TestCase):
                         any(f"--class gate {name}" in c for c in gate_commands),
                         f"{name} must be registered as a gate",
                     )
+
+
+# ---------------------------------------------------------------------------
+# T-41: Program-bound root authorization composed into the PreToolUse wrapper.
+#
+# These cases run the real wrapper against a real root autonomy runtime and a
+# real canonical Program state database. Nothing on the authorization path is
+# mocked: a fake authorizer would allow whatever the wrapper asked it, which is
+# precisely the failure mode this suite exists to detect. Only the downstream
+# ops gate is stubbed, because what is under test is what the wrapper hands it.
+# ---------------------------------------------------------------------------
+
+WRAPPER = REPO / "environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py"
+PE_ROOT = REPO / "environment/program-execution"
+INTEGRATION = PE_ROOT / "integrations/autonomy-control-plane"
+PEC_SCRIPTS = PE_ROOT / "core/program-execution-controller-template/scripts"
+
+STUB_GATE = """import os
+import pathlib
+import sys
+
+pathlib.Path(os.environ["L9_TEST_GATE_LOG"]).write_bytes(sys.stdin.buffer.read())
+raise SystemExit(0)
+"""
+
+
+def _load(path: Path, name: str):
+    spec = importlib.util.spec_from_file_location(name, str(path))
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def _git(*args: str, cwd: Path) -> str:
+    completed = subprocess.run(
+        ["git", *args],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
+        env={
+            **os.environ,
+            "GIT_CONFIG_GLOBAL": "/dev/null",
+            "GIT_CONFIG_SYSTEM": "/dev/null",
+            "GIT_AUTHOR_NAME": "Test",
+            "GIT_AUTHOR_EMAIL": "test@example.com",
+            "GIT_COMMITTER_NAME": "Test",
+            "GIT_COMMITTER_EMAIL": "test@example.com",
+        },
+    )
+    return completed.stdout.strip()
+
+
+class ProgramBoundAuthorizationTests(unittest.TestCase):
+    """The wrapper authorizes a live effect before the ops gate ever runs."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        for path in (str(REPO), str(PE_ROOT), str(PEC_SCRIPTS)):
+            if path not in sys.path:
+                sys.path.insert(0, path)
+        cls.wrapper = _load(WRAPPER, "l9_test_local_execution_gate_wrap")
+        cls.grant = _load(INTEGRATION / "grant.py", "l9_test_autonomy_grant")
+
+    def setUp(self) -> None:
+        self._tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self._tmp.cleanup)
+        self.root = Path(self._tmp.name)
+        self.workspace = self.root / "workspace"
+        self.worktree = self.workspace / "worktrees" / "TASK-1"
+        self.worktree.mkdir(parents=True)
+        _git("init", "--initial-branch=pec/task-1", cwd=self.worktree)
+        (self.worktree / "README.md").write_text("seed\n", encoding="utf-8")
+        _git("add", "README.md", cwd=self.worktree)
+        _git("commit", "-m", "seed", cwd=self.worktree)
+        self.base_sha = _git("rev-parse", "HEAD", cwd=self.worktree)
+        self.contract = {
+            "program_id": "Program A",
+            "task_id": "TASK-1",
+            "objective": "Edit the declared path",
+            "base_sha": self.base_sha,
+            "requested_actions": ["inspect", "local_write"],
+            "writable_paths": ["docs/result.txt"],
+            "contract_digest": "digest-1",
+            "repository_id": "repo-a",
+            "branch": "pec/task-1",
+            "lease_id": "lease-program-1",
+            "worktree": str(self.worktree),
+        }
+        self._bind_parent()
+        self.authority = self.grant.grant_task_mutation(
+            REPO,
+            self.workspace,
+            self.contract,
+            attempt_number=1,
+            agent_ref="claude-code",
+            surface="claude-cli",
+        )["autonomy_authority"]
+        self.gate_log = self.root / "gate-stdin.bin"
+        self.gate = self.root / "stub_gate.py"
+        self.gate.write_text(STUB_GATE, encoding="utf-8")
+
+    def _bind_parent(self, *, expires_in_seconds: int = 900, state: str = "EXECUTING") -> None:
+        from pec.state import StateDB
+
+        database = StateDB(self.workspace / "runtime" / "state.sqlite")
+        try:
+            database.upsert_task(
+                {
+                    "id": "TASK-1",
+                    "title": "TASK-1",
+                    "wave_id": "WAVE-1",
+                    "workstream_id": "WS-1",
+                    "target_id": "TARGET-A",
+                    "repository_id": "repo-a",
+                    "execution_kind": "code_change",
+                    "objective": "Edit the declared path",
+                    "risk_tier": "low",
+                    "definition_status": "defined",
+                }
+            )
+            now = datetime.now(tz=UTC)
+            database.create_lease(
+                {
+                    "lease_id": "lease-program-1",
+                    "task_id": "TASK-1",
+                    "repository_id": "repo-a",
+                    "holder": "make-campaign",
+                    "base_sha": self.base_sha,
+                    "branch": "pec/task-1",
+                    "worktree": str(self.worktree),
+                    "contract_digest": "digest-1",
+                    "issued_at": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                    "expires_at": (now + timedelta(seconds=expires_in_seconds)).strftime(
+                        "%Y-%m-%dT%H:%M:%SZ"
+                    ),
+                }
+            )
+            database.update_task("TASK-1", lease_id="lease-program-1")
+            for transition in ("ELIGIBLE", "LEASED", "PREPARED", "CONTRACTED", state):
+                if database.task("TASK-1")["runtime_state"] != transition:
+                    database.transition_task("TASK-1", transition)
+        finally:
+            database.close()
+
+    def _environment(self) -> dict[str, str]:
+        parent = self.authority.get("program_parent") or {}
+        return {
+            "L9_AUTONOMY_REQUIRED": "1",
+            "L9_ADAPTER_SESSION_ID": str(self.authority["adapter_session_id"]),
+            "L9_LEASE_ID": str(self.authority["lease_id"]),
+            "L9_AGENT_ID": str(self.authority["agent_id"]),
+            "L9_AUTONOMY_DATABASE": str(self.authority["runtime_database"]),
+            "L9_AUTONOMY_ROOT": str(self.authority["repository_root"]),
+            "L9_PROGRAM_WORKSPACE": str(self.authority["workspace"]),
+            "L9_PROGRAM_TASK_ID": str(self.authority["task_id"]),
+            "L9_PROGRAM_LEASE_ID": str(parent.get("lease_id") or ""),
+            "L9_PROGRAM_WORKTREE": str(parent.get("worktree") or self.worktree),
+        }
+
+    def _run(
+        self,
+        event: dict,
+        *,
+        environment: dict[str, str] | None = None,
+        gate: Path | None = None,
+    ) -> tuple[int, bytes]:
+        raw = json.dumps(event).encode("utf-8")
+        env = dict(os.environ)
+        env.update(self._environment() if environment is None else environment)
+        env["L9_TEST_GATE_LOG"] = str(self.gate_log)
+        stub = self.gate if gate is None else gate
+        with (
+            mock.patch.dict(os.environ, env, clear=True),
+            mock.patch.object(self.wrapper.sys, "stdin", mock.Mock(buffer=io.BytesIO(raw))),
+            mock.patch.object(self.wrapper, "GATE", stub),
+        ):
+            code = self.wrapper.main()
+        replayed = self.gate_log.read_bytes() if self.gate_log.exists() else b""
+        return code, replayed
+
+    def _write_event(self, path: str) -> dict:
+        return {"tool_name": "Write", "tool_input": {"file_path": path, "content": "x"}}
+
+    # -- the authorized path ------------------------------------------------
+
+    def test_authorized_write_reaches_the_downstream_gate_byte_identical(self) -> None:
+        event = self._write_event(str(self.worktree / "docs/result.txt"))
+        code, replayed = self._run(event)
+        self.assertEqual(code, 0)
+        self.assertEqual(replayed, json.dumps(event).encode("utf-8"))
+
+    def test_authorization_precedes_the_downstream_gate(self) -> None:
+        """A denial must never reach the ops gate at all."""
+        code, replayed = self._run(self._write_event("/etc/passwd"))
+        self.assertEqual(code, 2)
+        self.assertEqual(replayed, b"")
+
+    def test_outside_a_worker_window_the_gate_still_decides_alone(self) -> None:
+        code, replayed = self._run(
+            self._write_event(str(self.worktree / "docs/result.txt")),
+            environment={"L9_AUTONOMY_REQUIRED": ""},
+        )
+        self.assertEqual(code, 0)
+        self.assertTrue(replayed)
+
+    # -- fail closed --------------------------------------------------------
+
+    def test_missing_authority_blocks(self) -> None:
+        for dropped in (
+            "L9_ADAPTER_SESSION_ID",
+            "L9_LEASE_ID",
+            "L9_AGENT_ID",
+            "L9_AUTONOMY_DATABASE",
+            "L9_PROGRAM_WORKSPACE",
+        ):
+            with self.subTest(missing=dropped):
+                environment = self._environment()
+                environment[dropped] = ""
+                code, replayed = self._run(
+                    self._write_event(str(self.worktree / "docs/result.txt")),
+                    environment=environment,
+                )
+                self.assertEqual(code, 2)
+                self.assertEqual(replayed, b"")
+
+    def test_forged_identity_blocks(self) -> None:
+        for field, value in (
+            ("L9_ADAPTER_SESSION_ID", "adapter-session-forged"),
+            ("L9_LEASE_ID", "lease-forged"),
+            ("L9_AGENT_ID", "agent-forged"),
+        ):
+            with self.subTest(forged=field):
+                environment = self._environment()
+                environment[field] = value
+                code, _ = self._run(
+                    self._write_event(str(self.worktree / "docs/result.txt")),
+                    environment=environment,
+                )
+                self.assertEqual(code, 2)
+
+    def test_missing_downstream_gate_blocks_inside_a_worker_window(self) -> None:
+        code, _ = self._run(
+            self._write_event(str(self.worktree / "docs/result.txt")),
+            gate=self.root / "absent_gate.py",
+        )
+        self.assertEqual(code, 2)
+
+    def test_expired_program_parent_blocks(self) -> None:
+        connection = sqlite3.connect(self.workspace / "runtime" / "state.sqlite")
+        try:
+            connection.execute(
+                "UPDATE leases SET expires_at=? WHERE lease_id=?",
+                ("2000-01-01T00:00:00Z", "lease-program-1"),
+            )
+            connection.commit()
+        finally:
+            connection.close()
+        code, replayed = self._run(self._write_event(str(self.worktree / "docs/result.txt")))
+        self.assertEqual(code, 2)
+        self.assertEqual(replayed, b"")
+
+    def test_revoked_program_parent_blocks(self) -> None:
+        connection = sqlite3.connect(self.workspace / "runtime" / "state.sqlite")
+        try:
+            connection.execute("UPDATE leases SET active=0 WHERE lease_id=?", ("lease-program-1",))
+            connection.commit()
+        finally:
+            connection.close()
+        code, _ = self._run(self._write_event(str(self.worktree / "docs/result.txt")))
+        self.assertEqual(code, 2)
+
+    def test_stale_actual_worktree_head_blocks(self) -> None:
+        """The heartbeat is against the worktree's real HEAD, not a claim."""
+        (self.worktree / "drift.txt").write_text("drift\n", encoding="utf-8")
+        _git("add", "drift.txt", cwd=self.worktree)
+        _git("commit", "-m", "drift", cwd=self.worktree)
+        code, replayed = self._run(self._write_event(str(self.worktree / "docs/result.txt")))
+        self.assertEqual(code, 2)
+        self.assertEqual(replayed, b"")
+
+    def test_path_escapes_block(self) -> None:
+        cases = {
+            "absolute_outside": str(self.root / "outside.txt"),
+            "traversal": "../../outside.txt",
+            "system_path": "/etc/passwd",
+        }
+        for label, path in cases.items():
+            with self.subTest(escape=label):
+                code, _ = self._run(self._write_event(path))
+                self.assertEqual(code, 2)
+
+    def test_symlink_escape_blocks(self) -> None:
+        outside = self.root / "outside"
+        outside.mkdir()
+        (self.worktree / "docs").symlink_to(outside, target_is_directory=True)
+        code, _ = self._run(self._write_event("docs/result.txt"))
+        self.assertEqual(code, 2)
+
+    def test_non_canonical_shell_command_blocks(self) -> None:
+        for command in (
+            "ls -1 'a' 'b' >/dev/null",
+            'python3 -c "import os"',
+            "git push origin HEAD",
+            "rm -rf / && echo done",
+        ):
+            with self.subTest(command=command):
+                code, _ = self._run({"tool_name": "Bash", "tool_input": {"command": command}})
+                self.assertEqual(code, 2)
+
+    def test_a_local_write_window_never_authorizes_a_commit(self) -> None:
+        """DG-001 at the effect edge: no commit capability, no commit effect."""
+        code, _ = self._run({"tool_name": "git_commit", "tool_input": {"path": "docs/result.txt"}})
+        self.assertEqual(code, 2)
 
 
 if __name__ == "__main__":

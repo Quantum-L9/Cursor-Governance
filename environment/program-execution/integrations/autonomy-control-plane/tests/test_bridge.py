@@ -531,5 +531,207 @@ class ProgramBoundRootAuthorityTests(unittest.TestCase):
             )
 
 
+class SubordinateLifecycleTests(unittest.TestCase):
+    """PR-002: the subordinate lease terminalizes; it never owns the verdict."""
+
+    def _granted(self, workspace: Path, contract: dict[str, object] | None = None):
+        contract = contract or _mutating_contract()
+        _bind_program_parent(workspace, contract)
+        module = _grant()
+        grant = module.grant_task_mutation(_GOV_ROOT, workspace, contract, attempt_number=1)
+        return module, grant
+
+    def _lease_row(self, grant: dict[str, object]):
+        connection = sqlite3.connect(str(grant["runtime_database"]))
+        try:
+            connection.row_factory = sqlite3.Row
+            return connection.execute(
+                "SELECT * FROM leases WHERE lease_id = ?", (grant["lease_id"],)
+            ).fetchone()
+        finally:
+            connection.close()
+
+    def test_success_submits_a_result_that_releases_lease_and_claims(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            module, grant = self._granted(workspace)
+            result = module.submit_task_result(
+                grant,
+                changed_files=["docs/result.txt"],
+                candidate_sha=None,
+                contract_digest="digest-1",
+            )
+            self.assertTrue(result["submitted"])
+            self.assertEqual(result["lease_status"], "RELEASED")
+            connection = sqlite3.connect(str(grant["runtime_database"]))
+            try:
+                connection.row_factory = sqlite3.Row
+                claims = connection.execute(
+                    "SELECT status FROM claims WHERE lease_id = ?", (grant["lease_id"],)
+                ).fetchall()
+                artifact = connection.execute(
+                    "SELECT kind, status FROM artifacts WHERE artifact_id = ?",
+                    (result["artifact_id"],),
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(artifact["kind"], "ExecutionResult")
+            self.assertEqual(artifact["status"], "VALID")
+            self.assertTrue(claims, "the executor lease held no claims to release")
+            for claim in claims:
+                self.assertNotEqual(claim["status"], "HELD")
+
+    def test_root_support_never_completes_program_truth(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            module, grant = self._granted(workspace)
+            state_before = (workspace / "runtime" / "state.sqlite").read_bytes()
+            module.submit_task_result(
+                grant,
+                changed_files=["docs/result.txt"],
+                candidate_sha=None,
+                contract_digest="digest-1",
+            )
+            self.assertIs(grant["owns_program_state"], False)
+            self.assertEqual(
+                (workspace / "runtime" / "state.sqlite").read_bytes(),
+                state_before,
+                msg="root autonomy wrote to canonical Program state",
+            )
+
+    def test_controller_rejection_invalidates_root_support(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            module, grant = self._granted(workspace)
+            submitted = module.submit_task_result(
+                grant,
+                changed_files=["docs/result.txt"],
+                candidate_sha=None,
+                contract_digest="digest-1",
+            )
+            outcome = module.invalidate_task_support(
+                grant,
+                artifact_id=submitted["artifact_id"],
+                reason="controller verdict 'FAILED_LOCAL'",
+            )
+            self.assertTrue(outcome["invalidated"])
+            connection = sqlite3.connect(str(grant["runtime_database"]))
+            try:
+                connection.row_factory = sqlite3.Row
+                artifact = connection.execute(
+                    "SELECT status, invalidation_reason FROM artifacts WHERE artifact_id = ?",
+                    (submitted["artifact_id"],),
+                ).fetchone()
+            finally:
+                connection.close()
+            self.assertEqual(artifact["status"], "INVALID")
+            self.assertIn("FAILED_LOCAL", artifact["invalidation_reason"])
+
+    def test_failure_revokes_the_subordinate_lease(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            module, grant = self._granted(workspace)
+            module.revoke_task_grant(grant, reason="provider window failed")
+            self.assertEqual(self._lease_row(grant)["status"], "REVOKED")
+
+    def test_decision_coverage_names_every_unmediated_path(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            module, grant = self._granted(workspace)
+            # The grant authorized the declared writable path; nothing else.
+            self.assertEqual(module.authorized_resources(grant), {"docs/result.txt"})
+            self.assertEqual(
+                module.unmediated_changed_paths(grant, ["docs/result.txt"]),
+                [],
+            )
+            self.assertEqual(
+                module.unmediated_changed_paths(
+                    grant, ["docs/result.txt", "ops/secrets/leak.env", "AGENTS.md"]
+                ),
+                ["AGENTS.md", "ops/secrets/leak.env"],
+            )
+
+    def test_lease_decisions_are_scoped_to_this_lease(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            module, grant_a = self._granted(workspace)
+            other = _mutating_contract()
+            other["task_id"] = "TASK-2"
+            other["lease_id"] = "lease-program-2"
+            other["writable_paths"] = ["docs/other.md"]
+            other["contract_digest"] = "digest-2"
+            _bind_program_parent(workspace, other)
+            grant_b = module.grant_task_mutation(_GOV_ROOT, workspace, other, attempt_number=1)
+            self.assertEqual(module.authorized_resources(grant_b), {"docs/other.md"})
+            self.assertNotIn("docs/other.md", module.authorized_resources(grant_a))
+
+    def test_local_write_without_commit_stays_without_commit_through_lifecycle(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            contract = _write_only_contract()
+            contract["lease_id"] = "lease-program-2"
+            module, grant = self._granted(workspace, contract)
+            self.assertNotIn("git.commit_local", grant["authorized"])
+            module.submit_task_result(
+                grant,
+                changed_files=["docs/result.txt"],
+                candidate_sha=None,
+                contract_digest="digest-write-only",
+            )
+            decisions = module.lease_decisions(grant, allowed_only=False)
+            self.assertTrue(decisions)
+            self.assertNotIn("git.commit_local", {row["capability"] for row in decisions})
+
+
+class EffectAuthorizationTests(unittest.TestCase):
+    """PR-002: the resource and shell rules the live authorizer enforces."""
+
+    def test_resource_normalization_refuses_every_escape(self) -> None:
+        module = _program_authority()
+        with tempfile.TemporaryDirectory() as raw:
+            worktree = Path(raw) / "worktree"
+            (worktree / "docs").mkdir(parents=True)
+            (worktree / "docs" / "result.txt").write_text("x", encoding="utf-8")
+            self.assertEqual(
+                module.normalize_effect_resource(worktree, str(worktree / "docs/result.txt")),
+                "docs/result.txt",
+            )
+            self.assertEqual(
+                module.normalize_effect_resource(worktree, "docs/result.txt"),
+                "docs/result.txt",
+            )
+            for resource in ("/etc/passwd", "../escape.txt", str(Path(raw) / "outside.txt"), ""):
+                with self.subTest(resource=resource):
+                    with self.assertRaises(module.ProgramAuthorityError):
+                        module.normalize_effect_resource(worktree, resource)
+            linked = Path(raw) / "elsewhere"
+            linked.mkdir()
+            (worktree / "linked").symlink_to(linked, target_is_directory=True)
+            with self.assertRaises(module.ProgramAuthorityError):
+                module.normalize_effect_resource(worktree, "linked/result.txt")
+
+    def test_only_canonical_validation_commands_reach_test_run(self) -> None:
+        module = _program_authority()
+        self.assertEqual(module.canonical_shell_capability("pytest -q"), "test.run")
+        for command in ("ls -1 'a' >/dev/null", "git push origin HEAD", "sh -c 'rm -rf /'"):
+            with self.subTest(command=command):
+                with self.assertRaises(module.ProgramAuthorityError):
+                    module.canonical_shell_capability(command)
+
+    def test_a_shell_tool_cannot_infer_test_run_without_validation(self) -> None:
+        from autonomy.adapters import tool_hook
+        from autonomy.errors import PolicyViolation
+
+        with self.assertRaises(PolicyViolation):
+            tool_hook.pre_tool_use(
+                tool_name="Bash",
+                arguments={"command": "rm -rf /"},
+                session_id="adapter-session-x",
+                lease_id="lease-x",
+                agent_id="agent-x",
+                orchestrator=object(),
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -22,6 +22,8 @@ authority evidence instead of claiming a parent it never read.
 from __future__ import annotations
 
 import sqlite3
+import subprocess
+import sys
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -249,6 +251,45 @@ class ProgramAuthorityVerifier:
             )
         return max(1, min(int(default_ttl_seconds), bounded))
 
+    def parent_from_authority(self, authority: Mapping[str, Any]) -> ProgramParent:
+        """The live parent for an authority sidecar, checked against its record.
+
+        The sidecar records the parent the grant was issued beneath. This
+        re-reads canonical state and refuses any drift from that record, so an
+        effect can never run under an authority whose parent has been replaced,
+        re-leased, re-based, or re-rendered since the grant.
+        """
+        recorded = dict(authority.get("program_parent") or {})
+        binding = {
+            "task_id": authority.get("task_id") or recorded.get("task_id"),
+            "lease_id": recorded.get("lease_id"),
+            "base_sha": recorded.get("base_sha"),
+            "branch": recorded.get("branch"),
+            "contract_digest": recorded.get("contract_digest"),
+            "worktree": recorded.get("worktree"),
+        }
+        recorded_workspace = _text(recorded.get("workspace"))
+        if recorded_workspace and recorded_workspace != str(self.workspace):
+            raise ProgramAuthorityError(
+                "PROGRAM_PARENT_WORKSPACE_DRIFT: authority workspace "
+                f"{recorded_workspace!r} != {str(self.workspace)!r}"
+            )
+        parent = self.require_live_parent(binding)
+        if bool(recorded.get("bound")) and not parent.bound:
+            raise ProgramAuthorityError(
+                "PROGRAM_PARENT_UNBOUND: canonical Program state disappeared for task "
+                f"{parent.task_id!r}"
+            )
+        for field_name in ("branch", "worktree"):
+            declared = _text(recorded.get(field_name))
+            actual = _text(getattr(parent, field_name))
+            if declared and actual and declared != actual:
+                raise ProgramAuthorityError(
+                    f"PROGRAM_PARENT_{field_name.upper()}_DRIFT: authority "
+                    f"{declared!r} != parent {actual!r}"
+                )
+        return parent
+
     def _connect(self) -> sqlite3.Connection:
         """A connection that cannot write, whichever SQLite build is present."""
         path = self.state_path
@@ -261,3 +302,347 @@ class ProgramAuthorityVerifier:
             connection.execute("PRAGMA query_only = ON")
         connection.row_factory = sqlite3.Row
         return connection
+
+
+# ---------------------------------------------------------------------------
+# Effect authorization
+#
+# Everything above answers "is the Program parent live?". Everything below is
+# the single PE-to-root authorizer for one *effect*: the worker is about to run
+# a tool, and nothing may reach the filesystem until the root gateway has
+# allowed that exact capability on that exact resource under this task's
+# subordinate lease.
+# ---------------------------------------------------------------------------
+
+#: Tools whose argument is a shell command rather than a path.
+SHELL_TOOLS = frozenset({"Bash", "Shell", "run_terminal_cmd"})
+
+#: Capabilities the gateway resolves against a repository-relative path.
+PATH_CAPABILITY_PREFIXES = ("repository.", "file.", "git.diff")
+
+
+@dataclass(frozen=True)
+class EffectDecision:
+    """One root authorization verdict for one worker tool call."""
+
+    allowed: bool
+    code: str
+    message: str
+    tool_name: str
+    capability: str | None = None
+    resource: str | None = None
+    lease_id: str | None = None
+    parent: ProgramParent | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "allowed": self.allowed,
+            "code": self.code,
+            "message": self.message,
+            "tool_name": self.tool_name,
+            "capability": self.capability,
+            "resource": self.resource,
+            "lease_id": self.lease_id,
+            "program_parent": self.parent.to_dict() if self.parent is not None else None,
+        }
+
+
+def _ensure_import_paths() -> None:
+    """Make root autonomy and Peer Execution importable from any host process.
+
+    The hook that calls this authorizer runs from the governance clone, not
+    from a Python package rooted here.
+    """
+    here = Path(__file__).resolve().parent
+    for candidate in (here, here.parents[1], here.parents[3]):
+        if str(candidate) not in sys.path:
+            sys.path.insert(0, str(candidate))
+
+
+def normalize_effect_resource(worktree: str | Path | None, resource: str | None) -> str:
+    """One repository-relative resource for the gateway, or fail closed.
+
+    The gateway authorizes repository-relative paths against campaign and action
+    scope. A worker hands over whatever its host tool reported — usually an
+    absolute path inside the task worktree. Anything that leaves the worktree,
+    by absolute path, by traversal, or through a symlink, is not this task's
+    resource and is refused here rather than normalized into something the
+    gateway would accept.
+    """
+    raw = (resource or "").strip()
+    if not raw:
+        raise ProgramAuthorityError("RESOURCE_REQUIRED: this effect has no resource to authorize")
+    if "\x00" in raw:
+        raise ProgramAuthorityError("RESOURCE_INVALID: resource contains a NUL byte")
+    if worktree is None or not str(worktree).strip():
+        raise ProgramAuthorityError("WORKTREE_UNBOUND: no worktree to normalize this resource in")
+    root = Path(str(worktree)).expanduser()
+    candidate = Path(raw).expanduser()
+    if candidate.is_absolute():
+        try:
+            relative = candidate.resolve(strict=False).relative_to(root.resolve(strict=False))
+        except ValueError as exc:
+            raise ProgramAuthorityError(
+                f"RESOURCE_OUTSIDE_WORKTREE: absolute path {raw!r} is outside {str(root)!r}"
+            ) from exc
+    else:
+        if ".." in candidate.parts:
+            raise ProgramAuthorityError(
+                f"RESOURCE_TRAVERSAL: {raw!r} traverses out of the worktree"
+            )
+        try:
+            relative = (
+                (root / candidate).resolve(strict=False).relative_to(root.resolve(strict=False))
+            )
+        except ValueError as exc:
+            raise ProgramAuthorityError(
+                f"RESOURCE_OUTSIDE_WORKTREE: {raw!r} resolves outside {str(root)!r}"
+            ) from exc
+    normalized = relative.as_posix()
+    if not normalized or normalized == ".":
+        raise ProgramAuthorityError("RESOURCE_INVALID: resource must name a path in the worktree")
+    # A symlinked parent or target is an escape the resolved path already hid:
+    # `resolve()` followed the link, so the check has to be on the links
+    # themselves, walked from the worktree root.
+    cursor = root
+    for part in relative.parts[:-1]:
+        cursor = cursor / part
+        if cursor.is_symlink():
+            raise ProgramAuthorityError(f"RESOURCE_SYMLINK_PARENT: {str(cursor)!r} is a symlink")
+    target = root / relative
+    if target.is_symlink():
+        raise ProgramAuthorityError(f"RESOURCE_SYMLINK: {str(target)!r} is a symlink")
+    return normalized
+
+
+def canonical_shell_capability(command: str) -> str:
+    """`test.run`, but only for a command the canonical PE grammar admits.
+
+    Root autonomy maps a shell tool to `test.run`. Without this check any shell
+    string at all would inherit the capability a validation command was granted,
+    so the existing peer_execution grammar — one operation, no substitution, no
+    inline interpreter, read-only git — is what decides.
+    """
+    _ensure_import_paths()
+    from peer_execution.validation_command import (  # noqa: PLC0415
+        ValidationCommandError,
+        validate_validation_command,
+    )
+
+    try:
+        validate_validation_command(command)
+    except ValidationCommandError as exc:
+        raise ProgramAuthorityError(f"SHELL_COMMAND_NOT_CANONICAL: {exc}") from exc
+    return "test.run"
+
+
+class ProgramBoundEffectAuthorizer:
+    """Authorize one worker effect under a live Program parent, or refuse.
+
+    Order matters and is fail-closed at every step:
+
+    1. re-read the canonical Program parent (no cache, no transition);
+    2. resolve the capability, admitting `test.run` only for a shell command
+       the canonical validation grammar accepts;
+    3. normalize the resource inside the bound worktree, refusing escapes;
+    4. heartbeat the subordinate lease against the worktree's *actual* HEAD, so
+       a drifted base revokes the lease instead of authorizing over it;
+    5. ask the root gateway, through the live orchestrator, for this exact
+       capability on this exact resource.
+    """
+
+    def __init__(
+        self,
+        authority: Mapping[str, Any],
+        *,
+        orchestrator: Any = None,
+        head_reader: Any = None,
+    ) -> None:
+        self.authority = dict(authority)
+        for field_name in ("task_id", "adapter_session_id", "lease_id", "agent_id"):
+            if not _text(self.authority.get(field_name)):
+                raise ProgramAuthorityError(
+                    f"AUTONOMY_AUTHORITY_INCOMPLETE: missing {field_name!r}"
+                )
+        self._orchestrator = orchestrator
+        self._head_reader = head_reader or _worktree_head
+        workspace = _text(self.authority.get("workspace")) or _text(
+            (self.authority.get("program_parent") or {}).get("workspace")
+        )
+        if not workspace:
+            raise ProgramAuthorityError("AUTONOMY_AUTHORITY_INCOMPLETE: missing 'workspace'")
+        self.verifier = ProgramAuthorityVerifier(workspace)
+
+    @property
+    def orchestrator(self) -> Any:
+        if self._orchestrator is None:
+            self._orchestrator = self._default_orchestrator()
+        return self._orchestrator
+
+    def authorize(
+        self,
+        *,
+        tool_name: str,
+        arguments: Mapping[str, Any] | None = None,
+    ) -> EffectDecision:
+        arguments = dict(arguments or {})
+        try:
+            parent = self.verifier.parent_from_authority(self.authority)
+        except ProgramAuthorityError as exc:
+            return self._denied(tool_name, exc)
+        try:
+            capability = self._capability_for(tool_name, arguments)
+            resource = self._resource_for(capability, parent, tool_name, arguments)
+            self._heartbeat(parent)
+        except ProgramAuthorityError as exc:
+            return self._denied(tool_name, exc, parent=parent)
+        _ensure_import_paths()
+        from autonomy.adapters import tool_hook  # noqa: PLC0415
+        from autonomy.errors import PolicyViolation  # noqa: PLC0415
+
+        try:
+            decision = tool_hook.pre_tool_use(
+                tool_name=tool_name,
+                arguments=arguments,
+                orchestrator=self.orchestrator,
+                session_id=str(self.authority["adapter_session_id"]),
+                lease_id=str(self.authority["lease_id"]),
+                agent_id=str(self.authority["agent_id"]),
+                capability=capability,
+                resource=resource,
+                require_allowed=False,
+            )
+        except (PolicyViolation, KeyError, ValueError, OSError, RuntimeError) as exc:
+            return self._denied(
+                tool_name,
+                ProgramAuthorityError(f"ROOT_AUTHORIZATION_UNAVAILABLE: {exc}"),
+                parent=parent,
+                capability=capability,
+                resource=resource,
+            )
+        return EffectDecision(
+            allowed=bool(decision.get("allowed")),
+            code=str(decision.get("code") or "UNKNOWN"),
+            message=str(decision.get("message") or ""),
+            tool_name=tool_name,
+            capability=capability,
+            resource=resource,
+            lease_id=str(self.authority["lease_id"]),
+            parent=parent,
+        )
+
+    def _capability_for(self, tool_name: str, arguments: Mapping[str, Any]) -> str:
+        _ensure_import_paths()
+        from autonomy.adapters import tool_hook  # noqa: PLC0415
+
+        if tool_name in SHELL_TOOLS:
+            command = arguments.get("command") or arguments.get("cmd") or ""
+            if not isinstance(command, str) or not command.strip():
+                raise ProgramAuthorityError("SHELL_COMMAND_MISSING: no command to validate")
+            return canonical_shell_capability(command)
+        capability = tool_hook.infer_capability(tool_name, arguments)
+        if capability == "test.run":
+            # Only the validated shell path above may reach test.run.
+            raise ProgramAuthorityError(
+                f"SHELL_CAPABILITY_NOT_VALIDATED: {tool_name!r} may not claim test.run"
+            )
+        return capability
+
+    def _resource_for(
+        self,
+        capability: str,
+        parent: ProgramParent,
+        tool_name: str,
+        arguments: Mapping[str, Any],
+    ) -> str | None:
+        _ensure_import_paths()
+        from autonomy.adapters import tool_hook  # noqa: PLC0415
+
+        if not capability.startswith(PATH_CAPABILITY_PREFIXES):
+            return None
+        worktree = self._worktree(parent)
+        return normalize_effect_resource(worktree, tool_hook.infer_resource(tool_name, arguments))
+
+    def _worktree(self, parent: ProgramParent) -> str | None:
+        recorded = (self.authority.get("program_parent") or {}).get("worktree")
+        return _text(parent.worktree) or _text(recorded)
+
+    def _heartbeat(self, parent: ProgramParent) -> None:
+        """Prove the worktree still stands on the authorized base."""
+        worktree = self._worktree(parent)
+        if not worktree:
+            return
+        observed = self._head_reader(worktree)
+        if observed is None:
+            raise ProgramAuthorityError(
+                f"WORKTREE_HEAD_UNREADABLE: cannot read the actual HEAD of {worktree!r}"
+            )
+        _ensure_import_paths()
+        from autonomy.errors import PolicyViolation  # noqa: PLC0415
+
+        try:
+            self.orchestrator.heartbeat(
+                session_id=str(self.authority["adapter_session_id"]),
+                lease_id=str(self.authority["lease_id"]),
+                agent_id=str(self.authority["agent_id"]),
+                base_sha=observed,
+                status="RUNNING",
+                progress={"task_id": self.authority.get("task_id")},
+            )
+        except (PolicyViolation, KeyError, ValueError) as exc:
+            raise ProgramAuthorityError(f"ROOT_HEARTBEAT_REFUSED: {exc}") from exc
+
+    def _denied(
+        self,
+        tool_name: str,
+        exc: ProgramAuthorityError,
+        *,
+        parent: ProgramParent | None = None,
+        capability: str | None = None,
+        resource: str | None = None,
+    ) -> EffectDecision:
+        message = str(exc)
+        code = message.split(":", 1)[0] if ":" in message else "PROGRAM_AUTHORITY_DENIED"
+        return EffectDecision(
+            allowed=False,
+            code=code,
+            message=message,
+            tool_name=tool_name,
+            capability=capability,
+            resource=resource,
+            lease_id=_text(self.authority.get("lease_id")),
+            parent=parent,
+        )
+
+    def _default_orchestrator(self) -> Any:
+        _ensure_import_paths()
+        from autonomy.adapters.orchestrator import AdapterOrchestrator  # noqa: PLC0415
+        from autonomy.runtime.engine import AutonomyRuntime  # noqa: PLC0415
+
+        root = _text(self.authority.get("repository_root")) or "."
+        database = _text(self.authority.get("runtime_database"))
+        if not database:
+            raise ProgramAuthorityError("AUTONOMY_AUTHORITY_INCOMPLETE: missing 'runtime_database'")
+        runtime = AutonomyRuntime.from_repository(
+            repository_root=root,
+            database_path=database,
+        )
+        return AdapterOrchestrator(runtime, repository_root=root)
+
+
+def _worktree_head(worktree: str | Path) -> str | None:
+    """The worktree's actual current HEAD, or None when it cannot be read."""
+    try:
+        completed = subprocess.run(  # noqa: S603 - fixed argv, no shell
+            ["git", "-C", str(worktree), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            timeout=15,
+            check=False,
+        )
+    except (OSError, subprocess.SubprocessError):
+        return None
+    if completed.returncode != 0:
+        return None
+    head = completed.stdout.strip()
+    return head or None

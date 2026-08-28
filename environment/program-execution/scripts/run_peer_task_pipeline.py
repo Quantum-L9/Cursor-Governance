@@ -216,6 +216,33 @@ def _execute_provider(
         "dispatch": dispatched.to_dict(),
         **outcome.to_dict(),
         "terminal_result": dict(result),
+        "root_authority": _root_authority_evidence(autonomy_authority, result),
+    }
+
+
+def _root_authority_evidence(
+    autonomy_authority: dict[str, Any] | None,
+    result: Any,
+) -> dict[str, Any] | None:
+    """Correlation only: which lease/session this dispatch ran under.
+
+    Campaign reconciliation reads the decisions from the root runtime itself.
+    This carries the identifiers needed to find them, and deliberately no
+    verdict of its own — a second verifier is exactly what must not exist here.
+    """
+    if autonomy_authority is None:
+        return None
+    changed = result.get("changed_files") if isinstance(result, dict) else None
+    return {
+        "task_id": autonomy_authority.get("task_id"),
+        "lease_id": autonomy_authority.get("lease_id"),
+        "adapter_session_id": autonomy_authority.get("adapter_session_id"),
+        "agent_id": autonomy_authority.get("agent_id"),
+        "authority_digest": autonomy_authority.get("authority_digest"),
+        "runtime_database": autonomy_authority.get("runtime_database"),
+        "provider_reported_changed_files": sorted(
+            {str(item) for item in changed} if isinstance(changed, list) else set()
+        ),
     }
 
 

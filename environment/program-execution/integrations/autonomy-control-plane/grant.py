@@ -30,7 +30,7 @@ import json
 import re
 import sys
 import uuid
-from collections.abc import Mapping
+from collections.abc import Iterable, Mapping
 from pathlib import Path
 from typing import Any
 
@@ -648,3 +648,188 @@ def _issue_or_reuse(
         "expires_at": lease.expires_at,
         "adapter_session_id": dict(metadata or {}).get("adapter_session_id"),
     }
+
+
+# ---------------------------------------------------------------------------
+# Subordinate lifecycle
+#
+# A grant that is only ever issued is half a lifecycle. These helpers close it:
+# what the root gateway actually authorized (decision coverage), the terminal
+# ExecutionResult that releases the lease and its claims on success, and the
+# invalidation path for when the Controller — the only Program-state authority —
+# later rejects the attempt the root evidence supported.
+# ---------------------------------------------------------------------------
+
+
+def _runtime_for(grant: Mapping[str, Any]) -> AutonomyRuntime:
+    database = Path(str(grant.get("runtime_database") or ""))
+    if not database.is_file():
+        raise AutonomyGrantError("grant carries no live runtime binding")
+    root = str(grant.get("repository_root") or _GOV_ROOT)
+    return AutonomyRuntime.from_repository(repository_root=root, database_path=database)
+
+
+def lease_decisions(
+    grant: Mapping[str, Any],
+    *,
+    capability: str | None = None,
+    allowed_only: bool = True,
+) -> list[dict[str, Any]]:
+    """Every gateway decision recorded under this grant's subordinate lease."""
+    lease_id = str(grant.get("lease_id") or "")
+    if not lease_id:
+        return []
+    runtime = _runtime_for(grant)
+    query = "SELECT capability, resource, allowed, code, created_at FROM tool_decisions "
+    query += "WHERE lease_id = ?"
+    parameters: list[Any] = [lease_id]
+    if capability is not None:
+        query += " AND capability = ?"
+        parameters.append(capability)
+    if allowed_only:
+        query += " AND allowed = 1"
+    with runtime.store.connect() as connection:
+        rows = list(connection.execute(query, tuple(parameters)))
+    return [dict(row) for row in rows]
+
+
+def authorized_resources(
+    grant: Mapping[str, Any],
+    *,
+    capability: str = "repository.write_scoped",
+) -> set[str]:
+    """Resources this lease was actually allowed to write, as decided."""
+    return {
+        str(row["resource"])
+        for row in lease_decisions(grant, capability=capability)
+        if row.get("resource")
+    }
+
+
+def unmediated_changed_paths(
+    grant: Mapping[str, Any],
+    changed_paths: Iterable[str],
+    *,
+    capability: str = "repository.write_scoped",
+) -> list[str]:
+    """Changed paths with no pre-effect root authorization under this lease.
+
+    This is the coverage question the whole bridge exists to answer: an effect
+    that reached the filesystem without a `tool_authorized` decision was not
+    mediated, whatever the provider reports about it.
+    """
+    authorized = authorized_resources(grant, capability=capability)
+    missing: list[str] = []
+    for path in changed_paths:
+        normalized = str(path).replace("\\", "/").strip()
+        if not normalized:
+            continue
+        if normalized not in authorized:
+            missing.append(normalized)
+    return sorted(set(missing))
+
+
+def _dependency_artifacts(runtime: AutonomyRuntime, grant: Mapping[str, Any]) -> list[str]:
+    campaign_id = str(grant.get("campaign_id") or "")
+    action_id = str(grant.get("action_id") or "")
+    row = runtime.store.get_action(campaign_id, action_id)
+    action = json.loads(row["action_json"])
+    inputs: list[str] = []
+    for dependency_id in action.get("depends_on", []):
+        dependency = runtime.store.get_action(campaign_id, dependency_id)
+        artifact_id = dependency["result_artifact_id"]
+        if artifact_id:
+            inputs.append(str(artifact_id))
+    return sorted(inputs)
+
+
+def submit_task_result(
+    grant: Mapping[str, Any],
+    *,
+    changed_files: Iterable[str],
+    candidate_sha: str | None,
+    contract_digest: str,
+    evidence: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Terminalize the subordinate lease with a typed root ExecutionResult.
+
+    Root autonomy does not decide whether the Program task succeeded — the
+    Controller verifies that independently. This records what the subordinate
+    executor actually produced so its lease and resource claims are released
+    instead of staying live after the work is done.
+    """
+    runtime = _runtime_for(grant)
+    lease_id = str(grant["lease_id"])
+    agent_id = str(grant["agent_id"])
+    lease = runtime.leases.get(lease_id)
+    if lease.status.value != "ACTIVE":
+        return {
+            "submitted": False,
+            "reason": f"subordinate lease is already {lease.status.value}",
+            "lease_id": lease_id,
+        }
+    artifact_id = f"artifact-{uuid.uuid4().hex}"
+    runtime.artifacts.submit(
+        lease_id=lease_id,
+        agent_id=agent_id,
+        artifact={
+            "artifact_id": artifact_id,
+            "kind": "ExecutionResult",
+            "campaign_id": str(grant["campaign_id"]),
+            "graph_id": str(grant["graph_id"]),
+            "action_id": str(grant["action_id"]),
+            "lease_id": lease_id,
+            "producer_agent_id": agent_id,
+            "base_sha": str(grant["base_sha"]),
+            "input_artifacts": _dependency_artifacts(runtime, grant),
+            "payload": {
+                "candidate_sha": candidate_sha,
+                "changed_files": sorted({str(item) for item in changed_files}),
+                "contract_digest": contract_digest,
+                "owns_program_state": False,
+                "evidence": dict(evidence or {}),
+            },
+        },
+    )
+    terminal = runtime.leases.get(lease_id)
+    return {
+        "submitted": True,
+        "artifact_id": artifact_id,
+        "lease_id": lease_id,
+        "lease_status": terminal.status.value,
+    }
+
+
+def invalidate_task_support(
+    grant: Mapping[str, Any],
+    *,
+    artifact_id: str,
+    reason: str,
+    actor: str = "program-controller",
+) -> dict[str, Any]:
+    """Withdraw root support after the Controller rejected the attempt.
+
+    The Controller owns the verdict. What root autonomy owns is its own
+    evidence, and evidence for an attempt that did not verify must not stand.
+    """
+    runtime = _runtime_for(grant)
+    try:
+        runtime.artifacts.invalidate(artifact_id=artifact_id, reason=reason, actor=actor)
+    except KeyError:
+        return {"invalidated": False, "reason": "unknown artifact", "artifact_id": artifact_id}
+    return {"invalidated": True, "artifact_id": artifact_id, "reason": reason}
+
+
+def release_task_grant(
+    grant: Mapping[str, Any],
+    *,
+    reason: str = "ACTION_COMPLETED",
+    actor: str = "program-controller",
+) -> dict[str, Any]:
+    """Release a still-active subordinate lease and its resource claims."""
+    lease_id = str(grant.get("lease_id") or "")
+    if not lease_id:
+        return {"released": False, "reason": "grant carries no lease"}
+    runtime = _runtime_for(grant)
+    runtime.leases.release(lease_id=lease_id, actor=actor, reason=reason)
+    return {"released": True, "lease_id": lease_id, "reason": reason}
