@@ -289,12 +289,9 @@ def _pytest_argv(segment: str) -> list[str] | None:
     return None
 
 
-def _pytest_targets(segment: str) -> list[str]:
-    """Positional arguments after a pytest invocation, options removed."""
+def _positional_targets(argv: list[str]) -> list[str]:
+    """The paths in ARGV, with options and the values they consume removed."""
 
-    argv = _pytest_argv(segment)
-    if argv is None:
-        return []
     targets: list[str] = []
     skip_next = False
     for token in argv:
@@ -326,9 +323,10 @@ def command_runs_unscoped_pytest(command: str) -> str | None:
         hit = MAKE_FULL_CATALOG_GOALS.intersection(goals)
         if hit:
             return f"make {sorted(hit)[0]}"
-        if _pytest_argv(text) is None:
+        argv = _pytest_argv(text)
+        if argv is None:
             continue
-        targets = _pytest_targets(text)
+        targets = _positional_targets(argv)
         if not targets:
             return "pytest with no target"
         if any(target in {".", "./"} for target in targets):
