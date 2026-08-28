@@ -51,11 +51,15 @@ CURSOR_GOVERNANCE_DIR="<absolute-named-clone>" \
    `~/.cursor-governance.bak.*`.
 6. **Shelf leftover `WIP/` and `docs/plans/`** — if any untracked files remain
    under those trees (skip gitignored secret globs, `WIP/Legal Defense/`,
-   credential filenames), cut a sibling worktree from the new `origin/main`
-   tip (`feat/ff-shelf-<stamp>`), pathspec-add **only** those files, scoped
-   commit, then `PR_REMEDIATE=0 make pr`. Do **not** put `make pr` inside
-   `ff.sh`. Do not scoop other untracked paths. Do not delete the copies in
-   the named clone.
+   credential filenames, and anything an open `feat/ff-shelf-*` PR already
+   carries), cut a sibling worktree from the new `origin/main` tip
+   (`feat/ff-shelf-<stamp>`), **copy those files into it** — untracked bytes
+   do not exist in a fresh checkout — pathspec-add **only** those files,
+   scoped commit, run `l4_local.py begin / record-kernels / authorize-release`
+   in that worktree, then **ask the user** before `PR_REMEDIATE=0 make pr`.
+   Catching a clone up is not authorization to publish. Do **not** put
+   `make pr` inside `ff.sh`. Do not scoop other untracked paths. Do not delete
+   the copies in the named clone.
 7. Auto-chain `/ynp`.
 
 ## FORBIDDEN

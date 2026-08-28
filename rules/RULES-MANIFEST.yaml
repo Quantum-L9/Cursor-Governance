@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-28T18:44:33Z'
+generated_utc: '2026-08-28T19:24:25Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:b1b06f3db9c258a8360c76bb8d9cc52e16dc7938b6769358f7399ee6c16d2c0a
+source_tree_digest: sha256:5d280b8f07397f0861fc5fe8d2234f6a30c3c793fc36e66d2d1bbabb37d4a5ad
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -730,8 +730,8 @@ rules:
   globs: null
   first_heading: Fast-forward only (no SSOT clobber)
   has_yaml_frontmatter: true
-  line_count: 56
-  content_digest: sha256:e97125eb487f07199abfe2f111c0d31a358de479f9c00225b63a469662092c8d
+  line_count: 57
+  content_digest: sha256:4ef14331a2f442d81fe4f3b2457e7378fdd1947944ec01e8cea72ad05800c747
   authority: canonical_global
   context_cost: minimal
   deprecated: false

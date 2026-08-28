@@ -31,8 +31,9 @@ not delete files to unblock. Keep-list: `.env.local`, `env.local`,
 - Set `CURSOR_GOVERNANCE_DIR` to that clone
 - Run `skills/l9-repo-sync/scripts/ff.sh`
 - Verify `.venv`, env.local keep-list files, and unique untracked paths still exist (or are held) after the run
-- After catch-up, open a sibling PR for leftover untracked `WIP/` and
-  `docs/plans/` (`PR_REMEDIATE=0 make pr`). `ff.sh` stays push-off.
+- After catch-up, shelf leftover untracked `WIP/` and `docs/plans/` onto a
+  sibling branch — copy the bytes in, authorize release there, then ask before
+  `PR_REMEDIATE=0 make pr`. `ff.sh` stays push-off.
 
 ## MUST NOT
 
