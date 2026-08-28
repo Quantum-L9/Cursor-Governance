@@ -183,7 +183,8 @@ phase_3_git_state:
       ⚠️ Uncommitted changes: {count} files
       Branch: {branch}
       Last commit: {commit}
-      → Ask: "Commit before closing? [Y/N]"
+      → Scoped-commit the paths you authored (rule 99: always on, no ask).
+        Report dirty paths you did not author; never push unasked.
     ELSE:
       ✅ Working tree clean
 
