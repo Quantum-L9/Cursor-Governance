@@ -33,19 +33,19 @@ GATE_TIMING_SKIPPED=""
 _GATE_T0=""
 
 _now_ms() {
-  python3 -c 'import time; print(int(time.time() * 1000))' 2>/dev/null || echo 0
+  python3 -c 'import time; print(int(time.time() * 1000))'
 }
 
 _write_gate_timing() {
   mkdir -p "$WS/.l9/pr" || return 0
-  local total=0
+  local total=0 rc=0
   if [[ -n "${_GATE_T0:-}" ]]; then
     total=$(($(_now_ms) - _GATE_T0))
   fi
   GATE_TIMING_TOTAL_MS="$total"
   export GATE_TIMING_DIGEST_MS GATE_TIMING_WRITERS_MS GATE_TIMING_FETCH_MS
   export GATE_TIMING_TOTAL_MS GATE_TIMING_WAVE GATE_TIMING_SKIPPED
-  python3 - "$_GATE_TIMING" <<'PY' || true
+  python3 - "$_GATE_TIMING" <<'PY' || rc=$?
 import json
 import os
 import sys
@@ -82,8 +82,11 @@ print(f"gate timing written: {path}")
 PY
   {
     echo "gate timing: digest_ms=${GATE_TIMING_DIGEST_MS} writers_ms=${GATE_TIMING_WRITERS_MS} fetch_ms=${GATE_TIMING_FETCH_MS} wave=${GATE_TIMING_WAVE} total_ms=${GATE_TIMING_TOTAL_MS}"
-    cat "$_GATE_TIMING" 2>/dev/null || true
-  } >>"$_GATE_LOG" 2>/dev/null || true
+    if [[ -f "$_GATE_TIMING" ]]; then
+      cat "$_GATE_TIMING"
+    fi
+  } >>"$_GATE_LOG" || rc=$?
+  return 0
 }
 
 # Key the receipt on tree CONTENT, not on history.
@@ -249,10 +252,11 @@ fi
 _gate_failed=1
 _gate_on_exit() {
   if [[ -n "${_prefetch_pid:-}" ]]; then
-    wait "$_prefetch_pid" 2>/dev/null || true
+    _prefetch_wait_rc=0
+    wait "$_prefetch_pid" 2>/dev/null || _prefetch_wait_rc=$?
     _prefetch_pid=""
   fi
-  _write_gate_timing || true
+  _write_gate_timing
   if [[ "${_gate_failed:-0}" = "1" && -f "$_GATE_FAILURE_PY" ]]; then
     mkdir -p "$WS/.l9/pr"
     python3 "$_GATE_FAILURE_PY" write "$_GATE_FAILURE" "$(_gate_state_digest)" \
@@ -519,9 +523,19 @@ _gate_run_pytest() {
 
 _gate_run_sync() {
   echo "--- sync-generated-artifacts ---"
+  # --pe-manifest opts in to environment/program-execution/MANIFEST.json, which a
+  # bare --force does not reach. Without it the heal ran nowhere: this repo has no
+  # git commit hook (see run_pr_precommit.sh), so the "commit-time heal" the
+  # pre-commit config names never executed, and `make program-execution-conformance`
+  # failed on a manifest nothing regenerated. --changed-file still scopes it — the
+  # generator runs only when the branch touched environment/program-execution/.
+  # The write is a generated path (sync_generated_artifacts.GENERATED_PATH_PREFIXES),
+  # so _gate_classify_dirtiness below reports WARN + stage, never FAIL. CI checks
+  # the same artifact for drift in governance-self-check.yml.
   python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
     --root "$WS" \
     --changed-file "$changed_file" \
+    --pe-manifest \
     --check
   if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
     if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
@@ -593,6 +607,15 @@ _gate_run_wiring() {
     echo "OK: skip wiring (CI or non-writable ~/.cursor)"
     return 0
   fi
+  # Heal missing gitignored .cursor links under the existing make-pr lock.
+  # Not sessionStart — reconcilers skip while this lock is held.
+  if [[ -x "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" ]]; then
+    _wire_rc=0
+    L9_WIRE_LINKS_ONLY=1 bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" "$WS" || _wire_rc=$?
+    if [[ "$_wire_rc" -ne 0 ]]; then
+      echo "WARN: ensure_workspace_wired failed — wiring check will fail-closed"
+    fi
+  fi
   WS_KIND="$(classify_workspace_kind "$WS")"
   if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
     wiring_args=("$WS")
@@ -642,12 +665,17 @@ export PR_CHANGED_FILE="$changed_file"
 _wave_dir="$(mktemp -d)"
 _wave_pids=()
 _wave_names=()
-_wave_t0s=()
 _wave_start() {
   local name="$1"
   shift
-  _wave_t0s+=("$(_now_ms)")
-  ( "$@" ) >"$_wave_dir/$name.log" 2>&1 &
+  (
+    _t0="$(_now_ms)"
+    set +e
+    "$@"
+    _rc=$?
+    printf '%s %s\n' "$_rc" "$(($(_now_ms) - _t0))" >"$_wave_dir/$name.meta"
+    exit "$_rc"
+  ) >"$_wave_dir/$name.log" 2>&1 &
   _wave_pids+=("$!")
   _wave_names+=("$name")
 }
@@ -667,7 +695,11 @@ while [ "$_wave_i" -lt "${#_wave_pids[@]}" ]; do
     echo "FAIL: reader wave job ${_wave_names[$_wave_i]}"
     _wave_rc=1
   fi
-  _elapsed=$(($(_now_ms) - ${_wave_t0s[$_wave_i]}))
+  _elapsed=0
+  if [[ -f "$_wave_dir/${_wave_names[$_wave_i]}.meta" ]]; then
+    _elapsed="$(awk 'NF >= 2 { print $2; exit }' "$_wave_dir/${_wave_names[$_wave_i]}.meta")"
+    _elapsed="${_elapsed:-0}"
+  fi
   GATE_TIMING_WAVE="${GATE_TIMING_WAVE:+$GATE_TIMING_WAVE }${_wave_names[$_wave_i]}=${_elapsed}"
   _wave_i=$((_wave_i + 1))
 done

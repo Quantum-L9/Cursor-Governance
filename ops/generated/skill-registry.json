@@ -244,7 +244,10 @@
           "create claude.md",
           "create invariants.md",
           "root doc pointer",
-          "pointer stack"
+          "pointer stack",
+          "generate module readmes",
+          "readme-pipeline",
+          "subsystem readmes"
         ],
         "primary": "l9-update-agent-docs",
         "signal_weight": 8,
@@ -1296,7 +1299,7 @@
       "path": "skills/l9-update-agent-docs",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
+      "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes; generating module READMEs via readme-pipeline-v1; or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
     {
       "composition_role": "primary",
@@ -1322,6 +1325,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "788452df425c73f3e5bc18f9044458164e553d6488c940f7ded52b5c0f0ff985",
-  "source_skill_corpus_sha256": "a3154636b0ec3884d4402eb6356b903a9285a1fb2c99406426e34bdaaacb2654"
+  "source_manifest_sha256": "3d5f004e5f8cebcfbf846cd88a258f33e6f07dcd60e7896b7dae3bce274a1d91",
+  "source_skill_corpus_sha256": "64852ad77cc0ec93d2ad01225d7d9932b34ac7031081021b0564fc04ed93fa52"
 }

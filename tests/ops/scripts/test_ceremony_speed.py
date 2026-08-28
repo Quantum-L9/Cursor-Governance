@@ -233,3 +233,7 @@ def test_gate_script_records_timing_keys() -> None:
     assert "total_ms" in text
     assert 'PR_CHANGED_FILE="$changed_file"' in text
     assert "fetch_receipt_reusable" in text
+    assert "--pe-manifest" in text
+    assert "# Heal missing gitignored .cursor links" in text
+    assert 'L9_WIRE_LINKS_ONLY=1 bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh"' in text
+    assert ".meta" in text
