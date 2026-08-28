@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-28T20:06:36Z'
+generated_utc: '2026-08-28T20:38:05Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:e17b360a9917535873f75ac05b116371bee0178699a01daaa88c5bcfd4cb4e0a
+source_tree_digest: sha256:9c5d443a2caacf84023cb3cb3ef2028614802ff7ab71a412c23a582546f1e593
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -47,8 +47,8 @@ rules:
   globs: null
   first_heading: Slash Command Recognition
   has_yaml_frontmatter: true
-  line_count: 160
-  content_digest: sha256:795e96cd2221a875996f99b1c7fe7b85157dd091e50475618874b7e435beb342
+  line_count: 159
+  content_digest: sha256:29cc0743d1a672e4f9f695b516cc384a4722a324212deeb324c789aadc574d6c
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1433,7 +1433,7 @@ rules:
   first_heading: Learned lessons (index)
   has_yaml_frontmatter: true
   line_count: 30
-  content_digest: sha256:320bf13f04a1e2ad137c13c37a9f00d6d69736c6837d2cc7fbc5b1344b6c9754
+  content_digest: sha256:a90cefaa4b6dbfdfd8945b46a8eddec089500b089726b8801320d37882539119
   authority: canonical_global
   context_cost: minimal
   deprecated: false

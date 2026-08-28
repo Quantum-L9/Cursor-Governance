@@ -1535,7 +1535,7 @@
     },
     {
       "path": "peer_execution/autonomy/worker_lane.py",
-      "sha256": "772be67f10e7fb4300f7d7d1fe1c01f180ab7ab74a7a9c8577e2a8387a2e502a"
+      "sha256": "f792c249d5751e47771d87da5bafd518b2bf9bee732e1f4f74e78cb03b939687"
     },
     {
       "path": "peer_execution/base.py",
@@ -1791,7 +1791,7 @@
     },
     {
       "path": "scripts/run_conformance.py",
-      "sha256": "780cb453680a1e0f48cb7016306068c44b45a435c0bd2cd5fdda7285091cd159"
+      "sha256": "6e8f85bdf0c00681711ac8fd824132660bfec801a0c31fd9c0a24829ed505363"
     },
     {
       "path": "scripts/run_parity_gate.py",
@@ -1878,6 +1878,10 @@
       "sha256": "a36be2170c37bb87784360e118f595a44ddb0eca771c8be4dff0838996668fcf"
     },
     {
+      "path": "scripts/tests/test_run_conformance.py",
+      "sha256": "2c616985b9e58572485c7c7920516c2764de0b4baddf472624a88492324fa885"
+    },
+    {
       "path": "scripts/tests/test_run_peer_task_pipeline.py",
       "sha256": "0a465cdd767d959527688c9522564797e5b246c1978cd67dc3b9f9ff84b9690f"
     },
@@ -1907,7 +1911,7 @@
     },
     {
       "path": "tests/hardening/test_concurrent_worktree_isolation.py",
-      "sha256": "0627986bde4ab9886ae0b316640b8e347a17890c4297d94feaed6e082b72aeeb"
+      "sha256": "fcf544cfb5eb6c1ee2af0b3dbffc89af12ac449b4d561eb5045c5324e0b53830"
     },
     {
       "path": "tests/hardening/test_hardening_authority.py",
