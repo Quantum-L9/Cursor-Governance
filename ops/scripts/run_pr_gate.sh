@@ -670,11 +670,9 @@ _wave_start() {
   shift
   (
     _t0="$(_now_ms)"
-    set +e
+    _wave_meta="$_wave_dir/$name.meta"
+    trap '_code=$?; printf "%s %s\n" "$_code" "$(($(_now_ms) - _t0))" >"$_wave_meta"' EXIT
     "$@"
-    _rc=$?
-    printf '%s %s\n' "$_rc" "$(($(_now_ms) - _t0))" >"$_wave_dir/$name.meta"
-    exit "$_rc"
   ) >"$_wave_dir/$name.log" 2>&1 &
   _wave_pids+=("$!")
   _wave_names+=("$name")
