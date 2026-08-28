@@ -7,7 +7,10 @@ status: active
 
 # Component Audit (/audit-component)
 
-**DAG:** `component-audit-v1` — `.cursor-commands/workflows/dags/component_audit_dag.py`
+**Runtime:** none. There is no `component_audit_dag.py` in the tree and no
+`component-audit-v1` registration; this mode runs from the levels below as a
+read-only procedure. If it is ever given a DAG, `l9-dag-authoring` owns
+authoring and registering it under `workflows/dags/`.
 
 ## Usage
 
@@ -22,4 +25,4 @@ status: active
 2. File-level wiring (consumers, tests, re-exports)
 3. API instantiation (used symbols, missing APIs)
 
-Follow DAG node `action` fields exactly.
+Run the levels in order. Report evidence per level; never assert wiring you did not check.

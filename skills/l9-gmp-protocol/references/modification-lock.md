@@ -57,7 +57,7 @@ The original L9 protected set (orchestrator, kernel loader, executor, memory sub
 
 These actions are never taken implicitly inside a run. Schedule them as their own TODO and obtain explicit approval before execution; Phase 5 must confirm none ran unapproved.
 
-- `git commit` / `git push` (use `make push`; never raw `git push`).
+- Remote mutation: push, PR open, or merge. Local scoped commits on the task branch are standing and do not need approval (`rules/99-no-auto-commit.mdc`).
 - File or record deletion (`Delete` op on a whole file, `unlink`, dropping data).
 - Deployment / `make update` / container restarts.
 - Database writes outside the locked scope, and any schema-destructive migration (column/table drop).
@@ -69,7 +69,7 @@ If a run reaches an unapproved high-risk action, STOP and request approval rathe
 
 - New model → `security/ir.model.access.csv` row in the same module; new Python file → wired into `__init__.py`; new model file → added to manifest `data`/`depends`.
 - `sudo()` requires inline justification on the same line.
-- Remote pushes use `make push` (runs `make pr-check`) — never raw `git push`; API push only after `make pr-check` passes and `git push` fails.
+- GMP does not publish. Publication is `PR_REMEDIATE=0 make pr` (`l9 pr`), outside the run and separately authorized — `rules/48-make-pr-remediation.mdc`, `rules/88-l4-local-autonomy.mdc`. `make push` is denied at every phase; do not reach for it or for a raw-push fallback.
 - Odoo 19 patterns are CI-enforced (no `_sql_constraints`, `@api.one/multi`, `<tree>`, `attrs=`, `states=`, `t-esc=`).
 
 ## Evidence-Based Validation (three categories)

@@ -89,6 +89,59 @@ def candidates(subject, live):
     return scored
 
 
+POLICY = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "policies")
+
+
+def load_topology_policy():
+    """dag_skill_ownership rules. Absent policy disables the rule, never invents one."""
+    path = os.path.join(POLICY, "topology-ownership.yaml")
+    if not os.path.isfile(path):
+        return {}
+    with open(path, encoding="utf-8") as handle:
+        parsed = yaml.safe_load(handle) or {}
+    rule = parsed.get("dag_skill_ownership")
+    return rule if isinstance(rule, dict) else {}
+
+
+def find_owner(live, owner_role):
+    """The live skill declaring owner_role, if exactly one does."""
+    owners = [name for name, meta in live.items() if str(meta.get("role", "")) == owner_role]
+    return owners[0] if len(owners) == 1 else None
+
+
+def dag_skill_ownership_violation(subject, live, rule=None):
+    """A DAG does not justify a Skill.
+
+    Fires when the subject is DAG-shaped (carries a graph-runtime marker) but
+    does not itself claim the DAG lifecycle capability (carries no lifecycle
+    verb). Such a subject is asking for a sibling Skill around an execution
+    graph that some other capability already owns.
+
+    Returns (decision, evidence) or None when the rule does not apply.
+    """
+    rule = load_topology_policy() if rule is None else rule
+    if not rule:
+        return None
+    wanted = (
+        tokens(subject.get("proposed_name", ""))
+        | tokens(subject.get("domain", ""))
+        | tokens(subject.get("stated_objective", ""))
+    )
+    markers = wanted & set(rule.get("runtime_markers", []))
+    if not markers:
+        return None
+    if wanted & set(rule.get("lifecycle_verbs", [])):
+        return None  # the capability IS DAG lifecycle management; creation is legitimate
+    evidence = ["dag_skill_ownership_marker=" + ",".join(sorted(markers))]
+    owner = find_owner(live, rule.get("owner_role", "dag_lifecycle_owner"))
+    if not owner:
+        evidence.append("no_live_dag_lifecycle_owner")
+        return str(rule.get("on_violation_without_owner", "ESCALATE_TO_BOUNDED_LLM")), evidence
+    evidence.append("dag_lifecycle_owner=" + owner)
+    evidence.append("dag_is_runtime_artifact_of_owning_capability_not_a_skill")
+    return str(rule.get("on_violation", "REJECT_NEW_SKILL")), evidence
+
+
 def decide(subject, live):
     existing = subject.get("existing_skill")
     candidate_rows = candidates(subject, live)
@@ -96,6 +149,14 @@ def decide(subject, live):
     if existing and existing in live:
         evidence.append("existing_skill_present=" + existing)
         return "REPLACE_EXISTING", evidence, candidate_rows, "deterministic_rule"
+    violation = dag_skill_ownership_violation(subject, live)
+    if violation:
+        decision, rule_evidence = violation
+        evidence.extend(rule_evidence)
+        decided_by = (
+            "bounded_llm" if decision == "ESCALATE_TO_BOUNDED_LLM" else "deterministic_rule"
+        )
+        return decision, evidence, candidate_rows, decided_by
     if candidate_rows and candidate_rows[0]["capability_overlap"] >= 2:
         evidence.append(
             "nearest_owner="
