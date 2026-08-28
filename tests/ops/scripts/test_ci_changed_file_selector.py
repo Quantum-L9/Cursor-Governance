@@ -10,6 +10,7 @@ SCRIPTS = ROOT / "ops" / "scripts"
 if str(SCRIPTS) not in sys.path:
     sys.path.insert(0, str(SCRIPTS))
 
+import select_pr_pytest_paths as selector  # noqa: E402
 from run_python_test_suites import (  # noqa: E402
     _load_json,
     _suite_intersects,
@@ -20,7 +21,6 @@ from select_pr_pytest_paths import (  # noqa: E402
     infer_test_path,
     select_pr_pytest_paths,
 )
-import select_pr_pytest_paths as selector  # noqa: E402
 
 WORKFLOW = ROOT / ".github" / "workflows" / "l9-lint-test.yml"
 RULE_48 = ROOT / "rules" / "48-make-pr-remediation.mdc"
