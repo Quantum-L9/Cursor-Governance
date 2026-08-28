@@ -117,6 +117,9 @@ def _gate(
     work: Path, env: dict[str, str], extra_env: dict[str, str] | None = None
 ) -> subprocess.CompletedProcess[str]:
     gate_env = dict(env)
+    # Host make pr may export PR_OVERLAP=ignore; default the fixture to block
+    # unless the test sets an explicit extra_env value.
+    gate_env["PR_OVERLAP"] = "block"
     if extra_env:
         gate_env.update(extra_env)
     return subprocess.run(
