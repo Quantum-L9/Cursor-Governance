@@ -4,8 +4,8 @@
   "version": 1,
   "contract_id": "l9-commit-verification-integrity",
   "updated": "2026-08-28",
-  "rationale": "Pre-commit hooks are the last check that runs before history is written. A hook that can be skipped on the commit that most needs it is decoration. The hooks are also the only gate that sees a change BEFORE it becomes a commit others build on, so a bypass is not deferred work: it is work that silently never happens.",
-  "remedy": "Fix what the hook reported. A hook failure is evidence (rule 95): diagnose it as a product, test, fixture, environment, or flake defect and repair the narrowest true cause. If the hook itself is wrong, repair the hook in its own commit. If the failure is genuinely unrelated and unfixable in this scope, record it with ops/autonomy/session_debt.py and say so — never skip the hook to move on.",
+  "rationale": "A bypass token typed without knowing the verification model is the failure this contract exists to stop. The model is not universal: in a governed L9 workspace there is NO commit hook by design — verification is `make pr-check` / `make pr`, and `pre-commit install` is forbidden because a raw hook runs the catalog without the surface-aware SKIP list and rejects every commit on a non-cursor surface. So a bypass flag here is not merely wrong, it is incoherent: it suppresses nothing while signalling that verification was considered and skipped. Where a repo DOES install hooks, the same flag removes the only check that sees a change before it becomes history. Either way the token is never the answer.",
+  "remedy": "Run the verification this repository actually uses: `make pr-check` (or `l9 pr` for the full publish gate) in a governed workspace; the repo's declared gate elsewhere. Check which model applies with `python3 ops/autonomy/verification_bypass_gate.py --status`. If a check fails, that is evidence (rule 95): repair the narrowest true cause, or record it with ops/autonomy/session_debt.py. Never reach for a bypass token, and never install a commit hook to 'fix' a governed workspace.",
   "breakglass": {
     "env": "L9_VERIFY_BYPASS_AUTHORIZED",
     "requires_reason": true,
@@ -132,6 +132,6 @@
   "briefing_lines": [
     "`git commit --no-verify` / `-n`, `git push --no-verify`, `core.hooksPath` overrides, hook-suppressing env vars (`SKIP=`, `HUSKY=0`), `pre-commit uninstall`, and edits to `.git/hooks/**` are DENIED at PreToolUse by `ops/autonomy/verification_bypass_gate.py`. Declaration: `ops/config/commit-verification-contract.json`.",
     "A failing hook is evidence, not an obstacle: repair the narrowest true cause (rule 95), or record it with `session_debt.py`. Do not reach for a bypass when a hook fails — there is no form of it that this gate allows.",
-    "A clean commit is not proof the hooks ran: an unhooked checkout commits clean. Check with `python3 ops/autonomy/verification_bypass_gate.py --status` before claiming local verification; `armed: false` means CI is the only gate."
+    "A clean commit is not proof anything was verified, and in a governed L9 workspace there is no commit hook at all — by design. Verification is `make pr-check` / `make pr`; `pre-commit install` is forbidden here. Check the model with `python3 ops/autonomy/verification_bypass_gate.py --status` before claiming a commit was verified."
   ]
 }

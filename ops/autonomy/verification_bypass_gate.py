@@ -332,6 +332,30 @@ def command_bypasses_verification(
     return None
 
 
+def _governed_model(root: Path | None = None) -> bool:
+    """True when verification is the governed gate rather than a commit hook.
+
+    `ops/scripts/run_pr_precommit.sh` is the marker: where it exists, pre-commit
+    is invoked by `make pr-check` with a surface-aware SKIP list, and installing
+    a raw `.git/hooks/pre-commit` is explicitly forbidden — it would run the full
+    catalog without that list, so `symlinks-check` rejects every commit on a
+    non-cursor surface. `validate_claude_env.check_session_deps_installs_no_git_hook`
+    asserts the same rule.
+
+    This distinction is the whole point: an absent hook is a finding in one model
+    and correct in the other, and telling an agent to "install the hook" in the
+    governed model is telling it to break every commit on this surface.
+    """
+    gov = Path(os.environ.get("CURSOR_GOVERNANCE_DIR") or (Path.home() / ".cursor-governance"))
+    for candidate in (gov, Path(root) if root else Path.cwd(), _HERE.parents[1]):
+        try:
+            if (candidate / "ops" / "scripts" / "run_pr_precommit.sh").is_file():
+                return True
+        except OSError:
+            continue
+    return False
+
+
 def verification_status(root: Path | None = None) -> dict[str, Any]:
     """Whether local verification is actually armed in this checkout.
 
@@ -378,17 +402,40 @@ def verification_status(root: Path | None = None) -> dict[str, Any]:
     if not hooks_dir.is_absolute():
         hooks_dir = base / hooks_dir
     shim = hooks_dir / "pre-commit"
-    if not shim.is_file():
+    if shim.is_file():
+        return {
+            "armed": True,
+            "model": "commit_hook",
+            "hooks_dir": str(hooks_dir),
+            "shim": str(shim),
+        }
+    if _governed_model():
         return {
             "armed": False,
+            "model": "governed_gate",
+            "by_design": True,
             "hooks_dir": str(hooks_dir),
             "reason": (
-                "no pre-commit shim installed — commits in this checkout run NO local "
-                "verification. A clean commit here is not evidence that hooks passed; "
-                "run `pre-commit install`, or treat CI as the only verification and say so."
+                "No commit hook, BY DESIGN — this is not a deficiency and must not be "
+                "'fixed'. A raw hook would run the whole catalog without the "
+                "surface-aware SKIP list that ops/scripts/run_pr_precommit.sh applies, "
+                "so symlinks-check would reject every commit on a non-cursor surface. "
+                "Verification lives at `make pr-check` / `make pr`, not at commit time. "
+                "Do NOT run `pre-commit install`."
             ),
         }
-    return {"armed": True, "hooks_dir": str(hooks_dir), "shim": str(shim)}
+    return {
+        "armed": False,
+        "model": "unknown",
+        "by_design": False,
+        "hooks_dir": str(hooks_dir),
+        "reason": (
+            "No commit hook and no governed gate detected. A clean commit here is not "
+            "evidence that anything was verified. Use whatever gate this repository "
+            "declares (its CONTRIBUTING/CLAUDE.md), and say which one you ran — do not "
+            "assume `pre-commit install` is wanted; several L9 repos forbid it."
+        ),
+    }
 
 
 def _main() -> int:
@@ -396,7 +443,10 @@ def _main() -> int:
     if "--status" in sys.argv[1:]:
         status = verification_status()
         print(json.dumps(status, indent=2))
-        return 0 if status.get("armed") else 1
+        # `armed: false` is the CORRECT state in a governed workspace, so it is
+        # not a failure. Only an unrecognised model — no commit hook and no
+        # governed gate — means verification cannot be accounted for.
+        return 0 if (status.get("armed") or status.get("by_design")) else 1
     command = " ".join(sys.argv[1:])
     reason = command_bypasses_verification(command)
     if reason:

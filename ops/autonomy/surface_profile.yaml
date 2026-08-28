@@ -259,13 +259,16 @@ session_start_block: |
     `ops/config/commit-verification-contract.json`; human/ops breakglass is
     `L9_VERIFY_BYPASS_AUTHORIZED=<reason>` and an agent MUST NOT set it for
     itself.
-  - **A clean commit is not proof the hooks ran.** An ephemeral cloud clone
-    usually has no pre-commit shim installed, and an absent hook produces
-    exactly the same clean commit as a passing one. Before claiming local
-    verification, check:
-    `python3 ops/autonomy/verification_bypass_gate.py --status`.
-    If it reports `armed: false`, say so — local verify did not happen and
-    CI is the only gate. Do not report a commit as verified on that basis.
+  - **This workspace has NO commit hook, by design — do not install one.**
+    A raw `.git/hooks/pre-commit` runs the whole catalog without the
+    surface-aware SKIP list `ops/scripts/run_pr_precommit.sh` applies, so
+    `symlinks-check` would reject every commit on a non-cursor surface.
+    `pre-commit install` is forbidden and asserted against by
+    `validate_claude_env.py`. Verification lives at **`make pr-check` /
+    `make pr`**, not at commit time. So a clean commit here proves nothing was
+    verified — run the gate and say which one you ran. Check the model with
+    `python3 ops/autonomy/verification_bypass_gate.py --status`
+    (`model: governed_gate` = correct, not a deficiency).
   - Merge stays denied by `ops/autonomy/merge_gate.py` until
     `/l9-pr-remediation` writes the receipt (or `L9_MERGE_AUTHORIZED`).
     An L4 release receipt does **not** authorize merge.

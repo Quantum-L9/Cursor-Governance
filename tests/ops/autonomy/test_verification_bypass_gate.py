@@ -131,16 +131,37 @@ def test_briefing_lines_are_non_empty() -> None:
     assert lines and all(line.strip() for line in lines)
 
 
-def test_status_reports_an_unhooked_checkout(tmp_path) -> None:
-    """An absent shim must be reported, not mistaken for a passing hook."""
-    import subprocess
+def test_status_never_prescribes_installing_a_commit_hook() -> None:
+    """The correction that matters most.
 
-    repo = tmp_path / "repo"
-    repo.mkdir()
-    subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
-    status = verification_status(repo)
+    A governed L9 workspace has NO commit hook by design: a raw hook runs the
+    catalog without run_pr_precommit.sh's surface-aware SKIP list, so
+    symlinks-check rejects every commit on a non-cursor surface.
+    `pre-commit install` is forbidden (validate_claude_env.py asserts it, and
+    run_pr_precommit.sh says so in as many words). An earlier version of this
+    reporter told the agent to run it — advice that would have broken every
+    commit on this surface. No status output may prescribe it again.
+    """
+    for candidate in (ROOT, ROOT / "does-not-exist"):
+        text = json.dumps(verification_status(candidate)).lower()
+        index = text.find("pre-commit install")
+        while index != -1:
+            # Every mention must be negated. Checking only for the substring
+            # would flag the prohibition itself, so the lead-in is what decides.
+            lead = text[max(0, index - 48) : index]
+            assert any(marker in lead for marker in ("not ", "never", "forbid", "n't")), (
+                f"unnegated 'pre-commit install' in status for {candidate}: ...{lead}"
+            )
+            index = text.find("pre-commit install", index + 1)
+
+
+def test_governed_workspace_reports_absent_hook_as_by_design() -> None:
+    """`armed: false` here is correct, not a deficiency to be repaired."""
+    status = verification_status(ROOT)
     assert status["armed"] is False
-    assert "no local verification" in status["reason"].lower()
+    assert status["by_design"] is True
+    assert status["model"] == "governed_gate"
+    assert "make pr-check" in status["reason"]
 
 
 def test_status_reports_an_armed_checkout(tmp_path) -> None:
@@ -158,3 +179,10 @@ def test_status_reports_an_armed_checkout(tmp_path) -> None:
 
 def test_status_on_a_non_repository_is_not_a_crash(tmp_path) -> None:
     assert verification_status(tmp_path)["armed"] is False
+
+
+def test_contract_does_not_teach_a_commit_time_only_model() -> None:
+    """The remedy must name the gate this repo actually runs."""
+    blob = json.dumps(CONTRACT)
+    assert "make pr-check" in blob
+    assert "run `pre-commit install`" not in blob
