@@ -8,8 +8,8 @@ metadata:
   tags: [l9, gmp, deterministic, phases, evidence, modification_lock, governance]
   owner: igor_beylin
   status: active
-  version: 1.1.0
-  updated: 2026-06-04
+  version: 2.0.0
+  updated: 2026-08-28
 ---
 
 # GMP Protocol — Deterministic Phased Execution
@@ -19,6 +19,53 @@ metadata:
 Execute any repo change as a locked, traceable, drift-free run: lock a TODO plan, confirm ground truth, implement only the locked scope, validate, verify against the plan, and sign an evidence report. Source of truth: `docs/gmp_protocol/`.
 
 Use this skill when a change must be auditable and reversible, not when a one-line edit needs no ceremony.
+
+## Runtime authority
+
+Execution is owned by the modular LangGraph package, not by this document:
+
+```
+workflows/dags/gmp/graph.py       # build_gmp_graph() — the state machine
+workflows/dags/gmp/executor.py    # GMPLangGraphExecutor + CLI, MemorySaver checkpointing
+workflows/dags/gmp/state.py       # GMPState, GMPPhase
+workflows/dags/gmp/routing.py     # conditional routing between gates
+workflows/dags/gmp/nodes/         # node implementations
+```
+
+```bash
+python3 -m workflows.dags.gmp.executor "task description" --tier RUNTIME
+```
+
+`workflows/dags/gmp_langgraph_executor.py` is a backwards-compatibility shim
+over that package. The graph enforces step ordering, routes through explicit
+user gates at scope confirmation and validation confirmation, retries a failed
+validation back into `implement`, and makes the memory read/write nodes
+mandatory rather than advisory.
+
+**The graph owns no commit and no push.** Publication is a separate,
+separately-authorized act — see `rules/48-make-pr-remediation.mdc` and
+`rules/88-l4-local-autonomy.mdc`. Any older contract describing a GMP
+`COMMIT_GATE` is superseded by the graph.
+
+## Ownership boundary
+
+Owns:
+
+- when GMP is required, and when a change is too small to earn it
+- the execution authority boundary and the modification/scope lock semantics
+- evidence requirements and the signed report contract
+- terminal and failure semantics for a run
+
+Does not own:
+
+- generic DAG construction, registration, or discovery -> `l9-dag-authoring`
+- command generation or thin command-to-DAG binding -> `l9-dag-authoring`
+- Skill compilation -> `l9-skill-compiler`; Skill wiring -> `l9-wire-skill-into-repo`
+- generic component audit / verify / probe -> `l9-component-verification`
+- git publication, merge, or release authority -> the publish path rules
+
+GMP uses a DAG. That does not make GMP a DAG-authoring capability, and it does
+not make the DAG a second Skill.
 
 ## Core Contract
 
@@ -62,7 +109,7 @@ Load `references/phase-contracts.md` for the per-phase input/output contract.
 - Production-grade only: no stubs, pseudo-code, or "you'll need to tweak". Drop-in usable.
 - Scope discipline: deliver only what was requested; no unsolicited refactors, summaries, or helper files.
 - A change that would require violating the modification lock must fail at Phase 0 and request a revised plan with explicit permission.
-- Respect repo guardrails (see `references/modification-lock.md`): `pipeline_v2.py` is never activated; `make push` (never raw `git push`) for remote; new models need ACL; `sudo()` needs inline justification.
+- Respect repo guardrails (see `references/modification-lock.md`): `pipeline_v2.py` is never activated; new models need ACL; `sudo()` needs inline justification. A run never publishes — remote mutation is the publish path's, not GMP's.
 
 ## Resource Map
 
@@ -72,6 +119,7 @@ Load `references/phase-contracts.md` for the per-phase input/output contract.
 - `references/pipeline-composition.md` — multi-step pipeline YAML, stage failure policy, parallel groups, rollback triggers.
 - `references/lifecycle-pipelines.md` — Discover / Build / Ship / Check lifecycle, PlasticOS make mapping, decision tree.
 - `docs/gmp_protocol/` — canonical long-form source: `cursor-gmp-canonical.md` plus `cursor-phase-0..6-*.md` and `gmp-report-template.md`.
+- `workflows/dags/gmp/` — the executable runtime this skill delegates to (see Runtime authority).
 
 ## Validation Requirements
 
@@ -86,107 +134,3 @@ A GMP run is complete only when:
 ## Failure Handling
 
 When blocked: state the exact blocker, label missing/unverifiable inputs as `Unknown`, do not fabricate paths or results, and give the smallest safe next action. Never present a run as complete if any phase lacks evidence.
-
----
-
-<!-- migrated-from: commands/gmp.md -->
-
----
-name: gmp
-version: "8.2.0"
-description: "TRIGGER ONLY — Invokes gmp_executor.py for enforced phased execution"
-before_chain: rules
-auto_chain: ynp
-dag: gmp-execution-v1
-dag_executor: .cursor/workflows-synced/gmp_executor.py
----
-
-# /gmp — Governance Managed Process (v8.1.0)
-
-## THIS IS A TRIGGER ONLY
-
-`/gmp` invokes the GMP Executor DAG. All logic lives in the executor.
-
-## INVOCATION
-
-```bash
-python3 .cursor/workflows-synced/gmp_executor.py "task description" --tier RUNTIME
-```
-
-## WHAT THE DAG DOES (AUTONOMOUS)
-
-```
-┌─────────────────────────────────────────────────────────┐
-│  MEMORY_READ      │ Load context from memory substrate │
-├─────────────────────────────────────────────────────────┤
-│  SCOPE_LOCK       │ Lock TODO plan (Phase 0)           │
-├─────────────────────────────────────────────────────────┤
-│  USER_GATE        │ Confirm scope before proceeding    │
-├─────────────────────────────────────────────────────────┤
-│  BASELINE         │ Phase 1 — Verify current state     │
-├─────────────────────────────────────────────────────────┤
-│  IMPLEMENT        │ Phase 2 — Execute changes          │
-├─────────────────────────────────────────────────────────┤
-│  GENERATE_TESTS   │ Phase 3 — Auto-generate tests      │
-├─────────────────────────────────────────────────────────┤
-│  VALIDATE         │ Phase 4 — Run tests + lint         │
-├─────────────────────────────────────────────────────────┤
-│  MEMORY_WRITE     │ Phase 5 — Record lessons learned   │
-├─────────────────────────────────────────────────────────┤
-│  GENERATE_REPORT  │ Phase 6 — Create GMP report        │
-├─────────────────────────────────────────────────────────┤
-│  COMMIT_GATE      │ Stage + commit (NO PUSH)           │
-└─────────────────────────────────────────────────────────┘
-```
-
-## FEATURES
-
-- **Phased execution** — Enforced GMP v1.7 phases 0-6
-- **Memory integration** — Reads context, writes lessons
-- **Tier classification** — KERNEL, RUNTIME, INFRA, UX
-- **Auto-report** — Uses canonical report generator
-- **Safe commit** — Commits locally, does NOT push
-
-## USAGE
-
-```bash
-# Start new GMP
-python3 .cursor/workflows-synced/gmp_executor.py "add validation to registry" --tier RUNTIME
-
-# Resume interrupted GMP
-python3 .cursor/workflows-synced/gmp_executor.py --resume
-
-# Check current status
-python3 .cursor/workflows-synced/gmp_executor.py --status
-
-# Reset state (start fresh)
-python3 .cursor/workflows-synced/gmp_executor.py --reset
-```
-
-## TIERS
-
-| Tier | Scope | Examples |
-|---|---|---|
-| KERNEL | Core execution, safety | executor.py, kernel_loader.py |
-| RUNTIME | Services, tools, agents | task_queue.py, tool_registry.py |
-| INFRA | Deployment, docker, k8s | docker-compose.yml, Dockerfile |
-| UX | Frontend, docs, scripts | React components, README |
-
-## STATE FILE
-
-Execution state is persisted to `.gmp_executor_state.json`
-
-If interrupted, resume with `--resume`.
-
-## OUTPUT
-
-The executor produces:
-1. Terminal progress for each step
-2. GMP report at `reports/GMP-Report-*.md`
-3. Local commit (no push)
-
-## ENFORCEMENT
-
-The DAG is MANDATORY. The slash command is just a trigger.
-
-All step ordering, validation, and reporting is handled by the executor.
