@@ -832,3 +832,18 @@ rest. `/plan-audit` is a compatibility alias of that command.
 
 Skill **`l9-plan-audit`** is still the sessionStart 7-day live-queue scanner
 (§16). It does not move files. Do not treat it as `/l9-audit-plans`.
+
+<!-- FF_SHELF_WIP_PLANS_V1 -->
+## `/ff` shelves leftover WIP and plans (2026-08-28)
+
+After `skills/l9-repo-sync/scripts/ff.sh` succeeds, leftover **untracked**
+`WIP/` and `docs/plans/` are shelved onto a sibling branch
+(`feat/ff-shelf-<stamp>`, pathspecs only). `ff.sh` stays push-off.
+Untracked bytes must be **copied** into the new worktree — a fresh checkout
+does not have them. L4 state is workspace-local, so `begin` /
+`record-kernels` / `authorize-release` run in that worktree before publish.
+Publishing is **ask-first**: `/ff` catches a clone up, it does not authorize
+`PR_REMEDIATE=0 make pr`. Skip paths an open `feat/ff-shelf-*` PR already
+carries so repeat runs do not re-shelve the same bytes.
+Secret globs and `WIP/Legal Defense/` stay out. Dirty-preserve refs stay
+until `l9-git-work-preserve` triage + prune-policy.
