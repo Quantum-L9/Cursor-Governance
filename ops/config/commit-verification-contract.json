@@ -135,6 +135,6 @@
   "briefing_lines": [
     "`git commit --no-verify` / `-n`, `git push --no-verify`, `core.hooksPath` overrides, hook-suppressing env vars (`SKIP=`, `HUSKY=0`), `pre-commit uninstall`, and edits to `.git/hooks/**` are DENIED at PreToolUse by `ops/autonomy/verification_bypass_gate.py`. Declaration: `ops/config/commit-verification-contract.json`.",
     "A failing hook is evidence, not an obstacle: repair the narrowest true cause (rule 95), or record it with `session_debt.py`. Do not reach for a bypass when a hook fails — there is no form of it that this gate allows.",
-    "A clean commit is not proof anything was verified, and in a governed L9 workspace there is no commit hook at all — by design. Verification is `make pr-check` / `make pr`; `pre-commit install` is forbidden here. Check the model with `python3 ops/autonomy/verification_bypass_gate.py --status` before claiming a commit was verified."
+    "A clean commit is proof only if something verified it. In a governed L9 workspace there is no commit hook by default — verification is `make pr-check` / `make pr`, and `pre-commit install` is forbidden (a raw shim drops the surface-aware SKIP list). To get commit-time verification too, run `bash ops/scripts/install_commit_hook.sh`. Check which model is live with `python3 ops/autonomy/verification_bypass_gate.py --status`."
   ]
 }

@@ -155,9 +155,19 @@ def test_status_never_prescribes_installing_a_commit_hook() -> None:
             index = text.find("pre-commit install", index + 1)
 
 
-def test_governed_workspace_reports_absent_hook_as_by_design() -> None:
-    """`armed: false` here is correct, not a deficiency to be repaired."""
-    status = verification_status(ROOT)
+def test_governed_workspace_reports_absent_hook_as_by_design(tmp_path) -> None:
+    """`armed: false` in the governed model is correct, not a deficiency.
+
+    Uses a fixture, not ROOT: whether this clone has the shim installed is a
+    per-machine choice (`.git/hooks` is untracked), so asserting ROOT's armed
+    state makes the suite pass or fail on local setup rather than on behavior.
+    """
+    import subprocess
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+    status = verification_status(repo)
     assert status["armed"] is False
     assert status["by_design"] is True
     assert status["model"] == "governed_gate"
@@ -202,3 +212,33 @@ def test_config_suppressing_env_is_denied(command: str) -> None:
 
 def test_config_env_on_a_read_only_command_is_untouched() -> None:
     assert command_bypasses_verification("GIT_CONFIG_GLOBAL=/dev/null git status", env={}) is None
+
+
+def test_governed_gate_names_the_supported_installer(tmp_path) -> None:
+    """The briefing must point at the fix, not just name the limitation.
+
+    A session told only "there is no commit hook, by design" has no way to close
+    the window. The supported installer is the missing half.
+    """
+    import subprocess
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+    status = verification_status(repo)
+    assert status["model"] == "governed_gate"
+    assert "install_commit_hook.sh" in status["reason"]
+    assert "make pr-check" in status["reason"]
+
+
+def test_installer_exists_and_is_executable() -> None:
+    installer = ROOT / "ops" / "scripts" / "install_commit_hook.sh"
+    assert installer.is_file(), "briefing names an installer that must exist"
+    assert installer.stat().st_mode & 0o111, "installer must be executable"
+
+
+def test_runner_supports_staged_mode() -> None:
+    """The shim delegates to --staged; without it the hook rejects every commit."""
+    runner = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    assert "--staged" in runner
+    assert 'PR_STAGED" != "1"' in runner, "clean-tree assertion must be skipped when staged"

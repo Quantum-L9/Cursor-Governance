@@ -268,7 +268,12 @@ session_start_block: |
     `make pr`**, not at commit time. So a clean commit here proves nothing was
     verified — run the gate and say which one you ran. Check the model with
     `python3 ops/autonomy/verification_bypass_gate.py --status`
-    (`model: governed_gate` = correct, not a deficiency).
+    (`model: governed_gate` = correct, not a deficiency). To ALSO verify at
+    commit time, install the governed shim once per clone:
+    `bash ops/scripts/install_commit_hook.sh` — it delegates to
+    `run_pr_precommit.sh --staged`, keeping the SKIP list a raw
+    `pre-commit install` would drop. That is the supported way to close the
+    window; installing a raw hook is still forbidden.
   - Merge stays denied by `ops/autonomy/merge_gate.py` until
     `/l9-pr-remediation` writes the receipt (or `L9_MERGE_AUTHORIZED`).
     An L4 release receipt does **not** authorize merge.
