@@ -1,9 +1,10 @@
-"""The verification-bypass plane must deny the reflex, not ordinary git.
+"""Conformance suite for the commit-verification plane.
 
-The failure this gate exists to stop: an agent that learned "commits run hooks"
-elsewhere types `--no-verify` or `-c core.hooksPath=` here, where no commit hook
-exists at all. The command succeeds, looks like a bypass that worked, and the
-real verification (`make pr-check` / `make pr`) is never run.
+The point of these tests is not that the module has functions. It is that the
+rule an agent is *told* and the rule that is *enforced* are the same object:
+every form in the declaration is proven to deny, the briefing is proven to carry
+the declaration's own lines, and the tracked tree is proven to contain no
+command that the gate would refuse.
 """
 
 from __future__ import annotations
@@ -18,191 +19,254 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
 from verification_bypass_gate import (  # noqa: E402
-    POLICY_PATH,
+    CONTRACT_PATH,
+    ContractError,
+    briefing_lines,
     command_bypasses_verification,
-    human_authorized,
-    policy,
+    load_contract,
+    verification_status,
 )
+
+CONTRACT = json.loads(CONTRACT_PATH.read_text(encoding="utf-8"))
+HOOK_FILE = ".git/hooks/pre-commit"
+
+#: One command per declared form id. Parametrised from the declaration itself,
+#: so adding a form without a proof here fails `test_every_form_is_exercised`.
+DENIED: dict[str, str] = {
+    "git-commit-no-verify": 'git commit --no-verify -m "x"',
+    "git-push-no-verify": "git push --no-verify origin HEAD",
+    "git-hookspath-override": 'git -c core.hooksPath=/dev/null commit -m "x"',
+    "git-config-hookspath": "git config core.hooksPath /dev/null",
+    "hook-suppressing-env": 'SKIP=ruff git commit -m "x"',
+    "pre-commit-uninstall": "pre-commit uninstall",
+    "hook-file-mutation": f"rm -f {HOOK_FILE}",
+    "git-merge-no-verify": "git merge --no-verify topic",
+    "git-rebase-no-verify": "git rebase --no-verify main",
+    "git-cherry-pick-no-verify": "git cherry-pick --no-verify deadbee",
+    "git-revert-no-verify": "git revert --no-verify deadbee",
+    "git-am-no-verify": "git am --no-verify patch.mbox",
+}
+
+ALLOWED = [
+    'git commit -m "ordinary commit"',
+    "git commit --amend --no-edit",
+    "git push origin HEAD",
+    "git push -n origin HEAD",  # -n is --dry-run on push, read-only
+    'git commit -m "-n"',  # the message is "-n", not a bypass
+    'git commit -F msg.txt -m "x"',
+    "git status --porcelain",
+    "SKIP=ruff pre-commit run --all-files",  # how run_pr_precommit.sh narrows the gate
+    f"cat {HOOK_FILE}",
+    "ls .git/hooks",
+    "echo 'git commit --no-verify'",  # data, not a command
+    # -n is NOT --no-verify outside `git commit`; denying it would reject work.
+    "git rebase -i main",
+    "git revert -m 1 deadbee",
+    "git rebase --onto main a b",
+    'git merge -m "-n" topic',
+    "git merge topic",
+]
+
+
+@pytest.mark.parametrize("form_id,command", sorted(DENIED.items()))
+def test_declared_form_is_denied(form_id: str, command: str) -> None:
+    reason = command_bypasses_verification(command, env={})
+    assert reason, f"form {form_id} declared but not enforced: {command!r}"
+    assert form_id in reason or "could not be evaluated" not in reason
+
+
+def test_every_form_is_exercised() -> None:
+    """A form added to the declaration with no proof here is a silent gap."""
+    declared = {form["id"] for form in CONTRACT["forms"]}
+    assert declared == set(DENIED), f"unproven forms: {declared ^ set(DENIED)}"
+
+
+@pytest.mark.parametrize("command", ALLOWED)
+def test_ordinary_work_is_untouched(command: str) -> None:
+    assert command_bypasses_verification(command, env={}) is None, command
+
+
+def test_bypass_hidden_in_a_wrapper_is_caught() -> None:
+    assert command_bypasses_verification('bash -c "git commit --no-verify -m x"', env={})
+
+
+def test_bypass_in_a_later_segment_is_caught() -> None:
+    assert command_bypasses_verification("git add -A && git commit --no-verify -m x", env={})
+
+
+def test_heredoc_body_is_data_not_command() -> None:
+    command = "cat > note.md <<'EOF'\ngit commit --no-verify\nEOF"
+    assert command_bypasses_verification(command, env={}) is None
+
+
+def test_breakglass_needs_a_real_reason() -> None:
+    command = 'git commit --no-verify -m "x"'
+    env_name = CONTRACT["breakglass"]["env"]
+    assert command_bypasses_verification(command, env={env_name: "1"})
+    assert command_bypasses_verification(command, env={env_name: ""})
+    assert command_bypasses_verification(command, env={env_name: "yes"}), (
+        "a bare affirmative is not a stated reason"
+    )
+    assert (
+        command_bypasses_verification(
+            command, env={env_name: "operator ib: hook shim broken by upstream, tracked in #412"}
+        )
+        is None
+    )
+
+
+def test_unreadable_declaration_fails_closed_over_governed_commands(tmp_path, monkeypatch) -> None:
+    broken = tmp_path / "broken.json"
+    broken.write_text("{not json", encoding="utf-8")
+    monkeypatch.setattr("verification_bypass_gate.CONTRACT_PATH", broken)
+    load_contract.cache_clear()
+    try:
+        assert command_bypasses_verification('git commit -m "x"', env={})
+        assert command_bypasses_verification("ls -la", env={}) is None
+    finally:
+        load_contract.cache_clear()
+
+
+def test_contract_shape_is_validated() -> None:
+    load_contract.cache_clear()
+    try:
+        assert load_contract()["contract_id"]
+    finally:
+        load_contract.cache_clear()
+    with pytest.raises(ContractError):
+        load_contract(str(ROOT / "ops" / "config" / "does-not-exist.json"))
+
+
+def test_briefing_lines_are_non_empty() -> None:
+    lines = briefing_lines()
+    assert lines and all(line.strip() for line in lines)
+
+
+def test_status_never_prescribes_installing_a_commit_hook() -> None:
+    """The correction that matters most.
+
+    A governed L9 workspace has NO commit hook by design: a raw hook runs the
+    catalog without run_pr_precommit.sh's surface-aware SKIP list, so
+    symlinks-check rejects every commit on a non-cursor surface.
+    `pre-commit install` is forbidden (validate_claude_env.py asserts it, and
+    run_pr_precommit.sh says so in as many words). An earlier version of this
+    reporter told the agent to run it — advice that would have broken every
+    commit on this surface. No status output may prescribe it again.
+    """
+    for candidate in (ROOT, ROOT / "does-not-exist"):
+        text = json.dumps(verification_status(candidate)).lower()
+        index = text.find("pre-commit install")
+        while index != -1:
+            # Every mention must be negated. Checking only for the substring
+            # would flag the prohibition itself, so the lead-in is what decides.
+            lead = text[max(0, index - 48) : index]
+            assert any(marker in lead for marker in ("not ", "never", "forbid", "n't")), (
+                f"unnegated 'pre-commit install' in status for {candidate}: ...{lead}"
+            )
+            index = text.find("pre-commit install", index + 1)
+
+
+def test_governed_workspace_reports_absent_hook_as_by_design(tmp_path) -> None:
+    """`armed: false` in the governed model is correct, not a deficiency.
+
+    Uses a fixture, not ROOT: whether this clone has the shim installed is a
+    per-machine choice (`.git/hooks` is untracked), so asserting ROOT's armed
+    state makes the suite pass or fail on local setup rather than on behavior.
+    """
+    import subprocess
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+    status = verification_status(repo)
+    assert status["armed"] is False
+    assert status["by_design"] is True
+    assert status["model"] == "governed_gate"
+    assert "make pr-check" in status["reason"]
+
+
+def test_status_reports_an_armed_checkout(tmp_path) -> None:
+    import subprocess
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+    shim = repo / ".git" / "hooks" / "pre-commit"
+    shim.parent.mkdir(parents=True, exist_ok=True)
+    shim.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+    shim.chmod(0o755)
+    assert verification_status(repo)["armed"] is True
+
+
+def test_status_on_a_non_repository_is_not_a_crash(tmp_path) -> None:
+    assert verification_status(tmp_path)["armed"] is False
+
+
+def test_contract_does_not_teach_a_commit_time_only_model() -> None:
+    """The remedy must name the gate this repo actually runs."""
+    blob = json.dumps(CONTRACT)
+    assert "make pr-check" in blob
+    assert "run `pre-commit install`" not in blob
 
 
 @pytest.mark.parametrize(
     "command",
     [
-        "git commit --no-verify -m x",
-        "git commit -n -m x",
-        "git -c core.hooksPath=/dev/null commit -m x",
-        "git -c core.hookspath=/dev/null commit -m x",
-        "cd /repo && git commit -n -m x",
-        "HUSKY=0 git commit -m x",
-        "SKIP=ruff make pr",
-        "PRE_COMMIT_ALLOW_NO_CONFIG=1 pre-commit run",
-        "GIT_CONFIG_GLOBAL=/dev/null git commit -m x",
+        'GIT_CONFIG_GLOBAL=/dev/null git commit -m "x"',
+        "GIT_CONFIG_SYSTEM=/dev/null git push origin HEAD",
     ],
 )
-def test_bypass_is_denied(command: str) -> None:
-    reason = command_bypasses_verification(command)
-    assert reason, f"gate missed a verification bypass: {command}"
-    assert "make pr-check" in reason, "the deny must name where verification actually runs"
+def test_config_suppressing_env_is_denied(command: str) -> None:
+    """Neutralising the config that carries core.hooksPath names no bypass."""
+    assert command_bypasses_verification(command, env={})
 
 
-@pytest.mark.parametrize(
-    "command",
-    [
-        "git commit -m x",
-        "git commit --amend -m x",
-        'git commit -m "document --no-verify usage"',
-        "git -C /repo commit -m x",
-        "git log -n 5",
-        "git rebase -n main",  # -n is not --no-verify on rebase
-        "echo --no-verify",
-        "make pr-check",
-        "",
-    ],
-)
-def test_ordinary_commands_are_untouched(command: str) -> None:
-    assert command_bypasses_verification(command) is None
+def test_config_env_on_a_read_only_command_is_untouched() -> None:
+    assert command_bypasses_verification("GIT_CONFIG_GLOBAL=/dev/null git status", env={}) is None
 
 
-def test_the_exact_command_from_the_incident_is_denied() -> None:
-    """2026-08-28: this ran, and nothing stopped it."""
-    reason = command_bypasses_verification(
-        "git -c core.hooksPath=/dev/null commit -q -F - <<'EOF'\nmsg\nEOF"
-    )
-    assert reason and "core.hooksPath" in reason
+def test_governed_gate_names_the_supported_installer(tmp_path) -> None:
+    """The briefing must point at the fix, not just name the limitation.
 
-
-def test_human_authorization_needs_a_real_reason() -> None:
-    env_name = policy()["authorization_env"]
-    assert human_authorized({env_name: ""}) is False
-    assert human_authorized({env_name: "1"}) is False
-    assert human_authorized({env_name: "yes"}) is False
-    assert human_authorized({env_name: "ops: rotating a signing key"}) is True
-
-
-def test_authorized_human_may_proceed(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv(policy()["authorization_env"], "ops: recovering a corrupt hook env")
-    assert command_bypasses_verification("git commit --no-verify -m x") is None
-
-
-def test_unreadable_policy_fails_closed(monkeypatch: pytest.MonkeyPatch) -> None:
-    """No classification is possible without the policy, so nothing is allowed."""
-    import verification_bypass_gate as gate
-
-    monkeypatch.setattr(gate, "POLICY_PATH", ROOT / "ops" / "config" / "does-not-exist.json")
-    gate.policy.cache_clear()
-    try:
-        reason = gate.command_bypasses_verification("git commit -m x")
-        assert reason and "fail closed" in reason
-    finally:
-        gate.policy.cache_clear()
-
-
-def test_policy_is_the_single_machine_readable_source() -> None:
-    data = json.loads(POLICY_PATH.read_text(encoding="utf-8"))
-    assert data["schema"] == "l9.verification-bypass.v1"
-    # The tokens the gate enforces come from the file, never from a second list.
-    assert "--no-verify" in data["bypass_flags"]
-    assert "core.hooksPath" in data["bypass_config_keys"]
-    assert "git commit" in data["guarded_commands"]
-
-
-def test_gate_plane_denies_through_local_execution_gate(tmp_path: Path) -> None:
-    """Wired ahead of the git/gh exemption, or a git command would slip past."""
-    sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
-    import local_execution_gate as leg
-
-    reason = leg.evaluate("Bash", {"command": "git commit --no-verify -m x"}, root=tmp_path)
-    assert reason and "verification-bypass" in reason
-
-
-def _claude(raw: str) -> str:
-    """Run the Claude PreToolUse entry point over a raw payload, return stdout."""
-    import io
-    import json as _json
-    from contextlib import redirect_stdout
-
-    sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
-    import local_execution_gate as leg
-
-    stdin, sys.stdin = sys.stdin, io.StringIO(raw)
-    buf = io.StringIO()
-    try:
-        with redirect_stdout(buf):
-            leg.main_claude()
-    finally:
-        sys.stdin = stdin
-    out = buf.getvalue().strip()
-    return _json.loads(out)["hookSpecificOutput"]["permissionDecision"] if out else "allow"
-
-
-def test_payload_plane_denies_before_the_git_exemption() -> None:
-    """The regression that made the first wiring dead code.
-
-    ``payload_is_git_or_gh`` short-circuits ``main_claude`` before the event is
-    parsed, so a plane wired only into ``evaluate()`` never sees a git command.
-    Wiring it into ``evaluate`` alone passed its unit test and denied nothing.
+    A session told only "there is no commit hook, by design" has no way to close
+    the window. The supported installer is the missing half.
     """
-    raw = (
-        '{"tool_name":"Bash","tool_input":'
-        '{"command":"git -c core.hooksPath=/dev/null commit -q -m x"},"cwd":"."}'
-    )
-    assert _claude(raw) == "deny"
+    import subprocess
+
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    subprocess.run(["git", "-C", str(repo), "init", "-q"], check=True)
+    status = verification_status(repo)
+    assert status["model"] == "governed_gate"
+    assert "install_commit_hook.sh" in status["reason"]
+    assert "make pr-check" in status["reason"]
 
 
-def test_payload_plane_leaves_ordinary_commits_alone() -> None:
-    raw = '{"tool_name":"Bash","tool_input":{"command":"git commit -m x"},"cwd":"."}'
-    assert _claude(raw) == "allow"
+def test_installer_exists_and_is_executable() -> None:
+    installer = ROOT / "ops" / "scripts" / "install_commit_hook.sh"
+    assert installer.is_file(), "briefing names an installer that must exist"
+    assert installer.stat().st_mode & 0o111, "installer must be executable"
 
 
-def test_cursor_surface_denies_the_same_command() -> None:
-    import io
-    import json as _json
-    from contextlib import redirect_stdout
-
-    sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
-    import local_execution_gate as leg
-
-    stdin, sys.stdin = sys.stdin, io.StringIO('{"command":"git commit --no-verify -m x"}')
-    buf = io.StringIO()
-    try:
-        with redirect_stdout(buf):
-            leg.main_cursor_shell()
-    finally:
-        sys.stdin = stdin
-    assert _json.loads(buf.getvalue())["permission"] == "deny"
+def test_runner_supports_staged_mode() -> None:
+    """The shim delegates to --staged; without it the hook rejects every commit."""
+    runner = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    assert "--staged" in runner
+    assert 'PR_STAGED" != "1"' in runner, "clean-tree assertion must be skipped when staged"
 
 
-def test_deny_reason_never_echoes_an_operand() -> None:
-    """The reason is emitted into hook output and may be logged downstream.
+def test_breakglass_alias_and_reason_floor() -> None:
+    """One escape hatch, two spellings, and a reason that costs a sentence."""
+    command = 'git commit --no-verify -m "x"'
+    assert command_bypasses_verification(command, env={"L9_VERIFY_BYPASS_AUTHORIZED": "short"})
+    assert (
+        command_bypasses_verification(
+            command,
+            env={"L9_VERIFICATION_BYPASS_AUTHORIZED": "operator ib: upstream shim broken, #412"},
+        )
+        is None
+    ), "the alias must be honoured so neither spelling silently fails"
 
-    Naming the variable is the point; carrying its value there is not.
-    """
-    reason = command_bypasses_verification("TOKEN=s3cr3t-value SKIP=ruff make pr")
-    assert reason and "SKIP" in reason
-    assert "s3cr3t-value" not in reason
 
-
-def test_documented_tokens_stay_a_subset_of_the_policy() -> None:
-    """CLAUDE.md names tokens for orientation; the policy is what is enforced.
-
-    Prose that drifts from the gate is exactly the crossing-guard-with-a-megaphone
-    failure this gate replaced, so the doc may only name tokens the policy holds.
-    """
-    doc = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
-    spec = policy()
-    enforced = (
-        set(spec["bypass_flags"])
-        | set(spec["bypass_config_keys"])
-        | {f"{name}=" for name in spec["bypass_env_assignments"]}
-    )
-    section = doc.split("Local `git commit` runs no hooks here", 1)
-    assert len(section) == 2, "CLAUDE.md no longer documents the no-commit-hook model"
-    body = section[1].split("\n\n", 1)[0]
-    for token in ("--no-verify", "-c core.hooksPath=", "SKIP=", "HUSKY="):
-        if token in body:
-            bare = token.replace("-c ", "").strip()
-            assert (
-                bare in enforced
-                or bare.rstrip("=") + "=" in enforced
-                or any(bare.startswith(item) for item in enforced)
-            ), f"CLAUDE.md names {token!r}, which the policy does not enforce"
+def test_exec_path_global_does_not_hide_a_bypass() -> None:
+    assert command_bypasses_verification("git --exec-path=/tmp commit --no-verify -m x", env={})

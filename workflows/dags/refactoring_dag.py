@@ -292,8 +292,10 @@ Options:
             description="Execute git commit",
             action="""git commit -m "{message}"
 
-If pre-commit hooks fail on pre-existing issues:
-git commit --no-verify -m "{message}"
+If pre-commit hooks fail, repair what they reported — the hooks are the
+local verification plane and skipping them is denied at PreToolUse
+(ops/autonomy/verification_bypass_gate.py). A pre-existing failure is
+still a finding: fix it, or record it with ops/autonomy/session_debt.py.
 
 Verify commit with:
 git log -1 --oneline""",

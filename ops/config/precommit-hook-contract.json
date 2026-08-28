@@ -80,6 +80,10 @@
       "mode": "writer",
       "output_prefixes": [],
       "note": "reformats any passed Python file"
+    },
+    "commit-verification-contract": {
+      "mode": "read_only",
+      "note": "validate_commit_verification_contract.py — parses the declaration, greps tracked executables, runs the gate in-process; writes nothing"
     }
   }
 }

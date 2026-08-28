@@ -10,6 +10,12 @@ The classifiers still report a raw publish, so a policy engine can say "you
 bypassed `make pr`" after the fact; this gate no longer turns that report into
 a blocked command.
 
+Two planes answer before that exemption, so a git command can still earn a
+denial: ``git_guardrails`` (destruction) and ``verification_bypass_gate``
+(skipping the hooks that verify a commit — contract
+``l9-commit-verification-integrity``, declared in
+``ops/config/commit-verification-contract.json``).
+
 That exemption is about workflow preference, not about destroying work, and it
 is NOT a blanket allow of git: every shell command is first evaluated by
 ``git_guardrails`` (contract ``l9-context-sensitive-git-guardrails``), which
@@ -37,7 +43,7 @@ Escape hatches (human / ops only):
   L9_GIT_SWITCH_AUTHORIZED=<reason>
   L9_GIT_RESET_AUTHORIZED=<reason>
   L9_WORKTREE_ISOLATION=0
-  L9_VERIFICATION_BYPASS_AUTHORIZED=<reason>
+  L9_VERIFY_BYPASS_AUTHORIZED=<reason>   (alias: L9_VERIFICATION_BYPASS_AUTHORIZED)
 """
 
 from __future__ import annotations
@@ -303,7 +309,9 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
             return guardrail
         # Verification-bypass runs with the guardrail plane, before the git/gh
         # exemption: a git command is exempt from workflow denials, never from
-        # suppressing the verification it would otherwise have to pass.
+        # suppressing the verification it would otherwise have to pass. Skipping
+        # a hook destroys nothing, so the guardrails' effect taxonomy cannot see
+        # it; it is nonetheless a denial a git command can earn.
         bypass = command_bypasses_verification(raw_command)
         if bypass:
             return bypass
@@ -610,6 +618,9 @@ def main_cursor_shell() -> int:
         guardrail = command_requires_human(command, root=root)
         if guardrail:
             return _emit_cursor("deny", guardrail)
+        bypass = command_bypasses_verification(command)
+        if bypass:
+            return _emit_cursor("deny", bypass)
         iso = command_violates_worktree_isolation(command, root=root)
         if iso:
             return _emit_cursor("deny", iso)
