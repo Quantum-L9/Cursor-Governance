@@ -261,9 +261,10 @@ GENERATED_PATH_PREFIXES: tuple[str, ...] = (
 
 #: Paths the sync script regenerates but this gate must NOT call disposable.
 #: ``skills/AUTONOMY_MANIFEST.yaml`` is the hand-authored routing SSOT (rule 53
-#: keeps it off the generated merge driver for the same reason), and the PE
-#: manifest is advisory and never auto-synced (TODO.md), so neither is produced
-#: by a gate-run generator. Destroying a local edit to either would lose work.
+#: keeps it off the generated merge driver for the same reason). The PE manifest
+#: *is* gate-generated now (run_pr_gate.sh passes --pe-manifest), but it hashes
+#: ~500 files across the mutable PE tree, so a local regeneration is real work a
+#: destructive clean must not eat. Regenerable is not the same as disposable.
 DELIBERATELY_NOT_GENERATED: tuple[str, ...] = (
     "skills/AUTONOMY_MANIFEST.yaml",
     "environment/program-execution/MANIFEST.json",

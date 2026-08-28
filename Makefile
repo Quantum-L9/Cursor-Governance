@@ -605,10 +605,15 @@ program-execution-adapters:
 	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B 		$(PE_ROOT)/scripts/validate_execution_adapters.py
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B $(PE_ROOT)/scripts/validate_thin_providers.py
 
+# Integrity last, on purpose. validate_manifest.py used to run before the
+# controller tests, so a MANIFEST.json digest drift aborted the target and the
+# behavioural suite never ran -- a stale hash masked whatever else was broken.
+# Same checks, same fail-closed result; the drift can no longer hide a
+# regression.
 program-execution-conformance: autonomy-contracts-validate
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B 		$(PE_ROOT)/scripts/run_conformance.py
-	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B $(PE_ROOT)/scripts/validate_manifest.py
 	$(MAKE) program-execution-controller-tests
+	PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B $(PE_ROOT)/scripts/validate_manifest.py
 
 program-execution-probe:
 	PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=$(PE_ROOT) $(PYTHON) -B 		$(PE_ROOT)/scripts/probe_execution_adapters.py

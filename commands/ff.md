@@ -1,6 +1,6 @@
 ---
 name: ff
-version: "1.2.0"
+version: "1.3.0"
 description: "In-place catch-up of a named Cursor-Governance clone — parks unique work, keeps .venv; never activate_fresh"
 auto_chain: ynp
 aliases:
@@ -49,7 +49,18 @@ CURSOR_GOVERNANCE_DIR="<absolute-named-clone>" \
 5. Verify same gitdir, same branch, `.venv` and env.local keep-list still
    present, unique untracked still present or held, no new
    `~/.cursor-governance.bak.*`.
-6. Auto-chain `/ynp`.
+6. **Shelf leftover `WIP/` and `docs/plans/`** — if any untracked files remain
+   under those trees (skip gitignored secret globs, `WIP/Legal Defense/`,
+   credential filenames, and anything an open `feat/ff-shelf-*` PR already
+   carries), cut a sibling worktree from the new `origin/main` tip
+   (`feat/ff-shelf-<stamp>`), **copy those files into it** — untracked bytes
+   do not exist in a fresh checkout — pathspec-add **only** those files,
+   scoped commit, run `l4_local.py begin / record-kernels / authorize-release`
+   in that worktree, then **ask the user** before `PR_REMEDIATE=0 make pr`.
+   Catching a clone up is not authorization to publish. Do **not** put
+   `make pr` inside `ff.sh`. Do not scoop other untracked paths. Do not delete
+   the copies in the named clone.
+7. Auto-chain `/ynp`.
 
 ## FORBIDDEN
 

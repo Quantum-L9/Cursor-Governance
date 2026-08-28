@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .common import ControllerError, digest_object, load_json, utc_now, write_json
+from .runtime import _require_stack_proof_reentry, _runtime_config, open_runtime
 
 FORBIDDEN = {
     "objective",
@@ -23,24 +24,6 @@ FORBIDDEN = {
 PLAN_REVISION_REL = Path("runtime/plan-revision.json")
 REVISIONS_REL = Path("runtime/replan-revisions")
 SCHEMA_REL = Path("shared/schemas/replan-revision.schema.json")
-
-
-def _open_runtime(workspace: Path):
-    from .controller import open_runtime as open_runtime
-
-    return open_runtime(workspace)
-
-
-def _load_runtime_config(workspace: Path) -> dict[str, Any]:
-    from .controller import _runtime_config
-
-    return _runtime_config(workspace)
-
-
-def _require_stack_proof_reentry(workspace: Path, extra_text: str) -> None:
-    from .controller import _require_stack_proof_reentry as require_stack_proof_reentry
-
-    require_stack_proof_reentry(workspace, extra_text)
 
 
 def _revision_schema() -> dict[str, Any]:
@@ -153,7 +136,7 @@ def propose(
     if target.exists():
         raise ControllerError(f"replan revision already exists: {revision_id}")
     write_json(target, payload)
-    db, ledger = _open_runtime(workspace)
+    db, ledger = open_runtime(workspace)
     try:
         ledger.append(
             "REPLAN_PROPOSED",
@@ -194,7 +177,7 @@ def verify(workspace: Path, revision_id: str, *, verifier_actor: str) -> dict[st
     body = {k: v for k, v in revision.items() if k != "revision_digest"}
     revision["revision_digest"] = digest_object(body)
     write_json(path, revision)
-    db, ledger = _open_runtime(workspace)
+    db, ledger = open_runtime(workspace)
     try:
         ledger.append(
             "REPLAN_VERIFIED",
@@ -208,7 +191,7 @@ def verify(workspace: Path, revision_id: str, *, verifier_actor: str) -> dict[st
 
 def activate(workspace: Path, revision_id: str, *, actor: str) -> dict[str, Any]:
     workspace = workspace.resolve()
-    config = _load_runtime_config(workspace)
+    config = _runtime_config(workspace)
     if actor != config.get("controller_id") and actor != "controller":
         raise ControllerError("only the Controller may activate a Replan Revision")
     path = workspace / REVISIONS_REL / f"{revision_id}.json"
@@ -239,7 +222,7 @@ def activate(workspace: Path, revision_id: str, *, actor: str) -> dict[str, Any]
             "updated_at": revision["activated_at"],
         },
     )
-    db, ledger = _open_runtime(workspace)
+    db, ledger = open_runtime(workspace)
     try:
         ledger.append(
             "REPLAN_ACTIVATED",
@@ -263,7 +246,7 @@ def reject(workspace: Path, revision_id: str, *, actor: str, reason: str) -> dic
     body = {k: v for k, v in revision.items() if k != "revision_digest"}
     revision["revision_digest"] = digest_object(body)
     write_json(path, revision)
-    db, ledger = _open_runtime(workspace)
+    db, ledger = open_runtime(workspace)
     try:
         ledger.append(
             "REPLAN_REJECTED",

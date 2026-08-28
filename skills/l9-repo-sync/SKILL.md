@@ -81,6 +81,13 @@ It classifies `refs/l9/preserved/ff/*`, `refs/l9/preserved/ff-dirty/*`, and
 5. **Verify** — same `gitdir`, same branch, `.venv` and env.local keep-list
    still present at the same paths, no new `~/.cursor-governance.bak.*`
    from this run.
+6. **Shelf** — leftover untracked `WIP/` and `docs/plans/` become a sibling
+   branch (`feat/ff-shelf-<stamp>`). Copy the bytes into the new worktree
+   (untracked files are not in a fresh checkout), authorize release there
+   (L4 state is workspace-local), then **ask** before `PR_REMEDIATE=0 make pr`
+   — `/ff` does not itself authorize publishing. Skip paths an open shelf PR
+   already carries. `ff.sh` stays push-off. Secret globs stay out. The
+   dirty-preserve ref is **not** deleted here — see Handoff.
 
 ## Failure Handling
 

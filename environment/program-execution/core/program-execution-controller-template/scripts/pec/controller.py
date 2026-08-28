@@ -36,6 +36,13 @@ from .contracts import (
 )
 from .exec_env import resolve_exec_env, run_validation_command
 from .ledger import EventLedger
+from .runtime import (
+    _require_stack_proof_reentry,
+    _runtime_config,
+    campaign_status_path,
+    open_runtime,
+    read_campaign_status,
+)
 from .state import StateDB
 from .workspace_reset import clean_task_execution
 
@@ -78,17 +85,6 @@ def _campaign_completion_blockers(db: StateDB, verdict: str) -> dict[str, list[s
         if blocked_gates:
             blockers["blocking_gates"] = blocked_gates
     return blockers
-
-
-def campaign_status_path(workspace: Path) -> Path:
-    return workspace.resolve() / "runtime" / "campaign-status.json"
-
-
-def read_campaign_status(workspace: Path) -> dict[str, Any] | None:
-    path = campaign_status_path(workspace)
-    if not path.is_file():
-        return None
-    return load_json(path)
 
 
 def write_campaign_status(
@@ -195,24 +191,8 @@ def ensure_campaign_active(
     return payload
 
 
-def open_runtime(workspace: Path) -> tuple[StateDB, EventLedger]:
-    workspace = workspace.resolve()
-    if not (workspace / "runtime" / "state.sqlite").is_file():
-        raise ControllerError(f"Controller runtime not bootstrapped: {workspace}")
-    return StateDB(workspace / "runtime" / "state.sqlite"), EventLedger(
-        workspace / "ledger" / "events.jsonl"
-    )
-
-
 def load_json_or_yaml(path: Path) -> Any:
     return load_json(path) if path.suffix == ".json" else load_yaml(path)
-
-
-def _runtime_config(workspace: Path) -> dict[str, Any]:
-    path = workspace / "config" / "controller.json"
-    if not path.is_file():
-        raise ControllerError("runtime controller config missing")
-    return load_json(path)
 
 
 def _validate_schema(workspace: Path, schema_name: str, value: Any) -> None:
@@ -1262,25 +1242,6 @@ def prepare_worktree(workspace: Path, task_id: str) -> dict[str, Any]:
         }
     finally:
         db.close()
-
-
-def _require_stack_proof_reentry(workspace: Path, extra_text: str) -> None:
-    proof_path = Path(__file__).resolve().parents[4] / "scripts" / "context7_stack_proof.py"
-    if not proof_path.is_file():
-        raise ControllerError("context7_stack_proof.py missing; refuse start")
-    spec = importlib.util.spec_from_file_location("context7_stack_proof", proof_path)
-    if spec is None or spec.loader is None:
-        raise ControllerError("cannot load context7_stack_proof")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    status = read_campaign_status(workspace) or {}
-    campaign_id = str(status.get("campaign_id") or "").strip()
-    if not campaign_id:
-        raise ControllerError("campaign_id missing; cannot re-entry stack-proof")
-    try:
-        module.require_existing_receipt(campaign_id, extra_text)
-    except module.StackProofError as exc:
-        raise ControllerError(str(exc)) from exc
 
 
 def _worktree_matches_lease(worktree: Path, lease: dict[str, Any], repo_path: Path) -> bool:
