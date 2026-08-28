@@ -6,9 +6,9 @@
       "alias": null,
       "class": "always",
       "output": "00-global.md",
-      "output_sha256": "8b3ecdbe2f9d0c817cab569f6834e24cef6fbd14ad8761c78f2798798d787b25",
+      "output_sha256": "dba834ff614b6128b55c7465d2eea6c26acb121194abd6942e3e749fd6b1d435",
       "source": "rules/00-global.mdc",
-      "source_sha256": "c5b2842185acfba3d54108747cf6a05d670d4708caa9f5421ab91a1e5500dcf7",
+      "source_sha256": "ceaafbc510094aafbfd66606103783bc9630cb7073eec01ff07c3ebc9ac92548",
       "stem": "00-global"
     },
     {
@@ -609,18 +609,18 @@
       "alias": null,
       "class": "always",
       "output": "99-no-auto-commit.md",
-      "output_sha256": "604f6ba26067062d5a7997e2cbb2741cd108a1000031bdfe67b74cf82e8eaf44",
+      "output_sha256": "08651e64b3498d046d80914f70861bbf2f027fd3e6d181dca3937af0152f6582",
       "source": "rules/99-no-auto-commit.mdc",
-      "source_sha256": "c005a2cf7f0a4ba5229936283a05f1b289b9bb4d1b3d59c007dfaae81714bcd3",
+      "source_sha256": "f40fb8497a18ed5beac54fe9e7a5a6a23e7a6304180faaaf6861da80134e0bde",
       "stem": "99-no-auto-commit"
     },
     {
       "alias": null,
       "class": "always",
       "output": "zz-autonomy-surface-override.md",
-      "output_sha256": "69ee6bd7d1ac3814f408b6238ded1300c475c4937f1def90695da6b642cf5b9c",
+      "output_sha256": "bc718c4f31b2312617d2586e7645645084c8fe44f15613997bd702665046d6c2",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "4a0ebd62fd4acd0852573eaac034c4cff68ea496b8aa252dc6a499ef8b99f8ea",
+      "source_sha256": "5d28e7a71e98d918ccedf2348c69ffc283ba646d1eb18f5dfc2a53217ef6e2c0",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 69
   },
-  "tree_sha256": "dd992e34e9847d59bae77f13753d4a2244957afe142e151c5fd9c78d6de567d9"
+  "tree_sha256": "15e555052678bf18c08af33959db16202300e8a8defc7d6c99bab98840faa342"
 }

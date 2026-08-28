@@ -244,7 +244,7 @@ _PYTEST_INVOCATION_RE = re.compile(
     re.I,
 )
 
-#: Tokens that are options, not targets.
+
 def _pytest_targets(segment: str) -> list[str]:
     """Positional arguments after a pytest invocation, options removed."""
 
