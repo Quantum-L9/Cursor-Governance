@@ -11,9 +11,7 @@ import runpy
 import sys
 from pathlib import Path
 
-REPO_GENERATOR = (
-    Path(__file__).resolve().parents[3] / "scripts" / "generate_subsystem_readmes.py"
-)
+REPO_GENERATOR = Path(__file__).resolve().parents[3] / "scripts" / "generate_subsystem_readmes.py"
 
 
 def main() -> int:
