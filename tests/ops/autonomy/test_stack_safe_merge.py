@@ -12,7 +12,7 @@ HELPER = Path(__file__).resolve().parents[3] / "ops" / "autonomy" / "stack_safe_
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "autonomy"))
 
-from stack_safe_merge import merge_argv, select_merge_method  # noqa: E402
+from stack_safe_merge import _execute, merge_argv, select_merge_method  # noqa: E402
 
 
 def _probe(tmp_path: Path, entries: dict) -> str:
@@ -74,3 +74,39 @@ def test_cli_json_leaf_is_squash(tmp_path: Path) -> None:
     payload = json.loads(proc.stdout)
     assert payload["method"] == "squash"
     assert "--squash" in payload["argv"]
+
+
+def test_parent_omits_delete_branch(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("L9_STACK_PROBE_FILE", _probe(tmp_path, STACKED))
+    chosen = select_merge_method("Quantum-L9/SEO-Bot", "53")
+    argv = merge_argv("Quantum-L9/SEO-Bot", "53", delete_branch=True, selection=chosen)
+    assert "--delete-branch" not in argv
+    assert chosen["children"] == [54]
+
+
+def test_leaf_keeps_delete_branch(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("L9_STACK_PROBE_FILE", _probe(tmp_path, LEAF))
+    chosen = select_merge_method("Quantum-L9/SEO-Bot", "53")
+    argv = merge_argv("Quantum-L9/SEO-Bot", "53", delete_branch=True, selection=chosen)
+    assert "--delete-branch" in argv
+
+
+def test_execute_parent_skips_delete_ref(monkeypatch) -> None:
+    runs: list[list[str]] = []
+
+    def _capture(argv: list[str]) -> int:
+        runs.append(argv)
+        return 0
+
+    monkeypatch.setattr("stack_safe_merge._run", _capture)
+    selection = {
+        "repo": "Quantum-L9/SEO-Bot",
+        "pr": 53,
+        "method": "merge",
+        "head": "fix/parent",
+        "children": [54],
+    }
+    assert _execute(selection, delete_branch=True) == 0
+    joined = [" ".join(argv) for argv in runs]
+    assert not any("DELETE" in line and "refs/heads/" in line for line in joined)
+    assert any("pulls/53/merge" in line for line in joined)

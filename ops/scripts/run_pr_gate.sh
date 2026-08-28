@@ -417,6 +417,7 @@ _gate_run_sync() {
   python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
     --root "$WS" \
     --changed-file "$changed_file" \
+    --pe-manifest \
     --check
   if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
     if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then

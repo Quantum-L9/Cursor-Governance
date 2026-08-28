@@ -867,3 +867,23 @@ Remediator **publish** is a different path from the ceremony:
 
 `make pr` / `make pr-check` remain the campaign / feature ceremony. This
 section does not rewrite §4.
+
+<!-- L9_GENERATED_SNAPSHOT_SCOPE_V1 -->
+## Generated snapshot scope (2026-08-28)
+
+`pull_request` `governance-self-check` uses `sync_generated_artifacts.py
+--changed-file` (add `--pe-manifest` only when a path starts with
+`environment/program-execution/`). `push` to `main` keeps
+`--force --pe-manifest --check`. lint-autofix is the only generated janitor
+(cleanup PR; never push to protected `main`).
+
+`stack_safe_merge.py` keeps a parent ref while an open child still bases on
+it. After the last child retargets or lands, the parent ref may be deleted.
+
+Doctrine clause owners — later PRs **append a named fragment**. They do not
+rewrite `ops/autonomy/surface_profile.yaml` `session_start_block` or the
+whole `ops/scripts/run_pr_gate.sh`:
+
+- remediator publish: `skills/l9-pr-remediation` + this file `L9_PR_REMEDIATE_SPEED_V1`
+- unscoped pytest deny: `ops/scripts/run_pr_gate.sh`
+- kernel hook: `ops/hooks/plan-kernel-gate.py`
