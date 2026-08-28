@@ -213,9 +213,9 @@
       "alias": null,
       "class": "always",
       "output": "48-make-pr-remediation.md",
-      "output_sha256": "37df984539a1e2d6d4a8b543525f4a1eedffaa57308f6846e3b49758e3dfb49d",
+      "output_sha256": "c761862a9251478f9df7d96d2f1bd017ceacabbef63b1dde9a81c84337c374d6",
       "source": "rules/48-make-pr-remediation.mdc",
-      "source_sha256": "7a8c21f0e965b23c482642794695d02d186f20789cacae80fa1f24b87bbb87e9",
+      "source_sha256": "72302848d33ab5022e9c7640c5975bc96ec4fe6221ca9f8e337a56d87453f98b",
       "stem": "48-make-pr-remediation"
     },
     {
@@ -510,9 +510,9 @@
       "alias": null,
       "class": "always",
       "output": "88-l4-local-autonomy.md",
-      "output_sha256": "563a3f594e1f51276d1260f020596d5544932c1ab7d5c878736911eac4422d37",
+      "output_sha256": "efbc6483e37e7003a060a3c5bc53ed7f44c1530c947f7d3204d8e44a854cbd5e",
       "source": "rules/88-l4-local-autonomy.mdc",
-      "source_sha256": "ec6dfa6cb1e3655f0ca94d2315b8132496dc91a8bdc730ebc3e2686cbeb937f2",
+      "source_sha256": "88a6bc6c681c483e4b451017a2292e2a45b0c34e8b6a7cafa9878b048f4669de",
       "stem": "88-l4-local-autonomy"
     },
     {
@@ -618,9 +618,9 @@
       "alias": null,
       "class": "always",
       "output": "zz-autonomy-surface-override.md",
-      "output_sha256": "d488455e3b1add5b522f7ebd413675e7396ee0985ebd0b71ecf71bddd5d649f2",
+      "output_sha256": "7e4b0beac98ce5ff482b8437817bf5d54af13aa21f33fa6b6a66e2c94ff97102",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "144821b4b18f03f49689832a4d94e7a969fabc4b4927f9c673995c72a4def51e",
+      "source_sha256": "81d5c2fe2a0e3ee0c0bfd3bc95f833059658496acec5ae89af9ecc78028754a6",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 69
   },
-  "tree_sha256": "cae4e976efc8bd24ec2abddfc2345c35531641da2478ac71a4a9d891077db379"
+  "tree_sha256": "0cc3ebe242787433f6da66e514094a6ee853bb54a3dab970ea54824932585aba"
 }
