@@ -34,6 +34,7 @@ FAIL=0
 FAIL_CONSUMER=0
 FAIL_SESSIONEND=0
 FAIL_GRAPHITI=0
+FAIL_LAUNCHAGENT=0
 CURRENT_FAIL_CLASS=wiring
 
 WARN_FILE="$(mktemp)"
@@ -47,6 +48,7 @@ fail() {
     consumer) FAIL_CONSUMER=1 ;;
     sessionend) FAIL_SESSIONEND=1 ;;
     graphiti) FAIL_GRAPHITI=1 ;;
+    launchagent) FAIL_LAUNCHAGENT=1 ;;
   esac
 }
 warn() { echo "$1" >> "$WARN_FILE"; }
@@ -65,7 +67,10 @@ emit_result() {
     if [ "$FAIL_GRAPHITI" -eq 1 ]; then
       echo "RESULT: FAIL — Graphiti wiring"
     fi
-    if [ "$FAIL_CONSUMER" -eq 0 ] && [ "$FAIL_SESSIONEND" -eq 0 ] && [ "$FAIL_GRAPHITI" -eq 0 ]; then
+    if [ "$FAIL_LAUNCHAGENT" -eq 1 ]; then
+      echo "RESULT: FAIL — LaunchAgent path law"
+    fi
+    if [ "$FAIL_CONSUMER" -eq 0 ] && [ "$FAIL_SESSIONEND" -eq 0 ] && [ "$FAIL_GRAPHITI" -eq 0 ] && [ "$FAIL_LAUNCHAGENT" -eq 0 ]; then
       echo "RESULT: FAIL — governance wiring"
     fi
   fi
@@ -490,6 +495,34 @@ import json,sys
 print(json.load(open(sys.argv[1])).get("class", "unknown"))' "$WORKSPACE/.vscode/.l9-ide-desired-hash" 2>/dev/null || echo unknown))"
 else
   warn "IDE profile not yet applied — run: bash \"\$HOME/.cursor-governance/ops/scripts/install_ide_profile.sh\" \"$WORKSPACE\""
+fi
+
+CURRENT_FAIL_CLASS=launchagent
+echo ""
+echo "=== LaunchAgents (machine-plane path law) ==="
+# Report-only. Never unload, bootout, move, or delete. Override directory with
+# L9_LAUNCHAGENTS_DIR for tests. Missing directory is a warning (CI / Linux).
+LA_SCAN="$SCRIPT_DIR/scan_launchagents.py"
+if [ ! -f "$LA_SCAN" ]; then
+  fail "scan_launchagents.py missing: $LA_SCAN"
+else
+  LA_DIR="${L9_LAUNCHAGENTS_DIR:-$HOME/Library/LaunchAgents}"
+  set +e
+  LA_OUT="$("$GOV_PYTHON" "$LA_SCAN" --dir "$LA_DIR" --ssot "$HOME/.cursor-governance" 2>&1)"
+  LA_RC=$?
+  set -e
+  while IFS= read -r line; do
+    [ -n "$line" ] || continue
+    case "$line" in
+      WARN:*) warn "${line#WARN: }" ;;
+      FAIL:*) fail "${line#FAIL: }" ;;
+      OK:*) pass "${line#OK: }" ;;
+      *) echo "  $line" ;;
+    esac
+  done <<< "$LA_OUT"
+  if [ "$LA_RC" -ne 0 ] && [ "$FAIL_LAUNCHAGENT" -eq 0 ]; then
+    fail "scan_launchagents.py exited $LA_RC"
+  fi
 fi
 
 fi
