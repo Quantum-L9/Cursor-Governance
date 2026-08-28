@@ -1,0 +1,11 @@
+primary_family: diagnostic
+decided_by: bounded_llm
+reason: purpose is observe-and-report semantic transfer intelligence without state mutation; DAG is an execution-shape trait, not primary ownership family
+traits:
+  determinism: mixed
+  mutation_scope: artifact_only
+  state_model: resumable
+  risk_class: reversible
+  externality: network
+  evidence_mode: source_grounded
+  execution_shape: dag

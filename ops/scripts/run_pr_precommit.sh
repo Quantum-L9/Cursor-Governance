@@ -14,6 +14,17 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# Staged mode: invoked from a git commit hook rather than from make pr-check.
+# Same catalog, same SKIP list — the single reason `pre-commit install` is
+# forbidden is that a RAW shim runs the catalog WITHOUT that list, so
+# symlinks-check rejects every commit on a non-cursor surface. Delegating here
+# keeps the list, which is what makes a commit hook safe on every surface.
+PR_STAGED="${PR_STAGED:-0}"
+if [[ "${1:-}" == "--staged" ]]; then
+  PR_STAGED=1
+  shift
+fi
+
 WS="${1:-${WS:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-}"
@@ -39,7 +50,11 @@ GOV_PRECOMMIT_CONFIG="$GOV_ROOT/.pre-commit-config.yaml"
 
 # Resolve first. An empty list is PASS without the pre-commit CLI — CI Test
 # Suite does not install it, and this repo does not use a git commit hook.
-if [[ -n "${PR_CHANGED_FILE:-}" && -f "$PR_CHANGED_FILE" ]]; then
+if [[ "$PR_STAGED" == "1" ]]; then
+  tmp="$(mktemp)"
+  trap 'rm -f "$tmp"' EXIT
+  git -C "$WS" diff --cached --name-only --diff-filter=ACMR >"$tmp"
+elif [[ -n "${PR_CHANGED_FILE:-}" && -f "$PR_CHANGED_FILE" ]]; then
   tmp="$PR_CHANGED_FILE"
 else
   tmp="$(mktemp)"

@@ -40,7 +40,7 @@ Consumers do not inherit this file from the Quantum-L9/.github seeder; they
 keep their own `CLAUDE.md` if they have one (`agentdocs.sh` only maintains
 the formatter block).
 
-## The three things most often got wrong here
+## The things most often got wrong here
 
 - **`make pr` (any capitalization) is the sanctioned route to GitHub — and
   nothing blocks the alternatives.** Raw `git push` is *not* denied by
@@ -55,6 +55,16 @@ the formatter block).
   keeps the credential on the far side. A capability reporting `DEGRADED` or
   `BLOCKED_BY_PLATFORM` is never a reason to paste a secret — see
   `docs/DEGRADED_MODE_CONTRACT.md`.
+- **Local `git commit` runs no hooks here, and that is deliberate.** This repo
+  installs no commit hook — `pre-commit install` is *forbidden*
+  (`validate_claude_env.check_session_deps_installs_no_git_hook`,
+  `ops/scripts/run_pr_precommit.sh`), because a raw hook runs the catalog
+  without the surface-aware SKIP list. Verification lives at `make pr-check`
+  (public quality) and `make pr` (publish). So never reach for `--no-verify`,
+  `git commit -n`, `-c core.hooksPath=`, or `SKIP=`/`HUSKY=`: there is no hook
+  to skip, the token only signals intent to dodge verification, and
+  `ops/autonomy/verification_bypass_gate.py` denies it at PreToolUse. If you
+  want the checks, run `make pr-check`.
 - **Receipts expire.** `~/.l9/claude/bootstrap-state.json` and
   `~/.l9/claude/gov-refresh.json` carry a UTC timestamp and a TTL. Read them
   through `ops/scripts/claude_bootstrap_receipt.py` and
@@ -74,10 +84,19 @@ exit 5 means specifically: the files are correct and nothing loaded them.
 `STRUCTURAL_PASS` means the files are correct. It says nothing about whether any
 of them were loaded into this session; `RUNTIME:` is the line that answers that.
 
-This file is `managed` (rewrite allowed, no `ALLOW-ROOT-DELETION`). PRs that
-touch `additive_only` root files (`Makefile`, `AGENTS.md`, …) must use
-`.github/PULL_REQUEST_TEMPLATE/protected-root.md` (`<!-- L9_PROTECTED_ROOT_PR -->`).
-`make pr` injects it. CI fails without the stamp. See `AGENTS.md` §14.
+This file is `managed` (rewrite allowed, no `ALLOW-ROOT-DELETION`). Twelve root
+files are `additive_only` — among them `pyproject.toml`, `requirements.txt`,
+`conftest.py`, and `.pre-commit-config.yaml`, not only the obvious `Makefile`
+and `AGENTS.md`. Adding lines to one is free. **Removing or overwriting a line
+needs `ALLOW-ROOT-DELETION: <path> — <reason>` in a commit message on the
+branch** (any commit in the range counts) plus CODEOWNERS approval, and the PR
+must use `.github/PULL_REQUEST_TEMPLATE/protected-root.md`
+(`<!-- L9_PROTECTED_ROOT_PR -->`). `make pr` injects the template but cannot
+invent the marker; without it the gate blocks the push. Authoritative list:
+`ops/config/root-file-protection.json`. Full rule: `AGENTS.md` §14.
+`ops/autonomy/root_file_advisory.py` warns at the start of a turn when a
+protected root file is being overwritten without its marker, so this is caught
+at edit time rather than at push.
 
 <!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->
 

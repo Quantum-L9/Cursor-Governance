@@ -1,0 +1,59 @@
+{
+  "$id": "l9/intelligence-harvest/evidence",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "claim": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "epistemic": {
+      "enum": [
+        "CONFIRMED",
+        "INFERENCE",
+        "UNKNOWN"
+      ]
+    },
+    "id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "locator": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "path_lines",
+            "symbol",
+            "url",
+            "artifact",
+            "unknown"
+          ]
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "kind",
+        "value"
+      ],
+      "type": "object"
+    },
+    "secret_redacted": {
+      "default": false,
+      "type": "boolean"
+    },
+    "source": {
+      "minLength": 1,
+      "type": "string"
+    }
+  },
+  "required": [
+    "id",
+    "epistemic",
+    "source",
+    "locator"
+  ],
+  "title": "Evidence",
+  "type": "object"
+}

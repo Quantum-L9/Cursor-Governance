@@ -1,0 +1,25 @@
+# Gate D Build Manifest, version 3.8.0
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: GateD_BuildManifest
+type: object
+required: [files_written, files_complete, stubs_remaining, todos_remaining, placeholders_remaining, every_file_nonempty, references_resolved, scripts_compiled, validation_actually_ran]
+additionalProperties: false
+properties:
+  files_written: {type: integer, minimum: 1}
+  files_complete: {type: integer, minimum: 1}
+  stubs_remaining: {type: integer, enum: [0]}
+  todos_remaining: {type: integer, enum: [0]}
+  placeholders_remaining: {type: integer, enum: [0]}
+  every_file_nonempty: {type: boolean}
+  references_resolved: {type: boolean}
+  scripts_compiled: {type: boolean}
+  validation_actually_ran: {type: boolean}
+  execution_checks:
+    type: array
+    items:
+      type: object
+      required: [target, command, status]
+      properties:
+        target: {type: string}
+        command: {type: string}
+        status: {type: string, enum: [passed, failed, blocked, not_run]}

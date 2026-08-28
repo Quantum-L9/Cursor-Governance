@@ -1,0 +1,102 @@
+skill_intelligence_report:
+  activation_model:
+    strong_signals:
+      - explicit request to create, rebuild, harden, validate, or package a skill
+      - source is a prompt, SOP, workflow, kernel, playbook, or existing skill pack
+      - exemplary, portable, cross-agent, low-drift, or zero-stub quality requested
+    weak_signals:
+      - user asks to make a reusable agent workflow
+      - user references Claude Code, Manus, Cursor, or Agent Skills
+    reject_signals:
+      - no reusable skill artifact requested
+      - task belongs to a document, spreadsheet, slide, PDF, image, or general coding workflow
+      - archive contains multiple unrelated skill entrypoints and has not been split
+    specificity_score: 5
+    false_positive_risk_score: 1
+  authority_model:
+    order:
+      - latest explicit user instruction and supplied artifacts
+      - canonical pack and metadata contracts
+      - activated specialized contracts and adapters
+      - verified implementation and validation evidence
+      - model inference
+    conflict_rule: higher authority wins
+    unknown_rule: Unknown outranks unsupported inference
+  expert_heuristics:
+    - condition: a newer version removes dependencies still referenced by its entrypoint
+      judgment: the release is a partial overlay, not a coherent successor
+      action: preserve the last coherent baseline and mine the newer release for deltas only
+    - condition: a proposed file changes no activation, decision, execution, validation, portability, or reuse behavior
+      judgment: the file is decorative entropy
+      action: exclude it
+    - condition: platform differences affect only paths or tool names
+      judgment: doctrine should remain canonical
+      action: create a thin adapter rather than fork the skill
+    - condition: an exemplary claim lacks measured reject signals or authority order
+      judgment: intelligence is incomplete
+      action: downgrade the tier
+    - condition: a validation result has no executed command or inspected evidence
+      judgment: the status is unverified
+      action: mark UNKNOWN or BLOCKED, never PASS
+    - condition: multiple owners define the same responsibility
+      judgment: authority collision will create drift
+      action: resolve the owner before building
+    - condition: a full build is requested with sufficient source material
+      judgment: another planning turn adds friction
+      action: build, validate, and package in the current execution
+  doctrine:
+    - compressed judgment over bulk
+    - evidence over assertion
+    - canonical core plus conditional adapters
+    - complete artifacts over scaffolds
+    - convergence before expansion
+  invariants:
+    - one entrypoint and one root directory per archive
+    - zero broken references and unfinished markers
+    - no exemplary tier without deterministic evidence
+    - no invented tools, paths, sources, or pass claims
+  adapter_map:
+    core_default: portable Agent Skills-style pack
+    adapters:
+      - agent-skills-core
+      - cursor
+      - l9-platform
+  failure_modes:
+    - false activation
+    - intelligence-free bulk
+    - dependency regression
+    - platform doctrine contamination
+    - fake validation
+  leverage_points:
+    - dependency closure validation
+    - activation and rejection precision
+    - authority and Unknown rules
+    - platform adapter isolation
+    - baseline regression testing
+  evidence_hierarchy:
+    - user instruction and supplied artifacts
+    - canonical contracts
+    - activated adapters
+    - executed validation evidence
+    - inference
+  self_improvement_hook:
+    capture_only_when_observed:
+      - missed trigger
+      - false trigger
+      - recurring user correction
+      - output requiring manual rework
+    action: update the smallest responsible signal, heuristic, adapter, or validator and rerun regression tests
+  exemplary_gate_results:
+    activation_precision: pass
+    adapter_architecture: pass
+    evidence_hierarchy: pass
+    doctrine_extraction: pass
+    expert_heuristics: pass
+    failure_modes: pass
+    leverage_model: pass
+    self_improvement_hook: pass
+    compiler_enforcement_gates: pass
+    skill_intelligence_report: pass
+  tier_decision:
+    tier: exemplary
+    basis: all required intelligence primitives are populated and deterministic validators are included

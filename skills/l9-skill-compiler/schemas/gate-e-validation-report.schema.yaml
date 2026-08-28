@@ -1,0 +1,28 @@
+# Gate E Validation Report, version 3.8.0
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: GateE_ValidationReport
+type: object
+required: [validation_classes, forbidden_patterns_absent, evidence_matrix, tier_classification, honest_assessment, failures, correction_order]
+additionalProperties: false
+properties:
+  validation_classes:
+    type: object
+    required: [structural, contract, execution, evidence, operator, regression]
+    additionalProperties: false
+    properties:
+      structural: {$ref: "#/$defs/status"}
+      contract: {$ref: "#/$defs/status"}
+      execution: {$ref: "#/$defs/status"}
+      evidence: {$ref: "#/$defs/status"}
+      operator: {$ref: "#/$defs/status"}
+      regression: {$ref: "#/$defs/status"}
+  forbidden_patterns_absent: {type: boolean}
+  evidence_matrix: {type: array, minItems: 1}
+  tier_classification: {type: string, enum: [exemplary, strong, developing, failed, mine_for_components_only]}
+  honest_assessment: {type: boolean}
+  failures: {type: array}
+  correction_order: {type: array}
+$defs:
+  status:
+    type: string
+    enum: [PASS, FAIL, BLOCKED, UNKNOWN, NOT_APPLICABLE]

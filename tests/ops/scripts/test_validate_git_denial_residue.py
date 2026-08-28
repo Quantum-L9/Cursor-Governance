@@ -2,6 +2,13 @@
 
 Presence-only coverage would be worthless here: the whole point is that this
 gate fires on a sentence a human would read straight past.
+
+It must also FINISH. The gate once hung for minutes on a repository it was only
+ever going to clear: its units are whole paragraphs, a generated manifest is one
+50k-character paragraph with no blank line in it, and DENIAL_CLAIM is a pair of
+zero-width lookaheads that `search` retried from every one of those offsets. A
+validator that takes minutes is a validator someone deletes from pre-commit, so
+the linear-time property is part of the contract, not a nicety.
 """
 
 from __future__ import annotations
@@ -98,3 +105,38 @@ def test_section_citation_alone_does_not_exempt(tmp_path: Path) -> None:
 def test_repository_is_clean() -> None:
     """The tree this lands in must already satisfy the gate."""
     assert validator.scan(validator._candidates()) == []
+
+
+# --- performance contract -------------------------------------------------
+
+
+def test_denial_claim_is_linear_on_a_manifest_sized_unit() -> None:
+    """A large single-line unit must not cost quadratic time."""
+    import time
+
+    unit = ("git push " + "x" * 200 + " ") * 250  # ~50k chars, no denial verb
+    start = time.perf_counter()
+    validator.DENIAL_CLAIM.search(unit)
+    assert time.perf_counter() - start < 1.0
+
+
+@pytest.mark.parametrize(
+    "unit,expected",
+    [
+        ("`git push` is denied by the gate", True),
+        ("`gh pr create` is blocked at every phase", True),
+        ("`git push` is not denied; prefer `make pr`", True),
+        ("`make pr` is the preferred route to GitHub", False),
+        ("NEVER use a raw `git push`", False),
+        ("squash/rebase denied for a stacked parent", False),
+    ],
+)
+def test_denial_claim_detects_only_a_command_plus_a_denial_verb(unit: str, expected: bool) -> None:
+    """Anchoring DENIAL_CLAIM at \\A must not change which units are claims."""
+    assert bool(validator.DENIAL_CLAIM.search(unit)) is expected
+
+
+def test_a_negated_claim_is_exonerated() -> None:
+    unit = "`git push` is not denied by the gate"
+    assert validator.DENIAL_CLAIM.search(unit)
+    assert validator.ALLOW_LINE.search(unit)

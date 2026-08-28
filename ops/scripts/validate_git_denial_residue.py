@@ -54,10 +54,18 @@ TEXT_SUFFIXES = {".md", ".mdc", ".yaml", ".yml", ".json", ".txt"}
 #: text this gate exists to catch read "`git push` / `gh pr create` / `make pr`
 #: denied until `authorize-release`" — a bare participle. A skill's own
 #: discipline ("NEVER raw git push") carries no denial verb and stays clean.
+#: Anchored at \A deliberately. This is a *containment* test — two zero-width
+#: lookaheads that consume nothing — so if it matches anywhere it matches at
+#: offset 0, and letting `search` retry it at every offset is pure waste: each
+#: retry rescans the rest of the unit, which is O(n^2). Units are whole
+#: paragraphs and a generated manifest is one 50k-character paragraph with no
+#: blank line in it, so that quadratic term hung this gate for minutes on a file
+#: it was only ever going to clear. `[\s\S]` rather than `.` because a unit
+#: that ever carries a newline must still be scanned end to end.
 DENIAL_CLAIM = re.compile(
-    r"(?i)"
-    r"(?=.*\b(?:git\s+push|gh\s+pr\s+create|gh\s+pr\s+edit)\b)"
-    r"(?=.*\b(?:denied|blocked|refused|rejected|prohibited)\b)"
+    r"(?i)\A"
+    r"(?=[\s\S]*\b(?:git\s+push|gh\s+pr\s+create|gh\s+pr\s+edit)\b)"
+    r"(?=[\s\S]*\b(?:denied|blocked|refused|rejected|prohibited)\b)"
 )
 
 #: The claim is fine when the unit also says it is no longer true, states a
