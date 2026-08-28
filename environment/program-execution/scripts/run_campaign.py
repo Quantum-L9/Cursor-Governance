@@ -11,6 +11,7 @@ program-execution.intent.v1 and pe-<hash> workspaces are not this path.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import importlib.util
 import json
 import os
@@ -18,7 +19,7 @@ import re
 import shutil
 import subprocess
 import sys
-from collections.abc import Callable, Iterable, Iterator
+from collections.abc import Callable, Iterable, Iterator, Mapping
 from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -2623,17 +2624,44 @@ def _plan_peer_task_batch(
     return list(plan.selected)
 
 
+def _task_autonomy_authority(
+    workspace: Path,
+    contract: dict[str, Any],
+) -> dict[str, Any] | None:
+    """This task/attempt's root authority, read from its own grant receipt.
+
+    The task/attempt-scoped grant receipt is the authority evidence of record
+    (`integrations/autonomy-control-plane/README.md`). Reading the sidecar back
+    from it — rather than from a second in-memory copy — means a dispatch can
+    only ever carry authority that the grant actually recorded for this exact
+    task and attempt.
+    """
+    task_id = str(contract.get("task_id") or contract.get("id") or "")
+    if not task_id:
+        return None
+    attempt_number = int(contract.get("attempt_number") or 1)
+    path = _grant_module().grant_receipt_path(workspace, task_id, attempt_number, kind="grant")
+    if not path.is_file():
+        return None
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+    authority = receipt.get("autonomy_authority")
+    return dict(authority) if isinstance(authority, dict) else None
+
+
 def _run_peer_execution(
     workspace: Path,
     contract: dict[str, Any],
+    autonomy_authority: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Execute one rendered contract through binding → profile → probe → provider.
 
     The lifecycle itself belongs to `run_peer_task_pipeline`; this runner supplies
-    the campaign's identity and workspace and translates a non-PASS outcome into a
-    campaign-level stop.
+    the campaign's identity, workspace, and this task's root authority, and
+    translates a non-PASS outcome into a campaign-level stop.
     """
     pipeline = _peer_pipeline()
+    if autonomy_authority is None:
+        autonomy_authority = _task_autonomy_authority(workspace, contract)
     agent_ref, surface, provider_override = _peer_identity()
     task_id = contract.get("task_id")
     try:
@@ -2671,6 +2699,7 @@ def _run_peer_execution(
         binding=binding,
         adapter=adapter,
         probe=probe,
+        autonomy_authority=autonomy_authority,
     )
     # A non-PASS provider outcome is preserved, not thrown away: the terminal
     # failure result is evidence the batch reconciler must keep so the failed
@@ -2711,6 +2740,18 @@ def _grant_root_authority(
     """
     grants = _grant_module()
     attempt_number = int(contract.get("attempt_number") or 1)
+    # The root lease carries the full canonical peer identity, not just the
+    # surface: the adapter session it is bound to must be the conformant
+    # session for this peer/surface/provider/profile tuple.
+    agent_ref, surface, provider_override = _peer_identity()
+    try:
+        binding = _peer_pipeline().resolve_peer_binding(
+            GOV_ROOT, agent_ref, surface, provider_override
+        )
+    except ValueError as exc:
+        raise CampaignError(
+            f"{task_id}: canonical peer binding unresolved for {agent_ref}/{surface}: {exc}"
+        ) from exc
     try:
         with traced(trace, "task_prepare", "root_autonomy_grant", task_id=task_id):
             grant = grants.grant_task_mutation(
@@ -2718,7 +2759,11 @@ def _grant_root_authority(
                 workspace,
                 contract,
                 attempt_number=attempt_number,
-                adapter_id=_peer_identity()[1],
+                adapter_id=binding.provider_ref,
+                agent_ref=binding.agent_ref,
+                surface=binding.surface,
+                provider_ref=binding.provider_ref,
+                execution_profile_ref=binding.execution_profile_ref,
             )
     except Exception as exc:
         reason = f"root autonomy grant refused: {type(exc).__name__}: {exc}"
@@ -2739,9 +2784,164 @@ def _grant_root_authority(
             "lease_id": grant.get("lease_id"),
             "capability_id": grant.get("capability_id"),
             "agent_id": grant.get("agent_id"),
+            "adapter_session_id": grant.get("adapter_session_id"),
+            "program_lease_id": grant.get("program_lease_id"),
         },
     )
     return grant
+
+
+def actual_changed_paths(worktree: Path) -> list[str]:
+    """What the worktree itself shows as changed — never what a worker claimed.
+
+    Mediation coverage has to be judged against real filesystem effects. A
+    provider that writes directly and then reports an empty `changed_files`
+    would otherwise mediate nothing and still be accepted.
+    """
+    status = run_cmd(
+        ["git", "-C", str(worktree), "status", "--porcelain=v1", "-z", "--untracked-files=all"],
+        timeout=GIT_TIMEOUT_S,
+        env=git_env(),
+    )
+    if status.returncode != 0:
+        raise CampaignError(
+            f"cannot observe actual changed paths in {worktree}: {status.stderr.strip()[:400]}"
+        )
+    paths: set[str] = set()
+    parts = status.stdout.split("\0")
+    index = 0
+    while index < len(parts):
+        entry = parts[index]
+        if not entry:
+            index += 1
+            continue
+        code = entry[:2]
+        path = entry[3:]
+        if code[0] in {"R", "C"} and index + 1 < len(parts):
+            index += 1
+            path = parts[index]
+        if path:
+            paths.add(path.replace("\\", "/"))
+        index += 1
+    return sorted(paths)
+
+
+def _path_fingerprint(worktree: Path, relative: str) -> str:
+    """Enough of a path's state to tell "changed again" from "unchanged"."""
+    target = worktree / relative
+    if target.is_symlink():
+        return "link:" + os.readlink(target)
+    if target.is_dir():
+        return "dir"
+    try:
+        return "file:" + hashlib.sha256(target.read_bytes()).hexdigest()
+    except OSError:
+        return "absent"
+
+
+def worktree_effect_baseline(worktree: Path) -> dict[str, str]:
+    """Fingerprints of everything already changed before the provider window.
+
+    Program Execution wires the task worktree itself (governance links, plan
+    directories) before dispatch. Those are its own writes, not the provider's,
+    and holding a provider to account for them would make mediation coverage
+    unusable. Fingerprints rather than a path list, so a provider that rewrites
+    one of those paths is still an effect that must be authorized.
+    """
+    return {path: _path_fingerprint(worktree, path) for path in actual_changed_paths(worktree)}
+
+
+def provider_effected_paths(worktree: Path, baseline: Mapping[str, str] | None) -> list[str]:
+    """Paths this provider window created or altered."""
+    known = dict(baseline or {})
+    return sorted(
+        path
+        for path in actual_changed_paths(worktree)
+        if known.get(path) != _path_fingerprint(worktree, path)
+    )
+
+
+def _require_mediated_effects(
+    unit: dict[str, Any],
+    *,
+    trace: pe_trace.ExecutionTrace | None,
+) -> list[str]:
+    """Every actual change must carry a pre-effect root authorization.
+
+    This is the campaign-side half of P0-AP-001. The hook authorizes each
+    effect as it happens; this proves, before the Controller is asked to record
+    anything, that no effect reached the filesystem around it. An unmediated
+    write is not a Program attempt, so it never becomes one.
+    """
+    task_id = str(unit["task_id"])
+    grant = unit.get("grant")
+    changed = provider_effected_paths(
+        Path(str(unit["worktree"])), unit.get("pre_dispatch_baseline")
+    )
+    if not grant:
+        if changed:
+            raise CampaignError(
+                f"{task_id}: {len(changed)} worktree change(s) with no root autonomy grant"
+            )
+        return changed
+    unmediated = _grant_module().unmediated_changed_paths(grant, changed)
+    emit(
+        trace,
+        "TASK_EFFECT_MEDIATION",
+        "authority",
+        "root_decision_coverage",
+        task_id=task_id,
+        metadata={
+            "changed": len(changed),
+            "unmediated": len(unmediated),
+            "lease_id": grant.get("lease_id"),
+        },
+    )
+    if unmediated:
+        raise CampaignError(
+            f"{task_id}: unmediated worktree writes with no root authorization: "
+            f"{json.dumps(unmediated[:50], sort_keys=True)}"
+        )
+    return changed
+
+
+def _terminalize_root_authority(
+    unit: dict[str, Any],
+    *,
+    contract: dict[str, Any],
+    changed: list[str],
+    candidate_sha: str | None,
+) -> str | None:
+    """Hand the root executor lease its terminal result, or leave it revoked.
+
+    Root autonomy does not get to say the Program task passed — the Controller
+    does that next, independently. What this closes is the child authority: a
+    completed executor action releases the lease and its resource claims, so a
+    finished worker keeps no live mutation authority.
+    """
+    grant = unit.get("grant")
+    if not grant:
+        return None
+    grants = _grant_module()
+    try:
+        result = grants.submit_task_result(
+            grant,
+            changed_files=changed,
+            candidate_sha=candidate_sha,
+            contract_digest=str(contract.get("contract_digest") or ""),
+            evidence={"attempt_receipt_path": str(contract.get("attempt_receipt_path") or "")},
+        )
+    except Exception as exc:  # noqa: BLE001 — a failed handoff must revoke, not linger
+        grants.revoke_task_grant(
+            grant, reason=f"root result handoff failed: {type(exc).__name__}: {exc}"[:500]
+        )
+        raise CampaignError(
+            f"{unit['task_id']}: root autonomy refused the subordinate result: "
+            f"{type(exc).__name__}: {exc}"
+        ) from exc
+    if not result.get("submitted"):
+        return None
+    return str(result["artifact_id"])
 
 
 def _record_canonical_failure(
@@ -2904,6 +3104,13 @@ def _prepare_peer_unit(
         "title": str(task.get("title") or task_id),
         "already_submitted": already_submitted,
         "grant": grant,
+        "autonomy_authority": (grant or {}).get("autonomy_authority"),
+        # Snapshot taken after PE finished wiring the worktree and before any
+        # provider effect exists, so coverage is judged on the provider's own
+        # writes.
+        "pre_dispatch_baseline": (
+            {} if already_submitted else worktree_effect_baseline(Path(str(worktree)))
+        ),
     }
 
 
@@ -3094,14 +3301,47 @@ def _finish_peer_unit(
         receipt_path = Path(str(contract["attempt_receipt_path"]))
         if not receipt_path.is_file():
             raise CampaignError(f"Peer Core did not persist attempt receipt for {task_id}")
+        # Mediation coverage precedes the Controller: an unmediated write must
+        # never become a recorded Program attempt.
+        actual_changed = _require_mediated_effects(unit, trace=trace)
         with traced(trace, "commit", "record_attempt", task_id=task_id):
             recorded = pec_cmd(workspace, "record-attempt", task_id, "--receipt", str(receipt_path))
         if isinstance(recorded.get("attempt"), int):
             attempt_number = int(recorded["attempt"])
+        root_artifact_id = _terminalize_root_authority(
+            unit,
+            contract=contract,
+            changed=actual_changed,
+            candidate_sha=receipt.get("candidate_sha"),
+        )
+        emit(
+            trace,
+            "TASK_AUTHORITY_TERMINAL",
+            "authority",
+            "root_autonomy_terminal",
+            task_id=task_id,
+            metadata={
+                "artifact_id": root_artifact_id,
+                "lease_id": (unit.get("grant") or {}).get("lease_id"),
+            },
+        )
+    else:
+        root_artifact_id = None
 
     with timer.stage("task_verify", task_id=task_id):
         verification = traced_verify(workspace, task_id, trace=trace, attempt_number=attempt_number)
     if verification.get("verdict") != "PASSED_LOCAL":
+        # The Controller rejected the attempt this root evidence supported.
+        # Root autonomy withdraws its support; it never decides the verdict.
+        if root_artifact_id:
+            try:
+                _grant_module().invalidate_task_support(
+                    unit["grant"],
+                    artifact_id=root_artifact_id,
+                    reason=f"controller verdict {verification.get('verdict')!r}",
+                )
+            except Exception as exc:  # noqa: BLE001 — never mask the real verdict
+                log(f"root support invalidation for {task_id} failed: {type(exc).__name__}: {exc}")
         decision = dispatch_kernel_change(verification)
         reason = str(
             decision.get("reason")
