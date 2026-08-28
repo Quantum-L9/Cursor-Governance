@@ -1,0 +1,347 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Ceremony speed: one make pr, faster remaining wall",
+  "objective": "Speed the remaining single commit-then-make-pr path on this checkout. git commit stays hookless. make pr stays the only publish command. Do not rebuild tests-once teaching, remediates default, or remediator ingest. Cut the measured leftover: serial local pytest without xdist, a second git fetch after the gate, a second changed-file resolve inside security, and no phase timings to prove the next cut.",
+  "success_criteria": [
+    "A markdown-only tree prints phase timings in .l9/pr/gate-timing.json; scaffolding_ms excluding pytest is recorded and the file is overwritten each gate run.",
+    "When --profile local --changed-file selects two or more pytest files, the repo-root suite argv includes -n auto; a one-file selection does not add xdist; command_sequence suites never gain xdist.",
+    "open_pr_after_gate.sh does not git fetch origin when .l9/pr/fetch-receipt.json is younger than 60s and records the same BASE_REF SHA the gate just fetched.",
+    "run_pr_security.sh with PR_CHANGED_FILE set does not call resolve_changed_files.sh.",
+    "make pr-check PASS on this change set; pytest tests/ops/scripts/test_ceremony_speed.py PASS."
+  ],
+  "scope": {
+    "in": [
+      "ops/scripts/run_pr_gate.sh phase timings plus background prefetch of origin BASE_REF",
+      "ops/scripts/open_pr_after_gate.sh reuse of .l9/pr/fetch-receipt.json",
+      "ops/scripts/run_python_test_suites.py local changed-file xdist injection at two or more files",
+      "ops/scripts/run_pr_security.sh honor PR_CHANGED_FILE",
+      "tests/ops/scripts/test_ceremony_speed.py"
+    ],
+    "out": [
+      "docs/plans/publish_ceremony_once_d08758b6.plan.md tests-once / remediates / CI selector work",
+      "docs/plans/remediator_remaining_speed_bb4c2204.plan.md remediator ingest",
+      "Installing a git commit hook or pre-commit install",
+      "Weakening gitleaks bandit semgrep pip-audit or pytest assertions",
+      "Moving LaunchAgent scan off check_governance_wiring.sh",
+      "Folding or rewriting existing AGENTS.md CANONICAL_LAW.md Makefile lines",
+      "make campaign Program Lock or a new worktree from origin/main as a planning requirement",
+      "Staging foreign dirty .claude/settings.json stop_generated_collisions plan or remediator plan"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse HEAD; git status --short; git branch --show-current",
+      "pass_criteria": "workspace bound: main @ f1321207f525481798210ef63e15335b9d4b9ded dirty unrelated files listed and excluded from write_allow",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "python3 skills/l9-plan/scripts/route_plan.py --risk medium --evidence partial --json",
+      "pass_criteria": "depth=standard omit_gates=[]",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "time wiring digest fetch pre-commit dual-pass projection",
+      "pass_criteria": "wiring ~1.8s digest ~0.8s fetch ~0.7s each pre-commit pass ~0.8s projection --check ~0.2s; pytest remains the unmeasured wall on Python changes",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "read publish_ceremony_once remediator_remaining_speed Makefile PR_REMEDIATE and run_pr_gate reader wave",
+      "pass_criteria": "sibling plans identified; Makefile already Happy path finish then make pr; reader wave already parallel; local pytest profile lacks -n auto",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "instrument-spans",
+      "task": "Write .l9/pr/gate-timing.json from run_pr_gate.sh with UTC timestamps and millisecond spans for digest, writers, fetch, each reader-wave job, and total. Append the same lines to last-gate.log. Do not fail the gate on a timing write error.",
+      "files": [
+        "ops/scripts/run_pr_gate.sh",
+        "tests/ops/scripts/test_ceremony_speed.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "after _gate_write_receipt and around _wave_start / wait",
+      "leverage_rank": 2,
+      "shared_root_cause": "no measured spans so agents re-optimize already-cheap scaffolding"
+    },
+    {
+      "id": "local-xdist",
+      "task": "In run_python_test_suites.py when profile is local and --changed-file selected two or more pytest files, append -n auto to pytest suites that already allow user args. Never inject xdist for one file, never for command or command_sequence suites, never change the ci profile argv.",
+      "files": [
+        "ops/scripts/run_python_test_suites.py",
+        "tests/ops/scripts/test_ceremony_speed.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "instrument-spans"
+      ],
+      "operation": "Insert",
+      "anchor": "after changed-file selection builds pytest extra_args",
+      "leverage_rank": 1,
+      "shared_root_cause": "local make pr runs the same tests CI already parallelizes, one worker"
+    },
+    {
+      "id": "prefetch-reuse",
+      "task": "Start git fetch origin BASE_REF at the beginning of the make pr gate (backgrounded during writers). Write .l9/pr/fetch-receipt.json with fetched_sha and fetched_at. Skip the early-overlap inline fetch when that receipt is already fresh. Skip the open_pr_after_gate.sh fetch when the receipt is younger than 60s and BASE_REF matches.",
+      "files": [
+        "ops/scripts/run_pr_gate.sh",
+        "ops/scripts/open_pr_after_gate.sh",
+        "tests/ops/scripts/test_ceremony_speed.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "instrument-spans"
+      ],
+      "operation": "Replace",
+      "anchor": "run_pr_gate.sh Stage 3 git fetch; open_pr_after_gate.sh refresh base block",
+      "leverage_rank": 3,
+      "shared_root_cause": "each publish script self-fetches because none shares a receipt"
+    },
+    {
+      "id": "security-changed-file",
+      "task": "Honor PR_CHANGED_FILE in run_pr_security.sh the same way run_pr_precommit.sh does. When the gate already resolved the list, do not call resolve_changed_files.sh again. Keep the standalone make pr-security path resolving itself.",
+      "files": [
+        "ops/scripts/run_pr_security.sh",
+        "ops/scripts/run_pr_gate.sh",
+        "tests/ops/scripts/test_ceremony_speed.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "instrument-spans"
+      ],
+      "operation": "Insert",
+      "anchor": "run_pr_security.sh after WS bind, before resolve_changed_files.sh",
+      "leverage_rank": 4,
+      "shared_root_cause": "each leaf re-resolves the PR file set"
+    },
+    {
+      "id": "prove",
+      "task": "Add tests/ops/scripts/test_ceremony_speed.py covering xdist injection thresholds, fetch-receipt skip, and PR_CHANGED_FILE security skip. Run that file then make pr-check on this change set. Pathspecs only.",
+      "files": [
+        "tests/ops/scripts/test_ceremony_speed.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "local-xdist",
+        "prefetch-reuse",
+        "security-changed-file"
+      ],
+      "operation": "Create",
+      "anchor": "new test module",
+      "leverage_rank": 5
+    }
+  ],
+  "critical_path": [
+    "instrument-spans",
+    "local-xdist",
+    "prefetch-reuse",
+    "security-changed-file",
+    "prove"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "gate-timing.json exists after a gate run",
+      "unlocks": "falsifiable before/after for later cuts"
+    },
+    {
+      "id": "M2",
+      "outcome": "local changed-file pytest uses xdist at two or more files",
+      "unlocks": "the dominant wall-clock cut"
+    },
+    {
+      "id": "M3",
+      "outcome": "one fetch per make pr; security reuses the gate file list",
+      "unlocks": "prove and make pr-check"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "gate-timing.json schema has spans digest_ms writers_ms wave jobs total_ms",
+      "no_go_action": "stop and fix the timing writer before optimizing pytest"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "unit test shows -n auto iff selected pytest file count >= 2; command_sequence argv unchanged",
+      "no_go_action": "revert xdist injection; do not edit python-contract.json ci argv"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "make pr-check PASS; ceremony_speed tests PASS; foreign dirty paths unstaged",
+      "no_go_action": "do not push; do not stage unrelated files"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "Standing publish command stays make pr. Speed is internal to the gate. Tests-once teaching belongs to the sibling publish_ceremony_once plan."
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "No law change. Fetch reuse and xdist do not alter deny-by-effect or secret-boundary rules."
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "Pointer stack unchanged."
+    },
+    {
+      "surface": "Makefile",
+      "action": "n_a",
+      "reason": "Happy-path help already says finish then make pr. Do not rewrite additive_only lines for a transparent speed cut."
+    },
+    {
+      "surface": "INVARIANTS.md",
+      "action": "n_a",
+      "reason": "No new named invariant. Local xdist is an executor flag, not a new law."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If a typical ops/scripts Python PR selects one test file, does xdist injection never fire and the plan still claim a pytest speedup?",
+      "If fetch-receipt is reused after origin/main moved, does open_pr publish against a stale collision view?",
+      "If PR_CHANGED_FILE is stale relative to the worktree, does security miss a newly dirty secret file?",
+      "If xdist flakes a test that passes serially under local changed-file, is CI already running that test with -n auto so the flake is a product defect rather than a new local-only failure?"
+    ],
+    "assumed_false_ifs": [
+      "CI repo-root and claude-code-autonomy profiles already use -n auto on the same tests the local selector can pick",
+      "gate receipt still keys on worktree content so a second make pr on an unchanged tree skips the full gate including pytest",
+      "PR_CHANGED_FILE is written once per gate run before writers and security both read it",
+      "foreign dirty files on this main checkout are not staged"
+    ],
+    "blast_radius": "Every local make pr / make pr-check on ssot and ssot_checkout. Consumer workspaces skip governance pytest today. CI profiles unchanged. git commit latency unchanged (still no hook).",
+    "rollback": "Revert the one feature-branch PR. Timing file is gitignored under .l9/. Fetch-receipt is gitignored. python-contract.json ci argv is untouched so GitHub Test Suite does not roll back."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "local-xdist",
+      "instrument-spans",
+      "prefetch-reuse",
+      "security-changed-file",
+      "prove"
+    ],
+    "shared_causes": [
+      "Local velocity profile omits the xdist CI already pays for",
+      "Each publish leaf re-fetches and re-resolves because there is no intra-run receipt",
+      "Agents re-attack scaffolding because last-gate.log has no phase spans"
+    ],
+    "deletions_or_consolidations": [
+      "Second git fetch origin BASE_REF inside open_pr_after_gate.sh when the gate receipt is fresh",
+      "Second resolve_changed_files.sh inside run_pr_security.sh when PR_CHANGED_FILE is set",
+      "Do not delete the writers-then-readers split; that split exists to fail closed on formatter dirt before pytest"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "xdist worker spawn slower than serial for a one-file selection",
+      "mitigation": "Inject -n auto only when selected pytest file count is two or more"
+    },
+    {
+      "risk": "stale fetch-receipt hides a main-bound collision",
+      "mitigation": "60s TTL plus BASE_REF SHA match; on mismatch or missing file, fetch as today"
+    },
+    {
+      "risk": "PR_CHANGED_FILE reused after writers rewrote files",
+      "mitigation": "Writers fail closed on tracked dirt before the reader wave; security runs in the reader wave on the same list the gate resolved before writers. A rewrite aborts the gate."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Wall-clock pytest seconds for a typical ops/scripts change on this machine before xdist",
+      "decision_effect": "Does not change the xdist cut; CI already parallelizes those tests. Instrument-spans records the after number.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Does any locally selected test fail under xdist while passing serially?",
+      "decision_effect": "If yes, pin that test file serial via xdist_group or drop injection for that suite id only. Do not disable xdist globally.",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": ".venv/bin/python -m pytest tests/ops/scripts/test_ceremony_speed.py -q",
+      "pass_criteria": "PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on this change set versus PR_BASE origin/main",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2"
+    ],
+    "next_skill": "Build (current checkout)",
+    "stop_reason": "PLAN_DOCUMENT validated; implementation not yet run. Press Build. Do not run make campaign."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/scripts/run_pr_gate.sh",
+      "ops/scripts/open_pr_after_gate.sh",
+      "ops/scripts/run_python_test_suites.py",
+      "ops/scripts/run_pr_security.sh",
+      "tests/ops/scripts/test_ceremony_speed.py",
+      "docs/plans/ceremony_speed.plan.json"
+    ],
+    "must_not_modify": [
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      "Makefile",
+      "kernels/",
+      ".github/workflows/",
+      "ops/config/python-contract.json ci profile argv",
+      ".claude/settings.json",
+      "docs/plans/stop_generated_collisions_b4203c61.plan.md",
+      "docs/plans/remediator_remaining_speed_bb4c2204.plan.md",
+      "docs/plans/publish_ceremony_once_d08758b6.plan.md"
+    ],
+    "preserved_contracts": [
+      "no git commit hook",
+      "changed-files only on make pr",
+      "reader wave stays parallel",
+      "writers then readers split stays",
+      "CI profile xdist coverage timeout unchanged",
+      "LaunchAgent scan stays on wiring --machine",
+      "autonomous_merge false"
+    ],
+    "validation_commands": [
+      ".venv/bin/python -m pytest tests/ops/scripts/test_ceremony_speed.py -q",
+      "make pr-check"
+    ]
+  },
+  "depth": "standard",
+  "checklist": [
+    "timings",
+    "local xdist at two files",
+    "fetch receipt",
+    "security PR_CHANGED_FILE",
+    "tests plus make pr-check"
+  ],
+  "estimate": "one Build on current checkout; new feature branch at execute start because HEAD is main"
+}
