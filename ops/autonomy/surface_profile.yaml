@@ -20,6 +20,10 @@ authorize:
   - scoped_commit_push # only after L4 release_authorized (see l4_local_autonomy)
   - create_update_pr_via_make_pr # only after L4 release_authorized; checkers must PASS
   - pr_remediation_until_green_mergeable_and_merged # /l9-pr-remediation Converge
+  # Remediator velocity: already-open PR branch. Not a first publish. Effect
+  # plane (git_guardrails) still denies force-push / protected-branch rewrite.
+  - remediator_git_push_of_open_pr # git push + non-destructive git; not make pr
+  - remediator_non_destructive_git # status, fetch, diff, log, pathspec add, commit, merge
   - open_stacked_pr_on_open_pr_head # stacking policy; bottom-up merge order
 
 forbid:
@@ -211,13 +215,15 @@ session_start_block: |
     `record-kernels` → `authorize-release`.
   - Only then: `PR_REMEDIATE=0 make pr` (Makefile checkers, then push + open
     PR).
-  - **`make pr` is the ONLY way to reach GitHub — this is a path rule, not a
-    timing rule.** Raw `git push`, `gh pr create`, `gh pr edit`, `make push`
-    and the MCP `create_pull_request` / `push_files` tools are denied at every
-    phase, including after release_authorized, because they skip the Makefile
-    checkers the release receipt was granted on. Being authorized to publish
-    is not permission to publish a different way. Do not reach for a raw push
-    when `make pr` fails — fix what it reported, or say what is blocking.
+  - **Campaign first publish is `make pr`.** That is a path rule for opening
+    a PR, not a remediator deny. `/l9-pr-remediation` publishes an
+    already-open PR with `make precommit-repo` then `git push` (and other
+    non-destructive git). The execution gate must not workflow-deny those
+    git/gh forms — including `make precommit-repo && git push` and
+    `git push | tail`. `make push` and the MCP `create_pull_request` /
+    `push_files` tools stay denied at every phase. Force-push stays
+    effect-denied. Do not use `L9_PUBLISH_PATH_OVERRIDE` as the remediator
+    path. When campaign `make pr` fails, fix what it reported.
   - **`make pr` runs the GOVERNANCE Makefile, regardless of the repo worked in
     or its Makefile.** The environment always uses the
     `Quantum-L9/Cursor-Governance` Makefile as the publish authority; the repo
@@ -273,18 +279,17 @@ llm_rules_override: |
      Invoking `/l9-pr-remediation` then remediates **and merges** all open
      PRs in the target repo (bottom-up). Do **not** merge from the campaign
      path alone.
-  2a. `make pr` is the **only** route to GitHub — a PATH rule, not a timing
-     rule. Raw `git push`, `gh pr create`, `gh pr edit`, `make push` and the
-     MCP `create_pull_request` / `push_files` tools are denied at **every**
-     phase, including after release_authorized, because they skip the
-     Makefile checkers the receipt was granted on. Authorization to publish
-     is not permission to publish a different way. When `make pr` fails, fix
-     what it reported or state the blocker — never route around it.
-     Enforced by `ops/autonomy/local_execution_gate.py`; the adapter
-     permission deny-lists must agree with it. That `pr` target is the
-     **governance** Makefile's, reached via `l9 pr` / `make -C "$GOV" pr
-     WS="$PWD"` regardless of the workspace repo's own Makefile — a consumer
-     needs no `pr` target and there is no raw-push fallback.
+  2a. Campaign first publish is `make pr` (`l9 pr` / `make -C "$GOV" pr
+     WS="$PWD"`). That is a PATH rule for opening a PR, not a remediator
+     deny. `/l9-pr-remediation` publishes an already-open PR with
+     `make precommit-repo` then `git push` (and other non-destructive git).
+     The execution gate must not workflow-deny those git/gh forms. `make
+     push` and the MCP `create_pull_request` / `push_files` tools stay
+     denied at every phase. Force-push stays effect-denied. Do not use
+     `L9_PUBLISH_PATH_OVERRIDE` as the remediator path. When campaign
+     `make pr` fails, fix what it reported. A consumer needs no `pr`
+     target; there is no raw-push fallback for first publish.
+     Enforced by `ops/autonomy/local_execution_gate.py`.
   3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
   4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
      campaign PRs against `main`. Do not mix with other feature branches.

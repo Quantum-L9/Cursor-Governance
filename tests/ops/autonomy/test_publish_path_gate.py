@@ -12,6 +12,7 @@ are not git/gh executables and stay denied.
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -204,6 +205,82 @@ def test_mcp_push_tools_denied_even_when_release_authorized(
         reason = gate.evaluate(tool, {}, root=tmp_path)
         assert reason is not None, tool
         assert "make pr" in reason
+
+
+REMEDIATOR_GIT_COMMANDS = [
+    "git push origin HEAD",
+    "git push -u origin HEAD",
+    "git push origin HEAD | tail -8",
+    "make precommit-repo && git push origin HEAD",
+    "PR_BASE=origin/main make precommit-repo && git push",
+    "cd /tmp/repo && make precommit-repo && git push origin HEAD",
+    "gh pr edit 12 --body b",
+    "git status && git fetch origin && git push origin HEAD",
+]
+
+
+@pytest.mark.parametrize("command", REMEDIATOR_GIT_COMMANDS)
+def test_remediator_git_push_is_not_workflow_denied(
+    command: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """F-14 Allow + remediator velocity: git/gh publish is not a workflow deny.
+
+    Bare ``git push``, a pipe, and ``make precommit-repo && git push`` must
+    share one verdict. Classifiers still name the raw publish.
+    """
+    monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
+    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    assert gate.evaluate("Bash", {"command": command}, root=tmp_path) is None
+    assert gate.publish_path_workflow_deny(command) is None
+
+
+def test_piped_git_push_matches_bare_verdict(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
+    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    bare = gate.evaluate("Bash", {"command": "git push origin HEAD"}, root=tmp_path)
+    piped = gate.evaluate("Bash", {"command": "git push origin HEAD | tail -1"}, root=tmp_path)
+    assert bare is None
+    assert piped == bare
+
+
+def test_cursor_shell_allows_remediator_git_push(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Cursor beforeShellExecution is the live remediator deny surface."""
+    monkeypatch.delenv(gate.PUBLISH_PATH_OVERRIDE_ENV, raising=False)
+    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (False, "L4 denied"))
+    monkeypatch.setattr(gate, "workspace_from_event", lambda event: tmp_path)
+    monkeypatch.setattr(gate, "effective_root", lambda command, root: root)
+    monkeypatch.setattr(gate, "command_requires_human", lambda command, root=None: None)
+    monkeypatch.setattr(
+        gate, "command_violates_worktree_isolation", lambda command, root=None: None
+    )
+
+    class _Stdin:
+        def read(self) -> str:
+            return (
+                '{"command": "PR_BASE=origin/main make precommit-repo '
+                '&& git push origin HEAD"}'
+            )
+
+    class _Capture:
+        def __init__(self) -> None:
+            self.parts: list[str] = []
+
+        def write(self, chunk: str) -> int:
+            self.parts.append(chunk)
+            return len(chunk)
+
+        def flush(self) -> None:
+            return None
+
+    captured = _Capture()
+    monkeypatch.setattr(sys, "stdin", _Stdin())
+    monkeypatch.setattr(sys, "stdout", captured)
+    assert gate.main_cursor_shell() == 0
+    assert json.loads("".join(captured.parts))["permission"] == "allow"
 
 
 def test_human_override_restores_prior_behaviour(
