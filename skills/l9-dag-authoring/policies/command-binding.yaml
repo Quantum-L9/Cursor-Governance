@@ -1,0 +1,10 @@
+version: 2
+command_root: commands
+rules:
+  - command_is_optional
+  - command_is_trigger_only
+  - command_must_reference_canonical_dag_id_and_path
+  - no_detailed_phase_logic
+  - no_stale_dot_cursor_commands_repo_paths
+  - command_binding_failure_does_not_invalidate_valid_dag_unless_command_was_required
+recommended_max_lines: 80

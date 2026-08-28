@@ -1,0 +1,19 @@
+version: 2
+operations: [CREATE, UPDATE, VALIDATE, REGISTER, COMMAND_BIND]
+terminal_states: [PASS, PARTIAL, BLOCKED, FAIL]
+canonical:
+  dag_dir: workflows/dags
+  interface: workflows/session/interface.py
+  registry: workflows/session/registry.py
+  discovery: workflows/dags/__init__.py
+  registration_function: register_session_dag
+  lookup_function: get_session_dag
+rules:
+  - validate_before_registration
+  - registration_claim_requires_runtime_probe
+  - discovery_claim_requires_import_and_lookup_probe
+  - duplicate_id_fails_closed_unless_explicit_same_owner_update
+  - no_parallel_registry
+  - no_ACTIVE_DAGS_map
+  - command_binding_is_optional
+  - failure_blocks_downstream_success_claims
