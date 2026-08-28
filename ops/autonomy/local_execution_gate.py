@@ -10,6 +10,12 @@ The classifiers still report a raw publish, so a policy engine can say "you
 bypassed `make pr`" after the fact; this gate no longer turns that report into
 a blocked command.
 
+Two planes answer before that exemption, so a git command can still earn a
+denial: ``git_guardrails`` (destruction) and ``verification_bypass_gate``
+(skipping the hooks that verify a commit — contract
+``l9-commit-verification-integrity``, declared in
+``ops/config/commit-verification-contract.json``).
+
 That exemption is about workflow preference, not about destroying work, and it
 is NOT a blanket allow of git: every shell command is first evaluated by
 ``git_guardrails`` (contract ``l9-context-sensitive-git-guardrails``), which
@@ -30,6 +36,7 @@ Brain lives under ops/ per CANONICAL_LAW §2.1.
 
 Escape hatches (human / ops only):
   L9_GIT_DESTRUCTIVE_AUTHORIZED=<reason>
+  L9_VERIFY_BYPASS_AUTHORIZED=<reason>
   L9_LOCAL_PUSH_AUTHORIZED=<reason>
   L9_L4_LOCAL_AUTONOMY=0
   L9_GIT_REVERT_AUTHORIZED=<reason>
@@ -67,6 +74,9 @@ from git_execution_exemption import (  # noqa: E402
 )
 from git_guardrails import command_requires_human  # noqa: E402
 from l4_local import release_allows_remote, workspace_from_event  # noqa: E402
+from verification_bypass_gate import (  # noqa: E402
+    command_bypasses_verification,
+)
 from worktree_isolation_gate import command_violates_worktree_isolation  # noqa: E402
 
 #: git/gh forms that reach GitHub. `make` is NOT matched by regex here: see
@@ -295,11 +305,16 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
     that destroys nothing.
     """
     if tool_name in SHELL_TOOL_NAMES:
-        guardrail = command_requires_human(
-            str(tool_input.get("command") or tool_input.get("cmd") or ""), root=root
-        )
+        shell_command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        guardrail = command_requires_human(shell_command, root=root)
         if guardrail:
             return guardrail
+        # Second plane that answers before the git/gh exemption. Skipping a hook
+        # destroys nothing, so the guardrails' effect taxonomy cannot see it; it
+        # is nonetheless a denial a git command can earn.
+        bypass = command_bypasses_verification(shell_command)
+        if bypass:
+            return bypass
 
     if event_is_git_or_gh(tool_name, tool_input):
         return None
@@ -369,7 +384,10 @@ def _guardrail_from_payload(raw: str) -> str | None:
         root = workspace_from_event(event)
     except Exception:  # noqa: BLE001 - an unresolvable workspace is not a verdict
         root = None
-    return command_requires_human(command, root=root)
+    guardrail = command_requires_human(command, root=root)
+    if guardrail:
+        return guardrail
+    return command_bypasses_verification(command)
 
 
 def _deny_claude(reason: str) -> int:
@@ -563,6 +581,9 @@ def main_cursor_shell() -> int:
         guardrail = command_requires_human(command, root=root)
         if guardrail:
             return _emit_cursor("deny", guardrail)
+        bypass = command_bypasses_verification(command)
+        if bypass:
+            return _emit_cursor("deny", bypass)
         iso = command_violates_worktree_isolation(command, root=root)
         if iso:
             return _emit_cursor("deny", iso)
