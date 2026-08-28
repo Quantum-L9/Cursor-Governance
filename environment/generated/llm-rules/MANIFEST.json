@@ -618,9 +618,9 @@
       "alias": null,
       "class": "always",
       "output": "zz-autonomy-surface-override.md",
-      "output_sha256": "d15fb5bc8445097c140f51157ba68797098fd59e30a73daa90804baea05049af",
+      "output_sha256": "95f35bd752952c71de51df82004f394b3fabc19586667a2d1049559d9190dd9f",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "870e2066aae6adf9d38e5d3a6cfe45495d392f7733fe759bccb22cb5c99afe47",
+      "source_sha256": "861ceb8c14aca7d7ffedacb89594131b5c2d421d2edf14e049d2c7a14cd68a9b",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 69
   },
-  "tree_sha256": "ee7a856a183bdfd7a378f9a5111140d4d6790568b958b71b479902dc954ee00e"
+  "tree_sha256": "0a73e201a9a84560ad34d0ff3ba2b8ae8b6f716a71ce81c53322896620aea59c"
 }
