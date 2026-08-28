@@ -13,6 +13,8 @@ PR_REMEDIATE="${PR_REMEDIATE:-1}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# shellcheck source=lib/fetch_receipt.sh
+source "$SCRIPT_DIR/lib/fetch_receipt.sh"
 GOV_ROOT="${GOV_ROOT:-}"
 if [[ -z "$GOV_ROOT" ]]; then
   GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -79,10 +81,14 @@ fi
 # while this one works. Fetch failure means the collision state cannot be
 # determined, which denies publication (§14 / E6) without touching local work.
 echo "--- refresh base ($PR_BASE) ---"
-if ! git fetch origin "$BASE_REF"; then
+if fetch_receipt_reusable "$WS" "$BASE_REF"; then
+  echo "OK: reuse fetch-receipt (age < ${FETCH_RECEIPT_TTL_S}s, sha matches origin/$BASE_REF)"
+elif ! git fetch origin "$BASE_REF"; then
   echo "FAIL: cannot fetch origin/$BASE_REF — current-main collision state is"
   echo "      undeterminable, so publication is denied. Local work is unaffected."
   exit 1
+else
+  fetch_receipt_write "$WS" "$BASE_REF" "$(git rev-parse "origin/$BASE_REF")"
 fi
 
 if ! git rev-parse --verify "$PR_BASE" >/dev/null 2>&1; then
