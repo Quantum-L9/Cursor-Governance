@@ -1,7 +1,7 @@
 ---
 name: dag-authoring
-version: "2.0.0"
-description: "Create, update, validate, register, or command-bind an L9 DAG"
+version: "2.1.0"
+description: "Create, update, validate, register, or command-bind an L9 workflow graph"
 before_chain: rules
 auto_chain: ynp
 dag: dag-authoring-v1
@@ -10,7 +10,11 @@ dag_file: workflows/dags/dag_authoring_dag.py
 
 # /dag-authoring — DAG lifecycle
 
-Delegates to skill **`l9-dag-authoring`** (DAG lifecycle owner).
+Delegates to skill **`l9-dag-authoring`** (graph lifecycle owner).
+
+`workflows/` hosts two first-class graph kinds — `SESSION_GUIDANCE`
+(`SessionDAG`, registry-backed) and `LANGGRAPH_RUNTIME` (`StateGraph`,
+executable, never registry-backed). Kind is classified before authoring.
 
 ## Usage
 
@@ -28,7 +32,8 @@ retired; thin command-to-DAG binding is owned here.
 ## EXECUTION
 
 1. Read and follow skill `l9-dag-authoring`.
-2. Classify exactly one operation: CREATE, UPDATE, VALIDATE, REGISTER, COMMAND_BIND.
+2. Classify the graph kind, then exactly one operation: CREATE, UPDATE,
+   VALIDATE, REGISTER, COMMAND_BIND.
 3. Validate before any registration claim; probe before any discovery claim.
 4. Auto-chain `/ynp`.
 
@@ -36,5 +41,7 @@ retired; thin command-to-DAG binding is owned here.
 
 - Claiming registration or reachability without a successful probe
 - Inventing a registry beside `register_session_dag()`
+- Registering a `LANGGRAPH_RUNTIME` graph in the SessionDAG registry
+- Calling a `SessionDAG` fake because it is not executable LangGraph
 - Absorbing domain workflow semantics (GMP, compiler, maintenance, verification)
 - Pasting a DAG body or workflow phases into this file
