@@ -1,18 +1,36 @@
 ---
 name: l9-update-command
-description: minimize slash commands to dag triggers via slash-command-update workflow. use when reducing a command to a thin trigger or auditing dag-trigger commands.
-paths: "commands/**"
+description: deprecated — do not activate. superseded by l9-dag-authoring, which owns thin command-to-DAG binding as its COMMAND_BIND operation. archived out of live skills discovery.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, commands, dag, meta]
+  tags: [l9, commands, dag, deprecated]
   owner: igor_beylin
-  status: active
-  version: 2.0.0
-  updated: 2026-06-06
+  status: deprecated
+  version: 9.0.0
+  updated: 2026-08-28
+  superseded_by: l9-dag-authoring
 ---
+
+# l9-update-command (Deprecated)
+
+**Deprecated. Do not activate this pack.**
+
+Canonical replacement: `skills/l9-dag-authoring/` — thin command-to-DAG binding is
+the `COMMAND_BIND` operation there, reachable as `/dag-authoring --bind-command`.
+
+The runtime DAG `workflows/dags/slash_command_update_dag.py` is retained for now.
+A Skill is not required to keep a DAG alive: Skills represent capabilities, DAGs
+represent execution graphs. Archive that DAG separately once a reference search
+proves zero callers.
+
+Archived under `skills/_archived/l9-update-command/` for history only. The body below is the
+retired pack, retained verbatim for comparison.
+
+---
+
 
 # Update Command — Minimize Slash Commands
 

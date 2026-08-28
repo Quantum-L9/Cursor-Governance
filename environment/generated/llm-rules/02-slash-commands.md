@@ -53,7 +53,7 @@ When a command needs generator scripts:
 
 ## Available Slash Commands (enabled)
 
-Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not second primary rows: `/readme` → `/docs`, `/lint-fix` → `/lint`, `/violation` → `/governance`. Folded verify-ladder slashes (`/probe`, `/audit-component`, `/verify-component`) are modes on the analyze family. Retired with no alias: `/rules`, `/git-work-preserve`, `/harvest2`.
+Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not second primary rows: `/readme` → `/docs`, `/lint-fix` → `/lint`, `/violation` → `/governance`. Folded verify-ladder slashes (`/probe`, `/audit-component`, `/verify-component`) are modes on the analyze family. Retired with no alias: `/rules`, `/git-work-preserve`, `/harvest2`. `/update-command` is retired into `/dag-authoring --bind-command`.
 
 | Command | File | Description |
 |---------|------|-------------|
@@ -66,7 +66,7 @@ Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not
 | `/clean_compress` | `commands/clean_compress.md` | Clean and compress code |
 | `/confirm-wiring` | `commands/confirm-wiring.md` | Verify workspace or component is wired |
 | `/consolidate` | `commands/consolidate.md` | Consolidate scattered code |
-| `/dag-authoring` | `commands/dag-authoring.md` | Create/update DAGs the proper way |
+| `/dag-authoring` | `commands/dag-authoring.md` | DAG lifecycle — create/update/validate/register/command-bind |
 | `/docs` | `commands/docs.md` | Agent-docs update (`l9-update-agent-docs`; not the README DAG) |
 | `/e2e-blockers` | `commands/e2e-blockers.md` | E2E / local-proof blockers + brief |
 | `/end-session` | `commands/end-session.md` | Close session — save context, handoff |
@@ -100,7 +100,6 @@ Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not
 | `/refactor-sweep` | `commands/refactor-sweep.md` | Broad refactor sweep |
 | `/spec` | `commands/spec.md` | Generate specification |
 | `/start-session` | `commands/start-session.md` | Run L9 sessionStart bootstrap (`make start`) |
-| `/update-command` | `commands/update-command.md` | Slim slash commands to DAG triggers |
 | `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan |
 | `/wire` | `commands/wire.md` | Wire governance workspace or a code component |
 | `/ynp` | `commands/ynp.md` | Yes No Proceed — decision framework |

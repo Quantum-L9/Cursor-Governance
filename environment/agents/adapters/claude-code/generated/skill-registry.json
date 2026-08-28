@@ -865,7 +865,7 @@
     },
     {
       "composition_role": "general",
-      "description": "create or update l9 workflow dags the proper way via dag-authoring-v1. use when authoring new dags, updating existing dags, wiring commands to dag nodes, or registering dag executors.",
+      "description": "Author, update, validate, register, discover, and optionally bind thin command triggers to L9 DAGs through the canonical SessionDAG architecture while preventing DAG-related Skill sprawl and preserving domain workflow ownership. Use when creating or changing an L9 DAG, repairing SessionDAG registration/discovery, or making a command a thin DAG trigger. Do not use for domain workflow semantics, Skill wiring, Skill compilation, GMP execution, or generic component audits.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-dag-authoring",
@@ -985,17 +985,6 @@
       "when_to_use": "wiring memory, debugging prefetch/bootstrap, GMP Phase 0 MEMORY_PREFETCH, episode/T0 memory-bank writes, or checking Graphiti health"
     },
     {
-      "composition_role": "general",
-      "description": "harvest code extraction via sed/dag and use-harvest deployment pipeline. use when extracting code from documents, deploying harvested files, or running harvest-deploy-v1 dag \u2014 never manually rewrite code from documents.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
-      "name": "l9-harvest-pipeline",
-      "path": "skills/l9-harvest-pipeline",
-      "reason": "sed/cp harvest deployment pipeline",
-      "user_invocable": true,
-      "when_to_use": ""
-    },
-    {
       "composition_role": "primary",
       "description": "handle production incidents \u2014 triage, mitigate, communicate, and write postmortems. use when a production incident is active (SEV1\u2013SEV4), coordinating mitigation, or writing a postmortem.",
       "disable_model_invocation": false,
@@ -1005,17 +994,6 @@
       "reason": "",
       "user_invocable": true,
       "when_to_use": "a production incident is active (SEV1\u2013SEV4), coordinating mitigation, or writing a postmortem"
-    },
-    {
-      "composition_role": "general",
-      "description": "inspect code before it enters l9 \u2014 external code gate and existing file audit via inspect-v1 dag. use when validating markdown with code blocks, proposed files not yet in repo, or auditing existing repo files before import/refactor.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
-      "name": "l9-inspect",
-      "path": "skills/l9-inspect",
-      "reason": "external code gate and file audit before code enters L9",
-      "user_invocable": true,
-      "when_to_use": ""
     },
     {
       "composition_role": "general",
@@ -1260,17 +1238,6 @@
       "when_to_use": "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
     },
     {
-      "composition_role": "general",
-      "description": "minimize slash commands to dag triggers via slash-command-update workflow. use when reducing a command to a thin trigger or auditing dag-trigger commands.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
-      "name": "l9-update-command",
-      "path": "skills/l9-update-command",
-      "reason": "meta tooling that changes command/skill structure",
-      "user_invocable": true,
-      "when_to_use": ""
-    },
-    {
       "composition_role": "primary",
       "description": "registers, updates, or retires agent skills in discovery tables, autonomy manifests, adapter symlinks, subagent preloads, and related agent docs. use immediately after l9-skill-compiler finishes, when a skill pack exists but is not discoverable, when the user asks to wire or register a skill, or when a skill must be deprecated, unwired, archived, deregistered, or superseded \u2014 deprecate means archive out of live skills/ and clear every registry, never leave a deprecated pack discoverable.",
       "disable_model_invocation": false,
@@ -1294,6 +1261,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "18881b692dec7572f2a737dac6bd330f2e72c6a8bc33d8fb9410fdd5d5f64798",
-  "source_skill_corpus_sha256": "24cb8f35fb3db7353d861340f7c3955b17f09399ee5761bf3f6c12370e7bcc6c"
+  "source_manifest_sha256": "bd2a82a8faf0aa4841b867e7ee2669aedbe8f08be7f0ec6759e85fbfa16d400a",
+  "source_skill_corpus_sha256": "bfe6ae3480da6e7372ef4d75751f6e6951a3a7ea68cef0f324ba6f75f2711124"
 }

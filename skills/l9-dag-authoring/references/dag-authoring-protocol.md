@@ -10,7 +10,7 @@ status: active
 version: 1.1.1
 updated: 2026-06-06
 dag: dag-authoring-v1
-dag_file: .cursor-commands/workflows/dags/dag_authoring_dag.py
+dag_file: workflows/dags/dag_authoring_dag.py
 --- /SKILL_META ---
 -->
 
@@ -43,7 +43,7 @@ The DAG contains all instructions. Follow each node's `action` field exactly.
 
 ## Key Files
 
-- **DAG**: `.cursor-commands/workflows/dags/dag_authoring_dag.py`
-- **Interface**: `.cursor-commands/workflows/session/interface.py`
-- **Registry**: `.cursor-commands/workflows/session/registry.py`
-- **Commands**: `.cursor-commands/commands/*.md`
+- **DAG**: `workflows/dags/dag_authoring_dag.py`
+- **Interface**: `workflows/session/interface.py`
+- **Registry**: `workflows/session/registry.py`
+- **Commands**: `commands/*.md`
