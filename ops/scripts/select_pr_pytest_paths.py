@@ -13,6 +13,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 REGISTRY_PATH = REPO_ROOT / "ops" / "config" / "python-contract.json"
 
+# Documentation suffixes. Selection matches tests by the changed file's name, so
+# prose over-selects: a `README.md` edit otherwise names 25 unrelated suites.
+DOC_SUFFIXES = (".md",)
+
 
 def _load_suites(registry: Path) -> list[dict]:
     data = json.loads(registry.read_text(encoding="utf-8"))
@@ -184,7 +188,15 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
     # and config files are asserted about by name, so they select the tests
     # that name them; without this a `.sh` edit selected nothing and shipped
     # straight to CI.
-    other_changed = [path for path in changed if not path.endswith(".py")]
+    #
+    # Prose is the exception. Documentation is not executable, and matching by
+    # name over-selects wildly: 25 test files mention `README.md`, so a
+    # README-only edit pulled in 25 unrelated suites and broke the
+    # markdown-only-is-an-empty-mapped-set contract that lets CI skip pytest
+    # for a docs PR. Selection is by name, so a doc's name is not evidence.
+    other_changed = [
+        path for path in changed if not path.endswith(".py") and not path.endswith(DOC_SUFFIXES)
+    ]
     if not py_changed and not other_changed:
         return []
     suites = _load_suites(registry)
