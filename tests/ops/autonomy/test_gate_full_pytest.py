@@ -28,8 +28,11 @@ from local_execution_gate import (  # noqa: E402
 
 UNSCOPED = [
     # The exact command a ten-minute run took in-session before it was stopped.
-    'TESTING=true PYTHONPATH="$PWD" .venv/bin/python -m pytest . '
-    "--ignore=environment/program-execution/peer_execution/autonomy -n auto -q --timeout=300",
+    (
+        'TESTING=true PYTHONPATH="$PWD" .venv/bin/python -m pytest . '
+        + "--ignore=environment/program-execution/peer_execution/autonomy "
+        + "-n auto -q --timeout=300"
+    ),
     "pytest",
     "python -m pytest",
     "python3 -m pytest",
@@ -43,14 +46,28 @@ UNSCOPED = [
 
 SCOPED_OR_UNRELATED = [
     ".venv/bin/python -m pytest ops/scripts/tests/test_bootstrap_invariants.py -q",
-    "PYTHONPATH=environment/program-execution .venv/bin/python -m pytest "
-    "environment/program-execution/tests/hardening -q",
+    (
+        "PYTHONPATH=environment/program-execution .venv/bin/python -m pytest "
+        + "environment/program-execution/tests/hardening -q"
+    ),
     ".venv/bin/python -m pytest tests/ops/scripts/ -q -p no:cacheprovider",
     ".venv/bin/python -m pytest a.py b.py -n auto -q",
     "make pr-check",
     "PR_REMEDIATE=0 make pr",
     "git status --porcelain",
     "ruff check ops/scripts/select_pr_pytest_paths.py",
+    # pytest's own tmp_path lives under /tmp/pytest-of-<user>/pytest-<n>/. Naming
+    # one of those directories in an unrelated command is not an invocation.
+    "cd /tmp/pytest-of-runner/pytest-0/test_named_root0/stacked && make pr",
+    "make -C /tmp/pytest-of-runner/pytest-0/test_named_root0/stacked pr",
+    "ls /home/runner/pytest-cache",
+]
+
+WRAPPED_UNSCOPED = [
+    "uv run pytest",
+    "uv run --frozen pytest .",
+    "env pytest",
+    "time .venv/bin/python -m pytest .",
 ]
 
 
@@ -64,6 +81,13 @@ def test_unscoped_catalog_run_is_denied(command: str) -> None:
 def test_targeted_and_unrelated_commands_are_allowed(command: str) -> None:
     reason = command_runs_unscoped_pytest(command)
     assert reason is None, f"false positive on: {command} -> {reason}"
+
+
+@pytest.mark.parametrize("command", WRAPPED_UNSCOPED)
+def test_wrappers_do_not_hide_a_catalog_run(command: str) -> None:
+    """`uv run` / `env` / `time` pass the command through — so does the gate."""
+
+    assert command_runs_unscoped_pytest(command), f"should have been denied: {command}"
 
 
 def test_options_are_not_mistaken_for_targets() -> None:

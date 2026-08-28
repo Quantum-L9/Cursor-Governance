@@ -238,35 +238,71 @@ FULL_PYTEST_OVERRIDE_ENV = "L9_FULL_PYTEST_AUTHORIZED"
 #: Makefile goals that run the whole Python catalog.
 MAKE_FULL_CATALOG_GOALS = frozenset({"test", "pr-full"})
 
-_PYTEST_INVOCATION_RE = re.compile(
-    r"(?:^|[|;&]\s*|\s)(?:[A-Za-z_][A-Za-z0-9_]*=\S+\s+)*"
-    r"(?:\S*/)?(?:python[0-9.]*\s+-m\s+pytest|pytest)\b",
-    re.I,
-)
+#: `pytest`, or a path whose final component is exactly `pytest`. Anchored at
+#: both ends so a directory merely *named* like pytest cannot pass: CI runs
+#: under `/tmp/pytest-of-<user>/pytest-<n>/`, and an unanchored match there
+#: turned `cd <tmpdir> && make pr` into a bogus catalog run.
+_PYTEST_EXEC_RE = re.compile(r"(?:\S*/)?pytest", re.I).fullmatch
+_PYTHON_EXEC_RE = re.compile(r"(?:\S*/)?python[0-9.]*", re.I).fullmatch
+_ASSIGNMENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=\S*").fullmatch
+
+#: Prefixes that run the following words as their own command, unchanged.
+_TRANSPARENT_WRAPPERS = frozenset({"command", "env", "exec", "nohup", "sudo", "time"})
+
+#: `<tool> run <command>` forms. `uv run pytest` is the house style here.
+_RUNNER_WRAPPERS = frozenset({"hatch", "pdm", "pipenv", "poetry", "uv"})
+
+#: Short options that consume the next token: `-n auto`, `-p no:cacheprovider`,
+#: `-k expr`, `-m expr`. Long options carry their value with `=`.
+_OPTIONS_TAKING_A_VALUE = frozenset({"-n", "-p", "-k", "-m", "-o", "-c", "--rootdir"})
+
+
+def _pytest_argv(segment: str) -> list[str] | None:
+    """Return pytest's own argv when SEGMENT invokes pytest, else ``None``.
+
+    Only the command word counts. A `pytest`-shaped component elsewhere in the
+    line is an argument, not an invocation — `cd /tmp/pytest-of-x/run && make pr`
+    runs make.
+    """
+
+    tokens = segment.split()
+    index = 0
+    while index < len(tokens):
+        word = tokens[index]
+        if _ASSIGNMENT_RE(word) or word in _TRANSPARENT_WRAPPERS:
+            index += 1
+            continue
+        if word in _RUNNER_WRAPPERS and tokens[index + 1 : index + 2] == ["run"]:
+            index += 2
+            while index < len(tokens) and tokens[index].startswith("-"):
+                index += 1
+            continue
+        break
+    if index >= len(tokens):
+        return None
+    word = tokens[index]
+    rest = tokens[index + 1 :]
+    if _PYTEST_EXEC_RE(word):
+        return rest
+    if _PYTHON_EXEC_RE(word) and rest[:1] == ["-m"] and len(rest) > 1 and _PYTEST_EXEC_RE(rest[1]):
+        return rest[2:]
+    return None
 
 
 def _pytest_targets(segment: str) -> list[str]:
     """Positional arguments after a pytest invocation, options removed."""
 
-    tokens = segment.split()
-    try:
-        start = next(
-            index + 1
-            for index, token in enumerate(tokens)
-            if token == "pytest" or token.endswith("/pytest")
-        )
-    except StopIteration:
+    argv = _pytest_argv(segment)
+    if argv is None:
         return []
     targets: list[str] = []
     skip_next = False
-    for token in tokens[start:]:
+    for token in argv:
         if skip_next:
             skip_next = False
             continue
         if token.startswith("-"):
-            # Long options carrying a value use `=`; short ones consume the next
-            # token. `-n auto`, `-p no:cacheprovider`, `-k expr`, `-m expr`.
-            if token in {"-n", "-p", "-k", "-m", "-o", "-c", "--rootdir"}:
+            if token in _OPTIONS_TAKING_A_VALUE:
                 skip_next = True
             continue
         if token in {"|", "&&", "||", ";", ")", "("}:
@@ -290,7 +326,7 @@ def command_runs_unscoped_pytest(command: str) -> str | None:
         hit = MAKE_FULL_CATALOG_GOALS.intersection(goals)
         if hit:
             return f"make {sorted(hit)[0]}"
-        if not _PYTEST_INVOCATION_RE.search(text):
+        if _pytest_argv(text) is None:
             continue
         targets = _pytest_targets(text)
         if not targets:

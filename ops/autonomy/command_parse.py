@@ -23,8 +23,12 @@ import re
 # into every classifier that consumes this helper as though it were commands.
 # Only redirect clauses are tolerated after the delimiter, so the end-of-line
 # anchor still rules out `print(1 << SHIFT)` and friends.
+#
+# The redirect target excludes `>` so each clause can only be read one way. A
+# target of `\S+` could swallow the next `>`, giving `>a>a>a…` exponentially
+# many decompositions to try before the anchor fails (CodeQL alert 410).
 _HEREDOC_OPEN_RE = re.compile(
-    r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1\s*(?:[0-9]?>>?\s*\S+\s*)*$"
+    r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1(?:\s*[0-9]?>>?\s*[^\s>|&;]+)*\s*$"
 )
 _SEPARATOR_PAIRS = ("&&", "||")
 _SEPARATOR_SINGLES = ";|"
