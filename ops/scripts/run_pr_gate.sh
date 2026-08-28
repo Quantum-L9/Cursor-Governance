@@ -85,6 +85,17 @@ if [[ "${1:-}" == "--print-state-digest" ]]; then
   printf '\n'
   exit 0
 fi
+_gate_head_sha() {
+  # A repository with no commits has no HEAD to record. That is the documented
+  # "no head recorded" case, not a failure to swallow: pr_gate_failure.py then
+  # falls back to digest-only matching. Handled explicitly rather than with
+  # `|| true`, which the swallowed-failure ratchet counts and rightly so.
+  local head
+  if head="$(git rev-parse HEAD 2>/dev/null)"; then
+    printf '%s' "$head"
+  fi
+}
+
 _gate_receipt_matches() {
   [[ -f "$_GATE_RECEIPT" ]] || return 1
   python3 - "$_GATE_RECEIPT" "$(_gate_state_digest)" <<'PY'
@@ -108,7 +119,8 @@ if _gate_receipt_matches; then
 fi
 if [[ -f "$_GATE_FAILURE_PY" ]]; then
   _gate_refuse_rc=0
-  python3 "$_GATE_FAILURE_PY" refuse "$_GATE_FAILURE" "$(_gate_state_digest)" || _gate_refuse_rc=$?
+  python3 "$_GATE_FAILURE_PY" refuse "$_GATE_FAILURE" "$(_gate_state_digest)" \
+    --head-sha "$(_gate_head_sha)" || _gate_refuse_rc=$?
   if [[ "$_gate_refuse_rc" -eq 2 ]]; then
     exit 2
   fi
@@ -162,6 +174,7 @@ _gate_on_exit() {
   if [[ "${_gate_failed:-0}" = "1" && -f "$_GATE_FAILURE_PY" ]]; then
     mkdir -p "$WS/.l9/pr"
     python3 "$_GATE_FAILURE_PY" write "$_GATE_FAILURE" "$(_gate_state_digest)" \
+      --head-sha "$(_gate_head_sha)" \
       --log "$_GATE_LOG" \
       --precommit "${precommit_log:-}" \
       --pytest "$GOV_ROOT/.venv/bin/pytest" || true
