@@ -9,6 +9,22 @@ from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 from .digests import normalize_digest
 from .models import ProbeContext
 
+#: Schema of the task-scoped root-autonomy authority sidecar.
+#:
+#: The sidecar travels *beside* the rendered Program contract, never inside it:
+#: `rendered_contract` and `rendered_contract_digest` remain defined solely by
+#: what the Program Execution Controller rendered, so carrying root authority
+#: can never change contract identity.
+AUTONOMY_AUTHORITY_SCHEMA = "l9.program-execution.autonomy-authority.v1"
+
+_AUTONOMY_AUTHORITY_REQUIRED = (
+    "task_id",
+    "adapter_session_id",
+    "lease_id",
+    "agent_id",
+    "runtime_database",
+)
+
 _PROVIDER_PROBE_STATUSES = frozenset({"PASS", "BLOCKED", "FAIL"})
 _PROVIDER_INVOCATION_STATUSES = frozenset(
     {"PASS", "FAIL", "BLOCKED", "CANCELLED", "RUNNING", "UNSUPPORTED"}
@@ -58,6 +74,26 @@ def _bounded_int(
     if not minimum <= value <= maximum:
         raise ValueError(f"{key} must be between {minimum} and {maximum}")
     return value
+
+
+def validate_autonomy_authority(
+    value: object,
+    *,
+    task_id: str | None = None,
+) -> dict[str, Any]:
+    """Fail closed on a sidecar that is not this task's root authority."""
+    authority = dict(_require_mapping("autonomy_authority", value))
+    if authority.get("schema") != AUTONOMY_AUTHORITY_SCHEMA:
+        raise ValueError("unsupported autonomy authority schema")
+    for field_name in _AUTONOMY_AUTHORITY_REQUIRED:
+        _require_non_empty(f"autonomy_authority {field_name}", authority.get(field_name))
+    if authority.get("owns_program_state") is not False:
+        raise ValueError("autonomy_authority must declare owns_program_state=false")
+    if task_id is not None and authority["task_id"] != task_id:
+        raise ValueError("autonomy_authority task_id does not match the execution request")
+    if "rendered_contract" in authority or "rendered_contract_digest" in authority:
+        raise ValueError("autonomy_authority must not redefine the rendered contract")
+    return authority
 
 
 def _dict_tuple(name: str, value: object) -> tuple[dict[str, Any], ...]:
@@ -216,6 +252,7 @@ class CanonicalExecutionRequest(BaseModel):
     surface: str | None = None
     provider_ref: str = ""
     execution_profile_ref: str = ""
+    autonomy_authority: dict[str, Any] | None = None
 
     @model_validator(mode="after")
     def _validate_request(self) -> CanonicalExecutionRequest:
@@ -266,6 +303,12 @@ class CanonicalExecutionRequest(BaseModel):
         if not isinstance(allowed, list) or not set(requested) <= set(allowed):
             raise ValueError("resolved permission profile does not allow requested capabilities")
         _require_mapping("telemetry_context", self.telemetry_context)
+        if self.autonomy_authority is not None:
+            object.__setattr__(
+                self,
+                "autonomy_authority",
+                validate_autonomy_authority(self.autonomy_authority, task_id=self.task_id),
+            )
         for name in ("provider_ref", "execution_profile_ref"):
             _require_non_empty(name, getattr(self, name))
         for name in ("agent_ref", "surface"):
@@ -295,6 +338,9 @@ class CanonicalExecutionRequest(BaseModel):
             "surface": self.surface,
             "provider_ref": self.provider_ref,
             "execution_profile_ref": self.execution_profile_ref,
+            "autonomy_authority": (
+                dict(self.autonomy_authority) if self.autonomy_authority is not None else None
+            ),
         }
 
     @classmethod
@@ -348,6 +394,11 @@ class CanonicalExecutionRequest(BaseModel):
             provider_ref=_require_non_empty("provider_ref", value.get("provider_ref")),
             execution_profile_ref=_require_non_empty(
                 "execution_profile_ref", value.get("execution_profile_ref")
+            ),
+            autonomy_authority=(
+                dict(_require_mapping("autonomy_authority", value.get("autonomy_authority")))
+                if value.get("autonomy_authority") is not None
+                else None
             ),
         )
 

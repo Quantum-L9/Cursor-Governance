@@ -14,6 +14,67 @@
         }
       ]
     },
+    "autonomy_authority": {
+      "anyOf": [
+        {
+          "not": {
+            "anyOf": [
+              {
+                "required": [
+                  "rendered_contract"
+                ]
+              },
+              {
+                "required": [
+                  "rendered_contract_digest"
+                ]
+              }
+            ]
+          },
+          "properties": {
+            "adapter_session_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "agent_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "lease_id": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "owns_program_state": {
+              "const": false
+            },
+            "runtime_database": {
+              "minLength": 1,
+              "type": "string"
+            },
+            "schema": {
+              "const": "l9.program-execution.autonomy-authority.v1"
+            },
+            "task_id": {
+              "minLength": 1,
+              "type": "string"
+            }
+          },
+          "required": [
+            "schema",
+            "task_id",
+            "adapter_session_id",
+            "lease_id",
+            "agent_id",
+            "runtime_database",
+            "owns_program_state"
+          ],
+          "type": "object"
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
     "context_manifest_digest": {
       "pattern": "^(?:sha256:)?[0-9a-f]{64}$",
       "type": "string"
