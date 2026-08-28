@@ -47,6 +47,7 @@ from workflows.dags.inspect_dag import (
     build_inspect_graph,
     run_inspect,
 )
+from workflows.dags.intelligence_harvest_dag import INTELLIGENCE_HARVEST_V1
 from workflows.dags.readme_pipeline_dag import README_PIPELINE_DAG
 from workflows.dags.refactoring_dag import REFACTORING_DAG
 from workflows.dags.slash_command_update_dag import SLASH_COMMAND_UPDATE_DAG
@@ -63,6 +64,7 @@ __all__ = [
     "DAG_AUTHORING_DAG",
     "GMP_EXECUTION_DAG",
     "HARVEST_DEPLOY_DAG",
+    "INTELLIGENCE_HARVEST_V1",
     "README_PIPELINE_DAG",
     "REFACTORING_DAG",
     "SLASH_COMMAND_UPDATE_DAG",
