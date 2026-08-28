@@ -70,6 +70,13 @@ _SKIP_FILES = {
 
 _BYPASS_TOKEN = re.compile(r"(?i)--no-verify|core\.hooksPath|pre-commit\s+uninstall")
 
+#: Reading a setting is not setting it. `git config --get core.hooksPath` is how
+#: a tool REPORTS that hooks are repointed — the installer warns about exactly
+#: that — and a line that only mentions the key inside a message emits nothing.
+#: Both were flagged until the hook this gate guards caught its own installer,
+#: which is the intended way for a false positive to surface.
+_READS_NOT_WRITES = re.compile(r"(?i)--get\b|--get-all\b|--list\b|^\s*(?:#|echo\b|printf\b)")
+
 #: The line teaches against the bypass, or records that one happened. Both are
 #: legitimate; neither runs anything.
 _PROHIBITION = re.compile(
@@ -146,9 +153,15 @@ def check_tree_emits_no_bypass(errors: list[str]) -> None:
         except OSError:
             continue
         for number, line in enumerate(lines, start=1):
-            if not _BYPASS_TOKEN.search(line):
+            hit = _BYPASS_TOKEN.search(line)
+            if not hit:
                 continue
             if _PROHIBITION.search(_BYPASS_TOKEN.sub(" ", line)):
+                continue
+            # A read or a message about the key is not an emission. Scoped to
+            # core.hooksPath: `--no-verify` has no read form, so a line carrying
+            # it is always constructing the bypass.
+            if hit.group(0).lower() == "core.hookspath" and _READS_NOT_WRITES.search(line):
                 continue
             rel = path.relative_to(ROOT).as_posix()
             errors.append(
