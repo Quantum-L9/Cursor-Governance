@@ -619,7 +619,13 @@ def validate_after_sync(root: Path) -> list[str]:
     return errors
 
 
-def main() -> int:
+def build_parser() -> argparse.ArgumentParser:
+    """The CLI contract, callable without running a sync.
+
+    Extracted so callers of this script can be checked against the real parser
+    rather than a second copy of the flag list -- see
+    tests/ops/scripts/test_pe_manifest_heal.py.
+    """
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     parser.add_argument(
@@ -638,7 +644,7 @@ def main() -> int:
         "--pe-manifest",
         action="store_true",
         help="Also regenerate environment/program-execution/MANIFEST.json "
-        "(suspended from automatic sync; explicit maintenance only)",
+        "(opt-in: it hashes the whole PE tree, so --force alone skips it)",
     )
     parser.add_argument("--check", action="store_true", help="Validate after sync")
     parser.add_argument("--json", action="store_true", help="Print machine-readable result")
@@ -648,7 +654,11 @@ def main() -> int:
         default=None,
         help="Consumer workspace for project-scoped LLM skill adapters",
     )
-    args = parser.parse_args()
+    return parser
+
+
+def main() -> int:
+    args = build_parser().parse_args()
     root = args.root.resolve()
 
     if args.print_generated_prefixes:
