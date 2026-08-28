@@ -1,0 +1,23 @@
+version: 2.1
+operations: [CREATE, UPDATE, VALIDATE, REGISTER, COMMAND_BIND]
+terminal_states: [PASS, PARTIAL, BLOCKED, FAIL]
+canonical:
+  dag_dir: workflows/dags
+  session_interface: workflows/session/interface.py
+  session_registry: workflows/session/registry.py
+  discovery: workflows/dags/__init__.py
+  session_registration_function: register_session_dag
+  session_lookup_function: get_session_dag
+rules:
+  - classify_graph_kind_before_authoring_or_validation
+  - SESSION_GUIDANCE_uses_SessionDAG_contract_and_registry
+  - LANGGRAPH_RUNTIME_uses_StateGraph_and_never_session_registry
+  - UNKNOWN_blocks_mutation
+  - validate_before_registration
+  - registration_claim_requires_runtime_probe
+  - discovery_claim_requires_import_and_lookup_probe_for_SESSION_GUIDANCE
+  - duplicate_id_fails_closed_unless_explicit_same_owner_update
+  - no_parallel_registry
+  - no_ACTIVE_DAGS_map
+  - command_binding_is_optional
+  - failure_blocks_downstream_success_claims

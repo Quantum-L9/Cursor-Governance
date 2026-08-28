@@ -87,3 +87,93 @@ def test_trigger_overlap_is_distinguished_from_capability_overlap():
     )
     assert any(row["trigger_overlap"] for row in rows)
     assert all("capability_overlap" in row for row in rows)
+
+
+# --- dag_skill_ownership invariant ---------------------------------------
+# "The existence of a DAG does not justify a Skill." Policy:
+# ../policies/topology-ownership.yaml
+
+OWNER_LIVE = {
+    "l9-dag-authoring": {"role": "dag_lifecycle_owner", "description": "dag lifecycle"},
+    "l9-gmp-protocol": {"role": "skill_entrypoint", "description": "phased execution"},
+}
+
+
+def test_policy_loads_and_declares_the_invariant():
+    rule = st.load_topology_policy()
+    assert rule, "topology-ownership.yaml must be readable from the scanner"
+    assert "does not justify a Skill" in rule["invariant"]
+    assert rule["on_violation"] == "REJECT_NEW_SKILL"
+
+
+def test_dag_wrapper_skill_is_rejected_when_a_lifecycle_owner_exists():
+    decision, evidence, _, decided_by = st.decide(
+        {"proposed_name": "l9-inspect-dag", "stated_objective": "wrap the inspect dag"},
+        OWNER_LIVE,
+    )
+    assert decision == "REJECT_NEW_SKILL"
+    assert decided_by == "deterministic_rule"
+    assert any("dag_lifecycle_owner=l9-dag-authoring" in row for row in evidence)
+
+
+def test_the_dag_lifecycle_capability_itself_is_not_rejected():
+    """A lifecycle verb means the capability IS DAG management; creation is legitimate."""
+    for objective in (
+        "author and register l9 dags",
+        "validate dag structure before registration",
+        "bind a command to a dag as a thin trigger",
+    ):
+        assert (
+            st.dag_skill_ownership_violation(
+                {"proposed_name": "l9-dag-authoring", "stated_objective": objective}, OWNER_LIVE
+            )
+            is None
+        ), objective
+
+
+def test_non_dag_subjects_are_untouched_by_the_rule():
+    for subject in (
+        {"proposed_name": "l9-auditing-security", "stated_objective": "scan for exposed secrets"},
+        {"proposed_name": "l9-incident-response", "stated_objective": "triage a sev1"},
+    ):
+        assert st.dag_skill_ownership_violation(subject, OWNER_LIVE) is None
+
+
+def test_missing_owner_escalates_rather_than_silently_rejecting():
+    no_owner = {"l9-gmp-protocol": {"role": "skill_entrypoint", "description": "phases"}}
+    decision, evidence, _, decided_by = st.decide(
+        {"proposed_name": "l9-harvest-dag", "stated_objective": "run the harvest deploy dag"},
+        no_owner,
+    )
+    assert decision == "ESCALATE_TO_BOUNDED_LLM"
+    assert decided_by == "bounded_llm"
+    assert "no_live_dag_lifecycle_owner" in evidence
+
+
+def test_absent_policy_disables_the_rule_rather_than_inventing_one():
+    assert (
+        st.dag_skill_ownership_violation(
+            {"proposed_name": "l9-inspect-dag", "stated_objective": "wrap the inspect dag"},
+            OWNER_LIVE,
+            rule={},
+        )
+        is None
+    )
+
+
+def test_an_explicit_rebuild_of_the_owner_still_wins_over_the_rule():
+    """REPLACE_EXISTING is evaluated first; the invariant must not block a rebuild."""
+    decision, _, _, _ = st.decide(
+        {
+            "proposed_name": "l9-dag-authoring",
+            "existing_skill": "l9-dag-authoring",
+            "stated_objective": "rebuild the dag pack",
+        },
+        OWNER_LIVE,
+    )
+    assert decision == "REPLACE_EXISTING"
+
+
+def test_the_live_repo_declares_exactly_one_dag_lifecycle_owner():
+    live_repo = st.enumerate_live_skills(os.path.join(HERE, "..", "..", "..", "skills"))
+    assert st.find_owner(live_repo, "dag_lifecycle_owner") == "l9-dag-authoring"

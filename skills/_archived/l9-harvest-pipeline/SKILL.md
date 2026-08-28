@@ -1,17 +1,34 @@
 ---
 name: l9-harvest-pipeline
-description: harvest code extraction via sed/dag and use-harvest deployment pipeline. use when extracting code from documents, deploying harvested files, or running harvest-deploy-v1 dag — never manually rewrite code from documents.
+description: deprecated — do not activate. the harvest capability runs directly from its canonical DAG and executors via /harvest and /use-harvest. archived out of live skills discovery.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
   layer: control_plane
   role: skill_entrypoint
-  tags: [l9, harvest, sed, deployment, dag, governance]
+  tags: [l9, harvest, sed, dag, deprecated]
   owner: igor_beylin
-  status: active
-  version: 3.2.1
-  updated: 2026-06-06
+  status: deprecated
+  version: 9.0.0
+  updated: 2026-08-28
 ---
+
+# l9-harvest-pipeline (Deprecated)
+
+**Deprecated. Do not activate this pack.**
+
+The harvest capability is **not** retired — its Skill wrapper is. `/harvest` triggers
+`workflows/dags/harvest_deploy_dag.py` and `/use-harvest` triggers
+`workflows/use_harvest_executor.py` directly.
+
+The existence of a DAG does not justify a Skill. This pack was a wrapper around
+execution graphs that already carried the whole protocol.
+
+Archived under `skills/_archived/l9-harvest-pipeline/` for history only. The body below is the
+retired pack, retained verbatim for comparison.
+
+---
+
 
 # Harvest Pipeline
 

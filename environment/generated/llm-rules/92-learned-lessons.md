@@ -14,7 +14,7 @@ description: Always-on index into the learned-lessons corpus (harvest pipeline)
 
 - Full extracted corpus: `learning/failures/learned-lessons-corpus.md`
 - Related: `learning/failures/repeated-mistakes.md`, `learning/patterns/`
-- Harvest skill: `l9-harvest-pipeline`
+- Harvest pipeline: `/harvest` → `workflows/dags/harvest_deploy_dag.py` (the `l9-harvest-pipeline` Skill wrapper is archived)
 
 ## MUST NOT
 

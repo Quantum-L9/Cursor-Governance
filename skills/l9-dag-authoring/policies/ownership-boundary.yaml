@@ -1,0 +1,27 @@
+version: 2
+owns:
+  - dag_creation
+  - dag_update
+  - dag_structural_validation
+  - session_dag_registration
+  - dag_discovery_binding
+  - thin_command_trigger_binding
+does_not_own:
+  - domain_workflow_semantics
+  - skill_compilation
+  - skill_discovery_or_autonomy_manifest_wiring
+  - generic_component_audit
+  - gmp_execution
+  - code_maintenance_execution
+  - harvest_execution
+invariants:
+  - skills_represent_capabilities_dags_represent_execution_graphs
+  - most_specific_domain_owner_wins
+  - no_new_skill_solely_because_a_dag_exists
+  - do_not_absorb_execution_engine_ownership
+absorbs:
+  - skill: l9-update-command
+    capability: thin_command_trigger_binding
+    disposition: ARCHIVED
+    location: skills/_archived/l9-update-command/
+    reachable_as: /dag-authoring --bind-command
