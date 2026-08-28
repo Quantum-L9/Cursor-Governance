@@ -833,39 +833,6 @@ rest. `/plan-audit` is a compatibility alias of that command.
 Skill **`l9-plan-audit`** is still the sessionStart 7-day live-queue scanner
 (§16). It does not move files. Do not treat it as `/l9-audit-plans`.
 
-<!-- KERNEL_PRECOMMIT_HOOK_V1 -->
-## Kernel hook before precommit (2026-08-28)
-
-Tree kernels (Recursive Alignment + Validate & Repair) and plan `kernel_pass`
-are **not** an L4 phase and are **not** a mid-session inject. They fire as
-the first step of `make precommit-repo` (`ops/autonomy/kernel_gate.py`) so
-hooks and tests run **once** on the post-kernel tree. L4 is begin +
-authorize-release only. If the hook fails: apply the named kernels, commit,
-`kernel_gate.py record`, re-run the same `make pr`. Do not run precommit or
-pytest first.
-
-<!-- TESTS_ONCE_AND_PUBLISH_V1 -->
-## Tests once, then `make pr` remediates (2026-08-28)
-
-Supersedes older ceremony sentences (`PRECOMMIT_REPO_OWNS_RUFF_V1` post-commit
-ritual, `make pr-check` then `make pr`, standing `PR_REMEDIATE=0 make pr`).
-Do not fold those lines; this block is the live law.
-
-1. **Tests run once locally.** Same worktree digest + `PR_BASE` → one pytest
-   pass. `make pr` is the gate (`pr-check` is an internal leaf). Typing
-   `make pr-check` then `make pr` on an unchanged tree is a teaching failure;
-   the existing gate receipt is the mechanical once-only. Full corpus stays
-   `make pr-full` / nightly / push-to-`main`.
-2. **Commit finished work when it is completed.** Restates
-   `CURSOR_COMMIT_BEFORE_STOP_V1`. Intermediate commits during a task do not
-   start the publish gate.
-3. **If the work is done and committed, `make pr`.** That command is the
-   whole ceremony. Default remediates is 1 (poll to green + merge-ready).
-   Merge still requires `/l9-pr-remediation` Converge /
-   `authorize_merge.py`. `PR_REMEDIATE=0` is opt-out only.
-
-Happy path: finish → scoped-commit → `make pr`.
-
 <!-- FF_SHELF_WIP_PLANS_V1 -->
 ## `/ff` shelves leftover WIP and plans (2026-08-28)
 
