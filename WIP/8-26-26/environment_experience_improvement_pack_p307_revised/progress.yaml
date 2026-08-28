@@ -22,6 +22,95 @@ queue_counts:
   needs_attachment: 3
   closed: 2
 total: 38
+schedule:
+  model: weighted-dag-list-schedule
+  supersedes: six-wave-barrier-model
+  recommended_width: 4
+  recommended_reason: Not the fastest — 6 lanes finishes in 7 units against 11. It is the width the publication
+    doctrine supports. Rule 48 stacks concurrent PRs bottom-up with rebase and conflict resolution forbidden, which
+    holds only while scopes stay disjoint; every additional lane is another branch that must stay mergeable against
+    a moving base. Four lanes keeps the stack reviewable and still beats the wave model. Go to 6 if review throughput
+    allows; there is no reason to exceed 7.
+  makespan_at_recommended_width: 11
+  total_effort: 42
+  execution_units: 26
+  critical_path:
+  - CI-004
+  - CI-005
+  critical_path_length: 6
+  saturation_width: 7
+  makespan_by_width:
+  - lanes: 2
+    makespan: 21
+    bound: 21
+    optimal: true
+  - lanes: 3
+    makespan: 14
+    bound: 14
+    optimal: true
+  - lanes: 4
+    makespan: 11
+    bound: 11
+    optimal: true
+  - lanes: 5
+    makespan: 9
+    bound: 9
+    optimal: true
+  - lanes: 6
+    makespan: 7
+    bound: 7
+    optimal: true
+  - lanes: 7
+    makespan: 6
+    bound: 6
+    optimal: true
+  - lanes: 8
+    makespan: 6
+    bound: 6
+    optimal: true
+  versus_wave_model:
+    wave_model_at_4_lanes: 13
+    this_model_at_4_lanes: 11
+    wave_model_at_6_lanes: 13
+    this_model_at_6_lanes: 7
+  collisions:
+  - pair:
+    - CI-007
+    - CI-015
+    region: session_start#banner-authority
+    order: CI-007 first
+    reason: 'Both add a line to the banner''s authority section — CI-007 reports a breakglass grant in force, CI-015
+      names which of two governance clones rules resolve from. The grant line lands first because it is the P0.
+
+      '
+  - pair:
+    - CI-015
+    - CI-023
+    region: resolve_governance_paths.sh#assert
+    order: CI-023 first
+    reason: 'CI-023 adds the source-without-call guard; CI-015 makes the resolver assert which clone is authoritative.
+      Both add logic to the same entry-point region, and the guard is what the assert reports through.
+
+      '
+  dropped_edges:
+  - edge: CI-002 -> CI-013
+    reason: gate#statedir vs gate#stages — different regions, no semantic order
+  - edge: CI-002 -> CI-016
+    reason: l4#statedir vs l4#receipt-fields — same
+  - edge: CI-003 -> CI-002
+    reason: CI-003's lever is install.sh's exclude block; it consumes no ownership guard
+  - edge: CI-012 -> CI-004
+    reason: rule text and rule frontmatter never read the bootstrap receipt
+  - edge: CI-018 -> CI-009
+    reason: a ci-parity make target does not need the deps import smoke to exist
+  - edge: CI-022 -> CI-009
+    reason: a session-start coverage declaration is unrelated to interpreter authority
+  - edge: CI-023 -> CI-009
+    reason: CI-023's remaining scope does not change WHICH interpreter resolves
+  - edge: CI-025 -> CI-013
+    reason: inverted in practice — clean-pyc removes the pressure that motivates narrowing the guardrail
+  - edge: CI-028 -> CI-009
+    reason: not a dependency, the same edit — collapsed into one unit
 schema_additions:
 - 'blocked_on: external — adopted from the predecessor''s own proposed `progress-schema/external-owner`. Without
   it, six records this org cannot start sit in the same not_started bucket as work that could ship today, and the
@@ -30,13 +119,15 @@ schema_additions:
   now.
 - disposition — the full status class (COMPLETE / PARTIAL / NOT_STARTED / BLOCKED / UNKNOWN), kept alongside `progress`
   so the coarse word stays backward-compatible with the predecessor's three values.
-- optimized_sequence / execution_wave / execution_lane / priority_class / blocker_class / leverage_rank / hard_dependencies
-  / parallelizable_with — the re-derived execution order.
+- 'optimized_sequence / execution_lane / schedule_slot / effort_weight / priority_class / blocker_class / leverage_rank
+  / hard_dependencies / collides_with / parallelizable_with — the re-derived execution order. `execution_wave` is
+  GONE: waves were global barriers that no dependency required. A record now carries the lane and the effort interval
+  it occupies.'
 - previous_progress + demoted_from_done — every status change is legible against the predecessor rather than silently
   replacing it.
 next_slice:
   id: slice-live-authority-and-receipt-truth
-  title: Wave 1 — the standing breakglass grant and the receipt that lies about it
+  title: Lane openers — the standing breakglass grant and the receipt that lies about it
   supersedes: slice-ownership-aware-writes
   why: 'The predecessor''s slice was ownership-aware writes, on the premise that PR#307 guarded one write site and
     left four unguarded. The premise does not survive inspection: all four already compose additively and no-op
@@ -55,16 +146,106 @@ next_slice:
     a drifted value, and separate authority-widening drift from cosmetic drift.'
   - 'CI-004 (P0, leverage 2): treat a governance_revision mismatch as expiry distinct from TTL; re-probe DEGRADED
     components at session start; carry a reason and a log path per component.'
-  - 'CI-009+CI-028 (P0/P2, leverage 3-4, ONE edit): the deps stage writes a zero-byte stamp and a two-line log with
-    no exit code and no import proof, behind a banner that says ''toolchain ready''. The exit-code plumbing is the
-    carrier for the smoke.'
+  - 'CI-009+CI-028 (P0/P2, leverage 3-4, ONE edit, lane L2 [4-6]): the deps stage writes a zero-byte stamp and a
+    two-line log with no exit code and no import proof, behind a banner that says ''toolchain ready''. The exit-code
+    plumbing is the carrier for the smoke.'
   - 'CI-003 (P1, leverage 5): add `.mcp.json` to the Claude-specific exclude block in install.sh. One glob. The
     scoping decision it belongs to is already made and documented at install.sh:391-395.'
   excluded: CI-002 Phase 2c (L9_AUTONOMY_STATE_DIR relocation) — touches l4_local.py, local_execution_gate.py and
-    the publish path together, and collides with CI-013. Wave 5, after CI-013 releases the gate.
+    the publish path together. Re-derived at region granularity it collides with nothing — gate#statedir is disjoint
+    from CI-013's gate#stages and l4#statedir from CI-016's l4#receipt-fields — so it opens lane L2 at t=0 instead
+    of trailing the queue.
   alternative: 'None proposed. The predecessor''s alternative — the receipt-integrity slice — is no longer an alternative:
     CI-004 is inside this slice, and CI-034/CI-035 remain proposed against it.'
 records:
+- id: CI-004
+  priority: 0
+  title: Regenerate bootstrap receipts on lifecycle/revision changes and re-probe degraded components
+  original_status: ACTIVE
+  previous_progress: partial
+  progress: partial
+  disposition: PARTIAL
+  queue: active
+  confidence: high
+  optimized_sequence: 1
+  execution_lane: L0
+  effort_weight: 3
+  schedule_slot:
+    start: 0
+    end: 3
+    lanes: 4
+  priority_class: P0_EXECUTION_UNBLOCKER
+  blocker_class: VALIDATION_BLOCKER
+  leverage_rank: 2
+  hard_dependencies: []
+  parallelizable_with:
+  - CI-006
+  - CI-007
+  - CI-009
+  - CI-012
+  - CI-028
+  - CI-102
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  live_defect: true
+  residual:
+  - 'IMP-03 / I-BF-01: treat a governance_revision mismatch as expiry, distinct from TTL expiry.'
+  - 'IMP-04 / BOOT-1: re-probe DEGRADED components at session start rather than serving a day-old verdict, under
+    the repo-write lock, fail-soft.'
+  - 'I-BF-03 / IMP-10 / B5: a reason string and log path per degraded component. The deps stage already has log
+    files; the other five components have nothing.'
+  evidence:
+  - REPRODUCING AT THIS BINDING, fourth recorded occurrence. /root/.l9/claude/bootstrap-state.json carries governance_revision
+    b618338db235b120709202a217c8b0109bc3c05b, generated_at 2026-08-28T04:34:13Z. /root/.l9/claude/gov-refresh.json
+    carries local_sha and origin_sha 59f03a5d, refreshed_at 2026-08-28T21:39:28Z. readiness-receipt.json carries
+    governance_SHA 59f03a5d. Two stores, two answers, one session, nothing invalidated the stale one.
+  - The stale receipt is 17 hours old against ttl_seconds 86400, so TTL will not catch it. Revision-mismatch expiry
+    is the only mechanism that would, and claude_bootstrap_receipt.py implements TTL only (lines 98-102); governance_revision
+    is carried through at line 88 and never compared.
+  - 'Per-component evidence still absent: bootstrap-state.json reports bare DEGRADED for shared_bootstrap, capabilities,
+    memory, mcp and plugins, with one repo-level remediation string and no per-component reason or log path.'
+- id: CI-012
+  priority: 1
+  title: Gate rules and MCP config on actual surface capabilities
+  original_status: ACTIVE
+  previous_progress: partial
+  progress: partial
+  disposition: PARTIAL
+  queue: active
+  confidence: high
+  optimized_sequence: 2
+  execution_lane: L1
+  effort_weight: 3
+  schedule_slot:
+    start: 0
+    end: 3
+    lanes: 4
+  priority_class: P1_ROOT_REPAIR
+  blocker_class: AUTHORITY_BLOCKER
+  leverage_rank: 6
+  hard_dependencies: []
+  parallelizable_with:
+  - CI-004
+  - CI-006
+  - CI-007
+  - CI-009
+  - CI-028
+  - CI-102
+  delivered_by: Quantum-L9/Cursor-Governance PR#320 (merged into main as c3ddeea) + pre-existing adapter templates
+  residual_sharpened: true
+  residual:
+  - 'IMP-07: extend rule 22 with the server-absent case and name the required fallback, so the obligation stays
+    closable.'
+  - 'I-BS-12: declare a capability precondition per rule and annotate at projection time when it is unmet.'
+  evidence:
+  - rules/22-context7-auto-invoke.mdc still mandates Context7 on every surface and still carries no server-absent
+    case.
+  - 'Sharper than recorded: the live /home/user/.mcp.json declares exactly ONE server, graphiti-memory — and that
+    server failed to connect this session (502, upstream dial failed). So the rule mandates a mechanism the surface
+    does not expose, on a surface whose only declared MCP server is also down. The rule''s own text (''Do not treat
+    a missing allow-list entry as permission to skip'') makes the obligation unsatisfiable rather than merely awkward.'
+  - 'I-BS-12 unbuilt: ops/scripts/project_llm_rules.py carries no capability precondition handling.'
+  - 'Merged halves hold: capabilities.yaml `requires` restricted to EVALUABLE_REQUIREMENTS, generic adapter on the
+    brokered front door, `type` discriminator present.'
 - id: CI-007
   priority: 0
   title: Replace standing breakglass environment strings with scoped expiring receipts
@@ -74,17 +255,23 @@ records:
   disposition: PARTIAL
   queue: active
   confidence: high
-  optimized_sequence: 1
-  execution_wave: 1
-  execution_lane: 1A
+  optimized_sequence: 3
+  execution_lane: L2
+  effort_weight: 2
+  schedule_slot:
+    start: 0
+    end: 2
+    lanes: 4
   priority_class: P0_EXECUTION_UNBLOCKER
   blocker_class: AUTHORITY_BLOCKER
   leverage_rank: 1
   hard_dependencies: []
+  collides_with:
+  - CI-015
   parallelizable_with:
-  - CI-003
   - CI-004
   - CI-009
+  - CI-012
   - CI-028
   delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
   demoted_from_done: true
@@ -111,84 +298,6 @@ records:
   - 'All three source improvements are unmet at this binding: IMP-04 (absent from a fresh session, or a value describing
     standing policy), ENV-2 (retire the standing variable), I-EL-06 (express breakglass as a receipt with issuer,
     scope and expiry; report grants still in force at session start).'
-- id: CI-006
-  priority: 0
-  title: Resolve authority-sensitive environment drift at the actual source
-  original_status: OPEN_DECISION
-  previous_progress: partial
-  progress: partial
-  disposition: PARTIAL
-  queue: active
-  confidence: high
-  optimized_sequence: 2
-  execution_wave: 1
-  execution_lane: 1A
-  priority_class: P1_ROOT_REPAIR
-  blocker_class: NONBLOCKING
-  leverage_rank: 8
-  hard_dependencies:
-  - CI-007
-  parallelizable_with:
-  - CI-003
-  - CI-004
-  - CI-009
-  - CI-028
-  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
-  residual_narrowed: true
-  residual:
-  - 'I-EL-02: name the file that produced the live value when a variable drifts.'
-  - 'A1 / I-EL-03: classify authority-widening drift separately from cosmetic drift, and either apply the expected
-    value or state plainly that repair is human-only.'
-  - 'A1 second clause: have merge_gate record the effective value it read into the merge receipt.'
-  closed_legs:
-  - 'IMP-03, ENV-1, IMP-03(P7): the instance is closed. Zero drift, one layer.'
-  evidence:
-  - 'IMP-03''s done_when is now MET. `python3 environment/agents/adapters/claude-code/verify_account_env.py` at
-    this binding reports ''OK: all 32 expected variables match'' with zero drift, and L9_AUTONOMY_AUTONOMOUS_MERGE=false
-    is present in the session env but absent from /home/user/.claude/settings.json''s env block — set in exactly
-    one layer, which is the second half of the criterion.'
-  - 'The class mechanism is still unbuilt: verify_account_env.py contains no source-file attribution for a drifted
-    value (I-EL-02) and no authority-widening vs cosmetic classification (A1, I-EL-03).'
-- id: CI-004
-  priority: 0
-  title: Regenerate bootstrap receipts on lifecycle/revision changes and re-probe degraded components
-  original_status: ACTIVE
-  previous_progress: partial
-  progress: partial
-  disposition: PARTIAL
-  queue: active
-  confidence: high
-  optimized_sequence: 3
-  execution_wave: 1
-  execution_lane: 1B
-  priority_class: P0_EXECUTION_UNBLOCKER
-  blocker_class: VALIDATION_BLOCKER
-  leverage_rank: 2
-  hard_dependencies: []
-  parallelizable_with:
-  - CI-003
-  - CI-006
-  - CI-007
-  - CI-009
-  - CI-028
-  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
-  live_defect: true
-  residual:
-  - 'IMP-03 / I-BF-01: treat a governance_revision mismatch as expiry, distinct from TTL expiry.'
-  - 'IMP-04 / BOOT-1: re-probe DEGRADED components at session start rather than serving a day-old verdict, under
-    the repo-write lock, fail-soft.'
-  - 'I-BF-03 / IMP-10 / B5: a reason string and log path per degraded component. The deps stage already has log
-    files; the other five components have nothing.'
-  evidence:
-  - REPRODUCING AT THIS BINDING, fourth recorded occurrence. /root/.l9/claude/bootstrap-state.json carries governance_revision
-    b618338db235b120709202a217c8b0109bc3c05b, generated_at 2026-08-28T04:34:13Z. /root/.l9/claude/gov-refresh.json
-    carries local_sha and origin_sha 59f03a5d, refreshed_at 2026-08-28T21:39:28Z. readiness-receipt.json carries
-    governance_SHA 59f03a5d. Two stores, two answers, one session, nothing invalidated the stale one.
-  - The stale receipt is 17 hours old against ttl_seconds 86400, so TTL will not catch it. Revision-mismatch expiry
-    is the only mechanism that would, and claude_bootstrap_receipt.py implements TTL only (lines 98-102); governance_revision
-    is carried through at line 88 and never compared.
-  - 'Per-component evidence still absent: bootstrap-state.json reports bare DEGRADED for shared_bootstrap, capabilities,
-    memory, mcp and plugins, with one repo-level remediation string and no per-component reason or log path.'
 - id: CI-009
   priority: 0
   title: Establish one project interpreter/toolchain authority and verify importability before READY
@@ -202,19 +311,22 @@ records:
   collapsed_execution_unit:
   - CI-009
   - CI-028
-  collapsed_reason: 'One execution unit, one sequence number: same file, same stage, complementary halves. Sequencing
-    them apart would edit the deps stage twice.'
-  execution_wave: 1
-  execution_lane: 1C
+  collapsed_reason: 'One execution unit, one slot: same file, same stage, complementary halves. The exit-code plumbing
+    is the carrier for the import smoke; sequencing them apart edits the deps stage twice.'
+  execution_lane: L3
+  effort_weight: 2
+  schedule_slot:
+    start: 0
+    end: 2
+    lanes: 4
   priority_class: P1_ROOT_REPAIR
   blocker_class: VALIDATION_BLOCKER
   leverage_rank: 3
   hard_dependencies: []
   parallelizable_with:
-  - CI-003
   - CI-004
-  - CI-006
   - CI-007
+  - CI-012
   delivered_by: Quantum-L9/Cursor-Governance PR#307 (merged into main)
   collapse_with: CI-028
   residual:
@@ -235,23 +347,26 @@ records:
   disposition: NOT_STARTED
   queue: active
   confidence: high
-  optimized_sequence: 4
+  optimized_sequence: 5
   collapsed_execution_unit:
   - CI-009
   - CI-028
-  collapsed_reason: 'One execution unit, one sequence number: same file, same stage, complementary halves. Sequencing
-    them apart would edit the deps stage twice.'
-  execution_wave: 1
-  execution_lane: 1C
+  collapsed_reason: 'One execution unit, one slot: same file, same stage, complementary halves. The exit-code plumbing
+    is the carrier for the import smoke; sequencing them apart edits the deps stage twice.'
+  execution_lane: L3
+  effort_weight: 2
+  schedule_slot:
+    start: 0
+    end: 2
+    lanes: 4
   priority_class: P1_ROOT_REPAIR
   blocker_class: VALIDATION_BLOCKER
   leverage_rank: 4
   hard_dependencies: []
   parallelizable_with:
-  - CI-003
   - CI-004
-  - CI-006
   - CI-007
+  - CI-012
   delivered_by: null
   collapse_with: CI-009
   residual:
@@ -260,48 +375,87 @@ records:
   evidence:
   - 'LIVE: /root/.l9/claude/deps-9ff843f2….stamp is zero bytes; the paired .log carries no timestamp and no exit
     code. All five deps stamps in the directory are zero bytes.'
-- id: CI-003
-  priority: 1
-  title: Make the Stop hook ownership-aware instead of residue-blind
-  original_status: ACTIVE
-  previous_progress: not_started
+- id: CI-006
+  priority: 0
+  title: Resolve authority-sensitive environment drift at the actual source
+  original_status: OPEN_DECISION
+  previous_progress: partial
   progress: partial
   disposition: PARTIAL
   queue: active
   confidence: high
-  optimized_sequence: 5
-  execution_wave: 1
-  execution_lane: 1D
+  optimized_sequence: 6
+  execution_lane: L2
+  effort_weight: 2
+  schedule_slot:
+    start: 2
+    end: 4
+    lanes: 4
   priority_class: P1_ROOT_REPAIR
-  blocker_class: USABILITY_BLOCKER
-  leverage_rank: 5
+  blocker_class: NONBLOCKING
+  leverage_rank: 8
+  hard_dependencies:
+  - CI-007
+  parallelizable_with:
+  - CI-004
+  - CI-005
+  - CI-010
+  - CI-012
+  - CI-102
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual_narrowed: true
+  residual:
+  - 'I-EL-02: name the file that produced the live value when a variable drifts.'
+  - 'A1 / I-EL-03: classify authority-widening drift separately from cosmetic drift, and either apply the expected
+    value or state plainly that repair is human-only.'
+  - 'A1 second clause: have merge_gate record the effective value it read into the merge receipt.'
+  closed_legs:
+  - 'IMP-03, ENV-1, IMP-03(P7): the instance is closed. Zero drift, one layer.'
+  evidence:
+  - 'IMP-03''s done_when is now MET. `python3 environment/agents/adapters/claude-code/verify_account_env.py` at
+    this binding reports ''OK: all 32 expected variables match'' with zero drift, and L9_AUTONOMY_AUTONOMOUS_MERGE=false
+    is present in the session env but absent from /home/user/.claude/settings.json''s env block — set in exactly
+    one layer, which is the second half of the criterion.'
+  - 'The class mechanism is still unbuilt: verify_account_env.py contains no source-file attribution for a drifted
+    value (I-EL-02) and no authority-widening vs cosmetic classification (A1, I-EL-03).'
+- id: CI-102
+  priority: 4
+  title: Valid GH_TOKEN or formal surface exemption from gh-dependent gates
+  original_status: ACTIVE_CONTEXT_SPECIFIC
+  previous_progress: partial
+  progress: partial
+  disposition: PARTIAL
+  queue: active
+  confidence: high
+  optimized_sequence: 7
+  execution_lane: L3
+  effort_weight: 2
+  schedule_slot:
+    start: 2
+    end: 4
+    lanes: 4
+  priority_class: P1_ROOT_REPAIR
+  blocker_class: AUTHORITY_BLOCKER
+  leverage_rank: 10
   hard_dependencies: []
   parallelizable_with:
   - CI-004
+  - CI-005
   - CI-006
-  - CI-007
-  - CI-009
-  - CI-028
-  delivered_by: null
-  status_moved: not_started -> partial (in-repo lever was already largely built and went unrecorded)
+  - CI-010
+  - CI-012
+  delivered_by: Quantum-L9/Cursor-Governance 5612f6b (merged) — a third path, unwritten
   residual:
-  - Add `.mcp.json` to the Claude-specific exclude block in install.sh. One glob; the design decision it belongs
-    to is already made and documented.
-  - Hook-side ownership classification stays external.
+  - Record the REST route as a sanctioned surface capability in ops/autonomy/surface_profile.yaml and rule 62, or
+    provision the PAT. Until then the next gh-dependent gate reproduces the original block.
   evidence:
-  - The recorded residual says the in-repo lever is the .git/info/exclude list in bootstrap_agent_environment.sh,
-    which 'does not carry .claude/** or .mcp.json'. Half of that is out of date and was already out of date at 30c6ecd4.
-  - 'environment/agents/adapters/claude-code/install.sh:391-405 writes a SECOND, Claude-specific exclude block covering
-    .claude/skills/, .claude/rules/, .claude/commands/, with a comment stating the scoping decision explicitly:
-    ''Only the GENERATED mirrors are excluded — .claude/settings.json and .claude/hooks/ are committable consumer
-    wiring.'' Unchanged in 30c6ecd4..59f03a5d, so it was present and unrecorded at the last assessment.'
-  - 'LIVE: every in-scope consumer repo''s .git/info/exclude carries all seven globs, and every one reports a clean
-    tree.'
-  - 'Genuine gap: .mcp.json appears in NEITHER exclude list, and is a projection target (claude_projection.py:388).
-    It does not dirty a tree here only because the workspace root /home/user is not itself a git repository.'
-  - '/root/.claude/stop-hook-git-check.sh re-verified at this binding (regenerated 21:39 this session): fires on
-    any `git diff` delta and any `git ls-files --others --exclude-standard` output, with no ownership classification.
-    Harness-owned.'
+  - The third route still works and is still unwritten. `gh api user --jq .login` returns cryptoxdog at this binding
+    with GH_TOKEN set.
+  - Neither sanctioned option was taken. No openclaw PAT via the secret plane (option a). No surface_profile amendment;
+    rules/62-github-openclaw-authority.mdc still routes through the secret plane with no surface exemption (option
+    b).
+  - rules/53-pr-overlap-guardrail.mdc:56 does say 'Detection is REST-only (gh api)', but that documents one gate's
+    own implementation — it is not a surface exemption and does not generalise to the next gh-dependent gate written.
 - id: CI-005
   priority: 1
   title: Make memory health transport-specific and continuity task-bearing
@@ -311,18 +465,26 @@ records:
   disposition: NOT_STARTED
   queue: active
   confidence: high
-  optimized_sequence: 6
-  execution_wave: 2
-  execution_lane: 2A
+  optimized_sequence: 8
+  execution_lane: L0
+  effort_weight: 3
+  schedule_slot:
+    start: 3
+    end: 6
+    lanes: 4
   priority_class: P2_INTEGRATION_AND_RELIABILITY
   blocker_class: USABILITY_BLOCKER
   leverage_rank: 7
   hard_dependencies:
   - CI-004
   parallelizable_with:
+  - CI-006
+  - CI-008
   - CI-010
+  - CI-013
+  - CI-023
   - CI-030
-  - CI-036
+  - CI-102
   delivered_by: null
   residual:
   - 'I-BS-05: split the receipt''s `memory` component into memory.cli and memory.mcp, probed independently, with
@@ -354,9 +516,13 @@ records:
   disposition: PARTIAL
   queue: active
   confidence: high
-  optimized_sequence: 7
-  execution_wave: 2
-  execution_lane: 2B
+  optimized_sequence: 9
+  execution_lane: L1
+  effort_weight: 1
+  schedule_slot:
+    start: 3
+    end: 4
+    lanes: 4
   priority_class: P2_INTEGRATION_AND_RELIABILITY
   blocker_class: INTEGRATION_BLOCKER
   leverage_rank: 9
@@ -364,8 +530,8 @@ records:
   - CI-004
   parallelizable_with:
   - CI-005
-  - CI-030
-  - CI-036
+  - CI-006
+  - CI-102
   delivered_by: PR#305 (+ predecessor PR#304) and PR#320, all merged into main
   residual:
   - 'I-EL-02: report proxy-denied and upstream-error as distinct probe states, so an allowlist remediation decision
@@ -378,46 +544,6 @@ records:
   - 'The remaining split is absent: no proxy-denied vs upstream-error discrimination anywhere in ops/secrets/.'
   - 'External blocker unchanged: Quantum-L9/Cursor-Governance issues #301 (no broker-verifiable session identity
     on hosted Claude Code cloud) and #302 (broker not deployed, NXDOMAIN) are both still OPEN at this binding.'
-- id: CI-036
-  priority: 2
-  title: Keep unpushed-commit counts honest across merged-and-deleted branches
-  original_status: ACTIVE
-  previous_progress: partial
-  progress: partial
-  disposition: PARTIAL
-  queue: active
-  confidence: high
-  optimized_sequence: 8
-  execution_wave: 2
-  execution_lane: 2C
-  priority_class: P2_INTEGRATION_AND_RELIABILITY
-  blocker_class: NONBLOCKING
-  leverage_rank: 11
-  hard_dependencies: []
-  parallelizable_with:
-  - CI-005
-  - CI-010
-  - CI-030
-  delivered_by: be3f01c9 (#325, bootstrap prune + origin/HEAD) + 7ceeef38 (#324, an in-repo checker that does not
-    depend on local remote-tracking refs at all)
-  advanced: true
-  residual:
-  - Consolidate repo_hygiene.py's prune with the session-start prune so a count read mid-session is not served by
-    the session-end pass.
-  - Harness stop-hook resolution logic stays external.
-  evidence:
-  - ADVANCED since the assessment. af33b4d (#331, merged after 30c6ecd4) taught ops/autonomy/session_debt.py that
-    a merged-and-deleted branch is not unpushed work, using branch.<name>.remote as the offline distinguisher because
-    a squash merge leaves the branch's commits unreachable from main and the deleted ref leaves nothing to compare
-    against.
-  - 'Both directions are pinned: test_merged_and_deleted_branch_is_not_debt performs a real squash merge and branch
-    delete against a bare upstream and asserts HEAD is genuinely unreachable from main BEFORE asserting no debt,
-    so it fails if the fix degrades to a reachability check; test_never_pushed_branch_is_still_debt_when_absent_upstream
-    holds the opposite line.'
-  - 'The two earlier mechanisms remain: the session-start prune plus origin/HEAD in bootstrap_agent_environment.sh,
-    and ops/scripts/tests/test_stale_remote_ref_counts.sh.'
-  - 'Residual confirmed: ops/scripts/repo_hygiene.py:385 still runs `git fetch --prune origin` at session end only,
-    unconsolidated with the session-start prune.'
 - id: CI-030
   priority: 3
   title: Improve receipt CLI ergonomics without multiplying state owners
@@ -427,9 +553,13 @@ records:
   disposition: NOT_STARTED
   queue: active
   confidence: high
-  optimized_sequence: 9
-  execution_wave: 2
-  execution_lane: 2D
+  optimized_sequence: 10
+  execution_lane: L1
+  effort_weight: 1
+  schedule_slot:
+    start: 4
+    end: 5
+    lanes: 4
   priority_class: P4_NONBLOCKING_CLEANUP
   blocker_class: USABILITY_BLOCKER
   leverage_rank: 19
@@ -437,8 +567,8 @@ records:
   - CI-004
   parallelizable_with:
   - CI-005
-  - CI-010
-  - CI-036
+  - CI-008
+  - CI-013
   delivered_by: null
   ordering_note: Sequence after CI-004 — the default read should print the fields CI-004 adds, or it is written
     twice.
@@ -448,148 +578,6 @@ records:
   evidence:
   - ops/scripts/claude_bootstrap_receipt.py:144 and ops/scripts/governance_refresh_receipt.py:154 both still declare
     --read with required=True. No default read action.
-- id: CI-012
-  priority: 1
-  title: Gate rules and MCP config on actual surface capabilities
-  original_status: ACTIVE
-  previous_progress: partial
-  progress: partial
-  disposition: PARTIAL
-  queue: active
-  confidence: high
-  optimized_sequence: 10
-  execution_wave: 3
-  execution_lane: 3A
-  priority_class: P1_ROOT_REPAIR
-  blocker_class: AUTHORITY_BLOCKER
-  leverage_rank: 6
-  hard_dependencies: []
-  parallelizable_with: []
-  delivered_by: Quantum-L9/Cursor-Governance PR#320 (merged into main as c3ddeea) + pre-existing adapter templates
-  residual_sharpened: true
-  residual:
-  - 'IMP-07: extend rule 22 with the server-absent case and name the required fallback, so the obligation stays
-    closable.'
-  - 'I-BS-12: declare a capability precondition per rule and annotate at projection time when it is unmet.'
-  evidence:
-  - rules/22-context7-auto-invoke.mdc still mandates Context7 on every surface and still carries no server-absent
-    case.
-  - 'Sharper than recorded: the live /home/user/.mcp.json declares exactly ONE server, graphiti-memory — and that
-    server failed to connect this session (502, upstream dial failed). So the rule mandates a mechanism the surface
-    does not expose, on a surface whose only declared MCP server is also down. The rule''s own text (''Do not treat
-    a missing allow-list entry as permission to skip'') makes the obligation unsatisfiable rather than merely awkward.'
-  - 'I-BS-12 unbuilt: ops/scripts/project_llm_rules.py carries no capability precondition handling.'
-  - 'Merged halves hold: capabilities.yaml `requires` restricted to EVALUABLE_REQUIREMENTS, generic adapter on the
-    brokered front door, `type` discriminator present.'
-- id: CI-102
-  priority: 4
-  title: Valid GH_TOKEN or formal surface exemption from gh-dependent gates
-  original_status: ACTIVE_CONTEXT_SPECIFIC
-  previous_progress: partial
-  progress: partial
-  disposition: PARTIAL
-  queue: active
-  confidence: high
-  optimized_sequence: 11
-  execution_wave: 3
-  execution_lane: 3A
-  priority_class: P1_ROOT_REPAIR
-  blocker_class: AUTHORITY_BLOCKER
-  leverage_rank: 10
-  hard_dependencies: []
-  parallelizable_with: []
-  delivered_by: Quantum-L9/Cursor-Governance 5612f6b (merged) — a third path, unwritten
-  residual:
-  - Record the REST route as a sanctioned surface capability in ops/autonomy/surface_profile.yaml and rule 62, or
-    provision the PAT. Until then the next gh-dependent gate reproduces the original block.
-  evidence:
-  - The third route still works and is still unwritten. `gh api user --jq .login` returns cryptoxdog at this binding
-    with GH_TOKEN set.
-  - Neither sanctioned option was taken. No openclaw PAT via the secret plane (option a). No surface_profile amendment;
-    rules/62-github-openclaw-authority.mdc still routes through the secret plane with no surface exemption (option
-    b).
-  - rules/53-pr-overlap-guardrail.mdc:56 does say 'Detection is REST-only (gh api)', but that documents one gate's
-    own implementation — it is not a surface exemption and does not generalise to the next gh-dependent gate written.
-- id: CI-023
-  priority: 1
-  title: Collapse variable-loading authorities into one reproducible loader contract
-  original_status: ACTIVE
-  previous_progress: not_started
-  progress: not_started
-  disposition: NOT_STARTED
-  queue: active
-  confidence: high
-  optimized_sequence: 12
-  execution_wave: 3
-  execution_lane: 3A
-  priority_class: P2_INTEGRATION_AND_RELIABILITY
-  blocker_class: SCHEMA_BLOCKER
-  leverage_rank: 15
-  hard_dependencies: []
-  parallelizable_with: []
-  delivered_by: null
-  residual:
-  - 'IMP-02(P4): amend rule 06 to `source …; resolve_governance_paths_or_exit`.'
-  - 'LOADER-2: warn on stderr when the resolver is sourced by a shell that never calls either entry point.'
-  - 'IMP-01(P4): load the session env in non-interactive shells (BASH_ENV, or hoist the source line above the PS1
-    guard).'
-  out_of_tree_legs: IMP-002/005/006 target Enrichment.Inference.Engine — see CI-024's attachment note.
-  evidence:
-  - rules/06-governance-ssot-paths.mdc:39 still reads 'Governance scripts source resolve_governance_paths.sh and
-    use the exported values' — sourced, not must-call.
-  - ops/scripts/resolve_governance_paths.sh carries no source-without-call guard and no L9_RESOLVE_ON_SOURCE opt-in.
-- id: CI-027
-  priority: 3
-  title: Correct rule rationale that no longer matches container reality
-  original_status: ACTIVE
-  previous_progress: not_started
-  progress: not_started
-  disposition: NOT_STARTED
-  queue: active
-  confidence: high
-  optimized_sequence: 13
-  execution_wave: 3
-  execution_lane: 3A
-  priority_class: P4_NONBLOCKING_CLEANUP
-  blocker_class: NONBLOCKING
-  leverage_rank: 24
-  hard_dependencies: []
-  parallelizable_with: []
-  delivered_by: null
-  residual:
-  - 'IMP-17: keep the pinned-interpreter mandate, replace the justification with the true one (version pinning and
-    dependency isolation), and regenerate the projection.'
-  evidence:
-  - rules/03-graphiti-memory.mdc:56 still reads 'system `python3` often lacks PyYAML'. At this binding `python3
-    -c 'import yaml'` succeeds on CPython 3.11.15. The projected copy at environment/generated/llm-rules/03-graphiti-memory.md:48
-    carries the same false premise.
-- id: CI-015
-  priority: 1
-  title: Name and enforce the authoritative governance checkout
-  original_status: ACTIVE
-  previous_progress: partial
-  progress: partial
-  disposition: PARTIAL
-  queue: active
-  confidence: high
-  optimized_sequence: 14
-  execution_wave: 3
-  execution_lane: 3A
-  priority_class: P2_INTEGRATION_AND_RELIABILITY
-  blocker_class: USABILITY_BLOCKER
-  leverage_rank: 17
-  hard_dependencies: []
-  parallelizable_with: []
-  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
-  residual:
-  - 'I-BS-13: when a second checkout of the governance repository is present, print both paths with their revisions
-    and state which one rules resolve from.'
-  - 'I-WT-01: decide whether the workspace clone is an intentional consumer checkout or a leftover, and make resolve_governance_paths.sh
-    assert the answer.'
-  evidence:
-  - 'Both checkouts present and identical at this binding: /root/.cursor-governance and /home/user/Cursor-Governance
-    are each at 59f03a5. The session banner names only the first (''governance SSOT: /root/.cursor-governance'').'
-  - 'C2 stays closed: Quantum-L9/Cursor-Governance issues were listed at this binding with no add_repo call.'
 - id: CI-008
   priority: 0
   title: Reconcile make pr doctrine with consumer-repository command contracts
@@ -599,18 +587,22 @@ records:
   disposition: PARTIAL
   queue: active
   confidence: high
-  optimized_sequence: 15
-  execution_wave: 4
-  execution_lane: 4A
+  optimized_sequence: 11
+  execution_lane: L2
+  effort_weight: 2
+  schedule_slot:
+    start: 4
+    end: 6
+    lanes: 4
   priority_class: P2_INTEGRATION_AND_RELIABILITY
   blocker_class: EXECUTION_BLOCKER
   leverage_rank: 12
   hard_dependencies: []
   parallelizable_with:
+  - CI-005
   - CI-013
-  - CI-014
-  - CI-016
-  - CI-025
+  - CI-023
+  - CI-030
   delivered_by: Quantum-L9/Cursor-Governance PR#307 (merged into main)
   note: OD-002 stays RESOLVED. This is an implementation residual, not a reopened decision.
   residual:
@@ -623,64 +615,6 @@ records:
   - 'The file changed since 30c6ecd4 (3163c35, #348) but the change added --staged commit-hook delegation, not the
     consumer leg.'
   - The governance-always half remains bound and tested (GOV_PRECOMMIT_CONFIG, tests/ops/scripts/test_publish_verb_governance_always.py).
-- id: CI-019
-  priority: 2
-  title: Coordinate concurrent writers on shared PR branches
-  original_status: ACTIVE
-  previous_progress: not_started
-  progress: not_started
-  disposition: NOT_STARTED
-  queue: active
-  confidence: high
-  optimized_sequence: 16
-  execution_wave: 4
-  execution_lane: 4A
-  priority_class: P2_INTEGRATION_AND_RELIABILITY
-  blocker_class: NONBLOCKING
-  leverage_rank: 22
-  hard_dependencies: []
-  parallelizable_with:
-  - CI-013
-  - CI-014
-  - CI-016
-  - CI-025
-  delivered_by: null
-  residual:
-  - 'IMP-06(P7) retry half: bounded fetch/merge --no-edit/regen/re-verify/push loop, N<=2, never rewriting history.'
-  - Lease protocol half touches CANONICAL_LAW and needs review before design.
-  evidence:
-  - ops/scripts/open_pr_after_gate.sh fetches the base ref (line 82) and fails closed on a missing base, but carries
-    no non-fast-forward retry loop and no branch-lease marker. The file changed since 30c6ecd4 (e3f7065) without
-    touching this.
-- id: CI-025
-  priority: 2
-  title: Provide sanctioned cleanup of generated/cache residue
-  original_status: ACTIVE
-  previous_progress: not_started
-  progress: not_started
-  disposition: NOT_STARTED
-  queue: active
-  confidence: high
-  optimized_sequence: 17
-  execution_wave: 4
-  execution_lane: 4B
-  priority_class: P2_INTEGRATION_AND_RELIABILITY
-  blocker_class: EXECUTION_BLOCKER
-  leverage_rank: 14
-  hard_dependencies: []
-  parallelizable_with:
-  - CI-008
-  - CI-014
-  - CI-016
-  - CI-019
-  delivered_by: null
-  ordering_note: Doing this first removes the pressure that motivates CI-013's C3, rather than depending on it.
-    The original CI-025 -> CI-013 edge is inverted in practice.
-  residual:
-  - 'IMP-05/IMP-08(P7): add `make clean-pyc` and have the adapters gate pre-clean or ignore cache debris rather
-    than failing on it.'
-  evidence:
-  - No clean-pyc target and no __pycache__ handling in the governance Makefile.
 - id: CI-013
   priority: 1
   title: Preserve fail-closed destructive/staging gates while making denials actionable
@@ -690,18 +624,22 @@ records:
   disposition: NOT_STARTED
   queue: active
   confidence: high
-  optimized_sequence: 18
-  execution_wave: 4
-  execution_lane: 4B
+  optimized_sequence: 12
+  execution_lane: L3
+  effort_weight: 2
+  schedule_slot:
+    start: 4
+    end: 6
+    lanes: 4
   priority_class: P2_INTEGRATION_AND_RELIABILITY
   blocker_class: EXECUTION_BLOCKER
   leverage_rank: 13
   hard_dependencies: []
   parallelizable_with:
+  - CI-005
   - CI-008
-  - CI-014
-  - CI-016
-  - CI-019
+  - CI-023
+  - CI-030
   delivered_by: null
   residual:
   - 'I-BS-10 (in-repo): name the refused stage of a compound command and state that later stages did not run.'
@@ -717,71 +655,80 @@ records:
     allowance.'
   - B4 (surface hook stderr on INTERNAL_EVALUATION_ERROR) is a harness-side path; the in-repo wrapper already prints
     its own BLOCKED reason to stderr (local_execution_gate_wrap.py:148).
-- id: CI-016
+- id: CI-023
   priority: 1
-  title: Make L4/release receipts resolve paths, branch, and head dynamically
+  title: Collapse variable-loading authorities into one reproducible loader contract
   original_status: ACTIVE
-  previous_progress: partial
-  progress: partial
-  disposition: PARTIAL
+  previous_progress: not_started
+  progress: not_started
+  disposition: NOT_STARTED
   queue: active
   confidence: high
-  optimized_sequence: 19
-  execution_wave: 4
-  execution_lane: 4C
+  optimized_sequence: 13
+  execution_lane: L1
+  effort_weight: 2
+  schedule_slot:
+    start: 5
+    end: 7
+    lanes: 4
   priority_class: P2_INTEGRATION_AND_RELIABILITY
-  blocker_class: EXECUTION_BLOCKER
-  leverage_rank: 16
+  blocker_class: SCHEMA_BLOCKER
+  leverage_rank: 15
   hard_dependencies: []
+  collides_with:
+  - CI-015
   parallelizable_with:
+  - CI-002
+  - CI-003
+  - CI-005
   - CI-008
   - CI-013
-  - CI-014
   - CI-019
-  - CI-025
-  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  delivered_by: null
   residual:
-  - 'IMP-14: resolve pr_template against the released repository across the standard template locations; emit null
-    when none is found.'
-  - 'I-BS-09: have `status` compare the pinned SHA to current head and report STALE explicitly.'
+  - 'IMP-02(P4): amend rule 06 to `source …; resolve_governance_paths_or_exit`.'
+  - 'LOADER-2: warn on stderr when the resolver is sourced by a shell that never calls either entry point.'
+  - 'IMP-01(P4): load the session env in non-interactive shells (BASH_ENV, or hoist the source line above the PS1
+    guard).'
+  out_of_tree_legs: IMP-002/005/006 target Enrichment.Inference.Engine — see CI-024's attachment note.
   evidence:
-  - 'ops/autonomy/l4_local.py still writes the literal ''PULL_REQUEST_TEMPLATE.md'' at lines 337 and 436. The file
-    changed since 30c6ecd4 (e3f7065, #347) but that change moved kernels out of L4, not the template resolution.'
-  - Branch and head resolution remain dynamic (current_branch, current_head, drift check).
-- id: CI-014
+  - rules/06-governance-ssot-paths.mdc:39 still reads 'Governance scripts source resolve_governance_paths.sh and
+    use the exported values' — sourced, not must-call.
+  - ops/scripts/resolve_governance_paths.sh carries no source-without-call guard and no L9_RESOLVE_ON_SOURCE opt-in.
+- id: CI-019
   priority: 2
-  title: Make target repository/cwd explicit for governance CLIs
+  title: Coordinate concurrent writers on shared PR branches
   original_status: ACTIVE
-  previous_progress: partial
-  progress: partial
-  disposition: PARTIAL
+  previous_progress: not_started
+  progress: not_started
+  disposition: NOT_STARTED
   queue: active
   confidence: high
-  optimized_sequence: 20
-  execution_wave: 4
-  execution_lane: 4D
+  optimized_sequence: 14
+  execution_lane: L0
+  effort_weight: 2
+  schedule_slot:
+    start: 6
+    end: 8
+    lanes: 4
   priority_class: P2_INTEGRATION_AND_RELIABILITY
-  blocker_class: USABILITY_BLOCKER
-  leverage_rank: 18
+  blocker_class: NONBLOCKING
+  leverage_rank: 22
   hard_dependencies: []
   parallelizable_with:
-  - CI-008
-  - CI-013
-  - CI-016
-  - CI-019
-  - CI-025
-  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
-  residual_corrected: true
+  - CI-002
+  - CI-003
+  - CI-015
+  - CI-023
+  - CI-036
+  delivered_by: null
   residual:
-  - Add --workspace to graphiti_memory_client.py, defaulting to current behaviour.
-  - 'Make the refusal name the remedy: ''…did you mean --workspace <target repo>?'''
+  - 'IMP-06(P7) retry half: bounded fetch/merge --no-edit/regen/re-verify/push loop, N<=2, never rewriting history.'
+  - Lease protocol half touches CANONICAL_LAW and needs review before design.
   evidence:
-  - 'The recorded residual is wrong on its principal named target. ops/autonomy/l4_local.py:478 already declares
-    `--workspace` (''Workspace root (default: cwd / WS)''), and `git show 30c6ecd4:ops/autonomy/l4_local.py` contains
-    it too — it was present at the last assessment and went unrecorded.'
-  - ops/graphiti/graphiti_memory_client.py has no --workspace argument. That leg is genuinely open.
-  - 'IMP-06''s second clause is unmet: l4_local.py:247 refuses with ''L4 begin refused on <branch> — create/checkout
-    a stacked feature branch first'' and never suggests --workspace, which is the actionable half of the improvement.'
+  - ops/scripts/open_pr_after_gate.sh fetches the base ref (line 82) and fails closed on a missing base, but carries
+    no non-fast-forward retry loop and no branch-lease marker. The file changed since 30c6ecd4 (e3f7065) without
+    touching this.
 - id: CI-002
   priority: 0
   title: Make bootstrap projection ownership-aware and non-destructive to tracked repo content
@@ -791,20 +738,23 @@ records:
   disposition: PARTIAL
   queue: active
   confidence: high
-  optimized_sequence: 21
-  execution_wave: 5
-  execution_lane: 5A
+  optimized_sequence: 15
+  execution_lane: L2
+  effort_weight: 2
+  schedule_slot:
+    start: 6
+    end: 8
+    lanes: 4
   priority_class: P4_NONBLOCKING_CLEANUP
   blocker_class: NONBLOCKING
   leverage_rank: 23
-  hard_dependencies:
-  - CI-013
+  hard_dependencies: []
   parallelizable_with:
-  - CI-017
-  - CI-018
-  - CI-021
-  - CI-022
-  - CI-032
+  - CI-003
+  - CI-015
+  - CI-019
+  - CI-023
+  - CI-036
   delivered_by: PR#304 (Contract 1) + PR#307 (CI-008/CI-009/CI-002 slice), both merged into main
   residual_rescoped: true
   residual:
@@ -837,32 +787,237 @@ records:
     with a clean tree.'
   - 'Phase 2c confirmed still open: /home/user/.claude/settings.json sets L9_AUTONOMY_STATE_DIR=.l9/autonomy, inside
     the worktree.'
-- id: CI-018
+- id: CI-003
   priority: 1
-  title: Make local CI parity and hooks first-class provisioning
+  title: Make the Stop hook ownership-aware instead of residue-blind
+  original_status: ACTIVE
+  previous_progress: not_started
+  progress: partial
+  disposition: PARTIAL
+  queue: active
+  confidence: high
+  optimized_sequence: 16
+  execution_lane: L3
+  effort_weight: 1
+  schedule_slot:
+    start: 6
+    end: 7
+    lanes: 4
+  priority_class: P1_ROOT_REPAIR
+  blocker_class: USABILITY_BLOCKER
+  leverage_rank: 5
+  hard_dependencies: []
+  parallelizable_with:
+  - CI-002
+  - CI-019
+  - CI-023
+  delivered_by: null
+  status_moved: not_started -> partial (in-repo lever was already largely built and went unrecorded)
+  residual:
+  - Add `.mcp.json` to the Claude-specific exclude block in install.sh. One glob; the design decision it belongs
+    to is already made and documented.
+  - Hook-side ownership classification stays external.
+  evidence:
+  - The recorded residual says the in-repo lever is the .git/info/exclude list in bootstrap_agent_environment.sh,
+    which 'does not carry .claude/** or .mcp.json'. Half of that is out of date and was already out of date at 30c6ecd4.
+  - 'environment/agents/adapters/claude-code/install.sh:391-405 writes a SECOND, Claude-specific exclude block covering
+    .claude/skills/, .claude/rules/, .claude/commands/, with a comment stating the scoping decision explicitly:
+    ''Only the GENERATED mirrors are excluded — .claude/settings.json and .claude/hooks/ are committable consumer
+    wiring.'' Unchanged in 30c6ecd4..59f03a5d, so it was present and unrecorded at the last assessment.'
+  - 'LIVE: every in-scope consumer repo''s .git/info/exclude carries all seven globs, and every one reports a clean
+    tree.'
+  - 'Genuine gap: .mcp.json appears in NEITHER exclude list, and is a projection target (claude_projection.py:388).
+    It does not dirty a tree here only because the workspace root /home/user is not itself a git repository.'
+  - '/root/.claude/stop-hook-git-check.sh re-verified at this binding (regenerated 21:39 this session): fires on
+    any `git diff` delta and any `git ls-files --others --exclude-standard` output, with no ownership classification.
+    Harness-owned.'
+- id: CI-015
+  priority: 1
+  title: Name and enforce the authoritative governance checkout
+  original_status: ACTIVE
+  previous_progress: partial
+  progress: partial
+  disposition: PARTIAL
+  queue: active
+  confidence: high
+  optimized_sequence: 17
+  execution_lane: L1
+  effort_weight: 2
+  schedule_slot:
+    start: 7
+    end: 9
+    lanes: 4
+  priority_class: P2_INTEGRATION_AND_RELIABILITY
+  blocker_class: USABILITY_BLOCKER
+  leverage_rank: 17
+  hard_dependencies:
+  - CI-007
+  - CI-023
+  collides_with:
+  - CI-007
+  - CI-023
+  parallelizable_with:
+  - CI-002
+  - CI-014
+  - CI-016
+  - CI-019
+  - CI-025
+  - CI-036
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - 'I-BS-13: when a second checkout of the governance repository is present, print both paths with their revisions
+    and state which one rules resolve from.'
+  - 'I-WT-01: decide whether the workspace clone is an intentional consumer checkout or a leftover, and make resolve_governance_paths.sh
+    assert the answer.'
+  evidence:
+  - 'Both checkouts present and identical at this binding: /root/.cursor-governance and /home/user/Cursor-Governance
+    are each at 59f03a5. The session banner names only the first (''governance SSOT: /root/.cursor-governance'').'
+  - 'C2 stays closed: Quantum-L9/Cursor-Governance issues were listed at this binding with no add_repo call.'
+- id: CI-036
+  priority: 2
+  title: Keep unpushed-commit counts honest across merged-and-deleted branches
+  original_status: ACTIVE
+  previous_progress: partial
+  progress: partial
+  disposition: PARTIAL
+  queue: active
+  confidence: high
+  optimized_sequence: 18
+  execution_lane: L3
+  effort_weight: 1
+  schedule_slot:
+    start: 7
+    end: 8
+    lanes: 4
+  priority_class: P2_INTEGRATION_AND_RELIABILITY
+  blocker_class: NONBLOCKING
+  leverage_rank: 11
+  hard_dependencies: []
+  parallelizable_with:
+  - CI-002
+  - CI-015
+  - CI-019
+  delivered_by: be3f01c9 (#325, bootstrap prune + origin/HEAD) + 7ceeef38 (#324, an in-repo checker that does not
+    depend on local remote-tracking refs at all)
+  advanced: true
+  residual:
+  - Consolidate repo_hygiene.py's prune with the session-start prune so a count read mid-session is not served by
+    the session-end pass.
+  - Harness stop-hook resolution logic stays external.
+  evidence:
+  - ADVANCED since the assessment. af33b4d (#331, merged after 30c6ecd4) taught ops/autonomy/session_debt.py that
+    a merged-and-deleted branch is not unpushed work, using branch.<name>.remote as the offline distinguisher because
+    a squash merge leaves the branch's commits unreachable from main and the deleted ref leaves nothing to compare
+    against.
+  - 'Both directions are pinned: test_merged_and_deleted_branch_is_not_debt performs a real squash merge and branch
+    delete against a bare upstream and asserts HEAD is genuinely unreachable from main BEFORE asserting no debt,
+    so it fails if the fix degrades to a reachability check; test_never_pushed_branch_is_still_debt_when_absent_upstream
+    holds the opposite line.'
+  - 'The two earlier mechanisms remain: the session-start prune plus origin/HEAD in bootstrap_agent_environment.sh,
+    and ops/scripts/tests/test_stale_remote_ref_counts.sh.'
+  - 'Residual confirmed: ops/scripts/repo_hygiene.py:385 still runs `git fetch --prune origin` at session end only,
+    unconsolidated with the session-start prune.'
+- id: CI-025
+  priority: 2
+  title: Provide sanctioned cleanup of generated/cache residue
   original_status: ACTIVE
   previous_progress: not_started
   progress: not_started
   disposition: NOT_STARTED
   queue: active
   confidence: high
-  optimized_sequence: 22
-  execution_wave: 5
-  execution_lane: 5B
-  priority_class: P3_VALIDATION_AND_CONVERGENCE
-  blocker_class: VALIDATION_BLOCKER
-  leverage_rank: 21
+  optimized_sequence: 19
+  execution_lane: L0
+  effort_weight: 1
+  schedule_slot:
+    start: 8
+    end: 9
+    lanes: 4
+  priority_class: P2_INTEGRATION_AND_RELIABILITY
+  blocker_class: EXECUTION_BLOCKER
+  leverage_rank: 14
   hard_dependencies: []
   parallelizable_with:
-  - CI-002
-  - CI-017
-  - CI-032
+  - CI-014
+  - CI-015
+  - CI-016
   delivered_by: null
+  ordering_note: Doing this first removes the pressure that motivates CI-013's C3, rather than depending on it.
+    The original CI-025 -> CI-013 edge is inverted in practice.
   residual:
-  - 'IMP-01(P7): add a make target running the campaign and controller suites with HOME empty and both git config
-    files at /dev/null, and reference it from the pr-check documentation.'
+  - 'IMP-05/IMP-08(P7): add `make clean-pyc` and have the adapters gate pre-clean or ignore cache debris rather
+    than failing on it.'
   evidence:
-  - No ci-parity target in the governance Makefile; no GIT_CONFIG_GLOBAL/GIT_CONFIG_SYSTEM stanza.
+  - No clean-pyc target and no __pycache__ handling in the governance Makefile.
+- id: CI-016
+  priority: 1
+  title: Make L4/release receipts resolve paths, branch, and head dynamically
+  original_status: ACTIVE
+  previous_progress: partial
+  progress: partial
+  disposition: PARTIAL
+  queue: active
+  confidence: high
+  optimized_sequence: 20
+  execution_lane: L2
+  effort_weight: 1
+  schedule_slot:
+    start: 8
+    end: 9
+    lanes: 4
+  priority_class: P2_INTEGRATION_AND_RELIABILITY
+  blocker_class: EXECUTION_BLOCKER
+  leverage_rank: 16
+  hard_dependencies: []
+  parallelizable_with:
+  - CI-014
+  - CI-015
+  - CI-025
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - 'IMP-14: resolve pr_template against the released repository across the standard template locations; emit null
+    when none is found.'
+  - 'I-BS-09: have `status` compare the pinned SHA to current head and report STALE explicitly.'
+  evidence:
+  - 'ops/autonomy/l4_local.py still writes the literal ''PULL_REQUEST_TEMPLATE.md'' at lines 337 and 436. The file
+    changed since 30c6ecd4 (e3f7065, #347) but that change moved kernels out of L4, not the template resolution.'
+  - Branch and head resolution remain dynamic (current_branch, current_head, drift check).
+- id: CI-014
+  priority: 2
+  title: Make target repository/cwd explicit for governance CLIs
+  original_status: ACTIVE
+  previous_progress: partial
+  progress: partial
+  disposition: PARTIAL
+  queue: active
+  confidence: high
+  optimized_sequence: 21
+  execution_lane: L3
+  effort_weight: 1
+  schedule_slot:
+    start: 8
+    end: 9
+    lanes: 4
+  priority_class: P2_INTEGRATION_AND_RELIABILITY
+  blocker_class: USABILITY_BLOCKER
+  leverage_rank: 18
+  hard_dependencies: []
+  parallelizable_with:
+  - CI-015
+  - CI-016
+  - CI-025
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual_corrected: true
+  residual:
+  - Add --workspace to graphiti_memory_client.py, defaulting to current behaviour.
+  - 'Make the refusal name the remedy: ''…did you mean --workspace <target repo>?'''
+  evidence:
+  - 'The recorded residual is wrong on its principal named target. ops/autonomy/l4_local.py:478 already declares
+    `--workspace` (''Workspace root (default: cwd / WS)''), and `git show 30c6ecd4:ops/autonomy/l4_local.py` contains
+    it too — it was present at the last assessment and went unrecorded.'
+  - ops/graphiti/graphiti_memory_client.py has no --workspace argument. That leg is genuinely open.
+  - 'IMP-06''s second clause is unmet: l4_local.py:247 refuses with ''L4 begin refused on <branch> — create/checkout
+    a stacked feature branch first'' and never suggests --workspace, which is the actionable half of the improvement.'
 - id: CI-021
   priority: 2
   title: Make session-experience and skill-usage logging observable
@@ -872,17 +1027,21 @@ records:
   disposition: NOT_STARTED
   queue: active
   confidence: high
-  optimized_sequence: 23
-  execution_wave: 5
-  execution_lane: 5B
+  optimized_sequence: 22
+  execution_lane: L0
+  effort_weight: 1
+  schedule_slot:
+    start: 9
+    end: 10
+    lanes: 4
   priority_class: P3_VALIDATION_AND_CONVERGENCE
   blocker_class: NONBLOCKING
   leverage_rank: 20
   hard_dependencies: []
   parallelizable_with:
-  - CI-002
-  - CI-017
-  - CI-032
+  - CI-018
+  - CI-022
+  - CI-027
   delivered_by: null
   residual:
   - 'I-BS-11: narrow the matcher to namespaces this surface exposes, and emit a session-start line naming the log
@@ -891,6 +1050,68 @@ records:
   - 'LIVE: /home/user/.claude/settings.json sets L9_SKILL_USAGE_LOGGING=true, and /root/.claude/l9/ does not exist
     at this binding. Logging is enabled and reaching no disk, silently — which is exactly the state I-BS-11 exists
     to make distinguishable from inactivity.'
+- id: CI-018
+  priority: 1
+  title: Make local CI parity and hooks first-class provisioning
+  original_status: ACTIVE
+  previous_progress: not_started
+  progress: not_started
+  disposition: NOT_STARTED
+  queue: active
+  confidence: high
+  optimized_sequence: 23
+  execution_lane: L1
+  effort_weight: 1
+  schedule_slot:
+    start: 9
+    end: 10
+    lanes: 4
+  priority_class: P3_VALIDATION_AND_CONVERGENCE
+  blocker_class: VALIDATION_BLOCKER
+  leverage_rank: 21
+  hard_dependencies: []
+  parallelizable_with:
+  - CI-021
+  - CI-022
+  - CI-027
+  delivered_by: null
+  residual:
+  - 'IMP-01(P7): add a make target running the campaign and controller suites with HOME empty and both git config
+    files at /dev/null, and reference it from the pr-check documentation.'
+  evidence:
+  - No ci-parity target in the governance Makefile; no GIT_CONFIG_GLOBAL/GIT_CONFIG_SYSTEM stanza.
+- id: CI-027
+  priority: 3
+  title: Correct rule rationale that no longer matches container reality
+  original_status: ACTIVE
+  previous_progress: not_started
+  progress: not_started
+  disposition: NOT_STARTED
+  queue: active
+  confidence: high
+  optimized_sequence: 24
+  execution_lane: L2
+  effort_weight: 1
+  schedule_slot:
+    start: 9
+    end: 10
+    lanes: 4
+  priority_class: P4_NONBLOCKING_CLEANUP
+  blocker_class: NONBLOCKING
+  leverage_rank: 24
+  hard_dependencies: []
+  parallelizable_with:
+  - CI-018
+  - CI-021
+  - CI-022
+  delivered_by: null
+  residual:
+  - 'IMP-17: keep the pinned-interpreter mandate, replace the justification with the true one (version pinning and
+    dependency isolation), and regenerate the projection.'
+  evidence:
+  - rules/03-graphiti-memory.mdc:56 still reads 'system `python3` often lacks PyYAML'. At this binding `python3
+    -c 'import yaml'` succeeds on CPython 3.11.15. The projected copy at environment/generated/llm-rules/03-graphiti-memory.md:48
+    carries the same false premise.
 - id: CI-022
   priority: 2
   title: Provision or explicitly declare service-backed integration-test dependencies
@@ -900,17 +1121,21 @@ records:
   disposition: NOT_STARTED
   queue: active
   confidence: high
-  optimized_sequence: 24
-  execution_wave: 5
-  execution_lane: 5B
+  optimized_sequence: 25
+  execution_lane: L3
+  effort_weight: 1
+  schedule_slot:
+    start: 9
+    end: 10
+    lanes: 4
   priority_class: P3_VALIDATION_AND_CONVERGENCE
   blocker_class: VALIDATION_BLOCKER
   leverage_rank: 25
   hard_dependencies: []
   parallelizable_with:
-  - CI-002
-  - CI-017
-  - CI-032
+  - CI-018
+  - CI-021
+  - CI-027
   delivered_by: null
   residual:
   - 'I-EL-07, in-repo half: state at session start that service-backed integration tests are unavailable, so the
@@ -927,18 +1152,19 @@ records:
   disposition: PARTIAL
   queue: active
   confidence: medium
-  optimized_sequence: 25
-  execution_wave: 5
-  execution_lane: 5C
+  optimized_sequence: 26
+  execution_lane: L0
+  effort_weight: 1
+  schedule_slot:
+    start: 10
+    end: 11
+    lanes: 4
   priority_class: P4_NONBLOCKING_CLEANUP
   blocker_class: NONBLOCKING
   leverage_rank: 26
   hard_dependencies: []
   parallelizable_with:
-  - CI-002
-  - CI-018
-  - CI-021
-  - CI-022
+  - CI-032
   delivered_by: Quantum-L9/Cursor-Governance 7dc7e4f (merged)
   confidence_note: One of three named targets is attachable at this binding; two are not.
   residual:
@@ -961,18 +1187,19 @@ records:
   disposition: NOT_STARTED
   queue: active
   confidence: high
-  optimized_sequence: 26
-  execution_wave: 5
-  execution_lane: 5C
+  optimized_sequence: 27
+  execution_lane: L1
+  effort_weight: 1
+  schedule_slot:
+    start: 10
+    end: 11
+    lanes: 4
   priority_class: P4_NONBLOCKING_CLEANUP
   blocker_class: NONBLOCKING
   leverage_rank: 27
   hard_dependencies: []
   parallelizable_with:
-  - CI-002
-  - CI-018
-  - CI-021
-  - CI-022
+  - CI-017
   delivered_by: null
   residual:
   - 'IMP-10(P4): split the five-run incremental chain across two files, or reduce the incremental scale fixture

@@ -515,8 +515,12 @@ records:
       tracked files the design exists to avoid. Phase 2d is superseded by the same mechanism.'
     - The recorded next-slice instruction 'apply is_tracked() before the remaining projection writes' would add
       a report to four writes that already compose additively. It is not the protection the slice claimed to add.
-    optimized_sequence: 21
-    execution_wave: 5
+    optimized_sequence: 15
+    execution_lane: L2
+    schedule_slot:
+      start: 6
+      end: 8
+      lanes: 4
     leverage_rank: 23
 - id: CI-003
   title: Make the Stop hook ownership-aware instead of residue-blind
@@ -617,8 +621,12 @@ records:
     - '/root/.claude/stop-hook-git-check.sh re-verified at this binding (regenerated 21:39 this session): fires
       on any `git diff` delta and any `git ls-files --others --exclude-standard` output, with no ownership classification.
       Harness-owned.'
-    optimized_sequence: 5
-    execution_wave: 1
+    optimized_sequence: 16
+    execution_lane: L3
+    schedule_slot:
+      start: 6
+      end: 7
+      lanes: 4
     leverage_rank: 5
   dependencies_previous:
   - CI-002
@@ -882,8 +890,12 @@ records:
       is carried through at line 88 and never compared.
     - 'Per-component evidence still absent: bootstrap-state.json reports bare DEGRADED for shared_bootstrap, capabilities,
       memory, mcp and plugins, with one repo-level remediation string and no per-component reason or log path.'
-    optimized_sequence: 3
-    execution_wave: 1
+    optimized_sequence: 1
+    execution_lane: L0
+    schedule_slot:
+      start: 0
+      end: 3
+      lanes: 4
     leverage_rank: 2
 - id: CI-005
   title: Make memory health transport-specific and continuity task-bearing
@@ -1096,14 +1108,19 @@ records:
     - 'Compounding at this binding: the graphiti-memory MCP server failed to connect (502 upstream dial failed)
       while the CLI hydrate returned packets — precisely the per-transport divergence I-BS-05 exists to make visible,
       invisible behind one word.'
-    optimized_sequence: 6
-    execution_wave: 2
+    optimized_sequence: 8
+    execution_lane: L0
+    schedule_slot:
+      start: 3
+      end: 6
+      lanes: 4
     leverage_rank: 7
 - id: CI-006
   title: Resolve authority-sensitive environment drift at the actual source
   status: OPEN_DECISION
   priority: 0
-  dependencies: []
+  dependencies:
+  - CI-007
   canonical_action: Trace each effective value to its source, separate authority-widening drift from cosmetic drift,
     make repair reachable or explicitly human-only, and record the governing value. The intended AUTONOMOUS_MERGE
     value remains an open decision.
@@ -1308,9 +1325,15 @@ records:
       value (I-EL-02) and no authority-widening vs cosmetic classification (A1, I-EL-03).'
     closed_legs:
     - 'IMP-03, ENV-1, IMP-03(P7): the instance is closed. Zero drift, one layer.'
-    optimized_sequence: 2
-    execution_wave: 1
+    optimized_sequence: 6
+    execution_lane: L2
+    schedule_slot:
+      start: 2
+      end: 4
+      lanes: 4
     leverage_rank: 8
+  dependencies_previous: []
+  dependencies_rederived_at: 59f03a5d4460b939360bc2fd5dd85239d47416a5
 - id: CI-007
   title: Replace standing breakglass environment strings with scoped expiring receipts
   status: ACTIVE
@@ -1410,8 +1433,12 @@ records:
       authority is scoped and expiring, which is what this record is.
 
       '
-    optimized_sequence: 1
-    execution_wave: 1
+    optimized_sequence: 3
+    execution_lane: L2
+    schedule_slot:
+      start: 0
+      end: 2
+      lanes: 4
     leverage_rank: 1
 - id: CI-008
   title: Reconcile make pr doctrine with consumer-repository command contracts
@@ -1524,8 +1551,12 @@ records:
     - 'The file changed since 30c6ecd4 (3163c35, #348) but the change added --staged commit-hook delegation, not
       the consumer leg.'
     - The governance-always half remains bound and tested (GOV_PRECOMMIT_CONFIG, tests/ops/scripts/test_publish_verb_governance_always.py).
-    optimized_sequence: 15
-    execution_wave: 4
+    optimized_sequence: 11
+    execution_lane: L2
+    schedule_slot:
+      start: 4
+      end: 6
+      lanes: 4
     leverage_rank: 12
 - id: CI-009
   title: Establish one project interpreter/toolchain authority and verify importability before READY
@@ -1789,7 +1820,11 @@ records:
     - 'The merged half remains live: readiness-receipt.json reports interpreter_importable_status: READY.'
     external_legs: A2-A5 are container-image items outside this org's tree.
     optimized_sequence: 4
-    execution_wave: 1
+    execution_lane: L3
+    schedule_slot:
+      start: 0
+      end: 2
+      lanes: 4
     leverage_rank: 3
 - id: CI-010
   title: Make broker authentication and reachability diagnosable
@@ -1885,8 +1920,12 @@ records:
     - 'The remaining split is absent: no proxy-denied vs upstream-error discrimination anywhere in ops/secrets/.'
     - 'External blocker unchanged: Quantum-L9/Cursor-Governance issues #301 (no broker-verifiable session identity
       on hosted Claude Code cloud) and #302 (broker not deployed, NXDOMAIN) are both still OPEN at this binding.'
-    optimized_sequence: 7
-    execution_wave: 2
+    optimized_sequence: 9
+    execution_lane: L1
+    schedule_slot:
+      start: 3
+      end: 4
+      lanes: 4
     leverage_rank: 9
 - id: CI-011
   title: Bound large MCP responses with field projection/pagination
@@ -2059,8 +2098,12 @@ records:
     - 'I-BS-12 unbuilt: ops/scripts/project_llm_rules.py carries no capability precondition handling.'
     - 'Merged halves hold: capabilities.yaml `requires` restricted to EVALUABLE_REQUIREMENTS, generic adapter on
       the brokered front door, `type` discriminator present.'
-    optimized_sequence: 10
-    execution_wave: 3
+    optimized_sequence: 2
+    execution_lane: L1
+    schedule_slot:
+      start: 0
+      end: 3
+      lanes: 4
     leverage_rank: 6
   dependencies_previous:
   - CI-004
@@ -2199,8 +2242,12 @@ records:
     - B4 (surface hook stderr on INTERNAL_EVALUATION_ERROR) is a harness-side path; the in-repo wrapper already
       prints its own BLOCKED reason to stderr (local_execution_gate_wrap.py:148).
     external_legs: B4 harness message path; IMP-10 harness tracker.
-    optimized_sequence: 18
-    execution_wave: 4
+    optimized_sequence: 12
+    execution_lane: L3
+    schedule_slot:
+      start: 4
+      end: 6
+      lanes: 4
     leverage_rank: 13
 - id: CI-014
   title: Make target repository/cwd explicit for governance CLIs
@@ -2258,8 +2305,12 @@ records:
     - ops/graphiti/graphiti_memory_client.py has no --workspace argument. That leg is genuinely open.
     - 'IMP-06''s second clause is unmet: l4_local.py:247 refuses with ''L4 begin refused on <branch> — create/checkout
       a stacked feature branch first'' and never suggests --workspace, which is the actionable half of the improvement.'
-    optimized_sequence: 20
-    execution_wave: 4
+    optimized_sequence: 21
+    execution_lane: L3
+    schedule_slot:
+      start: 8
+      end: 9
+      lanes: 4
     leverage_rank: 18
 - id: CI-015
   title: Name and enforce the authoritative governance checkout
@@ -2344,8 +2395,12 @@ records:
     - 'Both checkouts present and identical at this binding: /root/.cursor-governance and /home/user/Cursor-Governance
       are each at 59f03a5. The session banner names only the first (''governance SSOT: /root/.cursor-governance'').'
     - 'C2 stays closed: Quantum-L9/Cursor-Governance issues were listed at this binding with no add_repo call.'
-    optimized_sequence: 14
-    execution_wave: 3
+    optimized_sequence: 17
+    execution_lane: L1
+    schedule_slot:
+      start: 7
+      end: 9
+      lanes: 4
     leverage_rank: 17
 - id: CI-016
   title: Make L4/release receipts resolve paths, branch, and head dynamically
@@ -2432,8 +2487,12 @@ records:
     - 'ops/autonomy/l4_local.py still writes the literal ''PULL_REQUEST_TEMPLATE.md'' at lines 337 and 436. The
       file changed since 30c6ecd4 (e3f7065, #347) but that change moved kernels out of L4, not the template resolution.'
     - Branch and head resolution remain dynamic (current_branch, current_head, drift check).
-    optimized_sequence: 19
-    execution_wave: 4
+    optimized_sequence: 20
+    execution_lane: L2
+    schedule_slot:
+      start: 8
+      end: 9
+      lanes: 4
     leverage_rank: 16
 - id: CI-017
   title: Validate generated-artifact membership and report all drift in one pass
@@ -2535,8 +2594,12 @@ records:
     - Cognitive.Engine.Graphs (IMP-B1) and l9-constellation-topology (I-WT-03) are not attachable to this session;
       those legs carry forward UNVERIFIED.
     - 'Governance-repo analogue holds: sync_generated_artifacts.py opts the PE manifest into commit-time heal.'
-    optimized_sequence: 25
-    execution_wave: 5
+    optimized_sequence: 26
+    execution_lane: L0
+    schedule_slot:
+      start: 10
+      end: 11
+      lanes: 4
     leverage_rank: 26
 - id: CI-018
   title: Make local CI parity and hooks first-class provisioning
@@ -2650,8 +2713,12 @@ records:
       files at /dev/null, and reference it from the pr-check documentation.'
     evidence:
     - No ci-parity target in the governance Makefile; no GIT_CONFIG_GLOBAL/GIT_CONFIG_SYSTEM stanza.
-    optimized_sequence: 22
-    execution_wave: 5
+    optimized_sequence: 23
+    execution_lane: L1
+    schedule_slot:
+      start: 9
+      end: 10
+      lanes: 4
     leverage_rank: 21
   dependencies_previous:
   - CI-009
@@ -2706,8 +2773,12 @@ records:
     - ops/scripts/open_pr_after_gate.sh fetches the base ref (line 82) and fails closed on a missing base, but carries
       no non-fast-forward retry loop and no branch-lease marker. The file changed since 30c6ecd4 (e3f7065) without
       touching this.
-    optimized_sequence: 16
-    execution_wave: 4
+    optimized_sequence: 14
+    execution_lane: L0
+    schedule_slot:
+      start: 6
+      end: 8
+      lanes: 4
     leverage_rank: 22
 - id: CI-020
   title: Expose notification age when queued state is delivered
@@ -2814,8 +2885,12 @@ records:
     - 'LIVE: /home/user/.claude/settings.json sets L9_SKILL_USAGE_LOGGING=true, and /root/.claude/l9/ does not exist
       at this binding. Logging is enabled and reaching no disk, silently — which is exactly the state I-BS-11 exists
       to make distinguishable from inactivity.'
-    optimized_sequence: 23
-    execution_wave: 5
+    optimized_sequence: 22
+    execution_lane: L0
+    schedule_slot:
+      start: 9
+      end: 10
+      lanes: 4
     leverage_rank: 20
 - id: CI-022
   title: Provision or explicitly declare service-backed integration-test dependencies
@@ -2859,8 +2934,12 @@ records:
     evidence:
     - 'LIVE: no neo4j binary on PATH and 127.0.0.1:7687 refuses connection. Nothing at session start says integration
       coverage is unavailable.'
-    optimized_sequence: 24
-    execution_wave: 5
+    optimized_sequence: 25
+    execution_lane: L3
+    schedule_slot:
+      start: 9
+      end: 10
+      lanes: 4
     leverage_rank: 25
   dependencies_previous:
   - CI-009
@@ -3029,8 +3108,12 @@ records:
       use the exported values' — sourced, not must-call.
     - ops/scripts/resolve_governance_paths.sh carries no source-without-call guard and no L9_RESOLVE_ON_SOURCE opt-in.
     out_of_tree_legs: IMP-002/005/006 target Enrichment.Inference.Engine — see CI-024's attachment note.
-    optimized_sequence: 12
-    execution_wave: 3
+    optimized_sequence: 13
+    execution_lane: L1
+    schedule_slot:
+      start: 5
+      end: 7
+      lanes: 4
     leverage_rank: 15
   dependencies_previous:
   - CI-009
@@ -3202,8 +3285,12 @@ records:
       than failing on it.'
     evidence:
     - No clean-pyc target and no __pycache__ handling in the governance Makefile.
-    optimized_sequence: 17
-    execution_wave: 4
+    optimized_sequence: 19
+    execution_lane: L0
+    schedule_slot:
+      start: 8
+      end: 9
+      lanes: 4
     leverage_rank: 14
   dependencies_previous:
   - CI-013
@@ -3309,8 +3396,12 @@ records:
     - rules/03-graphiti-memory.mdc:56 still reads 'system `python3` often lacks PyYAML'. At this binding `python3
       -c 'import yaml'` succeeds on CPython 3.11.15. The projected copy at environment/generated/llm-rules/03-graphiti-memory.md:48
       carries the same false premise.
-    optimized_sequence: 13
-    execution_wave: 3
+    optimized_sequence: 24
+    execution_lane: L2
+    schedule_slot:
+      start: 9
+      end: 10
+      lanes: 4
     leverage_rank: 24
 - id: CI-028
   title: Improve dependency provisioning evidence and determinism
@@ -3371,8 +3462,12 @@ records:
     evidence:
     - 'LIVE: /root/.l9/claude/deps-9ff843f2….stamp is zero bytes; the paired .log carries no timestamp and no exit
       code. All five deps stamps in the directory are zero bytes.'
-    optimized_sequence: 4
-    execution_wave: 1
+    optimized_sequence: 5
+    execution_lane: L3
+    schedule_slot:
+      start: 0
+      end: 2
+      lanes: 4
     leverage_rank: 4
   dependencies_previous:
   - CI-009
@@ -3458,8 +3553,12 @@ records:
     evidence:
     - ops/scripts/claude_bootstrap_receipt.py:144 and ops/scripts/governance_refresh_receipt.py:154 both still declare
       --read with required=True. No default read action.
-    optimized_sequence: 9
-    execution_wave: 2
+    optimized_sequence: 10
+    execution_lane: L1
+    schedule_slot:
+      start: 4
+      end: 5
+      lanes: 4
     leverage_rank: 19
 - id: CI-031
   title: Keep repo documentation and tracked-path hygiene synchronized
@@ -3566,8 +3665,12 @@ records:
     evidence:
     - l9-meta-injector at 874f327 still carries tests/corpus_scale_incremental.test.ts as a single unsplit file,
       and no per-file RPC ceiling configuration was found.
-    optimized_sequence: 26
-    execution_wave: 5
+    optimized_sequence: 27
+    execution_lane: L1
+    schedule_slot:
+      start: 10
+      end: 11
+      lanes: 4
     leverage_rank: 27
 - id: CI-033
   title: Use pipefail in push/retry helpers
@@ -3744,8 +3847,12 @@ records:
       b).
     - rules/53-pr-overlap-guardrail.mdc:56 does say 'Detection is REST-only (gh api)', but that documents one gate's
       own implementation — it is not a surface exemption and does not generalise to the next gh-dependent gate written.
-    optimized_sequence: 11
-    execution_wave: 3
+    optimized_sequence: 7
+    execution_lane: L3
+    schedule_slot:
+      start: 2
+      end: 4
+      lanes: 4
     leverage_rank: 10
 - id: CI-036
   title: Keep unpushed-commit counts honest across merged-and-deleted branches
@@ -3780,8 +3887,12 @@ records:
       and ops/scripts/tests/test_stale_remote_ref_counts.sh.'
     - 'Residual confirmed: ops/scripts/repo_hygiene.py:385 still runs `git fetch --prune origin` at session end
       only, unconsolidated with the session-start prune.'
-    optimized_sequence: 8
-    execution_wave: 2
+    optimized_sequence: 18
+    execution_lane: L3
+    schedule_slot:
+      start: 7
+      end: 8
+      lanes: 4
     leverage_rank: 11
 - id: CI-037
   title: Make abandoned work fail closed instead of relying on doctrine

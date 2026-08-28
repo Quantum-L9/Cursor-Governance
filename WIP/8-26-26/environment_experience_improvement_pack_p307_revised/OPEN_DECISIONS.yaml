@@ -45,7 +45,7 @@ open_decisions:
     CI-008 stays partial. The consumer-workspace leg of the pre-commit path is scoped in-script
     (run_pr_precommit.sh:33-47) and explicitly not enabled — 'requires validation against a real
     consumer checkout (not available in this environment)'. That is an implementation residual,
-    not a reopened decision. Wave 4, lane A.
+    not a reopened decision. Lane L3, slot [2-4].
 
 - id: OD-003
   title: Capability broker failure cause
@@ -61,8 +61,8 @@ open_decisions:
   - "Quantum-L9/Cursor-Governance issues #301 and #302 are both still OPEN at this binding."
   note: >
     Deciding this is what CI-010's remaining in-repo leg is for. The decision cannot be made
-    before the probe can report the distinction, so the ordering is: build the split (Wave 2,
-    lane B), then decide.
+    before the probe can report the distinction, so the ordering is: build the split
+    (CI-010, lane L1, slot [3-4], after CI-004), then decide.
 
 - id: OD-004
   title: CLAUDE_SESSION_JWT provisioning failure
@@ -118,7 +118,7 @@ open_decisions:
     The predecessor marked CI-007 done while OD-007 — the open decision about the same variable —
     stayed UNKNOWN. A record cannot be complete while the decision it depends on is open. This is
     the second half of CI-007's demotion evidence.
-  blocks: CI-007 (Wave 1, lane A, sequence 1)
+  blocks: CI-007 (lane L3, slot [0-2], leverage rank 1)
 
 overlay_note: >
   States re-checked 2026-08-28 against main@59f03a5d. OD-001 narrowed further — both halves of

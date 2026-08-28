@@ -10,13 +10,46 @@ Completed, external-blocked and unverifiable records are retained in `PROGRESS.m
 > `done` and are not (CI-007 is now scheduled first), and **CI-003** was `not_started` and is
 > partial. Read the overlay before scheduling any entry here.
 
-## Execution order
+## Execution order — 4 lanes, makespan 11
 
-### 1. CI-007 — Replace standing breakglass environment strings with scoped expiring receipts
+Weighted DAG list-schedule; supersedes the six wave barrier model. Total effort 42 units over 26 execution units, critical path 6 (`CI-004 → CI-005`), saturating at 7 lanes. Entries below are in start order; `[start-end]` are effort units, not days.
 
-**Wave:** 1 (lane 1A) &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P0_EXECUTION_UNBLOCKER  
+### 1. CI-004 — Regenerate bootstrap receipts on lifecycle/revision changes and re-probe degraded components
+
+**Lane L0** `[0-3]` &nbsp;·&nbsp; **effort 3** &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P0_EXECUTION_UNBLOCKER  
+**Blocker:** VALIDATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 2 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-006, CI-007, CI-009, CI-012, CI-028, CI-102
+
+Bind receipts to container/session lifecycle and governance revision; invalidate stale receipts; re-probe DEGRADED components; retain per-component reason, evidence, log path, and retry/remediation state.
+
+**Remaining at this binding:**
+
+- IMP-03 / I-BF-01: treat a governance_revision mismatch as expiry, distinct from TTL expiry.
+- IMP-04 / BOOT-1: re-probe DEGRADED components at session start rather than serving a day-old verdict, under the repo-write lock, fail-soft.
+- I-BF-03 / IMP-10 / B5: a reason string and log path per degraded component. The deps stage already has log files; the other five components have nothing.
+
+**Sources:** P1/improvements/IMP-10, P3/improvements/B5, P4/improvements/IMP-03, P4/improvements/IMP-04, P6/improvements/BOOT-1, P7/improvements/IMP-07, P8/improvements/I-BF-01, P8/improvements/I-BF-02, P8/improvements/I-BF-03, P9/improvements/I-BS-04
+
+### 2. CI-012 — Gate rules and MCP config on actual surface capabilities
+
+**Lane L1** `[0-3]` &nbsp;·&nbsp; **effort 3** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
+**Blocker:** AUTHORITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 6 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-004, CI-006, CI-007, CI-009, CI-028, CI-102
+
+Validate MCP config schema before session start and annotate projected rules with capability preconditions when their mechanism is unavailable, while preserving the rule intent.
+
+**Remaining at this binding:**
+
+- IMP-07: extend rule 22 with the server-absent case and name the required fallback, so the obligation stays closable.
+- I-BS-12: declare a capability precondition per rule and annotate at projection time when it is unmet.
+
+**Sources:** P4/improvements/IMP-07, P9/improvements/I-BS-03, P9/improvements/I-BS-12
+
+### 3. CI-007 — Replace standing breakglass environment strings with scoped expiring receipts
+
+**Lane L2** `[0-2]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P0_EXECUTION_UNBLOCKER  
 **Blocker:** AUTHORITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 1 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-003, CI-004, CI-009, CI-028
+**Depends on:** none &nbsp;·&nbsp; **Collides with:** CI-015 &nbsp;·&nbsp; **Runs alongside:** CI-004, CI-009, CI-012, CI-028
 
 Represent exceptional publish authority with issuer, reason, scope, issuance time, expiry/consumption semantics, and session-start visibility; do not normalize a one-time grant into silent permanent configuration.
 
@@ -27,11 +60,40 @@ Represent exceptional publish authority with issuer, reason, scope, issuance tim
 
 **Sources:** P1/improvements/IMP-04, P6/improvements/ENV-2, P9/improvements/I-EL-06
 
-### 2. CI-006 — Resolve authority-sensitive environment drift at the actual source
+### 4. CI-009 — Establish one project interpreter/toolchain authority and verify importability before READY
 
-**Wave:** 1 (lane 1A) &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
+**Lane L3** `[0-2]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
+**Blocker:** VALIDATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 3 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-004, CI-007, CI-012
+
+Resolve the project interpreter/venv deterministically, pin checker versions to the same authority, export durable PATH/PYTHONPATH only through one loader, and make readiness end with repository import/command smoke tests.
+
+**Remaining at this binding:**
+
+- I-EL-05: end the deps pass with an import smoke on the resolved interpreter; record interpreter path and version in the log.
+
+**Sources:** P2/improvements/IMP-E1, P2/improvements/IMP-E2, P2/improvements/IMP-E3, P3/improvements/A2, P3/improvements/A3, P3/improvements/A4, P3/improvements/A5, P5/improvements/IMP-003, P5/improvements/IMP-008, P7/improvements/IMP-04, P9/improvements/I-EL-05
+
+### 5. CI-028 — Improve dependency provisioning evidence and determinism
+
+**Lane L3** `[0-2]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
+**Blocker:** VALIDATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 4 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-004, CI-007, CI-012
+
+Use constraints or equivalent deterministic dependency resolution, timestamp dependency logs, and make the provisioning step emit a real exit status/readiness result.
+
+**Remaining at this binding:**
+
+- I-EL-03(P8): write the deps step's exit code into the stamp or the log's final line, and timestamp the log.
+- BOOT-5 constraints-file half depends on a consumer repo lock export — out of tree at this binding.
+
+**Sources:** P6/improvements/BOOT-5, P8/improvements/I-EL-03
+
+### 6. CI-006 — Resolve authority-sensitive environment drift at the actual source
+
+**Lane L2** `[2-4]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
 **Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 8 of 27 &nbsp;·&nbsp; **Status:** OPEN_DECISION → **partial**  
-**Depends on:** CI-007 &nbsp;·&nbsp; **Parallel with:** CI-003, CI-004, CI-009, CI-028
+**Depends on:** CI-007 &nbsp;·&nbsp; **Runs alongside:** CI-004, CI-005, CI-010, CI-012, CI-102
 
 Trace each effective value to its source, separate authority-widening drift from cosmetic drift, make repair reachable or explicitly human-only, and record the governing value. The intended AUTONOMOUS_MERGE value remains an open decision.
 
@@ -47,71 +109,25 @@ Trace each effective value to its source, separate authority-widening drift from
 
 **Sources:** P1/improvements/IMP-03, P3/improvements/A1, P4/improvements/IMP-08, P6/improvements/ENV-1, P7/improvements/IMP-03, P8/improvements/I-EL-01, P8/improvements/I-EL-02, P9/improvements/I-EL-03
 
-### 3. CI-004 — Regenerate bootstrap receipts on lifecycle/revision changes and re-probe degraded components
+### 7. CI-102 — Valid GH_TOKEN or formal surface exemption from gh-dependent gates
 
-**Wave:** 1 (lane 1B) &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P0_EXECUTION_UNBLOCKER  
-**Blocker:** VALIDATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 2 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-003, CI-006, CI-007, CI-009, CI-028
+**Lane L3** `[2-4]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 4 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
+**Blocker:** AUTHORITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 10 of 27 &nbsp;·&nbsp; **Status:** ACTIVE_CONTEXT_SPECIFIC → **partial**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-004, CI-005, CI-006, CI-010, CI-012
 
-Bind receipts to container/session lifecycle and governance revision; invalidate stale receipts; re-probe DEGRADED components; retain per-component reason, evidence, log path, and retry/remediation state.
-
-**Remaining at this binding:**
-
-- IMP-03 / I-BF-01: treat a governance_revision mismatch as expiry, distinct from TTL expiry.
-- IMP-04 / BOOT-1: re-probe DEGRADED components at session start rather than serving a day-old verdict, under the repo-write lock, fail-soft.
-- I-BF-03 / IMP-10 / B5: a reason string and log path per degraded component. The deps stage already has log files; the other five components have nothing.
-
-**Sources:** P1/improvements/IMP-10, P3/improvements/B5, P4/improvements/IMP-03, P4/improvements/IMP-04, P6/improvements/BOOT-1, P7/improvements/IMP-07, P8/improvements/I-BF-01, P8/improvements/I-BF-02, P8/improvements/I-BF-03, P9/improvements/I-BS-04
-
-### 4. CI-009 — Establish one project interpreter/toolchain authority and verify importability before READY
-
-**Wave:** 1 (lane 1C) &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
-**Blocker:** VALIDATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 3 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-003, CI-004, CI-006, CI-007
-
-Resolve the project interpreter/venv deterministically, pin checker versions to the same authority, export durable PATH/PYTHONPATH only through one loader, and make readiness end with repository import/command smoke tests.
+(a) provision openclaw PAT per rule 62 via secret plane; or (b) amend surface_profile + rules 53/62 to sanction MCP path for claude-cloud
 
 **Remaining at this binding:**
 
-- I-EL-05: end the deps pass with an import smoke on the resolved interpreter; record interpreter path and version in the log.
+- Record the REST route as a sanctioned surface capability in ops/autonomy/surface_profile.yaml and rule 62, or provision the PAT. Until then the next gh-dependent gate reproduces the original block.
 
-**Sources:** P2/improvements/IMP-E1, P2/improvements/IMP-E2, P2/improvements/IMP-E3, P3/improvements/A2, P3/improvements/A3, P3/improvements/A4, P3/improvements/A5, P5/improvements/IMP-003, P5/improvements/IMP-008, P7/improvements/IMP-04, P9/improvements/I-EL-05
+**Sources:** P6/improvements/ENV-3
 
-### 4. CI-028 — Improve dependency provisioning evidence and determinism
+### 8. CI-005 — Make memory health transport-specific and continuity task-bearing
 
-**Wave:** 1 (lane 1C) &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
-**Blocker:** VALIDATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 4 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-003, CI-004, CI-006, CI-007
-
-Use constraints or equivalent deterministic dependency resolution, timestamp dependency logs, and make the provisioning step emit a real exit status/readiness result.
-
-**Remaining at this binding:**
-
-- I-EL-03(P8): write the deps step's exit code into the stamp or the log's final line, and timestamp the log.
-- BOOT-5 constraints-file half depends on a consumer repo lock export — out of tree at this binding.
-
-**Sources:** P6/improvements/BOOT-5, P8/improvements/I-EL-03
-
-### 5. CI-003 — Make the Stop hook ownership-aware instead of residue-blind
-
-**Wave:** 1 (lane 1D) &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
-**Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 5 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-004, CI-006, CI-007, CI-009, CI-028
-
-Scope stop-hook checks to authored changes in the active repo and explicitly exclude bootstrap-owned paths without masking tracked authored content.
-
-**Remaining at this binding:**
-
-- Add `.mcp.json` to the Claude-specific exclude block in install.sh. One glob; the design decision it belongs to is already made and documented.
-- Hook-side ownership classification stays external.
-
-**Sources:** P1/improvements/IMP-08, P3/improvements/B3, P9/improvements/I-BS-02
-
-### 6. CI-005 — Make memory health transport-specific and continuity task-bearing
-
-**Wave:** 2 (lane 2A) &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Lane L0** `[3-6]` &nbsp;·&nbsp; **effort 3** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
 **Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 7 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** CI-004 &nbsp;·&nbsp; **Parallel with:** CI-010, CI-030, CI-036
+**Depends on:** CI-004 &nbsp;·&nbsp; **Runs alongside:** CI-006, CI-008, CI-010, CI-013, CI-023, CI-030, CI-102
 
 Use one authoritative probe per memory transport, distinguish nothing-to-write from failed writes, write a task-bearing completion PICKUP, prioritize the target repo in hydration, and name skipped repos/empty state explicitly.
 
@@ -124,11 +140,11 @@ Use one authoritative probe per memory transport, distinguish nothing-to-write f
 
 **Sources:** P1/improvements/IMP-09, P4/improvements/IMP-05, P6/improvements/BOOT-2, P6/improvements/BOOT-4, P6/improvements/BOOT-7, P7/improvements/IMP-09, P9/improvements/I-BS-05, P9/improvements/I-BS-06
 
-### 7. CI-010 — Make broker authentication and reachability diagnosable
+### 9. CI-010 — Make broker authentication and reachability diagnosable
 
-**Wave:** 2 (lane 2B) &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Lane L1** `[3-4]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
 **Blocker:** INTEGRATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 9 of 27 &nbsp;·&nbsp; **Status:** ACTIVE_WITH_UNKNOWN → **partial**  
-**Depends on:** CI-004 &nbsp;·&nbsp; **Parallel with:** CI-005, CI-030, CI-036
+**Depends on:** CI-004 &nbsp;·&nbsp; **Runs alongside:** CI-005, CI-006, CI-102
 
 Ensure CLAUDE_SESSION_JWT is issued or its absence is a hard named prerequisite failure; split broker states into DNS/unreachable, proxy-denied, and upstream-error before deciding allowlist remediation.
 
@@ -139,24 +155,11 @@ Ensure CLAUDE_SESSION_JWT is issued or its absence is a hard named prerequisite 
 
 **Sources:** P1/improvements/IMP-05, P9/improvements/I-EL-01, P9/improvements/I-EL-02
 
-### 8. CI-036 — Keep unpushed-commit counts honest across merged-and-deleted branches
+### 10. CI-030 — Improve receipt CLI ergonomics without multiplying state owners
 
-**Wave:** 2 (lane 2C) &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
-**Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 11 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-005, CI-010, CI-030
-
-Prune remote-tracking refs for branches deleted upstream and keep origin/HEAD resolvable, so unpushed-commit counts neither inflate nor fall silent.
-
-**Remaining at this binding:**
-
-- Consolidate repo_hygiene.py's prune with the session-start prune so a count read mid-session is not served by the session-end pass.
-- Harness stop-hook resolution logic stays external.
-
-### 9. CI-030 — Improve receipt CLI ergonomics without multiplying state owners
-
-**Wave:** 2 (lane 2D) &nbsp;·&nbsp; **Priority band:** 3 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
+**Lane L1** `[4-5]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 3 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
 **Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 19 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** CI-004 &nbsp;·&nbsp; **Parallel with:** CI-005, CI-010, CI-036
+**Depends on:** CI-004 &nbsp;·&nbsp; **Runs alongside:** CI-005, CI-008, CI-013
 
 Give receipt CLIs a default/status-style read action while retaining one canonical receipt store and schema.
 
@@ -166,85 +169,11 @@ Give receipt CLIs a default/status-style read action while retaining one canonic
 
 **Sources:** P6/improvements/LOADER-1
 
-### 10. CI-012 — Gate rules and MCP config on actual surface capabilities
+### 11. CI-008 — Reconcile make pr doctrine with consumer-repository command contracts
 
-**Wave:** 3 (lane 3A) &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
-**Blocker:** AUTHORITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 6 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** none in this wave
-
-Validate MCP config schema before session start and annotate projected rules with capability preconditions when their mechanism is unavailable, while preserving the rule intent.
-
-**Remaining at this binding:**
-
-- IMP-07: extend rule 22 with the server-absent case and name the required fallback, so the obligation stays closable.
-- I-BS-12: declare a capability precondition per rule and annotate at projection time when it is unmet.
-
-**Sources:** P4/improvements/IMP-07, P9/improvements/I-BS-03, P9/improvements/I-BS-12
-
-### 11. CI-102 — Valid GH_TOKEN or formal surface exemption from gh-dependent gates
-
-**Wave:** 3 (lane 3A) &nbsp;·&nbsp; **Priority band:** 4 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
-**Blocker:** AUTHORITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 10 of 27 &nbsp;·&nbsp; **Status:** ACTIVE_CONTEXT_SPECIFIC → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** none in this wave
-
-(a) provision openclaw PAT per rule 62 via secret plane; or (b) amend surface_profile + rules 53/62 to sanction MCP path for claude-cloud
-
-**Remaining at this binding:**
-
-- Record the REST route as a sanctioned surface capability in ops/autonomy/surface_profile.yaml and rule 62, or provision the PAT. Until then the next gh-dependent gate reproduces the original block.
-
-**Sources:** P6/improvements/ENV-3
-
-### 12. CI-023 — Collapse variable-loading authorities into one reproducible loader contract
-
-**Wave:** 3 (lane 3A) &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
-**Blocker:** SCHEMA_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 15 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** none in this wave
-
-Define one loader/precedence contract that works in non-interactive shells, fails fast on missing required configuration, guards source-without-call misuse, and removes inert/documented-but-unused variables.
-
-**Remaining at this binding:**
-
-- IMP-02(P4): amend rule 06 to `source …; resolve_governance_paths_or_exit`.
-- LOADER-2: warn on stderr when the resolver is sourced by a shell that never calls either entry point.
-- IMP-01(P4): load the session env in non-interactive shells (BASH_ENV, or hoist the source line above the PS1 guard).
-
-**Sources:** P4/improvements/IMP-01, P4/improvements/IMP-02, P5/improvements/IMP-002, P5/improvements/IMP-005, P5/improvements/IMP-006, P6/improvements/LOADER-2
-
-### 13. CI-027 — Correct rule rationale that no longer matches container reality
-
-**Wave:** 3 (lane 3A) &nbsp;·&nbsp; **Priority band:** 3 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
-**Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 24 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** none in this wave
-
-Preserve the pinned-interpreter requirement but remove or correct stale rationale that system Python lacks PyYAML when that premise is false.
-
-**Remaining at this binding:**
-
-- IMP-17: keep the pinned-interpreter mandate, replace the justification with the true one (version pinning and dependency isolation), and regenerate the projection.
-
-**Sources:** P1/improvements/IMP-17
-
-### 14. CI-015 — Name and enforce the authoritative governance checkout
-
-**Wave:** 3 (lane 3A) &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
-**Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 17 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** none in this wave
-
-When multiple governance trees exist, print both revisions, name the one from which rules resolve, and remove/relabel non-authoritative clones where possible.
-
-**Remaining at this binding:**
-
-- I-BS-13: when a second checkout of the governance repository is present, print both paths with their revisions and state which one rules resolve from.
-- I-WT-01: decide whether the workspace clone is an intentional consumer checkout or a leftover, and make resolve_governance_paths.sh assert the answer.
-
-**Sources:** P3/improvements/C2, P8/improvements/I-WT-01, P9/improvements/I-BS-13
-
-### 15. CI-008 — Reconcile make pr doctrine with consumer-repository command contracts
-
-**Wave:** 4 (lane 4A) &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Lane L2** `[4-6]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
 **Blocker:** EXECUTION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 12 of 27 &nbsp;·&nbsp; **Status:** OPEN_DECISION → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-013, CI-014, CI-016, CI-025
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-005, CI-013, CI-023, CI-030
 
 Choose one canonical contract: ship a functioning pr target into every governed consumer or relax the absolute doctrine to a defined supported fallback. Do not retain contradictory absolutes.
 
@@ -254,40 +183,11 @@ Choose one canonical contract: ship a functioning pr target into every governed 
 
 **Sources:** P1/improvements/IMP-13, P3/improvements/C4, P6/improvements/BOOT-6, P9/improvements/I-BS-08
 
-### 16. CI-019 — Coordinate concurrent writers on shared PR branches
+### 12. CI-013 — Preserve fail-closed destructive/staging gates while making denials actionable
 
-**Wave:** 4 (lane 4A) &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
-**Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 22 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-013, CI-014, CI-016, CI-025
-
-Detect/serialize or otherwise coordinate cross-machine writers before push so shared head branches do not repeatedly non-fast-forward.
-
-**Remaining at this binding:**
-
-- IMP-06(P7) retry half: bounded fetch/merge --no-edit/regen/re-verify/push loop, N<=2, never rewriting history.
-- Lease protocol half touches CANONICAL_LAW and needs review before design.
-
-**Sources:** P7/improvements/IMP-06
-
-### 17. CI-025 — Provide sanctioned cleanup of generated/cache residue
-
-**Wave:** 4 (lane 4B) &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
-**Blocker:** EXECUTION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 14 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-008, CI-014, CI-016, CI-019
-
-Keep generated/cache debris out of gate inputs and provide a permission-safe cleanup path that does not weaken general destructive-command policy.
-
-**Remaining at this binding:**
-
-- IMP-05/IMP-08(P7): add `make clean-pyc` and have the adapters gate pre-clean or ignore cache debris rather than failing on it.
-
-**Sources:** P5/improvements/IMP-010, P7/improvements/IMP-05, P7/improvements/IMP-08
-
-### 18. CI-013 — Preserve fail-closed destructive/staging gates while making denials actionable
-
-**Wave:** 4 (lane 4B) &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Lane L3** `[4-6]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
 **Blocker:** EXECUTION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 13 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-008, CI-014, CI-016, CI-019
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-005, CI-008, CI-023, CI-030
 
 Keep unresolved/empty destructive targets fail-closed. Add literal scoped cleanup paths, reachable authorization where policy permits, hook stderr, and per-stage denial reporting for compound commands. Do not weaken the unresolved-expansion invariant.
 
@@ -299,41 +199,42 @@ Keep unresolved/empty destructive targets fail-closed. Add literal scoped cleanu
 
 **Sources:** P3/improvements/B4, P3/improvements/C3, P7/improvements/IMP-10, P9/improvements/I-BS-07, P9/improvements/I-BS-10
 
-### 19. CI-016 — Make L4/release receipts resolve paths, branch, and head dynamically
+### 13. CI-023 — Collapse variable-loading authorities into one reproducible loader contract
 
-**Wave:** 4 (lane 4C) &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
-**Blocker:** EXECUTION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 16 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-008, CI-013, CI-014, CI-019, CI-025
+**Lane L1** `[5-7]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Blocker:** SCHEMA_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 15 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
+**Depends on:** none &nbsp;·&nbsp; **Collides with:** CI-015 &nbsp;·&nbsp; **Runs alongside:** CI-002, CI-003, CI-005, CI-008, CI-013, CI-019
 
-Bind receipts to the released repository, current branch/head, and actual template path; make stale SHA/branch bindings visible before they block publication.
-
-**Remaining at this binding:**
-
-- IMP-14: resolve pr_template against the released repository across the standard template locations; emit null when none is found.
-- I-BS-09: have `status` compare the pinned SHA to current head and report STALE explicitly.
-
-**Sources:** P1/improvements/IMP-14, P3/improvements/B6, P9/improvements/I-BS-09
-
-### 20. CI-014 — Make target repository/cwd explicit for governance CLIs
-
-**Wave:** 4 (lane 4D) &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
-**Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 18 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-008, CI-013, CI-016, CI-019, CI-025
-
-Pass the target repository explicitly to governance commands and avoid procedures whose correctness depends on persistent shell cwd.
+Define one loader/precedence contract that works in non-interactive shells, fails fast on missing required configuration, guards source-without-call misuse, and removes inert/documented-but-unused variables.
 
 **Remaining at this binding:**
 
-- Add --workspace to graphiti_memory_client.py, defaulting to current behaviour.
-- Make the refusal name the remedy: '…did you mean --workspace <target repo>?'
+- IMP-02(P4): amend rule 06 to `source …; resolve_governance_paths_or_exit`.
+- LOADER-2: warn on stderr when the resolver is sourced by a shell that never calls either entry point.
+- IMP-01(P4): load the session env in non-interactive shells (BASH_ENV, or hoist the source line above the PS1 guard).
 
-**Sources:** P4/improvements/IMP-06
+**Sources:** P4/improvements/IMP-01, P4/improvements/IMP-02, P5/improvements/IMP-002, P5/improvements/IMP-005, P5/improvements/IMP-006, P6/improvements/LOADER-2
 
-### 21. CI-002 — Make bootstrap projection ownership-aware and non-destructive to tracked repo content
+### 14. CI-019 — Coordinate concurrent writers on shared PR branches
 
-**Wave:** 5 (lane 5A) &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
+**Lane L0** `[6-8]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 22 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-002, CI-003, CI-015, CI-023, CI-036
+
+Detect/serialize or otherwise coordinate cross-machine writers before push so shared head branches do not repeatedly non-fast-forward.
+
+**Remaining at this binding:**
+
+- IMP-06(P7) retry half: bounded fetch/merge --no-edit/regen/re-verify/push loop, N<=2, never rewriting history.
+- Lease protocol half touches CANONICAL_LAW and needs review before design.
+
+**Sources:** P7/improvements/IMP-06
+
+### 15. CI-002 — Make bootstrap projection ownership-aware and non-destructive to tracked repo content
+
+**Lane L2** `[6-8]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 0 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
 **Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 23 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** CI-013 &nbsp;·&nbsp; **Parallel with:** CI-017, CI-018, CI-021, CI-022, CI-032
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-003, CI-015, CI-019, CI-023, CI-036
 
 Detect repository-owned tracked paths before projection. Project machine-local rules/hooks/state only to non-repo-owned locations; ignore only genuinely generated/untracked paths. Never blanket-ignore or replace a repository-owned .claude tree.
 
@@ -350,25 +251,98 @@ Detect repository-owned tracked paths before projection. Project machine-local r
 
 **Sources:** P1/improvements/IMP-06, P1/improvements/IMP-07, P3/improvements/B1, P3/improvements/B2, P6/improvements/BOOT-3, P9/improvements/I-BS-01
 
-### 22. CI-018 — Make local CI parity and hooks first-class provisioning
+### 16. CI-003 — Make the Stop hook ownership-aware instead of residue-blind
 
-**Wave:** 5 (lane 5B) &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P3_VALIDATION_AND_CONVERGENCE  
-**Blocker:** VALIDATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 21 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-002, CI-017, CI-032
+**Lane L3** `[6-7]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
+**Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 5 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-002, CI-019, CI-023
 
-Install the actual hooks/gates, define one local CI-parity command, and keep its blocker list aligned with remote CI so local green means something.
+Scope stop-hook checks to authored changes in the active repo and explicitly exclude bootstrap-owned paths without masking tracked authored content.
 
 **Remaining at this binding:**
 
-- IMP-01(P7): add a make target running the campaign and controller suites with HOME empty and both git config files at /dev/null, and reference it from the pr-check documentation.
+- Add `.mcp.json` to the Claude-specific exclude block in install.sh. One glob; the design decision it belongs to is already made and documented.
+- Hook-side ownership classification stays external.
 
-**Sources:** P2/improvements/IMP-B2, P2/improvements/IMP-R2, P5/improvements/IMP-001, P7/improvements/IMP-01
+**Sources:** P1/improvements/IMP-08, P3/improvements/B3, P9/improvements/I-BS-02
 
-### 23. CI-021 — Make session-experience and skill-usage logging observable
+### 17. CI-015 — Name and enforce the authoritative governance checkout
 
-**Wave:** 5 (lane 5B) &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P3_VALIDATION_AND_CONVERGENCE  
+**Lane L1** `[7-9]` &nbsp;·&nbsp; **effort 2** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 17 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
+**Depends on:** CI-007, CI-023 &nbsp;·&nbsp; **Collides with:** CI-007, CI-023 &nbsp;·&nbsp; **Runs alongside:** CI-002, CI-014, CI-016, CI-019, CI-025, CI-036
+
+When multiple governance trees exist, print both revisions, name the one from which rules resolve, and remove/relabel non-authoritative clones where possible.
+
+**Remaining at this binding:**
+
+- I-BS-13: when a second checkout of the governance repository is present, print both paths with their revisions and state which one rules resolve from.
+- I-WT-01: decide whether the workspace clone is an intentional consumer checkout or a leftover, and make resolve_governance_paths.sh assert the answer.
+
+**Sources:** P3/improvements/C2, P8/improvements/I-WT-01, P9/improvements/I-BS-13
+
+### 18. CI-036 — Keep unpushed-commit counts honest across merged-and-deleted branches
+
+**Lane L3** `[7-8]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 11 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-002, CI-015, CI-019
+
+Prune remote-tracking refs for branches deleted upstream and keep origin/HEAD resolvable, so unpushed-commit counts neither inflate nor fall silent.
+
+**Remaining at this binding:**
+
+- Consolidate repo_hygiene.py's prune with the session-start prune so a count read mid-session is not served by the session-end pass.
+- Harness stop-hook resolution logic stays external.
+
+### 19. CI-025 — Provide sanctioned cleanup of generated/cache residue
+
+**Lane L0** `[8-9]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Blocker:** EXECUTION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 14 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-014, CI-015, CI-016
+
+Keep generated/cache debris out of gate inputs and provide a permission-safe cleanup path that does not weaken general destructive-command policy.
+
+**Remaining at this binding:**
+
+- IMP-05/IMP-08(P7): add `make clean-pyc` and have the adapters gate pre-clean or ignore cache debris rather than failing on it.
+
+**Sources:** P5/improvements/IMP-010, P7/improvements/IMP-05, P7/improvements/IMP-08
+
+### 20. CI-016 — Make L4/release receipts resolve paths, branch, and head dynamically
+
+**Lane L2** `[8-9]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Blocker:** EXECUTION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 16 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-014, CI-015, CI-025
+
+Bind receipts to the released repository, current branch/head, and actual template path; make stale SHA/branch bindings visible before they block publication.
+
+**Remaining at this binding:**
+
+- IMP-14: resolve pr_template against the released repository across the standard template locations; emit null when none is found.
+- I-BS-09: have `status` compare the pinned SHA to current head and report STALE explicitly.
+
+**Sources:** P1/improvements/IMP-14, P3/improvements/B6, P9/improvements/I-BS-09
+
+### 21. CI-014 — Make target repository/cwd explicit for governance CLIs
+
+**Lane L3** `[8-9]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
+**Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 18 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-015, CI-016, CI-025
+
+Pass the target repository explicitly to governance commands and avoid procedures whose correctness depends on persistent shell cwd.
+
+**Remaining at this binding:**
+
+- Add --workspace to graphiti_memory_client.py, defaulting to current behaviour.
+- Make the refusal name the remedy: '…did you mean --workspace <target repo>?'
+
+**Sources:** P4/improvements/IMP-06
+
+### 22. CI-021 — Make session-experience and skill-usage logging observable
+
+**Lane L0** `[9-10]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P3_VALIDATION_AND_CONVERGENCE  
 **Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 20 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-002, CI-017, CI-032
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-018, CI-022, CI-027
 
 Fix logging matchers/paths and emit enough session-start evidence to distinguish inactivity from a broken collector.
 
@@ -378,11 +352,39 @@ Fix logging matchers/paths and emit enough session-start evidence to distinguish
 
 **Sources:** P5/improvements/IMP-011, P9/improvements/I-BS-11
 
-### 24. CI-022 — Provision or explicitly declare service-backed integration-test dependencies
+### 23. CI-018 — Make local CI parity and hooks first-class provisioning
 
-**Wave:** 5 (lane 5B) &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P3_VALIDATION_AND_CONVERGENCE  
+**Lane L1** `[9-10]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P3_VALIDATION_AND_CONVERGENCE  
+**Blocker:** VALIDATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 21 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-021, CI-022, CI-027
+
+Install the actual hooks/gates, define one local CI-parity command, and keep its blocker list aligned with remote CI so local green means something.
+
+**Remaining at this binding:**
+
+- IMP-01(P7): add a make target running the campaign and controller suites with HOME empty and both git config files at /dev/null, and reference it from the pr-check documentation.
+
+**Sources:** P2/improvements/IMP-B2, P2/improvements/IMP-R2, P5/improvements/IMP-001, P7/improvements/IMP-01
+
+### 24. CI-027 — Correct rule rationale that no longer matches container reality
+
+**Lane L2** `[9-10]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 3 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
+**Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 24 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-018, CI-021, CI-022
+
+Preserve the pinned-interpreter requirement but remove or correct stale rationale that system Python lacks PyYAML when that premise is false.
+
+**Remaining at this binding:**
+
+- IMP-17: keep the pinned-interpreter mandate, replace the justification with the true one (version pinning and dependency isolation), and regenerate the projection.
+
+**Sources:** P1/improvements/IMP-17
+
+### 25. CI-022 — Provision or explicitly declare service-backed integration-test dependencies
+
+**Lane L3** `[9-10]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P3_VALIDATION_AND_CONVERGENCE  
 **Blocker:** VALIDATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 25 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-002, CI-017, CI-032
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-018, CI-021, CI-027
 
 Provision declared services such as Neo4j when integration proof is expected, otherwise surface the unavailable coverage before tests run.
 
@@ -392,11 +394,11 @@ Provision declared services such as Neo4j when integration proof is expected, ot
 
 **Sources:** P9/improvements/I-EL-07
 
-### 25. CI-017 — Validate generated-artifact membership and report all drift in one pass
+### 26. CI-017 — Validate generated-artifact membership and report all drift in one pass
 
-**Wave:** 5 (lane 5C) &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
+**Lane L0** `[10-11]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
 **Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 26 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-002, CI-018, CI-021, CI-022
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-032
 
 Make validation tolerate legitimate index/worktree states, catch missing manifest membership at file creation, and report every generated artifact out of step in one run.
 
@@ -407,11 +409,11 @@ Make validation tolerate legitimate index/worktree states, catch missing manifes
 
 **Sources:** P2/improvements/IMP-B1, P4/improvements/IMP-09, P8/improvements/I-WT-03
 
-### 26. CI-032 — Give slow validation units explicit headroom without weakening total proof
+### 27. CI-032 — Give slow validation units explicit headroom without weakening total proof
 
-**Wave:** 5 (lane 5C) &nbsp;·&nbsp; **Priority band:** 3 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
+**Lane L1** `[10-11]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 3 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
 **Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 27 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
-**Depends on:** none &nbsp;·&nbsp; **Parallel with:** CI-002, CI-018, CI-021, CI-022
+**Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-017
 
 Adjust per-file RPC/test ceilings for known slow tests while keeping aggregate validation coverage intact.
 

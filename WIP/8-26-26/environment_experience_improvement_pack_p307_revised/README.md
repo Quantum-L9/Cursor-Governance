@@ -50,7 +50,7 @@ Artifacts **revised in r2**:
 
 - `README.md` — this file
 - `PROGRESS.md` — human view: what moved, what reproduces, the optimized order, full status
-- `progress.yaml` — machine view: per-record disposition, evidence, wave, sequence, leverage
+- `progress.yaml` — machine view: per-record disposition, evidence, lane, schedule slot, effort, leverage
 - `improvements.yaml` — canonical records with re-derived `dependencies` and rewritten `progress:` blocks
 - `IMPROVEMENT_PLAN.md` — the 27-record active queue in optimized execution order
 - `OPEN_DECISIONS.yaml` — re-checked at this binding
@@ -89,12 +89,11 @@ did not survive; each demotion is recorded with the evidence rather than applied
 
 ## Current roadmap
 
-Start with **CI-007** (the standing breakglass grant), then **CI-006** behind it on the
-same verifier; in parallel **CI-004** (the receipt that disagrees with the world),
-**CI-009+CI-028** as one edit (the deps stage that asserts readiness it never measured),
-and **CI-003** (one glob). Then the receipt consumers, then the rules plane, then
-publish/gate/L4, then the ownership model and observability. Full order and its
-justification: `PROGRESS.md` → *Optimized execution order*.
+Four lanes open at once. **L0** takes the critical chain — `CI-004` then `CI-005`, the two
+heaviest records, one gating the other. **L1** leads with `CI-012`. **L2** opens with
+`CI-002`. **L3** opens with **CI-007**, the live standing breakglass grant and the queue's
+highest-leverage item. Makespan 11 effort units at 4 lanes, 7 at 6 lanes, saturating at 7.
+Full schedule and every dropped edge: `PROGRESS.md` → *Optimized execution order*.
 
 ## Provenance
 

@@ -46,7 +46,8 @@ method:
   pass_2: >
     Disposed every record. Residualized partials to their true delta. Re-derived the
     dependency graph from current technical reality. Identified mutation-surface groups.
-    Ranked first-order leverage. Computed the critical path and parallel waves.
+    Ranked first-order leverage. Computed collisions at region granularity, the weighted
+    critical path, and a list-schedule measured against its lower bound at each lane width.
   pass_3: >
     Compiled the revision, attacked the order for hidden dependencies and unnecessary
     serialization, and validated it mechanically (see validation below).
@@ -96,7 +97,7 @@ status_changes_from_predecessor:
     report it; and verify_account_env.py's 32-variable contract does not include it, so drift
     detection cannot see it appear, change or persist.
   consequence: >
-    Promoted from unscheduled to leverage rank 1 and the first item of Wave 1. It is the only
+    Promoted from unscheduled to leverage rank 1, opening lane L3 at t=0. It is the only
     active authority-widening defect in the queue, and being marked done is why no slice was
     going to reach it.
 - id: CI-026
@@ -272,7 +273,7 @@ proposed_not_adopted:
     recording without checking only helps a reader who thinks to compare.
 - id: CI-035
   state: still proposed, reproducing
-  note: See live_defects/CI-004. Fold into CI-004's Wave 1 lane if one record per defect class is preferred.
+  note: See live_defects/CI-004. Fold into CI-004's slot on lane L0 if one record per defect class is preferred.
 - id: progress-schema/external-owner
   state: 'ADOPTED as `blocked_on: external` plus a `queue` field'
   note: >

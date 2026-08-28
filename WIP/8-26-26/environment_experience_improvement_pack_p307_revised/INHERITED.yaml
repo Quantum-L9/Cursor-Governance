@@ -22,7 +22,7 @@ revised_here:
 - path: PROGRESS.md
   why: full re-assessment, three status corrections, re-derived execution order
 - path: progress.yaml
-  why: per-record disposition, evidence, queue, wave, sequence, leverage
+  why: per-record disposition, evidence, queue, lane, schedule slot, effort weight, leverage
 - path: improvements.yaml
   why: >
     rewritten progress blocks, re-derived dependencies, CI-037 promoted to a first-class
