@@ -123,9 +123,12 @@ def test_the_dag_lifecycle_capability_itself_is_not_rejected():
         "validate dag structure before registration",
         "bind a command to a dag as a thin trigger",
     ):
-        assert st.dag_skill_ownership_violation(
-            {"proposed_name": "l9-dag-authoring", "stated_objective": objective}, OWNER_LIVE
-        ) is None, objective
+        assert (
+            st.dag_skill_ownership_violation(
+                {"proposed_name": "l9-dag-authoring", "stated_objective": objective}, OWNER_LIVE
+            )
+            is None
+        ), objective
 
 
 def test_non_dag_subjects_are_untouched_by_the_rule():
@@ -148,11 +151,14 @@ def test_missing_owner_escalates_rather_than_silently_rejecting():
 
 
 def test_absent_policy_disables_the_rule_rather_than_inventing_one():
-    assert st.dag_skill_ownership_violation(
-        {"proposed_name": "l9-inspect-dag", "stated_objective": "wrap the inspect dag"},
-        OWNER_LIVE,
-        rule={},
-    ) is None
+    assert (
+        st.dag_skill_ownership_violation(
+            {"proposed_name": "l9-inspect-dag", "stated_objective": "wrap the inspect dag"},
+            OWNER_LIVE,
+            rule={},
+        )
+        is None
+    )
 
 
 def test_an_explicit_rebuild_of_the_owner_still_wins_over_the_rule():

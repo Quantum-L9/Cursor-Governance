@@ -153,7 +153,9 @@ def decide(subject, live):
     if violation:
         decision, rule_evidence = violation
         evidence.extend(rule_evidence)
-        decided_by = "bounded_llm" if decision == "ESCALATE_TO_BOUNDED_LLM" else "deterministic_rule"
+        decided_by = (
+            "bounded_llm" if decision == "ESCALATE_TO_BOUNDED_LLM" else "deterministic_rule"
+        )
         return decision, evidence, candidate_rows, decided_by
     if candidate_rows and candidate_rows[0]["capability_overlap"] >= 2:
         evidence.append(
