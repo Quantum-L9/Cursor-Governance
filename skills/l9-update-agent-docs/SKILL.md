@@ -9,8 +9,8 @@ metadata:
   tags: [l9, docs, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 2.3.0
-  updated: 2026-08-24
+  version: 2.4.0
+  updated: 2026-08-28
   when_to_use: "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
 ---
 
@@ -54,15 +54,23 @@ auditor or repairer.
 ## Named write rules (harvested; not a kernel dump)
 
 1. **Target bind** — inventory files that exist. Skip and record `Unknown` for
-   missing paths. Never invent a root file to satisfy a template.
+   missing paths. Never invent a root file to satisfy a template. Harvest
+   nugget `c-bind-before-write` (MERGE_WITH_EXISTING): this step already owns
+   that contract; do not add a second gap-analysis generator.
 2. **Authority map** — skills do not author doctrine. Point at the live owner.
-3. **One owner** — `CLAUDE.md` stays a pointer; `AGENTS.md` stays the operating
+3. **Required headings** — a live index is invalid when headings or pointers
+   required by `references/pointer-heading-map.yaml` are absent. Fail closed
+   and report the missing names. Rebound to this pointer stack only — never
+   require donor sections `overview`, `airules`, `apisurface`, `datamodels`,
+   or `components`. Never overwrite `README.md` from a template to make the
+   check pass. Harvest nugget `c-required-section-validation`.
+4. **One owner** — `CLAUDE.md` stays a pointer; `AGENTS.md` stays the operating
    SSOT; generated formatter blocks stay companions owned by
    `environment/ide/policy.json` via `ops/scripts/adapters/agentdocs.sh`.
-4. **No competing SSOT** — do not dump CI, pre-commit, toolchain, or skill-registry
+5. **No competing SSOT** — do not dump CI, pre-commit, toolchain, or skill-registry
    tables that already live in `AGENTS.md` §§4–6 or generated registries.
-5. **Evidence + Unknown** — every number from repo files.
-6. **Audit-only default** — inspect before write; modify only files that exist
+6. **Evidence + Unknown** — every number from repo files.
+7. **Audit-only default** — inspect before write; modify only files that exist
    and that the user (or a locked plan) authorized.
 
 ## Named repair rules (Validate & Repair; not a kernel dump)
@@ -91,6 +99,9 @@ auditor or repairer.
   created by this skill
 - Editing `CANONICAL_LAW.md` or either kernel file
 - Rewriting generated formatter-ownership blocks by hand
+- Generating or overwriting `README.md` from a template or CodeGenAgent
+- Owning `readme-pipeline-v1` (that DAG stays under `workflows/`)
+- Treating `README.md` as a binding AI-scope contract
 
 ## When to Use
 
@@ -117,7 +128,8 @@ never invented root files:
 
 Read `ops/config/root-file-protection.json`. Confirm which of `AGENTS.md`,
 `CLAUDE.md`, `README.md` exist. If an adapter names additional **existing**
-files, include those. Record excluded or missing paths as `Unknown`.
+files, include those. Record excluded or missing paths as `Unknown`. Do not
+create a missing `README.md` to satisfy the heading map.
 
 ### Step 2 — Audit (read-only)
 
@@ -129,6 +141,9 @@ If ownership or source-of-truth is in doubt, load
 - `README.md` still points at law + `AGENTS.md`
 - Counts you intend to cite (hooks, jobs) match the files that own them
 
+Run `scripts/validate_pointer_headings.py --root <repo>`. Missing required
+headings or pointers on a **live** file mean the index is not honest
+(Failed). A mapped path that does not exist is Unknown — do not create it.
 Do not produce CI/pre-commit tables for pasting into `CLAUDE.md`.
 
 If a pointer is stale or a write target was invented, load
@@ -191,6 +206,8 @@ Do not claim either kernel was wrapped into this skill.
 - Formatter companion: `ops/scripts/adapters/agentdocs.sh`
 - Skill registry wire: `l9-wire-skill-into-repo`
 - No-wrap check: `scripts/self_test.py`
+- Pointer heading map: `references/pointer-heading-map.yaml`
+- Heading/pointer check: `scripts/validate_pointer_headings.py`
 
 ## Validation
 
@@ -201,6 +218,9 @@ Do not claim either kernel was wrapped into this skill.
 - Documented counts match repo files
 - Step 3a creations carry no fabricated counts, stay pointer/index-shaped,
   and are registered in the repo's root-file protection config when one exists
+- `validate_pointer_headings.py` is Passed for every live mapped file, or
+  Unknown for a mapped path that does not exist; Failed headings are reported
+  by name and are not repaired by generating a README
 
 ## Failure Handling
 
