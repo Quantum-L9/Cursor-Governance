@@ -84,10 +84,19 @@ exit 5 means specifically: the files are correct and nothing loaded them.
 `STRUCTURAL_PASS` means the files are correct. It says nothing about whether any
 of them were loaded into this session; `RUNTIME:` is the line that answers that.
 
-This file is `managed` (rewrite allowed, no `ALLOW-ROOT-DELETION`). PRs that
-touch `additive_only` root files (`Makefile`, `AGENTS.md`, …) must use
-`.github/PULL_REQUEST_TEMPLATE/protected-root.md` (`<!-- L9_PROTECTED_ROOT_PR -->`).
-`make pr` injects it. CI fails without the stamp. See `AGENTS.md` §14.
+This file is `managed` (rewrite allowed, no `ALLOW-ROOT-DELETION`). Twelve root
+files are `additive_only` — among them `pyproject.toml`, `requirements.txt`,
+`conftest.py`, and `.pre-commit-config.yaml`, not only the obvious `Makefile`
+and `AGENTS.md`. Adding lines to one is free. **Removing or overwriting a line
+needs `ALLOW-ROOT-DELETION: <path> — <reason>` in a commit message on the
+branch** (any commit in the range counts) plus CODEOWNERS approval, and the PR
+must use `.github/PULL_REQUEST_TEMPLATE/protected-root.md`
+(`<!-- L9_PROTECTED_ROOT_PR -->`). `make pr` injects the template but cannot
+invent the marker; without it the gate blocks the push. Authoritative list:
+`ops/config/root-file-protection.json`. Full rule: `AGENTS.md` §14.
+`ops/autonomy/root_file_advisory.py` warns at the start of a turn when a
+protected root file is being overwritten without its marker, so this is caught
+at edit time rather than at push.
 
 <!-- BEGIN L9 FORMATTER OWNERSHIP (generated — do not edit) -->
 
