@@ -12,7 +12,12 @@ repos:
     hooks:
       - id: check-merge-conflict
       - id: end-of-file-fixer
+        # Committed dist/ is tsc output, verified byte-identical by the consumer's
+        # own check:dist gate. tsc emits no trailing newline, so appending one here
+        # makes that gate fail and the rewrite can never be committed clean.
+        exclude: "^dist/"
       - id: trailing-whitespace
+        exclude: "^dist/"
       - id: check-added-large-files
         args: ["--maxkb=1000"]
       - id: check-yaml
