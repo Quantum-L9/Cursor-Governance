@@ -144,48 +144,6 @@ def run_argv(
     duration = time.monotonic() - start
     stdout = stdout[-_MAX_OUTPUT:]
     stderr = stderr[-_MAX_OUTPUT:]
-    # #region agent log
-    try:
-        import json as _json
-
-        _max_turns = None
-        if "--max-turns" in normalized:
-            _idx = normalized.index("--max-turns")
-            if _idx + 1 < len(normalized):
-                _max_turns = normalized[_idx + 1]
-        with open(
-            "/Users/macm2/Cursor-Governance/Cursor-Governance/.cursor/debug-65906b.log",
-            "a",
-            encoding="utf-8",
-        ) as _dbg:
-            _dbg.write(
-                _json.dumps(
-                    {
-                        "sessionId": "65906b",
-                        "runId": "pre-fix",
-                        "hypothesisId": "D",
-                        "location": "peer_execution/subprocess_runner.py:run_argv",
-                        "message": "run_argv captured streams",
-                        "data": {
-                            "argv0": normalized[0],
-                            "exit_code": process.returncode,
-                            "timed_out": timed_out,
-                            "duration_seconds": round(duration, 6),
-                            "max_turns_flag": _max_turns,
-                            "stdout_len": len(stdout or ""),
-                            "stderr_len": len(stderr or ""),
-                            "stderr_empty": not (stderr or "").strip(),
-                            "stderr_preview": (stderr or "")[-500:].replace("sk-", "sk-REDACTED"),
-                            "stdout_is_json_object": (stdout or "").lstrip().startswith("{"),
-                        },
-                        "timestamp": int(time.time() * 1000),
-                    }
-                )
-                + "\n"
-            )
-    except Exception:
-        pass
-    # #endregion
     return CommandResult(
         argv=normalized,
         executable=executable,
