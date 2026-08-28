@@ -87,7 +87,7 @@ tiers:
   - skill: l9-setting-up-terraform
     reason: infra-as-code bootstrap — high blast radius, explicit only
   - skill: l9-pr-remediation
-    reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs in the target repo to green + mergeable via make pr-check then PR_REMEDIATE=0 make pr, then merges them oldest-first and stack-safe (squash only when unstacked). Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
+    reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, then merges them oldest-first and stack-safe (squash only when unstacked). make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
   - skill: l9-issue-remediation
     reason: Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs — high blast radius, explicit only; hint_allowed for read-only Diagnose
   - skill: l9-bounded-autonomy
@@ -256,7 +256,7 @@ claude_routing:
     - admin merge
     - force push
     supporting: []
-    note: 'Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (green + mergeable, oldest-first, stack-safe). Verify with make pr-check; publish with PR_REMEDIATE=0 make pr. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.
+    note: 'Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run make pr or make pr-check. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.
 
       '
   - id: issue_remediation

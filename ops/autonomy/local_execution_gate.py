@@ -32,6 +32,10 @@ Claude Code PreToolUse adapter:
 Cursor beforeShellExecution adapter:
   ops/hooks/l4-local-execution-gate-shell.sh
 
+Both adapters resolve this file through ``ops/autonomy/resolve_execution_gate.py``.
+Do not add a third path lookup. A missing gate or a crashed evaluation is a
+deny, never an implicit allow.
+
 Brain lives under ops/ per CANONICAL_LAW §2.1.
 
 Escape hatches (human / ops only):
@@ -96,25 +100,31 @@ DENY_MCP_TOOLS = {
 }
 
 # ---------------------------------------------------------------------------
-# Publish-path enforcement (operator policy, all surfaces).
+# Publish-path classification vs enforcement (CANONICAL_LAW §6.2.4).
 #
-# `make pr` is the ONLY sanctioned way to reach GitHub: it runs the Makefile
-# checkers, then pushes and opens the PR through ops/scripts/open_pr_after_gate.sh.
-# A raw `git push` / `gh pr create` skips those checkers entirely, so being
-# release_authorized is NOT sufficient to use one — L4 governs *when* remote
-# work may happen, this governs *how*.
+# Campaign first publish still prefers `PR_REMEDIATE=0 make pr` (checkers, then
+# open). Remediator publish of an already-open PR is `make precommit-repo`
+# then `git push` (rule 48 / skill l9-pr-remediation). Classifiers still *name*
+# a raw git/gh publish so a policy engine can report it afterwards.
 #
-# Scope: only commands the agent itself issues pass through this gate. The
-# `git push` that open_pr_after_gate.sh runs internally is a subprocess of an
-# already-sanctioned `make pr` and is never re-evaluated here.
+# Enforcement does not deny git/gh forms — including when they share a shell
+# with `make precommit-repo`, `cd`, or a pipe. The all-git exemption cannot
+# see those compounds, and treating them as a publish-path deny is what
+# blocked remediator velocity (F-14). Effect stays with git_guardrails
+# (force-push, hard-reset, protected-branch rewrite).
 #
-# Breakglass is human/ops only: L9_PUBLISH_PATH_OVERRIDE=<reason>.
+# Still workflow-denied at every phase: `make push`, MCP create_pull_request /
+# push_files. Breakglass for those: L9_PUBLISH_PATH_OVERRIDE=<reason>.
 # ---------------------------------------------------------------------------
 RAW_PUBLISH_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bgit\s+push\b", re.I), "git push"),
     (re.compile(r"\bgh\s+pr\s+create\b", re.I), "gh pr create"),
     (re.compile(r"\bgh\s+pr\s+edit\b", re.I), "gh pr edit"),
 )
+
+#: Labels ``command_bypasses_publish_path`` returns for git/gh executables.
+#: Workflow enforcement must not deny these (bare or compounded).
+GIT_GH_PUBLISH_FORMS = frozenset({"git push", "gh pr create", "gh pr edit"})
 
 #: Makefile goals that reach GitHub outside the sanctioned `pr` goal, matched
 #: as exact goal tokens for the same reason as MAKE_REMOTE_GOALS.
@@ -224,6 +234,31 @@ def command_bypasses_publish_path(command: str) -> str | None:
             if pattern.search(segment):
                 return label
     return None
+
+
+def command_has_make_remote(command: str) -> bool:
+    """True when any segment invokes a Makefile remote goal (`pr` or `push`)."""
+    segments: list[str] = []
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        segments.append(segment)
+        segments.extend(wrapper_subcommands(segment))
+    return any(bool(MAKE_REMOTE_GOALS.intersection(make_goals(segment))) for segment in segments)
+
+
+def publish_path_workflow_deny(command: str) -> str | None:
+    """Workflow-plane publish deny, or None.
+
+    git/gh forms stay reported by ``command_bypasses_publish_path`` and are
+    not denied here — remediator ``make precommit-repo && git push`` and
+    ``git push | tail`` must match bare ``git push``. Only non-git bypasses
+    (`make push`) are denied. Override hands those to the L4 check.
+    """
+    if _publish_path_override():
+        return None
+    bypass = command_bypasses_publish_path(command)
+    if bypass is None or bypass in GIT_GH_PUBLISH_FORMS:
+        return None
+    return _publish_deny_reason(bypass)
 
 
 # ---------------------------------------------------------------------------
@@ -459,13 +494,15 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
         iso = command_violates_worktree_isolation(command, root=root)
         if iso:
             return iso
-        bypass = command_bypasses_publish_path(command)
-        if bypass and not _publish_path_override():
-            return _publish_deny_reason(bypass)
+        deny = publish_path_workflow_deny(command)
+        if deny:
+            return deny
         catalog = command_runs_unscoped_pytest(command)
         if catalog and not os.environ.get(FULL_PYTEST_OVERRIDE_ENV, "").strip():
             return _full_pytest_deny_reason(catalog)
         if not command_is_remote_mutation(command):
+            return None
+        if not command_has_make_remote(command):
             return None
         named_roots = extract_named_roots(command)
         if named_roots:
@@ -754,10 +791,12 @@ def main_cursor_shell() -> int:
         iso = command_violates_worktree_isolation(command, root=root)
         if iso:
             return _emit_cursor("deny", iso)
-        bypass = command_bypasses_publish_path(command)
-        if bypass and not _publish_path_override():
-            return _emit_cursor("deny", _publish_deny_reason(bypass))
+        deny = publish_path_workflow_deny(command)
+        if deny:
+            return _emit_cursor("deny", deny)
         if not command_is_remote_mutation(command):
+            return _emit_cursor("allow")
+        if not command_has_make_remote(command):
             return _emit_cursor("allow")
         allowed, reason = release_allows_remote(root)
     except Exception as exc:  # noqa: BLE001 - security boundary: deny on any fault

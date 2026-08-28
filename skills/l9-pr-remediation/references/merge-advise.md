@@ -62,8 +62,9 @@ git fetch origin
 git rebase --onto origin/main <old-parent-tip> <child-branch>
 ```
 
-Then publish the child with `UV_PYTHON=<native> PR_REMEDIATE=0 make pr` if
-the Makefile has a `pr` target. Never raw `git push`.
+Then remediator-publish the child with `git push` of the already-open PR
+branch. Do not run `make pr`. Campaign / feature work that is not this
+skill still uses `PR_REMEDIATE=0 make pr` and must never raw `git push`.
 
 ## Local merge when GitHub merge is infra-blocked
 
@@ -75,7 +76,10 @@ there — `make pr` refuses `main`/`master`.
 # stay on a feature branch; do not publish from main
 ```
 
-If Makefile `pr` exists, publish is `PR_REMEDIATE=0 make pr`. Never raw `git push`.
+Remediator publish is `git push` of the already-open PR branch. Do not
+run `make pr`. Campaign / feature work that is not this skill: if
+Makefile `pr` exists, publish is `PR_REMEDIATE=0 make pr`. Never raw
+`git push` on that ceremony path.
 
 ## Forbidden
 

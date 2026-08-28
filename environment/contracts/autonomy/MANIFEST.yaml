@@ -60,6 +60,8 @@ artifacts:
     consumed_by:
       - rules/88-l4-local-autonomy.mdc
       - ops/hooks/l4-local-execution-gate-shell.sh
+      - ops/autonomy/resolve_execution_gate.py
+      - environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py
       - skills/l9-bounded-autonomy
     not_for:
       - mid_execution_push_before_release_authorized

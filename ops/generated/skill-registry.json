@@ -65,7 +65,7 @@
           "admin merge",
           "force push"
         ],
-        "note": "Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (green + mergeable, oldest-first, stack-safe). Verify with make pr-check; publish with PR_REMEDIATE=0 make pr. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
+        "note": "Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run make pr or make pr-check. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
         "positive_signals": [
           "remediate the pr",
           "remediate until green",
@@ -1129,12 +1129,12 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 makefile pr-check then pr, remediate the open set, then a stack-safe oldest-first merge train. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 remediator path is precommit-repo then git push, then a stack-safe oldest-first merge train. do not run make pr or make pr-check. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
-      "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs in the target repo to green + mergeable via make pr-check then PR_REMEDIATE=0 make pr, then merges them oldest-first and stack-safe (squash only when unstacked). Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
+      "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, then merges them oldest-first and stack-safe (squash only when unstacked). make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1294,6 +1294,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "89ad518e436d62e99327908110fae18f5cfcdb462f78ac48fb205dabde8517be",
-  "source_skill_corpus_sha256": "198ee5735a64b8ad2197a4c4dd5f72dbcfa5c3e43196d72948d7ffddb4239db2"
+  "source_manifest_sha256": "810d0da830fe2b4db8ce6d12957ea5cd409fc45dfb074b2eba81b214e6e0760b",
+  "source_skill_corpus_sha256": "66c06ffecd618a55b57f7daa7242aac46724f968eec81cb8c9ba11387d340451"
 }

@@ -110,7 +110,7 @@ classified_findings:
 execution_plan:
   cycle_scope: [list of finding IDs to fix this cycle]
   estimated_files: [list of files to modify]
-  local_verify_commands: [make pr-check + cited-path checks]
+  local_verify_commands: [make precommit-repo]
 ```
 
 Promote this object into the full ledger in [remediation-plan.md](remediation-plan.md) (`disposition` + `status` on every finding) before any edit.
@@ -120,5 +120,5 @@ Promote this object into the full ledger in [remediation-plan.md](remediation-pl
 The plan MUST include ALL findings from the census. Do NOT plan to fix one finding at a time, and do not edit until every finding has a disposition.
 1. Fix all blocking findings.
 2. Fix all actionable findings (including validated code-review agent items).
-3. Run `make pr-check` + cited/planned path checks. Do not run every pre-commit hook or every workflow `run:`.
-4. Commit once. Sanctioned publish once (`PR_REMEDIATE=0 make pr`). Remote CI is confirmation, not a second planning loop.
+3. Run `make precommit-repo`. Do not run `make pr-check`. Do not run every pre-commit hook or every workflow `run:`.
+4. Commit once. Remediator publish once (`git push` of the already-open PR branch). Do not run `PR_REMEDIATE=0 make pr`. Remote CI is confirmation, not a second planning loop.

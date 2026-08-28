@@ -46,8 +46,33 @@ def _governance_root() -> Path:
     return Path.home() / ".cursor-governance"
 
 
+def _workspace_hint() -> Path | None:
+    for key in ("CLAUDE_PROJECT_DIR", "CURSOR_PROJECT", "L9_L4_WORKSPACE"):
+        raw = os.environ.get(key, "").strip()
+        if raw:
+            return Path(raw)
+    return None
+
+
+def _default_gate() -> Path:
+    """Same file Cursor's beforeShellExecution loads — one resolver."""
+    autonomy = _governance_root() / "ops" / "autonomy"
+    resolver = autonomy / "resolve_execution_gate.py"
+    fallback = autonomy / "local_execution_gate.py"
+    if not resolver.is_file():
+        return fallback
+    if str(autonomy) not in sys.path:
+        sys.path.insert(0, str(autonomy))
+    from resolve_execution_gate import resolve_gate  # noqa: PLC0415
+
+    try:
+        return resolve_gate(workspace=_workspace_hint(), hook_file=None)
+    except FileNotFoundError:
+        return fallback
+
+
 GOV = _governance_root()
-GATE = GOV / "ops" / "autonomy" / "local_execution_gate.py"
+GATE = _default_gate()
 AUTHORITY_MODULE = (
     GOV
     / "environment"
@@ -159,12 +184,7 @@ def main() -> int:
     if verdict != 0:
         return verdict
     if not GATE.is_file():
-        if autonomy_required():
-            # Inside a worker window the downstream gate is not optional: its
-            # absence is an unevaluated policy plane, not a pass.
-            return _deny(f"ops local execution gate is missing at {GATE}")
-        print("local_execution_gate_wrap: ops gate missing; skip", file=sys.stderr)
-        return 0
+        return _deny(f"ops local execution gate is missing at {GATE}")
     completed = subprocess.run(
         [sys.executable, str(GATE), "claude"],
         input=raw,

@@ -79,14 +79,14 @@ remediation_plan:
       action: "{one-line fix}"
 
   verify:
-    makefile_targets: ["pr-check"]
+    makefile_targets: ["precommit-repo"]
     cited_paths: ["path"]
     extra_local_commands: []
     all_green: false
 
   commit_policy:
     commits: 1
-    publish: "PR_REMEDIATE=0 make pr"   # cached sanctioned publish
+    publish: "git push"   # already-open PR branch
     no_verify: false
 ```
 
@@ -105,53 +105,51 @@ Companion miss is a plan-gate failure. Cursor-Governance: skill edits → `sync_
 
 ## 3. Local verify (blocks commit)
 
-Discover, then run. When a Makefile exists, **`make pr-check` is the public quality gate**. Also check cited/planned paths. Do not require `pre-commit --all-files`. Do not invoke INTERNAL `precommit` / `pr-preflight` / `pr-full`.
+Discover, then run. Local verify **is** `make precommit-repo`. Do not run `make pr-check`. Do not require `pre-commit --all-files`. Do not invoke INTERNAL `precommit` / `pr-preflight` / `pr-full`.
 
 ### Discover
 
 ```bash
 ls Makefile Makefile.am 2>/dev/null
-# PUBLIC verbs only when present: pr-check, pr, improve
+# remediator verbs: precommit-repo (verify), git push (publish)
 ```
 
-Prefer: `pr-check` (verify), then `pr` (publish). `improve` is optional kernels, not verify.
+Prefer: `precommit-repo` (verify), then `git push` (publish). `improve` is optional kernels, not verify. Do not run `make pr` or `make pr-check`.
 
 ### Run (blocking)
 
 ```bash
-# export cached UV_PYTHON first (uv-managed native CPython; never --system)
-UV_PYTHON="$UV_PYTHON" make pr-check
-# plus the relevant hook/compiler on cited/planned paths
+PR_BASE=origin/main make precommit-repo
 ```
 
 Rules:
 
-1. If a Makefile exists, local verify **is** `make pr-check` with cached `UV_PYTHON`.
+1. Local verify **is** `make precommit-repo`.
 2. Cited/planned paths get a real check even when `pyproject` / ruff excludes them (WIP/CQ case).
 3. Re-run after any verify-fix. Do not commit on a partial green.
 4. **Never** `git commit --no-verify` / `--no-gpg-sign`.
 5. Native-ext import fail is `ENVIRONMENT`, not a lock-pin or source edit. Do not use `uv python find --system`.
 6. Local verify iterations ≤ 5. Still one commit at the end.
-7. Do not replay every workflow `run:` when `pr-check` exists.
+7. Do not replay every workflow `run:`. Do not run ceremony `make pr-check`.
 
 ### No Makefile
 
 Fall back to the workflow `run:` list in [fix-engine.md](fix-engine.md). Record that fallback on the plan.
 
-## 4. One commit, one sanctioned publish
+## 4. One commit, one remediator publish
 
 After `verify.all_green: true` and every `fix` cluster is `done`:
 
 ```text
 git add <planned files only>
 git commit -m "fix(pr-remediation): resolve {count} findings"
-# sanctioned publish from RUN_CONTRACT — this host:
-UV_PYTHON="$UV_PYTHON" PR_REMEDIATE=0 make pr
+# remediator sanctioned publish — already-open PR branch:
+git push
 ```
 
 - Exactly one new commit on the branch for this remediation.
-- Exactly one sanctioned publish.
-- Never raw `git push` when Makefile `pr` exists.
+- Exactly one remediator publish (`git push` of the already-open PR branch).
+- Do not run `make pr` or `make pr-check`. Campaign / feature work that is not this skill still must not treat raw `git push` as its publish path when `make pr` exists.
 - Never `git add -u` / `-A`.
 - Commit message lists finding ids; trailer `Remediation-Cycle: {repo}#{pr}/cycle-1`.
 - **Forbidden:** commit-per-finding, publish-to-probe-CI, "wip" then fixup.

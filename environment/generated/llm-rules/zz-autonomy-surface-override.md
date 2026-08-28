@@ -18,18 +18,17 @@ AND `L9_AUTONOMY_ENABLED=true`:
    Invoking `/l9-pr-remediation` then remediates **and merges** all open
    PRs in the target repo (bottom-up). Do **not** merge from the campaign
    path alone.
-2a. `make pr` is the **only** route to GitHub — a PATH rule, not a timing
-   rule. Raw `git push`, `gh pr create`, `gh pr edit`, `make push` and the
-   MCP `create_pull_request` / `push_files` tools are denied at **every**
-   phase, including after release_authorized, because they skip the
-   Makefile checkers the receipt was granted on. Authorization to publish
-   is not permission to publish a different way. When `make pr` fails, fix
-   what it reported or state the blocker — never route around it.
-   Enforced by `ops/autonomy/local_execution_gate.py`; the adapter
-   permission deny-lists must agree with it. That `pr` target is the
-   **governance** Makefile's, reached via `l9 pr` / `make -C "$GOV" pr
-   WS="$PWD"` regardless of the workspace repo's own Makefile — a consumer
-   needs no `pr` target and there is no raw-push fallback.
+2a. Campaign first publish is `make pr` (`l9 pr` / `make -C "$GOV" pr
+   WS="$PWD"`). That is a PATH rule for opening a PR, not a remediator
+   deny. `/l9-pr-remediation` publishes an already-open PR with
+   `make precommit-repo` then `git push` (and other non-destructive git).
+   The execution gate must not workflow-deny those git/gh forms. `make
+   push` and the MCP `create_pull_request` / `push_files` tools stay
+   denied at every phase. Force-push stays effect-denied. Do not use
+   `L9_PUBLISH_PATH_OVERRIDE` as the remediator path. When campaign
+   `make pr` fails, fix what it reported. A consumer needs no `pr`
+   target; there is no raw-push fallback for first publish.
+   Enforced by `ops/autonomy/local_execution_gate.py`.
 3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
 3a. Commit verification is not skippable. `git commit --no-verify` / `-n`,
    `git push --no-verify`, `core.hooksPath` overrides, `SKIP=` / `HUSKY=0`
