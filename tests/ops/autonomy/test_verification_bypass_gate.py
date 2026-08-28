@@ -186,3 +186,19 @@ def test_contract_does_not_teach_a_commit_time_only_model() -> None:
     blob = json.dumps(CONTRACT)
     assert "make pr-check" in blob
     assert "run `pre-commit install`" not in blob
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        'GIT_CONFIG_GLOBAL=/dev/null git commit -m "x"',
+        "GIT_CONFIG_SYSTEM=/dev/null git push origin HEAD",
+    ],
+)
+def test_config_suppressing_env_is_denied(command: str) -> None:
+    """Neutralising the config that carries core.hooksPath names no bypass."""
+    assert command_bypasses_verification(command, env={})
+
+
+def test_config_env_on_a_read_only_command_is_untouched() -> None:
+    assert command_bypasses_verification("GIT_CONFIG_GLOBAL=/dev/null git status", env={}) is None

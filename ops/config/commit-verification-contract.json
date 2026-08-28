@@ -102,7 +102,10 @@
         "HUSKY",
         "HUSKY_SKIP_HOOKS",
         "PRE_COMMIT_ALLOW_NO_CONFIG",
-        "NO_VERIFY"
+        "NO_VERIFY",
+        "GIT_CONFIG_GLOBAL",
+        "GIT_CONFIG_SYSTEM",
+        "GIT_CONFIG_COUNT"
       ],
       "applies_to_subcommands": [
         "commit",
@@ -110,7 +113,7 @@
       ],
       "$comment": "Scoped to a git commit/push segment on purpose. `SKIP=<ids> pre-commit run` is how ops/scripts/run_pr_precommit.sh legitimately narrows the sanctioned gate, and must not be caught here.",
       "label": "hook-suppressing environment variable on a git commit/push",
-      "why": "disables hooks through the environment instead of a flag; the commit is just as unverified"
+      "why": "disables or neutralises hook configuration through the environment instead of a flag; GIT_CONFIG_GLOBAL/SYSTEM/COUNT suppress the config that can carry core.hooksPath, so the commit is just as unverified and nothing in the command names a bypass"
     },
     {
       "id": "pre-commit-uninstall",
