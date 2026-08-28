@@ -15,9 +15,9 @@
       "alias": null,
       "class": "always",
       "output": "02-slash-commands.md",
-      "output_sha256": "b8bc9ca25d9d0fe30cfa610387e866f1dcfdf96dd1e8c9c64ebc874b288d1fa5",
+      "output_sha256": "86cb5f2432bd388a7302105fa28fcf182aef435a02fcc4f2a9a30071bb95873f",
       "source": "rules/02-slash-commands.mdc",
-      "source_sha256": "795e96cd2221a875996f99b1c7fe7b85157dd091e50475618874b7e435beb342",
+      "source_sha256": "29cc0743d1a672e4f9f695b516cc384a4722a324212deeb324c789aadc574d6c",
       "stem": "02-slash-commands"
     },
     {
@@ -546,9 +546,9 @@
       "alias": null,
       "class": "always",
       "output": "92-learned-lessons.md",
-      "output_sha256": "c5a9c1dfd9f3d9a7f7b729fed50a5b0ac2fbb887ca9542af6a39d4b3b79e9cd6",
+      "output_sha256": "11e33d501cf50977e107e94075ef4e942c74395d54afdf7f8f50eebfda72995e",
       "source": "rules/92-learned-lessons.mdc",
-      "source_sha256": "320bf13f04a1e2ad137c13c37a9f00d6d69736c6837d2cc7fbc5b1344b6c9754",
+      "source_sha256": "a90cefaa4b6dbfdfd8945b46a8eddec089500b089726b8801320d37882539119",
       "stem": "92-learned-lessons"
     },
     {
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 69
   },
-  "tree_sha256": "84b44b1bfa095acc3adc4f3d4c29d7ad26f2f71e05ac7f1b67651985b55180b9"
+  "tree_sha256": "38cf0f1074918237740e43848fd0bcf36b4d616b44dddefe31bfaf4b72b8daab"
 }
