@@ -40,21 +40,22 @@ def test_langgraph_only_modules_are_importable_even_though_unregistered():
     separately. What this test pins is narrower: the module must import, since
     that is what broke the boundary.
     """
-    from workflows.dags import inspect_dag
+    import workflows.dags
 
-    assert hasattr(inspect_dag, "compliance_node")
+    assert hasattr(workflows.dags.inspect_dag, "compliance_node")
 
 
 def test_validators_availability_is_reported_not_assumed():
-    from workflows.dags.inspect_dag import validators_available
+    import workflows.dags
 
-    assert isinstance(validators_available(), bool)
+    assert isinstance(workflows.dags.inspect_dag.validators_available(), bool)
 
 
 def test_missing_validators_raise_rather_than_return_no_issues():
     """An empty issue list would read downstream as 'clean'. It must raise."""
-    from workflows.dags import inspect_dag
+    import workflows.dags
 
+    inspect_dag = workflows.dags.inspect_dag
     if inspect_dag.validators_available():
         pytest.skip("validators are present in this checkout; nothing to assert")
     with pytest.raises(RuntimeError, match="validators unavailable"):
@@ -63,8 +64,9 @@ def test_missing_validators_raise_rather_than_return_no_issues():
 
 def test_compliance_never_reports_ok_without_validators():
     """Unchecked is not clean. The flags stay False and the gap is flagged."""
-    from workflows.dags import inspect_dag
+    import workflows.dags
 
+    inspect_dag = workflows.dags.inspect_dag
     if inspect_dag.validators_available():
         pytest.skip("validators are present in this checkout; nothing to assert")
 
