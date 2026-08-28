@@ -1,0 +1,26 @@
+version: 1
+graph_kinds:
+  SESSION_GUIDANCE:
+    purpose: agent_guidance_and_session_workflow_contract
+    canonical_contract: workflows/session/interface.py
+    registry: workflows/session/registry.py
+    discovery: workflows/dags/__init__.py
+    registration_function: register_session_dag
+    lookup_function: get_session_dag
+    executable_runtime: false
+  LANGGRAPH_RUNTIME:
+    purpose: executable_state_machine_runtime
+    canonical_contract: langgraph.graph.StateGraph
+    registry: null
+    discovery: module_import_or_domain_runtime_entrypoint
+    registration_function: null
+    lookup_function: null
+    executable_runtime: true
+  UNKNOWN:
+    purpose: unresolved_graph_kind
+    disposition: BLOCKED
+invariants:
+  - classify_before_authoring
+  - never_force_langgraph_into_session_registry
+  - never_call_session_guidance_fake_or_runtime_equivalent
+  - graph_kind_does_not_change_domain_ownership

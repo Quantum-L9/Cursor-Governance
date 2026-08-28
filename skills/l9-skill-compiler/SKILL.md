@@ -101,7 +101,7 @@ authoritative over this section.
 
 Policies: `policies/skill-families.yaml`, `policies/runtime-routing.yaml`,
 `policies/capability-closure.yaml`, `policies/target-profiles.yaml`,
-`policies/behavior-evals.yaml`
+`policies/behavior-evals.yaml`, `policies/topology-ownership.yaml`
 
 First qualification run and defect classification: `QUALIFICATION.md`
 
@@ -115,6 +115,13 @@ Bounded LLM contracts: `references/source-intelligence-contract.md`,
 - One primary family plus orthogonal traits determines runtime, validation, and required evals.
 - A platform convention belongs to a target profile, never to universal Skill semantics.
 - Every required capability is closed, or explicitly runtime-bound with probe and failure behavior.
+- **The existence of a DAG does not justify a Skill.** Skills represent capabilities;
+  DAGs represent execution graphs. Create or retain a DAG-named Skill only when the
+  capability itself is DAG authoring, validation, registration, or lifecycle
+  management. Otherwise the DAG is a runtime artifact of the owning capability, the
+  owning Skill references it, and no sibling DAG-specific Skill is created.
+  Enforced deterministically at `SCAN_SKILL_TOPOLOGY` by
+  `policies/topology-ownership.yaml`.
 - Fail closed on material UNKNOWN. Never downgrade a blocking failure to success.
 
 ## Handoff

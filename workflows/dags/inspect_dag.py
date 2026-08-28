@@ -41,13 +41,38 @@ from typing import Any, Literal
 import structlog
 from langgraph.graph import END, START, StateGraph
 from pydantic import BaseModel, Field
-from tools.validation.validate_external_code import (
-    ValidationIssue,
-    extract_python_code_blocks,
-    validate_adr_compliance,
-    validate_config_values,
-    validate_imports,
-)
+
+try:
+    from tools.validation.validate_external_code import (
+        ValidationIssue,
+        extract_python_code_blocks,
+        validate_adr_compliance,
+        validate_config_values,
+        validate_imports,
+    )
+
+    _VALIDATORS_IMPORT_ERROR: str | None = None
+except ImportError as exc:  # pragma: no cover - exercised only without the tools package
+    # `tools.validation.validate_external_code` is optional tooling that is not
+    # vendored in every checkout. A hard import here took down the whole
+    # `workflows.dags` discovery boundary — every DAG in the package became
+    # unreachable because one DAG's optional dependency was missing.
+    #
+    # The import is therefore soft, but the capability is NOT faked: compliance
+    # checking raises below rather than reporting a clean bill of health it did
+    # not earn. Missing validators are a blocked check, never a passing one.
+    ValidationIssue = None  # type: ignore[assignment,misc]
+    extract_python_code_blocks = None  # type: ignore[assignment]
+    validate_adr_compliance = None  # type: ignore[assignment]
+    validate_config_values = None  # type: ignore[assignment]
+    validate_imports = None  # type: ignore[assignment]
+    _VALIDATORS_IMPORT_ERROR = str(exc)
+
+
+def validators_available() -> bool:
+    """True when the external-code validators are importable in this checkout."""
+    return _VALIDATORS_IMPORT_ERROR is None
+
 
 logger = structlog.get_logger(__name__)
 
@@ -143,6 +168,15 @@ async def classify_node(state: InspectState) -> dict[str, Any]:
         # Markdown file — extract code blocks
         is_external = True
         if target_path.exists():
+            if not validators_available():
+                # Extracting code blocks is the validators' job. Refuse the
+                # external-code mode outright rather than proceeding with zero
+                # blocks, which would read downstream as "nothing to flag".
+                raise RuntimeError(
+                    "external-code mode requires "
+                    "tools.validation.validate_external_code "
+                    f"({_VALIDATORS_IMPORT_ERROR})"
+                )
             raw_blocks = extract_python_code_blocks(target_path)
             code_blocks = [{"line": ln, "code": code} for ln, code in raw_blocks]
             logger.info("external_code_detected", blocks=len(code_blocks))
@@ -318,8 +352,18 @@ def _issue_to_dict(issue: ValidationIssue) -> dict[str, str]:
     }
 
 
-def _run_validators_on_code(code: str) -> list[ValidationIssue]:
-    """Run all validators from validate_external_code on a code string."""
+def _run_validators_on_code(code: str) -> list["ValidationIssue"]:
+    """Run all validators from validate_external_code on a code string.
+
+    Raises RuntimeError when the validators are not importable. Callers must
+    surface that as a blocked compliance check — never as a passing one.
+    """
+    if not validators_available():
+        raise RuntimeError(
+            "external-code validators unavailable: "
+            f"tools.validation.validate_external_code ({_VALIDATORS_IMPORT_ERROR}). "
+            "Compliance cannot be asserted without them."
+        )
     issues: list[ValidationIssue] = []
     issues.extend(validate_imports(code, _REPO_ROOT))
     issues.extend(validate_adr_compliance(code))
@@ -348,8 +392,28 @@ async def compliance_node(state: InspectState) -> dict[str, Any]:
                 pass
 
     # --- Run validators ---
-    for code in code_snippets:
-        all_issues.extend(_run_validators_on_code(code))
+    # A missing validator package is reported as a failed compliance check with
+    # an explicit anti-pattern, never silently skipped into a green result.
+    validators_ok = validators_available()
+    if validators_ok:
+        for code in code_snippets:
+            all_issues.extend(_run_validators_on_code(code))
+    elif code_snippets:
+        logger.error(
+            "compliance_validators_unavailable",
+            target=state.target,
+            error=_VALIDATORS_IMPORT_ERROR,
+        )
+        anti_patterns.append(
+            {
+                "pattern": "validators_unavailable",
+                "location": (
+                    "tools.validation.validate_external_code is not importable "
+                    f"({_VALIDATORS_IMPORT_ERROR}) — import/ADR/config compliance "
+                    "was NOT checked"
+                ),
+            }
+        )
 
     # --- Classify results ---
     import_issues = [i for i in all_issues if i.type == "import_error"]
@@ -357,9 +421,10 @@ async def compliance_node(state: InspectState) -> dict[str, Any]:
     config_issues = [i for i in all_issues if i.type == "config_drift"]
     critical_issues = [i for i in all_issues if i.severity in ("critical", "high")]
 
-    import_ok = len(import_issues) == 0
-    adr_ok = len(adr_issues) == 0
-    config_ok = len(config_issues) == 0
+    # Unchecked is not the same as clean: without validators these stay False.
+    import_ok = validators_ok and len(import_issues) == 0
+    adr_ok = validators_ok and len(adr_issues) == 0
+    config_ok = validators_ok and len(config_issues) == 0
 
     # --- Structural checks from hotspots ---
     structural_ok = not any(h.get("pattern") == "syntax_error" for h in state.hotspots)

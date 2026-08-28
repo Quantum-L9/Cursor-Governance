@@ -1,0 +1,30 @@
+# Ownership rules applied at SCAN_SKILL_TOPOLOGY, before family classification.
+# Creation is never the default outcome; these rules say when it is wrong outright.
+version: 1
+
+dag_skill_ownership:
+  invariant: >
+    The existence of a DAG does not justify a Skill. Skills represent
+    capabilities; DAGs represent execution graphs.
+  create_or_retain_dag_skill_only_when:
+    - the capability itself is DAG authoring, validation, registration, or lifecycle management
+  otherwise:
+    - DAG is an implementation/runtime artifact of the owning capability
+    - owning skill references the DAG
+    - no sibling DAG-specific skill is created
+  # Deterministic detection. A subject is DAG-shaped when its name, domain, or
+  # stated objective carries a graph-runtime marker; it claims the lifecycle
+  # capability only when it also carries a lifecycle verb.
+  runtime_markers: [dag, dags, graph, langgraph, workflow, workflows, pipeline, executor]
+  lifecycle_verbs: [authoring, author, lifecycle, registration, register, registry,
+    discovery, discover, binding, bind, validation, validate, compile, compiler]
+  # Fires only when a live owner exists to route to; otherwise the case is
+  # ambiguous and escalates rather than silently rejecting.
+  owner_role: dag_lifecycle_owner
+  on_violation: REJECT_NEW_SKILL
+  on_violation_without_owner: ESCALATE_TO_BOUNDED_LLM
+  rationale: >
+    Enforced after the 2026-08-28 consolidation, in which l9-update-command,
+    l9-inspect, and l9-harvest-pipeline were archived as Skill wrappers around
+    execution graphs that already carried their whole protocol. Without a
+    deterministic rule the same sprawl returns as soon as the next DAG lands.
