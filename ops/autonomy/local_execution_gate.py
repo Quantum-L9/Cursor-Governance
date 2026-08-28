@@ -36,7 +36,6 @@ Brain lives under ops/ per CANONICAL_LAW §2.1.
 
 Escape hatches (human / ops only):
   L9_GIT_DESTRUCTIVE_AUTHORIZED=<reason>
-  L9_VERIFY_BYPASS_AUTHORIZED=<reason>
   L9_LOCAL_PUSH_AUTHORIZED=<reason>
   L9_L4_LOCAL_AUTONOMY=0
   L9_GIT_REVERT_AUTHORIZED=<reason>
@@ -44,6 +43,7 @@ Escape hatches (human / ops only):
   L9_GIT_SWITCH_AUTHORIZED=<reason>
   L9_GIT_RESET_AUTHORIZED=<reason>
   L9_WORKTREE_ISOLATION=0
+  L9_VERIFY_BYPASS_AUTHORIZED=<reason>   (alias: L9_VERIFICATION_BYPASS_AUTHORIZED)
 """
 
 from __future__ import annotations
@@ -74,9 +74,7 @@ from git_execution_exemption import (  # noqa: E402
 )
 from git_guardrails import command_requires_human  # noqa: E402
 from l4_local import release_allows_remote, workspace_from_event  # noqa: E402
-from verification_bypass_gate import (  # noqa: E402
-    command_bypasses_verification,
-)
+from verification_bypass_gate import command_bypasses_verification  # noqa: E402
 from worktree_isolation_gate import command_violates_worktree_isolation  # noqa: E402
 
 #: git/gh forms that reach GitHub. `make` is NOT matched by regex here: see
@@ -305,14 +303,16 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
     that destroys nothing.
     """
     if tool_name in SHELL_TOOL_NAMES:
-        shell_command = str(tool_input.get("command") or tool_input.get("cmd") or "")
-        guardrail = command_requires_human(shell_command, root=root)
+        raw_command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+        guardrail = command_requires_human(raw_command, root=root)
         if guardrail:
             return guardrail
-        # Second plane that answers before the git/gh exemption. Skipping a hook
-        # destroys nothing, so the guardrails' effect taxonomy cannot see it; it
-        # is nonetheless a denial a git command can earn.
-        bypass = command_bypasses_verification(shell_command)
+        # Verification-bypass runs with the guardrail plane, before the git/gh
+        # exemption: a git command is exempt from workflow denials, never from
+        # suppressing the verification it would otherwise have to pass. Skipping
+        # a hook destroys nothing, so the guardrails' effect taxonomy cannot see
+        # it; it is nonetheless a denial a git command can earn.
+        bypass = command_bypasses_verification(raw_command)
         if bypass:
             return bypass
 
@@ -384,9 +384,40 @@ def _guardrail_from_payload(raw: str) -> str | None:
         root = workspace_from_event(event)
     except Exception:  # noqa: BLE001 - an unresolvable workspace is not a verdict
         root = None
-    guardrail = command_requires_human(command, root=root)
-    if guardrail:
-        return guardrail
+    return command_requires_human(command, root=root)
+
+
+def _command_from_payload(raw: str) -> str | None:
+    """Shell command carried by a raw hook payload, or None. Never raises."""
+    try:
+        event = json.loads(raw)
+    except (json.JSONDecodeError, ValueError, TypeError):
+        return None
+    if not isinstance(event, dict):
+        return None
+    tool_name = str(event.get("tool_name") or event.get("toolName") or "")
+    if tool_name and tool_name not in SHELL_TOOL_NAMES:
+        return None
+    command = str(event.get("command") or event.get("full_command") or "")
+    if not command:
+        tool_input = event.get("tool_input") or event.get("toolInput") or {}
+        if isinstance(tool_input, dict):
+            command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+    return command or None
+
+
+def _verification_bypass_from_payload(raw: str) -> str | None:
+    """Verification-bypass verdict for a raw hook payload. Never raises.
+
+    Must answer HERE, not only inside ``evaluate``. ``payload_is_git_or_gh``
+    short-circuits before the event is parsed, so a plane wired only into
+    ``evaluate`` never sees a git command — which is the entire class this one
+    exists to catch. The destructive plane learned the same lesson; see
+    ``_guardrail_from_payload``.
+    """
+    command = _command_from_payload(raw)
+    if not command or not command.strip():
+        return None
     return command_bypasses_verification(command)
 
 
@@ -437,6 +468,9 @@ def main_claude() -> int:
     guardrail = _guardrail_from_payload(raw)
     if guardrail:
         return _deny_claude(guardrail)
+    bypass = _verification_bypass_from_payload(raw)
+    if bypass:
+        return _deny_claude(bypass)
     # Answered before parsing, and outside the fail-closed handler below: for a
     # git/gh command, execution permission must not depend on this gate being
     # able to evaluate anything at all.
@@ -567,6 +601,9 @@ def main_cursor_shell() -> int:
     guardrail = _guardrail_from_payload(raw)
     if guardrail:
         return _emit_cursor("deny", guardrail)
+    bypass = _verification_bypass_from_payload(raw)
+    if bypass:
+        return _emit_cursor("deny", bypass)
     if payload_is_git_or_gh(raw):
         return _emit_cursor("allow")
     try:

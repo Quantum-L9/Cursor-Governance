@@ -40,6 +40,11 @@ DENIED: dict[str, str] = {
     "hook-suppressing-env": 'SKIP=ruff git commit -m "x"',
     "pre-commit-uninstall": "pre-commit uninstall",
     "hook-file-mutation": f"rm -f {HOOK_FILE}",
+    "git-merge-no-verify": "git merge --no-verify topic",
+    "git-rebase-no-verify": "git rebase --no-verify main",
+    "git-cherry-pick-no-verify": "git cherry-pick --no-verify deadbee",
+    "git-revert-no-verify": "git revert --no-verify deadbee",
+    "git-am-no-verify": "git am --no-verify patch.mbox",
 }
 
 ALLOWED = [
@@ -54,6 +59,12 @@ ALLOWED = [
     f"cat {HOOK_FILE}",
     "ls .git/hooks",
     "echo 'git commit --no-verify'",  # data, not a command
+    # -n is NOT --no-verify outside `git commit`; denying it would reject work.
+    "git rebase -i main",
+    "git revert -m 1 deadbee",
+    "git rebase --onto main a b",
+    'git merge -m "-n" topic',
+    "git merge topic",
 ]
 
 
@@ -242,3 +253,20 @@ def test_runner_supports_staged_mode() -> None:
     runner = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
     assert "--staged" in runner
     assert 'PR_STAGED" != "1"' in runner, "clean-tree assertion must be skipped when staged"
+
+
+def test_breakglass_alias_and_reason_floor() -> None:
+    """One escape hatch, two spellings, and a reason that costs a sentence."""
+    command = 'git commit --no-verify -m "x"'
+    assert command_bypasses_verification(command, env={"L9_VERIFY_BYPASS_AUTHORIZED": "short"})
+    assert (
+        command_bypasses_verification(
+            command,
+            env={"L9_VERIFICATION_BYPASS_AUTHORIZED": "operator ib: upstream shim broken, #412"},
+        )
+        is None
+    ), "the alias must be honoured so neither spelling silently fails"
+
+
+def test_exec_path_global_does_not_hide_a_bypass() -> None:
+    assert command_bypasses_verification("git --exec-path=/tmp commit --no-verify -m x", env={})

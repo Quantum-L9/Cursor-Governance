@@ -1,123 +1,167 @@
 ---
 name: l9-skill-compiler
-description: compile, rebuild, evolve, or validate reusable L9 Skills by deciding topology ownership before creation, classifying one primary family plus orthogonal traits, normalizing canonical Skill IR, rendering target profiles, and enforcing Capability Closure. use when creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided.
+description: compile, rebuild, validate, and package prompts, SOPs, workflows, kernels, and existing agent skills into standalone exemplary skill packs. use when the user asks to create or improve a reusable skill, make a skill portable across Claude Code, Manus, Cursor, or other agents, sharpen activation and reject signals, extract expert heuristics, enforce authority and evidence rules, eliminate drift or stubs, or produce a validated ZIP.
 metadata:
-  version: "2.0.0"
-  updated: "2026-08-26"
-  role: skill_compiler_runtime
-  tags: [l9, compiler, skill, ir, capability-closure, dag]
+  skill_schema: 1
+  layer: control_plane
+  role: skill_entrypoint
+  tags: [l9, compiler, skill, exemplary, portability, packaging]
   owner: igor_beylin
+  status: active
+  version: "3.8.0"
+  updated: "2026-08-28"
+  license: Proprietary
+  supersedes: l9-skill-compiler v2.0.0 (skill-compiler-v2 DAG runtime)
+  targets: [claude-code, manus, cursor, agent-skills]
 ---
 
-# l9-skill-compiler v2.0.0
+# L9 Skill Compiler
 
-**Thin bootloader. No generic doctrine is duplicated here.**
+## Purpose
 
-**DAG-ENFORCED.** Execute the `skill-compiler-v2` DAG. Do not run this Skill as a prose sequence.
+Turn source material or an existing skill into the smallest standalone pack that reliably changes future agent behavior. Exemplary means compressed judgment backed by evidence, not a thicker folder.
 
-## Activate when
+## Activation Boundary
 
-Creating, compiling, materially rebuilding, evolving, or validating a reusable Skill where
-topology ownership, runtime design, capability bindings, target profile rendering, or
-activation/behavior evaluation must be decided.
+Use this skill for creation, conversion, audit, rebuild, hardening, validation, portability, or packaging of reusable agent skills. Do not use it for one-off prompts that the user does not want packaged, ordinary document editing, or installing a multi-skill archive without first splitting it into one skill per pack.
 
-**First decide whether to extend, compose, replace, reject, or create.** Creation is not the
-default outcome. Most-specific existing owner wins.
+## Authority Order
 
-## Do not activate
+1. Latest explicit user instruction and supplied source artifacts.
+2. `references/skill-pack-contract.md`.
+3. `references/meta-standard.md` and `references/platform-portability.md`.
+4. Activated runtime directives and specialized contracts.
+5. Verified implementation and validation evidence.
+6. `Unknown`; inference never outranks evidence.
 
-- Merely wiring an existing pack into a repo -> `l9-wire-skill-into-repo`
-- Authoring a generic L9 DAG -> `l9-dag-authoring`
-- Generic reasoning methodology -> `l9-structured-reasoning`
-- Next-prompt behavior -> `l9-ynp`
-- A domain task already owned by a more specific Skill -> that Skill
+## Modes
 
-## Runtime
+| Mode | Result | Primary references |
+|---|---|---|
+| discuss | choices and trade-offs | `references/output-modes.md` |
+| analyze | evidence-backed gap and divergence report | `references/skill-pack-contract.md` |
+| design | bounded file tree and resource map | `references/file-contract.md` |
+| build / rebuild | complete skill pack | `references/build_execution_contract.md` |
+| exemplary | complete pack plus intelligence evidence | `references/smart-exemplary-skill-contract.md` |
+| hardened-rebuild | converged multi-pass replacement | `references/kernel-recursive-improvement.md` |
+| package | validated runtime `skill.zip` with root `SKILL.md` | `scripts/package_skill.py` |
 
-- Canonical typed graph: `workflows/dags/skill_compiler_dag.py`
-- Registry id: `skill-compiler-v2`, bound through the repo's existing `SessionDAG` registry and `workflows/dags/__init__.py` auto-discovery surface
-- Programmatic invocation: `workflows/dags/skill_compiler_runner.py`. It derives execution order, each stage's argv, guard entry, and terminal state from the graph itself, so it carries no stage list of its own.
-- DAG authoring mechanics and registration conventions are owned by `l9-dag-authoring`. This Skill consumes them and does not invent a parallel registry.
+## Mandatory Workflow
 
-Logical stages: COMPILE_REQUEST, BIND_INPUTS, SCAN_SKILL_TOPOLOGY, CLASSIFY_SKILL_PROFILE,
-EXTRACT_SOURCE_INTELLIGENCE, NORMALIZE_SKILL_IR, DESIGN_RUNTIME, RENDER_TARGET_PROFILE,
-STATIC_VALIDATE, CAPABILITY_CLOSURE, ACTIVATION_EVAL, BEHAVIOR_EVAL, PACKAGE,
-HANDOFF_TO_WIRING, PASS_BLOCKED_FAIL.
+1. Load `references/binding-runtime-directives.md` and record activated directives.
+2. Parse the source and produce Gate A using `schemas/gate-a-source-parse.schema.yaml`.
+3. For exemplary work, extract and compress expertise before designing files. Produce `expertise_model.yaml` and Gate B.
+4. Select the minimum high-leverage structure. Produce Gate C and lock files in scope.
+5. Build complete files only. Produce Gate D with zero stubs, TODOs, placeholders, or unverified pass claims. Write `SKILL.md` frontmatter to the five permitted top-level keys in `references/meta-standard.md` — `name`, `description`, `paths`, `disable-model-invocation`, `metadata` — with everything else nested under `metadata:`. A pack that emits `license` or `allowed-tools` at top level is rejected by the install gate of every governed repository and has to be repaired by hand before it can be wired.
+6. Validate structural, contract, execution, evidence, operator, and regression classes. Produce Gate E. `scripts/validate_skill_pack.py <pack>` is a required gate here, not an optional check: it is the executable form of the frontmatter contract and fails the build on a non-native top-level key, a name that does not match the pack directory, a description outside 150-500 characters or with no trigger clause, an empty `paths`, or an archived pack that is not `disable-model-invocation: true`.
+7. Create platform adapters only when they change installation, tool binding, activation, or output routing. Produce Gate F when wiring is in scope.
+8. Package only after validation passes. Produce Gate G and the actual archive.
 
-## Operator entrypoint
-
-`scripts/compile_skill.py` is a thin facade over the same DAG. It normalizes operator
-input into a canonical CompileRequest and invokes `skill-compiler-v2`; it owns no
-compilation semantics and never sequences stages itself.
-
-```bash
-python skills/l9-skill-compiler/scripts/compile_skill.py optimize l9-existing-skill
-python skills/l9-skill-compiler/scripts/compile_skill.py rebuild skills/l9-existing-skill
-python skills/l9-skill-compiler/scripts/compile_skill.py compile request.yaml
-python skills/l9-skill-compiler/scripts/compile_skill.py create \
-  --name l9-new-skill --source ./source.md --profile portable --profile l9
+```text
+parse_source
+-> extract_expertise
+-> compress_expertise
+-> design_skill
+-> build_complete_files
+-> validate_with_evidence
+-> adapt_platforms
+-> package
 ```
 
-| Mode | Canonical intent | Subject |
-|---|---|---|
-| `optimize <skill>` | `evolve` | resolved live Skill, its pack as source material |
-| `rebuild <skill>` | `rebuild` | resolved live Skill, identity preserved |
-| `compile <file>` | intent from the request | JSON or YAML request file |
-| `create --name --source` | `create` | proposed name plus source material |
+## Exemplary Gate
 
-YAML is an input adapter only: it normalizes into the same object as the equivalent
-JSON and is validated by the one `contracts/compile-request.schema.json`. There is no
-second schema, and a key the canonical schema does not allow fails closed.
+A generated skill may be classified `exemplary` only when all of the following are present and validated:
 
-Flags: `--dry-run`, `--output-json`, `--request-id`, `--profile`, `--objective`,
-`--receipt-path`, `--output-dir`, `--no-package`, `--ir`, `--skills-root`.
+- strong activation signals and explicit reject signals
+- ranked source authority and conflict rules
+- conditional expert heuristics in condition -> judgment -> action form
+- adapters that change real decision rules, not vocabulary
+- named failure modes with prevention controls
+- scored leverage points
+- an after-use correction hook based only on observed failures
+- deterministic validation evidence
 
-`--dry-run` parses, resolves the Skill or source, scans topology, classifies the
-profile, and prints the normalized request and planned node order. It writes no pack,
-performs no wiring or registration, and never reports a build.
+Run:
 
-The convenience verb never decides ownership. `create` still passes through the
-topology stage, so `EXTEND_EXISTING`, `COMPOSE_EXISTING`, `REPLACE_EXISTING`, and
-`REJECT_NEW_SKILL` remain possible answers and are surfaced as given.
+```bash
+python scripts/validate_skill_pack.py <skill-folder>
+python scripts/validate_exemplary_skill.py <skill-folder>
+```
 
-Bounded-LLM nodes have no deterministic substitute. A terminal-only run stops at the
-first such node and reports `BOUNDED_LLM_REQUIRED` with the node and its contract; the
-agent executes that node under the contract and re-invokes with `--ir` to drive the
-deterministic tail. A blocked run is never reported as a build.
+If any required gate is missing, failed, blocked, or `Unknown`, downgrade honestly to `strong`, `developing`, `failed`, or `mine_for_components_only`.
 
-Exit codes: `0` PASS, `2` invalid operator input, `3` BLOCKED, `4` compilation or
-runtime FAIL, `5` validation FAIL, `10` unclassified. Failures are typed
-(`REQUEST_SCHEMA_INVALID`, `SKILL_NOT_FOUND`, `TOPOLOGY_BLOCKED`, `DAG_NOT_AVAILABLE`,
-`COMPILATION_BLOCKED`, `VALIDATION_FAILED`, …) and `--output-json` emits the
-request, topology decision, skill profile, DAG terminal state, stage records,
-artifacts, unknowns, and errors. The executable and the contracts remain
-authoritative over this section.
+## Packaging Contract
 
-## Machine contracts
+- Produce one runtime archive named exactly `skill.zip`.
+- Put `SKILL.md` at the ZIP root; do not wrap the skill contents in a top-level skill directory.
+- Treat `SKILL.md` frontmatter `name` as canonical. The source/extraction directory may have any local name; flatten only the distributable archive.
+- Exclude source regression tests, cache/junk files, and unreferenced `scripts/validate_*.py` development validators by default.
+- Keep a validator in the runtime ZIP only when `SKILL.md`, `references/`, or `adapters/` explicitly names it as a runtime dependency.
+- Use `--include-tests` or `--include-unreferenced-validators` only for diagnostic/source archives, not normal runtime delivery.
+- Do not claim a ZIP exists until it has been created and inspected.
+- Do not include `agents/openai.yaml` unless ChatGPT packaging is explicitly requested.
 
-`contracts/compile-request.schema.json`, `contracts/skill-profile.schema.json`,
-`contracts/skill-ir.schema.json`, `contracts/capability-closure.schema.json`,
-`contracts/build-receipt.schema.json`
+## Resource Map
 
-Policies: `policies/skill-families.yaml`, `policies/runtime-routing.yaml`,
-`policies/capability-closure.yaml`, `policies/target-profiles.yaml`,
-`policies/behavior-evals.yaml`
+### Release and operator evidence
+- `README.md`
+- `RUNBOOK.md`
+- `MANIFEST.md`
+- `CHANGELOG.md`
+- `VALIDATION.md`
 
-First qualification run and defect classification: `QUALIFICATION.md`
+### Core contracts
+- `references/skill-pack-contract.md`
+- `references/meta-standard.md`
+- `references/platform-portability.md`
+- `references/file-contract.md`
+- `references/output-modes.md`
+- `references/build_execution_contract.md`
+- `references/enforcement-gates.md`
 
-Bounded LLM contracts: `references/source-intelligence-contract.md`,
-`references/runtime-design-contract.md`, `references/evaluation-contract.md`
+### Exemplary intelligence
+- `expertise_model.yaml`
+- `skill_intelligence_report.yaml`
+- `references/expertise_extraction_framework.md`
+- `references/smart-exemplary-skill-contract.md`
+- `references/canonical-smart-exemplary-spec.yaml`
 
-## Invariants
+### Runtime directives and kernels
+- `references/binding-runtime-directives.md`
+- `references/kernel-agent-state.md`
+- `references/kernel-first-order-thinking.md`
+- `references/kernel-build-quality.md`
+- `references/kernel-skill-doctrine.md`
+- `references/kernel-compounding-leverage.md`
+- `references/kernel-anti-drift.md`
+- `references/kernel-execution-cost.md`
+- `references/kernel-validation-evidence.md`
+- `references/kernel-recursive-improvement.md`
+- `references/kernel-convergence-architect.md`
+- `references/kernel-reasoning-think-strategy.md`
+- `references/kernel-zero-stub-build.md`
 
-- Source material compiles into Skill IR first. Files render only from validated IR.
-- Deterministic work is executable code. LLM nodes are explicit, bounded, schema-constrained.
-- One primary family plus orthogonal traits determines runtime, validation, and required evals.
-- A platform convention belongs to a target profile, never to universal Skill semantics.
-- Every required capability is closed, or explicitly runtime-bound with probe and failure behavior.
-- Fail closed on material UNKNOWN. Never downgrade a blocking failure to success.
+### Platform adapters
+- `adapters/claude-code.md`
+- `adapters/manus.md`
+- `adapters/cursor.md`
+- `adapters/l9-platform.md`
 
-## Handoff
+### Gate schemas
+- `schemas/gate-a-source-parse.schema.yaml`
+- `schemas/gate-b-expertise-model.schema.yaml`
+- `schemas/gate-c-file-tree.schema.yaml`
+- `schemas/gate-d-build-manifest.schema.yaml`
+- `schemas/gate-e-validation-report.schema.yaml`
+- `schemas/gate-f-wiring-report.schema.yaml`
+- `schemas/gate-g-package-record.schema.yaml`
 
-Discovery, registry updates, autonomy manifest tier, adapter symlinks, and deprecation are
-owned by `l9-wire-skill-into-repo`. This Skill emits a typed handoff and invokes the owner.
+### Deterministic tools
+- `scripts/validate_skill_pack.py`
+- `scripts/validate_exemplary_skill.py`
+- `scripts/validate_smart_exemplary_spec.py`
+- `scripts/package_skill.py`
+
+## Failure Handling
+
+State the exact blocker, preserve useful components, label unverifiable claims `Unknown`, and provide the smallest safe correction. Never fabricate missing resources, tool support, validation results, or installation paths.

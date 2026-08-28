@@ -1,0 +1,107 @@
+{
+  "failed_count": 0,
+  "missing_classes": [],
+  "results": [
+    {
+      "class": "positive",
+      "deterministic": true,
+      "expect": "activate",
+      "fired": true,
+      "prompt": "mine repo A for reusable patterns to strengthen repo B",
+      "route_to": null,
+      "status": "pass"
+    },
+    {
+      "class": "positive",
+      "deterministic": true,
+      "expect": "activate",
+      "fired": true,
+      "prompt": "decide what to port merge configure or reject from donor into beneficiary",
+      "route_to": null,
+      "status": "pass"
+    },
+    {
+      "class": "positive",
+      "deterministic": true,
+      "expect": "activate",
+      "fired": true,
+      "prompt": "identify highest value transferable intelligence from this donor",
+      "route_to": null,
+      "status": "pass"
+    },
+    {
+      "class": "positive",
+      "deterministic": true,
+      "expect": "activate",
+      "fired": true,
+      "prompt": "run a donor to beneficiary architecture harvest",
+      "route_to": null,
+      "status": "pass"
+    },
+    {
+      "class": "negative",
+      "deterministic": true,
+      "expect": "no_activate",
+      "fired": false,
+      "prompt": "literal code extraction",
+      "route_to": null,
+      "status": "pass"
+    },
+    {
+      "class": "negative",
+      "deterministic": true,
+      "expect": "no_activate",
+      "fired": false,
+      "prompt": "generic code analysis",
+      "route_to": null,
+      "status": "pass"
+    },
+    {
+      "class": "negative",
+      "deterministic": true,
+      "expect": "no_activate",
+      "fired": false,
+      "prompt": "percentage gap analysis",
+      "route_to": null,
+      "status": "pass"
+    },
+    {
+      "class": "negative",
+      "deterministic": true,
+      "expect": "no_activate",
+      "fired": false,
+      "prompt": "chat memory extraction",
+      "route_to": null,
+      "status": "pass"
+    },
+    {
+      "class": "negative",
+      "deterministic": true,
+      "expect": "no_activate",
+      "fired": false,
+      "prompt": "PE campaign nuggets",
+      "route_to": null,
+      "status": "pass"
+    },
+    {
+      "class": "negative",
+      "deterministic": true,
+      "expect": "no_activate",
+      "fired": false,
+      "prompt": "recursive artifact rewrite",
+      "route_to": null,
+      "status": "pass"
+    },
+    {
+      "class": "sibling_collision",
+      "deterministic": true,
+      "expect": "route_elsewhere",
+      "fired": false,
+      "prompt": "audit this artifact for contradictions and score findings",
+      "route_to": "evidence-review-engine",
+      "status": "pass"
+    }
+  ],
+  "stage": "ACTIVATION_EVAL",
+  "status": "PASS"
+}

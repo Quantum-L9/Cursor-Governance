@@ -20,7 +20,11 @@
       "ok",
       "please"
     ],
-    "note": "Human/ops only. An agent MUST NOT set this for itself: exporting it inside the same turn that runs the commit is the bypass, one level up."
+    "note": "Human/ops only. An agent MUST NOT set this for itself: exporting it inside the same turn that runs the commit is the bypass, one level up. A reason shorter than min_reason_chars is rejected like a bare affirmative. The alias is accepted so neither spelling silently fails.",
+    "min_reason_chars": 8,
+    "aliases": [
+      "L9_VERIFICATION_BYPASS_AUTHORIZED"
+    ]
   },
   "git_value_flags": {
     "$comment": "Flags whose value is a SEPARATE word, so a scanner must skip that word before reading the next flag. Without this, `git commit -m -n` (a message of '-n') reads as a bypass. Flags taking an attached-only optional value (-uno, -S<key>, --cleanup=<mode>) are deliberately absent: they never consume the next word.",
@@ -47,6 +51,49 @@
       "-o",
       "--push-option",
       "--refspec"
+    ],
+    "merge": [
+      "-m",
+      "--message",
+      "-F",
+      "--file",
+      "-S",
+      "--gpg-sign",
+      "--strategy",
+      "-s",
+      "--strategy-option",
+      "-X",
+      "--into-name"
+    ],
+    "rebase": [
+      "--onto",
+      "--exec",
+      "-x",
+      "--strategy",
+      "-s",
+      "--strategy-option",
+      "-X"
+    ],
+    "cherry-pick": [
+      "--strategy",
+      "-s",
+      "--strategy-option",
+      "-X",
+      "-m",
+      "--mainline"
+    ],
+    "revert": [
+      "--strategy",
+      "-s",
+      "--strategy-option",
+      "-X",
+      "-m",
+      "--mainline"
+    ],
+    "am": [
+      "--patch-format",
+      "-S",
+      "--gpg-sign"
     ]
   },
   "forms": [
@@ -55,7 +102,8 @@
       "detector": "git_flag",
       "subcommand": "commit",
       "flags": [
-        "--no-verify"
+        "--no-verify",
+        "--no-pre-commit-hook"
       ],
       "short_flags": [
         "n"
@@ -74,6 +122,71 @@
       "$comment": "No short form: `git push -n` is --dry-run, which is read-only and must stay allowed.",
       "label": "git push --no-verify",
       "why": "skips pre-push hooks, the last check before the work leaves the machine"
+    },
+    {
+      "id": "git-merge-no-verify",
+      "detector": "git_flag",
+      "subcommand": "merge",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
+      "label": "git merge --no-verify",
+      "why": "`git merge` can create a commit, and --no-verify skips the pre-merge-commit and commit-msg hooks that would verify it"
+    },
+    {
+      "id": "git-rebase-no-verify",
+      "detector": "git_flag",
+      "subcommand": "rebase",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
+      "label": "git rebase --no-verify",
+      "why": "`git rebase` can create a commit, and --no-verify skips the pre-merge-commit and commit-msg hooks that would verify it"
+    },
+    {
+      "id": "git-cherry-pick-no-verify",
+      "detector": "git_flag",
+      "subcommand": "cherry-pick",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
+      "label": "git cherry-pick --no-verify",
+      "why": "`git cherry-pick` can create a commit, and --no-verify skips the pre-merge-commit and commit-msg hooks that would verify it"
+    },
+    {
+      "id": "git-revert-no-verify",
+      "detector": "git_flag",
+      "subcommand": "revert",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
+      "label": "git revert --no-verify",
+      "why": "`git revert` can create a commit, and --no-verify skips the pre-merge-commit and commit-msg hooks that would verify it"
+    },
+    {
+      "id": "git-am-no-verify",
+      "detector": "git_flag",
+      "subcommand": "am",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
+      "label": "git am --no-verify",
+      "why": "`git am` can create a commit, and --no-verify skips the pre-merge-commit and commit-msg hooks that would verify it"
     },
     {
       "id": "git-hookspath-override",

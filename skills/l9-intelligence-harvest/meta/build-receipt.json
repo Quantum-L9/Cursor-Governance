@@ -1,0 +1,36 @@
+{
+  "compiler": "l9-skill-compiler-v2.0.0",
+  "gates": {
+    "activation_eval": "PASS",
+    "authority_preservation": "PASS",
+    "capability_closure": "RUNTIME_BOUND",
+    "chatgpt_skill_validation": "PASS",
+    "evidence_precedence": "PASS",
+    "invariant_closure": "PASS_20_OF_20",
+    "package_integrity": "PASS",
+    "python_compile": "PASS",
+    "qualification_closure": "PASS",
+    "sample_runtime": "PASS",
+    "self_test": "PASS",
+    "semantic_portability": "PASS",
+    "static_validate": "PASS",
+    "unit_tests": "PASS_32"
+  },
+  "not_performed": [
+    "repository wiring",
+    "registry mutation",
+    "commit",
+    "push",
+    "pull request",
+    "merge"
+  ],
+  "primary_family": "diagnostic",
+  "reason": "v1.1.0 harvested-invariant reconciliation complete; 20/20 identified semantic nuggets are integrated with executable or schema/policy enforcement; canonical DAG registration remains intentionally runtime-bound.",
+  "runtime_bound": [
+    "canonical SessionDAG authoring/registration via l9-dag-authoring in target repository"
+  ],
+  "skill": "l9-intelligence-harvest",
+  "status": "PARTIAL",
+  "topology_decision": "CREATE_NEW",
+  "version": "1.1.0"
+}

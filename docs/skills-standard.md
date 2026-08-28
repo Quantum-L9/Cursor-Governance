@@ -92,5 +92,11 @@ Decision recorded 2026-08-13: **flag-all**. Relocate `_archived/` to
 Discovery footprint is the skills equivalent of the rules always-apply budget.
 It is the only skill cost paid on every turn.
 
+A `SKILL.md` under a pack's own `tests/fixtures/` is a test fixture, not a
+skill: it is never registered in `AUTONOMY_MANIFEST.yaml`, never symlinked into
+an adapter, and never loaded on a turn. Those files are excluded from both the
+live count and the footprint, so the budget measures what agents actually
+discover.
+
 Empty `paths:` is forbidden. An empty glob hides the skill; omit the key
 instead.

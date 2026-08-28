@@ -1,0 +1,211 @@
+{
+  "artifacts": [
+    {
+      "bytes": 4074,
+      "path": "SKILL.md",
+      "sha256_16": "4ae777ab9623c029"
+    },
+    {
+      "bytes": 132,
+      "path": "agents/openai.yaml",
+      "sha256_16": "8765db3f454b5f90"
+    },
+    {
+      "bytes": 1041,
+      "path": "contracts/evidence.schema.json",
+      "sha256_16": "7c4b5248464b3edc"
+    },
+    {
+      "bytes": 12993,
+      "path": "contracts/harvest-ir.schema.json",
+      "sha256_16": "ef58ac05848d6483"
+    },
+    {
+      "bytes": 721,
+      "path": "contracts/harvest-receipt.schema.json",
+      "sha256_16": "3dd74024ccf29a93"
+    },
+    {
+      "bytes": 1129,
+      "path": "contracts/harvest-request.schema.json",
+      "sha256_16": "ebe2a8ef12d58415"
+    },
+    {
+      "bytes": 2643,
+      "path": "meta/activation-eval.json",
+      "sha256_16": "e41394b9c193dda9"
+    },
+    {
+      "bytes": 1174,
+      "path": "meta/build-receipt.json",
+      "sha256_16": "f017c14c1edc372d"
+    },
+    {
+      "bytes": 4005,
+      "path": "meta/capability-closure.json",
+      "sha256_16": "1110d70809fcf3e3"
+    },
+    {
+      "bytes": 5623,
+      "path": "meta/invariant-closure.yaml",
+      "sha256_16": "75f021c70b504989"
+    },
+    {
+      "bytes": 396,
+      "path": "meta/profile-decision.yaml",
+      "sha256_16": "2bc006feff2811ce"
+    },
+    {
+      "bytes": 99,
+      "path": "meta/pytest.txt",
+      "sha256_16": "6290fd67fe0494e4"
+    },
+    {
+      "bytes": 5,
+      "path": "meta/self-test.txt",
+      "sha256_16": "c26de83abdc9496c"
+    },
+    {
+      "bytes": 19774,
+      "path": "meta/skill-ir.draft.json",
+      "sha256_16": "37b2f2ff808428ba"
+    },
+    {
+      "bytes": 19774,
+      "path": "meta/skill-ir.json",
+      "sha256_16": "588f89d972e32530"
+    },
+    {
+      "bytes": 89,
+      "path": "meta/static-validation.json",
+      "sha256_16": "04a6b41a3847ea09"
+    },
+    {
+      "bytes": 492,
+      "path": "meta/topology-decision.yaml",
+      "sha256_16": "24633e3d23244373"
+    },
+    {
+      "bytes": 725,
+      "path": "policies/disposition-policy.yaml",
+      "sha256_16": "fe0426f3624d98f1"
+    },
+    {
+      "bytes": 2870,
+      "path": "policies/harvest-policy.yaml",
+      "sha256_16": "5ee55c62a00031f4"
+    },
+    {
+      "bytes": 515,
+      "path": "policies/source-adapters.yaml",
+      "sha256_16": "f8063ce121bd69ab"
+    },
+    {
+      "bytes": 1054,
+      "path": "references/beneficiary-fit-contract.md",
+      "sha256_16": "d7842e14759f26fe"
+    },
+    {
+      "bytes": 922,
+      "path": "references/concept-extraction-contract.md",
+      "sha256_16": "f1ef326e2cb058af"
+    },
+    {
+      "bytes": 848,
+      "path": "references/system-reconstruction-contract.md",
+      "sha256_16": "976b726045eb5219"
+    },
+    {
+      "bytes": 544,
+      "path": "scripts/_common.py",
+      "sha256_16": "67692ceff09f3d41"
+    },
+    {
+      "bytes": 731,
+      "path": "scripts/bind_request.py",
+      "sha256_16": "7191d5c9b492990f"
+    },
+    {
+      "bytes": 989,
+      "path": "scripts/inventory_source.py",
+      "sha256_16": "f3e3d89c01029405"
+    },
+    {
+      "bytes": 2358,
+      "path": "scripts/qualify_nuggets.py",
+      "sha256_16": "e9dbcbdf4251f06e"
+    },
+    {
+      "bytes": 682,
+      "path": "scripts/rank_nuggets.py",
+      "sha256_16": "24991fbdad023e90"
+    },
+    {
+      "bytes": 3400,
+      "path": "scripts/render_brief.py",
+      "sha256_16": "a5442e807b665261"
+    },
+    {
+      "bytes": 2082,
+      "path": "scripts/self_test.py",
+      "sha256_16": "5849a1cb3f124f27"
+    },
+    {
+      "bytes": 4438,
+      "path": "scripts/validate_harvest.py",
+      "sha256_16": "54276196db754b52"
+    },
+    {
+      "bytes": 753,
+      "path": "tests/fixtures/activation.json",
+      "sha256_16": "ff494347ba47724a"
+    },
+    {
+      "bytes": 2329,
+      "path": "tests/fixtures/harvest.valid.json",
+      "sha256_16": "1897b6a458f054dc"
+    },
+    {
+      "bytes": 1163,
+      "path": "tests/test_acceptance_boundaries.py",
+      "sha256_16": "49f1194bba339db0"
+    },
+    {
+      "bytes": 1312,
+      "path": "tests/test_evidence_closure.py",
+      "sha256_16": "80e2d8542aadc431"
+    },
+    {
+      "bytes": 8063,
+      "path": "tests/test_harvested_invariants.py",
+      "sha256_16": "9ac7c407f9af0f4f"
+    },
+    {
+      "bytes": 1142,
+      "path": "tests/test_portability_authority.py",
+      "sha256_16": "c9b941218547f09e"
+    },
+    {
+      "bytes": 1786,
+      "path": "tests/test_qualification.py",
+      "sha256_16": "d53af71b0ff41daf"
+    },
+    {
+      "bytes": 398,
+      "path": "tests/test_ranking.py",
+      "sha256_16": "6a1e2aff8b444a62"
+    },
+    {
+      "bytes": 425,
+      "path": "tests/test_security_and_activation.py",
+      "sha256_16": "46c0ce47ee83f09e"
+    }
+  ],
+  "empty_files": [],
+  "file_count": 40,
+  "invariant_closure": "20/20",
+  "missing": [],
+  "stage": "PACKAGE",
+  "status": "PASS",
+  "version": "1.1.0"
+}

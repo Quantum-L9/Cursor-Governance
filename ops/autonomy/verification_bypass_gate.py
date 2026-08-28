@@ -111,13 +111,24 @@ def _authorized(contract: dict[str, Any], env: Mapping[str, str] | None = None) 
     """True when a human has set the breakglass with a real reason."""
     source: Mapping[str, str] = os.environ if env is None else env
     breakglass = contract["breakglass"]
-    reason = str(source.get(str(breakglass["env"]), "")).strip()
+    names = [str(breakglass["env"]), *(str(a) for a in breakglass.get("aliases", ()))]
+    reason = ""
+    for name in names:
+        candidate = str(source.get(name, "")).strip()
+        if candidate:
+            reason = candidate
+            break
     if not reason:
         return False
     if not breakglass.get("requires_reason", True):
         return True
     rejected = {str(item).lower() for item in breakglass.get("rejected_reasons", ())}
-    return reason.lower() not in rejected
+    if reason.lower() in rejected:
+        return False
+    # A length floor catches the bare affirmatives the reject-list cannot
+    # enumerate ("ok2", "fine", "later"). Cheap, and it makes the escape hatch
+    # cost a sentence — which is the point of requiring a reason at all.
+    return len(reason) >= int(breakglass.get("min_reason_chars", 0))
 
 
 def _env_prefix(words: Sequence[str]) -> tuple[list[str], list[str]]:
@@ -141,7 +152,15 @@ def _git_parts(words: Sequence[str]) -> tuple[list[str], str | None, list[str]] 
     globals_: list[str] = []
     while index < len(rest):
         word = rest[index]
-        if word in {"-C", "--git-dir", "--work-tree", "--namespace", "-c", "--config-env"}:
+        if word in {
+            "-C",
+            "--git-dir",
+            "--work-tree",
+            "--namespace",
+            "-c",
+            "--config-env",
+            "--exec-path",
+        }:
             globals_.extend(rest[index + 1 : index + 2])
             index += 2
             continue

@@ -1,0 +1,17 @@
+# Gate G Package Record, version 3.8.0
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: GateG_PackageRecord
+type: object
+required: [zip_created, zip_path, zip_name, root_directory, zip_manifest, total_files, archive_bytes, checksum_sha256, validation_status]
+additionalProperties: false
+properties:
+  zip_created: {type: boolean}
+  zip_path: {type: string}
+  zip_name: {type: string, const: "skill.zip"}
+  root_directory: {type: string, const: "."}
+  zip_manifest: {type: array, minItems: 1, items: {type: string}}
+  total_files: {type: integer, minimum: 1}
+  archive_bytes: {type: integer, minimum: 1}
+  checksum_sha256: {type: string, pattern: "^[a-f0-9]{64}$"}
+  validation_status: {type: string, enum: [all_passed, passed_with_not_applicable, blocked]}
+  unknowns: {type: array, items: {type: string}}
