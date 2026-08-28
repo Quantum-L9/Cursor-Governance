@@ -18,9 +18,9 @@ Companion `.plan.json` / `.activate.yaml` files stay next to their `.plan.md`.
 ## Shelves (existing mechanics)
 
 Only **top-level** `*.plan.md` files are live for Cursor Build and session-start
-`l9-plan-audit` (root glob only). Folders hold everything else. On-demand
-organize is `/l9-audit-plans`. Multi-surface harvest (plans + WIP +
-campaigns) is `/l9-pipeline-audit`. Neither is the sessionStart skill.
+(root glob only). Folders hold everything else. SessionStart `### Plan audit`
+is `l9-pipeline-audit` against this store plus `WIP/` and PE campaigns.
+On-demand organize is `/l9-audit-plans`. On-demand harvest is `/l9-pipeline-audit`.
 
 | Location | Meaning |
 |---|---|
@@ -56,8 +56,7 @@ Current unbuilt only. Partial work is in `partially-built/` (`pe_fast_002_prepar
 1. `pe_loop_compiled_8-28-26` — first Compiled packet (PE-loop invariants; `/gmp`)
 2. `memory_outbox_drain_7c4a1e93` — RC-3 outbox drain (this-week hex; Cursor Build)
 3. `worktree_parent_clone_8-20-26` — shared isolation root cause (parent ≠ live SSOT)
-4. `make-program-execution-start-cleanly-gap-only_8-15-26` — PE start still open (`compiled_into: pe_loop_compiled_8-28-26`)
-5. `in-flight_pr_census_8-20-26` — one collision engine for sessionStart + `make pr`
+4. `in-flight_pr_census_8-20-26` — one collision engine for sessionStart + `make pr`
 6. `l4_publish_allow_8-20-26` — sole publish path
 7. `pe_unified_loop_8-20-26` — loop seams on what already landed (`compiled_into` stamped; not whole-file superseded)
 8. `pe_pipeline_fix_program_8-20-26` — factory friction (`compiled_into` stamped; not whole-file superseded)

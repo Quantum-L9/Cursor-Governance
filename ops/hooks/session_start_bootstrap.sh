@@ -152,7 +152,7 @@ if ! resolve_global_commands; then
 ### Code-graph
 - skipped
 ### Plan audit
-- plan audit: skipped (no SSOT)
+- pipeline audit: skipped (no SSOT)
 EOF
 )"
   COMBINED="$COMBINED" python3 - <<'PY'
@@ -383,41 +383,57 @@ fi
 GOV_HEAD="$(short_sha "$ACTIVATE_SHA")"
 REMOTE_HEAD="$(short_sha "$ACTIVATE_REMOTE_SHA")"
 
-# Plan audit: fail-open, budget-capped; never fail sessionStart.
-PLAN_AUDIT_MD="plan audit: skipped"
-AUDIT_PY="$GC/skills/l9-plan-audit/scripts/audit_plans.py"
-# Prefer SSOT; fall back to open workspace when developing ahead of tip sync.
+# Pipeline audit: fail-open, budget-capped; never fail sessionStart.
+# Heading stays ### Plan audit (bootstrap tests). Store is tracked docs/plans
+# via .cursor/plans → ~/.cursor/plans. Also scans WIP + PE campaigns.
+# Archives spent root plans and inventory-landed WIP only; mixed harvestable
+# donors stay. Never mutates CAMPAIGN_SOURCE.yaml. No auto-Build.
+PLAN_AUDIT_MD="pipeline audit: skipped"
+AUDIT_PY="$GC/skills/l9-pipeline-audit/scripts/audit_pipeline.py"
 if [ ! -f "$AUDIT_PY" ]; then
-  _ws_audit="${CURSOR_PROJECT_DIR:-$PWD}/skills/l9-plan-audit/scripts/audit_plans.py"
+  _ws_audit="${CURSOR_PROJECT_DIR:-$PWD}/skills/l9-pipeline-audit/scripts/audit_pipeline.py"
   if [ -f "$_ws_audit" ]; then
     AUDIT_PY="$_ws_audit"
   fi
 fi
+AUDIT_PY_BIN="$GC/.venv/bin/python"
+[ -x "$AUDIT_PY_BIN" ] || AUDIT_PY_BIN=python3
+ARCHIVE_ARGS=()
+_lock_lib="$GC/ops/scripts/lib/repo_write_lock.sh"
+if [ -f "$_lock_lib" ]; then
+  # shellcheck source=ops/scripts/lib/repo_write_lock.sh
+  . "$_lock_lib"
+  if [ -z "$(repo_write_lock_holder "${CURSOR_PROJECT_DIR:-$PWD}" 2>/dev/null || true)" ]; then
+    ARCHIVE_ARGS+=(--archive-spent)
+  fi
+else
+  ARCHIVE_ARGS+=(--archive-spent)
+fi
 if [ -f "$AUDIT_PY" ]; then
   if command -v timeout >/dev/null 2>&1; then
     PLAN_AUDIT_MD="$(
-      timeout 2 python3 "$AUDIT_PY" \
+      timeout 4 "$AUDIT_PY_BIN" "$AUDIT_PY" \
         --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
+        --gov-root "$GC" \
         --window-days 7 \
-        --format markdown \
-        --budget-chars 1200 \
-        --limit 5 \
-        --deadline-seconds 1.5 \
-        2>/dev/null || echo "plan audit: unavailable"
+        --format session-start \
+        --budget-chars 1600 \
+        "${ARCHIVE_ARGS[@]}" \
+        2>/dev/null || echo "pipeline audit: unavailable"
     )"
   else
     PLAN_AUDIT_MD="$(
-      python3 "$AUDIT_PY" \
+      "$AUDIT_PY_BIN" "$AUDIT_PY" \
         --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
+        --gov-root "$GC" \
         --window-days 7 \
-        --format markdown \
-        --budget-chars 1200 \
-        --limit 5 \
-        --deadline-seconds 1.5 \
-        2>/dev/null || echo "plan audit: unavailable"
+        --format session-start \
+        --budget-chars 1600 \
+        "${ARCHIVE_ARGS[@]}" \
+        2>/dev/null || echo "pipeline audit: unavailable"
     )"
   fi
-  [ -n "$PLAN_AUDIT_MD" ] || PLAN_AUDIT_MD="plan audit: unavailable"
+  [ -n "$PLAN_AUDIT_MD" ] || PLAN_AUDIT_MD="pipeline audit: unavailable"
 fi
 
 COMBINED="$(cat <<EOF

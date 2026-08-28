@@ -1107,7 +1107,7 @@
       "invocation": "explicit_only",
       "name": "l9-pipeline-audit",
       "path": "skills/l9-pipeline-audit",
-      "reason": "on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; not sessionStart l9-plan-audit; disable-model-invocation",
+      "reason": "on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; sessionStart runs audit_pipeline.py display+spent-archive only; disable-model-invocation",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1322,6 +1322,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "63b59bd62d7f6d7de6deda953075083b56dd2094571de727110faad58c542e56",
-  "source_skill_corpus_sha256": "1f094bb114798bedd7e23cad0bb6d1d63c0f82db07610504451d1cb3b8038485"
+  "source_manifest_sha256": "320e700b00dfd0e87b58d6e3a88ccebc6c8e64307743364a88f43525ce59dd38",
+  "source_skill_corpus_sha256": "02b452569233f78e683487468bae50e3f3ec30faed9817ea5106dd491c511722"
 }

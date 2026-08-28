@@ -134,6 +134,6 @@ Re-run the step-1 CLI. Root must be current unbuilt only (plus `_TEMPLATE`).
 
 ## NOTES
 
-- SessionStart `### Plan audit` stays the `l9-plan-audit` skill (display-only, no moves).
+- SessionStart `### Plan audit` is `l9-pipeline-audit` (plans + WIP + campaigns; spent archive only). This slash remains the plans-store shelf organizer.
 - `/plan-audit` is a compatibility alias of `/l9-pipeline-audit`, not this command.
 - Slash: `commands/l9-audit-plans.md`

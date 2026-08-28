@@ -119,7 +119,7 @@ tiers:
   - skill: l9-intelligence-harvest
     reason: donor-to-beneficiary semantic mining is a deliberate operation with a large read surface over a foreign repo; keeps the harvest family (l9-harvest-pipeline, l9-pe-nuggets) explicit; disable-model-invocation
   - skill: l9-pipeline-audit
-    reason: on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; not sessionStart l9-plan-audit; disable-model-invocation
+    reason: on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; sessionStart runs audit_pipeline.py display+spent-archive only; disable-model-invocation
   - skill: l9-pipeline-orchestrator
     reason: drives fresh sessions per contract, applies GitHub branch protection, and gates auto-merge with no human tap — high blast radius; merge authority still comes from /l9-pr-remediation, never from this pack; disable-model-invocation
   - skill: l9-global-architect
