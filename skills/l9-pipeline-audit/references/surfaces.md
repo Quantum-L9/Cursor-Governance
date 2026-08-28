@@ -13,9 +13,13 @@ Same component verdicts as `l9-plan-audit` (`live_invariant`, `stale_wiring`,
 
 | Surface | Root | Spent | Harvest emit |
 |---|---|---|---|
-| plans | `docs/plans/` top-level `*.plan.md` | all todos done / `built` / `superseded` | `docs/plans/<concern>_compiled_M-D-YY.plan.md` |
-| wip | `WIP/` except Legal Defense and secret globs | inventory `landed` / `possible-landed` with sha match | `WIP/<M-D-YY>/<concern>/` |
+| plans | tracked `docs/plans` via `.cursor/plans` → `~/.cursor/plans` | all todos done / `built` / `superseded` | `docs/plans/<concern>_compiled_M-D-YY.plan.md` |
+| wip | `WIP/` except Legal Defense and secret globs | inventory `landed` (sha match or `landed:`); `possible-landed` is leftover | `WIP/<M-D-YY>/<concern>/` |
 | campaigns | `environment/program-execution/campaigns/*/CAMPAIGN_SOURCE.yaml` | lifecycle complete / cancelled | `<campaign>/HARVEST_INTENT.md` |
 
-Do not `git mv` a mixed donor to archive. Do not instantiate a Program Lock.
+SessionStart (`--archive-spent`, fail-open, cap 8) may `shutil.move` spent
+root plans to `built/` or `archive/superseded/` and inventory-`landed` WIP to
+`WIP/_archived/`. Do not move mixed harvestable donors. Do not move
+`CAMPAIGN_SOURCE.yaml`. Do not instantiate a Program Lock.
 Do not write `WIP/INVENTORY.yaml` from this scan (that is `wip_corpus inventory`).
+Skip archive when the repo-write lock is held.

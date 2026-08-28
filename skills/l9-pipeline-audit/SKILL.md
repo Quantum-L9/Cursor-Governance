@@ -16,7 +16,9 @@ metadata:
 # l9-pipeline-audit
 
 On-demand orchestrator. Slash `/l9-pipeline-audit` (alias `/plan-audit`) is the
-explicit invoke. SessionStart `l9-plan-audit` stays plans-only and display-only.
+explicit invoke. SessionStart runs `scripts/audit_pipeline.py --format session-start`
+(heading `### Plan audit`) against tracked `docs/plans` plus `WIP/` and PE
+campaigns. That path archives spent plans and inventory-landed WIP only.
 
 ## Skills this workflow calls
 
@@ -34,7 +36,7 @@ flip it to PE-integrated mode.
 
 ## Compact workflow
 
-1. Run `scripts/audit_pipeline.py --workspace "$(pwd)" --format markdown`.
+1. Run `scripts/audit_pipeline.py --workspace "$(pwd)" --gov-root "$HOME/.cursor-governance" --format markdown`.
 2. List `harvestable` by surface and concern. Do not auto-shelf mixed donors.
 3. Harvest only named donors through `scripts/run_intelligence_harvest.py`.
 4. Emit compiled packets to `docs/plans/`, `WIP/<M-D-YY>/<concern>/`, or a

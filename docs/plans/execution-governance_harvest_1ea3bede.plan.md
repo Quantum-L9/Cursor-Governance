@@ -1,22 +1,22 @@
 ---
 name: execution-governance harvest
-overview: Run the explicit-only `l9-intelligence-harvest` pack with `execution-governance/` as donor and this repo (Quantum-L9/Cursor-Governance) as beneficiary, emitting validated `harvest.json`, `harvest-receipt.json`, and a rendered brief into `WIP/8-28-26/execution-governance-harvest/`. Read-only against donor and beneficiary; no live repo files are edited.
+overview: Run explicit-only l9-intelligence-harvest with execution-governance/ as donor and this repo as beneficiary. Emit harvest.json, harvest-receipt.json, and DONOR-HARVEST-BRIEF.md under WIP/8-28-26/execution-governance-harvest/. Read-only against donor and beneficiary.
 todos:
   - id: bind
     content: Create WIP/8-28-26/execution-governance-harvest/harvest-request.json and bind it with bind_request.py using the locked venv interpreter
     status: completed
   - id: inventory
     content: Run inventory_source.py against execution-governance, then transform the probe rows into IR-shaped inventory items with real classification, action, and evidence_ids
-    status: in_progress
+    status: completed
   - id: reconstruct
     content: "Reconstruct the donor system: populate system, surfaces, drift, and evidence, resolving the dead execution/ import paths, the archived rule-registry.json, the unloaded LaunchAgent, and the never-importable operational-oversight.py wrapper"
-    status: pending
+    status: completed
   - id: concepts
     content: Extract concept candidates, compare each against its live beneficiary owner, assign exactly one disposition, and derive given/when/then/must_not acceptance tests
-    status: pending
+    status: completed
   - id: qualify-rank
     content: Run qualify_nuggets.py then rank_nuggets.py to close qualification and set highest_leverage_nugget
-    status: pending
+    status: in_progress
   - id: validate-render
     content: Run validate_harvest.py to emit harvest-receipt.json, then render_brief.py to emit DONOR-HARVEST-BRIEF.md; do not advance on a failing receipt
     status: pending
@@ -24,29 +24,13 @@ todos:
     content: Scoped commit of the four WIP artifacts with explicit pathspecs
     status: pending
 isProject: false
-kind: simple
-execute_via: cursor-build
-kernel_pass:
-  bound_path: execution-governance_harvest_1ea3bede.plan.md
-  improve:
-    kernel: kernels/Improve.md
-    ran_at: 2026-08-28T22:51:00Z
-    body_sha256: "c24088fb179a71ca237705451093572b73729d0afa0f0ac0fed04cbfd11aac5f"
-    deltas:
-      - "Exclusive write lock: only WIP/8-28-26/execution-governance-harvest/. Donor and live beneficiary stay read-only."
-      - "Bind stays completed; inventory stays the live step. No second plan."
-      - "Disposition set is closed: MERGE_WITH_EXISTING, KEEP_LOCAL, REJECT, STANDALONE, UNKNOWN. No PORT."
-  validate_repair:
-    kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-28T22:51:30Z
-    body_sha256: "c24088fb179a71ca237705451093572b73729d0afa0f0ac0fed04cbfd11aac5f"
-    deltas:
-      - "Same bound path. No exclusive-list ellipsis. No unresolved exclusive lock."
-      - "Probe inventory rows must be transformed before harvest.json; bytes/sha256 are evidence locators only."
-      - "validate_harvest.py must PASS before render_brief.py writes."
 ---
 
 # Intelligence harvest: execution-governance to Cursor-Governance
+
+## Execute via
+
+`/gmp`. Do not press Build. Do not run `make campaign`. Do not admit a Program Lock.
 
 ## Scope and authority
 
@@ -137,10 +121,12 @@ Scoped commit with explicit pathspecs for `WIP/8-28-26/execution-governance-harv
 
 ## Deliverables
 
-- `WIP/8-28-26/execution-governance-harvest/harvest-request.json`
-- `WIP/8-28-26/execution-governance-harvest/harvest.json`
-- `WIP/8-28-26/execution-governance-harvest/harvest-receipt.json`
-- `WIP/8-28-26/execution-governance-harvest/DONOR-HARVEST-BRIEF.md`
+Write only these four files under `WIP/8-28-26/execution-governance-harvest/`:
+
+- `harvest-request.json`
+- `harvest.json`
+- `harvest-receipt.json`
+- `DONOR-HARVEST-BRIEF.md`
 
 ## Out of scope
 

@@ -22,8 +22,9 @@ Harvest live invariants through skill **`l9-intelligence-harvest`**. Emit
 compiled packets as a new plan, `WIP/<M-D-YY>/<concern>/`, or a campaign
 `HARVEST_INTENT.md`. Execute those packets with `/gmp`.
 
-This is **not** sessionStart skill `l9-plan-audit` (plans-only, display-only).
-This is **not** `/l9-audit-plans` (plans-store shelf organize only).
+SessionStart uses this pack's `audit_pipeline.py --format session-start`
+(same three surfaces; heading stays `### Plan audit`). On-demand harvest
+stays this slash. This is **not** `/l9-audit-plans` (plans-store shelf only).
 This is **not** `/harvest` / `l9-harvest-pipeline` (sed/cp deploy).
 
 Do **not** auto-Build. Do **not** run `make campaign`. Do **not** admit a
