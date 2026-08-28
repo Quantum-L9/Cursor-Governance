@@ -1535,7 +1535,7 @@
     },
     {
       "path": "peer_execution/autonomy/worker_lane.py",
-      "sha256": "772be67f10e7fb4300f7d7d1fe1c01f180ab7ab74a7a9c8577e2a8387a2e502a"
+      "sha256": "f792c249d5751e47771d87da5bafd518b2bf9bee732e1f4f74e78cb03b939687"
     },
     {
       "path": "peer_execution/base.py",
@@ -1911,7 +1911,7 @@
     },
     {
       "path": "tests/hardening/test_concurrent_worktree_isolation.py",
-      "sha256": "0627986bde4ab9886ae0b316640b8e347a17890c4297d94feaed6e082b72aeeb"
+      "sha256": "fcf544cfb5eb6c1ee2af0b3dbffc89af12ac449b4d561eb5045c5324e0b53830"
     },
     {
       "path": "tests/hardening/test_hardening_authority.py",

@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import os
 import re
 import shutil
 import subprocess
-from collections.abc import Sequence
+from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -19,6 +21,47 @@ class CommandResult:
     returncode: int
     stdout: str
     stderr: str
+
+
+@contextlib.contextmanager
+def _worktree_registry_lock(repo: Path) -> Iterator[None]:
+    """Serialize `git worktree add` against itself for one repository.
+
+    `git worktree add` is not reentrant on a single repo. It creates
+    `.git/worktrees/<name>/` and then writes `commondir` into it, and any
+    concurrent invocation walks that directory while validating the existing
+    registry. Landing in the window between the mkdir and the write makes the
+    second call read a file that is present but empty, and it dies with
+
+        fatal: failed to read .git/worktrees/<other>/commondir: Success
+
+    The `Success` is the tell: errno 0, a short read rather than an I/O error.
+
+    A lane is per-action and actions start concurrently by design, so two
+    workers racing here is the normal path, not a test artifact. The critical
+    section is one subprocess, so a lock costs nothing measurable and removes
+    the race outright -- unlike a retry, which only makes the window smaller.
+
+    An advisory `flock`, so it holds across processes and not merely across
+    threads: lanes are created by separate workers, not one interpreter. If the
+    lock file cannot be created (a read-only or exotic `.git`), proceed
+    unlocked rather than fail: the unlocked path is exactly today's behavior.
+    """
+    lock_path = repo / ".git" / "l9-worktree-registry.lock"
+    try:
+        lock_path.parent.mkdir(parents=True, exist_ok=True)
+        handle = lock_path.open("a+")
+    except OSError:
+        yield
+        return
+    try:
+        fcntl.flock(handle.fileno(), fcntl.LOCK_EX)
+        try:
+            yield
+        finally:
+            fcntl.flock(handle.fileno(), fcntl.LOCK_UN)
+    finally:
+        handle.close()
 
 
 class GitWorktreeLane:
@@ -63,7 +106,11 @@ class GitWorktreeLane:
         else:
             args.append("--detach")
         args.extend([str(self.path), ref])
-        result = self._git(args)
+        # Only the registry-mutating call is serialized; everything else in
+        # lane setup, including the wiring subprocess below, still runs
+        # concurrently.
+        with _worktree_registry_lock(self.repo):
+            result = self._git(args)
         if result.returncode != 0:
             raise RuntimeError(f"git worktree add failed: {result.stderr.strip()}")
         script = Path(__file__).resolve().parents[4] / "ops/scripts/ensure_workspace_wired.sh"
