@@ -131,7 +131,7 @@
     },
     {
       "path": "adapters/claude-code/provider.py",
-      "sha256": "16d52fb0b1d353e542201d4a5572aa4c2eba0069821492a3a98430331c83534d"
+      "sha256": "65de340481298876f64f0c6d81224eb7740c40f109395b9621bd96b2c40ea26c"
     },
     {
       "path": "adapters/claude-code/stream_parser.py",
@@ -139,11 +139,11 @@
     },
     {
       "path": "adapters/claude-code/tests/test_driver.py",
-      "sha256": "b19f3a601f235c59743dd483082e4a8a1613d2d1e4bf733030bcfbf590dc6b33"
+      "sha256": "93eb7f45d709a26a96a5eb1904fddf8a9424befc242b95d5208964c31c474095"
     },
     {
       "path": "adapters/claude-code/tests/test_turn_budget.py",
-      "sha256": "68b3492c6ef646f06aae4dcecf4620624fd862066dc87b924077ef2fcee5800b"
+      "sha256": "c44104d4643b6931358163b398d96184621aa85d1c1939f35c93982834fe7a52"
     },
     {
       "path": "adapters/codex/ADAPTER.yaml",
@@ -1159,7 +1159,7 @@
     },
     {
       "path": "conformance/schemas/canonical-execution-request.schema.json",
-      "sha256": "5be2686a0dea34aee640a73d78f38c5311073509d16b9a5dfba763c96e6deb77"
+      "sha256": "1280e7d70d95a7558f4f2843f749e1a29f3041a27afc52207df548c1f70c76f5"
     },
     {
       "path": "conformance/schemas/canonical-provider-result.schema.json",
@@ -1307,7 +1307,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/README.md",
-      "sha256": "92978cf398fa31a12e17d0c6b65c8ef7d074688cde92111da0171ac36a10d0b7"
+      "sha256": "aa2f9c40366cfb234ebc850d052e21d7127f2f5fb8a721d7f52b37a48f723287"
     },
     {
       "path": "integrations/autonomy-control-plane/bridge.py",
@@ -1315,11 +1315,15 @@
     },
     {
       "path": "integrations/autonomy-control-plane/contract_mapper.py",
-      "sha256": "ed4ed7cc2bbda5a0a90a38039ddfc1db413f8503e942ebc41921b31092bc4ba7"
+      "sha256": "953323f83ef4c984c470870f367a3078e048ce1763bce0974b34aea2aa442ae3"
     },
     {
       "path": "integrations/autonomy-control-plane/grant.py",
-      "sha256": "5f5c3a3e379b1c4c509ef35663c7386c07eaeedc62ed99d07d995fd99204ccc8"
+      "sha256": "3ad101038f8dc26f161ec7ca4026daac1c26d1047773894f1499f0215b557eb1"
+    },
+    {
+      "path": "integrations/autonomy-control-plane/program_authority.py",
+      "sha256": "5cfd9556713e163ec0e0a8dae9b78e099ee778ac64f64470747b55f9f02de1e2"
     },
     {
       "path": "integrations/autonomy-control-plane/receipt_mapper.py",
@@ -1327,7 +1331,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/tests/test_bridge.py",
-      "sha256": "2d5c315155030e33927043b4a563960f8026f267508647a720fcc9d0733d2494"
+      "sha256": "5e52e07d01261a92acbd790a64f2e7728054e1dea4e085f4ab453bce55a58423"
     },
     {
       "path": "integrations/bootstrap/README.md",
@@ -1567,7 +1571,7 @@
     },
     {
       "path": "peer_execution/execution.py",
-      "sha256": "4896f93782f0a1c7b6e3c65816227bd05fbe88c80f20e38d37bd69cd2edb8bb5"
+      "sha256": "39faa43ee613c4d89bb1d7ff0b076be8826fbb3a1bef7a773ada490fda1f7faf"
     },
     {
       "path": "peer_execution/golden_vectors.py",
@@ -1595,7 +1599,7 @@
     },
     {
       "path": "peer_execution/provider.py",
-      "sha256": "48e301a7eeb4c0713f9426af2be9c654ac205baef34e6cbd7d648573e8334b9e"
+      "sha256": "89bb40aef499d3a5ba435e01a081a71155dd27ac69c72a71f9aa8c3904376a52"
     },
     {
       "path": "peer_execution/pytest.ini",
@@ -1783,7 +1787,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "22d0ba9c82567a264abf0d6cb557696902453282415f47a10a6281b380a4b10e"
+      "sha256": "76a2ae5cfaa55d0098a0b702c36705c5780dcd63d6237a547559460f83de67e5"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1795,7 +1799,7 @@
     },
     {
       "path": "scripts/run_peer_task_pipeline.py",
-      "sha256": "997f7e46c9be0002f8bb6e482c51c48256545348a5cf47995439b92d5a406646"
+      "sha256": "15067c5271432095df07d2aeff93b151f0e055d69481ca611aef58834a6ace5a"
     },
     {
       "path": "scripts/tests/fixtures/architecture-intent-llm-router.md",
@@ -1883,11 +1887,11 @@
     },
     {
       "path": "scripts/tests/test_validate_campaign_promotion.py",
-      "sha256": "02b66338db751139ea8a8b71247e0702347539a1a52619fc7fba7bf17bf8a623"
+      "sha256": "7c5c60451a251117172eeee536a3ddbd0a5482218aee13b455dbca2c568ee5e5"
     },
     {
       "path": "scripts/validate_campaign_promotion.py",
-      "sha256": "176fb77adb6783f5da300b177846c02bfa97e4794eec53aadc2366efb91712f9"
+      "sha256": "141b2564e8f89ae0b06a990bf4cab75c2085921e1c5408e45285d2228a1bb74e"
     },
     {
       "path": "scripts/validate_execution_adapters.py",
