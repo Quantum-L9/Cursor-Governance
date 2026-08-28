@@ -414,9 +414,14 @@ _gate_run_pytest() {
 
 _gate_run_sync() {
   echo "--- sync-generated-artifacts ---"
+  # --pe-manifest reaches environment/program-execution/MANIFEST.json. Without
+  # it the PE manifest is never healed on the publish path and
+  # `make program-execution-conformance` goes red on every PE edit. The
+  # governance-self-check drift job is the other pinned caller.
   python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
     --root "$WS" \
     --changed-file "$changed_file" \
+    --pe-manifest \
     --check
   if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
     if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
@@ -487,6 +492,14 @@ _gate_run_wiring() {
   if [[ "$is_local" -ne 1 || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
     echo "OK: skip wiring (CI or non-writable ~/.cursor)"
     return 0
+  fi
+  # Heal missing gitignored .cursor links under the existing make-pr lock.
+  # Not sessionStart — reconcilers skip while this lock is held. Without the
+  # heal the wiring check below fail-closes on links the gate could have
+  # restored itself.
+  if [[ -x "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" ]]; then
+    L9_WIRE_LINKS_ONLY=1 bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" "$WS" \
+      || echo "WARN: ensure_workspace_wired failed — wiring check will fail-closed"
   fi
   WS_KIND="$(classify_workspace_kind "$WS")"
   if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then

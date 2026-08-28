@@ -143,6 +143,21 @@ def _paragraphs(text: str) -> list[tuple[int, str]]:
     return units
 
 
+#: Sentence and list-item boundaries inside a joined paragraph. Markdown wraps
+#: mid-sentence, so paragraphs are the right unit for *locating* a claim, but
+#: they are too coarse for *asserting* one: an AGENTS.md paragraph that said
+#: "Publish is `git push` ..." and, three bullets later, "If merge is blocked by
+#: required checks" was flagged as claiming push is denied. The denial verb has
+#: to attach to the command, so the claim is tested per clause while the
+#: exemption stays paragraph-wide.
+_CLAUSE_SPLIT = re.compile(r"(?:[.!?]\s+|\s+[-*]\s+|\s+\d+\.\s+)")
+
+
+def _clauses(unit: str) -> list[str]:
+    """Split a joined paragraph into sentence/list-item sized claims."""
+    return [part for part in _CLAUSE_SPLIT.split(unit) if part.strip()]
+
+
 def scan(paths: list[Path]) -> list[str]:
     findings = []
     for path in paths:
@@ -152,8 +167,11 @@ def scan(paths: list[Path]) -> list[str]:
             continue
         rel = path.relative_to(ROOT).as_posix()
         for number, unit in _paragraphs(text):
-            if DENIAL_CLAIM.search(unit) and not ALLOW_LINE.search(unit):
-                findings.append(f"{rel}:{number}: {unit.strip()[:160]}")
+            if not any(DENIAL_CLAIM.search(clause) for clause in _clauses(unit)):
+                continue
+            if ALLOW_LINE.search(unit):
+                continue
+            findings.append(f"{rel}:{number}: {unit.strip()[:160]}")
     return findings
 
 
