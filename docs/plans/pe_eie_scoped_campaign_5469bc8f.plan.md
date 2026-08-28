@@ -16,15 +16,41 @@ todos:
     status: pending
 isProject: false
 compiled_into: pe_loop_compiled_8-28-26
+kind: simple
+execute_via: do-not-execute
+kernel_pass:
+  bound_path: pe_eie_scoped_campaign_5469bc8f.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T20:41:00Z
+    body_sha256: "b9dace0a4b9430f9b29b262520abd558c651313a3bd5e8f28f0f15ac3bcd3a82"
+    deltas:
+      - "Locked this file as compiled donor; live successor is pe_loop_compiled_8-28-26"
+      - "Negated the make campaign block as donor-path forbidden; successor owns the front door"
+      - "Kept the W0 plus W2 isolation slice (Green 6, then 45, then 35, then 40)"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T20:41:30Z
+    body_sha256: "b9dace0a4b9430f9b29b262520abd558c651313a3bd5e8f28f0f15ac3bcd3a82"
+    deltas:
+      - "Re-ran Validate & Repair on the same bound path; no second plan created"
+      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
+      - "Recorded leftover emit todos as compiled-donor inventory, not a live execute DAG"
+      - "EIE baseline 7c4ce259 stays on Enrichment.Inference.Engine main, not this repo"
 ---
+
+# PE EIE scoped campaign (compiled donor)
+
+Do not execute this file. Do not run `make campaign` from this path. The live compiled contract is [`pe_loop_compiled_8-28-26.plan.md`](pe_loop_compiled_8-28-26.plan.md).
 
 # PE EIE scoped campaign (≤30%) for `make campaign`
 
 ## Objective
 
-After this plan is confirmed, emit three PE-admissible artifacts and stop. Do not mutate `app/`, `migrations/`, or other product files from the planning agent. Autonomous product execution starts only at:
+After a later confirm on the **compiled successor**, emit three PE-admissible artifacts and stop. Do not mutate `app/`, `migrations/`, or other product files from this donor file. Do not run the following from this path. The live front door lives on [`pe_loop_compiled_8-28-26.plan.md`](pe_loop_compiled_8-28-26.plan.md):
 
 ```bash
+# Do not run from this donor file.
 make -C "$HOME/.cursor-governance" campaign \
   INTENT="/Users/ib-mac/Enrichment.Inference.Engine/.cursor-commands/WIP/PE EIE/eie-inference-isolation-v1.md"
 ```
