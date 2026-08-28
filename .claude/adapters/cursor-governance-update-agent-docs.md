@@ -10,7 +10,7 @@ First-match adapter for this repository. PlasticOS / Odoo inventory steps do **n
 | `INVARIANTS.md` | This-repo invariant index, CI enforcement map, cited false positives | Managed. Point at `ORG_INVARIANTS.yaml`; do not copy `L9-ORG-*` bodies. |
 | `AGENTS.md` | Operating-instruction SSOT | `additive_only`. Append only. Do not fold. Do not re-dump CI / hook / skill tables that already live here. |
 | `CLAUDE.md` | Load pointer | Managed. Keep short. No Always/Never lists. No CI tables. One-line maps-not-rungs pointer is enough. |
-| `README.md` | Human index | Managed. Surgical pointers only. Required headings/pointers come from `skills/l9-update-agent-docs/references/pointer-heading-map.yaml` — fail closed via `validate_pointer_headings.py`; never generate the file. |
+| `README.md` | Human index | Managed. Surgical pointers only. Required headings/pointers come from `skills/l9-update-agent-docs/references/pointer-heading-map.yaml` — fail closed via `validate_pointer_headings.py`; never generate the root file. Module READMEs go through `scripts/generate_subsystem_readmes.py` + `readme-pipeline-v1`. |
 
 `CANONICAL_LAW.md` and `ORG_INVARIANTS.yaml` are out of scope for this skill.
 

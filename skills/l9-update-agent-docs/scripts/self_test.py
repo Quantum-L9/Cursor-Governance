@@ -26,6 +26,7 @@ DONOR_SECTIONS = ("overview", "airules", "apisurface", "datamodels", "components
 def main() -> int:
     text = SKILL.read_text(encoding="utf-8")
     errors: list[str] = []
+    repo = PACK.parents[1]
     for token in FORBIDDEN:
         if token in text:
             errors.append(f"forbidden kernel wrap token: {token}")
@@ -46,6 +47,12 @@ def main() -> int:
         errors.append("missing pointer-heading-map citation")
     if "validate_pointer_headings.py" not in text:
         errors.append("missing validate_pointer_headings.py citation")
+    if "scripts/generate_subsystem_readmes.py" not in text:
+        errors.append("missing generate_subsystem_readmes.py citation")
+    if "readme-pipeline-v1" not in text:
+        errors.append("missing readme-pipeline-v1 citation")
+    if "config/subsystems/readme_config.yaml" not in text:
+        errors.append("missing readme_config.yaml citation")
     if "Never invent a root file" not in text and "never invent" not in text.lower():
         errors.append("missing bind-before-write never-invent rule")
     # Prohibition mentions are allowed; a Write-table destination is not.
@@ -74,7 +81,6 @@ def main() -> int:
     if not VALIDATOR.is_file():
         errors.append("missing scripts/validate_pointer_headings.py")
     else:
-        repo = PACK.parents[1]
         proc = subprocess.run(
             [sys.executable, str(VALIDATOR), "--root", str(repo)],
             check=False,
@@ -114,6 +120,38 @@ def main() -> int:
                     path.unlink()
             if dishonest.exists():
                 dishonest.rmdir()
+    generator = repo / "scripts" / "generate_subsystem_readmes.py"
+    config = repo / "config" / "subsystems" / "readme_config.yaml"
+    dag = repo / "workflows" / "dags" / "readme_pipeline_dag.py"
+    if not generator.is_file():
+        errors.append("missing scripts/generate_subsystem_readmes.py")
+    if not config.is_file():
+        errors.append("missing config/subsystems/readme_config.yaml")
+    if not dag.is_file():
+        errors.append("missing workflows/dags/readme_pipeline_dag.py")
+    elif "scripts/generate_subsystem_readmes.py" not in dag.read_text(encoding="utf-8"):
+        errors.append("DAG no longer names generate_subsystem_readmes.py")
+    elif "memory/README.md" in dag.read_text(encoding="utf-8"):
+        errors.append("DAG still spots donor memory/README.md")
+    if generator.is_file() and config.is_file():
+        listed = subprocess.run(
+            [sys.executable, str(generator), "--root", str(repo), "--list"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if listed.returncode != 0:
+            errors.append(f"generator --list failed:\n{listed.stdout}{listed.stderr}")
+        elif "ops_autonomy" not in listed.stdout:
+            errors.append("generator --list did not emit ops_autonomy")
+        valid = subprocess.run(
+            [sys.executable, str(generator), "--root", str(repo), "--validate"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if valid.returncode != 0:
+            errors.append(f"generator --validate failed:\n{valid.stdout}{valid.stderr}")
     if errors:
         print("FAIL")
         for item in errors:

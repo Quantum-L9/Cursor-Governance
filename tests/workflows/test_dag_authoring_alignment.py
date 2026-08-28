@@ -316,8 +316,10 @@ def test_workflows_readme_declares_both_graph_kinds():
 
 
 def test_workflows_readme_does_not_claim_an_absent_generator():
-    """auto_generated: true invites deferral; nothing here regenerates the file."""
+    """workflows/README.md stays handwritten; the generator is wired for others."""
     text = (REPO_ROOT / "workflows" / "README.md").read_text(encoding="utf-8")
     front = text.split("---")[1]
     assert "auto_generated: false" in front
-    assert not (REPO_ROOT / "scripts" / "generate_subsystem_readmes.py").exists()
+    assert "generator_present: true" in front
+    assert (REPO_ROOT / "scripts" / "generate_subsystem_readmes.py").is_file()
+    assert (REPO_ROOT / "config" / "subsystems" / "readme_config.yaml").is_file()

@@ -207,10 +207,10 @@ Pre-reading: scripts/generate_subsystem_readmes.py
 python scripts/generate_subsystem_readmes.py --skip-time-verify
 
 # Or specific subsystem
-python scripts/generate_subsystem_readmes.py --subsystem memory --skip-time-verify
+python scripts/generate_subsystem_readmes.py --subsystem ops_autonomy --skip-time-verify
 
 # Or specific tier
-python scripts/generate_subsystem_readmes.py --tier core --skip-time-verify
+python scripts/generate_subsystem_readmes.py --tier operations --skip-time-verify
 ```
 
 Expected output:
@@ -235,14 +235,12 @@ Pre-reading: config/subsystems/readme_config.yaml
    find . -name "README.md" -newer config/subsystems/readme_config.yaml | wc -l
    ```
 
-2. Verify DORA header present:
-   ```bash
-   head -10 memory/README.md  # Should show YAML frontmatter
-   ```
+2. Confirm generated module READMEs (never the repo-root README.md).
 
-3. Run config validation:
+   3. Run config + section validation:
    ```bash
    python scripts/generate_subsystem_readmes.py --validate
+   python scripts/generate_subsystem_readmes.py --validate-sections
    ```
 
 4. Spot-check 3 random READMEs for:
