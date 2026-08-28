@@ -1,0 +1,144 @@
+{
+  "concerns": {
+    "pe-loop": [
+      {
+        "id": "SP-01",
+        "source": "pe_unified_loop_8-20-26.plan.md",
+        "text": "SC-01: baseline locked: origin/main full SHA recorded at execution start; new branch pe/unified-loop created from that SHA with a clean tree (no foreign files)."
+      },
+      {
+        "id": "SP-02",
+        "source": "pe_unified_loop_8-20-26.plan.md",
+        "text": "SC-02: re-land of the 8 unmerged admission/gate fixes (blueprint_ops, accept/collect tools, union-diff verify, L4 named-roots, heredoc-safe matching, memory session-id flags) verified present on the branch with the golden admission loop test passing (main was verified NOT to contain them)."
+      },
+      {
+        "id": "SP-03",
+        "source": "pe_unified_loop_8-20-26.plan.md",
+        "text": "SC-03: dispatch integration test passes: render-contract resolves an execution profile and probes a provider and invokes it; the provider result maps to an attempt-receipt pre-submission; worker_cannot_self_verify invariant holds."
+      },
+      {
+        "id": "SP-04",
+        "source": "pe_unified_loop_8-20-26.plan.md",
+        "text": "SC-04: record-attempt/verify/evaluate-gate/export-handoff call outcome_publisher and enqueue distill jobs (observable via dry-run queue listing)."
+      },
+      {
+        "id": "SP-05",
+        "source": "pe_unified_loop_8-20-26.plan.md",
+        "text": "SC-05: collect_evidence memory-lookup flag returns Graphiti context read-only and fails closed when Graphiti is unreachable (no memory mutation from admission)."
+      },
+      {
+        "id": "SP-06",
+        "source": "pe_unified_loop_8-20-26.plan.md",
+        "text": "SC-06: claim emits per-task autonomy_action_id plus packet skeleton via contract_mapper; unit test asserts the mapping without any autonomy-side mutation."
+      },
+      {
+        "id": "SP-07",
+        "source": "pe_unified_loop_8-20-26.plan.md",
+        "text": "SC-07: EXECUTION_ROUTING_POLICY extended with codex for tightly-scoped mechanical work; no-match routing returns CAPABILITY_UNSUPPORTED; routing golden vectors pass."
+      },
+      {
+        "id": "SP-08",
+        "source": "pe_unified_loop_8-20-26.plan.md",
+        "text": "SC-08: all existing suites stay green: PE conformance (142+), controller (25+), autonomy (56+), compile (5+), campaign-schema (2), plus the shared peer-execution lifecycle test."
+      },
+      {
+        "id": "SP-01",
+        "source": "pe_pipeline_fix_program_8-20-26.plan.md",
+        "text": "SP-01 Baseline matches locked SHA at execution start (git rev-parse HEAD == 95e4c0088919a3fe53fae36d82c36d69f7c13285)"
+      },
+      {
+        "id": "SP-02",
+        "source": "pe_pipeline_fix_program_8-20-26.plan.md",
+        "text": "SP-02 merge_gate denies by default and allows only a valid human authorization file (fixture hook runs)"
+      },
+      {
+        "id": "SP-03",
+        "source": "pe_pipeline_fix_program_8-20-26.plan.md",
+        "text": "SP-03 secrets resolver works from a consumer repo cwd (--check OK)"
+      },
+      {
+        "id": "SP-04",
+        "source": "pe_pipeline_fix_program_8-20-26.plan.md",
+        "text": "SP-04 authed npm install works via ops/secrets/authed_npm.sh wrapper (npm ci in scratch clone)"
+      },
+      {
+        "id": "SP-05",
+        "source": "pe_pipeline_fix_program_8-20-26.plan.md",
+        "text": "SP-05 dependency-publish preflight catches unpublished version and fabricated lock integrity (unit fixtures)"
+      },
+      {
+        "id": "SP-06",
+        "source": "pe_pipeline_fix_program_8-20-26.plan.md",
+        "text": "SP-06 graphiti conflicts filters expired edges (unit fixture)"
+      },
+      {
+        "id": "SP-07",
+        "source": "pe_pipeline_fix_program_8-20-26.plan.md",
+        "text": "SP-07 policy YAMLs parse and encode the new operating defaults (structural assertions)"
+      },
+      {
+        "id": "SP-08",
+        "source": "pe_pipeline_fix_program_8-20-26.plan.md",
+        "text": "SP-08 quality gates PASS on changed files (make pr-check)"
+      },
+      {
+        "id": "SP-09",
+        "source": "pe_pipeline_fix_program_8-20-26.plan.md",
+        "text": "SP-09 no in-flight pe/pipeline-fixes file modified by this program (diff name check)"
+      },
+      {
+        "id": "overview",
+        "source": "pe_eie_scoped_campaign_5469bc8f.plan.md",
+        "text": "Distill the 9-file PE EIE audit plus Repair Order into one compile_brief-admissible INTENT memo covering at most 30% of the corpus (inference + tenant/Alembic isolation), then emit a validated l9-plan dual artifact that hands that memo to the live PE front door."
+      },
+      {
+        "id": "SP-01",
+        "source": "make-program-execution-start-cleanly-gap-only_8-15-26.plan.md",
+        "text": "Cursor sessionStart live path (before exit 0) invokes ops/scripts/bootstrap_agent_environment.sh --surface cursor; a test fails if that call edge is removed"
+      },
+      {
+        "id": "SP-02",
+        "source": "make-program-execution-start-cleanly-gap-only_8-15-26.plan.md",
+        "text": "One machine-readable runtime readiness receipt answers which governance/runtime revisions and state roots a PE invocation will use; UNKNOWN is explicit; unverified mixed revisions fail before PE"
+      },
+      {
+        "id": "SP-03",
+        "source": "make-program-execution-start-cleanly-gap-only_8-15-26.plan.md",
+        "text": "Phase-lock acquire and governed mutation verify use the same session_id, namespace, workspace, and memory_state_root; mismatch prints both identities"
+      },
+      {
+        "id": "SP-04",
+        "source": "make-program-execution-start-cleanly-gap-only_8-15-26.plan.md",
+        "text": "pec preflight returns ready/blockers/next_action for draft-admission, reconcile, lease, holder, PREPARED, actor, writable paths, and phase-lock without first failing a controller command"
+      },
+      {
+        "id": "SP-05",
+        "source": "make-program-execution-start-cleanly-gap-only_8-15-26.plan.md",
+        "text": "draft-contract / compile cannot report success for an artifact the immediate consumer rejects"
+      },
+      {
+        "id": "SP-06",
+        "source": "make-program-execution-start-cleanly-gap-only_8-15-26.plan.md",
+        "text": "A clean-temp-state integration test reaches EXECUTING and records one schema-valid attempt receipt using real pec.py entrypoints"
+      },
+      {
+        "id": "SP-07",
+        "source": "make-program-execution-start-cleanly-gap-only_8-15-26.plan.md",
+        "text": "Existing Graphiti and controller safety gates remain enforced"
+      },
+      {
+        "id": "overview",
+        "source": "make-program-execution-start-cleanly-gap-only_8-15-26.plan.md",
+        "text": "After merging #168/#169/#170, finish only the remaining Cursor sessionStart \u2192 shared bootstrap \u2192 runtime receipt \u2192 Graphiti lock identity \u2192 PE preflight \u2192 producer/consumer \u2192 clean-runtime smoke path. Do not recreate bootstrap_agent_environment.sh, Claude install delegation, pre-commit provisioning, publish-path probe truth, or the secrets capability plane."
+      }
+    ]
+  },
+  "donors": [
+    "pe_unified_loop_8-20-26.plan.md",
+    "pe_pipeline_fix_program_8-20-26.plan.md",
+    "pe_eie_scoped_campaign_5469bc8f.plan.md",
+    "make-program-execution-start-cleanly-gap-only_8-15-26.plan.md"
+  ],
+  "implementation": false,
+  "kernel": "kernels/Gold Nugget Extractor \ud83d\ude80.md"
+}

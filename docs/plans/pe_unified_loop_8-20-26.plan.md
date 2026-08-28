@@ -43,6 +43,7 @@ todos:
     phase: execute
     depends_on: [todo-04, todo-05, todo-07]
 isProject: false
+compiled_into: pe_loop_compiled_8-28-26
 ---
 
 # PLAN: PE unified-loop seam wiring: worker dispatch, receipt-to-distill signals, Graphiti evidence intake, autonomy projection (clean branch off main)

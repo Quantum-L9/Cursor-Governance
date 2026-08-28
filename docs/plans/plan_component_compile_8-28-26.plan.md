@@ -1,109 +1,149 @@
 ---
-name: Make Program Execution start cleanly (gap only)
-overview: "After merging #168/#169/#170, finish only the remaining Cursor sessionStart → shared bootstrap → runtime receipt → Graphiti lock identity → PE preflight → producer/consumer → clean-runtime smoke path. Do not recreate bootstrap_agent_environment.sh, Claude install delegation, pre-commit provisioning, publish-path probe truth, or the secrets capability plane."
+name: Compile harvestable plan components into GMP Compiled plans
+overview: "Replace the binary plan-shelf verdict with a per-component classifier so a stale or superseded mission can still donate live invariants. Harvest those invariants without implementation, consolidate them by concern, and emit compiled plans that execute via /gmp. Do not use Program Execution to fix Program Execution."
 todos:
-  - id: T1
-    content: "Delegate Cursor sessionStart generic hydration to the existing shared bootstrap; keep only Cursor JSON/hydrate/plan-audit/wiring report in the hook; delete dead probe after exit 0; drop duplicated scratch_hold and inline uv sync that shared bootstrap already owns"
-    status: pending
+  - id: todo-01-baseline-preflight
+    content: "Cut a wired worktree from fetched origin/main, lock that full SHA, copy this plan onto the branch, and re-run CP-01..CP-04. Stop and replan on SHA drift. Do not execute on the dirty primary checkout."
+    status: cancelled
     phase: execute
     depends_on: []
-  - id: T2
-    content: "Materialize one runtime readiness receipt at shared-bootstrap time with required revision/state-root fields; UNKNOWN not omitted; mixed unverified revisions fail closed before PE"
-    status: pending
+  - id: todo-02-component-verdict-law
+    content: "Write the component-verdict contract: live_invariant, stale_wiring, superseded_mission, spent. A mixed plan stays harvestable. compiled: true is a live PE tag, not a built skip. Donors use status: superseded plus compiled_into after harvest."
+    status: completed
     phase: execute
-    depends_on: [T1]
-  - id: T3
-    content: "Unify Graphiti session/lock/gate identity: workspace_root honors CURSOR_PROJECT_DIR; phase-lock SET (not setdefault) CURSOR_CONVERSATION_ID; lock status and memory_gate print both identities/state roots on mismatch; add bind→acquire→query→mutation-precheck integration test"
-    status: pending
+    depends_on: [todo-01-baseline-preflight]
+  - id: todo-03-classifier-emit
+    content: "Extend audit_plans.py to emit per-component verdicts and a harvestable count without moving files. SessionStart stays display-only and fail-open. Keep the PyYAML fallback and Do **not** run make-campaign prohibition. Add mixed-verdict fixtures to self_test.py."
+    status: completed
     phase: execute
-    depends_on: [T2]
-  - id: T4
-    content: "Extend pec with preflight that inspects receipt, worktree, Blueprint/Source Contract admission, lease/holder/actor, writable paths, lock, controller state, and returns structured next_action for each historical friction state"
-    status: pending
+    depends_on: [todo-02-component-verdict-law]
+  - id: todo-04-audit-plans-harvest-step
+    content: "Add a harvest-candidate report to /l9-audit-plans after the live-queue scan. It lists harvestable components by concern. It must not auto-Build, auto-compile, or auto-shelf a mixed plan as superseded."
+    status: completed
     phase: execute
-    depends_on: [T2]
-  - id: T5
-    content: "Make draft-contract materialize consumer-required rollback/writable_paths from Blueprint task source and validate against validate_source_contract before reporting success; keep compile→template validate (already landed) and add register-contract consumer check"
-    status: pending
+    depends_on: [todo-03-classifier-emit]
+  - id: todo-05-harvest-invariants
+    content: "Add harvest_plan_invariants.py that reads Gold Nugget Extractor by path and writes invariants-only receipts grouped by concern. No implementation code. No l9-harvest-pipeline. No new l9-intelligence-harvest skill. Fail closed if a receipt contains code fences destined for deploy."
+    status: completed
     phase: execute
-    depends_on: [T4]
-  - id: T6
-    content: "Add one clean-temp-state smoke that bootstraps environment, writes receipt, binds session, reconciles repo, lock, pec preflight, bootstrap, claim, prepare, start, and one valid attempt receipt via real entrypoints — no exploratory failures"
-    status: pending
+    depends_on: [todo-03-classifier-emit]
+  - id: todo-06-gar-compile-by-concern
+    content: "Explicitly boot l9-global-architect in STANDALONE mode, load runtime/MANIFEST.yaml in load_order, and compile harvest receipts into one concern map. Repository presence must not flip GAR into PE-integrated mode. Output is a concern bundle, not product code."
+    status: cancelled
     phase: execute
-    depends_on: [T1, T2, T3, T4, T5]
+    depends_on: [todo-05-harvest-invariants]
+  - id: todo-07-emit-compiled-pe-plans
+    content: "For each concern bundle, run l9-plan (not l9-plan-simple): validate_plan_document.py PASS, render_plan_pe_autonomy.py --execute-via pe-campaign, kernel receipt PASS. Frontmatter compiled: true, kind: pe. Stamp donor compiled_into. Land compiled plans at docs/plans root."
+    status: completed
+    phase: execute
+    depends_on: [todo-06-gar-compile-by-concern]
+  - id: todo-08-rewire-stale-pe
+    content: "On each compiled plan, replace stale PE wires: restore a live Execute via @environment/program-execution heading, bind Program Lock and Controller lease, and remove leftover Cursor-Build-only execute paths. Keep Do not run make campaign only as a prohibition on simple leftovers, not as the execute path."
+    status: cancelled
+    phase: execute
+    depends_on: [todo-07-emit-compiled-pe-plans]
+  - id: todo-09-e2e-conformance
+    content: "Prove each compiled concern on the execute worktree: make program-execution-conformance, then the campaign probe named by that plan. Fail closed on empty commands or inspection-only compiled tasks."
+    status: cancelled
+    phase: execute
+    depends_on: [todo-08-rewire-stale-pe]
+  - id: todo-10-converge
+    content: "Run l9-plan-audit self_test and harvest extractor tests, make pr-check on the changed set, then PR_REMEDIATE=0 make pr. Do not merge. Write Graphiti PICKUP for the compiled cohort."
+    status: cancelled
+    phase: execute
+    depends_on: [todo-04-audit-plans-harvest-step, todo-09-e2e-conformance]
 isProject: false
-compiled_into: pe_loop_compiled_8-28-26
+kind: simple
+execute_via: gmp
+kernel_pass:
+  bound_path: plan_component_compile_8-28-26.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T19:20:00Z
+    body_sha256: "7eb4a5984eeae4a46f1351819d5f9e84f0cb04ea451d03bb8f60201941218607"
+    deltas:
+      - "User override: execute this compile via /gmp, not Program Execution"
+      - "Neutralized the live make campaign command and PE execute heading"
+      - "Cancelled PE worktree, GAR-integrated boot, PE rewire, and campaign-conformance todos"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T19:21:00Z
+    body_sha256: "7eb4a5984eeae4a46f1351819d5f9e84f0cb04ea451d03bb8f60201941218607"
+    deltas:
+      - "compiled packets are kind:simple / execute_via:gmp; donors carry compiled_into only"
+      - "Harvest CLI refuses implementation fences; first pe-loop packet emitted"
+      - "Stamped kernel_pass after Improve then Validate and Repair"
 ---
 
-# PLAN: Make Program Execution start cleanly (gap only)
+# PLAN: Compile harvestable plan components into GMP Compiled plans
 
-> **Projected by** `scripts/render_plan_pe_autonomy.py` from validated PLAN_DOCUMENT JSON.
+> **GMP override 2026-08-28:** execute this compile via `/gmp`. Do **not** run `make campaign`. Do not admit a Program Lock. Compiled packets are `kind: simple` / `execute_via: gmp`.
 > **Template SSOT:** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md`
-> **Execute:** `@environment/program-execution` → Program Lock/Controller → `@autonomy` (subordinate).
-> **Suggested filename:** `make-program-execution-start-cleanly-gap-only_254e3579.plan.md`
+> **Suggested filename:** `plan_component_compile_8-28-26.plan.md`
 
 ## Objective (from PLAN_DOCUMENT)
 
-After merging #168/#169/#170, finish only the remaining Cursor sessionStart → shared bootstrap → runtime receipt → Graphiti lock identity → PE preflight → producer/consumer → clean-runtime smoke path. Do not recreate bootstrap_agent_environment.sh, Claude install delegation, pre-commit provisioning, publish-path probe truth, or the secrets capability plane.
+Replace the binary plan-shelf verdict with a per-component classifier so a stale or superseded mission can still donate live invariants. Harvest those invariants without implementation, have Global Architect consolidate them by concern, and emit new PE-wired plans tagged compiled that rewire stale Program Execution wires and prove them with conformance plus e2e.
 
 ### Success properties (seed — complete evidence_type/proof in template sections)
 
 | id | property | evidence_type | proof | blocking |
 |----|----------|---------------|-------|----------|
-| SP-01 | Cursor sessionStart live path (before exit 0) invokes ops/scripts/bootstrap_agent_environment.sh --surface cursor; a test fails if that call edge is removed | quality_gate | observe during PE verify / make pr-check | true |
-| SP-02 | One machine-readable runtime readiness receipt answers which governance/runtime revisions and state roots a PE invocation will use; UNKNOWN is explicit; unverified mixed revisions fail before PE | quality_gate | observe during PE verify / make pr-check | true |
-| SP-03 | Phase-lock acquire and governed mutation verify use the same session_id, namespace, workspace, and memory_state_root; mismatch prints both identities | quality_gate | observe during PE verify / make pr-check | true |
-| SP-04 | pec preflight returns ready/blockers/next_action for draft-admission, reconcile, lease, holder, PREPARED, actor, writable paths, and phase-lock without first failing a controller command | quality_gate | observe during PE verify / make pr-check | true |
-| SP-05 | draft-contract / compile cannot report success for an artifact the immediate consumer rejects | quality_gate | observe during PE verify / make pr-check | true |
-| SP-06 | A clean-temp-state integration test reaches EXECUTING and records one schema-valid attempt receipt using real pec.py entrypoints | quality_gate | observe during PE verify / make pr-check | true |
-| SP-07 | Existing Graphiti and controller safety gates remain enforced | quality_gate | observe during PE verify / make pr-check | true |
+| SP-01 | Classifier output names each scanned component as live_invariant, stale_wiring, superseded_mission, or spent, and a plan with mixed verdicts is not forced into a single built or superseded shelf. | quality_gate | observe during PE verify / make pr-check | true |
+| SP-02 | Harvest writes an invariants-only receipt: no implementation files, no sed/cp deploy through l9-harvest-pipeline, and every invariant cites a source plan path plus a concern id. | quality_gate | observe during PE verify / make pr-check | true |
+| SP-03 | A compiled plan is a new artifact with compiled: true, kind: simple, execute_via: gmp, and is not marked status: superseded. | quality_gate | observe during /gmp validate | true |
+| SP-04 | Donor plans that were harvested gain compiled_into pointing at the compiled plan; they are not whole-file superseded. SessionStart still lists mixed donors as unbuilt until spent. | quality_gate | observe during /gmp validate | true |
+| SP-05 | Compiled plans execute via /gmp. They must not carry a live Execute via @environment/program-execution heading or an unnegated make campaign as the execute path. | quality_gate | observe during /gmp validate | true |
+| SP-06 | make program-execution-conformance and the campaign probe targeted by the compiled plan PASS on the execute worktree. | quality_gate | observe during PE verify / make pr-check | true |
+| SP-07 | make pr-check PASS on the changed-file set; PR_REMEDIATE=0 make pr opens or updates one PR; no merge. | quality_gate | observe during PE verify / make pr-check | true |
 
 ## Scope (from PLAN_DOCUMENT)
 
-**In:** ops/hooks/session_start_bootstrap.sh Cursor-specific orchestration only, ops/scripts/bootstrap_agent_environment.sh receipt + session identity stamp (extend, do not replace), ops/scripts/write_runtime_readiness_receipt.py (new) + environment/agents/runtime_paths.py helper, environment/agents/adapters/claude-code/memory/memory_state.py workspace_root + session_id resolver, environment/agents/adapters/claude-code/memory/graphiti_bridge.py SET CURSOR_CONVERSATION_ID, environment/agents/adapters/claude-code/hooks/memory_lock.py and memory_gate.py identity diagnostics, environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py preflight, environment/program-execution/core/program-execution-controller-template/scripts/pec/preflight.py (new, extend pec), environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py draft materialization, tests: Cursor→shared-bootstrap edge, receipt/mixed-revision, lock/gate identity, pec preflight states, producer/consumer, clean PE smoke
+**In:** skills/l9-plan-audit/scripts/audit_plans.py — component verdicts plus harvestable report, skills/l9-plan-audit/scripts/self_test.py — mixed-verdict and compiled-tag fixtures, skills/l9-plan-audit/references/staleness-rules.md — component law, skills/l9-plan-audit/scripts/harvest_plan_invariants.py — new invariants-only extractor citing kernels/Gold Nugget Extractor by path, commands/l9-audit-plans.md — harvest-candidate step; still no auto-Build and no auto-compile, docs/plans/README.md — compiled tag, donor compiled_into, no new pe/ci/date folder, Explicit l9-global-architect invocation to consolidate harvest receipts by concern, l9-plan PE projection of each compiled plan (not l9-plan-simple), PE rewire of stale wires on those compiled plans, then program-execution-conformance plus campaign probe, First compile cohort: current root PE-kind plans flagged kernel_unfired or missing_execute_section, plus parked donors that still hold invariants
 
 **Out:**
-- Do not create a campaign, campaign sources, task cards, ledgers, or nested PE program for this work
-- Do not recreate ops/scripts/bootstrap_agent_environment.sh (landed #168)
-- Do not re-implement Claude install.sh shared-bootstrap delegation (landed #168)
-- Do not redo pre-commit provisioning, publish-path deny-reason probe, or L9_GOVERNANCE_SURFACE wiring skip (landed #169)
-- Do not redo secrets capability plane, broker, or .mcp.json bearer removal (landed #170)
-- Do not add a second bootstrap layer or orchestration framework
-- Do not weaken Graphiti gates, phase locks, controller admission, or schemas
-- Do not rewrite environment architecture or mix this onto the dirty primary checkout
-- Do not special-case historical incident data or hard-code one repository path
+- Creating or compiling skills/l9-intelligence-harvest — compiler qualification BLOCKED; source kernel lacks activation surface
+- Using skills/l9-harvest-pipeline sed/cp deploy on plan markdown
+- Do not run make campaign from sessionStart Plan audit, and do not auto-Build
+- Treating compiled: true as a built skip the way built/superseded/cancelled are skipped
+- A compiled/ folder or pe/ci/date shelves
+- Rewriting kernels/Gold Nugget Extractor or kernels/Improve.md / Validate & Repair.md
+- Consumer repo product code, l9-ci-core tag cuts, Quantum-L9/.github seeder work
+- Merging the resulting PR
+- Mass-executing every backlog plan in one campaign
 
 ## Critical path (seed)
 
-T1 → T2 → T3 → T4 → T5 → T6
+todo-01-baseline-preflight → todo-02-component-verdict-law → todo-03-classifier-emit → todo-05-harvest-invariants → todo-06-gar-compile-by-concern → todo-07-emit-compiled-pe-plans → todo-08-rewire-stale-pe → todo-09-e2e-conformance → todo-10-converge
 
 ## Stress (seed from PLAN_DOCUMENT)
 
-- Blast radius: Cursor sessionStart, Graphiti mutation gates, and PE controller CLI. A bad session-id unify can deny all governed writes or falsely allow them. A bad receipt fail-closed can block all PE. Makefile/root files are out of this remaining scope.
-- Rollback: Revert the new feature branch from origin/main. Shared bootstrap and capability plane on main stay. Hook self-heal recopies session_start_bootstrap.sh from SSOT on next session.
+- Blast radius: Wrong skip rules hide the live queue. Wrong harvest owner deploys plan prose as code. Wrong GAR mode widens execution authority. Stale PE wires in compiled plans recreate the kernel_unfired and missing_execute_section noise this campaign exists to retire.
+- Rollback: Revert the classifier and command edits; leave donor plans where they were; delete compiled plans that have no PE conformance PASS; do not delete harvest receipts already cited by a compiled_into pointer until the donor restore is committed.
 
 ## Convergence (seed)
 
 - status: partial
-- next_skill: l9-gmp-protocol
-- stop_reason: Open PRs merged and remaining seams planned. Do not execute until the user Builds this plan or explicitly asks to implement. Land on a new branch from origin/main.
+- next_skill: l9-pe-campaign-activate
+- stop_reason: PLAN_DOCUMENT is the compile contract. Execution starts on a new origin/main worktree via Program Execution, not on this dirty main checkout. U2 is a probe inside todo-01.
 - execute_via: @environment/program-execution → @autonomy
 
 ---
 
 ## Template body (complete every required section before status=executable)
 
-# PLAN: Make Program Execution start cleanly (gap only)
+# PLAN: Compile harvestable plan components into PE Compiled plans
 
 > **First-class SSOT (git):** `environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md` · metadata sidecar `*.meta.md` · registered in `environment/contracts/execution/MANIFEST.yaml`. Skill path is a symlink; `.cursor/plans/_TEMPLATE.plan.md` is a local mirror only.
 > **Schema:** `canonical.schema.plan_document.v1` (status: fill → `executable` only when law holds)
 > **Execute:** when status is `executable`, run through **[@environment/program-execution](environment/program-execution/)** with autonomy as the subordinate orchestration plane — **[@autonomy](commands/autonomy.md)** / `l9-bounded-autonomy` under a Program lease. Do **not** free-form mutate from this markdown alone.
 > **Cursor todos:** frontmatter `todos` project to PE Task Cards + Phase-0 autonomy actions. Body is the binding contract.
-> **Rename to:** `snake_case_name_YYYY-MM-DD.plan.md` before execute.
+> **Rename to:** `snake_case_name_<8hex>.plan.md` before execute.
 > **Law:** executable only when baseline matches, capability probes pass, invariants match, and envelope is respected. Markdown completeness alone is insufficient.
 
-## Execute via @environment/program-execution + autonomy (required)
+## Execute via GMP (required)
+
+Historical PE projection below is not the live execute path. Do **not** run `make campaign`.
 
 **Authority order (fail-closed — see `environment/agents/PEER_EXECUTION.md`):**
 
@@ -128,36 +168,31 @@ Program leases are authoritative. Autonomy leases are subordinate and **must not
 
 ### Pipeline steps
 
-1. **Attach** [@environment/program-execution](environment/program-execution/) + [@autonomy](commands/autonomy.md).
-2. **Project this plan → Blueprint artifacts** (instantiate under `$HOME/.l9/programs/<program_id>/` — never mutate sealed `environment/program-execution/core/` templates in place):
-
-   | Plan section | PE Blueprint / Controller artifact |
-   |--------------|-------------------------------------|
-   | metadata / objective | `PROGRAM.yaml` / program identity |
-   | immutable_baseline | `CURRENT_STATE_DELTA` + reconcile exact SHA |
-   | execution_envelope + architecture_impact | Task Card `authorization_ceiling` + Source/Rendered Contract paths |
-   | execution_DAG / todos | `DEPENDENCY_GRAPH.yaml` + `TASK_CARDS.yaml` + `EXECUTION_WAVES.yaml` |
-   | capability_preflight | Controller reconcile + gate probes before claim |
-   | property_evidence_matrix | Task Card `validation` / evidence catalog refs |
-   | rollback | Task Card `rollback` + recovery receipts |
-   | convergence | `CONVERGENCE_GATES.yaml` + Handoff Receipt (owner accepts verdict) |
-
-3. **Validate + bootstrap Controller** (from controller template RUNBOOK):
+Live execution is one command. Do not hand-run pec, L4, or inner compile
+scripts from this template.
 
 ```bash
-# from instantiated controller workspace (paths illustrative)
-python scripts/pec.py bootstrap --workspace "$HOME/.l9/programs/<program_id>/runtime" \
-  --blueprint "$HOME/.l9/programs/<program_id>/blueprint"
-python scripts/pec.py reconcile --workspace … --repository <repository_id>=$(pwd)
-python scripts/pec.py status --workspace …
-python scripts/pec.py next --workspace …
+# Do not run `make campaign`. This compile executed via /gmp.
 ```
 
-4. **Admit exact task scope** — draft/register Source Contract ⊂ Task Card ceiling; then `claim` → `prepare` → `render-contract`. Worker receives **only** Rendered Contract + Worker Brief + worktree.
-5. **Map Program task → autonomy campaign** via `environment/program-execution/integrations/autonomy-control-plane/` (`map_program_contract` / bridge). Set each mutating Task Card `autonomy_action_id` (e.g. `pes.<wave>.<task>`).
-6. **Orchestrate under [@autonomy](commands/autonomy.md)** — load `l9-bounded-autonomy` Protocols A–D; campaign authorization **packet** aligned to Program Lock digest + declared branches/PRs (see AUTONOMY_BRIDGE vocabulary). Spawn ready `work` Tasks / background `poll` Tasks; main continues (no `AwaitShell` on poll).
-7. **L4 local autonomy** inside the Program lease: local commits only until `ops/autonomy/l4_local.py authorize-release` → scoped push/PR → `l9-pr-remediation` Converge. Launching this plan through PE+`/autonomy` **or** clicking Build **is** merge authorization for this stack after green+mergeable (bottom-up older PRs first).
-8. **Record + verify + handoff** — `pec.py record-attempt` → `verify` → `export-handoff`. Controller recommends; program owner accepts terminal verdict. Graphiti PICKUP on close (Protocol D) — observability only, never competing task claim.
+`run_campaign.py` projects the plan into Blueprint artifacts under
+`$HOME/.l9/programs/<id>/`, admits the lock, executes every task, stacks
+PRs, and closes into `campaigns/COMPLETED/<id>/`. Never mutate sealed
+`environment/program-execution/core/` templates in place.
+
+| Plan section | Runner-owned Blueprint / Controller artifact |
+|--------------|-------------------------------------|
+| metadata / objective | `PROGRAM.yaml` / program identity |
+| immutable_baseline | `CURRENT_STATE_DELTA` + reconcile exact SHA |
+| execution_envelope + architecture_impact | Task Card `authorization_ceiling` + Source/Rendered Contract paths |
+| execution_DAG / todos | `DEPENDENCY_GRAPH.yaml` + `TASK_CARDS.yaml` + `EXECUTION_WAVES.yaml` |
+| capability_preflight | Controller reconcile + gate probes before claim |
+| property_evidence_matrix | Task Card `validation` / evidence catalog refs |
+| rollback | Task Card `rollback` + recovery receipts |
+| convergence | `CONVERGENCE_GATES.yaml` + Handoff Receipt (owner accepts verdict) |
+
+If the runner exits nonzero, stop and report. Do not continue with
+`pec.py bootstrap`, `claim`, `record-attempt`, or a second scheduler.
 
 ### Adapter routing (from `registry/EXECUTION_ROUTING_POLICY.yaml`)
 
@@ -646,3 +681,4 @@ todos:
     content: …
     status: pending
 ```
+

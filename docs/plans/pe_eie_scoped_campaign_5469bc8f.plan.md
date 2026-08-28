@@ -15,6 +15,7 @@ todos:
     content: Classify the brief as kind=brief via campaign_input.py; stop and hand off to make campaign INTENT= (do not run pec or mutate app/)
     status: pending
 isProject: false
+compiled_into: pe_loop_compiled_8-28-26
 ---
 
 # PE EIE scoped campaign (≤30%) for `make campaign`

@@ -214,12 +214,37 @@ execute_via: cursor-build
 ## Execute via Cursor Build
 
 Press Build on the current checkout.
-- Do not run `make campaign`.
+- Do **not** run `make campaign`.
 """,
             encoding="utf-8",
         )
         when = time.time() - (0.15 * 86400.0)
         os.utime(simple_path, (when, when))
+        compiled_path = plans / "compiled_live_cafef00d.plan.md"
+        compiled_path.write_text(
+            """---
+name: compiled-live
+overview: fixture
+compiled: true
+todos:
+  - id: t1
+    content: x
+    status: pending
+isProject: false
+kind: simple
+execute_via: cursor-build
+---
+
+# PLAN: compiled
+
+## Execute via Cursor Build
+
+Press Build on the current checkout.
+- Do **not** run `make campaign`.
+""",
+            encoding="utf-8",
+        )
+        os.utime(compiled_path, (when, when))
         _write_plan(
             plans,
             "match_baseline_99999999.plan.md",
@@ -272,6 +297,11 @@ Press Build on the current checkout.
                 errors.append("missing_execute_section flag missing")
             if not noex or "in_progress" not in noex.get("flags", []):
                 errors.append("in_progress flag missing")
+            if not noex or "harvestable" not in noex.get("flags", []):
+                errors.append("harvestable flag missing on mixed PE-kind plan")
+            compiled = by_name.get("compiled_live_cafef00d.plan.md")
+            if not compiled:
+                errors.append("compiled: true plan with pending todos must stay unbuilt")
             simple = by_name.get("simple_build_cafecafe.plan.md")
             if not simple:
                 errors.append("simple-kind plan missing from findings")
@@ -284,6 +314,39 @@ Press Build on the current checkout.
         missing = run_audit(Path(tmp) / "nope", workspace, "--format", "markdown")
         if missing.returncode != 0 or "no plans dir" not in missing.stdout:
             errors.append(f"missing dir markdown failed: {missing.stdout!r} / {missing.stderr!r}")
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from harvest_plan_invariants import extract_invariants, reject_implementation
+
+        harvest_src = plans / "harvest_src_aaaaaaaa.plan.md"
+        harvest_src.write_text(
+            """---
+name: harvest-src
+overview: Keep the live invariant
+todos:
+  - id: t1
+    content: x
+    status: pending
+isProject: false
+---
+
+# PLAN
+
+| SP-01 | SessionStart stays display-only | quality_gate | proof | true |
+""",
+            encoding="utf-8",
+        )
+        harvested = extract_invariants(harvest_src)
+        texts = [item["text"] for item in harvested["invariants"]]
+        if "SessionStart stays display-only" not in texts:
+            errors.append("harvest extractor missed success property")
+        if any("```" in item["text"] for item in harvested["invariants"]):
+            errors.append("harvest extractor copied a code fence")
+        try:
+            reject_implementation({"body": "```python\nprint(1)\n```"})
+            errors.append("reject_implementation must fail on a code fence")
+        except SystemExit:
+            pass
 
     if errors:
         print("FAIL: l9-plan-audit self_test")

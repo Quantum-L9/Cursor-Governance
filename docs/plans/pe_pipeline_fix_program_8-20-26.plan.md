@@ -63,6 +63,7 @@ todos:
     phase: execute
     depends_on: [todo-11-prove]
 isProject: false
+compiled_into: pe_loop_compiled_8-28-26
 ---
 
 # PLAN: PE Factory Repair: pipeline friction fixes + bounded-autonomy defaults
