@@ -13,7 +13,9 @@ if str(SCRIPTS) not in sys.path:
 import select_pr_pytest_paths as selector  # noqa: E402
 from run_python_test_suites import (  # noqa: E402
     _load_json,
+    _suite_env,
     _suite_intersects,
+    strip_ceremony_knobs,
     validate_registry,
 )
 from select_pr_pytest_paths import (  # noqa: E402
@@ -82,3 +84,28 @@ def test_live_ops_script_change_skips_autonomy_wave3_pe() -> None:
 
 def test_markdown_only_file_list_is_empty_mapped_set() -> None:
     assert select_pr_pytest_paths(["README.md", "docs/plans/x.plan.md"]) == []
+
+
+def test_suite_env_strips_inherited_ceremony_knobs(monkeypatch) -> None:
+    monkeypatch.setenv("PR_OVERLAP", "ignore")
+    monkeypatch.setenv("PR_OVERLAP_TELEMETRY", "open")
+    monkeypatch.setenv("PR_STACK", "auto")
+    monkeypatch.setenv("PR_REMEDIATE", "1")
+    stripped = strip_ceremony_knobs(
+        dict(
+            **{
+                k: "ignore"
+                for k in (
+                    "PR_OVERLAP",
+                    "PR_OVERLAP_TELEMETRY",
+                    "PR_STACK",
+                    "PR_REMEDIATE",
+                )
+            }
+        )
+    )
+    assert "PR_OVERLAP" not in stripped
+    env = _suite_env({"env": {}}, {})
+    assert "PR_OVERLAP" not in env
+    assert "PR_STACK" not in env
+    assert "PR_REMEDIATE" not in env

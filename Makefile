@@ -793,3 +793,8 @@ l9-dispatcher-check:
 claude-readiness:
 	$(PYTHON) ops/scripts/emit_claude_readiness.py --root "$(CURDIR)" \
 		--workspace "$(if $(WS),$(WS),$(CURDIR))" --read
+
+# Ceremony phase 2 — early overlap on `make pr` only. Inherited by the
+# `pr-check` prerequisite when the user typed `make pr`. Direct
+# `make pr-check` / Diagnose leaves PR_EARLY_OVERLAP unset.
+pr: PR_EARLY_OVERLAP = 1

@@ -438,12 +438,15 @@ def test_precommit_script_runs_kernel_hook_first() -> None:
     precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
     kernel_at = precommit.find("kernel_gate.py")
     hook_at = precommit.find("pre-commit run")
-    ruff_at = precommit.find("--- lint-ruff")
+    ruff_at = precommit.find("--- ruff (locked writer)")
     assert kernel_at != -1
     assert kernel_at < hook_at < ruff_at
+    readers_branch = precommit.find('STAGE" == "readers"')
+    assert readers_branch != -1
+    assert kernel_at < readers_branch or "_run_kernel" in precommit
 
 
-def test_precommit_skip_list_drops_corpus_hooks() -> None:
+def test_precommit_skip_lists_are_disjoint() -> None:
     precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
     for hook in (
         "repo-hygiene",
@@ -452,7 +455,21 @@ def test_precommit_skip_list_drops_corpus_hooks() -> None:
         "skills-check",
     ):
         assert hook in precommit
-    assert "SKIP_LIST=" in precommit
+    assert "_WRITER_SKIP=" in precommit
+    assert "_READER_SKIP=" in precommit
+    assert "_READER_HOOKS=" in precommit
+    assert "_WRITER_HOOKS=" in precommit
+    writer_hooks = "end-of-file-fixer,trailing-whitespace"
+    reader_hooks = (
+        "check-merge-conflict,check-added-large-files,check-yaml,"
+        "no-hardcoded-paths,gh-package-deps-preflight"
+    )
+    assert writer_hooks in precommit
+    assert reader_hooks in precommit
+    for hook in writer_hooks.split(","):
+        assert hook not in reader_hooks
+    for hook in reader_hooks.split(","):
+        assert hook not in writer_hooks
 
 
 def test_gate_domain_gates_corpus_validators() -> None:
@@ -467,7 +484,45 @@ def test_gate_does_not_rerun_ruff() -> None:
     gate = (ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text(encoding="utf-8")
     precommit = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
     assert "--- ruff (changed Python) ---" not in gate
-    assert "--- lint-ruff (changed Python) ---" in precommit
+    assert "--- lint-ruff (changed Python) ---" not in precommit
+    assert precommit.count("--- ruff (locked writer) ---") == 1
+    assert "ruff,ruff-format" in precommit
+    assert "check --fix" in precommit
+    assert "quiescing and retrying pre-commit once" not in gate
+    assert "PR_PRECOMMIT_STAGE=writers" in gate or 'PR_PRECOMMIT_STAGE="$stage"' in gate
+    assert gate.count('git status --porcelain >"$status_before"') == 1
+
+
+def test_early_overlap_is_pr_goal_only() -> None:
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    gate = (ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text(encoding="utf-8")
+    open_pr = (SCRIPTS / "open_pr_after_gate.sh").read_text(encoding="utf-8")
+    assert "pr: PR_EARLY_OVERLAP = 1" in makefile
+    pr_check = makefile.split("pr-check:", 1)[1].split("\n\n", 1)[0]
+    assert "PR_EARLY_OVERLAP" not in pr_check
+    assert "PR_EARLY_OVERLAP:-0" in gate
+    assert "--reuse-receipt" in open_pr
+    assert "l4-preflight.json" in open_pr
+    assert "check-remote" in open_pr
+    assert "L4 preflight receipt reused" in open_pr
+    early = gate.find("--- early overlap")
+    wave = gate.find("=== reader wave")
+    assert early != -1 and wave != -1
+    assert early < wave
+    assert gate.find("FAIL: early overlap blocked publish") < wave
+
+
+def test_gate_hard_stop_precedes_pytest() -> None:
+    gate = (ROOT / "ops" / "scripts" / "run_pr_gate.sh").read_text(encoding="utf-8")
+    dirt = gate.find("Do not rebase status_before over that dirt")
+    pytest_at = gate.find("--- pytest ---")
+    wave = gate.find("=== reader wave")
+    assert dirt != -1
+    assert pytest_at != -1
+    assert dirt < pytest_at
+    assert dirt < wave
+    assert "unset PR_OVERLAP PR_OVERLAP_TELEMETRY PR_STACK PR_REMEDIATE" in gate
+    assert "quiescing and retrying pre-commit once" not in gate
 
 
 def test_workflow_action_pins() -> None:

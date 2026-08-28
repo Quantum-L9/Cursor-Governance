@@ -116,17 +116,38 @@ elif [[ -n "$(git status --porcelain)" ]]; then
 fi
 
 # L4 local autonomy — no mid-execution push; require release receipt.
+# Reuse the preflight receipt when HEAD is unchanged (one check-remote per HEAD).
 L4_CLI="${GOV_ROOT}/ops/autonomy/l4_local.py"
+_L4_RECEIPT="$WS/.l9/pr/l4-preflight.json"
 if [[ -f "$L4_CLI" && "${L9_L4_LOCAL_AUTONOMY:-1}" != "0" ]]; then
-  echo "--- L4 local autonomy remote check ---"
-  if ! python3 "$L4_CLI" --workspace "$WS" check-remote; then
-    echo "FAIL: L4 blocks push/PR until kernels + authorize-release."
-    echo "      pr-preflight should have caught this — drift if you reached here via make pr."
-    echo "  1) make improve"
-    echo "  2) Apply kernels/Recursive Alignment.md then kernels/Validate & Repair.md"
-    echo "  3) make improve IMPROVE_RECORD=1"
-    echo "  4) make pr-check && make pr"
-    exit 1
+  _l4_head="$(git rev-parse HEAD)"
+  _l4_reuse=0
+  if [[ -f "$_L4_RECEIPT" ]]; then
+    if python3 - "$_L4_RECEIPT" "$_l4_head" <<'PY'
+import json, sys
+path, head = sys.argv[1], sys.argv[2]
+try:
+    doc = json.loads(open(path, encoding="utf-8").read())
+except (OSError, json.JSONDecodeError):
+    raise SystemExit(1)
+raise SystemExit(0 if doc.get("schema") == "l9.l4_preflight.v1" and doc.get("head") == head and doc.get("result") == "pass" else 1)
+PY
+    then
+      echo "OK: L4 preflight receipt reused (HEAD unchanged)"
+      _l4_reuse=1
+    fi
+  fi
+  if [[ "$_l4_reuse" -eq 0 ]]; then
+    echo "--- L4 local autonomy remote check ---"
+    if ! python3 "$L4_CLI" --workspace "$WS" check-remote; then
+      echo "FAIL: L4 blocks push/PR until kernels + authorize-release."
+      echo "      pr-preflight should have caught this — drift if you reached here via make pr."
+      echo "  1) make improve"
+      echo "  2) Apply kernels/Recursive Alignment.md then kernels/Validate & Repair.md"
+      echo "  3) make improve IMPROVE_RECORD=1"
+      echo "  4) make pr-check && make pr"
+      exit 1
+    fi
   fi
 fi
 
@@ -138,9 +159,14 @@ fi
 # the WARN. A detected non-generated textual conflict blocks. PR_STACK=auto
 # re-resolves the base to the overlapping open PR's head (never main).
 _OVERLAP_GATE="$GOV_ROOT/ops/scripts/pr_overlap_check.py"
+_OVERLAP_RECEIPT="$WS/.l9/pr/overlap-receipt.json"
 if [[ -f "$_OVERLAP_GATE" ]]; then
   echo "--- PR overlap gate (PR_OVERLAP=${PR_OVERLAP:-block}) ---"
-  if ! _overlap_out="$(python3 "$_OVERLAP_GATE" --workspace "$WS" --base "$PR_BASE" 2>&1)"; then
+  mkdir -p "$WS/.l9/pr"
+  if ! _overlap_out="$(
+    python3 "$_OVERLAP_GATE" --workspace "$WS" --base "$PR_BASE" \
+      --reuse-receipt "$_OVERLAP_RECEIPT" --write-receipt "$_OVERLAP_RECEIPT" 2>&1
+  )"; then
     printf '%s\n' "$_overlap_out"
     echo "FAIL: PR overlap gate blocked push (PR_OVERLAP=${PR_OVERLAP:-block})"
     exit 1

@@ -41,6 +41,7 @@ _GATE_CODE_FILES=(
   "ops/scripts/run_pr_gate.sh"
   "ops/scripts/run_pr_precommit.sh"
   "ops/scripts/run_python_test_suites.py"
+  "ops/scripts/pr_overlap_check.py"
   "ops/scripts/pr_gate_failure.py"
   "ops/config/python-contract.json"
   "ops/autonomy/kernel_gate.py"
@@ -270,9 +271,11 @@ _gate_classify_dirtiness() {
 }
 
 _gate_run_precommit() {
+  local stage="${1:-}"
   local rc=0
   set +e
-  PR_CHANGED_FILE="$changed_file" bash "$SCRIPT_DIR/run_pr_precommit.sh" "$WS" 2>&1 | tee "$precommit_log"
+  PR_CHANGED_FILE="$changed_file" PR_PRECOMMIT_STAGE="$stage" \
+    bash "$SCRIPT_DIR/run_pr_precommit.sh" "$WS" 2>&1 | tee "$precommit_log"
   rc="${PIPESTATUS[0]}"
   set -e
   if [[ -f "$precommit_log" ]]; then
@@ -304,179 +307,155 @@ else
 fi
 echo "OK: skip doctrine residue / contract surface / git-denial (make pr-full owns corpus)"
 
-_gate_run_precommit && precommit_rc=0 || precommit_rc=$?
-
-if [[ "${L9_GATE_STRICT_LEGACY:-0}" = "1" && "$precommit_rc" -ne 0 ]]; then
-  echo "FAIL: pre-commit exited ${precommit_rc} (L9_GATE_STRICT_LEGACY=1 — no classification)"
-  exit "$precommit_rc"
-fi
-
-# pre-commit returns non-zero for `files_modified or bool(retcode)` (run.py).
-# Only a real hook exit code is a validator failure; a modified tree is
-# dirtiness this gate can classify, attribute, and often heal.
-if [[ "$precommit_rc" -ne 0 ]] && grep -q '^- exit code: ' "$precommit_log"; then
-  echo "FAIL: pre-commit hook(s) failed:"
-  _precommit_failing_hooks "$precommit_log"
-  exit 1
-fi
+echo "=== writers (once) ==="
+_gate_run_precommit writers && precommit_rc=0 || precommit_rc=$?
 
 if [[ "$precommit_rc" -ne 0 ]]; then
-  echo "NOTE: pre-commit exited ${precommit_rc} solely because the worktree changed during a hook."
-  echo "      That names the hook's time window, not the writer — classifying below."
-fi
-
-if ! _gate_classify_dirtiness "pre-commit"; then
   if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
     bash "$SCRIPT_DIR/attribute_tree_writers.sh" "$WS" "$status_before" "$precommit_log" || true
   fi
-
-  if [[ "${PR_GATE_RETRY:-1}" = "1" ]]; then
-    echo "--- quiescing and retrying pre-commit once ---"
-    repo_write_lock_acquire "$WS" "${PR_LOCK_WAIT_S:-30}" \
-      || echo "WARN: $(repo_write_lock_skip_note "$WS") — retrying anyway"
-    git status --porcelain >"$status_before"
-    tracked_before="$(_tracked_diff_digest)"
-    _gate_run_precommit && precommit_rc=0 || precommit_rc=$?
-    if [[ "$precommit_rc" -ne 0 ]] && grep -q '^- exit code: ' "$precommit_log"; then
-      echo "FAIL: pre-commit hook(s) failed on retry:"
-      _precommit_failing_hooks "$precommit_log"
-      exit 1
-    fi
-  fi
-
-  if ! _gate_classify_dirtiness "pre-commit retry"; then
-    echo "FAIL: non-generated files changed during the gate and persisted through a retry."
-    echo "      Review the attribution above; stage intended edits, or stop the writer, then re-run make pr."
-    if [[ "$(_tracked_diff_digest)" != "$tracked_before" ]]; then
-      echo "      tracked-file changes present (this is what pre-commit compares)"
-    else
-      echo "      untracked-only churn (never triggers pre-commit's modified-files check)"
-    fi
-    git status --short
-    exit 1
-  fi
-fi
-
-echo "--- uv lock ---"
-if grep -Eq '^(uv\.lock|pyproject\.toml|requirements.*\.txt|constraints\.txt)$' "$changed_file"; then
-  if [[ -f uv.lock ]]; then
-    uv lock --check
+  if grep -q '^- exit code: ' "$precommit_log"; then
+    echo "FAIL: pre-commit hook(s) failed:"
+    _precommit_failing_hooks "$precommit_log"
+  elif grep -q 'tracked files dirty after precommit-repo' "$precommit_log"; then
+    echo "FAIL: writer rewrote tracked files — commit the rewrite, then re-run make pr."
+    echo "      Do not rebase status_before over that dirt. Do not retry hooks."
   else
-    echo "OK: no uv.lock present, skipping"
+    echo "FAIL: writers stage exited ${precommit_rc}"
   fi
-else
-  echo "OK: skip uv-lock-check (dependency manifests unchanged)"
-fi
-
-echo "--- pytest ---"
-# run_python_test_suites.py runs the GOVERNANCE suite registry
-# (ops/config/python-contract.json) and derives REPO_ROOT from its own location,
-# so it only ever describes this repository. Handing it a consumer workspace's
-# changed files made the selector emit paths such as src/<consumer_pkg>/ that do
-# not exist under REPO_ROOT, so the repo-root suite matched nothing and pytest
-# exited 4 -- failing the gate before any push, for every consumer repo with a
-# changed .py file. Scope it to the workspaces it actually describes, the same
-# way this file already gates the wiring check below.
-_pytest_ws_kind="$(classify_workspace_kind "$WS")"
-if [[ "${PR_SKIP_PYTEST:-0}" == "1" ]]; then
-  echo "OK: skip pytest (PR_SKIP_PYTEST=1)"
-elif [[ "$_pytest_ws_kind" != "ssot" && "$_pytest_ws_kind" != "ssot_checkout" ]]; then
-  # Not a silent pass: this gate does not run a consumer's tests, and a green
-  # gate here must not be read as "the consumer suite ran".
-  echo "OK: skip governance pytest registry (workspace kind=$_pytest_ws_kind)"
-  echo "NOTE: consumer tests are owned by the consumer repository and its CI;" \
-       "this gate did not run them"
-elif grep -Eq '\.py$' "$changed_file"; then
-  # Local pr-check never passes repo-root '.' (SP-04 / SP-05). Full catalog
-  # remains make test / make pr-full / CI via run_pytest_suites.sh.
-  pytest_args=(--tb=short -q)
-  if ! grep -Eq '^(tests/ops/secrets/|ops/secrets/)' "$changed_file"; then
-    pytest_args+=(--ignore=tests/ops/secrets)
-    echo "OK: skip secrets capability suite (ops/secrets unchanged)"
-  fi
-  _pytest_py="${GOV_TOOLCHAIN_ROOT:-$GOV_ROOT}/.venv/bin/python"
-  if [[ ! -x "$_pytest_py" ]]; then
-    _pytest_py="$(command -v python3)"
-  fi
-  if [[ ! -x "$_pytest_py" ]]; then
-    echo "FAIL: no python interpreter for scoped pytest"
-    exit 1
-  fi
-  # Selection above read $WS; execution must name the same tree. Publishing from
-  # a second governance clone (rule 49 §7) runs this Makefile from $GOV while the
-  # changed files and their tests live in $WS, so a test added in the workspace
-  # collects as "no tests ran" and the gate fails exit 4 on work that is present
-  # and passing. Measured 2026-08-27.
-  #
-  # `:=` rather than a fresh assignment: PR #323 declares _pytest_ws_kind above
-  # the if/elif chain to skip this registry for consumer workspaces. Where that
-  # has landed this reuses its value; where it has not, this computes it. Either
-  # way there is one value and one declaration.
-  #
-  # Consumers keep $GOV as their root, byte for byte as before: they do not own
-  # these suites.
-  : "${_pytest_ws_kind:=$(classify_workspace_kind "$WS")}"
-  _pytest_repo_root_args=()
-  if [ "$_pytest_ws_kind" = "ssot" ] || [ "$_pytest_ws_kind" = "ssot_checkout" ]; then
-    if [ "$(cd "$WS" && pwd -P)" != "$(cd "$GOV_ROOT" && pwd -P)" ]; then
-      _pytest_repo_root_args=(--repo-root "$WS")
-      echo "OK: pytest root -> workspace ($_pytest_ws_kind; governance clone, \$GOV differs)"
-    fi
-  fi
-  # macOS /bin/bash 3.2 + set -u treats an empty array [@] as unbound.
-  "$_pytest_py" "$SCRIPT_DIR/run_python_test_suites.py" \
-    --profile local \
-    ${_pytest_repo_root_args[@]+"${_pytest_repo_root_args[@]}"} \
-    --changed-file "$changed_file" \
-    -- "${pytest_args[@]}"
-else
-  echo "OK: skip pytest (no changed Python files)"
-fi
-
-echo "--- sync-generated-artifacts ---"
-python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
-  --root "$WS" \
-  --changed-file "$changed_file" \
-  --check
-if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
-  if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
-    bash "$SCRIPT_DIR/attribute_tree_writers.sh" "$WS" "$status_before" || true
-  fi
-  echo "FAIL: unexpected non-generated dirtiness after sync"
-  git status --short
   exit 1
 fi
 
-echo "--- root-file protection ---"
-# Ran only in CI until now, which meant an additive_only violation on a root
-# file (Makefile, AGENTS.md, ...) was undiscoverable until after the PR was
-# already open — costing a fix commit and a second full publish cycle. It is a
-# ~0.7s git-diff analysis; there was never a reason for it to be remote-only.
-# The policy lives with the repo it protects, so the check applies exactly
-# where that config exists — consumer workspaces have no root inventory to
-# reconcile and must not be failed against the governance one.
-_root_protect_py="$GOV_ROOT/ops/scripts/validate_root_file_protection.py"
-if [[ -f "$_root_protect_py" && -f "$WS/ops/config/root-file-protection.json" ]]; then
-  python3 "$_root_protect_py" --base "$PR_BASE" --head HEAD --repo "$WS"
-else
-  echo "OK: skip root-file protection (no ops/config/root-file-protection.json in this workspace)"
-fi
-
-echo "--- skill-activation ---"
-if [[ -f "$WS/environment/agents/adapters/claude-code/validate_skill_activation.py" ]]; then
-  if grep -Eq '^(skills/|ops/skill_routing/|ops/generated/skill-registry\.json|environment/agents/adapters/claude-code/)' "$changed_file"; then
-    python3 "$WS/environment/agents/adapters/claude-code/validate_skill_activation.py"
-  else
-    echo "OK: skip skill-activation (skills/routing unchanged)"
+# Stage 3 — overlap once on make pr only (PR_EARLY_OVERLAP inherited from `pr:`).
+if [[ "${PR_EARLY_OVERLAP:-0}" = "1" ]]; then
+  echo "--- early overlap (PR_OVERLAP=${PR_OVERLAP:-block}) ---"
+  _base_ref="${PR_BASE#origin/}"
+  if ! git fetch origin "$_base_ref"; then
+    echo "FAIL: cannot fetch origin/${_base_ref} — collision state undeterminable"
+    exit 1
+  fi
+  mkdir -p "$WS/.l9/pr"
+  if ! python3 "$SCRIPT_DIR/pr_overlap_check.py" \
+    --workspace "$WS" --base "$PR_BASE" \
+    --write-receipt "$WS/.l9/pr/overlap-receipt.json"; then
+    echo "FAIL: early overlap blocked publish (PR_OVERLAP=${PR_OVERLAP:-block})"
+    exit 1
   fi
 fi
 
-echo "--- local-activation ---"
-is_local=0
-if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -d "${HOME}/.cursor" && -w "${HOME}/.cursor" ]]; then
-  is_local=1
-fi
-if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
+# Stage 4 — one parallel read-only wave. Jobs do not call each other.
+_gate_run_uv_lock() {
+  echo "--- uv lock ---"
+  if grep -Eq '^(uv\.lock|pyproject\.toml|requirements.*\.txt|constraints\.txt)$' "$changed_file"; then
+    if [[ -f uv.lock ]]; then
+      uv lock --check
+    else
+      echo "OK: no uv.lock present, skipping"
+    fi
+  else
+    echo "OK: skip uv-lock-check (dependency manifests unchanged)"
+  fi
+}
+
+_gate_run_pytest() {
+  echo "--- pytest ---"
+  # Host publish knobs must not leak into overlap / remediates tests.
+  unset PR_OVERLAP PR_OVERLAP_TELEMETRY PR_STACK PR_REMEDIATE
+  # run_python_test_suites.py runs the GOVERNANCE suite registry
+  # (ops/config/python-contract.json) and derives REPO_ROOT from its own location,
+  # so it only ever describes this repository. Handing it a consumer workspace's
+  # changed files made the selector emit paths such as src/<consumer_pkg>/ that do
+  # not exist under REPO_ROOT, so the repo-root suite matched nothing and pytest
+  # exited 4 -- failing the gate before any push, for every consumer repo with a
+  # changed .py file. Scope it to the workspaces it actually describes, the same
+  # way this file already gates the wiring check below.
+  _pytest_ws_kind="$(classify_workspace_kind "$WS")"
+  if [[ "${PR_SKIP_PYTEST:-0}" == "1" ]]; then
+    echo "OK: skip pytest (PR_SKIP_PYTEST=1)"
+  elif [[ "$_pytest_ws_kind" != "ssot" && "$_pytest_ws_kind" != "ssot_checkout" ]]; then
+    echo "OK: skip governance pytest registry (workspace kind=$_pytest_ws_kind)"
+    echo "NOTE: consumer tests are owned by the consumer repository and its CI;" \
+         "this gate did not run them"
+  elif grep -Eq '\.py$' "$changed_file"; then
+    pytest_args=(--tb=short -q)
+    if ! grep -Eq '^(tests/ops/secrets/|ops/secrets/)' "$changed_file"; then
+      pytest_args+=(--ignore=tests/ops/secrets)
+      echo "OK: skip secrets capability suite (ops/secrets unchanged)"
+    fi
+    _pytest_py="${GOV_TOOLCHAIN_ROOT:-$GOV_ROOT}/.venv/bin/python"
+    if [[ ! -x "$_pytest_py" ]]; then
+      _pytest_py="$(command -v python3)"
+    fi
+    if [[ ! -x "$_pytest_py" ]]; then
+      echo "FAIL: no python interpreter for scoped pytest"
+      exit 1
+    fi
+    : "${_pytest_ws_kind:=$(classify_workspace_kind "$WS")}"
+    _pytest_repo_root_args=()
+    if [ "$_pytest_ws_kind" = "ssot" ] || [ "$_pytest_ws_kind" = "ssot_checkout" ]; then
+      if [ "$(cd "$WS" && pwd -P)" != "$(cd "$GOV_ROOT" && pwd -P)" ]; then
+        _pytest_repo_root_args=(--repo-root "$WS")
+        echo "OK: pytest root -> workspace ($_pytest_ws_kind; governance clone, \$GOV differs)"
+      fi
+    fi
+    # macOS /bin/bash 3.2 + set -u treats an empty array [@] as unbound.
+    "$_pytest_py" "$SCRIPT_DIR/run_python_test_suites.py" \
+      --profile local \
+      ${_pytest_repo_root_args[@]+"${_pytest_repo_root_args[@]}"} \
+      --changed-file "$changed_file" \
+      -- "${pytest_args[@]}"
+  else
+    echo "OK: skip pytest (no changed Python files)"
+  fi
+}
+
+_gate_run_sync() {
+  echo "--- sync-generated-artifacts ---"
+  python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
+    --root "$WS" \
+    --changed-file "$changed_file" \
+    --check
+  if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
+    if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
+      bash "$SCRIPT_DIR/attribute_tree_writers.sh" "$WS" "$status_before" || true
+    fi
+    echo "FAIL: unexpected non-generated dirtiness after sync"
+    git status --short
+    exit 1
+  fi
+}
+
+_gate_run_root_protect() {
+  echo "--- root-file protection ---"
+  _root_protect_py="$GOV_ROOT/ops/scripts/validate_root_file_protection.py"
+  if [[ -f "$_root_protect_py" && -f "$WS/ops/config/root-file-protection.json" ]]; then
+    python3 "$_root_protect_py" --base "$PR_BASE" --head HEAD --repo "$WS"
+  else
+    echo "OK: skip root-file protection (no ops/config/root-file-protection.json in this workspace)"
+  fi
+}
+
+_gate_run_skill_activation() {
+  echo "--- skill-activation ---"
+  if [[ -f "$WS/environment/agents/adapters/claude-code/validate_skill_activation.py" ]]; then
+    if grep -Eq '^(skills/|ops/skill_routing/|ops/generated/skill-registry\.json|environment/agents/adapters/claude-code/)' "$changed_file"; then
+      python3 "$WS/environment/agents/adapters/claude-code/validate_skill_activation.py"
+    else
+      echo "OK: skip skill-activation (skills/routing unchanged)"
+    fi
+  fi
+}
+
+_gate_run_projection_check() {
+  echo "--- local-activation ---"
+  is_local=0
+  if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -d "${HOME}/.cursor" && -w "${HOME}/.cursor" ]]; then
+    is_local=1
+  fi
+  if [[ "$is_local" -ne 1 || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
+    echo "OK: skip local-activation (CI or non-writable ~/.cursor)"
+    return 0
+  fi
   if [[ -f "$GOV_ROOT/ops/scripts/project_llm_rules.py" ]]; then
     if ! python3 "$GOV_ROOT/ops/scripts/project_llm_rules.py" --root "$WS" --check --quiet; then
       echo "FAIL: llm-rules projection drift — re-run: python3 ops/scripts/project_llm_rules.py --root \"$WS\""
@@ -485,10 +464,6 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
     fi
     echo "OK: llm-rules projection matches rules/*.mdc"
   fi
-  # One projection entrypoint: apply skills/commands/rules, then verify clean.
-  python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
-    --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
-    --quiet --no-receipt || true
   if ! python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
     --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
     --check --quiet --no-receipt; then
@@ -497,35 +472,21 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
       --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp --check --summary --no-receipt
     exit 1
   fi
-  echo "OK: Claude projection (skills, commands, rules) reconciled to SSOT"
-  # check_governance_wiring.sh asserts Cursor DESKTOP activation (plugin symlink,
-  # .cursor-commands, .cursor/plans, ~/.cursor/hooks.json). The enclosing guard uses
-  # "~/.cursor exists and is writable" as a proxy for "this is a Cursor machine", but
-  # Graphiti's own state dir (~/.cursor/graphiti-state) creates that path on EVERY
-  # surface — so the proxy silently became true for headless adapters. Gate the
-  # desktop-wiring assertion on the surface id instead. The reconcile checks above
-  # stay unconditional: they are surface-independent and must keep running here.
-  # Heal missing gitignored .cursor links under the existing make-pr lock.
-  # Not sessionStart — reconcilers skip while this lock is held.
-  if [[ -x "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" ]]; then
-    L9_WIRE_LINKS_ONLY=1 bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" "$WS" \
-      || echo "WARN: ensure_workspace_wired failed — wiring check will fail-closed"
+  echo "OK: Claude projection (skills, commands, rules) matches SSOT"
+}
+
+_gate_run_wiring() {
+  echo "--- wiring ---"
+  is_local=0
+  if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -d "${HOME}/.cursor" && -w "${HOME}/.cursor" ]]; then
+    is_local=1
   fi
-  # PAIRED PREDICATE: run_pr_precommit.sh skips symlinks-check the same way.
-  # Isolates skip consumer repo symlinks; machine sessionEnd/Graphiti still run.
+  if [[ "$is_local" -ne 1 || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
+    echo "OK: skip wiring (CI or non-writable ~/.cursor)"
+    return 0
+  fi
   WS_KIND="$(classify_workspace_kind "$WS")"
   if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
-    # Apply the surface gate the comment above specifies. This branch used to run
-    # the FULL check unconditionally, so a headless adapter on an identity
-    # checkout asserted the Cursor DESKTOP hook plane (~/.cursor/hooks.json and
-    # its sessionEnd/skill-router entries) — artifacts the cloud installer
-    # deliberately never creates, making `make pr` unrunnable off Cursor. The
-    # correct predicate already existed one branch below and already returns
-    # "skip" for any surface != cursor; it was simply evaluated second.
-    # Scope to --workspace rather than skipping wholesale: every
-    # surface-independent check (SSOT freshness, merge drivers, slash-command
-    # drift, symlink health) still runs. Only the --machine desktop assertions
-    # are dropped, and only where policy already says they do not apply.
     wiring_args=("$WS")
     if ! is_cursor_host_surface; then
       wiring_args=(--workspace "$WS")
@@ -556,14 +517,59 @@ if [[ "$is_local" -eq 1 && -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
       exit 1
     fi
   fi
-else
-  echo "OK: skip local-activation (CI or non-writable ~/.cursor)"
-fi
+}
 
-echo "--- security ---"
-# Gate mode: on the publish path a missing scanner binary is a failure, not
-# a SKIP that reads as a pass (INV-5).
-bash "$SCRIPT_DIR/run_pr_security.sh" --mode gate "$WS"
+_gate_run_security() {
+  echo "--- security ---"
+  bash "$SCRIPT_DIR/run_pr_security.sh" --mode gate "$WS"
+}
+
+_gate_run_readers() {
+  echo "--- pre-commit readers (once) ---"
+  _gate_run_precommit readers
+}
+
+echo "=== reader wave (once, parallel) ==="
+_wave_dir="$(mktemp -d)"
+_wave_pids=()
+_wave_names=()
+_wave_start() {
+  local name="$1"
+  shift
+  ( "$@" ) >"$_wave_dir/$name.log" 2>&1 &
+  _wave_pids+=("$!")
+  _wave_names+=("$name")
+}
+_wave_start readers _gate_run_readers
+_wave_start uv-lock _gate_run_uv_lock
+_wave_start pytest _gate_run_pytest
+_wave_start sync _gate_run_sync
+_wave_start root-protect _gate_run_root_protect
+_wave_start skill-activation _gate_run_skill_activation
+_wave_start projection _gate_run_projection_check
+_wave_start wiring _gate_run_wiring
+_wave_start security _gate_run_security
+_wave_rc=0
+_wave_i=0
+while [ "$_wave_i" -lt "${#_wave_pids[@]}" ]; do
+  if ! wait "${_wave_pids[$_wave_i]}"; then
+    echo "FAIL: reader wave job ${_wave_names[$_wave_i]}"
+    _wave_rc=1
+  fi
+  _wave_i=$((_wave_i + 1))
+done
+_wave_i=0
+while [ "$_wave_i" -lt "${#_wave_names[@]}" ]; do
+  echo "=== wave: ${_wave_names[$_wave_i]} ==="
+  cat "$_wave_dir/${_wave_names[$_wave_i]}.log"
+  cat "$_wave_dir/${_wave_names[$_wave_i]}.log" >>"$_GATE_LOG" || true
+  _wave_i=$((_wave_i + 1))
+done
+rm -rf "$_wave_dir"
+if [[ "$_wave_rc" -ne 0 ]]; then
+  echo "FAIL: reader wave had a failing job"
+  exit 1
+fi
 
 if [[ "$PR_MYPY_STRICT" = "1" ]]; then
   _mypy="$GOV_ROOT/.venv/bin/mypy"

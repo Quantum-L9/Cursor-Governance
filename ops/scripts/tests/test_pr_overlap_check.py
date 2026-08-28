@@ -465,6 +465,83 @@ class PrOverlapCheckTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout)
         self.assertIn("PASS", result.stdout)
 
+    def test_inherited_ignore_without_gate_still_detects(self) -> None:
+        """Host PR_OVERLAP=ignore must not skip detection after ceremony strip.
+
+        Does not go through `_gate()` (which forces block). The runner
+        strip_ceremony_knobs is the spawn-time isolation.
+        """
+        scripts = Path(__file__).resolve().parents[1]
+        if str(scripts) not in sys.path:
+            sys.path.insert(0, str(scripts))
+        from run_python_test_suites import strip_ceremony_knobs
+
+        fake = FakeGh(
+            Path(tempfile.mkdtemp(prefix="l9-gh-")),
+            pulls="1\tfeat-theirs\tmain\n",
+            files={"1": "shared.txt\n"},
+        )
+        _bare, work, env = self._world_with_their_pr(fake, self._conflict_their)
+        host = fake.env(env)
+        host["PR_OVERLAP"] = "ignore"
+        stripped = strip_ceremony_knobs(host)
+        self.assertNotIn("PR_OVERLAP", stripped)
+        result = subprocess.run(
+            [sys.executable, str(GATE), "--workspace", str(work), "--base", "origin/main"],
+            cwd=work,
+            capture_output=True,
+            text=True,
+            env=stripped,
+            check=False,
+        )
+        self.assertNotIn("overlap gate skipped", result.stdout + result.stderr)
+        self.assertEqual(result.returncode, 1, result.stdout)
+
+    def test_overlap_receipt_reuse_skips_probes(self) -> None:
+        _bare, work, env = _init_world()
+        fake = FakeGh(Path(tempfile.mkdtemp(prefix="l9-gh-")), pulls="", files={})
+        receipt = work / "overlap-receipt.json"
+        gate_env = fake.env(env)
+        gate_env["PR_OVERLAP"] = "block"
+        first = subprocess.run(
+            [
+                sys.executable,
+                str(GATE),
+                "--workspace",
+                str(work),
+                "--base",
+                "origin/main",
+                "--write-receipt",
+                str(receipt),
+            ],
+            cwd=work,
+            capture_output=True,
+            text=True,
+            env=gate_env,
+            check=False,
+        )
+        self.assertEqual(first.returncode, 0, first.stdout)
+        self.assertTrue(receipt.is_file(), first.stdout)
+        second = subprocess.run(
+            [
+                sys.executable,
+                str(GATE),
+                "--workspace",
+                str(work),
+                "--base",
+                "origin/main",
+                "--reuse-receipt",
+                str(receipt),
+            ],
+            cwd=work,
+            capture_output=True,
+            text=True,
+            env=gate_env,
+            check=False,
+        )
+        self.assertEqual(second.returncode, 0, second.stdout)
+        self.assertIn("overlap receipt reused", second.stdout)
+
 
 class BaseConflictProbeTests(unittest.TestCase):
     """The #319 class: a branch duplicating work already merged into its base.
