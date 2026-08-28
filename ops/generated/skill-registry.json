@@ -843,7 +843,7 @@
     },
     {
       "composition_role": "general",
-      "description": "component audit, deterministic verify, and runtime probe escalation ladder. use from /analyze, /evaluate, or /analyze_evaluate when the user names a component, import, or wiring check.",
+      "description": "Audit, deterministically verify, or runtime-probe a named component \u2014 exports, imports, wiring, and loadability \u2014 as a read-only escalation ladder. Use from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring or registration, for editing the component, or for generic repo exploration.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-component-verification",
@@ -1262,5 +1262,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "bd2a82a8faf0aa4841b867e7ee2669aedbe8f08be7f0ec6759e85fbfa16d400a",
-  "source_skill_corpus_sha256": "bfe6ae3480da6e7372ef4d75751f6e6951a3a7ea68cef0f324ba6f75f2711124"
+  "source_skill_corpus_sha256": "15d8967ce643404ad4eb266a6a42920da0f2565effe98ccc15f0c97d270d34d4"
 }
