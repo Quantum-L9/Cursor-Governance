@@ -485,7 +485,7 @@ admin-merge remain forbidden.
 have not been since 2026-08-18. Older text saying otherwise names an enforcement
 that does not exist; do not treat it as live.
 
-Two planes, and only one of them denies:
+Three planes, and two of them deny:
 
 1. **Workflow plane — preference, not enforcement.** `make pr` is the preferred
    route to GitHub: it is the only one that runs the checkers. `git` and `gh` are
@@ -500,6 +500,29 @@ Two planes, and only one of them denies:
    git is allowed unconditionally; a destructive primitive over disposable state
    is allowed; an unrecoverable mutation of sensitive state is denied — to a
    human, not to a workflow phase.
+3. **Verification plane — this one denies too.** Every shell command is also
+   evaluated by [`ops/autonomy/verification_bypass_gate.py`](ops/autonomy/verification_bypass_gate.py)
+   (contract `l9-commit-verification-integrity`), which denies commands that skip
+   the hooks verifying a commit: `git commit --no-verify` / `-n`,
+   `git push --no-verify`, `core.hooksPath` overrides, hook-suppressing env vars
+   on a commit, `pre-commit uninstall`, and writes under `.git/hooks/`. Forms are
+   declared in [`ops/config/commit-verification-contract.json`](ops/config/commit-verification-contract.json);
+   human/ops breakglass is `L9_VERIFY_BYPASS_AUTHORIZED=<reason>`. This narrows
+   nothing in plane 1: a plain `git push` is **not denied**, and neither is
+   `gh pr create`. Only the hook-skipping *form* is refused, never the command.
+
+   It runs at the same point as the effect plane — **before** the exemption — for
+   the same structural reason: a check in the workflow plane never sees a git
+   command. It is separate from the effect plane because that contract reasons
+   about *destroying work*, and skipping a hook destroys nothing, it removes a
+   check. Two questions, two contracts.
+
+   This does not restore name-based gating. The denial is not "the word
+   `--no-verify` appeared": value-taking flags are skipped so `git commit -m "-n"`
+   is allowed, `git push -n` (`--dry-run`) is allowed, and `SKIP=... pre-commit run`
+   — how `run_pr_precommit.sh` narrows the sanctioned gate — is allowed. Publishing
+   itself is **not denied** here either. What this plane refuses is the *effect* of
+   writing a commit without the verification that governs it.
 
 Still mechanically denied at every phase, including `release_authorized`, because
 they reach GitHub without the checkers: `make push`,
@@ -516,6 +539,12 @@ Rationale: naming commands cannot distinguish `git push` to a feature branch fro
 `git push --force` over a colleague's work. Effect can. Enforcing by name gave
 both a false sense of protection and, in this repository, a constitution that
 described a gate its own code had stopped implementing.
+
+The verification plane was added (2026-08-28) after the mirrored failure: eight
+skill files forbade `git commit --no-verify` and every gate allowed it, while
+five workflow executors emitted it. Doctrine without enforcement is the same
+split-brain as enforcement without doctrine — it just fails quietly instead of
+loudly. A prohibition that no process can refuse is a preference.
 
 <!-- GOVERNANCE_ACTIVATE_FRESH_SESSIONSTART_V1 -->
 ## 5.1 SessionStart tip activation + symlink notes (2026-08-12) — supersedes §2 / §5 rows
