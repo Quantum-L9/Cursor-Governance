@@ -230,8 +230,6 @@
     "l9-global-architect": "user-invocable-only",
     "l9-governance-symlinks": "user-invocable-only",
     "l9-governance-wiring": "user-invocable-only",
-    "l9-harvest-pipeline": "user-invocable-only",
-    "l9-inspect": "user-invocable-only",
     "l9-intelligence-harvest": "user-invocable-only",
     "l9-issue-remediation": "user-invocable-only",
     "l9-kubernetes-deploying": "user-invocable-only",
@@ -246,8 +244,7 @@
     "l9-repo-sync": "user-invocable-only",
     "l9-repository-renovation": "user-invocable-only",
     "l9-setting-up-terraform": "user-invocable-only",
-    "l9-ui-operator": "user-invocable-only",
-    "l9-update-command": "user-invocable-only"
+    "l9-ui-operator": "user-invocable-only"
   },
   "workflowSizeGuideline": "unrestricted"
 }
