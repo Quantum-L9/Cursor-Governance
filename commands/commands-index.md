@@ -31,7 +31,8 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/ynp` | Highest-leverage next action |
 | `/l9-plan` | Deep PE+autonomy `.plan.md` via first-class template |
 | `/l9-plan-simple` | Same template, Cursor Build on the current checkout (not `make campaign`) |
-| `/l9-audit-plans` | Shelf the plans store: root = current unbuilt; partial/built/superseded/parked in subfolders (`/plan-audit` alias) |
+| `/l9-audit-plans` | Shelf the plans store: root = current unbuilt; partial/built/superseded/parked in subfolders |
+| `/l9-pipeline-audit` | Audit plans + WIP + PE campaigns; harvest via `l9-intelligence-harvest` (`/plan-audit` alias) |
 | `/git-work-preserve` | Diagnose-first git work audit / extract / prune-propose (`l9-git-work-preserve`) |
 | `/ff` | In-place catch-up of a named Cursor-Governance clone (`l9-repo-sync`) |
 | `/analyze` | Explore structure, flows, hotspots (`l9-code-analysis`; probe mode via `l9-component-verification`) |
@@ -64,7 +65,7 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/extract-chat` / `/extract-from-chat` / `/extract_align` | Chat / pattern extraction |
 | `/spec` / `/dag-authoring` | Spec / DAG lifecycle (incl. thin command binding) |
 | `/issues` | GitHub issues Diagnose / Converge |
-| `/plan-audit` | Audit unbuilt Cursor plans |
+| `/plan-audit` | Compatibility alias of `/l9-pipeline-audit` |
 | `/lcto` | L CTO strategic mode |
 
 ---

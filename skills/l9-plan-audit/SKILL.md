@@ -38,8 +38,8 @@ do not auto-Build plans from this skill.
 **Activate** when session context includes Plan audit findings, or the user
 asks which **live-queue** (root) plans are unbuilt or stale.
 
-**Reject** when the user wants `/l9-audit-plans` or store organize (that
-protocol is `commands/l9-audit-plans.md`), wants a new plan (`l9-plan-simple`
+**Reject** when the user wants `/l9-pipeline-audit` / `/plan-audit` (multi-surface
+harvest) or `/l9-audit-plans` (plans-store shelf), wants a new plan (`l9-plan-simple`
 / `l9-plan`), wants to execute a chosen plan (Build or PE+autonomy), or asks
 to remediate scanner drift outside the plans directory.
 

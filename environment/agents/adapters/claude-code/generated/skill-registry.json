@@ -387,6 +387,23 @@
         ]
       },
       {
+        "id": "pipeline_audit",
+        "positive_signals": [
+          "pipeline audit",
+          "l9-pipeline-audit",
+          "harvest WIP campaigns",
+          "audit program-execution campaigns",
+          "harvestable components"
+        ],
+        "primary": "l9-pipeline-audit",
+        "signal_weight": 8,
+        "supporting": [
+          "l9-intelligence-harvest",
+          "l9-plan-audit",
+          "l9-gmp-protocol"
+        ]
+      },
+      {
         "id": "performance_audit",
         "positive_signals": [
           "performance bottleneck",
@@ -1085,6 +1102,17 @@
     },
     {
       "composition_role": "general",
+      "description": "audit plans, WIP, and PE campaigns; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit runs.",
+      "disable_model_invocation": true,
+      "invocation": "explicit_only",
+      "name": "l9-pipeline-audit",
+      "path": "skills/l9-pipeline-audit",
+      "reason": "on-demand multi-surface harvest (plans + WIP + PE campaigns) can emit new WIP or campaign INTENT; slash /l9-pipeline-audit is the explicit invoke; not sessionStart l9-plan-audit; disable-model-invocation",
+      "user_invocable": true,
+      "when_to_use": ""
+    },
+    {
+      "composition_role": "general",
       "description": "drive a compiled contract chain as one fresh Claude Code session per contract, in dependency order. use when running an emitted multi-PR chain that needs an advance driver, auto-merge gate, and branch protection.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
@@ -1114,7 +1142,7 @@
       "path": "skills/l9-plan-audit",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "session context shows Plan audit or the 7-day live-queue scanner; not /l9-audit-plans (store shelf organize)"
+      "when_to_use": "session context shows Plan audit or the 7-day live-queue scanner; not /l9-audit-plans and not /l9-pipeline-audit"
     },
     {
       "composition_role": "general",
@@ -1294,6 +1322,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "810d0da830fe2b4db8ce6d12957ea5cd409fc45dfb074b2eba81b214e6e0760b",
-  "source_skill_corpus_sha256": "3c1f39a8a81ca65e4f1824c1155d0613d1a0b8db9fdb6297c8e6275d0999beee"
+  "source_manifest_sha256": "63b59bd62d7f6d7de6deda953075083b56dd2094571de727110faad58c542e56",
+  "source_skill_corpus_sha256": "1f094bb114798bedd7e23cad0bb6d1d63c0f82db07610504451d1cb3b8038485"
 }

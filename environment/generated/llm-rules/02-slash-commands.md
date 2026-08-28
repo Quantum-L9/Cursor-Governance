@@ -92,8 +92,9 @@ Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not
 | `/lint` | `commands/lint.md` | Systematic lint fixes (no commit) |
 | `/mem` | `commands/mem.md` | Memory-aware execution |
 | `/migrate` | `commands/migrate.md` | Autonomous code migration |
-| `/l9-audit-plans` | `commands/l9-audit-plans.md` | Shelf the plans store (root = current unbuilt). `/plan-audit` is an alias. Not skill `l9-plan-audit`. |
-| `/plan-audit` | `commands/plan-audit.md` | Audit unbuilt Cursor plans |
+| `/l9-audit-plans` | `commands/l9-audit-plans.md` | Shelf the plans store (root = current unbuilt). Not skill `l9-plan-audit`. |
+| `/l9-pipeline-audit` | `commands/l9-pipeline-audit.md` | Audit plans + WIP + PE campaigns; harvest via `l9-intelligence-harvest`. |
+| `/plan-audit` | `commands/plan-audit.md` | Compatibility alias of `/l9-pipeline-audit` |
 | `/pr` | `commands/pr.md` | PR Diagnose (readiness / blockers) via l9-pr-remediation |
 | `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |
 | `/refactor` | `commands/refactor.md` | Systematic refactoring/migration |

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Port plan invariants without implementation.
+"""Emit compiled packets from already-harvested invariants.
 
-Cites `kernels/Gold Nugget Extractor` by path. Does not write product code.
-Does not call l9-harvest-pipeline. Does not create l9-intelligence-harvest.
+Harvest owner is skills/l9-intelligence-harvest (bind/inventory/qualify).
+This script only extracts success-property rows and writes destination
+packets. It does not call l9-harvest-pipeline.
 """
 
 from __future__ import annotations

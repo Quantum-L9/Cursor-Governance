@@ -833,6 +833,18 @@ rest. `/plan-audit` is a compatibility alias of that command.
 Skill **`l9-plan-audit`** is still the sessionStart 7-day live-queue scanner
 (§16). It does not move files. Do not treat it as `/l9-audit-plans`.
 
+<!-- L9_PIPELINE_AUDIT_V1 -->
+## `/l9-pipeline-audit` (2026-08-28)
+
+`/plan-audit` is a compatibility alias of **`/l9-pipeline-audit`**
+(`commands/l9-pipeline-audit.md`). That command classifies Cursor plans,
+`WIP/`, and `environment/program-execution/campaigns/` with the same
+component verdicts, then harvests through skill `l9-intelligence-harvest`.
+Compiled packets emit as a new plan, `WIP/<M-D-YY>/<concern>/`, or a
+campaign `HARVEST_INTENT.md`. Execute via `/gmp`. Do not `make campaign`.
+`/l9-audit-plans` remains the plans-store shelf organizer. SessionStart
+`l9-plan-audit` is unchanged (plans-only, display-only).
+
 <!-- FF_SHELF_WIP_PLANS_V1 -->
 ## `/ff` shelves leftover WIP and plans (2026-08-28)
 
