@@ -2623,17 +2623,44 @@ def _plan_peer_task_batch(
     return list(plan.selected)
 
 
+def _task_autonomy_authority(
+    workspace: Path,
+    contract: dict[str, Any],
+) -> dict[str, Any] | None:
+    """This task/attempt's root authority, read from its own grant receipt.
+
+    The task/attempt-scoped grant receipt is the authority evidence of record
+    (`integrations/autonomy-control-plane/README.md`). Reading the sidecar back
+    from it — rather than from a second in-memory copy — means a dispatch can
+    only ever carry authority that the grant actually recorded for this exact
+    task and attempt.
+    """
+    task_id = str(contract.get("task_id") or contract.get("id") or "")
+    if not task_id:
+        return None
+    attempt_number = int(contract.get("attempt_number") or 1)
+    path = _grant_module().grant_receipt_path(workspace, task_id, attempt_number, kind="grant")
+    if not path.is_file():
+        return None
+    receipt = json.loads(path.read_text(encoding="utf-8"))
+    authority = receipt.get("autonomy_authority")
+    return dict(authority) if isinstance(authority, dict) else None
+
+
 def _run_peer_execution(
     workspace: Path,
     contract: dict[str, Any],
+    autonomy_authority: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Execute one rendered contract through binding → profile → probe → provider.
 
     The lifecycle itself belongs to `run_peer_task_pipeline`; this runner supplies
-    the campaign's identity and workspace and translates a non-PASS outcome into a
-    campaign-level stop.
+    the campaign's identity, workspace, and this task's root authority, and
+    translates a non-PASS outcome into a campaign-level stop.
     """
     pipeline = _peer_pipeline()
+    if autonomy_authority is None:
+        autonomy_authority = _task_autonomy_authority(workspace, contract)
     agent_ref, surface, provider_override = _peer_identity()
     task_id = contract.get("task_id")
     try:
@@ -2671,6 +2698,7 @@ def _run_peer_execution(
         binding=binding,
         adapter=adapter,
         probe=probe,
+        autonomy_authority=autonomy_authority,
     )
     # A non-PASS provider outcome is preserved, not thrown away: the terminal
     # failure result is evidence the batch reconciler must keep so the failed
@@ -2711,6 +2739,18 @@ def _grant_root_authority(
     """
     grants = _grant_module()
     attempt_number = int(contract.get("attempt_number") or 1)
+    # The root lease carries the full canonical peer identity, not just the
+    # surface: the adapter session it is bound to must be the conformant
+    # session for this peer/surface/provider/profile tuple.
+    agent_ref, surface, provider_override = _peer_identity()
+    try:
+        binding = _peer_pipeline().resolve_peer_binding(
+            GOV_ROOT, agent_ref, surface, provider_override
+        )
+    except ValueError as exc:
+        raise CampaignError(
+            f"{task_id}: canonical peer binding unresolved for {agent_ref}/{surface}: {exc}"
+        ) from exc
     try:
         with traced(trace, "task_prepare", "root_autonomy_grant", task_id=task_id):
             grant = grants.grant_task_mutation(
@@ -2718,7 +2758,11 @@ def _grant_root_authority(
                 workspace,
                 contract,
                 attempt_number=attempt_number,
-                adapter_id=_peer_identity()[1],
+                adapter_id=binding.provider_ref,
+                agent_ref=binding.agent_ref,
+                surface=binding.surface,
+                provider_ref=binding.provider_ref,
+                execution_profile_ref=binding.execution_profile_ref,
             )
     except Exception as exc:
         reason = f"root autonomy grant refused: {type(exc).__name__}: {exc}"
@@ -2739,6 +2783,8 @@ def _grant_root_authority(
             "lease_id": grant.get("lease_id"),
             "capability_id": grant.get("capability_id"),
             "agent_id": grant.get("agent_id"),
+            "adapter_session_id": grant.get("adapter_session_id"),
+            "program_lease_id": grant.get("program_lease_id"),
         },
     )
     return grant
@@ -2904,6 +2950,7 @@ def _prepare_peer_unit(
         "title": str(task.get("title") or task_id),
         "already_submitted": already_submitted,
         "grant": grant,
+        "autonomy_authority": (grant or {}).get("autonomy_authority"),
     }
 
 

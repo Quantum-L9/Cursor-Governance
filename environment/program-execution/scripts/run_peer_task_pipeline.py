@@ -133,12 +133,54 @@ def _preflight_digest(task_id: str, binding: Any) -> str:
     return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+#: Contract actions whose execution mutates the task worktree. A mutating
+#: dispatch without root authority is refused here rather than discovered later
+#: by decision-coverage reconciliation.
+MUTATING_ACTIONS = frozenset({"local_write", "destructive_change", "commit"})
+
+
+def _requires_root_authority(contract: dict[str, Any]) -> bool:
+    requested = {str(item) for item in (contract.get("requested_actions") or [])}
+    return bool(requested & MUTATING_ACTIONS)
+
+
+def _bind_root_authority(
+    *,
+    adapter: Any,
+    contract: dict[str, Any],
+    autonomy_authority: dict[str, Any] | None,
+) -> None:
+    """Attach this task's root authority to the adapter, or fail closed.
+
+    Peer Execution does not decide whether the authority is sufficient — the
+    root gateway does. It only refuses to dispatch mutating work with no
+    authority to carry, and refuses an adapter that cannot carry one.
+    """
+    binder = getattr(adapter, "bind_autonomy_authority", None)
+    if autonomy_authority is None:
+        if _requires_root_authority(contract):
+            raise ValueError(
+                "MUTATING_DISPATCH_WITHOUT_ROOT_AUTHORITY: "
+                f"{contract.get('task_id')!r} requests mutation with no root autonomy authority"
+            )
+        if callable(binder):
+            binder(None)
+        return
+    if not callable(binder):
+        raise ValueError(
+            "ADAPTER_CANNOT_CARRY_ROOT_AUTHORITY: "
+            f"{type(adapter).__name__} has no autonomy authority carrier"
+        )
+    binder(autonomy_authority)
+
+
 def _execute_provider(
     *,
     contract: dict[str, Any],
     binding: Any,
     adapter: Any,
     probe: Any,
+    autonomy_authority: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if probe.status != "PASS":
         return {
@@ -146,6 +188,11 @@ def _execute_provider(
             "binding": binding.to_dict(),
             "probe": probe.to_dict(),
         }
+    _bind_root_authority(
+        adapter=adapter,
+        contract=contract,
+        autonomy_authority=autonomy_authority,
+    )
     prepared = adapter.prepare(contract)
     dispatched = adapter.dispatch({"dispatch_id": prepared.dispatch_id})
     dispatch_id = str(prepared.dispatch_id)

@@ -5,10 +5,27 @@ Program contract to one subordinate root-autonomy campaign, completes the
 synthesis action that represents the already-rendered contract, then issues
 and acknowledges an executor lease that authorizes local write and commit.
 Push, pull request, and merge stay forbidden.
+
+The executor lease is bound to two things the campaign alone cannot supply:
+
+* a *conformant adapter session*, registered from the canonical `PeerBinding`
+  plus the current `autonomy/policies/adapter-requirements.json` policy, so the
+  live `AdapterOrchestrator` can authorize each individual effect against it;
+* the *live Program parent*, read read-only from canonical PEC state, so the
+  subordinate lease carries the parent's identity and can never outlive it.
+
+The acknowledgment path stays exactly as narrow as it was.
+`_executor_authority(contract)` intersects the task's `requested_actions`, and
+that intersection — not the executor role's full capability set — is what the
+lease accepts. `AdapterOrchestrator.request_agent()` is deliberately *not* used
+for this lease: it derives its acknowledgment set from the role policy, and
+`acknowledge_agent()` requires that exact role set, which would hand a
+`local_write`-only task `git.commit_local` (DG-001).
 """
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 import sys
@@ -26,10 +43,25 @@ for _path in (_HERE, _PE_ROOT, _GOV_ROOT):
 
 from bridge import AutonomyControlPlaneBridge  # noqa: E402
 from contract_mapper import map_program_contract  # noqa: E402
+from peer_execution.bindings import (  # noqa: E402
+    PeerBinding,
+    load_peer_bindings,
+    resolve_peer_binding,
+)
+from program_authority import (  # noqa: E402
+    ProgramAuthorityError,
+    ProgramAuthorityVerifier,
+    ProgramParent,
+)
 
+from autonomy.adapters.orchestrator import AdapterOrchestrator  # noqa: E402
+from autonomy.adapters.protocol import ADAPTER_PROTOCOL_VERSION  # noqa: E402
 from autonomy.compiler.graph_compiler import compile_graph  # noqa: E402
 from autonomy.models import CampaignAuthorization, DeploymentManifest  # noqa: E402
+from autonomy.policy_loader import load_policy  # noqa: E402
 from autonomy.runtime.engine import AutonomyRuntime  # noqa: E402
+
+AUTONOMY_AUTHORITY_SCHEMA = "l9.program-execution.autonomy-authority.v1"
 
 SYNTHESIS_CAPABILITIES = [
     "repository.read",
@@ -78,6 +110,149 @@ class AutonomyGrantError(RuntimeError):
     """Root autonomy refused to grant the requested local authority."""
 
 
+def resolve_identity(
+    repository_root: str | Path,
+    *,
+    agent_ref: str | None,
+    surface: str | None,
+    provider_ref: str | None,
+    execution_profile_ref: str | None,
+    adapter_id: str | None,
+) -> PeerBinding:
+    """The full canonical peer identity for this grant, or fail closed.
+
+    A caller that already knows its live identity passes it. A caller that only
+    knows a provider id (the historical surface-only argument) is resolved
+    through the same topology SSOT, and only when that lookup is unique — the
+    bridge never guesses which peer a provider belongs to.
+    """
+    root = Path(repository_root).resolve()
+    if agent_ref and surface:
+        return resolve_peer_binding(root, agent_ref, surface, provider_ref, execution_profile_ref)
+    probe = (provider_ref or adapter_id or "").strip()
+    if not probe:
+        raise AutonomyGrantError(
+            "AUTONOMY_IDENTITY_UNRESOLVED: peer agent_ref/surface or a provider_ref is required"
+        )
+    document = load_peer_bindings(root)
+    candidates: list[tuple[str, str, str]] = []
+    for peer_key, peer in (document.get("peers") or {}).items():
+        if not isinstance(peer, Mapping):
+            continue
+        for binding in (peer.get("execution") or {}).get("bindings") or []:
+            if not isinstance(binding, Mapping):
+                continue
+            if str(binding.get("provider_ref")) != probe:
+                continue
+            candidates.append(
+                (
+                    str(peer.get("agent_ref") or peer_key),
+                    str(binding.get("surface")),
+                    str(binding.get("execution_profile_ref")),
+                )
+            )
+    if len(candidates) != 1:
+        raise AutonomyGrantError(
+            "AUTONOMY_IDENTITY_UNRESOLVED: provider "
+            f"{probe!r} does not resolve to exactly one canonical peer binding "
+            f"(candidates={sorted(candidates)})"
+        )
+    resolved_agent, resolved_surface, resolved_profile = candidates[0]
+    return resolve_peer_binding(root, resolved_agent, resolved_surface, probe, resolved_profile)
+
+
+def _mandatory_policy_value(requirements: Mapping[str, Any], field_name: str) -> Any:
+    mandatory = requirements.get("mandatory") or {}
+    if not isinstance(mandatory, Mapping) or field_name not in mandatory:
+        raise AutonomyGrantError(
+            "ADAPTER_POLICY_INCOMPLETE: adapter-requirements does not declare "
+            f"mandatory {field_name!r}"
+        )
+    return mandatory[field_name]
+
+
+def _surface_supports_background(repository_root: Path, agent_ref: str) -> bool:
+    """Background-agent capability as the topology SSOT declares it."""
+    peer = (load_peer_bindings(repository_root).get("peers") or {}).get(agent_ref)
+    if not isinstance(peer, Mapping):
+        return False
+    subagents = peer.get("subagents")
+    return bool(isinstance(subagents, Mapping) and subagents.get("enabled") is True)
+
+
+def adapter_config_payload(
+    repository_root: str | Path,
+    binding: PeerBinding,
+    *,
+    database_path: str | Path,
+    requirements: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Current-policy adapter configuration for one canonical peer binding.
+
+    Every mandatory field comes from the live policy file rather than a literal
+    here, so a policy tightening is picked up without editing this bridge. The
+    two optional surface capabilities are declared from the topology SSOT, never
+    asserted optimistically.
+    """
+    root = Path(repository_root).resolve()
+    policy = dict(requirements if requirements is not None else load_policy("adapter-requirements"))
+    payload: dict[str, Any] = {
+        "adapter_id": binding.provider_ref,
+        "adapter_type": binding.agent_ref,
+        "peer_ref": binding.agent_ref,
+        "surface": binding.surface,
+        "provider_ref": binding.provider_ref,
+        "execution_profile_ref": binding.execution_profile_ref,
+        "protocol_version": str(policy.get("protocol_version") or ADAPTER_PROTOCOL_VERSION),
+        "supports_background_agents": _surface_supports_background(root, binding.agent_ref),
+        "supports_independent_review": False,
+        "metadata": {
+            "database_path": str(database_path),
+            "autonomy_provider_ref": binding.autonomy_provider_ref,
+            "program_bound": True,
+        },
+    }
+    for field_name in (
+        "tool_mediation_mode",
+        "direct_tool_access",
+        "autonomous_merge",
+        "supports_agent_identity",
+        "supports_lease_propagation",
+        "supports_heartbeat",
+        "supports_typed_artifacts",
+        "supports_human_gate",
+    ):
+        payload[field_name] = _mandatory_policy_value(policy, field_name)
+    return payload
+
+
+def register_adapter_session(
+    orchestrator: AdapterOrchestrator,
+    config_payload: Mapping[str, Any],
+) -> str:
+    """Register a conformant live adapter session or fail closed."""
+    registration = orchestrator.register(dict(config_payload))
+    report = registration.get("conformance") or {}
+    if report.get("status") != "PASS":
+        failures = [
+            f"{check.get('check_id')}: {check.get('message')}"
+            for check in report.get("checks") or []
+            if check.get("blocking") and not check.get("passed")
+        ]
+        raise AutonomyGrantError(
+            "ADAPTER_CONFORMANCE_FAILED: root autonomy refused a non-conformant "
+            f"adapter session; failures={failures}"
+        )
+    return str(registration["session_id"])
+
+
+def authority_digest(authority: Mapping[str, Any]) -> str:
+    """Stable correlation digest over the authority sidecar's own fields."""
+    payload = {key: value for key, value in authority.items() if key != "authority_digest"}
+    encoded = json.dumps(payload, sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return "sha256:" + hashlib.sha256(encoded).hexdigest()
+
+
 def grant_task_mutation(
     repository_root: str | Path,
     workspace: str | Path,
@@ -85,6 +260,10 @@ def grant_task_mutation(
     *,
     attempt_number: int = 1,
     adapter_id: str = "cursor-foreground",
+    agent_ref: str | None = None,
+    surface: str | None = None,
+    provider_ref: str | None = None,
+    execution_profile_ref: str | None = None,
 ) -> dict[str, Any]:
     root = Path(repository_root).resolve()
     pec = Path(workspace).resolve()
@@ -93,6 +272,24 @@ def grant_task_mutation(
     if probe.get("status") != "PASS":
         missing = ", ".join(probe.get("missing") or [])
         raise AutonomyGrantError(f"root autonomy control plane is BLOCKED; missing={missing}")
+    try:
+        binding = resolve_identity(
+            root,
+            agent_ref=agent_ref,
+            surface=surface,
+            provider_ref=provider_ref,
+            execution_profile_ref=execution_profile_ref,
+            adapter_id=adapter_id,
+        )
+    except (OSError, ValueError) as exc:
+        raise AutonomyGrantError(f"AUTONOMY_IDENTITY_UNRESOLVED: {exc}") from exc
+    # The canonical Program parent is read read-only before any root authority
+    # exists: a subordinate lease is only ever issued beneath a live parent.
+    verifier = ProgramAuthorityVerifier(pec)
+    try:
+        parent = verifier.require_live_parent(contract)
+    except ProgramAuthorityError as exc:
+        raise AutonomyGrantError(str(exc)) from exc
     mapped = map_program_contract(
         contract,
         adapter_id=adapter_id,
@@ -116,6 +313,11 @@ def grant_task_mutation(
         graph_payload=graph_payload,
     )
     runtime.scheduler.refresh_readiness(campaign.campaign_id)
+    orchestrator = AdapterOrchestrator(runtime, repository_root=root)
+    session_id = register_adapter_session(
+        orchestrator,
+        adapter_config_payload(root, binding, database_path=database),
+    )
     ids = mapped["ids"]
     if mapped["mutation"]:
         _complete_if_ready(
@@ -144,28 +346,56 @@ def grant_task_mutation(
         work_agent = ids["agent_id"]
         work_capabilities = RECON_CAPABILITIES
         authorize = INSPECT_AUTHORIZATIONS
+    task_id = str(contract.get("task_id") or contract.get("id") or "task")
+    try:
+        ttl_seconds = verifier.subordinate_ttl_seconds(
+            parent,
+            default_ttl_seconds=runtime.leases.default_ttl_seconds,
+        )
+    except ProgramAuthorityError as exc:
+        raise AutonomyGrantError(str(exc)) from exc
     lease = _issue_or_reuse(
         runtime,
         campaign_id=campaign.campaign_id,
         action_id=work_action,
         agent_id=work_agent,
         capabilities=work_capabilities,
+        ttl_seconds=ttl_seconds,
+        metadata=_lease_metadata(
+            session_id=session_id,
+            binding=binding,
+            parent=parent,
+            workspace=pec,
+            task_id=task_id,
+            attempt_number=attempt_number,
+        ),
     )
+    # A reused lease keeps the adapter session it was issued under: authorizing
+    # against a session the lease was not bound to is exactly the mismatch
+    # `authorize_tool` exists to refuse.
+    effective_session = str(lease.get("adapter_session_id") or session_id)
     authorized: list[str] = []
     for capability in authorize:
-        decision = runtime.gateway.authorize(
+        decision = orchestrator.authorize_tool(
+            session_id=effective_session,
             lease_id=lease["lease_id"],
             agent_id=work_agent,
             capability=capability,
             resource=_resource_for_capability(contract, capability),
+            metadata={
+                "program_task_id": task_id,
+                "program_lease_id": parent.lease_id,
+                "phase": "grant",
+            },
         )
-        if not decision.allowed:
-            raise AutonomyGrantError(f"{decision.code}: {decision.message} capability={capability}")
+        if not decision.get("allowed"):
+            raise AutonomyGrantError(
+                f"{decision.get('code')}: {decision.get('message')} capability={capability}"
+            )
         authorized.append(capability)
     # Receipts are task/attempt-scoped: one mutable workspace-global
     # autonomy-grant.json pair would let two concurrent PE tasks overwrite
     # each other's authority evidence.
-    task_id = str(contract.get("task_id") or contract.get("id") or "task")
     packet_path = grant_receipt_path(pec, task_id, attempt_number, kind="packet")
     grant_path = grant_receipt_path(pec, task_id, attempt_number, kind="grant")
     packet_path.parent.mkdir(parents=True, exist_ok=True)
@@ -173,6 +403,29 @@ def grant_task_mutation(
         json.dumps(campaign_payload, indent=2, sort_keys=True) + "\n",
         encoding="utf-8",
     )
+    authority = {
+        "schema": AUTONOMY_AUTHORITY_SCHEMA,
+        "owns_program_state": False,
+        "task_id": task_id,
+        "attempt_number": int(attempt_number),
+        "adapter_session_id": effective_session,
+        "campaign_id": campaign.campaign_id,
+        "graph_id": graph_payload["graph_id"],
+        "action_id": work_action,
+        "agent_id": work_agent,
+        "lease_id": lease["lease_id"],
+        "capability_id": lease["capability_id"],
+        "expires_at": lease.get("expires_at"),
+        "base_sha": str(campaign.base_state["commit_sha"]),
+        "capabilities": sorted(set(work_capabilities)),
+        "authorized": list(authorized),
+        "repository_root": str(root),
+        "runtime_database": str(database),
+        "workspace": str(pec),
+        "peer_binding": binding.to_dict(),
+        "program_parent": parent.to_dict(),
+    }
+    authority["authority_digest"] = authority_digest(authority)
     grant = {
         "schema": "l9.program-execution.autonomy-grant.v2",
         "provider": "root-autonomy-control-plane",
@@ -185,6 +438,8 @@ def grant_task_mutation(
         "agent_id": work_agent,
         "lease_id": lease["lease_id"],
         "capability_id": lease["capability_id"],
+        "adapter_session_id": effective_session,
+        "expires_at": lease.get("expires_at"),
         "base_sha": str(campaign.base_state["commit_sha"]),
         "mutation": bool(mapped["mutation"]),
         "authorized": authorized,
@@ -192,9 +447,43 @@ def grant_task_mutation(
         "packet": str(packet_path),
         "runtime_database": str(database),
         "program_lease_id": contract.get("lease_id"),
+        "program_parent": parent.to_dict(),
+        "peer_binding": binding.to_dict(),
+        "autonomy_authority": authority,
     }
     grant_path.write_text(json.dumps(grant, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     return grant
+
+
+def _lease_metadata(
+    *,
+    session_id: str,
+    binding: PeerBinding,
+    parent: ProgramParent,
+    workspace: Path,
+    task_id: str,
+    attempt_number: int,
+) -> dict[str, Any]:
+    """Identity the live orchestrator and the Program parent both check."""
+    return {
+        "adapter_session_id": session_id,
+        "adapter_id": binding.provider_ref,
+        "adapter_type": binding.agent_ref,
+        "peer_ref": binding.agent_ref,
+        "surface": binding.surface,
+        "execution_profile_ref": binding.execution_profile_ref,
+        "owns_program_state": False,
+        "program_workspace": str(workspace),
+        "program_task_id": task_id,
+        "program_attempt_number": int(attempt_number),
+        "program_lease_id": parent.lease_id,
+        "program_base_sha": parent.base_sha,
+        "program_branch": parent.branch,
+        "program_worktree": parent.worktree,
+        "program_contract_digest": parent.contract_digest,
+        "program_parent_expires_at": parent.expires_at,
+        "program_parent_bound": parent.bound,
+    }
 
 
 def grant_receipt_path(
@@ -317,6 +606,8 @@ def _issue_or_reuse(
     action_id: str,
     agent_id: str,
     capabilities: list[str],
+    ttl_seconds: int | None = None,
+    metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     row = runtime.store.get_action(campaign_id, action_id)
     status = str(row["status"])
@@ -326,6 +617,8 @@ def _issue_or_reuse(
             "lease_id": lease.lease_id,
             "capability_id": lease.capability_id,
             "agent_id": lease.agent_id,
+            "expires_at": lease.expires_at,
+            "adapter_session_id": lease.metadata.get("adapter_session_id"),
         }
     if status != "READY":
         runtime.scheduler.refresh_readiness(campaign_id)
@@ -338,7 +631,11 @@ def _issue_or_reuse(
         campaign_id=campaign_id,
         action_id=action_id,
         agent_id=agent_id,
+        ttl_seconds=ttl_seconds,
+        metadata=dict(metadata or {}),
     )
+    # Acknowledge the action-specific intersection, never the role-wide set:
+    # the accepted capability list is what the gateway checks per effect.
     runtime.leases.acknowledge(
         lease_id=lease.lease_id,
         agent_id=agent_id,
@@ -348,4 +645,6 @@ def _issue_or_reuse(
         "lease_id": lease.lease_id,
         "capability_id": lease.capability_id,
         "agent_id": lease.agent_id,
+        "expires_at": lease.expires_at,
+        "adapter_session_id": dict(metadata or {}).get("adapter_session_id"),
     }
