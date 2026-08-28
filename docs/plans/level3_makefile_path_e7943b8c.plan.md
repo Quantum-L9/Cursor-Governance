@@ -13,8 +13,28 @@ todos:
     status: completed
   - id: validate-pr-check
     content: make pr-check on changed ledger/handoff/doc paths only (no Makefile, no push)
-    status: in_progress
+    status: pending
 isProject: false
+kind: simple
+execute_via: cursor-build
+kernel_pass:
+  bound_path: level3_makefile_path_e7943b8c.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T19:28:00Z
+    body_sha256: "dfcd4d0d85b2853b023cdaf61a4d4108ecd554d3ac0fa8b6c25ec470dd560a12"
+    deltas:
+      - "Replaced hybrid-vs-restack framing with the executed delete-shadow-inputs closeout"
+      - "Removed live pointers to Makefile.candidate and Prompt - Start Campaign.md"
+      - "Locked live authority to root Makefile, AGENTS.md, CAMPAIGN_STATUS.yaml, CAMPAIGN_EXECUTION_POLICY.yaml"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T19:29:00Z
+    body_sha256: "dfcd4d0d85b2853b023cdaf61a4d4108ecd554d3ac0fa8b6c25ec470dd560a12"
+    deltas:
+      - "Recorded in-place close without archive_completed so the pack stays on disk"
+      - "Recorded leftover worktree as report-only and dirty; no git switch on primary"
+      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
 ---
 
 # Shadow-authority closeout for level3-make-pr-single-path
