@@ -1,0 +1,14 @@
+./WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/provider.py:97:class CanonicalProviderResult(BaseModel):
+./WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/provider.py:206:class CanonicalExecutionRequest(BaseModel):
+./workflows/dags/inspect_dag.py:63:class InspectState(BaseModel):
+./ops/graphiti/ontology_coding.py:28:class RepoManifest(BaseModel):
+./ops/graphiti/ontology_coding.py:35:class Module(BaseModel):
+./ops/graphiti/ontology_coding.py:40:class ADRDecision(BaseModel):
+./ops/graphiti/ontology_coding.py:46:class GMPPhase(BaseModel):
+./ops/graphiti/ontology_coding.py:51:class ModificationLock(BaseModel):
+./ops/graphiti/ontology_coding.py:55:class CIGotcha(BaseModel):
+./ops/graphiti/ontology_coding.py:60:class TechDebtItem(BaseModel):
+./ops/graphiti/ontology_coding.py:65:class Preference(BaseModel):
+./ops/graphiti/episode_contract.py:56:class EpisodeContract(BaseModel):
+./environment/program-execution/peer_execution/provider.py:97:class CanonicalProviderResult(BaseModel):
+./environment/program-execution/peer_execution/provider.py:196:class CanonicalExecutionRequest(BaseModel):
