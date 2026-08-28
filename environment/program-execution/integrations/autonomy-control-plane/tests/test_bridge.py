@@ -105,6 +105,21 @@ def _bind_program_parent(
         database.close()
 
 
+def _commit_only_contract() -> dict[str, object]:
+    """commit without local_write: incoherent, and must gain nothing.
+
+    Nothing upstream should produce this -- the campaign compiler refuses it.
+    That is exactly why the authority owner has to refuse it too: a lower
+    authority owner that depends on its caller staying honest is not
+    fail-closed, it has merely not been asked dishonestly yet.
+    """
+    contract = _mutating_contract()
+    contract["requested_actions"] = ["inspect", "commit"]
+    contract["task_id"] = "TASK-3"
+    contract["contract_digest"] = "digest-commit-only"
+    return contract
+
+
 def _write_only_contract() -> dict[str, object]:
     """Mutation without commit: the shape that used to receive commit anyway."""
     contract = _mutating_contract()
@@ -221,6 +236,55 @@ class AutonomyControlPlaneBridgeTests(unittest.TestCase):
             self.assertTrue(grant["mutation"])
             self.assertEqual(grant["authorized"], ["repository.write_scoped"])
             self.assertNotIn("git.commit_local", grant["authorized"])
+
+    def test_commit_without_local_write_is_refused_by_the_mapper(self) -> None:
+        """It must not fall through to the write set and pick up edit_scoped."""
+        module = _mapper()
+        with self.assertRaises(module.ContractActionError) as ctx:
+            module.allowed_operations(_commit_only_contract())
+        self.assertIn("local_write", str(ctx.exception))
+
+        with self.assertRaises(module.ContractActionError):
+            module.map_program_contract(
+                _commit_only_contract(),
+                adapter_id="cursor-foreground",
+                attempt_number=1,
+            )
+
+    def test_commit_without_local_write_yields_no_usable_grant(self) -> None:
+        """The authority owner refuses before any lease is issued."""
+        # Bind the module once: `_grant()` loads a fresh copy per call, so a
+        # second load would raise a different AutonomyGrantError class object.
+        grant_mod = _grant()
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            with self.assertRaises(grant_mod.AutonomyGrantError) as ctx:
+                grant_mod.grant_task_mutation(
+                    _GOV_ROOT,
+                    workspace,
+                    _commit_only_contract(),
+                    attempt_number=1,
+                )
+            self.assertIn("local_write", str(ctx.exception))
+            # No receipt, so no record of authority it never held.
+            self.assertFalse(
+                grant_mod.grant_receipt_path(workspace, "TASK-3", 1, kind="grant").exists()
+            )
+            self.assertFalse((workspace / "runtime" / "autonomy-grants").exists())
+
+    def test_write_capability_traces_only_to_local_write(self) -> None:
+        """Each capability comes from the one action that justifies it."""
+        executor_authority = _grant()._executor_authority
+
+        caps, authorized = executor_authority(_write_only_contract())
+        self.assertIn("repository.write_scoped", caps)
+        self.assertNotIn("git.commit_local", caps)
+        self.assertEqual(authorized, ("repository.write_scoped",))
+
+        caps, authorized = executor_authority(_mutating_contract())
+        self.assertIn("repository.write_scoped", caps)
+        self.assertIn("git.commit_local", caps)
+        self.assertEqual(authorized, ("repository.write_scoped", "git.commit_local"))
 
     def test_inspect_only_grant_does_not_authorize_write(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
