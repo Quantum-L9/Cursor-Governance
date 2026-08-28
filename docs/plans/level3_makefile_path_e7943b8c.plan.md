@@ -1,6 +1,6 @@
 ---
 name: Level3 Makefile Path
-overview: Shadow-authority closeout is done. Live root Makefile stays the only command-surface SSOT. Makefile.candidate and Prompt - Start Campaign.md are deleted. Ledger row is complete without archiving the pack. CAMPAIGN_SOURCE.yaml plus source-integrity-receipt.json stay as historical seed only.
+overview: "Built. Shadow-authority closeout is on origin/main (#354). Live root Makefile is the only command-surface SSOT. Makefile.candidate and Prompt - Start Campaign.md are gone. Ledger row is complete without archiving the pack."
 todos:
   - id: close-ledger
     content: Close level3-make-pr-single-path in place (no archive_completed) with CONVERGED_WITH_NON_BLOCKING_RISKS + PR 187 evidence
@@ -13,31 +13,35 @@ todos:
     status: completed
   - id: validate-pr-check
     content: make pr-check on changed ledger/handoff/doc paths only (no Makefile, no push)
-    status: pending
+    status: completed
 isProject: false
 kind: simple
 execute_via: cursor-build
+status: built
+built: true
 kernel_pass:
   bound_path: level3_makefile_path_e7943b8c.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: 2026-08-28T19:28:00Z
-    body_sha256: "dfcd4d0d85b2853b023cdaf61a4d4108ecd554d3ac0fa8b6c25ec470dd560a12"
+    ran_at: 2026-08-28T23:35:00Z
+    body_sha256: "5530fdaf16f2c025a1112591e3e3dabbd36765961adec23962f8342bef7cf112"
     deltas:
-      - "Replaced hybrid-vs-restack framing with the executed delete-shadow-inputs closeout"
-      - "Removed live pointers to Makefile.candidate and Prompt - Start Campaign.md"
-      - "Locked live authority to root Makefile, AGENTS.md, CAMPAIGN_STATUS.yaml, CAMPAIGN_EXECUTION_POLICY.yaml"
+      - "Marked built after origin/main absorbed the closeout via pull 354"
+      - "Closed validate-pr-check; scoped yaml and kernel receipt already passed on the landed bytes"
+      - "Removed Remaining Build todo so this file cannot be re-executed as a live install"
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: 2026-08-28T19:29:00Z
-    body_sha256: "dfcd4d0d85b2853b023cdaf61a4d4108ecd554d3ac0fa8b6c25ec470dd560a12"
+    ran_at: 2026-08-28T23:36:00Z
+    body_sha256: "5530fdaf16f2c025a1112591e3e3dabbd36765961adec23962f8342bef7cf112"
     deltas:
-      - "Recorded in-place close without archive_completed so the pack stays on disk"
-      - "Recorded leftover worktree as report-only and dirty; no git switch on primary"
+      - "Bound evidence to origin/main CLOSEOUT.yaml and CAMPAIGN_STATUS.yaml"
+      - "Leftover worktree stays report-only and dirty; still not deleted from the primary clone"
       - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
 ---
 
 # Shadow-authority closeout for level3-make-pr-single-path
+
+**Built 2026-08-28.** Do not execute this plan again. Closeout is on `origin/main` via [#354](https://github.com/Quantum-L9/Cursor-Governance/pull/354) (`59f03a5d`). Live command-surface SSOT is the root `Makefile`.
 
 ## Live authority (this surface)
 
@@ -60,12 +64,13 @@ The defect was agents reading pack leftovers as the next install. It was not a m
 
 | Action | Status | Evidence |
 |---|---|---|
-| Delete `Makefile.candidate` | Done 2026-08-28 | File absent under `environment/program-execution/campaigns/level3-make-pr-single-path/` |
-| Delete `Prompt - Start Campaign.md` | Done 2026-08-28 | Same directory; file absent |
+| Delete `Makefile.candidate` | Built | Absent on `origin/main` |
+| Delete `Prompt - Start Campaign.md` | Built | Absent on `origin/main` |
 | Keep `CAMPAIGN_SOURCE.yaml` + `source-integrity-receipt.json` | Kept | Historical seed only |
-| Stamp `INTENT.yaml` | Done | Header says CLOSED; do not replace live Makefile |
-| Close ledger without archive | Done | `close_campaign()` then notes; campaign dir still present |
-| Touch live `Makefile` | Forbidden / not done | Root Makefile unchanged |
+| Stamp `INTENT.yaml` | Built | Header says CLOSED on `origin/main` |
+| Close ledger without archive | Built | `CAMPAIGN_STATUS.yaml` + `handoff/CLOSEOUT.yaml` on `origin/main` |
+| Touch live `Makefile` | Forbidden / not done | Root Makefile was not replaced |
+| Scoped validate | Built | YAML parse + kernel receipt PASS; closeout landed with #354 |
 
 Do not run `close_campaign.py close` on the CLI: `cmd_close` also calls `archive_completed()` and would move the whole pack to `COMPLETED/`.
 
@@ -73,8 +78,7 @@ Do not run `close_campaign.py close` on the CLI: `cmd_close` also calls `archive
 
 - [#187](https://github.com/Quantum-L9/Cursor-Governance/pull/187) merged 2026-08-16 into `campaign/level3-make-pr-single-path` (`e5a3f9f6564974f84f2ab06926491f8897e6ed4f`). That SHA is not an ancestor of `origin/main`.
 - Candidate digest was `9ecb01de…` (~81 targets). Live Makefile digest was `7dc89ffa…` (~111 targets). Byte-replace would delete `campaign`, `pr-preflight`, `pr-check`, `improve`, `ff`, Claude projection, capability-broker, `wip-hygiene`, `gov-python`.
-- `eie-inference-isolation-v1` is `in_progress`. Do not mix this hygiene onto that campaign.
-- Policy still lists this id at execute_order 9. `next_campaign()` still returns `l9-ecosystem-fix-plan` first. Host pack `HOST_REGISTRATIONS.yaml` is not a launch.
+- Policy still lists this id at execute_order 9. Host pack `HOST_REGISTRATIONS.yaml` is not a launch.
 
 ```mermaid
 flowchart TD
@@ -89,7 +93,7 @@ flowchart TD
 
 ## Leftover worktree (report only)
 
-`$HOME/.l9/program-worktrees/level3-make-pr-single-path` exists.
+`$HOME/.l9/program-worktrees/level3-make-pr-single-path` still exists.
 
 - Branch: `feat/level3-make-pr-single-path` @ `1d491481`
 - Upstream `origin/feat/level3-make-pr-single-path` is gone
@@ -103,14 +107,9 @@ flowchart TD
 - Replaying W0–W3 or the deleted start prompt
 - `compile_activation_files.py`
 - Re-applying `HOST_REGISTRATIONS.yaml` as a start
-- Touching `eie-inference-isolation-v1`
 - `make campaign` / Program Lock
 - Archiving the campaign dir into `COMPLETED/`
 - A new one-pass-PR redesign against today's Makefile
-
-## Remaining Build todo
-
-1. **Validate** — `make pr-check` on ledger / handoff / INTENT / this plan only. No Makefile. No push.
 
 ## Stress test
 
@@ -121,4 +120,4 @@ flowchart TD
 
 ## Execute via Cursor Build
 
-Current checkout. No `make campaign`. No Program Lock. No new tip worktree for this hygiene pack.
+Built. Do not re-run. No `make campaign`. No Program Lock.
