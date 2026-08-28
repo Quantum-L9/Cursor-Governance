@@ -18,6 +18,8 @@ def test_request_contract():
     assert (
         validate_request({"operation": "CREATE", "repo_root": "/tmp", "graph_kind": "AUTO"}) == []
     )
+    # graph_kind is optional and defaults to AUTO.
+    assert validate_request({"operation": "CREATE", "repo_root": "/tmp"}) == []
     assert validate_request({"operation": "BOGUS", "repo_root": "/tmp"})
     assert validate_request(
         {
