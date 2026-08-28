@@ -6,6 +6,7 @@ import json
 import sys
 import tempfile
 import unittest
+import uuid
 from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parents[1]
@@ -123,3 +124,58 @@ class UncollectableTargetTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class NonPythonChangeTests(unittest.TestCase):
+    """A shell or config change is not an untested change.
+
+    `select_pr_pytest_paths` filtered the changed set to `.py`, so editing
+    `ops/scripts/run_pr_gate.sh` selected nothing and went straight to CI — where
+    `ops/scripts/tests/test_bootstrap_invariants.py` (which keys SWALLOW_BASELINE
+    on that exact path) failed. Tests that name a file are the tests that assert
+    about it.
+    """
+
+    CHANGED_SHELL = "ops/scripts/run_pr_gate.sh"
+
+    def test_shell_change_selects_the_tests_that_name_it(self) -> None:
+        selected = select_pr_pytest_paths([self.CHANGED_SHELL])
+        self.assertIn("ops/scripts/tests/test_bootstrap_invariants.py", selected)
+
+    def test_shell_change_selection_matches_a_name_scan(self) -> None:
+        """The machine must find what a careful reader would find by hand."""
+
+        repo_root = Path(__file__).resolve().parents[3]
+        expected = {
+            path.relative_to(repo_root).as_posix()
+            for path in repo_root.rglob("test_*.py")
+            if ".venv" not in path.parts
+            and self.CHANGED_SHELL in path.read_text(encoding="utf-8", errors="ignore")
+        }
+        selected = set(select_pr_pytest_paths([self.CHANGED_SHELL]))
+        self.assertTrue(expected)
+        self.assertTrue(
+            expected <= selected,
+            f"missed tests that name the file: {sorted(expected - selected)}",
+        )
+
+    def test_still_never_emits_repo_root_dot(self) -> None:
+        selected = select_pr_pytest_paths([self.CHANGED_SHELL, "Makefile"])
+        self.assertNotIn(".", selected)
+
+    def test_unreferenced_non_python_file_selects_nothing(self) -> None:
+        """No invented targets when nothing names the file.
+
+        The path is assembled at run time on purpose: writing the literal here
+        would make this very module name it, and the scan would then correctly
+        select this file — a self-referential pass that proves nothing.
+        """
+
+        unreferenced = "/".join(["docs", "plans", uuid.uuid4().hex + ".plan.md"])
+        selected = select_pr_pytest_paths([unreferenced])
+        self.assertEqual([], selected)
+
+    def test_mixed_change_set_keeps_both_kinds(self) -> None:
+        selected = select_pr_pytest_paths([self.CHANGED_SHELL, "ops/scripts/pr_gate_failure.py"])
+        self.assertIn("ops/scripts/tests/test_bootstrap_invariants.py", selected)
+        self.assertIn("tests/ops/scripts/test_pr_gate_failure.py", selected)

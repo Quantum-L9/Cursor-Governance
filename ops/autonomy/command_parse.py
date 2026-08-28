@@ -18,7 +18,14 @@ from __future__ import annotations
 
 import re
 
-_HEREDOC_OPEN_RE = re.compile(r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1\s*$")
+# The delimiter may be followed by redirects — `cat <<'EOF' > notes.md` is an
+# ordinary form, and anchoring hard on end-of-line missed it, leaking the body
+# into every classifier that consumes this helper as though it were commands.
+# Only redirect clauses are tolerated after the delimiter, so the end-of-line
+# anchor still rules out `print(1 << SHIFT)` and friends.
+_HEREDOC_OPEN_RE = re.compile(
+    r"<<-?\s*(['\"]?)([A-Za-z_][A-Za-z0-9_]*)\1\s*(?:[0-9]?>>?\s*\S+\s*)*$"
+)
 _SEPARATOR_PAIRS = ("&&", "||")
 _SEPARATOR_SINGLES = ";|"
 
