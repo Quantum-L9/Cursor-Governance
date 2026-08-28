@@ -1,0 +1,253 @@
+{
+  "$comment": "Single declaration of what counts as bypassing local commit verification, read by ops/autonomy/verification_bypass_gate.py (which denies it at PreToolUse), by ops/scripts/validate_commit_verification_contract.py (which proves the session briefing and the tracked tree agree with it), and by tests/ops/autonomy/test_verification_bypass_gate.py. Prose that merely says 'never --no-verify' is not enforcement: before this contract every form below was ALLOWED by the gate while eight skill files forbade it. Add a form here and every consumer picks it up; there is nowhere else to state it.",
+  "schema": "l9.commit-verification-contract.v1",
+  "version": 1,
+  "contract_id": "l9-commit-verification-integrity",
+  "updated": "2026-08-28",
+  "rationale": "A bypass token typed without knowing the verification model is the failure this contract exists to stop. The model is not universal: in a governed L9 workspace there is NO commit hook by design — verification is `make pr-check` / `make pr`, and `pre-commit install` is forbidden because a raw hook runs the catalog without the surface-aware SKIP list and rejects every commit on a non-cursor surface. So a bypass flag here is not merely wrong, it is incoherent: it suppresses nothing while signalling that verification was considered and skipped. Where a repo DOES install hooks, the same flag removes the only check that sees a change before it becomes history. Either way the token is never the answer.",
+  "remedy": "Run the verification this repository actually uses: `make pr-check` (or `l9 pr` for the full publish gate) in a governed workspace; the repo's declared gate elsewhere. Check which model applies with `python3 ops/autonomy/verification_bypass_gate.py --status`. If a check fails, that is evidence (rule 95): repair the narrowest true cause, or record it with ops/autonomy/session_debt.py. Never reach for a bypass token, and never install a commit hook to 'fix' a governed workspace.",
+  "breakglass": {
+    "env": "L9_VERIFY_BYPASS_AUTHORIZED",
+    "requires_reason": true,
+    "rejected_reasons": [
+      "1",
+      "0",
+      "y",
+      "yes",
+      "no",
+      "true",
+      "false",
+      "ok",
+      "please"
+    ],
+    "note": "Human/ops only. An agent MUST NOT set this for itself: exporting it inside the same turn that runs the commit is the bypass, one level up. A reason shorter than min_reason_chars is rejected like a bare affirmative. The alias is accepted so neither spelling silently fails.",
+    "min_reason_chars": 8,
+    "aliases": [
+      "L9_VERIFICATION_BYPASS_AUTHORIZED"
+    ]
+  },
+  "git_value_flags": {
+    "$comment": "Flags whose value is a SEPARATE word, so a scanner must skip that word before reading the next flag. Without this, `git commit -m -n` (a message of '-n') reads as a bypass. Flags taking an attached-only optional value (-uno, -S<key>, --cleanup=<mode>) are deliberately absent: they never consume the next word.",
+    "commit": [
+      "-m",
+      "--message",
+      "-c",
+      "--reedit-message",
+      "-C",
+      "--reuse-message",
+      "-F",
+      "--file",
+      "--author",
+      "--date",
+      "--fixup",
+      "--squash",
+      "--trailer",
+      "--pathspec-from-file"
+    ],
+    "push": [
+      "--repo",
+      "--receive-pack",
+      "--exec",
+      "-o",
+      "--push-option",
+      "--refspec"
+    ],
+    "merge": [
+      "-m",
+      "--message",
+      "-F",
+      "--file",
+      "-S",
+      "--gpg-sign",
+      "--strategy",
+      "-s",
+      "--strategy-option",
+      "-X",
+      "--into-name"
+    ],
+    "rebase": [
+      "--onto",
+      "--exec",
+      "-x",
+      "--strategy",
+      "-s",
+      "--strategy-option",
+      "-X"
+    ],
+    "cherry-pick": [
+      "--strategy",
+      "-s",
+      "--strategy-option",
+      "-X",
+      "-m",
+      "--mainline"
+    ],
+    "revert": [
+      "--strategy",
+      "-s",
+      "--strategy-option",
+      "-X",
+      "-m",
+      "--mainline"
+    ],
+    "am": [
+      "--patch-format",
+      "-S",
+      "--gpg-sign"
+    ]
+  },
+  "forms": [
+    {
+      "id": "git-commit-no-verify",
+      "detector": "git_flag",
+      "subcommand": "commit",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [
+        "n"
+      ],
+      "label": "git commit --no-verify",
+      "why": "skips every pre-commit and commit-msg hook for this commit, which is the entire local verification plane"
+    },
+    {
+      "id": "git-push-no-verify",
+      "detector": "git_flag",
+      "subcommand": "push",
+      "flags": [
+        "--no-verify"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: `git push -n` is --dry-run, which is read-only and must stay allowed.",
+      "label": "git push --no-verify",
+      "why": "skips pre-push hooks, the last check before the work leaves the machine"
+    },
+    {
+      "id": "git-merge-no-verify",
+      "detector": "git_flag",
+      "subcommand": "merge",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
+      "label": "git merge --no-verify",
+      "why": "`git merge` can create a commit, and --no-verify skips the pre-merge-commit and commit-msg hooks that would verify it"
+    },
+    {
+      "id": "git-rebase-no-verify",
+      "detector": "git_flag",
+      "subcommand": "rebase",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
+      "label": "git rebase --no-verify",
+      "why": "`git rebase` can create a commit, and --no-verify skips the pre-merge-commit and commit-msg hooks that would verify it"
+    },
+    {
+      "id": "git-cherry-pick-no-verify",
+      "detector": "git_flag",
+      "subcommand": "cherry-pick",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
+      "label": "git cherry-pick --no-verify",
+      "why": "`git cherry-pick` can create a commit, and --no-verify skips the pre-merge-commit and commit-msg hooks that would verify it"
+    },
+    {
+      "id": "git-revert-no-verify",
+      "detector": "git_flag",
+      "subcommand": "revert",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
+      "label": "git revert --no-verify",
+      "why": "`git revert` can create a commit, and --no-verify skips the pre-merge-commit and commit-msg hooks that would verify it"
+    },
+    {
+      "id": "git-am-no-verify",
+      "detector": "git_flag",
+      "subcommand": "am",
+      "flags": [
+        "--no-verify",
+        "--no-pre-commit-hook"
+      ],
+      "short_flags": [],
+      "$comment": "No short form: -n is NOT --no-verify outside `git commit` (on rebase/revert/cherry-pick it means other things), so denying it here would reject legitimate work.",
+      "label": "git am --no-verify",
+      "why": "`git am` can create a commit, and --no-verify skips the pre-merge-commit and commit-msg hooks that would verify it"
+    },
+    {
+      "id": "git-hookspath-override",
+      "detector": "git_global_config",
+      "keys": [
+        "core.hookspath"
+      ],
+      "label": "git -c core.hooksPath=… <command>",
+      "why": "repoints the hook directory for this invocation, disabling every hook without naming --no-verify"
+    },
+    {
+      "id": "git-config-hookspath",
+      "detector": "git_subcommand_args",
+      "subcommand": "config",
+      "match_args": [
+        "core.hookspath"
+      ],
+      "label": "git config core.hooksPath …",
+      "why": "durably repoints the hook directory, so every later commit in this clone is unverified"
+    },
+    {
+      "id": "hook-suppressing-env",
+      "detector": "env_prefix",
+      "vars": [
+        "SKIP",
+        "HUSKY",
+        "HUSKY_SKIP_HOOKS",
+        "PRE_COMMIT_ALLOW_NO_CONFIG",
+        "NO_VERIFY",
+        "GIT_CONFIG_GLOBAL",
+        "GIT_CONFIG_SYSTEM",
+        "GIT_CONFIG_COUNT"
+      ],
+      "applies_to_subcommands": [
+        "commit",
+        "push"
+      ],
+      "$comment": "Scoped to a git commit/push segment on purpose. `SKIP=<ids> pre-commit run` is how ops/scripts/run_pr_precommit.sh legitimately narrows the sanctioned gate, and must not be caught here.",
+      "label": "hook-suppressing environment variable on a git commit/push",
+      "why": "disables or neutralises hook configuration through the environment instead of a flag; GIT_CONFIG_GLOBAL/SYSTEM/COUNT suppress the config that can carry core.hooksPath, so the commit is just as unverified and nothing in the command names a bypass"
+    },
+    {
+      "id": "pre-commit-uninstall",
+      "detector": "argv",
+      "head": "pre-commit",
+      "args": [
+        "uninstall"
+      ],
+      "label": "pre-commit uninstall",
+      "why": "removes the hook shim from the clone, so verification stops for every later commit, not just this one"
+    },
+    {
+      "id": "hook-file-mutation",
+      "detector": "hook_path_write",
+      "label": "removing, replacing, or disarming a file under .git/hooks/",
+      "why": "the durable form of the same bypass: no flag is ever needed again"
+    }
+  ],
+  "briefing_lines": [
+    "`git commit --no-verify` / `-n`, `git push --no-verify`, `core.hooksPath` overrides, hook-suppressing env vars (`SKIP=`, `HUSKY=0`), `pre-commit uninstall`, and edits to `.git/hooks/**` are DENIED at PreToolUse by `ops/autonomy/verification_bypass_gate.py`. Declaration: `ops/config/commit-verification-contract.json`.",
+    "A failing hook is evidence, not an obstacle: repair the narrowest true cause (rule 95), or record it with `session_debt.py`. Do not reach for a bypass when a hook fails — there is no form of it that this gate allows.",
+    "A clean commit is proof only if something verified it. In a governed L9 workspace there is no commit hook by default — verification is `make pr-check` / `make pr`, and `pre-commit install` is forbidden (a raw shim drops the surface-aware SKIP list). To get commit-time verification too, run `bash ops/scripts/install_commit_hook.sh`. Check which model is live with `python3 ops/autonomy/verification_bypass_gate.py --status`."
+  ]
+}
