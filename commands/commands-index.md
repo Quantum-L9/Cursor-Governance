@@ -51,7 +51,7 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/gap-analysis-new` | Gap analysis (alternate protocol) |
 | `/inspect` | External code gate before import |
 | `/index` | Export repo indexes |
-| `/docs` | Agent-docs update (`l9-update-agent-docs`; not the README DAG) |
+| `/docs` | Agent-docs + module READMEs (`l9-update-agent-docs` → `readme-pipeline-v1`) |
 | `/end-session` | Session handoff + Graphiti PICKUP (memory-bank retired) |
 | `/e2e-blockers` | E2E / local-proof blockers + brief |
 | `/mem` | Memory operations |

@@ -73,7 +73,7 @@ Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not
 | `/confirm-wiring` | `commands/confirm-wiring.md` | Verify workspace or component is wired |
 | `/consolidate` | `commands/consolidate.md` | Consolidate scattered code |
 | `/dag-authoring` | `commands/dag-authoring.md` | DAG lifecycle — create/update/validate/register/command-bind |
-| `/docs` | `commands/docs.md` | Agent-docs update (`l9-update-agent-docs`; not the README DAG) |
+| `/docs` | `commands/docs.md` | Agent-docs + module READMEs (`l9-update-agent-docs` → `readme-pipeline-v1`) |
 | `/e2e-blockers` | `commands/e2e-blockers.md` | E2E / local-proof blockers + brief |
 | `/end-session` | `commands/end-session.md` | Close session — save context, handoff |
 | `/evaluate` | `commands/evaluate.md` | Deep evaluation (`l9-code-analysis`) |

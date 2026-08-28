@@ -1,3 +1,7 @@
+---
+auto_generated: false
+---
+
 # L9 slash commands
 
 This folder holds live slash triggers (`commands/*.md`).

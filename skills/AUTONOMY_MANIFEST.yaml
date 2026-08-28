@@ -34,7 +34,7 @@ tiers:
   - skill: l9-wire-skill-into-repo
     use_when: registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads
   - skill: l9-update-agent-docs
-    use_when: refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing
+    use_when: refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes; generating module READMEs via readme-pipeline-v1; or creating root CLAUDE.md / INVARIANTS.md when missing
   - skill: l9-code-graph-rag-mcp
     use_when: code-graph, batch_index, semantic code search, list_module_importers, analyze_code_impact, or MCP code indexing is needed
   - skill: l9-api-smoke-testing
@@ -394,6 +394,9 @@ claude_routing:
     - create invariants.md
     - root doc pointer
     - pointer stack
+    - generate module readmes
+    - readme-pipeline
+    - subsystem readmes
     supporting: []
   - id: context7_docs
     primary: l9-context7-docs

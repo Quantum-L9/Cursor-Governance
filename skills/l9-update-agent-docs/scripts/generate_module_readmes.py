@@ -7,20 +7,35 @@ readme-pipeline-v1 and this skill both call
 
 from __future__ import annotations
 
-import runpy
+import importlib.util
 import sys
 from pathlib import Path
 
-REPO_GENERATOR = Path(__file__).resolve().parents[3] / "scripts" / "generate_subsystem_readmes.py"
+
+def find_repo_generator() -> Path:
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "scripts" / "generate_subsystem_readmes.py"
+        config = parent / "config" / "subsystems" / "readme_config.yaml"
+        if candidate.is_file() and config.is_file():
+            return candidate
+    raise FileNotFoundError(
+        "wired generator not found (scripts/generate_subsystem_readmes.py "
+        "+ config/subsystems/readme_config.yaml)"
+    )
 
 
-def main() -> int:
-    if not REPO_GENERATOR.is_file():
-        print(f"missing wired generator: {REPO_GENERATOR}", file=sys.stderr)
+def main(argv: list[str] | None = None) -> int:
+    generator = find_repo_generator()
+    spec = importlib.util.spec_from_file_location(
+        "l9_generate_subsystem_readmes", generator
+    )
+    if spec is None or spec.loader is None:
+        print(f"cannot load wired generator: {generator}", file=sys.stderr)
         return 1
-    sys.argv = [str(REPO_GENERATOR), *sys.argv[1:]]
-    runpy.run_path(str(REPO_GENERATOR), run_name="__main__")
-    return 0
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return int(module.main(argv))
 
 
 if __name__ == "__main__":

@@ -15,6 +15,7 @@ from scripts.generate_subsystem_readmes import (  # noqa: E402
     generate_readme,
     is_root_readme,
     main,
+    resolve_under_root,
 )
 
 
@@ -136,6 +137,107 @@ subsystems:
 
 
 def test_dag_no_longer_spots_donor_memory_readme():
-    text = (REPO_ROOT / "workflows" / "dags" / "readme_pipeline_dag.py").read_text(encoding="utf-8")
+    text = (REPO_ROOT / "workflows" / "dags" / "readme_pipeline_dag.py").read_text(
+        encoding="utf-8"
+    )
     assert "memory/README.md" not in text
     assert "scripts/generate_subsystem_readmes.py" in text
+    assert "66+" not in text
+    assert "DORA header" not in text
+    assert "--gaps" in text
+    yaml_def = (REPO_ROOT / "workflows" / "defs" / "readme-pipeline.yaml").read_text(
+        encoding="utf-8"
+    )
+    assert "SessionRunner" not in yaml_def
+    assert "/readme-gen" not in yaml_def
+
+
+def test_path_jail(tmp_path: Path):
+    assert resolve_under_root(tmp_path, ".") is None
+    assert resolve_under_root(tmp_path, "..") is None
+    assert resolve_under_root(tmp_path, "../escape") is None
+    assert resolve_under_root(tmp_path, "/etc") is None
+    assert resolve_under_root(tmp_path, "ops/autonomy") == (
+        tmp_path / "ops" / "autonomy"
+    ).resolve()
+
+
+def test_refuses_path_dot(tmp_path: Path):
+    config = tmp_path / "config" / "subsystems"
+    config.mkdir(parents=True)
+    (config / "readme_config.yaml").write_text(
+        "version: '1.0'\nsubsystems: {}\n", encoding="utf-8"
+    )
+    (tmp_path / "README.md").write_text("# Root\n", encoding="utf-8")
+    assert main(["--root", str(tmp_path), "--path", "."]) == 0
+    assert (tmp_path / "README.md").read_text(encoding="utf-8") == "# Root\n"
+
+
+def test_skip_requires_force(tmp_path: Path):
+    pkg = tmp_path / "kept"
+    pkg.mkdir()
+    (pkg / "ok.py").write_text("class Keep:\n    pass\n", encoding="utf-8")
+    config = tmp_path / "config" / "subsystems"
+    config.mkdir(parents=True)
+    (config / "readme_config.yaml").write_text(
+        """version: "1.0"
+subsystems:
+  kept:
+    path: kept
+    title: Kept
+    tier: operations
+    description: Handwritten
+    skip: true
+""",
+        encoding="utf-8",
+    )
+    assert main(["--root", str(tmp_path), "--subsystem", "kept"]) == 1
+    assert not (pkg / "README.md").exists()
+
+
+def test_gaps_reports_missing(tmp_path: Path):
+    config = tmp_path / "config" / "subsystems"
+    config.mkdir(parents=True)
+    (config / "readme_config.yaml").write_text(
+        """version: "1.0"
+subsystems:
+  gone:
+    path: missing_mod
+    title: Gone
+    tier: operations
+    description: Absent
+""",
+        encoding="utf-8",
+    )
+    assert main(["--root", str(tmp_path), "--gaps"]) == 1
+
+
+def test_brace_in_docstring_does_not_break_render(tmp_path: Path):
+    pkg = tmp_path / "demo"
+    pkg.mkdir()
+    (pkg / "mod.py").write_text(
+        'class Widget:\n    """Uses {not_a_token} in docs."""\n    pass\n',
+        encoding="utf-8",
+    )
+    facts = extract_subsystem_facts(tmp_path, "demo")
+    rendered = generate_readme(
+        "demo",
+        {
+            "path": "demo",
+            "title": "Demo",
+            "tier": "operations",
+            "description": "Has {braces}.",
+            "purpose": "Prove {tokens} survive.",
+        },
+        facts,
+        {},
+    )
+    assert "{not_a_token}" in rendered
+    assert "{braces}" in rendered
+
+
+def test_skill_wrapper_delegates():
+    sys.path.insert(0, str(REPO_ROOT / "skills" / "l9-update-agent-docs" / "scripts"))
+    from generate_module_readmes import main as wrapper_main  # noqa: E402
+
+    assert wrapper_main(["--root", str(REPO_ROOT), "--list"]) == 0

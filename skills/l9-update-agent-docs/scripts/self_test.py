@@ -53,6 +53,12 @@ def main() -> int:
         errors.append("missing readme-pipeline-v1 citation")
     if "config/subsystems/readme_config.yaml" not in text:
         errors.append("missing readme_config.yaml citation")
+    if "SessionRunner.run" in text:
+        errors.append("SessionRunner.run is not a live API; cite get_session_dag")
+    if "get_session_dag" not in text:
+        errors.append("missing get_session_dag citation")
+    if "--gaps" not in text:
+        errors.append("missing --gaps citation")
     if "Never invent a root file" not in text and "never invent" not in text.lower():
         errors.append("missing bind-before-write never-invent rule")
     # Prohibition mentions are allowed; a Write-table destination is not.
@@ -131,10 +137,18 @@ def main() -> int:
         errors.append("missing config/subsystems/readme_config.yaml")
     if not dag.is_file():
         errors.append("missing workflows/dags/readme_pipeline_dag.py")
-    elif "scripts/generate_subsystem_readmes.py" not in dag.read_text(encoding="utf-8"):
-        errors.append("DAG no longer names generate_subsystem_readmes.py")
-    elif "memory/README.md" in dag.read_text(encoding="utf-8"):
-        errors.append("DAG still spots donor memory/README.md")
+    else:
+        dag_text = dag.read_text(encoding="utf-8")
+        if "scripts/generate_subsystem_readmes.py" not in dag_text:
+            errors.append("DAG no longer names generate_subsystem_readmes.py")
+        if "memory/README.md" in dag_text:
+            errors.append("DAG still spots donor memory/README.md")
+        if "66+" in dag_text:
+            errors.append("DAG still claims donor 66+ README outputs")
+        if "DORA header" in dag_text:
+            errors.append("DAG still requires DORA headers")
+        if "--gaps" not in dag_text:
+            errors.append("DAG gap_analysis does not call --gaps")
     if generator.is_file() and config.is_file():
         listed = subprocess.run(
             [sys.executable, str(generator), "--root", str(repo), "--list"],
@@ -154,6 +168,17 @@ def main() -> int:
         )
         if valid.returncode != 0:
             errors.append(f"generator --validate failed:\n{valid.stdout}{valid.stderr}")
+        gaps = subprocess.run(
+            [sys.executable, str(generator), "--root", str(repo), "--gaps"],
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if gaps.returncode != 0:
+            errors.append(f"generator --gaps failed:\n{gaps.stdout}{gaps.stderr}")
+        cfg_text = config.read_text(encoding="utf-8")
+        if "commands:" in cfg_text and "skip: true" not in cfg_text.split("commands:", 1)[1][:400]:
+            errors.append("commands module must be skip: true (handwritten slash index)")
     if errors:
         print("FAIL")
         for item in errors:

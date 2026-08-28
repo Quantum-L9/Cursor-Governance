@@ -9,7 +9,7 @@ metadata:
   tags: [l9, docs, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 2.5.0
+  version: 2.5.1
   updated: 2026-08-28
   when_to_use: "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes; generating module READMEs via readme-pipeline-v1; or creating root CLAUDE.md / INVARIANTS.md when missing"
 ---
@@ -62,8 +62,10 @@ auditor or repairer.
    required by `references/pointer-heading-map.yaml` are absent. Fail closed
    and report the missing names. Rebound to this pointer stack only — never
    require donor sections `overview`, `airules`, `apisurface`, `datamodels`,
-   or `components`. Never overwrite `README.md` from a template to make the
-   check pass. Harvest nugget `c-required-section-validation`.
+   or `components` on the **root** pointer map. Never overwrite root
+   `README.md` from a template to make the check pass. Module READMEs may
+   use Purpose / Components via `readme_config.yaml`. Harvest nugget
+   `c-required-section-validation`.
 4. **One owner** — `CLAUDE.md` stays a pointer; `AGENTS.md` stays the operating
    SSOT; generated formatter blocks stay companions owned by
    `environment/ide/policy.json` via `ops/scripts/adapters/agentdocs.sh`.
@@ -163,35 +165,6 @@ Preserve generated `<!-- BEGIN L9 FORMATTER OWNERSHIP -->` blocks. If
 `install_ide_profile` dirtied only that block, restore from HEAD unless
 `environment/ide/policy.json` changed.
 
-### Step 3b — Module README pipeline (wired)
-
-Owns **module** READMEs, not the root index. Sequencer is still
-`readme-pipeline-v1` in `workflows/dags/readme_pipeline_dag.py`. This skill
-invokes the same CLI the DAG names:
-
-```bash
-python scripts/generate_subsystem_readmes.py --list
-python scripts/generate_subsystem_readmes.py --validate
-python scripts/generate_subsystem_readmes.py --dry-run --subsystem <key>
-python scripts/generate_subsystem_readmes.py --skip-time-verify
-python scripts/generate_subsystem_readmes.py --validate-sections
-```
-
-Config SSOT: `config/subsystems/readme_config.yaml`. Facts come from stdlib
-AST (classes, functions, `__all__`, imports). `--skip-time-verify` is a
-no-op kept so the DAG argv stays valid.
-
-Must not:
-
-- Write repo-root `README.md`
-- Overwrite a README whose frontmatter says `auto_generated: false` unless
-  `--force`
-- Emit DORA blocks, worldtime calls, or AI allow/restrict/forbid scopes
-- Invent a module path that does not exist (record Unknown / skip)
-
-Or run the DAG: `SessionRunner.run("readme-pipeline-v1")`. Do not copy the
-DAG into this pack.
-
 ### Step 3a — Create Missing Root Docs (`CLAUDE.md`, `INVARIANTS.md`)
 
 Applies only when the file is **absent at repo root**. Never overwrite an existing
@@ -222,6 +195,38 @@ file from this step — an existing file falls through to the Step 3 write contr
 - Where the repo tracks root files (e.g. `ops/config/root-file-protection.json`),
   register the new file as `managed` in the same change.
 - A project adapter's write rules outrank these defaults when present.
+
+### Step 3b — Module README pipeline (wired)
+
+Owns **module** READMEs, not the root index. Sequencer remains
+`readme-pipeline-v1` in `workflows/dags/readme_pipeline_dag.py`. This skill
+invokes the same CLI the DAG names:
+
+```bash
+python scripts/generate_subsystem_readmes.py --list
+python scripts/generate_subsystem_readmes.py --gaps
+python scripts/generate_subsystem_readmes.py --validate
+python scripts/generate_subsystem_readmes.py --dry-run --subsystem <key>
+python scripts/generate_subsystem_readmes.py --skip-time-verify
+python scripts/generate_subsystem_readmes.py --validate-sections
+```
+
+Pack wrapper (same argv): `scripts/generate_module_readmes.py` in this skill.
+After `import workflows.dags`, resolve with
+`get_session_dag("readme-pipeline-v1")`. Do not invent a runner class.
+
+Config SSOT: `config/subsystems/readme_config.yaml`. Facts come from stdlib
+AST. `--skip-time-verify` is a no-op kept so the DAG argv stays valid.
+
+Must not:
+
+- Write repo-root `README.md`
+- Follow `--path` outside the repo or to `.`
+- Overwrite `auto_generated: false` or `skip: true` without `--force`
+- Emit DORA blocks, worldtime calls, or AI allow/restrict/forbid scopes
+- Invent a module path that does not exist (record Unknown / skip)
+
+Do not copy the DAG into this pack.
 
 ### Step 4 — Report
 
@@ -255,6 +260,7 @@ Do not claim either kernel was wrapped into this skill.
 - `validate_pointer_headings.py` is Passed for every live mapped file, or
   Unknown for a mapped path that does not exist; Failed headings are reported
   by name and are not repaired by generating a README
+- Module generate used `--validate` / `--gaps`; root `README.md` was not written
 
 ## Failure Handling
 
@@ -266,4 +272,6 @@ Do not claim either kernel was wrapped into this skill.
 
 ## Stop Condition
 
-Pointer stack is honest. Invented files were not created. Neither kernel was wrapped.
+Pointer stack is honest. Invented files were not created. Neither kernel was
+wrapped. Module READMEs, if generated, used Step 3b and left the root index
+alone.
