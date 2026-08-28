@@ -30,7 +30,7 @@ tiers:
   - skill: l9-ynp
     use_when: work just completed, priorities are unclear, or the user asks what to do next
   - skill: l9-skill-compiler
-    use_when: creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided
+    use_when: creating or improving a reusable skill, making a skill portable across Claude Code, Manus, or Cursor, sharpening activation and reject signals, extracting expert heuristics, eliminating drift or stubs, or producing a validated ZIP
   - skill: l9-wire-skill-into-repo
     use_when: registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads
   - skill: l9-update-agent-docs

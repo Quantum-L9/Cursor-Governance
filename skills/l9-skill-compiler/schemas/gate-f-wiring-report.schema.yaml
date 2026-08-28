@@ -1,0 +1,13 @@
+# Gate F Wiring Report, version 3.7.0
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: GateF_WiringReport
+type: object
+required: [applicable, target_platform, target_verified, changes, rollback, status]
+additionalProperties: false
+properties:
+  applicable: {type: boolean}
+  target_platform: {type: string}
+  target_verified: {type: boolean}
+  changes: {type: array, items: {type: string}}
+  rollback: {type: array, items: {type: string}}
+  status: {type: string, enum: [PASS, FAIL, BLOCKED, NOT_APPLICABLE]}

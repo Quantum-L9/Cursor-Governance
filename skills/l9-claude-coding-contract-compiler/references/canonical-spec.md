@@ -101,7 +101,8 @@ The terminal contract alone has:
 terminal_delivery: {authorized: true, command: "make pr"}
 ```
 
-Direct `git push` and direct PR-creation commands remain denied for every contract. The terminal
+Direct `git push` and direct PR-creation commands stay in `denied_tools` for every contract,
+where they are denied by the generated permission list rather than by a governance gate. The terminal
 `make pr` wrapper is the sole authorized push/PR-opening path for the chain. Run it once, only after
 the terminal contract has created its one validated local commit.
 

@@ -107,6 +107,7 @@ select = ["E", "F", "I", "UP"]
 # emitted artifact. Same rationale as the skill packs above — F/I/UP stay on.
 "skills/l9-claude-coding-contract-compiler/scripts/**" = ["E501"]
 "skills/l9-intelligence-harvest/scripts/**" = ["E501"]
+"skills/l9-skill-compiler/scripts/**" = ["E501"]
 "skills/l9-pipeline-orchestrator/*.py" = ["E501"]
 # subagent-generated-data runtime/adapters/tests bootstrap sys.path before
 # importing sibling modules (the packages are not installed), so imports
@@ -182,7 +183,7 @@ norecursedirs = [
 # Every skill that adds one MUST be listed below AND in ops/config/python-contract.json:
 # they all resolve to the module name `self_test` under rootdir-relative import mode,
 # so an unregistered file collides with the first sibling collected and errors the run.
-addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=skills/l9-plan/scripts/self_test.py --ignore=skills/l9-repository-renovation/scripts/self_test.py --ignore=skills/l9-structured-reasoning/scripts/self_test.py --ignore=skills/l9-skill-compiler/scripts/self_test.py"
+addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=skills/l9-plan/scripts/self_test.py --ignore=skills/l9-repository-renovation/scripts/self_test.py --ignore=skills/l9-structured-reasoning/scripts/self_test.py --ignore=skills/l9-intelligence-harvest/scripts/self_test.py"
 
 [build-system]
 requires = ["setuptools>=68"]

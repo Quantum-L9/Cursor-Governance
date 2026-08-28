@@ -102,7 +102,8 @@ make pr
 ```
 
 Run it once. It is the sole authorized push/PR-opening route for the complete chain. Direct
-`git push` and direct `gh pr create` remain denied.
+`git push` and direct `gh pr create` stay in `denied_tools`, where they are denied by the
+generated permission list rather than by a governance gate.
 
 ## 6. Validate the compiler itself
 

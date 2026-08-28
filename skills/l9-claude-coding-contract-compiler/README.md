@@ -16,7 +16,8 @@ The compiler is now **target-validation-aware** and ecosystem-neutral:
   entire validation gate that authorized that predecessor commit.
 - Internal seams are `<id> committed_and_validated`, not `merged_and_green`.
 - No push occurs between contracts.
-- Direct `git push` and direct PR creation remain denied.
+- Direct `git push` and direct PR creation stay in the contract's `denied_tools`, where they are
+  denied by the generated Claude Code permission list rather than by a governance gate.
 - The terminal contract alone is authorized to run **exactly `make pr` once** after its local commit.
 
 ## Compile

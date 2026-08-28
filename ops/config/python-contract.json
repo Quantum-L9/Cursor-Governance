@@ -50,7 +50,7 @@
       "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
     },
     {
-      "path": "skills/l9-skill-compiler/scripts/self_test.py",
+      "path": "skills/l9-intelligence-harvest/scripts/self_test.py",
       "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
     }
   ],

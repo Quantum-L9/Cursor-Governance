@@ -1,0 +1,20 @@
+# Gate A Source Parse, version 3.7.0
+$schema: "https://json-schema.org/draft/2020-12/schema"
+title: GateA_SourceParse
+type: object
+required: [objective, scope, inputs, outputs, triggers, reject_signals, workflow_steps, constraints, resources, risks, unknowns, directives, dependency_status]
+additionalProperties: false
+properties:
+  objective: {type: string, minLength: 10}
+  scope: {type: string, minLength: 5}
+  inputs: {type: array, items: {type: string}}
+  outputs: {type: array, minItems: 1, items: {type: string}}
+  triggers: {type: array, minItems: 1, items: {type: string}}
+  reject_signals: {type: array, items: {type: string}}
+  workflow_steps: {type: array, minItems: 1, items: {type: string}}
+  constraints: {type: array, items: {type: string}}
+  resources: {type: array, items: {type: string}}
+  risks: {type: array, items: {type: string}}
+  unknowns: {type: array, items: {type: string}}
+  directives: {type: array, minItems: 1, items: {type: string}}
+  dependency_status: {type: string, enum: [valid, invalid, unknown, not_applicable]}

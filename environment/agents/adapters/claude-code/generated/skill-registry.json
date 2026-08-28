@@ -1250,14 +1250,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "compile, rebuild, evolve, or validate reusable L9 Skills by deciding topology ownership before creation, classifying one primary family plus orthogonal traits, normalizing canonical Skill IR, rendering target profiles, and enforcing Capability Closure. use when creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided.",
+      "description": "compile, rebuild, validate, and package prompts, SOPs, workflows, kernels, and existing agent skills into standalone exemplary skill packs. use when the user asks to create or improve a reusable skill, make a skill portable across Claude Code, Manus, Cursor, or other agents, sharpen activation and reject signals, extract expert heuristics, enforce authority and evidence rules, eliminate drift or stubs, or produce a validated ZIP.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
       "name": "l9-skill-compiler",
       "path": "skills/l9-skill-compiler",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "creating or materially changing a reusable skill where topology, runtime design, capability binding, rendering, or activation/behavior evals must be decided"
+      "when_to_use": "creating or improving a reusable skill, making a skill portable across Claude Code, Manus, or Cursor, sharpening activation and reject signals, extracting expert heuristics, eliminating drift or stubs, or producing a validated ZIP"
     },
     {
       "composition_role": "primary",
@@ -1327,6 +1327,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "5d226a79e7cad11c9f43ba802be81249713c05217329cbc555b8c5b23145a249",
-  "source_skill_corpus_sha256": "0e7030e6c44c49ddff2f4581a4dda27377adff25e17045433ef460061c47bccc"
+  "source_manifest_sha256": "c6feca707ad8f63465f13b2278aa09acbc219af1a6db16974bd99501969403ff",
+  "source_skill_corpus_sha256": "bd617ded58b69f65975f24925b2983fb0b3a652deed89e1d1b111ea8651fd640"
 }

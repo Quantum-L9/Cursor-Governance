@@ -22,7 +22,8 @@ algorithm, section count/order, and fail-closed doctrine remain preserved.
 11. Internal seam state is `<id> committed_and_validated`.
 12. No nonterminal contract has remote-delivery authority.
 13. Exactly one contract, the terminal contract, has `terminal_delivery.command: make pr`.
-14. Direct `git push` and direct PR creation remain denied even on the terminal contract.
+14. Direct `git push` and direct PR creation stay in `denied_tools` even on the terminal contract,
+    where they are denied by the generated permission list rather than by a governance gate.
 15. `chain_digest` remains SHA-256 of the compact ordered contract-ID JSON list.
 16. Commit-gate stable deduplication must not reject a contract when the repository gate and completion proof are identical.
 17. Unchanged canonical input recompiles deterministically.

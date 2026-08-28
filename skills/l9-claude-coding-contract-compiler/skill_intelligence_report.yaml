@@ -72,7 +72,8 @@ skill_intelligence_report:
       action: "run validate_chain over the whole chain before declaring converged"
     - condition: "the chain reaches its terminal contract"
       judgment: "remote delivery is permitted exactly once through the repository's make pr wrapper"
-      action: "keep direct git push/gh pr create denied; authorize only terminal command make pr"
+      action: "keep direct git push/gh pr create in denied_tools, where they are denied by the
+        generated permission list, not a governance gate; authorize only terminal command make pr"
 
   doctrine:
     - "Claude decides WHAT; scripts decide the HASH — emit via compile_contract.py, never hand-type sections."
