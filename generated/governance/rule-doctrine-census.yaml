@@ -1,9 +1,9 @@
 $schema: l9.rule-doctrine-census/v1
 source:
   repository: github.com/Quantum-L9/Cursor-Governance
-  commit_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
-  commit_timestamp: '2026-08-28T11:09:06-10:00'
-  workspace_dirty: true
+  commit_sha: def897edb04f6a1450f5e8d32cfd34c7e9322383
+  commit_timestamp: '2026-08-28T22:06:32+00:00'
+  workspace_dirty: false
 summary:
   rule_count: 68
   candidate_count: 434
