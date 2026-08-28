@@ -170,3 +170,39 @@ def test_cursor_surface_denies_the_same_command() -> None:
     finally:
         sys.stdin = stdin
     assert _json.loads(buf.getvalue())["permission"] == "deny"
+
+
+def test_deny_reason_never_echoes_an_operand() -> None:
+    """The reason is emitted into hook output and may be logged downstream.
+
+    Naming the variable is the point; carrying its value there is not.
+    """
+    reason = command_bypasses_verification("TOKEN=s3cr3t-value SKIP=ruff make pr")
+    assert reason and "SKIP" in reason
+    assert "s3cr3t-value" not in reason
+
+
+def test_documented_tokens_stay_a_subset_of_the_policy() -> None:
+    """CLAUDE.md names tokens for orientation; the policy is what is enforced.
+
+    Prose that drifts from the gate is exactly the crossing-guard-with-a-megaphone
+    failure this gate replaced, so the doc may only name tokens the policy holds.
+    """
+    doc = (ROOT / "CLAUDE.md").read_text(encoding="utf-8")
+    spec = policy()
+    enforced = (
+        set(spec["bypass_flags"])
+        | set(spec["bypass_config_keys"])
+        | {f"{name}=" for name in spec["bypass_env_assignments"]}
+    )
+    section = doc.split("Local `git commit` runs no hooks here", 1)
+    assert len(section) == 2, "CLAUDE.md no longer documents the no-commit-hook model"
+    body = section[1].split("\n\n", 1)[0]
+    for token in ("--no-verify", "-c core.hooksPath=", "SKIP=", "HUSKY="):
+        if token in body:
+            bare = token.replace("-c ", "").strip()
+            assert (
+                bare in enforced
+                or bare.rstrip("=") + "=" in enforced
+                or any(bare.startswith(item) for item in enforced)
+            ), f"CLAUDE.md names {token!r}, which the policy does not enforce"

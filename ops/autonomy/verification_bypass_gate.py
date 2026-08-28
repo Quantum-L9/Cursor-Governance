@@ -76,6 +76,14 @@ def human_authorized(env: Mapping[str, str] | None = None) -> bool:
     return len(reason) >= int(spec.get("authorization_min_reason_chars", 8))
 
 
+def _first_command(words: list[str]) -> int:
+    """Index of the first non-assignment word — the command the env prefixes."""
+    index = 0
+    while index < len(words) and "=" in words[index] and not words[index].startswith("-"):
+        index += 1
+    return index if index < len(words) else len(words) - 1
+
+
 def _guarded_command(words: list[str]) -> str | None:
     """Return the guarded ``git <subcommand>`` this segment runs, else None.
 
@@ -144,10 +152,13 @@ def command_bypasses_verification(command: str) -> str | None:
         for word in words:
             if "=" not in word or word.startswith("-"):
                 break
-            if word.split("=", 1)[0] in env_names:
+            key = word.split("=", 1)[0]
+            if key in env_names:
+                # Name the variable, never its value: the reason string is
+                # emitted into hook output and may be logged downstream.
                 return _reason(
-                    f"`{word.split('=', 1)[0]}=` disables or narrows hook execution",
-                    f"in `{segment.strip()[:120]}`",
+                    f"`{key}=` disables or narrows hook execution",
+                    f"set inline on `{words[_first_command(words)]}`",
                 )
 
         guarded = _guarded_command(words)
