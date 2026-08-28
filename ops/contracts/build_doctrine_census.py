@@ -44,6 +44,13 @@ from extract_doctrine import (
 )
 
 CENSUS_VERSION = "1.0.0"
+# Provenance fields that describe WHEN/WHERE the census ran, not WHAT it observed.
+# They are excluded from ``integrity_digest`` so the digest is a semantic content
+# digest: identical corpora yield identical digests, and writing the census
+# (which dirties the workspace) cannot change the next run's digest.
+# validate_doctrine_ratchet.py still reads them from ``source`` for baseline
+# ``created_from`` provenance, so nothing downstream loses information.
+VOLATILE_SOURCE_KEYS = ("commit_sha", "commit_timestamp", "workspace_dirty")
 DEFAULT_OUTPUT = Path("generated") / "governance" / "doctrine-census.yaml"
 RISK_WEIGHT = {
     "critical": 40,
@@ -401,6 +408,17 @@ def _summary(
     }
 
 
+def _semantic_payload(census: dict[str, Any]) -> dict[str, Any]:
+    """Census content with the digest itself and volatile provenance removed."""
+    payload = {key: value for key, value in census.items() if key != "integrity_digest"}
+    source = payload.get("source")
+    if isinstance(source, dict):
+        payload["source"] = {
+            key: value for key, value in source.items() if key not in VOLATILE_SOURCE_KEYS
+        }
+    return payload
+
+
 def build_census(
     *,
     root: Path = ROOT,
@@ -497,9 +515,7 @@ def build_census(
             "findings": quality_findings,
         },
     }
-    census["integrity_digest"] = stable_digest(
-        {key: value for key, value in census.items() if key != "integrity_digest"}
-    )
+    census["integrity_digest"] = stable_digest(_semantic_payload(census))
     return census
 
 
