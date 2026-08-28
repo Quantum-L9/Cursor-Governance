@@ -22,30 +22,16 @@ Use this skill when a change must be auditable and reversible, not when a one-li
 
 ## Runtime authority
 
-Execution is owned by the modular LangGraph package, not by this document:
+Slash `/gmp` is authorization. Invocation is the locked-venv wizard at
+`workflows/gmp_executor.py` (`--authorized-by slash-gmp`). See `commands/gmp.md`.
+The LangGraph package under `workflows/dags/gmp/` remains a TTY/graph runtime;
+the slash does not invoke it and this skill does not rewrite it.
 
 ```
-workflows/dags/gmp/graph.py       # build_gmp_graph() — the state machine
-workflows/dags/gmp/executor.py    # GMPLangGraphExecutor + CLI, MemorySaver checkpointing
-workflows/dags/gmp/state.py       # GMPState, GMPPhase
-workflows/dags/gmp/routing.py     # conditional routing between gates
-workflows/dags/gmp/nodes/         # node implementations
+workflows/gmp_executor.py         # slash start / finalize / full (authorized mode)
+workflows/dags/gmp/graph.py       # TTY LangGraph state machine (not the slash)
+workflows/dags/gmp/executor.py    # GMPLangGraphExecutor + CLI
 ```
-
-```bash
-python3 -m workflows.dags.gmp.executor "task description" --tier RUNTIME
-```
-
-`workflows/dags/gmp_langgraph_executor.py` is a backwards-compatibility shim
-over that package. The graph enforces step ordering, routes through explicit
-user gates at scope confirmation and validation confirmation, retries a failed
-validation back into `implement`, and makes the memory read/write nodes
-mandatory rather than advisory.
-
-**The graph owns no commit and no push.** Publication is a separate,
-separately-authorized act — see `rules/48-make-pr-remediation.mdc` and
-`rules/88-l4-local-autonomy.mdc`. Any older contract describing a GMP
-`COMMIT_GATE` is superseded by the graph.
 
 ## Ownership boundary
 
@@ -109,7 +95,7 @@ Load `references/phase-contracts.md` for the per-phase input/output contract.
 - Production-grade only: no stubs, pseudo-code, or "you'll need to tweak". Drop-in usable.
 - Scope discipline: deliver only what was requested; no unsolicited refactors, summaries, or helper files.
 - A change that would require violating the modification lock must fail at Phase 0 and request a revised plan with explicit permission.
-- Respect repo guardrails (see `references/modification-lock.md`): `pipeline_v2.py` is never activated; new models need ACL; `sudo()` needs inline justification. A run never publishes — remote mutation is the publish path's, not GMP's.
+- Respect repo guardrails (see `references/modification-lock.md`): `pipeline_v2.py` is never activated; new models need ACL; `sudo()` needs inline justification. Skill implement does not publish. `/gmp` finalize publishes via `PR_REMEDIATE=1 make pr`.
 
 ## Resource Map
 
@@ -118,8 +104,20 @@ Load `references/phase-contracts.md` for the per-phase input/output contract.
 - `references/evidence-report.md` — the signed report contract (sections, numbering, final declaration) with the PlasticOS report shape.
 - `references/pipeline-composition.md` — multi-step pipeline YAML, stage failure policy, parallel groups, rollback triggers.
 - `references/lifecycle-pipelines.md` — Discover / Build / Ship / Check lifecycle, PlasticOS make mapping, decision tree.
+- `references/gmp-autonomy-bounds.md` — GMP packet, L4, remediates=1, host_bridge then serialize; no PE Controller.
+- `commands/gmp.md` — slash trigger SSOT (`/gmp` is authorization; last steps Shell the executor then Build).
 - `docs/gmp_protocol/` — canonical long-form source: `cursor-gmp-canonical.md` plus `cursor-phase-0..6-*.md` and `gmp-report-template.md`.
-- `workflows/dags/gmp/` — the executable runtime this skill delegates to (see Runtime authority).
+- `workflows/dags/gmp/` — TTY LangGraph package; not the `/gmp` slash runtime.
+
+Slash invocation (locked interpreter, no `/usr/bin/python3` fallback):
+
+```bash
+GOV_PY="${HOME}/.cursor-governance/.venv/bin/python"
+test -x "$GOV_PY" || GOV_PY="$(pwd)/.venv/bin/python"
+"$GOV_PY" workflows/gmp_executor.py --authorized-by slash-gmp --plan <plan.md> --mode start --tier RUNTIME "<task>"
+```
+
+When `/gmp` invoked the run, do not ask. USER_GATE is skipped. See `commands/gmp.md`.
 
 ## Validation Requirements
 
@@ -134,3 +132,5 @@ A GMP run is complete only when:
 ## Failure Handling
 
 When blocked: state the exact blocker, label missing/unverifiable inputs as `Unknown`, do not fabricate paths or results, and give the smallest safe next action. Never present a run as complete if any phase lacks evidence.
+
+Slash trigger SSOT is `commands/gmp.md`. Do not paste that command body here.
