@@ -38,9 +38,27 @@ def parse_digest(raw: str) -> tuple[str, str, str]:
     return paths, content, pr_base
 
 
-def digest_matches(doc: dict[str, Any], current: str) -> bool:
+def digest_matches(doc: dict[str, Any], current: str, head_sha: str = "") -> bool:
+    """Does this FAIL receipt still describe the current state?
+
+    The content digest alone is not sufficient. A pre-commit hook that rewrites
+    a tracked file does so *before* the receipt is written, so the receipt
+    already records the rewritten bytes. Committing that rewrite — which is
+    exactly what the gate instructs — moves HEAD but leaves the working tree
+    byte-identical, so a digest-only comparison would keep matching and the
+    loop-breaker would refuse the very re-run it asked for.
+
+    A receipt written without a head sha keeps the old digest-only behavior, so
+    this is never weaker than before.
+    """
+
     want = f"{doc.get('paths_digest', '')} {doc.get('content_digest', '')} {doc.get('pr_base', '')}"
-    return want == current
+    if want != current:
+        return False
+    recorded_head = str(doc.get("head_sha", "") or "")
+    if not recorded_head or not head_sha:
+        return True
+    return recorded_head == head_sha
 
 
 def load_doc(path: Path) -> dict[str, Any] | None:
@@ -91,6 +109,7 @@ def build_failure_doc(
     hooks: list[str],
     pytest_bin: str,
     log_hint: str,
+    head_sha: str = "",
 ) -> dict[str, Any]:
     paths, content, pr_base = parse_digest(current)
     command = recheck_command(nodes, pytest_bin)
@@ -109,6 +128,7 @@ def build_failure_doc(
         "paths_digest": paths,
         "content_digest": content,
         "pr_base": pr_base,
+        "head_sha": head_sha,
         "failed_at": utc_now(),
         "failed_nodes": nodes,
         "failed_hooks": hooks,
@@ -186,9 +206,9 @@ def _workspace(payload: dict[str, Any]) -> Path:
     return Path.cwd()
 
 
-def cmd_refuse(path: Path, current: str) -> int:
+def cmd_refuse(path: Path, current: str, head_sha: str = "") -> int:
     doc = load_doc(path)
-    if doc is None or not digest_matches(doc, current):
+    if doc is None or not digest_matches(doc, current, head_sha):
         return 0
     sys.stdout.write(format_refuse(doc))
     return 2
@@ -201,6 +221,7 @@ def cmd_write(
     log_path: Path | None,
     precommit_path: Path | None,
     pytest_bin: str,
+    head_sha: str = "",
 ) -> int:
     chunks: list[str] = []
     for candidate in (log_path, precommit_path):
@@ -216,6 +237,7 @@ def cmd_write(
         hooks=hooks,
         pytest_bin=pytest_bin,
         log_hint=hint,
+        head_sha=head_sha,
     )
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
@@ -261,6 +283,7 @@ def main(argv: list[str] | None = None) -> int:
     refuse = sub.add_parser("refuse")
     refuse.add_argument("path", type=Path)
     refuse.add_argument("digest")
+    refuse.add_argument("--head-sha", default="")
 
     write = sub.add_parser("write")
     write.add_argument("path", type=Path)
@@ -268,12 +291,13 @@ def main(argv: list[str] | None = None) -> int:
     write.add_argument("--log", type=Path, default=None)
     write.add_argument("--precommit", type=Path, default=None)
     write.add_argument("--pytest", default="pytest")
+    write.add_argument("--head-sha", default="")
 
     sub.add_parser("after-shell")
 
     args = parser.parse_args(argv)
     if args.cmd == "refuse":
-        return cmd_refuse(args.path, args.digest)
+        return cmd_refuse(args.path, args.digest, args.head_sha)
     if args.cmd == "write":
         return cmd_write(
             args.path,
@@ -281,6 +305,7 @@ def main(argv: list[str] | None = None) -> int:
             log_path=args.log,
             precommit_path=args.precommit,
             pytest_bin=args.pytest,
+            head_sha=args.head_sha,
         )
     return cmd_after_shell()
 

@@ -60,24 +60,34 @@ def _observe_worktree_changes(contract: Mapping[str, Any]) -> list[str]:
     if not root.is_dir():
         return []
     completed = subprocess.run(
-        ["git", "-C", str(root), "status", "--porcelain", "-uall"],
+        ["git", "-C", str(root), "status", "--porcelain=v1", "-z", "--untracked-files=all"],
         capture_output=True,
         text=True,
         check=False,
     )
     if completed.returncode != 0:
         return []
-    paths: list[str] = []
-    for line in completed.stdout.splitlines():
-        if len(line) < 4:
+    # NUL-delimited, parsed exactly as pec/controller.py::_changed_paths does.
+    # Without -z git quotes any path containing a space, and the quotes end up
+    # in the recorded filename, so verification against the controller's
+    # NUL-parsed set fails changed_files_exact on an otherwise valid attempt.
+    paths: set[str] = set()
+    parts = completed.stdout.split("\0")
+    index = 0
+    while index < len(parts):
+        entry = parts[index]
+        if not entry:
+            index += 1
             continue
-        path = line[3:]
-        if " -> " in path:
-            path = path.split(" -> ", 1)[1]
-        path = path.strip()
+        status_code = entry[:2]
+        path = entry[3:]
+        if status_code[0] in {"R", "C"} and index + 1 < len(parts):
+            index += 1
+            path = parts[index]
         if path:
-            paths.append(path)
-    return sorted(set(paths))
+            paths.add(path.replace("\\", "/"))
+        index += 1
+    return sorted(paths)
 
 
 def _mapping_list(
@@ -376,38 +386,6 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             raise ValueError("provider payload candidate_sha must be a string or null")
         residuals = _string_list(payload, "residual_unknowns", required=False)
         raw_changed = payload.get("changed_files")
-        # #region agent log
-        try:
-            import time as _time
-
-            with open(
-                "/Users/macm2/Cursor-Governance/Cursor-Governance/.cursor/debug-65906b.log",
-                "a",
-                encoding="utf-8",
-            ) as _dbg:
-                _dbg.write(
-                    json.dumps(
-                        {
-                            "sessionId": "65906b",
-                            "runId": "post-fix",
-                            "hypothesisId": "F",
-                            "location": "peer_execution/execution.py:_attempt_receipt",
-                            "message": "attempt receipt payload shape",
-                            "data": {
-                                "result_status": result.status,
-                                "changed_files_type": type(raw_changed).__name__,
-                                "changed_files_is_list": isinstance(raw_changed, list),
-                                "payload_keys": sorted(payload.keys()),
-                                "candidate_sha_type": type(candidate_sha).__name__,
-                            },
-                            "timestamp": int(_time.time() * 1000),
-                        }
-                    )
-                    + "\n"
-                )
-        except Exception:
-            pass
-        # #endregion
         if isinstance(raw_changed, str) and raw_changed.strip():
             payload["changed_files"] = [raw_changed.strip()]
             residuals.append("changed_files_coerced_from_string")
