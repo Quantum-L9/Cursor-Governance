@@ -240,22 +240,19 @@ if [ -f "$GOV_DIR/.pre-commit-config.yaml" ]; then
 fi
 
 # --- 2.5) Publish-path enforcement (verified, not assumed) ------------------
-# `make pr` is the only sanctioned way to reach GitHub. That is enforced by
-# ops/autonomy/local_execution_gate.py, which both the Claude PreToolUse hook
-# and the Cursor beforeShellExecution hook route through. A policy nobody
-# probes is a policy that silently stops working, so PROVE it here.
+# Campaign first publish is `make pr`. Remediator publish of an already-open
+# PR is `git push` (CANONICAL_LAW §6.2.4). Both the Claude PreToolUse hook
+# and the Cursor beforeShellExecution hook resolve the same
+# ops/autonomy/local_execution_gate.py via resolve_execution_gate.py.
 #
-# The invariant is about the PATH rule, not about timing. Two distinct gates
-# can deny `make pr`, and only one of them is a fault:
+# Two distinct gates can deny a command, and only one of them is this probe:
 #
-#   PATH rule  (local_execution_gate) — "this is the wrong way to reach GitHub"
-#   PHASE gate (l4_local)             — "not yet; finish locally and authorize"
+#   PATH rule  (local_execution_gate) — `make push` / MCP writes skip checkers
+#   EFFECT     (git_guardrails)       — force-push / hard-reset / etc.
+#   PHASE gate (l4_local)             — `make pr` before authorize-release
 #
-# On a fresh session L4 phase is null, so `make pr` is CORRECTLY denied for a
-# phase reason. Asserting a bare allow here made every activation report
-# "publish path NOT ENFORCED" — the exact opposite of the truth, since the
-# surface was more restricted, not less. So assert on the REASON: raw push must
-# be denied by the path rule, and `make pr` must never be denied by it.
+# `git push` is workflow-exempt. Probing it for a path-rule deny reports
+# NOT_ENFORCED on a healthy remediator surface. Probe `make push` instead.
 log "Publish-path enforcement"
 GATE="$GOV_DIR/ops/autonomy/local_execution_gate.py"
 if [ -f "$GATE" ]; then
@@ -301,7 +298,7 @@ if [ -f "$GATE" ]; then
 
   # ops/autonomy/local_execution_gate.py — the path-rule denial marker.
   PATH_RULE_MARKER='Publish path'
-  raw_probe="$(_gate_probe 'git push origin main')"
+  raw_probe="$(_gate_probe 'make push')"
   make_probe="$(_gate_probe 'make pr')"
   raw_state="${raw_probe%%:*}"
   make_state="${make_probe%%:*}"
@@ -324,16 +321,16 @@ if [ -f "$GATE" ]; then
     if [ "$raw_blocked_by_path" = "1" ] && [ "$make_blocked_by_path" = "0" ]; then
       PUBLISH_PATH_STATE="ENFORCED"
       if [ "$make_state" = "DENY" ]; then
-        say "publish path ENFORCED: raw 'git push' denied; 'make pr' is the open route"
+        say "publish path ENFORCED: 'make push' denied; 'make pr' is the campaign open route"
         say "  (currently phase-gated by L4 until authorize-release — expected, not a fault)"
       else
-        say "publish path ENFORCED: raw 'git push' denied, 'make pr' allowed"
+        say "publish path ENFORCED: 'make push' denied, 'make pr' allowed"
       fi
     else
       PUBLISH_PATH_STATE="NOT_ENFORCED"
       if [ "$raw_blocked_by_path" = "0" ]; then
-        warn "publish path NOT ENFORCED: raw 'git push' is not denied by the path rule"
-        warn "  agents on surface '$SURFACE' could reach GitHub without the Makefile checkers"
+        warn "publish path NOT ENFORCED: 'make push' is not denied by the path rule"
+        warn "  agents on surface '$SURFACE' could skip the Makefile checkers"
       fi
       if [ "$make_blocked_by_path" = "1" ]; then
         warn "publish path BROKEN: 'make pr' is denied by the path rule itself"

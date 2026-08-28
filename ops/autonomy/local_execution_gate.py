@@ -26,6 +26,10 @@ Claude Code PreToolUse adapter:
 Cursor beforeShellExecution adapter:
   ops/hooks/l4-local-execution-gate-shell.sh
 
+Both adapters resolve this file through ``ops/autonomy/resolve_execution_gate.py``.
+Do not add a third path lookup. A missing gate or a crashed evaluation is a
+deny, never an implicit allow.
+
 Brain lives under ops/ per CANONICAL_LAW §2.1.
 
 Escape hatches (human / ops only):
