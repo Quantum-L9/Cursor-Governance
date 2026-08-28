@@ -1,0 +1,316 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Cut l9-ci-core v2 tags and close remaining issues",
+  "objective": "Close the remaining Quantum-L9/l9-ci-core issues 112, 98, and 24 by cutting the existing v2.0.0 plus v2 release at current main. No product-code change. Do not merge the SHA-pin PR 114.",
+  "success_criteria": [
+    "refs/tags/v2 and refs/tags/v2.0.0 exist on Quantum-L9/l9-ci-core and both point at 7148fc73dcbf41367f5c5401432dc997b1f4f869 or the then-current origin/main SHA locked at execute start",
+    "gh api repos/Quantum-L9/l9-ci-core/contents/.github/actions/install-consumer-ci/action.yml?ref=v2 returns 200",
+    "GitHub Release v2.0.0 exists; Phase 4 release-validation workflow on the v2.0.0 tag is green or the failure is documented as shared-semgrep rather than missing files",
+    "Issues 112, 98, and 24 are closed with comments citing the tag SHAs; PR 114 is closed without merge as superseded by the tags",
+    "A seeded consumer workflow that currently 404s on quantum-l9/l9-ci-core@v2 reaches Set up job without Unable to resolve action version v2"
+  ],
+  "scope": {
+    "in": [
+      "Human cut of v2.0.0 and v2 via docs/release/tag-and-release.sh on Quantum-L9/l9-ci-core",
+      "Post-tag verify of refs, GitHub Release, and consumer action resolve",
+      "Close issues 112, 98, and 24 after tags exist",
+      "Close PR 114 without merge once tags exist"
+    ],
+    "out": [
+      "Merging PR 114 SHA-pin of install-consumer-ci",
+      "Rewriting pack or consumer workflows off the floating-major @v2 contract",
+      "Adding a tag-creating GitHub Actions workflow",
+      "Edits under .github/workflows in l9-ci-core",
+      "Consumer-repo source edits",
+      "Issue 57 (already closed; pins moved by PR 97)",
+      "l9-ci-core PR 113 auto-seed clobber (owned by Quantum-L9/.github PR 63)",
+      "Live mode=seed go-ahead and fleet SHA-pin campaigns"
+    ]
+  },
+  "code_in_scope": false,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "python3 skills/l9-plan/scripts/route_plan.py --risk high --evidence sufficient --json",
+      "pass_criteria": "depth=deep; omit_gates=[]",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "python3 skills/l9-issue-remediation/scripts/issue_ingest.py --repo Quantum-L9/l9-ci-core plus gh tag and PR inspection",
+      "pass_criteria": "Four open issues ingested; after close, 57 completed; 112/98/24 still open; tags only v0.1.0 v1 v1.0.0; main 7148fc73; PR 97 and 23 merged; PR 114 open SHA-pin",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "Confirm release scripts exist on main",
+      "pass_criteria": "docs/release/tag-and-release.sh and docs/release/RELEASE_CHECKLIST_v2.0.0.md present; script creates immutable v2.0.0 and force-moves v2",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-01-baseline-preflight",
+      "task": "Re-lock origin/main full SHA and confirm v2 plus v2.0.0 are still absent before any tag push",
+      "files": [
+        "docs/release/tag-and-release.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Wrap",
+      "anchor": "git matching-refs/tags on Quantum-L9/l9-ci-core",
+      "leverage_rank": 3,
+      "shared_root_cause": "published @v2 contract with no tag"
+    },
+    {
+      "id": "todo-02-human-cut-release",
+      "task": "Human with tag push rights runs bash docs/release/tag-and-release.sh from an l9-ci-core clone at the locked origin/main SHA",
+      "files": [
+        "docs/release/tag-and-release.sh",
+        "docs/release/RELEASE_NOTES_v2.0.0.md",
+        "docs/release/RELEASE_CHECKLIST_v2.0.0.md"
+      ],
+      "effort": "S",
+      "risk": "irreversible",
+      "dependencies": [
+        "todo-01-baseline-preflight"
+      ],
+      "operation": "Create",
+      "anchor": "git tag -a v2.0.0 and git tag -f v2",
+      "blocker": "HUMAN: git gateway denies refs/tags push from automated sessions (403). Maintainer must run tag-and-release.sh. Do not add a tag-creating workflow.",
+      "leverage_rank": 1,
+      "shared_root_cause": "published @v2 contract with no tag"
+    },
+    {
+      "id": "todo-03-prove-tags",
+      "task": "Prove v2 and v2.0.0 resolve install-consumer-ci and record release-validation status",
+      "files": [
+        ".github/actions/install-consumer-ci/action.yml",
+        ".github/workflows/release-validation.yml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-02-human-cut-release"
+      ],
+      "operation": "Wrap",
+      "anchor": "gh api git/ref/tags/v2",
+      "leverage_rank": 2,
+      "shared_root_cause": "published @v2 contract with no tag"
+    },
+    {
+      "id": "todo-04-close-remaining",
+      "task": "Close issues 112, 98, and 24 with tag SHA evidence; close PR 114 without merge as superseded",
+      "files": [],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-03-prove-tags"
+      ],
+      "operation": "Create",
+      "anchor": "gh issue close 112 98 24; gh pr close 114",
+      "blocker": "GitHub issue and PR state only; no product files. Wait until tags exist.",
+      "leverage_rank": 4,
+      "shared_root_cause": "published @v2 contract with no tag"
+    },
+    {
+      "id": "todo-05-breadcrumb",
+      "task": "Write Graphiti PICKUP for the v2 release cluster after closeout",
+      "files": [],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-04-close-remaining"
+      ],
+      "operation": "Create",
+      "anchor": "graphiti_memory_client.py write kind pickup_context",
+      "blocker": "Graphiti PICKUP write; no repo files.",
+      "leverage_rank": 5
+    }
+  ],
+  "critical_path": [
+    "todo-01-baseline-preflight",
+    "todo-02-human-cut-release",
+    "todo-03-prove-tags",
+    "todo-04-close-remaining",
+    "todo-05-breadcrumb"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "Baseline SHA locked and tags confirmed absent",
+      "unlocks": "human tag cut"
+    },
+    {
+      "id": "M1",
+      "outcome": "v2.0.0 and v2 published at locked main",
+      "unlocks": "consumer @v2 resolve and issue close"
+    },
+    {
+      "id": "M2",
+      "outcome": "Remaining Core issues closed; PR 114 abandoned",
+      "unlocks": "PICKUP and idle"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M0",
+      "evidence_required": "gh api git/matching-refs/tags still lacks v2 and v2.0.0; origin/main SHA recorded",
+      "no_go_action": "stop_and_replan if tags already exist or main drifted"
+    },
+    {
+      "id": "C2",
+      "after": "M1",
+      "evidence_required": "Both tag refs exist at locked SHA; action.yml readable at ref=v2",
+      "no_go_action": "do not close issues; do not merge PR 114; diagnose tag push failure"
+    },
+    {
+      "id": "C3",
+      "after": "M2",
+      "evidence_required": "Issues 112/98/24 closed; PR 114 closed unmerged",
+      "no_go_action": "leave issues open and report missing evidence"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No Cursor-Governance or l9-ci-core root-doc rewrite; release notes already on main"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "No governance law change"
+    },
+    {
+      "surface": "docs/release/RELEASE_CHECKLIST_v2.0.0.md",
+      "action": "n_a",
+      "reason": "Checklist already merged via PR 23; execute it, do not edit it"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Did origin/main move past 7148fc73 so the locked SHA in issue 112 is stale?",
+      "Would merging PR 114 green the repo while leaving every @v2 consumer still 404 until a later retarget?",
+      "Does tag-and-release.sh force-push v2 onto a SHA that lacks install-consumer-ci?",
+      "Can an agent session push refs/tags now, contradicting the 403 recorded on issue 24?"
+    ],
+    "assumed_false_ifs": [
+      "Maintainer with tag push rights is available",
+      "origin/main still contains install-consumer-ci and the @v2 contract tests",
+      "No second unpublished installer path exists besides install-consumer-ci@v2",
+      "v2.0.0 is still unpublished so the immutable-tag guard will create rather than refuse a move"
+    ],
+    "blast_radius": "Every Quantum-L9 consumer that already calls install-consumer-ci@v2, including newly seeded Python repos. A wrong v2 SHA makes org CI resolve a broken installer. Moving v2.0.0 after consumers depend on it is forbidden; rollback is delete-and-recut only before adoption, else v2.0.1.",
+    "rollback": "If v2.0.0 was just published and no consumer depends on it yet: git push origin :refs/tags/v2.0.0 && git tag -d v2.0.0, fix main, recut. After adoption: never move v2.0.0; cut v2.0.1. Moving alias v2 can be force-reset to the previous SHA. Do not force-push consumer branches. Leave PR 114 closed if tags are correct."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-02-human-cut-release",
+      "todo-03-prove-tags",
+      "todo-01-baseline-preflight",
+      "todo-04-close-remaining",
+      "todo-05-breadcrumb"
+    ],
+    "shared_causes": [
+      "The v2 floating-major contract was published and test-enforced before any v2 tag existed"
+    ],
+    "deletions_or_consolidations": [
+      "Close PR 114 instead of landing a SHA-pin that abandons the @v2 contract",
+      "Treat 112, 98, and 24 as one release action, not three code changes"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Automated execute tries to push tags and gets 403, then invents a SHA-pin or workflow",
+      "mitigation": "todo-02 is HUMAN-blocked. Envelope forbids merging PR 114 and forbids new tag workflows."
+    },
+    {
+      "risk": "v2.0.0 cut at a drifted main that fails release-validation",
+      "mitigation": "Lock SHA at execute start; run tag-and-release.sh with that commit argument; stop_and_replan on drift."
+    },
+    {
+      "risk": "Force-updating v2 after a bad first cut confuses already-seeded consumers",
+      "mitigation": "First publish only; prove action.yml at v2 before any closeout. After adoption, new immutable patch tag."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does the current operator gh identity have refs/tags push rights on Quantum-L9/l9-ci-core?",
+      "decision_effect": "If yes, the same human can run the script in this session; if no, wait for a maintainer. Agents still must not add a tag workflow.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "gh api repos/Quantum-L9/l9-ci-core/git/ref/tags/v2 --jq .object.sha && gh api repos/Quantum-L9/l9-ci-core/git/ref/tags/v2.0.0 --jq .object.sha",
+      "pass_criteria": "Both refs exist and match the locked origin/main SHA",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "gh api repos/Quantum-L9/l9-ci-core/contents/.github/actions/install-consumer-ci/action.yml?ref=v2 --jq .name",
+      "pass_criteria": "HTTP 200; not 404",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "gh release view v2.0.0 --repo Quantum-L9/l9-ci-core",
+      "pass_criteria": "Release exists",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "make pr-check",
+      "pass_criteria": "N/A: no product-code change in this plan",
+      "status": "not_applicable"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "Plan validated. Remaining Core issues are one HUMAN tag cut. Do not free-form mutate l9-ci-core and do not merge PR 114."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "none in-repo; GitHub tag refs v2 and v2.0.0 plus GitHub Release v2.0.0 via docs/release/tag-and-release.sh"
+    ],
+    "must_not_modify": [
+      ".github/workflows/**",
+      "l9-ci-pack/**",
+      "presets/**",
+      "starter-workflows/**",
+      "consumer repositories",
+      "PR 114 files as a substitute for the tag"
+    ],
+    "preserved_contracts": [
+      "install-consumer-ci@v2 floating major",
+      "tests/architecture/test_external_action_pins.py exemption",
+      "tests/workflows/test_python_mypy_contract.py @v2 string",
+      "v2.0.0 immutable once published",
+      "autonomous_merge false"
+    ],
+    "validation_commands": [
+      "gh api repos/Quantum-L9/l9-ci-core/git/ref/tags/v2",
+      "gh api repos/Quantum-L9/l9-ci-core/contents/.github/actions/install-consumer-ci/action.yml?ref=v2",
+      "gh release view v2.0.0 --repo Quantum-L9/l9-ci-core"
+    ]
+  },
+  "checklist": [
+    "re-lock main SHA",
+    "human tag-and-release.sh",
+    "prove v2 action resolve",
+    "close 112 98 24",
+    "close PR 114 unmerged"
+  ],
+  "estimate": "one human command plus verify"
+}

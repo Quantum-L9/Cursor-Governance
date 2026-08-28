@@ -431,9 +431,19 @@ else
 fi
 
 echo "--- sync-generated-artifacts ---"
+# --pe-manifest opts in to environment/program-execution/MANIFEST.json, which a
+# bare --force does not reach. Without it the heal ran nowhere: this repo has no
+# git commit hook (see run_pr_precommit.sh), so the "commit-time heal" the
+# pre-commit config names never executed, and `make program-execution-conformance`
+# failed on a manifest nothing regenerated. --changed-file still scopes it — the
+# generator runs only when the branch touched environment/program-execution/.
+# The write is a generated path (sync_generated_artifacts.GENERATED_PATH_PREFIXES),
+# so _gate_classify_dirtiness below reports WARN + stage, never FAIL. CI checks
+# the same artifact for drift in governance-self-check.yml.
 python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
   --root "$WS" \
   --changed-file "$changed_file" \
+  --pe-manifest \
   --check
 if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
   if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then

@@ -133,12 +133,54 @@ def _preflight_digest(task_id: str, binding: Any) -> str:
     return "sha256:" + hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+#: Contract actions whose execution mutates the task worktree. A mutating
+#: dispatch without root authority is refused here rather than discovered later
+#: by decision-coverage reconciliation.
+MUTATING_ACTIONS = frozenset({"local_write", "destructive_change", "commit"})
+
+
+def _requires_root_authority(contract: dict[str, Any]) -> bool:
+    requested = {str(item) for item in (contract.get("requested_actions") or [])}
+    return bool(requested & MUTATING_ACTIONS)
+
+
+def _bind_root_authority(
+    *,
+    adapter: Any,
+    contract: dict[str, Any],
+    autonomy_authority: dict[str, Any] | None,
+) -> None:
+    """Attach this task's root authority to the adapter, or fail closed.
+
+    Peer Execution does not decide whether the authority is sufficient — the
+    root gateway does. It only refuses to dispatch mutating work with no
+    authority to carry, and refuses an adapter that cannot carry one.
+    """
+    binder = getattr(adapter, "bind_autonomy_authority", None)
+    if autonomy_authority is None:
+        if _requires_root_authority(contract):
+            raise ValueError(
+                "MUTATING_DISPATCH_WITHOUT_ROOT_AUTHORITY: "
+                f"{contract.get('task_id')!r} requests mutation with no root autonomy authority"
+            )
+        if callable(binder):
+            binder(None)
+        return
+    if not callable(binder):
+        raise ValueError(
+            "ADAPTER_CANNOT_CARRY_ROOT_AUTHORITY: "
+            f"{type(adapter).__name__} has no autonomy authority carrier"
+        )
+    binder(autonomy_authority)
+
+
 def _execute_provider(
     *,
     contract: dict[str, Any],
     binding: Any,
     adapter: Any,
     probe: Any,
+    autonomy_authority: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     if probe.status != "PASS":
         return {
@@ -146,6 +188,11 @@ def _execute_provider(
             "binding": binding.to_dict(),
             "probe": probe.to_dict(),
         }
+    _bind_root_authority(
+        adapter=adapter,
+        contract=contract,
+        autonomy_authority=autonomy_authority,
+    )
     prepared = adapter.prepare(contract)
     dispatched = adapter.dispatch({"dispatch_id": prepared.dispatch_id})
     dispatch_id = str(prepared.dispatch_id)
@@ -169,6 +216,33 @@ def _execute_provider(
         "dispatch": dispatched.to_dict(),
         **outcome.to_dict(),
         "terminal_result": dict(result),
+        "root_authority": _root_authority_evidence(autonomy_authority, result),
+    }
+
+
+def _root_authority_evidence(
+    autonomy_authority: dict[str, Any] | None,
+    result: Any,
+) -> dict[str, Any] | None:
+    """Correlation only: which lease/session this dispatch ran under.
+
+    Campaign reconciliation reads the decisions from the root runtime itself.
+    This carries the identifiers needed to find them, and deliberately no
+    verdict of its own — a second verifier is exactly what must not exist here.
+    """
+    if autonomy_authority is None:
+        return None
+    changed = result.get("changed_files") if isinstance(result, dict) else None
+    return {
+        "task_id": autonomy_authority.get("task_id"),
+        "lease_id": autonomy_authority.get("lease_id"),
+        "adapter_session_id": autonomy_authority.get("adapter_session_id"),
+        "agent_id": autonomy_authority.get("agent_id"),
+        "authority_digest": autonomy_authority.get("authority_digest"),
+        "runtime_database": autonomy_authority.get("runtime_database"),
+        "provider_reported_changed_files": sorted(
+            {str(item) for item in changed} if isinstance(changed, list) else set()
+        ),
     }
 
 

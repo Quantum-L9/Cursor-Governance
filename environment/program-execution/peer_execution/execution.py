@@ -21,6 +21,7 @@ from .provider import (
     CanonicalProviderResult,
     ProviderInvocation,
     ThinProvider,
+    validate_autonomy_authority,
     validate_provider_invocation,
 )
 
@@ -134,12 +135,18 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         provider: ThinProvider,
         execution_profile: Mapping[str, Any],
         binding_context: Mapping[str, Any] | None = None,
+        autonomy_authority: Mapping[str, Any] | None = None,
     ) -> None:
         super().__init__(runtime_root)
         self.descriptor = dict(descriptor)
         self.provider = provider
         self.execution_profile = dict(execution_profile)
         self.binding_context = dict(binding_context or {})
+        self.autonomy_authority: dict[str, Any] | None = (
+            validate_autonomy_authority(autonomy_authority)
+            if autonomy_authority is not None
+            else None
+        )
         self.adapter_id = _required_string("adapter_id", self.descriptor.get("adapter_id"))
         self.adapter_version = _required_string(
             "adapter_version",
@@ -177,6 +184,27 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             capabilities.get("cancellation") or "unsupported",
         )
         self._provider_observed_capabilities: tuple[str, ...] = ()
+
+    def bind_autonomy_authority(self, authority: Mapping[str, Any] | None) -> None:
+        """Carry one task-scoped root authority sidecar beside the contract.
+
+        The sidecar never enters the rendered contract or its digest: Program
+        identity is the Controller's, and root authority is evidence that
+        travels next to it.
+        """
+        self.autonomy_authority = (
+            validate_autonomy_authority(authority) if authority is not None else None
+        )
+
+    def _authority_for(self, contract: Mapping[str, Any]) -> dict[str, Any] | None:
+        """This adapter's authority, refused when it belongs to another task."""
+        if self.autonomy_authority is None:
+            return None
+        task_id = contract.get("task_id") or contract.get("id")
+        return validate_autonomy_authority(
+            self.autonomy_authority,
+            task_id=str(task_id) if task_id is not None else None,
+        )
 
     def _probe_status(self, context):
         probe = self.provider.probe(context)
@@ -227,6 +255,8 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         record = self.runtime.load(str(receipt.dispatch_id))
         record["execution_profile_ref"] = self.execution_profile["profile_ref"]
         record["binding_context"] = dict(self.binding_context)
+        authority = self._authority_for(contract)
+        record["autonomy_authority"] = dict(authority) if authority is not None else None
         self.runtime.save(str(receipt.dispatch_id), record)
         return receipt
 
@@ -296,6 +326,7 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
                 "profile_ref",
                 profile.get("profile_ref"),
             ),
+            autonomy_authority=self._authority_for(contract),
         )
 
     def _request_from_record(
@@ -359,6 +390,14 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             expected_value = self.binding_context.get(key)
             if expected_value is not None and getattr(request, key) != expected_value:
                 raise ValueError(f"canonical execution request {key} drift")
+        expected_authority = record.get("autonomy_authority")
+        if expected_authority is None:
+            expected_authority = self._authority_for(binding.raw)
+        if request.autonomy_authority is not None or expected_authority is not None:
+            if request.autonomy_authority is None or expected_authority is None:
+                raise ValueError("canonical execution request autonomy_authority drift")
+            if dict(request.autonomy_authority) != dict(expected_authority):
+                raise ValueError("canonical execution request autonomy_authority drift")
         return request
 
     @staticmethod

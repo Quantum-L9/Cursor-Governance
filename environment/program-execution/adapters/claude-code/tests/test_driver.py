@@ -205,6 +205,19 @@ class ClaudeProviderSourceTests(unittest.TestCase):
             telemetry_context={"provider_ref": "claude-code-direct"},
             provider_ref="claude-code-direct",
             execution_profile_ref="worker-default",
+            # A mutating window must carry root authority: the provider refuses
+            # to launch one that cannot authorize its own effects.
+            autonomy_authority={
+                "schema": "l9.program-execution.autonomy-authority.v1",
+                "owns_program_state": False,
+                "task_id": "task-1",
+                "adapter_session_id": "adapter-session-fixture",
+                "lease_id": "lease-fixture",
+                "agent_id": "agent-fixture",
+                "runtime_database": "/tmp/autonomy-runtime.sqlite3",
+                "repository_root": "/tmp",
+                "workspace": "/tmp/workspace",
+            },
         )
         repo_root = Path(__file__).resolve().parents[5]
         with tempfile.TemporaryDirectory() as temporary:
