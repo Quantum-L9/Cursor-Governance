@@ -68,14 +68,16 @@ class UserScopeSettingsTests(unittest.TestCase):
             for matcher in group
             for entry in matcher["hooks"]
         ]
-        # 11 registrations covering 10 distinct hook scripts: skill_usage_logger
+        # 12 registrations covering 11 distinct hook scripts: skill_usage_logger
         # is registered twice (PreToolUse and UserPromptExpansion). The fourth
-        # gate is session_debt_wrap on Stop (rules/42-no-abandoned-work).
-        self.assertEqual(len(commands), 11, "every L9 hook registration must reach user scope")
+        # gate is session_debt_wrap on Stop (rules/42-no-abandoned-work); the
+        # eighth observer is root_file_advisory_wrap on UserPromptSubmit, which
+        # warns about a protected-root overwrite before `make pr` blocks on it.
+        self.assertEqual(len(commands), 12, "every L9 hook registration must reach user scope")
         self.assertEqual(sum("--class gate" in c for c in commands), 4)
-        self.assertEqual(sum("--class observer" in c for c in commands), 7)
+        self.assertEqual(sum("--class observer" in c for c in commands), 8)
         names = {c.rsplit(" ", 1)[-1].rstrip("'") for c in commands}
-        self.assertEqual(len(names), 10, "ten distinct hook scripts")
+        self.assertEqual(len(names), 11, "eleven distinct hook scripts")
 
     def test_managed_keys_are_all_present(self) -> None:
         self._reconcile()
