@@ -14,7 +14,9 @@
 # Systematic generation and validation of subsystem READMEs
 #
 # Usage:
-#   Invoke via: /readme-gen or SessionRunner.run("readme-pipeline-v1")
+#   /docs → skill l9-update-agent-docs Step 3b
+#   python scripts/generate_subsystem_readmes.py --list|--gaps|--validate
+#   After `import workflows.dags`, get_session_dag("readme-pipeline-v1")
 #
 # Version: 1.0.0
 # Created: 2026-01-25
@@ -38,7 +40,7 @@ tags:
   - documentation
   - generation
   - subsystems
-  - dora
+  - skill-l9-update-agent-docs
 
 # Key files this workflow operates on
 artifacts:
@@ -58,6 +60,7 @@ nodes:
     description: Identify missing subsystems in config
     commands:
       - python scripts/generate_subsystem_readmes.py --list
+      - python scripts/generate_subsystem_readmes.py --gaps
       - python scripts/generate_subsystem_readmes.py --validate
     outputs:
       - gaps

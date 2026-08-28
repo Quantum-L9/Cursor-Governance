@@ -102,7 +102,9 @@ def main() -> int:
         dishonest = Path(PACK / "scripts" / "_heading_fixture")
         try:
             dishonest.mkdir(exist_ok=True)
-            (dishonest / "README.md").write_text("# Index\n\nNo required pointers.\n", encoding="utf-8")
+            (dishonest / "README.md").write_text(
+                "# Index\n\nNo required pointers.\n", encoding="utf-8"
+            )
             (dishonest / "CLAUDE.md").write_text("# note\n", encoding="utf-8")
             (dishonest / "AGENTS.md").write_text("# ops\n", encoding="utf-8")
             bad = subprocess.run(

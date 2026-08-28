@@ -22,6 +22,7 @@ import yaml
 
 CONFIG_PATH = Path("config/subsystems/readme_config.yaml")
 ROOT_README = Path("README.md")
+FORBIDDEN_RELATIVE_PATHS = {"", ".", ".."}
 SKIP_DIR_NAMES = {
     ".git",
     ".venv",
@@ -31,9 +32,7 @@ SKIP_DIR_NAMES = {
     ".pytest_cache",
     ".ruff_cache",
 }
-HANDWRITTEN_RE = re.compile(
-    r"^auto_generated:\s*false\b", re.MULTILINE | re.IGNORECASE
-)
+HANDWRITTEN_RE = re.compile(r"^auto_generated:\s*false\b", re.MULTILINE | re.IGNORECASE)
 HEADING_RE = re.compile(r"^##\s+(.+?)\s*$", re.MULTILINE)
 
 README_TEMPLATE = """# {title}
@@ -249,9 +248,7 @@ def extract_subsystem_facts(repo_root: Path, subsystem_path: str) -> ModuleFacts
                         decorators=[ast.unparse(d) for d in node.decorator_list],
                     )
                 )
-            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and _public(
-                node.name
-            ):
+            elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and _public(node.name):
                 facts.functions.append(_function_info(node, rel))
     facts.imports = sorted(set(imports))
     facts.exports = sorted(set(exports))
@@ -309,6 +306,14 @@ def render_dependencies(facts: ModuleFacts) -> str:
     return ", ".join(f"`{name}`" for name in shown)
 
 
+def _fill(template: str, values: dict[str, str]) -> str:
+    """Replace `{name}` tokens without interpreting braces inside values."""
+    out = template
+    for key, value in values.items():
+        out = out.replace("{" + key + "}", value)
+    return out
+
+
 def generate_readme(
     name: str,
     config: dict[str, Any],
@@ -320,17 +325,39 @@ def generate_readme(
     description = str(config.get("description") or "").strip()
     if facts.module_docstrings and not purpose:
         purpose = next(iter(facts.module_docstrings.values())).splitlines()[0]
-    return README_TEMPLATE.format(
-        title=config.get("title") or config["path"],
-        path=config["path"],
-        tier=config.get("tier") or "unknown",
-        purpose=purpose or "_Unknown — no purpose in config or module docstring._",
-        description=description,
-        components=render_components(facts),
-        functions=render_functions(facts),
-        exports=render_exports(facts),
-        dependencies=render_dependencies(facts),
+    return _fill(
+        README_TEMPLATE,
+        {
+            "title": str(config.get("title") or config["path"]),
+            "path": str(config["path"]),
+            "tier": str(config.get("tier") or "unknown"),
+            "purpose": purpose or "_Unknown — no purpose in config or module docstring._",
+            "description": description,
+            "components": render_components(facts),
+            "functions": render_functions(facts),
+            "exports": render_exports(facts),
+            "dependencies": render_dependencies(facts),
+        },
     )
+
+
+def resolve_under_root(repo_root: Path, rel: str) -> Path | None:
+    """Return the resolved directory if `rel` stays inside repo_root and is not root."""
+    cleaned = (rel or "").strip()
+    if cleaned in FORBIDDEN_RELATIVE_PATHS:
+        return None
+    raw = Path(cleaned)
+    if raw.is_absolute() or ".." in raw.parts:
+        return None
+    root = repo_root.resolve()
+    dest = (root / raw).resolve()
+    try:
+        dest.relative_to(root)
+    except ValueError:
+        return None
+    if dest == root:
+        return None
+    return dest
 
 
 def is_root_readme(repo_root: Path, dest: Path) -> bool:
@@ -356,11 +383,16 @@ def write_readme(path: Path, content: str, *, backup: bool) -> None:
     path.write_text(content, encoding="utf-8")
 
 
-def validate_subsystem_config(key: str, config: dict[str, Any]) -> list[str]:
+def validate_subsystem_config(
+    key: str, config: dict[str, Any], repo_root: Path | None = None
+) -> list[str]:
     errors: list[str] = []
     for field_name in ("path", "title", "tier", "description"):
         if not config.get(field_name):
             errors.append(f"{key}: missing {field_name}")
+    path = str(config.get("path") or "")
+    if path and repo_root is not None and resolve_under_root(repo_root, path) is None:
+        errors.append(f"{key}: path {path!r} is not a module directory under the repo")
     return errors
 
 
@@ -372,16 +404,19 @@ def normalize_heading(text: str) -> str:
 def validate_sections(
     repo_root: Path, key: str, config: dict[str, Any], defaults: dict[str, Any]
 ) -> list[str]:
-    dest = repo_root / config["path"] / "README.md"
+    module_dir = resolve_under_root(repo_root, str(config.get("path") or ""))
+    if module_dir is None:
+        return [f"{key}: refuses to treat {config.get('path')!r} as a module target"]
+    dest = module_dir / "README.md"
     if is_root_readme(repo_root, dest):
         return [f"{key}: refuses to treat root README.md as a module target"]
+    if dest.is_file() and is_handwritten(dest):
+        return []
     if not dest.is_file():
         return [f"{key}: README.md missing at {dest.relative_to(repo_root)}"]
     sections = config.get("sections") or defaults.get("sections") or {}
     required = [
-        name
-        for name, spec in sections.items()
-        if isinstance(spec, dict) and spec.get("required")
+        name for name, spec in sections.items() if isinstance(spec, dict) and spec.get("required")
     ]
     found = {
         normalize_heading(match.group(1))
@@ -400,6 +435,31 @@ def list_subsystems(config: dict[str, Any]) -> None:
         print(f"{key}\t{spec.get('path')}\t{spec.get('title')}\t{flag}")
 
 
+def report_gaps(repo_root: Path, config: dict[str, Any]) -> int:
+    """Print stale (missing path) and unguarded handwritten READMEs. Exit 1 on stale."""
+    stale: list[str] = []
+    handwritten: list[str] = []
+    for key, spec in (config.get("subsystems") or {}).items():
+        path = str(spec.get("path") or "")
+        module_dir = resolve_under_root(repo_root, path)
+        if module_dir is None:
+            stale.append(f"{key}\t{path}\tinvalid")
+            continue
+        if not module_dir.exists():
+            stale.append(f"{key}\t{path}\tmissing")
+            continue
+        readme = module_dir / "README.md"
+        if readme.is_file() and is_handwritten(readme) and not spec.get("skip"):
+            handwritten.append(f"{key}\t{path}\thandwritten-unguarded")
+    for row in stale:
+        print(f"stale\t{row}")
+    for row in handwritten:
+        print(f"handwritten\t{row}")
+    if not stale and not handwritten:
+        print("gaps\tnone")
+    return 1 if stale else 0
+
+
 def select_targets(
     config: dict[str, Any],
     *,
@@ -407,13 +467,15 @@ def select_targets(
     tier: str | None,
     path: str | None,
     title: str | None,
+    force: bool = False,
 ) -> list[tuple[str, dict[str, Any]]]:
     defaults = config.get("defaults") or {}
     items = config.get("subsystems") or {}
     if path:
-        name = path.rstrip("/").replace("/", "_")
+        cleaned = path.rstrip("/")
+        name = cleaned.replace("/", "_")
         spec = {
-            "path": path.rstrip("/"),
+            "path": cleaned,
             "title": title or path,
             "tier": "operations",
             "description": defaults.get("description") or path,
@@ -423,7 +485,12 @@ def select_targets(
     if subsystem:
         if subsystem not in items:
             raise KeyError(subsystem)
-        return [(subsystem, items[subsystem])]
+        spec = items[subsystem]
+        if spec.get("skip") and not force:
+            raise PermissionError(
+                f"{subsystem} is skip: true (handwritten); pass --force to generate"
+            )
+        return [(subsystem, spec)]
     selected: list[tuple[str, dict[str, Any]]] = []
     for key, spec in items.items():
         if spec.get("skip"):
@@ -446,6 +513,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--verbose", "-v", action="store_true")
     parser.add_argument("--list", "-l", action="store_true")
+    parser.add_argument("--gaps", action="store_true", help="Report missing or invalid config paths")
     parser.add_argument("--validate", action="store_true")
     parser.add_argument("--validate-sections", action="store_true")
     parser.add_argument(
@@ -462,10 +530,13 @@ def main(argv: list[str] | None = None) -> int:
         list_subsystems(config)
         return 0
 
+    if args.gaps:
+        return report_gaps(repo_root, config)
+
     if args.validate or args.validate_sections:
         errors: list[str] = []
         for key, spec in (config.get("subsystems") or {}).items():
-            errors.extend(validate_subsystem_config(key, spec))
+            errors.extend(validate_subsystem_config(key, spec, repo_root))
             if args.validate_sections and not spec.get("skip"):
                 errors.extend(validate_sections(repo_root, key, spec, defaults))
         if errors:
@@ -483,21 +554,29 @@ def main(argv: list[str] | None = None) -> int:
             tier=args.tier,
             path=args.path,
             title=args.title,
+            force=args.force,
         )
     except KeyError as exc:
         print(f"unknown subsystem: {exc}", file=sys.stderr)
+        return 1
+    except PermissionError as exc:
+        print(str(exc), file=sys.stderr)
         return 1
 
     generated = 0
     skipped = 0
     for name, spec in targets:
-        dest = repo_root / spec["path"] / "README.md"
+        module_dir = resolve_under_root(repo_root, str(spec.get("path") or ""))
+        if module_dir is None:
+            print(f"skip {name}: refuses path {spec.get('path')!r}")
+            skipped += 1
+            continue
+        dest = module_dir / "README.md"
         if is_root_readme(repo_root, dest):
             print(f"skip {name}: refuses to write root README.md")
             skipped += 1
             continue
-        full = repo_root / spec["path"]
-        if not full.exists():
+        if not module_dir.exists():
             print(f"skip {name}: path missing ({spec['path']})")
             skipped += 1
             continue

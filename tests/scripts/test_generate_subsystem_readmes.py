@@ -117,9 +117,7 @@ def test_skips_handwritten(tmp_path: Path):
     pkg = tmp_path / "kept"
     pkg.mkdir()
     (pkg / "ok.py").write_text("class Keep:\n    pass\n", encoding="utf-8")
-    (pkg / "README.md").write_text(
-        "---\nauto_generated: false\n---\n# Hand\n", encoding="utf-8"
-    )
+    (pkg / "README.md").write_text("---\nauto_generated: false\n---\n# Hand\n", encoding="utf-8")
     config = tmp_path / "config" / "subsystems"
     config.mkdir(parents=True)
     (config / "readme_config.yaml").write_text(
@@ -138,8 +136,6 @@ subsystems:
 
 
 def test_dag_no_longer_spots_donor_memory_readme():
-    text = (REPO_ROOT / "workflows" / "dags" / "readme_pipeline_dag.py").read_text(
-        encoding="utf-8"
-    )
+    text = (REPO_ROOT / "workflows" / "dags" / "readme_pipeline_dag.py").read_text(encoding="utf-8")
     assert "memory/README.md" not in text
     assert "scripts/generate_subsystem_readmes.py" in text
