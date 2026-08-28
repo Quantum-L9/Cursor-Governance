@@ -31,6 +31,14 @@ AND `L9_AUTONOMY_ENABLED=true`:
    WS="$PWD"` regardless of the workspace repo's own Makefile — a consumer
    needs no `pr` target and there is no raw-push fallback.
 3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
+3a. Commit verification is not skippable. `git commit --no-verify` / `-n`,
+   `git push --no-verify`, `core.hooksPath` overrides, `SKIP=` / `HUSKY=0`
+   on a commit, `pre-commit uninstall`, and `.git/hooks/**` edits are
+   denied at PreToolUse by `ops/autonomy/verification_bypass_gate.py`
+   (contract `l9-commit-verification-integrity`, declared in
+   `ops/config/commit-verification-contract.json`). Repair what the hook
+   reported; breakglass `L9_VERIFY_BYPASS_AUTHORIZED=<reason>` is human/ops
+   only.
 4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
    campaign PRs against `main`. Do not mix with other feature branches.
 5. Cursor surface MUST scoped-commit locally after each authored chunk
