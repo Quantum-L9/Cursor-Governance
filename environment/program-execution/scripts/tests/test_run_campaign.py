@@ -383,12 +383,64 @@ class RunCampaignTests(unittest.TestCase):
         self.assertEqual(order, ["execute"])
         self.assertNotIn("push", order)
 
+    def test_write_and_commit_output_refuses_before_git_without_commit_authority(self) -> None:
+        """local_write is not commit authority; the refusal precedes `git add`."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            _git_init(root)
+            (root / "done.md").write_text(
+                "done.md holds real work, long enough to clear the stub floor\n",
+                encoding="utf-8",
+            )
+            head_before = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            with self.assertRaises(self.mod.CampaignError) as ctx:
+                self.mod.write_and_commit_output(
+                    root, "done.md", "Title", writable=["done.md"], commit_authorized=False
+                )
+            self.assertIn("does not request the 'commit' action", str(ctx.exception))
+            # Nothing was staged and no commit was created.
+            staged = subprocess.run(
+                ["git", "-C", str(root), "diff", "--cached", "--name-only"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            self.assertEqual(staged, "")
+            head_after = subprocess.run(
+                ["git", "-C", str(root), "rev-parse", "HEAD"],
+                check=True,
+                capture_output=True,
+                text=True,
+            ).stdout.strip()
+            self.assertEqual(head_after, head_before)
+
+    def test_contract_allows_commit_reads_the_requested_actions(self) -> None:
+        self.assertFalse(
+            self.mod.contract_allows_commit({"requested_actions": ["inspect", "local_write"]})
+        )
+        self.assertTrue(
+            self.mod.contract_allows_commit(
+                {"requested_actions": ["inspect", "local_write", "commit"]}
+            )
+        )
+        self.assertFalse(self.mod.contract_allows_commit({}))
+
     def test_write_and_commit_output_refuses_stub(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw)
             _git_init(root)
             with self.assertRaises(self.mod.CampaignError) as ctx:
-                self.mod.write_and_commit_output(root, "docs/program-execution/TASK-001.md", "x")
+                self.mod.write_and_commit_output(
+                    root,
+                    "docs/program-execution/TASK-001.md",
+                    "x",
+                    commit_authorized=True,
+                )
             self.assertIn("refuse stub", str(ctx.exception))
 
     def test_until_activate_emits_allowed_set(self) -> None:
@@ -1677,7 +1729,7 @@ class RunCampaignTests(unittest.TestCase):
                     encoding="utf-8",
                 )
             sha = self.mod.write_and_commit_output(
-                root, "one.md", "Title", writable=["one.md", "two.md"]
+                root, "one.md", "Title", writable=["one.md", "two.md"], commit_authorized=True
             )
             listed = subprocess.run(
                 ["git", "-C", str(root), "show", "--name-only", "--pretty=", sha],
@@ -1846,7 +1898,9 @@ class RunCampaignTests(unittest.TestCase):
                 text=True,
             ).stdout.strip()
             self.assertEqual(
-                self.mod.write_and_commit_output(root, "done.md", "Title", writable=["done.md"]),
+                self.mod.write_and_commit_output(
+                    root, "done.md", "Title", writable=["done.md"], commit_authorized=True
+                ),
                 head,
             )
 
@@ -1993,12 +2047,31 @@ class CampaignInputRoutingTests(unittest.TestCase):
                 ),
             )
 
+    def test_seed_view_projects_the_repository_from_targets(self) -> None:
+        """The runner and the compiler must bind the same repository."""
+        module = _load("campaign_input_seed_view", PE_ROOT / "scripts/campaign_input.py")
+        source = self._source()
+        source["targets"] = [
+            {"id": "TARGET-001", "repository_id": "Quantum-L9/Cursor-Governance"},
+            {"id": "TARGET-002", "kind": "program_control", "repository_id": None},
+        ]
+        source.setdefault("metadata", {})["intended_host"] = "Quantum-L9/Cursor-Governance"
+        seed = module.seed_view(source)
+        self.assertEqual(seed["target"]["repository_id"], "Quantum-L9/Cursor-Governance")
+
+    def test_seed_view_refuses_a_source_that_names_two_repositories(self) -> None:
+        module = _load("campaign_input_seed_view_conflict", PE_ROOT / "scripts/campaign_input.py")
+        source = self._source()
+        source["targets"] = [{"id": "TARGET-001", "repository_id": "Quantum-L9/Cursor-Governance"}]
+        source.setdefault("program", {})["target_repository_id"] = "Quantum-L9/l9-ci-core"
+        with self.assertRaises(Exception) as ctx:
+            module.seed_view(source)
+        self.assertIn("l9-ci-core", str(ctx.exception))
+
     def test_rich_campaign_source_preserves_task_validations_and_dependencies(self) -> None:
         """The whole point of the direct route: rich semantics survive intake."""
         source = self._source()
-        source["tasks"][1]["validation"] = [
-            {"command": "python3 -c 'print(\"marker-validation-preserved\")'"}
-        ]
+        source["tasks"][1]["validation"] = [{"command": "git status --short"}]
         source["tasks"][1]["depends_on"] = ["TASK-001"]
         source["tasks"][0]["paths"] = {"writable": ["docs/program-execution/marker.md"]}
         source["dependency_edges"] = [{"from": "TASK-001", "to": "TASK-002"}]
@@ -2025,10 +2098,7 @@ class CampaignInputRoutingTests(unittest.TestCase):
             )
         doc = landed["doc"]
         task2 = next(item for item in doc["tasks"] if item["id"] == "TASK-002")
-        self.assertEqual(
-            task2["validation"],
-            [{"command": "python3 -c 'print(\"marker-validation-preserved\")'"}],
-        )
+        self.assertEqual(task2["validation"], [{"command": "git status --short"}])
         self.assertEqual(task2["depends_on"], ["TASK-001"])
         self.assertEqual(doc["dependency_edges"], [{"from": "TASK-001", "to": "TASK-002"}])
         task1 = next(item for item in doc["tasks"] if item["id"] == "TASK-001")

@@ -224,7 +224,26 @@ class InferenceReachesTheTaskCardTest(unittest.TestCase):
 class DefinitionStatusNormalizationTest(unittest.TestCase):
     """Ordering intent must not become a state the controller cannot leave."""
 
-    def test_blocked_with_dependencies_compiles_as_ready(self) -> None:
+    def test_blocked_with_dependency_edges_compiles_as_ready(self) -> None:
+        src = {
+            "tasks": [
+                {"id": "TASK-001", "definition_status": "ready"},
+                {"id": "TASK-002", "definition_status": "blocked"},
+            ],
+            "dependency_edges": [{"from": "TASK-001", "to": "TASK-002"}],
+        }
+        notes = compile_source.normalize_definition_status(src)
+        self.assertEqual(src["tasks"][1]["definition_status"], "ready")
+        self.assertTrue(any("compiled as 'ready'" in note for note in notes))
+
+    def test_a_task_local_dependency_alias_carries_no_ordering(self) -> None:
+        """The alias never made a task ready; only `dependency_edges` does.
+
+        A source declaring one is refused outright by `_semantic_precheck`
+        before reaching here. This proves the alias is also inert at the
+        ordering decision itself, so neither layer can be the one that lets a
+        second DAG representation drive readiness.
+        """
         src = {
             "tasks": [
                 {"id": "TASK-001", "definition_status": "ready"},
@@ -235,9 +254,24 @@ class DefinitionStatusNormalizationTest(unittest.TestCase):
                 },
             ]
         }
-        notes = compile_source.normalize_definition_status(src)
-        self.assertEqual(src["tasks"][1]["definition_status"], "ready")
-        self.assertTrue(any("compiled as 'ready'" in note for note in notes))
+        with self.assertRaises(compile_source.CompileError) as ctx:
+            compile_source.normalize_definition_status(src)
+        self.assertIn("unclaimable", str(ctx.exception))
+
+        with self.assertRaises(compile_source.CompileError) as alias_ctx:
+            compile_source._semantic_precheck(
+                {
+                    "targets": [{"id": "TARGET-001", "repository_id": "org/repo"}],
+                    "tasks": [
+                        {
+                            "id": "TASK-002",
+                            "definition_status": "ready",
+                            "dependency_ids": ["TASK-001"],
+                        }
+                    ],
+                }
+            )
+        self.assertIn("dependency_ids", str(alias_ctx.exception))
 
     def test_blocked_without_dependencies_refuses_compilation(self) -> None:
         # ADR-0023: a blocked task with nothing to wait on is a runtime

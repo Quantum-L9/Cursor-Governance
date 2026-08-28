@@ -28,6 +28,20 @@ log = structlog.get_logger("peer_execution")
 
 _TERMINAL_PROVIDER_STATUSES = {"PASS", "FAIL", "BLOCKED", "CANCELLED"}
 _CLAIMED_STATUSES = {"completed", "failed", "blocked", "stopped"}
+#: Actions Program Execution performs at its own boundary instead of delegating.
+#: A Rendered Contract's `requested_actions` states the *task's* authority; the
+#: provider is asked only for the part of it the worker actually carries out.
+#: The worker mutates the worktree and PE stages and commits exactly the work
+#: the Controller verified, so `commit` is never a provider capability -- every
+#: adapter descriptor and every provider probe declares inspect / local_write /
+#: artifact_production and none declares commit. Declaring it there would assert
+#: a capability that does not exist and widen what the worker may do.
+PE_RETAINED_ACTIONS = frozenset({"commit"})
+
+
+def delegated_actions(requested: tuple[str, ...] | list[str]) -> tuple[str, ...]:
+    """The subset of a contract's actions the provider is actually asked for."""
+    return tuple(action for action in requested if action not in PE_RETAINED_ACTIONS)
 
 
 def _required_string(name: str, value: object) -> str:
@@ -187,7 +201,8 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         expected = contract.get("program_lock_digest") or contract.get("program_digest")
         binding = validate_contract(contract, expected_program_lock_digest=expected)
         probe = self._require_fresh_probe(binding.program_lock_digest)
-        unsupported = sorted(set(binding.requested_actions) - set(probe.capabilities))
+        delegated = delegated_actions(binding.requested_actions)
+        unsupported = sorted(set(delegated) - set(probe.capabilities))
         if unsupported:
             raise AdapterFailure(
                 CanonicalErrorCode.CAPABILITY_UNSUPPORTED,
@@ -199,11 +214,9 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
                 "permission_profile_ref",
                 self.execution_profile.get("permission_profile_ref"),
             ),
-            binding.requested_actions,
+            delegated,
         )
-        denied = sorted(
-            set(binding.requested_actions) - set(permission_profile.get("allowed_actions") or [])
-        )
+        denied = sorted(set(delegated) - set(permission_profile.get("allowed_actions") or []))
         if denied:
             raise AdapterFailure(
                 CanonicalErrorCode.AUTHORIZATION_INFLATION,
@@ -236,7 +249,7 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
                 "permission_profile_ref",
                 profile.get("permission_profile_ref"),
             ),
-            binding.requested_actions,
+            delegated_actions(binding.requested_actions),
         )
         return CanonicalExecutionRequest(
             execution_id=dispatch_id,
@@ -260,7 +273,7 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             permission_profile=permission_profile,
             inference_budget=dict(profile.get("inference_budget") or {}),
             timeout_budget=dict(profile.get("timeout_budget") or {}),
-            requested_capabilities=tuple(binding.requested_actions),
+            requested_capabilities=delegated_actions(binding.requested_actions),
             telemetry_context={
                 "provider_ref": self.adapter_id,
                 "execution_profile_ref": profile["profile_ref"],
@@ -313,7 +326,7 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
         for key, expected_value in expected.items():
             if getattr(request, key) != expected_value:
                 raise ValueError(f"canonical execution request {key} drift")
-        if request.requested_capabilities != binding.requested_actions:
+        if request.requested_capabilities != delegated_actions(binding.requested_actions):
             raise ValueError("canonical execution request requested_capabilities drift")
         if dict(request.inference_budget) != dict(
             self.execution_profile.get("inference_budget") or {}
@@ -338,7 +351,7 @@ class PeerExecutionAdapter(BaseExecutionAdapter):
             raise ValueError("canonical execution request worker_instruction drift")
         expected_permission = resolve_permission_profile(
             request.permission_profile_ref,
-            binding.requested_actions,
+            delegated_actions(binding.requested_actions),
         )
         if dict(request.permission_profile) != expected_permission:
             raise ValueError("canonical execution request permission_profile drift")

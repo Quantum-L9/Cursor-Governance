@@ -107,7 +107,7 @@ files:
 - path: schemas/task-card.schema.json
   sha256: 49713e146de1991478f9f30e5f443c79d41d0fe75a13038fa59395199d6485b7
 - path: schemas/task-cards.schema.json
-  sha256: 837d5b1798ad9f35275dab4af86f253ec716597baba0c5327e288c89d8ff1d11
+  sha256: 6c544565fad90e7f6787a03d8bacccbaece7e36204f914111bb8a86ced086ed5
 - path: schemas/unknown-register.schema.json
   sha256: 6e84ce48972fb1f8bb951990c8b54873fd96a86c1c3c468679458c73d5c60239
 - path: schemas/waiver-register.schema.json

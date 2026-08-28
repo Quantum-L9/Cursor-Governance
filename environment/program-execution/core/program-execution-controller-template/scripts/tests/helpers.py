@@ -44,6 +44,7 @@ def make_blueprint(
     risk_tier: str = "T2",
     with_decision_unknown: bool = False,
     open_risk: bool = False,
+    task_overrides: dict[str, Any] | None = None,
 ) -> Path:
     root.mkdir(parents=True, exist_ok=True)
     required = [
@@ -455,9 +456,18 @@ def make_blueprint(
             "completion_gate_ids": ["GATE-001"],
         }
 
-    tasks = [task("TASK-001", "docs/result.txt")]
+    def build(task_id: str, output: str) -> dict[str, Any]:
+        card = task(task_id, output)
+        for key, value in (task_overrides or {}).items():
+            if key == "authorization_ceiling" and isinstance(value, dict):
+                card[key] = {**card[key], **value}
+            else:
+                card[key] = value
+        return card
+
+    tasks = [build("TASK-001", "docs/result.txt")]
     if two_tasks:
-        tasks.append(task("TASK-002", "docs/second.txt"))
+        tasks.append(build("TASK-002", "docs/second.txt"))
     write_yaml(
         root / "TASK_CARDS.yaml",
         {

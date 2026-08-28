@@ -54,6 +54,31 @@ EVIDENCE_TYPE = {
 CONTRACT_KEYS = ("pair", "blueprint", "controller_minimum")
 AUTH_REQUIRED = ("id", "responsibility", "owner")
 TASK_STATUSES_ADMITTED = {"ready", "blocked", "cancelled", "superseded"}
+# Actions the sealed Program Execution runner cannot perform. A source may
+# still declare them -- historical sources declare push and pull_request --
+# but the effective Task Card ceiling narrows every one to false. A ceiling
+# that advertises authority no downstream surface can exercise is inherited
+# as fact by the Controller contract, the root-Autonomy grant, and the worker.
+PE_FORBIDDEN_ACTIONS = (
+    "push",
+    "pull_request",
+    "merge",
+    "publish_or_release",
+    "deploy_or_migrate",
+    "destructive_change",
+    "external_message",
+)
+KERNEL_PROFILES = ("BUILD", "CHANGE", "AUDIT")
+DEFAULT_KERNEL_PROFILE = "BUILD"
+# Task-local ordering aliases. `dependency_edges` is the only executable DAG
+# authority for campaign-source.v2; these are refused, never merged into it.
+TASK_DEPENDENCY_ALIASES = ("dependencies", "dependency_ids")
+# Read only to detect contradiction with targets[]. Never a target authority.
+TARGET_REPOSITORY_ALIASES = (
+    ("program.target_repository_id", ("program", "target_repository_id")),
+    ("metadata.intended_host", ("metadata", "intended_host")),
+    ("target.repository_id", ("target", "repository_id")),
+)
 
 
 class CompileError(RuntimeError):
@@ -301,6 +326,8 @@ def _semantic_precheck(src: dict[str, Any]) -> list[str]:
     Run before any artifact is written. Returns compile warnings.
     """
     warnings: list[str] = []
+    # One repository identity, resolved before anything reads a target.
+    resolve_campaign_target_repository(src)
     for decision in src.get("decisions") or []:
         if not decision.get("options"):
             raise CompileError(
@@ -317,6 +344,18 @@ def _semantic_precheck(src: dict[str, Any]) -> list[str]:
                 f"instantiated Blueprint validator ({sorted(TASK_STATUSES_ADMITTED)}); "
                 "fix the source"
             )
+        for alias in TASK_DEPENDENCY_ALIASES:
+            if task.get(alias):
+                raise CompileError(
+                    f"task {task['id']!r} declares task-local {alias!r}. Top-level "
+                    "`dependency_edges` is the sole executable DAG authority for "
+                    "campaign-source.v2, and a second ordering representation cannot be "
+                    "reconciled with it -- readiness would follow one while the executable "
+                    "graph followed the other. Express the edge as a top-level "
+                    f"dependency_edges entry naming the predecessor and {task['id']!r}"
+                )
+        _require_consistent_execution_authority(task)
+        _task_kernel_profile(task)
         for entry in task.get("validation") or []:
             if (
                 isinstance(entry, dict)
@@ -369,16 +408,41 @@ _EXECUTABLE_VALIDATION_METHODS = frozenset(
 )
 
 
-def _task_validations(item: dict[str, Any], suffix: str) -> list[dict[str, Any]]:
-    """Carry the seed's validation entries into the Task Card unchanged.
+def _normalized_validation_method(raw: dict[str, Any], task_id: str) -> str:
+    """The one method decision, made before preflight or lowering reads the entry.
 
-    Flattening every entry to ``method: inspection`` dropped the seed's shell
-    commands, so the Blueprint carried no ``required_validation_commands``, the
-    Rendered Contract carried none, and pec verify returned INCOMPLETE for every
-    task with nothing to run. The Task Cards schema admits ``command``, so pass
-    the declared command through and keep the acceptance statement only as the
-    fallback for a task that declared no validation.
+    Preflight used to read ``method`` verbatim and skip anything not already an
+    executable method, while lowering coerced every unrecognized value to
+    ``command``. An entry that omitted ``method`` therefore skipped the shell
+    grammar during preflight and was executed as shell afterwards -- the two
+    stages disagreed about the same entry. The decision is made once, here.
+
+    An omitted method is the legacy executable representation, whether the text
+    arrived in the explicit ``command`` field or in ``command_or_inspection``,
+    so it normalizes to ``command`` and is grammar-checked as one. A method that
+    is declared and unrecognized is a source defect: coercing it to ``command``
+    would run text the author never claimed was shell.
     """
+    declared = str(raw.get("method") or "").strip()
+    if not declared:
+        return "command"
+    if declared not in VALIDATION_METHODS:
+        raise CompileError(
+            f"task {task_id!r} validation {raw.get('id')!r} declares method {declared!r}, which "
+            f"is not one of {sorted(VALIDATION_METHODS)}. An unknown method is never coerced to "
+            "'command' -- name the method the entry actually uses"
+        )
+    return declared
+
+
+def normalize_task_validation(item: dict[str, Any], suffix: str) -> list[dict[str, Any]]:
+    """The task's validation ledger, normalized once for preflight and lowering.
+
+    Both stages read the entries this returns, so neither can reach a different
+    conclusion about a method or its text. The acceptance statement remains the
+    fallback for a task that declared no validation at all.
+    """
+    task_id = str(item.get("id") or "")
     entries: list[dict[str, Any]] = []
     for position, raw in enumerate(item.get("validation") or [], start=1):
         if not isinstance(raw, dict):
@@ -386,29 +450,52 @@ def _task_validations(item: dict[str, Any], suffix: str) -> list[dict[str, Any]]
         command = str(raw.get("command_or_inspection") or raw.get("command") or "").strip()
         if not command:
             continue
-        method = str(raw.get("method") or "").strip()
-        if method not in VALIDATION_METHODS:
-            method = "command"
         entries.append(
             {
                 "id": str(raw.get("id") or "").strip() or f"VAL-{suffix}-{position:02d}",
-                "method": method,
+                "method": _normalized_validation_method(raw, task_id),
                 "command_or_inspection": command,
                 "environment": str(raw.get("environment") or "").strip() or "local",
                 "expected_result": "PASS",
             }
         )
-    if not entries:
+    acceptance = item.get("acceptance") or []
+    if not entries and acceptance:
         entries.append(
             {
                 "id": f"VAL-{suffix}",
                 "method": "inspection",
-                "command_or_inspection": str(item["acceptance"][0]["statement"]).strip(),
-                "environment": ("planning" if item["id"] == "TASK-001" else "local"),
+                "command_or_inspection": str(acceptance[0]["statement"]).strip(),
+                "environment": ("planning" if item.get("id") == "TASK-001" else "local"),
                 "expected_result": "PASS",
             }
         )
     return entries
+
+
+def _task_validations(item: dict[str, Any], suffix: str) -> list[dict[str, Any]]:
+    """Lower exactly the normalized ledger preflight already inspected."""
+    return normalize_task_validation(item, suffix)
+
+
+def _task_kernel_profile(item: dict[str, Any]) -> str:
+    """The kernel profile this task executes under, decided once.
+
+    The campaign source admits BUILD / CHANGE / AUDIT, but the Task Card schema
+    carried no such field, so the value was dropped at lowering and every task
+    reached the Rendered Contract as BUILD -- an authored CHANGE or AUDIT
+    silently became something else. Defaulting happens here and nowhere
+    downstream, so the value that survives is the value that was authored.
+    """
+    raw = str(item.get("kernel_profile") or "").strip()
+    if not raw:
+        return DEFAULT_KERNEL_PROFILE
+    if raw not in KERNEL_PROFILES:
+        raise CompileError(
+            f"task {str(item.get('id'))!r} declares kernel_profile {raw!r}; admitted profiles "
+            f"are {list(KERNEL_PROFILES)}"
+        )
+    return raw
 
 
 # The Blueprint template schemas are the ID law. Reading the patterns from them
@@ -439,17 +526,119 @@ def blueprint_gate_id_pattern() -> str:
     return _schema_id_pattern(GATE_ID_SCHEMA, "gates")
 
 
-def _is_mutating_task(item: dict[str, Any]) -> bool:
-    """Does this task's effective ceiling permit writing repository content?
+def effective_authorization_ceiling(item: dict[str, Any]) -> dict[str, Any]:
+    """The one authority ceiling a compiled Task Card may carry.
 
-    `program_control` has its local_write removed at compile time regardless of
-    what the source declared, so the effective ceiling — not the declared one —
-    decides.
+    Downstream authority is an intersection, never a union: the Controller
+    Source Contract, the root-Autonomy grant, and the runner each narrow this
+    and none of them may add to it. So the narrowing happens once, here, and
+    every consumer reads the same effective answer.
+
+    Two narrowings apply. `program_control` writes no repository content and so
+    commits none of it, which removes both `local_write` and `commit` whatever
+    the source declared. Every action the sealed runner cannot perform is set
+    false -- a historical source declaring `push: true` still compiles, it
+    simply stops advertising authority that no downstream surface can exercise.
     """
+    declared = item.get("authorization_ceiling")
+    ceiling = dict(declared) if isinstance(declared, dict) else {}
     if str(item.get("execution_kind") or "").strip() == "program_control":
-        return False
-    ceiling = item.get("authorization_ceiling") or {}
-    return bool(ceiling.get("local_write")) if isinstance(ceiling, dict) else False
+        ceiling["local_write"] = False
+        ceiling["commit"] = False
+    for action in PE_FORBIDDEN_ACTIONS:
+        ceiling[action] = False
+    return ceiling
+
+
+def _is_mutating_task(item: dict[str, Any]) -> bool:
+    """Does this task's effective ceiling permit writing repository content?"""
+    return bool(effective_authorization_ceiling(item).get("local_write"))
+
+
+def _require_consistent_execution_authority(item: dict[str, Any]) -> None:
+    """Refuse a repo_local ceiling the runner has no terminal state for.
+
+    Program Execution's terminal effect is a verified local commit. A task
+    allowed to mutate the worktree but forbidden to commit has no supported end
+    state -- there is no terminal dirty-worktree mode -- so its verified work
+    could never be carried anywhere. A task allowed to commit but forbidden to
+    write can only commit work it did not author, because the commit boundary
+    stages the mutations the task itself produced. Neither shape is executable,
+    so neither compiles.
+    """
+    if str(item.get("execution_kind") or "").strip() != "repo_local":
+        return
+    ceiling = effective_authorization_ceiling(item)
+    local_write = bool(ceiling.get("local_write"))
+    commit = bool(ceiling.get("commit"))
+    task_id = str(item.get("id") or "")
+    if local_write and not commit:
+        raise CompileError(
+            f"task {task_id!r} permits local_write with commit false. Program Execution has no "
+            "terminal dirty-worktree mode, so the verified work would be stranded uncommitted "
+            "and the task could never complete. Declare commit true, or make the task "
+            "inspection-only by declaring local_write false"
+        )
+    if commit and not local_write:
+        raise CompileError(
+            f"task {task_id!r} permits commit with local_write false. The commit boundary stages "
+            "the task's own verified mutations, so commit cannot float free of local write. "
+            "Declare local_write true, or make the task inspection-only by declaring commit false"
+        )
+
+
+def _alias_value(src: dict[str, Any], path: tuple[str, ...]) -> str:
+    node: Any = src
+    for key in path:
+        if not isinstance(node, dict):
+            return ""
+        node = node.get(key)
+    return str(node or "").strip()
+
+
+def resolve_campaign_target_repository(src: dict[str, Any]) -> str:
+    """The one repository identity a direct campaign source binds execution to.
+
+    `targets[]` is the canonical declaration. The compiler already built the
+    Blueprint from it while the runner's seed view resolved its repository from
+    `program.target_repository_id` / `metadata.intended_host`, so a source whose
+    fields disagreed compiled against one repository and executed against
+    another. The aliases are read here only to detect that contradiction; none
+    of them is an independent authority.
+
+    The current runner executes one repository per campaign, so zero and
+    multiple distinct ids are both refused -- taking the first would invent a
+    primary target the source never declared.
+    """
+    found: list[str] = []
+    for entry in src.get("targets") or []:
+        if not isinstance(entry, dict):
+            continue
+        value = str(entry.get("repository_id") or "").strip()
+        if value and value not in found:
+            found.append(value)
+    if not found:
+        raise CompileError(
+            "campaign source declares no targets[].repository_id; the execution target "
+            "repository is never inferred from metadata. Declare the target repository in "
+            "targets[]"
+        )
+    if len(found) > 1:
+        raise CompileError(
+            f"campaign source declares multiple distinct targets[].repository_id ({found!r}); "
+            "the Program Execution runner executes one repository per campaign. Split the "
+            "campaign so each one names a single execution repository"
+        )
+    canonical = found[0]
+    for name, path in TARGET_REPOSITORY_ALIASES:
+        value = _alias_value(src, path)
+        if value and value != canonical:
+            raise CompileError(
+                f"campaign source binds two different repositories: targets[].repository_id is "
+                f"{canonical!r} but {name} is {value!r}. One repository identity owns execution "
+                "and targets[] is that authority -- correct the alias or remove it"
+            )
+    return canonical
 
 
 def _declared_writable_locations(item: dict[str, Any]) -> list[str]:
@@ -503,21 +692,18 @@ def preflight_campaign_source_document(src: dict[str, Any]) -> list[str]:
                 "or paths[]; refuse to fabricate writable scope. Declare the exact "
                 "repository paths the worker may modify"
             )
-        for entry in task.get("validation") or []:
-            if not isinstance(entry, dict):
-                continue
-            method = str(entry.get("method") or "").strip()
-            if method not in _EXECUTABLE_VALIDATION_METHODS:
+        # The exact ledger the Task Card will carry, so preflight cannot skip a
+        # command that lowering will execute.
+        for entry in normalize_task_validation(task, task_id.split("-")[-1]):
+            if entry["method"] not in _EXECUTABLE_VALIDATION_METHODS:
                 # Inspection text is prose for a human or the controller to read.
                 # It is not shell and must never reach the shell parser.
                 continue
-            command = str(entry.get("command_or_inspection") or entry.get("command") or "").strip()
-            if not command:
-                continue
+            command = entry["command_or_inspection"]
             reason = validation_command_error(command)
             if reason is not None:
                 raise CompileError(
-                    f"task {task_id!r} validation {entry.get('id')!r} declares command "
+                    f"task {task_id!r} validation {entry['id']!r} declares command "
                     f"{command!r}, which the peer permission ceiling refuses: {reason}. "
                     "Declare one shell operation per validation entry"
                 )
@@ -673,12 +859,10 @@ def normalize_definition_status(src: dict[str, Any]) -> list[str]:
     for task in src.get("tasks") or []:
         if task.get("definition_status") != "blocked":
             continue
-        dependencies = (
-            task.get("dependency_ids")
-            or task.get("dependencies")
-            or inbound.get(str(task.get("id")))
-            or []
-        )
+        # Only inbound `dependency_edges`. Task-local `dependencies` /
+        # `dependency_ids` aliases are refused in `_semantic_precheck`, so a
+        # second ordering representation can never reach this decision.
+        dependencies = inbound.get(str(task.get("id"))) or []
         if not dependencies:
             raise CompileError(
                 f"task {task['id']!r}: definition_status 'blocked' with no dependencies would "
@@ -755,8 +939,10 @@ def compile_source(
     # its id was listed somewhere first; identity collisions are answered from
     # real state at id allocation, which is a different question from admission.
     provenance_warnings = validate_intent_provenance(src)
-    stack_receipt = _bind_stack_proof(src, stack_proof)
+    # Source defects are decided before the stack-proof receipt is bound, so an
+    # unexecutable source is refused with nothing bound and nothing created.
     warnings = _semantic_precheck(src)
+    stack_receipt = _bind_stack_proof(src, stack_proof)
     warnings.extend(provenance_warnings)
     warnings.extend(normalize_definition_status(src))
     now = stamp or utc_now()
@@ -1161,9 +1347,7 @@ def compile_source(
 
     compiled_tasks = []
     for item in tasks:
-        ceiling = dict(item.get("authorization_ceiling") or {})
-        if item.get("execution_kind") == "program_control":
-            ceiling["local_write"] = False
+        ceiling = effective_authorization_ceiling(item)
         suffix = item["id"].split("-")[-1]
         output_locations = _task_output_locations(item)
         compiled_tasks.append(
@@ -1175,6 +1359,7 @@ def compile_source(
                 "wave_id": item["wave_id"],
                 "target_id": item["target_id"],
                 "execution_kind": item["execution_kind"],
+                "kernel_profile": _task_kernel_profile(item),
                 "objective": str(item["objective"]).strip(),
                 "authority_basis_ids": item["authority_basis_ids"],
                 "required_decision_ids": item.get("required_decision_ids") or [],

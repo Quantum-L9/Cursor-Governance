@@ -130,6 +130,36 @@ def test_permission_widening_is_rejected_not_silently_applied(tmp_path: Path) ->
     )
 
 
+def test_safe_autonomy_profile_matches_the_sealed_pe_ceiling(tmp_path: Path) -> None:
+    """The profile may not advertise authority the runner cannot reach.
+
+    Program Execution ends at a verified local commit: there is no push and no
+    pull-request path, and remote mutation is denied in the universal
+    Controller core. A profile still claiming push/pull_request handed every
+    consumer a ceiling that no downstream surface could exercise.
+    """
+    policy = load_policy(DEFAULT_PROFILE)
+    ceiling = policy["authorization_ceiling"]
+    assert ceiling["commit"] is True
+    assert ceiling["local_write"] is True
+    assert ceiling["inspect"] is True
+    for action in (
+        "push",
+        "pull_request",
+        "merge",
+        "publish_or_release",
+        "deploy_or_migrate",
+        "destructive_change",
+        "external_message",
+    ):
+        assert ceiling[action] is False, action
+    resolution = resolver.resolve(_intent(), truth=_truth(tmp_path, owner="Igor Beylin"))
+    resolved = resolution["_compiler_meta"]["ceiling"]
+    assert resolved["push"] is False
+    assert resolved["pull_request"] is False
+    assert resolved["commit"] is True
+
+
 def test_structural_evidence_is_not_runtime_proof(tmp_path: Path) -> None:
     """A declared test command is structural evidence, never a PASS claim."""
     resolution = resolver.resolve(
