@@ -1,0 +1,100 @@
+schema: program-execution-system.mission-acceptance-model.v1
+schema_version: 1.0.0
+status: active
+authority:
+  adr:
+    - environment/contracts/execution/adr/ADR-0027-mission-acceptance-separate-from-program-acceptance.md
+  contracts:
+    - MISSION_ACCEPTANCE_EVIDENCE_CONTRACT
+  reuses:
+    - environment/program-execution/core/shared/EVIDENCE_MODEL.yaml
+    - environment/program-execution/core/shared/schemas/evidence-reference.schema.json
+
+principle: >-
+  Program convergence is evidence toward Mission acceptance. It is not Mission
+  acceptance itself.
+
+acceptance_criterion:
+  required_fields:
+    - criterion_id
+    - statement
+    - required
+  optional_fields:
+    - evidence_requirements
+  laws:
+    - criterion_ids_unique_after_normalization
+    - required_criteria_cannot_be_weakened_by_blueprint_or_controller
+    - program_specific_acceptance_may_add_stricter_requirements
+
+criterion_result:
+  values:
+    - UNSATISFIED
+    - PARTIALLY_SATISFIED
+    - SATISFIED
+    - WAIVED
+    - BLOCKED
+    - UNKNOWN
+  unconditionally_passing:
+    - SATISFIED
+  conditionally_passing:
+    WAIVED: existing authorized waiver semantics or explicit mission-owner-authorized policy
+  non_passing:
+    - UNSATISFIED
+    - PARTIALLY_SATISFIED
+    - BLOCKED
+    - UNKNOWN
+  binds:
+    - criterion_id
+    - mission_id
+    - mission_revision
+    - mission_digest
+    - result
+    - evidence_refs
+    - evaluated_at
+    - evaluator
+    - result_digest
+
+mission_verdict:
+  values:
+    - SATISFIED
+    - NOT_SATISFIED
+    - INCONCLUSIVE
+    - CANCELLED
+  canonical_owner: mission_owner
+  controller_recommendation: advisory_only
+  satisfied_requires: >-
+    every required criterion is SATISFIED or validly WAIVED under authorized
+    policy
+  binds:
+    - mission_id
+    - mission_revision
+    - mission_digest
+    - verdict
+    - criterion_result_refs
+    - decided_at
+    - decided_by
+    - verdict_digest
+
+# Forbidden implications. Each of these is a shortcut that would let a lower
+# layer declare Mission acceptance it does not own.
+prohibited_acceptance_shortcuts:
+  - program_CONVERGED_implies_mission_SATISFIED
+  - program_ACCEPTED_implies_mission_SATISFIED
+  - task_COMPLETED_implies_mission_SATISFIED
+  - local_verification_implies_mission_SATISFIED
+  - worker_claim_is_mission_acceptance_evidence_by_itself
+  - unverified_model_statement_is_mission_acceptance_evidence
+
+# Mission extends the existing evidence architecture. It does not create a
+# parallel Mission evidence plane.
+evidence_integration:
+  reuses_schema: program-execution-system/evidence-reference.v2
+  preserved_properties:
+    - retrievability
+    - exact_state_binding
+    - producer_identity
+    - production_timestamp
+    - expiration_and_invalidation_handling
+    - claim_scoped_support
+    - UNKNOWN_is_non_passing
+  parallel_mission_evidence_plane: false

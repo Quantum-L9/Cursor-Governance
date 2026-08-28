@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "program-execution-system/mission.v1",
   "title": "Mission Revision",
-  "description": "An immutable, digest-bound Mission Revision: durable parent intent above one or more Execution Programs. Mission declares outcomes and ceilings; it never prescribes Task Cards, Runtime Tasks, waves, worktrees, files to edit, worker prompts, leases, provider bindings, execution profiles, or runtime task state. Authority: ADR-0024, ADR-0025.",
+  "description": "An immutable, digest-bound Mission Revision: durable parent intent above one or more Execution Programs. Mission declares outcomes and ceilings; it never prescribes Task Cards, Runtime Tasks, waves, worktrees, files to edit, worker prompts, leases, provider bindings, execution profiles, or runtime task state. Authority: ADR-0024, ADR-0025, ADR-0027.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -39,6 +39,14 @@
       "type": "string",
       "minLength": 1
     },
+    "targets": {
+      "description": "Declarative Mission targets. Blueprint may operationalize a subset and may not widen it.",
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
     "acceptance_criteria": {
       "description": "Mission Acceptance Criteria. Mission-owned; Program acceptance may contribute evidence toward these but never implies them (ADR-0027).",
       "type": "array",
@@ -46,7 +54,11 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["criterion_id", "statement"],
+        "required": [
+          "criterion_id",
+          "statement",
+          "required"
+        ],
         "properties": {
           "criterion_id": {
             "type": "string",
@@ -55,20 +67,133 @@
           "statement": {
             "type": "string",
             "minLength": 1
+          },
+          "required": {
+            "description": "A required criterion cannot be weakened by Blueprint or Controller. Mission SATISFIED needs every required criterion SATISFIED or validly WAIVED.",
+            "type": "boolean"
+          },
+          "evidence_requirements": {
+            "description": "Optional evidence obligations, expressed with the existing Program Execution evidence vocabulary. Mission does not create a parallel evidence plane.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "evidence_type"
+              ],
+              "properties": {
+                "evidence_type": {
+                  "description": "A type from the shared evidence reference schema.",
+                  "enum": [
+                    "source_snapshot",
+                    "command_output",
+                    "test_result",
+                    "inspection",
+                    "approval",
+                    "decision",
+                    "migration_result",
+                    "monitoring_observation",
+                    "recovery_artifact",
+                    "other"
+                  ]
+                },
+                "statement": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
           }
         }
       }
     },
     "authority_ceiling": {
-      "description": "Outer authorization ceiling over the Mission, expressed in the existing Program Execution action vocabulary. Lower layers may narrow it and never widen it. A ceiling, not an instruction. Detailed ceiling/budget/termination semantics are governed by MISSION_AUTHORITY_SCOPE_BUDGET_CONTRACT and are not implemented by this contract.",
+      "description": "Outer authorization ceiling over the Mission, in the existing Program Execution action vocabulary: a total map, all ten actions required, each boolean. A ceiling, not an instruction. Effective Program authorization is the intersection of the applicable rules, exact action approval, this ceiling, the Blueprint ceiling, Controller policy, the Source Contract request, and the Rendered Contract binding. Lower layers narrow, never widen.",
       "$ref": "program-execution-system/action-authorization.v2"
     },
-    "targets": {
-      "description": "Declarative Mission targets. Scope, budget, and termination semantics belong to MISSION_AUTHORITY_SCOPE_BUDGET_CONTRACT and are not implemented by this contract.",
-      "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
+    "constraints": {
+      "description": "Declarative Mission scope and count ceilings. Mission v1 scope is declarative: no machine-defined Blueprint-subset grammar exists yet, so this claims no semantic subset checking. Executable subset enforcement belongs to Mission Admission.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "scope": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "include": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "exclude": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "max_programs": {
+          "description": "Aggregate ceiling on Programs admitted under this Mission.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "deadline": {
+          "description": "Optional wall-clock ceiling. Format validation is enforced by the parser's FormatChecker, not by schema presence alone.",
+          "type": "string",
+          "format": "date-time"
+        }
+      }
+    },
+    "budgets": {
+      "description": "Mission-wide aggregate ceilings. An individual Program Controller has no authority to enforce Mission-wide totals; cross-Program accounting belongs to Mission Admission, which this contract does not build.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "max_model_cost_usd": {
+          "type": "number",
+          "minimum": 0
+        },
+        "max_agent_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_gate_calls": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_duration_seconds": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "max_parallel_programs": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "termination": {
+      "description": "Immutable Mission Revision termination definition. Participates in digest identity; mutable lifecycle state stays separate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode"
+      ],
+      "properties": {
+        "mode": {
+          "enum": [
+            "mission_acceptance",
+            "authority_boundary"
+          ]
+        },
+        "statement": {
+          "type": "string",
+          "minLength": 1
+        }
       }
     },
     "metadata": {
@@ -77,17 +202,61 @@
       "additionalProperties": true,
       "not": {
         "anyOf": [
-          {"required": ["tasks"]},
-          {"required": ["task_cards"]},
-          {"required": ["waves"]},
-          {"required": ["worktrees"]},
-          {"required": ["files_to_edit"]},
-          {"required": ["worker_prompts"]},
-          {"required": ["leases"]},
-          {"required": ["provider"]},
-          {"required": ["provider_ref"]},
-          {"required": ["execution_profile"]},
-          {"required": ["runtime_task_state"]}
+          {
+            "required": [
+              "tasks"
+            ]
+          },
+          {
+            "required": [
+              "task_cards"
+            ]
+          },
+          {
+            "required": [
+              "waves"
+            ]
+          },
+          {
+            "required": [
+              "worktrees"
+            ]
+          },
+          {
+            "required": [
+              "files_to_edit"
+            ]
+          },
+          {
+            "required": [
+              "worker_prompts"
+            ]
+          },
+          {
+            "required": [
+              "leases"
+            ]
+          },
+          {
+            "required": [
+              "provider"
+            ]
+          },
+          {
+            "required": [
+              "provider_ref"
+            ]
+          },
+          {
+            "required": [
+              "execution_profile"
+            ]
+          },
+          {
+            "required": [
+              "runtime_task_state"
+            ]
+          }
         ]
       }
     }

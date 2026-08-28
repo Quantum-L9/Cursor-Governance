@@ -1,31 +1,68 @@
-# Minimal-plus Mission Revision that satisfies the definition/boundary contract.
+# A conforming Mission Revision. Outcomes and ceilings only — no Task Cards,
+# waves, files to edit, worker prompts, leases, provider refs, or runtime state.
 schema: l9.program-execution.mission.v1
-mission_id: MISSION-PE-MISSION-FOUNDATION
+mission_id: MISSION-L9-GATEWAY-001
 mission_revision: 1
 mission_owner: L9 architecture
 objective: >-
-  Establish Mission as durable parent intent above one or more Execution
-  Programs without introducing a second execution-control plane.
+  Stand up a governed L9 gateway plane that survives the Programs that build it,
+  with durable acceptance evidence and no second execution-control plane.
+targets:
+  - environment/program-execution
+  - environment/contracts/execution
+  - ops/autonomy
+  - docs/decisions
 acceptance_criteria:
-  - criterion_id: MAC-MISSION-CONTRACT-SURFACE
+  - criterion_id: MAC-GATEWAY-CONTRACT-SURFACE
+    required: true
     statement: >-
-      The repository can represent an exact Mission Revision distinct from
-      mutable Mission lifecycle state.
-  - criterion_id: MAC-NO-SECOND-CONTROL-PLANE
+      The gateway plane is expressed as durable contract law that an exact
+      Mission Revision can be reproduced from.
+    evidence_requirements:
+      - evidence_type: test_result
+        statement: Contract law is covered by an executable suite.
+  - criterion_id: MAC-GATEWAY-AUTHORITY-CEILING
+    required: true
     statement: >-
-      Runtime Task state remains owned by the Program Execution Controller.
+      Every admitted Program executes within the Mission authority ceiling and
+      never widens it.
+    evidence_requirements:
+      - evidence_type: inspection
+        statement: Authorization intersection is verifiable from core law.
+  - criterion_id: MAC-GATEWAY-NO-SECOND-PLANE
+    required: true
+    statement: >-
+      Runtime Task state remains owned by the Program Execution Controller and
+      no Mission runtime controller exists.
 authority_ceiling:
   inspect: true
   local_write: true
   commit: true
-  push: false
-  pull_request: false
+  push: true
+  pull_request: true
   merge: false
   publish_or_release: false
   deploy_or_migrate: false
   destructive_change: false
   external_message: false
-targets:
-  - environment/program-execution/mission
+constraints:
+  scope:
+    include:
+      - environment/program-execution/**
+      - environment/contracts/execution/**
+    exclude:
+      - environment/program-execution/campaigns/**
+  max_programs: 8
+budgets:
+  max_model_cost_usd: 250.0
+  max_agent_tokens: 40000000
+  max_gate_calls: 5000
+  max_duration_seconds: 1209600
+  max_parallel_programs: 3
+termination:
+  mode: mission_acceptance
+  statement: >-
+    The Mission terminates when every required acceptance criterion is
+    SATISFIED or validly WAIVED.
 metadata:
   note: Non-authoritative annotation; cannot change authorization or acceptance.

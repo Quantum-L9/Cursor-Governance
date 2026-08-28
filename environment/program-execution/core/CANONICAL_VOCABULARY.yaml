@@ -18,6 +18,15 @@ terms:
     verification state.
   forbidden_synonyms:
   - mission status field inside the Mission definition
+- term: Mission Program Binding
+  definition: An immutable record binding one exact Mission Revision to one exact Program and Blueprint digest.
+    Created after the Blueprint digest exists, so it never participates in the content that digest covers.
+    Historical bindings survive Mission supersession unchanged.
+  forbidden_synonyms:
+  - mission membership list
+- term: Mission Verdict
+  definition: The mission-owner-owned acceptance decision over an exact Mission Revision. A Controller
+    recommendation is advisory; a Program verdict is evidence toward it, never equal to it.
 - term: Mission Acceptance Criterion
   definition: A mission-owner-owned criterion contributing to the Mission verdict. Program acceptance may supply
     evidence toward it but never implies it.

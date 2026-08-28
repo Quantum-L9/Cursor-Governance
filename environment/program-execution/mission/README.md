@@ -15,34 +15,36 @@ Mission
 A Mission may survive multiple Programs. A Program Execution Controller never
 becomes a Mission Controller.
 
-Mission declares **outcomes and ceilings**. It never prescribes Task Cards,
-Runtime Tasks, waves, worktrees, files to edit, worker prompts, leases,
-provider bindings, execution profiles, or runtime task state.
+## What Mission is, and is not
 
-## Authority
+Mission owns durable objective identity, Mission Acceptance Criteria, Mission
+acceptance authority, target/scope ceilings, authorization ceilings, aggregate
+resource ceilings, termination conditions, and cross-Program continuity.
 
-| Concern | Owner |
-|---|---|
-| Mission definition, Mission Revision, Mission verdict | `mission_owner` |
-| Program runtime, Task runtime | Program Execution Controller |
-| Final Program verdict | `program_owner` |
+Mission is **not** an Execution Program, Blueprint, Program Lock, Controller,
+Task Card, Runtime Task, scheduler, worker, lease authority, provider, or agent
+conversation. It declares **outcomes and ceilings** and never prescribes Task
+Cards, waves, worktrees, files to edit, worker prompts, leases, provider
+bindings, execution profiles, or runtime task state — those are structurally
+rejected, in `metadata` as well as at the top level.
 
-Mission authority is an **outer ceiling** in the existing authorization
-intersection. Lower layers may narrow it and never widen it. Capability,
-credential, connector, or provider availability is not authorization.
+### Mission versus Program
 
-Decisions: [ADR-0024](../../contracts/execution/adr/ADR-0024-mission-parent-intent-and-controller-boundary.md),
-[ADR-0025](../../contracts/execution/adr/ADR-0025-mission-revision-immutability-and-lifecycle-separation.md),
-[ADR-0026](../../contracts/execution/adr/ADR-0026-exact-mission-program-binding-and-non-circular-blueprint-identity.md),
-[ADR-0027](../../contracts/execution/adr/ADR-0027-mission-acceptance-separate-from-program-acceptance.md).
+A Program is one bounded, executable undertaking with a Blueprint, a Program
+Lock, and a Controller that owns its runtime. A Mission is the objective those
+Programs serve. One Mission may admit many Programs; a Program belongs to
+exactly one Mission Revision, pinned at admission.
 
-## Revision is not lifecycle
+## Immutable revision, separate lifecycle
 
-A **Mission Revision** is immutable contract identity. **Mission Lifecycle
-State** is mutable status *concerning* that revision. They are different
-objects and must not be collapsed — embedding lifecycle in the definition would
-let the same revision change meaning over time and would undermine digest-bound
-Program provenance.
+A **Mission Revision** is an immutable, digest-bound contract. Changing
+authoritative semantics — `mission_owner` included — creates a *superseding*
+revision rather than rewriting an existing one, so history stays append-only and
+a Program's provenance stays reproducible.
+
+**Mission Lifecycle State** is mutable status *concerning* a revision. The two
+are different objects and must not be collapsed: embedding lifecycle in the
+definition would let the same revision change meaning over time.
 
 ```text
 PROPOSED  -> ACTIVE | CANCELLED | SUPERSEDED
@@ -51,37 +53,133 @@ WAITING   -> ACTIVE | SATISFIED | FAILED | CANCELLED | SUPERSEDED
 SATISFIED -> []   FAILED -> []   CANCELLED -> []   SUPERSEDED -> []
 ```
 
-Changing authoritative Mission semantics — `mission_owner` included — creates a
-superseding revision rather than rewriting an existing one. Mission
-cancellation or supersession never directly mutates an already locked Program
-runtime; existing Programs stay bound to the exact revision under which they
-were admitted.
+`INCONCLUSIVE` does not imply a terminal state, and `NOT_SATISFIED` alone does
+not imply `FAILED`. Mission cancellation or supersession never directly mutates
+an already locked Program runtime.
+
+`mission_digest` is SHA-256 over deterministic sorted JSON of the eleven
+authoritative fields. `metadata` is excluded and cannot change authorization,
+scope, acceptance, budgets, termination, or ownership — so it cannot change
+identity either. The parsed object is transitively immutable: a retained
+reference to `authority_ceiling` cannot flip `push` to `true`.
+
+## Binding
+
+A **Mission Program Binding** pins one exact Mission Revision to one exact
+Program and Blueprint digest. Bindings are immutable; a new Program requires a
+new binding, and supersession never rebinds an existing one. The Controller
+receives a read-only projection of `mission_id`, `mission_revision`,
+`mission_digest`, and `binding_id` — and may not mutate the binding, rebind the
+Program, change the revision, or declare a Mission verdict.
+
+### Why the Blueprint digest cannot reference back
+
+The binding names `blueprint_digest`, so it must live **outside** the content
+that digest covers. A `MISSION_BINDING.yaml` stored inside the Blueprint it
+hashes would make the Blueprint's identity depend on a document that names that
+identity. Hence the ordering:
+
+```text
+Mission Revision → Mission Admission Context → Program Intent → Intent Resolver
+  → Blueprint → compute blueprint_digest → Mission Program Binding
+  → Program Lock → Controller
+```
+
+## Mission acceptance versus Program acceptance
+
+Program convergence is *evidence toward* Mission acceptance. It is not Mission
+acceptance. `Program CONVERGED`, `Program ACCEPTED`, `Task COMPLETED`, local
+verification, and a worker's own claim are each explicitly non-implications.
+
+Criterion results are `UNSATISFIED`, `PARTIALLY_SATISFIED`, `SATISFIED`,
+`WAIVED`, `BLOCKED`, or `UNKNOWN`; only `SATISFIED` passes unconditionally and
+`UNKNOWN` is non-passing. Mission verdicts are `SATISFIED`, `NOT_SATISFIED`,
+`INCONCLUSIVE`, or `CANCELLED`, owned by `mission_owner`; a Controller
+recommendation is advisory. Results and verdicts bind `mission_digest`, so a
+result cannot drift onto a different revision. Mission evidence extends the
+existing Program Execution evidence plane — it does not fork one.
+
+## Monotonically narrowing authorization
+
+`authority_ceiling` is a total map over the existing ten Program Execution
+actions, and it is a ceiling, not an instruction. Effective Program
+authorization is the intersection of:
+
+```text
+applicable safety/legal/security/organizational rules
+AND exact action approval when required
+AND Mission authority ceiling
+AND Blueprint authorization ceiling
+AND Controller policy
+AND Source Contract request
+AND Rendered Contract exact-state binding
+```
+
+Every lower layer may narrow and none may widen. Capability, credential,
+connector, or provider availability is never authorization, and the Mission
+ceiling grants no new remote mutation authority.
+
+## Aggregate budgets
+
+`max_model_cost_usd`, `max_agent_tokens`, `max_gate_calls`,
+`max_duration_seconds`, and `max_parallel_programs` are ceilings over the
+**whole Mission**, alongside `constraints.max_programs`. An individual Program
+Controller must not claim independent authority to enforce Mission-wide totals:
+
+> Mission Admission determines whether another executable undertaking may exist.
+> Program Controller determines how an admitted undertaking executes.
+
+The admission ledger that would enforce those totals is **not built here**.
+Likewise, Mission v1 scope is declarative: Program Execution has no machine
+defined selector grammar yet, so this claims no semantic Blueprint-subset
+checking.
+
+## Why there is no Mission Controller
+
+Program Execution already owns scheduling, leases, retries, Runtime Task state,
+and execution advancement. Giving Mission its own controller would create a
+second execution-control plane and pull cross-Program objective authority into
+the runtime. Cross-Program accounting belongs to a later Mission Admission
+layer, not to a Mission Controller.
+
+Runtime integration is deferred for the same reason: the Controller must
+eventually consume only the Mission projection pinned into Program Lock, and
+must never resolve mutable live Mission state to change locked execution
+authority. Building that consumption before the contract surface exists would
+bake in the wrong direction.
 
 ## Files
 
 | Path | Role |
 |---|---|
-| `MISSION_MODEL.yaml` | Mission definition law, ownership, and the lifecycle state domain |
+| `MISSION_MODEL.yaml` | Definition law, ownership, lifecycle domain, digest coverage |
+| `MISSION_AUTHORITY_MODEL.yaml` | Ceiling, intersection, scope, budgets, termination |
+| `MISSION_PROGRAM_BINDING.yaml` | Binding law and non-circular ordering |
+| `MISSION_ACCEPTANCE_MODEL.yaml` | Criterion results, verdicts, evidence integration |
 | `schemas/mission.schema.json` | Draft 2020-12 Mission Revision schema |
-| `tests/test_mission.py` | Executable definition/boundary and lifecycle law |
-| `tests/fixtures/` | One conforming Mission, one that prescribes execution |
+| `schemas/mission-program-binding.schema.json` | Draft 2020-12 binding schema |
+| `mission.py` | Parser, digest, transitive immutability |
+| `binding.py` | Immutable binding built from a parsed Mission |
+| `tests/` | Executable law; fixtures for a conforming and a prescribing Mission |
 
 `authority_ceiling` is a `$ref` to `program-execution-system/action-authorization.v2`
-rather than a restatement of the ten actions, so the action vocabulary keeps
-exactly one owner. Validating the Mission schema therefore needs a
-`referencing` registry built from `../core/shared/schemas/` — see `_registry()`
-in `tests/test_mission.py`.
+rather than a restatement of the ten actions, so the vocabulary keeps exactly one
+owner. Validation builds a `referencing` registry over `../core/shared/schemas/`
+(`schema_registry()` in `mission.py`). `date-time` is validated by a
+`FormatChecker` this module registers itself — `jsonschema` treats an unknown
+format as valid, so declaring the format without that registration would claim a
+check that never runs.
 
-## What is deliberately not here
+## Future integration order — named, not built
 
-This is the non-runtime foundation. There is no Mission Controller, Scheduler,
-Lease, Work Item, Task State, Worker, or Runtime Task, no Mission-to-Program
-compilation, no `make campaign` wiring, and no change to the campaign
-classifier or to Controller runtime behavior.
+```text
+Mission → Mission Admission → Program Intent → Intent Resolver → Blueprint
+  → compute blueprint_digest → Mission Program Binding → Program Lock → Controller
+```
 
-Implemented so far: `MISSION_DEFINITION_BOUNDARY_CONTRACT` and
-`MISSION_REVISION_LIFECYCLE_CONTRACT`. Still unimplemented, and listed under
-`deferred_to_later_contracts` in `MISSION_MODEL.yaml`: the authority/scope/
-budget/termination semantics, `mission_digest` and the deep-immutability parser
-(`mission.py`), Mission Program Binding, and the Mission acceptance/evidence
-model.
+Not implemented here: Mission → Program Admission, Mission context → Program
+Intent, Blueprint identity, Mission Program Binding *creation* inside the
+compiler, and Program Lock immutable import. There is no Mission Controller,
+Scheduler, Lease, Work Item, Task State, Worker, or Runtime Task; no
+Mission-to-Program compilation; no `make campaign` wiring; and no change to the
+campaign classifier or Controller runtime behaviour.

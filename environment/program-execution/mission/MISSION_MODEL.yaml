@@ -9,6 +9,11 @@ authority:
     - MISSION_DEFINITION_BOUNDARY_CONTRACT
     - MISSION_REVISION_LIFECYCLE_CONTRACT
   json_schema: schemas/mission.schema.json
+  python_model: mission.py
+  companion_models:
+    - MISSION_AUTHORITY_MODEL.yaml
+    - MISSION_PROGRAM_BINDING.yaml
+    - MISSION_ACCEPTANCE_MODEL.yaml
 
 # ---------------------------------------------------------------------------
 # Mission Definition and Runtime Boundary  (MISSION_DEFINITION_BOUNDARY_CONTRACT)
@@ -177,17 +182,24 @@ forbidden_concepts:
   - MissionWorker
   - MissionRuntimeTask
 
-# Governed by later contracts in this pack; deliberately absent here.
-deferred_to_later_contracts:
-  MISSION_AUTHORITY_SCOPE_BUDGET_CONTRACT:
-    - authority_ceiling total-map semantics and intersection law
-    - constraints.scope selector grammar
-    - Mission-wide aggregate budgets
-    - termination modes
-  MISSION_DIGEST_IMMUTABILITY_CONTRACT:
-    - mission_digest computation
-    - deep-immutability parser (mission.py)
-  MISSION_PROGRAM_BINDING_CONTRACT:
-    - Mission Program Binding
-  MISSION_ACCEPTANCE_EVIDENCE_CONTRACT:
-    - Mission acceptance evidence and verdict model
+# Digest identity (MISSION_DIGEST_IMMUTABILITY_CONTRACT). metadata is excluded
+# and cannot change authorization, scope, acceptance, budgets, termination, or
+# ownership.
+digest:
+  algorithm: sha256
+  rendering: deterministic sorted JSON, allow_nan false
+  covered_fields:
+    - schema
+    - mission_id
+    - mission_revision
+    - mission_owner
+    - objective
+    - targets
+    - acceptance_criteria
+    - authority_ceiling
+    - constraints
+    - budgets
+    - termination
+  excluded_fields:
+    - metadata
+  deep_immutability: transitive; authoritative mappings and sequences are not mutable through retained references

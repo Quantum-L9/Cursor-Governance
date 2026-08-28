@@ -1,18 +1,19 @@
-# Identical to valid_mission.yaml except that it prescribes execution.
-# `tasks` is structurally forbidden Mission semantics: Mission declares
-# outcomes and ceilings, never Task Cards or runtime work.
+# An otherwise plausible Mission that prescribes execution. `tasks` is
+# structurally forbidden: Mission declares outcomes and ceilings, never Task
+# Cards or runtime work. Parsing this must fail closed.
 schema: l9.program-execution.mission.v1
-mission_id: MISSION-PE-MISSION-FOUNDATION
+mission_id: MISSION-L9-GATEWAY-001
 mission_revision: 1
 mission_owner: L9 architecture
 objective: >-
-  Establish Mission as durable parent intent above one or more Execution
-  Programs without introducing a second execution-control plane.
+  Stand up a governed L9 gateway plane that survives the Programs that build it.
+targets:
+  - environment/program-execution
 acceptance_criteria:
-  - criterion_id: MAC-MISSION-CONTRACT-SURFACE
+  - criterion_id: MAC-GATEWAY-CONTRACT-SURFACE
+    required: true
     statement: >-
-      The repository can represent an exact Mission Revision distinct from
-      mutable Mission lifecycle state.
+      The gateway plane is expressed as durable contract law.
 authority_ceiling:
   inspect: true
   local_write: true
@@ -24,6 +25,10 @@ authority_ceiling:
   deploy_or_migrate: false
   destructive_change: false
   external_message: false
+termination:
+  mode: mission_acceptance
 tasks:
   - task_id: TASK-001
     title: Write the mission parser
+    files_to_edit:
+      - environment/program-execution/mission/mission.py
