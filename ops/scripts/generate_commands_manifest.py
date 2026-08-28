@@ -82,6 +82,10 @@ def build_manifest(root: Path) -> dict[str, Any]:
             "file": rel,
             "enabled": bool(prior.get("enabled", True)),
         }
+        if rel == "commands/gmp.md" and fm.get("description"):
+            entry["description"] = str(fm["description"])
+        elif prior.get("description"):
+            entry["description"] = str(prior["description"])
         aliases = prior.get("aliases")
         if aliases:
             entry["aliases"] = aliases
