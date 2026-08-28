@@ -1,0 +1,412 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Memory outbox drain: give DESTINATION_SUBMITTED an owner",
+  "objective": "Close RC-3. Generated-data memory candidates are durably enqueued to a file outbox and land in PipelineState.DESTINATION_SUBMITTED, which is deliberately non-terminal, but no component in the repository ever reads that outbox or advances that state. Add the single missing consumer inside the existing DeliveryWorker, reusing the existing transports, retry policy, receipt chain and state machine, and unify the two divergent outbox locations under one canonical owner. Introduce no new store, queue, service, scheduler, or memory writer.",
+  "code_in_scope": true,
+  "success_criteria": [
+    "A memory candidate enqueued to the canonical outbox is delivered to Graphiti by a named owner, and its job advances DESTINATION_SUBMITTED -> DESTINATION_ACCEPTED with a real destination receipt.",
+    "A drain attempt against an unreachable or unconfigured transport leaves the job in DESTINATION_SUBMITTED, records a failed delivery_attempt, and never marks DESTINATION_ACCEPTED.",
+    "Repeated drains of the same candidate are idempotent: the second pass reports deduplicated or already_delivered and performs no second non-idempotent write.",
+    "Exactly one canonical filesystem location holds memory-route candidates; the divergent second location is removed or aliased to the canonical resolver, and both writers and the drain resolve it through one function.",
+    "campaign_summary.py reports outbox backlog and oldest-candidate age as measured values, distinguishable from healthy submission, following the existing None -> UNKNOWN convention.",
+    "A campaign whose only memory delivery was outbox-enqueued can reach campaigns.state == completed after a successful drain, instead of remaining active forever.",
+    "No new state store, queue, service, scheduler, coordination protocol, or memory writer is introduced."
+  ],
+  "scope": {
+    "in": [
+      "environment/agents/generated-data/orchestration/delivery_worker.py — add outbox drain owned by the existing worker",
+      "environment/agents/generated-data/adapters/graphiti_memory.py — outbox path resolution and drain-side read helper",
+      "environment/agents/runtime_paths.py — one canonical memory-outbox resolver",
+      "environment/agents/generated-data/ingress/ingest.py — use the canonical resolver",
+      "environment/program-execution/integrations/subagent-generated-data/campaign_summary.py — backlog and staleness reporting",
+      "tests for drain success, drain failure, idempotency, and path unification",
+      "extension of environment/program-execution/tests/hardening/test_real_campaign_e2e.py where it currently characterises the unfixed gap"
+    ],
+    "out": [
+      "Non-memory route outboxes written by RouteOutboxTransport (<route>-outbox) — same class of defect, different destination systems, separate plan",
+      "ops/graphiti/distill_queue — a distinct S3-backed session-transcript pipeline, confirmed non-overlapping in TASK-01",
+      "Any change to Graphiti server-side ingestion semantics",
+      "Adding a scheduler, daemon, cron, or GitHub Actions runner for the drain",
+      "Changing the deliberate decision at ingest.py:105-107 that a missing live transport must still durably enqueue",
+      "Widening the generated-data pipeline's authority or publication boundary"
+    ]
+  },
+  "pre_validation": [
+    {
+      "id": "CP-01",
+      "command_or_action": "git rev-parse HEAD",
+      "pass_criteria": "equals the locked baseline SHA f4265dcc58ff8ebee7896a1a89c9f298c9e8e5c8; on mismatch stop and replan",
+      "status": "passed"
+    },
+    {
+      "id": "CP-02",
+      "command_or_action": "python -c \"import sys; sys.path.insert(0,'environment/agents'); from runtime_paths import generated_data_outbox_root; print(generated_data_outbox_root()/'memory')\"",
+      "pass_criteria": "prints the live outbox path; confirms which of the two locations production actually writes",
+      "status": "passed"
+    },
+    {
+      "id": "CP-03",
+      "command_or_action": "grep -rnE \"outbox.*(glob|iterdir|listdir|rglob|scandir)\" --include=*.py .",
+      "pass_criteria": "zero matches outside tests, re-confirming no drain exists at execution start",
+      "status": "passed"
+    },
+    {
+      "id": "CP-04",
+      "command_or_action": "PYTHONPATH=environment/program-execution python -m pytest environment/program-execution/tests/hardening -q",
+      "pass_criteria": "green before any change, establishing the regression baseline",
+      "status": "pending"
+    },
+    {
+      "id": "CP-05",
+      "command_or_action": "Inspect which memory transport is configured in this environment: L9_SGD_GRAPHITI_INGEST_COMMAND / endpoint env vars, and graphiti health",
+      "pass_criteria": "Records observed transport availability. A DEGRADED or absent transport does NOT block this plan: it is the exact condition the fail-closed path must handle, and drain tests use an injected fake transport.",
+      "status": "pending"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-01-baseline-preflight",
+      "task": "Lock the baseline and re-run CP-01..CP-05. Record the observed live outbox path and the observed transport availability into the plan's evidence section. Stop and replan on baseline drift.",
+      "files": [
+        "docs/plans/memory_outbox_drain_7c4a1e93.plan.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "leverage_rank": 5
+    },
+    {
+      "id": "todo-02-unify-outbox-path",
+      "task": "Resolve AI-002 duplicate location. ingest.py writes $L9_RUNTIME_ROOT/generated-data/outbox/memory while DeliveryWorkerConfiguration.memory_outbox and graphiti_memory._MEMORY_OUTBOX_DIR default to environment/agents/generated-data/.runtime/memory-outbox. Add one canonical resolver (memory_outbox_root()) in environment/agents/runtime_paths.py, make the adapter constant and the dataclass default resolve through it, and have the drain read exactly that. If any candidate files exist at the legacy location, the drain must adopt them once and log the adoption; it must not silently ignore them.",
+      "files": [
+        "environment/agents/runtime_paths.py",
+        "environment/agents/generated-data/adapters/graphiti_memory.py",
+        "environment/agents/generated-data/orchestration/delivery_worker.py",
+        "environment/agents/generated-data/ingress/ingest.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "todo-01-baseline-preflight"
+      ],
+      "operation": "Replace",
+      "anchor": "graphiti_memory.py:23 _MEMORY_OUTBOX_DIR; delivery_worker.py:48 memory_outbox default; ingest.py:139",
+      "leverage_rank": 2,
+      "shared_root_cause": "no single owner for the memory-outbox location"
+    },
+    {
+      "id": "todo-03-implement-drain",
+      "task": "Add DeliveryWorker.drain_memory_outbox(actor, limit) plus a --drain CLI flag. For each candidate file in the canonical outbox: look up its job, require current state DESTINATION_SUBMITTED, record a delivery_attempt with the existing idempotency_key, deliver through select_transport() (HttpJsonTransport or CommandTransport — never FileOutboxTransport, which would be a self-loop), then advance to DESTINATION_ACCEPTED on a real acceptance receipt, DESTINATION_REJECTED on a permanent rejection, RETRY_WAIT under the existing RetryPolicy on a transient failure, and DEAD_LETTERED at the policy ceiling. Remove the outbox file only after the terminal transition commits. Call recalculate_campaign_state so a fully drained campaign can finally reach completed. Fail closed: with no live transport configured, record the failed attempt and leave the job in DESTINATION_SUBMITTED.",
+      "files": [
+        "environment/agents/generated-data/orchestration/delivery_worker.py",
+        "environment/agents/generated-data/adapters/graphiti_memory.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "todo-02-unify-outbox-path"
+      ],
+      "operation": "Insert",
+      "anchor": "delivery_worker.py after run_batch(); reuse _next_attempt_number, complete_delivery_attempt, RetryPolicy, ProcessingReceiptChain",
+      "leverage_rank": 1,
+      "shared_root_cause": "DESTINATION_SUBMITTED has no owner that can advance it"
+    },
+    {
+      "id": "todo-04-drain-on-next-delivery",
+      "task": "Give the drain a trigger without adding a scheduler. At the start of DeliveryWorker.run_batch, opportunistically drain a bounded number of outbox candidates before selecting new jobs, so ordinary pipeline activity clears the backlog. Keep the bound explicit and configurable, and make the opportunistic drain non-fatal: a drain failure must never fail the delivery run that triggered it.",
+      "files": [
+        "environment/agents/generated-data/orchestration/delivery_worker.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "todo-03-implement-drain"
+      ],
+      "operation": "Insert",
+      "anchor": "delivery_worker.py run_batch() entry",
+      "leverage_rank": 4
+    },
+    {
+      "id": "todo-05-surface-backlog",
+      "task": "Now that a drain exists, complete the change TASK-05 deliberately deferred. Extend campaign_summary.build_summary()'s memory section with measured outbox_backlog_count and outbox_oldest_candidate_age_seconds, following the existing None -> UNKNOWN convention for anything not measured. Do not infer persistence from enqueue. render_brief must show backlog distinctly from submitted.",
+      "files": [
+        "environment/program-execution/integrations/subagent-generated-data/campaign_summary.py"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "todo-03-implement-drain"
+      ],
+      "operation": "Insert",
+      "anchor": "campaign_summary.py build_summary() memory block (lines 48-62) and render_brief() memory lines",
+      "leverage_rank": 3
+    },
+    {
+      "id": "todo-06-tests",
+      "task": "Add drain tests: (a) success advances SUBMITTED -> ACCEPTED and removes the file; (b) unconfigured or unreachable transport leaves SUBMITTED, records a failed attempt, marks nothing accepted; (c) a second drain of the same candidate is idempotent; (d) transient failure routes to RETRY_WAIT and the policy ceiling routes to DEAD_LETTERED; (e) legacy-location candidates are adopted, not ignored; (f) campaign reaches completed only after drain. Then update test_enqueued_is_not_reported_as_persisted in the hardening E2E: it currently characterises the unfixed gap and must be rewritten to assert the drained end state rather than deleted.",
+      "files": [
+        "environment/agents/generated-data/tests/integration/test_memory_delivery_protocol.py",
+        "environment/program-execution/tests/hardening/test_real_campaign_e2e.py"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "todo-03-implement-drain",
+        "todo-04-drain-on-next-delivery",
+        "todo-05-surface-backlog"
+      ],
+      "operation": "Insert",
+      "leverage_rank": 6
+    },
+    {
+      "id": "todo-07-converge",
+      "task": "Run the repo's fast checks and the affected suites, update docs/handoffs/PE_SWARM_MEMORY_REMEDIATION_FINDINGS.md to move RC-3 from ESCALATED to CLOSED with the evidence, then converge to a green PR. Do not merge.",
+      "files": [
+        "docs/handoffs/PE_SWARM_MEMORY_REMEDIATION_FINDINGS.md"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "todo-06-tests"
+      ],
+      "operation": "Replace",
+      "leverage_rank": 7
+    }
+  ],
+  "critical_path": [
+    "todo-01-baseline-preflight",
+    "todo-02-unify-outbox-path",
+    "todo-03-implement-drain",
+    "todo-06-tests",
+    "todo-07-converge"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "One canonical memory-outbox location with a single resolver owner",
+      "unlocks": "A drain that cannot miss candidates written by the live ingress path"
+    },
+    {
+      "id": "M2",
+      "outcome": "DESTINATION_SUBMITTED has an owner that can advance it to a real terminal state",
+      "unlocks": "Memory candidates actually reach Graphiti; campaigns can complete"
+    },
+    {
+      "id": "M3",
+      "outcome": "Backlog and staleness are measured and reported",
+      "unlocks": "A stalled drain is operationally visible instead of indistinguishable from health"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "CK-01",
+      "after": "todo-02-unify-outbox-path",
+      "evidence_required": "Both writers and the drain resolve the same absolute path in a test that asserts equality; legacy-location adoption path is exercised.",
+      "no_go_action": "Stop. A drain built on the wrong path is worse than none — it would report an empty backlog while candidates accumulate elsewhere."
+    },
+    {
+      "id": "CK-02",
+      "after": "todo-03-implement-drain",
+      "evidence_required": "Test proves SUBMITTED -> ACCEPTED only on a real receipt, and that an unavailable transport leaves SUBMITTED with a recorded failed attempt.",
+      "no_go_action": "Stop. If the drain can reach ACCEPTED without a destination receipt it recreates the exact false-completion defect RC-3 exists to prevent."
+    },
+    {
+      "id": "CK-03",
+      "after": "todo-06-tests",
+      "evidence_required": "Full hardening suite plus generated-data suites green; the rewritten E2E assertion proves the drained end state.",
+      "no_go_action": "Do not open a PR with the characterisation test still asserting the unfixed behaviour — that would silently re-bless the gap."
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "docs/handoffs/PE_SWARM_MEMORY_REMEDIATION_FINDINGS.md",
+      "action": "update",
+      "todo_ids": [
+        "todo-07-converge"
+      ],
+      "reason": "RC-3 moves from ESCALATED to CLOSED; the open-items table must stop listing it as outstanding."
+    },
+    {
+      "surface": "ARCHITECTURE.md",
+      "action": "n_a",
+      "reason": "No new module or CI surface is introduced; the drain lives inside an already-indexed component."
+    },
+    {
+      "surface": "INVARIANTS.md",
+      "action": "n_a",
+      "reason": "No new invariant is created. The existing submitted-is-not-accepted invariant is being honoured, not extended."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Is the outbox actually unearned complexity that should be deleted rather than drained? Evidence says no: ingest.py:105-107 documents it as a deliberate write-ahead so a missing transport does not mean data loss, and delivery_worker.py:471-472 maps it to a non-terminal state on purpose.",
+      "Could a scheduled GitHub Actions worker drain it, mirroring ops/graphiti/distill_queue? No. That pipeline works only because S3 is its transport. This outbox is machine-local under $L9_RUNTIME_ROOT (/root/.l9/generated-data/outbox/memory), is not in git and not in S3, so a hosted runner cannot see it. This falsifies the obvious-looking answer.",
+      "Does the state machine already lie about persistence, making this a truthfulness bug? No. DESTINATION_SUBMITTED is excluded from the terminal set at state_store.py:790-803 and the campaign stays active. The defect is an unowned lifecycle, not a false claim.",
+      "Would draining inside DeliveryWorker create duplicate delivery authority? No — DeliveryWorker is already the sole delivery owner and already owns delivery_attempts, receipts and dead letters. A separate drainer would be the duplicate.",
+      "Can a drain mark ACCEPTED without proof? It must not. The acceptance path is gated on a destination receipt from HttpJsonTransport or CommandTransport, never on file removal succeeding.",
+      "Is there a test that could pass while the requirement fails? Yes, and it is the danger: a drain test using FileOutboxTransport would self-loop and pass trivially. Drain tests must inject a fake live transport, never the file outbox."
+    ],
+    "assumed_false_ifs": [
+      "If the live path is NOT $L9_RUNTIME_ROOT/generated-data/outbox/memory in the operator's environment, todo-02's unification target is wrong and CK-01 must stop the plan.",
+      "If Graphiti ingestion is not idempotent on candidate_id, the retry path can double-write; the plan then requires dedupe-before-write to be proven, not assumed.",
+      "If DESTINATION_SUBMITTED jobs can also be produced by a non-outbox path, the drain's state precondition is too narrow and would strand them.",
+      "If candidate files can be written concurrently by two workers on one machine, the drain needs a claim discipline; single-writer is currently assumed and must be verified, not inferred."
+    ],
+    "blast_radius": "Medium. The change is confined to the generated-data delivery component plus one summary module, and adds a forward transition to a state that is currently a dead end, so existing terminal outcomes are unaffected. The realistic failure mode is a drain that marks ACCEPTED without a receipt, which would convert a visible stall into invisible data loss — worse than today. CK-02 exists specifically to block that.",
+    "rollback": "Every change is additive and revertible by scoped git restore of the listed files. The drain is opt-in at the call site, so reverting todo-04 alone disables automatic draining while leaving the CLI. No data migration occurs: candidate files are only removed after a committed terminal transition, so an aborted drain leaves the outbox intact."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-03-implement-drain",
+      "todo-02-unify-outbox-path",
+      "todo-05-surface-backlog",
+      "todo-04-drain-on-next-delivery",
+      "todo-01-baseline-preflight",
+      "todo-06-tests",
+      "todo-07-converge"
+    ],
+    "shared_causes": [
+      "DESTINATION_SUBMITTED was designed as a non-terminal state but no component was ever built to advance it.",
+      "The memory-outbox location has no single owner, so the dataclass default and the live ingress path diverged without either being wrong."
+    ],
+    "deletions_or_consolidations": [
+      "Consolidate two memory-outbox locations into one canonical resolver (todo-02).",
+      "Delete the duplicated path literal from graphiti_memory.py and delivery_worker.py in favour of that resolver.",
+      "No new component is added: the drain is a method on the existing owner, not a new service."
+    ]
+  },
+  "risks": [
+    {
+      "risk": "The drain marks DESTINATION_ACCEPTED without a genuine destination receipt, turning a visible stall into silent data loss.",
+      "mitigation": "Acceptance is gated on a transport receipt only. CK-02 blocks promotion without a test proving an unavailable transport leaves the job in DESTINATION_SUBMITTED."
+    },
+    {
+      "risk": "Drain tests self-loop by using FileOutboxTransport, passing while proving nothing.",
+      "mitigation": "The drain refuses FileOutboxTransport explicitly; tests inject a fake live transport and assert the recorded destination reference."
+    },
+    {
+      "risk": "Retry double-writes a candidate if Graphiti ingestion is not idempotent.",
+      "mitigation": "Reuse the existing idempotency_key on delivery_attempts and dedupe before any non-idempotent write; treat idempotency as unknown U2 until probed, not assumed."
+    },
+    {
+      "risk": "Unifying the outbox path strands candidates already written to the legacy location.",
+      "mitigation": "todo-02 requires one-time adoption of legacy-location files with a log line; silently ignoring them is explicitly forbidden and is covered by a test."
+    },
+    {
+      "risk": "Opportunistic draining inside run_batch turns a drain failure into a delivery-run failure.",
+      "mitigation": "todo-04 requires the opportunistic path to be non-fatal and bounded."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Which live Graphiti transport (endpoint plus credential, or ingest command) does the drain use in each environment? This session reports graphiti_authenticated_health DEGRADED, broker unreachable, and a model-controlled secret boundary, so it cannot be verified here.",
+      "decision_effect": "Determines whether the drain can ever reach DESTINATION_ACCEPTED in a given environment, but not the design: the fail-closed path is required either way.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Is Graphiti ingestion idempotent on candidate_id, so a retried drain cannot double-write?",
+      "decision_effect": "Decides whether dedupe-before-write must be enforced by the drain or can rely on the destination.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "Can two processes on one machine write or drain the same outbox concurrently?",
+      "decision_effect": "Decides whether the drain needs a claim or lock discipline beyond atomic rename.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U4",
+      "question": "Are there existing candidate files at the legacy in-repo location in any live operator environment?",
+      "decision_effect": "Decides whether the one-time adoption path in todo-02 is exercised in practice or is purely defensive.",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "FV-01",
+      "command": "PYTHONPATH=environment/program-execution python -m pytest environment/program-execution/tests/hardening -q",
+      "pass_criteria": "all pass; the rewritten memory assertion proves the drained end state rather than the unfixed gap",
+      "status": "pending"
+    },
+    {
+      "id": "FV-02",
+      "command": "python -m pytest environment/agents/generated-data/tests environment/agents/generated-data/ingress/tests -q",
+      "pass_criteria": "all pass, including the new drain success, fail-closed, idempotency and adoption tests",
+      "status": "pending"
+    },
+    {
+      "id": "FV-03",
+      "command": "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=environment/program-execution python environment/program-execution/scripts/run_conformance.py",
+      "pass_criteria": "exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "FV-04",
+      "command": "python -m ruff check <changed files> && python -m ruff format --check <changed files>",
+      "pass_criteria": "clean",
+      "status": "pending"
+    },
+    {
+      "id": "FV-05",
+      "command": "grep -rnE \"outbox.*(glob|iterdir|listdir|rglob|scandir)\" --include=*.py environment/agents/generated-data",
+      "pass_criteria": "at least one non-test match — the drain now exists, inverting the CP-03 baseline",
+      "status": "pending"
+    },
+    {
+      "id": "FV-06",
+      "command": "make pr-check",
+      "pass_criteria": "PASS — repository quality gate green on the changed files before any PR is opened",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2",
+      "U3",
+      "U4"
+    ],
+    "next_skill": "l9-plan-simple",
+    "stop_reason": "Plan is execution-ready. U1 is bounded by design (the fail-closed path is required regardless of transport availability) and does not block execution. U2, U3 and U4 are probes scheduled inside todo-01 and todo-02 and are resolved before the first irreversible change at todo-03."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "environment/agents/generated-data/orchestration/delivery_worker.py",
+      "environment/agents/generated-data/adapters/graphiti_memory.py",
+      "environment/agents/runtime_paths.py",
+      "environment/agents/generated-data/ingress/ingest.py",
+      "environment/program-execution/integrations/subagent-generated-data/campaign_summary.py",
+      "environment/agents/generated-data/tests/**",
+      "environment/program-execution/tests/hardening/test_real_campaign_e2e.py",
+      "docs/handoffs/PE_SWARM_MEMORY_REMEDIATION_FINDINGS.md"
+    ],
+    "must_not_modify": [
+      "ops/graphiti/distill_queue/**",
+      ".github/workflows/memory-distill.yml",
+      "environment/agents/generated-data/orchestration/state_store.py schema — reuse existing states and tables, do not add new ones",
+      "environment/program-execution/scripts/run_campaign.py",
+      "autonomy/**",
+      "Any secret, credential, or protected infrastructure file"
+    ],
+    "preserved_contracts": [
+      "submitted_is_not_accepted — DESTINATION_SUBMITTED may only advance on a genuine destination receipt",
+      "unknown_downstream_state_is_reported_UNKNOWN — campaign_summary keeps None for anything unmeasured",
+      "zero_is_not_UNKNOWN",
+      "A missing live transport must still durably enqueue (ingest.py:105-107) — do not reverse this",
+      "one_ingress and one_distillation_path — no second pipeline",
+      "Generated-data pipeline performs no remote publication"
+    ],
+    "validation_commands": [
+      "PYTHONPATH=environment/program-execution python -m pytest environment/program-execution/tests/hardening -q",
+      "python -m pytest environment/agents/generated-data/tests environment/agents/generated-data/ingress/tests -q",
+      "PYTHONDONTWRITEBYTECODE=1 PYTHONPATH=environment/program-execution python environment/program-execution/scripts/run_conformance.py"
+    ]
+  },
+  "estimate": "1-2 focused sessions; todo-03 is the only substantial implementation unit."
+}

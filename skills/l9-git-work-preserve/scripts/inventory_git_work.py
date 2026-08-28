@@ -8,6 +8,8 @@ import json
 import subprocess
 from pathlib import Path
 
+from git_fetch import NO_FETCH, fetch_origin
+
 
 def _run(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -24,10 +26,14 @@ def _lines(proc: subprocess.CompletedProcess[str]) -> list[str]:
     return [ln for ln in proc.stdout.splitlines() if ln.strip()]
 
 
-def inventory(repo: Path, baseline: str) -> dict:
+def inventory(repo: Path, baseline: str, do_fetch: bool = False) -> dict:
     inside = _run(repo, "rev-parse", "--is-inside-work-tree")
     if inside.returncode != 0 or inside.stdout.strip() != "true":
         raise SystemExit(f"not a git work tree: {repo}")
+
+    # Ahead counts are only as current as the baseline they are measured against;
+    # a stale origin/main routinely overstates how much work is unpushed.
+    fetch = fetch_origin(repo, baseline) if do_fetch else dict(NO_FETCH)
 
     head = _run(repo, "rev-parse", "HEAD").stdout.strip()
     branch = _run(repo, "branch", "--show-current").stdout.strip()
@@ -66,6 +72,9 @@ def inventory(repo: Path, baseline: str) -> dict:
         "schema": "l9.git_work_preserve.inventory/v1",
         "repo": str(repo.resolve()),
         "baseline": baseline,
+        "baseline_tip": fetch["baseline_tip"],
+        "fetched": fetch["fetched"],
+        "fetch_error": fetch["error"],
         "head": head,
         "branch": branch or None,
         "dirty": bool(porcelain),
@@ -82,9 +91,14 @@ def main() -> int:
     parser.add_argument("--repo", default=".", help="Git work tree path")
     parser.add_argument("--baseline", default="origin/main", help="Compare tip")
     parser.add_argument("--json", action="store_true", help="Print JSON (default)")
+    parser.add_argument(
+        "--fetch",
+        action="store_true",
+        help="Refresh origin first so ahead counts reflect current remote state",
+    )
     args = parser.parse_args()
     repo = Path(args.repo).expanduser().resolve()
-    data = inventory(repo, args.baseline)
+    data = inventory(repo, args.baseline, do_fetch=args.fetch)
     print(json.dumps(data, indent=2, sort_keys=True))
     return 0
 

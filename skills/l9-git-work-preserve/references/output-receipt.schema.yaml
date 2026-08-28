@@ -8,7 +8,7 @@ required:
   - baseline_ref
 properties:
   receipt_id: {type: string}
-  mode: {enum: [audit, diagnose-value, extract, harvest, prune-propose, prune-execute, stash-deep-analysis]}
+  mode: {enum: [audit, diagnose-value, extract, harvest, prune-propose, prune-execute, stash-deep-analysis, triage-preserved]}
   repo: {type: string}
   created_at: {type: string}
   baseline_ref: {type: string, description: "usually origin/main"}
@@ -18,5 +18,18 @@ properties:
   confidence: {enum: [high, medium, low, unknown]}
   unique_commits: {type: integer}
   unique_paths: {type: array, items: {type: string}}
+  baseline_resolved: {type: boolean, description: "false ⇒ novelty unprovable, keep the ref"}
+  baseline_tip: {type: string}
+  fetched: {type: boolean, description: "origin refreshed before judging; false is not an error"}
+  fetch_error: {type: [string, "null"], description: "null on success and when no fetch ran"}
+  cherry_available: {type: boolean, description: "git cherry answered; false ⇒ unproven, not novel"}
+  cherry_novel: {type: integer, description: "patches with no equivalent upstream patch id"}
+  cherry_dup: {type: integer, description: "patches already upstream by patch id"}
+  content_contained: {type: boolean, description: "every line this ref changed is absorbed upstream"}
+  redundancy_basis: {enum: ["", patch_id, content_superset], description: "evidence behind archive_ref"}
+  cherry_novel_commits: {type: array, items: {type: string}, description: "shas behind cherry_novel"}
+  cherry_dup_commits: {type: array, items: {type: string}, description: "shas behind cherry_dup"}
+  merge_commits_unexamined: {type: integer, description: "merges git cherry skipped; >0 forbids the patch_id basis"}
+  commit_subjects: {type: array, items: {type: string}, description: "subjects of the unique commits"}
   auth_env: {type: string, description: "name of auth env if mutation"}
   rollback: {type: string, description: "reflog or tip SHA recovery hint"}
