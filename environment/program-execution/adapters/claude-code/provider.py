@@ -13,6 +13,30 @@ from peer_execution.provider import (
 )
 from peer_execution.subprocess_runner import run_argv
 
+#: The live enforcement surface a Claude worker window runs behind. Without
+#: both of these the PreToolUse wrapper has nothing to authorize through, so a
+#: window would write with root authority nobody checked.
+HOOK_SURFACE_PATHS = (
+    "environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py",
+    "environment/program-execution/integrations/autonomy-control-plane/program_authority.py",
+    "autonomy/adapters/tool_hook.py",
+)
+
+#: Authority fields the live hook needs, and nothing else. The sidecar carries
+#: more (campaign/graph/action ids, capabilities, the peer binding); exporting
+#: those into a worker's environment would widen what a compromised worker can
+#: read without widening anything it can do.
+_AUTHORITY_ENVIRONMENT = {
+    "L9_ADAPTER_SESSION_ID": "adapter_session_id",
+    "L9_LEASE_ID": "lease_id",
+    "L9_AGENT_ID": "agent_id",
+    "L9_AUTONOMY_DATABASE": "runtime_database",
+    "L9_AUTONOMY_ROOT": "repository_root",
+    "L9_PROGRAM_WORKSPACE": "workspace",
+    "L9_PROGRAM_TASK_ID": "task_id",
+    "L9_AUTONOMY_AUTHORITY_DIGEST": "authority_digest",
+}
+
 
 class ClaudeCodeProvider:
     provider_id = "claude-code-direct"
@@ -26,6 +50,7 @@ class ClaudeCodeProvider:
         required = [
             self.repository_root / "autonomy/adapters/claude_code/adapter.py",
             self.repository_root / "autonomy/adapters/conformance.py",
+            *(self.repository_root / relative for relative in HOOK_SURFACE_PATHS),
         ]
         missing = [str(path) for path in required if not path.is_file()]
         metadata = self._provider_metadata()
@@ -66,6 +91,40 @@ class ClaudeCodeProvider:
             "model_hint": model,
         }
 
+    def _authority_environment(self, request: CanonicalExecutionRequest) -> dict[str, str]:
+        """Task-scoped root authority for the worker window, or fail closed.
+
+        A window that requests mutation without carrying root authority has no
+        way to authorize its own effects, and the campaign would only discover
+        that after the writes existed.
+        """
+        authority = request.autonomy_authority
+        mutating = bool(set(request.requested_capabilities) & {"local_write", "destructive_change"})
+        if authority is None:
+            if mutating:
+                raise ValueError(
+                    "MUTATING_WINDOW_WITHOUT_ROOT_AUTHORITY: "
+                    f"{request.task_id} carries no autonomy authority"
+                )
+            return {}
+        environment: dict[str, str] = {}
+        for name, field in _AUTHORITY_ENVIRONMENT.items():
+            value = authority.get(field)
+            if value is None or not str(value).strip():
+                if field == "authority_digest":
+                    continue
+                raise ValueError(f"ROOT_AUTHORITY_INCOMPLETE: missing {field!r}")
+            environment[name] = str(value)
+        parent = authority.get("program_parent") or {}
+        for name, field in (
+            ("L9_PROGRAM_LEASE_ID", "lease_id"),
+            ("L9_PROGRAM_WORKTREE", "worktree"),
+        ):
+            value = parent.get(field)
+            if value is not None and str(value).strip():
+                environment[name] = str(value)
+        return environment
+
     def invoke(self, request: CanonicalExecutionRequest) -> ProviderInvocation:
         permission_profile = dict(request.permission_profile)
         renderer = load_module(
@@ -96,6 +155,7 @@ class ClaudeCodeProvider:
             environment={
                 "L9_AUTONOMY_REQUIRED": "1",
                 "L9_PROGRAM_LOCK_DIGEST": request.program_lock_digest,
+                **self._authority_environment(request),
             },
         )
         excerpts = load_module(

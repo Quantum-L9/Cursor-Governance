@@ -100,28 +100,56 @@ def _require_env_aliases(*groups: tuple[str, ...]) -> dict[str, str]:
     return resolved
 
 
+#: Tools whose argument is a shell command. A shell tool only reaches
+#: ``test.run`` when a caller that validated the command against the canonical
+#: Program Execution validation grammar says so explicitly; inferring it here
+#: would let any shell string inherit a validation command's authority.
+SHELL_TOOL_NAMES = frozenset({"Bash", "Shell", "run_terminal_cmd"})
+
+
 def pre_tool_use(
     *,
     tool_name: str,
     arguments: Mapping[str, Any] | None = None,
     orchestrator: AdapterOrchestrator | None = None,
     require_allowed: bool = True,
+    session_id: str | None = None,
+    lease_id: str | None = None,
+    agent_id: str | None = None,
+    capability: str | None = None,
+    resource: str | None = None,
 ) -> dict[str, Any]:
-    env = _require_env_aliases(
-        ("L9_ADAPTER_SESSION_ID",),
-        ("L9_LEASE_ID", "L9_AUTONOMY_LEASE_ID"),
-        ("L9_AGENT_ID", "L9_AUTONOMY_AGENT_ID"),
-    )
-    session_id = env["L9_ADAPTER_SESSION_ID"]
-    lease_id = env["L9_LEASE_ID"]
-    agent_id = env["L9_AGENT_ID"]
-    capability = infer_capability(tool_name, arguments)
-    resource = infer_resource(tool_name, arguments)
+    """Authorize one tool call through the root capability gateway.
+
+    A Program Execution worker passes its identity and its already-validated
+    capability/resource explicitly, because those were resolved against the live
+    Program parent. Every other caller keeps the environment fallback.
+    """
+    if session_id and lease_id and agent_id:
+        resolved_session, resolved_lease, resolved_agent = session_id, lease_id, agent_id
+    else:
+        env = _require_env_aliases(
+            ("L9_ADAPTER_SESSION_ID",),
+            ("L9_LEASE_ID", "L9_AUTONOMY_LEASE_ID"),
+            ("L9_AGENT_ID", "L9_AUTONOMY_AGENT_ID"),
+        )
+        resolved_session = session_id or env["L9_ADAPTER_SESSION_ID"]
+        resolved_lease = lease_id or env["L9_LEASE_ID"]
+        resolved_agent = agent_id or env["L9_AGENT_ID"]
+    if capability is None:
+        capability = infer_capability(tool_name, arguments)
+        if tool_name in SHELL_TOOL_NAMES and capability == "test.run":
+            raise PolicyViolation(
+                "SHELL_CAPABILITY_NOT_VALIDATED: a shell tool reaches test.run only "
+                "through a caller that validated the command grammar"
+            )
+    if resource is None:
+        resource = infer_resource(tool_name, arguments)
     orch = orchestrator or _default_orchestrator()
     decision = orch.authorize_tool(
-        session_id=session_id,
-        lease_id=lease_id,
-        agent_id=agent_id,
+        session_id=resolved_session,
+        lease_id=resolved_lease,
+        agent_id=resolved_agent,
         capability=capability,
         resource=resource,
         metadata={"tool_name": tool_name},
