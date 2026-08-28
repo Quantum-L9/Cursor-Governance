@@ -206,7 +206,8 @@ Do not claim either kernel was wrapped into this skill.
 
 - Adapter missing → run generic steps; note domain gaps
 - Count unverified → `Unknown`; do not ship a guessed number
-- User asked to commit → present diff; do not commit unless requested
+- Doc edits you authored → scoped-commit them by pathspec without asking
+  (rule `99-no-auto-commit`); push and PR stay ask-first
 - Urge to embed either kernel → refuse; keep the path citation
 
 ## Stop Condition

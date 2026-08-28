@@ -288,8 +288,10 @@ llm_rules_override: |
   3. Force-push / hard-reset / admin-merge / secrets remain forbidden.
   4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
      campaign PRs against `main`. Do not mix with other feature branches.
-  5. Cursor surface auto-commits locally (pathspecs; rule 49). Push /
-     `make pr` stay ask-first except when the user invoked `make pr`.
+  5. Cursor surface MUST scoped-commit locally after each authored chunk
+     (pathspecs; rule 49). Unique dirty files you authored are a rule
+     failure. Do not ask. Push / `make pr` stay ask-first except when
+     the user invoked `make pr`.
      L4 remote gate still blocks mid-execution push.
   6. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
 
