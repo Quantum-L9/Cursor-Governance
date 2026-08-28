@@ -29,7 +29,11 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_action_enum() -> None:
-    for text, where in ((SKILL, "SKILL.md"), (WORKFLOW, "ynp-workflow.md"), (CMD_TEXT, "commands/ynp.md")):
+    for text, where in (
+        (SKILL, "SKILL.md"),
+        (WORKFLOW, "ynp-workflow.md"),
+        (CMD_TEXT, "commands/ynp.md"),
+    ):
         if not text:
             _fail(f"{where} missing")
         _need(text, "action:", where)

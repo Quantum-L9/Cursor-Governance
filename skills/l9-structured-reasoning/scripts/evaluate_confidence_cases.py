@@ -5,7 +5,6 @@ import json
 import sys
 from pathlib import Path
 
-sys.dont_write_bytecode = True
 from validate_ledger import validate
 
 

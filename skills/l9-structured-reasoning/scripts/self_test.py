@@ -9,9 +9,7 @@ from pathlib import Path
 
 def run(*args: str) -> None:
     env = {**os.environ, "PYTHONDONTWRITEBYTECODE": "1"}
-    result = subprocess.run(
-        [sys.executable, *args], text=True, capture_output=True, env=env
-    )
+    result = subprocess.run([sys.executable, *args], text=True, capture_output=True, env=env)
     if result.returncode != 0:
         sys.stderr.write(result.stdout)
         sys.stderr.write(result.stderr)
