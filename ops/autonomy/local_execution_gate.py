@@ -226,6 +226,133 @@ def command_bypasses_publish_path(command: str) -> str | None:
     return None
 
 
+# ---------------------------------------------------------------------------
+# Validation path: a whole-catalog pytest run belongs to CI, not to a chat turn.
+#
+# `make pr-check` is the designed local gate: it runs precommit once and selects
+# pytest targets from the changed set (ops/scripts/select_pr_pytest_paths.py),
+# so it finishes in seconds instead of ten minutes and picks the suites that own
+# what was actually touched. Hand-picking directories is how a CI-only failure
+# gets missed — the swallowed-failure ratchet lives in ops/scripts/tests/ while
+# the neighbouring tests/ops/scripts/ looks like the obvious place.
+#
+# Only UNSCOPED runs are denied. `pytest path/to/test_x.py` stays allowed: a
+# targeted run is legitimate debugging and is the fast half of the loop.
+#
+# Breakglass is human/ops only: L9_FULL_PYTEST_AUTHORIZED=<reason>.
+# ---------------------------------------------------------------------------
+FULL_PYTEST_OVERRIDE_ENV = "L9_FULL_PYTEST_AUTHORIZED"
+
+#: Makefile goals that run the whole Python catalog.
+MAKE_FULL_CATALOG_GOALS = frozenset({"test", "pr-full"})
+
+#: `pytest`, or a path whose final component is exactly `pytest`. Anchored at
+#: both ends so a directory merely *named* like pytest cannot pass: CI runs
+#: under `/tmp/pytest-of-<user>/pytest-<n>/`, and an unanchored match there
+#: turned `cd <tmpdir> && make pr` into a bogus catalog run.
+_PYTEST_EXEC_RE = re.compile(r"(?:\S*/)?pytest", re.I).fullmatch
+_PYTHON_EXEC_RE = re.compile(r"(?:\S*/)?python[0-9.]*", re.I).fullmatch
+_ASSIGNMENT_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*=\S*").fullmatch
+
+#: Prefixes that run the following words as their own command, unchanged.
+_TRANSPARENT_WRAPPERS = frozenset({"command", "env", "exec", "nohup", "sudo", "time"})
+
+#: `<tool> run <command>` forms. `uv run pytest` is the house style here.
+_RUNNER_WRAPPERS = frozenset({"hatch", "pdm", "pipenv", "poetry", "uv"})
+
+#: Short options that consume the next token: `-n auto`, `-p no:cacheprovider`,
+#: `-k expr`, `-m expr`. Long options carry their value with `=`.
+_OPTIONS_TAKING_A_VALUE = frozenset({"-n", "-p", "-k", "-m", "-o", "-c", "--rootdir"})
+
+
+def _pytest_argv(segment: str) -> list[str] | None:
+    """Return pytest's own argv when SEGMENT invokes pytest, else ``None``.
+
+    Only the command word counts. A `pytest`-shaped component elsewhere in the
+    line is an argument, not an invocation — `cd /tmp/pytest-of-x/run && make pr`
+    runs make.
+    """
+
+    tokens = segment.split()
+    index = 0
+    while index < len(tokens):
+        word = tokens[index]
+        if _ASSIGNMENT_RE(word) or word in _TRANSPARENT_WRAPPERS:
+            index += 1
+            continue
+        if word in _RUNNER_WRAPPERS and tokens[index + 1 : index + 2] == ["run"]:
+            index += 2
+            while index < len(tokens) and tokens[index].startswith("-"):
+                index += 1
+            continue
+        break
+    if index >= len(tokens):
+        return None
+    word = tokens[index]
+    rest = tokens[index + 1 :]
+    if _PYTEST_EXEC_RE(word):
+        return rest
+    if _PYTHON_EXEC_RE(word) and rest[:1] == ["-m"] and len(rest) > 1 and _PYTEST_EXEC_RE(rest[1]):
+        return rest[2:]
+    return None
+
+
+def _positional_targets(argv: list[str]) -> list[str]:
+    """The paths in ARGV, with options and the values they consume removed."""
+
+    targets: list[str] = []
+    skip_next = False
+    for token in argv:
+        if skip_next:
+            skip_next = False
+            continue
+        if token.startswith("-"):
+            if token in _OPTIONS_TAKING_A_VALUE:
+                skip_next = True
+            continue
+        if token in {"|", "&&", "||", ";", ")", "("}:
+            break
+        targets.append(token)
+    return targets
+
+
+def command_runs_unscoped_pytest(command: str) -> str | None:
+    """Return the offending form when a command runs the whole test catalog.
+
+    Unscoped means: no positional target at all, or the target is the repository
+    root (`.` / `./`). Either collects every test in the tree.
+    """
+
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        text = segment.strip()
+        if not text:
+            continue
+        goals = make_goals(text)
+        hit = MAKE_FULL_CATALOG_GOALS.intersection(goals)
+        if hit:
+            return f"make {sorted(hit)[0]}"
+        argv = _pytest_argv(text)
+        if argv is None:
+            continue
+        targets = _positional_targets(argv)
+        if not targets:
+            return "pytest with no target"
+        if any(target in {".", "./"} for target in targets):
+            return "pytest ."
+    return None
+
+
+def _full_pytest_deny_reason(what: str) -> str:
+    return (
+        f"Validation path: `{what}` runs the whole test catalog, which belongs to CI, "
+        "not to a chat turn. Use `make pr-check` — it runs precommit once and selects "
+        "pytest targets from your changed set, so it is both faster and better scoped "
+        "than a hand-picked directory list. A targeted run "
+        "(`pytest path/to/test_x.py`) is still allowed for debugging. "
+        f"Human/ops override: {FULL_PYTEST_OVERRIDE_ENV}=<reason>."
+    )
+
+
 def command_is_remote_mutation(command: str) -> bool:
     """Detect remote mutation in command text only (heredoc data is excluded).
 
@@ -335,6 +462,9 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
         bypass = command_bypasses_publish_path(command)
         if bypass and not _publish_path_override():
             return _publish_deny_reason(bypass)
+        catalog = command_runs_unscoped_pytest(command)
+        if catalog and not os.environ.get(FULL_PYTEST_OVERRIDE_ENV, "").strip():
+            return _full_pytest_deny_reason(catalog)
         if not command_is_remote_mutation(command):
             return None
         named_roots = extract_named_roots(command)

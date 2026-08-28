@@ -92,6 +92,7 @@ commands:
 - slash: /gmp
   file: commands/gmp.md
   enabled: true
+  description: Slash that Shells the GMP executor then Builds the named plan — no second confirm
 - slash: /governance
   file: commands/governance.md
   enabled: true
