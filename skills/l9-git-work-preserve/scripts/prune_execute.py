@@ -83,15 +83,19 @@ def _write_hygiene_receipt(repo: Path, payload: dict) -> Path:
     return path
 
 
-def _open_heads(git: repo_hygiene.Git, extra: list[str]) -> set[str]:
+def _open_heads(git: repo_hygiene.Git, extra: list[str]) -> tuple[set[str], str | None]:
     heads = {h for h in extra if h}
-    slug = repo_hygiene.origin_slug(git.out("remote", "get-url", "origin"))
-    prs, err = repo_hygiene.pr_index(slug) if slug else ({}, "empty origin slug")
-    if not err:
-        for name, rec in prs.items():
-            if str(rec.get("state") or "") == "OPEN":
-                heads.add(name)
-    return heads
+    url = git.out("remote", "get-url", "origin")
+    slug = repo_hygiene.origin_slug(url) if url else ""
+    if not slug:
+        return heads, None
+    prs, err = repo_hygiene.pr_index(slug)
+    if err:
+        return heads, err
+    for name, rec in prs.items():
+        if str(rec.get("state") or "") == "OPEN":
+            heads.add(name)
+    return heads, None
 
 
 def classify_targets(
@@ -179,6 +183,16 @@ def apply_targets(
             continue
         ref = row["ref"]
         tip = row["tip"]
+        if remote_delete:
+            remote_ref = f"refs/remotes/origin/{ref}"
+            remote_tip = git.out("rev-parse", remote_ref) if git.ok("rev-parse", remote_ref) else ""
+            if remote_tip and remote_tip != tip:
+                row["action"] = "keep"
+                row["detail"] = (
+                    f"origin/{ref} moved past receipt tip; refusing delete "
+                    f"{tip[:12]} -> {remote_tip[:12]}"
+                )
+                continue
         if not repo_hygiene.preserve(git, "branch", ref, tip, report):
             row["action"] = "delete-failed"
             row["detail"] = "preserve-ref failed; left in place"
@@ -252,7 +266,13 @@ def main(argv: list[str] | None = None) -> int:
 
     receipt_paths = [Path(p).expanduser() for p in args.receipt]
     receipts = load_receipts(receipt_paths) if receipt_paths else []
-    open_heads = _open_heads(git, args.open_head)
+    open_heads, index_err = _open_heads(git, args.open_head)
+    if args.apply and index_err:
+        print(
+            f"open-PR lookup failed ({index_err}); refusing --apply",
+            file=sys.stderr,
+        )
+        return 2
     rows = classify_targets(git, receipts, open_heads=open_heads, has_remote=has_remote)
 
     auth = (os.environ.get(AUTH_ENV) or "").strip()
@@ -289,7 +309,7 @@ def main(argv: list[str] | None = None) -> int:
     if applied:
         payload["hygiene_receipt"] = str(_write_hygiene_receipt(git.root, payload))
     print(json.dumps(payload, indent=2, sort_keys=True))
-    return 0 if not any(r.get("action") == "delete-failed" for r in rows) else 1
+    return 0 if not any(str(r.get("action") or "").endswith("-failed") for r in rows) else 1
 
 
 def _payload(

@@ -65,7 +65,16 @@ def sha256_blob(repo: Path, rev: str, rel: str) -> str | None:
 
 
 def path_key(rel: str) -> str:
-    return rel.replace("\\", "/").casefold()
+    """Case-fold only the documented docs/plans/built vs BUILT alias."""
+    norm = rel.replace("\\", "/")
+    folded = norm.casefold()
+    built_prefix = "docs/plans/built/"
+    built_exact = "docs/plans/built"
+    if folded == built_exact:
+        return built_exact
+    if folded.startswith(built_prefix):
+        return built_prefix + norm[len(built_prefix) :]
+    return norm
 
 
 def skip_path(rel: str) -> bool:
