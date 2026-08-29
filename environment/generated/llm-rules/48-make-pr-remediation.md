@@ -4,18 +4,15 @@ description: After make pr opens a PR, campaign path ends green + merge-ready; /
 
 # make pr → green merge-ready; /l9-pr-remediation → merge
 
-Default publish path on `L9_GOVERNANCE_SURFACE=claude-code` (and other
-adapters) is `make pr` (Autonomy Surface Profile `campaign_execution` /
-`l4_local_autonomy.post_push`). Remediates defaults to 1 after the PR
-opens. `PR_REMEDIATE=0` is opt-out only. Cursor finish is catalog +
-commit + stop.
+Default publish path on every surface (Cursor, Claude Code desktop,
+Claude Code Mobile) is `PR_REMEDIATE=0 make pr` / `l9 pr` (Autonomy
+Surface Profile `campaign_execution` / `l4_local_autonomy.post_push`).
+Remediates defaults to 1 after the PR opens. `PR_REMEDIATE=0` is
+opt-out for campaign and L4 authorize-release publish. Do not run
+`make precommit-repo` then `make pr`. Cursor skips the tree-kernel
+latch; adapters still fire it on `make pr`.
 
-**Cursor** (`L9_GOVERNANCE_SURFACE` is `cursor` or unset) MUST NOT use
-`make pr` as the finish step. Catalog (`make precommit-repo`) + scoped
-commit + **STOP**. `make pr` only when the human typed it this turn.
-
-**Claude Code** and other adapters (`L9_GOVERNANCE_SURFACE` is
-`claude-code`, `codex`, `gemini`, or `manus`) MUST:
+**All surfaces** MUST:
 
 1. Use `make pr` (any capitalization) so Makefile checkers run before push.
    The `pr` target is the **governance** Makefile's, always — reach it with
@@ -114,12 +111,10 @@ abort-on-any-non-zero behavior.
 Do **not** treat `make pr-check` then `make pr` as the happy path. That
 sequence is a teaching failure: on an unchanged tree the receipt skip
 prevents a second pytest, but agents must not type the extra command.
-Happy path on Cursor: finish → `make precommit-repo` → scoped-commit →
-**STOP**. Happy path on `L9_GOVERNANCE_SURFACE=claude-code`: finish →
-scoped-commit → `make pr`. `pr-check` / `OPEN_PR=0 make pr` remain
-diagnose-only on adapter surfaces. `make precommit-repo` is an internal
-leaf of the gate, not a post-commit ritual. Do not run `pr-check` after
-`precommit-repo`.
+Happy path on every surface: finish → scoped-commit → `PR_REMEDIATE=0
+make pr` / `l9 pr`. `pr-check` / `OPEN_PR=0 make pr` remain
+diagnose-only. `make precommit-repo` is an internal leaf of the gate,
+not a post-commit ritual. Do not run `pr-check` after `precommit-repo`.
 
 ```bash
 make pr  # L9_GOVERNANCE_SURFACE=claude-code

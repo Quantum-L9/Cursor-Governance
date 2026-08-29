@@ -105,6 +105,8 @@ class InstallReceiptTests(unittest.TestCase):
         parsed = self._receipt()
         self.assertEqual(parsed["schema"], "l9.claude-bootstrap.v1")
         self.assertIsInstance(parsed["ttl_seconds"], int)
+        self.assertIsInstance(parsed.get("reasons"), dict)
+        self.assertIn("log_path", parsed)
 
     def test_non_repository_workspace_is_blocked_not_ready(self) -> None:
         (self.gov / "CANONICAL_LAW.md").write_text("synthetic", encoding="utf-8")

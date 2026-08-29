@@ -9,8 +9,8 @@ than editing it by hand.
 
 | Plan | Scope | Status |
 |---|---|---|
-| `mobile-bootstrap-fixes` | 12 todos repairing wrong-workspace wiring, false READY, MCP drift and command parity in the cloud adapter | validated, unexecuted |
-| `contract-v31-fixes` | 5 todos amending the remediation execution contract to v3.1 — partial-run safety, measured self-heal budget, and three C11 defects | validated, unexecuted |
+| `mobile-bootstrap-fixes` | 12 todos repairing wrong-workspace wiring, false READY, MCP drift and command parity in the cloud adapter | **partially superseded** — T5 six-server broker template, T9 command reconciler, and T11 deploy broker are **not** remainder work. Live remainder: `claude_hosted_remainder_a53a9394` |
+| `contract-v31-fixes` | 5 todos amending the remediation execution contract to v3.1 | **C11 reshaped**: Graphiti HTTPS + marketplace-skip READY; do not deploy a broker |
 | `program-execution-remediation/` | Compiled six-contract pack repairing seven confirmed Program Execution authority findings; directory, not a pair | validated, unexecuted, **baseline drifted** |
 
 `mobile-bootstrap-fixes.readable.md` is a human-facing rendering of the same
@@ -28,6 +28,10 @@ has drifted from `main`.
 predate this directory and are **not** maintained. This directory is the plan of
 record for the Claude Code adapter workstream; resolve any divergence in favour
 of the plans above. See that directory's `README.md`.
+
+C11 broker-deploy clauses: see
+`docs/plans/claude-code/contract-v31-c11-amendment.yaml` (Graphiti HTTPS +
+marketplace-skip READY; do not deploy a broker).
 
 ## Regenerating
 

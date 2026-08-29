@@ -18,11 +18,12 @@ the SessionStart hook; `--json` prints the receipt. The emitter never mutates
 the repository, never fetches, and fails open (a probe that cannot run yields
 UNKNOWN, never a crash).
 
-Sources (all local; the capability broker is retired and is not probed):
+Sources (all local + Graphiti HTTPS; capability broker retired, never probed):
   git -C $GOV            governance repository / default branch / SHA / freshness
   ~/.l9/claude/projection-receipt.json   skill/command/rule/settings/hooks/plugins/mcp
   ~/.l9/claude/bootstrap-state.json      capabilities / memory / mcp coarse words
-  ops/scripts/probe_network_posture.py   optional; Graphiti uses GRAPHITI_MCP_URL
+  ops/graphiti/graphiti_memory_client.py health   memory.cli
+  GET ${GRAPHITI_MCP_URL}                memory.mcp (connect vs 401 vs 403 allowlist)
   make -C $GOV l9-consumer-safe-list     Makefile facade
   ops/scripts/install_l9_dispatcher.sh --check   dispatcher install
   ops/autonomy/merge_gate.py             live merge-authority posture probe
@@ -35,8 +36,17 @@ import json
 import os
 import re
 import subprocess
+import sys
+import urllib.error
+import urllib.request
 from pathlib import Path
 from typing import Any
+
+_OPS_LIB = Path(__file__).resolve().parent.parent / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import exchange  # noqa: E402
 
 SCHEMA_VERSION = "l9.claude-readiness.v1"
 
@@ -154,6 +164,29 @@ _PROJ_STATUS = {
 }
 
 
+def _map_projection_status(entry: dict[str, Any] | str, *, domain: str = "") -> str:
+    """Map a projection domain status onto READY/DEGRADED/BLOCKED/UNKNOWN.
+
+    A skipped *required* domain is not PASS. Hosted marketplace skip is the
+    exception: SKIP_PLUGIN_MARKETPLACE=true is platform policy, desktop extras
+    are not a required plane, and slash commands load through the commands
+    domain — not plugins.
+    """
+    if isinstance(entry, str):
+        raw = entry.lower()
+        detail: dict[str, Any] = {}
+    else:
+        raw = str(entry.get("status") or "").lower()
+        maybe_detail = entry.get("detail")
+        detail = maybe_detail if isinstance(maybe_detail, dict) else {}
+        domain = domain or str(entry.get("domain") or "")
+    if raw == "skipped" and domain == "plugins":
+        reason = str(detail.get("reason") or "")
+        if "marketplace" in reason or os.environ.get("SKIP_PLUGIN_MARKETPLACE") == "true":
+            return READY
+    return _PROJ_STATUS.get(raw, UNKNOWN)
+
+
 def _projection_statuses(receipt: dict[str, Any] | None) -> dict[str, str]:
     """Per-domain projection status from the projection receipt (not symlink existence)."""
     domains = ("skills", "commands", "rules", "settings", "hooks", "plugins", "mcp")
@@ -167,29 +200,131 @@ def _projection_statuses(receipt: dict[str, Any] | None) -> dict[str, str]:
                 continue
             name = str(entry.get("domain") or "")
             if name in out:
-                out[name] = _PROJ_STATUS.get(str(entry.get("status") or "").lower(), UNKNOWN)
+                out[name] = _map_projection_status(entry, domain=name)
     elif isinstance(per, dict):
         for d in domains:
             entry = per.get(d)
             if isinstance(entry, dict):
-                out[d] = _PROJ_STATUS.get(str(entry.get("status") or "").lower(), UNKNOWN)
+                out[d] = _map_projection_status(entry, domain=d)
             elif isinstance(entry, str):
-                out[d] = _PROJ_STATUS.get(entry.lower(), UNKNOWN)
+                out[d] = _map_projection_status(entry, domain=d)
     return out
 
 
-def _retired_plane() -> dict[str, Any]:
-    """The capability broker never shipped. Do not spawn probe_broker.py."""
+DEFAULT_GRAPHITI_MCP_URL = "https://memory.quantumaipartners.com/graphiti/mcp"
+GRAPHITI_MCP_HTTPS_HOSTS = frozenset({"memory.quantumaipartners.com"})
+
+# HTTP classifier vocabulary — lookup KEY only; never interpolate a URL, body,
+# or exception string into a printed note (severs clear-text-logging taint).
+_BLOCKER_VOCAB = {
+    "identity": "identity",
+    "dns": "dns",
+    "reachability": "reachability",
+    "config": "config",
+    "allowlist": "allowlist",
+    "network": "network",
+    "none": "none",
+}
+
+
+def graphiti_mcp_url() -> str:
+    return (os.environ.get("GRAPHITI_MCP_URL") or DEFAULT_GRAPHITI_MCP_URL).strip()
+
+
+def _classify_graphiti_http_code(code: int) -> tuple[str, str]:
+    """Map an HTTP status from GRAPHITI_MCP_URL to READY/DEGRADED + blocker.
+
+    MCP is JSON-RPC POST; GET/HEAD often returns 405. Any 2xx–4xx except 401/403
+    means the front door answered. 403 is the hosted allowlist miss (operator
+    paste), not a missing token — do not treat it as a reason to paste one.
+    """
+    if code == 401:
+        return DEGRADED, "not authenticated (blocker: identity)"
+    if code == 403:
+        return DEGRADED, "not authenticated (blocker: allowlist)"
+    if 200 <= code < 500:
+        return READY, "front door reachable"
+    return DEGRADED, "not authenticated (blocker: reachability)"
+
+
+def _graphiti_mcp_http_health() -> tuple[str, str]:
+    if os.environ.get("L9_GRAPHITI_PROBE_SKIP") == "1":
+        return READY, "probe skipped"
+    url = graphiti_mcp_url()
+    if not url:
+        return DEGRADED, "not authenticated (blocker: config)"
+    # Never urllib.urlopen: GRAPHITI_MCP_URL is env-sourced and urllib follows
+    # file:// (CWE-939). safe_https.exchange is HTTPS or loopback HTTP only.
+    req = urllib.request.Request(url, method="GET")
+    try:
+        with exchange(
+            req,
+            timeout=8,
+            allowed_https_hosts=GRAPHITI_MCP_HTTPS_HOSTS,
+            allow_loopback_http=True,
+            label="Graphiti MCP URL",
+        ) as resp:
+            return _classify_graphiti_http_code(int(resp.status))
+    except urllib.error.HTTPError as exc:
+        return _classify_graphiti_http_code(int(exc.code))
+    except ValueError:
+        return DEGRADED, "not authenticated (blocker: config)"
+    except Exception:  # noqa: BLE001 - a probe never crashes the emitter
+        return DEGRADED, "not authenticated (blocker: reachability)"
+
+
+def _graphiti_cli_health(gov: Path) -> tuple[str, str]:
+    if os.environ.get("L9_GRAPHITI_PROBE_SKIP") == "1":
+        return READY, "probe skipped"
+    client = gov / "ops" / "graphiti" / "graphiti_memory_client.py"
+    py = gov / ".venv" / "bin" / "python3"
+    if not py.is_file():
+        py = Path(sys.executable)
+    if not client.is_file():
+        return UNKNOWN, "graphiti client missing"
+    code, out, _err = _run([str(py), str(client), "health"], timeout=15)
+    text = (out or "").strip()
+    idx = text.find("{")
+    if idx < 0:
+        return DEGRADED if code else UNKNOWN, "cli health unparseable"
+    try:
+        data = json.loads(text[idx:])
+    except json.JSONDecodeError:
+        return DEGRADED, "cli health unparseable"
+    if not isinstance(data, dict):
+        return DEGRADED, "cli health unparseable"
+    if data.get("healthy"):
+        return READY, "cli authenticated"
+    # Classify without interpolating probe-derived exception text.
+    blob = json.dumps(data).lower()
+    if "403" in blob:
+        return DEGRADED, "not authenticated (blocker: allowlist)"
+    if "401" in blob:
+        return DEGRADED, "not authenticated (blocker: identity)"
+    if data.get("liveness_ok") and not (data.get("tools") or {}).get("reachable"):
+        return DEGRADED, "cli tool plane unreachable"
+    return DEGRADED, "not authenticated (blocker: reachability)"
+
+
+def graphiti_probe(gov: Path) -> dict[str, Any]:
+    """Split CLI vs MCP health — a working CLI + dead MCP is not one DEGRADED."""
+    cli_status, cli_note = _graphiti_cli_health(gov)
+    mcp_status, mcp_note = _graphiti_mcp_http_health()
     return {
-        "ok": False,
-        "secret_boundary": "model-controlled",
-        "primary_blocker": "retired",
-        "detail": "capability broker experiment retired (never shipped)",
+        "cli": {"status": cli_status, "reason": cli_note},
+        "mcp": {"status": mcp_status, "reason": mcp_note},
     }
 
 
-def _graphiti_health(_probe: dict[str, Any]) -> tuple[str, str]:
-    return READY, "capability broker retired; Graphiti front door is GRAPHITI_MCP_URL"
+def _graphiti_health(probe: dict[str, Any]) -> tuple[str, str]:
+    """Classify a pre-built probe dict (tests + compact Graphiti_authenticated)."""
+    if not probe:
+        return UNKNOWN, "graphiti probe unavailable"
+    if probe.get("ok"):
+        return READY, "authenticated"
+    key = str(probe.get("primary_blocker") or "").strip().lower()
+    blocker = _BLOCKER_VOCAB.get(key, "unknown")
+    return DEGRADED, f"not authenticated (blocker: {blocker})"
 
 
 def _mcp_status(bootstrap: dict[str, Any] | None, proj_mcp: str) -> tuple[str, str]:
@@ -291,11 +426,23 @@ def _merge_authority_status(gov: Path) -> tuple[str, str]:
     return BLOCKED, "environment boolean authorized a merge (regression)"
 
 
-def _secret_boundary_status(_probe: dict[str, Any]) -> tuple[str, str]:
-    return READY, (
-        "model-controlled (capability broker retired; "
-        "no Infisical/Graphiti secret in this environment)"
-    )
+# The boundary is a posture label, never a credential. The probe value is used
+# only as a lookup KEY into this fixed vocabulary; the emitted string is always
+# one of these module constants, so no probe-derived value is ever printed
+# verbatim (severs the CodeQL clear-text-logging taint — the probe by contract
+# returns classifier fields only, never secret material).
+_SECRET_BOUNDARY_VOCAB = {
+    "model-controlled": "model-controlled",
+    "broker-mediated": "broker-mediated",
+    "operator-trusted": "operator-trusted",
+}
+
+
+def _secret_boundary_status() -> tuple[str, str]:
+    # This surface holds no credentials. Graphiti health is HTTPS to
+    # memory.quantumaipartners.com, not a broker-mediated probe.
+    boundary = _SECRET_BOUNDARY_VOCAB["model-controlled"]
+    return READY, f"{boundary} (no broker/Infisical/Graphiti secret in this environment)"
 
 
 def _aggregate(statuses: dict[str, str]) -> str:
@@ -362,9 +509,15 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     proj = _read_json(home / ".l9" / "claude" / "projection-receipt.json")
     bootstrap = _read_json(home / ".l9" / "claude" / "bootstrap-state.json")
     proj_status = _projection_statuses(proj)
-    probe = _retired_plane()
+    split = graphiti_probe(gov)
+    cli_status = str(split["cli"]["status"])
+    cli_note = str(split["cli"]["reason"])
+    mem_mcp_status = str(split["mcp"]["status"])
+    mem_mcp_note = str(split["mcp"]["reason"])
+    # Hydrate path is the CLI. MCP HTTP is a distinct dimension so a working
+    # CLI + missing MCP tools is not one word DEGRADED.
+    graphiti_status, graphiti_note = cli_status, cli_note
 
-    graphiti_status, graphiti_note = _graphiti_health(probe)
     mcp_status, mcp_note = _mcp_status(bootstrap, proj_status["mcp"])
     facade_status, facade_note = _makefile_facade(gov)
     disp_status, disp_note = _dispatcher_status(gov)
@@ -373,7 +526,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     # Deliberately not named with "secret": these hold constant posture labels,
     # but a "secret"-named local is a clear-text-logging source by CodeQL's
     # name heuristic once the receipt is printed. The value carries no credential.
-    boundary_status, boundary_note = _secret_boundary_status(probe)
+    boundary_status, boundary_note = _secret_boundary_status()
 
     freshness_status = ident.pop("_sha_status")
     sha_note = ident.pop("_sha_note")
@@ -389,6 +542,8 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         "hooks_status": proj_status["hooks"],
         "plugins_status": proj_status["plugins"],
         "MCP_status": mcp_status,
+        "memory_cli_status": cli_status,
+        "memory_mcp_status": mem_mcp_status,
         "Graphiti_authenticated_health": graphiti_status,
         "Makefile_facade_status": facade_status,
         "dispatcher_status": disp_status,
@@ -401,6 +556,8 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         "interpreter_importable_status": interp_note,
         "governance_freshness": sha_note,
         "MCP_status": mcp_note,
+        "memory_cli_status": cli_note,
+        "memory_mcp_status": mem_mcp_note,
         "Graphiti_authenticated_health": graphiti_note,
         "Makefile_facade_status": facade_note,
         "dispatcher_status": disp_note,
@@ -464,6 +621,8 @@ def _compact(receipt: dict[str, Any]) -> str:
         "hooks_status",
         "plugins_status",
         "MCP_status",
+        "memory_cli_status",
+        "memory_mcp_status",
         "Graphiti_authenticated_health",
         "Makefile_facade_status",
         "dispatcher_status",
@@ -486,7 +645,17 @@ def main() -> int:
     parser.add_argument("--read", action="store_true", help="Print a compact human block")
     parser.add_argument("--json", action="store_true", help="Print the receipt JSON")
     parser.add_argument("--no-write", action="store_true", help="Do not write the receipt file")
+    parser.add_argument(
+        "--graphiti-probe",
+        action="store_true",
+        help="Print memory.cli / memory.mcp JSON and exit (no readiness receipt)",
+    )
     args = parser.parse_args()
+
+    if args.graphiti_probe:
+        gov = args.root or _gov_root()
+        print(json.dumps(graphiti_probe(gov)))
+        return 0
 
     receipt = build_receipt(gov=args.root, workspace=args.workspace)
 

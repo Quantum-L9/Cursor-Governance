@@ -13,8 +13,8 @@ before any other hook or test starts, so those checkers fire once.
 
 Cursor (``CURSOR_AGENT`` / ``L9_GOVERNANCE_SURFACE=cursor`` / unset surface
 with no Claude markers) does **not** take this latch. Tree kernels stay a
-Claude Code / adapter-surface ceremony. Cursor scoped-commits after
-``make precommit-repo`` without a kernel receipt.
+Claude Code / adapter-surface ceremony so ``make pr`` / ``l9 pr`` share one
+finish path without a second RA+V&R apply on Cursor.
 """
 
 from __future__ import annotations
@@ -24,6 +24,7 @@ import hashlib
 import json
 import os
 import sys
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -46,6 +47,7 @@ KERNEL_EXEMPT_PREFIXES = CORPUS_SKIP_PREFIXES
 #: Tree-kernel latch is adapter-surface only. Cursor is the primary plane
 #: and must not stall commit/push on Recursive Alignment receipts.
 ADAPTER_KERNEL_SURFACES = frozenset({"claude-code", "codex", "gemini", "manus"})
+ADAPTER_SURFACES = ADAPTER_KERNEL_SURFACES
 #: Executable-plan templates are not Cursor plans. Do not require kernel_pass.
 PLAN_SKIP_PREFIXES = (
     PLAN_FIXTURE_PREFIX,
@@ -65,6 +67,12 @@ def _is_corpus_path(rel: str) -> bool:
         if norm == prefix.rstrip("/") or norm.startswith(prefix):
             return True
     return False
+
+
+def adapter_tree_kernels_required(environ: Mapping[str, str] | None = None) -> bool:
+    """Compat alias of ``kernel_latch_required`` (adapter ``make pr`` only)."""
+    source = os.environ if environ is None else environ
+    return kernel_latch_required(env=source)
 
 
 def changed_are_corpus_only(changed_paths: list[str]) -> bool:
@@ -259,7 +267,7 @@ def read_changed_file(path: Path | None) -> list[str]:
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
-def kernel_latch_required(*, env: dict[str, str] | None = None) -> bool:
+def kernel_latch_required(*, env: Mapping[str, str] | None = None) -> bool:
     """True only on Claude Code / peer adapter runtimes.
 
     Cursor sessions set ``CURSOR_AGENT``. CI and a bare shell have neither

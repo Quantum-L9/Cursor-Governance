@@ -46,8 +46,8 @@ a secret backend is one bad line away from using it.
 | `pypi.org`, `files.pythonhosted.org` | `uv sync --locked` (governance `uv.lock`), `uvx` for bandit / semgrep / pip-audit, `pre-commit`, `uv` itself |
 | `astral.sh`, `*.astral.sh` | `uv`-managed CPython download when the sandbox lacks the pinned interpreter (`.python-version` = 3.12). Not needed when a system 3.12 is already present |
 | `registry.npmjs.org` | consumer workspaces with `package.json` |
-| `memory.quantumaipartners.com` | Graphiti HTTPS front door (`GRAPHITI_MCP_URL`). Required. The capability broker never shipped. |
-| `semgrep.dev`, `*.semgrep.dev` | Semgrep **registry rulesets** (`p/python`, `p/secrets`) for local CE only. Authenticated AppSec is operator-side, not here |
+| `memory.quantumaipartners.com` | Graphiti HTTPS front door (`GRAPHITI_MCP_URL`, default `/graphiti/mcp`). CLI health uses `graphiti_memory_client.py`; MCP health is HTTP connect vs 401 vs 403 allowlist. Broker never shipped. Do not paste `GRAPHITI_MCP_TOKEN` |
+| `semgrep.dev`, `*.semgrep.dev` | Semgrep **registry rulesets** (`p/python`, `p/secrets`) for local CE only. Authenticated AppSec runs in the trusted worker, not here |
 
 ### Egress the agent must not need (contract §16)
 
@@ -62,9 +62,10 @@ that can reach a secret backend is one mistake away from using one.
 | `semgrep.dev` authenticated API | **trusted worker only** | CE rule downloads are fine from the agent; authenticated AppSec is not |
 | AWS Secrets Manager endpoints | **nobody** | The AWS bootstrap path is removed entirely (contract S1). Do not re-add it |
 
-Broker egress allow-list (applied to the broker's own network policy, not this
-one): `app.infisical.com`, `memory.quantumaipartners.com`, `sonarcloud.io`,
-`semgrep.dev`, plus any host a newly registered capability declares.
+Broker egress allow-list (if a broker is ever deployed — it is **not** the
+Graphiti health plane): `app.infisical.com`, `memory.quantumaipartners.com`,
+`sonarcloud.io`, `semgrep.dev`, plus any host a newly registered capability
+declares.
 
 ### Deliberately absent
 

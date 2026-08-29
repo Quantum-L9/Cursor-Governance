@@ -140,3 +140,31 @@ def test_authorize_release_without_record_kernels(
     allowed, reason = release_allows_remote(stacked_repo)
     assert allowed
     assert "release_authorized" in reason
+
+
+def test_cursor_surface_skips_tree_latch_without_receipt(
+    stacked_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "cursor")
+    gate = _gate()
+    code = stacked_repo / "ops" / "foo.py"
+    code.parent.mkdir(parents=True)
+    code.write_text("x = 1\n", encoding="utf-8")
+    changed = tmp_path / "changed.txt"
+    changed.write_text("ops/foo.py\n")
+    assert gate.precommit(stacked_repo, ROOT, changed) == 0
+
+
+def test_unset_surface_skips_tree_latch_without_receipt(
+    stacked_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
+    gate = _gate()
+    code = stacked_repo / "ops" / "foo.py"
+    code.parent.mkdir(parents=True)
+    code.write_text("x = 1\n", encoding="utf-8")
+    changed = tmp_path / "changed.txt"
+    changed.write_text("ops/foo.py\n")
+    assert gate.precommit(stacked_repo, ROOT, changed) == 0
+    assert gate.adapter_tree_kernels_required({}) is False
+    assert gate.adapter_tree_kernels_required({"L9_GOVERNANCE_SURFACE": "claude-code"}) is True

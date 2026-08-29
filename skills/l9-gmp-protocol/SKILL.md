@@ -82,7 +82,7 @@ Because ground truth (2) outranks the canonical docs (4), follow the repo's actu
 2. **Phase 1 — Baseline.** For each TODO confirm file exists, anchor resolves uniquely, no protected path is targeted, dependency chain is acyclic. Status: READY | PARTIAL | BLOCKED. Proceed only on READY (or explicit human override).
 3. **Phase 2 — Implement.** Apply only READY TODOs, line-anchored and minimal. No edits outside the locked plan. Keep imports/standards intact. Record file + line ranges per TODO.
 4. **Phase 3 — Enforce.** Add only the guards/tests/ACL/observability the TODO requires. Never weaken existing checks. Skip cleanly if the change needs none.
-5. **Phase 4 — Validate.** Cursor: `make precommit-repo`, `python -m py_compile`, targeted tests. Claude Code (`L9_GOVERNANCE_SURFACE=claude-code`): `make pr` (lint, XML, wiring, circular deps, Odoo 19 patterns), `python -m py_compile`, targeted tests. Record pass/fail; failures block.
+5. **Phase 4 — Validate.** `OPEN_PR=0 make pr` (or `l9 pr` with `OPEN_PR=0`), `python -m py_compile`, targeted tests. Record pass/fail; failures block.
 6. **Phase 5 — Recursive verify.** Diff actual changes against the locked plan: only planned files changed, line ranges match, protected systems untouched, no scope creep. Status: VERIFIED | DISCREPANCY_FOUND.
 7. **Phase 6 — Finalize.** Write the evidence report to `reports/GMP-Report-{NNN}-{slug}.md` and end with the verbatim final declaration.
 
@@ -95,7 +95,7 @@ Load `references/phase-contracts.md` for the per-phase input/output contract.
 - Production-grade only: no stubs, pseudo-code, or "you'll need to tweak". Drop-in usable.
 - Scope discipline: deliver only what was requested; no unsolicited refactors, summaries, or helper files.
 - A change that would require violating the modification lock must fail at Phase 0 and request a revised plan with explicit permission.
-- Respect repo guardrails (see `references/modification-lock.md`): `pipeline_v2.py` is never activated; new models need ACL; `sudo()` needs inline justification. Skill implement does not publish. Cursor `/gmp` finalize is catalog + commit + stop. Claude Code (`L9_GOVERNANCE_SURFACE=claude-code`) finalize publishes via `PR_REMEDIATE=1 make pr`.
+- Respect repo guardrails (see `references/modification-lock.md`): `pipeline_v2.py` is never activated; new models need ACL; `sudo()` needs inline justification. Skill implement does not publish. `/gmp` finalize publishes via `PR_REMEDIATE=0 make pr` / `l9 pr` on every surface.
 
 ## Resource Map
 
@@ -126,7 +126,7 @@ A GMP run is complete only when:
 - Phase 0 plan is locked, fully specified, and unambiguous.
 - Baseline reported READY (or documented override) before any implementation.
 - Only locked-plan files were modified (Phase 5 VERIFIED, no drift).
-- Applicable repo gates passed (Cursor: `make precommit-repo` / py_compile / targeted tests; `L9_GOVERNANCE_SURFACE=claude-code`: `make pr` / py_compile / targeted tests).
+- Applicable repo gates passed (`OPEN_PR=0 make pr` / `l9 pr` / py_compile / targeted tests).
 - Evidence report exists in `reports/` with all required sections and the verbatim final declaration.
 
 ## Failure Handling

@@ -250,6 +250,9 @@ def plugin_desired_set(
         if repo not in marketplaces:
             marketplaces.append(repo)
     plugins = list(core.get("plugins") or []) + list(class_cfg.get("plugins") or [])
+    for extra in desired.get("desktop_only") or []:
+        if extra not in plugins:
+            plugins.append(extra)
     return marketplaces, plugins
 
 
@@ -469,6 +472,13 @@ def run(
         outcomes.append(project_commands(root, workspace, check))
     if "rules" in wanted:
         outcomes.append(project_rules(root, workspace, check))
+        if os.environ.get("SKIP_PLUGIN_MARKETPLACE", "") == "true":
+            for outcome in outcomes:
+                if outcome.name == "rules":
+                    outcome.detail["hosted_context7"] = (
+                        "MCP tools absent; obligation is skill l9-context7-docs "
+                        "or official docs GET"
+                    )
     if "settings" in wanted or "hooks" in wanted:
         settings_outcome, hooks_outcome = project_settings(root, workspace, check)
         if "settings" in wanted:

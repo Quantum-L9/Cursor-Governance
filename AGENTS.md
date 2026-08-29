@@ -1015,3 +1015,23 @@ This fragment supersedes the “after every local commit, run `make precommit-re
 - `make precommit-repo` is **optional local autofix** when you want the rewrite before publish. It is **not** a prerequisite of `make pr`. Do not add it as a Make prereq of `pr-check` / `pr`.
 - Receipt skip already prevents a second pytest on an unchanged tree. Do not run a second full gate on an unchanged tree.
 - Do not flip `PR_REMEDIATE`. Campaign and L4 authorize-release publish stay `PR_REMEDIATE=0 make pr`.
+
+<!-- ONE_FINISH_MAKE_PR_V1 -->
+## One finish path (2026-08-29)
+
+This fragment supersedes Cursor “STOP after `make precommit-repo`” sentences
+in Profile `session_start_block` / `llm_rules_override` (live text is rewritten
+in `ops/autonomy/surface_profile.yaml`). Historical paragraphs stay on disk
+where `additive_only`. It also supersedes the Cursor “scoped-commits after
+`make precommit-repo`” sentence in `CURSOR_KERNEL_LATCH_ADAPTER_ONLY_V1`.
+
+- All surfaces (Cursor, Claude Code desktop, Claude Code Mobile): finished
+  work → scoped-commit → `l4_local.py authorize-release` →
+  `PR_REMEDIATE=0 make pr` / `l9 pr`.
+- Do not run `make precommit-repo` then `make pr`. Receipt skip is not a
+  second ceremony.
+- Tree kernels: Cursor skips the tree latch (`kernel_gate.py`). Desktop and
+  Mobile still fire them on `make pr`. Plan-kernel and `/ff` corpus kernels
+  are unchanged.
+- Combined `beforeShellExecution` is Cursor-only. Claude uses PreToolUse
+  (`local_execution_gate_wrap.py`). Do not copy the hook cut.

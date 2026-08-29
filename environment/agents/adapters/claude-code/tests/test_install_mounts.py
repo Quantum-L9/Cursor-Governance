@@ -49,6 +49,7 @@ class InstallMountTests(unittest.TestCase):
                 # The shared bootstrap needs network and a uv sync; its own suite
                 # covers it. Skipping it here keeps this test about the adapter.
                 "L9_SKIP_SHARED_BOOTSTRAP": "1",
+                "L9_GRAPHITI_PROBE_SKIP": "1",
             }
         )
         env.pop("L9_GOVERNANCE_DIR", None)
@@ -120,6 +121,84 @@ class InstallMountTests(unittest.TestCase):
         self.assertEqual(
             foreign.read_bytes(), before, "a consumer's own hook must be byte-identical"
         )
+
+    def test_marketplace_skip_does_not_degrade_plugins(self) -> None:
+        env = dict(os.environ)
+        env.update(
+            {
+                "HOME": str(self.home),
+                "L9_CLAUDE_BOOTSTRAP_RECEIPT": str(self.receipt),
+                "L9_SKIP_SHARED_BOOTSTRAP": "1",
+                "L9_GRAPHITI_PROBE_SKIP": "1",
+                "SKIP_PLUGIN_MARKETPLACE": "true",
+            }
+        )
+        env.pop("L9_GOVERNANCE_DIR", None)
+        result = subprocess.run(
+            [
+                "bash",
+                str(INSTALL),
+                "--governance",
+                str(REPO),
+                "--workspace",
+                str(self.workspace),
+                "--quiet",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        self.assertIn(result.returncode, (0, 1), result.stderr[-2000:])
+        parsed = json.loads(self.receipt.read_text(encoding="utf-8"))
+        self.assertEqual(parsed["plugins"], "READY")
+        self.assertIn(parsed.get("commands"), ("READY", "DEGRADED"))
+        self.assertTrue((self.workspace / ".claude" / "commands").is_dir())
+
+    def test_check_mode_uses_live_ssot_not_workspace_clone(self) -> None:
+        """Hosted `make claude-install-check` passes CURDIR as --governance."""
+        fake_gov = self.root / "workspace-clone"
+        fake_gov.mkdir()
+        (fake_gov / "CANONICAL_LAW.md").write_text("clone, not SSOT\n", encoding="utf-8")
+        env = dict(os.environ)
+        env.update(
+            {
+                "HOME": str(self.home),
+                "L9_CLAUDE_BOOTSTRAP_RECEIPT": str(self.receipt),
+                "L9_SKIP_SHARED_BOOTSTRAP": "1",
+                "L9_GRAPHITI_PROBE_SKIP": "1",
+                "SKIP_PLUGIN_MARKETPLACE": "true",
+                "L9_GOVERNANCE_DIR": str(REPO),
+            }
+        )
+        result = subprocess.run(
+            [
+                "bash",
+                str(INSTALL),
+                "--check",
+                "--governance",
+                str(fake_gov),
+                "--workspace",
+                str(self.workspace),
+                "--quiet",
+            ],
+            capture_output=True,
+            text=True,
+            env=env,
+            check=False,
+        )
+        combined = result.stdout + result.stderr
+        self.assertIn("is not the live SSOT", combined)
+        parsed = json.loads(self.receipt.read_text(encoding="utf-8"))
+        self.assertEqual(parsed["plugins"], "READY")
+        self.assertNotEqual(parsed["shared_bootstrap"], "BLOCKED")
+        live_sha = subprocess.run(
+            ["git", "-C", str(REPO), "rev-parse", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        self.assertEqual(parsed["governance_revision"], live_sha)
 
 
 class LockedInterpreterPinTests(unittest.TestCase):

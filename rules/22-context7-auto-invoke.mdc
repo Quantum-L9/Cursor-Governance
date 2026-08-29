@@ -14,12 +14,20 @@ alwaysApply: true
 **MCP servers:** `context7` (Claude Code plugin) **and** `user-Context7` (Cursor).
 **Skill:** `@.cursor-commands/skills/l9-context7-docs/`
 
+When Context7 MCP tools (`mcp__context7__*`) are **absent** — hosted Web/Mobile
+with `SKIP_PLUGIN_MARKETPLACE=true` — the obligation is skill `l9-context7-docs`
+or an official docs GET. Do not treat a missing MCP tool as permission to skip
+docs, and do not register a credential-bearing Context7 HTTP MCP to close this.
+
 Call whichever server this surface exposes. Do not treat a missing allow-list
 entry as permission to skip.
 
 ## Mandatory — call Context7 before first implementation
 
-When the task touches any item below, **read MCP tool schemas**, then call `resolve-library-id` → `query-docs` **before writing or editing code**. Do not wait for the user to say "use context7".
+When the task touches any item below, **read MCP tool schemas** if those tools
+exist, then call `resolve-library-id` → `query-docs`. If those MCP tools are
+not on this session, invoke skill `l9-context7-docs` (or GET official docs)
+**before writing or editing code**. Do not wait for the user to say "use context7".
 
 | Trigger | Examples | Seed library names |
 |---------|----------|-------------------|

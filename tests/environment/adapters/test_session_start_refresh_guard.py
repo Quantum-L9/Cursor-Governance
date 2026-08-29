@@ -85,9 +85,12 @@ def test_hook_still_fails_open() -> None:
 def test_bootstrap_repair_marker_follows_installer_success() -> None:
     """A failed installer must not permanently skip repair at this revision."""
     text = body()
-    installer = text.index('timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" bash "$installer"')
-    marker_write = text.index(': >"$marker"')
-    assert installer < marker_write, "persist the attempt marker only after installer success"
+    timeout = text.index('timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}"')
+    installer = text.index('bash "$installer"', timeout)
+    marker_write = text.index(': >"$marker"', installer)
+    assert timeout < installer < marker_write, (
+        "persist the attempt marker only after installer success"
+    )
 
 
 def _synthetic_gov(home: Path, *, tracked_dirt: bool, untracked_dirt: bool) -> Path:

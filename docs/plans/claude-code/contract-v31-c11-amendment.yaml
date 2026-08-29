@@ -1,0 +1,20 @@
+# C11 hosted remainder (v3.1 reshape)
+# The live v3.1 YAML donor is not in this checkout. This fragment is the
+# remainder contract: Graphiti over HTTPS, marketplace skip READY, no broker
+# deploy. Bind to claude_hosted_remainder_a53a9394.
+
+schema: l9.claude-code-hosted-remainder.v3.1-c11
+supersedes:
+  - docs/plans/claude-code/mobile-bootstrap-fixes T5 (six-server broker template)
+  - docs/plans/claude-code/mobile-bootstrap-fixes T9 (command reconciler — already projected)
+  - docs/plans/claude-code/mobile-bootstrap-fixes T11 (deploy broker)
+  - docs/plans/claude-code/contract-v31-fixes C11 broker-deployment clauses
+do_not:
+  - deploy broker.quantumaipartners.com
+  - paste GRAPHITI_MCP_TOKEN
+  - DEGRADE plugins because SKIP_PLUGIN_MARKETPLACE=true
+require:
+  graphiti_front_door: https://memory.quantumaipartners.com/graphiti/mcp
+  memory_dimensions: [memory.cli, memory.mcp]
+  context7_when_mcp_absent: skill l9-context7-docs or official docs GET
+  marketplace_skip: READY

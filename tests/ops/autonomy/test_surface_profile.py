@@ -27,6 +27,10 @@ def test_profile_block_has_doctrine() -> None:
     # longer has any reason to spell out.
     assert "kernel_gate.py" in block
     assert "precommit-repo" in block
+    assert "l9 pr" in block
+    assert "One finish, all surfaces" in block
+    assert "Cursor does not take this step" not in block
+    assert "**STOP**" not in block
     assert block_sha256(ROOT)
 
 
@@ -38,6 +42,9 @@ def test_llm_override_outranks_ask_first() -> None:
     assert "local_execution_gate.py" in text
     assert "MUST scoped-commit locally" in text
     assert "Unique dirty files you authored are a rule" in text
+    assert "PR_REMEDIATE=0 make pr" in text
+    assert "l9 pr" in text
+    assert "After `make precommit-repo` and that commit, **STOP**" not in text
 
 
 def test_session_start_emits_profile(tmp_path: Path) -> None:

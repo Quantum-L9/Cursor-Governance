@@ -65,6 +65,23 @@ LINES=()
 LINES+=("L9 Governance — Claude Code session")
 LINES+=("workspace: $WORKSPACE")
 
+# Hosted/cloud: a raw pre-commit hook is a forbidden install (it runs the
+# catalog without the surface-aware SKIP list). Fail-open.
+if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ] || [ -n "${CLAUDE_CODE_REMOTE:-}" ]; then
+  gitdir=$(git -C "$WORKSPACE" rev-parse --git-dir 2>/dev/null || true)
+  if [ -n "$gitdir" ]; then
+    case "$gitdir" in
+      /*) ;;
+      *) gitdir="$WORKSPACE/$gitdir" ;;
+    esac
+    hook="$gitdir/hooks/pre-commit"
+    if [ -e "$hook" ]; then
+      rm -f "$hook" 2>/dev/null || true
+      LINES+=("cloud hygiene: removed forbidden raw .git/hooks/pre-commit")
+    fi
+  fi
+fi
+
 # --- Cloud-only governance refresh (CLAUDE_CODE_REMOTE=true) -----------------
 # Anthropic documents CLAUDE_CODE_REMOTE=true as the supported discriminator
 # for cloud-session-only setup. In cloud, the governance clone is an ephemeral
@@ -194,7 +211,29 @@ if GOV=$(resolve_governance_dir); then
   LINES+=("authority order: CANONICAL_LAW.md > Autonomy Surface Profile > AGENTS.md > skills > agent-invented contracts")
   if [ -d "$GOV/skills" ]; then
     n=$(find "$GOV/skills" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+    loadable=0
+    for d in "$WORKSPACE/.claude/skills" "$HOME/.claude/skills"; do
+      if [ -d "$d" ]; then
+        c=$(find "$d" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+        loadable=$((loadable + c))
+      fi
+    done
     LINES+=("skills available: $n l9-* skills under \$GOV/skills (invoke by name)")
+    LINES+=("skills loadable: $loadable SKILL.md under .claude/skills discovery paths")
+  fi
+
+  # Two-clone topology: workspace checkout vs live SSOT SessionStart loaded.
+  if git -C "$WORKSPACE" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    ws_root=$(git -C "$WORKSPACE" rev-parse --show-toplevel 2>/dev/null || echo "$WORKSPACE")
+    ws_abs=$(cd "$ws_root" 2>/dev/null && pwd -P)
+    gov_abs=$(cd "$GOV" 2>/dev/null && pwd -P)
+    if [ -n "$ws_abs" ] && [ -n "$gov_abs" ] && [ "$ws_abs" != "$gov_abs" ]; then
+      ws_sha=$(git -C "$ws_root" rev-parse --short HEAD 2>/dev/null || echo "?")
+      gov_sha=$(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo "?")
+      LINES+=("two-clone: workspace $ws_abs @$ws_sha")
+      LINES+=("two-clone: live SSOT $gov_abs @$gov_sha")
+      LINES+=("two-clone: rules resolve from live SSOT (not the workspace clone)")
+    fi
   fi
 
   # --- Autonomy Surface Profile doctrine (standing A4) ---------------------
@@ -223,6 +262,14 @@ if GOV=$(resolve_governance_dir); then
       projection=*)  LINES+=("claude projection: WARN ${PROJECTION_LINE#projection=} — see ~/.l9/claude/projection-receipt.json") ;;
       *)             LINES+=("claude projection: WARN engine produced no summary — run 'make claude-install'") ;;
     esac
+  fi
+  # Projection rewrites managed settings.env from the template. Re-apply the
+  # hosted overlay after every SessionStart projection, not only install.sh.
+  if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ] || [ -n "${CLAUDE_CODE_REMOTE:-}" ]; then
+    overlay="$GOV/environment/agents/adapters/claude-code/overlay_hosted_settings_env.py"
+    if [ -f "$overlay" ] && command -v "$PY" >/dev/null 2>&1; then
+      "$PY" "$overlay" --workspace "$WORKSPACE" >/dev/null 2>&1 || true
+    fi
   fi
 
   if [ -f "$PROFILE_LOADER" ] && command -v "$PY" >/dev/null 2>&1; then
@@ -325,7 +372,9 @@ except Exception:
       if [ ! -f "$marker" ] && [ -f "$installer" ]; then
         mkdir -p "$HOME/.l9/claude"
         LINES+=("bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once")
-        if timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" bash "$installer" \
+        if timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" \
+          env L9_BOOTSTRAP_LOG_PATH="$HOME/.l9/claude/bootstrap-repair-${revision}.log" \
+          bash "$installer" \
           >"$HOME/.l9/claude/bootstrap-repair-${revision}.log" 2>&1; then
           : >"$marker"
         fi
@@ -333,12 +382,24 @@ except Exception:
       ;;
   esac
 
-  local block
+  # A receipt written for a different directory reports READY for artifacts this
+  # session never loads, so compare the wired workspace against this project.
+  local wired block prefix
+  wired="$("$py" -c 'import json,sys
+try:
+    print(json.load(open(sys.argv[1], encoding="utf-8")).get("workspace",""))
+except Exception:
+    print("")' "$HOME/.l9/claude/bootstrap-state.json" 2>/dev/null || true)"
+  prefix=""
+  if [ -n "$wired" ] && [ "$wired" != "$WORKSPACE" ]; then
+    prefix="STALE: "
+    LINES+=("STALE: bootstrap receipt workspace $wired != session $WORKSPACE")
+  fi
   block="$("$py" "$reader" --read 2>/dev/null || true)"
   if [ -n "$block" ]; then
     LINES+=("--- L9 Claude environment ---")
     while IFS= read -r line || [ -n "$line" ]; do
-      LINES+=("$line")
+      LINES+=("${prefix}${line}")
     done <<< "$block"
   else
     LINES+=("L9 Claude environment: bootstrap receipt unreadable — run 'make claude-install'")
@@ -348,18 +409,6 @@ except Exception:
     local refresh
     refresh="$("$py" "$refresh_reader" --read 2>/dev/null || true)"
     [ -n "$refresh" ] && LINES+=("$refresh")
-  fi
-
-  # A receipt written for a different directory reports READY for artifacts this
-  # session never loads, so compare the wired workspace against this project.
-  local wired
-  wired="$("$py" -c 'import json,sys
-try:
-    print(json.load(open(sys.argv[1], encoding="utf-8")).get("workspace",""))
-except Exception:
-    print("")' "$HOME/.l9/claude/bootstrap-state.json" 2>/dev/null || true)"
-  if [ -n "$wired" ] && [ "$wired" != "$WORKSPACE" ]; then
-    LINES+=("WARN: bootstrap wired $wired, but this project is $WORKSPACE — .claude mirrors may be missing")
   fi
 }
 
@@ -388,10 +437,39 @@ emit_account_drift() {
   fi
 }
 
-# --- Capability plane (RETIRED 2026-08-29, never shipped) -------------------
+# --- Capability plane readiness (authenticated; never a secret) -------------
+# Graphiti over HTTPS (CLI + MCP). Distinct reasons: connect vs 401 vs 403
+# allowlist. Empty hydrate is honest; memory never gates repository writes.
+# Capability broker retired 2026-08-29 (never shipped; not probed).
 emit_capability_readiness() {
+  local py="$1"
+  local receipt="$HOME/.l9/claude/readiness-receipt.json"
+  [ -f "$receipt" ] || return 0
+  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
+
+  # Reuse the receipt from emit_readiness_receipt (one Graphiti probe).
+  local parsed
+  parsed="$("$py" -c '
+import json, os, sys
+path = os.path.expanduser("~/.l9/claude/readiness-receipt.json")
+try:
+    d = json.load(open(path, encoding="utf-8"))
+except Exception:
+    sys.exit(0)
+print("memory.cli=" + str(d.get("memory_cli_status", "UNKNOWN")))
+print("memory.mcp=" + str(d.get("memory_mcp_status", "UNKNOWN")))
+print("graphiti_authenticated_health=" + str(d.get("Graphiti_authenticated_health", "UNKNOWN")))
+notes = d.get("notes") if isinstance(d.get("notes"), dict) else {}
+print("primary_blocker=" + str(notes.get("Graphiti_authenticated_health") or "none"))
+' 2>/dev/null || true)"
+  [ -n "$parsed" ] || return 0
+  LINES+=("--- capability plane readiness ---")
   LINES+=("capability_broker=retired (never shipped; not probed)")
-  LINES+=("memory: GRAPHITI_MCP_URL / local Graphiti CLI (no broker probe)")
+  LINES+=("secret_boundary_status=model-controlled (no broker/Infisical/Graphiti secret in this environment)")
+  while IFS= read -r line || [ -n "$line" ]; do
+    [ -n "$line" ] && LINES+=("$line")
+  done <<< "$parsed"
+  LINES+=("mcp_configuration=.mcp.json is a projection of mcp.template.json (single MCP authority)")
 }
 
 # --- Final machine-readable readiness receipt (Phase 7) ---------------------
@@ -415,8 +493,20 @@ emit_readiness_receipt() {
 
 emit_bootstrap_status "$PY"
 emit_account_drift "$PY"
-emit_capability_readiness "$PY"
 emit_readiness_receipt "$PY"
+emit_capability_readiness "$PY"
+
+if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
+  LINES+=("Context7 (hosted skip): MCP tools absent — use skill l9-context7-docs")
+fi
+
+skill_log="$HOME/.claude/l9/skill-usage.jsonl"
+if [ -f "$skill_log" ]; then
+  skill_n=$(wc -l < "$skill_log" | tr -d ' ')
+  LINES+=("skill-usage: $skill_log ($skill_n entries)")
+else
+  LINES+=("skill-usage: $skill_log (absent — logger never wrote)")
+fi
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"
