@@ -172,13 +172,31 @@ def filter_slices_against_tip(
     slices: list[list[dict[str, Any]]],
     tip: str,
 ) -> tuple[list[list[dict[str, Any]]], list[str]]:
-    """Drop commits whose cherry-pick onto the tip conflicts. Unknown is drop."""
+    """Drop commits whose cherry-pick onto the tip conflicts. Unknown is drop.
+
+    Children of a kept parent are kept without a tip probe: ``parent..sha``
+    against the original tip false-conflicts once the parent already
+    rewrites the same file.
+    """
     kept: list[list[dict[str, Any]]] = []
     skipped: list[str] = []
     for group in slices:
+        by_sha = {str(item.get("sha") or ""): item for item in group}
+        novels = [
+            NovelCommit(
+                sha=sha,
+                paths=tuple(item.get("paths") or ()),
+                ref=str(item.get("ref") or ""),
+            )
+            for sha, item in by_sha.items()
+            if sha
+        ]
+        ordered = order_slice(repo, novels) if novels else []
         keep: list[dict[str, Any]] = []
-        for item in group:
-            sha = str(item.get("sha") or "")
+        kept_shas: set[str] = set()
+        for novel in ordered:
+            item = by_sha[novel.sha]
+            sha = novel.sha
             if (
                 not sha
                 or not is_git_repo(repo)
@@ -186,12 +204,20 @@ def filter_slices_against_tip(
                 or not sha_is_commit(repo, sha)
             ):
                 keep.append(item)
+                kept_shas.add(sha)
+                continue
+            parent = _git(repo, "rev-parse", f"{sha}^")
+            parent_sha = parent.stdout.strip() if parent.returncode == 0 else ""
+            if parent_sha and parent_sha in kept_shas:
+                keep.append(item)
+                kept_shas.add(sha)
                 continue
             conflicts = probe_cherry_conflicts(repo, tip, sha)
             if conflicts is None or conflicts:
                 skipped.append(sha)
                 continue
             keep.append(item)
+            kept_shas.add(sha)
         if keep:
             kept.append(keep)
     return kept, skipped
@@ -526,8 +552,8 @@ def default_extract(
     index: int,
 ) -> tuple[str, str]:
     short = (slice_commits[0]["sha"] if slice_commits else "empty")[:8]
-    branch = f"feat/pr-train-{index}-{short}"
     stamp = f"{os.getpid()}-{int(time.time())}"
+    branch = f"feat/pr-train-{index}-{short}-{stamp}"
     worktree = Path.home() / ".l9" / "gov-worktrees" / f"pr-train-{index}-{stamp}"
     if worktree.exists():
         raise RuntimeError(f"extract worktree already exists: {worktree}")

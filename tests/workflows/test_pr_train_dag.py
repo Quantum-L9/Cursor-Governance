@@ -579,6 +579,27 @@ def test_tip_preflight_uses_cherry_pick_not_tree_merge(tmp_path):
     assert kept[0][0]["sha"] == unique
 
 
+def test_tip_preflight_keeps_child_when_parent_stays(tmp_path):
+    """A follow-up commit on a kept parent must not probe against the original tip."""
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "dag.py", "v0\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    parent = _commit_file(repo, "dag.py", "v1\n", "parent")
+    child = _commit_file(repo, "dag.py", "v2\n", "child")
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "other.txt", "x\n", "unrelated tip")
+    assert probe_cherry_conflicts(repo, tip, child)
+    kept, skipped = filter_slices_against_tip(
+        repo,
+        [[{"sha": child, "paths": ["dag.py"]}, {"sha": parent, "paths": ["dag.py"]}]],
+        tip,
+    )
+    assert skipped == []
+    assert [item["sha"] for item in kept[0]] == [parent, child]
+
+
 def test_tip_conflict_commit_dropped_clean_stays(tmp_path):
     repo = tmp_path / "git"
     repo.mkdir()
