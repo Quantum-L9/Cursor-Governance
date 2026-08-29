@@ -28,6 +28,8 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     group_slices,
     order_slice,
     parse_merge_tree_name_only,
+    probe_cherry_conflicts,
+    probe_sha_conflicts,
     resolve_ff_clone,
     run_pr_train,
     shares_generated_clobber,
@@ -547,6 +549,33 @@ def test_campaign_halt_skips_remediator_and_ff(monkeypatch, tmp_path):
     assert "campaign" in state.halt_reason
     assert state.skill_dispatch == ""
     assert state.ff_ran is False
+
+
+def test_tip_preflight_uses_cherry_pick_not_tree_merge(tmp_path):
+    """A unique-file commit on an old base must not skip after the tip squash.
+
+    Tree-merge(tip, sha) conflicts on every file the squash already landed
+    because ``sha``'s tree still carries the pre-tip bytes. Cherry-pick only
+    applies parent..sha.
+    """
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    _commit_file(repo, "keep.txt", "feature-edit\n", "ancestral edit")
+    unique = _commit_file(repo, "ops/unique.py", "x\n", "unique")
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "keep.txt", "squashed\n", "squash")
+    tree = probe_sha_conflicts(repo, tip, unique)
+    cherry = probe_cherry_conflicts(repo, tip, unique)
+    assert tree, "tree-merge must still see the ancestral keep.txt clash"
+    assert cherry == []
+    kept, skipped = filter_slices_against_tip(
+        repo, [[{"sha": unique, "paths": ["ops/unique.py"]}]], tip
+    )
+    assert skipped == []
+    assert kept[0][0]["sha"] == unique
 
 
 def test_tip_conflict_commit_dropped_clean_stays(tmp_path):

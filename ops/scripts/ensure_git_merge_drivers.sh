@@ -14,6 +14,22 @@ DRIVER="$SCRIPT_DIR/git_merge_driver_generated.sh"
 CHECK_ATTRIBUTES=0
 REPO="$(pwd)"
 
+_is_ephemeral_path() {
+  case "$1" in
+    */.l9/gov-worktrees/*|*/.l9/program-worktrees/*|*/.l9/worktrees/*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+# Extracts share the clone gitdir. Registering an extract-absolute driver
+# poisons merge-tree for every worktree after that extract is removed.
+_canon="${CURSOR_GOVERNANCE_DIR:-$HOME/.cursor-governance}/ops/scripts/git_merge_driver_generated.sh"
+if _is_ephemeral_path "$SCRIPT_DIR" || _is_ephemeral_path "$DRIVER"; then
+  if [ -f "$_canon" ]; then
+    DRIVER="$_canon"
+  fi
+fi
+
 for arg in "$@"; do
   case "$arg" in
     --check-attributes) CHECK_ATTRIBUTES=1 ;;
