@@ -1,0 +1,342 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "EIE inference isolation v1",
+  "objective": "Emit a compile_brief-admissible INTENT for Quantum-L9/Enrichment.Inference.Engine that restores deterministic RuleEngine inference and tenant-authoritative idempotency/persistence (Green 6, then 45, then 35, then 40), then hand that memo to make campaign INTENT= without mutating app/ from the planning agent.",
+  "success_criteria": [
+    "scoped brief wc -c is at most 61351 bytes (30 percent of the 204505-byte corpus)",
+    "brief contains five Release A through E headings and an It is: objective extractable by compile_brief.py",
+    "campaign_input.py classifies the brief as kind brief with route brief -> activate -> campaign_source -> blueprint -> PEC",
+    "validate_plan_document.py PASS on this PLAN_DOCUMENT",
+    "projected .plan.md retains Execute via @environment/program-execution + autonomy and names the INTENT path",
+    "PE Task Cards exclude Greens 30-34, 36-39, 41-50, HTTP tenant invention, and v2/DAG deletion"
+  ],
+  "scope": {
+    "in": [
+      ".cursor-commands/WIP/PE EIE/eie-inference-isolation-v1.md",
+      ".cursor/plans/eie_inference_isolation.plan.json",
+      ".cursor/plans/eie_inference_isolation_<8hex>.plan.md",
+      "Release A Green 6 RuleEngine wiring files listed on T-A",
+      "Release B Alembic lineage files listed on T-B",
+      "Release C tenant Redis and Postgres idempotency files listed on T-C",
+      "Release D ResultStore and approval tenant predicates listed on T-D",
+      "Release E transport-tenant authority files listed on T-E"
+    ],
+    "out": [
+      "Greens 30-34 peer-boundary mutations",
+      "Greens 36-39 outbox, effect semantics, catalog, GRAPH inbox",
+      "Greens 41-50 proposals, enrich-path collapse, convergence, ops, release closure",
+      "PlasticOS rewrite to v2 or derived_from",
+      "delete inference_bridge_v2",
+      "direct HTTP /api/v1 tenant invention",
+      "deprecated chassis/router.py production dispatch",
+      "l9-plan or l9-pe-campaign-activate skill-pack edits",
+      "COMPILE_ALLOWLIST.yaml edits",
+      "make campaign / pec / push / PR / merge from this planning emit",
+      "app/ or migrations/ writes by the planning agent"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind Quantum-L9/Enrichment.Inference.Engine at 7c4ce2596ca511de32dafe642ef4cc6ee1b21b6d",
+      "pass_criteria": "git rev-parse HEAD equals the locked SHA at plan authoring; PE run re-binds at admit",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "inventory .cursor-commands/WIP/PE EIE corpus and Repair Order",
+      "pass_criteria": "repaired order locked: Green 6 then 45 then 35 then 40; 30-34 deferred as invariants",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "confirm EIE Makefile has agent-check and lacks pr-check",
+      "pass_criteria": "agent-check exists; pr-check absent; do not invent pr-check",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T-A",
+      "task": "Restore deterministic RuleEngine inference against PlasticOS inference_rules and prove the HDPE cascade",
+      "files": [
+        "app/main.py",
+        "app/engines/handlers.py",
+        "app/engines/inference/rule_loader.py",
+        "app/engines/inference/rule_engine.py",
+        "app/engines/inference_bridge_adapter.py",
+        "tests/test_rule_engine.py",
+        "tests/test_rule_loader.py",
+        "tests/test_inference_wiring.py",
+        "domains/plasticos/spec.yaml"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "register_orchestration domain_reader and InferenceBridge RuleEngine backend",
+      "leverage_rank": 1,
+      "shared_root_cause": "startup omits DomainYamlReader and InferenceBridge returns empty results for flat rules"
+    },
+    {
+      "id": "T-B",
+      "task": "Lock one Alembic tree on migrations/ with one head; leave the alembic/versions orphan out of the chain",
+      "files": [
+        "alembic.ini",
+        "migrations/versions/001_initial_schema.py",
+        "alembic/versions/0002_perplexity_api_key_default.py"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": ["T-A"],
+      "operation": "Replace",
+      "anchor": "alembic.ini script_location = migrations",
+      "leverage_rank": 2,
+      "shared_root_cause": "two migration trees; orphan 0002 is not canonical"
+    },
+    {
+      "id": "T-C",
+      "task": "Make Redis and Postgres idempotency tenant-scoped, fingerprint-safe, and UNIQUE(tenant_id, idempotency_key)",
+      "files": [
+        "app/engines/enrichment_orchestrator.py",
+        "app/engines/handlers.py",
+        "app/services/idempotency.py",
+        "app/services/pg_store.py",
+        "app/services/pg_models.py",
+        "migrations/versions/"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T-B"],
+      "operation": "Replace",
+      "anchor": "enrich_entity idempotency get/set and EnrichmentResult uniqueness",
+      "leverage_rank": 3,
+      "shared_root_cause": "handler tenant is dropped; cache and DB key on idempotency_key alone"
+    },
+    {
+      "id": "T-D",
+      "task": "Require tenant predicates on ResultStore lookups and schema-proposal approval",
+      "files": [
+        "app/services/result_store.py",
+        "app/services/pg_store.py"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": ["T-C"],
+      "operation": "Replace",
+      "anchor": "approve_schema_proposal and get_result UUID-only queries",
+      "leverage_rank": 5,
+      "shared_root_cause": "UUID treated as authorization"
+    },
+    {
+      "id": "T-E",
+      "task": "Make transport tenant authoritative and reject payload tenant mismatch",
+      "files": [
+        "app/engines/handlers.py",
+        "app/services/chassis_handlers.py"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": ["T-C"],
+      "operation": "Replace",
+      "anchor": "payload.get(tenant_id) or tenant reversed",
+      "leverage_rank": 4,
+      "shared_root_cause": "payload tenant overrides trusted transport tenant"
+    }
+  ],
+  "critical_path": ["T-A", "T-B", "T-C", "T-E"],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "PE-admissible brief and validated PLAN_DOCUMENT exist",
+      "unlocks": "make campaign INTENT= on the scoped memo"
+    },
+    {
+      "id": "M1",
+      "outcome": "Green 6 deterministic inference proven on PlasticOS rules",
+      "unlocks": "later DAG quarantine and convergence consumers"
+    },
+    {
+      "id": "M2",
+      "outcome": "One Alembic head plus tenant-scoped idempotency and transport tenant authority",
+      "unlocks": "outbox and catalog waves without repeating isolation defects"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C0",
+      "after": "M0",
+      "evidence_required": "campaign_input kind=brief and validate_plan_document.py PASS",
+      "no_go_action": "stop; do not run make campaign or pec"
+    },
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "PlasticOS cascade test pass; RuleEngine/RuleLoader quarantine entries removed only after pass",
+      "no_go_action": "keep quarantine entries; do not claim inference restored"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "cross-tenant same-key isolation test and payload-mismatch rejection test pass; make agent-check green",
+      "no_go_action": "do not merge campaign/eie-inference-isolation-v1"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "C-13/C-21 and agent-check remain the law; this campaign does not rewrite governance docs"
+    },
+    {
+      "surface": "ARCHITECTURE.md",
+      "action": "n_a",
+      "reason": "terminal invariants already match AUDIT_SUPERSESSION; no new architecture surface"
+    },
+    {
+      "surface": ".cursor-commands/WIP/PE EIE/eie-inference-isolation-v1.md",
+      "action": "update",
+      "todo_ids": ["T-A", "T-B", "T-C", "T-D", "T-E"]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Is File 9 correct that Green 45 must wait for Greens 30-34, making this isolation slice unsafe?",
+      "Has Green 6 already landed on main, making Release A verify-only?",
+      "Is test_tenant_override load-bearing for an external consumer that requires payload tenant to win?"
+    ],
+    "assumed_false_ifs": [
+      "Alembic orphan 0002 is on the configured path",
+      "HTTP /api/v1 routes can establish a trustworthy tenant from the single api_key_hash",
+      "Planning-agent writes to app/ are required to make the brief compile"
+    ],
+    "blast_radius": "Wrong isolation semantics leak cross-tenant cache or DB hits; wrong inference wiring leaves converge inert or invents v2; T4 handler edits can break C-13 lockstep.",
+    "rollback": "Planning emit: delete the brief, PLAN_DOCUMENT JSON, and projected .plan.md. PE run: do not merge campaign/eie-inference-isolation-v1; revert the campaign branch."
+  },
+  "leverage": {
+    "ranked_todo_ids": ["T-A", "T-B", "T-C", "T-E", "T-D"],
+    "shared_causes": [
+      "trusted transport tenant is dropped at the application boundary",
+      "process-local or globally unique idempotency is treated as durable isolation",
+      "InferenceBridge ignores the PlasticOS inference_rules contract the RuleEngine already understands"
+    ],
+    "deletions_or_consolidations": [
+      "remove Partner node default",
+      "stop reading legacy global Redis idempotency keys",
+      "do not import orphan alembic/versions/0002 into the active chain"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "T4 edits to app/main.py, handlers.py, and chassis_handlers.py drift C-13/C-21",
+      "mitigation": "same-PR lockstep; no deprecated chassis dispatch; PR plus two reviewers"
+    },
+    {
+      "risk": "File 9 landing order is interpreted as a hard dependency of 45 on 30-34",
+      "mitigation": "document 30-34 as invariants; defer their mutations; stop if a 30-34 invariant is violated"
+    },
+    {
+      "risk": "quarantine ledger is edited before tests pass",
+      "mitigation": "delete fingerprints only after the matching tests pass in the same PR"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does a hidden overlay expose make pr-check on this machine?",
+      "decision_effect": "final_validation names make pr-check for G_PR_CHECK and binds the real gate to make agent-check",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Does a live HTTP consumer block File 2 Wave 6 disposition?",
+      "decision_effect": "HTTP tenant mapping stays out of this campaign",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 ~/.claude/skills/l9-plan/scripts/validate_plan_document.py .cursor/plans/eie_inference_isolation.plan.json",
+      "pass_criteria": "prints PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 ~/.cursor-governance/environment/program-execution/scripts/campaign_input.py --json .cursor-commands/WIP/PE EIE/eie-inference-isolation-v1.md",
+      "pass_criteria": "kind is brief and supported is true",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "make pr-check",
+      "pass_criteria": "named for G_PR_CHECK; when the target is absent, make agent-check is the EIE 7-gate equivalent and must pass before PE merge",
+      "status": "not_applicable"
+    },
+    {
+      "id": "V4",
+      "command": "make agent-check",
+      "pass_criteria": "all 7 gates pass on the PE campaign branch after Releases A-E",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1", "U2"],
+    "next_skill": "l9-ynp",
+    "stop_reason": "planning emit complete; product execution is make campaign INTENT= the scoped brief, not pec and not this planning agent"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "app/main.py",
+      "app/engines/handlers.py",
+      "app/engines/inference/rule_loader.py",
+      "app/engines/inference/rule_engine.py",
+      "app/engines/inference_bridge_adapter.py",
+      "app/engines/enrichment_orchestrator.py",
+      "app/services/idempotency.py",
+      "app/services/pg_store.py",
+      "app/services/pg_models.py",
+      "app/services/result_store.py",
+      "app/services/chassis_handlers.py",
+      "migrations/versions/",
+      "tests/test_rule_engine.py",
+      "tests/test_rule_loader.py",
+      "tests/test_inference_wiring.py"
+    ],
+    "must_not_modify": [
+      "app/api/v1/chassis_endpoint.py",
+      "chassis/router.py",
+      "chassis/registry.py",
+      "chassis/envelope.py",
+      "domains/plasticos/spec.yaml",
+      "alembic/versions/0002_perplexity_api_key_default.py",
+      ".github/workflows/",
+      "AGENTS.md",
+      "kb/"
+    ],
+    "preserved_contracts": [
+      "C-13 transport lockstep",
+      "C-21 SDK owns /v1/execute",
+      "C-02 handle_*(tenant, payload) -> dict",
+      "C-03 tenant isolation in persistence queries",
+      "Green 45 one Alembic head",
+      "AUDIT_SUPERSESSION terminal invariants"
+    ],
+    "validation_commands": [
+      "make pr-check",
+      "make agent-check",
+      "pytest tests/test_rule_engine.py tests/test_rule_loader.py tests/test_inference_wiring.py"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "scoped brief",
+    "PLAN_DOCUMENT",
+    "validate_plan_document PASS",
+    "campaign_input kind=brief"
+  ],
+  "estimate": "one PE campaign through execute; no merge"
+}
