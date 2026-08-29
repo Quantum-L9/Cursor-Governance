@@ -256,11 +256,38 @@ def test_blueprint_identity_law_matches_the_shared_implementation() -> None:
 def test_blueprint_digest_self_reference_is_prohibited() -> None:
     model = _model()
     assert model["blueprint_digest_self_reference"] == "prohibited"
-    assert model["mission_context_yaml_added"] is False
     ordering = model["non_circular_ordering"]
+    assert ordering.index("official Blueprint validation") < ordering.index(
+        "compute blueprint_digest"
+    ), "an invalid Blueprint has no admissible identity"
     assert ordering.index("compute blueprint_digest") < ordering.index("Mission Program Binding")
     assert ordering.index("Mission Program Binding") < ordering.index("Program Lock")
     assert ordering.index("Program Lock") < ordering.index("Controller")
+
+
+def test_the_non_circular_mission_context_projection_is_emitted() -> None:
+    """ADR-0026 permits a Mission context inside the Blueprint; the binding stays out.
+
+    The projection is safe there precisely because every field is known before
+    the Blueprint exists, so nothing in it can depend on ``blueprint_digest``.
+    """
+    model = _model()
+    assert model["mission_context_yaml_added"] is True
+
+    context = model["mission_context"]
+    assert context["filename"] == "MISSION_CONTEXT.yaml"
+    assert context["fields"] == ["schema", "mission_id", "mission_revision", "mission_digest"]
+    assert context["inside_blueprint_digest_domain"] == "required"
+    assert context["written_before"] == "MANIFEST.yaml finalization"
+    assert context["duplicates_mission_semantics"] is False
+    assert (MISSION_ROOT / context["json_schema"]).resolve().is_file()
+    assert (MISSION_ROOT / context["emitted_by"]).resolve().is_file()
+
+    schema = json.loads((MISSION_ROOT / context["json_schema"]).resolve().read_text("utf-8"))
+    assert schema["$id"] == context["schema"]
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == set(context["fields"])
+    assert "blueprint_digest" not in schema["properties"], "the projection cannot be circular"
 
 
 def test_no_binding_document_is_stored_inside_a_blueprint() -> None:

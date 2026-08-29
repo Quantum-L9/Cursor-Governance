@@ -18,6 +18,12 @@ if str(TEMPLATE_ROOT / "scripts") not in sys.path:
 
 import instantiate  # noqa: E402 — official template renderer (contract §17 reuse)
 
+from .mission_admission import validate_mission_context  # noqa: E402
+
+#: Emitted only for a Mission-bound resolution. Not MISSION_BINDING.yaml: that
+#: names blueprint_digest and may never live inside the Blueprint (ADR-0026).
+MISSION_CONTEXT_FILENAME = "MISSION_CONTEXT.yaml"
+
 AUTH_ACTIONS = (
     "inspect",
     "local_write",
@@ -78,8 +84,32 @@ def synthesize(resolution: dict[str, Any], output_root: Path, now: datetime | No
     for name, text in _markdown_overrides(program).items():
         (output_root / f"{name}.md").write_text(text, encoding="utf-8")
 
+    _write_mission_context(resolution, output_root)
+
     instantiate.write_manifest(output_root)
     return output_root
+
+
+def _write_mission_context(resolution: dict[str, Any], output_root: Path) -> Path | None:
+    """Emit the minimal Mission projection, before the manifest is finalized.
+
+    Ordering is the point. ``write_manifest`` inventories every Blueprint file
+    but its own, so a context written after it would be a Blueprint file the
+    manifest does not cover — the official validator rejects that, and the
+    Mission projection would sit outside the identity it is meant to be part of.
+
+    Unbound synthesis emits nothing and behaves exactly as before.
+    """
+    context = resolution.get("mission_context")
+    if context is None:
+        return None
+    # Re-validated here rather than trusted: the synthesizer writes into the
+    # digest domain, so anything that reached this resolution by another path
+    # must still be exactly the four-field projection.
+    payload = validate_mission_context(dict(context))
+    path = output_root / MISSION_CONTEXT_FILENAME
+    path.write_text(yaml.safe_dump(payload, sort_keys=False, width=110), encoding="utf-8")
+    return path
 
 
 def _reject_runtime_state(resolution: dict[str, Any]) -> None:

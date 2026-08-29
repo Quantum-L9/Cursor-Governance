@@ -93,10 +93,31 @@ non_circular_ordering:
   - Program Intent
   - Intent Resolver
   - Blueprint
+  - official Blueprint validation
   - compute blueprint_digest
   - Mission Program Binding
   - Program Lock
   - Controller
 
 blueprint_digest_self_reference: prohibited
-mission_context_yaml_added: false
+
+# ADR-0026: "a future Blueprint may contain a non-circular Mission context
+# projection with already-known Mission ID, revision, and digest". It is now
+# emitted. Every field is known before the Blueprint exists, so the projection
+# may live inside the digest domain — and must, since it is written before
+# MANIFEST.yaml is finalized. The final binding, which names blueprint_digest,
+# still may not.
+mission_context_yaml_added: true
+mission_context:
+  filename: MISSION_CONTEXT.yaml
+  schema: program-execution.mission-context.v1
+  json_schema: ../compiler/schemas/mission-context.schema.json
+  emitted_by: ../compiler/synthesizer.py
+  fields:
+    - schema
+    - mission_id
+    - mission_revision
+    - mission_digest
+  written_before: MANIFEST.yaml finalization
+  inside_blueprint_digest_domain: required
+  duplicates_mission_semantics: false

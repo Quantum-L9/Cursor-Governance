@@ -923,7 +923,7 @@
     },
     {
       "path": "compiler/README.md",
-      "sha256": "dcc62f2e4edb8b422d513f70c5beafbb117231de4cff1a73da98b3192b32806b"
+      "sha256": "f18a4fee8c920b3620cadf65518f5b9067fb69d21151a7af576e932c2775d1ce"
     },
     {
       "path": "compiler/__init__.py",
@@ -972,6 +972,10 @@
     {
       "path": "compiler/mission_admission.py",
       "sha256": "ca3b5e9e443978a50ad902a3dd6828b9e18b7b04350a321b85b6e9f1e9292d62"
+    },
+    {
+      "path": "compiler/mission_binding.py",
+      "sha256": "09293a306caa934f41817ba76671ed93c1cc7b6407815363402bef6eb394936c"
     },
     {
       "path": "compiler/policies/quantum-l9.safe-autonomy.v1.yaml",
@@ -1027,7 +1031,7 @@
     },
     {
       "path": "compiler/synthesizer.py",
-      "sha256": "3b786826461d15f77fd10fb40cc32bad68d52da593edf432eb17a9573c05e3a1"
+      "sha256": "3cb14bdec5349b8da9b9e95e5cccfbc477eb995ad973f86be563c9f86e32e7f4"
     },
     {
       "path": "compiler/tests/conftest.py",
@@ -1062,6 +1066,10 @@
       "sha256": "9d031b12ade180c1659978ee46c1fc9f51fde9d547737329631d5228194b3521"
     },
     {
+      "path": "compiler/tests/test_mission_binding.py",
+      "sha256": "40e796170467e71bb30b4738d2776db1a294af968144deb94f327a146daffbf5"
+    },
+    {
       "path": "compiler/tests/test_program_action.py",
       "sha256": "ac8e527976068bf14e476fb8941c9a3ad6b6abbf6a01029eb5b2aa4dd2a50574"
     },
@@ -1071,7 +1079,7 @@
     },
     {
       "path": "compiler/tests/test_synthesizer.py",
-      "sha256": "633328d1438c0d399d459eef755adc516e033e91062044edeb2e1f9be991d233"
+      "sha256": "8d13d1f6665fedc2cea3be1a5d6da70986312cc8bf23c481874d33cc45d23db5"
     },
     {
       "path": "conformance/README.md",
@@ -1435,7 +1443,7 @@
     },
     {
       "path": "mission/MISSION_PROGRAM_BINDING.yaml",
-      "sha256": "99dc0388f6e8b57cb48bf7872ce2afa456aafd039bed7d2a860f647db97ed8d3"
+      "sha256": "bf93c31d88a900c67f7ce5d9df87b3a510dee99aca3670d4a07766155f96ed24"
     },
     {
       "path": "mission/README.md",
@@ -1467,7 +1475,7 @@
     },
     {
       "path": "mission/tests/test_binding.py",
-      "sha256": "48662792d36c17820740bc802007ce6636f37860c96eb7048ecd303f52bbc5a4"
+      "sha256": "c3eaa3fdda365b8be15c1cd62b144dbe66b0b36a78f53479d124edfc9cce692d"
     },
     {
       "path": "mission/tests/test_mission.py",
