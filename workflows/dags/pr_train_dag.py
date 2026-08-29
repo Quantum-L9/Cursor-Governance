@@ -200,6 +200,8 @@ def collect_remainder_slice(
         raw_paths = item.get("paths")
         paths = tuple(raw_paths) if raw_paths else (load_commit_paths(repo, sha) or ())
         for path in remainder_paths_for_commit(repo, sha, tip, paths):
+            if _git(repo, "cat-file", "-e", f"{sha}:{path}").returncode != 0:
+                continue
             by_path[path] = sha
     if not by_path:
         return []
@@ -623,8 +625,15 @@ def extract_remainder(
             paths = [str(path) for path in (item.get("paths") or ()) if path]
             if not sha or not paths:
                 continue
+            present = [
+                path
+                for path in paths
+                if _git(repo, "cat-file", "-e", f"{sha}:{path}").returncode == 0
+            ]
+            if not present:
+                continue
             checkout = subprocess.run(
-                ["git", "-C", str(worktree), "checkout", sha, "--", *paths],
+                ["git", "-C", str(worktree), "checkout", sha, "--", *present],
                 text=True,
                 capture_output=True,
                 check=False,
@@ -633,6 +642,7 @@ def extract_remainder(
                 raise RuntimeError(
                     f"remainder checkout failed on {sha}: {checkout.stderr.strip()}"
                 )
+            item["paths"] = tuple(present)
             applied += 1
         if applied == 0:
             raise RuntimeError("remainder empty: no unique paths from tip-conflict commits")
