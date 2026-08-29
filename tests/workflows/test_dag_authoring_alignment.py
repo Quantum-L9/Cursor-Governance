@@ -265,7 +265,7 @@ def test_discovery_boundary_still_registers_every_session_dag():
     registered = {entry["id"] for entry in list_session_dags()}
     assert "dag-authoring-v1" in registered
     assert len(registered) >= 9
-    for symbol in ("DAG_AUTHORING_DAG", "INSPECT_DAG", "WIRE_DAG"):
+    for symbol in ("DAG_AUTHORING_DAG", "INSPECT_DAG", "PLAN_SIMPLE_BUILD_DAG", "WIRE_DAG"):
         assert symbol in workflows.dags.__all__
 
 

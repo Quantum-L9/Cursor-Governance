@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-29T08:23:32Z'
+generated_utc: '2026-08-29T08:41:26Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:ca06f7ea2ea08c6bf7044f0bfd5923e79d7d364c19fdbe1b4f5658529e27f7df
+source_tree_digest: sha256:8e74d0b5a9581bff3f1e15694f1697f44c665529bac4209d302669992f7f50f4
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -47,8 +47,8 @@ rules:
   globs: null
   first_heading: Slash Command Recognition
   has_yaml_frontmatter: true
-  line_count: 162
-  content_digest: sha256:f601de6bbc2214c3eadebce58f73d099225e07a01a72020b550b190937cf09b4
+  line_count: 163
+  content_digest: sha256:caca5dcf9d485d532cf1b298b8082dfbb98470ed0daa393f09c99068ebfc6b42
   authority: canonical_global
   context_cost: moderate
   deprecated: false

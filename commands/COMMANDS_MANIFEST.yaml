@@ -128,6 +128,9 @@ commands:
 - slash: /l9-plan
   file: commands/l9-plan.md
   enabled: true
+- slash: /l9-plan-build
+  file: commands/l9-plan-build.md
+  enabled: true
 - slash: /l9-plan-simple
   file: commands/l9-plan-simple.md
   enabled: true

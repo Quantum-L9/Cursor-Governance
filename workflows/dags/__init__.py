@@ -54,6 +54,7 @@ from workflows.dags.inspect_dag import (
     run_inspect,
 )
 from workflows.dags.intelligence_harvest_dag import INTELLIGENCE_HARVEST_V1
+from workflows.dags.plan_simple_build_dag import PLAN_SIMPLE_BUILD_DAG
 from workflows.dags.pr_train_dag import (
     PR_TRAIN_DAG,
     PrTrainState,
@@ -81,6 +82,7 @@ __all__ = [
     "GMP_EXECUTION_DAG",
     "HARVEST_DEPLOY_DAG",
     "INTELLIGENCE_HARVEST_V1",
+    "PLAN_SIMPLE_BUILD_DAG",
     "README_PIPELINE_DAG",
     "REFACTORING_DAG",
     "SLASH_COMMAND_UPDATE_DAG",
