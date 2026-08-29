@@ -24,6 +24,7 @@ REQUIRED = [
     "scripts/diagnose_ref_value.py",
     "scripts/git_fetch.py",
     "scripts/harvest_worktree_dirt.py",
+    "scripts/extract_path_union.py",
     "scripts/triage_preserved_refs.py",
     "scripts/pack_self_test.py",
     "scripts/validate_pack_structure.py",

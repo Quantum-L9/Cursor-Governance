@@ -8,8 +8,8 @@ metadata:
   tags: [l9, git, worktree, stash, diagnose-first, preserve, prune, harvest, hygiene]
   owner: igor_beylin
   status: active
-  version: 1.1.0
-  updated: 2026-08-21
+  version: 1.2.0
+  updated: 2026-08-28
 disable-model-invocation: true
 ---
 
@@ -25,7 +25,7 @@ Inventory git work with evidence receipts; extract unique value safely; propose 
 |------|----------|--------|
 | `audit` (default) | No | JSON + summary: unpushed, dirty, worktrees, orphans, stale, stashes |
 | `diagnose-value` | No | Per-ref diagnosis receipt vs `origin/main` |
-| `extract` | Local only | New branch/worktree + surgical commits; never deletes source ref |
+| `extract` | Local only | Dedicated worktree + path-union of allowlisted path-absent files; never cherry-picks a mixed leftover ref; never deletes source ref |
 | `harvest` | Report, then local extract | Classify leftover dirty/untracked/WIP across sibling worktrees; port unique paths onto a fresh `origin/main` worktree |
 | `triage-preserved` | No | Classify the refs `/ff` parked; **deletes nothing** |
 | `prune-propose` | No | Delete candidates + required receipts + copy-paste commands |
@@ -76,7 +76,7 @@ later prune-execute), `review` (`content_superset` — human reads it), `merged`
 3. **Harvest classify (RO)** — when leftover worktree dirt / WIP is in scope:
    `scripts/harvest_worktree_dirt.py --repo <path> --include-wip --json`.
 4. **Plan** — harvest/extract and/or prune-propose with rollback (reflog SHA in receipt).
-5. **Execute** — harvest or extract first (fresh `origin/main` worktree); prune-execute last and auth-gated; stash drop only with `L9_GIT_STASH_DROP_AUTHORIZED`.
+5. **Execute** — harvest or extract first (fresh `origin/main` worktree). Extract leftover refs with `scripts/extract_path_union.py` (path-union through the allowlist; never mixed-branch cherry-pick). Prune-execute last and auth-gated; stash drop only with `L9_GIT_STASH_DROP_AUTHORIZED`.
 
 ## Forbidden
 
@@ -88,6 +88,7 @@ later prune-execute), `review` (`content_superset` — human reads it), `merged`
 - Applying a stale (behind-`main`) worktree dirty tree wholesale
 - Copying `WIP/` through `/tmp`
 - Scooping foreign dirt on a shared primary `main` checkout
+- Mixed-branch cherry-pick of a leftover ref that deletes or overwrites a baseline path
 
 ## Resource Map
 
@@ -98,7 +99,9 @@ later prune-execute), `review` (`content_superset` — human reads it), `merged`
 - [scripts/inventory_git_work.py](scripts/inventory_git_work.py)
 - [scripts/diagnose_ref_value.py](scripts/diagnose_ref_value.py)
 - [scripts/git_fetch.py](scripts/git_fetch.py)
+- [references/extract-workflow.md](references/extract-workflow.md)
 - [scripts/harvest_worktree_dirt.py](scripts/harvest_worktree_dirt.py)
+- [scripts/extract_path_union.py](scripts/extract_path_union.py)
 - [scripts/triage_preserved_refs.py](scripts/triage_preserved_refs.py)
 - [scripts/validate_pack_structure.py](scripts/validate_pack_structure.py)
 - [scripts/pack_self_test.py](scripts/pack_self_test.py)

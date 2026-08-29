@@ -39,7 +39,7 @@ compiled_prompt:
 
   hard_rules:
     - RULES_ONLY
-    - optimize_batch_prompts_first — do NOT overwrite Recursive Improvement.md or Recursive Alignment.md
+    - optimize_batch_prompts_first — do NOT overwrite kernels/Improve.md or kernels/Recursive Alignment.md
     - use_gmp_protocol_with_modification_lock
     - do_not_touch_skills_or_skill_packs
     - do_not_wire_skills_or_edit_AUTONOMY_MANIFEST
@@ -55,9 +55,7 @@ compiled_prompt:
 
   modification_lock:
     may_modify:
-      - .cursor-commands/prompts/Recursive Improvement — Rules Batch.md
-      - .cursor-commands/prompts/Recursive Alignment — Rules Batch.md
-      - .cursor-commands/prompts/Rules Hardening Batch Orchestrator.md
+      - .cursor-commands/kernels/Rules Hardening Batch Orchestrator.md
       - .cursor-commands/rules/*.mdc
       - .cursor/rules/*.mdc
       - .claude/rules/*.md
@@ -69,8 +67,9 @@ compiled_prompt:
       - reports/rules_final_validation.md
       - reports/GMP-Report-018-rules-hardening-batch.md
     must_not_modify:
-      - .cursor-commands/prompts/Recursive Improvement.md
-      - .cursor-commands/prompts/Recursive Alignment.md
+      - kernels/Improve.md
+      - kernels/Recursive Improvement (L9).md
+      - kernels/Recursive Alignment.md
       - .cursor-commands/skills/**
       - .claude/skills/**
       - plasticos_/**
@@ -101,8 +100,8 @@ compiled_prompt:
     phase_0:
       name: Plan lock + batch prompts + inventory
       todos:
-        - T-001: Create Recursive Improvement — Rules Batch.md (Appendix A1)
-        - T-002: Create Recursive Alignment — Rules Batch.md (Appendix A2)
+        - T-001: Use kernels/Recursive Improvement (L9).md (Appendix A1) — do not fork
+        - T-002: Use kernels/Recursive Alignment.md (Appendix A2) — do not fork
         - T-003: Create Rules Hardening Batch Orchestrator.md (Appendix A3)
         - T-004: Create reports/rules_inventory.yaml (all .mdc + .claude/rules/*.md)
       exit: Phase 0 complete. Inventory locked. Batch prompts written.
@@ -149,8 +148,8 @@ compiled_prompt:
       output: reports/GMP-Report-018-rules-hardening-batch.md
 
   per_rule_micro_loop:
-    1_improve: Load Recursive Improvement — Rules Batch.md → write complete revised file(s)
-    2_align: Load Recursive Alignment — Rules Batch.md → reports/rule-alignment/{basename}.md only (report mode)
+    1_improve: Load kernels/Recursive Improvement (L9).md → write complete revised file(s)
+    2_align: Load kernels/Recursive Alignment.md → reports/rule-alignment/{basename}.md only (report mode)
     3_fix: Apply correction_roadmap critical/high only
     4_tracker: Update reports/rules_inventory.yaml row + append reports/rules_hardening_log.md
 
@@ -224,96 +223,25 @@ compiled_prompt:
 
 # GMP-RULES-HARDEN-001 — Executable Rules Hardening Prompt
 
-Paste this entire file (or say: **Execute `@.cursor-commands/prompts/GMP Rules Hardening — Execute.md`**).
+Paste this entire file (or say: **Execute `@.cursor-commands/kernels/GMP Rules Hardening — Execute.md`**).
 
 Load **l9-gmp-protocol**. Do **not** edit attached plan files.
 
 ---
 
-## Appendix A1 — Create `Recursive Improvement — Rules Batch.md`
+## Appendix A1 — Improvement compiled prompt is `kernels/Recursive Improvement (L9).md`
 
-```yaml
-compiled_prompt:
-  id: recursive_l9_improvement_rules_batch_v1
-  role: l9_recursive_improvement_agent
-  extends: Recursive Improvement.md
-
-  objective: >
-    Recursively improve ONE rule file or thematic batch of rule files (.mdc or .claude/rules/*.md).
-    Inherit recursive passes from recursive_l9_improvement_prompt_v3.
-
-  input_contract:
-    required:
-      - rule_path: path to ONE .mdc or .claude/rules/*.md OR thematic group list
-      - tree: global_cursor | repo_overlay | claude_path_ref
-
-  hard_rules_additions:
-    - MUST preserve YAML frontmatter: description, alwaysApply, globs (.mdc) OR paths (.claude/rules/*.md)
-    - MUST NOT edit skills, AGENTS.md, INVARIANTS.md, AUTONOMY_MANIFEST
-    - MUST NOT weaken global authority when editing overlay
-    - MUST use $HOME/Dropbox/... paths — never /Users/<user>/ or /home/<user>/
-    - MUST strengthen MUST / MUST NOT / STOP / fail-closed where rule should be enforceable
-    - MUST deduplicate against global rule on same topic before expanding overlay prose
-    - global .mdc deletion: NEVER — report delete_candidate only
-
-  rule_improvement_contract:
-    body:
-      - operational precision over philosophy
-      - real commands only (make pr-check, make push, bash .cursor-commands/ops/scripts/...)
-      - remove stale CI gates that contradict AGENTS.md / ci.yml
-      - keep numbered-prefix meaning (81-ci-* = manifest contract, etc.)
-    claude_path_refs:
-      - may compress to pointer: "Authority: INVARIANTS.md §X / global rule Y"
-      - must not become full duplicate of INVARIANTS.md
-
-  output_requirements:
-    must_return:
-      - complete_revised_rule_file(s)
-      - convergence_block
-      - inventory_row: {path, tree, files_changed, execution_readiness}
-      - per_file_summary: max one line per file
-    must_not_return: [commentary_only, partial_patch_for_single_file_rules]
-```
+Do **not** create `Recursive Improvement — Rules Batch.md`. Load
+`kernels/Recursive Improvement (L9).md` for the improve pass (it extends
+`kernels/Improve.md`).
 
 ---
 
-## Appendix A2 — Create `Recursive Alignment — Rules Batch.md`
+## Appendix A2 — Alignment SSOT is `kernels/Recursive Alignment.md`
 
-```yaml
-compiled_prompt:
-  id: recursive_l9_alignment_rules_batch_v1
-  role: l9_recursive_alignment_auditor
-  extends: Recursive Alignment.md
-
-  objective: >
-    Audit ONE improved rule file against rule authority stack. Report only unless user says implement alignment fixes.
-
-  mode: report_only
-
-  source_authority:
-    highest: [CANONICAL_LAW.md, 06-governance-ssot-paths.mdc, global .cursor-commands/rules/]
-    not_applicable: [TransportPacket, Gate routing, node build pipeline — unless rule explicitly governs L9 nodes]
-
-  rule_alignment_passes:
-    pass_frontmatter: [valid YAML, description, activation fields intentional]
-    pass_activation:
-      - alwaysApply justified
-      - globs/paths not overly broad
-      - flag overlay alwaysApply bloat
-    pass_authority_layer:
-      - overlay must not duplicate global verbatim
-      - overlay must not contradict global
-    pass_path_contract: [no hardcoded user home paths]
-    pass_cross_doc: [no conflict with AGENTS.md, INVARIANTS.md on CI/push/test/path]
-    pass_enforceability: [commands exist, no fake gates]
-    pass_bloat: [duplicate push/CI doctrine across alwaysApply files]
-
-  output_contract:
-    write_to: reports/rule-alignment/{basename}.md
-    fields: [critical_violations, high_violations, implement_fixes_needed, delete_candidate, minimum_safe_next_action, convergence_block]
-
-  violation_id_prefix: "RULE-{basename}-"
-```
+Do **not** create `Recursive Alignment — Rules Batch.md`. Load
+`kernels/Recursive Alignment.md` for the align pass (report only unless the
+user authorizes fixes).
 
 ---
 
@@ -325,8 +253,8 @@ compiled_prompt:
   role: gmp_rules_batch_executor
 
   per_batch_sequence:
-    1: Recursive Improvement — Rules Batch.md
-    2: Recursive Alignment — Rules Batch.md
+    1: kernels/Recursive Improvement (L9).md
+    2: kernels/Recursive Alignment.md
     3: fix critical/high if implement_fixes_needed
     4: update rules_inventory.yaml + rules_hardening_log.md
 
