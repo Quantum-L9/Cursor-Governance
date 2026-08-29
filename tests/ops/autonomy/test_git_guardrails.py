@@ -555,6 +555,64 @@ class TestGhPolicy:
         assert outcome("gh pr merge 12 --admin") is Outcome.DENY_REQUIRES_HUMAN
         assert outcome("gh pr merge 12 --squash") is Outcome.GUARD_THEN_ALLOW
 
+    def test_graphql_query_is_not_the_mutation_deny(self) -> None:
+        """A query document is not a mutation. `-f` still makes gh POST, so GUARD."""
+        posted = "gh api graphql -f query='query { viewer { login } }'"
+        assert outcome(posted) is Outcome.GUARD_THEN_ALLOW
+        assert outcome("gh api graphql") is Outcome.ALLOW
+
+    def test_allowlisted_review_mutations_are_guarded(self) -> None:
+        resolve_cmd = (
+            "gh api graphql -f query='"
+            "mutation($threadId: ID!) { "
+            "resolveReviewThread(input: {threadId: $threadId}) "
+            "{ thread { isResolved } } }'"
+        )
+        reply_cmd = (
+            "gh api graphql -f query='"
+            "mutation { addPullRequestReviewThreadReply("
+            'input: {pullRequestReviewThreadId: "PRRT_1", body: "Fixed"}) '
+            "{ comment { id } } }'"
+        )
+        batched = (
+            "gh api graphql -f query='"
+            "mutation { "
+            "r1: addPullRequestReviewThreadReply("
+            'input: {pullRequestReviewThreadId: "PRRT_1", body: "Fixed"}) '
+            "{ comment { id } } "
+            's1: resolveReviewThread(input: {threadId: "PRRT_1"}) '
+            "{ thread { isResolved } } }'"
+        )
+        for command in (resolve_cmd, reply_cmd, batched):
+            assert outcome(command) is Outcome.GUARD_THEN_ALLOW, command
+
+    def test_unknown_or_mixed_graphql_mutations_are_denied(self) -> None:
+        delete_repo = (
+            "gh api graphql -f query='"
+            'mutation { deleteRepository(input: {repositoryId: "R"}) '
+            "{ clientMutationId } }'"
+        )
+        mixed = (
+            "gh api graphql -f query='"
+            "mutation { "
+            'resolveReviewThread(input: {threadId: "PRRT_1"}) { thread { isResolved } } '
+            'deleteRepository(input: {repositoryId: "R"}) { clientMutationId } }\''
+        )
+        unparseable = "gh api graphql -f query='mutation { resolveReviewThread('"
+        spread = "gh api graphql -f query='mutation { ...ReviewFields }'"
+        for command in (delete_repo, mixed, unparseable, spread):
+            assert outcome(command) is Outcome.DENY_REQUIRES_HUMAN, command
+
+    def test_mutation_word_inside_string_does_not_unclassify_allowlisted(self) -> None:
+        command = (
+            "gh api graphql -f query='"
+            "mutation { addPullRequestReviewThreadReply("
+            'input: {pullRequestReviewThreadId: "PRRT_1", '
+            'body: "this mutation is mentioned in the reply"}) '
+            "{ comment { id } } }'"
+        )
+        assert outcome(command) is Outcome.GUARD_THEN_ALLOW
+
 
 class TestGateWiring:
     """The guardrail must run BEFORE the git/gh workflow exemption.
@@ -575,6 +633,29 @@ class TestGateWiring:
 
     def test_read_only_git_still_passes_the_execution_gate(self, stacked_repo: Path) -> None:
         assert gate.evaluate("Bash", {"command": f"{GIT} status"}, root=stacked_repo) is None
+
+    def test_allowlisted_graphql_resolve_passes_the_execution_gate(
+        self, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(HUMAN_AUTHORIZATION_ENV, raising=False)
+        command = (
+            "gh api graphql -f query='"
+            'mutation { resolveReviewThread(input: {threadId: "PRRT_1"}) '
+            "{ thread { isResolved } } }'"
+        )
+        assert gate.evaluate("Bash", {"command": command}, root=stacked_repo) is None
+
+    def test_unknown_graphql_mutation_is_denied_by_the_execution_gate(
+        self, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.delenv(HUMAN_AUTHORIZATION_ENV, raising=False)
+        command = (
+            "gh api graphql -f query='"
+            'mutation { deleteRepository(input: {repositoryId: "R"}) '
+            "{ clientMutationId } }'"
+        )
+        reason = gate.evaluate("Bash", {"command": command}, root=stacked_repo)
+        assert reason is not None and "git guardrails" in reason
 
     def test_isolation_gate_delegates_forced_clean_to_the_guardrail(
         self, stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
