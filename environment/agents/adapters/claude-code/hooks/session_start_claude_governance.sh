@@ -104,7 +104,25 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
   if GOV=$(resolve_governance_dir); then
     GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
     GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
-    if git -C "$GOV" fetch --depth 1 origin "$GOV_BRANCH" >/dev/null 2>&1; then
+    # The reset below is `checkout -f`, which DISCARDS uncommitted work and moves
+    # HEAD off whatever branch is checked out. That is correct for the ephemeral
+    # cloud clone it is written for, and destructive for anything else. It ran
+    # unguarded, so a governance checkout carrying in-flight work — reachable
+    # here whenever $HOME/.cursor-governance resolves to a working clone rather
+    # than the throwaway one — lost that work silently, HEAD included. The reset
+    # only ever has something to do on a clean clone, so refusing a dirty one
+    # costs the intended path nothing and makes the destructive case impossible.
+    # TRACKED changes only. `checkout -f` discards tracked modifications and
+    # staged content — what this session actually lost — but leaves untracked
+    # files alone, so counting them would refuse a reset that was never
+    # dangerous and strand the ephemeral clone (a fresh one legitimately
+    # carries untracked bootstrap residue).
+    gov_dirty=$(git -C "$GOV" status --porcelain --untracked-files=no 2>/dev/null | head -c 1)
+    if [ -n "$gov_dirty" ]; then
+      local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
+      write_refresh_receipt reset-skipped-dirty "$local_sha" unknown -1 stale
+      LINES+=("governance refresh: WARN $GOV has uncommitted changes — reset SKIPPED (refusing to discard in-flight work)")
+    elif git -C "$GOV" fetch --depth 1 origin "$GOV_BRANCH" >/dev/null 2>&1; then
       remote_sha=$(git -C "$GOV" rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || echo 'unknown')
       if git -C "$GOV" checkout -f -B "$GOV_BRANCH" "origin/$GOV_BRANCH" >/dev/null 2>&1; then
         local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
@@ -266,6 +284,39 @@ emit_bootstrap_status() {
     LINES+=("L9 Claude environment: receipt reader unavailable — state UNKNOWN")
     return 0
   fi
+
+  # Repair, do not reprint. The receipt carries its own remediation string and
+  # SessionStart used to print it and move on, so a DEGRADED verdict was
+  # inherited across sessions and days while the fix sat one line away. The
+  # attempt is keyed on the GOVERNANCE REVISION, not on wall-clock time: the
+  # installer writes a receipt stamped with the current revision, so a
+  # successful repair suppresses the next attempt and a revision bump is the
+  # only thing that re-arms it. That is what makes this converge instead of
+  # re-running every session. Fail-open throughout — a repair that cannot run
+  # degrades the session, it never blocks it.
+  local state revision marker installer
+  state="$("$py" "$reader" --read --json 2>/dev/null \
+    | "$py" -c 'import json,sys
+try:
+    print(json.load(sys.stdin).get("state", ""))
+except Exception:
+    print("")' 2>/dev/null || true)"
+  revision="$(git -C "$GOV" rev-parse HEAD 2>/dev/null || echo unknown)"
+  marker="$HOME/.l9/claude/bootstrap-repair-${revision}.attempted"
+  installer="$GOV/environment/agents/adapters/claude-code/install.sh"
+  case "$state" in
+    ready|"") : ;;
+    *)
+      if [ ! -f "$marker" ] && [ -f "$installer" ]; then
+        mkdir -p "$HOME/.l9/claude"
+        LINES+=("bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once")
+        if timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" bash "$installer" \
+          >"$HOME/.l9/claude/bootstrap-repair-${revision}.log" 2>&1; then
+          : >"$marker"
+        fi
+      fi
+      ;;
+  esac
 
   local block
   block="$("$py" "$reader" --read 2>/dev/null || true)"

@@ -351,12 +351,44 @@ def archive_landed_wip(wip_root: Path, rows: list[dict[str, Any]], cap: int = 8)
     return moved
 
 
+def _built_shelf(plans_dir: Path) -> Path:
+    """The shelf for built plans, matching the directory that already exists.
+
+    The canonical tracked shelf is `BUILT/`. This resolved a hard-coded
+    lowercase `built`, which is the SAME directory on the case-insensitive
+    filesystem this repository is usually developed on and a DIFFERENT one on
+    Linux — where the cloud containers run. There it created a stray untracked
+    `built/` beside the tracked `BUILT/` and moved committed plan files into
+    it, silently un-tracking them: `git status` then showed the originals
+    deleted and untracked copies appearing, and the plan gate failed on
+    shelved plans that carry no kernel receipt.
+
+    The tracked `BUILT/` wins whenever it exists, so both platforms converge on
+    the one shelf that is under version control. A differently-cased directory
+    is honoured only where `BUILT/` is absent, which keeps a repository that
+    genuinely uses the lowercase spelling working; `BUILT` is created when
+    neither exists.
+    """
+    canonical = plans_dir / "BUILT"
+    if canonical.is_dir():
+        return canonical
+    try:
+        for child in plans_dir.iterdir():
+            if child.is_dir() and child.name.lower() == "built":
+                return child
+    except OSError:
+        # Directory scan is best-effort. Fall back to canonical BUILT when
+        # iterdir cannot run (unreadable parent, vanished path).
+        pass
+    return canonical
+
+
 def archive_spent_plans(plans_dir: Path, cap: int = 8) -> list[str]:
     """Move spent root plans. Do not touch harvestable mixed donors."""
     moved: list[str] = []
     if not plans_dir.is_dir():
         return moved
-    built = plans_dir / "built"
+    built = _built_shelf(plans_dir)
     superseded_dir = plans_dir / "archive" / "superseded"
     for path in sorted(plans_dir.glob("*.plan.md")):
         if len(moved) >= cap or path.name == TEMPLATE_NAME:
