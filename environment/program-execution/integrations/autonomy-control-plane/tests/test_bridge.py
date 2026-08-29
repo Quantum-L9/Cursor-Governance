@@ -702,17 +702,42 @@ class SubordinateLifecycleTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             workspace = Path(raw)
             module, grant = self._granted(workspace)
-            # The grant authorized the declared writable path; nothing else.
+            # The grant probed the declared writable path; nothing else.
             self.assertEqual(module.authorized_resources(grant), {"docs/result.txt"})
-            self.assertEqual(
-                module.unmediated_changed_paths(grant, ["docs/result.txt"]),
-                [],
-            )
             self.assertEqual(
                 module.unmediated_changed_paths(
                     grant, ["docs/result.txt", "ops/secrets/leak.env", "AGENTS.md"]
                 ),
-                ["AGENTS.md", "ops/secrets/leak.env"],
+                ["AGENTS.md", "docs/result.txt", "ops/secrets/leak.env"],
+            )
+
+    def test_a_grant_probe_is_not_an_effect_authorization(self) -> None:
+        """Holding the capability is not the same as having authorized a write.
+
+        The probe this module takes while issuing the lease is a real allowed
+        `repository.write_scoped` decision on the task's first writable path.
+        Counting it as mediation is what let a provider write that exact path
+        with no hook in the loop and still show full coverage, so coverage asks
+        only for `effect`-phase decisions -- of which a freshly issued grant has
+        none. The live effect path is proved end to end in
+        `environment/program-execution/tests/hardening/test_autonomy_enforcement_e2e.py`.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            workspace = Path(raw)
+            module, grant = self._granted(workspace)
+            probes = module.lease_decisions(
+                grant,
+                capability="repository.write_scoped",
+                phase=module.AUTHORIZATION_PHASE_GRANT_PROBE,
+            )
+            self.assertEqual([row["resource"] for row in probes], ["docs/result.txt"])
+            self.assertEqual(
+                module.authorized_resources(grant, phase=module.AUTHORIZATION_PHASE_EFFECT),
+                set(),
+            )
+            self.assertEqual(
+                module.unmediated_changed_paths(grant, ["docs/result.txt"]),
+                ["docs/result.txt"],
             )
 
     def test_lease_decisions_are_scoped_to_this_lease(self) -> None:

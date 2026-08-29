@@ -320,6 +320,23 @@ SHELL_TOOLS = frozenset({"Bash", "Shell", "run_terminal_cmd"})
 #: Capabilities the gateway resolves against a repository-relative path.
 PATH_CAPABILITY_PREFIXES = ("repository.", "file.", "git.diff")
 
+# Authorization phases recorded in a gateway decision's metadata. This module
+# owns the vocabulary because it is the one loaded standalone by the live
+# PreToolUse hook; `grant.py` imports these rather than restating them.
+#
+# Both phases are genuine gateway decisions under the same subordinate lease,
+# so only the caller can tell them apart:
+#
+# * `effect` -- taken here, immediately before a real tool call.
+# * `grant_probe` -- taken by `grant.py` while issuing the lease, to prove it
+#   holds the capability it claims. No effect follows it.
+#
+# Mediation coverage counts only `effect`. Letting a `grant_probe` satisfy it
+# would mean one probe on the task's first writable path silently vouching for
+# every unmediated write a provider then made to that path.
+AUTHORIZATION_PHASE_EFFECT = "effect"
+AUTHORIZATION_PHASE_GRANT_PROBE = "grant_probe"
+
 
 @dataclass(frozen=True)
 class EffectDecision:
@@ -511,6 +528,7 @@ class ProgramBoundEffectAuthorizer:
                 capability=capability,
                 resource=resource,
                 require_allowed=False,
+                metadata=self._effect_metadata(parent),
             )
         except (PolicyViolation, KeyError, ValueError, OSError, RuntimeError) as exc:
             return self._denied(
@@ -530,6 +548,19 @@ class ProgramBoundEffectAuthorizer:
             lease_id=str(self.authority["lease_id"]),
             parent=parent,
         )
+
+    def _effect_metadata(self, parent: ProgramParent) -> dict[str, Any]:
+        """Annotation proving this decision was taken to authorize an effect.
+
+        Recorded with the decision so campaign reconciliation can ask the one
+        question that matters: did *this* change carry a pre-effect
+        authorization, or only the probe the grant took on its way in?
+        """
+        return {
+            "authorization_phase": AUTHORIZATION_PHASE_EFFECT,
+            "program_task_id": _text(self.authority.get("task_id")),
+            "program_lease_id": parent.lease_id,
+        }
 
     def _capability_for(self, tool_name: str, arguments: Mapping[str, Any]) -> str:
         _ensure_import_paths()
