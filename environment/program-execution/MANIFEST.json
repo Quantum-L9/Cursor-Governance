@@ -970,6 +970,10 @@
       "sha256": "6a8249bc0807369248256559851ad38c08dbf58fa96312ea5775191a7a4d8b17"
     },
     {
+      "path": "compiler/mission_admission.py",
+      "sha256": "ca3b5e9e443978a50ad902a3dd6828b9e18b7b04350a321b85b6e9f1e9292d62"
+    },
+    {
       "path": "compiler/policies/quantum-l9.safe-autonomy.v1.yaml",
       "sha256": "b52dfcd7f102435f42a78142b34d709f2a6e4a8cfb1539181b9e2c915c4be5de"
     },
@@ -987,7 +991,7 @@
     },
     {
       "path": "compiler/resolver.py",
-      "sha256": "26af9a34a9e7d3ec763d2332714ca711320a58a15c92132477f62fbbe734e33b"
+      "sha256": "c4992bef1be1fb51a8634ee15db0b040fce9a98f7a3b55bc9563e55122a4655d"
     },
     {
       "path": "compiler/schemas/architecture-extractor-request.schema.json",
@@ -1011,11 +1015,15 @@
     },
     {
       "path": "compiler/schemas/intent-resolution.schema.json",
-      "sha256": "95c00d483d2b63e744a0577efe3b63203df3bb3a80ea8df7f25ee2bb589546df"
+      "sha256": "b8dffdbb0a956e64816238a5e7c246f9d812e6e074e80ed39b682cbdf42d11d6"
     },
     {
       "path": "compiler/schemas/intent.schema.json",
       "sha256": "93ad40d0d1cc72fd555ec4a8967025ad05169caaf4559a2c8f94c7c1a6bf451e"
+    },
+    {
+      "path": "compiler/schemas/mission-context.schema.json",
+      "sha256": "ba2f58d0a96162ea96eac6d14bc486a5623698be7bbb9be3e8cd58c8dd9a3990"
     },
     {
       "path": "compiler/synthesizer.py",
@@ -1050,12 +1058,16 @@
       "sha256": "e636c5802a37456e3c99a3bf6b4a0317a15f44149c77138fa2a6555cf78a8832"
     },
     {
+      "path": "compiler/tests/test_mission_admission.py",
+      "sha256": "9d031b12ade180c1659978ee46c1fc9f51fde9d547737329631d5228194b3521"
+    },
+    {
       "path": "compiler/tests/test_program_action.py",
       "sha256": "ac8e527976068bf14e476fb8941c9a3ad6b6abbf6a01029eb5b2aa4dd2a50574"
     },
     {
       "path": "compiler/tests/test_resolver.py",
-      "sha256": "ef24711a7e6c8ae8c4945ab8b6d6832f984a74764374b4a0ad6614198877fab3"
+      "sha256": "e62a7618c79a2934410edfe6620fe2cc3d25fc8401f5a3babbd3cc6202e67436"
     },
     {
       "path": "compiler/tests/test_synthesizer.py",
