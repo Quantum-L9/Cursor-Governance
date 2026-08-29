@@ -583,6 +583,8 @@ def test_publish_failure_reason_prefers_gate_log(tmp_path):
     assert "generated skill registry is stale" in reason
     assert "ERROR collecting" in reason
     assert "UV: cached" not in reason
+    assert "--- make ---" in reason
+    assert "pr-check" in reason
 
 
 def test_strip_failing_kernel_plans_removes_unstamped_plan(tmp_path):

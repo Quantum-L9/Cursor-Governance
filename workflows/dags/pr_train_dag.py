@@ -656,9 +656,10 @@ def publish_failure_reason(worktree: str, proc: subprocess.CompletedProcess[str]
                 fails.append(stripped)
             elif "import file mismatch" in stripped:
                 fails.append(stripped)
+    tail = (proc.stderr or proc.stdout or "").strip() or "make pr failed"
     if fails:
-        return "\n".join(fails[:24])
-    return proc.stderr.strip() or proc.stdout.strip() or "make pr failed"
+        return "\n".join(fails[:24]) + "\n--- make ---\n" + tail[-1500:]
+    return tail
 
 
 def _l4_authorize_worktree(worktree: str) -> None:
