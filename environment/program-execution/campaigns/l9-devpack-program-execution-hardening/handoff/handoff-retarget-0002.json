@@ -1,0 +1,89 @@
+{
+  "schema": "program-execution-controller.handoff-receipt.v2",
+  "handoff_id": "HANDOFF-devpack-retarget-0002",
+  "program_id": "l9-devpack-program-execution-hardening",
+  "program_digest": "aa1bc91c4c784aacd7be79e77149f776f95ef218439ec3f5e54dcab25314f78d",
+  "supersession_id": "AUTH-001-DEVPACK-HARDENING-IN-TREE-2026-08-14",
+  "supersedes_handoff_id": "HANDOFF-devpack-admission-0001",
+  "controller_id": "l9-devpack-hardening-controller",
+  "exported_at": "2026-08-14T00:00:00+00:00",
+  "runtime_summary": {
+    "blocking_gates_passed": 0,
+    "completed_tasks": 0,
+    "global_halt": false,
+    "ledger_valid": true,
+    "total_blocking_gates": 5,
+    "total_required_tasks": 7,
+    "unresolved_decisions": 0,
+    "unresolved_unknowns": 0,
+    "admission_wave": "W0",
+    "note": "AUTH-001 retargeted hardening onto environment/program-execution/compiler in Quantum-L9/Cursor-Governance. Foreign-repo UNK-001 is resolved. TASK-001 binds this repo/module; TASK-002-007 follow the build campaign on the same module."
+  },
+  "tasks": [
+    {
+      "id": "TASK-001",
+      "runtime_state": "READY",
+      "target_id": "TARGET-001",
+      "repository_id": "Quantum-L9/Cursor-Governance",
+      "module_path": "environment/program-execution/compiler",
+      "last_error": null
+    },
+    {
+      "id": "TASK-002",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": "dependency_not_complete:TASK-001"
+    },
+    {
+      "id": "TASK-003",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": "dependency_not_complete:TASK-001"
+    },
+    {
+      "id": "TASK-004",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": "dependency_not_complete:TASK-001"
+    },
+    {
+      "id": "TASK-005",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": "dependency_not_complete:TASK-001"
+    },
+    {
+      "id": "TASK-006",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": "dependency_not_complete:TASK-001"
+    },
+    {
+      "id": "TASK-007",
+      "runtime_state": "BLOCKED",
+      "target_id": "TARGET-001",
+      "last_error": "dependency_not_complete:TASK-001"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "UNK-001",
+      "status": "resolved",
+      "evidence_ids": [
+        "AUTH-001-PE-COMPILER-IN-TREE-2026-08-14"
+      ],
+      "topic": "Bind Quantum-L9/Cursor-Governance; mutable surface is environment/program-execution/compiler."
+    }
+  ],
+  "approvals": [],
+  "residual_risks": [
+    "RISK-001",
+    "RISK-002",
+    "RISK-003",
+    "RISK-004",
+    "RISK-005",
+    "compiler-module-build-not-yet-complete"
+  ],
+  "recommended_program_verdict": "INCONCLUSIVE",
+  "receipt_digest": "9121d38df97d78abef75f9ed9c095fbbbf6e1ed963cedb771a0c2235e1c06654"
+}

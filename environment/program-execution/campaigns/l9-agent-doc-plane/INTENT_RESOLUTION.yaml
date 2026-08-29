@@ -1,0 +1,99 @@
+schema: program-execution.intent-resolution.v1
+resolved_at: "2026-08-15T01:10:00Z"
+producer: operator_prebind
+intent:
+  id: INTENT-l9-agent-doc-plane-0001
+  original_objective: >
+    Transform the on-demand l9-update-agent-docs skill plus a one-time template
+    seed into a continuously accurate derived-doc plane.
+  normalized_objective: >
+    (1) Expand l9-update-agent-docs to create-if-absent the agent quartet,
+    readme-dag Core-10, and a consumer CANONICAL_LAW binding.
+    (2) Seed that library on l9-repo-template and inventory-gate it.
+    (3) Extract deterministic doc facts and render them into managed blocks
+    healed by sync_generated_artifacts / make pr.
+    (4) Harden template sync_ci fetch() to https + host allowlist.
+targets:
+  - repository_id: Quantum-L9/Cursor-Governance
+    resolution_source: group_registry + origin/main tip
+    evidence_ids: [EVID-001, EVID-002]
+    confidence: high
+  - repository_id: Quantum-L9/l9-repo-template
+    resolution_source: GitHub default branch listing
+    evidence_ids: [EVID-003]
+    confidence: high
+governing_authority:
+  policy_profile: quantum-l9.safe-autonomy.v1
+  source_ids:
+    - CANONICAL_LAW.md
+    - AGENTS.md
+    - ops/scripts/sync_generated_artifacts.py
+    - ops/scripts/adapters/agentdocs.sh
+    - skills/l9-update-agent-docs/SKILL.md
+    - ~/.cursor/plans/rich_root_agent_docs_557cc65b.plan.md
+  decision_ids: [DEC-001, DEC-002]
+derived_requirements:
+  - id: REQ-001
+    statement: Skill creates missing quartet + Core-10 + consumer CANONICAL_LAW from ground truth or labeled Unknown.
+    source: {type: user, ref: INTENT-l9-agent-doc-plane-0001}
+  - id: REQ-002
+    statement: Existing quartet refresh stays surgical; generated/PE managed blocks stay byte-stable.
+    source: {type: policy, ref: AGENTS.md ROOT_FILE_APPEND_ONLY + agentdocs}
+  - id: REQ-003
+    statement: Template root contains the 15-file library; README indexes every entry.
+    source: {type: user, ref: plan SP-template-library}
+  - id: REQ-004
+    statement: Template CANONICAL_LAW is a consumer binding, not a pasted CG SSOT.
+    source: {type: policy, ref: CANONICAL_LAW.md}
+  - id: REQ-005
+    statement: TEMPLATE_INVENTORY.md + inventory_check.py require the full checklist.
+    source: {type: user, ref: plan SP-inventory}
+  - id: REQ-006
+    statement: sync-ci community-health files remain; this campaign does not add a second copy path.
+    source: {type: evidence, ref: EVID-003}
+  - id: REQ-007
+    statement: extract_doc_facts.py emits JSON from workflows, pre-commit, lint, skill-registry with no model.
+    source: {type: decision, ref: DEC-001}
+  - id: REQ-008
+    statement: Managed fact blocks are healed by sync_generated_artifacts and fail-closed on --check.
+    source: {type: decision, ref: DEC-001}
+  - id: REQ-009
+    statement: sync_ci_from_pack.py fetch() fail-closes unless https and host in {api.github.com, raw.githubusercontent.com}.
+    source: {type: user, ref: plan SP-sync-ci-url-gate}
+  - id: REQ-010
+    statement: CG make pr-check PASS; template make verify PASS; L4 kernels then authorize-release before push/PR.
+    source: {type: policy, ref: AGENTS.md L4}
+decisions:
+  accepted_from_authority:
+    - KERNEL pack / PE overlay lands on a new branch from origin/main
+    - CG AGENTS.md and CANONICAL_LAW.md are additive_only
+    - make pr auto-heals derived artifacts via sync_generated_artifacts.py
+  accepted_from_policy:
+    - SessionStart must stay boring; no 15-file rewrite on hydrate
+    - Community health on the template is sync-ci owned
+  requires_human_authority:
+    - Remote merge of the template PR if L4 Build stack is not the only open stack
+unknowns:
+  - id: UNK-001
+    topic: Exact origin/main SHA at W0 lock
+    blocks: [TASK-001]
+    safe_state: refresh origin/main; lock full SHA; stop_and_replan on drift
+    resolution_requirements: [git fetch + rev-parse origin/main]
+  - id: UNK-002
+    topic: Whether l9-repo-template inventory_check.py already has an extension point for new required root files
+    blocks: [TASK-006]
+    safe_state: inspect script before editing; do not invent a second inventory tool
+    resolution_requirements: [read scripts/inventory_check.py]
+evidence:
+  authoritative:
+    - id: EVID-001
+      claim: l9-update-agent-docs v2.0.2 refreshes quartet only when files exist
+      location: skills/l9-update-agent-docs/SKILL.md
+    - id: EVID-002
+      claim: sync_generated_artifacts already heals manifests/registries on make pr
+      location: ops/scripts/sync_generated_artifacts.py
+    - id: EVID-003
+      claim: l9-repo-template main has thin docs plus sync-ci community-health copies; missing CLAUDE/INVARIANTS/consumer law/most Core-10
+      location: Quantum-L9/l9-repo-template@main
+confidence: high
+ready_to_synthesize_blueprint: true

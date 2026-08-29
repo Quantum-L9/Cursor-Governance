@@ -1,0 +1,12 @@
+{
+  "schema": "source-integrity-receipt.v1",
+  "campaign_id": "l9-dot-github-ci-boundary-v1",
+  "source_file": "CAMPAIGN_SOURCE.yaml",
+  "digest_algorithm": "sha256",
+  "digest": "7cdaf6574e82e75388b9a1d64c8f9af458dd795a9bc84f257ece55ac2f493864",
+  "bytes": 33804,
+  "pack_recorded_digest": "UNKNOWN",
+  "pack_recorded_bytes": 0,
+  "digest_matches_pack": false,
+  "producer": "l9-pe-campaign-activate"
+}

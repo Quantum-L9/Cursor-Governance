@@ -1,0 +1,29 @@
+{
+  "baseline": "origin/main",
+  "baseline_tip": "37363dd528e9ad99ecf9683d730da3fca6b4376b",
+  "branch": "main",
+  "branches": [
+    {
+      "ahead_of_baseline": 0,
+      "name": "main",
+      "orphan_gone": false,
+      "tip": "37363dd",
+      "track": null,
+      "upstream": "origin/main"
+    }
+  ],
+  "dirty": false,
+  "dirty_paths": [],
+  "fetch_error": null,
+  "fetched": true,
+  "head": "37363dd528e9ad99ecf9683d730da3fca6b4376b",
+  "repo": "/Users/ib-mac/.cursor-governance",
+  "schema": "l9.git_work_preserve.inventory/v1",
+  "stashes": [],
+  "unpushed_or_diverged": [],
+  "worktrees_porcelain": [
+    "worktree /Users/ib-mac/.cursor-governance",
+    "HEAD 37363dd528e9ad99ecf9683d730da3fca6b4376b",
+    "branch refs/heads/main"
+  ]
+}

@@ -1,0 +1,28 @@
+---
+description: One line, imperative, naming the trigger condition.
+globs: path/pattern/**, **/*.ext
+alwaysApply: false
+---
+
+# Rule name matching the filename slug
+
+## Scope
+
+When this applies and when it does not. One short paragraph.
+
+## Requirements
+
+- Imperative, checkable statements.
+- One requirement per bullet.
+- No style guidance a linter should own.
+
+## References
+
+Point at canonical files rather than copying them:
+
+@path/to/canonical-example.ts
+
+## Precedence
+
+If this rule conflicts with another, state which wins and why. Do not rely
+on filename ordering - Cursor does not order rules by filename.
