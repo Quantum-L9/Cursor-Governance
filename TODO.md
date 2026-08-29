@@ -1,9 +1,11 @@
 ## Issue unblock (session reference)
 
-**Cluster:** Quantum-L9/Cursor-Governance#303 (context: #301 EXTERNAL, #302 INFRA)
-**Owning fix:** PR #320 — broker enforces `requires` + `max_requests_per_minute`; codex/gemini/manus/generic MCP templates brokered and bearer-free
-**Next:** watch PR #320 to green, then take #303 item 1 (k8s broker manifest divergence) as an authorized infra change — `ops/secrets/deploy/**` and `ops/secrets/k8s/**` are protected under rule 90
-**Pickup:** Graphiti PICKUP written 2026-08-26
+**Cluster:** Quantum-L9/Cursor-Governance#377
+**Owning fix:** branch `agent/cursor/issue-377` — kernel_pass on 12 live plans, G_PRECOMMIT_CONFIG catalog entry on 10 PLAN_DOCUMENTs, exclusive lock on `in-flight_pr_census_8-20-26.plan.md`
+**Next:** open/watch the PR to green via l9-pr-remediation; do not merge from issue-remediation; do not fold #374
+**Pickup:** Graphiti PICKUP written 2026-08-29
+
+Prior cluster #303 (broker hardening) remains open as HUMAN/INFRA: PR #320 then k8s manifest divergence under rule 90.
 
 Prior cluster #171 (memory gates reporting unmeasured state) is closed: PR #264
 landed both fixes and they were re-verified against `main@498dcaa` this session.
