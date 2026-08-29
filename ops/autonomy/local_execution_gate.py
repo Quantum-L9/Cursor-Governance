@@ -809,52 +809,62 @@ def effective_root(command: str, root: Path) -> Path:
     return Path(toplevel) if toplevel else root
 
 
-def main_cursor_shell() -> int:
-    raw = sys.stdin.read()
+def cursor_shell_verdict(raw: str) -> tuple[str, str | None]:
+    """L4 / isolation / publish-path decision for a Cursor shell payload.
+
+    Returns ``(permission, message)`` and never prints. The combined
+    ``before_shell_execution_gate`` shares stdin with Graphiti and the plan
+    kernel; those callers must not re-read stdin.
+    """
     guardrail = _guardrail_from_payload(raw)
     if guardrail:
-        return _emit_cursor("deny", guardrail)
+        return "deny", guardrail
     bypass = _verification_bypass_from_payload(raw)
     if bypass:
-        return _emit_cursor("deny", bypass)
+        return "deny", bypass
     if payload_is_git_or_gh(raw):
-        return _emit_cursor("allow")
+        return "allow", None
     try:
         event = json.loads(raw)
     except json.JSONDecodeError:
-        return _emit_cursor("allow")
+        return "allow", None
     if not isinstance(event, dict):
-        return _emit_cursor("allow")
+        return "allow", None
     try:
         command = str(event.get("command") or event.get("full_command") or "")
         root = effective_root(command, workspace_from_event(event))
         guardrail = command_requires_human(command, root=root)
         if guardrail:
-            return _emit_cursor("deny", guardrail)
+            return "deny", guardrail
         bypass = command_bypasses_verification(command)
         if bypass:
-            return _emit_cursor("deny", bypass)
+            return "deny", bypass
         iso = command_violates_worktree_isolation(command, root=root)
         if iso:
-            return _emit_cursor("deny", iso)
+            return "deny", iso
         deny = publish_path_workflow_deny(command)
         if deny:
-            return _emit_cursor("deny", deny)
+            return "deny", deny
         if remediator_env_active(command):
             wave = command_runs_reader_wave(command)
             if wave:
-                return _emit_cursor("deny", _remediator_wave_deny_reason(wave))
+                return "deny", _remediator_wave_deny_reason(wave)
         if not command_is_remote_mutation(command):
-            return _emit_cursor("allow")
+            return "allow", None
         if not command_has_make_remote(command):
-            return _emit_cursor("allow")
+            return "allow", None
         allowed, reason = release_allows_remote(root)
     except Exception as exc:  # noqa: BLE001 - security boundary: deny on any fault
         _fail_closed_note(exc)
-        return _emit_cursor("deny", INTERNAL_EVALUATION_ERROR)
+        return "deny", INTERNAL_EVALUATION_ERROR
     if allowed:
-        return _emit_cursor("allow")
-    return _emit_cursor("deny", reason)
+        return "allow", None
+    return "deny", reason
+
+
+def main_cursor_shell() -> int:
+    perm, msg = cursor_shell_verdict(sys.stdin.read())
+    return _emit_cursor(perm, msg)
 
 
 if __name__ == "__main__":

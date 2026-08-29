@@ -84,9 +84,10 @@ class SelectPrPytestPathsTests(unittest.TestCase):
         self.assertNotIn(".", selected)
         self.assertNotIn(PE, selected)
         self.assertNotIn(GENERATED, selected)
-        self.assertTrue(selected)
-        self.assertTrue(
-            any(item.startswith("ops/scripts") for item in selected),
+        # This module names the missing helper, so it is a named test — not
+        # the whole sibling tests/ directory.
+        self.assertEqual(
+            ["ops/scripts/tests/test_select_pr_pytest_paths.py"],
             selected,
         )
 
@@ -150,6 +151,7 @@ class NonPythonChangeTests(unittest.TestCase):
             path.relative_to(repo_root).as_posix()
             for path in repo_root.rglob("test_*.py")
             if ".venv" not in path.parts
+            and "fixtures" not in path.parts
             and self.CHANGED_SHELL in path.read_text(encoding="utf-8", errors="ignore")
         }
         selected = set(select_pr_pytest_paths([self.CHANGED_SHELL]))
@@ -179,3 +181,28 @@ class NonPythonChangeTests(unittest.TestCase):
         selected = select_pr_pytest_paths([self.CHANGED_SHELL, "ops/scripts/pr_gate_failure.py"])
         self.assertIn("ops/scripts/tests/test_bootstrap_invariants.py", selected)
         self.assertIn("tests/ops/scripts/test_pr_gate_failure.py", selected)
+
+    def test_generic_basename_does_not_union_the_catalog(self) -> None:
+        makefile_only = set(select_pr_pytest_paths(["Makefile"]))
+        shell = set(select_pr_pytest_paths([self.CHANGED_SHELL]))
+        self.assertIn("ops/scripts/tests/test_bootstrap_invariants.py", shell)
+        self.assertLess(len(makefile_only), 8, makefile_only)
+
+    def test_wide_change_set_keeps_named_shell_tests_without_catalog_dump(self) -> None:
+        wide = [
+            self.CHANGED_SHELL,
+            "Makefile",
+            "LICENSE",
+            "hooks.json",
+            "pyproject.toml",
+            "requirements.txt",
+            "uv.lock",
+            "ops/hooks/hooks.json.template",
+            "AGENTS.md",
+            "README.md",
+        ]
+        wide.extend([f"docs/plans/fake_{i}.plan.md" for i in range(60)])
+        selected = select_pr_pytest_paths(wide)
+        self.assertIn("ops/scripts/tests/test_bootstrap_invariants.py", selected)
+        self.assertNotIn(".", selected)
+        self.assertLess(len(selected), 40, selected)

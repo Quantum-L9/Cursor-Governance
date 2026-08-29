@@ -536,6 +536,8 @@ test-ci-parity:
 # Velocity path: run_pr_gate.sh owns precommit (run_pr_precommit.sh) once.
 # Do not re-add a Make prereq that double-runs precommit-repo on pr-check or pr.
 # capability-contract is domain-gated inside the gate; corpus lives on pr-full.
+# Teaching: finished work → scoped commit → make pr. precommit-repo is optional
+# autofix, not a prerequisite (AGENTS TESTS_ONCE_MAKE_PR_V1).
 #
 # pr-check does NOT strip git identity — it runs as you do, which is the right
 # default for a local gate. When a suite touches Git worktrees, `make
