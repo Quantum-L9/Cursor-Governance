@@ -1899,7 +1899,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "9360eb483402a8f2ac17ffdbd1e5ac7565b182fac3762a031d59c46c974ad41a"
+      "sha256": "bd01fff6bc66bec4af7b3a63822ef1cc07b7a834dea2a1bd6832851d45c5d8e1"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
