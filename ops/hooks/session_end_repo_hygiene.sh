@@ -9,7 +9,10 @@
 # Runs last in the sessionEnd chain: governance-backup.sh commits and pushes
 # first, so a branch is only judged after its work has had its chance to land.
 #
-# Fail-open: never block session close. Kill switch: L9_REPO_HYGIENE=0.
+# Dirt-close runs before --apply: classify porcelain, drop landed copies,
+# park novel unique onto l9/dirt-shelf, prune absorbed parks. Kill switch:
+# L9_HYGIENE_DIRT_CLOSE=0. Hygiene kill switch: L9_REPO_HYGIENE=0.
+# Fail-open: never block session close.
 # Path contract: CANONICAL_LAW §9 — resolve via $GLOBAL_COMMANDS, not dirname "$0".
 set -uo pipefail
 
@@ -92,6 +95,36 @@ print(candidate or "")
   MODE="${L9_REPO_HYGIENE_MODE:---apply}"
 
   echo "workspace: $WS (mode $MODE)"
+
+  DIRT_CLOSE="$WS/ops/scripts/session_end_dirt_close.py"
+  [ -f "$DIRT_CLOSE" ] || DIRT_CLOSE="$GLOBAL_COMMANDS/ops/scripts/session_end_dirt_close.py"
+  if [ "${L9_HYGIENE_DIRT_CLOSE:-1}" != "0" ] && [ -f "$DIRT_CLOSE" ]; then
+    DIRT_OUT="$RECEIPTS/dirt-close-hook.json"
+    [ -n "$RECEIPTS" ] || DIRT_OUT="/dev/null"
+    printf '%s' "$PAYLOAD" | "$PY" "$DIRT_CLOSE" --workspace "$WS" --apply >"$DIRT_OUT" 2>>"$LOG" || {
+      echo "WARN: dirt-close exited non-zero"
+    }
+    if [ -n "$RECEIPTS" ] && [ -f "$DIRT_OUT" ]; then
+      "$PY" - "$DIRT_OUT" <<'DIRTSUM' 2>/dev/null || true
+import json, sys
+doc = json.load(open(sys.argv[1]))
+st = doc.get("status") or doc
+print(
+    "dirt-close dirty_unique=%s already_landed=%s novel_parked=%s absorbed_pruned=%s skip=%s"
+    % (
+        st.get("dirty_unique", len(st.get("dirty_files") or [])),
+        len(st.get("already_landed") or []),
+        len(st.get("novel_parked") or []),
+        len(st.get("absorbed_pruned") or []),
+        st.get("skipped") or doc.get("skip") or "",
+    )
+)
+DIRTSUM
+    fi
+  else
+    echo "dirt-close skipped (L9_HYGIENE_DIRT_CLOSE=0 or script missing)"
+  fi
+
   if [ -n "$RECEIPTS" ]; then
     RECEIPT="$RECEIPTS/$(date -u +%Y%m%dT%H%M%SZ).json"
     "$PY" "$HYGIENE" --workspace "$WS" "$MODE" --json >"$RECEIPT" 2>>"$LOG" || {
