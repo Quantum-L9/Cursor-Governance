@@ -10,8 +10,16 @@ GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WS="${WS:-${1:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-origin/main}"
+# shellcheck source=lib/fetch_receipt.sh
+source "$SCRIPT_DIR/lib/fetch_receipt.sh"
+# shellcheck source=lib/resolve_pr_stack.sh
+source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
 
 cd "$WS"
+if ! pr_stack_apply_publish_base "$WS"; then
+  exit $?
+fi
+export PR_BASE
 
 if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
   PY="$GOV_ROOT/.venv/bin/python"

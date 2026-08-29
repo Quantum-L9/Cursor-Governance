@@ -61,9 +61,14 @@ since a person can read it and judge. Override either way with
 decision (no probe ⇒ filename overlap still blocks); fail-closed on a detected
 non-generated textual conflict.
 
-The gate runs against the base ref that `open_pr_after_gate.sh` fetches
-immediately beforehand, so overlap is judged against the *current* origin/main
-rather than the task's original BASE_SHA (E5).
+`PR_STACK=auto` binds the unique open-PR chain tip at **pr-preflight / pr-check
+start** (`ops/scripts/lib/resolve_pr_stack.sh`), not only after the gate.
+Empty `PR_STACK=` keeps `PR_BASE`. `open_pr_after_gate.sh` reuses the
+stack-base receipt so the opened PR targets the same parent the gate used.
+
+Overlap still fetches that bound base immediately beforehand, so the probe is
+judged against the *current* parent tip rather than the task's original
+BASE_SHA (E5) — not against a stale `origin/main` while stacked.
 
 ## On overlap: preferred order
 

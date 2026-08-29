@@ -7,6 +7,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
 # shellcheck source=lib/fetch_receipt.sh
 source "$SCRIPT_DIR/lib/fetch_receipt.sh"
+# shellcheck source=lib/resolve_pr_stack.sh
+source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
 GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WS="${WS:-$(pwd)}"
 WS="$(cd "$WS" && pwd)"
@@ -114,6 +116,8 @@ _GATE_CODE_FILES=(
   ".pre-commit-config.yaml"
   "ops/scripts/run_pr_security.sh"
   "ops/scripts/lib/fetch_receipt.sh"
+  "ops/scripts/lib/resolve_pr_stack.sh"
+  "ops/scripts/resolve_stack_tip.py"
 )
 _gate_code_digest() {
   local rel present=()
@@ -156,6 +160,13 @@ if [[ "${1:-}" == "--print-state-digest" ]]; then
   printf '\n'
   exit 0
 fi
+
+# PR_STACK=auto binds the unique open-PR chain tip before receipt + changed-files.
+# Empty PR_STACK keeps PR_BASE. Must run after --print-state-digest (tests pin that).
+if ! pr_stack_apply_publish_base "$WS"; then
+  exit $?
+fi
+export PR_BASE
 _gate_head_sha() {
   # A repository with no commits has no HEAD to record. That is the documented
   # "no head recorded" case, not a failure to swallow: pr_gate_failure.py then
@@ -519,6 +530,9 @@ _gate_run_pytest() {
 
 _gate_run_sync() {
   echo "--- sync-generated-artifacts ---"
+  # Serialized writer: never run this in the parallel reader wave. The heal
+  # writes generated files; a reader hook's wall-clock window would then
+  # report "files were modified by this hook" (check-yaml) as Error 1.
   # --pe-manifest reaches environment/program-execution/MANIFEST.json. Without
   # it the PE manifest is never healed on the publish path and
   # `make program-execution-conformance` goes red on every PE edit. The
@@ -528,14 +542,6 @@ _gate_run_sync() {
     --changed-file "$changed_file" \
     --pe-manifest \
     --check
-  if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
-    if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
-      bash "$SCRIPT_DIR/attribute_tree_writers.sh" "$WS" "$status_before" || true
-    fi
-    echo "FAIL: unexpected non-generated dirtiness after sync"
-    git status --short
-    exit 1
-  fi
 }
 
 _gate_run_root_protect() {
@@ -647,8 +653,61 @@ _gate_run_security() {
 
 _gate_run_readers() {
   echo "--- pre-commit readers (once) ---"
-  _gate_run_precommit readers
+  local rc=0
+  _gate_run_precommit readers && rc=0 || rc=$?
+  if [[ "$rc" -eq 0 ]]; then
+    return 0
+  fi
+  if grep -q '^- exit code: ' "$precommit_log"; then
+    echo "FAIL: pre-commit hook(s) failed:"
+    _precommit_failing_hooks "$precommit_log"
+    return 1
+  fi
+  if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
+    bash "$SCRIPT_DIR/attribute_tree_writers.sh" "$WS" "$status_before" "$precommit_log" || true
+  fi
+  if grep -q '^- files were modified by this hook' "$precommit_log"; then
+    if _gate_classify_dirtiness "pre-commit readers"; then
+      echo "WARN: reader hooks reported a modified-files window; tree is generated-only or unchanged vs start — continuing"
+      return 0
+    fi
+    echo "FAIL: non-generated dirt during reader hooks — commit the rewrite, then re-run make pr."
+    return 1
+  fi
+  echo "FAIL: pre-commit readers exited ${rc}"
+  return 1
 }
+
+_gate_run_projection_heal() {
+  echo "--- local-activation heal ---"
+  is_local=0
+  if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -d "${HOME}/.cursor" && -w "${HOME}/.cursor" ]]; then
+    is_local=1
+  fi
+  if [[ "$is_local" -ne 1 || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
+    echo "OK: skip local-activation heal (CI or non-writable ~/.cursor)"
+    return 0
+  fi
+  if [[ -f "$GOV_ROOT/ops/scripts/project_llm_rules.py" ]]; then
+    python3 "$GOV_ROOT/ops/scripts/project_llm_rules.py" --root "$WS" --quiet
+  fi
+  python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
+    --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
+    --quiet --no-receipt
+}
+
+echo "=== generated heal (serialized writer) ==="
+_gate_run_sync
+_gate_run_projection_heal
+if git status --porcelain | grep -qvE '^\?\?'; then
+  echo "FAIL: tracked files dirty after generated heal — commit the rewrite, then re-run make pr."
+  echo "      Do not auto-stage. Paths:"
+  git status --porcelain | grep -vE '^\?\?'
+  exit 1
+fi
+if [[ -f "$WS/.l9/pr/regen-required.txt" ]]; then
+  rm -f "$WS/.l9/pr/regen-required.txt"
+fi
 
 echo "=== reader wave (once, parallel) ==="
 export PR_CHANGED_FILE="$changed_file"
@@ -667,7 +726,6 @@ _wave_start() {
 _wave_start readers _gate_run_readers
 _wave_start uv-lock _gate_run_uv_lock
 _wave_start pytest _gate_run_pytest
-_wave_start sync _gate_run_sync
 _wave_start root-protect _gate_run_root_protect
 _wave_start skill-activation _gate_run_skill_activation
 _wave_start projection _gate_run_projection_check
