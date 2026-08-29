@@ -620,7 +620,7 @@
       "output": "zz-autonomy-surface-override.md",
       "output_sha256": "e91c1f24e261f024793005b93c225487a71b804c398fab480f4bc6e0a3c663dc",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "370507e516bd466547f19574ce29c3b12d76a96f6f81fd8ea04212915ba466a8",
+      "source_sha256": "a19bcc6f72222d50080207ae7642275e79e445e5db47171568f413ff64c27e5a",
       "stem": "zz-autonomy-surface-override"
     }
   ],
