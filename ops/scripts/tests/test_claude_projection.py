@@ -365,6 +365,8 @@ class PluginDesiredStateTests(unittest.TestCase):
             encoding="utf-8"
         )
         self.assertIn("plugins.desired.json", script)
+        self.assertIn('for plugin in "${CORE_PLUGINS[@]}"', script)
+        self.assertIn('for plugin in "${DESKTOP_ONLY[@]}"', script)
         for entry in [*live["core"]["plugins"], *live.get("desktop_only", [])]:
             self.assertNotIn(f'"{entry}"', script)
 

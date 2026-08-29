@@ -102,7 +102,7 @@ def main() -> int:
         "Context7 stack proof required before editing API/MCP/install/Docker or "
         "campaign seed files. Call Context7 MCP (resolve-library-id → query-docs) "
         "when those tools exist; on hosted (marketplace skip) invoke skill "
-        "l9-context7-docs or GET official docs. Or wait for "
+        "l9-context7-docs. Or wait for "
         "$HOME/.l9/primed/<id>/stack-proof.json status=pass."
     )
 

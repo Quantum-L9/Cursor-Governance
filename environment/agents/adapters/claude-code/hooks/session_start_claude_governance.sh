@@ -263,6 +263,14 @@ if GOV=$(resolve_governance_dir); then
       *)             LINES+=("claude projection: WARN engine produced no summary — run 'make claude-install'") ;;
     esac
   fi
+  # Projection rewrites managed settings.env from the template. Re-apply the
+  # hosted overlay after every SessionStart projection, not only install.sh.
+  if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ] || [ -n "${CLAUDE_CODE_REMOTE:-}" ]; then
+    overlay="$GOV/environment/agents/adapters/claude-code/overlay_hosted_settings_env.py"
+    if [ -f "$overlay" ] && command -v "$PY" >/dev/null 2>&1; then
+      "$PY" "$overlay" --workspace "$WORKSPACE" >/dev/null 2>&1 || true
+    fi
+  fi
 
   if [ -f "$PROFILE_LOADER" ] && command -v "$PY" >/dev/null 2>&1; then
     PROFILE_BLOCK=$("$PY" "$PROFILE_LOADER" 2>/dev/null || true)
@@ -435,30 +443,25 @@ emit_account_drift() {
 # Capability broker retired 2026-08-29 (never shipped; not probed).
 emit_capability_readiness() {
   local py="$1"
-  local emitter="$GOV/ops/scripts/emit_claude_readiness.py"
-  [ -f "$emitter" ] || return 0
+  local receipt="$HOME/.l9/claude/readiness-receipt.json"
+  [ -f "$receipt" ] || return 0
   [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
 
-  local out
-  out="$("$py" "$emitter" --graphiti-probe --root "$GOV" 2>/dev/null || true)"
-  [ -n "$out" ] || return 0
-
+  # Reuse the receipt from emit_readiness_receipt (one Graphiti probe).
   local parsed
-  parsed="$(printf '%s' "$out" | "$py" - <<'PY' 2>/dev/null || true
-import json, sys
+  parsed="$("$py" -c '
+import json, os, sys
+path = os.path.expanduser("~/.l9/claude/readiness-receipt.json")
 try:
-    d = json.load(sys.stdin)
+    d = json.load(open(path, encoding="utf-8"))
 except Exception:
     sys.exit(0)
-cli = d.get("cli") or {}
-mcp = d.get("mcp") or {}
-print("memory.cli=" + str(cli.get("status", "UNKNOWN")))
-print("memory.mcp=" + str(mcp.get("status", "UNKNOWN")))
-print("graphiti_authenticated_health=" + str(cli.get("status", "UNKNOWN")))
-reason = cli.get("reason") or mcp.get("reason") or "none"
-print("primary_blocker=" + str(reason))
-PY
-)"
+print("memory.cli=" + str(d.get("memory_cli_status", "UNKNOWN")))
+print("memory.mcp=" + str(d.get("memory_mcp_status", "UNKNOWN")))
+print("graphiti_authenticated_health=" + str(d.get("Graphiti_authenticated_health", "UNKNOWN")))
+notes = d.get("notes") if isinstance(d.get("notes"), dict) else {}
+print("primary_blocker=" + str(notes.get("Graphiti_authenticated_health") or "none"))
+' 2>/dev/null || true)"
   [ -n "$parsed" ] || return 0
   LINES+=("--- capability plane readiness ---")
   LINES+=("capability_broker=retired (never shipped; not probed)")
@@ -490,11 +493,11 @@ emit_readiness_receipt() {
 
 emit_bootstrap_status "$PY"
 emit_account_drift "$PY"
-emit_capability_readiness "$PY"
 emit_readiness_receipt "$PY"
+emit_capability_readiness "$PY"
 
 if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
-  LINES+=("Context7 (hosted skip): MCP tools absent — use skill l9-context7-docs or official docs GET")
+  LINES+=("Context7 (hosted skip): MCP tools absent — use skill l9-context7-docs")
 fi
 
 skill_log="$HOME/.claude/l9/skill-usage.jsonl"

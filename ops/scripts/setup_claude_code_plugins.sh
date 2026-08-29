@@ -323,6 +323,13 @@ for plugin in "${CORE_PLUGINS[@]}"; do
   fi
 done
 
+for plugin in "${DESKTOP_ONLY[@]}"; do
+  log "Plugin (desktop extras, user scope): $plugin"
+  if ! claude plugin install -s user "$plugin"; then
+    echo "WARN: plugin install failed: $plugin" >&2
+  fi
+done
+
 if [ "${#CLASS_PLUGINS[@]}" -gt 0 ]; then
   log ""
   log "Class-gated plugins for '$WORKSPACE_CLASS' (project scope -> $WORKSPACE_DIR/.claude/settings.json):"

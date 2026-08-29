@@ -36,6 +36,7 @@ class Context7StackPretoolTests(unittest.TestCase):
         src = HOOK.read_text(encoding="utf-8")
         self.assertIn("l9-context7-docs", src)
         self.assertIn("when those tools exist", src)
+        self.assertNotIn("GET official docs", src)
 
     def test_allows_when_receipt_pass(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

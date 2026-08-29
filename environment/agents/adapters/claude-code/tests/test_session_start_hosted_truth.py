@@ -41,7 +41,21 @@ class SessionStartHostedTruthTests(unittest.TestCase):
     def test_hook_does_not_probe_broker(self) -> None:
         text = HOOK.read_text(encoding="utf-8")
         self.assertNotIn("probe_broker.py", text)
-        self.assertIn("--graphiti-probe", text)
+        self.assertNotIn("--graphiti-probe", text)
+        self.assertIn("readiness-receipt.json", text)
+
+    def test_hook_reapplies_hosted_overlay_after_projection(self) -> None:
+        text = HOOK.read_text(encoding="utf-8")
+        proj = text.index("claude_projection.py")
+        overlay = text.index("overlay_hosted_settings_env.py")
+        self.assertLess(proj, overlay)
+
+    def test_hook_reuses_readiness_receipt_for_capability_block(self) -> None:
+        text = HOOK.read_text(encoding="utf-8")
+        receipt_fn = text.index("emit_readiness_receipt")
+        cap_call = text.index('emit_capability_readiness "$PY"')
+        self.assertLess(receipt_fn, cap_call)
+        self.assertNotIn("python - <<", text)
 
     def test_install_runs_validate_claude_env(self) -> None:
         text = INSTALL.read_text(encoding="utf-8")
