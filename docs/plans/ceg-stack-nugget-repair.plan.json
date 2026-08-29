@@ -1,0 +1,403 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "standard",
+  "title": "CEG stack nugget repair — compatible pins, close 217-219",
+  "objective": "Extract only the useful diffs from the failed #217-#219 stack, land them from origin/main with a compatible l9-ci-sdk pin, then close the broken original stack so a green bottom-up merge is possible.",
+  "success_criteria": [
+    "Replacement PR targeting main has Baseline Ratchet / Required Tests conclusion success (no sdk-revision compatibility error)",
+    "Replacement PR gh pr view --json mergeStateStatus equals CLEAN and mergeable MERGEABLE",
+    "requirements.txt structlog upper bound allows 26.1.0 (not <26.0.0) and matches pyproject.toml",
+    "PRs 217 218 219 are state CLOSED unmerged after the replacement exists",
+    "Zero GraphQL reviewThreads with isResolved false on the replacement PR immediately before merge"
+  ],
+  "scope": {
+    "in": [
+      "Replace broken stack Quantum-L9/Cognitive.Engine.Graphs#217 #218 #219",
+      ".github/workflows/baseline-ratchet-caller.yml sdk-revision + core pin pairing",
+      ".github/workflows/l9-analysis.yml upload-artifact v7.0.1 + l9-ci-core 0d28395 pins",
+      ".github/workflows/supply-chain.yml SPDX AND allow-list fallback + upload-artifact tag",
+      ".github/workflows/audit.yml upload-artifact v7.0.1",
+      ".github/workflows/docker-build.yml attest-build-provenance v4.2.2",
+      "pyproject.toml poetry.lock requirements.txt observability bounds",
+      "Close superseded stack PRs after replacement is open"
+    ],
+    "out": [
+      "Engine match/handler query_id product changes unless origin/main Test Suite is proven red for the same assertion",
+      "Editing .github/workflows beyond the nugget pin/allow-list/attest set",
+      "Setting GitHub Actions repository variable ALLOWED_LICENSES (HUMAN / repo settings)",
+      "Scorecard pin-every-GitHub-owned-action cleanup beyond the files this pack already touches",
+      "Merging while Baseline Ratchet or required checks are red",
+      "Primary dirty Cognitive.Engine.Graphs worktree on main (use a dedicated worktree)",
+      "Campaign / PE overlay / kernel-pack landings unrelated to this stack"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind Quantum-L9/Cognitive.Engine.Graphs origin/main 36be3cce3658b01204b003481088b3d4f9a16f82",
+      "pass_criteria": "git rev-parse origin/main equals that SHA at plan time",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "gh pr view 217 218 219 --json mergeStateStatus,statusCheckRollup",
+      "pass_criteria": "217 UNSTABLE ratchet; 218 UNSTABLE Test Suite; 219 CLEAN on non-main base",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "gh api l9-ci-core .l9/sdk-compatibility.yaml at 0d28395428426853c44825c4645c23ee8ace23b1",
+      "pass_criteria": "0779fca not listed; default revision b1a491414ed04bb18d665f8a8755de80947c8200",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "grep Makefile for ^pr-check:|^pr:",
+      "pass_criteria": "CEG Makefile has neither; local verify fallback is make agent-check-unit",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Open isolated worktree from origin/main; do not touch the dirty primary checkout",
+      "files": [
+        "/Users/ib-mac/ceg-nugget-repair"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "git worktree add -B chore/nugget-ci-repair <path> origin/main",
+      "leverage_rank": 5
+    },
+    {
+      "id": "T2",
+      "task": "Replay useful #217 pins and set sdk-revision to l9-ci-core 0d28395 default b1a491414ed04bb18d665f8a8755de80947c8200",
+      "files": [
+        ".github/workflows/baseline-ratchet-caller.yml",
+        ".github/workflows/l9-analysis.yml",
+        ".github/workflows/supply-chain.yml",
+        ".github/workflows/audit.yml"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "sdk-revision: 0779fca8238011f8abea551895f96584676e9d17",
+      "leverage_rank": 1,
+      "shared_root_cause": "core pin moved without a listed sdk-revision"
+    },
+    {
+      "id": "T3",
+      "task": "Replay useful #218 observability bump in Poetry and raise requirements.txt structlog upper bound so Docker pip path is not left on <26",
+      "files": [
+        "pyproject.toml",
+        "poetry.lock",
+        "requirements.txt"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "structlog>=25.5.0,<26.0.0",
+      "leverage_rank": 2,
+      "shared_root_cause": "Poetry vs pip dual manifests"
+    },
+    {
+      "id": "T4",
+      "task": "Replay useful #219 attest-build-provenance v4.2.2 on docker-build.yml",
+      "files": [
+        ".github/workflows/docker-build.yml"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "actions/attest-build-provenance@619dbb2e03e0189af0c55118e7d3c5e129e99726 # v2.0.0",
+      "leverage_rank": 4
+    },
+    {
+      "id": "T5",
+      "task": "Probe whether Test Suite query_id failure exists on origin/main; only edit handle_match if main is red for the same assertion",
+      "files": [
+        "tests/test_handlers.py",
+        "engine/handlers.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "assert \"query_id\" in result",
+      "leverage_rank": 6,
+      "blocker": "Unknown whether #218 Test Suite failure is pre-existing on origin/main or an image/cache flake"
+    },
+    {
+      "id": "T6",
+      "task": "Publish one replacement PR to main from the worktree; CEG has no make pr so use documented publish override after local agent-check-unit",
+      "files": [
+        ".github/workflows/baseline-ratchet-caller.yml",
+        "requirements.txt"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T2",
+        "T3",
+        "T4",
+        "T5"
+      ],
+      "operation": "Create",
+      "anchor": "gh pr create --base main --head chore/nugget-ci-repair",
+      "leverage_rank": 3
+    },
+    {
+      "id": "T7",
+      "task": "Close original stack PRs 217 218 219 with comments pointing at the replacement; do not close until the replacement URL exists",
+      "files": [
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs/pull/217",
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs/pull/218",
+        "https://github.com/Quantum-L9/Cognitive.Engine.Graphs/pull/219"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T6"
+      ],
+      "operation": "Delete",
+      "anchor": "gh pr close 217 --comment superseded by replacement",
+      "leverage_rank": 7
+    },
+    {
+      "id": "T8",
+      "task": "Merge the replacement only after CLEAN + zero unresolved reviewThreads via stack_safe_merge.py --run",
+      "files": [
+        "/Users/ib-mac/.cursor-governance/ops/autonomy/stack_safe_merge.py"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": [
+        "T6",
+        "T7"
+      ],
+      "operation": "Create",
+      "anchor": "stack_safe_merge.py --repo Quantum-L9/Cognitive.Engine.Graphs --pr <n> --run",
+      "leverage_rank": 8
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T6",
+    "T7",
+    "T8"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Worktree on origin/main with compatible sdk-revision + nugget diffs",
+      "unlocks": "publish replacement PR"
+    },
+    {
+      "id": "M2",
+      "outcome": "Replacement PR open; 217-219 closed as superseded",
+      "unlocks": "wait for CLEAN then merge"
+    },
+    {
+      "id": "M3",
+      "outcome": "Replacement merged; no open broken stack",
+      "unlocks": "done"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "baseline-ratchet-caller.yml sdk-revision equals b1a491414ed04bb18d665f8a8755de80947c8200 and is listed in l9-ci-core sdk-compatibility.yaml at 0d28395",
+      "no_go_action": "do not publish; do not reuse 0779fca"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "gh pr view replacement mergeStateStatus and ratchet job logs; 217-219 state CLOSED",
+      "no_go_action": "do not merge; do not close 217-219 if replacement URL missing"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "replacement mergedAt set; stack_safe_merge used (no hand-typed --squash on a parent)",
+      "no_go_action": "stop; do not force-merge red checks"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No agent-rule or contract-doc change; pin pairing only"
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "Formatter ownership and engine conventions unchanged"
+    },
+    {
+      "surface": "README.md",
+      "action": "n_a",
+      "reason": "Operator-facing docs do not describe these workflow SHAs"
+    },
+    {
+      "surface": ".github/env.template",
+      "action": "n_a",
+      "reason": "ALLOWED_LICENSES repo var is HUMAN; fallback string is updated in supply-chain.yml only"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Is 0779fca actually supported under a different compatibility file path than .l9/sdk-compatibility.yaml?",
+      "Does vars.ALLOWED_LICENSES override the fallback so SPDX AND still fails on the replacement?",
+      "Is the #218 query_id Test Suite failure a mainline defect that will fail the replacement even with correct pins?",
+      "Will closing 217-219 before the replacement is green leave the repo with no path to land the attest/deps bumps?"
+    ],
+    "assumed_false_ifs": [
+      "l9-ci-core 0d28395 sdk-compatibility.yaml default revision remains b1a491414ed04bb18d665f8a8755de80947c8200 at execute time",
+      "origin/main stays at 36be3cce3658b01204b003481088b3d4f9a16f82 or a fast-forward that still contains query_id in handle_match",
+      "CEG Makefile still has no pr target so publish override remains the HOW",
+      "Attest v4.2.2 hash 4d101475d8b20a2381f78447822ac1eab6504dd8 is still the Dependabot target"
+    ],
+    "blast_radius": "Wrong sdk-revision keeps Baseline Ratchet red on every PR to main. Closing 217-219 without a replacement drops the attest and observability bumps. Raising structlog in requirements.txt affects the Docker/pip install path, not only Poetry.",
+    "rollback": "Delete the replacement branch and PR; restore 217-219 by reopening if GitHub allows, otherwise re-push the existing chore/stack-* tips from the ceg-pr-stack worktree. Do not revert origin/main unless the replacement was already merged — then revert that merge commit."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T2",
+      "T3",
+      "T6",
+      "T4",
+      "T1",
+      "T5",
+      "T7",
+      "T8"
+    ],
+    "shared_causes": [
+      "l9-ci-core pin moved without a supported sdk-revision (0779fca not in 0d28395 compatibility list)",
+      "Poetry vs requirements.txt dual manifest so Docker ignores the observability bump",
+      "Three overlapping Dependabot siblings plus a broken consolidation stack"
+    ],
+    "deletions_or_consolidations": [
+      "Close #217 #218 #219 instead of remediating three stacked parents",
+      "One replacement PR from origin/main instead of a 3-layer stack whose ratchet jobs only run on main",
+      "Keep SPDX AND fallback, drop the useless @v7 to @v7.0.1 retag if Scorecard still flags floating tags — execute may keep the retag only if it is already in the #217 diff"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "ALLOWED_LICENSES repo variable overrides the workflow fallback and Dependency Review still fails",
+      "mitigation": "If replacement Dependency Review fails with the same SPDX AND message, stop and treat as HUMAN (set the Actions variable); do not weaken fail-on-severity"
+    },
+    {
+      "risk": "query_id Test Suite failure is pre-existing or flake and blocks CLEAN",
+      "mitigation": "Compare origin/main Test Suite; only change handle_match if main is red for the same assertion; otherwise note ENVIRONMENT and do not invent a handler change"
+    },
+    {
+      "risk": "Closing 217-219 loses the only copy of the diffs",
+      "mitigation": "Keep ceg-pr-stack worktree tips; replacement commit must exist and be pushed before gh pr close"
+    },
+    {
+      "risk": "Merge of a red or stacked-parent squash",
+      "mitigation": "T8 only via stack_safe_merge.py --run after CLEAN and paginated threads resolved"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does origin/main Test Suite already fail tests/test_handlers.py::test_match_returns_structure?",
+      "decision_effect": "If yes, query_id is CODEBASE on main and may enter T5; if no, do not touch engine/handlers.py",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "Is vars.ALLOWED_LICENSES set on Quantum-L9/Cognitive.Engine.Graphs?",
+      "decision_effect": "If set without SPDX AND expressions, fallback edit is a no-op and 218-class Dependency Review stays red",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "make pr-check",
+      "pass_criteria": "CEG Makefile has no pr-check target; record NotApplicable and run make agent-check-unit instead",
+      "status": "not_applicable"
+    },
+    {
+      "id": "V2",
+      "command": "make agent-check-unit",
+      "pass_criteria": "exit 0 on the replacement worktree",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "gh pr view <replacement> --json mergeStateStatus,mergeable",
+      "pass_criteria": "mergeStateStatus CLEAN and mergeable MERGEABLE",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "PLAN_DOCUMENT validated; implementation not started. Execute via @environment/program-execution + /autonomy, not from this chat."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      ".github/workflows/baseline-ratchet-caller.yml",
+      ".github/workflows/l9-analysis.yml",
+      ".github/workflows/supply-chain.yml",
+      ".github/workflows/audit.yml",
+      ".github/workflows/docker-build.yml",
+      "pyproject.toml",
+      "poetry.lock",
+      "requirements.txt"
+    ],
+    "must_not_modify": [
+      "engine/handlers.py",
+      "engine/gates/",
+      "engine/config/schema.py",
+      "graph-cognitive-engine-spec-v1.1.0.yaml",
+      ".github/workflows/contracts.yml",
+      "docker-compose.yml"
+    ],
+    "preserved_contracts": [
+      "l9-pr-remediation: no merge while UNSTABLE; stack_safe_merge only",
+      "Contract 5: do not invent CI pipelines; only pin existing callers",
+      "Gold nugget: keep useful diffs only; close broken consolidation",
+      "Shared-worktree isolation: dedicated worktree, not dirty main"
+    ],
+    "validation_commands": [
+      "make pr-check",
+      "make agent-check-unit",
+      "gh pr view <replacement> --json mergeStateStatus"
+    ]
+  },
+  "checklist": [
+    "sdk-revision listed in 0d28395 sdk-compatibility.yaml",
+    "requirements.txt structlog bound matches poetry",
+    "replacement PR open before closing 217-219",
+    "merge only when CLEAN"
+  ],
+  "estimate": "1 PE wave / one replacement PR"
+}
