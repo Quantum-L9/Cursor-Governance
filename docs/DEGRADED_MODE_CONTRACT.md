@@ -1,7 +1,16 @@
-# Degraded-mode contract — what still works with zero brokered capabilities
+# Degraded-mode contract — capability broker RETIRED
+
+**Status:** retired 2026-08-29. The capability broker never shipped
+(`broker.quantumaipartners.com` has no DNS; hosted surfaces issue no
+broker-verifiable identity). Live Graphiti is `GRAPHITI_MCP_URL` or the
+local Cursor Graphiti CLI / SSH tunnel. Do not set `L9_CAPABILITY_BROKER_URL`.
+
+The findings below (mobile bootstrap audit B-09, B-10) remain historically
+true for Anthropic-hosted sessions. They no longer describe a plane that
+sessions should probe.
 
 **Findings:** mobile bootstrap audit B-09, B-10
-**Status:** in force on every Anthropic-hosted (`cloud_default`) session
+**Historical surface:** Anthropic-hosted (`cloud_default`) sessions
 
 Every brokered capability on this surface currently reports
 `BLOCKED_BY_PLATFORM`. That is not a misconfiguration and not an outage, and no
@@ -40,7 +49,7 @@ This is a second, independent blocker. Fixing it alone would not enable a single
 capability, because the identity gap above still applies.
 
 ```bash
-python3 ops/secrets/probe_broker.py        # tells the two apart
+python3 ops/secrets/probe_broker.py        # RETIRED unless L9_BROKER_FORCE=1
 ```
 
 ## What IS valid in degraded mode

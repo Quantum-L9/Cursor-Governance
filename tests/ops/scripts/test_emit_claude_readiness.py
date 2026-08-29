@@ -59,10 +59,10 @@ def test_projection_missing_receipt_is_unknown() -> None:
     assert set(out.values()) == {UNKNOWN}
 
 
-def test_graphiti_tcp_is_not_authenticated() -> None:
+def test_graphiti_health_is_local_after_broker_retire() -> None:
     status, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
-    assert status == DEGRADED
-    assert "identity" in note
+    assert status == READY
+    assert "retired" in note.lower()
     assert er._graphiti_health({"ok": True})[0] == READY
 
 
@@ -100,14 +100,15 @@ def test_uv_version_is_empty_when_uv_cannot_report(monkeypatch) -> None:
     assert er._uv_version() == ""
 
 
-def test_graphiti_blocker_is_a_constant_label() -> None:
-    # Only known blocker classes are emitted; an unknown value is mapped away so
-    # no probe-derived string is printed verbatim.
-    _, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
-    assert "identity" in note
+def test_graphiti_health_does_not_echo_a_retired_broker_probe() -> None:
+    # Broker retired: health is a constant READY note. Probe fields must not
+    # leak into the receipt (including a would-be secret-shaped blocker).
+    status, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
+    assert status == er.READY
+    assert "GRAPHITI_MCP_URL" in note
     _, other = er._graphiti_health({"ok": False, "primary_blocker": "ghs_leaked_token_value"})
     assert "ghs_leaked_token_value" not in other
-    assert "unknown" in other
+    assert "identity" not in other
 
 
 # --- Integration: build a fake governance clone + fake $HOME -------------------

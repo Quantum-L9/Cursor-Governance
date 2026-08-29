@@ -311,10 +311,8 @@ elif [ -n "$GOV_PY" ]; then
 fi
 
 # --- 3) Memory MCP front door (Claude .mcp.json format) ---------------------
-# Brokered front door: the template points at ${L9_CAPABILITY_BROKER_URL}
-# (/mcp/graphiti) and carries NO bearer (contract S3/§12). The broker speaks
-# the MCP handshake and maps search_memory/write_governed to
-# graphiti.query/graphiti.write_governed.
+# Graphiti HTTPS front door: the template points at ${GRAPHITI_MCP_URL} and
+# carries NO bearer. The capability broker never shipped (retired 2026-08-29).
 stage "mcp-front-door"
 # .mcp.json is a PROJECTION of mcp.template.json (the single MCP authority),
 # already rendered in the claude-projection stage above. The old `cp only if
@@ -333,46 +331,18 @@ case "$MCP_STATUS" in
   *) downgrade STATUS_MCP DEGRADED "mcp projection: $MCP_STATUS" ;;
 esac
 
-# Capability plane + memory posture for the receipt.
-#
-# This used to read `[ -z "$L9_CAPABILITY_BROKER_URL" ]` and call the result the
-# honest posture. Defining a NAME is not evidence that a plane works: the
-# configured broker host has had no DNS record and the hosted surface issues no
-# session identity, and the receipt still said READY for both capabilities and
-# memory. A false green is worse than a red, because nobody goes looking.
-#
-# ops/secrets/probe_broker.py is the classifier that already knows the
-# difference (identity vs configuration vs reachability). Exit 0 means a usable
-# plane; anything else names its primary blocker. It answers in under a second
-# when DNS fails, which is the case it has to be fast for.
+# Capability plane retired 2026-08-29 (never shipped). Do not probe a dead
+# broker or mark memory DEGRADED for its absence. Graphiti is GRAPHITI_MCP_URL.
 stage "capability-plane"
-PROBE_BROKER="$GOV_DIR/ops/secrets/probe_broker.py"
-if [ -z "${L9_CAPABILITY_BROKER_URL:-}" ]; then
-  downgrade STATUS_CAPABILITIES DEGRADED "L9_CAPABILITY_BROKER_URL unset"
-  downgrade STATUS_MEMORY DEGRADED "no broker-authenticated identity path"
-elif [ -n "$GOV_PY" ] && [ -f "$PROBE_BROKER" ]; then
-  if probe_json="$(L9_PROBE_QUIET=1 "$GOV_PY" "$PROBE_BROKER" --json 2>/dev/null)"; then
-    say "capability broker: reachable and identified"
-  else
-    probe_blocker="$(printf '%s' "$probe_json" \
-      | sed -n 's/.*"primary_blocker": *"\([^"]*\)".*/\1/p' | head -n 1)"
-    : "${probe_blocker:=unavailable}"
-    downgrade STATUS_CAPABILITIES DEGRADED "broker probe: $probe_blocker"
-    downgrade STATUS_MEMORY DEGRADED "broker probe: $probe_blocker"
-  fi
+say "capability plane: RETIRED (never shipped)"
+if [ -n "${GRAPHITI_MCP_URL:-}" ]; then
+  say "memory front door: GRAPHITI_MCP_URL set (no bearer in this process)"
 else
-  downgrade STATUS_CAPABILITIES DEGRADED "broker unprobeable (no interpreter or probe script)"
-  downgrade STATUS_MEMORY DEGRADED "broker unprobeable (no interpreter or probe script)"
+  downgrade STATUS_MEMORY DEGRADED "GRAPHITI_MCP_URL unset"
 fi
-
-# The memory MCP front door resolves THROUGH the broker
-# (url: ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti), so a present .mcp.json says
-# nothing about whether that server can ever connect. When the file routes
-# through the broker and the broker is not READY, neither is the front door.
-if [ "$STATUS_CAPABILITIES" != "READY" ] \
-   && [ -f "$WORKSPACE/.mcp.json" ] \
+if [ -f "$WORKSPACE/.mcp.json" ] \
    && grep -q 'L9_CAPABILITY_BROKER_URL' "$WORKSPACE/.mcp.json" 2>/dev/null; then
-  downgrade STATUS_MCP DEGRADED "front door routes through an unavailable broker"
+  downgrade STATUS_MCP DEGRADED "front door still routes through retired capability broker"
 fi
 
 # --- 3b) Marketplace plugins ------------------------------------------------

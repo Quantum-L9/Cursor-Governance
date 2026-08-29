@@ -1,6 +1,9 @@
+> **RETIRED 2026-08-29.** The capability broker never shipped. Do not follow
+> these steps. Live MCP: `environment/mcp/README.md` and `ops/secrets/RETIRED.md`.
+
 # Capability Broker Integration — Complete
 
-**Date**: 2026-08-17  
+**Date**: 2026-08-17
 **Status**: ✅ Wired and ready to deploy
 
 ## What Was Built

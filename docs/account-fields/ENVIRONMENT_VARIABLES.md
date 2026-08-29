@@ -5,7 +5,7 @@
 is stored as the characters `$HOME/x`.
 **Applies to:** NEW sessions only. Anthropic caches the environment after the
 first successful build, so a stale paste survives until a rebuild.
-**Checksum:** `de3f0ce160307b2f` (32 variables)
+**Checksum:** `749b74840720a42d` (31 variables)
 
 Generated from `environment/agents/adapters/claude-code/web/environment.env.example`
 by `verify_account_env.py --emit-fields`. Do not hand-edit this file; edit the
@@ -37,7 +37,6 @@ L9_AUTONOMY_MAX_PARALLEL=480
 L9_AUTONOMY_PROFILE=pr-convergence
 L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation
 L9_AUTONOMY_STATE_DIR=.l9/autonomy
-L9_CAPABILITY_BROKER_URL=https://broker.quantumaipartners.com/l9/capability
 L9_DISCOVER_BEFORE_ASK=true
 L9_GOVERNANCE_BRANCH=main
 L9_GOVERNANCE_REMOTE=https://github.com/Quantum-L9/Cursor-Governance.git
@@ -64,5 +63,5 @@ USER_ID=claude_code_agent
 python3 environment/agents/adapters/claude-code/verify_account_env.py
 ```
 
-`OK: all 32 expected variables match` means the field matches HEAD.
+`OK: all 31 expected variables match` means the field matches HEAD.
 Any `DRIFT:` line names the variable, what is set, and what was expected.

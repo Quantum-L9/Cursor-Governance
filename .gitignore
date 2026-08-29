@@ -150,7 +150,9 @@ docs/skills-inventory.md
 
 # runtime state
 .harvest_executor_state.json
-# .governance-build-lock stays tracked — session_start_bootstrap.sh reads it
+# Local-only backup kill switch. Presence still skips sessionEnd backup
+# (session_start_bootstrap.sh). Do not track it.
+.governance-build-lock
 
 # retired harvest dump — repo-hygiene fail-closes if this directory reappears
 current_work/

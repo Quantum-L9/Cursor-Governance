@@ -55,11 +55,8 @@ class AccountEnvDriftTests(unittest.TestCase):
     def _deviation(self, key: str, env: dict[str, str]) -> dict[str, str] | None:
         return next((d for d in compare(self.expected, env) if d["key"] == key), None)
 
-    def test_missing_broker_url_is_caught(self) -> None:
-        row = self._deviation("L9_CAPABILITY_BROKER_URL", AUDITED_ENV)
-        self.assertIsNotNone(row)
-        self.assertEqual(row["kind"], "missing")
-        self.assertIn("broker.quantumaipartners.com", row["expected"])
+    def test_retired_broker_url_is_not_an_account_field(self) -> None:
+        self.assertNotIn("L9_CAPABILITY_BROKER_URL", self.expected)
 
     def test_missing_subagent_ceiling_is_caught(self) -> None:
         row = self._deviation("CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS", AUDITED_ENV)

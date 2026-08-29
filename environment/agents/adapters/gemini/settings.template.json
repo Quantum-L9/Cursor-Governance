@@ -8,11 +8,11 @@
     "status": "active",
     "version": "1.2.0",
     "updated": "2026-08-26",
-    "note": "Merge mcpServers into ~/.gemini/settings.json. Brokered Graphiti front door. NO bearer in this file: the broker resolves GRAPHITI_MCP_TOKEN on its own side of the trust boundary and authenticates the session against its verifiable identity (ADAPTER_CONTRACT.md, capability carrier). When the broker URL is unset or the broker is not deployed this server returns an honest 401 and memory runs DEGRADED \u2014 never a reason to paste a token. Peer of environment/agents/adapters/claude-code/mcp.template.json."
+    "note": "Merge mcpServers into ~/.gemini/settings.json. Graphiti HTTPS front door (${GRAPHITI_MCP_URL}). NO bearer. The capability broker never shipped and is retired. Peer of environment/agents/adapters/claude-code/mcp.template.json."
   },
   "mcpServers": {
     "graphiti-memory": {
-      "httpUrl": "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti",
+      "httpUrl": "${GRAPHITI_MCP_URL}",
       "timeout": 120000,
       "trust": false
     }

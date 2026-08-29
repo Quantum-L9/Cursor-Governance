@@ -134,17 +134,13 @@ class SwallowedFailureTests(unittest.TestCase):
         self.assertEqual(offenders, [], "route GraphQL calls through gh_graphql()")
 
     def test_capability_check_failure_is_never_swallowed(self) -> None:
-        """The B-08 shape: `bash bootstrap_agent_env.sh ... || warn` with no count."""
+        """Broker probe retired: shared bootstrap must not call it or swallow it."""
         body = (REPO / "ops" / "scripts" / "bootstrap_agent_environment.sh").read_text(
             encoding="utf-8"
         )
-        self.assertNotRegex(
-            body,
-            r"bootstrap_agent_env\.sh[^\n]*\\\n[^\n]*\|\| warn",
-            "a capability-plane failure must increment DEGRADED, not merely warn",
-        )
-        self.assertIn("cap_rc=$?", body)
-        self.assertIn("DEGRADED=$((DEGRADED + 1))", body)
+        self.assertIn("capability plane: RETIRED", body)
+        self.assertNotIn('bash "$CAP_BOOTSTRAP"', body)
+        self.assertNotIn("cap_rc=$?", body)
 
     def test_comment_exemption_does_not_launder_a_real_swallow(self) -> None:
         """The exemption is full-line comments only, and nothing wider."""

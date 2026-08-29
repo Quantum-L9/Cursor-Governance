@@ -98,8 +98,9 @@ the account environment makes the bypass permanent for every session.
 2. **Environment variables** — paste `environment.env.example` **as-is**. Do not
    replace anything with Infisical UA, Infisical password, a PAT, or
    `GRAPHITI_MCP_TOKEN`. `GH_TOKEN=proxy-injected` is a marker, not a secret.
-   Authenticated work uses the capability broker (`L9_CAPABILITY_BROKER_URL`),
-   which holds Infisical credentials on the trusted side.
+   Authenticated Sonar/Semgrep stay operator-side. The capability broker
+   (`L9_CAPABILITY_BROKER_URL`) never shipped — do not set it. Graphiti is
+   `GRAPHITI_MCP_URL`.
 3. **Setup script** — **paste `setup.bootstrap.sh` (recommended), not `setup.sh`.**
    The account field is a *copy*, not a live link to the repo, so pasting the full
    `setup.sh` drifts from the file on every edit until someone re-pastes it. The
@@ -137,27 +138,18 @@ ls "$HOME/.cursor-governance/CANONICAL_LAW.md"    # governance clone present
 echo "$L9_GOVERNANCE_SURFACE"                     # must print exactly: claude-code
 echo "$L9_GOVERNANCE_DIR"                         # must be an expanded path, not '$HOME/...'
 "$HOME/.cursor-governance/.venv/bin/python3" -c 'import pydantic, yaml, jsonschema'  # locked env
-# Same capability check every surface runs (names only — no secret values):
-bash "$HOME/.cursor-governance/ops/secrets/bootstrap_agent_env.sh" --check \
-  --surface claude-code --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query
-# SessionStart injects "L9 Governance — Claude Code session". DEGRADED hydrate
-# with broker unset is the honest posture — do not paste GRAPHITI_MCP_TOKEN.
+# Graphiti health is GRAPHITI_MCP_URL (no broker). Do not paste GRAPHITI_MCP_TOKEN.
 ```
 
 ## Shared memory (required for governed Mobile/Web)
 
-Cloud sessions reach the **same** Graphiti store as Cursor through the brokered
+Cloud sessions reach the **same** Graphiti store as Cursor through the HTTPS
 front door. `mcp.template.json` points `graphiti-memory` at
-`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti` — the L9 capability broker
-(`graphiti.query`) — and carries **no bearer**: the broker resolves the
-Graphiti credential on its trusted side and proxies to
-`memory.quantumaipartners.com/graphiti/mcp`. This is **not** the retired
-`L9_MEMORY_HTTP_*` side door (ADR-0006).
+`${GRAPHITI_MCP_URL}` and carries **no bearer**. This is **not** the retired
+capability broker (`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`) and **not** the
+retired `L9_MEMORY_HTTP_*` side door (ADR-0006).
 
-**Honest posture when the broker is unreachable or has no authenticated
-identity for this session:** memory reports `DEGRADED` (broker identity
-unavailable). Do **not** paste a Graphiti bearer into the variables field to
-turn that green — the fix is broker delivery, never a static secret.
+**Honest posture:** do **not** paste a Graphiti bearer into the variables field.
 
 **Identity (shared graph, distinct author).** `group_id` is shared with Cursor.
 Writing identity is not: `USER_ID=claude_code_agent` / `L9_MEMORY_AGENT_ID=claude-code`.

@@ -91,13 +91,16 @@ l4_local_autonomy:
   kernel_hook:
     owner: ops/autonomy/kernel_gate.py
     fires: first_step_of_precommit_repo
+    skip_unless_adapter_surface: true
     note: >-
       Not an L4 phase. Fail-closed before any other hook or test so
       checkers run once on the post-kernel tree. WIP/, docs/plans/, and
       environment/program-execution/campaigns/ are /ff corpus surfaces
       (Improve then Recursive Alignment then Validate & Repair); this
       hook skips those prefixes and skips the tree latch when the whole
-      changeset is corpus-only.
+      changeset is corpus-only. Cursor (`CURSOR_AGENT` /
+      `L9_GOVERNANCE_SURFACE=cursor` / unset) skips this latch entirely —
+      tree kernels are a Claude Code / adapter-surface ceremony.
   required_kernels:
     - path: kernels/Recursive Alignment.md
       id: recursive_alignment

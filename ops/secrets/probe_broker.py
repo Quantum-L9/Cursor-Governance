@@ -166,6 +166,13 @@ def run(env: dict[str, str] | None = None, *, timeout: int = TIMEOUT) -> dict:
 
 
 def main(argv: list[str] | None = None) -> int:
+    if os.environ.get("L9_BROKER_FORCE") != "1":
+        print(
+            "probe_broker: RETIRED (capability broker never shipped). "
+            "Set L9_BROKER_FORCE=1 to run this probe.",
+            file=sys.stderr,
+        )
+        return 0
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)

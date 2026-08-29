@@ -969,3 +969,39 @@ skips the tree latch too. L4 on the shelf worktree is `begin` then
 `authorize-release` only — not `record-kernels`. Mid-session plan inject does
 not apply those kernels; `/ff` is the apply site. This fragment supersedes
 the `record-kernels` sentence in `FF_SHELF_WIP_PLANS_V1`.
+
+<!-- CURSOR_SESSIONSTART_NO_CLAUDE_CLOUD_V1 -->
+## Cursor SessionStart does not score Claude cloud (2026-08-29)
+
+`ops/hooks/session_start_bootstrap.sh` does not run `claude_projection.py`.
+Claude Code SessionStart (`session_start_claude_governance.sh`) is a no-op
+unless a Claude runtime marker is set (`CLAUDE_CODE_REMOTE=true`,
+`CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, or `CLAUDE_CODE_SESSION_ID`).
+`.governance-build-lock` is local-only (gitignored); presence still skips
+backup. This fragment supersedes §2.1 step 2 (Claude projection from Cursor
+SessionStart) and the older “keep `.governance-build-lock` tracked” housekeeping
+decision.
+
+<!-- CURSOR_KERNEL_LATCH_ADAPTER_ONLY_V1 -->
+## Tree kernels are Claude Code ceremony, not Cursor (2026-08-29)
+
+`ops/autonomy/kernel_gate.py` on `make precommit-repo` fires only when
+`L9_GOVERNANCE_SURFACE` is `claude-code` / `codex` / `gemini` / `manus`, or a
+Claude runtime marker is set. Cursor (`CURSOR_AGENT`, surface `cursor`, or
+unset) skips the latch. Cursor still scoped-commits after `make precommit-repo`
+(hooks + ruff) without a kernel receipt. `/ff` corpus kernels are unchanged.
+
+<!-- CAPABILITY_BROKER_RETIRED_V1 -->
+## Capability broker retired (2026-08-29)
+
+The capability broker never shipped. Session bootstrap does not probe it.
+Adapter MCP templates use `${GRAPHITI_MCP_URL}`. Cursor `master.mcp.json`
+does not route GitHub/Context7/Semgrep/GitGuardian through the broker.
+`make capability-check` / `broker-serve` print RETIRED and exit 0 unless
+`L9_BROKER_FORCE=1`. Cursor Graphiti is the local CLI / tunnel. Do not paste
+secrets to “fix” a retired plane. See `ops/secrets/RETIRED.md`.
+
+<!-- MAKE_381_PR_STACK_EXPORT_V1 -->
+## `make precommit-repo` on Apple GNU Make 3.81 (2026-08-29)
+
+macOS `/usr/bin/make` is GNU Make 3.81. `precommit-repo: export PR_STACK = $(PR_STACK)` is a recursive self-definition on 3.81 (Make 4.x snapshots that form). The live line is `export PR_STACK := $(PR_STACK)` so default `auto` and `PR_STACK=` opt-out reach `run_pr_precommit.sh`. Do not restore the `=` flavor. Homebrew `gmake` is not required.

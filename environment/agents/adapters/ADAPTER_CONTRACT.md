@@ -24,19 +24,17 @@ execution machinery.
 
 ## Memory carrier
 
-Brokered Graphiti front door:
+Graphiti HTTPS front door:
 
 ```text
-${L9_CAPABILITY_BROKER_URL}/mcp/graphiti
+${GRAPHITI_MCP_URL}
 ```
 
-**No adapter MCP template carries a bearer.** `GRAPHITI_MCP_TOKEN` is resolved
-by the broker on its own side of the trust boundary, never by a surface and
-never from an adapter config file — the same rule the capability carrier states
-below, applied to memory. An adapter template that interpolates
-`Authorization: Bearer ${GRAPHITI_MCP_TOKEN}` is a contract violation, not a
-fallback: when the broker URL is unset or the broker is not deployed, the
-server returns an honest 401 and memory runs DEGRADED.
+**No adapter MCP template carries a bearer.** The capability broker
+(`L9_CAPABILITY_BROKER_URL`) never shipped and is retired. Cursor uses the
+local Graphiti CLI / SSH tunnel. Adapter surfaces use `GRAPHITI_MCP_URL`.
+An adapter template that interpolates `Authorization: Bearer ${GRAPHITI_MCP_TOKEN}`
+is a contract violation.
 
 The direct cloud endpoint `https://memory.quantumaipartners.com/graphiti/mcp`
 is now reachable only from behind the broker. `ops/graphiti/mcp.json.example`

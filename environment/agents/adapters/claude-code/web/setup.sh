@@ -27,8 +27,7 @@
 #
 # Env vars (see web/environment.env.example):
 #   GH_TOKEN=proxy-injected        — not a PAT; Anthropic git/gh proxy
-#   GRAPHITI_MCP_URL               — Cursor Graphiti front door URL (no bearer)
-#   L9_CAPABILITY_BROKER_URL       — optional; Infisical stays behind the broker
+#   GRAPHITI_MCP_URL               — Graphiti HTTPS front door (no bearer)
 #   L9_GOVERNANCE_REMOTE / _BRANCH — default Quantum-L9/Cursor-Governance @ main
 #
 # Governance always lands at $HOME/.cursor-governance (GitHub main).

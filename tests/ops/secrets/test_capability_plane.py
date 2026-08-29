@@ -578,8 +578,16 @@ def test_mcp_config_carries_no_bearer() -> None:
     assert "headers" not in server
 
 
+def test_master_mcp_does_not_route_through_retired_broker() -> None:
+    """Cursor master MCP must not send GitHub/Context7/etc through the dead broker."""
+    raw = (REPO_ROOT / "environment" / "mcp" / "master.mcp.json").read_text(encoding="utf-8")
+    config = json.loads(raw)
+    wiring = {k: v for k, v in config.items() if not str(k).startswith("_")}
+    assert "L9_CAPABILITY_BROKER_URL" not in json.dumps(wiring)
+
+
 def test_no_adapter_mcp_template_carries_a_graphiti_bearer() -> None:
-    """#303 item 3: every adapter, not just Claude, uses the brokered front door.
+    """#303 item 3: adapter MCP templates use GRAPHITI_MCP_URL with no bearer.
 
     Scoped to adapter templates. `ops/graphiti/mcp.json.example` is the
     trusted-operator (Cursor SSH tunnel) shape and is deliberately not an
@@ -604,10 +612,11 @@ def test_no_adapter_mcp_template_carries_a_graphiti_bearer() -> None:
         rendered = json.dumps(wiring)
         if "GRAPHITI_MCP_TOKEN" in rendered or "Authorization" in rendered:
             offenders.append(str(path.relative_to(REPO_ROOT)))
+        if "L9_CAPABILITY_BROKER_URL" in rendered:
+            offenders.append(str(path.relative_to(REPO_ROOT)))
     assert checked >= 5, f"adapter template discovery found only {checked} configs"
     assert offenders == [], (
-        "adapter MCP templates must point at ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti "
-        f"with no in-file bearer: {offenders}"
+        f"adapter MCP templates must use ${{GRAPHITI_MCP_URL}} with no in-file bearer: {offenders}"
     )
 
 

@@ -40,6 +40,12 @@ class CursorSharedBootstrapEdgeTests(unittest.TestCase):
         self.assertIn('--surface "${L9_GOVERNANCE_SURFACE:-cursor}"', live)
         self.assertNotIn("l9_session_runtime_probe", live)
 
+    def test_cursor_hook_does_not_invoke_claude_projection(self) -> None:
+        live = _live_path(HOOK.read_text(encoding="utf-8"))
+        self.assertNotIn("claude_projection.py --root", live)
+        self.assertNotIn("$PROJECTION_ENGINE", live)
+        self.assertNotIn("- claude-plugins:", live)
+
     def test_hook_does_not_reimplement_shared_concerns(self) -> None:
         text = HOOK.read_text(encoding="utf-8")
         leaked = [f"{token} ({why})" for token, why in FORBIDDEN.items() if token in text]
