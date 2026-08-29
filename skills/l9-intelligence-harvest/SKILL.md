@@ -19,9 +19,9 @@ Machine-first semantic donor mining. The canonical product is `harvest.json`; Ma
 
 ## Runtime
 
-Canonical DAG: `workflows/dags/intelligence_harvest_dag.py`
+Canonical DAG: `workflows/dags/intelligence_harvest/graph.py`
 Registry id: `intelligence-harvest-v1`
-DAG authoring and registration are owned by `l9-dag-authoring`; this pack defines the typed logical graph in its Skill IR and must not invent a parallel registry.
+The SessionDAG adapter at `workflows/dags/intelligence_harvest_dag.py` stays registered. DAG authoring and registration are owned by `l9-dag-authoring`; this pack defines the typed logical graph in its Skill IR and must not invent a parallel registry.
 
 Logical order: BIND_REQUEST → PROBE_CAPABILITIES → LOCK_SOURCE_IDENTITY → INVENTORY_DONOR → RECONSTRUCT_SYSTEM → TRACE_SURFACES → DETECT_DUPLICATION_DRIFT → EXTRACT_CONCEPT_CANDIDATES → QUALIFY_NUGGETS → COMPARE_BENEFICIARY → DISPOSITION_CONCEPTS → DERIVE_ACCEPTANCE_TESTS → RANK_NUGGETS → SAFETY_PORTABILITY_AUDIT → EVIDENCE_CLOSURE → RENDER_OUTPUT → PASS/PARTIAL/BLOCKED/FAIL.
 

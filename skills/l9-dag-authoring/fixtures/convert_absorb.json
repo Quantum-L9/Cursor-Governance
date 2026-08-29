@@ -1,0 +1,6 @@
+{
+  "operation": "CONVERT",
+  "repo_root": ".",
+  "dag_id": "dag-authoring-v1",
+  "allow_session_retire": false
+}
