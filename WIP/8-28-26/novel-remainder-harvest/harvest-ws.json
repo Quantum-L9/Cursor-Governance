@@ -1,0 +1,2992 @@
+{
+  "baseline": "origin/main",
+  "counts": {
+    "harvestable": 8,
+    "skipped": 157,
+    "worktrees": 110
+  },
+  "harvestable": [
+    {
+      "branch": "feat/pr-train-pack-overlap",
+      "class": "unique_wip",
+      "path": "WIP/8-28-26/novel-remainder-harvest/harvest-ws.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "branch": "feat/pr-train-pack-overlap",
+      "class": "unique_wip",
+      "path": "WIP/8-28-26/novel-remainder-harvest/inv-ssot.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "branch": "feat/pr-train-pack-overlap",
+      "class": "unique_wip",
+      "path": "WIP/8-28-26/novel-remainder-harvest/inv-ws.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "branch": "feat/pr-train-pack-overlap",
+      "class": "unique_plans",
+      "path": "docs/plans/built/fix_ff_slash_command_49d066b7.plan.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "branch": "feat/pr-train-pack-overlap",
+      "class": "unique_plans",
+      "path": "docs/plans/fleet_issues_diagnose_ee5fa300.plan.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "branch": "feat/pr-train-pack-overlap",
+      "class": "unique_plans",
+      "path": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "branch": "feat/pe-brief-accept-cursor-plan-on-254",
+      "class": "unique_product",
+      "path": "skills/l9-pe-campaign-activate/scripts/fixtures/cursor-plan-todos.plan.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pe-brief-accept-cursor-plan"
+    },
+    {
+      "branch": "feat/pr-train-0-61e0b2a8-92726-1787966728",
+      "class": "unique_plans",
+      "path": "docs/plans/dag_authoring_convert_4d8d80c4.plan.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-train-0-92726-1787966728"
+    }
+  ],
+  "include_wip": true,
+  "mode": "harvest",
+  "repo": "/Users/ib-mac/Cursor-Governance",
+  "schema": "l9.git_work_preserve.harvest/v1",
+  "skipped": [
+    {
+      "branch": "feat/pr-train-pack-overlap",
+      "class": "already_on_baseline",
+      "path": "docs/plans/fix_ff_slash_command_49d066b7.plan.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "branch": "agent/cursor/c5-c6-harvest-land",
+      "class": "already_on_baseline",
+      "path": "docs/plans/BUILT/c5_c6_harvest_land_3bd25547.plan.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__c5-c6-harvest-land"
+    },
+    {
+      "branch": "feat/gmp-execution-governance-harvest",
+      "class": "already_on_baseline",
+      "path": "environment/agents/adapters/claude-code/generated/skill-registry.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/gmp-exec-gov-harvest-20260828T230515Z"
+    },
+    {
+      "branch": "feat/gmp-execution-governance-harvest",
+      "class": "already_on_baseline",
+      "path": "ops/generated/skill-registry.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/gmp-exec-gov-harvest-20260828T230515Z"
+    },
+    {
+      "branch": "feat/gmp-execution-governance-harvest",
+      "class": "already_on_baseline",
+      "path": "rules/RULES-MANIFEST.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/gmp-exec-gov-harvest-20260828T230515Z"
+    },
+    {
+      "branch": "feat/gmp-execution-governance-harvest",
+      "class": "already_on_baseline",
+      "path": "rules/RULES-MANIFEST.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/gmp-exec-gov-harvest-20260828T230515Z"
+    },
+    {
+      "branch": "feat/gmp-execution-governance-harvest",
+      "class": "already_on_baseline",
+      "path": "rules/RULES-MANIFEST.yaml",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/gmp-exec-gov-harvest-20260828T230515Z"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "AGENTS.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "CANONICAL_LAW.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "Makefile",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "commands/COMMANDS_MANIFEST.yaml",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "commands/commands-index.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "environment/agents/adapters/claude-code/generated/skill-registry.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "environment/generated/llm-rules/02-slash-commands.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "environment/generated/llm-rules/MANIFEST.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "environment/generated/llm-rules/l9-skill-routing.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "ops/generated/skill-registry.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "ops/hooks/session_start_bootstrap.sh",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/check_governance_wiring.sh",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/governance_activate_fresh.sh",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/governance_sync.sh",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/tests/test_governance_activate_fresh.sh",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "rules/02-slash-commands.mdc",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "rules/23-l9-skill-routing.mdc",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "rules/RULES-MANIFEST.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "rules/RULES-MANIFEST.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "rules/RULES-MANIFEST.yaml",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "skills/AUTONOMY_MANIFEST.yaml",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "commands/ff.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "environment/generated/llm-rules/55-ff-only-ssot-sync.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "rules/55-ff-only-ssot-sync.mdc",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "skills/l9-repo-sync/SKILL.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "skills/l9-repo-sync/agents/meta.yaml",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "skills/l9-repo-sync/references/clone-map.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "skills/l9-repo-sync/references/diagnose-first.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "skills/l9-repo-sync/references/execute.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "skills/l9-repo-sync/references/forbidden.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "skills/l9-repo-sync/scripts/ff.sh",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/l9-ff-only-sync",
+      "class": "already_on_baseline",
+      "path": "skills/l9-repo-sync/scripts/validate_pack_structure.py",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "branch": "feat/pe-brief-accept-cursor-plan-on-254",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/scripts/compile_brief.py",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pe-brief-accept-cursor-plan"
+    },
+    {
+      "branch": "feat/pe-brief-accept-cursor-plan-on-254",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/scripts/test_compile_brief.py",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pe-brief-accept-cursor-plan"
+    },
+    {
+      "branch": "claude/cursor-governance-remediation-irbyhf-03-git-doctrine",
+      "class": "already_on_baseline",
+      "path": "tests/ops/scripts/test_validate_git_denial_residue.py",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-256-git-doctrine"
+    },
+    {
+      "branch": "feat/pr-train-0-61e0b2a8-92726-1787966728",
+      "class": "already_on_baseline",
+      "path": "docs/plans/fold_pr-check_81560ec1.plan.md",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-train-0-92726-1787966728"
+    },
+    {
+      "branch": "feat/stack-proof-key-miss",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/MANIFEST.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/stack-proof-key-miss"
+    },
+    {
+      "branch": "feat/stack-proof-key-miss",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/scripts/blueprint_ops.py",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/stack-proof-key-miss"
+    },
+    {
+      "branch": "feat/stack-proof-key-miss",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/scripts/compile_campaign_source.py",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/stack-proof-key-miss"
+    },
+    {
+      "branch": "feat/stack-proof-key-miss",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/scripts/context7_stack_proof.py",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/stack-proof-key-miss"
+    },
+    {
+      "branch": "feat/stack-proof-key-miss",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/scripts/tests/test_context7_stack_proof.py",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/stack-proof-key-miss"
+    },
+    {
+      "branch": "feat/stack-proof-key-miss",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/scripts/compile_brief.py",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/stack-proof-key-miss"
+    },
+    {
+      "branch": "agent/cursor/stop-gen-conflicts",
+      "class": "already_on_baseline",
+      "path": ".claude/settings.json",
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/stop-generated-merge-conflicts"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/MANIFEST.json",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/README.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/CAMPAIGN_SOURCE.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/README.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/IB-Odoo_19-INTEGRATION-DELIVERY.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/reference/plasticos_ceg_match_mapper.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/reference/plasticos_eie_converge_mapper.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/handoff/CAMPAIGN_HANDOFF.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/handoff/handoff.json",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/AUTH-001-SUPERSESSION.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/CAMPAIGN_EXECUTION_BINDING.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/CURRENT_STATE.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/EXECUTION_FROM_ODOO.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/history/v1.0.0/CAMPAIGN_SOURCE.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/history/v1.0.0/README.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/history/v1.0.0/handoff.json",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/ecosystem-odoo-ready",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/history/v1.0.0/source-integrity-receipt.json",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "environment/agents/adapters/claude-code/validate_skill_activation.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "ops/hooks/hooks.json.template",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/check_governance_wiring.sh",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/run_pr_gate.sh",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/run_python_test_suites.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/setup_workspace_symlinks.sh",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/test_python_contract.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "tests/ops/scripts/test_pr_lifecycle.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "ops/hooks/pr_gate_failure_shell.sh",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/pr_gate_failure.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/gate-failure-receipt",
+      "class": "already_on_baseline",
+      "path": "tests/ops/scripts/test_pr_gate_failure.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "environment/agents/adapters/claude-code/settings.template.json",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "ops/generated/skill-registry.json",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "skills/AUTONOMY_MANIFEST.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/SKILL.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/agents/meta.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/references/file-set.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/references/merge-authority.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/references/pipeline.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/references/source-contract.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/l9-pe-campaign-activate",
+      "class": "already_on_baseline",
+      "path": "skills/l9-pe-campaign-activate/scripts/test_compile_activation_files.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "branch": "feat/level3-make-pr-single-path",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/level3-make-pr-single-path"
+    },
+    {
+      "branch": "feat/level3-make-pr-single-path",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/level3-make-pr-single-path/handoff/CLOSEOUT.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/level3-make-pr-single-path"
+    },
+    {
+      "branch": "feat/stack-proof-context7-capability",
+      "class": "already_on_baseline",
+      "path": "environment/agents/adapters/claude-code/web/network-policy.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "branch": "feat/stack-proof-context7-capability",
+      "class": "already_on_baseline",
+      "path": "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "branch": "feat/stack-proof-context7-capability",
+      "class": "already_on_baseline",
+      "path": "environment/mcp/CAPABILITY_BROKER_COMPLETE.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "branch": "feat/stack-proof-context7-capability",
+      "class": "already_on_baseline",
+      "path": "environment/mcp/MIGRATION_TO_BROKER.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "branch": "feat/stack-proof-context7-capability",
+      "class": "already_on_baseline",
+      "path": "environment/mcp/README.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "branch": "feat/stack-proof-context7-capability",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/scripts/context7_stack_proof.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "branch": "feat/stack-proof-context7-capability",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/scripts/tests/test_context7_stack_proof.py",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "branch": "feat/stack-proof-context7-capability",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/bootstrap_agent_environment.sh",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "branch": "feat/stack-proof-context7-capability",
+      "class": "already_on_baseline",
+      "path": "ops/secrets/README.md",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "branch": "feat/stack-proof-context7-capability",
+      "class": "already_on_baseline",
+      "path": "ops/secrets/capabilities.yaml",
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "branch": "fix/claude-session-start-thin-wrapper",
+      "class": "already_on_baseline",
+      "path": ".claude/hooks/session_start_claude_governance.sh",
+      "worktree": "/Users/ib-mac/Cursor-Governance-session-start-wrap"
+    },
+    {
+      "branch": "fix/claude-session-start-thin-wrapper",
+      "class": "already_on_baseline",
+      "path": ".claude/settings.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance-session-start-wrap"
+    },
+    {
+      "branch": "fix/claude-session-start-thin-wrapper",
+      "class": "already_on_baseline",
+      "path": "environment/agents/adapters/claude-code/README.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-session-start-wrap"
+    },
+    {
+      "branch": "fix/claude-session-start-thin-wrapper",
+      "class": "already_on_baseline",
+      "path": "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-session-start-wrap"
+    },
+    {
+      "branch": "fix/claude-session-start-thin-wrapper",
+      "class": "already_on_baseline",
+      "path": "environment/agents/adapters/claude-code/validate_claude_env.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-session-start-wrap"
+    },
+    {
+      "branch": "fix/claude-session-start-thin-wrapper",
+      "class": "already_on_baseline",
+      "path": "environment/agents/adapters/claude-code/web/setup.sh",
+      "worktree": "/Users/ib-mac/Cursor-Governance-session-start-wrap"
+    },
+    {
+      "branch": "fix/claude-session-start-thin-wrapper",
+      "class": "already_on_baseline",
+      "path": "ops/scripts/reconcile_claude_settings.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-session-start-wrap"
+    },
+    {
+      "branch": "fix/claude-session-start-thin-wrapper",
+      "class": "already_on_baseline",
+      "path": "tests/ops/autonomy/test_surface_profile.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-session-start-wrap"
+    },
+    {
+      "branch": "fix/claude-session-start-thin-wrapper",
+      "class": "already_on_baseline",
+      "path": "tests/ops/scripts/test_reconcile_claude_settings.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-session-start-wrap"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/Cursor Prompt 2.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/Cursor Prompt.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.capability_contract.v1.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.contract_extraction_record.v1.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.contract_projection_binding.v1.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.contract_registry.v1.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.cursor_rules_manifest.v3.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.evidence_contract.v1.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.governance_contract.v1.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.invariant_contract.v1.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.policy_contract.v1.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.rule_activation_binding.v1.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/contracts/schemas/canonical.schema.workflow_contract.v1.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/docs/decisions/ADR-0007-contracts-own-rule-semantics.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/docs/decisions/ADR-0008-rule-activation-binding-intermediate-representation.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/docs/decisions/ADR-0009-normative-advisory-rule-channels.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/docs/decisions/ADR-0010-rule-activation-and-context-budget.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/docs/decisions/ADR-0011-deterministic-generated-cursor-rule-projections.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/docs/decisions/ADR-0012-rules-manifest-generated-projection-registry.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/docs/decisions/ADR-0013-rule-compiler-fail-closed-conflicts-scope-and-drift.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/docs/decisions/ADR-0014-rules-strangler-migration-and-doctrine-ratchet.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/config/doctrine-baseline.rules.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/adapters/cursor_rules.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/build_doctrine_census.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/build_rule_doctrine_census.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/build_rules.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/cluster_doctrine.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/detect_hidden_doctrine.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/extract_doctrine.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/render_cursor_rule.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/resolve_rule_contracts.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/validate_doctrine_ratchet.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/validate_rule_binding.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/contracts/validate_rule_projections.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/ops/scripts/generate_rules_manifest.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "feat/cursor-rules-contract-foundation",
+      "class": "already_on_baseline",
+      "path": "WIP/CG/tests/contracts/test_rules_contract_compiler.py",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "branch": "campaign/l9-agent-doc-plane",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/MANIFEST.json",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/l9-agent-doc-plane"
+    },
+    {
+      "branch": "campaign/l9-agent-doc-plane",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/l9-agent-doc-plane"
+    },
+    {
+      "branch": "campaign/l9-agent-doc-plane",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/l9-agent-doc-plane"
+    },
+    {
+      "branch": "campaign/l9-agent-doc-plane",
+      "class": "already_on_baseline",
+      "path": "environment/program-execution/campaigns/README.md",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/l9-agent-doc-plane"
+    },
+    {
+      "branch": "fix/uv-dependency-cooldown",
+      "class": "already_on_baseline",
+      "path": ".github/dependabot.yml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/uv-dep-cooldown"
+    },
+    {
+      "branch": "fix/uv-dependency-cooldown",
+      "class": "already_on_baseline",
+      "path": "pyproject.toml",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/uv-dep-cooldown"
+    },
+    {
+      "branch": "fix/uv-dependency-cooldown",
+      "class": "already_on_baseline",
+      "path": "uv.lock",
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/uv-dep-cooldown"
+    }
+  ],
+  "worktrees": [
+    {
+      "behind_baseline": 3,
+      "branch": "feat/pr-train-pack-overlap",
+      "dirty_count": 7,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "docs/plans/fix_ff_slash_command_49d066b7.plan.md",
+          "status": " D"
+        },
+        {
+          "class": "unique_wip",
+          "path": "WIP/8-28-26/novel-remainder-harvest/harvest-ws.json",
+          "status": "??"
+        },
+        {
+          "class": "unique_wip",
+          "path": "WIP/8-28-26/novel-remainder-harvest/inv-ssot.json",
+          "status": "??"
+        },
+        {
+          "class": "unique_wip",
+          "path": "WIP/8-28-26/novel-remainder-harvest/inv-ws.json",
+          "status": "??"
+        },
+        {
+          "class": "unique_plans",
+          "path": "docs/plans/built/fix_ff_slash_command_49d066b7.plan.md",
+          "status": "??"
+        },
+        {
+          "class": "unique_plans",
+          "path": "docs/plans/fleet_issues_diagnose_ee5fa300.plan.md",
+          "status": "??"
+        },
+        {
+          "class": "unique_plans",
+          "path": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "6cb02014",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/Cursor-Governance"
+    },
+    {
+      "behind_baseline": 28,
+      "branch": "agent/cursor/c5-c6-harvest-land",
+      "dirty_count": 1,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "docs/plans/BUILT/c5_c6_harvest_land_3bd25547.plan.md",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "ed2ea014",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__c5-c6-harvest-land"
+    },
+    {
+      "behind_baseline": 11,
+      "branch": "agent/cursor/ff-switch-corpus",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "daee9164",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__ff-switch-corpus"
+    },
+    {
+      "behind_baseline": 347,
+      "branch": "agent/cursor/git-work-preserve-harvest",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "672ee5bd",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__git-work-preserve-harvest"
+    },
+    {
+      "behind_baseline": 38,
+      "branch": "agent/cursor/gmp-slash-build",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "47398bf8",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__gmp-slash-build"
+    },
+    {
+      "behind_baseline": 455,
+      "branch": "agent/cursor/plan-kernel-auto-pass",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "d90e5237",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__plan-kernel-auto-pass"
+    },
+    {
+      "behind_baseline": 28,
+      "branch": "agent/cursor/pr-train",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "20ec3252",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__pr-train"
+    },
+    {
+      "behind_baseline": 347,
+      "branch": "agent/cursor/protected-root-pr-template",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "6eb30cdb",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__protected-root-pr-template"
+    },
+    {
+      "behind_baseline": 20,
+      "branch": "agent/cursor/retire-integrity-healer",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "d60fc83d",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__retire-integrity-healer"
+    },
+    {
+      "behind_baseline": 28,
+      "branch": "agent/cursor/stop-gen-snap-v2",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "46071478",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__stop-gen-snap-v2"
+    },
+    {
+      "behind_baseline": 262,
+      "branch": "feat/ff-slash-dirt-park",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "8f1cc2b3",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/feat-ff-slash-dirt-park"
+    },
+    {
+      "behind_baseline": 28,
+      "branch": "feat/ff-shelf-20260828T223201Z",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "94540564",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/ff-shelf-20260828T223201Z"
+    },
+    {
+      "behind_baseline": 11,
+      "branch": "feat/ff-shelf-20260829T042716Z",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "e097fdae",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/ff-shelf-20260829T042716Z"
+    },
+    {
+      "behind_baseline": 64,
+      "branch": "feat/ff-shelf-wip-plans",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "65e5e008",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/ff-shelf-wip-plans"
+    },
+    {
+      "behind_baseline": 28,
+      "branch": "feat/gmp-execution-governance-harvest",
+      "dirty_count": 5,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "environment/agents/adapters/claude-code/generated/skill-registry.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/generated/skill-registry.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "rules/RULES-MANIFEST.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "rules/RULES-MANIFEST.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "rules/RULES-MANIFEST.yaml",
+          "status": " M"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "84ab7d3b",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/gmp-exec-gov-harvest-20260828T230515Z"
+    },
+    {
+      "behind_baseline": 64,
+      "branch": "feat/kernel-precommit-hook",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "43eae0e5",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/kernel-precommit-hook"
+    },
+    {
+      "behind_baseline": 421,
+      "branch": "feat/l9-ff-only-sync",
+      "dirty_count": 32,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "AGENTS.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "CANONICAL_LAW.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "Makefile",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "commands/COMMANDS_MANIFEST.yaml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "commands/commands-index.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/agents/adapters/claude-code/generated/skill-registry.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/generated/llm-rules/02-slash-commands.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/generated/llm-rules/MANIFEST.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/generated/llm-rules/l9-skill-routing.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/generated/skill-registry.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/hooks/session_start_bootstrap.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/check_governance_wiring.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/governance_activate_fresh.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/governance_sync.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/tests/test_governance_activate_fresh.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "rules/02-slash-commands.mdc",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "rules/23-l9-skill-routing.mdc",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "rules/RULES-MANIFEST.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "rules/RULES-MANIFEST.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "rules/RULES-MANIFEST.yaml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/AUTONOMY_MANIFEST.yaml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "commands/ff.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/generated/llm-rules/55-ff-only-ssot-sync.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "rules/55-ff-only-ssot-sync.mdc",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-repo-sync/SKILL.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-repo-sync/agents/meta.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-repo-sync/references/clone-map.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-repo-sync/references/diagnose-first.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-repo-sync/references/execute.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-repo-sync/references/forbidden.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-repo-sync/scripts/ff.sh",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-repo-sync/scripts/validate_pack_structure.py",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "577c482c",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync"
+    },
+    {
+      "behind_baseline": 373,
+      "branch": "feat/pe-brief-accept-cursor-plan-on-254",
+      "dirty_count": 3,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/scripts/compile_brief.py",
+          "status": "UU"
+        },
+        {
+          "class": "unique_product",
+          "path": "skills/l9-pe-campaign-activate/scripts/fixtures/cursor-plan-todos.plan.md",
+          "status": "A "
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/scripts/test_compile_brief.py",
+          "status": "M "
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "3a2797fb",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pe-brief-accept-cursor-plan"
+    },
+    {
+      "behind_baseline": 350,
+      "branch": "claude/cursor-governance-remediation-irbyhf-03-git-doctrine",
+      "dirty_count": 1,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "tests/ops/scripts/test_validate_git_denial_residue.py",
+          "status": " M"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "ca029a50",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-256-git-doctrine"
+    },
+    {
+      "behind_baseline": 349,
+      "branch": "claude/cursor-governance-remediation-irbyhf",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "b0158751",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-257"
+    },
+    {
+      "behind_baseline": 28,
+      "branch": "feat/pr-gate-ff-friction",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "2d0d6320",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-gate-ff-friction-20260828T224146Z"
+    },
+    {
+      "behind_baseline": 421,
+      "branch": "feat/l9-plan-audit-built-markers",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "e14b8df4",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-plan-audit"
+    },
+    {
+      "behind_baseline": 421,
+      "branch": "feat/protected-root-pr-template",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "f4e5b9c7",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-protected-root-template"
+    },
+    {
+      "behind_baseline": 34,
+      "branch": "feat/pr-remediator-speed",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "0f12ad5f",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-remediator-speed"
+    },
+    {
+      "behind_baseline": 347,
+      "branch": "feat/pr-stack-auto-default",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "759de516",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-stack-auto-default"
+    },
+    {
+      "behind_baseline": 21,
+      "branch": "feat/pr-train-0-bfa8e1d9-16004-1787970880",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "04126d7a",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-train-0-16004-1787970880"
+    },
+    {
+      "behind_baseline": 24,
+      "branch": "feat/pr-train-0-61e0b2a8-92726-1787966728",
+      "dirty_count": 2,
+      "paths": [
+        {
+          "class": "unique_plans",
+          "path": "docs/plans/dag_authoring_convert_4d8d80c4.plan.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "docs/plans/fold_pr-check_81560ec1.plan.md",
+          "status": " M"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "1d0ca877",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-train-0-92726-1787966728"
+    },
+    {
+      "behind_baseline": 24,
+      "branch": "feat/pr-train-cherry-probe",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "588ed78c",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-train-cherry-probe"
+    },
+    {
+      "behind_baseline": 23,
+      "branch": "feat/pr-train-remainder",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "98be33ea",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pr-train-remainder"
+    },
+    {
+      "behind_baseline": 364,
+      "branch": "pec/w1/task-006",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "fdda52af",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/rem-pr-251"
+    },
+    {
+      "behind_baseline": 347,
+      "branch": "feat/pe-eie-campaign-pipeline-v1",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "19ee1044",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/rem-pr-263"
+    },
+    {
+      "behind_baseline": 311,
+      "branch": "fix/stack-proof-https-only",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "459ae443",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/rem-pr-268"
+    },
+    {
+      "behind_baseline": 324,
+      "branch": "rem-269-rebased-hold",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "26cb76da",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/rem-pr-269"
+    },
+    {
+      "behind_baseline": 38,
+      "branch": "claude/cursor-governance-remediate-kpzvnr",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "20ba9dca",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/rem-pr-340"
+    },
+    {
+      "behind_baseline": 36,
+      "branch": "claude/cursor-governance-skills-qvcf3d",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "dc0358a2",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/rem-pr-341"
+    },
+    {
+      "behind_baseline": 23,
+      "branch": "claude/cursor-governance-pack-reconcile-9d4c9v",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "8d812336",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/rem-pr-360"
+    },
+    {
+      "behind_baseline": 4,
+      "branch": "claude/l9-runtime-velocity-analysis-yig5fe",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "b60a18a1",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/rem-pr-373"
+    },
+    {
+      "behind_baseline": 347,
+      "branch": "feat/root-docs-ra-pointer",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "a72a78da",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/root-docs-ra-pointer"
+    },
+    {
+      "behind_baseline": 248,
+      "branch": "feat-slash-catalog-revise",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "5b087b89",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/slash-catalog-primary"
+    },
+    {
+      "behind_baseline": 347,
+      "branch": "feat/stack-proof-key-miss",
+      "dirty_count": 6,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/MANIFEST.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/scripts/blueprint_ops.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/scripts/compile_campaign_source.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/scripts/context7_stack_proof.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/scripts/tests/test_context7_stack_proof.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/scripts/compile_brief.py",
+          "status": " M"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "8bc5781d",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/stack-proof-key-miss"
+    },
+    {
+      "behind_baseline": 33,
+      "branch": "agent/cursor/stop-gen-conflicts",
+      "dirty_count": 1,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": ".claude/settings.json",
+          "status": " M"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "3163c356",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/stop-generated-merge-conflicts"
+    },
+    {
+      "behind_baseline": 500,
+      "branch": "feat/adr-identity-integrity-v1",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "7cce887e",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/adr-identity-integrity-v1"
+    },
+    {
+      "behind_baseline": 499,
+      "branch": "feat/archive-completed-pe-campaigns",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "f6108d36",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/archive-completed-pe-campaigns"
+    },
+    {
+      "behind_baseline": 561,
+      "branch": "feat/bounded-replanning-v1-execute",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "41a1a3af",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/bounded-replanning-v1"
+    },
+    {
+      "behind_baseline": 561,
+      "branch": "feat/campaign-ceiling-commit-converged",
+      "dirty_count": 1,
+      "paths": [
+        {
+          "class": "skip_noise",
+          "path": ".venv",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "9ab7882d",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/campaign-ceiling-commit-converged"
+    },
+    {
+      "behind_baseline": 537,
+      "branch": "feat/campaign-live-closeout",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "8edf6c47",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/campaign-closeout-v1"
+    },
+    {
+      "behind_baseline": 561,
+      "branch": "feat/cc-pe-intent-compiler-v1-ceiling-converged",
+      "dirty_count": 1,
+      "paths": [
+        {
+          "class": "skip_noise",
+          "path": ".venv",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "9ab7882d",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/cc-pe-ceiling"
+    },
+    {
+      "behind_baseline": 540,
+      "branch": "campaign/l9-devpack-program-execution-hardening",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "ea221a12",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/cg-devpack-campaign-v11"
+    },
+    {
+      "behind_baseline": 561,
+      "branch": "feat/l9-ecosystem-fix-plan-ceiling-converged",
+      "dirty_count": 1,
+      "paths": [
+        {
+          "class": "skip_noise",
+          "path": ".venv",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "9ab7882d",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-ceiling"
+    },
+    {
+      "behind_baseline": 546,
+      "branch": "feat/ecosystem-odoo-ready",
+      "dirty_count": 20,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/MANIFEST.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/README.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/CAMPAIGN_SOURCE.yaml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/README.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/IB-Odoo_19-INTEGRATION-DELIVERY.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/reference/plasticos_ceg_match_mapper.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/deliverables/ib-odoo_19/reference/plasticos_eie_converge_mapper.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/handoff/CAMPAIGN_HANDOFF.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/handoff/handoff.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/source-integrity-receipt.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/ECOSYSTEM_ODOO_ALIGNMENT.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/AUTH-001-SUPERSESSION.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/CAMPAIGN_EXECUTION_BINDING.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/CURRENT_STATE.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/EXECUTION_FROM_ODOO.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/history/v1.0.0/CAMPAIGN_SOURCE.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/history/v1.0.0/README.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/history/v1.0.0/handoff.json",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/l9-ecosystem-fix-plan/history/v1.0.0/source-integrity-receipt.json",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "1aba3592",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready"
+    },
+    {
+      "behind_baseline": 537,
+      "branch": "feat/ecosystem-remaining-only",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "e44c282a",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/ecosystem-remaining-only"
+    },
+    {
+      "behind_baseline": 452,
+      "branch": "feat/gate-failure-receipt",
+      "dirty_count": 11,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "environment/agents/adapters/claude-code/validate_skill_activation.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/hooks/hooks.json.template",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/check_governance_wiring.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/run_pr_gate.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/run_python_test_suites.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/setup_workspace_symlinks.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/test_python_contract.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "tests/ops/scripts/test_pr_lifecycle.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/hooks/pr_gate_failure_shell.sh",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/pr_gate_failure.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "tests/ops/scripts/test_pr_gate_failure.py",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "d9459b03",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/gate-failure-receipt"
+    },
+    {
+      "behind_baseline": 561,
+      "branch": "feat/l9-devpack-program-execution-hardening-ceiling-converged",
+      "dirty_count": 1,
+      "paths": [
+        {
+          "class": "skip_noise",
+          "path": ".venv",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "9ab7882d",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/hardening-ceiling"
+    },
+    {
+      "behind_baseline": 508,
+      "branch": "pr/l9-dot-github-ci-boundary-v1",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "39f62bd9",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-dot-github-ci-boundary-v1"
+    },
+    {
+      "behind_baseline": 508,
+      "branch": "feat/l9-pe-campaign-activate",
+      "dirty_count": 12,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "environment/agents/adapters/claude-code/settings.template.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/generated/skill-registry.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/AUTONOMY_MANIFEST.yaml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/SKILL.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/agents/meta.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/references/file-set.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/references/merge-authority.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/references/pipeline.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/references/source-contract.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/scripts/authorize_campaign_merge.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "skills/l9-pe-campaign-activate/scripts/test_compile_activation_files.py",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "1f227ecd",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate"
+    },
+    {
+      "behind_baseline": 502,
+      "branch": "feat/l9-pe-campaign-activate-ssot",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "7a163b21",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate-ssot"
+    },
+    {
+      "behind_baseline": 507,
+      "branch": "feat/l9-repo-template-control-plane-ready-v1",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "1368e44b",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-repo-template-control-plane-ready-v1"
+    },
+    {
+      "behind_baseline": 502,
+      "branch": "feat/l9-repo-template-control-plane-ready-v1-recut",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "bb1e8868",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/l9-repo-template-recut"
+    },
+    {
+      "behind_baseline": 499,
+      "branch": "feat/level3-make-pr-single-path",
+      "dirty_count": 2,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/level3-make-pr-single-path/handoff/CLOSEOUT.yaml",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "1d491481",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/level3-make-pr-single-path"
+    },
+    {
+      "behind_baseline": 452,
+      "branch": "feat/pe-campaigns-https-close",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "2580248d",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/pe-campaigns-https-close"
+    },
+    {
+      "behind_baseline": 537,
+      "branch": "feat/pe-compiler-in-tree-alignment",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "fea9d964",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/pe-compiler-alignment"
+    },
+    {
+      "behind_baseline": 546,
+      "branch": "feat/pe-compiler-in-tree-retarget",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "3ac966d9",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/pe-compiler-in-tree-retarget"
+    },
+    {
+      "behind_baseline": 538,
+      "branch": "campaign/l9-ecosystem-fix-plan",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "cbe67adb",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/pr-bottom-up-merge"
+    },
+    {
+      "behind_baseline": 455,
+      "branch": "feat/pr-gate-velocity",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "3d8d328c",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/pr-gate-velocity"
+    },
+    {
+      "behind_baseline": 537,
+      "branch": "wip/pre-ff-snapshot-2026-08-14",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "92696137",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/pre-ff-wip-snapshot"
+    },
+    {
+      "behind_baseline": 451,
+      "branch": "feat/precommit-gate-failure",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "f8dd4c0f",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/precommit-gate-failure"
+    },
+    {
+      "behind_baseline": 455,
+      "branch": "feat/precommit-owns-ruff",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "e38fcdda",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/precommit-owns-ruff"
+    },
+    {
+      "behind_baseline": 537,
+      "branch": "feat/purge-legal-defense",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "2e53b072",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/purge-legal-defense"
+    },
+    {
+      "behind_baseline": 456,
+      "branch": "feat/stack-proof-context7-capability",
+      "dirty_count": 10,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "environment/agents/adapters/claude-code/web/network-policy.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/agents/adapters/claude-code/web/setup.bootstrap.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/mcp/CAPABILITY_BROKER_COMPLETE.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/mcp/MIGRATION_TO_BROKER.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/mcp/README.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/scripts/context7_stack_proof.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/scripts/tests/test_context7_stack_proof.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/bootstrap_agent_environment.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/secrets/README.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/secrets/capabilities.yaml",
+          "status": " M"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "b406feeb",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability"
+    },
+    {
+      "behind_baseline": 499,
+      "branch": "feat/wip-corpus-on-main",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "c76336af",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/wip-corpus-on-main"
+    },
+    {
+      "behind_baseline": 501,
+      "branch": "wip/preserve-local-2026-08-16",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "c8566f00",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/wip-preserve-2026-08-16"
+    },
+    {
+      "behind_baseline": 248,
+      "branch": "feat/claude-md-align",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "255a71ac",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/worktrees/cg-claude-md-align"
+    },
+    {
+      "behind_baseline": 262,
+      "branch": "feat/seed-ci-skill-pointers",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "69da04b7",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/worktrees/cg-seed-skill-pointers"
+    },
+    {
+      "behind_baseline": 563,
+      "branch": "fix/claude-session-start-thin-wrapper",
+      "dirty_count": 9,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": ".claude/hooks/session_start_claude_governance.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": ".claude/settings.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/agents/adapters/claude-code/README.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/agents/adapters/claude-code/hooks/SESSION_START_SPEC.md",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/agents/adapters/claude-code/validate_claude_env.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/agents/adapters/claude-code/web/setup.sh",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "ops/scripts/reconcile_claude_settings.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "tests/ops/autonomy/test_surface_profile.py",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "tests/ops/scripts/test_reconcile_claude_settings.py",
+          "status": " M"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "95e03eb8",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/Cursor-Governance-session-start-wrap"
+    },
+    {
+      "behind_baseline": 537,
+      "branch": "feat/cursor-rules-contract-foundation",
+      "dirty_count": 37,
+      "paths": [
+        {
+          "class": "skip_noise",
+          "path": ".venv",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/Cursor Prompt 2.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/Cursor Prompt.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.capability_contract.v1.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.contract_extraction_record.v1.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.contract_projection_binding.v1.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.contract_registry.v1.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.cursor_rules_manifest.v3.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.evidence_contract.v1.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.governance_contract.v1.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.invariant_contract.v1.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.policy_contract.v1.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.rule_activation_binding.v1.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/contracts/schemas/canonical.schema.workflow_contract.v1.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/docs/decisions/ADR-0007-contracts-own-rule-semantics.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/docs/decisions/ADR-0008-rule-activation-binding-intermediate-representation.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/docs/decisions/ADR-0009-normative-advisory-rule-channels.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/docs/decisions/ADR-0010-rule-activation-and-context-budget.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/docs/decisions/ADR-0011-deterministic-generated-cursor-rule-projections.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/docs/decisions/ADR-0012-rules-manifest-generated-projection-registry.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/docs/decisions/ADR-0013-rule-compiler-fail-closed-conflicts-scope-and-drift.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/docs/decisions/ADR-0014-rules-strangler-migration-and-doctrine-ratchet.md",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/config/doctrine-baseline.rules.yaml",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/adapters/cursor_rules.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/build_doctrine_census.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/build_rule_doctrine_census.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/build_rules.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/cluster_doctrine.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/detect_hidden_doctrine.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/extract_doctrine.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/render_cursor_rule.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/resolve_rule_contracts.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/validate_doctrine_ratchet.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/validate_rule_binding.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/contracts/validate_rule_projections.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/ops/scripts/generate_rules_manifest.py",
+          "status": "??"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "WIP/CG/tests/contracts/test_rules_contract_compiler.py",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "4e1ed896",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation"
+    },
+    {
+      "behind_baseline": 537,
+      "branch": "campaign/l9-agent-doc-plane",
+      "dirty_count": 4,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/MANIFEST.json",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/COMPILE_ALLOWLIST.yaml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "environment/program-execution/campaigns/README.md",
+          "status": " M"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "06978f4a",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/l9-agent-doc-plane"
+    },
+    {
+      "behind_baseline": 537,
+      "branch": "rem/pr-153-closeout",
+      "dirty_count": 1,
+      "paths": [
+        {
+          "class": "skip_noise",
+          "path": ".venv",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "68d6281d",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/pr-153-closeout"
+    },
+    {
+      "behind_baseline": 535,
+      "branch": "rem/pr-155-align",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "e3ddd525",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/pr-155-align"
+    },
+    {
+      "behind_baseline": 537,
+      "branch": "feat/l9-claude-code-deepseek-skill",
+      "dirty_count": 1,
+      "paths": [
+        {
+          "class": "skip_noise",
+          "path": ".venv",
+          "status": "??"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "1d2900fc",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/pr-157-deepseek"
+    },
+    {
+      "behind_baseline": 537,
+      "branch": "fix/uv-dependency-cooldown",
+      "dirty_count": 3,
+      "paths": [
+        {
+          "class": "already_on_baseline",
+          "path": ".github/dependabot.yml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "pyproject.toml",
+          "status": " M"
+        },
+        {
+          "class": "already_on_baseline",
+          "path": "uv.lock",
+          "status": " M"
+        }
+      ],
+      "refuse_foreign_shared": false,
+      "sha": "52b80493",
+      "stale_apply_risk": true,
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/uv-dep-cooldown"
+    },
+    {
+      "behind_baseline": 566,
+      "branch": "wip/track-peer-execution-overlay",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "f1276f32",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/Cursor-Governance-worktrees/wip-track-peer-execution"
+    },
+    {
+      "behind_baseline": 505,
+      "branch": "pe-start-cleanly",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "807c0634",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/Cursor-Governance-wt-pe-start"
+    },
+    {
+      "behind_baseline": 501,
+      "branch": "fix/pr-remediation-merge-authority",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "c6921edd",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/Cursor-Governance-wt-pr-merge-auth"
+    },
+    {
+      "behind_baseline": 506,
+      "branch": "claude/l9-zero-secret-agent-bootstrap-f5fs8e",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "6aadd510",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/Cursor-Governance-wt-pr170"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/claude-session-parity-814a3230"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/cursor__pe-consumer-venv-validation-v1"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/eie-inference-isolation-v1"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/feat-slash-catalog-revise"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pe-eie-campaign-pipeline-v1"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pe-plan-intent-stack"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/pe-plan-intent-stack-v2"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/plan-governance-scope-pr-check-stack-tip-v1"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/plan-governance-slash-catalog-revise-v1"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/plan-ops-pr-gate-changed-files-velocity-v1"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/slash-catalog-revise"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/gov-worktrees/wip-pe-pr-pack-v2"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/canonical-memory-lifecycle-convergence-v1"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/canonical-memory-lifecycle-convergence-v1.orphaned-20260816"
+    },
+    {
+      "behind_baseline": 0,
+      "branch": "main",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "577c482",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/claude-session-parity-814a3230"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/graphiti-cwe939"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/merge-pr-163"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/merge-pr-164"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/merge-pr-165"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/merge-pr-166"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/pe-campaign-activate-admissible-seed"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/pe-consumer-venv-stack"
+    },
+    {
+      "behind_baseline": 0,
+      "branch": "main",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "577c482",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/plan-governance-scope-pr-check-stack-tip-v1"
+    },
+    {
+      "behind_baseline": 0,
+      "branch": "main",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "fda7f5f",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/plan-governance-slash-catalog-revise-v1"
+    },
+    {
+      "behind_baseline": 0,
+      "branch": "main",
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": "b9ce7a4",
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/plan-ops-pr-gate-changed-files-velocity-v1"
+    },
+    {
+      "behind_baseline": -1,
+      "branch": null,
+      "dirty_count": 0,
+      "paths": [],
+      "refuse_foreign_shared": false,
+      "sha": null,
+      "stale_apply_risk": false,
+      "worktree": "/Users/ib-mac/.l9/program-worktrees/wip-8-21-26-pe-pack"
+    }
+  ]
+}

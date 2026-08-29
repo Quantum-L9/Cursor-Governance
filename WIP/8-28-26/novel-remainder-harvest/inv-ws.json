@@ -1,0 +1,1805 @@
+{
+  "baseline": "origin/main",
+  "baseline_tip": "37363dd528e9ad99ecf9683d730da3fca6b4376b",
+  "branch": "feat/pr-train-pack-overlap",
+  "branches": [
+    {
+      "ahead_of_baseline": 1,
+      "name": "agent/cursor/c5-c6-harvest-land",
+      "orphan_gone": false,
+      "tip": "ed2ea014",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "agent/cursor/ff-switch-corpus",
+      "orphan_gone": false,
+      "tip": "daee9164",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "agent/cursor/git-work-preserve-harvest",
+      "orphan_gone": false,
+      "tip": "672ee5bd",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "agent/cursor/gmp-slash-build",
+      "orphan_gone": true,
+      "tip": "47398bf8",
+      "track": "[gone]",
+      "upstream": "origin/agent/cursor/gmp-slash-build"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "agent/cursor/plan-kernel-auto-pass",
+      "orphan_gone": false,
+      "tip": "d90e5237",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 11,
+      "name": "agent/cursor/pr-train",
+      "orphan_gone": false,
+      "tip": "20ec3252",
+      "track": null,
+      "upstream": "origin/agent/cursor/pr-train"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "agent/cursor/protected-root-pr-template",
+      "orphan_gone": false,
+      "tip": "6eb30cdb",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "agent/cursor/retire-integrity-healer",
+      "orphan_gone": false,
+      "tip": "d60fc83d",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 0,
+      "name": "agent/cursor/stop-gen-conflicts",
+      "orphan_gone": false,
+      "tip": "3163c356",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "agent/cursor/stop-gen-snap-v2",
+      "orphan_gone": true,
+      "tip": "46071478",
+      "track": "[gone]",
+      "upstream": "origin/agent/cursor/stop-gen-snap-v2"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "backup/local-unpushed-2026-08-14",
+      "orphan_gone": false,
+      "tip": "aeab4dfb",
+      "track": null,
+      "upstream": "origin/backup/local-unpushed-2026-08-14"
+    },
+    {
+      "ahead_of_baseline": 17,
+      "name": "campaign/bounded-replanning-v1",
+      "orphan_gone": true,
+      "tip": "783e59fc",
+      "track": "[gone]",
+      "upstream": "origin/campaign/bounded-replanning-v1"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "campaign/cc-pe-intent-compiler-v1",
+      "orphan_gone": true,
+      "tip": "298e345c",
+      "track": "[gone]",
+      "upstream": "origin/campaign/cc-pe-intent-compiler-v1"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "campaign/l9-agent-doc-plane",
+      "orphan_gone": false,
+      "tip": "06978f4a",
+      "track": "[ahead 1, behind 537]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 6,
+      "name": "campaign/l9-devpack-program-execution-hardening",
+      "orphan_gone": true,
+      "tip": "ea221a12",
+      "track": "[gone]",
+      "upstream": "origin/campaign/l9-devpack-program-execution-hardening"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "campaign/l9-dot-github-ci-boundary-v1",
+      "orphan_gone": false,
+      "tip": "a61b7846",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "campaign/l9-ecosystem-fix-plan",
+      "orphan_gone": true,
+      "tip": "cbe67adb",
+      "track": "[gone]",
+      "upstream": "origin/campaign/l9-ecosystem-fix-plan"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "campaign/level3-make-pr-single-path",
+      "orphan_gone": false,
+      "tip": "309921d8",
+      "track": "[ahead 4, behind 499]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 17,
+      "name": "claude/cursor-governance-pack-reconcile-9d4c9v",
+      "orphan_gone": true,
+      "tip": "8d812336",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-pack-reconcile-9d4c9v"
+    },
+    {
+      "ahead_of_baseline": 17,
+      "name": "claude/cursor-governance-remediate-kpzvnr",
+      "orphan_gone": true,
+      "tip": "20ba9dca",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-remediate-kpzvnr"
+    },
+    {
+      "ahead_of_baseline": 7,
+      "name": "claude/cursor-governance-remediation-irbyhf",
+      "orphan_gone": true,
+      "tip": "b0158751",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-remediation-irbyhf"
+    },
+    {
+      "ahead_of_baseline": 8,
+      "name": "claude/cursor-governance-remediation-irbyhf-03-git-doctrine",
+      "orphan_gone": true,
+      "tip": "ca029a50",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-remediation-irbyhf-03-git-doctrine"
+    },
+    {
+      "ahead_of_baseline": 5,
+      "name": "claude/cursor-governance-seam-hardening-vckfoc",
+      "orphan_gone": true,
+      "tip": "fc5ac36c",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-seam-hardening-vckfoc"
+    },
+    {
+      "ahead_of_baseline": 33,
+      "name": "claude/cursor-governance-skills-qvcf3d",
+      "orphan_gone": true,
+      "tip": "dc0358a2",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-skills-qvcf3d"
+    },
+    {
+      "ahead_of_baseline": 14,
+      "name": "claude/l9-runtime-velocity-analysis-yig5fe",
+      "orphan_gone": true,
+      "tip": "b60a18a1",
+      "track": "[gone]",
+      "upstream": "origin/claude/l9-runtime-velocity-analysis-yig5fe"
+    },
+    {
+      "ahead_of_baseline": 6,
+      "name": "claude/l9-zero-secret-agent-bootstrap-f5fs8e",
+      "orphan_gone": true,
+      "tip": "6aadd510",
+      "track": "[gone]",
+      "upstream": "origin/claude/l9-zero-secret-agent-bootstrap-f5fs8e"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat-slash-catalog-revise",
+      "orphan_gone": false,
+      "tip": "5b087b89",
+      "track": null,
+      "upstream": "origin/feat-slash-catalog-revise"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat/adr-identity-integrity-v1",
+      "orphan_gone": true,
+      "tip": "7cce887e",
+      "track": "[gone]",
+      "upstream": "origin/feat/adr-identity-integrity-v1"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/archive-completed-pe-campaigns",
+      "orphan_gone": false,
+      "tip": "f6108d36",
+      "track": "[ahead 1, behind 499]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 12,
+      "name": "feat/bounded-replanning-v1-execute",
+      "orphan_gone": true,
+      "tip": "41a1a3af",
+      "track": "[gone]",
+      "upstream": "origin/feat/bounded-replanning-v1-execute"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/campaign-ceiling-commit-converged",
+      "orphan_gone": true,
+      "tip": "9ab7882d",
+      "track": "[gone]",
+      "upstream": "origin/feat/campaign-ceiling-commit-converged"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/campaign-live-closeout",
+      "orphan_gone": true,
+      "tip": "8edf6c47",
+      "track": "[gone]",
+      "upstream": "origin/feat/campaign-live-closeout"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/cc-pe-intent-compiler-v1-ceiling-converged",
+      "orphan_gone": true,
+      "tip": "9ab7882d",
+      "track": "[gone]",
+      "upstream": "origin/feat/cc-pe-intent-compiler-v1-ceiling-converged"
+    },
+    {
+      "ahead_of_baseline": 24,
+      "name": "feat/ceremony-speed-plan",
+      "orphan_gone": false,
+      "tip": "f40e5045",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/claude-md-align",
+      "orphan_gone": false,
+      "tip": "255a71ac",
+      "track": null,
+      "upstream": "origin/feat/claude-md-align"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/cursor-rules-contract-foundation",
+      "orphan_gone": true,
+      "tip": "4e1ed896",
+      "track": "[gone]",
+      "upstream": "origin/feat/cursor-rules-contract-foundation"
+    },
+    {
+      "ahead_of_baseline": 0,
+      "name": "feat/ecosystem-odoo-ready",
+      "orphan_gone": false,
+      "tip": "1aba3592",
+      "track": "[behind 546]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/ecosystem-remaining-only",
+      "orphan_gone": true,
+      "tip": "e44c282a",
+      "track": "[gone]",
+      "upstream": "origin/feat/ecosystem-remaining-only"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/ff-shelf-20260828T223201Z",
+      "orphan_gone": false,
+      "tip": "94540564",
+      "track": "[ahead 2, behind 28]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/ff-shelf-20260829T042716Z",
+      "orphan_gone": false,
+      "tip": "e097fdae",
+      "track": "[ahead 1, behind 11]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/ff-shelf-wip-plans",
+      "orphan_gone": true,
+      "tip": "65e5e008",
+      "track": "[gone]",
+      "upstream": "origin/feat/ff-shelf-wip-plans"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "feat/ff-slash-dirt-park",
+      "orphan_gone": false,
+      "tip": "8f1cc2b3",
+      "track": "[ahead 4, behind 262]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 0,
+      "name": "feat/gate-failure-receipt",
+      "orphan_gone": true,
+      "tip": "d9459b03",
+      "track": "[gone]",
+      "upstream": "origin/feat/stack-safe-merge"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat/gmp-execution-governance-harvest",
+      "orphan_gone": false,
+      "tip": "84ab7d3b",
+      "track": "[ahead 3, behind 28]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "feat/kernel-pack-new-branch-default",
+      "orphan_gone": true,
+      "tip": "f6a26db3",
+      "track": "[gone]",
+      "upstream": "origin/feat/kernel-pack-new-branch-default"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/kernel-precommit-hook",
+      "orphan_gone": false,
+      "tip": "43eae0e5",
+      "track": "[ahead 1, behind 64]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/l9-claude-code-deepseek-skill",
+      "orphan_gone": true,
+      "tip": "1d2900fc",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-claude-code-deepseek-skill"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/l9-devpack-program-execution-hardening-ceiling-converged",
+      "orphan_gone": true,
+      "tip": "9ab7882d",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-devpack-program-execution-hardening-ceiling-converged"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/l9-ecosystem-fix-plan-ceiling-converged",
+      "orphan_gone": true,
+      "tip": "9ab7882d",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-ecosystem-fix-plan-ceiling-converged"
+    },
+    {
+      "ahead_of_baseline": 0,
+      "name": "feat/l9-ff-only-sync",
+      "orphan_gone": false,
+      "tip": "577c482c",
+      "track": "[behind 421]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 0,
+      "name": "feat/l9-pe-campaign-activate",
+      "orphan_gone": false,
+      "tip": "1f227ecd",
+      "track": "[behind 508]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/l9-pe-campaign-activate-ssot",
+      "orphan_gone": true,
+      "tip": "7a163b21",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-pe-campaign-activate-ssot"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "feat/l9-plan-audit-built-markers",
+      "orphan_gone": true,
+      "tip": "e14b8df4",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-plan-audit-built-markers"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat/l9-repo-template-control-plane-ready-v1",
+      "orphan_gone": false,
+      "tip": "1368e44b",
+      "track": null,
+      "upstream": "origin/feat/l9-repo-template-control-plane-ready-v1"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/l9-repo-template-control-plane-ready-v1-recut",
+      "orphan_gone": true,
+      "tip": "bb1e8868",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-repo-template-control-plane-ready-v1-recut"
+    },
+    {
+      "ahead_of_baseline": 6,
+      "name": "feat/level3-make-pr-single-path",
+      "orphan_gone": true,
+      "tip": "1d491481",
+      "track": "[gone]",
+      "upstream": "origin/feat/level3-make-pr-single-path"
+    },
+    {
+      "ahead_of_baseline": 11,
+      "name": "feat/pe-brief-accept-cursor-plan",
+      "orphan_gone": false,
+      "tip": "d9808fc3",
+      "track": "[ahead 11, behind 421]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 8,
+      "name": "feat/pe-brief-accept-cursor-plan-on-254",
+      "orphan_gone": true,
+      "tip": "3a2797fb",
+      "track": "[gone]",
+      "upstream": "origin/pec/w1/task-006-followup"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pe-campaigns-https-close",
+      "orphan_gone": true,
+      "tip": "2580248d",
+      "track": "[gone]",
+      "upstream": "origin/feat/pe-campaigns-https-close"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pe-compiler-in-tree-alignment",
+      "orphan_gone": true,
+      "tip": "fea9d964",
+      "track": "[gone]",
+      "upstream": "origin/feat/pe-compiler-in-tree-alignment"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pe-compiler-in-tree-retarget",
+      "orphan_gone": false,
+      "tip": "3ac966d9",
+      "track": "[ahead 1, behind 546]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 11,
+      "name": "feat/pe-eie-campaign-pipeline-v1",
+      "orphan_gone": true,
+      "tip": "19ee1044",
+      "track": "[gone]",
+      "upstream": "origin/feat/pe-eie-campaign-pipeline-v1"
+    },
+    {
+      "ahead_of_baseline": 51,
+      "name": "feat/plan-skills-precommit-catalog",
+      "orphan_gone": false,
+      "tip": "4e6a0ee4",
+      "track": "[ahead 18]",
+      "upstream": "origin/feat/plan-skills-precommit-catalog"
+    },
+    {
+      "ahead_of_baseline": 28,
+      "name": "feat/pr-check-folded",
+      "orphan_gone": false,
+      "tip": "f8a227f1",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pr-gate-ff-friction",
+      "orphan_gone": false,
+      "tip": "2d0d6320",
+      "track": "[ahead 1, behind 28]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pr-gate-velocity",
+      "orphan_gone": false,
+      "tip": "3d8d328c",
+      "track": "[ahead 1, behind 455]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 14,
+      "name": "feat/pr-remediator-speed",
+      "orphan_gone": true,
+      "tip": "0f12ad5f",
+      "track": "[gone]",
+      "upstream": "origin/feat/pr-remediator-speed"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pr-stack-auto-default",
+      "orphan_gone": false,
+      "tip": "759de516",
+      "track": "[ahead 1, behind 347]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 14,
+      "name": "feat/pr-train-0-61e0b2a8-92726-1787966728",
+      "orphan_gone": true,
+      "tip": "1d0ca877",
+      "track": "[gone]",
+      "upstream": "origin/feat/pr-train-0-61e0b2a8-92726-1787966728"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat/pr-train-0-bfa8e1d9-16004-1787970880",
+      "orphan_gone": false,
+      "tip": "04126d7a",
+      "track": null,
+      "upstream": "origin/feat/pr-train-0-bfa8e1d9-16004-1787970880"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "feat/pr-train-cherry-probe",
+      "orphan_gone": false,
+      "tip": "588ed78c",
+      "track": null,
+      "upstream": "origin/feat/pr-train-cherry-probe"
+    },
+    {
+      "ahead_of_baseline": 19,
+      "name": "feat/pr-train-pack-overlap",
+      "orphan_gone": true,
+      "tip": "6cb02014",
+      "track": "[gone]",
+      "upstream": "origin/feat/pr-train-pack-overlap"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat/pr-train-remainder",
+      "orphan_gone": false,
+      "tip": "98be33ea",
+      "track": "[ahead 3, behind 23]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "feat/precommit-gate-failure",
+      "orphan_gone": true,
+      "tip": "f8dd4c0f",
+      "track": "[gone]",
+      "upstream": "origin/feat/precommit-gate-failure"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/precommit-owns-ruff",
+      "orphan_gone": false,
+      "tip": "e38fcdda",
+      "track": "[ahead 2, behind 455]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/protected-root-pr-template",
+      "orphan_gone": false,
+      "tip": "f4e5b9c7",
+      "track": "[ahead 1, behind 421]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/purge-legal-defense",
+      "orphan_gone": true,
+      "tip": "2e53b072",
+      "track": "[gone]",
+      "upstream": "origin/feat/purge-legal-defense"
+    },
+    {
+      "ahead_of_baseline": 6,
+      "name": "feat/root-docs-ra-pointer",
+      "orphan_gone": false,
+      "tip": "a72a78da",
+      "track": "[ahead 6, behind 347]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/rules-corpus-cleanup",
+      "orphan_gone": false,
+      "tip": "aeab4dfb",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/seed-ci-skill-pointers",
+      "orphan_gone": true,
+      "tip": "69da04b7",
+      "track": "[gone]",
+      "upstream": "origin/feat/seed-ci-skill-pointers"
+    },
+    {
+      "ahead_of_baseline": 0,
+      "name": "feat/stack-proof-context7-capability",
+      "orphan_gone": false,
+      "tip": "b406feeb",
+      "track": "[behind 456]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 0,
+      "name": "feat/stack-proof-key-miss",
+      "orphan_gone": false,
+      "tip": "8bc5781d",
+      "track": "[behind 347]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat/wip-corpus-on-main",
+      "orphan_gone": true,
+      "tip": "c76336af",
+      "track": "[gone]",
+      "upstream": "origin/feat/wip-corpus-on-main"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "fix/ci-required-contexts-wip-only",
+      "orphan_gone": false,
+      "tip": "de917f6a",
+      "track": null,
+      "upstream": "origin/fix/ci-required-contexts-wip-only"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "fix/claude-session-start-thin-wrapper",
+      "orphan_gone": false,
+      "tip": "95e03eb8",
+      "track": "[ahead 1, behind 563]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "fix/pr-remediation-merge-authority",
+      "orphan_gone": true,
+      "tip": "c6921edd",
+      "track": "[gone]",
+      "upstream": "origin/fix/pr-remediation-merge-authority"
+    },
+    {
+      "ahead_of_baseline": 5,
+      "name": "fix/precommit-attribution-gate",
+      "orphan_gone": true,
+      "tip": "b4638d23",
+      "track": "[gone]",
+      "upstream": "origin/fix/precommit-attribution-gate"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "fix/stack-proof-https-only",
+      "orphan_gone": false,
+      "tip": "459ae443",
+      "track": "[ahead 4, behind 1]",
+      "upstream": "origin/fix/stack-proof-https-only"
+    },
+    {
+      "ahead_of_baseline": 0,
+      "name": "fix/uv-dependency-cooldown",
+      "orphan_gone": false,
+      "tip": "52b80493",
+      "track": "[behind 537]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "l9/ff-preserve-20260824T014642Z",
+      "orphan_gone": false,
+      "tip": "64408002",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "l9/ff-preserve-20260824T014704Z",
+      "orphan_gone": false,
+      "tip": "64408002",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "l9/ff-preserve-20260827T025644Z",
+      "orphan_gone": false,
+      "tip": "98c90856",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 8,
+      "name": "l9/ff-preserve-20260828T222958Z",
+      "orphan_gone": false,
+      "tip": "eb286911",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 16,
+      "name": "l9/ff-preserve-20260829T042415Z",
+      "orphan_gone": false,
+      "tip": "f1321207",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 0,
+      "name": "main",
+      "orphan_gone": false,
+      "tip": "d6b30cdc",
+      "track": "[behind 11]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "pe-start-cleanly",
+      "orphan_gone": true,
+      "tip": "807c0634",
+      "track": "[gone]",
+      "upstream": "origin/pe-start-cleanly"
+    },
+    {
+      "ahead_of_baseline": 13,
+      "name": "pec/w1/task-006",
+      "orphan_gone": false,
+      "tip": "fdda52af",
+      "track": "[ahead 14]",
+      "upstream": "origin/pec/w1/task-006"
+    },
+    {
+      "ahead_of_baseline": 5,
+      "name": "pr/l9-dot-github-ci-boundary-v1",
+      "orphan_gone": true,
+      "tip": "39f62bd9",
+      "track": "[gone]",
+      "upstream": "origin/pr/l9-dot-github-ci-boundary-v1"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "preserve/local-main-714b930",
+      "orphan_gone": false,
+      "tip": "714b9306",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 5,
+      "name": "rem-269-rebased-hold",
+      "orphan_gone": true,
+      "tip": "26cb76da",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-audit-qdbhlw"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "rem/pr-153-closeout",
+      "orphan_gone": true,
+      "tip": "68d6281d",
+      "track": "[gone]",
+      "upstream": "origin/feat/campaign-live-closeout"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "rem/pr-155-align",
+      "orphan_gone": true,
+      "tip": "e3ddd525",
+      "track": "[gone]",
+      "upstream": "origin/feat/pe-compiler-in-tree-alignment"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "wip/pre-ff-snapshot-2026-08-14",
+      "orphan_gone": false,
+      "tip": "92696137",
+      "track": null,
+      "upstream": "origin/wip/pre-ff-snapshot-2026-08-14"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "wip/preserve-local-2026-08-16",
+      "orphan_gone": false,
+      "tip": "c8566f00",
+      "track": null,
+      "upstream": "origin/wip/preserve-local-2026-08-16"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "wip/track-peer-execution-overlay",
+      "orphan_gone": true,
+      "tip": "f1276f32",
+      "track": "[gone]",
+      "upstream": "origin/wip/track-peer-execution-overlay"
+    }
+  ],
+  "dirty": true,
+  "dirty_paths": [
+    " D docs/plans/fix_ff_slash_command_49d066b7.plan.md",
+    "?? WIP/8-28-26/novel-remainder-harvest/",
+    "?? docs/plans/built/fix_ff_slash_command_49d066b7.plan.md",
+    "?? docs/plans/fleet_issues_diagnose_ee5fa300.plan.md",
+    "?? docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+  ],
+  "fetch_error": null,
+  "fetched": true,
+  "head": "6cb02014ba9d14a28317bdb8cb3c3bb40b136c0f",
+  "repo": "/Users/ib-mac/Cursor-Governance",
+  "schema": "l9.git_work_preserve.inventory/v1",
+  "stashes": [],
+  "unpushed_or_diverged": [
+    {
+      "ahead_of_baseline": 1,
+      "name": "agent/cursor/c5-c6-harvest-land",
+      "orphan_gone": false,
+      "tip": "ed2ea014",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "agent/cursor/ff-switch-corpus",
+      "orphan_gone": false,
+      "tip": "daee9164",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "agent/cursor/git-work-preserve-harvest",
+      "orphan_gone": false,
+      "tip": "672ee5bd",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "agent/cursor/gmp-slash-build",
+      "orphan_gone": true,
+      "tip": "47398bf8",
+      "track": "[gone]",
+      "upstream": "origin/agent/cursor/gmp-slash-build"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "agent/cursor/plan-kernel-auto-pass",
+      "orphan_gone": false,
+      "tip": "d90e5237",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "agent/cursor/protected-root-pr-template",
+      "orphan_gone": false,
+      "tip": "6eb30cdb",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "agent/cursor/retire-integrity-healer",
+      "orphan_gone": false,
+      "tip": "d60fc83d",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "agent/cursor/stop-gen-snap-v2",
+      "orphan_gone": true,
+      "tip": "46071478",
+      "track": "[gone]",
+      "upstream": "origin/agent/cursor/stop-gen-snap-v2"
+    },
+    {
+      "ahead_of_baseline": 17,
+      "name": "campaign/bounded-replanning-v1",
+      "orphan_gone": true,
+      "tip": "783e59fc",
+      "track": "[gone]",
+      "upstream": "origin/campaign/bounded-replanning-v1"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "campaign/cc-pe-intent-compiler-v1",
+      "orphan_gone": true,
+      "tip": "298e345c",
+      "track": "[gone]",
+      "upstream": "origin/campaign/cc-pe-intent-compiler-v1"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "campaign/l9-agent-doc-plane",
+      "orphan_gone": false,
+      "tip": "06978f4a",
+      "track": "[ahead 1, behind 537]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 6,
+      "name": "campaign/l9-devpack-program-execution-hardening",
+      "orphan_gone": true,
+      "tip": "ea221a12",
+      "track": "[gone]",
+      "upstream": "origin/campaign/l9-devpack-program-execution-hardening"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "campaign/l9-dot-github-ci-boundary-v1",
+      "orphan_gone": false,
+      "tip": "a61b7846",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "campaign/l9-ecosystem-fix-plan",
+      "orphan_gone": true,
+      "tip": "cbe67adb",
+      "track": "[gone]",
+      "upstream": "origin/campaign/l9-ecosystem-fix-plan"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "campaign/level3-make-pr-single-path",
+      "orphan_gone": false,
+      "tip": "309921d8",
+      "track": "[ahead 4, behind 499]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 17,
+      "name": "claude/cursor-governance-pack-reconcile-9d4c9v",
+      "orphan_gone": true,
+      "tip": "8d812336",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-pack-reconcile-9d4c9v"
+    },
+    {
+      "ahead_of_baseline": 17,
+      "name": "claude/cursor-governance-remediate-kpzvnr",
+      "orphan_gone": true,
+      "tip": "20ba9dca",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-remediate-kpzvnr"
+    },
+    {
+      "ahead_of_baseline": 7,
+      "name": "claude/cursor-governance-remediation-irbyhf",
+      "orphan_gone": true,
+      "tip": "b0158751",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-remediation-irbyhf"
+    },
+    {
+      "ahead_of_baseline": 8,
+      "name": "claude/cursor-governance-remediation-irbyhf-03-git-doctrine",
+      "orphan_gone": true,
+      "tip": "ca029a50",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-remediation-irbyhf-03-git-doctrine"
+    },
+    {
+      "ahead_of_baseline": 5,
+      "name": "claude/cursor-governance-seam-hardening-vckfoc",
+      "orphan_gone": true,
+      "tip": "fc5ac36c",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-seam-hardening-vckfoc"
+    },
+    {
+      "ahead_of_baseline": 33,
+      "name": "claude/cursor-governance-skills-qvcf3d",
+      "orphan_gone": true,
+      "tip": "dc0358a2",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-skills-qvcf3d"
+    },
+    {
+      "ahead_of_baseline": 14,
+      "name": "claude/l9-runtime-velocity-analysis-yig5fe",
+      "orphan_gone": true,
+      "tip": "b60a18a1",
+      "track": "[gone]",
+      "upstream": "origin/claude/l9-runtime-velocity-analysis-yig5fe"
+    },
+    {
+      "ahead_of_baseline": 6,
+      "name": "claude/l9-zero-secret-agent-bootstrap-f5fs8e",
+      "orphan_gone": true,
+      "tip": "6aadd510",
+      "track": "[gone]",
+      "upstream": "origin/claude/l9-zero-secret-agent-bootstrap-f5fs8e"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat/adr-identity-integrity-v1",
+      "orphan_gone": true,
+      "tip": "7cce887e",
+      "track": "[gone]",
+      "upstream": "origin/feat/adr-identity-integrity-v1"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/archive-completed-pe-campaigns",
+      "orphan_gone": false,
+      "tip": "f6108d36",
+      "track": "[ahead 1, behind 499]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 12,
+      "name": "feat/bounded-replanning-v1-execute",
+      "orphan_gone": true,
+      "tip": "41a1a3af",
+      "track": "[gone]",
+      "upstream": "origin/feat/bounded-replanning-v1-execute"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/campaign-ceiling-commit-converged",
+      "orphan_gone": true,
+      "tip": "9ab7882d",
+      "track": "[gone]",
+      "upstream": "origin/feat/campaign-ceiling-commit-converged"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/campaign-live-closeout",
+      "orphan_gone": true,
+      "tip": "8edf6c47",
+      "track": "[gone]",
+      "upstream": "origin/feat/campaign-live-closeout"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/cc-pe-intent-compiler-v1-ceiling-converged",
+      "orphan_gone": true,
+      "tip": "9ab7882d",
+      "track": "[gone]",
+      "upstream": "origin/feat/cc-pe-intent-compiler-v1-ceiling-converged"
+    },
+    {
+      "ahead_of_baseline": 24,
+      "name": "feat/ceremony-speed-plan",
+      "orphan_gone": false,
+      "tip": "f40e5045",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/cursor-rules-contract-foundation",
+      "orphan_gone": true,
+      "tip": "4e1ed896",
+      "track": "[gone]",
+      "upstream": "origin/feat/cursor-rules-contract-foundation"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/ecosystem-remaining-only",
+      "orphan_gone": true,
+      "tip": "e44c282a",
+      "track": "[gone]",
+      "upstream": "origin/feat/ecosystem-remaining-only"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/ff-shelf-20260828T223201Z",
+      "orphan_gone": false,
+      "tip": "94540564",
+      "track": "[ahead 2, behind 28]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/ff-shelf-20260829T042716Z",
+      "orphan_gone": false,
+      "tip": "e097fdae",
+      "track": "[ahead 1, behind 11]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/ff-shelf-wip-plans",
+      "orphan_gone": true,
+      "tip": "65e5e008",
+      "track": "[gone]",
+      "upstream": "origin/feat/ff-shelf-wip-plans"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "feat/ff-slash-dirt-park",
+      "orphan_gone": false,
+      "tip": "8f1cc2b3",
+      "track": "[ahead 4, behind 262]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat/gmp-execution-governance-harvest",
+      "orphan_gone": false,
+      "tip": "84ab7d3b",
+      "track": "[ahead 3, behind 28]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "feat/kernel-pack-new-branch-default",
+      "orphan_gone": true,
+      "tip": "f6a26db3",
+      "track": "[gone]",
+      "upstream": "origin/feat/kernel-pack-new-branch-default"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/kernel-precommit-hook",
+      "orphan_gone": false,
+      "tip": "43eae0e5",
+      "track": "[ahead 1, behind 64]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/l9-claude-code-deepseek-skill",
+      "orphan_gone": true,
+      "tip": "1d2900fc",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-claude-code-deepseek-skill"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/l9-devpack-program-execution-hardening-ceiling-converged",
+      "orphan_gone": true,
+      "tip": "9ab7882d",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-devpack-program-execution-hardening-ceiling-converged"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/l9-ecosystem-fix-plan-ceiling-converged",
+      "orphan_gone": true,
+      "tip": "9ab7882d",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-ecosystem-fix-plan-ceiling-converged"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/l9-pe-campaign-activate-ssot",
+      "orphan_gone": true,
+      "tip": "7a163b21",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-pe-campaign-activate-ssot"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "feat/l9-plan-audit-built-markers",
+      "orphan_gone": true,
+      "tip": "e14b8df4",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-plan-audit-built-markers"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/l9-repo-template-control-plane-ready-v1-recut",
+      "orphan_gone": true,
+      "tip": "bb1e8868",
+      "track": "[gone]",
+      "upstream": "origin/feat/l9-repo-template-control-plane-ready-v1-recut"
+    },
+    {
+      "ahead_of_baseline": 6,
+      "name": "feat/level3-make-pr-single-path",
+      "orphan_gone": true,
+      "tip": "1d491481",
+      "track": "[gone]",
+      "upstream": "origin/feat/level3-make-pr-single-path"
+    },
+    {
+      "ahead_of_baseline": 11,
+      "name": "feat/pe-brief-accept-cursor-plan",
+      "orphan_gone": false,
+      "tip": "d9808fc3",
+      "track": "[ahead 11, behind 421]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 8,
+      "name": "feat/pe-brief-accept-cursor-plan-on-254",
+      "orphan_gone": true,
+      "tip": "3a2797fb",
+      "track": "[gone]",
+      "upstream": "origin/pec/w1/task-006-followup"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pe-campaigns-https-close",
+      "orphan_gone": true,
+      "tip": "2580248d",
+      "track": "[gone]",
+      "upstream": "origin/feat/pe-campaigns-https-close"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pe-compiler-in-tree-alignment",
+      "orphan_gone": true,
+      "tip": "fea9d964",
+      "track": "[gone]",
+      "upstream": "origin/feat/pe-compiler-in-tree-alignment"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pe-compiler-in-tree-retarget",
+      "orphan_gone": false,
+      "tip": "3ac966d9",
+      "track": "[ahead 1, behind 546]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 11,
+      "name": "feat/pe-eie-campaign-pipeline-v1",
+      "orphan_gone": true,
+      "tip": "19ee1044",
+      "track": "[gone]",
+      "upstream": "origin/feat/pe-eie-campaign-pipeline-v1"
+    },
+    {
+      "ahead_of_baseline": 51,
+      "name": "feat/plan-skills-precommit-catalog",
+      "orphan_gone": false,
+      "tip": "4e6a0ee4",
+      "track": "[ahead 18]",
+      "upstream": "origin/feat/plan-skills-precommit-catalog"
+    },
+    {
+      "ahead_of_baseline": 28,
+      "name": "feat/pr-check-folded",
+      "orphan_gone": false,
+      "tip": "f8a227f1",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pr-gate-ff-friction",
+      "orphan_gone": false,
+      "tip": "2d0d6320",
+      "track": "[ahead 1, behind 28]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pr-gate-velocity",
+      "orphan_gone": false,
+      "tip": "3d8d328c",
+      "track": "[ahead 1, behind 455]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 14,
+      "name": "feat/pr-remediator-speed",
+      "orphan_gone": true,
+      "tip": "0f12ad5f",
+      "track": "[gone]",
+      "upstream": "origin/feat/pr-remediator-speed"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/pr-stack-auto-default",
+      "orphan_gone": false,
+      "tip": "759de516",
+      "track": "[ahead 1, behind 347]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 14,
+      "name": "feat/pr-train-0-61e0b2a8-92726-1787966728",
+      "orphan_gone": true,
+      "tip": "1d0ca877",
+      "track": "[gone]",
+      "upstream": "origin/feat/pr-train-0-61e0b2a8-92726-1787966728"
+    },
+    {
+      "ahead_of_baseline": 19,
+      "name": "feat/pr-train-pack-overlap",
+      "orphan_gone": true,
+      "tip": "6cb02014",
+      "track": "[gone]",
+      "upstream": "origin/feat/pr-train-pack-overlap"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat/pr-train-remainder",
+      "orphan_gone": false,
+      "tip": "98be33ea",
+      "track": "[ahead 3, behind 23]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "feat/precommit-gate-failure",
+      "orphan_gone": true,
+      "tip": "f8dd4c0f",
+      "track": "[gone]",
+      "upstream": "origin/feat/precommit-gate-failure"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/precommit-owns-ruff",
+      "orphan_gone": false,
+      "tip": "e38fcdda",
+      "track": "[ahead 2, behind 455]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/protected-root-pr-template",
+      "orphan_gone": false,
+      "tip": "f4e5b9c7",
+      "track": "[ahead 1, behind 421]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/purge-legal-defense",
+      "orphan_gone": true,
+      "tip": "2e53b072",
+      "track": "[gone]",
+      "upstream": "origin/feat/purge-legal-defense"
+    },
+    {
+      "ahead_of_baseline": 6,
+      "name": "feat/root-docs-ra-pointer",
+      "orphan_gone": false,
+      "tip": "a72a78da",
+      "track": "[ahead 6, behind 347]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "feat/rules-corpus-cleanup",
+      "orphan_gone": false,
+      "tip": "aeab4dfb",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "feat/seed-ci-skill-pointers",
+      "orphan_gone": true,
+      "tip": "69da04b7",
+      "track": "[gone]",
+      "upstream": "origin/feat/seed-ci-skill-pointers"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "feat/wip-corpus-on-main",
+      "orphan_gone": true,
+      "tip": "c76336af",
+      "track": "[gone]",
+      "upstream": "origin/feat/wip-corpus-on-main"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "fix/claude-session-start-thin-wrapper",
+      "orphan_gone": false,
+      "tip": "95e03eb8",
+      "track": "[ahead 1, behind 563]",
+      "upstream": "origin/main"
+    },
+    {
+      "ahead_of_baseline": 3,
+      "name": "fix/pr-remediation-merge-authority",
+      "orphan_gone": true,
+      "tip": "c6921edd",
+      "track": "[gone]",
+      "upstream": "origin/fix/pr-remediation-merge-authority"
+    },
+    {
+      "ahead_of_baseline": 5,
+      "name": "fix/precommit-attribution-gate",
+      "orphan_gone": true,
+      "tip": "b4638d23",
+      "track": "[gone]",
+      "upstream": "origin/fix/precommit-attribution-gate"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "fix/stack-proof-https-only",
+      "orphan_gone": false,
+      "tip": "459ae443",
+      "track": "[ahead 4, behind 1]",
+      "upstream": "origin/fix/stack-proof-https-only"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "l9/ff-preserve-20260824T014642Z",
+      "orphan_gone": false,
+      "tip": "64408002",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "l9/ff-preserve-20260824T014704Z",
+      "orphan_gone": false,
+      "tip": "64408002",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "l9/ff-preserve-20260827T025644Z",
+      "orphan_gone": false,
+      "tip": "98c90856",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 8,
+      "name": "l9/ff-preserve-20260828T222958Z",
+      "orphan_gone": false,
+      "tip": "eb286911",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 16,
+      "name": "l9/ff-preserve-20260829T042415Z",
+      "orphan_gone": false,
+      "tip": "f1321207",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "pe-start-cleanly",
+      "orphan_gone": true,
+      "tip": "807c0634",
+      "track": "[gone]",
+      "upstream": "origin/pe-start-cleanly"
+    },
+    {
+      "ahead_of_baseline": 13,
+      "name": "pec/w1/task-006",
+      "orphan_gone": false,
+      "tip": "fdda52af",
+      "track": "[ahead 14]",
+      "upstream": "origin/pec/w1/task-006"
+    },
+    {
+      "ahead_of_baseline": 5,
+      "name": "pr/l9-dot-github-ci-boundary-v1",
+      "orphan_gone": true,
+      "tip": "39f62bd9",
+      "track": "[gone]",
+      "upstream": "origin/pr/l9-dot-github-ci-boundary-v1"
+    },
+    {
+      "ahead_of_baseline": 4,
+      "name": "preserve/local-main-714b930",
+      "orphan_gone": false,
+      "tip": "714b9306",
+      "track": null,
+      "upstream": null
+    },
+    {
+      "ahead_of_baseline": 5,
+      "name": "rem-269-rebased-hold",
+      "orphan_gone": true,
+      "tip": "26cb76da",
+      "track": "[gone]",
+      "upstream": "origin/claude/cursor-governance-audit-qdbhlw"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "rem/pr-153-closeout",
+      "orphan_gone": true,
+      "tip": "68d6281d",
+      "track": "[gone]",
+      "upstream": "origin/feat/campaign-live-closeout"
+    },
+    {
+      "ahead_of_baseline": 2,
+      "name": "rem/pr-155-align",
+      "orphan_gone": true,
+      "tip": "e3ddd525",
+      "track": "[gone]",
+      "upstream": "origin/feat/pe-compiler-in-tree-alignment"
+    },
+    {
+      "ahead_of_baseline": 1,
+      "name": "wip/track-peer-execution-overlay",
+      "orphan_gone": true,
+      "tip": "f1276f32",
+      "track": "[gone]",
+      "upstream": "origin/wip/track-peer-execution-overlay"
+    }
+  ],
+  "worktrees_porcelain": [
+    "worktree /Users/ib-mac/Cursor-Governance",
+    "HEAD 6cb02014ba9d14a28317bdb8cb3c3bb40b136c0f",
+    "branch refs/heads/feat/pr-train-pack-overlap",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/cursor__c5-c6-harvest-land",
+    "HEAD ed2ea014a915e6bccdc328c9eb1f7f2dcfef9863",
+    "branch refs/heads/agent/cursor/c5-c6-harvest-land",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/cursor__ff-switch-corpus",
+    "HEAD daee9164a67172132ee03378b214dcfe36cb33ca",
+    "branch refs/heads/agent/cursor/ff-switch-corpus",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/cursor__git-work-preserve-harvest",
+    "HEAD 672ee5bd2ca06df3897de1f2378feb3338a9aafa",
+    "branch refs/heads/agent/cursor/git-work-preserve-harvest",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/cursor__gmp-slash-build",
+    "HEAD 47398bf8fac8e4e919b177d01ffca9c29d373d45",
+    "branch refs/heads/agent/cursor/gmp-slash-build",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/cursor__plan-kernel-auto-pass",
+    "HEAD d90e52370fe10406e9cb59b2d4539e604ddaac36",
+    "branch refs/heads/agent/cursor/plan-kernel-auto-pass",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/cursor__pr-train",
+    "HEAD 20ec32520323296035f832fd0386a25f935f5e19",
+    "branch refs/heads/agent/cursor/pr-train",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/cursor__protected-root-pr-template",
+    "HEAD 6eb30cdb72ef0ca368bf5c96a6ec61d0d490daf3",
+    "branch refs/heads/agent/cursor/protected-root-pr-template",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/cursor__retire-integrity-healer",
+    "HEAD d60fc83d5fc7391b084c84b1dfc60104533cf656",
+    "branch refs/heads/agent/cursor/retire-integrity-healer",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/cursor__stop-gen-snap-v2",
+    "HEAD 460714788d27e95fa965aa19ad9add34d643a6ec",
+    "branch refs/heads/agent/cursor/stop-gen-snap-v2",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/feat-ff-slash-dirt-park",
+    "HEAD 8f1cc2b318eebcaa8cec840cd39bb2b0b06f51d6",
+    "branch refs/heads/feat/ff-slash-dirt-park",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/ff-shelf-20260828T223201Z",
+    "HEAD 945405641d68a8fb6f358583dd65cc75d26459a7",
+    "branch refs/heads/feat/ff-shelf-20260828T223201Z",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/ff-shelf-20260829T042716Z",
+    "HEAD e097fdae1b8010f87ae4a925e436d216882e28fd",
+    "branch refs/heads/feat/ff-shelf-20260829T042716Z",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/ff-shelf-wip-plans",
+    "HEAD 65e5e008ad922bdba481362fb37295a25e5a53f9",
+    "branch refs/heads/feat/ff-shelf-wip-plans",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/gmp-exec-gov-harvest-20260828T230515Z",
+    "HEAD 84ab7d3bfdf8db9de2fc6882a119e7436582a528",
+    "branch refs/heads/feat/gmp-execution-governance-harvest",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/kernel-precommit-hook",
+    "HEAD 43eae0e5853c4f99813c92ecf293f8a9146c581a",
+    "branch refs/heads/feat/kernel-precommit-hook",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/l9-ff-only-sync",
+    "HEAD 577c482cac657403fb6fb66f7f7d89e2ad6994e1",
+    "branch refs/heads/feat/l9-ff-only-sync",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pe-brief-accept-cursor-plan",
+    "HEAD 3a2797fb87d4b8f8d316c2f7486fc5bedd10c18a",
+    "branch refs/heads/feat/pe-brief-accept-cursor-plan-on-254",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-256-git-doctrine",
+    "HEAD ca029a50d3565a5516f373fbd781d86c44685348",
+    "branch refs/heads/claude/cursor-governance-remediation-irbyhf-03-git-doctrine",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-257",
+    "HEAD b015875199980ad5884810bb624d2b84ed3cbfc2",
+    "branch refs/heads/claude/cursor-governance-remediation-irbyhf",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-gate-ff-friction-20260828T224146Z",
+    "HEAD 2d0d6320fc281e3212f651a37ce9e7ca0444f0db",
+    "branch refs/heads/feat/pr-gate-ff-friction",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-plan-audit",
+    "HEAD e14b8df407cea830d8c57b22d55a0abb61f1b20d",
+    "branch refs/heads/feat/l9-plan-audit-built-markers",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-protected-root-template",
+    "HEAD f4e5b9c7eccc84b04fde7460d506e2f5a2c0e336",
+    "branch refs/heads/feat/protected-root-pr-template",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-remediator-speed",
+    "HEAD 0f12ad5fbb3f54203d548ec8bd8beb6a6798ca05",
+    "branch refs/heads/feat/pr-remediator-speed",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-stack-auto-default",
+    "HEAD 759de516933179c637a3a57b68f2d7ba49d39760",
+    "branch refs/heads/feat/pr-stack-auto-default",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-train-0-16004-1787970880",
+    "HEAD 04126d7ab6320bcd67f1b419fea29307187c0415",
+    "branch refs/heads/feat/pr-train-0-bfa8e1d9-16004-1787970880",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-train-0-92726-1787966728",
+    "HEAD 1d0ca877d4abc6d6c5b2624865aa4201c2a68599",
+    "branch refs/heads/feat/pr-train-0-61e0b2a8-92726-1787966728",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-train-cherry-probe",
+    "HEAD 588ed78c8b965225b1d30c9132f60f9cefc635e4",
+    "branch refs/heads/feat/pr-train-cherry-probe",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/pr-train-remainder",
+    "HEAD 98be33eabb1c828e01cccbec226ec4fd4c345459",
+    "branch refs/heads/feat/pr-train-remainder",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/rem-pr-251",
+    "HEAD fdda52af7bd5332f72a751a5c724e26e1c7ee362",
+    "branch refs/heads/pec/w1/task-006",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/rem-pr-263",
+    "HEAD 19ee104412198500f328b014074221c66448f7ac",
+    "branch refs/heads/feat/pe-eie-campaign-pipeline-v1",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/rem-pr-268",
+    "HEAD 459ae4436c5e9f73e4f0aa741414f6ea76ef4bda",
+    "branch refs/heads/fix/stack-proof-https-only",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/rem-pr-269",
+    "HEAD 26cb76dac304affc2bb7e586d0ebc139a6ead6e8",
+    "branch refs/heads/rem-269-rebased-hold",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/rem-pr-340",
+    "HEAD 20ba9dcabf70edd1fa1c83ac804bcf05dfb72bfe",
+    "branch refs/heads/claude/cursor-governance-remediate-kpzvnr",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/rem-pr-341",
+    "HEAD dc0358a2b309d38834e14ca162e46cec74fbdd5c",
+    "branch refs/heads/claude/cursor-governance-skills-qvcf3d",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/rem-pr-360",
+    "HEAD 8d81233648464330c7e45de9e75487a8c8dce583",
+    "branch refs/heads/claude/cursor-governance-pack-reconcile-9d4c9v",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/rem-pr-373",
+    "HEAD b60a18a12dbc3d745fa76c96514924ab37f9499f",
+    "branch refs/heads/claude/l9-runtime-velocity-analysis-yig5fe",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/root-docs-ra-pointer",
+    "HEAD a72a78daba67eda901bfaabeb514781b5a5b14e0",
+    "branch refs/heads/feat/root-docs-ra-pointer",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/slash-catalog-primary",
+    "HEAD 5b087b893d219ff35ec4ab69b6c6a12524902580",
+    "branch refs/heads/feat-slash-catalog-revise",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/stack-proof-key-miss",
+    "HEAD 8bc5781df8b246b83c14d359d0e0803e6d2ef868",
+    "branch refs/heads/feat/stack-proof-key-miss",
+    "worktree /Users/ib-mac/.l9/gov-worktrees/stop-generated-merge-conflicts",
+    "HEAD 3163c356ced149e4e6148e68db0d4d66e1281341",
+    "branch refs/heads/agent/cursor/stop-gen-conflicts",
+    "worktree /Users/ib-mac/.l9/program-worktrees/adr-identity-integrity-v1",
+    "HEAD 7cce887e79ff3bd8db688a232884ffca697cafb3",
+    "branch refs/heads/feat/adr-identity-integrity-v1",
+    "worktree /Users/ib-mac/.l9/program-worktrees/archive-completed-pe-campaigns",
+    "HEAD f6108d366490a3803b029b57dd0033eaf4ad9601",
+    "branch refs/heads/feat/archive-completed-pe-campaigns",
+    "worktree /Users/ib-mac/.l9/program-worktrees/bounded-replanning-v1",
+    "HEAD 41a1a3af89b905277de7f8917eec06e2a26275ea",
+    "branch refs/heads/feat/bounded-replanning-v1-execute",
+    "worktree /Users/ib-mac/.l9/program-worktrees/campaign-ceiling-commit-converged",
+    "HEAD 9ab7882d96ac730143d5c9c111c9840da72f7503",
+    "branch refs/heads/feat/campaign-ceiling-commit-converged",
+    "worktree /Users/ib-mac/.l9/program-worktrees/campaign-closeout-v1",
+    "HEAD 8edf6c47afc3b1542305d733286031b2112943e8",
+    "branch refs/heads/feat/campaign-live-closeout",
+    "worktree /Users/ib-mac/.l9/program-worktrees/cc-pe-ceiling",
+    "HEAD 9ab7882d96ac730143d5c9c111c9840da72f7503",
+    "branch refs/heads/feat/cc-pe-intent-compiler-v1-ceiling-converged",
+    "worktree /Users/ib-mac/.l9/program-worktrees/cg-devpack-campaign-v11",
+    "HEAD ea221a1274c532a3ec92f034ab80d12dedd787d7",
+    "branch refs/heads/campaign/l9-devpack-program-execution-hardening",
+    "worktree /Users/ib-mac/.l9/program-worktrees/ecosystem-ceiling",
+    "HEAD 9ab7882d96ac730143d5c9c111c9840da72f7503",
+    "branch refs/heads/feat/l9-ecosystem-fix-plan-ceiling-converged",
+    "worktree /Users/ib-mac/.l9/program-worktrees/ecosystem-odoo-ready",
+    "HEAD 1aba3592b094f8bd424479264e725ade585c018e",
+    "branch refs/heads/feat/ecosystem-odoo-ready",
+    "worktree /Users/ib-mac/.l9/program-worktrees/ecosystem-remaining-only",
+    "HEAD e44c282a0fd82f447a2ea13cca4d905186564236",
+    "branch refs/heads/feat/ecosystem-remaining-only",
+    "worktree /Users/ib-mac/.l9/program-worktrees/gate-failure-receipt",
+    "HEAD d9459b03834ff69b4fb6279e996f6f74e7628d10",
+    "branch refs/heads/feat/gate-failure-receipt",
+    "worktree /Users/ib-mac/.l9/program-worktrees/hardening-ceiling",
+    "HEAD 9ab7882d96ac730143d5c9c111c9840da72f7503",
+    "branch refs/heads/feat/l9-devpack-program-execution-hardening-ceiling-converged",
+    "worktree /Users/ib-mac/.l9/program-worktrees/l9-dot-github-ci-boundary-v1",
+    "HEAD 39f62bd9cb50988493630a8ee540443fb68bb347",
+    "branch refs/heads/pr/l9-dot-github-ci-boundary-v1",
+    "worktree /Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate",
+    "HEAD 1f227ecd99234013d62b3f33a5217ee0b2a27382",
+    "branch refs/heads/feat/l9-pe-campaign-activate",
+    "worktree /Users/ib-mac/.l9/program-worktrees/l9-pe-campaign-activate-ssot",
+    "HEAD 7a163b212319e02749c94f2d2d450c013d6c6b13",
+    "branch refs/heads/feat/l9-pe-campaign-activate-ssot",
+    "worktree /Users/ib-mac/.l9/program-worktrees/l9-repo-template-control-plane-ready-v1",
+    "HEAD 1368e44bb3c8caaa8ccee2cdd826550df1e02228",
+    "branch refs/heads/feat/l9-repo-template-control-plane-ready-v1",
+    "worktree /Users/ib-mac/.l9/program-worktrees/l9-repo-template-recut",
+    "HEAD bb1e8868c8c05c5e3ccac9d2408c079a35a2e822",
+    "branch refs/heads/feat/l9-repo-template-control-plane-ready-v1-recut",
+    "worktree /Users/ib-mac/.l9/program-worktrees/level3-make-pr-single-path",
+    "HEAD 1d49148118ccef841a49c688fdf7455e281c6b95",
+    "branch refs/heads/feat/level3-make-pr-single-path",
+    "worktree /Users/ib-mac/.l9/program-worktrees/pe-campaigns-https-close",
+    "HEAD 2580248da6d6989b4aa272a61b98d31452477fb4",
+    "branch refs/heads/feat/pe-campaigns-https-close",
+    "worktree /Users/ib-mac/.l9/program-worktrees/pe-compiler-alignment",
+    "HEAD fea9d9642e3bd6bb9c08deef0a67e5f35757d442",
+    "branch refs/heads/feat/pe-compiler-in-tree-alignment",
+    "worktree /Users/ib-mac/.l9/program-worktrees/pe-compiler-in-tree-retarget",
+    "HEAD 3ac966d9c45f1f88991579ceb6a3ecdca1cdd281",
+    "branch refs/heads/feat/pe-compiler-in-tree-retarget",
+    "worktree /Users/ib-mac/.l9/program-worktrees/pr-bottom-up-merge",
+    "HEAD cbe67adb69ffdd191688b0f6b54078187a6df50c",
+    "branch refs/heads/campaign/l9-ecosystem-fix-plan",
+    "worktree /Users/ib-mac/.l9/program-worktrees/pr-gate-velocity",
+    "HEAD 3d8d328c0f5bff15ea2848a45984bc99df4ecf55",
+    "branch refs/heads/feat/pr-gate-velocity",
+    "worktree /Users/ib-mac/.l9/program-worktrees/pre-ff-wip-snapshot",
+    "HEAD 92696137ba9db247f4d678bb77014e6216f4ba0e",
+    "branch refs/heads/wip/pre-ff-snapshot-2026-08-14",
+    "worktree /Users/ib-mac/.l9/program-worktrees/precommit-gate-failure",
+    "HEAD f8dd4c0f6a93a076ca80ddc5de3669d1f6e3a5c0",
+    "branch refs/heads/feat/precommit-gate-failure",
+    "worktree /Users/ib-mac/.l9/program-worktrees/precommit-owns-ruff",
+    "HEAD e38fcddaf72f907ae32ab1a8db70dba4e13c3b1e",
+    "branch refs/heads/feat/precommit-owns-ruff",
+    "worktree /Users/ib-mac/.l9/program-worktrees/purge-legal-defense",
+    "HEAD 2e53b072f57fab571d41db132253b6273de470d6",
+    "branch refs/heads/feat/purge-legal-defense",
+    "worktree /Users/ib-mac/.l9/program-worktrees/stack-proof-context7-capability",
+    "HEAD b406feeb4734f7029c36d718a68b004cacd6a68a",
+    "branch refs/heads/feat/stack-proof-context7-capability",
+    "worktree /Users/ib-mac/.l9/program-worktrees/wip-corpus-on-main",
+    "HEAD c76336af9312d16e593ddfe6889452239f9f0f0e",
+    "branch refs/heads/feat/wip-corpus-on-main",
+    "worktree /Users/ib-mac/.l9/program-worktrees/wip-preserve-2026-08-16",
+    "HEAD c8566f0034a6e44837414d599b50e243445d37df",
+    "branch refs/heads/wip/preserve-local-2026-08-16",
+    "worktree /Users/ib-mac/.l9/worktrees/cg-claude-md-align",
+    "HEAD 255a71ac3308d8f86e0424193a0c606f21083f1a",
+    "branch refs/heads/feat/claude-md-align",
+    "worktree /Users/ib-mac/.l9/worktrees/cg-seed-skill-pointers",
+    "HEAD 69da04b7cdacae27552c6dfb3c6d27a3f7b38dff",
+    "branch refs/heads/feat/seed-ci-skill-pointers",
+    "worktree /Users/ib-mac/Cursor-Governance-session-start-wrap",
+    "HEAD 95e03eb85b0cdaecccd6ac837e4707175ade01d8",
+    "branch refs/heads/fix/claude-session-start-thin-wrapper",
+    "worktree /Users/ib-mac/Cursor-Governance-worktrees/cursor-rules-contract-foundation",
+    "HEAD 4e1ed896473e551f3533aa368f6f13ebdaec4ece",
+    "branch refs/heads/feat/cursor-rules-contract-foundation",
+    "worktree /Users/ib-mac/Cursor-Governance-worktrees/l9-agent-doc-plane",
+    "HEAD 06978f4a38a2d3ef42e1fd9950d3dacb857defdc",
+    "branch refs/heads/campaign/l9-agent-doc-plane",
+    "worktree /Users/ib-mac/Cursor-Governance-worktrees/pr-153-closeout",
+    "HEAD 68d6281de5301fcdec747c62ad2a9f4d04408545",
+    "branch refs/heads/rem/pr-153-closeout",
+    "worktree /Users/ib-mac/Cursor-Governance-worktrees/pr-155-align",
+    "HEAD e3ddd52521453875e5f455826809c23fc526b67c",
+    "branch refs/heads/rem/pr-155-align",
+    "worktree /Users/ib-mac/Cursor-Governance-worktrees/pr-157-deepseek",
+    "HEAD 1d2900fce7e6951ec462cfa32c034efdb4eb9583",
+    "branch refs/heads/feat/l9-claude-code-deepseek-skill",
+    "worktree /Users/ib-mac/Cursor-Governance-worktrees/uv-dep-cooldown",
+    "HEAD 52b80493caa3ced45910e97415c721e2c725f4b8",
+    "branch refs/heads/fix/uv-dependency-cooldown",
+    "worktree /Users/ib-mac/Cursor-Governance-worktrees/wip-track-peer-execution",
+    "HEAD f1276f3279777585297af7299dc64fe0304ccf3f",
+    "branch refs/heads/wip/track-peer-execution-overlay",
+    "worktree /Users/ib-mac/Cursor-Governance-wt-pe-start",
+    "HEAD 807c06346ef7b55e7297c9f991bb00323c1e0324",
+    "branch refs/heads/pe-start-cleanly",
+    "worktree /Users/ib-mac/Cursor-Governance-wt-pr-merge-auth",
+    "HEAD c6921edd9a5c932657c9b98af4ec81d18b5f2684",
+    "branch refs/heads/fix/pr-remediation-merge-authority",
+    "worktree /Users/ib-mac/Cursor-Governance-wt-pr170",
+    "HEAD 6aadd510089913bc440ae112a00901fc338e771e",
+    "branch refs/heads/claude/l9-zero-secret-agent-bootstrap-f5fs8e"
+  ]
+}

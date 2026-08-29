@@ -1,0 +1,57 @@
+---
+description: Linear usage conventions for Cursor-Governance
+alwaysApply: true
+---
+
+# Linear conventions
+
+Linear is the work queue and audit record for this repository. It is not a
+memory or knowledge store; recall belongs to `l9-graphiti-memory`. Do not
+mirror repo state into Linear or treat issues as a cache.
+
+## When to create an issue
+
+Create a Linear issue when, and only when:
+
+- a governance check fails and the fix is not immediate
+- an invariant in `ORG_INVARIANTS.yaml` cannot be verified
+- work is deferred, handed off, or spans sessions
+- a decision needs a durable record
+
+Do not create issues for transient shell errors, for work you complete in
+the same turn, or as progress notes.
+
+## Issue format
+
+Title: `<area>: <imperative summary>` where area is a top-level directory
+such as `autonomy`, `integrity`, `telemetry`, `execution-governance`.
+
+Body must include:
+
+- **Trigger** - what surfaced this (check name, invariant ID, file path)
+- **Evidence** - the failing output or the specific lines, quoted
+- **Scope** - files or directories expected to change
+- **Blocked by** - other issue identifiers, if any
+
+Always cite the invariant or policy ID when one applies. An issue without a
+traceable trigger is not auditable.
+
+## Reading before writing
+
+Before creating an issue, search Linear for an existing one covering the same
+trigger. Duplicates degrade the audit record. Prefer commenting on the
+existing issue.
+
+## Handoff protocol
+
+When ending work that will resume in another session or on another machine,
+write the resume state into the issue as a comment: what is done, what is
+next, and the exact command to continue. Do not rely on chat context
+surviving.
+
+## Prohibitions
+
+- Never close an issue you did not verify as resolved.
+- Never paste secrets, tokens, connection strings, or customer data into an
+  issue. Issues are readable by every connected MCP client.
+- Never bulk-create issues. If more than three would be needed, stop and ask.

@@ -1,0 +1,79 @@
+{
+  "data": {
+    "repository": {
+      "pullRequests": {
+        "pageInfo": { "hasNextPage": false, "endCursor": "Y3Vyc29y" },
+        "nodes": [
+          {
+            "number": 191,
+            "title": "parent",
+            "createdAt": "2026-08-20T00:00:00Z",
+            "mergeable": "MERGEABLE",
+            "reviewDecision": "APPROVED",
+            "url": "https://github.com/example/repo/pull/191",
+            "additions": 10,
+            "deletions": 2,
+            "baseRefName": "main",
+            "headRefName": "feat/parent",
+            "headRefOid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "author": { "login": "alice" },
+            "files": {
+              "pageInfo": { "hasNextPage": false },
+              "nodes": [{ "path": "ops/generated/skill-registry.json" }, { "path": "skills/l9-pr-remediation/SKILL.md" }]
+            },
+            "reviewThreads": {
+              "pageInfo": { "hasNextPage": false, "endCursor": null },
+              "nodes": [
+                {
+                  "id": "PRRT_fixed",
+                  "isResolved": true,
+                  "comments": {
+                    "nodes": [
+                      { "body": "old", "author": { "login": "bob" }, "path": "skills/l9-pr-remediation/SKILL.md", "line": 1 }
+                    ]
+                  }
+                },
+                {
+                  "id": "PRRT_open",
+                  "isResolved": false,
+                  "comments": {
+                    "nodes": [
+                      {
+                        "body": "unused import",
+                        "author": { "login": "github-code-quality[bot]" },
+                        "path": "skills/l9-pr-remediation/SKILL.md",
+                        "line": 12
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          {
+            "number": 192,
+            "title": "child",
+            "createdAt": "2026-08-21T00:00:00Z",
+            "mergeable": "MERGEABLE",
+            "reviewDecision": null,
+            "url": "https://github.com/example/repo/pull/192",
+            "additions": 4,
+            "deletions": 1,
+            "baseRefName": "feat/parent",
+            "headRefName": "feat/child",
+            "headRefOid": "bbbbbbbbaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "author": { "login": "carol" },
+            "files": {
+              "pageInfo": { "hasNextPage": false },
+              "nodes": [{ "path": "ops/generated/skill-registry.json" }]
+            },
+            "reviewThreads": {
+              "pageInfo": { "hasNextPage": false, "endCursor": null },
+              "nodes": []
+            }
+          }
+        ]
+      }
+    }
+  }
+}
