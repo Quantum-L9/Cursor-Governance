@@ -28,6 +28,13 @@ from reconcile_claude_l9_skills import (  # noqa: E402
 ADAPTER_CONFIG_REL = Path("environment/skill-adapters/SKILL_ADAPTER_ROOTS.yaml")
 
 
+_GOV_LIB = Path(__file__).resolve().parent / "lib"
+if str(_GOV_LIB) not in sys.path:
+    sys.path.insert(0, str(_GOV_LIB))
+
+from workspace_roots import projection_roots  # noqa: E402
+
+
 def expand_path(raw: str, workspace: Path) -> Path:
     """Return the mount path without following a final-component symlink.
 
@@ -86,23 +93,34 @@ def reconcile_adapters(
             skipped.append({"id": adapter_id, "reason": "workspace-required"})
             continue
 
-        target = expand_path(str(raw_path), workspace)
         # Rules are whole-dir symlinked separately (reconcile_llm_rule_adapters.py).
         scope = "project" if kind == "project" else "user"
-        result = reconcile_scope(
-            root,
-            registry,
-            scope,
-            workspace,
-            mode,
-            check,
-            target_override=target,
-            replace_l9_duplicates=replace_dupes,
-        )
-        payload = result.as_dict()
-        payload["adapter_id"] = adapter_id
-        payload["surface"] = adapter.get("surface")
-        results.append(payload)
+        # A user-scope adapter has one absolute target. A project-scope adapter
+        # has one target PER MOUNT ROOT: in a cloud container the workspace is
+        # the container, and the per-repository `.claude` mirrors an earlier
+        # single-repo session created sit outside a container-only target. The
+        # obsolete-entry sweep below therefore never reached them, and they kept
+        # symlinks to skills the SSOT had removed — dangling links that fail any
+        # consumer test walking the repository tree. Reconciling every mount root
+        # is what lets that existing sweep do its job.
+        mount_roots = projection_roots(workspace) if scope == "project" else [workspace]
+        for mount_root in mount_roots:
+            target = expand_path(str(raw_path), mount_root)
+            result = reconcile_scope(
+                root,
+                registry,
+                scope,
+                mount_root,
+                mode,
+                check,
+                target_override=target,
+                replace_l9_duplicates=replace_dupes,
+            )
+            payload = result.as_dict()
+            payload["adapter_id"] = adapter_id
+            payload["surface"] = adapter.get("surface")
+            payload["mount_root"] = str(mount_root)
+            results.append(payload)
 
     return {
         "ssot": str((root / str(config.get("ssot_relative") or "skills")).resolve()),

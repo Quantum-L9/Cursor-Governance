@@ -32,7 +32,7 @@
    absent receipt is stated as such ("run `make claude-install` once"), never
    invented.
 7. On cloud sessions: a session-deps line from `hooks/session_deps_cloud.sh`
-   (fingerprint-cached consumer workspace toolchain + pre-commit warm; bounded
+   (fingerprint-cached toolchain PER REPOSITORY + pre-commit warm; bounded
    budget, self-detaches to background on expiry).
 
 ## Acceptance

@@ -267,6 +267,38 @@ emit_bootstrap_status() {
     return 0
   fi
 
+  # Repair, do not reprint. The receipt carries its own remediation string and
+  # SessionStart used to print it and move on, so a DEGRADED verdict was
+  # inherited across sessions and days while the fix sat one line away. The
+  # attempt is keyed on the GOVERNANCE REVISION, not on wall-clock time: the
+  # installer writes a receipt stamped with the current revision, so a
+  # successful repair suppresses the next attempt and a revision bump is the
+  # only thing that re-arms it. That is what makes this converge instead of
+  # re-running every session. Fail-open throughout — a repair that cannot run
+  # degrades the session, it never blocks it.
+  local state revision marker installer
+  state="$("$py" "$reader" --read --json 2>/dev/null \
+    | "$py" -c 'import json,sys
+try:
+    print(json.load(sys.stdin).get("state", ""))
+except Exception:
+    print("")' 2>/dev/null || true)"
+  revision="$(git -C "$GOV" rev-parse HEAD 2>/dev/null || echo unknown)"
+  marker="$HOME/.l9/claude/bootstrap-repair-${revision}.attempted"
+  installer="$GOV/environment/agents/adapters/claude-code/install.sh"
+  case "$state" in
+    ready|"") : ;;
+    *)
+      if [ ! -f "$marker" ] && [ -f "$installer" ]; then
+        mkdir -p "$HOME/.l9/claude"
+        : >"$marker"
+        LINES+=("bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once")
+        timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" bash "$installer" \
+          >"$HOME/.l9/claude/bootstrap-repair-${revision}.log" 2>&1 || true
+      fi
+      ;;
+  esac
+
   local block
   block="$("$py" "$reader" --read 2>/dev/null || true)"
   if [ -n "$block" ]; then
