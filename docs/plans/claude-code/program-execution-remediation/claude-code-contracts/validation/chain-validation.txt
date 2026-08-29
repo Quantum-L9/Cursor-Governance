@@ -1,0 +1,16 @@
+
+CHAIN VALID: 6 contracts, digest=sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3
+{
+  "schema_version": "2.0",
+  "chain_ids": [
+    "CG-PE-REMEDIATION-PR-001-v2.7.0",
+    "CG-PE-REMEDIATION-PR-002-v2.7.0",
+    "CG-PE-REMEDIATION-PR-003-v2.7.0",
+    "CG-PE-REMEDIATION-PR-004-v2.7.0",
+    "CG-PE-REMEDIATION-PR-005-v2.7.0",
+    "CG-PE-REMEDIATION-PR-006-v2.7.0"
+  ],
+  "chain_digest": "sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3",
+  "errors": [],
+  "valid": true
+}

@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "DeltaReport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "before_after_summary",
+    "files_changed",
+    "functional_changes",
+    "non_functional_changes",
+    "removed_items",
+    "added_items",
+    "preserved_items",
+    "rejected_changes",
+    "regression_notes"
+  ],
+  "properties": {
+    "before_after_summary": {
+      "type": "string",
+      "minLength": 10
+    },
+    "files_changed": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "change_type",
+          "before_lines",
+          "after_lines",
+          "summary"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "change_type": {
+            "type": "string",
+            "enum": [
+              "added",
+              "modified",
+              "removed",
+              "preserved"
+            ]
+          },
+          "before_lines": {
+            "type": "integer"
+          },
+          "after_lines": {
+            "type": "integer"
+          },
+          "summary": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "functional_changes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "non_functional_changes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "removed_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "added_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "preserved_items": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "rejected_changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "change",
+          "reason"
+        ],
+        "properties": {
+          "change": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "regression_notes": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

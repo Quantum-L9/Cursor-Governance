@@ -1,0 +1,152 @@
+schema: l9.audit-remediation.root-cause-matrix.v1
+groups:
+- id: RC-001
+  findings:
+  - PE-001
+  owner: PEC Controller recovery boundary
+  desired: fresh-workspace is tunnel-only cleanup; it cannot revoke live authority
+    or re-eligibilize a task. Canonical recover/fail owns transition out of active
+    execution.
+  files:
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/workspace_reset.py
+  - environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/tests/test_workspace_reset_safety.py
+  preserved_invariants:
+  - single canonical Program truth owner
+  - no scope widening
+  - no excluded memory work
+  - local-commit-only execution
+  - no new parallel runtime/registry/state machine
+  prohibited_changes:
+  - new competing authority
+  - validation weakening
+  - direct publication/merge effects inside Program Execution
+  - outside-scope edits
+  rollback: revert/restore only the root-cause batch files after preserving evidence
+  negative_regression_proof: See mapped SP and supported-path negative tests.
+- id: RC-002
+  findings:
+  - PE-002
+  owner: Program Execution campaign runner source-to-lock reconciliation
+  desired: every execute resume compares current authoritative source with the active
+    locked source before any resumed consequential effect; absorbable task edits relock,
+    wider drift rebuilds, unknown fails closed.
+  files:
+  - environment/program-execution/scripts/run_campaign.py
+  - environment/program-execution/scripts/tests/test_run_campaign.py
+  preserved_invariants:
+  - single canonical Program truth owner
+  - no scope widening
+  - no excluded memory work
+  - local-commit-only execution
+  - no new parallel runtime/registry/state machine
+  prohibited_changes:
+  - new competing authority
+  - validation weakening
+  - direct publication/merge effects inside Program Execution
+  - outside-scope edits
+  rollback: revert/restore only the root-cause batch files after preserving evidence
+  negative_regression_proof: See mapped SP and supported-path negative tests.
+- id: RC-003
+  findings:
+  - PE-003
+  owner: PEC campaign completion with repository ledger as projection
+  desired: PEC remains the only component deciding campaign terminality; repository
+    campaign status/archive is a verified idempotent projection of a current PEC terminal
+    receipt.
+  files:
+  - environment/program-execution/campaigns/scripts/close_campaign.py
+  - environment/program-execution/campaigns/scripts/test_close_campaign.py
+  - environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+  - environment/program-execution/campaigns/README.md
+  preserved_invariants:
+  - single canonical Program truth owner
+  - no scope widening
+  - no excluded memory work
+  - local-commit-only execution
+  - no new parallel runtime/registry/state machine
+  prohibited_changes:
+  - new competing authority
+  - validation weakening
+  - direct publication/merge effects inside Program Execution
+  - outside-scope edits
+  rollback: revert/restore only the root-cause batch files after preserving evidence
+  negative_regression_proof: See mapped SP and supported-path negative tests.
+- id: RC-004
+  findings:
+  - PE-004
+  owner: PEC gate evaluator
+  desired: gate result is derived from the frozen gate definition and current evidence;
+    caller may request evaluation but cannot assert PASS or substitute method/evidence
+    semantics.
+  files:
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/tests/test_gate_evaluation.py
+  preserved_invariants:
+  - single canonical Program truth owner
+  - no scope widening
+  - no excluded memory work
+  - local-commit-only execution
+  - no new parallel runtime/registry/state machine
+  prohibited_changes:
+  - new competing authority
+  - validation weakening
+  - direct publication/merge effects inside Program Execution
+  - outside-scope edits
+  rollback: revert/restore only the root-cause batch files after preserving evidence
+  negative_regression_proof: See mapped SP and supported-path negative tests.
+- id: RC-005
+  findings:
+  - PE-005
+  owner: existing live Peer provider execution coordinator
+  desired: the supported provider lifecycle consumes EXECUTION_FAILOVER_POLICY exactly
+    once; retries are classified, bounded, identity-preserving, and blocked after
+    uncertain or partial mutation without rollback proof. No second router or state
+    machine.
+  files:
+  - environment/program-execution/scripts/run_peer_task_pipeline.py
+  - environment/program-execution/scripts/run_campaign.py
+  - environment/program-execution/registry/EXECUTION_FAILOVER_POLICY.yaml
+  - environment/program-execution/scripts/tests/test_run_campaign.py
+  - environment/program-execution/peer_execution/tests/test_failover_policy.py
+  preserved_invariants:
+  - single canonical Program truth owner
+  - no scope widening
+  - no excluded memory work
+  - local-commit-only execution
+  - no new parallel runtime/registry/state machine
+  prohibited_changes:
+  - new competing authority
+  - validation weakening
+  - direct publication/merge effects inside Program Execution
+  - outside-scope edits
+  rollback: revert/restore only the root-cause batch files after preserving evidence
+  negative_regression_proof: See mapped SP and supported-path negative tests.
+- id: RC-006
+  findings:
+  - PE-006
+  - PE-007
+  owner: Program Execution supported-path assurance plus Peer provider lifecycle module
+  desired: one hermetic test proves the actual supported operator path through canonical
+    close, then active provider helpers live in a neutral Peer module while the old
+    script remains only a refusal shim until removal is safe.
+  files:
+  - environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py
+  - environment/program-execution/scripts/run_peer_task_pipeline.py
+  - environment/program-execution/scripts/run_campaign.py
+  - environment/program-execution/peer_execution/task_pipeline.py
+  preserved_invariants:
+  - single canonical Program truth owner
+  - no scope widening
+  - no excluded memory work
+  - local-commit-only execution
+  - no new parallel runtime/registry/state machine
+  prohibited_changes:
+  - new competing authority
+  - validation weakening
+  - direct publication/merge effects inside Program Execution
+  - outside-scope edits
+  rollback: revert/restore only the root-cause batch files after preserving evidence
+  negative_regression_proof: See mapped SP and supported-path negative tests.

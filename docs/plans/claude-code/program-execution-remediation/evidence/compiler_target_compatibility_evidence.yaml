@@ -1,0 +1,43 @@
+schema: compiler-target-compatibility-evidence.v2.7
+target_repository: Quantum-L9/Cursor-Governance
+audit_baseline_sha: f4265dcc58ff8ebee7896a1a89c9f298c9e8e5c8
+current_baseline_sha: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+compiler_version: 2.7.0
+status: PASS
+supersedes: compiler-target-compatibility-evidence.v1 from the v2.6.2 blocked package
+observations:
+- check: explicit_target_native_validation
+  status: PASS
+  evidence: campaign.validation is mandatory; emitted contracts preserve the supplied
+    Python/make commands and contain no compiler-inferred npm validation
+- check: compound_preflight_execution
+  status: PASS
+  evidence: v2.7 generate_preflight executes each declared command verbatim under
+    shell semantics; generated preflight scripts pass bash -n
+- check: internal_handoff
+  status: PASS
+  evidence: all internal seams are exact <contract-id> committed_and_validated tokens
+- check: one_commit_per_contract
+  status: PASS
+  evidence: all six contracts declare exactly_one_local_commit_per_contract with compiler-owned
+    subjects
+- check: terminal_delivery
+  status: PASS
+  evidence: contracts 1-5 authorize no remote delivery; contract 6 alone authorizes
+    exactly one make pr
+- check: remote_authority
+  status: PASS
+  evidence: direct git push, direct gh PR creation/merge/API mutation, merge, deployment,
+    and repo-settings mutation remain denied
+- check: compiler_regression_suite
+  status: PASS
+  evidence: 'scripts/test_target_validation.py: 11/11 PASS'
+- check: per_contract_validation
+  status: PASS
+  evidence: 6/6 validate_contract.py PASS
+- check: chain_validation
+  status: PASS
+  evidence: sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3
+- check: deterministic_recompile
+  status: PASS
+  evidence: all six emitted contract JSON files were byte-identical on a second compile

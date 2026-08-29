@@ -1,0 +1,30 @@
+schema: l9.audit-remediation.current-state-delta.v2
+audit_sha: f4265dcc58ff8ebee7896a1a89c9f298c9e8e5c8
+current_sha: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+sha_changed: true
+captured_at: '2026-08-28T14:37:20Z'
+intervening_change: 'fix(pe): seal authority and normalization seams'
+intervening_change_materiality: Program Execution authority/normalization changed,
+  so all seven findings were re-adjudicated; none were closed by the new commit.
+findings_already_resolved_since_audit: []
+current_defects_remaining:
+- PE-001
+- PE-002
+- PE-003
+- PE-004
+- PE-005
+- PE-006
+- PE-007
+changed_owner_or_callgraph_since_audit:
+- run_campaign/controller authority normalization changed around action ceilings and
+  validation normalization; canonical owners for the seven planned repairs did not
+  move
+assumptions_removed:
+- The old f4265dcc execution baseline is superseded for execution.
+- All seven remediation units remain required at 5eff2cdb.
+dirty_state: UNKNOWN_NOT_LOCAL_WORKSPACE
+reverify_at_execution_start: true
+execution_branch: claude/program-execution-authority-remediation-v1
+branch_creation_rule: Create claude/program-execution-authority-remediation-v1 from
+  exact 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d before contract 1; contract preflights
+  fail closed on branch mismatch and baseline ancestry.

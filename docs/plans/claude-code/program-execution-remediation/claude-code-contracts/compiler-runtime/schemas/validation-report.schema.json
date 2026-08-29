@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ValidationReport",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "contract_id",
+    "result",
+    "validation_classes",
+    "forbidden_patterns_absent",
+    "scope",
+    "approval"
+  ],
+  "properties": {
+    "contract_id": {
+      "type": "string"
+    },
+    "result": {
+      "type": "string",
+      "enum": [
+        "passed",
+        "failed"
+      ]
+    },
+    "validation_classes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "structural",
+        "contract",
+        "execution",
+        "evidence",
+        "operator",
+        "regression"
+      ],
+      "properties": {
+        "structural": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "UNKNOWN",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "contract": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "UNKNOWN",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "execution": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "UNKNOWN",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "evidence": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "UNKNOWN",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "operator": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "UNKNOWN",
+            "NOT_APPLICABLE"
+          ]
+        },
+        "regression": {
+          "type": "string",
+          "enum": [
+            "PASS",
+            "FAIL",
+            "BLOCKED",
+            "UNKNOWN",
+            "NOT_APPLICABLE"
+          ]
+        }
+      }
+    },
+    "forbidden_patterns_absent": {
+      "type": "boolean"
+    },
+    "sections_present": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 29
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "out_of_scope_files_touched",
+        "remote_changes_performed"
+      ],
+      "properties": {
+        "out_of_scope_files_touched": {
+          "type": "integer",
+          "const": 0
+        },
+        "remote_changes_performed": {
+          "const": false
+        }
+      }
+    },
+    "approval": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "push_requested",
+        "user_approval_recorded"
+      ],
+      "properties": {
+        "push_requested": {
+          "type": "boolean"
+        },
+        "user_approval_recorded": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}
