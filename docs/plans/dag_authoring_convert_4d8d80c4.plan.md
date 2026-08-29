@@ -45,6 +45,24 @@ todos:
     content: Run pack tests plus OPEN_PR=0 make pr; prove get_session_dag intelligence-harvest-v1 still resolves; do not push
     status: completed
 isProject: false
+kernel_pass:
+  bound_path: dag_authoring_convert_4d8d80c4.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T01:26:00Z
+    body_sha256: "2e4718fd1e5410f6f4bf766b7fce52a4a50bcae45f2f09d3d8154a281ba3faba"
+    deltas:
+      - "Parked this leftover CONVERT plan so unique commits can ride pr-train without a new planning pass"
+      - "Kept CONVERT as classify-then-emit; SessionDAG deletion stays a follow-on"
+      - "Did not mix this plan onto ssot main; extract cherry-picks only"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T01:26:30Z
+    body_sha256: "2e4718fd1e5410f6f4bf766b7fce52a4a50bcae45f2f09d3d8154a281ba3faba"
+    deltas:
+      - "Todos T01-T14 already completed in the source commits; this file is the receipt not a new Build"
+      - "No make campaign and no Program Lock from this parked plan"
+      - "kernel_pass stamped so precommit plan-gate can pass the extract"
 ---
 
 # PLAN: Add CONVERT to l9-dag-authoring

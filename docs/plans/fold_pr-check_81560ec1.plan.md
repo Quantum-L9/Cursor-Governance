@@ -15,6 +15,24 @@ todos:
     content: Run new tests + OPEN_PR=0 make pr on this change set. Protected-root stamp. Pathspecs only. No foreign dirty.
     status: pending
 isProject: false
+kernel_pass:
+  bound_path: fold_pr-check_81560ec1.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T01:26:00Z
+    body_sha256: "9d4664ab03fee113c158b5a1260d881f1747d4b69331b091121d9b78de59300a"
+    deltas:
+      - "Demote make pr-check to the internal leaf already invoked by make pr"
+      - "Stop teaching precommit-repo then pr-check then make pr as three public verbs"
+      - "Keep the pr-check Make target so the protected recipe is not rewritten"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T01:26:30Z
+    body_sha256: "9d4664ab03fee113c158b5a1260d881f1747d4b69331b091121d9b78de59300a"
+    deltas:
+      - "Protected-root Makefile stays append-only; no ALLOW-ROOT-DELETION for the pr-check target"
+      - "Remediator verify remains make precommit-repo; ceremony stays make pr"
+      - "kernel_pass stamped so this leftover plan can ride the extract without a false gate fail"
 ---
 
 # Fold pr-check into make pr

@@ -53,10 +53,7 @@ def test_head_move_does_not_require_second_apply(stacked_repo: Path) -> None:
 def test_changed_plan_template_is_skipped(stacked_repo: Path, tmp_path: Path) -> None:
     gate = _gate()
     gate.record(stacked_repo, gov=ROOT)
-    rel = (
-        "environment/contracts/execution/templates/"
-        "canonical.template.executable_plan.v1.plan.md"
-    )
+    rel = "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"
     template = stacked_repo / rel
     template.parent.mkdir(parents=True)
     template.write_text("---\nname: template\n---\n\n# not a live plan\n", encoding="utf-8")
