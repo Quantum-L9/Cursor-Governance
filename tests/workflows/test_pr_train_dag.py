@@ -19,12 +19,14 @@ from validate_langgraph_source import validate as validate_langgraph  # noqa: E4
 
 from workflows.dags.pr_train_dag import (  # noqa: E402
     GRAPH_ID,
+    ExtractEmpty,
     NovelCommit,
     campaign_halt,
     collect_remainder_slice,
     commits_must_colocate,
     default_extract,
     default_publish,
+    extract_node,
     filter_slices_against_tip,
     github_repo_slug,
     group_slices,
@@ -35,6 +37,7 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     probe_cherry_conflicts,
     probe_sha_conflicts,
     resolve_ff_clone,
+    route_after_extract,
     run_pr_train,
     shares_generated_clobber,
 )
@@ -604,6 +607,7 @@ def test_tip_preflight_keeps_child_when_parent_stays(tmp_path):
 
 
 def test_tip_preflight_still_probes_child_on_new_paths(tmp_path):
+    """One tip-conflict in a colocated group skips the whole group (no clean subset)."""
     repo = tmp_path / "git"
     repo.mkdir()
     _init_git(repo)
@@ -618,8 +622,8 @@ def test_tip_preflight_still_probes_child_on_new_paths(tmp_path):
         [[{"sha": parent, "paths": ["ops/unique.py"]}, {"sha": child, "paths": ["keep.txt"]}]],
         tip,
     )
-    assert skipped == [child]
-    assert [item["sha"] for item in kept[0]] == [parent]
+    assert kept == []
+    assert set(skipped) == {parent, child}
 
 
 def test_filter_keeps_remainder_mode_without_cherry_probe(monkeypatch, tmp_path):
@@ -681,7 +685,7 @@ def test_filter_remainder_drops_paths_already_on_new_tip(tmp_path):
     _git_c(repo, "commit", "-m", "unique")
     donor = _rev_parse(repo)
     _git_c(repo, "checkout", "main")
-    tip = _commit_file(repo, "ops/unique.py", "from-car\n", "car landed unique")
+    tip = _commit_file(repo, "ops/unique.py", "old\n", "car landed identical blob")
     kept, skipped, _items = filter_slices_against_tip(
         repo,
         [[{"sha": donor, "paths": ("ops/unique.py",), "mode": "remainder"}]],
@@ -689,6 +693,29 @@ def test_filter_remainder_drops_paths_already_on_new_tip(tmp_path):
     )
     assert skipped == []
     assert kept == []
+
+
+def test_filter_remainder_keeps_overlapping_unique_bytes(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    (repo / "ops").mkdir()
+    (repo / "ops" / "unique.py").write_text("old\n", encoding="utf-8")
+    _git_c(repo, "add", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "unique")
+    donor = _rev_parse(repo)
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "ops/unique.py", "from-car\n", "car landed different blob")
+    kept, skipped, _items = filter_slices_against_tip(
+        repo,
+        [[{"sha": donor, "paths": ("ops/unique.py",), "mode": "remainder"}]],
+        tip,
+    )
+    assert skipped == []
+    assert kept
+    assert kept[0][0]["paths"] == ("ops/unique.py",)
 
 
 def test_remainder_slice_keeps_unique_path_from_tip_conflict(tmp_path):
@@ -713,7 +740,7 @@ def test_remainder_slice_keeps_unique_path_from_tip_conflict(tmp_path):
     assert remainder
     assert remainder[0]["mode"] == "remainder"
     assert "ops/unique.py" in remainder[0]["paths"]
-    assert "keep.txt" not in remainder[0]["paths"]
+    assert "keep.txt" in remainder[0]["paths"]
 
 
 def test_extract_remainder_checkouts_unique_file(tmp_path, monkeypatch):
@@ -761,6 +788,60 @@ def test_tip_conflict_commit_dropped_clean_stays(tmp_path):
     assert skipped == [clash]
     assert len(kept) == 1
     assert kept[0][0]["sha"] == clean
+
+
+def test_filter_does_not_split_colocated_group(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "clash")
+    clash = _commit_file(repo, "docs/plans/x.plan.json", '{"a":1}\n', "clash")
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "docs/plans/x.plan.json", '{"a":2}\n', "tip")
+    _git_c(repo, "checkout", "-b", "clean")
+    clean = _commit_file(repo, "ops/a.py", "a\n", "clean")
+    kept, skipped, _skipped_items = filter_slices_against_tip(
+        repo,
+        [
+            [
+                {"sha": clash, "paths": ["docs/plans/x.plan.json"]},
+                {"sha": clean, "paths": ["ops/a.py"]},
+            ]
+        ],
+        tip,
+    )
+    assert kept == []
+    assert set(skipped) == {clash, clean}
+
+
+def test_extract_empty_skips_to_next_slice(tmp_path):
+    from workflows.dags.pr_train_dag import PrTrainState
+
+    def empty(*_a, **_k):
+        raise ExtractEmpty("extract empty: every kept commit was already on the tip")
+
+    state = PrTrainState(
+        repo=str(tmp_path),
+        execute=True,
+        slices=[[{"sha": "aaa"}], [{"sha": "bbb"}]],
+        current_slice=0,
+        stack_tip="main",
+        extract_fn=empty,
+    )
+    out = extract_node(state)
+    assert out.get("status") != "blocked"
+    assert out["current_slice"] == 1
+    assert out["extract_worktree"] == ""
+
+
+def test_route_after_extract_empty_goes_to_stack_base():
+    from workflows.dags.pr_train_dag import PrTrainState
+
+    skipped = PrTrainState(status="running", extract_worktree="", execute=True)
+    assert route_after_extract(skipped) == "stack_base"
+    ready = PrTrainState(status="running", extract_worktree="/tmp/wt", execute=True)
+    assert route_after_extract(ready) == "publish"
 
 
 def test_stack_base_filters_pending_slices_only(monkeypatch, tmp_path):
