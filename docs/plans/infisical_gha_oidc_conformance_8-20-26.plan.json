@@ -382,6 +382,12 @@
       "command": "make pr-check",
       "pass_criteria": "PASS vs PR_BASE=origin/main on the campaign branch",
       "status": "pending"
+    },
+    {
+      "id": "FV-PRECOMMIT-CATALOG",
+      "command": ".pre-commit-config.yaml catalog via make pr-check",
+      "pass_criteria": "PASS at execute time. This repository installs no commit hook by design; the catalog runs through make pr-check. Status not_applicable: execution-time gate, matching #376.",
+      "status": "not_applicable"
     }
   ],
   "convergence": {

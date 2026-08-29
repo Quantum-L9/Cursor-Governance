@@ -103,6 +103,32 @@ todos:
     phase: execute
     depends_on: [v1-validation-gates]
 isProject: false
+kernel_pass:
+  bound_path: claude_code_env_contract_8-20-26.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T17:20:00Z
+    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    deltas:
+      - "Stamp kernel_pass so the next editor is not the first to fail G_PLAN_KERNEL_PASS"
+      - "Keep this plan's existing todos and body; do not reopen landed work from this stamp"
+      - "Do not mix #374 end-of-file-fixer exclude into this corpus pass"
+  recursive_alignment:
+    kernel: kernels/Recursive Alignment.md
+    ran_at: 2026-08-29T17:20:30Z
+    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    deltas:
+      - "Align with issue #377 and the #376 G_PRECOMMIT_CONFIG plus kernel_pass precedent"
+      - "Leave docs/plans/_TEMPLATE.plan.md exempt via PLAN_SKIP_PREFIXES"
+      - "Do not edit .pre-commit-config.yaml in this cluster"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T17:21:00Z
+    body_sha256: "5c2e1adfdd25e3ea9d6f9163d1ef39fc38fa2e442ff5af2d2cc75cfb67e83625"
+    deltas:
+      - "G_PLAN_ETC and G_PLAN_EITHER_OR stay clean after this stamp"
+      - "Canonical body_sha256 is the post-stamp file hash with sha fields zeroed"
+      - "Do not mark status executable while the checker still fails"
 ---
 
 # PLAN: Claude Code environment contract repair (cloud/desktop → one session contract)

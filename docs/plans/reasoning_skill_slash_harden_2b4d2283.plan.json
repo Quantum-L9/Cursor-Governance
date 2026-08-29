@@ -6,8 +6,8 @@
   "objective": "Close the command/skill drift that reintroduced uncalibrated confidence percentages on /reasoning and /ynp. Encode the existing evidence-quality x decision-risk x action contract as YAML plus ledger validation, make /reasoning a thin delegate, and keep the auto-chain valid by updating YNP first. Do not add ECE computation, do not revive telemetry/, and do not fail-close ordinary runs that emit no probability.",
   "code_in_scope": true,
   "success_criteria": [
-    "commands/reasoning.md contains l9-structured-reasoning and evidence_quality and does not contain the live template string Confidence: {score}% or the scoring rows ≥90% / 80-89%.",
-    "commands/ynp.md and skills/l9-ynp require action: proceed|proceed_with_validation|bounded_probe|block; a bare percent is labeled uncalibrated and does not select the play; AUTO-EXECUTE on ≥90% is gone.",
+    "commands/reasoning.md contains l9-structured-reasoning and evidence_quality and does not contain the live template string Confidence: {score}% or the scoring rows \u226590% / 80-89%.",
+    "commands/ynp.md and skills/l9-ynp require action: proceed|proceed_with_validation|bounded_probe|block; a bare percent is labeled uncalibrated and does not select the play; AUTO-EXECUTE on \u226590% is gone.",
     "skills/l9-structured-reasoning/references/confidence-policy.yaml exists and is cited from SKILL.md; SKILL.md stays under 500 lines.",
     "validate_ledger.py PASSes today's fixtures/sample_ledger.json unchanged, FAILs stated_probability without calibration_status=calibrated, and FAILs action outside the evidence_quality x decision_risk allow-set.",
     "skills/l9-structured-reasoning/scripts/self_test.py PASS; new skills/l9-ynp/scripts/self_test.py PASS; needles cover both slash files.",
@@ -49,7 +49,7 @@
     {
       "id": "P0",
       "command_or_action": "git rev-parse --abbrev-ref HEAD && git rev-parse HEAD",
-      "pass_criteria": "branch=main; SHA a2eee3a6eedd8635ecf94f7e23022aab60187a5b recorded; dirty tree overlaps remediator WIP — Build uses pathspecs only",
+      "pass_criteria": "branch=main; SHA a2eee3a6eedd8635ecf94f7e23022aab60187a5b recorded; dirty tree overlaps remediator WIP \u2014 Build uses pathspecs only",
       "status": "passed"
     },
     {
@@ -60,7 +60,7 @@
     },
     {
       "id": "P2",
-      "command_or_action": "rg -n 'Confidence: \\{score\\}%|≥90%|AUTO-EXECUTE' commands/reasoning.md commands/ynp.md",
+      "command_or_action": "rg -n 'Confidence: \\{score\\}%|\u226590%|AUTO-EXECUTE' commands/reasoning.md commands/ynp.md",
       "pass_criteria": "both slash files still contain live percent / AUTO-EXECUTE contracts (defect confirmed)",
       "status": "passed"
     },
@@ -74,7 +74,7 @@
   "todos": [
     {
       "id": "todo-01-ynp-first",
-      "task": "Update l9-ynp skill, workflow, and commands/ynp.md so action enum is required, a bare percent is uncalibrated display-only, and AUTO-EXECUTE on ≥90% is removed. Add skills/l9-ynp/scripts/self_test.py needles. Keep recommend-only unless the user explicitly asks to run.",
+      "task": "Update l9-ynp skill, workflow, and commands/ynp.md so action enum is required, a bare percent is uncalibrated display-only, and AUTO-EXECUTE on \u226590% is removed. Add skills/l9-ynp/scripts/self_test.py needles. Keep recommend-only unless the user explicitly asks to run.",
       "files": [
         "skills/l9-ynp/SKILL.md",
         "skills/l9-ynp/references/ynp-workflow.md",
@@ -331,7 +331,7 @@
     ],
     "deletions_or_consolidations": [
       "Delete /reasoning CONFIDENCE SCORING table and Confidence: {score}% template",
-      "Delete /ynp AUTO-EXECUTE on ≥90%",
+      "Delete /ynp AUTO-EXECUTE on \u226590%",
       "Retarget AUTONOMY_MANIFEST reasoning_routing away from missing reference files"
     ]
   },
@@ -379,6 +379,12 @@
       "command": "make pr-check",
       "pass_criteria": "PASS on the changed-file set for this Build",
       "status": "pending"
+    },
+    {
+      "id": "FV-PRECOMMIT-CATALOG",
+      "command": ".pre-commit-config.yaml catalog via make pr-check",
+      "pass_criteria": "PASS at execute time. This repository installs no commit hook by design; the catalog runs through make pr-check. Status not_applicable: execution-time gate, matching #376.",
+      "status": "not_applicable"
     }
   ],
   "convergence": {
