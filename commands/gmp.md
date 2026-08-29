@@ -53,7 +53,10 @@ confirm). Tests once belong to that Build. Then:
 "$GOV_PY" workflows/gmp_executor.py --resume --mode finalize --commit-when-done
 ```
 
-Finalize runs L4 release when L4 is on, then `PR_REMEDIATE=1 make pr`. Do not
+Finalize is surface-split. Cursor (`L9_GOVERNANCE_SURFACE` is `cursor` or
+unset): `make precommit-repo` + commit + **STOP**. Do not `authorize-release`
+or `make pr`. Claude Code (`L9_GOVERNANCE_SURFACE=claude-code`) and other
+adapters: L4 release when L4 is on, then `PR_REMEDIATE=1 make pr`. Do not
 merge. Do not start pytest in finalize.
 
 Path miss + remainder:
@@ -77,7 +80,8 @@ If both are missing, exit 1. Do not fall back to `/usr/bin/python3`.
 
 ## Bounds
 
-- L4 local commits; no mid-work push. Publish is finalize.
+- L4 local commits; no mid-work push. Cursor finalize is catalog + commit +
+  stop. Claude Code finalize publishes.
 - Max 4 / 2 mutation Tasks. Admission via `autonomy/adapters/cursor/host_bridge.py`.
   If the lease is denied, serialize on the main agent. Do not ask.
 - No autonomous merge.

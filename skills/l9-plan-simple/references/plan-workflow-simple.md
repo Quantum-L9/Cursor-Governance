@@ -41,7 +41,7 @@ python3 ../l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=
 
 3. Frontmatter: Cursor `name`, `overview`, `todos`, `isProject`, plus `kind: simple`, `execute_via: cursor-build`.
 4. Convergence `execute_via`: `cursor-build`.
-5. Immutable baseline: current workspace (branch, dirty, HEAD if useful). Do **not** write `Lock: origin/main = <sha>`. Do **not** require a clean tip worktree. Do **not** stop-and-replan as a Program Lock.
+5. Immutable baseline: current workspace (branch, dirty, HEAD if useful). Do **not** write `Lock: origin/main = <sha>`. Do **not** require a clean tip worktree. Do **not** stop-and-replan as a Program Lock. For code in scope name `.pre-commit-config.yaml` as the hook catalog.
 6. DAG / Phase-0 table: keep as the todo/DAG projection. Rows are Build todos, not Controller `claim`/`render` Task Cards.
 
 ## Execute swap (required)

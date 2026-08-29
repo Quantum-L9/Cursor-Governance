@@ -32,7 +32,7 @@ campaign:
         - "python -m unittest discover -s tests -v"
     commit_gate:
       commands:
-        - "make pr-check"
+        - "make pr"
 ```
 
 Rules:

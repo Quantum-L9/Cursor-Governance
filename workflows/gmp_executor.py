@@ -110,6 +110,15 @@ def dry_run() -> bool:
     return os.environ.get("L9_GMP_DRY_RUN", "").strip() == "1"
 
 
+ADAPTER_PUBLISH_SURFACES = frozenset({"claude-code", "codex", "gemini", "manus"})
+
+
+def adapter_publish_surface() -> bool:
+    """Claude Code and sibling adapters finish via make pr. Cursor stops."""
+    surface = (os.environ.get("L9_GOVERNANCE_SURFACE") or "").strip().lower()
+    return surface in ADAPTER_PUBLISH_SURFACES
+
+
 def parse_plan_scope(plan_path: Path) -> list[dict[str, str]]:
     """Lock todos from plan frontmatter, else from a ## Files heading."""
     text = plan_path.read_text(encoding="utf-8")
@@ -307,20 +316,6 @@ class GMPExecutor:
         self.subprocess_log.append(cmd)
         print(f"SUBPROCESS: {cmd}")  # noqa: ADR-0019
 
-    def _run_shell(self, cmd: str, capture: bool = True) -> tuple[int, str, str]:
-        """Run shell command."""
-        self._record_subprocess(cmd)
-        if dry_run() and any(token in cmd for token in ("make pr", "git add", "git commit")):
-            return 0, "", ""
-        result = subprocess.run(
-            cmd,
-            shell=True,
-            cwd=REPO_ROOT,
-            capture_output=capture,
-            text=True,
-        )
-        return result.returncode, result.stdout, result.stderr
-
     def _run_argv(self, argv: list[str]) -> tuple[int, str, str]:
         rendered = " ".join(argv)
         self._record_subprocess(rendered)
@@ -394,15 +389,18 @@ class GMPExecutor:
 
         # Search for related work
         searches = [
-            f'"{self.state.task}"',
-            f'"lessons errors {self.state.task.split()[0]}"',
-            '"gmp patterns"',
+            self.state.task,
+            f"lessons errors {self.state.task.split()[0]}",
+            "gmp patterns",
         ]
 
         context_lines = []
         for query in searches:
-            cmd = f'python3 {MEMORY_CLIENT} search {query} 2>/dev/null || echo "Memory unavailable"'
-            code, stdout, stderr = self._run_shell(cmd)
+            code, stdout, stderr = self._run_argv(
+                [sys.executable, str(MEMORY_CLIENT), "search", query]
+            )
+            if code != 0:
+                stdout = "Memory unavailable"
             if stdout.strip():
                 context_lines.append(f"Query: {query}")
                 context_lines.append(stdout.strip()[:500])
@@ -658,29 +656,18 @@ class GMPExecutor:
 
             print(f"  📝 {py_file} → {test_file}")  # noqa: ADR-0019
 
-            # Generate tests using the test generator
             try:
-                cmd = f'''python3 -c "
-from core.testing import generate_test_file
-from pathlib import Path
+                from core.testing import generate_test_file
 
-code = Path('{filepath}').read_text()
-module_name = '{py_file}'.replace('/', '.').replace('.py', '')
-tests = generate_test_file(code, module_name)
-
-# Ensure test directory exists
-test_path = Path('{REPO_ROOT / test_file}')
-test_path.parent.mkdir(parents=True, exist_ok=True)
-test_path.write_text(tests)
-
-logger.info("generated {{len(tests.splitlines())}} lines")
-"'''
-                code, stdout, stderr = self._run_shell(cmd)
-                if code == 0:
-                    print(f"     ✅ {stdout.strip()}")  # noqa: ADR-0019
-                    generated.append(test_file)
-                else:
-                    print(f"     ❌ Failed: {stderr[:100]}")  # noqa: ADR-0019
+                tests = generate_test_file(
+                    filepath.read_text(encoding="utf-8"),
+                    py_file.replace("/", ".").replace(".py", ""),
+                )
+                test_path = REPO_ROOT / test_file
+                test_path.parent.mkdir(parents=True, exist_ok=True)
+                test_path.write_text(tests, encoding="utf-8")
+                print(f"     ✅ generated {len(tests.splitlines())} lines")  # noqa: ADR-0019
+                generated.append(test_file)
             except Exception as e:
                 print(f"     ❌ Error: {e}")  # noqa: ADR-0019
 
@@ -740,8 +727,14 @@ logger.info("generated {{len(tests.splitlines())}} lines")
 
             # Check if readme generator script exists
             if README_GENERATOR.exists():
-                cmd = f'python3 {README_GENERATOR} --dir "{REPO_ROOT / dir_path}" 2>/dev/null'
-                code, stdout, stderr = self._run_shell(cmd)
+                code, stdout, stderr = self._run_argv(
+                    [
+                        sys.executable,
+                        str(README_GENERATOR),
+                        "--dir",
+                        str(REPO_ROOT / dir_path),
+                    ]
+                )
                 if code == 0:
                     print("     ✅ Generated via script")  # noqa: ADR-0019
                     generated.append(f"{dir_path}/README.md")
@@ -823,8 +816,9 @@ from {module_path} import ...
         # py_compile
         py_files = [t["file"] for t in self.state.todo_plan if t["file"].endswith(".py")]
         if py_files:
-            files_str = " ".join(str(REPO_ROOT / f) for f in py_files)
-            code, stdout, stderr = self._run_shell(f"python3 -m py_compile {files_str}")
+            code, stdout, stderr = self._run_argv(
+                [sys.executable, "-m", "py_compile", *[str(REPO_ROOT / f) for f in py_files]]
+            )
             if code == 0:
                 validations.append({"gate": "py_compile", "result": "✅"})
                 print("✅ py_compile: PASSED")  # noqa: ADR-0019
@@ -856,11 +850,9 @@ from {module_path} import ...
             f"Tags: gmp, {self.state.tier.lower()}"
         )
 
-        cmd = (
-            f'python3 {MEMORY_CLIENT} write "{summary}" --kind lesson 2>/dev/null || '
-            'echo "Memory write failed"'
+        code, stdout, stderr = self._run_argv(
+            [sys.executable, str(MEMORY_CLIENT), "write", summary, "--kind", "lesson"]
         )
-        code, stdout, stderr = self._run_shell(cmd)
 
         if "failed" in stdout.lower() or code != 0:
             print(f"⚠️  Memory write failed: {stdout}{stderr}")  # noqa: ADR-0019
@@ -906,21 +898,21 @@ from {module_path} import ...
 
         if REPORT_GENERATOR.is_file():
             print("Generating canonical GMP report...\n")  # noqa: ADR-0019
-            todo_args = []
+            argv = [
+                sys.executable,
+                str(REPORT_GENERATOR),
+                "--task",
+                self.state.task,
+                "--tier",
+                f"{self.state.tier}_TIER",
+            ]
             for t in self.state.todo_plan:
                 desc = t.get("description", "")
-                todo_args.append(
-                    f'--todo "{t["id"]}|{t["file"]}|{t["lines"]}|{t["action"]}|{desc}"'
-                )
-            val_args = []
+                argv.extend(["--todo", f"{t['id']}|{t['file']}|{t['lines']}|{t['action']}|{desc}"])
             for v in self.state.validations:
-                val_args.append(f'--validation "{v["gate"]}|{v["result"]}"')
-            cmd = (
-                f'python3 {REPORT_GENERATOR} --task "{self.state.task}" '
-                f"--tier {self.state.tier}_TIER {' '.join(todo_args)} {' '.join(val_args)} "
-                '--summary "GMP execution via DAG executor" --skip-verify'
-            )
-            code, stdout, stderr = self._run_shell(cmd)
+                argv.extend(["--validation", f"{v['gate']}|{v['result']}"])
+            argv.extend(["--summary", "GMP execution via DAG executor", "--skip-verify"])
+            code, stdout, stderr = self._run_argv(argv)
             if code == 0:
                 for line in stdout.split("\n"):
                     if "Report saved:" in line or "reports/" in line:
@@ -960,7 +952,7 @@ from {module_path} import ...
                 response = "NO"
 
         if response == "DIFF":
-            code, stdout, stderr = self._run_shell("git diff --stat")
+            code, stdout, stderr = self._run_argv(["git", "diff", "--stat"])
             print(stdout)  # noqa: ADR-0019
             try:
                 response = input("Commit? [YES/NO]: ").strip().upper()
@@ -1070,6 +1062,23 @@ from {module_path} import ...
         self._save_state()
 
     def _publish_pr(self) -> None:
+        if not adapter_publish_surface():
+            self._record_subprocess("make precommit-repo")
+            print(  # noqa: ADR-0019
+                "Cursor finalize: catalog + commit + STOP. Do not make pr."
+            )
+            if dry_run():
+                return
+            result = subprocess.run(
+                ["make", "precommit-repo"],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+            )
+            print(result.stdout)  # noqa: ADR-0019
+            if result.returncode != 0:
+                print(result.stderr)  # noqa: ADR-0019
+            return
         self._maybe_l4_release()
         env_prefix = "PR_REMEDIATE=1 make pr"
         self._record_subprocess(env_prefix)

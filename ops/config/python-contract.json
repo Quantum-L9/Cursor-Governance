@@ -4,7 +4,7 @@
   "local_pr_check": {
     "never_pass_repo_root_dot": true,
     "selector": "ops/scripts/select_pr_pytest_paths.py",
-    "note": "make pr-check passes --changed-file to the runner. make test, make pr-full, and CI keep the catalog including repo-root '.'."
+    "note": "make pr passes --changed-file to the runner. make test, make pr-full, and CI keep the catalog including repo-root '.'."
   },
   "substitutions": {
     "REPO_ROOT": "absolute path of the repository root, resolved by the runner from its own location",
@@ -95,7 +95,7 @@
           ]
         }
       },
-      "rationale": "Root discovery over the whole repository with root autonomy/ on PYTHONPATH. Explicitly ignores the three separately-owned active suites (each has its own registry entry) so it neither shadows their packages nor double-runs them. Non-test false positives are ignored via pyproject addopts. CI profile keeps root-only coverage XML + terminal coverage, xdist, the 300s per-test timeout, and the existing zero-percent advisory threshold. Local make pr-check must not pass this suite's '.' collection root; it uses --changed-file and select_pr_pytest_paths.py instead."
+      "rationale": "Root discovery over the whole repository with root autonomy/ on PYTHONPATH. Explicitly ignores the three separately-owned active suites (each has its own registry entry) so it neither shadows their packages nor double-runs them. Non-test false positives are ignored via pyproject addopts. CI profile keeps root-only coverage XML + terminal coverage, xdist, the 300s per-test timeout, and the existing zero-percent advisory threshold. Local make pr must not pass this suite's '.' collection root; it uses --changed-file and select_pr_pytest_paths.py instead."
     },
     {
       "id": "claude-code-autonomy",

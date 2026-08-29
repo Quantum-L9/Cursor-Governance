@@ -769,3 +769,30 @@ requires `/l9-pr-remediation` (§6.2.3). Do not edit the older lines.
    1, including campaign PRs. `PR_REMEDIATE=0` is opt-out only. Remediates
    means poll to green + merge-ready. Merge still requires
    `/l9-pr-remediation` Converge / `authorize_merge.py`.
+
+<!-- PR_CHECK_FOLDED_V1 -->
+## 6.2.6 `pr-check` is the internal leaf, not a public verb (2026-08-28)
+
+Append-only. Supersedes §6.2.2 alias copy (`make pr` as `make pr-check`)
+and §6.2.5 item 1's leftover `make pr-check` then `make pr` sequence.
+Do not edit the older lines.
+
+Public ceremony is `make pr`. Diagnose is `OPEN_PR=0 make pr`. Do not
+type `make pr-check`. The Make target stays as the INTERNAL leaf
+(`pr: pr-preflight pr-check`). Remediator verify stays
+`make precommit-repo`.
+
+<!-- AGENT_STOP_AFTER_CATALOG_COMMIT_V1 -->
+## 6.2.7 Cursor stops after catalog + commit; Claude Code `make pr` (2026-08-28)
+
+Append-only. Supersedes §6.2.5 item 3 **for Cursor only**. Claude Code
+finished contracts still `make pr`. Do not edit the older lines.
+
+**Cursor** (`L9_GOVERNANCE_SURFACE` is `cursor` or unset): after
+`make precommit-repo` and a scoped local commit, **STOP**. Do not
+`authorize-release`, `make pr`, `make pr-check`, or `OPEN_PR=0 make pr`
+unless the human typed `make pr` this turn.
+
+**Claude Code** (`L9_GOVERNANCE_SURFACE=claude-code`): when a contract
+or program is finished, `authorize-release` then `make pr`. Other adapters
+(`codex` / `gemini` / `manus`) keep the same adapter publish path.

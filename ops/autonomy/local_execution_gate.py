@@ -180,9 +180,9 @@ def make_goals(segment: str) -> tuple[str, ...]:
 def is_make_pr(segment: str) -> bool:
     """True when this segment invokes the `pr` goal — the sanctioned publish path.
 
-    ``make pr-check`` is not a publish. It runs the local quality gate and never
-    reaches GitHub (rule 48: "pr-check is PUBLIC quality; GitHub mutation stays
-    make pr only"), so it is not this path and must not be gated as one.
+    The leftover Makefile target ``make pr-check`` is not a publish. It never
+    reaches GitHub, so it is not this path and must not be gated as one.
+    Agents must not type that target; Diagnose is ``OPEN_PR=0 make pr``.
     """
     return "pr" in make_goals(segment)
 
@@ -264,7 +264,7 @@ def publish_path_workflow_deny(command: str) -> str | None:
 # ---------------------------------------------------------------------------
 # Validation path: a whole-catalog pytest run belongs to CI, not to a chat turn.
 #
-# `make pr-check` is the designed local gate: it runs precommit once and selects
+# `make pr` is the designed local gate: it runs precommit once and selects
 # pytest targets from the changed set (ops/scripts/select_pr_pytest_paths.py),
 # so it finishes in seconds instead of ten minutes and picks the suites that own
 # what was actually touched. Hand-picking directories is how a CI-only failure
@@ -277,6 +277,11 @@ def publish_path_workflow_deny(command: str) -> str | None:
 # Breakglass is human/ops only: L9_FULL_PYTEST_AUTHORIZED=<reason>.
 # ---------------------------------------------------------------------------
 FULL_PYTEST_OVERRIDE_ENV = "L9_FULL_PYTEST_AUTHORIZED"
+REMEDIATOR_ENV = "L9_REMEDIATOR"
+
+#: Makefile goals that run the reader wave / ceremony publish. Remediator
+#: verify is ``make precommit-repo`` and must not invoke these.
+MAKE_CEREMONY_WAVE_GOALS = frozenset({"pr-check", "pr", "pr-full"})
 
 #: Makefile goals that run the whole Python catalog.
 MAKE_FULL_CATALOG_GOALS = frozenset({"test", "pr-full"})
@@ -380,11 +385,35 @@ def command_runs_unscoped_pytest(command: str) -> str | None:
 def _full_pytest_deny_reason(what: str) -> str:
     return (
         f"Validation path: `{what}` runs the whole test catalog, which belongs to CI, "
-        "not to a chat turn. Use `make pr-check` — it runs precommit once and selects "
-        "pytest targets from your changed set, so it is both faster and better scoped "
-        "than a hand-picked directory list. A targeted run "
+        "not to a chat turn. Campaign/feature local quality is `make pr` "
+        "(changed-file precommit plus scoped pytest). Remediator local verify is "
+        "`L9_REMEDIATOR=1 make precommit-repo` — never the reader wave. A targeted run "
         "(`pytest path/to/test_x.py`) is still allowed for debugging. "
         f"Human/ops override: {FULL_PYTEST_OVERRIDE_ENV}=<reason>."
+    )
+
+
+def remediator_env_active() -> bool:
+    return os.environ.get(REMEDIATOR_ENV, "").strip().lower() in {"1", "true", "yes"}
+
+
+def command_runs_reader_wave(command: str) -> str | None:
+    """Return the ceremony form when a command would start ``run_pr_gate.sh``."""
+    for segment in split_segments(strip_heredoc_bodies(command)):
+        goals = make_goals(segment)
+        hit = MAKE_CEREMONY_WAVE_GOALS.intersection(goals)
+        if hit:
+            return f"make {sorted(hit)[0]}"
+        if "run_pr_gate.sh" in segment:
+            return "run_pr_gate.sh"
+    return None
+
+
+def _remediator_wave_deny_reason(what: str) -> str:
+    return (
+        f"Remediator path: `{what}` runs the reader wave (pytest, projection, wiring). "
+        "Local verify is `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`. "
+        "Unset L9_REMEDIATOR only for campaign/feature `make pr`."
     )
 
 
@@ -399,7 +428,7 @@ def command_is_remote_mutation(command: str) -> bool:
 
     A `make` segment is classified by its goals, not by a regex over the text.
     ``\\bmake\\s+pr\\b`` matches ``make pr-check`` — the word boundary closes on
-    the hyphen — which denied the local quality gate as if it were a publish.
+    the hyphen — which denied the leftover quality target as if it were a publish.
     """
     segments: list[str] = []
     for segment in split_segments(strip_heredoc_bodies(command)):
@@ -500,6 +529,10 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
         catalog = command_runs_unscoped_pytest(command)
         if catalog and not os.environ.get(FULL_PYTEST_OVERRIDE_ENV, "").strip():
             return _full_pytest_deny_reason(catalog)
+        if remediator_env_active():
+            wave = command_runs_reader_wave(command)
+            if wave:
+                return _remediator_wave_deny_reason(wave)
         if not command_is_remote_mutation(command):
             return None
         if not command_has_make_remote(command):

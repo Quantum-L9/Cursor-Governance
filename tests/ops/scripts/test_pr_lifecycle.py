@@ -339,7 +339,7 @@ def test_precommit_missing_binary_fails_after_files(tmp_path: Path) -> None:
         },
     )
     assert proc.returncode == 1
-    assert "INTERNAL leaf of make pr-check" in proc.stderr
+    assert "INTERNAL leaf of make pr" in proc.stderr
     assert "Do not run 'pre-commit install'" in proc.stderr
 
 

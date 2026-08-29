@@ -1,4 +1,4 @@
-"""Unit tests for local make pr-check pytest path selection (plan T3/T4)."""
+"""Unit tests for local make pr pytest path selection (plan T3/T4)."""
 
 from __future__ import annotations
 
