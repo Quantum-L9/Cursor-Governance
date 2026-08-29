@@ -35,11 +35,9 @@ class HarvestExecutor:
 
     def resume(self, thread_id: str, updates: dict[str, Any] | None = None) -> dict[str, Any]:
         config = {"configurable": {"thread_id": thread_id}}
-        current = self.compiled.get_state(config)
-        payload = dict(current.values) if current else {}
         if updates:
-            payload.update(updates)
-        state = self.compiled.invoke(payload, config)
+            self.compiled.update_state(config, updates)
+        state = self.compiled.invoke(None, config)
         return {"thread_id": thread_id, "state": state}
 
     def get_state(self, thread_id: str):

@@ -285,11 +285,9 @@ def emit_package(repo: Path, graph: dict, emit_dir: Path, dag_id: str) -> dict:
         '        return {"thread_id": thread_id, "state": state}\n\n'
         "    def resume(self, thread_id: str, updates: dict[str, Any] | None = None):\n"
         '        config = {"configurable": {"thread_id": thread_id}}\n'
-        "        current = self.compiled.get_state(config)\n"
-        "        payload = dict(current.values) if current else {}\n"
         "        if updates:\n"
-        "            payload.update(updates)\n"
-        "        state = self.compiled.invoke(payload, config)\n"
+        "            self.compiled.update_state(config, updates)\n"
+        "        state = self.compiled.invoke(None, config)\n"
         '        return {"thread_id": thread_id, "state": state}\n\n'
         "    def get_state(self, thread_id: str):\n"
         '        config = {"configurable": {"thread_id": thread_id}}\n'

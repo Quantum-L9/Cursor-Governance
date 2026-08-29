@@ -57,17 +57,9 @@ class GMPLangGraphExecutor:
     ) -> dict[str, Any]:
         """Resume execution with user input."""
         config = {"configurable": {"thread_id": thread_id}}
-        state = self.compiled.get_state(config)
-
-        current_state = state.values
-        if isinstance(current_state, dict):
-            current_state = {**current_state, **updates}
-        else:
-            for key, value in updates.items():
-                if hasattr(current_state, key):
-                    setattr(current_state, key, value)
-
-        result = self.compiled.invoke(current_state, config)
+        if updates:
+            self.compiled.update_state(config, updates)
+        result = self.compiled.invoke(None, config)
         return {"thread_id": thread_id, "state": result}
 
     def get_state(self, thread_id: str) -> GMPState | dict[str, Any] | None:

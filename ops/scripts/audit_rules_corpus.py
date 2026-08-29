@@ -130,7 +130,7 @@ def collect_enforcer_blobs(root: Path) -> dict[str, str]:
 
 
 def _token_re(token: str) -> re.Pattern[str]:
-    return re.compile(rf"(?<![A-Za-z0-9_.-]){re.escape(token)}(?![A-Za-z0-9_.-])")
+    return re.compile(rf"(?<![A-Za-z0-9_.-]){re.escape(token)}(?:\.mdc)?(?![A-Za-z0-9_.-])")
 
 
 def coverage_for_rules(rules: list[dict[str, Any]], blobs: dict[str, str]) -> list[dict[str, Any]]:
@@ -139,7 +139,8 @@ def coverage_for_rules(rules: list[dict[str, Any]], blobs: dict[str, str]) -> li
         file_name = str(rule.get("file") or "")
         rule_id = str(rule.get("id") or "")
         stem = Path(file_name).stem if file_name else ""
-        tokens = [t for t in (stem, rule_id) if t]
+        basename = Path(file_name).name if file_name else ""
+        tokens = [t for t in (stem, rule_id, basename) if t]
         enforcers: list[str] = []
         for rel, text in blobs.items():
             if any(_token_re(token).search(text) for token in tokens):

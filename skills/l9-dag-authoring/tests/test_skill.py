@@ -299,3 +299,43 @@ def test_converter_emits_script_session(tmp_path):
     assert "register_session_dag" not in executor
     assert "checkpointer=" in executor
     assert "thread_id" in executor
+    assert "invoke(None, config)" in executor
+    assert "self.compiled.invoke(payload, config)" not in executor
+
+
+def test_validate_package_none_checkpointer_fails(tmp_path):
+    pkg = tmp_path / "none_saver"
+    pkg.mkdir()
+    (pkg / "graph.py").write_text(
+        "from langgraph.graph import StateGraph\ndef build():\n    return StateGraph(dict)\n",
+        encoding="utf-8",
+    )
+    (pkg / "executor.py").write_text(
+        "from workflows.dags.x.graph import build\n\n"
+        "def compile_graph():\n"
+        "    return build().compile(checkpointer=None)\n",
+        encoding="utf-8",
+    )
+    result = validate_package(pkg)
+    assert result["status"] == "FAIL"
+    assert result["persistence_class"] == "none"
+    assert "missing_durable_checkpointer" in result["errors"]
+
+
+def test_validate_package_unknown_checkpointer_fails(tmp_path):
+    pkg = tmp_path / "unknown_saver"
+    pkg.mkdir()
+    (pkg / "graph.py").write_text(
+        "from langgraph.graph import StateGraph\ndef build():\n    return StateGraph(dict)\n",
+        encoding="utf-8",
+    )
+    (pkg / "executor.py").write_text(
+        "from workflows.dags.x.graph import build\n\n"
+        "def compile_graph(saver):\n"
+        "    return build().compile(checkpointer=saver)\n",
+        encoding="utf-8",
+    )
+    result = validate_package(pkg)
+    assert result["status"] == "FAIL"
+    assert result["persistence_class"] == "none"
+    assert "missing_durable_checkpointer" in result["errors"]

@@ -14,9 +14,9 @@ Required proof obligations:
 4. Conditional routing targets resolve.
 5. `graph.py` builds only and never calls `compile()`. Existence of `StateGraph.compile()` is not durability.
 6. The executor is the only compile site: `compile(checkpointer=...)`.
-7. Persistence class is `durable`. `MemorySaver` / `InMemorySaver` is `ephemeral_checkpointer` (FAIL). Missing saver is `missing_durable_checkpointer` (FAIL). VALIDATE and CONVERT PASS only when `persistence_class=durable` is observed.
+7. Persistence class is `durable` only when `compile(checkpointer=...)` resolves to `open_checkpointer` or `SqliteSaver`. `MemorySaver` / `InMemorySaver` is `ephemeral_checkpointer` (FAIL). Missing saver, `checkpointer=None`, or an unproven name is `missing_durable_checkpointer` (FAIL). VALIDATE and CONVERT PASS only when `persistence_class=durable` is observed.
 8. Durable means a file or database saver (`SqliteSaver` or equivalent) after `setup()`. Checkpoint path is workspace `.l9/langgraph/<dag_id>.sqlite` (already covered by `.l9/` in `.gitignore`).
-9. Every invoke / resume / `get_state` takes `configurable.thread_id`. The caller supplies it, or the executor generates it once and returns it. Missing thread_id is `missing_thread_id` (FAIL).
+9. Every invoke / resume / `get_state` takes `configurable.thread_id`. The caller supplies it, or the executor generates it once and returns it. Missing thread_id is `missing_thread_id` (FAIL). Resume after a checkpoint is `update_state` (when applying values) then `invoke(None, config)` — never replay saved values as a fresh START input.
 10. Any public executor/runner entrypoint points to the same canonical graph.
 11. No `SessionDAG` registry entry is created merely because the artifact is a graph.
 12. Nodes are documented as re-enterable. Authoring does not implement domain idempotency.

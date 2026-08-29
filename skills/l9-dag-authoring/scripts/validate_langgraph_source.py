@@ -19,6 +19,7 @@ from pathlib import Path
 
 SESSION_SYMBOLS = {"SessionDAG", "register_session_dag", "get_session_dag"}
 EPHEMERAL_SAVERS = {"MemorySaver", "InMemorySaver"}
+DURABLE_SAVERS = {"open_checkpointer", "SqliteSaver"}
 REASON_CODES = (
     "missing_durable_checkpointer",
     "ephemeral_checkpointer",
@@ -46,6 +47,37 @@ def _parse(path: Path) -> ast.AST | dict:
 
 def _calls_named(tree: ast.AST, name: str) -> bool:
     return any(isinstance(node, ast.Call) and _called_name(node) == name for node in ast.walk(tree))
+
+
+def _assigned_call_names(tree: ast.AST) -> dict[str, str]:
+    """Map simple assignment targets to the callee they bind."""
+    out: dict[str, str] = {}
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not isinstance(node.value, ast.Call):
+            continue
+        callee = _called_name(node.value)
+        if not callee:
+            continue
+        for target in node.targets:
+            if isinstance(target, ast.Name):
+                out[target.id] = callee
+            elif isinstance(target, ast.Attribute):
+                out[target.attr] = callee
+    return out
+
+
+def _resolved_checkpointer_name(value: ast.AST, assignments: dict[str, str]) -> str | None:
+    if isinstance(value, ast.Constant) and value.value is None:
+        return None
+    if isinstance(value, ast.Call):
+        return _called_name(value)
+    if isinstance(value, ast.Name):
+        return assignments.get(value.id)
+    if isinstance(value, ast.Attribute):
+        return assignments.get(value.attr)
+    return None
 
 
 def _compile_calls(tree: ast.AST) -> list[ast.Call]:
@@ -115,18 +147,17 @@ def _executor_persistence(executor: Path) -> tuple[str, list[str]]:
 
     has_checkpointer = False
     ephemeral = False
+    proven_durable = False
+    assignments = _assigned_call_names(tree)
     for call in compiles:
         for kw in call.keywords:
             if kw.arg == "checkpointer":
                 has_checkpointer = True
-                value = kw.value
-                name = None
-                if isinstance(value, ast.Call):
-                    name = _called_name(value)
-                elif isinstance(value, ast.Name):
-                    name = value.id
+                name = _resolved_checkpointer_name(kw.value, assignments)
                 if name in EPHEMERAL_SAVERS:
                     ephemeral = True
+                elif name in DURABLE_SAVERS:
+                    proven_durable = True
 
     if _calls_named(tree, "MemorySaver") or _calls_named(tree, "InMemorySaver"):
         ephemeral = True
@@ -138,12 +169,12 @@ def _executor_persistence(executor: Path) -> tuple[str, list[str]]:
         elif isinstance(node, ast.Name) and node.id in EPHEMERAL_SAVERS:
             ephemeral = True
 
-    if not has_checkpointer:
-        errors.append("missing_durable_checkpointer")
-        persistence = "none"
-    elif ephemeral:
+    if ephemeral:
         errors.append("ephemeral_checkpointer")
         persistence = "ephemeral"
+    elif not has_checkpointer or not proven_durable:
+        errors.append("missing_durable_checkpointer")
+        persistence = "none"
     else:
         persistence = "durable"
 

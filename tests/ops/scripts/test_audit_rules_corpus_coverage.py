@@ -50,6 +50,21 @@ def test_zero_enforcer_rule_is_listed_not_omitted(tmp_path: Path) -> None:
     assert any(item["id"] == "RCA-007" for item in report["findings"])
 
 
+def test_mdc_path_reference_counts_as_enforcer(tmp_path: Path) -> None:
+    """Canonical rule paths with .mdc must match the stem token."""
+    _manifest(tmp_path, [("02-slash-commands.mdc", "l9.rule.slash-commands")])
+    _write(
+        tmp_path,
+        "skills/l9-demo/SKILL.md",
+        "See rules/02-slash-commands.mdc for slash routing.\n",
+    )
+    manifest, path = load_manifest(tmp_path)
+    report = build_report(tmp_path, manifest, path, generated_utc="2026-08-29T00:00:00Z")
+    by_id = {row["id"]: row for row in report["coverage"]["rules"]}
+    assert by_id["l9.rule.slash-commands"]["enforcer_count"] >= 1
+    assert "skills/l9-demo/SKILL.md" in by_id["l9.rule.slash-commands"]["enforcers"]
+
+
 def test_missing_manifest_fails_closed_and_names_path(tmp_path: Path) -> None:
     """Missing source must not report a successful zero-rule analysis."""
     _write(tmp_path, "README.md", "no rules dir\n")
