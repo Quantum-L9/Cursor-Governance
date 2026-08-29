@@ -14,8 +14,9 @@ The distinction this module exists to preserve:
     blocked     a required component could not be wired.
     degraded    an optional component is unavailable.
     ready       the required contract is satisfied.
-    unknown     a receipt exists but has outlived its TTL, so it describes a
-                state nobody has observed since.
+    unknown     a receipt exists but no longer describes an observed state,
+                either because it outlived its TTL or because the governance
+                revision it was produced against is no longer checked out.
 
 `never_ran` and `ready` are the two that get confused when a reader treats a
 missing file as benign, which is why they are separated here rather than in each
@@ -61,6 +62,62 @@ COMPONENTS = (
 )
 
 
+def _git_dir(base: Path) -> Path | None:
+    """Resolve the git directory for a clone or a worktree checkout.
+
+    A worktree stores `.git` as a `gitdir:` pointer file. Reading
+    `base/.git/HEAD` then raises OSError and would hide a live revision.
+    """
+    git = base / ".git"
+    try:
+        if git.is_file():
+            first = git.read_text(encoding="utf-8").splitlines()[0].strip()
+            prefix, _, rest = first.partition(":")
+            if prefix.lower() != "gitdir" or not rest.strip():
+                return None
+            pointer = Path(rest.strip())
+            if not pointer.is_absolute():
+                pointer = (base / pointer).resolve()
+            return pointer if pointer.is_dir() else None
+        if git.is_dir():
+            return git
+    except OSError:
+        return None
+    return None
+
+
+def live_governance_revision(root: Path | None = None) -> str:
+    """The governance revision this session is actually running.
+
+    Returns "" when it cannot be determined, and an undeterminable revision
+    never invalidates a receipt — a missing probe must not manufacture UNKNOWN
+    out of a receipt that may be perfectly current.
+    """
+    base = root or Path(os.environ.get("L9_GOV_ROOT") or (Path.home() / ".cursor-governance"))
+    git_dir = _git_dir(base)
+    if git_dir is None:
+        return ""
+    head = git_dir / "HEAD"
+    try:
+        raw = head.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    if raw.startswith("ref:"):
+        ref = raw.split(" ", 1)[1].strip()
+        try:
+            return (git_dir / ref).read_text(encoding="utf-8").strip()
+        except OSError:
+            packed = git_dir / "packed-refs"
+            try:
+                for line in packed.read_text(encoding="utf-8").splitlines():
+                    if line.endswith(f" {ref}"):
+                        return line.split(" ", 1)[0].strip()
+            except OSError:
+                return ""
+            return ""
+    return raw
+
+
 def receipt_path(env: dict[str, str] | None = None) -> Path:
     source = os.environ if env is None else env
     override = (source.get("L9_CLAUDE_BOOTSTRAP_RECEIPT") or "").strip()
@@ -69,7 +126,12 @@ def receipt_path(env: dict[str, str] | None = None) -> Path:
     return Path(source.get("HOME", str(Path.home()))) / ".l9" / "claude" / "bootstrap-state.json"
 
 
-def evaluate(receipt: dict[str, Any] | None, *, now: datetime | None = None) -> dict[str, Any]:
+def evaluate(
+    receipt: dict[str, Any] | None,
+    *,
+    now: datetime | None = None,
+    governance_revision: str | None = None,
+) -> dict[str, Any]:
     moment = now or datetime.now(UTC)
 
     if receipt is None:
@@ -101,6 +163,27 @@ def evaluate(receipt: dict[str, Any] | None, *, now: datetime | None = None) -> 
     if age > ttl:
         return {"state": UNKNOWN, "reason": f"receipt expired ({age}s old, ttl {ttl}s)", **carried}
 
+    # A receipt describes artifacts PROJECTED FROM a governance revision:
+    # skills, rules, settings, plugins. When that revision moves, the receipt
+    # describes a projection that no longer exists — regardless of its age.
+    # Time alone was the only expiry rule here, and its TTL is 24x the
+    # governance refresh TTL, so a DEGRADED verdict produced against a
+    # superseded revision was reported as current for a whole day, its
+    # remediation printed and never run. Revision is the stronger binding, so
+    # it is checked even while the clock still says fresh.
+    recorded_revision = str(receipt.get("governance_revision") or "").strip()
+    live = (governance_revision or "").strip()
+    if live and recorded_revision and recorded_revision != live:
+        return {
+            "state": UNKNOWN,
+            "reason": (
+                "governance revision superseded "
+                f"(receipt {recorded_revision[:8]}, live {live[:8]}) — "
+                "the projected artifacts this receipt describes were rebuilt"
+            ),
+            **carried,
+        }
+
     recorded = str(receipt.get("state") or receipt.get("overall") or "").upper()
     if recorded == "FAILED":
         return {
@@ -122,10 +205,16 @@ def _first_non_ready(components: dict[str, Any], level: str) -> str:
     return f"{level.lower()}: {', '.join(named)}" if named else level.lower()
 
 
-def read(path: Path | None = None, *, now: datetime | None = None) -> dict[str, Any]:
+def read(
+    path: Path | None = None,
+    *,
+    now: datetime | None = None,
+    governance_revision: str | None = None,
+) -> dict[str, Any]:
     target = path or receipt_path()
+    revision = live_governance_revision() if governance_revision is None else governance_revision
     if not target.is_file():
-        return evaluate(None, now=now)
+        return evaluate(None, now=now, governance_revision=revision)
     try:
         parsed = json.loads(target.read_text(encoding="utf-8"))
     except (OSError, ValueError):
@@ -136,7 +225,7 @@ def read(path: Path | None = None, *, now: datetime | None = None) -> dict[str, 
         }
     if not isinstance(parsed, dict):
         return {"state": UNKNOWN, "reason": "receipt is not a JSON object", "components": {}}
-    return evaluate(parsed, now=now)
+    return evaluate(parsed, now=now, governance_revision=revision)
 
 
 def main(argv: list[str] | None = None) -> int:

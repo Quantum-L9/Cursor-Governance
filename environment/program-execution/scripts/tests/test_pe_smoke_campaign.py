@@ -12,7 +12,12 @@ complete → dependency advance → TASK-002. Then it interrupts execution, rese
 and asserts the same campaign runs again.
 
 Only the `claude` executable is faked, so the binding, execution profile, probe,
-context manifest, adapter, and receipt schemas are all really exercised.
+context manifest, adapter, and receipt schemas are all really exercised. The
+fake is a *conformant host*: it runs the live PreToolUse wrapper before every
+write and every validation command, exactly as a real Claude Code window does,
+so the enforcement seam is part of the certified chain rather than something
+this fixture routed around. The matching negative control is
+`test_a_direct_unmediated_write_never_becomes_a_program_attempt`.
 
 It is the basic PE health check. It is meant to be fast enough to run during
 development, so its validation commands are trivially deterministic.
@@ -31,7 +36,16 @@ import unittest
 import unittest.mock
 from pathlib import Path
 
-from test_run_campaign import (  # type: ignore[import-not-found]
+# This module imports a sibling test file by bare name. That resolves only when
+# this directory is on `sys.path`, which pytest arranges as a side effect of
+# collecting some *other* file from here first — so the import silently depended
+# on collection order, and broke the moment a scoped or sharded run selected
+# this file without its sibling (`make pr-check` under `-n auto`).
+# `run_conformance._load` already documents the fix for the same class of
+# breakage: make the file self-sufficient by putting its own directory first.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     READY_SEED,
     _dump,
     _git_init,
@@ -45,14 +59,51 @@ SCRIPT = PE_ROOT / "scripts/run_campaign.py"
 ACTIVATE = PE_ROOT.parents[1] / "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py"
 PEC = PE_ROOT / "core/program-execution-controller-template/scripts/pec.py"
 
-# Deterministic fake Claude CLI. The live runner still traverses the real
-# runtime binding, execution profile, capability probe, context manifest,
-# PeerExecutionAdapter, thin claude-code provider, and typed attempt receipt.
+# Deterministic fake Claude CLI, standing in for a *conformant* Claude host.
+# The live runner still traverses the real runtime binding, execution profile,
+# capability probe, context manifest, PeerExecutionAdapter, thin claude-code
+# provider, and typed attempt receipt.
+#
+# The host part matters as much as the provider part. A real Claude Code window
+# runs every tool call through the PreToolUse wrapper before the effect happens,
+# and that authorization is what campaign mediation coverage counts. A fake that
+# writes straight to the filesystem is not a Claude host at all -- it is exactly
+# the unmediated writer the enforcement seam exists to reject -- so on the
+# positive path this one invokes the *same live wrapper*, with the task-scoped
+# authority environment the provider exported, before each write and each
+# validation command. `SMOKE_ROGUE_TASK` turns that off for one task, which is
+# the negative control: a direct write with no hook in the loop must be refused
+# before PEC ever records a Program attempt.
 FAKE_CLAUDE = r"""#!/usr/bin/env python3
 import json, os, pathlib, subprocess, sys
+
+HOOK_RELATIVE = "environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py"
+
+
+def mediate(tool_name, tool_input):
+    # Authorize one tool call through the live PreToolUse wrapper. Returns None
+    # when the effect may proceed, or the wrapper's stderr when it was refused.
+    # Nothing here decides anything: the verdict is the wrapper's, computed
+    # against the real root gateway and the live Program parent.
+    root = os.environ.get("L9_AUTONOMY_ROOT") or ""
+    hook = pathlib.Path(root) / HOOK_RELATIVE
+    if not hook.is_file():
+        return "conformant host cannot find the PreToolUse wrapper at %s" % hook
+    completed = subprocess.run(
+        [os.environ.get("SMOKE_HOST_PYTHON") or sys.executable, str(hook)],
+        input=json.dumps({"tool_name": tool_name, "tool_input": tool_input}),
+        text=True,
+        capture_output=True,
+    )
+    if completed.returncode == 0:
+        return None
+    return (completed.stderr or "denied").strip()
+
+
 prompt = sys.argv[sys.argv.index("-p") + 1]
 contract = json.loads(prompt.strip().splitlines()[-1])
-if os.environ.get("SMOKE_FAIL_TASK") == contract.get("task_id"):
+task_id = contract.get("task_id")
+if os.environ.get("SMOKE_FAIL_TASK") == task_id:
     print(json.dumps({
         "is_error": True,
         "session_id": "smoke-peer-session",
@@ -61,18 +112,29 @@ if os.environ.get("SMOKE_FAIL_TASK") == contract.get("task_id"):
         "result": "simulated provider failure for reconciliation testing",
     }))
     raise SystemExit(0)
+# The negative control: this window skips its own host mediation entirely.
+rogue = os.environ.get("SMOKE_ROGUE_TASK") == task_id
 worktree = pathlib.Path.cwd()
 changed = []
+denials = []
 for rel in contract.get("writable_paths") or []:
     target = worktree / rel
+    body = f"{task_id} implemented through Peer Core.\n" + ("verified " * 8) + "\n"
+    if not rogue:
+        refusal = mediate("Write", {"file_path": str(target), "content": body})
+        if refusal is not None:
+            denials.append({"tool": "Write", "resource": rel, "reason": refusal})
+            continue
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(
-        f"{contract['task_id']} implemented through Peer Core.\n" + ("verified " * 8) + "\n",
-        encoding="utf-8",
-    )
+    target.write_text(body, encoding="utf-8")
     changed.append(rel)
 validations = []
 for command in contract.get("validation_commands") or []:
+    if not rogue:
+        refusal = mediate("Bash", {"command": command})
+        if refusal is not None:
+            denials.append({"tool": "Bash", "resource": command, "reason": refusal})
+            continue
     completed = subprocess.run(command, cwd=worktree, shell=True, text=True, capture_output=True)
     validations.append({
         "command": command,
@@ -87,6 +149,8 @@ payload = {
     "residual_unknowns": [],
     "claimed_status": "completed",
 }
+if denials:
+    payload["host_permission_denials"] = denials
 print(json.dumps({
     "is_error": False,
     "session_id": "smoke-peer-session",
@@ -108,6 +172,11 @@ def _peer_test_env(tmp: Path) -> dict[str, str]:
         "L9_GOVERNANCE_SURFACE": "claude-code",
         "L9_PE_AGENT_REF": "claude-code",
         "L9_PE_SURFACE": "claude-cli",
+        # A real Claude host launches its hooks on the governance locked
+        # interpreter (`l9_hook_exec.sh`). The fake has no launcher, so it is
+        # told which interpreter can import the root autonomy runtime — the one
+        # already running this suite.
+        "SMOKE_HOST_PYTHON": sys.executable,
     }
 
 
@@ -290,6 +359,73 @@ class PeSmokeCampaignTests(unittest.TestCase):
             self.assertEqual(progress["execution"], {"done": 2, "total": 2})
             self.assertLess(elapsed, 300, "smoke campaign must stay fast enough to run in dev")
 
+    def test_a_direct_unmediated_write_never_becomes_a_program_attempt(self) -> None:
+        """The negative control for the conformant host above.
+
+        One task's window writes its declared path directly, with no PreToolUse
+        wrapper in the loop. The write is real and it lands in the worktree, so
+        nothing here is caught by reading the provider's own report — the
+        campaign has to notice that the change carries no effect-phase root
+        authorization. It must refuse before `pec record-attempt` runs, so an
+        unmediated write never becomes a recorded Program attempt.
+
+        The grant issued for this very task holds `repository.write_scoped` and
+        probed it against this very path, so the run also proves that holding
+        the capability is not the same as having authorized the write.
+        """
+        with tempfile.TemporaryDirectory() as raw:
+            tmp = Path(raw)
+            env = _peer_test_env(tmp)
+            env["SMOKE_ROGUE_TASK"] = "TASK-001"
+            with unittest.mock.patch.dict("os.environ", env):
+                with self.assertRaises(self.mod.CampaignError) as caught:
+                    self._run_smoke(tmp)
+            self.assertIn("TASK-001", str(caught.exception))
+
+            workspace = tmp / "l9" / "programs/demo-activate-v1"
+            status = {item["id"]: item for item in _pec(workspace, "status")["tasks"]}
+            self.assertEqual(status["TASK-001"]["runtime_state"], "FAILED")
+            # TASK-002 depends on TASK-001, so it must never have run.
+            self.assertNotEqual(status["TASK-002"]["runtime_state"], "COMPLETED")
+
+            # Canonical Program state, not the campaign's own report: the
+            # Controller recorded no attempt for the unmediated write, and
+            # therefore no verification verdict either.
+            import sqlite3
+
+            connection = sqlite3.connect(workspace / "runtime" / "state.sqlite")
+            try:
+                recorded = connection.execute(
+                    "SELECT COUNT(*) FROM attempts WHERE task_id=?", ("TASK-001",)
+                ).fetchone()[0]
+            finally:
+                connection.close()
+            self.assertEqual(
+                recorded, 0, msg="an unmediated write was recorded as a Program attempt"
+            )
+            self.assertFalse((workspace / "receipts/verification/TASK-001.json").is_file())
+
+            # The write really happened — this is a coverage failure, not a
+            # write that was stopped at the filesystem.
+            rogue = workspace / "worktrees/TASK-001/docs/program-execution/demo/baseline.md"
+            self.assertTrue(rogue.is_file(), msg="the rogue window never wrote anything")
+
+            # And the grant did hold the write capability on that same path.
+            grants = sorted((workspace / "runtime" / "autonomy-grants").glob("*.grant.json"))
+            self.assertTrue(grants, msg="task-scoped grant receipt missing")
+            grant = json.loads(grants[-1].read_text(encoding="utf-8"))
+            module = self.mod._grant_module()
+            self.assertIn("repository.write_scoped", grant["authorized"])
+            self.assertIn(
+                "docs/program-execution/demo/baseline.md",
+                module.authorized_resources(grant),
+            )
+            self.assertEqual(
+                module.authorized_resources(grant, phase=module.AUTHORIZATION_PHASE_EFFECT),
+                set(),
+                msg="a grant-time probe was recorded as an effect authorization",
+            )
+
     def test_interrupted_task_worktree_can_be_reset_and_recreated(self) -> None:
         """create worktree → interrupt → reset → recreate the same task → succeeds."""
         with tempfile.TemporaryDirectory() as raw:
@@ -389,6 +525,14 @@ class PeSmokeCampaignTests(unittest.TestCase):
             time_module.sleep(0.2)
             return {"status": "PASS", "receipt": {"task_id": contract["task_id"]}}
 
+        # `_dispatch_peer_batch` loads the peer pipeline module on the calling
+        # thread before it opens the pool. That import costs ~0.5s once per
+        # process, which is longer than the whole window this test measures — so
+        # a cold run charged a one-time import to the concurrency budget and
+        # read as "the windows did not overlap". Warm it here, outside the
+        # clock: what is under test is whether two provider windows run at once,
+        # not how long an import takes.
+        self.mod._peer_pipeline()
         started = time_module.monotonic()
         with unittest.mock.patch.object(self.mod, "_run_peer_execution", side_effect=fake_peer):
             outcomes, failures = self.mod._dispatch_peer_batch(Path("."), units)

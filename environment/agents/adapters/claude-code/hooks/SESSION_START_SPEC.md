@@ -1,7 +1,7 @@
 # SESSION_START_SPEC — Claude Code governance bootstrap
 
-**Status:** authoritative contract for `session_start_claude_governance.sh`  
-**Profile SSOT:** `ops/autonomy/surface_profile.yaml`  
+**Status:** authoritative contract for `session_start_claude_governance.sh`
+**Profile SSOT:** `ops/autonomy/surface_profile.yaml`
 **Install:** `ops/scripts/reconcile_claude_settings.py` copies this script into
 `<repo>/.claude/hooks/` as a **committed file** (Mobile/Web survival).
 
@@ -32,7 +32,7 @@
    absent receipt is stated as such ("run `make claude-install` once"), never
    invented.
 7. On cloud sessions: a session-deps line from `hooks/session_deps_cloud.sh`
-   (fingerprint-cached consumer workspace toolchain + pre-commit warm; bounded
+   (fingerprint-cached toolchain PER REPOSITORY + pre-commit warm; bounded
    budget, self-detaches to background on expiry).
 
 ## Acceptance

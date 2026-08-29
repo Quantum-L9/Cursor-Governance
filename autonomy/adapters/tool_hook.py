@@ -118,12 +118,21 @@ def pre_tool_use(
     agent_id: str | None = None,
     capability: str | None = None,
     resource: str | None = None,
+    metadata: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Authorize one tool call through the root capability gateway.
 
     A Program Execution worker passes its identity and its already-validated
     capability/resource explicitly, because those were resolved against the live
     Program parent. Every other caller keeps the environment fallback.
+
+    `metadata` is caller annotation recorded alongside the decision. It exists
+    for exactly one reason: an authorization that *precedes an effect* has to be
+    distinguishable, after the fact, from a capability probe taken while the
+    grant was being issued. Both are real gateway decisions under the same
+    lease, so nothing but the caller can tell them apart. It never widens what
+    is authorized -- the canonical `tool_name` stays authoritative and is merged
+    last, so no caller can overwrite the tool it is actually asking about.
     """
     if session_id and lease_id and agent_id:
         resolved_session, resolved_lease, resolved_agent = session_id, lease_id, agent_id
@@ -152,7 +161,7 @@ def pre_tool_use(
         agent_id=resolved_agent,
         capability=capability,
         resource=resource,
-        metadata={"tool_name": tool_name},
+        metadata={**dict(metadata or {}), "tool_name": tool_name},
     )
     if require_allowed and not decision.get("allowed"):
         raise PolicyViolation(f"{decision.get('code')}: {decision.get('message')}")

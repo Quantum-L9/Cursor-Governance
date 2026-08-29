@@ -122,6 +122,13 @@ def desired_commands(
     return desired, collisions, conflicts
 
 
+_GOV_LIB = Path(__file__).resolve().parent / "lib"
+if str(_GOV_LIB) not in sys.path:
+    sys.path.insert(0, str(_GOV_LIB))
+
+from workspace_roots import projection_roots  # noqa: E402
+
+
 def reconcile_commands_scope(
     root: Path,
     manifest: dict[str, Any],
@@ -219,17 +226,29 @@ def reconcile(
 ) -> dict[str, Any]:
     root = root.resolve()
     manifest = load_manifest(root)
-    results = [
-        reconcile_commands_scope(
-            root,
-            manifest,
-            scope,
-            workspace.resolve(),
-            check,
-            target_override=target_override,
-        )
-        for scope in dict.fromkeys(scopes)
-    ]
+    workspace = workspace.resolve()
+    # A project scope has one target PER MOUNT ROOT. In a cloud container the
+    # workspace is the container, so per-repository `.claude/commands` mirrors
+    # left by an earlier single-repo session were never reconciled and kept
+    # symlinks to commands the SSOT had retired. An explicit --target still
+    # names exactly one directory and is never fanned out.
+    results = []
+    for scope in dict.fromkeys(scopes):
+        if scope == "project" and target_override is None:
+            mount_roots = projection_roots(workspace)
+        else:
+            mount_roots = [workspace]
+        for mount_root in mount_roots:
+            results.append(
+                reconcile_commands_scope(
+                    root,
+                    manifest,
+                    scope,
+                    mount_root,
+                    check,
+                    target_override=target_override,
+                )
+            )
     return {
         "manifest": str(root / MANIFEST_REL),
         "results": [result.as_dict() for result in results],

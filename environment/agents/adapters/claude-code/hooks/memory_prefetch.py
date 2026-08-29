@@ -20,6 +20,27 @@ from pathlib import Path
 
 MEM = Path(__file__).resolve().parent.parent / "memory"
 
+
+def _governance_lib() -> Path:
+    """Locate ops/scripts/lib by walking up, not by counting parents.
+
+    A hard-coded parents[N] silently binds to the wrong directory the moment
+    this hook is moved or re-nested, and the failure mode is an ImportError at
+    SessionStart on a fail-open path — i.e. a silently degraded session.
+    """
+    for parent in Path(__file__).resolve().parents:
+        candidate = parent / "ops" / "scripts" / "lib"
+        if (candidate / "workspace_roots.py").is_file():
+            return candidate
+    raise ModuleNotFoundError("ops/scripts/lib/workspace_roots.py not found above this hook")
+
+
+_GOV_LIB = _governance_lib()
+if str(_GOV_LIB) not in sys.path:
+    sys.path.insert(0, str(_GOV_LIB))
+
+from workspace_roots import workspace_roots as _shared_workspace_roots  # noqa: E402
+
 #: Cloud containers put several repositories side by side. Hydrating each costs
 #: one packet of context, so the count is capped rather than unbounded — and the
 #: cap is reported in the emitted text, because a silent truncation reads as
@@ -65,15 +86,19 @@ def _hydration_roots(workspace: Path) -> list[Path]:
     while the store itself was healthy. When the workspace is a repository this
     returns it unchanged; when it is a container of repositories it returns the
     repositories that resolve to their own namespace, each hydrated under it.
+
+    The container-vs-checkout question is answered by `ops/scripts/lib/
+    workspace_roots.py`, not here. This function used to be the only place in
+    the bootstrap that answered it correctly, which is precisely why the
+    dependency helper and the project-scope projection — both of which consumed
+    the container root directly — could be wrong for so long. The namespace
+    filter stays local because it is memory's rule, not the resolver's.
     """
-    if (workspace / ".git").exists():
-        return [workspace]
-    try:
-        children = sorted(child for child in workspace.iterdir() if (child / ".git").exists())
-    except OSError:
-        children = []
-    usable = [child for child in children if _resolves_to_own_group(child)]
-    return usable[:_MAX_HYDRATION_ROOTS] or [workspace]
+    return _shared_workspace_roots(
+        workspace,
+        cap=_MAX_HYDRATION_ROOTS,
+        predicate=_resolves_to_own_group,
+    )
 
 
 sys.path.insert(0, str(MEM))

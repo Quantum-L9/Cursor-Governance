@@ -53,6 +53,8 @@ from peer_execution.bindings import (  # noqa: E402
     resolve_peer_binding,
 )
 from program_authority import (  # noqa: E402
+    AUTHORIZATION_PHASE_EFFECT,
+    AUTHORIZATION_PHASE_GRANT_PROBE,
     ProgramAuthorityError,
     ProgramAuthorityVerifier,
     ProgramParent,
@@ -92,6 +94,10 @@ RECON_CAPABILITIES = [
 WRITE_AUTHORIZATIONS = ("repository.write_scoped",)
 COMMIT_AUTHORIZATIONS = ("git.commit_local",)
 INSPECT_AUTHORIZATIONS = ("repository.read",)
+
+# `AUTHORIZATION_PHASE_GRANT_PROBE` / `AUTHORIZATION_PHASE_EFFECT` are imported
+# from `program_authority`, which owns the phase vocabulary, and re-exported
+# here because this module is the query surface campaign reconciliation reads.
 
 
 def _executor_authority(contract: Mapping[str, Any]) -> tuple[list[str], tuple[str, ...]]:
@@ -405,7 +411,7 @@ def grant_task_mutation(
             metadata={
                 "program_task_id": task_id,
                 "program_lease_id": parent.lease_id,
-                "phase": "grant",
+                "authorization_phase": AUTHORIZATION_PHASE_GRANT_PROBE,
             },
         )
         if not decision.get("allowed"):
@@ -689,19 +695,49 @@ def _runtime_for(grant: Mapping[str, Any]) -> AutonomyRuntime:
     return AutonomyRuntime.from_repository(repository_root=root, database_path=database)
 
 
+def _decision_phase(row: Mapping[str, Any]) -> str | None:
+    """The `authorization_phase` a decision was recorded under, if any.
+
+    Decisions written before the phase annotation existed carry no phase. They
+    are reported as `None` rather than defaulted to either phase: guessing
+    `effect` would resurrect exactly the coverage hole this distinction closes,
+    and guessing `grant_probe` would misattribute a real mediated write.
+    """
+    raw = row.get("metadata_json")
+    if not raw:
+        return None
+    try:
+        metadata = json.loads(str(raw))
+    except (TypeError, ValueError):
+        return None
+    if not isinstance(metadata, Mapping):
+        return None
+    phase = metadata.get("authorization_phase")
+    return str(phase) if isinstance(phase, str) and phase.strip() else None
+
+
 def lease_decisions(
     grant: Mapping[str, Any],
     *,
     capability: str | None = None,
     allowed_only: bool = True,
+    phase: str | None = None,
 ) -> list[dict[str, Any]]:
-    """Every gateway decision recorded under this grant's subordinate lease."""
+    """Every gateway decision recorded under this grant's subordinate lease.
+
+    `phase` narrows the result to one `authorization_phase` (see the constants
+    above). The filter is applied in Python rather than SQL because the phase
+    lives inside the decision's `metadata_json` blob, which is the gateway's
+    own column and is not this bridge's to reshape.
+    """
     lease_id = str(grant.get("lease_id") or "")
     if not lease_id:
         return []
     runtime = _runtime_for(grant)
-    query = "SELECT capability, resource, allowed, code, created_at FROM tool_decisions "
-    query += "WHERE lease_id = ?"
+    query = (
+        "SELECT capability, resource, allowed, code, created_at, metadata_json "
+        "FROM tool_decisions WHERE lease_id = ?"
+    )
     parameters: list[Any] = [lease_id]
     if capability is not None:
         query += " AND capability = ?"
@@ -709,19 +745,29 @@ def lease_decisions(
     if allowed_only:
         query += " AND allowed = 1"
     with runtime.store.connect() as connection:
-        rows = list(connection.execute(query, tuple(parameters)))
-    return [dict(row) for row in rows]
+        rows = [dict(row) for row in connection.execute(query, tuple(parameters))]
+    for row in rows:
+        row["authorization_phase"] = _decision_phase(row)
+    if phase is None:
+        return rows
+    return [row for row in rows if row["authorization_phase"] == phase]
 
 
 def authorized_resources(
     grant: Mapping[str, Any],
     *,
     capability: str = "repository.write_scoped",
+    phase: str | None = None,
 ) -> set[str]:
-    """Resources this lease was actually allowed to write, as decided."""
+    """Resources this lease was actually allowed to write, as decided.
+
+    Unfiltered by default, because "what did this lease ever hold?" is a
+    different question from "what authorized this write?". Coverage asks the
+    second one and passes `phase`.
+    """
     return {
         str(row["resource"])
-        for row in lease_decisions(grant, capability=capability)
+        for row in lease_decisions(grant, capability=capability, phase=phase)
         if row.get("resource")
     }
 
@@ -731,14 +777,27 @@ def unmediated_changed_paths(
     changed_paths: Iterable[str],
     *,
     capability: str = "repository.write_scoped",
+    phase: str = AUTHORIZATION_PHASE_EFFECT,
 ) -> list[str]:
     """Changed paths with no pre-effect root authorization under this lease.
 
     This is the coverage question the whole bridge exists to answer: an effect
     that reached the filesystem without a `tool_authorized` decision was not
     mediated, whatever the provider reports about it.
+
+    Only an `effect`-phase decision answers it. The probe this module takes
+    while issuing the grant is a real allowed decision on the task's first
+    writable path, so before the phase distinction existed a provider could
+    write that path directly, with no hook in the loop at all, and coverage
+    would still report full mediation.
     """
-    authorized = authorized_resources(grant, capability=capability)
+    if not phase:
+        # `phase=None` on this function would mean "count any decision", which
+        # is precisely the hole below. Coverage names a phase or it fails.
+        raise AutonomyGrantError(
+            "COVERAGE_PHASE_REQUIRED: mediation coverage must name an authorization phase"
+        )
+    authorized = authorized_resources(grant, capability=capability, phase=phase)
     missing: list[str] = []
     for path in changed_paths:
         normalized = str(path).replace("\\", "/").strip()

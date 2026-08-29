@@ -1335,11 +1335,11 @@
     },
     {
       "path": "integrations/autonomy-control-plane/grant.py",
-      "sha256": "3ad101038f8dc26f161ec7ca4026daac1c26d1047773894f1499f0215b557eb1"
+      "sha256": "8c44d768f316c6ad92367fc984b983d16d8e056d91f49bb9753f3c803c4601dc"
     },
     {
       "path": "integrations/autonomy-control-plane/program_authority.py",
-      "sha256": "5cfd9556713e163ec0e0a8dae9b78e099ee778ac64f64470747b55f9f02de1e2"
+      "sha256": "f8987c56fca308574aaaa8c80eb7c648acec5cf7c2c9b90fe91721c50dcff9e5"
     },
     {
       "path": "integrations/autonomy-control-plane/receipt_mapper.py",
@@ -1347,7 +1347,7 @@
     },
     {
       "path": "integrations/autonomy-control-plane/tests/test_bridge.py",
-      "sha256": "5e52e07d01261a92acbd790a64f2e7728054e1dea4e085f4ab453bce55a58423"
+      "sha256": "6697e6a55562e4953eb84b21a0f9df5361da0f62a5e3ce74daa6366b31c25f4b"
     },
     {
       "path": "integrations/bootstrap/README.md",
@@ -1855,7 +1855,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "76a2ae5cfaa55d0098a0b702c36705c5780dcd63d6237a547559460f83de67e5"
+      "sha256": "2228b0404197b97ce328cf7922fa94e8ee013fb6fd911d8b1876f8b87b332379"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -1919,7 +1919,7 @@
     },
     {
       "path": "scripts/tests/test_pe_smoke_campaign.py",
-      "sha256": "415b34fc6962cd319ae84cecc255750dd185bf53311d9ea4ca16bdffee474676"
+      "sha256": "bd01fff6bc66bec4af7b3a63822ef1cc07b7a834dea2a1bd6832851d45c5d8e1"
     },
     {
       "path": "scripts/tests/test_pe_trace.py",
@@ -1976,6 +1976,10 @@
     {
       "path": "tests/__init__.py",
       "sha256": "00f4860d32acec2e331e919166cfa84ee5f608e6fc51aac2500bd099852915ca"
+    },
+    {
+      "path": "tests/hardening/test_autonomy_enforcement_e2e.py",
+      "sha256": "18e08415dac5744133153925289471506e5e54d723521b56a554edaa902d4b37"
     },
     {
       "path": "tests/hardening/test_concurrent_worktree_isolation.py",

@@ -77,6 +77,14 @@ the formatter block).
   python3 ops/scripts/governance_refresh_receipt.py --json   # refresh state, machine-readable
   ```
 
+  Expiry is not only the clock: a bootstrap receipt also goes `unknown` when the
+  governance revision it was produced against is no longer checked out, because
+  the artifacts it describes — skills, rules, settings, plugins — are projected
+  from that revision. Time alone let a DEGRADED verdict from a dead revision be
+  reported as current for a full day, since the bootstrap TTL is 24x the
+  governance refresh TTL. SessionStart now runs the installer once per revision
+  when the receipt is not `ready`, instead of printing its remediation.
+
 ## Checking what is actually wired
 
 ```bash
