@@ -120,28 +120,32 @@ kernel_pass:
   bound_path: program_execution_authority_recovery_remediation_d681ee05.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: '2026-08-28T14:37:20+00:00'
-    body_sha256: '4f29033f9990e93c7c2cff5b2180bed6d297b53cfe98acde93ad02aaf0936d8e'
+    ran_at: '2026-08-29T02:20:00+00:00'
+    body_sha256: '14c78c3cabce640cf332be6659e729a1e2ce4c2154b73d9ccb1e9500e36c17a6'
     deltas:
-    - Compressed seven findings into six canonical-owner root causes; removed symptom-per-finding
-      patching.
-    - Moved P0 recovery seal ahead of all other mutation work and made safe retry
-      evidence a blocking property.
-    - Kept folder-only and memory exclusions as hard execution-envelope denies.
-    - Rebound execution baseline to current main without changing remediation root causes.
+    - Recorded the measured baseline drift in Immutable baseline, with the exact
+      seven changed contract scope paths, so todo-00-execution-preflight starts
+      from evidence instead of re-deriving it.
+    - Named the repository compiler skill as compiler of record, with the chain
+      digest that proves the packaged and repository compilers agree.
+    - Preserved every root cause, todo, DAG edge, success property and exclusion
+      from the packaging run; this pass added evidence and changed no remediation
+      content.
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: '2026-08-28T14:37:21+00:00'
-    body_sha256: '4f29033f9990e93c7c2cff5b2180bed6d297b53cfe98acde93ad02aaf0936d8e'
+    ran_at: '2026-08-29T02:20:01+00:00'
+    body_sha256: '14c78c3cabce640cf332be6659e729a1e2ce4c2154b73d9ccb1e9500e36c17a6'
     deltas:
-    - 'Added self-hosting bootstrap rule: use compiled Claude Code contracts for PE
-      repair rather than relying on the defective PE side doors.'
-    - Added exact negative regression properties for P0/P1 authority and false-completion
-      paths.
-    - Removed any plan work not traceable to PE-001 through PE-007 or required final
-      proof.
-    - Rebound execution baseline to current main after SHA drift and re-adjudicated all seven findings.
-    - Loaded compiler v2.7.0; target-native validation, compound preflights, committed_and_validated seams, and single terminal make pr all validate.
+    - 'Repaired a stale claim: on_drift read as hypothetical while drift had already
+      been measured. Now states drift_observed YES and names the consequence —
+      PR-002 asserts behavior_unchanged on blueprint.py against a non-HEAD version.'
+    - 'Repaired a dangling dependency: the plan assumed the compiler shipped beside
+      it. That copy duplicated a skill this repository already owns and was removed,
+      so the plan now points at the surviving owner.'
+    - Kept the snapshot honest by requiring re-measurement at execution start rather
+      than treating the recorded table as current.
+    - Verified against this repository that the PLAN_DOCUMENT still validates under
+      l9-plan 4.1.0 and that the chain still validates at the recorded digest.
 ---
 
 # PLAN: Program Execution Authority and Recovery Remediation
@@ -218,6 +222,41 @@ Use the executor selected by the Claude contract compiler for implementation. Do
 | overlap_policy | `stop_if_dirty_overlaps_may_modify` |
 | verification_rule | `reverify_at_execution_start` |
 | on_drift | `stop_and_replan` |
+| drift_observed | `YES` — see below; this is measured, not hypothetical |
+
+Drift against the locked baseline has already been measured and is recorded here
+so `todo-00-execution-preflight` starts from evidence rather than re-deriving it.
+At the time this plan was stored, `main` had moved past
+`5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d`, which remains an ancestor of `HEAD`
+(forward-only drift, no history rewrite). Of the 32 paths named across the six
+compiled contracts' `in_scope` and `preserved_files`, 20 were unchanged, 5 were
+correctly absent because the contracts create them, none were deleted, and 7 had
+changed content:
+
+| Contract | Kind | Path |
+|---|---|---|
+| PR-002 | in_scope | `environment/program-execution/scripts/run_campaign.py` |
+| PR-002 | preserved_files | `.../pec/blueprint.py` |
+| PR-004 | in_scope | `.../pec/controller.py` |
+| PR-005 | in_scope | `environment/program-execution/scripts/run_peer_task_pipeline.py` |
+| PR-005 | in_scope | `environment/program-execution/scripts/run_campaign.py` |
+| PR-006 | in_scope | `environment/program-execution/scripts/run_peer_task_pipeline.py` |
+| PR-006 | in_scope | `environment/program-execution/scripts/run_campaign.py` |
+
+PR-002 guarantees `behavior_unchanged` on `blueprint.py` against a version that
+is no longer `HEAD`, so that guarantee cannot be honoured as compiled. Per
+`on_drift: stop_and_replan`, re-adjudicate the seven findings against current
+`main` and recompile before running contract 1. Re-measure at execution start —
+the table above is a snapshot, and `main` keeps moving.
+
+## Compiler of record
+
+The contract chain is compiled and revalidated with
+`skills/l9-claude-coding-contract-compiler` (v2.7.0) in this repository. The
+packaging run used a separately uploaded copy of the same compiler at the same
+version; both were proven to produce byte-identical contracts and the same chain
+digest `sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3`.
+Use the repository skill. Do not reintroduce a second copy.
 
 ## Objective
 

@@ -190,39 +190,45 @@ findings:
 
 - id: RV-005
   severity: informational
-  status: ACCEPTED
-  title: Repo hygiene normalized one trailing blank line, breaking two hashes on that file
+  status: RESOLVED
+  title: The packaged projection carried a foreign kernel receipt; regenerated here
   detail: >-
-    The packaged projection
-    plans/program_execution_authority_recovery_remediation_d681ee05.plan.md ended
-    with two newlines. This repository's end-of-file-fixer pre-commit hook
-    normalizes that to one, so the committed file is one blank line shorter than
-    the file as received. Content is otherwise unchanged — the diff is exactly
-    one removed empty line at EOF.
-  hashes_affected:
-  - what: MANIFEST.yaml entry for that plan
-    manifest: 59c5bd601ecc537d1b6c01e7f93866e0c4861556c3363e3c074fb26646a74118
-    committed: 5ec2ea5c62d592be81ca9466bf69faa56559e2725b001de195e09db5e60e9ad9
-  - what: the plan's own kernel_pass.validate_repair.body_sha256
-    effect: >-
-      validate_plan_kernel_receipt.py run standalone on the committed file
-      reports G_PLAN_SHA mismatch. The receipt's canonicalize() zeroes only the
-      body_sha256 fields; it does not normalize trailing whitespace, so the blank
-      line was inside the hashed bytes.
-  why_not_excluded: >-
-    The precedent for carving a path out of end-of-file-fixer exists in this repo
-    (^dist/, for byte-identical verified output) and this is the same class of
-    problem. Taking it would mean editing .pre-commit-config.yaml, an
-    additive_only protected root file, which needs ALLOW-ROOT-DELETION plus
-    CODEOWNERS approval — not something to spend on one blank line. Normalizing
-    and recording the delta keeps the gate honest and green.
-  gate_status: >-
-    The repository gate is unaffected: kernel_gate.py precommit passes on the
-    committed file, because it does not treat a plan in this subfolder as a live
-    root-glob plan.
-  if_you_need_the_exact_bytes: >-
-    Re-extract from the source ZIP. The one-line difference is fully described
-    above, so the packaged hash remains checkable against the original.
+    Two things made the packaged plan projection unable to live in this
+    repository byte-exact. First, it ended with two newlines and this
+    repository's end-of-file-fixer normalizes that to one. Second — and this is
+    the real issue — its kernel_pass block recorded the packaging agent's own
+    kernel runs, hashed over the packaging machine's exact bytes. Any byte change
+    at all invalidates it, and this repository's gate checks that hash on every
+    changed *.plan.md. So the file could not be both hygienic and self-consistent
+    while carrying someone else's receipt.
+  correction_of_an_earlier_claim: >-
+    An earlier version of this receipt said the gate was unaffected, on the
+    strength of a standalone kernel_gate.py precommit run that passed. That run
+    passed only because the file was not yet in the changed set. Once committed,
+    the gate checked it and failed on G_PLAN_SHA. The claim was wrong.
+  resolution: >-
+    Followed the gate's own instruction (ACTION apply_plan_kernels_then_precommit)
+    rather than carving the path out of a hook. Applied kernels/Improve.md and
+    kernels/Validate & Repair.md to the plan and wrote a fresh kernel_pass
+    attributed to this run. The pass is substantive, not a rubber stamp — it
+    records the measured baseline drift from RV-001 directly in the plan's
+    Immutable baseline section, including the table of seven changed scope paths
+    and the PR-002 blueprint.py consequence, and it names
+    skills/l9-claude-coding-contract-compiler as compiler of record now that the
+    bundled copy is gone (RV-004). No root cause, todo, DAG edge, success
+    property or exclusion from the packaging run was changed.
+  hashes:
+    packaged_manifest_entry: 59c5bd601ecc537d1b6c01e7f93866e0c4861556c3363e3c074fb26646a74118
+    committed_raw: 92f56db5cd58cba4d39d9682335695f9c3e23e8aea4f45b6f7a5172c0436ebc6
+    committed_canonical_kernel: 14c78c3cabce640cf332be6659e729a1e2ce4c2154b73d9ccb1e9500e36c17a6
+  verification:
+    validate_plan_kernel_receipt: PASS
+    kernel_gate_precommit: OK
+    plan_document_schema: PASS (the .plan.json is untouched and still authoritative)
+  note: >-
+    The packaged bytes remain recoverable from the source ZIP, and the packaged
+    hash above stays checkable against it. Within this repository the PLAN_DOCUMENT
+    .plan.json is the authority; the projection is a rendering of it.
 
 overall:
   packaged_gates: ALL_REPRODUCED_PASS
