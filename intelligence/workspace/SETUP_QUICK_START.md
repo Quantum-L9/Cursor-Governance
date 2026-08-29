@@ -17,10 +17,9 @@ summary: "One-command workspace wiring via the real sessionStart hook, not the a
 **The full activation contract lives in [`AGENTS.md`](../../AGENTS.md) at the repo root. Read that
 first — this file is a short pointer, not a duplicate.**
 
-`setup-new-workspace.py` (Suite-6, v6/v7) is archived at
-[`intelligence/_archived/workspace/`](../_archived/workspace/). It described a `.suite6-config.json`
+`setup-new-workspace.py` (Suite-6, v6/v7) is retired. It described a `.suite6-config.json`
 + hardcoded-Dropbox-path setup flow that predates the GitHub-SSOT, Graphiti-native governance model.
-Do not follow its instructions.
+Do not follow its instructions. Do not restore the Suite-6 archive tree.
 
 ## Automatic activation (already wired, nothing to run manually)
 

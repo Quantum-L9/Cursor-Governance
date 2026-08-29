@@ -145,8 +145,7 @@ else
     echo "   • LaunchAgent services (when configured)"
     echo "   • All verification commands will execute successfully"
     echo ""
-    echo "   ✅ setup-new-workspace.md is 100% aligned!"
+    echo "   ✅ workspace setup alignment verified"
     echo ""
     exit 0
 fi
-

@@ -26,7 +26,7 @@ Analyze historical operations, decisions, and anomalies to identify patterns of 
 - Cluster previous actions into {"Success","Partial","Failure"}
 - Detect recurring failure signatures
 - Record recommended optimizations
-- Update `/intelligence/improvement-loop.md` with new learnings
+- Record new learnings in Graphiti (`ops/graphiti/graphiti_memory_client.py` write) and the lessons corpus
 
 ## Behavior
 Autonomous • Reflective • Option C (No Pause) Mode Active

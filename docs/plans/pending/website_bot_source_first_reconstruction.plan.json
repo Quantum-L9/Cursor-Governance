@@ -1,0 +1,519 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "standard",
+  "title": "Website-Bot source-first reconstruction",
+  "objective": "Make reconstruction the only path when a live source site exists: crawl must retain copy, phones, nav, photos, and CSS palette; downstream stages MUST port those observations and MUST fail closed instead of inventing a new brochure. Close remaining invention paths (generate-spec LLM identity and extra routes, content home-copy fallback, FAQ schema LLM, seo_contract.site_url pointing at igorbeylin.com). Land the campaign-local factory patches on Quantum-L9/Website-Bot. Preserve Safe Haven black plus Kyle blue plus white, real job photos, compact header, and (704) 648-7252. Reuse the campaign clone; do not rewrite already-working extract/design/chrome patches from origin/main.",
+  "success_criteria": [
+    "When assets.sourceSite.enabled is true and crawled pages exist, ContentGenerationStage does not call generateContent; section text equals crawled headings plus bodyText for the matching slug only.",
+    "When assets.sourceSite.enabled is true and crawled pages are empty, ContentGenerationStage throws CONTENT_VALIDATION_FAILED and does not call generateContent.",
+    "When reconstructing, an unmatched route slug does not receive the home page body (no silent home-copy fallback).",
+    "When assets.sourceSite.enabled is true and crawled CSS has no palette, DesignIntelligenceStage throws DESIGN_REASONING_FAILED and does not call designReasoning.",
+    "PageExtractor emits phones from tel: hrefs as NANP display form and depth-1 header nav; SourceSiteIngestionStage refuses cache reuse when home page lacks bodyText or phones or nav.",
+    "ImageAssetPlanner assigns /logo.webp (or equivalent filename) to global:logo; OG 1200x630 cards are not the header wordmark.",
+    "Assembled siteConfig.nav is at most 8 depth-1 items from crawled header, siteConfig.phone is the crawled number, tokens.css primary is crawled hex (Safe Haven: #1ca0e0 background #000000).",
+    "When crawl pages exist, generate-spec DomainSpec.routes come from crawled pages (not the LLM service list); crawled phone and palette win; seo_contract.site_url is the showable Vercel alias until a custom-domain secret exists.",
+    "When reconstructing, SchemaGeneratorStage does not call generateSchema for FAQs; FAQPage entries come from the crawled FAQ page or the FAQ schema is omitted.",
+    "Safe Haven production alias https://safehavenrr-site.vercel.app shows source wordmark, compact nav, phone pill, unique job-photo heroes, gallery grid, and no markdown asterisks in H1 (hard-refresh the alias, not a stale dpl card).",
+    "Quantum-L9/Website-Bot PR contains the factory patches; Website-Bot make verify-all PASS."
+  ],
+  "scope": {
+    "in": [
+      "Campaign Website-Bot clone at ~/dev/website-bot-e2e-full-feature-20260813/repos/Website-Bot (reuse; do not recreate)",
+      "Keep/prove extract persist: PageExtractor, SourceCrawler, SourceSiteManifest, SourceSiteIngestionStage, CrawlPriority, SourcePalette",
+      "Complete content port: sourceCopy.ts, ContentGenerationStage (fail closed on empty crawl; no home-copy fallback)",
+      "Keep/prove DesignIntelligenceStage fail-closed and SiteAssemblerStage compact nav",
+      "Keep/prove template chrome: BaseLayout, global.css, Hero, CtaBanner, ProseSection, Gallery, TEMPLATE_VERSION",
+      "Keep/prove unique photo assignment and logo vs OG",
+      "generate-spec: CODE identity and routes from crawl; overlay site_url to Vercel alias; LLM only for vertical/keywords if still required",
+      "SchemaGenerator: skip FAQ LLM when reconstructing; port crawled FAQ or omit FAQPage",
+      "Unit tests for extract, source-copy skip LLM, empty-crawl fail-closed, no home fallback, design fail-closed, logo scoring, generate-spec overlay, schema FAQ skip",
+      "One Safe Haven rebuild + Vercel production alias proof",
+      "PR to Quantum-L9/Website-Bot from the campaign clone"
+    ],
+    "out": [
+      "GoDaddy DNS cutover for igorbeylin.com (no GoDaddy API secret in AWS; Vercel alias remains the showable URL)",
+      "SEO keyword ranking / Search Console work",
+      "Recreating the campaign dir, venv, node_modules, or copying campaign .env into Website-Bot/.env",
+      "Killing Docker seo-bot-data-postgres-1 / seo-bot-data-redis-1",
+      "Cursor-Governance CANONICAL_LAW.md, AGENTS.md, pyproject.toml, or root-file-protection edits",
+      "Force-push, history rewrite, admin-merge",
+      "Inventing a second GitHub PAT",
+      "Hand-editing site-output HTML to look pretty without factory code",
+      "Gemini image generation except unresolved gap slots (OG cards)",
+      "Redesigning Kyle's palette away from black / #1ca0e0 / white",
+      "Adding a Website-Bot make pr-check target (Makefile has no such target; gate is make verify-all)",
+      "Rewriting Organization/LocalBusiness JSON-LD (already deterministic from DomainSpec; remaining hole is FAQ LLM only)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "Bind campaign Website-Bot clone ~/dev/website-bot-e2e-full-feature-20260813/repos/Website-Bot; confirm origin/main SHA c0ee7eacc4837ecd29fce379f69aa856f6259fce",
+      "pass_criteria": "Single clone; HEAD equals origin/main SHA; dirty tree is reconstruction patches, not a missing repo",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "python3 .claude/skills/l9-plan/scripts/route_plan.py --risk medium --evidence sufficient",
+      "pass_criteria": "depth=standard; omit_gates=[]",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "Inspect remaining LLM call sites against campaign source: ContentGenerationStage, DesignIntelligenceStage, scripts/generate-spec.ts, SchemaGeneratorStage.generateFaqs",
+      "pass_criteria": "Content skips LLM when pages.length>0 but falls back to home copy; content does not fail closed when sourceSite.enabled and pages empty; design fail-closed exists; generate-spec always calls designReasoning then overlays phone/palette; SchemaGenerator Organization/LocalBusiness are CODE, FAQ still calls generateSchema; generated-spec seo_contract.site_url is https://igorbeylin.com",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "Read Website-Bot Makefile for pr-check vs verify-all",
+      "pass_criteria": "No pr-check target; verify-all exists and runs npm run verify:all",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "aws secretsmanager list-secrets names-only plus openclaw-igorbot registry sync for godaddy",
+      "pass_criteria": "Zero GoDaddy secret names; DNS cutover stays out of scope",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Lock Website-Bot baseline SHA and reuse the existing campaign dirty tree; list uncommitted reconstruction files versus origin/main; do not clone a new campaign directory",
+      "files": [
+        "/Users/macm2/dev/website-bot-e2e-full-feature-20260813/repos/Website-Bot"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Wrap",
+      "anchor": "git status versus origin/main c0ee7eacc4837ecd29fce379f69aa856f6259fce",
+      "leverage_rank": 11,
+      "shared_root_cause": "clean-room rebuilds discard extract cache and force LLM invention again"
+    },
+    {
+      "id": "T2",
+      "task": "Keep crawled page bodyText, tel: phones, and header nav on IngestedPage; refuse source-site cache reuse when home lacks those fields; prove with existing unit tests rather than rewriting extract from origin/main",
+      "files": [
+        "src/ingestion/PageExtractor.ts",
+        "src/ingestion/SourceCrawler.ts",
+        "src/pipeline/evidence/SourceSiteManifest.ts",
+        "src/stages/SourceSiteIngestionStage.ts"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T1"],
+      "operation": "Wrap",
+      "anchor": "extractPage return and SourceSiteIngestionStage.canReuseManifest",
+      "leverage_rank": 1,
+      "shared_root_cause": "300-character excerpt discarded the live site so every later stage invented"
+    },
+    {
+      "id": "T3",
+      "task": "Keep source-copy port when pages exist; when sourceSite.enabled and pages are empty, throw CONTENT_VALIDATION_FAILED; when reconstructing, do not fall back to home bodyText for an unmatched slug",
+      "files": [
+        "src/services/content/sourceCopy.ts",
+        "src/stages/ContentGenerationStage.ts"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T2"],
+      "operation": "Replace",
+      "anchor": "ContentGenerationStage reconstructing branch: matchSourcePage fallback to '/'",
+      "leverage_rank": 2,
+      "shared_root_cause": "LLM essays plus home-copy fallback on invented routes produced repeated copy"
+    },
+    {
+      "id": "T4",
+      "task": "Keep crawled CSS palette as design tokens and DESIGN_REASONING_FAILED when sourceSite.enabled and palette missing; do not restore a designReasoning prompt that says preserve the original",
+      "files": [
+        "src/stages/DesignIntelligenceStage.ts",
+        "src/ingestion/SourcePalette.ts"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T2"],
+      "operation": "Wrap",
+      "anchor": "DesignIntelligenceStage after sourcePalette check",
+      "leverage_rank": 4,
+      "shared_root_cause": "LLM invented forest green when CSS already had #1ca0e0 on black"
+    },
+    {
+      "id": "T5",
+      "task": "Keep compact depth-1 nav plus crawled phone, sticky header, blue phone pill, inherit link color, ProseSection H2 from first crawled paragraph, CTA inspection headline",
+      "files": [
+        "src/stages/SiteAssemblerStage.ts",
+        "astro_template/src/layouts/BaseLayout.astro",
+        "astro_template/src/styles/global.css",
+        "astro_template/src/components/sections/Hero.astro",
+        "astro_template/src/components/sections/CtaBanner.astro",
+        "astro_template/src/components/sections/ProseSection.astro",
+        "astro_template/TEMPLATE_VERSION"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T3"],
+      "operation": "Wrap",
+      "anchor": "SiteAssemblerStage siteConfig.nav and astro_template chrome",
+      "leverage_rank": 6,
+      "shared_root_cause": "generic template chrome plus all-routes nav made a professional site look like a 1990s brochure"
+    },
+    {
+      "id": "T6",
+      "task": "Keep unique source-photo assignment, /logo.* preference for global:logo, no tiny-wordmark penalty, gallery-first leftover photos",
+      "files": [
+        "src/services/images/ImageAssetPlanner.ts",
+        "src/ingestion/CrawlPriority.ts",
+        "astro_template/src/components/sections/Gallery.astro"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T2"],
+      "operation": "Wrap",
+      "anchor": "scoreSourceCandidate logoLike byteLength and slotAssignPriority",
+      "leverage_rank": 5,
+      "shared_root_cause": "OG 1200x630 and tiny-file penalty stole the wordmark and heroes"
+    },
+    {
+      "id": "T7",
+      "task": "When crawled pages exist, build DomainSpec identity from the crawl before any LLM: routes from crawled slugs, phone from tel:, palette from CSS, site_url set to https://safehavenrr-site.vercel.app; LLM may fill only vertical and keywords",
+      "files": [
+        "scripts/generate-spec.ts",
+        "/Users/macm2/dev/website-bot-e2e-full-feature-20260813/generated-spec/safehavenrr.yaml"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T2"],
+      "operation": "Replace",
+      "anchor": "generate-spec designReasoning call and withAssets overlay; seo_contract.site_url",
+      "leverage_rank": 3,
+      "shared_root_cause": "spec LLM invents extra service routes; assembler then paints home copy onto every unmatched slug"
+    },
+    {
+      "id": "T8",
+      "task": "When reconstructing, skip generateFaqs; port FAQ pairs from the crawled FAQ page body or omit FAQPage; leave Organization and LocalBusiness as the existing CODE emitters from DomainSpec",
+      "files": [
+        "src/stages/SchemaGeneratorStage.ts",
+        "tests/unit/schema-generator.test.ts"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T3"],
+      "operation": "Replace",
+      "anchor": "SchemaGeneratorStage.generateFaqs LLM loop",
+      "leverage_rank": 7,
+      "shared_root_cause": "FAQ generateSchema invents Q-and-A the live site never asked"
+    },
+    {
+      "id": "T9",
+      "task": "Add or keep unit tests for phones/nav extract, source-copy skip LLM, empty-crawl fail-closed, unmatched-slug no home fallback, design fail-closed, logo versus OG, generate-spec crawl routes and site_url overlay, schema FAQ skip",
+      "files": [
+        "tests/unit/page-extractor.test.ts",
+        "tests/unit/source-copy.test.ts",
+        "tests/unit/content-generation.test.ts",
+        "tests/unit/source-palette.test.ts",
+        "tests/unit/image-asset-planning-source.test.ts",
+        "tests/unit/schema-generator.test.ts"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": ["T2", "T3", "T4", "T6", "T7", "T8"],
+      "operation": "Create",
+      "anchor": "tests/unit reconstruction suite",
+      "leverage_rank": 8,
+      "shared_root_cause": "without tests the LLM fallback and home-copy fallback can return unnoticed"
+    },
+    {
+      "id": "T10",
+      "task": "Rebuild Safe Haven from https://www.safehavenrr.com/ using the campaign clone; publish to cryptoxdog/safehavenrr-site; prove https://safehavenrr-site.vercel.app after hard refresh",
+      "files": [
+        "/Users/macm2/dev/website-bot-e2e-full-feature-20260813/generated-spec/safehavenrr.yaml"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T5", "T7", "T9"],
+      "operation": "Wrap",
+      "anchor": "npm run pipeline:end-to-end -- --spec=../../generated-spec/safehavenrr.yaml",
+      "leverage_rank": 9,
+      "shared_root_cause": "eyes-first customer gate; factory green with an ugly alias is still fail"
+    },
+    {
+      "id": "T11",
+      "task": "Open a scoped PR on Quantum-L9/Website-Bot with the factory patches; run make verify-all; merge only via L4 plan Build after green",
+      "files": [
+        "src/",
+        "astro_template/",
+        "scripts/generate-spec.ts",
+        "tests/unit/"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T10"],
+      "operation": "Wrap",
+      "anchor": "gh pr create against Quantum-L9/Website-Bot",
+      "leverage_rank": 10,
+      "shared_root_cause": "campaign-only patches die at session end and the next e2e rebuilds the ugly path from origin/main"
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T7",
+    "T3",
+    "T5",
+    "T9",
+    "T10",
+    "T11"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "Baseline locked; campaign clone reused",
+      "unlocks": "extract keep-and-prove plus remaining invention-path deletes"
+    },
+    {
+      "id": "M1",
+      "outcome": "Crawl retains copy, phones, nav, photos, palette; cache cannot drop them",
+      "unlocks": "CODE spec routes and fail-closed content"
+    },
+    {
+      "id": "M2",
+      "outcome": "No reconstruction LLM option remains for identity, copy, palette, extra routes, or FAQs; site_url is the Vercel alias",
+      "unlocks": "Safe Haven rebuild that cannot invent a new brand or repeat home copy"
+    },
+    {
+      "id": "M3",
+      "outcome": "Vercel alias matches source look; PR opened on Quantum-L9/Website-Bot",
+      "unlocks": "L4 remediate-to-green then merge"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M0",
+      "evidence_required": "git rev-parse HEAD == c0ee7eacc4837ecd29fce379f69aa856f6259fce on Website-Bot; campaign dir exists with node_modules",
+      "no_go_action": "stop_and_replan; do not git clone a new campaign"
+    },
+    {
+      "id": "C2",
+      "after": "M1",
+      "evidence_required": "node --import tsx --test tests/unit/page-extractor.test.ts tests/unit/source-copy.test.ts tests/unit/source-palette.test.ts PASS",
+      "no_go_action": "do not rebuild Safe Haven; fix extract/port first"
+    },
+    {
+      "id": "C3",
+      "after": "M2",
+      "evidence_required": "generate-spec routes ⊆ crawled slugs; ContentGenerationStage reconstructing path has no generateContent and no home fallback; DesignIntelligenceStage reconstructing path throws without designReasoning; SchemaGenerator reconstructing path has no generateFaqs; safehavenrr.yaml site_url is https://safehavenrr-site.vercel.app",
+      "no_go_action": "delete the LLM option; do not add a prompt that says preserve the original"
+    },
+    {
+      "id": "C4",
+      "after": "M3",
+      "evidence_required": "https://safehavenrr-site.vercel.app tokens #1ca0e0 on black, logo.webp 298x144, compact nav, phone pill, no repeated home essay on service pages; GitHub PR URL on Quantum-L9/Website-Bot",
+      "no_go_action": "do not treat evidence-run JSON or stale dpl cards as the live site; do not cut over GoDaddy"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "Cursor-Governance AGENTS.md",
+      "action": "n_a",
+      "reason": "Factory reconstruction lives in Website-Bot; no Cursor-Governance root-file change"
+    },
+    {
+      "surface": "Cursor-Governance CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "Symlink and memory law unchanged"
+    },
+    {
+      "surface": "Website-Bot README / generate-spec usage",
+      "action": "update",
+      "todo_ids": ["T7"],
+      "reason": "generate-spec still documents crawl plus LLM as the identity path; crawled routes, phone, palette, and showable site_url MUST win"
+    },
+    {
+      "surface": "skills/l9-e2e-blocker-resolution/references/campaign-reuse.md",
+      "action": "update",
+      "todo_ids": ["T1", "T11"],
+      "reason": "Bind reconstruction-only visual fidelity so the next e2e cannot invent a brochure"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If generate-spec still asks an LLM for the whole DomainSpec first, can crawled phone and palette still lose, and can invented /services/* slugs still receive home bodyText?",
+      "If SourceSiteIngestionStage reuses a 15-page cache that never stored bodyText, does ContentGenerationStage still skip LLM and ship 300-character excerpts as the whole site?",
+      "If sourceSite.enabled is true and the crawl returns zero pages, does content still call generateContent and invent a brochure?",
+      "If logo.webp is under 10KB, does global:logo still receive og.png 1200x630 and look like a duplicated banner in the header?",
+      "If seo_contract.site_url stays https://igorbeylin.com, do receipts and schema claim a domain that is still on GoDaddy parking?",
+      "If the customer opens a stale Vercel dpl card, can we claim visual PASS while the production alias is still the ugly first run?",
+      "If origin/main Website-Bot never receives the PR, does the next campaign from origin/main rebuild the invented-green path?",
+      "If execute runs make pr-check inside Website-Bot, does the gate fail because the Makefile has no such target?"
+    ],
+    "assumed_false_ifs": [
+      "Campaign clone at ~/dev/website-bot-e2e-full-feature-20260813/repos/Website-Bot remains the execution workspace",
+      "https://www.safehavenrr.com/ stays crawlable and keeps tel:+17046487252 plus CSS hex #1ca0e0",
+      "Vercel project safehavenrr-site and GitHub cryptoxdog/safehavenrr-site remain the publish targets",
+      "No GoDaddy secret appears; igorbeylin.com DNS stays out of this plan",
+      "LLM paths remain for greenfield specs where assets.sourceSite.enabled is false",
+      "Website-Bot quality gate remains make verify-all, not make pr-check"
+    ],
+    "blast_radius": "Wrong reconstruction ships an unshowable client site and trains the factory to invent brands. Invented extra routes plus home-copy fallback repeat the same essay on every page. A bad PR on Quantum-L9/Website-Bot changes every future consumer rebuild. A mistaken GoDaddy write is out of envelope. Regenerating Gemini heroes over real job photos burns budget and looks fake. A fake make pr-check gate stalls the PR for a target that does not exist.",
+    "rollback": "Revert the Website-Bot feature branch / close the PR; leave origin/main untouched. Do not force-push. Safe Haven Vercel alias can stay on the last known good production SHA. Do not revert GoDaddy (untouched). Do not delete the campaign clone or image cache."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T2",
+      "T3",
+      "T7",
+      "T4",
+      "T6",
+      "T5",
+      "T8",
+      "T9",
+      "T10",
+      "T11",
+      "T1"
+    ],
+    "shared_causes": [
+      "Crawl discarded copy, phones, and nav so downstream had nothing to port",
+      "LLM stages were optional replacements rather than gap fillers",
+      "generate-spec LLM invents extra routes; content then paints home copy onto every unmatched slug",
+      "Scoring treated OG cards and tiny wordmarks as interchangeable",
+      "Campaign-only patches never became origin/main so the ugly path remained the default",
+      "Receipts used seo_contract.site_url (igorbeylin.com) as if it were the showable site"
+    ],
+    "deletions_or_consolidations": [
+      "Delete designReasoning when sourceSite.enabled and palette is missing (already fail closed; keep)",
+      "Delete generateContent when sourceSiteManifest.pages exist (keep) and when sourceSite.enabled with empty pages (add fail closed)",
+      "Delete matchSourcePage fallback to '/' for unmatched reconstructing slugs",
+      "Delete generate-spec designReasoning as the identity path when crawled pages exist",
+      "Delete generateFaqs LLM when reconstructing",
+      "Delete seo_contract.site_url https://igorbeylin.com from the Safe Haven spec until a custom-domain secret exists",
+      "Delete a { color: var(--color-primary) } as the global link rule (already in chrome patches)",
+      "Stop treating 80-word LLM minimum as a quality gate on a live site",
+      "Stop treating Website-Bot make pr-check as a real gate"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Execution rewrites extract/content/design from scratch and loses the working campaign patches",
+      "mitigation": "T1 forbids a new clone; T2 T4 T5 T6 are Wrap/prove; only T3 T7 T8 mutate remaining holes"
+    },
+    {
+      "risk": "generate-spec LLM still invents routes that receive home copy",
+      "mitigation": "T7 builds routes from crawled slugs before LLM; T3 deletes home-copy fallback"
+    },
+    {
+      "risk": "Visual QA spawnSync ETIMEDOUT marked the last rebuild failed after Vercel READY",
+      "mitigation": "Treat production alias hard-refresh as the visual gate; do not block ship on local Node timeout"
+    },
+    {
+      "risk": "PR to Quantum-L9/Website-Bot conflicts with origin/main after other work",
+      "mitigation": "Rebase-or-merge only with non-force push; l9-pr-remediation cap 3; no admin-merge"
+    },
+    {
+      "risk": "Execute fails a nonexistent Website-Bot make pr-check target",
+      "mitigation": "V2 is make verify-all; V4 make pr-check is not_applicable"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does generate-spec still need an LLM for vertical slug and keyword list after CODE builds routes, phone, palette, and site_url from crawl?",
+      "decision_effect": "If yes, LLM stays for those two fields only. If no, T7 removes the LLM call entirely.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Will Website-Bot origin/main CODEOWNERS accept reconstruction fail-closed as a breaking change for greenfield-only tests?",
+      "decision_effect": "Greenfield (sourceSite disabled) must keep the LLM path; tests without a manifest must still pass.",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "cd /Users/macm2/dev/website-bot-e2e-full-feature-20260813/repos/Website-Bot && node --import tsx --test tests/unit/page-extractor.test.ts tests/unit/source-copy.test.ts tests/unit/content-generation.test.ts tests/unit/source-palette.test.ts tests/unit/image-asset-planning-source.test.ts tests/unit/schema-generator.test.ts",
+      "pass_criteria": "all listed tests PASS; reconstructing content test asserts prompts.length === 0 and unmatched slug does not equal home body; reconstructing schema test asserts generateSchema not called",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "cd /Users/macm2/dev/website-bot-e2e-full-feature-20260813/repos/Website-Bot && make verify-all",
+      "pass_criteria": "verify-all PASS. Website-Bot Makefile has no pr-check target; do not invent one in this plan.",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "curl -sS https://safehavenrr-site.vercel.app ; inspect tokens.css and header on the production alias after hard refresh",
+      "pass_criteria": "primary #1ca0e0, background near-black, logo.webp in header, phone (704) 648-7252, no ** in H1, compact nav not 15 service links, service pages are not a paste of the home essay",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "make pr-check",
+      "pass_criteria": "NotApplicable on Website-Bot (no Makefile target). Cursor-Governance files are outside may_modify, so this gate is not run against CG either.",
+      "status": "not_applicable"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1", "U2"],
+    "next_skill": "/autonomy",
+    "stop_reason": "PLAN_DOCUMENT improved and re-validated. Implementation is not started from this plan. Campaign clone already contains T2 T4 T5 T6 prototype. Remaining CODE holes: T3 home-copy fallback and empty-crawl fail-closed; T7 crawl-first spec identity plus site_url; T8 FAQ LLM skip; T10 alias proof; T11 PR. Execute via @environment/program-execution + /autonomy, not free-form chat mutation."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "/Users/macm2/dev/website-bot-e2e-full-feature-20260813/repos/Website-Bot/src/",
+      "/Users/macm2/dev/website-bot-e2e-full-feature-20260813/repos/Website-Bot/astro_template/",
+      "/Users/macm2/dev/website-bot-e2e-full-feature-20260813/repos/Website-Bot/scripts/generate-spec.ts",
+      "/Users/macm2/dev/website-bot-e2e-full-feature-20260813/repos/Website-Bot/tests/unit/",
+      "/Users/macm2/dev/website-bot-e2e-full-feature-20260813/generated-spec/safehavenrr.yaml",
+      "skills/l9-e2e-blocker-resolution/references/campaign-reuse.md"
+    ],
+    "must_not_modify": [
+      "CANONICAL_LAW.md",
+      "AGENTS.md",
+      "ORG_INVARIANTS.yaml",
+      "pyproject.toml",
+      "ops/hooks/session_start_bootstrap.sh",
+      "/Users/macm2/dev/website-bot-e2e-full-feature-20260813/.env",
+      "GoDaddy DNS for igorbeylin.com",
+      "Docker seo-bot-data-postgres-1",
+      "Docker seo-bot-data-redis-1",
+      "Website-Bot Makefile pr-check (target does not exist; do not add it here)"
+    ],
+    "preserved_contracts": [
+      "Reconstruction is the only path when assets.sourceSite.enabled is true",
+      "Gemini generates only unresolved gap slots",
+      "Kyle palette black / #1ca0e0 / white unless the human asks otherwise",
+      "Campaign directory reuse; no second clone",
+      "Vercel alias is the showable URL until a GoDaddy secret exists",
+      "No force-push / admin-merge / secret values in git",
+      "Greenfield (sourceSite disabled) keeps LLM paths",
+      "Website-Bot gate is make verify-all"
+    ],
+    "validation_commands": [
+      "node --import tsx --test tests/unit/page-extractor.test.ts tests/unit/source-copy.test.ts tests/unit/content-generation.test.ts tests/unit/source-palette.test.ts tests/unit/image-asset-planning-source.test.ts tests/unit/schema-generator.test.ts",
+      "make verify-all",
+      "make pr-check"
+    ]
+  },
+  "checklist": [
+    "extract retains body/nav/phones (keep)",
+    "content skip LLM when pages exist (keep)",
+    "content fail-closed when sourceSite.enabled and pages empty (add)",
+    "no home-copy fallback on unmatched slugs (add)",
+    "design fail-closed (keep)",
+    "logo not OG (keep)",
+    "compact nav plus phone pill (keep)",
+    "generate-spec routes from crawl (add)",
+    "seo_contract.site_url is Vercel alias (add)",
+    "schema FAQ no LLM when reconstructing (add)",
+    "Safe Haven alias proof",
+    "Website-Bot PR via make verify-all"
+  ],
+  "estimate": "1 PE program / 1 L4 stack PR"
+}

@@ -5,7 +5,7 @@
 #
 # Purpose:
 #   Machine-readable configuration for the L9 learning feedback loop.
-#   Extracted from: improvement-loop.md, meta-audit.md, reasoning-metrics.md
+#   Observe-compare-patch is `make improve`. Audit log is Graphiti / L4 receipts.
 #
 # Integration:
 #   - violation_tracker.py reads this config
@@ -23,7 +23,7 @@ updated: 2026-01-02
 
 # =============================================================================
 # IMPROVEMENT LOOP CONFIGURATION
-# Source: .cursor-commands/intelligence/improvement-loop.md
+# Live owner: make improve (observe-compare-patch)
 # =============================================================================
 
 improvement_loop:
@@ -58,7 +58,7 @@ improvement_loop:
 
     step_5_document:
       action: "Document all changes in meta-audit"
-      reference: ".cursor-commands/intelligence/meta-audit.md"
+      reference: "ops/graphiti/graphiti_memory_client.py"
       format: "improvement_snapshot"
 
   schedule:
@@ -68,7 +68,7 @@ improvement_loop:
 
 # =============================================================================
 # META AUDIT CONFIGURATION
-# Source: .cursor-commands/intelligence/meta-audit.md
+# Live owner: Graphiti episodes + L4 receipts
 # =============================================================================
 
 meta_audit:
@@ -210,8 +210,6 @@ mcp_memory:
 # =============================================================================
 
 feedback_collector:
-  script: ".cursor-commands/ops/scripts/feedback_collector.py"
-
   inputs:
     - violations
     - user_corrections
@@ -235,8 +233,6 @@ wiring:
       purpose: "Violation logging"
     - path: ".cursor-commands/commands/_archived/violation.md"
       purpose: "Archived slash; live path is /governance report-violation"
-    - path: ".cursor-commands/ops/scripts/feedback_collector.py"
-      purpose: "Feedback aggregation"
 
   integration_tests:
     - name: "violation_to_mcp"

@@ -1,0 +1,320 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "standard",
+  "title": "Publish ceremony once",
+  "objective": "One local pytest pass per unchanged tree. After finished work is committed, one command: make pr. GitHub pull_request Test Suite uses the same changed-vs-base file set as local. After the PR opens, remediates defaults to on.",
+  "code_in_scope": true,
+  "success_criteria": [
+    "A clean tree: one make pr run prints one pytest invocation; a second make pr on the same digest prints receipt skip and does not start suites.",
+    "open_pr_after_gate.sh with PR_REMEDIATE unset exports remediates=1.",
+    "On a fixture PR file list of one ops/scripts/foo.py with a mapped test, CI argv is that test file, not '.', and autonomy / Wave 3 / PE controller suites SKIP.",
+    "On a markdown-only PR file list, Test Suite PASSes with skip pytest.",
+    "git grep -n 'PR_REMEDIATE=0 make pr' rules/48-make-pr-remediation.mdc ops/autonomy/surface_profile.yaml is empty after the edit."
+  ],
+  "scope": {
+    "in": [
+      "ops/autonomy/kernel_gate.py via cherry-pick 43eae0e5 when absent",
+      "ops/scripts/open_pr_after_gate.sh remediates default 1",
+      "rules/48-make-pr-remediation.mdc standing make pr",
+      "ops/autonomy/surface_profile.yaml post_push and campaign pr_remediate",
+      "CANONICAL_LAW.md AGENTS.md append TESTS_ONCE_AND_PUBLISH_V1",
+      "INVARIANTS.md two pointer rows",
+      "Makefile one help echo",
+      ".github/workflows/l9-lint-test.yml scope.outputs.files and Test Suite --profile local --changed-file",
+      "ops/scripts/run_python_test_suites.py help text",
+      "generated zz-autonomy-surface-override.md via sync",
+      "tests for remediates default and CI selector"
+    ],
+    "out": [
+      "Lint job ruff check . / ruff format --check . / mypy full-tree",
+      ".github/workflows/peer-execution.yml",
+      "Auto-merge from remediates=1",
+      "A new forbid pr-check before make pr shell latch",
+      "Folding or rewriting existing AGENTS / CANONICAL_LAW / Makefile lines",
+      "Editing kernels/",
+      "Consumer product repos",
+      "Mixing this landing onto the dirty primary main checkout"
+    ]
+  },
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git cat-file -e origin/main:ops/autonomy/kernel_gate.py",
+      "pass_criteria": "absent on origin/main so cherry-pick 43eae0e5 is required",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "worktree_add_wired.sh -b feat/publish-ceremony-once origin/main",
+      "pass_criteria": "wired ssot_checkout worktree; primary checkout untouched",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "include-kernel-hook",
+      "task": "On a new origin/main worktree, if ops/autonomy/kernel_gate.py is absent, cherry-pick 43eae0e5; if present, skip the cherry-pick",
+      "files": [
+        "ops/autonomy/kernel_gate.py",
+        "ops/scripts/run_pr_precommit.sh"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "43eae0e5853c4f99813c92ecf293f8a9146c581a",
+      "leverage_rank": 4
+    },
+    {
+      "id": "remediate-default",
+      "task": "Default PR_REMEDIATE to 1 in open_pr_after_gate.sh, rule 48, and surface_profile; 0 is opt-out only",
+      "files": [
+        "ops/scripts/open_pr_after_gate.sh",
+        "rules/48-make-pr-remediation.mdc",
+        "ops/autonomy/surface_profile.yaml"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "include-kernel-hook"
+      ],
+      "operation": "Replace",
+      "anchor": "PR_REMEDIATE:-0 and required_command",
+      "leverage_rank": 1,
+      "shared_root_cause": "agents are taught a three-step publish the Makefile does not need"
+    },
+    {
+      "id": "ci-changed-file",
+      "task": "Scope job exports PR file list; Test Suite on pull_request runs --profile local --changed-file; push to main keeps --profile ci",
+      "files": [
+        ".github/workflows/l9-lint-test.yml",
+        "ops/scripts/run_python_test_suites.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "include-kernel-hook"
+      ],
+      "operation": "Replace",
+      "anchor": "scope.outputs.run and --profile ci",
+      "leverage_rank": 2,
+      "shared_root_cause": "agents are taught a three-step publish the Makefile does not need"
+    },
+    {
+      "id": "law-append",
+      "task": "Append TESTS_ONCE_AND_PUBLISH_V1 to CANONICAL_LAW.md, AGENTS.md, and INVARIANTS.md",
+      "files": [
+        "CANONICAL_LAW.md",
+        "AGENTS.md",
+        "INVARIANTS.md",
+        "Makefile"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "remediate-default"
+      ],
+      "operation": "Insert",
+      "anchor": "append-only TESTS_ONCE_AND_PUBLISH_V1",
+      "leverage_rank": 3,
+      "shared_root_cause": "agents are taught a three-step publish the Makefile does not need"
+    },
+    {
+      "id": "ceremony-teach",
+      "task": "Regenerate llm-rules after rule 48 and surface_profile so standing agent text matches remediates=1 and finish-commit-make-pr",
+      "files": [
+        "environment/generated/llm-rules/zz-autonomy-surface-override.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "remediate-default"
+      ],
+      "operation": "Replace",
+      "anchor": "sync_generated_artifacts.py --force",
+      "leverage_rank": 5
+    },
+    {
+      "id": "tests-docs",
+      "task": "Add remediates-default and CI selector tests; protected-root template because AGENTS.md and CANONICAL_LAW.md are in the PR",
+      "files": [
+        "tests/ops/scripts/test_pr_lifecycle.py",
+        "tests/ops/scripts/test_ci_changed_file_selector.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "remediate-default",
+        "ci-changed-file"
+      ],
+      "operation": "Insert",
+      "anchor": "test_open_pr_after_gate_handles_landed_pr",
+      "leverage_rank": 6
+    }
+  ],
+  "critical_path": [
+    "include-kernel-hook",
+    "remediate-default",
+    "ci-changed-file",
+    "law-append",
+    "ceremony-teach",
+    "tests-docs"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Kernel hook present; remediates default is 1; CI selector wired",
+      "unlocks": "law append and generated llm-rules sync"
+    },
+    {
+      "id": "M2",
+      "outcome": "Tests pass; make pr once from the worktree",
+      "unlocks": "green merge-ready PR; no merge from this path"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "include-kernel-hook",
+      "evidence_required": "ops/autonomy/kernel_gate.py exists on the worktree",
+      "no_go_action": "stop and replay kernel-hook files by path; do not force the pick"
+    },
+    {
+      "id": "C2",
+      "after": "tests-docs",
+      "evidence_required": "targeted pytest green; grep of rule 48 and surface_profile is empty for PR_REMEDIATE=0 make pr",
+      "no_go_action": "stop; do not make pr"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": ["law-append"]
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "update",
+      "todo_ids": ["law-append"]
+    },
+    {
+      "surface": "INVARIANTS.md",
+      "action": "update",
+      "todo_ids": ["law-append"]
+    },
+    {
+      "surface": "Makefile",
+      "action": "update",
+      "todo_ids": ["law-append"]
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "pointer stack unchanged"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Agents keep typing make pr-check then make pr",
+      "scope.outputs.files exceeds GitHub output size on a huge PR",
+      "Cherry-pick 43eae0e5 conflicts after origin/main moves",
+      "Remediates=1 on a campaign PR spawns a worker that tries to merge"
+    ],
+    "assumed_false_ifs": [
+      "gate receipt still keys on worktree digest",
+      "gh api pulls/N/files remains available to the Scope job",
+      "additive_only root gate still accepts append-only AGENTS / CANONICAL_LAW"
+    ],
+    "blast_radius": "every governed agent publish; GitHub Test Suite duration and skip behavior; campaign remediates spawn",
+    "rollback": "revert the one PR; law appends remain as historical supersession text until a later append; workflow change reverts independently of law appends"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "remediate-default",
+      "ci-changed-file",
+      "law-append",
+      "include-kernel-hook",
+      "ceremony-teach",
+      "tests-docs"
+    ],
+    "shared_causes": [
+      "agents are taught a three-step publish that the Makefile does not need"
+    ],
+    "deletions_or_consolidations": [
+      "standing instruction PR_REMEDIATE=0 make pr",
+      "post-commit make precommit-repo ritual"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "GitHub job-output size drops a huge PR file list and tests are skipped",
+      "mitigation": "fail open to --profile ci when files_unusable"
+    },
+    {
+      "risk": "Remediates=1 worker is read as merge authority",
+      "mitigation": "merge_gate still denies without Converge / authorize_merge.py"
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "pytest tests/ops/autonomy/test_kernel_gate.py tests/ops/scripts/test_pr_lifecycle.py tests/ops/scripts/test_ci_changed_file_selector.py",
+      "pass_criteria": "exit 0",
+      "status": "passed"
+    },
+    {
+      "id": "V2",
+      "command": ".venv/bin/python skills/l9-plan/scripts/validate_plan_document.py docs/plans/publish_ceremony_once_d08758b6.plan.json",
+      "pass_criteria": "exit 0",
+      "status": "passed"
+    },
+    {
+      "id": "V3",
+      "command": "make pr",
+      "pass_criteria": "one local gate then open PR; remediates=1; no merge",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "none",
+    "stop_reason": "local tests and plan document PASS; make pr still required"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/autonomy/kernel_gate.py",
+      "ops/scripts/run_pr_precommit.sh",
+      "ops/scripts/open_pr_after_gate.sh",
+      "ops/scripts/run_python_test_suites.py",
+      "ops/autonomy/surface_profile.yaml",
+      "rules/48-make-pr-remediation.mdc",
+      "CANONICAL_LAW.md",
+      "AGENTS.md",
+      "INVARIANTS.md",
+      "Makefile",
+      ".github/workflows/l9-lint-test.yml",
+      "environment/generated/llm-rules/",
+      "tests/ops/scripts/test_pr_lifecycle.py",
+      "tests/ops/scripts/test_ci_changed_file_selector.py",
+      "docs/plans/publish_ceremony_once_d08758b6.plan.json"
+    ],
+    "must_not_modify": [
+      "kernels/",
+      ".github/workflows/peer-execution.yml",
+      "primary checkout /Users/ib-mac/Cursor-Governance main"
+    ],
+    "preserved_contracts": [
+      "make pr is pr-preflight then pr-check then open_pr_after_gate.sh",
+      "no second gate latch beyond existing receipt",
+      "merge still requires /l9-pr-remediation Converge"
+    ],
+    "validation_commands": [
+      "pytest tests/ops/autonomy/test_kernel_gate.py tests/ops/scripts/test_pr_lifecycle.py tests/ops/scripts/test_ci_changed_file_selector.py",
+      ".venv/bin/python skills/l9-plan/scripts/validate_plan_document.py docs/plans/publish_ceremony_once_d08758b6.plan.json",
+      "make pr"
+    ]
+  }
+}

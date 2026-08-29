@@ -12,6 +12,12 @@ from pathlib import Path
 
 from git_fetch import NO_FETCH, fetch_origin
 
+# 59371162 (#334) sliced these to 50 as a display bound. pr-train's
+# diagnose_node fail-closes when cherry_novel > len(cherry_novel_commits),
+# so a cap below the branch silently blocks the train. 100 is the floor.
+RECEIPT_SHA_LIST_CAP = 100
+RECEIPT_SUBJECT_LIST_CAP = 100
+
 
 def _run(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
@@ -250,12 +256,12 @@ def diagnose(repo: Path, ref: str, baseline: str, do_fetch: bool = False) -> dic
         "cherry_available": cherry_available,
         "cherry_novel": len(cherry_novel),
         "cherry_dup": len(cherry_dup),
-        "cherry_novel_commits": cherry_novel[:50],
-        "cherry_dup_commits": cherry_dup[:50],
+        "cherry_novel_commits": cherry_novel[:RECEIPT_SHA_LIST_CAP],
+        "cherry_dup_commits": cherry_dup[:RECEIPT_SHA_LIST_CAP],
         "merge_commits_unexamined": unexamined_merges,
         "content_contained": contained,
         "redundancy_basis": _basis(classification, cherry_novel, cherry_dup, contained),
-        "commit_subjects": commits[:50],
+        "commit_subjects": commits[:RECEIPT_SUBJECT_LIST_CAP],
         "rollback": f"git checkout {tip_sha}  # or reflog",
     }
     return body

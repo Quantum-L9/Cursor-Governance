@@ -8,6 +8,6 @@
     "quick-fixes": 3,
     "solutions": 2
   },
-  "ingestion_target": "graphiti_sink.emit_session()",
+  "ingestion_target": "ops/graphiti/graphiti_memory_client.py write",
   "batch_command": "python3 -m l9_ops_mcp.cli batch-ingest learning/graphiti-episodes/"
 }

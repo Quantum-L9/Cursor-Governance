@@ -62,7 +62,7 @@ def test_changed_plan_template_is_skipped(stacked_repo: Path, tmp_path: Path) ->
     assert gate.precommit(stacked_repo, ROOT, changed) == 0
 
 
-def test_changed_plan_without_receipt_fails(stacked_repo: Path, tmp_path: Path) -> None:
+def test_changed_plan_store_path_is_skipped(stacked_repo: Path, tmp_path: Path) -> None:
     gate = _gate()
     gate.record(stacked_repo, gov=ROOT)
     plan = stacked_repo / "docs" / "plans" / "hook_test_00000000.plan.md"
@@ -70,8 +70,7 @@ def test_changed_plan_without_receipt_fails(stacked_repo: Path, tmp_path: Path) 
     plan.write_text("---\nname: hook test\n---\n\n# bare\n", encoding="utf-8")
     changed = tmp_path / "changed.txt"
     changed.write_text("docs/plans/hook_test_00000000.plan.md\n", encoding="utf-8")
-    rc = gate.precommit(stacked_repo, ROOT, changed)
-    assert rc == 2
+    assert gate.precommit(stacked_repo, ROOT, changed) == 0
 
 
 def test_authorize_release_without_record_kernels(

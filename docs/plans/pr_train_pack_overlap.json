@@ -1,0 +1,341 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "PR-train pack overlap",
+  "objective": "Fix pr-train so a colocated conflict component stays one stacked car, remainder ships unique blobs including filenames main already touched, empty extracts skip instead of aborting the train, and the diagnose SHA list cap rises from 50 to 100. Land on feat/pr-train-pack-overlap from merged #370 (main @ d6b30cdc).",
+  "success_criteria": [
+    "filter_slices_against_tip: one tip-conflict or unknown probe in a colocated group skips the whole group to remainder; pytest proves no clean-subset keep",
+    "remainder_paths_for_commit keeps sha blob != tip blob (overlap included) and drops identical blobs only; collect_remainder_slice / extract_remainder checkout mechanics unchanged",
+    "ExtractEmpty skips the car (current_slice + 1, empty extract_worktree) and route_after_extract goes to stack_base; cherry-pick conflict still blocks",
+    "diagnose_ref_value.py RECEIPT_SHA_LIST_CAP=100 on cherry_novel_commits, cherry_dup_commits, commit_subjects; incomplete-receipt halt still fires when count > listed",
+    "pytest tests/workflows/test_pr_train_dag.py PASS then make precommit-repo PASS on authored pathspecs; Cursor stop (do not make pr unless the human typed it)"
+  ],
+  "scope": {
+    "in": [
+      "workflows/dags/pr_train_dag.py filter_slices_against_tip remainder_paths_for_commit ExtractEmpty extract_node route_after_extract",
+      "skills/l9-git-work-preserve/scripts/diagnose_ref_value.py RECEIPT_SHA_LIST_CAP",
+      "tests/workflows/test_pr_train_dag.py remainder all-or-nothing empty-skip",
+      "commands/pr-train.md OPEN_TRAIN remainder sentence"
+    ],
+    "out": [
+      "Re-running /pr-train --execute / leftover haul",
+      "Restoring unique_tip_node (never in #370)",
+      "Makefile / pyproject.toml / dag-authoring / audit-component from #370",
+      "MERGE_TRAIN, force-push, --all-refs",
+      "Uncapping novel lists entirely",
+      "make campaign / Program Lock / AGENTS.md rewrite"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse HEAD; git rev-parse --abbrev-ref HEAD",
+      "pass_criteria": "HEAD d6b30cdc0dd87213e972d61dd383b91a1b63d180; branch feat/pr-train-pack-overlap from that tip",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "gh pr view 370 --json state,mergeCommit",
+      "pass_criteria": "PR 370 MERGED at d6b30cdc; remainder/split/empty-extract/[:50] unchanged on that tip",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "Read remainder_paths_for_commit, filter_slices_against_tip, default_extract applied==0, diagnose cherry_novel[:50]",
+      "pass_criteria": "Filename fork-diff remainder, partial-group keep, fatal empty extract, 50-cap confirmed on main@370",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T0",
+      "task": "Emit this PLAN_DOCUMENT JSON and Cursor Build .plan.md under docs/plans/; validate with validate_plan_document.py. Branch feat/pr-train-pack-overlap from d6b30cdc.",
+      "files": [
+        "docs/plans/pr_train_pack_overlap.json",
+        "docs/plans/pr_train_pack_overlap_37baa1e0.plan.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "docs/plans/",
+      "leverage_rank": 7,
+      "shared_root_cause": "l9-plan-simple dual artifact required before mutation"
+    },
+    {
+      "id": "T1",
+      "task": "filter_slices_against_tip: one tip-conflict or unknown in a colocated non-remainder group skips the whole ordered group to remainder. Do not publish a clean subset. Keep parent-inherit only inside a fully clean group. Disjoint fully-clean groups stay separate cars.",
+      "files": [
+        "workflows/dags/pr_train_dag.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T0"
+      ],
+      "operation": "Replace",
+      "anchor": "filter_slices_against_tip",
+      "leverage_rank": 1,
+      "shared_root_cause": "splitting a path-union into a 6-commit PR dropped the rest of the component"
+    },
+    {
+      "id": "T2",
+      "task": "remainder_paths_for_commit: keep paths whose blob at sha differs from tip (or tip lacks the path). Drop identical blobs only. Do not use tip_changed_paths fork-diff. Leave collect_remainder_slice last-writer and extract_remainder checkout mechanics.",
+      "files": [
+        "workflows/dags/pr_train_dag.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T0"
+      ],
+      "operation": "Replace",
+      "anchor": "remainder_paths_for_commit",
+      "leverage_rank": 2,
+      "shared_root_cause": "filename overlap with main dropped unique blobs the train is supposed to package"
+    },
+    {
+      "id": "T3",
+      "task": "Raise ExtractEmpty from empty cherry-pick skip-all and empty remainder. extract_node catches it: current_slice+1, clear extract_worktree. route_after_extract goes to stack_base when worktree empty. Cherry-pick conflict still fail-closes.",
+      "files": [
+        "workflows/dags/pr_train_dag.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
+      "operation": "Insert",
+      "anchor": "default_extract / extract_node / route_after_extract",
+      "leverage_rank": 3,
+      "shared_root_cause": "empty extract aborted the train before remainder (appended last) could run"
+    },
+    {
+      "id": "T4",
+      "task": "RECEIPT_SHA_LIST_CAP=100 on cherry_novel_commits, cherry_dup_commits, commit_subjects in diagnose_ref_value.py. Comment 59371162 display bound vs pr-train incomplete-receipt halt. Keep test_incomplete_novelty_receipt_halts.",
+      "files": [
+        "skills/l9-git-work-preserve/scripts/diagnose_ref_value.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T0"
+      ],
+      "operation": "Replace",
+      "anchor": "cherry_novel_commits[:50]",
+      "leverage_rank": 5,
+      "shared_root_cause": "cap 50 fail-closes pr-train when cherry_novel > listed; user allowed 100"
+    },
+    {
+      "id": "T5",
+      "task": "Update commands/pr-train.md OPEN_TRAIN: colocated slice is all-or-nothing; remainder is unique blobs vs tip including overlap; last writer wins. Do not restore unique_tip.",
+      "files": [
+        "commands/pr-train.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1",
+        "T2"
+      ],
+      "operation": "Replace",
+      "anchor": "OPEN_TRAIN remainder sentence",
+      "leverage_rank": 6,
+      "shared_root_cause": "slash still taught filename-never-touched remainder"
+    },
+    {
+      "id": "T6",
+      "task": "Rewrite remainder tests (overlap unique bytes kept; identical blob dropped). Add all-or-nothing group test and ExtractEmpty skip/route tests. Keep two-group clean-stays and H4 extract_remainder mechanics. pytest then make precommit-repo. Scoped commit. No make pr.",
+      "files": [
+        "tests/workflows/test_pr_train_dag.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5"
+      ],
+      "operation": "Insert",
+      "anchor": "tests/workflows/test_pr_train_dag.py",
+      "leverage_rank": 4,
+      "shared_root_cause": "old tests encode the filename-drop and partial-keep contract this plan rejects"
+    }
+  ],
+  "critical_path": [
+    "T0",
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T5",
+    "T6"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "Validated simple plan artifacts on feat/pr-train-pack-overlap @ d6b30cdc",
+      "unlocks": "mutation of DAG remainder/filter"
+    },
+    {
+      "id": "M1",
+      "outcome": "All-or-nothing filter + blob remainder + empty-skip + cap 100 + command sentence",
+      "unlocks": "tests that prove overlap is packaged not dropped"
+    },
+    {
+      "id": "M2",
+      "outcome": "pytest + make precommit-repo PASS; scoped commit; no make pr",
+      "unlocks": "Build complete"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C0",
+      "after": "M0",
+      "evidence_required": "validate_plan_document.py PASS; branch feat/pr-train-pack-overlap; HEAD parent is d6b30cdc or HEAD is that tip before first commit",
+      "no_go_action": "stop; do not mutate DAG until dual artifact validates"
+    },
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "filter all-or-nothing and blob remainder in source; ExtractEmpty routed; RECEIPT_SHA_LIST_CAP=100",
+      "no_go_action": "do not claim overlap packaged"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "pytest tests/workflows/test_pr_train_dag.py PASS; make precommit-repo PASS",
+      "no_go_action": "do not scoped-commit a red tree; do not make pr"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No new standing operating instruction"
+    },
+    {
+      "surface": "Makefile",
+      "action": "n_a",
+      "reason": "No Make target change; #370 Makefile stays untouched"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "Merge-authorization and symlink law unchanged"
+    },
+    {
+      "surface": "commands/pr-train.md",
+      "action": "update",
+      "todo_ids": [
+        "T5"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does all-or-nothing remainder of a 43-commit path-union become one huge mixed PR, and is that worse than #370's 6-commit subset?",
+      "Can blob remainder overwrite a previously published car of the same component?",
+      "Does skipping empty extract hide a real cherry-pick conflict?",
+      "Does raising the SHA cap to 100 still fail-close at 101 via incomplete receipt?"
+    ],
+    "assumed_false_ifs": [
+      "Least-PR packing of a path-union is one remainder car; disjoint slices stay separate",
+      "All-or-nothing prevents publishing a clean subset that remainder would then fight",
+      "ExtractEmpty is only empty-applied, not merge-tree conflict",
+      "Graph MERGE_TRAIN stays forbidden"
+    ],
+    "blast_radius": "Wrong all-or-nothing can merge unrelated clean work into remainder; wrong blob remainder can clobber tip files with older donor blobs; empty-skip must not swallow cherry-pick conflicts",
+    "rollback": "Revert feat/pr-train-pack-overlap; main @ d6b30cdc (#370) stays"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T6",
+      "T4",
+      "T5",
+      "T0"
+    ],
+    "shared_causes": [
+      "filter_slices_against_tip split colocated groups into a publishable clean subset",
+      "remainder used filename fork-diff instead of unique blobs",
+      "empty extract halted the train before remainder (last slice) ran"
+    ],
+    "deletions_or_consolidations": [
+      "Stop using tip_changed_paths as the remainder keep predicate",
+      "Do not add a second remainder extract path"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Remainder last-writer overwrites main's version of overlapping files",
+      "mitigation": "That is the intended packaging; MERGE_TRAIN sees one car not a split fight; cherry-pick conflict still abort"
+    },
+    {
+      "risk": "Scooping foreign dirty (tighten_kernel_latch, staging_wake plans)",
+      "mitigation": "Pathspecs only; do not git add those"
+    },
+    {
+      "risk": "Implementing unique_tip or re-running --execute in this Build",
+      "mitigation": "Out of scope; stop after precommit + scoped commit"
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "$PWD/.venv/bin/python -m pytest tests/workflows/test_pr_train_dag.py",
+      "pass_criteria": "PASS including all-or-nothing, blob remainder, ExtractEmpty skip, incomplete receipt, two-group clean-stays",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "make precommit-repo (catalog .pre-commit-config.yaml, changed files)",
+      "pass_criteria": "PASS on authored pathspecs; do not make pr unless the human typed it",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "Build (current checkout)",
+    "stop_reason": "Plan validated structurally; implementation is this Build"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "workflows/dags/pr_train_dag.py",
+      "skills/l9-git-work-preserve/scripts/diagnose_ref_value.py",
+      "tests/workflows/test_pr_train_dag.py",
+      "commands/pr-train.md",
+      "docs/plans/pr_train_pack_overlap.json",
+      "docs/plans/pr_train_pack_overlap_37baa1e0.plan.md"
+    ],
+    "must_not_modify": [
+      "AGENTS.md",
+      "Makefile",
+      "CANONICAL_LAW.md",
+      "pyproject.toml",
+      "ops/autonomy/authorize_merge.py",
+      "skills/l9-pr-remediation/"
+    ],
+    "preserved_contracts": [
+      "LANGGRAPH_RUNTIME not SessionDAG",
+      "graph does not MERGE_TRAIN or write merge authorization",
+      "cherry-pick conflict is not resolved mid-pick",
+      "extract_remainder checkout mechanics (H4)",
+      "autonomous_merge false"
+    ],
+    "validation_commands": [
+      "$PWD/.venv/bin/python -m pytest tests/workflows/test_pr_train_dag.py",
+      "make precommit-repo",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "standard"
+}
