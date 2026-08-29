@@ -1,0 +1,497 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Per-repository bootstrap correctness for multi-repo Claude cloud containers",
+  "objective": "Remove the recurring friction observed while executing the l9cr-context-compiler-pr-pack-v2 contract against Quantum-L9/l9-cognitive-runtime: make the Cursor-Governance cloud bootstrap resolve every repository in a multi-repo container instead of only the container root, and make readiness receipts bind to the governance revision they were produced against.",
+  "success_criteria": [
+    "l9-cognitive-runtime pytest is 184 passed / 0 failed with no dangling bootstrap symlinks in the tree (baseline today: 2 failed, 182 passed)",
+    "find /home/user/*/.claude -xtype l returns zero entries after a SessionStart in a multi-repo container (baseline today: 16 across 4 repos)",
+    "uv sync --locked --extra dev --dry-run reports zero package deltas in every detected repository after SessionStart (baseline today: 3 deltas in l9-cognitive-runtime including a missing declared dependency)",
+    "the session-deps banner names each repository it provisioned and its per-repo outcome, and never reports 'toolchain ready' for a repository whose lock is unapplied",
+    "claude_bootstrap_receipt.py reports state UNKNOWN when receipt.governance_revision does not equal the live governance HEAD, and SessionStart re-runs the installer instead of reprinting a stale DEGRADED verdict",
+    "make claude-env exits 0 in a correctly bootstrapped multi-repo container (baseline today: exit 5 on every session)"
+  ],
+  "scope": {
+    "in": [
+      "Cursor-Governance ops/scripts/lib shared workspace-root resolver extracted from environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
+      "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh per-repository provisioning",
+      "ops/scripts/claude_projection.py and ops/scripts/reconcile_claude_l9_skills.py per-repository .claude mirror reconciliation",
+      "ops/scripts/claude_bootstrap_receipt.py revision-bound staleness",
+      "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh installer re-run on stale receipt",
+      "conformance tests under tests/ for each of the above"
+    ],
+    "out": [
+      "implementing the CompiledTaskContext IR or any part of l9cr-context-compiler-pr-pack-v2",
+      "changing the make pr publish path, merge authority, or L4 release gating",
+      "changing Graphiti transport, broker identity, or the secret boundary",
+      "repairing the invalid GH_TOKEN sentinel or provisioning a PAT on this surface",
+      "rewriting the prior P307 environment-experience pack records",
+      "any edit inside l9-cognitive-runtime beyond adding absent agent-authority docs (R5)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind governance SSOT /home/user/Cursor-Governance at main@0fc6ee6 and confirm CLAUDE_CODE_REMOTE=true",
+      "pass_criteria": "single governance root resolved; cloud surface confirmed",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "reproduce the session-deps fingerprint at the container root: hash the manifest+tool-version input the script builds for /home/user",
+      "pass_criteria": "reproduces banner fingerprint 9ff843f2c5497a1fd3d6b792a4899071d33d54f4ea709ef369cb0aaa1c3f8df1 from tool versions alone, proving zero manifests were seen",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "cd /home/user/l9-cognitive-runtime && uv sync --locked --extra dev --dry-run",
+      "pass_criteria": "enumerates the drift the session banner denied",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "cd /home/user/l9-cognitive-runtime && .venv/bin/python -m pytest -q",
+      "pass_criteria": "captures the failing baseline attributable to bootstrap residue",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "for r in /home/user/*/; do find \"$r.claude\" -xtype l -printf '%p -> %l\\n'; done",
+      "pass_criteria": "enumerates dangling mirror links and the SSOT paths they target",
+      "status": "passed"
+    },
+    {
+      "id": "P5",
+      "command_or_action": "read ~/.l9/claude/projection-receipt.json adapter scopes and ~/.l9/claude/bootstrap-state.json governance_revision",
+      "pass_criteria": "confirms project-scope adapter targets the container root and the receipt names a superseded governance revision",
+      "status": "passed"
+    },
+    {
+      "id": "P6",
+      "command_or_action": "grep prior-art in WIP/8-26-26/environment_experience_improvement_pack_p307 for overlapping records",
+      "pass_criteria": "existing record IDs identified so this plan extends rather than re-derives them",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Extract the per-repository workspace-root resolver into a shared library. memory_prefetch._hydration_roots() is the only correct multi-repo detector in the bootstrap (children of the workspace with a .git entry, sorted, capped at 6). Promote it verbatim to a shared module and make memory_prefetch import it, so one definition of 'which repositories is this session working in' exists.",
+      "files": [
+        "ops/scripts/lib/workspace_roots.py",
+        "environment/agents/adapters/claude-code/hooks/memory_prefetch.py",
+        "tests/ops/scripts/test_workspace_roots.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new module; memory_prefetch keeps its public behavior and cap",
+      "leverage_rank": 1,
+      "shared_root_cause": "RC-1 container-root-as-workspace"
+    },
+    {
+      "id": "T2",
+      "task": "Reconcile per-repository .claude mirrors. The claude-code-project projection adapter targets /home/user/.claude, so per-repo .claude/skills and .claude/commands mirrors created by earlier single-repo sessions sit outside every reconciler's target set and keep symlinks to skills the SSOT has removed. Iterate workspace_roots and apply the existing stale-removal path (reconcile_claude_l9_skills.remove_managed) to each repository mirror; report removals per repository in the projection receipt.",
+      "files": [
+        "ops/scripts/claude_projection.py",
+        "ops/scripts/reconcile_claude_l9_skills.py",
+        "ops/scripts/reconcile_claude_commands.py",
+        "tests/ops/scripts/test_claude_projection_multi_repo.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "reconcile_claude_l9_skills.py stale loop at 'for stale in sorted(previous - set(desired))'",
+      "leverage_rank": 2,
+      "shared_root_cause": "RC-1 container-root-as-workspace"
+    },
+    {
+      "id": "T3",
+      "task": "Make session_deps_cloud.sh provision each detected repository. Today --workspace receives /home/user, which holds no manifest, so the fingerprint degenerates to tool versions, toolchain_present() can never return true, and the install pass is a no-op that still reports 'toolchain ready'. Loop workspace_roots, fingerprint and stamp per repository, and aggregate a per-repo banner line.",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+        "tests/environment/adapters/test_session_deps_cloud.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "WORKSPACE assignment and the fingerprint()/toolchain_present() pair",
+      "leverage_rank": 3,
+      "shared_root_cause": "RC-1 container-root-as-workspace"
+    },
+    {
+      "id": "T4",
+      "task": "Make the deps stamp assert applied state, not attempted state. Add a post-install proof per repository: uv sync --locked --check (or an equivalent lock-vs-environment probe) plus an import smoke of the repo's own package, and refuse to write the stamp or emit 'toolchain ready' unless the proof passes. This is the detector that would have caught RC-1 on the day it started.",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+        "tests/environment/adapters/test_session_deps_cloud.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T3"
+      ],
+      "operation": "Replace",
+      "anchor": "DEPS_FAILED accounting and the outer stamp-on-clean-run branch",
+      "leverage_rank": 4,
+      "shared_root_cause": "RC-1 container-root-as-workspace"
+    },
+    {
+      "id": "T5",
+      "task": "Bind bootstrap receipt freshness to the governance revision. claude_bootstrap_receipt.py carries governance_revision through but expires on wall-clock TTL only, so a DEGRADED verdict produced against a superseded governance revision is reported as current. Return UNKNOWN with reason 'revision superseded' when the recorded revision differs from live governance HEAD.",
+      "files": [
+        "ops/scripts/claude_bootstrap_receipt.py",
+        "tests/ops/scripts/test_claude_bootstrap_receipt.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "the ttl comparison returning 'receipt expired'",
+      "leverage_rank": 5,
+      "shared_root_cause": "RC-2 time-based rather than revision-based readiness"
+    },
+    {
+      "id": "T6",
+      "task": "Re-run the installer when the receipt is UNKNOWN or DEGRADED instead of reprinting it. SessionStart prints the receipt's own remediation string but never executes it, so a degraded verdict is inherited indefinitely. Invoke the adapter installer bounded and fail-open, then re-read the receipt so the banner reports post-repair state.",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+        "tests/environment/adapters/test_session_start_bootstrap_repair.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T5"
+      ],
+      "operation": "Replace",
+      "anchor": "emit_bootstrap_status()",
+      "leverage_rank": 6,
+      "shared_root_cause": "RC-2 time-based rather than revision-based readiness"
+    },
+    {
+      "id": "T7",
+      "task": "Publish an observed GitHub transport truth-table for this surface and correct the stale prior-art record. gh is installed at /usr/bin/gh and gh api succeeds through the agent proxy, while gh auth status reports the GH_TOKEN sentinel invalid and still exits 0. Record which transports are proven working, mark rule 62's PAT-resolution path inapplicable on a model-controlled surface, and supersede P307 CR-105/CR-124 ('no gh CLI exists'), which the current container falsifies.",
+      "files": [
+        "environment/generated/llm-rules/62-github-openclaw-authority.md",
+        "rules/62-github-openclaw-authority.mdc",
+        "docs/DEGRADED_MODE_CONTRACT.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "the 'Sole PAT' and 'Ask-human only' clauses",
+      "leverage_rank": 7,
+      "shared_root_cause": "RC-3 documented capability contradicts observed transport"
+    },
+    {
+      "id": "T8",
+      "task": "Seed agent-authority docs in l9-cognitive-runtime. It is the only in-scope repository with no CLAUDE.md, AGENTS.md, INVARIANTS.md or ARCHITECTURE.md, which is why the PR pack has to ship INVARIANTS.md for verbatim copy as step 3 of its own execution order. Add the authority pointer and invariants index so repo law is loadable without a pack.",
+      "files": [
+        "/home/user/l9-cognitive-runtime/CLAUDE.md",
+        "/home/user/l9-cognitive-runtime/AGENTS.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "repository root; mirror the Cursor-Governance CLAUDE.md authority-pointer shape",
+      "leverage_rank": 8,
+      "shared_root_cause": "RC-4 repo law absent from the repository"
+    },
+    {
+      "id": "T9",
+      "task": "Replace the standing publish breakglass with a scoped expiring receipt. L9_PUBLISH_PATH_OVERRIDE is exported into every session carrying the literal text 'one-time breakglass authorized by user', so a one-time authorization has become permanent configuration. Move it to a receipt with an issued-at and a TTL that the execution gate reads.",
+      "files": [
+        "ops/autonomy/local_execution_gate.py",
+        "tests/ops/autonomy/test_publish_path_override.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "the L9_PUBLISH_PATH_OVERRIDE read in the publish-path branch",
+      "leverage_rank": 9,
+      "shared_root_cause": "RC-5 standing authority from a one-time grant"
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3",
+    "T4"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "one shared per-repository workspace-root resolver exists and memory_prefetch consumes it",
+      "unlocks": "T2 and T3 can both iterate repositories without a second detector"
+    },
+    {
+      "id": "M2",
+      "outcome": "no dangling bootstrap symlinks in any repository; l9-cognitive-runtime pytest is fully green",
+      "unlocks": "a trustworthy baseline before any contract implementation work"
+    },
+    {
+      "id": "M3",
+      "outcome": "every detected repository is provisioned from its own lock and the banner proves it",
+      "unlocks": "reproducible local test results that match CI"
+    },
+    {
+      "id": "M4",
+      "outcome": "readiness receipts invalidate on governance revision change and SessionStart repairs instead of reprinting",
+      "unlocks": "make claude-env becomes an informative signal again"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "test_workspace_roots.py PASS and memory_prefetch multi-repo hydration output unchanged against the current 4-repo container",
+      "no_go_action": "stop; do not wire consumers to a resolver that changed hydration behavior"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "find /home/user/*/.claude -xtype l returns nothing, and pytest in l9-cognitive-runtime reports 184 passed 0 failed",
+      "no_go_action": "stop; the two test_gar_deployment_closure failures are the acceptance signal and must clear before proceeding"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "uv sync --locked --extra dev --dry-run reports zero deltas in all three uv repositories and the banner names each repository",
+      "no_go_action": "stop; a silent no-op is the defect being fixed and must not survive its own fix"
+    },
+    {
+      "id": "C4",
+      "after": "M4",
+      "evidence_required": "a receipt hand-stamped with a superseded governance_revision reads UNKNOWN, and make claude-env exits 0 after repair",
+      "no_go_action": "leave T6 unshipped and keep T5 alone; a repair loop that cannot converge is worse than a stale banner"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "CLAUDE.md",
+      "action": "update",
+      "todo_ids": [
+        "T5",
+        "T6"
+      ],
+      "reason": "the 'Receipts expire' section describes TTL-only semantics that T5 replaces with revision binding"
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": [
+        "T3",
+        "T4"
+      ],
+      "reason": "SessionStart activation contract gains per-repository provisioning and an applied-state proof"
+    },
+    {
+      "surface": "rules/62-github-openclaw-authority.mdc",
+      "action": "update",
+      "todo_ids": [
+        "T7"
+      ],
+      "reason": "PAT resolution is not performable on a model-controlled surface where gh already works through the proxy"
+    },
+    {
+      "surface": "INVARIANTS.md",
+      "action": "n_a",
+      "reason": "no governance invariant changes; this plan repairs implementations of existing invariants"
+    },
+    {
+      "surface": "ORG_INVARIANTS.yaml",
+      "action": "n_a",
+      "reason": "no org policy change"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Is the empty deps log actually caused by the container root, or by a cache hit? Answered: the fingerprint was reproduced byte-for-byte from tool versions with zero manifests present, and toolchain_present() tests paths that cannot exist at the container root, so neither branch could have installed anything.",
+      "Are the two pytest failures pre-existing product defects rather than bootstrap residue? Answered: the failing paths are untracked and gitignored (.gitignore:31 /.claude/), the working tree is otherwise clean, and the link targets are exactly the three skills this session's own projection receipt lists as removed.",
+      "Does per-repository provisioning simply move the cost into the SessionStart budget? The 20s budget with detached continuation already exists; per-repo work must reuse it, and a container at the cap of 6 repositories must still return a banner within budget.",
+      "Would revision-binding receipts cause a repair loop on every session, since cloud SessionStart resets governance to origin/main each time? This is the main risk in T5+T6 and is why C4 can ship T5 without T6.",
+      "Is the prior P307 pack already the fix, making this rework? No: P307 CR-113 states RC-2 identically and is unbuilt, and its PROGRESS.md diagnoses the empty deps log as 'no import smoke' — a detector, not the cause. RC-1 is new."
+    ],
+    "assumed_false_ifs": [
+      "if the per-repo .claude mirrors are actually consumed by a session (they are not: the effective project scope is /home/user/.claude), then removing their stale entries could deactivate skills rather than only clearing residue",
+      "if any repository legitimately needs a .venv that diverges from its lock, then T4's applied-state proof would fail a correct environment",
+      "if a repository in the container is not meant to be provisioned at all, iterating all roots wastes budget and may run untrusted install hooks"
+    ],
+    "blast_radius": "SessionStart runs on every session of every governed cloud workspace, so a defect in T3 or T6 degrades or stalls every future session rather than one repository. T2 unlinks files inside consumer repositories; scoped wrongly it could remove tracked content. T9 touches the publish-path gate and is the only high-risk item; it is deliberately last and off the critical path.",
+    "rollback": "Each TODO is an independent commit on a branch from origin/main. Revert order is reverse-dependency (T4, T3, T2, T1). The bootstrap is fail-open by construction: reverting restores the current behavior, which is degraded but non-blocking. T2 removals are recoverable because the mirrors are untracked, gitignored, and regenerable by the projection; no tracked file is deleted. T9 reverts to reading the environment variable."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T4",
+      "T5",
+      "T6",
+      "T7",
+      "T8",
+      "T9"
+    ],
+    "shared_causes": [
+      "RC-1: the bootstrap treats WORKSPACE as one repository, but a cloud container holds many; only memory_prefetch iterates repositories, and it is the one plane that works",
+      "RC-2: readiness is time-bound rather than revision-bound, so a verdict outlives the artifacts it describes",
+      "RC-3: documented capability contradicts observed transport, so agents route around a working path or trust a false negative",
+      "RC-4: repository law lives in delivery packs rather than in the repository",
+      "RC-5: a one-time grant persists as standing configuration"
+    ],
+    "deletions_or_consolidations": [
+      "delete the second workspace-root notion: memory_prefetch._hydration_roots becomes the single definition, consumed by the deps helper and the projection adapters instead of each re-deriving one",
+      "consolidate the deps stamp so it records applied state, retiring the attempted-state stamp that produced a false 'toolchain ready'",
+      "supersede P307 CR-105 and CR-124 rather than carrying a record the current container falsifies"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "T2 unlinks a path inside a consumer repository that is tracked or author-authored",
+      "mitigation": "operate only on entries the projection recorded as managed, assert the path is a symlink into the governance SSOT, and assert git check-ignore before removal; refuse on any tracked path"
+    },
+    {
+      "risk": "per-repository provisioning exceeds the SessionStart budget in a container at the 6-repo cap and stalls the session",
+      "mitigation": "keep the existing bounded-run and self-detach design, apply the budget across the whole loop rather than per repository, and keep the helper fail-open with exit 0"
+    },
+    {
+      "risk": "T5 plus T6 produce a repair loop because cloud SessionStart resets governance to origin/main on every session, changing the revision the receipt must match",
+      "mitigation": "write the receipt with the post-reset revision and re-probe at most once per session, guarded by a per-session marker; ship T5 alone if C4 shows non-convergence"
+    },
+    {
+      "risk": "T4's applied-state proof fails on a repository whose lock is legitimately unappliable in the container, converting a silent degradation into a loud one on every session",
+      "mitigation": "report per-repository status rather than a single verdict, and keep the helper fail-open so a failing repository degrades that repository only"
+    },
+    {
+      "risk": "this plan overlaps unbuilt P307 improvements and creates a competing record set",
+      "mitigation": "T5 and T6 are recorded as the implementation of CI-004 for CR-113, T3 and T4 extend CI-028, and T7 supersedes CR-105 and CR-124 explicitly rather than adding parallel records"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Which component wrote the per-repository .claude mirrors, given the current project-scope adapter targets the container root — an earlier single-repo-workspace session, ensure_workspace_wired.sh, or migrate_claude_orphan_skills.py?",
+      "decision_effect": "determines whether T2 only cleans residue or must also stop an active writer from recreating it",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "Do the two test_gar_deployment_closure failures also fail in this repository's CI, or does CI check out a tree with no .claude mirror?",
+      "decision_effect": "if CI is green, the failure is container-only and T2 is purely a local-velocity fix; if CI is red, it is also a release blocker",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "Is the 6-repository hydration cap the right bound for dependency provisioning, which is far more expensive per repository than a memory hydrate?",
+      "decision_effect": "sets whether T3 reuses the cap or takes its own budget-derived bound",
+      "resolution": "probe"
+    },
+    {
+      "id": "U4",
+      "question": "Does any consumer read L9_PUBLISH_PATH_OVERRIDE outside ops/autonomy/local_execution_gate.py?",
+      "decision_effect": "determines whether T9 is a single-site change or a contract change across surfaces",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 -m pytest tests/ops/scripts/test_workspace_roots.py tests/ops/scripts/test_claude_projection_multi_repo.py tests/environment/adapters/test_session_deps_cloud.py -q",
+      "pass_criteria": "all new conformance tests pass",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "bash environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh --workspace /home/user && for r in /home/user/*/; do [ -f \"$r/uv.lock\" ] && (cd \"$r\" && uv sync --locked --extra dev --dry-run); done",
+      "pass_criteria": "banner names each repository; every dry-run reports zero package deltas",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "find /home/user/Cursor-Governance/.claude /home/user/l9-ci-core/.claude /home/user/l9-cognitive-runtime/.claude /home/user/l9-meta-injector/.claude -xtype l",
+      "pass_criteria": "no output",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "cd /home/user/l9-cognitive-runtime && .venv/bin/python -m pytest -q",
+      "pass_criteria": "184 passed, 0 failed",
+      "status": "pending"
+    },
+    {
+      "id": "V5",
+      "command": "make claude-env",
+      "pass_criteria": "exit 0 with RUNTIME not DEGRADED",
+      "status": "pending"
+    },
+    {
+      "id": "V6",
+      "command": "make pr-check",
+      "pass_criteria": "governance precommit and the changed-set pytest selection both pass",
+      "status": "pending"
+    },
+    {
+      "id": "V7",
+      "command": "l9 pr-check",
+      "pass_criteria": "same gate reached from a consumer checkout via the dispatcher",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2",
+      "U3",
+      "U4"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "Analysis is evidence-complete and the plan is structurally validated, but four unknowns remain that are resolvable only by reading CI history and the projection writer's git history; none blocks starting T1, and each is bound to the TODO that must resolve it before its own implementation."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/scripts/lib/",
+      "ops/scripts/claude_bootstrap_receipt.py",
+      "ops/scripts/claude_projection.py",
+      "ops/scripts/reconcile_claude_l9_skills.py",
+      "ops/scripts/reconcile_claude_commands.py",
+      "environment/agents/adapters/claude-code/hooks/",
+      "rules/62-github-openclaw-authority.mdc",
+      "tests/"
+    ],
+    "must_not_modify": [
+      "ops/autonomy/merge_gate.py",
+      "ops/scripts/open_pr_after_gate.sh",
+      "ops/scripts/pr_overlap_check.py",
+      "ops/autonomy/verification_bypass_gate.py",
+      "environment/generated/llm-rules/",
+      "CANONICAL_LAW.md"
+    ],
+    "preserved_contracts": [
+      "SessionStart is fail-open and always exits 0",
+      "no git commit hook is installed in any governed workspace",
+      "publish remains make pr; merge authority remains the l9-pr-remediation receipt",
+      "the surface holds no credentials; capabilities resolve through the broker",
+      "memory never gates repository writes",
+      "generated rule projections are regenerated, never hand-edited"
+    ],
+    "validation_commands": [
+      "make pr-check",
+      "python3 -m pytest tests/ops/scripts -q",
+      "make claude-env"
+    ]
+  }
+}
