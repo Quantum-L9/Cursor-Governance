@@ -19,17 +19,8 @@ from dataclasses import asdict, dataclass
 from datetime import datetime
 from pathlib import Path
 
-# Add governance-monitor to path
 SCRIPT_DIR = Path(__file__).parent
 sys.path.insert(0, str(SCRIPT_DIR))
-
-try:
-    from governance_monitor import GovernanceMonitor
-
-    GOVERNANCE_MONITOR_AVAILABLE = True
-except ImportError:
-    print("⚠️  Warning: governance-monitor.py not found, governance metrics disabled")
-    GOVERNANCE_MONITOR_AVAILABLE = False
 
 
 @dataclass
@@ -76,14 +67,6 @@ class OperationalOversight:
         self.log_file = self.logs_dir / "operational_health.log"
         self.dashboard_file = self.logs_dir / "dashboard_state.json"
 
-        # Initialize governance monitor if available
-        self.governance_monitor = None
-        if GOVERNANCE_MONITOR_AVAILABLE:
-            try:
-                self.governance_monitor = GovernanceMonitor(self.cursor_commands)
-            except Exception as e:
-                self.log(f"Warning: Could not initialize governance monitor: {e}")
-
     def log(self, message: str, level: str = "INFO"):
         """Log message to file and stdout"""
         timestamp = datetime.now().isoformat()
@@ -96,15 +79,7 @@ class OperationalOversight:
     def collect_health_metrics(self) -> OperationalHealth:
         """Collect current operational health metrics"""
         self.log("Collecting operational health metrics...")
-
-        # Get governance metrics if available
         governance_health = 100.0
-        if self.governance_monitor:
-            try:
-                metrics = self.governance_monitor.collect_metrics()
-                governance_health = metrics.compliance_rate
-            except Exception as e:
-                self.log(f"Warning: Could not collect governance metrics: {e}", "WARN")
 
         # Check active alerts
         active_alerts = self._check_alerts()

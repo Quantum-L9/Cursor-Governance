@@ -86,5 +86,25 @@ class EmitNativeFrontmatterTests(unittest.TestCase):
             self.assertFalse(always_apply_is_true(parsed.metadata))
 
 
+class UnparseableFrontmatterTests(unittest.TestCase):
+    """Harvest C4: unparseable metadata is a named finding, never a skip."""
+
+    def test_non_mapping_frontmatter_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "10-list.mdc"
+            path.write_text("---\n- not\n- a\n- mapping\n---\n# body\n", encoding="utf-8")
+            with self.assertRaises(ValueError) as ctx:
+                parse_rule(path)
+            self.assertIn("frontmatter must be a mapping", str(ctx.exception))
+
+    def test_invalid_yaml_frontmatter_raises(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "10-broken.mdc"
+            path.write_text("---\n{[\n---\n# body\n", encoding="utf-8")
+            with self.assertRaises(ValueError) as ctx:
+                parse_rule(path)
+            self.assertIn("frontmatter parse failed", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
