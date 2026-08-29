@@ -1,11 +1,11 @@
 ## Issue unblock (session reference)
 
-**Cluster:** Quantum-L9/Cursor-Governance#374
-**Owning fix:** PR #395 — `end-of-file-fixer` / `trailing-whitespace` skip `docs/plans/claude-code/<pack>/` (same class as `dist/`)
-**Next:** `l9-pr-remediation` on PR #395 (issue-remediation does not merge). Next CODEBASE after that: #368 (CANONICAL_LAW Durable episodes successor). #367 Makefile targets already absent on `origin/main`.
+**Cluster:** Quantum-L9/Cursor-Governance#368
+**Owning fix:** this branch — append-only successor under CANONICAL_LAW §8 naming `graphiti_memory_client.py` + hydration as the live Durable-episodes interface
+**Next:** publish PR then merge (user asked issues→0). #367 Makefile targets already absent on `origin/main`.
 **Pickup:** Graphiti PICKUP written 2026-08-29
 
-Prior: #303 broker hardening — PR #320. #301 EXTERNAL / #302 INFRA remain.
+Prior: #374 closed via PR #395. SEO-Bot #74/#75 closed via PR #76. #303 broker / #301 EXTERNAL / #302 INFRA remain.
 
 Prior cluster #171 (memory gates reporting unmeasured state) is closed: PR #264
 landed both fixes and they were re-verified against `main@498dcaa` this session.
