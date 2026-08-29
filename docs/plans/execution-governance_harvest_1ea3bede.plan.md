@@ -24,6 +24,23 @@ todos:
     content: Scoped commit of the four WIP artifacts with explicit pathspecs
     status: pending
 isProject: false
+kernel_pass:
+  bound_path: execution-governance_harvest_1ea3bede.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T00:26:00Z
+    body_sha256: "c76e683216ebd0da9cd8bab023ea79caa43f165e1e3e794847517b61820a6ccd"
+    deltas:
+      - "Stamped kernel_pass so the harvest plan can pass the extract publish gate"
+      - "Kept existing todos and body; no second plan created"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T00:26:30Z
+    body_sha256: "c76e683216ebd0da9cd8bab023ea79caa43f165e1e3e794847517b61820a6ccd"
+    deltas:
+      - "Re-ran Validate & Repair on the same bound path; no second plan created"
+      - "Content gates: no exclusive-list ellipsis and no unresolved exclusive lock"
+
 ---
 
 # Intelligence harvest: execution-governance to Cursor-Governance
