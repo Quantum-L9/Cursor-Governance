@@ -420,8 +420,7 @@ precommit:
 ## Skips machine-local symlinks-check unless WS is a local governance SSOT clone
 ## (skills/AUTONOMY_MANIFEST.yaml + rules/RULES-MANIFEST.yaml present).
 precommit-repo:
-	PR_BASE="$(PR_BASE)" PR_STACK="$(PR_STACK)" \
-		bash ops/scripts/run_pr_precommit.sh "$(WS)"
+	PR_BASE="$(PR_BASE)" bash ops/scripts/run_pr_precommit.sh "$(WS)"
 
 ## Commit + rebase + push this clone to origin/main (same as sessionEnd hook)
 backup:
@@ -867,3 +866,6 @@ claude-readiness:
 # GNU Make 3.81 does not put an unexported target-specific var in the
 # recipe environment; export so run_pr_gate.sh sees it.
 pr: export PR_EARLY_OVERLAP = 1
+# Pass PR_STACK into the unchanged precommit-repo recipe (additive_only).
+# GNU Make 3.81 needs the assignment; a bare `export PR_STACK` would empty it.
+precommit-repo: export PR_STACK = $(PR_STACK)

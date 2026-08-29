@@ -529,6 +529,11 @@ def test_gate_hard_stop_precedes_pytest() -> None:
     assert heal_at != -1 and wave_at != -1
     assert heal_at < wave_at
     assert "_wave_start sync " not in gate
+    heal_block = gate[heal_at:wave_at]
+    assert "_gate_run_projection_heal" in heal_block
+    fn_at = gate.find("_gate_run_projection_heal() {")
+    assert fn_at != -1 and fn_at < heal_at
+    assert "--check --quiet --no-receipt" not in gate[fn_at:heal_at]
 
 
 def test_workflow_action_pins() -> None:

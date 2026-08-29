@@ -935,9 +935,10 @@ pr-preflight / pr-check start**, not only after the gate in
 than `origin/main` / `main` is never rewritten. `open_pr_after_gate.sh` reuses
 the stack-base receipt so the opened PR targets the same parent the gate used.
 
-`sync_generated_artifacts.py` runs in the **serialized writer** wave. Tracked
-dirt after that heal is "commit the rewrite, then re-run" — same as ruff.
-Reader-wave yaml / projection do not share a wall-clock window with that writer.
+`sync_generated_artifacts.py` and `claude_projection.py` (no `--check`) run in
+the **serialized writer** wave. Tracked dirt after that heal is "commit the
+rewrite, then re-run" — same as ruff. Reader-wave yaml / projection `--check`
+do not share a wall-clock window with that writer.
 Reader `files were modified` with no hook exit code is classified (generated
 WARN / window-only continue), not a hard Error 1.
 

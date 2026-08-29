@@ -198,7 +198,14 @@ def test_generated_heal_is_serialized_before_reader_wave() -> None:
     assert heal_at != -1 and wave_at != -1
     assert heal_at < wave_at
     assert "_wave_start sync " not in gate
-    assert "commit the rewrite, then re-run make pr." in gate[heal_at:wave_at]
+    heal_block = gate[heal_at:wave_at]
+    assert "commit the rewrite, then re-run make pr." in heal_block
+    assert "_gate_run_projection_heal" in heal_block
+    fn_at = gate.find("_gate_run_projection_heal() {")
+    assert fn_at != -1 and fn_at < heal_at
+    heal_fn = gate[fn_at:heal_at]
+    assert "--quiet --no-receipt" in heal_fn
+    assert "--check --quiet --no-receipt" not in heal_fn
     readers = gate[gate.find("_gate_run_readers") : wave_at]
     assert "files were modified by this hook" in readers
     assert "modified-files window" in readers
@@ -211,7 +218,10 @@ def test_makefile_passes_pr_stack_into_gate_recipes() -> None:
     assert 'PR_STACK="$(PR_STACK)"' in preflight
     assert 'PR_STACK="$(PR_STACK)"' in pr_check
     precommit_repo = makefile.split("precommit-repo:", 1)[1].split("\n\n", 1)[0]
-    assert 'PR_STACK="$(PR_STACK)"' in precommit_repo
+    # Recipe line stays byte-identical (additive_only). PR_STACK is a
+    # target-specific export so the leaf still sees auto without a deletion.
+    assert 'PR_BASE="$(PR_BASE)" bash ops/scripts/run_pr_precommit.sh' in precommit_repo
+    assert "precommit-repo: export PR_STACK = $(PR_STACK)" in makefile
     assert "pr_stack_apply_publish_base" in PREFLIGHT.read_text(encoding="utf-8")
     assert "pr_stack_apply_publish_base" in OPEN_PR.read_text(encoding="utf-8")
     assert "pr_stack_apply_publish_base" in GATE.read_text(encoding="utf-8")

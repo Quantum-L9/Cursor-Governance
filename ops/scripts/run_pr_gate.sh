@@ -678,8 +678,27 @@ _gate_run_readers() {
   return 1
 }
 
+_gate_run_projection_heal() {
+  echo "--- local-activation heal ---"
+  is_local=0
+  if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -d "${HOME}/.cursor" && -w "${HOME}/.cursor" ]]; then
+    is_local=1
+  fi
+  if [[ "$is_local" -ne 1 || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
+    echo "OK: skip local-activation heal (CI or non-writable ~/.cursor)"
+    return 0
+  fi
+  if [[ -f "$GOV_ROOT/ops/scripts/project_llm_rules.py" ]]; then
+    python3 "$GOV_ROOT/ops/scripts/project_llm_rules.py" --root "$WS" --quiet
+  fi
+  python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
+    --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
+    --quiet --no-receipt
+}
+
 echo "=== generated heal (serialized writer) ==="
 _gate_run_sync
+_gate_run_projection_heal
 if git status --porcelain | grep -qvE '^\?\?'; then
   echo "FAIL: tracked files dirty after generated heal — commit the rewrite, then re-run make pr."
   echo "      Do not auto-stage. Paths:"
