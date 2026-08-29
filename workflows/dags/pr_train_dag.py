@@ -501,20 +501,22 @@ def default_extract(
 
 def _l4_authorize_worktree(worktree: str) -> None:
     """Fresh extract worktrees have no L4 receipt; make pr fail-closes without one."""
+    # --workspace is a parent flag; it must precede the subcommand.
     for args in (
-        ["begin", "--workspace", worktree, "--contract-id", GRAPH_ID],
-        ["record-kernels", "--workspace", worktree],
-        ["authorize-release", "--workspace", worktree],
+        ["--workspace", worktree, "begin", "--contract-id", GRAPH_ID],
+        ["--workspace", worktree, "record-kernels"],
+        ["--workspace", worktree, "authorize-release"],
     ):
         proc = subprocess.run(
             [_python(), str(_L4_LOCAL), *args],
+            cwd=worktree,
             text=True,
             capture_output=True,
             check=False,
         )
         if proc.returncode != 0:
             raise RuntimeError(
-                proc.stderr.strip() or proc.stdout.strip() or f"l4_local.py {args[0]} failed"
+                proc.stderr.strip() or proc.stdout.strip() or f"l4_local.py {args[2]} failed"
             )
 
 
