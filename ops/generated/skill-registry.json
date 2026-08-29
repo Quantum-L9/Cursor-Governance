@@ -794,7 +794,7 @@
     },
     {
       "composition_role": "general",
-      "description": "ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, make pr-check fails, or adding an enforceable ci gate.",
+      "description": "ci/cd pipeline status, fix failures, list gates, and author ci regression policies. use when github actions fails, OPEN_PR=0 make pr fails, or adding an enforceable ci gate.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-ci-ops",
@@ -871,7 +871,7 @@
     },
     {
       "composition_role": "general",
-      "description": "Audit, deterministically verify, or runtime-probe a named component \u2014 exports, imports, wiring, and loadability \u2014 as a read-only escalation ladder. Use from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring or registration, for editing the component, or for generic repo exploration.",
+      "description": "Audit, deterministically verify, or runtime-probe a named component \u2014 exports, imports, wiring, and loadability \u2014 as a read-only escalation ladder. Use from /audit-component, or from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring or registration, for editing the component, or for generic repo exploration.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-component-verification",
@@ -1323,5 +1323,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "788452df425c73f3e5bc18f9044458164e553d6488c940f7ded52b5c0f0ff985",
-  "source_skill_corpus_sha256": "f64989f5996a39a7daff7b6b32ff5edda4530200a8f0c4be718614e589a2ac80"
+  "source_skill_corpus_sha256": "e13b846dc2777731adc8d49594753ff7021d016db15c7df65f906d31eee5ed93"
 }
