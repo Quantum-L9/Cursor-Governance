@@ -523,6 +523,12 @@ def test_gate_hard_stop_precedes_pytest() -> None:
     assert dirt < wave
     assert "unset PR_OVERLAP PR_OVERLAP_TELEMETRY PR_STACK PR_REMEDIATE" in gate
     assert "quiescing and retrying pre-commit once" not in gate
+    assert 'source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"' in gate
+    heal_at = gate.find("=== generated heal (serialized writer) ===")
+    wave_at = gate.find("=== reader wave")
+    assert heal_at != -1 and wave_at != -1
+    assert heal_at < wave_at
+    assert "_wave_start sync " not in gate
 
 
 def test_workflow_action_pins() -> None:
