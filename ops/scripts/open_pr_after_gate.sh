@@ -151,7 +151,7 @@ PY
       echo "  1) make improve"
       echo "  2) Apply kernels/Recursive Alignment.md then kernels/Validate & Repair.md"
       echo "  3) make improve IMPROVE_RECORD=1"
-      echo "  4) make pr-check && make pr"
+      echo "  4) make pr"
       exit 1
     fi
   fi

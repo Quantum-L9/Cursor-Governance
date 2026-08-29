@@ -90,6 +90,7 @@ def main() -> int:
         ("fixtures/plan_fail_shallow.json", "G_"),
         ("fixtures/plan_fail_ungrounded.json", "G_TODO_GROUND"),
         ("fixtures/plan_fail_quality.json", "G_"),
+        ("fixtures/plan_fail_precommit_config.json", "G_PRECOMMIT_CONFIG"),
     ]
     for rel, needle in fail_cases:
         proc = run([sys.executable, "scripts/validate_plan_document.py", rel])

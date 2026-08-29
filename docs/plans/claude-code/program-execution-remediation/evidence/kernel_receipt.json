@@ -1,0 +1,13 @@
+{
+  "schema": "l9.plan-kernel-receipt.v1",
+  "plan_path": "plans/program_execution_authority_recovery_remediation_d681ee05.plan.md",
+  "canonical_body_sha256": "4f29033f9990e93c7c2cff5b2180bed6d297b53cfe98acde93ad02aaf0936d8e",
+  "status": "PASS",
+  "validator_semantics": "skills/l9-plan/scripts/validate_plan_kernel_receipt.py v4.1 canonical-self hash semantics",
+  "refreshed_at": "2026-08-28T14:37:20Z",
+  "deltas": [
+    "baseline rebound to current main",
+    "compiler v2.7 executor projection replaces blocked v2.6.2 projection",
+    "terminal make pr authority narrowed to final compiler wrapper only"
+  ]
+}

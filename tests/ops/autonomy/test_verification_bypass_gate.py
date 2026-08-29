@@ -10,6 +10,9 @@ command that the gate would refuse.
 from __future__ import annotations
 
 import json
+import os
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -253,6 +256,57 @@ def test_runner_supports_staged_mode() -> None:
     runner = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
     assert "--staged" in runner
     assert 'PR_STAGED" != "1"' in runner, "clean-tree assertion must be skipped when staged"
+
+
+def _dirt_stop_verdict(repo: Path, *, staged: str) -> str:
+    """Run the SHIPPED _hard_stop_tracked_dirt against a commit in progress.
+
+    Extracted from the script rather than reimplemented: a string assertion
+    cannot tell whether the guard sits in the right place, which is how #347
+    dropped it during an extraction and left the governed commit hook rejecting
+    every commit.
+    """
+    src = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    match = re.search(r"_hard_stop_tracked_dirt\(\) \{.*?\n\}\n", src, re.S)
+    assert match, "the dirt-stop function must remain extractable for this test"
+    harness = match.group(0) + '\nPR_STAGED="${PR_STAGED:-0}"\n_hard_stop_tracked_dirt\n'
+    proc = subprocess.run(
+        ["bash", "-c", harness],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        env={**os.environ, "PR_STAGED": staged},
+        check=False,
+    )
+    return "clean" if proc.returncode == 0 else "blocked"
+
+
+@pytest.fixture()
+def commit_in_progress(tmp_path: Path) -> Path:
+    """A repo with a STAGED change to a tracked file — what a commit hook sees."""
+
+    def git(*args: str) -> None:
+        subprocess.run(["git", "-C", str(tmp_path), *args], check=True, capture_output=True)
+
+    git("init", "-q")
+    git("config", "user.email", "t@example.com")
+    git("config", "user.name", "t")
+    (tmp_path / "a.txt").write_text("v1\n", encoding="utf-8")
+    git("add", "a.txt")
+    git("commit", "-qm", "base")
+    (tmp_path / "a.txt").write_text("v2\n", encoding="utf-8")
+    git("add", "a.txt")
+    return tmp_path
+
+
+def test_staged_mode_does_not_reject_a_commit_in_progress(commit_in_progress: Path) -> None:
+    """The regression #347 introduced: every commit rejected under the shim."""
+    assert _dirt_stop_verdict(commit_in_progress, staged="1") == "clean"
+
+
+def test_unstaged_mode_still_blocks_tracked_dirt(commit_in_progress: Path) -> None:
+    """The invariant the guard exists for must survive the staged exemption."""
+    assert _dirt_stop_verdict(commit_in_progress, staged="0") == "blocked"
 
 
 def test_breakglass_alias_and_reason_floor() -> None:

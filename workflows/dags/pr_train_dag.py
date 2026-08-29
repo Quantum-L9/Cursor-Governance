@@ -152,9 +152,7 @@ def probe_cherry_conflicts(repo: Path, tip: str, sha: str) -> list[str] | None:
     parent_sha = parent.stdout.strip()
     if not parent_sha:
         return probe_sha_conflicts(repo, tip, sha)
-    return _parse_merge_tree(
-        _merge_tree(repo, f"--merge-base={parent_sha}", tip, sha)
-    )
+    return _parse_merge_tree(_merge_tree(repo, f"--merge-base={parent_sha}", tip, sha))
 
 
 def commit_unix(repo: Path, sha: str) -> int:
@@ -167,19 +165,77 @@ def commit_unix(repo: Path, sha: str) -> int:
         return 0
 
 
+def tip_changed_paths(repo: Path, tip: str, sha: str) -> set[str]:
+    """Paths the tip already rewrote since the merge-base with ``sha``."""
+    base = _git(repo, "merge-base", tip, sha)
+    if base.returncode != 0 or not base.stdout.strip():
+        return set()
+    diff = _git(repo, "diff", "--name-only", base.stdout.strip(), tip)
+    return {line for line in diff.stdout.splitlines() if line.strip()}
+
+
+def remainder_paths_for_commit(
+    repo: Path, sha: str, tip: str, commit_paths: tuple[str, ...]
+) -> tuple[str, ...]:
+    """Paths from a tip-conflict commit that main never touched.
+
+    Checking those files out onto the tip is not cherry-pick and not
+    conflict resolution. Overlap paths stay skipped.
+    """
+    touched = tip_changed_paths(repo, tip, sha)
+    return tuple(path for path in commit_paths if path and path not in touched)
+
+
+def collect_remainder_slice(
+    repo: Path, skipped_items: list[dict[str, Any]], tip: str
+) -> list[dict[str, Any]]:
+    """One remainder slice: last writer wins per unique path."""
+    by_path: dict[str, str] = {}
+    for item in skipped_items:
+        sha = str(item.get("sha") or "")
+        if not sha or not sha_is_commit(repo, sha):
+            continue
+        raw_paths = item.get("paths")
+        paths = tuple(raw_paths) if raw_paths else (load_commit_paths(repo, sha) or ())
+        for path in remainder_paths_for_commit(repo, sha, tip, paths):
+            if _git(repo, "cat-file", "-e", f"{sha}:{path}").returncode != 0:
+                by_path.pop(path, None)
+                continue
+            by_path[path] = sha
+    if not by_path:
+        return []
+    grouped: dict[str, list[str]] = {}
+    order: list[str] = []
+    for path, sha in by_path.items():
+        if sha not in grouped:
+            grouped[sha] = []
+            order.append(sha)
+        grouped[sha].append(path)
+    return [
+        {
+            "sha": sha,
+            "paths": tuple(grouped[sha]),
+            "ref": "remainder",
+            "mode": "remainder",
+        }
+        for sha in order
+    ]
+
+
 def filter_slices_against_tip(
     repo: Path,
     slices: list[list[dict[str, Any]]],
     tip: str,
-) -> tuple[list[list[dict[str, Any]]], list[str]]:
+) -> tuple[list[list[dict[str, Any]]], list[str], list[dict[str, Any]]]:
     """Drop commits whose cherry-pick onto the tip conflicts. Unknown is drop.
 
     Children of a kept parent are kept without a tip probe: ``parent..sha``
     against the original tip false-conflicts once the parent already
-    rewrites the same file.
+    rewrites the same file. Skipped items feed the unique-path remainder.
     """
     kept: list[list[dict[str, Any]]] = []
     skipped: list[str] = []
+    skipped_items: list[dict[str, Any]] = []
     for group in slices:
         by_sha = {str(item.get("sha") or ""): item for item in group}
         novels = [
@@ -199,6 +255,28 @@ def filter_slices_against_tip(
             item = by_sha[novel.sha]
             sha = novel.sha
             child_paths = set(novel.paths)
+            if item.get("mode") == "remainder":
+                paths = tuple(item.get("paths") or ())
+                if (
+                    sha
+                    and is_git_repo(repo)
+                    and sha_is_commit(repo, tip)
+                    and sha_is_commit(repo, sha)
+                ):
+                    fresh = remainder_paths_for_commit(repo, sha, tip, paths)
+                    present = tuple(
+                        path
+                        for path in fresh
+                        if _git(repo, "cat-file", "-e", f"{sha}:{path}").returncode == 0
+                    )
+                    if not present:
+                        continue
+                    item = {**item, "paths": present}
+                    child_paths = set(present)
+                keep.append(item)
+                kept_shas.add(sha)
+                kept_paths[sha] = child_paths
+                continue
             if (
                 not sha
                 or not is_git_repo(repo)
@@ -220,13 +298,14 @@ def filter_slices_against_tip(
             conflicts = probe_cherry_conflicts(repo, tip, sha)
             if conflicts is None or conflicts:
                 skipped.append(sha)
+                skipped_items.append(item)
                 continue
             keep.append(item)
             kept_shas.add(sha)
             kept_paths[sha] = inherited | child_paths
         if keep:
             kept.append(keep)
-    return kept, skipped
+    return kept, skipped, skipped_items
 
 
 def commits_must_colocate(repo: Path, left: NovelCommit, right: NovelCommit) -> bool:
@@ -551,6 +630,79 @@ def run_ff(clone: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
+def extract_remainder(
+    repo: Path,
+    slice_commits: list[dict[str, Any]],
+    stack_tip: str,
+    index: int,
+    worktree: Path,
+    branch: str,
+) -> tuple[str, str]:
+    """Checkout unique paths from tip-conflict commits. Last writer already won."""
+    applied = 0
+    try:
+        for item in slice_commits:
+            sha = str(item.get("sha") or "")
+            paths = [str(path) for path in (item.get("paths") or ()) if path]
+            if not sha or not paths:
+                continue
+            present = [
+                path
+                for path in paths
+                if _git(repo, "cat-file", "-e", f"{sha}:{path}").returncode == 0
+            ]
+            if not present:
+                continue
+            checkout = subprocess.run(
+                ["git", "-C", str(worktree), "checkout", sha, "--", *present],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if checkout.returncode != 0:
+                raise RuntimeError(f"remainder checkout failed on {sha}: {checkout.stderr.strip()}")
+            item["paths"] = tuple(present)
+            applied += 1
+        if applied == 0:
+            raise RuntimeError("remainder empty: no unique paths from tip-conflict commits")
+        add = subprocess.run(
+            ["git", "-C", str(worktree), "add", "--"]
+            + [str(path) for item in slice_commits for path in (item.get("paths") or ())],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if add.returncode != 0:
+            raise RuntimeError(add.stderr.strip() or "remainder git add failed")
+        commit = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(worktree),
+                "commit",
+                "-m",
+                "pr-train remainder: unique paths from tip-conflict commits",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if commit.returncode != 0:
+            raise RuntimeError(commit.stderr.strip() or "remainder commit failed")
+    except Exception:
+        subprocess.run(
+            ["git", "-C", str(repo), "worktree", "remove", "--force", str(worktree)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        _git(repo, "branch", "-D", branch)
+        rebind_merge_driver(repo)
+        raise
+    rebind_merge_driver(repo)
+    return str(worktree), branch
+
+
 def default_extract(
     repo: Path,
     slice_commits: list[dict[str, Any]],
@@ -568,6 +720,8 @@ def default_extract(
     if add.returncode != 0:
         raise RuntimeError(add.stderr.strip() or "git worktree add failed")
     rebind_merge_driver(repo)
+    if slice_commits and all(item.get("mode") == "remainder" for item in slice_commits):
+        return extract_remainder(repo, slice_commits, stack_tip, index, worktree, branch)
     applied = 0
     try:
         for item in slice_commits:
@@ -621,10 +775,22 @@ def default_extract(
     return str(worktree), branch
 
 
-def default_publish(worktree: str) -> dict[str, Any]:
+def pr_create_base(stack_tip: str, baseline: str = "origin/main") -> str:
+    """``gh pr create --base`` for a stacked car. Empty means the repo default."""
+    tip = (stack_tip or "").strip().removeprefix("origin/")
+    base = (baseline or "origin/main").strip().removeprefix("origin/") or "main"
+    if not tip or tip == base or tip in {"main", "HEAD"}:
+        return ""
+    if len(tip) == 40 and all(char in "0123456789abcdef" for char in tip):
+        return ""
+    return tip
+
+
+def default_publish(worktree: str, *, base: str = "") -> dict[str, Any]:
     """Remediator publish: push the extract and open a PR if none exists.
 
     Does not stamp kernel receipts and does not run ``make pr``.
+    A non-empty ``base`` stacks the new PR on the unique open-PR tip.
     """
     push = subprocess.run(
         ["git", "-C", worktree, "push", "-u", "origin", "HEAD"],
@@ -642,15 +808,18 @@ def default_publish(worktree: str) -> dict[str, Any]:
         check=False,
     )
     if view.returncode != 0 or not view.stdout.strip():
+        create = [
+            "gh",
+            "pr",
+            "create",
+            "--fill",
+            "--body",
+            "<!-- L9_PROTECTED_ROOT_PR -->\n",
+        ]
+        if base:
+            create[3:3] = ["--base", base]
         created = subprocess.run(
-            [
-                "gh",
-                "pr",
-                "create",
-                "--fill",
-                "--body",
-                "<!-- L9_PROTECTED_ROOT_PR -->\n",
-            ],
+            create,
             cwd=worktree,
             text=True,
             capture_output=True,
@@ -660,7 +829,7 @@ def default_publish(worktree: str) -> dict[str, Any]:
             raise RuntimeError(
                 created.stderr.strip() or created.stdout.strip() or "gh pr create failed"
             )
-    return {"worktree": worktree, "ok": True}
+    return {"worktree": worktree, "ok": True, "base": base}
 
 
 # ---------------------------------------------------------------------------
@@ -818,7 +987,10 @@ def stack_base_node(state: PrTrainState) -> dict[str, Any]:
     probe_ref = sha or tip
     done = state.slices[: state.current_slice]
     pending = state.slices[state.current_slice :]
-    kept, skipped = filter_slices_against_tip(repo, pending, probe_ref)
+    kept, skipped, skipped_items = filter_slices_against_tip(repo, pending, probe_ref)
+    remainder = collect_remainder_slice(repo, skipped_items, probe_ref)
+    if remainder:
+        kept = list(kept) + [remainder]
     skipped_all = list(state.skipped_tip_conflict) + skipped
     if skipped and not kept and not done:
         return {
@@ -861,9 +1033,15 @@ def publish_node(state: PrTrainState) -> dict[str, Any]:
         return {}
     if state.current_slice >= len(state.slices):
         return {}
-    publish_fn: Callable[[str], dict[str, Any]] = state.publish_fn or default_publish
+    publish_fn = state.publish_fn
     try:
-        result = publish_fn(state.extract_worktree)
+        if publish_fn is None:
+            result = default_publish(
+                state.extract_worktree,
+                base=pr_create_base(state.stack_tip, state.baseline),
+            )
+        else:
+            result = publish_fn(state.extract_worktree)
     except Exception as exc:
         return {"status": "blocked", "halt_reason": str(exc), "stop": "report"}
     opened = list(state.opened_prs)

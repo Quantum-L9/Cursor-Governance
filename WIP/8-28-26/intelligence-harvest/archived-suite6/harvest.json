@@ -1,0 +1,1421 @@
+{
+  "concepts": [
+    {
+      "acceptance_tests": [
+        {
+          "given": "a live pointer to intelligence/context-memory/context-extractor.py or ops/scripts/feedback_collector.py",
+          "must_not": "restore the archived extractor, collector, or setup script into a live path",
+          "then": "the pointer is retired or retargeted to Graphiti client / SessionStart, and the archived file stays archived",
+          "when": "cut-over closure is applied"
+        }
+      ],
+      "beneficiary_destination": "TODO.md B7/B8/C3 plus CANONICAL_LAW.md \u00a78, intelligence/context-memory/README.md, INSTALLATION.md, ops/scripts/process_context.sh, ops/feedback_loop_config.yaml",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "law \u00a78 rewrite needs an issue before overwrite; LaunchAgent residue may still exist on disk",
+        "existing_owner": "AGENTS.md SessionStart, ops/graphiti, SETUP_QUICK_START.md, TODO B7/B8/C3",
+        "merge_decision": "close leftover Suite-6 pointers; do not re-home archive implementations"
+      },
+      "compounding": 5,
+      "description": "The useful integration is not restoring archive code. It is closing the leftover pointers so SessionStart and Graphiti remain the only owners.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-archive-commit",
+        "e-setup-quickstart",
+        "e-process-context-dangle",
+        "e-graphiti-sink",
+        "e-changelog-sink",
+        "e-law-sink",
+        "e-readme-stale",
+        "e-fb-config",
+        "e-todo-c3",
+        "e-retired-export"
+      ],
+      "id": "c-cutover-seam-closure",
+      "leverage": 5,
+      "name": "Finish Suite-6 pointer retirement on live seams",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Archived Suite-6 files were moved, but live docs, a wrapper script, law \u00a78, and a feedback config still name the old extractors and LaunchAgent path.",
+      "rank_score": 55,
+      "risks": [
+        "Editing CANONICAL_LAW.md is high-risk and additive-only at repo root",
+        "Retiring process_context.sh without confirming no LaunchAgent still loads it",
+        "Do not delete _archived evidence while closing pointers"
+      ],
+      "semantic_contract": "After a Suite-6 artifact is archived, every live owner (law, README, wrapper, config) must name the Graphiti/SessionStart successor or be marked retired. Archive bytes are evidence, not an execution path."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a warn/block decision and a later unambiguous user action that the mapping classifies",
+          "must_not": "write foundation/logic/rule-registry.json or copy feedback_collector.py into ops/scripts",
+          "then": "a Graphiti outcome/lesson episode is written with agent_id and evidence, and no threshold or temperature file changes",
+          "when": "outcome labeling runs"
+        }
+      ],
+      "beneficiary_destination": "Graphiti write-on-correction (rules/87, l9-graphiti-memory) plus optional session_debt; never foundation rule-registry",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "implicit map can poison lessons if treated as authority",
+        "existing_owner": "rule 87 Graphiti write-on-correction (explicit only)",
+        "merge_decision": "adopt outcome-label semantics; reject registry mutation and the dangling feedback_loop_config script path"
+      },
+      "compounding": 3,
+      "description": "Port the labeling idea only: attach an outcome to a prior decision episode when behavior is unambiguous. Do not mutate policy weights or temperature.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-fb-implicit",
+        "e-fb-mutate",
+        "e-fb-config"
+      ],
+      "id": "c-implicit-outcome-label",
+      "leverage": 4,
+      "name": "Label decision outcomes from unambiguous post-decision behavior",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Graphiti write-on-correction needs an explicit user or agent lesson. The donor inferred CORRECT/TOO_STRICT/TOO_LENIENT from later behavior, then illegally auto-mutated thresholds.",
+      "rank_score": 43,
+      "risks": [
+        "False TOO_STRICT labels from 'this is fine' after a correct block",
+        "Auto-mutating thresholds recreates the retired probabilistic registry",
+        "Implicit inference without an agent_id stamp violates Graphiti write rules"
+      ],
+      "semantic_contract": "When post-decision behavior is in a declared unambiguous map, record an outcome label on the decision. Ambiguous behavior records nothing. Policy parameters do not move as a side effect."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a derived resume packet with no actions, files, decisions, or completion signals",
+          "must_not": "import foundation/_archived/logic/probabilistic_engine.py or reinstall hourly SQLite extraction",
+          "then": "the packet is omitted or marked low-signal, while closed-chat S3 archive is unchanged",
+          "when": "hydration/inject considers writing that packet as a session episode"
+        }
+      ],
+      "beneficiary_destination": "ops/graphiti/hydration SessionHydrationPacket / inject \u2014 not archive_transcript S3 policy",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "confusing resume-packet filter with transcript-archive completeness",
+        "existing_owner": "Graphiti hydrate budget + PICKUP compiler; archive_transcript archives all words",
+        "merge_decision": "optional keep/drop on derived resume packets only; S3 archive policy stays all-words"
+      },
+      "compounding": 4,
+      "description": "Port the keep/drop contract for resume episodes only. Do not port SQLite, hourly launchd, or probabilistic_engine.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-ctx-bayes",
+        "e-ctx-sqlite",
+        "e-retired-export"
+      ],
+      "id": "c-resume-episode-threshold",
+      "leverage": 3,
+      "name": "Resume-context episodes require a declared signal threshold",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "The donor refused to persist empty hourly snapshots. Beneficiary S3-archives all closed-chat words (correct) but resume/PICKUP quality still benefits from a keep/drop contract for derived context packets.",
+      "rank_score": 34,
+      "risks": [
+        "Applying the filter to S3 transcript archive would contradict the 2026-08-13 retirement",
+        "Reviving probabilistic_engine as a required runtime",
+        "Dropping useful PICKUP facts on a too-high threshold"
+      ],
+      "semantic_contract": "A derived resume-context episode is persisted only when a declared multi-signal threshold is met or the scorer is unavailable (fail-open). Full-text transcript archive is a different layer and stays complete."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a finished local contract",
+          "must_not": "stand up ops/reasoning-metrics.md from this archive",
+          "then": "kernels run and a receipt exists without writing intelligence/meta-audit.md",
+          "when": "improvement is recorded"
+        }
+      ],
+      "beneficiary_destination": "make improve, kernels/Recursive Alignment.md, kernels/Validate & Repair.md, L4 receipts",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "none if archive stays archive",
+        "existing_owner": "make improve + L4 + kernels",
+        "merge_decision": "keep beneficiary executable cycle; treat donor as unimplemented design notes"
+      },
+      "compounding": 3,
+      "description": "Beneficiary already owns the executable cycle as kernels + make improve + L4 record.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-imp-cycle",
+        "e-adaptive-unimplemented"
+      ],
+      "id": "c-observe-compare-patch-validate",
+      "leverage": 2,
+      "name": "Scheduled observe-compare-patch-validate improvement cycle",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Donor described a 24h improvement snapshot loop but never implemented the cited metrics files.",
+      "rank_score": 23,
+      "risks": [
+        "Restoring improvement-loop.md as if it were a live owner"
+      ],
+      "semantic_contract": "Improvement is observe current tree, compare to intended contract, apply a bounded patch, validate, then record. Metrics files are not implied."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "an existing file edit",
+          "must_not": "reintroduce intelligence/_archived/core-rules.md as a live rule file",
+          "then": "the change is targeted and formatting is preserved",
+          "when": "an agent changes it"
+        }
+      ],
+      "beneficiary_destination": "learning/failures/learned-lessons-corpus.md + rules/70-tool-efficiency.mdc + 91-existing-code-source-of-truth.mdc",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "none",
+        "existing_owner": "learned-lessons-corpus + rules 70/91",
+        "merge_decision": "no new file; archive fragment is duplicate"
+      },
+      "compounding": 2,
+      "description": "Already present in the live lessons corpus and editor-efficiency rules.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-core-rules",
+        "e-surgical-corpus"
+      ],
+      "id": "c-surgical-edits-only",
+      "leverage": 2,
+      "name": "Surgical edits over whole-file rewrite",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Whole-file rewrites destroy unrelated content on shared files.",
+      "rank_score": 22,
+      "risks": [
+        "Duplicating a third copy under intelligence/"
+      ],
+      "semantic_contract": "Prefer targeted edits on existing files; ask before a large rewrite; new files may be created whole."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a self-modification or kernel pass",
+          "must_not": "recreate intelligence/meta-audit.md as a live owner",
+          "then": "the event is in Graphiti or an L4 receipt, not a Suite-6 json mirror",
+          "when": "the session closes or L4 records"
+        }
+      ],
+      "beneficiary_destination": "Graphiti PICKUP / L4 receipts / git history",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "none",
+        "existing_owner": "Graphiti + L4 receipts",
+        "merge_decision": "keep Graphiti; donor log format is migration context only"
+      },
+      "compounding": 2,
+      "description": "Graphiti PICKUP, L4 receipts, and sessionEnd already record change history without meta_audit.json.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-audit-mirror",
+        "e-adaptive-unimplemented"
+      ],
+      "id": "c-immutable-self-mod-audit",
+      "leverage": 2,
+      "name": "Immutable record of self-modifications and rollbacks",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Donor wanted a non-blocking immutable audit of reasoning tunings and reversions.",
+      "rank_score": 22,
+      "risks": [
+        "Creating ops/logs/meta_audit.json as a second SSOT"
+      ],
+      "semantic_contract": "Self-modifications are append-only recorded with timestamp, trigger, and outcome. The store is Graphiti/receipts, not a Suite-6 markdown log."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "this harvest",
+          "must_not": "execute or copy setup-new-workspace.py or write .suite6-config.json",
+          "then": "SETUP_QUICK_START + SessionStart remain the owners",
+          "when": "workspace enablement is considered"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "Dropbox fallback would violate symlink law",
+        "existing_owner": "SessionStart + setup_workspace_symlinks.sh",
+        "merge_decision": "reject donor machinery"
+      },
+      "compounding": 1,
+      "description": "Successor is already one command: setup_workspace_symlinks.sh plus automatic SessionStart.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-setup-md-dropbox",
+        "e-setup-py-dropbox",
+        "e-setup-py-n8n",
+        "e-setup-quickstart",
+        "e-agents-sessionstart"
+      ],
+      "id": "c-suite6-workspace-machinery",
+      "leverage": 1,
+      "name": "Dropbox + .suite6-config.json + n8n kit workspace enablement",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": false,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": false,
+        "donor_runtime_required": true,
+        "external_dependency": {
+          "failure_behavior": "REJECT",
+          "probe": "test -d forbidden-dropbox-path",
+          "target": "Dropbox L9 Governance tree + env-manager.py"
+        },
+        "incidental_implementation_independent": false
+      },
+      "problem": "One-command governance enablement is still needed; donor implemented it with forbidden SSOT and product-specific kits.",
+      "rank_score": null,
+      "risks": [
+        "Reintroducing Dropbox fallback violates CANONICAL_LAW path contract"
+      ],
+      "semantic_contract": null
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a new session",
+          "must_not": "require reading the archived 22-file list",
+          "then": "SessionStart additional_context is the load surface",
+          "when": "activation runs"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "none",
+        "existing_owner": "SessionStart hook + Graphiti hydrate",
+        "merge_decision": "reject; this is the cut-over source, not a destination"
+      },
+      "compounding": 1,
+      "description": "Anti-pattern of the Suite-6 cut-over. SessionStart emits a bounded additional_context packet.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-setup-md-session-dump",
+        "e-setup-py-mandatory",
+        "e-agents-sessionstart"
+      ],
+      "id": "c-mandatory-session-dump",
+      "leverage": 1,
+      "name": "Read 22+ profiles and all learning files at every session start",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": false,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": false
+      },
+      "problem": "Donor treated session quality as exhaustive file load. That is the load model SessionStart replaced.",
+      "rank_score": null,
+      "risks": [
+        "Context explosion; fights skill routing and Graphiti hydrate budgets"
+      ],
+      "semantic_contract": null
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "this harvest",
+          "must_not": "schedule auto_calibrator.py or revive rule-registry.json writes",
+          "then": "the concept is rejected",
+          "when": "calibration transfer is considered"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "ECE revival would reopen a closed plan lock",
+        "existing_owner": "l9-structured-reasoning confidence policy (ECE is not a gate)",
+        "merge_decision": "reject"
+      },
+      "compounding": 1,
+      "description": "Beneficiary forbids ECE as a /reasoning gate and archived the registry/engine.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-cal-purpose",
+        "e-cal-write-registry",
+        "e-ece-forbid"
+      ],
+      "id": "c-ece-registry-autocalibrate",
+      "leverage": 1,
+      "name": "Nightly ECE temperature and threshold auto-write",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": false,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": false,
+        "donor_runtime_required": true,
+        "external_dependency": {
+          "failure_behavior": "REJECT",
+          "probe": "test -f foundation/logic/rule-registry.json",
+          "target": "foundation/_archived/logic/rule-registry.json"
+        },
+        "incidental_implementation_independent": false
+      },
+      "problem": "Donor auto-tuned a probabilistic registry from decision outcomes.",
+      "rank_score": null,
+      "risks": [
+        "Silent policy drift; writes dead registry; contradicts current reasoning contract"
+      ],
+      "semantic_contract": null
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a chat that matches 'should automatically extract'",
+          "must_not": "run chat-learning-extractor.py or emit canned FOL as a live rule",
+          "then": "Graphiti lesson write or harvest qualification is used",
+          "when": "learning is recorded"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "none",
+        "existing_owner": "Graphiti write --kind lesson + l9-intelligence-harvest qualification",
+        "merge_decision": "reject"
+      },
+      "compounding": 1,
+      "description": "Unsafe and superseded by Graphiti kinds, harvest qualification, and sessionEnd archive.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-chat-regex",
+        "e-chat-fol",
+        "e-retired-export"
+      ],
+      "id": "c-regex-chat-to-fol",
+      "leverage": 1,
+      "name": "Regex chat phrases into FOL governance rules",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": false
+      },
+      "problem": "Donor turned conversation wording into canned first-order rules and appended the meta-learning log.",
+      "rank_score": null,
+      "risks": [
+        "False rules from chat idiom; FOL templates are placeholders; writes a non-SSOT log"
+      ],
+      "semantic_contract": null
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a closed Cursor chat",
+          "must_not": "reinstall com.tenx.chat-export or treat composer.composerData as resume SSOT",
+          "then": "sessionEnd archive_transcript writes S3 json, not an hourly vscdb copy",
+          "when": "words must be preserved"
+        }
+      ],
+      "beneficiary_destination": "ops/scripts/RETIRED_export_chats_and_learning_processor.md",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "process_context.sh still looks like a live caller",
+        "existing_owner": "sessionEnd archive_transcript",
+        "merge_decision": "keep as historical extraction note; do not port"
+      },
+      "compounding": 1,
+      "description": "Retired: copies were huge, not the chat words, and used forbidden/legacy paths.",
+      "disposition": "MIGRATION_CONTEXT",
+      "evidence_ids": [
+        "e-ctx-sqlite",
+        "e-ctx-suite6-kw",
+        "e-retired-export",
+        "e-process-context-dangle"
+      ],
+      "id": "c-hourly-sqlite-extract",
+      "leverage": 2,
+      "name": "Hourly workspaceStorage SQLite composer extraction",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": false,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": false,
+        "donor_runtime_required": true,
+        "external_dependency": {
+          "failure_behavior": "MIGRATION_CONTEXT only; do not execute",
+          "probe": "test -d \"$HOME/Library/Application Support/Cursor/User/workspaceStorage\"",
+          "target": "Cursor User/workspaceStorage state.vscdb"
+        },
+        "incidental_implementation_independent": false
+      },
+      "problem": "Donor pulled composer.composerData from state.vscdb every hour.",
+      "rank_score": null,
+      "risks": [
+        "Reinstalling LaunchAgents; 100GB+ sqlite copies"
+      ],
+      "semantic_contract": null
+    }
+  ],
+  "drift": [
+    {
+      "behavior": "Workspace activation is SessionStart + setup_workspace_symlinks.sh; donor still documents Dropbox, .suite6-config.json, and a 22-file profile dump",
+      "canonical_candidate": "AGENTS.md \u00a72 + intelligence/workspace/SETUP_QUICK_START.md",
+      "resolution": "Donor is migration evidence. Do not restore. Successor already live."
+    },
+    {
+      "behavior": "Resume memory is Graphiti inject/PICKUP + sessionEnd S3 archive; donor extracts hourly SQLite composer blobs to JSON",
+      "canonical_candidate": "ops/graphiti/hydration/archive_transcript.py + graphiti_memory_client.py",
+      "resolution": "Hourly SQLite path is retired (RETIRED_export_chats_and_learning_processor.md). Meaningfulness-gate semantic may transfer; machinery must not."
+    },
+    {
+      "behavior": "process_context.sh still calls intelligence/context-memory/context-extractor.py after that file was git-mv'd to _archived",
+      "canonical_candidate": "retire process_context.sh with the tenx jobs, or retarget only after an authorized Graphiti owner exists",
+      "resolution": "Live dangling wrapper. Close as cut-over residue, do not un-archive the extractor."
+    },
+    {
+      "behavior": "CANONICAL_LAW \u00a78 names graphiti_sink.py as durable-episode interface; CHANGELOG and no ops/graphiti callers say it was never wired",
+      "canonical_candidate": "ops/graphiti/graphiti_memory_client.py (MCP) + hydration",
+      "resolution": "Law/doc seam. Stronger observable owner is the Graphiti client. Do not revive sink as authority."
+    },
+    {
+      "behavior": "intelligence/context-memory/README.md and INSTALLATION.md still tree-list the archived extractor as live",
+      "canonical_candidate": "SETUP_QUICK_START.md deprecation stance + Graphiti hydrate docs",
+      "resolution": "Beneficiary documentation drift from the 2026-07-19 archive."
+    },
+    {
+      "behavior": "ops/feedback_loop_config.yaml points at .cursor-commands/ops/scripts/feedback_collector.py which never lived there",
+      "canonical_candidate": "TODO.md B7; Graphiti write-on-correction (rule 87)",
+      "resolution": "Dangling config. Do not copy archived collector into ops/scripts."
+    },
+    {
+      "behavior": "adaptive-reasoning.md (live) still describes auto-tuning into meta-audit.md; improvement-loop.md (archived) is the paired unimplemented design",
+      "canonical_candidate": "l9-structured-reasoning + make improve; adaptive-reasoning.md already stamps Not implemented",
+      "resolution": "Keep the live 'not implemented' stamp. Do not restore improvement-loop.md as an owner."
+    },
+    {
+      "behavior": "Two Readme-style surgical-edit texts: archived core-rules.md and learning/failures/learned-lessons-corpus.md",
+      "canonical_candidate": "learned-lessons-corpus.md plus rules/70-tool-efficiency.mdc and 91-existing-code-source-of-truth.mdc",
+      "resolution": "Corpus already holds the fragment. Archive copy is duplicate evidence."
+    }
+  ],
+  "evidence": [
+    {
+      "claim": "The nine files were archived on 2026-07-19 as Suite-6 legacy, not as a new product line.",
+      "epistemic": "CONFIRMED",
+      "id": "e-archive-commit",
+      "locator": {
+        "kind": "artifact",
+        "value": "268608be 2026-07-19 chore(governance): archive Suite-6 legacy files"
+      },
+      "secret_redacted": false,
+      "source": "git log -- intelligence/_archived"
+    },
+    {
+      "claim": "File carries SUITE 6 CANONICAL HEADER, component_id INT-IMP-001, status active.",
+      "epistemic": "CONFIRMED",
+      "id": "e-imp-header",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/improvement-loop.md:2-10"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/improvement-loop.md"
+    },
+    {
+      "claim": "Describes observe-compare-micro-patch-validate-document; cites /ops/reasoning-metrics.md and /intelligence/meta-audit.md.",
+      "epistemic": "CONFIRMED",
+      "id": "e-imp-cycle",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/improvement-loop.md:62-75"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/improvement-loop.md"
+    },
+    {
+      "claim": "Live sibling states the metrics/meta-audit/profile paths are absent and auto-tuning is not running.",
+      "epistemic": "CONFIRMED",
+      "id": "e-adaptive-unimplemented",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/adaptive-reasoning.md:35-43"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/adaptive-reasoning.md"
+    },
+    {
+      "claim": "SUITE 6 header INT-AUD-002; purpose is immutable self-modification history.",
+      "epistemic": "CONFIRMED",
+      "id": "e-audit-header",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/meta-audit.md:2-10"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/meta-audit.md"
+    },
+    {
+      "claim": "Says logs are mirrored to /ops/logs/meta_audit.json. That path is not a live SSOT.",
+      "epistemic": "CONFIRMED",
+      "id": "e-audit-mirror",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/meta-audit.md:70-74"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/meta-audit.md"
+    },
+    {
+      "claim": "Surgical Edits Only: no whole-file rewrite; ask after ~10 surgical edits.",
+      "epistemic": "CONFIRMED",
+      "id": "e-core-rules",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/core-rules.md:2-13"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/core-rules.md"
+    },
+    {
+      "claim": "The same surgical-edits text already lives in the live lessons corpus.",
+      "epistemic": "CONFIRMED",
+      "id": "e-surgical-corpus",
+      "locator": {
+        "kind": "path_lines",
+        "value": "learning/failures/learned-lessons-corpus.md:66-77"
+      },
+      "secret_redacted": false,
+      "source": "learning/failures/learned-lessons-corpus.md"
+    },
+    {
+      "claim": "INT-WS-001 outputs include workspace/.suite6-config.json and .cursorrules.",
+      "epistemic": "CONFIRMED",
+      "id": "e-setup-md-header",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/workspace/setup-new-workspace.md:2-27"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/workspace/setup-new-workspace.md"
+    },
+    {
+      "claim": "Preflight hardcodes /Users/ib-mac/Dropbox/Cursor Governance/L9 Governance (L9).",
+      "epistemic": "CONFIRMED",
+      "id": "e-setup-md-dropbox",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/workspace/setup-new-workspace.md:63-64"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/workspace/setup-new-workspace.md"
+    },
+    {
+      "claim": "Mandates reading ALL .cursor-commands/learning/*.md plus ~22 profiles/commands at every session start.",
+      "epistemic": "CONFIRMED",
+      "id": "e-setup-md-session-dump",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/workspace/setup-new-workspace.md:86-89"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/workspace/setup-new-workspace.md"
+    },
+    {
+      "claim": "Live pointer says the v6/v7 setup script is archived and must not be followed.",
+      "epistemic": "CONFIRMED",
+      "id": "e-setup-quickstart",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/workspace/SETUP_QUICK_START.md:20-23"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/workspace/SETUP_QUICK_START.md"
+    },
+    {
+      "claim": "Resolves GLOBAL_COMMANDS via ~/.cursor-governance then two Dropbox fallbacks.",
+      "epistemic": "CONFIRMED",
+      "id": "e-setup-py-dropbox",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/workspace/setup-new-workspace.py:126-138"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/workspace/setup-new-workspace.py"
+    },
+    {
+      "claim": "MANDATORY_FILES lists 23 Suite-6 profiles/commands including startup/* and n8n reasoning profiles.",
+      "epistemic": "CONFIRMED",
+      "id": "e-setup-py-mandatory",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/workspace/setup-new-workspace.py:141-263"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/workspace/setup-new-workspace.py"
+    },
+    {
+      "claim": "Phase 5 fail-closes if .cursor-commands/n8n-start-up-kit is missing.",
+      "epistemic": "CONFIRMED",
+      "id": "e-setup-py-n8n",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/workspace/setup-new-workspace.py:596-618"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/workspace/setup-new-workspace.py"
+    },
+    {
+      "claim": "Phase 7 runs process_learnings.sh and process_context.sh and checks com.tenx.* LaunchAgents.",
+      "epistemic": "CONFIRMED",
+      "id": "e-setup-py-launchd",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/workspace/setup-new-workspace.py:695-753"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/workspace/setup-new-workspace.py"
+    },
+    {
+      "claim": "Nightly ECE temperature/threshold/weight calibration with no human gate.",
+      "epistemic": "CONFIRMED",
+      "id": "e-cal-purpose",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/learning/auto_calibrator.py:51-61"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/learning/auto_calibrator.py"
+    },
+    {
+      "claim": "Writes updated registry JSON in place.",
+      "epistemic": "CONFIRMED",
+      "id": "e-cal-write-registry",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/learning/auto_calibrator.py:505-511"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/learning/auto_calibrator.py"
+    },
+    {
+      "claim": "Beneficiary plan locks ECE out of /reasoning; ECE is not a gate.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ece-forbid",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/reasoning_skill_slash_harden_2b4d2283.plan.md:56-56"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/reasoning_skill_slash_harden_2b4d2283.plan.md"
+    },
+    {
+      "claim": "Infers CORRECT/TOO_STRICT/TOO_LENIENT from post-decision user behavior.",
+      "epistemic": "CONFIRMED",
+      "id": "e-fb-implicit",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/learning/feedback_collector.py:175-248"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/learning/feedback_collector.py"
+    },
+    {
+      "claim": "Immediate processing mutates auto_adjust thresholds and temperature and saves the registry.",
+      "epistemic": "CONFIRMED",
+      "id": "e-fb-mutate",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/learning/feedback_collector.py:250-303"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/learning/feedback_collector.py"
+    },
+    {
+      "claim": "Live config still names .cursor-commands/ops/scripts/feedback_collector.py.",
+      "epistemic": "CONFIRMED",
+      "id": "e-fb-config",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/feedback_loop_config.yaml:212-213"
+      },
+      "secret_redacted": false,
+      "source": "ops/feedback_loop_config.yaml"
+    },
+    {
+      "claim": "Five regexes detect validation/formatting/governance/automation/correction phrases.",
+      "epistemic": "CONFIRMED",
+      "id": "e-chat-regex",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/learning/chat-learning-extractor.py:84-116"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/learning/chat-learning-extractor.py"
+    },
+    {
+      "claim": "Maps each category to a canned FOL string and appends meta-learning-log.",
+      "epistemic": "CONFIRMED",
+      "id": "e-chat-fol",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/learning/chat-learning-extractor.py:285-297"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/learning/chat-learning-extractor.py"
+    },
+    {
+      "claim": "Reads User/workspaceStorage/*/state.vscdb key composer.composerData.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ctx-sqlite",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/context-memory/context-extractor.py:84-110"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/context-memory/context-extractor.py"
+    },
+    {
+      "claim": "Project detector keywords include suite 6 and globalcommands.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ctx-suite6-kw",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/context-memory/context-extractor.py:161-167"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/context-memory/context-extractor.py"
+    },
+    {
+      "claim": "Save only when a weighted evidence score exceeds 0.50; falls back to heuristics if the archived engine is missing.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ctx-bayes",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/_archived/context-memory/context-extractor.py:297-385"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/_archived/context-memory/context-extractor.py"
+    },
+    {
+      "claim": "Live script still executes $CONTEXT_DIR/context-extractor.py, which is no longer at that path.",
+      "epistemic": "CONFIRMED",
+      "id": "e-process-context-dangle",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/scripts/process_context.sh:26-28"
+      },
+      "secret_redacted": false,
+      "source": "ops/scripts/process_context.sh"
+    },
+    {
+      "claim": "Header says it replaces JSON save for context-extractor.py via memory_ingest_episode.",
+      "epistemic": "CONFIRMED",
+      "id": "e-graphiti-sink",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/context-memory/graphiti_sink.py:1-5"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/context-memory/graphiti_sink.py"
+    },
+    {
+      "claim": "Archive note: extractor moved; graphiti_sink kept as intended-but-never-wired replacement.",
+      "epistemic": "CONFIRMED",
+      "id": "e-changelog-sink",
+      "locator": {
+        "kind": "path_lines",
+        "value": "CHANGELOG.md:136-141"
+      },
+      "secret_redacted": false,
+      "source": "CHANGELOG.md"
+    },
+    {
+      "claim": "Law \u00a78 still lists graphiti_sink.py as the durable-episode interface and sessions JSON as fallback cache.",
+      "epistemic": "CONFIRMED",
+      "id": "e-law-sink",
+      "locator": {
+        "kind": "path_lines",
+        "value": "CANONICAL_LAW.md:288-291"
+      },
+      "secret_redacted": false,
+      "source": "CANONICAL_LAW.md"
+    },
+    {
+      "claim": "Hourly export + tenx learning processor retired 2026-08-13 in favor of sessionEnd archive_transcript to S3.",
+      "epistemic": "CONFIRMED",
+      "id": "e-retired-export",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/scripts/RETIRED_export_chats_and_learning_processor.md:1-19"
+      },
+      "secret_redacted": false,
+      "source": "ops/scripts/RETIRED_export_chats_and_learning_processor.md"
+    },
+    {
+      "claim": "There is exactly one activation mechanism and it is automatic SessionStart.",
+      "epistemic": "CONFIRMED",
+      "id": "e-agents-sessionstart",
+      "locator": {
+        "kind": "path_lines",
+        "value": "AGENTS.md:21-22"
+      },
+      "secret_redacted": false,
+      "source": "AGENTS.md"
+    },
+    {
+      "claim": "Open debt already names feedback_loop_config B7, process_context.sh B8, and context-memory C3 (law vs never-wired sink).",
+      "epistemic": "CONFIRMED",
+      "id": "e-todo-c3",
+      "locator": {
+        "kind": "path_lines",
+        "value": "TODO.md:247-274"
+      },
+      "secret_redacted": false,
+      "source": "TODO.md"
+    },
+    {
+      "claim": "Live README still lists context-extractor.py and hourly process_context.sh as the architecture.",
+      "epistemic": "CONFIRMED",
+      "id": "e-readme-stale",
+      "locator": {
+        "kind": "path_lines",
+        "value": "intelligence/context-memory/README.md:20-32"
+      },
+      "secret_redacted": false,
+      "source": "intelligence/context-memory/README.md"
+    }
+  ],
+  "highest_leverage_nugget": "c-cutover-seam-closure",
+  "inventory": [
+    {
+      "action": "archive",
+      "classification": "archive",
+      "consumers": [],
+      "evidence_ids": [
+        "e-imp-header",
+        "e-imp-cycle",
+        "e-adaptive-unimplemented"
+      ],
+      "importance": 2,
+      "owner": "Suite-6 intelligence layer (retired)",
+      "path": "improvement-loop.md",
+      "purpose": "Suite-6 INT-IMP-001 observe-compare-patch-validate design; cites absent metrics and meta-audit paths"
+    },
+    {
+      "action": "archive",
+      "classification": "archive",
+      "consumers": [],
+      "evidence_ids": [
+        "e-audit-header",
+        "e-audit-mirror"
+      ],
+      "importance": 2,
+      "owner": "Suite-6 intelligence layer (retired)",
+      "path": "meta-audit.md",
+      "purpose": "Suite-6 INT-AUD-002 immutable self-modification log; mirrors to absent ops/logs/meta_audit.json"
+    },
+    {
+      "action": "archive",
+      "classification": "archive",
+      "consumers": [
+        "learning/failures/learned-lessons-corpus.md"
+      ],
+      "evidence_ids": [
+        "e-core-rules",
+        "e-surgical-corpus"
+      ],
+      "importance": 2,
+      "owner": "legacy intelligence fragment",
+      "path": "core-rules.md",
+      "purpose": "Surgical-edits-only fragment; no Suite-6 header"
+    },
+    {
+      "action": "archive",
+      "classification": "archive",
+      "consumers": [],
+      "evidence_ids": [
+        "e-setup-md-header",
+        "e-setup-md-dropbox",
+        "e-setup-md-session-dump",
+        "e-setup-quickstart"
+      ],
+      "importance": 3,
+      "owner": "Suite-6 workspace setup (retired)",
+      "path": "workspace/setup-new-workspace.md",
+      "purpose": "Suite-6 INT-WS-001 1000-line workspace setup; Dropbox, .suite6-config.json, 22-file session dump, LaunchAgents"
+    },
+    {
+      "action": "archive",
+      "classification": "archive",
+      "consumers": [],
+      "evidence_ids": [
+        "e-setup-py-dropbox",
+        "e-setup-py-mandatory",
+        "e-setup-py-n8n",
+        "e-setup-py-launchd"
+      ],
+      "importance": 3,
+      "owner": "Suite-6 workspace setup (retired)",
+      "path": "workspace/setup-new-workspace.py",
+      "purpose": "v7 self-executing setup wrapping env-manager, Dropbox fallback, n8n kit, process_learnings, process_context, tenx LaunchAgents"
+    },
+    {
+      "action": "archive",
+      "classification": "archive",
+      "consumers": [
+        "telemetry/_archived/calibration_dashboard.py"
+      ],
+      "evidence_ids": [
+        "e-cal-purpose",
+        "e-cal-write-registry",
+        "e-ece-forbid"
+      ],
+      "importance": 2,
+      "owner": "Suite-6 probabilistic governance (retired)",
+      "path": "learning/auto_calibrator.py",
+      "purpose": "INT-AC-001 nightly ECE/temperature/threshold writer against foundation/logic/rule-registry.json"
+    },
+    {
+      "action": "migrate",
+      "classification": "archive",
+      "consumers": [
+        "ops/feedback_loop_config.yaml (dangling path)"
+      ],
+      "evidence_ids": [
+        "e-fb-implicit",
+        "e-fb-mutate",
+        "e-fb-config"
+      ],
+      "importance": 3,
+      "owner": "Suite-6 probabilistic governance (retired)",
+      "path": "learning/feedback_collector.py",
+      "purpose": "INT-FC-001 explicit/implicit feedback with immediate threshold/temperature mutation"
+    },
+    {
+      "action": "archive",
+      "classification": "archive",
+      "consumers": [
+        "intelligence/meta-learning/meta-learning-log.md (historical entries)"
+      ],
+      "evidence_ids": [
+        "e-chat-regex",
+        "e-chat-fol"
+      ],
+      "importance": 1,
+      "owner": "Suite-6 learning extractor (retired)",
+      "path": "learning/chat-learning-extractor.py",
+      "purpose": "INT-LE-001 regex conversation scanner that appends FOL rule candidates to meta-learning-log"
+    },
+    {
+      "action": "migrate",
+      "classification": "archive",
+      "consumers": [
+        "ops/scripts/process_context.sh (dangling live caller)"
+      ],
+      "evidence_ids": [
+        "e-ctx-sqlite",
+        "e-ctx-suite6-kw",
+        "e-ctx-bayes",
+        "e-process-context-dangle"
+      ],
+      "importance": 4,
+      "owner": "pre-Graphiti context memory (retired)",
+      "path": "context-memory/context-extractor.py",
+      "purpose": "INT-CM-001 hourly SQLite composer.composerData extractor with Bayesian meaningfulness gate; Suite-6 project keywords"
+    }
+  ],
+  "request": {
+    "access_mode": "read-only",
+    "beneficiary": "https://github.com/Quantum-L9/Cursor-Governance",
+    "brief": true,
+    "depth": "exhaustive",
+    "donor": "intelligence/_archived",
+    "harvest_target": "Suite-6 intelligence archive seams, successors, and transferable semantics",
+    "language": "as-donor",
+    "request_id": "ih-archived-suite6-20260828",
+    "secrets_policy": "redact"
+  },
+  "safety": [
+    {
+      "claim": "Donor Python was inventoried and read, not executed.",
+      "epistemic": "CONFIRMED"
+    },
+    {
+      "claim": "No beneficiary implementation, wiring, commit, or push was performed by this harvest.",
+      "epistemic": "CONFIRMED"
+    },
+    {
+      "claim": "Dropbox paths, LaunchAgents, .suite6-config.json, n8n kit, rule-registry writes, and ECE gates were not treated as transferable machinery.",
+      "epistemic": "CONFIRMED"
+    },
+    {
+      "claim": "S3 transcript-archive completeness was preserved as stronger beneficiary policy versus donor hourly JSON snapshots.",
+      "epistemic": "CONFIRMED"
+    },
+    {
+      "claim": "No secret values were observed in the nine archive files; machine home paths in setup-new-workspace.md were treated as forbidden path evidence, not copied.",
+      "epistemic": "INFERENCE"
+    }
+  ],
+  "schema_version": "1.1.0",
+  "source_identity": {
+    "archive_commit": "268608be",
+    "archive_date": "2026-07-19",
+    "archive_subject": "chore(governance): archive Suite-6 legacy files, migrate wire_executor, add repo root config",
+    "file_count": 9,
+    "inventory_status": "PASS",
+    "kind": "directory",
+    "path": "/Users/ib-mac/Cursor-Governance/intelligence/_archived",
+    "suite6_cutover": true
+  },
+  "status": "PARTIAL",
+  "surfaces": [
+    {
+      "dependencies": [
+        "pyyaml",
+        "Dropbox-or-~/.cursor-governance",
+        "launchctl"
+      ],
+      "evidence_ids": [
+        "e-setup-py-dropbox",
+        "e-setup-py-launchd"
+      ],
+      "is_wrapper": true,
+      "item": "intelligence/_archived/workspace/setup-new-workspace.py",
+      "mutations": [
+        "workspace .l9_governance-config.json",
+        "workspace .cursor-commands symlink"
+      ],
+      "resolved_target": "environment/_archived/env-manager.py plus ops/scripts/setup_workspace_symlinks.sh plus retired process_learnings.sh and process_context.sh",
+      "source": "intelligence/_archived/workspace/setup-new-workspace.py",
+      "visibility": "cli-archived"
+    },
+    {
+      "dependencies": [
+        ".suite6-config.json",
+        "profiles/*",
+        "LaunchAgents"
+      ],
+      "evidence_ids": [
+        "e-setup-md-header",
+        "e-setup-md-session-dump"
+      ],
+      "is_wrapper": true,
+      "item": "intelligence/_archived/workspace/setup-new-workspace.md",
+      "mutations": [],
+      "resolved_target": "same Dropbox env-manager + setup_workspace_symlinks.sh + verify-setup-alignment.sh flow",
+      "source": "intelligence/_archived/workspace/setup-new-workspace.md",
+      "visibility": "doc-archived"
+    },
+    {
+      "dependencies": [
+        "ops/logs/chat_exports",
+        "launchd (historical)"
+      ],
+      "evidence_ids": [
+        "e-process-context-dangle"
+      ],
+      "is_wrapper": true,
+      "item": "ops/scripts/process_context.sh",
+      "mutations": [
+        "intelligence/context-memory/sessions/*.json"
+      ],
+      "resolved_target": "intelligence/context-memory/context-extractor.py (file is now under intelligence/_archived/context-memory/)",
+      "source": "ops/scripts/process_context.sh",
+      "visibility": "live-dangling"
+    },
+    {
+      "dependencies": [
+        "l9_ops_mcp"
+      ],
+      "evidence_ids": [
+        "e-graphiti-sink",
+        "e-law-sink"
+      ],
+      "is_wrapper": true,
+      "item": "intelligence/context-memory/graphiti_sink.py",
+      "mutations": [
+        "intelligence/context-memory/sessions/*.json",
+        "intended Graphiti episode"
+      ],
+      "resolved_target": "l9_ops_mcp.cli ingest (no callers in ops/graphiti; CHANGELOG: never wired)",
+      "source": "intelligence/context-memory/graphiti_sink.py",
+      "visibility": "live-unwired"
+    },
+    {
+      "dependencies": [
+        "foundation/_archived/logic/rule-registry.json",
+        "telemetry jsonl"
+      ],
+      "evidence_ids": [
+        "e-cal-write-registry"
+      ],
+      "is_wrapper": false,
+      "item": "intelligence/_archived/learning/auto_calibrator.py",
+      "mutations": [
+        "rule-registry.json",
+        "meta-learning-log.md"
+      ],
+      "resolved_target": null,
+      "source": "intelligence/_archived/learning/auto_calibrator.py",
+      "visibility": "cli-archived"
+    },
+    {
+      "dependencies": [
+        "rule-registry.json"
+      ],
+      "evidence_ids": [
+        "e-fb-implicit",
+        "e-fb-mutate"
+      ],
+      "is_wrapper": false,
+      "item": "intelligence/_archived/learning/feedback_collector.py",
+      "mutations": [
+        "rule-registry thresholds and temperature",
+        "user_feedback.jsonl"
+      ],
+      "resolved_target": null,
+      "source": "intelligence/_archived/learning/feedback_collector.py",
+      "visibility": "cli-archived"
+    },
+    {
+      "dependencies": [
+        "regex pattern table"
+      ],
+      "evidence_ids": [
+        "e-chat-regex",
+        "e-chat-fol"
+      ],
+      "is_wrapper": false,
+      "item": "intelligence/_archived/learning/chat-learning-extractor.py",
+      "mutations": [
+        "intelligence/meta-learning/meta-learning-log.md"
+      ],
+      "resolved_target": null,
+      "source": "intelligence/_archived/learning/chat-learning-extractor.py",
+      "visibility": "cli-archived"
+    },
+    {
+      "dependencies": [
+        "sqlite3",
+        "optional probabilistic_engine"
+      ],
+      "evidence_ids": [
+        "e-ctx-sqlite",
+        "e-ctx-bayes"
+      ],
+      "is_wrapper": false,
+      "item": "intelligence/_archived/context-memory/context-extractor.py",
+      "mutations": [
+        "context-memory/sessions/*.json",
+        "index.json"
+      ],
+      "resolved_target": null,
+      "source": "intelligence/_archived/context-memory/context-extractor.py",
+      "visibility": "cli-archived"
+    },
+    {
+      "dependencies": [],
+      "evidence_ids": [
+        "e-imp-cycle",
+        "e-adaptive-unimplemented"
+      ],
+      "is_wrapper": true,
+      "item": "intelligence/_archived/improvement-loop.md",
+      "mutations": [],
+      "resolved_target": "absent ops/reasoning-metrics.md and intelligence/meta-audit.md",
+      "source": "intelligence/_archived/improvement-loop.md",
+      "visibility": "doc-archived"
+    }
+  ],
+  "system": {
+    "control_flow": [
+      {
+        "from": "workspace/setup-new-workspace.py",
+        "relation": "wraps (retired)",
+        "to": "environment/env-manager.py + ops/scripts/setup_workspace_symlinks.sh + process_learnings.sh + process_context.sh"
+      },
+      {
+        "from": "ops/scripts/process_context.sh",
+        "relation": "still invokes missing live path",
+        "to": "intelligence/context-memory/context-extractor.py (now intelligence/_archived/context-memory/)"
+      },
+      {
+        "from": "context-extractor.py",
+        "relation": "intended-but-never-wired replacement",
+        "to": "intelligence/context-memory/graphiti_sink.py"
+      },
+      {
+        "from": "feedback_collector.py + auto_calibrator.py",
+        "relation": "write",
+        "to": "foundation/logic/rule-registry.json (now foundation/_archived/logic/)"
+      },
+      {
+        "from": "chat-learning-extractor.py + auto_calibrator.py",
+        "relation": "append",
+        "to": "intelligence/meta-learning/meta-learning-log.md"
+      },
+      {
+        "from": "improvement-loop.md",
+        "relation": "cites absent",
+        "to": "ops/reasoning-metrics.md and intelligence/meta-audit.md"
+      }
+    ],
+    "dependencies": [
+      {
+        "name": "foundation/logic/probabilistic_engine.py",
+        "state": "archived",
+        "used_by": "context-extractor Bayesian gate, auto_calibrator"
+      },
+      {
+        "name": "Cursor User/workspaceStorage state.vscdb composer.composerData",
+        "state": "superseded by ~/.cursor/projects jsonl + sessionEnd archive_transcript",
+        "used_by": "context-extractor.py"
+      },
+      {
+        "name": "Dropbox Cursor Governance / L9 Governance (L9)",
+        "state": "forbidden SSOT fallback",
+        "used_by": "setup-new-workspace.md/.py"
+      },
+      {
+        "name": "LaunchAgents com.tenx.chat-export / com.tenx.learning-processor",
+        "state": "retired 2026-08-13",
+        "used_by": "setup-new-workspace.py Phase 7"
+      }
+    ],
+    "identity": {
+      "epistemic": "CONFIRMED",
+      "name": "Suite-6 Governance Intelligence Layer (archived)",
+      "summary": "Nine leftover artifacts from the 10X/Suite-6 intelligence layer, archived 2026-07-19 (268608be) as part of the Post-Suite-6 / Graphiti-native cut-over. Headers still claim status=active. Live successors are SessionStart, Graphiti hydrate/PICKUP, sessionEnd transcript archive, make improve, and setup_workspace_symlinks.sh."
+    },
+    "must_not_own": [
+      "Graphiti group_id / write authority",
+      "SessionStart activation",
+      "workspace symlink law",
+      "make improve / L4 release",
+      "S3 transcript archive policy",
+      "ECE as a reasoning or confidence gate",
+      "rule-registry.json mutation",
+      "Dropbox or .suite6-config.json reactivation",
+      "n8n start-up kit as governance prerequisite"
+    ],
+    "ownership_boundaries": [
+      {
+        "owner": "AGENTS.md SessionStart + ops/hooks/session_start_bootstrap.sh",
+        "owns": "workspace activation; forbids 22-file dump and Dropbox SSOT"
+      },
+      {
+        "owner": "ops/graphiti/hydration + graphiti_memory_client.py",
+        "owns": "resume packets, PICKUP, sessionEnd transcript archive to S3"
+      },
+      {
+        "owner": "make improve + kernels + L4 receipts",
+        "owns": "observe-align-validate-record improvement cycle"
+      },
+      {
+        "owner": "intelligence/_archived",
+        "owns": "Suite-6 evidence only; no execution authority"
+      },
+      {
+        "owner": "CANONICAL_LAW.md \u00a78",
+        "owns": "memory-layer declaration; still names graphiti_sink.py as durable-episode interface"
+      }
+    ],
+    "workflows": [
+      {
+        "evidence_ids": [
+          "e-setup-md-header",
+          "e-setup-py-launchd"
+        ],
+        "id": "suite6-workspace-enable",
+        "steps": [
+          "preflight Dropbox/L9 path + yaml",
+          "env-manager sync writes .suite6-config.json",
+          "symlink .cursor-commands",
+          "mandate 22+ file session read",
+          "activate process_learnings.sh + process_context.sh",
+          "verify LaunchAgents com.tenx.* and Suite-6 headers"
+        ]
+      },
+      {
+        "evidence_ids": [
+          "e-ctx-sqlite",
+          "e-chat-regex",
+          "e-cal-write-registry"
+        ],
+        "id": "suite6-learning-loop",
+        "steps": [
+          "hourly SQLite chat export",
+          "regex/heuristic extract",
+          "optional Bayesian keep/drop",
+          "append meta-learning-log / mutate rule-registry",
+          "nightly ECE calibration"
+        ]
+      },
+      {
+        "evidence_ids": [
+          "e-imp-cycle",
+          "e-adaptive-unimplemented"
+        ],
+        "id": "suite6-improvement-audit",
+        "steps": [
+          "observe metrics",
+          "compare GME patterns",
+          "micro-patch reasoning weights",
+          "validate via reasoning-metrics.md",
+          "append meta-audit"
+        ]
+      }
+    ]
+  },
+  "unknowns": [
+    "Whether any machine still has com.tenx.chat-export, com.tenx.learning-processor, or com.cursor.context.processor loaded.",
+    "Whether graphiti_sink.emit_session was ever invoked outside this repo (learning/graphiti-episodes/manifest.json still names it).",
+    "Whether implicit feedback_collector events were ever produced in production telemetry (telemetry/_archived only).",
+    "Whether CANONICAL_LAW \u00a78 graphiti_sink row is intentional leftover documentation or an unapplied law edit.",
+    "Exact remaining LaunchAgent plist contents on this host were not inspected in this harvest."
+  ]
+}

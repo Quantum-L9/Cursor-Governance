@@ -229,14 +229,65 @@ def test_model_states_blueprint_may_narrow_but_never_widen() -> None:
 # --- non-circular identity ------------------------------------------------
 
 
+def test_blueprint_identity_law_matches_the_shared_implementation() -> None:
+    """The law names one algorithm and one owner; the code must be that one.
+
+    A law file that drifts from the module it governs is worse than no law:
+    it reads as enforcement while enforcing nothing.
+    """
+    import sys
+
+    core_shared = MISSION_ROOT.parent / "core" / "shared"
+    if str(core_shared) not in sys.path:
+        sys.path.insert(0, str(core_shared))
+    import blueprint_identity
+
+    identity = _model()["blueprint_identity"]
+    assert identity["algorithm"] == blueprint_identity.DIGEST_ALGORITHM == "sha256"
+    assert identity["final_binding_inside_digest_domain"] == "prohibited"
+    assert "MANIFEST.yaml" in identity["canonical_input"]
+    assert "validation" in identity["computed_after"]
+    for forbidden in ("parse", "yaml_normalization", "key_sorting", "rewrite_or_reserialization"):
+        assert forbidden in identity["prohibited_before_hashing"]
+    assert (MISSION_ROOT / identity["implementation"]).resolve().is_file()
+    assert (MISSION_ROOT / identity["manifest_owner"]).resolve().is_file()
+
+
 def test_blueprint_digest_self_reference_is_prohibited() -> None:
     model = _model()
     assert model["blueprint_digest_self_reference"] == "prohibited"
-    assert model["mission_context_yaml_added"] is False
     ordering = model["non_circular_ordering"]
+    assert ordering.index("official Blueprint validation") < ordering.index(
+        "compute blueprint_digest"
+    ), "an invalid Blueprint has no admissible identity"
     assert ordering.index("compute blueprint_digest") < ordering.index("Mission Program Binding")
     assert ordering.index("Mission Program Binding") < ordering.index("Program Lock")
     assert ordering.index("Program Lock") < ordering.index("Controller")
+
+
+def test_the_non_circular_mission_context_projection_is_emitted() -> None:
+    """ADR-0026 permits a Mission context inside the Blueprint; the binding stays out.
+
+    The projection is safe there precisely because every field is known before
+    the Blueprint exists, so nothing in it can depend on ``blueprint_digest``.
+    """
+    model = _model()
+    assert model["mission_context_yaml_added"] is True
+
+    context = model["mission_context"]
+    assert context["filename"] == "MISSION_CONTEXT.yaml"
+    assert context["fields"] == ["schema", "mission_id", "mission_revision", "mission_digest"]
+    assert context["inside_blueprint_digest_domain"] == "required"
+    assert context["written_before"] == "MANIFEST.yaml finalization"
+    assert context["duplicates_mission_semantics"] is False
+    assert (MISSION_ROOT / context["json_schema"]).resolve().is_file()
+    assert (MISSION_ROOT / context["emitted_by"]).resolve().is_file()
+
+    schema = json.loads((MISSION_ROOT / context["json_schema"]).resolve().read_text("utf-8"))
+    assert schema["$id"] == context["schema"]
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == set(context["fields"])
+    assert "blueprint_digest" not in schema["properties"], "the projection cannot be circular"
 
 
 def test_no_binding_document_is_stored_inside_a_blueprint() -> None:

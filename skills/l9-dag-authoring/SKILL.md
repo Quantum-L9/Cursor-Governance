@@ -10,7 +10,7 @@ metadata:
   tags: [l9, dag, workflow, authoring, registry, langgraph, command-binding]
   owner: igor_beylin
   status: active
-  version: 2.2.0
+  version: 2.3.0
   updated: 2026-08-29
   absorbs: [l9-update-command]
 ---
@@ -130,12 +130,12 @@ first. This Skill then encodes the resulting workflow as a graph.
 2. Resolve repository surfaces with `scripts/inspect_repo_surfaces.py`; executable repo truth outranks stale docs.
 3. Resolve graph kind from explicit authority or `scripts/classify_graph_kind.py`.
 4. For `SESSION_GUIDANCE`, load [`references/session-dag-contract.md`](references/session-dag-contract.md), reconcile the `SessionDAG`, and run `scripts/validate_session_dag_source.py`.
-5. For `LANGGRAPH_RUNTIME`, load [`references/langgraph-runtime-contract.md`](references/langgraph-runtime-contract.md) and run `scripts/validate_langgraph_source.py` before any runtime claim.
+5. For `LANGGRAPH_RUNTIME`, load [`references/langgraph-runtime-contract.md`](references/langgraph-runtime-contract.md) and run `scripts/validate_langgraph_source.py` (package directory → `validate_package`) before any runtime claim. PASS requires `persistence_class=durable`.
 6. For `SESSION_GUIDANCE`, bind discovery through `workflows/dags/__init__.py` and probe `get_session_dag()` with `scripts/probe_registration.py`.
-7. For `LANGGRAPH_RUNTIME`, prove the canonical builder and executor entrypoint resolve to the same graph. Do not create SessionDAG registration as a side effect.
+7. For `LANGGRAPH_RUNTIME`, prove the canonical builder and executor entrypoint resolve to the same graph and that the executor compiles with a durable checkpointer and `thread_id`. Do not create SessionDAG registration as a side effect.
 8. Only when requested or already owned, create or reduce a command trigger and validate it with `scripts/validate_command_trigger.py`.
-9. For `CONVERT`, load [`references/session-to-langgraph-contract.md`](references/session-to-langgraph-contract.md), run `scripts/classify_conversion_disposition.py`, and emit a `StateGraph` with `scripts/convert_session_to_langgraph.py` only when disposition is `CONVERT_TO_LANGGRAPH`. Then `scripts/validate_langgraph_source.py` must PASS.
-10. Emit a receipt with `scripts/render_receipt.py`. CONVERT receipts carry `disposition`, `target_skill`, `emitted_runtime`, and `surviving_runtime`.
+9. For `CONVERT`, load [`references/session-to-langgraph-contract.md`](references/session-to-langgraph-contract.md), run `scripts/classify_conversion_disposition.py`, and emit a `StateGraph` with `scripts/convert_session_to_langgraph.py` only when disposition is `CONVERT_TO_LANGGRAPH`. Then `validate_package` on the emit directory must PASS with `persistence_class=durable`.
+10. Emit a receipt with `scripts/render_receipt.py`. CONVERT receipts carry `disposition`, `target_skill`, `emitted_runtime`, and `surviving_runtime`. LANGGRAPH_RUNTIME receipts may carry optional `persistence_class`.
 
 ## Command binding rules
 

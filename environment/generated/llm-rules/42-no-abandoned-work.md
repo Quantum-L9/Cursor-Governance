@@ -37,6 +37,16 @@ fixed and keeps it open, so the next session inherits it instead of
 rediscovering it. That is what stops rule 3 from decaying back into "someone
 else's problem".
 
+**A deferral discharges the TURN; only a human closes the ITEM.** The two are
+different questions and were once conflated: `deferred` counted as blocking, so
+a session that had pushed everything and reasoned every finding still could not
+end, and no action available to an agent could change that — the exact
+unclearable gate the Satisfiability section below calls worse than none. The
+item stays on the ledger and is reported on every `check` and `status` until a
+human closes it; what it stops doing is blocking. `open` is the only blocking
+state, deliberately: were `record` alone enough to end a turn, declaring a
+finding would become the abandonment this rule exists to prevent.
+
 ## MUST
 
 - Push a feature branch you committed on, via `PR_REMEDIATE=0 l9 pr`, before
@@ -72,6 +82,11 @@ publication — a cloud clone's single-branch refspec means
 `refs/remotes/origin/<feature>` never exists however many times the branch is
 pushed. An unreachable remote leaves the debt standing but marks it unverified:
 fail closed on the decision, honest about the evidence.
+
+The same principle governs deferral. A turn carrying only deferred items is
+dischargeable, because a gate an agent cannot clear by any correct action
+teaches bypassing rather than finishing. Deferred items are still printed at
+every check, so the cost of leaving one is visibility, not silence.
 
 Suite: `tests/ops/autonomy/test_session_debt.py`.
 

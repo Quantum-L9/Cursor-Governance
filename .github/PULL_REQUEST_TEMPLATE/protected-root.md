@@ -51,7 +51,7 @@ This PR touches additive-only repository-root files. Default template is not eno
 ## Evidence
 
 ```
-$ make pr-check
+$ make pr
 ```
 
 ## Reviewer focus

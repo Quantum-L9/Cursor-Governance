@@ -488,9 +488,56 @@ pr-check:
 	PR_MYPY_STRICT="$(PR_MYPY_STRICT)" WS="$(WS)" \
 		bash ops/scripts/run_pr_gate.sh
 
+# CI parity. CI runs with no developer git identity and no ~/.gitconfig; a
+# workstation has both. A test that quietly relies on inherited identity passes
+# locally and fails only in CI, which is the most expensive place to learn it.
+# This target runs the two suites that create real Git worktrees under the env
+# CI actually has. It DELEGATES to the existing targets rather than restating
+# their invocations, so the parity run cannot drift away from the real one.
+#
+# The recipe is the one already proven in
+# environment/program-execution/scripts/tests/test_run_campaign.py, which passes
+# an explicit -c identity per invocation precisely because none is inherited.
+#
+# Isolation is HOME alone, deliberately. The obvious stronger recipe adds
+# GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null, and
+# ops/autonomy/verification_bypass_gate.py denies exactly that form on a git
+# commit: those variables suppress the config that can carry core.hooksPath, so
+# it cannot tell a parity run from a bypass. Shipping a Make target that
+# normalises a denied form is how an exemption gets invented, so the target does
+# not use one.
+#
+# HOME alone is weaker on a machine that carries an identity in /etc/gitconfig.
+# So the property is ASSERTED rather than assumed: the run aborts if any
+# identity is still visible. That is stronger than the env-var recipe, which
+# only ever assumed its mechanism worked.
+.PHONY: test-ci-parity
+## Run the campaign + controller suites with CI's empty git identity (no ~/.gitconfig).
+test-ci-parity:
+	@parity_home="$$(mktemp -d)" || { echo "test-ci-parity: mktemp failed" >&2; exit 1; }; \
+	[ -n "$$parity_home" ] && [ -d "$$parity_home" ] || \
+		{ echo "test-ci-parity: refusing — scratch HOME unresolved" >&2; exit 1; }; \
+	for key in user.name user.email; do \
+		if val="$$(HOME="$$parity_home" git config --get "$$key" 2>/dev/null)"; then \
+			echo "test-ci-parity: NOT at parity — git still resolves $$key=$$val" >&2; \
+			echo "  a system-level gitconfig is leaking an identity CI would not have." >&2; \
+			rm -rf -- "$$parity_home"; exit 1; \
+		fi; \
+	done; \
+	echo "--- CI parity: HOME=$$parity_home, no git identity resolvable ---"; \
+	rc=0; \
+	HOME="$$parity_home" \
+		$(MAKE) program-execution-campaign-brief program-execution-controller-tests || rc=$$?; \
+	rm -rf -- "$$parity_home"; \
+	exit $$rc
+
 # Velocity path: run_pr_gate.sh owns precommit (run_pr_precommit.sh) once.
 # Do not re-add a Make prereq that double-runs precommit-repo on pr-check or pr.
 # capability-contract is domain-gated inside the gate; corpus lives on pr-full.
+#
+# pr-check does NOT strip git identity — it runs as you do, which is the right
+# default for a local gate. When a suite touches Git worktrees, `make
+# test-ci-parity` is the check that answers "would this pass in CI too".
 
 ## Gate → open/reuse GitHub PR → subscribe → emit l9-pr-remediation agent handoff.
 ## `make pr` / `make PR` / `make Pr` / `make pR` are equivalent (case-insensitive).
@@ -523,10 +570,15 @@ pr-full-corpus: venv
 	$(PYTHON) ops/scripts/validate_governance_contract_surface.py
 	$(PYTHON) ops/scripts/validate_git_denial_residue.py
 	$(PYTHON) ops/scripts/audit_corpus_reachability.py
+	$(PYTHON) ops/scripts/audit_rules_corpus.py
 
 .PHONY: corpus-reachability
 corpus-reachability: venv
 	$(PYTHON) ops/scripts/audit_corpus_reachability.py
+
+.PHONY: rules-corpus-audit
+rules-corpus-audit: venv
+	$(PYTHON) ops/scripts/audit_rules_corpus.py
 
 ## Read-only drift check: does the committed rules/RULES-MANIFEST.* still match the
 ## live rules/*.mdc corpus? Writes nothing. Exit 1 (with a findings list) on drift.
@@ -750,12 +802,20 @@ hygiene-fix:
 # Workspace ship+reset. Default apply opens scoped PRs (never main).
 # Preview: CLEAN_MODE=plan. Local only: CLEAN_REMOTE=0.
 # Consumer: make -C "$(HOME)/.cursor-governance" clean WS="$(pwd)"
+CLEAN_PYC_MODE ?= apply
 CLEAN_MODE ?= apply
 CLEAN_REMOTE ?= 1
 .PHONY: clean workspace-clean
 clean workspace-clean:
 	CLEAN_MODE="$(CLEAN_MODE)" CLEAN_REMOTE="$(CLEAN_REMOTE)" PR_BASE="$(PR_BASE)" \
 	WS="$(WS)" bash "$(CURDIR)/ops/scripts/run_workspace_clean.sh"
+
+.PHONY: clean-pyc
+## Remove __pycache__/.pytest_cache under WS. Preview: CLEAN_PYC_MODE=plan.
+## Sanctioned alternative to `rm -rf` so cache hygiene never argues with
+## ops/autonomy/git_guardrails.py (CI-025). Consumer: make -C "$(HOME)/.cursor-governance" clean-pyc WS="$(pwd)"
+clean-pyc:
+	CLEAN_PYC_MODE="$(CLEAN_PYC_MODE)" bash "$(CURDIR)/ops/scripts/clean_pyc.sh" "$(WS)"
 
 .PHONY: wip-hygiene wip-inventory
 ## Dated WIP corpus on main: file loose drops, inventory, high-evidence prune.

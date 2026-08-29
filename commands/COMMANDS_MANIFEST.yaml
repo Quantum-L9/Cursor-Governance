@@ -28,6 +28,9 @@ commands:
   aliases:
   - /analyze+evaluate
   - /analyze-evaluate
+- slash: /audit-component
+  file: commands/audit-component.md
+  enabled: true
 - slash: /autonomy
   file: commands/autonomy.md
   enabled: true

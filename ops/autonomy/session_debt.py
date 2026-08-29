@@ -50,7 +50,23 @@ SCHEMA = "l9.session-debt.v1"
 #: publish debt. A detached HEAD is likewise not a branch to push.
 UNPUBLISHABLE_BRANCHES = frozenset({"main", "master", "HEAD"})
 
+#: States that keep an item in the LIVE view. A deferral must stay visible --
+#: rule 42's whole point is that it "stays open and visible rather than
+#: dissolving into chat", so the next session inherits it.
 OPEN_STATES = frozenset({"open", "deferred"})
+
+#: States that BLOCK a turn from ending. Visibility and blocking are different
+#: questions, and conflating them made the gate unclearable: with everything
+#: else discharged, a turn carrying only deferrals still exited 2, and no action
+#: available to an agent could change that. Rule 42 calls `defer` "the correct
+#: discharge" when finishing requires authority the session does not have, and
+#: its Satisfiability section names an unclearable gate as worse than none,
+#: because it teaches bypassing. So a deferral discharges the TURN while the
+#: ITEM stays on the ledger until a human closes it.
+#:
+#: `open` is deliberately the only member. Widening this set would let a plain
+#: `record` clear a turn, which is the abandonment the gate exists to stop.
+BLOCKING_STATES = frozenset({"open"})
 
 
 def _git(root: Path, *args: str) -> tuple[int, str]:
@@ -250,13 +266,29 @@ def collect(roots: list[Path]) -> dict[str, Any]:
         for item in ledger.get("findings", []):
             if isinstance(item, dict) and item.get("state") in OPEN_STATES:
                 findings.append({**item, "workspace": str(root)})
+    blocking = [f for f in findings if f.get("state") in BLOCKING_STATES]
     return {
         "schema": SCHEMA,
         "publish_debt": publish,
         "open_findings": findings,
+        "blocking_findings": blocking,
         "unreadable_ledgers": unreadable,
-        "clean": not publish and not findings and not unreadable,
+        # An unreadable ledger blocks: it cannot prove debt is discharged.
+        "clean": not publish and not blocking and not unreadable,
     }
+
+
+def _render_findings(findings: list[dict[str, Any]]) -> str:
+    lines: list[str] = []
+    for item in findings:
+        state = str(item.get("state", "open")).upper()
+        lines.append(
+            f"  {state:9} {item.get('id', '?')} — {item.get('detail', '')}\n"
+            f"            {item['workspace']}\n"
+            f"            rules 2/3: a known bug is work, whoever wrote it. Fix it, "
+            f"or `session_debt.py defer <id> --reason` with a reason that survives you."
+        )
+    return "\n".join(lines)
 
 
 def _render(report: dict[str, Any]) -> str:
@@ -268,14 +300,7 @@ def _render(report: dict[str, Any]) -> str:
             f"            rule 1: if you commit, you must push. Publish with "
             f"`PR_REMEDIATE=0 l9 pr` from that workspace."
         )
-    for item in report["open_findings"]:
-        state = str(item.get("state", "open")).upper()
-        lines.append(
-            f"  {state:9} {item.get('id', '?')} — {item.get('detail', '')}\n"
-            f"            {item['workspace']}\n"
-            f"            rules 2/3: a known bug is work, whoever wrote it. Fix it, "
-            f"or `session_debt.py defer <id> --reason` with a reason that survives you."
-        )
+    lines.extend(_render_findings(report["open_findings"]).splitlines() or [])
     for path in report["unreadable_ledgers"]:
         lines.append(f"  CORRUPT   ledger unreadable at {path} — cannot prove debt is discharged")
     return "\n".join(lines)
@@ -286,8 +311,15 @@ def cmd_status(args: argparse.Namespace) -> int:
     if args.json:
         print(json.dumps(report, indent=2, sort_keys=True))
         return 0
+    deferred = [f for f in report["open_findings"] if f.get("state") == "deferred"]
     if report["clean"]:
-        print("PASS: no abandoned work (nothing unpushed, no open findings)")
+        print("PASS: no abandoned work (nothing unpushed, no blocking findings)")
+        if deferred:
+            # `clean` means the TURN is dischargeable, never that the ledger is
+            # empty. Hiding deferrals behind it would undo the visibility the
+            # deferral exists to preserve.
+            print(f"\n{len(deferred)} deferred item(s) awaiting a human:")
+            print(_render_findings(deferred))
         return 0
     print("Open debt:")
     print(_render(report))
@@ -298,6 +330,16 @@ def cmd_check(args: argparse.Namespace) -> int:
     """Gate entry point. Exit 2 blocks; the reason goes to stderr for the model."""
     report = collect(candidate_roots(args.root))
     if report["clean"]:
+        # Deferrals do not block, but they are never silent: a turn that ends
+        # carrying them says so, or the reason a human needs to act on stops
+        # reaching anyone.
+        deferred = [f for f in report["open_findings"] if f.get("state") == "deferred"]
+        if deferred:
+            print(
+                f"l9-debt: turn clear; {len(deferred)} deferred item(s) still on the "
+                "ledger for a human to close:\n" + _render_findings(deferred),
+                file=sys.stderr,
+            )
         return 0
     print(
         "l9-debt: this turn leaves work abandoned (rules/42-no-abandoned-work).\n"

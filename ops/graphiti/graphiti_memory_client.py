@@ -463,15 +463,30 @@ def health_check() -> int:
     return 0 if out["healthy"] else 1
 
 
-def cmd_resolve(_args: argparse.Namespace) -> int:
+def target_repo(args: argparse.Namespace) -> Path:
+    """The repository this invocation is about.
+
+    A group_id is repository identity, so resolving it from the process cwd made
+    every command's correctness depend on which directory a shell happened to be
+    in -- a hook, a subshell or a `cd` in a compound command silently retargeted
+    the memory write. `--workspace` states the target instead; cwd stays the
+    default so existing callers are unaffected.
+    """
+    explicit = getattr(args, "workspace", None)
+    if explicit:
+        return Path(explicit).expanduser().resolve()
+    return Path.cwd()
+
+
+def cmd_resolve(args: argparse.Namespace) -> int:
     load_env()
-    print(json.dumps(resolve_group_id(Path.cwd()), indent=2))
+    print(json.dumps(resolve_group_id(target_repo(args)), indent=2))
     return 0
 
 
 def cmd_search(args: argparse.Namespace) -> int:
     load_env()
-    resolved = resolve_group_id(Path.cwd(), explicit=getattr(args, "group_id", None))
+    resolved = resolve_group_id(target_repo(args), explicit=getattr(args, "group_id", None))
     group_id = resolved.get("group_id")
     if not group_id:
         raise SystemExit(resolved.get("error", "no group_id"))
@@ -532,7 +547,7 @@ def _resolve_cli_identity(args: argparse.Namespace) -> dict[str, str]:
 
 def cmd_write(args: argparse.Namespace) -> int:
     load_env()
-    resolved = resolve_group_id(Path.cwd(), explicit=getattr(args, "group_id", None))
+    resolved = resolve_group_id(target_repo(args), explicit=getattr(args, "group_id", None))
     if resolved.get("readonly"):
         raise SystemExit(f"write blocked: {resolved.get('error') or resolved.get('warning')}")
     group_id = resolved.get("group_id")
@@ -604,7 +619,7 @@ def _read_memory_bank(repo: Path) -> str:
 
 def cmd_inject(args: argparse.Namespace) -> int:
     load_env()
-    repo = Path.cwd()
+    repo = target_repo(args)
     resolved = resolve_group_id(repo)
     group_id = resolved.get("group_id") or "igor-workspace"
     task_sig = hashlib.sha256(args.task.encode()).hexdigest()[:16]
@@ -691,7 +706,7 @@ def _write_episode(name: str, body: str, group_id: str, source_description: str)
 
 def cmd_bootstrap(args: argparse.Namespace) -> int:
     load_env()
-    repo = Path.cwd()
+    repo = target_repo(args)
     resolved = resolve_group_id(repo, explicit=args.group_id)
     group_id = resolved.get("group_id")
     if not group_id:
@@ -796,7 +811,7 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
 
 def cmd_autoseed_check(args: argparse.Namespace) -> int:
     load_env()
-    resolved = resolve_group_id(Path.cwd(), explicit=getattr(args, "group_id", None))
+    resolved = resolve_group_id(target_repo(args), explicit=getattr(args, "group_id", None))
     group_id = resolved.get("group_id")
     if not group_id or resolved.get("readonly"):
         return 0
@@ -810,7 +825,7 @@ def cmd_autoseed_check(args: argparse.Namespace) -> int:
 
 def cmd_stats(args: argparse.Namespace) -> int:
     load_env()
-    group_id = args.group or resolve_group_id(Path.cwd()).get("group_id")
+    group_id = args.group or resolve_group_id(target_repo(args)).get("group_id")
     if not group_id:
         raise SystemExit("no group_id")
     episodes: list[Any] = []
@@ -922,13 +937,13 @@ def _conflicts_matching_task(data: list[Any], task: str) -> list[Any]:
     return matched
 
 
-def cmd_conflicts(_args: argparse.Namespace) -> int:
+def cmd_conflicts(args: argparse.Namespace) -> int:
     load_env()
-    group_id = resolve_group_id(Path.cwd()).get("group_id")
+    group_id = resolve_group_id(target_repo(args)).get("group_id")
     if not group_id:
         raise SystemExit("no group_id")
-    task = str(getattr(_args, "task", None) or "").strip()
-    namespace = str(getattr(_args, "namespace", None) or "").strip()
+    task = str(getattr(args, "task", None) or "").strip()
+    namespace = str(getattr(args, "namespace", None) or "").strip()
     signature = " ".join(part for part in (namespace, task) if part)
     if not signature:
         print(
@@ -962,7 +977,7 @@ def cmd_conflicts(_args: argparse.Namespace) -> int:
             )
         )
         return 0
-    if not getattr(_args, "include_expired", False):
+    if not getattr(args, "include_expired", False):
         data = _fresh_conflicts(data)
     data = _conflicts_in_scope(data, group_id)
     data = _conflicts_matching_task(data, signature)
@@ -1033,28 +1048,38 @@ def cmd_prune(args: argparse.Namespace) -> int:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Graphiti memory CLI")
+    # Shared by every subcommand so `... search q --workspace /path` reads
+    # naturally. Repository identity is what a group_id means, so it belongs on
+    # every command that resolves one, not just the obvious ones.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument(
+        "--workspace",
+        default=None,
+        metavar="PATH",
+        help="target repository (default: current directory)",
+    )
     sub = parser.add_subparsers(dest="cmd", required=True)
 
-    sub.add_parser("health")
-    sub.add_parser("resolve")
-    p_search = sub.add_parser("search")
+    sub.add_parser("health", parents=[common])
+    sub.add_parser("resolve", parents=[common])
+    p_search = sub.add_parser("search", parents=[common])
     p_search.add_argument("query")
     p_search.add_argument("--limit", type=int, default=10)
     p_search.add_argument("--group-id", default=None)
-    p_write = sub.add_parser("write")
+    p_write = sub.add_parser("write", parents=[common])
     p_write.add_argument("body")
     p_write.add_argument("--kind", default="lesson")
     p_write.add_argument("--group-id", default=None)
     p_write.add_argument("--agent-id", default=None, help="Writer agent_id (or L9_MEMORY_AGENT_ID)")
     p_write.add_argument("--dry-run", action="store_true")
-    p_inject = sub.add_parser("inject")
+    p_inject = sub.add_parser("inject", parents=[common])
     p_inject.add_argument("task", default="session start")
-    p_bootstrap = sub.add_parser("bootstrap")
+    p_bootstrap = sub.add_parser("bootstrap", parents=[common])
     p_bootstrap.add_argument("--dry-run", action="store_true")
     p_bootstrap.add_argument("--group-id", default=None)
-    p_stats = sub.add_parser("stats")
+    p_stats = sub.add_parser("stats", parents=[common])
     p_stats.add_argument("--group", default=None)
-    p_conflicts = sub.add_parser("conflicts")
+    p_conflicts = sub.add_parser("conflicts", parents=[common])
     p_conflicts.add_argument(
         "--include-expired", action="store_true", help="include expired/invalidated conflict edges"
     )
@@ -1062,15 +1087,15 @@ def main() -> int:
         "--task", default="", help="task signature to evaluate conflicts against"
     )
     p_conflicts.add_argument("--namespace", default="", help="optional namespace/group hint")
-    p_phase = sub.add_parser("phase-lock")
+    p_phase = sub.add_parser("phase-lock", parents=[common])
     p_phase.add_argument("--task", default="")
     p_phase.add_argument("--namespace", default="")
     p_phase.add_argument(
         "--include-expired", action="store_true", help="include expired/invalidated conflict edges"
     )
-    p_autoseed = sub.add_parser("autoseed-check")
+    p_autoseed = sub.add_parser("autoseed-check", parents=[common])
     p_autoseed.add_argument("--group-id", default=None)
-    p_prune = sub.add_parser("prune")
+    p_prune = sub.add_parser("prune", parents=[common])
     p_prune.add_argument("--dry-run", action="store_true")
     p_prune.add_argument("--apply", action="store_true")
 

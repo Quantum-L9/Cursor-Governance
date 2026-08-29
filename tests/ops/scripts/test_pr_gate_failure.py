@@ -152,7 +152,7 @@ def test_after_shell_fail_open_without_receipt(tmp_path: Path) -> None:
 
 
 def test_hook_script_fail_open_without_receipt(tmp_path: Path) -> None:
-    payload = json.dumps({"command": "make pr-check", "cwd": str(tmp_path), "exitCode": 2})
+    payload = json.dumps({"command": "make pr", "cwd": str(tmp_path), "exitCode": 2})
     proc = subprocess.run(
         ["bash", str(HOOK)],
         check=False,

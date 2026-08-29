@@ -33,6 +33,74 @@ Execution Controller remains the exclusive runtime authority for mutable
 execution state, task attempts, verification results, gate results, leases,
 recovery state, and handoff receipts.
 
+## Mission-bound pipeline
+
+A Program Intent may be admitted under a Mission. When it is, the same pipeline
+runs with one extra input and two extra outputs:
+
+```
+parsed Mission Revision  +  explicit Program Intent
+        → Mission Admission                      mission_admission.py
+        → Intent Resolver                        resolver.py
+              effective[action] =
+                  existing_ceiling[action] AND mission_ceiling[action]
+        → INTENT_RESOLUTION.yaml + mission_context
+        → Program Synthesizer                    synthesizer.py
+              Blueprint artifacts
+              MISSION_CONTEXT.yaml                ← before the manifest
+              canonical MANIFEST.yaml finalized
+        → official instantiated-Blueprint validation
+        → blueprint_digest = SHA-256(exact MANIFEST.yaml bytes)
+        → Mission Program Binding                 mission_binding.py
+              written OUTSIDE the Blueprint root
+        → prepared for lock
+```
+
+An **unbound** Program Intent takes the ordinary path above, unchanged: no
+Mission context file, no Mission provenance, no behavioural difference.
+
+### The four orderings that are not decorative
+
+| Ordering | Why |
+| --- | --- |
+| Admission receives an *explicit* Program Intent | Nothing here decomposes a Mission into Programs, so nothing can invent one |
+| `MISSION_CONTEXT.yaml` before `MANIFEST.yaml` | The manifest inventories every file but itself; a context written after it is uncovered, and the validator rejects that |
+| Official validation before `blueprint_digest` | An invalid Blueprint has no admissible identity, so there is nothing for a binding to pin |
+| Binding after the digest, and outside the Blueprint | The binding names `blueprint_digest`; storing it inside would make Blueprint identity depend on a document naming that identity (ADR-0026) |
+
+### Mission narrows, never widens
+
+The Mission ceiling is intersected with the ceiling the policy profile and the
+Program Intent already produced. `AND` can only clear bits, so a Mission
+declaring `push: true` cannot hand a Program push authority the profile
+withheld — widening is structurally impossible rather than merely checked.
+
+### What the Mission context is, and is not
+
+`MISSION_CONTEXT.yaml` carries exactly `schema`, `mission_id`,
+`mission_revision`, and `mission_digest`
+(`schemas/mission-context.schema.json`, closed to additional properties). It is
+provenance: it says *which exact Mission Revision admitted this Program* so a
+reader can fetch the Mission itself. Mission objective, acceptance criteria,
+authority ceiling, budgets, constraints, scope, lifecycle, and owner are
+deliberately absent — a copy of Mission semantics inside a Blueprint is a second
+source of Mission truth, and supersession cannot correct a copy.
+
+Mission identity is read off the parsed `Mission` at every step, never off a
+caller argument, so a Program cannot claim a Mission it was not admitted to.
+Blueprint identity comes from the single shared implementation,
+`../core/shared/blueprint_identity.py`.
+
+### Still deferred, and said so rather than implied
+
+Program Lock Mission binding import; Controller Mission projection and any
+Controller lookup of live Mission state; `make campaign` and compiler front-door
+(`cli.py`) wiring; autonomous Mission-to-Program decomposition; the aggregate
+Mission budget ledger that `max_programs`, `max_parallel_programs`, cost,
+tokens, gate calls, and duration would need; the semantic Mission scope-subset
+engine, which has no machine selector grammar to check against; and every
+Mission runtime construct — Controller, Scheduler, Lease, Work Item, Task State.
+
 ## Architecture route
 
 ```
@@ -113,6 +181,9 @@ cannot widen its own.
 | Intent Resolver | `resolver.py` | §5-§6 |
 | Program action (create/extend/supersede) | `program_action.py` | §14 |
 | Program Synthesizer | `synthesizer.py` | §9-§12, Gate C |
+| Mission context contract | `schemas/mission-context.schema.json` | ADR-0024, ADR-0026 |
+| Mission Program admission | `mission_admission.py` | ADR-0024, ADR-0026 |
+| Mission Program Binding production | `mission_binding.py` | ADR-0026, Gate D |
 | Official validator adapter | `blueprint_validate.py` | §13, Gate D |
 | Front door | `cli.py` | §15, Gate E |
 | Test matrix (13 §18 scenarios) | `tests/` | §18, Gate F |

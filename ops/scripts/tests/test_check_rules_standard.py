@@ -102,6 +102,19 @@ class CheckRulesStandardTests(unittest.TestCase):
             errs, _warns, _total, _files = check_rules(root)
             self.assertTrue(any(".md" in item for item in errs))
 
+    def test_unparseable_frontmatter_is_a_named_error(self) -> None:
+        """Harvest C4: parse failure is reported, not skipped."""
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            _write(
+                root,
+                "10-broken.mdc",
+                "---\n{[\n---\n# broken\n",
+            )
+            errs, _warns, _total, files = check_rules(root)
+            self.assertEqual(files, 1)
+            self.assertTrue(any("frontmatter parse failed" in item for item in errs))
+
 
 if __name__ == "__main__":
     unittest.main()

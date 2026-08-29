@@ -39,7 +39,9 @@ Silence is not permission to leave unique work uncommitted.
 - `git add -A` / `git add .` / scooping foreign dirty paths (rule 49)
 - `git push`, `gh pr create`, `make push`, or MCP `create_pull_request` /
   `push_files` without an explicit user request
-- `make pr` unless the user invoked it (or L4 release + standing publish path)
+- `make pr` unless the user invoked it. Standing L4 publish is adapter-only
+  (`L9_GOVERNANCE_SURFACE=claude-code` / `codex` / `gemini` / `manus`).
+  Cursor has no standing publish.
 - Chain commit **and** push from “looks good”
 
 ## MAY without asking
@@ -51,7 +53,7 @@ Silence is not permission to leave unique work uncommitted.
 
 1. **Mechanical gates** — `ops/autonomy/local_execution_gate.py`, L4 receipts, `merge_gate.py`
 2. **`88-l4-local-autonomy`** — during an active L4 program: local commits authorized; mid-execution `make pr` and MCP `create_pull_request` / `push_files` denied until `authorize-release`
-3. **This rule** — Cursor **local commit** is standing and mandatory after authored edits. **Push / PR open** stays ask-first except when the user invoked `make pr` or a campaign packet / L4 authorize-release publish path applies
+3. **This rule** — Cursor **local commit** is standing and mandatory after authored edits. **Push / PR open** stays ask-first except when the user invoked `make pr`. Standing L4 authorize-release publish applies on `L9_GOVERNANCE_SURFACE=claude-code` / `codex` / `gemini` / `manus` only. Cursor stops after catalog + commit.
 4. Force-push, hard-reset, admin-merge, and secrets exfil: **never** waived
 
 Projected override: `zz-autonomy-surface-override.md`.

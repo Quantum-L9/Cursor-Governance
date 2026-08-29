@@ -1,6 +1,6 @@
 ---
 name: l9-component-verification
-description: Audit, deterministically verify, or runtime-probe a named component — exports, imports, wiring, and loadability — as a read-only escalation ladder. Use from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring or registration, for editing the component, or for generic repo exploration.
+description: Audit, deterministically verify, or runtime-probe a named component — exports, imports, wiring, and loadability — as a read-only escalation ladder. Use from /audit-component, or from /analyze, /evaluate, or /analyze_evaluate when the user names a component, module, import, or wiring check. Do not use for DAG authoring or registration, for editing the component, or for generic repo exploration.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -17,7 +17,7 @@ metadata:
 
 ## Purpose
 
-Prove components are correctly defined, imported, wired, and loadable — via read-only audit, deterministic verify, or runtime probe. Invoke from `/analyze`, `/evaluate`, or `/analyze_evaluate` (the retired `/probe` / `/audit-component` / `/verify-component` slashes are gone).
+Prove components are correctly defined, imported, wired, and loadable — via read-only audit, deterministic verify, or runtime probe. `/audit-component` is the live slash for mode `audit-component`. `/analyze`, `/evaluate`, and `/analyze_evaluate` still load this skill when the user names a component. Folded slashes `/probe` and `/verify-component` remain modes on that family.
 
 ## Core Contract
 

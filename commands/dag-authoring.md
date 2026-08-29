@@ -1,6 +1,6 @@
 ---
 name: dag-authoring
-version: "2.2.0"
+version: "2.3.0"
 description: "Create, update, validate, register, command-bind, or convert an L9 workflow graph"
 before_chain: rules
 auto_chain: ynp

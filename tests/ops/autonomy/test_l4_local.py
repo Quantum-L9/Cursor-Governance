@@ -18,6 +18,8 @@ from l4_local import (  # noqa: E402
     begin,
     record_kernels,
     release_allows_remote,
+    resolve_pr_template,
+    status_dict,
     workspace_from_event,
 )
 from local_execution_gate import evaluate  # noqa: E402
@@ -116,3 +118,65 @@ def test_cli_check_remote_exit_codes(stacked_repo: Path, monkeypatch: pytest.Mon
     )
     assert ok.returncode == 0
     assert json.loads(ok.stdout)["allowed"] is True
+
+
+# -- CI-016 / IMP-14: pr_template resolves against the RELEASED repo ----------
+# The field was the literal "PULL_REQUEST_TEMPLATE.md" in every receipt, so a
+# receipt written in a repository with no template named the governance clone's
+# default as if it were that repo's own.
+
+
+def test_pr_template_is_none_when_the_released_repo_has_none(tmp_path: Path) -> None:
+    assert resolve_pr_template(tmp_path) is None
+
+
+@pytest.mark.parametrize(
+    "rel",
+    [
+        "PULL_REQUEST_TEMPLATE.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".github/pull_request_template.md",
+        "docs/PULL_REQUEST_TEMPLATE.md",
+    ],
+)
+def test_pr_template_found_at_each_standard_location(tmp_path: Path, rel: str) -> None:
+    target = tmp_path / rel
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text("## Summary\n", encoding="utf-8")
+    assert resolve_pr_template(tmp_path) == rel
+
+
+def test_pr_template_prefers_repo_root_over_dot_github(tmp_path: Path) -> None:
+    (tmp_path / "PULL_REQUEST_TEMPLATE.md").write_text("root", encoding="utf-8")
+    (tmp_path / ".github").mkdir()
+    (tmp_path / ".github" / "PULL_REQUEST_TEMPLATE.md").write_text("gh", encoding="utf-8")
+    # Same precedence as ops/scripts/open_pr_after_gate.sh, which searches
+    # $WS/PULL_REQUEST_TEMPLATE.md before $WS/.github/PULL_REQUEST_TEMPLATE.md.
+    assert resolve_pr_template(tmp_path) == "PULL_REQUEST_TEMPLATE.md"
+
+
+def test_pr_template_never_reports_the_governance_default_for_a_bare_repo(
+    stacked_repo: Path,
+) -> None:
+    """The done_when: a receipt in a repo without a template says null."""
+    for rel in (
+        "PULL_REQUEST_TEMPLATE.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
+        ".github/pull_request_template.md",
+        "docs/PULL_REQUEST_TEMPLATE.md",
+    ):
+        assert not (stacked_repo / rel).exists(), f"fixture unexpectedly ships {rel}"
+    begin(stacked_repo, contract_id="ci-016")
+    record_kernels(stacked_repo)
+    receipt = authorize_release(stacked_repo)
+    assert receipt["pr_template"] is None
+    assert status_dict(stacked_repo)["pr_template"] is None
+
+
+def test_pr_template_names_the_released_repos_own_template(stacked_repo: Path) -> None:
+    (stacked_repo / ".github").mkdir(exist_ok=True)
+    (stacked_repo / ".github" / "pull_request_template.md").write_text("x", encoding="utf-8")
+    begin(stacked_repo, contract_id="ci-016b")
+    record_kernels(stacked_repo)
+    receipt = authorize_release(stacked_repo)
+    assert receipt["pr_template"] == ".github/pull_request_template.md"

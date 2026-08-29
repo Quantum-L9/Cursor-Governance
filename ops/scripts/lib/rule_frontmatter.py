@@ -2,6 +2,8 @@
 
 Used by generate_rules_manifest.py and project_llm_rules.py so there is one
 parser for governance rule metadata.
+
+Invariant (harvest C4): unparseable metadata is a named finding, never a skip.
 """
 
 from __future__ import annotations
@@ -29,7 +31,10 @@ def parse_rule(path: Path) -> ParsedRule:
     if text.startswith("---\n"):
         parts = text.split("---\n", 2)
         if len(parts) == 3:
-            raw = yaml.safe_load(parts[1]) or {}
+            try:
+                raw = yaml.safe_load(parts[1]) or {}
+            except yaml.YAMLError as exc:
+                raise ValueError(f"frontmatter parse failed: {path}: {exc}") from exc
             if not isinstance(raw, dict):
                 raise ValueError(f"frontmatter must be a mapping: {path}")
             metadata = raw

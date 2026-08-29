@@ -1,0 +1,19 @@
+{
+  "checks": [
+    {
+      "errors": [],
+      "id": "harvest_schema_evidence_portability_authority_closure",
+      "status": "PASS"
+    }
+  ],
+  "outputs": [
+    "harvest.json"
+  ],
+  "request_id": "ih-readme-updater-2026-08-28",
+  "status": "PASS",
+  "unknowns": [
+    "Whether .github/scripts/validate-readme-sections.py is invoked by donor CI; workflows were outside the sparse inventory.",
+    "The exact semantic delta between the two readme_generator.py copies beyond unequal sha256.",
+    "Which headings a hardened pointer-stack required-section map should name; beneficiary README live headings were not re-audited as a count in this harvest."
+  ]
+}

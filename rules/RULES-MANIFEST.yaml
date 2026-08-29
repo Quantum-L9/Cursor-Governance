@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-29T00:29:49Z'
+generated_utc: '2026-08-29T04:03:19Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:692cfecd0176c35eaad70fb13cfe7fce784a15be41da8ed1f66fa7341cec2924
+source_tree_digest: sha256:44ab372504fa1915aaf78f2cfd589dac41936b96e5bdccb8bf5632cf6e5215fd
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -25,8 +25,8 @@ rules:
   globs: null
   first_heading: Global rules
   has_yaml_frontmatter: true
-  line_count: 36
-  content_digest: sha256:ceaafbc510094aafbfd66606103783bc9630cb7073eec01ff07c3ebc9ac92548
+  line_count: 40
+  content_digest: sha256:f52c4a83d3140578f1dba975f12b643ff85a0751c49c40af1ba112720dd2011c
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -47,8 +47,8 @@ rules:
   globs: null
   first_heading: Slash Command Recognition
   has_yaml_frontmatter: true
-  line_count: 161
-  content_digest: sha256:9b2cf950134c15be4fc9e01af14f2c1b514718555d0c59e2fa543894d779808a
+  line_count: 162
+  content_digest: sha256:f601de6bbc2214c3eadebce58f73d099225e07a01a72020b550b190937cf09b4
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -69,8 +69,8 @@ rules:
   globs: null
   first_heading: Graphiti Memory (SSOT)
   has_yaml_frontmatter: true
-  line_count: 68
-  content_digest: sha256:d3fca17315f96f3157e038e1b311b5482748b5a5733163cd41d888f1b555580d
+  line_count: 70
+  content_digest: sha256:93cd8a5cbf326814afcc9f1ce8651f16bcb1b4f1e991d35be2914a3a1ab39616
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -414,8 +414,8 @@ rules:
   globs: null
   first_heading: No abandoned work
   has_yaml_frontmatter: true
-  line_count: 83
-  content_digest: sha256:0faf271f64038c1ef63d070a52df2fb94320e329a7a626bc59abe4b5c05e4bb3
+  line_count: 98
+  content_digest: sha256:e956f6c8ae0f1d23c25adecb78bee084bf6cedb11d9774a70338d979037f448e
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -545,7 +545,7 @@ rules:
 - file: 48-make-pr-remediation.mdc
   id: l9.rule.48.make.pr.remediation
   id_source: explicit
-  version: 1.4.0
+  version: 1.5.0
   description: After make pr opens a PR, campaign path ends green + merge-ready; /l9-pr-remediation authorizes merge and publishes via precommit-repo plus git push
   scope: global
   domain: general
@@ -555,8 +555,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
-  line_count: 125
-  content_digest: sha256:72302848d33ab5022e9c7640c5975bc96ec4fe6221ca9f8e337a56d87453f98b
+  line_count: 135
+  content_digest: sha256:6e7690a6d6e954a4a4597f695305a62ef5bda9243873beec73fddf5ab7b93580
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -1344,8 +1344,8 @@ rules:
   globs: null
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
-  line_count: 69
-  content_digest: sha256:88a6bc6c681c483e4b451017a2292e2a45b0c34e8b6a7cafa9878b048f4669de
+  line_count: 73
+  content_digest: sha256:0ae1c99fa217b0befbfa51186e544dbb2b4ce31a8376f7a512f271cf8fa4173b
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -1586,8 +1586,8 @@ rules:
   globs: null
   first_heading: Local commit is standing (always on)
   has_yaml_frontmatter: true
-  line_count: 62
-  content_digest: sha256:f40fb8497a18ed5beac54fe9e7a5a6a23e7a6304180faaaf6861da80134e0bde
+  line_count: 64
+  content_digest: sha256:69479f6c29499b67beb0c2d5dd68bd7651ff751db7de0ad0cb3587c5de1ce689
   authority: canonical_global
   context_cost: minimal
   deprecated: false

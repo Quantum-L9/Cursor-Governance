@@ -204,6 +204,37 @@ def current_head(root: Path) -> str:
         return ""
 
 
+#: Where a PR template may live in the RELEASED repository, in the order
+#: `ops/scripts/open_pr_after_gate.sh` searches (lines 341-347), plus the two
+#: further locations GitHub itself honours for a single default template.
+#:
+#: The governance clone's own PULL_REQUEST_TEMPLATE.md is the publisher's LAST
+#: resort and is deliberately absent here: naming it in a receipt written for a
+#: consumer would report the governance default as if it were that repo's
+#: template, which is exactly the defect this list exists to fix.
+PR_TEMPLATE_CANDIDATES: tuple[str, ...] = (
+    "PULL_REQUEST_TEMPLATE.md",
+    ".github/PULL_REQUEST_TEMPLATE.md",
+    ".github/pull_request_template.md",
+    "docs/PULL_REQUEST_TEMPLATE.md",
+)
+
+
+def resolve_pr_template(root: Path) -> str | None:
+    """The released repo's own PR template, workspace-relative, or None.
+
+    `null` is the correct and informative answer for a repository that ships no
+    template — the publisher will fall back to the governance clone, and saying
+    so honestly is what lets a reader tell the two cases apart. Previously this
+    field was the literal string "PULL_REQUEST_TEMPLATE.md" in every receipt,
+    whether or not the released repo had one.
+    """
+    for rel in PR_TEMPLATE_CANDIDATES:
+        if (root / rel).is_file():
+            return rel
+    return None
+
+
 def load_json(path: Path) -> dict[str, Any] | None:
     if not path.is_file():
         return None
@@ -243,8 +274,16 @@ def begin(
 ) -> dict[str, Any]:
     branch = current_branch(root)
     if branch in {"main", "master", "HEAD"}:
+        # Name the directory, not just the branch. A refusal that says only
+        # "refused on 'main'" reads as a policy error when the real cause is
+        # usually that the command ran from the wrong tree -- a hook, a
+        # subshell, or a compound command that changed directory. IMP-06's
+        # second clause: say which repository was resolved, and name the flag
+        # that retargets it.
         raise RuntimeError(
-            f"L4 begin refused on '{branch}' — create/checkout a stacked feature branch first"
+            f"L4 begin refused on '{branch}' in {root} — "
+            "create/checkout a stacked feature branch first, "
+            "or did you mean --workspace <target repo>?"
         )
     state = {
         "schema": SCHEMA,
@@ -334,7 +373,7 @@ def authorize_release(root: Path) -> dict[str, Any]:
         "head_sha": head,
         "authorized_at": state["authorized_at"],
         "kernels": state.get("kernels"),
-        "pr_template": "PULL_REQUEST_TEMPLATE.md",
+        "pr_template": resolve_pr_template(root),
         "doctrine": "l4_local_autonomy",
     }
     write_autonomy_json(root, RECEIPT_FILENAME, receipt)
@@ -431,7 +470,7 @@ def status_dict(root: Path) -> dict[str, Any]:
         "remote_allowed": allowed,
         "reason": reason,
         "kernels_required": [KERNEL_RECURSIVE_ALIGNMENT, KERNEL_VALIDATE_REPAIR],
-        "pr_template": "PULL_REQUEST_TEMPLATE.md",
+        "pr_template": resolve_pr_template(root),
     }
 
 

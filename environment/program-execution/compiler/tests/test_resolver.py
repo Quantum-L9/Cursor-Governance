@@ -207,3 +207,134 @@ def test_existing_program_material_change_supersedes(tmp_path: Path) -> None:
     )
     assert resolution["program_action"]["mode"] == "supersede"
     assert resolution["program_action"]["parent_program_ref"] == "pe-old"
+
+
+# --- Mission-bound resolution (ADR-0024, ADR-0026) -------------------------
+
+
+def _mission(**overrides: object):
+    import sys
+
+    import yaml
+
+    mission_root = Path(__file__).resolve().parents[2] / "mission"
+    if str(mission_root) not in sys.path:
+        sys.path.insert(0, str(mission_root))
+    from mission import parse_mission
+
+    fixture = mission_root / "tests" / "fixtures" / "valid_mission.yaml"
+    document = yaml.safe_load(fixture.read_text(encoding="utf-8"))
+    document.update(overrides)
+    return parse_mission(document)
+
+
+def _admission(intent: Intent | None = None, **overrides: object):
+    from compiler.mission_admission import admit
+
+    return admit(_mission(**overrides), intent or _intent())
+
+
+def test_mission_bound_resolution_intersects_the_ceiling(tmp_path: Path) -> None:
+    from compiler.policy import CEILING_KEYS
+
+    unbound = resolver.resolve(_intent(), truth=_truth(tmp_path, owner="Igor Beylin"))
+    ceiling = dict.fromkeys(CEILING_KEYS, True)
+    ceiling["commit"] = False
+    bound = resolver.resolve(
+        _intent(),
+        truth=_truth(tmp_path, owner="Igor Beylin"),
+        admission=_admission(authority_ceiling=ceiling),
+    )
+
+    assert unbound["_compiler_meta"]["ceiling"]["commit"] is True
+    assert bound["_compiler_meta"]["ceiling"]["commit"] is False, "Mission must narrow"
+    assert bound["_compiler_meta"]["ceiling"]["inspect"] is True, "narrowing is per action"
+
+
+def test_mission_can_never_widen_the_resolved_ceiling(tmp_path: Path) -> None:
+    """The fixture Mission grants push and pull_request; the profile does not."""
+    from compiler.policy import CEILING_KEYS
+
+    admission = _admission(authority_ceiling=dict.fromkeys(CEILING_KEYS, True))
+    assert all(admission.authority_ceiling[key] for key in CEILING_KEYS)
+
+    policy = load_policy(DEFAULT_PROFILE)
+    resolution = resolver.resolve(
+        _intent(), truth=_truth(tmp_path, owner="Igor Beylin"), admission=admission
+    )
+    resolved = resolution["_compiler_meta"]["ceiling"]
+    for action in CEILING_KEYS:
+        assert not (resolved[action] and not policy["authorization_ceiling"][action]), action
+    assert resolved["push"] is False
+    assert resolved["merge"] is False
+
+
+def test_mission_context_is_first_class_exact_provenance(tmp_path: Path) -> None:
+    import yaml
+
+    admission = _admission()
+    resolution = resolver.resolve(
+        _intent(), truth=_truth(tmp_path, owner="Igor Beylin"), admission=admission
+    )
+
+    assert resolution["mission_context"] == admission.mission_context()
+    reference = admission.authority_reference()
+    assert reference in resolution["governing_authority"]["source_ids"]
+    assert reference in resolution["decisions"]["accepted_from_authority"]
+    assert any(
+        requirement["source"] == {"type": "decision", "ref": reference}
+        for requirement in resolution["derived_requirements"]
+    ), "the intersection must be traceable, not silent"
+
+    # First-class means it survives write_resolution(), which strips `_` keys.
+    path = resolver.write_resolution(resolution, tmp_path / "INTENT_RESOLUTION.yaml")
+    written = yaml.safe_load(path.read_text(encoding="utf-8"))
+    assert written["mission_context"] == admission.mission_context()
+
+    # And it carries no Mission planning, budget, or lifecycle semantics.
+    mission = _mission()
+    text = yaml.safe_dump(written["mission_context"])
+    assert mission.objective not in text
+    for absent in ("authority_ceiling", "budgets", "acceptance_criteria", "constraints"):
+        assert absent not in text
+
+
+def test_invalid_admission_fails_closed(tmp_path: Path) -> None:
+    """A duck-typed admission could carry a digest nobody parsed."""
+
+    class NotAnAdmission:
+        mission_id = "MISSION-FAKE"
+        mission_revision = 1
+        mission_digest = "f" * 64
+
+        def mission_context(self) -> dict:
+            return {
+                "schema": "program-execution.mission-context.v1",
+                "mission_id": self.mission_id,
+                "mission_revision": self.mission_revision,
+                "mission_digest": self.mission_digest,
+            }
+
+    with pytest.raises(ValueError, match="MissionAdmission"):
+        resolver.resolve(
+            _intent(), truth=_truth(tmp_path, owner="Igor Beylin"), admission=NotAnAdmission()
+        )
+    with pytest.raises(ValueError, match="MissionAdmission"):
+        resolver.resolve(
+            _intent(),
+            truth=_truth(tmp_path, owner="Igor Beylin"),
+            admission={"mission_id": "MISSION-FAKE"},
+        )
+
+
+def test_unbound_resolution_is_unchanged(tmp_path: Path) -> None:
+    """Backward compatibility is the load-bearing property of an optional binding."""
+    truth = _truth(tmp_path, owner="Igor Beylin", test_command="pytest -q")
+    baseline = resolver.resolve(_intent(), truth=truth)
+    explicit_none = resolver.resolve(_intent(), truth=truth, admission=None)
+
+    assert "mission_context" not in baseline
+    assert baseline == explicit_none
+    assert baseline["synthesis_status"] == "ready"
+    assert baseline["decisions"]["accepted_from_authority"] == []
+    assert baseline["governing_authority"]["source_ids"] == ["POLICY:" + DEFAULT_PROFILE]

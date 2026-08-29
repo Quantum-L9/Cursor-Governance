@@ -17,11 +17,17 @@ set `PR_BASE=origin/campaign/<id>`. Do not import or cite
 ## Publish
 
 `--mode start` / `--mode full` call `l4_local.py begin --contract-id gmp-<id>`
-when `L9_L4_LOCAL_AUTONOMY` is on. Finalize calls `record-kernels`, then
-`authorize-release`, then `PR_REMEDIATE=1 make pr`. That remediates value is the
-human override in rule 48. Merge still requires `/l9-pr-remediation` Converge.
+when `L9_L4_LOCAL_AUTONOMY` is on.
 
-PR-poll Tasks spawn only after that `make pr` opens a PR.
+**Cursor** (`L9_GOVERNANCE_SURFACE` is `cursor` or unset): finalize is
+`make precommit-repo` + commit + **STOP**. Do not `authorize-release` or
+`make pr`.
+
+**Claude Code** (`L9_GOVERNANCE_SURFACE=claude-code`) and other adapters:
+finalize calls `record-kernels`, then `authorize-release`, then `PR_REMEDIATE=1 make pr`.
+That remediates value is the human override in rule 48. Merge still requires
+`/l9-pr-remediation` Converge. PR-poll Tasks spawn only after that
+`L9_GOVERNANCE_SURFACE=claude-code` `make pr` opens a PR.
 
 ## Skill references to reuse (do not run PE steps)
 

@@ -37,10 +37,8 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
 ## Dangling references (broken if invoked)
 
 - [x] **`ops/scripts/operational-oversight.py`** — fixed (2026-07-19): dangling refs to
-  `startup/REASONING_STACK.yaml` and `verify-startup-files.sh` repaired. **Keep, still needs a
-  second pass:** its optional `governance_monitor` import (line 59) now points at an archived
-  module (`execution-governance/_archived/monitoring/governance-monitor.py`) — already
-  soft-fails via `try/except ImportError` so it's not broken, but the fallback message is stale.
+  `startup/REASONING_STACK.yaml` and `verify-startup-files.sh` repaired. **Second pass
+  (2026-08-28):** retired `governance_monitor` import/warning when A1 deleted.
 - [x] **`ops/scripts/verify-startup-files.sh`** — **already purged** with `ops/scripts/_archived`
   (2026-08-06). Close as stale; see DELETE LIST A9 / B9.
 - [x] **`ops/scripts/README_STARTUP_VERIFICATION.md`** — **already purged** (same).
@@ -50,10 +48,8 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
   Writes signatures to `foundation/security/_archived/signatures/` — an already-archived
   location predating this session. Needs investigation: either re-point at a live signature
   store, or confirm archived-signatures-as-read-only-ledger is the intended design.
-- [ ] **`ops/feedback_loop_config.yaml`** — `feedback_collector.script` points at
-  `.cursor-commands/ops/scripts/feedback_collector.py`, which never existed there (the real
-  file, now archived, lived at `intelligence/learning/feedback_collector.py`). Pre-existing
-  dangling path, not caused by this session's archiving.
+- [x] **`ops/feedback_loop_config.yaml`** — dangling collector script key removed
+  2026-08-28 (Suite-6 cut-over). Outcome labels live at `ops/graphiti/outcome_label.py`.
 
 ## Rules / docs that mention deleted assets
 
@@ -71,10 +67,8 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
   its `.py`; was a 1000+ line Suite-6 doc (`.suite6-config.json`, hardcoded Dropbox paths,
   `verify-startup-files.sh` expectations). `SETUP_QUICK_START.md` rewritten to point at
   `AGENTS.md` + `ops/hooks/session_start_bootstrap.sh` instead.
-- [x] **`execution-governance/README.md`** — **archived** (2026-07-19) to
-  `execution-governance/_archived/README.md` along with the rest of `execution-governance/`
-  (all 5 `.py` implementations were confirmed Suite-6 legacy — see CHANGELOG `[Unreleased]`).
-  **On DELETE LIST (2026-08-12) as A1** — whole tree is archive-only; awaiting delete PR.
+- [x] **`execution-governance/README.md`** — **archived** (2026-07-19), **deleted**
+  (2026-08-28, TODO A1) after harvest C3/C1/C4 landed in `audit_rules_corpus.py`.
 - [ ] **`README.md`** (GlobalCommands root) — startup/templates references
 - [x] **`C_GOV_FILES/`** duplicates — **path already deleted** (2026-07-05). Remaining work is
   doc scrub only — see DELETE LIST A8.
@@ -222,11 +216,11 @@ folder even if individual packs are later purged), `learning/` (non-`_archived`)
 
 | # | Path | Status | Notes |
 |---|------|--------|-------|
-| A1 | **`execution-governance/`** | EXISTS (7 files, only `_archived/`) | Suite-6 api/dashboard/monitor/validator (2026-07-19). No live callers. Soft-fail import note in `ops/scripts/operational-oversight.py` — scrub message when deleting. **Added 2026-08-12.** |
+| A1 | **`execution-governance/`** | ABSENT (deleted 2026-08-28) | Suite-6 api/dashboard/monitor/validator archived 2026-07-19; harvest C3/C1/C4 landed into `audit_rules_corpus.py`; tree removed after oversight-import scrub. |
 | A2 | **`telemetry/`** | EXISTS (2 files, only `_archived/`) | `calibration_dashboard.py`, `telemetry-collector.py` (2026-07-19). |
 | A3 | **`environment/_archived/`** | EXISTS (2 files) | `env-manager.py`, `env_loader.py` (2026-07-19). |
 | A4 | **`workflows/_archived/`** | EXISTS (1 file) | Orphan `wire_dag.py` duplicate (2026-07-19). |
-| A5 | **`intelligence/_archived/`** | EXISTS (9 files) | learning/workspace/context-memory Suite-6 (2026-07-19). |
+| A5 | **`intelligence/_archived/`** | EXISTS (9 files) | learning/workspace/context-memory Suite-6 (2026-07-19). Cut-over in progress 2026-08-28. |
 | A6 | **`learning/failures/_archived/`** | EXISTS (1 file) | Noise MD. |
 | A7 | **`foundation/`** | EXISTS (~351 files, all under `_archived/`) | logic/agents + `security/_archived/signatures/` (~333 JSON sigs). **Signatures may be provenance ledger** — prefer cold-export or keep sigs; do not bulk-delete without owner call. |
 | A8 | **`C_GOV_FILES/`** | ABSENT (deleted 2026-07-05) | Scrub README/TODO/pyproject excludes that still teach the path. |
@@ -279,7 +273,7 @@ folder even if individual packs are later purged), `learning/` (non-`_archived`)
 ### Suggested delete PR sequence (when authorized)
 
 1. **Doc scrub first:** A8–A11 path teaching + close stale Tier-B9 TODO bullets (no tree delete).
-2. **Empty archive shells:** A1 `execution-governance/`, A2 `telemetry/`, A3–A6 (skip A7 until signatures decision).
+2. **Empty archive shells:** A1 `execution-governance/` (deleted 2026-08-28), A2 `telemetry/`, A3–A6 (skip A7 until signatures decision).
 3. **Orphan live paths:** B1 `profiles/` (after AUTONOMY_MANIFEST), then B2–B4, B6–B8, B10.
 4. **Archive retention purge:** B5 / C1 only with explicit retention decision.
 5. **Never in spring-clean:** `environment/program-execution/`, Claude adapter pack, `ops/autonomy/`, root `autonomy/`.
@@ -295,11 +289,11 @@ folder even if individual packs are later purged), `learning/` (non-`_archived`)
 
 Changes live in the SSOT (`$HOME/.cursor-governance`). Backup via `sessionEnd` hook or `make governance-backup` — not from IB-Odoo_19.
 
-## pre-commit vs `make pr-check` — parked (2026-08-17)
+## pre-commit vs `make pr` — parked (2026-08-17)
 
 Do **not** edit `.pre-commit-config.yaml` and do **not** change the working
 `Makefile` / `make pr` lifecycle (PR #209) until this is an explicit follow-up.
-Keep shipping through `make improve` → `make pr-check` → `make pr`.
+Keep shipping through `make improve` → `make pr` → `make pr`.
 
 **Findings (microscope, 2026-08-17):**
 
@@ -309,7 +303,7 @@ Keep shipping through `make improve` → `make pr-check` → `make pr`.
    `pre-commit install` would write that local untracked file. CI never uses
    the hook.
 2. **What actually runs lint today**
-   - Local: `make pr-check` → `run_pr_gate.sh` → `run_pr_precommit.sh`
+   - Local: `make pr` → `run_pr_gate.sh` → `run_pr_precommit.sh`
      (catalog in `.pre-commit-config.yaml` on changed files) **then** locked
      `.venv` ruff check/format again.
    - CI Lint: `uv run ruff` in `.github/workflows/l9-lint-test.yml` — not the

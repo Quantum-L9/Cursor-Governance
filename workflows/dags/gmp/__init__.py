@@ -16,7 +16,8 @@ Usage:
     from workflows.dags.gmp import GMPLangGraphExecutor
 
     executor = GMPLangGraphExecutor()
-    result = executor.run("task description", tier="RUNTIME")
+    payload = executor.run("task description", tier="RUNTIME")
+    # payload = {"thread_id": ..., "state": ...}
 """
 
 from workflows.dags.gmp.executor import GMPLangGraphExecutor, main

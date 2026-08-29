@@ -9,7 +9,12 @@ import yaml
 from compiler.intent import parse_intent
 from compiler.repo_truth import RepoTruth
 from compiler.resolver import resolve
-from compiler.synthesizer import AUTH_ACTIONS, RuntimeContaminationError, synthesize
+from compiler.synthesizer import (
+    AUTH_ACTIONS,
+    MISSION_CONTEXT_FILENAME,
+    RuntimeContaminationError,
+    synthesize,
+)
 
 AUTH_ACTIONS_SET = set(AUTH_ACTIONS)
 
@@ -127,3 +132,121 @@ def test_acceptance_criteria_are_machine_verifiable(tmp_path: Path) -> None:
             assert "looks correct" not in text
             assert "seems clean" not in text
             assert "good quality" not in text
+
+
+# --- Mission-bound synthesis (ADR-0024, ADR-0026) --------------------------
+
+
+def _mission(**overrides):
+    import sys
+
+    mission_root = Path(__file__).resolve().parents[2] / "mission"
+    if str(mission_root) not in sys.path:
+        sys.path.insert(0, str(mission_root))
+    from mission import parse_mission
+
+    fixture = mission_root / "tests" / "fixtures" / "valid_mission.yaml"
+    document = yaml.safe_load(fixture.read_text(encoding="utf-8"))
+    document.update(overrides)
+    return parse_mission(document)
+
+
+def _bound_resolution(tmp_path: Path) -> tuple[dict, object]:
+    from compiler.mission_admission import admit
+
+    mission = _mission()
+    intent = parse_intent(
+        {"schema": "program-execution.intent.v1", "objective": "Make repo X achieve Y."}
+    )
+    truth = RepoTruth(
+        root=tmp_path,
+        remote="https://github.com/Quantum-L9/Cursor-Governance.git",
+        revision="0123456789abcdef0123456789abcdef01234567",
+        owner="Igor Beylin",
+        test_command="pytest -q",
+        package_manager=None,
+        runtime_version="3.12",
+        dpk=None,
+        constraints_files=[],
+        adr_files=[],
+        validation_commands=["pytest -q"],
+        rollback_defs=[],
+        source_priority={"test_command": "prose"},
+    )
+    return resolve(intent, truth=truth, admission=admit(mission, intent)), mission
+
+
+def test_mission_bound_synthesis_emits_the_exact_minimal_context(tmp_path: Path) -> None:
+    resolution, mission = _bound_resolution(tmp_path)
+    root = synthesize(resolution, tmp_path / "blueprint")
+
+    context = yaml.safe_load((root / MISSION_CONTEXT_FILENAME).read_text(encoding="utf-8"))
+    assert context == {
+        "schema": "program-execution.mission-context.v1",
+        "mission_id": mission.mission_id,
+        "mission_revision": mission.mission_revision,
+        "mission_digest": mission.mission_digest,
+    }
+
+
+def test_mission_context_participates_in_blueprint_identity(tmp_path: Path) -> None:
+    """Written before write_manifest(), so its bytes reach the digest."""
+    resolution, _ = _bound_resolution(tmp_path)
+    root = synthesize(resolution, tmp_path / "blueprint")
+
+    manifest = yaml.safe_load((root / "MANIFEST.yaml").read_text(encoding="utf-8"))
+    entry = next(e for e in manifest["files"] if e["path"] == MISSION_CONTEXT_FILENAME)
+    import hashlib
+
+    assert (
+        entry["sha256"]
+        == hashlib.sha256((root / MISSION_CONTEXT_FILENAME).read_bytes()).hexdigest()
+    )
+
+    from compiler.blueprint_validate import validate
+
+    assert validate(root, mode="instantiated").ok, "a covered context must validate"
+
+
+def test_mission_planning_and_runtime_semantics_are_not_copied(tmp_path: Path) -> None:
+    """The projection is provenance, never a second Mission definition."""
+    resolution, mission = _bound_resolution(tmp_path)
+    root = synthesize(resolution, tmp_path / "blueprint")
+    text = (root / MISSION_CONTEXT_FILENAME).read_text(encoding="utf-8")
+
+    assert mission.objective not in text
+    assert mission.mission_owner not in text
+    for criterion in mission.acceptance_criteria:
+        assert criterion["criterion_id"] not in text
+    for absent in (
+        "objective",
+        "acceptance_criteria",
+        "authority_ceiling",
+        "budgets",
+        "constraints",
+        "scope",
+        "targets",
+        "termination",
+        "mission_owner",
+        "metadata",
+        "tasks",
+        "waves",
+        "lease",
+        "worker",
+        "provider",
+        "runtime_status",
+        "attempts",
+    ):
+        assert absent not in text
+
+
+def test_unbound_synthesis_emits_no_mission_context(tmp_path: Path) -> None:
+    root = _synthesize(tmp_path)
+    assert not (root / MISSION_CONTEXT_FILENAME).exists()
+
+    manifest = yaml.safe_load((root / "MANIFEST.yaml").read_text(encoding="utf-8"))
+    assert MISSION_CONTEXT_FILENAME not in {entry["path"] for entry in manifest["files"]}
+
+    from compiler.blueprint_validate import validate
+
+    assert validate(root, mode="instantiated").ok, "unbound behaviour is unchanged"
