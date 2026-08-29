@@ -11,16 +11,16 @@ assessment_scope_note: Full re-derivation, not a counter update. Every one of th
   overlay named 30c6ecd4 while main had advanced 59 commits and 514 files — CI-034's defect, fourth occurrence,
   and the reason this pass is full rather than targeted.
 counts:
-  done: 2
-  partial: 16
-  not_started: 16
+  done: 7
+  partial: 15
+  not_started: 12
   blocked: 1
   unknown: 3
 queue_counts:
-  active: 27
-  external_blocked: 6
+  active: 20
+  external_blocked: 8
   needs_attachment: 3
-  closed: 2
+  closed: 7
 total: 38
 schedule:
   model: weighted-dag-list-schedule
@@ -549,9 +549,9 @@ records:
   title: Improve receipt CLI ergonomics without multiplying state owners
   original_status: ACTIVE
   previous_progress: not_started
-  progress: not_started
-  disposition: NOT_STARTED
-  queue: active
+  progress: done
+  disposition: COMPLETE
+  queue: closed
   confidence: high
   optimized_sequence: 10
   execution_lane: L1
@@ -572,12 +572,27 @@ records:
   delivered_by: null
   ordering_note: Sequence after CI-004 — the default read should print the fields CI-004 adds, or it is written
     twice.
-  residual:
+  residual: []
+  residual_as_assessed:
   - 'LOADER-1: make bare invocation read and print, keep --read accepted, and name the exact command in CLAUDE.md''s
     receipt paragraph.'
   evidence:
   - ops/scripts/claude_bootstrap_receipt.py:144 and ops/scripts/governance_refresh_receipt.py:154 both still declare
     --read with required=True. No default read action.
+  execution:
+    wave: 1
+    branch: claude/cursor-governance-pack-reconcile-9d4c9v
+    pr: 360
+    commits:
+    - 39c882be
+    delivered:
+    - 'LOADER-1 met. Both receipt CLIs read by default: --read is no longer required=True, so the obvious invocation
+      answers instead of exiting 2 with a usage error.'
+    - --read is still accepted, and a test pins that it produces byte-identical output to the bare form — hooks
+      and documented call sites pass it today.
+    - CLAUDE.md's receipt paragraph now names the command rather than describing a flag, and a test asserts that
+      text stays true.
+    residual_note: No in-repo residual.
 - id: CI-008
   priority: 0
   title: Reconcile make pr doctrine with consumer-repository command contracts
@@ -794,7 +809,7 @@ records:
   previous_progress: not_started
   progress: partial
   disposition: PARTIAL
-  queue: active
+  queue: external_blocked
   confidence: high
   optimized_sequence: 16
   execution_lane: L3
@@ -814,6 +829,8 @@ records:
   delivered_by: null
   status_moved: not_started -> partial (in-repo lever was already largely built and went unrecorded)
   residual:
+  - Hook-side ownership classification stays external (harness Stop-hook resolution).
+  residual_as_assessed:
   - Add `.mcp.json` to the Claude-specific exclude block in install.sh. One glob; the design decision it belongs
     to is already made and documented.
   - Hook-side ownership classification stays external.
@@ -831,6 +848,22 @@ records:
   - '/root/.claude/stop-hook-git-check.sh re-verified at this binding (regenerated 21:39 this session): fires on
     any `git diff` delta and any `git ls-files --others --exclude-standard` output, with no ownership classification.
     Harness-owned.'
+  execution:
+    wave: 1
+    branch: claude/cursor-governance-pack-reconcile-9d4c9v
+    pr: 360
+    commits:
+    - bfdfffcd
+    delivered:
+    - 'The one remaining glob is added: install.sh''s Claude-specific exclude block now carries ''.mcp.json'' alongside
+      .claude/skills/, .claude/rules/ and .claude/commands/.'
+    - 'Scoping evidence, checked rather than assumed: .mcp.json is TRACKED in Cursor-Governance and UNTRACKED in
+      all three consumers, so the exclude is a no-op exactly where the file is committed.'
+    - test_install_mounts.py tightened from a two-glob subset to the full set plus a negative assertion that .claude/settings.json
+      and .claude/hooks/ are NOT excluded — the scoping decision is now pinned in both directions, not only the
+      permissive one.
+    residual_note: In-repo residual closed. The record leaves the active queue as external-blocked, not done, because
+      its second leg is outside this org's surfaces.
 - id: CI-015
   priority: 1
   title: Name and enforce the authoritative governance checkout
@@ -880,7 +913,7 @@ records:
   previous_progress: partial
   progress: partial
   disposition: PARTIAL
-  queue: active
+  queue: external_blocked
   confidence: high
   optimized_sequence: 18
   execution_lane: L3
@@ -901,6 +934,8 @@ records:
     depend on local remote-tracking refs at all)
   advanced: true
   residual:
+  - Harness stop-hook resolution logic stays external.
+  residual_as_assessed:
   - Consolidate repo_hygiene.py's prune with the session-start prune so a count read mid-session is not served by
     the session-end pass.
   - Harness stop-hook resolution logic stays external.
@@ -917,14 +952,32 @@ records:
     and ops/scripts/tests/test_stale_remote_ref_counts.sh.'
   - 'Residual confirmed: ops/scripts/repo_hygiene.py:385 still runs `git fetch --prune origin` at session end only,
     unconsolidated with the session-start prune.'
+  execution:
+    wave: 1
+    branch: claude/cursor-governance-pack-reconcile-9d4c9v
+    pr: 360
+    commits:
+    - 1b8ad90c
+    - 4be93117
+    delivered:
+    - 'The residual named timing; the true defect was a SPLIT INVARIANT. #325 had already fixed the timing by pruning
+      at session start. bootstrap_agent_environment.sh ships two halves together — prune stale remote-tracking refs,
+      then ensure origin/HEAD resolves — because pruning alone converts an OVERCOUNT into SILENCE. repo_hygiene.py
+      had only the first half, and it is the tool that DELETES branches on that evidence.'
+    - 'sync_remote_refs() now carries both, fail-soft in three stages: no origin is silent; an unreachable remote
+      and an unresolvable origin/HEAD each surface as a report error rather than aborting hygiene.'
+    - 'Self-correction inside the record: the first commit claimed ''a contract both call sites satisfy'' and only
+      the commit message said so. A cross-site test now holds both implementations, and pins that the Python fetch/prune
+      appears exactly once so a second call site cannot skip the set-head half again.'
+    residual_note: In-repo residual closed; the record leaves the active queue as external-blocked.
 - id: CI-025
   priority: 2
   title: Provide sanctioned cleanup of generated/cache residue
   original_status: ACTIVE
   previous_progress: not_started
-  progress: not_started
-  disposition: NOT_STARTED
-  queue: active
+  progress: done
+  disposition: COMPLETE
+  queue: closed
   confidence: high
   optimized_sequence: 19
   execution_lane: L0
@@ -944,11 +997,31 @@ records:
   delivered_by: null
   ordering_note: Doing this first removes the pressure that motivates CI-013's C3, rather than depending on it.
     The original CI-025 -> CI-013 edge is inverted in practice.
-  residual:
+  residual: []
+  residual_as_assessed:
   - 'IMP-05/IMP-08(P7): add `make clean-pyc` and have the adapters gate pre-clean or ignore cache debris rather
     than failing on it.'
   evidence:
   - No clean-pyc target and no __pycache__ handling in the governance Makefile.
+  execution:
+    wave: 1
+    branch: claude/cursor-governance-pack-reconcile-9d4c9v
+    pr: 360
+    commits:
+    - acf8e9b3
+    delivered:
+    - 'IMP-08 met. `make clean-pyc` (WS-scoped, CLEAN_PYC_MODE=plan to preview) delegates to ops/scripts/clean_pyc.sh:
+      only directories named exactly __pycache__ or .pytest_cache, the name re-asserted at the line that deletes,
+      .git pruned so no object store is ever a candidate, and an empty root, a missing root or / refused. Cache
+      hygiene no longer needs an rm -rf that rule 54 must refuse.'
+    - 'A bug the test found and review would not have: ROOT="${1:-...}" treats an EMPTY argument as absent, so clean_pyc.sh
+      "$WS" with WS unset — the exact shape rule 54 refuses — fell through to the default and cleaned the current
+      directory. `$# -ge 1` now separates ''passed nothing'' from ''passed empty''.'
+    - 16 cases in tests/ops/scripts/test_clean_pyc.sh, weighted toward the refusals.
+    residual_note: 'IMP-05''s leg is re-scoped NO_LONGER_REQUIRED rather than implemented, with evidence: its named
+      target validate_execution_adapters.py is already invoked at Makefile:616 as ''PYTHONDONTWRITEBYTECODE=1 $(PYTHON)
+      -B'', which PREVENTS the debris the leg asked to clean up, and .gitignore covers both cache directories so
+      they never dirty a tree.'
 - id: CI-016
   priority: 1
   title: Make L4/release receipts resolve paths, branch, and head dynamically
@@ -975,6 +1048,10 @@ records:
   - CI-025
   delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
   residual:
+  - 'I-BS-09: have `status` compare the pinned SHA to current head and report STALE explicitly. Still open — status_dict()
+    surfaces staleness only inside release_allows_remote()''s prose `reason`, which pre-dates this work (present
+    at origin/main), and carries no explicit field a caller can test.'
+  residual_as_assessed:
   - 'IMP-14: resolve pr_template against the released repository across the standard template locations; emit null
     when none is found.'
   - 'I-BS-09: have `status` compare the pinned SHA to current head and report STALE explicitly.'
@@ -982,14 +1059,25 @@ records:
   - 'ops/autonomy/l4_local.py still writes the literal ''PULL_REQUEST_TEMPLATE.md'' at lines 337 and 436. The file
     changed since 30c6ecd4 (e3f7065, #347) but that change moved kernels out of L4, not the template resolution.'
   - Branch and head resolution remain dynamic (current_branch, current_head, drift check).
+  execution:
+    wave: 1
+    branch: claude/cursor-governance-pack-reconcile-9d4c9v
+    pr: 360
+    commits:
+    - 05cf45ff
+    delivered:
+    - IMP-14 met. resolve_pr_template() walks PR_TEMPLATE_CANDIDATES against the RELEASED repository and returns
+      None when none is found; both 'pr_template' sites call it instead of assuming a path.
+    - The release refusal now names the repository and --workspace, so the message says what to do.
+    residual_note: One of two legs delivered; the record stays active with the narrower residual.
 - id: CI-014
   priority: 2
   title: Make target repository/cwd explicit for governance CLIs
   original_status: ACTIVE
   previous_progress: partial
-  progress: partial
-  disposition: PARTIAL
-  queue: active
+  progress: done
+  disposition: COMPLETE
+  queue: closed
   confidence: high
   optimized_sequence: 21
   execution_lane: L3
@@ -1008,7 +1096,8 @@ records:
   - CI-025
   delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
   residual_corrected: true
-  residual:
+  residual: []
+  residual_as_assessed:
   - Add --workspace to graphiti_memory_client.py, defaulting to current behaviour.
   - 'Make the refusal name the remedy: ''…did you mean --workspace <target repo>?'''
   evidence:
@@ -1018,6 +1107,21 @@ records:
   - ops/graphiti/graphiti_memory_client.py has no --workspace argument. That leg is genuinely open.
   - 'IMP-06''s second clause is unmet: l4_local.py:247 refuses with ''L4 begin refused on <branch> — create/checkout
     a stacked feature branch first'' and never suggests --workspace, which is the actionable half of the improvement.'
+  execution:
+    wave: 1
+    branch: claude/cursor-governance-pack-reconcile-9d4c9v
+    pr: 360
+    commits:
+    - 8fb79b1d
+    delivered:
+    - graphiti_memory_client.py gains --workspace on all 11 subcommands via a shared `common` parent parser, and
+      target_repo(args) routes the six Path.cwd() identity reads through it. Default behaviour unchanged.
+    - 'The refusal names the remedy: ''…did you mean --workspace <target repo>?''.'
+    - tests/ops/graphiti/test_target_repo_workspace.py — 12 cases, including a source-walking regression guard that
+      fails on any Path.cwd() outside the two legitimate uses, so the next added subcommand cannot silently reintroduce
+      cwd-as-identity.
+    residual_note: Both legs delivered. The recorded residual was already wrong on its principal target — l4_local.py
+      declared --workspace at 30c6ecd4 — which the r2 assessment had corrected.
 - id: CI-021
   priority: 2
   title: Make session-experience and skill-usage logging observable
@@ -1055,9 +1159,9 @@ records:
   title: Make local CI parity and hooks first-class provisioning
   original_status: ACTIVE
   previous_progress: not_started
-  progress: not_started
-  disposition: NOT_STARTED
-  queue: active
+  progress: done
+  disposition: COMPLETE
+  queue: closed
   confidence: high
   optimized_sequence: 23
   execution_lane: L1
@@ -1075,19 +1179,40 @@ records:
   - CI-022
   - CI-027
   delivered_by: null
-  residual:
+  residual: []
+  residual_as_assessed:
   - 'IMP-01(P7): add a make target running the campaign and controller suites with HOME empty and both git config
     files at /dev/null, and reference it from the pr-check documentation.'
   evidence:
   - No ci-parity target in the governance Makefile; no GIT_CONFIG_GLOBAL/GIT_CONFIG_SYSTEM stanza.
+  execution:
+    wave: 1
+    branch: claude/cursor-governance-pack-reconcile-9d4c9v
+    pr: 360
+    commits:
+    - 8bdfab82
+    delivered:
+    - IMP-01(P7) met, both clauses. `make test-ci-parity` runs the campaign-brief and controller suites under CI's
+      identity conditions, delegating to the existing targets so the parity run cannot drift from the real one;
+      pr-check's documentation points at it (Makefile:540).
+    - 'Result: both suites pass at parity — they are already identity-clean. The target confirms that rather than
+      exposing a break, which could not previously be stated at all.'
+    residual_note: 'DELIBERATE DEVIATION from the residual''s wording, recorded rather than glossed. The residual
+      asked for ''both git config files at /dev/null''. GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
+      is a form ops/autonomy/verification_bypass_gate.py DENIES, because those variables suppress the config that
+      can carry core.hooksPath and the gate cannot tell a parity run from a bypass. Written that way first, it ran
+      only because the gate evaluates tool invocations and not commands inside a Make recipe. Shipping a target
+      that normalises a denied form is how an exemption gets invented. Isolation is HOME alone and the property
+      is ASSERTED instead of assumed: the run aborts, naming the leaking key and value, if any identity is still
+      resolvable — stronger than the env-var recipe, which only ever assumed its mechanism worked.'
 - id: CI-027
   priority: 3
   title: Correct rule rationale that no longer matches container reality
   original_status: ACTIVE
   previous_progress: not_started
-  progress: not_started
-  disposition: NOT_STARTED
-  queue: active
+  progress: done
+  disposition: COMPLETE
+  queue: closed
   confidence: high
   optimized_sequence: 24
   execution_lane: L2
@@ -1105,13 +1230,28 @@ records:
   - CI-021
   - CI-022
   delivered_by: null
-  residual:
+  residual: []
+  residual_as_assessed:
   - 'IMP-17: keep the pinned-interpreter mandate, replace the justification with the true one (version pinning and
     dependency isolation), and regenerate the projection.'
   evidence:
   - rules/03-graphiti-memory.mdc:56 still reads 'system `python3` often lacks PyYAML'. At this binding `python3
     -c 'import yaml'` succeeds on CPython 3.11.15. The projected copy at environment/generated/llm-rules/03-graphiti-memory.md:48
     carries the same false premise.
+  execution:
+    wave: 1
+    branch: claude/cursor-governance-pack-reconcile-9d4c9v
+    pr: 360
+    commits:
+    - 539b5d21
+    - 43f34da1
+    delivered:
+    - 'IMP-17 met. rules/03-graphiti-memory.mdc no longer claims system python3 ''often lacks PyYAML''. Measured
+      before editing: system python3 is 3.11.15 and imports PyYAML fine; the venv is 3.12.3. The mandate is unchanged
+      and the justification is now the true one — interpreter version pinning and dependency isolation.'
+    - Both projections regenerated. The first attempt regenerated only environment/generated/llm-rules/ and left
+      RULES-MANIFEST stale; generate_rules_manifest.py owns that store, not claude_projection.py.
+    residual_note: No in-repo residual. The record's single leg is delivered.
 - id: CI-022
   priority: 2
   title: Provision or explicitly declare service-backed integration-test dependencies
@@ -1386,3 +1526,123 @@ records:
   - 'REPRODUCING AT THIS BINDING: the session''s branch directive names one branch, claude/cursor-governance-pack-reconcile-9d4c9v,
     identically for all four in-scope repositories — Cursor-Governance, l9-cognitive-runtime, l9-ci-core and l9-meta-injector.
     Third consecutive assessment at which it reproduces.'
+counts_binding_note: Counts are stated AFTER execution wave 1 (see the execution block). The assessment that produced
+  this pack measured 2/16/16/1/3 at main@59f03a5d; seven execution units shipped on PR#360 moved five records to
+  done and two out of the active queue as external-blocked.
+execution:
+  schema: l9.environment_experience.execution/v1
+  note: 'A SECOND binding, additive to the assessment. Every field above this block still means ''as judged against
+    main@59f03a5d on 2026-08-28''. This block means ''as built on the branch below and published as PR#360''. They
+    are kept separate deliberately: collapsing them is how the predecessor pack came to carry three different counts
+    in three stores.'
+  executed_at: '2026-08-29'
+  branch: claude/cursor-governance-pack-reconcile-9d4c9v
+  branched_from: 0fc6ee6f2aadfbee885bf5bb708ff91c38205ba1
+  head_sha: 8d81233648464330c7e45de9e75487a8c8dce583
+  pull_request:
+    number: 360
+    url: https://github.com/Quantum-L9/Cursor-Governance/pull/360
+    state: open
+    base: main
+    mergeable: true
+    merged: false
+    template: .github/PULL_REQUEST_TEMPLATE/protected-root.md (marker L9_PROTECTED_ROOT_PR present)
+  gate_evidence: make pr-check green — 628 tests, 0 failures; ruff check + format clean; working tree clean at HEAD.
+  records_touched: 8
+  records_closed: 5
+  records_left_active_as_external_blocked: 2
+  records_still_active_with_narrowed_residual: 1
+  counts_delta:
+    done: 2 -> 7
+    partial: 16 -> 15
+    not_started: 16 -> 12
+    blocked: 1 (unchanged)
+    unknown: 3 (unchanged)
+  queue_delta:
+    active: 27 -> 20
+    external_blocked: 6 -> 8
+    needs_attachment: 3 (unchanged)
+    closed: 2 -> 7
+  effort:
+    consumed: 7
+    remaining: 35
+    of_total: 42
+    execution_units_remaining: 19
+    of_execution_units: 26
+    note: CI-016's weight is NOT decremented although one of its two legs shipped. Fractional consumption would
+      make the remaining figure unauditable; the narrowed residual is recorded on the record instead.
+  schedule_after_this_wave:
+    critical_path:
+    - CI-004
+    - CI-005
+    critical_path_length: 6
+    critical_path_unchanged_because: neither record was touched; both remain the two most expensive in the queue.
+    makespan_lower_bound_at_4_lanes: 9
+    lower_bound_derivation: max(critical_path=6, ceil(remaining_effort 35 / 4 lanes)=9) = 9, down from 11.
+    not_re_derived: The achievable makespan is NOT restated. Removing 7 units changes which pairs collide and which
+      lane assignment is optimal, and that needs the scheduler re-run rather than an arithmetic adjustment. The
+      bound is stated because it is computable; the schedule is not, because it is not.
+  repairs_outside_the_pack:
+  - commit: '99608999'
+    what: 'run_pr_precommit.sh: restored the staged-mode exemption #347 dropped.'
+    why_in_scope: rule 42/3 — a pre-existing error is in scope the moment it is identified. Without the guard, install_commit_hook.sh's
+      governed shim rejected EVERY commit, so the one supported way to verify at commit time was broken on main.
+  - commit: 8eff1c60
+    what: 'test_bootstrap_invariants.py: justified #359''s five added gate-timing swallows and 9ecfc823''s one,
+      un-redding the ratchet.'
+    why_in_scope: 'The ratchet was failing on main. Each added swallow was read before the baseline moved: timing
+      instrumentation and wave-log aggregation (failing to RECORD what a gate did must never change WHETHER it passed),
+      _gate_state_digest''s file-list build (on failure the digest differs and the gate RE-RUNS — it fails toward
+      more work), and two calls inside the EXIT trap (a handler that can itself fail would mask the real exit code).
+      No occurrence swallows the result of a check. SWALLOW_BASELINE is the mechanism for justifying a bump, not
+      a check being weakened — an earlier reading of this as rule-60 weakening was wrong and was reversed.'
+  - commit: 8d812336
+    what: 'session_debt.py: split OPEN_STATES (live view) from BLOCKING_STATES (ends a turn); rule 42 amended to
+      say a deferral discharges the TURN while the ITEM stays open; deferrals now always printed by both check and
+      status.'
+    why_in_scope: 'Subject-adjacent to CI-037 but not that record: CI-037 is ''make abandoned work fail closed''
+      and stays done. This is the satisfiability defect underneath it — a turn that had pushed everything and reasoned
+      every finding still could not end, which rule 42''s own Satisfiability section calls worse than no gate. Visibility
+      is preserved, blocking is not: ''open'' remains the only blocking state, deliberately, since a `record` that
+      ended a turn would make declaring a finding the abandonment the rule exists to prevent.'
+  - commit: c2a5cc7a / 43f34da1
+    what: Regenerated the skill registry and RULES-MANIFEST after merging main and after the rule 03 edit.
+    why_in_scope: Rule 53's regen obligation — a merge is not complete while a generated store is stale.
+  deferred_findings:
+  - id: od-002-makefile-precedence
+    state: deferred — awaiting an operator doctrine decision
+    detail: 'Operator correction 2026-08-29: make resolution should be the workspace Makefile FIRST, then the SSOT
+      clone bootstrapped in the repo. That contradicts surface_profile.yaml, CLAUDE.md, rules 48/88 and tests/ops/scripts/test_publish_verb_governance_always.py,
+      all of which state the governance Makefile is authoritative regardless of the repo worked in. Operator scoped
+      the correction ''behaviour only, for now'', so the doctrine change was deliberately NOT made. OPEN_DECISIONS.yaml
+      OD-002 is reopened to REOPENED in this revision and CI-008''s residual is flagged as shaped by the old direction.'
+  - id: verify-gate-denies-hookspath-read
+    state: deferred
+    detail: 'verification_bypass_gate.py denies ''git config --get core.hooksPath'' — a READ. The matcher does not
+      distinguish --get/--get-all/--list from a write, so diagnosing the hook model is blocked by the gate protecting
+      it. Observed during CI-018. Narrow fix: exempt read forms. Not a pack record; recorded so it is not rediscovered.'
+  - id: debt-gate-deferred-still-blocks
+    state: deferred — superseded by 8d812336, left open for a human to close
+    detail: The tension this named is resolved by the OPEN_STATES/BLOCKING_STATES split; a human closes the item.
+  - id: debt-gate-fix-cannot-self-apply
+    state: deferred — clears when 8d812336 reaches main
+    detail: 'Bootstrapping property, verified not inferred: session_debt_wrap.py:15 pins GATE to $HOME/.cursor-governance/ops/autonomy/session_debt.py,
+      so the Stop hook always runs the SSOT clone''s copy. The SSOT sits at main@0fc6ee6 (grep BLOCKING_STATES =
+      0); the fix lives in the workspace and on this branch (grep = 2). A fix to the debt gate therefore cannot
+      take effect for the session that writes it. Verify with: python3 ops/autonomy/session_debt.py check — the
+      workspace copy exits 0.'
+  what_is_left:
+    in_repo_active: 20
+    next_by_leverage:
+    - CI-004
+    - CI-012
+    - CI-006
+    - CI-007
+    - CI-009+CI-028
+    - CI-102
+    next_note: 'CI-004 is the P0 and the head of the critical path: a governance_revision mismatch is still not
+      treated as receipt expiry, so the stale-receipt defect reproduces at every binding and TTL will never catch
+      it. CI-005 is gated behind it. Nothing in this wave touched either.'
+    external_blocked: 8
+    needs_attachment: 3
+    closed: 7

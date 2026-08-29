@@ -27,7 +27,9 @@ open_decisions:
 
 - id: OD-002
   title: Canonical publish command contract
-  state: RESOLVED
+  state: REOPENED
+  reopened_at: '2026-08-29'
+  reopened_by: operator correction during execution wave 1
   question: Must every governed consumer implement make pr, or should doctrine define a supported fallback?
   resolution: >
     Neither branch of the original question: the governance Makefile is the publish authority
@@ -46,6 +48,29 @@ open_decisions:
     (run_pr_precommit.sh:33-47) and explicitly not enabled — 'requires validation against a real
     consumer checkout (not available in this environment)'. That is an implementation residual,
     not a reopened decision. Lane L3, slot [2-4].
+  reopening_2026_08_29: >
+    The operator states that make resolution should be the LOCAL WORKSPACE Makefile first, and the
+    SSOT clone bootstrapped in the repo second. That is the opposite ordering to the resolution
+    recorded above, so the resolution no longer holds and the decision is reopened rather than
+    quietly kept.
+  contradicts:
+  - "ops/autonomy/surface_profile.yaml — 'make pr runs the GOVERNANCE Makefile, regardless of the
+     repo worked in or its Makefile'."
+  - "CLAUDE.md and rules 48/88 — the governance Makefile is the publish authority; a consumer needs
+     no pr/pr-check target and there is no raw-push fallback."
+  - "tests/ops/scripts/test_publish_verb_governance_always.py — pins exactly that contract, so the
+     reordering is a test-visible doctrine change, not a preference."
+  scope_of_the_correction: >
+    Operator scoped it 'behaviour only, for now'. The doctrine change was therefore deliberately NOT
+    made in this wave: no rule, profile, Makefile or test was edited toward the new ordering. What
+    changed is this record and CI-008's flag below.
+  effect_on_ci_008: >
+    CI-008's residual was shaped by the old direction and must be reshaped when the doctrine call is
+    made. It is flagged, not rewritten, because rewriting it now would encode an unauthorized
+    doctrine into the pack.
+  blocking: >
+    This is the decision that ends the deferred finding 'od-002-makefile-precedence'. Until it is
+    made, CI-008 stays partial for a reason that is a pending decision rather than pending work.
 
 - id: OD-003
   title: Capability broker failure cause

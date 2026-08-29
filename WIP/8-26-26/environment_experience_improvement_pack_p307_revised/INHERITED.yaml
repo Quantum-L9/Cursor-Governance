@@ -16,6 +16,15 @@ verification: >
   `diff -r` between the two pack directories — the only differences must be the six revised
   artifacts and the two new ones.
 
+execution_wave_1: >
+  Wave 1 (2026-08-29, PR#360) wrote execution state back into the SAME six revised artifacts
+  and touched none of the fourteen inherited ones, so the byte-identity claim above is
+  unaffected and still checkable exactly as stated. Execution state is additive and separately
+  stamped — progress.yaml gains an `execution` block, each delivered record gains an
+  `execution` sub-block and keeps its `residual_as_assessed` — so no assessment field changed
+  meaning. No new store was created for delivery state: a third store is the CI-035 failure
+  this pack exists to stop repeating.
+
 revised_here:
 - path: README.md
   why: pack identity, status, roadmap and structure all move with the new binding

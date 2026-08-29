@@ -16,21 +16,37 @@ progress_meta:
     named residual; not_started = not addressed; blocked = valid but not startable from this org's surfaces; unknown
     = current evidence insufficient at this binding
   counts:
-    done: 2
-    partial: 16
-    not_started: 16
+    done: 7
+    partial: 15
+    not_started: 12
     blocked: 1
     unknown: 3
   queue_counts:
-    active: 27
-    external_blocked: 6
+    active: 20
+    external_blocked: 8
     needs_attachment: 3
-    closed: 2
+    closed: 7
   total: 38
   note: 'The predecessor''s improvements.yaml carried a progress_meta stamped ''main@post-#307-merge'' with counts
     2/9/25 of 36, while its progress.yaml carried 4/15/19 of 38 at 30c6ecd4 and its README a third figure. Three
     stores, three answers, inside the artifact that proposed CI-035. Reconciled here: both stores carry 38 records
     and the same counts.'
+  execution_binding:
+    executed_at: '2026-08-29'
+    branch: claude/cursor-governance-pack-reconcile-9d4c9v
+    pr: 360
+    head_sha: 8d81233648464330c7e45de9e75487a8c8dce583
+    records_touched:
+    - CI-003
+    - CI-014
+    - CI-016
+    - CI-018
+    - CI-025
+    - CI-027
+    - CI-030
+    - CI-036
+    note: Counts here are post-wave-1 and identical to progress.yaml's by construction — this script writes both.
+      CI-035 exists because the predecessor's two stores disagreed; they do not disagree again.
 records:
 - id: CI-001
   title: Publish and enforce the real GitHub REST/GraphQL capability boundary

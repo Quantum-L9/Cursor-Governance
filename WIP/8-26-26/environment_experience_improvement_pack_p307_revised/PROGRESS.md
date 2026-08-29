@@ -3,15 +3,106 @@
 Assessed against **main@59f03a5d** on 2026-08-28, full SHA `59f03a5d4460b939360bc2fd5dd85239d47416a5`.
 Predecessor: `WIP/8-26-26/environment_experience_improvement_pack_p307`, assessed at `30c6ecd4`.
 
-**2 done · 16 partial · 16 not started · 1 blocked · 3 unknown** (of 38 records).
+**As assessed at `59f03a5d`:** 2 done · 16 partial · 16 not started · 1 blocked · 3 unknown (of 38).
+Active queue 27; 6 external-blocked, 3 unverifiable without a repository attachment, 2 closed.
 
-**Active queue: 27.** 6 external-blocked, 3 unverifiable without a repository attachment, 2 closed.
+**After execution wave 1 (PR#360, open):** **7 done · 15 partial · 12 not started · 1 blocked ·
+3 unknown** (of 38). **Active queue: 20.** 8 external-blocked, 3 needing an attachment, 7 closed.
+
+Both figures are stated because they answer different questions, and collapsing them is exactly
+how the predecessor came to carry three different counts in three stores. Every count above is
+derived from the records themselves — `progress.yaml`'s stated `counts` and the tally over its 38
+records agree by construction.
 
 > **This pass is full, not targeted.** The predecessor was explicit that it re-verified only
 > the records touched by #324 and #325 and carried the rest forward. It named `30c6ecd4`;
 > main is at `59f03a5d`, 59 commits and 514 files later. Carrying judgements forward across
 > that gap is how three records came to be wrong, so every record here was re-judged against
 > the tree and the live container.
+
+## Execution wave 1 — what was built, on a branch, and published
+
+Branch `claude/cursor-governance-pack-reconcile-9d4c9v`, forked from `0fc6ee6f`, head
+`8d812336`, published as **PR#360 against `main` — open, mergeable, not merged**, carrying the
+`<!-- L9_PROTECTED_ROOT_PR -->` marker the protected-root gate requires. Gate evidence:
+`make pr-check` green, 628 tests, 0 failures, ruff clean, working tree clean at head.
+
+Seven of the queue's 26 execution units shipped. Eight records were touched.
+
+| Record | Was | Now | Delivered | Left |
+|---|---|---|---|---|
+| **CI-027** | ⬜ not started | ✅ **done** | Rule 03's interpreter rationale replaced with the true one — version pinning and dependency isolation. Measured first: system `python3` is 3.11.15 and imports PyYAML fine; the venv is 3.12.3. Mandate unchanged. | — |
+| **CI-030** | ⬜ not started | ✅ **done** | Both receipt CLIs read by default; `--read` still accepted and pinned byte-identical; CLAUDE.md names the command, with a test holding that text true. | — |
+| **CI-025** | ⬜ not started | ✅ **done** | `make clean-pyc` → `clean_pyc.sh`: exact names only, name re-asserted at the deleting line, `.git` pruned, empty/missing/`/` root refused. | — |
+| **CI-018** | ⬜ not started | ✅ **done** | `make test-ci-parity` runs both suites under CI's identity conditions and pr-check's docs point at it. Both suites pass at parity. | — |
+| **CI-014** | 🟡 partial | ✅ **done** | `--workspace` on all 11 `graphiti_memory_client.py` subcommands; six `Path.cwd()` identity reads routed through `target_repo()`; actionable refusal; 12 tests including a source-walking guard. | — |
+| **CI-003** | 🟡 partial | 🟡 partial → **external-blocked** | `.mcp.json` added to install.sh's exclude block; scoping pinned in both directions. | Hook-side ownership classification — external. |
+| **CI-036** | 🟡 partial | 🟡 partial → **external-blocked** | `sync_remote_refs()` carries prune *and* `origin/HEAD`, fail-soft in three stages, held by a cross-site test. | Harness stop-hook resolution — external. |
+| **CI-016** | 🟡 partial | 🟡 **partial** | IMP-14: `resolve_pr_template()` against the released repo, `None` when absent. | **I-BS-09** — `status` still reports staleness only inside `release_allows_remote()`'s prose `reason`, with no explicit field. |
+
+Three findings are worth stating rather than burying in the record rows.
+
+**CI-036's residual named the wrong defect.** It said timing; #325 had already fixed the timing.
+The real fault was a *split invariant*: `bootstrap_agent_environment.sh` ships prune and
+`origin/HEAD` together because pruning alone converts an overcount into **silence**, and
+`repo_hygiene.py` had only the first half — in the tool that *deletes branches* on that evidence.
+
+**CI-025's IMP-05 leg is re-scoped, not implemented.** Its named target is already invoked as
+`PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -B` (Makefile:616), which *prevents* the debris the leg asked
+to clean up, and `.gitignore` covers both directories. Recorded as no-longer-required with the
+evidence, rather than re-implemented to satisfy the wording.
+
+**CI-018 deliberately deviates from its residual's wording.** The residual asked for "both git
+config files at `/dev/null`" — a form `verification_bypass_gate.py` denies, because those
+variables suppress the config that can carry `core.hooksPath` and the gate cannot tell a parity
+run from a bypass. Written that way first, it ran only because the gate evaluates tool
+invocations, not commands inside a Make recipe. Shipping a target that normalises a denied form is
+how an exemption gets invented. Isolation is `HOME` alone and the property is **asserted** — the
+run aborts naming the leaking key — which is stronger than the env-var recipe, since that one only
+ever assumed its mechanism worked.
+
+### Three repairs outside the pack
+
+Rule 42/3: a pre-existing error is in scope the moment it is identified. All three were red on
+`main`.
+
+- **`99608999`** — `run_pr_precommit.sh`: restored the staged-mode exemption #347 dropped. Without
+  it, `install_commit_hook.sh`'s governed shim rejected **every** commit, so the one supported way
+  to verify at commit time was broken.
+- **`8eff1c60`** — justified #359's five added gate-timing swallows plus `9ecfc823`'s one, and
+  un-redded the ratchet. Each was read first; none swallows the result of a check. `SWALLOW_BASELINE`
+  *is* the justification mechanism — an earlier reading of the bump as rule-60 weakening was mine
+  and was wrong.
+- **`8d812336`** — `session_debt.py`: `OPEN_STATES` (live view) split from `BLOCKING_STATES` (ends
+  a turn), rule 42 amended, deferrals always printed. This is not CI-037, which stays done; it is
+  the satisfiability defect underneath it. A turn that had pushed everything and reasoned every
+  finding still could not end — the unclearable gate rule 42's own Satisfiability section calls
+  worse than no gate. `open` stays the only blocking state deliberately: a `record` that ended a
+  turn would make *declaring* a finding the abandonment the rule exists to prevent.
+
+### What is left
+
+**20 records active.** The critical path is untouched and unchanged: **`CI-004` → `CI-005`**,
+weight 6, still the two most expensive records in the queue. `CI-004` is the P0 — a
+`governance_revision` mismatch is still not treated as receipt expiry, so the stale-receipt defect
+reproduces at every binding and TTL will never catch it, and `CI-005` is gated behind it.
+
+Remaining effort **35 of 42** units across **19 of 26** execution units. `CI-016`'s weight is not
+decremented although a leg shipped: fractional consumption makes the remaining figure unauditable,
+so the narrowed residual sits on the record instead.
+
+The makespan **lower bound** at 4 lanes falls from 11 to **9** — `max(6, ⌈35/4⌉)`. The *achievable*
+makespan is deliberately not restated. Removing seven units changes which pairs collide and which
+lane assignment is optimal; that needs the scheduler re-run, not an arithmetic adjustment.
+
+### Four findings deferred to a human
+
+| Finding | State |
+|---|---|
+| `od-002-makefile-precedence` | The operator's correction — workspace Makefile first, SSOT clone second — contradicts `surface_profile.yaml`, CLAUDE.md, rules 48/88 and `test_publish_verb_governance_always.py`. Scoped "behaviour only, for now", so **no doctrine was changed**. `OPEN_DECISIONS.yaml` OD-002 moves `RESOLVED` → **`REOPENED`** and CI-008 is flagged as shaped by the old direction. |
+| `verify-gate-denies-hookspath-read` | `verification_bypass_gate.py` denies `git config --get core.hooksPath` — a *read*. The matcher does not separate `--get`/`--get-all`/`--list` from a write, so diagnosing the hook model is blocked by the gate protecting it. Narrow fix: exempt read forms. |
+| `debt-gate-deferred-still-blocks` | Superseded by `8d812336`; left open for a human to close. |
+| `debt-gate-fix-cannot-self-apply` | `session_debt_wrap.py:15` pins the gate to the **SSOT clone's** copy, so a fix to the debt gate cannot take effect for the session that writes it. Clears when `8d812336` reaches `main`. |
 
 ## Headline: three records were wrong, and two of them were wrong in the direction that hides work
 

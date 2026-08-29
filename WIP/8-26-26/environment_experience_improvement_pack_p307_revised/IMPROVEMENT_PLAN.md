@@ -1,8 +1,19 @@
 # Improvement Plan — Current Forward Work (revision r2)
 
-Bound to **main@59f03a5d** (`59f03a5d4460b939360bc2fd5dd85239d47416a5`). Only the 27-record active queue is scheduled.
-Completed, external-blocked and unverifiable records are retained in `PROGRESS.md` and
-`progress.yaml` with full lineage, and are not scheduled again.
+Bound to **main@59f03a5d** (`59f03a5d4460b939360bc2fd5dd85239d47416a5`). The 27 entries below are the
+queue **as scheduled at that binding**. Completed, external-blocked and unverifiable records are
+retained in `PROGRESS.md` and `progress.yaml` with full lineage, and are not scheduled again.
+
+> **Execution wave 1 landed after this plan was written.** Seven of the 26 execution units shipped on
+> branch `claude/cursor-governance-pack-reconcile-9d4c9v` and are open as **PR#360**. The active queue
+> is now **20**, not 27. Eight entries below carry a blockquote directly under their heading saying
+> what was delivered and whether they are still schedulable — read it before starting one.
+> **Entry numbers and leverage ranks are NOT renumbered**, deliberately: order lives in
+> `optimized_sequence`, and renumbering would break every reference into this plan.
+>
+> Delivered and closed: **CI-027, CI-030, CI-025, CI-018, CI-014**. Delivered in-repo and now
+> external-blocked: **CI-003, CI-036**. Still scheduled with a narrower residual: **CI-016**.
+> Untouched, and still the head of the critical path: **CI-004 → CI-005**.
 
 > The `**Status:**` line on each entry below is the record's roadmap classification at pack
 > generation and is historical. Delivery state lives in `PROGRESS.md` / `progress.yaml` and is
@@ -10,7 +21,7 @@ Completed, external-blocked and unverifiable records are retained in `PROGRESS.m
 > `done` and are not (CI-007 is now scheduled first), and **CI-003** was `not_started` and is
 > partial. Read the overlay before scheduling any entry here.
 
-## Execution order — 4 lanes, makespan 11
+## Execution order — 4 lanes, makespan 11 (as planned at `59f03a5d`; 7 units since delivered)
 
 Weighted DAG list-schedule; supersedes the six wave barrier model. Total effort 42 units over 26 execution units, critical path 6 (`CI-004 → CI-005`), saturating at 7 lanes. Entries below are in start order; `[start-end]` are effort units, not days.
 
@@ -157,6 +168,8 @@ Ensure CLAUDE_SESSION_JWT is issued or its absence is a hard named prerequisite 
 
 ### 10. CI-030 — Improve receipt CLI ergonomics without multiplying state owners
 
+> **DELIVERED — wave 1, PR#360 (`39c882be`). Record is now `done`; do not schedule.**
+
 **Lane L1** `[4-5]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 3 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
 **Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 19 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
 **Depends on:** CI-004 &nbsp;·&nbsp; **Runs alongside:** CI-005, CI-008, CI-013
@@ -253,6 +266,8 @@ Detect repository-owned tracked paths before projection. Project machine-local r
 
 ### 16. CI-003 — Make the Stop hook ownership-aware instead of residue-blind
 
+> **IN-REPO LEG DELIVERED — wave 1, PR#360 (`bfdfffcd`). Remaining leg is hook-side ownership classification, which is EXTERNAL. Record leaves the active queue as external-blocked; do not schedule.**
+
 **Lane L3** `[6-7]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P1_ROOT_REPAIR  
 **Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 5 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
 **Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-002, CI-019, CI-023
@@ -283,6 +298,8 @@ When multiple governance trees exist, print both revisions, name the one from wh
 
 ### 18. CI-036 — Keep unpushed-commit counts honest across merged-and-deleted branches
 
+> **IN-REPO LEG DELIVERED — wave 1, PR#360 (`1b8ad90c`, `4be93117`). Remaining leg is harness stop-hook resolution, which is EXTERNAL. Record leaves the active queue as external-blocked; do not schedule.**
+
 **Lane L3** `[7-8]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
 **Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 11 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
 **Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-002, CI-015, CI-019
@@ -295,6 +312,8 @@ Prune remote-tracking refs for branches deleted upstream and keep origin/HEAD re
 - Harness stop-hook resolution logic stays external.
 
 ### 19. CI-025 — Provide sanctioned cleanup of generated/cache residue
+
+> **DELIVERED — wave 1, PR#360 (`acf8e9b3`). Record is now `done`; IMP-05's leg re-scoped NO_LONGER_REQUIRED with evidence. Do not schedule.**
 
 **Lane L0** `[8-9]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
 **Blocker:** EXECUTION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 14 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
@@ -310,6 +329,8 @@ Keep generated/cache debris out of gate inputs and provide a permission-safe cle
 
 ### 20. CI-016 — Make L4/release receipts resolve paths, branch, and head dynamically
 
+> **PARTIALLY DELIVERED — wave 1, PR#360 (`05cf45ff`) shipped IMP-14. STILL SCHEDULED for I-BS-09 only: have `status` compare the pinned SHA to current head and report STALE explicitly. Ignore the IMP-14 bullet below.**
+
 **Lane L2** `[8-9]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
 **Blocker:** EXECUTION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 16 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
 **Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-014, CI-015, CI-025
@@ -324,6 +345,8 @@ Bind receipts to the released repository, current branch/head, and actual templa
 **Sources:** P1/improvements/IMP-14, P3/improvements/B6, P9/improvements/I-BS-09
 
 ### 21. CI-014 — Make target repository/cwd explicit for governance CLIs
+
+> **DELIVERED — wave 1, PR#360 (`8fb79b1d`). Record is now `done`; do not schedule.**
 
 **Lane L3** `[8-9]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 2 &nbsp;·&nbsp; **Class:** P2_INTEGRATION_AND_RELIABILITY  
 **Blocker:** USABILITY_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 18 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **partial**  
@@ -354,6 +377,8 @@ Fix logging matchers/paths and emit enough session-start evidence to distinguish
 
 ### 23. CI-018 — Make local CI parity and hooks first-class provisioning
 
+> **DELIVERED — wave 1, PR#360 (`8bdfab82`). Record is now `done`, with a recorded deviation: isolation is `HOME` alone with the identity property ASSERTED, because the residual's `/dev/null` recipe is a form `verification_bypass_gate.py` denies. Do not schedule.**
+
 **Lane L1** `[9-10]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 1 &nbsp;·&nbsp; **Class:** P3_VALIDATION_AND_CONVERGENCE  
 **Blocker:** VALIDATION_BLOCKER &nbsp;·&nbsp; **Leverage rank:** 21 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
 **Depends on:** none &nbsp;·&nbsp; **Runs alongside:** CI-021, CI-022, CI-027
@@ -367,6 +392,8 @@ Install the actual hooks/gates, define one local CI-parity command, and keep its
 **Sources:** P2/improvements/IMP-B2, P2/improvements/IMP-R2, P5/improvements/IMP-001, P7/improvements/IMP-01
 
 ### 24. CI-027 — Correct rule rationale that no longer matches container reality
+
+> **DELIVERED — wave 1, PR#360 (`539b5d21`, `43f34da1`). Record is now `done`; do not schedule.**
 
 **Lane L2** `[9-10]` &nbsp;·&nbsp; **effort 1** &nbsp;·&nbsp; **Priority band:** 3 &nbsp;·&nbsp; **Class:** P4_NONBLOCKING_CLEANUP  
 **Blocker:** NONBLOCKING &nbsp;·&nbsp; **Leverage rank:** 24 of 27 &nbsp;·&nbsp; **Status:** ACTIVE → **not_started**  
