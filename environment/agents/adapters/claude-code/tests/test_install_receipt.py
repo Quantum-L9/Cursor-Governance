@@ -122,7 +122,9 @@ class InstallReceiptTests(unittest.TestCase):
 
     def test_reader_classifies_the_failed_receipt(self) -> None:
         self._run()
-        result = read(self.receipt)
+        # Synthetic gov has no git; install.sh records revision "unknown".
+        # Do not probe the live SSOT clone or the reader reports superseded.
+        result = read(self.receipt, governance_revision="unknown")
         self.assertEqual(result["state"], "failed")
         self.assertIn("startup", result["reason"])
 
