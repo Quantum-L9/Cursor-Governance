@@ -33,6 +33,5 @@ depth_rules:
 
 escalation:
   when_risk_in: [high, irreversible]
-  force_depth: deep
   when_evidence_in: [conflicting, absent]
   force_depth: deep
