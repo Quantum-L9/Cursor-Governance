@@ -903,3 +903,23 @@ Remediator **publish** is a different path from the ceremony:
 
 `make pr` / `make pr-check` remain the campaign / feature ceremony. This
 section does not rewrite §4.
+
+<!-- PR_CHECK_FOLDED_V1 -->
+## `make pr` owns the ceremony; `pr-check` is the internal leaf (2026-08-28)
+
+Supersedes `PRECOMMIT_REPO_OWNS_RUFF_V1` and the §4 failure-loop sentence
+that types `make pr-check` then `make pr`. Those historical lines stay.
+
+Public verbs: `improve`, `pr`. `pr-check` is INTERNAL — the same
+`run_pr_gate.sh` leaf `make pr` already runs. Diagnose is
+`OPEN_PR=0 make pr` (leftover `make pr-check` is the same leaf). Do not
+type `pr-check` after `make precommit-repo`. Do not delete the `pr-check`
+Make target (`pr: pr-preflight pr-check` stays).
+
+Do not run `make precommit-repo` after every local commit on the ceremony
+path. Writers run first inside `make pr` and hard-stop if tracked dirt
+remains; commit the rewrite, then `make pr` again. `make precommit-repo`
+stays remediator verify, `make push` backup, and an INTERNAL lint leaf.
+
+`.pre-commit-config.yaml` is the hook catalog only. Never a public verb.
+Never install a git commit hook (`pre-commit install` stays forbidden).

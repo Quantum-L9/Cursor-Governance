@@ -110,11 +110,12 @@ prevents a second pytest, but agents must not type the extra command.
 Happy path: finish → scoped-commit → `make pr`. `pr-check` /
 `OPEN_PR=0 make pr` remain diagnose-only. `make precommit-repo` is an
 internal leaf of the gate, not a post-commit ritual.
+Diagnose is `OPEN_PR=0 make pr`; do not run `pr-check` after `precommit-repo`.
 
 ```bash
 make pr
 ```
 
-`pr-check` is PUBLIC quality. GitHub mutation stays `make pr` only.
+`pr-check` is the INTERNAL gate leaf. GitHub mutation stays `make pr` only.
 
 <!-- generated-from: rules/48-make-pr-remediation.mdc; do-not-edit -->

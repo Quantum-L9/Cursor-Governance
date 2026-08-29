@@ -77,7 +77,7 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertIn("M\tops/scripts/open_pr_after_gate.sh", result.body)
         self.assertIn("Closes #172", result.body)
         self.assertIn("gate-receipt.json present", result.body)
-        self.assertIn("- [x] `make pr-check` local gate receipt present", result.body)
+        self.assertIn("- [x] `make pr` local gate receipt present", result.body)
         self.assertIn("- [x] L4 release receipt present", result.body)
         self.assertIn(f"- [ ] CI green — {UNMEASURED}", result.body)
         self.assertIn(
@@ -117,9 +117,9 @@ class ComposePrBodyTests(unittest.TestCase):
     def test_missing_receipts_do_not_self_certify(self) -> None:
         facts = MechanicalFacts(commits=["wip"], changed_files=["A\tfoo.py"])
         result = compose_pr_body(facts, TEMPLATE)
-        self.assertIn(f"- [ ] `make pr-check` local gate receipt — {UNMEASURED}", result.body)
+        self.assertIn(f"- [ ] `make pr` local gate receipt — {UNMEASURED}", result.body)
         self.assertIn(f"- [ ] L4 release receipt — {UNMEASURED}", result.body)
-        self.assertNotIn("- [x] `make pr-check`", result.body)
+        self.assertNotIn("- [x] `make pr`", result.body)
         self.assertNotIn("- [x] L4 release", result.body)
 
     def test_no_template_still_lists_commits_and_files(self) -> None:

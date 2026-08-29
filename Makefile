@@ -86,6 +86,7 @@ help:
 	@echo "  Consumer repos: make -C \"\$$HOME/.cursor-governance\" clean WS=\"\$$(pwd)\""
 	@echo "  make gov-python — fail-closed .venv interpreter + runtime import probe"
 	@echo "  Happy path: finish → scoped-commit → make pr (tests once; remediates=1; PR_REMEDIATE=0 to opt out)"
+	@echo "  Diagnose: OPEN_PR=0 make pr (pr-check is the internal leaf; do not run it after precommit-repo)."
 
 ## Run the FULL session-start pipeline against WS, synchronously, with visible output.
 ## Same script Cursor runs on sessionStart — one implementation, no drift.

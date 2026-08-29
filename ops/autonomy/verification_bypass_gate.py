@@ -355,7 +355,7 @@ def _governed_model(root: Path | None = None) -> bool:
     """True when verification is the governed gate rather than a commit hook.
 
     `ops/scripts/run_pr_precommit.sh` is the marker: where it exists, pre-commit
-    is invoked by `make pr-check` with a surface-aware SKIP list, and installing
+    is invoked by `make pr` with a surface-aware SKIP list, and installing
     a raw `.git/hooks/pre-commit` is explicitly forbidden — it would run the full
     catalog without that list, so `symlinks-check` rejects every commit on a
     non-cursor surface. `validate_claude_env.check_session_deps_installs_no_git_hook`
@@ -439,7 +439,8 @@ def verification_status(root: Path | None = None) -> dict[str, Any]:
                 "'fixed'. A raw hook would run the whole catalog without the "
                 "surface-aware SKIP list that ops/scripts/run_pr_precommit.sh applies, "
                 "so symlinks-check would reject every commit on a non-cursor surface. "
-                "Verification lives at `make pr-check` / `make pr`, not at commit time. "
+                "Verification lives at `make pr` (internal leaf "
+                "`make pr-check`), not at commit time. "
                 "Do NOT run `pre-commit install`. To ALSO verify at commit time, "
                 "install the governed shim: `bash ops/scripts/install_commit_hook.sh` "
                 "(governance clone only) — it delegates to run_pr_precommit.sh --staged, "

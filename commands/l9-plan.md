@@ -43,11 +43,11 @@ Follow skill `l9-plan` (**plan mode default = PE+autonomy workflow**). Required 
 ### Gate commands (governed workspaces)
 
 ```bash
-# Changed-files scanners only — does NOT push or commit
-make pr-check
+# Diagnose only — does NOT push or commit. Same leaf as make pr.
+OPEN_PR=0 make pr
 ```
 
-Make is case-sensitive: use lowercase `pr-check` / `pr`, not `PR-check`.
+Make is case-sensitive: use lowercase `pr`, not `PR`. Do not run `make pr-check` after `precommit-repo`.
 
 ### Project command
 

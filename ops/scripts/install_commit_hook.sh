@@ -18,9 +18,10 @@
 #   it.
 #
 # This is OPT-IN and machine-local: .git/hooks is not tracked, so nothing here
-# changes another clone. It does not replace `make pr-check` / `make pr`, which
-# remain the public gate; it closes the window in which a commit is written with
-# nothing having verified it.
+# changes another clone. It does not replace `make pr`, which remains the
+# public ceremony (`OPEN_PR=0 make pr` / leftover `make pr-check` is the same
+# leaf); it closes the window in which a commit is written with nothing having
+# verified it.
 #
 # Usage:
 #   bash ops/scripts/install_commit_hook.sh [--force] [--uninstall] [<repo>]
