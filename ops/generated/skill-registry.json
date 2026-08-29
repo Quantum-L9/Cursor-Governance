@@ -24,7 +24,6 @@
       "l9-setting-up-ci",
       "l9-graphiti-memory",
       "l9-aws-secrets",
-      "l9-plan-audit",
       "l9-code-graph-rag-mcp",
       "l9-architecture-decision-records",
       "l9-monitoring-terminal-errors"
@@ -373,27 +372,16 @@
         ]
       },
       {
-        "id": "plan_audit",
+        "id": "pipeline_audit",
         "positive_signals": [
+          "pipeline audit",
+          "l9-pipeline-audit",
           "plan audit",
           "unbuilt plans",
           "stale plans",
           "audit .cursor/plans",
           "which plans are unbuilt",
-          "sessionStart plan audit"
-        ],
-        "primary": "l9-plan-audit",
-        "signal_weight": 8,
-        "supporting": [
-          "l9-plan",
-          "l9-ynp"
-        ]
-      },
-      {
-        "id": "pipeline_audit",
-        "positive_signals": [
-          "pipeline audit",
-          "l9-pipeline-audit",
+          "sessionStart plan audit",
           "harvest WIP campaigns",
           "audit program-execution campaigns",
           "harvestable components"
@@ -402,8 +390,8 @@
         "signal_weight": 8,
         "supporting": [
           "l9-intelligence-harvest",
-          "l9-plan-audit",
-          "l9-gmp-protocol"
+          "l9-gmp-protocol",
+          "l9-ynp"
         ]
       },
       {
@@ -1105,7 +1093,7 @@
     },
     {
       "composition_role": "general",
-      "description": "audit plans, WIP, and PE campaigns; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit runs.",
+      "description": "audit plans, WIP, and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs, or session context shows Plan audit.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pipeline-audit",
@@ -1135,17 +1123,6 @@
       "reason": "",
       "user_invocable": true,
       "when_to_use": "scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first"
-    },
-    {
-      "composition_role": "primary",
-      "description": "sessionStart scanner for unbuilt plans in the last 7 days under the live plans-store root. use when session context shows Plan audit. do not use to author plans (l9-plan-simple / l9-plan) or to shelf the store (that is /l9-audit-plans). do not auto-build plans.",
-      "disable_model_invocation": false,
-      "invocation": "model_allowed",
-      "name": "l9-plan-audit",
-      "path": "skills/l9-plan-audit",
-      "reason": "",
-      "user_invocable": true,
-      "when_to_use": "session context shows Plan audit or the 7-day live-queue scanner; not /l9-audit-plans and not /l9-pipeline-audit"
     },
     {
       "composition_role": "general",
@@ -1325,6 +1302,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "8bf3537c65343161ff6e543447569412b50dc338e7bc149ced145bc2ba253909",
-  "source_skill_corpus_sha256": "0c94a049a5c7a78d82eb73a5d23ee80965eef8e54949da3556042cd634ea60d6"
+  "source_manifest_sha256": "22ac1f140124a55fc928aff83dfd50e4570acb2dc082cc83b1d253949a01835c",
+  "source_skill_corpus_sha256": "bb87cb46f15eb3e3148f6438e8fd6652f02dd0133acb11ac005383bc15a0c76c"
 }
