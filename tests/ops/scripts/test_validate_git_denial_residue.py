@@ -96,6 +96,30 @@ def test_wrapped_denial_across_lines_is_caught(tmp_path: Path) -> None:
     assert hits, "wrapped denial claim was missed"
 
 
+def test_denial_verb_must_attach_to_the_command(tmp_path: Path) -> None:
+    """A paragraph is the unit for locating a claim, not for asserting one.
+
+    This shape is live in AGENTS.md: a bullet states the remediator publishes
+    with `git push`, and a later bullet says a *merge* can be blocked by
+    required checks. Neither sentence claims push is denied.
+    """
+    path = tmp_path / "doctrine.md"
+    path.write_text(
+        "# Doctrine\n\n"
+        "- Publish is `git push` of the already-open PR branch. Pathspecs only.\n"
+        "- Do not poll CI after push. If merge is blocked by required checks,\n"
+        "  record the blocker.\n",
+        encoding="utf-8",
+    )
+    original = validator.ROOT
+    validator.ROOT = tmp_path
+    try:
+        hits = validator.scan([path])
+    finally:
+        validator.ROOT = original
+    assert hits == [], f"unrelated 'blocked' in the same paragraph flagged: {hits}"
+
+
 def test_section_citation_alone_does_not_exempt(tmp_path: Path) -> None:
     """Citing §6.2.4 must not wash a still-false denial claim."""
     line = "`git push` is denied by the gate; see CANONICAL_LAW §6.2.4"

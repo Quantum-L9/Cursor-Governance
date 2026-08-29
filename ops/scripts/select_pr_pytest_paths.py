@@ -158,10 +158,19 @@ def tests_naming_path(changed: str, *, repo_root: Path = REPO_ROOT) -> list[str]
     file: a test that says `run_pr_gate.sh` asserts about it just as much as one
     that spells the full path, and dropping the second kind loses real coverage.
     Path matches are listed first only so the most specific targets lead.
+
+    Documentation markdown is excluded. The scope above is executable and
+    config artifacts; `.md` is prose, and its filenames are too common for a
+    substring scan to mean anything — the root `README.md` matched 25 unrelated
+    modules that merely mention the word. `.mdc` rule files stay in scope: they
+    are governance config and the suite asserts about them by name. Tests that
+    assert about prose still run in CI's full catalog.
     """
 
     target = changed.strip()
     if not target:
+        return []
+    if target.endswith(".md"):
         return []
     basename = Path(target).name
     by_path: list[str] = []

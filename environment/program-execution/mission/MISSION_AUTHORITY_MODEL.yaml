@@ -1,0 +1,75 @@
+schema: program-execution-system.mission-authority-model.v1
+schema_version: 1.0.0
+status: active
+authority:
+  adr:
+    - environment/contracts/execution/adr/ADR-0024-mission-parent-intent-and-controller-boundary.md
+  contracts:
+    - MISSION_AUTHORITY_SCOPE_BUDGET_CONTRACT
+  reuses:
+    - environment/program-execution/core/shared/AUTHORIZATION_MODEL.yaml
+    - environment/program-execution/core/shared/schemas/action-authorization.schema.json
+
+# Mission reuses the existing Program Execution action vocabulary exactly. The
+# ten actions are not restated here: action-authorization.schema.json owns them
+# and mission.schema.json $refs it.
+authorization_ceiling:
+  vocabulary_owner: program-execution-system/action-authorization.v2
+  shape: total map; all ten actions required; each value boolean
+  nature: ceiling, not instruction
+
+# Effective Program authorization is the intersection of every term. Mission is
+# one term among them and is never sufficient on its own.
+effective_permission_intersection:
+  - applicable_safety_legal_security_and_organizational_rules
+  - exact_action_approval_when_required
+  - mission_authority_ceiling
+  - blueprint_authorization_ceiling
+  - controller_policy
+  - source_contract_request
+  - rendered_contract_exact_state_binding
+
+laws:
+  - lower_layer_may_narrow_never_widen
+  - capability_or_credential_availability_is_not_authorization
+  - blueprint_authority_must_remain_within_mission_authority
+  - controller_authority_must_remain_within_blueprint_authority
+  - rendered_authority_remains_within_all_parent_ceilings
+  - irreversible_action_retains_named_authority_and_rollback_rules
+  - mission_ceiling_grants_no_new_remote_mutation_authority
+
+scope:
+  fields:
+    targets: list of declarative target strings
+    constraints.scope.include: list of strings
+    constraints.scope.exclude: list of strings
+  # No machine-defined Blueprint-subset grammar exists in Program Execution
+  # today, so v1 scope is declarative and claims no semantic subset checking.
+  # Executable subset enforcement belongs to Mission Admission / Program
+  # compilation, which this contract does not build.
+  semantic_subset_checking_claimed: false
+  enforcement_owner_when_built: mission_admission
+
+# Aggregate ceilings over the whole Mission. An individual Program Controller
+# must not claim independent authority to enforce Mission-wide totals.
+aggregate_budgets:
+  - max_model_cost_usd
+  - max_agent_tokens
+  - max_gate_calls
+  - max_duration_seconds
+  - max_parallel_programs
+constraint_budgets:
+  - max_programs
+
+admission_law: >-
+  Mission Admission determines whether another executable undertaking may
+  exist. Program Controller determines how an admitted undertaking executes.
+
+admission_ledger_built: false
+
+termination:
+  modes:
+    - mission_acceptance
+    - authority_boundary
+  participates_in_digest_identity: true
+  mutable_lifecycle_state_remains_separate: true

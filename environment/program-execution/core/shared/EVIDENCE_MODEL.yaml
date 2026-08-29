@@ -13,3 +13,16 @@ classes:
   execution: [attempt_receipt, changed_file_inventory, command_output]
   verification: [test_result, verification_receipt, gate_evaluation]
   governance: [approval, waiver, handoff_receipt, program_verdict_acceptance]
+  mission: [mission_criterion_result, mission_verdict]
+# Mission acceptance extends this plane; it does not fork one. Mission
+# criterion results and Mission verdicts carry the same validity rules and
+# bind mission_digest so a result cannot drift onto a different revision.
+mission_acceptance:
+  reuses_validity_rules: true
+  binds_exact_state_via: mission_digest
+  parallel_mission_evidence_plane: false
+  forbidden_implications:
+  - program_convergence_as_mission_acceptance
+  - task_completion_as_mission_acceptance
+  - worker_claim_as_mission_acceptance_evidence
+  - unverified_model_statement_as_mission_acceptance_evidence

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution-system/mission-program-binding.v1",
+  "title": "Mission Program Binding",
+  "description": "Binds one exact immutable Mission Revision to one exact Program / Blueprint identity. Created after blueprint_digest is computed and therefore outside the content domain that digest covers — a binding stored inside the Blueprint it hashes would be circular. Immutable: a new Program requires a new binding, and Mission supersession never rebinds an existing one. Authority: ADR-0026.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "binding_id",
+    "mission_id",
+    "mission_revision",
+    "mission_digest",
+    "program_id",
+    "blueprint_digest",
+    "bound_at"
+  ],
+  "properties": {
+    "schema": {
+      "const": "l9.program-execution.mission-program-binding.v1"
+    },
+    "binding_id": {
+      "type": "string",
+      "pattern": "^MPB-[A-Z0-9-]+$"
+    },
+    "mission_id": {
+      "type": "string",
+      "pattern": "^MISSION-[A-Z0-9-]+$"
+    },
+    "mission_revision": {
+      "description": "The exact revision admitted. A historical binding stays pinned to it after supersession.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "mission_digest": {
+      "description": "Canonical SHA-256 hexadecimal, matching the shared evidence-reference digest format.",
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "program_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "blueprint_digest": {
+      "description": "Digest of the exact Blueprint, computed before this binding exists.",
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    },
+    "bound_at": {
+      "description": "Explicit UTC timestamp. Format validation is enforced by the parser's FormatChecker.",
+      "type": "string",
+      "format": "date-time"
+    },
+    "metadata": {
+      "description": "Non-authoritative annotation.",
+      "type": "object",
+      "additionalProperties": true
+    }
+  }
+}

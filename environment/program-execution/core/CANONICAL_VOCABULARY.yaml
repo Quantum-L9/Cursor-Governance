@@ -1,5 +1,35 @@
 schema: program-execution-system.vocabulary.v2
 terms:
+- term: Mission
+  definition: Durable parent intent above one or more Execution Programs. It owns durable objective identity,
+    Mission acceptance authority, cross-Program continuity, and outer scope/authorization/resource ceilings.
+    It is never an Execution Program, Blueprint, Program Lock, Controller, Task Card, Runtime Task, scheduler,
+    worker, lease authority, provider, or agent conversation.
+  forbidden_synonyms:
+  - campaign
+  - epic
+  - agent conversation
+- term: Mission Revision
+  definition: An immutable digest-bound Mission definition. Changing authoritative Mission semantics creates a
+    superseding revision rather than rewriting an existing one.
+- term: Mission Lifecycle State
+  definition: Mutable status concerning an exact Mission Revision. It is a separate object from the revision and
+    never substitutes for definition state, Runtime Task state, evidence result, Program verdict, or Controller
+    verification state.
+  forbidden_synonyms:
+  - mission status field inside the Mission definition
+- term: Mission Program Binding
+  definition: An immutable record binding one exact Mission Revision to one exact Program and Blueprint digest.
+    Created after the Blueprint digest exists, so it never participates in the content that digest covers.
+    Historical bindings survive Mission supersession unchanged.
+  forbidden_synonyms:
+  - mission membership list
+- term: Mission Verdict
+  definition: The mission-owner-owned acceptance decision over an exact Mission Revision. A Controller
+    recommendation is advisory; a Program verdict is evidence toward it, never equal to it.
+- term: Mission Acceptance Criterion
+  definition: A mission-owner-owned criterion contributing to the Mission verdict. Program acceptance may supply
+    evidence toward it but never implies it.
 - term: Execution Program
   definition: A coordinated undertaking with multiple dependent workstreams, explicit authority, promotion gates,
     and a terminal state.

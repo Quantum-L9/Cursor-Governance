@@ -1,0 +1,79 @@
+schema: program-execution-system.mission-program-binding-model.v1
+schema_version: 1.0.0
+status: active
+authority:
+  adr:
+    - environment/contracts/execution/adr/ADR-0026-exact-mission-program-binding-and-non-circular-blueprint-identity.md
+  contracts:
+    - MISSION_PROGRAM_BINDING_CONTRACT
+  json_schema: schemas/mission-program-binding.schema.json
+  python_model: binding.py
+
+identity:
+  schema_discriminator: l9.program-execution.mission-program-binding.v1
+  binding_id_pattern: "^MPB-[A-Z0-9-]+$"
+  digest_format: canonical SHA-256 hexadecimal
+
+required_fields:
+  - schema
+  - binding_id
+  - mission_id
+  - mission_revision
+  - mission_digest
+  - program_id
+  - blueprint_digest
+  - bound_at
+
+mission_supplies:
+  - objective
+  - mission_acceptance_criteria
+  - mission_authority_ceiling
+  - mission_budget_ceiling
+  - mission_scope_ceiling
+
+blueprint_may:
+  - operationalize_a_subset_of_mission_scope
+  - narrow_authority
+  - add_program_specific_gates
+  - add_program_specific_evidence_requirements
+
+blueprint_may_not:
+  - widen_mission_scope
+  - widen_mission_authority
+  - weaken_required_mission_acceptance
+  - mutate_mission_definition
+
+controller_projection:
+  read_only_fields:
+    - mission_id
+    - mission_revision
+    - mission_digest
+    - binding_id
+  controller_may_not:
+    - mutate_binding
+    - rebind_program
+    - change_mission_revision
+    - declare_mission_verdict
+
+immutability:
+  historical_bindings_immutable_after_supersession: true
+  new_program_requires_new_binding: true
+  caller_supplied_mission_digest_spoofing: forbidden
+  binding_resolves_mutable_mission_state: false
+
+# The binding references blueprint_digest, so it must live outside the content
+# domain that digest covers. A MISSION_BINDING.yaml stored inside the Blueprint
+# and containing blueprint_digest is circular and is prohibited.
+non_circular_ordering:
+  - Mission Revision
+  - Mission Admission Context
+  - Program Intent
+  - Intent Resolver
+  - Blueprint
+  - compute blueprint_digest
+  - Mission Program Binding
+  - Program Lock
+  - Controller
+
+blueprint_digest_self_reference: prohibited
+mission_context_yaml_added: false
