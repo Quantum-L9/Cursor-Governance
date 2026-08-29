@@ -167,19 +167,74 @@ def commit_unix(repo: Path, sha: str) -> int:
         return 0
 
 
+def tip_changed_paths(repo: Path, tip: str, sha: str) -> set[str]:
+    """Paths the tip already rewrote since the merge-base with ``sha``."""
+    base = _git(repo, "merge-base", tip, sha)
+    if base.returncode != 0 or not base.stdout.strip():
+        return set()
+    diff = _git(repo, "diff", "--name-only", base.stdout.strip(), tip)
+    return {line for line in diff.stdout.splitlines() if line.strip()}
+
+
+def remainder_paths_for_commit(
+    repo: Path, sha: str, tip: str, commit_paths: tuple[str, ...]
+) -> tuple[str, ...]:
+    """Paths from a tip-conflict commit that main never touched.
+
+    Checking those files out onto the tip is not cherry-pick and not
+    conflict resolution. Overlap paths stay skipped.
+    """
+    touched = tip_changed_paths(repo, tip, sha)
+    return tuple(path for path in commit_paths if path and path not in touched)
+
+
+def collect_remainder_slice(
+    repo: Path, skipped_items: list[dict[str, Any]], tip: str
+) -> list[dict[str, Any]]:
+    """One remainder slice: last writer wins per unique path."""
+    by_path: dict[str, str] = {}
+    for item in skipped_items:
+        sha = str(item.get("sha") or "")
+        if not sha or not sha_is_commit(repo, sha):
+            continue
+        raw_paths = item.get("paths")
+        paths = tuple(raw_paths) if raw_paths else (load_commit_paths(repo, sha) or ())
+        for path in remainder_paths_for_commit(repo, sha, tip, paths):
+            by_path[path] = sha
+    if not by_path:
+        return []
+    grouped: dict[str, list[str]] = {}
+    order: list[str] = []
+    for path, sha in by_path.items():
+        if sha not in grouped:
+            grouped[sha] = []
+            order.append(sha)
+        grouped[sha].append(path)
+    return [
+        {
+            "sha": sha,
+            "paths": tuple(grouped[sha]),
+            "ref": "remainder",
+            "mode": "remainder",
+        }
+        for sha in order
+    ]
+
+
 def filter_slices_against_tip(
     repo: Path,
     slices: list[list[dict[str, Any]]],
     tip: str,
-) -> tuple[list[list[dict[str, Any]]], list[str]]:
+) -> tuple[list[list[dict[str, Any]]], list[str], list[dict[str, Any]]]:
     """Drop commits whose cherry-pick onto the tip conflicts. Unknown is drop.
 
     Children of a kept parent are kept without a tip probe: ``parent..sha``
     against the original tip false-conflicts once the parent already
-    rewrites the same file.
+    rewrites the same file. Skipped items feed the unique-path remainder.
     """
     kept: list[list[dict[str, Any]]] = []
     skipped: list[str] = []
+    skipped_items: list[dict[str, Any]] = []
     for group in slices:
         by_sha = {str(item.get("sha") or ""): item for item in group}
         novels = [
@@ -220,13 +275,14 @@ def filter_slices_against_tip(
             conflicts = probe_cherry_conflicts(repo, tip, sha)
             if conflicts is None or conflicts:
                 skipped.append(sha)
+                skipped_items.append(item)
                 continue
             keep.append(item)
             kept_shas.add(sha)
             kept_paths[sha] = inherited | child_paths
         if keep:
             kept.append(keep)
-    return kept, skipped
+    return kept, skipped, skipped_items
 
 
 def commits_must_colocate(repo: Path, left: NovelCommit, right: NovelCommit) -> bool:
@@ -551,6 +607,73 @@ def run_ff(clone: Path) -> subprocess.CompletedProcess[str]:
     )
 
 
+def extract_remainder(
+    repo: Path,
+    slice_commits: list[dict[str, Any]],
+    stack_tip: str,
+    index: int,
+    worktree: Path,
+    branch: str,
+) -> tuple[str, str]:
+    """Checkout unique paths from tip-conflict commits. Last writer already won."""
+    applied = 0
+    try:
+        for item in slice_commits:
+            sha = str(item.get("sha") or "")
+            paths = [str(path) for path in (item.get("paths") or ()) if path]
+            if not sha or not paths:
+                continue
+            checkout = subprocess.run(
+                ["git", "-C", str(worktree), "checkout", sha, "--", *paths],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if checkout.returncode != 0:
+                raise RuntimeError(
+                    f"remainder checkout failed on {sha}: {checkout.stderr.strip()}"
+                )
+            applied += 1
+        if applied == 0:
+            raise RuntimeError("remainder empty: no unique paths from tip-conflict commits")
+        add = subprocess.run(
+            ["git", "-C", str(worktree), "add", "--"]
+            + [str(path) for item in slice_commits for path in (item.get("paths") or ())],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if add.returncode != 0:
+            raise RuntimeError(add.stderr.strip() or "remainder git add failed")
+        commit = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(worktree),
+                "commit",
+                "-m",
+                "pr-train remainder: unique paths from tip-conflict commits",
+            ],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if commit.returncode != 0:
+            raise RuntimeError(commit.stderr.strip() or "remainder commit failed")
+    except Exception:
+        subprocess.run(
+            ["git", "-C", str(repo), "worktree", "remove", "--force", str(worktree)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        _git(repo, "branch", "-D", branch)
+        rebind_merge_driver(repo)
+        raise
+    rebind_merge_driver(repo)
+    return str(worktree), branch
+
+
 def default_extract(
     repo: Path,
     slice_commits: list[dict[str, Any]],
@@ -568,6 +691,8 @@ def default_extract(
     if add.returncode != 0:
         raise RuntimeError(add.stderr.strip() or "git worktree add failed")
     rebind_merge_driver(repo)
+    if slice_commits and all(item.get("mode") == "remainder" for item in slice_commits):
+        return extract_remainder(repo, slice_commits, stack_tip, index, worktree, branch)
     applied = 0
     try:
         for item in slice_commits:
@@ -818,7 +943,10 @@ def stack_base_node(state: PrTrainState) -> dict[str, Any]:
     probe_ref = sha or tip
     done = state.slices[: state.current_slice]
     pending = state.slices[state.current_slice :]
-    kept, skipped = filter_slices_against_tip(repo, pending, probe_ref)
+    kept, skipped, skipped_items = filter_slices_against_tip(repo, pending, probe_ref)
+    remainder = collect_remainder_slice(repo, skipped_items, probe_ref)
+    if remainder:
+        kept = list(kept) + [remainder]
     skipped_all = list(state.skipped_tip_conflict) + skipped
     if skipped and not kept and not done:
         return {
