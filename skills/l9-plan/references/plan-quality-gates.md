@@ -23,7 +23,7 @@ Gate IDs are enforced by `scripts/validate_plan_document.py`.
 | G_ROLLBACK | high/irreversible risk without rollback |
 | G_DOC_SURFACE | missing impact entries or N/A without reason |
 | G_PRE_FINAL | missing pre_validation or final_validation |
-| G_PR_CHECK | code in scope but no `make pr` in final_validation |
+| G_PRECOMMIT_CONFIG | code in scope but no `.pre-commit-config.yaml` in final_validation |
 | G_UNKNOWN_HONESTY | material ambiguity with empty unknowns |
 | G_CONVERGENCE | converged while mandatory status pending/failed/unknown |
 | G_LEVERAGE | leverage.ranked_todo_ids empty |

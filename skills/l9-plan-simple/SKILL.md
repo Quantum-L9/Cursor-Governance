@@ -62,7 +62,7 @@ Default human/executable projection: the shared canonical `.plan.md` with the PE
 ## Compact Workflow
 
 1. **Doctrine / depth** — load `l9-plan` [planning-doctrine.md](../l9-plan/references/planning-doctrine.md) and classify via `python3 ../l9-plan/scripts/route_plan.py` (escalate-only). Do not omit baseline gates.
-2. **Pre-Validate** — bind the **current workspace** (branch, dirty, HEAD if useful). For code in scope on governed workspaces name `OPEN_PR=0 make pr` (**no commit, no push**). Do **not** lock `origin/main` or open a tip worktree.
+2. **Pre-Validate** — bind the **current workspace** (branch, dirty, HEAD if useful). For code in scope on governed workspaces name `.pre-commit-config.yaml` as the hook catalog. Do **not** lock `origin/main` or open a tip worktree.
 3. **Gather** — objective, scope in/out, falsifiable success. Ambiguity → STOP and ask.
 4. **Decompose** — TODOs with files (or blocker) and deps. DAG rows are Build todos, not Controller `claim`/`render` Task Cards.
 5. **Stress-test + leverage** — mandatory; reuse `l9-plan` [plan-stress-test.md](../l9-plan/references/plan-stress-test.md) and [first-order-leverage.md](../l9-plan/references/first-order-leverage.md).

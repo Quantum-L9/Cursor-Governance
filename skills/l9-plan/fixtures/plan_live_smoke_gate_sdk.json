@@ -183,8 +183,8 @@
     },
     {
       "id": "V2",
-      "command": "make pr",
-      "pass_criteria": "PASS; no commit/push",
+      "command": ".pre-commit-config.yaml",
+      "pass_criteria": "catalog path named",
       "status": "pending"
     }
   ],
@@ -214,7 +214,7 @@
     ],
     "validation_commands": [
       "pytest -q",
-      "make pr"
+      ".pre-commit-config.yaml"
     ]
   },
   "depth": "deep",

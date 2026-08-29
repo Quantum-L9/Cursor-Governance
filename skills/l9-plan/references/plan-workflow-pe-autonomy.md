@@ -85,8 +85,8 @@ Optional (activate when conditions in template/schema apply): inventory classifi
 
 - Every plan must validate via `scripts/validate_plan_document.py`.
 - Delivered markdown for plan mode **MUST** be the PE+autonomy `.plan.md` shape (this workflow + template).
-- Code-editing plans must include `make pr` in final / quality-gate success properties.
+- Code-editing plans must include `.pre-commit-config.yaml` in final / quality-gate success properties.
 - Never weaken scanners to obtain PASS.
-- Do not push, open a PR, or mutate product code from plan mode.
+- Do not mutate product code from plan mode.
 - `autonomous_merge` remains `false` in the campaign packet (`COMPATIBILITY.yaml`); L4 plan/PE stack merge only after green+mergeable per AGENTS.md.
 - KERNEL pack / PE overlay landings: new branch from `origin/main` without asking (`AGENTS.md` `KERNEL_PACK_NEW_BRANCH_DEFAULT_V1`).

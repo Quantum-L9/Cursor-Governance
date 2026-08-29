@@ -25,7 +25,7 @@ Create a structured plan before implementation. Delegates template authority to 
 7. Project Cursor `.plan.md` via `render_plan_pe_autonomy.py` (must include PE+autonomy execute path)
 8. Auto-chain to `/ynp`
 
-Planning-only — do not edit product files, commit, or push from `/l9-plan`.
+Planning-only — do not edit product files from `/l9-plan`. For code in scope bind `.pre-commit-config.yaml` as the hook catalog.
 
 `/plan` is **retired**. Ordinary Cursor Plan / Build-button plans use **`/l9-plan-simple`**. This command stays PE/campaign only.
 
@@ -39,15 +39,6 @@ Follow skill `l9-plan` (**plan mode default = PE+autonomy workflow**). Required 
 2. Cursor `.plan.md` under `.cursor/plans/<slug>_<8hex>.plan.md` filled from the first-class template
 3. Sections listed in `plan-workflow-pe-autonomy.md` (frontmatter todos, baseline, envelope, DAG, evidence, convergence, **Execute via @environment/program-execution + autonomy**)
 4. `scripts/validate_plan_kernel_receipt.py` PASS on that bound `.plan.md` (hooks enforce; this is the pointer)
-
-### Gate commands (governed workspaces)
-
-```bash
-# Diagnose only — does NOT push or commit. Same leaf as make pr.
-OPEN_PR=0 make pr
-```
-
-Make is case-sensitive: use lowercase `pr`, not `PR`. Do not run `make pr` after `precommit-repo`.
 
 ### Project command
 

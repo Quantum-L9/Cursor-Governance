@@ -25,7 +25,7 @@ depth_rules:
     omit_gates: []
     add_gates:
       - G_ROLLBACK
-      - G_PR_CHECK
+      - G_PRECOMMIT_CONFIG
     extra_obligations:
       - at least 3 disconfirming_questions
       - explicit rollback non-empty

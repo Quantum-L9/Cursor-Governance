@@ -95,6 +95,37 @@ def test_live_teachers_do_not_teach_postcommit_precommit_repo() -> None:
     )
 
 
+PLAN_TEACHERS = (
+    ROOT / "skills" / "l9-plan" / "SKILL.md",
+    ROOT / "skills" / "l9-plan-simple" / "SKILL.md",
+    ROOT / "commands" / "l9-plan.md",
+    ROOT / "commands" / "l9-plan-simple.md",
+)
+
+PLAN_CEREMONY_GATES = (
+    re.compile(r"make pr-check"),
+    re.compile(r"OPEN_PR=0"),
+    re.compile(r"git commit"),
+    re.compile(r"git push"),
+    re.compile(r"(?<![\w-])make pr(?![\w-])"),
+)
+
+
+def test_plan_teachers_keep_only_precommit_catalog() -> None:
+    failures: list[str] = []
+    for path in PLAN_TEACHERS:
+        assert path.is_file(), f"missing plan teacher: {path}"
+        text = path.read_text(encoding="utf-8")
+        rel = path.relative_to(ROOT).as_posix()
+        for pattern in PLAN_CEREMONY_GATES:
+            hits = _unnegated_hits(text, pattern)
+            if hits:
+                failures.append(f"{rel} {pattern.pattern}: {hits}")
+    assert not failures, "unnegated commit/push/pr ceremony in plan teachers:\n" + "\n".join(
+        failures
+    )
+
+
 def test_makefile_pr_graph_keeps_pr_check_leaf() -> None:
     makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
     assert re.search(r"^pr:\s*pr-preflight\s+pr-check\s*$", makefile, re.MULTILINE), (

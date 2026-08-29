@@ -137,10 +137,11 @@ def _check_code_scope(plan: dict) -> list[str]:
         return []
     errors: list[str] = []
     commands = " ".join(str(x.get("command", "")) for x in plan.get("final_validation") or [])
-    # Require make pr. Do not use \bmake\s+pr\b — that also matches leftover
-    # make pr-check because '-' is a word boundary.
-    if re.search(r"\bmake\s+pr(?:\s|$)", commands) is None:
-        errors.append("G_PR_CHECK: code_in_scope true but final_validation lacks make pr")
+    if ".pre-commit-config.yaml" not in commands:
+        errors.append(
+            "G_PRECOMMIT_CONFIG: code_in_scope true but final_validation "
+            "lacks .pre-commit-config.yaml"
+        )
     handoff = plan.get("gmp_handoff") or {}
     if not handoff.get("may_modify") or not handoff.get("must_not_modify"):
         errors.append("G_GMP_LOCK: code_in_scope requires may_modify and must_not_modify")

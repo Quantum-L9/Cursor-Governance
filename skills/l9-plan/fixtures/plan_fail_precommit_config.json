@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0.0",
   "mode": "plan",
-  "title": "Shallow looking plan",
+  "title": "Rebuild l9-plan validators",
   "objective": "Make planning machine-validated and fail-closed",
   "success_criteria": [
     "self_test.py PASS",
@@ -62,7 +62,10 @@
       "leverage_rank": 2
     }
   ],
-  "critical_path": [],
+  "critical_path": [
+    "T1",
+    "T2"
+  ],
   "milestones": [
     {
       "id": "M1",
@@ -104,7 +107,11 @@
     }
   ],
   "stress_test": {
-    "disconfirming_questions": [],
+    "disconfirming_questions": [
+      "Would heading-only markdown still pass?",
+      "Can a plan converge with unknown final validation?",
+      "Does GMP receive ungrounded TODOs?"
+    ],
     "assumed_false_ifs": [
       "agents ignore JSON and skip validator"
     ],
@@ -112,7 +119,10 @@
     "rollback": "revert skill pack to previous tag; keep consumer repos unchanged"
   },
   "leverage": {
-    "ranked_todo_ids": [],
+    "ranked_todo_ids": [
+      "T1",
+      "T2"
+    ],
     "shared_causes": [
       "prose-only readiness"
     ],
@@ -136,7 +146,7 @@
     },
     {
       "id": "V2",
-      "command": ".pre-commit-config.yaml",
+      "command": "make pr",
       "pass_criteria": "PASS or N/A if no consumer repo edits",
       "status": "not_applicable"
     }
@@ -164,7 +174,7 @@
     ],
     "validation_commands": [
       "python3 scripts/self_test.py",
-      ".pre-commit-config.yaml"
+      "make pr"
     ]
   },
   "depth": "deep",
