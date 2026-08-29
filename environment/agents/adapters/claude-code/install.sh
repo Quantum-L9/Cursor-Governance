@@ -334,7 +334,7 @@ esac
 # Capability plane retired 2026-08-29 (never shipped). Do not probe a dead
 # broker or mark memory DEGRADED for its absence. Graphiti is GRAPHITI_MCP_URL.
 stage "capability-plane"
-say "capability plane: RETIRED (never shipped)"
+say "capability broker experiment retired (never shipped; not probed)"
 if [ -n "${GRAPHITI_MCP_URL:-}" ]; then
   say "memory front door: GRAPHITI_MCP_URL set (no bearer in this process)"
 else
