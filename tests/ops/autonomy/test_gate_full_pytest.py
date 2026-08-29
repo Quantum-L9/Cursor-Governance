@@ -1,6 +1,6 @@
 """A whole-catalog pytest run belongs to CI, not to a chat turn.
 
-`make pr-check` is the designed local gate: precommit once, plus pytest targets
+`make pr` is the designed local gate: precommit once, plus pytest targets
 selected from the changed set. A hand-picked directory list is how a CI-only
 failure gets missed — the swallowed-failure ratchet lives in `ops/scripts/tests/`
 while the neighbouring `tests/ops/scripts/` looks like the obvious place, and a
@@ -52,7 +52,8 @@ SCOPED_OR_UNRELATED = [
     ),
     ".venv/bin/python -m pytest tests/ops/scripts/ -q -p no:cacheprovider",
     ".venv/bin/python -m pytest a.py b.py -n auto -q",
-    "make pr-check",
+    "make pr",
+    "make pr-check",  # leftover Makefile leaf; not a catalog pytest run
     "PR_REMEDIATE=0 make pr",
     "git status --porcelain",
     "ruff check ops/scripts/select_pr_pytest_paths.py",
@@ -118,5 +119,6 @@ def test_deny_reason_names_the_replacement_command() -> None:
     from local_execution_gate import _full_pytest_deny_reason
 
     text = _full_pytest_deny_reason(reason)
-    assert "make pr-check" in text
+    assert "make pr" in text
+    assert "make precommit-repo" in text
     assert FULL_PYTEST_OVERRIDE_ENV in text

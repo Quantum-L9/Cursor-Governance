@@ -1,6 +1,6 @@
 # Cursor-Governance — invariants index
 
-**Version:** 1.0.0
+**Version:** 1.0.1
 **Updated:** 2026-08-28
 **Role:** this-repo operating-invariant index plus a CI enforcement map.
 
@@ -26,6 +26,7 @@ Named pointers only. One line + path. Bind from live law at refresh time.
 | Org repository birth under `Quantum-L9` | `ORG_INVARIANTS.yaml` `invariants:`; `docs/governance/ORG_INVARIANTS.md` |
 | Tests run once locally (same worktree digest + `PR_BASE`); full corpus is `make pr-full` / nightly / push-to-`main` | `AGENTS.md` `TESTS_ONCE_AND_PUBLISH_V1`; `CANONICAL_LAW.md` §6.2.5 |
 | Commit finished work when done, then `make pr` (remediates=1; `PR_REMEDIATE=0` opt-out) | `AGENTS.md` `TESTS_ONCE_AND_PUBLISH_V1`; `rules/48-make-pr-remediation.mdc` |
+| `pr-check` is the INTERNAL gate leaf of `make pr`; Diagnose is `OPEN_PR=0 make pr`; do not run `pr-check` after `precommit-repo` | `AGENTS.md` `PR_CHECK_FOLDED_V1`; `rules/48-make-pr-remediation.mdc` |
 
 Org-policy invariant IDs and enforcement text live only in the YAML `invariants:` block. Point there; do not duplicate.
 
@@ -40,7 +41,7 @@ Invariant → workflow or script that actually checks it. Local procedure remain
 | Governance wiring / tip freshness | `.github/workflows/governance-self-check.yml`; `ops/scripts/check_governance_wiring.sh` |
 | No hardcoded `/Users` / `/home` paths | `.pre-commit-config.yaml` hook `no-hardcoded-paths` → `ops/scripts/validate_governance_no_hardcoded_paths.sh` |
 | No Dropbox SSOT / L9_MEMORY_HTTP residue | pre-commit `legacy-doctrine-residue` → `ops/scripts/validate_legacy_doctrine_residue.py` |
-| Lint / format / tests | `.github/workflows/l9-lint-test.yml`; local `make pr-check` |
+| Lint / format / tests | `.github/workflows/l9-lint-test.yml`; local `make pr` |
 | Peer Execution / adapter conformance | `.github/workflows/peer-execution.yml` |
 | Supply chain | `.github/workflows/supply-chain.yml` |
 | CodeQL | `.github/workflows/codeql.yml` (reusable: `codeql-reusable.yml`) |

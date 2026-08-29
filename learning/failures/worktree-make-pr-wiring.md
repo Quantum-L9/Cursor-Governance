@@ -1,7 +1,7 @@
 # Failure: make pr died on unwired gov worktrees
 
 **Date:** 2026-08-15 (landed 2026-08-17)
-**Surface:** `make pr` / `make pr-check` (`symlinks-check` + `run_pr_gate.sh` local-activation)
+**Surface:** `make pr` (`symlinks-check` + `run_pr_gate.sh` local-activation)
 **Cost:** push never ran; IDE-profile WARN looked like the gate.
 
 ## What the tool said

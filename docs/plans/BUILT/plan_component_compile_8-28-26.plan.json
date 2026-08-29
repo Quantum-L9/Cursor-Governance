@@ -1,0 +1,455 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Compile harvestable plan components into PE Compiled plans",
+  "objective": "Replace the binary plan-shelf verdict with a per-component classifier so a stale or superseded mission can still donate live invariants. Harvest those invariants without implementation, have Global Architect consolidate them by concern, and emit new PE-wired plans tagged compiled that rewire stale Program Execution wires and prove them with conformance plus e2e.",
+  "code_in_scope": true,
+  "success_criteria": [
+    "Classifier output names each scanned component as live_invariant, stale_wiring, superseded_mission, or spent, and a plan with mixed verdicts is not forced into a single built or superseded shelf.",
+    "Harvest writes an invariants-only receipt: no implementation files, no sed/cp deploy through l9-harvest-pipeline, and every invariant cites a source plan path plus a concern id.",
+    "A compiled plan is a new PE-kind l9-plan artifact with compiled: true, kind: pe, execute_via: pe-campaign, and is not marked status: superseded.",
+    "Donor plans that were harvested gain status: superseded plus compiled_into pointing at the compiled plan; sessionStart skips donors and lists compiled plans as unbuilt.",
+    "Compiled plans that inherit stale PE wiring contain a live Execute via @environment/program-execution heading and no live unnegated make campaign left as the only execute path.",
+    "make program-execution-conformance and the campaign probe targeted by the compiled plan PASS on the execute worktree.",
+    "make pr-check PASS on the changed-file set; PR_REMEDIATE=0 make pr opens or updates one PR; no merge."
+  ],
+  "scope": {
+    "in": [
+      "skills/l9-plan-audit/scripts/audit_plans.py — component verdicts plus harvestable report",
+      "skills/l9-plan-audit/scripts/self_test.py — mixed-verdict and compiled-tag fixtures",
+      "skills/l9-plan-audit/references/staleness-rules.md — component law",
+      "skills/l9-plan-audit/scripts/harvest_plan_invariants.py — new invariants-only extractor citing kernels/Gold Nugget Extractor by path",
+      "commands/l9-audit-plans.md — harvest-candidate step; still no auto-Build and no auto-compile",
+      "docs/plans/README.md — compiled tag, donor compiled_into, no new pe/ci/date folder",
+      "Explicit l9-global-architect invocation to consolidate harvest receipts by concern",
+      "l9-plan PE projection of each compiled plan (not l9-plan-simple)",
+      "PE rewire of stale wires on those compiled plans, then program-execution-conformance plus campaign probe",
+      "First compile cohort: current root PE-kind plans flagged kernel_unfired or missing_execute_section, plus parked donors that still hold invariants"
+    ],
+    "out": [
+      "Creating or compiling skills/l9-intelligence-harvest — compiler qualification BLOCKED; source kernel lacks activation surface",
+      "Using skills/l9-harvest-pipeline sed/cp deploy on plan markdown",
+      "Auto-Build or auto make campaign from sessionStart Plan audit",
+      "Treating compiled: true as a built skip the way built/superseded/cancelled are skipped",
+      "A compiled/ folder or pe/ci/date shelves",
+      "Rewriting kernels/Gold Nugget Extractor or kernels/Improve.md / Validate & Repair.md",
+      "Consumer repo product code, l9-ci-core tag cuts, Quantum-L9/.github seeder work",
+      "Merging the resulting PR",
+      "Mass-executing every backlog plan in one campaign"
+    ]
+  },
+  "pre_validation": [
+    {
+      "id": "CP-01",
+      "command_or_action": "git fetch origin && git rev-parse origin/main",
+      "pass_criteria": "full SHA recorded; execute worktree cut from that tip, not from the dirty main checkout that holds the 2026-08-28 shelf pass",
+      "status": "pending"
+    },
+    {
+      "id": "CP-02",
+      "command_or_action": "test ! -d skills/l9-intelligence-harvest && test -f skills/l9-harvest-pipeline/SKILL.md && test -f skills/l9-global-architect/SKILL.md && test -f 'kernels/Gold Nugget Extractor 🚀.md'",
+      "pass_criteria": "intelligence-harvest absent; harvest-pipeline present and must not be the harvest owner; GAR and Gold Nugget kernel present",
+      "status": "passed"
+    },
+    {
+      "id": "CP-03",
+      "command_or_action": ".venv/bin/python skills/l9-plan-audit/scripts/audit_plans.py --workspace \"$(pwd)\" --window-days 7 --format json --limit 20",
+      "pass_criteria": "emits unbuilt root plans; today the findings are file-level STALE flags only, with no component verdicts",
+      "status": "passed"
+    },
+    {
+      "id": "CP-04",
+      "command_or_action": ".venv/bin/python skills/l9-plan/scripts/route_plan.py --risk high --evidence conflicting",
+      "pass_criteria": "depth=deep; this PLAN_DOCUMENT depth matches",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-01-baseline-preflight",
+      "task": "Cut a wired worktree from fetched origin/main, lock that full SHA, copy this plan onto the branch, and re-run CP-01..CP-04. Stop and replan on SHA drift. Do not execute on the dirty primary checkout.",
+      "files": [
+        "docs/plans/plan_component_compile_8-28-26.plan.md",
+        "ops/scripts/agent_worktree_start.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new worktree from origin/main",
+      "leverage_rank": 6
+    },
+    {
+      "id": "todo-02-component-verdict-law",
+      "task": "Write the component-verdict contract: live_invariant, stale_wiring, superseded_mission, spent. A mixed plan stays harvestable. compiled: true is a live PE tag, not a built skip. Donors use status: superseded plus compiled_into after harvest.",
+      "files": [
+        "skills/l9-plan-audit/references/staleness-rules.md",
+        "docs/plans/README.md"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "todo-01-baseline-preflight"
+      ],
+      "operation": "Replace",
+      "anchor": "Shelves (existing mechanics) and Unbuilt sections",
+      "leverage_rank": 1,
+      "shared_root_cause": "binary shelf verdict discards live invariants"
+    },
+    {
+      "id": "todo-03-classifier-emit",
+      "task": "Extend audit_plans.py to emit per-component verdicts and a harvestable count without moving files. SessionStart stays display-only and fail-open. Keep the PyYAML fallback and Do **not** run make-campaign prohibition. Add mixed-verdict fixtures to self_test.py.",
+      "files": [
+        "skills/l9-plan-audit/scripts/audit_plans.py",
+        "skills/l9-plan-audit/scripts/self_test.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "todo-02-component-verdict-law"
+      ],
+      "operation": "Insert",
+      "anchor": "flags_for / is_unbuilt",
+      "leverage_rank": 2
+    },
+    {
+      "id": "todo-04-audit-plans-harvest-step",
+      "task": "Add a harvest-candidate report to /l9-audit-plans after the live-queue scan. It lists harvestable components by concern. It must not auto-Build, auto-compile, or auto-shelf a mixed plan as superseded.",
+      "files": [
+        "commands/l9-audit-plans.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-03-classifier-emit"
+      ],
+      "operation": "Insert",
+      "anchor": "EXECUTION step 2",
+      "leverage_rank": 5
+    },
+    {
+      "id": "todo-05-harvest-invariants",
+      "task": "Add harvest_plan_invariants.py that reads Gold Nugget Extractor by path and writes invariants-only receipts grouped by concern. No implementation code. No l9-harvest-pipeline. No new l9-intelligence-harvest skill. Fail closed if a receipt contains code fences destined for deploy.",
+      "files": [
+        "skills/l9-plan-audit/scripts/harvest_plan_invariants.py",
+        "kernels/Gold Nugget Extractor 🚀.md"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "todo-03-classifier-emit"
+      ],
+      "operation": "Create",
+      "anchor": "new script beside audit_plans.py",
+      "leverage_rank": 3
+    },
+    {
+      "id": "todo-06-gar-compile-by-concern",
+      "task": "Explicitly boot l9-global-architect in STANDALONE mode, load runtime/MANIFEST.yaml in load_order, and compile harvest receipts into one concern map. Repository presence must not flip GAR into PE-integrated mode. Output is a concern bundle, not product code.",
+      "files": [
+        "skills/l9-global-architect/SKILL.md",
+        "skills/l9-global-architect/runtime/MANIFEST.yaml",
+        "skills/l9-global-architect/integrations/L9_RUNTIME_BINDING.yaml"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "todo-05-harvest-invariants"
+      ],
+      "operation": "Wrap",
+      "anchor": "GAR boot_sequence then concern compile",
+      "leverage_rank": 4
+    },
+    {
+      "id": "todo-07-emit-compiled-pe-plans",
+      "task": "For each concern bundle, run l9-plan (not l9-plan-simple): validate_plan_document.py PASS, render_plan_pe_autonomy.py --execute-via pe-campaign, kernel receipt PASS. Frontmatter compiled: true, kind: pe. Stamp donor compiled_into. Land compiled plans at docs/plans root.",
+      "files": [
+        "skills/l9-plan/scripts/validate_plan_document.py",
+        "skills/l9-plan/scripts/render_plan_pe_autonomy.py",
+        "docs/plans/README.md"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "todo-06-gar-compile-by-concern"
+      ],
+      "operation": "Create",
+      "anchor": "docs/plans/<concern>_compiled_M-D-YY.plan.md",
+      "leverage_rank": 7
+    },
+    {
+      "id": "todo-08-rewire-stale-pe",
+      "task": "On each compiled plan, replace stale PE wires: restore a live Execute via @environment/program-execution heading, bind Program Lock and Controller lease, and remove leftover Cursor-Build-only execute paths. Keep Do not run make campaign only as a prohibition on simple leftovers, not as the execute path.",
+      "files": [
+        "environment/program-execution/",
+        "environment/agents/PEER_EXECUTION.md",
+        "docs/plans/"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "todo-07-emit-compiled-pe-plans"
+      ],
+      "operation": "Replace",
+      "anchor": "compiled plan execute section plus PE adapter bind",
+      "leverage_rank": 8
+    },
+    {
+      "id": "todo-09-e2e-conformance",
+      "task": "Prove each compiled concern on the execute worktree: make program-execution-conformance, then the campaign probe named by that plan. Fail closed on empty commands or inspection-only compiled tasks.",
+      "files": [
+        "environment/program-execution/",
+        "Makefile"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "todo-08-rewire-stale-pe"
+      ],
+      "operation": "Wrap",
+      "anchor": "program-execution-conformance and program-execution-probe targets",
+      "leverage_rank": 9
+    },
+    {
+      "id": "todo-10-converge",
+      "task": "Run l9-plan-audit self_test and harvest extractor tests, make pr-check on the changed set, then PR_REMEDIATE=0 make pr. Do not merge. Write Graphiti PICKUP for the compiled cohort.",
+      "files": [
+        "skills/l9-plan-audit/scripts/self_test.py",
+        "docs/plans/README.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "todo-04-audit-plans-harvest-step",
+        "todo-09-e2e-conformance"
+      ],
+      "operation": "Wrap",
+      "anchor": "PR_REMEDIATE=0 make pr",
+      "leverage_rank": 10
+    }
+  ],
+  "critical_path": [
+    "todo-01-baseline-preflight",
+    "todo-02-component-verdict-law",
+    "todo-03-classifier-emit",
+    "todo-05-harvest-invariants",
+    "todo-06-gar-compile-by-concern",
+    "todo-07-emit-compiled-pe-plans",
+    "todo-08-rewire-stale-pe",
+    "todo-09-e2e-conformance",
+    "todo-10-converge"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "Component verdict law is written and the scanner emits harvestable without moving files",
+      "unlocks": "invariant harvest"
+    },
+    {
+      "id": "M2",
+      "outcome": "Invariants-only receipts exist, grouped by concern, with no implementation payload",
+      "unlocks": "GAR compile"
+    },
+    {
+      "id": "M3",
+      "outcome": "Compiled PE plans exist at docs/plans root with live PE execute headings",
+      "unlocks": "e2e and publish"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "self_test PASS and a mixed-verdict fixture is not shelved as superseded",
+      "no_go_action": "stop; do not harvest"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "harvest receipt contains zero deployable code fences and cites Gold Nugget kernel by path",
+      "no_go_action": "discard receipt; do not boot GAR"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "validate_plan_document.py PASS, kernel receipt PASS, program-execution-conformance PASS",
+      "no_go_action": "do not make pr"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "docs/plans/README.md",
+      "action": "update",
+      "todo_ids": [
+        "todo-02-component-verdict-law",
+        "todo-07-emit-compiled-pe-plans"
+      ]
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "compiled tag and harvest step live in the plans store README and l9-plan-audit; no AGENTS fold required"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "classifier and harvest do not change symlink law or secret plane"
+    },
+    {
+      "surface": "commands/l9-audit-plans.md",
+      "action": "update",
+      "todo_ids": [
+        "todo-04-audit-plans-harvest-step"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does a mixed plan still get git mv into archive/superseded because status: superseded is set on the whole file before harvest?",
+      "Does compiled: true get added to frontmatter_marks_built and disappear from sessionStart?",
+      "Does the harvest step silently call l9-harvest-pipeline and deploy markdown as code?",
+      "Does GAR flip to PE-integrated mode because the pack exists on disk?",
+      "Does a compiled plan keep a Cursor-Build-only execute path and fail PE conformance while still looking green?"
+    ],
+    "assumed_false_ifs": [
+      "operators keep using binary shelf moves on mixed plans",
+      "GAR integration activates from repository presence",
+      "harvest receipts include implementation that later gets copied into PE"
+    ],
+    "blast_radius": "Wrong skip rules hide the live queue. Wrong harvest owner deploys plan prose as code. Wrong GAR mode widens execution authority. Stale PE wires in compiled plans recreate the kernel_unfired and missing_execute_section noise this campaign exists to retire.",
+    "rollback": "Revert the classifier and command edits; leave donor plans where they were; delete compiled plans that have no PE conformance PASS; do not delete harvest receipts already cited by a compiled_into pointer until the donor restore is committed."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-02-component-verdict-law",
+      "todo-03-classifier-emit",
+      "todo-05-harvest-invariants",
+      "todo-06-gar-compile-by-concern",
+      "todo-04-audit-plans-harvest-step",
+      "todo-01-baseline-preflight",
+      "todo-07-emit-compiled-pe-plans",
+      "todo-08-rewire-stale-pe",
+      "todo-09-e2e-conformance",
+      "todo-10-converge"
+    ],
+    "shared_causes": [
+      "binary pass/fail shelf hides live invariants inside stale missions",
+      "sessionStart flags (kernel_unfired, missing_execute_section) name stale PE wires, not worthless plans",
+      "named intelligence-harvest skill is not shipped; sed harvest is the wrong owner"
+    ],
+    "deletions_or_consolidations": [
+      "stop whole-file superseded moves for mixed plans",
+      "collapse same-concern leftovers into one compiled PE plan instead of keeping parallel drafts"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "compiled: true is treated as built and vanishes from the live queue",
+      "mitigation": "self_test fixture asserts compiled plus pending todos still appears in unbuilt findings"
+    },
+    {
+      "risk": "harvest is routed to l9-harvest-pipeline or a not-yet-created l9-intelligence-harvest pack",
+      "mitigation": "scope.out names both; extractor refuses deployable code fences; cite Gold Nugget kernel by path only"
+    },
+    {
+      "risk": "GAR integrated mode starts from pack presence and mutates outside the envelope",
+      "mitigation": "STANDALONE only; L9_RUNTIME_BINDING.yaml repository presence does not activate integration"
+    },
+    {
+      "risk": "compiled plans inherit stale PE wires and fail closed only after publish",
+      "mitigation": "todo-08 and todo-09 are on the critical path before make pr"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "l9-intelligence-harvest does not exist; the 2026-08 compile was BLOCKED at topology ownership.",
+      "decision_effect": "Harvest owner for this campaign is l9-plan-audit harvest_plan_invariants.py plus the Gold Nugget kernel cited by path.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Which parked or root plans enter the first compile cohort.",
+      "decision_effect": "todo-01 records the cohort: root PE-kind kernel_unfired or missing_execute_section, plus donors that still hold invariants. Backlog mass compile stays out.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "GAR standalone compile versus PE-integrated compile.",
+      "decision_effect": "STANDALONE compile of receipts; l9-plan then PE-wires the compiled plans. Integration does not activate from repo presence.",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": ".venv/bin/python skills/l9-plan-audit/scripts/self_test.py",
+      "pass_criteria": "PASS including mixed-verdict and compiled-tag fixtures",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": ".venv/bin/python skills/l9-plan/scripts/validate_plan_document.py docs/plans/plan_component_compile_8-28-26.plan.json",
+      "pass_criteria": "PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "make program-execution-conformance",
+      "pass_criteria": "PASS on the execute worktree after compiled PE rewire",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on the changed-file set",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U2"
+    ],
+    "next_skill": "l9-pe-campaign-activate",
+    "stop_reason": "PLAN_DOCUMENT is the compile contract. Execution starts on a new origin/main worktree via Program Execution, not on this dirty main checkout. U2 is a probe inside todo-01."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/l9-plan-audit/",
+      "commands/l9-audit-plans.md",
+      "docs/plans/README.md",
+      "docs/plans/*.plan.md",
+      "docs/plans/*.plan.json"
+    ],
+    "must_not_modify": [
+      "CANONICAL_LAW.md",
+      "kernels/Gold Nugget Extractor 🚀.md",
+      "skills/l9-harvest-pipeline/",
+      "skills/l9-intelligence-harvest/",
+      "consumer product trees",
+      "Quantum-L9/.github seeder workflows"
+    ],
+    "preserved_contracts": [
+      "sessionStart plan audit remains display-only",
+      "l9-plan-simple stays the Build-button path",
+      "compiled plans execute through PE plus autonomy",
+      "autonomous_merge remains false",
+      "GAR integration does not activate from repository presence"
+    ],
+    "validation_commands": [
+      ".venv/bin/python skills/l9-plan-audit/scripts/self_test.py",
+      "make program-execution-conformance",
+      "make pr-check"
+    ]
+  },
+  "checklist": [
+    "component verdicts",
+    "invariants-only harvest",
+    "GAR concern compile",
+    "PE compiled plans",
+    "e2e conformance"
+  ],
+  "estimate": "one PE campaign on a fresh origin/main worktree"
+}

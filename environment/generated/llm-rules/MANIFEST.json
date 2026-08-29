@@ -6,9 +6,9 @@
       "alias": null,
       "class": "always",
       "output": "00-global.md",
-      "output_sha256": "dba834ff614b6128b55c7465d2eea6c26acb121194abd6942e3e749fd6b1d435",
+      "output_sha256": "44c969e7d398fa0797a350f55e9d9c127ed0a006c1edeae06a87d8f020ac0820",
       "source": "rules/00-global.mdc",
-      "source_sha256": "ceaafbc510094aafbfd66606103783bc9630cb7073eec01ff07c3ebc9ac92548",
+      "source_sha256": "f52c4a83d3140578f1dba975f12b643ff85a0751c49c40af1ba112720dd2011c",
       "stem": "00-global"
     },
     {
@@ -213,9 +213,9 @@
       "alias": null,
       "class": "always",
       "output": "48-make-pr-remediation.md",
-      "output_sha256": "c761862a9251478f9df7d96d2f1bd017ceacabbef63b1dde9a81c84337c374d6",
+      "output_sha256": "f79d9b5d35e332a1d37c74ebf22e8949e1b6d66aa77f1c5f6be586d871e1eac4",
       "source": "rules/48-make-pr-remediation.mdc",
-      "source_sha256": "72302848d33ab5022e9c7640c5975bc96ec4fe6221ca9f8e337a56d87453f98b",
+      "source_sha256": "6e7690a6d6e954a4a4597f695305a62ef5bda9243873beec73fddf5ab7b93580",
       "stem": "48-make-pr-remediation"
     },
     {
@@ -510,9 +510,9 @@
       "alias": null,
       "class": "always",
       "output": "88-l4-local-autonomy.md",
-      "output_sha256": "efbc6483e37e7003a060a3c5bc53ed7f44c1530c947f7d3204d8e44a854cbd5e",
+      "output_sha256": "ddc82b9dd8715c259696e4b1d385f7cd6efb1825930b61da4b27bb73a17ea43d",
       "source": "rules/88-l4-local-autonomy.mdc",
-      "source_sha256": "88a6bc6c681c483e4b451017a2292e2a45b0c34e8b6a7cafa9878b048f4669de",
+      "source_sha256": "0ae1c99fa217b0befbfa51186e544dbb2b4ce31a8376f7a512f271cf8fa4173b",
       "stem": "88-l4-local-autonomy"
     },
     {
@@ -609,18 +609,18 @@
       "alias": null,
       "class": "always",
       "output": "99-no-auto-commit.md",
-      "output_sha256": "08651e64b3498d046d80914f70861bbf2f027fd3e6d181dca3937af0152f6582",
+      "output_sha256": "7f27345d2f9bce24f5f47427fff46c393be4b209a3aec3b222ace0e291df30ed",
       "source": "rules/99-no-auto-commit.mdc",
-      "source_sha256": "f40fb8497a18ed5beac54fe9e7a5a6a23e7a6304180faaaf6861da80134e0bde",
+      "source_sha256": "69479f6c29499b67beb0c2d5dd68bd7651ff751db7de0ad0cb3587c5de1ce689",
       "stem": "99-no-auto-commit"
     },
     {
       "alias": null,
       "class": "always",
       "output": "zz-autonomy-surface-override.md",
-      "output_sha256": "7e4b0beac98ce5ff482b8437817bf5d54af13aa21f33fa6b6a66e2c94ff97102",
+      "output_sha256": "dd8fb4f2891a99bdcce85a4fce3bed3496f268a4c913f2fbc65587b77be6c1bc",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "81d5c2fe2a0e3ee0c0bfd3bc95f833059658496acec5ae89af9ecc78028754a6",
+      "source_sha256": "b3baf802f673c24587dbe90ca3b7d6375dcdb70f26416287ca08c475faa25a61",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 69
   },
-  "tree_sha256": "6b48a5394eeba368595bdf8769a0d671a2e81c103683d9d24257db410b91811c"
+  "tree_sha256": "9a0bebc947bf3df8c5e183e08bf0b1d3c1a0f51047d512d9cccbaf8e07989ba8"
 }

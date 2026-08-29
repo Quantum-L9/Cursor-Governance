@@ -13,14 +13,15 @@
 #
 #   The shim installed here does NOT call `pre-commit` directly. It delegates
 #   to run_pr_precommit.sh --staged, which resolves the surface-aware SKIP list
-#   from one place. Same catalog, same exclusions as `make pr-check`, applied to
+#   from one place. Same catalog, same exclusions as `make pr`, applied to
 #   the index. That removes the reason for the prohibition instead of ignoring
 #   it.
 #
 # This is OPT-IN and machine-local: .git/hooks is not tracked, so nothing here
-# changes another clone. It does not replace `make pr-check` / `make pr`, which
-# remain the public gate; it closes the window in which a commit is written with
-# nothing having verified it.
+# changes another clone. It does not replace `make pr`, which remains the
+# public ceremony (`OPEN_PR=0 make pr` / leftover `make pr-check` is the same
+# leaf); it closes the window in which a commit is written with nothing having
+# verified it.
 #
 # Usage:
 #   bash ops/scripts/install_commit_hook.sh [--force] [--uninstall] [<repo>]

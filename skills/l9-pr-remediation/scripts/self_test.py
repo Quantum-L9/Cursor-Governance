@@ -54,6 +54,8 @@ def test_makefile_surface() -> None:
     _need(SKILL, "must not invoke `make pr`", "SKILL.md")
     _need(SKILL, "not the remediator publish", "SKILL.md")
     _need(SKILL, "make pr-check", "SKILL.md")
+    _need(SKILL, "L9_REMEDIATOR=1", "SKILL.md")
+    _need(REFS["run-contract.md"], "L9_REMEDIATOR=1", "run-contract.md")
     _need(SKILL, "PR_REMEDIATE=0 make pr", "SKILL.md")
     _need(REFS["run-contract.md"], "make precommit-repo", "run-contract.md")
     _need(REFS["run-contract.md"], "make pr-check", "run-contract.md")

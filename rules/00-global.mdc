@@ -28,6 +28,10 @@ alwaysApply: true
 - Deploy, mutate production, or edit C1/VPS without explicit approval (`93-c1`, `94-deployment-prohibition`)
 - Create a second governance tree or duplicate `.cursor/commands` / skills
 - Hand-edit generated manifests (`RULES-MANIFEST.*`, `environment/generated/llm-rules/**`)
+- Overwrite `AGENTS.md` or `Makefile` (same `additive_only` rule). Append only.
+  A rewrite needs a GitHub issue first. Do not invent `ALLOW-ROOT-DELETION`
+  or chase the protected-root PR template — that is the delay this rule exists
+  to prevent.
 
 ## See also
 
