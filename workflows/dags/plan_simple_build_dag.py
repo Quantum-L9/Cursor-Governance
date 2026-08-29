@@ -122,7 +122,15 @@ PLAN_SIMPLE_BUILD_NODES = [
         metadata={
             "ir_kind": "deterministic",
             "domain_owner": "l9-gmp-protocol",
-            "argv": ["--authorized-by", "slash-gmp", "--mode", "start", "--plan"],
+            "argv": [
+                "--authorized-by",
+                "slash-gmp",
+                "--mode",
+                "start",
+                "--plan",
+                "<resolved.plan.md>",
+                "<task>",
+            ],
             "also_read": ["commands/gmp.md", "skills/l9-gmp-protocol/SKILL.md"],
         },
     ),

@@ -78,6 +78,19 @@ def test_domain_actions_are_existing_repo_paths() -> None:
         assert (REPO_ROOT / rel).is_file(), rel
 
 
+def test_gmp_start_argv_supplies_plan_and_task() -> None:
+    pytest.importorskip("structlog")
+    from workflows.dags.plan_simple_build_dag import PLAN_SIMPLE_BUILD_DAG
+
+    node = next(item for item in PLAN_SIMPLE_BUILD_DAG.nodes if item.id == "gmp_start")
+    argv = list(node.metadata["argv"])
+    plan_at = argv.index("--plan")
+    assert plan_at + 2 < len(argv)
+    assert argv[plan_at + 1] != "--plan"
+    assert argv[plan_at + 1].startswith("<")
+    assert argv[plan_at + 2].startswith("<")
+
+
 def test_does_not_restate_gmp_phases_or_wire_campaign() -> None:
     text = DAG_SOURCE.read_text(encoding="utf-8")
     assert "make campaign" not in text
