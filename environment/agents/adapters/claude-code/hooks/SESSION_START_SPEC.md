@@ -8,6 +8,11 @@
 ## Hard constraints
 
 1. **Fail-open** — always exit 0; never block a session.
+1a. **Claude Code runtime only.** If none of `CLAUDE_CODE_REMOTE=true`,
+    `CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, or `CLAUDE_CODE_SESSION_ID` is set,
+    emit empty `additionalContext` and return. Cursor loads projected
+    `.claude/settings.json` in this repo; scoring a Cursor session with cloud
+    account-field drift or broker probes is forbidden.
 2. Resolve governance only at `$HOME/.cursor-governance` (ignore other `L9_GOVERNANCE_DIR`).
 3. Emit Claude SessionStart JSON envelope with `additionalContext`.
 4. **Mobile-safe** — committed consumer copy must not require `~/.cursor`.

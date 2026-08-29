@@ -10,7 +10,7 @@
 # writers, so `make pr` holds this lock and they yield to it.
 #
 # Boundaries:
-#   - machine-local and short-lived. The tracked `.governance-build-lock` file
+#   - machine-local and short-lived. A local `.governance-build-lock` file
 #     is an independent long-lived human kill switch; do not conflate them.
 #   - serializes automation only. Parallel humans/agents on one clone remain
 #     governed by rules/49-shared-worktree-isolation.mdc (use a worktree).

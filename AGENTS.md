@@ -969,3 +969,15 @@ skips the tree latch too. L4 on the shelf worktree is `begin` then
 `authorize-release` only — not `record-kernels`. Mid-session plan inject does
 not apply those kernels; `/ff` is the apply site. This fragment supersedes
 the `record-kernels` sentence in `FF_SHELF_WIP_PLANS_V1`.
+
+<!-- CURSOR_SESSIONSTART_NO_CLAUDE_CLOUD_V1 -->
+## Cursor SessionStart does not score Claude cloud (2026-08-29)
+
+`ops/hooks/session_start_bootstrap.sh` does not run `claude_projection.py`.
+Claude Code SessionStart (`session_start_claude_governance.sh`) is a no-op
+unless a Claude runtime marker is set (`CLAUDE_CODE_REMOTE=true`,
+`CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, or `CLAUDE_CODE_SESSION_ID`).
+`.governance-build-lock` is local-only (gitignored); presence still skips
+backup. This fragment supersedes §2.1 step 2 (Claude projection from Cursor
+SessionStart) and the older “keep `.governance-build-lock` tracked” housekeeping
+decision.

@@ -63,7 +63,6 @@
     { "path": ".biomeignore", "tier": "managed", "rule": "managed" },
     { "path": ".python-version", "tier": "managed", "rule": "managed" },
     { "path": ".cursorignore", "tier": "managed", "rule": "managed" },
-    { "path": ".governance-build-lock", "tier": "managed", "rule": "managed" },
     { "path": "uv.lock", "tier": "regenerable", "rule": "regenerable" }
   ],
   "exempt_root_files": [],

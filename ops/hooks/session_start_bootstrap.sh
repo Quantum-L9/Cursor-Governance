@@ -8,12 +8,6 @@ set -uo pipefail
 
 REPO="${CURSOR_PROJECT_DIR:-}"
 
-# Prefer native Claude Code (~/.local/bin) over a stale npm-global binary so
-# marketplace schema stays compatible with plugin reconcile.
-if [ -x "$HOME/.local/bin/claude" ]; then
-  export PATH="$HOME/.local/bin:$PATH"
-fi
-
 # Slow reconcilers (plugins, IDE, cold venv) are backgrounded during sessionStart.
 # Manual `make start` sets L9_BOOTSTRAP_SYNC=1 to run them in the foreground.
 BOOTSTRAP_SYNC="${L9_BOOTSTRAP_SYNC:-0}"
@@ -211,22 +205,10 @@ SETUP="$GC/ops/scripts/setup_workspace_symlinks.sh"
 ORCH="$GC/ops/hooks/session_start_memory_orchestrator.sh"
 GRAPHITI_CLI="$GC/ops/graphiti/graphiti_memory_client.py"
 
-# Background Claude projection (one engine: skills, commands, rules, settings,
-# hooks, declarative plugins — the imperative plugin setup runs only as the
-# engine's fallback). Activate already ran foreground.
-PROJECTION_ENGINE="$GC/ops/scripts/claude_projection.py"
-if [ -f "$PROJECTION_ENGINE" ]; then
-  if [ -x "$GC/.venv/bin/python3" ]; then
-    PROJ_PY="$GC/.venv/bin/python3"
-  else
-    PROJ_PY="python3"
-  fi
-  if [ -n "$REPO" ]; then
-    run_reconciler "$PROJ_PY" "$PROJECTION_ENGINE" --root "$GC" --workspace "$REPO" --quiet
-  else
-    run_reconciler "$PROJ_PY" "$PROJECTION_ENGINE" --root "$GC" --quiet
-  fi
-fi
+# Claude projection is Claude Code SessionStart's job
+# (session_start_claude_governance.sh). Running it from Cursor SessionStart
+# wrote readiness receipts against the wrong workspace and mixed Claude cloud
+# scoring into this report. Do not call claude_projection.py here.
 
 # venv: shared bootstrap owns uv sync; report the result only
 VENV_NOTE="absent"
@@ -280,16 +262,6 @@ if [ "$needs_wire" -eq 1 ] && [ -n "$REPO" ] && [ -f "$SETUP" ]; then
   fi
 fi
 
-PLUGIN_STAMP="$HOME/.claude/plugins/.l9-plugin-desired-hash"
-if command -v claude >/dev/null 2>&1; then
-  if [ -f "$PLUGIN_STAMP" ]; then
-    PLUGIN_NOTE="desired-state stamped"
-  else
-    PLUGIN_NOTE="reconciling (background)"
-  fi
-else
-  PLUGIN_NOTE="claude CLI not on PATH"
-fi
 
 # Graphiti env + tunnel + health (no memory-bank)
 # shellcheck source=/dev/null
@@ -440,7 +412,6 @@ COMBINED="$(cat <<EOF
 ### Runtime
 - venv: ${VENV_NOTE}
 - ide-profile: ${IDE_NOTE}
-- claude-plugins: ${PLUGIN_NOTE}
 - tunnel: ${TUNNEL_NOTE}
 - graphiti health: ${GRAPHITI_HEALTH}
 ### Graphiti hydrate
