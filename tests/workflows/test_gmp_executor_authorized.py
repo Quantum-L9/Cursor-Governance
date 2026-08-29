@@ -6,10 +6,14 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[2]
 EXECUTOR = ROOT / "workflows" / "gmp_executor.py"
 GOV_PY = ROOT / ".venv" / "bin" / "python"
 STATE = ROOT / ".l9" / "gmp" / "executor-state.json"
+
+pytestmark = pytest.mark.xdist_group("gmp_executor_authorized")
 
 
 def _env(**overrides: str) -> dict[str, str]:

@@ -39,3 +39,29 @@ def test_evaluate_denies_pr_check_when_remediator_env_set(
     assert (
         evaluate("Bash", {"command": "L9_REMEDIATOR=1 make precommit-repo"}, root=tmp_path) is None
     )
+
+
+def test_evaluate_denies_inline_remediator_assignment(tmp_path: Path) -> None:
+    reason = evaluate("Bash", {"command": "L9_REMEDIATOR=1 make pr-check"}, root=tmp_path)
+    assert reason is not None
+    assert "reader wave" in reason
+
+
+def test_cursor_shell_denies_pr_check_when_remediator_env_set(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    import json
+    from io import StringIO
+
+    import local_execution_gate as gate
+
+    monkeypatch.setenv(REMEDIATOR_ENV, "1")
+    monkeypatch.setattr(
+        sys,
+        "stdin",
+        StringIO(json.dumps({"command": "make pr-check"})),
+    )
+    assert gate.main_cursor_shell() == 0
+    payload = json.loads(capsys.readouterr().out.strip().splitlines()[-1])
+    assert payload["permission"] == "deny"
+    assert "reader wave" in payload["user_message"]

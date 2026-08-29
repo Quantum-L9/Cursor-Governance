@@ -1061,23 +1061,27 @@ from {module_path} import ...
         )
         self._save_state()
 
+    def _catalog_gate(self) -> StepResult:
+        self._record_subprocess("make precommit-repo")
+        if dry_run():
+            return StepResult(success=True, output="dry-run catalog")
+        result = subprocess.run(
+            ["make", "precommit-repo"],
+            cwd=REPO_ROOT,
+            capture_output=True,
+            text=True,
+        )
+        print(result.stdout)  # noqa: ADR-0019
+        if result.returncode != 0:
+            print(result.stderr)  # noqa: ADR-0019
+            return StepResult(success=False, error="make precommit-repo failed")
+        return StepResult(success=True, output="catalog passed")
+
     def _publish_pr(self) -> None:
         if not adapter_publish_surface():
-            self._record_subprocess("make precommit-repo")
             print(  # noqa: ADR-0019
                 "Cursor finalize: catalog + commit + STOP. Do not make pr."
             )
-            if dry_run():
-                return
-            result = subprocess.run(
-                ["make", "precommit-repo"],
-                cwd=REPO_ROOT,
-                capture_output=True,
-                text=True,
-            )
-            print(result.stdout)  # noqa: ADR-0019
-            if result.returncode != 0:
-                print(result.stderr)  # noqa: ADR-0019
             return
         self._maybe_l4_release()
         env_prefix = "PR_REMEDIATE=1 make pr"
@@ -1148,6 +1152,11 @@ from {module_path} import ...
                 self.state.completed_steps.append(step.value)
         self.state.needs_tests = False
         self.state.needs_readme = False
+        catalog = self._catalog_gate()
+        if not catalog.success:
+            print(f"Step failed: catalog: {catalog.error}")  # noqa: ADR-0019
+            self._save_state()
+            return 1
         for step in (
             StepType.VALIDATE,
             StepType.MEMORY_WRITE,

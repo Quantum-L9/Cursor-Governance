@@ -393,8 +393,21 @@ def _full_pytest_deny_reason(what: str) -> str:
     )
 
 
-def remediator_env_active() -> bool:
-    return os.environ.get(REMEDIATOR_ENV, "").strip().lower() in {"1", "true", "yes"}
+_REMEDIATOR_TRUE = frozenset({"1", "true", "yes"})
+_LEADING_ASSIGN = re.compile(r"\A(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)=(\S+)\s+")
+
+
+def remediator_env_active(command: str = "") -> bool:
+    if os.environ.get(REMEDIATOR_ENV, "").strip().lower() in _REMEDIATOR_TRUE:
+        return True
+    rest = command.lstrip()
+    while True:
+        match = _LEADING_ASSIGN.match(rest)
+        if match is None:
+            return False
+        if match.group(1) == REMEDIATOR_ENV and match.group(2).strip().lower() in _REMEDIATOR_TRUE:
+            return True
+        rest = rest[match.end() :]
 
 
 def command_runs_reader_wave(command: str) -> str | None:
@@ -529,7 +542,7 @@ def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str |
         catalog = command_runs_unscoped_pytest(command)
         if catalog and not os.environ.get(FULL_PYTEST_OVERRIDE_ENV, "").strip():
             return _full_pytest_deny_reason(catalog)
-        if remediator_env_active():
+        if remediator_env_active(command):
             wave = command_runs_reader_wave(command)
             if wave:
                 return _remediator_wave_deny_reason(wave)
@@ -827,6 +840,10 @@ def main_cursor_shell() -> int:
         deny = publish_path_workflow_deny(command)
         if deny:
             return _emit_cursor("deny", deny)
+        if remediator_env_active(command):
+            wave = command_runs_reader_wave(command)
+            if wave:
+                return _emit_cursor("deny", _remediator_wave_deny_reason(wave))
         if not command_is_remote_mutation(command):
             return _emit_cursor("allow")
         if not command_has_make_remote(command):
