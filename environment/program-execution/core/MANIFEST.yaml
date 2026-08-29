@@ -530,6 +530,9 @@ files:
 - path: shared/STATE_MODEL.yaml
   sha256: 681611b460790b2b54e23efa2da600874845b18ef5097ca12aa0abb6168402a7
   bytes: 2511
+- path: shared/blueprint_identity.py
+  sha256: bb4384df72bea24fcafccb7e61d562f263020c3965c8b2e65365b7f1f5404c5b
+  bytes: 3916
 - path: shared/schemas/action-authorization.schema.json
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
@@ -551,6 +554,9 @@ files:
 - path: tests/test_autonomy_rail.py
   sha256: 5f29a2ac881118936fd70f078cc96cdd0c4a2c5c588964303c1f20b8f96bd092
   bytes: 3861
+- path: tests/test_blueprint_identity.py
+  sha256: c7bb48a7d456bbced267ba99be643995b2c01d61db2093e016114b50d2c08a7f
+  bytes: 4180
 - path: tests/test_pair_alignment.py
   sha256: 81b298a4128e9a2674ab00519c4e22c908e4331d7244c8b4b06b9606a81e50ec
   bytes: 1748
@@ -585,5 +591,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 193
-  total_bytes: 721872
+  file_count: 195
+  total_bytes: 729968

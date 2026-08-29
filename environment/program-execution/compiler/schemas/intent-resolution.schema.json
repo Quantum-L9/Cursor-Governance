@@ -22,6 +22,10 @@
     "schema": {
       "const": "program-execution.intent-resolution.v1"
     },
+    "mission_context": {
+      "description": "Optional. Present only for a Mission-bound resolution, and then exactly the canonical minimal Mission projection — id, revision, digest — carried as first-class provenance rather than as compiler-private metadata. Absent for an unbound Program Intent, which stays valid and unchanged. The Mission objective, acceptance criteria, authority ceiling, budgets, constraints, and lifecycle are deliberately not projected here; the Mission ceiling reaches this document only through its effect on the resolved authorization, never as a second copy of Mission law.",
+      "$ref": "program-execution.mission-context.v1"
+    },
     "intent": {
       "type": "object",
       "additionalProperties": false,
