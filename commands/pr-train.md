@@ -13,7 +13,7 @@ dag_file: workflows/dags/pr_train_dag.py
 
 One slash, three stops in order:
 
-1. **OPEN_TRAIN** — unique local commits onto stacked PRs (`PR_STACK=auto make pr`)
+1. **OPEN_TRAIN** — unique local commits onto stacked PRs. Same-path, generated-prefix clobber, and `git merge-tree` conflict stay one PR (unknown probe fail-closes into one PR). Then `PR_STACK=auto make pr`.
 2. **REMEDIATE** — skill `l9-pr-remediation` Converge (merge authorization)
 3. **/ff** — only when `open_pr_count == 0` (`skills/l9-repo-sync/scripts/ff.sh`)
 
@@ -40,5 +40,6 @@ Plan-only (default): omit `--execute`. Campaign branches halt unless `--campaign
 
 - SessionDAG / `register_session_dag`
 - Rebase, conflict resolution, force-push, sibling PRs onto main
+- Splitting merge-tree / generated-prefix collisions across stacked PRs
 - `/ff` while any PR is still open
 - Pasting a DAG body into this file

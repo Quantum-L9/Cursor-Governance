@@ -5,8 +5,10 @@ LANGGRAPH_RUNTIME (not a SessionDAG). Never call register_session_dag.
 Stops (one slash, one graph):
 
 1. OPEN_TRAIN — inventory unique local commits, drop already-landed patches,
-   keep colliding paths in one slice, cherry-pick onto the unique stack tip,
-   publish with ``PR_STACK=auto make pr``.
+   consolidate colliding work into one slice (shared path, generated-prefix
+   clobber, or ``git merge-tree`` conflict; unknown probe fail-closes into
+   the same PR), cherry-pick onto the unique stack tip, publish with
+   ``PR_STACK=auto make pr``.
 2. REMEDIATE — dispatch skill ``l9-pr-remediation`` Converge (merge
    authorization for all open PRs). Do not run ``make pr`` here.
 3. FF — only when ``open_pr_count == 0``, run ``skills/l9-repo-sync/scripts/ff.sh``.
@@ -38,6 +40,13 @@ _AUTHORIZE_MERGE = _REPO_ROOT / "ops" / "autonomy" / "authorize_merge.py"
 GRAPH_ID = "pr-train-v1"
 MAX_SLICES = 32
 REMEDIATOR_SKILL = "l9-pr-remediation"
+_SCRIPTS = _REPO_ROOT / "ops" / "scripts"
+if str(_SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(_SCRIPTS))
+try:
+    from sync_generated_artifacts import GENERATED_PATH_PREFIXES
+except ImportError:  # pragma: no cover — tests still union by path + merge-tree
+    GENERATED_PATH_PREFIXES = ()
 
 
 # ---------------------------------------------------------------------------
@@ -59,8 +68,102 @@ def campaign_halt(branch: str | None, override: bool) -> str | None:
     return None
 
 
-def group_slices(commits: list[NovelCommit]) -> list[list[NovelCommit]]:
-    """Union-find by shared paths. Overlapping hunk owners stay one PR."""
+def generated_prefix(path: str) -> str | None:
+    rel = path.lstrip("./")
+    for prefix in GENERATED_PATH_PREFIXES:
+        if rel.startswith(prefix) or rel == prefix.rstrip("."):
+            return prefix
+    return None
+
+
+def shares_generated_clobber(left: NovelCommit, right: NovelCommit) -> bool:
+    """Whole-file generated corpora clobber on MERGE_TRAIN if split across PRs."""
+    left_p = {generated_prefix(p) for p in left.paths} - {None}
+    right_p = {generated_prefix(p) for p in right.paths} - {None}
+    return bool(left_p & right_p)
+
+
+def parse_merge_tree_name_only(stdout: str, returncode: int) -> list[str] | None:
+    """Same contract as ``pr_overlap_check.probe_ref_conflicts``: [] / paths / None."""
+    if returncode == 0:
+        return []
+    if returncode != 1:
+        return None
+    conflicts: list[str] = []
+    for line in stdout.splitlines():
+        line = line.strip()
+        if not line or " " in line or line.isdigit():
+            continue
+        if len(line) == 40 and all(c in "0123456789abcdef" for c in line):
+            continue
+        conflicts.append(line)
+    return conflicts
+
+
+def is_git_repo(repo: Path) -> bool:
+    return _git(repo, "rev-parse", "--is-inside-work-tree").returncode == 0
+
+
+def sha_is_commit(repo: Path, sha: str) -> bool:
+    return _git(repo, "cat-file", "-e", f"{sha}^{{commit}}").returncode == 0
+
+
+def probe_sha_conflicts(repo: Path, left: str, right: str) -> list[str] | None:
+    """Textual conflicts if ``left`` and ``right`` were merged. None = unknown.
+
+    Exit 1 with no parseable paths still counts as a conflict (fail-closed).
+    """
+    result = _git(repo, "merge-tree", "--write-tree", "--name-only", left, right)
+    if result.returncode == 0:
+        return []
+    if result.returncode != 1:
+        return None
+    parsed = parse_merge_tree_name_only(result.stdout, 1)
+    return parsed if parsed else ["__merge_tree_conflict__"]
+
+
+def commit_unix(repo: Path, sha: str) -> int:
+    proc = _git(repo, "log", "-1", "--format=%ct", sha)
+    if proc.returncode != 0:
+        return 0
+    try:
+        return int((proc.stdout or "0").strip() or "0")
+    except ValueError:
+        return 0
+
+
+def commits_must_colocate(repo: Path, left: NovelCommit, right: NovelCommit) -> bool:
+    """True → same stacked PR. Unknown merge-tree is fail-closed (colocate)."""
+    if shares_generated_clobber(left, right):
+        return True
+    if not is_git_repo(repo):
+        return False
+    if not sha_is_commit(repo, left.sha) or not sha_is_commit(repo, right.sha):
+        return False
+    conflicts = probe_sha_conflicts(repo, left.sha, right.sha)
+    if conflicts is None:
+        return True
+    return bool(conflicts)
+
+
+def order_slice(repo: Path, group: list[NovelCommit]) -> list[NovelCommit]:
+    """Oldest commit first so cherry-pick onto the stack tip is linear."""
+    if len(group) < 2 or not is_git_repo(repo):
+        return group
+    return sorted(group, key=lambda c: (commit_unix(repo, c.sha), c.sha))
+
+
+def group_slices(
+    commits: list[NovelCommit],
+    must_colocate: Callable[[NovelCommit, NovelCommit], bool] | None = None,
+) -> list[list[NovelCommit]]:
+    """One PR per conflict component.
+
+    Always union commits that share a path. Then union any pair for which
+    ``must_colocate`` is true (merge-tree conflict, unknown probe, or
+    generated-prefix clobber). Unknown is fail-closed: one PR, not a stacked
+    pair that will stall MERGE_TRAIN.
+    """
     if not commits:
         return []
     parent = list(range(len(commits)))
@@ -84,6 +187,14 @@ def group_slices(commits: list[NovelCommit]) -> list[list[NovelCommit]]:
                 first_for_path[path] = i
             else:
                 union(i, seen)
+
+    if must_colocate is not None:
+        for i, left in enumerate(commits):
+            for j in range(i + 1, len(commits)):
+                if find(i) == find(j):
+                    continue
+                if must_colocate(left, commits[j]):
+                    union(i, j)
 
     grouped: dict[int, list[NovelCommit]] = {}
     order: list[int] = []
@@ -146,6 +257,7 @@ class PrTrainState(BaseModel):
     publish_fn: Any = Field(default=None)
     remediate_fn: Any = Field(default=None)
     ff_fn: Any = Field(default=None)
+    colocate_fn: Any = Field(default=None)
 
     status: Literal["running", "blocked", "complete", "failed"] = Field(default="running")
     halt_reason: str = Field(default="")
@@ -412,13 +524,20 @@ def diagnose_node(state: PrTrainState) -> dict[str, Any]:
 def slice_node(state: PrTrainState) -> dict[str, Any]:
     if state.status in {"blocked", "failed"}:
         return {}
+    repo = Path(state.repo or ".").resolve()
     commits = [
         NovelCommit(sha=row["sha"], paths=tuple(row.get("paths") or ()), ref=row.get("ref") or "")
         for row in state.novel
     ]
+    must = state.colocate_fn
+    if must is None:
+
+        def must(left: NovelCommit, right: NovelCommit) -> bool:
+            return commits_must_colocate(repo, left, right)
+
     slices = [
-        [{"sha": c.sha, "paths": list(c.paths), "ref": c.ref} for c in group]
-        for group in group_slices(commits)
+        [{"sha": c.sha, "paths": list(c.paths), "ref": c.ref} for c in order_slice(repo, group)]
+        for group in group_slices(commits, must_colocate=must)
     ]
     if len(slices) > MAX_SLICES:
         return {
@@ -546,7 +665,7 @@ def report_node(state: PrTrainState) -> dict[str, Any]:
         f"status: {status}",
         f"branch: {state.branch or '?'}",
         f"novel commits: {len(state.novel)} (skipped landed: {len(state.skipped_dup)})",
-        f"slices: {len(state.slices)}",
+        f"slices: {len(state.slices)} (path ∪ generated-prefix ∪ merge-tree; unknown=colocate)",
         f"opened: {len(state.opened_prs)}",
         f"stop 2 skill: {state.skill_dispatch or '(not dispatched)'}",
         f"open_pr_count: {state.open_pr_count}",
