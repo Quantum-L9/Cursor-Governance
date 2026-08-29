@@ -122,6 +122,22 @@ def test_graphiti_http_403_is_allowlist() -> None:
     assert er._classify_graphiti_http_code(405)[0] == READY
 
 
+def test_graphiti_mcp_http_health_rejects_file_scheme(monkeypatch) -> None:
+    monkeypatch.delenv("L9_GRAPHITI_PROBE_SKIP", raising=False)
+    monkeypatch.setenv("GRAPHITI_MCP_URL", "file:///etc/passwd")
+    status, note = er._graphiti_mcp_http_health()
+    assert status == DEGRADED
+    assert "config" in note
+
+
+def test_graphiti_mcp_http_health_rejects_non_allowlisted_https(monkeypatch) -> None:
+    monkeypatch.delenv("L9_GRAPHITI_PROBE_SKIP", raising=False)
+    monkeypatch.setenv("GRAPHITI_MCP_URL", "https://evil.example/graphiti/mcp")
+    status, note = er._graphiti_mcp_http_health()
+    assert status == DEGRADED
+    assert "config" in note
+
+
 def test_working_cli_and_dead_mcp_are_not_one_word(tmp_path: Path, monkeypatch) -> None:
     gov = _init_fake_gov(tmp_path, merge_denies=True)
     home = _fake_home(tmp_path, mcp="READY")

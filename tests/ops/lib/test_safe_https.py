@@ -24,6 +24,7 @@ _FETCHERS = (
     REPO / "ops" / "secrets" / "broker_identity.py",
     REPO / "ops" / "scripts" / "validate_gh_package_deps.py",
     REPO / "ops" / "scripts" / "probe_network_posture.py",
+    REPO / "ops" / "scripts" / "emit_claude_readiness.py",
     REPO / "ops" / "graphiti" / "prune.py",
     REPO / "environment" / "program-execution" / "scripts" / "context7_stack_proof.py",
     REPO / "environment" / "agents" / "generated-data" / "adapters" / "graphiti_memory.py",

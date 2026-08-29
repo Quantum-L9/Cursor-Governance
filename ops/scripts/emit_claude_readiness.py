@@ -35,13 +35,18 @@ import argparse
 import json
 import os
 import re
-import ssl
 import subprocess
 import sys
 import urllib.error
 import urllib.request
 from pathlib import Path
 from typing import Any
+
+_OPS_LIB = Path(__file__).resolve().parent.parent / "lib"
+if str(_OPS_LIB) not in sys.path:
+    sys.path.insert(0, str(_OPS_LIB))
+
+from safe_https import exchange  # noqa: E402
 
 SCHEMA_VERSION = "l9.claude-readiness.v1"
 
@@ -207,6 +212,7 @@ def _projection_statuses(receipt: dict[str, Any] | None) -> dict[str, str]:
 
 
 DEFAULT_GRAPHITI_MCP_URL = "https://memory.quantumaipartners.com/graphiti/mcp"
+GRAPHITI_MCP_HTTPS_HOSTS = frozenset({"memory.quantumaipartners.com"})
 
 # HTTP classifier vocabulary — lookup KEY only; never interpolate a URL, body,
 # or exception string into a printed note (severs clear-text-logging taint).
@@ -247,14 +253,22 @@ def _graphiti_mcp_http_health() -> tuple[str, str]:
     url = graphiti_mcp_url()
     if not url:
         return DEGRADED, "not authenticated (blocker: config)"
-    ctx = ssl.create_default_context()
-    ctx.minimum_version = ssl.TLSVersion.TLSv1_2
+    # Never urllib.urlopen: GRAPHITI_MCP_URL is env-sourced and urllib follows
+    # file:// (CWE-939). safe_https.exchange is HTTPS or loopback HTTP only.
     req = urllib.request.Request(url, method="GET")
     try:
-        with urllib.request.urlopen(req, timeout=8, context=ctx) as resp:  # noqa: S310
-            return _classify_graphiti_http_code(int(getattr(resp, "status", 200) or 200))
+        with exchange(
+            req,
+            timeout=8,
+            allowed_https_hosts=GRAPHITI_MCP_HTTPS_HOSTS,
+            allow_loopback_http=True,
+            label="Graphiti MCP URL",
+        ) as resp:
+            return _classify_graphiti_http_code(int(resp.status))
     except urllib.error.HTTPError as exc:
         return _classify_graphiti_http_code(int(exc.code))
+    except ValueError:
+        return DEGRADED, "not authenticated (blocker: config)"
     except Exception:  # noqa: BLE001 - a probe never crashes the emitter
         return DEGRADED, "not authenticated (blocker: reachability)"
 
