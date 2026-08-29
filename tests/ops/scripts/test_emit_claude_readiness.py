@@ -85,6 +85,21 @@ def test_sanitize_remote_passes_clean_urls() -> None:
     assert er._sanitize_remote("git@github.com:o/r.git") == "git@github.com:o/r.git"
 
 
+def test_uv_version_parses_the_build_suffix(monkeypatch) -> None:
+    # uv reports "uv 0.8.0 (<commit> <date> <triple>)". A consumer comparing
+    # against `required-version` should not have to parse that.
+    monkeypatch.setattr(
+        er, "_run", lambda *a, **k: (0, "uv 0.8.0 (3cdf50e09 2026-06-19 x86_64-linux-gnu)", "")
+    )
+    assert er._uv_version() == "0.8.0"
+
+
+def test_uv_version_is_empty_when_uv_cannot_report(monkeypatch) -> None:
+    # "not observed" must stay distinguishable from "an old version".
+    monkeypatch.setattr(er, "_run", lambda *a, **k: (127, "", "not found"))
+    assert er._uv_version() == ""
+
+
 def test_graphiti_blocker_is_a_constant_label() -> None:
     # Only known blocker classes are emitted; an unknown value is mapped away so
     # no probe-derived string is printed verbatim.
@@ -206,6 +221,40 @@ def test_ready_only_when_all_components_pass(tmp_path: Path, monkeypatch) -> Non
         "warnings",
     ):
         assert field in receipt
+
+
+def test_old_uv_is_an_observation_not_a_readiness_verdict(tmp_path: Path, monkeypatch) -> None:
+    # The whole point of recording uv is that the version is EVIDENCE. An old uv
+    # is a fact about the environment, not a defect, so it must never reach
+    # _aggregate — a version field that can turn a healthy session DEGRADED
+    # would make operators stop reading the receipt.
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY")
+    monkeypatch.setattr(er, "_uv_version", lambda: "0.8.0")
+    receipt = _build(gov, home, monkeypatch)
+    assert receipt["uv_version"] == "0.8.0"
+    assert receipt["overall_readiness"] == READY, receipt["warnings"]
+    assert not any("uv" in w for w in receipt["warnings"])
+    assert not any("uv" in f for f in receipt["failures"])
+
+
+def test_unobserved_uv_neither_degrades_nor_prints_blank(tmp_path: Path, monkeypatch) -> None:
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY")
+    monkeypatch.setattr(er, "_uv_version", lambda: "")
+    receipt = _build(gov, home, monkeypatch)
+    assert receipt["uv_version"] == ""
+    assert receipt["overall_readiness"] == READY, receipt["warnings"]
+    # Legible in a pasted SessionStart block rather than a dangling "uv_version=".
+    assert "uv_version=unobserved" in er._compact(receipt)
+
+
+def test_compact_prints_uv_version_when_observed(tmp_path: Path, monkeypatch) -> None:
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY")
+    monkeypatch.setattr(er, "_uv_version", lambda: "0.11.23")
+    receipt = _build(gov, home, monkeypatch)
+    assert "uv_version=0.11.23" in er._compact(receipt)
 
 
 def test_blocked_when_merge_authority_regresses(tmp_path: Path, monkeypatch) -> None:

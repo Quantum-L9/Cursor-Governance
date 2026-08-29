@@ -33,6 +33,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -386,6 +387,25 @@ def _interpreter_importable_status(gov: Path) -> tuple[str, str]:
     return DEGRADED, "governance interpreter cannot import core deps"
 
 
+# The resolver's own version, recorded as an OBSERVATION and deliberately not a
+# readiness dimension: an old uv is a fact about the environment, not a defect,
+# so it must never reach _aggregate and turn an otherwise healthy session
+# DEGRADED. It is recorded because the cloud sandbox is the one surface whose uv
+# nobody can read after the fact — the VM and everything under ~/.l9 are
+# destroyed together — which left `[tool.uv] required-version` being argued from
+# a four-week-old comment instead of evidence.
+_UV_VERSION_RE = re.compile(r"\b(\d+\.\d+\.\d+)\b")
+
+
+def _uv_version() -> str:
+    """Return uv's semantic version, or "" when uv is absent or unparseable."""
+    code, out, _err = _run(["uv", "--version"], timeout=10)
+    if code != 0:
+        return ""
+    match = _UV_VERSION_RE.search(out)
+    return match.group(1) if match else ""
+
+
 def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> dict[str, Any]:
     gov = gov or _gov_root()
     workspace = workspace or os.environ.get("CURSOR_PROJECT_DIR") or os.getcwd()
@@ -459,6 +479,9 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         "governance_default_branch": ident["governance_default_branch"],
         "governance_SHA": ident["governance_SHA"],
         "workspace": workspace,
+        # Observation, not a dims entry — see _uv_version. Empty string means
+        # "not observed", which is distinct from a version that is merely old.
+        "uv_version": _uv_version(),
     }
     receipt.update(dims)
     receipt["overall_readiness"] = overall
@@ -482,6 +505,10 @@ def _compact(receipt: dict[str, Any]) -> str:
         f"governance={receipt['governance_default_branch']}@"
         f"{str(receipt['governance_SHA'])[:8]} workspace={receipt['workspace']}"
     )
+    # Printed outside `order` because that list is the status dimensions, and a
+    # version string is not a status. "unobserved" rather than a bare blank so
+    # the absence is legible in a pasted SessionStart block.
+    lines.append(f"uv_version={receipt.get('uv_version') or 'unobserved'}")
     order = [
         "skill_projection_status",
         "command_projection_status",
