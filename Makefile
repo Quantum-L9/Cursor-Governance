@@ -750,12 +750,20 @@ hygiene-fix:
 # Workspace ship+reset. Default apply opens scoped PRs (never main).
 # Preview: CLEAN_MODE=plan. Local only: CLEAN_REMOTE=0.
 # Consumer: make -C "$(HOME)/.cursor-governance" clean WS="$(pwd)"
+CLEAN_PYC_MODE ?= apply
 CLEAN_MODE ?= apply
 CLEAN_REMOTE ?= 1
 .PHONY: clean workspace-clean
 clean workspace-clean:
 	CLEAN_MODE="$(CLEAN_MODE)" CLEAN_REMOTE="$(CLEAN_REMOTE)" PR_BASE="$(PR_BASE)" \
 	WS="$(WS)" bash "$(CURDIR)/ops/scripts/run_workspace_clean.sh"
+
+.PHONY: clean-pyc
+## Remove __pycache__/.pytest_cache under WS. Preview: CLEAN_PYC_MODE=plan.
+## Sanctioned alternative to `rm -rf` so cache hygiene never argues with
+## ops/autonomy/git_guardrails.py (CI-025). Consumer: make -C "$(HOME)/.cursor-governance" clean-pyc WS="$(pwd)"
+clean-pyc:
+	CLEAN_PYC_MODE="$(CLEAN_PYC_MODE)" bash "$(CURDIR)/ops/scripts/clean_pyc.sh" "$(WS)"
 
 .PHONY: wip-hygiene wip-inventory
 ## Dated WIP corpus on main: file loose drops, inventory, high-evidence prune.
