@@ -32,7 +32,7 @@ Add a cloud-only installer-drift self-heal to SessionStart: when the receipt nam
 
 `Insert` · effort **M** · risk **medium** · depends on none
 
-**Where** `environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh`  
+**Where** `environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh`
 **Anchor** after the CLAUDE_CODE_REMOTE governance refresh block, before emit_bootstrap_status
 
 ### 2. Allowlist `api.context7.io` (forces the cache rebuild)   <sub>`T12`</sub>
@@ -41,7 +41,7 @@ Add api.context7.io to the environment's Custom allowed-domains list; the same e
 
 `Insert` · effort **S** · risk **low** · depends on none
 
-**Where** `environment/agents/adapters/claude-code/web/network-policy.md`  
+**Where** `environment/agents/adapters/claude-code/web/network-policy.md`
 **Anchor** the allowlisted-hosts table
 
 ### 3. Count skills that actually load   <sub>`T2`</sub>
@@ -50,7 +50,7 @@ Replace the SSOT SKILL.md file count with a loadable-skill probe over the real d
 
 `Replace` · effort **S** · risk **low** · depends on none
 
-**Where** `environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh`  
+**Where** `environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh`
 **Anchor** line 115, the 'skills available: N l9-* skills under $GOV/skills' line
 
 ### 4. Mark stale receipt statuses STALE   <sub>`T3`</sub>
@@ -59,7 +59,7 @@ Mark receipt-derived statuses STALE in the SessionStart projection when receipt.
 
 `Replace` · effort **S** · risk **low** · depends on none
 
-**Where** `environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh`  
+**Where** `environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh`
 **Anchor** lines 216-227 in the emit_bootstrap_status python block
 
 ### 5. Make `.mcp.json` a managed artifact   <sub>`T5`</sub>
@@ -68,7 +68,7 @@ Make .mcp.json a managed artifact: reconcile it from mcp.template.json when it c
 
 `Replace` · effort **M** · risk **high** · depends on none
 
-**Where** `environment/agents/adapters/claude-code/install.sh`, `.mcp.json`  
+**Where** `environment/agents/adapters/claude-code/install.sh`, `.mcp.json`
 **Anchor** install.sh lines 205-206 '.mcp.json already present — left as the repo committed it'
 
 ### 6. Run adapter self-validation from the installer   <sub>`T7`</sub>
@@ -77,7 +77,7 @@ Invoke validate_claude_env.py from install.sh and downgrade a receipt status on 
 
 `Insert` · effort **S** · risk **medium** · depends on `T6`
 
-**Where** `environment/agents/adapters/claude-code/install.sh`  
+**Where** `environment/agents/adapters/claude-code/install.sh`
 **Anchor** before the receipt write block at install.sh:250
 
 ### 7. Remove the prohibited git pre-commit hook   <sub>`T4`</sub>
@@ -86,7 +86,7 @@ Detect and remove a pre-commit-generated .git/hooks/pre-commit during cloud Sess
 
 `Insert` · effort **S** · risk **medium** · depends on none
 
-**Where** `environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh`  
+**Where** `environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh`
 **Anchor** in the pre-commit warm block, beside the 'Never pre-commit install' comment at lines 169-176
 
 ### 8. Fix the memory-enforcement schema   <sub>`T6`</sub>
@@ -95,7 +95,7 @@ Allow gate_shape and note on the precondition definition in the memory-enforceme
 
 `Insert` · effort **S** · risk **low** · depends on none
 
-**Where** `environment/agents/adapters/claude-code/memory/memory-enforcement.schema.json`  
+**Where** `environment/agents/adapters/claude-code/memory/memory-enforcement.schema.json`
 **Anchor** definitions.precondition properties, which is additionalProperties:false
 
 ### 9. Teach the MCP inventory about Claude Code   <sub>`T8`</sub>
@@ -104,7 +104,7 @@ Extend the MCP inventory scan set to the Claude Code surface (.mcp.json in works
 
 `Insert` · effort **S** · risk **low** · depends on none
 
-**Where** `ops/scripts/inventory_mcp_servers.py`  
+**Where** `ops/scripts/inventory_mcp_servers.py`
 **Anchor** lines 74-77, the scanned_configs list
 
 ### 10. Mirror slash commands into `.claude/commands`   <sub>`T9`</sub>
@@ -113,7 +113,7 @@ Add a slash-command reconciler that mirrors commands/ into <workspace>/.claude/c
 
 `Create` · effort **M** · risk **medium** · depends on none
 
-**Where** `ops/scripts/reconcile_claude_commands.py`, `environment/agents/adapters/claude-code/install.sh`  
+**Where** `ops/scripts/reconcile_claude_commands.py`, `environment/agents/adapters/claude-code/install.sh`
 **Anchor** new script modelled on reconcile_claude_l9_skills.py scope_target
 
 > **Blocked.** Gated on U1: mirroring is only correct if Claude Code tolerates the existing name/version/before_chain/auto_chain frontmatter. Probe two commands first; if discovery breaks, fall back to amending rule 02-slash-commands instead.
@@ -124,7 +124,7 @@ Add regression tests: drift self-heal fires only on mismatch, loadable-skill pro
 
 `Create` · effort **M** · risk **low** · depends on `T1`, `T2`, `T3`, `T4`, `T5`
 
-**Where** `ops/scripts/tests/test_bootstrap_diagnostic_contract.py`, `environment/agents/adapters/claude-code/tests/test_session_start_selfheal.py`  
+**Where** `ops/scripts/tests/test_bootstrap_diagnostic_contract.py`, `environment/agents/adapters/claude-code/tests/test_session_start_selfheal.py`
 **Anchor** extend the existing bootstrap diagnostic contract suite
 
 ### 12. Deploy the capability broker   <sub>`T11`</sub>
@@ -133,7 +133,7 @@ Deploy the capability broker and run sessions in the self-hosted ccpool_ environ
 
 `Replace` · effort **L** · risk **high** · depends on none
 
-**Where** `ops/secrets/k8s/broker-deployment.yaml`, `ops/secrets/deploy/broker-kubernetes.yaml`  
+**Where** `ops/secrets/k8s/broker-deployment.yaml`, `ops/secrets/deploy/broker-kubernetes.yaml`
 **Anchor** broker-deployment.yaml:65 --audience ccpool_prod; broker_identity.py:143 ccpool_ audience guard
 
 > **Blocked.** Infrastructure, not code. The broker is complete and coherent: broker-deployment.yaml:65,69 pins --audience ccpool_prod, capability_broker.py:47 serves --audience ccpool_<environment>, and broker_identity.py:143 refuses any audience not starting with ccpool_. It expects a self-hosted ccpool_ pool whose control plane issues the iss=ccr session assertion. This session is CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE=cloud_default, where no ccr issuer exists (claude.ai CCR JWKS probed 404). Nothing in the design is missing; it is undeployed and this environment is not its target. L9_BROKER_JWKS_URL is already the env knob for a self-hosted issuer.

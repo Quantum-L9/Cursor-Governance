@@ -518,4 +518,3 @@ todos:
     content: …
     status: pending
 ```
-
