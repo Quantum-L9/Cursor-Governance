@@ -730,15 +730,23 @@ def extract_remainder(
             applied += 1
         if applied == 0:
             raise ExtractEmpty("remainder empty: no unique paths from tip-conflict commits")
-        add = subprocess.run(
-            ["git", "-C", str(worktree), "add", "--"]
-            + [str(path) for item in slice_commits for path in (item.get("paths") or ())],
-            text=True,
-            capture_output=True,
-            check=False,
+        add_paths = sorted(
+            {
+                str(path)
+                for item in slice_commits
+                for path in (item.get("paths") or ())
+                if path and (worktree / str(path)).exists()
+            }
         )
-        if add.returncode != 0:
-            raise RuntimeError(add.stderr.strip() or "remainder git add failed")
+        if add_paths:
+            add = subprocess.run(
+                ["git", "-C", str(worktree), "add", "--", *add_paths],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            if add.returncode != 0:
+                raise RuntimeError(add.stderr.strip() or "remainder git add failed")
         commit = subprocess.run(
             [
                 "git",
