@@ -29,6 +29,19 @@ WS="${1:-${WS:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-}"
 STAGE="${PR_PRECOMMIT_STAGE:-}"
+# shellcheck source=lib/fetch_receipt.sh
+source "$SCRIPT_DIR/lib/fetch_receipt.sh"
+# shellcheck source=lib/resolve_pr_stack.sh
+source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
+
+# Standalone make precommit-repo has no PR_CHANGED_FILE. Bind the unique chain
+# tip before resolve_changed_files so kernel_gate does not see parent-stack
+# fixtures. The gate already resolved and passes PR_CHANGED_FILE — skip.
+if [[ -z "${PR_CHANGED_FILE:-}" || ! -f "${PR_CHANGED_FILE:-}" ]]; then
+  PR_BASE="${PR_BASE:-origin/main}"
+  pr_stack_apply_publish_base "$WS" || exit $?
+  export PR_BASE
+fi
 
 # CI-008 governance-always: the publish gate runs the GOVERNANCE pre-commit
 # config as its authority, named explicitly rather than picked up from the

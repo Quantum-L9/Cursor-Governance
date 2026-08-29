@@ -228,9 +228,21 @@ def resolve_pr_template(root: Path) -> str | None:
     so honestly is what lets a reader tell the two cases apart. Previously this
     field was the literal string "PULL_REQUEST_TEMPLATE.md" in every receipt,
     whether or not the released repo had one.
+
+    Existence is matched on the directory listing, not Path.is_file alone, so a
+    case-insensitive volume cannot return `.github/PULL_REQUEST_TEMPLATE.md`
+    for a file created as `pull_request_template.md`.
     """
     for rel in PR_TEMPLATE_CANDIDATES:
-        if (root / rel).is_file():
+        candidate = root / rel
+        parent = candidate.parent
+        if not parent.is_dir():
+            continue
+        try:
+            names = os.listdir(parent)
+        except OSError:
+            continue
+        if Path(rel).name in names and candidate.is_file():
             return rel
     return None
 

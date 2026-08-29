@@ -924,6 +924,28 @@ whole `ops/scripts/run_pr_gate.sh`:
 - unscoped pytest deny: `ops/scripts/run_pr_gate.sh`
 - kernel hook: `ops/hooks/plan-kernel-gate.py`
 
+<!-- L9_CEREMONY_STACK_AND_HEAL_V1 -->
+## Ceremony stack-tip and generated heal (2026-08-28)
+
+`PR_STACK=auto` resolves the unique open-PR chain tip at **precommit-repo /
+pr-preflight / pr-check start**, not only after the gate in
+`open_pr_after_gate.sh`. Empty `PR_STACK=` keeps `PR_BASE` (usually
+`origin/main`). Sibling chains still fail closed. Missing `gh` keeps
+`origin/main` with a WARN (fail-open telemetry). An explicit `PR_BASE` other
+than `origin/main` / `main` is never rewritten. `open_pr_after_gate.sh` reuses
+the stack-base receipt so the opened PR targets the same parent the gate used.
+
+`sync_generated_artifacts.py` and `claude_projection.py` (no `--check`) run in
+the **serialized writer** wave. Tracked dirt after that heal is "commit the
+rewrite, then re-run" — same as ruff. Reader-wave yaml / projection `--check`
+do not share a wall-clock window with that writer.
+Reader `files were modified` with no hook exit code is classified (generated
+WARN / window-only continue), not a hard Error 1.
+
+Cherry-pick / rebase of `merge=l9-generated` paths still keep ours; the writer
+heal regenerates from live sources. Do not publish until that regen is
+committed.
+
 <!-- FF_SWITCH_TO_MAIN_V1 -->
 ## `/ff` switches to `main` (2026-08-28)
 

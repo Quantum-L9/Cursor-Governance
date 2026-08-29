@@ -15,6 +15,8 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
 # shellcheck source=lib/fetch_receipt.sh
 source "$SCRIPT_DIR/lib/fetch_receipt.sh"
+# shellcheck source=lib/resolve_pr_stack.sh
+source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
 GOV_ROOT="${GOV_ROOT:-}"
 if [[ -z "$GOV_ROOT" ]]; then
   GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
@@ -74,6 +76,12 @@ if [[ "$branch" == "main" || "$branch" == "master" ]]; then
   echo "FAIL: on '$branch' — create/checkout a feature branch, commit, then re-run make pr"
   exit 1
 fi
+
+# Bind the unique chain tip before fetch/overlap so the PR opens against the
+# same base pr-check already gated. Receipt reuse skips a second gh round-trip.
+pr_stack_apply_publish_base "$WS" || exit $?
+export PR_BASE
+BASE_REF="${PR_BASE#origin/}"
 
 # Pre-publication base refresh (L9 Multi-Agent Main-Bound Execution Contract
 # §11 / invariant E5). The branch must be evaluated against the CURRENT

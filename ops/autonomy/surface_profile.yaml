@@ -130,6 +130,7 @@ pr_stacking:
     exemptions: generated_path_prefixes # ops/scripts/sync_generated_artifacts.py SSOT
     probe: git_merge_tree # git merge-tree --write-tree textual-conflict probe
     auto_stack_env: PR_STACK # auto: start on the unique open-PR tip; PR_STACK= keeps main
+    gate_resolves_tip: true # pr-preflight / pr-check / open_pr bind resolve_stack_tip.py when PR_STACK=auto
     gate: ops/scripts/pr_overlap_check.py
   phases:
     executing: deny_remote
