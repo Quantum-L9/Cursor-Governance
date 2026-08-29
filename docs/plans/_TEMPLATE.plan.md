@@ -28,18 +28,6 @@ todos:
     depends_on: [todo-03-prove]
     evidence_property_refs: [SP-03]
 isProject: false
-kernel_pass:
-  bound_path: ""
-  improve:
-    kernel: kernels/Improve.md
-    ran_at: ""
-    body_sha256:
-    deltas: []
-  validate_repair:
-    kernel: kernels/Validate & Repair.md
-    ran_at: ""
-    body_sha256:
-    deltas: []
 ---
 
 # PLAN: Short plan title
@@ -48,7 +36,7 @@ kernel_pass:
 > **Schema:** `canonical.schema.plan_document.v1` (status: fill → `executable` only when law holds)
 > **Execute:** when status is `executable`, run through **[@environment/program-execution](environment/program-execution/)** with autonomy as the subordinate orchestration plane — **[@autonomy](commands/autonomy.md)** / `l9-bounded-autonomy` under a Program lease. Do **not** free-form mutate from this markdown alone.
 > **Cursor todos:** frontmatter `todos` project to PE Task Cards + Phase-0 autonomy actions. Body is the binding contract.
-> **Rename to:** `snake_case_name_<8hex>.plan.md` before execute.
+> **Rename to:** `snake_case_name_M-D-YY.plan.md` before execute (US; example `8-20-26`).
 > **Law:** executable only when baseline matches, capability probes pass, invariants match, and envelope is respected. Markdown completeness alone is insufficient.
 
 ## Execute via @environment/program-execution + autonomy (required)
@@ -223,7 +211,7 @@ One paragraph: residual defect or feature; system bound; non-negotiable preserve
 |----|----------|---------------|-------|----------|
 | SP-01 | Baseline still matches locked SHA at start | `repository_state` | `git rev-parse HEAD` == locked SHA | true |
 | SP-02 | Declared behavior/structure holds after mutation | `runtime_behavior` \| `structural` \| `filesystem` | exact command + expected marker (not exit-0 alone) | true |
-| SP-03 | Quality gate / PR gate PASS on changed files | `quality_gate` | e.g. bind `.pre-commit-config.yaml` catalog | true |
+| SP-03 | Quality gate / PR gate PASS on changed files | `quality_gate` | e.g. `make pr-check` → PASS | true |
 
 `evidence_type` ∈ `filesystem` \| `runtime_behavior` \| `structural` \| `quality_gate` \| `repository_state` \| `network_observation` \| `proof_receipt` \| `human_confirmation`
 
@@ -403,7 +391,7 @@ Exit-0 alone is insufficient when property needs structural/runtime proof (PLAN-
 |-------------|---------------|---------------|--------|---------|-------------------|--------|
 | EV-SP-01 | SP-01 | `repository_state_evidence` | rev-parse compare | `git rev-parse HEAD` | locked SHA | `not_run` |
 | EV-SP-02 | SP-02 | `property_evidence` \| `structural_evidence` \| `runtime_behavior_evidence` | … | … | marker / structure | `not_run` |
-| EV-SP-03 | SP-03 | `quality_gate_evidence` | catalog | `.pre-commit-config.yaml` | catalog named | `not_run` |
+| EV-SP-03 | SP-03 | `quality_gate_evidence` | pr-check | `make pr-check` | PASS | `not_run` |
 
 ## Stress and disconfirm
 

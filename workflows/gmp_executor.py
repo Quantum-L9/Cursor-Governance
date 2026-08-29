@@ -73,7 +73,7 @@ __dora_meta__ = {
 # Configuration
 # =============================================================================
 
-REPO_ROOT = Path(__file__).parent.parent
+REPO_ROOT = Path(__file__).resolve().parent.parent
 MEMORY_CLIENT = REPO_ROOT / "ops" / "graphiti" / "graphiti_memory_client.py"
 REPORT_GENERATOR = REPO_ROOT / "scripts" / "generate_gmp_report.py"
 TEST_GENERATOR_MODULE = "core.testing"
