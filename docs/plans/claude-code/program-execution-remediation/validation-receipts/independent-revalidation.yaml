@@ -79,43 +79,42 @@ repo_native_gates:
 findings:
 - id: RV-001
   severity: blocking_for_execution
-  status: OPEN
-  title: Locked baseline has drifted; 7 of 32 contract scope paths changed since it
-  detail: >-
-    The pack pins baseline 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d. Current main
-    has moved past it. Of the 32 paths named across all six contracts' in_scope and
-    preserved_files, 20 are unchanged, 5 are correctly absent (new files the
-    contracts create), 0 were deleted, and 7 changed content between the baseline
-    and HEAD.
-  drifted_paths:
-  - contract: PR-002
-    kind: in_scope
-    path: environment/program-execution/scripts/run_campaign.py
-  - contract: PR-002
-    kind: preserved_files
-    path: environment/program-execution/core/program-execution-controller-template/scripts/pec/blueprint.py
-  - contract: PR-004
-    kind: in_scope
-    path: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
-  - contract: PR-005
-    kind: in_scope
-    path: environment/program-execution/scripts/run_peer_task_pipeline.py
-  - contract: PR-005
-    kind: in_scope
-    path: environment/program-execution/scripts/run_campaign.py
-  - contract: PR-006
-    kind: in_scope
-    path: environment/program-execution/scripts/run_peer_task_pipeline.py
-  - contract: PR-006
-    kind: in_scope
-    path: environment/program-execution/scripts/run_campaign.py
-  consequence: >-
-    Storing the pack is unaffected. Executing it is not: the pack's own RUNBOOK
-    requires stop/replan on material current-state drift, and PR-002's
-    preserved_files guarantee "behavior_unchanged" on blueprint.py is asserted
-    against a version of that file that is no longer HEAD. Re-adjudicate the
-    seven findings against current main and recompile before running contract 1.
-  does_not_block: committing this planning package
+  status: RESOLVED
+  resolved_at: '2026-08-29'
+  resolved_against: d6b30cdc0dd87213e972d61dd383b91a1b63d180
+  title: Locked baseline had drifted; re-adjudicated and recompiled
+  original_detail: >-
+    The pack pinned baseline 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d. main had
+    moved past it. Of the 32 paths named across all six contracts' in_scope and
+    preserved_files, 20 were unchanged, 5 correctly absent (files the contracts
+    create), 0 deleted, and 7 had changed content — including pec/blueprint.py,
+    which PR-002 guarantees behavior_unchanged against. That guarantee was
+    asserted over a version that was no longer HEAD, so it could not be honoured
+    as compiled.
+  resolution: >-
+    Re-adjudicated all seven findings by reading current source at HEAD rather
+    than re-reading the prior ledger. 7/7 remain CONFIRMED, with current-source
+    locations recorded per finding. The chain was then recompiled against the new
+    baseline with skills/l9-claude-coding-contract-compiler: campaign-spec's
+    cold_resume ancestry assertion rebound from 5eff2cdb to d6b30cdc, which is the
+    only remediation-content change — no root cause, item, scope path, success
+    property or exclusion moved. PR-002's blueprint.py guarantee now refers to the
+    current version.
+  verification:
+    per_contract: 6/6 VALID
+    chain: PASS
+    chain_digest: sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3
+    chain_digest_note: unchanged by design — computed over ordered contract IDs
+    target_regression: 11/11 PASS
+    plan_kernel_receipt: PASS
+    plan_document_schema: PASS
+  drift_at_new_baseline: >-
+    Identical 7-path set. main moved but touched no further contract scope path.
+  evidence: evidence/readjudication_d6b30cdc.yaml
+  residual: >-
+    Re-measure at execution start regardless. The recorded table is a snapshot,
+    main keeps moving, and todo-00-execution-preflight plus
+    on_drift stop_and_replan exist for exactly that.
 
 - id: RV-002
   severity: informational
@@ -230,10 +229,47 @@ findings:
     hash above stays checkable against it. Within this repository the PLAN_DOCUMENT
     .plan.json is the authority; the projection is a rendering of it.
 
+- id: RV-006
+  severity: structural
+  status: RESOLVED
+  found_at: '2026-08-29'
+  title: Rebaselining exposed two stale references in the PLAN_DOCUMENT
+  detail: >-
+    Re-running the repo validators at the new baseline surfaced two defects that
+    the old baseline did not catch. Neither was introduced by the rebind; both
+    were latent.
+  defects:
+  - id: G_PRECOMMIT_CONFIG
+    detail: >-
+      main's l9-plan validator gained a gate requiring any plan with
+      code_in_scope true to name .pre-commit-config.yaml in final_validation.
+      The plan predates that gate and failed it.
+    fix: >-
+      Added FV-06 naming the .pre-commit-config.yaml catalog, run through
+      make pr-check. This repository installs no commit hook by design, so the
+      catalog runs there with the surface-aware SKIP list rather than at commit
+      time. Status not_applicable, matching FV-04's existing posture — both are
+      execution-time gates, and the RUNBOOK is explicit that implementation tests
+      and make pr-check run during contract execution rather than being fabricated
+      in this planning package.
+  - id: FV-05-dangling-path
+    detail: >-
+      FV-05 pointed at claude-code-contracts/compiler-runtime/scripts/, a path
+      removed under RV-004 when the duplicate compiler was dropped. The plan's own
+      final validation named a file that no longer exists.
+    fix: >-
+      Repointed at skills/l9-claude-coding-contract-compiler/scripts/, the
+      compiler of record. Dropped the "plan compatibility" clause from its
+      pass_criteria, which named a packaging-run artifact rather than a runnable
+      check.
+  verification:
+    validate_plan_document: PASS
+    validate_plan_kernel_receipt: PASS
+
 overall:
   packaged_gates: ALL_REPRODUCED_PASS
   reproduced_with_repo_compiler_skill: ALL_PASS_IDENTICAL
   repo_native_gates: PASS
   pack_integrity: PASS_WITH_RECORDED_DELTAS
-  execution_readiness: BLOCKED_ON_RV-001
+  execution_readiness: READY_AT_d6b30cdc — RV-001 cleared; re-measure drift at execution start
   storage_readiness: PASS

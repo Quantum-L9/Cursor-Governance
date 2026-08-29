@@ -120,32 +120,31 @@ kernel_pass:
   bound_path: program_execution_authority_recovery_remediation_d681ee05.plan.md
   improve:
     kernel: kernels/Improve.md
-    ran_at: '2026-08-29T02:20:00+00:00'
-    body_sha256: '14c78c3cabce640cf332be6659e729a1e2ce4c2154b73d9ccb1e9500e36c17a6'
+    ran_at: '2026-08-29T03:10:00+00:00'
+    body_sha256: '0bda4d044e92b2958429b7f7cefe4974ed6af5f47365e1263c17b37677376dae'
     deltas:
-    - Recorded the measured baseline drift in Immutable baseline, with the exact
-      seven changed contract scope paths, so todo-00-execution-preflight starts
-      from evidence instead of re-deriving it.
-    - Named the repository compiler skill as compiler of record, with the chain
-      digest that proves the packaged and repository compilers agree.
-    - Preserved every root cause, todo, DAG edge, success property and exclusion
-      from the packaging run; this pass added evidence and changed no remediation
-      content.
+    - Rebound the execution baseline from 5eff2cdb to d6b30cdc after re-verifying
+      all seven findings against current source, and recompiled the chain against it.
+    - Turned the Immutable baseline drift record from an open warning into a
+      resolved one, keeping the measured table and the instruction to re-measure
+      at execution start.
+    - Preserved every root cause, todo, DAG edge, success property and exclusion;
+      the only remediation-content change is the cold_resume ancestry line.
   validate_repair:
     kernel: kernels/Validate & Repair.md
-    ran_at: '2026-08-29T02:20:01+00:00'
-    body_sha256: '14c78c3cabce640cf332be6659e729a1e2ce4c2154b73d9ccb1e9500e36c17a6'
+    ran_at: '2026-08-29T03:10:01+00:00'
+    body_sha256: '0bda4d044e92b2958429b7f7cefe4974ed6af5f47365e1263c17b37677376dae'
     deltas:
-    - 'Repaired a stale claim: on_drift read as hypothetical while drift had already
-      been measured. Now states drift_observed YES and names the consequence —
-      PR-002 asserts behavior_unchanged on blueprint.py against a non-HEAD version.'
-    - 'Repaired a dangling dependency: the plan assumed the compiler shipped beside
-      it. That copy duplicated a skill this repository already owns and was removed,
-      so the plan now points at the surviving owner.'
-    - Kept the snapshot honest by requiring re-measurement at execution start rather
-      than treating the recorded table as current.
-    - Verified against this repository that the PLAN_DOCUMENT still validates under
-      l9-plan 4.1.0 and that the chain still validates at the recorded digest.
+    - 'Cleared RV-001. PR-002 asserted behavior_unchanged on blueprint.py against a
+      version that was no longer HEAD; the rebind makes that guarantee refer to the
+      current version.'
+    - Re-verified each finding by reading current source rather than trusting the
+      prior ledger — 7/7 still CONFIRMED, with current-source locations recorded in
+      evidence/readjudication_d6b30cdc.yaml.
+    - Updated CP-01 and the pipeline step so both name the rebound baseline instead
+      of the superseded one.
+    - 'Validated the recompiled chain: 6/6 per-contract, chain PASS at the same
+      digest, compiler regression 11/11.'
 ---
 
 # PLAN: Program Execution Authority and Recovery Remediation
@@ -160,7 +159,7 @@ Canonical steady-state execution remains `.plan.md -> @environment/program-execu
 
 ### Pipeline steps
 
-1. Create `claude/program-execution-authority-remediation-v1` from exact `5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d`; stop and replan on any material baseline drift.
+1. Create `claude/program-execution-authority-remediation-v1` from exact `d6b30cdc0dd87213e972d61dd383b91a1b63d180`; stop and replan on any material baseline drift.
 2. Execute contracts PR-001 through PR-006 in order. Each fresh Claude session runs its generated `preflight.sh` before mutation.
 3. Contracts 1-5 produce exactly one validated local commit each and never publish. Direct `git push`, direct `gh pr create`, merge, deployment, and repo-settings mutation remain denied.
 4. Contract 6 proves the supported front door, compatibility thinning, and final quality gate, then creates its one validated local commit.
@@ -217,21 +216,30 @@ Use the executor selected by the Claude contract compiler for implementation. Do
 | repository | `Quantum-L9/Cursor-Governance` |
 | workspace | executor checkout, re-resolved at execution |
 | branch | `claude/program-execution-authority-remediation-v1` created from current `main` baseline |
-| commit_sha | `5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d` |
+| commit_sha | `d6b30cdc0dd87213e972d61dd383b91a1b63d180` (rebound 2026-08-29) |
+| superseded_commit_sha | `5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d` |
 | dirty | `UNKNOWN_NOT_LOCAL_WORKSPACE`; must be rechecked before mutation |
 | overlap_policy | `stop_if_dirty_overlaps_may_modify` |
 | verification_rule | `reverify_at_execution_start` |
 | on_drift | `stop_and_replan` |
-| drift_observed | `YES` — see below; this is measured, not hypothetical |
+| drift_observed | `RESOLVED 2026-08-29` — re-adjudicated and recompiled against this baseline |
 
-Drift against the locked baseline has already been measured and is recorded here
-so `todo-00-execution-preflight` starts from evidence rather than re-deriving it.
-At the time this plan was stored, `main` had moved past
-`5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d`, which remains an ancestor of `HEAD`
-(forward-only drift, no history rewrite). Of the 32 paths named across the six
-compiled contracts' `in_scope` and `preserved_files`, 20 were unchanged, 5 were
-correctly absent because the contracts create them, none were deleted, and 7 had
-changed content:
+The baseline was rebound on 2026-08-29 after the drift recorded below was acted
+on. Full evidence: `evidence/readjudication_d6b30cdc.yaml`.
+
+All seven findings were re-verified by reading current source at
+`d6b30cdc0dd87213e972d61dd383b91a1b63d180`, not by re-reading the prior ledger,
+and **all seven remain CONFIRMED**. The contract chain was then recompiled
+against this baseline: `campaign.validation.cold_resume` now asserts ancestry of
+`d6b30cdc…`, and that single line is the only remediation-content change — no
+root cause, item, scope path, success property or exclusion moved. Recompiled
+chain validates 6/6 per-contract, chain PASS at the same digest
+`sha256:4d340ed5…41c2b3`, compiler regression 11/11.
+
+Of the 32 paths named across the six contracts' `in_scope` and `preserved_files`
+at this baseline: 20 unchanged, 5 correctly absent because the contracts create
+them, 0 deleted, and 7 carrying content that differs from the superseded
+baseline:
 
 | Contract | Kind | Path |
 |---|---|---|
@@ -243,11 +251,14 @@ changed content:
 | PR-006 | in_scope | `environment/program-execution/scripts/run_peer_task_pipeline.py` |
 | PR-006 | in_scope | `environment/program-execution/scripts/run_campaign.py` |
 
-PR-002 guarantees `behavior_unchanged` on `blueprint.py` against a version that
-is no longer `HEAD`, so that guarantee cannot be honoured as compiled. Per
-`on_drift: stop_and_replan`, re-adjudicate the seven findings against current
-`main` and recompile before running contract 1. Re-measure at execution start —
-the table above is a snapshot, and `main` keeps moving.
+That set is unchanged from the earlier measurement — `main` moved, but touched no
+further contract scope path. PR-002's `behavior_unchanged` guarantee on
+`blueprint.py` is now asserted against the current version rather than a stale
+one, which is what the rebind fixes.
+
+Contract 1 may start from a branch off `d6b30cdc…`. Still re-measure at execution
+start: the table is a snapshot and `main` keeps moving. That is what
+`todo-00-execution-preflight` is for, and `on_drift: stop_and_replan` still governs.
 
 ## Compiler of record
 
@@ -287,7 +298,7 @@ Repair the seven confirmed non-memory Program Execution findings at their existi
 
 | id | capability | command_or_action | pass_criteria | blocking |
 |---|---|---|---|---|
-| CP-01 | baseline | `git rev-parse HEAD` | equals `5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d` | true |
+| CP-01 | baseline | `git rev-parse HEAD` | equals `d6b30cdc0dd87213e972d61dd383b91a1b63d180` | true |
 | CP-02 | clean overlap | `git status --porcelain` filtered to write_allow | no unowned overlapping dirt | true |
 | CP-03 | local validation | Python/pytest/git/make availability | required local commands resolve | true |
 
