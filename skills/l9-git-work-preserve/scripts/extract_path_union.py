@@ -11,11 +11,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 from pathlib import Path
 from typing import Any
 
 SCHEMA = "l9.git_work_preserve.extract_path_union/v1"
+
+
+class ExtractError(Exception):
+    """Fail-closed extract/apply error. ``code`` is the process exit status."""
+
+    def __init__(self, message: str, code: int = 2) -> None:
+        super().__init__(message)
+        self.code = code
 
 
 def _run(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
@@ -36,7 +45,9 @@ def name_status(repo: Path, baseline: str, ref: str) -> list[tuple[str, str]]:
     proc = _run(repo, "diff", "--name-status", f"{baseline}...{ref}")
     rows: list[tuple[str, str]] = []
     if proc.returncode != 0:
-        return rows
+        raise ExtractError(
+            (proc.stderr or "").strip() or f"git diff failed ({baseline}...{ref})",
+        )
     for line in proc.stdout.splitlines():
         if not line.strip():
             continue
@@ -165,9 +176,23 @@ def show_blob(repo: Path, ref: str, rel: str) -> bytes | None:
     return proc.stdout
 
 
+def _tree_mode(repo: Path, ref: str, rel: str) -> str:
+    proc = _run(repo, "ls-tree", "-z", ref, "--", rel)
+    if proc.returncode != 0 or not (proc.stdout or "").strip("\0"):
+        return "100644"
+    meta = proc.stdout.split("\0", 1)[0].split("\t", 1)[0]
+    parts = meta.split()
+    return parts[0] if parts else "100644"
+
+
 def apply_copy(repo: Path, ref: str, dest: Path, copy: list[dict[str, str]]) -> list[str]:
     written: list[str] = []
     dest = dest.resolve()
+    collisions = [row["path"] for row in copy if row.get("path") and (dest / row["path"]).exists()]
+    if collisions:
+        raise ExtractError(
+            "refuse apply: destination already has " + ", ".join(sorted(collisions)),
+        )
     for row in copy:
         rel = row["path"]
         blob = show_blob(repo, ref, rel)
@@ -175,7 +200,13 @@ def apply_copy(repo: Path, ref: str, dest: Path, copy: list[dict[str, str]]) -> 
             continue
         target = dest / rel
         target.parent.mkdir(parents=True, exist_ok=True)
-        target.write_bytes(blob)
+        mode = _tree_mode(repo, ref, rel)
+        if mode == "120000":
+            target.symlink_to(os.fsdecode(blob).rstrip("\n"))
+        else:
+            target.write_bytes(blob)
+            if mode == "100755":
+                target.chmod(target.stat().st_mode | 0o111)
         written.append(rel)
     return written
 
@@ -232,24 +263,30 @@ def main() -> int:
     args = parser.parse_args()
     repo = Path(args.repo).expanduser().resolve()
     allowlist = load_allowlist(Path(args.allowlist).expanduser()) if args.allowlist else None
-    data = extract_plan(repo, ref=args.ref, baseline=args.baseline, allowlist=allowlist)
-    if args.apply:
-        if not args.dest:
-            print(json.dumps({"status": "FAIL", "error": "--dest is required with --apply"}))
-            return 2
-        dest = Path(args.dest).expanduser().resolve()
-        if dest == repo:
-            print(
-                json.dumps(
-                    {
-                        "status": "FAIL",
-                        "error": "refuse apply onto --repo; use a dedicated destination worktree",
-                    }
+    try:
+        data = extract_plan(repo, ref=args.ref, baseline=args.baseline, allowlist=allowlist)
+        if args.apply:
+            if not args.dest:
+                print(json.dumps({"status": "FAIL", "error": "--dest is required with --apply"}))
+                return 2
+            dest = Path(args.dest).expanduser().resolve()
+            if dest == repo:
+                print(
+                    json.dumps(
+                        {
+                            "status": "FAIL",
+                            "error": (
+                                "refuse apply onto --repo; use a dedicated destination worktree"
+                            ),
+                        }
+                    )
                 )
-            )
-            return 2
-        data["written"] = apply_copy(repo, args.ref, dest, data["copy"])
-        data["dest"] = str(dest)
+                return 2
+            data["written"] = apply_copy(repo, args.ref, dest, data["copy"])
+            data["dest"] = str(dest)
+    except ExtractError as exc:
+        print(json.dumps({"status": "FAIL", "error": str(exc)}))
+        return exc.code
     print(json.dumps(data, indent=2, sort_keys=True))
     return 0
 

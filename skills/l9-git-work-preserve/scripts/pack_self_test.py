@@ -391,6 +391,46 @@ def check_extract_path_union(tmp: Path, errors: list[str]) -> None:
     if after_head != dest_head:
         errors.append("apply must not cherry-pick or otherwise move destination HEAD")
 
+    second = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "extract_path_union.py"),
+            "--repo",
+            str(repo),
+            "--ref",
+            "feature/mixed",
+            "--baseline",
+            "main",
+            "--apply",
+            "--dest",
+            str(dest),
+        ]
+    )
+    if second.returncode == 0:
+        errors.append("apply must refuse when destination already has copy-set paths")
+    else:
+        try:
+            second_data = json.loads(second.stdout)
+        except json.JSONDecodeError:
+            second_data = {}
+        if "already has" not in str(second_data.get("error") or second.stdout):
+            errors.append(f"collision apply should name existing dest paths, got {second.stdout}")
+
+    missing_ref = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "extract_path_union.py"),
+            "--repo",
+            str(repo),
+            "--ref",
+            "does-not-exist",
+            "--baseline",
+            "main",
+        ]
+    )
+    if missing_ref.returncode == 0:
+        errors.append("unresolvable ref must fail closed, not emit an empty copy set")
+
     empty = tmp / "empty-allowlist.json"
     empty.write_text(json.dumps({"copy": [], "skip": []}), encoding="utf-8")
     stopped = run(
