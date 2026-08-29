@@ -24,6 +24,20 @@ todos:
     content: Extend test_ceremony_ownership.py for unnegated Cursor finish-then-make-pr strings without a claude-code predicate. Run that pytest only. Catalog and Makefile diffs empty.
     status: completed
 isProject: false
+kernel_pass:
+  bound_path: stop_after_catalog_commit_84e1f841.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T02:44:00Z
+    body_sha256: "dbacf8680144dd86e0b5ae6bb9df6a3c03043e101094bee7f71ac7ae57fb9cb9"
+    deltas:
+      - "Stamped kernel_pass so leftover unique plan can pass the extract gate"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T02:45:00Z
+    body_sha256: "dbacf8680144dd86e0b5ae6bb9df6a3c03043e101094bee7f71ac7ae57fb9cb9"
+    deltas:
+      - "Receipt only; leftover unique body unchanged"
 ---
 
 # PLAN: Stop after catalog commit (Cursor) / make pr (Claude Code)
