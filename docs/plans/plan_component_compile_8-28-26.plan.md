@@ -681,4 +681,3 @@ todos:
     content: …
     status: pending
 ```
-
