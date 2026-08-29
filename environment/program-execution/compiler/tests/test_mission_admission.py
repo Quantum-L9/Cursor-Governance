@@ -165,8 +165,9 @@ def test_admission_requires_an_explicit_program_intent() -> None:
         admit(mission, None)  # type: ignore[arg-type]
     assert "explicit" in str(excinfo.value)
 
+    raw_intent = {"schema": "program-execution.intent.v1", "objective": "raw"}
     with pytest.raises(MissionAdmissionError):
-        admit(mission, {"schema": "program-execution.intent.v1", "objective": "raw"})  # type: ignore[arg-type]
+        admit(mission, raw_intent)  # type: ignore[arg-type]
 
     intent = _intent()
     assert admit(mission, intent).intent is intent
