@@ -96,10 +96,27 @@ working_files() {
   } | awk 'NF' | sort -u
 }
 
+# Exit 2 = the comparison could not be computed (distinct from "computed, and
+# it is empty"). Collapsing those two is how a gate reports PASS on work it
+# never looked at.
 comparison_files() {
   local base="$1"
   local mb
-  mb="$(git merge-base "$base" HEAD)"
+  if ! mb="$(git merge-base "$base" HEAD 2>/dev/null)" || [[ -z "$mb" ]]; then
+    # A cloud SessionStart fetches the base with `--depth 1`, so the base and
+    # this branch can share no reachable ancestor and merge-base fails outright.
+    # Deepen once and retry before giving up: on a shallow clone the history is
+    # missing, not absent.
+    if [[ -f "$(git rev-parse --git-dir)/shallow" ]]; then
+      git fetch --deepen=200 origin "${base#origin/}" >/dev/null 2>&1 \
+        || git fetch --unshallow origin >/dev/null 2>&1 || true
+      mb="$(git merge-base "$base" HEAD 2>/dev/null || true)"
+    fi
+  fi
+  if [[ -z "$mb" ]]; then
+    echo "ERROR: no merge base between $base and HEAD — the comparison is UNKNOWN, not empty" >&2
+    return 2
+  fi
   git -c core.quotePath=false diff --no-renames --name-only --diff-filter=ACMR "$mb" HEAD
 }
 
@@ -109,7 +126,16 @@ COMMITTED=""
 SOURCE=""
 
 if BASE="$(pick_base)"; then
-  COMMITTED="$(comparison_files "$BASE" || true)"
+  COMPARISON_RC=0
+  COMMITTED="$(comparison_files "$BASE")" || COMPARISON_RC=$?
+  if [[ "$COMPARISON_RC" -eq 2 ]]; then
+    # Fail closed. Reporting an undeterminable comparison as "nothing changed"
+    # let the gate PASS a branch of 117 changed files without running a single
+    # checker, because a `--depth 1` base has no merge base with it.
+    echo "ERROR: cannot determine the change set against $BASE (no merge base)." >&2
+    echo "       Deepen the clone (git fetch --unshallow) or pass explicit paths." >&2
+    exit 1
+  fi
   if [[ -n "$WORKING" && -n "$COMMITTED" ]]; then
     SOURCE="comparison+working-tree base=$BASE"
   elif [[ -n "$COMMITTED" ]]; then
