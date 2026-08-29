@@ -2,6 +2,16 @@
   "python.analysis.typeCheckingMode": "basic",
   "cursorpyright.analysis.typeCheckingMode": "basic",
   "cursorpyright.analysis.diagnosticMode": "openFilesOnly",
+  "cursorpyright.analysis.autoSearchPaths": false,
+  "cursorpyright.shouldImportPylanceSettings": "never",
+  "cursorpyright.analysis.include": [
+    "conftest.py",
+    "ops",
+    "environment",
+    "skills",
+    "tools",
+    "workflows"
+  ],
   "python.analysis.diagnosticMode": "openFilesOnly",
   "python.terminal.useEnvFile": true,
   "python.defaultInterpreterPath": "${workspaceFolder}/.venv/bin/python",
