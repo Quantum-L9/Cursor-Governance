@@ -1,0 +1,434 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "standard",
+  "title": "Harden structured-reasoning and thin /reasoning",
+  "objective": "Close the command/skill drift that reintroduced uncalibrated confidence percentages on /reasoning and /ynp. Encode the existing evidence-quality x decision-risk x action contract as YAML plus ledger validation, make /reasoning a thin delegate, and keep the auto-chain valid by updating YNP first. Do not add ECE computation, do not revive telemetry/, and do not fail-close ordinary runs that emit no probability.",
+  "code_in_scope": true,
+  "success_criteria": [
+    "commands/reasoning.md contains l9-structured-reasoning and evidence_quality and does not contain the live template string Confidence: {score}% or the scoring rows ≥90% / 80-89%.",
+    "commands/ynp.md and skills/l9-ynp require action: proceed|proceed_with_validation|bounded_probe|block; a bare percent is labeled uncalibrated and does not select the play; AUTO-EXECUTE on ≥90% is gone.",
+    "skills/l9-structured-reasoning/references/confidence-policy.yaml exists and is cited from SKILL.md; SKILL.md stays under 500 lines.",
+    "validate_ledger.py PASSes today's fixtures/sample_ledger.json unchanged, FAILs stated_probability without calibration_status=calibrated, and FAILs action outside the evidence_quality x decision_risk allow-set.",
+    "skills/l9-structured-reasoning/scripts/self_test.py PASS; new skills/l9-ynp/scripts/self_test.py PASS; needles cover both slash files.",
+    "No new file under telemetry/; no ECE field required on ordinary /reasoning output; run-metrics.schema.json calibration key is not reused; INVARIANTS.md and CANONICAL_LAW.md are untouched.",
+    "make pr-check PASS on the changed-file set. No merge."
+  ],
+  "scope": {
+    "in": [
+      "skills/l9-ynp/SKILL.md",
+      "skills/l9-ynp/references/ynp-workflow.md",
+      "skills/l9-ynp/scripts/self_test.py (new)",
+      "commands/ynp.md",
+      "skills/l9-structured-reasoning/references/confidence-policy.yaml (new)",
+      "skills/l9-structured-reasoning/references/evidence-decision-contract.yaml",
+      "skills/l9-structured-reasoning/references/risk-and-autonomy-policy.md",
+      "skills/l9-structured-reasoning/schemas/evidence-ledger.schema.json",
+      "skills/l9-structured-reasoning/scripts/validate_ledger.py",
+      "skills/l9-structured-reasoning/scripts/validate_skill.py",
+      "skills/l9-structured-reasoning/scripts/self_test.py",
+      "skills/l9-structured-reasoning/fixtures/confidence_cases.json (new)",
+      "skills/l9-structured-reasoning/SKILL.md (cite only; keep under 500 lines)",
+      "commands/reasoning.md",
+      "commands/commands-index.md (one-line /reasoning blurb)",
+      "skills/AUTONOMY_MANIFEST.yaml reasoning_routing dead reference retarget only"
+    ],
+    "out": [
+      "ECE / MCE / drift computation or a decision-outcome log",
+      "telemetry/ revival, telemetry/logs/, telemetry/memory_metrics.py",
+      "Reusing run-metrics.schema.json calibration as ECE",
+      "INVARIANTS.md, ORG_INVARIANTS.yaml, CANONICAL_LAW.md, AGENTS.md rewrite",
+      "Compiling l9-intelligence-harvest or editing kernels/Gold Nugget Extractor",
+      "make campaign, Program Lock, PE overlay, new worktree from origin/main",
+      "Changing /ynp auto_chain off of /reasoning (keep the chain; fix YNP first)",
+      "Forbidding the word confidence across the skill tree",
+      "Merging any PR"
+    ]
+  },
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse --abbrev-ref HEAD && git rev-parse HEAD",
+      "pass_criteria": "branch=main; SHA a2eee3a6eedd8635ecf94f7e23022aab60187a5b recorded; dirty tree overlaps remediator WIP — Build uses pathspecs only",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": ".venv/bin/python skills/l9-structured-reasoning/scripts/self_test.py",
+      "pass_criteria": "PASS before mutation; 17 router cases; sample ledger valid",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "rg -n 'Confidence: \\{score\\}%|≥90%|AUTO-EXECUTE' commands/reasoning.md commands/ynp.md",
+      "pass_criteria": "both slash files still contain live percent / AUTO-EXECUTE contracts (defect confirmed)",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": ".venv/bin/python skills/l9-plan/scripts/route_plan.py --risk medium --evidence partial --json",
+      "pass_criteria": "depth=standard; this PLAN_DOCUMENT depth matches",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-01-ynp-first",
+      "task": "Update l9-ynp skill, workflow, and commands/ynp.md so action enum is required, a bare percent is uncalibrated display-only, and AUTO-EXECUTE on ≥90% is removed. Add skills/l9-ynp/scripts/self_test.py needles. Keep recommend-only unless the user explicitly asks to run.",
+      "files": [
+        "skills/l9-ynp/SKILL.md",
+        "skills/l9-ynp/references/ynp-workflow.md",
+        "skills/l9-ynp/scripts/self_test.py",
+        "commands/ynp.md"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "YNP Confidence scoring table and AUTO-EXECUTE rule",
+      "leverage_rank": 1,
+      "shared_root_cause": "slash files reintroduced uncalibrated percents the skill already replaced"
+    },
+    {
+      "id": "todo-02-confidence-policy",
+      "task": "Add confidence-policy.yaml (stated_probability forbidden unless calibrated; calibration_status none|uncalibrated|calibrated; ece_is_not_a_gate true; action_source is the risk table). Encode the risk-and-autonomy-policy.md matrix as data in that file. Cite it from SKILL.md without growing past 500 lines.",
+      "files": [
+        "skills/l9-structured-reasoning/references/confidence-policy.yaml",
+        "skills/l9-structured-reasoning/references/risk-and-autonomy-policy.md",
+        "skills/l9-structured-reasoning/SKILL.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-01-ynp-first"
+      ],
+      "operation": "Create",
+      "anchor": "new confidence-policy.yaml plus Risk and Autonomy cite",
+      "leverage_rank": 2,
+      "shared_root_cause": "slash files reintroduced uncalibrated percents the skill already replaced"
+    },
+    {
+      "id": "todo-03-ledger-schema",
+      "task": "Extend evidence-decision-contract.yaml and evidence-ledger.schema.json with optional evidence_quality, decision_risk, calibration_status default none, and stated_probability null. Existing sample_ledger.json remains valid.",
+      "files": [
+        "skills/l9-structured-reasoning/references/evidence-decision-contract.yaml",
+        "skills/l9-structured-reasoning/schemas/evidence-ledger.schema.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-02-confidence-policy"
+      ],
+      "operation": "Replace",
+      "anchor": "ledger action enum block",
+      "leverage_rank": 3,
+      "shared_root_cause": "prose contract is not what validate_ledger.py checks"
+    },
+    {
+      "id": "todo-04-validate-ledger",
+      "task": "Teach validate_ledger.py the allow-set from confidence-policy.yaml: action must be in the evidence_quality x decision_risk cell; stated_probability set with calibration_status none or uncalibrated is FAIL; calibrated requires window, n, and ece; missing new fields stay PASS.",
+      "files": [
+        "skills/l9-structured-reasoning/scripts/validate_ledger.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "todo-03-ledger-schema"
+      ],
+      "operation": "Replace",
+      "anchor": "validate() REQUIRED and ACTIONS checks",
+      "leverage_rank": 4,
+      "shared_root_cause": "prose contract is not what validate_ledger.py checks"
+    },
+    {
+      "id": "todo-05-confidence-fixtures",
+      "task": "Add fixtures/confidence_cases.json and run them from self_test.py: current sample ledger PASS; Confidence: 85% envelope FAIL; stated_probability 0.9 with status none FAIL; high x reversible proceed PASS; unknown x irreversible proceed FAIL.",
+      "files": [
+        "skills/l9-structured-reasoning/fixtures/confidence_cases.json",
+        "skills/l9-structured-reasoning/scripts/self_test.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-04-validate-ledger"
+      ],
+      "operation": "Create",
+      "anchor": "self_test.py run() list",
+      "leverage_rank": 5,
+      "shared_root_cause": "prose contract is not what validate_ledger.py checks"
+    },
+    {
+      "id": "todo-06-thin-reasoning-command",
+      "task": "Rewrite commands/reasoning.md as a thin delegate to l9-structured-reasoning: keep auto_chain ynp; delete percent table and Confidence template; require evidence_quality, decision_risk, action, calibration_status none. Update commands-index.md one-liner. Retarget AUTONOMY_MANIFEST.yaml reasoning_routing from missing md files to live references only.",
+      "files": [
+        "commands/reasoning.md",
+        "commands/commands-index.md",
+        "skills/AUTONOMY_MANIFEST.yaml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-01-ynp-first",
+        "todo-02-confidence-policy"
+      ],
+      "operation": "Replace",
+      "anchor": "commands/reasoning.md CONFIDENCE SCORING section",
+      "leverage_rank": 6,
+      "shared_root_cause": "slash files reintroduced uncalibrated percents the skill already replaced"
+    },
+    {
+      "id": "todo-07-needles",
+      "task": "Extend validate_skill.py REQUIRED with confidence-policy.yaml. Add remediator-style _need/_forbid for commands/reasoning.md (must cite skill and evidence_quality; forbid Confidence: {score}%) and commands/ynp.md (forbid AUTO-EXECUTE). Do not forbid the word confidence in run-metrics or expertise_model.",
+      "files": [
+        "skills/l9-structured-reasoning/scripts/validate_skill.py",
+        "skills/l9-structured-reasoning/scripts/self_test.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-05-confidence-fixtures",
+        "todo-06-thin-reasoning-command"
+      ],
+      "operation": "Replace",
+      "anchor": "validate_skill.py REQUIRED and legacy_patterns",
+      "leverage_rank": 7,
+      "shared_root_cause": "slash files reintroduced uncalibrated percents the skill already replaced"
+    },
+    {
+      "id": "todo-08-prove",
+      "task": "Run both pack self_tests and make pr-check on the pathspec set. Pathspecs only; do not stage remediator WIP.",
+      "files": [
+        "skills/l9-structured-reasoning/scripts/self_test.py",
+        "skills/l9-ynp/scripts/self_test.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-07-needles"
+      ],
+      "operation": "Wrap",
+      "anchor": "self_test entry points",
+      "leverage_rank": 8,
+      "shared_root_cause": "prose contract is not what validate_ledger.py checks"
+    }
+  ],
+  "critical_path": [
+    "todo-01-ynp-first",
+    "todo-02-confidence-policy",
+    "todo-03-ledger-schema",
+    "todo-04-validate-ledger",
+    "todo-05-confidence-fixtures",
+    "todo-06-thin-reasoning-command",
+    "todo-07-needles",
+    "todo-08-prove"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "YNP accepts action enum; AUTO-EXECUTE removed; chain cannot invent a percent",
+      "unlocks": "safe rewrite of /reasoning"
+    },
+    {
+      "id": "M2",
+      "outcome": "confidence-policy.yaml plus ledger validator encode the risk table",
+      "unlocks": "fixtures and command needles"
+    },
+    {
+      "id": "M3",
+      "outcome": "both self_tests and make pr-check PASS",
+      "unlocks": "Build complete; publish later via ceremony if requested"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "rg finds no AUTO-EXECUTE in commands/ynp.md; YNP self_test PASS",
+      "no_go_action": "do not edit commands/reasoning.md"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "validate_ledger.py PASS on sample_ledger.json and FAIL on the stated_probability none case",
+      "no_go_action": "stop and fix validator; do not add ECE"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "both self_tests PASS; make pr-check PASS",
+      "no_go_action": "do not claim ready"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No operating-instruction change; skill and slash only"
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "Authority pointer unchanged"
+    },
+    {
+      "surface": "README.md",
+      "action": "n_a",
+      "reason": "Index already lists l9-structured-reasoning"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "Not a symlink-law or secret-plane change"
+    },
+    {
+      "surface": "INVARIANTS.md",
+      "action": "n_a",
+      "reason": "Calibration is a skill contract, not a CI-enforced repo invariant"
+    },
+    {
+      "surface": "commands/commands-index.md",
+      "action": "update",
+      "todo_ids": [
+        "todo-06-thin-reasoning-command"
+      ]
+    },
+    {
+      "surface": "skills/AUTONOMY_MANIFEST.yaml",
+      "action": "update",
+      "todo_ids": [
+        "todo-06-thin-reasoning-command"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does any consumer parse Confidence: N% from /reasoning or /ynp as a machine field, so removing it breaks a script?",
+      "Would requiring ECE or calibration_status=calibrated on every ledger make sample_ledger.json and ordinary /reasoning FAIL?",
+      "Would forbidding the substring confidence fail expertise_model.yaml, skill_intelligence_report.yaml, or run-metrics.schema.json?"
+    ],
+    "assumed_false_ifs": [
+      "YNP is updated before /reasoning loses the percent template",
+      "Ordinary ledgers omit stated_probability and stay valid",
+      "Build pathspecs exclude remediator and other dirty WIP on this checkout"
+    ],
+    "blast_radius": "Agent output shape of /reasoning and /ynp only. PE traces, Graphiti, make pr ceremony, and telemetry/ stay unchanged. A too-wide needle can fail the already-green structured-reasoning self_test.",
+    "rollback": "Revert the pathspec set: l9-ynp, l9-structured-reasoning, commands/reasoning.md, commands/ynp.md, commands-index.md, AUTONOMY_MANIFEST.yaml reasoning_routing. Restore generated companions only if sync_generated_artifacts ran."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-01-ynp-first",
+      "todo-02-confidence-policy",
+      "todo-04-validate-ledger",
+      "todo-06-thin-reasoning-command",
+      "todo-03-ledger-schema",
+      "todo-05-confidence-fixtures",
+      "todo-07-needles",
+      "todo-08-prove"
+    ],
+    "shared_causes": [
+      "slash files reintroduced uncalibrated percents the skill already replaced",
+      "prose contract is not what validate_ledger.py checks"
+    ],
+    "deletions_or_consolidations": [
+      "Delete /reasoning CONFIDENCE SCORING table and Confidence: {score}% template",
+      "Delete /ynp AUTO-EXECUTE on ≥90%",
+      "Retarget AUTONOMY_MANIFEST reasoning_routing away from missing reference files"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Editing /reasoning before YNP leaves auto_chain able to invent a percent or AUTO-EXECUTE",
+      "mitigation": "Checkpoint C1: YNP first; do not touch commands/reasoning.md until YNP self_test PASS"
+    },
+    {
+      "risk": "Required ECE or required new ledger fields fail current fixtures",
+      "mitigation": "New fields optional; calibration_status defaults to none; sample_ledger.json must stay PASS"
+    },
+    {
+      "risk": "Wide needles break the green pack",
+      "mitigation": "Forbid exact templates (Confidence: {score}%, AUTO-EXECUTE), not the word confidence"
+    },
+    {
+      "risk": "Dirty checkout scoops remediator WIP into this commit",
+      "mitigation": "Pathspecs only; todo-08-prove names the two self_test files; do not git add -A"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does any out-of-repo consumer parse Confidence: N% from /reasoning or /ynp output?",
+      "decision_effect": "If yes, keep a one-line uncalibrated alias in YNP output; still do not let the number select action",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": ".venv/bin/python skills/l9-structured-reasoning/scripts/self_test.py",
+      "pass_criteria": "PASS including confidence fixtures and command needles",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": ".venv/bin/python skills/l9-ynp/scripts/self_test.py",
+      "pass_criteria": "PASS; AUTO-EXECUTE absent; action enum present",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on the changed-file set for this Build",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1"
+    ],
+    "next_skill": "Build (current checkout)",
+    "stop_reason": "PLAN_DOCUMENT validated; implementation not yet run. Press Build. YNP first."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/l9-ynp/",
+      "skills/l9-structured-reasoning/",
+      "commands/ynp.md",
+      "commands/reasoning.md",
+      "commands/commands-index.md",
+      "skills/AUTONOMY_MANIFEST.yaml"
+    ],
+    "must_not_modify": [
+      "telemetry/",
+      "INVARIANTS.md",
+      "ORG_INVARIANTS.yaml",
+      "CANONICAL_LAW.md",
+      "AGENTS.md",
+      "kernels/",
+      "environment/program-execution/",
+      "skills/l9-structured-reasoning/schemas/run-metrics.schema.json"
+    ],
+    "preserved_contracts": [
+      "l9-structured-reasoning already forbids arbitrary confidence percentages",
+      "risk-and-autonomy-policy.md evidence x risk table",
+      "ledger action enum proceed|proceed_with_validation|bounded_probe|block",
+      "run-metrics calibration is benchmark run quality, not ECE",
+      "/reasoning auto_chain stays ynp",
+      "YNP recommend-only unless user explicitly asks to run"
+    ],
+    "validation_commands": [
+      ".venv/bin/python skills/l9-structured-reasoning/scripts/self_test.py",
+      ".venv/bin/python skills/l9-ynp/scripts/self_test.py",
+      "make pr-check"
+    ]
+  },
+  "checklist": [
+    "YNP first",
+    "policy yaml",
+    "ledger fail-open",
+    "thin /reasoning",
+    "narrow needles",
+    "no ECE"
+  ],
+  "estimate": "one Build on current checkout"
+}

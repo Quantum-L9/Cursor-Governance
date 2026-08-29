@@ -1,0 +1,872 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Fill every PE pipeline-assembly gap from brief to COMPLETED",
+  "objective": "Make make campaign a single autonomous assembly line: operator brief to TASK execution, stacked task PRs never based on main, pec plus host close, and move of the campaign directory into campaigns/COMPLETED. Close all 31 GAP ids in environment/program-execution/audits/pipeline-assembly-audit.v1.yaml with a regression test per finding. Do not invent a second front door.",
+  "success_criteria": [
+    "Every audit finding GAP-001 through GAP-032 has a regression test that fails on the quoted evidence before the fix and passes after",
+    "A fixture brief through make campaign --until close with two tasks reaches TASK-001 COMPLETED, TASK-002 COMPLETED, pec runtime_status closed, host ledger lifecycle complete, and campaigns/COMPLETED/<id>/ present with no live campaigns/<id>/ directory",
+    "Inspection-only compiled tasks reach pec PASSED_LOCAL when docs/program-execution/TASK-00N.md exists and validation_commands is empty (GAP-032)",
+    "After arm, pec status names TASK-001 as current work; pec next ready=[] is not treated as idle",
+    "TASK-002 prepare parent SHA equals TASK-001 branch HEAD after TASK-001 has a commit; PR_BASE is never main or origin/main",
+    "until=merge before all tasks COMPLETED refuses host-only merge; Makefile may still pass --until merge and the runner interprets that as execute-then-close",
+    "PHASE0 operator_ack.acknowledged_at remains null; no program-execution.intent.v1; no pec --admission-draft; no pe-[0-9a-f]{8,} campaign id",
+    "make pr-check PASS on the Cursor-Governance factory branch after the fill",
+    "Audit fill_order is exhausted; overall_autonomy_percent in the audit file is updated to 100 only after the e2e fixture passes"
+  ],
+  "scope": {
+    "in": [
+      "Quantum-L9/Cursor-Governance factory worktree $HOME/.l9/gov-worktrees/make-campaign on feat/campaign-tunnel then feat/pipeline-assembly-fill",
+      "environment/program-execution/scripts/run_campaign.py and its tests",
+      "skills/l9-pe-campaign-activate/ scripts compile_brief.py compile_activation_files.py authorize_campaign_merge.py SKILL.md references/pipeline.md",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py cli.py state.py and pec tests",
+      "environment/program-execution/campaigns/scripts/close_campaign.py CAMPAIGN_EXECUTION_POLICY.yaml and new campaigns/COMPLETED/",
+      "ops/scripts/stack_pr.py",
+      "environment/program-execution/scripts/run_peer_task_pipeline.py abort-execution registration or deletion",
+      "environment/program-execution/audits/pipeline-assembly-audit.v1.yaml status updates after each GAP close",
+      "PE MANIFEST.json regeneration and sync_generated_artifacts --force after PE or skill edits",
+      "Makefile append-only additions only"
+    ],
+    "out": [
+      "Quantum-L9/l9-ci-core product code, workflows, or MANIFEST.sha256",
+      "Writing the dirty ~/.cursor-governance primary clone",
+      "Patching live stopped campaigns l9-ci-core-org-runtime-v1 or pe-8c9f6de43b25",
+      "Launching PE- Memory.md or any live campaign from a document-class brief",
+      "Forging PHASE0_USER_CONFIG.yaml operator_ack.acknowledged_at",
+      "Rewriting CAMPAIGN_SOURCE.yaml after receipt bind",
+      "Restoring program-execution.intent.v1 or pec --admission-draft as a live path",
+      "PR_BASE=main or origin/main for any campaign or task PR",
+      "Force-push, admin-merge, hard reset, scanner weakening",
+      "Rewriting existing Makefile lines (root-file append-only)",
+      "Eighth l9-ci-core reusable workflow",
+      "Editing .cursor/plans/campaign_brief_ir_ebea99a7.plan.md",
+      "Full-throttle program_deploying=true without a real Igor ack",
+      "Merging Cursor-Governance PR 189 from the l9-ci-core workspace"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind $HOME/.l9/gov-worktrees/make-campaign as Cursor-Governance factory; refuse l9-ci-core as change target",
+      "pass_criteria": "single factory root; AGENTS.md in that worktree is Cursor-Governance PE host",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "python3 -c yaml.safe_load audits/pipeline-assembly-audit.v1.yaml",
+      "pass_criteria": "31 unique GAP ids; fill_order covers all; COMPLETED folder absent",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "git -C $HOME/.l9/gov-worktrees/make-campaign rev-parse HEAD",
+      "pass_criteria": "8c2932d310a988e0ad5431c185d524146acbc459 on feat/campaign-tunnel; origin/main is 93fbd924 (host-activate stub only)",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "python3 scripts/route_plan.py --risk high --evidence sufficient --json",
+      "pass_criteria": "depth=deep omit_gates=[]",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "inventory run_campaign UNTIL_STAGES, pec complete_task, compile_activation_files definition_status, stack_pr.py cmd_base, close_campaign.py, glob COMPLETED",
+      "pass_criteria": "quoted audit evidence still present at those symbols",
+      "status": "passed"
+    },
+    {
+      "id": "P5",
+      "command_or_action": "make pr-check",
+      "pass_criteria": "named as the factory quality gate; not executed in plan mode",
+      "status": "pending"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T00",
+      "task": "On feat/pipeline-assembly-fill only, commit the audit and MANIFEST, lock UNK-001/002/003 defaults; do not commit onto feat/campaign-tunnel unless the operator names that branch",
+      "files": [
+        "environment/program-execution/audits/pipeline-assembly-audit.v1.yaml",
+        "environment/program-execution/MANIFEST.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "audits/pipeline-assembly-audit.v1.yaml schema header",
+      "leverage_rank": 3,
+      "shared_root_cause": "no machine worklist"
+    },
+    {
+      "id": "T01",
+      "task": "GAP-002: compile later tasks as definition_status ready; keep W1 plus dependency_edges as the only serial lock; complete_task must not be the only unlock path; add pec test that TASK-002 is claimable after TASK-001 COMPLETED and GATE-001 PASS",
+      "files": [
+        "skills/l9-pe-campaign-activate/scripts/compile_activation_files.py",
+        "skills/l9-pe-campaign-activate/scripts/test_compile_activation_files.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_wave_dependency.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T00"],
+      "operation": "Replace",
+      "anchor": "compile_activation_files.py build_source definition_status ready if index == 1 else blocked",
+      "leverage_rank": 1,
+      "shared_root_cause": "successor never becomes claimable"
+    },
+    {
+      "id": "T02",
+      "task": "GAP-009 GAP-029: after verify PASS, pec evaluate-gate on the task completion_gate and W0 exit gate so _gate_satisfied is true before complete and before W1 claim; complete_task stays evidence-gated; add test predecessor_wave_exit_gate is absent after GATE-001 PASS",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_waived_gate.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T01"],
+      "operation": "Replace",
+      "anchor": "controller.py _gate_satisfied and complete_task completion_gates loop",
+      "leverage_rank": 4,
+      "shared_root_cause": "gates never evaluated so waves never unlock"
+    },
+    {
+      "id": "T25",
+      "task": "GAP-032: pec verify PASS for inspection-only tasks when required output files exist and validation_commands is empty; do not invent a shell command from acceptance prose; add test empty command list plus present docs/program-execution/TASK-001.md yields PASSED_LOCAL",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_state_transition.py",
+        "environment/program-execution/scripts/compile_campaign_source.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T00"],
+      "operation": "Replace",
+      "anchor": "controller.py verify gates[validation] requires nonempty validations list",
+      "leverage_rank": 2,
+      "shared_root_cause": "inspection-only compile makes PASSED_LOCAL unreachable"
+    },
+    {
+      "id": "T03",
+      "task": "GAP-003: claim and prepare_worktree take base_sha from STACK.json predecessor tip (campaign/<id> for TASK-001, pec/w0/task-00N-1 thereafter); refuse lease.base_sha equal to origin/main when a predecessor branch exists; test TASK-002 prepare parent equals TASK-001 HEAD after a commit",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": ["T00"],
+      "operation": "Replace",
+      "anchor": "controller.py claim_task base_sha=repo[head_sha] and prepare_worktree worktree add -b lease.branch lease.base_sha",
+      "leverage_rank": 2,
+      "shared_root_cause": "stacking is a pointer file not a git parent"
+    },
+    {
+      "id": "T04",
+      "task": "GAP-004: stack_pr.py and make pr read $L9/programs/<id>/runtime/STACK.json; fallback to main is a hard fail; refuse_unstacked_pr_base is the only default; do not rewrite existing Makefile PR_BASE line, append a campaign-stack helper target instead",
+      "files": [
+        "ops/scripts/stack_pr.py",
+        "environment/program-execution/scripts/run_campaign.py",
+        "Makefile"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T03"],
+      "operation": "Replace",
+      "anchor": "ops/scripts/stack_pr.py cmd_base default_branch fallback",
+      "leverage_rank": 6,
+      "shared_root_cause": "three stacking SSOTs"
+    },
+    {
+      "id": "T05",
+      "task": "GAP-001 GAP-028: until=execute writes the compiled output path in the pec prepare worktree, builds attempt-receipt.v2 from rendered digests, then pec record-attempt verify evaluate-gate complete claim-next; no idle after arm; no second scheduler; fixture skips GitHub",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": ["T01", "T02", "T03", "T25"],
+      "operation": "Insert",
+      "anchor": "run_campaign.py UNTIL_STAGES tuple and default_arm return",
+      "leverage_rank": 5,
+      "shared_root_cause": "factory stops at LEASED"
+    },
+    {
+      "id": "T06",
+      "task": "GAP-025: pec next and status emit current=leased-or-executing task; LAUNCH.json pec_ready_empty_is_expected is true only while a lease is active; after arm, empty ready list is not an idle signal",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py",
+        "environment/program-execution/scripts/run_campaign.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T05"],
+      "operation": "Replace",
+      "anchor": "run_campaign.py write_launch_pointer pec_ready_empty_is_expected False",
+      "leverage_rank": 7,
+      "shared_root_cause": "Activation 100 Execution 0 hang"
+    },
+    {
+      "id": "T07",
+      "task": "GAP-007 GAP-018 GAP-026: runner treats until=merge as execute-then-close and refuses host-only merge before all tasks COMPLETED; commit ALLOWED_CAMPAIGN_FILES on feat/<id> stacked on campaign/<id> only after first task execute starts; until=bootstrap includes arm; do not rewrite Makefile CAMPAIGN_UNTIL comment",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T05"],
+      "operation": "Replace",
+      "anchor": "run_campaign.py UNTIL_STAGES and default_make_pr",
+      "leverage_rank": 8,
+      "shared_root_cause": "fake finish via host PR"
+    },
+    {
+      "id": "T08",
+      "task": "GAP-016: remediations.scope becomes stacked_prs_opened_by_this_run; runner squash-merges only PR numbers it recorded on STACK.json after green+mergeable; never all_open_prs_in_target_repo; policy and runner must agree in a unit test",
+      "files": [
+        "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+        "environment/program-execution/scripts/run_campaign.py",
+        "skills/l9-pe-campaign-activate/references/merge-authority.md",
+        "skills/l9-pe-campaign-activate/SKILL.md"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T07"],
+      "operation": "Replace",
+      "anchor": "CAMPAIGN_EXECUTION_POLICY.yaml publish.merge false halt_before_merge true",
+      "leverage_rank": 14,
+      "shared_root_cause": "policy and runner contradict"
+    },
+    {
+      "id": "T09",
+      "task": "GAP-006 GAP-005 GAP-024: one close stage runs pec close then close_campaign.py then moves campaigns/<id>/ to campaigns/COMPLETED/<id>/; export-handoff is evidence only and leaves host lifecycle not complete; next_campaign skips COMPLETED",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/campaigns/scripts/close_campaign.py",
+        "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": ["T05"],
+      "operation": "Insert",
+      "anchor": "close_campaign.py close_campaign in-place write; no COMPLETED mover",
+      "leverage_rank": 9,
+      "shared_root_cause": "three unlinked close surfaces"
+    },
+    {
+      "id": "T10",
+      "task": "GAP-010: relaunch of an in_progress or incomplete campaign_id reuses the id after quarantine; suffix -v2 only when the prior id is complete or cancelled",
+      "files": [
+        "skills/l9-pe-campaign-activate/scripts/compile_brief.py",
+        "environment/program-execution/scripts/run_campaign.py",
+        "skills/l9-pe-campaign-activate/scripts/test_compile_brief.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T00"],
+      "operation": "Replace",
+      "anchor": "compile_brief.py assign_campaign_id collision assigns base-v2",
+      "leverage_rank": 15
+    },
+    {
+      "id": "T11",
+      "task": "GAP-011: isolate_worktree reuses an existing worktree only when clean and at the expected branch; otherwise quarantine and recreate",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T00"],
+      "operation": "Replace",
+      "anchor": "run_campaign.py isolate_worktree if worktree.exists reuse",
+      "leverage_rank": 16
+    },
+    {
+      "id": "T12",
+      "task": "GAP-012 GAP-027: default_ensure_target_checkout donor allowed only when donor origin matches repository_id; otherwise clone that repository; fetch campaign/<id> and predecessor task branches; refuse --single-branch main as the only history once stacking is required",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": ["T03"],
+      "operation": "Replace",
+      "anchor": "run_campaign.py default_ensure_target_checkout donor=write_root and git clone --depth 1 --single-branch --branch main",
+      "leverage_rank": 12
+    },
+    {
+      "id": "T13",
+      "task": "GAP-013: collect EVID-001 with the reconciled target HEAD 40-char SHA after ensure_target_checkout and before accept_blueprint",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/collect_evidence.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T12"],
+      "operation": "Replace",
+      "anchor": "run_campaign.py admit revision=seed target.repository_id",
+      "leverage_rank": 18
+    },
+    {
+      "id": "T14",
+      "task": "GAP-022: quarantine $L9/blueprints/<id> together with $L9/programs/<id> before compile so a leftover lock cannot fail collect_evidence",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/collect_evidence.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T10"],
+      "operation": "Replace",
+      "anchor": "run_campaign.py quarantine_occupied pec workspace only",
+      "leverage_rank": 17
+    },
+    {
+      "id": "T15",
+      "task": "GAP-015: add pec claim --ttl-minutes integer; runner passes 15; card Budget line is 15 minutes; expired lease cannot remain EXECUTING",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T05"],
+      "operation": "Replace",
+      "anchor": "run_campaign.py claim without ttl; controller.py claim_task ttl_hours=8",
+      "leverage_rank": 19
+    },
+    {
+      "id": "T16",
+      "task": "GAP-017: push campaign/<id> with no force before any make pr that sets PR_BASE=origin/campaign/<id>; fail closed if the remote branch is missing",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T07"],
+      "operation": "Insert",
+      "anchor": "run_campaign.py ensure_integration_branch local-only branch create",
+      "leverage_rank": 13
+    },
+    {
+      "id": "T17",
+      "task": "GAP-008: delete the pec abort-execution invocation from run_peer_task_pipeline.py; do not add a pec abort-execution subcommand; make campaign execute uses pec via run_campaign only",
+      "files": [
+        "environment/program-execution/scripts/run_peer_task_pipeline.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T05"],
+      "operation": "Replace",
+      "anchor": "run_peer_task_pipeline.py abort-execution call; pec/cli.py missing subcommand",
+      "leverage_rank": 20
+    },
+    {
+      "id": "T18",
+      "task": "GAP-014 GAP-030: after arm, program_blockers does not contain target work not started; live SSOT is LAUNCH.json; origin CAMPAIGN_STATUS stays unchanged until the host PR merges",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T05"],
+      "operation": "Replace",
+      "anchor": "run_campaign.py default_program_blockers and mark_host_campaign_active",
+      "leverage_rank": 21
+    },
+    {
+      "id": "T19",
+      "task": "GAP-019 GAP-031: keep acknowledged_at null and forge false; for T0 make campaign set LAUNCH.json operator_ack_required false; document make campaign as the admission act while program_deploying stays false",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "skills/l9-pe-campaign-activate/references/pipeline.md",
+        "skills/l9-pe-campaign-activate/SKILL.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T00"],
+      "operation": "Replace",
+      "anchor": "run_campaign.py write_launch_pointer operator_ack_required True",
+      "leverage_rank": 22
+    },
+    {
+      "id": "T20",
+      "task": "GAP-020: pec bootstrap refuses campaign_id matching pe-[0-9a-f]{8,} even if L9_ALLOW_INTENT_COMPILER=1 produced it; compiler remains refuse-by-default",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/compiler/cli.py",
+        "environment/program-execution/compiler/tests/test_cli.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": ["T00"],
+      "operation": "Insert",
+      "anchor": "compiler/cli.py L9_ALLOW_INTENT_COMPILER escape; pec bootstrap admission",
+      "leverage_rank": 23
+    },
+    {
+      "id": "T21",
+      "task": "GAP-021: pec start refuses when the working context path is the operator memo listed in primed/*.activate.yaml; LAUNCH.json load_operator_brief=false is enforced at start not only as prose",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/scripts/run_campaign.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T05"],
+      "operation": "Insert",
+      "anchor": "controller.py start_task; run_campaign.py write_execution_card",
+      "leverage_rank": 24
+    },
+    {
+      "id": "T22",
+      "task": "GAP-023: pipeline.md isolate section matches code; LAUNCH.json names host feat/<id>, target program-worktrees/<id>, and pec prepare workspace/worktrees/TASK-00N as the write tree; add a test that pec prepare worktree is the mutation checkout",
+      "files": [
+        "skills/l9-pe-campaign-activate/references/pipeline.md",
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["T03", "T05"],
+      "operation": "Replace",
+      "anchor": "skills/l9-pe-campaign-activate/references/pipeline.md isolate section",
+      "leverage_rank": 25
+    },
+    {
+      "id": "T23",
+      "task": "Unmocked two-task fixture from brief through close into COMPLETED; update SKILL.md compact workflow; regenerate PE MANIFEST.json; sync_generated_artifacts --force; mark each GAP Resolved in the audit only after its acceptance_test passes",
+      "files": [
+        "environment/program-execution/scripts/tests/test_run_campaign.py",
+        "skills/l9-pe-campaign-activate/SKILL.md",
+        "skills/l9-pe-campaign-activate/references/pipeline.md",
+        "environment/program-execution/audits/pipeline-assembly-audit.v1.yaml",
+        "environment/program-execution/MANIFEST.json"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "T01", "T02", "T03", "T04", "T05", "T06", "T07", "T08", "T09",
+        "T10", "T11", "T12", "T13", "T14", "T15", "T16", "T17", "T18",
+        "T19", "T20", "T21", "T22", "T25"
+      ],
+      "operation": "Insert",
+      "anchor": "test_run_campaign.py existing unmocked arm loop",
+      "leverage_rank": 10,
+      "shared_root_cause": "no brief-to-COMPLETED proof"
+    },
+    {
+      "id": "T24",
+      "task": "Run make pr-check on the factory branch; remediate red checks without weakening scanners; do not merge from l9-ci-core; stack the fill PR on feat/campaign-tunnel while 189 is open",
+      "files": [
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": ["T23"],
+      "operation": "Replace",
+      "anchor": "Cursor-Governance make pr-check / CI on feat/pipeline-assembly-fill",
+      "leverage_rank": 11
+    }
+  ],
+  "critical_path": [
+    "T00",
+    "T01",
+    "T25",
+    "T02",
+    "T03",
+    "T05",
+    "T06",
+    "T07",
+    "T09",
+    "T23",
+    "T24"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "Audit committed; branch feat/pipeline-assembly-fill; UNK defaults locked",
+      "unlocks": "all GAP fills"
+    },
+    {
+      "id": "M1",
+      "outcome": "Successors are claimable after TASK-001 COMPLETED and GATE-001 PASS; inspection-only verify can PASSED_LOCAL",
+      "unlocks": "execute loop and W1"
+    },
+    {
+      "id": "M2",
+      "outcome": "Task branches stack on predecessor tips; helpers refuse main",
+      "unlocks": "conflict-free task PRs"
+    },
+    {
+      "id": "M3",
+      "outcome": "Runner execute loop reaches COMPLETED without a human pec CLI",
+      "unlocks": "closeout and e2e"
+    },
+    {
+      "id": "M4",
+      "outcome": "Host merge cannot fire before task work; emit commit is real",
+      "unlocks": "honest publish plane"
+    },
+    {
+      "id": "M5",
+      "outcome": "pec close plus host ledger plus COMPLETED move is one stage",
+      "unlocks": "operator-visible terminal state"
+    },
+    {
+      "id": "M6",
+      "outcome": "Unmocked two-task fixture plus make pr-check PASS",
+      "unlocks": "stack PR; autonomy 100"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C0",
+      "after": "M0",
+      "evidence_required": "git log shows audit on feat/pipeline-assembly-fill; yaml.safe_load 31 findings",
+      "no_go_action": "stop; do not mutate pec until the worklist is committed"
+    },
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "unittest: TASK-002 claim succeeds after TASK-001 COMPLETED and GATE-001 PASS; definition_status ready on later tasks",
+      "no_go_action": "do not start execute loop; W1 is still dead"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "TASK-002 prepare parent SHA equals TASK-001 HEAD; stack_pr.py base never prints main when STACK.json exists",
+      "no_go_action": "do not open task PRs; stacking is still fiction"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "until=execute fixture reaches PASSED_LOCAL then COMPLETED without human pec CLI; pec status current=TASK-001 after arm",
+      "no_go_action": "do not add closeout; execution still hangs"
+    },
+    {
+      "id": "C4",
+      "after": "M4",
+      "evidence_required": "until=merge before all tasks COMPLETED raises CampaignError; no host PR without a commit ahead of campaign/<id>",
+      "no_go_action": "do not call make pr"
+    },
+    {
+      "id": "C5",
+      "after": "M5",
+      "evidence_required": "close fixture: pec campaign-status closed, CAMPAIGN_STATUS lifecycle complete, campaigns/COMPLETED/<id>/ exists, live campaigns/<id>/ absent",
+      "no_go_action": "do not claim autonomy 100"
+    },
+    {
+      "id": "C6",
+      "after": "M6",
+      "evidence_required": "make pr-check PASS; audit overall_autonomy_percent 100; all GAP ids Resolved",
+      "no_go_action": "remediate; do not merge red"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "skills/l9-pe-campaign-activate/SKILL.md",
+      "action": "update",
+      "todo_ids": ["T08", "T19", "T23"]
+    },
+    {
+      "surface": "skills/l9-pe-campaign-activate/references/pipeline.md",
+      "action": "update",
+      "todo_ids": ["T19", "T22", "T23"]
+    },
+    {
+      "surface": "skills/l9-pe-campaign-activate/references/merge-authority.md",
+      "action": "update",
+      "todo_ids": ["T08"]
+    },
+    {
+      "surface": "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+      "action": "update",
+      "todo_ids": ["T08", "T09"]
+    },
+    {
+      "surface": "environment/program-execution/audits/pipeline-assembly-audit.v1.yaml",
+      "action": "update",
+      "todo_ids": ["T00", "T23"]
+    },
+    {
+      "surface": "environment/program-execution/MANIFEST.json",
+      "action": "update",
+      "todo_ids": ["T00", "T23"]
+    },
+    {
+      "surface": "Makefile",
+      "action": "update",
+      "todo_ids": ["T04"],
+      "reason": "append-only helper target; do not rewrite existing campaign or PR_BASE lines"
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "Cursor-Governance PE host laws already name make campaign as the front door; no new eighth workflow"
+    },
+    {
+      "surface": "l9-ci-core AGENTS.md",
+      "action": "n_a",
+      "reason": "l9-ci-core is out of scope; Core is not the factory"
+    },
+    {
+      "surface": "docs/templates/",
+      "action": "n_a",
+      "reason": "consumer templates are not this assembly line"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If later tasks stay definition_status blocked, does the execute loop silently finish after TASK-001 and call that autonomy?",
+      "If STACK.json is written but pec prepare still uses reconcile HEAD, do task PRs still conflict on main after every merge?",
+      "If Makefile keeps --until merge, does changing only the Python default hide a fake host-only finish?",
+      "If pec next still returns ready=[] after claim, will a disobedient agent sit for hours even with an execute loop present?",
+      "If COMPLETED/ is created under $HOME/.l9 instead of campaigns/COMPLETED, will next_campaign keep selecting the same id?",
+      "If donor=write_root still clones Cursor-Governance for an l9-ci-core target, does stacking write the wrong repo?",
+      "If export-handoff marks pec completed without close_campaign.py, will agents skip the COMPLETED move?",
+      "If pec verify still requires a nonempty validation command list, does every compiled campaign task die at SUBMITTED?"
+    ],
+    "assumed_false_ifs": [
+      "feat/campaign-tunnel factory commits 1e1e24e through 8c2932d remain the parent of the fill branch",
+      "origin/main stays the host-activate stub until 189 merges; fill PRs never use PR_BASE=main",
+      "PHASE0 operator_ack.acknowledged_at stays null; program_deploying stays false",
+      "Makefile existing lines stay append-only; Python refuses host-only merge even when until=merge is passed",
+      "No live campaign is resumed; PE- Memory.md is never INTENT",
+      "Dirty ~/.cursor-governance is never the write root",
+      "l9-ci-core is never edited for this factory"
+    ],
+    "blast_radius": "This is the operator front door for every future campaign. A wrong unlock, stack base, or close path idles every campaign or force-conflicts every task PR. pec controller changes affect all instantiated workspaces. Policy merge-scope mistakes can authorize merging unrelated open PRs. COMPLETED move mistakes can hide or duplicate campaign source.",
+    "rollback": "Revert the feat/pipeline-assembly-fill commits (no force-push). Leave feat/campaign-tunnel and PR 189 untouched if the fill is stacked. Do not revert 8c2932d factory commits. Quarantine any $L9/programs/<fixture-id> created by tests. Restore campaigns/<id>/ from COMPLETED/<id>/ if a mover ran on a real campaign. pec controller rollback is git revert of those files plus regenerate manifests."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T01",
+      "T25",
+      "T03",
+      "T00",
+      "T02",
+      "T05",
+      "T04",
+      "T06",
+      "T07",
+      "T09",
+      "T23",
+      "T24",
+      "T12",
+      "T16",
+      "T08",
+      "T10",
+      "T11",
+      "T14",
+      "T13",
+      "T15",
+      "T17",
+      "T18",
+      "T19",
+      "T20",
+      "T21",
+      "T22"
+    ],
+    "shared_causes": [
+      "factory stops at LEASED and hopes an agent notices",
+      "definition_status blocked plus unevaluated wave exit gates make W1 unclaimable",
+      "STACK.json is documentation; git parent and make pr still use main or reconcile HEAD",
+      "three close commands and no COMPLETED folder",
+      "host PR merge is treated as campaign finish",
+      "status surfaces lie (operator_intake, ready=[], program_blockers, dirty primary ledger)"
+    ],
+    "deletions_or_consolidations": [
+      "Delete run_peer_task_pipeline as a live executor or fold abort-execution into pec; one execute path",
+      "Delete main fallback in stack_pr.py",
+      "Delete host-only merge as a success path",
+      "Do not add a second campaign id scheme or intent.v1 door",
+      "Do not add a parallel COMPLETED tree under $HOME/.l9"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Changing pec controller breaks existing instantiated programs that rely on blocked successors or reconcile-HEAD prepare",
+      "mitigation": "Keep wave and dependency blockers; only flip compile-time definition_status to ready. Add pec tests for both campaign-compiled and hand-authored blocked tasks. prepare uses STACK.json when present and reconcile HEAD only when no predecessor exists."
+    },
+    {
+      "risk": "Makefile still passes --until merge and reopens the fake finish",
+      "mitigation": "Python refuses host merge until all required tasks COMPLETED. Append-only Makefile. Test the Makefile-passed until=merge string."
+    },
+    {
+      "risk": "Execute loop tries to implement task bodies inside run_campaign and becomes an analysis engine",
+      "mitigation": "Loop only pec state transitions and bounded git/gh. Task body remains the 15-minute card plus existing worker/adapter. No SDK analysis in Core or in the runner."
+    },
+    {
+      "risk": "COMPLETED move loses CAMPAIGN_SOURCE.yaml or breaks allowlists",
+      "mitigation": "Move after both pec close and close_campaign.py; keep ledger pointer; update next_campaign to skip COMPLETED; add allowlist path tests."
+    },
+    {
+      "risk": "Fill lands on origin/main and drops the sealed runner",
+      "mitigation": "Branch from feat/campaign-tunnel at 8c2932d plus audit commit. Never from 93fbd924."
+    },
+    {
+      "risk": "Agent forges Phase 0 ack to unblock deploy-shaped gates",
+      "mitigation": "annotate_phase0_without_forging_ack stays. T19 sets operator_ack_required false for T0 only. Test refuses non-null acknowledged_at written by make campaign."
+    },
+    {
+      "risk": "Shallow clone plus stacking fails merge-base",
+      "mitigation": "T12 fetches predecessor branches and enough history before prepare."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "UNK-001",
+      "question": "Is make campaign itself Phase 0 admission (ack stays null) or is a human timestamp required before first local_write?",
+      "decision_effect": "LAUNCH.json operator_ack_required and whether pec start blocks T0 writes",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "UNK-002",
+      "question": "Is COMPLETED under environment/program-execution/campaigns/COMPLETED or $HOME/.l9/programs/completed?",
+      "decision_effect": "mover destination and next_campaign skip rule",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "UNK-003",
+      "question": "Does a host activation PR exist at all, or only target-repo stacked task PRs?",
+      "decision_effect": "whether emit is committed and when make pr runs",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 -m unittest environment.program-execution.scripts.tests.test_run_campaign environment.program-execution.scripts.tests.test_compile_campaign_source skills.l9-pe-campaign-activate.scripts.test_compile_activation_files skills.l9-pe-campaign-activate.scripts.test_compile_brief",
+      "pass_criteria": "all PASS including unmocked two-task brief-to-COMPLETED",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 -m unittest discover environment/program-execution/core/program-execution-controller-template/scripts/tests",
+      "pass_criteria": "all PASS; TASK-002 claim after complete; prepare parent is predecessor tip; abort-execution listed or unused",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "python3 environment/program-execution/scripts/validate_manifest.py && python3 ops/scripts/sync_generated_artifacts.py --force --check",
+      "pass_criteria": "PE MANIFEST honest; generated artifacts in sync",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "python3 -c audit GAP ids all Resolved and overall_autonomy_percent==100",
+      "pass_criteria": "31 Resolved; no open critical or high",
+      "status": "pending"
+    },
+    {
+      "id": "V5",
+      "command": "make pr-check",
+      "pass_criteria": "PASS; no scanner weakening",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["UNK-001", "UNK-002", "UNK-003"],
+    "next_skill": "l9-ynp",
+    "stop_reason": "PLAN_DOCUMENT and PE+autonomy projection are the planning deliverable. Implementation is not run in plan mode. UNK-001/002/003 are locked to audit defaults (accept_bounded). Execute via @environment/program-execution then subordinate @autonomy under a Program lease on feat/pipeline-assembly-fill."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "environment/program-execution/scripts/",
+      "environment/program-execution/scripts/tests/",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/",
+      "environment/program-execution/core/program-execution-controller-template/scripts/tests/",
+      "environment/program-execution/campaigns/scripts/",
+      "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+      "environment/program-execution/campaigns/COMPLETED/",
+      "environment/program-execution/audits/",
+      "environment/program-execution/MANIFEST.json",
+      "environment/program-execution/compiler/cli.py",
+      "environment/program-execution/compiler/tests/",
+      "skills/l9-pe-campaign-activate/",
+      "ops/scripts/stack_pr.py",
+      "Makefile"
+    ],
+    "must_not_modify": [
+      "/Users/macm2/l9-ci-core/",
+      "/Users/macm2/.cursor-governance/",
+      "environment/program-execution/core/program-execution-blueprint-template/",
+      "PHASE0_USER_CONFIG.yaml operator_ack.acknowledged_at",
+      "CAMPAIGN_SOURCE.yaml after receipt bind",
+      "docs/templates/",
+      ".cursor/plans/campaign_brief_ir_ebea99a7.plan.md",
+      "live pec workspaces l9-ci-core-org-runtime-v1 and pe-8c9f6de43b25"
+    ],
+    "preserved_contracts": [
+      "one operator front door: make campaign INTENT=",
+      "no program-execution.intent.v1 live path",
+      "no pec --admission-draft live path",
+      "no pe-hash campaign ids",
+      "never forge Phase 0 ack",
+      "never PR_BASE=main",
+      "never force-push",
+      "Makefile existing lines append-only",
+      "Core does not own analysis semantics",
+      "host-only merge is not campaign close"
+    ],
+    "validation_commands": [
+      "python3 -m unittest environment.program-execution.scripts.tests.test_run_campaign",
+      "python3 -m unittest discover environment/program-execution/core/program-execution-controller-template/scripts/tests",
+      "python3 environment/program-execution/scripts/validate_manifest.py",
+      "make pr-check"
+    ]
+  },
+  "checklist": [
+    "GAP-001 execute loop",
+    "GAP-002 definition_status ready",
+    "GAP-003 prepare from predecessor tip",
+    "GAP-004 STACK.json enforced",
+    "GAP-005 COMPLETED move",
+    "GAP-006 pec plus host close",
+    "GAP-007 no host merge before tasks",
+    "GAP-008 one executor",
+    "GAP-009 evaluate-gate",
+    "GAP-010 same-id relaunch",
+    "GAP-011 clean isolate reuse",
+    "GAP-012 donor matches target",
+    "GAP-013 EVID-001 SHA",
+    "GAP-014 blockers after arm",
+    "GAP-015 lease TTL",
+    "GAP-016 one merge law",
+    "GAP-017 push campaign branch",
+    "GAP-018 bootstrap includes arm",
+    "GAP-019 Phase 0 law documented",
+    "GAP-020 refuse pe-hash bootstrap",
+    "GAP-021 refuse operator memo at start",
+    "GAP-022 quarantine blueprint",
+    "GAP-023 one tree diagram",
+    "GAP-024 export-handoff evidence only",
+    "GAP-025 pec next current",
+    "GAP-026 commit emit files",
+    "GAP-027 fetch stack history",
+    "GAP-028 no idle after arm",
+    "GAP-029 W1 exit gate PASS",
+    "GAP-030 LAUNCH.json live SSOT",
+    "GAP-031 operator_ack_required false for T0",
+    "GAP-032 inspection-only verify PASS"
+  ],
+  "estimate": "one stacked factory PR on feat/pipeline-assembly-fill; seven checkpoints; do not split GAP-001 through GAP-009 across uncoordinated agents"
+}

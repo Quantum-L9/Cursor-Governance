@@ -1,0 +1,376 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Contract v3.1 \u2014 land the two unadopted review fixes and the three v3 regressions",
+  "objective": "Amend the claude_code_mobile_bootstrap_remediation contract from v3.0.0 to v3.1.0 so that it (a) restores and asserts partial-installer-run safety, (b) makes the SessionStart self-heal time budget a measured preflight obligation rather than an assumption, (c) replaces a C11B assertion that is guaranteed to fail once the remediation merges, (d) actually verifies Context7 reachability and defines rebuild_observed as a measurable, and (e) records the brokered-path evidence behind the operator decision to retain the cloud_activation lane. This plan edits the contract document only; it does not modify install.sh, the SessionStart hook, or any adapter code.",
+  "success_criteria": [
+    "C1_SESSIONSTART_SELF_HEAL carries a failures block again, satisfying governance.require and repairing the false internal_consistency: PASS claim in v3.0.0",
+    "C1 declares partial_installer_run_is_safe_to_rerun as an invariant and installer_steps_verified_idempotent as a precondition",
+    "P1_REPOSITORY_PREFLIGHT emits installer_steps_verified_idempotent and BLOCKs on a non-idempotent install.sh step",
+    "P1 emits warm_install_seconds, sessionstart_prefix_seconds and available_self_heal_budget_seconds",
+    "P1 BLOCKs when available_self_heal_budget_seconds is below warm_install_seconds, halting C1 with a required-timeout-increase report",
+    "C12_CORE_REGRESSION_SUITE requires a self_heal_partial_run_is_safe_to_rerun test",
+    "C11B no longer compares observed_governance_revision against the frozen INPUT_EXECUTION_SHA",
+    "C11B validates egress to api.context7.io with an exact machine-checkable expectation",
+    "C11B defines rebuild_observed with a stated measurement method rather than an undefined boolean",
+    "C11A records the brokered-path evidence and C11B records that PENDING_NEXT_SESSION is the expected resting state until broker deployment",
+    "The v3.1 contract parses as YAML and passes the five-fix assertion script without manual inspection"
+  ],
+  "scope": {
+    "in": [
+      "WIP/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml",
+      "contract task C1_SESSIONSTART_SELF_HEAL (failures, preconditions, invariants)",
+      "contract task P1_REPOSITORY_PREFLIGHT (actions, outputs, failures)",
+      "contract task C11A_ALLOWLIST_DECLARATION (brokered_path_note)",
+      "contract task C11B_REBUILD_OBSERVATION (actions, outputs, validation, failure_behavior)",
+      "contract task C12_CORE_REGRESSION_SUITE (required_tests)"
+    ],
+    "out": [
+      "install.sh, session_start_claude_governance.sh, session_deps_cloud.sh and every other adapter file \u2014 this plan edits the contract, not the code it governs",
+      "Deleting or retargeting the cloud_activation lane \u2014 operator decided on 2026-08-20 to retain it as-is",
+      "Building completion-marker or rollback machinery for the self-heal \u2014 operator selected verify-and-assert",
+      "Restoring failures on the seven other tasks that lack it (C2, C3, C4, C8, C10A, C11A, C12_CORE, V1) \u2014 pre-existing in v2, follow-on",
+      "Restoring TODO to forbidden_markers \u2014 follow-on",
+      "Naming the V3 assertion source \u2014 separate residual item",
+      "git push, pull request creation, merge"
+    ]
+  },
+  "code_in_scope": false,
+  "pre_validation": [
+    {
+      "id": "P1",
+      "command_or_action": "read install.sh mutation ordering and guards",
+      "pass_criteria": "settings/skills/rules reconcilers at :145/:164/:183, .mcp.json existence guard at :210, exclude guarded by grep -qxF at :235, receipt written last at :253 \u2014 partial-run safety holds by construction",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "confirm a HOME-isolated timing run cannot clobber the live receipt",
+      "pass_criteria": "install.sh:253 derives RECEIPT from $HOME and :46 GOV_DIR is overridden by --governance, so HOME=<tmp> plus explicit --governance isolates it",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "measure install.sh --check and read the SessionStart hook timeout",
+      "pass_criteria": "--check is 3s exit 0 with receipt mtime unchanged (so it is not a proxy for a real run); hook timeout is 30s shared with the governance fetch, session_deps, both profile loaders and the autonomy bootstrap",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "probe api.context7.io and grep the repo for session-side Context7 consumers",
+      "pass_criteria": "host returns 000; repo-wide it appears only at ops/secrets/capabilities.yaml:229 as the brokered context7.mcp upstream and in a secret-name map; skills/l9-context7-docs references it zero times",
+      "status": "passed"
+    },
+    {
+      "id": "P5",
+      "command_or_action": "confirm INPUT_EXECUTION_SHA cannot equal a later session's governance revision",
+      "pass_criteria": "bound at P0 to b406fee; merging the remediation advances main; later sessions refresh to the newer HEAD, so the equality assertion routes to next_session_wrong_revision FAIL",
+      "status": "passed"
+    },
+    {
+      "id": "P6",
+      "command_or_action": "confirm WIP/claude-code-mobile-environment is this workstream's established artifact home",
+      "pass_criteria": "directory already holds the tracked claude-code-mobile-environment.plan.json and .plan.md",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "A1",
+      "task": "Create the v3.1 contract from v3.0.0 and land partial-run safety: restore C1.failures (write_lock_unavailable, installer_timeout, receipt_still_mismatched), add the partial_installer_run_is_safe_to_rerun invariant and installer_steps_verified_idempotent precondition, add the P1 zero-diff verification action plus output and BLOCKED failure, and add the regression test",
+      "files": [
+        "WIP/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "tasks C1_SESSIONSTART_SELF_HEAL, P1_REPOSITORY_PREFLIGHT, C12_CORE_REGRESSION_SUITE",
+      "leverage_rank": 1,
+      "shared_root_cause": "v3.0.0 dropped content and assumed properties it never verified"
+    },
+    {
+      "id": "A2",
+      "task": "Make the self-heal time budget a measured preflight obligation: add P1 actions measuring warm install.sh wall time under an isolated HOME and disposable workspace clone plus the SessionStart prefix, emit warm_install_seconds / sessionstart_prefix_seconds / available_self_heal_budget_seconds, BLOCK when the budget is below the measured install time, and gate C1 on it",
+      "files": [
+        "WIP/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "A1"
+      ],
+      "operation": "Insert",
+      "anchor": "P1_REPOSITORY_PREFLIGHT actions/outputs/failures and C1_SESSIONSTART_SELF_HEAL preconditions",
+      "leverage_rank": 2,
+      "shared_root_cause": "v3.0.0 dropped content and assumed properties it never verified"
+    },
+    {
+      "id": "A3",
+      "task": "Replace the C11B assertion observed_governance_revision == INPUT_EXECUTION_SHA with a staleness check against live origin/main at observation time, so the lane does not self-destruct the moment the remediation merges",
+      "files": [
+        "WIP/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "A1"
+      ],
+      "operation": "Replace",
+      "anchor": "C11B_REBUILD_OBSERVATION.validation.pass_when",
+      "leverage_rank": 3,
+      "shared_root_cause": "C11B validates proxies for its objective rather than the objective"
+    },
+    {
+      "id": "A4",
+      "task": "Give C11B something that actually proves its objective: add an api.context7.io egress probe with an exact expectation, and replace the undefined rebuild_observed boolean with a stated measurement (observing session's receipt written after the C11A application time)",
+      "files": [
+        "WIP/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "A3"
+      ],
+      "operation": "Insert",
+      "anchor": "C11B_REBUILD_OBSERVATION actions, outputs and validation.pass_when",
+      "leverage_rank": 4,
+      "shared_root_cause": "C11B validates proxies for its objective rather than the objective"
+    },
+    {
+      "id": "A5",
+      "task": "Record the brokered-path evidence on C11A and mark PENDING_NEXT_SESSION as the expected resting state on C11B until broker deployment, so the retained lane is honest about what it can and cannot achieve",
+      "files": [
+        "WIP/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "A4"
+      ],
+      "operation": "Insert",
+      "anchor": "C11A_ALLOWLIST_DECLARATION brokered_path_note and C11B failure_behavior.no_next_session_yet",
+      "leverage_rank": 5,
+      "shared_root_cause": "C11B validates proxies for its objective rather than the objective"
+    }
+  ],
+  "critical_path": [
+    "A1",
+    "A2",
+    "A3",
+    "A4",
+    "A5"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "The self-heal is honest about what it assumes and bounded by what was measured",
+      "unlocks": "a C1 that either provably fits the hook budget or BLOCKs in preflight instead of failing at runtime"
+    },
+    {
+      "id": "M2",
+      "outcome": "The cloud_activation lane validates its own objective and cannot pass on proxies",
+      "unlocks": "a C11B whose PASS means the allowlist worked, and whose PENDING is a documented resting state"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "the five-fix assertion script reports C1.failures present, both C1 preconditions present, and both P1 output groups present",
+      "no_go_action": "stop; a contract that claims internal_consistency PASS while violating governance.require is not shippable"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "C11B pass_when contains no INPUT_EXECUTION_SHA reference and does contain the context7 probe; rebuild_observed carries a method",
+      "no_go_action": "stop; do not ship a lane that can report success while its objective went unmet"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "WIP/claude-code-mobile-environment/",
+      "action": "update",
+      "todo_ids": [
+        "A1"
+      ],
+      "reason": "the v3.1 contract lands beside the existing tracked workstream plan artifacts"
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "todo_ids": [],
+      "reason": "no authority-order or governance-surface change"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "todo_ids": [],
+      "reason": "the contract sits below canonical law and changes none of it"
+    },
+    {
+      "surface": "README.md",
+      "action": "n_a",
+      "todo_ids": [],
+      "reason": "internal execution contract, not a user-facing surface"
+    },
+    {
+      "surface": "rules/",
+      "action": "n_a",
+      "todo_ids": [],
+      "reason": "no rule text changes"
+    },
+    {
+      "surface": "reports/",
+      "action": "n_a",
+      "todo_ids": [],
+      "reason": "a planning artifact produces no GMP report"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If install.sh steps are already idempotent, does A1 add anything beyond documentation? Yes \u2014 an unasserted property silently regresses the first time someone adds a non-guarded step, and C12 has no test for it today.",
+      "Could the A2 measurement itself mutate the live environment? Only if HOME isolation fails; P2 verified RECEIPT derives from $HOME and --governance overrides GOV_DIR, and the plan requires a disposable workspace clone.",
+      "Is warm-run timing stable enough to gate C1 on? It is not, on a cold cache \u2014 which is why the failure is BLOCKED with a report rather than an automatic timeout bump.",
+      "Does A3 simply move the goalposts so C11B always passes? No \u2014 the staleness check still fails when a session runs a receipt older than live main, which is the real defect it was meant to catch.",
+      "Will the A4 probe ever pass? Not until the broker is deployed. A5 records exactly that, and PENDING_NEXT_SESSION is already non-blocking for V1 and I1.",
+      "Does retaining the lane contradict the evidence in P4? It is an operator decision taken with that evidence in hand; A5 preserves the evidence so it is not silently re-litigated.",
+      "Does editing the contract without touching code leave the fixes unproven? Yes, partially \u2014 A1 and A2 are only fully discharged when P1 runs against the real adapter, which the verification section states explicitly."
+    ],
+    "assumed_false_ifs": [
+      "Anthropic changes SessionStart hook timeout semantics, which would invalidate the A2 budget arithmetic",
+      "A future install.sh step is added without a guard, which would falsify the A1 invariant and should then fail the new regression test",
+      "A session-side direct consumer of api.context7.io is introduced, which would make the A5 brokered-path note stale"
+    ],
+    "blast_radius": "One new YAML file under WIP/. No executable path changes, no adapter code, no runtime behaviour until the contract is executed.",
+    "rollback": "Delete the v3.1 file; v3.0.0 semantics are unchanged because v3.0.0 is not itself committed and nothing imports the new file."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "A1",
+      "A2",
+      "A3",
+      "A4",
+      "A5"
+    ],
+    "shared_causes": [
+      "v3.0.0 dropped content and assumed properties it never verified",
+      "C11B validates proxies for its objective rather than the objective"
+    ],
+    "deletions_or_consolidations": [
+      "restore C1.failures rather than inventing a new failure taxonomy \u2014 the v2 block was correct",
+      "assert existing idempotence rather than building rollback machinery the guards already make unnecessary",
+      "delete the frozen-SHA comparison rather than adding an exception list around it",
+      "A3 and A4 edit one block, so they land as a single C11B rewrite rather than two passes"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "A2's warm-run measurement is taken on a warm cache and under-estimates a cold-start session, letting C1 through a budget it will miss in practice",
+      "mitigation": "record the cache state alongside the measurement and treat the warm number as a lower bound; the BLOCKED failure names a required timeout increase rather than silently accepting the margin"
+    },
+    {
+      "risk": "Restoring C1.failures exposes that seven other tasks still lack the block, inviting scope creep",
+      "mitigation": "explicitly out of scope and listed as follow-on; the five items stay the deliverable"
+    },
+    {
+      "risk": "The retained cloud_activation lane parks at PENDING indefinitely and is later mistaken for an unfinished obligation",
+      "mitigation": "A5 records expected_until: broker_deployment_completes so the resting state is self-documenting"
+    },
+    {
+      "risk": "The contract is authored as YAML with no schema, so structural errors surface only at execution",
+      "mitigation": "the verification section runs a parse plus an explicit five-fix assertion script, which is the closest available equivalent to a schema check"
+    },
+    {
+      "risk": "v3.0.0 exists only in conversation, so v3.1 could silently diverge from what was reviewed",
+      "mitigation": "A1 creates v3.1 as a full document rather than a patch, so the committed file is the single readable source"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "What is the actual warm install.sh full-run wall time on this surface, and does it fit the residual SessionStart budget?",
+      "decision_effect": "Determines whether C1 is implementable as specified or whether the hook timeout must be raised first. Discharged by A2's own P1 obligation at execution time.",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "Does every install.sh mutation step re-run to zero diff in practice, not just by inspection?",
+      "decision_effect": "Confirms or falsifies the A1 invariant. A falsification names the offending step and BLOCKs C1 rather than silently weakening the invariant.",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 -c \"import yaml; yaml.safe_load(open('WIP/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml'))\"",
+      "pass_criteria": "exits 0 \u2014 the v3.1 contract is well-formed YAML",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "python3 ops/scripts/../../scripts/assert_contract_v31_fixes.py  # inline heredoc in the plan file",
+      "pass_criteria": "all five fixes assert present: C1.failures, C1 invariant + precondition, P1 idempotence and budget outputs, C11B without INPUT_EXECUTION_SHA and with the context7 probe",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "git status --porcelain",
+      "pass_criteria": "exactly one added path under WIP/claude-code-mobile-environment/ and nothing else",
+      "status": "pending"
+    },
+    {
+      "id": "V4",
+      "command": "make pr-check",
+      "pass_criteria": "exit 0 \u2014 public quality gate passes on the added file",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "Both operator decisions are taken and recorded: the cloud_activation lane is retained with A3 and A4 applied, and the self-heal fix is verify-and-assert rather than new machinery. U1 and U2 are execution-time probes that A2 and A1 themselves install as P1 obligations, so they are discharged by running the plan rather than blocking it. All five todos are grounded in files and line anchors verified this session at b406fee."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "WIP/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml"
+    ],
+    "must_not_modify": [
+      "environment/agents/adapters/claude-code/install.sh",
+      "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+      "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+      "environment/agents/adapters/claude-code/mcp.template.json",
+      "ops/secrets/capabilities.yaml",
+      "ops/secrets/broker_identity.py",
+      "ops/secrets/capability_broker.py",
+      "WIP/claude-code-mobile-environment/claude-code-mobile-environment.plan.json",
+      "WIP/claude-code-mobile-environment/claude-code-mobile-environment.plan.md"
+    ],
+    "preserved_contracts": [
+      "SessionStart hooks remain fail-open and always exit 0",
+      "No raw secret is ever hydrated onto a model-controlled surface",
+      "The broker identity model is unchanged and no second authentication path is introduced",
+      "mcp.template.json remains read-only",
+      "Memory runtime readiness stays out of scope",
+      "make pr is the only route to GitHub"
+    ],
+    "validation_commands": [
+      "python3 -c \"import yaml; yaml.safe_load(open('WIP/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml'))\"",
+      "git status --porcelain",
+      "make pr-check"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "partial-run safety",
+    "measured budget",
+    "assertion truthfulness",
+    "objective verification",
+    "decision provenance"
+  ],
+  "estimate": "1 GMP run: A1 creates the v3.1 document with its edits; A2-A5 land as three further blocks in the same file"
+}
