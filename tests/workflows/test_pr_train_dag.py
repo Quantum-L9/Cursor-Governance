@@ -600,6 +600,25 @@ def test_tip_preflight_keeps_child_when_parent_stays(tmp_path):
     assert [item["sha"] for item in kept[0]] == [parent, child]
 
 
+def test_tip_preflight_still_probes_child_on_new_paths(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    parent = _commit_file(repo, "ops/unique.py", "x\n", "parent unique")
+    child = _commit_file(repo, "keep.txt", "feature\n", "child clashes tip")
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "keep.txt", "squash\n", "tip squash")
+    kept, skipped = filter_slices_against_tip(
+        repo,
+        [[{"sha": parent, "paths": ["ops/unique.py"]}, {"sha": child, "paths": ["keep.txt"]}]],
+        tip,
+    )
+    assert skipped == [child]
+    assert [item["sha"] for item in kept[0]] == [parent]
+
+
 def test_tip_conflict_commit_dropped_clean_stays(tmp_path):
     repo = tmp_path / "git"
     repo.mkdir()

@@ -194,9 +194,11 @@ def filter_slices_against_tip(
         ordered = order_slice(repo, novels) if novels else []
         keep: list[dict[str, Any]] = []
         kept_shas: set[str] = set()
+        kept_paths: dict[str, set[str]] = {}
         for novel in ordered:
             item = by_sha[novel.sha]
             sha = novel.sha
+            child_paths = set(novel.paths)
             if (
                 not sha
                 or not is_git_repo(repo)
@@ -205,12 +207,15 @@ def filter_slices_against_tip(
             ):
                 keep.append(item)
                 kept_shas.add(sha)
+                kept_paths[sha] = child_paths
                 continue
             parent = _git(repo, "rev-parse", f"{sha}^")
             parent_sha = parent.stdout.strip() if parent.returncode == 0 else ""
-            if parent_sha and parent_sha in kept_shas:
+            inherited = kept_paths.get(parent_sha, set()) if parent_sha else set()
+            if parent_sha in kept_shas and child_paths and child_paths <= inherited:
                 keep.append(item)
                 kept_shas.add(sha)
+                kept_paths[sha] = inherited | child_paths
                 continue
             conflicts = probe_cherry_conflicts(repo, tip, sha)
             if conflicts is None or conflicts:
@@ -218,6 +223,7 @@ def filter_slices_against_tip(
                 continue
             keep.append(item)
             kept_shas.add(sha)
+            kept_paths[sha] = inherited | child_paths
         if keep:
             kept.append(keep)
     return kept, skipped
@@ -608,6 +614,7 @@ def default_extract(
             capture_output=True,
             check=False,
         )
+        _git(repo, "branch", "-D", branch)
         rebind_merge_driver(repo)
         raise
     rebind_merge_driver(repo)
