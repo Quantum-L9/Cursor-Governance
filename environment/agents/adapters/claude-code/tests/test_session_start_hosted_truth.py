@@ -5,9 +5,7 @@ from __future__ import annotations
 import unittest
 from pathlib import Path
 
-HOOK = (
-    Path(__file__).resolve().parents[1] / "hooks" / "session_start_claude_governance.sh"
-)
+HOOK = Path(__file__).resolve().parents[1] / "hooks" / "session_start_claude_governance.sh"
 INSTALL = Path(__file__).resolve().parents[1] / "install.sh"
 RULE = Path(__file__).resolve().parents[5] / "rules" / "22-context7-auto-invoke.mdc"
 
