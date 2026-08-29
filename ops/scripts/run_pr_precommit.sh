@@ -107,7 +107,7 @@ cd "$WS"
 
 # Corpus + generated heal + desktop wiring (gate owns check_governance_wiring.sh).
 # Pre-commit ruff/ruff-format are skipped: locked-venv ruff is the one writer.
-_CORPUS_SKIP="sync-generated-artifacts,repo-hygiene,legacy-doctrine-residue,rules-check,skills-check,symlinks-check,ruff,ruff-format"
+_CORPUS_SKIP="sync-generated-artifacts,repo-hygiene,legacy-doctrine-residue,rules-check,skills-check,symlinks-check,ruff,ruff-format,commit-verification-contract"
 _READER_HOOKS="check-merge-conflict,check-added-large-files,check-yaml,no-hardcoded-paths,gh-package-deps-preflight"
 _WRITER_HOOKS="end-of-file-fixer,trailing-whitespace"
 # Writer pass skips every reader. Reader pass skips every writer. Disjoint.
@@ -117,13 +117,10 @@ _READER_SKIP="${_CORPUS_SKIP},${_WRITER_HOOKS}"
 # Governance-local hooks with no `files:` guard. Their entry scripts live in the
 # governance tree, so in a consumer workspace they resolve to a path that does
 # not exist and the hook dies on a missing file rather than on anything it
-# checked. `symlinks-check` and `legacy-doctrine-residue` are already in
-# _CORPUS_SKIP; `commit-verification-contract` was not, and is the one that
-# actually failed. Skipped ONLY for a consumer workspace — the governance repo
-# guards its own commit-verification contract exactly as before, which is the
-# whole point of that hook.
-_GOV_ONLY_SKIP="commit-verification-contract"
-if [[ "$WS" != "$GOV_ROOT" ]]; then
+# checked. `commit-verification-contract` is now in `_CORPUS_SKIP` (velocity
+# path); `make precommit` / `make pr-full` still run it `--all-files`.
+_GOV_ONLY_SKIP=""
+if [[ -n "$_GOV_ONLY_SKIP" && "$WS" != "$GOV_ROOT" ]]; then
   _WRITER_SKIP="${_WRITER_SKIP},${_GOV_ONLY_SKIP}"
   _READER_SKIP="${_READER_SKIP},${_GOV_ONLY_SKIP}"
 fi
@@ -164,7 +161,10 @@ _run_locked_ruff_writer() {
     return 0
   fi
   echo "ruff (changed): $(grep -c . "$py_list") file(s)"
-  local _ruff="$GOV_ROOT/.venv/bin/ruff"
+  local _ruff="$WS/.venv/bin/ruff"
+  if [[ ! -x "$_ruff" ]]; then
+    _ruff="$GOV_ROOT/.venv/bin/ruff"
+  fi
   if [[ ! -x "$_ruff" && -n "${GOV_TOOLCHAIN_ROOT:-}" && -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff" ]]; then
     _ruff="$GOV_TOOLCHAIN_ROOT/.venv/bin/ruff"
   fi
@@ -212,7 +212,11 @@ echo "--- pre-commit writers (once) ---"
 _run_hooks "$_WRITER_SKIP" && pc_rc=0 || pc_rc=$?
 
 _run_locked_ruff_writer || exit $?
-_hard_stop_tracked_dirt || exit $?
+if [[ "${PR_PRECOMMIT_DEFER_DIRTY_STOP:-0}" == "1" && "$STAGE" == "writers" ]]; then
+  echo "OK: defer dirty-stop to generated heal (gate writers)"
+else
+  _hard_stop_tracked_dirt || exit $?
+fi
 
 if [[ "$pc_rc" -ne 0 ]]; then
   echo "FAIL: pre-commit writers exited ${pc_rc}" >&2
@@ -220,7 +224,11 @@ if [[ "$pc_rc" -ne 0 ]]; then
 fi
 
 if [[ "$STAGE" == "writers" ]]; then
-  echo "OK: precommit writers clean (kernel + writers + locked ruff, no tracked dirt)"
+  if [[ "${PR_PRECOMMIT_DEFER_DIRTY_STOP:-0}" == "1" ]]; then
+    echo "OK: precommit writers clean (kernel + writers + locked ruff; dirty-stop deferred)"
+  else
+    echo "OK: precommit writers clean (kernel + writers + locked ruff, no tracked dirt)"
+  fi
   exit 0
 fi
 

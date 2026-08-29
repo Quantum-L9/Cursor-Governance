@@ -291,6 +291,8 @@ install_session_end_governance_hook() {
     "lifecycle-subagent-start.sh:lifecycle-subagent-start.sh" \
     "lifecycle-subagent-stop.sh:lifecycle-subagent-stop.sh" \
     "l4-local-execution-gate-shell.sh:l4-local-execution-gate-shell.sh" \
+    "before-shell-execution-gate.sh:before-shell-execution-gate.sh" \
+    "before_shell_execution_gate.py:before_shell_execution_gate.py" \
     "pr_gate_failure_shell.sh:pr-gate-failure-shell.sh" \
     "session_end_repo_hygiene.sh:session-end-repo-hygiene.sh" \
     "before_submit_skill_router.py:before-submit-skill-router.py" \
@@ -389,6 +391,26 @@ ss = [bootstrap_entry] + [
     e for e in ss if "session-start-bootstrap.sh" not in (e.get("command") or "")
 ]
 hooks["sessionStart"] = ss
+
+# beforeShellExecution: one combined gate. Drop the three predecessors so
+# a merge that only appended would otherwise run four processes.
+retired_bse = {
+    "./hooks/graphiti-gate-shell.sh",
+    "./hooks/l4-local-execution-gate-shell.sh",
+    "./hooks/plan-kernel-execute-gate.sh",
+}
+combined_bse = "./hooks/before-shell-execution-gate.sh"
+bse = hooks.setdefault("beforeShellExecution", [])
+bse = [
+    e
+    for e in bse
+    if isinstance(e, dict) and (e.get("command") or "") not in retired_bse
+]
+combined_entry = {"command": combined_bse, "timeout": 10}
+bse = [combined_entry] + [
+    e for e in bse if combined_bse not in (e.get("command") or "")
+]
+hooks["beforeShellExecution"] = bse
 data = {"version": 1, "hooks": hooks}
 
 hooks_json.parent.mkdir(parents=True, exist_ok=True)

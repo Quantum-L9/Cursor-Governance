@@ -69,15 +69,7 @@
     ],
     "beforeShellExecution": [
       {
-        "command": "./hooks/graphiti-gate-shell.sh",
-        "timeout": 10
-      },
-      {
-        "command": "./hooks/l4-local-execution-gate-shell.sh",
-        "timeout": 10
-      },
-      {
-        "command": "./hooks/plan-kernel-execute-gate.sh",
+        "command": "./hooks/before-shell-execution-gate.sh",
         "timeout": 10
       }
     ],

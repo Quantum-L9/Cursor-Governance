@@ -1005,3 +1005,13 @@ secrets to “fix” a retired plane. See `ops/secrets/RETIRED.md`.
 ## `make precommit-repo` on Apple GNU Make 3.81 (2026-08-29)
 
 macOS `/usr/bin/make` is GNU Make 3.81. `precommit-repo: export PR_STACK = $(PR_STACK)` is a recursive self-definition on 3.81 (Make 4.x snapshots that form). The live line is `export PR_STACK := $(PR_STACK)` so default `auto` and `PR_STACK=` opt-out reach `run_pr_precommit.sh`. Do not restore the `=` flavor. Homebrew `gmake` is not required.
+
+<!-- TESTS_ONCE_MAKE_PR_V1 -->
+## Finished work → scoped commit → `make pr` (2026-08-29)
+
+This fragment supersedes the “after every local commit, run `make precommit-repo` then `make pr`” sentence in `PRECOMMIT_REPO_OWNS_RUFF_V1`. That paragraph stays on disk (additive_only). Do not fold it.
+
+- After finished work: scoped-commit (pathspecs; rule 49), then **`make pr`**. The gate already runs writers (kernel + eof/whitespace + locked ruff) once.
+- `make precommit-repo` is **optional local autofix** when you want the rewrite before publish. It is **not** a prerequisite of `make pr`. Do not add it as a Make prereq of `pr-check` / `pr`.
+- Receipt skip already prevents a second pytest on an unchanged tree. Do not run a second full gate on an unchanged tree.
+- Do not flip `PR_REMEDIATE`. Campaign and L4 authorize-release publish stay `PR_REMEDIATE=0 make pr`.
