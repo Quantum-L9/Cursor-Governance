@@ -24,9 +24,7 @@ RESOLVER = REPO_ROOT / "ops" / "scripts" / "resolve_changed_files.sh"
 
 
 def git(*args: str, cwd: Path, check: bool = True) -> subprocess.CompletedProcess:
-    return subprocess.run(
-        ["git", *args], cwd=cwd, capture_output=True, text=True, check=check
-    )
+    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=check)
 
 
 def run_resolver(cwd: Path, base: str = "origin/main") -> subprocess.CompletedProcess:
