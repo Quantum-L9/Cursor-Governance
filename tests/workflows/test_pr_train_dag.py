@@ -29,6 +29,7 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     is_heal_path,
     parse_merge_tree_name_only,
     publish_failure_reason,
+    publish_makefile,
     resolve_ff_clone,
     run_pr_train,
     shares_generated_clobber,
@@ -549,6 +550,16 @@ def test_campaign_halt_skips_remediator_and_ff(monkeypatch, tmp_path):
     assert "campaign" in state.halt_reason
     assert state.skill_dispatch == ""
     assert state.ff_ran is False
+
+
+def test_publish_makefile_prefers_extract_when_common_dir_matches(tmp_path, monkeypatch):
+    from workflows.dags import pr_train_dag as mod
+
+    extract = tmp_path / "extract"
+    extract.mkdir()
+    (extract / "Makefile").write_text("all:\n", encoding="utf-8")
+    monkeypatch.setattr(mod, "_git_common_dir", lambda _p: "same")
+    assert publish_makefile(str(extract)) == extract
 
 
 def test_is_heal_path_skips_claude_settings():

@@ -658,14 +658,42 @@ def _l4_authorize_worktree(worktree: str) -> None:
             )
 
 
+def _git_common_dir(repo: Path) -> str:
+    proc = _git(repo, "rev-parse", "--git-common-dir")
+    if proc.returncode != 0:
+        return ""
+    raw = (proc.stdout or "").strip()
+    path = Path(raw)
+    if not path.is_absolute():
+        path = (repo / raw).resolve()
+    return str(path)
+
+
+def publish_makefile(worktree: str) -> Path:
+    """Gov extracts use their own Makefile so checkers match the published tree.
+
+    ``make -C ~/.cursor-governance`` against a diverged gov worktree projects
+    main's skills into the extract and runs main's pytest runner.
+    """
+    wt = Path(worktree)
+    gov = Path.home() / ".cursor-governance"
+    if (wt / "Makefile").is_file() and _git_common_dir(wt) == _git_common_dir(_REPO_ROOT):
+        return wt
+    if (gov / "Makefile").is_file():
+        return gov
+    return _REPO_ROOT
+
+
 def default_publish(worktree: str) -> dict[str, Any]:
     _l4_authorize_worktree(worktree)
-    gov = Path.home() / ".cursor-governance"
-    makefile = gov if (gov / "Makefile").is_file() else _REPO_ROOT
+    makefile = publish_makefile(worktree)
     env = os.environ.copy()
     env["PR_STACK"] = "auto"
     env["PR_REMEDIATE"] = "0"
     env["WS"] = worktree
+    extra = env.get("PYTEST_ADDOPTS", "")
+    if "--import-mode=importlib" not in extra:
+        env["PYTEST_ADDOPTS"] = (extra + " --import-mode=importlib").strip()
     proc = subprocess.run(
         ["make", "-C", str(makefile), "pr", f"WS={worktree}"],
         cwd=worktree,
