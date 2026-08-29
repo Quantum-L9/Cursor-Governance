@@ -189,9 +189,7 @@ class PlatformBlockTests(unittest.TestCase):
     """
 
     def test_session_start_does_not_invoke_probe_broker(self) -> None:
-        src = (ADAPTER / "hooks" / "session_start_claude_governance.sh").read_text(
-            encoding="utf-8"
-        )
+        src = (ADAPTER / "hooks" / "session_start_claude_governance.sh").read_text(encoding="utf-8")
         self.assertNotIn("probe_broker.py", src)
         self.assertIn("capability_broker=retired", src)
 
@@ -203,6 +201,7 @@ class PlatformBlockTests(unittest.TestCase):
     def test_bootstrap_does_not_export_or_probe_broker_url(self) -> None:
         src = (ADAPTER / "web" / "setup.bootstrap.sh").read_text(encoding="utf-8")
         self.assertNotIn("L9_CAPABILITY_BROKER_URL", src)
+
 
 class DegradedModeContractTests(unittest.TestCase):
     """T-38: the still-valid operation set is written down, not inferred."""
