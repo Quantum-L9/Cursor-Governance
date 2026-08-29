@@ -1,0 +1,147 @@
+schema: l9.audit-finding-readjudication.v1
+supersedes_baseline: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+readjudicated_against: d6b30cdc0dd87213e972d61dd383b91a1b63d180
+readjudicated_at: '2026-08-29'
+readjudicated_by: claude-code
+trigger: >-
+  RV-001 in validation-receipts/independent-revalidation.yaml. The pack's locked
+  baseline had drifted from main, so every finding and every contract scope path
+  had to be re-checked against current source before the chain could be run.
+method: >-
+  Each finding's claim was re-verified by reading current source at HEAD, not by
+  re-reading the prior ledger. Line references below are current-source
+  observations recorded at the time of re-adjudication; re-verify at execution
+  start, since main keeps moving.
+
+result: 7/7 STILL CONFIRMED
+findings:
+- id: PE-001
+  severity: P0
+  adjudication: CONFIRMED
+  observed:
+  - 'pec/cli.py: `fresh-workspace` is a real command (parser ~L82, dispatch ~L350)
+    but is absent from `_TUNNEL_COMMANDS` (~L272-302), so the tunnel guard at ~L315
+    never fires for it.'
+  - 'pec/workspace_reset.py: `_release_open_leases` (~L177-196) calls
+    `db.release_lease(...)` on open leases and then transitions the task
+    STALE -> ELIGIBLE (~L194-195), i.e. cleanup still changes task eligibility.'
+- id: PE-002
+  severity: P1
+  adjudication: CONFIRMED
+  observed:
+  - 'run_campaign.py ~L4486-4490: `should_run(until, "execute") and
+    resumable_workspace(pec_workspace) and not live_lock_missing_seed_paths(seed,
+    pec_workspace)` returns `resume_live_campaign(...)` directly, with no
+    current-source reconciliation on the path.'
+- id: PE-003
+  severity: P1
+  adjudication: CONFIRMED
+  observed:
+  - 'campaigns/scripts/close_campaign.py: the only evidence check is
+    `if not evidence: raise SystemExit(...)` (~L112-113) — any nonempty map passes.
+    It then writes `"lifecycle": "complete"` (~L119) and archives (~L142) without
+    consulting PEC terminal truth.'
+- id: PE-004
+  severity: P2
+  adjudication: CONFIRMED
+  observed:
+  - 'pec/cli.py ~L190-194: `evaluate-gate` takes `result` as a caller-supplied
+    positional choice plus `--method`.'
+  - 'pec/controller.py `evaluate_gate` (~L2025-2033) accepts `result` and `method`
+    as parameters, so gate truth is still whatever the caller asserts.'
+- id: PE-005
+  severity: P2
+  adjudication: CONFIRMED
+  observed:
+  - 'registry/EXECUTION_FAILOVER_POLICY.yaml L2 declares `maximum_automatic_retries: 2`.
+    A repo-wide search across .py/.json/.yaml under environment/program-execution
+    returns that declaration and nothing else — still zero runtime consumers.'
+- id: PE-006
+  severity: P2
+  adjudication: CONFIRMED
+  observed:
+  - environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py
+    is still absent at HEAD.
+- id: PE-007
+  severity: P3
+  adjudication: CONFIRMED
+  observed:
+  - 'scripts/run_peer_task_pipeline.py publicly refuses — `refuse_live_front_door`
+    raises `RuntimeError(LIVE_FRONT_DOOR)` (~L81) — while retaining
+    `_resolve_provider` (~L91), `_probe_provider` (~L109) and `_execute_provider`
+    (~L177).'
+  - 'run_campaign.py loads that module via `_load_script` (~L2530) and calls all
+    three helpers directly (~L2668, ~L2683, ~L2697), so the refusal facade is
+    still bypassed by the supported runner.'
+
+scope_path_drift:
+  measured_against: d6b30cdc0dd87213e972d61dd383b91a1b63d180
+  total_paths: 32
+  unchanged: 20
+  to_create: 5
+  deleted: 0
+  drifted: 7
+  drifted_paths:
+  - contract: PR-002
+    kind: in_scope
+    path: environment/program-execution/scripts/run_campaign.py
+  - contract: PR-002
+    kind: preserved_files
+    path: environment/program-execution/core/program-execution-controller-template/scripts/pec/blueprint.py
+  - contract: PR-004
+    kind: in_scope
+    path: environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+  - contract: PR-005
+    kind: in_scope
+    path: environment/program-execution/scripts/run_peer_task_pipeline.py
+  - contract: PR-005
+    kind: in_scope
+    path: environment/program-execution/scripts/run_campaign.py
+  - contract: PR-006
+    kind: in_scope
+    path: environment/program-execution/scripts/run_peer_task_pipeline.py
+  - contract: PR-006
+    kind: in_scope
+    path: environment/program-execution/scripts/run_campaign.py
+  note: >-
+    The drifted set is identical to the one measured at the previous baseline —
+    main moved but did not touch any further contract scope path. PR-002 still
+    guarantees behavior_unchanged on blueprint.py, and that guarantee is now
+    asserted against the current version rather than a stale one, because the
+    chain was recompiled against this baseline.
+
+recompilation:
+  compiler: skills/l9-claude-coding-contract-compiler v2.7.0
+  spec_change: >-
+    campaign.validation.cold_resume rebound from
+    `git merge-base --is-ancestor 5eff2cdb... HEAD` to
+    `git merge-base --is-ancestor d6b30cdc... HEAD`. That is the only
+    remediation-content change; no root cause, item, scope path, success property
+    or exclusion was altered.
+  emitted_diff: >-
+    All six contracts differ from the packaged versions by exactly the one
+    cold_resume line. Generated CLAUDE.md and preflight.sh additionally carry the
+    compiler's own provenance comment, which names the repo skill.
+  validation:
+    per_contract: 6/6 VALID
+    chain: PASS
+    chain_digest: sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3
+    chain_digest_note: >-
+      Unchanged, and expected to be — the digest is computed over the ordered
+      contract IDs, which the rebind does not touch.
+    target_regression: 11/11 PASS
+
+manifest_impact: >-
+  MANIFEST.yaml still describes the original packaging run and is deliberately
+  not rewritten — it is a record of that run, and this repository has no
+  generator for its canonical_self_zeroed scheme, so editing its hashes by hand
+  would fabricate provenance. The 19 files changed by this re-adjudication
+  (campaign-spec.yaml, 6 contracts, 6 CLAUDE.md, 6 preflight.sh) therefore no
+  longer match their MANIFEST entries. Verify those against this file and git
+  history instead.
+
+execution_readiness: >-
+  RV-001 is cleared. The chain is bound to current main, all seven findings are
+  re-confirmed against current source, and the recompiled contracts validate.
+  Contract 1 may start from a branch off d6b30cdc. Re-measure drift at execution
+  start regardless — todo-00-execution-preflight exists for exactly that.

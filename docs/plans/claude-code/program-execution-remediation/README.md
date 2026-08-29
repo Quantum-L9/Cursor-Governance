@@ -58,25 +58,30 @@ $PY "$C/validate_chain.py" emitted/PR-00{1,2,3,4,5,6}.contract.json
 Full detail, including the interpreter used and three recorded findings, is in
 `validation-receipts/independent-revalidation.yaml`.
 
-## Before executing it — read this
+## Baseline
 
-**The pack is not executable as-is.** It pins baseline
-`5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d`, which `main` has since moved past.
-Seven of the thirty-two paths named across the six contracts changed content
-between that baseline and current `HEAD` — including
-`scripts/run_campaign.py`, `pec/controller.py`, `scripts/run_peer_task_pipeline.py`,
-and `pec/blueprint.py`, which PR-002 asserts is `behavior_unchanged` against a
-version that is no longer HEAD.
+Rebound to `d6b30cdc0dd87213e972d61dd383b91a1b63d180` on 2026-08-29. The pack
+originally pinned `5eff2cdb`, `main` moved past it, and 7 of the 32 paths the six
+contracts name had changed content — including `pec/blueprint.py`, which PR-002
+guarantees `behavior_unchanged` against, asserted over a version that was no
+longer HEAD.
 
-The pack's own RUNBOOK requires stop/replan on material current-state drift, so
-re-adjudicate the seven findings against current `main` and recompile before
-running contract 1. That is finding `RV-001` in the receipt.
+All seven findings were re-adjudicated by reading current source rather than
+re-reading the prior ledger: **7/7 still CONFIRMED**, with current-source
+locations per finding in `evidence/readjudication_d6b30cdc.yaml`. The chain was
+recompiled against the new baseline — the `cold_resume` ancestry assertion is the
+only remediation-content change, and no root cause, item, scope path, success
+property or exclusion moved. Recompiled chain: 6/6 per-contract, chain PASS at
+the same digest, regression 11/11.
 
-The compiler's execution model, once a recompiled pack is current: one branch,
-one validated local commit per contract, `PR-001 → … → PR-006` in order, a fresh
-`preflight.sh` run at the start of every contract, no publication between
-contracts, and exactly one terminal `make pr` after PR-006's commit. Merge is
-outside the chain.
+**Still re-measure at execution start.** The recorded drift table is a snapshot
+and `main` keeps moving; `todo-00-execution-preflight` and
+`on_drift: stop_and_replan` exist for exactly that.
+
+The compiler's execution model: one branch off `d6b30cdc…`, one validated local
+commit per contract, `PR-001 → … → PR-006` in order, a fresh `preflight.sh` at
+the start of every contract, no publication between contracts, and exactly one
+terminal `make pr` after PR-006's commit. Merge is outside the chain.
 
 ## Excluded from the commit
 
@@ -95,6 +100,14 @@ directory is missing:
   equivalence above was proven, not before.
 - **5 `.pyc` files** — `compiler-runtime/scripts/__pycache__/*.cpython-313.pyc`,
   packaging-machine bytecode caught by this repository's `.gitignore`.
+
+The 19 files touched by the 2026-08-29 baseline rebind — `campaign-spec.yaml`,
+the six contracts, and the six generated `CLAUDE.md` / `preflight.sh` pairs — no
+longer match their `MANIFEST.yaml` entries either. `MANIFEST.yaml` is a record of
+the original packaging run and is deliberately not rewritten: this repository has
+no generator for its `canonical_self_zeroed` scheme, so hand-editing its hashes
+would fabricate provenance. Verify those files against
+`evidence/readjudication_d6b30cdc.yaml` and git history instead.
 
 One further file is deliberately not byte-exact: the `.plan.md` projection. Its
 packaged `kernel_pass` block recorded the packaging agent's own kernel runs,

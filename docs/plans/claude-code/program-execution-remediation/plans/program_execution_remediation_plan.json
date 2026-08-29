@@ -413,9 +413,15 @@
     },
     {
       "id": "FV-05",
-      "command": "claude-code-contracts/compiler-runtime/scripts/validate_contract.py + validate_chain.py + test_target_validation.py + plan-compatibility-validation",
-      "pass_criteria": "6/6 contracts PASS, chain PASS, v2.7 target regression 11/11 PASS, deterministic recompile PASS, plan compatibility PASS",
+      "command": "skills/l9-claude-coding-contract-compiler/scripts/validate_contract.py + validate_chain.py + test_target_validation.py",
+      "pass_criteria": "6/6 contracts PASS, chain PASS at the recorded digest, v2.7 target regression 11/11 PASS, deterministic recompile PASS",
       "status": "passed"
+    },
+    {
+      "id": "FV-06",
+      "command": ".pre-commit-config.yaml catalog via `make pr-check`",
+      "pass_criteria": "PASS during contract execution. This repository installs no commit hook by design, so the .pre-commit-config.yaml catalog runs through make pr-check with the surface-aware SKIP list rather than at commit time. Same posture as FV-04: run when the contracts execute, not fabricated in this planning package.",
+      "status": "not_applicable"
     }
   ],
   "convergence": {

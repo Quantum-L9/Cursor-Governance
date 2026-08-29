@@ -1,7 +1,9 @@
 schema: l9.audit-finding-disposition-ledger.v1
 audit_source: Cursor-Governance Program Execution Forensic Audit
 audit_baseline_sha: f4265dcc58ff8ebee7896a1a89c9f298c9e8e5c8
-current_baseline_sha: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+current_baseline_sha: d6b30cdc0dd87213e972d61dd383b91a1b63d180
+superseded_baseline_sha: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+readjudication_evidence: evidence/readjudication_d6b30cdc.yaml
 audited_scope: environment/program-execution/**
 exclusions:
 - all memory-related content and dependencies

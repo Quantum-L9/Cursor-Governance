@@ -16,7 +16,7 @@
     "verify_before_starting": [
       "test \"$(git rev-parse --abbrev-ref HEAD)\" = claude/program-execution-authority-remediation-v1",
       "test \"$(git show -s --format=%s HEAD)\" = CG-PE-REMEDIATION-PR-001-v2.7.0",
-      "git merge-base --is-ancestor 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d HEAD",
+      "git merge-base --is-ancestor d6b30cdc0dd87213e972d61dd383b91a1b63d180 HEAD",
       "python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py environment/program-execution/campaigns/scripts/test_close_campaign.py",
       "python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py environment/program-execution/core/program-execution-controller-template/scripts/tests/test_workspace_reset_safety.py"
     ],
