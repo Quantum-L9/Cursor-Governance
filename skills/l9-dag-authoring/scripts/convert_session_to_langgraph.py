@@ -10,6 +10,7 @@ from pathlib import Path
 
 from classify_conversion_disposition import classify_request
 from validate_langgraph_source import validate as validate_langgraph
+from validate_langgraph_source import validate_package
 
 TERMINAL_KINDS = {"terminal"}
 BOUNDED_KINDS = {"bounded_llm"}
@@ -258,11 +259,42 @@ def emit_package(repo: Path, graph: dict, emit_dir: Path, dag_id: str) -> dict:
     graph_py = emit_dir / "graph.py"
     graph_py.write_text("".join(graph_lines), encoding="utf-8")
 
+    dag_key = str(graph.get("id") or emit_dir.name)
     (emit_dir / "executor.py").write_text(
         "from __future__ import annotations\n\n"
-        f"from workflows.dags.{emit_dir.name}.graph import {builder}\n\n\n"
-        "def compile_graph():\n"
-        f"    return {builder}().compile()\n",
+        "from datetime import datetime\n"
+        "from pathlib import Path\n"
+        "from typing import Any\n\n"
+        "from workflows.dags._runtime.durable_checkpointer import open_checkpointer\n"
+        f"from workflows.dags.{emit_dir.name}.graph import {builder}\n\n"
+        f"DAG_ID = {dag_key!r}\n\n\n"
+        "def compile_graph(workspace: Path | None = None):\n"
+        "    root = Path(workspace) if workspace else Path.cwd()\n"
+        "    checkpointer = open_checkpointer(DAG_ID, workspace=root)\n"
+        f"    return {builder}().compile(checkpointer=checkpointer)\n\n\n"
+        "class RuntimeExecutor:\n"
+        "    def __init__(self, workspace: Path | None = None):\n"
+        "        self.workspace = Path(workspace) if workspace else Path.cwd()\n"
+        "        self.checkpointer = open_checkpointer(DAG_ID, workspace=self.workspace)\n"
+        f"        self.compiled = {builder}().compile(checkpointer=self.checkpointer)\n\n"
+        "    def run(self, initial: dict[str, Any] | None = None, thread_id: str | None = None):\n"
+        "        if thread_id is None:\n"
+        "            thread_id = f\"{DAG_ID}-{datetime.now().strftime('%Y%m%d%H%M%S%f')}\"\n"
+        '        config = {"configurable": {"thread_id": thread_id}}\n'
+        "        state = self.compiled.invoke(initial or {}, config)\n"
+        '        return {"thread_id": thread_id, "state": state}\n\n'
+        "    def resume(self, thread_id: str, updates: dict[str, Any] | None = None):\n"
+        '        config = {"configurable": {"thread_id": thread_id}}\n'
+        "        current = self.compiled.get_state(config)\n"
+        "        payload = dict(current.values) if current else {}\n"
+        "        if updates:\n"
+        "            payload.update(updates)\n"
+        "        state = self.compiled.invoke(payload, config)\n"
+        '        return {"thread_id": thread_id, "state": state}\n\n'
+        "    def get_state(self, thread_id: str):\n"
+        '        config = {"configurable": {"thread_id": thread_id}}\n'
+        "        snapshot = self.compiled.get_state(config)\n"
+        "        return snapshot.values if snapshot else None\n",
         encoding="utf-8",
     )
     (emit_dir / "__init__.py").write_text(
@@ -271,11 +303,13 @@ def emit_package(repo: Path, graph: dict, emit_dir: Path, dag_id: str) -> dict:
     )
 
     proof = validate_langgraph(graph_py)
+    package = validate_package(emit_dir)
     return {
         "emitted_runtime": str(graph_py.as_posix()),
         "builder": builder,
         "nodes": node_ids,
         "validate": proof,
+        "validate_package": package,
     }
 
 
@@ -349,6 +383,13 @@ def convert(
             "status": "FAIL",
             "reason": "langgraph_source_invalid",
             "validate": emitted["validate"],
+        }
+    if emitted.get("validate_package", {}).get("status") != "PASS":
+        return {
+            "status": "FAIL",
+            "reason": "langgraph_package_invalid",
+            "validate": emitted["validate"],
+            "validate_package": emitted.get("validate_package"),
         }
     return {
         "status": "PASS",

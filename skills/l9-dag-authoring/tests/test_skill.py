@@ -14,7 +14,12 @@ from classify_conversion_disposition import (  # noqa: E402
 from classify_graph_kind import classify  # noqa: E402
 from convert_session_to_langgraph import convert  # noqa: E402
 from validate_command_trigger import validate as validate_command  # noqa: E402
-from validate_langgraph_source import validate as validate_langgraph  # noqa: E402
+from validate_langgraph_source import (  # noqa: E402
+    validate as validate_langgraph,
+)
+from validate_langgraph_source import (  # noqa: E402
+    validate_package,
+)
 from validate_request import validate as validate_request  # noqa: E402
 from validate_session_dag_source import validate as validate_session  # noqa: E402
 
@@ -108,6 +113,45 @@ def test_langgraph_validator(tmp_path):
     assert validate_langgraph(bad)["status"] == "FAIL"
 
 
+def test_validate_package_compile_only_fails(tmp_path):
+    pkg = tmp_path / "compile_only"
+    pkg.mkdir()
+    (pkg / "graph.py").write_text(
+        "from langgraph.graph import StateGraph\ndef build():\n    return StateGraph(dict)\n",
+        encoding="utf-8",
+    )
+    (pkg / "executor.py").write_text(
+        "from workflows.dags.x.graph import build\n\n"
+        "def compile_graph():\n"
+        "    return build().compile()\n",
+        encoding="utf-8",
+    )
+    result = validate_package(pkg)
+    assert result["status"] == "FAIL"
+    assert result["persistence_class"] == "none"
+    assert "missing_durable_checkpointer" in result["errors"]
+
+
+def test_validate_package_memory_saver_fails(tmp_path):
+    pkg = tmp_path / "ephemeral"
+    pkg.mkdir()
+    (pkg / "graph.py").write_text(
+        "from langgraph.graph import StateGraph\ndef build():\n    return StateGraph(dict)\n",
+        encoding="utf-8",
+    )
+    (pkg / "executor.py").write_text(
+        "from langgraph.checkpoint.memory import MemorySaver\n"
+        "from workflows.dags.x.graph import build\n\n"
+        "def compile_graph():\n"
+        "    return build().compile(checkpointer=MemorySaver())\n",
+        encoding="utf-8",
+    )
+    result = validate_package(pkg)
+    assert result["status"] == "FAIL"
+    assert result["persistence_class"] == "ephemeral"
+    assert "ephemeral_checkpointer" in result["errors"]
+
+
 def test_command_validator(tmp_path):
     f = tmp_path / "cmd.md"
     f.write_text(
@@ -148,7 +192,9 @@ def test_receipt_renderer(tmp_path):
     )
     data = json.loads(out.read_text(encoding="utf-8"))
     assert data["skill"] == "l9-dag-authoring"
+    assert data["version"] == "2.3.0"
     assert data["status"] == "PASS"
+    assert data.get("persistence_class") is None
 
 
 def test_ownership_policy_contains_sprawl_guard():
@@ -192,7 +238,7 @@ def test_convert_request_and_receipt(tmp_path):
         text=True,
     )
     data = json.loads(out.read_text(encoding="utf-8"))
-    assert data["version"] == "2.2.0"
+    assert data["version"] == "2.3.0"
     assert data["disposition"] == "CONVERT_TO_LANGGRAPH"
 
 
@@ -244,5 +290,12 @@ def test_converter_emits_script_session(tmp_path):
     assert result["status"] == "PASS"
     assert (out / "graph.py").is_file()
     assert validate_langgraph(out / "graph.py")["status"] == "PASS"
+    package = validate_package(out)
+    assert package["status"] == "PASS"
+    assert package["persistence_class"] == "durable"
     text = (out / "graph.py").read_text(encoding="utf-8")
     assert "register_session_dag" not in text
+    executor = (out / "executor.py").read_text(encoding="utf-8")
+    assert "register_session_dag" not in executor
+    assert "checkpointer=" in executor
+    assert "thread_id" in executor
