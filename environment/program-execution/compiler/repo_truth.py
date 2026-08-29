@@ -42,9 +42,7 @@ DISPOSITIONS = (
     "UNKNOWN",
 )
 
-_PATH_TOKEN = re.compile(
-    r"\b((?:[\w.-]+/)+[\w.-]+\.(?:py|md|yaml|yml|json|toml|sh))\b"
-)
+_PATH_TOKEN = re.compile(r"\b((?:[\w.-]+/)+[\w.-]+\.(?:py|md|yaml|yml|json|toml|sh))\b")
 _IDENT_TOKEN = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]{3,})\b")
 
 
@@ -139,9 +137,7 @@ def classify_dispositions(
     return rows
 
 
-def _ground_requirement(
-    statement: str, truth: RepoTruth
-) -> tuple[str | None, str | None, str]:
+def _ground_requirement(statement: str, truth: RepoTruth) -> tuple[str | None, str | None, str]:
     root = truth.root
     for match in _PATH_TOKEN.finditer(statement):
         rel = match.group(1)

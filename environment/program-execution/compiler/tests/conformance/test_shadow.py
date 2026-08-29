@@ -15,19 +15,13 @@ def test_fixture_corpus_is_01_through_14() -> None:
     assert ids[-1].startswith("14_")
 
 
-def test_shadow_compile_does_not_touch_l9_programs_or_worktree(
-    tmp_path: Path, monkeypatch
-) -> None:
+def test_shadow_compile_does_not_touch_l9_programs_or_worktree(tmp_path: Path, monkeypatch) -> None:
     root = Path(__file__).resolve().parents[5]
     programs = Path.home() / ".l9" / "programs"
-    before_programs = (
-        sorted(p.name for p in programs.iterdir()) if programs.is_dir() else []
-    )
+    before_programs = sorted(p.name for p in programs.iterdir()) if programs.is_dir() else []
     fixture = Path(__file__).resolve().parent / "fixtures" / "01_one_sentence_intent"
     report = compile_fixture(fixture, repo_root=root)
-    after_programs = (
-        sorted(p.name for p in programs.iterdir()) if programs.is_dir() else []
-    )
+    after_programs = sorted(p.name for p in programs.iterdir()) if programs.is_dir() else []
     assert before_programs == after_programs
     assert report.side_effects == []
     assert "classify" in report.stages

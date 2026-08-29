@@ -99,8 +99,7 @@ def compile_fixture(fixture_dir: Path, *, repo_root: Path) -> ShadowReport:
             stages.append("disposition")
     else:
         compiled["dispositions"] = [
-            row.to_dict()
-            for row in classify_dispositions([text.strip()], discover(repo_root))
+            row.to_dict() for row in classify_dispositions([text.strip()], discover(repo_root))
         ]
         stages.append("disposition")
         compiled["objective"] = text
