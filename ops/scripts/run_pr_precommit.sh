@@ -145,7 +145,15 @@ _run_locked_ruff_writer() {
 }
 
 _hard_stop_tracked_dirt() {
-  if git status --porcelain | grep -qvE '^\?\?'; then
+  # Staged mode is a commit IN PROGRESS: its staged changes are tracked files
+  # that `git status --porcelain` reports as dirty by definition. Applying the
+  # clean-tree assertion there rejects every commit, which is precisely what the
+  # governed shim installed by ops/scripts/install_commit_hook.sh would do.
+  #
+  # The guard was inline before this check became a function and was dropped in
+  # the extraction (e3f7065, #347). tests/ops/autonomy/test_verification_bypass_gate.py
+  # ::test_runner_supports_staged_mode has been failing on main ever since.
+  if [[ "$PR_STAGED" != "1" ]] && git status --porcelain | grep -qvE '^\?\?'; then
     echo "FAIL: tracked files dirty after precommit-repo — commit the rewrite, then re-run."
     echo "      Do not auto-stage. Paths:"
     git status --porcelain | grep -vE '^\?\?'
