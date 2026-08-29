@@ -86,7 +86,10 @@ def parse_kernel_pass_fallback(raw: str) -> dict[str, Any] | None:
             return None
         key, rest = stripped.split(":", 1)
         current_key = key.strip()
-        if current_key in {"improve", "recursive_alignment", "validate_repair"} and rest.strip() == "":
+        if (
+            current_key in {"improve", "recursive_alignment", "validate_repair"}
+            and rest.strip() == ""
+        ):
             child: dict[str, Any] = {}
             if isinstance(parent, dict):
                 parent[current_key] = child

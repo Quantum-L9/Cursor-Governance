@@ -122,9 +122,7 @@ def main() -> int:
             hits = [
                 h
                 for h in hits
-                if "reset --keep" not in h
-                and "merge --ff-only" not in h
-                and "git switch" not in h
+                if "reset --keep" not in h and "merge --ff-only" not in h and "git switch" not in h
             ]
         if hits:
             for hit in hits:
