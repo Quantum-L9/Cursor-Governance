@@ -92,8 +92,18 @@ def _synthetic_gov(home: Path, *, tracked_dirt: bool, untracked_dirt: bool) -> P
     subprocess.run(["git", "init", "-q", str(gov)], check=True)
     subprocess.run(["git", "-C", str(gov), "add", "CANONICAL_LAW.md"], check=True)
     subprocess.run(
-        ["git", "-C", str(gov), "-c", "user.email=t@e", "-c", "user.name=t",
-         "commit", "-qm", "base"],
+        [
+            "git",
+            "-C",
+            str(gov),
+            "-c",
+            "user.email=t@e",
+            "-c",
+            "user.name=t",
+            "commit",
+            "-qm",
+            "base",
+        ],
         check=True,
     )
     if tracked_dirt:
