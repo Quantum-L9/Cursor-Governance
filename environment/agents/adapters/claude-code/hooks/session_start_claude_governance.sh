@@ -104,7 +104,20 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
   if GOV=$(resolve_governance_dir); then
     GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
     GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
-    if git -C "$GOV" fetch --depth 1 origin "$GOV_BRANCH" >/dev/null 2>&1; then
+    # The reset below is `checkout -f`, which DISCARDS uncommitted work and moves
+    # HEAD off whatever branch is checked out. That is correct for the ephemeral
+    # cloud clone it is written for, and destructive for anything else. It ran
+    # unguarded, so a governance checkout carrying in-flight work — reachable
+    # here whenever $HOME/.cursor-governance resolves to a working clone rather
+    # than the throwaway one — lost that work silently, HEAD included. The reset
+    # only ever has something to do on a clean clone, so refusing a dirty one
+    # costs the intended path nothing and makes the destructive case impossible.
+    gov_dirty=$(git -C "$GOV" status --porcelain 2>/dev/null | head -c 1)
+    if [ -n "$gov_dirty" ]; then
+      local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
+      write_refresh_receipt reset-skipped-dirty "$local_sha" unknown -1 stale
+      LINES+=("governance refresh: WARN $GOV has uncommitted changes — reset SKIPPED (refusing to discard in-flight work)")
+    elif git -C "$GOV" fetch --depth 1 origin "$GOV_BRANCH" >/dev/null 2>&1; then
       remote_sha=$(git -C "$GOV" rev-parse --verify --quiet FETCH_HEAD 2>/dev/null || echo 'unknown')
       if git -C "$GOV" checkout -f -B "$GOV_BRANCH" "origin/$GOV_BRANCH" >/dev/null 2>&1; then
         local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
