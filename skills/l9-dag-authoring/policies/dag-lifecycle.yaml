@@ -1,5 +1,5 @@
-version: 2.1
-operations: [CREATE, UPDATE, VALIDATE, REGISTER, COMMAND_BIND]
+version: 2.2
+operations: [CREATE, UPDATE, VALIDATE, REGISTER, COMMAND_BIND, CONVERT]
 terminal_states: [PASS, PARTIAL, BLOCKED, FAIL]
 canonical:
   dag_dir: workflows/dags
@@ -20,4 +20,8 @@ rules:
   - no_parallel_registry
   - no_ACTIVE_DAGS_map
   - command_binding_is_optional
+  - CONVERT_is_disposition_gate_not_rewrite
+  - CONVERT_emits_StateGraph_only_for_CONVERT_TO_LANGGRAPH
+  - CONVERT_never_deletes_SessionDAG_in_the_same_step
+  - CONVERT_refuses_allow_session_retire
   - failure_blocks_downstream_success_claims

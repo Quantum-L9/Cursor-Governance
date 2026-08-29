@@ -75,7 +75,7 @@
       "donor to beneficiary",
       "architecture harvest"
     ],
-    "canonical_dag": "workflows/dags/intelligence_harvest_dag.py",
+    "canonical_dag": "workflows/dags/intelligence_harvest/graph.py",
     "dag_registry_id": "intelligence-harvest-v1",
     "non_activation_triggers": [
       "literal code extraction",

@@ -1,0 +1,54 @@
+version: 1
+allow_session_retire: false
+catalog:
+  - dag_id: gmp-execution-v1
+    source_path: workflows/dags/gmp_execution_dag.py
+    disposition: DELETE_TWIN
+    domain_owner: l9-gmp-protocol
+    proof_path: workflows/dags/gmp/graph.py
+  - dag_id: harvest-deploy-v1
+    source_path: workflows/dags/harvest_deploy_dag.py
+    disposition: DELETE_TWIN
+    domain_owner: l9-harvest-pipeline
+    proof_path: workflows/harvest_deploy.py
+  - dag_id: slash-command-update-v1
+    source_path: workflows/dags/slash_command_update_dag.py
+    disposition: DELETE_TWIN
+    domain_owner: l9-dag-authoring
+    proof_path: skills/l9-dag-authoring/SKILL.md
+  - dag_id: skill-compiler-v2
+    source_path: null
+    disposition: DELETE_TWIN
+    domain_owner: l9-skill-compiler
+    proof_path: skills/l9-skill-compiler/SKILL.md
+  - dag_id: readme-pipeline-v1
+    source_path: workflows/dags/readme_pipeline_dag.py
+    disposition: ABSORB_INTO_SKILL
+    domain_owner: l9-update-agent-docs
+    proof_path: skills/l9-update-agent-docs/SKILL.md
+  - dag_id: refactoring-v1
+    source_path: workflows/dags/refactoring_dag.py
+    disposition: ABSORB_INTO_SKILL
+    domain_owner: l9-code-maintenance
+    proof_path: skills/l9-code-maintenance/SKILL.md
+  - dag_id: wire-v1
+    source_path: workflows/dags/wire_dag.py
+    disposition: ABSORB_INTO_SKILL
+    domain_owner: l9-governance-wiring
+    proof_path: skills/l9-governance-wiring/references/wire-executor.md
+  - dag_id: test-pipeline-v1
+    source_path: workflows/dags/test_pipeline_dag.py
+    disposition: ABSORB_INTO_SKILL
+    domain_owner: l9-code-maintenance
+    proof_path: skills/l9-code-maintenance/SKILL.md
+  - dag_id: dag-authoring-v1
+    source_path: workflows/dags/dag_authoring_dag.py
+    disposition: ABSORB_INTO_SKILL
+    domain_owner: l9-dag-authoring
+    proof_path: skills/l9-dag-authoring/SKILL.md
+  - dag_id: intelligence-harvest-v1
+    source_path: workflows/dags/intelligence_harvest_dag.py
+    disposition: CONVERT_TO_LANGGRAPH
+    domain_owner: l9-intelligence-harvest
+    proof_path: skills/l9-intelligence-harvest/meta/skill-ir.json
+    emit_dir: workflows/dags/intelligence_harvest

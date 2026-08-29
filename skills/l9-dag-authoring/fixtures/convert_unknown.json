@@ -1,0 +1,6 @@
+{
+  "operation": "CONVERT",
+  "repo_root": ".",
+  "dag_id": "not-a-catalog-id",
+  "allow_session_retire": false
+}

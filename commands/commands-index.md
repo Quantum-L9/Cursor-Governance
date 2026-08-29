@@ -63,7 +63,7 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/consolidate` / `/clean_compress` | Cleanup / densify |
 | `/clean` | Cleanup command |
 | `/extract-chat` / `/extract-from-chat` / `/extract_align` | Chat / pattern extraction |
-| `/spec` / `/dag-authoring` | Spec / DAG lifecycle (incl. thin command binding) |
+| `/spec` / `/dag-authoring` | Spec / DAG lifecycle (incl. thin command binding and CONVERT) |
 | `/issues` | GitHub issues Diagnose / Converge |
 | `/plan-audit` | Compatibility alias of `/l9-pipeline-audit` |
 | `/lcto` | L CTO strategic mode |

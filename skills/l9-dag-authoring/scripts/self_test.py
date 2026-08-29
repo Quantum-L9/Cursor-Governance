@@ -3,11 +3,16 @@ import json
 import tempfile
 from pathlib import Path
 
+from classify_conversion_disposition import classify_all
 from classify_graph_kind import classify
+from convert_session_to_langgraph import convert
 from validate_command_trigger import validate as validate_command
 from validate_langgraph_source import validate as validate_langgraph
 from validate_request import validate as validate_request
 from validate_session_dag_source import validate as validate_session
+
+PACK = Path(__file__).resolve().parents[1]
+REPO = PACK.parents[1]
 
 
 def main():
@@ -101,6 +106,43 @@ def main():
         checks.append(
             ("thin_command_rejects_stale_path", validate_command(bad, "demo")["status"] == "FAIL")
         )
+        checks.append(
+            (
+                "convert_requires_id",
+                bool(validate_request({"operation": "CONVERT", "repo_root": "/tmp"})),
+            )
+        )
+        checks.append(
+            (
+                "convert_refuses_retire",
+                bool(
+                    validate_request(
+                        {
+                            "operation": "CONVERT",
+                            "repo_root": "/tmp",
+                            "dag_id": "x",
+                            "allow_session_retire": True,
+                        }
+                    )
+                ),
+            )
+        )
+        checks.append(
+            (
+                "convert_count_is_one",
+                classify_all(REPO)["convert_to_langgraph_count"] == 1,
+            )
+        )
+        prose = convert(
+            REPO,
+            dag_id="prose-convert-fixture",
+            disposition="CONVERT_TO_LANGGRAPH",
+            source=PACK / "fixtures" / "convert_prose_action.py",
+            emit_dir=root / "prose",
+        )
+        checks.append(("prose_action_refused", prose.get("status") == "FAIL"))
+        twin = convert(REPO, dag_id="gmp-execution-v1")
+        checks.append(("twin_not_emitted", twin.get("status") == "FAIL"))
     failed = [name for name, ok in checks if not ok]
     print(
         json.dumps(
