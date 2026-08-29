@@ -45,7 +45,6 @@ __dora_meta__ = {
 from workflows.dags.dag_authoring_dag import DAG_AUTHORING_DAG
 from workflows.dags.gmp_execution_dag import GMP_EXECUTION_DAG
 from workflows.dags.harvest_deploy_dag import HARVEST_DEPLOY_DAG
-from workflows.dags.plan_simple_build_dag import PLAN_SIMPLE_BUILD_DAG
 
 # LANGGRAPH_RUNTIME graphs — executable, not registry-backed
 from workflows.dags.inspect_dag import (
@@ -55,6 +54,7 @@ from workflows.dags.inspect_dag import (
     run_inspect,
 )
 from workflows.dags.intelligence_harvest_dag import INTELLIGENCE_HARVEST_V1
+from workflows.dags.plan_simple_build_dag import PLAN_SIMPLE_BUILD_DAG
 from workflows.dags.pr_train_dag import (
     PR_TRAIN_DAG,
     PrTrainState,
