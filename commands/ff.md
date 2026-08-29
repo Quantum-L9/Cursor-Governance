@@ -1,7 +1,7 @@
 ---
 name: ff
-version: "1.4.0"
-description: "In-place catch-up of a named Cursor-Governance clone — parks unique work, keeps .venv; never activate_fresh"
+version: "1.6.0"
+description: "In-place catch-up: this Cursor-Governance clone + SSOT in parallel; --clone / --ssot for one target"
 auto_chain: ynp
 aliases:
   - /repo-sync
@@ -13,10 +13,15 @@ aliases:
 ## WHAT IT DOES
 
 Thin caller for skill **`l9-repo-sync`**. Run `skills/l9-repo-sync/scripts/ff.sh`.
-`make ff` is the same wrapper.
+`make ff` is the same wrapper (pairs when this checkout is not the live SSOT).
 
-Catch the named clone up to `origin/main` **in place**. Unique work is
-**parked, never deleted**:
+| Typed | What runs |
+|---|---|
+| `/ff` | **Both**: this Cursor-Governance checkout **and** `$HOME/.cursor-governance`, **in parallel**. This is the default in this repo. |
+| `/ff --clone` | The Cursor-Governance **working copy** only (not SSOT). Use from other repos. |
+| `/ff --ssot` | `$HOME/.cursor-governance` only. Use from other repos. |
+
+Unique work is **parked, never deleted**:
 
 - `.venv` stays at the same path
 - `.env.local`, `env.local`, `.env.*.local`, and `.claude/settings.local.json`
@@ -35,26 +40,25 @@ Skill: [`skills/l9-repo-sync/SKILL.md`](../skills/l9-repo-sync/SKILL.md).
 
 ## EXECUTION
 
-0. **`ff.sh` switches to `main`.** Do not `git switch` yourself. The script
-   parks dirty tracked (and untracked that `origin/main` already tracks), then
-   `git switch` to `main` (or creates it tracking `origin/main`). The feature
-   branch ref stays. Unique feature commits are not `l9/ff-preserve-*`.
-1. Read and follow skill `l9-repo-sync`.
-2. Name the clone (`ssot` = `$HOME/.cursor-governance`, or `workspace`).
-   “This workspace” / untracked-in-this-folder → `workspace`.
-3. Diagnose (branch, porcelain, ahead/behind, `.venv` present). Not-on-main
-   is not a stop.
-4. Run **only**:
+Do **not** name clones. Do **not** diagnose. Do **not** wait for one clone
+then start the other. Do **not** run pytest as part of `/ff`.
+
+0. **`ff.sh` switches to `main`.** Do not `git switch` yourself.
+1. Pass through the user's flags. Bare `/ff` has no flags.
 
 ```bash
-CURSOR_GOVERNANCE_DIR="<absolute-named-clone>" \
-  bash skills/l9-repo-sync/scripts/ff.sh
+# /ff          → both, parallel
+bash skills/l9-repo-sync/scripts/ff.sh
+# /ff --clone  → working copy only
+bash skills/l9-repo-sync/scripts/ff.sh --clone
+# /ff --ssot   → $HOME/.cursor-governance only
+bash skills/l9-repo-sync/scripts/ff.sh --ssot
 ```
 
-5. Verify same gitdir, HEAD on `main`, `.venv` and env.local keep-list still
-   present, unique untracked still present or held, no new
-   `~/.cursor-governance.bak.*`.
-6. **Shelf leftover `WIP/`, `docs/plans/`, and
+`--clone` from another repo: this checkout if it is a governance identity
+tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
+
+2. **Shelf leftover `WIP/`, `docs/plans/`, and
    `environment/program-execution/campaigns/`** — if any untracked files remain
    under those trees (skip gitignored secret globs, `WIP/Legal Defense/`,
    credential filenames, and anything an open `feat/ff-shelf-*` PR already
@@ -70,7 +74,7 @@ CURSOR_GOVERNANCE_DIR="<absolute-named-clone>" \
    Catching a clone up is not authorization to publish. Do **not** put
    `make pr` inside `ff.sh`. Do not scoop other untracked paths. Do not delete
    the copies in the named clone.
-7. Auto-chain `/ynp`.
+3. Auto-chain `/ynp`.
 
 ## FORBIDDEN
 
@@ -80,6 +84,9 @@ CURSOR_GOVERNANCE_DIR="<absolute-named-clone>" \
 - Agent `git switch` / `checkout` / `pull` / `clone`. Inner `ff.sh` `git switch`
   **to `main` after parking** is the exception. Resetting a feature branch
   onto `origin/main` stays forbidden.
+- Stopping to name `ssot` vs `workspace`
+- Sequential second `ff.sh` after this clone already finished (the script pairs)
 
-`make ff` is this command (same wrapper). `make sync` remains
-`governance_sync.sh` and is **not** `/ff`.
+`make ff` is this command (same wrapper). `make ff-clone` / `make ff-ssot`
+are `--clone` / `--ssot`. `make sync` remains `governance_sync.sh` and is
+**not** `/ff`.
