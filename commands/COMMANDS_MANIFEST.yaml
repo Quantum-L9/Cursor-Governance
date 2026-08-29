@@ -146,6 +146,9 @@ commands:
 - slash: /pr
   file: commands/pr.md
   enabled: true
+- slash: /pr-train
+  file: commands/pr-train.md
+  enabled: true
 - slash: /reasoning
   file: commands/reasoning.md
   enabled: true

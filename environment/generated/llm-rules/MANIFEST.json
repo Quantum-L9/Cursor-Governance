@@ -15,9 +15,9 @@
       "alias": null,
       "class": "always",
       "output": "02-slash-commands.md",
-      "output_sha256": "a6cafda70d860e2a726925c873722963a7675d1ad83dd3561638f610916298a4",
+      "output_sha256": "4bdc25ea61e4730cb847468e21f1b43ca8b67493bfd127ce8ff6ef94f058ddac",
       "source": "rules/02-slash-commands.mdc",
-      "source_sha256": "96496ab63b576435fad8d32375348f49fc8f198c07a2ecf42a45f7b11acc593b",
+      "source_sha256": "9b2cf950134c15be4fc9e01af14f2c1b514718555d0c59e2fa543894d779808a",
       "stem": "02-slash-commands"
     },
     {
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 69
   },
-  "tree_sha256": "b008594c474fe42eb70d994290688ff5b5f5afeb746f807cc8f667c5cfe4c2fc"
+  "tree_sha256": "0e658969dd732d1455b4809381f883eb8eca057bd98bee5547802e5df4ddaa12"
 }
