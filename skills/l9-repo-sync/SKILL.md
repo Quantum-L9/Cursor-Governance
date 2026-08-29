@@ -9,8 +9,8 @@ metadata:
   tags: [l9, git, sync, fast-forward, ssot, cursor-governance]
   owner: igor_beylin
   status: active
-  version: 1.2.0
-  updated: 2026-08-22
+  version: 1.3.0
+  updated: 2026-08-28
 ---
 
 # Repo Sync (in-place fast-forward)
@@ -40,7 +40,7 @@ catch-up — not only triple-dot colliding ones.
 |---|---|---|
 | diagnose | No | Name the clone. Inventory. Can this branch ff? |
 | sync (`/ff`) | Yes — catch-up | Run [references/execute.md](references/execute.md) via `scripts/ff.sh` |
-| refuse | No | Clone is not on `main`, or park/hold failed |
+| refuse | No | Park/hold/switch failed. Do not reset a feature branch onto main. |
 
 No new pull script. The only mutate path is `scripts/ff.sh` (`reset --keep`
 after preserve refs). It does **not** call `governance_sync.sh` (that script
@@ -75,19 +75,24 @@ It classifies `refs/l9/preserved/ff/*`, `refs/l9/preserved/ff-dirty/*`, and
    user said “this repo” and both gitdirs exist, **stop until they name one**.
 2. **Diagnose** — [references/diagnose-first.md](references/diagnose-first.md).
 3. **Refuse** — [references/forbidden.md](references/forbidden.md) if the ask
-   needs switch, clone, swap, or push.
+   needs clone, swap, push, or an **agent** `git switch`. Inner `ff.sh` may
+   `git switch` to `main` after parking.
 4. **Execute** — [references/execute.md](references/execute.md) via
-   `scripts/ff.sh`. Dirt and unique commits are **not** a stop.
-5. **Verify** — same `gitdir`, same branch, `.venv` and env.local keep-list
+   `scripts/ff.sh`. Dirt, unique commits, and not-on-main are **not** a stop.
+   Step 0 inside the script switches to `main` without moving the feature ref.
+5. **Verify** — same `gitdir`, HEAD on `main`, `.venv` and env.local keep-list
    still present at the same paths, no new `~/.cursor-governance.bak.*`
    from this run.
-6. **Shelf** — leftover untracked `WIP/` and `docs/plans/` become a sibling
-   branch (`feat/ff-shelf-<stamp>`). Copy the bytes into the new worktree
-   (untracked files are not in a fresh checkout), authorize release there
-   (L4 state is workspace-local), then **ask** before `PR_REMEDIATE=0 make pr`
-   — `/ff` does not itself authorize publishing. Skip paths an open shelf PR
-   already carries. `ff.sh` stays push-off. Secret globs stay out. The
-   dirty-preserve ref is **not** deleted here — see Handoff.
+6. **Shelf** — leftover untracked `WIP/`, `docs/plans/`, and
+   `environment/program-execution/campaigns/` become a sibling branch
+   (`feat/ff-shelf-<stamp>`). Copy the bytes into the new worktree
+   (untracked files are not in a fresh checkout). Apply Improve, then
+   Recursive Alignment, then Validate & Repair **before** commit/precommit.
+   Then `l4_local.py begin` + `authorize-release` (not `record-kernels`).
+   **Ask** before `PR_REMEDIATE=0 make pr` — `/ff` does not itself authorize
+   publishing. Skip paths an open shelf PR already carries. `ff.sh` stays
+   push-off. Secret globs stay out. The dirty-preserve ref is **not** deleted
+   here — see Handoff.
 
 ## Failure Handling
 
@@ -100,8 +105,9 @@ after reading the FAIL line.
 
 See [references/forbidden.md](references/forbidden.md). Never
 `git switch` / `git checkout` / `git pull` / `git clone` / `git stash -u` /
-`git reset --hard` as a sync. Catch-up is `git reset --keep` inside `ff.sh`.
-Never delete unique files to “unblock” `/ff`.
+`git reset --hard` as an **agent** sync. Catch-up is `git switch` to `main`
+(after park) then `git reset --keep` **inside** `ff.sh`. Never reset a
+feature branch onto `origin/main`. Never delete unique files to “unblock” `/ff`.
 
 ## Validation
 

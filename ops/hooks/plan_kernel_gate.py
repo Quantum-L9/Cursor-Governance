@@ -197,12 +197,9 @@ def newest_recent_unbuilt_failing() -> Path | None:
 
 
 def inject_block(workspace: Path) -> str:
-    path = load_required_plan(workspace)
-    if path is None or not path.is_file() or not plan_fails(path):
-        path = newest_recent_unbuilt_failing()
-    if path is None:
-        return ""
-    return f"PLAN KERNEL PASS REQUIRED on `{path}`.\n{INJECT_TEXT}"
+    # Corpus kernels (plans / WIP / campaigns) fire on /ff, not mid-session.
+    del workspace
+    return ""
 
 
 def extract_command(event: dict[str, Any]) -> str:
@@ -247,11 +244,9 @@ def execute_verdict(event: dict[str, Any]) -> tuple[str, str]:
 
 
 def handle_post_tool_use(event: dict[str, Any]) -> None:
-    path = written_path(event)
-    if path is None or not is_store_plan(path) or not path.is_file():
-        return
-    if plan_fails(path):
-        write_required(workspace_from_event(event), path)
+    # Store-plan kernel apply is /ff-owned. Do not latch Improve/V&R here.
+    del event
+    return
 
 
 def handle_execute_gate(event: dict[str, Any]) -> int:
@@ -297,11 +292,10 @@ def _self_test() -> int:
         os.environ["L9_PLANS_STORE"] = str(plan.parent)
         try:
             handle_post_tool_use(event)
-            if not required_path(ws).is_file():
-                errors.append("postToolUse did not latch a failing store plan")
+            if required_path(ws).is_file():
+                errors.append("postToolUse must not latch store plans (/ff owns corpus kernels)")
         finally:
             os.environ.pop("L9_PLANS_STORE", None)
-        required_path(ws).unlink(missing_ok=True)
 
         allow, _msg = execute_verdict({"cwd": str(ws), "command": "make campaign INTENT=x.md"})
         if allow != "allow":

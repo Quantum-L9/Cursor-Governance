@@ -423,7 +423,7 @@ def group_slices(
 
 
 def resolve_ff_clone(repo: Path, branch: str | None) -> Path:
-    """ff.sh only runs on main. Feature worktrees catch up the SSOT clone."""
+    """ff.sh switches to main after parking. Feature worktrees catch up the SSOT clone."""
     name = (branch or "").removeprefix("origin/")
     if name in {"main", "master"}:
         return repo

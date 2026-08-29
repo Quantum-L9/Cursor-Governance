@@ -93,7 +93,11 @@ l4_local_autonomy:
     fires: first_step_of_precommit_repo
     note: >-
       Not an L4 phase. Fail-closed before any other hook or test so
-      checkers run once on the post-kernel tree.
+      checkers run once on the post-kernel tree. WIP/, docs/plans/, and
+      environment/program-execution/campaigns/ are /ff corpus surfaces
+      (Improve then Recursive Alignment then Validate & Repair); this
+      hook skips those prefixes and skips the tree latch when the whole
+      changeset is corpus-only.
   required_kernels:
     - path: kernels/Recursive Alignment.md
       id: recursive_alignment

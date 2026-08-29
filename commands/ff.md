@@ -1,6 +1,6 @@
 ---
 name: ff
-version: "1.3.0"
+version: "1.4.0"
 description: "In-place catch-up of a named Cursor-Governance clone — parks unique work, keeps .venv; never activate_fresh"
 auto_chain: ynp
 aliases:
@@ -35,10 +35,15 @@ Skill: [`skills/l9-repo-sync/SKILL.md`](../skills/l9-repo-sync/SKILL.md).
 
 ## EXECUTION
 
+0. **`ff.sh` switches to `main`.** Do not `git switch` yourself. The script
+   parks dirty tracked (and untracked that `origin/main` already tracks), then
+   `git switch` to `main` (or creates it tracking `origin/main`). The feature
+   branch ref stays. Unique feature commits are not `l9/ff-preserve-*`.
 1. Read and follow skill `l9-repo-sync`.
 2. Name the clone (`ssot` = `$HOME/.cursor-governance`, or `workspace`).
    “This workspace” / untracked-in-this-folder → `workspace`.
-3. Diagnose (branch, porcelain, ahead/behind, `.venv` present).
+3. Diagnose (branch, porcelain, ahead/behind, `.venv` present). Not-on-main
+   is not a stop.
 4. Run **only**:
 
 ```bash
@@ -46,17 +51,22 @@ CURSOR_GOVERNANCE_DIR="<absolute-named-clone>" \
   bash skills/l9-repo-sync/scripts/ff.sh
 ```
 
-5. Verify same gitdir, same branch, `.venv` and env.local keep-list still
+5. Verify same gitdir, HEAD on `main`, `.venv` and env.local keep-list still
    present, unique untracked still present or held, no new
    `~/.cursor-governance.bak.*`.
-6. **Shelf leftover `WIP/` and `docs/plans/`** — if any untracked files remain
+6. **Shelf leftover `WIP/`, `docs/plans/`, and
+   `environment/program-execution/campaigns/`** — if any untracked files remain
    under those trees (skip gitignored secret globs, `WIP/Legal Defense/`,
    credential filenames, and anything an open `feat/ff-shelf-*` PR already
    carries), cut a sibling worktree from the new `origin/main` tip
    (`feat/ff-shelf-<stamp>`), **copy those files into it** — untracked bytes
-   do not exist in a fresh checkout — pathspec-add **only** those files,
-   scoped commit, run `l4_local.py begin / record-kernels / authorize-release`
-   in that worktree, then **ask the user** before `PR_REMEDIATE=0 make pr`.
+   do not exist in a fresh checkout. **Before commit and before precommit**,
+   apply `kernels/Improve.md`, then `kernels/Recursive Alignment.md`, then
+   `kernels/Validate & Repair.md` to those files (write `kernel_pass` on
+   shelved `*.plan.md`). Then pathspec-add **only** those files, scoped commit,
+   run `l4_local.py begin` then `authorize-release` in that worktree
+   (**not** `record-kernels` — corpus kernels are not an L4 phase). Then
+   **ask the user** before `PR_REMEDIATE=0 make pr`.
    Catching a clone up is not authorization to publish. Do **not** put
    `make pr` inside `ff.sh`. Do not scoop other untracked paths. Do not delete
    the copies in the named clone.
@@ -67,7 +77,9 @@ CURSOR_GOVERNANCE_DIR="<absolute-named-clone>" \
 - `governance_activate_fresh.sh` / `make start` as “sync”
 - `GOVERNANCE_SYNC_PUSH=1` or `GOVERNANCE_SYNC_HARD_RESET=1`
 - `git stash -u` / `git reset --hard` / deleting files to unblock catch-up
-- `git switch` / `checkout` / `pull` / `clone`
+- Agent `git switch` / `checkout` / `pull` / `clone`. Inner `ff.sh` `git switch`
+  **to `main` after parking** is the exception. Resetting a feature branch
+  onto `origin/main` stays forbidden.
 
 `make ff` is this command (same wrapper). `make sync` remains
 `governance_sync.sh` and is **not** `/ff`.

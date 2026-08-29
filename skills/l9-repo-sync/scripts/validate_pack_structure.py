@@ -116,9 +116,16 @@ def main() -> int:
                 if "reset --keep" not in h
                 and "merge --ff-only" not in h
                 and "do not switch" not in h.lower()
+                and "git switch" not in h
             ]
         if rel.endswith("execute.md") or rel.endswith("SKILL.md"):
-            hits = [h for h in hits if "reset --keep" not in h and "merge --ff-only" not in h]
+            hits = [
+                h
+                for h in hits
+                if "reset --keep" not in h
+                and "merge --ff-only" not in h
+                and "git switch" not in h
+            ]
         if hits:
             for hit in hits:
                 print(f"FAIL: {rel} {hit}", file=sys.stderr)

@@ -11,12 +11,17 @@ kernel_pass:
   improve:
     kernel: kernels/Improve.md
     ran_at: 2026-08-21T05:14:00Z
-    body_sha256: "86fe1f5b19744fdb49717b85ebd4d49dac3dde0bd923de79e585e10c8adbc62b"
+    body_sha256: "b5ba5d9fc6ae2ece75ecc6deb53a03105e3b8ba0701128e9bbb2ea82023f857b"
+    deltas: ["no material delta"]
+  recursive_alignment:
+    kernel: kernels/Recursive Alignment.md
+    ran_at: 2026-08-21T05:15:30Z
+    body_sha256: "b5ba5d9fc6ae2ece75ecc6deb53a03105e3b8ba0701128e9bbb2ea82023f857b"
     deltas: ["no material delta"]
   validate_repair:
     kernel: kernels/Validate & Repair.md
     ran_at: 2026-08-21T05:17:00Z
-    body_sha256: "86fe1f5b19744fdb49717b85ebd4d49dac3dde0bd923de79e585e10c8adbc62b"
+    body_sha256: "b5ba5d9fc6ae2ece75ecc6deb53a03105e3b8ba0701128e9bbb2ea82023f857b"
     deltas: ["no material delta"]
 ---
 

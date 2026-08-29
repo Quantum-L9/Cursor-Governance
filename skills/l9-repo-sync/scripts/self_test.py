@@ -340,6 +340,89 @@ def test_origin_tracked_env_local_does_not_clobber() -> int:
     return 0
 
 
+def test_feature_branch_switches_to_main() -> int:
+    """Off-main clone: switch to main, keep the feature ref, park feature dirt."""
+    with tempfile.TemporaryDirectory() as tmp:
+        remote = Path(tmp) / "remote.git"
+        clone = Path(tmp) / "clone"
+        run(["git", "init", "--bare", str(remote)])
+        run(["git", "clone", str(remote), str(clone)])
+        git(clone, "config", "user.email", "test@example.com")
+        git(clone, "config", "user.name", "Test")
+        (clone / "tracked.txt").write_text("v1\n", encoding="utf-8")
+        git(clone, "add", "tracked.txt")
+        git(clone, "commit", "-m", "base")
+        git(clone, "branch", "-M", "main")
+        git(clone, "push", "-u", "origin", "main")
+        git(remote, "symbolic-ref", "HEAD", "refs/heads/main")
+
+        other = Path(tmp) / "other"
+        run(["git", "clone", str(remote), str(other)])
+        git(other, "config", "user.email", "test@example.com")
+        git(other, "config", "user.name", "Test")
+        (other / "tracked.txt").write_text("v2\n", encoding="utf-8")
+        git(other, "add", "tracked.txt")
+        git(other, "commit", "-m", "origin ahead")
+        git(other, "push")
+
+        git(clone, "checkout", "-b", "feat/unique")
+        (clone / "feature.txt").write_text("only-on-feature\n", encoding="utf-8")
+        git(clone, "add", "feature.txt")
+        git(clone, "commit", "-m", "unique feature commit")
+        feature_sha = run(["git", "-C", str(clone), "rev-parse", "HEAD"]).stdout.strip()
+        (clone / "tracked.txt").write_text("feature-dirty\n", encoding="utf-8")
+        (clone / ".venv").mkdir()
+        (clone / ".venv" / "pyvenv.cfg").write_text("home = /tmp\n", encoding="utf-8")
+        (clone / "notes.untracked").write_text("keep me\n", encoding="utf-8")
+
+        home = Path(tmp) / "home"
+        home.mkdir()
+        proc = run(
+            ["bash", str(FF)],
+            env={"CURSOR_GOVERNANCE_DIR": str(clone), "HOME": str(home)},
+        )
+        if proc.returncode != 0:
+            print(
+                f"FAIL: ff.sh rc={proc.returncode}\n{proc.stdout}\n{proc.stderr}",
+                file=sys.stderr,
+            )
+            return 1
+        branch = run(["git", "-C", str(clone), "rev-parse", "--abbrev-ref", "HEAD"]).stdout.strip()
+        if branch != "main":
+            return _fail(f"expected HEAD on main, got {branch}")
+        if (clone / "tracked.txt").read_text(encoding="utf-8") != "v2\n":
+            return _fail("did not catch up tracked.txt from origin/main")
+        if (clone / "feature.txt").is_file():
+            return _fail("feature-only tracked file leaked onto main")
+        still = run(["git", "-C", str(clone), "rev-parse", "feat/unique"]).stdout.strip()
+        if still != feature_sha:
+            return _fail("feature branch tip moved; unique commits must stay")
+        if "step 0 switched feat/unique -> main" not in proc.stdout:
+            return _fail("missing step 0 switch log")
+        if "feature-dirty" in (clone / "tracked.txt").read_text(encoding="utf-8"):
+            return _fail("feature dirty was left on main")
+        hold_hits = list(home.joinpath(".cursor/l9-ff-hold").rglob("tracked.txt"))
+        if not any(p.read_text(encoding="utf-8") == "feature-dirty\n" for p in hold_hits):
+            return _fail("feature dirty bytes were not copied to l9-ff-hold")
+        if (clone / "notes.untracked").read_text(encoding="utf-8") != "keep me\n":
+            return _fail("untracked file lost across switch")
+        if not (clone / ".venv" / "pyvenv.cfg").is_file():
+            return _fail(".venv was removed")
+        preserve = run(
+            [
+                "git",
+                "-C",
+                str(clone),
+                "for-each-ref",
+                "--format=%(refname)",
+                "refs/l9/preserved/ff/",
+            ]
+        )
+        if preserve.stdout.strip():
+            return _fail("must not park feature commits as l9/ff-preserve-*")
+    return 0
+
+
 def main() -> int:
     struct = run([sys.executable, str(ROOT / "scripts" / "validate_pack_structure.py")])
     if struct.returncode != 0:
@@ -352,6 +435,7 @@ def main() -> int:
         ("already_at_tip", test_already_at_tip_leaves_dirty),
         ("unrelated_history", test_unrelated_history_with_dirty),
         ("keep_env_local", test_origin_tracked_env_local_does_not_clobber),
+        ("feature_branch_switch", test_feature_branch_switches_to_main),
     ):
         rc = fn()
         if rc != 0:

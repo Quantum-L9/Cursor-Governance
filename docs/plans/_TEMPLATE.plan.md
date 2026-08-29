@@ -35,6 +35,11 @@ kernel_pass:
     ran_at: ""
     body_sha256:
     deltas: []
+  recursive_alignment:
+    kernel: kernels/Recursive Alignment.md
+    ran_at: ""
+    body_sha256:
+    deltas: []
   validate_repair:
     kernel: kernels/Validate & Repair.md
     ran_at: ""

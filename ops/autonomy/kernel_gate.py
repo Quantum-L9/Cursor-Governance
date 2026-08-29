@@ -3,10 +3,10 @@
 
 Not an L4 phase. L4 remains local-commit / no-mid-push / authorize-release.
 This module is the only velocity-path latch for applying tree kernels
-(Recursive Alignment + Validate & Repair) and for plan ``kernel_pass``
-receipts on changed ``*.plan.md`` files. Pipeline-audit surfaces
-(``docs/plans/``, ``WIP/``, ``environment/program-execution/campaigns/``)
-skip the plan latch; they have their own Improve/harvest/PE treatment.
+(Recursive Alignment + Validate & Repair). WIP/, docs/plans/, and
+environment/program-execution/campaigns/ are corpus surfaces owned by
+``/ff`` (Improve then RA then Validate & Repair) — this hook must not
+L9_AGENT_REQUIRED them. L4 record-kernels is not the corpus apply path.
 
 ``precommit`` must run first in ``run_pr_precommit.sh`` and fail closed
 before any other hook or test starts, so those checkers fire once.
@@ -30,12 +30,14 @@ KERNELS: tuple[tuple[str, str], ...] = (
     ("validate_repair", "kernels/Validate & Repair.md"),
 )
 PLAN_FIXTURE_PREFIX = "skills/l9-plan/fixtures/"
-#: Pipeline-audit surfaces. Separate treatment; do not latch make pr on them.
-KERNEL_EXEMPT_PREFIXES = (
-    "docs/plans/",
+#: Corpus kernels fire on /ff shelf, not at precommit or L4.
+CORPUS_SKIP_PREFIXES = (
     "WIP/",
+    "docs/plans/",
     "environment/program-execution/campaigns/",
 )
+#: Same prefixes as CORPUS_SKIP_PREFIXES (pipeline-audit surfaces).
+KERNEL_EXEMPT_PREFIXES = CORPUS_SKIP_PREFIXES
 #: Executable-plan templates are not Cursor plans. Do not require kernel_pass.
 PLAN_SKIP_PREFIXES = (
     PLAN_FIXTURE_PREFIX,
@@ -43,6 +45,25 @@ PLAN_SKIP_PREFIXES = (
     "docs/plans/_TEMPLATE.plan.md",
     *KERNEL_EXEMPT_PREFIXES,
 )
+
+
+def _rel_path(raw: str) -> str:
+    return raw.strip().lstrip("./")
+
+
+def _is_corpus_path(rel: str) -> bool:
+    norm = _rel_path(rel)
+    for prefix in CORPUS_SKIP_PREFIXES:
+        if norm == prefix.rstrip("/") or norm.startswith(prefix):
+            return True
+    return False
+
+
+def changed_are_corpus_only(changed_paths: list[str]) -> bool:
+    paths = [_rel_path(raw) for raw in changed_paths if raw.strip()]
+    if not paths:
+        return False
+    return all(_is_corpus_path(path) for path in paths)
 
 
 def _utc_now() -> str:
@@ -201,6 +222,8 @@ def verify_plans(changed_paths: list[str], *, workspace: Path, gov: Path) -> str
         rel = raw.strip().lstrip("./")
         if not rel.endswith(".plan.md"):
             continue
+        if _is_corpus_path(rel):
+            continue
         if any(rel.startswith(prefix) for prefix in PLAN_SKIP_PREFIXES):
             continue
         candidate = Path(raw)
@@ -229,11 +252,15 @@ def read_changed_file(path: Path | None) -> list[str]:
 
 
 def precommit(root: Path, gov: Path, changed_file: Path | None) -> int:
+    changed = read_changed_file(changed_file)
+    if changed_are_corpus_only(changed):
+        print("OK: kernel hook skipped (corpus-only changeset; /ff owns WIP/plans/campaigns)")
+        return 0
     tree_fail = verify_tree(root, gov)
     if tree_fail:
         sys.stderr.write(tree_fail)
         return 2
-    plan_fail = verify_plans(read_changed_file(changed_file), workspace=root, gov=gov)
+    plan_fail = verify_plans(changed, workspace=root, gov=gov)
     if plan_fail:
         sys.stderr.write(plan_fail)
         return 2
