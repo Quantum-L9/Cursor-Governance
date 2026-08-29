@@ -152,9 +152,7 @@ def probe_cherry_conflicts(repo: Path, tip: str, sha: str) -> list[str] | None:
     parent_sha = parent.stdout.strip()
     if not parent_sha:
         return probe_sha_conflicts(repo, tip, sha)
-    return _parse_merge_tree(
-        _merge_tree(repo, f"--merge-base={parent_sha}", tip, sha)
-    )
+    return _parse_merge_tree(_merge_tree(repo, f"--merge-base={parent_sha}", tip, sha))
 
 
 def commit_unix(repo: Path, sha: str) -> int:
@@ -630,9 +628,7 @@ def extract_remainder(
                 check=False,
             )
             if checkout.returncode != 0:
-                raise RuntimeError(
-                    f"remainder checkout failed on {sha}: {checkout.stderr.strip()}"
-                )
+                raise RuntimeError(f"remainder checkout failed on {sha}: {checkout.stderr.strip()}")
             applied += 1
         if applied == 0:
             raise RuntimeError("remainder empty: no unique paths from tip-conflict commits")
