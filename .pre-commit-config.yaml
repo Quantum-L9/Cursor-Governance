@@ -15,9 +15,13 @@ repos:
         # Committed dist/ is tsc output, verified byte-identical by the consumer's
         # own check:dist gate. tsc emits no trailing newline, so appending one here
         # makes that gate fail and the rewrite can never be committed clean.
-        exclude: "^dist/"
+        # Hash-anchored compiled plan packs under docs/plans/claude-code/<pack>/
+        # are the same class: MANIFEST.yaml and kernel_pass hash exact bytes
+        # (Quantum-L9/Cursor-Governance#374). Flat files at
+        # docs/plans/claude-code/*.plan.md stay normalised.
+        exclude: "^(dist/|docs/plans/claude-code/[^/]+/)"
       - id: trailing-whitespace
-        exclude: "^dist/"
+        exclude: "^(dist/|docs/plans/claude-code/[^/]+/)"
       - id: check-added-large-files
         args: ["--maxkb=1000"]
       - id: check-yaml
