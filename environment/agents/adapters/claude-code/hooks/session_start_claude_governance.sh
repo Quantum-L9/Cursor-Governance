@@ -390,54 +390,10 @@ emit_readiness_receipt() {
   done <<< "$block"
 }
 
-# --- Durable record of the cloud sandbox's own toolchain (fail-open) ---------
-# Cloud-only and detached. uv's version in the Anthropic sandbox decides whether
-# the `[tool.uv]` keys this repo depends on are honoured or silently dropped
-# (0.8.x discards the whole table when it meets a key it does not know), and it
-# is the one surface whose version cannot be checked after the fact: the VM and
-# everything under ~/.l9 are destroyed together. A local checkout's uv is
-# readable at any time, so recording that would be noise.
-#
-# Detached with a timeout because SessionStart's budget is already mostly spent:
-# a memory write must never delay a session, and a hung tunnel must never become
-# a hung hook. Repeat writes are safe — graphiti_memory_client.cmd_write finds
-# the near-duplicate and supersedes it rather than accumulating copies — so the
-# per-version stamp is only an optimisation to skip the round-trip inside one VM.
-record_sandbox_toolchain() {
-  local py="$1"
-  [ "${CLAUDE_CODE_REMOTE:-}" = "true" ] || return 0
-  local observed="$HOME/.l9/claude/toolchain-observed.json"
-  local client="$GOV/ops/graphiti/graphiti_memory_client.py"
-  [ -f "$observed" ] && [ -f "$client" ] || return 0
-  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
-
-  local uv_v
-  uv_v="$(sed -n 's/.*"uv_version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' "$observed" | head -n1)"
-  [ -n "$uv_v" ] || return 0
-
-  local stamp="$HOME/.l9/claude/toolchain-graphiti-$uv_v.stamp"
-  if [ -f "$stamp" ]; then
-    LINES+=("sandbox toolchain: uv $uv_v (already recorded to Graphiti)")
-    return 0
-  fi
-
-  local body="Anthropic Claude Code cloud sandbox ships uv $uv_v. Check [tool.uv] required-version and any uv feature floor (exclude-newer needs 0.9.17) against this version before relying on it; uv 0.8.x silently discards the entire [tool.uv] table when it meets an unknown key."
-  if command -v timeout >/dev/null 2>&1; then
-    ( timeout 25 "$py" "$client" write "$body" --kind note --agent-id claude-code \
-        >/dev/null 2>&1 && touch "$stamp" ) &
-  else
-    ( "$py" "$client" write "$body" --kind note --agent-id claude-code \
-        >/dev/null 2>&1 && touch "$stamp" ) &
-  fi
-  disown 2>/dev/null || true
-  LINES+=("sandbox toolchain: uv $uv_v — recording to Graphiti (detached)")
-}
-
 emit_bootstrap_status "$PY"
 emit_account_drift "$PY"
 emit_capability_readiness "$PY"
 emit_readiness_receipt "$PY"
-record_sandbox_toolchain "$PY"
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
 emit "$CONTEXT"

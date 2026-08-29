@@ -18,14 +18,6 @@
 #     with a present toolchain re-installs nothing.
 #   * Fail-open: always exits 0; a dependency failure degrades the session,
 #     it never blocks it.
-#   * Observing: records the sandbox's own toolchain versions verbatim to
-#     ~/.l9/claude/toolchain-observed.json. The fingerprint below always read
-#     `uv --version`, but only ever folded it into a SHA-256 nothing can invert,
-#     so the one surface whose uv version cannot be checked after the fact left
-#     no record of it at all — and `[tool.uv] required-version` was argued from
-#     a stale comment instead. The file is the local half; the durable half is
-#     the Graphiti write in session_start_claude_governance.sh, because this VM
-#     and everything under ~/.l9 are destroyed together.
 #   * Bounded: a synchronous run stays within L9_SESSION_DEPS_BUDGET seconds
 #     (default 20); if the budget expires the helper re-launches itself
 #     detached to finish in the background.
@@ -66,21 +58,6 @@ file_hash() {
     || md5sum "$1" 2>/dev/null | awk '{print $1}'
 }
 
-# Captured verbatim at top level, and deliberately not inside fingerprint():
-# that function runs in a command substitution, so a version assigned there
-# would not survive into this scope. The expressions are byte-identical to the
-# ones fingerprint() used to inline, so recording them changes no cache key and
-# invalidates no existing stamp — the values were always read, just discarded.
-UV_VERSION="$(uv --version 2>/dev/null || echo none)"
-NODE_VERSION="$(node --version 2>/dev/null || echo none)"
-PNPM_VERSION="$(pnpm --version 2>/dev/null || echo none)"
-NPM_VERSION="$(npm --version 2>/dev/null || echo none)"
-
-# Bare semver, so a consumer comparing against `required-version` does not have
-# to parse "uv 0.8.0 (3cdf50e09 2026-06-19 x86_64-unknown-linux-gnu)". Empty
-# when uv is absent, which is distinct from a version that is merely old.
-UV_SEMVER="$(printf '%s\n' "$UV_VERSION" | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -n1)"
-
 fingerprint() {
   local stamp_input=""
   for f in uv.lock pyproject.toml requirements.txt package.json pnpm-lock.yaml package-lock.yaml .pre-commit-config.yaml; do
@@ -88,39 +65,15 @@ fingerprint() {
       stamp_input="$stamp_input|$f:$(file_hash "$WORKSPACE/$f")"
     fi
   done
-  stamp_input="$stamp_input|uv:$UV_VERSION"
-  stamp_input="$stamp_input|node:$NODE_VERSION"
-  stamp_input="$stamp_input|pnpm:$PNPM_VERSION"
-  stamp_input="$stamp_input|npm:$NPM_VERSION"
+  stamp_input="$stamp_input|uv:$(uv --version 2>/dev/null || echo none)"
+  stamp_input="$stamp_input|node:$(node --version 2>/dev/null || echo none)"
+  stamp_input="$stamp_input|pnpm:$(pnpm --version 2>/dev/null || echo none)"
+  stamp_input="$stamp_input|npm:$(npm --version 2>/dev/null || echo none)"
   printf '%s' "$stamp_input" | shasum -a 256 | awk '{print $1}'
 }
 
 STAMP_DIR="$HOME/.l9/claude"
 mkdir -p "$STAMP_DIR"
-
-# Written before the cache check, not after: the observation is about the
-# environment, not about whether an install ran, so a cached toolchain must
-# still leave a record of the uv that resolved it.
-TOOLCHAIN_OBSERVED="$STAMP_DIR/toolchain-observed.json"
-write_toolchain_observation() {
-  local ts
-  ts="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
-  cat >"$TOOLCHAIN_OBSERVED" 2>/dev/null <<EOF || true
-{
-  "schema": "l9.claude-toolchain-observed.v1",
-  "observed_at": "$ts",
-  "surface": "claude-code-cloud",
-  "uv_version": "$UV_SEMVER",
-  "uv_version_raw": "$UV_VERSION",
-  "node_version": "$NODE_VERSION",
-  "pnpm_version": "$PNPM_VERSION",
-  "npm_version": "$NPM_VERSION"
-}
-EOF
-}
-write_toolchain_observation
-echo "session-deps: observed uv ${UV_SEMVER:-none} (raw: $UV_VERSION) node $NODE_VERSION"
-
 FP="$(fingerprint)"
 STAMP="$STAMP_DIR/deps-$FP.stamp"
 
