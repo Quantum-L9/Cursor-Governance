@@ -513,7 +513,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--force", action="store_true")
     parser.add_argument("--verbose", "-v", action="store_true")
     parser.add_argument("--list", "-l", action="store_true")
-    parser.add_argument("--gaps", action="store_true", help="Report missing or invalid config paths")
+    parser.add_argument(
+        "--gaps", action="store_true", help="Report missing or invalid config paths"
+    )
     parser.add_argument("--validate", action="store_true")
     parser.add_argument("--validate-sections", action="store_true")
     parser.add_argument(
