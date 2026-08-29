@@ -1,17 +1,19 @@
-"""PR-train LangGraph — open stacked PRs, converge, then /ff.
+"""PR-train LangGraph — open stacked PRs, halt for remediator, then /ff.
 
 LANGGRAPH_RUNTIME (not a SessionDAG). Never call register_session_dag.
 
-Stops (one slash, one graph):
+Stops (one slash, graph + remediator skill):
 
-1. OPEN_TRAIN — inventory unique local commits, drop already-landed patches,
-   consolidate colliding work into one slice (shared path, generated-prefix
-   clobber, or ``git merge-tree`` conflict; unknown probe fail-closes into
-   the same PR), cherry-pick onto the unique stack tip, publish with
-   ``PR_STACK=auto make pr``.
-2. REMEDIATE — dispatch skill ``l9-pr-remediation`` Converge (merge
-   authorization for all open PRs). Do not run ``make pr`` here.
-3. FF — only when ``open_pr_count == 0``, run ``skills/l9-repo-sync/scripts/ff.sh``.
+1. OPEN_TRAIN — inventory unique commits on the **current branch** (opt-in
+   ``--all-refs``), drop already-landed patches, consolidate colliding work
+   into one slice (shared path, generated-prefix clobber, or ``git merge-tree``
+   conflict; unknown probe fail-closes into the same PR), cherry-pick onto
+   the unique stack tip, publish with ``PR_STACK=auto make pr``.
+2. REMEDIATE — this graph does **not** run MERGE_TRAIN and does **not** write
+   merge authorization. It dispatches skill ``l9-pr-remediation`` Converge
+   and HALTS. Do not run ``make pr`` here.
+3. FF — ``--ff-only`` after ``open_pr_count == 0``, run
+   ``skills/l9-repo-sync/scripts/ff.sh``.
 
 Rebase and conflict resolution stay forbidden. Cherry-pick conflict stops.
 Campaign branches halt unless ``campaign_override``.
@@ -20,6 +22,7 @@ Campaign branches halt unless ``campaign_override``.
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import os
 import subprocess
@@ -41,12 +44,22 @@ GRAPH_ID = "pr-train-v1"
 MAX_SLICES = 32
 REMEDIATOR_SKILL = "l9-pr-remediation"
 _SCRIPTS = _REPO_ROOT / "ops" / "scripts"
-if str(_SCRIPTS) not in sys.path:
-    sys.path.insert(0, str(_SCRIPTS))
-try:
-    from sync_generated_artifacts import GENERATED_PATH_PREFIXES
-except ImportError:  # pragma: no cover — tests still union by path + merge-tree
-    GENERATED_PATH_PREFIXES = ()
+
+
+def _load_generated_prefixes() -> tuple[str, ...]:
+    path = _SCRIPTS / "sync_generated_artifacts.py"
+    if not path.is_file():
+        return ()
+    spec = importlib.util.spec_from_file_location("_l9_sync_generated_artifacts", path)
+    if spec is None or spec.loader is None:
+        return ()
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    prefixes = getattr(module, "GENERATED_PATH_PREFIXES", ())
+    return tuple(prefixes) if prefixes else ()
+
+
+GENERATED_PATH_PREFIXES = _load_generated_prefixes()
 
 
 # ---------------------------------------------------------------------------
@@ -229,6 +242,9 @@ class PrTrainState(BaseModel):
     execute: bool = Field(default=False)
     campaign_override: bool = Field(default=False)
     fetch: bool = Field(default=True)
+    all_refs: bool = Field(default=False)
+    refs: list[str] = Field(default_factory=list)
+    ff_only: bool = Field(default=False)
 
     branch: str | None = Field(default=None)
     inventory: dict[str, Any] = Field(default_factory=dict)
@@ -316,11 +332,25 @@ def load_diagnosis(repo: Path, ref: str, baseline: str, fetch: bool) -> dict[str
     return json.loads(proc.stdout)
 
 
-def load_commit_paths(repo: Path, sha: str) -> tuple[str, ...]:
+def load_commit_paths(repo: Path, sha: str) -> tuple[str, ...] | None:
     proc = _git(repo, "diff-tree", "--no-commit-id", "--name-only", "-r", sha)
     if proc.returncode != 0:
-        return ()
+        return None
     return tuple(line for line in proc.stdout.splitlines() if line.strip())
+
+
+def github_repo_slug(repo: Path) -> str:
+    remote = _git(repo, "remote", "get-url", "origin")
+    if remote.returncode != 0:
+        raise RuntimeError("cannot resolve origin for GitHub slug")
+    url = remote.stdout.strip().removesuffix(".git")
+    if "github.com" not in url:
+        raise RuntimeError("origin is not GitHub; refuse slug")
+    tail = url.split("github.com", 1)[1].lstrip(":/")
+    parts = [p for p in tail.split("/") if p]
+    if len(parts) < 2:
+        raise RuntimeError("origin is not owner/repo; refuse slug")
+    return f"{parts[0]}/{parts[1]}"
 
 
 def load_stack_tip(repo: Path, default_ref: str) -> tuple[str, str, str]:
@@ -346,17 +376,7 @@ def load_stack_tip(repo: Path, default_ref: str) -> tuple[str, str, str]:
 
 
 def count_open_prs(repo: Path) -> int:
-    remote = _git(repo, "remote", "get-url", "origin")
-    if remote.returncode != 0:
-        raise RuntimeError("cannot resolve origin for open-PR count")
-    url = remote.stdout.strip()
-    if url.endswith(".git"):
-        url = url[:-4]
-    if "github.com" not in url:
-        raise RuntimeError("origin is not GitHub; refuse open-PR count")
-    tail = url.split("github.com", 1)[1].lstrip(":/")
-    parts = [p for p in tail.split("/") if p]
-    slug = f"{parts[0]}/{parts[1]}"
+    slug = github_repo_slug(repo)
     proc = subprocess.run(
         ["gh", "pr", "list", "--repo", slug, "--state", "open", "--json", "number"],
         text=True,
@@ -477,9 +497,22 @@ def inventory_node(state: PrTrainState) -> dict[str, Any]:
             "halt_reason": halt,
             "stop": "report",
         }
-    refs = [row["name"] for row in data.get("unpushed_or_diverged") or [] if row.get("name")]
-    if branch and branch not in refs and data.get("head"):
-        refs = [branch, *refs]
+    if state.refs:
+        refs = [name for name in state.refs if name]
+    elif state.all_refs:
+        refs = [row["name"] for row in data.get("unpushed_or_diverged") or [] if row.get("name")]
+        if branch and branch not in refs and data.get("head"):
+            refs = [branch, *refs]
+    elif branch:
+        refs = [branch]
+    else:
+        return {
+            "inventory": data,
+            "branch": branch,
+            "status": "blocked",
+            "halt_reason": "no current branch; refuse all-ref inventory",
+            "stop": "report",
+        }
     return {
         "inventory": data,
         "branch": branch,
@@ -515,6 +548,13 @@ def diagnose_node(state: PrTrainState) -> dict[str, Any]:
                     continue
                 seen.add(sha)
                 paths = load_commit_paths(repo, sha)
+                if paths is None:
+                    return {
+                        "diagnoses": diagnoses,
+                        "status": "blocked",
+                        "halt_reason": f"paths unproven for {sha}; refuse slice split",
+                        "stop": "report",
+                    }
                 novel.append({"sha": sha, "paths": list(paths), "ref": ref})
     except Exception as exc:
         return {"status": "failed", "halt_reason": str(exc), "errors": [str(exc)]}
@@ -598,31 +638,18 @@ def remediate_node(state: PrTrainState) -> dict[str, Any]:
         return {}
     if not state.execute:
         return {"stop": "remediate", "skill_dispatch": REMEDIATOR_SKILL}
-    repo = Path(state.repo).resolve()
     remediator: Callable[[PrTrainState], dict[str, Any]] | None = state.remediate_fn
     updates: dict[str, Any] = {
         "stop": "remediate",
         "skill_dispatch": REMEDIATOR_SKILL,
-        "merge_authorized": True,
+        "merge_authorized": False,
     }
     if remediator is None:
-        try:
-            authorize_merge(
-                _repo_slug(repo),
-                "pr-train-v1 stop 2: l9-pr-remediation Converge",
-            )
-        except Exception as exc:
-            return {
-                "stop": "remediate",
-                "skill_dispatch": REMEDIATOR_SKILL,
-                "status": "blocked",
-                "halt_reason": str(exc),
-            }
-        try:
-            updates["open_pr_count"] = count_open_prs(repo)
-        except Exception as exc:
-            return {**updates, "status": "blocked", "halt_reason": str(exc)}
-        return updates
+        return {
+            **updates,
+            "status": "blocked",
+            "halt_reason": "awaiting l9-pr-remediation Converge",
+        }
     extra = remediator(state)
     updates.update(extra)
     return updates
@@ -633,17 +660,20 @@ def ff_node(state: PrTrainState) -> dict[str, Any]:
         return {}
     if not state.execute:
         return {"stop": "ff", "ff_skipped": "plan-only"}
-    if state.open_pr_count is None:
-        return {"status": "blocked", "halt_reason": "open_pr_count unknown; refuse /ff"}
-    if state.open_pr_count != 0:
+    repo = Path(state.repo).resolve()
+    open_count = state.open_pr_count
+    if open_count is None:
+        try:
+            open_count = count_open_prs(repo)
+        except Exception as exc:
+            return {"status": "blocked", "halt_reason": str(exc), "stop": "ff"}
+    if open_count != 0:
         return {
+            "open_pr_count": open_count,
             "ff_ran": False,
-            "ff_skipped": f"open_pr={state.open_pr_count}",
+            "ff_skipped": f"open_pr={open_count}",
             "stop": "ff",
         }
-    if not state.execute:
-        return {"stop": "ff", "ff_skipped": "plan-only"}
-    repo = Path(state.repo).resolve()
     clone = resolve_ff_clone(repo, state.branch)
     ff_fn: Callable[[Path], subprocess.CompletedProcess[str]] = state.ff_fn or run_ff
     proc = ff_fn(clone)
@@ -655,7 +685,7 @@ def ff_node(state: PrTrainState) -> dict[str, Any]:
             "halt_reason": proc.stderr.strip() or proc.stdout.strip() or "ff.sh failed",
             "stop": "ff",
         }
-    return {"ff_clone": str(clone), "ff_ran": True, "stop": "ff"}
+    return {"ff_clone": str(clone), "ff_ran": True, "open_pr_count": open_count, "stop": "ff"}
 
 
 def report_node(state: PrTrainState) -> dict[str, Any]:
@@ -667,7 +697,8 @@ def report_node(state: PrTrainState) -> dict[str, Any]:
         f"novel commits: {len(state.novel)} (skipped landed: {len(state.skipped_dup)})",
         f"slices: {len(state.slices)} (path ∪ generated-prefix ∪ merge-tree; unknown=colocate)",
         f"opened: {len(state.opened_prs)}",
-        f"stop 2 skill: {state.skill_dispatch or '(not dispatched)'}",
+        f"stop 2 skill: {state.skill_dispatch or '(not dispatched)'}"
+        + (" — graph does not MERGE_TRAIN" if state.skill_dispatch else ""),
         f"open_pr_count: {state.open_pr_count}",
         f"stop 3 /ff: {'ran' if state.ff_ran else state.ff_skipped or 'not run'}",
     ]
@@ -679,13 +710,7 @@ def report_node(state: PrTrainState) -> dict[str, Any]:
 
 
 def _repo_slug(repo: Path) -> str:
-    remote = _git(repo, "remote", "get-url", "origin")
-    url = remote.stdout.strip()
-    if url.endswith(".git"):
-        url = url[:-4]
-    tail = url.split("github.com", 1)[1].lstrip(":/")
-    parts = [p for p in tail.split("/") if p]
-    return f"{parts[0]}/{parts[1]}"
+    return github_repo_slug(repo)
 
 
 # ---------------------------------------------------------------------------
@@ -693,11 +718,19 @@ def _repo_slug(repo: Path) -> str:
 # ---------------------------------------------------------------------------
 
 
+def route_start(state: PrTrainState) -> Literal["inventory", "ff"]:
+    if state.ff_only:
+        return "ff"
+    return "inventory"
+
+
 def route_after_slice(state: PrTrainState) -> Literal["stack_base", "remediate", "report"]:
     if state.status in {"blocked", "failed"}:
         return "report"
-    if state.slices and state.execute:
+    if state.execute and state.slices:
         return "stack_base"
+    if state.execute:
+        return "report"
     return "remediate"
 
 
@@ -739,7 +772,11 @@ def build_pr_train_graph():
     graph.add_node("ff", ff_node)
     graph.add_node("report", report_node)
 
-    graph.add_edge(START, "inventory")
+    graph.add_conditional_edges(
+        START,
+        route_start,
+        {"inventory": "inventory", "ff": "ff"},
+    )
     graph.add_edge("inventory", "diagnose")
     graph.add_edge("diagnose", "slice")
     graph.add_conditional_edges(
@@ -781,13 +818,19 @@ def run_pr_train(
     execute: bool = False,
     campaign_override: bool = False,
     fetch: bool = True,
+    all_refs: bool = False,
+    refs: list[str] | None = None,
+    ff_only: bool = False,
     **hooks: Any,
 ) -> PrTrainState:
     initial = PrTrainState(
         repo=str(Path(repo or Path.cwd()).resolve()),
-        execute=execute,
+        execute=execute or ff_only,
         campaign_override=campaign_override,
         fetch=fetch,
+        all_refs=all_refs,
+        refs=list(refs or []),
+        ff_only=ff_only,
         **hooks,
     )
     result = PR_TRAIN_DAG.invoke(initial)
@@ -800,6 +843,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--execute", action="store_true")
     parser.add_argument("--campaign-override", action="store_true")
     parser.add_argument("--no-fetch", action="store_true")
+    parser.add_argument("--all-refs", action="store_true")
+    parser.add_argument("--ref", action="append", dest="refs", default=[])
+    parser.add_argument("--ff-only", action="store_true")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)
     state = run_pr_train(
@@ -807,6 +853,9 @@ def main(argv: list[str] | None = None) -> int:
         execute=args.execute,
         campaign_override=args.campaign_override,
         fetch=not args.no_fetch,
+        all_refs=args.all_refs,
+        refs=args.refs,
+        ff_only=args.ff_only,
     )
     if args.json:
         print(state.model_dump_json(indent=2))

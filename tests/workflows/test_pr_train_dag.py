@@ -20,6 +20,7 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     NovelCommit,
     campaign_halt,
     commits_must_colocate,
+    github_repo_slug,
     group_slices,
     parse_merge_tree_name_only,
     resolve_ff_clone,
@@ -96,6 +97,9 @@ def test_command_is_thin_trigger():
     assert "l9-pr-remediation" in text
     assert "/ff" in text
     assert "open_pr" in text
+    assert "awaiting" in text
+    assert "--ff-only" in text
+    assert "--all-refs" in text
     assert ".cursor-commands/workflows/dags" not in text
 
 
@@ -336,6 +340,69 @@ def test_execute_open_then_remediate_then_ff_when_open_pr_zero(monkeypatch, tmp_
 def test_ff_skipped_while_open_prs_remain(monkeypatch, tmp_path):
     from workflows.dags import pr_train_dag as mod
 
+    monkeypatch.setattr(mod, "count_open_prs", lambda *_a, **_k: 2)
+
+    def ff(_clone):
+        raise AssertionError("/ff must not run while open_pr!=0")
+
+    state = run_pr_train(tmp_path, ff_only=True, ff_fn=ff)
+    assert state.ff_ran is False
+    assert state.ff_skipped == "open_pr=2"
+    assert state.open_pr_count == 2
+
+
+def test_execute_without_remediator_halts_and_does_not_authorize(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+
+    monkeypatch.setattr(
+        mod,
+        "load_inventory",
+        lambda *_a, **_k: _inventory("feat/x", ["feat/x"]),
+    )
+    monkeypatch.setattr(
+        mod,
+        "load_diagnosis",
+        lambda *_a, **_k: {
+            "cherry_available": True,
+            "baseline_resolved": True,
+            "cherry_novel_commits": ["aaa"],
+            "cherry_dup_commits": [],
+        },
+    )
+    monkeypatch.setattr(mod, "load_commit_paths", lambda *_a, **_k: ("ops/a.py",))
+    monkeypatch.setattr(
+        mod, "load_stack_tip", lambda *_a, **_k: ("origin/main", "1" * 40, "no_open_prs")
+    )
+
+    def boom(*_a, **_k):
+        raise AssertionError("graph must not authorize merge")
+
+    monkeypatch.setattr(mod, "authorize_merge", boom)
+    monkeypatch.setattr(mod, "run_ff", boom)
+
+    def extract(_repo, _commits, _tip, index):
+        return str(tmp_path / f"wt-{index}"), f"feat/pr-train-{index}"
+
+    def publish(worktree: str):
+        return {"worktree": worktree, "ok": True}
+
+    state = run_pr_train(
+        tmp_path,
+        execute=True,
+        fetch=False,
+        extract_fn=extract,
+        publish_fn=publish,
+    )
+    assert state.status == "blocked"
+    assert "awaiting l9-pr-remediation" in state.halt_reason
+    assert state.merge_authorized is False
+    assert state.ff_ran is False
+    assert state.opened_prs
+
+
+def test_execute_empty_train_does_not_authorize_or_remediate(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+
     monkeypatch.setattr(
         mod,
         "load_inventory",
@@ -352,24 +419,93 @@ def test_ff_skipped_while_open_prs_remain(monkeypatch, tmp_path):
         },
     )
     monkeypatch.setattr(mod, "load_commit_paths", lambda *_a, **_k: ())
-    monkeypatch.setattr(mod, "authorize_merge", lambda *_a, **_k: None)
+
+    def boom(*_a, **_k):
+        raise AssertionError("empty train must not authorize merge")
+
+    monkeypatch.setattr(mod, "authorize_merge", boom)
 
     def remediate(_state):
-        return {"open_pr_count": 2}
-
-    def ff(_clone):
-        raise AssertionError("/ff must not run while open_pr!=0")
+        raise AssertionError("empty train must not enter remediator")
 
     state = run_pr_train(
         tmp_path,
         execute=True,
         fetch=False,
         remediate_fn=remediate,
-        ff_fn=ff,
     )
-    assert state.ff_ran is False
-    assert state.ff_skipped == "open_pr=2"
-    assert state.open_pr_count == 2
+    assert state.status == "complete"
+    assert state.slices == []
+    assert state.merge_authorized is False
+    assert state.skill_dispatch == ""
+
+
+def test_default_inventory_is_current_branch_only(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+
+    seen: list[str] = []
+
+    monkeypatch.setattr(
+        mod,
+        "load_inventory",
+        lambda *_a, **_k: _inventory("feat/x", ["feat/x", "feat/foreign"]),
+    )
+
+    def diagnose(_repo, ref, *_a, **_k):
+        seen.append(ref)
+        return {
+            "cherry_available": True,
+            "baseline_resolved": True,
+            "cherry_novel_commits": [],
+            "cherry_dup_commits": [],
+        }
+
+    monkeypatch.setattr(mod, "load_diagnosis", diagnose)
+    state = run_pr_train(tmp_path, execute=False, fetch=False)
+    assert seen == ["feat/x"]
+    assert state.unpushed_refs == ["feat/x"]
+
+
+def test_all_refs_includes_foreign_unpushed(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+
+    seen: list[str] = []
+    monkeypatch.setattr(
+        mod,
+        "load_inventory",
+        lambda *_a, **_k: _inventory("feat/x", ["feat/x", "feat/foreign"]),
+    )
+
+    def diagnose(_repo, ref, *_a, **_k):
+        seen.append(ref)
+        return {
+            "cherry_available": True,
+            "baseline_resolved": True,
+            "cherry_novel_commits": [],
+            "cherry_dup_commits": [],
+        }
+
+    monkeypatch.setattr(mod, "load_diagnosis", diagnose)
+    state = run_pr_train(tmp_path, execute=False, fetch=False, all_refs=True)
+    assert seen == ["feat/x", "feat/foreign"]
+    assert state.unpushed_refs == ["feat/x", "feat/foreign"]
+
+
+def test_github_slug_refuses_non_github(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+
+    def fake_git(_repo, *args):
+        if args[:2] == ("remote", "get-url"):
+            return SimpleNamespace(returncode=0, stdout="git@example.com:org/repo\n", stderr="")
+        return SimpleNamespace(returncode=1, stdout="", stderr="no")
+
+    monkeypatch.setattr(mod, "_git", fake_git)
+    try:
+        github_repo_slug(tmp_path)
+    except RuntimeError as exc:
+        assert "not GitHub" in str(exc)
+    else:
+        raise AssertionError("expected refuse")
 
 
 def test_campaign_halt_skips_remediator_and_ff(monkeypatch, tmp_path):

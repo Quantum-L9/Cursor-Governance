@@ -95,7 +95,7 @@ Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not
 | `/l9-audit-plans` | `commands/l9-audit-plans.md` | Shelf the plans store (root = current unbuilt). `/plan-audit` is an alias. Not skill `l9-plan-audit`. |
 | `/plan-audit` | `commands/plan-audit.md` | Audit unbuilt Cursor plans |
 | `/pr` | `commands/pr.md` | PR Diagnose (readiness / blockers) via l9-pr-remediation |
-| `/pr-train` | `commands/pr-train.md` | Stacked PR train, remediator Converge, then `/ff` when open_pr=0 |
+| `/pr-train` | `commands/pr-train.md` | Current-branch stacked PRs, halt for remediator Converge, then `/ff` when open_pr=0 |
 | `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |
 | `/refactor` | `commands/refactor.md` | Systematic refactoring/migration |
 | `/refactor-sweep` | `commands/refactor-sweep.md` | Broad refactor sweep |
