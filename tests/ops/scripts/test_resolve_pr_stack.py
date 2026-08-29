@@ -238,9 +238,7 @@ def _apple_make() -> Path | None:
     make = Path("/usr/bin/make")
     if not make.is_file():
         return None
-    ver = subprocess.run(
-        [str(make), "--version"], capture_output=True, text=True, check=False
-    )
+    ver = subprocess.run([str(make), "--version"], capture_output=True, text=True, check=False)
     if "GNU Make 3.81" not in (ver.stdout or ""):
         return None
     return make
@@ -264,9 +262,7 @@ def test_apple_make_381_snapshots_pr_stack_with_simply_expanded_export(
     default = _run([str(make), "-f", str(probe), "precommit-repo"], cwd=tmp_path)
     assert default.returncode == 0, default.stderr
     assert "env=auto" in default.stdout
-    empty = _run(
-        [str(make), "-f", str(probe), "precommit-repo", "PR_STACK="], cwd=tmp_path
-    )
+    empty = _run([str(make), "-f", str(probe), "precommit-repo", "PR_STACK="], cwd=tmp_path)
     assert empty.returncode == 0, empty.stderr
     assert empty.stdout.strip() == "env="
     custom = _run(

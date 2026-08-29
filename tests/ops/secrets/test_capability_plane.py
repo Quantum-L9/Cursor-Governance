@@ -616,8 +616,7 @@ def test_no_adapter_mcp_template_carries_a_graphiti_bearer() -> None:
             offenders.append(str(path.relative_to(REPO_ROOT)))
     assert checked >= 5, f"adapter template discovery found only {checked} configs"
     assert offenders == [], (
-        "adapter MCP templates must use ${GRAPHITI_MCP_URL} "
-        f"with no in-file bearer: {offenders}"
+        f"adapter MCP templates must use ${{GRAPHITI_MCP_URL}} with no in-file bearer: {offenders}"
     )
 
 
