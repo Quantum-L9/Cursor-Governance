@@ -42,6 +42,7 @@ import shutil
 import subprocess
 import sys
 import time
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -53,8 +54,9 @@ DEFAULT_L4_RECEIPT_AGE_HOURS = 12.0
 PROTECTED_BRANCHES = {"main", "master", "HEAD"}
 PROTECTED_PREFIXES = ("campaign/",)
 DEFAULT_STASH_AGE_HOURS = 24.0
-GH_LIMIT = 200
-GH_TIMEOUT = 30
+GH_PAGE_SIZE = 100
+GH_MAX_PAGES = 100
+GH_TIMEOUT = 60
 
 SAFE_TO_DELETE = {"merged", "absorbed"}
 
@@ -111,6 +113,8 @@ class Report:
     untracked: list[str] = field(default_factory=list)
     preserved_refs: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
+    pr_record_count: int = 0
+    pr_index_error: str = ""
 
 
 class Git:
@@ -138,24 +142,65 @@ def origin_slug(url: str) -> str:
     return match.group(1) if match else ""
 
 
-def pr_index(slug: str) -> tuple[dict[str, dict], str]:
-    """Map head branch -> most recent PR record. Empty map when gh cannot answer."""
-    if not slug or not shutil.which("gh"):
-        return {}, "gh unavailable"
+def normalize_pr_record(item: dict) -> dict | None:
+    """Accept `gh pr list` JSON or GitHub REST `/pulls` items."""
+    if "headRefName" in item:
+        head = str(item.get("headRefName") or "")
+        state = str(item.get("state") or "")
+        merged_at = item.get("mergedAt") or item.get("merged_at")
+        number = item.get("number")
+    else:
+        head = str((item.get("head") or {}).get("ref") or "")
+        state = str(item.get("state") or "")
+        merged_at = item.get("merged_at") or item.get("mergedAt")
+        number = item.get("number")
+    if not head:
+        return None
+    state_u = state.upper()
+    if merged_at and state_u != "OPEN":
+        state_u = "MERGED"
+    return {
+        "number": number,
+        "headRefName": head,
+        "state": state_u,
+        "mergedAt": merged_at,
+    }
+
+
+def _pr_beats(new: dict, prior: dict) -> bool:
+    """OPEN beats everything; else MERGED beats CLOSED; else higher number wins."""
+    rank = {"OPEN": 3, "MERGED": 2, "CLOSED": 1}
+    ns, ps = rank.get(str(new.get("state") or ""), 0), rank.get(str(prior.get("state") or ""), 0)
+    if ns != ps:
+        return ns > ps
+    return int(new.get("number") or 0) > int(prior.get("number") or 0)
+
+
+def merge_pr_records(records: list[dict]) -> dict[str, dict]:
+    """Map head branch -> governing PR. OPEN wins when any open PR uses that head."""
+    index: dict[str, dict] = {}
+    for raw in records:
+        record = normalize_pr_record(raw)
+        if record is None:
+            continue
+        head = record["headRefName"]
+        prior = index.get(head)
+        if prior is None or _pr_beats(record, prior):
+            index[head] = record
+    return index
+
+
+def _github_pulls_page(slug: str, page: int, per_page: int) -> tuple[list | None, str]:
+    if not shutil.which("gh"):
+        return None, "gh unavailable"
     try:
         proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
             [
                 "gh",
-                "pr",
-                "list",
-                "--repo",
-                slug,
-                "--state",
-                "all",
-                "--limit",
-                str(GH_LIMIT),
-                "--json",
-                "number,headRefName,state,mergedAt",
+                "api",
+                "-H",
+                "Accept: application/vnd.github+json",
+                f"/repos/{slug}/pulls?state=all&per_page={per_page}&page={page}",
             ],
             capture_output=True,
             text=True,
@@ -163,28 +208,62 @@ def pr_index(slug: str) -> tuple[dict[str, dict], str]:
             check=False,
         )
     except (OSError, subprocess.SubprocessError) as exc:
-        return {}, f"gh failed: {exc}"
+        return None, f"gh failed: {exc}"
     if proc.returncode != 0:
-        return {}, (proc.stderr or "gh returned non-zero").strip().splitlines()[-1][:200]
+        return None, (proc.stderr or "gh returned non-zero").strip().splitlines()[-1][:200]
     try:
-        records = json.loads(proc.stdout or "[]")
+        payload = json.loads(proc.stdout or "[]")
     except json.JSONDecodeError as exc:
-        return {}, f"gh emitted non-JSON: {exc}"
+        return None, f"gh emitted non-JSON: {exc}"
+    if isinstance(payload, dict):
+        return None, str(payload.get("message") or "gh api non-list")[:200]
+    if not isinstance(payload, list):
+        return None, "gh api non-list"
+    return payload, ""
 
-    index: dict[str, dict] = {}
-    for record in records:
-        head = str(record.get("headRefName") or "")
-        if not head:
-            continue
-        prior = index.get(head)
-        # MERGED beats any other state; otherwise the highest PR number wins.
-        if prior is None:
-            index[head] = record
-        elif record.get("state") == "MERGED":
-            index[head] = record
-        elif prior.get("state") != "MERGED" and record.get("number", 0) > prior.get("number", 0):
-            index[head] = record
-    return index, ""
+
+def fetch_all_pull_requests(
+    slug: str,
+    *,
+    page_fn: Callable[[str, int, int], tuple[list | None, str]] | None = None,
+) -> tuple[list[dict], str]:
+    """Page GitHub `/pulls` until a short page. Fail closed on a silent cap."""
+    if not slug:
+        return [], "empty origin slug"
+    pager = page_fn or _github_pulls_page
+    records: list[dict] = []
+    page = 1
+    while page <= GH_MAX_PAGES:
+        batch, err = pager(slug, page, GH_PAGE_SIZE)
+        if err:
+            return [], err
+        if batch is None:
+            return [], "gh returned no page"
+        records.extend(batch)
+        if len(batch) < GH_PAGE_SIZE:
+            return records, ""
+        page += 1
+    return [], (f"PR list exceeded {GH_MAX_PAGES * GH_PAGE_SIZE} records; refusing silent cap")
+
+
+def pr_index(
+    slug: str,
+    *,
+    records: list[dict] | None = None,
+    fetch_pages: Callable[[str], tuple[list[dict], str]] | None = None,
+) -> tuple[dict[str, dict], str]:
+    """Map head branch -> governing PR record. Empty map when gh cannot answer."""
+    if records is not None:
+        return merge_pr_records(records), ""
+    if fetch_pages is not None:
+        fetched, err = fetch_pages(slug)
+        if err:
+            return {}, err
+        return merge_pr_records(fetched), ""
+    fetched, err = fetch_all_pull_requests(slug)
+    if err:
+        return {}, err
+    return merge_pr_records(fetched), ""
 
 
 def worktree_map(git: Git) -> dict[str, Path]:
@@ -424,6 +503,8 @@ def build_report(
         report.errors.append(ref_warning)
 
     prs, pr_error = pr_index(slug)
+    report.pr_index_error = pr_error
+    report.pr_record_count = len(prs)
     if pr_error:
         report.errors.append(
             f"PR state unavailable ({pr_error}); branches judged by ancestry only, "
@@ -619,6 +700,13 @@ def main(argv: list[str] | None = None) -> int:
         git, max_stash_age=args.stash_age_hours, max_receipt_age=args.l4_receipt_age_hours
     )
     if args.apply and not args.report:
+        if report.pr_index_error:
+            print(
+                f"refusing --apply: PR index required and unavailable ({report.pr_index_error})",
+                file=sys.stderr,
+            )
+            print(json.dumps(asdict(report), indent=2) if args.json else render(report))
+            return 4
         apply_report(git, report)
     print(json.dumps(asdict(report), indent=2) if args.json else render(report))
     return 0

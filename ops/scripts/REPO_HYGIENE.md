@@ -77,3 +77,22 @@ Both are printed under `UNLANDED WORK` with a recovery SHA.
 Worktrees are removed before their branches, since a checked-out branch cannot
 be deleted. A branch whose worktree is dirty is reported `blocked-by-worktree`
 and kept — the dirty worktree wins.
+
+## PR index paging
+
+`pr_index` pages GitHub `/pulls` until a short page (100 per page). It does not
+silently stop at 200. `--apply` fail-closes when `gh` cannot answer — open-PR
+heads must be visible before anything is deleted. Report-only stays fail-soft
+(ancestry only, with the error recorded).
+
+OPEN beats MERGED for the same head so a reused branch with a live PR is kept
+as `open_pr`.
+
+## Leftovers this tool does not delete
+
+SessionEnd never force-deletes dirty trees, open-PR heads, or `[gone]` locals
+whose content is not yet proven spent. That close is
+`skills/l9-git-work-preserve/scripts/prune_execute.py` (receipt +
+`L9_GIT_PRUNE_AUTHORIZED`, preserve-ref, local only by default) after
+`prune_open_pr_copies.py` unlinks untracked sha-matches of open-PR blobs.
+See `skills/l9-git-work-preserve/references/prune-policy.md`.

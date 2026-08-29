@@ -3,7 +3,9 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
+import os
 import subprocess
 import sys
 import tempfile
@@ -13,8 +15,14 @@ ROOT = Path(__file__).resolve().parents[1]
 SCRIPTS = ROOT / "scripts"
 
 
-def run(cmd: list[str], cwd: Path | None = None) -> subprocess.CompletedProcess[str]:
-    return subprocess.run(cmd, cwd=str(cwd or ROOT), text=True, capture_output=True)
+def run(
+    cmd: list[str], cwd: Path | None = None, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
+    full = None
+    if env is not None:
+        full = os.environ.copy()
+        full.update(env)
+    return subprocess.run(cmd, cwd=str(cwd or ROOT), text=True, capture_output=True, env=full)
 
 
 def _git(repo: Path, *args: str) -> None:
@@ -556,6 +564,366 @@ def check_mode_change(tmp: Path, errors: list[str]) -> None:
         errors.append(f"mode-only change expected keep_push got {receipt.get('classification')}")
 
 
+def _rev(repo: Path, ref: str) -> str:
+    proc = subprocess.run(
+        ["git", "-C", str(repo), "rev-parse", ref],
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+    return proc.stdout.strip()
+
+
+def check_prune_execute(tmp: Path, errors: list[str]) -> None:
+    """Spent clean worktree is removable with receipt+auth; dirty/open_pr stay."""
+    repo = _init(tmp / "prune-exec")
+    _git(repo, "checkout", "-b", "feat/spent")
+    spent_tip = _rev(repo, "HEAD")
+    _git(repo, "checkout", "main")
+    _commit(repo, "later.txt", "moved\n", "main moves past spent")
+
+    _git(repo, "checkout", "-b", "feat/dirty")
+    dirty_tip = _rev(repo, "HEAD")
+    _git(repo, "checkout", "main")
+    _commit(repo, "later2.txt", "again\n", "main moves past dirty")
+
+    _git(repo, "checkout", "-b", "feat/open")
+    open_tip = _rev(repo, "HEAD")
+    _git(repo, "checkout", "main")
+
+    spent_wt = tmp / "spent-wt"
+    dirty_wt = tmp / "dirty-wt"
+    open_wt = tmp / "open-wt"
+    _git(repo, "worktree", "add", str(spent_wt), "feat/spent")
+    _git(repo, "worktree", "add", str(dirty_wt), "feat/dirty")
+    _git(repo, "worktree", "add", str(open_wt), "feat/open")
+    (dirty_wt / "precious.txt").write_text("unique dirt\n", encoding="utf-8")
+
+    rec_dir = tmp / "receipts"
+    rec_dir.mkdir()
+    for name, ref, tip, extra in (
+        ("spent.json", "feat/spent", spent_tip, {}),
+        ("dirty.json", "feat/dirty", dirty_tip, {}),
+        ("open.json", "feat/open", open_tip, {}),
+        (
+            "superset.json",
+            "feat/spent",
+            spent_tip,
+            {"classification": "archive_ref", "redundancy_basis": "content_superset"},
+        ),
+    ):
+        body = {
+            "receipt_id": name,
+            "mode": "diagnose-value",
+            "repo": str(repo),
+            "created_at": "2026-08-28T00:00:00Z",
+            "baseline_ref": "main",
+            "ref": ref,
+            "tip_sha": tip,
+            "classification": extra.get("classification", "prune_candidate"),
+            "confidence": extra.get("confidence", "high"),
+            "redundancy_basis": extra.get("redundancy_basis", ""),
+            "fetched": False,
+            "merge_commits_unexamined": 0,
+        }
+        (rec_dir / name).write_text(json.dumps(body), encoding="utf-8")
+
+    reported = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_execute.py"),
+            "--repo",
+            str(repo),
+            "--receipt",
+            str(rec_dir / "spent.json"),
+            "--skip-fetch",
+            "--json",
+        ]
+    )
+    if reported.returncode != 0:
+        errors.append(f"prune_execute report failed: {reported.stderr or reported.stdout}")
+        return
+    data = json.loads(reported.stdout)
+    if data.get("applied"):
+        errors.append("report-only must not set applied")
+    if not spent_wt.is_dir():
+        errors.append("report-only must not remove the spent worktree")
+    if (
+        "feat/spent"
+        not in subprocess.run(
+            ["git", "-C", str(repo), "branch", "--list"], text=True, capture_output=True, check=True
+        ).stdout
+    ):
+        errors.append("report-only must not delete the spent branch")
+
+    denied = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_execute.py"),
+            "--repo",
+            str(repo),
+            "--receipt",
+            str(rec_dir / "spent.json"),
+            "--skip-fetch",
+            "--apply",
+        ]
+    )
+    if denied.returncode == 0:
+        errors.append("prune_execute --apply without L9_GIT_PRUNE_AUTHORIZED must fail")
+    if not spent_wt.is_dir():
+        errors.append("--apply without auth must not remove the worktree")
+
+    auth = {"L9_GIT_PRUNE_AUTHORIZED": "pack-self-test"}
+    super_run = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_execute.py"),
+            "--repo",
+            str(repo),
+            "--receipt",
+            str(rec_dir / "superset.json"),
+            "--skip-fetch",
+            "--apply",
+        ],
+        env=auth,
+    )
+    super_data = json.loads(super_run.stdout) if super_run.stdout.strip().startswith("{") else {}
+    if any(r.get("action") in {"delete", "deleted"} for r in super_data.get("candidates") or []):
+        errors.append("content_superset must never authorize delete")
+    if not spent_wt.is_dir():
+        errors.append("content_superset apply must leave the spent worktree")
+
+    applied = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_execute.py"),
+            "--repo",
+            str(repo),
+            "--receipt",
+            str(rec_dir / "spent.json"),
+            "--skip-fetch",
+            "--apply",
+        ],
+        env=auth,
+    )
+    if applied.returncode != 0:
+        errors.append(f"authorized prune_execute failed: {applied.stderr or applied.stdout}")
+        return
+    applied_data = json.loads(applied.stdout)
+    if spent_wt.exists():
+        errors.append("authorized prune_execute must remove the spent worktree")
+    branches = subprocess.run(
+        ["git", "-C", str(repo), "show-ref", "--verify", "--quiet", "refs/heads/feat/spent"],
+        check=False,
+    )
+    if branches.returncode == 0:
+        errors.append("authorized prune_execute must delete the spent branch")
+    preserved = applied_data.get("preserved_refs") or []
+    if not preserved:
+        errors.append("preserve-ref must exist before delete")
+        return
+    _git(repo, "branch", "recovered", preserved[0])
+    if _rev(repo, "recovered") != spent_tip:
+        errors.append("git branch recovered <preserve-ref> must restore the tip")
+
+    dirty_run = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_execute.py"),
+            "--repo",
+            str(repo),
+            "--receipt",
+            str(rec_dir / "dirty.json"),
+            "--skip-fetch",
+            "--apply",
+        ],
+        env=auth,
+    )
+    if dirty_run.returncode != 0:
+        errors.append(f"dirty prune_execute report/apply should exit 0 keep: {dirty_run.stderr}")
+    if not (dirty_wt / "precious.txt").is_file():
+        errors.append("dirty unique worktree must be kept")
+    if (
+        "feat/dirty"
+        not in subprocess.run(
+            ["git", "-C", str(repo), "branch", "--list"], text=True, capture_output=True, check=True
+        ).stdout
+    ):
+        errors.append("dirty unique branch must be kept")
+
+    open_run = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_execute.py"),
+            "--repo",
+            str(repo),
+            "--receipt",
+            str(rec_dir / "open.json"),
+            "--open-head",
+            "feat/open",
+            "--skip-fetch",
+            "--apply",
+        ],
+        env=auth,
+    )
+    if not open_wt.is_dir():
+        errors.append("open_pr worktree must be kept")
+    if (
+        "feat/open"
+        not in subprocess.run(
+            ["git", "-C", str(repo), "branch", "--list"], text=True, capture_output=True, check=True
+        ).stdout
+    ):
+        errors.append("open_pr branch must be kept")
+    if open_run.returncode != 0:
+        errors.append(f"open_pr prune_execute should keep and exit 0: {open_run.stderr}")
+
+    dup = build_redundancy_fixture(tmp / "dup-prune")
+    dup_receipt = _diagnose(dup, "feature/dup")
+    if dup_receipt.get("redundancy_basis") != "patch_id":
+        errors.append(f"dup fixture expected patch_id, got {dup_receipt}")
+        return
+    dup_path = tmp / "dup-receipt.json"
+    dup_path.write_text(json.dumps(dup_receipt), encoding="utf-8")
+    dup_tip = dup_receipt["tip_sha"]
+    dup_apply = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_execute.py"),
+            "--repo",
+            str(dup),
+            "--receipt",
+            str(dup_path),
+            "--skip-fetch",
+            "--apply",
+        ],
+        env=auth,
+    )
+    if dup_apply.returncode != 0:
+        errors.append(f"patch_id archive_ref prune failed: {dup_apply.stderr or dup_apply.stdout}")
+        return
+    dup_data = json.loads(dup_apply.stdout)
+    still = subprocess.run(
+        ["git", "-C", str(dup), "show-ref", "--verify", "--quiet", "refs/heads/feature/dup"],
+        check=False,
+    )
+    if still.returncode == 0:
+        errors.append("patch_id archive_ref should delete the local branch")
+    if not dup_data.get("preserved_refs"):
+        errors.append("patch_id delete must preserve-ref")
+    else:
+        _git(dup, "branch", "recovered-dup", dup_data["preserved_refs"][0])
+        if _rev(dup, "recovered-dup") != dup_tip:
+            errors.append("patch_id preserve-ref must restore the tip")
+
+
+def check_shipped_copies(tmp: Path, errors: list[str]) -> None:
+    repo = _init(tmp / "copies")
+    blob = "open pr bytes\n"
+    digest = hashlib.sha256(blob.encode()).hexdigest()
+    _git(repo, "checkout", "-b", "feat/pr")
+    _commit(repo, "shipped.txt", blob, "land on pr")
+    _git(repo, "checkout", "main")
+
+    pr_wt = tmp / "pr-wt"
+    leftover_wt = tmp / "leftover-wt"
+    _git(repo, "worktree", "add", str(pr_wt), "feat/pr")
+    _git(repo, "worktree", "add", "-b", "feat/leftover", str(leftover_wt), "main")
+    (leftover_wt / "shipped.txt").write_text(blob, encoding="utf-8")
+    (leftover_wt / "unique-other.txt").write_text("not on pr\n", encoding="utf-8")
+    (leftover_wt / "docs" / "plans" / "BUILT").mkdir(parents=True, exist_ok=True)
+    (leftover_wt / "docs" / "plans" / "BUILT" / "x.plan.md").write_text(blob, encoding="utf-8")
+
+    index = {
+        "shipped.txt": [digest],
+        "docs/plans/built/x.plan.md": [digest],
+    }
+    index_path = tmp / "blob-index.json"
+    index_path.write_text(json.dumps(index), encoding="utf-8")
+
+    reported = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_open_pr_copies.py"),
+            "--repo",
+            str(repo),
+            "--blob-index",
+            str(index_path),
+            "--pr-head",
+            "feat/pr",
+            "--skip-fetch",
+        ]
+    )
+    if reported.returncode != 0:
+        errors.append(f"shipped-copy report failed: {reported.stderr or reported.stdout}")
+        return
+    if not (leftover_wt / "shipped.txt").is_file():
+        errors.append("shipped-copy report-only must not unlink")
+    if not (pr_wt / "shipped.txt").is_file():
+        errors.append("tracked PR checkout must remain during report")
+
+    applied = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_open_pr_copies.py"),
+            "--repo",
+            str(repo),
+            "--blob-index",
+            str(index_path),
+            "--pr-head",
+            "feat/pr",
+            "--skip-fetch",
+            "--apply",
+        ]
+    )
+    if applied.returncode != 0:
+        errors.append(f"shipped-copy apply failed: {applied.stderr or applied.stdout}")
+        return
+    if (leftover_wt / "shipped.txt").exists():
+        errors.append("untracked sha-match must be unlinked")
+    if not (pr_wt / "shipped.txt").is_file():
+        errors.append("tracked PR checkout must never be unlinked")
+    if not (leftover_wt / "unique-other.txt").is_file():
+        errors.append("unique untracked bytes that are not on the PR must stay")
+    if (leftover_wt / "docs" / "plans" / "BUILT" / "x.plan.md").exists():
+        errors.append("casefold docs/plans/BUILT sha-match must be unlinked")
+
+    overlay = tmp / "overlay-wt"
+    _git(repo, "worktree", "add", "-b", "feat/overlay", str(overlay), "main")
+    (overlay / "shipped.txt").write_text("committed leftover\n", encoding="utf-8")
+    _git(overlay, "add", "shipped.txt")
+    _git(overlay, "commit", "-m", "leftover committed copy")
+    (overlay / "shipped.txt").write_text(blob, encoding="utf-8")
+    overlay_apply = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "prune_open_pr_copies.py"),
+            "--repo",
+            str(repo),
+            "--blob-index",
+            str(index_path),
+            "--pr-head",
+            "feat/pr",
+            "--skip-fetch",
+            "--apply",
+        ]
+    )
+    if overlay_apply.returncode != 0:
+        errors.append(f"overlay restore failed: {overlay_apply.stderr or overlay_apply.stdout}")
+        return
+    restored = (overlay / "shipped.txt").read_text(encoding="utf-8")
+    if restored != "committed leftover\n":
+        errors.append(f"M overlay matching PR blob must restore leftover HEAD, got {restored!r}")
+    show = subprocess.run(
+        ["git", "-C", str(overlay), "show", "HEAD:shipped.txt"],
+        text=True,
+        capture_output=True,
+        check=True,
+    ).stdout
+    if show != "committed leftover\n":
+        errors.append("restore must keep unique committed bytes")
+
+
 def main() -> int:
     errors: list[str] = []
     struct = run([sys.executable, str(SCRIPTS / "validate_pack_structure.py")])
@@ -573,6 +941,8 @@ def main() -> int:
         check_harvest(repo, root, errors)
         check_extract_path_union(root, errors)
         check_triage(build_redundancy_fixture(root / "triage"), errors)
+        check_prune_execute(root / "prune", errors)
+        check_shipped_copies(root / "copies", errors)
 
     if errors:
         for e in errors:

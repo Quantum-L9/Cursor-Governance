@@ -8,7 +8,7 @@ metadata:
   tags: [l9, git, worktree, stash, diagnose-first, preserve, prune, harvest, hygiene]
   owner: igor_beylin
   status: active
-  version: 1.2.0
+  version: 1.3.0
   updated: 2026-08-28
 disable-model-invocation: true
 ---
@@ -29,6 +29,7 @@ Inventory git work with evidence receipts; extract unique value safely; propose 
 | `harvest` | Report, then local extract | Classify leftover dirty/untracked/WIP across sibling worktrees; port unique paths onto a fresh `origin/main` worktree |
 | `triage-preserved` | No | Classify the refs `/ff` parked; **deletes nothing** |
 | `prune-propose` | No | Delete candidates + required receipts + copy-paste commands |
+| `prune-open-pr-copies` | Untracked sha-matches only | Unlink leftover **untracked** copies of open-PR blobs; never `unlink` `HEAD:path` |
 | `prune-execute` | Yes | Only with user auth **and** `L9_GIT_PRUNE_AUTHORIZED=<reason>` |
 
 Load detail: [references/audit-workflow.md](references/audit-workflow.md), [references/value-diagnosis.md](references/value-diagnosis.md), [references/extract-workflow.md](references/extract-workflow.md), [references/harvest-workflow.md](references/harvest-workflow.md), [references/triage-handoff.md](references/triage-handoff.md), [references/prune-policy.md](references/prune-policy.md), [references/stash-deep-analysis.md](references/stash-deep-analysis.md).
@@ -76,7 +77,10 @@ later prune-execute), `review` (`content_superset` — human reads it), `merged`
 3. **Harvest classify (RO)** — when leftover worktree dirt / WIP is in scope:
    `scripts/harvest_worktree_dirt.py --repo <path> --include-wip --json`.
 4. **Plan** — harvest/extract and/or prune-propose with rollback (reflog SHA in receipt).
-5. **Execute** — harvest or extract first (fresh `origin/main` worktree). Extract leftover refs with `scripts/extract_path_union.py` (path-union through the allowlist; never mixed-branch cherry-pick). Prune-execute last and auth-gated; stash drop only with `L9_GIT_STASH_DROP_AUTHORIZED`.
+5. **Execute** — harvest or extract first (fresh `origin/main` worktree). Extract leftover refs with `scripts/extract_path_union.py` (path-union through the allowlist; never mixed-branch cherry-pick).
+6. **Publish** — scoped pathspecs, then the governed publish path. Do not prune yet.
+7. **Shipped-copy prune** — `scripts/prune_open_pr_copies.py --repo <path>` (report), then `--apply` to unlink untracked sha256 matches of open-PR blobs. Never unlinks a tracked `HEAD:path`. Receipts go to `.l9/hygiene/`.
+8. **Prune-execute last** — `scripts/prune_execute.py --repo <path> --receipt <diagnose.json>` report-only; `--apply` only with `L9_GIT_PRUNE_AUTHORIZED` and `prune_candidate` high or `archive_ref` + `redundancy_basis: patch_id`. Preserve-ref, then worktree, then local branch. Stash drop only with `L9_GIT_STASH_DROP_AUTHORIZED`. SessionEnd `repo_hygiene.py --apply` still owns automatic spent+clean residue only.
 
 ## Forbidden
 
@@ -102,6 +106,8 @@ later prune-execute), `review` (`content_superset` — human reads it), `merged`
 - [references/extract-workflow.md](references/extract-workflow.md)
 - [scripts/harvest_worktree_dirt.py](scripts/harvest_worktree_dirt.py)
 - [scripts/extract_path_union.py](scripts/extract_path_union.py)
+- [scripts/prune_open_pr_copies.py](scripts/prune_open_pr_copies.py)
+- [scripts/prune_execute.py](scripts/prune_execute.py)
 - [scripts/triage_preserved_refs.py](scripts/triage_preserved_refs.py)
 - [scripts/validate_pack_structure.py](scripts/validate_pack_structure.py)
 - [scripts/pack_self_test.py](scripts/pack_self_test.py)
