@@ -489,6 +489,7 @@ def default_extract(
                 )
                 raise RuntimeError(f"cherry-pick conflict on {item['sha']}: {pick.stderr.strip()}")
         strip_failing_kernel_plans(worktree, stack_tip)
+        heal_generated_extract(worktree)
     except Exception:
         subprocess.run(
             ["git", "-C", str(repo), "worktree", "remove", "--force", str(worktree)],
@@ -555,6 +556,87 @@ def strip_failing_kernel_plans(worktree: Path, tip: str) -> list[str]:
     return dropped
 
 
+def is_heal_path(rel: str) -> bool:
+    """Generated corpora only. Never stage ``.claude/settings.json``."""
+    cleaned = rel.lstrip("./")
+    if cleaned == ".claude/settings.json" or cleaned.startswith(".claude/"):
+        return False
+    return any(
+        cleaned.startswith(prefix) or cleaned == prefix.rstrip(".")
+        for prefix in GENERATED_PATH_PREFIXES
+    )
+
+
+def heal_generated_extract(worktree: Path) -> list[str]:
+    """Regenerate and commit stale manifests so make pr does not fail on drift."""
+    sync = _SCRIPTS / "sync_generated_artifacts.py"
+    if not sync.is_file():
+        return []
+    proc = subprocess.run(
+        [
+            _python(),
+            str(sync),
+            "--root",
+            str(worktree),
+            "--force",
+            "--workspace",
+            str(worktree),
+        ],
+        cwd=str(worktree),
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if proc.returncode != 0:
+        raise RuntimeError(
+            proc.stderr.strip() or proc.stdout.strip() or "sync_generated_artifacts failed"
+        )
+    status = _git(worktree, "status", "--porcelain")
+    staged: list[str] = []
+    for line in (status.stdout or "").splitlines():
+        path = line[3:].strip().split(" -> ")[-1]
+        if not is_heal_path(path):
+            continue
+        added = _git(worktree, "add", "--", path)
+        if added.returncode != 0:
+            raise RuntimeError(added.stderr.strip() or f"git add {path} failed")
+        staged.append(path)
+    if not staged:
+        return []
+    commit = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(worktree),
+            "commit",
+            "-m",
+            "pr-train: heal generated manifests after extract",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if commit.returncode != 0:
+        raise RuntimeError(commit.stderr.strip() or "generated-heal commit failed")
+    return staged
+
+
+def publish_failure_reason(worktree: str, proc: subprocess.CompletedProcess[str]) -> str:
+    """Prefer last-gate FAIL lines over make's stderr tail."""
+    log = Path(worktree) / ".l9" / "pr" / "last-gate.log"
+    fails: list[str] = []
+    if log.is_file():
+        for line in log.read_text(encoding="utf-8", errors="replace").splitlines():
+            stripped = line.strip()
+            if stripped.startswith("FAIL:") or "ERROR collecting" in stripped:
+                fails.append(stripped)
+            elif "import file mismatch" in stripped:
+                fails.append(stripped)
+    if fails:
+        return "\n".join(fails[:24])
+    return proc.stderr.strip() or proc.stdout.strip() or "make pr failed"
+
+
 def _l4_authorize_worktree(worktree: str) -> None:
     """Fresh extract worktrees have no L4 receipt; make pr fail-closes without one."""
     # --workspace is a parent flag; it must precede the subcommand.
@@ -586,13 +668,14 @@ def default_publish(worktree: str) -> dict[str, Any]:
     env["WS"] = worktree
     proc = subprocess.run(
         ["make", "-C", str(makefile), "pr", f"WS={worktree}"],
+        cwd=worktree,
         text=True,
         capture_output=True,
         check=False,
         env=env,
     )
     if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "make pr failed")
+        raise RuntimeError(publish_failure_reason(worktree, proc))
     return {"worktree": worktree, "ok": True}
 
 

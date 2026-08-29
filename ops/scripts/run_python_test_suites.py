@@ -402,7 +402,8 @@ def run_suite(
                 extra_args = [*user_args, *paths]
             elif not extra_args:
                 extra_args = list(user_args)
-        argv = [mapping["PYTHON"], "-m", "pytest", *tokens]
+        # importlib mode: scoped PRs can pass two skill scripts/self_test.py paths.
+        argv = [mapping["PYTHON"], "-m", "pytest", "--import-mode=importlib", *tokens]
         if suite["append_user_pytest_args"] and extra_args:
             argv.extend(extra_args)
         code = _run_subprocess(argv, cwd, env)

@@ -26,7 +26,9 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     filter_slices_against_tip,
     github_repo_slug,
     group_slices,
+    is_heal_path,
     parse_merge_tree_name_only,
+    publish_failure_reason,
     resolve_ff_clone,
     run_pr_train,
     shares_generated_clobber,
@@ -547,6 +549,29 @@ def test_campaign_halt_skips_remediator_and_ff(monkeypatch, tmp_path):
     assert "campaign" in state.halt_reason
     assert state.skill_dispatch == ""
     assert state.ff_ran is False
+
+
+def test_is_heal_path_skips_claude_settings():
+    assert is_heal_path("ops/generated/skill-registry.json") is True
+    assert is_heal_path("environment/generated/llm-rules/02-slash-commands.md") is True
+    assert is_heal_path(".claude/settings.json") is False
+    assert is_heal_path("workflows/dags/pr_train_dag.py") is False
+
+
+def test_publish_failure_reason_prefers_gate_log(tmp_path):
+    log = tmp_path / ".l9" / "pr"
+    log.mkdir(parents=True)
+    (log / "last-gate.log").write_text(
+        "UV: cached locked environment\n"
+        "FAIL: generated skill registry is stale\n"
+        "ERROR collecting skills/l9-ynp/scripts/self_test.py\n",
+        encoding="utf-8",
+    )
+    proc = SimpleNamespace(returncode=1, stdout="", stderr="make: *** [pr-check] Error 1")
+    reason = publish_failure_reason(str(tmp_path), proc)
+    assert "generated skill registry is stale" in reason
+    assert "ERROR collecting" in reason
+    assert "UV: cached" not in reason
 
 
 def test_strip_failing_kernel_plans_removes_unstamped_plan(tmp_path):
