@@ -594,6 +594,24 @@ def test_stack_base_filters_pending_slices_only(monkeypatch, tmp_path):
     assert [group[0]["sha"] for group in out["slices"]] == ["done", "pending"]
 
 
+def test_l4_authorize_puts_workspace_before_subcommand(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(argv, **_kwargs):
+        calls.append(list(argv))
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+    mod._l4_authorize_worktree(str(tmp_path / "wt"))
+    assert len(calls) == 3
+    for argv in calls:
+        assert argv[2] == "--workspace"
+        assert argv[3].endswith("/wt")
+        assert argv[4] in {"begin", "record-kernels", "authorize-release"}
+
+
 def test_extract_removes_worktree_on_cherry_pick_abort(tmp_path, monkeypatch):
     monkeypatch.setattr(Path, "home", lambda: tmp_path)
     repo = tmp_path / "git"
