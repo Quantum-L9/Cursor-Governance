@@ -8,6 +8,12 @@ compiled_prompt:
     scaffold-only files, thin files, unwired files, and fake validation.
     Inspect first. Fix only confirmed gaps. Do not expand scope.
 
+  authority_order:
+    - "explicit_user_request"
+    - "CANONICAL_LAW.md"
+    - "ops/autonomy/surface_profile.yaml"
+    - "AGENTS.md"
+
   focus_scan:
     - TODO
     - FIXME

@@ -8,6 +8,12 @@ compiled_prompt:
     incomplete required files, and honest post-fix validation. Preserve
     public contracts. Do not expand scope.
 
+  authority_order:
+    - "explicit_user_request"
+    - "CANONICAL_LAW.md"
+    - "ops/autonomy/surface_profile.yaml"
+    - "AGENTS.md"
+
   gap_fill_allowed:
     - missing docs required by manifest or README
     - missing validation report
