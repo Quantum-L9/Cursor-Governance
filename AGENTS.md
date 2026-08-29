@@ -1064,3 +1064,16 @@ the issue does not stay OPEN.
 **`/l9-pr-remediation` runs only after bound-target `open_issues=0`.** Zero
 means zero. Leftover HUMAN/EXTERNAL OPEN issues are `BLOCKED_OPEN_ISSUES` —
 do not weaken to an automatable subset. The issue skill never `gh pr merge`.
+
+<!-- L9_PLAN_AUDIT_ABSORBED_V1 -->
+## `l9-plan-audit` absorbed into `l9-pipeline-audit` (2026-08-29)
+
+This fragment supersedes the live-scanner sentences in §16, `L9_AUDIT_PLANS_V1`,
+`L9_PIPELINE_AUDIT_V1`, and `L9_SESSION_PIPELINE_AUDIT_V1`. Those paragraphs
+stay on disk (additive_only). Do not treat `skills/l9-plan-audit/` as a live
+pack.
+
+- SessionStart `### Plan audit` is `skills/l9-pipeline-audit/scripts/audit_pipeline.py --format session-start`. The plans scanner is `skills/l9-pipeline-audit/scripts/audit_plans.py`.
+- Plans, WIP, and PE campaigns are one family. NEXT 1–3 takes one slot per surface first, then fills leftovers (cap 3). Eligible WIP is harvestable or pending-active, not inventory-`landed`.
+- Live skill is **`l9-pipeline-audit`**. The old pack is archived at `skills/_archived/l9-plan-audit/` (`superseded_by: l9-pipeline-audit`).
+- `/plan-audit` remains a compatibility alias of `/l9-pipeline-audit`. `/l9-audit-plans` remains the plans-store shelf organizer. Do not auto-Build. Do not `make campaign`.
