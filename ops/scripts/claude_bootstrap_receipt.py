@@ -58,6 +58,8 @@ COMPONENTS = (
     "rules",
     "capabilities",
     "memory",
+    "memory_cli",
+    "memory_mcp",
     "mcp",
     "plugins",
 )
@@ -144,6 +146,10 @@ def evaluate(
         }
 
     components = {key: receipt.get(key, "UNKNOWN") for key in COMPONENTS}
+    if "memory_cli" not in receipt:
+        components["memory_cli"] = receipt.get("memory", "UNKNOWN")
+    if "memory_mcp" not in receipt:
+        components["memory_mcp"] = receipt.get("memory", "UNKNOWN")
     carried = {
         "components": components,
         "stage": receipt.get("stage"),
@@ -151,6 +157,8 @@ def evaluate(
         "governance_revision": receipt.get("governance_revision"),
         "generated_at": receipt.get("generated_at"),
         "remediation": receipt.get("remediation", ""),
+        "reasons": receipt.get("reasons") if isinstance(receipt.get("reasons"), dict) else {},
+        "log_path": str(receipt.get("log_path") or ""),
     }
 
     written = _parse_timestamp(str(receipt.get("generated_at", "")))
@@ -251,6 +259,12 @@ def main(argv: list[str] | None = None) -> int:
         print(f"claude bootstrap: {result['state']} — {result['reason']}")
         for key, value in (result.get("components") or {}).items():
             print(f"  {key}: {value}")
+            reason = (result.get("reasons") or {}).get(key, "")
+            if reason:
+                print(f"    reason: {reason}")
+        log_path = result.get("log_path") or ""
+        if log_path:
+            print(f"  log_path: {log_path}")
     return 0
 
 

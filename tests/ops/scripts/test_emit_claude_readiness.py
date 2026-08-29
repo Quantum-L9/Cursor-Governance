@@ -114,7 +114,49 @@ def test_uv_version_is_empty_when_uv_cannot_report(monkeypatch) -> None:
     assert er._uv_version() == ""
 
 
-def test_graphiti_blocker_is_a_constant_label() -> None:
+def test_graphiti_http_403_is_allowlist() -> None:
+    status, note = er._classify_graphiti_http_code(403)
+    assert status == DEGRADED
+    assert "allowlist" in note
+    assert "identity" in er._classify_graphiti_http_code(401)[1]
+    assert er._classify_graphiti_http_code(405)[0] == READY
+
+
+def test_working_cli_and_dead_mcp_are_not_one_word(tmp_path: Path, monkeypatch) -> None:
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path, mcp="READY")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli authenticated"))
+    monkeypatch.setattr(
+        er,
+        "_graphiti_mcp_http_health",
+        lambda: (DEGRADED, "not authenticated (blocker: allowlist)"),
+    )
+    receipt = er.build_receipt(gov=gov, workspace=str(gov))
+    assert receipt["memory_cli_status"] == READY
+    assert receipt["memory_mcp_status"] == DEGRADED
+    assert receipt["Graphiti_authenticated_health"] == READY
+    assert receipt["overall_readiness"] == DEGRADED
+
+
+def test_graphiti_probe_does_not_call_broker(tmp_path: Path, monkeypatch) -> None:
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    called = {"broker": False}
+
+    def _no_broker(*_a, **_k):
+        called["broker"] = True
+        raise AssertionError("probe_broker must not run")
+
+    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli authenticated"))
+    monkeypatch.setattr(er, "_graphiti_mcp_http_health", lambda: (READY, "front door reachable"))
+    monkeypatch.setattr(er, "_broker_probe", _no_broker, raising=False)
+    home = _fake_home(tmp_path, mcp="READY")
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    receipt = er.build_receipt(gov=gov, workspace=str(gov))
+    assert called["broker"] is False
+    assert receipt["Graphiti_authenticated_health"] == READY
     # Only known blocker classes are emitted; an unknown value is mapped away so
     # no probe-derived string is printed verbatim.
     _, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
@@ -211,6 +253,8 @@ def _fake_home(tmp_path: Path, *, mcp: str = "READY") -> Path:
 def _build(gov: Path, home: Path, monkeypatch) -> dict:
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli authenticated"))
+    monkeypatch.setattr(er, "_graphiti_mcp_http_health", lambda: (READY, "front door reachable"))
     return er.build_receipt(gov=gov, workspace=str(gov))
 
 

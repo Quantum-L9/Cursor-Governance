@@ -239,6 +239,9 @@ class ClaudeProjectionEngineTests(unittest.TestCase):
         self.assertTrue((self.ws / ".claude" / "commands" / "alpha.md").is_symlink())
         self.assertTrue((self.ws / ".claude" / "rules").is_symlink())
         self.assertTrue((self.ws / ".claude" / "settings.json").is_file())
+        rules_domain = next(d for d in receipt["domains"] if d["domain"] == "rules")
+        self.assertIn("hosted_context7", rules_domain["detail"])
+        self.assertIn("l9-context7-docs", rules_domain["detail"]["hosted_context7"])
 
     def test_second_run_idempotent(self) -> None:
         self.run_engine()

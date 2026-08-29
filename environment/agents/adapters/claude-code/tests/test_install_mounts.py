@@ -49,6 +49,7 @@ class InstallMountTests(unittest.TestCase):
                 # The shared bootstrap needs network and a uv sync; its own suite
                 # covers it. Skipping it here keeps this test about the adapter.
                 "L9_SKIP_SHARED_BOOTSTRAP": "1",
+                "L9_GRAPHITI_PROBE_SKIP": "1",
             }
         )
         env.pop("L9_GOVERNANCE_DIR", None)
@@ -128,6 +129,7 @@ class InstallMountTests(unittest.TestCase):
                 "HOME": str(self.home),
                 "L9_CLAUDE_BOOTSTRAP_RECEIPT": str(self.receipt),
                 "L9_SKIP_SHARED_BOOTSTRAP": "1",
+                "L9_GRAPHITI_PROBE_SKIP": "1",
                 "SKIP_PLUGIN_MARKETPLACE": "true",
             }
         )
@@ -164,6 +166,7 @@ class InstallMountTests(unittest.TestCase):
                 "HOME": str(self.home),
                 "L9_CLAUDE_BOOTSTRAP_RECEIPT": str(self.receipt),
                 "L9_SKIP_SHARED_BOOTSTRAP": "1",
+                "L9_GRAPHITI_PROBE_SKIP": "1",
                 "SKIP_PLUGIN_MARKETPLACE": "true",
                 "L9_GOVERNANCE_DIR": str(REPO),
             }
