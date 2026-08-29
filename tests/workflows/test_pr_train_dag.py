@@ -30,6 +30,7 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     resolve_ff_clone,
     run_pr_train,
     shares_generated_clobber,
+    strip_failing_kernel_plans,
 )
 
 DAG_SOURCE = REPO_ROOT / "workflows" / "dags" / "pr_train_dag.py"
@@ -546,6 +547,26 @@ def test_campaign_halt_skips_remediator_and_ff(monkeypatch, tmp_path):
     assert "campaign" in state.halt_reason
     assert state.skill_dispatch == ""
     assert state.ff_ran is False
+
+
+def test_strip_failing_kernel_plans_removes_unstamped_plan(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    tip = _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "side")
+    (repo / "docs" / "plans").mkdir(parents=True)
+    plan = repo / "docs" / "plans" / "unstamped_abcd1234.plan.md"
+    plan.write_text(
+        "---\nname: x\noverview: y\nisProject: false\n---\n\n# Body\n",
+        encoding="utf-8",
+    )
+    _git_c(repo, "add", "docs/plans/unstamped_abcd1234.plan.md")
+    _git_c(repo, "commit", "-m", "add plan")
+    dropped = strip_failing_kernel_plans(repo, tip)
+    assert dropped == ["docs/plans/unstamped_abcd1234.plan.md"]
+    assert not plan.exists()
+    assert "drop unstamped plans" in _git_c(repo, "log", "-1", "--format=%s").stdout
 
 
 def test_tip_conflict_commit_dropped_clean_stays(tmp_path):

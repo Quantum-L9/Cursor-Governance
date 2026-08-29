@@ -488,6 +488,7 @@ def default_extract(
                     check=False,
                 )
                 raise RuntimeError(f"cherry-pick conflict on {item['sha']}: {pick.stderr.strip()}")
+        strip_failing_kernel_plans(worktree, stack_tip)
     except Exception:
         subprocess.run(
             ["git", "-C", str(repo), "worktree", "remove", "--force", str(worktree)],
@@ -497,6 +498,61 @@ def default_extract(
         )
         raise
     return str(worktree), branch
+
+
+def strip_failing_kernel_plans(worktree: Path, tip: str) -> list[str]:
+    """Drop changed ``.plan.md`` files that would fail the kernel_pass gate."""
+    diff = subprocess.run(
+        ["git", "-C", str(worktree), "diff", "--name-only", f"{tip}...HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if diff.returncode != 0:
+        return []
+    scripts = _REPO_ROOT / "skills" / "l9-plan" / "scripts"
+    if str(scripts) not in sys.path:
+        sys.path.insert(0, str(scripts))
+    from validate_plan_kernel_receipt import check_plan
+
+    dropped: list[str] = []
+    for raw in (diff.stdout or "").splitlines():
+        rel = raw.strip()
+        if not rel.endswith(".plan.md"):
+            continue
+        path = worktree / rel
+        if not path.is_file():
+            continue
+        if not check_plan(path):
+            continue
+        on_tip = _git(worktree, "cat-file", "-e", f"{tip}:{rel}")
+        if on_tip.returncode == 0:
+            restore = _git(worktree, "checkout", tip, "--", rel)
+            if restore.returncode != 0:
+                raise RuntimeError(restore.stderr.strip() or f"restore {rel} from {tip} failed")
+        else:
+            remove = _git(worktree, "rm", "-f", "--", rel)
+            if remove.returncode != 0:
+                raise RuntimeError(remove.stderr.strip() or f"git rm {rel} failed")
+        dropped.append(rel)
+    if not dropped:
+        return []
+    commit = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(worktree),
+            "commit",
+            "-m",
+            "pr-train: drop unstamped plans the gate would reject",
+        ],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if commit.returncode != 0:
+        raise RuntimeError(commit.stderr.strip() or "plan-strip commit failed")
+    return dropped
 
 
 def _l4_authorize_worktree(worktree: str) -> None:
