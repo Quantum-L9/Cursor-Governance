@@ -13,7 +13,7 @@ if [[ ! -f "$GATE" ]]; then
   echo "before-shell-execution-gate: python gate missing; failing closed" >&2
   _deny_internal
 fi
-if ! OUT="$(python3 "$GATE" <<<"$INPUT")"; then
+if ! OUT="$(python3 "$GATE" <<<"$INPUT" 2>"$HOME/.cursor/hooks/before-shell-execution-gate.stderr")"; then
   echo "before-shell-execution-gate: gate exited non-zero; failing closed" >&2
   _deny_internal
 fi

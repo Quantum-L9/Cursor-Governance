@@ -40,6 +40,22 @@ def test_combined_allows_echo() -> None:
     assert payload["permission"] == "allow"
 
 
+def test_combined_allows_echo_when_copied_to_cursor_hooks(tmp_path: Path) -> None:
+    """setup may install a real file under ~/.cursor/hooks, not a symlink."""
+    copied = tmp_path / "before_shell_execution_gate.py"
+    copied.write_text(COMBINED_PY.read_text(encoding="utf-8"), encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(copied)],
+        input='{"command":"echo hi","cwd":"' + str(ROOT) + '"}',
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stderr
+    payload = json.loads(proc.stdout.splitlines()[-1])
+    assert payload["permission"] == "allow"
+
+
 def test_combined_shell_wrapper_exists() -> None:
     assert COMBINED_SH.is_file()
     assert "before_shell_execution_gate.py" in COMBINED_SH.read_text(encoding="utf-8")
