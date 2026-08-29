@@ -11,8 +11,8 @@ metadata:
   version: 1.0.1
   updated: 2026-06-07
   sources:
-  - Recursive Alignment.md
-  - Recursive Improvement.md
+  - kernels/Recursive Alignment.md
+  - kernels/Improve.md
 ---
 
 # Recursive Optimization
@@ -26,7 +26,7 @@ Recursively align, improve, and converge artifact groups until they are complete
 | Mode | Action | Implements | Load |
 |------|--------|------------|------|
 | **align** | Read-only audit vs active contract | Recursive Alignment | [alignment-protocol.md](references/alignment-protocol.md) |
-| **improve** | Transform artifacts in place | Recursive Improvement | [improvement-protocol.md](references/improvement-protocol.md) |
+| **improve** | Transform artifacts in place | Improve.md | [improvement-protocol.md](references/improvement-protocol.md) |
 | **optimize** (default) | Align → improve gaps → converge | Both protocols | [mode-routing.md](references/mode-routing.md) + both protocol refs |
 
 **Align** reports violations; it does not rewrite source. **Improve** rewrites artifacts while preserving intent. **Optimize** runs alignment first, improves material gaps, then re-aligns until convergence.

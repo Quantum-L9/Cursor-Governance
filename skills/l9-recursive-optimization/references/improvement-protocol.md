@@ -9,7 +9,7 @@ status: active
 version: 1.0.0
 updated: 2026-06-06
 sources:
-  - Recursive Improvement.md
+  - kernels/Improve.md
 /L9_META -->
 
 # Improvement Protocol

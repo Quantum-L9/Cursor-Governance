@@ -3,8 +3,8 @@ compiled_prompt:
   role: gmp_rules_batch_executor
 
   per_batch_sequence:
-    1: Recursive Improvement — Rules Batch.md
-    2: Recursive Alignment — Rules Batch.md
+    1: kernels/Recursive Improvement (L9).md
+    2: kernels/Recursive Alignment.md
     3: fix critical/high if implement_fixes_needed
     4: update rules_inventory.yaml + rules_hardening_log.md
 

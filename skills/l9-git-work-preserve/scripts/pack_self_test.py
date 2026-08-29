@@ -314,6 +314,191 @@ def check_triage(repo: Path, errors: list[str]) -> None:
         errors.append(f"triage removed parked refs: {after}")
 
 
+def check_extract_path_union(tmp: Path, errors: list[str]) -> None:
+    """Mixed leftover refs extract by path-union; they never cherry-pick."""
+    repo = _init(tmp / "extract-union")
+    _git(repo, "checkout", "-b", "feature/mixed")
+    _commit(repo, "unique.txt", "only on leftover\n", "add unique")
+    (repo / "a.txt").unlink()
+    _git(repo, "add", "a.txt")
+    _git(repo, "commit", "-m", "delete baseline file")
+
+    dest = tmp / "extract-dest"
+    _git(repo, "worktree", "add", str(dest), "main")
+    dest_head = subprocess.run(
+        ["git", "-C", str(dest), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=True,
+    ).stdout.strip()
+
+    plan = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "extract_path_union.py"),
+            "--repo",
+            str(repo),
+            "--ref",
+            "feature/mixed",
+            "--baseline",
+            "main",
+            "--json",
+        ]
+    )
+    if plan.returncode != 0:
+        errors.append(f"extract_path_union plan failed: {plan.stderr or plan.stdout}")
+        return
+    data = json.loads(plan.stdout)
+    copy_paths = {row["path"] for row in data.get("copy", [])}
+    skip_by_path = {row["path"]: row["reason"] for row in data.get("skip", [])}
+    if "unique.txt" not in copy_paths:
+        errors.append(f"path-absent unique.txt should copy, got {data.get('copy')}")
+    if skip_by_path.get("a.txt") != "baseline_delete":
+        errors.append(f"baseline delete a.txt should skip, got {data.get('skip')}")
+    if data.get("cherry_pick") is not False:
+        errors.append("extract_path_union must never cherry-pick")
+    if not data.get("mixed_range"):
+        errors.append("delete-plus-add leftover ref is a mixed range")
+
+    applied = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "extract_path_union.py"),
+            "--repo",
+            str(repo),
+            "--ref",
+            "feature/mixed",
+            "--baseline",
+            "main",
+            "--apply",
+            "--dest",
+            str(dest),
+        ]
+    )
+    if applied.returncode != 0:
+        errors.append(f"extract_path_union apply failed: {applied.stderr or applied.stdout}")
+        return
+    if not (dest / "unique.txt").is_file():
+        errors.append("apply should write the path-absent file")
+    if not (dest / "a.txt").is_file():
+        errors.append("apply must not delete a path that exists on baseline")
+    after_head = subprocess.run(
+        ["git", "-C", str(dest), "rev-parse", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=True,
+    ).stdout.strip()
+    if after_head != dest_head:
+        errors.append("apply must not cherry-pick or otherwise move destination HEAD")
+
+    second = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "extract_path_union.py"),
+            "--repo",
+            str(repo),
+            "--ref",
+            "feature/mixed",
+            "--baseline",
+            "main",
+            "--apply",
+            "--dest",
+            str(dest),
+        ]
+    )
+    if second.returncode == 0:
+        errors.append("apply must refuse when destination already has copy-set paths")
+    else:
+        try:
+            second_data = json.loads(second.stdout)
+        except json.JSONDecodeError:
+            second_data = {}
+        if "already has" not in str(second_data.get("error") or second.stdout):
+            errors.append(f"collision apply should name existing dest paths, got {second.stdout}")
+
+    missing_ref = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "extract_path_union.py"),
+            "--repo",
+            str(repo),
+            "--ref",
+            "does-not-exist",
+            "--baseline",
+            "main",
+        ]
+    )
+    if missing_ref.returncode == 0:
+        errors.append("unresolvable ref must fail closed, not emit an empty copy set")
+
+    empty = tmp / "empty-allowlist.json"
+    empty.write_text(json.dumps({"copy": [], "skip": []}), encoding="utf-8")
+    stopped = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "extract_path_union.py"),
+            "--repo",
+            str(repo),
+            "--ref",
+            "feature/mixed",
+            "--baseline",
+            "main",
+            "--allowlist",
+            str(empty),
+        ]
+    )
+    if stopped.returncode != 0:
+        errors.append(f"empty allowlist should succeed: {stopped.stderr or stopped.stdout}")
+        return
+    stopped_data = json.loads(stopped.stdout)
+    if stopped_data.get("copy"):
+        errors.append("empty copy set must copy nothing")
+    if not stopped_data.get("stop"):
+        errors.append("empty copy set is a valid stop")
+
+    overwrite = _init(tmp / "extract-present")
+    _git(overwrite, "checkout", "-b", "feature/overwrite")
+    _commit(overwrite, "a.txt", "rewritten\n", "overwrite baseline path")
+    blocked = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "extract_path_union.py"),
+            "--repo",
+            str(overwrite),
+            "--ref",
+            "feature/overwrite",
+            "--baseline",
+            "main",
+        ]
+    )
+    if blocked.returncode != 0:
+        errors.append(f"overwrite classify failed: {blocked.stderr or blocked.stdout}")
+        return
+    blocked_data = json.loads(blocked.stdout)
+    if any(row["path"] == "a.txt" for row in blocked_data.get("copy", [])):
+        errors.append("path present on baseline must not enter the copy set")
+    if blocked_data.get("cherry_pick") is not False:
+        errors.append("overwrite leftover must not cherry-pick")
+
+    same_tree = run(
+        [
+            sys.executable,
+            str(SCRIPTS / "extract_path_union.py"),
+            "--repo",
+            str(repo),
+            "--ref",
+            "feature/mixed",
+            "--baseline",
+            "main",
+            "--apply",
+            "--dest",
+            str(repo),
+        ]
+    )
+    if same_tree.returncode == 0:
+        errors.append("apply onto --repo must be refused")
+
+
 def check_harvest(repo: Path, tmp: Path, errors: list[str]) -> None:
     """Sibling-worktree dirt still classifies; triage did not displace harvest."""
     extra = tmp / "wts"
@@ -386,6 +571,7 @@ def main() -> int:
         check_real_fetch(build_remote_fixture(root), errors)
         check_mode_change(root, errors)
         check_harvest(repo, root, errors)
+        check_extract_path_union(root, errors)
         check_triage(build_redundancy_fixture(root / "triage"), errors)
 
     if errors:

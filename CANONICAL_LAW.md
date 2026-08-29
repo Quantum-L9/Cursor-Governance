@@ -796,3 +796,49 @@ unless the human typed `make pr` this turn.
 **Claude Code** (`L9_GOVERNANCE_SURFACE=claude-code`): when a contract
 or program is finished, `authorize-release` then `make pr`. Other adapters
 (`codex` / `gemini` / `manus`) keep the same adapter publish path.
+
+<!-- DIAGNOSE_FIRST_KERNEL_PATH_V3 -->
+## Diagnose First kernel path (2026-08-28) — retires the 10X digest
+
+Append-only. Supersedes DIAGNOSE_FIRST_KERNEL_PATH_V1 item 3 and
+DIAGNOSE_FIRST_KERNEL_PATH_V2 item 3. Do not edit the older lines.
+
+1. Full Diagnose First kernel SSOT remains `kernels/Diagnose First Kernel.md`.
+2. `prompts/10X Kernels/` is removed. The former digest
+   `prompts/10X Kernels/Diagnose First Kernel.md` is not restored.
+3. Unique 10X files live under `kernels/` (`Build.md`, `Flawless Victory.md`,
+   `Recursive Improvement (L9).md`, `Validate & Eliminate Stubs.md`,
+   `Validate & Fill Gaps.md`). Root `prompts/` is unchanged.
+
+<!-- KERNEL_PROMPTS_HOME_V1 -->
+## Compiled kernel prompts live under `kernels/` (2026-08-28)
+
+Append-only. Supersedes DIAGNOSE_FIRST_KERNEL_PATH_V3 item 3
+("Root `prompts/` is unchanged") for these files. Do not edit the older lines.
+
+1. GMP batch runners and orchestrators live under `kernels/`
+   (`GMP Rules Hardening — Execute.md`, `* Batch.md`, `* Orchestrator.md`).
+2. Callers load `.cursor-commands/kernels/…`, not `.cursor-commands/prompts/…`.
+3. Root `prompts/` is reserved empty (keep file only). Do not restore the
+   compiled Recursive Alignment / Recursive Improvement prompt copies there.
+
+<!-- ALIGNMENT_KERNEL_SINGLE_SSOT_V1 -->
+## Recursive Alignment has one file (2026-08-28)
+
+Append-only. Supersedes KERNEL_PROMPTS_HOME_V1 item 1 for Alignment batch
+forks. Do not edit the older lines.
+
+1. Alignment SSOT is `kernels/Recursive Alignment.md` only.
+2. `kernels/Recursive Alignment — Rules Batch.md` and
+   `kernels/Recursive Alignment — Skills Batch.md` are removed. Do not restore.
+
+<!-- IMPROVEMENT_COMPILED_SINGLE_SSOT_V1 -->
+## Recursive Improvement compiled prompt has one file (2026-08-28)
+
+Append-only. Supersedes KERNEL_PROMPTS_HOME_V1 item 1 for Improvement batch
+forks. Do not edit the older lines.
+
+1. Compiled Improvement prompt SSOT is `kernels/Recursive Improvement (L9).md`
+   (extends `kernels/Improve.md`).
+2. `kernels/Recursive Improvement — Rules Batch.md` and
+   `kernels/Recursive Improvement — Skills Batch.md` are removed. Do not restore.

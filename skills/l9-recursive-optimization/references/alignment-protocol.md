@@ -9,7 +9,7 @@ status: active
 version: 1.0.1
 updated: 2026-06-07
 sources:
-  - Recursive Alignment.md
+  - kernels/Recursive Alignment.md
 /L9_META -->
 
 # Alignment Protocol

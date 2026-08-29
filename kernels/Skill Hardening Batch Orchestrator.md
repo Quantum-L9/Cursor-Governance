@@ -10,8 +10,8 @@ compiled_prompt:
     must_not_modify: [AGENTS.md, .claude/README.md, AUTONOMY_MANIFEST.yaml, plasticos_*/, tests/, ci/]
 
   per_skill_sequence:
-    1: "Recursive Improvement — Skills Batch.md → write skill pack"
-    2: "Recursive Alignment — Skills Batch.md → reports/skill-alignment/{name}.md only"
+    1: "kernels/Recursive Improvement (L9).md → write skill pack"
+    2: "kernels/Recursive Alignment.md → reports/skill-alignment/{name}.md only"
     3: "If critical/high and implement_fixes_needed → apply to skill pack"
     4: "Update reports/skill-hardening-inventory.yaml"
 
