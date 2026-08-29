@@ -22,7 +22,7 @@ Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml).
 
 ## Quick reference
 
-Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary rows): `/readme` → `/docs`, `/lint-fix` → `/lint`, `/violation` → `/governance`. Verify-ladder work is a mode on `/analyze` / `/evaluate` / `/analyze_evaluate`. Retired with no alias: `/rules`, `/git-work-preserve`, `/harvest2`. A consumer overlay `.cursor/commands/{old}.md` still wins resolution order 1st — do not recreate the retired live file.
+Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary rows): `/readme` → `/docs`, `/lint-fix` → `/lint`, `/violation` → `/governance`. `/audit-component` is live (`l9-component-verification`). Folded: `/probe`, `/verify-component` remain modes on `/analyze` / `/evaluate` / `/analyze_evaluate`. Retired with no alias: `/rules`, `/git-work-preserve`, `/harvest2`. A consumer overlay `.cursor/commands/{old}.md` still wins resolution order 1st — do not recreate the retired live file.
 
 | Command | What it does |
 |---------|--------------|
@@ -38,6 +38,7 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/analyze` | Explore structure, flows, hotspots (`l9-code-analysis`; probe mode via `l9-component-verification`) |
 | `/evaluate` | Deep readiness / compliance audit |
 | `/analyze_evaluate` | Analyze + evaluate in one pass |
+| `/audit-component` | Export / wiring / API audit (`l9-component-verification`) |
 | `/reasoning` | Structured reasoning (`l9-structured-reasoning`; stance enums, then `/ynp`) |
 | `/gmp` | Phased, auditable execution |
 | `/forge` | Fast autonomous batch execution |
