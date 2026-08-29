@@ -1,0 +1,21 @@
+{
+  "checks": [
+    {
+      "errors": [],
+      "id": "harvest_schema_evidence_portability_authority_closure",
+      "status": "PASS"
+    }
+  ],
+  "outputs": [
+    "harvest.json",
+    "harvest-receipt.json",
+    "DONOR-HARVEST-BRIEF.md"
+  ],
+  "request_id": "no-regress-git-work-preserve-2026-08-28",
+  "status": "PASS",
+  "unknowns": [
+    "Whether keep_push path-union should be a new script or extract-workflow prose only.",
+    "Whether layout-native prefixes belong in harvest-workflow.md or a YAML config beside the classifier.",
+    "Whether the add-only dirty-on-baseline exception should be an explicit classifier class or remain default-skip with a documented override."
+  ]
+}

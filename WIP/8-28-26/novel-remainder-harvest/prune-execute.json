@@ -1,0 +1,772 @@
+{
+  "schema": "l9.novel_remainder.prune.v1",
+  "created_at": "2026-08-29T07:25:59Z",
+  "auth": "L9_GIT_PRUNE_AUTHORIZED=novel-remainder-plan",
+  "fetched": {
+    "fetched": true,
+    "error": null,
+    "baseline_tip": "37363dd528e9ad99ecf9683d730da3fca6b4376b"
+  },
+  "protected": [
+    "agent/cursor/c5-c6-harvest-land",
+    "agent/cursor/ff-switch-corpus",
+    "agent/cursor/git-work-preserve-harvest",
+    "agent/cursor/gmp-slash-build",
+    "agent/cursor/plan-kernel-auto-pass",
+    "agent/cursor/pr-train",
+    "agent/cursor/protected-root-pr-template",
+    "agent/cursor/retire-integrity-healer",
+    "agent/cursor/stop-gen-conflicts",
+    "agent/cursor/stop-gen-snap-v2",
+    "campaign/l9-agent-doc-plane",
+    "campaign/l9-devpack-program-execution-hardening",
+    "campaign/l9-ecosystem-fix-plan",
+    "claude/cursor-governance-pack-reconcile-9d4c9v",
+    "claude/cursor-governance-remediate-kpzvnr",
+    "claude/cursor-governance-remediation-irbyhf",
+    "claude/cursor-governance-remediation-irbyhf-03-git-doctrine",
+    "claude/cursor-governance-skills-qvcf3d",
+    "claude/l9-runtime-velocity-analysis-yig5fe",
+    "claude/l9-zero-secret-agent-bootstrap-f5fs8e",
+    "feat-slash-catalog-revise",
+    "feat/adr-identity-integrity-v1",
+    "feat/archive-completed-pe-campaigns",
+    "feat/bounded-replanning-v1-execute",
+    "feat/campaign-ceiling-commit-converged",
+    "feat/campaign-live-closeout",
+    "feat/cc-pe-intent-compiler-v1-ceiling-converged",
+    "feat/claude-md-align",
+    "feat/cursor-rules-contract-foundation",
+    "feat/ecosystem-odoo-ready",
+    "feat/ecosystem-remaining-only",
+    "feat/ff-shelf-20260828T223201Z",
+    "feat/ff-shelf-20260829T042716Z",
+    "feat/ff-shelf-wip-plans",
+    "feat/ff-slash-dirt-park",
+    "feat/gate-failure-receipt",
+    "feat/gmp-execution-governance-harvest",
+    "feat/kernel-precommit-hook",
+    "feat/l9-claude-code-deepseek-skill",
+    "feat/l9-devpack-program-execution-hardening-ceiling-converged",
+    "feat/l9-ecosystem-fix-plan-ceiling-converged",
+    "feat/l9-ff-only-sync",
+    "feat/l9-pe-campaign-activate",
+    "feat/l9-pe-campaign-activate-ssot",
+    "feat/l9-plan-audit-built-markers",
+    "feat/l9-repo-template-control-plane-ready-v1",
+    "feat/l9-repo-template-control-plane-ready-v1-recut",
+    "feat/level3-make-pr-single-path",
+    "feat/novel-remainder-kernels",
+    "feat/novel-remainder-no-regress",
+    "feat/novel-remainder-plans",
+    "feat/novel-remainder-product",
+    "feat/pe-brief-accept-cursor-plan-on-254",
+    "feat/pe-campaigns-https-close",
+    "feat/pe-compiler-in-tree-alignment",
+    "feat/pe-compiler-in-tree-retarget",
+    "feat/pe-eie-campaign-pipeline-v1",
+    "feat/pr-gate-ff-friction",
+    "feat/pr-gate-velocity",
+    "feat/pr-remediator-speed",
+    "feat/pr-stack-auto-default",
+    "feat/pr-train-0-61e0b2a8-92726-1787966728",
+    "feat/pr-train-0-bfa8e1d9-16004-1787970880",
+    "feat/pr-train-cherry-probe",
+    "feat/pr-train-pack-overlap",
+    "feat/pr-train-remainder",
+    "feat/precommit-gate-failure",
+    "feat/precommit-owns-ruff",
+    "feat/protected-root-pr-template",
+    "feat/purge-legal-defense",
+    "feat/root-docs-ra-pointer",
+    "feat/seed-ci-skill-pointers",
+    "feat/stack-proof-context7-capability",
+    "feat/stack-proof-key-miss",
+    "feat/wip-corpus-on-main",
+    "fix/claude-session-start-thin-wrapper",
+    "fix/pr-remediation-merge-authority",
+    "fix/stack-proof-https-only",
+    "fix/uv-dependency-cooldown",
+    "main",
+    "pe-start-cleanly",
+    "pec/w1/task-006",
+    "pr/l9-dot-github-ci-boundary-v1",
+    "rem-269-rebased-hold",
+    "rem/pr-153-closeout",
+    "rem/pr-155-align",
+    "wip/pre-ff-snapshot-2026-08-14",
+    "wip/preserve-local-2026-08-16",
+    "wip/track-peer-execution-overlay"
+  ],
+  "propose_count": 109,
+  "classes": {
+    "archive_ref": 9,
+    "keep_push": 91,
+    "prune_candidate": 9
+  },
+  "executed_branches": [],
+  "skipped": [
+    {
+      "ref": "agent/cursor/c5-c6-harvest-land",
+      "classification": "archive_ref",
+      "basis": "content_superset",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "agent/cursor/ff-switch-corpus",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "agent/cursor/git-work-preserve-harvest",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "agent/cursor/gmp-slash-build",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "agent/cursor/plan-kernel-auto-pass",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "agent/cursor/pr-train",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "agent/cursor/protected-root-pr-template",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "agent/cursor/retire-integrity-healer",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "agent/cursor/stop-gen-conflicts",
+      "classification": "prune_candidate",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "agent/cursor/stop-gen-snap-v2",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "backup/local-unpushed-2026-08-14",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "campaign/bounded-replanning-v1",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "campaign/cc-pe-intent-compiler-v1",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "campaign/l9-agent-doc-plane",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "campaign/l9-devpack-program-execution-hardening",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "campaign/l9-dot-github-ci-boundary-v1",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "campaign/l9-ecosystem-fix-plan",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "campaign/level3-make-pr-single-path",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "claude/cursor-governance-pack-reconcile-9d4c9v",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "claude/cursor-governance-remediate-kpzvnr",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "claude/cursor-governance-remediation-irbyhf",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "claude/cursor-governance-remediation-irbyhf-03-git-doctrine",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "claude/cursor-governance-seam-hardening-vckfoc",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "claude/cursor-governance-skills-qvcf3d",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "claude/l9-runtime-velocity-analysis-yig5fe",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "claude/l9-zero-secret-agent-bootstrap-f5fs8e",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat-slash-catalog-revise",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/adr-identity-integrity-v1",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/archive-completed-pe-campaigns",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/bounded-replanning-v1-execute",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/campaign-ceiling-commit-converged",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/campaign-live-closeout",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/cc-pe-intent-compiler-v1-ceiling-converged",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/ceremony-speed-plan",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/claude-md-align",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/cursor-rules-contract-foundation",
+      "classification": "archive_ref",
+      "basis": "patch_id",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/ecosystem-odoo-ready",
+      "classification": "prune_candidate",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/ecosystem-remaining-only",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/ff-shelf-20260828T223201Z",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/ff-shelf-20260829T042716Z",
+      "classification": "archive_ref",
+      "basis": "content_superset",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/ff-shelf-wip-plans",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/ff-slash-dirt-park",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/gate-failure-receipt",
+      "classification": "prune_candidate",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/gmp-execution-governance-harvest",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/kernel-pack-new-branch-default",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/kernel-precommit-hook",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/l9-claude-code-deepseek-skill",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/l9-devpack-program-execution-hardening-ceiling-converged",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/l9-ecosystem-fix-plan-ceiling-converged",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/l9-ff-only-sync",
+      "classification": "prune_candidate",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/l9-pe-campaign-activate",
+      "classification": "prune_candidate",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/l9-pe-campaign-activate-ssot",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/l9-plan-audit-built-markers",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/l9-repo-template-control-plane-ready-v1",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/l9-repo-template-control-plane-ready-v1-recut",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/level3-make-pr-single-path",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/novel-remainder-kernels",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/novel-remainder-no-regress",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/novel-remainder-plans",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/novel-remainder-product",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pe-brief-accept-cursor-plan",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pe-brief-accept-cursor-plan-on-254",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pe-campaigns-https-close",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pe-compiler-in-tree-alignment",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pe-compiler-in-tree-retarget",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pe-eie-campaign-pipeline-v1",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/plan-skills-precommit-catalog",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pr-check-folded",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pr-gate-ff-friction",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pr-gate-velocity",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pr-remediator-speed",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pr-stack-auto-default",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pr-train-0-61e0b2a8-92726-1787966728",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pr-train-0-bfa8e1d9-16004-1787970880",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pr-train-cherry-probe",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pr-train-pack-overlap",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/pr-train-remainder",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/precommit-gate-failure",
+      "classification": "archive_ref",
+      "basis": "patch_id",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/precommit-owns-ruff",
+      "classification": "archive_ref",
+      "basis": "patch_id",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/protected-root-pr-template",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/purge-legal-defense",
+      "classification": "archive_ref",
+      "basis": "patch_id",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/root-docs-ra-pointer",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/rules-corpus-cleanup",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/seed-ci-skill-pointers",
+      "classification": "archive_ref",
+      "basis": "patch_id",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/stack-proof-context7-capability",
+      "classification": "prune_candidate",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/stack-proof-key-miss",
+      "classification": "prune_candidate",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "feat/wip-corpus-on-main",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "fix/ci-required-contexts-wip-only",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "fix/claude-session-start-thin-wrapper",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "fix/pr-remediation-merge-authority",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "fix/precommit-attribution-gate",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "fix/stack-proof-https-only",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "fix/uv-dependency-cooldown",
+      "classification": "prune_candidate",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "l9/ff-preserve-20260824T014642Z",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "l9/ff-preserve-20260824T014704Z",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "l9/ff-preserve-20260827T025644Z",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "l9/ff-preserve-20260828T222958Z",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "l9/ff-preserve-20260829T042415Z",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "main",
+      "classification": "prune_candidate",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "pe-start-cleanly",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "pec/w1/task-006",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "pr/l9-dot-github-ci-boundary-v1",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "preserve/local-main-714b930",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "rem-269-rebased-hold",
+      "classification": "archive_ref",
+      "basis": "patch_id",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "rem/pr-153-closeout",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "rem/pr-155-align",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "wip/pre-ff-snapshot-2026-08-14",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "wip/preserve-local-2026-08-16",
+      "classification": "keep_push",
+      "basis": "",
+      "reason": "keep_or_unproven_or_protected"
+    },
+    {
+      "ref": "wip/track-peer-execution-overlay",
+      "classification": "archive_ref",
+      "basis": "patch_id",
+      "reason": "keep_or_unproven_or_protected"
+    }
+  ],
+  "preserve_triage_buckets": {
+    "novel": 13,
+    "superseded": 0,
+    "review": 1,
+    "merged": 0,
+    "unproven": 0
+  },
+  "preserve_deleted": []
+}
