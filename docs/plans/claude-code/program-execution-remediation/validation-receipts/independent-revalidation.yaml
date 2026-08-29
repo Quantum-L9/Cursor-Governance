@@ -9,6 +9,14 @@ purpose: >-
   on its own packaging machine. Nothing here is copied from the pack's own
   receipts; every row was reproduced.
 
+compiler_of_record: skills/l9-claude-coding-contract-compiler (v2.7.0, this repository)
+compiler_note: >-
+  The pack shipped its own copy of the compiler under
+  claude-code-contracts/compiler-runtime/. That copy is not committed — see
+  RV-004. Every gate below was reproduced twice: once with the pack's copy as
+  received, and once with the repository's own skill. Both agree on every
+  result, including the chain digest and byte-identical contract output.
+
 interpreter:
   python: 3.11.15
   venv: $HOME/.cursor-governance/.venv
@@ -45,7 +53,11 @@ gates_reproduced:
   manifest_integrity:
     method: sha256 of every artifact declared in MANIFEST.yaml
     result: PASS
-    detail: 98 declared artifacts; 97 raw_final_bytes verified, 0 mismatch, 0 missing
+    detail: >-
+      Against the pack as received: 98 declared artifacts, 97 raw_final_bytes
+      verified, 0 mismatch, 0 missing. Against the committed tree: 43 verified,
+      0 mismatch, 54 absent, 1 self-skipped — the absent set is entirely under
+      compiler-runtime/, per RV-003 and RV-004. 43 + 54 + 1 = 98.
     skipped: MANIFEST.yaml itself (hash_mode canonical_self_zeroed)
 
 repo_native_gates:
@@ -128,19 +140,57 @@ findings:
 - id: RV-003
   severity: informational
   status: ACCEPTED
-  title: Five manifest artifacts are not committed
+  title: Manifest declares 98 artifacts; 44 are committed
   detail: >-
-    MANIFEST.yaml declares 98 artifacts. 93 are committed. The 5 excluded are
-    claude-code-contracts/compiler-runtime/scripts/__pycache__/*.cpython-313.pyc,
-    CPython bytecode from the packaging machine, matched by this repository's
-    .gitignore rules (__pycache__/ and *.pyc).
+    MANIFEST.yaml declares 98 artifacts. 44 are committed. The 54 not committed
+    are all under claude-code-contracts/compiler-runtime/ — 49 compiler files
+    removed under RV-004 as a duplicate of a skill this repository already owns,
+    plus 5 __pycache__/*.cpython-313.pyc bytecode files from the packaging
+    machine that this repository's .gitignore excludes (__pycache__/ and *.pyc).
   consequence: >-
-    No content is lost. Each excluded .pyc is compiled output of a .py source
-    that is committed. Manifest verification against the working tree reports
-    them as the only absent entries.
+    Manifest verification against this tree therefore reports 43 hashes verified,
+    0 mismatched, 54 absent and MANIFEST.yaml itself self-skipped (43 + 54 + 1 =
+    98). Every absent entry is a compiler-runtime path. Nothing
+    outside compiler-runtime/ is absent, and every hash that can be checked
+    matches. Verify the compiler itself against
+    skills/l9-claude-coding-contract-compiler instead.
+
+- id: RV-004
+  severity: structural
+  status: RESOLVED
+  title: Pack shipped a duplicate of a compiler this repository already owns
+  detail: >-
+    The pack bundled claude-code-contracts/compiler-runtime/ — a complete
+    claude-coding-contract-compiler v2.7.0 pack, including its own SKILL.md,
+    agents/, references/, schemas/ and scripts/. This repository already owns
+    that compiler at the same version as skills/l9-claude-coding-contract-compiler,
+    and the repository's copy is the hardened one: ruff-clean imports and a
+    _sibling() path importer that fixes a real sys.modules basename collision
+    between skill packs. Committing the pack's copy would have placed a second
+    SKILL.md and a second authority corpus for the same tool under docs/.
+  equivalence_proof:
+    method: >-
+      Ran every gate twice — once with the pack's bundled compiler, once with
+      skills/l9-claude-coding-contract-compiler — and compared.
+    regression_suite: both 11/11 PASS
+    per_contract: both 6/6 VALID
+    chain_digest: >-
+      identical under both:
+      sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3
+    recompile_contracts: all 6 contract JSONs byte-identical under both
+    recompile_artifacts: >-
+      Identical except one provenance comment line per generated CLAUDE.md and
+      preflight.sh, which names the emitting pack
+      ("l9-claude-coding-contract-compiler" vs "claude-coding-contract-compiler").
+      A name string in a comment; no semantic difference.
+  resolution: >-
+    compiler-runtime/ removed from the commit. skills/l9-claude-coding-contract-compiler
+    is the compiler of record for this pack. Recompiling or revalidating the
+    chain uses that skill, and the equivalence proof above is why that is sound.
 
 overall:
   packaged_gates: ALL_REPRODUCED_PASS
+  reproduced_with_repo_compiler_skill: ALL_PASS_IDENTICAL
   repo_native_gates: PASS
   pack_integrity: PASS
   execution_readiness: BLOCKED_ON_RV-001
