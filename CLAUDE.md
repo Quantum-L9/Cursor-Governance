@@ -70,6 +70,12 @@ the formatter block).
   through `ops/scripts/claude_bootstrap_receipt.py` and
   `ops/scripts/governance_refresh_receipt.py`, which recompute state rather than
   trusting the recorded word. An absent receipt means `never_ran`, not `ready`.
+  Both read by default — no flag needed, and `--json` for the machine form:
+
+  ```bash
+  python3 ops/scripts/claude_bootstrap_receipt.py            # bootstrap state + per-component
+  python3 ops/scripts/governance_refresh_receipt.py --json   # refresh state, machine-readable
+  ```
 
 ## Checking what is actually wired
 
