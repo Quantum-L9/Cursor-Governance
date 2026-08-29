@@ -152,9 +152,7 @@ def probe_cherry_conflicts(repo: Path, tip: str, sha: str) -> list[str] | None:
     parent_sha = parent.stdout.strip()
     if not parent_sha:
         return probe_sha_conflicts(repo, tip, sha)
-    return _parse_merge_tree(
-        _merge_tree(repo, f"--merge-base={parent_sha}", tip, sha)
-    )
+    return _parse_merge_tree(_merge_tree(repo, f"--merge-base={parent_sha}", tip, sha))
 
 
 def commit_unix(repo: Path, sha: str) -> int:
@@ -201,6 +199,7 @@ def collect_remainder_slice(
         paths = tuple(raw_paths) if raw_paths else (load_commit_paths(repo, sha) or ())
         for path in remainder_paths_for_commit(repo, sha, tip, paths):
             if _git(repo, "cat-file", "-e", f"{sha}:{path}").returncode != 0:
+                by_path.pop(path, None)
                 continue
             by_path[path] = sha
     if not by_path:
@@ -257,6 +256,23 @@ def filter_slices_against_tip(
             sha = novel.sha
             child_paths = set(novel.paths)
             if item.get("mode") == "remainder":
+                paths = tuple(item.get("paths") or ())
+                if (
+                    sha
+                    and is_git_repo(repo)
+                    and sha_is_commit(repo, tip)
+                    and sha_is_commit(repo, sha)
+                ):
+                    fresh = remainder_paths_for_commit(repo, sha, tip, paths)
+                    present = tuple(
+                        path
+                        for path in fresh
+                        if _git(repo, "cat-file", "-e", f"{sha}:{path}").returncode == 0
+                    )
+                    if not present:
+                        continue
+                    item = {**item, "paths": present}
+                    child_paths = set(present)
                 keep.append(item)
                 kept_shas.add(sha)
                 kept_paths[sha] = child_paths
@@ -644,9 +660,7 @@ def extract_remainder(
                 check=False,
             )
             if checkout.returncode != 0:
-                raise RuntimeError(
-                    f"remainder checkout failed on {sha}: {checkout.stderr.strip()}"
-                )
+                raise RuntimeError(f"remainder checkout failed on {sha}: {checkout.stderr.strip()}")
             item["paths"] = tuple(present)
             applied += 1
         if applied == 0:
