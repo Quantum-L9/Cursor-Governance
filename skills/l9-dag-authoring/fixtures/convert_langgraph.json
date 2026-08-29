@@ -1,0 +1,6 @@
+{
+  "operation": "CONVERT",
+  "repo_root": ".",
+  "dag_id": "intelligence-harvest-v1",
+  "allow_session_retire": false
+}

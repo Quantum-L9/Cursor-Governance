@@ -126,8 +126,13 @@ note "Pins: gitleaks@$GITLEAKS_PIN bandit==$BANDIT_PIN pip-audit==$PIP_AUDIT_PIN
 _all_tmp="$(mktemp)"
 _chg_tmp="$(mktemp)"
 trap 'rm -f "$_all_tmp" "$_chg_tmp"' EXIT
-PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
-  >"$_all_tmp" 2> >(while IFS= read -r line; do note "$line"; done)
+if [[ -n "${PR_CHANGED_FILE:-}" && -f "$PR_CHANGED_FILE" ]]; then
+  note "OK: skip resolve_changed_files.sh (PR_CHANGED_FILE)"
+  cat "$PR_CHANGED_FILE" >"$_all_tmp"
+else
+  PR_BASE="$PR_BASE" WS="$WS" bash "$SCRIPT_DIR/resolve_changed_files.sh" \
+    >"$_all_tmp" 2> >(while IFS= read -r line; do note "$line"; done)
+fi
 filter_existing <"$_all_tmp" >"$_chg_tmp"
 
 CHANGED=()

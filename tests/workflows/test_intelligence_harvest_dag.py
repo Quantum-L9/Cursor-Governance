@@ -8,64 +8,23 @@ test can hold those two together once they live in different files.
 
 from __future__ import annotations
 
-import importlib.util
 import json
-import sys
-import types
 from pathlib import Path
 
 import pytest
 
+from workflows.dags.intelligence_harvest_dag import INTELLIGENCE_HARVEST_V1
+
 ROOT = Path(__file__).resolve().parents[2]
 IR_PATH = ROOT / "skills" / "l9-intelligence-harvest" / "meta" / "skill-ir.json"
-DAG_PATH = ROOT / "workflows" / "dags" / "intelligence_harvest_dag.py"
 
-
-def _load_dag_module():
-    """Import the DAG without executing `workflows/__init__`.
-
-    That package imports `inspect_dag`, which hits the documented
-    `tools.validation.validate_external_code` gap (TODO.md; 2026-07-19 decision to
-    leave it broken). pyproject already ignores `workflows/dags/test_pipeline_dag.py`
-    for the same reason. The shim keeps this suite testing the DAG rather than that
-    unrelated gap.
-    """
-    for name, path in (
-        ("workflows", ROOT / "workflows"),
-        ("workflows.session", ROOT / "workflows" / "session"),
-        ("workflows.dags", ROOT / "workflows" / "dags"),
-    ):
-        if name not in sys.modules:
-            pkg = types.ModuleType(name)
-            pkg.__path__ = [str(path)]
-            sys.modules[name] = pkg
-    for mod in ("interface", "registry"):
-        full = f"workflows.session.{mod}"
-        if full not in sys.modules:
-            spec = importlib.util.spec_from_file_location(
-                full, ROOT / "workflows" / "session" / f"{mod}.py"
-            )
-            assert spec is not None and spec.loader is not None
-            module = importlib.util.module_from_spec(spec)
-            sys.modules[full] = module
-            spec.loader.exec_module(module)
-    spec = importlib.util.spec_from_file_location(
-        "workflows.dags.intelligence_harvest_dag", DAG_PATH
-    )
-    assert spec is not None and spec.loader is not None
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
-
-
-dag_module = _load_dag_module()
-DAG = dag_module.INTELLIGENCE_HARVEST_V1
+DAG = INTELLIGENCE_HARVEST_V1
 IR = json.loads(IR_PATH.read_text(encoding="utf-8"))["workflow"]
 
 
 def test_the_skill_declares_this_module_and_registry_id() -> None:
     authority = json.loads(IR_PATH.read_text(encoding="utf-8"))["authority"]
-    assert authority["canonical_dag"] == "workflows/dags/intelligence_harvest_dag.py"
+    assert authority["canonical_dag"] == "workflows/dags/intelligence_harvest/graph.py"
     assert authority["dag_registry_id"] == DAG.id == "intelligence-harvest-v1"
 
 

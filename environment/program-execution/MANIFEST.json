@@ -1410,6 +1410,58 @@
       "sha256": "a6a5bdf507128ebb9b5dee1b991b86ba5a15ff96a1fae39ad1444ed0ea943c1d"
     },
     {
+      "path": "mission/MISSION_ACCEPTANCE_MODEL.yaml",
+      "sha256": "d3825c29d60bf20da3a1903d68b912456cb7b7045d10b0f0c8246fecc9c3ca35"
+    },
+    {
+      "path": "mission/MISSION_AUTHORITY_MODEL.yaml",
+      "sha256": "5867d09c392ed216f656376e7c58bbfabad6bec4d9e37bbc787ccf7175bbc96a"
+    },
+    {
+      "path": "mission/MISSION_MODEL.yaml",
+      "sha256": "83b49b532ae38575fce0c65ca13033bd92b63d1c662af2f5b6296313c7c3e12a"
+    },
+    {
+      "path": "mission/MISSION_PROGRAM_BINDING.yaml",
+      "sha256": "3fb2eba1fa1d6cf65ac0e50844f64aa76b74914bbf0dcaaf738f303412bf7552"
+    },
+    {
+      "path": "mission/README.md",
+      "sha256": "d2cb5520b08f62e84813688165b85d99c44199c42d65cc0dd47afc9d9b302022"
+    },
+    {
+      "path": "mission/binding.py",
+      "sha256": "6a0fdd73efab2484ea66e880d7a64f941671f1963d52bb07f10500a915800830"
+    },
+    {
+      "path": "mission/mission.py",
+      "sha256": "5ac8b708ea2fbe3f09f42287a992e0ea25f5907cd982ceb2dfe6fee941861744"
+    },
+    {
+      "path": "mission/schemas/mission-program-binding.schema.json",
+      "sha256": "3588aa98875d95228d89c4e7acf3c7d2730d9058cb3702ddfecc0c641472bb4f"
+    },
+    {
+      "path": "mission/schemas/mission.schema.json",
+      "sha256": "f6a97707df14b6e6bc5fe87993e86888fc406fafc6db8f71a20fa07c07b3a29b"
+    },
+    {
+      "path": "mission/tests/fixtures/invalid_mission_with_tasks.yaml",
+      "sha256": "6ffbba9cdb91026332baa6b617b5115dd9e048d78cd0fd8c6b264bf642ff258e"
+    },
+    {
+      "path": "mission/tests/fixtures/valid_mission.yaml",
+      "sha256": "b5803f8f85867219a9c4f5bb25e68d260115233aec0eb01e6e364dedb0967da4"
+    },
+    {
+      "path": "mission/tests/test_binding.py",
+      "sha256": "61bc96d12f8b7d0c66b2a1f81189544f55b98ac9523976ea244d0278cf85ee59"
+    },
+    {
+      "path": "mission/tests/test_mission.py",
+      "sha256": "2a8920e4537ec391dc73254b6e4d39b67162bd2a2eb70d8111d9083fe3105c0d"
+    },
+    {
       "path": "peer_execution/README.md",
       "sha256": "8494397945f6d85e03cf97ed8f2d4730149cbba3962e049ec4f27382f2bd12e0"
     },

@@ -10,8 +10,8 @@ metadata:
   tags: [l9, dag, workflow, authoring, registry, langgraph, command-binding]
   owner: igor_beylin
   status: active
-  version: 2.1.0
-  updated: 2026-08-28
+  version: 2.2.0
+  updated: 2026-08-29
   absorbs: [l9-update-command]
 ---
 
@@ -19,10 +19,16 @@ metadata:
 
 ## Core contract
 
-`BIND → CLASSIFY GRAPH KIND → RECONSTRUCT → DESIGN/RECONCILE → VALIDATE → BIND RUNTIME/DISCOVERY → OPTIONAL COMMAND BIND → VERIFY → RECEIPT`
+`BIND → CLASSIFY GRAPH KIND → RECONSTRUCT → DESIGN/RECONCILE → VALIDATE → BIND RUNTIME/DISCOVERY → OPTIONAL COMMAND BIND → OPTIONAL CONVERT → VERIFY → RECEIPT`
 
 Own the **graph lifecycle mechanism** only. `workflows/` owns graph implementation
 and execution. The most-specific domain Skill continues to own workflow semantics.
+
+`CONVERT` is a disposition gate, not a rewrite of every `SessionDAG`. Classify
+kind first. Continue only on `SESSION_GUIDANCE`. Look up
+[`policies/session-deprecation.yaml`](policies/session-deprecation.yaml). Emit a
+`StateGraph` only for `CONVERT_TO_LANGGRAPH`. Twin and absorb rows write a
+receipt and stop. Never delete the source `SessionDAG` in the same step.
 
 ## Graph kinds
 
@@ -67,12 +73,19 @@ literal, not a construction.
 - Never claim `SessionDAG` and `StateGraph` are equivalent runtime types.
 - Keep domain semantics with the domain owner. Do not become a generic workflow
   god-skill.
-- Author graph artifacts under current canonical `workflows/` surfaces. Do not
-  create a parallel workflow root.
+- Author canonical graphs under `workflows/dags/` unless current repository ground
+  truth proves another canonical location — a `LANGGRAPH_RUNTIME` may legitimately
+  live elsewhere under `workflows/`. Never create a parallel workflow root.
 - Register only `SESSION_GUIDANCE` graphs through `register_session_dag()`. Never
   invent `ACTIVE_DAGS`, dict-only registries, or a parallel registration layer.
 - Never register a `LANGGRAPH_RUNTIME` graph in the SessionDAG registry unless a
   future explicit repository contract defines an adapter.
+- `CONVERT` refuses `UNKNOWN` kind, a `LANGGRAPH_RUNTIME` source, an unknown
+  catalog id, and `allow_session_retire: true`. Missing `proof_path` on a twin
+  or absorb row is `BLOCKED`, not convert.
+- An emitted runtime must not call `register_session_dag()`.
+- A prose `action` string fails closed. Only an existing repo script path may
+  become a node callable.
 - Validate before registration. Never claim registration or reachability without a
   successful probe.
 - Require unique node IDs, resolvable edge endpoints, a resolvable entry node, and
@@ -85,8 +98,8 @@ literal, not a construction.
   workflow instructions.
 - Do not own Skill discovery or autonomy wiring. Hand that to
   `l9-wire-skill-into-repo` only when Skill wiring is requested.
-- Do not claim imports, registration, compilation, tests, or runtime behavior that
-  were not actually checked.
+- Do not claim commands, imports, registration, compilation, tests, or runtime
+  behavior that were not actually checked.
 
 ## Operation routing
 
@@ -97,10 +110,16 @@ Classify the request as exactly one primary operation:
 - `VALIDATE` — prove graph structure and importability without changing semantics.
 - `REGISTER` — repair canonical registration/discovery for an existing graph.
 - `COMMAND_BIND` — create or reduce a command to a thin trigger for an existing graph.
+- `CONVERT` — classify a `SESSION_GUIDANCE` graph against the deprecation catalog
+  and apply exactly one disposition: `DELETE_TWIN`, `ABSORB_INTO_SKILL`, or
+  `CONVERT_TO_LANGGRAPH`.
 
 `REGISTER` applies directly to `SESSION_GUIDANCE`. For `LANGGRAPH_RUNTIME`,
 interpret binding as proving the canonical module and runtime entrypoint resolve
 to the same graph — never as SessionDAG registration.
+
+`CONVERT` requires `dag_id` or `dag_path`. It does not absorb GMP, harvest, docs,
+or maintenance semantics. Domain owners stay with the catalog `domain_owner`.
 
 If the request is actually "design the domain workflow", route to the domain owner
 first. This Skill then encodes the resulting workflow as a graph.
@@ -115,7 +134,8 @@ first. This Skill then encodes the resulting workflow as a graph.
 6. For `SESSION_GUIDANCE`, bind discovery through `workflows/dags/__init__.py` and probe `get_session_dag()` with `scripts/probe_registration.py`.
 7. For `LANGGRAPH_RUNTIME`, prove the canonical builder and executor entrypoint resolve to the same graph. Do not create SessionDAG registration as a side effect.
 8. Only when requested or already owned, create or reduce a command trigger and validate it with `scripts/validate_command_trigger.py`.
-9. Emit a receipt with `scripts/render_receipt.py`.
+9. For `CONVERT`, load [`references/session-to-langgraph-contract.md`](references/session-to-langgraph-contract.md), run `scripts/classify_conversion_disposition.py`, and emit a `StateGraph` with `scripts/convert_session_to_langgraph.py` only when disposition is `CONVERT_TO_LANGGRAPH`. Then `scripts/validate_langgraph_source.py` must PASS.
+10. Emit a receipt with `scripts/render_receipt.py`. CONVERT receipts carry `disposition`, `target_skill`, `emitted_runtime`, and `surviving_runtime`.
 
 ## Command binding rules
 
@@ -145,16 +165,20 @@ verification, harvesting, or any other workflow that merely happens to use a gra
 - [`policies/graph-kinds.yaml`](policies/graph-kinds.yaml)
 - [`policies/ownership-boundary.yaml`](policies/ownership-boundary.yaml)
 - [`policies/command-binding.yaml`](policies/command-binding.yaml)
+- [`policies/session-deprecation.yaml`](policies/session-deprecation.yaml)
 - [`references/session-dag-contract.md`](references/session-dag-contract.md)
 - [`references/langgraph-runtime-contract.md`](references/langgraph-runtime-contract.md)
+- [`references/session-to-langgraph-contract.md`](references/session-to-langgraph-contract.md)
 - [`references/dag-lifecycle-contract.md`](references/dag-lifecycle-contract.md)
 - [`references/command-binding-contract.md`](references/command-binding-contract.md)
 
 ## Failure behavior
 
 Fail closed when graph kind is unresolved, structural validation fails, required
-SessionDAG registration or discovery fails, or a LangGraph runtime cannot prove a
-canonical executable graph. Report the smallest repair seam. Do not widen into
-domain semantics, Skill wiring, or unrelated repository surgery.
+SessionDAG registration or discovery fails, a LangGraph runtime cannot prove a
+canonical executable graph, CONVERT sees a non-session source or unknown catalog
+id, or CONVERT is asked to retire SessionDAG this wave. Report the smallest
+repair seam. Do not widen into domain semantics, Skill wiring, or unrelated
+repository surgery.
 
 Terminal state is `PASS`, `PARTIAL`, `BLOCKED`, or `FAIL`.

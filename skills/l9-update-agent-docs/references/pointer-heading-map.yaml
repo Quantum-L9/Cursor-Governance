@@ -1,0 +1,31 @@
+# Pointer-stack required-heading map (harvest nugget c-required-section-validation).
+# Rebound from donor subsystem templates. Do not add donor section names
+# (overview, airules, apisurface, datamodels, components) as required keys.
+version: 1
+harvest_nugget: c-required-section-validation
+forbidden_donor_sections:
+  - overview
+  - airules
+  - apisurface
+  - datamodels
+  - components
+files:
+  README.md:
+    role: index
+    required_pointers:
+      - CANONICAL_LAW.md
+      - AGENTS.md
+    required_headings:
+      - Purpose
+      - Key Files
+  CLAUDE.md:
+    role: load_pointer
+    required_pointers:
+      - CANONICAL_LAW.md
+      - AGENTS.md
+    required_headings:
+      - Authority chain
+  AGENTS.md:
+    role: operating_ssot
+    required_pointers: []
+    required_headings: []

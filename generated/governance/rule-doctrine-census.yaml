@@ -1,27 +1,35 @@
 $schema: l9.rule-doctrine-census/v1
 source:
   repository: github.com/Quantum-L9/Cursor-Governance
-  commit_sha: 52b80493caa3ced45910e97415c721e2c725f4b8
-  commit_timestamp: '2026-08-14T20:58:06-04:00'
-  workspace_dirty: true
+  commit_sha: def897edb04f6a1450f5e8d32cfd34c7e9322383
+  commit_timestamp: '2026-08-28T22:06:32+00:00'
+  workspace_dirty: false
 summary:
-  rule_count: 63
-  candidate_count: 365
-  normative_candidate_count: 311
-  unowned_debt_count: 311
+  rule_count: 68
+  candidate_count: 434
+  normative_candidate_count: 370
+  unowned_debt_count: 370
   duplicate_cluster_count: 1
   potential_conflict_cluster_count: 0
-  always_rule_candidate_count: 187
+  always_rule_candidate_count: 255
 debt_allowance_candidate:
+- fingerprint: 003eca5599199ebbe0a9d4406bc7bf22e9376468f67a63558399cf99326fe4e0
+  count: 1
 - fingerprint: 00a84cde8161d1ce7f1007dd8394dbd759f9e33eaa3567c12fcbaec0c4a99d9d
   count: 1
 - fingerprint: 012d8089d4f2a0f0424efd3ea4ecdce6c79fe2a1d57a720412cce227124774c6
+  count: 1
+- fingerprint: 0134f0bff3582f437d14c0ed7e159a870942a0b87796e6e9f9a4d62ef56dc972
   count: 1
 - fingerprint: 01897f43353ee97dac223db69323a2272ca47493a787717afa4e3a25c3d60796
   count: 1
 - fingerprint: 01ba54aba4e5777a914ea7ef6e5af09e9b8e501051f7649d2afda0021a23ebe7
   count: 1
+- fingerprint: 025489452a3ad4f8ea3dcced13d38b73eccef9aaf9a2d20f7ba8382d9a3fffbb
+  count: 1
 - fingerprint: 02bd6d1547280d88b0679020c463ce62ea99e61825953e57108764a0727f4d42
+  count: 1
+- fingerprint: 02f7112053097dc8c27b54f00b2c9a408ee61a3bbc8e3c2597759fe6dabf0bca
   count: 1
 - fingerprint: 03159a0a6f2c9cc6c36bcfb5182bd0800d0eaf237115df846fe0c08e4d711199
   count: 1
@@ -37,13 +45,19 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 091a4f8d0cf75111e5026a175e6aaf885a1994929d6b650580329a7dff985abb
   count: 1
+- fingerprint: 093cbf0d729f0b4aaf753318d95b76caa91814dbb09b799b175efb2b57df3943
+  count: 1
 - fingerprint: 09f4ed4ebc4ae5cd1338a3d87c8355d105099806c291f8788a7f378251c43a30
   count: 1
 - fingerprint: 0a08a41b0d7430157ae976796680fc734867bba4e16f907b9d98370e6699cda9
   count: 1
 - fingerprint: 0b5c2749b0d3f435d4298c182a7dd016228fc72ca98d4ab570cc9e263ac4305f
   count: 1
+- fingerprint: 0b74528f339d7062c78db3a73d39cf042759bba64f352606243b565c61dfeaa9
+  count: 1
 - fingerprint: 0c635f112934d8188c15c2349304cfe093fbb198fffefd85171ea373f5c31cd4
+  count: 1
+- fingerprint: 0e04f0c0fee64b2ea550cd2c9c630a9f8e77e1b1fa66bcbb3387e17bd897eacc
   count: 1
 - fingerprint: 0e45cbe2477da3713b3bed67869472b2a83c115ae62978359f09ad4915339bed
   count: 1
@@ -51,9 +65,15 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 0ed5b45b9e8cd09f530f6913aefea1a3ea63d2f0364a6561edb850cea1c10b47
   count: 1
+- fingerprint: 0fe89cce3a58165919ee950b7c1dfeb06b3fae912a6dc37b196075293c80cd1d
+  count: 1
 - fingerprint: 1022928f4764a7e5d7b7e40933ecf8bd9f9fde1327d9d0dd1845f6faeca7db71
   count: 1
 - fingerprint: 110f820b422acdcb0536e10cac4b0cbe39f0087f6d931b90a700e64cd3f24d18
+  count: 1
+- fingerprint: 11e644a0c2ac8d0680d5e63f474e736a2ce5b2d38e582a248412356d184e4df4
+  count: 1
+- fingerprint: 124371b99ca13fda5342462fe4b6ab034429d1cb4bf989e4fec6172ccdc011f7
   count: 1
 - fingerprint: 1317ca768eaf54c15c0066c2889f6a7b58d1a6e95fa3d95ccd98b24b263c449a
   count: 1
@@ -67,8 +87,6 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 16b12bfdecf2d0bdb0ea7613bea9bf175be7bca52c1fa895c001a295fc5fad44
   count: 1
-- fingerprint: 178680f0ae50876e0088d036410a36725041b247316a869d687aef690f5379f0
-  count: 1
 - fingerprint: 17cd4475d03505ca5a2be0b90346b12461f220f3233f80059766b52c6adb97a6
   count: 1
 - fingerprint: 1800dd97aa1c3dec9629ac68c00682e37d3652af5bc71a8ede46b76adb85d066
@@ -77,13 +95,21 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 18bce218191fb14eff91eb8bf3f08aa90037b93acc2d1e9ef6d99192bbc4d874
   count: 1
+- fingerprint: 1a08b4d78435014f171ee1e35104783af6936db5f6d336a0f0b51d194776d7db
+  count: 1
 - fingerprint: 1a3dc5fced2685c703c61fa9d65778896fb9c7e99e8c6ca945adf93452b96832
   count: 1
 - fingerprint: 1ba0feee2b60494b94a9d85165acd1bd73a2e51ae5e29c6914f9019f84f236d1
   count: 1
 - fingerprint: 1c979b2ca76b0cb96343323c7c4a009845621d5ec922c4902828941b9c6f4ae1
   count: 1
+- fingerprint: 1d46f0c58f828a935494b2edaedfbe428788942949a82c0b192e7e95ab163a9d
+  count: 1
+- fingerprint: 1ea983f4f38bf6d5639f67a760df6acfa9ef53a58dde3f5ef618bd5937370ecc
+  count: 1
 - fingerprint: 1f25c784a79fbc7795e767c13b8bd63f10c99604df663f158c5c9c68ac765996
+  count: 1
+- fingerprint: 1fb1e51fec8677f0c9d857b494c79bb02d7ca2bd695bd6c88716db1e0fc4a1fc
   count: 1
 - fingerprint: 20deaab9b7d33b576d29aad05478e208536495874e5b0d1ed072762a027aaf26
   count: 1
@@ -94,6 +120,8 @@ debt_allowance_candidate:
 - fingerprint: 24dec80d3100da5bd5ae2a5a19300e98628dd3115c322f20384fe54d5070f195
   count: 1
 - fingerprint: 262693b64e2451f6b78f320e93182ace596832951500257d818e184f88180ec8
+  count: 1
+- fingerprint: 2643a1ce16358b24864e33cb2e842a53278f602b3b001a4ea13b4ad64cb19595
   count: 1
 - fingerprint: 26bc9d4141d4169f131b6a9c243f38e80ae3e9d5b17ab13e99751549f110f632
   count: 1
@@ -106,6 +134,14 @@ debt_allowance_candidate:
 - fingerprint: 28f15443173c6164b5c957e7144c316b641c5dff22bf4c5f68e82de5ac693113
   count: 1
 - fingerprint: 2a333647a233d74d78a5af766df92d3d57a6a8cd8a04ae93d39184b85f950750
+  count: 1
+- fingerprint: 2a4c1a05f72d63d87a513f02411b2088c80abc9f2bad3937e3096d45e94176cc
+  count: 1
+- fingerprint: 2aeb4c180d192316713fbe040eb05405edb8e38c7348e31cc5f1818bfcca294d
+  count: 1
+- fingerprint: 2b625c177360a188d477e5845a3cb4066f049dd1965ba951fb3a39b6f62a459f
+  count: 1
+- fingerprint: 2b8488ff45902c7d0e2bd4889d0f56863e249f41fe111ec0b546d6df4ea500f4
   count: 1
 - fingerprint: 2c28392dad2cc7b2e7c3c5a2211aad843805f5dac66e6e8fb09aeef4d1efd169
   count: 1
@@ -127,13 +163,19 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 32a87941b3691f85ca0693a89cd5a829bbf054c24c8a63e4cc2debfa94912c27
   count: 1
-- fingerprint: 334903995c5c40a4d4b7938d626c5b2cbcf922c27682eff0e987201cb1855ed0
+- fingerprint: 32ac801e0a9ba3f45396a871d23519b11301d77e7900c51c72f91b4cebdf7bc3
   count: 1
-- fingerprint: 33f1e6fa3df9f7609b7f3e80d24716cfb9daaf2b79376b1251fb2ccd984e5e3a
+- fingerprint: 334903995c5c40a4d4b7938d626c5b2cbcf922c27682eff0e987201cb1855ed0
   count: 1
 - fingerprint: 3773cbd5521f40ee6b8beac837dd37b7fc31459627f9a2ebc01a2ddcd20a6f91
   count: 1
+- fingerprint: 37c33872b2629bb9d90852e2837d54f71dfa48ed937a02c51b4fd276b5fa9dd5
+  count: 1
 - fingerprint: 37c500d3589db47a55e9b29f9c8c5313b9f38e0534d5cb7fe61cf83aaddcb630
+  count: 1
+- fingerprint: 381f7f90110143f6173ef8884eee8f05abe059457f1f061d4ad61247c69b6194
+  count: 1
+- fingerprint: 3899bb3916f28aa729a6666d336e35b394445f89c5a4dc8088b3dfc8d8e3541e
   count: 1
 - fingerprint: 38ae4ea27c9f297025eda75580163e0ad8bcd369db43227c1615a4a9f9b95c44
   count: 1
@@ -141,9 +183,13 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 3a09562222227ab0556ea9ddf9d0def634ebd3da46a5511ecb4c328a7aee5176
   count: 1
+- fingerprint: 3a25f5875dcb6bf86dca5a8a5a501780de13a5ae8f761d57b3f9aefeb1adcfcc
+  count: 1
 - fingerprint: 3ad902e5c83b673ca3ac212074a4230a36ff3c8f36c0b745a3b56b1a33f0d369
   count: 1
 - fingerprint: 3ae87140fe22dada409d8de5858eb24f993cf52f729fbf90804ffd9acb712b2b
+  count: 1
+- fingerprint: 3b8ca99991d4bbf7c83729b314c3155f840b3548b549b5622d48d75e9d311e5f
   count: 1
 - fingerprint: 3d9b5a1c923b4d005eeaace49d16d7a8687494b812e473c660575812ffacb640
   count: 1
@@ -159,9 +205,13 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 42e23edafc78a0b686df4c4e0de3cd8cc880361c98de708d8fd8b954cbbf54da
   count: 1
+- fingerprint: 42ebd9e3038c54a4d2891bb9b12f7719f8c3f2bc63fe3fe024dbcf1b5de64268
+  count: 1
 - fingerprint: 4379654607925b64bd64835dcd7128a667a3c9d8bf72f6e704870ea5784b9cf9
   count: 1
 - fingerprint: 4409590f5e52a1a72362b84e70c5f8c09b0ba62401c03d11dbdca245d2f39701
+  count: 1
+- fingerprint: 445af4c8a3ec14110ca1b55b1bced23e98e0005a87a24f07944ed17bde60f161
   count: 1
 - fingerprint: 448459df3386506854c90a5e85f3c27690f790fefbf1142647a712fe2d5b1d3f
   count: 1
@@ -173,9 +223,9 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 475a6551b869c47313f3494f775365c064067c09af872bf9cebb7d6fcff50a7b
   count: 1
-- fingerprint: 4821e21584d1ade02c069316440c4be013faae6c9ac116b6c6240a9aa3dfbd97
-  count: 1
 - fingerprint: 48a997281d447c5d0b93a31018bcf4464e17c3f402c3fc20509d7fea01944d87
+  count: 1
+- fingerprint: 48ebff1442c0cfad76ed9862ce6cce262a7bb6b12770a88ca457ddf1f6dbd719
   count: 1
 - fingerprint: 4972141b9e1b046324b1f31cb573a8745cd364e2f2fff3e5b424a101fa749b33
   count: 1
@@ -183,11 +233,19 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 4a4d1046ab92873606a27d87d3d57f8735718de01ee9d5df1a0d3b9dfb88e61f
   count: 1
+- fingerprint: 4bf5de2659a8642878176b9a0fb73a21fdbd05d0f7076d9c3a414a6c8d1a0f2f
+  count: 1
+- fingerprint: 4c5b6828c7f60d11326d732cc87c80af728e35eceebda169e442968d865f037d
+  count: 1
+- fingerprint: 4eb9d77e97a7fba8289baebcc161e49964924481bce83fbceda0742234765642
+  count: 1
 - fingerprint: 4f36e0820bd2d7b07d46cfdfabd1c6a1c1993a0c44d49d45ac0029edd719f7ed
   count: 1
 - fingerprint: 500d17e95c7656b87a5615247ed2834a989f2ff4bdd52dbbf46927c7f613f13d
   count: 1
 - fingerprint: 50a4da7521ecf8bafd93f3bcff96ed2f1928d437e36832212a7e13714b5deef7
+  count: 1
+- fingerprint: 512556a192d6451fc2c57d187e303c9536079b3e20c3cc3f2f3f5eb5b9a06ce5
   count: 1
 - fingerprint: 514f8d026a0e6a557535b716e3d4d0bf22b95cb92dc6bb668d19e5f8087b44d9
   count: 1
@@ -195,6 +253,8 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 5226ce1fca010b8e17e9684931215f09132497af39052bf75b02b3cffa0647c8
   count: 2
+- fingerprint: 5246fd6863e98294cb4a501519bde17c3529d2a88ece97d6007b4ea2fa0af93d
+  count: 1
 - fingerprint: 53875fa6c4d9b8d68b22f8ca990b257dad71a141127d1fbbf58c1b93b0254ce0
   count: 1
 - fingerprint: 53c65a2b3d221ead8d3faddc5bd7394531b34d37873256c8c8314ba4989d9077
@@ -207,19 +267,25 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 55ecced3b43ae6fe93f00dab030b42190860fa74de9015fad6d1aff7044cebc8
   count: 1
+- fingerprint: 5623c4369f8cf75337f03a1e413c2c7b72f5391bf8320ec71a79a3d39b8edc69
+  count: 1
 - fingerprint: 568d2d7e909fc4bb55e3f6bfcb9f747328615ee75b7b3d473ca3f9bff16ef0fe
+  count: 1
+- fingerprint: 5692256fef0cfefd43fb9b5982bdd129975ca6ae8c070591315c12a54aa1d41f
   count: 1
 - fingerprint: 574589532b0c7752c33eea73a0b92c9e6370733e7c61fdce8a98d966244842aa
   count: 1
-- fingerprint: 579bfe64afc431f21b83ef7312d64d94c65c89fa3019edd2a6a3a3da465b4d2b
-  count: 1
 - fingerprint: 5805e1bac91136c5902d85a4f383feaa98255a77ec351df72026a926c3171e16
+  count: 1
+- fingerprint: 586c2cfe4a13b36d76cf0449ad89202fafdde4f99790a923ca75d29ac1f703f6
   count: 1
 - fingerprint: 58c71ac0665f1879640c2d07817ca5030191a5e993ef84832aba8fa3f242c85c
   count: 1
 - fingerprint: 594e90bf8ebd1884b6ed68c872d4d9087a2d5eabb40674669aba456d6f997584
   count: 1
 - fingerprint: 5959d037f5590d0dbdfa68e311242034f02e0ae6b2020c68716ee5b6cfdb4801
+  count: 1
+- fingerprint: 59eaf84a9640beba45b0a3d30fc3b1fa88462c0f958083a2b176f9de4e5f2ca9
   count: 1
 - fingerprint: 5a6438e78de1530892338cdb0dbc8ef2f95ca1765228963c70563f7f1a5c3bb6
   count: 1
@@ -241,6 +307,8 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 5e7a60125c38e62481515f1b6f3166c8ebe11cb7597c0c1a9e26cc6797fe4e62
   count: 1
+- fingerprint: 5f0abf164d12b736d8e699d0bfa66cd0ee6453862f4ace305c03a75e25ba6bfc
+  count: 1
 - fingerprint: 5f0e964a6291ff5efdf624886e7d8cbbdaf22ddfa7c0e7a63a9fd437bd298d78
   count: 1
 - fingerprint: 5f190a376d7aa5e572d40483793eb27f81d032c83bbda264b5723aa927d0eaaf
@@ -261,17 +329,15 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 61b9db55d5303eb439edc60812ea0b8074de8f3f6530e15c14fb43d8cdcfb22d
   count: 1
+- fingerprint: 62078ac7ea6d3b29d44d50d72834ebd8e5deb309965fc9d973816944df82733c
+  count: 1
 - fingerprint: 633198a62c45dc8bc2541ae858e32e4a0421dfc960372bd9c5120fa41b48f710
   count: 1
 - fingerprint: 633f8ff5b2a6c64c4a5aeca4b7ad7f9e12d0d1f52200a0763b2034e5d2e99e7a
   count: 1
-- fingerprint: 66957b98ea253d0437920723110969a87c37ea53118091bfae90d7150a2d08ca
-  count: 1
 - fingerprint: 66a16b7fd3bb21e318879597b17783389f48d0cd561e8ae38b899a297dee4fbb
   count: 1
 - fingerprint: 671c9aa8dbaf838834d69c4d0ce47762e663cf193a65065b52eb86724e7cbb59
-  count: 1
-- fingerprint: 67f40044c5f5b1490eb5018396342ea04a4eb2a918a497d89c215857e7f16178
   count: 1
 - fingerprint: 6899824c80bfd71729518c15f24aeb42f202d4702062f6b13584a9b17371e8d6
   count: 1
@@ -282,6 +348,10 @@ debt_allowance_candidate:
 - fingerprint: 6a9357187510ebf9608eb6e955e327718250dd0788324aabba99c8e7d4f04f2d
   count: 1
 - fingerprint: 6ae3a28026e4118e1beb83649d6da58826e8c5dba2e2320c5a1a69c4d138812f
+  count: 1
+- fingerprint: 6b7d9c1204ab44a2355c6dd703a155c0e72000fb9af2c604844f328f8f72b6af
+  count: 1
+- fingerprint: 6c47a86a02828214a8326170ffc9cf7b00c6cf6b5120828aa2b05ce271351939
   count: 1
 - fingerprint: 6cb0c479ec70da3f3669ea1bd31a8d5b6fd0d5a88661ec276523d8fc462cf13c
   count: 1
@@ -299,13 +369,13 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 7261dd22c31ff3b70ee7cbf51491a000c261b8d8014a8509bf209dfea932b465
   count: 1
-- fingerprint: 72b4f68ebf4aef28848726d8e50c517ec17138dacb1cd06679ad1a3336b404a3
-  count: 1
 - fingerprint: 72e08c11eb8718088ee48b9354831980ac9c248815f5fbb4e77f909bd0cb5970
   count: 1
 - fingerprint: 739c4b44b0ef9fc5d344a7abfcf9af50423bd3d9a858dad5f600c04c57eb632c
   count: 1
 - fingerprint: 74a226d5086aabb075966eb06352e376a8c8c001d0dc3b992e3fe7df1f1935ae
+  count: 1
+- fingerprint: 75138b47c3dc3d0e994ef776f986cff9f04cdd3441847098662e2b211df971bc
   count: 1
 - fingerprint: 754b230054342b9f3b4410ce58fd4d735b0136e5246e96d15c7c486af5d51afc
   count: 1
@@ -327,9 +397,13 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 79332e63655f17925bec08d05fe6fd3390294a594d1f69a13cde3613324d384e
   count: 1
+- fingerprint: 7951fd7be9e2effc913b1795de94304ce563a07d5fd9d3672a44c369cb507ea9
+  count: 1
 - fingerprint: 797805c2e03b4e7ecec1a1d587e529356b367481c67fda4b0d84de6672e48150
   count: 1
 - fingerprint: 7a3898e43438eff71b4199fb173d5de8a6d94469e4646a5b9b19d9375a48d5f4
+  count: 1
+- fingerprint: 7ae58d5bd7cc30aa19131eed07db637628756dab5a728fd8bc324e0dc13d60eb
   count: 1
 - fingerprint: 7c1b88a4b0ea8f3aa2e785329f9df0d09d41569cab7f70569382d4317c5f952a
   count: 1
@@ -341,17 +415,25 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 7f913748b3d3212c4112345bbfd8d636a4ba4f4a1b7ca9fd4e896dab8223f3bf
   count: 1
+- fingerprint: 7fdbe2a8984f129733543cff3231b1afbac4dc2e306c4a631b0b0093e66ee575
+  count: 1
 - fingerprint: 808569445bd805fa7aa8cbf96546470f6bc2a4384638d157dd90475a8a0d6fe2
   count: 1
 - fingerprint: 81a1cf106e39fcf0547eb3a74eac8f003cc68684927f4a6e74f4046facb7ba15
+  count: 1
+- fingerprint: 81b25d752060a2b04856c2d362d906512eb9c156f701545da3ca3a9899bd5231
   count: 1
 - fingerprint: 829bbdf66725e92cfa3221c8eba4afb5c2d3234f5c90e5689d07848c9c663e9f
   count: 1
 - fingerprint: 82bf083842327b3b674b1beb3551a33a0ad93420f3df84d0264e8ba89d644bcc
   count: 1
+- fingerprint: 83369faa1dbfe9f0dcd304342ae2af90d60f7e75d37f84946e56f2ebec8ad466
+  count: 1
 - fingerprint: 8342e4ad2f01f088a5a6a24ed50f84cf99edaeccbc35913cec2fc24c17086dd9
   count: 1
 - fingerprint: 836f1808d08322a6ea2f76f779cf425c93ff03371c69ee46bcda3ee8486012bd
+  count: 1
+- fingerprint: 8387f5e6a9e526945ab191ca304a18a6c57706ce00dbb4eff5953cd1c4e2ac82
   count: 1
 - fingerprint: 84546c13f539badf4b7138e35cda517088e74a6fa8bfe136f642489c8f005ea0
   count: 1
@@ -360,6 +442,8 @@ debt_allowance_candidate:
 - fingerprint: 84d172e236a183cca40e0fd820d40cfda6f54d75a8acb4bce0302b0c2607138c
   count: 1
 - fingerprint: 851c8960a5a88d55fedd734beb8886d62e9e7331b214e8912c5969feab392366
+  count: 1
+- fingerprint: 851e77238a9a0de6b8e108541824d061c4506e4507d93772d80530e08d188e0a
   count: 1
 - fingerprint: 869054c93d25c8489c669cd68637612f8341488dd6729c7d6d7d410c3bfd23ea
   count: 1
@@ -371,9 +455,11 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 87fd3e20cf0d71640f8ea1725c9a38edecc014e9df951e513541575e1a649281
   count: 1
-- fingerprint: 8802d7f054d91a6701645929d1ca7026a26d090d98d2653316414722b8717bc5
+- fingerprint: 89623dc6d54e374613d7e93b91bd7aa8beb447c2aab277e9d4e7cb816b6062aa
   count: 1
 - fingerprint: 8a8b4d3c58831570926ea691726345fae2ccabe25a2dd3a1d20ddfc88ef5f9d0
+  count: 1
+- fingerprint: 8b1278a6e24af22af3d685e48f8e72d94c9cdb52143efafec191643dfc267843
   count: 1
 - fingerprint: 8b2c1cbb47c0f244578d47f351d2c4b70035c7df0a947076abfab7c3490d601b
   count: 1
@@ -396,8 +482,6 @@ debt_allowance_candidate:
 - fingerprint: 8f2bb5d3ea207cc0934f6f6977651d41e6aa057cdba15f397990e273afcf6414
   count: 1
 - fingerprint: 90fc29ce67e119128f0195ab42e99e26fbf568d6edf9f7452d11dbc256a317f0
-  count: 1
-- fingerprint: 924d982f9776ce77cd61d2d556cc85cbed249a3990f69d51b8d1ff30ea096422
   count: 1
 - fingerprint: 925a5fd8f2f62b8b5fb8a444a89f78dcc66a774afe22fbc90749bde4df33c266
   count: 1
@@ -423,6 +507,8 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: 9cd740b114268362919ac95e1dfe235a951306cf78f7caf95d9349b78abc352e
   count: 1
+- fingerprint: 9e2231ef2a4572ea5b06b1e21fcecadbbcf7fc5fdd9130bd9831bcfd3ecd3b4f
+  count: 1
 - fingerprint: 9ffd6d665116134e5798a644a6838116e320a9e973bce9e0e546728d2424eff8
   count: 1
 - fingerprint: a04e3f5c68c86e8e56d12d7e56fd1a37bc03d05c7b9b1ce1b21969335a60719c
@@ -434,6 +520,10 @@ debt_allowance_candidate:
 - fingerprint: a23f2e4e5f4fa87ffb6cebcf93aff99854b9244a091adf201c396f21cd588d08
   count: 1
 - fingerprint: a477b8e79871d0e66107afc7c8ca7c4cd5d695256fa7eb16922143278459ad21
+  count: 1
+- fingerprint: a4cacd1c572370dabc208f209baa73970745fc5925caeb76baefa2b1298c7093
+  count: 1
+- fingerprint: a4d64caee37eedba46fa678f75125aac00d63e533069d92ca210c6262f09cb6c
   count: 1
 - fingerprint: a5e27e48449bdfa62c3213807bce3fe172d4ecfedc83f8b4e3f2f7fb4d0926ed
   count: 1
@@ -455,6 +545,12 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: ad4bb0dc773d6d05ba3b95d2d3d73ec5d5f1c86591e01e6fe75a0048516cf8f9
   count: 1
+- fingerprint: ae0ae0d8d2d3b929538bcb9b5d39c996433a9184729993cba594ffc933540e12
+  count: 1
+- fingerprint: afc5a49401cefbd0c5e8bf1240d64c27a84830b6f6e8f1a78070d4554d0214f8
+  count: 1
+- fingerprint: affaa4627bdd52e752ceacb4d8d8bcd9fc5d9ba987599c62dd7f01d2ac459480
+  count: 1
 - fingerprint: affeef40b89c504d89a2de85bb20500ace156850ed2c00298dce4cbcfb7770bf
   count: 1
 - fingerprint: b07e5d5b78b9263edf5b75d4692f8e6a09606b9f9a557a71ccec83778225bf7d
@@ -468,6 +564,8 @@ debt_allowance_candidate:
 - fingerprint: b3a2a5701f0743e1f4d8f022c434fc437f25407b7462532a3e3e6954aef659f4
   count: 1
 - fingerprint: b3ac8e3bf49898ee46083f8af5aa756f278e5c188e2c23bef25836dbaab9caa7
+  count: 1
+- fingerprint: b4176aac6758d6498faa2776c0a776139aa601df833b8f01a0d7385e3030629e
   count: 1
 - fingerprint: b48985074c56f218ab202d33f46548714869e9f7a310cb84e48dded801fa33f2
   count: 1
@@ -493,8 +591,6 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: b9d99b16d4e6ef6b380848dbf3b76f0319a00418fdc8d32f3f7c1c0b1d11a205
   count: 1
-- fingerprint: bb209da388da5654db3d2003f7c173209c3c29b56789088ff77e0ca76d445834
-  count: 1
 - fingerprint: bb81735ea6368a4170fa816d51b940d787e058bfddaa2f345d7cfa05a2d2a910
   count: 1
 - fingerprint: bbd26569699d743d887153ca29b46fff4a97720ea28dd415da13e483d72fcacc
@@ -515,17 +611,25 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: c1961cb80955fd6f59a5b8d88ae0a6d8c7de6b5d7f979e4ebb413c90e90933a3
   count: 1
+- fingerprint: c1bc4b33940dd30e49a02007f84bdb5402ed46f5ffdfff66ad5f0e2f80aa679b
+  count: 1
 - fingerprint: c1f8ddccac856d26d394f01590766981a10ce7c0dc79faaac4719dc69ad68e93
   count: 1
 - fingerprint: c3317443c7f91c216241c5b7e04466d6b085b1203f75e274584a35b17713d8ed
   count: 1
 - fingerprint: c3694213f9b450c5b0256af193ac64e807f6c8682682781a20241c31cdbebb2f
   count: 1
+- fingerprint: c4a6461c028216d1954e7176b34d96bdc8d8521d4a7b702cb7812930f88c3c3a
+  count: 1
 - fingerprint: c5a3653c89443f133e7354a4441b0d910f1eb097b9abc6c1793dcdef2bfd85a0
   count: 1
 - fingerprint: c68a744a1237b3f31cbe3eb2a4cc157ca9bab14fa2017bc88a10a36a36fcebcf
   count: 1
 - fingerprint: c6f8e69eeed7ecf0de3a6ca297490299aaacf1d252c2cbf0bdbcad0ffbdab80e
+  count: 1
+- fingerprint: c874909481d182df9afb247a86ba5d0b32209bfcbc49d44b259fcd56f4ab84ca
+  count: 1
+- fingerprint: c8df10961177cc4d6010d2b94116f02e1eacc15aa3f61dc7fb15cb3a1cdeb9f8
   count: 1
 - fingerprint: c8e084c47f34c2ad40b38c8383c74461c0bae0e3757fa1be7c2e54e9f6153c03
   count: 1
@@ -547,7 +651,7 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: cf799f797d67c86d915a832e5b9829818b9aab56632c6ac6cc26fddd469c3aea
   count: 1
-- fingerprint: d2205d015121c928be11bb76c945fbe27d293466e10136138e16dcd659f5cb40
+- fingerprint: d217614d34bf1823e0e986ad6fabaafc68493cf4e2eeacb9bebd8aec2f3c1534
   count: 1
 - fingerprint: d25c3d916eb3d81951036ef195c50fd7094fa20317bc5f43cc073e37c2919ea8
   count: 1
@@ -559,13 +663,13 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: d32ef87e0a7a0e7f279b5507cdb416ed3c86c7c47350359b3cbd557548b3d61d
   count: 1
-- fingerprint: d3a408578bfde44080f4b1a0a6e736d0f8c568fa374bd8114b465f683f2db6cd
-  count: 1
 - fingerprint: d4da0d31e2488a53108b83a4ee8aa8c52bfbd31dc6e11c3f0bd6ebd6337d9687
   count: 1
 - fingerprint: d7eb6ef6be5c88172bbbc3ee2bc39d61c7652875e3a027b22204e2af8b32c1ab
   count: 1
 - fingerprint: d8cb64c5d576fef4019b755967302b20f65e0c5248c90779681866f93d368141
+  count: 1
+- fingerprint: da422708f1e4977066c291552e3bd22d11b0b8217e54295794d4c81910afa7f5
   count: 1
 - fingerprint: dab860d21952fdaceb861a772e6d1a3757b00cd01930a5536bcecbb24d1f2860
   count: 1
@@ -579,7 +683,11 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: e011d5d4b0cdaeb106021d8c390f5166d1f5220b870ae5df1cdc2c07560768e0
   count: 1
+- fingerprint: e100b421f9d2fee0c3c65c64db08fe6e3f17cb3a2226eebcd2311a17605427f3
+  count: 1
 - fingerprint: e14ce08b04a8c311ede39387782ade141873022b9c500aace5fdf5c5bc543748
+  count: 1
+- fingerprint: e1aeca8215b47f054c116a465afc8e40b2d72d088cf3c7fbbc3b023222c4e2b6
   count: 1
 - fingerprint: e22b346171409238250b1cd760ffe76edde2a87ad2578a904ad6d91474302776
   count: 1
@@ -597,17 +705,25 @@ debt_allowance_candidate:
   count: 1
 - fingerprint: ebf50df318a0b28e5fcf2e9ea9eda6f1a87beead563ddfdefe37390382d6be98
   count: 1
+- fingerprint: edf3140eda4cde1330dbf6926a4f9dccc37743b0d3e3a326384c04af6f01288f
+  count: 1
 - fingerprint: ee1b0179679d8598055599a124e2b06f556f2f9389f1ec03ca03e1492a1a3698
   count: 1
 - fingerprint: ef7f44753857cf456b974f5920eef3d4e203eeeb7713147393ed08f7a56cf5ab
   count: 1
 - fingerprint: f18b384e2dfdb11aec4c9714349338541a27da2c95a3276757ec53e200466de9
   count: 1
+- fingerprint: f24965ca8acc0894096acb739a9c09827b4f4ef2dc2699d807ba9e9c6c0cfa21
+  count: 1
 - fingerprint: f25e4e975c9ee450b4acf18aa8a82d90f449c5fb7f090210f9d2a18463550bf0
   count: 1
 - fingerprint: f448966fec86392303a3dc178c49df3c43b3da0943764460e1b987dfc42122c4
   count: 1
 - fingerprint: f8b12e012e53184248ee25473d8b376138c4d80cc64738eebe840feb6d2fae1f
+  count: 1
+- fingerprint: fa0c549cacfb7120503b2dc627d8b14d0644ab7d416998edb5ba1c4b916f1abc
+  count: 1
+- fingerprint: fab6d2facb8d1d1fd7abf295007a34872f50c5acc199e246c0422b8b753909a4
   count: 1
 - fingerprint: fac50a95a6aeb957b274c4de87b016586add6f9fc5dbf7771a01ba07e533c923
   count: 1
@@ -624,6 +740,8 @@ debt_allowance_candidate:
 - fingerprint: fd2e860ba65fc9fce7227e58ea47b7d1cf7a3cabff0efecc5d61fae7d2a4b8f5
   count: 1
 - fingerprint: fd38248836b6e73cfd946b11f18d59a7850b6fc885e33e71cf8debd2db00bfd4
+  count: 1
+- fingerprint: fd514d820cb115f0248c053b28d223d273fe00b65ca8c6fd2cca20712010e51e
   count: 1
 - fingerprint: fe05bcf50e85d47516debb97ec400754d96b97c8f66b9d68899e3d08b785abcf
   count: 1
@@ -651,6 +769,84 @@ candidate_index:
     scope: global
   classification:
     candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 115
+- extraction_id: EXT.SKILL.4F392D9460BA718C
+  fingerprint: fd514d820cb115f0248c053b28d223d273fe00b65ca8c6fd2cca20712010e51e
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 65
+    section: 4. Phase-lock prohibition
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 115
+- extraction_id: EXT.SKILL.71B4176FD89AAE93
+  fingerprint: b4176aac6758d6498faa2776c0a776139aa601df833b8f01a0d7385e3030629e
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 113
+    section: Enforcement invariants
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 115
+- extraction_id: EXT.SKILL.DFF7234C7DD7309E
+  fingerprint: 6c47a86a02828214a8326170ffc9cf7b00c6cf6b5120828aa2b05ce271351939
+  source:
+    path: rules/98-graphiti-memory-gate.mdc
+    line_start: 36
+    section: Write gates (GATES-002)
+  rule:
+    rule_id: l9.rule.graphiti.memory.gate
+    file: rules/98-graphiti-memory-gate.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: memory
+    scope: global
+  classification:
+    candidate_kind: workflow
     doctrine_strength: hard_normative
     sharedness: repository_global
     risk: critical
@@ -765,11 +961,63 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 107
+- extraction_id: EXT.SKILL.7F5D190EFAA1458B
+  fingerprint: 8b1278a6e24af22af3d685e48f8e72d94c9cdb52143efafec191643dfc267843
+  source:
+    path: rules/54-context-sensitive-git-guardrails.mdc
+    line_start: 67
+    section: Not in scope
+  rule:
+    rule_id: l9.rule.54.git.guardrails
+    file: rules/54-context-sensitive-git-guardrails.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: domain_shared
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 107
+- extraction_id: EXT.SKILL.7375E2A6EAC0E668
+  fingerprint: 89623dc6d54e374613d7e93b91bd7aa8beb447c2aab277e9d4e7cb816b6062aa
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 93
+    section: 5. Publication
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: domain_shared
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 107
 - extraction_id: EXT.SKILL.CC512C5A02A61A56
   fingerprint: 45fb5f6dfbd77ed175d5407188ed2f3aae327209f1e6b17494564317010db169
   source:
     path: rules/99-no-auto-commit.mdc
-    line_start: 34
+    line_start: 55
     section: Precedence (highest first)
   rule:
     rule_id: l9.rule.git.mutation-gate
@@ -869,11 +1117,115 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 100
-- extraction_id: EXT.SKILL.673A2EB9BD1BE739
-  fingerprint: 178680f0ae50876e0088d036410a36725041b247316a869d687aef690f5379f0
+- extraction_id: EXT.SKILL.8DD128DF6E827A73
+  fingerprint: 2643a1ce16358b24864e33cb2e842a53278f602b3b001a4ea13b4ad64cb19595
+  source:
+    path: rules/22-context7-auto-invoke.mdc
+    line_start: 36
+    section: Mandatory — call Context7 before first implementation
+  rule:
+    rule_id: l9.rule.22.context7.auto.invoke
+    file: rules/22-context7-auto-invoke.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 100
+- extraction_id: EXT.SKILL.10C588FBB61378FC
+  fingerprint: 4eb9d77e97a7fba8289baebcc161e49964924481bce83fbceda0742234765642
+  source:
+    path: rules/48-make-pr-remediation.mdc
+    line_start: 20
+    section: make pr → green merge-ready; /l9-pr-remediation → merge
+  rule:
+    rule_id: l9.rule.48.make.pr.remediation
+    file: rules/48-make-pr-remediation.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: general
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 100
+- extraction_id: EXT.SKILL.6C3C9D6C5941048E
+  fingerprint: 381f7f90110143f6173ef8884eee8f05abe059457f1f061d4ad61247c69b6194
+  source:
+    path: rules/48-make-pr-remediation.mdc
+    line_start: 114
+    section: Failure loop and gate receipt (2026-08-17)
+  rule:
+    rule_id: l9.rule.48.make.pr.remediation
+    file: rules/48-make-pr-remediation.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: general
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 100
+- extraction_id: EXT.SKILL.50275C69792D8F02
+  fingerprint: 59eaf84a9640beba45b0a3d30fc3b1fa88462c0f958083a2b176f9de4e5f2ca9
   source:
     path: rules/49-shared-worktree-isolation.mdc
     line_start: 28
+    section: MUST
+  rule:
+    rule_id: l9.rule.49.shared.worktree.isolation
+    file: rules/49-shared-worktree-isolation.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 100
+- extraction_id: EXT.SKILL.777F4159BCA10DC5
+  fingerprint: 48ebff1442c0cfad76ed9862ce6cce262a7bb6b12770a88ca457ddf1f6dbd719
+  source:
+    path: rules/49-shared-worktree-isolation.mdc
+    line_start: 51
     section: MUST
   rule:
     rule_id: l9.rule.49.shared.worktree.isolation
@@ -999,32 +1351,6 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 100
-- extraction_id: EXT.SKILL.F474A0F60E7EBE46
-  fingerprint: d2205d015121c928be11bb76c945fbe27d293466e10136138e16dcd659f5cb40
-  source:
-    path: rules/84-cursor-governance-wiring.mdc
-    line_start: 48
-    section: Repository path contracts
-  rule:
-    rule_id: l9.rule.cursor-governance-wiring
-    file: rules/84-cursor-governance-wiring.mdc
-    activation: always
-    always_apply: true
-    globs: []
-    domain: governance
-    scope: global
-  classification:
-    candidate_kind: invariant
-    doctrine_strength: hard_normative
-    sharedness: repository_global
-    risk: high
-  ownership:
-    status: unowned
-    debt: true
-    owner_ref: null
-  duplicate_clusters: []
-  conflict_clusters: []
-  priority_score: 100
 - extraction_id: EXT.SKILL.998556C16D75C05F
   fingerprint: 324f7bf8e26602a0a683f6049491476618367d82966490c76dbe826cdc1aa8ef
   source:
@@ -1077,6 +1403,110 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 100
+- extraction_id: EXT.SKILL.C87704C71F9A0CDE
+  fingerprint: c874909481d182df9afb247a86ba5d0b32209bfcbc49d44b259fcd56f4ab84ca
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 30
+    section: 1. Authority (never substitutable)
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 100
+- extraction_id: EXT.SKILL.478A2E38064DD1FE
+  fingerprint: c4a6461c028216d1954e7176b34d96bdc8d8521d4a7b702cb7812930f88c3c3a
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 53
+    section: 3. Shared memory
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 100
+- extraction_id: EXT.SKILL.1EEB40EFF605FE00
+  fingerprint: affaa4627bdd52e752ceacb4d8d8bcd9fc5d9ba987599c62dd7f01d2ac459480
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 58
+    section: 3. Shared memory
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: evidence
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 100
+- extraction_id: EXT.SKILL.6C0125DC20DF28AF
+  fingerprint: 5246fd6863e98294cb4a501519bde17c3529d2a88ece97d6007b4ea2fa0af93d
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 79
+    section: 4. Phase-lock prohibition
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 100
 - extraction_id: EXT.SKILL.F10E26E6BA3261C6
   fingerprint: 6899824c80bfd71729518c15f24aeb42f202d4702062f6b13584a9b17371e8d6
   source:
@@ -1103,6 +1533,58 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 100
+- extraction_id: EXT.SKILL.DF6B55938944AFC2
+  fingerprint: 5692256fef0cfefd43fb9b5982bdd129975ca6ae8c070591315c12a54aa1d41f
+  source:
+    path: rules/98-graphiti-memory-gate.mdc
+    line_start: 43
+    section: Write gates (GATES-002)
+  rule:
+    rule_id: l9.rule.graphiti.memory.gate
+    file: rules/98-graphiti-memory-gate.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: memory
+    scope: global
+  classification:
+    candidate_kind: evidence
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 100
+- extraction_id: EXT.SKILL.3D57EEF2CCF7B986
+  fingerprint: c8df10961177cc4d6010d2b94116f02e1eacc15aa3f61dc7fb15cb3a1cdeb9f8
+  source:
+    path: rules/22-context7-auto-invoke.mdc
+    line_start: 17
+    section: Context7 Auto-Invoke (External Docs)
+  rule:
+    rule_id: l9.rule.22.context7.auto.invoke
+    file: rules/22-context7-auto-invoke.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 95
 - extraction_id: EXT.SKILL.15B84BAC2B5F3944
   fingerprint: fbfb0b44416a2843217139786f81db2a8624a6d0d55db9807d53b69c5298854a
   source:
@@ -1116,6 +1598,58 @@ candidate_index:
     always_apply: true
     globs: []
     domain: general
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 95
+- extraction_id: EXT.SKILL.2A3233DF087A7469
+  fingerprint: da422708f1e4977066c291552e3bd22d11b0b8217e54295794d4c81910afa7f5
+  source:
+    path: rules/54-context-sensitive-git-guardrails.mdc
+    line_start: 32
+    section: Outcomes
+  rule:
+    rule_id: l9.rule.54.git.guardrails
+    file: rules/54-context-sensitive-git-guardrails.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 95
+- extraction_id: EXT.SKILL.2D4882B3BF37A978
+  fingerprint: fa0c549cacfb7120503b2dc627d8b14d0644ab7d416998edb5ba1c4b916f1abc
+  source:
+    path: rules/55-ff-only-ssot-sync.mdc
+    line_start: 28
+    section: Fast-forward only (no SSOT clobber)
+  rule:
+    rule_id: l9.rule.55.ff.only.ssot.sync
+    file: rules/55-ff-only-ssot-sync.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
     scope: global
   classification:
     candidate_kind: invariant
@@ -1207,6 +1741,58 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 95
+- extraction_id: EXT.SKILL.F40119D91420C2B2
+  fingerprint: 1a08b4d78435014f171ee1e35104783af6936db5f6d336a0f0b51d194776d7db
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 77
+    section: 4. Phase-lock prohibition
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 95
+- extraction_id: EXT.SKILL.86CF128A3BA2FF3C
+  fingerprint: e1aeca8215b47f054c116a465afc8e40b2d72d088cf3c7fbbc3b023222c4e2b6
+  source:
+    path: rules/48-make-pr-remediation.mdc
+    line_start: 31
+    section: make pr → green merge-ready; /l9-pr-remediation → merge
+  rule:
+    rule_id: l9.rule.48.make.pr.remediation
+    file: rules/48-make-pr-remediation.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: general
+    scope: global
+  classification:
+    candidate_kind: evidence
+    doctrine_strength: conditional_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 93
 - extraction_id: EXT.SKILL.8590DBA67F8C588F
   fingerprint: 851c8960a5a88d55fedd734beb8886d62e9e7331b214e8912c5969feab392366
   source:
@@ -1220,6 +1806,32 @@ candidate_index:
     always_apply: true
     globs: []
     domain: governance
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 93
+- extraction_id: EXT.SKILL.0297D87AA6E7313E
+  fingerprint: 11e644a0c2ac8d0680d5e63f474e736a2ce5b2d38e582a248412356d184e4df4
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 128
+    section: Final rule
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
     scope: global
   classification:
     candidate_kind: policy
@@ -1263,7 +1875,7 @@ candidate_index:
   fingerprint: 49fd5e188baf98e8d6039da1ec6b4b146c45dff251facf88c0eedebbd73c64cd
   source:
     path: rules/02-slash-commands.mdc
-    line_start: 157
+    line_start: 159
     section: 'CRITICAL: Always Read the File'
   rule:
     rule_id: l9.rule.slash-commands
@@ -1415,6 +2027,32 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 92
+- extraction_id: EXT.SKILL.E66A5C12C9F60681
+  fingerprint: 7951fd7be9e2effc913b1795de94304ce563a07d5fd9d3672a44c369cb507ea9
+  source:
+    path: rules/42-no-abandoned-work.mdc
+    line_start: 31
+    section: Mechanism
+  rule:
+    rule_id: l9.rule.42.no.abandoned.work
+    file: rules/42-no-abandoned-work.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: domain_shared
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 92
 - extraction_id: EXT.SKILL.5401612E21B19F6A
   fingerprint: 50a4da7521ecf8bafd93f3bcff96ed2f1928d437e36832212a7e13714b5deef7
   source:
@@ -1445,7 +2083,7 @@ candidate_index:
   fingerprint: ca11c773229cd68d32ac85a972bea33f22aa6fcd57ac6b3dd4bbc3344ea831d8
   source:
     path: rules/49-shared-worktree-isolation.mdc
-    line_start: 32
+    line_start: 40
     section: MUST
   rule:
     rule_id: l9.rule.49.shared.worktree.isolation
@@ -1471,7 +2109,7 @@ candidate_index:
   fingerprint: fac50a95a6aeb957b274c4de87b016586add6f9fc5dbf7771a01ba07e533c923
   source:
     path: rules/49-shared-worktree-isolation.mdc
-    line_start: 34
+    line_start: 42
     section: MUST
   rule:
     rule_id: l9.rule.49.shared.worktree.isolation
@@ -1497,7 +2135,7 @@ candidate_index:
   fingerprint: 2e559d9a9d82b770dfeae6497de9b746c57282ac38c1aaaf453afe8e09eca080
   source:
     path: rules/49-shared-worktree-isolation.mdc
-    line_start: 37
+    line_start: 45
     section: MUST
   rule:
     rule_id: l9.rule.49.shared.worktree.isolation
@@ -1509,6 +2147,58 @@ candidate_index:
     scope: global
   classification:
     candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: domain_shared
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 92
+- extraction_id: EXT.SKILL.C92915CD65FA679D
+  fingerprint: 1ea983f4f38bf6d5639f67a760df6acfa9ef53a58dde3f5ef618bd5937370ecc
+  source:
+    path: rules/54-context-sensitive-git-guardrails.mdc
+    line_start: 18
+    section: Context-sensitive git guardrails
+  rule:
+    rule_id: l9.rule.54.git.guardrails
+    file: rules/54-context-sensitive-git-guardrails.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: domain_shared
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 92
+- extraction_id: EXT.SKILL.625344DC9A6845D8
+  fingerprint: 75138b47c3dc3d0e994ef776f986cff9f04cdd3441847098662e2b211df971bc
+  source:
+    path: rules/54-context-sensitive-git-guardrails.mdc
+    line_start: 42
+    section: MUST
+  rule:
+    rule_id: l9.rule.54.git.guardrails
+    file: rules/54-context-sensitive-git-guardrails.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
     doctrine_strength: hard_normative
     sharedness: domain_shared
     risk: high
@@ -1623,8 +2313,8 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 92
-- extraction_id: EXT.SKILL.1ADB7DC105E47B96
-  fingerprint: 924d982f9776ce77cd61d2d556cc85cbed249a3990f69d51b8d1ff30ea096422
+- extraction_id: EXT.SKILL.7A8C7865B9BB2758
+  fingerprint: edf3140eda4cde1330dbf6926a4f9dccc37743b0d3e3a326384c04af6f01288f
   source:
     path: rules/88-l4-local-autonomy.mdc
     line_start: 21
@@ -1857,32 +2547,32 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 92
-- extraction_id: EXT.SKILL.4FD49B013AD8DAE0
-  fingerprint: 72b4f68ebf4aef28848726d8e50c517ec17138dacb1cd06679ad1a3336b404a3
+- extraction_id: EXT.SKILL.D5885B2970D49F8A
+  fingerprint: 3132d6978847febbaed3e861eac2b961bdfa41554b273530e6af0d1416a8516b
   source:
-    path: rules/98-graphiti-memory-gate.mdc
-    line_start: 39
-    section: Write gates (GATES-002)
+    path: rules/54-context-sensitive-git-guardrails.mdc
+    line_start: 57
+    section: MUST NOT
   rule:
-    rule_id: l9.rule.graphiti.memory.gate
-    file: rules/98-graphiti-memory-gate.mdc
+    rule_id: l9.rule.54.git.guardrails
+    file: rules/54-context-sensitive-git-guardrails.mdc
     activation: always
     always_apply: true
     globs: []
-    domain: memory
+    domain: git
     scope: global
   classification:
-    candidate_kind: workflow
-    doctrine_strength: hard_normative
-    sharedness: domain_shared
-    risk: high
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: repository_global
+    risk: critical
   ownership:
-    status: unowned
-    debt: true
+    status: not_normative
+    debt: false
     owner_ref: null
   duplicate_clusters: []
   conflict_clusters: []
-  priority_score: 92
+  priority_score: 90
 - extraction_id: EXT.SKILL.F63D32719812EC1A
   fingerprint: b47c3916454e3a948a09f00b39b22aa655894094b2939a9d407625b3806bed7c
   source:
@@ -1961,6 +2651,58 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 90
+- extraction_id: EXT.SKILL.5FC9AC540284A0C1
+  fingerprint: 2b625c177360a188d477e5845a3cb4066f049dd1965ba951fb3a39b6f62a459f
+  source:
+    path: rules/42-no-abandoned-work.mdc
+    line_start: 68
+    section: Not a licence
+  rule:
+    rule_id: l9.rule.42.no.abandoned.work
+    file: rules/42-no-abandoned-work.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 88
+- extraction_id: EXT.SKILL.F2E80EA6C3CE6535
+  fingerprint: 2aeb4c180d192316713fbe040eb05405edb8e38c7348e31cc5f1818bfcca294d
+  source:
+    path: rules/55-ff-only-ssot-sync.mdc
+    line_start: 56
+    section: MUST NOT
+  rule:
+    rule_id: l9.rule.55.ff.only.ssot.sync
+    file: rules/55-ff-only-ssot-sync.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 88
 - extraction_id: EXT.SKILL.64EC25C1EAD30179
   fingerprint: 18bce218191fb14eff91eb8bf3f08aa90037b93acc2d1e9ef6d99192bbc4d874
   source:
@@ -1991,7 +2733,7 @@ candidate_index:
   fingerprint: 671c9aa8dbaf838834d69c4d0ce47762e663cf193a65065b52eb86724e7cbb59
   source:
     path: rules/49-shared-worktree-isolation.mdc
-    line_start: 46
+    line_start: 60
     section: 'Automated writers: the repo-write lock'
   rule:
     rule_id: l9.rule.49.shared.worktree.isolation
@@ -2000,6 +2742,32 @@ candidate_index:
     always_apply: true
     globs: []
     domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: repository_global
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 87
+- extraction_id: EXT.SKILL.640CAAA368718AE0
+  fingerprint: 62078ac7ea6d3b29d44d50d72834ebd8e5deb309965fc9d973816944df82733c
+  source:
+    path: rules/84-cursor-governance-wiring.mdc
+    line_start: 48
+    section: Repository path contracts
+  rule:
+    rule_id: l9.rule.cursor-governance-wiring
+    file: rules/84-cursor-governance-wiring.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: governance
     scope: global
   classification:
     candidate_kind: invariant
@@ -2118,6 +2886,32 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 85
+- extraction_id: EXT.SKILL.53047E6297BECCD2
+  fingerprint: 0fe89cce3a58165919ee950b7c1dfeb06b3fae912a6dc37b196075293c80cd1d
+  source:
+    path: rules/42-no-abandoned-work.mdc
+    line_start: 76
+    section: Satisfiability
+  rule:
+    rule_id: l9.rule.42.no.abandoned.work
+    file: rules/42-no-abandoned-work.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: evidence
+    doctrine_strength: conditional_normative
+    sharedness: domain_shared
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 85
 - extraction_id: EXT.SKILL.1380F16F53179F4F
   fingerprint: 5f190a376d7aa5e572d40483793eb27f81d032c83bbda264b5723aa927d0eaaf
   source:
@@ -2210,6 +3004,162 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 85
+- extraction_id: EXT.SKILL.1601B36F88A1BD38
+  fingerprint: 5f0abf164d12b736d8e699d0bfa66cd0ee6453862f4ace305c03a75e25ba6bfc
+  source:
+    path: rules/99-no-auto-commit.mdc
+    line_start: 28
+    section: MUST
+  rule:
+    rule_id: l9.rule.git.mutation-gate
+    file: rules/99-no-auto-commit.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: conditional_normative
+    sharedness: domain_shared
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 85
+- extraction_id: EXT.SKILL.4DEBB9C138A22A44
+  fingerprint: 0b74528f339d7062c78db3a73d39cf042759bba64f352606243b565c61dfeaa9
+  source:
+    path: rules/48-make-pr-remediation.mdc
+    line_start: 29
+    section: make pr → green merge-ready; /l9-pr-remediation → merge
+  rule:
+    rule_id: l9.rule.48.make.pr.remediation
+    file: rules/48-make-pr-remediation.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: general
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 80
+- extraction_id: EXT.SKILL.474AE5B392320259
+  fingerprint: afc5a49401cefbd0c5e8bf1240d64c27a84830b6f6e8f1a78070d4554d0214f8
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 36
+    section: Base probe (runs first)
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 80
+- extraction_id: EXT.SKILL.EB7782E2C83D6300
+  fingerprint: 1fb1e51fec8677f0c9d857b494c79bb02d7ca2bd695bd6c88716db1e0fc4a1fc
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 79
+    section: 'On overlap: preferred order'
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 80
+- extraction_id: EXT.SKILL.AF094A485604A3C6
+  fingerprint: 124371b99ca13fda5342462fe4b6ab034429d1cb4bf989e4fec6172ccdc011f7
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 91
+    section: Generated artifacts
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 80
+- extraction_id: EXT.SKILL.7A2776C4CB8C237A
+  fingerprint: 2a4c1a05f72d63d87a513f02411b2088c80abc9f2bad3937e3096d45e94176cc
+  source:
+    path: rules/54-context-sensitive-git-guardrails.mdc
+    line_start: 44
+    section: MUST
+  rule:
+    rule_id: l9.rule.54.git.guardrails
+    file: rules/54-context-sensitive-git-guardrails.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 80
 - extraction_id: EXT.SKILL.4C92B7721DFCB87E
   fingerprint: ac8b1f2d721ca1d4a149db159f4fcf18f538b5aef5349b3d3c9afc0446acb43f
   source:
@@ -2240,7 +3190,7 @@ candidate_index:
   fingerprint: 6e04fa50de478e758ce418ae52c69312dc9d06958b486359fc41a228f5aca132
   source:
     path: rules/88-l4-local-autonomy.mdc
-    line_start: 22
+    line_start: 25
     section: MUST
   rule:
     rule_id: l9.rule.l4.local-autonomy
@@ -2262,15 +3212,41 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 80
-- extraction_id: EXT.SKILL.D8D784A83C0518D1
-  fingerprint: d3a408578bfde44080f4b1a0a6e736d0f8c568fa374bd8114b465f683f2db6cd
+- extraction_id: EXT.SKILL.92A14C9B2792C671
+  fingerprint: c1bc4b33940dd30e49a02007f84bdb5402ed46f5ffdfff66ad5f0e2f80aa679b
   source:
     path: rules/88-l4-local-autonomy.mdc
-    line_start: 36
+    line_start: 48
     section: MUST
   rule:
     rule_id: l9.rule.l4.local-autonomy
     file: rules/88-l4-local-autonomy.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 80
+- extraction_id: EXT.SKILL.F5B25587EDCB6F03
+  fingerprint: 7ae58d5bd7cc30aa19131eed07db637628756dab5a728fd8bc324e0dc13d60eb
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 85
+    section: 5. Publication
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
     activation: always
     always_apply: true
     globs: []
@@ -2292,7 +3268,7 @@ candidate_index:
   fingerprint: c12e1400c0b43d739cf3cf8388c6285be517cb0288eaf6864e1cfb2fed8dcb3d
   source:
     path: rules/22-context7-auto-invoke.mdc
-    line_start: 41
+    line_start: 48
     section: Skip Context7
   rule:
     rule_id: l9.rule.22.context7.auto.invoke
@@ -2578,7 +3554,7 @@ candidate_index:
   fingerprint: b2a98fe153b0fc60acba4efb736bba70a6d4cd3051f9dff760c19d4db17b3c82
   source:
     path: rules/02-slash-commands.mdc
-    line_start: 85
+    line_start: 89
     section: Available Slash Commands (enabled)
   rule:
     rule_id: l9.rule.slash-commands
@@ -2626,32 +3602,6 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 75
-- extraction_id: EXT.SKILL.74D6FB3BF9A66985
-  fingerprint: 33f1e6fa3df9f7609b7f3e80d24716cfb9daaf2b79376b1251fb2ccd984e5e3a
-  source:
-    path: rules/22-context7-auto-invoke.mdc
-    line_start: 40
-    section: Skip Context7
-  rule:
-    rule_id: l9.rule.22.context7.auto.invoke
-    file: rules/22-context7-auto-invoke.mdc
-    activation: always
-    always_apply: true
-    globs: []
-    domain: git
-    scope: global
-  classification:
-    candidate_kind: invariant
-    doctrine_strength: descriptive
-    sharedness: repository_global
-    risk: high
-  ownership:
-    status: unowned
-    debt: true
-    owner_ref: null
-  duplicate_clusters: []
-  conflict_clusters: []
-  priority_score: 75
 - extraction_id: EXT.SKILL.6DB15E668EEEF893
   fingerprint: 03159a0a6f2c9cc6c36bcfb5182bd0800d0eaf237115df846fe0c08e4d711199
   source:
@@ -2682,7 +3632,7 @@ candidate_index:
   fingerprint: 446073daec3d43be800e74e81d2960353d0af21e9b7222ab19702432d29fdb73
   source:
     path: rules/48-make-pr-remediation.mdc
-    line_start: 55
+    line_start: 106
     section: Gate dirtiness semantics (do not misread pre-commit)
   rule:
     rule_id: l9.rule.48.make.pr.remediation
@@ -2708,11 +3658,167 @@ candidate_index:
   fingerprint: c3317443c7f91c216241c5b7e04466d6b085b1203f75e274584a35b17713d8ed
   source:
     path: rules/49-shared-worktree-isolation.mdc
-    line_start: 39
+    line_start: 47
     section: MUST
   rule:
     rule_id: l9.rule.49.shared.worktree.isolation
     file: rules/49-shared-worktree-isolation.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: descriptive
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 75
+- extraction_id: EXT.SKILL.11A9F11B5683930B
+  fingerprint: 32ac801e0a9ba3f45396a871d23519b11301d77e7900c51c72f91b4cebdf7bc3
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 14
+    section: PR overlap guardrail (PR_OVERLAP_GUARDRAIL_V1)
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: routing_activation
+    doctrine_strength: advisory
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 75
+- extraction_id: EXT.SKILL.19B4DA9E2930F46D
+  fingerprint: a4d64caee37eedba46fa678f75125aac00d63e533069d92ca210c6262f09cb6c
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 61
+    section: Overlap gate
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: capability
+    doctrine_strength: descriptive
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 75
+- extraction_id: EXT.SKILL.19C0BC41C639639B
+  fingerprint: f24965ca8acc0894096acb739a9c09827b4f4ef2dc2699d807ba9e9c6c0cfa21
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 102
+    section: Generated artifacts
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: routing_activation
+    doctrine_strength: descriptive
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 75
+- extraction_id: EXT.SKILL.879E30E81A697D5A
+  fingerprint: ae0ae0d8d2d3b929538bcb9b5d39c996433a9184729993cba594ffc933540e12
+  source:
+    path: rules/55-ff-only-ssot-sync.mdc
+    line_start: 15
+    section: Fast-forward only (no SSOT clobber)
+  rule:
+    rule_id: l9.rule.55.ff.only.ssot.sync
+    file: rules/55-ff-only-ssot-sync.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: descriptive
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 75
+- extraction_id: EXT.SKILL.CAAC16917B2FF47E
+  fingerprint: 37c33872b2629bb9d90852e2837d54f71dfa48ed937a02c51b4fd276b5fa9dd5
+  source:
+    path: rules/55-ff-only-ssot-sync.mdc
+    line_start: 19
+    section: Fast-forward only (no SSOT clobber)
+  rule:
+    rule_id: l9.rule.55.ff.only.ssot.sync
+    file: rules/55-ff-only-ssot-sync.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: descriptive
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 75
+- extraction_id: EXT.SKILL.B1A8C045EC95C81E
+  fingerprint: e100b421f9d2fee0c3c65c64db08fe6e3f17cb3a2226eebcd2311a17605427f3
+  source:
+    path: rules/55-ff-only-ssot-sync.mdc
+    line_start: 37
+    section: MUST
+  rule:
+    rule_id: l9.rule.55.ff.only.ssot.sync
+    file: rules/55-ff-only-ssot-sync.mdc
     activation: always
     always_apply: true
     globs: []
@@ -2964,6 +4070,58 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 75
+- extraction_id: EXT.SKILL.B567BB516CFE17CF
+  fingerprint: 4ae08d072d2eb834ff922b9ab9c3a4d71bd0ea1037615a172227cc5481796f2c
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 98
+    section: 5. Publication
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: not_normative
+    debt: false
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 75
+- extraction_id: EXT.SKILL.258B243257D2AC47
+  fingerprint: 4bf5de2659a8642878176b9a0fb73a21fdbd05d0f7076d9c3a414a6c8d1a0f2f
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 105
+    section: 6. Integration
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: descriptive
+    sharedness: repository_global
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 75
 - extraction_id: EXT.SKILL.1BF2D02403492D1B
   fingerprint: 8a31b371cbac7c623a854db228336bfe5d89b2307255e764699e0a6d2e6fe3ef
   source:
@@ -3016,12 +4174,12 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 75
-- extraction_id: EXT.SKILL.060E37D81ED8E6D7
+- extraction_id: EXT.SKILL.DDE4BDEE5381741C
   fingerprint: c3694213f9b450c5b0256af193ac64e807f6c8682682781a20241c31cdbebb2f
   source:
     path: rules/99-no-auto-commit.mdc
     line_start: 14
-    section: Git mutation gate (ask-first)
+    section: Local commit is standing (always on)
   rule:
     rule_id: l9.rule.git.mutation-gate
     file: rules/99-no-auto-commit.mdc
@@ -3072,6 +4230,32 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 73
+- extraction_id: EXT.SKILL.9A8106F20A49D85B
+  fingerprint: 003eca5599199ebbe0a9d4406bc7bf22e9376468f67a63558399cf99326fe4e0
+  source:
+    path: rules/42-no-abandoned-work.mdc
+    line_start: 18
+    section: No abandoned work
+  rule:
+    rule_id: l9.rule.42.no.abandoned.work
+    file: rules/42-no-abandoned-work.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 73
 - extraction_id: EXT.SKILL.F52B76E40C141E75
   fingerprint: 71c1917f8574d13ebd1041f8c88d1268b6005631e60b8d7f6ef363e72c463dd9
   source:
@@ -3091,6 +4275,84 @@ candidate_index:
     doctrine_strength: hard_normative
     sharedness: unknown
     risk: critical
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 73
+- extraction_id: EXT.SKILL.1A0477BEB2FFD8DA
+  fingerprint: d217614d34bf1823e0e986ad6fabaafc68493cf4e2eeacb9bebd8aec2f3c1534
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 97
+    section: Generated artifacts
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 73
+- extraction_id: EXT.SKILL.12808D8F44C2AA00
+  fingerprint: 025489452a3ad4f8ea3dcced13d38b73eccef9aaf9a2d20f7ba8382d9a3fffbb
+  source:
+    path: rules/99-no-auto-commit.mdc
+    line_start: 16
+    section: Local commit is standing (always on)
+  rule:
+    rule_id: l9.rule.git.mutation-gate
+    file: rules/99-no-auto-commit.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 73
+- extraction_id: EXT.SKILL.5E0CA3AFF03FDD06
+  fingerprint: 1d46f0c58f828a935494b2edaedfbe428788942949a82c0b192e7e95ab163a9d
+  source:
+    path: rules/99-no-auto-commit.mdc
+    line_start: 54
+    section: Precedence (highest first)
+  rule:
+    rule_id: l9.rule.git.mutation-gate
+    file: rules/99-no-auto-commit.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: high
   ownership:
     status: unowned
     debt: true
@@ -3230,6 +4492,58 @@ candidate_index:
   - DUP.1B7E7A9A3B5CB5ED
   conflict_clusters: []
   priority_score: 71
+- extraction_id: EXT.SKILL.BA3CC22466AF0AD4
+  fingerprint: 512556a192d6451fc2c57d187e303c9536079b3e20c3cc3f2f3f5eb5b9a06ce5
+  source:
+    path: rules/15-work-tracking.mdc
+    line_start: 23
+    section: MUST
+  rule:
+    rule_id: l9.rule.15.work.tracking
+    file: rules/15-work-tracking.mdc
+    activation: agent_requested
+    always_apply: false
+    globs: []
+    domain: general
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: domain_shared
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 70
+- extraction_id: EXT.SKILL.1DFF1CEEC7D20E43
+  fingerprint: 0e04f0c0fee64b2ea550cd2c9c630a9f8e77e1b1fa66bcbb3387e17bd897eacc
+  source:
+    path: rules/15-work-tracking.mdc
+    line_start: 37
+    section: MUST NOT
+  rule:
+    rule_id: l9.rule.15.work.tracking
+    file: rules/15-work-tracking.mdc
+    activation: agent_requested
+    always_apply: false
+    globs: []
+    domain: general
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: domain_shared
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 70
 - extraction_id: EXT.SKILL.5E7A8FD8000E3045
   fingerprint: 0e76196267d956d38393756fd19725bee8a28a13bf13c9c7430ecf1989ae690f
   source:
@@ -3282,6 +4596,58 @@ candidate_index:
   ownership:
     status: unowned
     debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 70
+- extraction_id: EXT.SKILL.FF1862875A03EEBA
+  fingerprint: 843c2c3d7eb8732a4e8643b81f413bed80808125c6ed5259a8078b4eb6bda90b
+  source:
+    path: rules/48-make-pr-remediation.mdc
+    line_start: 45
+    section: make pr → green merge-ready; /l9-pr-remediation → merge
+  rule:
+    rule_id: l9.rule.48.make.pr.remediation
+    file: rules/48-make-pr-remediation.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: general
+    scope: global
+  classification:
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: unknown
+    risk: critical
+  ownership:
+    status: not_normative
+    debt: false
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 70
+- extraction_id: EXT.SKILL.877947B01C1F81BD
+  fingerprint: 01c79072d91d38bd82fde5bdc159dc085ab17bec17fa5b0587eb30e2fb0ef3b3
+  source:
+    path: rules/54-context-sensitive-git-guardrails.mdc
+    line_start: 63
+    section: MUST NOT
+  rule:
+    rule_id: l9.rule.54.git.guardrails
+    file: rules/54-context-sensitive-git-guardrails.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: unknown
+    risk: critical
+  ownership:
+    status: not_normative
+    debt: false
     owner_ref: null
   duplicate_clusters: []
   conflict_clusters: []
@@ -3464,8 +4830,8 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 70
-- extraction_id: EXT.SKILL.0CEB13F8F68BA868
-  fingerprint: bb209da388da5654db3d2003f7c173209c3c29b56789088ff77e0ca76d445834
+- extraction_id: EXT.SKILL.C634A0A5FA403B84
+  fingerprint: 81b25d752060a2b04856c2d362d906512eb9c156f701545da3ca3a9899bd5231
   source:
     path: rules/72-review-ergonomics.mdc
     line_start: 37
@@ -3576,6 +4942,32 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 70
+- extraction_id: EXT.SKILL.B39908EB49678FA4
+  fingerprint: 83369faa1dbfe9f0dcd304342ae2af90d60f7e75d37f84946e56f2ebec8ad466
+  source:
+    path: rules/00-global.mdc
+    line_start: 22
+    section: MUST
+  rule:
+    rule_id: l9.rule.00.global
+    file: rules/00-global.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: governance
+    scope: global
+  classification:
+    candidate_kind: workflow
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 67
 - extraction_id: EXT.SKILL.5DFAE0AA891B8C3F
   fingerprint: e819a5c26e0e5d7a17b93f75458396f3acd18b8ee926eda07bc84a435df01f20
   source:
@@ -3762,7 +5154,7 @@ candidate_index:
   fingerprint: 53c65a2b3d221ead8d3faddc5bd7394531b34d37873256c8c8314ba4989d9077
   source:
     path: rules/22-context7-auto-invoke.mdc
-    line_start: 35
+    line_start: 44
     section: Verify before codegen
   rule:
     rule_id: l9.rule.22.context7.auto.invoke
@@ -3836,8 +5228,8 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 67
-- extraction_id: EXT.SKILL.729727948FC9FC66
-  fingerprint: 8802d7f054d91a6701645929d1ca7026a26d090d98d2653316414722b8717bc5
+- extraction_id: EXT.SKILL.9952204BE098B713
+  fingerprint: 445af4c8a3ec14110ca1b55b1bced23e98e0005a87a24f07944ed17bde60f161
   source:
     path: rules/23-l9-skill-routing.mdc
     line_start: 47
@@ -3866,7 +5258,7 @@ candidate_index:
   fingerprint: 6ae3a28026e4118e1beb83649d6da58826e8c5dba2e2320c5a1a69c4d138812f
   source:
     path: rules/23-l9-skill-routing.mdc
-    line_start: 56
+    line_start: 59
     section: Fail-closed
   rule:
     rule_id: l9.rule.skill-routing
@@ -3892,7 +5284,7 @@ candidate_index:
   fingerprint: ffb18bc13d924a4d80fccdd9cb05789ea84a67c62903425092c2a8f2880eeaeb
   source:
     path: rules/23-l9-skill-routing.mdc
-    line_start: 75
+    line_start: 79
     section: Common triggers → primary skill
   rule:
     rule_id: l9.rule.skill-routing
@@ -3918,7 +5310,7 @@ candidate_index:
   fingerprint: 5959d037f5590d0dbdfa68e311242034f02e0ae6b2020c68716ee5b6cfdb4801
   source:
     path: rules/23-l9-skill-routing.mdc
-    line_start: 92
+    line_start: 97
     section: Common triggers → primary skill
   rule:
     rule_id: l9.rule.skill-routing
@@ -3992,12 +5384,12 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 67
-- extraction_id: EXT.SKILL.94C9FE90DA3471BD
+- extraction_id: EXT.SKILL.CC6A7B55D2B92D96
   fingerprint: 93c0ca3ba23a3df3cd3db8f30484f2ae024d0aa2359e594ee472884ae8927a02
   source:
     path: rules/48-make-pr-remediation.mdc
-    line_start: 17
-    section: make pr → checkers + PR open (no remediation)
+    line_start: 18
+    section: make pr → green merge-ready; /l9-pr-remediation → merge
   rule:
     rule_id: l9.rule.48.make.pr.remediation
     file: rules/48-make-pr-remediation.mdc
@@ -4018,12 +5410,38 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 67
-- extraction_id: EXT.SKILL.685E5D895000B81A
+- extraction_id: EXT.SKILL.C665E026AB42D3B2
+  fingerprint: 093cbf0d729f0b4aaf753318d95b76caa91814dbb09b799b175efb2b57df3943
+  source:
+    path: rules/48-make-pr-remediation.mdc
+    line_start: 25
+    section: make pr → green merge-ready; /l9-pr-remediation → merge
+  rule:
+    rule_id: l9.rule.48.make.pr.remediation
+    file: rules/48-make-pr-remediation.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: general
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 67
+- extraction_id: EXT.SKILL.720FA2830F586A5E
   fingerprint: d8cb64c5d576fef4019b755967302b20f65e0c5248c90779681866f93d368141
   source:
     path: rules/48-make-pr-remediation.mdc
-    line_start: 21
-    section: make pr → checkers + PR open (no remediation)
+    line_start: 27
+    section: make pr → green merge-ready; /l9-pr-remediation → merge
   rule:
     rule_id: l9.rule.48.make.pr.remediation
     file: rules/48-make-pr-remediation.mdc
@@ -4048,7 +5466,7 @@ candidate_index:
   fingerprint: 96a4a3f67e0cb9078e2b0d50efd74a9eacede0407f1ca600c51dcf5176e79844
   source:
     path: rules/48-make-pr-remediation.mdc
-    line_start: 48
+    line_start: 99
     section: Gate dirtiness semantics (do not misread pre-commit)
   rule:
     rule_id: l9.rule.48.make.pr.remediation
@@ -4074,7 +5492,7 @@ candidate_index:
   fingerprint: 1317ca768eaf54c15c0066c2889f6a7b58d1a6e95fa3d95ccd98b24b263c449a
   source:
     path: rules/49-shared-worktree-isolation.mdc
-    line_start: 58
+    line_start: 72
     section: 'Automated writers: the repo-write lock'
   rule:
     rule_id: l9.rule.49.shared.worktree.isolation
@@ -4089,6 +5507,84 @@ candidate_index:
     doctrine_strength: hard_normative
     sharedness: unknown
     risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 67
+- extraction_id: EXT.SKILL.C44A6B358352B757
+  fingerprint: 68b30b46149823c92144f2c5d522f23e5afdc07f911cff97c559f6e3699077ad
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 24
+    section: Base probe (runs first)
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: domain_shared
+    risk: high
+  ownership:
+    status: not_normative
+    debt: false
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 67
+- extraction_id: EXT.SKILL.0F68614180139B11
+  fingerprint: 02f7112053097dc8c27b54f00b2c9a408ee61a3bbc8e3c2597759fe6dabf0bca
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 77
+    section: 'On overlap: preferred order'
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 67
+- extraction_id: EXT.SKILL.812F4995848BC6D6
+  fingerprint: 586c2cfe4a13b36d76cf0449ad89202fafdde4f99790a923ca75d29ac1f703f6
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 110
+    section: Guardrail, not proof
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: evidence
+    doctrine_strength: descriptive
+    sharedness: domain_shared
+    risk: high
   ownership:
     status: unowned
     debt: true
@@ -4490,7 +5986,7 @@ candidate_index:
   fingerprint: a5e27e48449bdfa62c3213807bce3fe172d4ecfedc83f8b4e3f2f7fb4d0926ed
   source:
     path: rules/88-l4-local-autonomy.mdc
-    line_start: 37
+    line_start: 51
     section: MUST
   rule:
     rule_id: l9.rule.l4.local-autonomy
@@ -4798,6 +6294,110 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 67
+- extraction_id: EXT.SKILL.9F68C1CBA5AA5A97
+  fingerprint: 5623c4369f8cf75337f03a1e413c2c7b72f5391bf8320ec71a79a3d39b8edc69
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 23
+    section: 1. Authority (never substitutable)
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: descriptive
+    sharedness: domain_shared
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 67
+- extraction_id: EXT.SKILL.E8DF3D6077D81BA8
+  fingerprint: 8387f5e6a9e526945ab191ca304a18a6c57706ce00dbb4eff5953cd1c4e2ac82
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 45
+    section: 2. Task start (main binding + isolation)
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 67
+- extraction_id: EXT.SKILL.4C4D0CC116DF20D6
+  fingerprint: 851e77238a9a0de6b8e108541824d061c4506e4507d93772d80530e08d188e0a
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 49
+    section: 2. Task start (main binding + isolation)
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 67
+- extraction_id: EXT.SKILL.6F6F708BDAD483D7
+  fingerprint: 0134f0bff3582f437d14c0ed7e159a870942a0b87796e6e9f9a4d62ef56dc972
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 125
+    section: Final rule
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: descriptive
+    sharedness: domain_shared
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 67
 - extraction_id: EXT.SKILL.E272605E5010A8AF
   fingerprint: e4cb3ff64707d300cbc4eab5b3b7dd3a6496a399df38bf001371d1cc0507e3b4
   source:
@@ -4850,38 +6450,12 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 67
-- extraction_id: EXT.SKILL.612FD6F1395E6616
-  fingerprint: 4821e21584d1ade02c069316440c4be013faae6c9ac116b6c6240a9aa3dfbd97
-  source:
-    path: rules/98-graphiti-memory-gate.mdc
-    line_start: 33
-    section: Write gates (GATES-002)
-  rule:
-    rule_id: l9.rule.graphiti.memory.gate
-    file: rules/98-graphiti-memory-gate.mdc
-    activation: always
-    always_apply: true
-    globs: []
-    domain: memory
-    scope: global
-  classification:
-    candidate_kind: workflow
-    doctrine_strength: hard_normative
-    sharedness: unknown
-    risk: medium
-  ownership:
-    status: unowned
-    debt: true
-    owner_ref: null
-  duplicate_clusters: []
-  conflict_clusters: []
-  priority_score: 67
-- extraction_id: EXT.SKILL.09BB9FC2D7ECF128
-  fingerprint: 131576d61c2b539c04daf9ea7361a30d06a3a6650bd6b9a239c19934478eef2a
+- extraction_id: EXT.SKILL.37D36D731E10726D
+  fingerprint: 42ebd9e3038c54a4d2891bb9b12f7719f8c3f2bc63fe3fe024dbcf1b5de64268
   source:
     path: rules/99-no-auto-commit.mdc
-    line_start: 28
-    section: Precedence (highest first)
+    line_start: 24
+    section: MUST
   rule:
     rule_id: l9.rule.git.mutation-gate
     file: rules/99-no-auto-commit.mdc
@@ -4891,13 +6465,13 @@ candidate_index:
     domain: git
     scope: global
   classification:
-    candidate_kind: unknown
-    doctrine_strength: descriptive
-    sharedness: domain_shared
-    risk: high
+    candidate_kind: invariant
+    doctrine_strength: hard_normative
+    sharedness: unknown
+    risk: medium
   ownership:
-    status: not_normative
-    debt: false
+    status: unowned
+    debt: true
     owner_ref: null
   duplicate_clusters: []
   conflict_clusters: []
@@ -5099,7 +6673,7 @@ candidate_index:
   fingerprint: ad4bb0dc773d6d05ba3b95d2d3d73ec5d5f1c86591e01e6fe75a0048516cf8f9
   source:
     path: rules/22-context7-auto-invoke.mdc
-    line_start: 18
+    line_start: 22
     section: Mandatory — call Context7 before first implementation
   rule:
     rule_id: l9.rule.22.context7.auto.invoke
@@ -5121,11 +6695,63 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 60
+- extraction_id: EXT.SKILL.F58C5ADC230DAA39
+  fingerprint: 7fdbe2a8984f129733543cff3231b1afbac4dc2e306c4a631b0b0093e66ee575
+  source:
+    path: rules/22-context7-auto-invoke.mdc
+    line_start: 43
+    section: Verify before codegen
+  rule:
+    rule_id: l9.rule.22.context7.auto.invoke
+    file: rules/22-context7-auto-invoke.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 60
+- extraction_id: EXT.SKILL.6CEE9D0C4D4CB7E5
+  fingerprint: a4cacd1c572370dabc208f209baa73970745fc5925caeb76baefa2b1298c7093
+  source:
+    path: rules/22-context7-auto-invoke.mdc
+    line_start: 49
+    section: Skip Context7
+  rule:
+    rule_id: l9.rule.22.context7.auto.invoke
+    file: rules/22-context7-auto-invoke.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 60
 - extraction_id: EXT.SKILL.BA172F88F69FE597
   fingerprint: 75dd966b2f5e8e62c695af218932ae7ba517bc3f7c916994fc1b2d1305b51ecd
   source:
     path: rules/23-l9-skill-routing.mdc
-    line_start: 64
+    line_start: 67
     section: Live route hint (hook)
   rule:
     rule_id: l9.rule.skill-routing
@@ -5134,6 +6760,32 @@ candidate_index:
     always_apply: true
     globs: []
     domain: governance
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 60
+- extraction_id: EXT.SKILL.5E4D3469E2FB09F5
+  fingerprint: 6b7d9c1204ab44a2355c6dd703a155c0e72000fb9af2c604844f328f8f72b6af
+  source:
+    path: rules/42-no-abandoned-work.mdc
+    line_start: 19
+    section: No abandoned work
+  rule:
+    rule_id: l9.rule.42.no.abandoned.work
+    file: rules/42-no-abandoned-work.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
     scope: global
   classification:
     candidate_kind: policy
@@ -5156,6 +6808,32 @@ candidate_index:
   rule:
     rule_id: l9.rule.pre-action-verification
     file: rules/45-pre-action-verification.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: general
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 60
+- extraction_id: EXT.SKILL.5EF4C03C512500A8
+  fingerprint: 9e2231ef2a4572ea5b06b1e21fcecadbbcf7fc5fdd9130bd9831bcfd3ecd3b4f
+  source:
+    path: rules/48-make-pr-remediation.mdc
+    line_start: 70
+    section: make pr → green merge-ready; /l9-pr-remediation → merge
+  rule:
+    rule_id: l9.rule.48.make.pr.remediation
+    file: rules/48-make-pr-remediation.mdc
     activation: always
     always_apply: true
     globs: []
@@ -5197,6 +6875,58 @@ candidate_index:
     doctrine_strength: descriptive
     sharedness: repository_global
     risk: high
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 60
+- extraction_id: EXT.SKILL.E98209CEC3D05170
+  fingerprint: 4c5b6828c7f60d11326d732cc87c80af728e35eceebda169e442968d865f037d
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 41
+    section: Base probe (runs first)
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 60
+- extraction_id: EXT.SKILL.B1AFE80E3D4E504C
+  fingerprint: 3899bb3916f28aa729a6666d336e35b394445f89c5a4dc8088b3dfc8d8e3541e
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 53
+    section: Overlap gate
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: medium
   ownership:
     status: unowned
     debt: true
@@ -5272,6 +7002,32 @@ candidate_index:
     scope: global
   classification:
     candidate_kind: policy
+    doctrine_strength: conditional_normative
+    sharedness: unknown
+    risk: medium
+  ownership:
+    status: unowned
+    debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 60
+- extraction_id: EXT.SKILL.85F32533B87ECAA1
+  fingerprint: fab6d2facb8d1d1fd7abf295007a34872f50c5acc199e246c0422b8b753909a4
+  source:
+    path: rules/88-l4-local-autonomy.mdc
+    line_start: 38
+    section: MUST
+  rule:
+    rule_id: l9.rule.l4.local-autonomy
+    file: rules/88-l4-local-autonomy.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: evidence
     doctrine_strength: conditional_normative
     sharedness: unknown
     risk: medium
@@ -5792,11 +7548,63 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 55
+- extraction_id: EXT.SKILL.39671A214CDACD52
+  fingerprint: ca2e8dc00fc3582df79e95b55783d629daef4e506c2be444f8d5334db59d5da1
+  source:
+    path: rules/42-no-abandoned-work.mdc
+    line_start: 25
+    section: Mechanism
+  rule:
+    rule_id: l9.rule.42.no.abandoned.work
+    file: rules/42-no-abandoned-work.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: not_normative
+    debt: false
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 55
+- extraction_id: EXT.SKILL.01A2B08FD0D4458E
+  fingerprint: 064e6aa6798806a8b5a614d487e4d199614a16cd91c59b651ce28d3b3c82f496
+  source:
+    path: rules/48-make-pr-remediation.mdc
+    line_start: 57
+    section: make pr → green merge-ready; /l9-pr-remediation → merge
+  rule:
+    rule_id: l9.rule.48.make.pr.remediation
+    file: rules/48-make-pr-remediation.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: general
+    scope: global
+  classification:
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: not_normative
+    debt: false
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 55
 - extraction_id: EXT.SKILL.00AE8B726111443D
   fingerprint: 1168127673f1002e8dd1b6e71d927d1afce09d9ec30854225e4f4054fdea3376
   source:
     path: rules/48-make-pr-remediation.mdc
-    line_start: 44
+    line_start: 95
     section: Gate dirtiness semantics (do not misread pre-commit)
   rule:
     rule_id: l9.rule.48.make.pr.remediation
@@ -5814,6 +7622,32 @@ candidate_index:
   ownership:
     status: not_normative
     debt: false
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 55
+- extraction_id: EXT.SKILL.6771B5606FD43686
+  fingerprint: 3a25f5875dcb6bf86dca5a8a5a501780de13a5ae8f761d57b3f9aefeb1adcfcc
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 50
+    section: Overlap gate
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: routing_activation
+    doctrine_strength: descriptive
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
     owner_ref: null
   duplicate_clusters: []
   conflict_clusters: []
@@ -5892,6 +7726,32 @@ candidate_index:
   ownership:
     status: not_normative
     debt: false
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 55
+- extraction_id: EXT.SKILL.B1DDE433F91A9B1B
+  fingerprint: 3b8ca99991d4bbf7c83729b314c3155f840b3548b549b5622d48d75e9d311e5f
+  source:
+    path: rules/96-multi-agent-main-bound-execution.mdc
+    line_start: 25
+    section: 1. Authority (never substitutable)
+  rule:
+    rule_id: l9.rule.96.multi.agent.main.bound.execution
+    file: rules/96-multi-agent-main-bound-execution.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: invariant
+    doctrine_strength: descriptive
+    sharedness: unknown
+    risk: high
+  ownership:
+    status: unowned
+    debt: true
     owner_ref: null
   duplicate_clusters: []
   conflict_clusters: []
@@ -5986,7 +7846,7 @@ candidate_index:
   fingerprint: 5a6438e78de1530892338cdb0dbc8ef2f95ca1765228963c70563f7f1a5c3bb6
   source:
     path: rules/49-shared-worktree-isolation.mdc
-    line_start: 54
+    line_start: 68
     section: 'Automated writers: the repo-write lock'
   rule:
     rule_id: l9.rule.49.shared.worktree.isolation
@@ -6686,38 +8546,12 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 45
-- extraction_id: EXT.SKILL.49D3C823EF5F8334
-  fingerprint: 67f40044c5f5b1490eb5018396342ea04a4eb2a918a497d89c215857e7f16178
-  source:
-    path: rules/15-work-tracking.mdc
-    line_start: 14
-    section: Work tracking
-  rule:
-    rule_id: l9.rule.15.work.tracking
-    file: rules/15-work-tracking.mdc
-    activation: agent_requested
-    always_apply: false
-    globs: []
-    domain: general
-    scope: global
-  classification:
-    candidate_kind: invariant
-    doctrine_strength: hard_normative
-    sharedness: unknown
-    risk: medium
-  ownership:
-    status: unowned
-    debt: true
-    owner_ref: null
-  duplicate_clusters: []
-  conflict_clusters: []
-  priority_score: 45
-- extraction_id: EXT.SKILL.8D574472A6E0ADF9
+- extraction_id: EXT.SKILL.8FC82BB4CD4FED55
   fingerprint: c1961cb80955fd6f59a5b8d88ae0a6d8c7de6b5d7f979e4ebb413c90e90933a3
   source:
     path: rules/15-work-tracking.mdc
-    line_start: 15
-    section: Work tracking
+    line_start: 24
+    section: MUST
   rule:
     rule_id: l9.rule.15.work.tracking
     file: rules/15-work-tracking.mdc
@@ -6738,12 +8572,12 @@ candidate_index:
   duplicate_clusters: []
   conflict_clusters: []
   priority_score: 45
-- extraction_id: EXT.SKILL.124C69BD190C3B80
-  fingerprint: 66957b98ea253d0437920723110969a87c37ea53118091bfae90d7150a2d08ca
+- extraction_id: EXT.SKILL.D745876A893836D7
+  fingerprint: 2b8488ff45902c7d0e2bd4889d0f56863e249f41fe111ec0b546d6df4ea500f4
   source:
     path: rules/15-work-tracking.mdc
-    line_start: 17
-    section: Work tracking
+    line_start: 34
+    section: MUST NOT
   rule:
     rule_id: l9.rule.15.work.tracking
     file: rules/15-work-tracking.mdc
@@ -6992,7 +8826,7 @@ candidate_index:
   fingerprint: 04a797796b151b0aa82408f2946a4410f17d24c3e56ca4c9e004fc4bed888810
   source:
     path: rules/23-l9-skill-routing.mdc
-    line_start: 55
+    line_start: 58
     section: Fail-closed
   rule:
     rule_id: l9.rule.skill-routing
@@ -8622,37 +10456,11 @@ candidate_index:
   fingerprint: 8a8b4d3c58831570926ea691726345fae2ccabe25a2dd3a1d20ddfc88ef5f9d0
   source:
     path: rules/00-global.mdc
-    line_start: 33
+    line_start: 35
     section: See also
   rule:
     rule_id: l9.rule.00.global
     file: rules/00-global.mdc
-    activation: always
-    always_apply: true
-    globs: []
-    domain: governance
-    scope: global
-  classification:
-    candidate_kind: routing_activation
-    doctrine_strength: descriptive
-    sharedness: unknown
-    risk: low
-  ownership:
-    status: unowned
-    debt: true
-    owner_ref: null
-  duplicate_clusters: []
-  conflict_clusters: []
-  priority_score: 33
-- extraction_id: EXT.SKILL.1760010C335506A3
-  fingerprint: 579bfe64afc431f21b83ef7312d64d94c65c89fa3019edd2a6a3a3da465b4d2b
-  source:
-    path: rules/02-slash-commands.mdc
-    line_start: 103
-    section: Available Slash Commands (enabled)
-  rule:
-    rule_id: l9.rule.slash-commands
-    file: rules/02-slash-commands.mdc
     activation: always
     always_apply: true
     globs: []
@@ -8700,7 +10508,7 @@ candidate_index:
   fingerprint: 633198a62c45dc8bc2541ae858e32e4a0421dfc960372bd9c5120fa41b48f710
   source:
     path: rules/22-context7-auto-invoke.mdc
-    line_start: 20
+    line_start: 24
     section: Mandatory — call Context7 before first implementation
   rule:
     rule_id: l9.rule.22.context7.auto.invoke
@@ -8726,7 +10534,7 @@ candidate_index:
   fingerprint: 769fd3b9d60bce3c16453a38fc025f31e2001a3ee13d26ca0dfa71dbf649073d
   source:
     path: rules/22-context7-auto-invoke.mdc
-    line_start: 22
+    line_start: 26
     section: Mandatory — call Context7 before first implementation
   rule:
     rule_id: l9.rule.22.context7.auto.invoke
@@ -8752,7 +10560,7 @@ candidate_index:
   fingerprint: 8b2c1cbb47c0f244578d47f351d2c4b70035c7df0a947076abfab7c3490d601b
   source:
     path: rules/22-context7-auto-invoke.mdc
-    line_start: 29
+    line_start: 34
     section: Mandatory — call Context7 before first implementation
   rule:
     rule_id: l9.rule.22.context7.auto.invoke
@@ -8830,7 +10638,7 @@ candidate_index:
   fingerprint: 3d9b5a1c923b4d005eeaace49d16d7a8687494b812e473c660575812ffacb640
   source:
     path: rules/23-l9-skill-routing.mdc
-    line_start: 62
+    line_start: 65
     section: Live route hint (hook)
   rule:
     rule_id: l9.rule.skill-routing
@@ -8978,6 +10786,58 @@ candidate_index:
   ownership:
     status: unowned
     debt: true
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 33
+- extraction_id: EXT.SKILL.04D4B059DE820906
+  fingerprint: a57c384ea41630bf5417974d13d933d10fd54942061937a80a20a2e9c0661a84
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 54
+    section: Overlap gate
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: unknown
+    risk: low
+  ownership:
+    status: not_normative
+    debt: false
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 33
+- extraction_id: EXT.SKILL.2BF3892BCEF4B47F
+  fingerprint: 3e505579081580994086481de69eee9b982bf57b61703f1e100ba3d1d51ca58c
+  source:
+    path: rules/53-pr-overlap-guardrail.mdc
+    line_start: 87
+    section: Generated artifacts
+  rule:
+    rule_id: l9.rule.53.pr.overlap.guardrail
+    file: rules/53-pr-overlap-guardrail.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: unknown
+    risk: low
+  ownership:
+    status: not_normative
+    debt: false
     owner_ref: null
   duplicate_clusters: []
   conflict_clusters: []
@@ -9173,7 +11033,7 @@ candidate_index:
   fingerprint: e7f74e2e049a276d8c2a10efaa32d73bace004d8df634656d59e806f4b181dac
   source:
     path: rules/88-l4-local-autonomy.mdc
-    line_start: 46
+    line_start: 60
     section: Enforcement
   rule:
     rule_id: l9.rule.l4.local-autonomy
@@ -9355,7 +11215,7 @@ candidate_index:
   fingerprint: b26d0f901ab3437e122b5765ed6f2fc295ddac6f6dd0ab1d34a187d57b3829bb
   source:
     path: rules/98-graphiti-memory-gate.mdc
-    line_start: 35
+    line_start: 34
     section: Write gates (GATES-002)
   rule:
     rule_id: l9.rule.graphiti.memory.gate
@@ -9364,6 +11224,58 @@ candidate_index:
     always_apply: true
     globs: []
     domain: memory
+    scope: global
+  classification:
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: unknown
+    risk: low
+  ownership:
+    status: not_normative
+    debt: false
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 33
+- extraction_id: EXT.SKILL.0CA9C344E42690C8
+  fingerprint: c7934f622f260921e9da0aedb7b0be7ed36f5e2cbb92476dc014639102746408
+  source:
+    path: rules/99-no-auto-commit.mdc
+    line_start: 38
+    section: MUST NOT
+  rule:
+    rule_id: l9.rule.git.mutation-gate
+    file: rules/99-no-auto-commit.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
+    scope: global
+  classification:
+    candidate_kind: unknown
+    doctrine_strength: descriptive
+    sharedness: unknown
+    risk: low
+  ownership:
+    status: not_normative
+    debt: false
+    owner_ref: null
+  duplicate_clusters: []
+  conflict_clusters: []
+  priority_score: 33
+- extraction_id: EXT.SKILL.3184D4CCB1A14F7E
+  fingerprint: fb5666fdaad9fab23d514b4783ec0d6d3eec3c51dc86a83ff28ae25a515c8dec
+  source:
+    path: rules/99-no-auto-commit.mdc
+    line_start: 53
+    section: Precedence (highest first)
+  rule:
+    rule_id: l9.rule.git.mutation-gate
+    file: rules/99-no-auto-commit.mdc
+    activation: always
+    always_apply: true
+    globs: []
+    domain: git
     scope: global
   classification:
     candidate_kind: unknown
@@ -10589,4 +12501,4 @@ duplicate_clusters:
     effect: prohibit
 potential_conflict_clusters: []
 quality_findings: []
-integrity_digest: 7ec32badafab45ac1ce58f06544a67d7e7745576548ff2a4e90b93404c5582b5
+integrity_digest: c4b8aec9f458b73835b33a871603424867946caa8920a45605a003315e641905

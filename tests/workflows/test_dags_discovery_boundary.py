@@ -28,7 +28,11 @@ def test_registered_session_dags_are_reachable_through_the_registry():
     import workflows.dags  # noqa: F401
     from workflows.session.registry import get_session_dag
 
-    for dag_id in ("dag-authoring-v1", "gmp-execution-v1", "skill-compiler-v2"):
+    # `skill-compiler-v2` was retired on purpose in #341 — `l9-skill-compiler`
+    # declares `supersedes: l9-skill-compiler v2.0.0 (skill-compiler-v2 DAG
+    # runtime)`. Sentinel repointed at another long-lived SessionDAG; three ids
+    # must still all resolve, so the assertion keeps its original strength.
+    for dag_id in ("dag-authoring-v1", "gmp-execution-v1", "wire-v1"):
         assert get_session_dag(dag_id) is not None, dag_id
 
 
@@ -43,6 +47,8 @@ def test_langgraph_only_modules_are_importable_even_though_unregistered():
     import workflows.dags
 
     assert hasattr(workflows.dags.inspect_dag, "compliance_node")
+    assert hasattr(workflows.dags.pr_train_dag, "ff_node")
+    assert workflows.dags.PR_TRAIN_DAG is not None
 
 
 def test_validators_availability_is_reported_not_assumed():

@@ -2,6 +2,7 @@ version: 1
 graph_kinds:
   SESSION_GUIDANCE:
     purpose: agent_guidance_and_session_workflow_contract
+    disposition: deprecated_pending_convert
     canonical_contract: workflows/session/interface.py
     registry: workflows/session/registry.py
     discovery: workflows/dags/__init__.py

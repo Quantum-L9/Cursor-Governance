@@ -1,86 +1,38 @@
 ---
 name: reasoning
-version: "6.0.0"
-description: "Multi-modal reasoning — abductive, deductive, inductive"
+version: "6.1.0"
+description: "Structured reasoning — evidence, risk, action; auto-chains to /ynp"
 auto_chain: ynp
 ---
 
-# /reasoning — Multi-Modal Reasoning
+# /reasoning — Structured reasoning
 
-## WHAT IT DOES
+Delegates to skill **`l9-structured-reasoning`**.
 
-Apply structured reasoning with confidence scoring:
+Do not emit an uncalibrated confidence percent. Stance is `evidence_quality` × `decision_risk` → `action`.
 
-| Mode | Purpose | When |
-|------|---------|------|
-| Abductive | Pattern discovery, hypothesis | Diagnosis, root cause |
-| Deductive | Logical validation | Verification, compliance |
-| Inductive | Generalization | Trends, predictions |
+## Usage
 
----
-
-## EXECUTION
-
-### 1. DEFINE OBJECTIVE
-
-- What's the question/decision?
-- What does success look like?
-- What constraints apply?
-
-### 2. APPLY REASONING MODES
-
-**Abductive (Discovery):**
-- Observe symptoms
-- Generate explanations
-- Rank by likelihood
-
-**Deductive (Validation):**
-- State premises
-- Apply logic
-- Derive conclusions
-
-**Inductive (Generalization):**
-- Collect observations
-- Identify patterns
-- Generalize principle
-
-### 3. SYNTHESIZE
-
-Combine insights → confidence score → recommendation
-
----
-
-## CONFIDENCE SCORING
-
-| Score | Meaning | Action |
-|-------|---------|--------|
-| ≥90% | Very High | Execute |
-| 80-89% | High | Proceed with monitoring |
-| 70-79% | Moderate | Validate first |
-| <70% | Low | Investigate more |
-
----
-
-## OUTPUT FORMAT
-
-```markdown
-## 🧠 REASONING: {topic}
-
-### Analysis
-**Abductive:** {findings}
-**Deductive:** {validation}
-**Inductive:** {patterns}
-
-### Synthesis
-{combined insight}
-
-### Confidence: {score}%
-**Evidence:** {quality}
-
-### Recommendation
-{action with rationale}
+```text
+/reasoning
+/reasoning <decision or diagnosis>
 ```
 
-→ **Auto-chains to /ynp**
+## Execution
 
---- End Command ---
+1. Read `skills/l9-structured-reasoning/SKILL.md` and `references/confidence-policy.yaml`.
+2. Classify `task_kind` and `epistemic_methods` (abductive, deductive, inductive, comparative).
+3. Emit the stance block. `calibration_status` defaults to `none`. `stated_probability` stays null unless a calibrated window, n, and ece are present.
+4. Auto-chain to `/ynp`. YNP recommends only; it does not auto-execute.
+
+## Output
+
+Show the decision, decisive evidence, material Unknowns, trade-offs, and the next action or stop condition. No ceremonial Confidence heading.
+
+```yaml
+evidence_quality: high | medium | low | unknown
+decision_risk: reversible | guarded | irreversible
+action: proceed | proceed_with_validation | bounded_probe | block
+calibration_status: none
+stated_probability: null
+```

@@ -49,18 +49,11 @@ def test_ensure_workspace_wired_creates_links_and_is_idempotent(tmp_path: Path) 
     assert "WIRE:" in first.stdout or "LINKED:" in first.stdout or "OK:" in first.stdout
 
 
-def test_run_pr_gate_heals_before_wiring_check() -> None:
+def test_run_pr_gate_locks_before_wiring_check() -> None:
     text = GATE.read_text(encoding="utf-8")
-    marker = "# Heal missing gitignored .cursor links"
-    heal_at = text.find(marker)
-    invoke_at = text.find('bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh"')
-    check_at = text.find('if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WS"')
-    assert heal_at != -1
-    assert invoke_at != -1
-    assert check_at != -1
-    assert heal_at < invoke_at < check_at
     lock_at = text.find('L9_REPO_WRITE_LOCK_LABEL="make-pr-gate"')
+    check_at = text.find('if ! bash "$SCRIPT_DIR/check_governance_wiring.sh" "$WS"')
     assert lock_at != -1
-    assert lock_at < heal_at
-    assert "wiring check will fail-closed" in text
-    assert 'L9_WIRE_LINKS_ONLY=1 bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh"' in text
+    assert check_at != -1
+    assert lock_at < check_at
+    assert "_gate_run_wiring" in text

@@ -6,6 +6,7 @@ owns:
   - session_dag_registration
   - dag_discovery_binding
   - thin_command_trigger_binding
+  - convert_disposition_classification
 does_not_own:
   - domain_workflow_semantics
   - skill_compilation

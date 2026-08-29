@@ -4,12 +4,16 @@ actions: [inspect, local_write, commit, push, pull_request, merge, publish_or_re
 effective_permission_intersection:
 - applicable_safety_legal_security_and_organizational_rules
 - exact_action_approval_when_required
+- mission_authority_ceiling
 - blueprint_authorization_ceiling
 - controller_policy
 - source_contract_request
 - rendered_contract_exact_state_binding
 laws:
 - lower_layer_may_narrow_never_widen
+- blueprint_authority_must_remain_within_mission_authority
+- controller_authority_must_remain_within_blueprint_authority
+- mission_ceiling_grants_no_new_remote_mutation_authority
 - connector_or_credential_availability_is_not_authorization
 - approval_is_bound_to_program_digest_target_repository_base_sha_action_and_expiry
 - remote_mutation_is_denied_by_universal_core_without_adapter_and_exact_approval

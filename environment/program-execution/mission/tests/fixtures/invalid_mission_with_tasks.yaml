@@ -1,0 +1,34 @@
+# An otherwise plausible Mission that prescribes execution. `tasks` is
+# structurally forbidden: Mission declares outcomes and ceilings, never Task
+# Cards or runtime work. Parsing this must fail closed.
+schema: l9.program-execution.mission.v1
+mission_id: MISSION-L9-GATEWAY-001
+mission_revision: 1
+mission_owner: L9 architecture
+objective: >-
+  Stand up a governed L9 gateway plane that survives the Programs that build it.
+targets:
+  - environment/program-execution
+acceptance_criteria:
+  - criterion_id: MAC-GATEWAY-CONTRACT-SURFACE
+    required: true
+    statement: >-
+      The gateway plane is expressed as durable contract law.
+authority_ceiling:
+  inspect: true
+  local_write: true
+  commit: true
+  push: false
+  pull_request: false
+  merge: false
+  publish_or_release: false
+  deploy_or_migrate: false
+  destructive_change: false
+  external_message: false
+termination:
+  mode: mission_acceptance
+tasks:
+  - task_id: TASK-001
+    title: Write the mission parser
+    files_to_edit:
+      - environment/program-execution/mission/mission.py

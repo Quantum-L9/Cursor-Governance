@@ -5,7 +5,9 @@ This is the single implementation of suite orchestration. It reads the declarati
 registry at ops/config/python-contract.json, strictly validates it, and executes the
 declared suites in order under two profiles:
 
-    --profile local   forwards operator pytest arguments (default)
+    --profile local   forwards operator pytest arguments (default);
+                      with --changed-file, injects ``-n auto`` when two or more
+                      pytest files are selected (CI profiles already declare xdist)
     --profile ci      applies the locked coverage / xdist / timeout arguments
 
 Guarantees:
@@ -78,6 +80,7 @@ def _rebind_repo_root(root: Path) -> str | None:
 
 PROFILES = ("local", "ci")
 SUITE_KINDS = ("pytest", "command", "command_sequence")
+XDIST_MIN_SCOPED_FILES = 2
 ALLOWED_ENV_SUBSTITUTIONS = {"REPO_ROOT"}
 ALLOWED_ARGV_SUBSTITUTIONS = {"REPO_ROOT", "PYTHON"}
 REQUIRED_SUITE_FIELDS = (
@@ -276,6 +279,27 @@ CEREMONY_KNOBS: tuple[str, ...] = (
 )
 
 
+def local_changed_file_xdist_args(
+    profile: str,
+    scoped_paths: list[str] | None,
+    user_args: list[str],
+) -> list[str]:
+    """Return ``-n auto`` for local changed-file runs with two or more tests.
+
+    CI profiles already declare xdist in registry argv. command and
+    command_sequence suites never see these args (append_user_pytest_args is
+    false). A one-file selection stays serial so worker spawn cannot dominate.
+    """
+    if profile != "local" or scoped_paths is None:
+        return []
+    if "-n" in user_args:
+        return []
+    files = [path for path in scoped_paths if path.endswith((".py", ".pyi"))]
+    if len(files) < XDIST_MIN_SCOPED_FILES:
+        return []
+    return ["-n", "auto"]
+
+
 def strip_ceremony_knobs(env: dict[str, str]) -> dict[str, str]:
     """Return a copy with publish-path knobs removed (not set empty)."""
     out = dict(env)
@@ -402,7 +426,8 @@ def run_suite(
                 extra_args = [*user_args, *paths]
             elif not extra_args:
                 extra_args = list(user_args)
-        argv = [mapping["PYTHON"], "-m", "pytest", *tokens]
+        # importlib mode: scoped PRs can pass two skill scripts/self_test.py paths.
+        argv = [mapping["PYTHON"], "-m", "pytest", "--import-mode=importlib", *tokens]
         if suite["append_user_pytest_args"] and extra_args:
             argv.extend(extra_args)
         code = _run_subprocess(argv, cwd, env)
@@ -521,6 +546,11 @@ def main(argv: list[str] | None = None) -> int:
             f"[runner] scoped_pr_check paths={scoped_paths or ['<none>']} "
             f"never_pass_repo_root_dot=true"
         )
+        xdist_args = local_changed_file_xdist_args(profile, scoped_paths, user_args)
+        if xdist_args:
+            n_files = len([p for p in scoped_paths if p.endswith((".py", ".pyi"))])
+            print(f"[runner] local xdist={' '.join(xdist_args)} scoped_pytest_files={n_files}")
+            user_args = [*user_args, *xdist_args]
 
     print(f"[runner] profile={profile} suites={len(suites)} repo_root={REPO_ROOT}")
     return run_suites(

@@ -3,8 +3,9 @@ import json
 import sys
 from pathlib import Path
 
-OPS = {"CREATE", "UPDATE", "VALIDATE", "REGISTER", "COMMAND_BIND"}
+OPS = {"CREATE", "UPDATE", "VALIDATE", "REGISTER", "COMMAND_BIND", "CONVERT"}
 GRAPH_KINDS = {"AUTO", "SESSION_GUIDANCE", "LANGGRAPH_RUNTIME", "UNKNOWN"}
+NON_CREATE = {"UPDATE", "VALIDATE", "REGISTER", "COMMAND_BIND", "CONVERT"}
 
 
 def validate(data):
@@ -21,11 +22,7 @@ def validate(data):
         errors.append("graph_kind must be one of " + ",".join(sorted(GRAPH_KINDS)))
     if graph_kind == "UNKNOWN" and data.get("allow_mutation"):
         errors.append("UNKNOWN graph_kind blocks mutation")
-    if (
-        data.get("operation") in {"UPDATE", "VALIDATE", "REGISTER", "COMMAND_BIND"}
-        and not data.get("dag_path")
-        and not data.get("dag_id")
-    ):
+    if data.get("operation") in NON_CREATE and not data.get("dag_path") and not data.get("dag_id"):
         errors.append("dag_path or dag_id required for non-CREATE operation")
     if data.get("operation") == "COMMAND_BIND" and not data.get("command_path"):
         errors.append("command_path required for COMMAND_BIND")
@@ -34,6 +31,8 @@ def validate(data):
             "REGISTER is SessionDAG registry-specific; "
             "use VALIDATE/UPDATE for LangGraph runtime binding"
         )
+    if data.get("allow_session_retire") is True:
+        errors.append("allow_session_retire is refused this wave")
     return errors
 
 

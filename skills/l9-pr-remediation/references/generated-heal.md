@@ -14,6 +14,8 @@ updated: 2026-08-28
 
 Same remediator publish path as source fixes: `make precommit-repo`, commit, `git push`. Not a second protocol.
 
+After the oldest ready PR merges and remaining heads `git merge origin/main`, regen. Do not file-audit generated paths.
+
 ## Classifier
 
 After `git merge origin/main` (or GitHub `CONFLICTING`), list dirty / unresolved paths.

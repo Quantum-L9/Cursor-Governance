@@ -5,6 +5,26 @@ rules:
   runtime_projection_does_not_transfer_definition_authority: true
   controller_may_narrow_never_widen: true
 concerns:
+- concern: mission_identity_objective_and_acceptance
+  canonical_owner: mission owner
+  controller_projection: read_only Mission Program Binding
+  mutation_path: superseding Mission Revision accepted by mission owner
+- concern: mission_program_membership
+  canonical_owner: mission owner
+  controller_projection: immutable Mission Program Binding
+  mutation_path: new immutable binding
+- concern: mission_acceptance_evaluation
+  canonical_owner: mission owner
+  controller_projection: advisory evidence projection
+  mutation_path: evidence-backed Mission verdict
+- concern: mission_authorization_ceiling
+  canonical_owner: Mission Revision
+  controller_projection: read_only upper-bound projection
+  mutation_path: superseding Mission Revision
+- concern: mission_lifecycle_state
+  canonical_owner: mission owner
+  controller_projection: none; a Mission state change never mutates Program runtime
+  mutation_path: authorized Mission lifecycle transition
 - concern: program_identity_target_state_and_scope
   canonical_owner: Program Execution Blueprint
   controller_projection: immutable Program Lock

@@ -7,11 +7,18 @@ PACK = Path(__file__).resolve().parents[1]
 SCRIPTS = PACK / "scripts"
 sys.path.insert(0, str(SCRIPTS))
 
+from classify_conversion_disposition import (  # noqa: E402
+    classify_all,
+    classify_request,
+)
 from classify_graph_kind import classify  # noqa: E402
+from convert_session_to_langgraph import convert  # noqa: E402
 from validate_command_trigger import validate as validate_command  # noqa: E402
 from validate_langgraph_source import validate as validate_langgraph  # noqa: E402
 from validate_request import validate as validate_request  # noqa: E402
 from validate_session_dag_source import validate as validate_session  # noqa: E402
+
+REPO = PACK.parents[1]
 
 
 def test_request_contract():
@@ -27,6 +34,21 @@ def test_request_contract():
             "repo_root": "/tmp",
             "dag_id": "x",
             "graph_kind": "LANGGRAPH_RUNTIME",
+        }
+    )
+    assert validate_request({"operation": "CONVERT", "repo_root": "/tmp"})
+    assert (
+        validate_request(
+            {"operation": "CONVERT", "repo_root": "/tmp", "dag_id": "intelligence-harvest-v1"}
+        )
+        == []
+    )
+    assert validate_request(
+        {
+            "operation": "CONVERT",
+            "repo_root": "/tmp",
+            "dag_id": "intelligence-harvest-v1",
+            "allow_session_retire": True,
         }
     )
 
@@ -135,3 +157,92 @@ def test_ownership_policy_contains_sprawl_guard():
     assert "l9-update-command" in text
     kinds = (PACK / "policies" / "graph-kinds.yaml").read_text(encoding="utf-8")
     assert "SESSION_GUIDANCE" in kinds and "LANGGRAPH_RUNTIME" in kinds
+    assert "deprecated_pending_convert" in kinds
+    assert "convert_disposition_classification" in text
+    catalog = (PACK / "policies" / "session-deprecation.yaml").read_text(encoding="utf-8")
+    assert "intelligence-harvest-v1" in catalog
+    assert "CONVERT_TO_LANGGRAPH" in catalog
+
+
+def test_convert_request_and_receipt(tmp_path):
+    fixture = json.loads((PACK / "fixtures" / "convert_langgraph.json").read_text(encoding="utf-8"))
+    fixture["repo_root"] = str(REPO)
+    assert validate_request(fixture) == []
+    unknown = json.loads((PACK / "fixtures" / "convert_unknown.json").read_text(encoding="utf-8"))
+    unknown["repo_root"] = str(REPO)
+    assert validate_request(unknown) == []
+    out = tmp_path / "receipt.json"
+    subprocess.run(
+        [
+            sys.executable,
+            str(SCRIPTS / "render_receipt.py"),
+            "--operation",
+            "CONVERT",
+            "--status",
+            "PASS",
+            "--dag-id",
+            "intelligence-harvest-v1",
+            "--disposition",
+            "CONVERT_TO_LANGGRAPH",
+            "--out",
+            str(out),
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    data = json.loads(out.read_text(encoding="utf-8"))
+    assert data["version"] == "2.2.0"
+    assert data["disposition"] == "CONVERT_TO_LANGGRAPH"
+
+
+def test_classifier_catalog_dispositions():
+    twin = classify_request(REPO, "gmp-execution-v1")
+    assert twin["status"] == "PASS"
+    assert twin["disposition"] == "DELETE_TWIN"
+    absorb = classify_request(REPO, "dag-authoring-v1")
+    assert absorb["status"] == "PASS"
+    assert absorb["disposition"] == "ABSORB_INTO_SKILL"
+    convert_row = classify_request(REPO, "intelligence-harvest-v1")
+    assert convert_row["disposition"] == "CONVERT_TO_LANGGRAPH"
+    assert convert_row["status"] in {"PASS", "BLOCKED"}
+    if convert_row["status"] == "BLOCKED":
+        assert convert_row["reason"] == "twin_StateGraph_already_exists"
+    summary = classify_all(REPO)
+    assert summary["convert_to_langgraph_count"] == 1
+    unknown = classify_request(REPO, "not-a-catalog-id")
+    assert unknown["status"] == "BLOCKED"
+    assert unknown["reason"] == "unknown_catalog_id"
+    langgraph_source = classify(PACK / "fixtures" / "convert_langgraph_source.py")
+    assert langgraph_source["graph_kind"] == "LANGGRAPH_RUNTIME"
+
+
+def test_converter_refuses_non_convert_and_prose(tmp_path):
+    refused = convert(REPO, dag_id="gmp-execution-v1")
+    assert refused["status"] == "FAIL"
+    assert refused["disposition"] == "DELETE_TWIN"
+    prose = convert(
+        REPO,
+        dag_id="prose-convert-fixture",
+        disposition="CONVERT_TO_LANGGRAPH",
+        source=PACK / "fixtures" / "convert_prose_action.py",
+        emit_dir=tmp_path / "prose",
+    )
+    assert prose["status"] == "FAIL"
+    assert prose["reason"] == "prose_action_refused"
+
+
+def test_converter_emits_script_session(tmp_path):
+    out = tmp_path / "ok_graph"
+    result = convert(
+        REPO,
+        dag_id="fixture-convert-ok",
+        disposition="CONVERT_TO_LANGGRAPH",
+        source=PACK / "fixtures" / "convert_ok_session.py",
+        emit_dir=out,
+    )
+    assert result["status"] == "PASS"
+    assert (out / "graph.py").is_file()
+    assert validate_langgraph(out / "graph.py")["status"] == "PASS"
+    text = (out / "graph.py").read_text(encoding="utf-8")
+    assert "register_session_dag" not in text

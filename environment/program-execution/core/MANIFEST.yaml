@@ -9,8 +9,8 @@ files:
   sha256: 81200312df8937dd955d337de2e63dac4631f1808ae0fb7acc4303d2bf936bdd
   bytes: 2340
 - path: CANONICAL_VOCABULARY.yaml
-  sha256: 42242e604dd95a879d1e745ba74cc79c9d2aff13336464f0845bf547cdb14f9a
-  bytes: 2044
+  sha256: 7102e403f837c5caadb322215be69f0e0b2ac3e52a1c5e2321b63390e034461c
+  bytes: 3856
 - path: CHANGELOG.md
   sha256: 88c5fafd37497bd9d0bf412e157c482b547dadb7f940f44040943d15e542a7c5
   bytes: 709
@@ -507,14 +507,14 @@ files:
   sha256: a823d852d2fc9879495735b2b4f5b050059ea6a67987fc733f81a673a43dcc9c
   bytes: 3855
 - path: shared/AUTHORIZATION_MODEL.yaml
-  sha256: 2a7d346233543ce8a9aa62b0ea219e5627cc0bfd34979adbe56dd7318aa81a05
-  bytes: 843
+  sha256: b9eca22d18e8f8beb2019c43b41e0b0e8875c18a0905530602b5bd32703d0e59
+  bytes: 1050
 - path: shared/ERROR_TAXONOMY.yaml
   sha256: 0bcf88346ab6d9574297e7e0d277d3a57e20f69aaaaf958abceb1326df65d9b8
   bytes: 2638
 - path: shared/EVIDENCE_MODEL.yaml
-  sha256: 4a8b52ced7f9a39314ae4042992fbaee6fd514134e2190a3f19dc5c343e4ca93
-  bytes: 799
+  sha256: 0f15bfc0a734ffdf365e1c9d6b3e8e29aa2a88a3e427751dc16556f98a0e7727
+  bytes: 1429
 - path: shared/HANDOFF_PROTOCOL.yaml
   sha256: 0fed57e4796bd3580918e41d83ad35e5503da49f0a9018c775d3c5a71e62e971
   bytes: 651
@@ -522,14 +522,14 @@ files:
   sha256: bd20035664e3c3474b0a039d8c5abf13b19621d19cb137a9474042829202987a
   bytes: 3104
 - path: shared/OWNERSHIP_MATRIX.yaml
-  sha256: 936389561ac91db740279b4ff09d2c94cb440303b292d4ab42f456db97c2ca08
-  bytes: 1978
+  sha256: 3f8580aa21017d8da6c1eefa48f3f1a3ab38e87387fef1f683f4aa2f9b5e2f96
+  bytes: 2931
 - path: shared/REPLAN_CONTRACT.yaml
   sha256: 6d081f36eb88055270e93f23dceb06b158003688f386d6e2dd1ae9f61aeb00fb
   bytes: 1306
 - path: shared/STATE_MODEL.yaml
-  sha256: e8b785723f49e8942f0ae4d95774d722ffdfd196877164f48e00bd2705c44452
-  bytes: 1521
+  sha256: 681611b460790b2b54e23efa2da600874845b18ef5097ca12aa0abb6168402a7
+  bytes: 2511
 - path: shared/schemas/action-authorization.schema.json
   sha256: f6d7dce38cac015d0549f1c4d499d840c99d9a9b7e350fd81f171a1f9956b31b
   bytes: 981
@@ -586,4 +586,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 193
-  total_bytes: 717280
+  total_bytes: 721872

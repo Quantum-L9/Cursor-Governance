@@ -4,16 +4,15 @@ dora:
   type: subsystem_readme
   generated: "2026-01-29 03:05:45 UTC"
   generator: scripts/generate_subsystem_readmes.py
-  generator_present: false
+  generator_present: true
   config: config/subsystems/readme_config.yaml
-  config_present: false
-  time_verified: "system clock (verification skipped)"
+  config_present: true
+  time_verified: "system clock (no external verify)"
   auto_generated: false
   maintenance: >-
-    Originally generated, now hand-maintained. Neither the generator nor its
-    config is present in this repository, so nothing regenerates this file and
-    a hand edit cannot be clobbered. Restore the generator before reinstating
-    auto_generated: true.
+    Hand-maintained. The generator and config are wired for other modules and
+    for readme-pipeline-v1. This file stays skip: true in the config and must
+    not be overwritten unless --force is passed.
 ---
 
 # Workflow Engine

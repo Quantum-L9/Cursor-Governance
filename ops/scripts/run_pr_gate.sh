@@ -5,6 +5,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# shellcheck source=lib/fetch_receipt.sh
+source "$SCRIPT_DIR/lib/fetch_receipt.sh"
 GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WS="${WS:-$(pwd)}"
 WS="$(cd "$WS" && pwd)"
@@ -18,8 +20,72 @@ export WS PR_BASE PR_SECURITY_ADVISORY
 _GATE_RECEIPT="$WS/.l9/pr/gate-receipt.json"
 _GATE_FAILURE="$WS/.l9/pr/gate-failure.json"
 _GATE_LOG="$WS/.l9/pr/last-gate.log"
+_GATE_TIMING="$WS/.l9/pr/gate-timing.json"
 _GATE_FAILURE_PY="$SCRIPT_DIR/pr_gate_failure.py"
 _gate_failed=0
+_prefetch_pid=""
+GATE_TIMING_DIGEST_MS=0
+GATE_TIMING_WRITERS_MS=0
+GATE_TIMING_FETCH_MS=0
+GATE_TIMING_TOTAL_MS=0
+GATE_TIMING_WAVE=""
+GATE_TIMING_SKIPPED=""
+_GATE_T0=""
+
+_now_ms() {
+  python3 -c 'import time; print(int(time.time() * 1000))' 2>/dev/null || echo 0
+}
+
+_write_gate_timing() {
+  mkdir -p "$WS/.l9/pr" || return 0
+  local total=0
+  if [[ -n "${_GATE_T0:-}" ]]; then
+    total=$(($(_now_ms) - _GATE_T0))
+  fi
+  GATE_TIMING_TOTAL_MS="$total"
+  export GATE_TIMING_DIGEST_MS GATE_TIMING_WRITERS_MS GATE_TIMING_FETCH_MS
+  export GATE_TIMING_TOTAL_MS GATE_TIMING_WAVE GATE_TIMING_SKIPPED
+  python3 - "$_GATE_TIMING" <<'PY' || true
+import json
+import os
+import sys
+from datetime import datetime, timezone
+
+path = sys.argv[1]
+wave = {}
+for item in os.environ.get("GATE_TIMING_WAVE", "").split():
+    if "=" not in item:
+        continue
+    name, _, raw = item.partition("=")
+    try:
+        wave[name] = int(raw)
+    except ValueError:
+        continue
+skipped = os.environ.get("GATE_TIMING_SKIPPED", "")
+doc = {
+    "schema": "l9.gate_timing.v1",
+    "written_at": datetime.now(timezone.utc)
+    .replace(microsecond=0)
+    .isoformat()
+    .replace("+00:00", "Z"),
+    "digest_ms": int(os.environ.get("GATE_TIMING_DIGEST_MS") or 0),
+    "writers_ms": int(os.environ.get("GATE_TIMING_WRITERS_MS") or 0),
+    "fetch_ms": int(os.environ.get("GATE_TIMING_FETCH_MS") or 0),
+    "wave": wave,
+    "total_ms": int(os.environ.get("GATE_TIMING_TOTAL_MS") or 0),
+}
+if skipped:
+    doc["skipped"] = skipped
+with open(path, "w", encoding="utf-8") as handle:
+    handle.write(json.dumps(doc, indent=2) + "\n")
+print(f"gate timing written: {path}")
+PY
+  {
+    echo "gate timing: digest_ms=${GATE_TIMING_DIGEST_MS} writers_ms=${GATE_TIMING_WRITERS_MS} fetch_ms=${GATE_TIMING_FETCH_MS} wave=${GATE_TIMING_WAVE} total_ms=${GATE_TIMING_TOTAL_MS}"
+    cat "$_GATE_TIMING" 2>/dev/null || true
+  } >>"$_GATE_LOG" 2>/dev/null || true
+}
+
 # Key the receipt on tree CONTENT, not on history.
 #
 # The old digest was HEAD + `git status --porcelain`. Both change when you
@@ -46,6 +112,8 @@ _GATE_CODE_FILES=(
   "ops/config/python-contract.json"
   "ops/autonomy/kernel_gate.py"
   ".pre-commit-config.yaml"
+  "ops/scripts/run_pr_security.sh"
+  "ops/scripts/lib/fetch_receipt.sh"
 )
 _gate_code_digest() {
   local rel present=()
@@ -113,13 +181,19 @@ raise SystemExit(0 if want == current else 1)
 PY
 }
 
+_GATE_T0="$(_now_ms)"
 # PASS skip first. A matching FAIL receipt then refuses a second full gate
 # (STOP LOOPING) so agents cannot wait through the same red tree again.
+_t_digest="$(_now_ms)"
 if _gate_receipt_matches; then
+  GATE_TIMING_DIGEST_MS=$(($(_now_ms) - _t_digest))
+  GATE_TIMING_SKIPPED="receipt_reuse"
+  _write_gate_timing
   echo "OK: gate receipt matches unchanged state — skipping full validation"
   echo "RESULT: PASS — local PR gate clean (receipt reuse)"
   exit 0
 fi
+GATE_TIMING_DIGEST_MS=$(($(_now_ms) - _t_digest))
 if [[ -f "$_GATE_FAILURE_PY" ]]; then
   _gate_refuse_rc=0
   python3 "$_GATE_FAILURE_PY" refuse "$_GATE_FAILURE" "$(_gate_state_digest)" \
@@ -174,6 +248,11 @@ else
 fi
 _gate_failed=1
 _gate_on_exit() {
+  if [[ -n "${_prefetch_pid:-}" ]]; then
+    wait "$_prefetch_pid" 2>/dev/null || true
+    _prefetch_pid=""
+  fi
+  _write_gate_timing || true
   if [[ "${_gate_failed:-0}" = "1" && -f "$_GATE_FAILURE_PY" ]]; then
     mkdir -p "$WS/.l9/pr"
     python3 "$_GATE_FAILURE_PY" write "$_GATE_FAILURE" "$(_gate_state_digest)" \
@@ -308,7 +387,16 @@ fi
 echo "OK: skip doctrine residue / contract surface / git-denial (make pr-full owns corpus)"
 
 echo "=== writers (once) ==="
+_base_ref="${PR_BASE#origin/}"
+if [[ "${PR_EARLY_OVERLAP:-0}" = "1" ]]; then
+  echo "--- prefetch origin/${_base_ref} (background) ---"
+  _t_fetch="$(_now_ms)"
+  git fetch origin "$_base_ref" &
+  _prefetch_pid=$!
+fi
+_t_writers="$(_now_ms)"
 _gate_run_precommit writers && precommit_rc=0 || precommit_rc=$?
+GATE_TIMING_WRITERS_MS=$(($(_now_ms) - _t_writers))
 
 if [[ "$precommit_rc" -ne 0 ]]; then
   if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
@@ -326,13 +414,30 @@ if [[ "$precommit_rc" -ne 0 ]]; then
   exit 1
 fi
 
+if [[ -n "${_prefetch_pid:-}" ]]; then
+  if ! wait "$_prefetch_pid"; then
+    echo "FAIL: cannot fetch origin/${_base_ref} — collision state undeterminable"
+    _prefetch_pid=""
+    exit 1
+  fi
+  _prefetch_pid=""
+  _fetched_sha="$(git rev-parse "origin/${_base_ref}")"
+  fetch_receipt_write "$WS" "$_base_ref" "$_fetched_sha"
+  GATE_TIMING_FETCH_MS=$(($(_now_ms) - _t_fetch))
+fi
+
 # Stage 3 — overlap once on make pr only (PR_EARLY_OVERLAP inherited from `pr:`).
 if [[ "${PR_EARLY_OVERLAP:-0}" = "1" ]]; then
   echo "--- early overlap (PR_OVERLAP=${PR_OVERLAP:-block}) ---"
-  _base_ref="${PR_BASE#origin/}"
-  if ! git fetch origin "$_base_ref"; then
-    echo "FAIL: cannot fetch origin/${_base_ref} — collision state undeterminable"
-    exit 1
+  if fetch_receipt_reusable "$WS" "$_base_ref"; then
+    echo "OK: reuse fetch-receipt (age < ${FETCH_RECEIPT_TTL_S}s, sha matches origin/${_base_ref})"
+  else
+    if ! git fetch origin "$_base_ref"; then
+      echo "FAIL: cannot fetch origin/${_base_ref} — collision state undeterminable"
+      exit 1
+    fi
+    _fetched_sha="$(git rev-parse "origin/${_base_ref}")"
+    fetch_receipt_write "$WS" "$_base_ref" "$_fetched_sha"
   fi
   mkdir -p "$WS/.l9/pr"
   if ! python3 "$SCRIPT_DIR/pr_overlap_check.py" \
@@ -414,9 +519,14 @@ _gate_run_pytest() {
 
 _gate_run_sync() {
   echo "--- sync-generated-artifacts ---"
+  # --pe-manifest reaches environment/program-execution/MANIFEST.json. Without
+  # it the PE manifest is never healed on the publish path and
+  # `make program-execution-conformance` goes red on every PE edit. The
+  # governance-self-check drift job is the other pinned caller.
   python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
     --root "$WS" \
     --changed-file "$changed_file" \
+    --pe-manifest \
     --check
   if ! _gate_classify_dirtiness "sync-generated-artifacts"; then
     if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
@@ -488,6 +598,14 @@ _gate_run_wiring() {
     echo "OK: skip wiring (CI or non-writable ~/.cursor)"
     return 0
   fi
+  # Heal missing gitignored .cursor links under the existing make-pr lock.
+  # Not sessionStart — reconcilers skip while this lock is held. Without the
+  # heal the wiring check below fail-closes on links the gate could have
+  # restored itself.
+  if [[ -x "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" ]]; then
+    L9_WIRE_LINKS_ONLY=1 bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" "$WS" \
+      || echo "WARN: ensure_workspace_wired failed — wiring check will fail-closed"
+  fi
   WS_KIND="$(classify_workspace_kind "$WS")"
   if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
     wiring_args=("$WS")
@@ -524,7 +642,7 @@ _gate_run_wiring() {
 
 _gate_run_security() {
   echo "--- security ---"
-  bash "$SCRIPT_DIR/run_pr_security.sh" --mode gate "$WS"
+  PR_CHANGED_FILE="$changed_file" bash "$SCRIPT_DIR/run_pr_security.sh" --mode gate "$WS"
 }
 
 _gate_run_readers() {
@@ -533,12 +651,15 @@ _gate_run_readers() {
 }
 
 echo "=== reader wave (once, parallel) ==="
+export PR_CHANGED_FILE="$changed_file"
 _wave_dir="$(mktemp -d)"
 _wave_pids=()
 _wave_names=()
+_wave_t0s=()
 _wave_start() {
   local name="$1"
   shift
+  _wave_t0s+=("$(_now_ms)")
   ( "$@" ) >"$_wave_dir/$name.log" 2>&1 &
   _wave_pids+=("$!")
   _wave_names+=("$name")
@@ -559,6 +680,8 @@ while [ "$_wave_i" -lt "${#_wave_pids[@]}" ]; do
     echo "FAIL: reader wave job ${_wave_names[$_wave_i]}"
     _wave_rc=1
   fi
+  _elapsed=$(($(_now_ms) - ${_wave_t0s[$_wave_i]}))
+  GATE_TIMING_WAVE="${GATE_TIMING_WAVE:+$GATE_TIMING_WAVE }${_wave_names[$_wave_i]}=${_elapsed}"
   _wave_i=$((_wave_i + 1))
 done
 _wave_i=0
