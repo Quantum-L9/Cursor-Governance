@@ -1,7 +1,7 @@
 # Setup script — paste-ready
 
 **Field:** claude.ai/code → environment → **Setup script**
-**Revision:** `2026-08-22.2` · **Checksum:** `6a40e65f0df1d371`
+**Revision:** `2026-08-29.1` · **Checksum:** `14efeae6907fcc2d`
 **Applies to:** NEW sessions only.
 
 Source of truth: `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`.
@@ -146,7 +146,7 @@ unset _l9_contaminated
 # to see it from inside the sandbox. Recording the revision that actually ran
 # turns "is the pasted stub current?" from unanswerable into a comparison
 # (audit B-06). verify_account_env.py reads it back from cloud-session.env.
-L9_STUB_REVISION="2026-08-22.2"
+L9_STUB_REVISION="2026-08-29.1"
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
 note() { printf 'L9 bootstrap: %s\n' "$*"; }
@@ -303,9 +303,7 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   echo "export L9_GOVERNANCE_DIR=$(printf %q "$GOV_DIR")"
   echo "export L9_GOVERNANCE_SURFACE=claude-code"
   echo "export GRAPHITI_MCP_URL=$(printf %q "$GRAPHITI_MCP_URL")"
-  if [ -n "${L9_CAPABILITY_BROKER_URL:-}" ]; then
-    echo "export L9_CAPABILITY_BROKER_URL=$(printf %q "$L9_CAPABILITY_BROKER_URL")"
-  fi
+  # L9_CAPABILITY_BROKER_URL is retired (never shipped). Do not re-export it.
   # No GH_TOKEN export and no GH_TOKEN unset: the platform issues it, gh needs
   # it, and ~/.profile sources this file unguarded, so an unset here would strip
   # it from every login shell.
@@ -334,37 +332,11 @@ else
   note "CLAUDE_ENV_FILE unset — sourcing $L9_ENV_FILE from the shell profile instead"
 fi
 
-# --- 4) Capability plane readiness (report, never block) -------------------
-# Same check every surface runs after install.sh -> bootstrap_agent_environment.sh.
-# Do NOT paste GRAPHITI_MCP_TOKEN / Infisical UA / password to turn this green.
-if [ -n "${L9_CAPABILITY_BROKER_URL:-}" ]; then
-  note "capability broker: $L9_CAPABILITY_BROKER_URL (credentials stay on the broker)"
-  # Reachability, not just presence. A broker host missing from the Network
-  # access allowlist is denied at CONNECT, and the old "is the var set?" check
-  # reported that as healthy — so every session came up with capabilities,
-  # memory, mcp and plugins DEGRADED and no line naming the cause. Report only;
-  # this must never block the environment build.
-  broker_host="${L9_CAPABILITY_BROKER_URL#*://}"
-  broker_host="${broker_host%%/*}"
-  if command -v curl >/dev/null 2>&1; then
-    # curl already prints 000 on a failed CONNECT and exits non-zero, so a
-    # || echo 000 fallback would concatenate into "000000" and never match.
-    broker_code="$(curl -sS -o /dev/null -w '%{http_code}' --max-time 10 \
-                     "$L9_CAPABILITY_BROKER_URL" 2>/dev/null)"
-    case "$broker_code" in ''|000) broker_code=000 ;; esac
-    if [ "$broker_code" = "000" ]; then
-      warn "capability broker UNREACHABLE ($broker_host) — capabilities will run DEGRADED"
-      warn "  most likely: '$broker_host' is not in Network access (see web/network-policy.md)"
-      warn "  a proxied sandbox answers 502 to CONNECT for a non-allowlisted host"
-    else
-      note "capability broker reachable ($broker_host -> HTTP $broker_code)"
-    fi
-  fi
-else
-  warn "L9_CAPABILITY_BROKER_URL unset — Sonar/Semgrep/Graphiti capabilities DEGRADED"
-  warn "  Honest posture. Fix broker delivery; do not paste Infisical or Graphiti secrets."
-fi
-note "memory front door URL: $GRAPHITI_MCP_URL (no bearer in this process)"
+# --- 4) Memory front door (report, never block) ----------------------------
+# Capability broker retired 2026-08-29 (never shipped). Do not probe it.
+# Graphiti is GRAPHITI_MCP_URL. Do NOT paste GRAPHITI_MCP_TOKEN / Infisical UA.
+note "memory front door URL: ${GRAPHITI_MCP_URL:-unset} (no bearer in this process)"
+note "capability plane: RETIRED (never shipped)"
 
 if [ "$SETUP_RC" -ne 0 ]; then
   warn "cloud bootstrap FAILED — web/setup.sh exited $SETUP_RC"
@@ -381,7 +353,7 @@ exit 0
 Start a NEW session, then:
 
 ```bash
-grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-08-22.2
+grep L9_STUB_REVISION ~/.l9/cloud-session.env      # expect 2026-08-29.1
 make claude-env                                    # structural + RUNTIME verdicts
 ```
 

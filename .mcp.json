@@ -1,9 +1,9 @@
 {
-  "_generated": "Rendered from environment/agents/adapters/claude-code/mcp.template.json by ops/scripts/claude_projection.py (domain: mcp). Do not edit \u2014 edit the template. Consumer-owned servers not defined by the template are preserved.",
+  "_generated": "Rendered from environment/agents/adapters/claude-code/mcp.template.json by ops/scripts/claude_projection.py (domain: mcp). Do not edit — edit the template. Consumer-owned servers not defined by the template are preserved.",
   "mcpServers": {
     "graphiti-memory": {
       "type": "http",
-      "url": "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti",
+      "url": "${GRAPHITI_MCP_URL}",
       "timeout": 120000,
       "alwaysLoad": true
     }

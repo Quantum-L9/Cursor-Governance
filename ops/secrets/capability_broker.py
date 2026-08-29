@@ -965,6 +965,13 @@ def preflight(
 
 
 def main(argv: list[str] | None = None) -> int:
+    if os.environ.get("L9_BROKER_FORCE") != "1":
+        print(
+            "capability_broker: RETIRED (never shipped). "
+            "Graphiti uses GRAPHITI_MCP_URL. Set L9_BROKER_FORCE=1 to run this binary.",
+            file=sys.stderr,
+        )
+        return 0
     parser = argparse.ArgumentParser(description="L9 capability broker (trusted side).")
     parser.add_argument("command", choices=["serve", "preflight"])
     parser.add_argument("--audience", help="exact ccpool_<environment> this broker serves")

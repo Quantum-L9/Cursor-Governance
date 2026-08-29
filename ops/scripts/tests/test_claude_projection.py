@@ -166,7 +166,7 @@ def make_root(base: Path) -> Path:
                 "mcpServers": {
                     "graphiti-memory": {
                         "type": "http",
-                        "url": "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti",
+                        "url": "${GRAPHITI_MCP_URL}",
                         "timeout": 120000,
                         "alwaysLoad": True,
                     }

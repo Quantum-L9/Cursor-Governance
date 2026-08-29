@@ -50,7 +50,7 @@ context**, **reach shared memory** — without a human wiring step.
 | Discover L9 skills | `~/.claude/skills/` fed by `reconcile_claude_l9_skills.py` via `install.sh` (canonical native L9 skills) | governance cloned by `web/setup.sh`; skills referenced from the clone |
 | Boot session context | `hooks/session_start_claude_governance.sh` via `make claude-settings` → `~/.claude/settings.json` | **same hook**, committed at `.claude/settings.json` + `.claude/hooks/` via reconcile |
 | Autonomy velocity | Profile `ops/autonomy/surface_profile.yaml` + merge_gate + local_execution_gate PreToolUse | same Profile; standing A4 + L4 local (no mid-exec push); human merge |
-| Reach shared memory | `mcp.template.json` → brokered `graphiti-memory` server (`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`, no bearer) | same committed `.mcp.json`; `L9_MEMORY_*` identity from the account environment |
+| Reach shared memory | `mcp.template.json` → `${GRAPHITI_MCP_URL}` (no bearer; broker retired) | same committed `.mcp.json`; no Graphiti token in the account environment |
 
 ### Proactive L9 skill discovery and routing
 
@@ -90,22 +90,14 @@ Two different mechanisms feed Claude Code, and the names must not blur:
   mobile does not expose local-only commands such as `/plugin`, and a governed
   cloud session must not depend on them.
 
-### Memory transport — brokered, and honest when degraded
+### Memory transport — HTTPS Graphiti, no broker
 
-The MCP template points `graphiti-memory` at the L9 capability broker
-(`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`). The broker speaks the MCP
-handshake (`initialize` / `tools/list` / `tools/call`) and maps its bounded
-memory tools onto the registered capabilities — `search_memory` →
-`graphiti.query`, `write_governed` → `graphiti.write_governed` — so the
-Graphiti bearer stays on the trusted side and never reaches a
-model-controlled surface.
+The MCP template points `graphiti-memory` at `${GRAPHITI_MCP_URL}` (default
+`https://memory.quantumaipartners.com/graphiti/mcp`). There is **no bearer**
+in the template. The capability broker never shipped; do not point MCP at
+`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`.
 
-A session without a verifiable platform identity (ordinary Anthropic-hosted
-cloud today) gets an honest 401 from the broker: the MCP server is reported
-unavailable and memory runs **DEGRADED — broker identity unavailable**. That
-is the truthful posture, surfaced by the SessionStart status block. The fix
-is broker identity delivery, never pasting `GRAPHITI_MCP_TOKEN` into an
-environment.
+Do **not** paste `GRAPHITI_MCP_TOKEN` into a model-controlled environment.
 
 ### Memory identity — distinct from Cursor, shared graph
 
@@ -137,7 +129,7 @@ second place to drift.
 | `render.claude.json` | all | Rendering map: how `policy.json` reaches Claude Code (peer of `render.cursor.json`). IDE-neutral policy never changes for it. |
 | `settings.template.json` | all | Committable `.claude/settings.json` for a consumer repo: SessionStart hook + conservative permission + env defaults. |
 | `hooks/session_start_claude_governance.sh` | all | Mobile-safe SessionStart bootstrap. Git-only, **no `~/.cursor` dependency**. Emits Claude Code `additionalContext` JSON. |
-| `mcp.template.json` | all | Shared memory MCP block — brokered `${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`. **Never a token, never a bearer.** |
+| `mcp.template.json` | all | Shared memory MCP block — `${GRAPHITI_MCP_URL}`. **Never a token, never a bearer. Broker retired.** |
 | `web/README.md` | Web · Mobile | Install guide for the account environment (the Network / Env / Setup triad). |
 | `web/network-policy.md` | Web · Mobile | Network-access decision (Full vs Custom allowlist) with the concrete allowlist. |
 | `web/environment.env.example` | Web · Mobile | Environment-variables template. No credentials, no GH token — the platform proxy injects. |

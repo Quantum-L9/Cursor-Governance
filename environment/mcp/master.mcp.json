@@ -1,17 +1,18 @@
 {
   "_comment": [
-    "MASTER MCP configuration for all L9 surfaces — capability broker architecture",
+    "MASTER MCP for the Cursor (CLI) plane — NOT Claude Code.",
     "Authority: ~/.cursor-governance/environment/mcp/master.mcp.json",
-    "Consumers:",
-    "  - Cursor: ~/.cursor/mcp.json (symlink)",
-    "  - Claude Code CLI: ~/.claude/mcp.json (symlink)",
-    "  - Claude Code Web/Mobile: .mcp.json in each repo (env-var refs only)",
+    "Wired to Cursor as ~/.cursor/mcp.json (symlink).",
     "",
-    "Credential-bearing MCPs reach upstream APIs through the L9 capability broker.",
-    "The broker holds secrets; this surface holds only capability IDs and a workload JWT.",
-    "Set L9_CAPABILITY_BROKER_URL to http://localhost:8787 (CLI) or the cloud broker URL.",
+    "The capability broker never shipped (2026-08-29). Do not point any server",
+    "at ${L9_CAPABILITY_BROKER_URL}. GitHub / Context7 / Semgrep / GitGuardian",
+    "are Cursor-native MCP installs (marketplace / user mcp.json), not this file.",
     "",
-    "No-credential MCPs (Playwright, public repos) run locally as before."
+    "Claude Code Web/Mobile uses environment/agents/adapters/claude-code/",
+    "mcp.template.json → ${GRAPHITI_MCP_URL} only. Do not merge those planes.",
+    "",
+    "graphiti-memory here is the operator SSH tunnel (127.0.0.1:8100), not the",
+    "cloud HTTPS front door."
   ],
   "mcpServers": {
     "n8n-workflows Docs": {
@@ -20,34 +21,6 @@
         "mcp-remote",
         "https://gitmcp.io/Zie619/n8n-workflows"
       ]
-    },
-    "GitHub": {
-      "url": "${L9_CAPABILITY_BROKER_URL}/mcp",
-      "headers": {
-        "X-Capability-Id": "github.mcp"
-      },
-      "timeout": 30000
-    },
-    "Context7": {
-      "url": "${L9_CAPABILITY_BROKER_URL}/mcp",
-      "headers": {
-        "X-Capability-Id": "context7.mcp"
-      },
-      "timeout": 30000
-    },
-    "Semgrep": {
-      "url": "${L9_CAPABILITY_BROKER_URL}/mcp",
-      "headers": {
-        "X-Capability-Id": "semgrep.mcp"
-      },
-      "timeout": 30000
-    },
-    "GitGuardian": {
-      "url": "${L9_CAPABILITY_BROKER_URL}/mcp",
-      "headers": {
-        "X-Capability-Id": "gitguardian.mcp"
-      },
-      "timeout": 30000
     },
     "Playwright": {
       "command": "npx",

@@ -981,3 +981,22 @@ unless a Claude runtime marker is set (`CLAUDE_CODE_REMOTE=true`,
 backup. This fragment supersedes §2.1 step 2 (Claude projection from Cursor
 SessionStart) and the older “keep `.governance-build-lock` tracked” housekeeping
 decision.
+
+<!-- CURSOR_KERNEL_LATCH_ADAPTER_ONLY_V1 -->
+## Tree kernels are Claude Code ceremony, not Cursor (2026-08-29)
+
+`ops/autonomy/kernel_gate.py` on `make precommit-repo` fires only when
+`L9_GOVERNANCE_SURFACE` is `claude-code` / `codex` / `gemini` / `manus`, or a
+Claude runtime marker is set. Cursor (`CURSOR_AGENT`, surface `cursor`, or
+unset) skips the latch. Cursor still scoped-commits after `make precommit-repo`
+(hooks + ruff) without a kernel receipt. `/ff` corpus kernels are unchanged.
+
+<!-- CAPABILITY_BROKER_RETIRED_V1 -->
+## Capability broker retired (2026-08-29)
+
+The capability broker never shipped. Session bootstrap does not probe it.
+Adapter MCP templates use `${GRAPHITI_MCP_URL}`. Cursor `master.mcp.json`
+does not route GitHub/Context7/Semgrep/GitGuardian through the broker.
+`make capability-check` / `broker-serve` print RETIRED and exit 0 unless
+`L9_BROKER_FORCE=1`. Cursor Graphiti is the local CLI / tunnel. Do not paste
+secrets to “fix” a retired plane. See `ops/secrets/RETIRED.md`.

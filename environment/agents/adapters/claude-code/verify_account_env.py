@@ -12,10 +12,11 @@ what the repository expects, and prints exact paste-ready replacement text.
 
 The audit found four deviations, all of them costly and none of them visible:
 
-    L9_CAPABILITY_BROKER_URL               missing  -> whole capability plane unconfigured
     CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS   missing  -> native 20-subagent ceiling
     L9_AUTONOMY_MAX_PARALLEL               4        -> expected 480
     L9_AUTONOMY_MAX_MUTATION_LANES         2        -> expected 128 (120x throttle)
+
+`L9_CAPABILITY_BROKER_URL` is retired (never shipped) and is not an account field.
 
 The last two are Cursor's constrained defaults, which the example file says
 explicitly belong to Cursor and not here.

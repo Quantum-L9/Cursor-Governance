@@ -19,13 +19,12 @@ shared memory and GitHub.
 
 | Host | Why |
 |---|---|
-| `memory.quantumaipartners.com` | Graphiti HTTPS MCP (`GRAPHITI_MCP_URL` …/graphiti/mcp) |
-| `broker.quantumaipartners.com` | L9 capability broker — every authenticated capability (`sonar.read_issues`, `semgrep.appsec_scan`, `graphiti.*`). The concrete default `web/environment.env.example` ships in `L9_CAPABILITY_BROKER_URL`; substitute your own broker hostname if you run one, but do not leave it unlisted — a denied broker does not fail loudly, it silently reports capabilities/memory/mcp as DEGRADED on every session |
+| `memory.quantumaipartners.com` | Graphiti HTTPS MCP (`GRAPHITI_MCP_URL` …/graphiti/mcp). Required. The capability broker never shipped — do not list `broker.quantumaipartners.com` as required. |
 | `github.com`, `*.githubusercontent.com` | clone governance + consumer repos |
 | `api.github.com` | `gh` / GitHub API |
 | `pypi.org`, `files.pythonhosted.org` | Python toolchains when the surface installs packages |
 | `registry.npmjs.org` | Node toolchains when applicable |
-| `npm.pkg.github.com` | GitHub Packages for `@quantum-l9/*` (broker / trusted-operator `authed_npm.sh` only; no PAT in the agent env) |
+| `npm.pkg.github.com` | GitHub Packages for `@quantum-l9/*` (trusted-operator `authed_npm.sh` only; no PAT in the agent env) |
 
 ## Production memory
 

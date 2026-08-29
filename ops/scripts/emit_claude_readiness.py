@@ -18,11 +18,11 @@ the SessionStart hook; `--json` prints the receipt. The emitter never mutates
 the repository, never fetches, and fails open (a probe that cannot run yields
 UNKNOWN, never a crash).
 
-Sources (all local + the non-secret broker probe):
+Sources (all local; the capability broker is retired):
   git -C $GOV            governance repository / default branch / SHA / freshness
   ~/.l9/claude/projection-receipt.json   skill/command/rule/settings/hooks/plugins/mcp
   ~/.l9/claude/bootstrap-state.json      capabilities / memory / mcp coarse words
-  ops/secrets/probe_broker.py --json     Graphiti authenticated health, secret boundary
+  GRAPHITI_MCP_URL / local Graphiti CLI  memory (no broker probe)
   make -C $GOV l9-consumer-safe-list     Makefile facade
   ops/scripts/install_l9_dispatcher.sh --check   dispatcher install
   ops/autonomy/merge_gate.py             live merge-authority posture probe
@@ -35,7 +35,6 @@ import json
 import os
 import re
 import subprocess
-import sys
 from pathlib import Path
 from typing import Any
 
@@ -180,57 +179,18 @@ def _projection_statuses(receipt: dict[str, Any] | None) -> dict[str, str]:
 
 
 def _broker_probe(gov: Path) -> dict[str, Any]:
-    probe = gov / "ops" / "secrets" / "probe_broker.py"
-    if not probe.is_file():
-        return {}
-    try:
-        proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
-            [sys.executable, str(probe), "--json"],
-            cwd=str(gov),
-            capture_output=True,
-            text=True,
-            timeout=25,
-            env={**os.environ, "L9_PROBE_QUIET": "1"},
-            check=False,
-        )
-    except (OSError, subprocess.SubprocessError):
-        return {}
-    # probe_broker exits non-zero when the plane is blocked (e.g. no identity) but
-    # still prints a valid JSON classifier. Parse stdout regardless of exit code.
-    out = proc.stdout
-    if not out.strip():
-        return {}
-    try:
-        data = json.loads(out)
-        return data if isinstance(data, dict) else {}
-    except json.JSONDecodeError:
-        return {}
+    """Retired. The capability broker never shipped.
 
-
-# The broker probe is the capability/secret plane; CodeQL models its output as
-# sensitive. Never interpolate a probe value into printed output — map the
-# blocker to a fixed vocabulary of non-secret labels (lookup KEY only), so the
-# emitted note is always a module constant (severs the clear-text-logging taint).
-_BLOCKER_VOCAB = {
-    "identity": "identity",
-    "dns": "dns",
-    "reachability": "reachability",
-    "config": "config",
-    "broker_auth": "broker_auth",
-    "network": "network",
-    "none": "none",
-}
+    Keep the symbol so receipt builders do not grow a second Graphiti path.
+    Callers must treat an empty probe as 'broker retired', not as a failure.
+    """
+    del gov
+    return {}
 
 
 def _graphiti_health(probe: dict[str, Any]) -> tuple[str, str]:
-    if not probe:
-        return UNKNOWN, "broker probe unavailable"
-    if probe.get("ok"):
-        return READY, "authenticated"
-    key = str(probe.get("primary_blocker") or "").strip().lower()
-    blocker = _BLOCKER_VOCAB.get(key, "unknown")
-    # TCP reachable is not authenticated: report DEGRADED with the blocker class.
-    return DEGRADED, f"not authenticated (blocker: {blocker})"
+    del probe
+    return READY, "broker retired; GRAPHITI_MCP_URL / local Graphiti CLI"
 
 
 def _mcp_status(bootstrap: dict[str, Any] | None, proj_mcp: str) -> tuple[str, str]:
@@ -345,7 +305,7 @@ _SECRET_BOUNDARY_VOCAB = {
 
 
 def _secret_boundary_status(probe: dict[str, Any]) -> tuple[str, str]:
-    # This surface holds no credentials; the broker keeps them on the far side.
+    # This surface holds no credentials. The capability broker is retired.
     key = str(probe.get("secret_boundary") or "").strip().lower()
     boundary = _SECRET_BOUNDARY_VOCAB.get(key, "model-controlled")
     return READY, f"{boundary} (no broker/Infisical/Graphiti secret in this environment)"

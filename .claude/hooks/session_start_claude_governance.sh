@@ -388,53 +388,10 @@ emit_account_drift() {
   fi
 }
 
-# --- Capability plane readiness (authenticated; never a secret) -------------
-# The bootstrap receipt above carries the coarse capabilities/memory/mcp words;
-# this section names the DISTINCT dimensions an operator needs to tell apart —
-# configuration vs identity vs DNS vs reachability vs broker-auth vs authorized
-# Graphiti. It is driven by ops/secrets/probe_broker.py, whose --json output
-# carries identity METHOD names only, never a token or a secret value. On a
-# hosted surface with no session identity the probe short-circuits before any
-# network call, so this stays fast and fail-open.
+# --- Capability plane (RETIRED 2026-08-29, never shipped) -------------------
 emit_capability_readiness() {
-  local py="$1"
-  local probe="$GOV/ops/secrets/probe_broker.py"
-  [ -f "$probe" ] || return 0
-  [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
-
-  local out
-  out="$(L9_PROBE_QUIET=1 "$py" "$probe" --json 2>/dev/null || true)"
-  [ -n "$out" ] || return 0
-
-  # Parse only non-secret classifier fields. python one-liner keeps this robust
-  # to formatting; it prints "key=value" lines and never echoes a token.
-  local parsed
-  parsed="$("$py" - "$out" <<'PY' 2>/dev/null || true
-import json, sys
-try:
-    d = json.loads(sys.argv[1])
-except Exception:
-    sys.exit(0)
-blocker = d.get("primary_blocker", "unknown")
-ident_ok = d.get("identity_available")
-ready = d.get("authenticated_readiness", "")
-print(f"broker_reachability={d.get('dns','n/a')}/{d.get('health','n/a')}")
-print(f"broker_identity_status={d.get('identity_method','none')}:"
-      f"{'available' if ident_ok else d.get('identity_reason','unavailable')}")
-print(f"MCP_authentication_status={'verified' if str(ready).startswith('http_2') else ('rejected' if ready else 'not_attempted')}")
-print(f"graphiti_authenticated_health={'PASS' if d.get('ok') else 'DEGRADED'}")
-print(f"primary_blocker={blocker}")
-PY
-)"
-  [ -n "$parsed" ] || return 0
-  LINES+=("--- capability plane readiness ---")
-  # secret_boundary_status is a positive statement: this surface holds no
-  # credentials (see verify_account_env prohibited set); the broker keeps them.
-  LINES+=("secret_boundary_status=model-controlled (no broker/Infisical/Graphiti secret in this environment)")
-  while IFS= read -r line || [ -n "$line" ]; do
-    [ -n "$line" ] && LINES+=("$line")
-  done <<< "$parsed"
-  LINES+=("mcp_configuration=.mcp.json is a projection of mcp.template.json (single MCP authority)")
+  LINES+=("capability plane: RETIRED (never shipped)")
+  LINES+=("memory: GRAPHITI_MCP_URL / local Graphiti CLI (no broker probe)")
 }
 
 # --- Final machine-readable readiness receipt (Phase 7) ---------------------
