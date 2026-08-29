@@ -36,6 +36,20 @@ todos:
     content: Targeted pytest + make precommit-repo; re-check SP-03 and SP-06
     status: in_progress
 isProject: false
+kernel_pass:
+  bound_path: suite6_archive_cutover_99e38bd1.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T04:05:20Z
+    body_sha256: "01205f9eac8d8086defe7d14c1118c8c26dcf669bb53bc1e18c08642f8efaf4e"
+    deltas:
+      - "Confirmed freeze/cutover contract; live Graphiti/hydration owners stay"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T04:05:50Z
+    body_sha256: "01205f9eac8d8086defe7d14c1118c8c26dcf669bb53bc1e18c08642f8efaf4e"
+    deltas:
+      - "todo-11 remains in_progress on this parked copy; no exclusive-lock defects"
 ---
 
 # PLAN: Complete Suite-6 intelligence archive cut-over

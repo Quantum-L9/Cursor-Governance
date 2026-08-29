@@ -27,6 +27,20 @@ todos:
     content: git rm -r execution-governance/ only; do not delete other A-tier archive shells
     status: completed
 isProject: false
+kernel_pass:
+  bound_path: harvest_semantics_land_57f9f340.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T04:05:10Z
+    body_sha256: "5c90cd39afdae4e6f97e703670a83d62f5360b36dfb3d6c3f7d2d26642704fae"
+    deltas:
+      - "Confirmed remaining harvest semantics already live in corpus auditors; no second archive owner"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T04:05:40Z
+    body_sha256: "5c90cd39afdae4e6f97e703670a83d62f5360b36dfb3d6c3f7d2d26642704fae"
+    deltas:
+      - "Completed todos; no exclusive-lock defects; parked as BUILT receipt"
 ---
 
 # Port remaining harvest semantics, then delete execution-governance

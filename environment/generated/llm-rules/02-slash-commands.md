@@ -53,12 +53,13 @@ When a command needs generator scripts:
 
 ## Available Slash Commands (enabled)
 
-Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not second primary rows: `/readme` → `/docs`, `/lint-fix` → `/lint`, `/violation` → `/governance`. Folded verify-ladder slashes (`/probe`, `/audit-component`, `/verify-component`) are modes on the analyze family. Retired with no alias: `/rules`, `/git-work-preserve`, `/harvest2`. `/update-command` is retired into `/dag-authoring --bind-command`.
+Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not second primary rows: `/readme` → `/docs`, `/lint-fix` → `/lint`, `/violation` → `/governance`. `/audit-component` is live (`l9-component-verification`). Folded verify-ladder slashes (`/probe`, `/verify-component`) are modes on the analyze family. Retired with no alias: `/rules`, `/git-work-preserve`, `/harvest2`. `/update-command` is retired into `/dag-authoring --bind-command`.
 
 | Command | File | Description |
 |---------|------|-------------|
 | `/analyze` | `commands/analyze.md` | Rapid exploration (`l9-code-analysis`) |
 | `/analyze_evaluate` | `commands/analyze_evaluate.md` | Combined analysis + evaluation |
+| `/audit-component` | `commands/audit-component.md` | Export / wiring / API audit (`l9-component-verification`) |
 | `/autonomy` | `commands/autonomy.md` | Bounded autonomy — parallel Tasks + background PR poll |
 | `/ci` | `commands/ci.md` | CI/CD operations |
 | `/ci-policy` | `commands/ci-policy.md` | CI policy / gate authoring |

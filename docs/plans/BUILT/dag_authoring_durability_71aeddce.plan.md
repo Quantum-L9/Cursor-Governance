@@ -21,6 +21,20 @@ todos:
     content: Update skill tests, self_test, harvest langgraph, alignment test, receipt 2.3.0; add two-instance crash-resume test; version-bump commands/dag-authoring.md only
     status: completed
 isProject: false
+kernel_pass:
+  bound_path: dag_authoring_durability_71aeddce.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T04:05:00Z
+    body_sha256: "8fd2c188e31e08ea9f7d2cae24a4cd75541438692dda325f4e166cdcc22791b5"
+    deltas:
+      - "Confirmed LANGGRAPH_RUNTIME PASS means crash-resumable SqliteSaver; no new architecture fork"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T04:05:30Z
+    body_sha256: "8fd2c188e31e08ea9f7d2cae24a4cd75541438692dda325f4e166cdcc22791b5"
+    deltas:
+      - "Todos already completed; no exclusive-lock or etc defects; parked as BUILT receipt"
 ---
 
 # Upgrade /dag-authoring (durable LANGGRAPH_RUNTIME)

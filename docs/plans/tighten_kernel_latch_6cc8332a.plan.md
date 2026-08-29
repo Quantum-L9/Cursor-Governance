@@ -21,6 +21,20 @@ todos:
     content: Replace the honor-system test; add fail/pass cases; run the locked pytest file list
     status: completed
 isProject: false
+kernel_pass:
+  bound_path: tighten_kernel_latch_6cc8332a.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T04:06:10Z
+    body_sha256: "d6992f53f727a037bbf525ed2156f13823fd25979d45ea1026850706eb4ab896"
+    deltas:
+      - "Latch contract stays kernel_gate.py plus hashed apply report; l9-recursive-optimization stays optional routing"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T04:06:40Z
+    body_sha256: "d6992f53f727a037bbf525ed2156f13823fd25979d45ea1026850706eb4ab896"
+    deltas:
+      - "Plan todos marked completed on this extract; remediator does not implement v2 record(); no exclusive-lock defects"
 ---
 
 # Tighten kernel latch evidence

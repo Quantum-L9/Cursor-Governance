@@ -390,7 +390,7 @@ def render_markdown(report: dict[str, Any]) -> str:
             "## Convergence",
             "",
             "Scope, activation, size, identity, deprecation, coverage, and adversarial "
-            "passes completed. Findings stabilized.",
+            + "passes completed. Findings stabilized.",
             "No mass conversion was performed without behavioral evidence.",
             "",
         ]
