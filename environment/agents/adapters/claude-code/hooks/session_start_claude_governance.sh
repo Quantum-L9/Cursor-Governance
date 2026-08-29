@@ -112,7 +112,12 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
     # than the throwaway one — lost that work silently, HEAD included. The reset
     # only ever has something to do on a clean clone, so refusing a dirty one
     # costs the intended path nothing and makes the destructive case impossible.
-    gov_dirty=$(git -C "$GOV" status --porcelain 2>/dev/null | head -c 1)
+    # TRACKED changes only. `checkout -f` discards tracked modifications and
+    # staged content — what this session actually lost — but leaves untracked
+    # files alone, so counting them would refuse a reset that was never
+    # dangerous and strand the ephemeral clone (a fresh one legitimately
+    # carries untracked bootstrap residue).
+    gov_dirty=$(git -C "$GOV" status --porcelain --untracked-files=no 2>/dev/null | head -c 1)
     if [ -n "$gov_dirty" ]; then
       local_sha=$(git -C "$GOV" rev-parse --verify --quiet HEAD 2>/dev/null || echo 'unknown')
       write_refresh_receipt reset-skipped-dirty "$local_sha" unknown -1 stale

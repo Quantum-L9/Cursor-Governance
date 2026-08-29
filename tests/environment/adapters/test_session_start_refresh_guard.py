@@ -80,3 +80,75 @@ def test_hook_still_fails_open() -> None:
     """A guard that blocks the session is worse than the bug it prevents."""
     text = body()
     assert "set -e" not in text.splitlines()[0:5]
+
+
+def _synthetic_gov(home: Path, *, tracked_dirt: bool, untracked_dirt: bool) -> Path:
+    """A minimal governance clone the hook will accept as $GOV."""
+    import subprocess
+
+    gov = home / ".cursor-governance"
+    gov.mkdir(parents=True)
+    (gov / "CANONICAL_LAW.md").write_text("synthetic\n", encoding="utf-8")
+    subprocess.run(["git", "init", "-q", str(gov)], check=True)
+    subprocess.run(["git", "-C", str(gov), "add", "CANONICAL_LAW.md"], check=True)
+    subprocess.run(
+        ["git", "-C", str(gov), "-c", "user.email=t@e", "-c", "user.name=t",
+         "commit", "-qm", "base"],
+        check=True,
+    )
+    if tracked_dirt:
+        (gov / "CANONICAL_LAW.md").write_text("synthetic + in-flight work\n", encoding="utf-8")
+    if untracked_dirt:
+        (gov / "scratch.txt").write_text("residue\n", encoding="utf-8")
+    return gov
+
+
+def _run(home: Path, receipt: Path):
+    import subprocess
+
+    return subprocess.run(
+        ["bash", str(HOOK)],
+        capture_output=True,
+        text=True,
+        env={
+            "HOME": str(home),
+            "PATH": "/usr/bin:/bin:/usr/local/bin",
+            "CLAUDE_CODE_REMOTE": "true",
+            "L9_GOV_REFRESH_RECEIPT": str(receipt),
+            "CLAUDE_PROJECT_DIR": str(home),
+        },
+        check=False,
+        timeout=180,
+    )
+
+
+def test_tracked_dirt_actually_prevents_the_reset(tmp_path: Path) -> None:
+    """Behavioural proof, not a text match: in-flight tracked work survives."""
+    import json
+
+    gov = _synthetic_gov(tmp_path, tracked_dirt=True, untracked_dirt=False)
+    receipt = tmp_path / "receipt.json"
+    result = _run(tmp_path, receipt)
+
+    assert result.returncode == 0, "SessionStart must never block"
+    assert (gov / "CANONICAL_LAW.md").read_text(encoding="utf-8") == (
+        "synthetic + in-flight work\n"
+    ), "the reset discarded tracked work the guard exists to protect"
+    assert json.loads(receipt.read_text(encoding="utf-8"))["outcome"] == "reset-skipped-dirty"
+
+
+def test_untracked_residue_does_not_trip_the_guard(tmp_path: Path) -> None:
+    """A fresh ephemeral clone carries untracked bootstrap residue.
+
+    `checkout -f` leaves untracked files alone, so counting them would strand
+    the very clone this refresh exists to reset.
+    """
+    import json
+
+    _synthetic_gov(tmp_path, tracked_dirt=False, untracked_dirt=True)
+    receipt = tmp_path / "receipt.json"
+    result = _run(tmp_path, receipt)
+
+    assert result.returncode == 0
+    outcome = json.loads(receipt.read_text(encoding="utf-8"))["outcome"]
+    assert outcome != "reset-skipped-dirty", "untracked residue must not block the reset"
