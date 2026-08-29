@@ -51,6 +51,32 @@ todos:
     depends_on: [w4-oidc-login-tests, w5-claude-bootstrap-comments, w6-operator-create-identity]
     evidence_property_refs: [SP-05]
 isProject: false
+kernel_pass:
+  bound_path: infisical_gha_oidc_conformance_8-20-26.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T17:20:00Z
+    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    deltas:
+      - "Stamp kernel_pass so the next editor is not the first to fail G_PLAN_KERNEL_PASS"
+      - "Keep this plan's existing todos and body; do not reopen landed work from this stamp"
+      - "Do not mix #374 end-of-file-fixer exclude into this corpus pass"
+  recursive_alignment:
+    kernel: kernels/Recursive Alignment.md
+    ran_at: 2026-08-29T17:20:30Z
+    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    deltas:
+      - "Align with issue #377 and the #376 G_PRECOMMIT_CONFIG plus kernel_pass precedent"
+      - "Leave docs/plans/_TEMPLATE.plan.md exempt via PLAN_SKIP_PREFIXES"
+      - "Do not edit .pre-commit-config.yaml in this cluster"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T17:21:00Z
+    body_sha256: "54b692175fff95ace0f4ba6b482b1475d686ed651b5cd6f79c387b976bb181e7"
+    deltas:
+      - "G_PLAN_ETC and G_PLAN_EITHER_OR stay clean after this stamp"
+      - "Canonical body_sha256 is the post-stamp file hash with sha fields zeroed"
+      - "Do not mark status executable while the checker still fails"
 ---
 
 # PLAN: Infisical GHA OIDC on existing secrets plane

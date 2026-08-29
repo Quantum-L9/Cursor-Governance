@@ -24,6 +24,32 @@ todos:
     content: "Run mandatory checks on the exact final worktree state; fill the Definition of Done record; Done only if every applicable gate is Passed or NotApplicable"
     status: pending
 isProject: false
+kernel_pass:
+  bound_path: in-flight_pr_census_8-20-26.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T17:20:00Z
+    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    deltas:
+      - "Stamp kernel_pass so the next editor is not the first to fail G_PLAN_KERNEL_PASS"
+      - "Keep this plan's existing todos and body; do not reopen landed work from this stamp"
+      - "Do not mix #374 end-of-file-fixer exclude into this corpus pass"
+  recursive_alignment:
+    kernel: kernels/Recursive Alignment.md
+    ran_at: 2026-08-29T17:20:30Z
+    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    deltas:
+      - "Align with issue #377 and the #376 G_PRECOMMIT_CONFIG plus kernel_pass precedent"
+      - "Leave docs/plans/_TEMPLATE.plan.md exempt via PLAN_SKIP_PREFIXES"
+      - "Do not edit .pre-commit-config.yaml in this cluster"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T17:21:00Z
+    body_sha256: "e1b2e3d8b7121a86aa1ff96b2d79f0c8d2949e4c2d1438bfbfb4b5cad7031650"
+    deltas:
+      - "G_PLAN_ETC and G_PLAN_EITHER_OR stay clean after this stamp"
+      - "Canonical body_sha256 is the post-stamp file hash with sha fields zeroed"
+      - "Do not mark status executable while the checker still fails"
 ---
 
 # In-flight PR census + unstacked generated-collision refuse
@@ -96,7 +122,7 @@ flowchart TD
 ## Design locks (MUST / MUST NOT)
 
 - **Two layers.** Census = awareness (fail-open). `make pr` refuse = enforcement (fail-closed). Census alone MUST NOT be treated as sufficient.
-- **One engine.** Create [`ops/scripts/generated_collision.py`](/Users/macm2/.cursor-governance/ops/scripts/generated_collision.py) as the only owner of prefixes, GraphQL, intersection, self-exclusion, and truncation. Thin CLIs: [`in_flight_pr_census.py`](/Users/macm2/.cursor-governance/ops/scripts/in_flight_pr_census.py) and [`refuse_unstacked_generated_collision.py`](/Users/macm2/.cursor-governance/ops/scripts/refuse_unstacked_generated_collision.py). MUST NOT copy the query or prefix tuple into either CLI or either hook.
+- **One engine.** Create [`ops/scripts/generated_collision.py`](/Users/macm2/.cursor-governance/ops/scripts/generated_collision.py) as the only owner of prefixes, GraphQL, intersection, self-exclusion, and truncation. Thin CLIs: [`in_flight_pr_census.py`](/Users/macm2/.cursor-governance/ops/scripts/in_flight_pr_census.py) and [`refuse_unstacked_generated_collision.py`](/Users/macm2/.cursor-governance/ops/scripts/refuse_unstacked_generated_collision.py). MUST NOT copy the query or prefix tuple into the census CLI, the refuse CLI, or the hooks.
 - **sessionStart stays fail-open.** Timeout, missing `gh`, unauth, GraphQL miss, or deadline → `in-flight PRs: unavailable`. Always exit 0. Same budget shape as plan audit in [`session_start_bootstrap.sh`](/Users/macm2/.cursor-governance/ops/hooks/session_start_bootstrap.sh) (outer `timeout 2`, `--budget-chars 1200`, `--limit 8`, `--deadline-seconds 1.5`).
 - **Hook is read-only.** MUST NOT checkout, rebase, merge, push, or regenerate in sessionStart.
 - **No new `hooks.json` entry.** Insert into the existing `COMBINED` packet.
@@ -105,7 +131,7 @@ flowchart TD
 - **stdlib only on SessionStart.** MUST NOT import `sync_generated_artifacts.py` (PyYAML + generators). Tests MAY import it for prefix-drift.
 - **Refuse only when all are true:** `PR_BASE` normalizes to `main`/`master` (`origin/main`, `main`, `origin/master`, `master`, or a ref that `git rev-parse` equals that tip); this branch’s changed files vs `PR_BASE` include a whole-file generated path; an **other** open PR on the same repo already lists that path (or that PR’s file list is truncated). Exit 2 with `#N`, path, colliding head, and regenerate. Already-stacked `PR_BASE` (campaign head, other PR head) MUST pass.
 - **Self-exclusion.** Refuse MUST ignore the open PR whose head equals the current branch, and MUST ignore `--exclude-pr` when `open_pr_after_gate.sh` already resolved a number. Census MAY still list that PR (awareness).
-- **STACK_BASE.** When any generated whole-file appears on an other open PR: `STACK_BASE=<that PR's head>` and `COLLISION=generated path=… #N`. If several such PRs exist, use the lowest PR number (oldest holder). When none: `STACK_BASE=origin/main` and `note=no generated collision`. MUST NOT invoke `stack_pr.py` from census or either sessionStart.
+- **STACK_BASE.** When any generated whole-file appears on an other open PR: `STACK_BASE=<that PR's head>` and `COLLISION=generated path=… #N`. If several such PRs exist, use the lowest PR number (oldest holder). When none: `STACK_BASE=origin/main` and `note=no generated collision`. MUST NOT invoke `stack_pr.py` from census or the sessionStart hooks.
 - **Authored same-path overlap** (non-generated): census prints `COLLISION=authored path=… #N` (advisory). Refuse this iteration is generated-only.
 - **Rule 46 exception (one sentence):** KERNEL/PE still get a **new** branch; if census `COLLISION=generated`, the parent is `STACK_BASE` (colliding PR head), not `origin/main`. MUST NOT mix onto the other agent’s working tree.
 - No auto-merge. No force-push. No second scheduler. No Graphiti census SSOT (`gh` is current).

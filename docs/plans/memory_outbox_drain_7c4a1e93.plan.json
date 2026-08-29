@@ -16,17 +16,17 @@
   ],
   "scope": {
     "in": [
-      "environment/agents/generated-data/orchestration/delivery_worker.py — add outbox drain owned by the existing worker",
-      "environment/agents/generated-data/adapters/graphiti_memory.py — outbox path resolution and drain-side read helper",
-      "environment/agents/runtime_paths.py — one canonical memory-outbox resolver",
-      "environment/agents/generated-data/ingress/ingest.py — use the canonical resolver",
-      "environment/program-execution/integrations/subagent-generated-data/campaign_summary.py — backlog and staleness reporting",
+      "environment/agents/generated-data/orchestration/delivery_worker.py \u2014 add outbox drain owned by the existing worker",
+      "environment/agents/generated-data/adapters/graphiti_memory.py \u2014 outbox path resolution and drain-side read helper",
+      "environment/agents/runtime_paths.py \u2014 one canonical memory-outbox resolver",
+      "environment/agents/generated-data/ingress/ingest.py \u2014 use the canonical resolver",
+      "environment/program-execution/integrations/subagent-generated-data/campaign_summary.py \u2014 backlog and staleness reporting",
       "tests for drain success, drain failure, idempotency, and path unification",
       "extension of environment/program-execution/tests/hardening/test_real_campaign_e2e.py where it currently characterises the unfixed gap"
     ],
     "out": [
-      "Non-memory route outboxes written by RouteOutboxTransport (<route>-outbox) — same class of defect, different destination systems, separate plan",
-      "ops/graphiti/distill_queue — a distinct S3-backed session-transcript pipeline, confirmed non-overlapping in TASK-01",
+      "Non-memory route outboxes written by RouteOutboxTransport (<route>-outbox) \u2014 same class of defect, different destination systems, separate plan",
+      "ops/graphiti/distill_queue \u2014 a distinct S3-backed session-transcript pipeline, confirmed non-overlapping in TASK-01",
       "Any change to Graphiti server-side ingestion semantics",
       "Adding a scheduler, daemon, cron, or GitHub Actions runner for the drain",
       "Changing the deliberate decision at ingest.py:105-107 that a missing live transport must still durably enqueue",
@@ -99,7 +99,7 @@
     },
     {
       "id": "todo-03-implement-drain",
-      "task": "Add DeliveryWorker.drain_memory_outbox(actor, limit) plus a --drain CLI flag. For each candidate file in the canonical outbox: look up its job, require current state DESTINATION_SUBMITTED, record a delivery_attempt with the existing idempotency_key, deliver through select_transport() (HttpJsonTransport or CommandTransport — never FileOutboxTransport, which would be a self-loop), then advance to DESTINATION_ACCEPTED on a real acceptance receipt, DESTINATION_REJECTED on a permanent rejection, RETRY_WAIT under the existing RetryPolicy on a transient failure, and DEAD_LETTERED at the policy ceiling. Remove the outbox file only after the terminal transition commits. Call recalculate_campaign_state so a fully drained campaign can finally reach completed. Fail closed: with no live transport configured, record the failed attempt and leave the job in DESTINATION_SUBMITTED.",
+      "task": "Add DeliveryWorker.drain_memory_outbox(actor, limit) plus a --drain CLI flag. For each candidate file in the canonical outbox: look up its job, require current state DESTINATION_SUBMITTED, record a delivery_attempt with the existing idempotency_key, deliver through select_transport() (HttpJsonTransport or CommandTransport \u2014 never FileOutboxTransport, which would be a self-loop), then advance to DESTINATION_ACCEPTED on a real acceptance receipt, DESTINATION_REJECTED on a permanent rejection, RETRY_WAIT under the existing RetryPolicy on a transient failure, and DEAD_LETTERED at the policy ceiling. Remove the outbox file only after the terminal transition commits. Call recalculate_campaign_state so a fully drained campaign can finally reach completed. Fail closed: with no live transport configured, record the failed attempt and leave the job in DESTINATION_SUBMITTED.",
       "files": [
         "environment/agents/generated-data/orchestration/delivery_worker.py",
         "environment/agents/generated-data/adapters/graphiti_memory.py"
@@ -205,7 +205,7 @@
       "id": "CK-01",
       "after": "todo-02-unify-outbox-path",
       "evidence_required": "Both writers and the drain resolve the same absolute path in a test that asserts equality; legacy-location adoption path is exercised.",
-      "no_go_action": "Stop. A drain built on the wrong path is worse than none — it would report an empty backlog while candidates accumulate elsewhere."
+      "no_go_action": "Stop. A drain built on the wrong path is worse than none \u2014 it would report an empty backlog while candidates accumulate elsewhere."
     },
     {
       "id": "CK-02",
@@ -217,7 +217,7 @@
       "id": "CK-03",
       "after": "todo-06-tests",
       "evidence_required": "Full hardening suite plus generated-data suites green; the rewritten E2E assertion proves the drained end state.",
-      "no_go_action": "Do not open a PR with the characterisation test still asserting the unfixed behaviour — that would silently re-bless the gap."
+      "no_go_action": "Do not open a PR with the characterisation test still asserting the unfixed behaviour \u2014 that would silently re-bless the gap."
     }
   ],
   "doc_root_surface_impact": [
@@ -245,7 +245,7 @@
       "Is the outbox actually unearned complexity that should be deleted rather than drained? Evidence says no: ingest.py:105-107 documents it as a deliberate write-ahead so a missing transport does not mean data loss, and delivery_worker.py:471-472 maps it to a non-terminal state on purpose.",
       "Could a scheduled GitHub Actions worker drain it, mirroring ops/graphiti/distill_queue? No. That pipeline works only because S3 is its transport. This outbox is machine-local under $L9_RUNTIME_ROOT (/root/.l9/generated-data/outbox/memory), is not in git and not in S3, so a hosted runner cannot see it. This falsifies the obvious-looking answer.",
       "Does the state machine already lie about persistence, making this a truthfulness bug? No. DESTINATION_SUBMITTED is excluded from the terminal set at state_store.py:790-803 and the campaign stays active. The defect is an unowned lifecycle, not a false claim.",
-      "Would draining inside DeliveryWorker create duplicate delivery authority? No — DeliveryWorker is already the sole delivery owner and already owns delivery_attempts, receipts and dead letters. A separate drainer would be the duplicate.",
+      "Would draining inside DeliveryWorker create duplicate delivery authority? No \u2014 DeliveryWorker is already the sole delivery owner and already owns delivery_attempts, receipts and dead letters. A separate drainer would be the duplicate.",
       "Can a drain mark ACCEPTED without proof? It must not. The acceptance path is gated on a destination receipt from HttpJsonTransport or CommandTransport, never on file removal succeeding.",
       "Is there a test that could pass while the requirement fails? Yes, and it is the danger: a drain test using FileOutboxTransport would self-loop and pass trivially. Drain tests must inject a fake live transport, never the file outbox."
     ],
@@ -255,7 +255,7 @@
       "If DESTINATION_SUBMITTED jobs can also be produced by a non-outbox path, the drain's state precondition is too narrow and would strand them.",
       "If candidate files can be written concurrently by two workers on one machine, the drain needs a claim discipline; single-writer is currently assumed and must be verified, not inferred."
     ],
-    "blast_radius": "Medium. The change is confined to the generated-data delivery component plus one summary module, and adds a forward transition to a state that is currently a dead end, so existing terminal outcomes are unaffected. The realistic failure mode is a drain that marks ACCEPTED without a receipt, which would convert a visible stall into invisible data loss — worse than today. CK-02 exists specifically to block that.",
+    "blast_radius": "Medium. The change is confined to the generated-data delivery component plus one summary module, and adds a forward transition to a state that is currently a dead end, so existing terminal outcomes are unaffected. The realistic failure mode is a drain that marks ACCEPTED without a receipt, which would convert a visible stall into invisible data loss \u2014 worse than today. CK-02 exists specifically to block that.",
     "rollback": "Every change is additive and revertible by scoped git restore of the listed files. The drain is opt-in at the call site, so reverting todo-04 alone disables automatic draining while leaving the CLI. No data migration occurs: candidate files are only removed after a committed terminal transition, so an aborted drain leaves the outbox intact."
   },
   "leverage": {
@@ -354,14 +354,20 @@
     {
       "id": "FV-05",
       "command": "grep -rnE \"outbox.*(glob|iterdir|listdir|rglob|scandir)\" --include=*.py environment/agents/generated-data",
-      "pass_criteria": "at least one non-test match — the drain now exists, inverting the CP-03 baseline",
+      "pass_criteria": "at least one non-test match \u2014 the drain now exists, inverting the CP-03 baseline",
       "status": "pending"
     },
     {
       "id": "FV-06",
       "command": "make pr-check",
-      "pass_criteria": "PASS — repository quality gate green on the changed files before any PR is opened",
+      "pass_criteria": "PASS \u2014 repository quality gate green on the changed files before any PR is opened",
       "status": "pending"
+    },
+    {
+      "id": "FV-PRECOMMIT-CATALOG",
+      "command": ".pre-commit-config.yaml catalog via make pr-check",
+      "pass_criteria": "PASS at execute time. This repository installs no commit hook by design; the catalog runs through make pr-check. Status not_applicable: execution-time gate, matching #376.",
+      "status": "not_applicable"
     }
   ],
   "convergence": {
@@ -389,17 +395,17 @@
     "must_not_modify": [
       "ops/graphiti/distill_queue/**",
       ".github/workflows/memory-distill.yml",
-      "environment/agents/generated-data/orchestration/state_store.py schema — reuse existing states and tables, do not add new ones",
+      "environment/agents/generated-data/orchestration/state_store.py schema \u2014 reuse existing states and tables, do not add new ones",
       "environment/program-execution/scripts/run_campaign.py",
       "autonomy/**",
       "Any secret, credential, or protected infrastructure file"
     ],
     "preserved_contracts": [
-      "submitted_is_not_accepted — DESTINATION_SUBMITTED may only advance on a genuine destination receipt",
-      "unknown_downstream_state_is_reported_UNKNOWN — campaign_summary keeps None for anything unmeasured",
+      "submitted_is_not_accepted \u2014 DESTINATION_SUBMITTED may only advance on a genuine destination receipt",
+      "unknown_downstream_state_is_reported_UNKNOWN \u2014 campaign_summary keeps None for anything unmeasured",
       "zero_is_not_UNKNOWN",
-      "A missing live transport must still durably enqueue (ingest.py:105-107) — do not reverse this",
-      "one_ingress and one_distillation_path — no second pipeline",
+      "A missing live transport must still durably enqueue (ingest.py:105-107) \u2014 do not reverse this",
+      "one_ingress and one_distillation_path \u2014 no second pipeline",
       "Generated-data pipeline performs no remote publication"
     ],
     "validation_commands": [

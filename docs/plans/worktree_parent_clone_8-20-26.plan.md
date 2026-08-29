@@ -27,6 +27,32 @@ todos:
     content: Prove tests + validate_root_file_protection + make pr-check; PR_REMEDIATE=0 make pr
     status: pending
 isProject: false
+kernel_pass:
+  bound_path: worktree_parent_clone_8-20-26.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T17:20:00Z
+    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    deltas:
+      - "Stamp kernel_pass so the next editor is not the first to fail G_PLAN_KERNEL_PASS"
+      - "Keep this plan's existing todos and body; do not reopen landed work from this stamp"
+      - "Do not mix #374 end-of-file-fixer exclude into this corpus pass"
+  recursive_alignment:
+    kernel: kernels/Recursive Alignment.md
+    ran_at: 2026-08-29T17:20:30Z
+    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    deltas:
+      - "Align with issue #377 and the #376 G_PRECOMMIT_CONFIG plus kernel_pass precedent"
+      - "Leave docs/plans/_TEMPLATE.plan.md exempt via PLAN_SKIP_PREFIXES"
+      - "Do not edit .pre-commit-config.yaml in this cluster"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T17:21:00Z
+    body_sha256: "41c28061fed31bc3b10bc4d37ae5d1788890b8f3b23e78d05971bb9279054aae"
+    deltas:
+      - "G_PLAN_ETC and G_PLAN_EITHER_OR stay clean after this stamp"
+      - "Canonical body_sha256 is the post-stamp file hash with sha fields zeroed"
+      - "Do not mark status executable while the checker still fails"
 ---
 
 # Worktree parent clone contract
