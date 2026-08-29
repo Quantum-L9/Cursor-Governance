@@ -24,7 +24,7 @@ IR = json.loads(IR_PATH.read_text(encoding="utf-8"))["workflow"]
 
 def test_the_skill_declares_this_module_and_registry_id() -> None:
     authority = json.loads(IR_PATH.read_text(encoding="utf-8"))["authority"]
-    assert authority["canonical_dag"] == "workflows/dags/intelligence_harvest_dag.py"
+    assert authority["canonical_dag"] == "workflows/dags/intelligence_harvest/graph.py"
     assert authority["dag_registry_id"] == DAG.id == "intelligence-harvest-v1"
 
 

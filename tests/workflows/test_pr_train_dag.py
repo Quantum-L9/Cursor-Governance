@@ -26,8 +26,11 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     filter_slices_against_tip,
     github_repo_slug,
     group_slices,
+    is_empty_cherry_pick,
     order_slice,
     parse_merge_tree_name_only,
+    probe_cherry_conflicts,
+    probe_sha_conflicts,
     resolve_ff_clone,
     run_pr_train,
     shares_generated_clobber,
@@ -549,6 +552,73 @@ def test_campaign_halt_skips_remediator_and_ff(monkeypatch, tmp_path):
     assert state.ff_ran is False
 
 
+def test_tip_preflight_uses_cherry_pick_not_tree_merge(tmp_path):
+    """A unique-file commit on an old base must not skip after the tip squash.
+
+    Tree-merge(tip, sha) conflicts on every file the squash already landed
+    because ``sha``'s tree still carries the pre-tip bytes. Cherry-pick only
+    applies parent..sha.
+    """
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    _commit_file(repo, "keep.txt", "feature-edit\n", "ancestral edit")
+    unique = _commit_file(repo, "ops/unique.py", "x\n", "unique")
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "keep.txt", "squashed\n", "squash")
+    tree = probe_sha_conflicts(repo, tip, unique)
+    cherry = probe_cherry_conflicts(repo, tip, unique)
+    assert tree, "tree-merge must still see the ancestral keep.txt clash"
+    assert cherry == []
+    kept, skipped = filter_slices_against_tip(
+        repo, [[{"sha": unique, "paths": ["ops/unique.py"]}]], tip
+    )
+    assert skipped == []
+    assert kept[0][0]["sha"] == unique
+
+
+def test_tip_preflight_keeps_child_when_parent_stays(tmp_path):
+    """A follow-up commit on a kept parent must not probe against the original tip."""
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "dag.py", "v0\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    parent = _commit_file(repo, "dag.py", "v1\n", "parent")
+    child = _commit_file(repo, "dag.py", "v2\n", "child")
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "other.txt", "x\n", "unrelated tip")
+    assert probe_cherry_conflicts(repo, tip, child)
+    kept, skipped = filter_slices_against_tip(
+        repo,
+        [[{"sha": child, "paths": ["dag.py"]}, {"sha": parent, "paths": ["dag.py"]}]],
+        tip,
+    )
+    assert skipped == []
+    assert [item["sha"] for item in kept[0]] == [parent, child]
+
+
+def test_tip_preflight_still_probes_child_on_new_paths(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    parent = _commit_file(repo, "ops/unique.py", "x\n", "parent unique")
+    child = _commit_file(repo, "keep.txt", "feature\n", "child clashes tip")
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "keep.txt", "squash\n", "tip squash")
+    kept, skipped = filter_slices_against_tip(
+        repo,
+        [[{"sha": parent, "paths": ["ops/unique.py"]}, {"sha": child, "paths": ["keep.txt"]}]],
+        tip,
+    )
+    assert skipped == [child]
+    assert [item["sha"] for item in kept[0]] == [parent]
+
+
 def test_tip_conflict_commit_dropped_clean_stays(tmp_path):
     repo = tmp_path / "git"
     repo.mkdir()
@@ -611,6 +681,35 @@ def test_default_publish_is_git_push_not_make_pr(monkeypatch, tmp_path):
     assert out["ok"] is True
     assert any(argv[:4] == ["git", "-C", str(tmp_path / "wt"), "push"] for argv in calls)
     assert not any(argv[:1] == ["make"] or "record-kernels" in argv for argv in calls)
+
+
+def test_is_empty_cherry_pick_detects_git_empty_message():
+    empty_msg = "The previous cherry-pick is now empty, possibly due to conflict resolution."
+    assert is_empty_cherry_pick("", empty_msg)
+    assert not is_empty_cherry_pick("", "CONFLICT (content): Merge conflict in AGENTS.md")
+
+
+def test_extract_skips_empty_cherry_pick_then_keeps_unique(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "readme.md", "v1\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    empty = _commit_file(repo, "readme.md", "v2\n", "already on tip")
+    unique = _commit_file(repo, "ops/unique.py", "x\n", "unique")
+    _git_c(repo, "checkout", "main")
+    _commit_file(repo, "readme.md", "v2\n", "tip already has v2")
+    worktree, branch = default_extract(
+        repo,
+        [{"sha": empty}, {"sha": unique}],
+        "main",
+        0,
+    )
+    assert branch.startswith("feat/pr-train-0-")
+    assert Path(worktree).is_dir()
+    assert (Path(worktree) / "ops" / "unique.py").read_text(encoding="utf-8") == "x\n"
+    _git_c(repo, "worktree", "remove", "--force", worktree)
 
 
 def test_extract_removes_worktree_on_cherry_pick_abort(tmp_path, monkeypatch):

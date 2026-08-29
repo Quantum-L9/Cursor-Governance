@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "l9/dag-authoring/request-v2.1",
+  "$id": "l9/dag-authoring/request-v2.2",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -14,7 +14,8 @@
         "UPDATE",
         "VALIDATE",
         "REGISTER",
-        "COMMAND_BIND"
+        "COMMAND_BIND",
+        "CONVERT"
       ]
     },
     "repo_root": {
@@ -52,6 +53,10 @@
       ]
     },
     "allow_mutation": {
+      "type": "boolean",
+      "default": false
+    },
+    "allow_session_retire": {
       "type": "boolean",
       "default": false
     },

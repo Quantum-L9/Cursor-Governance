@@ -28,6 +28,11 @@ KERNELS: tuple[tuple[str, str], ...] = (
     ("validate_repair", "kernels/Validate & Repair.md"),
 )
 PLAN_FIXTURE_PREFIX = "skills/l9-plan/fixtures/"
+#: Executable-plan templates are not Cursor plans. Do not require kernel_pass.
+PLAN_SKIP_PREFIXES = (
+    PLAN_FIXTURE_PREFIX,
+    "environment/contracts/execution/templates/",
+)
 
 
 def _utc_now() -> str:
@@ -186,7 +191,7 @@ def verify_plans(changed_paths: list[str], *, workspace: Path, gov: Path) -> str
         rel = raw.strip().lstrip("./")
         if not rel.endswith(".plan.md"):
             continue
-        if rel.startswith(PLAN_FIXTURE_PREFIX):
+        if any(rel.startswith(prefix) for prefix in PLAN_SKIP_PREFIXES):
             continue
         candidate = Path(raw)
         if not candidate.is_absolute():

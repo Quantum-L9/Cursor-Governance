@@ -1,0 +1,1670 @@
+{
+  "concepts": [
+    {
+      "acceptance_tests": [
+        {
+          "given": "two compliance observations taken over different file populations",
+          "must_not": "publish a single compliance_rate field whose denominator is implicit",
+          "then": "each observation carries its population definition and the reader can tell they are not comparable",
+          "when": "they are appended to the same series"
+        },
+        {
+          "given": "a recorded compliance trend showing 94 percent",
+          "must_not": "let the trend value relax or satisfy any gate threshold",
+          "then": "the gate decides pass or fail on its own contract, independent of the trend",
+          "when": "a gate runs on a changed file"
+        }
+      ],
+      "beneficiary_destination": "the nightly make pr-full path, emitting into reports/ alongside rules-corpus-audit.json rather than a new service",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "a reporting series that drifts from the gates' definition of compliant would produce two contradictory answers, which is exactly the donor's validator-versus-monitor defect",
+        "existing_owner": "ops/scripts/check_rules_standard.py plus check_skills_standard.py plus the pre-commit and make pr gate family",
+        "merge_decision": "keep enforcement ownership with the existing fail-closed gates and add only the reporting dimension they lack; do not introduce a second component that decides compliance"
+      },
+      "compounding": 3,
+      "description": "The donor computed compliance as compliant over total and stored each observation as a row, so the rate was queryable over time rather than discarded at process exit.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-mon-01",
+        "e-val-02",
+        "e-mon-03",
+        "e-ben-03",
+        "e-ben-05"
+      ],
+      "id": "C1",
+      "leverage": 3,
+      "name": "Compliance as a persisted rate, not a per-run boolean",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "A pass/fail gate on changed files tells you whether today's diff is clean, but not whether corpus health is improving or decaying. Without a persisted series there is no way to detect slow erosion, and no way to tell a one-off regression from a trend.",
+      "rank_score": 33,
+      "risks": [
+        "the donor published one metric name over two different populations, so a series is meaningless unless the population is recorded with every observation",
+        "a trend metric invites a tolerance threshold, which rule 95 forbids; it must stay reporting-only and never become a gate that passes known violations",
+        "the donor coupled governance compliance to host CPU and memory in the same row, mixing unrelated concerns"
+      ],
+      "semantic_contract": "Corpus compliance is expressed as a rate over an explicitly declared population, and each observation is retained with its timestamp and population definition so the series is comparable across runs."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a workspace missing its governance symlink",
+          "must_not": "report ready, or report a generic failure without naming the path",
+          "then": "the check reports a specific failing path",
+          "when": "readiness is evaluated"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "none, because nothing transfers; attempting a merge would only re-add retired Suite-6 path assertions",
+        "existing_owner": "ops/scripts/check_governance_wiring.sh",
+        "merge_decision": "no transfer; the live checker is a strict superset that additionally covers workspace class, forbidden duplicates, SSOT branch and cleanliness, tip freshness, and self-alias detection, and it is already wired into make pr"
+      },
+      "compounding": 1,
+      "description": "The donor's validate_workspace returned a governance_enabled boolean derived from file presence, symlink resolution, and a config version check.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-val-03",
+        "e-ben-05"
+      ],
+      "id": "C2",
+      "leverage": 1,
+      "name": "Workspace governance as a validated boolean",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": false
+      },
+      "problem": "An agent that assumes its workspace is wired will act on governance that never loaded.",
+      "rank_score": null,
+      "risks": [
+        "the donor asserted .cursorrules and .l9_governance-config.json with suite_version 6.0.0, all three of which are retired Suite-6 artifacts; adopting any of it would reintroduce dead contract surface"
+      ],
+      "semantic_contract": "Workspace governance readiness is computed from observable filesystem state and reported as an explicit boolean, never assumed."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a rules corpus in which one rule is referenced by no gate, hook, or skill",
+          "must_not": "omit the rule because it produced no matches",
+          "then": "that rule appears in the output with an empty enforcer set",
+          "when": "coverage is computed"
+        },
+        {
+          "given": "the declared rule input source is missing or unreadable",
+          "must_not": "default to an empty corpus and report a successful zero-rule analysis",
+          "then": "the run fails closed and names the missing source",
+          "when": "coverage is computed"
+        }
+      ],
+      "beneficiary_destination": "a coverage dimension added to ops/scripts/audit_rule_references.py, reading the live rules corpus and RULES-MANIFEST instead of the retired rule-registry.json",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "the live corpus has no rules_enforced field, so the enforcer set must be derived from actual references, which is a different and larger extraction than reading a declared list",
+        "existing_owner": "ops/scripts/audit_rule_references.py",
+        "merge_decision": "extend the existing fail-closed auditor with the inversion and zero-coverage report; do not add a query service or a natural-language layer"
+      },
+      "compounding": 4,
+      "description": "The donor inverted the per-agent rules_enforced lists into a rules-to-agents index, then reported every registered rule with its enforcer list and usage count, surfacing zero-coverage rules as first-class output.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-reg-01",
+        "e-reg-03",
+        "e-ben-01",
+        "e-ben-02",
+        "e-ben-06"
+      ],
+      "id": "C3",
+      "leverage": 4,
+      "name": "Rule coverage as an inverted index over enforcers",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "A rule corpus can be internally consistent and still be inert. Checking that every reference resolves says nothing about whether any component actually enforces a given rule, so a rule with zero enforcers looks identical to a well-enforced one.",
+      "rank_score": 44,
+      "risks": [
+        "the donor read its inputs from foundation/logic/rule-registry.json and foundation/agents/stubs/, both archived; the ported semantic needs a live input source and must not resurrect either path",
+        "the donor swallowed a missing registry into an empty list, so it reported total coverage of zero rules as a successful answer; the ported version must fail closed when its input is absent",
+        "coverage percentage over a small agent population is noisy and could be misread as a quality score"
+      ],
+      "semantic_contract": "For every declared rule, the set of artifacts that enforce it is computed by inversion and reported, so a rule with an empty enforcer set is a visible finding rather than an absence of output."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a file whose frontmatter is present but will not parse",
+          "must_not": "continue past the file and leave it out of both the violation list and the total",
+          "then": "the file is reported with the parse failure named",
+          "when": "a corpus audit runs"
+        }
+      ],
+      "beneficiary_destination": "recorded as a shared invariant over the ops/scripts validator family; no new implementation",
+      "beneficiary_fit": {
+        "comparison": "EQUIVALENT",
+        "compatibility_risk": "none for the invariant itself; a broad audit of existing bare-except sites in ops/scripts would be a separate change with its own blast radius",
+        "existing_owner": "ops/scripts/lib/rule_frontmatter.py parse_rule, which raises rather than swallowing",
+        "merge_decision": "no implementation transfers; the beneficiary already fails closed, so the value is documenting the invariant explicitly so future validators inherit it rather than rediscovering it"
+      },
+      "compounding": 4,
+      "description": "The donor's staleness sweep bucketed an unparseable last_validated value as stale with an explicit invalid_date marker, while its own test suite skipped unreadable files with a bare except continue.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-reg-02",
+        "e-test-03",
+        "e-val-04",
+        "e-ben-09"
+      ],
+      "id": "C4",
+      "leverage": 2,
+      "name": "Unparseable metadata is a finding, not a skip",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "An auditor that cannot parse a file's metadata has two options: report it or skip it. Skipping is the silent option, and it makes the corpus look cleaner the more broken it becomes.",
+      "rank_score": 24,
+      "risks": [
+        "the donor subsystem violated this invariant in two places while honoring it in one, so citing the donor as a model requires naming which implementation is being cited"
+      ],
+      "semantic_contract": "When an audit cannot parse the metadata it is auditing, the artifact is reported as a violation with the parse failure named; it is never excluded from the denominator."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a corpus containing a file referenced only from a design document",
+          "must_not": "report a utilization figure without disclosing which entrypoints defined reachability",
+          "then": "the file is reported unreachable with the entrypoint set that was searched named in the output",
+          "when": "the reachability audit runs against the declared entrypoint set"
+        },
+        {
+          "given": "an artifact loaded by name at runtime rather than imported, such as a skill or a rule",
+          "must_not": "classify it as an orphan because no import statement points at it",
+          "then": "the name-based reference is counted as reachable",
+          "when": "the audit classifies it"
+        },
+        {
+          "given": "an unreachable artifact identified by the audit",
+          "must_not": "treat the reachability report as authorization to delete",
+          "then": "the deletion still requires its own authorization and review",
+          "when": "a deletion is proposed"
+        }
+      ],
+      "beneficiary_destination": "a reachability report under ops/scripts/ emitting into reports/, with the entrypoint set declared explicitly (hooks, Makefile targets, pre-commit hooks, manifests, plugin discovery) rather than inferred",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "an under-specified entrypoint set would mark live governance content as orphaned and could motivate deleting something load-bearing, so the report must name its entrypoint set and stay advisory",
+        "existing_owner": "none \u2014 ops/scripts/audit_rule_references.py checks that references resolve, and TODO.md carries hand-maintained delete tiers, but nothing computes reachability over the corpus",
+        "merge_decision": "adopt the semantic as a computed report with an explicitly declared entrypoint set; do not adopt the donor's hand-maintained table, its activate-the-orphans recommendation, or its per-file importance scores"
+      },
+      "compounding": 4,
+      "description": "The donor README classified all 164 files into active or orphan by asking, for each one, whether any entrypoint initialized it, and published the ratio per category \u2014 32 active, 133 orphan, 19.5 percent utilization \u2014 alongside a named list of high-value orphans worth activating.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-readme-01",
+        "e-readme-02",
+        "e-src-01",
+        "e-ben-06",
+        "e-todo-01"
+      ],
+      "id": "C5",
+      "leverage": 5,
+      "name": "Corpus utilization as a measured reachability audit",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "A governance corpus grows by addition. Files are written, referenced once in a design doc, and never wired into an entrypoint. Nothing fails, so nothing surfaces the accumulation, and the corpus silently becomes mostly inert. Every deletion decision then rests on manual recall of what is actually loaded.",
+      "rank_score": 54,
+      "risks": [
+        "the donor's classification was hand-maintained prose, so it was stale the moment the corpus changed; a ported version is only worth having if it is computed",
+        "reachability depends entirely on the declared entrypoint set, and an incomplete set will label live artifacts as orphans, which is the failure mode that makes such a report dangerous as a delete authority",
+        "the donor recommended activating six orphans without asking whether they should exist, and one of its six was itself; a reachability report must not imply that unreachable means activate",
+        "governance content is legitimately reachable by name rather than by import (skills read by an agent, rules loaded by the IDE), so a naive import graph will badly under-count"
+      ],
+      "semantic_contract": "Every artifact in the governance corpus is classified as reachable or unreachable from a declared entrypoint set, the ratio is reported per category, and unreachable artifacts are enumerated by path so the corpus cannot silently accumulate inert content."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "an installed LaunchAgent whose program arguments reference a governance root outside $HOME/.cursor-governance",
+          "must_not": "pass because launchctl shows the agent unloaded",
+          "then": "the agent is reported by label and target path, whether or not it is currently loaded",
+          "when": "the machine-plane wiring check runs"
+        },
+        {
+          "given": "a host with no LaunchAgents directory",
+          "must_not": "fail the gate for absence of a host-specific directory",
+          "then": "the check warns and continues",
+          "when": "the machine-plane check runs"
+        },
+        {
+          "given": "a reported LaunchAgent referencing a forbidden cloud-storage governance root",
+          "must_not": "unload, modify, or delete the agent automatically",
+          "then": "the finding is reported for human action",
+          "when": "the check completes"
+        }
+      ],
+      "beneficiary_destination": "the machine plane of ops/scripts/check_governance_wiring.sh --machine, which already owns machine-local checks, reporting installed LaunchAgents that reference a governance root",
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "scanning host state inside a gate that also runs in CI requires the check to be a no-op where the directory is absent, or it will fail runs for reasons unrelated to the change",
+        "existing_owner": "ops/scripts/resolve_governance_paths.sh owns resolution, validate_governance_no_hardcoded_paths.sh owns path law over a seven-file in-repo allowlist, check_governance_wiring.sh --machine owns the machine plane",
+        "merge_decision": "extend the existing machine-plane checker's scope; the beneficiary's law is already stronger and explicit, so only enforcement coverage is missing and no new owner should be created"
+      },
+      "compounding": 3,
+      "description": "The donor's scheduler wrapper resolves the governance root itself with a three-branch search that falls back to Dropbox, and its LaunchAgent is still installed on this machine. Neither file is in the repo, so neither is reachable by the seven-file path-lint allowlist.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-la-01",
+        "e-la-02",
+        "e-la-03",
+        "e-la-04",
+        "e-la-05",
+        "e-ben-07",
+        "e-plan-01"
+      ],
+      "id": "C6",
+      "leverage": 5,
+      "name": "Path law must cover every governance-root resolver, including those outside the repo",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "The rule against cloud-storage governance roots is enforced by scanning files in the checkout. An artifact that resolves a governance root but lives on the machine rather than in the repo is subject to the law and invisible to its enforcement, so the prohibition holds everywhere it is checked and nowhere it is not.",
+      "rank_score": 53,
+      "risks": [
+        "the donor artifact is the counter-example, not the model; what transfers is the coverage requirement, not the wrapper's resolution logic",
+        "a machine-plane sweep reads outside the repo and must stay read-only and report-only, never unloading or deleting a user's LaunchAgent without authorization",
+        "LaunchAgent inventory is host-specific, so the check must fail open with a warning on hosts where the directory is absent rather than failing the gate",
+        "unloading the agent is not the same as removing it; the plan that unloaded it left both the plist and the Dropbox wrapper in place, which is why the residue survived"
+      ],
+      "semantic_contract": "Any artifact that resolves a governance root is subject to governance path law regardless of where it lives; the set of such artifacts is enumerable and the machine-local plane is enumerated, not assumed empty."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a proposal to expose governance state over a network interface",
+          "must_not": "accept an unauthenticated write path into the governance corpus for dashboard convenience",
+          "then": "it is rejected unless mutation flows through the reviewed publish path",
+          "when": "the proposal includes any mutation endpoint"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "STANDALONE",
+        "compatibility_risk": "adopting any part of it would create a governance mutation route that bypasses make pr and the root-file protection gate",
+        "existing_owner": null,
+        "merge_decision": "no transfer; the read-only reporting need is already met by C1 and C5 as artifacts under reports/, with no listener and no write path"
+      },
+      "compounding": 1,
+      "description": "A Flask app exposed status, metrics, health, validation, learning extraction, and a rule-creation endpoint that appended to the rule registry and wrote the file back.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-api-02",
+        "e-api-03",
+        "e-api-01",
+        "e-ben-08",
+        "e-dash-01"
+      ],
+      "id": "C7",
+      "leverage": 1,
+      "name": "REST control plane over governance with a network write path",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": false,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": false,
+        "donor_runtime_required": true,
+        "external_dependency": {
+          "failure_behavior": "reject the transfer; the dependency is neither pinned nor wanted, and the endpoint set cannot be made safe without removing its reason for existing",
+          "probe": "GET /governance/health and an import check for flask, flask_cors, psutil under the locked venv",
+          "target": "a Flask process on 0.0.0.0:8080 plus flask, flask_cors, and psutil in the runtime environment"
+        },
+        "incidental_implementation_independent": false
+      },
+      "problem": "Making governance state readable and mutable over HTTP for a dashboard and external integrations.",
+      "rank_score": null,
+      "risks": [
+        "POST /governance/rules writes the governance rule corpus with no authentication, no authorization, and no audit of the caller",
+        "CORS is unrestricted across every route and the listener binds 0.0.0.0, so any host on the local network can reach that write path",
+        "it would place rule mutation outside the make pr publish path and its checkers, bypassing the review boundary entirely",
+        "it requires flask, flask_cors, and psutil, none of which are pinned in the beneficiary toolchain, so adopting it needs a protected-file dependency change",
+        "the learning-extraction endpoints would constitute a second learning surface beside Graphiti"
+      ],
+      "semantic_contract": "Governance state is exposed over a network interface for external consumers."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a corpus with known violations and a gate that must pass",
+          "must_not": "assert a fixed tolerance for a violation count and annotate it as acceptable during development",
+          "then": "the threshold is a ratchet that may only tighten, with the current measurement recorded as the ceiling",
+          "when": "the gate threshold is set"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "none, because nothing transfers",
+        "existing_owner": "ops/scripts/check_rules_standard.py ratchet plus the pytest catalog behind make pr-check",
+        "merge_decision": "no transfer; the ratchet already solves the same problem correctly and the donor pattern would weaken it"
+      },
+      "compounding": 2,
+      "description": "Four unittest classes asserted compliance at least 80 percent, at most 3 naming violations, and at most 2 component-ID violations, with the tolerances written into the assertions and annotated as allowances for development.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-test-02",
+        "e-test-01",
+        "e-test-03",
+        "e-ben-03"
+      ],
+      "id": "C8",
+      "leverage": 1,
+      "name": "Threshold-tolerant compliance test suite",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": false
+      },
+      "problem": "Getting a governance test suite to pass while the corpus is known to be non-compliant.",
+      "rank_score": null,
+      "risks": [
+        "a tolerance assertion is exactly the weakened-assertion anti-pattern that rule 95 forbids, and it hides the marginal violation permanently",
+        "the beneficiary's ratcheted budget in check_rules_standard.py is strictly stronger: it may only be lowered, so the tolerance shrinks over time instead of persisting",
+        "two of its tests skip unreadable files silently, so the violation counts the thresholds are measured against are themselves under-counted",
+        "test_symlink_structure creates and removes a fixed /tmp path, which is not parallel-safe"
+      ],
+      "semantic_contract": "Compliance is asserted against a tolerance for known violations rather than against the contract."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "an archived artifact referencing EXE-VAL-001",
+          "must_not": "imply that an execution layer or that component ID exists in the current structure",
+          "then": "the taxonomy identifies it as the retired execution-layer validator with no live counterpart at that address",
+          "when": "a reader resolves the reference"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "UNKNOWN",
+        "compatibility_risk": "reintroducing layer names the current structure does not use would misplace new work",
+        "existing_owner": "git history plus CHANGELOG.md carry the migration record; no component owns the taxonomy itself",
+        "merge_decision": "retain as historical reading aid only; no destination and no adoption"
+      },
+      "compounding": 1,
+      "description": "A seven-prefix layer taxonomy with the regex ^(INT|FND|EXE|OPS|ENV|TEL|DOC)-[A-Z]{2,3}-\\d{3}$, plus a canonical-header field set, addressed every component in the retired system.",
+      "disposition": "MIGRATION_CONTEXT",
+      "evidence_ids": [
+        "e-val-01",
+        "e-sig-01",
+        "e-chg-01"
+      ],
+      "id": "C9",
+      "leverage": 2,
+      "name": "Suite-6 component-ID taxonomy as a decoder for surviving residue",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": false
+      },
+      "problem": "Archived artifacts, hash-signature records, and residual docs still address components by Suite-6 IDs. Without the taxonomy those references are unreadable, and a reader cannot tell whether EXE-VAL-001 names something that still exists.",
+      "rank_score": null,
+      "risks": [
+        "the taxonomy describes a layer structure this repo no longer uses, so treating it as current would misdirect placement decisions",
+        "five surviving .sig.json records carry Dropbox Suite 5 absolute paths and would reintroduce machine-specific paths if copied forward"
+      ],
+      "semantic_contract": "The retired addressing scheme is retained as read-only historical context for interpreting archived references, with no claim on current structure."
+    }
+  ],
+  "drift": [
+    {
+      "behavior": "canonical-header presence check",
+      "canonical_candidate": "governance-validator.py",
+      "epistemic": "CONFIRMED",
+      "evidence_ids": [
+        "e-val-01",
+        "e-mon-02"
+      ],
+      "implementations": [
+        "governance-validator.py:128-148 \u2014 per-suffix rules; .md must both start with --- and contain the header marker; .json must parse and carry metadata.suite",
+        "governance-monitor.py:150-159 \u2014 bare substring test for the marker, .md only, bare except returning False"
+      ],
+      "resolution": "the monitor is a weaker duplicate of the validator's check; the two therefore disagree about which files are compliant while reporting the same metric name"
+    },
+    {
+      "behavior": "compliance rate denominator",
+      "canonical_candidate": "none \u2014 neither is declared authoritative",
+      "epistemic": "CONFIRMED",
+      "evidence_ids": [
+        "e-val-02",
+        "e-mon-03"
+      ],
+      "implementations": [
+        "governance-validator.py:79-92 \u2014 7 layers, suffixes .md/.py/.json/.yaml",
+        "governance-monitor.py:118-121 \u2014 5 layers, *.md only"
+      ],
+      "resolution": "compliance_rate is published by both the validator report and the monitor time series over different populations, so the API's status and validate endpoints could return different rates for the same tree"
+    },
+    {
+      "behavior": "handling of unparseable metadata",
+      "canonical_candidate": "registry-viewer-intelligence.py",
+      "epistemic": "CONFIRMED",
+      "evidence_ids": [
+        "e-reg-02",
+        "e-val-04",
+        "e-test-03"
+      ],
+      "implementations": [
+        "registry-viewer-intelligence.py:244-255 \u2014 an unparseable last_validated date is bucketed as stale (fail closed)",
+        "governance-validator.py:145-146 \u2014 bare except returns False for JSON that will not parse (fail closed but silent)",
+        "governance-test-suite.py:145-146 \u2014 bare except continue silently skips the file (fail open)"
+      ],
+      "resolution": "the same subsystem both fails closed and fails open on malformed input; the test suite's fail-open skip is the weakest and sits in the component whose job is to catch violations"
+    },
+    {
+      "behavior": "governance-root resolution",
+      "canonical_candidate": "ops/scripts/resolve_governance_paths.sh (beneficiary)",
+      "epistemic": "CONFIRMED",
+      "evidence_ids": [
+        "e-la-03",
+        "e-ben-07"
+      ],
+      "implementations": [
+        "each donor module \u2014 Path(__file__).parent.parent.parent, independently, four times",
+        "governance-monitor-wrapper.sh:5-11 \u2014 three-branch search preferring $HOME/.cursor-governance then Dropbox then Application Support"
+      ],
+      "resolution": "the wrapper is a second resolver with a cloud-storage fallback, which rule 06-governance-ssot-paths and AGENTS.md section 12.3 forbid outright; it survives because it lives outside the repo and outside the path-lint allowlist"
+    }
+  ],
+  "evidence": [
+    {
+      "claim": "The donor tree holds exactly 7 files and every one of them sits under _archived/, so the directory has no live content.",
+      "epistemic": "CONFIRMED",
+      "id": "e-src-01",
+      "locator": {
+        "kind": "artifact",
+        "value": "source_identity.file_count=7; sha256 recorded per file; every path under _archived/"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-intelligence-harvest/scripts/inventory_source.py run over execution-governance"
+    },
+    {
+      "claim": "The whole tree was archived on 2026-07-19 by git mv, preserving history.",
+      "epistemic": "CONFIRMED",
+      "id": "e-git-01",
+      "locator": {
+        "kind": "artifact",
+        "value": "268608be56d3c0bb54c969f6e434bacde3d55215 2026-07-19 chore(governance): archive Suite-6 legacy files"
+      },
+      "secret_redacted": false,
+      "source": "git log -1 268608be"
+    },
+    {
+      "claim": "The validator enforces ten required header fields, a component-ID regex ^(INT|FND|EXE|OPS|ENV|TEL|DOC)-[A-Z]{2,3}-\\d{3}$, seven valid layers, four valid statuses, and kebab-case filenames.",
+      "epistemic": "CONFIRMED",
+      "id": "e-val-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/validation/governance-validator.py:54-77,128-148,224-231"
+      },
+      "secret_redacted": false,
+      "source": "_archived/validation/governance-validator.py"
+    },
+    {
+      "claim": "Compliance is reported as a rate over all files in seven layer directories with suffixes .md, .py, .json, .yaml, and the CLI exits 1 when any violation exists.",
+      "epistemic": "CONFIRMED",
+      "id": "e-val-02",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/validation/governance-validator.py:79-92,242-285"
+      },
+      "secret_redacted": false,
+      "source": "_archived/validation/governance-validator.py"
+    },
+    {
+      "claim": "validate_workspace asserts .cursorrules, .cursor-commands, and .l9_governance-config.json exist, that .cursor-commands is a resolving symlink, and that the config declares suite_version 6.0.0.",
+      "epistemic": "CONFIRMED",
+      "id": "e-val-03",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/validation/governance-validator.py:287-321"
+      },
+      "secret_redacted": false,
+      "source": "_archived/validation/governance-validator.py"
+    },
+    {
+      "claim": "A bare except in the JSON branch of _has_canonical_header returns False on any parse error, failing closed but recording no diagnostic.",
+      "epistemic": "CONFIRMED",
+      "id": "e-val-04",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/validation/governance-validator.py:141-148"
+      },
+      "secret_redacted": false,
+      "source": "_archived/validation/governance-validator.py"
+    },
+    {
+      "claim": "The monitor creates governance_metrics and performance_metrics tables in a SQLite database under telemetry/logs/ and inserts one metrics row per run, giving compliance a persisted time series.",
+      "epistemic": "CONFIRMED",
+      "id": "e-mon-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/monitoring/governance-monitor.py:67-107,161-189"
+      },
+      "secret_redacted": false,
+      "source": "_archived/monitoring/governance-monitor.py"
+    },
+    {
+      "claim": "The monitor's own compliance test is a bare substring search for the header marker wrapped in a bare except returning False.",
+      "epistemic": "CONFIRMED",
+      "id": "e-mon-02",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/monitoring/governance-monitor.py:150-159"
+      },
+      "secret_redacted": false,
+      "source": "_archived/monitoring/governance-monitor.py"
+    },
+    {
+      "claim": "The monitor counts only *.md across five layers, a strictly narrower population than the validator's, while publishing the same compliance_rate field name.",
+      "epistemic": "CONFIRMED",
+      "id": "e-mon-03",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/monitoring/governance-monitor.py:118-129"
+      },
+      "secret_redacted": false,
+      "source": "_archived/monitoring/governance-monitor.py"
+    },
+    {
+      "claim": "The monitor imports psutil at module scope and records host memory and CPU alongside governance compliance in the same row.",
+      "epistemic": "CONFIRMED",
+      "id": "e-mon-04",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/monitoring/governance-monitor.py:39,131-133"
+      },
+      "secret_redacted": false,
+      "source": "_archived/monitoring/governance-monitor.py"
+    },
+    {
+      "claim": "The API loads its validator and monitor via importlib from l9_governance_root/execution/validation and l9_governance_root/execution/monitoring, an execution/ tree that does not exist in this repo, so the module cannot import.",
+      "epistemic": "CONFIRMED",
+      "id": "e-api-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/api/governance-api.py:42-56"
+      },
+      "secret_redacted": false,
+      "source": "_archived/api/governance-api.py"
+    },
+    {
+      "claim": "POST /governance/rules accepts a JSON rule from any caller, appends it to the rule registry, and writes the file back with no authentication, authorization, or audit of the caller.",
+      "epistemic": "CONFIRMED",
+      "id": "e-api-02",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/api/governance-api.py:144-178"
+      },
+      "secret_redacted": false,
+      "source": "_archived/api/governance-api.py"
+    },
+    {
+      "claim": "CORS is applied to the entire app with no origin restriction and the server binds 0.0.0.0:8080, exposing the write path above to the local network.",
+      "epistemic": "CONFIRMED",
+      "id": "e-api-03",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/api/governance-api.py:71-72,303-309"
+      },
+      "secret_redacted": false,
+      "source": "_archived/api/governance-api.py"
+    },
+    {
+      "claim": "Three endpoints read foundation/logic/rule-registry.json by direct path.",
+      "epistemic": "CONFIRMED",
+      "id": "e-api-04",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/api/governance-api.py:129,156,212"
+      },
+      "secret_redacted": false,
+      "source": "_archived/api/governance-api.py"
+    },
+    {
+      "claim": "query_rule_coverage inverts the agent-to-rules mapping into a rules-to-agents index, then reports every registered rule with its enforcing-agent list, usage count, and coverage percentage, including rules whose usage count is zero.",
+      "epistemic": "CONFIRMED",
+      "id": "e-reg-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/api/registry-viewer-intelligence.py:299-350"
+      },
+      "secret_redacted": false,
+      "source": "_archived/api/registry-viewer-intelligence.py"
+    },
+    {
+      "claim": "query_stale_agents treats a last_validated value that will not parse as ISO as stale rather than skipping it, so malformed metadata surfaces as a finding instead of disappearing.",
+      "epistemic": "CONFIRMED",
+      "id": "e-reg-02",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/api/registry-viewer-intelligence.py:227-256"
+      },
+      "secret_redacted": false,
+      "source": "_archived/api/registry-viewer-intelligence.py"
+    },
+    {
+      "claim": "Both data sources are read under suite_root as foundation/logic/rule-registry.json and foundation/agents/stubs/*.stub.json, and a missing registry is swallowed into a {'rules': []} default.",
+      "epistemic": "CONFIRMED",
+      "id": "e-reg-03",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/api/registry-viewer-intelligence.py:67-72,119-141"
+      },
+      "secret_redacted": false,
+      "source": "_archived/api/registry-viewer-intelligence.py"
+    },
+    {
+      "claim": "The suite appends execution/validation and execution/monitoring to sys.path then imports governance_monitor and governance_validator at module scope; both directories are absent, so collection fails before any test runs.",
+      "epistemic": "CONFIRMED",
+      "id": "e-test-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/testing/governance-test-suite.py:38-43"
+      },
+      "secret_redacted": false,
+      "source": "_archived/testing/governance-test-suite.py"
+    },
+    {
+      "claim": "Three assertions encode tolerance for known violations rather than a contract: compliance rate at least 80 percent, at most 3 naming violations, at most 2 component-ID violations.",
+      "epistemic": "CONFIRMED",
+      "id": "e-test-02",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/testing/governance-test-suite.py:72,118,153"
+      },
+      "secret_redacted": false,
+      "source": "_archived/testing/governance-test-suite.py"
+    },
+    {
+      "claim": "test_component_id_format and test_no_hardcoded_secrets both wrap their per-file read in a bare except continue, so an unreadable file is silently excluded from the violation count.",
+      "epistemic": "CONFIRMED",
+      "id": "e-test-03",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/testing/governance-test-suite.py:145-146,332-333"
+      },
+      "secret_redacted": false,
+      "source": "_archived/testing/governance-test-suite.py"
+    },
+    {
+      "claim": "The dashboard hardcodes http://localhost:8080, refreshes every 30000 ms, and polls the status, metrics, and health endpoints.",
+      "epistemic": "CONFIRMED",
+      "id": "e-dash-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/dashboard/governance-dashboard.html:327,335,397,405,415"
+      },
+      "secret_redacted": false,
+      "source": "_archived/dashboard/governance-dashboard.html"
+    },
+    {
+      "claim": "The donor README publishes a utilization table splitting the corpus into active and orphan by category: Python 4 of 47, Markdown 26 of 108, YAML 2 of 9, total 32 of 164 files wired, 19.5 percent.",
+      "epistemic": "CONFIRMED",
+      "id": "e-readme-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/README.md:243-250"
+      },
+      "secret_redacted": false,
+      "source": "_archived/README.md"
+    },
+    {
+      "claim": "The README names six high-value orphans that should be activated, one of which is execution-governance/validation/governance-validator.py itself, so the subsystem documented its own non-activation.",
+      "epistemic": "CONFIRMED",
+      "id": "e-readme-02",
+      "locator": {
+        "kind": "path_lines",
+        "value": "execution-governance/_archived/README.md:189-208"
+      },
+      "secret_redacted": false,
+      "source": "_archived/README.md"
+    },
+    {
+      "claim": "rule-registry.json now exists only under foundation/_archived/logic/; there is no live copy anywhere in the repo.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "foundation/_archived/logic/rule-registry.json"
+      },
+      "secret_redacted": false,
+      "source": "beneficiary checkout"
+    },
+    {
+      "claim": "The agent stubs the registry viewer queries survive only under foundation/_archived/agents/stubs/ as FND-AG-001, FND-AG-002, FND-LG-001, FND-LG-002, INT-ML-001 and siblings.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-02",
+      "locator": {
+        "kind": "path_lines",
+        "value": "foundation/_archived/agents/stubs/"
+      },
+      "secret_redacted": false,
+      "source": "beneficiary checkout"
+    },
+    {
+      "claim": "The live rules gate enforces docs/rules-standard.md with a ratcheted always-apply byte budget that may only be lowered, hard-failing native-field, glob-shape, extension, and budget checks.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-03",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/scripts/check_rules_standard.py:1-30"
+      },
+      "secret_redacted": false,
+      "source": "ops/scripts/check_rules_standard.py"
+    },
+    {
+      "claim": "The live skills gate enforces a discovery byte budget plus description length bounds and a body maximum, parameterized by SKILLS_DISCOVERY_BUDGET.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-04",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/scripts/check_skills_standard.py:1-23"
+      },
+      "secret_redacted": false,
+      "source": "ops/scripts/check_skills_standard.py"
+    },
+    {
+      "claim": "The live wiring checker validates workspace and machine planes with class-specific pass/fail lines, covering .cursor-commands, .cursor/plans, .cursor/governance, forbidden duplicates, SSOT branch and cleanliness, unpushed commits, HEAD equal to origin/main, and self-alias absence \u2014 a strict superset of the donor's three-file workspace check.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-05",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/scripts/check_governance_wiring.sh:1-40,111-291"
+      },
+      "secret_redacted": false,
+      "source": "ops/scripts/check_governance_wiring.sh"
+    },
+    {
+      "claim": "The live rule auditor is a fail-closed scan for stale references to retired or renamed rules; a search of the file for coverage, orphan, unused, and zero returns no matches, so it has no rule-to-consumer coverage dimension.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-06",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/scripts/audit_rule_references.py:1-30"
+      },
+      "secret_redacted": false,
+      "source": "ops/scripts/audit_rule_references.py"
+    },
+    {
+      "claim": "Path law is enforced against a fixed seven-file SCAN_FILES allowlist rooted at GOVERNANCE_SCAN_ROOT, matching /Users/, /home/, and Library/CloudStorage/Dropbox; nothing outside the checkout is scanned.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-07",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/scripts/validate_governance_no_hardcoded_paths.sh:12-30"
+      },
+      "secret_redacted": false,
+      "source": "ops/scripts/validate_governance_no_hardcoded_paths.sh"
+    },
+    {
+      "claim": "None of the donor's third-party runtime dependencies are pinned in the beneficiary toolchain, so no donor service could run under the locked venv without a protected-file change.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-08",
+      "locator": {
+        "kind": "artifact",
+        "value": "ripgrep for flask, flask-cors, psutil across requirements.txt and pyproject.toml returns no matches"
+      },
+      "secret_redacted": false,
+      "source": "requirements.txt and pyproject.toml"
+    },
+    {
+      "claim": "A live script still attempts from governance_monitor import GovernanceMonitor behind try/except ImportError and prints a warning naming governance-monitor.py; because the donor filename is hyphenated it was never an importable module, so governance metrics have always been disabled here.",
+      "epistemic": "CONFIRMED",
+      "id": "e-oo-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/scripts/operational-oversight.py:22-32,79-107"
+      },
+      "secret_redacted": false,
+      "source": "ops/scripts/operational-oversight.py"
+    },
+    {
+      "claim": "The governance-monitor LaunchAgent is still installed on this machine but is not loaded, so it is dormant rather than removed.",
+      "epistemic": "CONFIRMED",
+      "id": "e-la-01",
+      "locator": {
+        "kind": "artifact",
+        "value": "$HOME/Library/LaunchAgents/com.cursor.governance-monitor.plist present; launchctl list filtered for governance returns nothing"
+      },
+      "secret_redacted": false,
+      "source": "launchctl and the LaunchAgents directory"
+    },
+    {
+      "claim": "The plist runs a Dropbox-resident wrapper every two hours with RunAtLoad true and writes its logs into the Dropbox governance tree.",
+      "epistemic": "CONFIRMED",
+      "id": "e-la-02",
+      "locator": {
+        "kind": "artifact",
+        "value": "PlistBuddy Print: StartInterval=7200, RunAtLoad=true, ProgramArguments=[/bin/bash, <Dropbox>/GlobalCommands/ops/scripts/governance-monitor-wrapper.sh], StandardOutPath and StandardErrorPath under the same Dropbox tree"
+      },
+      "secret_redacted": false,
+      "source": "com.cursor.governance-monitor.plist"
+    },
+    {
+      "claim": "The wrapper implements its own governance-root resolution with three branches, preferring $HOME/.cursor-governance but falling back to the Dropbox tree and then to Application Support \u2014 the cloud-storage SSOT fallback that rule 06 and AGENTS.md section 12.3 forbid.",
+      "epistemic": "CONFIRMED",
+      "id": "e-la-03",
+      "locator": {
+        "kind": "path_lines",
+        "value": "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/governance-monitor-wrapper.sh:4-14"
+      },
+      "secret_redacted": false,
+      "source": "governance-monitor-wrapper.sh"
+    },
+    {
+      "claim": "The wrapper's target ops/scripts/governance-monitor.py does not exist under the live governance root, so a loaded agent would take the error branch rather than execute anything.",
+      "epistemic": "CONFIRMED",
+      "id": "e-la-04",
+      "locator": {
+        "kind": "artifact",
+        "value": "ls ops/scripts/governance-monitor.py returns No such file or directory"
+      },
+      "secret_redacted": false,
+      "source": "beneficiary checkout"
+    },
+    {
+      "claim": "The retired Dropbox governance tree and the wrapper inside it are still present on this machine, so the fallback branch is reachable rather than merely written.",
+      "epistemic": "CONFIRMED",
+      "id": "e-la-05",
+      "locator": {
+        "kind": "artifact",
+        "value": "$HOME/Dropbox/Cursor Governance and the wrapper script both resolve"
+      },
+      "secret_redacted": false,
+      "source": "filesystem"
+    },
+    {
+      "claim": "A built plan unloaded the learning-processor, context.processor, and governance-monitor LaunchAgents, which explains the dormant state but did not remove the plist or the Dropbox wrapper.",
+      "epistemic": "CONFIRMED",
+      "id": "e-plan-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/BUILT/disable_broken_startup_systems_920c0410.plan.md:21,81"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/BUILT/disable_broken_startup_systems_920c0410.plan.md"
+    },
+    {
+      "claim": "The archive rationale of record is that all five Python implementations were confirmed Suite-6 and the docs described the same retired system, cross-validated by six independent research passes.",
+      "epistemic": "CONFIRMED",
+      "id": "e-chg-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "CHANGELOG.md:127-130"
+      },
+      "secret_redacted": false,
+      "source": "CHANGELOG.md"
+    },
+    {
+      "claim": "The tree is tracked as delete-list item A1 in the Tier A archive-shell group with a note to scrub the stale operational-oversight.py warning when deleting.",
+      "epistemic": "CONFIRMED",
+      "id": "e-todo-01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "TODO.md:74-77,225,282"
+      },
+      "secret_redacted": false,
+      "source": "TODO.md"
+    },
+    {
+      "claim": "Five hash-signature records for the donor files survive with Dropbox Suite 5 absolute paths, preserving the component-ID taxonomy and the pre-migration layout.",
+      "epistemic": "CONFIRMED",
+      "id": "e-sig-01",
+      "locator": {
+        "kind": "artifact",
+        "value": "governance-api.py.sig.json, governance-monitor.py.sig.json, governance-validator.py.sig.json, governance-test-suite.py.sig.json, registry-viewer-intelligence.py.sig.json each record full_path under a Dropbox 'Cursor Governance Suite 5 (Unified)' directory"
+      },
+      "secret_redacted": false,
+      "source": "foundation/security/_archived/signatures/"
+    },
+    {
+      "claim": "parse_rule raises ValueError on non-mapping frontmatter and wraps yaml.safe_load in no try/except, so the beneficiary already fails closed on unparseable rule metadata.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-09",
+      "locator": {
+        "kind": "path_lines",
+        "value": "ops/scripts/lib/rule_frontmatter.py:24-38"
+      },
+      "secret_redacted": false,
+      "source": "ops/scripts/lib/rule_frontmatter.py"
+    }
+  ],
+  "highest_leverage_nugget": "C5",
+  "inventory": [
+    {
+      "action": "migrate",
+      "classification": "archive",
+      "consumers": [],
+      "evidence_ids": [
+        "e-src-01",
+        "e-readme-01",
+        "e-readme-02",
+        "e-chg-01"
+      ],
+      "importance": 4,
+      "owner": null,
+      "path": "_archived/README.md",
+      "purpose": "Suite-6 status report: architecture diagram, active-vs-orphan file status matrix, utilization metrics, interaction map, recommendations"
+    },
+    {
+      "action": "delete",
+      "classification": "archive",
+      "consumers": [
+        "_archived/dashboard/governance-dashboard.html"
+      ],
+      "evidence_ids": [
+        "e-src-01",
+        "e-api-01",
+        "e-api-02",
+        "e-api-03",
+        "e-api-04",
+        "e-ben-08"
+      ],
+      "importance": 2,
+      "owner": null,
+      "path": "_archived/api/governance-api.py",
+      "purpose": "Flask REST API exposing governance status, validate, rules CRUD, metrics, health, and learning-extraction endpoints"
+    },
+    {
+      "action": "migrate",
+      "classification": "archive",
+      "consumers": [],
+      "evidence_ids": [
+        "e-src-01",
+        "e-reg-01",
+        "e-reg-02",
+        "e-reg-03",
+        "e-ben-01",
+        "e-ben-02"
+      ],
+      "importance": 4,
+      "owner": null,
+      "path": "_archived/api/registry-viewer-intelligence.py",
+      "purpose": "Regex-intent natural-language query engine over the rule registry and agent stubs; computes rule coverage, staleness, layer and escalation distributions"
+    },
+    {
+      "action": "delete",
+      "classification": "archive",
+      "consumers": [],
+      "evidence_ids": [
+        "e-src-01",
+        "e-dash-01"
+      ],
+      "importance": 1,
+      "owner": null,
+      "path": "_archived/dashboard/governance-dashboard.html",
+      "purpose": "Static single-page dashboard polling the governance API every 30 seconds"
+    },
+    {
+      "action": "delete",
+      "classification": "archive",
+      "consumers": [
+        "ops/scripts/operational-oversight.py (soft import, never resolves)"
+      ],
+      "evidence_ids": [
+        "e-src-01",
+        "e-mon-01",
+        "e-mon-02",
+        "e-mon-03",
+        "e-mon-04",
+        "e-oo-01"
+      ],
+      "importance": 3,
+      "owner": null,
+      "path": "_archived/monitoring/governance-monitor.py",
+      "purpose": "Periodic compliance-metrics collector persisting a SQLite time series of compliance rate plus host CPU/memory"
+    },
+    {
+      "action": "delete",
+      "classification": "archive",
+      "consumers": [],
+      "evidence_ids": [
+        "e-src-01",
+        "e-test-01",
+        "e-test-02",
+        "e-test-03"
+      ],
+      "importance": 2,
+      "owner": null,
+      "path": "_archived/testing/governance-test-suite.py",
+      "purpose": "unittest framework asserting canonical-header compliance, kebab-case naming, component-ID format, symlink structure, performance budgets, and secret absence"
+    },
+    {
+      "action": "delete",
+      "classification": "archive",
+      "consumers": [],
+      "evidence_ids": [
+        "e-src-01",
+        "e-val-01",
+        "e-val-02",
+        "e-val-03",
+        "e-val-04",
+        "e-ben-05"
+      ],
+      "importance": 4,
+      "owner": null,
+      "path": "_archived/validation/governance-validator.py",
+      "purpose": "Runtime compliance validator for canonical headers, kebab-case filenames, component-ID format, and workspace governance wiring"
+    }
+  ],
+  "request": {
+    "access_mode": "read-only",
+    "beneficiary": "https://github.com/Quantum-L9/Cursor-Governance",
+    "brief": true,
+    "depth": "exhaustive",
+    "donor": "execution-governance/",
+    "harvest_target": "governance validation, compliance monitoring, registry query, and self-audit semantics worth preserving before the Tier-A1 delete",
+    "language": "as-donor",
+    "request_id": "harvest-execution-governance-2026-08-28",
+    "secrets_policy": "redact"
+  },
+  "safety": [
+    {
+      "claim": "A dormant but installed LaunchAgent on this machine points at a Dropbox-resident wrapper that re-resolves the governance root with a cloud-storage fallback branch, which rule 06-governance-ssot-paths and AGENTS.md section 12.3 forbid outright. It is not loaded, so nothing runs today, and its ultimate target is absent so a load would only log an error. The exposure is that the plist, the wrapper, and the Dropbox tree all still exist, so a single launchctl load would re-establish a two-hourly out-of-band governance execution path outside the repo publish plane.",
+      "epistemic": "CONFIRMED",
+      "evidence_ids": [
+        "e-la-01",
+        "e-la-02",
+        "e-la-03",
+        "e-la-04",
+        "e-la-05",
+        "e-ben-07"
+      ],
+      "id": "S1",
+      "in_repo": false,
+      "reachable_by_repo_lint": false,
+      "recommended_action": "report only; removal of a user LaunchAgent and of the Dropbox tree needs its own authorization and is out of scope for a harvest",
+      "severity": "medium",
+      "surface": "com.cursor.governance-monitor.plist and governance-monitor-wrapper.sh"
+    },
+    {
+      "claim": "The donor API exposes an unauthenticated POST that appends to the governance rule registry and writes the file back, with unrestricted CORS on every route and a listener bound to all interfaces. The code cannot execute today because its importlib targets are absent and its dependencies are unpinned, so the finding is a design warning about the archived pattern rather than a live vulnerability.",
+      "epistemic": "CONFIRMED",
+      "evidence_ids": [
+        "e-api-02",
+        "e-api-03",
+        "e-api-01",
+        "e-ben-08"
+      ],
+      "id": "S2",
+      "in_repo": true,
+      "reachable_by_repo_lint": true,
+      "recommended_action": "keep the REJECT disposition on C7 and record the pattern as a governance anti-pattern; do not resurrect any part of the endpoint set",
+      "severity": "high_if_executed",
+      "surface": "_archived/api/governance-api.py POST /governance/rules"
+    },
+    {
+      "claim": "A live script, ops/scripts/operational-oversight.py, still references the archived monitor and prints a warning naming a path that no longer exists. The import is guarded and has never succeeded, so behavior is correct and only the operator-facing message is misleading.",
+      "epistemic": "CONFIRMED",
+      "evidence_ids": [
+        "e-oo-01",
+        "e-todo-01"
+      ],
+      "id": "S3",
+      "in_repo": true,
+      "reachable_by_repo_lint": true,
+      "recommended_action": "scrub the warning message when the Tier-A1 delete lands, as TODO.md already notes",
+      "severity": "low",
+      "surface": "ops/scripts/operational-oversight.py:22-32"
+    },
+    {
+      "claim": "Five surviving hash-signature records under foundation/security/_archived/signatures/ carry absolute Dropbox paths from the Suite 5 (Unified) tree. They are archived data and are not read by any live checker, so they present no execution risk, but they are machine-specific paths retained in the repository.",
+      "epistemic": "CONFIRMED",
+      "evidence_ids": [
+        "e-sig-01",
+        "e-ben-07"
+      ],
+      "id": "S4",
+      "in_repo": true,
+      "reachable_by_repo_lint": false,
+      "recommended_action": "no action from this harvest; note as residue if the archive-retention question is revisited",
+      "severity": "informational",
+      "surface": "foundation/security/_archived/signatures/"
+    },
+    {
+      "claim": "No secret values were encountered in the donor tree. The test suite's own secret scan is name-pattern based over assignment syntax and would not have detected a value regardless; the redact policy was applied and had nothing to redact.",
+      "epistemic": "CONFIRMED",
+      "evidence_ids": [
+        "e-src-01",
+        "e-test-03"
+      ],
+      "id": "S5",
+      "in_repo": true,
+      "reachable_by_repo_lint": true,
+      "recommended_action": "none",
+      "severity": "none",
+      "surface": "donor tree"
+    }
+  ],
+  "schema_version": "1.1.0",
+  "source_identity": {
+    "adapter": "local_path",
+    "archive_method": "git mv (history preserved, nothing hard-deleted)",
+    "archived_at_commit": "268608be56d3c0bb54c969f6e434bacde3d55215",
+    "archived_date": "2026-07-19",
+    "donor_is_subtree_of_beneficiary": true,
+    "file_count": 7,
+    "kind": "directory",
+    "live_content_outside_archive": "none \u2014 execution-governance/ contains only _archived/",
+    "path": "/Users/ib-mac/Cursor-Governance/execution-governance"
+  },
+  "status": "PASS",
+  "surfaces": [
+    {
+      "dependencies": [
+        "yaml"
+      ],
+      "evidence_ids": [
+        "e-val-01",
+        "e-val-02"
+      ],
+      "is_wrapper": false,
+      "item": "governance-validator.py (default CLI)",
+      "mutations": [
+        "appends to telemetry/logs/governance-violations.log",
+        "mkdir -p of telemetry/logs/"
+      ],
+      "resolved_target": "GovernanceValidator.enforce_compliance()",
+      "source": "_archived/validation/governance-validator.py:324-354",
+      "visibility": "cli"
+    },
+    {
+      "dependencies": [],
+      "evidence_ids": [
+        "e-val-03"
+      ],
+      "is_wrapper": false,
+      "item": "governance-validator.py --workspace-check",
+      "mutations": [],
+      "resolved_target": "GovernanceValidator.validate_workspace()",
+      "source": "_archived/validation/governance-validator.py:332-344",
+      "visibility": "cli"
+    },
+    {
+      "dependencies": [
+        "flask"
+      ],
+      "evidence_ids": [
+        "e-api-02",
+        "e-api-04"
+      ],
+      "is_wrapper": false,
+      "item": "POST /governance/rules",
+      "mutations": [
+        "overwrites the governance rule registry on disk"
+      ],
+      "resolved_target": "append to rules_registry['rules'] then json.dump back over foundation/logic/rule-registry.json",
+      "source": "_archived/api/governance-api.py:144-178",
+      "visibility": "network_unauthenticated"
+    },
+    {
+      "dependencies": [
+        "flask",
+        "flask_cors"
+      ],
+      "evidence_ids": [
+        "e-api-03"
+      ],
+      "is_wrapper": false,
+      "item": "Flask listener",
+      "mutations": [],
+      "resolved_target": "app.run(host='0.0.0.0', port=8080) with CORS(app) applied to every route",
+      "source": "_archived/api/governance-api.py:71-72,309",
+      "visibility": "network_all_interfaces"
+    },
+    {
+      "dependencies": [
+        "governance-api.py"
+      ],
+      "evidence_ids": [
+        "e-dash-01",
+        "e-api-01"
+      ],
+      "is_wrapper": true,
+      "item": "governance-dashboard.html poll loop",
+      "mutations": [],
+      "resolved_target": "http://localhost:8080/governance/{status,metrics,health} on governance-api.py, which cannot start because its importlib targets are absent",
+      "source": "_archived/dashboard/governance-dashboard.html:327,335,397,405,415",
+      "visibility": "browser"
+    },
+    {
+      "dependencies": [
+        "foundation/logic/rule-registry.json",
+        "foundation/agents/stubs/"
+      ],
+      "evidence_ids": [
+        "e-reg-01",
+        "e-reg-03"
+      ],
+      "is_wrapper": false,
+      "item": "registry-viewer-intelligence.py CLI",
+      "mutations": [
+        "mkdir -p of execution/api/query-cache/"
+      ],
+      "resolved_target": "RegistryViewerIntelligence.execute_query()",
+      "source": "_archived/api/registry-viewer-intelligence.py:494-518",
+      "visibility": "cli"
+    },
+    {
+      "dependencies": [],
+      "evidence_ids": [
+        "e-oo-01"
+      ],
+      "is_wrapper": true,
+      "item": "ops/scripts/operational-oversight.py governance_monitor import",
+      "mutations": [],
+      "resolved_target": "unresolvable \u2014 no module named governance_monitor exists on sys.path; the donor file is hyphenated and was never an importable module name, so this has always taken the except ImportError branch and printed a warning naming a now-archived path",
+      "source": "ops/scripts/operational-oversight.py:22-32",
+      "visibility": "internal_soft_import"
+    },
+    {
+      "dependencies": [
+        "governance-monitor-wrapper.sh"
+      ],
+      "evidence_ids": [
+        "e-la-01",
+        "e-la-02",
+        "e-la-05"
+      ],
+      "is_wrapper": true,
+      "item": "com.cursor.governance-monitor LaunchAgent",
+      "mutations": [
+        "would append to Dropbox ops/logs/governance_monitor_launchd.{out,err} if loaded"
+      ],
+      "resolved_target": "/bin/bash on a Dropbox-resident governance-monitor-wrapper.sh; present on disk but absent from launchctl list, so currently dormant rather than running",
+      "source": "$HOME/Library/LaunchAgents/com.cursor.governance-monitor.plist",
+      "visibility": "machine_local_scheduler"
+    },
+    {
+      "dependencies": [
+        "python3"
+      ],
+      "evidence_ids": [
+        "e-la-03",
+        "e-la-04"
+      ],
+      "is_wrapper": true,
+      "item": "governance-monitor-wrapper.sh",
+      "mutations": [
+        "appends to a log file under the resolved root"
+      ],
+      "resolved_target": "$GLOBAL_COMMANDS/ops/scripts/governance-monitor.py after a three-branch root resolution preferring $HOME/.cursor-governance then falling back to Dropbox then Application Support; that target does not exist in the live repo, so the script logs 'Error: governance-monitor.py not found'",
+      "source": "$HOME/Dropbox/Cursor Governance/GlobalCommands/ops/scripts/governance-monitor-wrapper.sh:5-23",
+      "visibility": "machine_local_script"
+    },
+    {
+      "dependencies": [
+        "governance-validator.py",
+        "governance-monitor.py"
+      ],
+      "evidence_ids": [
+        "e-test-01",
+        "e-test-02"
+      ],
+      "is_wrapper": true,
+      "item": "governance-test-suite.py runner",
+      "mutations": [
+        "test_symlink_structure creates and removes /tmp/l9_governance-test-workspace and a symlink inside it"
+      ],
+      "resolved_target": "unittest over TestL9Governance{Compliance,Integration,Performance,Security}, but collection dies first on the module-level import of governance_monitor and governance_validator from absent execution/ paths",
+      "source": "_archived/testing/governance-test-suite.py:38-43,343-389",
+      "visibility": "cli"
+    }
+  ],
+  "system": {
+    "control_flow": [
+      {
+        "consequence": "module import raises at process start; no endpoint is reachable",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-api-01"
+        ],
+        "from": "governance-api.py",
+        "mechanism": "importlib.util.spec_from_file_location against l9_governance_root/execution/{validation,monitoring}/",
+        "resolves": false,
+        "to": "governance-validator.py and governance-monitor.py"
+      },
+      {
+        "consequence": "ImportError at collection; the whole suite is uncollectable",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-test-01"
+        ],
+        "from": "governance-test-suite.py",
+        "mechanism": "sys.path.append of l9_governance_root/execution/{validation,monitoring}/ then plain import",
+        "resolves": false,
+        "to": "governance_validator and governance_monitor"
+      },
+      {
+        "consequence": "no server can start, so every panel renders its error state",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-dash-01",
+          "e-api-01"
+        ],
+        "from": "governance-dashboard.html",
+        "mechanism": "browser fetch against a hardcoded http://localhost:8080",
+        "resolves": false,
+        "to": "governance-api.py"
+      },
+      {
+        "consequence": "always falls to the except branch and disables governance metrics; the import could never have succeeded because the donor filename is hyphenated and therefore not an importable module name",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-oo-01"
+        ],
+        "from": "ops/scripts/operational-oversight.py",
+        "mechanism": "from governance_monitor import GovernanceMonitor inside try/except ImportError",
+        "resolves": false,
+        "to": "governance-monitor.py"
+      },
+      {
+        "consequence": "the agent is present on this machine but not loaded; if loaded it would resolve $HOME/.cursor-governance, look for ops/scripts/governance-monitor.py, not find it, and log an error every two hours",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-la-01",
+          "e-la-02",
+          "e-la-03",
+          "e-la-04"
+        ],
+        "from": "com.cursor.governance-monitor.plist",
+        "mechanism": "launchd ProgramArguments to a Dropbox-resident wrapper that re-resolves the governance root itself",
+        "resolves": false,
+        "to": "governance-monitor.py"
+      },
+      {
+        "consequence": "both data sources were archived to foundation/_archived/; _load_rule_registry swallows the miss and returns {'rules': []}, so every query answers over an empty corpus instead of failing",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-reg-03",
+          "e-ben-01",
+          "e-ben-02"
+        ],
+        "from": "registry-viewer-intelligence.py",
+        "mechanism": "direct path read under suite_root",
+        "resolves": false,
+        "to": "foundation/logic/rule-registry.json and foundation/agents/stubs/"
+      }
+    ],
+    "dependencies": [
+      {
+        "evidence_ids": [
+          "e-api-03",
+          "e-ben-08"
+        ],
+        "kind": "python_package",
+        "name": "flask, flask_cors",
+        "present_in_beneficiary_toolchain": false,
+        "used_by": "governance-api.py"
+      },
+      {
+        "evidence_ids": [
+          "e-mon-04",
+          "e-ben-08"
+        ],
+        "kind": "python_package",
+        "name": "psutil",
+        "present_in_beneficiary_toolchain": false,
+        "used_by": "governance-monitor.py"
+      },
+      {
+        "evidence_ids": [
+          "e-mon-01",
+          "e-test-01"
+        ],
+        "kind": "stdlib",
+        "name": "sqlite3, unittest",
+        "present_in_beneficiary_toolchain": true,
+        "used_by": "governance-monitor.py, governance-test-suite.py"
+      },
+      {
+        "evidence_ids": [
+          "e-api-04",
+          "e-reg-03",
+          "e-ben-01"
+        ],
+        "kind": "data_artifact",
+        "name": "foundation/logic/rule-registry.json",
+        "present_in_beneficiary_toolchain": false,
+        "used_by": "governance-api.py, registry-viewer-intelligence.py"
+      },
+      {
+        "evidence_ids": [
+          "e-reg-03",
+          "e-ben-02"
+        ],
+        "kind": "data_artifact",
+        "name": "foundation/agents/stubs/*.stub.json",
+        "present_in_beneficiary_toolchain": false,
+        "used_by": "registry-viewer-intelligence.py"
+      },
+      {
+        "evidence_ids": [
+          "e-la-01",
+          "e-la-02"
+        ],
+        "kind": "machine_local_scheduler",
+        "name": "com.cursor.governance-monitor LaunchAgent",
+        "present_in_beneficiary_toolchain": false,
+        "used_by": "governance-monitor.py"
+      }
+    ],
+    "identity": {
+      "component_ids": [
+        "EXE-VAL-001",
+        "EXE-MON-001",
+        "EXE-API-001",
+        "EXE-API-002",
+        "EXE-TEST-001"
+      ],
+      "current_state": "wholly archived; zero live callers; every internal path target absent",
+      "declared_version": "6.0.0",
+      "lineage": "Suite 3 numbered scripts (50_Governance_Validator_v3.0.py, 51_Governance_Test_Suite_v3.0.py, 52_Governance_Monitor_v3.0.py, 56_Governance_API_v3.0.py) then Suite 5 (Unified) on Dropbox, then Suite-6, then archived in this repo",
+      "name": "Suite-6 execution-layer governance subsystem"
+    },
+    "must_not_own": [
+      "any second governance-root resolver, especially one with a cloud-storage fallback branch",
+      "an unauthenticated network write path into the governance rule corpus",
+      "a compliance gate whose pass threshold is a tolerance for known violations",
+      "a machine-local scheduler that executes governance code outside the repo publish path",
+      "a second episodic-memory or learning-extraction surface beside Graphiti"
+    ],
+    "ownership_boundaries": [
+      {
+        "beneficiary_owner": "ops/scripts/check_rules_standard.py, check_skills_standard.py, validate_rules_manifest.py, validate_root_file_protection.py wired through .pre-commit-config.yaml and make pr",
+        "capability": "compliance validation",
+        "donor_owner": "governance-validator.py (EXE-VAL-001)",
+        "evidence_ids": [
+          "e-val-01",
+          "e-ben-03",
+          "e-ben-04"
+        ],
+        "stronger": "beneficiary"
+      },
+      {
+        "beneficiary_owner": "ops/scripts/check_governance_wiring.sh (--workspace and --machine)",
+        "capability": "workspace wiring validation",
+        "donor_owner": "governance-validator.py validate_workspace()",
+        "evidence_ids": [
+          "e-val-03",
+          "e-ben-05"
+        ],
+        "stronger": "beneficiary"
+      },
+      {
+        "beneficiary_owner": "ops/scripts/audit_rule_references.py (stale references only; no coverage dimension)",
+        "capability": "rule coverage analytics",
+        "donor_owner": "registry-viewer-intelligence.py query_rule_coverage()",
+        "evidence_ids": [
+          "e-reg-01",
+          "e-ben-06"
+        ],
+        "stronger": "donor"
+      },
+      {
+        "beneficiary_owner": "none",
+        "capability": "corpus utilization audit",
+        "donor_owner": "_archived/README.md status matrix",
+        "evidence_ids": [
+          "e-readme-01",
+          "e-ben-06"
+        ],
+        "stronger": "donor"
+      },
+      {
+        "beneficiary_owner": "ops/scripts/resolve_governance_paths.sh plus ops/scripts/validate_governance_no_hardcoded_paths.sh over a fixed seven-file allowlist",
+        "capability": "governance-root path law",
+        "donor_owner": "each donor module resolves Path(__file__).parent.parent.parent independently; the LaunchAgent wrapper adds a three-branch resolver with a Dropbox fallback",
+        "evidence_ids": [
+          "e-la-03",
+          "e-ben-07"
+        ],
+        "stronger": "beneficiary"
+      },
+      {
+        "beneficiary_owner": "none (SessionStart emits point-in-time status; nothing persists a trend)",
+        "capability": "compliance metric time series",
+        "donor_owner": "governance-monitor.py SQLite tables",
+        "evidence_ids": [
+          "e-mon-01",
+          "e-ben-05"
+        ],
+        "stronger": "donor"
+      }
+    ],
+    "workflows": [
+      {
+        "behavior": "walk 7 declared layer directories, validate .md/.py/.json/.yaml for a canonical header plus kebab-case filename plus component-ID format, append violations to telemetry/logs/governance-violations.log, print a compliance rate, exit 1 on any violation",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-val-01",
+          "e-val-02"
+        ],
+        "id": "w-compliance-sweep",
+        "name": "Corpus compliance sweep",
+        "trigger": "CLI (governance-validator.py, no flags)"
+      },
+      {
+        "behavior": "assert presence of .cursorrules, .cursor-commands, .l9_governance-config.json; assert .cursor-commands is a resolving symlink; assert config suite_version == 6.0.0; return a governance_enabled boolean",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-val-03"
+        ],
+        "id": "w-workspace-check",
+        "name": "Workspace governance check",
+        "trigger": "CLI (governance-validator.py --workspace-check [path])"
+      },
+      {
+        "behavior": "recount compliance over 5 layers (*.md only), sample host memory and CPU via psutil, INSERT a row into governance_metrics and optionally performance_metrics in a SQLite database under telemetry/logs/",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-mon-01",
+          "e-mon-03",
+          "e-mon-04",
+          "e-la-01",
+          "e-la-02"
+        ],
+        "id": "w-metric-timeseries",
+        "name": "Compliance metric time series",
+        "trigger": "LaunchAgent com.cursor.governance-monitor, StartInterval 7200"
+      },
+      {
+        "behavior": "match the question against six regex intent families, then answer from rule-registry.json plus foundation/agents/stubs/*.stub.json; intents cover rule enforcement, kernel version, staleness, layer membership, rule coverage, escalation paths",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-reg-01",
+          "e-reg-02",
+          "e-reg-03"
+        ],
+        "id": "w-registry-query",
+        "name": "Registry intelligence query",
+        "trigger": "CLI (registry-viewer-intelligence.py '<question>')"
+      },
+      {
+        "behavior": "Flask app on 0.0.0.0:8080 with unrestricted CORS serves GET status/rules/metrics/health and POST validate/rules/learning; the dashboard polls status, metrics, and health every 30 seconds against http://localhost:8080",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-api-01",
+          "e-api-02",
+          "e-api-03",
+          "e-dash-01"
+        ],
+        "id": "w-api-dashboard",
+        "name": "REST API plus polling dashboard",
+        "trigger": "CLI (governance-api.py) then a browser opening governance-dashboard.html"
+      },
+      {
+        "behavior": "run four unittest classes over compliance, integration, performance, and security, asserting tolerance thresholds rather than absolutes; import the validator and monitor from execution/validation and execution/monitoring on sys.path",
+        "epistemic": "CONFIRMED",
+        "evidence_ids": [
+          "e-test-01",
+          "e-test-02"
+        ],
+        "id": "w-test-suite",
+        "name": "Governance test suite",
+        "trigger": "CLI (governance-test-suite.py)"
+      }
+    ]
+  },
+  "unknowns": [
+    "Whether the compliance-rate time series in governance-metrics.db was ever populated with more than a handful of rows is unknown; the database lives under telemetry/logs/, which is not present in this checkout, so no historical trend was observable.",
+    "Whether any other machine that consumed this governance clone still has the com.cursor.governance-monitor LaunchAgent loaded is unknown; only the current host was observed.",
+    "The size and content of the live rules corpus that a ported C3 coverage audit would read is unknown at harvest time; the donor's declared rules_enforced field has no live equivalent, so the enforcer-set extraction is unspecified rather than merely unimplemented.",
+    "Whether the two other LaunchAgents named in the same built plan, com.tenx.learning-processor and com.cursor.context.processor, carry the same Dropbox fallback pattern was not inspected; only the governance-monitor agent was in the harvest target.",
+    "Whether the three Suite-3 numbered ancestors cited in the donor migration notes still exist anywhere is unknown and was not searched, so the lineage claim rests on the donor's own header assertions rather than on observed artifacts."
+  ]
+}

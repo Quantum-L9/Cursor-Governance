@@ -45,6 +45,8 @@ GRAPH_ID = "pr-train-v1"
 MAX_SLICES = 32
 REMEDIATOR_SKILL = "l9-pr-remediation"
 _SCRIPTS = _REPO_ROOT / "ops" / "scripts"
+_GENERATED_DRIVER = _SCRIPTS / "git_merge_driver_generated.sh"
+_ENSURE_MERGE_DRIVERS = _SCRIPTS / "ensure_git_merge_drivers.sh"
 
 
 def _load_generated_prefixes() -> tuple[str, ...]:
@@ -97,6 +99,12 @@ def shares_generated_clobber(left: NovelCommit, right: NovelCommit) -> bool:
     return bool(left_p & right_p)
 
 
+def is_empty_cherry_pick(stdout: str, stderr: str) -> bool:
+    """Already-landed patch. ``cherry-pick --skip`` is not conflict resolution."""
+    blob = f"{stdout}\n{stderr}"
+    return "cherry-pick is now empty" in blob or "nothing to commit" in blob
+
+
 def parse_merge_tree_name_only(stdout: str, returncode: int) -> list[str] | None:
     """Same contract as ``pr_overlap_check.probe_ref_conflicts``: [] / paths / None."""
     if returncode == 0:
@@ -127,13 +135,26 @@ def probe_sha_conflicts(repo: Path, left: str, right: str) -> list[str] | None:
 
     Exit 1 with no parseable paths still counts as a conflict (fail-closed).
     """
-    result = _git(repo, "merge-tree", "--write-tree", "--name-only", left, right)
-    if result.returncode == 0:
-        return []
-    if result.returncode != 1:
-        return None
-    parsed = parse_merge_tree_name_only(result.stdout, 1)
-    return parsed if parsed else ["__merge_tree_conflict__"]
+    return _parse_merge_tree(_merge_tree(repo, left, right))
+
+
+def probe_cherry_conflicts(repo: Path, tip: str, sha: str) -> list[str] | None:
+    """Conflicts if ``sha`` were cherry-picked onto ``tip``. None = unknown.
+
+    ``merge-tree tip sha`` merges the two *trees* (common ancestor = merge-base).
+    That false-conflicts every commit whose ancestor still carries pre-tip
+    versions of files the squash already landed. Cherry-pick only applies
+    ``parent..sha``, so the merge-base must be the parent.
+    """
+    parent = _git(repo, "rev-parse", f"{sha}^")
+    if parent.returncode != 0:
+        return probe_sha_conflicts(repo, tip, sha)
+    parent_sha = parent.stdout.strip()
+    if not parent_sha:
+        return probe_sha_conflicts(repo, tip, sha)
+    return _parse_merge_tree(
+        _merge_tree(repo, f"--merge-base={parent_sha}", tip, sha)
+    )
 
 
 def commit_unix(repo: Path, sha: str) -> int:
@@ -151,13 +172,33 @@ def filter_slices_against_tip(
     slices: list[list[dict[str, Any]]],
     tip: str,
 ) -> tuple[list[list[dict[str, Any]]], list[str]]:
-    """Drop commits that ``merge-tree`` against the stack tip. Unknown is drop."""
+    """Drop commits whose cherry-pick onto the tip conflicts. Unknown is drop.
+
+    Children of a kept parent are kept without a tip probe: ``parent..sha``
+    against the original tip false-conflicts once the parent already
+    rewrites the same file.
+    """
     kept: list[list[dict[str, Any]]] = []
     skipped: list[str] = []
     for group in slices:
+        by_sha = {str(item.get("sha") or ""): item for item in group}
+        novels = [
+            NovelCommit(
+                sha=sha,
+                paths=tuple(item.get("paths") or ()),
+                ref=str(item.get("ref") or ""),
+            )
+            for sha, item in by_sha.items()
+            if sha
+        ]
+        ordered = order_slice(repo, novels) if novels else []
         keep: list[dict[str, Any]] = []
-        for item in group:
-            sha = str(item.get("sha") or "")
+        kept_shas: set[str] = set()
+        kept_paths: dict[str, set[str]] = {}
+        for novel in ordered:
+            item = by_sha[novel.sha]
+            sha = novel.sha
+            child_paths = set(novel.paths)
             if (
                 not sha
                 or not is_git_repo(repo)
@@ -165,12 +206,24 @@ def filter_slices_against_tip(
                 or not sha_is_commit(repo, sha)
             ):
                 keep.append(item)
+                kept_shas.add(sha)
+                kept_paths[sha] = child_paths
                 continue
-            conflicts = probe_sha_conflicts(repo, tip, sha)
+            parent = _git(repo, "rev-parse", f"{sha}^")
+            parent_sha = parent.stdout.strip() if parent.returncode == 0 else ""
+            inherited = kept_paths.get(parent_sha, set()) if parent_sha else set()
+            if parent_sha in kept_shas and child_paths and child_paths <= inherited:
+                keep.append(item)
+                kept_shas.add(sha)
+                kept_paths[sha] = inherited | child_paths
+                continue
+            conflicts = probe_cherry_conflicts(repo, tip, sha)
             if conflicts is None or conflicts:
                 skipped.append(sha)
                 continue
             keep.append(item)
+            kept_shas.add(sha)
+            kept_paths[sha] = inherited | child_paths
         if keep:
             kept.append(keep)
     return kept, skipped
@@ -336,6 +389,41 @@ def _git(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
+def _merge_tree(repo: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    """merge-tree with a live generated-file driver, not a spent extract path."""
+    cmd: list[str] = ["git", "-C", str(repo)]
+    if _GENERATED_DRIVER.is_file():
+        cmd.extend(
+            [
+                "-c",
+                f'merge.l9-generated.driver=bash "{_GENERATED_DRIVER}" %O %A %B %P',
+            ]
+        )
+    cmd.extend(["merge-tree", "--write-tree", "--name-only", *args])
+    return subprocess.run(cmd, text=True, capture_output=True, check=False)
+
+
+def _parse_merge_tree(result: subprocess.CompletedProcess[str]) -> list[str] | None:
+    if result.returncode == 0:
+        return []
+    if result.returncode != 1:
+        return None
+    parsed = parse_merge_tree_name_only(result.stdout, 1)
+    return parsed if parsed else ["__merge_tree_conflict__"]
+
+
+def rebind_merge_driver(repo: Path) -> None:
+    """Rewrite ``merge.l9-generated.driver`` off an ephemeral extract path."""
+    if not _ENSURE_MERGE_DRIVERS.is_file():
+        return
+    subprocess.run(
+        ["bash", str(_ENSURE_MERGE_DRIVERS), str(repo)],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+
+
 def _python() -> str:
     venv = _REPO_ROOT / ".venv" / "bin" / "python"
     return str(venv) if venv.is_file() else sys.executable
@@ -470,8 +558,8 @@ def default_extract(
     index: int,
 ) -> tuple[str, str]:
     short = (slice_commits[0]["sha"] if slice_commits else "empty")[:8]
-    branch = f"feat/pr-train-{index}-{short}"
     stamp = f"{os.getpid()}-{int(time.time())}"
+    branch = f"feat/pr-train-{index}-{short}-{stamp}"
     worktree = Path.home() / ".l9" / "gov-worktrees" / f"pr-train-{index}-{stamp}"
     if worktree.exists():
         raise RuntimeError(f"extract worktree already exists: {worktree}")
@@ -479,6 +567,8 @@ def default_extract(
     add = _git(repo, "worktree", "add", "-b", branch, str(worktree), stack_tip)
     if add.returncode != 0:
         raise RuntimeError(add.stderr.strip() or "git worktree add failed")
+    rebind_merge_driver(repo)
+    applied = 0
     try:
         for item in slice_commits:
             pick = subprocess.run(
@@ -487,14 +577,36 @@ def default_extract(
                 capture_output=True,
                 check=False,
             )
-            if pick.returncode != 0:
-                subprocess.run(
-                    ["git", "-C", str(worktree), "cherry-pick", "--abort"],
+            if pick.returncode == 0:
+                applied += 1
+                continue
+            if is_empty_cherry_pick(pick.stdout or "", pick.stderr or ""):
+                skip = subprocess.run(
+                    ["git", "-C", str(worktree), "cherry-pick", "--skip"],
                     text=True,
                     capture_output=True,
                     check=False,
                 )
-                raise RuntimeError(f"cherry-pick conflict on {item['sha']}: {pick.stderr.strip()}")
+                if skip.returncode != 0:
+                    subprocess.run(
+                        ["git", "-C", str(worktree), "cherry-pick", "--abort"],
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+                    raise RuntimeError(
+                        f"empty cherry-pick skip failed on {item['sha']}: {skip.stderr.strip()}"
+                    )
+                continue
+            subprocess.run(
+                ["git", "-C", str(worktree), "cherry-pick", "--abort"],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            raise RuntimeError(f"cherry-pick conflict on {item['sha']}: {pick.stderr.strip()}")
+        if applied == 0:
+            raise RuntimeError("extract empty: every kept commit was already on the tip")
     except Exception:
         subprocess.run(
             ["git", "-C", str(repo), "worktree", "remove", "--force", str(worktree)],
@@ -502,7 +614,10 @@ def default_extract(
             capture_output=True,
             check=False,
         )
+        _git(repo, "branch", "-D", branch)
+        rebind_merge_driver(repo)
         raise
+    rebind_merge_driver(repo)
     return str(worktree), branch
 
 
