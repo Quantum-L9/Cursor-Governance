@@ -23,8 +23,10 @@ contract:
 
   authority_order:
     - "user task"
-    - "repo files"
-    - "AGENTS.md / README / manifests / configs"
+    - "CANONICAL_LAW.md"
+    - "ops/autonomy/surface_profile.yaml"
+    - "AGENTS.md"
+    - "repo files / README / manifests / configs"
     - "tests and CI"
     - "existing repo patterns"
     - "Unknown"
@@ -77,7 +79,7 @@ contract:
   stop_conditions:
     - "Task objective unclear."
     - "Required files unavailable."
-    - "Repo has unrelated dirty changes."
+    - "Unrelated dirty work is present: preserve and report it; continue with scoped pathspec edits."
     - "Fix requires out-of-scope work."
     - "Validation cannot be run honestly."
     - "L9 boundary conflict cannot be resolved without user decision."

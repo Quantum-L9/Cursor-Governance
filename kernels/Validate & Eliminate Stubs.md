@@ -172,9 +172,9 @@ prompt:
     - "HALT if final zip cannot be created."
 
   convergence_block:
-    convergence_status: "converged"
-    recursive_passes_run: 6
-    same_output_after_multiple_passes: true
+    convergence_status: "<observed: converged|partial|blocked|failed>"
+    recursive_passes_run: "<observed integer>"
+    same_output_after_multiple_passes: "<observed boolean>"
     no_drift: true
     validation_first: true
     enrichment_second: true

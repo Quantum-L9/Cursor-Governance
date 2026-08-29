@@ -39,6 +39,9 @@ prompt:
 
   authority_order:
     - "explicit_user_request"
+    - "CANONICAL_LAW.md"
+    - "ops/autonomy/surface_profile.yaml"
+    - "AGENTS.md"
     - "provided_pack_contents"
     - "existing repo or pack contracts"
     - "existing tests and validation outputs"
@@ -251,7 +254,7 @@ prompt:
     - "confirmed_gaps_filled"
     - "hardening_completed"
     - "public_contracts_preserved"
-    - "no_regression_guard_created"
+    - "regression_guard_created"
     - "post_fix_validation_completed_or_skipped_with_reason"
     - "validation_report_honest"
     - "traceability_map_created"
@@ -310,14 +313,14 @@ prompt:
     - "HALT if final zip cannot be created."
 
   convergence_block:
-    convergence_status: "converged"
-    recursive_passes_run: 6
-    same_output_after_multiple_passes: true
-    pack_validated: true
-    confirmed_gaps_filled: true
-    broken_code_fixed_where_supported: true
-    pack_hardened: true
-    public_contracts_preserved: true
+    convergence_status: "<observed: converged|partial|blocked|failed>"
+    recursive_passes_run: "<observed integer>"
+    same_output_after_multiple_passes: "<observed boolean>"
+    pack_validated: "<observed boolean>"
+    confirmed_gaps_filled: "<observed boolean>"
+    broken_code_fixed_where_supported: "<observed boolean>"
+    pack_hardened: "<observed boolean>"
+    public_contracts_preserved: "<observed boolean>"
     revised_pack_required: true
     zip_required: true
     no_drift: true
