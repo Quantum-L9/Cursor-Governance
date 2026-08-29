@@ -169,7 +169,8 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
         )
     if "headers" in mem and mem.get("headers"):
         _fail(
-            "mcp.template.json graphiti-memory must not carry headers — no bearer on this surface",
+            "mcp.template.json graphiti-memory must not carry headers — "
+            "no bearer on this surface",
             failures,
         )
     else:

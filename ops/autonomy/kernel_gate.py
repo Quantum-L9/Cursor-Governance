@@ -281,7 +281,10 @@ def kernel_latch_required(*, env: dict[str, str] | None = None) -> bool:
 
 def precommit(root: Path, gov: Path, changed_file: Path | None) -> int:
     if not kernel_latch_required():
-        print("OK: kernel hook skipped (Cursor / non-adapter surface; Claude Code owns this latch)")
+        print(
+            "OK: kernel hook skipped "
+            "(Cursor / non-adapter surface; Claude Code owns this latch)"
+        )
         return 0
     changed = read_changed_file(changed_file)
     if changed_are_corpus_only(changed):

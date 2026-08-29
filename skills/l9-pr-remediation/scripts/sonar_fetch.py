@@ -176,7 +176,9 @@ def fetch_issues(
     return {"issues": issues, "total": total, "retrieved": len(issues), "complete": complete}
 
 
-def fetch_rules(transport: DirectTransport, rule_keys: list[str], organization: str) -> dict:
+def fetch_rules(
+    transport: DirectTransport, rule_keys: list[str], organization: str
+) -> dict:
     rules: dict[str, dict] = {}
     for rule_key in sorted(set(rule_keys)):
         payload = transport.get("/rules/show", {"key": rule_key, "organization": organization})

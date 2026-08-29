@@ -1,6 +1,6 @@
 # L9 Cursor MCP configuration
 
-**Authority:** `environment/mcp/master.mcp.json`
+**Authority:** `environment/mcp/master.mcp.json`  
 **Wired to:** Cursor `~/.cursor/mcp.json` (symlink via `setup_workspace_symlinks.sh`)
 
 This file is the **Cursor CLI** MCP map. It is **not** Claude Code’s map.

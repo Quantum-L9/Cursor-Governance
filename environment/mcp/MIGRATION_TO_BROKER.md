@@ -3,7 +3,7 @@
 
 # Migration to Capability Broker Architecture
 
-**Date**: 2026-08-17
+**Date**: 2026-08-17  
 **Status**: Completed
 
 ## What Changed
