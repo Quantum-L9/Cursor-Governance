@@ -7,6 +7,8 @@ import sys
 from pathlib import Path
 from types import SimpleNamespace
 
+import pytest
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SCRIPTS = REPO_ROOT / "skills" / "l9-dag-authoring" / "scripts"
 sys.path.insert(0, str(SCRIPTS))
@@ -20,6 +22,8 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     NovelCommit,
     campaign_halt,
     commits_must_colocate,
+    default_extract,
+    filter_slices_against_tip,
     github_repo_slug,
     group_slices,
     parse_merge_tree_name_only,
@@ -542,6 +546,70 @@ def test_campaign_halt_skips_remediator_and_ff(monkeypatch, tmp_path):
     assert "campaign" in state.halt_reason
     assert state.skill_dispatch == ""
     assert state.ff_ran is False
+
+
+def test_tip_conflict_commit_dropped_clean_stays(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "clash")
+    clash = _commit_file(repo, "docs/plans/x.plan.json", '{"a":1}\n', "clash")
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "docs/plans/x.plan.json", '{"a":2}\n', "tip")
+    _git_c(repo, "checkout", "-b", "clean")
+    clean = _commit_file(repo, "ops/a.py", "a\n", "clean")
+    slices = [
+        [{"sha": clash, "paths": ["docs/plans/x.plan.json"]}],
+        [{"sha": clean, "paths": ["ops/a.py"]}],
+    ]
+    kept, skipped = filter_slices_against_tip(repo, slices, tip)
+    assert skipped == [clash]
+    assert len(kept) == 1
+    assert kept[0][0]["sha"] == clean
+
+
+def test_stack_base_filters_pending_slices_only(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+    from workflows.dags.pr_train_dag import PrTrainState, stack_base_node
+
+    seen: list[list[str]] = []
+
+    def fake_filter(_repo, slices, _tip):
+        seen.append([item["sha"] for group in slices for item in group])
+        return slices, []
+
+    monkeypatch.setattr(mod, "filter_slices_against_tip", fake_filter)
+    monkeypatch.setattr(
+        mod, "load_stack_tip", lambda *_a, **_k: ("origin/main", "1" * 40, "no_open_prs")
+    )
+    state = PrTrainState(
+        repo=str(tmp_path),
+        execute=True,
+        current_slice=1,
+        slices=[[{"sha": "done"}], [{"sha": "pending"}]],
+    )
+    out = stack_base_node(state)
+    assert seen == [["pending"]]
+    assert [group[0]["sha"] for group in out["slices"]] == ["done", "pending"]
+
+
+def test_extract_removes_worktree_on_cherry_pick_abort(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "clash")
+    clash = _commit_file(repo, "docs/plans/x.plan.json", '{"a":1}\n', "clash")
+    _git_c(repo, "checkout", "main")
+    _commit_file(repo, "docs/plans/x.plan.json", '{"a":2}\n', "tip")
+    with pytest.raises(RuntimeError, match="cherry-pick conflict"):
+        default_extract(repo, [{"sha": clash}], "main", 0)
+    leftover = list((tmp_path / ".l9" / "gov-worktrees").glob("pr-train-0-*"))
+    assert leftover == []
+    listed = _git_c(repo, "worktree", "list", "--porcelain").stdout
+    assert str(tmp_path / ".l9") not in listed
 
 
 def test_sibling_stack_halts_to_remediator_without_extract(monkeypatch, tmp_path):

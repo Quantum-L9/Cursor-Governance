@@ -27,6 +27,7 @@ import json
 import os
 import subprocess
 import sys
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
@@ -146,6 +147,36 @@ def commit_unix(repo: Path, sha: str) -> int:
         return 0
 
 
+def filter_slices_against_tip(
+    repo: Path,
+    slices: list[list[dict[str, Any]]],
+    tip: str,
+) -> tuple[list[list[dict[str, Any]]], list[str]]:
+    """Drop commits that ``merge-tree`` against the stack tip. Unknown is drop."""
+    kept: list[list[dict[str, Any]]] = []
+    skipped: list[str] = []
+    for group in slices:
+        keep: list[dict[str, Any]] = []
+        for item in group:
+            sha = str(item.get("sha") or "")
+            if (
+                not sha
+                or not is_git_repo(repo)
+                or not sha_is_commit(repo, tip)
+                or not sha_is_commit(repo, sha)
+            ):
+                keep.append(item)
+                continue
+            conflicts = probe_sha_conflicts(repo, tip, sha)
+            if conflicts is None or conflicts:
+                skipped.append(sha)
+                continue
+            keep.append(item)
+        if keep:
+            kept.append(keep)
+    return kept, skipped
+
+
 def commits_must_colocate(repo: Path, left: NovelCommit, right: NovelCommit) -> bool:
     """True → same stacked PR. Unknown merge-tree is fail-closed (colocate)."""
     if shares_generated_clobber(left, right):
@@ -253,6 +284,7 @@ class PrTrainState(BaseModel):
     diagnoses: list[dict[str, Any]] = Field(default_factory=list)
     novel: list[dict[str, Any]] = Field(default_factory=list)
     skipped_dup: list[str] = Field(default_factory=list)
+    skipped_tip_conflict: list[str] = Field(default_factory=list)
     slices: list[list[dict[str, Any]]] = Field(default_factory=list)
     current_slice: int = Field(default=0)
 
@@ -432,7 +464,7 @@ def default_extract(
 ) -> tuple[str, str]:
     short = (slice_commits[0]["sha"] if slice_commits else "empty")[:8]
     branch = f"feat/pr-train-{index}-{short}"
-    stamp = os.getpid()
+    stamp = f"{os.getpid()}-{int(time.time())}"
     worktree = Path.home() / ".l9" / "gov-worktrees" / f"pr-train-{index}-{stamp}"
     if worktree.exists():
         raise RuntimeError(f"extract worktree already exists: {worktree}")
@@ -440,21 +472,30 @@ def default_extract(
     add = _git(repo, "worktree", "add", "-b", branch, str(worktree), stack_tip)
     if add.returncode != 0:
         raise RuntimeError(add.stderr.strip() or "git worktree add failed")
-    for item in slice_commits:
-        pick = subprocess.run(
-            ["git", "-C", str(worktree), "cherry-pick", item["sha"]],
-            text=True,
-            capture_output=True,
-            check=False,
-        )
-        if pick.returncode != 0:
-            subprocess.run(
-                ["git", "-C", str(worktree), "cherry-pick", "--abort"],
+    try:
+        for item in slice_commits:
+            pick = subprocess.run(
+                ["git", "-C", str(worktree), "cherry-pick", item["sha"]],
                 text=True,
                 capture_output=True,
                 check=False,
             )
-            raise RuntimeError(f"cherry-pick conflict on {item['sha']}: {pick.stderr.strip()}")
+            if pick.returncode != 0:
+                subprocess.run(
+                    ["git", "-C", str(worktree), "cherry-pick", "--abort"],
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                raise RuntimeError(f"cherry-pick conflict on {item['sha']}: {pick.stderr.strip()}")
+    except Exception:
+        subprocess.run(
+            ["git", "-C", str(repo), "worktree", "remove", "--force", str(worktree)],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        raise
     return str(worktree), branch
 
 
@@ -637,7 +678,29 @@ def stack_base_node(state: PrTrainState) -> dict[str, Any]:
                 "stop": "remediate",
             }
         return {"status": "blocked", "halt_reason": msg, "stop": "report"}
-    return {"stack_tip": tip, "stack_tip_sha": sha, "stack_reason": reason}
+    probe_ref = sha or tip
+    done = state.slices[: state.current_slice]
+    pending = state.slices[state.current_slice :]
+    kept, skipped = filter_slices_against_tip(repo, pending, probe_ref)
+    skipped_all = list(state.skipped_tip_conflict) + skipped
+    if skipped and not kept and not done:
+        return {
+            "stack_tip": tip,
+            "stack_tip_sha": sha,
+            "stack_reason": reason,
+            "slices": [],
+            "skipped_tip_conflict": skipped_all,
+            "status": "blocked",
+            "halt_reason": f"every slice conflicts with {probe_ref}",
+            "stop": "report",
+        }
+    return {
+        "stack_tip": tip,
+        "stack_tip_sha": sha,
+        "stack_reason": reason,
+        "slices": done + kept,
+        "skipped_tip_conflict": skipped_all,
+    }
 
 
 def extract_node(state: PrTrainState) -> dict[str, Any]:
@@ -734,7 +797,11 @@ def report_node(state: PrTrainState) -> dict[str, Any]:
         f"# PR train ({GRAPH_ID})",
         f"status: {status}",
         f"branch: {state.branch or '?'}",
-        f"novel commits: {len(state.novel)} (skipped landed: {len(state.skipped_dup)})",
+        (
+            f"novel commits: {len(state.novel)} "
+            f"(skipped landed: {len(state.skipped_dup)}; "
+            f"tip-conflict: {len(state.skipped_tip_conflict)})"
+        ),
         f"slices: {len(state.slices)} (path ∪ generated-prefix ∪ merge-tree; unknown=colocate)",
         f"stack: {state.stack_reason or '(unprobed)'}",
         f"opened: {len(state.opened_prs)}",
@@ -745,6 +812,8 @@ def report_node(state: PrTrainState) -> dict[str, Any]:
     ]
     if state.halt_reason:
         lines.append(f"halt: {state.halt_reason}")
+    if state.skipped_tip_conflict:
+        lines.append("skipped tip-conflict: " + ",".join(state.skipped_tip_conflict))
     if not state.execute:
         lines.append("execute=false — plan only; no extract/publish/merge/ff")
     return {"report": "\n".join(lines), "status": status, "stop": "report"}
@@ -780,6 +849,8 @@ def route_after_stack(state: PrTrainState) -> Literal["extract", "remediate", "r
         return "remediate"
     if state.status in {"blocked", "failed"}:
         return "report"
+    if state.current_slice >= len(state.slices):
+        return "remediate"
     return "extract"
 
 
