@@ -1538,7 +1538,10 @@ execution:
   executed_at: '2026-08-29'
   branch: claude/cursor-governance-pack-reconcile-9d4c9v
   branched_from: 0fc6ee6f2aadfbee885bf5bb708ff91c38205ba1
-  head_sha: 8d81233648464330c7e45de9e75487a8c8dce583
+  code_delivery_head_sha: 8d81233648464330c7e45de9e75487a8c8dce583
+  code_delivery_head_note: Head of wave 1's CODE delivery. The branch tip is later by the commits that record this
+    wave into the pack (7b35b52b, c351fb1c) — those are tracking, not delivery, and are deliberately not counted
+    as execution units.
   pull_request:
     number: 360
     url: https://github.com/Quantum-L9/Cursor-Governance/pull/360
