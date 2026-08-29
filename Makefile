@@ -1,4 +1,4 @@
-.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-projection claude-projection-check claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync
+.PHONY: help start sync wiring-check symlinks-check symlinks-install claude-plugins claude-projection claude-projection-check claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize secrets-sync secrets-check ui-operator-sync
 .PHONY: l4-status l4-begin l4-record-kernels l4-authorize
 .PHONY: improve pr-preflight
 .PHONY: repo-write-lock-test precommit-hook-contract
@@ -66,7 +66,7 @@ $(_GOV_PYTHON_REQ): gov-python
 endif
 
 help:
-	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-projection claude-projection-check claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize integrity-check integrity-snapshot secrets-sync secrets-check ui-operator-sync"
+	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-projection claude-projection-check claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize secrets-sync secrets-check ui-operator-sync"
 	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
@@ -594,21 +594,6 @@ rules-validate:
 ## For a pure read-only check use `make rules-validate`.
 rules-stabilize:
 	bash ops/scripts/run_rules_stabilization_validation.sh
-
-## Read-only integrity check: report drift/missing/extra governed files against the
-## committed integrity/manifest-lock.json baseline. Never repairs, never writes to
-## tracked files (report goes to the gitignored ops/logs/). If the baseline was never
-## seeded it prints "manifest not seeded" and exits 0. Safe to run anytime.
-integrity-check:
-	$(PYTHON) integrity/hash-verifier.py --no-repair
-
-## Seed/refresh the integrity baseline: snapshot every governed file's sha256 + full
-## base64 content into integrity/manifest-lock.json. Deliberate, high-footprint action
-## (embeds file contents) — run intentionally and review the (large) diff. Not wired
-## into any hook/CI. The self-heal auto-repair mode is intentionally NOT exposed as a
-## target because it overwrites working-tree files from the baseline.
-integrity-snapshot:
-	$(PYTHON) integrity/hash-verifier.py --snapshot
 
 ## Sync ops/secrets/openclaw-igorbot.registry.yaml from AWS Secrets Manager (refs/key names only).
 secrets-sync:

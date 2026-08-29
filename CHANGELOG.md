@@ -14,6 +14,16 @@ history instead of trusting a backfilled entry here.
   live. `operational-oversight.py` no longer soft-imports the retired
   `governance-monitor`. Do not restore the Flask API, dashboard, or Suite-6
   header validator.
+- **Suite-6 integrity healer:** deleted `integrity/` (`hash-verifier.py`,
+  `system-check.sh`, empty `manifest-lock.json`, `integrity-audit.md`) and
+  `foundation/security/_archived/governance-integrity.py` plus its
+  `.sig.json`. Makefile `integrity-check` / `integrity-snapshot` removed
+  (`ALLOW-ROOT-DELETION`, GitHub #367). Live integrity stays git + `make pr`,
+  PE MANIFEST hashes, `source-integrity-receipt.v1`, generated-artifact
+  sync, and tip freshness. Lessons:
+  `learning/failures/check-must-not-recreate-archived.md`,
+  `learning/failures/integrity-tool-must-not-heal.md`. The
+  `foundation/security/_archived/signatures/` corpus stays (TODO C2).
 
 ### Changed
 - **Suite-6 intelligence archive cut-over (2026-08-28):** live wrappers no longer
@@ -167,10 +177,8 @@ session (see below).
   lacked the required DORA header/footer meta blocks.
 
 ### Investigated and kept (not archived, despite initial LEGACY flags)
-- `integrity/hash-verifier.py` — confirmed ACTIVE: `manifest-lock.json` is a
-  live artifact, `system-check.sh` calls it, git history shows deliberate
-  Suite-6→L9 rebrand carry-forward. Standalone integrity concern, unrelated
-  to the deprecated memory/learning stack.
+- `integrity/hash-verifier.py` — **retired 2026-08-28.** The 2026-07-19
+  ACTIVE keep was existence, not authority. Folder deleted; do not restore.
 - `intelligence/reasoning/reasoning-snapshot-generator.py` — kept per
   explicit decision; needs a follow-up fix (see `TODO.md`).
 

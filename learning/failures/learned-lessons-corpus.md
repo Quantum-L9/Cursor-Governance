@@ -806,3 +806,31 @@ contain detection patterns like `postgresql://.*:.*@` to find violations.
 **Wrong:** `mv WIP /tmp/cg-untracked-hold-final` then `make pr`
 **Right:** Leave WIP dirty; run `make pr` (scratch dirt is WARN-softened)
 
+---
+
+## Integrity: check must not recreate archived files (2026-08-28)
+
+**Rule:** A verifier may read or write a gitignored report. It must not
+create a path that is missing because it was archived, retired, or never
+seeded.
+
+**Wrong:** Recreate `intelligence/meta-audit.md` or `memory-bank/` as a side
+effect of a health check.
+
+**Right:** Report `absent` / `not_seeded` and stop. Restore only via git /
+`governance_activate_fresh.sh`.
+
+**File:** `learning/failures/check-must-not-recreate-archived.md`
+
+---
+
+## Integrity: a healer is not a checker (2026-08-28)
+
+**Rule:** Integrity proves a digest. It does not restore bytes from a side
+store. Do not embed file bodies in a lock. Do not revive `integrity/` or
+`governance-integrity.py` because an old TODO said ACTIVE, keep.
+
+**Owners:** git + `make pr`, PE MANIFEST hashes, `source-integrity-receipt.v1`,
+`sync_generated_artifacts.py`, tip freshness.
+
+**File:** `learning/failures/integrity-tool-must-not-heal.md`

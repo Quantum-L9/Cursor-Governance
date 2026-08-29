@@ -73,7 +73,6 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 ├── learning/          # Curated lessons, repeated-mistakes, quick-fixes
 ├── protocols/         # GMP protocol contracts and templates
 ├── security/          # Security governance docs
-├── integrity/         # Integrity verification docs/scripts
 ├── pipeline/          # Pipeline orchestration & validation docs
 ├── reports/           # GMP execution reports
 ├── C_GOV_FILES/       # Legacy duplicate tree — pending removal (see hygiene PRs)

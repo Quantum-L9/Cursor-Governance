@@ -201,7 +201,7 @@
 |------|--------------|
 | `ops/scripts/pre_execution_checker.py` | Block dangerous ops BEFORE they run |
 | `ops/scripts/violation_tracker.py` | Track rule violations |
-| `integrity/hash-verifier.py` | Detect file tampering |
+| `integrity/hash-verifier.py` | Deleted 2026-08-28 — healer, not a checker |
 | `intelligence/learning/chat-learning-extractor.py` | Auto-extract lessons from chats |
 | `ops/scripts/prevention_effectiveness_tracker.py` | Measure if lessons work |
 | `execution-governance/validation/governance-validator.py` | Validate governance rules |

@@ -80,10 +80,10 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
 - [x] **`ops/scripts/_archived/migrate_to_project_rules.py`** — archive tree purged 2026-08-06;
   see DELETE LIST A9 (doc scrub only).
 - [ ] **`intelligence/reasoning/cursor-native-reasoning.md`** — verify overlap with `l9-structured-reasoning` before edit/delete
-- [ ] **`integrity/hash-verifier.py`** — investigated 2026-07-19, confirmed **ACTIVE, keep**:
-  `manifest-lock.json` is a live present artifact, `system-check.sh` calls it, and git history
-  shows deliberate Suite-6→L9 rebrand carry-forward (not left to rot). Distinct standalone
-  concern from the deprecated memory/learning stack.
+- [x] **`integrity/hash-verifier.py`** — deleted 2026-08-28 (not ACTIVE). Empty
+  lock, unwired, default auto-repair. Lessons:
+  `learning/failures/check-must-not-recreate-archived.md`,
+  `learning/failures/integrity-tool-must-not-heal.md`. GitHub #367.
 
 ## Ruff debt (RESOLVED 2026-07-28 — `ruff check .` and `ruff format --check .` are green)
 
@@ -207,7 +207,7 @@ deleted in this pass.** Before any delete PR: re-grep live callers
 **Not on this list (KEEP — live SSOT):**
 `environment/program-execution/`, `environment/agents/adapters/claude-code/`,
 root `autonomy/`, `ops/autonomy/`, `ops/hooks/`, `ops/scripts/` (active set),
-`ops/graphiti/`, `integrity/`, `kernels/`, `skills/` (live packs),
+`ops/graphiti/`, `kernels/`, `skills/` (live packs),
 `skills/_archived/` **directory convention** (retirement landing zone — keep the
 folder even if individual packs are later purged), `learning/` (non-`_archived`),
 `schemas/`, `releases/`, `governance/`, `ORG_INVARIANTS.yaml`, `end-session.yaml`.
