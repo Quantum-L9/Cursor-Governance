@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-29T00:29:49Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-29T01:56:32Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -20,7 +20,7 @@ Generated: `2026-08-29T00:29:49Z`. Source: `rules/*.mdc`.
 |---|---|---|---|---|---:|---|
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 36 | `ceaafbc51009` |
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 161 | `9b2cf950134c` |
-| `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 68 | `d3fca17315f9` |
+| `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 70 | `93cd8a5cbf32` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
 | `06-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | git | always | 56 | `a8c0978cff70` |
