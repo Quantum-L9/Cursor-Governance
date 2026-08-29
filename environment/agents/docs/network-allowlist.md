@@ -25,7 +25,7 @@ shared memory and GitHub.
 | `api.github.com` | `gh` / GitHub API |
 | `pypi.org`, `files.pythonhosted.org` | Python toolchains when the surface installs packages |
 | `registry.npmjs.org` | Node toolchains when applicable |
-| `npm.pkg.github.com` | GitHub Packages for `@quantum-l9/*` (broker / trusted-operator `authed_npm.sh` only; no PAT in the agent env) |
+| `npm.pkg.github.com` | GitHub Packages for `@quantum-l9/*` (`ops/secrets/gh_npm.sh` + `gh auth token` on hosted; Infisical `authed_npm.sh` for trusted operators). Do not paste `NODE_AUTH_TOKEN` |
 
 ## Production memory
 
