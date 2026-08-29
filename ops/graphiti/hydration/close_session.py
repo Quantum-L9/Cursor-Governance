@@ -30,6 +30,10 @@ from ops.graphiti.hydration.identity import (  # noqa: E402
     resolve_write_identity,
     stamp_source_description,
 )
+from ops.graphiti.hydration.resume_signal_scorer import (  # noqa: E402
+    should_persist_derived_episode,
+    signals_from_close,
+)
 from ops.graphiti.hydration.transcript import load_transcript_excerpt  # noqa: E402
 
 PHASE_A_BUDGET = 8.0
@@ -449,7 +453,15 @@ def close_session(
             report["signal_packet_id"] = signal.get("packet_id")
             # Optionally supersede pickup with richer one
             rich = signal.get("pickup") or {}
-            if rich.get("next_action") and rich.get("active_objective"):
+            session_signals = signals_from_close(
+                transcript=transcript,
+                reason=reason,
+                promotion_decisions=signal.get("promotion_decisions") or [],
+            )
+            persist_derived = should_persist_derived_episode(session_signals, rules)
+            if not persist_derived:
+                report["warnings"].append("derived resume episode dropped: low resume signal")
+            if rich.get("next_action") and rich.get("active_objective") and persist_derived:
                 rich_line = (
                     f"PICKUP|objective={rich['active_objective']}|next={rich['next_action']}|"
                     f"agent={identity['agent_id']}|session={session_id}"

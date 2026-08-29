@@ -26,7 +26,7 @@ Continuously adjust reasoning depth, mode, and latency based on real‑time feed
 1. Parse `ops/logs/reasoning_metrics.json`
 2. Detect downward trend in confidence or performance
 3. Switch reasoning intensity or modify validation thresholds
-4. Append decision rationale to `intelligence/meta-audit.md`
+4. Append decision rationale as a Graphiti lesson (stamp `agent_id`)
 
 ## Output
 - Updated reasoning weights
@@ -34,10 +34,9 @@ Continuously adjust reasoning depth, mode, and latency based on real‑time feed
 
 ## Not implemented
 
-**This describes an intended design, not running behavior.** All four cited paths are absent:
-`ops/reasoning-metrics.md`, `ops/logs/reasoning_metrics.json`, `intelligence/meta-audit.md`, and the
-former `.cursor/profiles/reasoning.md` target (retired — reasoning depth now lives in
-[reasoning-modes.md](../skills/l9-structured-reasoning/references/reasoning-modes.md)).
+**This describes an intended design, not running behavior.** Cited Suite-6 metric/audit
+paths are absent. Reasoning depth now lives in
+[reasoning-modes.md](../skills/l9-structured-reasoning/references/reasoning-modes.md).
 
 Depth selection is currently **model-invoked, not metric-tuned**: the agent picks a reasoning mode per
 task from `l9-structured-reasoning`. No feedback loop writes reasoning weights. Treat any claim of

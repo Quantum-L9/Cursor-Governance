@@ -1,0 +1,24 @@
+# Suite-6 cut-over: implicit outcome labels (six pairs only).
+# Any other (action, feedback) pair is a no-op.
+# Require an existing Graphiti decision episode id at write time.
+# Do not mutate thresholds, temperature, or a rule registry.
+version: 1
+pairs:
+  - action: WARN_AND_LOG
+    feedback: edited_file
+    label: CORRECT
+  - action: WARN_AND_LOG
+    feedback: said_fine
+    label: TOO_STRICT
+  - action: BLOCK_OR_REQUIRE_REVIEW
+    feedback: added_header
+    label: CORRECT
+  - action: BLOCK_OR_REQUIRE_REVIEW
+    feedback: overrode
+    label: TOO_STRICT
+  - action: LOG_ONLY
+    feedback: error_occurred
+    label: TOO_LENIENT
+  - action: LOG_ONLY
+    feedback: no_issues
+    label: CORRECT

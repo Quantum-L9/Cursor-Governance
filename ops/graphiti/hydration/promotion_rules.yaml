@@ -20,3 +20,18 @@ phase_b_budget_seconds: 18
 total_close_budget_seconds: 30
 transcript_char_cap_default: 12000
 hydration_char_budget_default: 4000
+# Optional derived Graphiti episode keep/drop (close_session promotions only).
+# Does not filter SessionHydrationPacket or archive_transcript.
+derived_episode_min_score: 0.35
+resume_signals:
+  actions_divisor: 3
+  actions_weight: 0.25
+  files_divisor: 5
+  files_weight: 0.20
+  decisions_divisor: 2
+  decisions_weight: 0.20
+  messages_divisor: 10
+  messages_weight: 0.15
+  code_weight: 0.10
+  incomplete_completion_score: 0.3
+  completion_weight: 0.10
