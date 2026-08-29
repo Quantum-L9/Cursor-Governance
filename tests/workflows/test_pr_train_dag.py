@@ -642,6 +642,55 @@ def test_filter_keeps_remainder_mode_without_cherry_probe(monkeypatch, tmp_path)
     assert kept[0][0]["mode"] == "remainder"
 
 
+def test_remainder_slice_tombstones_deleted_last_writer(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    (repo / "ops").mkdir()
+    (repo / "ops" / "unique.py").write_text("x\n", encoding="utf-8")
+    _git_c(repo, "add", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "add unique")
+    added = _rev_parse(repo)
+    _git_c(repo, "rm", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "delete unique")
+    deleted = _rev_parse(repo)
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "keep.txt", "squash\n", "tip squash")
+    remainder = collect_remainder_slice(
+        repo,
+        [
+            {"sha": added, "paths": ("ops/unique.py",)},
+            {"sha": deleted, "paths": ("ops/unique.py",)},
+        ],
+        tip,
+    )
+    assert remainder == []
+
+
+def test_filter_remainder_drops_paths_already_on_new_tip(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    (repo / "ops").mkdir()
+    (repo / "ops" / "unique.py").write_text("old\n", encoding="utf-8")
+    _git_c(repo, "add", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "unique")
+    donor = _rev_parse(repo)
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "ops/unique.py", "from-car\n", "car landed unique")
+    kept, skipped, _items = filter_slices_against_tip(
+        repo,
+        [[{"sha": donor, "paths": ("ops/unique.py",), "mode": "remainder"}]],
+        tip,
+    )
+    assert skipped == []
+    assert kept == []
+
+
 def test_remainder_slice_keeps_unique_path_from_tip_conflict(tmp_path):
     repo = tmp_path / "git"
     repo.mkdir()
