@@ -339,3 +339,32 @@ def test_sync_remote_refs_is_fail_soft_without_a_remote(tmp_path: Path) -> None:
     solo.mkdir()
     subprocess.run(["git", "-C", str(solo), "init", "-q"], check=True)
     assert repo_hygiene.sync_remote_refs(repo_hygiene.Git(solo)) is None
+
+
+def test_both_call_sites_ship_both_halves() -> None:
+    """The contract, asserted at every site that claims it.
+
+    ops/scripts/tests/test_stale_remote_ref_counts.sh already pins the bash
+    half. Nothing pinned the pair ACROSS the two implementations, which is how
+    they diverged: one language got both halves and the other got one, and only
+    prose said they were the same contract. Prose is what failed here.
+    """
+    gov = Path(__file__).resolve().parents[3]
+    bootstrap = (gov / "ops" / "scripts" / "bootstrap_agent_environment.sh").read_text(
+        encoding="utf-8"
+    )
+    hygiene = (gov / "ops" / "scripts" / "repo_hygiene.py").read_text(encoding="utf-8")
+
+    # bash: prune, then guarantee the fallback the prune creates a need for
+    assert "remote prune origin" in bootstrap
+    assert "remote set-head origin -a" in bootstrap
+
+    # python: the same pair, through sync_remote_refs
+    assert '"fetch", "--prune", "origin"' in hygiene
+    assert '"remote", "set-head", "origin", "-a"' in hygiene
+    assert "sync_remote_refs" in hygiene
+
+    # and the python fetch must not be reachable except through the pair
+    assert hygiene.count('"fetch", "--prune", "origin"') == 1, (
+        "a second prune site would be able to skip the set-head half again"
+    )
