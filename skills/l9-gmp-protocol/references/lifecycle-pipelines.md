@@ -52,12 +52,12 @@ What do you need?
 | Stage | L9 / repo actions |
 |-------|-------------------|
 | **Discover** | `l9-code-analysis` + `l9-gap-analysis`; optional `make audit` |
-| **Build** | `l9-plan` / `l9-structured-reasoning` → implement → local `make pr-check` |
+| **Build** | `l9-plan` / `l9-structured-reasoning` → implement → local `make pr` |
 | **Ship** | `PR_REMEDIATE=0 make pr` / `l9 pr` (runs the checkers, then push + PR) → CI green |
 | **Check** | `make audit`; advisory security scans; review open PRs/CI |
 | **Fix** | `l9-incident-response`; git revert; Odoo `make update` rollback path |
 
-Generic repos: swap `make pr-check` / `make audit` for equivalent CI gates. The publish path does not vary: `make pr` runs the governance Makefile's target from any workspace.
+Generic repos: swap `make pr` / `make audit` for equivalent CI gates. The publish path does not vary: `make pr` runs the governance Makefile's target from any workspace.
 
 ---
 
@@ -90,7 +90,7 @@ Generic repos: swap `make pr-check` / `make audit` for equivalent CI gates. The 
 |------|--------|------|
 | 1. Design | `l9-structured-reasoning` or `l9-plan`; Block 9 impl plan if coding | Requirements clear; confidence ≥ 0.8 |
 | 2. Implement | Locked scope only | Incremental validation |
-| 3. Static validate | `make pr-check` or repo lint/test equivalent | Must pass before ship |
+| 3. Static validate | `make pr` or repo lint/test equivalent | Must pass before ship |
 | 4. Backup checkpoint | Commit or stash before risky steps | Rollback point exists |
 | 5. Ready for SHIP | Pre-ship checklist (below) | All gates green |
 
@@ -99,7 +99,7 @@ Generic repos: swap `make pr-check` / `make audit` for equivalent CI gates. The 
 - [ ] No open TODO/FIXME without tracking
 - [ ] Tests added/updated for behavior change
 - [ ] Docs/manifest/wiring updated if applicable
-- [ ] `make pr-check` passed this session
+- [ ] `make pr` passed this session
 - [ ] Rollback plan named (revert commit / module downgrade)
 
 ---

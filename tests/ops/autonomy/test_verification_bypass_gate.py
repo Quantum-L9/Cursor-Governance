@@ -182,7 +182,7 @@ def test_governed_workspace_reports_absent_hook_as_by_design(tmp_path) -> None:
     assert status["armed"] is False
     assert status["by_design"] is True
     assert status["model"] == "governed_gate"
-    assert "make pr-check" in status["reason"]
+    assert "make pr" in status["reason"]
 
 
 def test_status_reports_an_armed_checkout(tmp_path) -> None:
@@ -205,7 +205,7 @@ def test_status_on_a_non_repository_is_not_a_crash(tmp_path) -> None:
 def test_contract_does_not_teach_a_commit_time_only_model() -> None:
     """The remedy must name the gate this repo actually runs."""
     blob = json.dumps(CONTRACT)
-    assert "make pr-check" in blob
+    assert "make pr" in blob
     assert "run `pre-commit install`" not in blob
 
 
@@ -239,7 +239,7 @@ def test_governed_gate_names_the_supported_installer(tmp_path) -> None:
     status = verification_status(repo)
     assert status["model"] == "governed_gate"
     assert "install_commit_hook.sh" in status["reason"]
-    assert "make pr-check" in status["reason"]
+    assert "make pr" in status["reason"]
 
 
 def test_installer_exists_and_is_executable() -> None:

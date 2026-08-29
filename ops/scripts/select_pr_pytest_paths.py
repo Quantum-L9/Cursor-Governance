@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Select local make pr-check pytest paths. Never emit repo-root '.'."""
+"""Select local make pr pytest paths. Never emit repo-root '.'."""
 
 from __future__ import annotations
 

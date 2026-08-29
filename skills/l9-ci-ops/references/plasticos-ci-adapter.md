@@ -7,12 +7,12 @@ status: active
 
 # PlasticOS CI Adapter
 
-Load when `AGENTS.md` or `make pr-check` exists in the repo.
+Load when `AGENTS.md` or `make pr` exists in the repo.
 
 ## Local gate (authoritative)
 
 ```bash
-make pr-check
+OPEN_PR=0 make pr
 ```
 
 Runs: ruff, XML, module wiring, circular deps, Odoo 19 patterns, semgrep, pytest (pure-python tier).
@@ -28,7 +28,7 @@ Runs: ruff, XML, module wiring, circular deps, Odoo 19 patterns, semgrep, pytest
 ## Push workflow
 
 ```bash
-make push          # pr-check then push
+make push          # backup after local OPEN_PR=0 make pr
 make push pr=1     # push + open PR into Staging
 ```
 

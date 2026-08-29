@@ -189,7 +189,7 @@ def _success_table(plan: dict) -> list[str]:
     criteria = plan.get("success_criteria") or []
     for i, c in enumerate(criteria, start=1):
         lines.append(
-            f"| SP-{i:02d} | {c} | quality_gate | observe during PE verify / make pr-check | true |"
+            f"| SP-{i:02d} | {c} | quality_gate | observe during PE verify / make pr | true |"
         )
     if not criteria:
         lines.append(

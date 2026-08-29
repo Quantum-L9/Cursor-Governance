@@ -259,7 +259,7 @@ compiled_prompt:
   rule_improvement_contract:
     body:
       - operational precision over philosophy
-      - real commands only (make pr-check, make push, bash .cursor-commands/ops/scripts/...)
+      - real commands only (make pr, make push, bash .cursor-commands/ops/scripts/...)
       - remove stale CI gates that contradict AGENTS.md / ci.yml
       - keep numbered-prefix meaning (81-ci-* = manifest contract, etc.)
     claude_path_refs:

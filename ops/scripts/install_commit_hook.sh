@@ -13,7 +13,7 @@
 #
 #   The shim installed here does NOT call `pre-commit` directly. It delegates
 #   to run_pr_precommit.sh --staged, which resolves the surface-aware SKIP list
-#   from one place. Same catalog, same exclusions as `make pr-check`, applied to
+#   from one place. Same catalog, same exclusions as `make pr`, applied to
 #   the index. That removes the reason for the prohibition instead of ignoring
 #   it.
 #

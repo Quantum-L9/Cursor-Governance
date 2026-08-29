@@ -163,7 +163,7 @@ if [[ "${1:-}" == "--print-state-digest" ]]; then
 fi
 # Remediator local verify is make precommit-repo. The reader wave (pytest,
 # projection, wiring) is ceremony-only. Export L9_REMEDIATOR=1 on that path
-# so an accidental make pr-check fails in milliseconds instead of minutes.
+# so an accidental leftover make pr-check or make pr fails in milliseconds instead of minutes.
 if [[ "${L9_REMEDIATOR:-0}" == "1" ]]; then
   echo "FAIL: remediator local verify is make precommit-repo (no reader wave)"
   echo "Run: L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo"

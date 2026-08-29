@@ -440,7 +440,7 @@ def verification_status(root: Path | None = None) -> dict[str, Any]:
                 "surface-aware SKIP list that ops/scripts/run_pr_precommit.sh applies, "
                 "so symlinks-check would reject every commit on a non-cursor surface. "
                 "Verification lives at `make pr` (internal leaf "
-                "`make pr-check`), not at commit time. "
+                "`make pr`), not at commit time. "
                 "Do NOT run `pre-commit install`. To ALSO verify at commit time, "
                 "install the governed shim: `bash ops/scripts/install_commit_hook.sh` "
                 "(governance clone only) — it delegates to run_pr_precommit.sh --staged, "

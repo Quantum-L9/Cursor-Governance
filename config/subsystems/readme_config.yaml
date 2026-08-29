@@ -39,7 +39,7 @@ subsystems:
     title: Governance scripts
     tier: operations
     description: Wiring, publish, and hygiene CLIs used by Makefile targets.
-    purpose: Capability graph behind make start / make pr / make pr-check.
+    purpose: Capability graph behind make start / make pr.
   workflows:
     path: workflows
     title: Workflow graphs

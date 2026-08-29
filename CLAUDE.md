@@ -59,12 +59,12 @@ the formatter block).
   installs no commit hook — `pre-commit install` is *forbidden*
   (`validate_claude_env.check_session_deps_installs_no_git_hook`,
   `ops/scripts/run_pr_precommit.sh`), because a raw hook runs the catalog
-  without the surface-aware SKIP list. Verification lives at `make pr-check`
-  (public quality) and `make pr` (publish). So never reach for `--no-verify`,
+  without the surface-aware SKIP list. Verification lives at `make pr`
+  (Diagnose: `OPEN_PR=0 make pr`). So never reach for `--no-verify`,
   `git commit -n`, `-c core.hooksPath=`, or `SKIP=`/`HUSKY=`: there is no hook
   to skip, the token only signals intent to dodge verification, and
   `ops/autonomy/verification_bypass_gate.py` denies it at PreToolUse. If you
-  want the checks, run `make pr-check`.
+  want the checks, run `OPEN_PR=0 make pr`.
 - **Receipts expire.** `~/.l9/claude/bootstrap-state.json` and
   `~/.l9/claude/gov-refresh.json` carry a UTC timestamp and a TTL. Read them
   through `ops/scripts/claude_bootstrap_receipt.py` and

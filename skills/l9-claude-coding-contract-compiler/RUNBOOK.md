@@ -22,7 +22,7 @@ campaign:
     commit_gate:
       commands:
         - "python -m unittest discover -s tests -v"
-        - "make pr-check"
+        - "make pr"
 ```
 
 Example Node target:

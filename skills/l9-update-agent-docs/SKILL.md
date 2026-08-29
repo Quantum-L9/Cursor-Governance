@@ -83,7 +83,7 @@ auditor or repairer.
 3. **Smallest source-aligned change** — one additive `AGENTS.md` line or one
    `CLAUDE.md` pointer correction. No fold, no rewrite, no extra files.
 4. **Honest validation** — report only checks that ran as Passed / Failed /
-   Skipped / Unknown / NotApplicable. Local `make pr-check` is not remote CI.
+   Skipped / Unknown / NotApplicable. Local `make pr` is not remote CI.
    Do not claim a gate from inspection or grep alone.
 5. **No stubs or fake validation** — no TODO-as-done, no invented root files,
    no claimed PASS without the command output.

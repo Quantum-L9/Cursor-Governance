@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# INTERNAL leaf of make pr (run_pr_gate.sh). Diagnose alias: make pr-check /
-# OPEN_PR=0 make pr. Runs the hook catalog in .pre-commit-config.yaml on
+# INTERNAL leaf of make pr (run_pr_gate.sh). Diagnose: OPEN_PR=0 make pr
+# (leftover target pr-check is the same leaf). Runs the hook catalog in
 # changed files only. This is not a public gate and not a git commit hook.
 # Full-tree of the same catalog is INTERNAL `make precommit` (nightly / make pr-full).
 #

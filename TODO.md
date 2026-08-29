@@ -295,11 +295,11 @@ folder even if individual packs are later purged), `learning/` (non-`_archived`)
 
 Changes live in the SSOT (`$HOME/.cursor-governance`). Backup via `sessionEnd` hook or `make governance-backup` — not from IB-Odoo_19.
 
-## pre-commit vs `make pr-check` — parked (2026-08-17)
+## pre-commit vs `make pr` — parked (2026-08-17)
 
 Do **not** edit `.pre-commit-config.yaml` and do **not** change the working
 `Makefile` / `make pr` lifecycle (PR #209) until this is an explicit follow-up.
-Keep shipping through `make improve` → `make pr-check` → `make pr`.
+Keep shipping through `make improve` → `make pr` → `make pr`.
 
 **Findings (microscope, 2026-08-17):**
 
@@ -309,7 +309,7 @@ Keep shipping through `make improve` → `make pr-check` → `make pr`.
    `pre-commit install` would write that local untracked file. CI never uses
    the hook.
 2. **What actually runs lint today**
-   - Local: `make pr-check` → `run_pr_gate.sh` → `run_pr_precommit.sh`
+   - Local: `make pr` → `run_pr_gate.sh` → `run_pr_precommit.sh`
      (catalog in `.pre-commit-config.yaml` on changed files) **then** locked
      `.venv` ruff check/format again.
    - CI Lint: `uv run ruff` in `.github/workflows/l9-lint-test.yml` — not the

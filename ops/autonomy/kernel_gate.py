@@ -127,7 +127,7 @@ def _agent_required_tree(root: Path) -> str:
         "  2. Apply kernels/Validate & Repair.md independently on the same tree\n"
         "  3. Commit any revisions on this stacked branch (no push)\n"
         "  4. python3 ops/autonomy/kernel_gate.py record --workspace <this workspace>\n"
-        "  5. Re-run the same command (make precommit-repo / make pr-check / make pr).\n"
+        "  5. Re-run the same command (make precommit-repo / make pr).\n"
         "     Hooks and tests run once after this hook passes.\n"
         "Kernels are not an L4 phase. Do not record-kernels / IMPROVE_RECORD to apply them.\n"
         "Do not run pre-commit or pytest first.\n"

@@ -47,7 +47,7 @@ Follow skill `l9-plan` (**plan mode default = PE+autonomy workflow**). Required 
 OPEN_PR=0 make pr
 ```
 
-Make is case-sensitive: use lowercase `pr`, not `PR`. Do not run `make pr-check` after `precommit-repo`.
+Make is case-sensitive: use lowercase `pr`, not `PR`. Do not run `make pr` after `precommit-repo`.
 
 ### Project command
 
