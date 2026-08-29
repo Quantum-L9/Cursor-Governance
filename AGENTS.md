@@ -1000,3 +1000,8 @@ does not route GitHub/Context7/Semgrep/GitGuardian through the broker.
 `make capability-check` / `broker-serve` print RETIRED and exit 0 unless
 `L9_BROKER_FORCE=1`. Cursor Graphiti is the local CLI / tunnel. Do not paste
 secrets to “fix” a retired plane. See `ops/secrets/RETIRED.md`.
+
+<!-- MAKE_381_PR_STACK_EXPORT_V1 -->
+## `make precommit-repo` on Apple GNU Make 3.81 (2026-08-29)
+
+macOS `/usr/bin/make` is GNU Make 3.81. `precommit-repo: export PR_STACK = $(PR_STACK)` is a recursive self-definition on 3.81 (Make 4.x snapshots that form). The live line is `export PR_STACK := $(PR_STACK)` so default `auto` and `PR_STACK=` opt-out reach `run_pr_precommit.sh`. Do not restore the `=` flavor. Homebrew `gmake` is not required.

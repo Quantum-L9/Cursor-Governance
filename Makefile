@@ -867,5 +867,7 @@ claude-readiness:
 # recipe environment; export so run_pr_gate.sh sees it.
 pr: export PR_EARLY_OVERLAP = 1
 # Pass PR_STACK into the unchanged precommit-repo recipe (additive_only).
-# GNU Make 3.81 needs the assignment; a bare `export PR_STACK` would empty it.
-precommit-repo: export PR_STACK = $(PR_STACK)
+# GNU Make 3.81 treats `export PR_STACK = $(PR_STACK)` as a recursive self-ref
+# and aborts `make precommit-repo`. Make 4.x snapshots that form; `:=` snapshots
+# on both. A bare `export PR_STACK` is a prerequisite named `export` on 3.81.
+precommit-repo: export PR_STACK := $(PR_STACK)
