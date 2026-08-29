@@ -13,7 +13,7 @@ dag_file: workflows/dags/pr_train_dag.py
 
 One slash, three stops. The graph does **not** MERGE_TRAIN or write merge authorization.
 
-1. **OPEN_TRAIN** — unique commits on the **current branch** (not every local ref). Same-path, generated-prefix clobber, and `git merge-tree` conflict stay one PR (unknown probe fail-closes). Commits whose cherry-pick onto the stack tip conflicts are skipped, not resolved. Tip-preflight uses ``parent..sha`` (not a tree-merge of the whole ancestral commit). Then remediator publish (`git push` of the extract + `gh pr create` if needed). Do not run `make pr`.
+1. **OPEN_TRAIN** — unique commits on the **current branch** (not every local ref). Same-path, generated-prefix clobber, and `git merge-tree` conflict stay one PR (unknown probe fail-closes). Commits whose cherry-pick onto the stack tip conflicts are skipped, not resolved. Tip-preflight uses ``parent..sha`` (not a tree-merge of the whole ancestral commit). Unique paths those skipped commits added that ``main`` never touched become one remainder slice (``git checkout sha -- path``, last writer wins). Then remediator publish (`git push` of the extract + `gh pr create` if needed). Do not run `make pr`.
 2. **REMEDIATE** — graph HALTS. Read `skills/l9-pr-remediation/SKILL.md` Converge. Do not run `make pr`.
 3. **/ff** — `--ff-only` only when `open_pr_count == 0` (`skills/l9-repo-sync/scripts/ff.sh`)
 
