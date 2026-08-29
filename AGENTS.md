@@ -927,10 +927,13 @@ whole `ops/scripts/run_pr_gate.sh`:
 <!-- L9_CEREMONY_STACK_AND_HEAL_V1 -->
 ## Ceremony stack-tip and generated heal (2026-08-28)
 
-`make precommit-repo` / `pr-check` / `pr-preflight` / `open_pr_after_gate.sh`
-all bind that tip. Empty `PR_STACK=` keeps `PR_BASE` (usually `origin/main`).
-Missing `gh` keeps `origin/main` with a WARN (fail-open telemetry). An explicit
-`PR_BASE` other than `origin/main` / `main` is never rewritten.
+`PR_STACK=auto` resolves the unique open-PR chain tip at **precommit-repo /
+pr-preflight / pr-check start**, not only after the gate in
+`open_pr_after_gate.sh`. Empty `PR_STACK=` keeps `PR_BASE` (usually
+`origin/main`). Sibling chains still fail closed. Missing `gh` keeps
+`origin/main` with a WARN (fail-open telemetry). An explicit `PR_BASE` other
+than `origin/main` / `main` is never rewritten. `open_pr_after_gate.sh` reuses
+the stack-base receipt so the opened PR targets the same parent the gate used.
 
 `sync_generated_artifacts.py` runs in the **serialized writer** wave. Tracked
 dirt after that heal is "commit the rewrite, then re-run" — same as ruff.
