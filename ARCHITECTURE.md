@@ -54,7 +54,7 @@ Root agent-doc surface (this change): `CANONICAL_LAW.md`, `AGENTS.md`, `CLAUDE.m
 Local publish path (authoritative procedure): [`AGENTS.md`](AGENTS.md) §4–6.
 
 ```text
-make pr-check          quality only (changed-file hooks + ruff / security + scoped pytest; full catalog is make pr-full)
+make pr          quality only (changed-file hooks + ruff / security + scoped pytest; full catalog is make pr-full)
 PR_REMEDIATE=0 make pr  sole path to GitHub (gate + open_pr_after_gate.sh)
 ```
 

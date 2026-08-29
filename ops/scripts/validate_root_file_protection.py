@@ -154,7 +154,7 @@ def additive_only_touched(repo: Path, config: dict, base: str, head: str) -> lis
 def load_pr_body(*, body_file: str | None = None) -> str | None:
     """PR body from --pr-body-file, L9_PR_BODY, or GITHUB_EVENT_PATH.
 
-    Returns None when no source is present (local make pr-check). Empty string
+    Returns None when no source is present (local make pr). Empty string
     means a source existed but the body was blank.
     """
     if body_file:

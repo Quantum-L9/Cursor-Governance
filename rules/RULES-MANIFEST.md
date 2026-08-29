@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-29T02:11:11Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-29T02:43:08Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -18,7 +18,7 @@ Generated: `2026-08-29T02:11:11Z`. Source: `rules/*.mdc`.
 
 | File | ID | Scope | Domain | Activation | Lines | Digest |
 |---|---|---|---|---|---:|---|
-| `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 36 | `ceaafbc51009` |
+| `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 40 | `f52c4a83d314` |
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 161 | `9b2cf950134c` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 70 | `93cd8a5cbf32` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
@@ -41,7 +41,7 @@ Generated: `2026-08-29T02:11:11Z`. Source: `rules/*.mdc`.
 | `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 87 | `2d4e738329b0` |
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `76c8cba8c93a` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
-| `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 125 | `72302848d33a` |
+| `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 135 | `6e7690a6d6e9` |
 | `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 85 | `9f0288253b25` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
@@ -74,7 +74,7 @@ Generated: `2026-08-29T02:11:11Z`. Source: `rules/*.mdc`.
 | `85-workflow-state-bridge.mdc` | `l9.rule.85.workflow.state.bridge` | global | memory | agent_requested | 91 | `3e623c8e396d` |
 | `86-module-tier-mapping.mdc` | `l9.rule.86.module.tier.mapping` | global | governance | agent_requested | 58 | `7a05740e99d2` |
 | `87-cursor-memory-kernel.mdc` | `l9.rule.cursor.memory.kernel` | global | memory | always | 166 | `a27cb6825319` |
-| `88-l4-local-autonomy.mdc` | `l9.rule.l4.local-autonomy` | global | git | always | 69 | `88a6bc6c681c` |
+| `88-l4-local-autonomy.mdc` | `l9.rule.l4.local-autonomy` | global | git | always | 73 | `0ae1c99fa217` |
 | `89-constellation-gate-workspace-session.mdc` | `l9.rule.89.constellation.gate.workspace.session` | global | governance | agent_requested | 40 | `3b1b5e0cfd03` |
 | `90-protected-core.mdc` | `l9.rule.90.protected.core` | global | governance | always | 106 | `0e67f1cc2c17` |
 | `91-existing-code-source-of-truth.mdc` | `l9.rule.91.existing.code.source.of.truth` | global | general | always | 70 | `5043e3374dca` |
@@ -85,7 +85,7 @@ Generated: `2026-08-29T02:11:11Z`. Source: `rules/*.mdc`.
 | `96-multi-agent-main-bound-execution.mdc` | `l9.rule.96.multi.agent.main.bound.execution` | global | git | always | 129 | `4c3da47effd7` |
 | `97-graph-layer-boundary.mdc` | `l9.rule.graph-layer-boundary` | global | memory | always | 37 | `381364ee74a4` |
 | `98-graphiti-memory-gate.mdc` | `l9.rule.graphiti.memory.gate` | global | memory | always | 48 | `557a495cb0ca` |
-| `99-no-auto-commit.mdc` | `l9.rule.git.mutation-gate` | global | git | always | 62 | `f40fb8497a18` |
+| `99-no-auto-commit.mdc` | `l9.rule.git.mutation-gate` | global | git | always | 64 | `69479f6c2949` |
 
 ## Notes
 

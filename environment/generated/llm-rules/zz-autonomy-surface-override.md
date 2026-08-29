@@ -40,11 +40,12 @@ AND `L9_AUTONOMY_ENABLED=true`:
    only.
 4. Campaign work uses `campaign/<campaign_id>` as `PR_BASE`. Do not open
    campaign PRs against `main`. Do not mix with other feature branches.
-5. Cursor surface MUST scoped-commit locally after each authored chunk
-   (pathspecs; rule 49). Unique dirty files you authored are a rule
-   failure. Do not ask. Push / `make pr` stay ask-first except when
-   the user invoked `make pr`.
-   L4 remote gate still blocks mid-execution push.
+5. Cursor surface (`L9_GOVERNANCE_SURFACE` is `cursor` or unset) MUST scoped-commit locally
+   after each authored chunk (pathspecs; rule 49).
+   Unique dirty files you authored are a rule failure. Do not ask.
+   After `make precommit-repo` and that commit, **STOP**. Do not
+   `authorize-release` or `make pr` unless the user invoked `make pr`
+   this turn. L4 remote gate still blocks mid-execution push.
 6. Source of truth: `ops/autonomy/surface_profile.yaml` — do not fork this text.
 
 ## L4 Local Autonomy (all surfaces; default ON)
@@ -64,10 +65,12 @@ AND `L9_AUTONOMY_ENABLED=true`:
   isolation: `L9_GIT_REVERT_AUTHORIZED` / `L9_GIT_BROAD_ADD_AUTHORIZED` /
   `L9_GIT_SWITCH_AUTHORIZED` / `L9_GIT_RESET_AUTHORIZED` /
   `L9_WORKTREE_ISOLATION=0`.
-- Post-push: `make pr` (remediates=1) to a green merge-ready PR. Merge
-  only after `/l9-pr-remediation` writes
+- Post-push (`L9_GOVERNANCE_SURFACE=claude-code` / `codex` / `gemini` /
+  `manus` only): `make pr` (remediates=1) to a green merge-ready PR.
+  Merge only after `/l9-pr-remediation` writes
   `ops/autonomy/authorize_merge.py --all-open` and each PR is green +
-  mergeable. Force-push / admin-merge stay forbidden.
+  mergeable. Force-push / admin-merge stay forbidden. Cursor stops
+  after catalog + commit; `make pr` only when the user typed it.
 - Stacked PRs: when a PR is already open for the workstream, the next PR
   bases on the open PR's head (bottom-up merge order). Rebase and conflict
   resolution are forbidden; one feature branch per program.

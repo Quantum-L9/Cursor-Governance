@@ -24,12 +24,14 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     collect_remainder_slice,
     commits_must_colocate,
     default_extract,
+    default_publish,
     filter_slices_against_tip,
     github_repo_slug,
     group_slices,
     is_empty_cherry_pick,
     order_slice,
     parse_merge_tree_name_only,
+    pr_create_base,
     probe_cherry_conflicts,
     probe_sha_conflicts,
     resolve_ff_clone,
@@ -620,6 +622,75 @@ def test_tip_preflight_still_probes_child_on_new_paths(tmp_path):
     assert [item["sha"] for item in kept[0]] == [parent]
 
 
+def test_filter_keeps_remainder_mode_without_cherry_probe(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+
+    probed: list[str] = []
+
+    def boom(*_a, **_k):
+        probed.append("hit")
+        return ["conflict.py"]
+
+    monkeypatch.setattr(mod, "probe_cherry_conflicts", boom)
+    kept, skipped, _items = filter_slices_against_tip(
+        tmp_path,
+        [[{"sha": "abc", "paths": ("ops/unique.py",), "mode": "remainder"}]],
+        "tip",
+    )
+    assert probed == []
+    assert skipped == []
+    assert kept[0][0]["mode"] == "remainder"
+
+
+def test_remainder_slice_tombstones_deleted_last_writer(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    (repo / "ops").mkdir()
+    (repo / "ops" / "unique.py").write_text("x\n", encoding="utf-8")
+    _git_c(repo, "add", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "add unique")
+    added = _rev_parse(repo)
+    _git_c(repo, "rm", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "delete unique")
+    deleted = _rev_parse(repo)
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "keep.txt", "squash\n", "tip squash")
+    remainder = collect_remainder_slice(
+        repo,
+        [
+            {"sha": added, "paths": ("ops/unique.py",)},
+            {"sha": deleted, "paths": ("ops/unique.py",)},
+        ],
+        tip,
+    )
+    assert remainder == []
+
+
+def test_filter_remainder_drops_paths_already_on_new_tip(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    (repo / "ops").mkdir()
+    (repo / "ops" / "unique.py").write_text("old\n", encoding="utf-8")
+    _git_c(repo, "add", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "unique")
+    donor = _rev_parse(repo)
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "ops/unique.py", "from-car\n", "car landed unique")
+    kept, skipped, _items = filter_slices_against_tip(
+        repo,
+        [[{"sha": donor, "paths": ("ops/unique.py",), "mode": "remainder"}]],
+        tip,
+    )
+    assert skipped == []
+    assert kept == []
+
+
 def test_remainder_slice_keeps_unique_path_from_tip_conflict(tmp_path):
     repo = tmp_path / "git"
     repo.mkdir()
@@ -733,6 +804,30 @@ def test_default_publish_is_git_push_not_make_pr(monkeypatch, tmp_path):
     assert out["ok"] is True
     assert any(argv[:4] == ["git", "-C", str(tmp_path / "wt"), "push"] for argv in calls)
     assert not any(argv[:1] == ["make"] or "record-kernels" in argv for argv in calls)
+
+
+def test_pr_create_base_stacks_on_unique_chain_tip():
+    assert pr_create_base("origin/main") == ""
+    assert pr_create_base("main", "origin/main") == ""
+    assert pr_create_base("feat/pr-train-0-abc") == "feat/pr-train-0-abc"
+    assert pr_create_base("a" * 40) == ""
+
+
+def test_default_publish_passes_base_on_create(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+
+    calls: list[list[str]] = []
+
+    def fake_run(argv, **_kwargs):
+        calls.append(list(argv))
+        if argv[:3] == ["gh", "pr", "view"]:
+            return SimpleNamespace(returncode=1, stdout="", stderr="no pr")
+        return SimpleNamespace(returncode=0, stdout="https://example/364\n", stderr="")
+
+    monkeypatch.setattr(mod.subprocess, "run", fake_run)
+    default_publish(str(tmp_path / "wt"), base="feat/pr-train-0-abc")
+    created = next(argv for argv in calls if argv[:3] == ["gh", "pr", "create"])
+    assert created[created.index("--base") + 1] == "feat/pr-train-0-abc"
 
 
 def test_is_empty_cherry_pick_detects_git_empty_message():

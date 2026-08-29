@@ -73,12 +73,14 @@ def test_silent_on_a_purely_additive_change(repo: Path) -> None:
 
 
 def test_fires_on_an_uncommitted_overwrite(repo: Path) -> None:
-    """The cheapest moment to act: the marker can still go in the commit."""
+    """The cheapest moment to act: revert or open an issue, do not chase the template."""
     _as_origin_main(repo)
     (repo / "pyproject.toml").write_text("ALPHA\nbeta\ngamma\n", encoding="utf-8")
     message = advisory(repo)
     assert message and "pyproject.toml" in message
-    assert "ALLOW-ROOT-DELETION" in message
+    assert "GitHub issue" in message
+    assert "Do not amend" in message
+    assert "PR template" in message
 
 
 def test_fires_on_a_committed_overwrite(repo: Path) -> None:

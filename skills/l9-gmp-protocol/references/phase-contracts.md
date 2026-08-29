@@ -65,7 +65,7 @@ Each phase ends with its named status line and proceeds only if the exit gate is
 ## Phase 4 — Validation
 
 - **Does:** runs the gates that apply to the change. No app-code edits (tests only if the plan lists them).
-- **Order:** `python -m py_compile` / import check → targeted unit tests → integration/smoke → repo gate `make pr-check` (ruff, XML, module wiring, circular deps, Odoo 19 patterns).
+- **Order:** `python -m py_compile` / import check → targeted unit tests → integration/smoke → repo gate `make pr` (ruff, XML, module wiring, circular deps, Odoo 19 patterns).
 - **Output:** validation report with pass/fail counts and failure summaries; `Recommendation: PROCEED | BLOCKED`.
 - **Exit:** all-pass → Phase 5; any fail → fix or block (never proceed past a failure).
 

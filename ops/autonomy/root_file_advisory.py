@@ -1,32 +1,23 @@
 #!/usr/bin/env python3
 """Warn at the start of a turn when a protected root file is being overwritten.
 
-Every file at the repository root is protected (AGENTS.md §14,
-``ops/config/root-file-protection.json``). An ``additive_only`` file may gain
-lines freely; deleting or overwriting existing content needs an
-``ALLOW-ROOT-DELETION: <path> — <reason>`` line in a commit message.
+Every file at the repository root is protected (AGENTS.md
+PROTECTED_ROOT_PRE_EDIT_V1, ``ops/config/root-file-protection.json``).
+``AGENTS.md`` and ``Makefile`` share the same ``additive_only`` rule. An
+agent may append. An overwrite is not a commit-marker or PR-template
+chore: open a GitHub issue and stop.
 
-Nothing said so until `make pr` — the last step of a session's work. On
-2026-08-28 a single rewritten line in ``pyproject.toml`` was discovered there,
-an hour after the edit, and cost an amend and a second gate run. The rule was
-not missing: AGENTS.md §14 states it exactly. AGENTS.md is 28 KB and did not
-reach the model's context, which is the failure ``CLAUDE.md`` opens by
-describing — authority in force and invisible at the same time.
-
-A document that must be read before the mistake cannot prevent it. This runs on
-UserPromptSubmit, reuses ``ops/scripts/validate_root_file_protection.py`` rather
-than restating its rule, and speaks only when there is something to say:
+This runs on UserPromptSubmit. It speaks only when an overwrite is
+already in the tree and no marker exists yet. The always-on teacher is
+``rules/00-global.mdc`` so the agent knows *before* the first edit.
 
   * silent when every protected-root change is additive;
-  * silent once a commit carries the marker (the advisory clears itself);
-  * one short paragraph naming the path, the counts, and the exact remedy
-    otherwise.
+  * silent once a commit carries the marker (human/ops after an issue);
+  * one short paragraph: revert to additive, or open an issue. Do not
+    amend or chase the PR template.
 
-It never blocks. An edit to a protected root file is legitimate work; only an
-unjustified overwrite reaching a PR is not.
-
-Observer class: any failure here is silent. A missing advisory must never cost a
-turn, and the real gate still runs at `make pr` and in CI.
+Observer class: any failure here is silent. A missing advisory must never
+cost a turn. The CI gate still runs at `make pr`.
 """
 
 from __future__ import annotations
@@ -116,13 +107,13 @@ def advisory(repo: Path) -> str | None:
     listed = "; ".join(f"`{p}` (+{a} -{d})" for p, a, d in rows)
     more = f" and {len(seen) - len(rows)} more" if len(seen) > len(rows) else ""
     return (
-        f"Protected-root advisory: {listed}{more} — additive_only root file(s) with "
-        "removed/overwritten lines and no ALLOW-ROOT-DELETION marker. `make pr` will "
-        "block on this. Either rewrite the change to be purely additive, or put "
-        "`ALLOW-ROOT-DELETION: <path> — <reason with proof of necessity>` in a commit "
-        "message on this branch (any commit in the range counts, so amending HEAD "
-        "works). The PR body also needs the protected-root template; `make pr` injects "
-        "it. Authority: AGENTS.md §14, ops/config/root-file-protection.json."
+        f"Protected-root advisory: {listed}{more} — additive_only overwrite "
+        "(AGENTS.md and Makefile are the same rule). STOP. Do not amend the "
+        "commit and do not chase the protected-root PR template. Revert to a "
+        "purely additive edit, or open a GitHub issue and wait. "
+        "ALLOW-ROOT-DELETION is human/ops after that issue, not an agent first "
+        "move. Authority: AGENTS.md PROTECTED_ROOT_PRE_EDIT_V1, "
+        "ops/config/root-file-protection.json."
     )
 
 

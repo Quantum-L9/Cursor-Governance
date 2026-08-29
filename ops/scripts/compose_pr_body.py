@@ -247,10 +247,10 @@ def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResu
         )
     parts.extend(["", "## Commits", "", _bullet_list(facts.commits), "", "## Test plan", ""])
     if facts.gate_receipt:
-        parts.append("- [x] `make pr-check` local gate receipt present")
-        filled.append("make pr-check receipt")
+        parts.append("- [x] `make pr` local gate receipt present")
+        filled.append("make pr gate receipt")
     else:
-        parts.append(f"- [ ] `make pr-check` local gate receipt — {UNMEASURED}")
+        parts.append(f"- [ ] `make pr` local gate receipt — {UNMEASURED}")
     if facts.l4_receipt and facts.l4_receipt.get("phase") == "release_authorized":
         parts.append("- [x] L4 release receipt present (`release_authorized`)")
         filled.append("L4 receipt")
