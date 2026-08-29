@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-08-29T04:48:19Z",
+  "generated_utc": "2026-08-29T08:23:32Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:6dc55c2b756e8c5f94d7d2c90ea2bafd57f7122a9a47467c0da4c2025bf6def5",
+  "source_tree_digest": "sha256:ca06f7ea2ea08c6bf7044f0bfd5923e79d7d364c19fdbe1b4f5658529e27f7df",
   "summary": {
     "total_mdc_files": 68,
     "always_apply_true": 32,
@@ -755,8 +755,8 @@
       "globs": null,
       "first_heading": "PR overlap guardrail (PR_OVERLAP_GUARDRAIL_V1)",
       "has_yaml_frontmatter": true,
-      "line_count": 112,
-      "content_digest": "sha256:043137b8e8a57e7238bb5349bc4aac002fa67ec7c00cd7eb95e4270b7d3b85b1",
+      "line_count": 117,
+      "content_digest": "sha256:f0ca4633d6a1c4a84e437e218577c9dc82351d418da9b4034eb905e6932d90a0",
       "authority": "canonical_global",
       "context_cost": "moderate",
       "deprecated": false,

@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-29T04:48:19Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-29T08:23:32Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -46,7 +46,7 @@ Generated: `2026-08-29T04:48:19Z`. Source: `rules/*.mdc`.
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | agent_requested | 35 | `38f6e2e26683` |
-| `53-pr-overlap-guardrail.mdc` | `l9.rule.53.pr.overlap.guardrail` | global | git | always | 112 | `043137b8e8a5` |
+| `53-pr-overlap-guardrail.mdc` | `l9.rule.53.pr.overlap.guardrail` | global | git | always | 117 | `f0ca4633d6a1` |
 | `54-context-sensitive-git-guardrails.mdc` | `l9.rule.54.git.guardrails` | global | git | always | 78 | `22327366534e` |
 | `55-ff-only-ssot-sync.mdc` | `l9.rule.55.ff.only.ssot.sync` | global | git | always | 63 | `f50edf623c5b` |
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
