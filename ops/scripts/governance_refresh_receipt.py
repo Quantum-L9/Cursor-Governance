@@ -151,7 +151,15 @@ def read(path: Path | None = None, *, now: datetime | None = None) -> dict[str, 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--read", action="store_true", required=True)
+    # Read is the only action these CLIs have, so requiring a flag to select it
+    # made the obvious invocation fail with a usage error instead of answering.
+    # LOADER-1: bare invocation reads; --read stays accepted so every documented
+    # call site and hook keeps working unchanged.
+    parser.add_argument(
+        "--read",
+        action="store_true",
+        help="read and print the receipt (default action; accepted for compatibility)",
+    )
     parser.add_argument("--path", default="")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)

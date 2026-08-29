@@ -238,16 +238,66 @@ def test_closing_a_finding_clears_it(clone: Path) -> None:
     assert session_debt.collect([clone])["open_findings"] == []
 
 
-def test_deferring_does_not_discharge_it(clone: Path) -> None:
+def test_deferring_keeps_the_item_but_discharges_the_turn(clone: Path) -> None:
     """Deferral is weaker than closing on purpose: the next session inherits it.
 
     This is what stops "pre-existing, not mine" from being an exit (rule 3).
+    The item therefore stays in the live view and keeps being reported — what a
+    deferral does NOT do is block the turn forever. Rule 42 calls `defer` "the
+    correct discharge" when finishing needs authority the session lacks, and its
+    Satisfiability section names an unclearable gate as worse than none. This
+    test previously asserted clean is False, which made the two statements
+    contradict: with everything else discharged, no action available to an agent
+    could end a turn.
     """
     ledger = session_debt.load_ledger(clone)
     ledger["findings"].append({"id": "F-1", "state": "deferred", "reason": "needs owner"})
     session_debt.save_ledger(clone, ledger)
     report = session_debt.collect([clone])
+
+    # inherited, visible, and never silent
     assert [f["id"] for f in report["open_findings"]] == ["F-1"]
+    assert "F-1" in session_debt._render_findings(report["open_findings"])
+
+    # but it does not block
+    assert report["blocking_findings"] == []
+    assert report["clean"] is True
+
+
+def test_an_open_finding_still_blocks(clone: Path) -> None:
+    """The exemption is for `deferred` alone — `record` must not clear a turn."""
+    ledger = session_debt.load_ledger(clone)
+    ledger["findings"].append({"id": "F-1", "state": "open", "detail": "found, not triaged"})
+    session_debt.save_ledger(clone, ledger)
+    report = session_debt.collect([clone])
+    assert [f["id"] for f in report["blocking_findings"]] == ["F-1"]
+    assert report["clean"] is False
+
+
+def test_blocking_states_is_exactly_open() -> None:
+    """Widening this set would let a bare `record` discharge abandoned work."""
+    assert session_debt.BLOCKING_STATES == frozenset({"open"})
+    assert "deferred" in session_debt.OPEN_STATES, "a deferral must stay visible"
+
+
+def test_a_deferral_does_not_mask_publish_debt(clone: Path) -> None:
+    """Deferring a finding must not excuse unpushed commits — different rule."""
+    ledger = session_debt.load_ledger(clone)
+    ledger["findings"].append({"id": "F-1", "state": "deferred", "reason": "needs owner"})
+    session_debt.save_ledger(clone, ledger)
+    # main is never publish debt, so the unpushed commit needs a feature branch.
+    commit_on_branch(clone, "feat/x")
+    report = session_debt.collect([clone])
+    assert report["publish_debt"], "an unpushed commit is still rule-1 debt"
+    assert report["clean"] is False
+
+
+def test_a_deferral_does_not_mask_a_corrupt_ledger(clone: Path) -> None:
+    """An unreadable ledger cannot prove ANY debt is discharged, deferred or not."""
+    path = clone / ".l9" / "autonomy" / session_debt.LEDGER_NAME
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("{not json", encoding="utf-8")
+    report = session_debt.collect([clone])
     assert report["clean"] is False
 
 

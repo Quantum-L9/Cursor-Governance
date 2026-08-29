@@ -81,8 +81,14 @@ class InstallMountTests(unittest.TestCase):
         exclude = self.workspace / ".git" / "info" / "exclude"
         self.assertTrue(exclude.is_file())
         body = exclude.read_text(encoding="utf-8")
-        for glob in (".claude/skills/", ".claude/rules/"):
+        # The whole projected set, not a subset: .mcp.json is a render of
+        # mcp.template.json and shows as untracked in every consumer that does not
+        # commit it. Asserting the full list is what stops a glob being dropped.
+        for glob in (".claude/skills/", ".claude/rules/", ".claude/commands/", ".mcp.json"):
             self.assertIn(glob, body, f"{glob} must be excluded from the consumer repo")
+        # Committable consumer wiring must NOT be excluded.
+        for glob in (".claude/settings.json", ".claude/hooks/"):
+            self.assertNotIn(glob, body, f"{glob} is consumer wiring and must stay visible")
 
     def test_install_is_idempotent(self) -> None:
         self._run()

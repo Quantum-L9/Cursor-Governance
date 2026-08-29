@@ -277,3 +277,94 @@ def test_origin_slug_parses_ssh_and_https() -> None:
     assert repo_hygiene.origin_slug("https://github.com/Quantum-L9/Cursor-Governance") == (
         "Quantum-L9/Cursor-Governance"
     )
+
+
+# -- CI-036: prune and origin/HEAD are one operation, not two ----------------
+# #325 established that pruning ALONE converts an overcount into silence. The
+# session-start path ships both halves; repo_hygiene -- the tool that DELETES
+# branches on this evidence -- pruned without ever ensuring the fallback it
+# creates a dependence on.
+
+
+def _bare_upstream_with_clone(tmp_path: Path) -> tuple[Path, Path]:
+    upstream = tmp_path / "upstream.git"
+    subprocess.run(["git", "init", "-q", "--bare", "-b", "main", str(upstream)], check=True)
+    seed = tmp_path / "seed"
+    subprocess.run(["git", "clone", "-q", str(upstream), str(seed)], check=True)
+    for key, val in (("user.email", "t@example.com"), ("user.name", "t")):
+        subprocess.run(["git", "-C", str(seed), "config", key, val], check=True)
+    (seed / "a.txt").write_text("v1\n", encoding="utf-8")
+    subprocess.run(["git", "-C", str(seed), "add", "a.txt"], check=True)
+    subprocess.run(["git", "-C", str(seed), "commit", "-qm", "base"], check=True)
+    subprocess.run(["git", "-C", str(seed), "push", "-q", "origin", "main"], check=True)
+    clone = tmp_path / "clone"
+    subprocess.run(["git", "clone", "-q", str(upstream), str(clone)], check=True)
+    return upstream, clone
+
+
+def test_sync_remote_refs_sets_origin_head_when_missing(tmp_path: Path) -> None:
+    """The half repo_hygiene was missing: a pruned ref must leave a fallback."""
+    _, clone = _bare_upstream_with_clone(tmp_path)
+    subprocess.run(
+        ["git", "-C", str(clone), "symbolic-ref", "-d", "refs/remotes/origin/HEAD"],
+        check=True,
+        capture_output=True,
+    )
+    git = repo_hygiene.Git(clone)
+    assert not git.ok("symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
+
+    assert repo_hygiene.sync_remote_refs(git) is None
+    assert git.ok("symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"), (
+        "prune without origin/HEAD is the state that makes counts read 0"
+    )
+
+
+def test_sync_remote_refs_prunes_a_branch_deleted_upstream(tmp_path: Path) -> None:
+    upstream, clone = _bare_upstream_with_clone(tmp_path)
+    subprocess.run(
+        ["git", "-C", str(clone), "push", "-q", "origin", "HEAD:refs/heads/gone"], check=True
+    )
+    subprocess.run(["git", "-C", str(clone), "fetch", "-q", "origin"], check=True)
+    git = repo_hygiene.Git(clone)
+    assert git.ok("rev-parse", "--verify", "refs/remotes/origin/gone")
+
+    subprocess.run(["git", "-C", str(upstream), "update-ref", "-d", "refs/heads/gone"], check=True)
+    assert repo_hygiene.sync_remote_refs(git) is None
+    assert not git.ok("rev-parse", "--verify", "refs/remotes/origin/gone")
+
+
+def test_sync_remote_refs_is_fail_soft_without_a_remote(tmp_path: Path) -> None:
+    """No network, or no origin, is not a reason to abort hygiene."""
+    solo = tmp_path / "solo"
+    solo.mkdir()
+    subprocess.run(["git", "-C", str(solo), "init", "-q"], check=True)
+    assert repo_hygiene.sync_remote_refs(repo_hygiene.Git(solo)) is None
+
+
+def test_both_call_sites_ship_both_halves() -> None:
+    """The contract, asserted at every site that claims it.
+
+    ops/scripts/tests/test_stale_remote_ref_counts.sh already pins the bash
+    half. Nothing pinned the pair ACROSS the two implementations, which is how
+    they diverged: one language got both halves and the other got one, and only
+    prose said they were the same contract. Prose is what failed here.
+    """
+    gov = Path(__file__).resolve().parents[3]
+    bootstrap = (gov / "ops" / "scripts" / "bootstrap_agent_environment.sh").read_text(
+        encoding="utf-8"
+    )
+    hygiene = (gov / "ops" / "scripts" / "repo_hygiene.py").read_text(encoding="utf-8")
+
+    # bash: prune, then guarantee the fallback the prune creates a need for
+    assert "remote prune origin" in bootstrap
+    assert "remote set-head origin -a" in bootstrap
+
+    # python: the same pair, through sync_remote_refs
+    assert '"fetch", "--prune", "origin"' in hygiene
+    assert '"remote", "set-head", "origin", "-a"' in hygiene
+    assert "sync_remote_refs" in hygiene
+
+    # and the python fetch must not be reachable except through the pair
+    assert hygiene.count('"fetch", "--prune", "origin"') == 1, (
+        "a second prune site would be able to skip the set-head half again"
+    )

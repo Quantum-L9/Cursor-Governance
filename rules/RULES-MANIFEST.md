@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-29T00:29:49Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-29T02:11:11Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -20,7 +20,7 @@ Generated: `2026-08-29T00:29:49Z`. Source: `rules/*.mdc`.
 |---|---|---|---|---|---:|---|
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 36 | `ceaafbc51009` |
 | `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 161 | `9b2cf950134c` |
-| `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 68 | `d3fca17315f9` |
+| `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 70 | `93cd8a5cbf32` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
 | `06-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | git | always | 56 | `a8c0978cff70` |
@@ -35,7 +35,7 @@ Generated: `2026-08-29T00:29:49Z`. Source: `rules/*.mdc`.
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | agent_requested | 145 | `935829c0a8d1` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | agent_requested | 182 | `fbbfa0dc8cc4` |
 | `41-graph-engine-architecture.mdc` | `l9.rule.41.graph.engine.architecture` | global | security | agent_requested | 104 | `db87e22cdb8a` |
-| `42-no-abandoned-work.mdc` | `l9.rule.42.no.abandoned.work` | global | git | always | 83 | `0faf271f6403` |
+| `42-no-abandoned-work.mdc` | `l9.rule.42.no.abandoned.work` | global | git | always | 98 | `e956f6c8ae0f` |
 | `43-lang-postgresql.mdc` | `l9.rule.43.lang.postgresql` | global | security | agent_requested | 54 | `3a3ff21bfdec` |
 | `44-recursive-execution-kernel.mdc` | `l9.rule.recursive-execution-kernel` | global | execution | agent_requested | 39 | `4c064ea19ce3` |
 | `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 87 | `2d4e738329b0` |
