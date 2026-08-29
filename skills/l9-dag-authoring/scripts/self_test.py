@@ -8,6 +8,7 @@ from classify_graph_kind import classify
 from convert_session_to_langgraph import convert
 from validate_command_trigger import validate as validate_command
 from validate_langgraph_source import validate as validate_langgraph
+from validate_langgraph_source import validate_package
 from validate_request import validate as validate_request
 from validate_session_dag_source import validate as validate_session
 
@@ -77,6 +78,55 @@ def main():
             ("classifies_langgraph", classify(runtime)["graph_kind"] == "LANGGRAPH_RUNTIME")
         )
         checks.append(("langgraph_source_valid", validate_langgraph(runtime)["status"] == "PASS"))
+        compile_only = root / "compile_only"
+        compile_only.mkdir()
+        (compile_only / "graph.py").write_text(
+            runtime.read_text(encoding="utf-8"), encoding="utf-8"
+        )
+        (compile_only / "executor.py").write_text(
+            "def compile_graph():\n    return build_graph().compile()\n",
+            encoding="utf-8",
+        )
+        compile_pkg = validate_package(compile_only)
+        checks.append(
+            (
+                "package_compile_only_fails",
+                compile_pkg["status"] == "FAIL"
+                and "missing_durable_checkpointer" in compile_pkg["errors"],
+            )
+        )
+        ephemeral = root / "ephemeral"
+        ephemeral.mkdir()
+        (ephemeral / "graph.py").write_text(runtime.read_text(encoding="utf-8"), encoding="utf-8")
+        (ephemeral / "executor.py").write_text(
+            "from langgraph.checkpoint.memory import MemorySaver\n"
+            "def compile_graph():\n"
+            "    return build_graph().compile(checkpointer=MemorySaver())\n",
+            encoding="utf-8",
+        )
+        ephemeral_pkg = validate_package(ephemeral)
+        checks.append(
+            (
+                "package_ephemeral_fails",
+                ephemeral_pkg["status"] == "FAIL"
+                and "ephemeral_checkpointer" in ephemeral_pkg["errors"],
+            )
+        )
+        emitted = convert(
+            REPO,
+            dag_id="fixture-convert-ok",
+            disposition="CONVERT_TO_LANGGRAPH",
+            source=PACK / "fixtures" / "convert_ok_session.py",
+            emit_dir=root / "ok_graph",
+        )
+        emit_pkg = validate_package(root / "ok_graph")
+        checks.append(("convert_emit_pass", emitted.get("status") == "PASS"))
+        checks.append(
+            (
+                "convert_emit_durable",
+                emit_pkg.get("status") == "PASS" and emit_pkg.get("persistence_class") == "durable",
+            )
+        )
         mixed = root / "mixed.py"
         mixed.write_text(
             "from langgraph.graph import StateGraph\n"

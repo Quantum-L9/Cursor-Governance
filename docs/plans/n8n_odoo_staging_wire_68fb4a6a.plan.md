@@ -21,6 +21,20 @@ todos:
     content: Commit registry/plan; make pr-check; PE handoff + L4 PR if needed
     status: pending
 isProject: false
+kernel_pass:
+  bound_path: n8n_odoo_staging_wire_68fb4a6a.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T04:06:00Z
+    body_sha256: "ad119b3b39e4e8a80e788d6af1c98409be84fc348c3d19ebdcf5076058960e79"
+    deltas:
+      - "Re-read the 2026-08-13 Improve pass; staging-only lock and secret non-clobber still hold"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T04:06:30Z
+    body_sha256: "ad119b3b39e4e8a80e788d6af1c98409be84fc348c3d19ebdcf5076058960e79"
+    deltas:
+      - "Pending todos are the live execute queue; no exclusive-lock defects"
 ---
 
 # PLAN: n8n Odoo staging wire

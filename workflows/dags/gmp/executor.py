@@ -5,15 +5,18 @@ GMP Executor — Executor class and CLI for GMP workflow
 from __future__ import annotations
 
 from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 import structlog
-from langgraph.checkpoint.memory import MemorySaver
 
+from workflows.dags._runtime.durable_checkpointer import open_checkpointer
 from workflows.dags.gmp.graph import build_gmp_graph
 from workflows.dags.gmp.state import GMPState
 
 logger = structlog.get_logger(__name__)
+
+DAG_ID = "gmp"
 
 
 class GMPLangGraphExecutor:
@@ -21,13 +24,14 @@ class GMPLangGraphExecutor:
     Executor for GMP workflow using LangGraph.
 
     This provides a clean interface for running the GMP DAG
-    with proper state management and checkpointing.
+    with proper state management and durable checkpointing.
     """
 
-    def __init__(self):
+    def __init__(self, workspace: Path | None = None):
         """Initialize the executor."""
+        self.workspace = Path(workspace) if workspace else Path.cwd()
         self.graph = build_gmp_graph()
-        self.checkpointer = MemorySaver()
+        self.checkpointer = open_checkpointer(DAG_ID, workspace=self.workspace)
         self.compiled = self.graph.compile(checkpointer=self.checkpointer)
 
     def run(
@@ -36,15 +40,15 @@ class GMPLangGraphExecutor:
         tier: str = "RUNTIME",
         thread_id: str | None = None,
     ) -> dict[str, Any]:
-        """Run the GMP workflow."""
+        """Run the GMP workflow. Returns thread_id plus state."""
         if thread_id is None:
-            thread_id = f"gmp-{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            thread_id = f"gmp-{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
 
         initial_state = GMPState(task=task, tier=tier)
         config = {"configurable": {"thread_id": thread_id}}
         result = self.compiled.invoke(initial_state, config)
 
-        return result
+        return {"thread_id": thread_id, "state": result}
 
     def resume(
         self,
@@ -53,17 +57,12 @@ class GMPLangGraphExecutor:
     ) -> dict[str, Any]:
         """Resume execution with user input."""
         config = {"configurable": {"thread_id": thread_id}}
-        state = self.compiled.get_state(config)
+        if updates:
+            self.compiled.update_state(config, updates)
+        result = self.compiled.invoke(None, config)
+        return {"thread_id": thread_id, "state": result}
 
-        current_state = state.values
-        for key, value in updates.items():
-            if hasattr(current_state, key):
-                setattr(current_state, key, value)
-
-        result = self.compiled.invoke(current_state, config)
-        return result
-
-    def get_state(self, thread_id: str) -> GMPState | None:
+    def get_state(self, thread_id: str) -> GMPState | dict[str, Any] | None:
         """Get current state for a thread."""
         config = {"configurable": {"thread_id": thread_id}}
         try:
@@ -77,6 +76,12 @@ class GMPLangGraphExecutor:
         return self.compiled.get_graph().draw_mermaid()
 
 
+def compile_graph(workspace: Path | None = None):
+    root = Path(workspace) if workspace else Path.cwd()
+    checkpointer = open_checkpointer(DAG_ID, workspace=root)
+    return build_gmp_graph().compile(checkpointer=checkpointer)
+
+
 def main():
     """CLI entry point."""
     import argparse
@@ -87,10 +92,11 @@ def main():
     parser.add_argument("--resume", help="Thread ID to resume")
     parser.add_argument("--status", help="Get status for thread ID")
     parser.add_argument("--mermaid", action="store_true", help="Print Mermaid diagram")
+    parser.add_argument("--workspace", help="Workspace root for checkpoints")
 
     args = parser.parse_args()
 
-    executor = GMPLangGraphExecutor()
+    executor = GMPLangGraphExecutor(workspace=args.workspace)
 
     if args.mermaid:
         logger.info("output", value=executor.get_mermaid())
@@ -99,9 +105,16 @@ def main():
     if args.status:
         state = executor.get_state(args.status)
         if state:
-            logger.info("phase: {state.phase}")
-            logger.info("task: {state.task}")
-            for msg in state.messages[-10:]:
+            phase = state.get("phase") if isinstance(state, dict) else getattr(state, "phase", None)
+            task = state.get("task") if isinstance(state, dict) else getattr(state, "task", None)
+            messages = (
+                state.get("messages", [])
+                if isinstance(state, dict)
+                else getattr(state, "messages", [])
+            )
+            logger.info("phase", phase=phase)
+            logger.info("task", task=task)
+            for msg in messages[-10:]:
                 logger.info("output", value=msg)
         else:
             logger.info("no state found for thread: {args.status}")
@@ -112,10 +125,12 @@ def main():
         return
 
     if args.resume:
-        state = executor.resume(args.resume, {})
+        payload = executor.resume(args.resume, {})
     else:
-        state = executor.run(args.task, args.tier)
+        payload = executor.run(args.task, args.tier)
 
+    thread_id = payload.get("thread_id")
+    state = payload.get("state", payload)
     messages = (
         state.get("messages", []) if isinstance(state, dict) else getattr(state, "messages", [])
     )
@@ -128,9 +143,9 @@ def main():
         else getattr(state, "phase", "unknown")
     )
     gmp_id = state.get("gmp_id", "") if isinstance(state, dict) else getattr(state, "gmp_id", "")
-    logger.info("\ngmp id: gmp id", gmp_id=gmp_id)
-    logger.info("phase: phase", phase=phase)
-    logger.info("thread id: gmp-{datetime.now().strftime('%y%m%d%h%m%s')}")
+    logger.info("gmp id", gmp_id=gmp_id)
+    logger.info("phase", phase=phase)
+    logger.info("thread id", thread_id=thread_id)
     logger.info("use --resume <thread_id> to continue")
 
 

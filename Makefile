@@ -570,10 +570,15 @@ pr-full-corpus: venv
 	$(PYTHON) ops/scripts/validate_governance_contract_surface.py
 	$(PYTHON) ops/scripts/validate_git_denial_residue.py
 	$(PYTHON) ops/scripts/audit_corpus_reachability.py
+	$(PYTHON) ops/scripts/audit_rules_corpus.py
 
 .PHONY: corpus-reachability
 corpus-reachability: venv
 	$(PYTHON) ops/scripts/audit_corpus_reachability.py
+
+.PHONY: rules-corpus-audit
+rules-corpus-audit: venv
+	$(PYTHON) ops/scripts/audit_rules_corpus.py
 
 ## Read-only drift check: does the committed rules/RULES-MANIFEST.* still match the
 ## live rules/*.mdc corpus? Writes nothing. Exit 1 (with a findings list) on drift.

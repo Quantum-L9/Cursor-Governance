@@ -20,11 +20,15 @@ def main():
     ap.add_argument("--changed", action="append", default=[])
     ap.add_argument("--unknown", action="append", default=[])
     ap.add_argument("--note", action="append", default=[])
+    ap.add_argument(
+        "--persistence-class",
+        choices=["durable", "ephemeral", "none"],
+    )
     ap.add_argument("--out")
     ns = ap.parse_args()
     payload = {
         "skill": "l9-dag-authoring",
-        "version": "2.2.0",
+        "version": "2.3.0",
         "operation": ns.operation,
         "status": ns.status,
         "dag_id": ns.dag_id,
@@ -32,6 +36,7 @@ def main():
         "target_skill": ns.target_skill,
         "emitted_runtime": ns.emitted_runtime,
         "surviving_runtime": ns.surviving_runtime,
+        "persistence_class": ns.persistence_class,
         "checks": [{"id": c, "status": "PASS"} for c in ns.check],
         "changed_surfaces": ns.changed,
         "unknowns": ns.unknown,

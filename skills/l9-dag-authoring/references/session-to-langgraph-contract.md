@@ -26,4 +26,4 @@ When `proof_path` is a skill IR (`meta/skill-ir.json`), the IR `workflow.nodes` 
 
 ## Proof
 
-`scripts/validate_langgraph_source.py` must PASS on any emitted module. The SessionDAG adapter stays registered until a later retirement plan.
+`scripts/validate_langgraph_source.py` structural `validate` must PASS on the emitted `graph.py`, and `validate_package` must PASS on the emit directory with `persistence_class=durable`. The SessionDAG adapter stays registered until a later retirement plan.

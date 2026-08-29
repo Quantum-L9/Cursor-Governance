@@ -1,12 +1,12 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "l9/dag-authoring/receipt-v2.2",
+  "$id": "l9/dag-authoring/receipt-v2.3",
   "type": "object",
   "additionalProperties": false,
   "required": ["skill", "version", "operation", "status", "checks", "changed_surfaces"],
   "properties": {
     "skill": {"const": "l9-dag-authoring"},
-    "version": {"const": "2.2.0"},
+    "version": {"const": "2.3.0"},
     "operation": {
       "enum": ["CREATE", "UPDATE", "VALIDATE", "REGISTER", "COMMAND_BIND", "CONVERT"]
     },
@@ -19,6 +19,10 @@
     "target_skill": {"type": ["string", "null"]},
     "emitted_runtime": {"type": ["string", "null"]},
     "surviving_runtime": {"type": ["string", "null"]},
+    "persistence_class": {
+      "type": ["string", "null"],
+      "enum": ["durable", "ephemeral", "none", null]
+    },
     "checks": {"type": "array", "items": {"type": "object"}},
     "changed_surfaces": {"type": "array", "items": {"type": "string"}},
     "unknowns": {"type": "array", "items": {"type": "string"}},

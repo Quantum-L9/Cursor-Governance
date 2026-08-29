@@ -7,7 +7,19 @@ history instead of trusting a backfilled entry here.
 
 ## [Unreleased]
 
+### Removed
+- **`execution-governance/`** (TODO A1): Suite-6 archive shell deleted after
+  harvest C3/C1/C4 semantics landed in `ops/scripts/audit_rules_corpus.py`
+  (inverted rule-enforcer coverage + named population). C5/C6 were already
+  live. `operational-oversight.py` no longer soft-imports the retired
+  `governance-monitor`. Do not restore the Flask API, dashboard, or Suite-6
+  header validator.
+
 ### Changed
+- **Suite-6 intelligence archive cut-over (2026-08-28):** live wrappers no longer
+  exec missing context extractors. Resume owner is Graphiti hydrate +
+  `graphiti_memory_client.py`. Historical: nine Suite-6 files were archived
+  2026-07-19 (`268608be`); `graphiti_sink.py` was intended but never wired.
 - **Merge authority:** campaigns / `make pr` still end green + merge-ready
   and do not merge. Invoking `/l9-pr-remediation` authorizes ordinary
   `gh pr merge` for all open PRs in the target repo after Converge.
@@ -23,6 +35,11 @@ history instead of trusting a backfilled entry here.
   `biome.json`, and must not add ESLint/Prettier as a second JS/TS/JSON owner.
 
 ### Added
+- **Rules corpus coverage (harvest C3/C1):** `audit_rules_corpus.py` reports
+  every declared rule's named enforcers and stamps `population` on
+  `reports/rules-corpus-audit.json`. Advisory only — not a `make pr` gate.
+  `make rules-corpus-audit` and `pr-full-corpus` run it. Missing
+  `rules/RULES-MANIFEST.yaml` fails closed.
 - **L4 Local Autonomy (no mid-execution push):** standing doctrine in
   `ops/autonomy/surface_profile.yaml` (`l4_local_autonomy`), CANONICAL_LAW §6.2,
   AGENTS.md §2.0.2, rule `88-l4-local-autonomy.mdc`. Flow: stacked-branch local

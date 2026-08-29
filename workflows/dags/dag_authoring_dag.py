@@ -556,37 +556,48 @@ Pre-reading: workflows/dags/gmp/graph.py, workflows/dags/inspect_dag.py""",
 
 1. **Syntax check:**
 ```bash
-python -m py_compile workflows/dags/<runtime>.py
+python -m py_compile workflows/dags/<package>/graph.py
 ```
 
-2. **Shape check (AST):**
+2. **Shape check (AST, graph.py only):**
 ```bash
 python3 skills/l9-dag-authoring/scripts/validate_langgraph_source.py \\
-    workflows/dags/<runtime>.py
+    workflows/dags/<package>/graph.py
 ```
 This proves the module imports langgraph, actually constructs the graph, and
 carries no session-registry contamination. Contamination is detected from the
 AST — an import of or call to the registry symbols — so a docstring that names
 them to say they must not be used is documenting the boundary, not crossing it.
 
-3. **Compile when the runtime is available:**
+3. **Package durability check:**
+```bash
+python3 skills/l9-dag-authoring/scripts/validate_langgraph_source.py \\
+    workflows/dags/<package>
+```
+PASS requires persistence_class=durable: executor compile(checkpointer=...)
+with a non-MemorySaver and thread_id. graph.py must not call compile().
+MemorySaver / missing saver is FAIL, not PARTIAL.
+
+4. **Compile when the runtime is available:**
 ```bash
 python -c "
-from workflows.dags.<runtime> import build_graph
-build_graph().compile()
+from workflows.dags.<package>.executor import compile_graph
+compile_graph()
 print('compiled')
 "
 ```
 If langgraph is not installed, record PARTIAL — a non-local probe that cannot
 execute is not a pass.
 
-4. **Confirm every referenced node is bound and every conditional route target
+5. **Confirm every referenced node is bound and every conditional route target
    resolves.**
 
 SUCCESS CRITERIA:
 - py_compile passes
-- validate_langgraph_source.py returns PASS
-- graph compiles, or PARTIAL is recorded with the reason""",
+- structural validate(graph.py) returns PASS
+- validate_package(dir) returns PASS with persistence_class=durable
+- executor compiles with a durable checkpointer, or PARTIAL is recorded because
+  langgraph is not installed""",
             outputs=["validation_passed"],
         ),
         SessionNode(

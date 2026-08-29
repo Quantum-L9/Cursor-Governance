@@ -1,4 +1,4 @@
-version: 2.2
+version: 2.3
 operations: [CREATE, UPDATE, VALIDATE, REGISTER, COMMAND_BIND, CONVERT]
 terminal_states: [PASS, PARTIAL, BLOCKED, FAIL]
 canonical:
@@ -25,3 +25,4 @@ rules:
   - CONVERT_never_deletes_SessionDAG_in_the_same_step
   - CONVERT_refuses_allow_session_retire
   - failure_blocks_downstream_success_claims
+  - LANGGRAPH_RUNTIME_requires_durable_checkpointer

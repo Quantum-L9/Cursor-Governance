@@ -20,4 +20,4 @@ When the user names a component, export, or API-instantiation check, also load *
 ## FORBIDDEN
 
 - Pasting a DAG or inventing a second evaluate protocol
-- Recreating `/audit-component` as a live slash
+- Duplicating the component-audit procedure here (`/audit-component` owns that slash)

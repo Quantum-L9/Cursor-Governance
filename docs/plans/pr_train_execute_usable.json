@@ -1,0 +1,331 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Make /pr-train --execute usable",
+  "objective": "Fix /pr-train --execute so it is a real OPEN_TRAIN: unique-stack-tip step 0 fail-closes to remediator before extract, the slash recipe finds the DAG when this checkout lacks the file, plan-only cannot report complete while siblings block, and remainder extract is proven or fail-closed. Graph still does not MERGE_TRAIN or write merge authorization.",
+  "success_criteria": [
+    "pytest tests/workflows/test_pr_train_dag.py PASS after unique_tip step 0: execute+sibling load_stack_tip error yields status=blocked, skill_dispatch=l9-pr-remediation, opened_prs=[], no extract/authorize_merge",
+    "pytest tests/workflows/test_pr_train_dag.py PASS: plan-only + sibling tip FAIL yields status=blocked not complete",
+    "commands/pr-train.md recipe invokes a DAG path that exists when $PWD/workflows/dags/pr_train_dag.py is absent (HOME/.cursor-governance or GOV_ROOT fallback) and still passes --repo $PWD; test_command_is_thin_trigger PASS",
+    "make precommit-repo PASS against .pre-commit-config.yaml on authored pathspecs; Cursor then stop (do not make pr unless the human typed it)",
+    "Remainder #365: either extract_remainder regression test PASS proving incomplete checkout cannot publish, or written bounded skip with inspect evidence that CI red is not remainder-path incompleteness"
+  ],
+  "scope": {
+    "in": [
+      "workflows/dags/pr_train_dag.py unique_tip / route_start / report_node / command recipe",
+      "workflows/dags/__init__.py PR_TRAIN_DAG export if missing on this branch",
+      "tests/workflows/test_pr_train_dag.py",
+      "commands/pr-train.md slash recipe",
+      "Inspect GitHub PR 365 remainder tree only to confirm or reject H4"
+    ],
+    "out": [
+      "Graph calling authorize_merge.py or MERGE_TRAIN",
+      "make pr / make pr-check as remediator publish",
+      "Rebasing or merging #364 #365 #366 from this plan",
+      "Force-push, conflict resolution, splitting merge-tree collisions",
+      "AGENTS.md / Makefile / CANONICAL_LAW.md rewrites",
+      "Landing SSOT debug-9f32a0 instrumentation",
+      "make campaign / Program Lock / new origin/main worktree as a planning requirement"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse HEAD; git rev-parse --abbrev-ref HEAD; test -f workflows/dags/pr_train_dag.py; git cat-file -e origin/main:workflows/dags/pr_train_dag.py",
+      "pass_criteria": "Workspace HEAD e95e4707540b6465a5cf59ba98853cf44df46f0f on feat/plan-skills-precommit-catalog; DAG absent here; origin/main has DAG",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "Read route_after_slice, remediate_node, report_node, load_stack_tip, commands/pr-train.md on SSOT",
+      "pass_criteria": "H1 FileNotFound recipe, H2 plan-only skips stack_base, H3 running→complete confirmed in source",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "gh pr list --repo Quantum-L9/Cursor-Governance --state open",
+      "pass_criteria": "Sibling chains #364 and #366 target main; #365 stacked on #364 — unique tip FAIL until remediator Converge, which this graph must not perform",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T0",
+      "task": "Pathspec-checkout origin/main workflows/dags/pr_train_dag.py tests/workflows/test_pr_train_dag.py commands/pr-train.md and the dags/__init__.py PR_TRAIN export onto this checkout. Delete _dbg / #region agent log debug instrumentation if present. Do not scoop foreign dirty.",
+      "files": [
+        "workflows/dags/pr_train_dag.py",
+        "workflows/dags/__init__.py",
+        "tests/workflows/test_pr_train_dag.py",
+        "commands/pr-train.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "origin/main:workflows/dags/pr_train_dag.py",
+      "leverage_rank": 2,
+      "shared_root_cause": "this branch lacks the DAG so Build cannot edit the live graph"
+    },
+    {
+      "id": "T1",
+      "task": "Insert unique_tip node as step 0 on every non-ff-only start. load_stack_tip sibling/unreadable topology → status=blocked, skill_dispatch=l9-pr-remediation, halt_reason collapse before OPEN_TRAIN, route to remediate then report. Do not inventory/extract/publish/authorize_merge/ff. Unique tip continues to inventory. Plan-only siblings must be blocked not complete. report_node must not coerce running→complete when status is blocked.",
+      "files": [
+        "workflows/dags/pr_train_dag.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T0"
+      ],
+      "operation": "Insert",
+      "anchor": "route_start / build_pr_train_graph",
+      "leverage_rank": 1,
+      "shared_root_cause": "H2+H3: execute is ornamental because halt is delayed and plan-only reports complete"
+    },
+    {
+      "id": "T2",
+      "task": "Change commands/pr-train.md recipe so python+DAG resolve: prefer $PWD file, else $HOME/.cursor-governance (or GOV_ROOT). Always --repo $PWD. Keep LANGGRAPH_RUNTIME, no SessionDAG, no .cursor-commands/workflows/dags. Do not teach make pr.",
+      "files": [
+        "commands/pr-train.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Replace",
+      "anchor": "Usage bash block",
+      "leverage_rank": 3,
+      "shared_root_cause": "H1+H5: slash recipe FileNotFounds on branches that do not carry the DAG; __file__ scripts vs --repo workspace is correct"
+    },
+    {
+      "id": "T3",
+      "task": "Inspect PR 365 files vs extract_remainder. If unique-path checkout is an incomplete tree that would fail Lint/Test, fail-closed remainder (do not publish) plus a regression test. If CI red is unrelated (protected-root, missing tests), record bounded skip and do not change extract_remainder.",
+      "files": [
+        "workflows/dags/pr_train_dag.py",
+        "tests/workflows/test_pr_train_dag.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Wrap",
+      "anchor": "extract_remainder / default_extract",
+      "leverage_rank": 5,
+      "shared_root_cause": "H4 inconclusive: remainder slice must not ship a broken tree"
+    },
+    {
+      "id": "T4",
+      "task": "Add/adjust tests: execute sibling halts before inventory; plan-only sibling status=blocked; command recipe contains SSOT/GOV fallback and --repo; existing test_sibling_stack_halts_to_remediator_without_extract still PASS; no register_session_dag.",
+      "files": [
+        "tests/workflows/test_pr_train_dag.py"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T1",
+        "T2",
+        "T3"
+      ],
+      "operation": "Insert",
+      "anchor": "test_sibling_stack_halts_to_remediator_without_extract",
+      "leverage_rank": 4,
+      "shared_root_cause": "without tests --execute stays an ornament after the next refactor"
+    },
+    {
+      "id": "T5",
+      "task": "Run targeted pytest tests/workflows/test_pr_train_dag.py then make precommit-repo on authored pathspecs bound to .pre-commit-config.yaml. Do not make pr unless the human typed it. Do not make campaign. Do not merge. Do not /pr-train --execute as this plan's publish.",
+      "files": [
+        "tests/workflows/test_pr_train_dag.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T4"
+      ],
+      "operation": "Wrap",
+      "anchor": "local verify",
+      "leverage_rank": 6
+    }
+  ],
+  "critical_path": [
+    "T0",
+    "T1",
+    "T2",
+    "T3",
+    "T4",
+    "T5"
+  ],
+  "milestones": [
+    {
+      "id": "M0",
+      "outcome": "pr-train sources exist on this checkout without debug logs",
+      "unlocks": "T1 graph edit"
+    },
+    {
+      "id": "M1",
+      "outcome": "step 0 unique_tip fail-closes siblings on plan and execute",
+      "unlocks": "usable --execute halt then remediator"
+    },
+    {
+      "id": "M2",
+      "outcome": "slash recipe + tests green",
+      "unlocks": "Build complete; remediator is a later slash not this plan"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C0",
+      "after": "M0",
+      "evidence_required": "test -f workflows/dags/pr_train_dag.py and no _DBG_LOG / debug-9f32a0 in that file",
+      "no_go_action": "stop; do not invent a second DAG; checkout origin/main pathspecs"
+    },
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "pytest assertion status==blocked for plan-only sibling; execute sibling never calls extract",
+      "no_go_action": "do not land; H2/H3 still open"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "test_command_is_thin_trigger PASS and recipe has GOV/SSOT fallback",
+      "no_go_action": "H1 still FileNotFound; do not claim --execute usable"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No new standing operating instruction; slash file already names remediator halt"
+    },
+    {
+      "surface": "Makefile",
+      "action": "n_a",
+      "reason": "No Make target change; remediator publish stays git push"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "Symlink and merge-authorization law unchanged; graph still must not write merge receipts"
+    },
+    {
+      "surface": "commands/pr-train.md",
+      "action": "update",
+      "todo_ids": [
+        "T2"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If unique_tip runs before inventory, do agents lose the slice plan they need after remediator — and is that worse than a false complete?",
+      "If the command points at $HOME/.cursor-governance while this checkout has a diverging DAG, does --execute mutate the wrong graph?",
+      "If step 0 auto-invoked remediator MERGE_TRAIN, would that violate the slash FORBIDDEN (graph must not merge)?",
+      "If remainder fail-closed drops unique paths forever, is that data loss vs a broken PR?"
+    ],
+    "assumed_false_ifs": [
+      "Graph MERGE_TRAIN stays forbidden",
+      "$PWD DAG is preferred when present so a landed branch does not silently run a stale SSOT copy",
+      "Sibling unique-tip FAIL is the only reason --execute is blocked today besides FileNotFound"
+    ],
+    "blast_radius": "A wrong unique_tip short-circuit can hide slice plans or skip OPEN_TRAIN after remediator; a wrong SSOT fallback can execute a different graph than the PR under edit; remainder fail-closed can drop unique paths",
+    "rollback": "Revert the four may_modify paths; origin/main already has the pre-step-0 DAG; do not revert unrelated dirty on this branch"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T0",
+      "T2",
+      "T4",
+      "T3",
+      "T5"
+    ],
+    "shared_causes": [
+      "halt is not fail-closed at start so --execute and plan-only look successful while siblings block OPEN_TRAIN",
+      "slash recipe binds DAG to $PWD so any branch without the file cannot run --execute"
+    ],
+    "deletions_or_consolidations": [
+      "Remove debug-9f32a0 _dbg regions from the DAG if copied from the instrumented SSOT",
+      "Do not add a second SessionDAG or a $PWD-only duplicate recipe"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Implementing step 0 as MERGE_TRAIN inside the graph",
+      "mitigation": "Tests boom authorize_merge; halt only dispatches skill name; human/agent runs /l9-pr-remediation after"
+    },
+    {
+      "risk": "SSOT DAG vs workspace DAG split-brain after H1 fallback",
+      "mitigation": "Prefer $PWD DAG when present; fallback only when absent; --repo always workspace"
+    },
+    {
+      "risk": "Scooping foreign dirty on feat/plan-skills-precommit-catalog",
+      "mitigation": "Pathspecs only; T0 is git checkout origin/main -- <pr-train paths>"
+    },
+    {
+      "risk": "H4 remainder change ships without inspect evidence",
+      "mitigation": "T3 is inspect-first; bounded skip allowed with written evidence"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Is PR 365 Lint/Test failure caused by remainder unique-path checkout?",
+      "decision_effect": "T3 either fail-closes extract_remainder or records skip",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "$PWD/.venv/bin/python -m pytest tests/workflows/test_pr_train_dag.py",
+      "pass_criteria": "PASS including sibling blocked on plan-only and execute, command fallback, no SessionDAG",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "make precommit-repo (catalog .pre-commit-config.yaml, changed files)",
+      "pass_criteria": "PASS on authored pathspecs; do not make pr unless the human typed it",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1"
+    ],
+    "next_skill": "Build (current checkout)",
+    "stop_reason": "Plan validated structurally; U1 remainder inspect is a Build probe; implementation not yet run"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "workflows/dags/pr_train_dag.py",
+      "workflows/dags/__init__.py",
+      "tests/workflows/test_pr_train_dag.py",
+      "commands/pr-train.md"
+    ],
+    "must_not_modify": [
+      "AGENTS.md",
+      "Makefile",
+      "CANONICAL_LAW.md",
+      "ops/autonomy/authorize_merge.py",
+      "skills/l9-pr-remediation/"
+    ],
+    "preserved_contracts": [
+      "LANGGRAPH_RUNTIME not SessionDAG",
+      "graph does not MERGE_TRAIN or write merge authorization",
+      "remediator publish is git push not make pr",
+      "--repo is the train workspace; DAG/scripts may come from __file__ clone",
+      "autonomous_merge false"
+    ],
+    "validation_commands": [
+      "$PWD/.venv/bin/python -m pytest tests/workflows/test_pr_train_dag.py",
+      "make precommit-repo",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "standard"
+}
