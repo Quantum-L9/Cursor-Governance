@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "program-execution.mission-context.v1",
+  "title": "Program Execution Mission Context v1",
+  "description": "The minimal immutable Mission projection carried through design-time compilation. It is exact provenance, never a second Mission definition: it answers only 'which exact Mission Revision admitted this Program', so a reader can re-fetch the Mission itself. Mission objective, acceptance criteria, authority ceiling, budgets, constraints, scope, lifecycle, owner, targets, tasks, workers, leases, provider data, and runtime state are all excluded — duplicating them here would create a second, drifting source of Mission truth that no supersession could correct. Non-circular by construction: every field is already known before the Blueprint exists, so this projection may live inside the Blueprint digest domain. The final Mission Program Binding, which names blueprint_digest, may not.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "mission_id",
+    "mission_revision",
+    "mission_digest"
+  ],
+  "properties": {
+    "schema": {
+      "const": "program-execution.mission-context.v1"
+    },
+    "mission_id": {
+      "description": "Immutable Mission identity, in the canonical Mission ID form.",
+      "type": "string",
+      "pattern": "^MISSION-[A-Z0-9-]+$"
+    },
+    "mission_revision": {
+      "description": "The exact revision admitted. Pinned; supersession never rewrites it.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "mission_digest": {
+      "description": "Canonical SHA-256 hexadecimal over the Mission's authoritative semantics, computed by the Mission parser and never accepted as a caller claim.",
+      "type": "string",
+      "pattern": "^[a-f0-9]{64}$"
+    }
+  }
+}

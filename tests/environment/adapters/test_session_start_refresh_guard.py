@@ -82,6 +82,14 @@ def test_hook_still_fails_open() -> None:
     assert "set -e" not in text.splitlines()[0:5]
 
 
+def test_bootstrap_repair_marker_follows_installer_success() -> None:
+    """A failed installer must not permanently skip repair at this revision."""
+    text = body()
+    installer = text.index('timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" bash "$installer"')
+    marker_write = text.index(': >"$marker"')
+    assert installer < marker_write, "persist the attempt marker only after installer success"
+
+
 def _synthetic_gov(home: Path, *, tracked_dirt: bool, untracked_dirt: bool) -> Path:
     """A minimal governance clone the hook will accept as $GOV."""
     import subprocess

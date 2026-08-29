@@ -144,7 +144,7 @@
     },
     {
       "id": "V2",
-      "command": "make pr-check",
+      "command": ".pre-commit-config.yaml",
       "pass_criteria": "PASS or N/A if no consumer repo edits",
       "status": "not_applicable"
     }
@@ -172,7 +172,7 @@
     ],
     "validation_commands": [
       "python3 scripts/self_test.py",
-      "make pr-check"
+      ".pre-commit-config.yaml"
     ]
   },
   "depth": "deep",

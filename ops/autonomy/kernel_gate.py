@@ -32,6 +32,7 @@ PLAN_FIXTURE_PREFIX = "skills/l9-plan/fixtures/"
 PLAN_SKIP_PREFIXES = (
     PLAN_FIXTURE_PREFIX,
     "environment/contracts/execution/templates/",
+    "docs/plans/_TEMPLATE.plan.md",
 )
 
 

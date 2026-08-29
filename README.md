@@ -85,7 +85,7 @@ make -C "$HOME/.cursor-governance" start WS="$(pwd)"
 └── README.md          # This file
 ```
 
-`execution-governance/`, `foundation/`, `environment/`,
+`foundation/`, `environment/`,
 `telemetry/`, `prompts/`, and `logs/`
 hold supporting docs, in-progress notes, and legacy scaffolding; treat
 `CANONICAL_LAW.md` and `skills/*/SKILL.md` as the sources of truth over any

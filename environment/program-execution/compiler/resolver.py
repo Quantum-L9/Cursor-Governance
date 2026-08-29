@@ -10,13 +10,21 @@ from typing import Any
 
 import yaml
 from jsonschema import Draft202012Validator
+from referencing import Registry, Resource
 
 from .intent import Intent, intent_id
+from .mission_admission import (
+    MissionAdmission,
+    MissionAdmissionError,
+    mission_narrowed_ceiling,
+    validate_mission_context,
+)
 from .policy import DEFAULT_PROFILE, load_policy, narrowed_ceiling
 from .program_action import decide
 from .repo_truth import RepoTruth, discover
 
-SCHEMA_PATH = Path(__file__).resolve().parent / "schemas" / "intent-resolution.schema.json"
+SCHEMAS_DIR = Path(__file__).resolve().parent / "schemas"
+SCHEMA_PATH = SCHEMAS_DIR / "intent-resolution.schema.json"
 
 REMOTE_RE = re.compile(
     r"(?:git@|https://|ssh://git@)?([A-Za-z0-9._-]+)/([A-Za-z0-9._-]+?)(?:\.git)?/?$"
@@ -37,6 +45,7 @@ def resolve(
     truth: RepoTruth | None = None,
     profile_id: str | None = None,
     existing_programs: list[dict[str, Any]] | None = None,
+    admission: MissionAdmission | None = None,
 ) -> dict[str, Any]:
     """Produce the canonical INTENT_RESOLUTION artifact for a parsed intent.
 
@@ -45,7 +54,24 @@ def resolve(
       policy-determined    -> auto-resolve with policy provenance
       reversible planning  -> auto within the authority envelope
       authority-bearing    -> explicit decision/Unknown; block only dependents
+
+    ``admission`` is an optional validated :class:`MissionAdmission`. When it is
+    present the resolution is Mission-bound: the resolved authorization ceiling
+    is intersected action-by-action with the Mission ceiling, and the exact
+    minimal Mission projection is emitted as first-class ``mission_context``
+    provenance. Mission can only narrow. When it is absent the resolution is an
+    ordinary unbound one and nothing about this function's behaviour changes.
     """
+    if admission is not None:
+        # Fail closed on anything that merely looks like an admission: a
+        # duck-typed object could carry a Mission digest nobody parsed.
+        if not isinstance(admission, MissionAdmission):
+            raise MissionAdmissionError(
+                "mission admission must be a validated MissionAdmission from "
+                "compiler.mission_admission.admit()"
+            )
+        validate_mission_context(admission.mission_context())
+
     truth = truth or discover(Path.cwd())
     profile_id = profile_id or intent.policy_profile or DEFAULT_PROFILE
     policy = load_policy(profile_id)
@@ -56,6 +82,20 @@ def resolve(
     targets, target_evidence = _resolve_targets(intent, truth, issues)
     owner = _resolve_owner(truth, policy, issues)
     ceiling = _resolve_ceiling(policy, intent, issues)
+    if admission is not None:
+        ceiling = mission_narrowed_ceiling(ceiling, admission)
+        issues.append(
+            ResolutionIssue(
+                topic=(
+                    "Authorization ceiling intersected with the Mission authority ceiling of "
+                    f"{admission.authority_reference()}; a Mission may narrow an action and "
+                    "never widen one."
+                ),
+                issue_class="decision",
+                resolved_value=ceiling,
+                provenance={"type": "decision", "ref": admission.authority_reference()},
+            )
+        )
     test_command = _resolve_test_command(truth, issues)
 
     requirements: list[dict[str, Any]] = []
@@ -155,6 +195,13 @@ def resolve(
         "confidence": confidence,
         "synthesis_status": synthesis_status,
     }
+    if admission is not None:
+        # First-class, not `_compiler_meta`: write_resolution() strips private
+        # keys, and the Mission projection has to reach the synthesizer.
+        reference = admission.authority_reference()
+        resolution["mission_context"] = admission.mission_context()
+        resolution["governing_authority"]["source_ids"].append(reference)
+        resolution["decisions"]["accepted_from_authority"].append(reference)
     _validate(resolution)
     resolution["_compiler_meta"] = {
         "ceiling": ceiling,
@@ -305,10 +352,27 @@ def _repo_id_from_remote(remote: str) -> str | None:
     return f"{match.group(1)}/{match.group(2)}"
 
 
+def _schema_registry() -> Registry:
+    """Resolve compiler schema ``$ref`` by ``$id``.
+
+    ``mission_context`` refs the canonical mission-context schema rather than
+    restating its four fields, so the projection keeps exactly one owner and
+    cannot drift between the compiler and the artifact it emits.
+    """
+    resources = []
+    for path in sorted(SCHEMAS_DIR.glob("*.json")):
+        document = json.loads(path.read_text(encoding="utf-8"))
+        schema_id = document.get("$id")
+        if schema_id:
+            resources.append((schema_id, Resource.from_contents(document)))
+    return Registry().with_resources(resources)
+
+
 def _validate(resolution: dict[str, Any]) -> None:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
     errors = sorted(
-        Draft202012Validator(schema).iter_errors(resolution), key=lambda e: list(e.path)
+        Draft202012Validator(schema, registry=_schema_registry()).iter_errors(resolution),
+        key=lambda e: list(e.path),
     )
     if errors:
         details = "; ".join(

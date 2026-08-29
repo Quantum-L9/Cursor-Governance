@@ -143,6 +143,12 @@ toolchain_proven() {
   if [ -f "$repo/package.json" ] && [ ! -d "$repo/node_modules" ]; then
     return 1
   fi
+  # Pip-managed repos have no uv.lock for `uv sync --check`. install_repo's pip
+  # path is best-effort (`|| true`), so a failed install must not stamp ready.
+  if { [ -f "$repo/pyproject.toml" ] || [ -f "$repo/requirements.txt" ]; } \
+      && [ ! -f "$repo/uv.lock" ]; then
+    [ -x "$repo/.venv/bin/python" ] || return 1
+  fi
   return 0
 }
 

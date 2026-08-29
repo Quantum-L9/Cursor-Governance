@@ -1,0 +1,16 @@
+test_branch_and_predecessor_preflight_execute_fail_closed (__main__.TargetValidationTests.test_branch_and_predecessor_preflight_execute_fail_closed) ... ok
+test_deterministic_recompile_and_single_terminal_delivery (__main__.TargetValidationTests.test_deterministic_recompile_and_single_terminal_delivery) ... ok
+test_emitter_has_no_ecosystem_fallback_literals (__main__.TargetValidationTests.test_emitter_has_no_ecosystem_fallback_literals) ... ok
+test_empty_validation_fails_closed (__main__.TargetValidationTests.test_empty_validation_fails_closed) ... ok
+test_go_has_no_implicit_node_or_python_fallback (__main__.TargetValidationTests.test_go_has_no_implicit_node_or_python_fallback) ... ok
+test_identical_repo_gate_and_completion_proof_dedupes_without_false_failure (__main__.TargetValidationTests.test_identical_repo_gate_and_completion_proof_dedupes_without_false_failure) ... ok
+test_missing_validation_fails_closed (__main__.TargetValidationTests.test_missing_validation_fails_closed) ... ok
+test_multi_commit_item_fails_closed (__main__.TargetValidationTests.test_multi_commit_item_fails_closed) ... ok
+test_multiline_validation_fails_closed (__main__.TargetValidationTests.test_multiline_validation_fails_closed) ... ok
+test_node_explicit_npm_is_preserved (__main__.TargetValidationTests.test_node_explicit_npm_is_preserved) ... ok
+test_python_has_no_implicit_npm_and_predecessor_proof_is_bound (__main__.TargetValidationTests.test_python_has_no_implicit_npm_and_predecessor_proof_is_bound) ... ok
+
+----------------------------------------------------------------------
+Ran 11 tests in 18.560s
+
+OK

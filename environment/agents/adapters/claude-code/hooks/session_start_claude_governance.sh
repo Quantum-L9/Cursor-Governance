@@ -309,10 +309,11 @@ except Exception:
     *)
       if [ ! -f "$marker" ] && [ -f "$installer" ]; then
         mkdir -p "$HOME/.l9/claude"
-        : >"$marker"
         LINES+=("bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once")
-        timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" bash "$installer" \
-          >"$HOME/.l9/claude/bootstrap-repair-${revision}.log" 2>&1 || true
+        if timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" bash "$installer" \
+          >"$HOME/.l9/claude/bootstrap-repair-${revision}.log" 2>&1; then
+          : >"$marker"
+        fi
       fi
       ;;
   esac

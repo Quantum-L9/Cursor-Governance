@@ -81,9 +81,47 @@ identity. Hence the ordering:
 
 ```text
 Mission Revision → Mission Admission Context → Program Intent → Intent Resolver
-  → Blueprint → compute blueprint_digest → Mission Program Binding
-  → Program Lock → Controller
+  → Blueprint → official validation → compute blueprint_digest
+  → Mission Program Binding → Program Lock → Controller
 ```
+
+### What `blueprint_digest` is, exactly
+
+```text
+blueprint_digest = lowercase_hex(SHA-256(exact bytes of MANIFEST.yaml))
+```
+
+The canonical input is the **exact bytes** of the instantiated Blueprint's final
+`MANIFEST.yaml` — nothing is parsed, normalized, key-sorted, rewritten, or
+reserialized first. That is what makes the digest name one exact Blueprint
+rather than an equivalence class of them: two byte-different manifests that
+happen to parse equal are two different Blueprints, and a binding that could not
+tell them apart would no longer pin exact state.
+
+Hashing the manifest rather than walking the tree keeps a single owner. The
+official template manifest writer
+(`../core/program-execution-blueprint-template/scripts/instantiate.py`) already
+records every other Blueprint file with its SHA-256, so the manifest's bytes
+transitively cover the Blueprint. Program Execution does not maintain a second
+file inventory.
+
+Two orderings are load-bearing:
+
+* **Validation precedes identity.** The digest is computed only after the
+  official instantiated-Blueprint validator reports the Blueprint valid. An
+  invalid Blueprint has no admissible identity, so there is nothing for a
+  binding to pin.
+* **Any Mission context inside the Blueprint precedes the manifest.** A
+  non-circular Mission context projection — already-known Mission ID, revision,
+  and digest, and nothing else — may live in the Blueprint, but it must be
+  written before the manifest is finalized so its bytes participate in identity.
+  The *final* Mission Program Binding may not: it contains `blueprint_digest`.
+
+Identity fails closed. A missing, non-regular, or unreadable `MANIFEST.yaml`
+raises rather than returning a digest, because a well-formed digest for a
+Blueprint that does not exist is the one failure a binding cannot detect. The
+single implementation is
+[`../core/shared/blueprint_identity.py`](../core/shared/blueprint_identity.py).
 
 ## Mission acceptance versus Program acceptance
 
@@ -160,6 +198,7 @@ bake in the wrong direction.
 | `schemas/mission-program-binding.schema.json` | Draft 2020-12 binding schema |
 | `mission.py` | Parser, digest, transitive immutability |
 | `binding.py` | Immutable binding built from a parsed Mission |
+| `../core/shared/blueprint_identity.py` | Exact-byte Blueprint identity (one owner, provider-neutral) |
 | `tests/` | Executable law; fixtures for a conforming and a prescribing Mission |
 
 `authority_ceiling` is a `$ref` to `program-execution-system/action-authorization.v2`
@@ -178,8 +217,9 @@ Mission → Mission Admission → Program Intent → Intent Resolver → Bluepri
 ```
 
 Not implemented here: Mission → Program Admission, Mission context → Program
-Intent, Blueprint identity, Mission Program Binding *creation* inside the
-compiler, and Program Lock immutable import. There is no Mission Controller,
+Intent, Mission Program Binding *creation* inside the compiler, and Program Lock
+immutable import. Blueprint identity **is** implemented, in
+`../core/shared/blueprint_identity.py`. There is no Mission Controller,
 Scheduler, Lease, Work Item, Task State, Worker, or Runtime Task; no
 Mission-to-Program compilation; no `make campaign` wiring; and no change to the
 campaign classifier or Controller runtime behaviour.

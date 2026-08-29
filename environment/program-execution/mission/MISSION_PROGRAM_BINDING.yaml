@@ -14,6 +14,29 @@ identity:
   binding_id_pattern: "^MPB-[A-Z0-9-]+$"
   digest_format: canonical SHA-256 hexadecimal
 
+# Blueprint identity is exact and acyclic (ADR-0026). The canonical input is the
+# exact bytes of the instantiated Blueprint's final MANIFEST.yaml, which the
+# official template manifest writer already fills with every other Blueprint file
+# and its SHA-256 — so identity covers the whole Blueprint through one owner.
+blueprint_identity:
+  canonical_input: exact bytes of the instantiated Blueprint MANIFEST.yaml
+  algorithm: sha256
+  representation: lowercase hexadecimal, 64 characters
+  implementation: ../core/shared/blueprint_identity.py
+  manifest_owner: ../core/program-execution-blueprint-template/scripts/instantiate.py
+  # Ordering, not decoration: an unvalidated Blueprint has no admissible identity.
+  computed_after: official instantiated-Blueprint validation reports valid
+  prohibited_before_hashing:
+    - parse
+    - yaml_normalization
+    - key_sorting
+    - rewrite_or_reserialization
+  fail_closed_when:
+    - MANIFEST.yaml is absent
+    - MANIFEST.yaml is not a regular file
+    - MANIFEST.yaml cannot be read
+  final_binding_inside_digest_domain: prohibited
+
 required_fields:
   - schema
   - binding_id
@@ -70,10 +93,31 @@ non_circular_ordering:
   - Program Intent
   - Intent Resolver
   - Blueprint
+  - official Blueprint validation
   - compute blueprint_digest
   - Mission Program Binding
   - Program Lock
   - Controller
 
 blueprint_digest_self_reference: prohibited
-mission_context_yaml_added: false
+
+# ADR-0026: "a future Blueprint may contain a non-circular Mission context
+# projection with already-known Mission ID, revision, and digest". It is now
+# emitted. Every field is known before the Blueprint exists, so the projection
+# may live inside the digest domain — and must, since it is written before
+# MANIFEST.yaml is finalized. The final binding, which names blueprint_digest,
+# still may not.
+mission_context_yaml_added: true
+mission_context:
+  filename: MISSION_CONTEXT.yaml
+  schema: program-execution.mission-context.v1
+  json_schema: ../compiler/schemas/mission-context.schema.json
+  emitted_by: ../compiler/synthesizer.py
+  fields:
+    - schema
+    - mission_id
+    - mission_revision
+    - mission_digest
+  written_before: MANIFEST.yaml finalization
+  inside_blueprint_digest_domain: required
+  duplicates_mission_semantics: false

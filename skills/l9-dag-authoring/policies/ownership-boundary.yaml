@@ -1,4 +1,4 @@
-version: 2
+version: 3
 owns:
   - dag_creation
   - dag_update
@@ -7,6 +7,7 @@ owns:
   - dag_discovery_binding
   - thin_command_trigger_binding
   - convert_disposition_classification
+  - langgraph_runtime_persistence_mechanics
 does_not_own:
   - domain_workflow_semantics
   - skill_compilation
@@ -15,6 +16,9 @@ does_not_own:
   - gmp_execution
   - code_maintenance_execution
   - harvest_execution
+  - checkpointer_as_memory_ssot
+  - pe_execution_authority
+  - domain_interrupt_placement
 invariants:
   - skills_represent_capabilities_dags_represent_execution_graphs
   - most_specific_domain_owner_wins

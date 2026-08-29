@@ -58,9 +58,12 @@ def test_graph_declares_the_ir_node_set() -> None:
 
 def test_builder_source_is_langgraph_and_off_registry() -> None:
     sys.path.insert(0, str(ROOT / "skills" / "l9-dag-authoring" / "scripts"))
-    from validate_langgraph_source import validate
+    from validate_langgraph_source import validate, validate_package
 
     assert validate(GRAPH_PATH)["status"] == "PASS"
+    package = validate_package(GRAPH_PATH.parent)
+    assert package["status"] == "PASS", package
+    assert package["persistence_class"] == "durable"
     text = GRAPH_PATH.read_text(encoding="utf-8")
     assert "register_session_dag" not in text
     assert "def build_intelligence_harvest_graph" in text
@@ -81,6 +84,20 @@ def test_builder_source_is_langgraph_and_off_registry() -> None:
     )
     done = subprocess.run([sys.executable, "-c", probe], cwd=ROOT, capture_output=True, text=True)
     assert done.returncode == 0, done.stderr
+    executor_probe = (
+        "import sys, tempfile\n"
+        f"root = {str(ROOT)!r}\n"
+        "sys.path.insert(0, root)\n"
+        "from pathlib import Path\n"
+        "from workflows.dags.intelligence_harvest.executor import HarvestExecutor, compile_graph\n"
+        "ws = Path(tempfile.mkdtemp())\n"
+        "assert compile_graph(workspace=ws) is not None\n"
+        "assert HarvestExecutor(workspace=ws).compiled is not None\n"
+    )
+    compiled = subprocess.run(
+        [sys.executable, "-c", executor_probe], cwd=ROOT, capture_output=True, text=True
+    )
+    assert compiled.returncode == 0, compiled.stderr
 
 
 def test_session_adapter_still_resolves() -> None:

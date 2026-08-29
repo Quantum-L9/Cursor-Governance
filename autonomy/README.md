@@ -355,9 +355,24 @@ the registry enforces it transactionally at lease time (and stays
 authoritative), the scheduler pre-filters admission with it, and the linter uses
 it to tell a real ordering constraint from a serialization-only edge.
 
-**Known limitation:** claim keys are opaque identifiers, so `repo:addons/auth`
-and `repo:addons/auth/security.py` do **not** collide. Overlapping scopes must
-be declared under the same claim key to serialize.
+Overlap is scope-aware, not exact-key. `autonomy.runtime.claims.resource_keys_overlap`
+classifies a claim key first, and the classification decides how it compares:
+
+| Key shape | Example | Overlap rule |
+|---|---|---|
+| Path-scoped — explicit `path:` namespace, or no `:` at all | `path:src/api`, `src/**`, `README.md` | containment and glob: a directory scope collides with anything under it, and a glob segment is assumed to match |
+| Opaque — any other namespaced key | `target-lineage:TARGET-001`, `repository:declared` | exact equality only |
+
+So `src` and `src/module.py` **do** collide, and so do `src/**` and `src/*.py`,
+while `docs/a.md` and `docs/b.md` run concurrently. Uncertainty resolves toward
+conflict: an empty, absolute, or escaping path scope is treated as the whole
+repository rather than as something narrow.
+
+**Still true for opaque keys:** `repo:addons/auth` and
+`repo:addons/auth/security.py` are `repo:`-namespaced, so they compare by
+equality and do **not** collide despite the nesting their text suggests.
+Declare overlapping scopes as path-scoped keys, or under one shared key, to
+serialize them.
 
 ## Bottleneck telemetry
 

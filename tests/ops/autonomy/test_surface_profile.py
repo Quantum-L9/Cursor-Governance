@@ -19,13 +19,14 @@ def test_profile_block_has_doctrine() -> None:
     assert "Autonomy Velocity Doctrine" in block
     assert "l9-pr-remediation" in block
     assert "L4 local autonomy" in block
-    # Kernels are no longer an L4 phase, so the block no longer names
-    # "Recursive Alignment": they fire as the first step of precommit-repo.
-    # Assert the contract the doctrine actually carries now, not the one it
-    # carried before that move — a stale assertion is a red suite that teaches
-    # people to ignore it.
-    assert "Tree kernels are not an L4 phase" in block
+    # The block must still tell an agent where tree kernels fire. It named
+    # "Recursive Alignment" until #347 moved kernels out of L4 and into the
+    # first step of `make precommit-repo`; the assertion kept pinning the old
+    # wording and has been red on main since. Pin the CURRENT contract — the
+    # owner and the entry point — rather than a kernel title the doctrine no
+    # longer has any reason to spell out.
     assert "kernel_gate.py" in block
+    assert "precommit-repo" in block
     assert block_sha256(ROOT)
 
 

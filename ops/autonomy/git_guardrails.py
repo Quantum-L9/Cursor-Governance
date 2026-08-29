@@ -1648,15 +1648,7 @@ def _classify_gh(ctx: GuardContext, words: Sequence[str]) -> Finding:
                 blast_radius=BlastRadius.UNKNOWN,
             )
         if "graphql" in positional and _gh_graphql_is_mutation(args):
-            return _deny(
-                Effect.REMOTE_REF_UPDATE,
-                "gh api graphql mutation",
-                "a GraphQL mutation's remote effect cannot be classified from "
-                f"the command text. Set {HUMAN_AUTHORIZATION_ENV}=<reason>.",
-                sensitivity=Sensitivity.UNKNOWN,
-                recoverability=Recoverability.UNCERTAIN,
-                blast_radius=BlastRadius.UNKNOWN,
-            )
+            return _classify_gh_graphql_mutation(args)
         if method in _GH_WRITE_METHODS:
             return _guard(
                 Effect.REMOTE_REF_UPDATE,
@@ -1718,6 +1710,218 @@ def _gh_api_method(args: Sequence[str]) -> str:
 
 def _gh_graphql_is_mutation(args: Sequence[str]) -> bool:
     return any("mutation" in arg.lower() for arg in args)
+
+
+#: Remediator GraphQL mutations whose remote effect is the same class as a
+#: REST POST / ``gh pr comment`` (thread reply + resolve). Unknown mutation
+#: fields stay DENY — parser uncertainty never upgrades to ALLOW (I015).
+_GH_GRAPHQL_ALLOWED_MUTATIONS = frozenset(
+    {
+        "addPullRequestReviewThreadReply",
+        "resolveReviewThread",
+    }
+)
+
+_GRAPHQL_NAME_RE = re.compile(r"[A-Za-z_][A-Za-z0-9_]*")
+
+
+def _classify_gh_graphql_mutation(args: Sequence[str]) -> Finding:
+    """GUARD allowlisted remediator mutations; DENY every other GraphQL mutation."""
+    fields = _graphql_mutation_field_names("\n".join(args))
+    if fields is not None and fields <= _GH_GRAPHQL_ALLOWED_MUTATIONS:
+        return _guard(
+            Effect.REMOTE_REF_UPDATE,
+            "gh api graphql mutation",
+            f"allowlisted remediator GraphQL mutation ({', '.join(sorted(fields))})",
+            sensitivity=Sensitivity.SHARED_BRANCH,
+            recoverability=Recoverability.UNCERTAIN,
+            blast_radius=BlastRadius.UNKNOWN,
+        )
+    return _deny(
+        Effect.REMOTE_REF_UPDATE,
+        "gh api graphql mutation",
+        "a GraphQL mutation's remote effect cannot be classified from "
+        f"the command text. Set {HUMAN_AUTHORIZATION_ENV}=<reason>.",
+        sensitivity=Sensitivity.UNKNOWN,
+        recoverability=Recoverability.UNCERTAIN,
+        blast_radius=BlastRadius.UNKNOWN,
+    )
+
+
+def _graphql_skip_string(text: str, index: int) -> int:
+    if text.startswith('"""', index):
+        end = text.find('"""', index + 3)
+        return len(text) if end < 0 else end + 3
+    if index < len(text) and text[index] == '"':
+        cursor = index + 1
+        while cursor < len(text):
+            if text[cursor] == "\\":
+                cursor += 2
+                continue
+            if text[cursor] == '"':
+                return cursor + 1
+            cursor += 1
+        return len(text)
+    return index
+
+
+def _graphql_skip_trivia(text: str, index: int) -> int:
+    n = len(text)
+    while index < n:
+        char = text[index]
+        if char in " \t\r\n,":
+            index += 1
+            continue
+        if char == "#":
+            newline = text.find("\n", index)
+            index = n if newline < 0 else newline + 1
+            continue
+        break
+    return index
+
+
+def _graphql_skip_balanced(text: str, index: int, open_ch: str, close_ch: str) -> int | None:
+    if index >= len(text) or text[index] != open_ch:
+        return None
+    depth = 0
+    cursor = index
+    n = len(text)
+    while cursor < n:
+        if text.startswith('"""', cursor) or text[cursor] == '"':
+            cursor = _graphql_skip_string(text, cursor)
+            continue
+        if text[cursor] == "#":
+            newline = text.find("\n", cursor)
+            cursor = n if newline < 0 else newline + 1
+            continue
+        if text[cursor] == open_ch:
+            depth += 1
+            cursor += 1
+            continue
+        if text[cursor] == close_ch:
+            depth -= 1
+            cursor += 1
+            if depth == 0:
+                return cursor
+            continue
+        cursor += 1
+    return None
+
+
+def _graphql_selection_field_names(inner: str) -> frozenset[str] | None:
+    names: list[str] = []
+    cursor = 0
+    n = len(inner)
+    while True:
+        cursor = _graphql_skip_trivia(inner, cursor)
+        if cursor >= n:
+            break
+        if inner.startswith("...", cursor):
+            return None
+        match = _GRAPHQL_NAME_RE.match(inner, cursor)
+        if not match:
+            return None
+        first = match.group(0)
+        after = _graphql_skip_trivia(inner, match.end())
+        if after < n and inner[after] == ":":
+            after = _graphql_skip_trivia(inner, after + 1)
+            field = _GRAPHQL_NAME_RE.match(inner, after)
+            if not field:
+                return None
+            name = field.group(0)
+            cursor = field.end()
+        else:
+            name = first
+            cursor = match.end()
+        cursor = _graphql_skip_trivia(inner, cursor)
+        if cursor < n and inner[cursor] == "(":
+            nxt = _graphql_skip_balanced(inner, cursor, "(", ")")
+            if nxt is None:
+                return None
+            cursor = _graphql_skip_trivia(inner, nxt)
+        while cursor < n and inner[cursor] == "@":
+            cursor += 1
+            directive = _GRAPHQL_NAME_RE.match(inner, cursor)
+            if not directive:
+                return None
+            cursor = _graphql_skip_trivia(inner, directive.end())
+            if cursor < n and inner[cursor] == "(":
+                nxt = _graphql_skip_balanced(inner, cursor, "(", ")")
+                if nxt is None:
+                    return None
+                cursor = _graphql_skip_trivia(inner, nxt)
+        if cursor < n and inner[cursor] == "{":
+            nxt = _graphql_skip_balanced(inner, cursor, "{", "}")
+            if nxt is None:
+                return None
+            cursor = nxt
+        names.append(name)
+    if not names:
+        return None
+    return frozenset(names)
+
+
+def _graphql_fields_after_mutation(text: str, keyword_start: int) -> frozenset[str] | None:
+    cursor = _graphql_skip_trivia(text, keyword_start + len("mutation"))
+    name = _GRAPHQL_NAME_RE.match(text, cursor)
+    if name:
+        cursor = _graphql_skip_trivia(text, name.end())
+    if cursor < len(text) and text[cursor] == "(":
+        nxt = _graphql_skip_balanced(text, cursor, "(", ")")
+        if nxt is None:
+            return None
+        cursor = _graphql_skip_trivia(text, nxt)
+    while cursor < len(text) and text[cursor] == "@":
+        cursor += 1
+        directive = _GRAPHQL_NAME_RE.match(text, cursor)
+        if not directive:
+            return None
+        cursor = _graphql_skip_trivia(text, directive.end())
+        if cursor < len(text) and text[cursor] == "(":
+            nxt = _graphql_skip_balanced(text, cursor, "(", ")")
+            if nxt is None:
+                return None
+            cursor = _graphql_skip_trivia(text, nxt)
+    if cursor >= len(text) or text[cursor] != "{":
+        return None
+    end = _graphql_skip_balanced(text, cursor, "{", "}")
+    if end is None:
+        return None
+    return _graphql_selection_field_names(text[cursor + 1 : end - 1])
+
+
+def _graphql_mutation_field_names(document: str) -> frozenset[str] | None:
+    """Top-level mutation field names, or None when the document is unparseable.
+
+    ``mutation`` inside GraphQL strings/comments is ignored so a remediator
+    reply body cannot spawn a second unclassified operation.
+    """
+    fields: set[str] = set()
+    found = False
+    cursor = 0
+    n = len(document)
+    while cursor < n:
+        if document.startswith('"""', cursor) or document[cursor] == '"':
+            cursor = _graphql_skip_string(document, cursor)
+            continue
+        if document[cursor] == "#":
+            newline = document.find("\n", cursor)
+            cursor = n if newline < 0 else newline + 1
+            continue
+        match = _GRAPHQL_NAME_RE.match(document, cursor)
+        if match:
+            if match.group(0).lower() == "mutation":
+                found = True
+                parsed = _graphql_fields_after_mutation(document, match.start())
+                if parsed is None:
+                    return None
+                fields.update(parsed)
+            cursor = match.end()
+            continue
+        cursor += 1
+    if not found or not fields:
+        return None
+    return frozenset(fields)
 
 
 # ---------------------------------------------------------------------------

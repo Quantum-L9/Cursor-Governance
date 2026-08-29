@@ -1,0 +1,24 @@
+schema: claude-coding-contract-compiler.activation-receipt.v1
+source_type: uploaded_zip
+uploaded_filename: claude-coding-contract-compiler-v2.7.zip
+archive_sha256: 47dca00ec0642483002dccb7f5426fb263431cbb7a82b293268e815bca852c2f
+pack_root: claude-coding-contract-compiler/
+skill_entrypoint: claude-coding-contract-compiler/SKILL.md
+loaded_version: 2.7.0
+load_mode: manual
+load_status: PASS
+binding_directives_applied:
+  fail_closed: active
+  claude_fill_policy: active
+  scope_lock: active
+  validation_evidence: active
+  recursive_harden: not_applicable
+compiler_emitter: scripts/compile_contract.py
+per_contract_validator: scripts/validate_contract.py
+chain_validator: scripts/validate_chain.py
+preflight_generator: scripts/generate_preflight.py
+settings_generator: scripts/generate_claude_settings.py
+target_validation_regression: scripts/test_target_validation.py
+campaign_input_schema: schemas/campaign-spec.schema.json
+contract_schema: schemas/coding-contract.schema.json
+activated_at: '2026-08-28T14:37:20Z'

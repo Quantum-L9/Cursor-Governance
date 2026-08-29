@@ -62,6 +62,30 @@ COMPONENTS = (
 )
 
 
+def _git_dir(base: Path) -> Path | None:
+    """Resolve the git directory for a clone or a worktree checkout.
+
+    A worktree stores `.git` as a `gitdir:` pointer file. Reading
+    `base/.git/HEAD` then raises OSError and would hide a live revision.
+    """
+    git = base / ".git"
+    try:
+        if git.is_file():
+            first = git.read_text(encoding="utf-8").splitlines()[0].strip()
+            prefix, _, rest = first.partition(":")
+            if prefix.lower() != "gitdir" or not rest.strip():
+                return None
+            pointer = Path(rest.strip())
+            if not pointer.is_absolute():
+                pointer = (base / pointer).resolve()
+            return pointer if pointer.is_dir() else None
+        if git.is_dir():
+            return git
+    except OSError:
+        return None
+    return None
+
+
 def live_governance_revision(root: Path | None = None) -> str:
     """The governance revision this session is actually running.
 
@@ -70,7 +94,10 @@ def live_governance_revision(root: Path | None = None) -> str:
     out of a receipt that may be perfectly current.
     """
     base = root or Path(os.environ.get("L9_GOV_ROOT") or (Path.home() / ".cursor-governance"))
-    head = base / ".git" / "HEAD"
+    git_dir = _git_dir(base)
+    if git_dir is None:
+        return ""
+    head = git_dir / "HEAD"
     try:
         raw = head.read_text(encoding="utf-8").strip()
     except OSError:
@@ -78,9 +105,9 @@ def live_governance_revision(root: Path | None = None) -> str:
     if raw.startswith("ref:"):
         ref = raw.split(" ", 1)[1].strip()
         try:
-            return (base / ".git" / ref).read_text(encoding="utf-8").strip()
+            return (git_dir / ref).read_text(encoding="utf-8").strip()
         except OSError:
-            packed = base / ".git" / "packed-refs"
+            packed = git_dir / "packed-refs"
             try:
                 for line in packed.read_text(encoding="utf-8").splitlines():
                     if line.endswith(f" {ref}"):
@@ -203,7 +230,15 @@ def read(
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--read", action="store_true", required=True)
+    # Read is the only action these CLIs have, so requiring a flag to select it
+    # made the obvious invocation fail with a usage error instead of answering.
+    # LOADER-1: bare invocation reads; --read stays accepted so every documented
+    # call site and hook keeps working unchanged.
+    parser.add_argument(
+        "--read",
+        action="store_true",
+        help="read and print the receipt (default action; accepted for compatibility)",
+    )
     parser.add_argument("--path", default="")
     parser.add_argument("--json", action="store_true")
     args = parser.parse_args(argv)

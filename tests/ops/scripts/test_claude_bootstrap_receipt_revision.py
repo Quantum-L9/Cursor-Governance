@@ -105,3 +105,13 @@ def test_live_revision_falls_back_to_packed_refs(tmp_path: Path) -> None:
 
 def test_live_revision_is_empty_when_undeterminable(tmp_path: Path) -> None:
     assert receipt.live_governance_revision(tmp_path) == ""
+
+
+def test_live_revision_follows_a_worktree_gitdir(tmp_path: Path) -> None:
+    git_dir = tmp_path / "gitdir"
+    git_dir.mkdir()
+    (git_dir / "HEAD").write_text("f" * 40 + "\n", encoding="utf-8")
+    worktree = tmp_path / "wt"
+    worktree.mkdir()
+    (worktree / ".git").write_text(f"gitdir: {git_dir}\n", encoding="utf-8")
+    assert receipt.live_governance_revision(worktree) == "f" * 40

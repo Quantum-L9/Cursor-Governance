@@ -42,19 +42,22 @@ SWALLOW_BASELINE = {
     # fresh PR (fail-safe), so the swallow is justified. The commit added the
     # occurrence without bumping this baseline, leaving the ratchet red on main.
     "ops/scripts/open_pr_after_gate.sh": 18,
-    # 15 since 0fc6ee6 ("feat/pr train 0"), which added occurrences without
-    # bumping this baseline and left the ratchet red on main — the same lapse
-    # the open_pr_after_gate note above records. Audited one by one: all 15 are
-    # best-effort TELEMETRY around a verdict carried elsewhere. Timing helper
-    # and gate-timing write, gate-log appends and reads, the changed-file
-    # stderr filter, `wait` on the prefetch pid, and the two
-    # attribute_tree_writers.sh calls are diagnostics — the gate's own contract
-    # treats attribution as diagnostic, not as the verdict. The two that could
-    # plausibly swallow a decision do not: `scratch_hold.py restore --all` is
-    # compensated by the separate fail-closed `_scratch_hold_status` check
-    # ("fail closed if still open"), and the gate-failure receipt write runs in
-    # the already-failing path, so losing it costs a breadcrumb and not the
-    # FAIL. Raise this only after the same one-by-one audit.
+    # 15 since #359 (0fc6ee6), which added gate timing and the wave-log
+    # aggregator. That commit introduced five occurrences without bumping this
+    # baseline, leaving the ratchet red on main — the same shape as the
+    # open_pr_after_gate.sh entry above. Each added swallow was read and is
+    # fail-safe:
+    #   * timing instrumentation (the millisecond clock, the receipt writer,
+    #     and appending it to the log): failing to RECORD what a gate did must
+    #     never change WHETHER it passed;
+    #   * the wave-log aggregation `cat ... >>"$_GATE_LOG"`: same class;
+    #   * `_gate_state_digest`'s file-list build: on failure the list is empty,
+    #     so the digest differs from the receipt and the gate RE-RUNS instead
+    #     of skipping. It fails toward more work, not less;
+    #   * `wait "$_prefetch_pid"` and `_write_gate_timing` inside the
+    #     `_gate_on_exit` trap: an EXIT handler that can itself fail would mask
+    #     the real exit code, so swallowing there is required correctness.
+    # No occurrence swallows the result of a check. Verified 2026-08-29.
     "ops/scripts/run_pr_gate.sh": 15,
     "ops/scripts/run_pr_security.sh": 3,
     "ops/scripts/bootstrap_agent_environment.sh": 3,

@@ -1,0 +1,21 @@
+{
+  "checks": [
+    {
+      "errors": [],
+      "id": "harvest_schema_evidence_portability_authority_closure",
+      "status": "PASS"
+    }
+  ],
+  "outputs": [
+    "harvest.json"
+  ],
+  "request_id": "ih-archived-suite6-20260828",
+  "status": "PASS",
+  "unknowns": [
+    "Whether any machine still has com.tenx.chat-export, com.tenx.learning-processor, or com.cursor.context.processor loaded.",
+    "Whether graphiti_sink.emit_session was ever invoked outside this repo (learning/graphiti-episodes/manifest.json still names it).",
+    "Whether implicit feedback_collector events were ever produced in production telemetry (telemetry/_archived only).",
+    "Whether CANONICAL_LAW \u00a78 graphiti_sink row is intentional leftover documentation or an unapplied law edit.",
+    "Exact remaining LaunchAgent plist contents on this host were not inspected in this harvest."
+  ]
+}

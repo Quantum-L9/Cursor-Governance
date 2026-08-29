@@ -18,6 +18,7 @@ dependencies = [
     "pyyaml>=6.0",
     "structlog>=24.0",
     "langgraph>=0.2",
+    "langgraph-checkpoint-sqlite>=2.0",
     # Program Execution System core (environment/program-execution/core) validators
     # and controller runtime import Draft202012Validator.
     "jsonschema>=4.22,<5",

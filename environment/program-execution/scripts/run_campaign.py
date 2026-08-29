@@ -2872,7 +2872,15 @@ def _require_mediated_effects(
     effect as it happens; this proves, before the Controller is asked to record
     anything, that no effect reached the filesystem around it. An unmediated
     write is not a Program attempt, so it never becomes one.
+
+    Coverage is asked of `effect`-phase decisions only, and only under this
+    task's own subordinate lease. Any earlier allowed decision -- above all the
+    capability probe the grant itself takes on the task's first writable path
+    -- proves the lease *holds* the capability. It says nothing about whether
+    the write that actually happened went through the hook, which is the only
+    question here.
     """
+    grants = _grant_module()
     task_id = str(unit["task_id"])
     grant = unit.get("grant")
     changed = provider_effected_paths(
@@ -2884,7 +2892,15 @@ def _require_mediated_effects(
                 f"{task_id}: {len(changed)} worktree change(s) with no root autonomy grant"
             )
         return changed
-    unmediated = _grant_module().unmediated_changed_paths(grant, changed)
+    unmediated = grants.unmediated_changed_paths(
+        grant,
+        changed,
+        phase=grants.AUTHORIZATION_PHASE_EFFECT,
+    )
+    mediated = grants.authorized_resources(
+        grant,
+        phase=grants.AUTHORIZATION_PHASE_EFFECT,
+    )
     emit(
         trace,
         "TASK_EFFECT_MEDIATION",
@@ -2894,6 +2910,8 @@ def _require_mediated_effects(
         metadata={
             "changed": len(changed),
             "unmediated": len(unmediated),
+            "effect_authorized": len(mediated),
+            "authorization_phase": grants.AUTHORIZATION_PHASE_EFFECT,
             "lease_id": grant.get("lease_id"),
         },
     )

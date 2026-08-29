@@ -377,6 +377,8 @@ def _built_shelf(plans_dir: Path) -> Path:
             if child.is_dir() and child.name.lower() == "built":
                 return child
     except OSError:
+        # Directory scan is best-effort. Fall back to canonical BUILT when
+        # iterdir cannot run (unreadable parent, vanished path).
         pass
     return canonical
 

@@ -1,0 +1,19 @@
+schema: claude-coding-contract-compiler.validation-summary.v2.7
+compiler_structural:
+  per_contract: 6/6 PASS
+  chain: PASS
+  chain_digest: sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3
+target_validation:
+  compiler_regression_suite: 11/11 PASS
+  deterministic_recompile: PASS
+  no_implicit_npm: PASS
+plan_compatibility:
+  scope_subset: PASS
+  todo_coverage: PASS
+  target_cold_start: PASS
+  handoff_authority: PASS
+  terminal_delivery: PASS
+  overall: PASS
+completion_status: PASS_EXECUTABLE_CHAIN
+execution_rule: 'Contracts 1-5: one validated local commit, no remote delivery. Contract
+  6: one validated local commit then exactly one make pr. Merge remains outside chain.'

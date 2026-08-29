@@ -1,0 +1,187 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Rebuild l9-plan validators",
+  "objective": "Make planning machine-validated and fail-closed",
+  "success_criteria": [
+    "self_test.py PASS",
+    "plan_fail_shallow.json FAIL with G_STRESS or G_CRITICAL_PATH"
+  ],
+  "scope": {
+    "in": [
+      "l9-plan skill pack schemas scripts fixtures"
+    ],
+    "out": [
+      "Gate SDK transport contract changes",
+      "auto-commit from plan mode"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind /Users/ib-mac/.claude/skills/l9-plan",
+      "pass_criteria": "single root",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "inventory pack",
+      "pass_criteria": "files listed",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Add schema",
+      "files": [
+        "schemas/plan-document.schema.json"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "new file",
+      "leverage_rank": 1,
+      "shared_root_cause": "prose-only plans"
+    },
+    {
+      "id": "T2",
+      "task": "Add validator",
+      "files": [
+        "scripts/validate_plan_document.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Create",
+      "anchor": "new file",
+      "leverage_rank": 2
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "schema exists",
+      "unlocks": "validator"
+    },
+    {
+      "id": "M2",
+      "outcome": "validator passes fixtures",
+      "unlocks": "pack ready"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "schema file exists",
+      "no_go_action": "stop and fix schema"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "self_test PASS",
+      "no_go_action": "block readiness"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "SDK transport laws unchanged"
+    },
+    {
+      "surface": "l9-plan SKILL.md",
+      "action": "update",
+      "todo_ids": [
+        "T2"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Would heading-only markdown still pass?",
+      "Can a plan converge with unknown final validation?",
+      "Does GMP receive ungrounded TODOs?"
+    ],
+    "assumed_false_ifs": [
+      "agents ignore JSON and skip validator"
+    ],
+    "blast_radius": "bad plans cause implementation rework across GMP phases",
+    "rollback": "revert skill pack to previous tag; keep consumer repos unchanged"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2"
+    ],
+    "shared_causes": [
+      "prose-only readiness"
+    ],
+    "deletions_or_consolidations": [
+      "remove rapid omit-depth routing"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "validator too loose",
+      "mitigation": "fail_shallow fixture must fail"
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 scripts/self_test.py",
+      "pass_criteria": "PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "make pr",
+      "pass_criteria": "PASS or N/A if no consumer repo edits",
+      "status": "not_applicable"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "l9-gmp-protocol",
+    "stop_reason": "plan validated structurally; implementation not yet run"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "schemas/",
+      "scripts/",
+      "fixtures/",
+      "references/",
+      "SKILL.md"
+    ],
+    "must_not_modify": [
+      "src/constellation_node_sdk/"
+    ],
+    "preserved_contracts": [
+      "planning-only no code edits",
+      "Gate-only egress in SDK"
+    ],
+    "validation_commands": [
+      "python3 scripts/self_test.py",
+      "make pr"
+    ]
+  },
+  "depth": "deep",
+  "checklist": [
+    "schema",
+    "validator",
+    "fixtures"
+  ],
+  "estimate": "1 GMP"
+}

@@ -1,0 +1,358 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Plan skills keep only the precommit catalog",
+  "objective": "Strip commit and push ceremony from /l9-plan and /l9-plan-simple. Planning teachers and the shared plan validator bind quality to .pre-commit-config.yaml as the hook catalog only. They must not name make pr, make pr-check, OPEN_PR=0 make pr, git commit, or git push as a planning gate. Do not mutate the catalog file. Do not rewrite Makefile public ceremony or PE packet commit/push allowances.",
+  "success_criteria": [
+    "When code_in_scope is true, validate_plan_document.py PASSes a fixture whose final_validation names .pre-commit-config.yaml and does not name make pr-check or make pr.",
+    "When code_in_scope is true, validate_plan_document.py FAILs a fixture whose final_validation omits .pre-commit-config.yaml.",
+    "Live teacher files skills/l9-plan/SKILL.md, skills/l9-plan-simple/SKILL.md, commands/l9-plan.md, commands/l9-plan-simple.md contain no unnegated make pr-check, make pr, OPEN_PR=0, git commit, or git push as a named gate.",
+    "render_plan_pe_autonomy.py success-property proof no longer says observe during PE verify / make pr-check.",
+    "Canonical template SP-03 and EV-SP-03 examples name .pre-commit-config.yaml; allowed_inside_packet commit_scoped_on_declared_branch and push_non_force_declared_branch stay.",
+    "l9-plan scripts/self_test.py PASS and tests/ops/scripts/test_ceremony_ownership.py PASS; .pre-commit-config.yaml bytes unchanged."
+  ],
+  "scope": {
+    "in": [
+      "skills/l9-plan SKILL.md, workflows, quality-gates, plan-router G_PR_CHECK, validator, fixtures, renderer quality_gate string",
+      "skills/l9-plan-simple SKILL.md and plan-workflow-simple.md Pre-Validate line",
+      "commands/l9-plan.md Gate commands block and Planning-only commit/push sentence",
+      "commands/l9-plan-simple.md only if a commit/push/pr-check gate appears",
+      "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md SP-03 and EV-SP-03 example strings only",
+      "tests/ops/scripts/test_ceremony_ownership.py scan of the four plan teachers"
+    ],
+    "out": [
+      "Mutating .pre-commit-config.yaml (keep the catalog; do not edit hook ids or revs)",
+      "Makefile public ceremony, pr: pr-preflight pr-check graph, make pr, OPEN_PR=0 make pr as a repo verb",
+      "AGENTS.md historical append-only blocks and a new protected-root append",
+      "PE campaign packet allowed_inside_packet commit_scoped_on_declared_branch and push_non_force_declared_branch",
+      "l9-pr-remediation publish path, make precommit-repo as a remediator verb",
+      "Installing a git commit hook or running pre-commit install",
+      "fold_pr-check leftover prove todo and ceremony-speed Makefile work",
+      "Foreign dirty .claude/settings.json and docs/plans/fold_pr-check_81560ec1.plan.md",
+      "make campaign Program Lock from this planning turn"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse --abbrev-ref HEAD; git rev-parse HEAD; git status --short",
+      "pass_criteria": "feat/pr-check-folded @ ee4c40d954cdb480260d5a3fc2b6a588559d4f49; dirty only .claude/settings.json and docs/plans/fold_pr-check_81560ec1.plan.md (write_deny)",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "python3 skills/l9-plan/scripts/route_plan.py --risk medium --evidence sufficient --json",
+      "pass_criteria": "depth=standard omit_gates=[]",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "grep live teachers and G_PR_CHECK in skills/l9-plan skills/l9-plan-simple commands/l9-plan.md",
+      "pass_criteria": "SKILL.md both packs name make pr-check (no commit, no push); commands/l9-plan.md Gate commands is OPEN_PR=0 make pr; validator requires make pr-check or make pr",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "retarget-gate",
+      "task": "Rename G_PR_CHECK to G_PRECOMMIT_CONFIG. When code_in_scope, final_validation must contain .pre-commit-config.yaml. Stop requiring make pr-check or make pr. Update plan-quality-gates.md, plan-router.yaml deep add_gates, and every skills/l9-plan/fixtures/*.json final_validation plus gmp_handoff.validation_commands.",
+      "files": [
+        "skills/l9-plan/scripts/validate_plan_document.py",
+        "skills/l9-plan/references/plan-quality-gates.md",
+        "skills/l9-plan/references/plan-router.yaml",
+        "skills/l9-plan/fixtures/plan_pass.json",
+        "skills/l9-plan/fixtures/plan_fail_quality.json",
+        "skills/l9-plan/fixtures/plan_fail_shallow.json",
+        "skills/l9-plan/fixtures/plan_fail_ungrounded.json",
+        "skills/l9-plan/fixtures/plan_live_smoke_gate_sdk.json"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "_check_code_scope G_PR_CHECK",
+      "leverage_rank": 1,
+      "shared_root_cause": "validator forces plan authors to name a publish ceremony"
+    },
+    {
+      "id": "strip-teachers",
+      "task": "Remove named commit/push/pr/pr-check gates from both plan SKILL.md Pre-Validate lines, both plan workflows, legacy plan-workflow.md, and commands/l9-plan.md Gate commands plus the Planning-only commit-or-push clause. Replace with: planning-only, no product mutation; for code in scope bind .pre-commit-config.yaml as the catalog. Keep Execute via Cursor Build and PE execute headings. Keep Do not run make campaign on the simple path.",
+      "files": [
+        "skills/l9-plan/SKILL.md",
+        "skills/l9-plan/references/plan-workflow-pe-autonomy.md",
+        "skills/l9-plan/references/plan-workflow.md",
+        "skills/l9-plan-simple/SKILL.md",
+        "skills/l9-plan-simple/references/plan-workflow-simple.md",
+        "commands/l9-plan.md",
+        "commands/l9-plan-simple.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "retarget-gate"
+      ],
+      "operation": "Replace",
+      "anchor": "Pre-Validate make pr-check (no commit, no push)",
+      "leverage_rank": 2,
+      "shared_root_cause": "validator forces plan authors to name a publish ceremony"
+    },
+    {
+      "id": "renderer-template",
+      "task": "Change render_plan_pe_autonomy.py _success_table proof from observe during PE verify / make pr-check to observe .pre-commit-config.yaml catalog. Change canonical template SP-03 and EV-SP-03 examples to the same catalog path. Leave allowed_inside_packet commit and push lines untouched.",
+      "files": [
+        "skills/l9-plan/scripts/render_plan_pe_autonomy.py",
+        "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "retarget-gate"
+      ],
+      "operation": "Replace",
+      "anchor": "SP-03 Quality gate / PR gate PASS",
+      "leverage_rank": 3,
+      "shared_root_cause": "validator forces plan authors to name a publish ceremony"
+    },
+    {
+      "id": "reentry-scan",
+      "task": "Extend tests/ops/scripts/test_ceremony_ownership.py to scan the four plan teacher files. Fail unnegated make pr-check, isolated make pr, OPEN_PR=0, git commit, git push. Do not fail .pre-commit-config.yaml. Do not fail Do not run make campaign. Do not scan remediator or Makefile.",
+      "files": [
+        "tests/ops/scripts/test_ceremony_ownership.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "strip-teachers",
+        "renderer-template"
+      ],
+      "operation": "Insert",
+      "anchor": "SCAN_GLOBS after commands/*.md",
+      "leverage_rank": 4,
+      "shared_root_cause": "validator forces plan authors to name a publish ceremony"
+    },
+    {
+      "id": "prove",
+      "task": "Run python3 skills/l9-plan/scripts/self_test.py from the pack root and pytest tests/ops/scripts/test_ceremony_ownership.py. Confirm git diff -- .pre-commit-config.yaml is empty. Pathspecs only. Do not stage write_deny paths.",
+      "files": [
+        "skills/l9-plan/scripts/self_test.py",
+        "tests/ops/scripts/test_ceremony_ownership.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "reentry-scan"
+      ],
+      "operation": "Replace",
+      "anchor": "pack self_test plus ceremony ownership",
+      "leverage_rank": 5,
+      "shared_root_cause": "validator forces plan authors to name a publish ceremony"
+    }
+  ],
+  "critical_path": [
+    "retarget-gate",
+    "strip-teachers",
+    "renderer-template",
+    "reentry-scan",
+    "prove"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "G_PRECOMMIT_CONFIG is the only code-in-scope quality gate and fixtures pass or fail on the catalog path",
+      "unlocks": "teacher strip without re-failing pack fixtures"
+    },
+    {
+      "id": "M2",
+      "outcome": "Four plan teachers plus renderer and template examples name the catalog only",
+      "unlocks": "reentry scan"
+    },
+    {
+      "id": "M3",
+      "outcome": "self_test and ceremony ownership PASS; catalog file unchanged",
+      "unlocks": "plan ready for PE execute close"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "validate_plan_document.py fixtures/plan_pass.json PASS; a no-catalog code_in_scope fixture emits G_PRECOMMIT_CONFIG",
+      "no_go_action": "stop; do not strip teachers while the old gate still requires make pr-check"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "rg of the four teacher files finds no unnegated make pr-check or Gate commands OPEN_PR block",
+      "no_go_action": "restore the missed teacher before adding the scan"
+    },
+    {
+      "id": "C3",
+      "after": "M3",
+      "evidence_required": "self_test PASS; test_ceremony_ownership PASS; .pre-commit-config.yaml unmodified",
+      "no_go_action": "block readiness"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "PR_CHECK_FOLDED_V1 already names .pre-commit-config.yaml as catalog; historical append-only blocks stay; this work does not need a new root append"
+    },
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "authority pointer only; plan skill ceremony is not loaded from CLAUDE.md"
+    },
+    {
+      "surface": "Makefile",
+      "action": "n_a",
+      "reason": "public ceremony graph stays pr: pr-preflight pr-check; this plan does not edit Make"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "symlink and autonomy law unchanged"
+    },
+    {
+      "surface": "README.md",
+      "action": "n_a",
+      "reason": "index only; no plan-skill gate listed there"
+    },
+    {
+      "surface": "skills/l9-plan SKILL.md and workflows",
+      "action": "update",
+      "todo_ids": [
+        "strip-teachers",
+        "retarget-gate"
+      ]
+    },
+    {
+      "surface": "skills/l9-plan-simple SKILL.md",
+      "action": "update",
+      "todo_ids": [
+        "strip-teachers"
+      ]
+    },
+    {
+      "surface": "commands/l9-plan.md",
+      "action": "update",
+      "todo_ids": [
+        "strip-teachers"
+      ]
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If agents still run OPEN_PR=0 make pr after the Gate commands block is gone, did a generated .claude/skills copy or skill-registry description keep teaching it?",
+      "If G_PRECOMMIT_CONFIG only searches final_validation.command, will authors hide make pr-check in success_criteria and keep the ceremony?",
+      "If the shared PE template SP-03 example stays make pr-check, will every new PE plan reintroduce the gate the skills just removed?"
+    ],
+    "assumed_false_ifs": [
+      "Execute-path PE packet commit_scoped and push_non_force are treated as plan-mode teachers",
+      ".pre-commit-config.yaml is edited to satisfy the new gate",
+      "A Claude projection rewrite of .claude/skills is required in this change set"
+    ],
+    "blast_radius": "Every new /l9-plan and /l9-plan-simple PLAN_DOCUMENT must name the catalog. Existing docs/plans JSON that still say make pr-check will FAIL if re-validated. Makefile and remediator verbs stay. Generated Claude skill copies lag until projection.",
+    "rollback": "Revert the pathspec commits on the feature branch. Fixtures restore G_PR_CHECK. Catalog file is never touched so rollback cannot corrupt hooks."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "retarget-gate",
+      "strip-teachers",
+      "renderer-template",
+      "reentry-scan",
+      "prove"
+    ],
+    "shared_causes": [
+      "validator forces plan authors to name a publish ceremony"
+    ],
+    "deletions_or_consolidations": [
+      "Delete commands/l9-plan.md Gate commands bash block",
+      "Delete G_PR_CHECK make pr-check requirement",
+      "Delete Pre-Validate no commit, no push parenthetical"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Re-validating older docs/plans JSON fails G_PRECOMMIT_CONFIG",
+      "mitigation": "Do not add a corpus validator over docs/plans/. Only pack fixtures and newly emitted plans must pass."
+    },
+    {
+      "risk": "Editing the canonical template is read as a PE overlay landing",
+      "mitigation": "Change only SP-03 and EV-SP-03 example strings. Leave allowed_inside_packet and execute heading. Not a KERNEL pack; stay stacked on feat/pr-check-folded."
+    },
+    {
+      "risk": "Claude projection leaves .claude/skills teaching the old gate",
+      "mitigation": "Source of truth is skills/. Projection is derived. Do not hand-edit .claude/skills. Let session projection refresh."
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "python3 skills/l9-plan/scripts/self_test.py",
+      "pass_criteria": "PASS from skills/l9-plan",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "bind .pre-commit-config.yaml as catalog (unchanged bytes); leftover make pr-check until G_PRECOMMIT_CONFIG lands",
+      "pass_criteria": "catalog path named; git diff -- .pre-commit-config.yaml empty; current G_PR_CHECK substring satisfied",
+      "status": "pending"
+    },
+    {
+      "id": "V3",
+      "command": "pytest tests/ops/scripts/test_ceremony_ownership.py",
+      "pass_criteria": "PASS including the four plan teacher files",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "/autonomy + @environment/program-execution",
+    "stop_reason": "PLAN_DOCUMENT and PE projection ready; implementation not started from plan mode"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "skills/l9-plan/",
+      "skills/l9-plan-simple/",
+      "commands/l9-plan.md",
+      "commands/l9-plan-simple.md",
+      "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md",
+      "tests/ops/scripts/test_ceremony_ownership.py"
+    ],
+    "must_not_modify": [
+      ".pre-commit-config.yaml",
+      "Makefile",
+      "AGENTS.md",
+      "CANONICAL_LAW.md",
+      ".claude/settings.json",
+      "docs/plans/fold_pr-check_81560ec1.plan.md",
+      "skills/l9-pr-remediation/"
+    ],
+    "preserved_contracts": [
+      "Planning-only emits no product mutation",
+      ".pre-commit-config.yaml remains the hook catalog and is never a public verb",
+      "Makefile stays pr: pr-preflight pr-check",
+      "PE packet commit_scoped_on_declared_branch and push_non_force_declared_branch stay for execute, not plan teachers",
+      "pre-commit install stays forbidden"
+    ],
+    "validation_commands": [
+      "python3 skills/l9-plan/scripts/self_test.py",
+      "pytest tests/ops/scripts/test_ceremony_ownership.py",
+      "git diff -- .pre-commit-config.yaml",
+      "make pr-check"
+    ]
+  },
+  "depth": "standard",
+  "checklist": [
+    "retarget G_PRECOMMIT_CONFIG",
+    "strip four teachers",
+    "template SP-03 example only",
+    "reentry scan",
+    "catalog file untouched"
+  ],
+  "estimate": "1 PE wave"
+}

@@ -1,0 +1,161 @@
+schema: l9.audit-finding-disposition-ledger.v1
+audit_source: Cursor-Governance Program Execution Forensic Audit
+audit_baseline_sha: f4265dcc58ff8ebee7896a1a89c9f298c9e8e5c8
+current_baseline_sha: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+audited_scope: environment/program-execution/**
+exclusions:
+- all memory-related content and dependencies
+- repository paths outside environment/program-execution/ as mutation targets
+- root autonomy implementation
+- ops/autonomy implementation
+- unrelated agents/skills/CI/external repositories
+findings:
+- audit_source: Cursor-Governance Program Execution Forensic Audit
+  finding_id: PE-001
+  original_severity: P0
+  adjudication: CONFIRMED
+  current_evidence:
+  - current cli.py still omits fresh-workspace from _TUNNEL_COMMANDS
+  - current workspace_reset.py still releases active leases and transitions nonterminal
+    tasks STALE -> ELIGIBLE
+  current_files_and_symbols:
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/workspace_reset.py
+  - environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/tests/test_workspace_reset_safety.py
+  root_cause_group: RC-001
+  remediation_required: true
+  plan_todo_ids:
+  - todo-01-recovery-seal
+  success_property_ids:
+  - SP-02
+  - SP-03
+  claude_contract_ids:
+  - CG-PE-REMEDIATION-PR-001-v2.7.0
+  reason: Current main moved from audit baseline f4265dcc to 5eff2cdb; narrow SHA-bound
+    re-adjudication confirms the same defect remains.
+- audit_source: Cursor-Governance Program Execution Forensic Audit
+  finding_id: PE-002
+  original_severity: P1
+  adjudication: CONFIRMED
+  current_evidence:
+  - current run_campaign.py still takes resumable_workspace + live_lock_missing_seed_paths
+    execute shortcut directly into resume_live_campaign before current-source reconciliation
+  current_files_and_symbols:
+  - environment/program-execution/scripts/run_campaign.py
+  - environment/program-execution/scripts/tests/test_run_campaign.py
+  root_cause_group: RC-002
+  remediation_required: true
+  plan_todo_ids:
+  - todo-02-resume-source-lock
+  success_property_ids:
+  - SP-04
+  claude_contract_ids:
+  - CG-PE-REMEDIATION-PR-002-v2.7.0
+  reason: Current main moved from audit baseline f4265dcc to 5eff2cdb; narrow SHA-bound
+    re-adjudication confirms the same defect remains.
+- audit_source: Cursor-Governance Program Execution Forensic Audit
+  finding_id: PE-003
+  original_severity: P1
+  adjudication: CONFIRMED
+  current_evidence:
+  - current close_campaign.py still accepts any nonempty evidence map, writes lifecycle
+    complete, and archives without validating current PEC terminal truth
+  current_files_and_symbols:
+  - environment/program-execution/campaigns/scripts/close_campaign.py
+  - environment/program-execution/campaigns/scripts/test_close_campaign.py
+  - environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+  - environment/program-execution/campaigns/README.md
+  root_cause_group: RC-003
+  remediation_required: true
+  plan_todo_ids:
+  - todo-03-completion-projection
+  success_property_ids:
+  - SP-05
+  claude_contract_ids:
+  - CG-PE-REMEDIATION-PR-003-v2.7.0
+  reason: Current main moved from audit baseline f4265dcc to 5eff2cdb; narrow SHA-bound
+    re-adjudication confirms the same defect remains.
+- audit_source: Cursor-Governance Program Execution Forensic Audit
+  finding_id: PE-004
+  original_severity: P2
+  adjudication: CONFIRMED
+  current_evidence:
+  - current evaluate-gate CLI still accepts caller result and method; current controller
+    evaluate_gate signature still consumes both
+  current_files_and_symbols:
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/tests/test_gate_evaluation.py
+  root_cause_group: RC-004
+  remediation_required: true
+  plan_todo_ids:
+  - todo-04-gate-derived-truth
+  success_property_ids:
+  - SP-06
+  claude_contract_ids:
+  - CG-PE-REMEDIATION-PR-004-v2.7.0
+  reason: Current main moved from audit baseline f4265dcc to 5eff2cdb; narrow SHA-bound
+    re-adjudication confirms the same defect remains.
+- audit_source: Cursor-Governance Program Execution Forensic Audit
+  finding_id: PE-005
+  original_severity: P2
+  adjudication: CONFIRMED
+  current_evidence:
+  - EXECUTION_FAILOVER_POLICY still declares maximum_automatic_retries while current
+    code search exposes no runtime consumer of that field
+  current_files_and_symbols:
+  - environment/program-execution/scripts/run_peer_task_pipeline.py
+  - environment/program-execution/scripts/run_campaign.py
+  - environment/program-execution/registry/EXECUTION_FAILOVER_POLICY.yaml
+  - environment/program-execution/scripts/tests/test_run_campaign.py
+  - environment/program-execution/peer_execution/tests/test_failover_policy.py
+  root_cause_group: RC-005
+  remediation_required: true
+  plan_todo_ids:
+  - todo-05-failover-parity
+  success_property_ids:
+  - SP-07
+  claude_contract_ids:
+  - CG-PE-REMEDIATION-PR-005-v2.7.0
+  reason: Current main moved from audit baseline f4265dcc to 5eff2cdb; narrow SHA-bound
+    re-adjudication confirms the same defect remains.
+- audit_source: Cursor-Governance Program Execution Forensic Audit
+  finding_id: PE-006
+  original_severity: P2
+  adjudication: CONFIRMED
+  current_evidence:
+  - test_supported_campaign_front_door_e2e.py is still absent at current main
+  current_files_and_symbols: &id001
+  - environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py
+  - environment/program-execution/scripts/run_peer_task_pipeline.py
+  - environment/program-execution/scripts/run_campaign.py
+  - environment/program-execution/peer_execution/task_pipeline.py
+  root_cause_group: RC-006
+  remediation_required: true
+  plan_todo_ids:
+  - todo-06-supported-path-e2e
+  success_property_ids:
+  - SP-08
+  claude_contract_ids:
+  - CG-PE-REMEDIATION-PR-006-v2.7.0
+  reason: Current main moved from audit baseline f4265dcc to 5eff2cdb; narrow SHA-bound
+    re-adjudication confirms the same defect remains.
+- audit_source: Cursor-Governance Program Execution Forensic Audit
+  finding_id: PE-007
+  original_severity: P3
+  adjudication: CONFIRMED
+  current_evidence:
+  - run_peer_task_pipeline.py still publicly refuses while retaining active _resolve_provider/_probe_provider/_execute_provider
+    helpers consumed by run_campaign
+  current_files_and_symbols: *id001
+  root_cause_group: RC-006
+  remediation_required: true
+  plan_todo_ids:
+  - todo-07-compatibility-thinning
+  success_property_ids:
+  - SP-09
+  claude_contract_ids:
+  - CG-PE-REMEDIATION-PR-006-v2.7.0
+  reason: Current main moved from audit baseline f4265dcc to 5eff2cdb; narrow SHA-bound
+    re-adjudication confirms the same defect remains.

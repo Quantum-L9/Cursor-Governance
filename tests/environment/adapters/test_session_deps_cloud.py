@@ -159,3 +159,19 @@ def test_proof_does_not_collapse_outdated_into_the_plain_resolution() -> None:
     body = HELPER.read_text(encoding="utf-8")
     assert 'rc" -eq 2' in body
     assert 'rc" -ne 0' in body
+
+
+def test_unapplied_pip_manifest_is_not_reported_ready(tmp_path: Path) -> None:
+    """pyproject.toml / requirements.txt without uv.lock must not stamp ready
+    when .venv is absent — pip install in install_repo is best-effort."""
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = make_repo(workspace, "pip-only")
+    (repo / "pyproject.toml").write_text("[project]\nname='pip-only'\n", encoding="utf-8")
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="1")
+    assert result.returncode == 0
+    combined = result.stdout + result.stderr
+    assert "UNPROVEN" in combined or "continues in background" in combined
+    stamps = list((home / ".l9" / "claude").glob("deps-*.stamp"))
+    assert stamps == [], "a stamp must never be written for an unproven pip toolchain"
