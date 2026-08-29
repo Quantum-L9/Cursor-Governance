@@ -53,13 +53,13 @@ from workflows.dags.inspect_dag import (
     build_inspect_graph,
     run_inspect,
 )
+from workflows.dags.intelligence_harvest_dag import INTELLIGENCE_HARVEST_V1
 from workflows.dags.pr_train_dag import (
     PR_TRAIN_DAG,
     PrTrainState,
     build_pr_train_graph,
     run_pr_train,
 )
-from workflows.dags.intelligence_harvest_dag import INTELLIGENCE_HARVEST_V1
 from workflows.dags.readme_pipeline_dag import README_PIPELINE_DAG
 from workflows.dags.refactoring_dag import REFACTORING_DAG
 from workflows.dags.slash_command_update_dag import SLASH_COMMAND_UPDATE_DAG

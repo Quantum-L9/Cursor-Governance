@@ -26,6 +26,7 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     filter_slices_against_tip,
     github_repo_slug,
     group_slices,
+    order_slice,
     parse_merge_tree_name_only,
     resolve_ff_clone,
     run_pr_train,
@@ -88,7 +89,7 @@ def test_langgraph_source_validator_passes():
 
 
 def test_not_registered_as_session_dag():
-    import workflows.dags  # noqa: F401
+    from workflows import dags  # noqa: F401
     from workflows.session.registry import get_session_dag
 
     assert get_session_dag("pr-train-v1") is None
@@ -594,22 +595,22 @@ def test_stack_base_filters_pending_slices_only(monkeypatch, tmp_path):
     assert [group[0]["sha"] for group in out["slices"]] == ["done", "pending"]
 
 
-def test_l4_authorize_puts_workspace_before_subcommand(monkeypatch, tmp_path):
+def test_default_publish_is_git_push_not_make_pr(monkeypatch, tmp_path):
     from workflows.dags import pr_train_dag as mod
 
     calls: list[list[str]] = []
 
     def fake_run(argv, **_kwargs):
         calls.append(list(argv))
+        if argv[:2] == ["gh", "pr"]:
+            return SimpleNamespace(returncode=0, stdout="358\n", stderr="")
         return SimpleNamespace(returncode=0, stdout="", stderr="")
 
     monkeypatch.setattr(mod.subprocess, "run", fake_run)
-    mod._l4_authorize_worktree(str(tmp_path / "wt"))
-    assert len(calls) == 3
-    for argv in calls:
-        assert argv[2] == "--workspace"
-        assert argv[3].endswith("/wt")
-        assert argv[4] in {"begin", "record-kernels", "authorize-release"}
+    out = mod.default_publish(str(tmp_path / "wt"))
+    assert out["ok"] is True
+    assert any(argv[:4] == ["git", "-C", str(tmp_path / "wt"), "push"] for argv in calls)
+    assert not any(argv[:1] == ["make"] or "record-kernels" in argv for argv in calls)
 
 
 def test_extract_removes_worktree_on_cherry_pick_abort(tmp_path, monkeypatch):
@@ -628,6 +629,46 @@ def test_extract_removes_worktree_on_cherry_pick_abort(tmp_path, monkeypatch):
     assert leftover == []
     listed = _git_c(repo, "worktree", "list", "--porcelain").stdout
     assert str(tmp_path / ".l9") not in listed
+
+
+def test_incomplete_novelty_receipt_halts(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+
+    monkeypatch.setattr(mod, "load_inventory", lambda *_a, **_k: _inventory("feat/x", ["feat/x"]))
+    monkeypatch.setattr(
+        mod,
+        "load_diagnosis",
+        lambda *_a, **_k: {
+            "cherry_available": True,
+            "baseline_resolved": True,
+            "cherry_novel": 51,
+            "cherry_novel_commits": ["aaa"],
+            "merge_commits_unexamined": 0,
+            "cherry_dup_commits": [],
+        },
+    )
+
+    def boom(*_a, **_k):
+        raise AssertionError("incomplete receipt must not extract")
+
+    monkeypatch.setattr(mod, "default_extract", boom)
+    state = run_pr_train(tmp_path, execute=True, fetch=False)
+    assert state.status == "blocked"
+    assert "incomplete" in state.halt_reason
+
+
+def test_order_slice_preserves_ancestry(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    parent = _commit_file(repo, "a.txt", "1\n", "parent")
+    child = _commit_file(repo, "a.txt", "2\n", "child")
+    commits = [
+        NovelCommit(sha=child, paths=("a.txt",), ref="feat"),
+        NovelCommit(sha=parent, paths=("a.txt",), ref="feat"),
+    ]
+    ordered = order_slice(repo, commits)
+    assert [item.sha for item in ordered] == [parent, child]
 
 
 def test_sibling_stack_halts_to_remediator_without_extract(monkeypatch, tmp_path):
@@ -670,8 +711,8 @@ def test_sibling_stack_halts_to_remediator_without_extract(monkeypatch, tmp_path
 
 
 def test_discovery_boundary_exports_pr_train():
-    import workflows.dags
+    from workflows import dags
 
-    assert workflows.dags.PR_TRAIN_DAG is not None
-    assert hasattr(workflows.dags.pr_train_dag, "ff_node")
-    assert not hasattr(workflows.dags.pr_train_dag, "compliance_node")
+    assert dags.PR_TRAIN_DAG is not None
+    assert hasattr(dags.pr_train_dag, "ff_node")
+    assert not hasattr(dags.pr_train_dag, "compliance_node")

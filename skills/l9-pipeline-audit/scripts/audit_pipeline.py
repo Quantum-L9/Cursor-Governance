@@ -5,8 +5,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import shutil
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -69,6 +71,57 @@ def resolve_tracked_plans_dir(workspace: Path) -> Path:
     if ws_docs.is_dir():
         return ws_docs.resolve()
     return resolve_plans_dir(workspace, None)
+
+
+def _archive_lock_target(plans_dir: Path, wip_root: Path, workspace: Path, gov_root: Path) -> Path:
+    """Lock the clone that archive will write, preferring $GC when falling back."""
+    gov = gov_root.resolve()
+    for path in (plans_dir, wip_root):
+        try:
+            path.resolve().relative_to(gov)
+            return gov
+        except ValueError:
+            continue
+    return workspace.resolve()
+
+
+def _repo_write_lock_dir(ws: Path) -> Path:
+    proc = subprocess.run(
+        ["cksum"],
+        input=str(ws).encode(),
+        capture_output=True,
+        check=False,
+    )
+    ident = proc.stdout.decode().split()[0] if proc.returncode == 0 else "0"
+    return Path.home() / ".cursor" / f"l9-repo-write.{ident}.lock.d"
+
+
+def _try_hold_write_lock(ws: Path) -> Path | None:
+    """Acquire the same lock path make pr uses. None means another writer holds it."""
+    if os.environ.get("L9_REPO_WRITE_LOCK", "1").lower() in {"0", "false", "no"}:
+        return Path()
+    lock_dir = _repo_write_lock_dir(ws)
+    try:
+        lock_dir.mkdir(parents=True)
+    except FileExistsError:
+        return None
+    try:
+        (lock_dir / "owner").write_text(
+            f"{os.getpid()} {int(time.time())} {ws} audit_pipeline\n",
+            encoding="utf-8",
+        )
+    except OSError:
+        shutil.rmtree(lock_dir, ignore_errors=True)
+        return None
+    os.environ["L9_REPO_WRITE_LOCK_OWNER"] = str(os.getpid())
+    return lock_dir
+
+
+def _release_write_lock(lock_dir: Path | None) -> None:
+    if lock_dir is None or str(lock_dir) in {"", "."}:
+        return
+    if lock_dir.is_dir():
+        shutil.rmtree(lock_dir, ignore_errors=True)
 
 
 def _tracked_store(plans_dir: Path, workspace: Path, gov_root: Path) -> bool:
@@ -366,8 +419,16 @@ def run(
     ]
     archived: list[str] = []
     if archive and _tracked_store(plans_dir, workspace, gov_root):
-        archived = archive_spent_plans(plans_dir)
-        archived.extend(archive_landed_wip(wip_root, findings))
+        lock_target = _archive_lock_target(plans_dir, wip_root, workspace, gov_root)
+        lock_dir = _try_hold_write_lock(lock_target)
+        if lock_dir is None:
+            archived = []
+        else:
+            try:
+                archived = archive_spent_plans(plans_dir)
+                archived.extend(archive_landed_wip(wip_root, findings))
+            finally:
+                _release_write_lock(lock_dir)
     next_three = rank_next(findings, plans_dir)
     pending = [row for row in findings if row.get("pending")]
     harvestable = [row for row in findings if row.get("harvestable")]

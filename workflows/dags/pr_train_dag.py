@@ -8,7 +8,7 @@ Stops (one slash, graph + remediator skill):
    ``--all-refs``), drop already-landed patches, consolidate colliding work
    into one slice (shared path, generated-prefix clobber, or ``git merge-tree``
    conflict; unknown probe fail-closes into the same PR), cherry-pick onto
-   the unique stack tip, publish with ``PR_STACK=auto make pr``.
+   the unique stack tip, remediator-publish (``git push`` + ``gh pr create``).
 2. REMEDIATE — this graph does **not** run MERGE_TRAIN and does **not** write
    merge authorization. It dispatches skill ``l9-pr-remediation`` Converge
    and HALTS. Do not run ``make pr`` here.
@@ -41,7 +41,6 @@ _PRESERVE_SCRIPTS = _REPO_ROOT / "skills" / "l9-git-work-preserve" / "scripts"
 _FF_SH = _REPO_ROOT / "skills" / "l9-repo-sync" / "scripts" / "ff.sh"
 _RESOLVE_STACK = _REPO_ROOT / "ops" / "scripts" / "resolve_stack_tip.py"
 _AUTHORIZE_MERGE = _REPO_ROOT / "ops" / "autonomy" / "authorize_merge.py"
-_L4_LOCAL = _REPO_ROOT / "ops" / "autonomy" / "l4_local.py"
 GRAPH_ID = "pr-train-v1"
 MAX_SLICES = 32
 REMEDIATOR_SKILL = "l9-pr-remediation"
@@ -192,10 +191,18 @@ def commits_must_colocate(repo: Path, left: NovelCommit, right: NovelCommit) -> 
 
 
 def order_slice(repo: Path, group: list[NovelCommit]) -> list[NovelCommit]:
-    """Oldest commit first so cherry-pick onto the stack tip is linear."""
+    """Ancestry order so a child is never cherry-picked before its parent."""
     if len(group) < 2 or not is_git_repo(repo):
         return group
-    return sorted(group, key=lambda c: (commit_unix(repo, c.sha), c.sha))
+    shas = [item.sha for item in group]
+    proc = _git(repo, "rev-list", "--no-walk", "--reverse", "--topo-order", *shas)
+    if proc.returncode != 0:
+        return sorted(group, key=lambda c: (commit_unix(repo, c.sha), c.sha))
+    order = [line.strip() for line in proc.stdout.splitlines() if line.strip()]
+    by_sha = {item.sha: item for item in group}
+    ordered = [by_sha[sha] for sha in order if sha in by_sha]
+    leftover = [item for item in group if item.sha not in {row.sha for row in ordered}]
+    return ordered + leftover
 
 
 def group_slices(
@@ -499,44 +506,45 @@ def default_extract(
     return str(worktree), branch
 
 
-def _l4_authorize_worktree(worktree: str) -> None:
-    """Fresh extract worktrees have no L4 receipt; make pr fail-closes without one."""
-    # --workspace is a parent flag; it must precede the subcommand.
-    for args in (
-        ["--workspace", worktree, "begin", "--contract-id", GRAPH_ID],
-        ["--workspace", worktree, "record-kernels"],
-        ["--workspace", worktree, "authorize-release"],
-    ):
-        proc = subprocess.run(
-            [_python(), str(_L4_LOCAL), *args],
+def default_publish(worktree: str) -> dict[str, Any]:
+    """Remediator publish: push the extract and open a PR if none exists.
+
+    Does not stamp kernel receipts and does not run ``make pr``.
+    """
+    push = subprocess.run(
+        ["git", "-C", worktree, "push", "-u", "origin", "HEAD"],
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if push.returncode != 0:
+        raise RuntimeError(push.stderr.strip() or push.stdout.strip() or "git push failed")
+    view = subprocess.run(
+        ["gh", "pr", "view", "--json", "number", "-q", ".number"],
+        cwd=worktree,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    if view.returncode != 0 or not view.stdout.strip():
+        created = subprocess.run(
+            [
+                "gh",
+                "pr",
+                "create",
+                "--fill",
+                "--body",
+                "<!-- L9_PROTECTED_ROOT_PR -->\n",
+            ],
             cwd=worktree,
             text=True,
             capture_output=True,
             check=False,
         )
-        if proc.returncode != 0:
+        if created.returncode != 0:
             raise RuntimeError(
-                proc.stderr.strip() or proc.stdout.strip() or f"l4_local.py {args[2]} failed"
+                created.stderr.strip() or created.stdout.strip() or "gh pr create failed"
             )
-
-
-def default_publish(worktree: str) -> dict[str, Any]:
-    _l4_authorize_worktree(worktree)
-    gov = Path.home() / ".cursor-governance"
-    makefile = gov if (gov / "Makefile").is_file() else _REPO_ROOT
-    env = os.environ.copy()
-    env["PR_STACK"] = "auto"
-    env["PR_REMEDIATE"] = "0"
-    env["WS"] = worktree
-    proc = subprocess.run(
-        ["make", "-C", str(makefile), "pr", f"WS={worktree}"],
-        text=True,
-        capture_output=True,
-        check=False,
-        env=env,
-    )
-    if proc.returncode != 0:
-        raise RuntimeError(proc.stderr.strip() or proc.stdout.strip() or "make pr failed")
     return {"worktree": worktree, "ok": True}
 
 
@@ -603,6 +611,18 @@ def diagnose_node(state: PrTrainState) -> dict[str, Any]:
                     "diagnoses": diagnoses,
                     "status": "blocked",
                     "halt_reason": f"novelty unproven for {ref}",
+                    "stop": "report",
+                }
+            listed = list(receipt.get("cherry_novel_commits") or [])
+            novel_count = receipt.get("cherry_novel")
+            if novel_count is None:
+                novel_count = len(listed)
+            unexamined = int(receipt.get("merge_commits_unexamined") or 0)
+            if int(novel_count) > len(listed) or unexamined:
+                return {
+                    "diagnoses": diagnoses,
+                    "status": "blocked",
+                    "halt_reason": f"novelty receipt incomplete for {ref}",
                     "stop": "report",
                 }
             for sha in receipt.get("cherry_dup_commits") or []:

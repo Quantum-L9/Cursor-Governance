@@ -128,7 +128,8 @@ Pre-reading: config/subsystems/readme_config.yaml
             name="Enrich Config",
             node_type=NodeType.TRANSFORM,
             description="Add missing subsystems to readme_config.yaml",
-            action="""Add only paths `--gaps` reported as missing after a human or locked-plan confirm.
+            action="""Add only paths `--gaps` reported as missing after a
+human or locked-plan confirm.
 
 Required fields: path, title, tier, description.
 Allowed tiers here: operations | control_plane | documentation.

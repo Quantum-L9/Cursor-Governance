@@ -398,17 +398,8 @@ if [ ! -f "$AUDIT_PY" ]; then
 fi
 AUDIT_PY_BIN="$GC/.venv/bin/python"
 [ -x "$AUDIT_PY_BIN" ] || AUDIT_PY_BIN=python3
-ARCHIVE_ARGS=()
-_lock_lib="$GC/ops/scripts/lib/repo_write_lock.sh"
-if [ -f "$_lock_lib" ]; then
-  # shellcheck source=ops/scripts/lib/repo_write_lock.sh
-  . "$_lock_lib"
-  if [ -z "$(repo_write_lock_holder "${CURSOR_PROJECT_DIR:-$PWD}" 2>/dev/null || true)" ]; then
-    ARCHIVE_ARGS+=(--archive-spent)
-  fi
-else
-  ARCHIVE_ARGS+=(--archive-spent)
-fi
+# Archive gating lives in audit_pipeline.py (acquires the $GC write lock).
+ARCHIVE_ARGS=(--archive-spent)
 if [ -f "$AUDIT_PY" ]; then
   if command -v timeout >/dev/null 2>&1; then
     PLAN_AUDIT_MD="$(

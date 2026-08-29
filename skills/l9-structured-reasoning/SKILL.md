@@ -1,6 +1,6 @@
 ---
 name: l9-structured-reasoning
-description: Adaptive evidence-based reasoning for hard planning, architecture, debugging, corpus analysis, and multi-option decisions. Use when the user needs trade-offs, root-cause reasoning, or an evidence-grounded decision record. Do not activate for simple facts, direct rewrites, or when a more specific domain Skill already owns the contract.
+description: Adaptive evidence-based reasoning for planning, architecture, debugging, and trade-offs. Use when the user needs root-cause reasoning or an evidence-grounded decision. Do not activate for simple facts or when a domain Skill owns the contract.
 ---
 
 # L9 Structured Reasoning

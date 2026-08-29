@@ -52,7 +52,8 @@ subsystems:
     title: Slash commands
     tier: control_plane
     description: Live slash-command protocols.
-    purpose: Trigger skills and DAGs by name.
+    purpose: Trigger skills and DAGs by name. README is handwritten.
+    skip: true
   rules:
     path: rules
     title: Cursor rules
