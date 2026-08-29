@@ -36,7 +36,16 @@ import unittest
 import unittest.mock
 from pathlib import Path
 
-from test_run_campaign import (  # type: ignore[import-not-found]
+# This module imports a sibling test file by bare name. That resolves only when
+# this directory is on `sys.path`, which pytest arranges as a side effect of
+# collecting some *other* file from here first — so the import silently depended
+# on collection order, and broke the moment a scoped or sharded run selected
+# this file without its sibling (`make pr-check` under `-n auto`).
+# `run_conformance._load` already documents the fix for the same class of
+# breakage: make the file self-sufficient by putting its own directory first.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from test_run_campaign import (  # type: ignore[import-not-found]  # noqa: E402
     READY_SEED,
     _dump,
     _git_init,
@@ -516,6 +525,14 @@ class PeSmokeCampaignTests(unittest.TestCase):
             time_module.sleep(0.2)
             return {"status": "PASS", "receipt": {"task_id": contract["task_id"]}}
 
+        # `_dispatch_peer_batch` loads the peer pipeline module on the calling
+        # thread before it opens the pool. That import costs ~0.5s once per
+        # process, which is longer than the whole window this test measures — so
+        # a cold run charged a one-time import to the concurrency budget and
+        # read as "the windows did not overlap". Warm it here, outside the
+        # clock: what is under test is whether two provider windows run at once,
+        # not how long an import takes.
+        self.mod._peer_pipeline()
         started = time_module.monotonic()
         with unittest.mock.patch.object(self.mod, "_run_peer_execution", side_effect=fake_peer):
             outcomes, failures = self.mod._dispatch_peer_batch(Path("."), units)
