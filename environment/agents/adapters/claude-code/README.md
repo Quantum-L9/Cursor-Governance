@@ -50,7 +50,7 @@ context**, **reach shared memory** — without a human wiring step.
 | Discover L9 skills | `~/.claude/skills/` fed by `reconcile_claude_l9_skills.py` via `install.sh` (canonical native L9 skills) | governance cloned by `web/setup.sh`; skills referenced from the clone |
 | Boot session context | `hooks/session_start_claude_governance.sh` via `make claude-settings` → `~/.claude/settings.json` | **same hook**, committed at `.claude/settings.json` + `.claude/hooks/` via reconcile |
 | Autonomy velocity | Profile `ops/autonomy/surface_profile.yaml` + merge_gate + local_execution_gate PreToolUse | same Profile; standing A4 + L4 local (no mid-exec push); human merge |
-| Reach shared memory | Graphiti HTTPS (`GRAPHITI_MCP_URL` → `memory.quantumaipartners.com/graphiti/mcp`); health is `memory.cli` + `memory.mcp`, not the broker | same; empty hydrate is honest — do not paste `GRAPHITI_MCP_TOKEN` |
+| Reach shared memory | Graphiti HTTPS (`GRAPHITI_MCP_URL` → `memory.quantumaipartners.com/graphiti/mcp`); health is `memory.cli` + `memory.mcp`; broker retired | same; empty hydrate is honest — do not paste `GRAPHITI_MCP_TOKEN` |
 
 ### Proactive L9 skill discovery and routing
 
@@ -100,11 +100,12 @@ Two different mechanisms feed Claude Code, and the names must not blur:
 
 Health probes `GRAPHITI_MCP_URL` (default
 `https://memory.quantumaipartners.com/graphiti/mcp`) without the capability
-broker. `memory.cli` is locked `.venv` + `graphiti_memory_client.py health`.
-`memory.mcp` is HTTP to that URL: connect vs 401 vs 403 allowlist are
-distinct reasons. A working CLI + missing MCP tools is not one word
-DEGRADED. `.mcp.json` remains a projection of `mcp.template.json` (sibling
-unwire owns retiring the broker URL in that template).
+broker (retired, never shipped). `memory.cli` is locked `.venv` +
+`graphiti_memory_client.py health`. `memory.mcp` is HTTP to that URL:
+connect vs 401 vs 403 allowlist are distinct reasons. A working CLI +
+missing MCP tools is not one word DEGRADED. `.mcp.json` is a projection
+of `mcp.template.json` pointing at `${GRAPHITI_MCP_URL}` — never
+`${L9_CAPABILITY_BROKER_URL}/mcp/graphiti`.
 
 A 403 allowlist miss is an operator paste, not a missing token. Empty
 hydrate is honest. Do not paste `GRAPHITI_MCP_TOKEN`.
@@ -139,7 +140,7 @@ second place to drift.
 | `render.claude.json` | all | Rendering map: how `policy.json` reaches Claude Code (peer of `render.cursor.json`). IDE-neutral policy never changes for it. |
 | `settings.template.json` | all | Committable `.claude/settings.json` for a consumer repo: SessionStart hook + conservative permission + env defaults. |
 | `hooks/session_start_claude_governance.sh` | all | Mobile-safe SessionStart bootstrap. Git-only, **no `~/.cursor` dependency**. Emits Claude Code `additionalContext` JSON. |
-| `mcp.template.json` | all | Shared memory MCP block (projection source for `.mcp.json`). Health is `GRAPHITI_MCP_URL`, never a token or bearer. |
+| `mcp.template.json` | all | Shared memory MCP block — `${GRAPHITI_MCP_URL}`. Health is `GRAPHITI_MCP_URL`. **Never a token, never a bearer. Broker retired.** |
 | `web/README.md` | Web · Mobile | Install guide for the account environment (the Network / Env / Setup triad). |
 | `web/network-policy.md` | Web · Mobile | Network-access decision (Full vs Custom allowlist) with the concrete allowlist. |
 | `web/environment.env.example` | Web · Mobile | Environment-variables template. No credentials, no GH token — the platform proxy injects. |

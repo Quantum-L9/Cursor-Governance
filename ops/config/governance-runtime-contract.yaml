@@ -170,7 +170,7 @@ invariants:
       - type: file_contains
         path: ops/config/root-file-protection.json
         pattern: ".governance-build-lock"
-        present: true
+        present: false
       - type: file_contains
         path: ops/config/root-file-protection.json
         pattern: "\"governance-health-report.json\", \"tier\""

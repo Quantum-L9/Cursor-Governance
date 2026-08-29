@@ -381,10 +381,8 @@ if [ "$CHECK" != "1" ] && [ -n "$GOV_PY" ]; then
 fi
 
 # --- 3) Memory MCP front door (Claude .mcp.json format) ---------------------
-# Brokered front door: the template points at ${L9_CAPABILITY_BROKER_URL}
-# (/mcp/graphiti) and carries NO bearer (contract S3/§12). The broker speaks
-# the MCP handshake and maps search_memory/write_governed to
-# graphiti.query/graphiti.write_governed.
+# Graphiti HTTPS front door: the template points at ${GRAPHITI_MCP_URL} and
+# carries NO bearer. The capability broker never shipped (retired 2026-08-29).
 stage "mcp-front-door"
 # .mcp.json is a PROJECTION of mcp.template.json (the single MCP authority),
 # already rendered in the claude-projection stage above. The old `cp only if
@@ -406,8 +404,8 @@ esac
 # Graphiti health without the capability broker. CLI uses the locked
 # interpreter + graphiti_memory_client.py; MCP is HTTP to GRAPHITI_MCP_URL
 # (default https://memory.quantumaipartners.com/graphiti/mcp). Connect vs 401
-# vs 403 allowlist are distinct reasons. A missing broker URL is not a
-# capabilities/memory defect — authenticated Sonar/Semgrep stay off hosted.
+# vs 403 allowlist are distinct reasons. Broker retired 2026-08-29 (never
+# shipped; not probed). A leftover broker URL in .mcp.json is still a defect.
 stage "graphiti-health"
 EMITTER="$GOV_DIR/ops/scripts/emit_claude_readiness.py"
 if [ -n "$GOV_PY" ] && [ -f "$EMITTER" ]; then
@@ -430,6 +428,10 @@ if [ "$STATUS_MEMORY_CLI" != "READY" ]; then
   downgrade STATUS_MEMORY DEGRADED "${REASON_MEMORY_CLI:-memory.cli}"
 elif [ "$STATUS_MEMORY_MCP" != "READY" ]; then
   downgrade STATUS_MEMORY DEGRADED "${REASON_MEMORY_MCP:-memory.mcp}"
+fi
+if [ -f "$WORKSPACE/.mcp.json" ] \
+   && grep -q 'L9_CAPABILITY_BROKER_URL' "$WORKSPACE/.mcp.json" 2>/dev/null; then
+  downgrade STATUS_MCP DEGRADED "front door still routes through retired capability broker"
 fi
 
 # --- 3b) Marketplace plugins ------------------------------------------------

@@ -9,7 +9,7 @@ rebuilt — which is the failure this file exists to make detectable.
 
 ## 1. Environment variables
 
-Checksum `de3f0ce160307b2f` — `verify_account_env.py` confirms a paste by comparing
+Checksum `749b74840720a42d` — `verify_account_env.py` confirms a paste by comparing
 the live runtime against this set.
 
 ```dotenv
@@ -26,7 +26,6 @@ L9_AUTONOMY_MAX_PARALLEL=480
 L9_AUTONOMY_PROFILE=pr-convergence
 L9_AUTONOMY_REMEDIATION_SKILL=l9-pr-remediation
 L9_AUTONOMY_STATE_DIR=.l9/autonomy
-L9_CAPABILITY_BROKER_URL=https://broker.quantumaipartners.com/l9/capability
 L9_DISCOVER_BEFORE_ASK=true
 L9_GOVERNANCE_BRANCH=main
 L9_GOVERNANCE_REMOTE=https://github.com/Quantum-L9/Cursor-Governance.git
@@ -51,8 +50,8 @@ USER_ID=claude_code_agent
 
 Paste `environment/agents/adapters/claude-code/web/setup.bootstrap.sh` verbatim.
 
-- Revision: `2026-08-22.2`
-- Checksum: `6a40e65f0df1d371`
+- Revision: `2026-08-29.1`
+- Checksum: `35bb0822d8472aec`
 
 The stub records its own revision into `~/.l9/cloud-session.env`, so a later
 session can tell whether the pasted copy is current without reading the field.

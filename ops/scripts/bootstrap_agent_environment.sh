@@ -8,7 +8,7 @@
 #
 #   1. locked toolchain from uv.lock          (ensure_uv_environment.sh)
 #   2. canonical checker binaries             (gitleaks / uvx / pre-commit)
-#   3. secret bootstrap                       (ops/secrets/bootstrap_agent_env.sh)
+#   3. capability plane                       RETIRED — never call bootstrap_agent_env.sh here
 #   4. repository-scoped identity             (Graphiti group, Sonar project)
 #   5. shared local git excludes
 #   6. readiness preflight                    (gate imports, kernels, L4, holds)
@@ -351,47 +351,13 @@ else
   DEGRADED=$((DEGRADED + 1))
 fi
 
-# --- 3) Capability bootstrap ------------------------------------------------
-# This section used to ask whether SONAR_TOKEN and SEMGREP_APP_TOKEN were
-# available as environment credentials. That question is now the wrong one: a
-# raw secret must never be available to this process, so a surface where those
-# names resolve is a surface that FAILED the security contract, not one that
-# passed it.
-#
-# What a session actually needs to know is which named CAPABILITIES it can use.
-# Those resolve through the shared capability plane, where the credential stays
-# on the far side of the trust boundary. This step reports ENABLED / DEGRADED /
-# UNAVAILABLE / BLOCKED and hydrates nothing.
+# --- 3) Capability bootstrap (RETIRED 2026-08-29) ---------------------------
+# The capability broker never shipped: broker.quantumaipartners.com has no DNS,
+# hosted surfaces issue no broker-verifiable identity, and every brokered
+# capability reported DEGRADED. Cursor Graphiti is the local CLI / tunnel and
+# GRAPHITI_MCP_URL. Do not probe a dead plane or increment DEGRADED for it.
 log "Canonical capability bootstrap"
-CAP_BOOTSTRAP="$GOV_DIR/ops/secrets/bootstrap_agent_env.sh"
-if [ -f "$CAP_BOOTSTRAP" ]; then
-  # `2>&1` used to fold this report into stdout, which is the sessionStart JSON
-  # payload upstream. `>&2` redirects stdout to stderr; the script's own stderr
-  # already lands there, so both streams stay diagnostic (F-08).
-  bash "$CAP_BOOTSTRAP" --check --surface "$SURFACE" \
-    --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query >&2
-  cap_rc=$?
-  # INV-3: a capability-plane failure is a DEGRADED COMPONENT, not a warning the
-  # receipt may ignore. This section used to `|| warn` and move on, so a session
-  # with a totally dead capability plane still printed "Agent environment ready"
-  # and wrote --degraded-count 0 (audit B-08). Every other section in this file
-  # increments; this one now does too.
-  if [ "$cap_rc" -ne 0 ]; then
-    # Exit 4 is the platform-blocked class and is NOT a configuration error
-    # (INV-4). Reporting it as "no broker configured" misdirects the operator
-    # toward the account environment field, which cannot fix it (audit B-10).
-    if [ "$cap_rc" -eq 4 ]; then
-      warn "capability plane BLOCKED_BY_PLATFORM — this surface issues no broker-verifiable identity"
-      warn "  not repairable from the environment field; see docs/DEGRADED_MODE_CONTRACT.md"
-    else
-      warn "capability plane DEGRADED — authenticated Sonar/Semgrep/Graphiti unavailable"
-    fi
-    DEGRADED=$((DEGRADED + 1))
-  fi
-else
-  warn "missing ops/secrets/bootstrap_agent_env.sh — no canonical capability resolution"
-  DEGRADED=$((DEGRADED + 1))
-fi
+say "capability plane: RETIRED (never shipped) — Graphiti via GRAPHITI_MCP_URL / local CLI"
 
 # A surface that still carries raw downstream secrets has not been migrated.
 # Report it loudly here: this is the check that would have caught the old
@@ -521,15 +487,14 @@ fi
 for retired in L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN; do
   [ -n "${!retired:-}" ] && warn "$retired set — retired ADR-0006 side door; remove it"
 done
-# Memory front door. A bearer in this process is a contract violation, not a
-# readiness signal — the brokered graphiti.* capabilities carry the credential
-# on the trusted side, so an agent surface needs no token at all.
+# Memory front door. A bearer in this process is a contract violation.
+# Graphiti is GRAPHITI_MCP_URL (HTTPS) or the local SSH tunnel CLI — not a
+# capability broker (retired 2026-08-29, never shipped).
 if [ -n "${GRAPHITI_MCP_TOKEN:-}" ]; then
   warn "GRAPHITI_MCP_TOKEN present in a model-controlled surface — PROHIBITED (contract S3)"
-  warn "  remove it; memory resolves through the graphiti.query / graphiti.write_governed"
-  warn "  capabilities, which keep the bearer beyond the model boundary"
+  warn "  remove it; Cursor uses the local Graphiti CLI, adapters use GRAPHITI_MCP_URL"
 else
-  say "memory front door: brokered (no bearer in this process; graphiti.* capabilities)"
+  say "memory front door: GRAPHITI_MCP_URL / local Graphiti CLI (no bearer in this process)"
 fi
 
 for kernel in "Recursive Alignment.md" "Validate & Repair.md"; do
@@ -557,14 +522,10 @@ fi
 #   6  session usable, components degraded  -> never the ready banner
 #   1  arguments invalid, or the locked venv cannot import the gate modules
 #
-# 6 exists to resolve a real tension. T-01 requires a degraded capability plane
-# to exit non-zero, but install.sh maps ANY non-zero shared-bootstrap exit to
-# STATUS_SHARED=BLOCKED — and on a hosted surface the capability plane is
-# permanently BLOCKED_BY_PLATFORM, which INV-4 says must stay distinct from a
-# failure. Collapsing the two would mark every install BLOCKED forever and erase
-# exactly the distinction WS-5 exists to draw. A dedicated code keeps the
-# session fail-open, keeps the degradation machine-detectable, and lets the
-# caller classify it as DEGRADED rather than BLOCKED.
+# 6 exists so a usable session with real degradations (leaked secrets, missing
+# jsonschema, broken publish-path probe) is machine-detectable without being
+# mistaken for a hard failure. The retired capability broker is not one of
+# those degradations.
 BOOTSTRAP_EXIT=0
 if [ "$DEGRADED" -gt 0 ]; then
   warn "agent bootstrap completed with $DEGRADED degraded component(s) on surface '$SURFACE'"

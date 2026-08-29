@@ -18,7 +18,7 @@ the SessionStart hook; `--json` prints the receipt. The emitter never mutates
 the repository, never fetches, and fails open (a probe that cannot run yields
 UNKNOWN, never a crash).
 
-Sources (all local + Graphiti HTTPS, never the retired capability broker):
+Sources (all local + Graphiti HTTPS; capability broker retired, never probed):
   git -C $GOV            governance repository / default branch / SHA / freshness
   ~/.l9/claude/projection-receipt.json   skill/command/rule/settings/hooks/plugins/mcp
   ~/.l9/claude/bootstrap-state.json      capabilities / memory / mcp coarse words

@@ -73,11 +73,14 @@ def test_projection_missing_receipt_is_unknown() -> None:
     assert set(out.values()) == {UNKNOWN}
 
 
-def test_graphiti_tcp_is_not_authenticated() -> None:
+def test_graphiti_health_classifies_probe_not_broker() -> None:
+    """Graphiti compact health is the CLI/MCP probe, not a capability-broker /whoami."""
     status, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
     assert status == DEGRADED
     assert "identity" in note
+    assert "GRAPHITI_MCP_URL" not in note
     assert er._graphiti_health({"ok": True})[0] == READY
+    assert er._graphiti_health({})[0] == UNKNOWN
 
 
 def test_configured_mcp_is_not_loaded_mcp() -> None:
@@ -208,10 +211,6 @@ def _init_fake_gov(
 
     (gov / "Makefile").write_text(
         "l9-consumer-safe-list:\n\t@echo start pr pr-check improve\n", encoding="utf-8"
-    )
-    (gov / "ops" / "secrets" / "probe_broker.py").write_text(
-        "import json\nprint(json.dumps({'ok': True, 'secret_boundary': 'model-controlled'}))\n",
-        encoding="utf-8",
     )
     # The emitter imports merge_gate.evaluate() in-process (the CLI needs a git
     # work tree it does not have). A deny is a returned reason string; an allow

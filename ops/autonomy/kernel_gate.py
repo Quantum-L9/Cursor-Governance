@@ -11,10 +11,10 @@ L9_AGENT_REQUIRED them. L4 record-kernels is not the corpus apply path.
 ``precommit`` must run first in ``run_pr_precommit.sh`` and fail closed
 before any other hook or test starts, so those checkers fire once.
 
-Tree kernels latch on adapter surfaces (``claude-code``, ``codex``,
-``gemini``, ``manus``). Cursor (``L9_GOVERNANCE_SURFACE`` unset or
-``cursor``) skips the tree latch so ``make pr`` / ``l9 pr`` share one
-finish path without a second RA+V&R apply.
+Cursor (``CURSOR_AGENT`` / ``L9_GOVERNANCE_SURFACE=cursor`` / unset surface
+with no Claude markers) does **not** take this latch. Tree kernels stay a
+Claude Code / adapter-surface ceremony so ``make pr`` / ``l9 pr`` share one
+finish path without a second RA+V&R apply on Cursor.
 """
 
 from __future__ import annotations
@@ -44,6 +44,10 @@ CORPUS_SKIP_PREFIXES = (
 )
 #: Same prefixes as CORPUS_SKIP_PREFIXES (pipeline-audit surfaces).
 KERNEL_EXEMPT_PREFIXES = CORPUS_SKIP_PREFIXES
+#: Tree-kernel latch is adapter-surface only. Cursor is the primary plane
+#: and must not stall commit/push on Recursive Alignment receipts.
+ADAPTER_KERNEL_SURFACES = frozenset({"claude-code", "codex", "gemini", "manus"})
+ADAPTER_SURFACES = ADAPTER_KERNEL_SURFACES
 #: Executable-plan templates are not Cursor plans. Do not require kernel_pass.
 PLAN_SKIP_PREFIXES = (
     PLAN_FIXTURE_PREFIX,
@@ -51,7 +55,6 @@ PLAN_SKIP_PREFIXES = (
     "docs/plans/_TEMPLATE.plan.md",
     *KERNEL_EXEMPT_PREFIXES,
 )
-ADAPTER_SURFACES = frozenset({"claude-code", "codex", "gemini", "manus"})
 
 
 def _rel_path(raw: str) -> str:
@@ -67,10 +70,9 @@ def _is_corpus_path(rel: str) -> bool:
 
 
 def adapter_tree_kernels_required(environ: Mapping[str, str] | None = None) -> bool:
-    """Tree latch fires on adapter ``make pr`` only. Cursor skips it."""
-    env = os.environ if environ is None else environ
-    surface = str(env.get("L9_GOVERNANCE_SURFACE") or "").strip().lower()
-    return surface in ADAPTER_SURFACES
+    """Compat alias of ``kernel_latch_required`` (adapter ``make pr`` only)."""
+    source = os.environ if environ is None else environ
+    return kernel_latch_required(env=source)
 
 
 def changed_are_corpus_only(changed_paths: list[str]) -> bool:
@@ -265,20 +267,33 @@ def read_changed_file(path: Path | None) -> list[str]:
     return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
+def kernel_latch_required(*, env: Mapping[str, str] | None = None) -> bool:
+    """True only on Claude Code / peer adapter runtimes.
+
+    Cursor sessions set ``CURSOR_AGENT``. CI and a bare shell have neither
+    that nor an adapter surface id — they skip, so a Cursor-authored PR is
+    not blocked in GitHub Actions for a missing kernel receipt.
+    """
+    source = os.environ if env is None else env
+    surface = (source.get("L9_GOVERNANCE_SURFACE") or "").strip().lower()
+    if surface in ADAPTER_KERNEL_SURFACES:
+        return True
+    if source.get("CLAUDECODE") or source.get("CLAUDE_CODE_ENTRYPOINT"):
+        return True
+    if source.get("CLAUDE_CODE_REMOTE") == "true":
+        return True
+    if source.get("CLAUDE_CODE_SESSION_ID"):
+        return True
+    return False
+
+
 def precommit(root: Path, gov: Path, changed_file: Path | None) -> int:
+    if not kernel_latch_required():
+        print("OK: kernel hook skipped (Cursor / non-adapter surface; Claude Code owns this latch)")
+        return 0
     changed = read_changed_file(changed_file)
     if changed_are_corpus_only(changed):
         print("OK: kernel hook skipped (corpus-only changeset; /ff owns WIP/plans/campaigns)")
-        return 0
-    if not adapter_tree_kernels_required():
-        print(
-            "OK: kernel hook skipped tree latch "
-            "(cursor surface; adapters still apply on make pr)"
-        )
-        plan_fail = verify_plans(changed, workspace=root, gov=gov)
-        if plan_fail:
-            sys.stderr.write(plan_fail)
-            return 2
         return 0
     tree_fail = verify_tree(root, gov)
     if tree_fail:

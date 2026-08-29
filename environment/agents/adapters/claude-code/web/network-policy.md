@@ -46,7 +46,7 @@ a secret backend is one bad line away from using it.
 | `pypi.org`, `files.pythonhosted.org` | `uv sync --locked` (governance `uv.lock`), `uvx` for bandit / semgrep / pip-audit, `pre-commit`, `uv` itself |
 | `astral.sh`, `*.astral.sh` | `uv`-managed CPython download when the sandbox lacks the pinned interpreter (`.python-version` = 3.12). Not needed when a system 3.12 is already present |
 | `registry.npmjs.org` | consumer workspaces with `package.json` |
-| `memory.quantumaipartners.com` | Graphiti HTTPS front door (`GRAPHITI_MCP_URL`, default `/graphiti/mcp`). CLI health uses `graphiti_memory_client.py`; MCP health is HTTP connect vs 401 vs 403 allowlist. Do not paste `GRAPHITI_MCP_TOKEN` |
+| `memory.quantumaipartners.com` | Graphiti HTTPS front door (`GRAPHITI_MCP_URL`, default `/graphiti/mcp`). CLI health uses `graphiti_memory_client.py`; MCP health is HTTP connect vs 401 vs 403 allowlist. Broker never shipped. Do not paste `GRAPHITI_MCP_TOKEN` |
 | `semgrep.dev`, `*.semgrep.dev` | Semgrep **registry rulesets** (`p/python`, `p/secrets`) for local CE only. Authenticated AppSec runs in the trusted worker, not here |
 
 ### Egress the agent must not need (contract §16)
@@ -57,8 +57,8 @@ that can reach a secret backend is one mistake away from using one.
 
 | Host | Who reaches it | Why not the agent |
 |---|---|---|
-| `app.infisical.com` | **broker only** | The secret backend. The agent holds no Infisical credential and has no reason to speak to it; blocking egress makes that structural rather than conventional |
-| `sonarcloud.io`, `*.sonarcloud.io` | **broker only** | Authenticated Sonar reads are brokered. Unauthenticated public reads still work if you choose to allow the host; the token never leaves the broker either way |
+| `app.infisical.com` | **operator / hydrate only** | The secret backend. The agent holds no Infisical credential and has no reason to speak to it; blocking egress makes that structural rather than conventional |
+| `sonarcloud.io`, `*.sonarcloud.io` | **optional public read** | Unauthenticated public Sonar reads. Do not paste `SONAR_TOKEN` here; the capability broker never shipped |
 | `semgrep.dev` authenticated API | **trusted worker only** | CE rule downloads are fine from the agent; authenticated AppSec is not |
 | AWS Secrets Manager endpoints | **nobody** | The AWS bootstrap path is removed entirely (contract S1). Do not re-add it |
 

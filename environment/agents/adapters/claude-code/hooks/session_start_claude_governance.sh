@@ -45,6 +45,21 @@ emit() {
   exit 0
 }
 
+# Cursor also loads projected .claude/settings.json in this repo. This hook is
+# Claude Code SessionStart only. Running it under Cursor scores that session
+# with cloud account-field drift, broker probes, and never_ran installer
+# receipts that cannot pass here. Skip unless a Claude Code runtime marker is
+# present. CURSOR_AGENT alone is not Claude Code.
+_l9_claude_runtime=0
+[ "${CLAUDE_CODE_REMOTE:-}" = "true" ] && _l9_claude_runtime=1
+[ -n "${CLAUDECODE:-}" ] && _l9_claude_runtime=1
+[ -n "${CLAUDE_CODE_ENTRYPOINT:-}" ] && _l9_claude_runtime=1
+[ -n "${CLAUDE_CODE_SESSION_ID:-}" ] && _l9_claude_runtime=1
+if [ "$_l9_claude_runtime" -eq 0 ]; then
+  emit ""
+fi
+unset _l9_claude_runtime
+
 WORKSPACE="${CLAUDE_PROJECT_DIR:-$PWD}"
 LINES=()
 LINES+=("L9 Governance — Claude Code session")
@@ -417,6 +432,7 @@ emit_account_drift() {
 # --- Capability plane readiness (authenticated; never a secret) -------------
 # Graphiti over HTTPS (CLI + MCP). Distinct reasons: connect vs 401 vs 403
 # allowlist. Empty hydrate is honest; memory never gates repository writes.
+# Capability broker retired 2026-08-29 (never shipped; not probed).
 emit_capability_readiness() {
   local py="$1"
   local emitter="$GOV/ops/scripts/emit_claude_readiness.py"
@@ -445,6 +461,7 @@ PY
 )"
   [ -n "$parsed" ] || return 0
   LINES+=("--- capability plane readiness ---")
+  LINES+=("capability_broker=retired (never shipped; not probed)")
   LINES+=("secret_boundary_status=model-controlled (no broker/Infisical/Graphiti secret in this environment)")
   while IFS= read -r line || [ -n "$line" ]; do
     [ -n "$line" ] && LINES+=("$line")

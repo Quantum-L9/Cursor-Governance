@@ -6,11 +6,11 @@
     "layer": "adapter-config",
     "owner": "governance-control-plane",
     "status": "active",
-    "version": "1.2.0",
-    "updated": "2026-08-26",
-    "note": "Manus Custom MCP connector. Brokered Graphiti front door. NO bearer in this file: the broker resolves GRAPHITI_MCP_TOKEN on its own side of the trust boundary and authenticates the session against its verifiable identity (ADAPTER_CONTRACT.md, capability carrier). When the broker URL is unset or the broker is not deployed this server returns an honest 401 and memory runs DEGRADED \u2014 never a reason to paste a token. Peer of environment/agents/adapters/claude-code/mcp.template.json."
+    "version": "1.3.0",
+    "updated": "2026-08-29",
+    "note": "Manus Custom MCP connector. Graphiti HTTPS front door at ${GRAPHITI_MCP_URL}. NO bearer. The capability-broker experiment never shipped \u2014 do not point this server at L9_CAPABILITY_BROKER_URL. Peer of environment/agents/adapters/claude-code/mcp.template.json."
   },
   "name": "graphiti-memory",
   "transport": "http",
-  "url": "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti"
+  "url": "${GRAPHITI_MCP_URL}"
 }

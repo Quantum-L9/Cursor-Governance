@@ -212,8 +212,9 @@ if [[ -f "$_GATE_FAILURE_PY" ]]; then
   fi
 fi
 
-# Isolates are not a uv project. Bind PATH/UV_PROJECT to the donor or
-# $HOME/.cursor-governance locked venv before any uv run/sync.
+# Isolates bind PATH to the donor/primary locked interpreter. UV_PROJECT is
+# the gated checkout when it has pyproject.toml, so uv/ruff cannot re-wrap
+# worktree Python against a sibling clone's toolchain.
 _isolate_venv_existed=0
 if is_l9_isolate_workspace "$WS"; then
   [[ -d "$WS/.venv" ]] && _isolate_venv_existed=1
@@ -395,6 +396,62 @@ else
 fi
 echo "OK: skip doctrine residue / contract surface / git-denial (make pr-full owns corpus)"
 
+_generated_sources_changed() {
+  grep -Eq '^(rules/|skills/|commands/|environment/agents/|environment/program-execution/|ops/generated/)' "$changed_file"
+}
+
+_projection_sources_changed() {
+  grep -Eq '^(skills/|commands/|rules/|environment/agents/adapters/claude-code/|environment/mcp/|\.mcp\.json$)' "$changed_file"
+}
+
+_wiring_sources_changed() {
+  grep -Eq '^(ops/hooks/|ops/scripts/setup_workspace_symlinks\.sh$|ops/scripts/check_governance_wiring\.sh$|ops/scripts/ensure_workspace_wired\.sh$)' "$changed_file"
+}
+
+_root_level_changed() {
+  grep -Eq '^[^/]+$' "$changed_file"
+}
+
+_gate_run_sync() {
+  echo "--- sync-generated-artifacts ---"
+  # Serialized writer: never run this in the parallel reader wave. The heal
+  # writes generated files; a reader hook's wall-clock window would then
+  # report "files were modified by this hook" (check-yaml) as Error 1.
+  # --pe-manifest reaches environment/program-execution/MANIFEST.json.
+  if ! _generated_sources_changed; then
+    echo "OK: skip generated heal (generated sources unchanged)"
+    return 0
+  fi
+  python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
+    --root "$WS" \
+    --changed-file "$changed_file" \
+    --pe-manifest
+}
+
+_gate_run_projection_heal() {
+  echo "--- local-activation heal ---"
+  is_local=0
+  if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -d "${HOME}/.cursor" && -w "${HOME}/.cursor" ]]; then
+    is_local=1
+  fi
+  if [[ "$is_local" -ne 1 || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
+    echo "OK: skip local-activation heal (CI or non-writable ~/.cursor)"
+    return 0
+  fi
+  if ! _projection_sources_changed; then
+    echo "OK: skip local-activation heal (projection sources unchanged)"
+    return 0
+  fi
+  if [[ -f "$GOV_ROOT/ops/scripts/project_llm_rules.py" ]]; then
+    python3 "$GOV_ROOT/ops/scripts/project_llm_rules.py" --root "$WS" --quiet
+  fi
+  python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
+    --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
+    --quiet --no-receipt
+  PR_HEALED_PROJECTION=1
+  export PR_HEALED_PROJECTION
+}
+
 echo "=== writers (once) ==="
 _base_ref="${PR_BASE#origin/}"
 if [[ "${PR_EARLY_OVERLAP:-0}" = "1" ]]; then
@@ -404,8 +461,7 @@ if [[ "${PR_EARLY_OVERLAP:-0}" = "1" ]]; then
   _prefetch_pid=$!
 fi
 _t_writers="$(_now_ms)"
-_gate_run_precommit writers && precommit_rc=0 || precommit_rc=$?
-GATE_TIMING_WRITERS_MS=$(($(_now_ms) - _t_writers))
+PR_PRECOMMIT_DEFER_DIRTY_STOP=1 _gate_run_precommit writers && precommit_rc=0 || precommit_rc=$?
 
 if [[ "$precommit_rc" -ne 0 ]]; then
   if [[ -f "$SCRIPT_DIR/attribute_tree_writers.sh" ]]; then
@@ -422,6 +478,20 @@ if [[ "$precommit_rc" -ne 0 ]]; then
   fi
   exit 1
 fi
+
+echo "=== generated heal (serialized writer) ==="
+_gate_run_sync
+_gate_run_projection_heal
+if git status --porcelain | grep -qvE '^\?\?'; then
+  echo "FAIL: tracked files dirty after generated heal — commit the rewrite, then re-run make pr."
+  echo "      Do not auto-stage. Paths:"
+  git status --porcelain | grep -vE '^\?\?'
+  exit 1
+fi
+if [[ -f "$WS/.l9/pr/regen-required.txt" ]]; then
+  rm -f "$WS/.l9/pr/regen-required.txt"
+fi
+GATE_TIMING_WRITERS_MS=$(($(_now_ms) - _t_writers))
 
 if [[ -n "${_prefetch_pid:-}" ]]; then
   if ! wait "$_prefetch_pid"; then
@@ -526,24 +596,12 @@ _gate_run_pytest() {
   fi
 }
 
-_gate_run_sync() {
-  echo "--- sync-generated-artifacts ---"
-  # Serialized writer: never run this in the parallel reader wave. The heal
-  # writes generated files; a reader hook's wall-clock window would then
-  # report "files were modified by this hook" (check-yaml) as Error 1.
-  # --pe-manifest reaches environment/program-execution/MANIFEST.json. Without
-  # it the PE manifest is never healed on the publish path and
-  # `make program-execution-conformance` goes red on every PE edit. The
-  # governance-self-check drift job is the other pinned caller.
-  python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" \
-    --root "$WS" \
-    --changed-file "$changed_file" \
-    --pe-manifest \
-    --check
-}
-
 _gate_run_root_protect() {
   echo "--- root-file protection ---"
+  if ! _root_level_changed; then
+    echo "OK: skip root-file protection (no root-level path in change set)"
+    return 0
+  fi
   _root_protect_py="$GOV_ROOT/ops/scripts/validate_root_file_protection.py"
   if [[ -f "$_root_protect_py" && -f "$WS/ops/config/root-file-protection.json" ]]; then
     python3 "$_root_protect_py" --base "$PR_BASE" --head HEAD --repo "$WS"
@@ -571,6 +629,14 @@ _gate_run_projection_check() {
   fi
   if [[ "$is_local" -ne 1 || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
     echo "OK: skip local-activation (CI or non-writable ~/.cursor)"
+    return 0
+  fi
+  if [[ "${PR_HEALED_PROJECTION:-0}" == "1" ]]; then
+    echo "OK: skip local-activation --check (healed this run)"
+    return 0
+  fi
+  if ! _projection_sources_changed; then
+    echo "OK: skip local-activation --check (projection sources unchanged)"
     return 0
   fi
   if [[ -f "$GOV_ROOT/ops/scripts/project_llm_rules.py" ]]; then
@@ -602,6 +668,11 @@ _gate_run_wiring() {
     echo "OK: skip wiring (CI or non-writable ~/.cursor)"
     return 0
   fi
+  WS_KIND="$(classify_workspace_kind "$WS")"
+  if { [ "$WS_KIND" = "ssot_checkout" ] || is_l9_isolate_workspace "$WS"; } && ! _wiring_sources_changed; then
+    echo "OK: skip wiring (isolate/ssot_checkout; wiring sources unchanged)"
+    return 0
+  fi
   # Heal missing gitignored .cursor links under the existing make-pr lock.
   # Not sessionStart — reconcilers skip while this lock is held. Without the
   # heal the wiring check below fail-closes on links the gate could have
@@ -610,7 +681,6 @@ _gate_run_wiring() {
     L9_WIRE_LINKS_ONLY=1 bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh" "$WS" \
       || echo "WARN: ensure_workspace_wired failed — wiring check will fail-closed"
   fi
-  WS_KIND="$(classify_workspace_kind "$WS")"
   if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
     wiring_args=("$WS")
     if ! is_cursor_host_surface; then
@@ -676,48 +746,23 @@ _gate_run_readers() {
   return 1
 }
 
-_gate_run_projection_heal() {
-  echo "--- local-activation heal ---"
-  is_local=0
-  if [[ -z "${CI:-}" && -z "${GITHUB_ACTIONS:-}" && -d "${HOME}/.cursor" && -w "${HOME}/.cursor" ]]; then
-    is_local=1
-  fi
-  if [[ "$is_local" -ne 1 || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
-    echo "OK: skip local-activation heal (CI or non-writable ~/.cursor)"
-    return 0
-  fi
-  if [[ -f "$GOV_ROOT/ops/scripts/project_llm_rules.py" ]]; then
-    python3 "$GOV_ROOT/ops/scripts/project_llm_rules.py" --root "$WS" --quiet
-  fi
-  python3 "$GOV_ROOT/ops/scripts/claude_projection.py" \
-    --root "$WS" --workspace "$WS" --domains skills,commands,rules,mcp \
-    --quiet --no-receipt
-}
-
-echo "=== generated heal (serialized writer) ==="
-_gate_run_sync
-_gate_run_projection_heal
-if git status --porcelain | grep -qvE '^\?\?'; then
-  echo "FAIL: tracked files dirty after generated heal — commit the rewrite, then re-run make pr."
-  echo "      Do not auto-stage. Paths:"
-  git status --porcelain | grep -vE '^\?\?'
-  exit 1
-fi
-if [[ -f "$WS/.l9/pr/regen-required.txt" ]]; then
-  rm -f "$WS/.l9/pr/regen-required.txt"
-fi
-
 echo "=== reader wave (once, parallel) ==="
 export PR_CHANGED_FILE="$changed_file"
 _wave_dir="$(mktemp -d)"
 _wave_pids=()
 _wave_names=()
-_wave_t0s=()
 _wave_start() {
   local name="$1"
   shift
-  _wave_t0s+=("$(_now_ms)")
-  ( "$@" ) >"$_wave_dir/$name.log" 2>&1 &
+  (
+    _t0="$(_now_ms)"
+    set +e
+    "$@"
+    _rc=$?
+    set -e
+    echo $(($(_now_ms) - _t0)) >"$_wave_dir/$name.ms"
+    exit "$_rc"
+  ) >"$_wave_dir/$name.log" 2>&1 &
   _wave_pids+=("$!")
   _wave_names+=("$name")
 }
@@ -736,7 +781,10 @@ while [ "$_wave_i" -lt "${#_wave_pids[@]}" ]; do
     echo "FAIL: reader wave job ${_wave_names[$_wave_i]}"
     _wave_rc=1
   fi
-  _elapsed=$(($(_now_ms) - ${_wave_t0s[$_wave_i]}))
+  _elapsed=0
+  if [[ -f "$_wave_dir/${_wave_names[$_wave_i]}.ms" ]]; then
+    _elapsed="$(cat "$_wave_dir/${_wave_names[$_wave_i]}.ms")"
+  fi
   GATE_TIMING_WAVE="${GATE_TIMING_WAVE:+$GATE_TIMING_WAVE }${_wave_names[$_wave_i]}=${_elapsed}"
   _wave_i=$((_wave_i + 1))
 done

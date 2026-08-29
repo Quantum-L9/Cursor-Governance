@@ -63,6 +63,8 @@ def test_session_start_emits_profile(tmp_path: Path) -> None:
     test must not hand it a live checkout to reset. Clearing the flag also
     exercises the local-checkout path, which is the one whose reported
     ``governance SSOT`` / doctrine text this test actually asserts on.
+    ``CLAUDECODE=1`` marks a local Claude Code runtime so the Cursor no-op
+    gate does not skip the inject this test is proving.
     """
     home = tmp_path / "home"
     home.mkdir()
@@ -86,6 +88,7 @@ def test_session_start_emits_profile(tmp_path: Path) -> None:
             "HOME": str(home),
             "CLAUDE_PROJECT_DIR": str(tmp_path),
             "CLAUDE_CODE_REMOTE": "",
+            "CLAUDECODE": "1",
         },
         check=False,
     )

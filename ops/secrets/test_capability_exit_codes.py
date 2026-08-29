@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
-"""Capability survey exit codes distinguish "fix it" from "you cannot" (INV-4).
+"""Capability survey exit codes after broker retirement.
 
-Covers audit findings B-10, B-19 and acceptance tests T-02, T-03, T-04, T-36.
+The capability-broker experiment never shipped. Registered capabilities report
+UNAVAILABLE (survey exit 3). --require still exits 1 when nothing is ENABLED.
+--allow-degraded still exits 0 for UNAVAILABLE. Hosted identity classification
+is diagnostic only — it does not change capability status to BLOCKED_BY_PLATFORM.
 
-Two defects meet here. `--check` without `--require` used to `return 0`
-unconditionally, so a caller surveying the plane read a total outage as success
-(B-19). And `status()` tested the broker URL before the session identity, so a
-runtime that can NEVER mint a broker-verifiable identity was reported as "no
-broker configured" — which reads as a missing environment field and sent
-operators to fix something no field can fix (B-10).
-
-Environments are constructed explicitly rather than inherited, so these assert
-on the classifier rather than on whatever the host session happens to be.
+Environments are constructed explicitly rather than inherited.
 """
 
 from __future__ import annotations
@@ -31,6 +26,7 @@ from capability_client import (  # noqa: E402
     EXIT_BLOCKED_BY_PLATFORM,
     EXIT_DEGRADED,
     EXIT_OK,
+    UNAVAILABLE,
     CapabilityClient,
     main,
     session_identity,
@@ -56,7 +52,6 @@ class SessionIdentityTests(unittest.TestCase):
         self.assertTrue(identity.tracking)
 
     def test_unknown_runtime_is_classified_separately(self) -> None:
-        """A misconfigured self-hosted runtime has a remedy; a hosted one does not."""
         identity = session_identity(BASE_ENV)
         self.assertFalse(identity.available)
         self.assertNotEqual(identity.reason, "hosted_surface_issues_no_session_identity")
@@ -72,64 +67,35 @@ class SessionIdentityTests(unittest.TestCase):
         Path(path).unlink()
 
 
-class StatusPrecedenceTests(unittest.TestCase):
-    """T-36: identity is evaluated before the broker URL, and the order matters."""
-
-    def test_hosted_surface_is_blocked_not_degraded_even_with_a_broker_url(self) -> None:
+class RetiredStatusTests(unittest.TestCase):
+    def test_registered_capability_is_unavailable_even_with_a_broker_url(self) -> None:
         client = CapabilityClient(env=hosted_env(L9_CAPABILITY_BROKER_URL="https://broker.test"))
         status = client.status("sonar.read_issues")
-        self.assertEqual(status.status, BLOCKED_BY_PLATFORM)
+        self.assertEqual(status.status, UNAVAILABLE)
+        self.assertIn("retired", status.detail)
 
     def test_hosted_surface_is_never_reported_as_no_broker_configured(self) -> None:
-        """The precise misdirection the audit observed."""
         client = CapabilityClient(env=hosted_env())
         status = client.status("sonar.read_issues")
-        self.assertEqual(status.status, BLOCKED_BY_PLATFORM)
+        self.assertEqual(status.status, UNAVAILABLE)
         self.assertNotIn("no broker configured", status.detail)
 
-    def test_identified_runtime_without_a_broker_is_degraded(self) -> None:
-        """With an identity in hand, a missing URL IS the operator's to fix."""
+    def test_identity_does_not_enable_a_retired_broker(self) -> None:
         with tempfile.NamedTemporaryFile("w", delete=False) as handle:
             handle.write("token-material")
             path = handle.name
         client = CapabilityClient(env={**BASE_ENV, "L9_WORKLOAD_IDENTITY_TOKEN_FILE": path})
         status = client.status("sonar.read_issues")
-        self.assertEqual(status.status, DEGRADED)
-        self.assertIn("no broker configured", status.detail)
+        self.assertEqual(status.status, UNAVAILABLE)
+        self.assertNotEqual(status.status, ENABLED)
         Path(path).unlink()
-
-    def test_unconfigured_runtime_degrades_rather_than_blocking(self) -> None:
-        """A fixable identity gap must not be reported as unfixable.
-
-        BLOCKED_BY_PLATFORM means nothing here can produce an identity. An
-        unconfigured self-hosted runtime has simply not been given one, and
-        overstating that as platform-blocked is the same kind of misreport as
-        understating an outage — it just fails in the other direction. Caught by
-        tests/ops/secrets/test_capability_plane.py, which this now guards.
-        """
-        client = CapabilityClient(env=dict(BASE_ENV))
-        status = client.status("sonar.read_issues")
-        self.assertEqual(status.status, DEGRADED)
-        self.assertNotEqual(status.status, BLOCKED_BY_PLATFORM)
-
-    def test_identity_gap_with_a_broker_configured_is_degraded_not_blocked(self) -> None:
-        client = CapabilityClient(
-            env={**BASE_ENV, "L9_CAPABILITY_BROKER_URL": "https://broker.test"}
-        )
-        self.assertEqual(client.status("sonar.read_issues").status, DEGRADED)
-
-    def test_only_a_terminal_identity_gap_blocks(self) -> None:
-        self.assertTrue(session_identity(hosted_env()).terminal)
-        self.assertFalse(session_identity(BASE_ENV).terminal)
 
     def test_unregistered_capability_is_unavailable(self) -> None:
         client = CapabilityClient(env=hosted_env())
-        self.assertEqual(client.status("nope.not_a_capability").status, "UNAVAILABLE")
+        self.assertEqual(client.status("nope.not_a_capability").status, UNAVAILABLE)
 
 
 class ExitCodeTests(unittest.TestCase):
-    """T-02, T-03, T-04. main() reads os.environ, so each case patches it."""
-
     def _main(self, argv: list[str], env: dict[str, str]) -> int:
         import os
 
@@ -142,44 +108,24 @@ class ExitCodeTests(unittest.TestCase):
             os.environ.clear()
             os.environ.update(saved)
 
-    def test_blocked_by_platform_exits_4(self) -> None:
-        self.assertEqual(self._main(["--check"], hosted_env()), EXIT_BLOCKED_BY_PLATFORM)
-
-    def test_degraded_exits_3(self) -> None:
-        with tempfile.NamedTemporaryFile("w", delete=False) as handle:
-            handle.write("token-material")
-            path = handle.name
-        env = {**BASE_ENV, "L9_WORKLOAD_IDENTITY_TOKEN_FILE": path}
-        self.assertEqual(self._main(["--check"], env), EXIT_DEGRADED)
-        Path(path).unlink()
+    def test_survey_exits_degraded_not_blocked(self) -> None:
+        self.assertEqual(self._main(["--check"], hosted_env()), EXIT_DEGRADED)
 
     def test_allow_degraded_exits_0_and_names_what_it_tolerated(self) -> None:
-        with tempfile.NamedTemporaryFile("w", delete=False) as handle:
-            handle.write("token-material")
-            path = handle.name
-        env = {**BASE_ENV, "L9_WORKLOAD_IDENTITY_TOKEN_FILE": path}
         import contextlib
         import io
 
         buffer = io.StringIO()
         with contextlib.redirect_stdout(buffer):
-            rc = self._main(["--check", "--allow-degraded"], env)
+            rc = self._main(["--check", "--allow-degraded"], hosted_env())
         self.assertEqual(rc, EXIT_OK)
         self.assertIn("tolerated (--allow-degraded):", buffer.getvalue())
         self.assertIn("sonar.read_issues", buffer.getvalue())
-        Path(path).unlink()
-
-    def test_allow_degraded_does_not_rescue_blocked_by_platform(self) -> None:
-        """INV-4: a state this repository cannot repair never exits 0."""
-        self.assertEqual(
-            self._main(["--check", "--allow-degraded"], hosted_env()),
-            EXIT_BLOCKED_BY_PLATFORM,
-        )
 
     def test_require_preserves_the_legacy_contract(self) -> None:
         self.assertEqual(self._main(["--check", "--require", "sonar.read_issues"], hosted_env()), 1)
 
-    def test_survey_prints_the_platform_block_detail(self) -> None:
+    def test_survey_prints_retired_not_platform_block(self) -> None:
         import contextlib
         import io
 
@@ -187,16 +133,15 @@ class ExitCodeTests(unittest.TestCase):
         with contextlib.redirect_stdout(buffer):
             self._main(["--check"], hosted_env())
         printed = buffer.getvalue()
-        self.assertIn(f"state={BLOCKED_BY_PLATFORM}", printed)
-        self.assertIn("reason=hosted_surface_issues_no_session_identity", printed)
-        self.assertIn("remediation=none_available_in_repo", printed)
-        self.assertIn("tracking=", printed)
+        self.assertIn("broker=retired", printed)
+        self.assertNotIn(f"state={BLOCKED_BY_PLATFORM}", printed)
 
 
 class VocabularyTests(unittest.TestCase):
     def test_status_words_are_distinct(self) -> None:
         self.assertNotEqual(ENABLED, DEGRADED)
         self.assertNotEqual(DEGRADED, BLOCKED_BY_PLATFORM)
+        self.assertNotEqual(UNAVAILABLE, ENABLED)
         self.assertNotEqual(EXIT_DEGRADED, EXIT_BLOCKED_BY_PLATFORM)
 
 

@@ -170,3 +170,44 @@ def test_untracked_residue_does_not_trip_the_guard(tmp_path: Path) -> None:
     assert result.returncode == 0
     outcome = json.loads(receipt.read_text(encoding="utf-8"))["outcome"]
     assert outcome != "reset-skipped-dirty", "untracked residue must not block the reset"
+
+
+def test_cursor_skip_precedes_claude_banner() -> None:
+    text = body()
+    skip = text.index("_l9_claude_runtime")
+    banner = text.index('LINES+=("L9 Governance — Claude Code session")')
+    assert skip < banner
+
+
+def test_cursor_runtime_emits_empty_context(tmp_path: Path) -> None:
+    """Cursor loads this hook via projected .claude/settings.json.
+
+    Without a Claude Code runtime marker it must not inject account-field
+    drift, broker probes, or never_ran installer receipts.
+    """
+    import json
+    import subprocess
+
+    home = tmp_path / "home"
+    home.mkdir()
+    (home / ".cursor-governance").symlink_to(REPO_ROOT)
+    result = subprocess.run(
+        ["bash", str(HOOK)],
+        capture_output=True,
+        text=True,
+        env={
+            "HOME": str(home),
+            "PATH": "/usr/bin:/bin:/usr/local/bin",
+            "CURSOR_AGENT": "1",
+            "CLAUDE_PROJECT_DIR": str(tmp_path),
+        },
+        check=False,
+        timeout=30,
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    ctx = payload["hookSpecificOutput"]["additionalContext"]
+    assert ctx == ""
+    assert "account field drift" not in ctx
+    assert "capability plane" not in ctx
+    assert "never_ran" not in ctx

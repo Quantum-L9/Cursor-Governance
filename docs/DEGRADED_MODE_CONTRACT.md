@@ -1,49 +1,31 @@
-# Degraded-mode contract — what still works with zero brokered capabilities
+# Degraded-mode contract — what still works with the capability broker retired
 
-**Findings:** mobile bootstrap audit B-09, B-10
-**Status:** in force on every Anthropic-hosted (`cloud_default`) session
+**Findings:** mobile bootstrap audit B-09, B-10; capability-broker retirement 2026-08-29
+**Status:** in force on every model-controlled surface
 
-Every brokered capability on this surface currently reports
-`BLOCKED_BY_PLATFORM`. That is not a misconfiguration and not an outage, and no
-environment field will change it. This document says exactly what remains valid,
-so the answer is written down rather than rediscovered by trial.
+The capability-broker experiment **never shipped**. `capability_client.py`
+reports every registered capability `UNAVAILABLE`. That is not a
+misconfiguration and not an outage, and no environment field will change it.
+This document says exactly what remains valid.
 
-## <a id="hosted-surface-identity"></a>Why: the hosted surface issues no session identity
+## <a id="hosted-surface-identity"></a>Why: the broker is gone, not waiting
 
-`ops/secrets/capability_client.py` accepts two proofs of identity:
+The former architecture needed a platform-issued session identity the broker
+could verify (`ccpool_*` JWT or a projected workload identity). An
+Anthropic-hosted `cloud_default` environment issues neither. Independently,
+`broker.quantumaipartners.com` was never deployed.
 
-1. a `ccpool_*` session JWT — self-hosted Claude Code Remote pools only
-2. a projected workload identity (Kubernetes SA, SPIFFE JWT-SVID)
+Retirement closes both questions: do not set `L9_CAPABILITY_BROKER_URL`, do not
+probe a never-shipped host, and do not paste a reusable secret into a
+model-controlled sandbox to "enable" Sonar / Semgrep / Context7.
 
-An Anthropic-hosted `cloud_default` environment issues **neither**. The broker
-therefore has nothing to verify, and the only way to give it something would be
-to place a reusable secret in a model-controlled sandbox — which is the exact
-posture the capability architecture exists to remove.
+Graphiti memory uses `${GRAPHITI_MCP_URL}` (default
+`https://memory.quantumaipartners.com/graphiti/mcp`) with **no bearer**. Cursor
+on this machine may still use the SSH tunnel at `127.0.0.1:8100`.
 
-So the block is structural. It holds regardless of `L9_CAPABILITY_BROKER_URL`,
-regardless of whether the broker is deployed, and regardless of network policy.
-It is reported as `BLOCKED_BY_PLATFORM` (exit 4) and never as "no broker
-configured" (exit 3), because those call for different actions and only one of
-them is achievable.
+Archived implementation: `ops/secrets/_archived/capability-broker/RETIRED.md`.
 
-**Tracking:** this needs a platform-side session-identity mechanism, or an L9
-self-hosted `ccpool_*` environment. Both are outside this repository.
-
-## Compounding: the broker host is not deployed
-
-`broker.quantumaipartners.com` has **no DNS record**. Verified by contrast:
-`sonarcloud.io`, `semgrep.dev`, `context7.com` and `memory.quantumaipartners.com`
-all resolve from the same runtime; the broker host raises `gaierror` locally and
-`502 CONNECT` through the egress gateway.
-
-This is a second, independent blocker. Fixing it alone would not enable a single
-capability, because the identity gap above still applies.
-
-```bash
-python3 ops/secrets/probe_broker.py        # tells the two apart
-```
-
-## What IS valid in degraded mode
+## What IS valid
 
 This is the supported operating envelope, not a list of things that happen to
 work today.
@@ -58,6 +40,7 @@ work today.
 | Local `semgrep` CE, `bandit`, `pip-audit` | Credential-free rulesets |
 | `gitleaks` | Once provisioned; the security gate fails closed without it |
 | Every `l9-*` skill that does not call a capability | |
+| Graphiti MCP at `GRAPHITI_MCP_URL` | No bearer; session may be memory-blind |
 
 | Does not work | Consequence |
 |---|---|
@@ -65,15 +48,15 @@ work today.
 | Autonomous merge | `gh pr merge` is GraphQL, so it 403s here anyway; and there is no autonomous-merge env boolean — merge needs the scoped `/l9-pr-remediation` receipt (or human `L9_MERGE_AUTHORIZED`) |
 | `sonar.read_issues` | No authenticated Sonar; public reads only |
 | `semgrep.appsec_scan`, `semgrep.mcp` | No authenticated AppSec; CE unaffected |
-| `context7.mcp` | No library docs retrieval |
+| `context7.mcp` | No library docs retrieval via the retired broker |
 | `gitguardian.mcp` | No brokered secret scanning; `gitleaks` still runs locally |
-| `github.mcp`, `github.packages_read` | Platform GitHub MCP is connected and covers most of this |
+| `github.mcp`, `github.packages_read` | Platform GitHub MCP (where connected) covers most of this |
 
 ## The rule that does not bend
 
-A capability reporting `DEGRADED` or `BLOCKED_BY_PLATFORM` is **never** a reason
-to paste a credential into this surface. Not `SONAR_TOKEN`, not
-`SEMGREP_APP_TOKEN`, not `INFISICAL_CLIENT_SECRET`, not a Graphiti bearer.
-Everything an LLM can execute can read that LLM's environment. A degraded
-capability is a delivery problem on the trusted side; a pasted secret is a
-permanent compromise on this one.
+A capability reporting `UNAVAILABLE`, `DEGRADED`, or `BLOCKED_BY_PLATFORM` is
+**never** a reason to paste a credential into this surface. Not `SONAR_TOKEN`,
+not `SEMGREP_APP_TOKEN`, not `INFISICAL_CLIENT_SECRET`, not a Graphiti bearer.
+Everything an LLM can execute can read that LLM's environment. An unavailable
+capability is a delivery problem; a pasted secret is a permanent compromise on
+this surface.

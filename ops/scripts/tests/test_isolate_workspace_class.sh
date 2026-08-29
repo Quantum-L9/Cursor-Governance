@@ -88,4 +88,12 @@ fi
   || fail_now "toolchain root has no locked interpreter: $tool"
 pass "toolchain root is donor or primary, not isolate"
 
+printf '[project]\nname = "isolate-uv"\nversion = "0.0.0"\n' >"$ISO/pyproject.toml"
+bind_isolate_toolchain "$ISO" "$HOME/.cursor-governance"
+[ "$UV_PROJECT" = "$ISO" ] || fail_now "UV_PROJECT must be isolate when pyproject.toml exists: $UV_PROJECT"
+if [ "$GOV_TOOLCHAIN_ROOT" = "$ISO" ]; then
+  fail_now "toolchain root must stay donor/primary, not isolate"
+fi
+pass "isolate UV_PROJECT is checkout, PATH donor"
+
 echo "RESULT: PASS — isolate workspace class ($PASS checks)"

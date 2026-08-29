@@ -430,10 +430,25 @@ if [ -f "$GRAPHITI_CLI" ]; then
   else
     fail "postToolUse plan-kernel-gate.py missing from hooks.json"
   fi
-  if grep -q "plan-kernel-execute-gate.sh" "$HOOKS_JSON" 2>/dev/null; then
-    pass "beforeShellExecution plan kernel execute gate registered"
+  if grep -q "before-shell-execution-gate.sh" "$HOOKS_JSON" 2>/dev/null; then
+    pass "beforeShellExecution combined gate registered"
   else
-    fail "beforeShellExecution plan-kernel-execute-gate.sh missing from hooks.json"
+    fail "beforeShellExecution before-shell-execution-gate.sh missing from hooks.json"
+  fi
+  if grep -q "./hooks/graphiti-gate-shell.sh" "$HOOKS_JSON" 2>/dev/null \
+    || grep -q "./hooks/l4-local-execution-gate-shell.sh" "$HOOKS_JSON" 2>/dev/null \
+    || grep -q "./hooks/plan-kernel-execute-gate.sh" "$HOOKS_JSON" 2>/dev/null; then
+    fail "stale beforeShellExecution predecessor still registered (reconcile should collapse to before-shell-execution-gate.sh)"
+  fi
+  if [ -x "$HOME/.cursor/hooks/before-shell-execution-gate.sh" ] || [ -L "$HOME/.cursor/hooks/before-shell-execution-gate.sh" ]; then
+    pass "before-shell-execution-gate.sh installed under ~/.cursor/hooks"
+  else
+    fail "before-shell-execution-gate.sh missing under ~/.cursor/hooks"
+  fi
+  if [ -f "$HOME/.cursor/hooks/before_shell_execution_gate.py" ] || [ -L "$HOME/.cursor/hooks/before_shell_execution_gate.py" ]; then
+    pass "before_shell_execution_gate.py installed under ~/.cursor/hooks"
+  else
+    fail "before_shell_execution_gate.py missing under ~/.cursor/hooks"
   fi
   if [ -x "$HOME/.cursor/hooks/plan-kernel-gate.py" ] || [ -L "$HOME/.cursor/hooks/plan-kernel-gate.py" ]; then
     pass "plan-kernel-gate.py installed under ~/.cursor/hooks"
