@@ -1,0 +1,11 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 09_detailed_technical_spec
+objective_contains:
+- stderr
+prohibitions:
+- MUST NOT
+- DO NOT
+expected_dispositions:
+- UNKNOWN
+authority_must_not_expand: true
+source_traceability_required: true

@@ -90,11 +90,19 @@ class SegmentationTests(unittest.TestCase):
         self.assertEqual(unit.id, edited_unit.id)
         self.assertNotEqual(unit.sha256, edited_unit.sha256)
 
-    def test_normative_signals_are_case_sensitive(self) -> None:
-        self.assertEqual(normative_signals("The router must be fast."), ())
+    def test_normative_signals_retain_lowercase_material_prohibitions(self) -> None:
+        self.assertEqual(normative_signals("The router must be fast."), ("MUST",))
         self.assertEqual(normative_signals("The router MUST be fast."), ("MUST",))
         self.assertIn("MUST NOT", normative_signals("It MUST NOT happen."))
         self.assertNotIn("MUST", normative_signals("It MUST NOT happen."))
+        self.assertIn("DO NOT", normative_signals("don't replace assurance"))
+        self.assertEqual(
+            set(normative_signals("DO NOT REPLACE ASSURANCE")),
+            set(normative_signals("do not replace assurance")),
+        )
+        self.assertEqual(normative_signals("Please keep going."), ())
+        self.assertEqual(normative_signals("it deliberately never becomes one."), ())
+        self.assertIn("NEVER", normative_signals("never replace assurance"))
 
     def test_line_spans_point_back_at_the_document(self) -> None:
         text = normalize_source(DOC)

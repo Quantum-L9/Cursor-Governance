@@ -1,0 +1,13 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 03_long_architecture_adr
+objective_contains:
+- Compiler ingress
+preserve:
+- assurance
+prohibitions:
+- MUST NOT
+- DO NOT
+expected_dispositions:
+- KEEP
+authority_must_not_expand: true
+source_traceability_required: true

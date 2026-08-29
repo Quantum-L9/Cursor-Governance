@@ -227,8 +227,13 @@ class ClaudeProviderSourceTests(unittest.TestCase):
         self.assertEqual(invocation.status, "FAIL")
         evidence = invocation.evidence[0]
         self.assertEqual(evidence["subtype"], "error_max_turns")
+        self.assertEqual(evidence["num_turns"], 13)
         self.assertIn("error: max turns exceeded", evidence["stderr_excerpt"])
         self.assertIn("error_max_turns", evidence["stdout_excerpt"])
+        self.assertEqual(evidence["stderr_text"], evidence["stderr_excerpt"])
+        self.assertEqual(evidence["stdout_text"], evidence["stdout_excerpt"])
+        self.assertTrue(str(evidence["stderr_digest"]).startswith("sha256:"))
+        self.assertTrue(str(evidence["stdout_digest"]).startswith("sha256:"))
         self.assertEqual(
             invocation.result.structured_payload["changed_files"],
             ["ops/scripts/claude_projection.py"],
@@ -236,6 +241,38 @@ class ClaudeProviderSourceTests(unittest.TestCase):
         error = invocation.result.errors[0]
         self.assertEqual(error["subtype"], "error_max_turns")
         self.assertIn("stderr_excerpt", error)
+        self.assertIn("error: max turns exceeded", str(error["stderr_text"]))
+        transport = invocation.result.transport_evidence_refs[0]
+        self.assertIn("error: max turns exceeded", str(transport["stderr_text"]))
+        self.assertTrue(str(transport["stderr_digest"]).startswith("sha256:"))
+
+    def test_worker_cannot_git_commit_and_must_return_null_candidate_sha(self) -> None:
+        renderer = self._permission_renderer()
+        profile = {"allowed_actions": ["inspect", "local_write"], "denied_actions": ["push"]}
+        permissions = renderer.render_permissions(profile, {"validation_commands": []})
+        self.assertIn("Bash(git add:*)", permissions["denied"])
+        self.assertIn("Bash(git commit:*)", permissions["denied"])
+        self.assertIn("Bash(gh:*)", permissions["denied"])
+        self.assertNotIn("Bash(git push:*)", permissions["allowed"])
+        from peer_execution.context import build_context_manifest
+
+        manifest = build_context_manifest(
+            {
+                "task_id": "task-1",
+                "program_digest": "a" * 64,
+                "contract_digest": "b" * 64,
+                "base_sha": "c" * 40,
+                "worktree": "/tmp/w",
+                "objective": "tiny edit",
+                "writable_paths": ["src/one.py"],
+                "validation_commands": [],
+                "required_evidence_ids": [],
+                "requested_actions": ["inspect", "local_write"],
+            }
+        )
+        instruction = str(manifest["worker_instruction"])
+        self.assertIn("candidate_sha MUST be JSON null", instruction)
+        self.assertIn("do not git add or git commit", instruction)
 
 
 if __name__ == "__main__":

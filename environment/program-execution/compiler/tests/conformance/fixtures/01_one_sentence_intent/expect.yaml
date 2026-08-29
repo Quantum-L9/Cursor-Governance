@@ -1,0 +1,12 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 01_one_sentence_intent
+objective_contains:
+- Harden the existing Program Execution compiler ingress
+preserve:
+- compiler
+prohibitions: []
+expected_dispositions:
+- HARDEN_WIRE_EXISTING
+unknowns_expected: []
+authority_must_not_expand: true
+source_traceability_required: true

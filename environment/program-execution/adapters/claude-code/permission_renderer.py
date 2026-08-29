@@ -38,6 +38,9 @@ def render_permissions(
         if not isinstance(command, str):
             raise ValueError("validation commands must be strings")
         allowed.append(f"Bash({validate_validation_command(command)})")
+    # Workers may not mint a candidate commit. candidate_sha on the worker
+    # receipt is JSON null; the controller records worktree HEAD after the
+    # attempt. Do not grant git add/commit to "fix" that identity.
     denied = [
         "Bash(git add:*)",
         "Bash(git commit:*)",
