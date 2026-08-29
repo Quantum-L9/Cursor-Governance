@@ -11,9 +11,16 @@ than editing it by hand.
 |---|---|---|
 | `mobile-bootstrap-fixes` | 12 todos repairing wrong-workspace wiring, false READY, MCP drift and command parity in the cloud adapter | validated, unexecuted |
 | `contract-v31-fixes` | 5 todos amending the remediation execution contract to v3.1 — partial-run safety, measured self-heal budget, and three C11 defects | validated, unexecuted |
+| `program-execution-remediation/` | Compiled six-contract pack repairing seven confirmed Program Execution authority findings; directory, not a pair | validated, unexecuted, **baseline drifted** |
 
 `mobile-bootstrap-fixes.readable.md` is a human-facing rendering of the same
 PLAN_DOCUMENT — narrative, not executable.
+
+`program-execution-remediation/` is the one entry that is a directory rather
+than a plan pair: it is a compiled contract pack kept verbatim, hash-verified
+against its own `MANIFEST.yaml`. Its PLAN_DOCUMENT and projection live inside it
+under `plans/`. Read its `README.md` before executing it — its locked baseline
+has drifted from `main`.
 
 ## Superseded snapshots
 

@@ -1,0 +1,282 @@
+schema: l9.environment_experience.source_map/v1
+generated_at: '2026-08-25T02:03:03Z'
+artifacts:
+- final_path: README.md
+  final_artifact_id: FINAL-001
+  source_versions: &id001
+  - P1-P9
+  - _reconciliation artifacts
+  source_paths: *id001
+  reconciliation_actions:
+  - SYNTHESIZE
+  - ORIENT
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: ARCHITECTURE.md
+  final_artifact_id: FINAL-002
+  source_versions: &id002
+  - CF-*
+  - CR-*
+  - CI-*
+  - C-001..C-008
+  source_paths: *id002
+  reconciliation_actions:
+  - MERGE
+  - RECONSTRUCT
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: LAWS_AND_INVARIANTS.md
+  final_artifact_id: FINAL-003
+  source_versions: &id003
+  - P1-P9 recurring evidence
+  source_paths: *id003
+  reconciliation_actions:
+  - MERGE
+  - DERIVE_WITH_EVIDENCE
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: EXPERIENCE_REPORT.md
+  final_artifact_id: FINAL-004
+  source_versions: &id004
+  - P1-P9/EXPERIENCE_REPORT.md
+  - P1-P9/experience.yaml
+  source_paths: *id004
+  reconciliation_actions:
+  - MERGE
+  - RECONCILE
+  superseded_sources: []
+  restored_older_content:
+  - Pack 1 raw-evidence-backed observations retained through mapped canonical concepts where still compatible.
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: FRICTION_AND_FAILURES.md
+  final_artifact_id: FINAL-005
+  source_versions: &id005
+  - P1-P9/FRICTION_AND_FAILURES.md
+  - P1-P9/failures.yaml
+  - P1-P9/friction.yaml
+  source_paths: *id005
+  reconciliation_actions:
+  - MERGE
+  - DEDUPLICATE_SEMANTICALLY
+  superseded_sources: []
+  restored_older_content:
+  - Pack 1 raw-evidence-backed observations retained through mapped canonical concepts where still compatible.
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: IMPROVEMENT_PLAN.md
+  final_artifact_id: FINAL-006
+  source_versions: &id006
+  - P1-P9/IMPROVEMENT_PLAN.md
+  - P1-P9/improvements.yaml
+  source_paths: *id006
+  reconciliation_actions:
+  - MERGE
+  - RECONCILE_ROADMAP
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: environment_inventory.yaml
+  final_artifact_id: FINAL-007
+  source_versions: &id007
+  - P1-P9/environment_inventory.yaml
+  source_paths: *id007
+  reconciliation_actions:
+  - MERGE
+  - PRESERVE_VARIABILITY
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: experience.yaml
+  final_artifact_id: FINAL-008
+  source_versions: &id008
+  - P1-P9/experience.yaml
+  source_paths: *id008
+  reconciliation_actions:
+  - MERGE
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: failures.yaml
+  final_artifact_id: FINAL-009
+  source_versions: &id009
+  - P1-P9/failures.yaml
+  source_paths: *id009
+  reconciliation_actions:
+  - MERGE
+  - KEEP_CONTEXT_SPECIFIC
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: friction.yaml
+  final_artifact_id: FINAL-010
+  source_versions: &id010
+  - P1-P9/friction.yaml
+  source_paths: *id010
+  reconciliation_actions:
+  - MERGE
+  - KEEP_CONTEXT_SPECIFIC
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: improvements.yaml
+  final_artifact_id: FINAL-011
+  source_versions: &id011
+  - P1-P9/improvements.yaml
+  source_paths: *id011
+  reconciliation_actions:
+  - MERGE
+  - CURRENT_ROADMAP_ONLY_ACTIVE
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: OPEN_DECISIONS.yaml
+  final_artifact_id: FINAL-012
+  source_versions: &id012
+  - P1-P9 unknown/decision fields
+  - CONFLICTS
+  source_paths: *id012
+  reconciliation_actions:
+  - MERGE
+  - OPEN_CONFLICT
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: _reconciliation/CORPUS.yaml
+  final_artifact_id: FINAL-013
+  source_versions: &id013
+  - P1-P9/MANIFEST.json
+  - archive hashes
+  - discovery results
+  source_paths: *id013
+  reconciliation_actions:
+  - INDEX
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: _reconciliation/LINEAGE.yaml
+  final_artifact_id: FINAL-014
+  source_versions: &id014
+  - P1-P9/MANIFEST.json
+  - P9 supersedes block
+  - archive hashes
+  source_paths: *id014
+  reconciliation_actions:
+  - RECONSTRUCT_LINEAGE
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: _reconciliation/RECONCILIATION_LEDGER.yaml
+  final_artifact_id: FINAL-015
+  source_versions: &id015
+  - all included source records
+  source_paths: *id015
+  reconciliation_actions:
+  - INDEX_RECONCILIATION
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: _reconciliation/COMPLETENESS_MATRIX.yaml
+  final_artifact_id: FINAL-016
+  source_versions: &id016
+  - all 93 source files
+  source_paths: *id016
+  reconciliation_actions:
+  - MAP_DISPOSITION
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: _reconciliation/CONFLICTS.yaml
+  final_artifact_id: FINAL-017
+  source_versions: &id017
+  - P1-P9 conflicting claims/proposals
+  source_paths: *id017
+  reconciliation_actions:
+  - OPEN_CONFLICT
+  - RESOLVE_WITH_EVIDENCE
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high
+- final_path: _reconciliation/SOURCE_MAP.yaml
+  final_artifact_id: FINAL-018
+  source_versions: &id018
+  - all included source artifacts
+  source_paths: *id018
+  reconciliation_actions:
+  - INDEX_PROVENANCE
+  superseded_sources: []
+  restored_older_content: []
+  unresolved_conflicts:
+  - C-002
+  - C-003
+  - C-005
+  confidence: high

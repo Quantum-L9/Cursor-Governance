@@ -390,18 +390,28 @@ elif ! command -v claude >/dev/null 2>&1; then
 fi
 
 # --- 4) Excludes for the GENERATED .claude mirrors --------------------------
-# Shared activation artifacts are excluded by the shared bootstrap; these two
-# globs are Claude-specific. Only the GENERATED mirrors are excluded —
+# Shared activation artifacts are excluded by the shared bootstrap; these globs
+# are Claude-specific. Only the GENERATED mirrors are excluded —
 # .claude/settings.json and .claude/hooks/ are committable consumer wiring.
+#
+# .mcp.json belongs in this list for the same reason the mirrors do: it is a
+# render of mcp.template.json (claude_projection.py), not hand-authored, and in
+# a consumer that does not commit it the projection shows as untracked on every
+# session. Measured across the four in-scope repos: tracked in Cursor-Governance,
+# untracked in l9-ci-core, l9-cognitive-runtime and l9-meta-injector.
+#
+# Excluding it is a no-op wherever it IS committed — .git/info/exclude only
+# governs untracked paths, so a tracked .mcp.json keeps showing its real diff.
+# That is what makes one list correct for both cases.
 if [ "$CHECK" != "1" ] && git -C "$WORKSPACE" rev-parse --git-dir >/dev/null 2>&1; then
   exclude_file="$(git -C "$WORKSPACE" rev-parse --git-dir)/info/exclude"
   case "$exclude_file" in /*) : ;; *) exclude_file="$WORKSPACE/$exclude_file" ;; esac
   mkdir -p "$(dirname "$exclude_file")"
   touch "$exclude_file"
-  for glob in ".claude/skills/" ".claude/rules/" ".claude/commands/"; do
+  for glob in ".claude/skills/" ".claude/rules/" ".claude/commands/" ".mcp.json"; do
     grep -qxF "$glob" "$exclude_file" 2>/dev/null || printf '%s\n' "$glob" >> "$exclude_file"
   done
-  say "excluded generated .claude mirrors (local, uncommitted)"
+  say "excluded generated .claude mirrors + .mcp.json (local, uncommitted)"
 fi
 
 # --- 5) Thin l9 dispatcher --------------------------------------------------

@@ -1,0 +1,24 @@
+===== PR-001.contract.json =====
+/mnt/data/claude-compiler-v2.7-loaded/claude-coding-contract-compiler/scripts/validate_contract.py:167: DeprecationWarning: jsonschema.RefResolver is deprecated as of v4.18.0, in favor of the https://github.com/python-jsonschema/referencing library, which provides more compliant referencing behavior as well as more flexible APIs for customization. A future release will remove RefResolver. Please file a feature request (on referencing) if you are missing an API for the kind of customization you need.
+  resolver = jsonschema.RefResolver(base_uri=schema_dir.as_uri()+"/", referrer=schema, store=store)
+VALID: schema + Claude-fit + DPK (score=63, band=rejected)
+===== PR-002.contract.json =====
+/mnt/data/claude-compiler-v2.7-loaded/claude-coding-contract-compiler/scripts/validate_contract.py:167: DeprecationWarning: jsonschema.RefResolver is deprecated as of v4.18.0, in favor of the https://github.com/python-jsonschema/referencing library, which provides more compliant referencing behavior as well as more flexible APIs for customization. A future release will remove RefResolver. Please file a feature request (on referencing) if you are missing an API for the kind of customization you need.
+  resolver = jsonschema.RefResolver(base_uri=schema_dir.as_uri()+"/", referrer=schema, store=store)
+VALID: schema + Claude-fit + DPK (score=63, band=rejected)
+===== PR-003.contract.json =====
+/mnt/data/claude-compiler-v2.7-loaded/claude-coding-contract-compiler/scripts/validate_contract.py:167: DeprecationWarning: jsonschema.RefResolver is deprecated as of v4.18.0, in favor of the https://github.com/python-jsonschema/referencing library, which provides more compliant referencing behavior as well as more flexible APIs for customization. A future release will remove RefResolver. Please file a feature request (on referencing) if you are missing an API for the kind of customization you need.
+  resolver = jsonschema.RefResolver(base_uri=schema_dir.as_uri()+"/", referrer=schema, store=store)
+VALID: schema + Claude-fit + DPK (score=63, band=rejected)
+===== PR-004.contract.json =====
+/mnt/data/claude-compiler-v2.7-loaded/claude-coding-contract-compiler/scripts/validate_contract.py:167: DeprecationWarning: jsonschema.RefResolver is deprecated as of v4.18.0, in favor of the https://github.com/python-jsonschema/referencing library, which provides more compliant referencing behavior as well as more flexible APIs for customization. A future release will remove RefResolver. Please file a feature request (on referencing) if you are missing an API for the kind of customization you need.
+  resolver = jsonschema.RefResolver(base_uri=schema_dir.as_uri()+"/", referrer=schema, store=store)
+VALID: schema + Claude-fit + DPK (score=63, band=rejected)
+===== PR-005.contract.json =====
+/mnt/data/claude-compiler-v2.7-loaded/claude-coding-contract-compiler/scripts/validate_contract.py:167: DeprecationWarning: jsonschema.RefResolver is deprecated as of v4.18.0, in favor of the https://github.com/python-jsonschema/referencing library, which provides more compliant referencing behavior as well as more flexible APIs for customization. A future release will remove RefResolver. Please file a feature request (on referencing) if you are missing an API for the kind of customization you need.
+  resolver = jsonschema.RefResolver(base_uri=schema_dir.as_uri()+"/", referrer=schema, store=store)
+VALID: schema + Claude-fit + DPK (score=63, band=rejected)
+===== PR-006.contract.json =====
+/mnt/data/claude-compiler-v2.7-loaded/claude-coding-contract-compiler/scripts/validate_contract.py:167: DeprecationWarning: jsonschema.RefResolver is deprecated as of v4.18.0, in favor of the https://github.com/python-jsonschema/referencing library, which provides more compliant referencing behavior as well as more flexible APIs for customization. A future release will remove RefResolver. Please file a feature request (on referencing) if you are missing an API for the kind of customization you need.
+  resolver = jsonschema.RefResolver(base_uri=schema_dir.as_uri()+"/", referrer=schema, store=store)
+VALID: schema + Claude-fit + DPK (score=63, band=rejected)

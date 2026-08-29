@@ -21,6 +21,7 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     GRAPH_ID,
     NovelCommit,
     campaign_halt,
+    collect_remainder_slice,
     commits_must_colocate,
     default_extract,
     filter_slices_against_tip,
@@ -572,7 +573,7 @@ def test_tip_preflight_uses_cherry_pick_not_tree_merge(tmp_path):
     cherry = probe_cherry_conflicts(repo, tip, unique)
     assert tree, "tree-merge must still see the ancestral keep.txt clash"
     assert cherry == []
-    kept, skipped = filter_slices_against_tip(
+    kept, skipped, _skipped_items = filter_slices_against_tip(
         repo, [[{"sha": unique, "paths": ["ops/unique.py"]}]], tip
     )
     assert skipped == []
@@ -591,7 +592,7 @@ def test_tip_preflight_keeps_child_when_parent_stays(tmp_path):
     _git_c(repo, "checkout", "main")
     tip = _commit_file(repo, "other.txt", "x\n", "unrelated tip")
     assert probe_cherry_conflicts(repo, tip, child)
-    kept, skipped = filter_slices_against_tip(
+    kept, skipped, _skipped_items = filter_slices_against_tip(
         repo,
         [[{"sha": child, "paths": ["dag.py"]}, {"sha": parent, "paths": ["dag.py"]}]],
         tip,
@@ -610,13 +611,64 @@ def test_tip_preflight_still_probes_child_on_new_paths(tmp_path):
     child = _commit_file(repo, "keep.txt", "feature\n", "child clashes tip")
     _git_c(repo, "checkout", "main")
     tip = _commit_file(repo, "keep.txt", "squash\n", "tip squash")
-    kept, skipped = filter_slices_against_tip(
+    kept, skipped, _skipped_items = filter_slices_against_tip(
         repo,
         [[{"sha": parent, "paths": ["ops/unique.py"]}, {"sha": child, "paths": ["keep.txt"]}]],
         tip,
     )
     assert skipped == [child]
     assert [item["sha"] for item in kept[0]] == [parent]
+
+
+def test_remainder_slice_keeps_unique_path_from_tip_conflict(tmp_path):
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    (repo / "keep.txt").write_text("feature\n", encoding="utf-8")
+    (repo / "ops").mkdir()
+    (repo / "ops" / "unique.py").write_text("x\n", encoding="utf-8")
+    _git_c(repo, "add", "keep.txt", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "mixed")
+    mixed = _rev_parse(repo)
+    _git_c(repo, "checkout", "main")
+    tip = _commit_file(repo, "keep.txt", "squash\n", "tip squash")
+    remainder = collect_remainder_slice(
+        repo,
+        [{"sha": mixed, "paths": ("keep.txt", "ops/unique.py")}],
+        tip,
+    )
+    assert remainder
+    assert remainder[0]["mode"] == "remainder"
+    assert "ops/unique.py" in remainder[0]["paths"]
+    assert "keep.txt" not in remainder[0]["paths"]
+
+
+def test_extract_remainder_checkouts_unique_file(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "keep.txt", "base\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    (repo / "keep.txt").write_text("feature\n", encoding="utf-8")
+    (repo / "ops").mkdir()
+    (repo / "ops" / "unique.py").write_text("x\n", encoding="utf-8")
+    _git_c(repo, "add", "keep.txt", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "mixed")
+    mixed = _rev_parse(repo)
+    _git_c(repo, "checkout", "main")
+    _commit_file(repo, "keep.txt", "squash\n", "tip squash")
+    worktree, _branch = default_extract(
+        repo,
+        [{"sha": mixed, "paths": ("ops/unique.py",), "mode": "remainder"}],
+        "main",
+        0,
+    )
+    assert (Path(worktree) / "ops" / "unique.py").read_text(encoding="utf-8") == "x\n"
+    assert (Path(worktree) / "keep.txt").read_text(encoding="utf-8") == "squash\n"
+    _git_c(repo, "worktree", "remove", "--force", worktree)
 
 
 def test_tip_conflict_commit_dropped_clean_stays(tmp_path):
@@ -634,7 +686,7 @@ def test_tip_conflict_commit_dropped_clean_stays(tmp_path):
         [{"sha": clash, "paths": ["docs/plans/x.plan.json"]}],
         [{"sha": clean, "paths": ["ops/a.py"]}],
     ]
-    kept, skipped = filter_slices_against_tip(repo, slices, tip)
+    kept, skipped, _skipped_items = filter_slices_against_tip(repo, slices, tip)
     assert skipped == [clash]
     assert len(kept) == 1
     assert kept[0][0]["sha"] == clean
@@ -648,7 +700,7 @@ def test_stack_base_filters_pending_slices_only(monkeypatch, tmp_path):
 
     def fake_filter(_repo, slices, _tip):
         seen.append([item["sha"] for group in slices for item in group])
-        return slices, []
+        return slices, [], []
 
     monkeypatch.setattr(mod, "filter_slices_against_tip", fake_filter)
     monkeypatch.setattr(

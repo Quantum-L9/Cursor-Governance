@@ -1,0 +1,302 @@
+schema: l9.environment_experience.current_state_reconciliation/v1
+pack_revision: p307-r2
+generated_at: '2026-08-28'
+
+binding:
+  repository: Quantum-L9/Cursor-Governance
+  remote: https://github.com/Quantum-L9/Cursor-Governance
+  branch: main
+  sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+  short_sha: 59f03a5d
+  head_message: Land remaining unique local plan harvests and generated heal (#354)
+  head_date: '2026-08-28T11:09:06-10:00'
+  verification: HEAD == origin/main after `git fetch origin main`; working tree clean
+  predecessor_binding: 30c6ecd4
+  distance_from_predecessor:
+    commits: 59
+    files_changed: 514
+    insertions: 62811
+    deletions: 8528
+  open_prs_at_binding: 0
+  open_issues_at_binding: [336, 303, 302, 301, 281, 184, 167]
+
+session_scope_at_binding:
+  attachable_repositories:
+  - Quantum-L9/Cursor-Governance
+  - Quantum-L9/l9-cognitive-runtime
+  - Quantum-L9/l9-ci-core
+  - Quantum-L9/l9-meta-injector
+  not_attachable_but_named_by_records:
+  - Quantum-L9/.github            # CI-026
+  - Cognitive.Engine.Graphs       # CI-017 (IMP-B1), CI-002 (IMP-06 targets)
+  - l9-constellation-topology     # CI-029, CI-017 (I-WT-03)
+  - l9-ci-sdk                     # CI-031
+  - Enrichment.Inference.Engine   # CI-024, CI-023 (IMP-002/005/006)
+  consequence: >
+    Three records (CI-024, CI-029, CI-031) plus one leg each of CI-017 and CI-023 cannot be
+    judged at this binding. They are recorded UNKNOWN with the attachment named, not
+    re-asserted from the predecessor's evidence and not silently carried as done.
+
+method:
+  passes: 3
+  pass_1: >
+    Reconstructed the source pack in full (20 files) and every record's intent, scope,
+    dependencies, acceptance criteria and source lineage. Read the current tree and the
+    live container for every record's named target.
+  pass_2: >
+    Disposed every record. Residualized partials to their true delta. Re-derived the
+    dependency graph from current technical reality. Identified mutation-surface groups.
+    Ranked first-order leverage. Computed collisions at region granularity, the weighted
+    critical path, and a list-schedule measured against its lower bound at each lane width.
+  pass_3: >
+    Compiled the revision, attacked the order for hidden dependencies and unnecessary
+    serialization, and validated it mechanically (see validation below).
+  evidence_rule: >
+    COMPLETE requires proving the acceptance criteria, not file presence, a merged PR, or a
+    documentation claim. Predecessor completion claims were tested against their own
+    done_when, and two did not survive.
+
+counts:
+  total: 38
+  by_class:
+    COMPLETE: 2
+    PARTIAL: 16
+    NOT_STARTED: 16
+    BLOCKED: 1
+    UNKNOWN: 3
+    SUPERSEDED: 0
+    NO_LONGER_REQUIRED: 0
+    DUPLICATE: 0
+    INVALIDATED: 0
+  by_queue:
+    active: 27
+    external_blocked: 6
+    needs_attachment: 3
+    closed: 2
+  note: >
+    No record is classified SUPERSEDED, DUPLICATE or INVALIDATED at the record level. Three
+    SUB-LEGS are invalidated or superseded inside otherwise-live records — see
+    invalidated_work below. Collapsing a whole record on the strength of a leg would lose
+    the live remainder.
+
+status_changes_from_predecessor:
+# Six records changed status: three substantive corrections (CI-007, CI-026, CI-003) and
+# three reclassifications to UNKNOWN caused by this session's repository scope.
+- id: CI-007
+  from: done
+  to: partial
+  kind: DEMOTION
+  reason: >
+    Completion claim not supported by its own acceptance criteria. The evidence cited —
+    readiness merge_authority_status=READY — establishes that the readiness probe stopped
+    crashing, which is not what the record is about. IMP-04, ENV-2 and I-EL-06 are all unmet
+    at this binding, and the defect is live: L9_PUBLISH_PATH_OVERRIDE='one-time breakglass
+    authorized by user' is in the session environment and is read by
+    ops/autonomy/local_execution_gate.py:190-203 as a human/ops override of the publish plane.
+    It carries no issuer, scope, issuance time or expiry; the session-start banner does not
+    report it; and verify_account_env.py's 32-variable contract does not include it, so drift
+    detection cannot see it appear, change or persist.
+  consequence: >
+    Promoted from unscheduled to leverage rank 1, opening lane L3 at t=0. It is the only
+    active authority-widening defect in the queue, and being marked done is why no slice was
+    going to reach it.
+- id: CI-026
+  from: done
+  to: blocked
+  kind: DEMOTION
+  reason: >
+    Completion claim rested on non-durable session configuration: that /home/user/.github
+    existed and quantum-l9/.github appeared in the session repository scope list. Neither
+    holds at this binding. IMP-16's named target is the add_repo tool — an explicit target
+    directory, or an auto-alias for a dot-prefixed name — and that tool is harness-owned and
+    unchanged. A completion that a differently-configured session revokes was never a delivery.
+  consequence: Moved to external_blocked; not scheduled; retained with lineage.
+- id: CI-003
+  from: not_started
+  to: partial
+  kind: PROMOTION
+  reason: >
+    Understated, and understated at the predecessor binding too. The recorded residual says the
+    in-repo lever lacks .claude/** ; environment/agents/adapters/claude-code/install.sh:391-405
+    already excludes .claude/skills/, .claude/rules/ and .claude/commands/ and states the scoping
+    decision explicitly — only the GENERATED mirrors are excluded, because .claude/settings.json
+    and .claude/hooks/ are committable consumer wiring. That block is unchanged in
+    30c6ecd4..59f03a5d, so it was present and unrecorded. Confirmed live: every in-scope
+    consumer repo's .git/info/exclude carries all seven globs and every tree is clean.
+  remaining: .mcp.json is in neither exclude list. One glob.
+- id: CI-024
+  from: not_started
+  to: unknown
+  kind: RECLASSIFICATION_UNVERIFIABLE
+  reason: >
+    Every named target belongs to Enrichment.Inference.Engine, which no session here can
+    attach. The predecessor recorded not_started, which asserts the work is absent. Nothing
+    at this binding supports that assertion in either direction, so it is recorded UNKNOWN
+    with the attachment named rather than carried as a claim no evidence backs.
+- id: CI-029
+  from: partial
+  to: unknown
+  kind: RECLASSIFICATION_UNVERIFIABLE
+  reason: >
+    l9-constellation-topology is not attachable here, so neither the recorded partial evidence
+    (tests/corpus_fixtures.py at 3b02c6b) nor its two open residuals can be re-verified. The
+    predecessor's evidence is retained verbatim in improvements.yaml; only the assertion that
+    it still holds is withdrawn.
+- id: CI-031
+  from: not_started
+  to: unknown
+  kind: RECLASSIFICATION_UNVERIFIABLE
+  reason: >
+    IMP-R1's target is l9-ci-sdk's CLAUDE.md, not attachable here. IMP-R3's case-only
+    duplicate-path guard has no counterpart in the governance tree, but its named target is the
+    same out-of-scope repository's lint surface.
+
+corrected_claims:
+- id: CI-002
+  claim: >
+    'apply is_tracked() before the remaining projection writes — claude_projection.py:422,
+    reconcile_claude_l9_skills.py, reconcile_claude_commands.py, reconcile_claude_settings.py'
+    was the pack's named next slice and its biggest open P0 residual.
+  correction: >
+    The grep is right and the inference is wrong. Each of the four already implements the
+    non-destructive property the record's canonical_action asks for, by a different mechanism:
+    managed-entry symlink sets that never touch unmanaged entries (skills docstring 4-6,
+    commands docstring 5); merge_workspace_settings() preserving consumer-owned keys (92-110)
+    behind write_if_changed (113); and .mcp.json rendered with every template-undefined server
+    preserved (claude_projection.py:415) behind write-if-changed (419). Live proof: all four
+    in-scope repositories report an empty `git status --porcelain --untracked-files=all`,
+    including l9-meta-injector, which TRACKS .claude/settings.json.
+  consequence: >
+    CI-002 falls from headline slice to leverage rank 23 of 27. Genuine remainder is Phase 2c
+    alone. Applying is_tracked() to those four adds a report, not a protection they lack.
+- id: CI-014
+  claim: "l4_local.py and graphiti_memory_client.py both need an explicit --workspace argument."
+  correction: >
+    ops/autonomy/l4_local.py:478 already declares --workspace, and
+    `git show 30c6ecd4:ops/autonomy/l4_local.py` contains it — present and unrecorded at the
+    predecessor binding. Only graphiti_memory_client.py lacks it, plus IMP-06's second clause
+    (an actionable refusal naming --workspace), which l4_local.py:247 does not do.
+- id: CI-006
+  claim: "done_when '0 of 33 in exactly one layer' unmet; the stray var is still present."
+  correction: >
+    Met at this binding. verify_account_env.py reports 'OK: all 32 expected variables match'
+    with zero drift, and L9_AUTONOMY_AUTONOMOUS_MERGE=false is in the session env but absent
+    from /home/user/.claude/settings.json's env block — exactly one layer. The residual narrows
+    to the class mechanism: source-file attribution and a widening-vs-cosmetic split.
+- id: CI-036
+  claim: "partial, residuals unchanged."
+  correction: >
+    Advanced by af33b4d (#331), merged after the predecessor binding: session_debt.py now treats
+    a merged-and-deleted branch as published, using branch.<name>.remote because a squash merge
+    leaves the commits unreachable from main and the deleted ref leaves nothing to compare.
+    Pinned in both directions against a real bare upstream. Residuals otherwise stand.
+
+invalidated_work:
+- record: CI-002
+  leg: P1/improvements/IMP-06
+  title: Propagate the existing gitignore stanza to the other 8 repos
+  disposition: INVALIDATED
+  reason: >
+    Executing it would mutate consumer tracked files, which the current design exists to avoid.
+    ops/scripts/bootstrap_agent_environment.sh:462-464 states the choice: the exclusions go to
+    .git/info/exclude 'which is LOCAL and uncommitted, so a consumer's tracked .gitignore is
+    never mutated'. Phase 2d is superseded by the same mechanism.
+- record: CI-002
+  leg: "recorded next-slice instruction (apply is_tracked to four write sites)"
+  disposition: INVALIDATED_AS_WRITTEN
+  reason: See corrected_claims/CI-002. It would be rework on code that already holds the property.
+- record: CI-025
+  leg: "dependency CI-025 -> CI-013"
+  disposition: SUPERSEDED_BY_ORDERING
+  reason: >
+    Inverted in practice. `make clean-pyc` is independently deliverable and removes the pressure
+    that motivates narrowing the forced-removal guardrail, rather than depending on it.
+
+live_defects_reproducing_at_this_binding:
+- id: CI-004
+  occurrence: 4
+  observation: >
+    bootstrap-state.json governance_revision b618338db235b120709202a217c8b0109bc3c05b at
+    2026-08-28T04:34:13Z; gov-refresh.json local_sha/origin_sha 59f03a5d at 21:39:28Z;
+    readiness-receipt.json governance_SHA 59f03a5d. Stale by 17h against ttl_seconds 86400, so
+    TTL cannot catch it, and claude_bootstrap_receipt.py compares TTL only (98-102) while
+    carrying governance_revision through unexamined (88).
+- id: CI-001
+  occurrence: 4
+  observation: >
+    This session's system prompt states 'You do NOT have access to the gh CLI, hub CLI, or
+    direct GitHub API access' while `gh api user --jq .login` returns cryptoxdog. IMP-01 verbatim.
+- id: CI-009
+  observation: >
+    Banner 'session-deps: toolchain ready'; backing log two lines, no exit code, no interpreter,
+    no import proof; paired .stamp zero bytes (all five stamps are zero bytes).
+- id: CI-005
+  observation: >
+    All four namespaces hydrated facts_returned=8, previewed facts self-referential PICKUP
+    restatements. Simultaneously the graphiti-memory MCP server failed to connect (502) while the
+    CLI transport returned packets — the per-transport divergence I-BS-05 exists to expose,
+    collapsed into one word.
+- id: CI-012
+  observation: >
+    Live .mcp.json declares one server, graphiti-memory, and it 502'd. rules/22 mandates Context7
+    on every surface and says a missing allow-list entry is not permission to skip.
+- id: CI-021
+  observation: L9_SKILL_USAGE_LOGGING=true and /root/.claude/l9/ absent.
+- id: CI-022
+  observation: no neo4j binary; 127.0.0.1:7687 refused; nothing at session start declares the gap.
+- id: CI-027
+  observation: "rules/03:56 'system python3 often lacks PyYAML'; import yaml succeeds on 3.11.15."
+- id: CI-101
+  observation: >
+    One branch directive, claude/cursor-governance-pack-reconcile-9d4c9v, named identically for
+    all four in-scope repositories.
+
+pack_internal_consistency:
+  defect: >
+    The predecessor's three stores disagreed with each other, inside the artifact that proposed
+    CI-035 for exactly that. improvements.yaml carried progress_meta 'main@post-#307-merge' with
+    counts 2/9/25 of 36 and held 37 records; progress.yaml carried 4/15/19 of 38 at 30c6ecd4;
+    CI-037 existed in progress.yaml alone.
+  resolution: >
+    CI-037 promoted to a first-class improvements.yaml record. Both stores carry 38 records, the
+    same counts, and the same assessed_against_sha.
+  unfixed: >
+    Nothing yet ENFORCES the agreement. That is CI-034's drift check, still proposed, and this is
+    its fourth occurrence.
+
+proposed_not_adopted:
+- id: CI-034
+  state: still proposed, evidence strengthened
+  note: >
+    The predecessor implemented CI-034's recording half (assessed_against_sha: 30c6ecd4) and then
+    went 59 commits stale with nothing flagging it — which is the predecessor's own argument that
+    recording without checking only helps a reader who thinks to compare.
+- id: CI-035
+  state: still proposed, reproducing
+  note: See live_defects/CI-004. Fold into CI-004's slot on lane L0 if one record per defect class is preferred.
+- id: progress-schema/external-owner
+  state: 'ADOPTED as `blocked_on: external` plus a `queue` field'
+  note: >
+    Adopted because without it the not_started count mixes six records this org cannot start with
+    work that could ship today, and the active queue is not a workload. This is the one schema
+    proposal taken up; CI-034 and CI-035 remain scope decisions for the pack owner.
+
+validation:
+  every_original_item_reconciled: true
+  records_in: 38
+  records_out: 38
+  ids_renumbered: 0
+  records_dropped: 0
+  completion_claims_independently_tested: 4
+  completion_claims_that_failed: 2
+  dag_acyclic: true
+  hard_edge_order_violations: 0
+  scheduled_non_active_records: 0
+  active_records_scheduled_exactly_once: 27
+  parallel_lanes_sharing_a_mutation_surface: 0
+  historical_edges_removed: 7
+  edges_added: 3
+  edges_kept: 2
+  counts_match_dispositions: true
+  both_machine_stores_agree: true
+  inherited_artifacts_byte_identical_to_predecessor: 14

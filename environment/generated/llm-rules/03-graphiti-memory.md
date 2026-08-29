@@ -45,7 +45,9 @@ description: Graphiti episodic memory SSOT — retrieval authority, group_id, te
 
 ## CLI (terminal / hooks only)
 
-Use the governance locked venv (system `python3` often lacks PyYAML):
+Use the governance locked venv — it pins the interpreter version and isolates the
+client's dependencies from whatever the container's `python3` happens to be
+(3.11 here, 3.12 in the venv):
 
 ```bash
 GOV="${HOME}/.cursor-governance"

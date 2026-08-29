@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "deny": [
+      "git push",
+      "git merge",
+      "gh pr create",
+      "gh pr merge",
+      "gh api *repos*",
+      "git reset --hard"
+    ],
+    "allow": []
+  }
+}

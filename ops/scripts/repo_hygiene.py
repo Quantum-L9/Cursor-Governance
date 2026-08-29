@@ -376,13 +376,52 @@ def preserve(git: Git, kind: str, label: str, sha: str, report: Report) -> bool:
     return True
 
 
+def sync_remote_refs(git: Git) -> str | None:
+    """Prune stale remote-tracking refs AND ensure origin/HEAD resolves.
+
+    These two are one operation, not two, and #325 established why: pruning
+    alone converts an OVERCOUNT into SILENCE. A branch deleted upstream leaves
+    refs/remotes/origin/<branch> behind, so a checker resolving it counts every
+    commit main gained since the merge as unpushed work (measured: 16 reported
+    where 2 were real). Prune that ref and the fallback becomes origin/HEAD --
+    which a fetch-built checkout never sets -- so rev-list fails and the count
+    reads 0 with real unpushed commits present. A false negative on a real
+    condition is worse than an inflated one.
+
+    ops/scripts/bootstrap_agent_environment.sh ships both halves at session
+    start. This function is the same contract for the tool that DELETES
+    branches on that evidence, which previously pruned without ever ensuring
+    the fallback it creates a dependence on.
+
+    Both halves are fail-soft: they need the remote, and a session with no
+    network is not a reason to abort hygiene. Returns a warning, or None.
+    """
+    if not git.ok("remote", "get-url", "origin"):
+        return None
+    if not git.ok("fetch", "--prune", "origin"):
+        return (
+            "could not fetch/prune stale remote-tracking refs (remote unreachable); "
+            "unpushed counts may overcount and branch judgements may be stale"
+        )
+    if git.ok("symbolic-ref", "--quiet", "refs/remotes/origin/HEAD"):
+        return None
+    if git.ok("remote", "set-head", "origin", "-a"):
+        return None
+    return (
+        "origin/HEAD unset and could not be resolved — with stale refs pruned, "
+        "a deleted branch leaves unpushed counts unreportable rather than merely wrong"
+    )
+
+
 def build_report(
     git: Git, *, max_stash_age: float, max_receipt_age: float = DEFAULT_L4_RECEIPT_AGE_HOURS
 ) -> Report:
     report = Report(repo=str(git.root))
     report.origin = git.out("remote", "get-url", "origin")
     slug = origin_slug(report.origin)
-    git("fetch", "--prune", "origin")
+    ref_warning = sync_remote_refs(git)
+    if ref_warning:
+        report.errors.append(ref_warning)
 
     prs, pr_error = pr_index(slug)
     if pr_error:

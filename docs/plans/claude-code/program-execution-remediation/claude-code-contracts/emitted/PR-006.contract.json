@@ -1,0 +1,374 @@
+{
+  "executor": "claude-code",
+  "contract_id": "CG-PE-REMEDIATION-PR-006-v2.7.0",
+  "contract_version": "2.7.0",
+  "target_repo": "Quantum-L9/Cursor-Governance",
+  "target_branch": "claude/program-execution-authority-remediation-v1",
+  "pr_title": "PR-006 \u2014 Prove supported front door then thin compatibility facade",
+  "prerequisite_contract": {
+    "id": "CG-PE-REMEDIATION-PR-005-v2.7.0",
+    "required_state": "committed_and_validated"
+  },
+  "resume_from": {
+    "assumes_already_green": [
+      "CG-PE-REMEDIATION-PR-005-v2.7.0 committed_and_validated"
+    ],
+    "verify_before_starting": [
+      "test \"$(git rev-parse --abbrev-ref HEAD)\" = claude/program-execution-authority-remediation-v1",
+      "test \"$(git show -s --format=%s HEAD)\" = CG-PE-REMEDIATION-PR-005-v2.7.0",
+      "git merge-base --is-ancestor 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d HEAD",
+      "python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py environment/program-execution/campaigns/scripts/test_close_campaign.py",
+      "python3 -m pytest -q environment/program-execution/peer_execution/tests/test_failover_policy.py environment/program-execution/scripts/tests/test_run_campaign.py -k \"failover or provider or peer\""
+    ],
+    "if_assumption_false": "HALT RESUME_PRECONDITION_NOT_SATISFIED"
+  },
+  "execution_authority": {
+    "denied_tools": [
+      "Bash(git push:*)",
+      "Bash(git merge:*)",
+      "Bash(gh pr create:*)",
+      "Bash(gh pr merge:*)",
+      "Bash(gh api *repos*:*)",
+      "Bash(git reset --hard:*)"
+    ],
+    "dry_run_mapping": "plan_mode",
+    "may_read_repository": true,
+    "may_modify_worktree": true,
+    "may_run_local_tests": true,
+    "may_create_local_commits": true,
+    "may_rewrite_unpushed_local_commits": false
+  },
+  "halt_boundary": [
+    "git_push",
+    "pr_open",
+    "pr_merge",
+    "required_check_change",
+    "ruleset_change",
+    "branch_protection_change",
+    "merge_queue_activation",
+    "ruleset_apply",
+    "bypass_creation"
+  ],
+  "commit_gate": {
+    "required_before_commit": [
+      "make pr-check",
+      "python3 -m pytest -q environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py"
+    ]
+  },
+  "git_workflow": {
+    "shared_branch": "claude/program-execution-authority-remediation-v1",
+    "commit_policy": "exactly_one_local_commit_per_contract",
+    "commit_subject": "CG-PE-REMEDIATION-PR-006-v2.7.0",
+    "commit_command": "git commit -m \"CG-PE-REMEDIATION-PR-006-v2.7.0\"",
+    "completion_proof": "python3 -m pytest -q environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py",
+    "push_policy": "terminal_contract_only_via_make_pr",
+    "terminal_delivery": {
+      "authorized": true,
+      "command": "make pr"
+    }
+  },
+  "scope_lock": {
+    "in_scope": [
+      {
+        "id": 1,
+        "deliverable": "Add non-memory supported-front-door E2E proof",
+        "path": "environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py"
+      },
+      {
+        "id": 2,
+        "deliverable": "Move active provider lifecycle helpers to neutral Peer module",
+        "path": "environment/program-execution/peer_execution/task_pipeline.py"
+      },
+      {
+        "id": 3,
+        "deliverable": "Leave legacy script as explicit refusal-only compatibility shim",
+        "path": "environment/program-execution/scripts/run_peer_task_pipeline.py"
+      },
+      {
+        "id": 4,
+        "deliverable": "Consume neutral Peer task pipeline from supported runner",
+        "path": "environment/program-execution/scripts/run_campaign.py"
+      },
+      {
+        "id": 5,
+        "deliverable": "Extend tunnel bypass regression coverage",
+        "path": "environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py"
+      }
+    ],
+    "hard_out_of_scope": [
+      "memory test modification",
+      "second public execution front door",
+      "provider-specific Program lifecycle fork",
+      "direct git push",
+      "direct PR creation outside terminal make pr",
+      "merge",
+      "deployment",
+      "repo-settings mutation",
+      "all memory-related Program Execution content or dependencies",
+      "root autonomy implementation",
+      "ops/autonomy implementation",
+      "repository paths outside environment/program-execution",
+      "direct git push or direct PR creation outside the compiler-owned terminal make pr delivery",
+      "merge, deployment, repo-settings mutation",
+      "new Program state machine, router, registry, validator, or completion authority"
+    ],
+    "preserved_files": [
+      {
+        "path": "environment/program-execution/tests/hardening/test_real_campaign_e2e.py",
+        "guarantee": "behavior_unchanged"
+      }
+    ],
+    "must_not_add": [
+      "memory test modification",
+      "second public execution front door",
+      "provider-specific Program lifecycle fork",
+      "direct git push",
+      "direct PR creation outside terminal make pr",
+      "merge",
+      "deployment",
+      "repo-settings mutation",
+      "all memory-related Program Execution content or dependencies",
+      "root autonomy implementation",
+      "ops/autonomy implementation",
+      "repository paths outside environment/program-execution",
+      "direct git push or direct PR creation outside the compiler-owned terminal make pr delivery",
+      "merge, deployment, repo-settings mutation",
+      "new Program state machine, router, registry, validator, or completion authority"
+    ]
+  },
+  "sections": [
+    {
+      "number": 0,
+      "name": "Resume-From",
+      "status": "present"
+    },
+    {
+      "number": 1,
+      "name": "Mandate",
+      "status": "present"
+    },
+    {
+      "number": 2,
+      "name": "Prerequisite Contract",
+      "status": "present"
+    },
+    {
+      "number": 3,
+      "name": "Scope Lock",
+      "status": "present"
+    },
+    {
+      "number": 4,
+      "name": "Package Layout",
+      "status": "present"
+    },
+    {
+      "number": 5,
+      "name": "Registry/Config Authority",
+      "status": "present"
+    },
+    {
+      "number": 6,
+      "name": "Risk/Tier Policy",
+      "status": "present"
+    },
+    {
+      "number": 7,
+      "name": "Context Normalization",
+      "status": "present"
+    },
+    {
+      "number": 8,
+      "name": "Input Acquisition",
+      "status": "present"
+    },
+    {
+      "number": 9,
+      "name": "Deterministic Planner",
+      "status": "present"
+    },
+    {
+      "number": 10,
+      "name": "Safe Executor",
+      "status": "present"
+    },
+    {
+      "number": 11,
+      "name": "Evidence Enrichment",
+      "status": "present"
+    },
+    {
+      "number": 12,
+      "name": "Fail-Closed Evaluator",
+      "status": "present"
+    },
+    {
+      "number": 13,
+      "name": "Workflow Architecture",
+      "status": "present"
+    },
+    {
+      "number": 14,
+      "name": "Matrix/Parallel Execution",
+      "status": "not_applicable",
+      "not_applicable_reason": "Single focused-session additive change; no parallel/matrix execution track."
+    },
+    {
+      "number": 15,
+      "name": "Runtime Guarantee Preservation",
+      "status": "present"
+    },
+    {
+      "number": 16,
+      "name": "Self-Modification Protection",
+      "status": "present"
+    },
+    {
+      "number": 17,
+      "name": "Schemas",
+      "status": "present"
+    },
+    {
+      "number": 18,
+      "name": "Test Contract",
+      "status": "present"
+    },
+    {
+      "number": 19,
+      "name": "Failure Evidence",
+      "status": "present"
+    },
+    {
+      "number": 20,
+      "name": "Documentation",
+      "status": "present"
+    },
+    {
+      "number": 21,
+      "name": "Required File Manifest",
+      "status": "present"
+    },
+    {
+      "number": 22,
+      "name": "Commit Plan",
+      "status": "present"
+    },
+    {
+      "number": 23,
+      "name": "Validation Commands",
+      "status": "present"
+    },
+    {
+      "number": 24,
+      "name": "Acceptance Criteria",
+      "status": "present"
+    },
+    {
+      "number": 25,
+      "name": "Non-Goals Verification",
+      "status": "present"
+    },
+    {
+      "number": 26,
+      "name": "Required Validation Report",
+      "status": "present"
+    },
+    {
+      "number": 27,
+      "name": "Definition of Done",
+      "status": "present"
+    },
+    {
+      "number": 28,
+      "name": "Handoff",
+      "status": "present"
+    },
+    {
+      "number": 29,
+      "name": "Governance",
+      "status": "present"
+    }
+  ],
+  "agent_self_approval_forbidden": true,
+  "promotion_ready": false,
+  "handoff": {
+    "next_session_may_assume_green": [
+      "CG-PE-REMEDIATION-PR-006-v2.7.0 committed_and_validated"
+    ],
+    "next_contract": null,
+    "chain_digest": "sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3"
+  },
+  "dpk": {
+    "manifest": {
+      "schema_version": "dpk-1.0-derived",
+      "repository": {
+        "id": "cursor-governance",
+        "name": "Cursor-Governance",
+        "type": "governance-control-plane",
+        "lifecycle": "production",
+        "criticality": "tier-1",
+        "description": "Quantum-L9 governance SSOT; this compiler manifest is a contract-local projection of current repository evidence, not a new repo authority."
+      },
+      "ownership": {
+        "accountable_team": "Quantum-L9",
+        "technical_owner": "Quantum-L9",
+        "operational_owner": "Quantum-L9"
+      },
+      "boundaries": {
+        "owns": [
+          "environment/program-execution/**"
+        ],
+        "does_not_own": [
+          "all memory-related Program Execution content or dependencies",
+          "root autonomy implementation",
+          "ops/autonomy implementation",
+          "repository paths outside environment/program-execution",
+          "direct git push or direct PR creation outside the compiler-owned terminal make pr delivery",
+          "merge, deployment, repo-settings mutation",
+          "new Program state machine, router, registry, validator, or completion authority"
+        ]
+      },
+      "interfaces": {
+        "inbound": [],
+        "outbound": []
+      }
+    },
+    "rollback_target": "git revert HEAD",
+    "has_ai_feature": false,
+    "broken_alert_runbook_links": false,
+    "categories": {
+      "repo_clarity": 10,
+      "arch_mapping": 15,
+      "local_reproducibility": 0,
+      "test_eval_coverage": 8,
+      "security_boundaries": 10,
+      "observability_integrity": 0,
+      "deploy_rollback": 10,
+      "transition_clarity": 10
+    },
+    "readiness": {
+      "total": 63,
+      "band": "rejected",
+      "categories": {
+        "repo_clarity": 10,
+        "arch_mapping": 15,
+        "local_reproducibility": 0,
+        "test_eval_coverage": 8,
+        "security_boundaries": 10,
+        "observability_integrity": 0,
+        "deploy_rollback": 10,
+        "transition_clarity": 10
+      },
+      "red_line_triggered": false
+    }
+  },
+  "session_budget": {
+    "estimated_new_files": 2,
+    "estimated_modified_files": 3,
+    "estimated_test_cases": 18,
+    "fits_one_session": true,
+    "source_commits": [
+      6
+    ]
+  }
+}
