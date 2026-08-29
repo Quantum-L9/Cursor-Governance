@@ -1,0 +1,1180 @@
+{
+  "concepts": [
+    {
+      "acceptance_tests": [
+        {
+          "given": "a keep_push ref whose commit range both adds a path absent from baseline and deletes a path present on baseline",
+          "must_not": "cherry-pick the whole ref or apply the baseline delete",
+          "then": "only the path-absent allowlisted paths appear on the extract branch",
+          "when": "extract runs"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve/references/extract-workflow.md",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "Extract self-test currently asserts cherry-pick of identical patches; hardening must not weaken patch-id diagnosis.",
+        "existing_owner": "skills/l9-git-work-preserve extract-workflow (cherry-pick or path-limited commits)",
+        "merge_decision": "Replace whole-ref cherry-pick with path-union through the allowlist; keep cherry-pick only when the diagnosis receipt proves the range is path-limited and add-only."
+      },
+      "compounding": 5,
+      "description": "For diagnosed keep_push and preserve refs, extract the union of paths that pass the allowlist versus the fetched baseline. Do not cherry-pick the whole branch.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-donor-path-union",
+        "e-ben-extract-cherry",
+        "e-path-union-script-gap"
+      ],
+      "id": "c-path-union-not-cherry-pick",
+      "leverage": 5,
+      "name": "Path-union extract, never whole-branch cherry-pick",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Cherry-picking a mixed leftover ref copies deletes and overwrites of names already on the baseline.",
+      "rank_score": 55,
+      "risks": [
+        "A remaining cherry-pick path that is not add-only reintroduces baseline deletes.",
+        "Unknown whether this needs a new script or workflow-only hardening."
+      ],
+      "semantic_contract": "Extract leftover committed work by path-union against the fetched baseline through the allowlist. Whole-branch cherry-pick is forbidden when the range touches a path already on baseline."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a unique blob whose bytes do not appear on baseline but whose path already exists at baseline",
+          "must_not": "overwrite the baseline path because the blob looks novel",
+          "then": "the path is skipped as already on baseline",
+          "when": "harvest classify and extract run"
+        },
+        {
+          "given": "a unique blob on a keep_push tip at a path that fails cat-file on baseline",
+          "must_not": "ignore committed leftover trees solely because porcelain is clean",
+          "then": "that path is eligible to copy",
+          "when": "extract runs after allowlist"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve/scripts/harvest_worktree_dirt.py classify_path plus extract of diagnosed leftover trees",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "Classifier remains report-only; extract must consume the same predicate.",
+        "existing_owner": "harvest_worktree_dirt.path_on_baseline for porcelain dirt",
+        "merge_decision": "Keep porcelain cat-file skip; extend the same path-absent rule to unique committed paths on diagnosed leftover refs."
+      },
+      "compounding": 4,
+      "description": "Copy a path only when git cat-file -e baseline:path fails. Path-absent, not blob-absent-only. Apply to porcelain dirt and to unique committed paths on diagnosed leftover refs.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-donor-sp01",
+        "e-donor-path-absent-not-blob",
+        "e-donor-classifier",
+        "e-ben-path-on-baseline",
+        "e-ben-porcelain-only"
+      ],
+      "id": "c-path-absent-copy",
+      "leverage": 5,
+      "name": "Copy iff path absent on baseline",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Copying a blob onto a path that already exists on baseline overwrites landed work; copying by blob identity duplicates a file later added under a new name.",
+      "rank_score": 54,
+      "risks": [
+        "Extending cat-file to keep_push trees without an allowlist would copy foreign-layout or generated paths.",
+        "Blob-absent checks would duplicate renamed landings."
+      ],
+      "semantic_contract": "A path is copy-eligible only when it is absent from the fetched baseline tree. Novelty of blob content without path absence is not copy authority."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "classifier output whose unique copy set is empty",
+          "must_not": "treat empty unique as failure or copy skipped paths",
+          "then": "extract stops successfully and copies nothing",
+          "when": "extract is considered"
+        },
+        {
+          "given": "an allowlist with copy and skip rows each carrying a reason",
+          "must_not": "copy a skipped path because it appeared in harvestable earlier",
+          "then": "only copy-set paths are copied",
+          "when": "extract runs"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve harvest then extract handoff",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "JSON schema for the allowlist does not exist yet and must not encode donor filenames.",
+        "existing_owner": "harvest_worktree_dirt harvestable/skipped lists",
+        "merge_decision": "Keep classifier lists as input; require an allowlist artifact with reasons and empty-stop before extract mutates."
+      },
+      "compounding": 4,
+      "description": "Emit a copy/skip/reason allowlist artifact. Extract consumes only the copy set. Empty copy set is a valid stop.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-donor-allowlist-empty",
+        "e-ben-already-on-baseline"
+      ],
+      "id": "c-allowlist-gate",
+      "leverage": 4,
+      "name": "Durable copy/skip allowlist; empty copy set is stop",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "A live classifier dump is not a gate: skip reasons vanish, and an empty unique set is treated as failure instead of success.",
+      "rank_score": 44,
+      "risks": [
+        "An allowlist that lists paths without reasons becomes an un-auditable copy list.",
+        "Mutating extract before the allowlist exists recreates scooping."
+      ],
+      "semantic_contract": "Extract may copy only paths in a durable allowlist copy set. Each skip has a reason. An empty copy set is success, not a defect."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a dirty file whose path exists on baseline and whose diff deletes a line that still exists on baseline",
+          "must_not": "overwrite or delete any baseline line",
+          "then": "the path is skipped",
+          "when": "harvest classify runs"
+        },
+        {
+          "given": "a dirty file whose path exists on baseline and whose diff adds lines and deletes zero baseline-still-present lines",
+          "must_not": "rewrite the baseline file wholesale",
+          "then": "only the added lines may be appended",
+          "when": "extract is allowed the add-only exception"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve/scripts/harvest_worktree_dirt.py already_on_baseline handling",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "False add-only proofs would regress protected root files.",
+        "existing_owner": "already_on_baseline hard skip",
+        "merge_decision": "Keep default skip; add an explicit add-only exception with a proof that no still-present baseline line is deleted."
+      },
+      "compounding": 3,
+      "description": "Default skip dirty-on-baseline. Copy unique added lines only when the worktree diff deletes zero lines that still exist on baseline.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-donor-add-only",
+        "e-ben-already-on-baseline"
+      ],
+      "id": "c-add-only-dirty-on-baseline",
+      "leverage": 4,
+      "name": "Add-only exception for dirty-on-baseline paths",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "A hard skip of every path that exists on baseline drops unique added lines; overwriting that path regresses landed wording.",
+      "rank_score": 43,
+      "risks": [
+        "A naive line-in-file check can false-positive on coincidental shared lines.",
+        "Protected additive_only roots still need append-only plus marker rules."
+      ],
+      "semantic_contract": "Dirty-on-baseline defaults to skip. The only exception is an add-only diff: zero deletions of lines that still exist on baseline, applied as append, never wholesale overwrite."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a unique path whose first directory is absent from the fetched baseline tree layout",
+          "must_not": "copy it because it is path-absent",
+          "then": "the path is skipped as foreign overlay",
+          "when": "classify runs"
+        },
+        {
+          "given": "a unique path matching the live generated-prefix SSOT",
+          "must_not": "copy the stale generated file from a behind tree",
+          "then": "the path is skipped and later regen may recreate it from copied sources",
+          "when": "classify and extract run"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve harvest classifier declarative prefix/generated/secret config",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "A second generated-prefix list would drift from GENERATED_PATH_PREFIXES.",
+        "existing_owner": "harvest skip_noise/wiring_noise only; generated skip lives in harvest-workflow prose plus sync_generated_artifacts.py",
+        "merge_decision": "Configure prefix/generated/secret skip from live SSOTs; do not encode donor product-tree names."
+      },
+      "compounding": 3,
+      "description": "Copy only prefixes the fetched baseline tree uses. Skip generated prefixes owned by the regen SSOT, secret globs, and trees absent from baseline layout. Prefix lists are configuration, not donor path literals.",
+      "disposition": "CONFIGURE",
+      "evidence_ids": [
+        "e-donor-layout-prefix",
+        "e-generated-prefixes"
+      ],
+      "id": "c-layout-native-prefixes",
+      "leverage": 4,
+      "name": "Copy only layout-native prefixes",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Unique paths from another product layout, generated prefixes, or secret globs look harvestable if the only test is path-absent.",
+      "rank_score": 43,
+      "risks": [
+        "Baking a donor product-tree name list into the skill would fail on the next layout.",
+        "Generated skip must follow GENERATED_PATH_PREFIXES, not a parallel list."
+      ],
+      "semantic_contract": "Copy eligibility requires the path prefix to be part of the baseline layout, not generated, and not secret. Foreign overlay means a prefix the baseline tree does not use."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a dangling blob with no recoverable path name",
+          "must_not": "write it to a guessed path on the extract branch",
+          "then": "the blob is left dangling",
+          "when": "extract considers dangling recover"
+        },
+        {
+          "given": "a dangling blob whose recovered path fails the allowlist",
+          "must_not": "copy it because the object is unique",
+          "then": "the blob is left dangling",
+          "when": "extract considers dangling recover"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve extract optional dangling recover",
+      "beneficiary_fit": {
+        "comparison": "STANDALONE",
+        "compatibility_risk": "Lost-found naming is git-implementation incidental; recover must use the path, not the lost-found filename.",
+        "existing_owner": "none in l9-git-work-preserve",
+        "merge_decision": "Add optional recover behind the same allowlist; default leave dangling."
+      },
+      "compounding": 3,
+      "description": "Recover a dangling blob only when a path name exists and that path passes the allowlist. Unnamed dangling objects stay dangling.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-donor-dangling",
+        "e-donor-allowlist-empty"
+      ],
+      "id": "c-named-dangling-recover",
+      "leverage": 3,
+      "name": "Recover dangling objects only when named and allowlisted",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Lost objects without a path cannot be proven unique-and-layout-native, so recovering them risks silent overwrites.",
+      "rank_score": 33,
+      "risks": [
+        "fsck lost-found names can be incomplete; unnamed recover is unsafe.",
+        "Pack has no dangling recover path today; adding one without the allowlist would bypass classify."
+      ],
+      "semantic_contract": "Dangling recover requires both a path name and allowlist membership. Object uniqueness without a path is not copy authority."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a unique path that harvest intends to remove from the donor location",
+          "must_not": "delete the unique path while it is the only copy",
+          "then": "a committed copy already exists at the destination path",
+          "when": "the remove is considered"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve harvest unique_plans execute notes",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "Source worktrees staying intact already preserves bytes; the new rule is about planned path deletes, not worktree deletes.",
+        "existing_owner": "harvest-workflow leave source worktrees intact; no bytes-before-delete rule",
+        "merge_decision": "Add the preserve-before-delete gate for unique_plans/unique_wip moves; do not import donor shelf filenames."
+      },
+      "compounding": 2,
+      "description": "Do not drop a unique path until a committed copy exists at the intended destination path.",
+      "disposition": "PORT_WITH_HARDENING",
+      "evidence_ids": [
+        "e-donor-bytes-preserve"
+      ],
+      "id": "c-bytes-before-delete",
+      "leverage": 3,
+      "name": "Committed copy before unique-path delete",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Deleting or shelving a unique path before a committed copy exists at the destination loses the only bytes.",
+      "rank_score": 32,
+      "risks": [
+        "Shelf-layout destination paths are beneficiary-specific and must not import donor filenames.",
+        "This is adjacent to plans-store shelf rules; keep harvest from owning shelf taxonomy."
+      ],
+      "semantic_contract": "A unique path may be removed from a donor location only after a committed copy exists at the destination. Absence of that copy blocks delete."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "harvestable unique_plans and unrelated unique_product paths",
+          "must_not": "mix the themes in one PR or stack onto an unrelated open PR",
+          "then": "they land on separate PRs on the default stack and none are merged by harvest",
+          "when": "publish runs"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve/references/harvest-workflow.md Publish",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "Push authorization stays on the surface profile, not this skill.",
+        "existing_owner": "harvest-workflow Publish: one theme per PR, no unrelated stack, overlap block",
+        "merge_decision": "Fold default-stack and no-merge into Publish. Do not encode a theme count."
+      },
+      "compounding": 3,
+      "description": "Publish leftover themes as separate PRs on the default stack. Do not mix unique_product themes. Do not merge from harvest.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-donor-themed-pr",
+        "e-ben-publish-theme"
+      ],
+      "id": "c-themed-stacked-publish",
+      "leverage": 3,
+      "name": "One theme per PR on the stack, no merge",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Mixing leftover themes in one PR and stacking onto an unrelated open PR hides review and collides overlap.",
+      "rank_score": 33,
+      "risks": [
+        "A numeric theme count is donor-incidental and must not become a skill quota.",
+        "PR_STACK=auto is already the repo default; restating it as harvest-only would fork publish doctrine."
+      ],
+      "semantic_contract": "Each leftover theme publishes as its own PR on the default stack. Harvest does not merge. Unrelated open PRs are not harvest stack parents."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a leftover ref still classified keep_push after extract",
+          "must_not": "delete keep_push or content_superset refs",
+          "then": "the ref is kept",
+          "when": "prune-execute is considered"
+        },
+        {
+          "given": "unique paths have not yet been extracted",
+          "must_not": "delete a ref whose unique paths are not yet on an extract branch",
+          "then": "prune is refused",
+          "when": "prune-execute is considered"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve/references/prune-policy.md plus compact workflow step 5",
+      "beneficiary_fit": {
+        "comparison": "DONOR_STRONGER",
+        "compatibility_risk": "Do not let harvest own stash-drop; that stays stash-deep-analysis.",
+        "existing_owner": "prune-policy patch_id split plus SKILL extract-then-prune order",
+        "merge_decision": "Keep existing delete classes; add explicit re-diagnose after extract and refuse prune until extract receipts exist for unique paths."
+      },
+      "compounding": 3,
+      "description": "Re-diagnose after extract. prune-execute only prune_candidate or archive_ref with patch_id. keep_push and content_superset remain. Stashes are not dropped.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-donor-prune-last",
+        "e-ben-prune-patch-id",
+        "e-ben-prune-order"
+      ],
+      "id": "c-prune-after-extract",
+      "leverage": 4,
+      "name": "Prune last; patch-id only; keep keep_push",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Pruning leftover refs before unique paths are extracted deletes the only SHA of unlanded work; content_superset deletes are false absorption.",
+      "rank_score": 43,
+      "risks": [
+        "Re-diagnose skipped after extract would prune a ref whose unique path was just copied but whose leftover sibling path was not.",
+        "keep_push is already a non-prune class; duplicating that as a new rule creates two owners."
+      ],
+      "semantic_contract": "Prune-execute runs only after extract and a fresh diagnosis. Eligible classes are prune_candidate and archive_ref with patch_id. keep_push and content_superset are never deleted by this path."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a leftover tree containing both a unique source and a generated manifest",
+          "must_not": "copy the leftover generated manifest",
+          "then": "the source may copy and generated files are regenerated from the SSOT if needed",
+          "when": "extract runs"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve/references/harvest-workflow.md Execute step 6",
+      "beneficiary_fit": {
+        "comparison": "EQUIVALENT",
+        "compatibility_risk": "None if prefixes stay owned by sync_generated_artifacts.py.",
+        "existing_owner": "harvest-workflow Execute step 6 plus GENERATED_PATH_PREFIXES",
+        "merge_decision": "Keep existing regen-not-copy rule; do not add a second generated list."
+      },
+      "compounding": 3,
+      "description": "If copied sources require regen, run the generated-artifact SSOT. Do not copy generated files from leftover trees.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-donor-regen",
+        "e-ben-harvest-execute",
+        "e-generated-prefixes"
+      ],
+      "id": "c-regen-generated-not-copy",
+      "leverage": 3,
+      "name": "Regen generated artifacts; never copy stale generated",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Generated files from a behind tree overwrite current hashes and manifests.",
+      "rank_score": 33,
+      "risks": [
+        "A parallel generated-prefix list would drift."
+      ],
+      "semantic_contract": "Generated artifacts are regenerated from copied sources via the existing SSOT. Leftover generated files are never copy sources."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a dirty shared primary checkout and leftover unique paths",
+          "must_not": "stage, checkout, or apply on the shared dirty clone, or apply a behind-baseline dirty tree wholesale",
+          "then": "copies land on a dedicated worktree started from fetched baseline",
+          "when": "harvest extract runs"
+        }
+      ],
+      "beneficiary_destination": "skills/l9-git-work-preserve/references/harvest-workflow.md Execute",
+      "beneficiary_fit": {
+        "comparison": "EQUIVALENT",
+        "compatibility_risk": "None if rule 49 remains the isolation owner.",
+        "existing_owner": "harvest-workflow Execute plus stale_apply_risk",
+        "merge_decision": "Keep existing execute path; treat donor as confirming evidence."
+      },
+      "compounding": 2,
+      "description": "Extract onto a dedicated worktree from fetched baseline. Never scoop the dirty shared clone. Never apply a behind-baseline dirty tree wholesale.",
+      "disposition": "MERGE_WITH_EXISTING",
+      "evidence_ids": [
+        "e-donor-worktree",
+        "e-ben-harvest-execute"
+      ],
+      "id": "c-dedicated-worktree",
+      "leverage": 3,
+      "name": "Dedicated baseline worktree; never scoop shared dirty clone",
+      "nugget": true,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": true,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": true
+      },
+      "problem": "Applying leftover dirt on the shared primary clone overwrites other agents' work and can replay stale baseline hunks.",
+      "rank_score": 32,
+      "risks": [
+        "Restating rule 49 inside harvest would duplicate worktree isolation."
+      ],
+      "semantic_contract": "Leftover extract mutates only a dedicated worktree from fetched baseline. Shared dirty clones and wholesale stale-tree applies are forbidden."
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "this harvest",
+          "must_not": "add bak-clone skip lists to l9-git-work-preserve",
+          "then": "SSOT/bak skip stays local to this machine's clone map",
+          "when": "beneficiary fit is applied"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "Importing bak skip would mix repo-sync ownership into harvest.",
+        "existing_owner": "l9-repo-sync clone-map (ssot vs workspace)",
+        "merge_decision": "Keep local. git-work-preserve harvests sibling worktrees of the named repo, not clone-map selection."
+      },
+      "compounding": 1,
+      "description": "Live SSOT and backup clones are not harvest sources unless a path is absent from the workspace extract.",
+      "disposition": "KEEP_LOCAL",
+      "evidence_ids": [
+        "e-donor-ssot-skip"
+      ],
+      "id": "c-skip-ssot-bak",
+      "leverage": 2,
+      "name": "Skip live SSOT and bak clones unless path missing from workspace extract",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": false,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": false
+      },
+      "problem": "A second governance clone can look like leftover unique work.",
+      "rank_score": null,
+      "risks": [
+        "Clone-map already owns ssot vs workspace selection."
+      ],
+      "semantic_contract": null
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "a proposal to treat harvest completion as push authorization",
+          "must_not": "record plan-build as harvest skill authority",
+          "then": "the concept is rejected and publish stays ask-first unless the surface profile already authorizes it",
+          "when": "beneficiary fit is applied"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "Conflicting auth would let leftover extract skip make pr gates.",
+        "existing_owner": "autonomy surface profile and AGENTS.md publish path",
+        "merge_decision": "Reject. Harvest does not grant push or merge."
+      },
+      "compounding": 1,
+      "description": "Donor states that building the plan authorizes make pr. That authority belongs to the surface profile and the human, not this skill.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-donor-push-auth"
+      ],
+      "id": "c-plan-is-push-auth",
+      "leverage": 1,
+      "name": "Plan-build as push authorization",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": false,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": false
+      },
+      "problem": "Harvest needs a publish path, but push authority is not a leftover-work classifier concern.",
+      "rank_score": null,
+      "risks": [
+        "Putting push auth in harvest would fork AGENTS.md ask-first publish rules."
+      ],
+      "semantic_contract": null
+    },
+    {
+      "acceptance_tests": [
+        {
+          "given": "harvest.json after qualification",
+          "must_not": "name donor kernel files, plan filenames, SHAs, branch names, or census counts as the contract",
+          "then": "they speak in baseline/cat-file/allowlist/path-union language",
+          "when": "nugget semantic contracts and acceptance tests are inspected"
+        }
+      ],
+      "beneficiary_destination": null,
+      "beneficiary_fit": {
+        "comparison": "BENEFICIARY_STRONGER",
+        "compatibility_risk": "None if instances stay out of nugget contracts.",
+        "existing_owner": "this harvest's invariant/instance split",
+        "merge_decision": "Reject as transferable content. Keep as donor evidence locators only."
+      },
+      "compounding": 1,
+      "description": "Named kernels, plan files, SHAs, branch names, worktree counts, and a numeric theme count are instances of the invariants above, not transferable contracts.",
+      "disposition": "REJECT",
+      "evidence_ids": [
+        "e-donor-instances"
+      ],
+      "id": "c-hardcoded-instances",
+      "leverage": 1,
+      "name": "Donor filenames, SHAs, census, and theme counts",
+      "nugget": false,
+      "portability": {
+        "donor_execution_authority_independent": true,
+        "donor_identity_independent": false,
+        "donor_infrastructure_independent": true,
+        "donor_runtime_required": false,
+        "external_dependency": null,
+        "incidental_implementation_independent": false
+      },
+      "problem": "A remainder campaign names specific files, commits, and counts that will not recur.",
+      "rank_score": null,
+      "risks": [
+        "Copying those literals into the skill would freeze a one-off remainder as doctrine."
+      ],
+      "semantic_contract": null
+    }
+  ],
+  "drift": [
+    {
+      "behavior": "Porcelain harvest classifies dirty/untracked paths with cat-file against baseline, but does not scan unique committed paths on keep_push or preserve tips.",
+      "canonical_candidate": "path-absent copy applied to diagnosed ref trees as well as porcelain",
+      "evidence_ids": [
+        "e-ben-porcelain-only",
+        "e-donor-classifier"
+      ],
+      "resolution": "Donor is stronger on committed leftover trees; beneficiary already owns the porcelain case."
+    },
+    {
+      "behavior": "Extract workflow still allows cherry-pick of a whole diagnosed ref; donor forbids whole-branch cherry-pick because mixed refs carry baseline overwrites and deletes.",
+      "canonical_candidate": "path-union through the allowlist",
+      "evidence_ids": [
+        "e-ben-extract-cherry",
+        "e-donor-path-union"
+      ],
+      "resolution": "Port path-union; keep cherry-pick only when the diagnosis receipt proves the commit range is path-limited and add-only."
+    },
+    {
+      "behavior": "already_on_baseline is a hard skip; donor allows an add-only exception when the dirty diff deletes zero lines that still exist on baseline.",
+      "canonical_candidate": "default skip with explicit add-only exception",
+      "evidence_ids": [
+        "e-ben-already-on-baseline",
+        "e-donor-add-only"
+      ],
+      "resolution": "Port the exception as hardening, not as a default overwrite."
+    }
+  ],
+  "evidence": [
+    {
+      "claim": "Success property: harvested path fails git cat-file -e baseline:path before copy and exists on the extract branch after.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-sp01",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:67"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Copy iff unique class or cat-file fails on a keep_push/dangling blob, prefix is layout-native, not generated, not additive_only overwrite, not foreign overlay, and not a wholesale stale apply.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-classifier",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:72-81"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Require path-absent, not blob-absent-only: a blob later landed under a new name would duplicate if copied by content identity.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-path-absent-not-blob",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:165"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Emit allowlist JSON of paths to copy or skip with reason. Empty copy set is a valid stop.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-allowlist-empty",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:147"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Overlapping unique paths on keep_push tips extract by path union vs baseline, not by cherry-picking whole branches.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-path-union",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:139"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Default skip dirty-on-baseline. Append-only unique lines only if the worktree diff deletes zero lines that still exist on baseline.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-add-only",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:79"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Copy only this-repo prefixes; skip generated prefixes, secret globs, and trees the baseline layout does not use.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-layout-prefix",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:77-80"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Recover dangling blobs only when named and allowlisted; unnamed dangling objects stay dangling.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-dangling",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:140"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Preserve unique plan bytes before any root delete of that path.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-bytes-preserve",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:15"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Do not mix unique_product themes in one PR; stack via PR_STACK=auto; do not stack onto unrelated open PRs.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-themed-pr",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:105"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Prune-execute only after extract; re-diagnose; delete prune_candidate and archive_ref with patch_id only; keep keep_push and content_superset; do not drop stashes.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-prune-last",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:154"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Regenerate generated artifacts from copied sources; do not copy stale generated files.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-regen",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:152"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Extract uses a dedicated worktree as an execution step, not a planning lock; do not harvest onto the dirty shared branch.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-worktree",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:59"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Skip live SSOT and bak clones unless a path is missing from the workspace extract.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-ssot-skip",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:111"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Donor states that building this plan is push authorization for those make pr invocations.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-push-auth",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:153"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Named kernel files, commit SHAs, and a numeric theme count are instances of path-absent copy and path-union, not transferable contracts.",
+      "epistemic": "CONFIRMED",
+      "id": "e-donor-instances",
+      "locator": {
+        "kind": "path_lines",
+        "value": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md:83-91"
+      },
+      "secret_redacted": false,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md"
+    },
+    {
+      "claim": "Classifier returns already_on_baseline when git cat-file -e baseline:rel succeeds.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-path-on-baseline",
+      "locator": {
+        "kind": "symbol",
+        "value": "path_on_baseline"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-git-work-preserve/scripts/harvest_worktree_dirt.py"
+    },
+    {
+      "claim": "Harvest class already_on_baseline means path exists at baseline and is not harvested.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-already-on-baseline",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-git-work-preserve/references/harvest-workflow.md:41"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-git-work-preserve/references/harvest-workflow.md"
+    },
+    {
+      "claim": "Harvest inspects git status porcelain untracked-all only; it does not walk committed trees of keep_push tips.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-porcelain-only",
+      "locator": {
+        "kind": "symbol",
+        "value": "inspect_worktree"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-git-work-preserve/scripts/harvest_worktree_dirt.py"
+    },
+    {
+      "claim": "Extract workflow says cherry-pick or path-limited commits onto the new branch and keeps this file as the one-ref cherry-pick path.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-extract-cherry",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-git-work-preserve/references/extract-workflow.md:7-13"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-git-work-preserve/references/extract-workflow.md"
+    },
+    {
+      "claim": "Harvest execute: dedicated origin/main worktree, unique_* pathspecs only, regen generated artifacts, never copy stale generated files, never scoop the shared clone.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-harvest-execute",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-git-work-preserve/references/harvest-workflow.md:53-67"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-git-work-preserve/references/harvest-workflow.md"
+    },
+    {
+      "claim": "Publish forbids mixing unrelated unique_product themes and stacking this harvest onto an unrelated open PR. PR_STACK=auto is not named.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-publish-theme",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-git-work-preserve/references/harvest-workflow.md:70-84"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-git-work-preserve/references/harvest-workflow.md"
+    },
+    {
+      "claim": "archive_ref prune requires redundancy_basis patch_id; content_superset never authorises a delete.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-prune-patch-id",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-git-work-preserve/references/prune-policy.md:35-46"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-git-work-preserve/references/prune-policy.md"
+    },
+    {
+      "claim": "Compact workflow: harvest or extract first on a fresh origin/main worktree; prune-execute last and auth-gated.",
+      "epistemic": "CONFIRMED",
+      "id": "e-ben-prune-order",
+      "locator": {
+        "kind": "path_lines",
+        "value": "skills/l9-git-work-preserve/SKILL.md:79"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-git-work-preserve/SKILL.md"
+    },
+    {
+      "claim": "Generated path prefixes are owned by sync_generated_artifacts.py, not by donor path literals.",
+      "epistemic": "CONFIRMED",
+      "id": "e-generated-prefixes",
+      "locator": {
+        "kind": "symbol",
+        "value": "GENERATED_PATH_PREFIXES"
+      },
+      "secret_redacted": false,
+      "source": "ops/scripts/sync_generated_artifacts.py"
+    },
+    {
+      "claim": "Whether path-union should be a new script or extract-workflow prose only is unobserved.",
+      "epistemic": "UNKNOWN",
+      "id": "e-path-union-script-gap",
+      "locator": {
+        "kind": "unknown",
+        "value": "no keep_push path-union script observed"
+      },
+      "secret_redacted": false,
+      "source": "skills/l9-git-work-preserve"
+    }
+  ],
+  "highest_leverage_nugget": "c-path-union-not-cherry-pick",
+  "inventory": [
+    {
+      "action": "keep",
+      "classification": "canonical",
+      "consumers": [
+        "l9-intelligence-harvest"
+      ],
+      "evidence_ids": [
+        "e-donor-classifier",
+        "e-donor-sp01"
+      ],
+      "importance": 5,
+      "owner": "donor plan",
+      "path": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+      "purpose": "Donor execution plan stating leftover-work no-regression invariants: classify, allowlist, path-union extract, themed publish, prune-last."
+    }
+  ],
+  "request": {
+    "access_mode": "read-only",
+    "beneficiary": "skills/l9-git-work-preserve",
+    "brief": true,
+    "depth": "exhaustive",
+    "donor": "/Users/ib-mac/Cursor-Governance/docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+    "harvest_target": "portable leftover-work no-regression invariants",
+    "language": "as-donor",
+    "request_id": "no-regress-git-work-preserve-2026-08-28",
+    "secrets_policy": "redact"
+  },
+  "safety": [
+    {
+      "claim": "Donor plan was inventoried and read, not executed. No harvest/extract/prune scripts were run against leftover refs.",
+      "epistemic": "CONFIRMED"
+    },
+    {
+      "claim": "No files under skills/l9-git-work-preserve were created or edited.",
+      "epistemic": "CONFIRMED"
+    },
+    {
+      "claim": "Donor kernel filenames, plan filenames, SHAs, branch names, and census counts were classified REJECT, not PORT.",
+      "epistemic": "CONFIRMED"
+    },
+    {
+      "claim": "Secret globs and Legal Defense paths were not copied into transferable contracts.",
+      "epistemic": "CONFIRMED"
+    }
+  ],
+  "schema_version": "1.1.0",
+  "source_identity": {
+    "bytes": 13617,
+    "file_count": 1,
+    "inventory_status": "PASS",
+    "kind": "file",
+    "note": "Untracked plan at inventory time; no git blob sha.",
+    "path": "/Users/ib-mac/Cursor-Governance/docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+    "ref": null,
+    "remote": null,
+    "sha256": "971845994af946b1fb39f0496e4b8a5a639d193f88a6fc04f41b51d77e90b2df"
+  },
+  "status": "PARTIAL",
+  "surfaces": [
+    {
+      "dependencies": [
+        "git cat-file -e baseline:path"
+      ],
+      "evidence_ids": [
+        "e-donor-classifier",
+        "e-ben-path-on-baseline"
+      ],
+      "is_wrapper": true,
+      "item": "no-regression classifier",
+      "mutations": [],
+      "resolved_target": "skills/l9-git-work-preserve/scripts/harvest_worktree_dirt.py",
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+      "visibility": "plan-prose"
+    },
+    {
+      "dependencies": [],
+      "evidence_ids": [
+        "e-donor-allowlist-empty"
+      ],
+      "is_wrapper": false,
+      "item": "allowlist gate",
+      "mutations": [],
+      "resolved_target": null,
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+      "visibility": "plan-todo-T2"
+    },
+    {
+      "dependencies": [
+        "allowlist gate"
+      ],
+      "evidence_ids": [
+        "e-donor-path-union",
+        "e-ben-extract-cherry"
+      ],
+      "is_wrapper": true,
+      "item": "path-union extract",
+      "mutations": [
+        "copy onto dedicated worktree only"
+      ],
+      "resolved_target": "skills/l9-git-work-preserve/references/extract-workflow.md",
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+      "visibility": "plan-todo-T5"
+    },
+    {
+      "dependencies": [],
+      "evidence_ids": [
+        "e-donor-themed-pr",
+        "e-ben-publish-theme"
+      ],
+      "is_wrapper": true,
+      "item": "themed publish",
+      "mutations": [],
+      "resolved_target": "skills/l9-git-work-preserve/references/harvest-workflow.md",
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+      "visibility": "plan-todo-T8"
+    },
+    {
+      "dependencies": [
+        "path-union extract"
+      ],
+      "evidence_ids": [
+        "e-donor-prune-last",
+        "e-ben-prune-patch-id"
+      ],
+      "is_wrapper": true,
+      "item": "prune-last",
+      "mutations": [
+        "auth-gated local ref delete"
+      ],
+      "resolved_target": "skills/l9-git-work-preserve/references/prune-policy.md",
+      "source": "docs/plans/novel_remainder_no-regress_0429bc04.plan.md",
+      "visibility": "plan-todo-T9"
+    }
+  ],
+  "system": {
+    "control_flow": [
+      {
+        "from": "classify unique vs baseline",
+        "relation": "feeds",
+        "to": "allowlist JSON"
+      },
+      {
+        "from": "allowlist JSON",
+        "relation": "gates copy set; empty is stop",
+        "to": "dedicated baseline worktree"
+      },
+      {
+        "from": "path-union extract",
+        "relation": "must complete before",
+        "to": "prune-execute"
+      }
+    ],
+    "dependencies": [
+      {
+        "name": "git cat-file / worktree / pathspecs",
+        "used_by": "path-absent copy and extract"
+      },
+      {
+        "name": "ops/scripts/agent_worktree_start.sh",
+        "used_by": "dedicated baseline worktree"
+      },
+      {
+        "name": "ops/scripts/sync_generated_artifacts.py GENERATED_PATH_PREFIXES",
+        "used_by": "generated skip and regen-not-copy"
+      }
+    ],
+    "identity": "A leftover-work remainder system: reclassify unique bytes against a fetched baseline, emit a copy/skip allowlist, port only path-absent layout-native paths onto a dedicated baseline worktree, publish by theme, then prune only patch-id-absorbed refs.",
+    "must_not_own": [
+      "donor census counts, SHAs, branch names, and named file lists",
+      "l9-repo-sync /ff parking",
+      "surface-profile push/merge authorization",
+      "live SSOT vs bak clone selection",
+      "implementation edits under skills/l9-git-work-preserve"
+    ],
+    "ownership_boundaries": [
+      {
+        "owner": "skills/l9-git-work-preserve harvest classifier",
+        "owns": "porcelain dirty/untracked path classes vs baseline"
+      },
+      {
+        "owner": "skills/l9-git-work-preserve extract-workflow",
+        "owns": "one-ref local extract; currently cherry-pick or path-limited commits"
+      },
+      {
+        "owner": "skills/l9-git-work-preserve prune-policy",
+        "owns": "delete authority: prune_candidate and archive_ref with patch_id only"
+      },
+      {
+        "owner": "skills/l9-repo-sync",
+        "owns": "in-place catch-up and parking of unique work; does not harvest or prune"
+      },
+      {
+        "owner": "this harvest",
+        "owns": "transfer semantics and acceptance tests only; no skill mutation"
+      }
+    ],
+    "workflows": [
+      {
+        "evidence_ids": [
+          "e-donor-classifier",
+          "e-donor-allowlist-empty",
+          "e-donor-path-union",
+          "e-donor-prune-last"
+        ],
+        "id": "no-regress-remainder",
+        "steps": [
+          "re-inventory and re-diagnose vs fetched baseline",
+          "emit copy/skip/reason allowlist; stop if copy set empty",
+          "spawn dedicated worktree from fetched baseline",
+          "copy path-union of unique paths through the allowlist",
+          "regen generated artifacts from copied sources only",
+          "publish one theme per PR on the stack; no merge",
+          "re-diagnose; prune-execute patch-id absorbed refs last"
+        ]
+      }
+    ]
+  },
+  "unknowns": [
+    "Whether keep_push path-union should be a new script or extract-workflow prose only.",
+    "Whether layout-native prefixes belong in harvest-workflow.md or a YAML config beside the classifier.",
+    "Whether the add-only dirty-on-baseline exception should be an explicit classifier class or remain default-skip with a documented override."
+  ]
+}

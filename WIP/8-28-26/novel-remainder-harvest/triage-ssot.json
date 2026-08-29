@@ -1,0 +1,22 @@
+{
+  "baseline_ref": "origin/main",
+  "baseline_tip": "37363dd528e9ad99ecf9683d730da3fca6b4376b",
+  "buckets": {
+    "merged": [],
+    "novel": [],
+    "review": [],
+    "superseded": [],
+    "unproven": []
+  },
+  "created_at": "2026-08-29T06:51:28Z",
+  "deletes_performed": 0,
+  "fetch_error": null,
+  "fetched": true,
+  "mode": "triage-preserved",
+  "preserved_total": 0,
+  "receipt_id": "d1038b6c5de57c9a",
+  "refs": [],
+  "removal_path": "prune-policy.md (prune-execute; patch_id basis only)",
+  "repo": "/Users/ib-mac/.cursor-governance",
+  "schema": "l9.git_work_preserve.triage/v1"
+}
