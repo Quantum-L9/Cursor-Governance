@@ -26,9 +26,7 @@ def find_repo_generator() -> Path:
 
 def main(argv: list[str] | None = None) -> int:
     generator = find_repo_generator()
-    spec = importlib.util.spec_from_file_location(
-        "l9_generate_subsystem_readmes", generator
-    )
+    spec = importlib.util.spec_from_file_location("l9_generate_subsystem_readmes", generator)
     if spec is None or spec.loader is None:
         print(f"cannot load wired generator: {generator}", file=sys.stderr)
         return 1

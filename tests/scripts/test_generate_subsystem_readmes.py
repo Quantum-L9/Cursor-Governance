@@ -137,9 +137,7 @@ subsystems:
 
 
 def test_dag_no_longer_spots_donor_memory_readme():
-    text = (REPO_ROOT / "workflows" / "dags" / "readme_pipeline_dag.py").read_text(
-        encoding="utf-8"
-    )
+    text = (REPO_ROOT / "workflows" / "dags" / "readme_pipeline_dag.py").read_text(encoding="utf-8")
     assert "memory/README.md" not in text
     assert "scripts/generate_subsystem_readmes.py" in text
     assert "66+" not in text
@@ -157,17 +155,13 @@ def test_path_jail(tmp_path: Path):
     assert resolve_under_root(tmp_path, "..") is None
     assert resolve_under_root(tmp_path, "../escape") is None
     assert resolve_under_root(tmp_path, "/etc") is None
-    assert resolve_under_root(tmp_path, "ops/autonomy") == (
-        tmp_path / "ops" / "autonomy"
-    ).resolve()
+    assert resolve_under_root(tmp_path, "ops/autonomy") == (tmp_path / "ops" / "autonomy").resolve()
 
 
 def test_refuses_path_dot(tmp_path: Path):
     config = tmp_path / "config" / "subsystems"
     config.mkdir(parents=True)
-    (config / "readme_config.yaml").write_text(
-        "version: '1.0'\nsubsystems: {}\n", encoding="utf-8"
-    )
+    (config / "readme_config.yaml").write_text("version: '1.0'\nsubsystems: {}\n", encoding="utf-8")
     (tmp_path / "README.md").write_text("# Root\n", encoding="utf-8")
     assert main(["--root", str(tmp_path), "--path", "."]) == 0
     assert (tmp_path / "README.md").read_text(encoding="utf-8") == "# Root\n"
