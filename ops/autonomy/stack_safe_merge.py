@@ -74,6 +74,8 @@ def merge_argv(
     selection: dict[str, Any] | None = None,
 ) -> list[str]:
     chosen = selection or select_merge_method(repo, str(pr))
+    if chosen.get("children"):
+        delete_branch = False
     argv = [
         "gh",
         "pr",
@@ -128,6 +130,8 @@ def _execute(selection: dict[str, Any], *, delete_branch: bool) -> int:
     pr = str(selection["pr"])
     method = str(selection["method"])
     head = str(selection.get("head") or "")
+    if selection.get("children"):
+        delete_branch = False
 
     rc = _run(merge_rest_argv(repo, pr, method))
     if rc != 0:

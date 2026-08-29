@@ -108,7 +108,7 @@ Edges:
 
 - `base_dependency` / `stacked_dependency` — head of A is base of B, or B contains A's commits
 - `file_overlap` — from `gh pr view --json files` (do not download full patches)
-- `generated_output_overlap` — `MANIFEST.yaml`, `skill-registry.json`, `RULES-MANIFEST.*`, other generated pairs
+- `generated_output_overlap` — `MANIFEST.yaml`, `skill-registry.json`, `RULES-MANIFEST.*`, other generated pairs. Generated-only overlap is **not** INVENTORY_GATE-blocking. After oldest-ready merge plus `git merge origin/main`, regen (see `generated-heal.md`). Do not file-audit generated paths.
 - `merge_effect_dependency` — predicted invalidation of remaining heads
 
 Independent = empty file overlap and not stacked.

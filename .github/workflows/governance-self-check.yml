@@ -15,6 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97  # v7.0.0
@@ -50,25 +52,39 @@ jobs:
           echo "ok: governance SSOT present"
 
       - name: Generated-artifact drift (deterministic content, not mtime)
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE_REF: ${{ github.base_ref }}
         run: |
-          # Regenerate every covered derived artifact and fail closed if the
-          # tracked content differs. mtime is not correctness evidence: a stale
-          # manifest with a newer timestamp used to pass the old check.
-          # Scope the diff to generated *content* files (not env-dependent
-          # symlink reconciliation) so the check is deterministic in CI.
+          # pull_request: regenerate only generators whose sources are in the
+          # PR file list (--changed-file, no --force). --pe-manifest is added
+          # only when a PE source path is listed. An empty file list must not
+          # be passed (the script treats that as --force).
+          # push to main / workflow_dispatch: full snapshot
+          # (--force --pe-manifest --check).
           gen=ops/scripts/sync_generated_artifacts.py
           [ -f "$gen" ] || { echo "::error::$gen missing - cannot verify generated artifacts"; exit 1; }
-          # --pe-manifest reaches environment/program-execution/MANIFEST.json,
-          # which --force alone does not. This is the single enforcement point
-          # for that artifact: it is checked here like every other generated
-          # file, not by a step in peer-execution.yml.
-          python3 "$gen" --force --pe-manifest --check --json
           paths="rules/RULES-MANIFEST.json rules/RULES-MANIFEST.yaml rules/RULES-MANIFEST.md \
                  ops/generated/skill-registry.json \
                  skills/AUTONOMY_MANIFEST.yaml commands/COMMANDS_MANIFEST.yaml \
                  environment/generated/llm-rules \
                  environment/program-execution/core/MANIFEST.yaml \
                  environment/program-execution/MANIFEST.json"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            git fetch --no-tags origin "${BASE_REF}"
+            git diff --name-only "origin/${BASE_REF}...HEAD" > /tmp/pr-changed-files.txt
+            if [ ! -s /tmp/pr-changed-files.txt ]; then
+              echo "ok: empty PR file list — skip generated regen"
+            elif grep -E -q '^environment/program-execution/' /tmp/pr-changed-files.txt; then
+              python3 "$gen" --changed-file /tmp/pr-changed-files.txt --pe-manifest --check --json
+            else
+              python3 "$gen" --changed-file /tmp/pr-changed-files.txt --check --json
+            fi
+          else
+            # --pe-manifest reaches environment/program-execution/MANIFEST.json,
+            # which --force alone does not. push to main is the snapshot check.
+            python3 "$gen" --force --pe-manifest --check --json
+          fi
           if ! git diff --quiet -- $paths; then
             echo "::error::generated artifacts are stale - regenerate with 'python3 $gen --force --pe-manifest' and commit"
             git --no-pager diff --stat -- $paths

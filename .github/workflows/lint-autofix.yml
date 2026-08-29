@@ -1,7 +1,7 @@
-# Lint Autofix (Ruff) — post-merge janitor for main, not the local pre-push
+# Lint Autofix — post-merge janitor for main, not the local pre-push
 # autofix. Local clean-on-push is `make precommit-repo` (ruff --fix / format).
 # This workflow runs after something is already on main and opens a cleanup PR
-# if ruff can still fix drift. It never pushes to protected main.
+# if ruff or the generated snapshot still drifts. It never pushes to protected main.
 #
 # Toolchain matches l9-lint-test.yml: uv sync --locked --extra dev.
 # Third-party actions are SHA-pinned (ops/scripts/validate_workflow_action_pins.py).
@@ -57,6 +57,11 @@ jobs:
       - name: Confirm No Remaining Autofixable Violations
         run: uv run --frozen --no-build ruff check .
 
+      - name: Heal generated artifacts
+        run: |
+          set -euo pipefail
+          uv run --frozen --no-build python ops/scripts/sync_generated_artifacts.py --force --pe-manifest
+
       - name: Check For Changes
         id: diff
         run: |
@@ -72,19 +77,21 @@ jobs:
         uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1  # v8
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: "style: automated ruff lint/format autofix"
-          title: "Lint Autofix: automated ruff corrections"
+          commit-message: "chore: automated ruff + generated-artifact heal"
+          title: "Lint Autofix: ruff and generated heal"
           body: |
-            ## Automated Lint Autofix
+            ## Automated Lint Autofix + generated heal
 
             This PR contains automated fixes produced by:
 
             ```bash
             uv run --frozen --no-build ruff check . --fix
             uv run --frozen --no-build ruff format .
+            uv run --frozen --no-build python ops/scripts/sync_generated_artifacts.py --force --pe-manifest
             ```
 
             on `main`, using the ruff version pinned in `uv.lock`.
+            Generated heal is the full snapshot (`--force --pe-manifest`).
             `WIP/**` is already force-excluded by `pyproject.toml`.
 
             **Review required:** confirm the diff is purely mechanical
@@ -107,4 +114,4 @@ jobs:
 
       - name: No Changes Needed
         if: steps.diff.outputs.changed == 'false'
-        run: echo "ruff found nothing to autofix on main — no PR needed."
+        run: echo "ruff and generated snapshot are clean on main — no PR needed."
