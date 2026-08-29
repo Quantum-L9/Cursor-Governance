@@ -87,13 +87,10 @@
         "hint_allowed": true,
         "id": "issue_remediation",
         "negative_signals": [
-          "remediate the issue",
-          "fix the issue",
-          "unblock the issue",
-          "babysit issues",
-          "converge issues"
+          "admin merge",
+          "force push"
         ],
-        "note": "explicit_only + hint_allowed \u2014 Read Diagnose path only; Converge mutate requires explicit fix/remediate/unblock/babysit or autonomy packet. PR green/merge stays on l9-pr-remediation.\n",
+        "note": "explicit_only + hint_allowed \u2014 /issues and /l9-issue-remediation are remediator Converge. Diagnose is /issues diagnose or \u201cwhat\u2019s blocking?\u201d only and never chains /l9-pr-remediation. Converge lands fixes on matching or stacked PRs, closes status=fixed, and chains l9-pr-remediation only when open_issues=0.\n",
         "positive_signals": [
           "open issues",
           "github issues",
@@ -102,7 +99,13 @@
           "org issues",
           "cross-repo issues",
           "diagnose issues",
-          "/issues"
+          "/issues",
+          "/l9-issue-remediation",
+          "remediate the issue",
+          "fix the issue",
+          "unblock the issue",
+          "babysit issues",
+          "converge issues"
         ],
         "primary": "l9-issue-remediation",
         "signal_weight": 8,
@@ -1036,12 +1039,12 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge open github issues across all non-archived quantum-l9 repos \u2014 inventory and rank blockers, fix at the obvious owning repo, hand prs to l9-pr-remediation, and leave graphiti pickup plus issue comment plus conditional root session-reference markdown so the next agent can resume. use when reviewing org issue readiness or blockers, or when the user asks to fix, remediate, unblock, or converge open issues across repos.",
+      "description": "remediator for open github issues across all non-archived quantum-l9 repos \u2014 drain leverage-ranked clusters, land fixes on the matching open pr or a stacked pr on the newest, close resolved issues, and chain l9-pr-remediation only when open_issues=0. diagnose is the auditor opt-out. use when the user runs /issues or /l9-issue-remediation, or asks to fix, remediate, unblock, or converge open issues.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-issue-remediation",
       "path": "skills/l9-issue-remediation",
-      "reason": "Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs \u2014 high blast radius, explicit only; hint_allowed for read-only Diagnose",
+      "reason": "/issues and /l9-issue-remediation are remediator Converge (drain all clusters, land on PRs, close resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1322,6 +1325,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "788452df425c73f3e5bc18f9044458164e553d6488c940f7ded52b5c0f0ff985",
-  "source_skill_corpus_sha256": "faf460d64a72d9423bdadc748b93807bac74547cccd0562508e395cb87fa68cf"
+  "source_manifest_sha256": "8bf3537c65343161ff6e543447569412b50dc338e7bc149ced145bc2ba253909",
+  "source_skill_corpus_sha256": "0c94a049a5c7a78d82eb73a5d23ee80965eef8e54949da3556042cd634ea60d6"
 }
