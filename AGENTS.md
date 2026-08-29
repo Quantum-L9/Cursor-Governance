@@ -969,3 +969,22 @@ skips the tree latch too. L4 on the shelf worktree is `begin` then
 `authorize-release` only — not `record-kernels`. Mid-session plan inject does
 not apply those kernels; `/ff` is the apply site. This fragment supersedes
 the `record-kernels` sentence in `FF_SHELF_WIP_PLANS_V1`.
+
+<!-- ONE_FINISH_MAKE_PR_V1 -->
+## One finish path (2026-08-29)
+
+This fragment supersedes Cursor “STOP after `make precommit-repo`” sentences
+in Profile `session_start_block` / `llm_rules_override` (live text is rewritten
+in `ops/autonomy/surface_profile.yaml`). Historical paragraphs stay on disk
+where `additive_only`.
+
+- All surfaces (Cursor, Claude Code desktop, Claude Code Mobile): finished
+  work → scoped-commit → `l4_local.py authorize-release` →
+  `PR_REMEDIATE=0 make pr` / `l9 pr`.
+- Do not run `make precommit-repo` then `make pr`. Receipt skip is not a
+  second ceremony.
+- Tree kernels: Cursor skips the tree latch (`kernel_gate.py`). Desktop and
+  Mobile still fire them on `make pr`. Plan-kernel and `/ff` corpus kernels
+  are unchanged.
+- Combined `beforeShellExecution` is Cursor-only. Claude uses PreToolUse
+  (`local_execution_gate_wrap.py`). Do not copy the hook cut.

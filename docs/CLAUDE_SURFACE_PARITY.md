@@ -29,7 +29,7 @@ Expected, per `l9.claude_operational_parity_convergence.v1`:
 | Graphiti capability | HTTPS Graphiti (`GRAPHITI_MCP_URL`); `memory.cli` vs `memory.mcp` | `emit_claude_readiness.py` graphiti probe; not `probe_broker.py` |
 | Secret boundary | `model-controlled` — no broker/Infisical/Graphiti secret on the surface | `verify_account_env.py` prohibited set |
 | Makefile facade | one Governance Makefile; `l9` dispatcher exposes CONSUMER_SAFE targets | `L9_CONSUMER_SAFE_TARGETS`; `docs/L9_DISPATCHER.md` |
-| PR validation | governance Makefile `pr` via `l9 pr` / `make -C "$GOV" pr WS="$PWD"` → `open_pr_after_gate.sh` (REST); changed-files gate; consumer repo needs no local `pr` target | governance Makefile `pr` / `pr-check` (`docs/L9_DISPATCHER.md`) |
+| PR validation | governance Makefile `pr` via `l9 pr` / `make -C "$GOV" pr WS="$PWD"` → `open_pr_after_gate.sh` (REST); changed-files gate; consumer repo needs no local `pr` target. Same finish as Cursor: authorize-release then `PR_REMEDIATE=0 make pr` / `l9 pr`. Cursor skips tree kernels; this adapter still fires them. | governance Makefile `pr` / `pr-check` (`docs/L9_DISPATCHER.md`); Profile `session_start_block` |
 | Push authority | available when repo release law + L4 release receipt allow | `l4_local.py`; `open_pr_after_gate.sh` |
 | Merge authority | no standing env boolean; scoped, expiring receipt or human breakglass | `merge_gate.py`; `authorize_merge.py` |
 | Readiness schema | `l9.claude-readiness.v1` (this repo) | `emit_claude_readiness.py` |

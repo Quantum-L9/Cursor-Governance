@@ -139,58 +139,46 @@ def test_makefile_pr_graph_keeps_pr_check_leaf() -> None:
     )
 
 
-CURSOR_FINISH_TEACHERS = (
+FINISH_TEACHERS = (
     ROOT / "ops" / "autonomy" / "surface_profile.yaml",
     ROOT / "rules" / "88-l4-local-autonomy.mdc",
     ROOT / "rules" / "48-make-pr-remediation.mdc",
     ROOT / "rules" / "99-no-auto-commit.mdc",
-    ROOT / "rules" / "42-no-abandoned-work.mdc",
     ROOT / "commands" / "gmp.md",
     ROOT / "skills" / "l9-gmp-protocol" / "SKILL.md",
     ROOT / "skills" / "l9-gmp-protocol" / "references" / "gmp-autonomy-bounds.md",
 )
 
-FINISH_THEN_MAKE_PR = re.compile(
-    r"(Only then:.*make pr|"
-    r"PR_REMEDIATE=[01] make pr|"
-    r"Finalize runs L4 release.*make pr|"
-    r"Happy path: finish → scoped-commit → `make pr`)"
+SPLIT_FINISH = (
+    "catalog + commit + **STOP**",
+    "catalog + commit + stop",
+    "Cursor has no standing publish",
+    "Cursor does not take this step",
+    "Cursor stops after catalog",
+    "after `make precommit-repo` and a scoped local commit, **STOP**",
+    "After `make precommit-repo` and that commit, **STOP**",
 )
-SURFACE_PREDICATE = re.compile(r"(?i)claude-code|L9_GOVERNANCE_SURFACE")
 
 
-def _preceding_or_same_has_predicate(lines: list[str], index: int) -> bool:
-    if SURFACE_PREDICATE.search(lines[index]):
-        return True
-    if index == 0:
-        return False
-    return bool(SURFACE_PREDICATE.search(lines[index - 1]))
-
-
-def test_cursor_finish_teachers_do_not_unnegated_make_pr() -> None:
-    failures: list[str] = []
-    for path in CURSOR_FINISH_TEACHERS:
+def test_finish_teachers_teach_one_make_pr() -> None:
+    missing: list[str] = []
+    for path in FINISH_TEACHERS:
         assert path.is_file(), f"missing finish teacher: {path}"
-        lines = path.read_text(encoding="utf-8").splitlines()
-        rel = path.relative_to(ROOT).as_posix()
-        for number, line in enumerate(lines, start=1):
-            if not FINISH_THEN_MAKE_PR.search(line):
-                continue
-            if NEGATION.search(line):
-                continue
-            if _preceding_or_same_has_predicate(lines, number - 1):
-                continue
-            failures.append(f"{rel}:{number}:{line.strip()}")
-    assert not failures, (
-        "unnegated Cursor finish-then-make-pr without a claude-code predicate:\n"
-        + "\n".join(failures)
+        text = path.read_text(encoding="utf-8")
+        if "PR_REMEDIATE=0 make pr" not in text and "l9 pr" not in text:
+            missing.append(path.relative_to(ROOT).as_posix())
+    assert not missing, "finish teachers must name PR_REMEDIATE=0 make pr or l9 pr:\n" + "\n".join(
+        missing
     )
 
 
-def test_cursor_finish_teachers_name_stop() -> None:
-    missing: list[str] = []
-    for path in CURSOR_FINISH_TEACHERS:
+def test_finish_teachers_do_not_split_cursor_stop() -> None:
+    failures: list[str] = []
+    for path in FINISH_TEACHERS:
         text = path.read_text(encoding="utf-8")
-        if "STOP" not in text and "stop" not in text:
-            missing.append(path.relative_to(ROOT).as_posix())
-    assert not missing, "finish teachers must name Cursor STOP:\n" + "\n".join(missing)
+        rel = path.relative_to(ROOT).as_posix()
+        lower = text.lower()
+        for needle in SPLIT_FINISH:
+            if needle.lower() in lower:
+                failures.append(f"{rel}: {needle}")
+    assert not failures, "split Cursor-STOP teaching still live:\n" + "\n".join(failures)

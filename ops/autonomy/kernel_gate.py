@@ -10,6 +10,11 @@ L9_AGENT_REQUIRED them. L4 record-kernels is not the corpus apply path.
 
 ``precommit`` must run first in ``run_pr_precommit.sh`` and fail closed
 before any other hook or test starts, so those checkers fire once.
+
+Tree kernels latch on adapter surfaces (``claude-code``, ``codex``,
+``gemini``, ``manus``). Cursor (``L9_GOVERNANCE_SURFACE`` unset or
+``cursor``) skips the tree latch so ``make pr`` / ``l9 pr`` share one
+finish path without a second RA+V&R apply.
 """
 
 from __future__ import annotations
@@ -19,6 +24,7 @@ import hashlib
 import json
 import os
 import sys
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -45,6 +51,7 @@ PLAN_SKIP_PREFIXES = (
     "docs/plans/_TEMPLATE.plan.md",
     *KERNEL_EXEMPT_PREFIXES,
 )
+ADAPTER_SURFACES = frozenset({"claude-code", "codex", "gemini", "manus"})
 
 
 def _rel_path(raw: str) -> str:
@@ -57,6 +64,13 @@ def _is_corpus_path(rel: str) -> bool:
         if norm == prefix.rstrip("/") or norm.startswith(prefix):
             return True
     return False
+
+
+def adapter_tree_kernels_required(environ: Mapping[str, str] | None = None) -> bool:
+    """Tree latch fires on adapter ``make pr`` only. Cursor skips it."""
+    env = os.environ if environ is None else environ
+    surface = str(env.get("L9_GOVERNANCE_SURFACE") or "").strip().lower()
+    return surface in ADAPTER_SURFACES
 
 
 def changed_are_corpus_only(changed_paths: list[str]) -> bool:
@@ -255,6 +269,16 @@ def precommit(root: Path, gov: Path, changed_file: Path | None) -> int:
     changed = read_changed_file(changed_file)
     if changed_are_corpus_only(changed):
         print("OK: kernel hook skipped (corpus-only changeset; /ff owns WIP/plans/campaigns)")
+        return 0
+    if not adapter_tree_kernels_required():
+        print(
+            "OK: kernel hook skipped tree latch "
+            "(cursor surface; adapters still apply on make pr)"
+        )
+        plan_fail = verify_plans(changed, workspace=root, gov=gov)
+        if plan_fail:
+            sys.stderr.write(plan_fail)
+            return 2
         return 0
     tree_fail = verify_tree(root, gov)
     if tree_fail:

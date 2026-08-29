@@ -21,7 +21,9 @@ are **overruled** here for work you authored this session.
 3. Before you tell the user the coding work is done, `git status` must show
    **no unique dirty files you authored this session**. If it does, commit now.
    Then reply.
-4. Ask only before remote mutation: push / `make pr` / `gh pr create`.
+4. Ask only before a raw `git push` / `gh pr create` that is not the
+   finish path. Finished work is `authorize-release` then
+   `PR_REMEDIATE=0 make pr` / `l9 pr` on every surface.
 
 Silence is not permission to leave unique work uncommitted.
 
@@ -30,11 +32,10 @@ Silence is not permission to leave unique work uncommitted.
 - Ask “should I commit?”
 - Stop with unique uncommitted files you wrote this session
 - `git add -A` / `git add .` / scooping foreign dirty paths (rule 49)
-- `git push`, `gh pr create`, `make push`, or MCP `create_pull_request` /
-  `push_files` without an explicit user request
-- `make pr` unless the user invoked it. Standing L4 publish is adapter-only
-  (`L9_GOVERNANCE_SURFACE=claude-code` / `codex` / `gemini` / `manus`).
-  Cursor has no standing publish.
+- A raw `git push` / `gh pr create` / `make push`, or MCP
+  `create_pull_request` / `push_files`, without an explicit user request.
+  Finished work uses `PR_REMEDIATE=0 make pr` / `l9 pr` after L4
+  `authorize-release` — that finish is standing on every surface.
 - Chain commit **and** push from “looks good”
 
 ## MAY without asking
@@ -46,14 +47,15 @@ Silence is not permission to leave unique work uncommitted.
 
 1. **Mechanical gates** — `ops/autonomy/local_execution_gate.py`, L4 receipts, `merge_gate.py`
 2. **`88-l4-local-autonomy`** — during an active L4 program: local commits authorized; mid-execution `make pr` and MCP `create_pull_request` / `push_files` denied until `authorize-release`
-3. **This rule** — Cursor **local commit** is standing and mandatory after authored edits. **Push / PR open** stays ask-first except when the user invoked `make pr`. Standing L4 authorize-release publish applies on `L9_GOVERNANCE_SURFACE=claude-code` / `codex` / `gemini` / `manus` only. Cursor stops after catalog + commit.
+3. **This rule** — Cursor **local commit** is standing and mandatory after authored edits. Finished work is `authorize-release` then `PR_REMEDIATE=0 make pr` / `l9 pr` on every surface. Raw `git push` / `gh pr create` stay ask-first. Tree kernels skip on Cursor; adapters still fire them on `make pr`.
 4. Force-push, hard-reset, admin-merge, and secrets exfil: **never** waived
 
 Projected override: `zz-autonomy-surface-override.md`.
 
-## Approval phrases (push / PR only)
+## Approval phrases (raw push only)
 
-Push: "push", "push it", "git push", "push to origin", "make pr".
+Raw push: "push", "push it", "git push", "push to origin".
+`make pr` / `l9 pr` is the finish path after L4 release, not an ask phrase.
 Commit does not need a phrase.
 
 <!-- generated-from: rules/99-no-auto-commit.mdc; do-not-edit -->
