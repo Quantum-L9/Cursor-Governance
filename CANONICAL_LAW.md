@@ -290,6 +290,8 @@ hook says so; then re-run the same gate once.
 | Local cache | `intelligence/context-memory/sessions/*.json` | Fallback only |
 | MCP interface | `ops/graphiti/graphiti_memory_client.py` | L9-Ops-MCP |
 
+**Live Durable-episodes interface (issue #368):** writes and session resume use `ops/graphiti/graphiti_memory_client.py` (ADR-0006 single front door) and `ops/graphiti/hydration/` (`compile_session_packet.py`, `close_session.py`, `archive_transcript.py`). The `graphiti_sink.py` cell above is historical — CHANGELOG records it was intended but never wired. Do not restore `intelligence/_archived/`.
+
 **Rules:** `03-graphiti-memory.mdc`, `97-graph-layer-boundary.mdc`, `98-graphiti-memory-gate.mdc`, `99-graphiti-temporal.mdc`
 **Skill:** `skills/l9-graphiti-memory/SKILL.md`
 **Flags:** `GRAPHITI_MEMORY_ENABLED`, `GRAPHITI_WRITE_GATES`
