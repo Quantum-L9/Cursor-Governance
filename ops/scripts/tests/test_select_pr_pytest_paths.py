@@ -206,3 +206,43 @@ class NonPythonChangeTests(unittest.TestCase):
         self.assertIn("ops/scripts/tests/test_bootstrap_invariants.py", selected)
         self.assertNotIn(".", selected)
         self.assertLess(len(selected), 40, selected)
+
+
+class FixtureAndCampaignScopeTests(unittest.TestCase):
+    """Fixture/MANIFEST basenames must not union the catalog.
+
+    A compiler-only change must stay smaller than one that includes
+    campaign_input.py, and must not pull test_run_campaign.py.
+    """
+
+    CAMPAIGN_TEST = "environment/program-execution/scripts/tests/test_run_campaign.py"
+    COMPILER_SRC = "environment/program-execution/compiler/architecture_intent.py"
+    CAMPAIGN_SRC = "environment/program-execution/scripts/campaign_input.py"
+    FIXTURE = (
+        "environment/program-execution/compiler/tests/conformance/"
+        "fixtures/01_one_sentence_intent/expect.yaml"
+    )
+
+    def test_expect_yaml_basename_does_not_select_campaign_suite(self) -> None:
+        selected = select_pr_pytest_paths([self.FIXTURE])
+        self.assertNotIn(self.CAMPAIGN_TEST, selected)
+        self.assertLess(len(selected), 8, selected)
+
+    def test_manifest_basename_does_not_union_the_catalog(self) -> None:
+        selected = select_pr_pytest_paths(["MANIFEST.yaml"])
+        self.assertLess(len(selected), 8, selected)
+
+    def test_compiler_only_change_excludes_campaign_runner(self) -> None:
+        selected = select_pr_pytest_paths([self.COMPILER_SRC])
+        self.assertNotIn(self.CAMPAIGN_TEST, selected)
+
+    def test_campaign_input_keeps_named_campaign_tests(self) -> None:
+        selected = select_pr_pytest_paths([self.CAMPAIGN_SRC])
+        self.assertIn(self.CAMPAIGN_TEST, selected)
+
+    def test_compiler_set_does_not_contain_campaign_named_tests(self) -> None:
+        compiler = set(select_pr_pytest_paths([self.COMPILER_SRC]))
+        campaign = set(select_pr_pytest_paths([self.CAMPAIGN_SRC]))
+        self.assertTrue(campaign - compiler, (compiler, campaign))
+        self.assertNotIn(self.CAMPAIGN_TEST, compiler)
+        self.assertIn(self.CAMPAIGN_TEST, campaign)

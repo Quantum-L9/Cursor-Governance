@@ -1077,3 +1077,14 @@ pack.
 - Plans, WIP, and PE campaigns are one family. NEXT 1–3 takes one slot per surface first, then fills leftovers (cap 3). Eligible WIP is harvestable or pending-active, not inventory-`landed`.
 - Live skill is **`l9-pipeline-audit`**. The old pack is archived at `skills/_archived/l9-plan-audit/` (`superseded_by: l9-pipeline-audit`).
 - `/plan-audit` remains a compatibility alias of `/l9-pipeline-audit`. `/l9-audit-plans` remains the plans-store shelf organizer. Do not auto-Build. Do not `make campaign`.
+
+<!-- L9_PR_SECURITY_VELOCITY_V1 -->
+## Local PR security velocity (2026-08-29)
+
+`make pr` / `make pr-check` / default `make pr-security` use
+`PR_SECURITY_PROFILE=velocity`: one gitleaks process over the changed set,
+gitleaks+bandit+semgrep in parallel, Semgrep `p/secrets` plus
+`.semgrep/l9-pr.yml`. `p/python` stays on CI and on
+`PR_SECURITY_PROFILE=full make pr-security` / `make pr-security-full`
+(also a `pr-full` prereq). `SEMGREP_CONFIGS` still overrides. Do not skip
+the security wave. Do not default `gitleaks detect` without `--no-git`.
