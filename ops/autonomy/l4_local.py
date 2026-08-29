@@ -274,8 +274,16 @@ def begin(
 ) -> dict[str, Any]:
     branch = current_branch(root)
     if branch in {"main", "master", "HEAD"}:
+        # Name the directory, not just the branch. A refusal that says only
+        # "refused on 'main'" reads as a policy error when the real cause is
+        # usually that the command ran from the wrong tree -- a hook, a
+        # subshell, or a compound command that changed directory. IMP-06's
+        # second clause: say which repository was resolved, and name the flag
+        # that retargets it.
         raise RuntimeError(
-            f"L4 begin refused on '{branch}' — create/checkout a stacked feature branch first"
+            f"L4 begin refused on '{branch}' in {root} — "
+            "create/checkout a stacked feature branch first, "
+            "or did you mean --workspace <target repo>?"
         )
     state = {
         "schema": SCHEMA,
