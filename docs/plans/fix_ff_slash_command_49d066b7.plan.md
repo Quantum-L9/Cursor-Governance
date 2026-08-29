@@ -19,7 +19,7 @@ todos:
     status: completed
   - id: doctrine
     content: Update ff.md, skill refs, rule 55, AGENTS.md append, surface_profile kernel_hook, pack validator
-    status: in_progress
+    status: completed
 isProject: false
 ---
 
