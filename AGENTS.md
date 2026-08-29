@@ -1088,3 +1088,14 @@ gitleaks+bandit+semgrep in parallel, Semgrep `p/secrets` plus
 `PR_SECURITY_PROFILE=full make pr-security` / `make pr-security-full`
 (also a `pr-full` prereq). `SEMGREP_CONFIGS` still overrides. Do not skip
 the security wave. Do not default `gitleaks detect` without `--no-git`.
+
+<!-- L9_PLAN_SIMPLE_STACK_PR_V1 -->
+## `l9-plan-simple` Build publishes a stacked PR (2026-08-29)
+
+This fragment supersedes the “Build button on the current checkout” sentence
+in `L9_PLAN_SIMPLE_V1`. That paragraph stays on disk (additive_only). Do not fold it.
+
+- Planning still binds the current workspace. Do not write `Lock: origin/main = <sha>`. Do not run `make campaign`.
+- After **Build** todos complete: scoped-commit, `l4_local.py authorize-release`, then **`PR_STACK=auto PR_REMEDIATE=0 make pr`**.
+- If any open PR exists: **never** branch from `origin/main`. Start from the unique open-PR chain tip. Sibling chains fail closed. Empty board may use `origin/main`.
+- The finish reply **must** display the opened PR URL as proof.

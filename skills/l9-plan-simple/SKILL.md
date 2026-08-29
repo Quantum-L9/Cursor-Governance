@@ -1,10 +1,11 @@
 ---
 name: l9-plan-simple
 description: create a machine-validated cursor .plan.md from the shared executable-plan
-  template and execute it with the build button on the current checkout. use when
-  scope is unclear, requirements need decomposition, cursor plan mode is on, or the
-  next step should be planned before code changes. do not use when the user asks for
-  program-execution, make campaign, /l9-plan, or a pe campaign lock.
+  template and execute it with the build button, then open a stacked PR. never branch
+  off main when an open PR exists. always make pr after build and display the PR URL.
+  use when scope is unclear, requirements need decomposition, cursor plan mode is on,
+  or the next step should be planned before code changes. do not use when the user
+  asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.
 metadata:
   skill_schema: 1
   layer: control_plane
@@ -19,8 +20,8 @@ metadata:
   - validation
   owner: igor_beylin
   status: active
-  version: 1.0.0
-  updated: 2026-08-21
+  version: 1.1.0
+  updated: 2026-08-29
 disable-model-invocation: true
 ---
 
@@ -28,9 +29,11 @@ disable-model-invocation: true
 
 ## Purpose
 
-Produce a deep, machine-validated plan from the **same** first-class executable-plan template as `l9-plan`, then execute it with the **Build** button on the current checkout.
+Produce a deep, machine-validated plan from the **same** first-class executable-plan template as `l9-plan`, then execute it with the **Build** button, then **always** publish with `PR_STACK=auto PR_REMEDIATE=0 make pr`.
 
-This skill does **not** wire the delivered plan to Program Execution. Do not run `make campaign`. Do not admit a Program Lock. Do not write `Lock: origin/main = <sha>` or require a new worktree from tip.
+This skill does **not** wire the delivered plan to Program Execution. Do not run `make campaign`. Do not admit a Program Lock. Do not write `Lock: origin/main = <sha>`. Do not require a new worktree from tip as a **planning** requirement.
+
+If any open PR exists, Build **never** branches from `origin/main`. Execute on the unique open-PR chain tip. After todos complete, open the stacked PR and **display the PR URL** as proof.
 
 **Doctrine:** a minute of planning saves an hour of debugging. The template sections stay; only the execute path changes.
 
@@ -70,7 +73,7 @@ Default human/executable projection: the shared canonical `.plan.md` with the PE
 7. **Emit PLAN_DOCUMENT** — JSON conforming to the shared schema.
 8. **Validate** — `python3 ../l9-plan/scripts/validate_plan_document.py <plan.json>`. FAIL → not ready.
 9. **Project** — `python3 ../l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=cursor-build > .cursor/plans/<slug>_<8hex>.plan.md` (or hand-fill [executable-plan.template.md](references/executable-plan.template.md) and swap the execute block per [plan-workflow-simple.md](references/plan-workflow-simple.md)). Frontmatter must include `kind: simple` and `execute_via: cursor-build`.
-10. **Handoff** — user presses **Build**. Work stays on the current checkout. Recommend `l9-ynp` only if the next skill is unclear.
+10. **Handoff** — user presses **Build**. If any open PR exists, execute on the unique chain tip (`PR_STACK=auto`); never branch from `origin/main`. After todos: scoped-commit, `l4_local.py authorize-release`, `PR_STACK=auto PR_REMEDIATE=0 make pr`. Display the opened **PR URL**. Recommend `l9-ynp` only if the next skill is unclear.
 
 ## Resource Map
 
@@ -88,9 +91,10 @@ Default human/executable projection: the shared canonical `.plan.md` with the PE
 ```bash
 python3 ../l9-plan/scripts/validate_plan_document.py ../l9-plan/fixtures/plan_pass.json
 python3 ../l9-plan/scripts/render_plan_pe_autonomy.py ../l9-plan/fixtures/plan_pass.json --execute-via=cursor-build | grep -q "Execute via Cursor Build"
+python3 ../l9-plan/scripts/render_plan_pe_autonomy.py ../l9-plan/fixtures/plan_pass.json --execute-via=cursor-build | grep -q "PR_STACK=auto"
 ```
 
-A delivered plan is incomplete unless `validate_plan_document.py` PASSes **and** the `.plan.md` has every required template section with **Execute via Cursor Build** (not `make campaign`, not Program Lock).
+A delivered plan is incomplete unless `validate_plan_document.py` PASSes **and** the `.plan.md` has every required template section with **Execute via Cursor Build** (not `make campaign`, not Program Lock) **and** the stacked-`make pr` / PR URL contract.
 
 ## Failure Handling
 
@@ -98,4 +102,5 @@ A delivered plan is incomplete unless `validate_plan_document.py` PASSes **and**
 - Validator FAIL → fix or set `convergence.status=blocked`; do not claim ready.
 - User asks for PE / campaign / `make campaign` → hand off to `l9-plan`; do not invent a PE lock here.
 - KERNEL / PE overlay landing → hand off to `l9-plan`.
-- User presses Build → execute todos on the current checkout; do not run `make campaign`.
+- User presses Build → if any open PR exists, execute on the unique chain tip (never `origin/main`); after todos `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the **PR URL**; do not run `make campaign`.
+- Build without `make pr`, or a finish reply without the opened PR URL → incomplete.

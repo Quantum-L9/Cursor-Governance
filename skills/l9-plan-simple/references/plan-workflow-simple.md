@@ -6,8 +6,8 @@ role: plan_workflow
 tags: [plan, todo, validation, projection, cursor-build]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-08-21
+version: 1.1.0
+updated: 2026-08-29
 /L9_META -->
 
 # Plan Workflow — Shared Template, Cursor Build Execute
@@ -51,12 +51,16 @@ python3 ../l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=
 ```markdown
 ## Execute via Cursor Build
 
-Press **Build**. Work in the **current checkout**.
+Press **Build**. Plan on the current workspace. Execute on the unique open-PR chain tip.
 
+- If any open PR exists: **never** branch from `origin/main`. Start from the unique chain tip (`PR_STACK=auto`). Use `agent_worktree_start.sh` when this checkout is not already that tip. Sibling open-PR chains fail closed.
+- If the board is empty: `origin/main` is allowed.
 - Do not run `make campaign`.
 - Do not admit a Program Lock or Controller lease.
 - Do not write `Lock: origin/main = <sha>`.
-- Do not open a new worktree from tip as a planning requirement.
+- Do not open a new worktree from tip as a **planning** requirement.
+- After Build todos complete: scoped-commit (pathspecs), `l4_local.py authorize-release`, then `PR_STACK=auto PR_REMEDIATE=0 make pr`. Do not skip `make pr`.
+- The finish reply **must** display the opened PR URL as proof. Without that URL the Build is incomplete.
 ```
 
 A delivered simple plan that still contains a live (unnegated) `make campaign` command or a live PE execute heading is not ready. Required prohibition sentences such as `Do not run make campaign` are not live wiring.
@@ -72,5 +76,8 @@ Same as the shared template / `plan-workflow-pe-autonomy.md` items 1–16, with 
 - campaign authorization packet
 - `@environment/program-execution` as the run path
 - new worktree from `origin/main` as a planning requirement
+- branching from `origin/main` when any open PR exists
+- finishing Build without `PR_STACK=auto PR_REMEDIATE=0 make pr`
+- a finish reply that omits the opened PR URL
 
 KERNEL pack / PE overlay landings: escalate to `l9-plan` + `rules/46-kernel-pack-new-branch.mdc`. Do not invent a SHA lock here.
