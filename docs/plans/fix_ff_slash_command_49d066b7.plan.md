@@ -4,22 +4,22 @@ overview: Make `/ff` switch the named clone onto `main` as step 0 (inside `ff.sh
 todos:
   - id: ff-step0-switch
     content: Park then git switch to main inside ff.sh; identity check BRANCH_AFTER==main; do not reset feature branches
-    status: in_progress
+    status: completed
   - id: ff-self-test
     content: "Add self_test: feature branch unique commits survive; clone ends on origin/main"
-    status: pending
+    status: completed
   - id: corpus-kernels-protocol
     content: Shelf leftover WIP/plans/campaigns; apply Improve then RA then V&R before commit; L4 begin+authorize only
-    status: pending
+    status: completed
   - id: kernel-gate-skip
     content: Skip WIP/docs/plans/campaigns in kernel_gate; corpus-only changesets skip tree latch; flip tests
-    status: pending
+    status: completed
   - id: plan-receipt-ra
     content: Insert recursive_alignment between improve and validate_repair in plan kernel_pass checker + fixtures
-    status: pending
+    status: completed
   - id: doctrine
     content: Update ff.md, skill refs, rule 55, AGENTS.md append, surface_profile kernel_hook, pack validator
-    status: pending
+    status: in_progress
 isProject: false
 ---
 
