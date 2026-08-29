@@ -404,17 +404,18 @@ esac
 # Graphiti health without the capability broker. CLI uses the locked
 # interpreter + graphiti_memory_client.py; MCP is HTTP to GRAPHITI_MCP_URL
 # (default https://memory.quantumaipartners.com/graphiti/mcp). Connect vs 401
-# vs 403 allowlist are distinct reasons. Broker retired 2026-08-29 (never
-# shipped; not probed). A leftover broker URL in .mcp.json is still a defect.
+# vs 403 allowlist are distinct reasons. capability broker experiment retired
+# (never shipped; not probed). A leftover broker URL in .mcp.json is still a
+# defect.
 stage "graphiti-health"
 EMITTER="$GOV_DIR/ops/scripts/emit_claude_readiness.py"
 if [ -n "$GOV_PY" ] && [ -f "$EMITTER" ]; then
-  probe_json="$("$GOV_PY" "$EMITTER" --graphiti-probe --root "$GOV_DIR" 2>/dev/null || true)"
+  probe_json="$("$GOV_PY" "$EMITTER" --graphiti-probe --root "$GOV_DIR" 2>/dev/null)" || probe_json=""
   if [ -n "$probe_json" ]; then
-    cli_st="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["cli"]["status"])' 2>/dev/null || echo READY)"
-    cli_rs="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["cli"]["reason"])' 2>/dev/null || echo "")"
-    mcp_st="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["mcp"]["status"])' 2>/dev/null || echo READY)"
-    mcp_rs="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["mcp"]["reason"])' 2>/dev/null || echo "")"
+    cli_st="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["cli"]["status"])' 2>/dev/null)" || cli_st=UNKNOWN
+    cli_rs="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["cli"]["reason"])' 2>/dev/null)" || cli_rs=""
+    mcp_st="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["mcp"]["status"])' 2>/dev/null)" || mcp_st=UNKNOWN
+    mcp_rs="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["mcp"]["reason"])' 2>/dev/null)" || mcp_rs=""
     case "$cli_st" in
       DEGRADED|BLOCKED|UNKNOWN) downgrade STATUS_MEMORY_CLI DEGRADED "${cli_rs:-cli health}" ;;
     esac
