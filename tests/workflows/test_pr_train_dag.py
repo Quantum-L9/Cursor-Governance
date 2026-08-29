@@ -26,6 +26,7 @@ from workflows.dags.pr_train_dag import (  # noqa: E402
     filter_slices_against_tip,
     github_repo_slug,
     group_slices,
+    is_empty_cherry_pick,
     order_slice,
     parse_merge_tree_name_only,
     probe_cherry_conflicts,
@@ -640,6 +641,35 @@ def test_default_publish_is_git_push_not_make_pr(monkeypatch, tmp_path):
     assert out["ok"] is True
     assert any(argv[:4] == ["git", "-C", str(tmp_path / "wt"), "push"] for argv in calls)
     assert not any(argv[:1] == ["make"] or "record-kernels" in argv for argv in calls)
+
+
+def test_is_empty_cherry_pick_detects_git_empty_message():
+    empty_msg = "The previous cherry-pick is now empty, possibly due to conflict resolution."
+    assert is_empty_cherry_pick("", empty_msg)
+    assert not is_empty_cherry_pick("", "CONFLICT (content): Merge conflict in AGENTS.md")
+
+
+def test_extract_skips_empty_cherry_pick_then_keeps_unique(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    _commit_file(repo, "readme.md", "v1\n", "base")
+    _git_c(repo, "checkout", "-b", "feature")
+    empty = _commit_file(repo, "readme.md", "v2\n", "already on tip")
+    unique = _commit_file(repo, "ops/unique.py", "x\n", "unique")
+    _git_c(repo, "checkout", "main")
+    _commit_file(repo, "readme.md", "v2\n", "tip already has v2")
+    worktree, branch = default_extract(
+        repo,
+        [{"sha": empty}, {"sha": unique}],
+        "main",
+        0,
+    )
+    assert branch.startswith("feat/pr-train-0-")
+    assert Path(worktree).is_dir()
+    assert (Path(worktree) / "ops" / "unique.py").read_text(encoding="utf-8") == "x\n"
+    _git_c(repo, "worktree", "remove", "--force", worktree)
 
 
 def test_extract_removes_worktree_on_cherry_pick_abort(tmp_path, monkeypatch):

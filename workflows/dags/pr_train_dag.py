@@ -99,6 +99,12 @@ def shares_generated_clobber(left: NovelCommit, right: NovelCommit) -> bool:
     return bool(left_p & right_p)
 
 
+def is_empty_cherry_pick(stdout: str, stderr: str) -> bool:
+    """Already-landed patch. ``cherry-pick --skip`` is not conflict resolution."""
+    blob = f"{stdout}\n{stderr}"
+    return "cherry-pick is now empty" in blob or "nothing to commit" in blob
+
+
 def parse_merge_tree_name_only(stdout: str, returncode: int) -> list[str] | None:
     """Same contract as ``pr_overlap_check.probe_ref_conflicts``: [] / paths / None."""
     if returncode == 0:
@@ -530,6 +536,7 @@ def default_extract(
     if add.returncode != 0:
         raise RuntimeError(add.stderr.strip() or "git worktree add failed")
     rebind_merge_driver(repo)
+    applied = 0
     try:
         for item in slice_commits:
             pick = subprocess.run(
@@ -538,14 +545,36 @@ def default_extract(
                 capture_output=True,
                 check=False,
             )
-            if pick.returncode != 0:
-                subprocess.run(
-                    ["git", "-C", str(worktree), "cherry-pick", "--abort"],
+            if pick.returncode == 0:
+                applied += 1
+                continue
+            if is_empty_cherry_pick(pick.stdout or "", pick.stderr or ""):
+                skip = subprocess.run(
+                    ["git", "-C", str(worktree), "cherry-pick", "--skip"],
                     text=True,
                     capture_output=True,
                     check=False,
                 )
-                raise RuntimeError(f"cherry-pick conflict on {item['sha']}: {pick.stderr.strip()}")
+                if skip.returncode != 0:
+                    subprocess.run(
+                        ["git", "-C", str(worktree), "cherry-pick", "--abort"],
+                        text=True,
+                        capture_output=True,
+                        check=False,
+                    )
+                    raise RuntimeError(
+                        f"empty cherry-pick skip failed on {item['sha']}: {skip.stderr.strip()}"
+                    )
+                continue
+            subprocess.run(
+                ["git", "-C", str(worktree), "cherry-pick", "--abort"],
+                text=True,
+                capture_output=True,
+                check=False,
+            )
+            raise RuntimeError(f"cherry-pick conflict on {item['sha']}: {pick.stderr.strip()}")
+        if applied == 0:
+            raise RuntimeError("extract empty: every kept commit was already on the tip")
     except Exception:
         subprocess.run(
             ["git", "-C", str(repo), "worktree", "remove", "--force", str(worktree)],
