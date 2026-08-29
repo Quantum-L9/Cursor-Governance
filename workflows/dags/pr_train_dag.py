@@ -221,9 +221,8 @@ def collect_remainder_slice(
         raw_paths = item.get("paths")
         paths = tuple(raw_paths) if raw_paths else (load_commit_paths(repo, sha) or ())
         for path in remainder_paths_for_commit(repo, sha, tip, paths):
-            if _git(repo, "cat-file", "-e", f"{sha}:{path}").returncode != 0:
-                by_path.pop(path, None)
-                continue
+            # Last writer wins, including deletions (`rev:path` missing).
+            # Dropping those paths omitted `git rm` and lost the original change.
             by_path[path] = sha
     if not by_path:
         return []
@@ -683,17 +682,51 @@ def extract_remainder(
                 for path in paths
                 if _git(repo, "cat-file", "-e", f"{sha}:{path}").returncode == 0
             ]
-            if not present:
+            missing = [path for path in paths if path not in present]
+            if present:
+                checkout = subprocess.run(
+                    ["git", "-C", str(worktree), "checkout", sha, "--", *present],
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                if checkout.returncode != 0:
+                    raise RuntimeError(
+                        f"remainder checkout failed on {sha}: {checkout.stderr.strip()}"
+                    )
+            tracked_missing: list[str] = []
+            for path in missing:
+                listed = subprocess.run(
+                    ["git", "-C", str(worktree), "ls-files", "--", path],
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                if (listed.stdout or "").strip() or (worktree / path).exists():
+                    tracked_missing.append(path)
+            if tracked_missing:
+                removed = subprocess.run(
+                    [
+                        "git",
+                        "-C",
+                        str(worktree),
+                        "rm",
+                        "-f",
+                        "--ignore-unmatch",
+                        "--",
+                        *tracked_missing,
+                    ],
+                    text=True,
+                    capture_output=True,
+                    check=False,
+                )
+                if removed.returncode != 0:
+                    raise RuntimeError(
+                        f"remainder git rm failed on {sha}: {removed.stderr.strip()}"
+                    )
+            if not present and not tracked_missing:
                 continue
-            checkout = subprocess.run(
-                ["git", "-C", str(worktree), "checkout", sha, "--", *present],
-                text=True,
-                capture_output=True,
-                check=False,
-            )
-            if checkout.returncode != 0:
-                raise RuntimeError(f"remainder checkout failed on {sha}: {checkout.stderr.strip()}")
-            item["paths"] = tuple(present)
+            item["paths"] = tuple(present + tracked_missing)
             applied += 1
         if applied == 0:
             raise ExtractEmpty("remainder empty: no unique paths from tip-conflict commits")

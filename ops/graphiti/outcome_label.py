@@ -44,11 +44,13 @@ def write_outcome_label(
     agent_id: str,
     write_fn: WriteFn | None = None,
     mapping: dict[tuple[str, str], str] | None = None,
+    group_id: str | None = None,
 ) -> dict[str, Any] | None:
     """Write a lesson episode for a declared pair. Unknown pairs are no-ops.
 
     Requires a non-empty decision episode id and agent_id. Unit tests must pass
-    write_fn (mock). Live path uses graphiti_memory_client.call_tool.
+    write_fn (mock). Live path uses graphiti_memory_client.call_tool with a
+    resolved group_id (same payload shape as EpisodeContract.to_mcp_payload).
     """
     episode_id = str(decision_episode_id or "").strip()
     if not episode_id:
@@ -76,12 +78,20 @@ def write_outcome_label(
         "label": label,
     }
     if write_fn is None:
+        from ops.graphiti.graphiti_memory_client import call_tool
+        from ops.graphiti.group_resolver import resolve_group_id
+
+        gid = str(group_id or "").strip() or str(resolve_group_id().get("group_id") or "").strip()
+        if not gid:
+            msg = "group_id is required"
+            raise ValueError(msg)
+        payload["group_id"] = gid
 
         def _live_write(p: dict[str, Any]) -> Any:
-            import graphiti_memory_client as gmc
-
-            return gmc.call_tool("add_memory", p)
+            return call_tool("add_memory", p)
 
         write_fn = _live_write
+    elif group_id:
+        payload["group_id"] = str(group_id).strip()
     result = write_fn(payload)
     return {"wrote": True, "label": label, "kind": _WRITE_KIND, "result": result}

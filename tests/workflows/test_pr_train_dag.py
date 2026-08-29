@@ -670,7 +670,32 @@ def test_remainder_slice_tombstones_deleted_last_writer(tmp_path):
         ],
         tip,
     )
-    assert remainder == []
+    assert remainder
+    assert remainder[0]["sha"] == deleted
+    assert remainder[0]["paths"] == ("ops/unique.py",)
+
+
+def test_extract_remainder_removes_deleted_last_writer(tmp_path, monkeypatch):
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    repo = tmp_path / "git"
+    repo.mkdir()
+    _init_git(repo)
+    (repo / "ops").mkdir()
+    (repo / "ops" / "unique.py").write_text("on-tip\n", encoding="utf-8")
+    _git_c(repo, "add", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "tip has file")
+    _git_c(repo, "checkout", "-b", "feature")
+    _git_c(repo, "rm", "ops/unique.py")
+    _git_c(repo, "commit", "-m", "delete unique")
+    deleted = _rev_parse(repo)
+    _git_c(repo, "checkout", "main")
+    remainder = collect_remainder_slice(
+        repo, [{"sha": deleted, "paths": ("ops/unique.py",)}], "main"
+    )
+    assert remainder
+    worktree, _branch = default_extract(repo, remainder, "main", 0)
+    assert not (Path(worktree) / "ops" / "unique.py").exists()
+    _git_c(repo, "worktree", "remove", "--force", worktree)
 
 
 def test_filter_remainder_drops_paths_already_on_new_tip(tmp_path):

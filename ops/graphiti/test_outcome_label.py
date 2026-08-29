@@ -51,6 +51,25 @@ def test_declared_pairs_write_lesson(action, feedback, expected):
     assert expected in captured[0]["episode_body"]
 
 
+def test_write_includes_group_id_when_provided():
+    captured: list[dict] = []
+    write_outcome_label(
+        decision_episode_id="ep-decision-1",
+        action="WARN_AND_LOG",
+        feedback="edited_file",
+        agent_id="cursor",
+        group_id="cursor-governance",
+        write_fn=lambda p: captured.append(p) or p,
+    )
+    assert captured[0]["group_id"] == "cursor-governance"
+
+
+def test_live_writer_imports_package_client():
+    text = Path(__file__).resolve().parent.joinpath("outcome_label.py").read_text(encoding="utf-8")
+    assert "from ops.graphiti.graphiti_memory_client import call_tool" in text
+    assert "import graphiti_memory_client as gmc" not in text
+
+
 def test_unknown_pair_is_noop():
     calls: list[dict] = []
     result = write_outcome_label(

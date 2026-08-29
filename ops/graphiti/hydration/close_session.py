@@ -497,40 +497,41 @@ def close_session(
                 except Exception as exc:  # noqa: BLE001
                     report["warnings"].append(f"Phase B pickup write failed: {exc}")
 
-            promote_min = float(rules.get("promote_min_score", 0.65))
-            max_promo = int(rules.get("max_promotions_per_close", 5))
-            promotable = set(rules.get("promotable_kinds") or ["lesson", "insight", "decision"])
             promoted = 0
-            for item in signal.get("promotion_decisions") or []:
-                if promoted >= max_promo:
-                    break
-                if not isinstance(item, dict):
-                    continue
-                if item.get("decision") != "promote":
-                    continue
-                kind = str(item.get("kind") or "lesson")
-                if kind not in promotable:
-                    continue
-                score = float(item.get("score") or 0)
-                if score < promote_min:
-                    continue
-                body = str(item.get("body") or "").strip()
-                if not body:
-                    continue
-                try:
-                    report["writes"].append(
-                        _write_kind(
-                            body,
-                            kind=kind,
-                            group_id=group_id,
-                            agent_id=identity["agent_id"],
-                            user_id=identity["user_id"],
-                            dry_run=dry_run,
+            if persist_derived:
+                promote_min = float(rules.get("promote_min_score", 0.65))
+                max_promo = int(rules.get("max_promotions_per_close", 5))
+                promotable = set(rules.get("promotable_kinds") or ["lesson", "insight", "decision"])
+                for item in signal.get("promotion_decisions") or []:
+                    if promoted >= max_promo:
+                        break
+                    if not isinstance(item, dict):
+                        continue
+                    if item.get("decision") != "promote":
+                        continue
+                    kind = str(item.get("kind") or "lesson")
+                    if kind not in promotable:
+                        continue
+                    score = float(item.get("score") or 0)
+                    if score < promote_min:
+                        continue
+                    body = str(item.get("body") or "").strip()
+                    if not body:
+                        continue
+                    try:
+                        report["writes"].append(
+                            _write_kind(
+                                body,
+                                kind=kind,
+                                group_id=group_id,
+                                agent_id=identity["agent_id"],
+                                user_id=identity["user_id"],
+                                dry_run=dry_run,
+                            )
                         )
-                    )
-                    promoted += 1
-                except Exception as exc:  # noqa: BLE001
-                    report["warnings"].append(f"promote {kind} failed: {exc}")
+                        promoted += 1
+                    except Exception as exc:  # noqa: BLE001
+                        report["warnings"].append(f"promote {kind} failed: {exc}")
             report["status"] = "phase_a_b"
             report["promoted"] = promoted
 
