@@ -254,6 +254,9 @@ def test_plan_mode_does_not_ff_or_publish(monkeypatch, tmp_path):
         },
     )
     monkeypatch.setattr(mod, "load_commit_paths", lambda *_a, **_k: ("ops/a.py",))
+    monkeypatch.setattr(
+        mod, "load_stack_tip", lambda *_a, **_k: ("origin/main", "1" * 40, "no_open_prs")
+    )
 
     def boom(*_a, **_k):
         raise AssertionError("must not publish or ff in plan mode")
@@ -419,6 +422,9 @@ def test_execute_empty_train_does_not_authorize_or_remediate(monkeypatch, tmp_pa
         },
     )
     monkeypatch.setattr(mod, "load_commit_paths", lambda *_a, **_k: ())
+    monkeypatch.setattr(
+        mod, "load_stack_tip", lambda *_a, **_k: ("origin/main", "1" * 40, "no_open_prs")
+    )
 
     def boom(*_a, **_k):
         raise AssertionError("empty train must not authorize merge")
@@ -461,6 +467,9 @@ def test_default_inventory_is_current_branch_only(monkeypatch, tmp_path):
         }
 
     monkeypatch.setattr(mod, "load_diagnosis", diagnose)
+    monkeypatch.setattr(
+        mod, "load_stack_tip", lambda *_a, **_k: ("origin/main", "1" * 40, "no_open_prs")
+    )
     state = run_pr_train(tmp_path, execute=False, fetch=False)
     assert seen == ["feat/x"]
     assert state.unpushed_refs == ["feat/x"]
@@ -486,6 +495,9 @@ def test_all_refs_includes_foreign_unpushed(monkeypatch, tmp_path):
         }
 
     monkeypatch.setattr(mod, "load_diagnosis", diagnose)
+    monkeypatch.setattr(
+        mod, "load_stack_tip", lambda *_a, **_k: ("origin/main", "1" * 40, "no_open_prs")
+    )
     state = run_pr_train(tmp_path, execute=False, fetch=False, all_refs=True)
     assert seen == ["feat/x", "feat/foreign"]
     assert state.unpushed_refs == ["feat/x", "feat/foreign"]
@@ -529,6 +541,45 @@ def test_campaign_halt_skips_remediator_and_ff(monkeypatch, tmp_path):
     assert state.status == "blocked"
     assert "campaign" in state.halt_reason
     assert state.skill_dispatch == ""
+    assert state.ff_ran is False
+
+
+def test_sibling_stack_halts_to_remediator_without_extract(monkeypatch, tmp_path):
+    from workflows.dags import pr_train_dag as mod
+
+    monkeypatch.setattr(
+        mod,
+        "load_inventory",
+        lambda *_a, **_k: _inventory("feat/x", ["feat/x"]),
+    )
+    monkeypatch.setattr(
+        mod,
+        "load_diagnosis",
+        lambda *_a, **_k: {
+            "cherry_available": True,
+            "baseline_resolved": True,
+            "cherry_novel_commits": ["aaa"],
+            "cherry_dup_commits": [],
+        },
+    )
+    monkeypatch.setattr(mod, "load_commit_paths", lambda *_a, **_k: ("ops/a.py",))
+
+    def boom_tip(*_a, **_k):
+        raise RuntimeError("sibling open-PR chains target main: #355,#356,#357")
+
+    monkeypatch.setattr(mod, "load_stack_tip", boom_tip)
+
+    def boom(*_a, **_k):
+        raise AssertionError("sibling halt must not extract or authorize")
+
+    monkeypatch.setattr(mod, "default_extract", boom)
+    monkeypatch.setattr(mod, "authorize_merge", boom)
+
+    state = run_pr_train(tmp_path, execute=True, fetch=False)
+    assert state.status == "blocked"
+    assert "sibling open-PR" in state.halt_reason
+    assert state.skill_dispatch == "l9-pr-remediation"
+    assert state.opened_prs == []
     assert state.ff_ran is False
 
 

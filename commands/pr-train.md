@@ -35,7 +35,7 @@ Plan-only (default): omit `--execute`. Widen inventory with `--all-refs` or `--r
 ## EXECUTION
 
 1. Compile and run the graph. Do not skip stop 1.
-2. After `--execute` opens PRs, status is `blocked` / `awaiting l9-pr-remediation Converge`. Run that skill. Do not run `make pr`.
+2. After `--execute` opens PRs, status is `blocked` / `awaiting l9-pr-remediation Converge`. Sibling open-PR chains also halt here (collapse first). Do not run `make pr`.
 3. After `open_pr=0`, `--ff-only`. Auto-chain `/ynp`.
 
 ## FORBIDDEN
