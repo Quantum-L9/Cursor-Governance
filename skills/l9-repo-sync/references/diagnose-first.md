@@ -34,6 +34,7 @@ Dirty, unique commits, and untracked are **not** a stop. `/ff` parks them
 That primitive keeps unique untracked and `.venv`. It does **not** delete
 files to unblock catch-up.
 
-If the clone is not on `main`, **stop** (do not reset a feature branch onto
-`origin/main`). A `main` checkout is this clone; extra worktrees use
+If the clone is not on `main`, that is **not** a stop. `ff.sh` parks dirt
+then `git switch`es to `main`; the feature branch ref stays. Do not reset a
+feature branch onto `origin/main`. Extra worktrees use
 `worktree_add_wired.sh` only when the user asked for a new tree.

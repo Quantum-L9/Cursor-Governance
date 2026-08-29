@@ -36,23 +36,8 @@ check "OPS Layer" "$ROOT/ops"
 check "Security Layer" "$ROOT/security"
 check "Pipeline Layer" "$ROOT/pipeline"
 check "Intelligence Layer" "$ROOT/intelligence"
-check "Integrity Layer" "$ROOT/integrity"
-check "Manifest Lock" "$ROOT/integrity/manifest-lock.json"
-check "Integrity Activity Log" "$ROOT/ops/logs/integrity_activity.log"
 
 echo "---------------------------------------------"
-if grep -q "Verify+Repair executed" "$ROOT/ops/logs/integrity_activity.log" 2>/dev/null; then
-  echo "🧠 Integrity Agent — Active (last run logged)"
-else
-  echo "⚠️ Integrity Agent — No recent runs logged"
-fi
-
-if launchctl list | grep -q "com.tenx.integritycheck"; then
-  echo "🔁 LaunchAgent (Integrity) — Loaded"
-else
-  echo "⚠️ LaunchAgent (Integrity) — Not loaded"
-fi
-
 if launchctl list | grep -q "com.tenx.chat-export"; then
   echo "🧠 LaunchAgent (Chat Export) — Loaded"
 else

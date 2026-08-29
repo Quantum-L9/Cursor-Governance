@@ -86,7 +86,10 @@ def parse_kernel_pass_fallback(raw: str) -> dict[str, Any] | None:
             return None
         key, rest = stripped.split(":", 1)
         current_key = key.strip()
-        if current_key in {"improve", "validate_repair"} and rest.strip() == "":
+        if (
+            current_key in {"improve", "recursive_alignment", "validate_repair"}
+            and rest.strip() == ""
+        ):
             child: dict[str, Any] = {}
             if isinstance(parent, dict):
                 parent[current_key] = child
@@ -205,37 +208,45 @@ def check_plan(path: Path) -> list[str]:
         errors.append("G_PLAN_SUPERSEDED: a newer same-slug plan is the live target")
 
     improve = _pass_block(kernel_pass, "improve")
+    alignment = _pass_block(kernel_pass, "recursive_alignment")
     repair = _pass_block(kernel_pass, "validate_repair")
     if improve is None:
         errors.append("G_PLAN_KERNEL_PASS: improve block missing")
+    if alignment is None:
+        errors.append("G_PLAN_KERNEL_PASS: recursive_alignment block missing")
     if repair is None:
         errors.append("G_PLAN_KERNEL_PASS: validate_repair block missing")
 
-    if improve is not None:
-        if not _deltas(improve):
-            errors.append("G_PLAN_DELTAS: improve.deltas is empty")
-        improve_at = _parse_ran_at(improve.get("ran_at"))
-        if improve_at is None:
-            errors.append("G_PLAN_RAN_AT: improve.ran_at missing or unparseable")
-    else:
-        improve_at = None
+    timestamps: list[tuple[str, datetime | None]] = []
+    for name, block in (
+        ("improve", improve),
+        ("recursive_alignment", alignment),
+        ("validate_repair", repair),
+    ):
+        if block is None:
+            timestamps.append((name, None))
+            continue
+        if not _deltas(block):
+            errors.append(f"G_PLAN_DELTAS: {name}.deltas is empty")
+        ran_at = _parse_ran_at(block.get("ran_at"))
+        if ran_at is None:
+            errors.append(f"G_PLAN_RAN_AT: {name}.ran_at missing or unparseable")
+        timestamps.append((name, ran_at))
+        if name == "validate_repair":
+            claimed = str(block.get("body_sha256") or "").strip().strip("\"'")
+            if not claimed:
+                errors.append("G_PLAN_SHA: validate_repair.body_sha256 unset")
+            elif claimed != canonical_sha256(text):
+                errors.append("G_PLAN_SHA: validate_repair.body_sha256 != canonical file sha")
 
-    if repair is not None:
-        if not _deltas(repair):
-            errors.append("G_PLAN_DELTAS: validate_repair.deltas is empty")
-        repair_at = _parse_ran_at(repair.get("ran_at"))
-        if repair_at is None:
-            errors.append("G_PLAN_RAN_AT: validate_repair.ran_at missing or unparseable")
-        claimed = str(repair.get("body_sha256") or "").strip().strip("\"'")
-        if not claimed:
-            errors.append("G_PLAN_SHA: validate_repair.body_sha256 unset")
-        elif claimed != canonical_sha256(text):
-            errors.append("G_PLAN_SHA: validate_repair.body_sha256 != canonical file sha")
-    else:
-        repair_at = None
-
-    if improve_at is not None and repair_at is not None and not (improve_at < repair_at):
-        errors.append("G_PLAN_ORDER: improve.ran_at must be earlier than validate_repair.ran_at")
+    ordered = [(name, ts) for name, ts in timestamps if ts is not None]
+    for idx in range(len(ordered) - 1):
+        left_name, left_ts = ordered[idx]
+        right_name, right_ts = ordered[idx + 1]
+        if not (left_ts < right_ts):
+            errors.append(
+                f"G_PLAN_ORDER: {left_name}.ran_at must be earlier than {right_name}.ran_at"
+            )
 
     errors.extend(check_content_gates(body))
 

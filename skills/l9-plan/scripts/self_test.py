@@ -74,6 +74,8 @@ def main() -> int:
         ("fixtures/plan_kernel_fail_either.plan.md", "G_PLAN_EITHER_OR"),
         ("fixtures/plan_kernel_fail_empty_deltas.plan.md", "G_PLAN_DELTAS"),
         ("fixtures/plan_kernel_fail_sha.plan.md", "G_PLAN_SHA"),
+        ("fixtures/plan_kernel_fail_missing_ra.plan.md", "G_PLAN_KERNEL_PASS"),
+        ("fixtures/plan_kernel_fail_order.plan.md", "G_PLAN_ORDER"),
     ]
     for rel, needle in kernel_fail_cases:
         proc = run([sys.executable, "scripts/validate_plan_kernel_receipt.py", rel])

@@ -246,9 +246,9 @@ Before ANY execution task:
 || Auto-detected Issues | 3 | AI Pattern Detection | ✅ Active |
 ---
 
-**Last Updated:** 2026-03-28T05:00:01Z  
-**Version:** 8.3.0  
-**Changes:** 
+**Last Updated:** 2026-03-28T05:00:01Z
+**Version:** 8.3.0
+**Changes:**
 - Added #15 PR MERGE FIRST — git handles file transfer, never manual write from PR diff
 - Renumbered lessons 16-19 (was 15-18)
 - Updated /pr command v9.0.0 with git-native adoption workflow
@@ -496,3 +496,20 @@ vanish partway through the run.
 
 Fixed by clearing the flag for that subprocess. **When a test executes a real
 lifecycle hook, give it a disposable tree, never a pointer to the live one.**
+
+### **48. Check recreated an archived file**
+**Mistake:** A verify/health path wrote a retired artifact (`meta-audit.md`,
+`memory-bank/`, empty lock snapshot) because the script still named the path.
+**Prevention:** Absent → report and stop. Restore via git / activate_fresh only.
+**Rule:** A check must not recreate an archived or unseeded file
+**Date Added:** 2026-08-28
+**File:** `learning/failures/check-must-not-recreate-archived.md`
+
+### **49. Integrity tool healed the worktree from a side store**
+**Mistake:** Suite-6 `integrity/hash-verifier.py` defaulted to auto-repair from
+base64; `system-check.sh` swallowed errors and logged Active. TODO said keep.
+**Prevention:** Hash-only manifests. Never embed file bodies. Never expose
+restore-from-blob. Do not recreate `integrity/` or `governance-integrity.py`.
+**Rule:** An integrity tool that writes the worktree is a healer, not a checker
+**Date Added:** 2026-08-28
+**File:** `learning/failures/integrity-tool-must-not-heal.md`

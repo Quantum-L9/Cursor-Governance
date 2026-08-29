@@ -13,6 +13,11 @@ kernel_pass:
     ran_at: 2026-08-21T05:14:00Z
     body_sha256: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     deltas: ["no material delta"]
+  recursive_alignment:
+    kernel: kernels/Recursive Alignment.md
+    ran_at: 2026-08-21T05:15:30Z
+    body_sha256: "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    deltas: ["no material delta"]
   validate_repair:
     kernel: kernels/Validate & Repair.md
     ran_at: 2026-08-21T05:17:00Z

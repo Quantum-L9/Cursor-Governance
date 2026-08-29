@@ -923,3 +923,27 @@ whole `ops/scripts/run_pr_gate.sh`:
 - remediator publish: `skills/l9-pr-remediation` + this file `L9_PR_REMEDIATE_SPEED_V1`
 - unscoped pytest deny: `ops/scripts/run_pr_gate.sh`
 - kernel hook: `ops/hooks/plan-kernel-gate.py`
+
+<!-- FF_SWITCH_TO_MAIN_V1 -->
+## `/ff` switches to `main` (2026-08-28)
+
+`skills/l9-repo-sync/scripts/ff.sh` step 0: if HEAD is not `main`, park dirty
+tracked and untracked paths that `origin/main` already tracks, then `git switch`
+to `main`. Agents must not `git switch` themselves. The feature branch ref
+stays. Unique feature commits are not `l9/ff-preserve-*`. Identity after
+catch-up is same gitdir and HEAD on `main`.
+
+<!-- FF_CORPUS_KERNELS_V1 -->
+## `/ff` owns WIP / plans / campaign kernels (2026-08-28)
+
+Leftover untracked `WIP/`, `docs/plans/`, and
+`environment/program-execution/campaigns/` get Improve, then Recursive
+Alignment, then Validate & Repair **before** commit and **before**
+`.pre-commit-config.yaml` hooks. Shelved `*.plan.md` write `kernel_pass` with
+those three blocks in `ran_at` order.
+
+`ops/autonomy/kernel_gate.py` skips those prefixes. A corpus-only changeset
+skips the tree latch too. L4 on the shelf worktree is `begin` then
+`authorize-release` only — not `record-kernels`. Mid-session plan inject does
+not apply those kernels; `/ff` is the apply site. This fragment supersedes
+the `record-kernels` sentence in `FF_SHELF_WIP_PLANS_V1`.

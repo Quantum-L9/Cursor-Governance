@@ -37,11 +37,15 @@ not delete files to unblock. Keep-list: `.env.local`, `env.local`,
 - Name the clone (`ssot` = `$HOME/.cursor-governance`, or `workspace`)
 - Set `GOVERNANCE_SYNC_PUSH=0` and `GOVERNANCE_SYNC_HARD_RESET=0`
 - Set `CURSOR_GOVERNANCE_DIR` to that clone
-- Run `skills/l9-repo-sync/scripts/ff.sh`
+- Run `skills/l9-repo-sync/scripts/ff.sh` (it switches to `main` after parking;
+  do not `git switch` yourself)
 - Verify `.venv`, env.local keep-list files, and unique untracked paths still exist (or are held) after the run
-- After catch-up, shelf leftover untracked `WIP/` and `docs/plans/` onto a
-  sibling branch — copy the bytes in, authorize release there, then ask before
-  `PR_REMEDIATE=0 make pr`. `ff.sh` stays push-off.
+- After catch-up, shelf leftover untracked `WIP/`, `docs/plans/`, and
+  `environment/program-execution/campaigns/` onto a sibling branch — copy the
+  bytes in, apply Improve then Recursive Alignment then Validate & Repair
+  before precommit, then `l4_local.py begin` + `authorize-release` (not
+  `record-kernels`), then ask before `PR_REMEDIATE=0 make pr`. `ff.sh` stays
+  push-off.
 
 ## MUST NOT
 
@@ -49,8 +53,10 @@ not delete files to unblock. Keep-list: `.env.local`, `env.local`,
   atomic swap **replaces** the live directory and drops `.venv`)
 - Use `make start` / sessionStart activate as a stand-in for `/ff`
 - Treat `make sync` as `/ff` (`make sync` is still `governance_sync.sh`)
-- `git stash -u` / `git reset --hard` / `git pull` / `git switch` /
-  `git checkout` / `git clone` to “catch up”
+- `git stash -u` / `git reset --hard` / `git pull` / agent `git switch` /
+  `git checkout` / `git clone` to “catch up” (inner `ff.sh` `git switch` to
+  `main` after park is the exception)
+- Reset a feature branch onto `origin/main`
 - Delete dirty or untracked files so `reset --keep` can proceed
 
 If `reset --keep` aborts, unique bytes are still in the tree or on a

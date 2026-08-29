@@ -13,7 +13,7 @@ These are **not** `/ff`. Name them so agents can refuse. Do not run them.
 
 ## Incident shapes
 
-- `git switch` / `git checkout` onto `main` on a dirty shared clone
+- Agent `git switch` / `git checkout` onto `main` on a dirty shared clone
 - `git merge` / `git pull` / `git clone` as a “sync”
 - `git reset --hard` (discards dirty tracked; not the catch-up primitive)
 - `git stash` / `stash -u` / stash-pop as preserve (2026-08-21: this is why
@@ -30,6 +30,7 @@ These are **not** `/ff`. Name them so agents can refuse. Do not run them.
 ## Allowed catch-up (only inside `scripts/ff.sh`)
 
 - `git fetch origin main`
+- `git switch` **to `main`** after parking dirt (feature ref stays)
 - `git update-ref` / `git branch` for `l9/ff-preserve-*` and `ff-dirty`
 - `git stash create` (no `-u`) to park dirty tracked, then restore those paths
 - copy/move unique bytes to `$HOME/.cursor/l9-ff-hold/`
