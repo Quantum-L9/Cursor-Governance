@@ -117,6 +117,8 @@ _GATE_CODE_FILES=(
   ".pre-commit-config.yaml"
   "ops/scripts/run_pr_security.sh"
   "ops/scripts/lib/fetch_receipt.sh"
+  "ops/scripts/lib/wave_prefix.py"
+  "ops/scripts/select_pr_pytest_paths.py"
 )
 _gate_code_digest() {
   local rel present=()
@@ -158,6 +160,14 @@ if [[ "${1:-}" == "--print-state-digest" ]]; then
   _gate_state_digest
   printf '\n'
   exit 0
+fi
+# Remediator local verify is make precommit-repo. The reader wave (pytest,
+# projection, wiring) is ceremony-only. Export L9_REMEDIATOR=1 on that path
+# so an accidental make pr-check fails in milliseconds instead of minutes.
+if [[ "${L9_REMEDIATOR:-0}" == "1" ]]; then
+  echo "FAIL: remediator local verify is make precommit-repo (no reader wave)"
+  echo "Run: L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo"
+  exit 1
 fi
 _gate_head_sha() {
   # A repository with no commits has no HEAD to record. That is the documented
@@ -568,6 +578,8 @@ _gate_run_skill_activation() {
   fi
 }
 
+_PROJECTION_CHANGED_RE='^(skills/|commands/|rules/|environment/generated/llm-rules/|environment/agents/adapters/claude-code/|\.claude/|\.mcp\.json|ops/scripts/claude_projection\.py|ops/scripts/project_llm_rules\.py|skills/AUTONOMY_MANIFEST\.yaml|commands/COMMANDS_MANIFEST\.yaml)'
+
 _gate_run_projection_check() {
   echo "--- local-activation ---"
   is_local=0
@@ -576,6 +588,10 @@ _gate_run_projection_check() {
   fi
   if [[ "$is_local" -ne 1 || ! -f "$WS/skills/AUTONOMY_MANIFEST.yaml" ]]; then
     echo "OK: skip local-activation (CI or non-writable ~/.cursor)"
+    return 0
+  fi
+  if ! grep -Eq "$_PROJECTION_CHANGED_RE" "$changed_file"; then
+    echo "OK: skip projection (skills/commands/rules/mcp unchanged)"
     return 0
   fi
   if [[ -f "$GOV_ROOT/ops/scripts/project_llm_rules.py" ]]; then
@@ -672,8 +688,10 @@ _wave_start() {
     _t0="$(_now_ms)"
     _wave_meta="$_wave_dir/$name.meta"
     trap '_code=$?; printf "%s %s\n" "$_code" "$(($(_now_ms) - _t0))" >"$_wave_meta"' EXIT
-    "$@"
-  ) >"$_wave_dir/$name.log" 2>&1 &
+    set +o pipefail
+    "$@" 2>&1 | python3 "$SCRIPT_DIR/lib/wave_prefix.py" --name "$name" --log "$_wave_dir/$name.log"
+    exit "${PIPESTATUS[0]}"
+  ) &
   _wave_pids+=("$!")
   _wave_names+=("$name")
 }
@@ -703,16 +721,28 @@ while [ "$_wave_i" -lt "${#_wave_pids[@]}" ]; do
 done
 _wave_i=0
 while [ "$_wave_i" -lt "${#_wave_names[@]}" ]; do
-  echo "=== wave: ${_wave_names[$_wave_i]} ==="
-  cat "$_wave_dir/${_wave_names[$_wave_i]}.log"
   cat "$_wave_dir/${_wave_names[$_wave_i]}.log" >>"$_GATE_LOG" || true
   _wave_i=$((_wave_i + 1))
 done
-rm -rf "$_wave_dir"
 if [[ "$_wave_rc" -ne 0 ]]; then
+  _wave_i=0
+  while [ "$_wave_i" -lt "${#_wave_names[@]}" ]; do
+    _job_rc=0
+    if [[ -f "$_wave_dir/${_wave_names[$_wave_i]}.meta" ]]; then
+      _job_rc="$(awk 'NF >= 1 { print $1; exit }' "$_wave_dir/${_wave_names[$_wave_i]}.meta")"
+      _job_rc="${_job_rc:-0}"
+    fi
+    if [[ "$_job_rc" != "0" ]]; then
+      echo "=== wave: ${_wave_names[$_wave_i]} FAILED ==="
+      cat "$_wave_dir/${_wave_names[$_wave_i]}.log"
+    fi
+    _wave_i=$((_wave_i + 1))
+  done
+  rm -rf "$_wave_dir"
   echo "FAIL: reader wave had a failing job"
   exit 1
 fi
+rm -rf "$_wave_dir"
 
 if [[ "$PR_MYPY_STRICT" = "1" ]]; then
   _mypy="$GOV_ROOT/.venv/bin/mypy"

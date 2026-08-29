@@ -413,7 +413,9 @@ precommit:
 	pre-commit run --all-files
 
 ## INTERNAL leaf of `make pr-check` (changed-files hook catalog).
-## Changed-files pre-commit for PR velocity.
+## Remediator local verify. Changed-files pre-commit for PR velocity.
+## Does not run the reader wave (pytest / projection / wiring). Ceremony
+## quality is `make pr-check`; remediator must not invoke it.
 ## Skips machine-local symlinks-check unless WS is a local governance SSOT clone
 ## (skills/AUTONOMY_MANIFEST.yaml + rules/RULES-MANIFEST.yaml present).
 precommit-repo:

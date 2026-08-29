@@ -119,4 +119,5 @@ def test_deny_reason_names_the_replacement_command() -> None:
 
     text = _full_pytest_deny_reason(reason)
     assert "make pr-check" in text
+    assert "make precommit-repo" in text
     assert FULL_PYTEST_OVERRIDE_ENV in text

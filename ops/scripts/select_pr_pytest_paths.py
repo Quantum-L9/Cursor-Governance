@@ -159,6 +159,10 @@ def tests_naming_path(changed: str, *, repo_root: Path = REPO_ROOT) -> list[str]
     target = changed.strip()
     if not target:
         return []
+    # Markdown is not a pytest name-scan target: README.md / SKILL.md appear as
+    # fixtures in dozens of modules. Docs/skills gates own those files.
+    if Path(target).suffix.lower() in {".md", ".mdc"}:
+        return []
     basename = Path(target).name
     by_path: list[str] = []
     by_name: list[str] = []

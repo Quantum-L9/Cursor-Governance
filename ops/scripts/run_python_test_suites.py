@@ -7,7 +7,8 @@ declared suites in order under two profiles:
 
     --profile local   forwards operator pytest arguments (default);
                       with --changed-file, injects ``-n auto`` when two or more
-                      pytest files are selected (CI profiles already declare xdist)
+                      pytest files are selected, including files under directory
+                      targets (CI profiles already declare xdist)
     --profile ci      applies the locked coverage / xdist / timeout arguments
 
 Guarantees:
@@ -279,10 +280,39 @@ CEREMONY_KNOBS: tuple[str, ...] = (
 )
 
 
+def scoped_pytest_file_count(
+    scoped_paths: list[str],
+    *,
+    repo_root: Path | None = None,
+) -> int:
+    """Count collectable pytest modules, including those under directory targets.
+
+    A scoped path of ``skills/l9-pr-remediation/scripts`` is one selector entry
+    but many tests. Counting only ``.py`` suffixes left that shape serial.
+    """
+    root = repo_root or REPO_ROOT
+    files: set[str] = set()
+    for path in scoped_paths:
+        rel = path.rstrip("/")
+        if rel.endswith((".py", ".pyi")):
+            files.add(rel)
+            continue
+        candidate = root / rel
+        if not candidate.is_dir():
+            continue
+        for hit in candidate.rglob("test_*.py"):
+            files.add(hit.relative_to(root).as_posix())
+        for hit in candidate.rglob("*_test.py"):
+            files.add(hit.relative_to(root).as_posix())
+    return len(files)
+
+
 def local_changed_file_xdist_args(
     profile: str,
     scoped_paths: list[str] | None,
     user_args: list[str],
+    *,
+    repo_root: Path | None = None,
 ) -> list[str]:
     """Return ``-n auto`` for local changed-file runs with two or more tests.
 
@@ -294,8 +324,7 @@ def local_changed_file_xdist_args(
         return []
     if "-n" in user_args:
         return []
-    files = [path for path in scoped_paths if path.endswith((".py", ".pyi"))]
-    if len(files) < XDIST_MIN_SCOPED_FILES:
+    if scoped_pytest_file_count(scoped_paths, repo_root=repo_root) < XDIST_MIN_SCOPED_FILES:
         return []
     return ["-n", "auto"]
 
@@ -545,9 +574,11 @@ def main(argv: list[str] | None = None) -> int:
             f"[runner] scoped_pr_check paths={scoped_paths or ['<none>']} "
             f"never_pass_repo_root_dot=true"
         )
-        xdist_args = local_changed_file_xdist_args(profile, scoped_paths, user_args)
+        xdist_args = local_changed_file_xdist_args(
+            profile, scoped_paths, user_args, repo_root=REPO_ROOT
+        )
         if xdist_args:
-            n_files = len([p for p in scoped_paths if p.endswith((".py", ".pyi"))])
+            n_files = scoped_pytest_file_count(scoped_paths, repo_root=REPO_ROOT)
             print(f"[runner] local xdist={' '.join(xdist_args)} scoped_pytest_files={n_files}")
             user_args = [*user_args, *xdist_args]
 

@@ -19,6 +19,7 @@ from run_python_test_suites import (  # noqa: E402
     REGISTRY_PATH,
     _load_json,
     local_changed_file_xdist_args,
+    scoped_pytest_file_count,
     validate_registry,
 )
 
@@ -237,3 +238,76 @@ def test_gate_script_records_timing_keys() -> None:
     assert "# Heal missing gitignored .cursor links" in text
     assert 'L9_WIRE_LINKS_ONLY=1 bash "$GOV_ROOT/ops/scripts/ensure_workspace_wired.sh"' in text
     assert ".meta" in text
+    assert "wave_prefix.py" in text
+    assert "skip projection" in text
+    assert "L9_REMEDIATOR:-0" in text
+    assert "FAILED ===" in text
+
+
+def test_local_xdist_directory_with_two_tests_injects(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    suite = root / "skills" / "pack" / "scripts"
+    suite.mkdir(parents=True)
+    (suite / "test_a.py").write_text("def test_a():\n    assert True\n", encoding="utf-8")
+    (suite / "test_b.py").write_text("def test_b():\n    assert True\n", encoding="utf-8")
+    assert scoped_pytest_file_count(["skills/pack/scripts"], repo_root=root) == 2
+    args = local_changed_file_xdist_args(
+        "local",
+        ["skills/pack/scripts"],
+        ["-q"],
+        repo_root=root,
+    )
+    assert args == ["-n", "auto"]
+
+
+def test_local_xdist_directory_with_one_test_stays_serial(tmp_path: Path) -> None:
+    root = tmp_path / "repo"
+    suite = root / "skills" / "pack" / "scripts"
+    suite.mkdir(parents=True)
+    (suite / "test_a.py").write_text("def test_a():\n    assert True\n", encoding="utf-8")
+    args = local_changed_file_xdist_args(
+        "local",
+        ["skills/pack/scripts"],
+        ["-q"],
+        repo_root=root,
+    )
+    assert args == []
+
+
+def test_wave_prefix_teed_log_is_unprefixed(tmp_path: Path) -> None:
+    log = tmp_path / "job.log"
+    fed = subprocess.run(
+        ["python3", str(SCRIPTS / "lib" / "wave_prefix.py"), "--name", "pytest", "--log", str(log)],
+        input="hello\nworld\n",
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert fed.returncode == 0, fed.stderr
+    assert fed.stdout == "[wave:pytest] hello\n[wave:pytest] world\n"
+    assert log.read_text(encoding="utf-8") == "hello\nworld\n"
+
+
+def test_precommit_repo_recipe_does_not_invoke_reader_wave() -> None:
+    makefile = (ROOT / "Makefile").read_text(encoding="utf-8")
+    block = makefile.split("precommit-repo:", 1)[1].split("\n\n", 1)[0]
+    assert "run_pr_precommit.sh" in block
+    assert "run_pr_gate.sh" not in block
+    precommit = (SCRIPTS / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    live = [line for line in precommit.splitlines() if not line.lstrip().startswith("#")]
+    joined = "\n".join(live)
+    assert "run_pr_gate.sh" not in joined
+    assert "claude_projection.py" not in joined
+    assert "run_python_test_suites.py" not in joined
+
+
+def test_remediator_env_fail_closes_run_pr_gate(tmp_path: Path) -> None:
+    proc = _run(
+        ["bash", str(SCRIPTS / "run_pr_gate.sh")],
+        cwd=tmp_path,
+        env={"L9_REMEDIATOR": "1", "WS": str(tmp_path)},
+    )
+    out = proc.stdout + proc.stderr
+    assert proc.returncode != 0, out
+    assert "no reader wave" in out
+    assert "reader wave (once, parallel)" not in out

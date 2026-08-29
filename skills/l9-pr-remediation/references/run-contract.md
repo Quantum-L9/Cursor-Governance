@@ -29,7 +29,7 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 | `P_wire` | `git worktree list` first; reuse the worktree that already holds the branch | `worktree_add_wired.sh` only when none exists. Do not commit wire / `AGENTS.md`. |
 | `P_blockers` | Known HUMAN / CI_PIPELINE / ENVIRONMENT | Note; continue independent CODEBASE work. |
 | `P_diag` | For the PR about to be edited: head SHA, `gh pr checks`, paginated `reviewThreads`, cited-file read at that SHA | Missing evidence → `Unknown`; do not edit. `disposition: fix` requires a verified root cause. |
-| `P_verify` | `make precommit-repo` (changed-file hooks plus ruff) | `make precommit-repo` is the remediator gate. Record `Passed` / `Failed` / `Unknown`. Do not run `make pr-check`. Do not run pytest or conformance. Do not treat local `Passed` as remote CI `Passed`. |
+| `P_verify` | `L9_REMEDIATOR=1 make precommit-repo` (changed-file hooks plus ruff) | `make precommit-repo` is the remediator gate. Record `Passed` / `Failed` / `Unknown`. Do not run `make pr-check`. That env fail-closes `run_pr_gate.sh`. Do not run pytest or conformance. Do not treat local `Passed` as remote CI `Passed`. |
 
 Stop cataloging when `RUN_CONTRACT` is filled and the next PR to edit has a finding list sufficient to patch without predictable rework.
 
@@ -39,7 +39,7 @@ Resume discovery when: unexpected failure, scope change, new dependency, environ
 
 This host (Cursor-Governance / Makefile capability graph):
 
-- verify: `PR_BASE=origin/main make precommit-repo`
+- verify: `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`
 - kernels (optional): `make improve`
 - publish: `git push` of the already-open PR branch
 - merge: `ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run` (method chosen in code; oldest `createdAt` first)
