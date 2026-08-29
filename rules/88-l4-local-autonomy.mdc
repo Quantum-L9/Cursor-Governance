@@ -23,27 +23,31 @@ Default ON (`L9_L4_LOCAL_AUTONOMY=1`).
    are not blocked (CANONICAL_LAW §6.2.4), so mid-execution restraint on those
    is doctrine you keep, not a gate that stops you.
 3. **Do not** stall for push-approval pacing during local execution.
-4. When the program/contract is finished locally, authorize release.
-   Tree kernels are **not** an L4 phase. They fire as the first step of
-   `make precommit-repo` via `ops/autonomy/kernel_gate.py` so hooks and
-   tests run once on the post-kernel tree.
-5. Authorize release, then publish **only** via Makefile checkers:
+4. When the program/contract is finished locally on **Cursor**
+   (`L9_GOVERNANCE_SURFACE` is `cursor` or unset): run
+   `make precommit-repo`, scoped-commit, then **STOP**. Do not
+   `authorize-release` or `make pr` unless the human typed `make pr`
+   this turn. Tree kernels fire as the first step of
+   `make precommit-repo` via `ops/autonomy/kernel_gate.py`.
+5. On **Claude Code** and other adapters (`L9_GOVERNANCE_SURFACE` is
+   `claude-code`, `codex`, `gemini`, or `manus`): authorize release,
+   then publish **only** via Makefile checkers:
 
 ```bash
 python3 ops/autonomy/l4_local.py begin --contract-id "<id>"   # if not begun
 python3 ops/autonomy/l4_local.py authorize-release
-PR_REMEDIATE=0 make pr
+PR_REMEDIATE=0 make pr  # L9_GOVERNANCE_SURFACE=claude-code
 ```
 
 If the kernel hook fails, apply `kernels/Recursive Alignment.md` then
 `kernels/Validate & Repair.md`, commit, `kernel_gate.py record`, and
 re-run the same `make pr`. Do not run precommit or pytest first.
 
-`make pr` runs the **governance** Makefile's `pr` target regardless of the
-workspace repo or its Makefile — reach it with `l9 pr` /
-`make -C "$GOV" pr WS="$PWD"` from a consumer checkout with no local `pr`
-target. A consumer needs no `pr`/`pr-check` target; there is no raw-push
-fallback where one is absent.
+On those adapter surfaces, `make pr` runs the **governance** Makefile's
+`pr` target regardless of the workspace repo or its Makefile — reach it
+with `l9 pr` / `make -C "$GOV" pr WS="$PWD"` from a consumer checkout
+with no local `pr` target. A consumer needs no `pr`/`pr-check` target;
+there is no raw-push fallback where one is absent.
 
 6. Do **not** merge from the campaign / `make pr` path. Campaign end state
    is green + merge-ready. Merge only after the user invokes

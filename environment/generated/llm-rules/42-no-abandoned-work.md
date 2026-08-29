@@ -39,8 +39,12 @@ else's problem".
 
 ## MUST
 
-- Push a feature branch you committed on, via `PR_REMEDIATE=0 l9 pr`, before
-  the turn ends.
+- **Claude Code** / adapters (`L9_GOVERNANCE_SURFACE` is `claude-code`,
+  `codex`, `gemini`, or `manus`): push a feature branch you committed on,
+  via `PR_REMEDIATE=0 l9 pr`, before the turn ends.
+- **Cursor** (`cursor` or unset): catalog + scoped commit is the finish.
+  **STOP.** Do not push or `make pr` unless the human typed `make pr`
+  this turn.
 - Record a defect you identify — yours or inherited — the moment you identify
   it, then fix it or defer it with a reason that survives you.
 - Treat a failing validator as a finding, including one that fails identically

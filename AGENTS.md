@@ -923,3 +923,19 @@ stays remediator verify, `make push` backup, and an INTERNAL lint leaf.
 
 `.pre-commit-config.yaml` is the hook catalog only. Never a public verb.
 Never install a git commit hook (`pre-commit install` stays forbidden).
+
+<!-- AGENT_STOP_AFTER_CATALOG_COMMIT_V1 -->
+## Cursor stops after catalog + commit; Claude Code `make pr` (2026-08-28)
+
+Supersedes `PR_CHECK_FOLDED_V1` standing next-step **for Cursor only**.
+Historical blocks stay. Makefile `pr: pr-preflight pr-check` stays.
+
+**Cursor** (`L9_GOVERNANCE_SURFACE` is `cursor` or unset): run
+`make precommit-repo`, scoped-commit authored pathspecs, then **STOP**.
+Do not `authorize-release`, `make pr`, `make pr-check`, or
+`OPEN_PR=0 make pr` unless the human typed `make pr` this turn.
+
+**Claude Code** (`L9_GOVERNANCE_SURFACE=claude-code`): a finished
+contract still `authorize-release` then `make pr`. Other adapters
+(`codex` / `gemini` / `manus`) keep the same adapter publish path.
+Remediator `git push` after `/l9-pr-remediation` is unchanged.

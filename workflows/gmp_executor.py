@@ -110,6 +110,15 @@ def dry_run() -> bool:
     return os.environ.get("L9_GMP_DRY_RUN", "").strip() == "1"
 
 
+ADAPTER_PUBLISH_SURFACES = frozenset({"claude-code", "codex", "gemini", "manus"})
+
+
+def adapter_publish_surface() -> bool:
+    """Claude Code and sibling adapters finish via make pr. Cursor stops."""
+    surface = (os.environ.get("L9_GOVERNANCE_SURFACE") or "").strip().lower()
+    return surface in ADAPTER_PUBLISH_SURFACES
+
+
 def parse_plan_scope(plan_path: Path) -> list[dict[str, str]]:
     """Lock todos from plan frontmatter, else from a ## Files heading."""
     text = plan_path.read_text(encoding="utf-8")
@@ -310,7 +319,10 @@ class GMPExecutor:
     def _run_shell(self, cmd: str, capture: bool = True) -> tuple[int, str, str]:
         """Run shell command."""
         self._record_subprocess(cmd)
-        if dry_run() and any(token in cmd for token in ("make pr", "git add", "git commit")):
+        if dry_run() and any(
+            token in cmd
+            for token in ("make pr", "make precommit-repo", "git add", "git commit")
+        ):
             return 0, "", ""
         result = subprocess.run(
             cmd,
@@ -1070,6 +1082,23 @@ from {module_path} import ...
         self._save_state()
 
     def _publish_pr(self) -> None:
+        if not adapter_publish_surface():
+            self._record_subprocess("make precommit-repo")
+            print(  # noqa: ADR-0019
+                "Cursor finalize: catalog + commit + STOP. Do not make pr."
+            )
+            if dry_run():
+                return
+            result = subprocess.run(
+                ["make", "precommit-repo"],
+                cwd=REPO_ROOT,
+                capture_output=True,
+                text=True,
+            )
+            print(result.stdout)  # noqa: ADR-0019
+            if result.returncode != 0:
+                print(result.stderr)  # noqa: ADR-0019
+            return
         self._maybe_l4_release()
         env_prefix = "PR_REMEDIATE=1 make pr"
         self._record_subprocess(env_prefix)
