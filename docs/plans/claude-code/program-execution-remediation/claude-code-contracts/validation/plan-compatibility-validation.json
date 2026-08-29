@@ -1,0 +1,32 @@
+{
+  "schema": "l9.plan-to-claude.target-compatibility.v2.7",
+  "target_repository": "Quantum-L9/Cursor-Governance",
+  "current_main_sha": "5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d",
+  "audit_sha": "f4265dcc58ff8ebee7896a1a89c9f298c9e8e5c8",
+  "target_branch": "claude/program-execution-authority-remediation-v1",
+  "compiler_version": "2.7.0",
+  "status": "PASS",
+  "checks": {
+    "current_head_rebound": "PASS",
+    "seven_findings_revalidated": "PASS",
+    "campaign_validation_explicit": "PASS",
+    "no_ecosystem_inference": "PASS",
+    "preflight_compound_command_semantics": "PASS",
+    "internal_handoff_committed_and_validated": "PASS",
+    "exactly_one_local_commit_per_contract": "PASS",
+    "direct_remote_tools_denied": "PASS",
+    "nonterminal_remote_delivery_zero": "PASS",
+    "single_terminal_make_pr": "PASS",
+    "merge_authority_absent": "PASS",
+    "scope_subset_of_plan": "PASS",
+    "memory_exclusion_preserved": "PASS",
+    "deterministic_recompile": "PASS",
+    "compiler_target_regression_suite": "PASS_11_OF_11"
+  },
+  "authority_note": "Current user instruction to load compiler v2.7 adopts its terminal make pr delivery rule. Direct git push, direct gh PR creation, merge, deployment and repo-settings mutation remain denied. Program Execution itself remains local-commit-only; make pr is the outer repository publish wrapper after the terminal validated local commit.",
+  "old_blockers_resolved": [
+    "no hardcoded npm validation",
+    "preflight generator executes compound commands with shell semantics",
+    "internal seams use committed_and_validated rather than merged_and_green"
+  ]
+}

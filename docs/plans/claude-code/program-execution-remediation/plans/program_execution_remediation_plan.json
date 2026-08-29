@@ -1,0 +1,470 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Program Execution Authority and Recovery Remediation",
+  "objective": "Repair the seven confirmed non-memory Program Execution findings at their existing canonical owners so the supported campaign path becomes a single fail-closed execution tunnel from accepted source to verified local completion. Preserve the folder-only audit boundary, all memory exclusions, PEC single ownership of Program truth, local-commit-only publication law, provider thinness, and current compiler/verification behavior that already works. Do not redesign Program Execution or add a second state machine, router, registry, validator, completion owner, or recovery authority.",
+  "success_criteria": [
+    "Execution start re-verifies Cursor-Governance main at the locked 40-character SHA and stops/replans on drift.",
+    "Direct pec fresh-workspace without the campaign tunnel is rejected before state or filesystem mutation.",
+    "No workspace reset can release an active execution lease or transition an active/ambiguous attempt directly back to ELIGIBLE.",
+    "Every resumed execute path reconciles current source identity and task/program shape against the active Program Lock before dispatch.",
+    "Repository campaign lifecycle complete/archive can be produced only from a current canonical PEC terminal receipt whose campaign and Program Lock identities match.",
+    "A gate cannot PASS from caller assertion: PEC derives the result from the frozen definition, required evidence, current revision/freshness, waiver law, and executable method/predicate semantics.",
+    "Provider retry/failover obeys EXECUTION_FAILOVER_POLICY: bounded retryable classes only, new dispatch identity, and no mutating failover after uncertain/partial mutation without proven rollback.",
+    "A hermetic test traverses the supported campaign front door through real local mutation, Controller verification, integration, task completion, dependency advance, and canonical campaign close, including the P0/P1 negative cases.",
+    "run_peer_task_pipeline.py no longer contains active provider lifecycle ownership; its public compatibility behavior remains an explicit refusal and run_campaign consumes the neutral Peer lifecycle module.",
+    "All changed Program Execution tests and make pr-check pass without weakening validation, widening authority, touching excluded content, or publishing/merging."
+  ],
+  "scope": {
+    "in": [
+      "environment/program-execution/** only, limited to the exact write_allow files named by the remediation TODOs",
+      "Current Program Execution runner, PEC core owner, campaign ledger projection, Peer provider lifecycle, registry failover policy, and non-memory tests needed to prove the seven findings closed"
+    ],
+    "out": [
+      "All memory-related Program Execution content and all memory dependencies",
+      "All repository paths outside environment/program-execution/** except read-only execution preflight of repository instructions/baseline metadata",
+      "root autonomy/ implementation and ops/autonomy implementation",
+      "Unrelated agents, skills, repository-wide CI, external repositories, publication/merge/deployment redesign",
+      "Any feature work not required to close PE-001 through PE-007"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "PV-01",
+      "command_or_action": "Resolve Quantum-L9/Cursor-Governance main via GitHub and bind full HEAD",
+      "pass_criteria": "main == 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d",
+      "status": "passed"
+    },
+    {
+      "id": "PV-02",
+      "command_or_action": "Re-adjudicate PE-001..PE-007 against current SHA-bound source",
+      "pass_criteria": "Every finding appears exactly once; no finding relies on historical-only evidence",
+      "status": "passed"
+    },
+    {
+      "id": "PV-03",
+      "command_or_action": "Read current OWNERSHIP.md, core package boundary, root AGENTS.md, l9-global-architect, l9-plan, and canonical plan template",
+      "pass_criteria": "Canonical owners and execution constraints resolved; scope remains environment/program-execution/**",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-00-execution-preflight",
+      "task": "At execution start, re-resolve origin/main, require HEAD == locked baseline, inspect working-tree overlap only for the exact write_allow files, and stop/replan on material drift or overlapping dirt. Do not mutate source in this step.",
+      "files": [
+        "environment/program-execution/OWNERSHIP.md",
+        "environment/program-execution/core/MANIFEST.yaml",
+        "environment/program-execution/scripts/run_campaign.py"
+      ],
+      "effort": "small",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 1,
+      "operation": "Wrap",
+      "anchor": "execution preflight before first implementation contract",
+      "shared_root_cause": "baseline_drift_prevention"
+    },
+    {
+      "id": "todo-01-recovery-seal",
+      "task": "Seal the PEC recovery side door: add fresh-workspace to the campaign-tunnel mutation set; make workspace reset refuse active leases and active/ambiguous execution states; remove lease release and STALE->ELIGIBLE transitions from cleanup; require canonical fail/recover to preserve attempt evidence and establish a safe non-active state before destructive residue cleanup. Extend tunnel and recovery tests to prove no duplicate dispatch path.",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/workspace_reset.py",
+        "environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_workspace_reset_safety.py"
+      ],
+      "effort": "medium",
+      "risk": "high",
+      "dependencies": [
+        "todo-00-execution-preflight"
+      ],
+      "leverage_rank": 2,
+      "operation": "Replace",
+      "anchor": "_TUNNEL_COMMANDS + fresh_execution_workspace/_release_open_leases",
+      "shared_root_cause": "RC-001"
+    },
+    {
+      "id": "todo-02-resume-source-lock",
+      "task": "Move execute-resume eligibility behind current-source reconciliation. Persist/compare source digest, program-shape digest, and per-task definition digests; unchanged resumes, task-local absorbable drift relocks before claim, wider drift quarantines/rebuilds, and an unprovable comparison fails closed. Add tests for dependency, validation, writable scope, authority, execution-kind, and task-set edits after partial completion.",
+      "files": [
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "medium",
+      "risk": "high",
+      "dependencies": [
+        "todo-00-execution-preflight"
+      ],
+      "leverage_rank": 3,
+      "operation": "Replace",
+      "anchor": "early resumable execute branch + campaign_source_shape/edited_task_ids/adopt_changed_definitions",
+      "shared_root_cause": "RC-002"
+    },
+    {
+      "id": "todo-03-completion-projection",
+      "task": "Collapse repository campaign close into a projection of PEC truth. close_campaign.py must consume and validate a canonical PEC terminal close/handoff receipt, bind campaign_id and Program Lock digest/current runtime, re-check required terminal predicates read-only, project the result idempotently into CAMPAIGN_STATUS/CLOSEOUT, and archive only after successful projection. Remove free-form evidence as independent close authority and align policy/docs/tests.",
+      "files": [
+        "environment/program-execution/campaigns/scripts/close_campaign.py",
+        "environment/program-execution/campaigns/scripts/test_close_campaign.py",
+        "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+        "environment/program-execution/campaigns/README.md"
+      ],
+      "effort": "medium",
+      "risk": "high",
+      "dependencies": [
+        "todo-00-execution-preflight"
+      ],
+      "leverage_rank": 4,
+      "operation": "Replace",
+      "anchor": "close_campaign/command closeout contract",
+      "shared_root_cause": "RC-003"
+    },
+    {
+      "id": "todo-04-gate-derived-truth",
+      "task": "Make PEC gate evaluation a derivation, not an assertion. Preserve one evaluator inside the Controller: load the frozen gate definition, bind its digest, require the declared evidence IDs and current evidence, execute or mechanically verify the declared method/predicate, derive PASS/FAIL/BLOCKED/UNKNOWN, and keep waiver handling explicit. The CLI may name the gate and actor but must not choose PASS. Add negative tests for wrong evidence/method, stale evidence, changed definition, unmet pass condition, and invalid waiver.",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_gate_evaluation.py"
+      ],
+      "effort": "medium",
+      "risk": "medium",
+      "dependencies": [
+        "todo-00-execution-preflight"
+      ],
+      "leverage_rank": 5,
+      "operation": "Replace",
+      "anchor": "evaluate_gate + evaluate-gate CLI",
+      "shared_root_cause": "RC-004"
+    },
+    {
+      "id": "todo-05-failover-parity",
+      "task": "Bind the existing EXECUTION_FAILOVER_POLICY to the live Peer provider lifecycle without adding a second router/state machine. Classify canonical provider failures, retry only declared transient classes up to the declared ceiling with a new dispatch ID, preserve logical task/attempt lineage, and refuse mutating failover when prior terminality or rollback is not proven. Keep non-retryable classes terminal. Add focused provider lifecycle tests and runner integration proof.",
+      "files": [
+        "environment/program-execution/scripts/run_peer_task_pipeline.py",
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/registry/EXECUTION_FAILOVER_POLICY.yaml",
+        "environment/program-execution/scripts/tests/test_run_campaign.py",
+        "environment/program-execution/peer_execution/tests/test_failover_policy.py"
+      ],
+      "effort": "medium",
+      "risk": "medium",
+      "dependencies": [
+        "todo-00-execution-preflight",
+        "todo-02-resume-source-lock"
+      ],
+      "leverage_rank": 6,
+      "operation": "Wrap",
+      "anchor": "_execute_provider / live provider dispatch",
+      "shared_root_cause": "RC-005"
+    },
+    {
+      "id": "todo-06-supported-path-e2e",
+      "task": "Add one hermetic non-memory end-to-end test that invokes the actual supported campaign front door with a deterministic local provider and proves compile/blueprint/admission/claim/worktree/mutation/attempt/Controller validation+verification/integration/completion/dependency advance/canonical close. Add negative variants for fresh-workspace bypass, live-source drift, forged ledger close, gate assertion, provider failure, no-op worker, duplicate result/completion, dependency block, and conflicting mutations.",
+      "files": [
+        "environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py",
+        "environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py"
+      ],
+      "effort": "large",
+      "risk": "medium",
+      "dependencies": [
+        "todo-01-recovery-seal",
+        "todo-02-resume-source-lock",
+        "todo-03-completion-projection",
+        "todo-04-gate-derived-truth",
+        "todo-05-failover-parity"
+      ],
+      "leverage_rank": 7,
+      "operation": "Create",
+      "anchor": "supported make campaign/run_campaign boundary",
+      "shared_root_cause": "RC-006"
+    },
+    {
+      "id": "todo-07-compatibility-thinning",
+      "task": "After supported-path proof is green, extract only the live provider binding/probe/execute helpers from run_peer_task_pipeline.py into peer_execution/task_pipeline.py. Update run_campaign to consume that neutral module. Leave run_peer_task_pipeline.py as a minimal explicit non-routable refusal shim with no active orchestration logic, and add import/CLI tests that prevent resurrection of a second front door.",
+      "files": [
+        "environment/program-execution/scripts/run_peer_task_pipeline.py",
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/peer_execution/task_pipeline.py",
+        "environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py"
+      ],
+      "effort": "medium",
+      "risk": "low",
+      "dependencies": [
+        "todo-05-failover-parity",
+        "todo-06-supported-path-e2e"
+      ],
+      "leverage_rank": 8,
+      "operation": "Replace",
+      "anchor": "provider helper ownership / compatibility facade",
+      "shared_root_cause": "RC-006"
+    },
+    {
+      "id": "todo-08-final-proof",
+      "task": "Run targeted Program Execution regression suites followed by make pr-check. Verify only expected in-scope files changed, manifests/generated integrity are updated through their existing supported mechanism if required, every seven finding property is proven, no memory-related content changed, no publication/merge occurs, and the final diff contains no parallel state/receipt/router authority.",
+      "files": [
+        "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+        "environment/program-execution/campaigns/README.md",
+        "environment/program-execution/campaigns/scripts/close_campaign.py",
+        "environment/program-execution/campaigns/scripts/test_close_campaign.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/workspace_reset.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_gate_evaluation.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_workspace_reset_safety.py",
+        "environment/program-execution/peer_execution/task_pipeline.py",
+        "environment/program-execution/peer_execution/tests/test_failover_policy.py",
+        "environment/program-execution/registry/EXECUTION_FAILOVER_POLICY.yaml",
+        "environment/program-execution/scripts/run_campaign.py",
+        "environment/program-execution/scripts/run_peer_task_pipeline.py",
+        "environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py",
+        "environment/program-execution/scripts/tests/test_run_campaign.py",
+        "environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py"
+      ],
+      "effort": "medium",
+      "risk": "medium",
+      "dependencies": [
+        "todo-01-recovery-seal",
+        "todo-02-resume-source-lock",
+        "todo-03-completion-projection",
+        "todo-04-gate-derived-truth",
+        "todo-05-failover-parity",
+        "todo-06-supported-path-e2e",
+        "todo-07-compatibility-thinning"
+      ],
+      "leverage_rank": 9,
+      "operation": "Wrap",
+      "anchor": "final validation/convergence",
+      "shared_root_cause": "cross-cutting-proof"
+    }
+  ],
+  "critical_path": [
+    "todo-00-execution-preflight",
+    "todo-01-recovery-seal",
+    "todo-02-resume-source-lock",
+    "todo-05-failover-parity",
+    "todo-06-supported-path-e2e",
+    "todo-07-compatibility-thinning",
+    "todo-08-final-proof"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "P0 replay/reset bypass eliminated without creating a new recovery owner",
+      "unlocks": "Safe continuation of remaining remediation work"
+    },
+    {
+      "id": "M2",
+      "outcome": "Resume, completion, gate truth, and provider failure semantics each route through one canonical owner",
+      "unlocks": "Supported-path integration proof"
+    },
+    {
+      "id": "M3",
+      "outcome": "Actual front door proves all repaired seams and compatibility facade is thin",
+      "unlocks": "Final quality gate and execution handoff"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "CP-01",
+      "after": "todo-00-execution-preflight",
+      "evidence_required": "HEAD equals locked SHA and no dirty overlap with write_allow",
+      "no_go_action": "STOP_AND_REPLAN"
+    },
+    {
+      "id": "CP-02",
+      "after": "todo-01-recovery-seal",
+      "evidence_required": "negative test proves direct fresh-workspace refused and active/ambiguous execution cannot be reset/re-eligible",
+      "no_go_action": "Do not continue to other mutation batches"
+    },
+    {
+      "id": "CP-03",
+      "after": "todo-06-supported-path-e2e",
+      "evidence_required": "supported-front-door happy path plus all P0/P1 negative cases pass",
+      "no_go_action": "Do not perform compatibility thinning"
+    },
+    {
+      "id": "CP-04",
+      "after": "todo-08-final-proof",
+      "evidence_required": "targeted tests + make pr-check + scope/diff hygiene all pass",
+      "no_go_action": "Do not hand off for publication"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "environment/program-execution/campaigns/README.md",
+      "action": "update",
+      "todo_ids": [
+        "todo-03-completion-projection"
+      ],
+      "reason": "Current documented closeout command must reflect projection-only semantics."
+    },
+    {
+      "surface": "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+      "action": "update",
+      "todo_ids": [
+        "todo-03-completion-projection"
+      ],
+      "reason": "Machine policy must stop advertising free-form ledger close authority."
+    },
+    {
+      "surface": "Repository root documentation outside environment/program-execution/",
+      "action": "n_a",
+      "reason": "Original audit/remediation mutation boundary is folder-only; no confirmed finding requires an outside-root documentation edit."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Can fresh-workspace still cause any active or terminality-unknown provider attempt to lose its lease/worktree and later be redispatched?",
+      "Can an edited campaign source reach provider dispatch on a resumable runtime before current source/Program Lock reconciliation?",
+      "Can CAMPAIGN_STATUS or COMPLETED advance without a valid current PEC terminal receipt?",
+      "Can a caller still choose a gate PASS while the frozen gate definition would not derive PASS?",
+      "Can provider retry/failover occur after partial mutation or uncertain terminality without proven rollback?",
+      "Could every unit test pass while the real run_campaign front door remains broken or bypassable?",
+      "Does extracting provider helpers accidentally create another public execution path or duplicate lifecycle owner?"
+    ],
+    "assumed_false_ifs": [
+      "Current main changes materially before execution starts",
+      "Canonical ownership moves outside environment/program-execution/ before implementation",
+      "Required correction is found to depend on excluded memory behavior",
+      "Existing Program Execution quality gate is unavailable in the execution workspace"
+    ],
+    "blast_radius": "High: incorrect recovery/resume/completion repairs can duplicate consequential execution or manufacture terminal truth; incorrect gate/failover changes can silently weaken verification or retry safety.",
+    "rollback": "Each implementation batch is a scoped local commit. On a blocking property failure, revert only that batch commit or git-restore its exact write_allow paths; preserve prior green batches and all recovery evidence. No force-push or hard reset."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-01-recovery-seal",
+      "todo-02-resume-source-lock",
+      "todo-03-completion-projection",
+      "todo-04-gate-derived-truth",
+      "todo-05-failover-parity",
+      "todo-06-supported-path-e2e",
+      "todo-07-compatibility-thinning",
+      "todo-08-final-proof",
+      "todo-00-execution-preflight"
+    ],
+    "shared_causes": [
+      "RC-001 removes the only proven direct duplicate-effect replay side door before all other work",
+      "RC-003 removes shadow campaign completion authority instead of adding reconciliation between owners",
+      "RC-006 closes both missing live-path proof and the compatibility ambiguity that could recreate a second execution facade"
+    ],
+    "deletions_or_consolidations": [
+      "Remove state transitions and live-lease release from workspace cleanup",
+      "Remove free-form close evidence as lifecycle authority",
+      "Move active provider helpers out of the compatibility refusal script; retain only the refusal shim until removal is separately proven safe"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Self-remediation touches PEC canonical core source while PEC is one of the defective systems.",
+      "mitigation": "Execute the compiled Claude Code contract chain as the bootstrap implementation path; do not use the defective fresh-workspace or ledger-close side doors. Keep all work local-commit-only and run supported PE E2E only after the authority repairs land."
+    },
+    {
+      "risk": "Removing reset-driven re-eligibility could strand retryable failed/stale tasks.",
+      "mitigation": "Do not invent retry semantics in cleanup. Reuse/repair the existing canonical PEC fail/recover/readiness transition owner and prove an intentional safe retry path separately."
+    },
+    {
+      "risk": "Gate derivation could overfit one gate method and become a new generic framework.",
+      "mitigation": "Implement only machine methods already present in current gate contracts; unsupported methods remain UNKNOWN/BLOCKED rather than adding speculative evaluators."
+    },
+    {
+      "risk": "Failover wiring could duplicate routing or state.",
+      "mitigation": "Keep binding and Program state where they are; add policy consumption to the existing Peer lifecycle coordinator only."
+    },
+    {
+      "risk": "Large E2E fixture could drift into excluded memory.",
+      "mitigation": "Use a new non-memory supported-path fixture and terminate all excluded dependency traces at the existing boundary."
+    },
+    {
+      "risk": "The v2.7 terminal delivery wrapper performs one make pr after all six local contract commits.",
+      "mitigation": "Direct git push/direct gh PR creation stay denied in every contract; Program Execution remains local-commit-only; only the compiler-owned terminal make pr wrapper may publish, and merge remains outside the chain."
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "FV-01",
+      "command": "python3 skills/l9-plan/scripts/validate_plan_document.py plans/program_execution_remediation_plan.json",
+      "pass_criteria": "PASS with zero schema/semantic gate failures",
+      "status": "passed"
+    },
+    {
+      "id": "FV-02",
+      "command": "python3 skills/l9-plan/scripts/validate_plan_kernel_receipt.py plans/<bound>.plan.md",
+      "pass_criteria": "PASS with valid Improve then Validate & Repair receipt and canonical body SHA",
+      "status": "passed"
+    },
+    {
+      "id": "FV-03",
+      "command": "pytest -q environment/program-execution/scripts/tests environment/program-execution/core/program-execution-controller-template/scripts/tests environment/program-execution/tests/hardening -k \"campaign or workspace or gate or failover or front_door\"",
+      "pass_criteria": "All selected non-memory Program Execution regression tests pass",
+      "status": "not_applicable"
+    },
+    {
+      "id": "FV-04",
+      "command": "make pr-check",
+      "pass_criteria": "PASS on changed Program Execution files; no validation weakening",
+      "status": "not_applicable"
+    },
+    {
+      "id": "FV-05",
+      "command": "claude-code-contracts/compiler-runtime/scripts/validate_contract.py + validate_chain.py + test_target_validation.py + plan-compatibility-validation",
+      "pass_criteria": "6/6 contracts PASS, chain PASS, v2.7 target regression 11/11 PASS, deterministic recompile PASS, plan compatibility PASS",
+      "status": "passed"
+    }
+  ],
+  "convergence": {
+    "status": "converged",
+    "remaining_unknown_ids": [],
+    "next_skill": "execute validated Claude Code contract chain",
+    "stop_reason": "Planning and Claude executor projection are converged at current main; implementation has not yet run."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml",
+      "environment/program-execution/campaigns/README.md",
+      "environment/program-execution/campaigns/scripts/close_campaign.py",
+      "environment/program-execution/campaigns/scripts/test_close_campaign.py",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/workspace_reset.py",
+      "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_gate_evaluation.py",
+      "environment/program-execution/core/program-execution-controller-template/scripts/tests/test_workspace_reset_safety.py",
+      "environment/program-execution/peer_execution/task_pipeline.py",
+      "environment/program-execution/peer_execution/tests/test_failover_policy.py",
+      "environment/program-execution/registry/EXECUTION_FAILOVER_POLICY.yaml",
+      "environment/program-execution/scripts/run_campaign.py",
+      "environment/program-execution/scripts/run_peer_task_pipeline.py",
+      "environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py",
+      "environment/program-execution/scripts/tests/test_run_campaign.py",
+      "environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py"
+    ],
+    "must_not_modify": [
+      "ALL paths outside environment/program-execution/**",
+      "Any memory-related directory, module, class, function, contract, schema, test, fixture, example, documentation, integration, receipt, or generated surface even if nested under environment/program-execution/**",
+      "root autonomy/ implementation and ops/autonomy implementation",
+      "repository-wide CI, unrelated skills/agents, external repositories",
+      "secrets, credentials, caches, build outputs, generated runtime state"
+    ],
+    "preserved_contracts": [
+      "environment/program-execution/OWNERSHIP.md: core remains Program Lock/task state/Program lease/canonical receipt owner",
+      "Program Execution remains local-commit-only; contracts 1-5 never publish; contract 6 may run exactly one terminal make pr wrapper after its validated local commit; merge remains outside this chain",
+      "Peer adapters remain translation/execution boundaries and never own Program state or canonical convergence",
+      "Architecture compiler source-fidelity and independent Controller verification behavior remain unchanged unless a direct regression test proves a required compatibility adjustment",
+      "Absolute memory exclusion from the source audit/remediation scope"
+    ],
+    "validation_commands": [
+      "pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py",
+      "pytest -q environment/program-execution/scripts/tests/test_run_campaign.py",
+      "pytest -q environment/program-execution/campaigns/scripts/test_close_campaign.py",
+      "pytest -q environment/program-execution/core/program-execution-controller-template/scripts/tests",
+      "pytest -q environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py",
+      "make pr-check"
+    ]
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema": "claude-coding-contract-compiler.chain-validation.v2.7",
+  "valid": true,
+  "contract_count": 6,
+  "chain_ids": [
+    "CG-PE-REMEDIATION-PR-001-v2.7.0",
+    "CG-PE-REMEDIATION-PR-002-v2.7.0",
+    "CG-PE-REMEDIATION-PR-003-v2.7.0",
+    "CG-PE-REMEDIATION-PR-004-v2.7.0",
+    "CG-PE-REMEDIATION-PR-005-v2.7.0",
+    "CG-PE-REMEDIATION-PR-006-v2.7.0"
+  ],
+  "chain_digest": "sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3",
+  "same_target_repo": true,
+  "same_target_branch": true,
+  "internal_handoff_state": "committed_and_validated",
+  "terminal_delivery_count": 1,
+  "terminal_delivery_command": [
+    "make pr"
+  ],
+  "errors": []
+}

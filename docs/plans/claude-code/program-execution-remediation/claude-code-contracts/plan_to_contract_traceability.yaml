@@ -1,0 +1,358 @@
+schema: l9.plan-to-claude.traceability.v2.7
+plan_todo_coverage:
+  implementation_todos:
+  - todo-01-recovery-seal
+  - todo-02-resume-source-lock
+  - todo-03-completion-projection
+  - todo-04-gate-derived-truth
+  - todo-05-failover-parity
+  - todo-06-supported-path-e2e
+  - todo-07-compatibility-thinning
+  - todo-08-final-proof
+  embedded_preflight_todo: todo-00-execution-preflight
+  coverage: PASS
+contracts:
+- contract_id: CG-PE-REMEDIATION-PR-001-v2.7.0
+  compiler_generated_or_source_identifier: CG-PE-REMEDIATION-PR-001-v2.7.0
+  plan_todo_ids:
+  - todo-01-recovery-seal
+  root_cause_ids:
+  - RC-001
+  finding_ids:
+  - PE-001
+  target_repository: Quantum-L9/Cursor-Governance
+  target_branch: claude/program-execution-authority-remediation-v1
+  baseline_SHA: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+  allowed_files:
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/workspace_reset.py
+  - environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/tests/test_workspace_reset_safety.py
+  preserved_files:
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+  - environment/program-execution/peer_execution/contracts.py
+  forbidden_capabilities:
+  - new retry state machine
+  - cleanup-owned eligibility transitions
+  - release of active execution leases by workspace cleanup
+  - direct git push
+  - direct PR creation outside terminal make pr
+  - merge
+  - deployment
+  - repo-settings mutation
+  - all memory-related Program Execution content or dependencies
+  - root autonomy implementation
+  - ops/autonomy implementation
+  - repository paths outside environment/program-execution
+  - direct git push or direct PR creation outside the compiler-owned terminal make
+    pr delivery
+  - merge, deployment, repo-settings mutation
+  - new Program state machine, router, registry, validator, or completion authority
+  prerequisite_contract: null
+  validation_commands:
+  - test "$(git rev-parse --abbrev-ref HEAD)" = claude/program-execution-authority-remediation-v1
+  - git merge-base --is-ancestor 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d HEAD
+  - python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+    environment/program-execution/campaigns/scripts/test_close_campaign.py
+  - make pr-check
+  - python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+    environment/program-execution/core/program-execution-controller-template/scripts/tests/test_workspace_reset_safety.py
+  success_property_ids:
+  - SP-02
+  - SP-03
+  next_contract: CG-PE-REMEDIATION-PR-002-v2.7.0
+  handoff_semantics:
+  - CG-PE-REMEDIATION-PR-001-v2.7.0 committed_and_validated
+  terminal_delivery:
+    authorized: false
+    command: null
+- contract_id: CG-PE-REMEDIATION-PR-002-v2.7.0
+  compiler_generated_or_source_identifier: CG-PE-REMEDIATION-PR-002-v2.7.0
+  plan_todo_ids:
+  - todo-02-resume-source-lock
+  root_cause_ids:
+  - RC-002
+  finding_ids:
+  - PE-002
+  target_repository: Quantum-L9/Cursor-Governance
+  target_branch: claude/program-execution-authority-remediation-v1
+  baseline_SHA: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+  allowed_files:
+  - environment/program-execution/scripts/run_campaign.py
+  - environment/program-execution/scripts/tests/test_run_campaign.py
+  preserved_files:
+  - environment/program-execution/compiler/architecture_intent.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/blueprint.py
+  forbidden_capabilities:
+  - weakened Program Lock comparison
+  - resume based only on workspace existence
+  - new source-of-truth outside campaign source and Program Lock
+  - direct git push
+  - direct PR creation outside terminal make pr
+  - merge
+  - deployment
+  - repo-settings mutation
+  - all memory-related Program Execution content or dependencies
+  - root autonomy implementation
+  - ops/autonomy implementation
+  - repository paths outside environment/program-execution
+  - direct git push or direct PR creation outside the compiler-owned terminal make
+    pr delivery
+  - merge, deployment, repo-settings mutation
+  - new Program state machine, router, registry, validator, or completion authority
+  prerequisite_contract:
+    id: CG-PE-REMEDIATION-PR-001-v2.7.0
+    required_state: committed_and_validated
+  validation_commands:
+  - test "$(git rev-parse --abbrev-ref HEAD)" = claude/program-execution-authority-remediation-v1
+  - test "$(git show -s --format=%s HEAD)" = CG-PE-REMEDIATION-PR-001-v2.7.0
+  - git merge-base --is-ancestor 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d HEAD
+  - python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+    environment/program-execution/campaigns/scripts/test_close_campaign.py
+  - python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+    environment/program-execution/core/program-execution-controller-template/scripts/tests/test_workspace_reset_safety.py
+  - make pr-check
+  - python3 -m pytest -q environment/program-execution/scripts/tests/test_run_campaign.py
+    -k "resume or relock or source"
+  success_property_ids:
+  - SP-04
+  next_contract: CG-PE-REMEDIATION-PR-003-v2.7.0
+  handoff_semantics:
+  - CG-PE-REMEDIATION-PR-002-v2.7.0 committed_and_validated
+  terminal_delivery:
+    authorized: false
+    command: null
+- contract_id: CG-PE-REMEDIATION-PR-003-v2.7.0
+  compiler_generated_or_source_identifier: CG-PE-REMEDIATION-PR-003-v2.7.0
+  plan_todo_ids:
+  - todo-03-completion-projection
+  root_cause_ids:
+  - RC-003
+  finding_ids:
+  - PE-003
+  target_repository: Quantum-L9/Cursor-Governance
+  target_branch: claude/program-execution-authority-remediation-v1
+  baseline_SHA: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+  allowed_files:
+  - environment/program-execution/campaigns/scripts/close_campaign.py
+  - environment/program-execution/campaigns/scripts/test_close_campaign.py
+  - environment/program-execution/campaigns/CAMPAIGN_EXECUTION_POLICY.yaml
+  - environment/program-execution/campaigns/README.md
+  preserved_files:
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/state.py
+  forbidden_capabilities:
+  - second campaign completion decision owner
+  - free-form evidence as terminal truth
+  - archive before canonical completion proof
+  - direct git push
+  - direct PR creation outside terminal make pr
+  - merge
+  - deployment
+  - repo-settings mutation
+  - all memory-related Program Execution content or dependencies
+  - root autonomy implementation
+  - ops/autonomy implementation
+  - repository paths outside environment/program-execution
+  - direct git push or direct PR creation outside the compiler-owned terminal make
+    pr delivery
+  - merge, deployment, repo-settings mutation
+  - new Program state machine, router, registry, validator, or completion authority
+  prerequisite_contract:
+    id: CG-PE-REMEDIATION-PR-002-v2.7.0
+    required_state: committed_and_validated
+  validation_commands:
+  - test "$(git rev-parse --abbrev-ref HEAD)" = claude/program-execution-authority-remediation-v1
+  - test "$(git show -s --format=%s HEAD)" = CG-PE-REMEDIATION-PR-002-v2.7.0
+  - git merge-base --is-ancestor 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d HEAD
+  - python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+    environment/program-execution/campaigns/scripts/test_close_campaign.py
+  - python3 -m pytest -q environment/program-execution/scripts/tests/test_run_campaign.py
+    -k "resume or relock or source"
+  - make pr-check
+  - python3 -m pytest -q environment/program-execution/campaigns/scripts/test_close_campaign.py
+  success_property_ids:
+  - SP-05
+  next_contract: CG-PE-REMEDIATION-PR-004-v2.7.0
+  handoff_semantics:
+  - CG-PE-REMEDIATION-PR-003-v2.7.0 committed_and_validated
+  terminal_delivery:
+    authorized: false
+    command: null
+- contract_id: CG-PE-REMEDIATION-PR-004-v2.7.0
+  compiler_generated_or_source_identifier: CG-PE-REMEDIATION-PR-004-v2.7.0
+  plan_todo_ids:
+  - todo-04-gate-derived-truth
+  root_cause_ids:
+  - RC-004
+  finding_ids:
+  - PE-004
+  target_repository: Quantum-L9/Cursor-Governance
+  target_branch: claude/program-execution-authority-remediation-v1
+  baseline_SHA: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+  allowed_files:
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py
+  - environment/program-execution/core/program-execution-controller-template/scripts/tests/test_gate_evaluation.py
+  preserved_files:
+  - environment/program-execution/core/program-execution-blueprint-template/schemas/convergence-gates.schema.json
+  forbidden_capabilities:
+  - parallel gate evaluator
+  - caller supplied PASS authority
+  - validation weakening
+  - direct git push
+  - direct PR creation outside terminal make pr
+  - merge
+  - deployment
+  - repo-settings mutation
+  - all memory-related Program Execution content or dependencies
+  - root autonomy implementation
+  - ops/autonomy implementation
+  - repository paths outside environment/program-execution
+  - direct git push or direct PR creation outside the compiler-owned terminal make
+    pr delivery
+  - merge, deployment, repo-settings mutation
+  - new Program state machine, router, registry, validator, or completion authority
+  prerequisite_contract:
+    id: CG-PE-REMEDIATION-PR-003-v2.7.0
+    required_state: committed_and_validated
+  validation_commands:
+  - test "$(git rev-parse --abbrev-ref HEAD)" = claude/program-execution-authority-remediation-v1
+  - test "$(git show -s --format=%s HEAD)" = CG-PE-REMEDIATION-PR-003-v2.7.0
+  - git merge-base --is-ancestor 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d HEAD
+  - python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+    environment/program-execution/campaigns/scripts/test_close_campaign.py
+  - python3 -m pytest -q environment/program-execution/campaigns/scripts/test_close_campaign.py
+  - make pr-check
+  - python3 -m pytest -q environment/program-execution/core/program-execution-controller-template/scripts/tests/test_gate_evaluation.py
+  success_property_ids:
+  - SP-06
+  next_contract: CG-PE-REMEDIATION-PR-005-v2.7.0
+  handoff_semantics:
+  - CG-PE-REMEDIATION-PR-004-v2.7.0 committed_and_validated
+  terminal_delivery:
+    authorized: false
+    command: null
+- contract_id: CG-PE-REMEDIATION-PR-005-v2.7.0
+  compiler_generated_or_source_identifier: CG-PE-REMEDIATION-PR-005-v2.7.0
+  plan_todo_ids:
+  - todo-05-failover-parity
+  root_cause_ids:
+  - RC-005
+  finding_ids:
+  - PE-005
+  target_repository: Quantum-L9/Cursor-Governance
+  target_branch: claude/program-execution-authority-remediation-v1
+  baseline_SHA: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+  allowed_files:
+  - environment/program-execution/scripts/run_peer_task_pipeline.py
+  - environment/program-execution/scripts/run_campaign.py
+  - environment/program-execution/registry/EXECUTION_FAILOVER_POLICY.yaml
+  - environment/program-execution/scripts/tests/test_run_campaign.py
+  - environment/program-execution/peer_execution/tests/test_failover_policy.py
+  preserved_files:
+  - environment/program-execution/scripts/router.py
+  - environment/program-execution/registry/EXECUTION_ADAPTER_REGISTRY.yaml
+  forbidden_capabilities:
+  - second provider router
+  - provider-owned Program state
+  - mutating failover after uncertain terminality without rollback proof
+  - direct git push
+  - direct PR creation outside terminal make pr
+  - merge
+  - deployment
+  - repo-settings mutation
+  - all memory-related Program Execution content or dependencies
+  - root autonomy implementation
+  - ops/autonomy implementation
+  - repository paths outside environment/program-execution
+  - direct git push or direct PR creation outside the compiler-owned terminal make
+    pr delivery
+  - merge, deployment, repo-settings mutation
+  - new Program state machine, router, registry, validator, or completion authority
+  prerequisite_contract:
+    id: CG-PE-REMEDIATION-PR-004-v2.7.0
+    required_state: committed_and_validated
+  validation_commands:
+  - test "$(git rev-parse --abbrev-ref HEAD)" = claude/program-execution-authority-remediation-v1
+  - test "$(git show -s --format=%s HEAD)" = CG-PE-REMEDIATION-PR-004-v2.7.0
+  - git merge-base --is-ancestor 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d HEAD
+  - python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+    environment/program-execution/campaigns/scripts/test_close_campaign.py
+  - python3 -m pytest -q environment/program-execution/core/program-execution-controller-template/scripts/tests/test_gate_evaluation.py
+  - make pr-check
+  - python3 -m pytest -q environment/program-execution/peer_execution/tests/test_failover_policy.py
+    environment/program-execution/scripts/tests/test_run_campaign.py -k "failover
+    or provider or peer"
+  success_property_ids:
+  - SP-07
+  next_contract: CG-PE-REMEDIATION-PR-006-v2.7.0
+  handoff_semantics:
+  - CG-PE-REMEDIATION-PR-005-v2.7.0 committed_and_validated
+  terminal_delivery:
+    authorized: false
+    command: null
+- contract_id: CG-PE-REMEDIATION-PR-006-v2.7.0
+  compiler_generated_or_source_identifier: CG-PE-REMEDIATION-PR-006-v2.7.0
+  plan_todo_ids:
+  - todo-06-supported-path-e2e
+  - todo-07-compatibility-thinning
+  - todo-08-final-proof
+  root_cause_ids:
+  - RC-006
+  finding_ids:
+  - PE-006
+  - PE-007
+  target_repository: Quantum-L9/Cursor-Governance
+  target_branch: claude/program-execution-authority-remediation-v1
+  baseline_SHA: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+  allowed_files:
+  - environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py
+  - environment/program-execution/peer_execution/task_pipeline.py
+  - environment/program-execution/scripts/run_peer_task_pipeline.py
+  - environment/program-execution/scripts/run_campaign.py
+  - environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+  preserved_files:
+  - environment/program-execution/tests/hardening/test_real_campaign_e2e.py
+  forbidden_capabilities:
+  - memory test modification
+  - second public execution front door
+  - provider-specific Program lifecycle fork
+  - direct git push
+  - direct PR creation outside terminal make pr
+  - merge
+  - deployment
+  - repo-settings mutation
+  - all memory-related Program Execution content or dependencies
+  - root autonomy implementation
+  - ops/autonomy implementation
+  - repository paths outside environment/program-execution
+  - direct git push or direct PR creation outside the compiler-owned terminal make
+    pr delivery
+  - merge, deployment, repo-settings mutation
+  - new Program state machine, router, registry, validator, or completion authority
+  prerequisite_contract:
+    id: CG-PE-REMEDIATION-PR-005-v2.7.0
+    required_state: committed_and_validated
+  validation_commands:
+  - test "$(git rev-parse --abbrev-ref HEAD)" = claude/program-execution-authority-remediation-v1
+  - test "$(git show -s --format=%s HEAD)" = CG-PE-REMEDIATION-PR-005-v2.7.0
+  - git merge-base --is-ancestor 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d HEAD
+  - python3 -m pytest -q environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+    environment/program-execution/campaigns/scripts/test_close_campaign.py
+  - python3 -m pytest -q environment/program-execution/peer_execution/tests/test_failover_policy.py
+    environment/program-execution/scripts/tests/test_run_campaign.py -k "failover
+    or provider or peer"
+  - make pr-check
+  - python3 -m pytest -q environment/program-execution/tests/hardening/test_supported_campaign_front_door_e2e.py
+    environment/program-execution/scripts/tests/test_campaign_tunnel_airtight.py
+  success_property_ids:
+  - SP-08
+  - SP-09
+  - SP-10
+  next_contract: null
+  handoff_semantics:
+  - CG-PE-REMEDIATION-PR-006-v2.7.0 committed_and_validated
+  terminal_delivery:
+    authorized: true
+    command: make pr
+execution_compatibility_status: PASS

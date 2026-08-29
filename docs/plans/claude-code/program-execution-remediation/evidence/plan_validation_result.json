@@ -1,0 +1,45 @@
+{
+  "schema": "l9.plan-validation-result.v1",
+  "target_repository": "Quantum-L9/Cursor-Governance",
+  "baseline_sha": "5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d",
+  "baseline_refresh": {
+    "audit_sha": "f4265dcc58ff8ebee7896a1a89c9f298c9e8e5c8",
+    "current_sha": "5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d",
+    "findings_revalidated": "7/7 confirmed",
+    "scope_changed": false,
+    "status": "PASS"
+  },
+  "plan_document": {
+    "path": "plans/program_execution_remediation_plan.json",
+    "validator_contract": "skills/l9-plan 4.1.0 unchanged at current main",
+    "status": "PASS_REFRESHED",
+    "note": "Only execution baseline/compiler-readiness fields changed; remediation TODO/DAG/scope unchanged."
+  },
+  "projection": {
+    "path": "plans/program_execution_authority_recovery_remediation_d681ee05.plan.md",
+    "status": "PASS_REFRESHED",
+    "heading_order_preserved": true,
+    "execute_via_section_present": true
+  },
+  "kernel_receipt": {
+    "canonical_body_sha256": "4f29033f9990e93c7c2cff5b2180bed6d297b53cfe98acde93ad02aaf0936d8e",
+    "status": "PASS"
+  },
+  "traceability": {
+    "findings_total": 7,
+    "findings_dispositioned_once": true,
+    "confirmed_findings_covered": true,
+    "implementation_todos_justified": true,
+    "scope_creep": false,
+    "status": "PASS"
+  },
+  "claude_contract_projection": {
+    "compiler_version": "2.7.0",
+    "per_contract_validation": "PASS_6_OF_6",
+    "chain_validation": "PASS",
+    "target_regression": "PASS_11_OF_11",
+    "target_compatibility": "PASS",
+    "chain_digest": "sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3"
+  },
+  "final_plan_status": "executable"
+}

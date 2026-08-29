@@ -1,0 +1,985 @@
+schema: l9.audit-remediation-package.manifest.v1
+package_version: v.1-revised-v2.7
+package_id: l9.audit-remediation.cursor-governance.program-execution.5eff2cdb.v1-v27
+created_at: '2026-08-28T14:37:20Z'
+generator_role: l9_global_architect_remediation_planner
+completion_status: PLAN_EXECUTABLE
+source_audits:
+- title: Cursor-Governance Program Execution Forensic Audit
+  source_or_path: conversation audit preceding original remediation package
+  target_repository: Quantum-L9/Cursor-Governance
+  audit_baseline_SHA: f4265dcc58ff8ebee7896a1a89c9f298c9e8e5c8
+  audited_scope: environment/program-execution/**
+  exclusions:
+  - all memory-related content/dependencies
+  - paths outside environment/program-execution as mutation targets
+  - root autonomy implementation
+  - ops/autonomy implementation
+  - unrelated agents/skills/CI/external repositories
+  finding_count: 7
+target_bindings:
+- repository: Quantum-L9/Cursor-Governance
+  branch: main
+  remediation_baseline_SHA: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+  execution_branch: claude/program-execution-authority-remediation-v1
+  baseline_captured_at: '2026-08-28T14:37:20Z'
+  audit_sha_drifted: true
+  re_adjudication_status: 7/7 CONFIRMED
+skills:
+  l9_global_architect:
+    source_repository: Quantum-L9/Cursor-Governance
+    loaded_revision: f4265dcc58ff8ebee7896a1a89c9f298c9e8e5c8
+    entrypoint: skills/l9-global-architect/SKILL.md
+    version: 0.4.0
+    load_status: PASS_ORIGINAL_PLAN
+  l9_plan:
+    source_repository: Quantum-L9/Cursor-Governance
+    loaded_revision: 5eff2cdb27d709d37a9ee79fe8c2bc42515ff19d
+    entrypoint: skills/l9-plan/SKILL.md
+    version: 4.1.0
+    load_status: UNCHANGED_CURRENT
+    template_path: environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md
+    schema_path: skills/l9-plan/schemas/plan-document.schema.json
+  claude_coding_contract_compiler:
+    source_type: uploaded_zip
+    uploaded_filename: claude-coding-contract-compiler-v2.7.zip
+    loaded_version: 2.7.0
+    pack_root: claude-coding-contract-compiler/
+    skill_entrypoint: claude-coding-contract-compiler/SKILL.md
+    load_mode: manual
+    load_status: PASS
+    skill_archive_sha256: 47dca00ec0642483002dccb7f5426fb263431cbb7a82b293268e815bca852c2f
+    compiler_input_schema: schemas/campaign-spec.schema.json
+    compiler_emitter: scripts/compile_contract.py
+    per_contract_validator: scripts/validate_contract.py
+    chain_validator: scripts/validate_chain.py
+    target_validation_regression: scripts/test_target_validation.py
+finding_summary:
+  total: 7
+  confirmed: 7
+  confirmed_changed_shape: 0
+  partially_resolved: 0
+  superseded: 0
+  duplicate: 0
+  not_reproducible: 0
+  out_of_scope: 0
+  blocked_by_unknown: 0
+plan_summary:
+  plan_count: 1
+  root_cause_group_count: 6
+  todo_count: 9
+  blocking_success_property_count: 10
+  final_plan_status: executable
+  canonical_plan_filename: plans/program_execution_authority_recovery_remediation_d681ee05.plan.md
+  plan_document_filename: plans/program_execution_remediation_plan.json
+claude_contract_summary:
+  compiler_activation_status: PASS
+  compiler_version: 2.7.0
+  campaign_or_input_spec_count: 1
+  contract_count: 6
+  chain_count: 1
+  plan_todos_covered: 9
+  plan_todos_not_applicable_to_claude: 0
+  per_contract_validation_status: PASS_6_OF_6
+  chain_validation_status: PASS
+  plan_to_contract_traceability_status: PASS
+  target_compatibility_status: PASS
+  compiler_regression_status: PASS_11_OF_11
+  deterministic_recompile_status: PASS
+  final_contract_pack_status: EXECUTABLE
+  chain_digest: sha256:4d340ed56b2c97664f13126c9716452efbf98cd8a23c76ba400773a94241c2b3
+  terminal_delivery: PR-006 make pr exactly once
+validation:
+  PLAN_DOCUMENT_validator_status: PASS_REFRESHED
+  projection_status: PASS_REFRESHED
+  kernel_receipt_status: PASS
+  traceability_status: PASS
+  claude_contract_validation_status: PASS
+  claude_contract_chain_status: PASS
+  convergence_status: PLAN_EXECUTABLE
+package_integrity:
+  hash_algorithm: sha256
+  manifest_self_hash_mode: canonical_self_zeroed
+artifacts:
+- id: manifest-yaml
+  path: MANIFEST.yaml
+  type: artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: c517a2513e914d1676d5d94a8a8f2cfd210fa9841daadc4c9a548cee07bfae95
+  hash_mode: canonical_self_zeroed
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: runbook-md
+  path: RUNBOOK.md
+  type: runbook
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: null
+  sha256: fabf1e02c24eae100f2ada85af6d0343a5bca5eaf583deffa7a81ec3cd32f8b7
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-manifest-yaml
+  path: claude-code-contracts/MANIFEST.yaml
+  type: claude_contract_pack_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 10341f1faa1a902416ea1627dde8b78c91c8955fa91b97475340c1975795f408
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-validation-yaml
+  path: claude-code-contracts/VALIDATION.yaml
+  type: claude_contract_pack_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 90e5c50a41078674d479c5b0a4bedb8bbd9c4bf86178caed2c095f43e3552bbf
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-001-cg-pe-remediation-pr-001-v2-7-0-claude-settings-json
+  path: claude-code-contracts/artifacts/PR-001/CG-PE-REMEDIATION-PR-001-v2.7.0/.claude/settings.json
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 25418ca7e27738924349195b6a9037a25fd326058d513681bb4948061f922438
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-001-cg-pe-remediation-pr-001-v2-7-0-claude-md
+  path: claude-code-contracts/artifacts/PR-001/CG-PE-REMEDIATION-PR-001-v2.7.0/CLAUDE.md
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: d1dba7a8e8c40daf3e3548651c9d9d08a9ff58c95979753beec988cfb5378c0a
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-001-cg-pe-remediation-pr-001-v2-7-0-preflight-sh
+  path: claude-code-contracts/artifacts/PR-001/CG-PE-REMEDIATION-PR-001-v2.7.0/preflight.sh
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 4fdaec53ca143136685fea243da1c5aa287992617fa086c9ea6ee61641017244
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-002-cg-pe-remediation-pr-002-v2-7-0-claude-settings-json
+  path: claude-code-contracts/artifacts/PR-002/CG-PE-REMEDIATION-PR-002-v2.7.0/.claude/settings.json
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 25418ca7e27738924349195b6a9037a25fd326058d513681bb4948061f922438
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-002-cg-pe-remediation-pr-002-v2-7-0-claude-md
+  path: claude-code-contracts/artifacts/PR-002/CG-PE-REMEDIATION-PR-002-v2.7.0/CLAUDE.md
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: cf8ac45c7ad0e248ab11efa80a38cc7a4da2126c13af0c024d163353b3f646aa
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-002-cg-pe-remediation-pr-002-v2-7-0-preflight-sh
+  path: claude-code-contracts/artifacts/PR-002/CG-PE-REMEDIATION-PR-002-v2.7.0/preflight.sh
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 1c954a26915ee2c38bba4eeae03ffe605c00a00ba6d7b0ccdd255fdd627d3425
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-003-cg-pe-remediation-pr-003-v2-7-0-claude-settings-json
+  path: claude-code-contracts/artifacts/PR-003/CG-PE-REMEDIATION-PR-003-v2.7.0/.claude/settings.json
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 25418ca7e27738924349195b6a9037a25fd326058d513681bb4948061f922438
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-003-cg-pe-remediation-pr-003-v2-7-0-claude-md
+  path: claude-code-contracts/artifacts/PR-003/CG-PE-REMEDIATION-PR-003-v2.7.0/CLAUDE.md
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: c6b9047236c4d5302615752d8862c64483a55d3b2e5c151366991e7005eb87ff
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-003-cg-pe-remediation-pr-003-v2-7-0-preflight-sh
+  path: claude-code-contracts/artifacts/PR-003/CG-PE-REMEDIATION-PR-003-v2.7.0/preflight.sh
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 69bff02ba1968751134f10e5f24217d8392a5690c0670365ff7deaf003e31f88
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-004-cg-pe-remediation-pr-004-v2-7-0-claude-settings-json
+  path: claude-code-contracts/artifacts/PR-004/CG-PE-REMEDIATION-PR-004-v2.7.0/.claude/settings.json
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 25418ca7e27738924349195b6a9037a25fd326058d513681bb4948061f922438
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-004-cg-pe-remediation-pr-004-v2-7-0-claude-md
+  path: claude-code-contracts/artifacts/PR-004/CG-PE-REMEDIATION-PR-004-v2.7.0/CLAUDE.md
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 32b198289fd5edb7d808ef1d3150ddc91a38f2ad1e2d17c70757af914735b9a6
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-004-cg-pe-remediation-pr-004-v2-7-0-preflight-sh
+  path: claude-code-contracts/artifacts/PR-004/CG-PE-REMEDIATION-PR-004-v2.7.0/preflight.sh
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 0f353116da60d194dc0e26c1b398a2ee335915b44e50af4717260b6579b442e5
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-005-cg-pe-remediation-pr-005-v2-7-0-claude-settings-json
+  path: claude-code-contracts/artifacts/PR-005/CG-PE-REMEDIATION-PR-005-v2.7.0/.claude/settings.json
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 25418ca7e27738924349195b6a9037a25fd326058d513681bb4948061f922438
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-005-cg-pe-remediation-pr-005-v2-7-0-claude-md
+  path: claude-code-contracts/artifacts/PR-005/CG-PE-REMEDIATION-PR-005-v2.7.0/CLAUDE.md
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 2c228fce0726f34339fe729c112424fe29eb1c2c20dcc7b41f8ccf4dc073aca3
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-005-cg-pe-remediation-pr-005-v2-7-0-preflight-sh
+  path: claude-code-contracts/artifacts/PR-005/CG-PE-REMEDIATION-PR-005-v2.7.0/preflight.sh
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: ec28396e603fa70460268d8da941f879e8bc26b2d545177d6057b5873fed8c1c
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-006-cg-pe-remediation-pr-006-v2-7-0-claude-settings-json
+  path: claude-code-contracts/artifacts/PR-006/CG-PE-REMEDIATION-PR-006-v2.7.0/.claude/settings.json
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 25418ca7e27738924349195b6a9037a25fd326058d513681bb4948061f922438
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-006-cg-pe-remediation-pr-006-v2-7-0-claude-md
+  path: claude-code-contracts/artifacts/PR-006/CG-PE-REMEDIATION-PR-006-v2.7.0/CLAUDE.md
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 9175cfed4a3d6b65c036b6e0d0638148d05accbeafce69fd0d15b6ba9d29830e
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-artifacts-pr-006-cg-pe-remediation-pr-006-v2-7-0-preflight-sh
+  path: claude-code-contracts/artifacts/PR-006/CG-PE-REMEDIATION-PR-006-v2.7.0/preflight.sh
+  type: executor_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: f17dd083515ace47af1bcf0e41e07c5e44f1e1f13908375c65a59569aa3e18e4
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-campaign-spec-yaml
+  path: claude-code-contracts/campaign-spec.yaml
+  type: claude_contract_pack_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: cb64729070a3661ee234996bba02dcbf9dce52c9432231ab942ac58f36bc1d2b
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-alignment-report-md
+  path: claude-code-contracts/compiler-runtime/ALIGNMENT_REPORT.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: fba6db198de265c85aec762b532f865b65c321fab3911736a8ffe9d903d3a3b7
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-change-summary-md
+  path: claude-code-contracts/compiler-runtime/CHANGE_SUMMARY.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 446fc60c13ad09e81293531e3a4a4cf932abc56c59b4d62413694bcd4b80f792
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-manifest-md
+  path: claude-code-contracts/compiler-runtime/MANIFEST.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 56d9072594c212558c64335568b9bf2305a5a71148bcae9c0e5865b830243856
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-provenance-map-yaml
+  path: claude-code-contracts/compiler-runtime/PROVENANCE_MAP.yaml
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 6e45dadedb0797bf378cfce975384afb41ae23645442ba45432339a21b6ab1aa
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-readme-md
+  path: claude-code-contracts/compiler-runtime/README.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 9d859c8f7cfc51e73e4d5fe39df55caf349c3b298aa262b212e13ca030ee9f2a
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-regression-guard-md
+  path: claude-code-contracts/compiler-runtime/REGRESSION_GUARD.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 7bf22648c4a85a169cc51f4ac2797644fca2fadcbc263900d7651a2aa17a4ace
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-runbook-md
+  path: claude-code-contracts/compiler-runtime/RUNBOOK.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 495ae2acf53e96e0f3a7dfdd3122dd29713dc52af281646cf12e5f0998555043
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-skill-md
+  path: claude-code-contracts/compiler-runtime/SKILL.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 804de314d08ee3f7920d094b11013d32308a0b8120f27e115d4ec4e10281881b
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-validation-md
+  path: claude-code-contracts/compiler-runtime/VALIDATION.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 76b5bf9fd9aa402b8f7e5ca21cf1f469d7325ad0820a1b35a2e550ce656e5dae
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-agents-openai-yaml
+  path: claude-code-contracts/compiler-runtime/agents/openai.yaml
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 84c6c0d84c3afb0c4c46a425b299b2e80e7d664f308e79b1ee8cf059332ea678
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-examples-campaign-spec-example-yaml
+  path: claude-code-contracts/compiler-runtime/examples/campaign-spec.example.yaml
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 6838e90448d57a54aa55ddda94c6bac42fa853b41116b758e87bffc07a218727
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-examples-campaign-spec-go-example-yaml
+  path: claude-code-contracts/compiler-runtime/examples/campaign-spec.go.example.yaml
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 54db0e3e823b850314798891da30f15b318a79b24bfb40836bd9acce42a3e822
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-examples-campaign-spec-python-example-yaml
+  path: claude-code-contracts/compiler-runtime/examples/campaign-spec.python.example.yaml
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 741b0e0b8330cc0c48cf805de54b25a742537e999d1e82ae905f37e34a381932
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-expertise-model-yaml
+  path: claude-code-contracts/compiler-runtime/expertise_model.yaml
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 7ce38d9dafa6c1fefc64f0f5cbfa2a55008b5c0a1278d43bce04d8e67f17b10a
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-binding-directives-md
+  path: claude-code-contracts/compiler-runtime/references/binding-directives.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 36faf3d6977be2ba7467e300e8a5209065a3978bdf7c83d9366f028a162ab734
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-canonical-spec-md
+  path: claude-code-contracts/compiler-runtime/references/canonical-spec.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: f8c6d0e3b4cf593526765177ceda323f2b6981f216dd4cc8bf9ceebc1f3f7a0c
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-claude-fill-policy-md
+  path: claude-code-contracts/compiler-runtime/references/claude-fill-policy.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: d10a730809981bad55a2eabe7d5430522c5a068c2c1af7378bf97a6dc28d5db7
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-contract-anatomy-md
+  path: claude-code-contracts/compiler-runtime/references/contract-anatomy.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 2d9d9559dc7a01261f3a3e788f210c6adf69dc0bd9fd896b11771403d7ced9f5
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-dpk-integration-md
+  path: claude-code-contracts/compiler-runtime/references/dpk-integration.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 5955bf6d8669c035f12aee28842f33f58c8fb60e078f94b74a52ddf12d9a73cf
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-enforcement-gates-md
+  path: claude-code-contracts/compiler-runtime/references/enforcement-gates.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 9553b61789670bae40d5f91aa5baf4039b1b396015444c7104caf136b07fa641
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-kernel-fail-closed-md
+  path: claude-code-contracts/compiler-runtime/references/kernel-fail-closed.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 287c6adcfbe4599f4f20c34f6c6d6eafefd44769593b8df009f8a9f20c6e05bb
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-kernel-recursive-harden-md
+  path: claude-code-contracts/compiler-runtime/references/kernel-recursive-harden.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 4d2265497839cdc739a658e611bf490f3061e5c30a4bcbe5087f8f3e73641e26
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-kernel-scope-lock-md
+  path: claude-code-contracts/compiler-runtime/references/kernel-scope-lock.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: eb52578012bdf0d0b7e599fcdf33e0aa4e329e1215ceaa3cdbb53f7ca6076286
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-output-modes-md
+  path: claude-code-contracts/compiler-runtime/references/output-modes.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: f4a81119193ebe34460677cfb23d101cceb02b9799a1324dcfb66b76030d14cf
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-section-contract-md
+  path: claude-code-contracts/compiler-runtime/references/section-contract.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: f8cd61ad97d1a26d374293b6fae791b5780a694f12a9ae4909b70afac65e299e
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-references-validation-evidence-md
+  path: claude-code-contracts/compiler-runtime/references/validation-evidence.md
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 020616cb99d15b3fe07a4caf5f3ff658167e4b26f8386f500910a3f9b1792572
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-campaign-spec-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/campaign-spec.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 7faf33435c500eb0138de6bf8964eb2f68b5b582999041f00f6073ec5c2a20bd
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-coding-contract-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/coding-contract.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: de3cb59bc24081e3a0e97168c296466cf0d0ebc7e8a72bad3c8764ed267bc8f0
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-convergence-report-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/convergence-report.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 345afeafb11aa58a2bb36363038240ebbbc3b753fdb15c93d632b92e4d47fa40
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-delta-report-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/delta-report.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: fe00411582e034c924b191142b7161fca19dd073a165f915e0ee5f63d708b7be
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-dpk-alert-runbook-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/dpk-alert-runbook.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 43c838bbe31fb2708c4a7504296b580d0eec741de464f005a1231b89bdcbd51d
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-dpk-debt-register-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/dpk-debt-register.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 805d28514649840e673b4b9741f1bf979c541d3f4dde0e8914e4e501b9095cd0
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-dpk-manifest-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/dpk-manifest.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 12dd9c54b6ff107dc4558982272dae23874b024f2b8be5055c08423858a12d03
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-dpk-readiness-score-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/dpk-readiness-score.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: f1e920038cef17b97db4a585c8faed86b924f8c4bd43808c311bb1236443bb08
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-dpk-task-contract-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/dpk-task-contract.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 7d42b8df918de1154a07d923ac14246d8ec93836a6b2fef1f116260dd1de3bca
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-evidence-record-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/evidence-record.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 24f56ecc5963c134c2d9c6c99714365332e01e82cd76f966c1307dadeb762245
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-improvement-log-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/improvement-log.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 10aabc3d5ab0139f2e205aa9310ba57971d7d59cd1eae28dc3f59932d69881a8
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-improvement-report-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/improvement-report.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 6b39c69b718595afc23bbb56277c89d5f7372aa0e660f69a30815c1f2853f67d
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-promotion-decision-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/promotion-decision.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 133fac1086a0e1d1184864d83119a01704fd5a0cd75a76843f75e1353709259a
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-scope-lock-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/scope-lock.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 7a38718a1586eca01ebbe854b7cfa7648874f19a73a358d77df8e2138b780795
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-schemas-validation-report-schema-json
+  path: claude-code-contracts/compiler-runtime/schemas/validation-report.schema.json
+  type: compiler_schema
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: eab9ca887284895ba53ba9632a9542af620be6f2e97ce791dedc4dedf92b1adb
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-pycache-generate-claude-settings-cpython-313-pyc
+  path: claude-code-contracts/compiler-runtime/scripts/__pycache__/generate_claude_settings.cpython-313.pyc
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 7cc8440c47a8f951dc2b9daf5426acfab760d854e8f4dbf67d3f3092b2e9e893
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-pycache-generate-preflight-cpython-313-pyc
+  path: claude-code-contracts/compiler-runtime/scripts/__pycache__/generate_preflight.cpython-313.pyc
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: dd3715fc385089ce225dbc83426b880226193bbe000e61cef5f91a25a469855c
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-pycache-plan-decomposition-cpython-313-pyc
+  path: claude-code-contracts/compiler-runtime/scripts/__pycache__/plan_decomposition.cpython-313.pyc
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: be56e8c9d7d1a79b475481f776b8c7a3b421fde46eeed58d2bce7943557bdd1b
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-pycache-validate-chain-cpython-313-pyc
+  path: claude-code-contracts/compiler-runtime/scripts/__pycache__/validate_chain.cpython-313.pyc
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: b8ff46c15e2fe882a346b42f2f797748c163ea298b50c7c85e577044c2e3e17a
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-pycache-validate-contract-cpython-313-pyc
+  path: claude-code-contracts/compiler-runtime/scripts/__pycache__/validate_contract.cpython-313.pyc
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 3bb9b6dcba5aa5b6e5118a5321a5262a6768cff116d6ee3810a0046a16e056df
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-compile-contract-py
+  path: claude-code-contracts/compiler-runtime/scripts/compile_contract.py
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 5025dcc8143fbe3a802ca7002fa651f8bd10039b54d7356b9dff9ef4392c01d4
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-generate-claude-settings-py
+  path: claude-code-contracts/compiler-runtime/scripts/generate_claude_settings.py
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 3bb0607fd5b2fb528db749f3ab7494217b681a04d005141452e49642907b79b9
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-generate-preflight-py
+  path: claude-code-contracts/compiler-runtime/scripts/generate_preflight.py
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 5cadfe911d668f66b623ea9530ea9939d1135da76158f8f1d533cbe88dde37d5
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-plan-decomposition-py
+  path: claude-code-contracts/compiler-runtime/scripts/plan_decomposition.py
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 23f21c5886dd5f0cce4e17bc49e4493601ddb9a5083bb09a46c9c5aee1dcee32
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-test-target-validation-py
+  path: claude-code-contracts/compiler-runtime/scripts/test_target_validation.py
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: c22216ec16dc155d132d9526e1f5ec008e486c6c1de993bdcc9d6170058a8ea8
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-validate-chain-py
+  path: claude-code-contracts/compiler-runtime/scripts/validate_chain.py
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 68a85e368fa274247d3e50524a4c2ae3ab52249c6c6315f0bc166a0b344b170a
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-scripts-validate-contract-py
+  path: claude-code-contracts/compiler-runtime/scripts/validate_contract.py
+  type: compiler_runtime_script
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 2b65832c158cf5429d75c7da5751838361772fa229afb0b1da927abc77cdb4c1
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-runtime-skill-intelligence-report-yaml
+  path: claude-code-contracts/compiler-runtime/skill_intelligence_report.yaml
+  type: compiler_skill_resource
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: b71ec3b40067f2268c687b12e88dfdc68d2ed608b00518befd77e21b92556670
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-compiler-activation-receipt-yaml
+  path: claude-code-contracts/compiler_activation_receipt.yaml
+  type: claude_contract_pack_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: a6c89a21aa6d06772b106d16c43c7cd13de843bf43c59a478bf1ed88c547681b
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-emitted-pr-001-contract-json
+  path: claude-code-contracts/emitted/PR-001.contract.json
+  type: claude_code_contract
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 90ddba2b6395b59bf6406d3145c28bc57a8497fc0d4cc75e2975fdb810a36625
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-emitted-pr-002-contract-json
+  path: claude-code-contracts/emitted/PR-002.contract.json
+  type: claude_code_contract
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: c2ec29a5be42c97c80049042082674a67dca1171ed69e95588df418456439e96
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-emitted-pr-003-contract-json
+  path: claude-code-contracts/emitted/PR-003.contract.json
+  type: claude_code_contract
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: b5e0067d3dc97484e901b34cd53e693c91f962d6bc080a30e45653e380ed3f41
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-emitted-pr-004-contract-json
+  path: claude-code-contracts/emitted/PR-004.contract.json
+  type: claude_code_contract
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 05083303609a26c67421b89a258587adf5187a70048bec0daf69d33582d40467
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-emitted-pr-005-contract-json
+  path: claude-code-contracts/emitted/PR-005.contract.json
+  type: claude_code_contract
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 2af3645b0fe82310ef315546a9b59fc2e4eaf86a9def361a4cffd110bcab8913
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-emitted-pr-006-contract-json
+  path: claude-code-contracts/emitted/PR-006.contract.json
+  type: claude_code_contract
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: b26babbcef0b1c9653859b6f0999dfc5e36dd0075eab041b7d0f2145b285365d
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-plan-to-contract-traceability-yaml
+  path: claude-code-contracts/plan_to_contract_traceability.yaml
+  type: claude_contract_pack_artifact
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 0d240c7657190579e013b120e2767616af141aa5284590669d7d714599a55806
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-validation-chain-validation-json
+  path: claude-code-contracts/validation/chain-validation.json
+  type: compiler_validation_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: bc716efad3408cafa70422a297a183147a6e5e8c2287cff9ae16e6ac5fc78381
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-validation-chain-validation-txt
+  path: claude-code-contracts/validation/chain-validation.txt
+  type: compiler_validation_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 85c90ca7805572ab8c8becc23accdcae6f424ac96a3f5e7d546d8dd61367a50e
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-validation-per-contract-validation-txt
+  path: claude-code-contracts/validation/per-contract-validation.txt
+  type: compiler_validation_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 6f5b9f6cf5a365e285badded02c1af99da8ee9e29a07efcd6faefbf4556e0111
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-validation-plan-compatibility-validation-json
+  path: claude-code-contracts/validation/plan-compatibility-validation.json
+  type: compiler_validation_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 7aeabf430ff515f926bc7eb82c52341f880eac20e80176eea6622741048b53ef
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: claude-code-contracts-validation-target-validation-regression-txt
+  path: claude-code-contracts/validation/target-validation-regression.txt
+  type: compiler_validation_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 640b3482e2808d33d739662175277d954f9b1db28df645723dfd2cc28916d595
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: evidence-compiler-target-compatibility-evidence-yaml
+  path: evidence/compiler_target_compatibility_evidence.yaml
+  type: planning_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: e5b21010048e6881117b34afb683556e8af4bef0ef8804e8a067311478f7733d
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: evidence-current-state-delta-yaml
+  path: evidence/current_state_delta.yaml
+  type: planning_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 8ebb8104543c2a9a706ff96b19af08808e572efc89fc0ee65a1c60026567b6cf
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: evidence-finding-disposition-ledger-yaml
+  path: evidence/finding_disposition_ledger.yaml
+  type: planning_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 00bba17f931f33d5e96cd7e7096bdd4559de0cf2e4cfe92f4baf9387ca64907b
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: evidence-kernel-receipt-json
+  path: evidence/kernel_receipt.json
+  type: planning_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: eefbebdea7ba7d2c166a19864efd92d7d19c54d571f9a79ad8b6155661b325e8
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: evidence-plan-validation-result-json
+  path: evidence/plan_validation_result.json
+  type: planning_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 324fa9b1d75b553b1f9de392e3dc072541cf58b26b0b5c4c37e625eb0d921613
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: evidence-root-cause-matrix-yaml
+  path: evidence/root_cause_matrix.yaml
+  type: planning_evidence
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: d394a50d31f40b33a9c65d765257312b841643a99d0fb1d7cdf9a6b923278e05
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: plans-program-execution-authority-recovery-remediation-d681ee05-plan-md
+  path: plans/program_execution_authority_recovery_remediation_d681ee05.plan.md
+  type: canonical_plan_projection
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 59c5bd601ecc537d1b6c01e7f93866e0c4861556c3363e3c074fb26646a74118
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: projection_or_evidence
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
+- id: plans-program-execution-remediation-plan-json
+  path: plans/program_execution_remediation_plan.json
+  type: PLAN_DOCUMENT
+  purpose: Packaged remediation/contract artifact
+  target_repository_if_applicable: Quantum-L9/Cursor-Governance
+  sha256: 8ca6f4ab8f631fedbcd249145e60cdcdc0eaabf3e4401c608d9d83b4d27af531
+  hash_mode: raw_final_bytes
+  authoritative_or_projection: authoritative
+  generated_from: validated remediation plan / compiler v2.7 / current-state re-adjudication
