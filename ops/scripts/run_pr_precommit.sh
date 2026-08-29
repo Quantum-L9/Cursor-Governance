@@ -39,9 +39,7 @@ source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
 # fixtures. The gate already resolved and passes PR_CHANGED_FILE — skip.
 if [[ -z "${PR_CHANGED_FILE:-}" || ! -f "${PR_CHANGED_FILE:-}" ]]; then
   PR_BASE="${PR_BASE:-origin/main}"
-  if ! pr_stack_apply_publish_base "$WS"; then
-    exit $?
-  fi
+  pr_stack_apply_publish_base "$WS" || exit $?
   export PR_BASE
 fi
 

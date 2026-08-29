@@ -193,9 +193,17 @@ pr_stack_apply_publish_base() {
   fi
   base="$(pr_stack_normalize_ref "$tip")"
   if [ "$base" != "origin/main" ]; then
-    if ! git -C "$workspace" rev-parse --verify "$base" >/dev/null 2>&1; then
+    local_sha="$(git -C "$workspace" rev-parse --verify "$base" 2>/dev/null || true)"
+    if [ -n "$sha" ] && [ "$local_sha" = "$sha" ]; then
+      :
+    else
       if ! git -C "$workspace" fetch origin "${base#origin/}"; then
         echo "FAIL: cannot fetch $base — stack tip unverifiable" >&2
+        return 1
+      fi
+      local_sha="$(git -C "$workspace" rev-parse --verify "$base" 2>/dev/null || true)"
+      if [ -n "$sha" ] && [ "$local_sha" != "$sha" ]; then
+        echo "FAIL: $base is ${local_sha:-missing}, resolver reported $sha" >&2
         return 1
       fi
     fi

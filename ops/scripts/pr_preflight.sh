@@ -16,9 +16,7 @@ source "$SCRIPT_DIR/lib/fetch_receipt.sh"
 source "$SCRIPT_DIR/lib/resolve_pr_stack.sh"
 
 cd "$WS"
-if ! pr_stack_apply_publish_base "$WS"; then
-  exit $?
-fi
+pr_stack_apply_publish_base "$WS" || exit $?
 export PR_BASE
 
 if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then

@@ -79,9 +79,7 @@ fi
 
 # Bind the unique chain tip before fetch/overlap so the PR opens against the
 # same base pr-check already gated. Receipt reuse skips a second gh round-trip.
-if ! pr_stack_apply_publish_base "$WS"; then
-  exit $?
-fi
+pr_stack_apply_publish_base "$WS" || exit $?
 export PR_BASE
 BASE_REF="${PR_BASE#origin/}"
 

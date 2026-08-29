@@ -163,9 +163,7 @@ fi
 
 # PR_STACK=auto binds the unique open-PR chain tip before receipt + changed-files.
 # Empty PR_STACK keeps PR_BASE. Must run after --print-state-digest (tests pin that).
-if ! pr_stack_apply_publish_base "$WS"; then
-  exit $?
-fi
+pr_stack_apply_publish_base "$WS" || exit $?
 export PR_BASE
 _gate_head_sha() {
   # A repository with no commits has no HEAD to record. That is the documented
