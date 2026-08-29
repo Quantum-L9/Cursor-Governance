@@ -1631,6 +1631,17 @@ execution:
       0); the fix lives in the workspace and on this branch (grep = 2). A fix to the debt gate therefore cannot
       take effect for the session that writes it. Verify with: python3 ops/autonomy/session_debt.py check — the
       workspace copy exits 0.'
+  - id: gate-fail-receipt-unclearable-by-projection-fix
+    state: deferred — found while recording this wave
+    detail: 'run_pr_gate.sh''s FAIL receipt (.l9/pr/gate-failure.json) keys on paths_digest + content_digest + pr_base
+      + head_sha, all TRACKED state. The failure it recorded was ''Claude projection --check drifted'', whose sanctioned
+      repair — the command the failure message itself names — writes only into untracked .claude/ and leaves git
+      status clean. So repairing exactly what the gate asked for does not change the digest, and the next make pr-check
+      refuses with STOP LOOPING instead of re-running. Verified at head 7b35b52b: projection --check exits 0 while
+      the receipt still refuses. Same satisfiability shape as the debt gate. Narrow fix: record the failing check
+      and skip the refusal once it passes, or fold untracked projection state into the digest. Deferred rather than
+      fixed because it is the gate blocking this turn, and an agent redesigning its own constraint to unblock itself
+      is the pattern rule 42 warns about.'
   what_is_left:
     in_repo_active: 20
     next_by_leverage:

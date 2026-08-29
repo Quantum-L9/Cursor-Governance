@@ -95,7 +95,7 @@ The makespan **lower bound** at 4 lanes falls from 11 to **9** — `max(6, ⌈35
 makespan is deliberately not restated. Removing seven units changes which pairs collide and which
 lane assignment is optimal; that needs the scheduler re-run, not an arithmetic adjustment.
 
-### Four findings deferred to a human
+### Five findings deferred to a human
 
 | Finding | State |
 |---|---|
@@ -103,6 +103,7 @@ lane assignment is optimal; that needs the scheduler re-run, not an arithmetic a
 | `verify-gate-denies-hookspath-read` | `verification_bypass_gate.py` denies `git config --get core.hooksPath` — a *read*. The matcher does not separate `--get`/`--get-all`/`--list` from a write, so diagnosing the hook model is blocked by the gate protecting it. Narrow fix: exempt read forms. |
 | `debt-gate-deferred-still-blocks` | Superseded by `8d812336`; left open for a human to close. |
 | `debt-gate-fix-cannot-self-apply` | `session_debt_wrap.py:15` pins the gate to the **SSOT clone's** copy, so a fix to the debt gate cannot take effect for the session that writes it. Clears when `8d812336` reaches `main`. |
+| `gate-fail-receipt-unclearable-by-projection-fix` | The PR gate's FAIL receipt keys on tracked content, but the repair it names for a projection drift writes only into untracked `.claude/`. Doing exactly what the gate asks does not change the digest, so the next run refuses with STOP LOOPING. Found while recording this wave; deferred because it is the gate blocking the turn. |
 
 ## Headline: three records were wrong, and two of them were wrong in the direction that hides work
 
