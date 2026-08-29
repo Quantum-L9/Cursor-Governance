@@ -884,4 +884,3 @@ pr-security-full:
 		bash ops/scripts/run_pr_security.sh "$(WS)"
 
 pr-full: pr-security-full
-
