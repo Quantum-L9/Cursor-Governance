@@ -11,14 +11,33 @@ Emit candidates with:
 
 ## `prune-execute`
 
+Script: `scripts/prune_execute.py`. Default is JSON report. `--apply` fail-closes
+if `git fetch --prune origin` fails (hygiene sessionEnd stays fail-soft).
+
 Requires **all** of:
 
 1. Explicit user authorization in this turn
 2. Env `L9_GIT_PRUNE_AUTHORIZED=<non-empty reason>`
-3. Diagnosis receipt with class `prune_candidate` and confidence `high`
-4. Tip SHA recorded in receipt before delete
+3. Diagnosis receipt with class `prune_candidate` and confidence `high`, **or**
+   `archive_ref` with **`redundancy_basis: patch_id`** (and `fetched: true` when
+   the repo has a remote)
+4. Tip SHA recorded in receipt before delete; porcelain empty (run shipped-copy
+   prune first). Open-PR heads and `campaign/*` are never deleted.
 
-Local branch delete only by default. Remote `git push --delete` requires the reason to include `remote_delete=1` and a second explicit user confirmation.
+Every worktree or branch delete is preceded by `refs/l9/preserved/` (same helper
+as `ops/scripts/repo_hygiene.py`). Worktrees go before branches. Recover with
+`git branch recovered <preserve-ref>`.
+
+Local branch delete only by default. Remote `git push --delete` requires the
+reason to include `remote_delete=1` **and** `--confirm-remote-delete`.
+
+## Shipped-copy prune (before prune-execute)
+
+Script: `scripts/prune_open_pr_copies.py`. Report-only default. `--apply` unlinks
+**untracked** files whose sha256 equals an open-PR blob at the same path
+(casefold `docs/plans/built` vs `BUILT`). ` M` overlays that match a PR blob are
+restored to that leftover worktree’s HEAD. **Never** `unlink` when `HEAD:path`
+exists. Receipts: `.l9/hygiene/`, not `WIP/_receipts/`.
 
 ## `archive_ref`
 

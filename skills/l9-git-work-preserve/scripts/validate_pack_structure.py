@@ -25,6 +25,8 @@ REQUIRED = [
     "scripts/git_fetch.py",
     "scripts/harvest_worktree_dirt.py",
     "scripts/extract_path_union.py",
+    "scripts/prune_execute.py",
+    "scripts/prune_open_pr_copies.py",
     "scripts/triage_preserved_refs.py",
     "scripts/pack_self_test.py",
     "scripts/validate_pack_structure.py",

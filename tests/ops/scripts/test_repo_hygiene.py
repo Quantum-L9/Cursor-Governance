@@ -368,3 +368,59 @@ def test_both_call_sites_ship_both_halves() -> None:
     assert hygiene.count('"fetch", "--prune", "origin"') == 1, (
         "a second prune site would be able to skip the set-head half again"
     )
+
+
+def test_pr_index_pages_past_200() -> None:
+    """SP-01: heads past the old silent 200 cap are still classified."""
+
+    def pages(slug: str, page: int, per_page: int) -> tuple[list | None, str]:
+        start = (page - 1) * per_page
+        total = 250
+        if start >= total:
+            return [], ""
+        end = min(start + per_page, total)
+        batch = [
+            {
+                "number": i,
+                "head": {"ref": f"feat/h{i}"},
+                "state": "closed",
+                "merged_at": None,
+            }
+            for i in range(start + 1, end + 1)
+        ]
+        return batch, ""
+
+    records, err = repo_hygiene.fetch_all_pull_requests("owner/repo", page_fn=pages)
+    assert err == ""
+    assert len(records) == 250
+    index, err = repo_hygiene.pr_index("owner/repo", records=records)
+    assert err == ""
+    assert "feat/h201" in index
+    assert "feat/h250" in index
+    assert len(index) == 250
+
+
+def test_open_pr_wins_over_merged_same_head() -> None:
+    records = [
+        {"number": 10, "headRefName": "feat/x", "state": "MERGED", "mergedAt": "2026-01-01"},
+        {"number": 20, "headRefName": "feat/x", "state": "OPEN", "mergedAt": None},
+    ]
+    index = repo_hygiene.merge_pr_records(records)
+    assert index["feat/x"]["state"] == "OPEN"
+    assert index["feat/x"]["number"] == 20
+
+
+def test_apply_fail_closed_when_pr_index_unavailable(
+    repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    git(repo, "checkout", "-b", "feat/gone")
+    commit(repo, "gone.txt", "content")
+    git(repo, "checkout", "main")
+    git(repo, "merge", "--squash", "feat/gone")
+    git(repo, "commit", "-m", "squashed")
+    git(repo, "push", "origin", "main")
+
+    monkeypatch.setattr(repo_hygiene, "pr_index", lambda slug, **kwargs: ({}, "gh unavailable"))
+    code = repo_hygiene.main(["--workspace", str(repo), "--apply", "--json"])
+    assert code == 4
+    assert "feat/gone" in git(repo, "branch", "--list")

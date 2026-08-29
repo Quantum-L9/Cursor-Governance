@@ -8,7 +8,7 @@ required:
   - baseline_ref
 properties:
   receipt_id: {type: string}
-  mode: {enum: [audit, diagnose-value, extract, harvest, prune-propose, prune-execute, stash-deep-analysis, triage-preserved]}
+  mode: {enum: [audit, diagnose-value, extract, harvest, prune-propose, prune-execute, prune-open-pr-copies, stash-deep-analysis, triage-preserved]}
   repo: {type: string}
   created_at: {type: string}
   baseline_ref: {type: string, description: "usually origin/main"}

@@ -76,6 +76,28 @@ Same publish path as any other extract: L4 kernels → `authorize-release` →
 Do not set `PR_OVERLAP=ignore` without an explicit user override. Do not stack
 this harvest onto an unrelated open PR just to clear the gate.
 
+## After publish: shipped copies, then prune-execute
+
+Once the unique paths are on an **open** PR, leftover worktrees still hold
+untracked copies of those blobs. Those copies are not unique value:
+
+```bash
+python3 scripts/prune_open_pr_copies.py --repo "$(pwd)" --json
+python3 scripts/prune_open_pr_copies.py --repo "$(pwd)" --apply
+```
+
+Then, only with diagnosis receipts + `L9_GIT_PRUNE_AUTHORIZED`, delete leftover
+refs/worktrees (preserve-ref first):
+
+```bash
+python3 scripts/prune_execute.py --repo "$(pwd)" --receipt <diagnose.json> --json
+L9_GIT_PRUNE_AUTHORIZED="<reason>" python3 scripts/prune_execute.py \
+  --repo "$(pwd)" --receipt <diagnose.json> --apply
+```
+
+Do not treat `repo_hygiene.py --apply` as this close: hygiene only removes
+spent+clean residue at sessionEnd.
+
 ## Forbidden
 
 - Scoop the dirty shared primary clone
