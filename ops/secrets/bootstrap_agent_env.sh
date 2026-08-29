@@ -112,7 +112,7 @@ if [ "$MODE" = "--export" ]; then
   exec "$PY" "$HERE/hydrate_infisical.py" --surface "$SURFACE" --export "$EXPORT_NAMES"
 fi
 
-echo "capability bootstrap: surface=${SURFACE} trust=${TRUST} plane=l9-capability-broker (ops/secrets SSOT)"
+echo "capability bootstrap: surface=${SURFACE} trust=${TRUST} plane=retired (ops/secrets SSOT)"
 
 if [ -n "$REQUIRE_CAPS" ]; then
   "$PY" "$CLIENT" --check --require "$REQUIRE_CAPS"
@@ -122,13 +122,12 @@ fi
 rc=$?
 
 if [ "$rc" -ne 0 ]; then
-  # A capability that is not ENABLED is a DELIVERY problem — the broker is
-  # unreachable, or this platform issues no session identity the broker can
-  # verify. It is never a reason to ask a human to paste a credential into the
-  # agent environment; that is the exact posture this file removed.
-  echo "capability bootstrap: DEGRADED — capability plane incomplete for surface '${SURFACE}'" >&2
-  echo "  configure L9_CAPABILITY_BROKER_URL to a trusted L9 broker, and run that broker" >&2
-  echo "  with a workload identity (Kubernetes Auth / SPIFFE / OIDC) to Infisical." >&2
+  # A capability that is not ENABLED is a DELIVERY problem. The capability
+  # broker never shipped. It is never a reason to ask a human to paste a
+  # credential into the agent environment; that is the exact posture this
+  # file removed.
+  echo "capability bootstrap: UNAVAILABLE — capability broker experiment retired for surface '${SURFACE}'" >&2
+  echo "  See ops/secrets/_archived/capability-broker/RETIRED.md." >&2
   echo "  Do NOT paste INFISICAL_CLIENT_SECRET, SONAR_TOKEN, SEMGREP_APP_TOKEN or a" >&2
   echo "  Graphiti bearer into this surface — raw secrets are prohibited here." >&2
 fi

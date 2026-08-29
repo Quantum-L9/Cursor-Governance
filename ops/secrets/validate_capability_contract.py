@@ -223,7 +223,7 @@ def scan_aws_fallback_docs(repo: Path) -> list[Violation]:
                         number,
                         "aws-fallback-doc",
                         "adapter env example must not teach an AWS secret fallback; "
-                        "model surfaces use the capability broker only",
+                        "model surfaces never receive raw secrets; the capability-broker experiment is retired",
                     )
                 )
     return violations

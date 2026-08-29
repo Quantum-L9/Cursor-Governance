@@ -59,10 +59,12 @@ def test_projection_missing_receipt_is_unknown() -> None:
     assert set(out.values()) == {UNKNOWN}
 
 
-def test_graphiti_health_is_local_after_broker_retire() -> None:
+def test_graphiti_health_is_retired_constant() -> None:
+    """The capability broker is gone; Graphiti health is not a probe of /whoami."""
     status, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
     assert status == READY
-    assert "retired" in note.lower()
+    assert "GRAPHITI_MCP_URL" in note
+    assert "identity" not in note
     assert er._graphiti_health({"ok": True})[0] == READY
 
 
@@ -100,15 +102,10 @@ def test_uv_version_is_empty_when_uv_cannot_report(monkeypatch) -> None:
     assert er._uv_version() == ""
 
 
-def test_graphiti_health_does_not_echo_a_retired_broker_probe() -> None:
-    # Broker retired: health is a constant READY note. Probe fields must not
-    # leak into the receipt (including a would-be secret-shaped blocker).
-    status, note = er._graphiti_health({"ok": False, "primary_blocker": "identity"})
-    assert status == er.READY
+def test_graphiti_note_never_interpolates_probe_bytes() -> None:
+    _, note = er._graphiti_health({"ok": False, "primary_blocker": "ghs_leaked_token_value"})
+    assert "ghs_leaked_token_value" not in note
     assert "GRAPHITI_MCP_URL" in note
-    _, other = er._graphiti_health({"ok": False, "primary_blocker": "ghs_leaked_token_value"})
-    assert "ghs_leaked_token_value" not in other
-    assert "identity" not in other
 
 
 # --- Integration: build a fake governance clone + fake $HOME -------------------
@@ -137,10 +134,6 @@ def _init_fake_gov(
 
     (gov / "Makefile").write_text(
         "l9-consumer-safe-list:\n\t@echo start pr pr-check improve\n", encoding="utf-8"
-    )
-    (gov / "ops" / "secrets" / "probe_broker.py").write_text(
-        "import json\nprint(json.dumps({'ok': True, 'secret_boundary': 'model-controlled'}))\n",
-        encoding="utf-8",
     )
     # The emitter imports merge_gate.evaluate() in-process (the CLI needs a git
     # work tree it does not have). A deny is a returned reason string; an allow

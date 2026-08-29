@@ -26,8 +26,8 @@ Expected, per `l9.claude_operational_parity_convergence.v1`:
 | Plugin required state | declarative `plugins.desired.json` | `claude_projection.py` (plugins) |
 | MCP contract | `.mcp.json` is a projection of `mcp.template.json` (single MCP authority) | `claude_projection.py` (mcp) |
 | Memory backend | Cursor Graphiti front door only (`ops/graphiti`); no side door | rule 03; CANONICAL_LAW §8 |
-| Graphiti capability | HTTPS `${GRAPHITI_MCP_URL}` (no bearer). Broker retired. | `mcp.template.json`; Cursor uses local CLI / tunnel |
-| Secret boundary | `model-controlled` — no broker/Infisical/Graphiti secret on the surface | `verify_account_env.py` prohibited set |
+| Graphiti capability | HTTPS front door `${GRAPHITI_MCP_URL}` with no bearer | adapter `mcp.template.json`; capability broker retired |
+| Secret boundary | `model-controlled` — no Infisical/Graphiti secret on the surface | `verify_account_env.py` prohibited set |
 | Makefile facade | one Governance Makefile; `l9` dispatcher exposes CONSUMER_SAFE targets | `L9_CONSUMER_SAFE_TARGETS`; `docs/L9_DISPATCHER.md` |
 | PR validation | governance Makefile `pr` via `l9 pr` / `make -C "$GOV" pr WS="$PWD"` → `open_pr_after_gate.sh` (REST); changed-files gate; consumer repo needs no local `pr` target | governance Makefile `pr` / `pr-check` (`docs/L9_DISPATCHER.md`) |
 | Push authority | available when repo release law + L4 release receipt allow | `l4_local.py`; `open_pr_after_gate.sh` |
@@ -56,9 +56,10 @@ The live readiness receipt (`~/.l9/claude/readiness-receipt.json`, schema
 `l9.claude-readiness.v1`) is the evidence. On this hosted surface it reports
 `overall_readiness = DEGRADED`: the structural contract (projection, Makefile
 facade, dispatcher, merge-authority posture, secret boundary) is READY, while
-the capability dimensions used to score a dead broker. Graphiti is
-`${GRAPHITI_MCP_URL}` (no bearer). See `docs/DEGRADED_MODE_CONTRACT.md`.
-Parity is judged on the **contract** fields, which match.
+the capability dimensions (MCP loaded, authenticated Graphiti) are DEGRADED
+because the platform issues no broker-verifiable session identity — a
+`BLOCKED_BY_EXTERNAL_DEPENDENCY` documented in `docs/DEGRADED_MODE_CONTRACT.md`,
+not a parity defect. Parity is judged on the **contract** fields, which match.
 
 ## Parity probe procedure (run on each BLOCKED surface)
 

@@ -448,8 +448,8 @@ def main(argv: list[str] | None = None) -> int:
             )
     for key in result["prohibited_present"]:
         print(f"  PROHIBITED: {key} is set in this environment (value not shown)")
-        print("              delete it from the Environment variables field; the broker")
-        print("              holds this credential on its own side (contract S1/S2/S3)")
+        print("              delete it from the Environment variables field; a pasted")
+        print("              credential is never a workaround (contract S1/S2/S3)")
     if result["stub_drift"]:
         actual = result["stub_revision_actual"] or "<unrecorded>"
         print(
