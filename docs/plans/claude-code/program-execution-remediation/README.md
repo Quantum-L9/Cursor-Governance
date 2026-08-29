@@ -5,8 +5,8 @@ confirmed non-memory findings in `environment/program-execution/**`. It is
 stored here as the plan of record; nothing in it has been run against the
 repository.
 
-The pack is kept **verbatim** as received, with one deliberate removal (see
-*Excluded from the commit*). `MANIFEST.yaml` carries a SHA-256 for every
+The pack is kept **verbatim** as received, with one deliberate removal and one
+one-line normalization (both under *Excluded from the commit*). `MANIFEST.yaml` carries a SHA-256 for every
 artifact and those hashes are checked against this tree, so do not reformat,
 rename, or regenerate files inside it. Amendments belong in a new compiled pack,
 not in edits here.
@@ -95,6 +95,12 @@ directory is missing:
 - **5 `.pyc` files** — `compiler-runtime/scripts/__pycache__/*.cpython-313.pyc`,
   packaging-machine bytecode caught by this repository's `.gitignore`.
 
-So manifest verification against this tree reports 43 hashes verified, 0
-mismatched, 54 absent, and `MANIFEST.yaml` itself self-skipped — 43 + 54 + 1 =
-98. Verify the compiler against the skill instead.
+One further file differs by a single byte-level detail: this repository's
+`end-of-file-fixer` hook trimmed a trailing blank line from the packaged
+`.plan.md`, which changes both its MANIFEST hash and its own `kernel_pass`
+hash. Content is otherwise identical — the diff is one removed empty line. See
+`RV-005` for the exact before/after hashes and why no hook carve-out was taken.
+
+So manifest verification against this tree reports 42 hashes verified, 1
+mismatched, 54 absent, and `MANIFEST.yaml` itself self-skipped — 42 + 1 + 54 + 1
+= 98. Verify the compiler against the skill instead.

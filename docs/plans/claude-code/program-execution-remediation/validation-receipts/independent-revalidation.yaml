@@ -148,9 +148,9 @@ findings:
     plus 5 __pycache__/*.cpython-313.pyc bytecode files from the packaging
     machine that this repository's .gitignore excludes (__pycache__/ and *.pyc).
   consequence: >-
-    Manifest verification against this tree therefore reports 43 hashes verified,
-    0 mismatched, 54 absent and MANIFEST.yaml itself self-skipped (43 + 54 + 1 =
-    98). Every absent entry is a compiler-runtime path. Nothing
+    Manifest verification against this tree therefore reports 42 hashes verified,
+    1 mismatched (RV-005), 54 absent and MANIFEST.yaml itself self-skipped
+    (42 + 1 + 54 + 1 = 98). Every absent entry is a compiler-runtime path. Nothing
     outside compiler-runtime/ is absent, and every hash that can be checked
     matches. Verify the compiler itself against
     skills/l9-claude-coding-contract-compiler instead.
@@ -188,10 +188,46 @@ findings:
     is the compiler of record for this pack. Recompiling or revalidating the
     chain uses that skill, and the equivalence proof above is why that is sound.
 
+- id: RV-005
+  severity: informational
+  status: ACCEPTED
+  title: Repo hygiene normalized one trailing blank line, breaking two hashes on that file
+  detail: >-
+    The packaged projection
+    plans/program_execution_authority_recovery_remediation_d681ee05.plan.md ended
+    with two newlines. This repository's end-of-file-fixer pre-commit hook
+    normalizes that to one, so the committed file is one blank line shorter than
+    the file as received. Content is otherwise unchanged — the diff is exactly
+    one removed empty line at EOF.
+  hashes_affected:
+  - what: MANIFEST.yaml entry for that plan
+    manifest: 59c5bd601ecc537d1b6c01e7f93866e0c4861556c3363e3c074fb26646a74118
+    committed: 5ec2ea5c62d592be81ca9466bf69faa56559e2725b001de195e09db5e60e9ad9
+  - what: the plan's own kernel_pass.validate_repair.body_sha256
+    effect: >-
+      validate_plan_kernel_receipt.py run standalone on the committed file
+      reports G_PLAN_SHA mismatch. The receipt's canonicalize() zeroes only the
+      body_sha256 fields; it does not normalize trailing whitespace, so the blank
+      line was inside the hashed bytes.
+  why_not_excluded: >-
+    The precedent for carving a path out of end-of-file-fixer exists in this repo
+    (^dist/, for byte-identical verified output) and this is the same class of
+    problem. Taking it would mean editing .pre-commit-config.yaml, an
+    additive_only protected root file, which needs ALLOW-ROOT-DELETION plus
+    CODEOWNERS approval — not something to spend on one blank line. Normalizing
+    and recording the delta keeps the gate honest and green.
+  gate_status: >-
+    The repository gate is unaffected: kernel_gate.py precommit passes on the
+    committed file, because it does not treat a plan in this subfolder as a live
+    root-glob plan.
+  if_you_need_the_exact_bytes: >-
+    Re-extract from the source ZIP. The one-line difference is fully described
+    above, so the packaged hash remains checkable against the original.
+
 overall:
   packaged_gates: ALL_REPRODUCED_PASS
   reproduced_with_repo_compiler_skill: ALL_PASS_IDENTICAL
   repo_native_gates: PASS
-  pack_integrity: PASS
+  pack_integrity: PASS_WITH_RECORDED_DELTAS
   execution_readiness: BLOCKED_ON_RV-001
   storage_readiness: PASS

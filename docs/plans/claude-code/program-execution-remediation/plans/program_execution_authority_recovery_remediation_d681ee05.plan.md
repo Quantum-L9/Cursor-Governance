@@ -462,4 +462,3 @@ Repair the seven confirmed non-memory Program Execution findings at their existi
 - minimum_safe_next_action: execute the first validated Claude Code contract from this package against the locked baseline.
 - execute_via bootstrap: validated Claude Code v2.7 contract chain on the declared branch; contracts 1-5 local-only, contract 6 terminal make pr. Steady-state after remediation remains `@environment/program-execution -> Program Lock/Controller -> @autonomy -> Peer adapter`.
 - broader_work_requires_separate_contract: true
-
