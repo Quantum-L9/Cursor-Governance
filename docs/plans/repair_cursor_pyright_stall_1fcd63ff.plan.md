@@ -4,22 +4,22 @@ overview: "Stop the files-to-analyze spinner by not creating .cursor-commands on
 todos:
   - id: todo-01-stop-ssot-checkout-link
     content: "setup_workspace_symlinks.sh: source workspace_kind.sh; if classify_workspace_kind is ssot or ssot_checkout, remove .cursor-commands and do not create it. Consumers still get the link."
-    status: pending
+    status: completed
     phase: execute
     depends_on: []
   - id: todo-02-prove-kind-gate
     content: "Add ssot_checkout fixture to kind/symlink tests so creating .cursor-commands on an identity-tree checkout fails the test."
-    status: pending
+    status: completed
     phase: execute
     depends_on: [todo-01-stop-ssot-checkout-link]
   - id: todo-03-pin-pyright-include
     content: "settings.python.json: include matches [tool.pyright]; autoSearchPaths false; shouldImportPylanceSettings never. Do not edit biome.json."
-    status: pending
+    status: completed
     phase: execute
     depends_on: []
   - id: todo-04-merge-ide-profile
     content: "Run install_ide_profile.sh so .vscode/settings.json gets the new keys. biome.json unchanged vs HEAD."
-    status: pending
+    status: completed
     phase: execute
     depends_on: [todo-03-pin-pyright-include]
   - id: todo-05-prove-clear
@@ -210,11 +210,11 @@ Checkpoint C2 after todo-05: if Pyright Output still lists `.cursor-commands` pa
 
 | Field | Value |
 |---|---|
-| status | `partial` (plan ready; Build not run) |
+| status | `partial` (todos 01–04 landed; ensure_workspace_wired kind-split added so make pr cannot recreate the link) |
 | remaining_unknown_ids | `U1` |
-| next_skill | Build on this checkout |
-| execute_via | Cursor Build on the current checkout |
-| stop_reason | Do not implement until Build. C1 before settings.python.json if the kind branch is unproven. |
+| next_skill | Cursor Pyright: Restart Server (SP-05) |
+| execute_via | cursor-build |
+| stop_reason | SP-05 needs Restart Server in the IDE. SessionStart still uses live SSOT until this branch is on origin/main. |
 
 ```yaml
 evidence_quality: high
