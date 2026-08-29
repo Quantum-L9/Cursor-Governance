@@ -42,7 +42,20 @@ SWALLOW_BASELINE = {
     # fresh PR (fail-safe), so the swallow is justified. The commit added the
     # occurrence without bumping this baseline, leaving the ratchet red on main.
     "ops/scripts/open_pr_after_gate.sh": 18,
-    "ops/scripts/run_pr_gate.sh": 10,
+    # 15 since 0fc6ee6 ("feat/pr train 0"), which added occurrences without
+    # bumping this baseline and left the ratchet red on main — the same lapse
+    # the open_pr_after_gate note above records. Audited one by one: all 15 are
+    # best-effort TELEMETRY around a verdict carried elsewhere. Timing helper
+    # and gate-timing write, gate-log appends and reads, the changed-file
+    # stderr filter, `wait` on the prefetch pid, and the two
+    # attribute_tree_writers.sh calls are diagnostics — the gate's own contract
+    # treats attribution as diagnostic, not as the verdict. The two that could
+    # plausibly swallow a decision do not: `scratch_hold.py restore --all` is
+    # compensated by the separate fail-closed `_scratch_hold_status` check
+    # ("fail closed if still open"), and the gate-failure receipt write runs in
+    # the already-failing path, so losing it costs a breadcrumb and not the
+    # FAIL. Raise this only after the same one-by-one audit.
+    "ops/scripts/run_pr_gate.sh": 15,
     "ops/scripts/run_pr_security.sh": 3,
     "ops/scripts/bootstrap_agent_environment.sh": 3,
     "environment/agents/adapters/claude-code/install.sh": 3,
