@@ -38,13 +38,18 @@ STAGE="${PR_PRECOMMIT_STAGE:-}"
 # cwd config, so this is a strict no-op and the governance repo's own `make pr`
 # is unchanged.
 #
-# NOTE (scoped follow-up): running this governance config against a *consumer*
-# workspace (WS != GOV_ROOT) additionally needs cwd=$GOV_ROOT so the config's
-# repo-local `entry: ops/scripts/...` hooks resolve, absolute --files paths, and
-# a governance-only-local-hook skip subset. That path requires validation
-# against a real consumer checkout (not available in this environment), so it
-# is not enabled here; the explicit config binding is the safe, in-repo-validated
-# half of §8b.
+# The governance-only-local-hook skip subset (_GOV_ONLY_SKIP below) is one half
+# of the follow-up this note used to defer, now implemented: a hook whose
+# `entry: ops/scripts/...` resolves against the WORKSPACE cannot run in a
+# consumer checkout, where that script does not exist. Validated against a real
+# consumer checkout (Quantum-L9/l9-repo-template), where the gate died with
+#   can't open file '<consumer>/ops/scripts/validate_commit_verification_contract.py'
+# on a hook that had checked nothing — a false FAIL blocking `make pr` for every
+# consumer repository.
+#
+# NOTE (still deferred): cwd=$GOV_ROOT with absolute --files paths. That changes
+# how every hook resolves its inputs; skipping the unresolvable hooks is the
+# narrower fix for the failure actually observed.
 GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 GOV_PRECOMMIT_CONFIG="$GOV_ROOT/.pre-commit-config.yaml"
 
@@ -95,6 +100,20 @@ _WRITER_HOOKS="end-of-file-fixer,trailing-whitespace"
 # Writer pass skips every reader. Reader pass skips every writer. Disjoint.
 _WRITER_SKIP="${_CORPUS_SKIP},${_READER_HOOKS}"
 _READER_SKIP="${_CORPUS_SKIP},${_WRITER_HOOKS}"
+
+# Governance-local hooks with no `files:` guard. Their entry scripts live in the
+# governance tree, so in a consumer workspace they resolve to a path that does
+# not exist and the hook dies on a missing file rather than on anything it
+# checked. `symlinks-check` and `legacy-doctrine-residue` are already in
+# _CORPUS_SKIP; `commit-verification-contract` was not, and is the one that
+# actually failed. Skipped ONLY for a consumer workspace — the governance repo
+# guards its own commit-verification contract exactly as before, which is the
+# whole point of that hook.
+_GOV_ONLY_SKIP="commit-verification-contract"
+if [[ "$WS" != "$GOV_ROOT" ]]; then
+  _WRITER_SKIP="${_WRITER_SKIP},${_GOV_ONLY_SKIP}"
+  _READER_SKIP="${_READER_SKIP},${_GOV_ONLY_SKIP}"
+fi
 
 _run_kernel() {
   local _kernel_py="$GOV_ROOT/.venv/bin/python"
