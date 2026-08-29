@@ -591,6 +591,30 @@ def heal_generated_extract(worktree: Path) -> list[str]:
         raise RuntimeError(
             proc.stderr.strip() or proc.stdout.strip() or "sync_generated_artifacts failed"
         )
+    projector = _SCRIPTS / "claude_projection.py"
+    if projector.is_file():
+        projected = subprocess.run(
+            [
+                _python(),
+                str(projector),
+                "--root",
+                str(worktree),
+                "--workspace",
+                str(worktree),
+                "--summary",
+                "--no-receipt",
+            ],
+            cwd=str(worktree),
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if projected.returncode != 0:
+            raise RuntimeError(
+                projected.stderr.strip()
+                or projected.stdout.strip()
+                or "claude_projection failed"
+            )
     status = _git(worktree, "status", "--porcelain")
     staged: list[str] = []
     for line in (status.stdout or "").splitlines():
@@ -684,8 +708,16 @@ def publish_makefile(worktree: str) -> Path:
     return _REPO_ROOT
 
 
+def _clear_gate_failure_receipt(worktree: str) -> None:
+    """A prior FAIL receipt on the same digest STOP-LOOPS make pr."""
+    path = Path(worktree) / ".l9" / "pr" / "gate-failure.json"
+    if path.is_file():
+        path.unlink()
+
+
 def default_publish(worktree: str) -> dict[str, Any]:
     _l4_authorize_worktree(worktree)
+    _clear_gate_failure_receipt(worktree)
     makefile = publish_makefile(worktree)
     env = os.environ.copy()
     env["PR_STACK"] = "auto"
