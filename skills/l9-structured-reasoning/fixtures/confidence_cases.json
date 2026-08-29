@@ -1,0 +1,158 @@
+{
+  "cases": [
+    {
+      "id": "sample_unchanged",
+      "path": "fixtures/sample_ledger.json",
+      "expect": "pass"
+    },
+    {
+      "id": "stated_probability_none",
+      "expect": "fail",
+      "ledger": {
+        "objective": "Choose a safe architecture migration path",
+        "task_kind": "architecture",
+        "claims": [
+          {
+            "claim_id": "CLM-001",
+            "statement": "Option A preserves compatibility",
+            "evidence_refs": ["ADR-12"],
+            "evidence_grade": "direct",
+            "disconfirming_evidence": [],
+            "uncertainty_type": "none",
+            "decision_effect": "supports"
+          }
+        ],
+        "options": [
+          {
+            "option_id": "OPT-001",
+            "summary": "Incremental migration",
+            "benefits": ["reversible"],
+            "costs": ["temporary dual path"],
+            "risks": ["drift"],
+            "reversibility": "high",
+            "evidence_refs": ["ADR-12"]
+          }
+        ],
+        "selected_option": "OPT-001",
+        "selection_rationale": "Highest reversibility with direct compatibility evidence",
+        "action": "proceed_with_validation",
+        "next_probe": "Run compatibility suite",
+        "stop_condition": "Compatibility suite passes and rollback is tested",
+        "stated_probability": 0.9,
+        "calibration_status": "none"
+      }
+    },
+    {
+      "id": "percent_envelope",
+      "expect": "fail",
+      "ledger": {
+        "objective": "Choose a safe architecture migration path",
+        "task_kind": "architecture",
+        "claims": [
+          {
+            "claim_id": "CLM-001",
+            "statement": "Option A preserves compatibility",
+            "evidence_refs": ["ADR-12"],
+            "evidence_grade": "direct",
+            "disconfirming_evidence": [],
+            "uncertainty_type": "none",
+            "decision_effect": "supports"
+          }
+        ],
+        "options": [
+          {
+            "option_id": "OPT-001",
+            "summary": "Incremental migration",
+            "benefits": ["reversible"],
+            "costs": ["temporary dual path"],
+            "risks": ["drift"],
+            "reversibility": "high",
+            "evidence_refs": ["ADR-12"]
+          }
+        ],
+        "selected_option": "OPT-001",
+        "selection_rationale": "Highest reversibility with direct compatibility evidence",
+        "action": "proceed_with_validation",
+        "next_probe": "Run compatibility suite",
+        "stop_condition": "Compatibility suite passes and rollback is tested",
+        "envelope": "Confidence: 85%"
+      }
+    },
+    {
+      "id": "high_reversible_proceed",
+      "expect": "pass",
+      "ledger": {
+        "objective": "Choose a safe architecture migration path",
+        "task_kind": "architecture",
+        "claims": [
+          {
+            "claim_id": "CLM-001",
+            "statement": "Option A preserves compatibility",
+            "evidence_refs": ["ADR-12"],
+            "evidence_grade": "direct",
+            "disconfirming_evidence": [],
+            "uncertainty_type": "none",
+            "decision_effect": "supports"
+          }
+        ],
+        "options": [
+          {
+            "option_id": "OPT-001",
+            "summary": "Incremental migration",
+            "benefits": ["reversible"],
+            "costs": ["temporary dual path"],
+            "risks": ["drift"],
+            "reversibility": "high",
+            "evidence_refs": ["ADR-12"]
+          }
+        ],
+        "selected_option": "OPT-001",
+        "selection_rationale": "Highest reversibility with direct compatibility evidence",
+        "action": "proceed",
+        "next_probe": "Run compatibility suite",
+        "stop_condition": "Compatibility suite passes and rollback is tested",
+        "evidence_quality": "high",
+        "decision_risk": "reversible",
+        "calibration_status": "none",
+        "stated_probability": null
+      }
+    },
+    {
+      "id": "unknown_irreversible_proceed",
+      "expect": "fail",
+      "ledger": {
+        "objective": "Choose a safe architecture migration path",
+        "task_kind": "architecture",
+        "claims": [
+          {
+            "claim_id": "CLM-001",
+            "statement": "Option A preserves compatibility",
+            "evidence_refs": ["ADR-12"],
+            "evidence_grade": "direct",
+            "disconfirming_evidence": [],
+            "uncertainty_type": "none",
+            "decision_effect": "supports"
+          }
+        ],
+        "options": [
+          {
+            "option_id": "OPT-001",
+            "summary": "Incremental migration",
+            "benefits": ["reversible"],
+            "costs": ["temporary dual path"],
+            "risks": ["drift"],
+            "reversibility": "high",
+            "evidence_refs": ["ADR-12"]
+          }
+        ],
+        "selected_option": "OPT-001",
+        "selection_rationale": "Highest reversibility with direct compatibility evidence",
+        "action": "proceed",
+        "next_probe": "Run compatibility suite",
+        "stop_condition": "Compatibility suite passes and rollback is tested",
+        "evidence_quality": "unknown",
+        "decision_risk": "irreversible"
+      }
+    }
+  ]
+}

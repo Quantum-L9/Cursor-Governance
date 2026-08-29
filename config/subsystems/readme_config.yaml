@@ -1,0 +1,74 @@
+# Module README map for readme-pipeline-v1.
+# SSOT for scripts/generate_subsystem_readmes.py.
+# Root README.md is never a generate target (owned by l9-update-agent-docs pointer stack).
+version: "1.0"
+defaults:
+  owner: l9-update-agent-docs
+  sections:
+    purpose:
+      required: true
+    components:
+      required: true
+    functions:
+      required: false
+    exports:
+      required: false
+    dependencies:
+      required: false
+subsystems:
+  ops_autonomy:
+    path: ops/autonomy
+    title: Autonomy plane
+    tier: operations
+    description: Shared autonomy surface — L4 local gate, merge gate, and profile.
+    purpose: Enforce local-commit vs publish vs merge authority without a second scheduler.
+  ops_hooks:
+    path: ops/hooks
+    title: Session hooks
+    tier: operations
+    description: SessionStart bootstrap and shell gates.
+    purpose: Activate governance, hydrate Graphiti, and deny mid-execution publish.
+  ops_graphiti:
+    path: ops/graphiti
+    title: Graphiti memory client
+    tier: operations
+    description: Graphiti CLI, hydration, and memory-bank policy.
+    purpose: One episodic resume store via inject / PICKUP.
+  ops_scripts:
+    path: ops/scripts
+    title: Governance scripts
+    tier: operations
+    description: Wiring, publish, and hygiene CLIs used by Makefile targets.
+    purpose: Capability graph behind make start / make pr / make pr-check.
+  workflows:
+    path: workflows
+    title: Workflow graphs
+    tier: operations
+    description: SessionDAG guidance graphs and LangGraph runtimes.
+    purpose: Register and document workflow graphs. README is handwritten.
+    skip: true
+  commands:
+    path: commands
+    title: Slash commands
+    tier: control_plane
+    description: Live slash-command protocols.
+    purpose: Trigger skills and DAGs by name. README is handwritten.
+    skip: true
+  rules:
+    path: rules
+    title: Cursor rules
+    tier: control_plane
+    description: Always-on and requestable .mdc rules.
+    purpose: Bind agent behavior without a second governance tree.
+  kernels:
+    path: kernels
+    title: Alignment kernels
+    tier: control_plane
+    description: Recursive Alignment, Validate and Repair, and related kernels.
+    purpose: Full auditors loaded by path; skills cite them and do not wrap them.
+  skills:
+    path: skills
+    title: L9 skills
+    tier: control_plane
+    description: Task-scoped skill packs invoked by name.
+    purpose: Procedures that outrank agent-invented contracts and sit under AGENTS.md.

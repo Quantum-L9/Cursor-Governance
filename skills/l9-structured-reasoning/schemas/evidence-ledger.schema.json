@@ -49,6 +49,36 @@
         "block"
       ]
     },
+    "evidence_quality": {
+      "enum": [
+        "high",
+        "medium",
+        "low",
+        "unknown"
+      ]
+    },
+    "decision_risk": {
+      "enum": [
+        "reversible",
+        "guarded",
+        "irreversible"
+      ]
+    },
+    "calibration_status": {
+      "enum": [
+        "none",
+        "uncalibrated",
+        "calibrated"
+      ]
+    },
+    "stated_probability": {
+      "type": [
+        "number",
+        "null"
+      ],
+      "minimum": 0,
+      "maximum": 1
+    },
     "next_probe": {
       "type": [
         "string",

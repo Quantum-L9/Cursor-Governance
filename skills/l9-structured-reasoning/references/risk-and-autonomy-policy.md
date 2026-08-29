@@ -1,6 +1,7 @@
 # Risk and Autonomy Policy
 
 Use evidence quality and reversibility to choose the action. Do not invent numeric confidence.
+Canonical allow-set: `confidence-policy.yaml`.
 
 | Evidence | Reversible | Guarded | Irreversible |
 |---|---|---|---|

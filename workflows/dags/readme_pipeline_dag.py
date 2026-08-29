@@ -70,9 +70,10 @@ or auditing README coverage across the codebase.
 KEY FILES:
 - Config: config/subsystems/readme_config.yaml
 - Generator: scripts/generate_subsystem_readmes.py
-- Output: */README.md (66+ files)
+- Skill: skills/l9-update-agent-docs (invokes this DAG; never writes root README.md)
+- Output: <module>/README.md for live (non-skip) config keys only
 """,
-    tags=["readme", "documentation", "generation", "subsystems", "dora"],
+    tags=["readme", "documentation", "generation", "subsystems"],
     nodes=[
         # === ENTRY ===
         SessionNode(
@@ -90,29 +91,24 @@ KEY FILES:
             description="Identify missing subsystems in config",
             action="""Analyze gaps between config and codebase:
 
-1. Read current config:
+1. List configured modules:
    ```bash
    python scripts/generate_subsystem_readmes.py --list
    ```
 
-2. List all potential subsystem directories:
+2. Report stale or unguarded handwritten paths (do not `find` the tree):
    ```bash
-   find . -type d -name "*.py" -prune -o -type d -print |
-     grep -E "^\\./[a-z]" |
-     grep -v -E "(node_modules|venv|__pycache__|.git)"
+   python scripts/generate_subsystem_readmes.py --gaps
    ```
 
-3. Compare and identify:
-   - Directories NOT in config (gaps)
-   - Config entries with invalid paths (stale)
+3. Document results in state from that CLI only:
+   - stale / invalid config paths
+   - handwritten READMEs that are not skip: true
 
-4. Document gaps in state:
-   ```python
-   state["gaps"] = ["core/new_module", "services/new_service"]
-   state["stale"] = ["old_module"]
-   ```
+Do not invent modules. Do not treat repo-root README.md as a gap to generate.
 
 Pre-reading: config/subsystems/readme_config.yaml
+   skills/l9-update-agent-docs/SKILL.md Step 3b
 """,
             outputs=["gaps", "stale_entries"],
         ),
@@ -132,32 +128,15 @@ Pre-reading: config/subsystems/readme_config.yaml
             name="Enrich Config",
             node_type=NodeType.TRANSFORM,
             description="Add missing subsystems to readme_config.yaml",
-            action="""Add missing subsystems to config:
+            action="""Add only paths `--gaps` reported as missing after a
+human or locked-plan confirm.
 
-For each gap directory, add entry to readme_config.yaml:
+Required fields: path, title, tier, description.
+Allowed tiers here: operations | control_plane | documentation.
+path must be a directory under the repo root, never `.` or `..`.
 
-```yaml
-  new_subsystem:
-    path: path/to/subsystem
-    title: Human Readable Title
-    tier: core|orchestration|api|agents|services|infrastructure
-    description: One-line description
-    purpose: What this module does and why it exists.
-    protected_files: [__init__.py]
-    allowed_patterns: ['**/*.py']
-    depends_on: []
-    depended_by: []
-    invariants: []
-    last_updated: null
-```
-
-Determine tier based on location:
-- core/* → core
-- orchestration/*, orchestrators/* → orchestration
-- api/* → api
-- agents/*, *_agent → agents
-- services/* → services
-- Everything else → infrastructure
+Mark handwritten indexes `skip: true` (see commands/, workflows/).
+Do not copy donor L9-OS fields (forbidden_scopes, airules, DORA).
 
 Pre-reading: config/subsystems/readme_config.yaml
 """,
@@ -177,15 +156,11 @@ Pre-reading: config/subsystems/readme_config.yaml
             name="Update Template",
             node_type=NodeType.TRANSFORM,
             description="Enhance README_TEMPLATE in generator script",
-            action="""Update README_TEMPLATE in scripts/generate_subsystem_readmes.py:
+            action="""Change README_TEMPLATE only when the user asked for a new *module* section.
 
-Common enhancements:
-1. Add new sections (e.g., Lifecycle, Edge Cases)
-2. Update DORA header fields
-3. Modify ASCII diagram
-4. Add/remove template variables
+Keep Purpose + Components. Do not add DORA frontmatter, ASCII banners, or
+AI allow/restrict/forbid scopes. After edit:
 
-After changes, validate template compiles:
 ```bash
 python -c "from scripts.generate_subsystem_readmes import README_TEMPLATE; print('OK')"
 ```
@@ -207,18 +182,17 @@ Pre-reading: scripts/generate_subsystem_readmes.py
 python scripts/generate_subsystem_readmes.py --skip-time-verify
 
 # Or specific subsystem
-python scripts/generate_subsystem_readmes.py --subsystem memory --skip-time-verify
+python scripts/generate_subsystem_readmes.py --subsystem ops_autonomy --skip-time-verify
 
 # Or specific tier
-python scripts/generate_subsystem_readmes.py --tier core --skip-time-verify
+python scripts/generate_subsystem_readmes.py --tier operations --skip-time-verify
 ```
 
-Expected output:
-- Generated: N (number of READMEs created)
-- Skipped: M (directories that don't exist)
-- Config timestamps updated
+Expected output: generated=N skipped=M. Root README.md must stay unwritten.
+skip: true modules are skipped unless --force.
 
 Pre-reading: config/subsystems/readme_config.yaml
+   skills/l9-update-agent-docs/SKILL.md Step 3b
 """,
             outputs=["generated_count", "skipped_count"],
         ),
@@ -228,28 +202,17 @@ Pre-reading: config/subsystems/readme_config.yaml
             name="Validate Output",
             node_type=NodeType.VALIDATE,
             description="Verify READMEs were generated correctly",
-            action="""Validate generated READMEs:
+            action="""Validate generated module READMEs (never the repo-root README.md):
 
-1. Count generated files:
-   ```bash
-   find . -name "README.md" -newer config/subsystems/readme_config.yaml | wc -l
-   ```
+```bash
+python scripts/generate_subsystem_readmes.py --validate
+python scripts/generate_subsystem_readmes.py --validate-sections
+python skills/l9-update-agent-docs/scripts/validate_pointer_headings.py --root .
+```
 
-2. Verify DORA header present:
-   ```bash
-   head -10 memory/README.md  # Should show YAML frontmatter
-   ```
-
-3. Run config validation:
-   ```bash
-   python scripts/generate_subsystem_readmes.py --validate
-   ```
-
-4. Spot-check 3 random READMEs for:
-   - DORA header present
-   - ASCII diagram renders
-   - Sections populated (not empty placeholders)
-   - No template variables like {subsystem_name} remaining
+Required module headings come from config defaults (Purpose, Components).
+Handwritten files (auto_generated: false) and skip: true keys are not Failed.
+Root pointer-stack headings stay on the skill map, not this generator.
 """,
             outputs=["validation_passed", "validation_errors"],
         ),

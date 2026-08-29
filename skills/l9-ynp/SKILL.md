@@ -8,8 +8,8 @@ metadata:
   tags: [l9, ynp, next-action, leverage, priority]
   owner: igor_beylin
   status: active
-  version: 2.0.0
-  updated: 2026-06-06
+  version: 2.1.0
+  updated: 2026-08-28
 ---
 
 # Your Next Play (YNP)
@@ -22,7 +22,7 @@ Synthesize the **single highest-leverage next action** from current context. Rec
 
 | Input | Output | Scope |
 |-------|--------|-------|
-| Chat context, workflow state, recent outputs | One primary action + confidence + alternates | Local file ops, slash commands, GMP — not VPS/SSH/production deploy |
+| Chat context, workflow state, recent outputs | One primary play + `action` enum + alternates | Local file ops, slash commands, GMP — not VPS/SSH/production deploy |
 
 Load workflow detail: [references/ynp-workflow.md](references/ynp-workflow.md).
 
@@ -32,14 +32,23 @@ Load workflow detail: [references/ynp-workflow.md](references/ynp-workflow.md).
 2. Highest-severity open blocker in context (CI, merge blockers, failed gates).
 3. Locked TODO plan or workflow_state when present.
 4. This skill's references.
-5. `Unknown` — ask clarifying question when confidence <70%.
+5. `Unknown` — ask a clarifying question when `action` is `block` or `bounded_probe` and the missing evidence is unnamed.
 
 ## Compact Workflow
 
 1. **Harvest** — chat context, workflow_state, recent GMP outputs, reusable assets.
 2. **Synthesize** — abductive/deductive/inductive reasoning on candidates.
-3. **Score** — confidence ≥90% strong | 80–89% recommend | 70–79% caveats | <70% ask.
+3. **Score** — emit `evidence_quality`, `decision_risk`, and `action`. A bare percent is `uncalibrated` and must not select the play.
 4. **Deliver** — one primary play, scope, alternates if blocked.
+
+```yaml
+evidence_quality: high | medium | low | unknown
+decision_risk: reversible | guarded | irreversible
+action: proceed | proceed_with_validation | bounded_probe | block
+calibration_status: none | uncalibrated | calibrated
+```
+
+Display alias only (do not compute these percents): `proceed` ≈ old ≥90 slot, `proceed_with_validation` ≈ 80–89, `bounded_probe` ≈ 70–79, `block` ≈ below 70.
 
 ## Resource Map
 
@@ -47,11 +56,11 @@ Load workflow detail: [references/ynp-workflow.md](references/ynp-workflow.md).
 
 ## Validation
 
-Exactly one primary recommendation. Confidence MUST be stated. Batch related TODOs (3 in one GMP > 3 separate runs).
+Exactly one primary recommendation. action: MUST be stated. A bare percent is labeled uncalibrated and must not choose the play. Batch related TODOs (3 in one GMP > 3 separate runs).
 
 ## Failure Handling
 
 - Ambiguous context → ask clarifying question.
 - Multiple equal-priority items → present ranked options with trade-offs.
 - Protected file without approval → route to KERNEL GMP.
-- Confidence <70% → gather more info; do not guess.
+- `action: block` or unnamed missing evidence → gather more info; do not guess.

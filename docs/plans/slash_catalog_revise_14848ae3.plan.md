@@ -21,6 +21,24 @@ todos:
     content: make pr-check; kernels Recursive Alignment + Validate & Repair; L4 begin/record-kernels/authorize-release; PR_REMEDIATE=0 make pr
     status: pending
 isProject: false
+kind: simple
+execute_via: cursor-build
+kernel_pass:
+  bound_path: slash_catalog_revise_14848ae3.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-28T22:40:00Z
+    body_sha256: "40bd76e4595774a82e7671321283ffc7909dd2c956e7eddc30559ce402a90275"
+    deltas:
+      - "Recorded /plan-audit rename to /l9-pipeline-audit instead of deletion"
+      - "Marked kind:simple / execute_via:cursor-build; neutralized live PE execute heading"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-28T22:41:00Z
+    body_sha256: "40bd76e4595774a82e7671321283ffc7909dd2c956e7eddc30559ce402a90275"
+    deltas:
+      - "Alias file commands/plan-audit.md now points at /l9-pipeline-audit"
+      - "Stamped kernel_pass after Improve then Validate and Repair"
 ---
 
 # PLAN: Slash catalog revision (annotated index)
@@ -32,7 +50,11 @@ isProject: false
 > **status:** `executable`
 > **Improve.md:** applied in place 2026-08-22 (pass log at end). Catalog decisions unchanged; contracts hardened.
 
-## Execute via @environment/program-execution + autonomy (required)
+## Execute via Cursor Build
+
+`/plan-audit` is renamed to `/l9-pipeline-audit` (not deleted). Do **not** run `make campaign`.
+
+## Historical PE heading (not live)
 
 ```text
 this .plan.md
@@ -334,7 +356,8 @@ Do **not** edit `CANONICAL_LAW.md`. Skill `l9-git-work-preserve` remains the law
 ## Out of scope
 
 - Creating `/ff` or `l9-repo-sync`
-- Deleting `/gap-analysis-new`, `/issues`, `/plan-audit`, `/clean`
+- Deleting `/gap-analysis-new`, `/issues`, `/clean`
+- `/plan-audit` is renamed to `/l9-pipeline-audit` (compatibility alias kept); do not delete the alias file
 - Slimming the LEAVE set
 - Rewriting skill procedures, DAGs, or `workflows/dags/readme_pipeline_dag.py`
 - Purging consumer-repo `.cursor/commands/{old}.md` overlays (resolution order 1st — index footnote only)

@@ -1,7 +1,7 @@
 ---
 name: docs
 version: "1.0.0"
-description: "Update agent-facing docs via l9-update-agent-docs (not the README DAG)"
+description: "Update agent-facing docs via l9-update-agent-docs; module READMEs via readme-pipeline-v1"
 auto_chain: ynp
 ---
 
@@ -9,7 +9,10 @@ auto_chain: ynp
 
 Delegates to skill **`l9-update-agent-docs`**.
 
-This is **not** the README DAG. Subsystem README generation stays under `workflows/dags/readme_pipeline_dag.py` and is invoked from there, not as a slash.
+Root pointer stack stays in the skill. Module / subsystem README generation is
+the same pipeline the skill invokes: `readme-pipeline-v1` in
+`workflows/dags/readme_pipeline_dag.py` → `scripts/generate_subsystem_readmes.py`
++ `config/subsystems/readme_config.yaml`.
 
 `/readme` is an alias of this command.
 
@@ -21,6 +24,6 @@ This is **not** the README DAG. Subsystem README generation stays under `workflo
 
 ## FORBIDDEN
 
-- Treating this slash as the README DAG
+- Generating the repo-root `README.md`
 - Recreating `/readme` as a live command file
 - Editing `CANONICAL_LAW.md`

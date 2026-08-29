@@ -13,6 +13,7 @@ REQUIRED = [
     "skill_intelligence_report.yaml",
     "references/reasoning-router.yaml",
     "references/evidence-decision-contract.yaml",
+    "references/confidence-policy.yaml",
     "references/risk-and-autonomy-policy.md",
     "references/capability-adapters.md",
     "references/output-profiles.md",
@@ -20,6 +21,7 @@ REQUIRED = [
     "scripts/evaluate_fixtures.py",
     "scripts/validate_ledger.py",
     "fixtures/router_cases.json",
+    "fixtures/confidence_cases.json",
 ]
 
 
@@ -129,6 +131,22 @@ def main() -> int:
             json.loads(path.read_text(encoding="utf-8"))
         except Exception as exc:
             errors.append(f"invalid JSON-compatible YAML/JSON {path.name}: {exc}")
+
+    repo = root.parents[1]
+    reasoning_cmd = repo / "commands" / "reasoning.md"
+    ynp_cmd = repo / "commands" / "ynp.md"
+    if reasoning_cmd.is_file():
+        reasoning_text = reasoning_cmd.read_text(encoding="utf-8")
+        if "l9-structured-reasoning" not in reasoning_text:
+            errors.append("commands/reasoning.md must cite l9-structured-reasoning")
+        if "evidence_quality" not in reasoning_text:
+            errors.append("commands/reasoning.md must cite evidence_quality")
+        if "Confidence: {score}%" in reasoning_text:
+            errors.append("commands/reasoning.md forbids Confidence: {score}%")
+    if ynp_cmd.is_file():
+        ynp_text = ynp_cmd.read_text(encoding="utf-8")
+        if "AUTO-EXECUTE" in ynp_text:
+            errors.append("commands/ynp.md forbids AUTO-EXECUTE")
 
     if errors:
         for error in errors:

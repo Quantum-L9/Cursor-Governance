@@ -1,6 +1,6 @@
 ---
 name: l9-update-agent-docs
-description: "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) against live authority. use when the user says update agent docs, refresh repo docs, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change. creates those two only when absent; never invents other root files."
+description: "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) and generate module READMEs via readme-pipeline-v1. use when the user says update agent docs, refresh repo docs, generate module readmes, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change. creates those two only when absent; never invents other root files."
 paths: "AGENTS.md, CLAUDE.md, README.md, INVARIANTS.md"
 metadata:
   skill_schema: 1
@@ -9,9 +9,9 @@ metadata:
   tags: [l9, docs, agents, ci, maintenance]
   owner: igor_beylin
   status: active
-  version: 2.3.0
-  updated: 2026-08-24
-  when_to_use: "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing"
+  version: 2.5.0
+  updated: 2026-08-28
+  when_to_use: "refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes; generating module READMEs via readme-pipeline-v1; or creating root CLAUDE.md / INVARIANTS.md when missing"
 ---
 
 # Update Agent Documentation (L9)
@@ -54,15 +54,23 @@ auditor or repairer.
 ## Named write rules (harvested; not a kernel dump)
 
 1. **Target bind** — inventory files that exist. Skip and record `Unknown` for
-   missing paths. Never invent a root file to satisfy a template.
+   missing paths. Never invent a root file to satisfy a template. Harvest
+   nugget `c-bind-before-write` (MERGE_WITH_EXISTING): this step already owns
+   that contract; do not add a second gap-analysis generator.
 2. **Authority map** — skills do not author doctrine. Point at the live owner.
-3. **One owner** — `CLAUDE.md` stays a pointer; `AGENTS.md` stays the operating
+3. **Required headings** — a live index is invalid when headings or pointers
+   required by `references/pointer-heading-map.yaml` are absent. Fail closed
+   and report the missing names. Rebound to this pointer stack only — never
+   require donor sections `overview`, `airules`, `apisurface`, `datamodels`,
+   or `components`. Never overwrite `README.md` from a template to make the
+   check pass. Harvest nugget `c-required-section-validation`.
+4. **One owner** — `CLAUDE.md` stays a pointer; `AGENTS.md` stays the operating
    SSOT; generated formatter blocks stay companions owned by
    `environment/ide/policy.json` via `ops/scripts/adapters/agentdocs.sh`.
-4. **No competing SSOT** — do not dump CI, pre-commit, toolchain, or skill-registry
+5. **No competing SSOT** — do not dump CI, pre-commit, toolchain, or skill-registry
    tables that already live in `AGENTS.md` §§4–6 or generated registries.
-5. **Evidence + Unknown** — every number from repo files.
-6. **Audit-only default** — inspect before write; modify only files that exist
+6. **Evidence + Unknown** — every number from repo files.
+7. **Audit-only default** — inspect before write; modify only files that exist
    and that the user (or a locked plan) authorized.
 
 ## Named repair rules (Validate & Repair; not a kernel dump)
@@ -91,6 +99,9 @@ auditor or repairer.
   created by this skill
 - Editing `CANONICAL_LAW.md` or either kernel file
 - Rewriting generated formatter-ownership blocks by hand
+- Generating or overwriting the **root** `README.md` from a template or CodeGenAgent
+- Moving `readme-pipeline-v1` out of `workflows/` — the DAG stays the sequencer
+- Treating the root `README.md` as a binding AI-scope contract
 
 ## When to Use
 
@@ -98,6 +109,7 @@ auditor or repairer.
 - After CI, pre-commit, or skill-registry changes that make a **pointer** stale
 - After `l9-wire-skill-into-repo` when docs still name a skill incorrectly
 - Root `CLAUDE.md` or `INVARIANTS.md` is missing (bootstrap creation — Step 3a)
+- User asks to generate or refresh **module / subsystem** READMEs from code facts
 
 Skill **wire / unwire** is owned by `l9-wire-skill-into-repo`. Use this skill
 afterward only to keep pointers honest.
@@ -117,7 +129,8 @@ never invented root files:
 
 Read `ops/config/root-file-protection.json`. Confirm which of `AGENTS.md`,
 `CLAUDE.md`, `README.md` exist. If an adapter names additional **existing**
-files, include those. Record excluded or missing paths as `Unknown`.
+files, include those. Record excluded or missing paths as `Unknown`. Do not
+create a missing `README.md` to satisfy the heading map.
 
 ### Step 2 — Audit (read-only)
 
@@ -129,6 +142,9 @@ If ownership or source-of-truth is in doubt, load
 - `README.md` still points at law + `AGENTS.md`
 - Counts you intend to cite (hooks, jobs) match the files that own them
 
+Run `scripts/validate_pointer_headings.py --root <repo>`. Missing required
+headings or pointers on a **live** file mean the index is not honest
+(Failed). A mapped path that does not exist is Unknown — do not create it.
 Do not produce CI/pre-commit tables for pasting into `CLAUDE.md`.
 
 If a pointer is stale or a write target was invented, load
@@ -140,11 +156,41 @@ If a pointer is stale or a write target was invented, load
 |------|----------------|
 | `CLAUDE.md` | Fix a stale pointer or a factual error in the existing short bullets. Do not add Always/Never, CI, or registry sections. |
 | `AGENTS.md` | Surgical additive update of an existing operating section, or a new marked append. Do not fold. Do not delete lines without `ALLOW-ROOT-DELETION`. |
-| `README.md` | Fix an index pointer that names a missing or invented file. |
+| `README.md` (repo root) | Fix an index pointer that names a missing or invented file. Never generate this file. |
+| `<module>/README.md` | Generate or refresh only through Step 3b (AST + config). Never the root index. |
 
 Preserve generated `<!-- BEGIN L9 FORMATTER OWNERSHIP -->` blocks. If
 `install_ide_profile` dirtied only that block, restore from HEAD unless
 `environment/ide/policy.json` changed.
+
+### Step 3b — Module README pipeline (wired)
+
+Owns **module** READMEs, not the root index. Sequencer is still
+`readme-pipeline-v1` in `workflows/dags/readme_pipeline_dag.py`. This skill
+invokes the same CLI the DAG names:
+
+```bash
+python scripts/generate_subsystem_readmes.py --list
+python scripts/generate_subsystem_readmes.py --validate
+python scripts/generate_subsystem_readmes.py --dry-run --subsystem <key>
+python scripts/generate_subsystem_readmes.py --skip-time-verify
+python scripts/generate_subsystem_readmes.py --validate-sections
+```
+
+Config SSOT: `config/subsystems/readme_config.yaml`. Facts come from stdlib
+AST (classes, functions, `__all__`, imports). `--skip-time-verify` is a
+no-op kept so the DAG argv stays valid.
+
+Must not:
+
+- Write repo-root `README.md`
+- Overwrite a README whose frontmatter says `auto_generated: false` unless
+  `--force`
+- Emit DORA blocks, worldtime calls, or AI allow/restrict/forbid scopes
+- Invent a module path that does not exist (record Unknown / skip)
+
+Or run the DAG: `SessionRunner.run("readme-pipeline-v1")`. Do not copy the
+DAG into this pack.
 
 ### Step 3a — Create Missing Root Docs (`CLAUDE.md`, `INVARIANTS.md`)
 
@@ -191,6 +237,11 @@ Do not claim either kernel was wrapped into this skill.
 - Formatter companion: `ops/scripts/adapters/agentdocs.sh`
 - Skill registry wire: `l9-wire-skill-into-repo`
 - No-wrap check: `scripts/self_test.py`
+- Pointer heading map: `references/pointer-heading-map.yaml`
+- Heading/pointer check: `scripts/validate_pointer_headings.py`
+- Module README sequencer: `workflows/dags/readme_pipeline_dag.py` (`readme-pipeline-v1`)
+- Module README CLI: `scripts/generate_subsystem_readmes.py`
+- Module README map: `config/subsystems/readme_config.yaml`
 
 ## Validation
 
@@ -201,6 +252,9 @@ Do not claim either kernel was wrapped into this skill.
 - Documented counts match repo files
 - Step 3a creations carry no fabricated counts, stay pointer/index-shaped,
   and are registered in the repo's root-file protection config when one exists
+- `validate_pointer_headings.py` is Passed for every live mapped file, or
+  Unknown for a mapped path that does not exist; Failed headings are reported
+  by name and are not repaired by generating a README
 
 ## Failure Handling
 

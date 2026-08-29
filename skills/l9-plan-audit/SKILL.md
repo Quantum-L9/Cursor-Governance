@@ -22,8 +22,9 @@ markdown/JSON report. Scan **top-level** `*.plan.md` only — `built/`,
 `partially-built/`, `backlog/`, and `archive/` are out of session-start. Frontmatter `built: true`
 or `status` in `{built, completed, cancelled, superseded}` skips the plan even
 when leftover todos are `pending`. `compiled: true` is not a skip. Mixed
-`harvestable` findings are display-only. SessionStart bootstrap inserts the markdown
-under `### Plan audit` in `additional_context`. Findings are **display-only** —
+`harvestable` findings are display-only. SessionStart now calls
+`l9-pipeline-audit` `audit_pipeline.py`, which uses this scanner for the
+plans surface only. Findings are **display-only from this skill** —
 do not auto-Build plans from this skill.
 
 ## Authority
@@ -38,8 +39,8 @@ do not auto-Build plans from this skill.
 **Activate** when session context includes Plan audit findings, or the user
 asks which **live-queue** (root) plans are unbuilt or stale.
 
-**Reject** when the user wants `/l9-audit-plans` or store organize (that
-protocol is `commands/l9-audit-plans.md`), wants a new plan (`l9-plan-simple`
+**Reject** when the user wants `/l9-pipeline-audit` / `/plan-audit` (multi-surface
+harvest) or `/l9-audit-plans` (plans-store shelf), wants a new plan (`l9-plan-simple`
 / `l9-plan`), wants to execute a chosen plan (Build or PE+autonomy), or asks
 to remediate scanner drift outside the plans directory.
 
@@ -68,7 +69,7 @@ python3 "$GOV/skills/l9-plan-audit/scripts/audit_plans.py" \
 - [scripts/audit_plans.py](scripts/audit_plans.py)
 - [scripts/self_test.py](scripts/self_test.py)
 - Slash (store organize, not this skill): `commands/l9-audit-plans.md`
-- Hook: `ops/hooks/session_start_bootstrap.sh` → `### Plan audit`
+- Hook: `ops/hooks/session_start_bootstrap.sh` → `### Plan audit` via `l9-pipeline-audit`
 
 ## Validation
 

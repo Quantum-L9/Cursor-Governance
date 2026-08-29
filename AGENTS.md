@@ -833,6 +833,42 @@ rest. `/plan-audit` is a compatibility alias of that command.
 Skill **`l9-plan-audit`** is still the sessionStart 7-day live-queue scanner
 (§16). It does not move files. Do not treat it as `/l9-audit-plans`.
 
+<!-- L9_PIPELINE_AUDIT_V1 -->
+## `/l9-pipeline-audit` (2026-08-28)
+
+`/plan-audit` is a compatibility alias of **`/l9-pipeline-audit`**
+(`commands/l9-pipeline-audit.md`). That command classifies Cursor plans,
+`WIP/`, and `environment/program-execution/campaigns/` with the same
+component verdicts, then harvests through skill `l9-intelligence-harvest`.
+Compiled packets emit as a new plan, `WIP/<M-D-YY>/<concern>/`, or a
+campaign `HARVEST_INTENT.md`. Execute via `/gmp`. Do not `make campaign`.
+`/l9-audit-plans` remains the plans-store shelf organizer. SessionStart
+`l9-plan-audit` is unchanged (plans-only, display-only).
+
+<!-- L9_SESSION_PIPELINE_AUDIT_V1 -->
+## SessionStart pipeline audit (2026-08-28)
+
+§16 heading `### Plan audit` is unchanged. The producer is now
+`skills/l9-pipeline-audit/scripts/audit_pipeline.py --format session-start`
+(`~4s` fail-open). The plans store is the tracked `docs/plans/` directory
+reached by `.cursor/plans` → `~/.cursor/plans`. The same scan covers
+`WIP/` (skip Legal Defense and secret globs) and
+`environment/program-execution/campaigns/*/CAMPAIGN_SOURCE.yaml`
+(gov-root fallback on consumers).
+
+SessionStart may archive spent root plans (`built/` or `archive/superseded/`)
+and inventory-`landed` WIP (`WIP/_archived/`), cap 8, skip when the
+repo-write lock is held. Mixed harvestable donors stay. Campaign sources
+are never moved. Do not auto-Build. Do not auto-harvest.
+
+The report lists pending counts and exactly three next executions in order:
+compiled packets first (`/gmp`), then README live-queue names, then live
+campaigns, then other unbuilt plans. `possible-landed` WIP is leftover, not
+an execute slot.
+
+`l9-plan-audit` remains the plans-surface scanner called by that CLI.
+`/l9-pipeline-audit` remains the on-demand harvest slash.
+
 <!-- FF_SHELF_WIP_PLANS_V1 -->
 ## `/ff` shelves leftover WIP and plans (2026-08-28)
 

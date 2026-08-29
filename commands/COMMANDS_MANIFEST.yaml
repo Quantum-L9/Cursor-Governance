@@ -114,6 +114,9 @@ commands:
 - slash: /l9-audit-plans
   file: commands/l9-audit-plans.md
   enabled: true
+- slash: /l9-pipeline-audit
+  file: commands/l9-pipeline-audit.md
+  enabled: true
   aliases:
   - /plan-audit
 - slash: /l9-plan
@@ -142,6 +145,9 @@ commands:
   enabled: true
 - slash: /pr
   file: commands/pr.md
+  enabled: true
+- slash: /pr-train
+  file: commands/pr-train.md
   enabled: true
 - slash: /reasoning
   file: commands/reasoning.md

@@ -1,6 +1,6 @@
 ---
 name: l9-structured-reasoning
-description: Adaptive evidence-based reasoning for hard planning, architecture, debugging, corpus analysis, and multi-option decisions. Use when the user needs trade-offs, root-cause reasoning, or an evidence-grounded decision record. Do not activate for simple facts, direct rewrites, or when a more specific domain Skill already owns the contract.
+description: Adaptive evidence-based reasoning for planning, architecture, debugging, and trade-offs. Use when the user needs root-cause reasoning or an evidence-grounded decision. Do not activate for simple facts or when a domain Skill owns the contract.
 ---
 
 # L9 Structured Reasoning
@@ -92,6 +92,7 @@ Required principles:
 ## Risk and Autonomy
 
 Do not use arbitrary confidence percentages unless calibrated by benchmark history.
+Machine contract: `references/confidence-policy.yaml` (risk table as `allow_set`; ECE is not a gate).
 
 Use:
 
@@ -99,6 +100,8 @@ Use:
 evidence_quality: high | medium | low | unknown
 decision_risk: reversible | guarded | irreversible
 action: proceed | proceed_with_validation | bounded_probe | block
+calibration_status: none
+stated_probability: null
 ```
 
 Reversible work may proceed with bounded validation. Irreversible work requires direct evidence, an explicit authorization boundary, and a rollback or containment path. Fail closed when a material uncertainty cannot be bounded.
@@ -153,6 +156,7 @@ This rebuild used the mandatory `extract_expertise -> compress_expertise -> desi
 
 - `references/reasoning-router.yaml`: routing dimensions and conditional proof obligations.
 - `references/evidence-decision-contract.yaml`: auditable ledger contract.
+- `references/confidence-policy.yaml`: stated-probability ban and evidence × risk allow-set.
 - `references/risk-and-autonomy-policy.md`: evidence-risk-action rules.
 - `references/capability-adapters.md`: tool, parallelism, Git, and write-authority fallbacks.
 - `references/output-profiles.md`: proportional response and artifact shapes.
