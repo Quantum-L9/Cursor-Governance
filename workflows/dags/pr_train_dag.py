@@ -40,6 +40,7 @@ _PRESERVE_SCRIPTS = _REPO_ROOT / "skills" / "l9-git-work-preserve" / "scripts"
 _FF_SH = _REPO_ROOT / "skills" / "l9-repo-sync" / "scripts" / "ff.sh"
 _RESOLVE_STACK = _REPO_ROOT / "ops" / "scripts" / "resolve_stack_tip.py"
 _AUTHORIZE_MERGE = _REPO_ROOT / "ops" / "autonomy" / "authorize_merge.py"
+_L4_LOCAL = _REPO_ROOT / "ops" / "autonomy" / "l4_local.py"
 GRAPH_ID = "pr-train-v1"
 MAX_SLICES = 32
 REMEDIATOR_SKILL = "l9-pr-remediation"
@@ -457,7 +458,27 @@ def default_extract(
     return str(worktree), branch
 
 
+def _l4_authorize_worktree(worktree: str) -> None:
+    """Fresh extract worktrees have no L4 receipt; make pr fail-closes without one."""
+    for args in (
+        ["begin", "--workspace", worktree, "--contract-id", GRAPH_ID],
+        ["record-kernels", "--workspace", worktree],
+        ["authorize-release", "--workspace", worktree],
+    ):
+        proc = subprocess.run(
+            [_python(), str(_L4_LOCAL), *args],
+            text=True,
+            capture_output=True,
+            check=False,
+        )
+        if proc.returncode != 0:
+            raise RuntimeError(
+                proc.stderr.strip() or proc.stdout.strip() or f"l4_local.py {args[0]} failed"
+            )
+
+
 def default_publish(worktree: str) -> dict[str, Any]:
+    _l4_authorize_worktree(worktree)
     gov = Path.home() / ".cursor-governance"
     makefile = gov if (gov / "Makefile").is_file() else _REPO_ROOT
     env = os.environ.copy()
@@ -586,7 +607,16 @@ def slice_node(state: PrTrainState) -> dict[str, Any]:
             "halt_reason": f"slice cap {MAX_SLICES} exceeded",
             "stop": "report",
         }
-    return {"slices": slices, "current_slice": 0}
+    probe: dict[str, Any] = {"slices": slices, "current_slice": 0}
+    try:
+        tip, sha, reason = load_stack_tip(repo, state.baseline)
+        probe["stack_tip"] = tip
+        probe["stack_tip_sha"] = sha
+        probe["stack_reason"] = reason
+    except Exception as exc:
+        probe["stack_reason"] = str(exc)
+        probe["errors"] = [str(exc)]
+    return probe
 
 
 def stack_base_node(state: PrTrainState) -> dict[str, Any]:
@@ -598,7 +628,15 @@ def stack_base_node(state: PrTrainState) -> dict[str, Any]:
     try:
         tip, sha, reason = load_stack_tip(repo, state.baseline)
     except Exception as exc:
-        return {"status": "blocked", "halt_reason": str(exc), "stop": "report"}
+        msg = str(exc)
+        if "sibling open-PR" in msg:
+            return {
+                "status": "blocked",
+                "halt_reason": f"{msg}; collapse via {REMEDIATOR_SKILL} Converge before OPEN_TRAIN",
+                "skill_dispatch": REMEDIATOR_SKILL,
+                "stop": "remediate",
+            }
+        return {"status": "blocked", "halt_reason": msg, "stop": "report"}
     return {"stack_tip": tip, "stack_tip_sha": sha, "stack_reason": reason}
 
 
@@ -634,8 +672,10 @@ def publish_node(state: PrTrainState) -> dict[str, Any]:
 
 
 def remediate_node(state: PrTrainState) -> dict[str, Any]:
-    if state.status in {"blocked", "failed"}:
+    if state.status == "failed":
         return {}
+    if state.status == "blocked" and state.skill_dispatch == REMEDIATOR_SKILL:
+        return {"stop": "remediate"}
     if not state.execute:
         return {"stop": "remediate", "skill_dispatch": REMEDIATOR_SKILL}
     remediator: Callable[[PrTrainState], dict[str, Any]] | None = state.remediate_fn
@@ -696,6 +736,7 @@ def report_node(state: PrTrainState) -> dict[str, Any]:
         f"branch: {state.branch or '?'}",
         f"novel commits: {len(state.novel)} (skipped landed: {len(state.skipped_dup)})",
         f"slices: {len(state.slices)} (path ∪ generated-prefix ∪ merge-tree; unknown=colocate)",
+        f"stack: {state.stack_reason or '(unprobed)'}",
         f"opened: {len(state.opened_prs)}",
         f"stop 2 skill: {state.skill_dispatch or '(not dispatched)'}"
         + (" — graph does not MERGE_TRAIN" if state.skill_dispatch else ""),
@@ -734,7 +775,9 @@ def route_after_slice(state: PrTrainState) -> Literal["stack_base", "remediate",
     return "remediate"
 
 
-def route_after_stack(state: PrTrainState) -> Literal["extract", "report"]:
+def route_after_stack(state: PrTrainState) -> Literal["extract", "remediate", "report"]:
+    if state.status == "blocked" and state.skill_dispatch == REMEDIATOR_SKILL:
+        return "remediate"
     if state.status in {"blocked", "failed"}:
         return "report"
     return "extract"
@@ -787,7 +830,7 @@ def build_pr_train_graph():
     graph.add_conditional_edges(
         "stack_base",
         route_after_stack,
-        {"extract": "extract", "report": "report"},
+        {"extract": "extract", "remediate": "remediate", "report": "report"},
     )
     graph.add_conditional_edges(
         "extract",
