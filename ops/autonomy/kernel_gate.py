@@ -177,10 +177,10 @@ def _agent_required_plan(path: Path) -> str:
         "ACTION: apply_plan_kernels_then_precommit\n"
         f"PLAN: {path}\n"
         "INSTRUCTIONS:\n"
-        "  Apply kernels/Improve.md, overwrite this path, re-read it, apply\n"
-        "  kernels/Validate & Repair.md, overwrite the same path, write kernel_pass\n"
-        "  into this file. Then re-run make precommit-repo / make pr.\n"
-        "Plan kernels fire here, not as a mid-session inject and not as L4.\n"
+        "  Apply kernels/Improve.md, then kernels/Recursive Alignment.md, then\n"
+        "  kernels/Validate & Repair.md, overwrite this path, write kernel_pass\n"
+        "  (three blocks, ran_at in that order). Then re-run make precommit-repo.\n"
+        "docs/plans, WIP, and campaigns skip this latch (/ff owns them).\n"
         "=== END L9_AGENT_REQUIRED ===\n"
     )
 

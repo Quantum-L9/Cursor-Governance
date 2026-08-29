@@ -14,9 +14,10 @@ from pathlib import Path
 from typing import Any
 
 INJECT_TEXT = (
-    "Apply `kernels/Improve.md`, overwrite this path, re-read it, apply "
-    "`kernels/Validate & Repair.md`, overwrite the same path, write "
-    "`kernel_pass` into this file. Do not create another plan."
+    "Apply `kernels/Improve.md`, then `kernels/Recursive Alignment.md`, "
+    "then `kernels/Validate & Repair.md`, overwrite this path, write "
+    "`kernel_pass` (those three blocks in ran_at order). Store plans apply "
+    "on /ff, not as a mid-session inject. Do not create another plan."
 )
 REQUIRED_REL = Path(".l9") / "plan" / "kernel-pass-required.json"
 REQUIRED_SCHEMA = "l9.plan.kernel_pass_required.v1"
