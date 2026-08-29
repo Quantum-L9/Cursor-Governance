@@ -256,6 +256,11 @@ def filter_slices_against_tip(
             item = by_sha[novel.sha]
             sha = novel.sha
             child_paths = set(novel.paths)
+            if item.get("mode") == "remainder":
+                keep.append(item)
+                kept_shas.add(sha)
+                kept_paths[sha] = child_paths
+                continue
             if (
                 not sha
                 or not is_git_repo(repo)
@@ -756,10 +761,22 @@ def default_extract(
     return str(worktree), branch
 
 
-def default_publish(worktree: str) -> dict[str, Any]:
+def pr_create_base(stack_tip: str, baseline: str = "origin/main") -> str:
+    """``gh pr create --base`` for a stacked car. Empty means the repo default."""
+    tip = (stack_tip or "").strip().removeprefix("origin/")
+    base = (baseline or "origin/main").strip().removeprefix("origin/") or "main"
+    if not tip or tip == base or tip in {"main", "HEAD"}:
+        return ""
+    if len(tip) == 40 and all(char in "0123456789abcdef" for char in tip):
+        return ""
+    return tip
+
+
+def default_publish(worktree: str, *, base: str = "") -> dict[str, Any]:
     """Remediator publish: push the extract and open a PR if none exists.
 
     Does not stamp kernel receipts and does not run ``make pr``.
+    A non-empty ``base`` stacks the new PR on the unique open-PR tip.
     """
     push = subprocess.run(
         ["git", "-C", worktree, "push", "-u", "origin", "HEAD"],
@@ -777,15 +794,18 @@ def default_publish(worktree: str) -> dict[str, Any]:
         check=False,
     )
     if view.returncode != 0 or not view.stdout.strip():
+        create = [
+            "gh",
+            "pr",
+            "create",
+            "--fill",
+            "--body",
+            "<!-- L9_PROTECTED_ROOT_PR -->\n",
+        ]
+        if base:
+            create[3:3] = ["--base", base]
         created = subprocess.run(
-            [
-                "gh",
-                "pr",
-                "create",
-                "--fill",
-                "--body",
-                "<!-- L9_PROTECTED_ROOT_PR -->\n",
-            ],
+            create,
             cwd=worktree,
             text=True,
             capture_output=True,
@@ -795,7 +815,7 @@ def default_publish(worktree: str) -> dict[str, Any]:
             raise RuntimeError(
                 created.stderr.strip() or created.stdout.strip() or "gh pr create failed"
             )
-    return {"worktree": worktree, "ok": True}
+    return {"worktree": worktree, "ok": True, "base": base}
 
 
 # ---------------------------------------------------------------------------
@@ -999,9 +1019,15 @@ def publish_node(state: PrTrainState) -> dict[str, Any]:
         return {}
     if state.current_slice >= len(state.slices):
         return {}
-    publish_fn: Callable[[str], dict[str, Any]] = state.publish_fn or default_publish
+    publish_fn = state.publish_fn
     try:
-        result = publish_fn(state.extract_worktree)
+        if publish_fn is None:
+            result = default_publish(
+                state.extract_worktree,
+                base=pr_create_base(state.stack_tip, state.baseline),
+            )
+        else:
+            result = publish_fn(state.extract_worktree)
     except Exception as exc:
         return {"status": "blocked", "halt_reason": str(exc), "stop": "report"}
     opened = list(state.opened_prs)
