@@ -15,6 +15,26 @@ todos:
     content: Run new tests + OPEN_PR=0 make pr on this change set. Protected-root stamp. Pathspecs only. No foreign dirty.
     status: pending
 isProject: false
+kernel_pass:
+  bound_path: fold_pr-check_81560ec1.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T00:40:00Z
+    body_sha256: "579bbdad9bcf2b3ac490ef17b4b6d9805b152d903a139ee50261cc934b6b82c5"
+    deltas:
+      - "Live teachers type make pr or OPEN_PR=0 make pr; leftover make pr-check is not a verb"
+      - "Remediator pack keeps do-not-run make pr-check as a leftover-target forbid"
+      - "Hyphen-boundary parser comments still name make pr-check so make pr is not a false publish"
+      - "Historical campaigns, handoffs, and the locked plan body were restored after bulk replace"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T00:41:00Z
+    body_sha256: "579bbdad9bcf2b3ac490ef17b4b6d9805b152d903a139ee50261cc934b6b82c5"
+    deltas:
+      - "G_PR_CHECK requires make pr and does not match leftover make pr-check via word boundary"
+      - "CANONICAL_LAW PR_CHECK_FOLDED_V1 append names the internal leaf"
+      - "PlasticOS local verify before make push is OPEN_PR=0 make pr"
+      - "Prove is make precommit-repo only; no make pr, make pr-check, or PR open"
 ---
 
 # Fold pr-check into make pr
