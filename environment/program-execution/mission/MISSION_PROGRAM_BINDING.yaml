@@ -14,6 +14,29 @@ identity:
   binding_id_pattern: "^MPB-[A-Z0-9-]+$"
   digest_format: canonical SHA-256 hexadecimal
 
+# Blueprint identity is exact and acyclic (ADR-0026). The canonical input is the
+# exact bytes of the instantiated Blueprint's final MANIFEST.yaml, which the
+# official template manifest writer already fills with every other Blueprint file
+# and its SHA-256 — so identity covers the whole Blueprint through one owner.
+blueprint_identity:
+  canonical_input: exact bytes of the instantiated Blueprint MANIFEST.yaml
+  algorithm: sha256
+  representation: lowercase hexadecimal, 64 characters
+  implementation: ../core/shared/blueprint_identity.py
+  manifest_owner: ../core/program-execution-blueprint-template/scripts/instantiate.py
+  # Ordering, not decoration: an unvalidated Blueprint has no admissible identity.
+  computed_after: official instantiated-Blueprint validation reports valid
+  prohibited_before_hashing:
+    - parse
+    - yaml_normalization
+    - key_sorting
+    - rewrite_or_reserialization
+  fail_closed_when:
+    - MANIFEST.yaml is absent
+    - MANIFEST.yaml is not a regular file
+    - MANIFEST.yaml cannot be read
+  final_binding_inside_digest_domain: prohibited
+
 required_fields:
   - schema
   - binding_id

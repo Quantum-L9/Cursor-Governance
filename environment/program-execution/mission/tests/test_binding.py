@@ -229,6 +229,30 @@ def test_model_states_blueprint_may_narrow_but_never_widen() -> None:
 # --- non-circular identity ------------------------------------------------
 
 
+def test_blueprint_identity_law_matches_the_shared_implementation() -> None:
+    """The law names one algorithm and one owner; the code must be that one.
+
+    A law file that drifts from the module it governs is worse than no law:
+    it reads as enforcement while enforcing nothing.
+    """
+    import sys
+
+    core_shared = MISSION_ROOT.parent / "core" / "shared"
+    if str(core_shared) not in sys.path:
+        sys.path.insert(0, str(core_shared))
+    import blueprint_identity
+
+    identity = _model()["blueprint_identity"]
+    assert identity["algorithm"] == blueprint_identity.DIGEST_ALGORITHM == "sha256"
+    assert identity["final_binding_inside_digest_domain"] == "prohibited"
+    assert "MANIFEST.yaml" in identity["canonical_input"]
+    assert "validation" in identity["computed_after"]
+    for forbidden in ("parse", "yaml_normalization", "key_sorting", "rewrite_or_reserialization"):
+        assert forbidden in identity["prohibited_before_hashing"]
+    assert (MISSION_ROOT / identity["implementation"]).resolve().is_file()
+    assert (MISSION_ROOT / identity["manifest_owner"]).resolve().is_file()
+
+
 def test_blueprint_digest_self_reference_is_prohibited() -> None:
     model = _model()
     assert model["blueprint_digest_self_reference"] == "prohibited"
