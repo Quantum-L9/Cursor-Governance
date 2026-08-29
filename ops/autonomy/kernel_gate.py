@@ -4,7 +4,9 @@
 Not an L4 phase. L4 remains local-commit / no-mid-push / authorize-release.
 This module is the only velocity-path latch for applying tree kernels
 (Recursive Alignment + Validate & Repair) and for plan ``kernel_pass``
-receipts on changed ``*.plan.md`` files.
+receipts on changed ``*.plan.md`` files. Pipeline-audit surfaces
+(``docs/plans/``, ``WIP/``, ``environment/program-execution/campaigns/``)
+skip the plan latch; they have their own Improve/harvest/PE treatment.
 
 ``precommit`` must run first in ``run_pr_precommit.sh`` and fail closed
 before any other hook or test starts, so those checkers fire once.
@@ -28,11 +30,18 @@ KERNELS: tuple[tuple[str, str], ...] = (
     ("validate_repair", "kernels/Validate & Repair.md"),
 )
 PLAN_FIXTURE_PREFIX = "skills/l9-plan/fixtures/"
+#: Pipeline-audit surfaces. Separate treatment; do not latch make pr on them.
+KERNEL_EXEMPT_PREFIXES = (
+    "docs/plans/",
+    "WIP/",
+    "environment/program-execution/campaigns/",
+)
 #: Executable-plan templates are not Cursor plans. Do not require kernel_pass.
 PLAN_SKIP_PREFIXES = (
     PLAN_FIXTURE_PREFIX,
     "environment/contracts/execution/templates/",
     "docs/plans/_TEMPLATE.plan.md",
+    *KERNEL_EXEMPT_PREFIXES,
 )
 
 
