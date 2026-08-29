@@ -1,7 +1,7 @@
 # SESSION_START_SPEC — Claude Code governance bootstrap
 
-**Status:** authoritative contract for `session_start_claude_governance.sh`  
-**Profile SSOT:** `ops/autonomy/surface_profile.yaml`  
+**Status:** authoritative contract for `session_start_claude_governance.sh`
+**Profile SSOT:** `ops/autonomy/surface_profile.yaml`
 **Install:** `ops/scripts/reconcile_claude_settings.py` copies this script into
 `<repo>/.claude/hooks/` as a **committed file** (Mobile/Web survival).
 

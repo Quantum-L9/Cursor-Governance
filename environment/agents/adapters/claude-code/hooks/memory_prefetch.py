@@ -19,6 +19,8 @@ import sys
 from pathlib import Path
 
 MEM = Path(__file__).resolve().parent.parent / "memory"
+
+
 def _governance_lib() -> Path:
     """Locate ops/scripts/lib by walking up, not by counting parents.
 

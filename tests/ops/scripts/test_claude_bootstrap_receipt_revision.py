@@ -69,9 +69,7 @@ def test_receipt_without_a_recorded_revision_is_not_invalidated() -> None:
 
 
 def test_ttl_expiry_still_wins_when_the_revision_matches() -> None:
-    result = receipt.evaluate(
-        make(age_seconds=90_000), now=NOW, governance_revision="a" * 40
-    )
+    result = receipt.evaluate(make(age_seconds=90_000), now=NOW, governance_revision="a" * 40)
     assert result["state"] == receipt.UNKNOWN
     assert "expired" in result["reason"]
 

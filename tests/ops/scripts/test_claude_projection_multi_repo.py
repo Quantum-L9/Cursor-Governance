@@ -31,7 +31,7 @@ def make_repo(parent: Path, name: str) -> Path:
 
 def test_skill_adapter_fans_project_scope_over_mount_roots() -> None:
     body = SKILL_ADAPTERS.read_text(encoding="utf-8")
-    assert "projection_roots(workspace) if scope == \"project\" else [workspace]" in body
+    assert 'projection_roots(workspace) if scope == "project" else [workspace]' in body
     assert "mount_root" in body, "each result must name the root it reconciled"
 
 

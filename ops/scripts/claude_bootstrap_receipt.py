@@ -69,9 +69,7 @@ def live_governance_revision(root: Path | None = None) -> str:
     never invalidates a receipt — a missing probe must not manufacture UNKNOWN
     out of a receipt that may be perfectly current.
     """
-    base = root or Path(
-        os.environ.get("L9_GOV_ROOT") or (Path.home() / ".cursor-governance")
-    )
+    base = root or Path(os.environ.get("L9_GOV_ROOT") or (Path.home() / ".cursor-governance"))
     head = base / ".git" / "HEAD"
     try:
         raw = head.read_text(encoding="utf-8").strip()
