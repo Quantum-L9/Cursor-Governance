@@ -30,8 +30,10 @@
 # HEALTH CONTRACT: every step classifies itself BLOCKED / DEGRADED / READY.
 #   BLOCKED   governance SSOT absent, locked interpreter unusable, or required
 #             settings wiring failed (exit code reflects it).
-#   DEGRADED  optional capability unavailable, marketplace plugin unavailable,
-#             memory unavailable, or an optional checker unavailable.
+#   DEGRADED  optional capability unavailable, memory unavailable, or an
+#             optional checker unavailable. A platform-disabled marketplace
+#             (SKIP_PLUGIN_MARKETPLACE=true) is READY — hosted extras are not
+#             a required plane; slash commands are projected, not plugins.
 #   READY     required environment contract satisfied.
 # The machine-readable receipt lands at ~/.l9/claude/bootstrap-state.json
 # (schema l9.claude-bootstrap.v1); the SessionStart hook projects it. There is
@@ -67,7 +69,7 @@ warn() { printf 'claude-adapter WARN: %s\n' "$*" >&2; }
 # downgrade: READY -> DEGRADED -> BLOCKED.
 STATUS_SHARED="READY"; STATUS_SETTINGS="READY"; STATUS_SKILLS="READY"
 STATUS_RULES="READY"; STATUS_CAPABILITIES="READY"; STATUS_MEMORY="READY"
-STATUS_MCP="READY"; STATUS_PLUGINS="READY"
+STATUS_MCP="READY"; STATUS_PLUGINS="READY"; STATUS_COMMANDS="READY"
 
 downgrade() { # $1=step-var-name $2=new-status $3=reason
   local name="$1" want="$2" cur="${!1}"
@@ -128,6 +130,7 @@ write_receipt() {
     printf '  "shared_bootstrap": "%s",\n' "$(json_token "$STATUS_SHARED")"
     printf '  "settings": "%s",\n' "$(json_token "$STATUS_SETTINGS")"
     printf '  "skills": "%s",\n' "$(json_token "$STATUS_SKILLS")"
+    printf '  "commands": "%s",\n' "$(json_token "$STATUS_COMMANDS")"
     printf '  "rules": "%s",\n' "$(json_token "$STATUS_RULES")"
     printf '  "capabilities": "%s",\n' "$(json_token "$STATUS_CAPABILITIES")"
     printf '  "memory": "%s",\n' "$(json_token "$STATUS_MEMORY")"
@@ -202,6 +205,25 @@ case "$GOV_DIR" in
     ;;
 esac
 
+# Cloud doctor: `make claude-install-check` passes --governance $(CURDIR). On
+# hosted Claude that is the workspace clone, not the live SSOT SessionStart
+# loaded ($HOME/.cursor-governance). Projection --check against the workspace
+# then reports skills/rules drift while the session is READY. Remap only in
+# --check when the platform skipped the marketplace (the hosted topology) and
+# a distinct live SSOT exists. Local Desktop `make claude-install-check` from
+# a worktree is unchanged.
+if [ "$CHECK" = "1" ]; then
+  live_ssot="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+  if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ] && [ -f "$live_ssot/CANONICAL_LAW.md" ]; then
+    gov_abs="$(cd "$GOV_DIR" 2>/dev/null && pwd -P)" || gov_abs=""
+    live_abs="$(cd "$live_ssot" 2>/dev/null && pwd -P)" || live_abs=""
+    if [ -n "$gov_abs" ] && [ -n "$live_abs" ] && [ "$gov_abs" != "$live_abs" ]; then
+      warn "check-mode: --governance $GOV_DIR is not the live SSOT; checking $live_ssot"
+      GOV_DIR="$live_ssot"
+    fi
+  fi
+fi
+
 if [ ! -f "$GOV_DIR/CANONICAL_LAW.md" ]; then
   warn "no governance SSOT at $GOV_DIR — the surface caller must clone it first"
   warn "BLOCKED: governance SSOT absent"
@@ -274,6 +296,7 @@ if [ -n "$GOV_PY" ] && [ -f "$PROJECTION_ENGINE" ]; then
     # so no domain can claim health from silence.
     downgrade STATUS_SETTINGS BLOCKED "projection engine failed (exit $projection_rc)"
     downgrade STATUS_SKILLS DEGRADED "projection engine failed (exit $projection_rc)"
+    downgrade STATUS_COMMANDS DEGRADED "projection engine failed (exit $projection_rc)"
     downgrade STATUS_RULES DEGRADED "projection engine failed (exit $projection_rc)"
     downgrade STATUS_PLUGINS DEGRADED "projection engine failed (exit $projection_rc)"
   fi
@@ -284,6 +307,7 @@ if [ -n "$GOV_PY" ] && [ -f "$PROJECTION_ENGINE" ]; then
   for pair in \
     "settings STATUS_SETTINGS" \
     "skills STATUS_SKILLS" \
+    "commands STATUS_COMMANDS" \
     "rules STATUS_RULES" \
     "plugins STATUS_PLUGINS"; do
     domain="${pair%% *}"
@@ -306,8 +330,21 @@ elif [ -n "$GOV_PY" ]; then
   warn "missing ops/scripts/claude_projection.py"
   downgrade STATUS_SETTINGS BLOCKED "projection engine missing"
   downgrade STATUS_SKILLS DEGRADED "projection engine missing"
+  downgrade STATUS_COMMANDS DEGRADED "projection engine missing"
   downgrade STATUS_RULES DEGRADED "projection engine missing"
   downgrade STATUS_PLUGINS DEGRADED "projection engine missing"
+fi
+
+# Hosted/Mobile wrap: account Environment variables may lower autonomy without
+# forking settings.template.json. Desktop CLI is unchanged (no overlay).
+if [ "$CHECK" != "1" ] && [ -n "$GOV_PY" ]; then
+  if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ] || [ -n "${CLAUDE_CODE_REMOTE:-}" ]; then
+    overlay="$GOV_DIR/environment/agents/adapters/claude-code/overlay_hosted_settings_env.py"
+    if [ -f "$overlay" ]; then
+      "$GOV_PY" "$overlay" --workspace "$WORKSPACE" \
+        || warn "hosted settings env overlay failed"
+    fi
+  fi
 fi
 
 # --- 3) Memory MCP front door (Claude .mcp.json format) ---------------------
@@ -378,13 +415,15 @@ fi
 # --- 3b) Marketplace plugins ------------------------------------------------
 # Plugin convergence is a projection-engine domain (declarative desired state
 # in plugins.desired.json; setup_claude_code_plugins.sh only as fallback) and
-# already ran in stage claude-projection. What remains here is the honest
-# posture: a platform-disabled marketplace, or a missing claude CLI, still
-# means the PreToolUse matcher's context7 plugin cannot exist.
+# already ran in stage claude-projection. Hosted Web/Mobile set
+# SKIP_PLUGIN_MARKETPLACE=true: that skip is by design (desktop extras are not
+# required for Web/Mobile parity). Slash commands load through
+# claude_projection.py (commands domain), not the marketplace. A missing
+# claude CLI on Desktop still means marketplace packages were not converged.
 stage "marketplace-plugins"
 if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
   say "plugin marketplace disabled by the platform (SKIP_PLUGIN_MARKETPLACE=true)"
-  downgrade STATUS_PLUGINS DEGRADED "marketplace disabled by the platform"
+  say "plugins: READY (hosted skip — desktop extras are not a required plane)"
 elif ! command -v claude >/dev/null 2>&1; then
   downgrade STATUS_PLUGINS DEGRADED "claude CLI unavailable — plugins not converged"
 fi
@@ -432,8 +471,9 @@ fi
 
 # --- Receipt + final classification -----------------------------------------
 OVERALL="READY"
-for st in "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_RULES" \
-          "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP" "$STATUS_PLUGINS"; do
+for st in "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_COMMANDS" \
+          "$STATUS_RULES" "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP" \
+          "$STATUS_PLUGINS"; do
   case "$st" in
     BLOCKED)  OVERALL="BLOCKED"; break ;;
     DEGRADED) OVERALL="DEGRADED" ;;
@@ -449,9 +489,10 @@ write_receipt "$OVERALL"
 say "bootstrap receipt: $RECEIPT ($OVERALL)"
 
 log "Claude Code adapter: $OVERALL"
-[ "$QUIET" = "1" ] || printf '  shared=%s settings=%s skills=%s rules=%s capabilities=%s memory=%s mcp=%s plugins=%s\n' \
-  "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_RULES" \
-  "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP" "$STATUS_PLUGINS"
+[ "$QUIET" = "1" ] || printf '  shared=%s settings=%s skills=%s commands=%s rules=%s capabilities=%s memory=%s mcp=%s plugins=%s\n' \
+  "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_COMMANDS" \
+  "$STATUS_RULES" "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP" \
+  "$STATUS_PLUGINS"
 
 if [ "$OVERALL" = "BLOCKED" ]; then
   warn "BLOCKED — see classification above; SessionStart will report the degraded contract"

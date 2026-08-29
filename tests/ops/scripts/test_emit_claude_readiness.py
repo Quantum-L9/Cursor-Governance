@@ -54,6 +54,20 @@ def test_projection_skipped_is_not_pass() -> None:
     assert out["skills"] == READY
 
 
+def test_plugin_marketplace_skip_is_ready() -> None:
+    receipt = {
+        "domains": [
+            {
+                "domain": "plugins",
+                "status": "skipped",
+                "detail": {"reason": "marketplace disabled by the platform"},
+            }
+        ]
+    }
+    out = er._projection_statuses(receipt)
+    assert out["plugins"] == READY
+
+
 def test_projection_missing_receipt_is_unknown() -> None:
     out = er._projection_statuses(None)
     assert set(out.values()) == {UNKNOWN}

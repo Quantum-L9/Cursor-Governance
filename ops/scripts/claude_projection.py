@@ -250,6 +250,9 @@ def plugin_desired_set(
         if repo not in marketplaces:
             marketplaces.append(repo)
     plugins = list(core.get("plugins") or []) + list(class_cfg.get("plugins") or [])
+    for extra in desired.get("desktop_only") or []:
+        if extra not in plugins:
+            plugins.append(extra)
     return marketplaces, plugins
 
 

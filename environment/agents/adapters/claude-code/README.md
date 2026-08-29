@@ -82,13 +82,19 @@ Two different mechanisms feed Claude Code, and the names must not blur:
   `ops/scripts/reconcile_claude_l9_skills.py` (project scope, and the user-scope
   mirror). This is the mechanism that makes L9 skills available, on every
   surface including Web/Mobile.
-- **Optional marketplace plugins** — `make claude-plugins` →
-  `ops/scripts/setup_claude_code_plugins.sh`. Installs Claude marketplace
-  packages (hookify, pr-review-toolkit, desktop-commander, context7),
-  including project-scoped plugin mutations. This is an explicit **local /
-  Desktop enhancement** and is **not required for Web/Mobile parity** — Claude
-  mobile does not expose local-only commands such as `/plugin`, and a governed
-  cloud session must not depend on them.
+- **Slash commands** — `claude_projection.py` domain `commands` reads
+  `commands/COMMANDS_MANIFEST.yaml` and installs per-command symlinks under
+  `.claude/commands/` (and `~/.claude/commands`). They are **not** marketplace
+  plugins. Hosted `SKIP_PLUGIN_MARKETPLACE=true` does not affect `/gmp`, `/pr`,
+  `/l9-plan`, or the rest of the projected set. A name that collides with a
+  skill is fail-closed to the skill.
+- **Optional marketplace plugins** — `plugins.desired.json` →
+  `claude_projection.py` / `setup_claude_code_plugins.sh`. Desktop converges
+  `core.plugins` (context7) plus `desktop_only` (hookify, pr-review-toolkit,
+  desktop-commander). Hosted Web/Mobile skip the marketplace; that skip is
+  **READY**, not DEGRADED. Context7 MCP tools are therefore absent on hosted
+  until a non-marketplace front door exists — use skill `l9-context7-docs`
+  there. Do not treat `/plugin` as a hosted requirement.
 
 ### Memory transport — brokered, and honest when degraded
 

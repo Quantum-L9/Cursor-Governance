@@ -23,7 +23,7 @@ Expected, per `l9.claude_operational_parity_convergence.v1`:
 | Enabled skills | projected per-skill symlinks from the skill registry | `claude_projection.py` (skills) |
 | Enabled commands | per-command symlinks from `commands/COMMANDS_MANIFEST.yaml` | `claude_projection.py` (commands) |
 | Rules contract | `environment/generated/llm-rules/**` mounted at `.claude/rules` | `claude_projection.py` (rules) |
-| Plugin required state | declarative `plugins.desired.json` | `claude_projection.py` (plugins) |
+| Plugin required state | Desktop: `plugins.desired.json` (core + desktop_only). Hosted: marketplace skip is READY, not a required plane. | `claude_projection.py` (plugins) |
 | MCP contract | `.mcp.json` is a projection of `mcp.template.json` (single MCP authority) | `claude_projection.py` (mcp) |
 | Memory backend | Cursor Graphiti front door only (`ops/graphiti`); no side door | rule 03; CANONICAL_LAW §8 |
 | Graphiti capability | authenticated Graphiti when the platform issues identity | broker plane; `probe_broker.py` |

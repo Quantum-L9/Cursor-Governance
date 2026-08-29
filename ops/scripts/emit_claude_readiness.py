@@ -155,6 +155,29 @@ _PROJ_STATUS = {
 }
 
 
+def _map_projection_status(entry: dict[str, Any] | str, *, domain: str = "") -> str:
+    """Map a projection domain status onto READY/DEGRADED/BLOCKED/UNKNOWN.
+
+    A skipped *required* domain is not PASS. Hosted marketplace skip is the
+    exception: SKIP_PLUGIN_MARKETPLACE=true is platform policy, desktop extras
+    are not a required plane, and slash commands load through the commands
+    domain — not plugins.
+    """
+    if isinstance(entry, str):
+        raw = entry.lower()
+        detail: dict[str, Any] = {}
+    else:
+        raw = str(entry.get("status") or "").lower()
+        maybe_detail = entry.get("detail")
+        detail = maybe_detail if isinstance(maybe_detail, dict) else {}
+        domain = domain or str(entry.get("domain") or "")
+    if raw == "skipped" and domain == "plugins":
+        reason = str(detail.get("reason") or "")
+        if "marketplace" in reason or os.environ.get("SKIP_PLUGIN_MARKETPLACE") == "true":
+            return READY
+    return _PROJ_STATUS.get(raw, UNKNOWN)
+
+
 def _projection_statuses(receipt: dict[str, Any] | None) -> dict[str, str]:
     """Per-domain projection status from the projection receipt (not symlink existence)."""
     domains = ("skills", "commands", "rules", "settings", "hooks", "plugins", "mcp")
@@ -168,14 +191,14 @@ def _projection_statuses(receipt: dict[str, Any] | None) -> dict[str, str]:
                 continue
             name = str(entry.get("domain") or "")
             if name in out:
-                out[name] = _PROJ_STATUS.get(str(entry.get("status") or "").lower(), UNKNOWN)
+                out[name] = _map_projection_status(entry, domain=name)
     elif isinstance(per, dict):
         for d in domains:
             entry = per.get(d)
             if isinstance(entry, dict):
-                out[d] = _PROJ_STATUS.get(str(entry.get("status") or "").lower(), UNKNOWN)
+                out[d] = _map_projection_status(entry, domain=d)
             elif isinstance(entry, str):
-                out[d] = _PROJ_STATUS.get(entry.lower(), UNKNOWN)
+                out[d] = _map_projection_status(entry, domain=d)
     return out
 
 

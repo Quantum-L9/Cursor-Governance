@@ -54,6 +54,7 @@ COMPONENTS = (
     "shared_bootstrap",
     "settings",
     "skills",
+    "commands",
     "rules",
     "capabilities",
     "memory",

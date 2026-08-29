@@ -291,14 +291,18 @@ class ClaudeProjectionEngineTests(unittest.TestCase):
         receipt = self.run_engine()
         plugin_domain = next(d for d in receipt["domains"] if d["domain"] == "plugins")
         self.assertEqual(plugin_domain["status"], "skipped")
+        command_domain = next(d for d in receipt["domains"] if d["domain"] == "commands")
+        self.assertEqual(command_domain["status"], "ok")
+        self.assertGreater(command_domain["projected"], 0)
 
 
 class PluginDesiredStateTests(unittest.TestCase):
     DESIRED = {
         "core": {
             "marketplaces": ["anthropics/claude-plugins-official"],
-            "plugins": ["hookify@claude-plugins-official"],
+            "plugins": ["context7@claude-plugins-official"],
         },
+        "desktop_only": ["hookify@claude-plugins-official"],
         "classes": {
             "zep_memory": {
                 "marketplaces": ["getzep/zep"],
@@ -310,12 +314,22 @@ class PluginDesiredStateTests(unittest.TestCase):
     def test_class_merge(self) -> None:
         marketplaces, plugins = claude_projection.plugin_desired_set(self.DESIRED, "zep_memory")
         self.assertEqual(marketplaces, ["anthropics/claude-plugins-official", "getzep/zep"])
-        self.assertEqual(plugins, ["hookify@claude-plugins-official", "building-with-zep@zep"])
+        self.assertEqual(
+            plugins,
+            [
+                "context7@claude-plugins-official",
+                "building-with-zep@zep",
+                "hookify@claude-plugins-official",
+            ],
+        )
 
-    def test_core_default_gets_core_only(self) -> None:
+    def test_core_default_gets_core_and_desktop_only(self) -> None:
         marketplaces, plugins = claude_projection.plugin_desired_set(self.DESIRED, "core_default")
         self.assertEqual(marketplaces, ["anthropics/claude-plugins-official"])
-        self.assertEqual(plugins, ["hookify@claude-plugins-official"])
+        self.assertEqual(
+            plugins,
+            ["context7@claude-plugins-official", "hookify@claude-plugins-official"],
+        )
 
     def test_hash_matches_shell_contract(self) -> None:
         # setup_claude_code_plugins.sh stamps sha256 of newline-joined
@@ -342,12 +356,13 @@ class PluginDesiredStateTests(unittest.TestCase):
         )
         self.assertEqual(live["schema"], "l9.claude-plugins-desired.v1")
         self.assertTrue(live["core"]["plugins"])
+        self.assertTrue(live.get("desktop_only"))
         # The imperative fallback must carry no plugin ids of its own.
         script = (GOV_ROOT / "ops" / "scripts" / "setup_claude_code_plugins.sh").read_text(
             encoding="utf-8"
         )
         self.assertIn("plugins.desired.json", script)
-        for entry in live["core"]["plugins"]:
+        for entry in [*live["core"]["plugins"], *live.get("desktop_only", [])]:
             self.assertNotIn(f'"{entry}"', script)
 
 
