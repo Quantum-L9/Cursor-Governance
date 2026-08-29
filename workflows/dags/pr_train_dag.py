@@ -152,9 +152,7 @@ def probe_cherry_conflicts(repo: Path, tip: str, sha: str) -> list[str] | None:
     parent_sha = parent.stdout.strip()
     if not parent_sha:
         return probe_sha_conflicts(repo, tip, sha)
-    return _parse_merge_tree(
-        _merge_tree(repo, f"--merge-base={parent_sha}", tip, sha)
-    )
+    return _parse_merge_tree(_merge_tree(repo, f"--merge-base={parent_sha}", tip, sha))
 
 
 def commit_unix(repo: Path, sha: str) -> int:
