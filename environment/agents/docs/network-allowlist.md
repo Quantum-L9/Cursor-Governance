@@ -19,12 +19,13 @@ shared memory and GitHub.
 
 | Host | Why |
 |---|---|
-| `memory.quantumaipartners.com` | Graphiti HTTPS MCP (`GRAPHITI_MCP_URL` …/graphiti/mcp). Required. The capability broker never shipped — do not list `broker.quantumaipartners.com` as required. |
+| `memory.quantumaipartners.com` | Graphiti HTTPS MCP (`GRAPHITI_MCP_URL` …/graphiti/mcp) |
+| `broker.quantumaipartners.com` | **nobody** — capability-broker experiment retired; never shipped. Do not allowlist a host no adapter calls |
 | `github.com`, `*.githubusercontent.com` | clone governance + consumer repos |
 | `api.github.com` | `gh` / GitHub API |
 | `pypi.org`, `files.pythonhosted.org` | Python toolchains when the surface installs packages |
 | `registry.npmjs.org` | Node toolchains when applicable |
-| `npm.pkg.github.com` | GitHub Packages for `@quantum-l9/*` (trusted-operator `authed_npm.sh` only; no PAT in the agent env) |
+| `npm.pkg.github.com` | GitHub Packages for `@quantum-l9/*` (broker / trusted-operator `authed_npm.sh` only; no PAT in the agent env) |
 
 ## Production memory
 

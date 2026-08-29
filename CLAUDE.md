@@ -51,9 +51,9 @@ the formatter block).
   `make push` and the MCP `create_pull_request` / `push_files` tools. If
   `make pr` is what is denied, that is a fault.
 - **This surface holds no credentials.** It is `model-controlled`: no Infisical
-  import, no PAT, no bearer. Capabilities resolve through the broker, which
-  keeps the credential on the far side. A capability reporting `DEGRADED` or
-  `BLOCKED_BY_PLATFORM` is never a reason to paste a secret — see
+  import, no PAT, no bearer. The capability-broker experiment never shipped;
+  authenticated Sonar/Semgrep/Context7 are not delivered through a broker. A
+  capability reporting `UNAVAILABLE` is never a reason to paste a secret — see
   `docs/DEGRADED_MODE_CONTRACT.md`.
 - **Local `git commit` runs no hooks here, and that is deliberate.** This repo
   installs no commit hook — `pre-commit install` is *forbidden*

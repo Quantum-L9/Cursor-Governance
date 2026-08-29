@@ -6,9 +6,9 @@
     "layer": "adapter-config",
     "owner": "governance-control-plane",
     "status": "active",
-    "version": "1.1.0",
-    "updated": "2026-08-26",
-    "note": "HTTP MCP block for Codex. Graphiti HTTPS front door (${GRAPHITI_MCP_URL}). NO bearer. The capability broker never shipped and is retired. Peer of environment/agents/adapters/claude-code/mcp.template.json."
+    "version": "1.2.0",
+    "updated": "2026-08-29",
+    "note": "HTTP MCP block for Codex. Graphiti HTTPS front door at ${GRAPHITI_MCP_URL}. NO bearer. The capability-broker experiment never shipped \u2014 do not point this server at L9_CAPABILITY_BROKER_URL. Peer of environment/agents/adapters/claude-code/mcp.template.json."
   },
   "mcpServers": {
     "graphiti-memory": {

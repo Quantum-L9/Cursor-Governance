@@ -253,7 +253,7 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   echo "export L9_GOVERNANCE_DIR=$(printf %q "$GOV_DIR")"
   echo "export L9_GOVERNANCE_SURFACE=claude-code"
   echo "export GRAPHITI_MCP_URL=$(printf %q "$GRAPHITI_MCP_URL")"
-  # L9_CAPABILITY_BROKER_URL is retired (never shipped). Do not re-export it.
+  # The retired capability-plane URL is deliberately not exported.
   # No GH_TOKEN export and no GH_TOKEN unset: the platform issues it, gh needs
   # it, and ~/.profile sources this file unguarded, so an unset here would strip
   # it from every login shell.

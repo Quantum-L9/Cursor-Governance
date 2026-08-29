@@ -1,7 +1,7 @@
 # Setup script — paste-ready
 
 **Field:** claude.ai/code → environment → **Setup script**
-**Revision:** `2026-08-29.1` · **Checksum:** `14efeae6907fcc2d`
+**Revision:** `2026-08-29.1` · **Checksum:** `35bb0822d8472aec`
 **Applies to:** NEW sessions only.
 
 Source of truth: `environment/agents/adapters/claude-code/web/setup.bootstrap.sh`.
@@ -192,10 +192,9 @@ for retired in L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN; d
   fi
 done
 
-# Infisical / capability plane (same contract as ops/scripts/bootstrap_agent_environment.sh).
 # Model-controlled surfaces never hold UA, password, PAT, or downstream tokens.
-# Credentials stay in Infisical behind the broker. A pasted "Infisical password"
-# configuration here is a master key — strip it.
+# A pasted "Infisical password" configuration here is a master key — strip it.
+# The capability-broker experiment never shipped; do not re-introduce a broker URL.
 for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
               INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD \
               GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID \
@@ -303,7 +302,6 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   echo "export L9_GOVERNANCE_DIR=$(printf %q "$GOV_DIR")"
   echo "export L9_GOVERNANCE_SURFACE=claude-code"
   echo "export GRAPHITI_MCP_URL=$(printf %q "$GRAPHITI_MCP_URL")"
-  # L9_CAPABILITY_BROKER_URL is retired (never shipped). Do not re-export it.
   # No GH_TOKEN export and no GH_TOKEN unset: the platform issues it, gh needs
   # it, and ~/.profile sources this file unguarded, so an unset here would strip
   # it from every login shell.
@@ -333,10 +331,10 @@ else
 fi
 
 # --- 4) Memory front door (report, never block) ----------------------------
-# Capability broker retired 2026-08-29 (never shipped). Do not probe it.
-# Graphiti is GRAPHITI_MCP_URL. Do NOT paste GRAPHITI_MCP_TOKEN / Infisical UA.
-note "memory front door URL: ${GRAPHITI_MCP_URL:-unset} (no bearer in this process)"
-note "capability plane: RETIRED (never shipped)"
+# Graphiti MCP is ${GRAPHITI_MCP_URL}. The capability-broker experiment never
+# shipped — do not probe a capability broker and do not treat its absence
+# as DEGRADED. Do NOT paste GRAPHITI_MCP_TOKEN / Infisical UA / password.
+note "memory front door URL: $GRAPHITI_MCP_URL (no bearer in this process)"
 
 if [ "$SETUP_RC" -ne 0 ]; then
   warn "cloud bootstrap FAILED — web/setup.sh exited $SETUP_RC"

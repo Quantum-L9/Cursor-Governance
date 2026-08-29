@@ -15,8 +15,8 @@ example and regenerate, or the two disagree and the drift check trusts the examp
 
 No PAT, no Graphiti bearer, no Sonar or Semgrep token, no Infisical client
 secret, no AWS key. Everything in this field is readable by anything the model
-can run. A capability reporting DEGRADED is a broker-delivery problem; pasting a
-secret here to turn it green is a permanent compromise (contract S1/S2/S3).
+can run. A capability that is unavailable is never a reason to paste a secret
+here (contract S1/S2/S3).
 
 `verify_account_env.py` now reports a prohibited credential it finds in the live
 runtime, so a paste of one does not pass silently.

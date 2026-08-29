@@ -390,7 +390,7 @@ emit_account_drift() {
 
 # --- Capability plane (RETIRED 2026-08-29, never shipped) -------------------
 emit_capability_readiness() {
-  LINES+=("capability plane: RETIRED (never shipped)")
+  LINES+=("capability_broker=retired (never shipped; not probed)")
   LINES+=("memory: GRAPHITI_MCP_URL / local Graphiti CLI (no broker probe)")
 }
 

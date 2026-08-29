@@ -18,11 +18,11 @@ the SessionStart hook; `--json` prints the receipt. The emitter never mutates
 the repository, never fetches, and fails open (a probe that cannot run yields
 UNKNOWN, never a crash).
 
-Sources (all local; the capability broker is retired):
+Sources (all local; the capability broker is retired and is not probed):
   git -C $GOV            governance repository / default branch / SHA / freshness
   ~/.l9/claude/projection-receipt.json   skill/command/rule/settings/hooks/plugins/mcp
   ~/.l9/claude/bootstrap-state.json      capabilities / memory / mcp coarse words
-  GRAPHITI_MCP_URL / local Graphiti CLI  memory (no broker probe)
+  ops/scripts/probe_network_posture.py   optional; Graphiti uses GRAPHITI_MCP_URL
   make -C $GOV l9-consumer-safe-list     Makefile facade
   ops/scripts/install_l9_dispatcher.sh --check   dispatcher install
   ops/autonomy/merge_gate.py             live merge-authority posture probe
@@ -178,19 +178,18 @@ def _projection_statuses(receipt: dict[str, Any] | None) -> dict[str, str]:
     return out
 
 
-def _broker_probe(gov: Path) -> dict[str, Any]:
-    """Retired. The capability broker never shipped.
+def _retired_plane() -> dict[str, Any]:
+    """The capability broker never shipped. Do not spawn probe_broker.py."""
+    return {
+        "ok": False,
+        "secret_boundary": "model-controlled",
+        "primary_blocker": "retired",
+        "detail": "capability broker experiment retired (never shipped)",
+    }
 
-    Keep the symbol so receipt builders do not grow a second Graphiti path.
-    Callers must treat an empty probe as 'broker retired', not as a failure.
-    """
-    del gov
-    return {}
 
-
-def _graphiti_health(probe: dict[str, Any]) -> tuple[str, str]:
-    del probe
-    return READY, "broker retired; GRAPHITI_MCP_URL / local Graphiti CLI"
+def _graphiti_health(_probe: dict[str, Any]) -> tuple[str, str]:
+    return READY, "capability broker retired; Graphiti front door is GRAPHITI_MCP_URL"
 
 
 def _mcp_status(bootstrap: dict[str, Any] | None, proj_mcp: str) -> tuple[str, str]:
@@ -292,23 +291,11 @@ def _merge_authority_status(gov: Path) -> tuple[str, str]:
     return BLOCKED, "environment boolean authorized a merge (regression)"
 
 
-# The boundary is a posture label, never a credential. The probe value is used
-# only as a lookup KEY into this fixed vocabulary; the emitted string is always
-# one of these module constants, so no probe-derived value is ever printed
-# verbatim (severs the CodeQL clear-text-logging taint — the probe by contract
-# returns classifier fields only, never secret material).
-_SECRET_BOUNDARY_VOCAB = {
-    "model-controlled": "model-controlled",
-    "broker-mediated": "broker-mediated",
-    "operator-trusted": "operator-trusted",
-}
-
-
-def _secret_boundary_status(probe: dict[str, Any]) -> tuple[str, str]:
-    # This surface holds no credentials. The capability broker is retired.
-    key = str(probe.get("secret_boundary") or "").strip().lower()
-    boundary = _SECRET_BOUNDARY_VOCAB.get(key, "model-controlled")
-    return READY, f"{boundary} (no broker/Infisical/Graphiti secret in this environment)"
+def _secret_boundary_status(_probe: dict[str, Any]) -> tuple[str, str]:
+    return READY, (
+        "model-controlled (capability broker retired; "
+        "no Infisical/Graphiti secret in this environment)"
+    )
 
 
 def _aggregate(statuses: dict[str, str]) -> str:
@@ -375,7 +362,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     proj = _read_json(home / ".l9" / "claude" / "projection-receipt.json")
     bootstrap = _read_json(home / ".l9" / "claude" / "bootstrap-state.json")
     proj_status = _projection_statuses(proj)
-    probe = _broker_probe(gov)
+    probe = _retired_plane()
 
     graphiti_status, graphiti_note = _graphiti_health(probe)
     mcp_status, mcp_note = _mcp_status(bootstrap, proj_status["mcp"])

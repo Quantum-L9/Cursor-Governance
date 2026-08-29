@@ -25,7 +25,6 @@ sys.path.insert(0, str(ADAPTER))
 sys.path.insert(0, str(REPO / "ops" / "secrets"))
 sys.path.insert(0, str(REPO / "ops" / "scripts"))
 
-import probe_broker  # noqa: E402
 import probe_network_posture  # noqa: E402
 from verify_account_env import (  # noqa: E402
     RUNTIME_MANAGED,
@@ -42,7 +41,8 @@ AUDITED_ENV = {
     "L9_AUTONOMY_MAX_PARALLEL": "4",
     "L9_AUTONOMY_MAX_MUTATION_LANES": "2",
     "L9_GOVERNANCE_SURFACE": "claude-code",
-    # L9_CAPABILITY_BROKER_URL and CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS absent.
+    # CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS absent. L9_CAPABILITY_BROKER_URL
+    # is retired and must not appear in the expected set.
 }
 
 
@@ -55,8 +55,11 @@ class AccountEnvDriftTests(unittest.TestCase):
     def _deviation(self, key: str, env: dict[str, str]) -> dict[str, str] | None:
         return next((d for d in compare(self.expected, env) if d["key"] == key), None)
 
-    def test_retired_broker_url_is_not_an_account_field(self) -> None:
+    def test_retired_broker_url_is_not_expected(self) -> None:
+        """Capability-broker experiment never shipped; absence is the contract."""
         self.assertNotIn("L9_CAPABILITY_BROKER_URL", self.expected)
+        row = self._deviation("L9_CAPABILITY_BROKER_URL", AUDITED_ENV)
+        self.assertIsNone(row)
 
     def test_missing_subagent_ceiling_is_caught(self) -> None:
         row = self._deviation("CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS", AUDITED_ENV)
@@ -178,42 +181,26 @@ class NetworkPostureTests(unittest.TestCase):
 
 
 class PlatformBlockTests(unittest.TestCase):
-    """T-35, T-36, T-37: classify; never fake, never collapse."""
+    """Hosted Claude Code no longer probes the retired capability broker.
 
-    HOSTED = {
-        "CLAUDE_CODE_REMOTE_ENVIRONMENT_TYPE": "cloud_default",
-        "L9_GOVERNANCE_SURFACE": "claude-code",
-        "HOME": "/nonexistent",
-    }
+    Identity/reachability classification for the retired broker lives under
+    ops/secrets/_archived/capability-broker/tests/. This adapter must not
+    re-introduce that probe as a SessionStart or install health check.
+    """
 
-    def test_hosted_surface_names_identity_as_the_primary_blocker(self) -> None:
-        result = probe_broker.run(dict(self.HOSTED))
-        self.assertEqual(result["primary_blocker"], probe_broker.IDENTITY)
-        self.assertEqual(result["identity_reason"], "hosted_surface_issues_no_session_identity")
-        self.assertEqual(result["remediation"], "none_available_in_repo")
+    def test_session_start_does_not_invoke_probe_broker(self) -> None:
+        src = (ADAPTER / "hooks" / "session_start_claude_governance.sh").read_text(encoding="utf-8")
+        self.assertNotIn("probe_broker.py", src)
+        self.assertIn("capability_broker=retired", src)
 
-    def test_identity_outranks_reachability_even_with_a_broker_url(self) -> None:
-        """T-36: never reported as a configuration gap the operator could close."""
-        env = {**self.HOSTED, "L9_CAPABILITY_BROKER_URL": "https://broker.invalid/l9"}
-        result = probe_broker.run(env, timeout=1)
-        self.assertEqual(result["primary_blocker"], probe_broker.IDENTITY)
-        self.assertNotEqual(result["primary_blocker"], probe_broker.CONFIGURATION)
+    def test_install_does_not_probe_the_broker(self) -> None:
+        src = (ADAPTER / "install.sh").read_text(encoding="utf-8")
+        self.assertNotIn("probe_broker.py", src)
+        self.assertIn("capability broker experiment retired", src)
 
-    def test_dns_absence_is_distinguished_from_a_policy_block(self) -> None:
-        """T-37: the distinction the audit could not make from the client side."""
-        env = {**self.HOSTED, "L9_CAPABILITY_BROKER_URL": "https://broker.invalid/l9"}
-        result = probe_broker.run(env, timeout=1)
-        self.assertEqual(result["dns"], "no_dns_record")
-        self.assertIn("NOT DEPLOYED", result["reachability_note"])
-
-    def test_identified_runtime_without_a_url_blames_configuration(self) -> None:
-        with tempfile.NamedTemporaryFile("w", delete=False) as handle:
-            handle.write("token-material")
-            path = handle.name
-        env = {"L9_GOVERNANCE_SURFACE": "claude-code", "L9_WORKLOAD_IDENTITY_TOKEN_FILE": path}
-        result = probe_broker.run(env)
-        self.assertEqual(result["primary_blocker"], probe_broker.CONFIGURATION)
-        Path(path).unlink()
+    def test_bootstrap_does_not_export_or_probe_broker_url(self) -> None:
+        src = (ADAPTER / "web" / "setup.bootstrap.sh").read_text(encoding="utf-8")
+        self.assertNotIn("L9_CAPABILITY_BROKER_URL", src)
 
 
 class DegradedModeContractTests(unittest.TestCase):
