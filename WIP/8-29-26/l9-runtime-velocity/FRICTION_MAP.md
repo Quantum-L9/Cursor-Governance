@@ -149,3 +149,113 @@ R1 and R2 share RC-1 and are unblocked by the same twenty-line extraction: make 
 | U4 | Does anything besides `ops/autonomy/local_execution_gate.py` read `L9_PUBLISH_PATH_OVERRIDE`? | decides whether R6 is one site or a cross-surface contract change | grep the governance tree and `surface_profile.yaml` |
 
 None blocks starting R1. Each is bound to the change that must resolve it before its own implementation.
+
+---
+
+## Addendum — found while implementing the fixes (2026-08-29)
+
+Three further defects surfaced during implementation, each with harder evidence
+than anything in the original map because each one bit during this session.
+All three are fixed on this branch.
+
+### RC-6 — The cloud refresh hard-resets `$GOV` with no guard
+
+`session_start_claude_governance.sh` resets the governance clone with
+`git checkout -f -B main origin/main`. Correct for the ephemeral clone it was
+written for; destructive anywhere else — it discards uncommitted changes and
+moves HEAD off the checked-out branch.
+
+Validating an edited hook end to end required `$HOME/.cursor-governance` to
+resolve to the working checkout. The refresh then discarded that checkout's
+uncommitted implementation and reset HEAD from the feature branch to
+`origin/main`. Nothing warned; the receipt recorded an ordinary `fetched`. The
+work survived only because it had been staged, so the blobs remained as
+dangling objects and `git fsck --lost-found` recovered all eleven files.
+
+This is P307 CR-010 ("multiple governance checkouts create wrong-tree risk")
+made concrete: `/root/.cursor-governance` and `/home/user/Cursor-Governance`
+are two distinct clones, and the hooks run from the former while the session
+works in the latter.
+
+**Fixed:** the reset is skipped when the clone has tracked modifications, and
+the skip is named in the banner and recorded as `reset-skipped-dirty`. The
+probe is `git status --porcelain`, never a stash — a probe that mutates to
+measure state is the same class of defect. Untracked files are deliberately
+not counted: `checkout -f` leaves them alone, and a fresh ephemeral clone
+legitimately carries untracked bootstrap residue.
+
+### RC-7 — The plans shelver un-tracks committed files on Linux
+
+`skills/l9-pipeline-audit/scripts/audit_pipeline.py` shelved spent plans into
+`plans_dir / "built"`. The tracked canonical shelf is `docs/plans/BUILT/`. On
+the case-insensitive filesystem this repository is normally developed on those
+are the same directory; on Linux, where the cloud containers run, they are not.
+
+Every projection run therefore moved three tracked plans into a stray untracked
+`built/`, showing as deletions plus untracked additions, and the plan gate then
+failed on shelved plans carrying no kernel receipt. Restoring by hand did not
+hold — the next run moved them again.
+
+**Fixed:** the shelf resolves to the tracked `BUILT/` whenever it exists, so
+both platforms converge on the directory under version control.
+
+### RC-8 — The quality gate passed a branch it never looked at
+
+The most severe finding of the session. The cloud SessionStart fetches the base
+with `--depth 1`. Once `origin/main` advanced mid-session, it shared no
+reachable ancestor with this branch:
+
+```
+$ git diff --name-only origin/main...HEAD
+fatal: origin/main...HEAD: no merge base
+$ git diff --name-only origin/main..HEAD | wc -l
+117
+```
+
+`comparison_files()` ran `git merge-base` unguarded and the caller swallowed
+the failure with `|| true`, so an undeterminable comparison became an empty
+one. The gate then reported:
+
+```
+OK: nothing to gate vs origin/main (no committed or working-tree changes outside scratch)
+RESULT: PASS — local PR gate clean (nothing to gate)
+```
+
+and wrote a PASS receipt, having run no checker at all on 117 changed files.
+A gate that passes work it never examined is worse than no gate, and it fails
+this way on every cloud session where the base moves.
+
+**Fixed:** an uncomputable comparison is now distinct from an empty one. On a
+shallow clone the resolver deepens once and retries — the history is missing,
+not absent, and that alone recovered the real change set here. If no merge base
+exists even then, it exits naming the cause rather than emitting silence. After
+the fix the same gate run reports `PASS — local PR gate clean (changed files
+only)` with 357 tests executed.
+
+### Two pre-existing failures on `main`, also cleared
+
+Both are byte-identical to `origin/main` here, so neither was caused by this
+branch; both were introduced by `0fc6ee6` without updating the invariant that
+guards them.
+
+* `test_profile_block_has_doctrine` asserted the doctrine block names
+  "Recursive Alignment". Kernels stopped being an L4 phase and the block now
+  routes them through `kernel_gate.py` without naming the kernel. The assertion
+  was updated to the contract the doctrine actually carries — not deleted, not
+  skipped.
+* The `run_pr_gate.sh` swallow ratchet stood at 10 against 15 occurrences.
+  Re-baselined only after auditing all fifteen: every one is best-effort
+  telemetry around a verdict carried elsewhere, and the two that could
+  plausibly swallow a decision are compensated (`scratch_hold.py restore --all`
+  by a separate fail-closed status check; the gate-failure receipt write runs
+  in the already-failing path). The audit is recorded inline so the next raise
+  must repeat it.
+
+### What this addendum changes about the ranking
+
+RC-8 outranks everything in the original list: a false PASS in the quality gate
+silently removes the guarantee every other change depends on. RC-6 is second —
+it destroys work rather than merely wasting time. Both were invisible to the
+original analysis because neither shows up until you *act* in the environment
+rather than measure it, which is the general lesson: the friction map found what
+was slow, and implementation found what was unsound.
