@@ -202,7 +202,7 @@
       "blocker": "operator decision on direction",
       "status": "done",
       "commit": "95be4f0",
-      "completion_note": "Root cause was a half-done retirement, not a missed one: all three already existed in commands/_archived/ and only the live copies survived, which the generator's commands/*.md glob resurrected on every run. Live copies deleted (two byte-identical to their archived twins; update-command's twin strictly richer). Manifest regenerated 54 -> 51, commands re-projected, stale index row dropped. 26 projection tests pass."
+      "completion_note": "Root cause was a half-done retirement, not a missed one: all three already existed in commands/_archived/ and only the live copies survived, which the generator's commands/*.md glob resurrected on every run. Live copies deleted (two byte-identical to their archived twins; update-command's twin strictly richer). Manifest regenerated 54 -> 51, commands re-projected, stale index row dropped. 26 projection tests pass. SCOPE TRIMMED at publish: PR #408 (agent/cursor/skill-slash-hygiene) retires 35 skill-only command wrappers including /git-work-preserve, and owns commands/commands-index.md. The overlap gate blocked on that one file, so the stale index row was left to #408 rather than opening a competing sibling edit. This branch still uniquely retires /rules and /update-command, which #408 does not touch; the shared /git-work-preserve deletion merges cleanly because both sides delete it."
     },
     {
       "id": "T6",
@@ -315,6 +315,7 @@
     "lane_b_handoff": "Start a session scoped to skills/, ops/skill_routing/, ops/scripts/check_skills_standard.py and skills/AUTONOMY_MANIFEST.yaml. T6 before T7. T8 is independent and largest. Build the l9-skill-routing trigger table into a regression test before tuning the scorer.",
     "lane_c_handoff": "T9 needs the operator to copy the hosted Environment-variables field out and diff it against web/setup.bootstrap.sh. Do NOT re-paste the field \u2014 it is ahead of HEAD and holds the only copy.",
     "known_lag": "The live SSOT at /root/.cursor-governance is main@ac0e5e6 and still carries the pre-fix files. SessionStart projects from the SSOT, so the three retired commands and the old banner lines return on each new session until this branch merges.",
-    "next_skill": "l9-ynp"
+    "next_skill": "l9-ynp",
+    "overlap_resolution": "PR_STACK=auto could not resolve a unique tip (4 sibling chains target main). Published against origin/main with PR_STACK= (the documented opt-out; the overlap gate still ran). Gate cleared #404 as disjoint and blocked on #408 for commands/commands-index.md. Resolved by dropping this branch's one-line edit to that file rather than stacking on a 3-deep cross-agent chain, since #408 removes the same row anyway."
   }
 }
