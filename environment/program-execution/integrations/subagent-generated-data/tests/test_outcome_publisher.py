@@ -114,7 +114,9 @@ class OutcomePublisherTests(unittest.TestCase):
         runtime = validator_path.parent
         if str(runtime) not in sys.path:
             sys.path.insert(0, str(runtime))
-        spec = importlib.util.spec_from_file_location("pes_test_packet_validator_extra", validator_path)
+        spec = importlib.util.spec_from_file_location(
+            "pes_test_packet_validator_extra", validator_path
+        )
         if spec is None or spec.loader is None:
             raise RuntimeError(validator_path)
         validator = importlib.util.module_from_spec(spec)

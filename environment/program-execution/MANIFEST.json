@@ -1563,7 +1563,11 @@
     },
     {
       "path": "integrations/subagent-generated-data/campaign_summary.py",
-      "sha256": "dd13edadaa5525240fac54e9ff2b031d77f1b3a7fd88f02003f56abdcaa18430"
+      "sha256": "ba477a7b59b618e20ed8eba2c1b53e8e68c8bec532fe1fd3f62c086a91bd05fa"
+    },
+    {
+      "path": "integrations/subagent-generated-data/compile_units.py",
+      "sha256": "faeb9ef5b78b1844f9e4809de9584e167cec85b976be85b23f642eec02652f82"
     },
     {
       "path": "integrations/subagent-generated-data/outcome_publisher.py",
@@ -1571,15 +1575,15 @@
     },
     {
       "path": "integrations/subagent-generated-data/receipt_projection.py",
-      "sha256": "f52d55c75abfca4a745ee448e2ba736df9b6bb0de7e57cc7d9b2f1f067c4ae53"
+      "sha256": "d34abe2a9bd05355792f11f43c6d785dfc8083455a5923ecf6c2979791db4180"
     },
     {
       "path": "integrations/subagent-generated-data/tests/test_campaign_summary.py",
-      "sha256": "23e421d3bb8333124abe1624c378f337d1c32680cb2a16ef5c6e9a767bb03a07"
+      "sha256": "8c5bd6e43c844ac5814b9c54d01071b5b6f8a69b8405aef3b670e800e1af60ca"
     },
     {
       "path": "integrations/subagent-generated-data/tests/test_outcome_publisher.py",
-      "sha256": "a6a5bdf507128ebb9b5dee1b991b86ba5a15ff96a1fae39ad1444ed0ea943c1d"
+      "sha256": "d2c3b3147b2bee6e35d000aa23cca3946a8b9c156875d095b56b7c1ce2bbc797"
     },
     {
       "path": "mission/MISSION_ACCEPTANCE_MODEL.yaml",
@@ -2007,7 +2011,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "2228b0404197b97ce328cf7922fa94e8ee013fb6fd911d8b1876f8b87b332379"
+      "sha256": "660eae9cfc6d33275b6c2ff226e06edbf3d71c7d76bbe87b4513c8d35402fc5e"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2155,7 +2159,7 @@
     },
     {
       "path": "tests/hardening/test_real_campaign_e2e.py",
-      "sha256": "0847a058bdace927f5e44ea0297f616c5861a4808362d682e308be9ca4b3d30c"
+      "sha256": "d8290565761302ba6e2f34a80984c1ee6ec0e93c8c7c43ba55c260b59568c0e0"
     },
     {
       "path": "tests/test_adapter_cli.py",

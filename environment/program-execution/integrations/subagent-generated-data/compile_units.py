@@ -137,11 +137,18 @@ def compile_generated_data_units(
             validations.extend(item for item in raw_validations if isinstance(item, Mapping))
         gates = verification.get("gates")
         if isinstance(gates, Mapping) and gates:
-            validations.append({"gates": dict(gates), "status": "PASS" if _passed_local(receipt, verification) else "FAIL"})
+            validations.append(
+                {
+                    "gates": dict(gates),
+                    "status": "PASS" if _passed_local(receipt, verification) else "FAIL",
+                }
+            )
     produced = []
     raw_evidence = receipt.get("produced_evidence")
     if isinstance(raw_evidence, list):
-        produced.extend(item for item in raw_evidence if isinstance(item, Mapping) or str(item).strip())
+        produced.extend(
+            item for item in raw_evidence if isinstance(item, Mapping) or str(item).strip()
+        )
     unknowns: list[object] = []
     for key in ("residual_unknowns", "unresolved_unknowns"):
         raw = receipt.get(key)
@@ -183,10 +190,11 @@ def compile_generated_data_units(
                     "cross_task": True,
                     "cross_campaign": False,
                     "cross_repository": False,
-                    "description": "Later tasks should treat these paths as the observed write set.",
+                    "description": "Later tasks should treat these paths as the write set.",
                 },
                 "invalidation_conditions": [
-                    {"condition_type": "relevant_path_changed", "selector": path} for path in changed
+                    {"condition_type": "relevant_path_changed", "selector": path}
+                    for path in changed
                 ],
                 "self_promoted": False,
                 "visibility": str(receipt.get("visibility") or "campaign_local"),
@@ -203,7 +211,9 @@ def compile_generated_data_units(
                 name = str(item.get("name") or item.get("id") or item.get("check") or "check")
                 status = str(item.get("status") or item.get("result") or "UNKNOWN")
                 gate_bits.append(f"{name}={status}")
-        statement = f"Task {task_id} validations: {', '.join(gate_bits) if gate_bits else 'recorded'}"
+        statement = (
+            f"Task {task_id} validations: {', '.join(gate_bits) if gate_bits else 'recorded'}"
+        )
         units.append(
             {
                 "unit_id": _unit_id("validation", index),
@@ -323,7 +333,9 @@ def compile_generated_data_units(
 
     reusable = bool(units)
     if reusable:
-        reason_text = "Compiled reusable PE findings from observed attempt and verification evidence"
+        reason_text = (
+            "Compiled reusable PE findings from observed attempt and verification evidence"
+        )
     else:
         reason_text = (
             "PE task supplied no extractable evidence "

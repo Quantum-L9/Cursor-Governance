@@ -600,7 +600,11 @@ def test_enqueued_is_not_reported_as_persisted(tmp_path: Path) -> None:
     accept = [
         sys.executable,
         "-c",
-        "import json,sys; json.dump({'status':'accepted','memory_id':'m-e2e','write_receipt_id':'w-e2e'}, sys.stdout)",
+        (
+            "import json,sys; "
+            "json.dump({'status':'accepted','memory_id':'m-e2e',"
+            "'write_receipt_id':'w-e2e'}, sys.stdout)"
+        ),
     ]
     store = PipelineStateStore(tmp_path / "pipeline.sqlite3")
     drain_worker = DeliveryWorker(

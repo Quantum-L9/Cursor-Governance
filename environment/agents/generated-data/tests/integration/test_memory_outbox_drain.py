@@ -20,7 +20,11 @@ from state_store import PipelineState, PipelineStateStore
 ACCEPT_CMD = [
     sys.executable,
     "-c",
-    "import json,sys; json.dump({'status':'accepted','memory_id':'m-1','write_receipt_id':'w-1'}, sys.stdout)",
+    (
+        "import json,sys; "
+        "json.dump({'status':'accepted','memory_id':'m-1',"
+        "'write_receipt_id':'w-1'}, sys.stdout)"
+    ),
 ]
 FAIL_CMD = [sys.executable, "-c", "import sys; sys.exit(1)"]
 
@@ -130,7 +134,8 @@ class MemoryOutboxDrainTests(unittest.TestCase):
             self.assertTrue(list(outbox.glob("memcand-*.json")))
             with store.connect() as connection:
                 failed = connection.execute(
-                    "SELECT COUNT(*) AS n FROM delivery_attempts WHERE job_id = ? AND status = 'FAILED'",
+                    "SELECT COUNT(*) AS n FROM delivery_attempts "
+                    "WHERE job_id = ? AND status = 'FAILED'",
                     (job_id,),
                 ).fetchone()["n"]
             self.assertGreaterEqual(int(failed), 1)

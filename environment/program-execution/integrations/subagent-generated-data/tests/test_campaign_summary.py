@@ -98,9 +98,7 @@ class CampaignSummaryTruthfulnessTests(unittest.TestCase):
             outbox = database.parent / "outbox" / "memory"
             outbox.mkdir(parents=True)
             (outbox / "memcand-backlog.json").write_text("{}", encoding="utf-8")
-            summary = self.module.build_summary(
-                database_path=database, campaign_id="campaign-1"
-            )
+            summary = self.module.build_summary(database_path=database, campaign_id="campaign-1")
         self.assertEqual(summary["memory"]["outbox_backlog_count"], 1)
         self.assertIsInstance(summary["memory"]["outbox_oldest_candidate_age_seconds"], int)
         self.assertIsNone(summary["memory"]["memory_units_persisted"])

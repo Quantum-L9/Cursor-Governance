@@ -94,9 +94,7 @@ def ingest_candidate(candidate: Mapping[str, Any], *, dry_run: bool = False) -> 
     result = call_tool("add_memory", payload)
     memory_id = ""
     if isinstance(result, Mapping):
-        memory_id = str(
-            result.get("memory_id") or result.get("uuid") or result.get("id") or ""
-        )
+        memory_id = str(result.get("memory_id") or result.get("uuid") or result.get("id") or "")
     return {
         "status": "accepted",
         "candidate_id": candidate.get("candidate_id"),

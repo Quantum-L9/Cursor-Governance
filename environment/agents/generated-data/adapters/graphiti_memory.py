@@ -26,6 +26,7 @@ if str(_AGENTS_ROOT) not in sys.path:
 try:
     from runtime_paths import memory_outbox_root as _memory_outbox_root
 except ImportError:  # pragma: no cover - isolated adapter load without agents root
+
     def _memory_outbox_root() -> Path:
         return _PACKAGE_ROOT / ".runtime" / "memory-outbox"
 
