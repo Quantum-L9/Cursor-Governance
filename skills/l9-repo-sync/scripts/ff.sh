@@ -152,7 +152,7 @@ else
   ssot_ff_corpus_skip_rel() { return 1; }
   ssot_is_ff_corpus_keep() {
     case "${1#./}" in
-      TODO.md|WIP/*|docs/plans/*|environment/program-execution/campaigns/*) return 0 ;;
+      TODO.md|WIP/*|docs/plans/*|environment/program-execution/campaigns/*|reports/repo-index/*|reports/repo-index) return 0 ;;
     esac
     return 1
   }
