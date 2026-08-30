@@ -232,7 +232,7 @@ def test_open_issues_gate() -> None:
 
 def test_comment_sends_user_agent() -> None:
     src = (ROOT / "scripts" / "post_issue_comment.py").read_text(encoding="utf-8")
-    _need(src, 'User-Agent', "post_issue_comment.py")
+    _need(src, "User-Agent", "post_issue_comment.py")
     _need(src, "Quantum-L9-l9-issue-remediation", "post_issue_comment.py")
 
 
