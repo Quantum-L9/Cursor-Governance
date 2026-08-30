@@ -1,87 +1,74 @@
 ---
 name: commands-index
-version: "2.0.0"
-description: "Human index of enabled L9 Cursor Governance slash commands"
+version: "3.0.0"
+description: "Human index of enabled L9 slash commands (non-skill wrappers only)"
 status: active
-updated: "2026-08-01"
+updated: "2026-08-29"
 registry: commands/COMMANDS_MANIFEST.yaml
 recognition_rule: rules/02-slash-commands.mdc
 ---
 
 # L9 Cursor Commands — Index
 
-Slash commands live in `commands/*.md` and activate whenever Cursor Governance is wired:
+**Skills are the SSOT.** Thin `commands/*.md` wrappers whose only job was
+delegating to one skill pack are **retired** under `commands/_archived/`.
+Invoke the skill directly (Cursor plugin / Claude Code `~/.claude/skills/` symlink).
 
-1. Plugin: `~/.cursor/plugins/local/l9-governance` → `$HOME/.cursor-governance`
-2. Repo symlink: `.cursor-commands` → same SSOT
-3. Bootstrap: `sessionStart` hook or `/start-session` / `make start`
-
-Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml).
+Machine registry: [`COMMANDS_MANIFEST.yaml`](COMMANDS_MANIFEST.yaml) — **18** live
+commands (executors, DAGs, bootstrap, or protocols with no 1:1 skill name).
 
 ---
 
-## Quick reference
-
-Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary rows): `/readme` → `/docs`, `/lint-fix` → `/lint`, `/violation` → `/governance`. `/audit-component` is live (`l9-component-verification`). Folded: `/probe`, `/verify-component` remain modes on `/analyze` / `/evaluate` / `/analyze_evaluate`. Retired with no alias: `/rules`, `/git-work-preserve`, `/harvest2`. A consumer overlay `.cursor/commands/{old}.md` still wins resolution order 1st — do not recreate the retired live file.
+## Live slash commands
 
 | Command | What it does |
 |---------|--------------|
 | `/start-session` | Run L9 sessionStart bootstrap (`make start`) |
-| `/autonomy` | Bounded autonomy — parallel Tasks + background PR poll (packet) |
-| `/ynp` | Highest-leverage next action |
-| `/l9-plan` | Deep PE+autonomy `.plan.md` via first-class template |
-| `/l9-plan-simple` | Same template, Cursor Build, then stacked `make pr` (never off `main` if an open PR exists) |
-| `/l9-plan-build` | Plan via `/l9-plan-simple`, Improve then Validate & Repair, then Cursor Build under `/gmp` |
-| `/l9-audit-plans` | Shelf the plans store: root = current unbuilt; partial/built/superseded/parked in subfolders |
-| `/l9-pipeline-audit` | Audit plans + WIP + PE campaigns; harvest via `l9-intelligence-harvest` (`/plan-audit` alias) |
-| `/git-work-preserve` | Diagnose-first git work audit / extract / prune-propose (`l9-git-work-preserve`) |
-| `/ff` | This Cursor-Governance clone **and** SSOT in parallel (`--clone` / `--ssot` = one target) |
-| `/analyze` | Explore structure, flows, hotspots (`l9-code-analysis`; probe mode via `l9-component-verification`) |
-| `/evaluate` | Deep readiness / compliance audit |
-| `/analyze_evaluate` | Analyze + evaluate in one pass |
-| `/audit-component` | Export / wiring / API audit (`l9-component-verification`) |
-| `/reasoning` | Structured reasoning (`l9-structured-reasoning`; stance enums, then `/ynp`) |
-| `/gmp` | Phased, auditable execution |
-| `/forge` | Fast autonomous batch execution |
-| `/harvest` | Extract code from docs (sed / copy — no rewrite) |
-| `/use-harvest` | Deploy harvested artifacts via plan |
-| `/wire` | Governance wiring or component wire-up |
-| `/confirm-wiring` | Verify full wiring |
-| `/pr` | PR analysis, gaps, merge blockers (Diagnose only) |
-| `/pr-train` | Current-branch stacked PRs, halt for remediator Converge, then `--ff-only` when `open_pr=0` |
-| `/l9-pr-remediation` | Converge via make pr-check / make pr, then stack-safe oldest-first merge |
-| `/gap-analysis` | Gaps vs target state |
-| `/gap-analysis-new` | Gap analysis (alternate protocol) |
-| `/inspect` | External code gate before import |
-| `/index` | Export repo indexes |
-| `/docs` | Agent-docs update (`l9-update-agent-docs`; not the README DAG) |
-| `/end-session` | Session handoff + Graphiti PICKUP (memory-bank retired) |
-| `/e2e-blockers` | E2E / local-proof blockers + brief |
-| `/mem` | Memory operations |
-| `/governance` | Compliance validation + report-violation mode |
-| `/governance-backup` | Push SSOT to GitHub |
-| `/ci` / `/ci-policy` | CI operations / policy |
-| `/lint` | Systematic lint fixes (no commit) |
-| `/migrate` / `/refactor` / `/refactor-sweep` | Migration / refactor sweeps |
-| `/consolidate` / `/clean_compress` | Cleanup / densify |
-| `/clean` | Cleanup command |
-| `/extract-chat` / `/extract-from-chat` / `/extract_align` | Chat / pattern extraction |
-| `/spec` / `/dag-authoring` | Spec / DAG lifecycle (incl. thin command binding and CONVERT) |
-| `/issues` | Issue remediator (Converge); `/issues diagnose` auditor |
-| `/l9-issue-remediation` | Same Converge as `/issues`; chain `/l9-pr-remediation` only at `open_issues=0` |
-| `/plan-audit` | Compatibility alias of `/l9-pipeline-audit` |
+| `/gmp` | GMP executor + plan Build (not a skill wrapper) |
+| `/governance-backup` | Push governance SSOT to GitHub |
+| `/clean` | Workspace cleanup via `make clean` |
+| `/harvest` | Harvest deploy DAG (sed/copy path) |
+| `/use-harvest` | Deploy harvested artifacts (executor) |
+| `/migrate` | Autonomous migration executor |
+| `/inspect` | External code gate (inspect DAG) |
+| `/refactor` | Refactoring DAG |
+| `/refactor-sweep` | Broad refactor sweep protocol |
+| `/index` | Export repo indexes (script) |
+| `/pr-train` | Stacked PR train DAG → halts for `l9-pr-remediation` |
+| `/l9-plan-build` | Plan-simple + kernels + Build DAG |
+| `/l9-audit-plans` | Plans-store shelf organizer (not pipeline audit) |
 | `/lcto` | L CTO strategic mode |
+| `/spec` | Specification generator |
+| `/rules` | List governance rules from `.cursor/rules/` |
+| `/update-command` | Slash-command minimizer DAG (legacy) |
 
 ---
 
-## Lifecycle
+## Invoke skills directly (no `commands/` file)
 
-| When | Command |
-|------|---------|
-| Open / resume a window | `/start-session` |
-| Decide what to do | `/ynp` |
-| Tracked change | `/gmp` |
-| Close the window | `/end-session` |
+Examples — full list: `skills/` + `ops/generated/skill-registry.json`.
+
+| Skill | Typical invoke |
+|-------|----------------|
+| `l9-issue-remediation` | `/l9-issue-remediation` (Claude Code skill slash) |
+| `l9-pr-remediation` | `/l9-pr-remediation` |
+| `l9-plan` / `l9-plan-simple` | skill name or natural-language plan intent |
+| `l9-pipeline-audit` | skill name (`/plan-audit` alias retired) |
+| `l9-code-analysis` | analyze / evaluate / extract_align modes in skill |
+| `l9-bounded-autonomy` | `/autonomy` retired — invoke skill + packet |
+| `l9-ynp` | skill name |
+| `l9-repo-sync` | `/ff` retired — invoke skill or `make ff` |
+| `l9-end-session` | skill name (force-retry close) |
+| `l9-forge` | skill name |
+| `l9-ci-ops` | `/ci` and `/ci-policy` retired |
+| `l9-graphiti-memory` | `/mem` retired |
+
+Claude Code: every registered skill is symlinked under `~/.claude/skills/` and
+`<repo>/.claude/skills/` → `$HOME/.cursor-governance/skills/`. Type
+`/skill-name` as a skill slash.
+
+Cursor: skills load via the `l9-governance` plugin; attach or route per
+`rules/23-l9-skill-routing.mdc`.
 
 ---
 
@@ -89,9 +76,10 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 
 | Mechanism | Role |
 |-----------|------|
-| `ops/hooks/session_start_bootstrap.sh` | Auto on Cursor `sessionStart` |
-| `/start-session` | Manual — identical bootstrap via `make start` |
-| `rules/02-slash-commands.mdc` | Always-on recognition (this table) |
-| `commands/COMMANDS_MANIFEST.yaml` | Enabled file map |
+| `sessionStart` hook | Auto bootstrap |
+| `/start-session` / `make start` | Manual bootstrap |
+| `.cursor-commands` → SSOT | Command + skill reference plane |
+| `l9-governance` plugin | Skill + rule activation |
 
-If a slash command is missing: run `/start-session` or `make -C "$HOME/.cursor-governance" start WS="$(pwd)"`, then confirm `.cursor-commands/commands/<name>.md` exists.
+If a retired slash is typed: resolve the matching **`skills/<name>/SKILL.md`**
+from the registry — do not read `commands/_archived/`.

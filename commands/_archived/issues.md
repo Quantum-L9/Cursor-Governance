@@ -10,6 +10,9 @@ strict_mode: true
 
 Delegates to skill **`l9-issue-remediation`** in **Converge** intent.
 
+Claude Code: invoke skill **`/l9-issue-remediation`** directly (no `commands/` duplicate).
+Cursor: this command or the skill name; both load the same SSOT pack.
+
 ## Usage
 
 ```text

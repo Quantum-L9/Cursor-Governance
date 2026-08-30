@@ -19,89 +19,13 @@ resolution_order:
 - .cursor-commands/commands/{cmd}.md
 - L9 skill (skills/AUTONOMY_MANIFEST.yaml) when file absent
 commands:
-- slash: /analyze
-  file: commands/analyze.md
-  enabled: true
-- slash: /analyze_evaluate
-  file: commands/analyze_evaluate.md
-  enabled: true
-  aliases:
-  - /analyze+evaluate
-  - /analyze-evaluate
-- slash: /audit-component
-  file: commands/audit-component.md
-  enabled: true
-- slash: /autonomy
-  file: commands/autonomy.md
-  enabled: true
-- slash: /ci
-  file: commands/ci.md
-  enabled: true
-- slash: /ci-policy
-  file: commands/ci-policy.md
-  enabled: true
 - slash: /clean
   file: commands/clean.md
-  enabled: true
-- slash: /clean_compress
-  file: commands/clean_compress.md
-  enabled: true
-  aliases:
-  - /clean+compress
-- slash: /confirm-wiring
-  file: commands/confirm-wiring.md
-  enabled: true
-- slash: /consolidate
-  file: commands/consolidate.md
-  enabled: true
-- slash: /dag-authoring
-  file: commands/dag-authoring.md
-  enabled: true
-- slash: /docs
-  file: commands/docs.md
-  enabled: true
-- slash: /e2e-blockers
-  file: commands/e2e-blockers.md
-  enabled: true
-- slash: /end-session
-  file: commands/end-session.md
-  enabled: true
-- slash: /evaluate
-  file: commands/evaluate.md
-  enabled: true
-- slash: /extract-chat
-  file: commands/extract-chat.md
-  enabled: true
-- slash: /extract-from-chat
-  file: commands/extract-from-chat.md
-  enabled: true
-- slash: /extract_align
-  file: commands/extract_align.md
-  enabled: true
-  aliases:
-  - /extract+align
-- slash: /ff
-  file: commands/ff.md
-  enabled: true
-- slash: /forge
-  file: commands/forge.md
-  enabled: true
-- slash: /gap-analysis
-  file: commands/gap-analysis.md
-  enabled: true
-- slash: /gap-analysis-new
-  file: commands/gap-analysis-new.md
-  enabled: true
-- slash: /git-work-preserve
-  file: commands/git-work-preserve.md
   enabled: true
 - slash: /gmp
   file: commands/gmp.md
   enabled: true
   description: Slash that Shells the GMP executor then Builds the named plan — no second confirm
-- slash: /governance
-  file: commands/governance.md
-  enabled: true
 - slash: /governance-backup
   file: commands/governance-backup.md
   enabled: true
@@ -114,55 +38,20 @@ commands:
 - slash: /inspect
   file: commands/inspect.md
   enabled: true
-- slash: /issues
-  file: commands/issues.md
-  enabled: true
 - slash: /l9-audit-plans
   file: commands/l9-audit-plans.md
-  enabled: true
-- slash: /l9-issue-remediation
-  file: commands/l9-issue-remediation.md
-  enabled: true
-- slash: /l9-pipeline-audit
-  file: commands/l9-pipeline-audit.md
-  enabled: true
-  aliases:
-  - /plan-audit
-- slash: /l9-plan
-  file: commands/l9-plan.md
   enabled: true
 - slash: /l9-plan-build
   file: commands/l9-plan-build.md
   enabled: true
-- slash: /l9-plan-simple
-  file: commands/l9-plan-simple.md
-  enabled: true
-- slash: /l9-pr-remediation
-  file: commands/l9-pr-remediation.md
-  enabled: true
 - slash: /lcto
   file: commands/lcto.md
-  enabled: true
-- slash: /lint
-  file: commands/lint.md
-  enabled: true
-- slash: /mem
-  file: commands/mem.md
   enabled: true
 - slash: /migrate
   file: commands/migrate.md
   enabled: true
-- slash: /plan-audit
-  file: commands/plan-audit.md
-  enabled: true
-- slash: /pr
-  file: commands/pr.md
-  enabled: true
 - slash: /pr-train
   file: commands/pr-train.md
-  enabled: true
-- slash: /reasoning
-  file: commands/reasoning.md
   enabled: true
 - slash: /refactor
   file: commands/refactor.md
@@ -184,12 +73,6 @@ commands:
   enabled: true
 - slash: /use-harvest
   file: commands/use-harvest.md
-  enabled: true
-- slash: /wire
-  file: commands/wire.md
-  enabled: true
-- slash: /ynp
-  file: commands/ynp.md
   enabled: true
 excluded:
 - commands/README.md
