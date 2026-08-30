@@ -87,6 +87,22 @@ Context: `tests/`, `templates/`, and `startup/` were deleted (superseded by v6 L
   `learning/failures/check-must-not-recreate-archived.md`,
   `learning/failures/integrity-tool-must-not-heal.md`. GitHub #367.
 
+## Remediator skill packs — markdownlint MD024 (2026-08-29)
+
+IDE markdownlint warnings on the issue/PR remediator packs (style only; contracts are fine).
+Primary fix requested: **MD024** — give duplicate headings unique text within each file
+(e.g. rename second `### Diagnose` / `### Converge` to `### Diagnose failure handling`,
+`### Converge final status`). Optional same pass: MD060 table pipe spacing, MD029 list
+numbering after fenced blocks, MD022/MD032 blank lines around headings/lists.
+
+- [ ] **`skills/l9-issue-remediation/SKILL.md`** — duplicate `### Diagnose` / `### Converge`
+  (Resource Map vs Failure Handling / Final Status)
+- [ ] **`skills/l9-pr-remediation/SKILL.md`** — same duplicate-heading pattern
+- [ ] **`commands/l9-issue-remediation.md`** — MD029 step 7 after fenced bash block
+- [ ] **`skills/l9-issue-remediation/references/`** — `convergence-loop.md`, `diagnose-workflow.md`,
+  `fix-engine.md` (duplicate step 3 + list renumber), `issue-verify.md`, `unblock-breadcrumb.md`
+- [ ] **`skills/l9-pr-remediation/references/`** — `review-replies.md`, `run-contract.md`
+
 ## Ruff debt (RESOLVED 2026-07-28 — `ruff check .` and `ruff format --check .` are green)
 
 Both steps in `.github/workflows/l9-lint-test.yml`'s `Lint and Type Check` job were failing
