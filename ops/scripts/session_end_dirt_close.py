@@ -296,9 +296,17 @@ def park_novel(root: Path, rels: list[str]) -> tuple[str, str]:
             seeded = _git(root, "read-tree", DIRT_SHELF_REF, env=env)
             if seeded.returncode != 0:
                 return DIRT_SHELF_REF, f"read-tree-failed:{seeded.stderr.strip()[:160]}"
-        add = _git(root, "add", "-f", "--", *rels, env=env)
-        if add.returncode != 0:
-            return DIRT_SHELF_REF, f"add-failed:{add.stderr.strip()[:160]}"
+        staged: list[str] = []
+        add_errors: list[str] = []
+        for rel in rels:
+            add = _git(root, "add", "-f", "--", rel, env=env)
+            if add.returncode != 0:
+                add_errors.append(f"{rel}:{add.stderr.strip()[:120]}")
+            else:
+                staged.append(rel)
+        if not staged:
+            detail = add_errors[0] if add_errors else "no paths staged"
+            return DIRT_SHELF_REF, f"add-failed:{detail[:160]}"
         tree = _git(root, "write-tree", env=env).stdout.strip()
         if not tree:
             return DIRT_SHELF_REF, "write-tree-failed"
@@ -504,6 +512,15 @@ def apply_close(
                     receipt["actions"].append(
                         {"path": rel, "class": NOVEL_CLASS, "action": "parked+cleaned"}
                     )
+            park_failures = [rel for rel in novel if rel not in cleaned]
+            if (
+                park_failures
+                and commit not in {"", "unchanged"}
+                and not commit.startswith("add-failed")
+            ):
+                receipt.setdefault("errors", []).append(
+                    f"partial-park:{len(park_failures)} path(s) not on shelf"
+                )
     leftover_novel = overflow + [p for p in novel if p not in cleaned]
     absorbed = prune_absorbed_refs(
         root, baseline=baseline, blob_index=blob_index, pr_index_error=pr_index_error

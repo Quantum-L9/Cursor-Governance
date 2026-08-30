@@ -9,8 +9,8 @@ metadata:
   tags: [l9, pr, ci, code-review, github-code-quality, copilot, diagnose, sonarcloud, codeql, debt, remediation, concurrent, github, makefile]
   owner: igor_beylin
   status: active
-  version: 4.3.0
-  updated: 2026-08-28
+  version: 4.3.1
+  updated: 2026-08-29
 ---
 
 # PR Remediation
@@ -143,7 +143,11 @@ Reuse a locked plan / `Remediation-Cycle:` trailer when files still match. If no
 4. **Fix the planned batch.** All `disposition: fix` clusters. Skip HUMAN / CI_PIPELINE / ENVIRONMENT (note them). [references/fix-engine.md](references/fix-engine.md). Independent PRs may be remediated in parallel after the overlap matrix exists. Do not commit yet. Do not merge yet.
 5. **Local verify (blocks commit).** `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`. If hooks rewrite files, commit the rewrite and re-run once. ≤5 iterations. Never `--no-verify`. Never `make pr-check`. Never `make precommit` / `--all-files`.
 6. **One commit, one remediator publish.** Explicit `git add` of planned files only. Never `git add -u` / `-A`. Never `git reset --hard`. `git push` the already-open PR branch. Trailer `Remediation-Cycle: {repo}#{pr}/cycle-1`. Poll workers never merge. Ignore `merge_eligible` whose SHA is older than HEAD or older than the last repo merge.
-7. **Reply + resolve.** Every thread, any author. [references/review-replies.md](references/review-replies.md).
+7. **Reply + resolve.** Every thread, any author. Inspect cited files first.
+   Then `python3 -u skills/l9-pr-remediation/scripts/reply_threads.py --repo {owner}/{repo} --input {threads.json}`
+   (GraphQL batch, 30s `gh` timeout, flushed progress, batch summary).
+   Do not loop REST reply + `resolveReviewThread` per thread.
+   [references/review-replies.md](references/review-replies.md).
 8. **Next PR immediately.** [references/convergence-loop.md](references/convergence-loop.md). Re-query `reviewThreads` (paginated). Reply + resolve re-files. **Do not merge** because this one PR is green. Repeat 2–8 for remaining in-scope PRs. Do not poll CI.
 9. **MERGE_TRAIN** only after FIRST_MERGE_GATE. Oldest `createdAt` first. Immediately before each `gh pr merge`, re-query `reviewThreads` and the stack probe (is this head the base of another open PR?). Zero `isResolved: false` required.
 
@@ -202,6 +206,7 @@ This is not a second publish path. Same `make precommit-repo` plus `git push`.
 - [references/fix-engine.md](references/fix-engine.md)
 - [references/code-review-agents.md](references/code-review-agents.md)
 - [references/review-replies.md](references/review-replies.md)
+- [scripts/reply_threads.py](scripts/reply_threads.py)
 - [references/convergence-loop.md](references/convergence-loop.md)
 - [references/generated-heal.md](references/generated-heal.md)
 - [references/validation-gates.md](references/validation-gates.md)

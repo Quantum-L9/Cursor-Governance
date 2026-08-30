@@ -4,9 +4,13 @@
 Registry: `commands/COMMANDS_MANIFEST.yaml` — the only command registry.
 Managed entries are per-command symlinks (`<target>/<name>.md`) into the
 governance SSOT `commands/` tree. Unmanaged consumer commands are never
-overwritten or removed. A command whose name collides with a projected skill
-is rejected (fail-closed) and reported: skills and commands share the `/name`
-namespace in Claude Code, so projecting both would be ambiguous.
+overwritten or removed.
+
+Skill parity law: when a registered skill in `ops/generated/skill-registry.json`
+shares the slash basename (e.g. `l9-issue-remediation`), the skill SSOT owns that
+namespace. Do not add a matching `commands/*.md` — Claude Code invokes the skill
+folder directly; Cursor routes via skill name or a differently named alias
+(`/issues`, `/pr`). `validate_commands_manifest.py` fails closed on collisions.
 """
 
 from __future__ import annotations

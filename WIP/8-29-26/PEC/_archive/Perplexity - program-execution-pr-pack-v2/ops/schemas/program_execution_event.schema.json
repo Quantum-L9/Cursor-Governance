@@ -1,0 +1,44 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "program_execution_event",
+  "type": "object",
+  "required": [
+    "event_type",
+    "node_id",
+    "timestamp"
+  ],
+  "properties": {
+    "event_type": {
+      "type": "string",
+      "enum": [
+        "queue_enqueued",
+        "queue_wait_seconds",
+        "queue_batch_result",
+        "lease_acquired",
+        "lease_reclaimed",
+        "lease_released",
+        "scope_violation",
+        "rebase_failure",
+        "push_retry_exhausted",
+        "semantic_conflict_detected",
+        "test_impact_selected",
+        "remediation_time_seconds"
+      ]
+    },
+    "node_id": {
+      "type": "string"
+    },
+    "timestamp": {
+      "type": "number"
+    },
+    "agent_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "detail": {
+      "type": "object"
+    }
+  }
+}

@@ -3,7 +3,7 @@ l9_schema: 1
 parent: l9-repo-sync
 tags: [sync, execute, fast-forward]
 status: active
-version: 1.3.0
+version: 1.4.0
 updated: 2026-08-29
 /L9_META -->
 
@@ -13,7 +13,10 @@ updated: 2026-08-29
 `$HOME/.cursor-governance` up to `origin/main` **in parallel**. `/ff --clone`
 and `/ff --ssot` are one target each (other repos). Unique work is parked
 first. Nothing unique is deleted. Keep-list: `.env.local`, `env.local`,
-`.env.*.local`, `.claude/settings.local.json`.
+`.env.*.local`, `.claude/settings.local.json`. **Corpus keep-list** (worktree
+bytes survive catch-up): `TODO.md`, `WIP/`, `docs/plans/`,
+`environment/program-execution/campaigns/` (`ssot_is_ff_corpus_keep`).
+Never `git stash push` corpus — shelf + commit + `make pr`.
 
 The only mutate path is the wrapper:
 
@@ -39,13 +42,15 @@ Inside `scripts/ff.sh`, after fetch:
 1. If `ahead > 0` **on main**, create the preserve branch/ref (do not drop
    unique commits on `main`).
 2. If the clone is **behind or ahead** and has dirty **tracked** paths, park
-   **all** of them (not only paths that differ on `origin/main`, and not
-   `HEAD...origin/main` — that fails when there is no merge-base):
+   **non-corpus** paths (corpus keep-list bytes stay in the worktree — see
+   `ssot_is_ff_corpus_keep`):
    - `git stash create` (no `-u`) at `refs/l9/preserved/ff-dirty/<stamp>`
    - copy each path to `$HOME/.cursor/l9-ff-hold/<clone-key>/<stamp>/tracked/`
    - classify `already_at_origin` vs `unique`
-   - restore only those tracked paths from `HEAD` so `reset --keep` can run
-   Untracked and `.venv` stay in the tree.
+   - restore non-corpus tracked paths from `HEAD` so `reset --keep` can run
+   - copy corpus keep-list paths to hold; **do not** restore from `HEAD`;
+     restore from hold after `checkout -f origin/main -- .`
+   Untracked, `.venv`, and corpus keep-list dirty tracked stay in the tree.
 3. If already at the tip **on main**, leave unique dirty tracked in the worktree.
    Feature-branch dirt parked in step 0 is not restored onto `main`.
 4. If an untracked path is now tracked on `origin/main`, move the local copy
@@ -63,11 +68,11 @@ Same gitdir, HEAD on `main`, `.venv` still at `<clone>/.venv` when it existed
 before, env.local keep-list still present, unique untracked still present
 or held, no new `~/.cursor-governance.bak.*`.
 
-## After success — shelf WIP, plans, and campaigns
+## After success — shelf corpus (WIP, plans, campaigns, TODO)
 
 `ff.sh` is finished. The slash/`make ff` caller then shelves leftover
-**untracked** `WIP/`, `docs/plans/`, and
-`environment/program-execution/campaigns/` so the named clone is not a dump:
+**untracked and dirty tracked** corpus under `TODO.md`, `WIP/`, `docs/plans/`,
+and `environment/program-execution/campaigns/` so the named clone is not a dump:
 
 1. List untracked under those three trees (respect `.gitignore`).
 2. Skip `WIP/Legal Defense/`, `WIP/*oauth*.json`, `WIP/*credentials*.json`,
@@ -107,13 +112,20 @@ or held, no new `~/.cursor-governance.bak.*`.
    "$SHELF/.venv/bin/python" ops/autonomy/l4_local.py authorize-release
    ```
 
-7. **Ask before publishing.** Report the file list and the branch name, and run
-   `PR_REMEDIATE=0 make pr` only once the user approves. `/ff` is a request to
-   catch a clone up, not a request to publish — push and `make pr` stay
-   ask-first (`AGENTS.md` "Commit before you stop"; `rules/99-no-auto-commit.mdc`).
-   If approval is declined, the branch stays local and the copies stay put.
-8. Leave the copies in the named clone. Do not `git stash -u`. Do not run
-   `make pr` from inside `ff.sh`.
+7. **Finish the shelf loop (default ON).** When shelf paths remain after dedupe,
+   run `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf worktree and display
+   the opened **PR URL**. Opt-out: `FF_SHELF_PUBLISH=0` (shelf + commit only).
+   `/ff` still does not call `make pr` from inside `ff.sh` — the slash caller
+   runs publish after `ff.sh` returns.
+8. **Post-shelf close** in the named clone:
+
+   ```bash
+   bash ops/scripts/run_ff_post_shelf.sh "$CLONE"
+   ops/scripts/verify_worktree_clean.py --workspace "$CLONE"
+   ```
+
+   Leave shelf copies in the named clone until verify passes. Do not `git stash -u`.
+   Do not run `make pr` from inside `ff.sh`.
 
 `refs/l9/preserved/ff-dirty/<stamp>` stays until `l9-git-work-preserve` triage
 plus `prune-policy` say otherwise. `/ff` never deletes it.

@@ -1,0 +1,8 @@
+schema_id: canonical.program_execution.provenance.v1
+description: Contract for signed build provenance via actions/attest-build-provenance.
+fields:
+  predicate_type: { type: string, const: https://slsa.dev/provenance/v1 }
+  required_predicate_fields: [source_sha, workflow_ref, node_id, contract_digest]
+verification:
+  command: gh attestation verify <artifact> -o Quantum-L9
+  failure_action: block deployment

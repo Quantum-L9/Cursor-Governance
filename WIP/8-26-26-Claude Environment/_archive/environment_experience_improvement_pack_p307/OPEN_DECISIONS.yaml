@@ -1,0 +1,81 @@
+schema: l9.environment_experience.open_decisions/v1
+generated_at: '2026-08-25T02:03:03Z'
+open_decisions:
+- id: OD-001
+  title: Authoritative value for L9_AUTONOMY_AUTONOMOUS_MERGE
+  state: NARROWED
+  question: Should the governed account/session value be true or false?
+  why_open: 'The contradiction that opened this is gone: the live account now reports L9_AUTONOMY_AUTONOMOUS_MERGE=false,
+    which is what the verifier expects. What remains open is narrower and is a policy question, not a
+    conflict — whether the variable should exist at all. CI-006 and CI-007 both state done_when as ''absent
+    from a fresh session'', so the roadmap already implies deletion; no policy lock records the decision.'
+  sources:
+  - C-002
+  - CI-006
+  evidence_2026_08_27:
+  - 'live env: L9_AUTONOMY_AUTONOMOUS_MERGE=false (was true at the 2026-08-26 assessment)'
+  - 'readiness receipt note: ''env boolean does not authorize merge; receipt/breakglass required'''
+- id: OD-002
+  title: Canonical publish command contract
+  state: RESOLVED
+  question: Must every governed consumer implement make pr, or should doctrine define a supported fallback?
+  why_open: Both states exist in source material and no later convergence decision chooses one.
+  sources:
+  - C-003
+  - CI-008
+  resolution: 'Neither branch of the original question: the governance Makefile is the publish authority
+    regardless of the repo worked in, a consumer needs no pr/pr-check target, and there is no raw-push
+    fallback. The ''ship a pr target into every consumer'' option is rejected.'
+  resolved_by: Quantum-L9/Cursor-Governance PR#307 (CI-008), merged into main
+  evidence_2026_08_27:
+  - tests/ops/scripts/test_publish_verb_governance_always.py::test_doctrine_states_consumer_needs_no_pr_target
+    asserts surface_profile.yaml, rules/48-make-pr-remediation.mdc and docs/L9_DISPATCHER.md each state
+    a consumer needs no local pr target
+  - test_each_doctrine_surface_names_the_governance_rooted_verb pins the `make -C $GOV pr WS=$PWD` / `l9
+    pr` form
+  - CLAUDE.md and rules 48/88 carry the same contract
+  residual: 'CI-008 stays partial: the consumer-workspace leg of the pre-commit path is scoped in-script
+    (run_pr_precommit.sh lines 28-32), not enabled, and unverified against a real consumer checkout. That
+    is an implementation residual, not an open decision.'
+- id: OD-003
+  title: Capability broker failure cause
+  state: UNKNOWN
+  question: Is broker.quantumaipartners.com unreachable because of proxy policy or upstream availability?
+  why_open: CONNECT 502 cannot discriminate the cause.
+  sources:
+  - C-005
+  - CI-010
+- id: OD-004
+  title: CLAUDE_SESSION_JWT provisioning failure
+  state: UNKNOWN
+  question: Why is CLAUDE_SESSION_JWT unset on the surface that declares broker-authenticated MCP endpoints?
+  why_open: Pack 9 observes the variable missing but cannot observe the provisioning owner/cause.
+  sources:
+  - P9/MANIFEST.json#U-01
+  - CI-010
+- id: OD-005
+  title: Memory writeback warning
+  state: UNKNOWN
+  question: What produced the single warning in the zero-write memory writeback receipt?
+  why_open: The warning count is observed but its cause is not present in the accessible pack evidence.
+  sources:
+  - P9/MANIFEST.json#U-03
+  - CI-005
+- id: OD-006
+  title: Exact identity of Pack 9 predecessor
+  state: UNKNOWN
+  question: Is accessible Pack 3 exactly the 01:18 predecessor Pack 9 says it supersedes, or a neighboring
+    regenerated export?
+  why_open: Timestamp/workload match strongly; reported archive byte size does not.
+  sources:
+  - C-008
+- id: OD-007
+  title: Origin and lifecycle of standing publish override
+  state: UNKNOWN
+  question: Which component issued L9_PUBLISH_PATH_OVERRIDE and what consumes/expires it?
+  why_open: The value persisted across restarts without issuer or expiry metadata.
+  sources:
+  - P9/MANIFEST.json#U-04
+  - CI-007
+overlay_note: States re-checked 2026-08-27 against main@498dcaa. OD-002 is resolved by merged work; OD-001
+  is narrowed because its underlying contradiction cleared. The rest are unchanged.

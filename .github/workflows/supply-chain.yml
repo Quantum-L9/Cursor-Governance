@@ -108,7 +108,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
 
       - name: Dependency Review
-        uses: actions/dependency-review-action@1e966ba708e4b64bb0c9bfb7abb5a232840be16a  # main 2026-07-16
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294  # v5.0.0
         with:
           fail-on-severity: high
           deny-licenses: ${{ vars.PIP_LICENSES_DENY || 'GPL-3.0, AGPL-3.0' }}

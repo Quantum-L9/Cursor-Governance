@@ -13,6 +13,9 @@ PR_REMEDIATE="${PR_REMEDIATE:-1}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+if ! resolve_governance_paths; then
+  GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
 # shellcheck source=lib/fetch_receipt.sh
 source "$SCRIPT_DIR/lib/fetch_receipt.sh"
 # shellcheck source=lib/resolve_pr_stack.sh
@@ -195,7 +198,49 @@ if [[ -f "$_OVERLAP_GATE" ]]; then
 fi
 
 echo "--- open PR (branch=$branch base=$BASE_REF; $ahead commit(s) ahead) ---"
-git push -u origin HEAD
+# T-CI019: bounded recover on a rejected push. Never rewrite history.
+# Attempt, then at most one fetch + merge --no-edit + generated regen + retry (N<=2).
+_push_with_bounded_recover() {
+  local attempt=1 max=2
+  while [ "$attempt" -le "$max" ]; do
+    if git push -u origin HEAD; then
+      return 0
+    fi
+    if [ "$attempt" -ge "$max" ]; then
+      echo "FAIL: git push failed after $max attempts (no history rewrite)"
+      return 1
+    fi
+    echo "WARN: push rejected — recover $((attempt + 1))/$max (fetch + merge --no-edit + regen)"
+    git fetch origin "$BASE_REF" || return 1
+    # Also fetch the remote feature branch tip: a concurrent publisher advancing the
+    # same PR branch causes the rejection; merging only origin/$BASE_REF leaves those
+    # commits absent and the next push is rejected again.
+    git fetch origin "$branch" 2>/dev/null || true
+    git merge --no-edit "origin/$BASE_REF" || return 1
+    if git rev-parse "origin/$branch" >/dev/null 2>&1 && \
+       ! git merge-base --is-ancestor "origin/$branch" HEAD 2>/dev/null; then
+      git merge --no-edit "origin/$branch" || return 1
+    fi
+    if [ -f "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" ]; then
+      python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" --force || return 1
+      # Commit any generated-artifact rewrites from the merge before re-pushing;
+      # leaving them unstaged means the retry push publishes an unvalidated tree.
+      if ! git diff --quiet; then
+        git add -- \
+          "environment/generated/llm-rules/" \
+          "rules/RULES-MANIFEST.json" "rules/RULES-MANIFEST.md" "rules/RULES-MANIFEST.yaml" \
+          "ops/generated/skill-registry.json" \
+          "environment/agents/adapters/claude-code/generated/" \
+          "environment/program-execution/MANIFEST.json" 2>/dev/null || true
+        git diff --cached --quiet || \
+          git commit --no-edit -m "chore(generated): heal artifacts after push-recovery merge" || return 1
+      fi
+    fi
+    attempt=$((attempt + 1))
+  done
+  return 1
+}
+_push_with_bounded_recover
 
 if [[ "${PUSH_ONLY:-0}" == "1" ]]; then
   echo "PUSH_ONLY=1 — pushed '$branch'; skipped GitHub PR open"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 4.3.0. Stdlib only."""
+"""Contract tests for l9-pr-remediation 4.3.1. Stdlib only."""
 
 from __future__ import annotations
 
@@ -29,7 +29,9 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_version_and_map() -> None:
-    _need(SKILL, "version: 4.3.0", "SKILL.md")
+    _need(SKILL, "version: 4.3.1", "SKILL.md")
+    if not (ROOT / "scripts" / "reply_threads.py").is_file():
+        _fail("scripts/reply_threads.py missing")
     _need(SKILL, "Kernel bind", "SKILL.md")
     _need(SKILL, "Diagnose First", "SKILL.md")
     _need(SKILL, "Passed` / `Failed` / `Unknown", "SKILL.md")
@@ -146,6 +148,15 @@ def test_conversations() -> None:
     _need(REFS["code-review-agents.md"], "isResolved", "code-review-agents.md")
     _need(REFS["review-replies.md"], "hasNextPage", "review-replies.md")
     _need(REFS["review-replies.md"], "HUMAN Deferred", "review-replies.md")
+    _need(REFS["review-replies.md"], "reply_threads.py", "review-replies.md")
+    _need(REFS["review-replies.md"], "python3 -u", "review-replies.md")
+    _need(REFS["review-replies.md"], "inspected: true", "review-replies.md")
+    _need(SKILL, "reply_threads.py", "SKILL.md")
+    helper = (ROOT / "scripts" / "reply_threads.py").read_text(encoding="utf-8")
+    _need(helper, "GH_TIMEOUT_SEC = 30", "reply_threads.py")
+    _need(helper, "addPullRequestReviewThreadReply", "reply_threads.py")
+    _need(helper, "flush=True", "reply_threads.py")
+    _need(helper, "inspected", "reply_threads.py")
 
 
 def test_fast_path() -> None:

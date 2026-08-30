@@ -70,11 +70,36 @@ tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
    shelved `*.plan.md`). Then pathspec-add **only** those files, scoped commit,
    run `l4_local.py begin` then `authorize-release` in that worktree
    (**not** `record-kernels` — corpus kernels are not an L4 phase). Then
-   **ask the user** before `PR_REMEDIATE=0 make pr`.
-   Catching a clone up is not authorization to publish. Do **not** put
-   `make pr` inside `ff.sh`. Do not scoop other untracked paths. Do not delete
-   the copies in the named clone.
-3. Auto-chain `/ynp`.
+   **finish the shelf loop** unless `FF_SHELF_PUBLISH=0`:
+   `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf worktree and display
+   the opened **PR URL**. If the shelf list was empty after dedupe, skip publish.
+   Opt-out: `FF_SHELF_PUBLISH=0` shelves and commits only (no `make pr`).
+   Do **not** put `make pr` inside `ff.sh`. Do not scoop other untracked paths.
+   Do not delete the copies in the named clone.
+
+   Record which clones `ff.sh` synced into `FF_TARGETS` (same resolution as the
+   table above) before post-shelf — do not assume `$(pwd)`.
+3. **Post-shelf close** — on every clone `/ff` actually synced (not
+   `$(pwd)` when that is a consumer repo, and not only one clone when bare
+   `/ff` paired two):
+
+   ```bash
+   # Resolve the same target set ff.sh used:
+   #   bare /ff     → this Cursor-Governance checkout + $HOME/.cursor-governance
+   #   /ff --clone  → working-copy only
+   #   /ff --ssot   → $HOME/.cursor-governance only
+   GOV_PY="${GOV_PY:-$HOME/.cursor-governance/.venv/bin/python}"
+   for _ff_ws in "${FF_TARGETS[@]}"; do
+     bash "$_ff_ws/ops/scripts/run_ff_post_shelf.sh" "$_ff_ws"
+     "$GOV_PY" "$_ff_ws/ops/scripts/verify_worktree_clean.py" --workspace "$_ff_ws"
+   done
+   ```
+
+   `verify_worktree_clean.py` is not executable (`100644`); always invoke it
+   through the locked interpreter. For plan execution on a clean baseline
+   after verify passes, prefer `agent_worktree_start.sh` off the open-PR tip
+   or `origin/main`.
+4. Auto-chain `/ynp`.
 
 ## FORBIDDEN
 

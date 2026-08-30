@@ -1,0 +1,608 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Claude Environment pending fixes after p307-r2",
+  "objective": "Execute the remaining in-repo Claude Code environment-experience repairs on the current checkout via Cursor Build. Land scoped breakglass receipts and honest receipt/deps/memory evidence first, then surface-capability rule gating and loader/gate actionability, then the lower-leverage hygiene items. Stop before harness-owned, other-repo, and broker-revival work. Do not run the campaign runner, admit a Program Lock, or revive the retired capability broker.",
+  "success_criteria": [
+    "CI-007: L9_PUBLISH_PATH_OVERRIDE is no longer a standing session string; exceptional publish authority is a receipt with issuer, scope, and expiry, and SessionStart names any grant still in force with its age",
+    "CI-004 residual: SessionStart re-probes DEGRADED bootstrap components fail-soft under the repo-write lock; each non-READY component carries a reason string and log path; revision-mismatch expiry already in claude_bootstrap_receipt.py stays the stronger binding versus TTL",
+    "CI-009+CI-028 residual: session_deps_cloud.sh ends a proven pass with an import smoke on the resolved interpreter, records interpreter path and version, and writes exit code plus timestamp into the stamp or the log final line",
+    "CI-012: rules/22-context7-auto-invoke.mdc names the server-absent case and the required fallback; project_llm_rules.py annotates a projected rule when its capability precondition is unmet",
+    "CI-005: bootstrap memory splits into memory.cli and memory.mcp probed independently; hydration reports a non-self-referential fact count; a hydration with only PICKUP restatements is visibly empty",
+    "CI-006: verify_account_env.py names the file that produced a drifted value and classifies authority-widening versus cosmetic drift; merge_gate records the effective value it read",
+    "CI-102: the REST gh route used by merge_gate is recorded as a sanctioned surface capability in surface_profile.yaml and rule 62, or the openclaw PAT path is the only documented route",
+    "CI-013/023/016/015 land their named in-repo residuals; CI-008 stays blocked until OD-002 is decided; .pre-commit-config.yaml is the hook catalog for changed files"
+  ],
+  "scope": {
+    "in": [
+      "WIP/8-26-26-Claude Environment/PLAN_DOCUMENT.claude-env-pending-fixes.v1.json as the remaining-work SSOT",
+      "ops/scripts/claude_bootstrap_receipt.py and governance_refresh_receipt.py",
+      "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh and session_start_claude_governance.sh",
+      "environment/agents/adapters/claude-code/verify_account_env.py and settings.template.json",
+      "ops/autonomy/local_execution_gate.py git_guardrails.py merge_gate.py l4_local.py surface_profile.yaml",
+      "ops/scripts/project_llm_rules.py resolve_governance_paths.sh open_pr_after_gate.sh",
+      "ops/graphiti/hydration/ and graphiti_memory_client.py health/hydrate evidence fields",
+      "rules/22-context7-auto-invoke.mdc rules/06-governance-ssot-paths.mdc rules/62-github-openclaw-authority.mdc rules/49-shared-worktree-isolation.mdc rules/88-l4-local-autonomy.mdc"
+    ],
+    "out": [
+      "make campaign, pec bootstrap/claim/render, Program Lock, Controller lease",
+      "Reviving the capability broker, CLAUDE_SESSION_JWT provisioning, issues #301/#302",
+      "CI-010 proxy-denied versus upstream-error split against a retired plane",
+      "CI-001 Anthropic session prompt, CI-011 GitHub MCP pagination, CI-020 notification age, CI-026 add_repo aliases, CI-100 Actions approval, CI-101 remote branch directive",
+      "CI-024 Enrichment.Inference.Engine, CI-029 l9-constellation-topology, CI-031 l9-ci-sdk, CI-017/CI-032 l9-meta-injector",
+      "CI-003 and CI-036 harness Stop-hook legs",
+      "CI-002 apply is_tracked to the four projection writers (invalidated)",
+      "CI-002 IMP-06 consumer .gitignore copies (invalidated)",
+      "Closed records CI-014 CI-018 CI-025 CI-027 CI-030 CI-033 CI-037",
+      "WIP/8-26-26-Claude Environment/_archive/",
+      "environment/program-execution compiler and campaign runner",
+      "merge, push, force-push, admin-merge",
+      "AGENTS.md CANONICAL_LAW.md Makefile rewrites unless a remaining todo proves a pointer defect"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse HEAD && git branch --show-current",
+      "pass_criteria": "HEAD recorded; current checkout used; no origin/main SHA lock written",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "test -f WIP/8-26-26-Claude Environment/PLAN_DOCUMENT.claude-env-pending-fixes.v1.json && test -f WIP/8-26-26-Claude Environment/_archive/DEPRECATED.md",
+      "pass_criteria": "remaining-work SSOT present; sources live only under _archive",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "python3 skills/l9-plan/scripts/route_plan.py --risk high --evidence partial --json",
+      "pass_criteria": "depth=deep; omit_gates=[]",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "python3 -c \"from ops.scripts.claude_bootstrap_receipt import evaluate; print('revision-mismatch expiry present')\"",
+      "pass_criteria": "CI-004 revision-mismatch expiry already landed; this plan does not re-implement TTL-only expiry",
+      "status": "passed"
+    },
+    {
+      "id": "P4",
+      "command_or_action": "grep -n 'capability plane: RETIRED\\|CAPABILITY_BROKER_RETIRED' AGENTS.md ops/secrets/RETIRED.md",
+      "pass_criteria": "broker retirement is live doctrine; CI-010 is out of scope",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T-CI007",
+      "task": "Replace standing L9_PUBLISH_PATH_OVERRIDE session string with a scoped expiring breakglass receipt; report any grant still in force and its age at SessionStart",
+      "files": [
+        "ops/autonomy/local_execution_gate.py",
+        "environment/agents/adapters/claude-code/verify_account_env.py",
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "PUBLISH_PATH_OVERRIDE_ENV",
+      "leverage_rank": 1,
+      "shared_root_cause": "One-time publish breakglass normalized into permanent environment"
+    },
+    {
+      "id": "T-CI004",
+      "task": "Re-probe DEGRADED bootstrap components at SessionStart fail-soft under the repo-write lock; attach a reason string and log path per non-READY component; keep revision-mismatch expiry as the stronger binding",
+      "files": [
+        "ops/scripts/claude_bootstrap_receipt.py",
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+        "ops/scripts/tests/test_claude_bootstrap_receipt.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "governance revision superseded",
+      "leverage_rank": 2,
+      "shared_root_cause": "Coarse READY/DEGRADED hides per-component and per-transport truth"
+    },
+    {
+      "id": "T-CI012",
+      "task": "Extend rule 22 with the server-absent case and named fallback; annotate projected rules when a capability precondition is unmet",
+      "files": [
+        "rules/22-context7-auto-invoke.mdc",
+        "ops/scripts/project_llm_rules.py",
+        "environment/generated/llm-rules/l9-skill-routing.md"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "Do not treat a missing allow-list entry as permission to skip",
+      "leverage_rank": 4,
+      "shared_root_cause": "Rules mandate mechanisms the live surface does not expose"
+    },
+    {
+      "id": "T-CI009",
+      "task": "After toolchain_proven, run an import smoke on the resolved interpreter, record path and version, and write exit code plus timestamp into the deps stamp or log final line",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh",
+        "environment/agents/adapters/claude-code/tests/test_session_deps_cloud.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "toolchain_proven",
+      "leverage_rank": 3,
+      "shared_root_cause": "Coarse READY/DEGRADED hides per-component and per-transport truth"
+    },
+    {
+      "id": "T-CI006",
+      "task": "Name the file that produced a drifted account-env value; classify authority-widening versus cosmetic drift; record the effective value merge_gate read",
+      "files": [
+        "environment/agents/adapters/claude-code/verify_account_env.py",
+        "ops/autonomy/merge_gate.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T-CI007"
+      ],
+      "operation": "Insert",
+      "anchor": "all 32 expected variables match",
+      "leverage_rank": 6,
+      "shared_root_cause": "Authority-sensitive values have no source attribution"
+    },
+    {
+      "id": "T-CI102",
+      "task": "Record the REST gh route as a sanctioned surface capability in surface_profile.yaml and rule 62, or keep the openclaw PAT path as the only documented route",
+      "files": [
+        "ops/autonomy/surface_profile.yaml",
+        "rules/62-github-openclaw-authority.mdc"
+      ],
+      "effort": "S",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "Detection is REST-only",
+      "leverage_rank": 7,
+      "shared_root_cause": "A working third route is unwritten, so the next gh-dependent gate reproduces the block"
+    },
+    {
+      "id": "T-CI005",
+      "task": "Split bootstrap memory into memory.cli and memory.mcp probed independently; count facts that are not self-referential PICKUP restatements; write a task-bearing completion PICKUP at contract end",
+      "files": [
+        "ops/scripts/claude_bootstrap_receipt.py",
+        "ops/graphiti/hydration/",
+        "ops/graphiti/graphiti_memory_client.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T-CI004"
+      ],
+      "operation": "Replace",
+      "anchor": "memory",
+      "leverage_rank": 5,
+      "shared_root_cause": "Coarse READY/DEGRADED hides per-component and per-transport truth"
+    },
+    {
+      "id": "T-CI013",
+      "task": "Name the refused stage of a compound command and state that later stages did not run; allow scratchpad-owned forced removal while refusing repo paths; make documented escapes reachable or delete them from rules 49 and 88",
+      "files": [
+        "ops/autonomy/local_execution_gate.py",
+        "ops/autonomy/git_guardrails.py",
+        "rules/49-shared-worktree-isolation.mdc",
+        "rules/88-l4-local-autonomy.mdc"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "I-BS-10",
+      "leverage_rank": 8,
+      "shared_root_cause": "Fail-closed gates are correct and undiagnosable"
+    },
+    {
+      "id": "T-CI023",
+      "task": "Warn when resolve_governance_paths.sh is sourced without calling an entry point; amend rule 06 to source then resolve_governance_paths_or_exit; load session env in non-interactive shells",
+      "files": [
+        "ops/scripts/resolve_governance_paths.sh",
+        "rules/06-governance-ssot-paths.mdc"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "resolve_governance_paths_or_exit",
+      "leverage_rank": 9,
+      "shared_root_cause": "Sourcing the resolver does not bind which clone is authoritative"
+    },
+    {
+      "id": "T-CI016",
+      "task": "Have l4_local status compare the pinned SHA to current head and report STALE as an explicit field a caller can test",
+      "files": [
+        "ops/autonomy/l4_local.py",
+        "tests/ops/autonomy/test_l4_local.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "status_dict",
+      "leverage_rank": 11
+    },
+    {
+      "id": "T-CI015",
+      "task": "When a second governance checkout is present, print both paths with revisions and state which one rules resolve from; assert whether the workspace clone is an intentional consumer checkout or leftover",
+      "files": [
+        "ops/scripts/resolve_governance_paths.sh",
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T-CI007",
+        "T-CI023"
+      ],
+      "operation": "Insert",
+      "anchor": "I-BS-13",
+      "leverage_rank": 10,
+      "shared_root_cause": "Sourcing the resolver does not bind which clone is authoritative"
+    },
+    {
+      "id": "T-CI002",
+      "task": "Relocate L9_AUTONOMY_STATE_DIR outside the worktree in the Claude settings template and account-field docs; keep .l9/autonomy as a gitignored fallback only",
+      "files": [
+        "environment/agents/adapters/claude-code/settings.template.json",
+        "docs/account-fields/ENVIRONMENT_VARIABLES.md",
+        ".claude/settings.json"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "L9_AUTONOMY_STATE_DIR",
+      "leverage_rank": 12
+    },
+    {
+      "id": "T-CI019",
+      "task": "Add a bounded fetch/merge --no-edit/regen/re-verify/push retry loop N<=2 on open_pr_after_gate.sh; never rewrite history; leave a CANONICAL_LAW lease protocol out of this plan",
+      "files": [
+        "ops/scripts/open_pr_after_gate.sh"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "IMP-06(P7)",
+      "leverage_rank": 13
+    },
+    {
+      "id": "T-CI021",
+      "task": "Narrow skill-usage logging to namespaces this surface exposes and emit a SessionStart line naming the log path and current entry count",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh",
+        "ops/hooks/session_start_bootstrap.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "L9_SKILL_USAGE_LOGGING",
+      "leverage_rank": 14
+    },
+    {
+      "id": "T-CI022",
+      "task": "State at SessionStart that service-backed integration tests are unavailable when neo4j is absent or 127.0.0.1:7687 refuses, so the runnable versus unrunnable split is known before a run",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "I-EL-07",
+      "leverage_rank": 15
+    },
+    {
+      "id": "T-CI008",
+      "task": "Enable the consumer-workspace pre-commit path only after OD-002 decides whether the workspace Makefile or the governance Makefile is publish authority",
+      "files": [
+        "ops/scripts/run_pr_precommit.sh",
+        "WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/OPEN_DECISIONS.yaml"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T-CI007"
+      ],
+      "operation": "Replace",
+      "anchor": "cwd=$GOV_ROOT",
+      "blocker": "OD-002 REOPENED: operator correction contradicts surface_profile.yaml, CLAUDE.md, rules 48/88, and test_publish_verb_governance_always.py. Do not encode a doctrine change in this plan.",
+      "leverage_rank": 16
+    }
+  ],
+  "critical_path": [
+    "T-CI007",
+    "T-CI004",
+    "T-CI005",
+    "T-CI023",
+    "T-CI015"
+  ],
+  "milestones": [
+    {
+      "id": "M-authority",
+      "outcome": "Breakglass is a receipt; DEGRADED components have reasons; deps smoke is falsifiable",
+      "unlocks": "Honest memory transport split and drift attribution"
+    },
+    {
+      "id": "M-surface",
+      "outcome": "Rule 22 is closable when Context7 is absent; REST gh route is written; memory.cli versus memory.mcp is visible",
+      "unlocks": "Loader assert and gate actionability without lying about capability"
+    },
+    {
+      "id": "M-actionable",
+      "outcome": "Gates name refused stages; resolver warns on source-without-call; L4 status reports STALE; dual checkouts are named",
+      "unlocks": "Lower-leverage hygiene without reopening authority"
+    },
+    {
+      "id": "M-hygiene",
+      "outcome": "Autonomy state dir, concurrent-writer retry, skill-log observability, and integration-test declaration land or stay blocked with evidence",
+      "unlocks": "Stacked make pr of the remaining-work branch"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "CP-breakglass",
+      "after": "T-CI007",
+      "evidence_required": "A fresh session without a receipt cannot publish via L9_PUBLISH_PATH_OVERRIDE alone; SessionStart prints grant age when a receipt is in force",
+      "no_go_action": "Do not proceed to T-CI006 or T-CI015 while the standing string still widens the publish plane"
+    },
+    {
+      "id": "CP-receipts",
+      "after": "T-CI004",
+      "evidence_required": "A planted DEGRADED component without a log path fails the receipt test; SessionStart re-probe runs under the repo-write lock and fail-softs",
+      "no_go_action": "Do not start T-CI005 until per-component reason and log path exist"
+    },
+    {
+      "id": "CP-memory",
+      "after": "T-CI005",
+      "evidence_required": "A CLI-healthy MCP-down session reports memory.cli READY and memory.mcp DEGRADED; a PICKUP-only hydrate reports empty task facts",
+      "no_go_action": "Do not collapse the two transports back into one memory word"
+    },
+    {
+      "id": "CP-od002",
+      "after": "T-CI008",
+      "evidence_required": "OD-002 is decided in writing before run_pr_precommit.sh cwd changes",
+      "no_go_action": "Leave T-CI008 blocked; do not silently pick workspace-Makefile-first or governance-Makefile-always"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "CLAUDE.md",
+      "action": "n_a",
+      "reason": "Receipt CLI default-read already named; no new root-doc pointer required unless T-CI007 adds a second receipt command"
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "Additive-only root file; broker retirement fragment already records CAPABILITY_BROKER_RETIRED_V1"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "CI-019 lease protocol half stays out; no constitution edit"
+    },
+    {
+      "surface": "ARCHITECTURE.md",
+      "action": "n_a",
+      "reason": "No new module; existing autonomy and adapter paths stay"
+    },
+    {
+      "surface": "INVARIANTS.md",
+      "action": "n_a",
+      "reason": "No new org invariant; adapter and autonomy tests own the new assertions"
+    },
+    {
+      "surface": "rules/22-context7-auto-invoke.mdc",
+      "action": "update",
+      "todo_ids": [
+        "T-CI012"
+      ]
+    },
+    {
+      "surface": "rules/62-github-openclaw-authority.mdc",
+      "action": "update",
+      "todo_ids": [
+        "T-CI102"
+      ]
+    },
+    {
+      "surface": "WIP/8-26-26-Claude Environment/PLAN_DOCUMENT.claude-env-pending-fixes.v1.json",
+      "action": "update",
+      "todo_ids": [
+        "T-CI008"
+      ]
+    }
+  ],
+  "stress_test": {
+      "disconfirming_questions": [
+        "If a live session already has no L9_PUBLISH_PATH_OVERRIDE and SessionStart already prints grant age, is T-CI007 a product defect or only missing tests?",
+        "If SessionStart on Cursor no longer runs claude_projection and Claude SessionStart is a no-op without a Claude runtime marker, does T-CI004 re-probe have a live caller on this surface?",
+        "If recording the REST gh route in rule 62 is read as a second PAT, does T-CI102 widen GitHub authority instead of documenting the route that already works?",
+        "If T-CI013 scratchpad allowance matches unresolved expansions, does forced removal of a repo path become reachable?",
+        "If T-CI008 is implemented as workspace-Makefile-first without an OD-002 decision, has this plan encoded unauthorized doctrine?"
+      ],
+      "assumed_false_ifs": [
+        "claude_bootstrap_receipt.py revision-mismatch expiry remains landed and is not reverted",
+        "Capability broker stays retired; no plan todo reopens /mcp identity",
+        "session_deps_cloud.sh toolchain_proven remains the applied-state gate",
+        "PR#360 in-repo closures (CI-014/018/025/027/030 and CI-003/036 in-repo legs) remain in the tree",
+        "Dirty WIP archive moves do not overlap environment/agents or ops/ write_allow"
+      ],
+      "blast_radius": "Wrong breakglass or publish-path text can silently widen remote mutation. Wrong rule 62 wording can invent a second GitHub PAT story. Wrong scratchpad narrowing can delete repo paths. Wrong T-CI008 cwd change can make consumer make pr resolve the wrong Makefile. Wrong memory split can hide a working CLI behind a dead MCP.",
+      "rollback": "git restore --worktree --staged scoped to write_allow paths; revert local commits on this checkout only; do not force-push; leave ~/.l9/claude receipts in place unless a todo wrote a malformed schema, in which case delete only the new receipt file this plan created"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T-CI007",
+      "T-CI004",
+      "T-CI009",
+      "T-CI012",
+      "T-CI005",
+      "T-CI006",
+      "T-CI102",
+      "T-CI013",
+      "T-CI023",
+      "T-CI015",
+      "T-CI016",
+      "T-CI002",
+      "T-CI019",
+      "T-CI021",
+      "T-CI022",
+      "T-CI008"
+    ],
+    "shared_causes": [
+      "Coarse READY/DEGRADED hides per-component and per-transport truth",
+      "One-time publish breakglass normalized into permanent environment",
+      "Rules mandate mechanisms the live surface does not expose",
+      "Sourcing the resolver does not bind which clone is authoritative",
+      "Fail-closed gates are correct and undiagnosable"
+    ],
+    "deletions_or_consolidations": [
+      "Archive p307, p307-r2, URGENT overlay, 8-17 env-contract plan, setup-script snapshots, and superseded mobile plans",
+      "Do not re-admit broker diagnosis, is_tracked-on-four-writers, or consumer .gitignore copies",
+      "Collapse CI-009 and CI-028 into one deps-evidence todo"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "T-CI007 receipt design silently preserves the standing env var as a parallel grant",
+      "mitigation": "Gate reads the receipt only; env string without a valid receipt is inert and reported"
+    },
+    {
+      "risk": "T-CI102 documents REST as a second authority next to the openclaw PAT",
+      "mitigation": "Additive surface_profile fragment: REST is the same PAT used via gh api, not a new secret"
+    },
+    {
+      "risk": "T-CI013 scratchpad allowance matches empty or unresolved paths",
+      "mitigation": "Keep unresolved-expansion fail-closed; allow only literal paths under the session scratch root"
+    },
+    {
+      "risk": "T-CI008 implements a doctrine the operator has not decided",
+      "mitigation": "Todo carries a blocker; CP-od002 no-go; do not edit run_pr_precommit.sh cwd until OD-002 closes"
+    },
+    {
+      "risk": "T-CI002 relocates autonomy state while an L4 receipt is in the old path",
+      "mitigation": "Read old path once, write new path, do not delete the old receipt in the same commit"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does this Cursor checkout still export L9_PUBLISH_PATH_OVERRIDE, or is the standing grant only on hosted Claude cloud sessions?",
+      "decision_effect": "T-CI007 may shrink to tests plus SessionStart reporting if the var is already absent here",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "On Cursor, SessionStart no longer runs claude_projection and Claude SessionStart is a no-op without a Claude runtime marker. Which hook is the live caller for T-CI004 re-probe on this surface?",
+      "decision_effect": "Caller file for T-CI004 and T-CI021/T-CI022",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "OD-002: is publish authority the workspace Makefile first, or the governance Makefile regardless of the repo worked in?",
+      "decision_effect": "T-CI008 stays blocked until this is decided",
+      "resolution": "block"
+    },
+    {
+      "id": "U4",
+      "question": "Is the workspace Cursor-Governance clone an intentional consumer checkout or a leftover next to ~/.cursor-governance?",
+      "decision_effect": "T-CI015 assert text and whether the workspace clone is refused",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V-receipt",
+      "command": "python3 ops/scripts/claude_bootstrap_receipt.py --json",
+      "pass_criteria": "Prints live state; revision mismatch yields unknown, not a stale DEGRADED as current",
+      "status": "pending"
+    },
+    {
+      "id": "V-account-env",
+      "command": "python3 environment/agents/adapters/claude-code/verify_account_env.py",
+      "pass_criteria": "Still matches expected variables; drifted values name a source file after T-CI006",
+      "status": "pending"
+    },
+    {
+      "id": "V-l4-status",
+      "command": "python3 ops/autonomy/l4_local.py status --workspace .",
+      "pass_criteria": "After T-CI016, status JSON includes an explicit STALE field when pinned SHA differs from HEAD",
+      "status": "pending"
+    },
+    {
+      "id": "V-precommit",
+      "command": ".pre-commit-config.yaml",
+      "pass_criteria": "changed-file hooks named in catalog; no campaign runner; no broker revival",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2",
+      "U3",
+      "U4"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "Plan validated for Cursor Build. Implementation not run. U1-U2 require SessionStart/probe. T-CI008 blocked on OD-002. External and other-repo records stay archived."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/autonomy/",
+      "ops/scripts/claude_bootstrap_receipt.py",
+      "ops/scripts/project_llm_rules.py",
+      "ops/scripts/resolve_governance_paths.sh",
+      "ops/scripts/open_pr_after_gate.sh",
+      "ops/graphiti/hydration/",
+      "environment/agents/adapters/claude-code/",
+      "rules/22-context7-auto-invoke.mdc",
+      "rules/06-governance-ssot-paths.mdc",
+      "rules/62-github-openclaw-authority.mdc",
+      "rules/49-shared-worktree-isolation.mdc",
+      "rules/88-l4-local-autonomy.mdc",
+      "docs/account-fields/ENVIRONMENT_VARIABLES.md",
+      "WIP/8-26-26-Claude Environment/PLAN_DOCUMENT.claude-env-pending-fixes.v1.json"
+    ],
+    "must_not_modify": [
+      "CANONICAL_LAW.md",
+      "AGENTS.md",
+      "Makefile",
+      "WIP/8-26-26-Claude Environment/_archive/",
+      "environment/program-execution/core/shared/AUTHORIZATION_MODEL.yaml",
+      "environment/program-execution/core/shared/EVIDENCE_MODEL.yaml",
+      "ops/secrets/_archived/capability-broker/"
+    ],
+    "preserved_contracts": [
+      "Capability broker stays retired",
+      "Cursor Build execute path; campaign runner forbidden",
+      "autonomous_merge remains false",
+      "Revision-mismatch receipt expiry stays stronger than TTL",
+      "toolchain_proven remains the deps applied-state gate",
+      "Consumer tracked .gitignore is never mutated by bootstrap exclude copies"
+    ],
+    "validation_commands": [
+      "python3 ops/scripts/claude_bootstrap_receipt.py --json",
+      "python3 environment/agents/adapters/claude-code/verify_account_env.py",
+      "python3 ops/autonomy/l4_local.py status --workspace .",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "estimate": "M-authority one Build slice; M-surface and M-actionable a second slice; M-hygiene last; T-CI008 stays blocked"
+}

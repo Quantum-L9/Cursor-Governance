@@ -27,6 +27,17 @@ proactively from their `description` / `when_to_use` signals and the canonical
 routing manifest. Explicit-only skills require direct invocation or established
 campaign authority. Skill visibility and routing are context, not mutation authority.
 
+## Cursor / Claude Code parity (skill SSOT)
+
+| Surface | Skills | Slash commands |
+|---|---|---|
+| **Cursor** | Plugin + `.cursor-commands/skills/` (SSOT) | **18** live commands only — executors, DAGs, bootstrap (`commands/COMMANDS_MANIFEST.yaml`). Skill wrappers retired to `commands/_archived/`. |
+| **Claude Code** | Symlinks under `~/.claude/skills/` and `<repo>/.claude/skills/` → `$HOME/.cursor-governance/skills/` | Same **18** non-wrapper commands under `.claude/commands/`. No command file when slash basename equals a registered skill name. |
+
+Invoke remediators and other explicit packs **as skills** (`/l9-issue-remediation`, `/l9-pr-remediation`, …). `validate_commands_manifest.py` fails closed if a new `commands/*.md` duplicates a skill name.
+
+Projection engine: `ops/scripts/claude_projection.py`.
+
 ## Invocation
 
 - Load `CANONICAL_LAW.md` first, then `AGENTS.md`, then the specific `SKILL.md`.

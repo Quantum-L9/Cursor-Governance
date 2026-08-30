@@ -173,6 +173,22 @@ def test_pr_template_never_reports_the_governance_default_for_a_bare_repo(
     assert status_dict(stacked_repo)["pr_template"] is None
 
 
+def test_status_dict_exposes_stale_when_head_moves(stacked_repo: Path) -> None:
+    begin(stacked_repo, contract_id="ci-016-stale")
+    record_kernels(stacked_repo)
+    authorize_release(stacked_repo)
+    status = status_dict(stacked_repo)
+    assert status["stale"] is False
+    subprocess.run(
+        ["git", "-C", str(stacked_repo), "commit", "--allow-empty", "-m", "move head"],
+        check=True,
+        capture_output=True,
+    )
+    moved = status_dict(stacked_repo)
+    assert moved["stale"] is True
+    assert moved["head"] != (moved["receipt"] or {}).get("head_sha")
+
+
 def test_pr_template_names_the_released_repos_own_template(stacked_repo: Path) -> None:
     (stacked_repo / ".github").mkdir(exist_ok=True)
     (stacked_repo / ".github" / "pull_request_template.md").write_text("x", encoding="utf-8")

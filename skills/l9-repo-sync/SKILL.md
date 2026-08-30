@@ -9,7 +9,7 @@ metadata:
   tags: [l9, git, sync, fast-forward, ssot, cursor-governance]
   owner: igor_beylin
   status: active
-  version: 1.4.0
+  version: 1.5.0
   updated: 2026-08-29
 ---
 
@@ -21,10 +21,25 @@ Catch **this** Cursor-Governance clone **and** `$HOME/.cursor-governance`
 up to `origin/main` **in place**, in parallel, when they are different
 gitdirs.
 `.venv`, env.local keep-list files (`.env.local`, `env.local`,
-`.env.*.local`, `.claude/settings.local.json`), and unique untracked files
-stay. Unique local commits and every dirty tracked path are parked first.
+`.env.*.local`, `.claude/settings.local.json`), **corpus keep-list files**
+(`TODO.md`, `WIP/`, `docs/plans/`, `environment/program-execution/campaigns/`
+— `ssot_is_ff_corpus_keep`), and unique untracked files
+stay. Unique local commits and other dirty tracked paths are parked first.
 Nothing unique is deleted.
-Slash entry: [`/ff`](../../commands/ff.md). Rule:
+
+**Shelf publish loop (2026-08-29):** when `/ff` shelves WIP/plans/campaigns, the
+caller finishes with `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf
+worktree unless `FF_SHELF_PUBLISH=0`, then runs
+`ops/scripts/run_ff_post_shelf.sh` and `verify_worktree_clean.py` on the named
+clone. See `commands/ff.md` step 2–3 and `AGENTS.md`
+`FF_CLOSE_PUBLISH_LOOP_V1`.
+
+**Corpus clean-repo law:** modified corpus is committed and pushed via the
+shelf loop — never `git stash push` (incident: `wip-todo-unrelated` clobbered
+`TODO.md`). See `commands/ff.md` § Clean-repo law.
+
+Slash entry: skill `l9-repo-sync` (legacy slash file:
+[`commands/ff.md`](../../commands/ff.md)). Rule:
 [`rules/55-ff-only-ssot-sync.mdc`](../../rules/55-ff-only-ssot-sync.mdc).
 
 **Incident 2026-08-21:** `governance_activate_fresh.sh` shallow-clone + atomic
@@ -91,10 +106,12 @@ It classifies `refs/l9/preserved/ff/*`, `refs/l9/preserved/ff-dirty/*`, and
    (untracked files are not in a fresh checkout). Apply Improve, then
    Recursive Alignment, then Validate & Repair **before** commit/precommit.
    Then `l4_local.py begin` + `authorize-release` (not `record-kernels`).
-   **Ask** before `PR_REMEDIATE=0 make pr` — `/ff` does not itself authorize
-   publishing. Skip paths an open shelf PR already carries. `ff.sh` stays
-   push-off. Secret globs stay out. The dirty-preserve ref is **not** deleted
-   here — see Handoff.
+   **Finish the shelf publish loop** unless `FF_SHELF_PUBLISH=0`:
+   `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf worktree and display
+   the opened **PR URL** (see Shelf publish loop above / `FF_CLOSE_PUBLISH_LOOP_V1`).
+   Opt-out: `FF_SHELF_PUBLISH=0` shelves and commits only. Skip paths an open
+   shelf PR already carries. `ff.sh` stays push-off. Secret globs stay out.
+   The dirty-preserve ref is **not** deleted here — see Handoff.
 
 ## Failure Handling
 

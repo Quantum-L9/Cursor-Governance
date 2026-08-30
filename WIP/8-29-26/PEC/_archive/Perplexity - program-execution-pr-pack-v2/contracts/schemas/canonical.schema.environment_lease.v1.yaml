@@ -1,0 +1,24 @@
+schema_id: canonical.schema.environment_lease.v1
+description: Canonical schema for a runtime environment lease.
+required_fields: [node_id, worktree, resources, claimed_at, ttl_seconds, state]
+field_definitions:
+  node_id: { type: string }
+  worktree: { type: string }
+  resources:
+    type: object
+    properties:
+      db_branch: { type: string }
+      preview_url: { type: string }
+      port_range: { type: array, items: { type: integer } }
+  claimed_at: { type: number }
+  ttl_seconds: { type: integer, default: 3600 }
+  state: { type: string, enum: [active, released, expired] }
+validation_rules:
+  - id: EN001
+    description: no two active leases may reference the same db_branch.
+  - id: EN002
+    description: no two active leases may reference overlapping port_range.
+  - id: EN003
+    description: preview deployment env vars must match the leased db_branch.
+  - id: EN004
+    description: a lease must be released or expired before its worktree is removed.

@@ -1,0 +1,13 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://quantum-l9.example/schemas/work-context-packet/v1",
+  "title":"WorkContextPacket",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema","packet_id","objective","task_scope","artifacts","dependencies","blockers","supersession","conflicts","unknowns","evidence_refs","exclusions","retrieval_provenance"],
+  "properties":{
+    "schema":{"const":"l9.work-context-packet/v1"},"packet_id":{"type":"string","minLength":1},"objective":{"type":"string","minLength":1},"task_scope":{"type":"string","minLength":1},"focal_entities":{"type":"array","items":{"type":"string"}},
+    "artifacts":{"type":"array","items":{"type":"object","required":["artifact_id","disposition","reason"],"properties":{"artifact_id":{"type":"string"},"disposition":{"enum":["REQUIRED","SUPPORTING","OPTIONAL","CONFLICTING","SUPERSEDED","EXCLUDED","UNRESOLVED"]},"reason":{"type":"string"}},"additionalProperties":true}},
+    "dependencies":{"type":"object"},"blockers":{"type":"array","items":{"type":"string"}},"supersession":{"type":"object"},"conflicts":{"type":"array","items":{"type":"string"}},"unknowns":{"type":"array","items":{"type":"string"}},"readiness_evidence":{"type":"array","items":{"type":"string"}},"candidate_relations":{"type":"array","items":{"type":"string"}},"evidence_refs":{"type":"array","items":{"type":"string"}},"exclusions":{"type":"array","items":{"type":"object","required":["artifact_id","reason"],"properties":{"artifact_id":{"type":"string"},"reason":{"type":"string"}},"additionalProperties":false}},"retrieval_provenance":{"type":"object"}
+  }
+}

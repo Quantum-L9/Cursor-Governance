@@ -1,0 +1,3941 @@
+schema: l9.environment_experience.improvements.canonical/v1
+generated_at: '2026-08-25T02:03:03Z'
+revised_at: '2026-08-28'
+pack_revision: p307-r2
+predecessor_pack: WIP/8-26-26/environment_experience_improvement_pack_p307
+roadmap_rule: Only current/forward work is active; completed source items are retained but excluded from the current
+  roadmap.
+roadmap_rule_addendum: Completed, external-blocked and unverifiable records are retained with full lineage and excluded
+  from the active queue. Dependencies are re-derived from current repository truth; a historical edge that no longer
+  holds is removed and the removal is justified in progress.yaml's ordering section.
+progress_meta:
+  assessed_against: main@59f03a5d
+  assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+  assessed_at: '2026-08-28'
+  legend: done = verified against the tree and the live container at this SHA; partial = merged progress with a
+    named residual; not_started = not addressed; blocked = valid but not startable from this org's surfaces; unknown
+    = current evidence insufficient at this binding
+  counts:
+    done: 7
+    partial: 15
+    not_started: 12
+    blocked: 1
+    unknown: 3
+  queue_counts:
+    active: 20
+    external_blocked: 8
+    needs_attachment: 3
+    closed: 7
+  total: 38
+  note: 'The predecessor''s improvements.yaml carried a progress_meta stamped ''main@post-#307-merge'' with counts
+    2/9/25 of 36, while its progress.yaml carried 4/15/19 of 38 at 30c6ecd4 and its README a third figure. Three
+    stores, three answers, inside the artifact that proposed CI-035. Reconciled here: both stores carry 38 records
+    and the same counts.'
+  execution_binding:
+    executed_at: '2026-08-29'
+    branch: claude/cursor-governance-pack-reconcile-9d4c9v
+    pr: 360
+    head_sha: 8d81233648464330c7e45de9e75487a8c8dce583
+    records_touched:
+    - CI-003
+    - CI-014
+    - CI-016
+    - CI-018
+    - CI-025
+    - CI-027
+    - CI-030
+    - CI-036
+    note: Counts here are post-wave-1 and identical to progress.yaml's by construction — this script writes both.
+      CI-035 exists because the predecessor's two stores disagreed; they do not disagree again.
+records:
+- id: CI-001
+  title: Publish and enforce the real GitHub REST/GraphQL capability boundary
+  status: ACTIVE
+  priority: 1
+  dependencies: []
+  canonical_action: Document REST and GraphQL independently; use a REST auth probe; give merge/PR helpers REST-capable
+    probe/execution paths; report probe-blocked separately from stack/auth unknown.
+  source_records:
+  - source_ref: P1/improvements/IMP-01
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-01
+    source_title: Publish the gh REST/GraphQL split as an explicit environment fact
+    source_record:
+      id: IMP-01
+      group: env_loader
+      title: Publish the gh REST/GraphQL split as an explicit environment fact
+      traces_to:
+      - FAIL-01
+      - FAIL-02
+      - FRICTION-03
+      root_cause: gh auth status probes via GraphQL; the proxy 403s GraphQL; gh renders that as an invalid token.
+        The session prompt separately claims no gh access at all.
+      change: 'Correct the session prompt''s GitHub section to state the real capability boundary: gh api REST works;
+        gh GraphQL and all gh pr subcommands are blocked; gh auth status will falsely report an invalid token. Do
+        not tell agents they have no gh access.'
+      owner: remote-session prompt owner (Anthropic harness)
+      owner_confidence: UNKNOWN whether this org can edit this surface
+      target: session system prompt, GitHub Integration section
+      effort: S
+      risk: low
+      risk_note: text only
+      done_when: A fresh session's prompt names the REST/GraphQL split, and an agent reading it does not abandon
+        gh on an auth status failure.
+  - source_ref: P1/improvements/IMP-02
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-02
+    source_title: Stop treating gh auth status as the auth preflight
+    source_record:
+      id: IMP-02
+      group: env_loader
+      title: Stop treating gh auth status as the auth preflight
+      traces_to:
+      - FAIL-01
+      root_cause: Same as IMP-01; this is the agent-side half, shippable without harness changes.
+      change: In l9-pr-remediation preflight check P_cmd, replace any gh auth status probe with `gh api user --jq
+        .login`. Record REST reachability and GraphQL reachability as separate fingerprint fields so a GraphQL block
+        does not read as an auth failure.
+      owner: governance skill maintainer
+      target: /root/.cursor-governance/skills/l9-pr-remediation/references/run-contract.md
+      effort: S
+      risk: low
+      done_when: Preflight on this container reports github_rest reachable, github_graphql blocked, auth valid —
+        not "token invalid".
+  - source_ref: P1/improvements/IMP-11
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-11
+    source_title: Give stack_safe_merge and merge_gate a REST probe path
+    source_record:
+      id: IMP-11
+      group: governance_tooling
+      title: Give stack_safe_merge and merge_gate a REST probe path
+      traces_to:
+      - FAIL-03
+      - FAIL-02
+      root_cause: merge_gate._stacked_children (lines 240, 244) shells to gh pr view --json and gh pr list --json,
+        both GraphQL. stack_safe_merge imports it. Exit 2 in this environment.
+      change: Implement the probe over REST — gh api repos/{owner}/{repo}/pulls?state=open returns head.ref and
+        base.ref for every open PR, which is all _stacked_children needs. Keep GraphQL as a fast path and fall back
+        to REST on 403.
+      viability_evidence: 'Verified: REST is exactly how the correct topology was derived by hand in the observed
+        run.'
+      owner: governance autonomy maintainer
+      target: /root/.cursor-governance/ops/autonomy/merge_gate.py (_stacked_children, _gh_json)
+      effort: M
+      risk: medium
+      risk_note: This function backs a fail-closed safety gate; add tests for 403-fallback, empty-children, and
+        stacked-parent before shipping.
+      done_when: stack_safe_merge.py --repo Quantum-L9/.github --pr <n> --json exits 0 on this container with no
+        L9_STACK_PROBE_FILE set, and returns "merge" for a stacked parent.
+  - source_ref: P1/improvements/IMP-12
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-12
+    source_title: Distinguish probe-blocked from stack-unknown in the deny reason
+    source_record:
+      id: IMP-12
+      group: governance_tooling
+      title: Distinguish probe-blocked from stack-unknown in the deny reason
+      traces_to:
+      - FAIL-03
+      root_cause: _stack_safety_reason catches RuntimeError from the probe and returns _stack_unknown_reason regardless
+        of cause. A proxy 403 and a genuinely ambiguous topology produce the same operator-facing message.
+      change: Propagate the probe's failure kind into the deny reason. Fail-closed behavior stays exactly as it
+        is; only the message changes.
+      owner: governance autonomy maintainer
+      target: ops/autonomy/merge_gate.py (_stack_safety_reason, _stack_unknown_reason)
+      effort: S
+      risk: low
+      risk_note: message-only; do not alter the deny decision
+      done_when: A GraphQL-blocked probe denies with a reason naming the transport, not "unknown".
+  - source_ref: P2/improvements/IMP-A1
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-A1
+    source_title: Resolve the gh-CLI / gh-token mismatch
+    source_record:
+      id: IMP-A1
+      title: Resolve the gh-CLI / gh-token mismatch
+      traces_to:
+      - FRIC-04
+      - FRIC-10
+      root_cause: GH_TOKEN and GITHUB_TOKEN are set in the environment while gh and hub are absent. The l9-pr-remediation
+        skill specifies its entire input contract in gh commands, all of which had to be re-derived against mcp__github__*
+        tools.
+      proposal: 'Either install gh in this environment, or rewrite the skill''s Core Contract table to name the
+        mcp__github__* equivalents. The second removes a dependency rather than adding one, and also fixes the inability
+        to poll GitHub from Monitor/bash.
+
+        '
+      owner: 'role: platform / skill owner (UNKNOWN)'
+      target: Environment image, or .claude/skills/synced/l9-pr-remediation/SKILL.md
+      effort: M
+      risk: low
+      done_condition: Every command in the skill's Core Contract table is executable as written in this environment,
+        or the table names tools that are.
+  - source_ref: P3/improvements/C1
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: C1
+    source_title: Give stack_safe_merge.py a REST path
+    source_record:
+      id: C1
+      group: tooling_contract
+      title: Give stack_safe_merge.py a REST path
+      root_cause_ref: FAIL-01
+      owner: ops/autonomy/stack_safe_merge.py, ops/autonomy/merge_gate.py
+      target: _stacked_children probe and the merge exec
+      effort: M
+      risk: Med
+      risk_note: the gate must not be bypassable through the new path
+      change: implement _stacked_children over REST (GET /repos/{o}/{r}/pulls?base=<head>&state=open, exit 0 in
+        this session) with GraphQL as an optimisation; exec the merge via PUT /repos/{o}/{r}/pulls/{n}/merge when
+        gh pr merge is unavailable; ensure merge_gate intercepts that REST call as it does the CLI form
+      done_when: stack_safe_merge.py --run completes in a GraphQL-disabled session, and a REST merge attempted without
+        authorisation is refused
+      sequence: 2
+  - source_ref: P3/improvements/A6
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: A6
+    source_title: Reconcile the documented tool surface with the observed one
+    source_record:
+      id: A6
+      group: environment_and_variable_loader
+      title: Reconcile the documented tool surface with the observed one
+      root_cause_refs:
+      - FRIC-10
+      - FAIL-01
+      owner: session_prompt_composer
+      target: system prompt GitHub Integration section
+      effort: S
+      risk: Low
+      change: 'state the real surface: gh present, repository-scoped REST permitted, GraphQL and org-wide search
+        unavailable'
+      done_when: an agent can predict which gh invocations will fail without probing
+      sequence: 6
+  - source_ref: P4/improvements/IMP-11
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-11
+    source_title: Stop treating gh auth status as a health check on this surface
+    source_record:
+      id: IMP-11
+      stream: other
+      priority: 6
+      title: Stop treating gh auth status as a health check on this surface
+      traces_to:
+      - F-10
+      observed_root_cause: '`gh auth status` exits 1 with "The token in GH_TOKEN is invalid" while `gh api repos/...`
+        exits 0 and `make pr` opened PR #81 successfully. GH_TOKEN is 14 characters, which is not a PAT shape.'
+      change: Where a preflight needs to know whether GitHub is reachable, call `gh api user` or `gh api repos/<owner>/<repo>`
+        and check the exit code. Note in rule 62-github-openclaw-authority that on proxied cloud surfaces GH_TOKEN
+        may be a placeholder and auth status is not authoritative.
+      target:
+      - /root/.cursor-governance/rules/62-github-openclaw-authority.mdc
+      - /root/.cursor-governance/ops/scripts/open_pr_after_gate.sh
+      owner: governance-rules-maintainer
+      effort: S
+      risk: low
+      unknown_to_resolve_first: Which component supplies the working credential. Confirm before rewriting the rule,
+        so the replacement text describes the real mechanism.
+      done_condition: No sanctioned script gates on `gh auth status`, and rule 62 states what authorises GitHub
+        calls on a proxied surface.
+  - source_ref: P7/improvements/IMP-02
+    source_pack: P7
+    source_path: improvements.yaml
+    source_id: IMP-02
+    source_title: Reconcile gh authentication with the session gateway
+    source_record:
+      id: IMP-02
+      category: environment
+      title: Reconcile gh authentication with the session gateway
+      root_cause: F-05 (GH_TOKEN invalid to gh; GraphQL refused; subscribe 404; REST-only via proxy)
+      change: 'Either provision a valid GH_TOKEN for the container, or make REST-only operation explicit: document
+        it in the session-deps line, and teach open_pr_after_gate.sh to skip its gh-subscribe step (it already warns)
+        when GraphQL is unavailable, pointing to the MCP subscription instead.
+
+        '
+      owner: platform (token) + governance-repo (script messaging)
+      target: environment config revision
+      effort: S-M
+      risk: low
+      done_condition: '`gh auth status` reports a valid principal OR the publish flow emits one deliberate "REST-only
+        session" line with no 404/GraphQL noise.
+
+        '
+  - source_ref: P8/improvements/I-WT-02
+    source_pack: P8
+    source_path: improvements.yaml
+    source_id: I-WT-02
+    source_title: Fail fast when a GraphQL-dependent gh subcommand is used on this surface
+    source_record:
+      id: I-WT-02
+      title: Fail fast when a GraphQL-dependent gh subcommand is used on this surface
+      traces_to:
+      - F-02
+      root_cause: '`gh pr checks --json` returns HTTP 403 from the session gateway. Inside a background poll loop
+        the failure is silent, so a monitor can appear healthy while emitting nothing.'
+      change: Document (or wrap) the GraphQL-backed gh subcommands as unavailable on this surface, and prefer the
+        REST forms in any monitor or poll template.
+      owner: environment/runner owner + docs
+      target: docs/DEGRADED_MODE_CONTRACT.md and any monitor guidance
+      effort: S
+      risk: Low - documentation and template change.
+      done_condition: A monitor template exists that uses `gh api .../check-runs` and a reader can see which gh
+        subcommands are unavailable before writing one.
+  - source_ref: P9/improvements/I-EL-04
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-EL-04
+    source_title: Correct the documented tool inventory to match the provisioned image
+    source_record:
+      id: I-EL-04
+      title: Correct the documented tool inventory to match the provisioned image
+      traces_to:
+      - F-20
+      - F-11
+      root_cause: Session documentation states the gh CLI is unavailable. gh 2.98.0 is installed, and gh api REST
+        was the path that actually opened a pull request. Separately, gh pr create returns 403 from the GraphQL
+        surface while REST succeeds.
+      change: State that gh is present, that the REST surface is permitted, and that the GraphQL surface used by
+        gh pr create is not - so the working path is documented rather than discovered.
+      owner: harness session documentation
+      target: session system prompt / environment documentation
+      effort: S
+      risk: low
+      done_condition: Documentation matches command -v gh and names REST as the supported PR-creation surface.
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: external_blocked
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance 5612f6b (probe, merged) + be3f01c9 (#325, merge verb) + 7ceeef38
+      (#324, gate recognition of the REST merge) + pre-existing ops/scripts/lib/gh_auth_probe.sh
+    residual:
+    - 'IMP-01 only: the remote-session prompt still denies gh access that demonstrably works. Harness-owned; no
+      in-repo lever.'
+    evidence:
+    - 'Re-verified at 59f03a5d: merge_gate REST transport, gh_auth_probe.sh, stack_safe_merge REST merge verb all
+      intact.'
+    - 'LIVE, this session: `gh api user --jq .login` returns cryptoxdog, while this session''s own system prompt
+      states ''You do NOT have access to the gh CLI, hub CLI, or direct GitHub API access.'' IMP-01''s defect reproduces
+      verbatim at this binding, unchanged across four assessments.'
+    blocked_on: external
+- id: CI-002
+  title: Make bootstrap projection ownership-aware and non-destructive to tracked repo content
+  status: ACTIVE
+  priority: 0
+  dependencies: []
+  canonical_action: Detect repository-owned tracked paths before projection. Project machine-local rules/hooks/state
+    only to non-repo-owned locations; ignore only genuinely generated/untracked paths. Never blanket-ignore or replace
+    a repository-owned .claude tree.
+  source_records:
+  - source_ref: P1/improvements/IMP-06
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-06
+    source_title: Propagate the existing gitignore stanza to the other 8 repos
+    source_record:
+      id: IMP-06
+      group: bootstrap
+      title: Propagate the existing gitignore stanza to the other 8 repos
+      traces_to:
+      - FRICTION-02
+      - FRICTION-01
+      root_cause: The correct commented ignore stanza exists in l9-meta-injector/.gitignore:45,48 and nowhere else.
+        That repo shows 0 untracked entries; the other 8 show 3 to 5 each.
+      change: Add the same four lines, with the existing rationale comment, to the remaining repos. The comment
+        already records the non-obvious constraints (hooks carry absolute $HOME paths; .claude/rules needs no trailing
+        slash because a trailing-slash pattern does not match a symlink). This is a copy, not a redesign.
+      stanza:
+      - .claude/hooks/
+      - .claude/rules
+      - .claude/skills/
+      - .mcp.json
+      caution: .claude/settings.json stays TRACKED where it is hand-authored repository content (as in Cognitive.Engine.Graphs,
+        which tracks .claude/rules/* and .claude/agents/*). It is untracked bootstrap output only where the repo
+        has no authored copy. Check per repo; do not blanket-ignore.
+      owner: each repo maintainer, one PR per repo
+      target:
+      - Cognitive.Engine.Graphs/.gitignore
+      - LLM-Router/.gitignore
+      - SEO-Bot/.gitignore
+      - Website-Bot/.gitignore
+      - l9-ci-core/.gitignore
+      - l9-ci-sdk/.gitignore
+      - l9-cognitive-runtime/.gitignore
+      - l9-graphiti-memory/.gitignore
+      effort: M
+      effort_note: 8 small PRs
+      risk: low
+      risk_note: additive; verify per repo that no currently-tracked file becomes ignored
+      done_when: git status --porcelain --untracked-files=all is empty in all 8 after a fresh bootstrap.
+  - source_ref: P1/improvements/IMP-07
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-07
+    source_title: Ignore .l9/ wherever the L4 state dir is written, or move it out of the repo
+    source_record:
+      id: IMP-07
+      group: bootstrap
+      title: Ignore .l9/ wherever the L4 state dir is written, or move it out of the repo
+      traces_to:
+      - FRICTION-02
+      - FAIL-07
+      root_cause: L9_AUTONOMY_STATE_DIR=.l9/autonomy writes into the working repo, but only 4 of 10 repos ignore
+        .l9. In org-github-defaults the receipts surfaced untracked and the Stop hook demanded they be pushed.
+      change: Add .l9/ to the 6 repos that lack it. Orthogonally and preferably, point L9_AUTONOMY_STATE_DIR outside
+        the repo (scratchpad or $HOME/.l9/) so session receipts never land in a working tree. The second option
+        fixes the class; the first the instances.
+      owner: governance environment maintainer (state dir) plus repo maintainers (gitignore)
+      target:
+      - L9_AUTONOMY_STATE_DIR
+      - Cognitive.Engine.Graphs/.gitignore
+      - l9-ci-core/.gitignore
+      - l9-ci-sdk/.gitignore
+      - l9-cognitive-runtime/.gitignore
+      - l9-graphiti-memory/.gitignore
+      - org-github-defaults/.gitignore
+      effort: S for gitignore, M to relocate the state dir
+      risk: medium
+      risk_note: l4_local.py, local_execution_gate.py, and make pr all read this path; relocate together or not
+        at all.
+      done_when: Running l4_local.py authorize-release in any clone leaves git status --porcelain empty.
+  - source_ref: P3/improvements/B1
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: B1
+    source_title: Never write to a consumer repo's tracked paths
+    source_record:
+      id: B1
+      group: bootstrap_flow
+      title: Never write to a consumer repo's tracked paths
+      root_cause_ref: FAIL-02
+      owner: environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh
+      target: the bootstrap writer for .claude/** and .mcp.json
+      effort: M
+      risk: Low
+      risk_note: strictly narrows what the bootstrap touches
+      change: test git ls-files --error-unmatch before writing; if tracked, do not replace — fail closed and report,
+        or compose additively; never swap a tracked directory for a symlink; never drop an existing hook or allowlist
+        entry
+      done_when: a session in Cognitive.Engine.Graphs leaves git status clean of tracked .claude paths, and that
+        repo's PreToolUse banned-pattern guard is still registered at first tool call
+      tracked_at: Quantum-L9/Cursor-Governance#281
+      sequence: 1
+  - source_ref: P3/improvements/B2
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: B2
+    source_title: Ignore the untracked injections at the container layer
+    source_record:
+      id: B2
+      group: bootstrap_flow
+      title: Ignore the untracked injections at the container layer
+      root_cause_ref: FRIC-02
+      owner: session_bootstrap
+      target: core.excludesFile
+      effort: S
+      risk: Low
+      change: ignore .claude/ and .mcp.json globally in the session environment
+      limitation: necessary but not sufficient — cannot affect the tracked files in B1
+      done_when: a fresh session reports a clean worktree in the repos with no tracked .claude content
+      sequence: 4
+  - source_ref: P6/improvements/BOOT-3
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: BOOT-3
+    source_title: Stop dirtying repo checkouts with session artifacts
+    source_record:
+      id: BOOT-3
+      plane: bootstrap
+      title: Stop dirtying repo checkouts with session artifacts
+      root_cause_ref: FA-4
+      root_cause_observed: '.mcp.json/.claude written untracked into 3 of 4 checkouts; caused PR #235 /.claude/
+        gitignore defect'
+      change: 'write session MCP/hook config to overlay outside worktree or to .git/info/exclude at bootstrap; design
+        tracked-.claude projection split PR #235 deferred'
+      owner: governance-maintainer
+      target: cloud bootstrap (setup.bootstrap.sh / adapter install), not consumer .gitignore
+      effort: ML
+      risk: MCP config discovery must still resolve; tracked-.claude repos need overlay design
+      done_condition: 'fresh session: git status --porcelain clean in all 4 checkouts post-bootstrap with MCP+hooks
+        functional'
+  - source_ref: P9/improvements/I-BS-01
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-01
+    source_title: Stop projecting .claude/rules over repository-owned trees; project to a path the repository does
+      not track
+    source_record:
+      id: I-BS-01
+      title: Stop projecting .claude/rules over repository-owned trees; project to a path the repository does not
+        track
+      traces_to:
+      - F-01
+      - F-02
+      - FR-10
+      root_cause: The adapter replaces the tracked .claude/rules directory with a symlink to the governance clone,
+        producing 9 tracked-file deletions plus an untracked symlink in every CEG working copy.
+      change: Detect that the target path is tracked (git ls-files --error-unmatch) before projecting. When it is
+        tracked, project the governance rules to a sibling path the repository does not own and reference that path
+        instead of overwriting repository content.
+      owner: Cursor-Governance - environment/agents/adapters/claude-code/install.sh and the rule-projection step
+      target: /root/.cursor-governance/environment/agents/adapters/claude-code/
+      effort: M
+      risk: medium
+      done_condition: In a fresh session on Cognitive.Engine.Graphs, git status --porcelain is empty immediately
+        after bootstrap, and the governance rules are still readable by the agent.
+      verification: git -C Cognitive.Engine.Graphs status --porcelain | wc -l -> 0
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: PR#304 (Contract 1) + PR#307 (CI-008/CI-009/CI-002 slice), both merged into main
+    residual:
+    - Phase 2c (relocate L9_AUTONOMY_STATE_DIR outside the worktree). The only unmitigated leg. Touches l4_local.py
+      + local_execution_gate.py + make pr together.
+    - 'Phase 2b (project to a non-owned sibling when the target is tracked) is an ownership-MODEL change, not a
+      defect repair: the hazard it was written against is already mitigated by the four mechanisms above. Re-cost
+      it before scheduling.'
+    - The 8-fixture git-status-clean done_when is satisfied for the 4 repos attachable at this binding; the other
+      4 remain unverified for want of a session that carries them.
+    evidence:
+    - is_tracked is still defined and called only in ops/scripts/reconcile_llm_rule_adapters.py (lines 27, 146);
+      grep -c returns 0 for the other four write sites. The recorded fact is confirmed.
+    - 'But the inference drawn from it does not hold. Each of the four sites already implements the non-destructive
+      property this record''s canonical_action asks for, by a different mechanism: reconcile_claude_l9_skills.py
+      and reconcile_claude_commands.py operate on a MANAGED-ENTRY set of per-entry symlinks and document that unmanaged
+      entries are never overwritten or removed (skills docstring lines 4-6); reconcile_claude_settings.py merge-patches
+      via merge_workspace_settings() so consumer-owned keys survive (line 92-110) and writes only on change; claude_projection.py
+      renders .mcp.json preserving every server the template does not define (preserved_unmanaged, line 415) and
+      write-if-changed at line 419.'
+    - 'LIVE done_when check at this binding: all four in-scope repos report empty `git status --porcelain --untracked-files=all`,
+      INCLUDING l9-meta-injector, which TRACKS .claude/settings.json. A tracked projection target survived a bootstrap
+      with a clean tree.'
+    - 'Phase 2c confirmed still open: /home/user/.claude/settings.json sets L9_AUTONOMY_STATE_DIR=.l9/autonomy,
+      inside the worktree.'
+    invalidated_legs:
+    - 'IMP-06 (copy four .gitignore lines into 8 consumer repos) is INVALIDATED. The current design deliberately
+      writes .git/info/exclude instead, and says so: ''which is LOCAL and uncommitted, so a consumer''s tracked
+      .gitignore is never mutated'' (bootstrap_agent_environment.sh:462-464). Executing IMP-06 would mutate consumer
+      tracked files the design exists to avoid. Phase 2d is superseded by the same mechanism.'
+    - The recorded next-slice instruction 'apply is_tracked() before the remaining projection writes' would add
+      a report to four writes that already compose additively. It is not the protection the slice claimed to add.
+    optimized_sequence: 15
+    execution_lane: L2
+    schedule_slot:
+      start: 6
+      end: 8
+      lanes: 4
+    leverage_rank: 23
+- id: CI-003
+  title: Make the Stop hook ownership-aware instead of residue-blind
+  status: ACTIVE
+  priority: 1
+  dependencies: []
+  canonical_action: Scope stop-hook checks to authored changes in the active repo and explicitly exclude bootstrap-owned
+    paths without masking tracked authored content.
+  source_records:
+  - source_ref: P1/improvements/IMP-08
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-08
+    source_title: Teach the Stop hook to distinguish authored work from bootstrap residue
+    source_record:
+      id: IMP-08
+      group: bootstrap
+      title: Teach the Stop hook to distinguish authored work from bootstrap residue
+      traces_to:
+      - FRICTION-01
+      root_cause: /root/.claude/stop-hook-git-check.sh tests for any untracked file and cannot tell agent-authored
+        work from machine-local wiring. It was wrong about every file it flagged.
+      change: Exclude a known machine-local set (.claude/hooks/, .claude/rules, .claude/skills/, .mcp.json, .l9/)
+        and scope the check to the repo the session actually worked in rather than every clone under /home/user.
+        IMP-06 and IMP-07 make the hook correct by removing the residue; this makes it correct even when residue
+        exists.
+      owner: Claude-adapter hook maintainer
+      target: /root/.claude/stop-hook-git-check.sh
+      effort: M
+      risk: medium
+      risk_note: Over-broad exclusions would mask genuinely uncommitted work; exclude by explicit path list, never
+        by pattern breadth.
+      done_when: A session that authored nothing outside its target repo ends with no Stop-hook warning, while a
+        session with a genuinely uncommitted authored file still gets one.
+  - source_ref: P3/improvements/B3
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: B3
+    source_title: Teach the Stop hook the difference between injected and repo content
+    source_record:
+      id: B3
+      group: bootstrap_flow
+      title: Teach the Stop hook the difference between injected and repo content
+      root_cause_ref: FRIC-02
+      owner: ~/.claude/stop-hook-git-check.sh
+      target: the dirty check
+      effort: S
+      risk: Low
+      change: exclude governance-injected paths from the dirty check independently of B2, so a future injected path
+        cannot reproduce the prompt
+      done_when: the hook stays silent when the only dirt is injected, and still fires on real changes
+      sequence: 4
+  - source_ref: P9/improvements/I-BS-02
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-02
+    source_title: Let the stop hook ignore bootstrap-owned paths
+    source_record:
+      id: I-BS-02
+      title: Let the stop hook ignore bootstrap-owned paths
+      traces_to:
+      - F-02
+      - FR-10
+      root_cause: /root/.claude/stop-hook-git-check.sh triggers on any dirty path and cannot tell agent-authored
+        work from bootstrap projection artifacts, so it fires every turn.
+      change: 'Have bootstrap write a manifest of the paths it projects, and have the stop hook subtract those paths
+        before evaluating dirtiness. Secondary to I-BS-01: if projection stops touching tracked paths, this becomes
+        defence in depth rather than the fix.'
+      owner: harness stop hook plus the adapter that would emit the manifest
+      target: /root/.claude/stop-hook-git-check.sh
+      effort: S
+      risk: low
+      done_condition: A session that makes no repository edits ends with no stop-hook message.
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - Add `.mcp.json` to the Claude-specific exclude block in install.sh. One glob; the design decision it belongs
+      to is already made and documented.
+    - Hook-side ownership classification stays external.
+    evidence:
+    - The recorded residual says the in-repo lever is the .git/info/exclude list in bootstrap_agent_environment.sh,
+      which 'does not carry .claude/** or .mcp.json'. Half of that is out of date and was already out of date at
+      30c6ecd4.
+    - 'environment/agents/adapters/claude-code/install.sh:391-405 writes a SECOND, Claude-specific exclude block
+      covering .claude/skills/, .claude/rules/, .claude/commands/, with a comment stating the scoping decision explicitly:
+      ''Only the GENERATED mirrors are excluded — .claude/settings.json and .claude/hooks/ are committable consumer
+      wiring.'' Unchanged in 30c6ecd4..59f03a5d, so it was present and unrecorded at the last assessment.'
+    - 'LIVE: every in-scope consumer repo''s .git/info/exclude carries all seven globs, and every one reports a
+      clean tree.'
+    - 'Genuine gap: .mcp.json appears in NEITHER exclude list, and is a projection target (claude_projection.py:388).
+      It does not dirty a tree here only because the workspace root /home/user is not itself a git repository.'
+    - '/root/.claude/stop-hook-git-check.sh re-verified at this binding (regenerated 21:39 this session): fires
+      on any `git diff` delta and any `git ls-files --others --exclude-standard` output, with no ownership classification.
+      Harness-owned.'
+    optimized_sequence: 16
+    execution_lane: L3
+    schedule_slot:
+      start: 6
+      end: 7
+      lanes: 4
+    leverage_rank: 5
+  dependencies_previous:
+  - CI-002
+  dependencies_rederived_at: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+- id: CI-004
+  title: Regenerate bootstrap receipts on lifecycle/revision changes and re-probe degraded components
+  status: ACTIVE
+  priority: 0
+  dependencies: []
+  canonical_action: Bind receipts to container/session lifecycle and governance revision; invalidate stale receipts;
+    re-probe DEGRADED components; retain per-component reason, evidence, log path, and retry/remediation state.
+  source_records:
+  - source_ref: P1/improvements/IMP-10
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-10
+    source_title: Emit a reason for each degraded bootstrap subsystem
+    source_record:
+      id: IMP-10
+      group: bootstrap
+      title: Emit a reason for each degraded bootstrap subsystem
+      traces_to:
+      - FRICTION-10
+      root_cause: SessionStart reports 5 of 8 subsystems degraded with no reason, log path, or retry hint. Only
+        capabilities was attributable, and only by manual correlation.
+      change: Attach a one-line cause and a log path to each degraded subsystem. Where the cause is a blocked host,
+        name the host — the proxy already exposes exactly that at $HTTPS_PROXY/__agentproxy/status.
+      owner: Claude-adapter bootstrap maintainer
+      target: SessionStart bootstrap reporter
+      effort: M
+      risk: low
+      done_when: 'Each degraded line carries a cause or an explicit "cause: unknown", plus a log path.'
+  - source_ref: P3/improvements/B5
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: B5
+    source_title: Explain bootstrap degradation
+    source_record:
+      id: B5
+      group: bootstrap_flow
+      title: Explain bootstrap degradation
+      root_cause_ref: FRIC-06
+      owner: session_start_claude_governance.sh
+      target: SessionStart additional context
+      effort: M
+      risk: Low
+      change: emit per-subsystem reason and remediation command, or downgrade cosmetic degradations so the signal
+        is not five-of-eight noise at every start
+      done_when: each DEGRADED line carries a cause and a next action
+      sequence: 6
+  - source_ref: P4/improvements/IMP-03
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-03
+    source_title: Invalidate the bootstrap receipt when the governance revision it names changes
+    source_record:
+      id: IMP-03
+      stream: bootstrap
+      priority: 1
+      title: Invalidate the bootstrap receipt when the governance revision it names changes
+      traces_to:
+      - FR-03
+      observed_root_cause: /root/.l9/claude/bootstrap-state.json records governance_revision fda7f5fe..., the clone
+        is at 84d06e3d..., and gov-refresh.json simultaneously reports state "fresh" with 0 commits behind. The
+        receipt expires only on a 24-hour wall clock; the refresh TTL is one hour. The session therefore opened
+        reporting component health as "unknown" from a receipt describing a different tree.
+      change: 'Treat a governance_revision mismatch as expiry, independent of TTL. On mismatch either re-run the
+        adapter installer automatically or report "receipt stale: governance moved fda7f5f -> 84d06e3" rather than
+        "unknown".'
+      target:
+      - /root/.cursor-governance/ops/scripts/claude_bootstrap_receipt.py
+      - /root/.cursor-governance/ops/hooks/session_start_bootstrap.sh
+      owner: bootstrap-maintainer
+      effort: S
+      risk: low
+      done_condition: With the clone moved to a new revision, the session banner names the revision mismatch as
+        the reason, and a refreshed receipt records the current HEAD.
+  - source_ref: P4/improvements/IMP-04
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-04
+    source_title: Re-probe DEGRADED components at session start instead of reading a day-old verdict
+    source_record:
+      id: IMP-04
+      stream: bootstrap
+      priority: 2
+      title: Re-probe DEGRADED components at session start instead of reading a day-old verdict
+      traces_to:
+      - FR-03
+      - F-03
+      observed_root_cause: 'The receipt reported memory as DEGRADED. Tested directly during this audit, the memory
+        client returned exit 0 and {"healthy": true, circuit CLOSED}. The DEGRADED verdict was 24 hours old and
+        no longer true.'
+      change: 'For components marked DEGRADED in an expired receipt, run their existing cheap health probe at session
+        start and report the live result. Memory already has one: graphiti_memory_client.py health under the governance
+        venv.'
+      target:
+      - /root/.cursor-governance/ops/hooks/session_start_bootstrap.sh
+      owner: bootstrap-maintainer
+      effort: M
+      risk: medium
+      risk_note: Adds startup latency; bound each probe with a timeout and fail soft.
+      done_condition: A session whose receipt is expired reports at least one component's live state, and reports
+        memory as READY when the health probe exits 0.
+  - source_ref: P6/improvements/BOOT-1
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: BOOT-1
+    source_title: Auto-rerun install.sh on expired/DEGRADED receipt at SessionStart
+    source_record:
+      id: BOOT-1
+      plane: bootstrap
+      title: Auto-rerun install.sh on expired/DEGRADED receipt at SessionStart
+      root_cause_ref: FA-2
+      root_cause_observed: receipt expired (99580s > 86400 ttl) -> unknown; named remediation never auto-run in
+        2 turns
+      change: SessionStart hook runs named remediation bounded/logged/fail-soft when receipt expired or DEGRADED;
+        writes fresh receipt; failure backoff stamp
+      owner: governance-maintainer
+      target: environment/agents/adapters/claude-code hooks + install.sh idempotency
+      effort: M
+      risk: SessionStart latency; broken install.sh would run each session — backoff required
+      done_condition: session started >24h after build shows receipt generated_at from that session start, state
+        != unknown
+  - source_ref: P7/improvements/IMP-07
+    source_pack: P7
+    source_path: improvements.yaml
+    source_id: IMP-07
+    source_title: Truthful bootstrap status for the claude_cloud surface
+    source_record:
+      id: IMP-07
+      category: bootstrap
+      title: Truthful bootstrap status for the claude_cloud surface
+      root_cause: FR-01 (DEGRADED memory/mcp lines while both demonstrably worked; receipt expiry -> "unknown")
+      change: 'Diagnose why shared_bootstrap/capabilities/memory/mcp/plugins report DEGRADED on this surface. For
+        any state that is expected in cloud sessions, print "expected-degraded (cloud)" instead of DEGRADED; refresh
+        the bootstrap receipt at SessionStart so TTL expiry does not manufacture "unknown" on a healthy session.
+
+        '
+      owner: governance-repo (ops/scripts/claude_bootstrap_receipt.py + bootstrap probes)
+      target: bootstrap-truthfulness PR
+      effort: M (needs the actual probe failures, which this session did not capture — first step is instrumentation)
+      risk: low
+      done_condition: 'A cloud SessionStart shows only states that match observed capability (a subsystem marked
+        DEGRADED must actually fail when exercised).
+
+        '
+  - source_ref: P8/improvements/I-BF-01
+    source_pack: P8
+    source_path: improvements.yaml
+    source_id: I-BF-01
+    source_title: Invalidate the bootstrap receipt when the governance revision moves
+    source_record:
+      id: I-BF-01
+      title: Invalidate the bootstrap receipt when the governance revision moves
+      traces_to:
+      - F-03
+      - R-01
+      root_cause: The receipt pins governance_revision 84d06e3d and the refresh reports 829f45ec. Refresh does not
+        invalidate the receipt, so a receipt describing a superseded revision is read as merely "expired" rather
+        than "stale for this revision".
+      change: Have the refresh step compare its resulting SHA against the receipt's governance_revision and mark
+        the receipt stale-by-revision when they differ, distinctly from stale-by-TTL.
+      owner: shared-bootstrap maintainer
+      target: ops/scripts/claude_bootstrap_receipt.py + the refresh step
+      effort: M
+      risk: Low-medium. More sessions will be classified as needing re-bootstrap, which is the point; it should
+        not be coupled to any auto-run without I-BF-02's guardrails.
+      done_condition: With a receipt pinned to revision A and governance at revision B, the receipt reader reports
+        stale-by-revision and names both SHAs.
+  - source_ref: P8/improvements/I-BF-02
+    source_pack: P8
+    source_path: improvements.yaml
+    source_id: I-BF-02
+    source_title: Decide explicitly whether SessionStart may re-run the remediation
+    source_record:
+      id: I-BF-02
+      title: Decide explicitly whether SessionStart may re-run the remediation
+      traces_to:
+      - R-05
+      - F-03
+      root_cause: 'The receipt carries `remediation: bash .../install.sh`, the banner prints the degraded state,
+        and the SessionStart hook references only verify_account_env (line 289). Nothing re-runs install.sh, so
+        a degraded bootstrap persists indefinitely.'
+      change: Either (a) invoke the remediation under the existing repo-write lock with a fail-soft skip when the
+        lock is held, or (b) state in the banner that repair is operator-initiated and stop presenting a remediation
+        string that nothing will run.
+      owner: governance-adapter maintainer
+      target: environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh
+      effort: M
+      risk: Medium for option (a) - install.sh writes into the workspace and would need the repo-write lock to avoid
+        the pre-commit attribution failure described in rules/48. Option (b) is Low risk and honest.
+      done_condition: Either a degraded receipt is repaired without human action, or the banner no longer advertises
+        a repair that does not execute.
+  - source_ref: P8/improvements/I-BF-03
+    source_pack: P8
+    source_path: improvements.yaml
+    source_id: I-BF-03
+    source_title: Retain a per-component reason when bootstrap degrades
+    source_record:
+      id: I-BF-03
+      title: Retain a per-component reason when bootstrap degrades
+      traces_to:
+      - F-03
+      - UNK-02
+      - UNK-03
+      root_cause: The receipt records shared_bootstrap/capabilities/memory/mcp/plugins as DEGRADED with no reason,
+        and no log from that run is retained under /root/.l9/claude/. The cause is not recoverable after the fact.
+      change: Add a short reason string per degraded component in the receipt.
+      owner: shared-bootstrap maintainer
+      target: ops/scripts/bootstrap_agent_environment.sh receipt writer
+      effort: S
+      risk: Low - additive field.
+      done_condition: A degraded component in bootstrap-state.json carries a reason a later session can read without
+        re-running the bootstrap.
+  - source_ref: P9/improvements/I-BS-04
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-04
+    source_title: Regenerate the bootstrap receipt on container restart, or mark it stale rather than unknown
+    source_record:
+      id: I-BS-04
+      title: Regenerate the bootstrap receipt on container restart, or mark it stale rather than unknown
+      traces_to:
+      - F-06
+      - F-07
+      - FR-03
+      root_cause: The restart rewrote /root/.claude/* (mtime 01:33) and refreshed gov-refresh.json, but left bootstrap-state.json
+        at its 2026-08-23 21:38 mtime, so it ages past its 86400s TTL and reports unknown forever. It also pins
+        governance_revision 84d06e3d while the SSOT moved to 829f45ec.
+      change: Re-run the bootstrap probe on session start when the receipt is older than its TTL, and re-stamp governance_revision
+        from the live SSOT. If a re-probe is not affordable, print the last known component states with an explicit
+        age rather than the single word unknown.
+      owner: Cursor-Governance - claude-code adapter session-start path
+      target: /root/.l9/claude/bootstrap-state.json
+      effort: M
+      risk: low
+      done_condition: After a restart, the banner prints per-component states with an age under the TTL, and governance_revision
+        matches gov-refresh.json local_sha.
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+    residual:
+    - 'IMP-03 / I-BF-01: treat a governance_revision mismatch as expiry, distinct from TTL expiry.'
+    - 'IMP-04 / BOOT-1: re-probe DEGRADED components at session start rather than serving a day-old verdict, under
+      the repo-write lock, fail-soft.'
+    - 'I-BF-03 / IMP-10 / B5: a reason string and log path per degraded component. The deps stage already has log
+      files; the other five components have nothing.'
+    evidence:
+    - REPRODUCING AT THIS BINDING, fourth recorded occurrence. /root/.l9/claude/bootstrap-state.json carries governance_revision
+      b618338db235b120709202a217c8b0109bc3c05b, generated_at 2026-08-28T04:34:13Z. /root/.l9/claude/gov-refresh.json
+      carries local_sha and origin_sha 59f03a5d, refreshed_at 2026-08-28T21:39:28Z. readiness-receipt.json carries
+      governance_SHA 59f03a5d. Two stores, two answers, one session, nothing invalidated the stale one.
+    - The stale receipt is 17 hours old against ttl_seconds 86400, so TTL will not catch it. Revision-mismatch expiry
+      is the only mechanism that would, and claude_bootstrap_receipt.py implements TTL only (lines 98-102); governance_revision
+      is carried through at line 88 and never compared.
+    - 'Per-component evidence still absent: bootstrap-state.json reports bare DEGRADED for shared_bootstrap, capabilities,
+      memory, mcp and plugins, with one repo-level remediation string and no per-component reason or log path.'
+    optimized_sequence: 1
+    execution_lane: L0
+    schedule_slot:
+      start: 0
+      end: 3
+      lanes: 4
+    leverage_rank: 2
+- id: CI-005
+  title: Make memory health transport-specific and continuity task-bearing
+  status: ACTIVE
+  priority: 1
+  dependencies:
+  - CI-004
+  canonical_action: Use one authoritative probe per memory transport, distinguish nothing-to-write from failed writes,
+    write a task-bearing completion PICKUP, prioritize the target repo in hydration, and name skipped repos/empty
+    state explicitly.
+  source_records:
+  - source_ref: P1/improvements/IMP-09
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-09
+    source_title: Make hydration relevance-ordered, or report what it skipped
+    source_record:
+      id: IMP-09
+      group: bootstrap
+      title: Make hydration relevance-ordered, or report what it skipped
+      traces_to:
+      - FRICTION-06
+      root_cause: hydrated 6 of 11 (cap 6); selection is not relevance-driven and none of the 6 was the repo being
+        worked on. All 8 facts were PICKUP restatements with no task content.
+      change: Order hydration by the session's declared repo scope / task target before applying the cap, and have
+        the packet name the repos it skipped. If a PICKUP has no task content, say so rather than emitting 8 paraphrases
+        of the same empty result.
+      owner: Graphiti hydration maintainer
+      target: /root/.cursor-governance/ops/graphiti/hydration/
+      effort: M
+      risk: low
+      done_when: The packet lists skipped repos and a session targeting one repo hydrates that repo first.
+      open_question: UNKNOWN whether the cap of 6 is a latency budget or a context budget; that determines whether
+        raising it is an option.
+  - source_ref: P4/improvements/IMP-05
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-05
+    source_title: Name the repositories that hydration skipped
+    source_record:
+      id: IMP-05
+      stream: bootstrap
+      priority: 3
+      title: Name the repositories that hydration skipped
+      traces_to:
+      - FR-07
+      observed_root_cause: The banner says "hydrated 6 of 9 repositories under /home/user (cap 6)". Eight of the
+        nine directories are git repositories. Which two were excluded is not stated, so an agent cannot tell whether
+        its target repository has memory loaded.
+      change: 'Print the excluded repository names and the ordering rule, e.g. "skipped: SEO-Bot, Website-Bot (cap
+        6, ordered by last commit)".'
+      target:
+      - /root/.cursor-governance/ops/graphiti/hydration/cli.py
+      owner: memory-maintainer
+      effort: S
+      risk: low
+      done_condition: The banner names every skipped repository and the ordering used.
+  - source_ref: P6/improvements/BOOT-2
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: BOOT-2
+    source_title: Single authoritative memory probe shared by receipt and hydrate
+    source_record:
+      id: BOOT-2
+      plane: bootstrap
+      title: Single authoritative memory probe shared by receipt and hydrate
+      root_cause_ref:
+      - FA-6
+      - FA-7
+      root_cause_observed: receipt memory=DEGRADED vs hydrate degraded=false in same session
+      change: receipt memory component consumes hydrate result or both call one shared probe
+      owner: governance-maintainer
+      target: receipt writer + ops/graphiti/hydration/
+      effort: M
+      risk: low; unification may reveal which verdict was wrong — investigate before silencing
+      done_condition: receipt memory state and hydrate degraded flag agree, probe named in both outputs
+  - source_ref: P6/improvements/BOOT-4
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: BOOT-4
+    source_title: Write completion PICKUP at contract end
+    source_record:
+      id: BOOT-4
+      plane: bootstrap
+      title: Write completion PICKUP at contract end
+      root_cause_ref: FA-5
+      root_cause_observed: hydrate facts circular; completed contract state absent; turn 1 fully re-verified done
+        work
+      change: at completion, write one atomic Graphiti fact (rule 87 format, group_id+agent_id stamped) naming contract
+        outcome; stop re-ingesting generic resume instruction as fact
+      owner: governance-maintainer
+      target: ops/graphiti/hydration/ close path (Phase A/B)
+      effort: M
+      risk: low; must respect group_id contract (rule 98)
+      done_condition: session after a completed contract shows the completion fact in hydrate facts_preview
+  - source_ref: P6/improvements/BOOT-7
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: BOOT-7
+    source_title: Name skipped repos in multi-repo hydrate banner
+    source_record:
+      id: BOOT-7
+      plane: bootstrap
+      title: Name skipped repos in multi-repo hydrate banner
+      root_cause_ref: FR-6
+      root_cause_observed: '''hydrated 4 of 5'' with the 5th unnamed; identity UNKNOWN'
+      change: banner enumerates every discovered repo with hydrated/skipped + reason
+      owner: governance-maintainer
+      target: ops/graphiti/hydration/ banner writer
+      effort: S
+      risk: none
+      done_condition: banner lists all repos with status and skip reason
+  - source_ref: P7/improvements/IMP-09
+    source_pack: P7
+    source_path: improvements.yaml
+    source_id: IMP-09
+    source_title: Make PICKUP hydration carry real resume state
+    source_record:
+      id: IMP-09
+      category: loader
+      title: Make PICKUP hydration carry real resume state
+      root_cause: FR-05 (all 4 hydration packets said "resume from the latest PICKUP" — self-referential)
+      change: 'At session close, write PICKUP episodes containing concrete state (task, branch, head SHA, next action)
+        instead of the generic resume pointer, or have the hydrator drop packets whose next_action merely references
+        PICKUP itself and say "no substantive PICKUP" honestly.
+
+        '
+      owner: governance-repo (ops/graphiti hydration/close pipeline)
+      target: memory-pipeline PR
+      effort: M
+      risk: low
+      done_condition: 'A session that ends mid-task produces a PICKUP whose next_action names the task and branch;
+        the circular form no longer appears in hydration.
+
+        '
+  - source_ref: P9/improvements/I-BS-05
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-05
+    source_title: Report memory health per transport instead of as one collapsed verdict
+    source_record:
+      id: I-BS-05
+      title: Report memory health per transport instead of as one collapsed verdict
+      traces_to:
+      - F-07
+      - F-04
+      - FR-02
+      root_cause: The CLI front door to Graphiti is healthy (health -> healthy true, tool_count 9) while the brokered
+        MCP transport is not. One memory verdict cannot express that, so it reports DEGRADED and discourages the
+        path that works.
+      change: Split the memory component into memory.cli and memory.mcp, probed independently, and report each.
+        Base the CLI verdict on graphiti_memory_client.py health rather than on broker reachability.
+      owner: Cursor-Governance - ops/graphiti and the adapter bootstrap probe
+      target: /root/.l9/claude/bootstrap-state.json schema
+      effort: M
+      risk: low
+      done_condition: With the broker unreachable and the CLI healthy, the banner reports memory.cli READY and memory.mcp
+        DEGRADED.
+  - source_ref: P9/improvements/I-BS-06
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-06
+    source_title: Make the writeback receipt distinguish nothing-to-write from failed-to-write, and count task-bearing
+      facts on hydrate
+    source_record:
+      id: I-BS-06
+      title: Make the writeback receipt distinguish nothing-to-write from failed-to-write, and count task-bearing
+        facts on hydrate
+      traces_to:
+      - F-04
+      - FR-02
+      root_cause: 'The writeback receipt records writes: 0, close_status: skipped, warnings: 1 with no warning text.
+        Hydration then returns 8 self-referential meta-facts and reports success, because the metric counted is
+        facts_returned rather than task-bearing content.'
+      change: Record the warning text and an explicit reason code in the writeback receipt. On the hydrate side,
+        count facts that are not self-referential PICKUP restatements and surface that number, so a hydration carrying
+        no task state is visibly empty rather than apparently successful.
+      owner: Cursor-Governance - ops/graphiti/hydration and the Stop-hook writeback
+      target: /home/user/.l9/memory/receipts/
+      effort: M
+      risk: low
+      done_condition: 'A session that produced no durable memory shows task_bearing_facts: 0 at the next start instead
+        of facts_returned: 8.'
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'I-BS-05: split the receipt''s `memory` component into memory.cli and memory.mcp, probed independently, with
+      the CLI verdict based on graphiti_memory_client.py health rather than broker reachability.'
+    - 'I-BS-06 / IMP-09(P7): count facts that are not self-referential PICKUP restatements and surface that number,
+      so a hydration carrying no task state is visibly empty rather than apparently successful; record a reason
+      code in the writeback receipt so nothing-to-write is distinguishable from failed-to-write.'
+    - 'BOOT-4: write a task-bearing completion PICKUP at contract end (task, branch, head SHA, next action) instead
+      of re-ingesting the generic resume pointer as a fact.'
+    - 'IMP-09(P1) / IMP-05(P4) / BOOT-7: order hydration by the session''s declared repo scope before applying the
+      cap, and have the banner enumerate every discovered repository as hydrated or skipped, with a per-repo reason.'
+    evidence:
+    - 'No memory.cli / memory.mcp split exists: bootstrap-state.json carries one collapsed "memory": "DEGRADED".'
+    - 'LIVE hydrate at this binding, all four namespaces: facts_returned=8 for each, and the previewed facts are
+      self-referential PICKUP restatements (''The next action involves resuming from the latest Graphiti PICKUP'',
+      ''Search Graphiti for latest PICKUP and continue''). A hydration carrying no task state still reports success.
+      No task-bearing fact count exists in ops/graphiti/hydration/.'
+    - The multi-repo banner names counts and a generic skip rule ('hydrated 4 of 4 ... repositories with no namespace
+      of their own are skipped') but not skipped repository names with per-repo reasons.
+    - 'Compounding at this binding: the graphiti-memory MCP server failed to connect (502 upstream dial failed)
+      while the CLI hydrate returned packets — precisely the per-transport divergence I-BS-05 exists to make visible,
+      invisible behind one word.'
+    optimized_sequence: 8
+    execution_lane: L0
+    schedule_slot:
+      start: 3
+      end: 6
+      lanes: 4
+    leverage_rank: 7
+- id: CI-006
+  title: Resolve authority-sensitive environment drift at the actual source
+  status: OPEN_DECISION
+  priority: 0
+  dependencies:
+  - CI-007
+  canonical_action: Trace each effective value to its source, separate authority-widening drift from cosmetic drift,
+    make repair reachable or explicitly human-only, and record the governing value. The intended AUTONOMOUS_MERGE
+    value remains an open decision.
+  source_records:
+  - source_ref: P1/improvements/IMP-03
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-03
+    source_title: Resolve the L9_AUTONOMY_AUTONOMOUS_MERGE drift at its real source
+    source_record:
+      id: IMP-03
+      group: env_loader
+      title: Resolve the L9_AUTONOMY_AUTONOMOUS_MERGE drift at its real source
+      traces_to:
+      - FRICTION-09
+      root_cause: The verifier expects 'false'; /home/user/.claude/settings.json:166 sets "true". The reported repair
+        targets the account env pane, which is not the source.
+      change: Decide which value is correct, then make settings.json and the verifier agree. Extend the drift report
+        to name the file and line where it found the value.
+      owner: governance environment maintainer
+      target:
+      - /home/user/.claude/settings.json
+      - environment/agents/adapters/claude-code/verify_account_env.py
+      effort: S
+      risk: medium
+      risk_note: AUTONOMOUS_MERGE gates unattended merging; confirm intended value with a human before flipping
+        it.
+      done_when: SessionStart reports 0 of 33 drifted and the value is set in exactly one layer.
+      decision_required: true
+  - source_ref: P3/improvements/A1
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: A1
+    source_title: Make autonomy-widening variable drift fail loudly and be auditable
+    source_record:
+      id: A1
+      group: environment_and_variable_loader
+      title: Make autonomy-widening variable drift fail loudly and be auditable
+      root_cause_ref: FAIL-06
+      owner: environment/agents/adapters/claude-code/verify_account_env.py + ops/autonomy/merge_gate.py
+      target: SessionStart output and merge decision records
+      effort: S
+      risk: Low
+      change: distinguish autonomy-widening drift from cosmetic drift in the SessionStart line; have merge_gate
+        record the effective value it read
+      done_when: a session whose L9_AUTONOMY_AUTONOMOUS_MERGE disagrees with the expectation emits a distinguishable
+        warning, and a merge receipt records the effective value
+      sequence: 3
+  - source_ref: P4/improvements/IMP-08
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-08
+    source_title: Automate what can be automated in the account-drift repair
+    source_record:
+      id: IMP-08
+      stream: other
+      priority: 3
+      title: Automate what can be automated in the account-drift repair
+      traces_to:
+      - FR-04
+      observed_root_cause: 'verify_account_env.py exits 1 with "L9_AUTONOMY_AUTONOMOUS_MERGE: expected ''false'',
+        got ''true''" and its repair is to paste fields into a UI panel. The same drift was reported at the start
+        of two consecutive sessions.'
+      change: Where a drifted variable is not required to be panel-scoped, export the corrected value into the session
+        env from the adapter and record that it was corrected at runtime. Where it must be panel-scoped, escalate
+        after N consecutive sessions rather than repeating the same line.
+      target:
+      - /root/.cursor-governance/environment/agents/adapters/claude-code/verify_account_env.py
+      - /root/.l9/cloud-session.env
+      owner: governance-adapter-maintainer
+      effort: M
+      risk: medium
+      risk_note: Overriding a panel value at runtime hides the drift from the panel. Only acceptable if the override
+        is announced in the session banner.
+      done_condition: verify_account_env.py exits 0, or reports the variable as corrected at runtime with the panel
+        still flagged for a human.
+  - source_ref: P6/improvements/ENV-1
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: ENV-1
+    source_title: Repair L9_AUTONOMY_AUTONOMOUS_MERGE drift
+    source_record:
+      id: ENV-1
+      plane: env
+      title: Repair L9_AUTONOMY_AUTONOMOUS_MERGE drift
+      root_cause_ref: FA-3
+      root_cause_observed: live env true vs expected false; verifier exit 1; unrepaired 2/2 sessions
+      change: run verify_account_env.py --emit-fields; paste docs/ACCOUNT_FIELDS.md section 1 into environment variables
+      owner: account-owner
+      target: claude.ai environment configuration
+      effort: S
+      risk: low; workflows silently relying on autonomous merge stop doing so (intended)
+      done_condition: verify_account_env.py exits 0; banner shows DRIFT 0 of 33 next session
+  - source_ref: P7/improvements/IMP-03
+    source_pack: P7
+    source_path: improvements.yaml
+    source_id: IMP-03
+    source_title: Close the L9_AUTONOMY_AUTONOMOUS_MERGE drift (or silence it deliberately)
+    source_record:
+      id: IMP-03
+      category: loader
+      title: Close the L9_AUTONOMY_AUTONOMOUS_MERGE drift (or silence it deliberately)
+      root_cause: FR-02 (same 1-of-33 drift warned at all 4 session starts; unrepairable from inside a session)
+      change: 'Operator pastes docs/ACCOUNT_FIELDS.md section 1 into claude.ai Environment variables (the printed
+        repair), setting L9_AUTONOMY_AUTONOMOUS_MERGE=false. If ''true'' is actually intended, update the expected
+        value in the account-field contract instead so the warning stops lying.
+
+        '
+      owner: operator
+      target: immediate (console action)
+      effort: S (minutes)
+      risk: 'low-medium: the drifted value relaxes a merge-authority default; leaving it drifted is the riskier
+        state.
+
+        '
+      done_condition: 'SessionStart reports "DRIFT: 0 of 33 variables".'
+  - source_ref: P8/improvements/I-EL-01
+    source_pack: P8
+    source_path: improvements.yaml
+    source_id: I-EL-01
+    source_title: Resolve the AUTONOMOUS_MERGE contradiction at its source
+    source_record:
+      id: I-EL-01
+      title: Resolve the AUTONOMOUS_MERGE contradiction at its source
+      traces_to:
+      - F-01
+      root_cause: settings.template.json:194 renders "true" into the live session while verify_account_env.py derives
+        the expected "false" from web/environment.env.example:110. Two governance files disagree.
+      change: 'Pick one authority and make the other read from it. Preferred: have settings.template.json''s env
+        block for this key be generated from environment.env.example, so the verifier and the renderer cannot diverge.
+        Also reconcile the prose at settings.template.json:25 ("Standing autonomous merge is ON"), which states
+        the opposite of the example''s rationale at lines 96-104.'
+      owner: governance-adapter maintainer (Cursor-Governance)
+      target: environment/agents/adapters/claude-code/settings.template.json + web/environment.env.example
+      effort: S
+      risk: Medium. This flag is a real merge_gate.py control. Setting it false on this surface removes an affordance
+        that, per the example's own comment and confirmed by F-02, always failed at the last step anyway. Changing
+        it must not be done silently on self-hosted surfaces with full GraphQL.
+      done_condition: '`python3 verify_account_env.py` exits 0 on a fresh cloud session with no manual account-field
+        paste.'
+  - source_ref: P8/improvements/I-EL-02
+    source_pack: P8
+    source_path: improvements.yaml
+    source_id: I-EL-02
+    source_title: Make the drift report name the file that produced the live value
+    source_record:
+      id: I-EL-02
+      title: Make the drift report name the file that produced the live value
+      traces_to:
+      - F-01
+      root_cause: The report says "expected 'false', got 'true'" and offers an account-field paste as repair. It
+        does not say the value came from the rendered settings env block, so the offered repair does not address
+        the actual source.
+      change: When a drifted variable is also present in ~/.claude/settings.json's env block, print that path as
+        the effective source alongside the expectation.
+      owner: governance-adapter maintainer
+      target: environment/agents/adapters/claude-code/verify_account_env.py
+      effort: S
+      risk: Low - reporting only, no behaviour change.
+      done_condition: Running the verifier on this session prints the settings.json path for L9_AUTONOMY_AUTONOMOUS_MERGE.
+  - source_ref: P9/improvements/I-EL-03
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-EL-03
+    source_title: Provide an in-session path to correct account-field drift, or downgrade it to informational
+    source_record:
+      id: I-EL-03
+      title: Provide an in-session path to correct account-field drift, or downgrade it to informational
+      traces_to:
+      - F-12
+      root_cause: L9_AUTONOMY_AUTONOMOUS_MERGE is true where the verifier expects false. The printed repair requires
+        running verify_account_env.py and pasting output into a web UI, which no session can do. The drift persisted
+        across the restart.
+      change: Either let the loader apply the expected value for variables the verifier owns, or state plainly that
+        the drift is human-only to repair and that the expected value governs agent behaviour meanwhile. Drift on
+        an authority-widening variable should be called out separately from cosmetic drift.
+      owner: Cursor-Governance - environment/agents/adapters/claude-code/verify_account_env.py
+      target: account field plane
+      effort: M
+      risk: high
+      done_condition: Either drift count reaches 0 without human action, or the banner marks the item human-only
+        and names the governing value.
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+    residual:
+    - 'I-EL-02: name the file that produced the live value when a variable drifts.'
+    - 'A1 / I-EL-03: classify authority-widening drift separately from cosmetic drift, and either apply the expected
+      value or state plainly that repair is human-only.'
+    - 'A1 second clause: have merge_gate record the effective value it read into the merge receipt.'
+    evidence:
+    - 'IMP-03''s done_when is now MET. `python3 environment/agents/adapters/claude-code/verify_account_env.py` at
+      this binding reports ''OK: all 32 expected variables match'' with zero drift, and L9_AUTONOMY_AUTONOMOUS_MERGE=false
+      is present in the session env but absent from /home/user/.claude/settings.json''s env block — set in exactly
+      one layer, which is the second half of the criterion.'
+    - 'The class mechanism is still unbuilt: verify_account_env.py contains no source-file attribution for a drifted
+      value (I-EL-02) and no authority-widening vs cosmetic classification (A1, I-EL-03).'
+    closed_legs:
+    - 'IMP-03, ENV-1, IMP-03(P7): the instance is closed. Zero drift, one layer.'
+    optimized_sequence: 6
+    execution_lane: L2
+    schedule_slot:
+      start: 2
+      end: 4
+      lanes: 4
+    leverage_rank: 8
+  dependencies_previous: []
+  dependencies_rederived_at: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+- id: CI-007
+  title: Replace standing breakglass environment strings with scoped expiring receipts
+  status: ACTIVE
+  priority: 0
+  dependencies: []
+  canonical_action: Represent exceptional publish authority with issuer, reason, scope, issuance time, expiry/consumption
+    semantics, and session-start visibility; do not normalize a one-time grant into silent permanent configuration.
+  source_records:
+  - source_ref: P1/improvements/IMP-04
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-04
+    source_title: Expire or re-scope L9_PUBLISH_PATH_OVERRIDE
+    source_record:
+      id: IMP-04
+      group: env_loader
+      title: Expire or re-scope L9_PUBLISH_PATH_OVERRIDE
+      traces_to:
+      - FRICTION-08
+      root_cause: A variable whose value asserts "one-time breakglass" is permanently set; present in both observed
+        sessions.
+      change: Either remove it from the standing environment and require per-session injection, or change the value
+        to describe the actual standing scope.
+      owner: governance environment maintainer
+      target: account Environment variables / settings.json env block
+      effort: S
+      risk: medium
+      risk_note: Removal may block publication paths that currently depend on it; verify dependents first.
+      done_when: The variable is either absent from a fresh session or its value describes a standing policy.
+      decision_required: true
+  - source_ref: P6/improvements/ENV-2
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: ENV-2
+    source_title: Retire standing 'one-time' breakglass variable
+    source_record:
+      id: ENV-2
+      plane: env
+      title: Retire standing 'one-time' breakglass variable
+      root_cause_ref: FR-4
+      root_cause_observed: L9_PUBLISH_PATH_OVERRIDE persists across sessions with one-time wording
+      change: delete variable; re-grant per-session if ever needed
+      owner: account-owner
+      target: claude.ai environment configuration
+      effort: S
+      risk: low; a gate depending on it will surface the real dependency
+      done_condition: variable absent from env dump in fresh session; no untriaged gate regression
+  - source_ref: P9/improvements/I-EL-06
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-EL-06
+    source_title: Give breakglass grants an expiry and a recorded origin
+    source_record:
+      id: I-EL-06
+      title: Give breakglass grants an expiry and a recorded origin
+      traces_to:
+      - F-17
+      root_cause: L9_PUBLISH_PATH_OVERRIDE holds the free-text value 'one-time breakglass authorized by user' and
+        survived the container restart. Nothing records who set it, what it scoped, or when it lapses.
+      change: Express breakglass as a receipt with an issuer, a scope and an expiry timestamp rather than a durable
+        environment string, and have the session-start banner report any grant still in force along with its age.
+      owner: Cursor-Governance - autonomy surface profile and env loader
+      target: L9_PUBLISH_PATH_OVERRIDE
+      effort: M
+      risk: high
+      done_condition: A one-time grant is absent from the environment on the session after it is consumed.
+      unknown_ref: U-04
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: done
+    delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+    residual:
+    - 'IMP-04 / ENV-2: remove the standing variable from the account environment, or replace its value with one
+      that describes an actual standing policy.'
+    - 'I-EL-06: express breakglass as a receipt with issuer, scope and expiry, and report any grant still in force,
+      with its age, in the session-start banner.'
+    evidence:
+    - 'LIVE at this binding: the session environment carries L9_PUBLISH_PATH_OVERRIDE=''one-time breakglass authorized
+      by user''. The value is its own indictment — a one-time grant normalized into permanent configuration is the
+      exact defect the record names.'
+    - It is not inert. ops/autonomy/local_execution_gate.py:190-203 reads PUBLISH_PATH_OVERRIDE_ENV as a live human/ops
+      breakglass over the publish-path plane.
+    - It carries no issuer, no scope, no issuance time and no expiry, and the session-start banner does not report
+      that a grant is in force.
+    - 'It is not covered by the account-field contract either: verify_account_env.py compares 32 expected variables
+      and this is not among them, so drift detection would not notice it appearing, changing or persisting.'
+    - 'All three source improvements are unmet at this binding: IMP-04 (absent from a fresh session, or a value
+      describing standing policy), ENV-2 (retire the standing variable), I-EL-06 (express breakglass as a receipt
+      with issuer, scope and expiry; report grants still in force at session start).'
+    demoted_from_done: true
+    demotion_reason: 'Marked done on evidence that answers a different question. The cited proof — readiness merge_authority_status=READY
+      — establishes that the readiness probe no longer crashes. It says nothing about whether exceptional publish
+      authority is scoped and expiring, which is what this record is.
+
+      '
+    optimized_sequence: 3
+    execution_lane: L2
+    schedule_slot:
+      start: 0
+      end: 2
+      lanes: 4
+    leverage_rank: 1
+- id: CI-008
+  title: Reconcile make pr doctrine with consumer-repository command contracts
+  status: OPEN_DECISION
+  priority: 0
+  dependencies: []
+  canonical_action: 'Choose one canonical contract: ship a functioning pr target into every governed consumer or
+    relax the absolute doctrine to a defined supported fallback. Do not retain contradictory absolutes.'
+  source_records:
+  - source_ref: P1/improvements/IMP-13
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-13
+    source_title: Reconcile the absolute make pr rule with repos that have no pr target
+    source_record:
+      id: IMP-13
+      group: governance_tooling
+      title: Reconcile the absolute make pr rule with repos that have no pr target
+      traces_to:
+      - FRICTION-04
+      root_cause: 'The surface profile says make pr is the ONLY way to reach GitHub; l9-pr-remediation says repos
+        without a pr target fall back to the workflow run: list. Quantum-L9/.github has no pr target, so publication
+        used raw git push — off-doctrine under one authority and sanctioned under the other.'
+      change: 'State the precedence explicitly in the surface profile: name the fallback and require it be recorded
+        on the run''s plan (which the skill already asks for). Alternatively add a minimal pr target to repos expected
+        to be published by agents.'
+      owner: ops/autonomy/surface_profile.yaml owner
+      target:
+      - ops/autonomy/surface_profile.yaml
+      - rules/48-make-pr-remediation
+      - rules/88-l4-local-autonomy
+      effort: S
+      risk: low
+      risk_note: clarifies existing intent rather than widening authority
+      done_when: An agent facing a repo with no pr target can cite one authority, not two that disagree.
+      decision_required: true
+  - source_ref: P3/improvements/C4
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: C4
+    source_title: Reconcile l9-pr-remediation with repos lacking make pr
+    source_record:
+      id: C4
+      group: tooling_contract
+      title: Reconcile l9-pr-remediation with repos lacking make pr
+      root_cause_ref: FAIL-09
+      owner: skills/l9-pr-remediation/SKILL.md + constellation Makefile template
+      target: the PUBLIC verb contract
+      effort: M
+      risk: Low
+      change: add pr/pr-check to the Makefile template, or promote the fallback to a first-class branch of the contract
+        naming the per-repo gate
+      done_when: the skill names a working verify+publish path for every constellation repo
+      sequence: 6
+  - source_ref: P6/improvements/BOOT-6
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: BOOT-6
+    source_title: Reconcile 'make pr only' doctrine with consumer repos lacking the target
+    source_record:
+      id: BOOT-6
+      plane: bootstrap
+      title: Reconcile 'make pr only' doctrine with consumer repos lacking the target
+      root_cause_ref:
+      - FR-2
+      - FA-1
+      root_cause_observed: 'CEG Makefile has no pr target; PR #234 invoked governance script directly'
+      change: ship governance-provided pr target include, or doctrine names open_pr_after_gate.sh as equivalent
+        sanctioned entry
+      owner: governance-maintainer; repo-maintainer applies
+      target: governance Makefile include + Cognitive.Engine.Graphs/Makefile
+      effort: S
+      risk: none observed
+      done_condition: make -n pr resolves in CEG, or doctrine projection updated
+  - source_ref: P9/improvements/I-BS-08
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-08
+    source_title: Ship the make pr target into consumer repositories, or stop naming it the only path
+    source_record:
+      id: I-BS-08
+      title: Ship the make pr target into consumer repositories, or stop naming it the only path
+      traces_to:
+      - F-10
+      root_cause: Doctrine states make pr is the only route to GitHub, and grep -cE '^pr(-check)?:' on the CEG Makefile
+        returns 0 across 44 targets. The underlying script exists at ops/scripts/open_pr_after_gate.sh.
+      change: Add a pr and pr-check target to the consumer Makefile that delegate to open_pr_after_gate.sh, as part
+        of consumer wiring. Until that lands, have the doctrine name the script as the equivalent sanctioned path
+        so agents are not left choosing between an absent target and an off-doctrine command.
+      owner: Cognitive.Engine.Graphs Makefile, plus Cursor-Governance consumer-wiring docs
+      target: /home/user/Cognitive.Engine.Graphs/Makefile
+      effort: S
+      risk: medium
+      done_condition: make pr-check runs the same gate chain the script runs today and exits 0 on a clean tree.
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance PR#307 (merged into main)
+    residual:
+    - 'Enable the consumer-workspace path: cwd=$GOV_ROOT so repo-local `entry:` hooks resolve, absolute --files
+      paths, and a governance-only-local-hook skip subset — validated against a real consumer checkout.'
+    evidence:
+    - 'ops/scripts/run_pr_precommit.sh:33-47 still carries the consumer-workspace leg as an in-script scoped follow-up,
+      explicitly not enabled: ''That path requires validation against a real consumer checkout (not available in
+      this environment), so it is not enabled here.'''
+    - 'The file changed since 30c6ecd4 (3163c35, #348) but the change added --staged commit-hook delegation, not
+      the consumer leg.'
+    - The governance-always half remains bound and tested (GOV_PRECOMMIT_CONFIG, tests/ops/scripts/test_publish_verb_governance_always.py).
+    optimized_sequence: 11
+    execution_lane: L2
+    schedule_slot:
+      start: 4
+      end: 6
+      lanes: 4
+    leverage_rank: 12
+- id: CI-009
+  title: Establish one project interpreter/toolchain authority and verify importability before READY
+  status: ACTIVE
+  priority: 0
+  dependencies: []
+  canonical_action: Resolve the project interpreter/venv deterministically, pin checker versions to the same authority,
+    export durable PATH/PYTHONPATH only through one loader, and make readiness end with repository import/command
+    smoke tests.
+  source_records:
+  - source_ref: P2/improvements/IMP-E1
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-E1
+    source_title: Add a single sourceable env loader that exports PYTHONPATH and pins the toolchain path
+    source_record:
+      id: IMP-E1
+      title: Add a single sourceable env loader that exports PYTHONPATH and pins the toolchain path
+      traces_to:
+      - FRIC-02
+      - FRIC-03
+      root_cause: 'No variable-load script exists (verified negative: find/grep/ls all returned no matches). PYTHONPATH
+        is unset in every fresh shell, so it was manually exported 18 times this session.'
+      proposal: 'Add scripts/env.sh that exports PYTHONPATH="$(git rev-parse --show-toplevel)" and prepends "$REPO/.venv/bin"
+        to PATH. Make it idempotent and safe to source twice. Do not have it read secrets or any .env file.
+
+        '
+      owner: 'role: repo maintainer (UNKNOWN)'
+      target: scripts/env.sh (new); referenced from README and CLAUDE.md
+      effort: S
+      risk: low
+      done_condition: '`. scripts/env.sh && python -c "import l9_ci; print(l9_ci.__file__)"` resolves to the repo
+        checkout from a shell where PYTHONPATH started unset, and `which ruff` resolves to .venv/bin/ruff.
+
+        '
+      non_goal: Not a secrets loader. Credentials in this environment arrive from the harness (GH_TOKEN, AWS_*),
+        and must not be duplicated into a tracked file.
+  - source_ref: P2/improvements/IMP-E2
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-E2
+    source_title: Make the local gate refuse to run against an unpinned toolchain
+    source_record:
+      id: IMP-E2
+      title: Make the local gate refuse to run against an unpinned toolchain
+      traces_to:
+      - FRIC-01
+      root_cause: ruff 0.15.8 / mypy 1.19.1 / pytest 9.0.2 sit on PATH ahead of the pinned 0.16.0 / 2.3.0 / 9.1.1
+        in .venv. ruff format output is version-sensitive; FAIL-05 was a formatting disagreement.
+      proposal: 'Extend `make doctor` (or the new env.sh) to compare the resolved ruff/mypy/pytest versions against
+        requirements-ci.txt and exit non-zero on mismatch, naming both versions.
+
+        '
+      owner: 'role: repo maintainer (UNKNOWN)'
+      target: Makefile doctor target
+      effort: S
+      risk: low
+      done_condition: With /root/.local/bin ahead of .venv/bin on PATH, `make doctor` exits non-zero and prints
+        the expected vs resolved version for each of the three tools.
+  - source_ref: P2/improvements/IMP-E3
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-E3
+    source_title: Reconcile the pre-commit ruff rev with the CI pin
+    source_record:
+      id: IMP-E3
+      title: Reconcile the pre-commit ruff rev with the CI pin
+      traces_to:
+      - FRIC-01
+      root_cause: .pre-commit-config.yaml pins ruff-pre-commit rev v0.15.5; requirements-ci.txt and pyproject [ci]
+        pin ruff==0.16.0. The hook and the blocking gate can disagree about formatting.
+      proposal: Move the hook rev to v0.16.0, or add a check asserting the two agree.
+      owner: 'role: repo maintainer (UNKNOWN)'
+      target: .pre-commit-config.yaml
+      effort: S
+      risk: medium
+      risk_detail: Bumping the hook rev may reformat files. Must be done as its own commit with the diff reviewed.
+      done_condition: The ruff version in .pre-commit-config.yaml equals the one in requirements-ci.txt, asserted
+        by a test or lint check, and `ruff format --check` is clean at that version.
+      blocked_by: UNK-03 — ruff 0.15.5 was never executed here, so the actual formatting delta between 0.15.5 and
+        0.16.0 in this codebase is unmeasured.
+  - source_ref: P3/improvements/A2
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: A2
+    source_title: Ship UV_PYTHON or remove it from the contract
+    source_record:
+      id: A2
+      group: environment_and_variable_loader
+      title: Ship UV_PYTHON or remove it from the contract
+      root_cause_refs:
+      - FRIC-04
+      - FAIL-04
+      - FAIL-05
+      owner: account environment + skills/l9-pr-remediation/references/run-contract.md
+      target: exported variable set, or the skill contract
+      effort: S
+      risk: Low
+      change: export UV_PYTHON to a uv-managed native CPython >=3.12, or drop the requirement and replace with per-repo
+        interpreter resolution
+      done_when: the preflight venv fingerprint step completes without a hand-built venv
+      sequence: 5
+  - source_ref: P3/improvements/A3
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: A3
+    source_title: Default python3 at or above the constellation floor
+    source_record:
+      id: A3
+      group: environment_and_variable_loader
+      title: Default python3 at or above the constellation floor
+      root_cause_ref: FAIL-04
+      owner: container_image
+      target: /usr/local/bin/python3
+      effort: M
+      risk: Med
+      risk_note: other tooling may pin 3.11
+      change: make default python3 >=3.12 (3.12 already present at /usr/bin/python3.12), or document per-repo interpreter
+        selection in bootstrap output
+      done_when: pip install -r requirements.txt succeeds on a clean checkout of the constellation repos
+      sequence: 5
+  - source_ref: P3/improvements/A4
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: A4
+    source_title: Remove the Debian-managed cryptography that pip cannot replace
+    source_record:
+      id: A4
+      group: environment_and_variable_loader
+      title: Remove the Debian-managed cryptography that pip cannot replace
+      root_cause_ref: FAIL-04
+      owner: container_image
+      target: system site-packages
+      effort: S
+      risk: Low
+      change: drop distro python3-cryptography, or pre-set venv-first guidance so repo installs do not collide
+      done_when: pip install -r requirements-ci.txt succeeds without --ignore-installed
+      sequence: 5
+  - source_ref: P3/improvements/A5
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: A5
+    source_title: Resolve the mypy split
+    source_record:
+      id: A5
+      group: environment_and_variable_loader
+      title: Resolve the mypy split
+      root_cause_ref: FAIL-05
+      owner: container_image
+      target: /root/.local/bin/mypy (uv tool venv)
+      effort: S
+      risk: Low
+      change: install mypy into the interpreter that carries project dependencies, or make the uv tool venv plugin-aware;
+        two mypy versions answering the same command is itself a defect
+      done_when: mypy engine/ --config-file=pyproject.toml succeeds from PATH on a prepared checkout
+      sequence: 5
+  - source_ref: P5/improvements/IMP-003
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-003
+    source_title: Pin Makefile lint and type targets to the venv interpreter
+    source_record:
+      id: IMP-003
+      traces_to: FR-003
+      category: tooling
+      title: Pin Makefile lint and type targets to the venv interpreter
+      root_cause: lint, lint-fix, test-all, agent-fix and agent-check call bare ruff/mypy, which resolve to /root/.local/bin
+        (ruff 0.15.8, mypy 1.19.1) instead of the pinned 0.16.1 / 2.3.0.
+      actions:
+      - Introduce RUFF := $(PYTHON) -m ruff and MYPY := $(PYTHON) -m mypy alongside the existing PYTHON/PYTEST vars
+      - Replace every bare ruff/mypy invocation with those variables
+      owner: repo maintainer
+      target: Makefile:8-9,40-42,52-58,86-88,100-101
+      effort: S
+      risk: low
+      risk_note: Newer pinned tools may surface findings the older PATH tools missed; that is the point, but expect
+        a first-run diff.
+      done_condition: '`make lint` reports ruff 0.16.1 and mypy 2.3.x, matching pyproject; no target invokes a bare
+        linter.'
+  - source_ref: P5/improvements/IMP-008
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-008
+    source_title: Install the CLIs the Makefile assumes, or declare them optional
+    source_record:
+      id: IMP-008
+      traces_to: FR-008
+      category: tooling
+      title: Install the CLIs the Makefile assumes, or declare them optional
+      root_cause: gh, gitleaks, semgrep and pre-commit are absent, so `make setup` cannot finish and the security/merge
+        targets cannot run.
+      actions:
+      - Add them to the devcontainer/image, or
+      - Guard each target with a command -v check that prints an actionable skip instead of failing
+      owner: environment owner
+      target: .devcontainer/Dockerfile, Makefile:14-16,143-144,180-189
+      effort: M
+      risk: low
+      done_condition: '`make setup` exits 0 on a clean container, or every target needing a missing CLI reports
+        a clear skip.'
+  - source_ref: P7/improvements/IMP-04
+    source_pack: P7
+    source_path: improvements.yaml
+    source_id: IMP-04
+    source_title: Make PE test modules collectable without manual PYTHONPATH
+    source_record:
+      id: IMP-04
+      category: loader
+      title: Make PE test modules collectable without manual PYTHONPATH
+      root_cause: F-04 (test_bridge.py collection fails from repo root; 2 failed invocations)
+      change: 'Add a conftest.py under environment/program-execution/ (or its tests dirs) that inserts PE_ROOT into
+        sys.path before collection, mirroring what the Makefile targets do with PYTHONPATH=$(PE_ROOT).
+
+        '
+      owner: governance-repo
+      target: next test-hygiene PR
+      effort: S
+      risk: low (test-only; must not leak into runtime imports)
+      done_condition: '`.venv/bin/python3 -m pytest environment/program-execution/integrations/ autonomy-control-plane/tests`
+        passes from the repo root with no environment variables.
+
+        '
+  - source_ref: P9/improvements/I-EL-05
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-EL-05
+    source_title: Make session-deps verify an importable environment before reporting ready
+    source_record:
+      id: I-EL-05
+      title: Make session-deps verify an importable environment before reporting ready
+      traces_to:
+      - F-15
+      - FR-05
+      root_cause: The banner reported toolchain ready and the log contains only two lines, yet project tooling was
+        unavailable until poetry env use /usr/bin/python3.12 and poetry install were run by hand. Default python3
+        remains 3.11.15 against a 3.12+ floor, with the venv outside the repository and no in-repo .venv.
+      change: Have the deps pass end with an import smoke test using the resolved interpreter, record the interpreter
+        path and version in the log, and either place the venv in the repository or export its bin directory on
+        PATH.
+      owner: session-deps provisioning
+      target: /root/.l9/claude/deps-<fingerprint>.log
+      effort: M
+      risk: medium
+      done_condition: python3 -c 'import engine' succeeds without a PATH prefix, and the deps log records the interpreter
+        path and version.
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance PR#307 (merged into main)
+    residual:
+    - 'I-EL-05: end the deps pass with an import smoke on the resolved interpreter; record interpreter path and
+      version in the log.'
+    evidence:
+    - 'CONFIRMED still open at this binding. The banner says ''session-deps: toolchain ready (fingerprint 9ff843f2…)''.
+      The backing log /root/.l9/claude/deps-9ff843f2….log contains exactly two lines: ''installing workspace toolchain''
+      and ''install pass complete''. No import proof, no interpreter path, no version, no exit code.'
+    - 'The merged half remains live: readiness-receipt.json reports interpreter_importable_status: READY.'
+    external_legs: A2-A5 are container-image items outside this org's tree.
+    optimized_sequence: 4
+    execution_lane: L3
+    schedule_slot:
+      start: 0
+      end: 2
+      lanes: 4
+    leverage_rank: 3
+- id: CI-010
+  title: Make broker authentication and reachability diagnosable
+  status: ACTIVE_WITH_UNKNOWN
+  priority: 0
+  dependencies:
+  - CI-004
+  canonical_action: Ensure CLAUDE_SESSION_JWT is issued or its absence is a hard named prerequisite failure; split
+    broker states into DNS/unreachable, proxy-denied, and upstream-error before deciding allowlist remediation.
+  source_records:
+  - source_ref: P1/improvements/IMP-05
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-05
+    source_title: Resolve or document the capability-broker denial
+    source_record:
+      id: IMP-05
+      group: env_loader
+      title: Resolve or document the capability-broker denial
+      traces_to:
+      - FAIL-05
+      root_cause: broker.quantumaipartners.com:443 receives 502 to CONNECT from the proxy gateway; L9_CAPABILITY_BROKER_URL
+        points there. Only attributable cause of capabilities DEGRADED.
+      change: 'Determine whether the host belongs on the proxy allowlist. If yes, add it. If no, stop pointing L9_CAPABILITY_BROKER_URL
+        at it in remote sessions and have SessionStart report "capabilities: unavailable (by policy)" rather than
+        DEGRADED.'
+      owner: L9 platform / proxy policy owner
+      target:
+      - proxy allowlist
+      - L9_CAPABILITY_BROKER_URL
+      effort: M
+      risk: low
+      done_when: Either the CONNECT succeeds, or SessionStart distinguishes blocked-by-policy from degraded.
+      open_question: UNKNOWN whether any capability in this workload required the broker
+  - source_ref: P9/improvements/I-EL-01
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-EL-01
+    source_title: Issue CLAUDE_SESSION_JWT into the session, or make its absence a hard bootstrap failure
+    source_record:
+      id: I-EL-01
+      title: Issue CLAUDE_SESSION_JWT into the session, or make its absence a hard bootstrap failure
+      traces_to:
+      - F-09
+      root_cause: 'Five MCP entries send "Authorization": "${CLAUDE_SESSION_JWT}" and the variable is unset, so
+        the header expands empty. The config''s own comment names this JWT as the mechanism by which the broker
+        authenticates the session.'
+      change: Have the loader mint or import the workload JWT and export it. If it cannot, fail the capability probe
+        loudly at session start with the exact missing variable name rather than reporting a generic DEGRADED.
+      owner: platform session provisioning plus the claude-code env loader
+      target: environment.env / account field plane
+      effort: M
+      risk: high
+      done_condition: test -n "$CLAUDE_SESSION_JWT" succeeds at session start, or the banner names CLAUDE_SESSION_JWT
+        as the missing prerequisite.
+      unknown_ref: U-01
+  - source_ref: P9/improvements/I-EL-02
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-EL-02
+    source_title: Distinguish broker-unreachable from broker-denied in the capability probe
+    source_record:
+      id: I-EL-02
+      title: Distinguish broker-unreachable from broker-denied in the capability probe
+      traces_to:
+      - F-08
+      root_cause: curl to the broker returns CONNECT tunnel failed, response 502 and DNS resolves nothing. A 502
+        on CONNECT does not say whether the upstream is down or the proxy denied the host.
+      change: Have the capability probe attempt DNS resolution and a direct connect separately, and report unreachable,
+        proxy-denied, or upstream-error as distinct states in the receipt.
+      owner: Cursor-Governance - capability probe in the claude-code adapter
+      target: L9_CAPABILITY_BROKER_URL probe path
+      effort: S
+      risk: low
+      done_condition: The receipt records one of three distinct broker states rather than a bare DEGRADED.
+      unknown_ref: U-02
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: PR#305 (+ predecessor PR#304) and PR#320, all merged into main
+    residual:
+    - 'I-EL-02: report proxy-denied and upstream-error as distinct probe states, so an allowlist remediation decision
+      has something to decide on.'
+    - 'IMP-05 / I-EL-01: identity provisioning is external and tracked in #301/#302.'
+    evidence:
+    - ops/secrets/probe_broker.py distinguishes no_dns_record (line 61) from unreachable_<ExcType> (lines 77, 98),
+      and the live banner reports broker_reachability=no_dns_record/unreachable_URLError with primary_blocker=identity.
+      Named states, not collapsed — the merged half holds.
+    - 'The remaining split is absent: no proxy-denied vs upstream-error discrimination anywhere in ops/secrets/.'
+    - 'External blocker unchanged: Quantum-L9/Cursor-Governance issues #301 (no broker-verifiable session identity
+      on hosted Claude Code cloud) and #302 (broker not deployed, NXDOMAIN) are both still OPEN at this binding.'
+    optimized_sequence: 9
+    execution_lane: L1
+    schedule_slot:
+      start: 3
+      end: 4
+      lanes: 4
+    leverage_rank: 9
+- id: CI-011
+  title: Bound large MCP responses with field projection/pagination
+  status: ACTIVE
+  priority: 2
+  dependencies: []
+  canonical_action: Add projection, pagination, or bounded summaries to large file/job methods so tool responses
+    remain inside the interaction envelope.
+  source_records:
+  - source_ref: P1/improvements/IMP-15
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-15
+    source_title: Add field projection to the MCP get_files PR method
+    source_record:
+      id: IMP-15
+      group: governance_tooling
+      title: Add field projection to the MCP get_files PR method
+      traces_to:
+      - FAIL-06
+      root_cause: pull_request_read method get_files returns full patch bodies with no projection parameter; 109,019
+        chars on a 31-file PR. Sibling list_pull_requests already has fields.
+      change: Accept a fields projection (at minimum filename, status, additions, deletions) so callers needing
+        a file list do not pay for every patch body.
+      owner: GitHub MCP server maintainer
+      owner_confidence: UNKNOWN whether in this org's control
+      target: GitHub MCP pull_request_read
+      effort: M
+      risk: low
+      risk_note: additive, optional parameter
+      done_when: get_files with a projection returns a file list for a 30-file PR under the token cap.
+      interim_workaround: Prefer git diff --name-status <base>...<head> on a local clone — same answer, ~35 lines.
+        No dependency on this improvement.
+  - source_ref: P2/improvements/IMP-A2
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-A2
+    source_title: Constrain oversized MCP Actions responses
+    source_record:
+      id: IMP-A2
+      title: Constrain oversized MCP Actions responses
+      traces_to:
+      - FAIL-09
+      root_cause: mcp__github__actions_list list_workflow_runs returned 60,764 characters for per_page=10 because
+        each run object embeds the full commit message. The response exceeded the token limit and was diverted to
+        a file.
+      proposal: Support a field-projection parameter for list_workflow_runs, or truncate head_commit.message, as
+        pull_request_read already does via its `fields` parameter.
+      owner: 'role: MCP GitHub server owner (UNKNOWN)'
+      target: github MCP server, actions_list method
+      effort: M
+      risk: low
+      done_condition: list_workflow_runs with per_page=10 returns a response within the token budget for a repository
+        whose commit messages exceed 4 KB.
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: external_blocked
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual: []
+    evidence:
+    - Target is the GitHub MCP server's pull_request_read/actions_list response shape. No in-repo lever.
+    blocked_on: external
+- id: CI-012
+  title: Gate rules and MCP config on actual surface capabilities
+  status: ACTIVE
+  priority: 1
+  dependencies: []
+  canonical_action: Validate MCP config schema before session start and annotate projected rules with capability
+    preconditions when their mechanism is unavailable, while preserving the rule intent.
+  source_records:
+  - source_ref: P4/improvements/IMP-07
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-07
+    source_title: Reconcile rule 22 with the MCP servers a surface actually exposes
+    source_record:
+      id: IMP-07
+      stream: other
+      priority: 2
+      title: Reconcile rule 22 with the MCP servers a surface actually exposes
+      traces_to:
+      - FR-05
+      observed_root_cause: '/home/user/.mcp.json declares Context7 and rule 22 makes calling it mandatory before
+        first implementation, stating that a missing allow-list entry is not permission to skip. No context7 tool
+        was exposed this session: a ToolSearch for resolve-library-id and query-docs returned unrelated tools. The
+        rule was unsatisfiable, not skipped.'
+      change: Either ensure Context7 starts on this surface, or extend rule 22 with the case it does not cover -
+        server absent - and state the required fallback (official docs fetch, or record Unknown) so the obligation
+        stays closed.
+      target:
+      - /home/user/.mcp.json
+      - /root/.cursor-governance/rules/22-context7-auto-invoke.mdc
+      owner: governance-rules-maintainer
+      effort: M
+      risk: low
+      done_condition: Either a context7 tool is resolvable via ToolSearch in a cloud session, or rule 22 specifies
+        the server-absent path and what must be recorded.
+  - source_ref: P9/improvements/I-BS-03
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-03
+    source_title: Add the required "type" discriminator to every MCP server entry in the template
+    source_record:
+      id: I-BS-03
+      title: Add the required "type" discriminator to every MCP server entry in the template
+      traces_to:
+      - F-03
+      - F-16
+      - F-18
+      - FR-01
+      root_cause: 'Five server objects in the MCP template specify url and headers but omit type, so claude mcp
+        list skips them. graphiti-memory, the one entry that has "type": "http", is the one entry that parses.'
+      change: 'Add "type": "http" to the GitHub, Context7, Semgrep, GitGuardian and Playwright entries in mcp.template.json
+        and re-render both .mcp.json copies. Separately, resolve the graphiti-memory pending-approval state for
+        non-interactive surfaces, and stop writing a second copy of the config into the repository checkout so warnings
+        are not doubled.'
+      owner: Cursor-Governance - environment/agents/adapters/claude-code/mcp.template.json
+      target: /home/user/.mcp.json and /home/user/Cognitive.Engine.Graphs/.mcp.json
+      effort: S
+      risk: low
+      done_condition: claude mcp list reports zero Skipped entries and each warning appears at most once.
+      note: 'This is necessary but not sufficient: F-09 (JWT unset) and F-08 (broker unreachable) sit on the same
+        path and must also be resolved before any brokered tool works.'
+  - source_ref: P9/improvements/I-BS-12
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-12
+    source_title: Gate always-on rules on the capability they require
+    source_record:
+      id: I-BS-12
+      title: Gate always-on rules on the capability they require
+      traces_to:
+      - FR-01
+      - FR-08
+      root_cause: 'Four separate rules mandate tooling this session did not have: Context7 MCP (F-03), gate escape
+        variables (F-05), make pr (F-10), and PAT resolution while GH_TOKEN is literally ''proxy-injected''.'
+      change: Give each rule a declared capability precondition, and have the session-start projection annotate
+        any rule whose precondition is unmet with the observed state. A rule stays in force; the agent is told up
+        front that its mechanism is absent, instead of discovering it mid-task.
+      owner: Cursor-Governance - ops/scripts/project_llm_rules.py and the rule frontmatter
+      target: /root/.cursor-governance/environment/generated/llm-rules/
+      effort: L
+      risk: low
+      done_condition: The projected rule set marks Context7 as capability-unavailable in a session where the MCP
+        server does not parse.
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance PR#320 (merged into main as c3ddeea) + pre-existing adapter templates
+    residual:
+    - 'IMP-07: extend rule 22 with the server-absent case and name the required fallback, so the obligation stays
+      closable.'
+    - 'I-BS-12: declare a capability precondition per rule and annotate at projection time when it is unmet.'
+    evidence:
+    - rules/22-context7-auto-invoke.mdc still mandates Context7 on every surface and still carries no server-absent
+      case.
+    - 'Sharper than recorded: the live /home/user/.mcp.json declares exactly ONE server, graphiti-memory — and that
+      server failed to connect this session (502, upstream dial failed). So the rule mandates a mechanism the surface
+      does not expose, on a surface whose only declared MCP server is also down. The rule''s own text (''Do not
+      treat a missing allow-list entry as permission to skip'') makes the obligation unsatisfiable rather than merely
+      awkward.'
+    - 'I-BS-12 unbuilt: ops/scripts/project_llm_rules.py carries no capability precondition handling.'
+    - 'Merged halves hold: capabilities.yaml `requires` restricted to EVALUABLE_REQUIREMENTS, generic adapter on
+      the brokered front door, `type` discriminator present.'
+    optimized_sequence: 2
+    execution_lane: L1
+    schedule_slot:
+      start: 0
+      end: 3
+      lanes: 4
+    leverage_rank: 6
+  dependencies_previous:
+  - CI-004
+  dependencies_rederived_at: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+- id: CI-013
+  title: Preserve fail-closed destructive/staging gates while making denials actionable
+  status: ACTIVE
+  priority: 1
+  dependencies: []
+  canonical_action: Keep unresolved/empty destructive targets fail-closed. Add literal scoped cleanup paths, reachable
+    authorization where policy permits, hook stderr, and per-stage denial reporting for compound commands. Do not
+    weaken the unresolved-expansion invariant.
+  source_records:
+  - source_ref: P3/improvements/B4
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: B4
+    source_title: Surface hook stderr on gate faults
+    source_record:
+      id: B4
+      group: bootstrap_flow
+      title: Surface hook stderr on gate faults
+      root_cause_ref: FAIL-03
+      owner: harness hook runner + environment/agents/adapters/claude-code/hooks/local_execution_gate_wrap.py
+      target: the INTERNAL_EVALUATION_ERROR message path
+      effort: S
+      risk: Low
+      change: include captured stderr, or a path to it, in the harness message; the wrapper currently discards the
+        subprocess result beyond its return code
+      done_when: a deliberately failing gate hook produces a message naming the failing line
+      note: without this, FAIL-03's root cause stays UNKNOWN and unreproducible
+      sequence: 4
+  - source_ref: P3/improvements/C3
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: C3
+    source_title: Narrow the rm -rf guardrail to paths outside the session scratchpad
+    source_record:
+      id: C3
+      group: tooling_contract
+      title: Narrow the rm -rf guardrail to paths outside the session scratchpad
+      root_cause_ref: FAIL-07
+      owner: ops/autonomy/git_guardrails.py / local_execution_gate.py
+      target: destructive-command classification
+      effort: S
+      risk: Med
+      risk_note: must not widen to repo paths
+      change: allow removal within CLAUDE-owned scratchpad paths; keep the guardrail everywhere else; do NOT relax
+        the gh api -X DELETE rule, which was correct
+      done_when: scratchpad cleanup succeeds and a repo-path rm -rf is still refused
+      sequence: 6
+  - source_ref: P7/improvements/IMP-10
+    source_pack: P7
+    source_path: improvements.yaml
+    source_id: IMP-10
+    source_title: Report the execution-gate INTERNAL_EVALUATION_ERROR as a harness bug
+    source_record:
+      id: IMP-10
+      category: environment
+      title: Report the execution-gate INTERNAL_EVALUATION_ERROR as a harness bug
+      root_cause: F-06 (one compound `make pr-check && ... make pr` denied by a self-declared gate fault)
+      change: 'File the exact command and error with the platform/harness owners; until fixed, keep compound publish
+        commands split (the observed workaround).
+
+        '
+      owner: platform
+      target: harness issue tracker (outside this repo — UNKNOWN which tracker; not guessed)
+      effort: S to report; fix effort UNKNOWN
+      risk: low
+      done_condition: the same compound command evaluates to an allow/deny decision, not a gate fault.
+  - source_ref: P9/improvements/I-BS-07
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-07
+    source_title: Give the gates an escape channel the agent can actually reach, or delete the escapes from the
+      rules
+    source_record:
+      id: I-BS-07
+      title: Give the gates an escape channel the agent can actually reach, or delete the escapes from the rules
+      traces_to:
+      - F-05
+      - FR-08
+      root_cause: worktree_isolation_gate.py:88 resolves the escape from the gate process's own os.environ, while
+        local_execution_gate.py:416 receives the command as JSON on stdin. The gate runs as a harness-spawned PreToolUse
+        hook, so neither an export inside a Bash tool call nor an inline VAR=value prefix in the command string
+        can ever appear in that environment.
+      change: Either accept the escape from the parsed command string as an explicit authorization token, or move
+        it to a file-based receipt under .l9/ that the gate reads. If neither is acceptable, remove L9_WORKTREE_ADD_AUTHORIZED
+        and L9_GIT_SWITCH_AUTHORIZED from rules 49 and 88 so they are not published as usable escapes.
+      owner: Cursor-Governance - ops/autonomy/worktree_isolation_gate.py, rules 49 and 88
+      target: /root/.cursor-governance/ops/autonomy/
+      effort: M
+      risk: high
+      done_condition: Either a documented escape demonstrably permits one gated command in a test session, or the
+        rules no longer document an escape that cannot work.
+  - source_ref: P9/improvements/I-BS-10
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-10
+    source_title: Report which stage of a compound command was refused
+    source_record:
+      id: I-BS-10
+      title: Report which stage of a compound command was refused
+      traces_to:
+      - F-14
+      - FR-07
+      root_cause: 'Gate and permission evaluation operate on the whole command string, so one disallowed stage suppresses
+        every other stage. Observed twice: a git add && commit && push chain where the commit also did not run,
+        and an rm/mkdir/cd chain denied in full.'
+      change: Have the denial message name the offending stage and state that the remaining stages did not execute,
+        so the retry can be decomposed correctly on the first attempt.
+      owner: Cursor-Governance - ops/autonomy/local_execution_gate.py and git_guardrails.py
+      target: /root/.cursor-governance/ops/autonomy/
+      effort: S
+      risk: low
+      done_condition: A denied compound command names the specific stage and confirms no stage ran.
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'I-BS-10 (in-repo): name the refused stage of a compound command and state that later stages did not run.'
+    - 'C3 (in-repo): narrow the forced-removal guardrail to allow scratchpad-owned paths while keeping repo paths
+      refused.'
+    - 'I-BS-07 (in-repo): make the documented escapes reachable, or delete them from rules 49 and 88 so they are
+      not published as usable.'
+    evidence:
+    - No per-stage denial naming in ops/autonomy/local_execution_gate.py (I-BS-10).
+    - 'No scratchpad narrowing in ops/autonomy/git_guardrails.py (C3) — confirmed live this session: `rm -rf` of
+      a scratchpad path under an unresolved expansion was refused, correctly, but the classification has no scratchpad-scoped
+      allowance.'
+    - B4 (surface hook stderr on INTERNAL_EVALUATION_ERROR) is a harness-side path; the in-repo wrapper already
+      prints its own BLOCKED reason to stderr (local_execution_gate_wrap.py:148).
+    external_legs: B4 harness message path; IMP-10 harness tracker.
+    optimized_sequence: 12
+    execution_lane: L3
+    schedule_slot:
+      start: 4
+      end: 6
+      lanes: 4
+    leverage_rank: 13
+- id: CI-014
+  title: Make target repository/cwd explicit for governance CLIs
+  status: ACTIVE
+  priority: 2
+  dependencies: []
+  canonical_action: Pass the target repository explicitly to governance commands and avoid procedures whose correctness
+    depends on persistent shell cwd.
+  source_records:
+  - source_ref: P4/improvements/IMP-06
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-06
+    source_title: Make governance CLIs take the target repository explicitly
+    source_record:
+      id: IMP-06
+      stream: other
+      priority: 1
+      title: Make governance CLIs take the target repository explicitly
+      traces_to:
+      - F-01
+      - F-02
+      - FR-06
+      observed_root_cause: l4_local.py derives the branch from its process working directory, so running it from
+        the governance clone inspected that clone and refused with "L4 begin refused on 'main'" three times. The
+        same cwd dependence makes the memory client resolve a null group from /home/user. The Bash working directory
+        resets to /home/user whenever a command leaves that tree, so the wrong-cwd state is the default rather than
+        the exception.
+      change: 'Add an explicit `--workspace <path>` argument to l4_local.py and the graphiti client, defaulting
+        to the current behaviour. Where a tool refuses because of the directory it was run from, say so: "refused
+        on ''main'' in /root/.cursor-governance - did you mean --workspace <target repo>?".'
+      target:
+      - /root/.cursor-governance/ops/autonomy/l4_local.py
+      - /root/.cursor-governance/ops/graphiti/graphiti_memory_client.py
+      owner: autonomy-maintainer
+      effort: M
+      risk: low
+      done_condition: '`python3 l4_local.py status --workspace /home/user/l9-meta-injector` from any directory reports
+        that repository, and the refusal message names the directory it inspected.'
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+    residual:
+    - Add --workspace to graphiti_memory_client.py, defaulting to current behaviour.
+    - 'Make the refusal name the remedy: ''…did you mean --workspace <target repo>?'''
+    evidence:
+    - 'The recorded residual is wrong on its principal named target. ops/autonomy/l4_local.py:478 already declares
+      `--workspace` (''Workspace root (default: cwd / WS)''), and `git show 30c6ecd4:ops/autonomy/l4_local.py` contains
+      it too — it was present at the last assessment and went unrecorded.'
+    - ops/graphiti/graphiti_memory_client.py has no --workspace argument. That leg is genuinely open.
+    - 'IMP-06''s second clause is unmet: l4_local.py:247 refuses with ''L4 begin refused on <branch> — create/checkout
+      a stacked feature branch first'' and never suggests --workspace, which is the actionable half of the improvement.'
+    optimized_sequence: 21
+    execution_lane: L3
+    schedule_slot:
+      start: 8
+      end: 9
+      lanes: 4
+    leverage_rank: 18
+- id: CI-015
+  title: Name and enforce the authoritative governance checkout
+  status: ACTIVE
+  priority: 1
+  dependencies: []
+  canonical_action: When multiple governance trees exist, print both revisions, name the one from which rules resolve,
+    and remove/relabel non-authoritative clones where possible.
+  source_records:
+  - source_ref: P3/improvements/C2
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: C2
+    source_title: Scope Cursor-Governance into sessions that load its rules
+    source_record:
+      id: C2
+      group: tooling_contract
+      title: Scope Cursor-Governance into sessions that load its rules
+      root_cause_ref: FAIL-08
+      owner: session_scope_composer
+      target: the session repository scope list
+      effort: S
+      risk: Low
+      change: include the governance SSOT in the GitHub scope of any session whose rules it supplies
+      done_when: a governed session can read the SSOT's issues without add_repo
+      sequence: 6
+  - source_ref: P8/improvements/I-WT-01
+    source_pack: P8
+    source_path: improvements.yaml
+    source_id: I-WT-01
+    source_title: Remove or relabel the duplicate governance clone
+    source_record:
+      id: I-WT-01
+      title: Remove or relabel the duplicate governance clone
+      traces_to:
+      - R-01
+      root_cause: /home/user/Cursor-Governance (84d06e3) coexists with the SSOT clone /root/.cursor-governance (829f45ec),
+        contrary to the single-root contract in rules/06-governance-ssot-paths.
+      change: Determine whether the workspace clone is an intentional consumer checkout or a leftover. If leftover,
+        stop provisioning it; if intentional, document which one governance scripts must read and make the resolver
+        assert it.
+      owner: environment/runner owner
+      target: session provisioning + ops/scripts/resolve_governance_paths.sh
+      effort: M
+      risk: Medium - something may depend on the workspace clone. Investigate before removing; do not delete on
+        the strength of this pack alone.
+      done_condition: Exactly one governance clone is present, or both are present with a documented, asserted role
+        for each.
+  - source_ref: P9/improvements/I-BS-13
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-13
+    source_title: Name the authoritative governance tree explicitly when more than one is present
+    source_record:
+      id: I-BS-13
+      title: Name the authoritative governance tree explicitly when more than one is present
+      traces_to:
+      - FR-04
+      root_cause: /root/.cursor-governance is at 829f45ec while /home/user/Cursor-Governance is at 84d06e3. Rule
+        06 defines $HOME/.cursor-governance as the sole root; $HOME is /root here while the workspace is /home/user.
+      change: Have the session-start banner print both paths with their revisions and state which one rules resolve
+        from, whenever a second checkout of the governance repository is present in the workspace.
+      owner: Cursor-Governance - session_start_claude_governance.sh
+      target: session-start banner
+      effort: S
+      risk: low
+      done_condition: The banner names both checkouts and their revisions when both exist.
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+    residual:
+    - 'I-BS-13: when a second checkout of the governance repository is present, print both paths with their revisions
+      and state which one rules resolve from.'
+    - 'I-WT-01: decide whether the workspace clone is an intentional consumer checkout or a leftover, and make resolve_governance_paths.sh
+      assert the answer.'
+    evidence:
+    - 'Both checkouts present and identical at this binding: /root/.cursor-governance and /home/user/Cursor-Governance
+      are each at 59f03a5. The session banner names only the first (''governance SSOT: /root/.cursor-governance'').'
+    - 'C2 stays closed: Quantum-L9/Cursor-Governance issues were listed at this binding with no add_repo call.'
+    optimized_sequence: 17
+    execution_lane: L1
+    schedule_slot:
+      start: 7
+      end: 9
+      lanes: 4
+    leverage_rank: 17
+- id: CI-016
+  title: Make L4/release receipts resolve paths, branch, and head dynamically
+  status: ACTIVE
+  priority: 1
+  dependencies: []
+  canonical_action: Bind receipts to the released repository, current branch/head, and actual template path; make
+    stale SHA/branch bindings visible before they block publication.
+  source_records:
+  - source_ref: P1/improvements/IMP-14
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-14
+    source_title: Resolve pr_template against the released repo, not the governance clone
+    source_record:
+      id: IMP-14
+      group: governance_tooling
+      title: Resolve pr_template against the released repo, not the governance clone
+      traces_to:
+      - FRICTION-05
+      root_cause: l4_local.py reported pr_template PULL_REQUEST_TEMPLATE.md while releasing Quantum-L9/.github,
+        whose template is .github/pull_request_template.md.
+      change: Resolve the field against the repo the release is for, searching the standard template locations;
+        emit null when none is found rather than a governance-clone default.
+      owner: governance autonomy maintainer
+      target: /root/.cursor-governance/ops/autonomy/l4_local.py
+      effort: S
+      risk: low
+      risk_note: the field is descriptive, not enforcing
+      done_when: A receipt written in org-github-defaults names .github/pull_request_template.md or null.
+  - source_ref: P3/improvements/B6
+    source_pack: P3
+    source_path: improvements.yaml
+    source_id: B6
+    source_title: Make L4 receipt scope explicit and branch resolution dynamic
+    source_record:
+      id: B6
+      group: bootstrap_flow
+      title: Make L4 receipt scope explicit and branch resolution dynamic
+      root_cause_refs:
+      - FRIC-05
+      - FRIC-07
+      - FAIL-03
+      owner: ops/autonomy/l4_local.py
+      target: status output and receipt validation
+      effort: S
+      risk: Low
+      change: state the scope in l4_local.py status; resolve stacked_branch at check time rather than trusting the
+        value stamped at begin
+      done_when: status names its scope, and a renamed branch does not leave a stale receipt
+      sequence: 6
+  - source_ref: P9/improvements/I-BS-09
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-09
+    source_title: Make the L4 receipt's SHA binding visible before it blocks a publish
+    source_record:
+      id: I-BS-09
+      title: Make the L4 receipt's SHA binding visible before it blocks a publish
+      traces_to:
+      - F-13
+      root_cause: The receipt pins head_sha 3994580 while the branch is at 125c038. The invalidation is silent until
+        publication is attempted.
+      change: Have l4_local.py status compare the pinned SHA to the current head and report STALE explicitly, and
+        have the publish path name the exact re-authorization sequence when it refuses.
+      owner: Cursor-Governance - ops/autonomy/l4_local.py
+      target: /home/user/Cognitive.Engine.Graphs/.l9/autonomy/l4-release-receipt.json
+      effort: S
+      risk: low
+      done_condition: l4_local.py status prints STALE with both SHAs when the branch has advanced past the receipt.
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+    residual:
+    - 'IMP-14: resolve pr_template against the released repository across the standard template locations; emit
+      null when none is found.'
+    - 'I-BS-09: have `status` compare the pinned SHA to current head and report STALE explicitly.'
+    evidence:
+    - 'ops/autonomy/l4_local.py still writes the literal ''PULL_REQUEST_TEMPLATE.md'' at lines 337 and 436. The
+      file changed since 30c6ecd4 (e3f7065, #347) but that change moved kernels out of L4, not the template resolution.'
+    - Branch and head resolution remain dynamic (current_branch, current_head, drift check).
+    optimized_sequence: 20
+    execution_lane: L2
+    schedule_slot:
+      start: 8
+      end: 9
+      lanes: 4
+    leverage_rank: 16
+- id: CI-017
+  title: Validate generated-artifact membership and report all drift in one pass
+  status: ACTIVE
+  priority: 1
+  dependencies: []
+  canonical_action: Make validation tolerate legitimate index/worktree states, catch missing manifest membership
+    at file creation, and report every generated artifact out of step in one run.
+  source_records:
+  - source_ref: P2/improvements/IMP-B1
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-B1
+    source_title: Make `scripts/generate_validation_report.py` tolerate an index/worktree mismatch
+    source_record:
+      id: IMP-B1
+      title: Make `scripts/generate_validation_report.py` tolerate an index/worktree mismatch
+      traces_to:
+      - FAIL-02
+      root_cause: _tracked_files() reads `git ls-files -z` (the index) then opens each path from the working tree
+        (line 120 -> line 83). A staged-but-deleted-on-disk path raises FileNotFoundError and aborts gate 7.
+      proposal: 'Either fail with a clear message naming the divergent paths and instructing `git add -A`, or read
+        blobs via `git cat-file` so the report describes the index it enumerated. The second is the more correct
+        fix: the report claims to describe a commit.
+
+        '
+      owner: 'role: repo maintainer (UNKNOWN)'
+      target: scripts/generate_validation_report.py
+      effort: M
+      risk: medium
+      risk_detail: Changes what the file_tree_digest is computed over. That digest is commit-bound evidence, so
+        the change needs an ADR per CLAUDE.md.
+      done_condition: With a `git rm --cached`-style divergence present, the script either exits non-zero with a
+        message naming the path, or produces a digest identical to the committed-tree digest. No traceback.
+  - source_ref: P4/improvements/IMP-09
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-09
+    source_title: Report every out-of-step generated artefact in one pass
+    source_record:
+      id: IMP-09
+      stream: other
+      priority: 4
+      title: Report every out-of-step generated artefact in one pass
+      traces_to:
+      - FR-01
+      observed_root_cause: 'Eight "architecture manifest is stale" and eight "dist-integrity: FAILED" results across
+        the session, each requiring a regenerate and a re-run of a 61-62 s gate. The gate stops at the first artefact
+        that is out of step.'
+      change: Have `npm run validate` collect manifest staleness and dist divergence in a single report and print
+        both repair commands together, or add a `npm run regen` that performs build, manifest:update and staging
+        in one step.
+      target:
+      - /home/user/l9-meta-injector/package.json
+      - /home/user/l9-meta-injector/scripts/check-dist-sync.js
+      - /home/user/l9-meta-injector/scripts/generate-architecture-manifest.js
+      owner: repository-maintainer
+      effort: S
+      risk: low
+      done_condition: A tree with both a stale manifest and a stale dist produces one failure naming both, and one
+        command restores both.
+  - source_ref: P8/improvements/I-WT-03
+    source_pack: P8
+    source_path: improvements.yaml
+    source_id: I-WT-03
+    source_title: Check MANIFEST.md membership at file creation rather than at the gate
+    source_record:
+      id: I-WT-03
+      title: Check MANIFEST.md membership at file creation rather than at the gate
+      traces_to:
+      - F-04
+      root_cause: validate_release_readiness.py compares the tree against a hand-maintained MANIFEST.md, so every
+        new file fails the gate until a human adds a row. Observed 3 times in one session.
+      change: Offer a `--fix` mode that appends missing files with a placeholder responsibility for the author to
+        edit, or surface the omission in the pre-commit hook rather than only in the release gate.
+      owner: l9-constellation-topology maintainer
+      target: scripts/validate_release_readiness.py
+      effort: S
+      risk: Medium if auto-fill is silent - a generated responsibility line would weaken the manifest's purpose.
+        Placeholder must be obviously unedited.
+      done_condition: Adding a new source file surfaces the manifest requirement before the release gate runs.
+  reconciliation_action: MERGE
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance 7dc7e4f (merged)
+    residual:
+    - 'IMP-09 (l9-meta-injector): collect manifest staleness and dist divergence in one report, or add `npm run
+      regen`.'
+    - 'IMP-B1, I-WT-03: unverified at this binding — see queue needs_attachment note.'
+    evidence:
+    - 'l9-meta-injector leg (IMP-09) verified OPEN at 874f327: package.json `validate` chains check:manifest and
+      check:dist with `&&`, so the first failure stops the run and the second repair command is never printed. There
+      is no `regen` script combining build, manifest:update and staging. scripts/validation-report.js is about report
+      freshness, not single-pass drift collection.'
+    - Cognitive.Engine.Graphs (IMP-B1) and l9-constellation-topology (I-WT-03) are not attachable to this session;
+      those legs carry forward UNVERIFIED.
+    - 'Governance-repo analogue holds: sync_generated_artifacts.py opts the PE manifest into commit-time heal.'
+    optimized_sequence: 26
+    execution_lane: L0
+    schedule_slot:
+      start: 10
+      end: 11
+      lanes: 4
+    leverage_rank: 26
+- id: CI-018
+  title: Make local CI parity and hooks first-class provisioning
+  status: ACTIVE
+  priority: 1
+  dependencies: []
+  canonical_action: Install the actual hooks/gates, define one local CI-parity command, and keep its blocker list
+    aligned with remote CI so local green means something.
+  source_records:
+  - source_ref: P2/improvements/IMP-B2
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-B2
+    source_title: Install git hooks as part of environment provisioning
+    source_record:
+      id: IMP-B2
+      title: Install git hooks as part of environment provisioning
+      traces_to:
+      - FRIC-06
+      root_cause: .git/hooks contains only .sample files and the pre-commit binary is absent, so the repository's
+        fail-closed pre-push gate never engaged. Three commits were pushed this session with no automatic enforcement.
+      proposal: Run `make install-hooks` (or `pre-commit install --hook-type pre-commit --hook-type pre-push`) during
+        container/session setup.
+      owner: 'role: platform / environment owner (UNKNOWN)'
+      target: Session setup for this environment; optionally a SessionStart hook
+      effort: S
+      risk: medium
+      risk_detail: The l9-make-check hook runs the full `make check` on push, which will materially slow every push
+        and may fail in containers lacking the full toolchain.
+      done_condition: '`ls .git/hooks` shows executable pre-commit and pre-push; a deliberately malformed commit
+        is rejected locally.'
+      blocked_by: UNK-02 — the pre-push hook has never been executed in this environment, so its runtime and pass/fail
+        behaviour here are unmeasured.
+  - source_ref: P2/improvements/IMP-R2
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-R2
+    source_title: Document the full blocking gate list in one place
+    source_record:
+      id: IMP-R2
+      title: Document the full blocking gate list in one place
+      traces_to:
+      - FRIC-08
+      root_cause: Gate discovery from .github/workflows/*.yml yielded 8 gates. Two more blocking checkers (lint/check_action_pins.py,
+        lint/check_governance_json.py) were found only because a review comment named one.
+      proposal: Add the complete gate list to CLAUDE.md or VALIDATION.md, including the lint/ checkers and which
+        workflow or hook invokes each.
+      owner: 'role: repo maintainer (UNKNOWN)'
+      target: VALIDATION.md
+      effort: S
+      risk: low
+      done_condition: Every command that can fail a PR is listed with its invoking workflow or hook, and the list
+        is asserted against the workflows by a test.
+  - source_ref: P5/improvements/IMP-001
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-001
+    source_title: Restore or remove the local PR pipeline entrypoint
+    source_record:
+      id: IMP-001
+      traces_to: FAIL-001
+      category: bootstrap
+      title: Restore or remove the local PR pipeline entrypoint
+      root_cause: 10 Makefile targets invoke local_pr_pipeline/pr_pipeline.sh, which does not exist (exit=127).
+      options:
+      - Restore pr_pipeline.sh from the commit that removed it
+      - Or reduce the targets to the commands they were meant to wrap and delete the rest
+      recommended: Restore if it exists in history; otherwise rewrite the 10 targets to call the real gate commands
+        directly.
+      owner: repo maintainer (Enrichment.Inference.Engine)
+      target: Makefile:129-156, local_pr_pipeline/
+      effort: M
+      risk: low
+      risk_note: Makefile-only change; no application code.
+      done_condition: '`make pr-validate` exits 0 or 1 from real gate work, never 127; the PR-pipeline CI comment''s
+        ''Local equivalent'' command runs.'
+  - source_ref: P7/improvements/IMP-01
+    source_pack: P7
+    source_path: improvements.yaml
+    source_id: IMP-01
+    source_title: Make CI-parity (identity-free git) a first-class local check
+    source_record:
+      id: IMP-01
+      category: environment
+      title: Make CI-parity (identity-free git) a first-class local check
+      root_cause: F-01 (container global git identity masked the missing-committer failure; 2 red CI runs)
+      change: 'Add a make target (e.g. `make test-ci-parity`) that runs the campaign + controller suites with HOME=<empty>
+        GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null, and reference it from the pr-check documentation.
+        Optionally strip inherited git identity inside test fixtures the way test_run_campaign._GIT_IDENTITY already
+        does.
+
+        '
+      owner: governance-repo
+      target: next hardening PR in Cursor-Governance
+      effort: S (the exact env recipe is proven; wiring is a Makefile stanza)
+      risk: low (additive check)
+      done_condition: '`make test-ci-parity` exists, passes on the merged tree, and a seeded global git identity
+        no longer changes any suite''s verdict.
+
+        '
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'IMP-01(P7): add a make target running the campaign and controller suites with HOME empty and both git config
+      files at /dev/null, and reference it from the pr-check documentation.'
+    evidence:
+    - No ci-parity target in the governance Makefile; no GIT_CONFIG_GLOBAL/GIT_CONFIG_SYSTEM stanza.
+    optimized_sequence: 23
+    execution_lane: L1
+    schedule_slot:
+      start: 9
+      end: 10
+      lanes: 4
+    leverage_rank: 21
+  dependencies_previous:
+  - CI-009
+  dependencies_rederived_at: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+- id: CI-019
+  title: Coordinate concurrent writers on shared PR branches
+  status: ACTIVE
+  priority: 2
+  dependencies: []
+  canonical_action: Detect/serialize or otherwise coordinate cross-machine writers before push so shared head branches
+    do not repeatedly non-fast-forward.
+  source_records:
+  - source_ref: P7/improvements/IMP-06
+    source_pack: P7
+    source_path: improvements.yaml
+    source_id: IMP-06
+    source_title: Cross-machine writer coordination for a shared PR head branch
+    source_record:
+      id: IMP-06
+      category: bootstrap
+      title: Cross-machine writer coordination for a shared PR head branch
+      root_cause: F-02 (two non-fast-forward rejections; repo-write lock is machine-local by design)
+      change: 'Give open_pr_after_gate.sh a bounded retry loop: on a non-fast-forward reject, fetch, merge --no-edit
+        (never rewrite), rerun the generated- artifact regen obligation, re-verify the gate receipt, and push again
+        (N<=2). Longer term: a branch-lease marker (e.g. in the PR body or a .l9 ref) so a Cursor remediation loop
+        and a cloud session take turns instead of racing.
+
+        '
+      owner: governance-repo
+      target: publish-flow PR (design note first — CANONICAL_LAW touches the publish path)
+      effort: M (retry loop) / L (lease protocol)
+      risk: 'medium: the retry loop re-runs gates on a merged tree — it must re-check, not blindly push; the lease
+        protocol changes multi-agent doctrine and needs CANONICAL_LAW review.
+
+        '
+      done_condition: 'Two writers pushing the same PR branch within one gate-cycle converge without a human-visible
+        failed `make pr` (validated by a two-session drill).
+
+        '
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'IMP-06(P7) retry half: bounded fetch/merge --no-edit/regen/re-verify/push loop, N<=2, never rewriting history.'
+    - Lease protocol half touches CANONICAL_LAW and needs review before design.
+    evidence:
+    - ops/scripts/open_pr_after_gate.sh fetches the base ref (line 82) and fails closed on a missing base, but carries
+      no non-fast-forward retry loop and no branch-lease marker. The file changed since 30c6ecd4 (e3f7065) without
+      touching this.
+    optimized_sequence: 14
+    execution_lane: L0
+    schedule_slot:
+      start: 6
+      end: 8
+      lanes: 4
+    leverage_rank: 22
+- id: CI-020
+  title: Expose notification age when queued state is delivered
+  status: ACTIVE
+  priority: 3
+  dependencies: []
+  canonical_action: Stamp queued notifications with age at delivery so superseded instructions are recognizable
+    before action.
+  source_records:
+  - source_ref: P9/improvements/I-BS-14
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-14
+    source_title: Stamp queued notifications with age at delivery
+    source_record:
+      id: I-BS-14
+      title: Stamp queued notifications with age at delivery
+      traces_to:
+      - FR-06
+      root_cause: A check-in queued at 2026-08-24T23:35:59Z was delivered after the 2026-08-25T01:33:27Z restart,
+        roughly two hours later, describing state that a 23:39Z pass had already superseded.
+      change: Render the delivery-time age alongside queued_at in the notification envelope, so a stale instruction
+        is recognisable before it is acted on.
+      owner: harness notification delivery
+      target: ReadNotifications envelope
+      effort: S
+      risk: low
+      done_condition: A delivered notification shows both queued_at and age_at_delivery.
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: external_blocked
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual: []
+    evidence:
+    - Target is the ReadNotifications delivery envelope. No in-repo lever.
+    blocked_on: external
+- id: CI-021
+  title: Make session-experience and skill-usage logging observable
+  status: ACTIVE
+  priority: 2
+  dependencies: []
+  canonical_action: Fix logging matchers/paths and emit enough session-start evidence to distinguish inactivity
+    from a broken collector.
+  source_records:
+  - source_ref: P5/improvements/IMP-011
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-011
+    source_title: Make session-experience metrics collectable
+    source_record:
+      id: IMP-011
+      traces_to: UNK-001
+      category: tooling
+      title: Make session-experience metrics collectable
+      root_cause: Scripted reads of /root/.claude are refused by the auto-mode classifier, so retry, wait, denial
+        and compaction counts could not be computed for this pack.
+      actions:
+      - Add a Bash permission rule for read-only access to the transcript directory, or
+      - Emit a session metrics summary to a readable path
+      owner: environment owner
+      target: Claude Code settings (permissions)
+      effort: S
+      risk: low
+      risk_note: Transcripts may contain sensitive content; prefer an aggregated metrics file over raw transcript
+        access.
+      done_condition: The five metrics listed in experience.yaml#manual_steps_waits_retries_context_loss can be
+        produced without a denial.
+  - source_ref: P9/improvements/I-BS-11
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-BS-11
+    source_title: Fix the skill-usage logger matcher and record whether logging is reaching disk
+    source_record:
+      id: I-BS-11
+      title: Fix the skill-usage logger matcher and record whether logging is reaching disk
+      traces_to:
+      - F-19
+      root_cause: One event in skill-usage.jsonl across a multi-day session with L9_SKILL_USAGE_LOGGING=true. The
+        PreToolUse matcher is Skill|mcp__context7__.*|mcp__plugin_context7_context7__.* and, per F-03, two of its
+        three arms match a tool namespace that never existed.
+      change: Narrow the matcher to namespaces that exist on this surface, and emit a session-start line recording
+        the log path and current entry count so silence is distinguishable from inactivity.
+      owner: Cursor-Governance - claude-code adapter settings template
+      target: /root/.claude/l9/skill-usage.jsonl
+      effort: S
+      risk: low
+      done_condition: A session that invokes two skills records two entries.
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'I-BS-11: narrow the matcher to namespaces this surface exposes, and emit a session-start line naming the
+      log path and its current entry count.'
+    evidence:
+    - 'LIVE: /home/user/.claude/settings.json sets L9_SKILL_USAGE_LOGGING=true, and /root/.claude/l9/ does not exist
+      at this binding. Logging is enabled and reaching no disk, silently — which is exactly the state I-BS-11 exists
+      to make distinguishable from inactivity.'
+    optimized_sequence: 22
+    execution_lane: L0
+    schedule_slot:
+      start: 9
+      end: 10
+      lanes: 4
+    leverage_rank: 20
+- id: CI-022
+  title: Provision or explicitly declare service-backed integration-test dependencies
+  status: ACTIVE
+  priority: 2
+  dependencies: []
+  canonical_action: Provision declared services such as Neo4j when integration proof is expected, otherwise surface
+    the unavailable coverage before tests run.
+  source_records:
+  - source_ref: P9/improvements/I-EL-07
+    source_pack: P9
+    source_path: improvements.yaml
+    source_id: I-EL-07
+    source_title: Provide or declare the integration-test service dependency
+    source_record:
+      id: I-EL-07
+      title: Provide or declare the integration-test service dependency
+      traces_to:
+      - FR-09
+      root_cause: tests/integration/ requires testcontainers-neo4j. Docker 29.3.1 is installed but no service is
+        started, so integration collection fails and local proof is partial.
+      change: Either start Neo4j as part of session provisioning for repositories that declare it, or state at session
+        start that integration tests are unavailable, so the split between runnable and unrunnable coverage is known
+        before a test run rather than after.
+      owner: session provisioning plus the repository's declared services
+      target: session-deps
+      effort: M
+      risk: low
+      done_condition: make test-integration either runs green, or the banner names it as unavailable with the reason.
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'I-EL-07, in-repo half: state at session start that service-backed integration tests are unavailable, so the
+      split between runnable and unrunnable coverage is known before a run rather than after.'
+    evidence:
+    - 'LIVE: no neo4j binary on PATH and 127.0.0.1:7687 refuses connection. Nothing at session start says integration
+      coverage is unavailable.'
+    optimized_sequence: 25
+    execution_lane: L3
+    schedule_slot:
+      start: 9
+      end: 10
+      lanes: 4
+    leverage_rank: 25
+  dependencies_previous:
+  - CI-009
+  dependencies_rederived_at: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+- id: CI-023
+  title: Collapse variable-loading authorities into one reproducible loader contract
+  status: ACTIVE
+  priority: 1
+  dependencies: []
+  canonical_action: Define one loader/precedence contract that works in non-interactive shells, fails fast on missing
+    required configuration, guards source-without-call misuse, and removes inert/documented-but-unused variables.
+  source_records:
+  - source_ref: P4/improvements/IMP-01
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-01
+    source_title: Load the session env in non-interactive shells, not only interactive ones
+    source_record:
+      id: IMP-01
+      stream: env_loader
+      priority: 1
+      title: Load the session env in non-interactive shells, not only interactive ones
+      traces_to:
+      - FR-10
+      - F-02
+      observed_root_cause: /root/.bashrc returns at line 6 for non-interactive shells and sources $HOME/.l9/cloud-session.env
+        at line 110, so the agent's Bash tool never sees L9_GOVERNANCE_DIR or L9_STUB_REVISION.
+      change: Move the source line above the `[ -z "$PS1" ] && return` guard in /root/.bashrc, or set BASH_ENV to
+        a wrapper that sources cloud-session.env, so non-interactive shells get the same variables as login shells.
+      target:
+      - /root/.bashrc
+      - /root/.cursor-governance/environment/agents/adapters/claude-code/web/setup.bootstrap.sh
+      owner: governance-adapter-maintainer
+      effort: S
+      risk: low
+      risk_note: Sourcing earlier runs the unset block earlier too; the file only exports four variables and unsets
+        thirteen credential names, so ordering is not load-bearing. Verify the unsets still apply.
+      done_condition: '`bash -c ''echo $L9_GOVERNANCE_DIR $L9_STUB_REVISION''` prints both values, and `env | grep
+        -c ''^L9_''` returns at least 25 in the agent shell.'
+  - source_ref: P4/improvements/IMP-02
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-02
+    source_title: State in rule 06 that the resolver must be called, not merely sourced
+    source_record:
+      id: IMP-02
+      stream: env_loader
+      priority: 2
+      title: State in rule 06 that the resolver must be called, not merely sourced
+      traces_to:
+      - FR-09
+      observed_root_cause: Rule 06-governance-ssot-paths says scripts "source resolve_governance_paths.sh and use
+        the exported $GOV_ROOT". Sourcing alone exports nothing and returns 0; resolve_governance_paths() must be
+        invoked. Four probes were spent establishing this.
+      change: Amend the rule text to `source ...; resolve_governance_paths_or_exit`, and have resolve_governance_paths.sh
+        print a one-line warning to stderr when it is sourced by a shell that never calls either entry point.
+      target:
+      - /root/.cursor-governance/rules/06-governance-ssot-paths.mdc
+      - /root/.cursor-governance/ops/scripts/resolve_governance_paths.sh
+      owner: governance-rules-maintainer
+      effort: S
+      risk: low
+      done_condition: The rule shows the two-line invocation, and a script that sources without calling emits a
+        diagnostic instead of silently continuing with GOV_ROOT empty.
+  - source_ref: P5/improvements/IMP-002
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-002
+    source_title: Provide a real .env.local and fail fast on placeholder secrets
+    source_record:
+      id: IMP-002
+      traces_to: FR-002
+      category: env_loader
+      title: Provide a real .env.local and fail fast on placeholder secrets
+      root_cause: No .env/.env.local exists; 0 of 49 fields come from the environment, so neo4j_password, inter_node_secret
+        and database_url resolve to shipped placeholders.
+      actions:
+      - cp .env.local.example .env.local and fill the values actually needed
+      - Add a pydantic model_validator that raises when a placeholder default ('changeme', 'dev-inter-node-secret')
+        is active outside test runs
+      owner: repo maintainer
+      target: app/core/config.py, .env.local
+      effort: S
+      risk: medium
+      risk_note: A fail-fast validator can break any flow that silently relied on defaults; gate it so tests are
+        exempt.
+      done_condition: Starting the app with placeholder secrets raises at startup; the test suite still passes unchanged.
+  - source_ref: P5/improvements/IMP-005
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-005
+    source_title: Collapse five environment authorities to one plus a generated example
+    source_record:
+      id: IMP-005
+      traces_to: FR-005
+      category: env_loader
+      title: Collapse five environment authorities to one plus a generated example
+      root_cause: Five files describe env vars. .env.required names APP_NAME/APP_API_KEY/APP_PORT, none of which
+        are Settings fields, so extra="ignore" discards them. .env.template sets APP_MODULE=engine.main:app, wrong
+        for this app.
+      actions:
+      - Make docs/contracts/config/env-contract.yaml the single authority
+      - Generate .env.example from it plus app/core/config.py so drift is impossible
+      - Delete .env.required and .env.template (zero consumers; grep confirms only bootstrap.sh self-references)
+      - Add a test asserting every name in the contract is a Settings field
+      owner: repo maintainer
+      target: .env.required, .env.template, .env.example, docs/contracts/config/env-contract.yaml
+      effort: M
+      risk: medium
+      risk_note: Deleting a file named '.env.required' looks alarming; the PR must show it has no readers.
+      done_condition: One authority remains; a test fails if a documented variable is not a Settings field.
+  - source_ref: P5/improvements/IMP-006
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-006
+    source_title: Either honour TESTING or drop it from the documented commands
+    source_record:
+      id: IMP-006
+      traces_to: FR-007
+      category: env_loader
+      title: Either honour TESTING or drop it from the documented commands
+      root_cause: TESTING is exported by ci.yml, sonarcloud.yml and pr-pipeline.yml but read by no Python in the
+        repo, so TESTING=true in the local verify command has no effect.
+      options:
+      - Read it in app/core/config.py to select test-safe defaults
+      - Or remove it from workflows and from documented local commands
+      recommended: Remove it unless a real behaviour is intended; a variable that looks load-bearing but is not
+        is worse than none.
+      owner: repo maintainer
+      target: app/core/config.py or .github/workflows/{ci,sonarcloud,pr-pipeline}.yml
+      effort: S
+      risk: low
+      done_condition: Either grep finds a Python reader, or no workflow and no doc sets TESTING.
+  - source_ref: P6/improvements/LOADER-2
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: LOADER-2
+    source_title: Guard resolver against source-without-call consumers
+    source_record:
+      id: LOADER-2
+      plane: loader
+      title: Guard resolver against source-without-call consumers
+      root_cause_ref: FR-7
+      root_cause_observed: sourcing exports nothing until resolve_governance_paths called; empty GOV_ROOT, no error
+      change: opt-in L9_RESOLVE_ON_SOURCE=1 autorun, or header warning + self-test
+      owner: governance-maintainer
+      target: ops/scripts/resolve_governance_paths.sh
+      effort: S
+      risk: autorun would change existing sourcers' behavior — keep opt-in
+      done_condition: test sources with flag and asserts non-empty GOV_ROOT, or validator present
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'IMP-02(P4): amend rule 06 to `source …; resolve_governance_paths_or_exit`.'
+    - 'LOADER-2: warn on stderr when the resolver is sourced by a shell that never calls either entry point.'
+    - 'IMP-01(P4): load the session env in non-interactive shells (BASH_ENV, or hoist the source line above the
+      PS1 guard).'
+    evidence:
+    - rules/06-governance-ssot-paths.mdc:39 still reads 'Governance scripts source resolve_governance_paths.sh and
+      use the exported values' — sourced, not must-call.
+    - ops/scripts/resolve_governance_paths.sh carries no source-without-call guard and no L9_RESOLVE_ON_SOURCE opt-in.
+    out_of_tree_legs: IMP-002/005/006 target Enrichment.Inference.Engine — see CI-024's attachment note.
+    optimized_sequence: 13
+    execution_lane: L1
+    schedule_slot:
+      start: 5
+      end: 7
+      lanes: 4
+    leverage_rank: 15
+  dependencies_previous:
+  - CI-009
+  dependencies_rederived_at: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+- id: CI-024
+  title: Repair or remove foreign/stale bootstrap and deploy entrypoints
+  status: ACTIVE
+  priority: 2
+  dependencies: []
+  canonical_action: Choose one documented provisioning path and ensure bootstrap/deploy targets belong to and execute
+    against the actual repository instead of missing or foreign scripts.
+  source_records:
+  - source_ref: P2/improvements/IMP-B3
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-B3
+    source_title: Decide and document one provisioning path
+    source_record:
+      id: IMP-B3
+      title: Decide and document one provisioning path
+      traces_to:
+      - FRIC-05
+      root_cause: 'Two provisioning paths exist and neither references the other: `make deps` installs requirements-ci.txt
+        + pre-commit; ci.yml installs `-e .[ci] -c constraints.txt`. This session used the ci.yml path to guarantee
+        parity with the blocking gate and never exercised `make bootstrap`.'
+      proposal: 'Either have `make deps` invoke the same pip command ci.yml uses, or document explicitly in CLAUDE.md
+        which path is authoritative for local work and why.
+
+        '
+      owner: 'role: repo maintainer (UNKNOWN)'
+      target: Makefile deps target and/or CLAUDE.md
+      effort: S
+      risk: low
+      done_condition: A contributor following the documented path obtains byte-identical ruff/mypy/pytest versions
+        to those ci.yml installs, verifiable by `pip list --format=freeze` diff.
+      blocked_by: UNK-01 — `make bootstrap` / `make deps` / `make check` were never run in this container, so their
+        behaviour here is unverified.
+  - source_ref: P5/improvements/IMP-004
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-004
+    source_title: Delete or replace the foreign bootstrap.sh
+    source_record:
+      id: IMP-004
+      traces_to: FAIL-002
+      category: bootstrap
+      title: Delete or replace the foreign bootstrap.sh
+      root_cause: bootstrap.sh is the 'Venture Forge Toolbox' installer; 12 of its 15 copy sources are absent and
+        it exits 1 at line 70 having created nothing.
+      options:
+      - Delete it - the repo already bootstraps via `make setup` plus the devcontainer
+      - Or reduce it to the steps that work here and drop the missing-tool copies
+      recommended: Delete. It cannot succeed, and its printed next-steps point at eight scripts that do not exist.
+      owner: repo maintainer
+      target: bootstrap.sh
+      effort: S
+      risk: low
+      risk_note: Confirm no CI job or doc invokes it before removal.
+      done_condition: No executable in the tree advertises a bootstrap that exits non-zero on a clean checkout.
+  - source_ref: P5/improvements/IMP-009
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-009
+    source_title: Fix or remove the deploy target
+    source_record:
+      id: IMP-009
+      traces_to: FAIL-003
+      category: tooling
+      title: Fix or remove the deploy target
+      root_cause: Makefile:225 calls ./scripts/deploy.sh, which does not exist.
+      owner: repo maintainer
+      target: Makefile:224-225
+      effort: S
+      risk: low
+      done_condition: '`make deploy` either runs a real script or the target is gone.'
+  reconciliation_action: MERGE
+  progress:
+    status: unknown
+    disposition: UNKNOWN
+    queue: needs_attachment
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual: []
+    evidence:
+    - Every named target (bootstrap.sh, Makefile:224-225, the deps/provisioning path) belongs to Enrichment.Inference.Engine,
+      which is not attachable to this session. No evidence at this binding can move this record in either direction.
+- id: CI-025
+  title: Provide sanctioned cleanup of generated/cache residue
+  status: ACTIVE
+  priority: 2
+  dependencies: []
+  canonical_action: Keep generated/cache debris out of gate inputs and provide a permission-safe cleanup path that
+    does not weaken general destructive-command policy.
+  source_records:
+  - source_ref: P5/improvements/IMP-010
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-010
+    source_title: Stop carrying build residue and duplicate config in the tree
+    source_record:
+      id: IMP-010
+      traces_to: FR-009
+      category: hygiene
+      title: Stop carrying build residue and duplicate config in the tree
+      root_cause: coverage.xml, .coverage, htmlcov/, artifacts/ and four cache directories sit beside sources; .devcontainer
+        holds both devcontainer.json and P2_6_devcontainer.json; a directory is named 'Current Work'.
+      actions:
+      - Confirm generated outputs are gitignored and remove any that are tracked
+      - Delete or rename the duplicate devcontainer file
+      - Rename 'Current Work' to remove the space
+      owner: repo maintainer
+      target: repo root, .devcontainer/
+      effort: S
+      risk: low
+      done_condition: git status is clean after a full test run, and no two devcontainer files disagree.
+  - source_ref: P7/improvements/IMP-05
+    source_pack: P7
+    source_path: improvements.yaml
+    source_id: IMP-05
+    source_title: Adapters gate should pre-clean or ignore Python cache debris
+    source_record:
+      id: IMP-05
+      category: bootstrap
+      title: Adapters gate should pre-clean or ignore Python cache debris
+      root_cause: F-03 (gate FAIL on peer_execution/.pytest_cache created by an ordinary pytest run)
+      change: 'In validate_execution_adapters.py (or the make target before it), delete or ignore __pycache__/.pytest_cache
+        paths instead of failing on them; alternatively add a sanctioned `make clean-pyc` and invoke it first. This
+        also removes the need for agents to fight the permission gate over `rm -rf` (F-06).
+
+        '
+      owner: governance-repo
+      target: next validation-hardening PR
+      effort: S
+      risk: low (cache dirs are regenerable by definition)
+      done_condition: '`make program-execution-adapters` passes immediately after `pytest environment/program-execution/peer_execution`
+        with no manual cleanup.
+
+        '
+  - source_ref: P7/improvements/IMP-08
+    source_pack: P7
+    source_path: improvements.yaml
+    source_id: IMP-08
+    source_title: Sanctioned cache-cleanup path under the permission gate
+    source_record:
+      id: IMP-08
+      category: environment
+      title: Sanctioned cache-cleanup path under the permission gate
+      root_cause: F-06 (two rm -rf denials forced a python shutil workaround)
+      change: 'Provide `make clean-pyc` (repo) and/or allowlist deletion of *_cache/__pycache__ directories inside
+        the workspace in the session permission policy, so routine cache hygiene does not require workarounds.
+
+        '
+      owner: governance-repo (make target) + platform (policy allowlist)
+      target: with IMP-05
+      effort: S
+      risk: low (scope the allowlist to cache directory names only)
+      done_condition: cache cleanup succeeds via one documented command with no denial.
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'IMP-05/IMP-08(P7): add `make clean-pyc` and have the adapters gate pre-clean or ignore cache debris rather
+      than failing on it.'
+    evidence:
+    - No clean-pyc target and no __pycache__ handling in the governance Makefile.
+    optimized_sequence: 19
+    execution_lane: L0
+    schedule_slot:
+      start: 8
+      end: 9
+      lanes: 4
+    leverage_rank: 14
+  dependencies_previous:
+  - CI-013
+  dependencies_rederived_at: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+- id: CI-026
+  title: Support safe on-disk aliases for dot-prefixed repositories
+  status: ACTIVE
+  priority: 3
+  dependencies: []
+  canonical_action: Allow repositories such as .github to be attached under an explicit safe alias rather than blocking
+    the entire org-governance class.
+  source_records:
+  - source_ref: P1/improvements/IMP-16
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-16
+    source_title: Support an on-disk alias for repos whose name begins with a dot
+    source_record:
+      id: IMP-16
+      group: governance_tooling
+      title: Support an on-disk alias for repos whose name begins with a dot
+      traces_to:
+      - FAIL-04
+      root_cause: add_repo derives the clone directory from the repo name and rejects leading-dot names to avoid
+        colliding with config directories. No alias mechanism exists.
+      change: 'Allow an explicit target directory (the manual workaround was exactly this: git clone ... org-github-defaults),
+        or auto-alias .github to <owner>-dot-github. The safety concern is directory naming, not the repository
+        itself.'
+      owner: remote-session add_repo maintainer
+      owner_confidence: UNKNOWN whether in this org's control
+      target: add_repo tool
+      effort: M
+      risk: low
+      risk_note: keep the leading-dot rejection for the directory, not the repo
+      done_when: Quantum-L9/.github attaches as a session source and its CLAUDE.md and skills load.
+  reconciliation_action: MERGE
+  progress:
+    status: blocked
+    disposition: BLOCKED
+    queue: external_blocked
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: done
+    delivered_by: Session repository scope (Quantum-L9/.github attached; clone at /home/user/.github)
+    residual:
+    - 'IMP-16: durable alias support in add_repo, or an explicit record that attachment is per-session operator
+      configuration and not a delivered capability.'
+    evidence:
+    - At this binding NEITHER holds. `ls -d /home/user/.github` fails; /home/user carries only .claude, .l9, .mcp.json
+      and the four in-scope repositories. The session scope list names quantum-l9/cursor-governance, l9-cognitive-runtime,
+      l9-ci-core and l9-meta-injector, and no .github.
+    - IMP-16's named target is the add_repo tool — allow an explicit target directory, or auto-alias .github. That
+      tool is harness-owned and unchanged.
+    - The prior done therefore regressed the moment a session was configured without the attachment, which is what
+      a completion resting on session state does.
+    blocked_on: external
+    demoted_from_done: true
+    demotion_reason: 'Marked done on non-durable evidence. The completion proof was that /home/user/.github existed
+      and quantum-l9/.github appeared in the session repository scope list — both properties of one session''s configuration,
+      not of any delivered change.
+
+      '
+- id: CI-027
+  title: Correct rule rationale that no longer matches container reality
+  status: ACTIVE
+  priority: 3
+  dependencies: []
+  canonical_action: Preserve the pinned-interpreter requirement but remove or correct stale rationale that system
+    Python lacks PyYAML when that premise is false.
+  source_records:
+  - source_ref: P1/improvements/IMP-17
+    source_pack: P1
+    source_path: improvements.yaml
+    source_id: IMP-17
+    source_title: Correct or drop the PyYAML rationale in rule 03
+    source_record:
+      id: IMP-17
+      group: governance_tooling
+      title: Correct or drop the PyYAML rationale in rule 03
+      traces_to:
+      - FRICTION-13
+      root_cause: rules/03-graphiti-memory mandates the governance venv because "system python3 often lacks PyYAML".
+        Here system python3 has PyYAML 6.0.1; the venv has 3.12.3 / 6.0.3.
+      change: Keep the mandate — a pinned interpreter is right — and replace the justification with the true one
+        (version pinning and dependency isolation, 3.11 vs 3.12).
+      owner: governance rules maintainer
+      target: rules/03-graphiti-memory.mdc
+      effort: S
+      risk: low
+      risk_note: documentation only
+      done_when: The rule's stated reason matches observable container state.
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'IMP-17: keep the pinned-interpreter mandate, replace the justification with the true one (version pinning
+      and dependency isolation), and regenerate the projection.'
+    evidence:
+    - rules/03-graphiti-memory.mdc:56 still reads 'system `python3` often lacks PyYAML'. At this binding `python3
+      -c 'import yaml'` succeeds on CPython 3.11.15. The projected copy at environment/generated/llm-rules/03-graphiti-memory.md:48
+      carries the same false premise.
+    optimized_sequence: 24
+    execution_lane: L2
+    schedule_slot:
+      start: 9
+      end: 10
+      lanes: 4
+    leverage_rank: 24
+- id: CI-028
+  title: Improve dependency provisioning evidence and determinism
+  status: ACTIVE
+  priority: 2
+  dependencies: []
+  canonical_action: Use constraints or equivalent deterministic dependency resolution, timestamp dependency logs,
+    and make the provisioning step emit a real exit status/readiness result.
+  source_records:
+  - source_ref: P6/improvements/BOOT-5
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: BOOT-5
+    source_title: Constraints file to eliminate pip backtracking; timestamp deps logs
+    source_record:
+      id: BOOT-5
+      plane: bootstrap
+      title: Constraints file to eliminate pip backtracking; timestamp deps logs
+      root_cause_ref: FR-1
+      root_cause_observed: resolver walked >=6 openai versions during CEG editable install; duration unmeasurable
+        (no timestamps)
+      change: pip install -c constraints.txt (from repo lock export) in session-deps; add timestamps to deps logs
+      owner: repo-maintainer(Cognitive.Engine.Graphs) + governance-maintainer
+      target: session-deps invocation + CEG constraints export
+      effort: SM
+      risk: pins drift from pyproject — regenerate in CI
+      done_condition: fresh build deps log shows single-version resolution and timestamps
+  - source_ref: P8/improvements/I-EL-03
+    source_pack: P8
+    source_path: improvements.yaml
+    source_id: I-EL-03
+    source_title: Emit an exit code for the session-deps step
+    source_record:
+      id: I-EL-03
+      title: Emit an exit code for the session-deps step
+      traces_to:
+      - experience.bootstrap_flow_observed.step2
+      root_cause: /root/.l9/claude/deps-<fingerprint>.log records "install pass complete" but carries no exit code,
+        and the .stamp file is zero bytes. Success cannot be distinguished from partial success after the fact.
+      change: Write the step's exit code into the stamp or the log's final line.
+      owner: shared-bootstrap maintainer
+      target: ops/scripts/bootstrap_agent_environment.sh (deps stage)
+      effort: S
+      risk: Low.
+      done_condition: The stamp or log states an exit code that a later read can assert on.
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'I-EL-03(P8): write the deps step''s exit code into the stamp or the log''s final line, and timestamp the
+      log.'
+    - BOOT-5 constraints-file half depends on a consumer repo lock export — out of tree at this binding.
+    evidence:
+    - 'LIVE: /root/.l9/claude/deps-9ff843f2….stamp is zero bytes; the paired .log carries no timestamp and no exit
+      code. All five deps stamps in the directory are zero bytes.'
+    optimized_sequence: 5
+    execution_lane: L3
+    schedule_slot:
+      start: 0
+      end: 2
+      lanes: 4
+    leverage_rank: 4
+  dependencies_previous:
+  - CI-009
+  dependencies_rederived_at: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+- id: CI-029
+  title: Persist repeatable cross-repo E2E fixtures
+  status: ACTIVE
+  priority: 3
+  dependencies: []
+  canonical_action: Move scratchpad-only fixture builders required for repeatable validation into an owned repository
+    surface.
+  source_records:
+  - source_ref: P8/improvements/I-WT-04
+    source_pack: P8
+    source_path: improvements.yaml
+    source_id: I-WT-04
+    source_title: Persist the cross-repo E2E fixture builder in a repository
+    source_record:
+      id: I-WT-04
+      title: Persist the cross-repo E2E fixture builder in a repository
+      traces_to:
+      - R-06
+      root_cause: build_corpus.mjs, which constructs the two-root eight-format corpus used for the real producer/consumer
+        qualification, exists only under the session scratchpad and does not survive a container recycle.
+      change: Commit it (or an equivalent) into l9-constellation-topology's test tooling, importing the producer's
+        fixture helpers rather than duplicating them.
+      owner: l9-constellation-topology maintainer
+      target: tests/ or scripts/ in l9-constellation-topology
+      effort: M
+      risk: Low-medium - it depends on the producer's tests/helpers, which are not a published API and may move.
+        The dependency must be explicit.
+      done_condition: The real-generation E2E can be re-run from a fresh clone.
+  reconciliation_action: MERGE
+  progress:
+    status: unknown
+    disposition: UNKNOWN
+    queue: needs_attachment
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: l9-constellation-topology tests/corpus_fixtures.py (3b02c6b)
+    residual: []
+    evidence:
+    - l9-constellation-topology is not attachable to this session, so neither the recorded partial evidence (tests/corpus_fixtures.py
+      at 3b02c6b) nor its two open residuals can be re-verified. Carried forward unchanged and marked unverifiable
+      at this binding rather than re-asserted.
+- id: CI-030
+  title: Improve receipt CLI ergonomics without multiplying state owners
+  status: ACTIVE
+  priority: 3
+  dependencies: []
+  canonical_action: Give receipt CLIs a default/status-style read action while retaining one canonical receipt store
+    and schema.
+  source_records:
+  - source_ref: P6/improvements/LOADER-1
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: LOADER-1
+    source_title: Default action + documented flag for receipt CLIs
+    source_record:
+      id: LOADER-1
+      plane: loader
+      title: Default action + documented flag for receipt CLIs
+      root_cause_ref: FR-3
+      root_cause_observed: '''status'' verb rejected; --read required yet only verb; CLAUDE.md shows no invocation
+        shape'
+      change: make bare invocation read+print (keep --read accepted); add exact command to CLAUDE.md receipt paragraph
+      owner: governance-maintainer
+      target: ops/scripts/claude_bootstrap_receipt.py, ops/scripts/governance_refresh_receipt.py, CLAUDE.md
+      effort: S
+      risk: none observed; additive default
+      done_condition: bare invocation prints recomputed state, exit 0
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'LOADER-1: make bare invocation read and print, keep --read accepted, and name the exact command in CLAUDE.md''s
+      receipt paragraph.'
+    evidence:
+    - ops/scripts/claude_bootstrap_receipt.py:144 and ops/scripts/governance_refresh_receipt.py:154 both still declare
+      --read with required=True. No default read action.
+    optimized_sequence: 10
+    execution_lane: L1
+    schedule_slot:
+      start: 4
+      end: 5
+      lanes: 4
+    leverage_rank: 19
+- id: CI-031
+  title: Keep repo documentation and tracked-path hygiene synchronized
+  status: ACTIVE
+  priority: 3
+  dependencies: []
+  canonical_action: Correct stale hook counts and prevent case-only duplicate tracked paths that make documentation/checkout
+    behavior platform-dependent.
+  source_records:
+  - source_ref: P2/improvements/IMP-R1
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-R1
+    source_title: Correct the pre-commit hook count in CLAUDE.md
+    source_record:
+      id: IMP-R1
+      title: Correct the pre-commit hook count in CLAUDE.md
+      traces_to:
+      - FRIC-07
+      root_cause: 'CLAUDE.md ''Live CI facts'' states ''Pre-commit has two hooks: ruff --fix and ruff-format''.
+        Enumeration of .pre-commit-config.yaml returns 9 hooks, including l9-action-pins and l9-governance-json
+        — the two checkers most relevant to this session''s failures.'
+      proposal: Update the line to the actual set, or generate that section from the config.
+      owner: 'role: repo maintainer (UNKNOWN)'
+      target: CLAUDE.md, section 'Live CI facts'
+      effort: S
+      risk: low
+      done_condition: The hook count and names in CLAUDE.md match a fresh enumeration of .pre-commit-config.yaml.
+  - source_ref: P2/improvements/IMP-R3
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-R3
+    source_title: Add a guard against case-only duplicate tracked paths
+    source_record:
+      id: IMP-R3
+      title: Add a guard against case-only duplicate tracked paths
+      traces_to:
+      - FRIC-12
+      root_cause: .github/pull_request_template.md and .github/PULL_REQUEST_TEMPLATE.md were both tracked simultaneously;
+        git ls-files listed both. Case-insensitive checkouts cannot represent both.
+      proposal: Add a check asserting that no two tracked paths differ only by case.
+      owner: 'role: repo maintainer (UNKNOWN)'
+      target: lint/ (new checker) or an architecture test
+      effort: S
+      risk: low
+      done_condition: Re-adding a case-variant path causes the check to fail, naming both paths.
+  reconciliation_action: MERGE
+  progress:
+    status: unknown
+    disposition: UNKNOWN
+    queue: needs_attachment
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual: []
+    evidence:
+    - IMP-R1's target (l9-ci-sdk CLAUDE.md hook count) is not attachable to this session.
+    - IMP-R3 (case-only duplicate tracked-path guard) has no counterpart in the governance tree at this binding,
+      but its named target is the same out-of-scope repository's lint surface.
+- id: CI-032
+  title: Give slow validation units explicit headroom without weakening total proof
+  status: ACTIVE
+  priority: 3
+  dependencies: []
+  canonical_action: Adjust per-file RPC/test ceilings for known slow tests while keeping aggregate validation coverage
+    intact.
+  source_records:
+  - source_ref: P4/improvements/IMP-10
+    source_pack: P4
+    source_path: improvements.yaml
+    source_id: IMP-10
+    source_title: Give the slowest test file headroom against the per-file RPC ceiling
+    source_record:
+      id: IMP-10
+      stream: other
+      priority: 5
+      title: Give the slowest test file headroom against the per-file RPC ceiling
+      traces_to:
+      - FR-02
+      observed_root_cause: tests/corpus_scale_incremental.test.ts was measured at 61 839 ms, above the 60 s per-file
+        RPC ceiling this repository has hit before. Trimming the generated fixture body reduced it to about 47 s,
+        which is headroom, not safety, on a slower runner.
+      change: Split the five-run incremental chain across two files, or reduce the scale fixture for the incremental
+        chain specifically while leaving corpus_scale.test.ts at ten thousand artifacts.
+      target:
+      - /home/user/l9-meta-injector/tests/corpus_scale_incremental.test.ts
+      owner: repository-maintainer
+      effort: S
+      risk: low
+      risk_note: Splitting recomputes the chain prefix, so total suite time rises while per-file time falls. That
+        is the intended trade.
+      done_condition: No test file exceeds 40 s on this runner.
+  reconciliation_action: MERGE
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual:
+    - 'IMP-10(P4): split the five-run incremental chain across two files, or reduce the incremental scale fixture
+      while leaving corpus_scale.test.ts at ten thousand artifacts.'
+    evidence:
+    - l9-meta-injector at 874f327 still carries tests/corpus_scale_incremental.test.ts as a single unsplit file,
+      and no per-file RPC ceiling configuration was found.
+    optimized_sequence: 27
+    execution_lane: L1
+    schedule_slot:
+      start: 10
+      end: 11
+      lanes: 4
+    leverage_rank: 27
+- id: CI-033
+  title: Use pipefail in push/retry helpers
+  status: COMPLETED
+  priority: 99
+  dependencies: []
+  canonical_action: Ensure a failed git push cannot be masked by a successful downstream pipe command.
+  source_records:
+  - source_ref: P2/improvements/IMP-A3
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-A3
+    source_title: Adopt set -o pipefail in every push/retry helper
+    source_record:
+      id: IMP-A3
+      title: Adopt set -o pipefail in every push/retry helper
+      traces_to:
+      - FAIL-01
+      root_cause: '`git push ... | tail -4` returned tail''s exit status, so a non-fast-forward rejection was reported
+        as PUSH_OK.'
+      proposal: Make `set -o pipefail` standard in any generated retry loop, or capture output to a variable and
+        test the command's own status.
+      owner: 'role: agent operator (self)'
+      target: Retry loop pattern used for git push
+      effort: S
+      risk: low
+      done_condition: A deliberately rejected push causes the loop to report failure and retry rather than print
+        success.
+      already_applied_this_session: true
+      already_applied_evidence: The corrected loop with `set -o pipefail` was used for the successful c983a53..fe0dfab
+        push.
+  reconciliation_action: MERGE
+  progress:
+    status: done
+    disposition: COMPLETE
+    queue: closed
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: done
+    delivered_by: Pre-existing (already COMPLETED at pack generation)
+    residual: []
+    evidence:
+    - COMPLETED at pack generation; no counter-evidence at this binding. Retained for provenance, not scheduled.
+- id: CI-100
+  title: 'Investigate why PR #70''s workflow runs were gated in action_required'
+  status: ACTIVE_CONTEXT_SPECIFIC
+  priority: 4
+  dependencies: []
+  canonical_action: Read the repository and org Actions approval settings and determine whether bot-authored branches
+    require manual approval by policy.
+  source_records:
+  - source_ref: P2/improvements/IMP-C1
+    source_pack: P2
+    source_path: improvements.yaml
+    source_id: IMP-C1
+    source_title: 'Investigate why PR #70''s workflow runs were gated in action_required'
+    source_record:
+      id: IMP-C1
+      title: 'Investigate why PR #70''s workflow runs were gated in action_required'
+      traces_to:
+      - FAIL-07
+      root_cause_status: UNKNOWN
+      observed: Four workflows on head c983a53 completed with conclusion=action_required at 01:15:49-01:15:50Z.
+        The PR displayed 2 checks. After a push from this session's identity, the same workflows ran and 24 checks
+        appeared.
+      why_it_matters: A PR with four genuinely failing invariant tests presented as having no failures. Any reviewer
+        or automation trusting the check list would have been misled.
+      proposal: Read the repository and org Actions approval settings and determine whether bot-authored branches
+        require manual approval by policy.
+      owner: 'role: org / repository admin (UNKNOWN)'
+      target: Repository Actions settings (outside the tree)
+      effort: S
+      risk: low
+      done_condition: The approval policy is documented, and either bot-seeded PRs run CI automatically or the gating
+        is stated on the PR so it is not mistaken for a green result.
+      explicitly_not_asserted: This session did not read those settings and does not claim to know the cause.
+  reconciliation_action: KEEP
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: external_blocked
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual: []
+    evidence:
+    - Target is repository/org Actions approval settings, outside any tree.
+    blocked_on: external
+- id: CI-101
+  title: Align the branch directive with the repository actually worked in
+  status: ACTIVE_CONTEXT_SPECIFIC
+  priority: 4
+  dependencies: []
+  canonical_action: Align the branch directive with the repository actually worked in
+  source_records:
+  - source_ref: P5/improvements/IMP-007
+    source_pack: P5
+    source_path: improvements.yaml
+    source_id: IMP-007
+    source_title: Align the branch directive with the repository actually worked in
+    source_record:
+      id: IMP-007
+      traces_to: FR-006
+      category: bootstrap
+      title: Align the branch directive with the repository actually worked in
+      root_cause: The directive mandates claude/pr-remediation-enrichment-engine-smfw97 across 7 repos. Work happened
+        entirely in enrichment.inference.engine, which is absent from that list and has no such branch; six listed
+        repos sit idle on it.
+      actions:
+      - Include the target repo in the branch directive, or scope the directive to the repo being worked
+      - Do not pre-create the branch in repos no task touches
+      owner: session/orchestration owner
+      target: session bootstrap configuration
+      effort: S
+      risk: low
+      risk_note: Policy change only; no repository content is affected.
+      done_condition: The repo receiving commits is covered by the directive, and no idle repo carries an unused
+        task branch.
+  reconciliation_action: KEEP
+  progress:
+    status: not_started
+    disposition: NOT_STARTED
+    queue: external_blocked
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: not_started
+    delivered_by: null
+    residual: []
+    evidence:
+    - 'REPRODUCING AT THIS BINDING: the session''s branch directive names one branch, claude/cursor-governance-pack-reconcile-9d4c9v,
+      identically for all four in-scope repositories — Cursor-Governance, l9-cognitive-runtime, l9-ci-core and l9-meta-injector.
+      Third consecutive assessment at which it reproduces.'
+    blocked_on: external
+- id: CI-102
+  title: Valid GH_TOKEN or formal surface exemption from gh-dependent gates
+  status: ACTIVE_CONTEXT_SPECIFIC
+  priority: 4
+  dependencies: []
+  canonical_action: (a) provision openclaw PAT per rule 62 via secret plane; or (b) amend surface_profile + rules
+    53/62 to sanction MCP path for claude-cloud
+  source_records:
+  - source_ref: P6/improvements/ENV-3
+    source_pack: P6
+    source_path: improvements.yaml
+    source_id: ENV-3
+    source_title: Valid GH_TOKEN or formal surface exemption from gh-dependent gates
+    source_record:
+      id: ENV-3
+      plane: env
+      title: Valid GH_TOKEN or formal surface exemption from gh-dependent gates
+      root_cause_ref: FA-1
+      root_cause_observed: gh installed, GH_TOKEN invalid; doctrine's publish/overlap chain requires gh api
+      change: (a) provision openclaw PAT per rule 62 via secret plane; or (b) amend surface_profile + rules 53/62
+        to sanction MCP path for claude-cloud
+      owner: governance-maintainer + account-owner
+      target: environment secret config OR ops/autonomy/surface_profile.yaml + rules
+      effort: M
+      risk: (a) credential handling must stay in secret plane; (b) doctrine change needs review
+      done_condition: gh auth status succeeds in-session OR surface profile names sanctioned MCP path explicitly
+  reconciliation_action: KEEP
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: Quantum-L9/Cursor-Governance 5612f6b (merged) — a third path, unwritten
+    residual:
+    - Record the REST route as a sanctioned surface capability in ops/autonomy/surface_profile.yaml and rule 62,
+      or provision the PAT. Until then the next gh-dependent gate reproduces the original block.
+    evidence:
+    - The third route still works and is still unwritten. `gh api user --jq .login` returns cryptoxdog at this binding
+      with GH_TOKEN set.
+    - Neither sanctioned option was taken. No openclaw PAT via the secret plane (option a). No surface_profile amendment;
+      rules/62-github-openclaw-authority.mdc still routes through the secret plane with no surface exemption (option
+      b).
+    - rules/53-pr-overlap-guardrail.mdc:56 does say 'Detection is REST-only (gh api)', but that documents one gate's
+      own implementation — it is not a surface exemption and does not generalise to the next gh-dependent gate written.
+    optimized_sequence: 7
+    execution_lane: L3
+    schedule_slot:
+      start: 2
+      end: 4
+      lanes: 4
+    leverage_rank: 10
+- id: CI-036
+  title: Keep unpushed-commit counts honest across merged-and-deleted branches
+  status: ACTIVE
+  priority: 2
+  dependencies: []
+  canonical_action: Prune remote-tracking refs for branches deleted upstream and keep origin/HEAD resolvable, so
+    unpushed-commit counts neither inflate nor fall silent.
+  source_records: []
+  progress:
+    status: partial
+    disposition: PARTIAL
+    queue: active
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: partial
+    delivered_by: be3f01c9 (#325, bootstrap prune + origin/HEAD) + 7ceeef38 (#324, an in-repo checker that does
+      not depend on local remote-tracking refs at all)
+    residual:
+    - Consolidate repo_hygiene.py's prune with the session-start prune so a count read mid-session is not served
+      by the session-end pass.
+    - Harness stop-hook resolution logic stays external.
+    evidence:
+    - ADVANCED since the assessment. af33b4d (#331, merged after 30c6ecd4) taught ops/autonomy/session_debt.py that
+      a merged-and-deleted branch is not unpushed work, using branch.<name>.remote as the offline distinguisher
+      because a squash merge leaves the branch's commits unreachable from main and the deleted ref leaves nothing
+      to compare against.
+    - 'Both directions are pinned: test_merged_and_deleted_branch_is_not_debt performs a real squash merge and branch
+      delete against a bare upstream and asserts HEAD is genuinely unreachable from main BEFORE asserting no debt,
+      so it fails if the fix degrades to a reachability check; test_never_pushed_branch_is_still_debt_when_absent_upstream
+      holds the opposite line.'
+    - 'The two earlier mechanisms remain: the session-start prune plus origin/HEAD in bootstrap_agent_environment.sh,
+      and ops/scripts/tests/test_stale_remote_ref_counts.sh.'
+    - 'Residual confirmed: ops/scripts/repo_hygiene.py:385 still runs `git fetch --prune origin` at session end
+      only, unconsolidated with the session-start prune.'
+    optimized_sequence: 18
+    execution_lane: L3
+    schedule_slot:
+      start: 7
+      end: 8
+      lanes: 4
+    leverage_rank: 11
+- id: CI-037
+  title: Make abandoned work fail closed instead of relying on doctrine
+  status: ACTIVE
+  priority: 1
+  dependencies: []
+  canonical_action: Make the three standing operator rules — commit implies push, an identified bug must be fixed,
+    a pre-existing error is in scope once identified — mechanical rather than doctrinal, as session debt a gate
+    refuses to end a turn over.
+  source_records: []
+  reconciliation_action: PROMOTED. Introduced in the predecessor's progress.yaml only, which left improvements.yaml
+    one record short of its own progress store. Promoted here so both stores carry 38.
+  progress:
+    status: done
+    disposition: COMPLETE
+    queue: closed
+    assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+    previous_status: done
+    delivered_by: 7ceeef38 (#324) — rules/42-no-abandoned-work.mdc + ops/autonomy/session_debt.py, registered on
+      the Claude Stop hook as --class gate
+    residual: []
+    evidence:
+    - Re-verified live at this binding. ops/autonomy/session_debt.py is present and executable; rules/42-no-abandoned-work.mdc
+      is present; and /home/user/.claude/settings.json registers session_debt_wrap.py on the Stop hook via l9_hook_exec.sh
+      --class gate, alongside merge_gate_wrap, local_execution_gate_wrap and memory_gate.
+    - Delivered by 7ceeef38 (#324), with the registration repair a3d91aa5 and the merged-and-deleted correction
+      af33b4d (#331) — the latter counted against CI-036.
+    residual_carried:
+    - The ledger is per-workspace under .l9/autonomy/, so a finding recorded in one worktree is invisible from another.
+      Cross-workspace inheritance remains convention, not mechanism. Not scheduled; recorded.

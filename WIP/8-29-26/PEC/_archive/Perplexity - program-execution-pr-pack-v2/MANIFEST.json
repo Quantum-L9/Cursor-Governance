@@ -1,0 +1,365 @@
+{
+  "pack_name": "program-execution-pr-pack-v2",
+  "target_repo": "Quantum-L9/Cursor-Governance",
+  "base_branch": "main",
+  "mode": "CREATE_ONLY new files; explicit APPEND/MODIFY instructions in RUNBOOK.md for existing repo files (Gap 2)",
+  "generated_at": "2026-08-21T00:28:00-04:00",
+  "supersedes": "program-execution-pr-pack.zip (previous turn)",
+  "changes_from_previous_pack": [
+    "Gap 1: RUNBOOK.md now includes a token/permission matrix stating the exact gh scope or workflow permission required per step; only ruleset apply (step 2) and merge-queue toggle (step 3) require administration:write/org-admin \u2014 everything else is contents:write or the zero-config default GITHUB_TOKEN.",
+    "Gap 2: RUNBOOK.md step 2/3/5/7 now give literal append/modify snippets for ORG_INVARIANTS.yaml, commands/COMMANDS_MANIFEST.yaml, CODEOWNERS, Makefile, .pre-commit-config.yaml, .github/workflows/l9-lint-test.yml, and governance/TRUST_MODEL.md instead of just naming them as deferred.",
+    "Gap 3 (new files added this turn): ops/lib/telemetry.py + tests/tools/test_telemetry.py (in-process emitter, fail-soft, schema-validated); wiring/ob-010-instrumentation-diffs.md (exact 4 call-site diffs for agent_git.py, check_feature_tree.py, environment_lease.py, semantic_merge_probe.py); reports/latest/semantic_contracts/*.yaml (7 files, one per node, feeding tools/semantic_merge_probe.py); reports/latest/test_impact_map.v1.yaml (real impact map, no longer a theoretical fallback-only path); .github/workflows/deploy-with-provenance-gate.yml (wires tools/verify_provenance.py into an actual deploy gate); artifact-provenance.yml now uploads its artifact for that gate to consume.",
+    "Gap 4 (semantic contracts / bypass-actor policy / CI batching / dashboard content) deferred to next turn per user instruction."
+  ],
+  "validation_performed": [
+    "python -m py_compile on all tools/*.py, ops/scripts/*.py, ops/lib/*.py: PASS",
+    "yaml.safe_load + json.load scan across all yaml/yml/json files: 0 failures (one real YAML syntax bug found and fixed in artifact-provenance.yml)",
+    "pytest tests/tools/ \u2014 10 tests passed: feature-tree DAG/cycle/scope/diff-scope (4), agent-git doctor/claim incl. bare-repo clone fixture (3), telemetry emit/reject/append (3)",
+    "Bug found+fixed: ops/schemas/program_execution_event.schema.json required agent_id as string only; code legitimately passes None for unattended events \u2014 schema now allows [string, null]",
+    "tools/generate_program_execution_artifacts.py --check round-trip: PASS, zero drift",
+    "tools/check_merge_queue.py: FAILs correctly when a dependency is unmerged and outside the batch; PASSes once included"
+  ],
+  "file_count": 68,
+  "files": [
+    {
+      "path": ".github/workflows/agent-git-guard.yml",
+      "size_bytes": 1059,
+      "sha256_12": "c4dbf8cc2e0d"
+    },
+    {
+      "path": ".github/workflows/artifact-provenance.yml",
+      "size_bytes": 767,
+      "sha256_12": "4e63247c161b"
+    },
+    {
+      "path": ".github/workflows/deploy-with-provenance-gate.yml",
+      "size_bytes": 1332,
+      "sha256_12": "ea93768f246b"
+    },
+    {
+      "path": ".github/workflows/feature-tree-gate.yml",
+      "size_bytes": 1637,
+      "sha256_12": "4f0ede83b7a4"
+    },
+    {
+      "path": ".github/workflows/merge-queue.yml",
+      "size_bytes": 889,
+      "sha256_12": "7d2a5a71f077"
+    },
+    {
+      "path": ".github/workflows/policy-conftest.yml",
+      "size_bytes": 1022,
+      "sha256_12": "4412bf1cf093"
+    },
+    {
+      "path": ".github/workflows/preview-environment-gate.yml",
+      "size_bytes": 966,
+      "sha256_12": "c6645429f4aa"
+    },
+    {
+      "path": ".github/workflows/semantic-conflict.yml",
+      "size_bytes": 809,
+      "sha256_12": "86da0d8b2fd1"
+    },
+    {
+      "path": ".github/workflows/test-impact.yml",
+      "size_bytes": 1018,
+      "sha256_12": "cff60ff335e1"
+    },
+    {
+      "path": "EXTERNAL_CONFIGURATION/github-merge-queue.md",
+      "size_bytes": 231,
+      "sha256_12": "ff8e8295e009"
+    },
+    {
+      "path": "EXTERNAL_CONFIGURATION/github-ruleset.program-execution.md",
+      "size_bytes": 355,
+      "sha256_12": "eecfc69ede81"
+    },
+    {
+      "path": "EXTERNAL_CONFIGURATION/supabase-preview-branches.md",
+      "size_bytes": 179,
+      "sha256_12": "9e2d25b90210"
+    },
+    {
+      "path": "EXTERNAL_CONFIGURATION/vercel-preview-integration.md",
+      "size_bytes": 185,
+      "sha256_12": "57032afc68c0"
+    },
+    {
+      "path": "RUNBOOK.md",
+      "size_bytes": 12231,
+      "sha256_12": "eae8c0373ddf"
+    },
+    {
+      "path": "commands/agent-git.md",
+      "size_bytes": 986,
+      "sha256_12": "147b561c6237"
+    },
+    {
+      "path": "contracts/program-execution/canonical.environment_lease.v1.yaml",
+      "size_bytes": 641,
+      "sha256_12": "166c5f93c367"
+    },
+    {
+      "path": "contracts/program-execution/canonical.merge_queue.v1.yaml",
+      "size_bytes": 344,
+      "sha256_12": "ae517f721d08"
+    },
+    {
+      "path": "contracts/program-execution/canonical.provenance.v1.yaml",
+      "size_bytes": 411,
+      "sha256_12": "b60f4e48cf3f"
+    },
+    {
+      "path": "contracts/program-execution/canonical.semantic_conflict.v1.yaml",
+      "size_bytes": 446,
+      "sha256_12": "7948889dae03"
+    },
+    {
+      "path": "contracts/schemas/canonical.schema.environment_lease.v1.yaml",
+      "size_bytes": 969,
+      "sha256_12": "527400fae091"
+    },
+    {
+      "path": "contracts/schemas/canonical.schema.feature_tree.v1.yaml",
+      "size_bytes": 2483,
+      "sha256_12": "f9ae9e300ca8"
+    },
+    {
+      "path": "contracts/schemas/canonical.schema.semantic_contract.v1.yaml",
+      "size_bytes": 417,
+      "sha256_12": "50b0fee957b5"
+    },
+    {
+      "path": "contracts/schemas/canonical.schema.test_impact_map.v1.yaml",
+      "size_bytes": 416,
+      "sha256_12": "ab9681a4e3c1"
+    },
+    {
+      "path": "governance/generated/CODEOWNERS",
+      "size_bytes": 149,
+      "sha256_12": "2367ceb592b7"
+    },
+    {
+      "path": "governance/generated/github-ruleset.program-execution.json",
+      "size_bytes": 460,
+      "sha256_12": "74c16639928f"
+    },
+    {
+      "path": "ops/__init__.py",
+      "size_bytes": 0,
+      "sha256_12": "e3b0c44298fc"
+    },
+    {
+      "path": "ops/config/environment-lease.config.yaml",
+      "size_bytes": 169,
+      "sha256_12": "22f93a97d52a"
+    },
+    {
+      "path": "ops/config/merge-queue.config.yaml",
+      "size_bytes": 187,
+      "sha256_12": "77980e64bc64"
+    },
+    {
+      "path": "ops/config/test-impact.config.yaml",
+      "size_bytes": 149,
+      "sha256_12": "5a507e2a1b8d"
+    },
+    {
+      "path": "ops/lib/__init__.py",
+      "size_bytes": 0,
+      "sha256_12": "e3b0c44298fc"
+    },
+    {
+      "path": "ops/lib/telemetry.py",
+      "size_bytes": 2710,
+      "sha256_12": "639e6472939a"
+    },
+    {
+      "path": "ops/schemas/program_execution_event.schema.json",
+      "size_bytes": 862,
+      "sha256_12": "876513705167"
+    },
+    {
+      "path": "ops/scripts/emit_program_execution_metrics.py",
+      "size_bytes": 1271,
+      "sha256_12": "53c4eba6a085"
+    },
+    {
+      "path": "ops/scripts/reconcile_preview_leases.py",
+      "size_bytes": 990,
+      "sha256_12": "1cb8c65a5528"
+    },
+    {
+      "path": "policy/environment_lease.rego",
+      "size_bytes": 282,
+      "sha256_12": "7ed8354477ad"
+    },
+    {
+      "path": "policy/feature_tree.rego",
+      "size_bytes": 476,
+      "sha256_12": "8225962e94d6"
+    },
+    {
+      "path": "policy/merge_queue.rego",
+      "size_bytes": 256,
+      "sha256_12": "aa52d6ea5d1b"
+    },
+    {
+      "path": "policy/provenance.rego",
+      "size_bytes": 417,
+      "sha256_12": "3b53443ed4f0"
+    },
+    {
+      "path": "policy/semantic_conflict.rego",
+      "size_bytes": 130,
+      "sha256_12": "b55f2a0fb9a9"
+    },
+    {
+      "path": "policy/testdata/invalid_parallel_scope.yaml",
+      "size_bytes": 326,
+      "sha256_12": "b0275caf2fc3"
+    },
+    {
+      "path": "policy/testdata/invalid_provenance.yaml",
+      "size_bytes": 109,
+      "sha256_12": "c1e5e892e17a"
+    },
+    {
+      "path": "policy/testdata/valid_environment_lease.yaml",
+      "size_bytes": 230,
+      "sha256_12": "024c0910dd19"
+    },
+    {
+      "path": "policy/testdata/valid_feature_tree.yaml",
+      "size_bytes": 401,
+      "sha256_12": "fdfbe9a9936d"
+    },
+    {
+      "path": "reports/latest/semantic_contracts/EN-010.semantic_contract.v1.yaml",
+      "size_bytes": 431,
+      "sha256_12": "3a769d2c2978"
+    },
+    {
+      "path": "reports/latest/semantic_contracts/MQ-010.semantic_contract.v1.yaml",
+      "size_bytes": 319,
+      "sha256_12": "951099fb8cf9"
+    },
+    {
+      "path": "reports/latest/semantic_contracts/OB-010.semantic_contract.v1.yaml",
+      "size_bytes": 354,
+      "sha256_12": "75d74d215293"
+    },
+    {
+      "path": "reports/latest/semantic_contracts/PE-010.semantic_contract.v1.yaml",
+      "size_bytes": 422,
+      "sha256_12": "857a227d1ca8"
+    },
+    {
+      "path": "reports/latest/semantic_contracts/PE-020.semantic_contract.v1.yaml",
+      "size_bytes": 353,
+      "sha256_12": "70712e410474"
+    },
+    {
+      "path": "reports/latest/semantic_contracts/PR-010.semantic_contract.v1.yaml",
+      "size_bytes": 299,
+      "sha256_12": "fed49a9b3293"
+    },
+    {
+      "path": "reports/latest/semantic_contracts/SC-010.semantic_contract.v1.yaml",
+      "size_bytes": 451,
+      "sha256_12": "3c5f94aee76d"
+    },
+    {
+      "path": "reports/latest/test_impact_map.v1.yaml",
+      "size_bytes": 2376,
+      "sha256_12": "f58c897b61ee"
+    },
+    {
+      "path": "tests/fixtures/feature_trees/PE-010.contract.md",
+      "size_bytes": 5,
+      "sha256_12": "25cf54c697a6"
+    },
+    {
+      "path": "tests/fixtures/feature_trees/PE-020.contract.md",
+      "size_bytes": 5,
+      "sha256_12": "25cf54c697a6"
+    },
+    {
+      "path": "tests/fixtures/feature_trees/invalid_cycle.yaml",
+      "size_bytes": 520,
+      "sha256_12": "022fa8b44974"
+    },
+    {
+      "path": "tests/fixtures/feature_trees/invalid_parallel_scope.yaml",
+      "size_bytes": 532,
+      "sha256_12": "86367a7a65b7"
+    },
+    {
+      "path": "tests/fixtures/feature_trees/valid.yaml",
+      "size_bytes": 670,
+      "sha256_12": "0fff09356c66"
+    },
+    {
+      "path": "tests/tools/test_agent_git.py",
+      "size_bytes": 1866,
+      "sha256_12": "3494b68df864"
+    },
+    {
+      "path": "tests/tools/test_check_feature_tree.py",
+      "size_bytes": 1342,
+      "sha256_12": "7d0ee9ad3677"
+    },
+    {
+      "path": "tests/tools/test_telemetry.py",
+      "size_bytes": 1410,
+      "sha256_12": "b9d129192103"
+    },
+    {
+      "path": "tools/agent_git.py",
+      "size_bytes": 8708,
+      "sha256_12": "4e58812e8c33"
+    },
+    {
+      "path": "tools/check_feature_tree.py",
+      "size_bytes": 6431,
+      "sha256_12": "37dcf6552c15"
+    },
+    {
+      "path": "tools/check_merge_queue.py",
+      "size_bytes": 1342,
+      "sha256_12": "ce6012705838"
+    },
+    {
+      "path": "tools/environment_lease.py",
+      "size_bytes": 3674,
+      "sha256_12": "515a901faaed"
+    },
+    {
+      "path": "tools/generate_program_execution_artifacts.py",
+      "size_bytes": 2397,
+      "sha256_12": "c285cbdc6bcd"
+    },
+    {
+      "path": "tools/select_impacted_tests.py",
+      "size_bytes": 1275,
+      "sha256_12": "abc9549b68ce"
+    },
+    {
+      "path": "tools/semantic_merge_probe.py",
+      "size_bytes": 2428,
+      "sha256_12": "72ed32014e7c"
+    },
+    {
+      "path": "tools/verify_provenance.py",
+      "size_bytes": 1490,
+      "sha256_12": "963e37051903"
+    },
+    {
+      "path": "wiring/ob-010-instrumentation-diffs.md",
+      "size_bytes": 3620,
+      "sha256_12": "f53349e3bd4f"
+    }
+  ]
+}
