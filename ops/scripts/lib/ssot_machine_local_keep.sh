@@ -22,7 +22,7 @@ ssot_is_ff_corpus_keep() {
     return 1
   fi
   case "$rel" in
-    TODO.md|WIP/*|docs/plans/*|environment/program-execution/campaigns/*)
+    TODO.md|WIP/*|docs/plans/*|environment/program-execution/campaigns/*|reports/repo-index/*|reports/repo-index)
       return 0
       ;;
   esac
