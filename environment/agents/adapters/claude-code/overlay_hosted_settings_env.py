@@ -14,10 +14,12 @@ The workspace target is `.claude/settings.local.json`, NOT the tracked
 `.claude/settings.json`. The tracked file is a GENERATED artifact (it is listed
 in sync_generated_artifacts GENERATED_PATH_PREFIXES) projected from
 settings.template.json, and patching it in place dirtied a clean checkout within
-seconds of every SessionStart. Worse, the runtime decrements
+seconds of every SessionStart. The runtime also decrements
 CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH per nesting level (3 -> 1 observed within
-one session; see verify_account_env.RUNTIME_MANAGED), so committing that churn
-would have frozen nested-delegation depth at 1 for every future session.
+one session; see verify_account_env.RUNTIME_MANAGED), so copying that process
+value back into settings froze nested-delegation depth at the remainder. That
+key is therefore no longer overlaid at all: the template's value is the ceiling
+and always wins (see UNCLAMPED_RUNTIME_KEYS).
 `.claude/settings.local.json` is already gitignored, and project-local settings
 outrank shared project settings, so the values still reach the session.
 
@@ -62,11 +64,41 @@ OVERLAY_KEYS = (
     "L9_L4_LOCAL_AUTONOMY",
     "L9_WORKTREE_ISOLATION",
     "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS",
-    "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH",
 )
+
+#: Deliberately NOT overlaid: CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH.
+#:
+#: The runtime decrements it per nesting level, so the process value observed at
+#: SessionStart is the DEPTH REMAINING for this session, not the configured
+#: ceiling. Copying it into settings pinned every future session to that
+#: remainder — a session that started one level down wrote back `1` and froze
+#: nested delegation there permanently. The template's value is the ceiling and
+#: is the only correct source; the process value is a runtime observation and is
+#: now read for reporting only (verify_account_env.RUNTIME_MANAGED).
+UNCLAMPED_RUNTIME_KEYS = ("CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH",)
 
 SURFACE_KEY = "L9_GOVERNANCE_SURFACE"
 REQUIRED_SURFACE = "claude-code"
+
+TEMPLATE_REL = Path("environment/agents/adapters/claude-code/settings.template.json")
+
+
+def _template_ceiling(key: str) -> str | None:
+    """Configured ceiling for a runtime-decremented key, from the template.
+
+    Returns None when the template does not set it, in which case the key is
+    dropped rather than pinned to a runtime remainder.
+    """
+    for base in (Path(__file__).resolve().parents[4], Path.home() / ".cursor-governance"):
+        candidate = base / TEMPLATE_REL
+        try:
+            data = json.loads(candidate.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            continue
+        env = data.get("env")
+        if isinstance(env, dict) and env.get(key) is not None:
+            return str(env[key])
+    return None
 
 
 def overlay_payload_from_environ(environ: dict[str, str] | None = None) -> dict[str, str]:
@@ -84,6 +116,12 @@ def apply_overlay(settings: dict[str, Any], overlay: dict[str, str]) -> dict[str
     env = dict(settings.get("env") or {})
     env.update(overlay)
     env[SURFACE_KEY] = REQUIRED_SURFACE
+    for key in UNCLAMPED_RUNTIME_KEYS:
+        base = _template_ceiling(key)
+        if base is not None:
+            env[key] = base
+        else:
+            env.pop(key, None)
     settings["env"] = env
     return settings
 

@@ -146,9 +146,18 @@ done
 # Model-controlled surfaces never hold UA, password, PAT, or downstream tokens.
 # Credentials stay in Infisical behind the broker. A pasted "Infisical password"
 # configuration here is a master key — strip it.
+#
+# GRAPHITI_MCP_TOKEN and CONTEXT7_API_KEY are deliberately NOT in this list, for
+# the same reason GH_TOKEN is not (see the block below): they are MCP transport
+# credentials the platform may proxy, and sweeping the announcement disables the
+# proxying without removing any secret. Neither is ever pasted into the account
+# variables field and neither is exported with a value by this script.
+# mcp.template.json references them as ${VAR}, so a proxied value reaches the
+# MCP client and nothing else; with no value proxied the servers behave exactly
+# as before (Graphiti unauthenticated, Context7 simply absent).
 for leaked in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
               INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD \
-              GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID \
+              AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID \
               AWS_SESSION_TOKEN; do
   leaked_value="${!leaked:-}"
   [ -n "$leaked_value" ] || continue
@@ -258,8 +267,13 @@ mkdir -p "$(dirname "$L9_ENV_FILE")"
   # it, and ~/.profile sources this file unguarded, so an unset here would strip
   # it from every login shell.
   # ADR-0006 + Infisical plane: keep vault credentials out of every in-session shell.
+  # No GRAPHITI_MCP_TOKEN / CONTEXT7_API_KEY export and no unset either, on the
+  # same GH_TOKEN reasoning above: they are proxied MCP transport credentials
+  # referenced as ${VAR} from mcp.template.json, this file is sourced unguarded
+  # by ~/.profile, and an unset here would strip a proxied value from every
+  # login shell — disabling the proxying rather than removing a secret.
   echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
-  echo "unset GRAPHITI_MCP_TOKEN INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD"
+  echo "unset INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD"
   echo "unset SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN"
   echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN"
 } > "$L9_ENV_FILE"
@@ -284,8 +298,12 @@ fi
 
 # --- 4) Memory front door (report, never block) ----------------------------
 # Capability broker retired 2026-08-29 (never shipped). Do not probe it.
-# Graphiti is GRAPHITI_MCP_URL. Do NOT paste GRAPHITI_MCP_TOKEN / Infisical UA.
-note "memory front door URL: ${GRAPHITI_MCP_URL:-unset} (no bearer in this process)"
+# Graphiti is GRAPHITI_MCP_URL. Do NOT paste GRAPHITI_MCP_TOKEN, CONTEXT7_API_KEY,
+# or an Infisical UA into the variables field. Those two MCP transport credentials
+# are proxied: mcp.template.json references them as ${VAR}, so a value reaches the
+# MCP client only when the platform proxies one, and never via a pasted secret.
+note "memory front door URL: ${GRAPHITI_MCP_URL:-unset} (bearer: ${GRAPHITI_MCP_TOKEN:+proxied}${GRAPHITI_MCP_TOKEN:-none})"
+note "context7 mcp key: ${CONTEXT7_API_KEY:+proxied}${CONTEXT7_API_KEY:-none}"
 note "capability plane: RETIRED (never shipped)"
 
 if [ "$SETUP_RC" -ne 0 ]; then

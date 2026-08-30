@@ -5,10 +5,13 @@ from __future__ import annotations
 
 import ast
 import json
+import re
+import sys
 import unittest
 from pathlib import Path
 
 CLAUDE = Path(__file__).resolve().parent.parent
+REPO = Path(__file__).resolve().parents[5]
 HOOKS = CLAUDE / "hooks"
 MEM = CLAUDE / "memory"
 FORBIDDEN_IMPORTS = {"memory_client", "urllib.request", "urllib.error"}
@@ -115,18 +118,77 @@ class FrontDoorTests(unittest.TestCase):
         url = servers["graphiti-memory"].get("url", "")
         self.assertEqual(url, "${GRAPHITI_MCP_URL}")
 
-    def test_mcp_template_holds_no_bearer(self) -> None:
-        """Contract S3/§12: the functional config carries no Graphiti bearer.
+    def test_mcp_template_holds_no_literal_credential(self) -> None:
+        """Contract S3/§12: no credential VALUE, in the template or the render.
 
-        A prohibition mention in the _comment block documents the contract and
-        is expected; the mcpServers config itself must never reference it.
+        The prohibition is on written-down credential material, not on naming a
+        variable. A bearer may now be referenced as ``${GRAPHITI_MCP_TOKEN}`` —
+        Claude Code expands it at load from a value the platform proxies, so
+        nothing is stored here or in the account variables field. What must never
+        appear is a resolved secret: any Bearer whose argument is not a bare
+        ``${VAR}`` reference.
         """
-        raw = (CLAUDE / "mcp.template.json").read_text(encoding="utf-8")
-        mcp = json.loads(raw)
-        self.assertNotIn("GRAPHITI_MCP_TOKEN", json.dumps(mcp["mcpServers"]))
-        self.assertNotIn("Bearer", raw)
-        mem = mcp["mcpServers"]["graphiti-memory"]
-        self.assertFalse(mem.get("headers"), "graphiti-memory must carry no headers")
+        mcp = json.loads((CLAUDE / "mcp.template.json").read_text(encoding="utf-8"))
+
+        def walk(node: object) -> list[str]:
+            """Every string leaf, so a Bearer is matched in its own value."""
+            if isinstance(node, str):
+                return [node]
+            if isinstance(node, dict):
+                return [leaf for value in node.values() for leaf in walk(value)]
+            if isinstance(node, list):
+                return [leaf for item in node for leaf in walk(item)]
+            return []
+
+        found = 0
+        for leaf in walk(mcp["mcpServers"]):
+            match = re.fullmatch(r"Bearer\s+(.+)", leaf)
+            if not match:
+                continue
+            found += 1
+            self.assertRegex(
+                match.group(1),
+                r"^\$\{[A-Z0-9_]+\}$",
+                f"Bearer must reference a variable, not a literal: {match.group(1)!r}",
+            )
+        self.assertTrue(found, "expected at least one ${VAR} bearer reference to check")
+
+    def test_graphiti_bearer_is_env_gated_and_absent_when_unproxied(self) -> None:
+        """An unproxied session must render exactly the previous wire config.
+
+        The Graphiti front door is unauthenticated today. Emitting an empty or
+        literal Authorization header would break the one memory path that works,
+        so the header lives under ``_optional_headers`` and only materialises
+        when the variable actually carries a proxied value.
+        """
+        sys.path.insert(0, str(REPO / "ops" / "scripts"))
+        import claude_projection as cp
+
+        template = json.loads((CLAUDE / "mcp.template.json").read_text(encoding="utf-8"))
+
+        unproxied = cp.render_mcp(template, None, environ={})["mcpServers"]
+        self.assertIn("graphiti-memory", unproxied)
+        self.assertFalse(
+            unproxied["graphiti-memory"].get("headers"),
+            "unproxied graphiti-memory must carry no headers",
+        )
+        self.assertNotIn("context7", unproxied, "context7 requires a proxied key")
+        self.assertNotIn(
+            "_optional_headers",
+            json.dumps(unproxied),
+            "private template directives must never ship",
+        )
+
+        proxied = cp.render_mcp(
+            template,
+            None,
+            environ={"GRAPHITI_MCP_TOKEN": "proxied", "CONTEXT7_API_KEY": "proxied"},
+        )["mcpServers"]
+        self.assertEqual(
+            proxied["graphiti-memory"]["headers"]["Authorization"],
+            "Bearer ${GRAPHITI_MCP_TOKEN}",
+        )
+        self.assertEqual(proxied["context7"]["url"], "https://mcp.context7.com/mcp")
 
     def test_environment_template_exports_no_credentials(self) -> None:
         """The cloud variables field is plaintext and model-readable: no
