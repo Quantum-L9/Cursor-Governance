@@ -95,24 +95,9 @@ def test_live_teachers_do_not_teach_postcommit_precommit_repo() -> None:
     )
 
 
-# The live plan teachers. Skill-named slashes load skills/<name>/SKILL.md
-# directly (rules/02), so these are what a session actually reads.
 PLAN_TEACHERS = (
     ROOT / "skills" / "l9-plan" / "SKILL.md",
     ROOT / "skills" / "l9-plan-simple" / "SKILL.md",
-)
-
-# Retired wrappers. commands/l9-plan.md and commands/l9-plan-simple.md moved to
-# commands/_archived/ when the skill-wrapper layer was retired — they carry no
-# COMMANDS_MANIFEST entry and no session loads them. Asserting the live path
-# still held them made this test fail on a correct tree. They stay in scope
-# while they exist, so an un-retirement cannot smuggle ceremony gates back in,
-# but their absence is the expected state and is not a failure.
-ARCHIVED_PLAN_TEACHERS = (
-    ROOT / "commands" / "_archived" / "l9-plan.md",
-    ROOT / "commands" / "_archived" / "l9-plan-simple.md",
-    ROOT / "commands" / "l9-plan.md",
-    ROOT / "commands" / "l9-plan-simple.md",
 )
 
 PLAN_CEREMONY_GATES = (
@@ -128,9 +113,6 @@ def test_plan_teachers_keep_only_precommit_catalog() -> None:
     failures: list[str] = []
     for path in PLAN_TEACHERS:
         assert path.is_file(), f"missing plan teacher: {path}"
-    for path in (*PLAN_TEACHERS, *ARCHIVED_PLAN_TEACHERS):
-        if not path.is_file():
-            continue
         text = path.read_text(encoding="utf-8")
         rel = path.relative_to(ROOT).as_posix()
         for pattern in PLAN_CEREMONY_GATES:
