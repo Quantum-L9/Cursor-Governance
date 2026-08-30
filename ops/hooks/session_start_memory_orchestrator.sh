@@ -37,6 +37,14 @@ if graphiti_enabled; then
   if [ -n "$REPO" ] && [ -f "$GOV_ROOT/ops/graphiti/hydration/cli.py" ]; then
     PY="${GOV_ROOT}/.venv/bin/python3"
     [ -x "$PY" ] || PY="python3"
+    BG_OPEN=()
+    if [ "${CURSOR_IS_BACKGROUND_AGENT:-}" = "1" ] || [ "${L9_MEMORY_BACKGROUND:-}" = "1" ]; then
+      BG_OPEN+=(--background)
+    fi
+    (cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+      "$PY" -m ops.graphiti.hydration.cli open \
+      --project-dir "$REPO" --session-id "$CURSOR_CONVERSATION_ID" \
+      "${BG_OPEN[@]}" >/dev/null 2>&1) || true
     if OUT="$(cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
         "$PY" -m ops.graphiti.hydration.cli compile \
         --project-dir "$REPO" \

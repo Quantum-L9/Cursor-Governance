@@ -20,6 +20,11 @@ if str(_REPO_ROOT) not in sys.path:
 from group_resolver import resolve_group_id  # noqa: E402
 
 from ops.graphiti.hydration.identity import resolve_write_identity  # noqa: E402
+from ops.graphiti.hydration.session_latches import (  # noqa: E402
+    close_gap_reason,
+    prior_session_id,
+    resolve_session_id,
+)
 
 
 def _read_groups(group_id: str) -> list[str]:
@@ -205,6 +210,11 @@ def compile_session_packet(
 ) -> dict[str, Any]:
     """Build a SessionHydrationPacket dict (fail-open when Graphiti is down)."""
     project = Path(project_dir).expanduser().resolve()
+    conversation_id = resolve_session_id(explicit=conversation_id)
+    close_gap = False
+    close_gap_text = close_gap_reason(project, conversation_id)
+    if close_gap_text:
+        close_gap = True
     try:
         identity = resolve_write_identity(explicit_agent_id=agent_id, surface="cursor")
     except Exception:  # noqa: BLE001
@@ -228,8 +238,23 @@ def compile_session_packet(
         )
     else:
         try:
-            search_queries_used += 1
-            facts = _search_facts(group_id, "PICKUP|objective= next= agent=", limit=8)
+            prior = prior_session_id(project, conversation_id)
+            if prior:
+                search_queries_used += 1
+                facts = _search_facts(group_id, f"PICKUP session={prior}", limit=8)
+                if facts and not any(prior in _fact_text(f) for f in facts):
+                    close_gap = True
+                    close_gap_text = close_gap_text or (
+                        f"prior session {prior} has no PICKUP fact"
+                    )
+                elif not facts:
+                    close_gap = True
+                    close_gap_text = close_gap_text or (
+                        f"empty PICKUP search for prior session {prior}"
+                    )
+            if not facts:
+                search_queries_used += 1
+                facts = _search_facts(group_id, "PICKUP|objective= next= agent=", limit=8)
             if not facts:
                 search_queries_used += 1
                 facts = _search_facts(group_id, "PICKUP next_action session resume", limit=8)
@@ -261,6 +286,9 @@ def compile_session_packet(
             or "ACTIVE_OBJECTIVE" in raw_joined
             or bool(pickup.get("context_slice"))
         )
+    if close_gap:
+        degraded = True
+        degrade_reason = close_gap_text or "prior session close-gap"
     if not facts and not degraded:
         degraded = True
         degrade_reason = degrade_reason or "empty PICKUP search"
@@ -299,6 +327,7 @@ def compile_session_packet(
         "budget_chars": budget,
         "degraded": degraded,
         "degrade_reason": degrade_reason,
+        "close_gap": close_gap,
     }
 
     packet = {
@@ -306,9 +335,13 @@ def compile_session_packet(
         "active_objective": pickup["active_objective"],
         "context_slice": context_slice,
         "next_action_contract": {
-            "next_action": pickup["next_action"],
-            "rationale": "Compiled from Graphiti PICKUP/facts at sessionStart",
-            "blockers": [],
+            "next_action": "/end-session" if close_gap else pickup["next_action"],
+            "rationale": (
+                "Close-gap — repair via /end-session (ADR-0028)"
+                if close_gap
+                else "Compiled from Graphiti PICKUP/facts at sessionStart"
+            ),
+            "blockers": ["/end-session"] if close_gap else [],
         },
         "group_id": group_id or "unresolved",
         "agent_id": identity["agent_id"],
@@ -317,6 +350,7 @@ def compile_session_packet(
         "blockers": [],
         "degraded": degraded,
         "degrade_reason": degrade_reason,
+        "close_gap": close_gap,
         "conversation_id": conversation_id,
         "fact_count": len(facts),
         "hydrate_stats": hydrate_stats,
@@ -331,12 +365,16 @@ def format_additional_context(packet: dict[str, Any]) -> str:
     next_action = (packet.get("next_action_contract") or {}).get("next_action") or ""
     stats = packet.get("hydrate_stats") or {}
     pickup_yes = "yes" if stats.get("pickup_parsed") else "no"
-    lines = [
-        "### Graphiti hydrate",
+    close_gap = bool(packet.get("close_gap") or stats.get("close_gap"))
+    lines: list[str] = []
+    if close_gap:
+        lines.extend(["DEGRADED", "REPAIR: /end-session"])
+    lines.append("### Graphiti hydrate")
+    lines.append(
         f"graphiti hydrate: group_id={packet.get('group_id')} "
         f"agent_id={packet.get('agent_id')} packet={packet.get('packet_id')}"
-        + (" DEGRADED" if packet.get("degraded") else ""),
-    ]
+        + (" DEGRADED" if packet.get("degraded") else "")
+    )
     if packet.get("degraded") and packet.get("degrade_reason"):
         lines.append(f"hydration degraded: {packet['degrade_reason']}")
     lines.append(f"objective: {packet.get('active_objective', '')}")
