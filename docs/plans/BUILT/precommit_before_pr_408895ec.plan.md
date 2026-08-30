@@ -1,5 +1,7 @@
 ---
 name: precommit before pr
+status: completed
+built: true
 overview: Move ruff/lint onto changed-file precommit, fail closed on formatter dirt, drop the second ruff pass from make pr, port hygiene hooks and pack-1 lint-autofix, and upgrade the two workflow ports (baseline-ratchet + supply-chain) to pack 2 as the sole donor.
 todos:
   - id: branch
