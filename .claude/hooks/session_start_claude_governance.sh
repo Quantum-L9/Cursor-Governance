@@ -230,7 +230,11 @@ if GOV=$(resolve_governance_dir); then
     if [ -n "$ws_abs" ] && [ -n "$gov_abs" ] && [ "$ws_abs" != "$gov_abs" ]; then
       ws_sha=$(git -C "$ws_root" rev-parse --short HEAD 2>/dev/null || echo "?")
       gov_sha=$(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo "?")
-      LINES+=("two-clone: workspace $ws_abs @$ws_sha")
+      if [ -f "$ws_abs/CANONICAL_LAW.md" ] && [ -f "$ws_abs/AGENTS.md" ]; then
+        LINES+=("two-clone: workspace $ws_abs @$ws_sha (intentional consumer checkout of Cursor-Governance)")
+      else
+        LINES+=("two-clone: workspace $ws_abs @$ws_sha (leftover or unknown second checkout)")
+      fi
       LINES+=("two-clone: live SSOT $gov_abs @$gov_sha")
       LINES+=("two-clone: rules resolve from live SSOT (not the workspace clone)")
     fi
@@ -395,7 +399,7 @@ except Exception:
     prefix="STALE: "
     LINES+=("STALE: bootstrap receipt workspace $wired != session $WORKSPACE")
   fi
-  block="$("$py" "$reader" --read 2>/dev/null || true)"
+  block="$("$py" "$reader" --read --reprobe 2>/dev/null || true)"
   if [ -n "$block" ]; then
     LINES+=("--- L9 Claude environment ---")
     while IFS= read -r line || [ -n "$line" ]; do
@@ -506,6 +510,15 @@ if [ -f "$skill_log" ]; then
   LINES+=("skill-usage: $skill_log ($skill_n entries)")
 else
   LINES+=("skill-usage: $skill_log (absent — logger never wrote)")
+fi
+
+if [ -f "$GOV/ops/autonomy/breakglass_receipt.py" ]; then
+  LINES+=("$("$PY" "$GOV/ops/autonomy/breakglass_receipt.py" --status 2>/dev/null || echo "publish-path grant: unread")")
+fi
+if ! "$PY" -c 'import socket;s=socket.socket();s.settimeout(0.3);s.connect(("127.0.0.1",7687));s.close()' 2>/dev/null; then
+  LINES+=("itest: unavailable — neo4j absent or 127.0.0.1:7687 refused")
+else
+  LINES+=("itest: neo4j 127.0.0.1:7687 reachable — service-backed integration tests may run")
 fi
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")
