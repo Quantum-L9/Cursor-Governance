@@ -25,12 +25,15 @@ Delegates to skill **`l9-issue-remediation`** in **Converge** intent.
 1. Read `skills/l9-issue-remediation/SKILL.md` and follow **Converge**.
 2. Fleet default: all non-archived `Quantum-L9/*` via `scripts/fleet_discover.py`.
 3. Drain **all** automatable clusters, highest leverage first
-   (`scripts/cluster_rank.py`).
-4. Land each fix on the matching open PR, else a new stacked PR on the newest
+   (`scripts/cluster_rank.py`). Do not stop between issues.
+4. Verify each issue is real (`references/issue-verify.md`) before a patch.
+   Close phantoms. Remediate only `exists`.
+5. Land each fix on the matching open PR, else a new stacked PR on the newest
    open PR (`PR_STACK=auto` / `PR_REMEDIATE=0 make pr`).
-5. Close resolved issues (`scripts/close_resolved_issue.py`) when the fix is
+6. Close resolved issues (`scripts/close_resolved_issue.py`) when the fix is
    on a PR. `status=fixed` must not stay OPEN.
-6. Re-count open issues. Invoke `/l9-pr-remediation` **only if**
+7. HUMAN/ARCHITECTURE leftover → recommended-A multiple-choice, then resume.
+8. Re-count open issues. Invoke `/l9-pr-remediation` **only if**
    `open_issues == 0`:
 
 ```bash
@@ -54,4 +57,4 @@ Already-resolved close is allowed. Diagnose **never** invokes
 - Merging PRs from this slash
 - Chaining `/l9-pr-remediation` while `open_issues != 0`
 - Inventing root `TODO.md` files
-- Mass-closing HUMAN/EXTERNAL without superseded/duplicate/already-fixed proof
+- Mass-closing HUMAN/EXTERNAL without superseded/duplicate/already-fixed/not-reproducible/does-not-exist proof

@@ -91,6 +91,30 @@ def test_close_gates() -> None:
     if reason != "superseded":
         _fail(f"HUMAN superseded reason={reason!r}")
 
+    reason = close_resolved_issue.validate_close(
+        ownership="CODEBASE",
+        status="fixed",
+        reason="not-reproducible",
+        merged_pr=None,
+        commit=None,
+        proof="gh issue view + rg found no matching defect",
+        on_pr=None,
+    )
+    if reason != "not-reproducible":
+        _fail(f"not-reproducible reason={reason!r}")
+
+    reason = close_resolved_issue.validate_close(
+        ownership="CODEBASE",
+        status="fixed",
+        reason="does-not-exist",
+        merged_pr=None,
+        commit=None,
+        proof="claimed path absent from owning repo",
+        on_pr=None,
+    )
+    if reason != "does-not-exist":
+        _fail(f"does-not-exist reason={reason!r}")
+
 
 def test_cluster_rank_shared_cause_first() -> None:
     issues = [
@@ -211,7 +235,14 @@ def test_skill_defaults() -> None:
     _need(SKILL, "chain_pr_remediation: after_open_issues_zero", "SKILL.md")
     _need(SKILL, "make_pr: true", "SKILL.md")
     _need(SKILL, "close_resolved: true", "SKILL.md")
+    _need(SKILL, "verify_before_trust: true", "SKILL.md")
+    _need(SKILL, "max_autonomy: until_human_blocker", "SKILL.md")
+    _need(SKILL, "recommend_letter: A", "SKILL.md")
+    _need(SKILL, "issue-verify.md", "SKILL.md")
+    _need(SKILL, "human-blocker-mcq.md", "SKILL.md")
     _need(SKILL, "open_issues=0", "SKILL.md")
+    _need(REFS["issue-verify.md"], "Recreate the live issue", "issue-verify.md")
+    _need(REFS["human-blocker-mcq.md"], "**A) [RECOMMENDED]**", "human-blocker-mcq.md")
     _need(SKILL, "pr-landing.md", "SKILL.md")
     _need(SKILL, "close_resolved_issue.py", "SKILL.md")
     _need(REFS["handoff-to-pr-remediation.md"], "open_issues == 0", "handoff-to-pr-remediation.md")

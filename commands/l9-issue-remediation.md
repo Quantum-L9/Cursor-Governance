@@ -22,18 +22,22 @@ Same contract as bare `/issues`. Diagnose is `/issues diagnose` only.
 ## Contract
 
 1. Read `skills/l9-issue-remediation/SKILL.md` and follow **Converge**.
-2. Drain all automatable clusters, highest leverage first.
+2. Drain all automatable clusters, highest leverage first. Do not stop
+   between issues. Verify each issue is real
+   (`references/issue-verify.md`) before a patch; close phantoms.
 3. Land fixes on the matching open PR or a new stacked PR on the newest
    (`PR_STACK=auto`). `make_pr: true` means the fix is on a GitHub PR.
 4. Close when `status=fixed` (`scripts/close_resolved_issue.py`).
-5. Invoke `/l9-pr-remediation` **only after** bound-target `open_issues=0`:
+5. When only HUMAN/ARCHITECTURE/EXTERNAL remain, ask a recommended
+   multiple-choice (**A** first) and resume after the letter.
+6. Invoke `/l9-pr-remediation` **only after** bound-target `open_issues=0`:
 
 ```bash
 python3 skills/l9-issue-remediation/scripts/open_issues_gate.py \
   --intent converge --issues issues.json
 ```
 
-6. Never `gh pr merge` from this command. Merge stays on
+7. Never `gh pr merge` from this command. Merge stays on
    `/l9-pr-remediation` after the gate.
 
 ## Forbidden

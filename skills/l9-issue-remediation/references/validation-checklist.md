@@ -24,14 +24,16 @@ updated: 2026-08-29
 
 - [ ] `fleet_discover.py` returns non-archived Quantum-L9 repos
 - [ ] `issue_ingest.py` produces secret-free JSON
-- [ ] Verdict emitted only after ingest
-- [ ] Already-resolved close allowed with evidence
+- [ ] Verdict emitted only after ingest + live `gh issue view` verify
+- [ ] Already-resolved / phantom close allowed with evidence
 - [ ] No commit / push / fix
 - [ ] Never chains `/l9-pr-remediation`
 
 ## Converge (remediator)
 
 - [ ] `max_clusters_per_invoke: all` — leverage-ranked queue, not sticky ≤ 1
+- [ ] `verify_before_trust: true` — recreate live issue; close if phantom; remediate only if `exists`
+- [ ] Do not stop between automatable issues; HUMAN/ARCHITECTURE uses recommended-A MCQ then resume
 - [ ] Ownership classified before edit
 - [ ] CROSS_REPO fixed at obvious owner
 - [ ] Cycles ≤ 3 per cluster; land on matching open PR or stacked newest

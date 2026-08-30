@@ -32,7 +32,11 @@ rg -i "<error class or key phrase>" \
 ## Steps
 
 1. Clone or open the **owning repo** worktree (never invent paths).
-2. **Lesson recall** — run the search above; apply a matching template only when the current failure matches.
+2. **Verify the issue** — [issue-verify.md](issue-verify.md). Recreate the
+   live GitHub record. If 404 or already CLOSED, stop this item. If the
+   defect is absent, close (`not-reproducible` / `does-not-exist` /
+   `already-fixed`) and do not patch. Continue only on `exists`.
+3. **Lesson recall** — run the search above; apply a matching template only when the current failure matches.
 3. Implement the smallest change that removes the root cause.
 4. Prefer shared contracts/tests that would fail if the audited bug returned.
 5. Run every locally reproducible required gate for that repo (lint/type/test).
