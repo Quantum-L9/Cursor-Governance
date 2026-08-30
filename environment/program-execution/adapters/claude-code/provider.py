@@ -188,8 +188,8 @@ class ClaudeCodeProvider:
             else []
         )
         host_errors = host.get("errors") if isinstance(host.get("errors"), list) else None
-        stdout_text = excerpts.redacted_excerpt(result.stdout)
-        stderr_text = excerpts.redacted_excerpt(result.stderr)
+        stdout_text = excerpts.allowlisted_excerpt(result.stdout)
+        stderr_text = excerpts.allowlisted_excerpt(result.stderr)
         diagnostics = {
             "type": "claude_code_execution",
             "stdout_digest": result.stdout_digest,
@@ -220,8 +220,8 @@ class ClaudeCodeProvider:
             "stderr_excerpt": stderr_text,
         }
         if status == "FAIL":
-            # Bounded redacted text on FAIL so a digest-only receipt is not the
-            # only diagnostic. Digests stay; secrets stay redacted.
+            # Allowlisted diagnostics only — no arbitrary CLI/JSON dumps.
+            # Digests stay; structured host fields above carry triage.
             diagnostics["stdout_text"] = stdout_text
             diagnostics["stderr_text"] = stderr_text
             fail_error["stdout_text"] = stdout_text

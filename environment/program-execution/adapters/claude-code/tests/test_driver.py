@@ -139,6 +139,25 @@ class ClaudeProviderSourceTests(unittest.TestCase):
         self.assertNotIn(token, text)
         self.assertIn("<redacted>", text)
 
+    def test_allowlisted_excerpt_strips_payload_suffix_and_aws_key(self) -> None:
+        excerpts = self._excerpts()
+        key = "AKIA" + "ABCDEFGHIJKLMNOP"
+        line = f'Error: upstream payload={{"aws_access_key_id":"{key}"}}'
+        kept = excerpts.allowlisted_excerpt(line)
+        self.assertIsNotNone(kept)
+        self.assertNotIn(key, kept or "")
+        self.assertNotIn("payload", (kept or "").lower())
+        self.assertTrue((kept or "").lower().startswith("error"))
+
+    def test_allowlisted_excerpt_drops_arbitrary_json(self) -> None:
+        excerpts = self._excerpts()
+        dumped = (
+            '{"subtype": "error_max_turns", "errors": ["Reached maximum number of turns (12)"]}'
+        )
+        self.assertIsNone(excerpts.allowlisted_excerpt(dumped))
+        kept = excerpts.allowlisted_excerpt("noise\nerror: max turns exceeded\nnoise")
+        self.assertEqual(kept, "error: max turns exceeded")
+
     def test_invoke_persists_host_excerpts_on_failure(self) -> None:
         from peer_execution.context import build_context_manifest
         from peer_execution.permissions import resolve_permission_profile
@@ -229,9 +248,9 @@ class ClaudeProviderSourceTests(unittest.TestCase):
         self.assertEqual(evidence["subtype"], "error_max_turns")
         self.assertEqual(evidence["num_turns"], 13)
         self.assertIn("error: max turns exceeded", evidence["stderr_excerpt"])
-        self.assertIn("error_max_turns", evidence["stdout_excerpt"])
+        self.assertIsNone(evidence["stdout_excerpt"])
         self.assertEqual(evidence["stderr_text"], evidence["stderr_excerpt"])
-        self.assertEqual(evidence["stdout_text"], evidence["stdout_excerpt"])
+        self.assertIsNone(evidence["stdout_text"])
         self.assertTrue(str(evidence["stderr_digest"]).startswith("sha256:"))
         self.assertTrue(str(evidence["stdout_digest"]).startswith("sha256:"))
         self.assertEqual(

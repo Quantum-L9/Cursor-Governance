@@ -1,5 +1,12 @@
 ## Issue unblock (session reference)
 
+**Cluster:** Quantum-L9/Cursor-Governance#336
+**Owning fix:** allowlisted CLI diagnostics in claude-code excerpts (this branch)
+**Next:** land stacked PR then r9 #184
+**Pickup:** Graphiti PICKUP written 2026-08-30
+
+## Issue unblock (session reference)
+
 **Cluster:** CEG#139 closed already-fixed + skill close-now v1.3.0
 **Owning fix:** CEG#139 closed 2026-08-30; skill PR stacked on #415
 **Next:** CEG#138 / PR 248 then remaining HUMAN issues; do not chain /l9-pr-remediation
