@@ -6,8 +6,8 @@ role: run_contract
 tags: [pr, preflight, venv, command-surface, topology, cache, makefile]
 owner: igor_beylin
 status: active
-version: 1.3.0
-updated: 2026-08-28
+version: 1.4.0
+updated: 2026-08-30
 /L9_META -->
 
 # Run Contract (min preflight + cache)
@@ -122,7 +122,7 @@ FIRST_MERGE_GATE forbids `gh pr merge` until:
 - expected merge effect on remaining PRs known
 - merge strategy selected (squash if unstacked; `--merge` or children-first if stacked)
 
-Then MERGE_TRAIN: **oldest `createdAt` first (bottom-up)**. After each merge, do **not** `gh pr update-branch` on a child whose parent was squash-merged. Use `git rebase --onto <new-base> <old-parent-tip> <child>` when the child must move. Do not wait for CI.
+Then MERGE_TRAIN: **oldest `createdAt` first (bottom-up)**. After each merge, do **not** `gh pr update-branch` on a child whose parent was squash-merged. Use `git rebase --onto <new-base> <old-parent-tip> <child>` when the child must move. When the only blocker is required checks in progress, poll until `CLEAN` then merge — do not hand the watch back to the human.
 
 Forbidden: remediate A → merge A → discover B conflicts → remediate B → rerun CI → repeat.
 

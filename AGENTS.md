@@ -1199,3 +1199,20 @@ That paragraph stays on disk (additive_only). Do not fold it.
   append-only gate still fails CI without that stamp.
 - Prefer append-only. A rewrite still needs
   `ALLOW-ROOT-DELETION: <path> — <reason>` in a commit message.
+
+<!-- L9_PR_REMEDIATE_OWN_UNTIL_MERGED_V1 -->
+## `/l9-pr-remediation` owns PRs until merged (2026-08-30)
+
+This fragment supersedes only the “Do not poll CI after push / record the
+blocker and finish” sentences in `L9_PR_REMEDIATE_SPEED_V1`. That paragraph
+stays on disk (additive_only). Live pack: `skills/l9-pr-remediation` v4.4.0.
+
+- Converge **subscribes** to every in-scope open PR and **owns** them.
+  The human is not watching.
+- After remediator `git push`, continue independent PRs, then **stay on
+  MERGE_TRAIN**. Poll required checks (15s snapshots) until `CLEAN` and
+  merge via `stack_safe_merge.py --run`.
+- Never finish with “re-invoke `/l9-pr-remediation` when CI turns green.”
+- A GitHub subscription 404/422 does not waive ownership.
+- HUMAN / CI_PIPELINE leftovers still stop that PR. `--admin` stays denied.
+- Poll workers never merge.
