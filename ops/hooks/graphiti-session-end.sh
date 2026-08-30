@@ -62,7 +62,7 @@ PY
 fi
 
 [ -n "$REPO" ] || {
-  echo "WARN: no project dir (CURSOR_PROJECT_DIR / workspace_roots) — close skipped" >&2
+  echo "ERROR: no project dir (CURSOR_PROJECT_DIR / workspace_roots) — close skipped" >&2
   exit 0
 }
 
@@ -70,23 +70,33 @@ export L9_MEMORY_AGENT_ID="${L9_MEMORY_AGENT_ID:-cursor}"
 export USER_ID="${USER_ID:-cursor_agent}"
 export CURSOR_CONVERSATION_ID="$SESSION_ID"
 
-graphiti_load_env
-if ! graphiti_enabled; then
-  echo "WARN: Graphiti disabled — close skipped" >&2
-  exit 0
-fi
-
 GOV_ROOT="$(cd "$(dirname "$REAL_HOOK")/../.." && pwd)"
 if [ ! -f "$GOV_ROOT/ops/graphiti/hydration/cli.py" ]; then
   GOV_ROOT="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
 fi
-if [ ! -f "$GOV_ROOT/ops/graphiti/hydration/cli.py" ]; then
-  echo "WARN: hydration CLI missing — close skipped" >&2
+PY="${GOV_ROOT}/.venv/bin/python3"
+[ -x "$PY" ] || PY="python3"
+
+_record_skip() {
+  local status="$1"
+  (cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    "$PY" -m ops.graphiti.hydration.cli record-skip \
+    --project-dir "$REPO" --session-id "$SESSION_ID" --status "$status") \
+    >/dev/null 2>&1 || true
+}
+
+graphiti_load_env
+if ! graphiti_enabled; then
+  echo "ERROR: Graphiti disabled — close skipped" >&2
+  _record_skip skipped_disabled
   exit 0
 fi
 
-PY="${GOV_ROOT}/.venv/bin/python3"
-[ -x "$PY" ] || PY="python3"
+if [ ! -f "$GOV_ROOT/ops/graphiti/hydration/cli.py" ]; then
+  echo "ERROR: hydration CLI missing — close skipped" >&2
+  _record_skip skipped_cli_missing
+  exit 0
+fi
 
 # Full-words S3 archive on chat close (X-out). Background: do not spend the 30s Graphiti budget.
 ARCHIVE_ARGS=(--session-id "$SESSION_ID" --project-dir "$REPO")
@@ -141,7 +151,34 @@ if d.get("enqueue_ok") is True:
     print("INFO: distill job enqueued", file=sys.stderr)
 ' 2>&1 || echo "INFO: session close finished" >&2
 elif [[ "$CLOSE_RC" -ne 0 && "$CLOSE_RC" -ne 2 ]]; then
-  echo "WARN: session close failed — Phase A may be missing; use /end-session force-retry" >&2
+  echo "ERROR: session close failed — Phase A may be missing; attempting Graphiti write fallback" >&2
+fi
+
+WRITE_COUNT="$(echo "${REPORT:-}" | python3 -c 'import sys,json
+try:
+    d=json.load(sys.stdin)
+    print(int(d.get("write_count") or 0))
+except Exception:
+    print(0)
+' 2>/dev/null || echo 0)"
+CLOSE_STATUS="$(echo "${REPORT:-}" | python3 -c 'import sys,json
+try:
+    print(json.load(sys.stdin).get("status") or "")
+except Exception:
+    print("")
+' 2>/dev/null || true)"
+if [[ "$CLOSE_STATUS" != "idempotent_skip" ]] && { [[ "$CLOSE_RC" -ne 0 && "$CLOSE_RC" -ne 2 ]] || [[ "${WRITE_COUNT:-0}" == "0" ]]; }; then
+  echo "ERROR: close write_count=${WRITE_COUNT:-0} rc=${CLOSE_RC} — one Graphiti fallback write" >&2
+  FB_RC=0
+  (cd "$GOV_ROOT" && PYTHONPATH="$GOV_ROOT${PYTHONPATH:+:$PYTHONPATH}" \
+    "$PY" -m ops.graphiti.hydration.cli fallback-write \
+    --project-dir "$REPO" --session-id "$SESSION_ID" \
+    --reason "$REASON" --agent-id "$L9_MEMORY_AGENT_ID" \
+    ${TRANSCRIPT_PATH:+--transcript-path "$TRANSCRIPT_PATH"}) || FB_RC=$?
+  if [[ "$FB_RC" -ne 0 ]]; then
+    echo "ERROR: fallback write failed — REPAIR: /end-session" >&2
+    _record_skip close_failed
+  fi
 fi
 # Fail-loud on enqueue (cli exit 2); keep Graphiti availability fail-open otherwise.
 if [[ "${CLOSE_RC:-0}" == "2" ]]; then

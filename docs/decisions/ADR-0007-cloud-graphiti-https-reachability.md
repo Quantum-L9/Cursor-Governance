@@ -31,3 +31,8 @@ Claude Code Web/Mobile sandboxes cannot use the SSH tunnel to `127.0.0.1:8100`.
 - Front-door tests forbid the HTTP side door, not the public Graphiti hostname.
 - `mcp.template.json` uses `${GRAPHITI_MCP_URL}` env expansion.
 - Thin adapters inherit the Graphiti carrier contract.
+
+## Related
+
+- ADR-0006 — single memory front door
+- ADR-0028 — session hydrate/close visibility and write-primary repair

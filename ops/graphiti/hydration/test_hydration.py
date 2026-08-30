@@ -275,6 +275,7 @@ def test_phase_b_success_with_mocked_transport(monkeypatch, tmp_path):
         "do_not_promote": [],
     }
     monkeypatch.setattr(cs, "_distill_signal_packet", lambda **k: (packet, ""))
+    monkeypatch.setattr(cs, "should_persist_derived_episode", lambda *a, **k: True)
 
     report = cs.close_session(
         project_dir=tmp_path,
@@ -409,3 +410,215 @@ def test_readonly_group_warns(monkeypatch, tmp_path):
     )
     assert report["status"] == "skipped"
     assert any("write blocked" in w for w in report["warnings"])
+
+
+def test_resolve_session_id_order(monkeypatch):
+    from ops.graphiti.hydration.session_latches import resolve_session_id
+
+    monkeypatch.delenv("CURSOR_CONVERSATION_ID", raising=False)
+    monkeypatch.delenv("CURSOR_SESSION_ID", raising=False)
+    assert resolve_session_id() == "default"
+    monkeypatch.setenv("CURSOR_SESSION_ID", "sess-env")
+    assert resolve_session_id() == "sess-env"
+    monkeypatch.setenv("CURSOR_CONVERSATION_ID", "conv-env")
+    assert resolve_session_id() == "conv-env"
+    assert resolve_session_id(explicit="explicit-1") == "explicit-1"
+
+
+def test_orchestrator_opens_latch_before_graphiti_enabled() -> None:
+    text = (ROOT / "ops" / "hooks" / "session_start_memory_orchestrator.sh").read_text(
+        encoding="utf-8"
+    )
+    assert text.index("cli open") < text.index("if graphiti_enabled")
+    assert text.index("if graphiti_enabled") < text.index("cli compile")
+
+
+def test_background_open_does_not_rotate_last_opened(tmp_path):
+    from ops.graphiti.hydration.session_latches import (
+        read_last_opened,
+        write_open_latch,
+    )
+
+    write_open_latch(tmp_path, "parent-sess", background=False)
+    parent = read_last_opened(tmp_path)
+    assert parent and parent["session_id"] == "parent-sess"
+    write_open_latch(tmp_path, "bg-sess", background=True)
+    assert read_last_opened(tmp_path)["session_id"] == "parent-sess"
+
+
+def test_compile_close_gap_missing_receipt(monkeypatch, tmp_path):
+    from ops.graphiti.hydration.session_latches import write_open_latch
+
+    write_open_latch(tmp_path, "old-sess", background=False)
+    write_open_latch(tmp_path, "new-sess", background=False)
+    monkeypatch.setattr(
+        comp,
+        "resolve_group_id",
+        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    )
+    monkeypatch.setattr(comp, "_search_facts", lambda *a, **k: [])
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="new-sess", agent_id="cursor"
+    )
+    assert packet["degraded"] is True
+    assert packet["close_gap"] is True
+    ctx = comp.format_additional_context(packet)
+    assert ctx.startswith("DEGRADED")
+    assert "REPAIR: /end-session" in ctx
+
+
+def test_compile_close_gap_write_count_zero(monkeypatch, tmp_path):
+    from ops.graphiti.hydration.session_latches import write_open_latch, write_receipt
+
+    write_open_latch(tmp_path, "old-zero", background=False)
+    write_receipt(
+        tmp_path,
+        "old-zero",
+        {"status": "close_failed", "write_count": 0, "phase_a": False},
+    )
+    write_open_latch(tmp_path, "new-zero", background=False)
+    monkeypatch.setattr(
+        comp,
+        "resolve_group_id",
+        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    )
+    monkeypatch.setattr(comp, "_search_facts", lambda *a, **k: [])
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="new-zero", agent_id="cursor"
+    )
+    assert packet["close_gap"] is True
+    assert comp.format_additional_context(packet).startswith("DEGRADED")
+
+
+def test_compile_enqueue_failed_is_not_close_gap(monkeypatch, tmp_path):
+    from ops.graphiti.hydration.session_latches import write_open_latch, write_receipt
+
+    write_open_latch(tmp_path, "old-enq", background=False)
+    write_receipt(
+        tmp_path,
+        "old-enq",
+        {"status": "closed_enqueue_failed", "write_count": 2, "phase_a": True},
+    )
+    write_open_latch(tmp_path, "new-enq", background=False)
+    monkeypatch.setattr(
+        comp,
+        "resolve_group_id",
+        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    )
+
+    def _facts(_gid, query, **_k):
+        if "old-enq" in str(query):
+            return [{"fact": "PICKUP|session=old-enq|next=continue"}]
+        return []
+
+    monkeypatch.setattr(comp, "_search_facts", _facts)
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="new-enq", agent_id="cursor"
+    )
+    assert packet["close_gap"] is False
+    ctx = comp.format_additional_context(packet)
+    assert not ctx.startswith("DEGRADED")
+
+
+def test_compile_first_session_no_receipt_gap(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        comp,
+        "resolve_group_id",
+        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    )
+    monkeypatch.setattr(comp, "_search_facts", lambda *a, **k: [])
+    packet = comp.compile_session_packet(
+        project_dir=tmp_path, conversation_id="first", agent_id="cursor"
+    )
+    assert packet.get("close_gap") is False
+    assert packet["hydrate_stats"]["degrade_reason"] == "empty PICKUP search"
+    assert not comp.format_additional_context(packet).startswith("DEGRADED")
+
+
+def test_fallback_write_invoked_on_zero_count(monkeypatch, tmp_path):
+    import group_resolver
+
+    from ops.graphiti.hydration import pickup_write as pw
+    from ops.graphiti.hydration.session_latches import load_close_receipt
+
+    monkeypatch.setattr(
+        group_resolver,
+        "resolve_group_id",
+        lambda p: {"group_id": "cursor-governance", "readonly": False},
+    )
+
+    def fake_write(body, **kwargs):
+        return {"written": True, "kind": kwargs["kind"]}
+
+    import ops.graphiti.hydration.close_session as cs_mod
+
+    monkeypatch.setattr(cs_mod, "_write_kind", fake_write)
+    monkeypatch.setattr(cs_mod, "load_transcript_excerpt", lambda **k: ("user: hi", "test"))
+    report = pw.fallback_pickup_write(
+        project_dir=tmp_path, session_id="fb-1", agent_id="cursor", dry_run=False
+    )
+    assert report["write_count"] == 1
+    assert report["status"] == "closed"
+    receipt = load_close_receipt(tmp_path, "fb-1")
+    assert receipt and int(receipt["write_count"]) == 1
+
+
+def test_repair_skips_when_already_closed(tmp_path):
+    from ops.graphiti.hydration.pickup_write import repair_pickup_write
+    from ops.graphiti.hydration.session_latches import write_receipt
+
+    write_receipt(
+        tmp_path,
+        "rep-1",
+        {"status": "closed", "write_count": 2, "phase_a": True},
+    )
+    report = repair_pickup_write(
+        project_dir=tmp_path,
+        session_id="rep-1",
+        objective="done",
+        next_action="nothing",
+        agent_id="cursor",
+    )
+    assert report["status"] == "skipped_already_closed"
+    assert report["written"] is False
+
+
+def test_readonly_close_writes_fail_receipt(monkeypatch, tmp_path):
+    monkeypatch.setattr(
+        cs,
+        "resolve_group_id",
+        lambda p: {"group_id": "igor-workspace", "readonly": True, "warning": "readonly"},
+    )
+    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("", "none"))
+    report = cs.close_session(
+        project_dir=tmp_path, session_id="ro-receipt", agent_id="cursor", dry_run=False
+    )
+    from ops.graphiti.hydration.session_latches import load_close_receipt
+
+    receipt = load_close_receipt(tmp_path, "ro-receipt")
+    assert report["status"] == "skipped"
+    assert receipt is not None
+    assert receipt["status"] == "close_failed"
+    assert int(receipt["write_count"]) == 0
+
+
+def test_adr_0028_required_sections():
+    path = ROOT / "docs" / "decisions" / "ADR-0028-session-hydrate-close-visibility.md"
+    text = path.read_text(encoding="utf-8")
+    for heading in (
+        "## Status",
+        "## Date",
+        "## Context",
+        "## Options Considered",
+        "## Decision",
+        "## Consequences",
+        "## Related",
+    ):
+        assert heading in text
+    assert "ADR-0005" in text
+    assert "ADR-0006" in text
+    assert "Does not supersede" in text or "does not supersede" in text.lower()
+    assert "Option A" in text
+    assert "Option F" in text
+    assert "hydration.cli close" in text
+    assert "memory-bank" in text

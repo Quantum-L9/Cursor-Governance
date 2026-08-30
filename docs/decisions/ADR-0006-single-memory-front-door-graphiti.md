@@ -45,5 +45,6 @@ structural duplicate.
 ## Related
 
 - ADR-0002, ADR-0003 (roles), ADR-0004 (superseded client pin), ADR-0005
+- ADR-0028 — session hydrate/close visibility and write-primary repair
 - `skills/l9-graphiti-memory/SKILL.md`
 - `CANONICAL_LAW.md` §8

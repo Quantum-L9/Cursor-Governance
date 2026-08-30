@@ -85,10 +85,11 @@ Live path map: [`docs/MEMORY_PIPELINE_MAP.md`](../../docs/MEMORY_PIPELINE_MAP.md
 
 ## Session lifecycle
 
-1. **sessionStart** — `session_start_memory_orchestrator.sh` compiles `SessionHydrationPacket` (`next=` + facts) via `ops/graphiti/hydration/`, plus inject receipt for gates.
+1. **sessionStart** — write open latch, then compile `SessionHydrationPacket` (`next=` + facts). A prior-session close-gap leads with `DEGRADED` + `REPAIR: /end-session` (ADR-0028).
 2. **Resume** — follow hydrated `next=`; search PICKUP if degraded; do not read `memory-bank/` as SSOT.
-3. **sessionEnd hook** — `graphiti-session-end.sh` → Phase A/B close (PICKUP + atomics, `agent_id` stamped). Normal X-out does **not** need `/end-session`.
-4. **`/end-session` / `l9-end-session`** — **force-retry / offline recovery only**. See `skills/l9-end-session/SKILL.md`.
+3. **session work** — atomic T2 writes (`--kind lesson|insight` or a real `PICKUP|objective=…|next=…|files=…|blocker=…`). Do not wait for sessionEnd.
+4. **sessionEnd hook** — `graphiti-session-end.sh` → Phase A/B close; always write a receipt; one client `write` fallback if `write_count=0`. Normal X-out does **not** need `/end-session`.
+5. **`/end-session` / `l9-end-session`** — **force-retry / offline recovery only**. Primary is `graphiti_memory_client.py write`, not `hydration.cli close`. See `skills/l9-end-session/SKILL.md`.
 
 ## Proactive writes (T2)
 

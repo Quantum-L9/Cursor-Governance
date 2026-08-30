@@ -46,6 +46,64 @@ def _public_close_report(report: dict) -> dict:
     }
 
 
+def _cmd_open(args: argparse.Namespace) -> int:
+    from ops.graphiti.hydration.session_latches import resolve_session_id, write_open_latch
+
+    sid = resolve_session_id(explicit=args.session_id)
+    result = write_open_latch(Path(args.project_dir), sid, background=args.background)
+    print(json.dumps(result, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _cmd_record_skip(args: argparse.Namespace) -> int:
+    from ops.graphiti.hydration.session_latches import record_skip_receipt, resolve_session_id
+
+    sid = resolve_session_id(explicit=args.session_id)
+    payload = record_skip_receipt(Path(args.project_dir), sid, args.status)
+    print(json.dumps(payload, indent=2, ensure_ascii=False))
+    return 0
+
+
+def _cmd_fallback_write(args: argparse.Namespace) -> int:
+    from ops.graphiti.hydration.pickup_write import fallback_pickup_write
+
+    report = fallback_pickup_write(
+        project_dir=args.project_dir,
+        session_id=args.session_id,
+        reason=args.reason,
+        transcript_path=args.transcript_path,
+        agent_id=args.agent_id,
+        dry_run=args.dry_run,
+    )
+    print(
+        json.dumps(
+            {"status": report.get("status"), "write_count": report.get("write_count")},
+            indent=2,
+        )
+    )
+    return 0 if int(report.get("write_count") or 0) > 0 else 1
+
+
+def _cmd_repair_write(args: argparse.Namespace) -> int:
+    from ops.graphiti.hydration.pickup_write import repair_pickup_write
+
+    report = repair_pickup_write(
+        project_dir=args.project_dir,
+        session_id=args.session_id,
+        objective=args.objective,
+        next_action=args.next,
+        files=args.files,
+        blocker=args.blocker,
+        agent_id=args.agent_id,
+        supersede=args.supersede,
+        dry_run=args.dry_run,
+    )
+    print(json.dumps(report, indent=2, ensure_ascii=False, default=str))
+    if report.get("status") == "skipped_already_closed":
+        return 0
+    return 0 if report.get("written") else 1
+
+
 def _cmd_close(args: argparse.Namespace) -> int:
     from ops.graphiti.hydration.close_session import close_session
 
@@ -86,6 +144,48 @@ def main(argv: list[str] | None = None) -> int:
     p_close.add_argument("--background", action="store_true")
     p_close.add_argument("--dry-run", action="store_true")
     p_close.set_defaults(func=_cmd_close)
+
+    p_open = sub.add_parser("open", help="Write session open latch (ADR-0028)")
+    p_open.add_argument("--project-dir", default=".")
+    p_open.add_argument("--session-id", default="default")
+    p_open.add_argument("--background", action="store_true")
+    p_open.set_defaults(func=_cmd_open)
+
+    p_skip = sub.add_parser("record-skip", help="Write skip/fail close receipt")
+    p_skip.add_argument("--project-dir", default=".")
+    p_skip.add_argument("--session-id", default="default")
+    p_skip.add_argument(
+        "--status",
+        required=True,
+        choices=[
+            "close_failed",
+            "skipped_no_project",
+            "skipped_disabled",
+            "skipped_cli_missing",
+        ],
+    )
+    p_skip.set_defaults(func=_cmd_record_skip)
+
+    p_fb = sub.add_parser("fallback-write", help="One Graphiti PICKUP write after empty close")
+    p_fb.add_argument("--project-dir", default=".")
+    p_fb.add_argument("--session-id", default="default")
+    p_fb.add_argument("--reason", default="close_fallback")
+    p_fb.add_argument("--transcript-path", default=None)
+    p_fb.add_argument("--agent-id", default=None)
+    p_fb.add_argument("--dry-run", action="store_true")
+    p_fb.set_defaults(func=_cmd_fallback_write)
+
+    p_rp = sub.add_parser("repair-write", help="/end-session primary Graphiti PICKUP write")
+    p_rp.add_argument("--project-dir", default=".")
+    p_rp.add_argument("--session-id", default="default")
+    p_rp.add_argument("--objective", required=True)
+    p_rp.add_argument("--next", required=True)
+    p_rp.add_argument("--files", default="")
+    p_rp.add_argument("--blocker", default="")
+    p_rp.add_argument("--agent-id", default=None)
+    p_rp.add_argument("--supersede", action="store_true")
+    p_rp.add_argument("--dry-run", action="store_true")
+    p_rp.set_defaults(func=_cmd_repair_write)
 
     args = parser.parse_args(argv)
     # Ensure repo root on path when invoked as a script.
