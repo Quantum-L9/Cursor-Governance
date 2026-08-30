@@ -436,18 +436,11 @@ ensure_global_git_ignores
 echo ""
 bash "$SCRIPT_DIR/validate_governance_symlinks.sh" "$WORKSPACE_DIR"
 
-# Claude projection engine: one entrypoint for skills, commands, rules mount,
-# settings triad, hooks, and declarative plugin state (imperative plugin setup
-# runs only as the engine's fallback). Writes the projection receipt to
-# ~/.l9/claude/projection-receipt.json.
+# Claude projection is Claude SessionStart / make claude-install /
+# make claude-projection. Cursor SessionStart auto-wire must not write
+# ~/.l9/claude/projection-receipt.json (CURSOR_SESSIONSTART_NO_CLAUDE_CLOUD_V1).
 echo ""
-if [ -f "$SCRIPT_DIR/claude_projection.py" ]; then
-  python3 "$SCRIPT_DIR/claude_projection.py" \
-    --root "$GOV_ROOT" --workspace "$WORKSPACE_DIR" --summary \
-    || echo "WARN: Claude projection engine reported drift or conflicts (non-blocking)"
-else
-  echo "HINT: claude_projection.py missing — skip Claude projection"
-fi
+echo "SKIP: Claude projection is Claude SessionStart / make claude-install (not Cursor auto-wire)"
 
 # IDE profile: extensions are machine-scoped, .vscode/settings.json is workspace-scoped.
 # Wiring a workspace is exactly the moment to reconcile both.

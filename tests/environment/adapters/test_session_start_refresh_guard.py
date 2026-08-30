@@ -85,11 +85,15 @@ def test_hook_still_fails_open() -> None:
 def test_bootstrap_repair_marker_follows_installer_success() -> None:
     """A failed installer must not permanently skip repair at this revision."""
     text = body()
-    timeout = text.index('timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}"')
+    timeout = text.index('run_with_timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}"')
     installer = text.index('bash "$installer"', timeout)
     marker_write = text.index(': >"$marker"', installer)
     assert timeout < installer < marker_write, (
         "persist the attempt marker only after installer success"
+    )
+    assert not re.search(
+        r'(?<!run_with_)timeout "\$\{L9_BOOTSTRAP_REPAIR_BUDGET:-90\}"',
+        text,
     )
 
 

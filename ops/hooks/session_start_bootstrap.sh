@@ -275,31 +275,41 @@ if [ -f "$ENSURE_TUNNEL" ]; then
 fi
 
 GRAPHITI_HEALTH="disabled or CLI missing"
+GRAPHITI_HEALTHY="false"
+GRAPHITI_STDERR=""
 if [ "${GRAPHITI_MEMORY_ENABLED:-1}" != "0" ] && [ -f "$GRAPHITI_CLI" ]; then
   if [ -x "$GC/.venv/bin/python3" ]; then
     GPY="$GC/.venv/bin/python3"
   else
     GPY="python3"
   fi
-  HEALTH_JSON="$("$GPY" "$GRAPHITI_CLI" health 2>/dev/null || echo '{"healthy":false}')"
+  HEALTH_ERR="$(mktemp "${TMPDIR:-/tmp}/l9-graphiti-health.XXXXXX")"
+  HEALTH_JSON="$("$GPY" "$GRAPHITI_CLI" health 2>"$HEALTH_ERR" || echo '{"healthy":false}')"
+  GRAPHITI_STDERR="$(head -c 500 "$HEALTH_ERR" | tr '\n' ' ')"
+  rm -f "$HEALTH_ERR"
   HEALTH_OK="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; print(json.load(sys.stdin).get('healthy',False))" 2>/dev/null || echo False)"
   LIVENESS_OK="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('liveness_ok', False))" 2>/dev/null || echo False)"
   if [ "$HEALTH_OK" = "True" ]; then
     GRAPHITI_HEALTH="healthy"
+    GRAPHITI_HEALTHY="true"
   elif [ "$LIVENESS_OK" = "True" ]; then
     GRAPHITI_HEALTH="tunnel up (MCP tools degraded — check VPS / graphiti-mcp-token)"
   else
     REASON="$(echo "$HEALTH_JSON" | "$GPY" -c "import sys,json; d=json.load(sys.stdin); print(d.get('degraded') or d.get('liveness_error') or d.get('reason') or 'unreachable')" 2>/dev/null || echo unreachable)"
     GRAPHITI_HEALTH="$REASON"
+    [ -n "$GRAPHITI_STDERR" ] || GRAPHITI_STDERR="$HEALTH_JSON"
   fi
 fi
 
 WIRING_CHECK="skipped"
 if [ -n "$REPO" ] && [ -f "$GC/ops/scripts/check_governance_wiring.sh" ]; then
-  if bash "$GC/ops/scripts/check_governance_wiring.sh" "$REPO" >/dev/null 2>&1; then
+  WIRE_OUT="$(bash "$GC/ops/scripts/check_governance_wiring.sh" "$REPO" 2>&1)"
+  WIRE_RC=$?
+  if [ "$WIRE_RC" -eq 0 ]; then
     WIRING_CHECK="PASS"
   else
-    WIRING_CHECK="FAIL — run bash \"$GC/ops/scripts/wire_governance_workspace.sh\" \"$REPO\""
+    WIRE_TAIL="$(printf '%s\n' "$WIRE_OUT" | tail -n 4 | tr '\n' ' ')"
+    WIRING_CHECK="FAIL rc=${WIRE_RC} — ${WIRE_TAIL} — run bash \"$GC/ops/scripts/wire_governance_workspace.sh\" \"$REPO\""
   fi
 fi
 
@@ -370,19 +380,23 @@ if [ ! -f "$AUDIT_PY" ]; then
 fi
 AUDIT_PY_BIN="$GC/.venv/bin/python"
 [ -x "$AUDIT_PY_BIN" ] || AUDIT_PY_BIN=python3
+# shellcheck source=/dev/null
+[ -f "$GC/ops/scripts/lib/run_with_timeout.sh" ] && . "$GC/ops/scripts/lib/run_with_timeout.sh"
+[ -f "${CURSOR_PROJECT_DIR:-}/ops/scripts/lib/run_with_timeout.sh" ] && . "${CURSOR_PROJECT_DIR}/ops/scripts/lib/run_with_timeout.sh"
 # Archive gating lives in audit_pipeline.py (acquires the $GC write lock).
 ARCHIVE_ARGS=(--archive-spent)
 if [ -f "$AUDIT_PY" ]; then
-  if command -v timeout >/dev/null 2>&1; then
+  PLAN_AUDIT_ERR="$(mktemp "${TMPDIR:-/tmp}/l9-plan-audit.XXXXXX")"
+  if type run_with_timeout >/dev/null 2>&1; then
     PLAN_AUDIT_MD="$(
-      timeout 4 "$AUDIT_PY_BIN" "$AUDIT_PY" \
+      run_with_timeout 4 "$AUDIT_PY_BIN" "$AUDIT_PY" \
         --workspace "${CURSOR_PROJECT_DIR:-$PWD}" \
         --gov-root "$GC" \
         --window-days 7 \
         --format session-start \
         --budget-chars 1600 \
         "${ARCHIVE_ARGS[@]}" \
-        2>/dev/null || echo "pipeline audit: unavailable"
+        2>"$PLAN_AUDIT_ERR" || true
     )"
   else
     PLAN_AUDIT_MD="$(
@@ -393,17 +407,19 @@ if [ -f "$AUDIT_PY" ]; then
         --format session-start \
         --budget-chars 1600 \
         "${ARCHIVE_ARGS[@]}" \
-        2>/dev/null || echo "pipeline audit: unavailable"
+        2>"$PLAN_AUDIT_ERR" || true
     )"
   fi
-  [ -n "$PLAN_AUDIT_MD" ] || PLAN_AUDIT_MD="pipeline audit: unavailable"
+  if [ -z "$PLAN_AUDIT_MD" ]; then
+    PLAN_AUDIT_TAIL="$(head -c 240 "$PLAN_AUDIT_ERR" | tr '\n' ' ')"
+    PLAN_AUDIT_MD="pipeline audit: unavailable — ${PLAN_AUDIT_TAIL:-no stderr captured}"
+  fi
+  rm -f "$PLAN_AUDIT_ERR"
 fi
 
 # T-CI007 / T-CI015 / T-CI021 / T-CI022 — live Cursor SessionStart caller (U2).
-GRANT_NOTE="publish-path grant: none"
-if [ -f "$GC/ops/autonomy/breakglass_receipt.py" ]; then
-  GRANT_NOTE="$("$AUDIT_PY_BIN" "$GC/ops/autonomy/breakglass_receipt.py" --status 2>/dev/null || echo "publish-path grant: unread")"
-fi
+# Classification lives in session_start_runtime_report.py so slogans cannot
+# masquerade as this-session faults (missing breakglass = ok; :7687 = n/a).
 TWO_CLONE_NOTE=""
 WS_ROOT="${CURSOR_PROJECT_DIR:-$PWD}"
 if git -C "$WS_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
@@ -425,18 +441,76 @@ if git -C "$WS_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
 fi
 SKILL_LOG="$HOME/.claude/l9/skill-usage.jsonl"
 if [ -f "$SKILL_LOG" ]; then
-  SKILL_NOTE="skill-usage: $SKILL_LOG ($(wc -l < "$SKILL_LOG" | tr -d ' ') entries)"
+  SKILL_NOTE="$SKILL_LOG ($(wc -l < "$SKILL_LOG" | tr -d ' ') entries)"
 else
-  SKILL_NOTE="skill-usage: $SKILL_LOG (absent — logger never wrote)"
+  SKILL_NOTE="$SKILL_LOG (absent — logger never wrote)"
 fi
-ITEST_NOTE="itest: neo4j 127.0.0.1:7687 reachable — service-backed integration tests may run"
-if ! "$AUDIT_PY_BIN" -c 'import socket;s=socket.socket();s.settimeout(0.3);s.connect(("127.0.0.1",7687));s.close()' 2>/dev/null; then
-  ITEST_NOTE="itest: unavailable — neo4j absent or 127.0.0.1:7687 refused"
+HYDRATE_DEGRADED="false"
+HYDRATE_REASON=""
+case "$HYDRATE_MD" in
+  *DEGRADED*|*'"degraded": true'*)
+    HYDRATE_DEGRADED="true"
+    HYDRATE_REASON="$(printf '%s\n' "$HYDRATE_MD" | grep -E 'degraded|degrade_reason|hydration degraded' | head -n 2 | tr '\n' ' ')"
+    ;;
+esac
+
+# Resolve order: override, then this checkout (ssot_checkout / feature worktree),
+# then live SSOT. make start still runs the SSOT hook until this PR merges.
+resolve_runtime_reporter() {
+  if [ -n "${L9_SESSION_RUNTIME_REPORT:-}" ] && [ -f "$L9_SESSION_RUNTIME_REPORT" ]; then
+    printf '%s\n' "$L9_SESSION_RUNTIME_REPORT"
+    return 0
+  fi
+  if [ -n "${CURSOR_PROJECT_DIR:-}" ] && [ -f "$CURSOR_PROJECT_DIR/ops/scripts/session_start_runtime_report.py" ]; then
+    printf '%s\n' "$CURSOR_PROJECT_DIR/ops/scripts/session_start_runtime_report.py"
+    return 0
+  fi
+  if [ -f "$GC/ops/scripts/session_start_runtime_report.py" ]; then
+    printf '%s\n' "$GC/ops/scripts/session_start_runtime_report.py"
+    return 0
+  fi
+  return 1
+}
+
+RUNTIME_MD="### Runtime
+- reporter: failed — session_start_runtime_report.py missing
+### Degraded
+- reporter: failed — session_start_runtime_report.py missing"
+RUNTIME_REPORTER="$(resolve_runtime_reporter || true)"
+if [ -n "$RUNTIME_REPORTER" ] && [ -f "$RUNTIME_REPORTER" ]; then
+  RUNTIME_ERR="$(mktemp "${TMPDIR:-/tmp}/l9-runtime-report.XXXXXX")"
+  RUNTIME_MD="$("$AUDIT_PY_BIN" "$RUNTIME_REPORTER" \
+    --surface "${L9_GOVERNANCE_SURFACE:-cursor}" \
+    --venv "$VENV_NOTE" \
+    --ide-profile "$IDE_NOTE" \
+    --tunnel "$TUNNEL_NOTE" \
+    --graphiti-detail "$GRAPHITI_HEALTH" \
+    --graphiti-stderr "$GRAPHITI_STDERR" \
+    --graphiti-healthy "$GRAPHITI_HEALTHY" \
+    --wiring "$WIRING_CHECK" \
+    --backup "$BACKUP_NOTE" \
+    --skill-note "$SKILL_NOTE" \
+    --codegraph "$CODEGRAPH_MD" \
+    --hydrate-degraded "$HYDRATE_DEGRADED" \
+    --hydrate-reason "$HYDRATE_REASON" \
+    2>"$RUNTIME_ERR" || true)"
+  if [ -z "$RUNTIME_MD" ]; then
+    RUNTIME_TAIL="$(head -c 240 "$RUNTIME_ERR" | tr '\n' ' ')"
+    RUNTIME_MD="### Runtime
+- reporter: failed — no markdown emitted
+### Degraded
+- reporter: failed — ${RUNTIME_TAIL:-no stderr captured}"
+  fi
+  rm -f "$RUNTIME_ERR"
 fi
-BOOTSTRAP_NOTE=""
-if [ -f "$GC/ops/scripts/claude_bootstrap_receipt.py" ]; then
-  BOOTSTRAP_NOTE="$("$AUDIT_PY_BIN" "$GC/ops/scripts/claude_bootstrap_receipt.py" --read --reprobe 2>/dev/null | head -n 20 || true)"
-fi
+
+# compile_session_packet.py already emits ### Graphiti hydrate. Do not wrap twice.
+HYDRATE_BLOCK="$HYDRATE_MD"
+case "$HYDRATE_MD" in
+  *"### Graphiti hydrate"*) ;;
+  *) HYDRATE_BLOCK="### Graphiti hydrate
+${HYDRATE_MD}" ;;
+esac
 
 COMBINED="$(cat <<EOF
 ## L9 session state
@@ -449,18 +523,8 @@ COMBINED="$(cat <<EOF
 - wire: ${WIRE_NOTE}
 - backup: ${BACKUP_NOTE}
 ${TWO_CLONE_NOTE}
-### Runtime
-- venv: ${VENV_NOTE}
-- ide-profile: ${IDE_NOTE}
-- tunnel: ${TUNNEL_NOTE}
-- graphiti health: ${GRAPHITI_HEALTH}
-- ${GRANT_NOTE}
-- ${SKILL_NOTE}
-- ${ITEST_NOTE}
-${BOOTSTRAP_NOTE:+- bootstrap:}${BOOTSTRAP_NOTE:+
-}${BOOTSTRAP_NOTE}
-### Graphiti hydrate
-${HYDRATE_MD}
+${RUNTIME_MD}
+${HYDRATE_BLOCK}
 ### Code-graph
 ${CODEGRAPH_MD}
 ### Plan audit
