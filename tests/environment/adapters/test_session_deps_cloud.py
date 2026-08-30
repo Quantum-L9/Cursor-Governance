@@ -158,7 +158,8 @@ def test_stamp_writer_records_exit_and_interpreter() -> None:
     assert "write_deps_stamp()" in body
     assert "import_smoke()" in body
     assert 'echo "exit=$rc"' in body
-    assert "import json,sys,yaml" in body
+    assert "import json,sys" in body
+    assert "import json,sys,yaml" not in body
 
 
 def test_proof_does_not_collapse_outdated_into_the_plain_resolution() -> None:
