@@ -1,7 +1,7 @@
 ---
 name: l9-plan-simple
-version: "1.0.0"
-description: "Create a Cursor Build plan from the shared executable-plan template (not PE / make campaign)"
+version: "1.1.0"
+description: "Create a Cursor Build plan, then stacked make pr (never branch off main if an open PR exists)"
 auto_chain: ynp
 ---
 
@@ -9,7 +9,7 @@ auto_chain: ynp
 
 ## WHAT IT DOES
 
-Create a structured plan before implementation using the **same** first-class template as `/l9-plan`, then execute it with the **Build** button on the current checkout.
+Create a structured plan before implementation using the **same** first-class template as `/l9-plan`, then execute it with the **Build** button and **always** publish a stacked PR (`PR_STACK=auto PR_REMEDIATE=0 make pr`). Display the opened PR URL.
 
 Delegates to skill **`l9-plan-simple`**:
 
@@ -31,7 +31,7 @@ Follow skill `l9-plan-simple`. Required deliverables:
 1. Validated `PLAN_DOCUMENT` JSON
 2. Cursor `.plan.md` under `.cursor/plans/<slug>_<8hex>.plan.md` from the shared template
 3. Frontmatter `kind: simple`, `execute_via: cursor-build`
-4. **Execute via Cursor Build** (PE execute block swapped)
+4. **Execute via Cursor Build** (PE execute block swapped): stacked tip if any open PR exists, then `make pr`, display the PR URL
 
 ### Project command
 
@@ -40,13 +40,14 @@ python3 skills/l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-
   > .cursor/plans/<snake_slug>_<8hex>.plan.md
 ```
 
-Planning-only — do not edit product files until the user presses **Build**.
+Planning-only — do not edit product files until the user presses **Build**. After Build todos complete, `PR_STACK=auto PR_REMEDIATE=0 make pr` is required. Never branch from `origin/main` when any open PR exists. The finish reply must show the opened PR URL.
 
 ---
 
 ## NOTES
 
 - Baseline records the current workspace. Do not write `Lock: origin/main = <sha>`.
+- If any open PR exists: execute on the unique chain tip (`PR_STACK=auto`). Do not fork `origin/main`.
 - KERNEL pack / PE overlay landings: use `/l9-plan`, not this command.
 
 --- End Command ---
