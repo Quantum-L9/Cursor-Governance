@@ -12,7 +12,7 @@ Enforced by `ops/scripts/check_skills_standard.py` (`make skills-check`).
 |---|---|---|
 | `name` | Yes | Lowercase letters, numbers, hyphens. **Must match the parent folder name.** |
 | `description` | Yes | What it does *and* when to use it. The entire routing signal. |
-| `paths` | No | Globs. Skill surfaces only when matching files are in context. |
+| `paths` | No | Globs. Skill surfaces only when matching files are in context. **Incompatible with model invocation — see §paths.** |
 | `disable-model-invocation` | No | `true` = explicit `/skill-name` only, never auto-selected. |
 | `metadata` | No | Arbitrary key-value mapping for additional metadata. |
 
@@ -98,5 +98,47 @@ an adapter, and never loaded on a turn. Those files are excluded from both the
 live count and the footprint, so the budget measures what agents actually
 discover.
 
+## paths: is an availability gate, not a relevance hint
+
 Empty `paths:` is forbidden. An empty glob hides the skill; omit the key
 instead.
+
+A **non-empty** `paths:` on a model-invocable skill is forbidden too, and the
+gate rejects it. `paths:` does not merely rank a skill lower when the globs do
+not match — it removes the entry from the skill listing entirely until a
+matching file is in context. A skill declared `auto_invoke` in
+`skills/AUTONOMY_MANIFEST.yaml` is then silently absent from every session that
+has not yet touched a matching file, while the manifest and
+`ops/generated/skill-registry.json` both still promise it.
+
+Measured 2026-08-30 on the `claude-code` surface: **7/7** path-gated
+model-invocable skills were missing from the session roster, and **0/16** of the
+skills that did load carried the key. Perfect separation.
+
+The key reads like a Cursor rule `globs:` — 19 `rules/*.mdc` use that key with
+this same comma-separated glob syntax — where scoping is free because the rule
+is consulted when relevant. For a skill the same syntax means *does not exist
+yet*, and the mental model does not transfer.
+
+Ask what actually triggers the skill. Every one of the ten gated skills answered
+"a request", not "a file", in its own `description`:
+
+- `l9-setting-up-ci` — "use when **bootstrapping** CI", gated on
+  `.github/workflows/**`, the files it exists to create
+- `l9-architecture-decision-records` — "use when capturing a decision", gated on
+  `docs/adr/**`, the directory it exists to create
+- `l9-update-agent-docs` — "use when **the user says** update agent docs", a
+  phrase trigger, gated on files
+- `l9-wire-skill-into-repo` — "use **immediately after** l9-skill-compiler", a
+  chain trigger, gated on files
+
+If a skill is genuinely file-triggered rather than request-triggered, gate it
+with `paths:` **and** mark it `disable-model-invocation: true`, so the manifest
+does not claim automatic availability the frontmatter withholds.
+
+If the concern is context cost rather than relevance, `paths:` is the wrong
+lever: it hides the skill outright. Claude Code lists **every** skill name
+always and trims only descriptions under a listing budget that scales with the
+context window, dropping the least-invoked first. Use
+`skillOverrides: "name-only"` in settings to free budget while keeping the skill
+discoverable.

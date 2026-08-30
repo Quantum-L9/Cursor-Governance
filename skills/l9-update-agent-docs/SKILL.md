@@ -1,7 +1,6 @@
 ---
 name: l9-update-agent-docs
 description: "maintain the root agent-doc pointer stack (agents.md, claude.md, readme.md) and generate module READMEs via readme-pipeline-v1. use when the user says update agent docs, refresh repo docs, generate module readmes, sync agent files, create root claude.md/invariants.md, or after ci checks or pre-commit hooks change. creates those two only when absent; never invents other root files."
-paths: "AGENTS.md, CLAUDE.md, README.md, INVARIANTS.md"
 metadata:
   skill_schema: 1
   layer: control_plane
