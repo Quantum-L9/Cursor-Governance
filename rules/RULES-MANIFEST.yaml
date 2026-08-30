@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-30T03:14:40Z'
+generated_utc: '2026-08-30T18:37:05Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:bacdc0a6b40601c2e292eebda5914f63ebc4f0b108acd5b3ce39251a82e41223
+source_tree_digest: sha256:2ae635b44de6b3057f24cfbb1e9c5d36e172de88fff231f094198801f08c6910
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -136,7 +136,7 @@ rules:
   first_heading: Governance SSOT Path Contract
   has_yaml_frontmatter: true
   line_count: 56
-  content_digest: sha256:a8c0978cff70bea2b859557c5aa2b7ed5f9157d959006b981252d9b582c372e0
+  content_digest: sha256:d08e5923b2c6f97978b812df1efcc5c6e0734275e6a06d3ed6346390380508ec
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -577,8 +577,8 @@ rules:
   globs: null
   first_heading: Shared worktree isolation
   has_yaml_frontmatter: true
-  line_count: 92
-  content_digest: sha256:f70eda56dbbce79a45ba86f2c875093220ed91ac68fd8e46eed75a44b1d9c40d
+  line_count: 94
+  content_digest: sha256:6171469f551631fad67777364ed10603c33db8d90dc97ee7353d26ff1bd42da9
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -825,8 +825,8 @@ rules:
   globs: null
   first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14)
   has_yaml_frontmatter: true
-  line_count: 23
-  content_digest: sha256:9b4abefa8ef4ede36d0ed6e55fef4eb702b7c3407c3053bf0d363f13bddc8b5d
+  line_count: 27
+  content_digest: sha256:8083a57ba87c282fb103b0dfeca5493b28e5ad09833a79de97af2b4dc69f2f11
   authority: canonical_global
   context_cost: minimal
   deprecated: false
