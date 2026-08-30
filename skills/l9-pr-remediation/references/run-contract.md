@@ -39,7 +39,7 @@ Resume discovery when: unexpected failure, scope change, new dependency, environ
 
 This host (Cursor-Governance / Makefile capability graph):
 
-- verify: `PR_BASE=origin/main make precommit-repo`
+- verify: `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`
 - kernels (optional): `make improve`
 - publish: `git push` of the already-open PR branch
 - merge: `ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run` (method chosen in code; oldest `createdAt` first)
