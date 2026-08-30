@@ -35,7 +35,7 @@
         "T8"
       ],
       "rationale": "Operator-directed split. Skill activation gating and router scoring are one coupled subsystem (skills/*/SKILL.md frontmatter, AUTONOMY_MANIFEST.yaml, ops/skill_routing/, ops/generated/skill-registry.json, check_skills_standard.py) and should be changed and validated together, not piecemeal.",
-      "status": "not started \u2014 separate session"
+      "status": "T6, T7 done in-session at operator direction; T8 (router recall) still open"
     },
     "lane_c": {
       "name": "blocked on human \u2014 no agent-side fix",
@@ -229,7 +229,9 @@
       "shared_root_cause": "RC5",
       "verify": "A fresh session's skill roster contains every skill AUTONOMY_MANIFEST declares auto_invoke.",
       "blocker": null,
-      "status": "open"
+      "status": "done",
+      "commit": "0e9cbf29",
+      "completion_note": "Removed paths: from all 10 carriers (7 model-invocable + 3 where it was dead config behind disable-model-invocation). Root cause: paths: was applied as a Cursor-style rule glob (relevance hint) rather than a Claude Code availability gate; 19 rules/*.mdc use globs: with the same syntax. All 10 declared intent triggers in their own descriptions; 4 were inverted (gated on files they exist to create). Verified: 23/23 auto_invoke skills now discoverable, 0 blocked; the 7 appeared live in this session's roster. Footprint-neutral to the governance budget (name+description only; 16,210 of 16,384 B either way). Earlier T6 risk note about the discovery budget was unfounded."
     },
     {
       "id": "T7",
@@ -250,7 +252,9 @@
       "shared_root_cause": "RC5",
       "verify": "Re-adding a paths: gate to an auto_invoke skill fails the gate.",
       "blocker": null,
-      "status": "open"
+      "status": "done",
+      "commit": "0e9cbf29",
+      "completion_note": "check_skills_standard now errors on non-empty paths + model-invocable. Previously only an EMPTY paths was rejected, which is why all 7 passed. A genuinely file-triggered skill may keep paths but must also carry disable-model-invocation. Mutation-checked. docs/skills-standard.md gained a 'paths: is an availability gate, not a relevance hint' section with the measurement and the name-only alternative. 8 gate tests."
     },
     {
       "id": "T8",
@@ -312,7 +316,7 @@
   "convergence": {
     "status": "lane_a_complete",
     "lane_a": "T1-T5 done and committed on claude/bootstrap-audit-4jijz4.",
-    "lane_b_handoff": "Start a session scoped to skills/, ops/skill_routing/, ops/scripts/check_skills_standard.py and skills/AUTONOMY_MANIFEST.yaml. T6 before T7. T8 is independent and largest. Build the l9-skill-routing trigger table into a regression test before tuning the scorer.",
+    "lane_b_handoff": "T6/T7 done. T8 (skill-router recall, measured 6/18 against the l9-skill-routing trigger table) remains: build the table into a regression test first, then tune. Note the 7 newly-discoverable skills change the routing input set, so re-measure the 6/18 baseline before tuning.",
     "lane_c_handoff": "T9 needs the operator to copy the hosted Environment-variables field out and diff it against web/setup.bootstrap.sh. Do NOT re-paste the field \u2014 it is ahead of HEAD and holds the only copy.",
     "known_lag": "The live SSOT at /root/.cursor-governance is main@ac0e5e6 and still carries the pre-fix files. SessionStart projects from the SSOT, so the three retired commands and the old banner lines return on each new session until this branch merges.",
     "next_skill": "l9-ynp",
