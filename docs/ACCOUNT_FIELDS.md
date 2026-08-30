@@ -50,8 +50,8 @@ USER_ID=claude_code_agent
 
 Paste `environment/agents/adapters/claude-code/web/setup.bootstrap.sh` verbatim.
 
-- Revision: `2026-08-29.2`
-- Checksum: `1955705c0694b773`
+- Revision: `2026-08-29.3`
+- Checksum: `e94e1da822905021`
 
 The stub records its own revision into `~/.l9/cloud-session.env`, so a later
 session can tell whether the pasted copy is current without reading the field.

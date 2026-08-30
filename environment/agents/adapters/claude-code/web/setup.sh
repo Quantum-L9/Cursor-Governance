@@ -40,6 +40,11 @@ if [ -f "$_L9_ADAPTER/lib/cloud_account_env.sh" ]; then
   # shellcheck source=../lib/cloud_account_env.sh
   source "$_L9_ADAPTER/lib/cloud_account_env.sh"
   l9_normalize_cloud_account_env
+else
+  export L9_GOVERNANCE_DIR="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+  export L9_GOVERNANCE_SURFACE="claude-code"
+  : "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
+  export GRAPHITI_MCP_URL
 fi
 unset _L9_ADAPTER
 

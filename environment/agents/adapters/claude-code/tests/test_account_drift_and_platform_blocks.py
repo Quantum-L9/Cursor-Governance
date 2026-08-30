@@ -204,12 +204,13 @@ class PlatformBlockTests(unittest.TestCase):
     def test_bootstrap_does_not_export_or_probe_broker_url(self) -> None:
         src = (ADAPTER / "web" / "setup.bootstrap.sh").read_text(encoding="utf-8")
         self.assertNotIn("L9_CAPABILITY_BROKER_URL", src)
-        self.assertIn("cloud_account_env.sh", src)
+        self.assertNotIn("probe_broker.py", src)
+        self.assertIn("web/setup.sh", src)
 
-    def test_cloud_env_lib_strips_retired_broker_url(self) -> None:
-        src = (ADAPTER / "lib" / "cloud_account_env.sh").read_text(encoding="utf-8")
-        self.assertIn("L9_CAPABILITY_BROKER_URL", src)
-        self.assertIn("l9_normalize_cloud_account_env", src)
+    def test_bootstrap_survives_missing_lib_on_clone(self) -> None:
+        src = (ADAPTER / "web" / "setup.bootstrap.sh").read_text(encoding="utf-8")
+        self.assertIn("_l9_legacy_normalize", src)
+        self.assertNotIn("missing cloud_account_env.sh or web/setup.sh", src)
 
 
 class DegradedModeContractTests(unittest.TestCase):

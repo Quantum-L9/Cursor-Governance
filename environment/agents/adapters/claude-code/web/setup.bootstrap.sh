@@ -3,38 +3,13 @@
 # ---------------------------------------------------------------------------
 # L9 Claude Code cloud Setup script — startup stub (Web · Mobile · --cloud).
 #
-# THIS FILE CONTAINS NO BACKTICKS, DELIBERATELY. Do not add any, and do not
-# "restore" markdown quoting to these comments. Reason, measured 2026-08-22:
-# docs/account-fields/SETUP_SCRIPT.md presents this stub inside a fenced
-# markdown code block. A human who selects the section rather than the fence body
-# pastes that fence into the field. A fence is THREE backticks, an odd count, so
-# bash opens a command substitution that never closes and swallows the rest of
-# the file. Every backtick that used to sit in these comments then closed or
-# reopened that substitution, which pushed the following prose out of comment
-# position and ran it as shell. The measured result was English executed as
-# commands, git clone invoked with an empty target directory, and exit 127 with
-# the environment half-built.
+# THIS FILE CONTAINS NO BACKTICKS, DELIBERATELY. See tests/test_account_drift_and_platform_blocks.py.
 #
-# With zero backticks in the file the damage is contained: the substitution
-# opened by the leading fence now runs to the CLOSING fence and no further, so
-# the stub is executed whole, in a subshell, instead of being shredded into
-# fragments of executable English. That is still wrong -- a subshell discards
-# every export and the exit code -- which is why the paste-integrity guard below
-# detects the fence and refuses outright. Both properties are enforced by
-# tests/test_account_drift_and_platform_blocks.py.
+# Paste THIS into claude.ai/code -> environment -> Setup script. Clones governance
+# @ main, then execs web/setup.sh from that clone. Prefer lib/cloud_account_env.sh
+# when the clone carries it; until then a compact legacy fallback runs here.
 #
-# Paste THIS into claude.ai/code -> environment -> Setup script. Do not paste
-# web/setup.sh: the field is a copy, not a live link. This stub clones governance
-# and execs web/setup.sh from that clone. Env normalization, durable session env,
-# and adapter wiring live in lib/cloud_account_env.sh, setup.sh, and install.sh.
-#
-# Companion fields:
-#   Environment variables -> web/environment.env.example
-#   Network access        -> web/network-policy.md
-#
-# Anthropic snapshots the VM after the first successful run — keep this stub
-# small and put heavy probes in setup.sh / SessionStart hooks.
-#
+# Companion fields: web/environment.env.example · web/network-policy.md
 # Docs: https://code.claude.com/docs/en/cloud-environments
 # ---------------------------------------------------------------------------
 set -uo pipefail
@@ -52,16 +27,12 @@ unset _l9_self _l9_fence
 if [ "$_l9_contaminated" -ne 0 ]; then
   printf '%s\n' \
     'L9 bootstrap FATAL: the Setup script field contains markdown fence lines.' \
-    'L9 bootstrap FATAL:   You copied the code block MARKERS along with the code.' \
-    'L9 bootstrap FATAL:   Nothing below this point ran at top level; the environment is NOT built.' \
-    'L9 bootstrap FATAL:   Re-paste ONLY the lines from the L9-PASTE-BEGIN marker' \
-    'L9 bootstrap FATAL:   through the L9-PASTE-END marker -- no fence lines, no prose.' >&2
+    'L9 bootstrap FATAL:   Re-paste ONLY L9-PASTE-BEGIN through L9-PASTE-END — no fences.' >&2
   exit 2
 fi
 unset _l9_contaminated
 
-# Bump on EVERY change to this file (audit B-06; verify_account_env.py).
-L9_STUB_REVISION="2026-08-29.2"
+L9_STUB_REVISION="2026-08-29.3"
 export L9_STUB_REVISION
 
 warn() { printf 'L9 bootstrap WARN: %s\n' "$*" >&2; }
@@ -71,7 +42,52 @@ if [ "${CLAUDE_CODE_REMOTE:-}" != "true" ]; then
   exit 0
 fi
 
-# --- 1) Governance SSOT (minimal pre-lib) ------------------------------------
+# Compact fallback until origin/main carries lib/cloud_account_env.sh (chicken-egg
+# with a pasted stub ahead of merge). Must not name retired broker env vars here.
+_l9_legacy_normalize() {
+  export L9_GOVERNANCE_DIR="$GOV_DIR"
+  export L9_GOVERNANCE_SURFACE="claude-code"
+  : "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
+  export GRAPHITI_MCP_URL
+  local k v
+  for k in SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN \
+           INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD \
+           GRAPHITI_MCP_TOKEN AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN \
+           L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN; do
+    v="${!k:-}"
+    [ -n "$v" ] || continue
+    [ "$v" = "proxy-injected" ] && continue
+    warn "$k is PROHIBITED on this surface; unsetting"
+    unset "$k"
+  done
+}
+
+_l9_legacy_session_env() {
+  local f="$HOME/.l9/cloud-session.env"
+  mkdir -p "$(dirname "$f")"
+  {
+    echo "# Written by L9 setup.bootstrap.sh (legacy fallback) — do not edit."
+    echo "export L9_STUB_REVISION=$(printf %q "$L9_STUB_REVISION")"
+    echo "export L9_GOVERNANCE_DIR=$(printf %q "$GOV_DIR")"
+    echo "export L9_GOVERNANCE_SURFACE=claude-code"
+    echo "export GRAPHITI_MCP_URL=$(printf %q "${GRAPHITI_MCP_URL:-}")"
+    echo "unset L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN"
+    echo "unset GRAPHITI_MCP_TOKEN INFISICAL_CLIENT_SECRET INFISICAL_TOKEN INFISICAL_PASSWORD"
+    echo "unset SONAR_TOKEN SONARCLOUD_TOKEN SEMGREP_APP_TOKEN"
+    echo "unset AWS_SECRET_ACCESS_KEY AWS_ACCESS_KEY_ID AWS_SESSION_TOKEN"
+  } > "$f"
+  if [ -n "${CLAUDE_ENV_FILE:-}" ]; then
+    cat "$f" >> "$CLAUDE_ENV_FILE"
+  else
+    for p in "$HOME/.bashrc" "$HOME/.profile"; do
+      [ -f "$p" ] || touch "$p"
+      grep -qF 'cloud-session.env' "$p" 2>/dev/null \
+        || printf '%s\n' '. "$HOME/.l9/cloud-session.env"  # L9 governed session env' >> "$p"
+    done
+  fi
+}
+
+# --- 1) Governance SSOT ----------------------------------------------------
 GOV_DIR="$HOME/.cursor-governance"
 GOV_REMOTE="${L9_GOVERNANCE_REMOTE:-https://github.com/Quantum-L9/Cursor-Governance.git}"
 GOV_BRANCH="${L9_GOVERNANCE_BRANCH:-main}"
@@ -96,19 +112,32 @@ fi
 
 L9_CLOUD_ENV_LIB="$GOV_DIR/environment/agents/adapters/claude-code/lib/cloud_account_env.sh"
 SETUP="$GOV_DIR/environment/agents/adapters/claude-code/web/setup.sh"
-if [ ! -f "$L9_CLOUD_ENV_LIB" ] || [ ! -f "$SETUP" ]; then
-  warn "governance clone incomplete (missing cloud_account_env.sh or web/setup.sh)"
+if [ ! -f "$SETUP" ]; then
+  warn "governance clone incomplete — missing web/setup.sh at $SETUP"
+  warn "  clone HEAD: $(git -C "$GOV_DIR" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   exit 1
 fi
 
-# shellcheck source=../lib/cloud_account_env.sh
-source "$L9_CLOUD_ENV_LIB"
-l9_normalize_cloud_account_env
+if [ -f "$L9_CLOUD_ENV_LIB" ]; then
+  # shellcheck source=../lib/cloud_account_env.sh
+  source "$L9_CLOUD_ENV_LIB"
+  l9_normalize_cloud_account_env
+else
+  warn "lib/cloud_account_env.sh not on clone yet — using bootstrap legacy normalize"
+  _l9_legacy_normalize
+fi
 
 L9_GOVERNANCE_BOOTSTRAPPED=1 bash "$SETUP"
 SETUP_RC=$?
-l9_write_cloud_session_env "$SETUP_RC" || true
-l9_report_cloud_memory_posture
+
+if [ -f "$L9_CLOUD_ENV_LIB" ]; then
+  l9_write_cloud_session_env "$SETUP_RC" || true
+  l9_report_cloud_memory_posture
+else
+  _l9_legacy_session_env || true
+  note "memory front door: ${GRAPHITI_MCP_URL:-unset} (no bearer)"
+  note "capability plane: RETIRED (never shipped)"
+fi
 
 if [ "$SETUP_RC" -ne 0 ]; then
   warn "cloud bootstrap FAILED — web/setup.sh exited $SETUP_RC"
