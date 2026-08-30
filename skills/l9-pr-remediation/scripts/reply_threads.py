@@ -67,7 +67,9 @@ def _chunks(items: list[Any], size: int) -> list[list[Any]]:
     return [items[i : i + size] for i in range(0, len(items), size)]
 
 
-def _require_inspected(prs: list[dict[str, Any]]) -> None:
+def _require_inspected(
+    prs: list[dict[str, Any]], *, summary_only: bool = False
+) -> None:
     for pr in prs:
         for th in pr.get("threads") or []:
             if th.get("inspected") is not True:
@@ -81,7 +83,7 @@ def _require_inspected(prs: list[dict[str, Any]]) -> None:
                     f"PR #{pr.get('number')} thread {th.get('thread_id')} "
                     f"invalid disposition {disp!r}"
                 )
-            if not str(th.get("body") or "").strip():
+            if not summary_only and not str(th.get("body") or "").strip():
                 _fail(f"PR #{pr.get('number')} thread {th.get('thread_id')} empty body")
             if not str(th.get("thread_id") or "").strip():
                 _fail(f"PR #{pr.get('number')} missing thread_id")
@@ -215,7 +217,7 @@ def main(argv: list[str] | None = None) -> int:
 
     data = _load_input(args.input)
     prs: list[dict[str, Any]] = data["prs"]
-    _require_inspected(prs)
+    _require_inspected(prs, summary_only=args.summary_only)
     cycle = int(data.get("cycle") or 1)
     commit = str(data.get("commit") or "none")
     verify = str(data.get("local_verify") or "Unknown")
