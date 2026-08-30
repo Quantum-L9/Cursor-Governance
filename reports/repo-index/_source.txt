@@ -1,4 +1,4 @@
 generator=manual_fallback (no export_repo_indexes.py at synced or repo-local path)
 workspace=/Users/ib-mac/Cursor-Governance
-generated_utc=2026-08-28T19:03:25Z
+generated_utc=2026-08-30T20:18:13Z
 odoo=skipped (not an Odoo repo)

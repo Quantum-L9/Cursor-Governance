@@ -184,6 +184,13 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
 fi
 
 if GOV=$(resolve_governance_dir); then
+  # shellcheck source=/dev/null
+  [ -f "$GOV/ops/scripts/lib/run_with_timeout.sh" ] && . "$GOV/ops/scripts/lib/run_with_timeout.sh"
+  if ! type run_with_timeout >/dev/null 2>&1; then
+    _HOOK_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    _REL_LIB="$_HOOK_DIR/../../../../ops/scripts/lib/run_with_timeout.sh"
+    [ -f "$_REL_LIB" ] && . "$_REL_LIB"
+  fi
   LINES+=("governance SSOT: $GOV (GitHub Quantum-L9/Cursor-Governance)")
   if [ -d "$GOV/.git" ]; then
     br=$(git -C "$GOV" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
@@ -380,12 +387,20 @@ except Exception:
     *)
       if [ ! -f "$marker" ] && [ -f "$installer" ]; then
         mkdir -p "$HOME/.l9/claude"
+        if ! type run_with_timeout >/dev/null 2>&1; then
+          LINES+=("bootstrap repair: SKIPPED — run_with_timeout.sh missing; installer not started")
+        else
         LINES+=("bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once")
-        if timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" \
+        if run_with_timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" \
           env L9_BOOTSTRAP_LOG_PATH="$HOME/.l9/claude/bootstrap-repair-${revision}.log" \
           bash "$installer" \
           >"$HOME/.l9/claude/bootstrap-repair-${revision}.log" 2>&1; then
           : >"$marker"
+        else
+          _repair_rc=$?
+          _repair_how="$(head -n 3 "$HOME/.l9/claude/bootstrap-repair-${revision}.log" | tr '\n' ' ')"
+          LINES+=("bootstrap repair: FAILED rc=${_repair_rc} — ${_repair_how:-no log bytes}")
+        fi
         fi
       fi
       ;;
@@ -452,6 +467,7 @@ emit_account_drift() {
 # Capability broker retired 2026-08-29 (never shipped; not probed).
 emit_capability_readiness() {
   local py="$1"
+  # Missing lib: parse .mcp.json with bare python3. Do not define a no-op timeout.
   local receipt="$HOME/.l9/claude/readiness-receipt.json"
   [ -f "$receipt" ] || return 0
   [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
@@ -482,7 +498,8 @@ print("primary_blocker=" + str(notes.get("Graphiti_authenticated_health") or "no
   # not over the session's MCP surface. Hosted surfaces inject servers (github,
   # and others) that governance neither configures nor gates, so the unqualified
   # "single MCP authority" claim was false wherever it mattered.
-  mcp_managed="$(timeout 10 python3 -c '
+  if type run_with_timeout >/dev/null 2>&1; then
+    mcp_managed="$(run_with_timeout 10 python3 -c '
 import json, sys
 try:
     with open(sys.argv[1], encoding="utf-8") as fh:
@@ -491,6 +508,17 @@ except Exception:
     sys.exit(1)
 print(", ".join(servers) if servers else "none")
 ' "$WORKSPACE/.mcp.json" 2>/dev/null || echo "unreadable")"
+  else
+    mcp_managed="$(python3 -c '
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        servers = sorted((json.load(fh).get("mcpServers") or {}))
+except Exception:
+    sys.exit(1)
+print(", ".join(servers) if servers else "none")
+' "$WORKSPACE/.mcp.json" 2>/dev/null || echo "unreadable")"
+  fi
   LINES+=("mcp_configuration=.mcp.json is a projection of mcp.template.json; it is the single authority over GOVERNANCE-MANAGED servers only [$mcp_managed]")
   LINES+=("mcp_platform_injected=this surface may also carry platform-injected servers that governance does not configure or gate -- read the live tool surface, not this file, for the full set")
 }
