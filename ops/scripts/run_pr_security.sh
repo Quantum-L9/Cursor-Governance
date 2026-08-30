@@ -298,22 +298,51 @@ run_semgrep() {
     configs+=(--config "$c")
   done
   note "semgrep configs: $SEMGREP_CONFIGS"
+  # Local rule files (absolute or repo-relative) vs registry rulesets (`p/…`).
+  # Only the latter need semgrep.dev, so only the latter can be lost to egress.
+  local -a local_configs=()
+  for c in $SEMGREP_CONFIGS; do  # shellcheck disable=SC2086
+    case "$c" in p/*|r/*|https://*) ;; *) local_configs+=(--config "$c") ;; esac
+  done
+
+  # semgrep exits 1 for FINDINGS and >1 for "could not load rules". Treating
+  # every non-zero exit as findings reported a blocked registry fetch as a code
+  # problem — the reader then hunts a defect that is not in the diff. Classify.
+  _semgrep_verdict() {
+    local rc="$1"
+    shift
+    if [[ "$rc" -eq 0 ]]; then
+      ok "semgrep (${#targets[@]} file(s))"
+      return 0
+    fi
+    if [[ "$rc" -eq 1 ]]; then
+      fail "semgrep found issues in changed files"
+      return 0
+    fi
+    # Rules never loaded. Re-run with local rules alone to say whether the diff
+    # is clean under what IS available, then fail closed on the missing plane —
+    # missing telemetry is not a pass (rules/53 E6).
+    if [[ ${#local_configs[@]} -gt 0 ]] && "$@" --error --quiet --metrics=off \
+        "${local_configs[@]}" "${targets[@]}"; then
+      fail "semgrep registry rules unreachable (blocker: allowlist); local rules passed"
+    else
+      fail "semgrep could not load its rules (exit $rc)"
+    fi
+  }
+
   if have semgrep; then
     ver="$(semgrep --version 2>/dev/null | head -1 || true)"
     note "semgrep: $ver (SDK supported range >=1.100.0,<2.0.0)"
-    if semgrep --error --quiet --metrics=off "${configs[@]}" "${targets[@]}"; then
-      ok "semgrep (${#targets[@]} file(s))"
-    else
-      fail "semgrep found issues in changed files"
-    fi
+    local rc=0
+    semgrep --error --quiet --metrics=off "${configs[@]}" "${targets[@]}" || rc=$?
+    _semgrep_verdict "$rc" semgrep
   elif have uvx || have uv; then
     ver="$(run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --version 2>/dev/null | head -1 || true)"
     note "semgrep: $ver (SDK supported range >=1.100.0,<2.0.0)"
-    if run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --error --quiet --metrics=off "${configs[@]}" "${targets[@]}"; then
-      ok "semgrep (${#targets[@]} file(s))"
-    else
-      fail "semgrep found issues in changed files"
-    fi
+    local rc=0
+    run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --error --quiet --metrics=off \
+      "${configs[@]}" "${targets[@]}" || rc=$?
+    _semgrep_verdict "$rc" run_uvx_pkg "semgrep>=1.100.0,<2" semgrep
   else
     missing_tool semgrep "install uv/uvx, or pip install semgrep"
   fi

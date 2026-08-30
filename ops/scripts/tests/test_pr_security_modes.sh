@@ -89,4 +89,21 @@ grep -Eq 'run_pr_security\.sh"? --mode gate' "$PR_GATE" \
   || fail "run_pr_gate.sh must invoke the security gate in gate mode"
 pass "publish path invokes gate mode"
 
+
+
+# T6 — a semgrep exit that means "rules never loaded" is not reported as findings.
+# semgrep exits 1 for FINDINGS and >1 when it cannot resolve its config. Reporting
+# every non-zero exit as "found issues in changed files" sent the reader hunting a
+# defect that was not in the diff — the real cause was a blocked registry fetch.
+grep -q 'semgrep registry rules unreachable (blocker: allowlist)' "$SECURITY" \
+  || fail "security gate cannot distinguish unreachable rules from findings"
+grep -q 'rc" -eq 1' "$SECURITY" \
+  || fail "security gate does not treat exit 1 as the findings case"
+pass "semgrep separates 'rules unreachable' from 'issues found'"
+
+# T7 — that distinction must not become a pass. Missing telemetry fails closed
+# (rules/53 E6); only the MESSAGE changed, never the verdict.
+grep -q 'fail "semgrep registry rules unreachable' "$SECURITY" \
+  || fail "unreachable rules must still FAIL, not warn or pass"
+pass "unreachable rules still fail closed"
 echo "OK: $PASS assertions"
