@@ -1,8 +1,8 @@
 # Cursor Subagent Delegation
-Status: active contract  
-Scope: Cursor-native subagents only  
-Runtime owner: active main Cursor agent  
-Safety owner: root `autonomy/`  
+Status: active contract
+Scope: Cursor-native subagents only
+Runtime owner: active main Cursor agent
+Safety owner: root `autonomy/`
 Durable document owner: `environment/agents/generated-data/`
 ## Purpose
 This module lets the active main Cursor agent fan out bounded work to native
