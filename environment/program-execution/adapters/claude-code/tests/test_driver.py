@@ -139,6 +139,16 @@ class ClaudeProviderSourceTests(unittest.TestCase):
         self.assertNotIn(token, text)
         self.assertIn("<redacted>", text)
 
+    def test_allowlisted_excerpt_strips_payload_suffix_and_aws_key(self) -> None:
+        excerpts = self._excerpts()
+        key = "AKIA" + "ABCDEFGHIJKLMNOP"
+        line = f'Error: upstream payload={{"aws_access_key_id":"{key}"}}'
+        kept = excerpts.allowlisted_excerpt(line)
+        self.assertIsNotNone(kept)
+        self.assertNotIn(key, kept or "")
+        self.assertNotIn("payload", (kept or "").lower())
+        self.assertTrue((kept or "").lower().startswith("error"))
+
     def test_allowlisted_excerpt_drops_arbitrary_json(self) -> None:
         excerpts = self._excerpts()
         dumped = (

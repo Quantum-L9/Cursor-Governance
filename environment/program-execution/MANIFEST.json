@@ -123,7 +123,7 @@
     },
     {
       "path": "adapters/claude-code/excerpts.py",
-      "sha256": "5e88bcde8f8678cea617cfb68b9dfdac84d8430dfc6ea091a8ebcfebd1786e97"
+      "sha256": "7e48234520afbf2e78cbbc661587c2979dd5d19727eaebf6905f2104560a8c87"
     },
     {
       "path": "adapters/claude-code/permission_renderer.py",
@@ -139,7 +139,7 @@
     },
     {
       "path": "adapters/claude-code/tests/test_driver.py",
-      "sha256": "2d699a32c0cdf968f9cb6c2bc2f210bebdb3e7b285323187ef46509545bd4f5f"
+      "sha256": "37ba5b8b1a8f097541f19988396fe22de7f95ab571eaf0b11502ba80bc404841"
     },
     {
       "path": "adapters/claude-code/tests/test_turn_budget.py",

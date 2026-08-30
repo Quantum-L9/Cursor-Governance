@@ -9,6 +9,7 @@ _SECRET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bsk-[A-Za-z0-9_-]{16,}"), _REDACTED),
     (re.compile(r"\bgh[pousr]_[A-Za-z0-9]{16,}"), _REDACTED),
     (re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}"), _REDACTED),
+    (re.compile(r"\bA[KS]IA[0-9A-Z]{16}\b"), _REDACTED),
     (
         re.compile(r"(?s)-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----"),
         _REDACTED,
@@ -34,6 +35,7 @@ _ALLOWLIST_LINE = re.compile(
     r"|timed? ?out"
     r")"
 )
+_UNRESTRICTED_SUFFIX = re.compile(r"\s*(?:\{|payload\s*=).*$", re.IGNORECASE)
 
 
 def redacted_excerpt(text: str | None, *, limit: int = _EXCERPT_LIMIT) -> str | None:
@@ -61,7 +63,9 @@ def allowlisted_excerpt(text: str | None, *, limit: int = _EXCERPT_LIMIT) -> str
         if not line or line[:1] in "{[":
             continue
         if _ALLOWLIST_LINE.search(line):
-            kept.append(line)
+            shaped = _UNRESTRICTED_SUFFIX.sub("", line).strip()
+            if shaped:
+                kept.append(shaped)
     if not kept:
         return None
     return redacted_excerpt("\n".join(kept), limit=limit)
