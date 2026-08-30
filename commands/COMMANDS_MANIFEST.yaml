@@ -22,6 +22,9 @@ commands:
 - slash: /clean
   file: commands/clean.md
   enabled: true
+- slash: /ff
+  file: commands/ff.md
+  enabled: true
 - slash: /gmp
   file: commands/gmp.md
   enabled: true
