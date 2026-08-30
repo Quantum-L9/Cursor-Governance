@@ -6,8 +6,8 @@ role: review_replies
 tags: [pr, review, replies, threads, resolution, leverage]
 owner: igor_beylin
 status: active
-version: 2.3.0
-updated: 2026-08-18
+version: 2.4.0
+updated: 2026-08-29
 /L9_META -->
 
 # Review Reply Protocol
@@ -130,10 +130,35 @@ After posting → **resolve the thread**.
 
 ## How to Post Replies
 
+**Required remediator path** is `scripts/reply_threads.py` (not a per-thread
+`gh` loop). Inspect the cited file first. Then:
+
+```bash
+# TEMPLATE — substitute after inspect. python3 -u so progress is visible.
+python3 -u skills/l9-pr-remediation/scripts/reply_threads.py \
+  --repo {owner}/{repo} --input {threads.json}
+```
+
+The helper:
+
+- refuses any thread without `inspected: true` (Law 9)
+- batches GraphQL `addPullRequestReviewThreadReply` then `resolveReviewThread`
+  (chunk of 6; reply phase before resolve phase)
+- times out each `gh` spawn at 30s
+- flushes every progress line
+- posts the per-PR batch summary unless `--no-summary`
+
+Do **not** spawn one REST `/comments/{id}/replies` plus one
+`resolveReviewThread` per thread. That is 2N cold `gh` starts, silent if
+stdout is buffered, and looks hung (2026-08-30: 18 threads / 107s / no
+output until exit).
+
+Single-thread fallback (one thread only, or the helper is unavailable):
+
 ### Reply to inline (diff) comments
 
 ```bash
-gh api /repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
+gh api --timeout 30s /repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
   -f body="{canonical_reply}"
 ```
 
@@ -146,7 +171,7 @@ gh pr comment {pr_number} --repo {owner}/{repo} --body "{reply}"
 ### Resolve a thread (GraphQL)
 
 ```bash
-gh api graphql -f query='
+gh api --timeout 30s graphql -f query='
   mutation($threadId: ID!) {
     resolveReviewThread(input: {threadId: $threadId}) {
       thread { isResolved }

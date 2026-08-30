@@ -1,8 +1,10 @@
-# Managed by Quantum-L9/.github. Pinned to a tag so main can move safely.
+# Managed by Quantum-L9/.github. Caller is SHA-pinned to that repo's main.
 #
-# This file should never need editing again. Governance logic lives in
-# Quantum-L9/.github/.github/workflows/governance-*.yml; shipping a change means
-# force-moving the v1 tag there, not touching this file.
+# The v1 tag is frozen on github-script v7.0.1 (node20) and checkout v4.2.2.
+# .github main already ships github-script v9.0.0 (node24; v8 was the first
+# node24 major). Do not retarget @v1 until that tag is moved; force-moving it
+# is denied here. Governance logic still lives in
+# Quantum-L9/.github/.github/workflows/governance-*.yml.
 #
 # SECRETS: a called workflow does NOT inherit caller secrets automatically. Today
 # both callees use only the automatic GITHUB_TOKEN, so nothing is passed. If a
@@ -36,7 +38,7 @@ jobs:
     permissions:
       contents: read
       pull-requests: write
-    uses: Quantum-L9/.github/.github/workflows/governance-pr.yml@v1
+    uses: Quantum-L9/.github/.github/workflows/governance-pr.yml@de85dc52667b285e03bcc0b81629b23ffe008905  # main; github-script v9.0.0
     # secrets: inherit
 
   issue:
@@ -44,5 +46,5 @@ jobs:
     permissions:
       contents: read
       issues: write
-    uses: Quantum-L9/.github/.github/workflows/governance-issue.yml@v1
+    uses: Quantum-L9/.github/.github/workflows/governance-issue.yml@de85dc52667b285e03bcc0b81629b23ffe008905  # main; github-script v9.0.0
     # secrets: inherit
