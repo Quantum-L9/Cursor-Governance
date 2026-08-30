@@ -137,6 +137,67 @@ def test_blocked_nesting_is_a_defect(tmp_path: Path) -> None:
     assert any("nested delegation" in d for d in resolved["defects"])
 
 
+def test_runtime_decrement_below_a_healthy_declared_depth_is_not_a_defect(
+    tmp_path: Path,
+) -> None:
+    """Regression: the SessionStart banner reported a CONFIG DEFECT for a value
+    verify_account_env classifies RUNTIME_MANAGED and explicitly declines to
+    report as a deviation. Two components, one banner, opposite verdicts. A
+    defect the operator cannot clear by any configuration change teaches them to
+    ignore the banner."""
+
+    workspace = tmp_path / "workspace"
+    home = tmp_path / "home"
+    (workspace / ".claude").mkdir(parents=True)
+    home.mkdir(parents=True)
+    (workspace / ".claude" / "settings.json").write_text(
+        json.dumps(
+            {
+                "workflowSizeGuideline": "unrestricted",
+                "env": {"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "3"},
+            }
+        ),
+        encoding="utf-8",
+    )
+    env = {**CLAUDE_ENV, "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1"}
+    resolved = resolve(env=env, workspace=workspace, home=home, root=ROOT)
+
+    assert resolved["subagent_spawn_depth"] == 3
+    assert resolved["subagent_spawn_depth_declared"] == 3
+    assert resolved["subagent_spawn_depth_live"] == 1
+    assert not any("nested delegation" in d for d in resolved["defects"])
+    assert "runtime-decremented to 1" in render_block(resolved)
+
+
+def test_declared_depth_is_read_from_shared_not_local_settings(tmp_path: Path) -> None:
+    """settings.local.json is written from the live process env by the hosted
+    overlay, so it mirrors runtime. Reading it as 'declared' would reintroduce
+    the decremented value this fix exists to look past."""
+
+    workspace = tmp_path / "workspace"
+    home = tmp_path / "home"
+    (workspace / ".claude").mkdir(parents=True)
+    home.mkdir(parents=True)
+    (workspace / ".claude" / "settings.json").write_text(
+        json.dumps({"env": {"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "3"}}), encoding="utf-8"
+    )
+    (workspace / ".claude" / "settings.local.json").write_text(
+        json.dumps({"env": {"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1"}}), encoding="utf-8"
+    )
+    resolved = resolve(env=dict(CLAUDE_ENV), workspace=workspace, home=home, root=ROOT)
+    assert resolved["subagent_spawn_depth_declared"] == 3
+
+
+def test_a_genuinely_undeclared_low_depth_is_still_a_defect(tmp_path: Path) -> None:
+    """The fix must not blanket-silence the check: with nothing declared, a live
+    depth of 1 is the only evidence there is and does block nested delegation."""
+
+    env = {**CLAUDE_ENV, "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1"}
+    resolved = _resolve(env, tmp_path)
+    assert resolved["subagent_spawn_depth_declared"] is None
+    assert any("nested delegation" in d for d in resolved["defects"])
+
+
 def test_global_subagent_model_override_is_a_defect(tmp_path: Path) -> None:
     env = {**CLAUDE_ENV, "CLAUDE_CODE_SUBAGENT_MODEL": "haiku"}
     assert any("CLAUDE_CODE_SUBAGENT_MODEL" in d for d in _resolve(env, tmp_path)["defects"])

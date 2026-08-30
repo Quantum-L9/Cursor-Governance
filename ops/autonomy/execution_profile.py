@@ -118,6 +118,42 @@ def read_setting(key: str, workspace: Path, home: Path) -> tuple[Any, str | None
     return None, None
 
 
+#: Env names the Claude Code runtime rewrites as a session nests. The live
+#: process value describes the depth REMAINING at this level, not how the
+#: surface is configured, so comparing it to a static expectation reports a
+#: permanent defect that no configuration change can clear. Mirrors
+#: verify_account_env.RUNTIME_MANAGED, which documents the observed 3 -> 1
+#: decrement within a single session and declines to report it as a deviation.
+#: Both modules must agree; a defect the operator cannot act on trains them to
+#: ignore the banner.
+RUNTIME_DECREMENTED = frozenset({"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"})
+
+
+def declared_env_int(name: str, workspace: Path, home: Path) -> int | None:
+    """Read an `env` sub-key from the scopes that DECLARE configuration.
+
+    Deliberately skips `.claude/settings.local.json`. That file is written from
+    the live process environment by the hosted-env overlay, so it mirrors
+    runtime rather than intent; reading it here would reintroduce the very
+    decremented value this function exists to look past.
+    """
+
+    for path in (workspace / ".claude" / "settings.json", home / ".claude" / "settings.json"):
+        try:
+            data = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            continue
+        if not isinstance(data, Mapping):
+            continue
+        env_block = data.get("env")
+        if isinstance(env_block, Mapping) and name in env_block:
+            try:
+                return int(str(env_block[name]).strip())
+            except (TypeError, ValueError):
+                return None
+    return None
+
+
 def _int_env(env: Mapping[str, str], name: str) -> int | None:
     try:
         return int(str(env[name]).strip())
@@ -147,7 +183,15 @@ def resolve(
     guideline, guideline_source = read_setting("workflowSizeGuideline", workspace, home)
     disable_workflows, _ = read_setting("disableWorkflows", workspace, home)
     native_limit = _int_env(env, "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS")
-    spawn_depth = _int_env(env, "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH")
+    spawn_depth_live = _int_env(env, "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH")
+    spawn_depth_declared = declared_env_int(
+        "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH", workspace, home
+    )
+    # Declared wins where it exists: a decremented live value describes this
+    # agent's remaining nesting budget, not a misconfiguration. Where nothing is
+    # declared, the live value is the only evidence there is, and a depth of 1
+    # genuinely does block nested delegation.
+    spawn_depth = spawn_depth_declared if spawn_depth_declared is not None else spawn_depth_live
     max_parallel = _int_env(env, "L9_AUTONOMY_MAX_PARALLEL")
     max_mutation_lanes = _int_env(env, "L9_AUTONOMY_MAX_MUTATION_LANES")
     subagent_model = str(env.get("CLAUDE_CODE_SUBAGENT_MODEL", "")).strip()
@@ -176,6 +220,8 @@ def resolve(
             if spawn_depth is not None
             else natives.get("CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH")
         ),
+        "subagent_spawn_depth_live": spawn_depth_live,
+        "subagent_spawn_depth_declared": spawn_depth_declared,
         "l9_max_parallel": max_parallel,
         "l9_max_mutation_lanes": max_mutation_lanes,
         "worker_target": target,
@@ -250,6 +296,17 @@ def _claude_defects(
     return defects
 
 
+
+def _depth_note(resolved: Mapping[str, Any]) -> str:
+    """Explain a live depth below the declared one without calling it a defect."""
+
+    declared = resolved.get("subagent_spawn_depth_declared")
+    live = resolved.get("subagent_spawn_depth_live")
+    if declared is None or live is None or live >= declared:
+        return ""
+    return f" (declared; runtime-decremented to {live} at this nesting level)"
+
+
 def render_block(resolved: Mapping[str, Any]) -> str:
     native = resolved["native_subagent_limit"]
     native_note = "" if resolved["native_subagent_limit_declared"] else " (Claude Code default)"
@@ -260,7 +317,7 @@ def render_block(resolved: Mapping[str, Any]) -> str:
         f"execution_profile: {resolved['execution_profile']}",
         f"concurrency_policy: {resolved['concurrency_policy']}",
         f"native_subagent_limit: {native}{native_note}",
-        f"subagent_spawn_depth: {resolved['subagent_spawn_depth']}",
+        f"subagent_spawn_depth: {resolved['subagent_spawn_depth']}{_depth_note(resolved)}",
         f"workflow_size_guideline: {resolved['workflow_size_guideline']} "
         f"({resolved['workflow_size_guideline_source']})",
         f"mutation_parallelism: {resolved['mutation_parallelism']}",
