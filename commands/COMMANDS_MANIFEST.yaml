@@ -71,11 +71,17 @@ commands:
 - slash: /refactor-sweep
   file: commands/refactor-sweep.md
   enabled: true
+- slash: /rules
+  file: commands/rules.md
+  enabled: true
 - slash: /spec
   file: commands/spec.md
   enabled: true
 - slash: /start-session
   file: commands/start-session.md
+  enabled: true
+- slash: /update-command
+  file: commands/update-command.md
   enabled: true
 - slash: /use-harvest
   file: commands/use-harvest.md
