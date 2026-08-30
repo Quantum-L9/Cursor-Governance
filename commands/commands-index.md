@@ -53,7 +53,7 @@ Examples — full list: `skills/` + `ops/generated/skill-registry.json`.
 | `l9-issue-remediation` | `/l9-issue-remediation` (Claude Code skill slash) |
 | `l9-pr-remediation` | `/l9-pr-remediation` |
 | `l9-plan` / `l9-plan-simple` | skill name or natural-language plan intent |
-| `l9-pipeline-audit` | skill name (`/plan-audit` alias retired) |
+| `l9-pipeline-audit` | skill name or `/plan-audit` (compat alias) |
 | `l9-code-analysis` | analyze / evaluate / extract_align modes in skill |
 | `l9-bounded-autonomy` | `/autonomy` retired — invoke skill + packet |
 | `l9-ynp` | skill name |

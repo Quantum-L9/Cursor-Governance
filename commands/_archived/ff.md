@@ -99,15 +99,29 @@ tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
    Opt-out: `FF_SHELF_PUBLISH=0` shelves and commits only (no `make pr`).
    Do **not** put `make pr` inside `ff.sh`. Do not scoop other untracked paths.
    Do not delete the copies in the named clone.
-3. **Post-shelf close** — in the named clone (not the shelf worktree):
+
+   Record which clones `ff.sh` synced into `FF_TARGETS` (same resolution as the
+   table above) before post-shelf — do not assume `$(pwd)`.
+3. **Post-shelf close** — on every clone `/ff` actually synced (not
+   `$(pwd)` when that is a consumer repo, and not only one clone when bare
+   `/ff` paired two):
 
    ```bash
-   bash ops/scripts/run_ff_post_shelf.sh "$(pwd)"
-   ops/scripts/verify_worktree_clean.py --workspace "$(pwd)"
+   # Resolve the same target set ff.sh used:
+   #   bare /ff     → this Cursor-Governance checkout + $HOME/.cursor-governance
+   #   /ff --clone  → working-copy only
+   #   /ff --ssot   → $HOME/.cursor-governance only
+   GOV_PY="${GOV_PY:-$HOME/.cursor-governance/.venv/bin/python}"
+   for _ff_ws in "${FF_TARGETS[@]}"; do
+     bash "$_ff_ws/ops/scripts/run_ff_post_shelf.sh" "$_ff_ws"
+     "$GOV_PY" "$_ff_ws/ops/scripts/verify_worktree_clean.py" --workspace "$_ff_ws"
+   done
    ```
 
-   For plan execution on a clean baseline after verify passes, prefer
-   `agent_worktree_start.sh` off the open-PR tip or `origin/main`.
+   `verify_worktree_clean.py` is not executable (`100644`); always invoke it
+   through the locked interpreter. For plan execution on a clean baseline
+   after verify passes, prefer `agent_worktree_start.sh` off the open-PR tip
+   or `origin/main`.
 4. Auto-chain `/ynp`.
 
 ## FORBIDDEN
