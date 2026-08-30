@@ -1,0 +1,54 @@
+meta:
+  artifact_type: claude_code_build_contract
+  id: corpus-phase5-work-context-compiler
+  target_repo: Quantum-L9/l9-cognitive-runtime
+  terminal_authority: HALT_BEFORE_MERGE
+
+mission: >
+  Implement Phase 5 WorkContextCompiler in l9-cognitive-runtime using current repository extension
+  points. Compile the minimum sufficient authoritative task context from governed Graphiti/Memory
+  retrieval and topology relations. Do not add a second memory control plane or direct Dropbox access.
+
+preflight:
+  - bind exact current main SHA
+  - read all applicable AGENTS.md, ADRs, architecture, contracts and tests
+  - locate existing CompiledTaskContext/context compilation models and reuse them where compatible
+  - locate canonical memory client/SDK boundary; never import provider-specific Graphiti models into domain logic
+  - report filetree before mutation
+
+required_behavior:
+  - resolve focal entities from objective
+  - retrieve candidates through a narrow provider-neutral port
+  - traverse only canonical dependency-bearing relations by default
+  - hydrate canonical memory records before authority/evidence decisions
+  - collapse superseded history without losing lineage
+  - preserve conflicts and unresolved material unknowns
+  - assign every candidate exactly one disposition: REQUIRED, SUPPORTING, OPTIONAL, CONFLICTING, SUPERSEDED, EXCLUDED, UNRESOLVED
+  - fail with BLOCKED_CONTEXT_BUDGET if REQUIRED plus CONFLICTING material cannot fit
+  - emit schema-valid WorkContextPacket or existing CompiledTaskContext equivalent plus exclusion ledger
+
+prohibited:
+  - direct Dropbox mutation or browsing in compiler logic
+  - direct Graphiti provider writes
+  - priority/build-wave decisions
+  - Program Execution scheduling or PR operations
+  - silent conflict resolution
+  - silent context truncation
+
+validation:
+  required:
+    - unit tests for all dispositions
+    - traversal test proving REFERENCES and DUPLICATE_OF are excluded from default dependency expansion
+    - budget fail-closed test
+    - supersession collapse test
+    - conflict preservation test
+    - provider-neutral port test
+    - repo native lint/type/test/build gates
+
+completion:
+  require:
+    - scoped diff
+    - exact commands and outputs
+    - no failing/pending required CI
+    - implementation receipt with baseline SHA and files changed
+  terminal: HALT_BEFORE_MERGE

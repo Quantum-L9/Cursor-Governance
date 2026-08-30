@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.example/schemas/program-execution-handoff/v1",
+  "title": "ProgramExecutionHandoff",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","handoff_id","build_wave_plan_id","objective","selected_waves","work_units","validation_expectations","authority_constraints","out_of_scope","reconsideration_triggers","source_graph_snapshot"],
+  "properties": {
+    "schema":{"const":"l9.program-execution-handoff/v1"},"handoff_id":{"type":"string"},"build_wave_plan_id":{"type":"string"},"objective":{"type":"string"},"selected_waves":{"type":"array","items":{"type":"string"}},"work_units":{"type":"array","items":{"type":"string"}},"validation_expectations":{"type":"array","items":{"type":"string"}},"authority_constraints":{"type":"array","items":{"type":"string"}},"unresolved_unknowns":{"type":"array","items":{"type":"string"}},"out_of_scope":{"type":"array","items":{"type":"string"}},"reconsideration_triggers":{"type":"array","items":{"type":"string"}},"source_graph_snapshot":{"type":"string"}
+  }
+}

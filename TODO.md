@@ -1,11 +1,11 @@
 ## Issue unblock (session reference)
 
-**Cluster:** Quantum-L9/Cursor-Governance#368
-**Owning fix:** this branch — append-only successor under CANONICAL_LAW §8 naming `graphiti_memory_client.py` + hydration as the live Durable-episodes interface
-**Next:** publish PR then merge (user asked issues→0). #367 Makefile targets already absent on `origin/main`.
-**Pickup:** Graphiti PICKUP written 2026-08-29
+**Cluster:** Quantum-L9/Cursor-Governance#281
+**Owning fix:** PR #412 — `merge_workspace_settings` composes a git-tracked workspace `hooks` block with the template instead of wholesale-replacing it (reconcile_claude_settings.py + regression tests)
+**Next:** remediator merge of PR #412; verify a CEG session keeps its PreToolUse guards after reconcile
+**Pickup:** Graphiti PICKUP written 2026-08-30
 
-Prior: #374 closed via PR #395. SEO-Bot #74/#75 closed via PR #76. #303 broker / #301 EXTERNAL / #302 INFRA remain.
+Prior: #374 closed via PR #395. SEO-Bot #74/#75 closed via PR #76. #303 broker / #301 EXTERNAL / #302 INFRA remain. #368 was the previous session-reference cluster.
 
 Prior cluster #171 (memory gates reporting unmeasured state) is closed: PR #264
 landed both fixes and they were re-verified against `main@498dcaa` this session.
