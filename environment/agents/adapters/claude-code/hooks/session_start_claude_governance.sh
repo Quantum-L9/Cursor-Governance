@@ -184,6 +184,11 @@ if [ "${CLAUDE_CODE_REMOTE:-}" = "true" ]; then
 fi
 
 if GOV=$(resolve_governance_dir); then
+  # shellcheck source=/dev/null
+  [ -f "$GOV/ops/scripts/lib/run_with_timeout.sh" ] && . "$GOV/ops/scripts/lib/run_with_timeout.sh"
+  if ! type run_with_timeout >/dev/null 2>&1; then
+    run_with_timeout() { shift; "$@"; }
+  fi
   LINES+=("governance SSOT: $GOV (GitHub Quantum-L9/Cursor-Governance)")
   if [ -d "$GOV/.git" ]; then
     br=$(git -C "$GOV" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")
@@ -211,10 +216,15 @@ if GOV=$(resolve_governance_dir); then
   LINES+=("authority order: CANONICAL_LAW.md > Autonomy Surface Profile > AGENTS.md > skills > agent-invented contracts")
   if [ -d "$GOV/skills" ]; then
     n=$(find "$GOV/skills" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+    # -L is load-bearing: every entry under .claude/skills is a SYMLINK to a
+    # directory in the governance clone. Without -L, find refuses to descend and
+    # the count reports the handful of real directories -- it printed
+    # "skills loadable: 1" against 54 resolvable skills, which is precisely the
+    # line an operator reads to conclude that skills failed to load.
     loadable=0
     for d in "$WORKSPACE/.claude/skills" "$HOME/.claude/skills"; do
       if [ -d "$d" ]; then
-        c=$(find "$d" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+        c=$(find -L "$d" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
         loadable=$((loadable + c))
       fi
     done
@@ -230,7 +240,11 @@ if GOV=$(resolve_governance_dir); then
     if [ -n "$ws_abs" ] && [ -n "$gov_abs" ] && [ "$ws_abs" != "$gov_abs" ]; then
       ws_sha=$(git -C "$ws_root" rev-parse --short HEAD 2>/dev/null || echo "?")
       gov_sha=$(git -C "$GOV" rev-parse --short HEAD 2>/dev/null || echo "?")
-      LINES+=("two-clone: workspace $ws_abs @$ws_sha")
+      if [ -f "$ws_abs/CANONICAL_LAW.md" ] && [ -f "$ws_abs/AGENTS.md" ]; then
+        LINES+=("two-clone: workspace $ws_abs @$ws_sha (intentional consumer checkout of Cursor-Governance)")
+      else
+        LINES+=("two-clone: workspace $ws_abs @$ws_sha (leftover or unknown second checkout)")
+      fi
       LINES+=("two-clone: live SSOT $gov_abs @$gov_sha")
       LINES+=("two-clone: rules resolve from live SSOT (not the workspace clone)")
     fi
@@ -372,11 +386,15 @@ except Exception:
       if [ ! -f "$marker" ] && [ -f "$installer" ]; then
         mkdir -p "$HOME/.l9/claude"
         LINES+=("bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once")
-        if timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" \
+        if run_with_timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" \
           env L9_BOOTSTRAP_LOG_PATH="$HOME/.l9/claude/bootstrap-repair-${revision}.log" \
           bash "$installer" \
           >"$HOME/.l9/claude/bootstrap-repair-${revision}.log" 2>&1; then
           : >"$marker"
+        else
+          _repair_rc=$?
+          _repair_how="$(head -n 3 "$HOME/.l9/claude/bootstrap-repair-${revision}.log" | tr '\n' ' ')"
+          LINES+=("bootstrap repair: FAILED rc=${_repair_rc} — ${_repair_how:-no log bytes}")
         fi
       fi
       ;;
@@ -395,7 +413,7 @@ except Exception:
     prefix="STALE: "
     LINES+=("STALE: bootstrap receipt workspace $wired != session $WORKSPACE")
   fi
-  block="$("$py" "$reader" --read 2>/dev/null || true)"
+  block="$("$py" "$reader" --read --reprobe 2>/dev/null || true)"
   if [ -n "$block" ]; then
     LINES+=("--- L9 Claude environment ---")
     while IFS= read -r line || [ -n "$line" ]; do
@@ -443,6 +461,7 @@ emit_account_drift() {
 # Capability broker retired 2026-08-29 (never shipped; not probed).
 emit_capability_readiness() {
   local py="$1"
+  type run_with_timeout >/dev/null 2>&1 || run_with_timeout() { shift; "$@"; }
   local receipt="$HOME/.l9/claude/readiness-receipt.json"
   [ -f "$receipt" ] || return 0
   [ -n "$py" ] && command -v "$py" >/dev/null 2>&1 || return 0
@@ -469,7 +488,21 @@ print("primary_blocker=" + str(notes.get("Graphiti_authenticated_health") or "no
   while IFS= read -r line || [ -n "$line" ]; do
     [ -n "$line" ] && LINES+=("$line")
   done <<< "$parsed"
-  LINES+=("mcp_configuration=.mcp.json is a projection of mcp.template.json (single MCP authority)")
+  # .mcp.json is the single authority over the servers GOVERNANCE configures --
+  # not over the session's MCP surface. Hosted surfaces inject servers (github,
+  # and others) that governance neither configures nor gates, so the unqualified
+  # "single MCP authority" claim was false wherever it mattered.
+  mcp_managed="$(run_with_timeout 10 python3 -c '
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        servers = sorted((json.load(fh).get("mcpServers") or {}))
+except Exception:
+    sys.exit(1)
+print(", ".join(servers) if servers else "none")
+' "$WORKSPACE/.mcp.json" 2>/dev/null || echo "unreadable")"
+  LINES+=("mcp_configuration=.mcp.json is a projection of mcp.template.json; it is the single authority over GOVERNANCE-MANAGED servers only [$mcp_managed]")
+  LINES+=("mcp_platform_injected=this surface may also carry platform-injected servers that governance does not configure or gate -- read the live tool surface, not this file, for the full set")
 }
 
 # --- Final machine-readable readiness receipt (Phase 7) ---------------------
@@ -506,6 +539,15 @@ if [ -f "$skill_log" ]; then
   LINES+=("skill-usage: $skill_log ($skill_n entries)")
 else
   LINES+=("skill-usage: $skill_log (absent — logger never wrote)")
+fi
+
+if [ -f "$GOV/ops/autonomy/breakglass_receipt.py" ]; then
+  LINES+=("$("$PY" "$GOV/ops/autonomy/breakglass_receipt.py" --status 2>/dev/null || echo "publish-path grant: unread")")
+fi
+if ! "$PY" -c 'import socket;s=socket.socket();s.settimeout(0.3);s.connect(("127.0.0.1",7687));s.close()' 2>/dev/null; then
+  LINES+=("itest: unavailable — neo4j absent or 127.0.0.1:7687 refused")
+else
+  LINES+=("itest: neo4j 127.0.0.1:7687 reachable — service-backed integration tests may run")
 fi
 
 CONTEXT=$(printf '%s\n' "${LINES[@]}")

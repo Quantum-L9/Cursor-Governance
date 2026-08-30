@@ -61,6 +61,25 @@ DELIBERATELY_ABSENT = frozenset(
     }
 )
 
+#: Keys whose drift widens authority rather than just changing a display default.
+AUTHORITY_WIDENING = frozenset(
+    {
+        "L9_AUTONOMY_ENABLED",
+        "L9_AUTONOMY_AUTHORITY",
+        "L9_AUTONOMY_MATURITY",
+        "L9_L4_LOCAL_AUTONOMY",
+        "L9_AUTONOMY_MAX_PARALLEL",
+        "L9_AUTONOMY_MAX_MUTATION_LANES",
+        "L9_GOVERNANCE_SURFACE",
+        "L9_PUBLISH_PATH_OVERRIDE",
+        "L9_MERGE_AUTHORIZED",
+        "L9_WORKTREE_ISOLATION",
+        "L9_AUTONOMY_STATE_DIR",
+    }
+)
+
+ENV_EXAMPLE_REL = "environment/agents/adapters/claude-code/web/environment.env.example"
+
 #: Variables the RUNTIME owns after the account field sets them. The harness
 #: decrements CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH per nesting level — observed
 #: going 3 -> 1 within one session as subagents nested — so comparing it to a
@@ -205,14 +224,17 @@ def compare(expected: dict[str, str], env: dict[str, str] | None = None) -> list
     for key, want in sorted(expected.items()):
         if key in RUNTIME_MANAGED:
             continue
+        klass = "authority_widening" if key in AUTHORITY_WIDENING else "cosmetic"
+        row = {
+            "key": key,
+            "expected": want,
+            "source": ENV_EXAMPLE_REL,
+            "class": klass,
+        }
         if key not in live:
-            deviations.append(
-                {"key": key, "expected": want, "actual": "<missing>", "kind": "missing"}
-            )
+            deviations.append({**row, "actual": "<missing>", "kind": "missing"})
         elif live[key] != want:
-            deviations.append(
-                {"key": key, "expected": want, "actual": live[key], "kind": "mismatch"}
-            )
+            deviations.append({**row, "actual": live[key], "kind": "mismatch"})
     return deviations
 
 
@@ -475,7 +497,8 @@ def main(argv: list[str] | None = None) -> int:
         key = row["key"]
         print(
             f"    {key}: expected {safe_value(key, row['expected'])!r}, "
-            f"got {safe_value(key, row['actual'])!r}"
+            f"got {safe_value(key, row['actual'])!r} "
+            f"(source {row.get('source', ENV_EXAMPLE_REL)}; class {row.get('class', 'cosmetic')})"
         )
     print(
         "\n  Repair: python3 environment/agents/adapters/claude-code/verify_account_env.py"

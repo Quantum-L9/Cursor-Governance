@@ -1,0 +1,11 @@
+{
+  "$schema":"https://json-schema.org/draft/2020-12/schema",
+  "$id":"https://quantum-l9.example/schemas/work-unit/v1",
+  "title":"WorkUnit",
+  "type":"object",
+  "additionalProperties":false,
+  "required":["schema","work_unit_id","title","objective","artifact_ids","evidence_refs","current_state","prerequisites","dependents","blockers","capabilities_unlocked","readiness","effort","risk","leverage","unknowns","completion_evidence"],
+  "properties":{
+    "schema":{"const":"l9.work-unit/v1"},"work_unit_id":{"type":"string"},"title":{"type":"string"},"objective":{"type":"string"},"artifact_ids":{"type":"array","items":{"type":"string"}},"evidence_refs":{"type":"array","items":{"type":"string"}},"current_state":{"type":"string"},"prerequisites":{"type":"array","items":{"type":"string"}},"dependents":{"type":"array","items":{"type":"string"}},"blockers":{"type":"array","items":{"type":"string"}},"capabilities_unlocked":{"type":"array","items":{"type":"string"}},"readiness":{"type":"object"},"effort":{"type":"object"},"risk":{"type":"object"},"leverage":{"type":"object"},"priority_class":{"enum":["FOUNDATIONAL_UNLOCK","QUICK_HIGH_LEVERAGE","DEPENDENCY_REQUIRED","READY_VALUE","STRATEGIC_BET","WAITING","LOW_RETURN","OBSOLETE","UNKNOWN"]},"unknowns":{"type":"array","items":{"type":"string"}},"completion_evidence":{"type":"array","items":{"type":"string"}}
+  }
+}

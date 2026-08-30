@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quantum-l9.example/schemas/build-wave-plan/v1",
+  "title": "BuildWavePlan",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema","plan_id","objective","source_graph_snapshot","work_units","waves","deferred","reconsideration_triggers"],
+  "properties": {
+    "schema": {"const": "l9.build-wave-plan/v1"},
+    "plan_id": {"type": "string"},
+    "objective": {"type": "string"},
+    "source_graph_snapshot": {"type": "string"},
+    "work_units": {"type": "array", "items": {"type": "string"}},
+    "waves": {"type": "array", "items": {"type": "object", "required": ["wave_id","purpose","requires","parallel_groups","expected_unlocks"], "additionalProperties": false, "properties": {"wave_id":{"type":"string"},"purpose":{"type":"string"},"requires":{"type":"array","items":{"type":"string"}},"parallel_groups":{"type":"array","items":{"type":"array","items":{"type":"string"}}},"expected_unlocks":{"type":"array","items":{"type":"string"}}}}},
+    "deferred": {"type":"array","items":{"type":"object","required":["work_unit_id","reason"],"properties":{"work_unit_id":{"type":"string"},"reason":{"type":"string"}},"additionalProperties":false}},
+    "reconsideration_triggers": {"type":"array","items":{"type":"string"}}
+  }
+}

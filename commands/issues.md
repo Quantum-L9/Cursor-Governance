@@ -33,8 +33,10 @@ Cursor: this command or the skill name; both load the same SSOT pack.
    Close phantoms. Remediate only `exists`.
 5. Land each fix on the matching open PR, else a new stacked PR on the newest
    open PR (`PR_STACK=auto` / `PR_REMEDIATE=0 make pr`).
-6. Close resolved issues (`scripts/close_resolved_issue.py`) when the fix is
-   on a PR. `status=fixed` must not stay OPEN.
+6. Close resolved issues **in the same turn**
+   (`scripts/close_resolved_issue.py` or `gh issue close`) when the fix is
+   on a PR **or** verify said already-fixed / phantom. `status=fixed` must
+   not stay OPEN. Do not defer close to merge or a later session.
 7. HUMAN/ARCHITECTURE leftover → recommended-A multiple-choice, then resume.
 8. Re-count open issues. Invoke `/l9-pr-remediation` **only if**
    `open_issues == 0`:

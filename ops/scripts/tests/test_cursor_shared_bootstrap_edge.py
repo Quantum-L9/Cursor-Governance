@@ -56,6 +56,43 @@ class CursorSharedBootstrapEdgeTests(unittest.TestCase):
             + ", ".join(leaked),
         )
 
+    def test_cursor_wire_path_does_not_invoke_claude_projection(self) -> None:
+        setup = REPO / "ops" / "scripts" / "setup_workspace_symlinks.sh"
+        text = setup.read_text(encoding="utf-8")
+        self.assertNotIn("claude_projection.py --root", text)
+        self.assertNotIn("claude_projection.py", text)
+        hook = _live_path(HOOK.read_text(encoding="utf-8"))
+        self.assertNotIn("L9_CLAUDE_PROJECTION=1", hook)
+
+    def test_hook_reporter_resolve_prefers_worktree_over_gc(self) -> None:
+        live = _live_path(HOOK.read_text(encoding="utf-8"))
+        override = live.index("L9_SESSION_RUNTIME_REPORT")
+        worktree = live.index("CURSOR_PROJECT_DIR/ops/scripts/session_start_runtime_report.py")
+        gc = live.index("$GC/ops/scripts/session_start_runtime_report.py")
+        self.assertLess(override, worktree)
+        self.assertLess(worktree, gc)
+
+    def test_hook_drops_fault_slogans(self) -> None:
+        live = _live_path(HOOK.read_text(encoding="utf-8"))
+        for slogan in (
+            "no publish-path breakglass",
+            "itest: unavailable — neo4j absent",
+            "GRANT_NOTE",
+            "ITEST_NOTE",
+            "BOOTSTRAP_NOTE",
+        ):
+            self.assertNotIn(slogan, live)
+
+    def test_hook_emits_single_graphiti_hydrate_heading(self) -> None:
+        live = _live_path(HOOK.read_text(encoding="utf-8"))
+        self.assertIn("HYDRATE_BLOCK", live)
+        marker = 'COMBINED="$(cat <<EOF'
+        idx = live.rfind(marker)
+        self.assertGreaterEqual(idx, 0)
+        combined = live[idx:]
+        self.assertIn("${HYDRATE_BLOCK}", combined)
+        self.assertNotIn("### Graphiti hydrate\n${HYDRATE_MD}", combined)
+
 
 if __name__ == "__main__":
     unittest.main()

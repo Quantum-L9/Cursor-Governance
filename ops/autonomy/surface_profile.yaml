@@ -136,6 +136,13 @@ pr_stacking:
     auto_stack_env: PR_STACK # auto: start on the unique open-PR tip; PR_STACK= keeps main
     gate_resolves_tip: true # pr-preflight / pr-check / open_pr bind resolve_stack_tip.py when PR_STACK=auto
     gate: ops/scripts/pr_overlap_check.py
+  # GITHUB_REST_ROUTE_V1 — same openclaw PAT; not a second secret.
+  github_rest:
+    pat_ref: openclaw-igorbot/github#token
+    sanctioned_routes:
+      - gh
+      - gh api # REST fallback when GraphQL is 403; same token
+    second_pat: forbidden
   phases:
     executing: deny_remote
     kernels_recorded: deny_remote

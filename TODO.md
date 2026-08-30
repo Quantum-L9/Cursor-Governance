@@ -1,11 +1,20 @@
 ## Issue unblock (session reference)
 
-**Cluster:** Quantum-L9/Cursor-Governance#368
-**Owning fix:** this branch — append-only successor under CANONICAL_LAW §8 naming `graphiti_memory_client.py` + hydration as the live Durable-episodes interface
-**Next:** publish PR then merge (user asked issues→0). #367 Makefile targets already absent on `origin/main`.
-**Pickup:** Graphiti PICKUP written 2026-08-29
+**Cluster:** Quantum-L9/Cursor-Governance#336
+**Owning fix:** allowlisted CLI diagnostics in claude-code excerpts (this branch)
+**Next:** land stacked PR then r9 #184
+**Pickup:** Graphiti PICKUP written 2026-08-30
 
-Prior: #374 closed via PR #395. SEO-Bot #74/#75 closed via PR #76. #303 broker / #301 EXTERNAL / #302 INFRA remain.
+## Issue unblock (session reference)
+
+**Cluster:** CEG#139 closed already-fixed + skill close-now v1.3.0
+**Owning fix:** CEG#139 closed 2026-08-30; skill PR stacked on #415
+**Next:** CEG#138 / PR 248 then remaining HUMAN issues; do not chain /l9-pr-remediation
+**Pickup:** Graphiti PICKUP written 2026-08-30
+
+Prior: #281 / PR #412.
+
+Prior: #374 closed via PR #395. SEO-Bot #74/#75 closed via PR #76. #303 broker / #301 EXTERNAL / #302 INFRA remain. #368 was the previous session-reference cluster.
 
 Prior cluster #171 (memory gates reporting unmeasured state) is closed: PR #264
 landed both fixes and they were re-verified against `main@498dcaa` this session.

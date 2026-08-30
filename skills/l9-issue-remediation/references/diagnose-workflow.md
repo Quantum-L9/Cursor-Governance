@@ -6,8 +6,8 @@ role: diagnose_workflow
 tags: [issues, diagnose, fleet, blockers, readiness]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-08-29
+version: 1.2.0
+updated: 2026-08-30
 /L9_META -->
 
 # Diagnose Workflow (auditor)
@@ -61,11 +61,13 @@ python3 skills/l9-issue-remediation/scripts/cluster_rank.py --issues issues.json
 5. **Classify (read-only)** — ownership guess only; do not mutate code. Load
    [ownership-boundary.md](ownership-boundary.md) + [finding-classifier.md](finding-classifier.md).
 
-6. **Already-resolved / phantom close** — if a linked PR is merged, the
-   defect is gone, or verify said `not-reproducible` / `does-not-exist`,
-   run `scripts/close_resolved_issue.py` with `--merged-pr`, `--commit`,
-   or `--proof`. Still **never** chain `/l9-pr-remediation`. Confirm the
-   gate:
+6. **Already-resolved / phantom close (same turn)** — if a linked PR is
+   merged, the defect is gone, or verify said `already-fixed` /
+   `not-reproducible` / `does-not-exist`, run
+   `scripts/close_resolved_issue.py` with `--merged-pr`, `--commit`, or
+   `--proof` **before** the Diagnose verdict. Leaving those issues OPEN
+   is a skill failure. Still **never** chain `/l9-pr-remediation`. Confirm
+   the gate:
 
 ```bash
 python3 skills/l9-issue-remediation/scripts/open_issues_gate.py --intent diagnose --issues issues.json

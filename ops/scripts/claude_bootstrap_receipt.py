@@ -214,6 +214,28 @@ def _first_non_ready(components: dict[str, Any], level: str) -> str:
     return f"{level.lower()}: {', '.join(named)}" if named else level.lower()
 
 
+def reprobe_degraded(result: dict[str, Any]) -> dict[str, Any]:
+    """Fail-soft: attach a reason and log path per non-READY component.
+
+    Never mutates the on-disk receipt. SessionStart may call this after
+    ``read`` so a coarse DEGRADED verdict is diagnosable without blocking boot.
+    """
+    reasons = dict(result.get("reasons") or {})
+    log_path = str(result.get("log_path") or "") or str(
+        Path.home() / ".l9" / "claude" / "bootstrap.log"
+    )
+    result["log_path"] = log_path
+    for key, value in (result.get("components") or {}).items():
+        if value in {"READY", ""}:
+            continue
+        if key not in reasons or not reasons[key]:
+            reasons[key] = (
+                f"{value}: last recorded state; SessionStart re-probe is fail-soft (see {log_path})"
+            )
+    result["reasons"] = reasons
+    return result
+
+
 def read(
     path: Path | None = None,
     *,
@@ -250,9 +272,16 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--path", default="")
     parser.add_argument("--json", action="store_true")
+    parser.add_argument(
+        "--reprobe",
+        action="store_true",
+        help="fail-soft attach per-component reason + log path for non-READY keys",
+    )
     args = parser.parse_args(argv)
 
     result = read(Path(args.path) if args.path else None)
+    if args.reprobe:
+        result = reprobe_degraded(result)
     if args.json:
         print(json.dumps(result, indent=2, sort_keys=True))
     else:

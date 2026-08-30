@@ -88,6 +88,7 @@ def _post_comment(owner: str, repo: str, number: int, body: str, token: str) -> 
     request = urllib.request.Request(url, data=payload, method="POST")
     request.add_header("Accept", "application/vnd.github+json")
     request.add_header("X-GitHub-Api-Version", API_VERSION)
+    request.add_header("User-Agent", "Quantum-L9-l9-issue-remediation")
     request.add_header("Authorization", f"Bearer {token}")
     request.add_header("Content-Type", "application/json")
     try:
