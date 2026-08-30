@@ -1,0 +1,13 @@
+schema: canonical.schema.feature_tree.v1
+program_id: program-execution-control-plane
+stack_base: main
+nodes:
+  - id: PE-010
+    title: Foundation
+    depends_on: []
+    branch: feat/program-execution-foundation
+    base: main
+    contract: reports/2026-08-20/contracts/PE-010.contract.md
+    file_scope: [tools/check_feature_tree.py]
+    gates: [feature-tree-gate, agent-git-guard]
+    state: planned

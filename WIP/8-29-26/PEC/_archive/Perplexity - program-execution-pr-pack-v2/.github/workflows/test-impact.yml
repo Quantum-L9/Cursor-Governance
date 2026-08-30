@@ -1,0 +1,24 @@
+name: test-impact
+on:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  select-and-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml pytest
+      - id: diff
+        run: |
+          git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+          echo "files=$(git diff --name-only origin/${{ github.event.pull_request.base.ref }}...HEAD | tr '\n' ' ')" >> "$GITHUB_OUTPUT"
+      - run: |
+          MAP=reports/latest/test_impact_map.v1.yaml
+          if [ -f "$MAP" ]; then python tools/select_impacted_tests.py --impact-map "$MAP" --changed-files ${{ steps.diff.outputs.files }} | tee selection.json
+          else echo '{"fallback_full_suite": true, "reason": "no impact map committed yet"}' | tee selection.json; fi
+      - uses: actions/upload-artifact@v4
+        with: { name: test-impact-selection, path: selection.json }

@@ -1,0 +1,4 @@
+attestation:
+  predicate:
+    source_sha: abc123
+    workflow_ref: .github/workflows/artifact-provenance.yml
