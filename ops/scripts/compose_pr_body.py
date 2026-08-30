@@ -20,9 +20,14 @@ SCHEMA = "l9.pr_body_completion.v1"
 UNMEASURED = "not measured by open_pr_after_gate.sh — do not treat as verified"
 PROTECTED_STAMP = "<!-- L9_PROTECTED_ROOT_PR -->"
 NA = "n/a — not this change"
-DELETION_RE = re.compile(
-    r"ALLOW-ROOT-DELETION:\s*(?P<path>\S+?)\s*(?:—|-)\s+(?P<reason>\S.*)"
+FIX_PLACEHOLDER = (
+    "<!-- What you changed to make the problem above go away. "
+    "Note alternatives you rejected and why. -->"
 )
+REVIEWER_PLACEHOLDER = (
+    "<!-- Where to look hardest. Trade-offs accepted. Deferred follow-ups, with issue links. -->"
+)
+DELETION_RE = re.compile(r"ALLOW-ROOT-DELETION:\s*(?P<path>\S+?)\s*(?:—|-)\s+(?P<reason>\S.*)")
 TYPE_LABELS = (
     "Bug fix",
     "Feature / enhancement",
@@ -173,13 +178,9 @@ def infer_type_of_change(facts: MechanicalFacts) -> str:
     paths = _changed_paths(facts)
     if facts.deletion_markers:
         return "Breaking change"
-    if paths and all(
-        path.startswith(DOCS_PREFIXES) or path.startswith("docs/") for path in paths
-    ):
+    if paths and all(path.startswith(DOCS_PREFIXES) or path.startswith("docs/") for path in paths):
         return "Documentation"
-    if paths and all(
-        path.startswith(GOV_PREFIXES) or path.startswith("docs/") for path in paths
-    ):
+    if paths and all(path.startswith(GOV_PREFIXES) or path.startswith("docs/") for path in paths):
         return "CI / governance change"
     return "Feature / enhancement"
 
@@ -431,11 +432,7 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     text = re.sub(r"Closes #(?!\d)", f"Closes {closes}", text, count=1)
     text = _fill_type_of_change(text, facts)
     if "## Fix" in text:
-        text = text.replace(
-            "<!-- What you changed to make the problem above go away. Note alternatives you rejected and why. -->",
-            subject,
-            1,
-        )
+        text = text.replace(FIX_PLACEHOLDER, subject, 1)
         text = text.replace("<!-- What you changed -->", subject, 1)
     text = _fill_risk(text, facts)
     text = re.sub(r"(?m)^Rollback:\s*$", "Rollback: revert this PR", text, count=1)
@@ -461,7 +458,7 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     text = _fill_gates(text, facts)
     if "## Reviewer focus" in text:
         text = text.replace(
-            "<!-- Where to look hardest. Trade-offs accepted. Deferred follow-ups, with issue links. -->",
+            REVIEWER_PLACEHOLDER,
             "See Changes by intent and Protected-root (if any additive_only path).",
             1,
         )

@@ -128,10 +128,14 @@ class ComposePrBodyTests(unittest.TestCase):
         self.assertIn("- [x] `make pr` local gate receipt present", result.body)
         self.assertIn("- [x] L4 release receipt present", result.body)
         self.assertIn(f"- [ ] CI green — {UNMEASURED}", result.body)
-        self.assertIn("- [x] Medium — touches shared code, config, or a public interface", result.body)
+        self.assertIn(
+            "- [x] Medium — touches shared code, config, or a public interface", result.body
+        )
         self.assertIn("- [x] CI / governance change", result.body)
         self.assertIn("Rollback: revert this PR", result.body)
-        self.assertIn("`ops/scripts/open_pr_after_gate.sh` — fix: fill PR body from receipts", result.body)
+        self.assertIn(
+            "`ops/scripts/open_pr_after_gate.sh` — fix: fill PR body from receipts", result.body
+        )
         self.assertIn("- N/A — no additive_only root files", result.body)
         self.assertEqual(result.needs_completion, [])
         self.assertIn("commits", result.mechanical_filled)
