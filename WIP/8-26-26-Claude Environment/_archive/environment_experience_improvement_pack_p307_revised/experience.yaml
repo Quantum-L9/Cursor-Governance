@@ -1,0 +1,102 @@
+schema: l9.environment_experience.canonical/v1
+generated_at: '2026-08-25T02:03:03Z'
+family_id: environment_experience_improvement_pack
+canonical_pack_version: 1.0.0-canonical.1
+corpus:
+  accessible_unique_versions: 9
+  duplicate_copies: 2
+  source_objects: 93
+interpretation: The family is a set of parallel environment-experience observations across sessions/repos, not a simple linear
+  document revision chain. Recurrent concepts are merged; context-specific findings remain distinct.
+dominant_cross_session_patterns:
+- id: XP-01
+  pattern: Capability truth is too coarse
+  evidence:
+  - CF-001
+  - CF-006
+  - CF-014
+  - CR-002
+  - CR-012
+  implication: Readiness must be per transport/capability, not a one-word healthy/degraded state.
+- id: XP-02
+  pattern: Bootstrap lacks an ownership boundary
+  evidence:
+  - CF-002
+  - CR-001
+  - CR-005
+  - CR-013
+  implication: Projection, receipts, and stop hooks need explicit ownership/freshness semantics.
+- id: XP-03
+  pattern: Environment authority is fragmented
+  evidence:
+  - CF-003
+  - CF-010
+  - CR-008
+  - CR-014
+  implication: Interpreter, variables, and authority-sensitive settings need one traceable source/resolution path.
+- id: XP-04
+  pattern: Governance contracts can name unavailable mechanisms
+  evidence:
+  - CF-011
+  - CR-003
+  - CR-012
+  implication: Rules should bind to capability/consumer contracts and surface unsupported mechanisms before execution.
+- id: XP-05
+  pattern: Session continuity evidence is weak
+  evidence:
+  - CF-005
+  - CR-004
+  - CR-011
+  implication: Memory and notifications need task-bearing, freshness-stamped state rather than generic resume cues.
+- id: XP-06
+  pattern: Safety gates are valuable but ergonomically opaque
+  evidence:
+  - CF-009
+  - CR-009
+  implication: Preserve fail-closed semantics while improving diagnostics, literal scoped actions, and authorized escape reachability.
+current_forward_work:
+- CI-002
+- CI-004
+- CI-006
+- CI-007
+- CI-008
+- CI-009
+- CI-010
+- CI-001
+- CI-003
+- CI-005
+- CI-012
+- CI-013
+- CI-015
+- CI-016
+- CI-017
+- CI-018
+- CI-023
+- CI-011
+- CI-014
+- CI-019
+- CI-021
+- CI-022
+- CI-024
+- CI-025
+- CI-028
+- CI-020
+- CI-026
+- CI-027
+- CI-029
+- CI-030
+- CI-031
+- CI-032
+- CI-100
+- CI-101
+- CI-102
+completed_or_historical_improvements:
+- CI-033
+open_decisions:
+- OD-001
+- OD-002
+- OD-003
+- OD-004
+- OD-005
+- OD-006
+- OD-007

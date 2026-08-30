@@ -2,7 +2,7 @@
 name: l9-plan-simple
 description: create a machine-validated cursor .plan.md from the shared executable-plan
   template and execute it with the build button, then open a stacked PR. never branch
-  off main when an open PR exists. always make pr after build and display the PR URL.
+  off main when an open PR exists. always publish via the stacked path after build and display the PR URL.
   use when scope is unclear, requirements need decomposition, cursor plan mode is on,
   or the next step should be planned before code changes. do not use when the user
   asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.
@@ -29,7 +29,7 @@ disable-model-invocation: true
 
 ## Purpose
 
-Produce a deep, machine-validated plan from the **same** first-class executable-plan template as `l9-plan`, then execute it with the **Build** button, then **always** publish with `PR_STACK=auto PR_REMEDIATE=0 make pr`.
+Produce a deep, machine-validated plan from the **same** first-class executable-plan template as `l9-plan`, then execute it with the **Build** button, then **always** publish with `PR_STACK=auto PR_REMEDIATE=0 l9 pr`.
 
 This skill does **not** wire the delivered plan to Program Execution. Do not run `make campaign`. Do not admit a Program Lock. Do not write `Lock: origin/main = <sha>`. Do not require a new worktree from tip as a **planning** requirement.
 
@@ -94,7 +94,7 @@ python3 ../l9-plan/scripts/render_plan_pe_autonomy.py ../l9-plan/fixtures/plan_p
 python3 ../l9-plan/scripts/render_plan_pe_autonomy.py ../l9-plan/fixtures/plan_pass.json --execute-via=cursor-build | grep -q "PR_STACK=auto"
 ```
 
-A delivered plan is incomplete unless `validate_plan_document.py` PASSes **and** the `.plan.md` has every required template section with **Execute via Cursor Build** (not `make campaign`, not Program Lock) **and** the stacked-`make pr` / PR URL contract.
+A delivered plan is incomplete unless `validate_plan_document.py` PASSes **and** the `.plan.md` has every required template section with **Execute via Cursor Build** (not `make campaign`, not Program Lock) **and** the stacked-PR / PR URL contract.
 
 ## Failure Handling
 
@@ -103,4 +103,4 @@ A delivered plan is incomplete unless `validate_plan_document.py` PASSes **and**
 - User asks for PE / campaign / `make campaign` → hand off to `l9-plan`; do not invent a PE lock here.
 - KERNEL / PE overlay landing → hand off to `l9-plan`.
 - User presses Build → if any open PR exists, execute on the unique chain tip (never `origin/main`); after todos `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the **PR URL**; do not run `make campaign`.
-- Build without `make pr`, or a finish reply without the opened PR URL → incomplete.
+- Build without the stacked publish, or a finish reply without the opened PR URL → incomplete.

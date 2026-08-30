@@ -114,7 +114,9 @@ DENY_MCP_TOOLS = {
 # (force-push, hard-reset, protected-branch rewrite).
 #
 # Still workflow-denied at every phase: `make push`, MCP create_pull_request /
-# push_files. Breakglass for those: L9_PUBLISH_PATH_OVERRIDE=<reason>.
+# push_files. Breakglass for those is a scoped expiring receipt
+# (ops/autonomy/breakglass_receipt.py). A standing L9_PUBLISH_PATH_OVERRIDE
+# string is inert.
 # ---------------------------------------------------------------------------
 RAW_PUBLISH_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"\bgit\s+push\b", re.I), "git push"),
@@ -191,7 +193,23 @@ PUBLISH_PATH_OVERRIDE_ENV = "L9_PUBLISH_PATH_OVERRIDE"
 
 
 def _publish_path_override() -> str:
-    return os.environ.get(PUBLISH_PATH_OVERRIDE_ENV, "").strip()
+    """Return the grant reason only when a valid unexpired receipt is in force.
+
+    The standing environment string is deliberately ignored: a session-wide
+    paste must not widen the publish plane.
+    """
+    try:
+        from breakglass_receipt import active_publish_path_reason
+    except ImportError:  # pragma: no cover - package import
+        from ops.autonomy.breakglass_receipt import active_publish_path_reason
+    return active_publish_path_reason()
+
+
+def _compound_stage_note(command: str) -> str:
+    """Name that a compound command stopped before later stages ran."""
+    if "&&" not in command and ";" not in command:
+        return ""
+    return " Refused stage of a compound command; later stages did not run."
 
 
 def _publish_deny_reason(what: str) -> str:
@@ -200,7 +218,9 @@ def _publish_deny_reason(what: str) -> str:
         "Use `PR_REMEDIATE=0 make pr`, which runs the Makefile checkers and then "
         "pushes and opens the PR via ops/scripts/open_pr_after_gate.sh. "
         "Being L4 release_authorized does not permit a raw push — L4 governs WHEN, "
-        f"this governs HOW. Human/ops override: {PUBLISH_PATH_OVERRIDE_ENV}=<reason>."
+        "this governs HOW. Human/ops override: a scoped expiring receipt via "
+        "ops/autonomy/breakglass_receipt.py "
+        f"(standing {PUBLISH_PATH_OVERRIDE_ENV} is inert)."
     )
 
 
@@ -491,6 +511,18 @@ def _repo_root_from_path(path: str) -> Path | None:
 
 
 def evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str | None:
+    """Return deny reason or None if allowed. Compound commands name the stop."""
+    reason = _evaluate(tool_name, tool_input, root=root)
+    if not reason:
+        return None
+    command = str(tool_input.get("command") or tool_input.get("cmd") or "")
+    note = _compound_stage_note(command)
+    if note and note not in reason:
+        return reason + note
+    return reason
+
+
+def _evaluate(tool_name: str, tool_input: dict[str, Any], *, root: Path) -> str | None:
     """Return deny reason or None if allowed.
 
     Workspace resolution: when the command explicitly names repo paths

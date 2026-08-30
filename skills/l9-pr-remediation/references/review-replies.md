@@ -158,7 +158,8 @@ Single-thread fallback (one thread only, or the helper is unavailable):
 ### Reply to inline (diff) comments
 
 ```bash
-gh api --timeout 30s /repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
+# gh has no --timeout; bound the spawn externally (same 30s as reply_threads.py).
+timeout 30s gh api /repos/{owner}/{repo}/pulls/{pr_number}/comments/{comment_id}/replies \
   -f body="{canonical_reply}"
 ```
 
@@ -171,7 +172,7 @@ gh pr comment {pr_number} --repo {owner}/{repo} --body "{reply}"
 ### Resolve a thread (GraphQL)
 
 ```bash
-gh api --timeout 30s graphql -f query='
+timeout 30s gh api graphql -f query='
   mutation($threadId: ID!) {
     resolveReviewThread(input: {threadId: $threadId}) {
       thread { isResolved }

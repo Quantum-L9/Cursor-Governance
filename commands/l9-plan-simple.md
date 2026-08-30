@@ -9,7 +9,7 @@ auto_chain: ynp
 
 ## WHAT IT DOES
 
-Create a structured plan before implementation using the **same** first-class template as `/l9-plan`, then execute it with the **Build** button and **always** publish a stacked PR (`PR_STACK=auto PR_REMEDIATE=0 make pr`). Display the opened PR URL.
+Create a structured plan before implementation using the **same** first-class template as `/l9-plan`, then execute it with the **Build** button and **always** publish a stacked PR (`PR_STACK=auto PR_REMEDIATE=0 l9 pr`). Display the opened PR URL.
 
 Delegates to skill **`l9-plan-simple`**:
 
@@ -31,7 +31,7 @@ Follow skill `l9-plan-simple`. Required deliverables:
 1. Validated `PLAN_DOCUMENT` JSON
 2. Cursor `.plan.md` under `.cursor/plans/<slug>_<8hex>.plan.md` from the shared template
 3. Frontmatter `kind: simple`, `execute_via: cursor-build`
-4. **Execute via Cursor Build** (PE execute block swapped): stacked tip if any open PR exists, then `make pr`, display the PR URL
+4. **Execute via Cursor Build** (PE execute block swapped): stacked tip if any open PR exists, then publish via the stacked path, display the PR URL
 
 ### Project command
 

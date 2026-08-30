@@ -1,0 +1,70 @@
+schema: l9.environment_experience.lineage/v1
+generated_at: '2026-08-25T02:03:03Z'
+chronology_note: Numeric filenames are not treated as authority. Timestamps establish observation order where available; most
+  packs are parallel evidence, not predecessor/successor revisions.
+nodes:
+- id: P1
+  generated_at: '2026-08-24T01:03:00Z'
+  role: included_parallel_observation
+- id: P2
+  generated_at: '2026-08-24T01:17:55Z'
+  role: included_parallel_observation
+- id: P3
+  generated_at: '2026-08-24T01:18:29Z'
+  role: included_parallel_observation
+- id: P4
+  generated_at: '2026-08-24T01:15:00Z'
+  role: included_parallel_observation
+- id: P5
+  generated_at: '2026-08-23'
+  role: included_parallel_observation
+- id: P6
+  generated_at: '2026-08-25T01:17:31Z'
+  role: included_parallel_observation
+- id: P7
+  generated_at: 2026-08-24T01:11Z/11:41Z
+  role: included_parallel_observation
+- id: P8
+  generated_at: '2026-08-25T01:36:26Z'
+  role: included_parallel_observation
+- id: P9
+  generated_at: '2026-08-25T01:38:00Z'
+  role: included_parallel_observation
+- id: REF-0118
+  generated_at: 2026-08-24T01:18Z
+  role: referenced_unbound_predecessor
+- id: COPY-P1-01
+  role: duplicate_copy
+- id: COPY-P2-01
+  role: duplicate_copy
+edges:
+- from: COPY-P1-01
+  to: P1
+  type: DUPLICATE_OF
+  confidence: confirmed
+  evidence: identical SHA-256
+- from: COPY-P2-01
+  to: P2
+  type: DUPLICATE_OF
+  confidence: confirmed
+  evidence: identical SHA-256
+- from: REF-0118
+  to: P9
+  type: SUPERSEDES
+  direction_note: P9 supersedes REF-0118
+  confidence: confirmed
+  evidence: P9 MANIFEST.json supersedes block
+- from: P3
+  to: REF-0118
+  type: EXPORT_OF
+  confidence: likely
+  evidence: same 2026-08-24T01:18 minute and Cognitive.Engine.Graphs experience lineage; archive byte-size mismatch prevents
+    exact identity
+parallel_observations:
+- P1
+- P2
+- P4
+- P5
+- P6
+- P7
+- P8
