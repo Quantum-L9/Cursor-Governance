@@ -1,7 +1,6 @@
 ---
 name: l9-dag-authoring
 description: Author, update, validate, register, discover, and optionally bind thin command triggers to L9 workflow graphs, keeping SessionDAG guidance graphs and executable LangGraph runtimes as distinct first-class kinds. Use when creating or changing an L9 graph, repairing SessionDAG registration/discovery, validating a LangGraph runtime shape, or making a command a thin graph trigger. Do not use for domain workflow semantics, Skill wiring, Skill compilation, GMP execution, or generic component audits.
-paths: "workflows/**, **/*dag*.py, **/*dag*.yaml"
 disable-model-invocation: true
 metadata:
   skill_schema: 1

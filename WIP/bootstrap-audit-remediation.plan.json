@@ -1,0 +1,325 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "Claude Code bootstrap audit \u2014 full remediation queue",
+  "objective": "Remediate the eight defects found by the 2026-08-30 bootstrap audit of the claude-code surface, where every readiness receipt reported READY while seven auto_invoke skills were absent from the session, a tracked generated artifact was dirtied at every SessionStart, and two governance components contradicted each other in the same banner.",
+  "code_in_scope": true,
+  "audit_provenance": {
+    "date": "2026-08-30",
+    "surface": "claude-code",
+    "governance_rev": "main@ac0e5e6",
+    "workspace": "/home/user/Cursor-Governance",
+    "ssot": "/root/.cursor-governance",
+    "method": "live-plane probes, not receipt reads",
+    "receipts_at_audit_time": "bootstrap=ready (11/11 components READY), governance refresh=fresh, make claude-env=STRUCTURAL_PASS + RUNTIME: READY exit 0"
+  },
+  "session_split": {
+    "lane_a": {
+      "name": "this session \u2014 non-skill planes",
+      "todos": [
+        "T1",
+        "T2",
+        "T3",
+        "T4",
+        "T5"
+      ],
+      "rationale": "Independent of skill projection and skill routing. Touch settings projection, execution-profile reporting, SessionStart banner telemetry, and command-manifest doctrine drift.",
+      "status": "complete"
+    },
+    "lane_b": {
+      "name": "separate session \u2014 skill planes",
+      "todos": [
+        "T6",
+        "T7",
+        "T8"
+      ],
+      "rationale": "Operator-directed split. Skill activation gating and router scoring are one coupled subsystem (skills/*/SKILL.md frontmatter, AUTONOMY_MANIFEST.yaml, ops/skill_routing/, ops/generated/skill-registry.json, check_skills_standard.py) and should be changed and validated together, not piecemeal.",
+      "status": "T6, T7 done in-session at operator direction; T8 (router recall) still open"
+    },
+    "lane_c": {
+      "name": "blocked on human \u2014 no agent-side fix",
+      "todos": [
+        "T9"
+      ],
+      "rationale": "State lives in the hosted account Environment-variables field, which no agent on this surface can read.",
+      "status": "blocked on operator"
+    }
+  },
+  "root_causes": {
+    "RC1": "A runtime writer mutates a tracked, generated artifact in place, so every clean checkout is dirty within seconds of SessionStart.",
+    "RC2": "Two components hold independent opinions about the same fact with no shared constant, so they can and do contradict each other in one banner.",
+    "RC3": "SessionStart telemetry reports counts and authority claims that do not match the session it is describing.",
+    "RC4": "Authored doctrine (a rule) and a generated manifest disagree about which commands are retired; the manifest wins silently.",
+    "RC5": "Governance does not model Claude Code's `paths:` skill-activation gate, so a skill declared auto_invoke can be invisible with no signal.",
+    "RC6": "The live router scorer under-triggers relative to the trigger table governance publishes as its contract.",
+    "RC7": "Authoritative state is held outside the repository in a human-only field."
+  },
+  "success_criteria": [
+    "A clean checkout of the workspace stays clean across a full SessionStart: `git status --porcelain` is empty after the bootstrap completes.",
+    "The committed value of CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH is never overwritten by a runtime-decremented value.",
+    "No SessionStart banner reports a CONFIG DEFECT for a variable that verify_account_env.py classifies RUNTIME_MANAGED.",
+    "The `skills loadable:` banner line reports the true resolvable count (54 workspace / 55 user at audit time), not 1.",
+    "The MCP banner line distinguishes governance-managed MCP servers from platform-injected ones and does not assert sole authority over servers governance does not configure.",
+    "rules/02-slash-commands.mdc and commands/COMMANDS_MANIFEST.yaml agree on which commands are retired.",
+    "Every skill declared auto_invoke in skills/AUTONOMY_MANIFEST.yaml is actually present in a fresh session's skill roster, or is reclassified.",
+    "check_skills_standard.py fails a skill that is declared auto_invoke and carries a non-empty `paths:` gate.",
+    "The router's recall against the l9-skill-routing trigger table is materially above the measured 6/18 baseline."
+  ],
+  "scope": {
+    "in": [
+      "environment/agents/adapters/claude-code/ \u2014 overlay, session-start hook, verify_account_env",
+      "ops/autonomy/execution_profile.py",
+      "ops/scripts/check_skills_standard.py",
+      "ops/skill_routing/",
+      "skills/*/SKILL.md frontmatter (paths: keys)",
+      "skills/AUTONOMY_MANIFEST.yaml tier declarations",
+      "rules/02-slash-commands.mdc",
+      "commands/ retirement via generate_commands_manifest.py inputs"
+    ],
+    "out": [
+      "Any change to gate semantics: merge_gate.py, local_execution_gate.py, verification_bypass_gate.py, git_guardrails.py.",
+      "Any change to the publish path (make pr) or merge authority.",
+      "Context7 MCP absence \u2014 rule 22 fallback to skill l9-context7-docs is loaded and working as designed.",
+      "The disable-model-invocation / skillOverrides explicit_only tier \u2014 32+31 entries are deliberate, and /name invocation still works for all of them."
+    ]
+  },
+  "todos": [
+    {
+      "id": "T1",
+      "lane": "A",
+      "finding": "F3",
+      "task": "Stop overlay_hosted_settings_env.py writing runtime env into the tracked, generated .claude/settings.json. Retarget it to .claude/settings.local.json, which is already gitignored at .gitignore:51 and is the Claude Code scope designed for machine-local overrides (local scope takes precedence over project scope, so the runtime values still reach the session). Keep the tracked settings.json as the pure projection of settings.template.json.",
+      "files": [
+        "environment/agents/adapters/claude-code/overlay_hosted_settings_env.py",
+        "environment/agents/adapters/claude-code/install.sh (overlay invocation, scopes workspace,user)",
+        ".gitignore:51 (already covers .claude/settings.local.json \u2014 verify, do not duplicate)"
+      ],
+      "evidence": "Clean checkout showed `M .claude/settings.json` at 04:12:15, ~5s before the session's first tool call. Semantic delta: CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH '3'->'1' plus added L9_L4_LOCAL_AUTONOMY and L9_WORKTREE_ISOLATION. Reproduced identically on the next session.",
+      "effort": "M",
+      "risk": "medium",
+      "risk_detail": "Claude Code must actually merge settings.local.json env over settings.json env. Verify empirically before declaring done; if local scope does not merge env, fall back to `git update-index --skip-worktree` on the tracked path.",
+      "dependencies": [],
+      "leverage_rank": 1,
+      "shared_root_cause": "RC1",
+      "verify": "Fresh SessionStart, then `git status --porcelain` is empty AND the session env still carries L9_L4_LOCAL_AUTONOMY=1 and L9_WORKTREE_ISOLATION=1.",
+      "blocker": null,
+      "status": "done",
+      "commit": "442dba7",
+      "completion_note": "Overlay retargeted to .claude/settings.local.json. Verified: full SessionStart-equivalent overlay run leaves the tracked file byte-clean and spawn depth at the committed 3; local file carries all 17 env keys including L9_GOVERNANCE_SURFACE. 6 tests."
+    },
+    {
+      "id": "T2",
+      "lane": "A",
+      "finding": "F4",
+      "task": "Resolve the spawn-depth contradiction. execution_profile.py emits `CONFIG DEFECT: CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1 blocks nested delegation` for exactly the value verify_account_env.py declares RUNTIME_MANAGED and documents as 'Reported for information, never as a deviation'. Introduce one shared constant both import, and make execution_profile.py compare against the committed/template value rather than the live decremented env, or downgrade its report to INFO for runtime-managed names.",
+      "files": [
+        "ops/autonomy/execution_profile.py:150,177,234",
+        "environment/agents/adapters/claude-code/verify_account_env.py:65-69 (RUNTIME_MANAGED)",
+        "tests/ops/autonomy/test_execution_profile.py:134,233"
+      ],
+      "evidence": "Both fired in the same SessionStart banner this session: `INFO: CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH=1 (runtime-managed; not compared)` from verify_account_env, and `CONFIG DEFECT: ...blocks nested delegation` from execution_profile.",
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 2,
+      "shared_root_cause": "RC2",
+      "verify": "SessionStart banner carries at most one statement about spawn depth, and it is not a CONFIG DEFECT when the only cause is runtime decrement. Existing tests in test_execution_profile.py still pass.",
+      "blocker": null,
+      "status": "done",
+      "commit": "c125ee8",
+      "completion_note": "declared_env_int reads shared scopes only (skips settings.local.json, which now mirrors runtime). Banner reads 'subagent_spawn_depth: 3 (declared; runtime-decremented to 1 at this nesting level)'. No CONFIG DEFECT. Check narrowed not silenced: undeclared low depth still reports. 22 tests."
+    },
+    {
+      "id": "T3",
+      "lane": "A",
+      "finding": "F5",
+      "task": "Fix the `skills loadable:` counter. session_start_claude_governance.sh counts with `find \"$d\" -maxdepth 2 -name SKILL.md` and no -L. Every entry under .claude/skills/ is a symlink to a directory, so find never descends and the line reports 1 (the single real directory) instead of the true resolvable count. Add -L. Note this is banner telemetry, not skill machinery \u2014 it is in lane A deliberately, and touches no skill projection or routing code.",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh:212-222",
+        ".claude/hooks/session_start_claude_governance.sh (tracked projection \u2014 regenerate, do not hand-edit)"
+      ],
+      "evidence": "`find .claude/skills -name SKILL.md` => 0; `find -L .claude/skills -maxdepth 2 -name SKILL.md` => 54. User scope: 55. Banner printed `skills loadable: 1`.",
+      "effort": "S",
+      "risk": "low",
+      "risk_detail": "Both the adapter source and the .claude/ copy are tracked. Confirm which is generated from which and regenerate rather than editing both by hand.",
+      "dependencies": [],
+      "leverage_rank": 3,
+      "shared_root_cause": "RC3",
+      "verify": "Fresh SessionStart banner reports `skills loadable: 54` (or the true count for the scope), matching `find -L`.",
+      "blocker": null,
+      "status": "done",
+      "commit": "6167893",
+      "completion_note": "find -L added. Counter goes 1 -> 54 (workspace) / 55 (user). Guard mutation-checked: reverting -L fails the test."
+    },
+    {
+      "id": "T4",
+      "lane": "A",
+      "finding": "F6",
+      "task": "Correct the MCP authority claim. The banner asserts `.mcp.json is a projection of mcp.template.json (single MCP authority)` while the session actually carried five MCP servers governance neither configures nor gates. Reword to scope the claim to governance-managed servers, and if the platform-injected set is discoverable at runtime, report it separately so an operator sees the real surface.",
+      "files": [
+        "environment/agents/adapters/claude-code/hooks/session_start_claude_governance.sh:472",
+        "environment/agents/adapters/claude-code/install.sh:402 (same claim in a comment)",
+        "ops/scripts/claude_projection.py:359 (docstring)"
+      ],
+      "evidence": ".mcp.json mcpServers == ['graphiti-memory']. Session tool surface additionally carried github, Tavily-MCP, Vercel, Google_Calendar, Claude_Code_Remote.",
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "leverage_rank": 5,
+      "shared_root_cause": "RC3",
+      "verify": "Banner line is true as written for a session carrying platform-injected MCP servers.",
+      "blocker": null,
+      "status": "done",
+      "commit": "6167893",
+      "completion_note": "Claim scoped to governance-managed servers, names the managed set [graphiti-memory], and adds mcp_platform_injected pointing at the live tool surface."
+    },
+    {
+      "id": "T5",
+      "lane": "A",
+      "finding": "F7",
+      "task": "Reconcile retired-command drift between rules/02-slash-commands.mdc ('Retired with no alias: /rules, /git-work-preserve, /harvest2'; '/update-command is retired into /dag-authoring --bind-command') and commands/COMMANDS_MANIFEST.yaml, which carries all three of /rules, /git-work-preserve, /update-command with `enabled: true`. /harvest2 is already correctly absent, which is evidence the manifest is maintained for retirement and these three were simply missed. DIRECTION REQUIRES AN OPERATOR CALL \u2014 see decision_required.",
+      "files": [
+        "rules/02-slash-commands.mdc",
+        "commands/COMMANDS_MANIFEST.yaml (GENERATED \u2014 do not hand-edit; rule 00-global)",
+        "ops/scripts/generate_commands_manifest.py:69,83 (globs commands/*.md, defaults enabled True, preserves prior enabled)",
+        "commands/rules.md, commands/git-work-preserve.md, commands/update-command.md"
+      ],
+      "evidence": "All three projected to /root/.claude/commands/ and present in this session's command roster. Manifest entry shape: `- slash: /git-work-preserve` / `file: ...` / `enabled: true`.",
+      "decision_required": {
+        "question": "Retire the capability, or correct the doctrine?",
+        "option_archive": "Move the three commands/*.md into commands/_archived/ (already in generate_commands_manifest DEFAULT_EXCLUDED), regenerate the manifest, re-project. Makes the rule true; removes three working user-facing commands.",
+        "option_doc": "Update rules/02-slash-commands.mdc to stop calling them retired. Zero risk; contradicts a deliberate authored statement.",
+        "note": "Age could not decide it \u2014 the session clone is shallow (single commit), so rule 91's git-history test is unavailable."
+      },
+      "effort": "S",
+      "risk": "medium",
+      "risk_detail": "Archiving removes user-facing commands and could break muscle memory or automation that calls them.",
+      "dependencies": [],
+      "leverage_rank": 6,
+      "shared_root_cause": "RC4",
+      "verify": "The rule text and the generated manifest agree, and the projected command set matches both.",
+      "blocker": "operator decision on direction",
+      "status": "done",
+      "commit": "95be4f0",
+      "completion_note": "Root cause was a half-done retirement, not a missed one: all three already existed in commands/_archived/ and only the live copies survived, which the generator's commands/*.md glob resurrected on every run. Live copies deleted (two byte-identical to their archived twins; update-command's twin strictly richer). Manifest regenerated 54 -> 51, commands re-projected, stale index row dropped. 26 projection tests pass. SCOPE TRIMMED at publish: PR #408 (agent/cursor/skill-slash-hygiene) retires 35 skill-only command wrappers including /git-work-preserve, and owns commands/commands-index.md. The overlap gate blocked on that one file, so the stale index row was left to #408 rather than opening a competing sibling edit. This branch still uniquely retires /rules and /update-command, which #408 does not touch; the shared /git-work-preserve deletion merges cleanly because both sides delete it."
+    },
+    {
+      "id": "T6",
+      "lane": "B",
+      "finding": "F1",
+      "task": "Resolve the seven auto_invoke skills that are invisible at session start because of a `paths:` activation gate. Per Claude Code docs, `paths` means 'Claude loads the skill automatically only when working with files matching the patterns'. It is a real field working as designed, but governance declares all seven auto_invoke in skills/AUTONOMY_MANIFEST.yaml and ops/generated/skill-registry.json, so the roster lies. For each skill decide: drop the gate (make it genuinely auto_invoke), widen it, or reclassify the skill as path-scoped in the manifest so the two agree.",
+      "files": [
+        "skills/l9-api-smoke-testing/SKILL.md \u2014 paths: **/api/**, **/routes/**, **/*router*.py, **/*controller*.py",
+        "skills/l9-architecture-decision-records/SKILL.md \u2014 paths: docs/adr/**, docs/decisions/**",
+        "skills/l9-code-graph-rag-mcp/SKILL.md \u2014 paths: graph/**, **/*graph*.py",
+        "skills/l9-prompt-engineering/SKILL.md \u2014 paths: prompts/**, **/*prompt*.md",
+        "skills/l9-setting-up-ci/SKILL.md \u2014 paths: .github/workflows/**, biome.json, .biomeignore, .editorconfig, .vscode/extensions.json",
+        "skills/l9-update-agent-docs/SKILL.md \u2014 paths: AGENTS.md, CLAUDE.md, README.md, INVARIANTS.md",
+        "skills/l9-wire-skill-into-repo/SKILL.md \u2014 paths: skills/**, .cursor-plugin/plugin.json",
+        "skills/AUTONOMY_MANIFEST.yaml"
+      ],
+      "evidence": "Correlation is exact: 7/7 path-gated auto_invoke skills absent from the session roster, 0/16 loaded skills carry `paths:`. Frontmatter is otherwise valid and identical in shape to the 16 that loaded; manifest tiers and frontmatter agree with zero divergence, so the manifest is not the cause.",
+      "note": "Self-defeating in this repo specifically: l9-update-agent-docs is gated on CLAUDE.md, which is loaded into every session here; l9-wire-skill-into-repo is gated on skills/**, which this repo owns.",
+      "effort": "M",
+      "risk": "medium",
+      "risk_detail": "Removing gates widens the always-in-context discovery footprint, which check_skills_standard.py budgets at SKILLS_DISCOVERY_BUDGET=16384 bytes of name+description. Check the budget before ungating all seven.",
+      "dependencies": [],
+      "leverage_rank": 4,
+      "shared_root_cause": "RC5",
+      "verify": "A fresh session's skill roster contains every skill AUTONOMY_MANIFEST declares auto_invoke.",
+      "blocker": null,
+      "status": "done",
+      "commit": "0e9cbf29",
+      "completion_note": "Removed paths: from all 10 carriers (7 model-invocable + 3 where it was dead config behind disable-model-invocation). Root cause: paths: was applied as a Cursor-style rule glob (relevance hint) rather than a Claude Code availability gate; 19 rules/*.mdc use globs: with the same syntax. All 10 declared intent triggers in their own descriptions; 4 were inverted (gated on files they exist to create). Verified: 23/23 auto_invoke skills now discoverable, 0 blocked; the 7 appeared live in this session's roster. Footprint-neutral to the governance budget (name+description only; 16,210 of 16,384 B either way). Earlier T6 risk note about the discovery budget was unfounded."
+    },
+    {
+      "id": "T7",
+      "lane": "B",
+      "finding": "F1",
+      "task": "Teach check_skills_standard.py the real failure mode. It currently errors only on an EMPTY paths ('empty `paths` would hide the skill; remove the key instead') and treats a non-empty paths as fine. Add a check that fails when a skill declared auto_invoke in AUTONOMY_MANIFEST.yaml carries a non-empty `paths:` gate, since that combination silently hides an allegedly-automatic skill.",
+      "files": [
+        "ops/scripts/check_skills_standard.py:20 (NATIVE set), :122 (empty-paths check)",
+        "skills/AUTONOMY_MANIFEST.yaml (tier source for the cross-check)"
+      ],
+      "evidence": "The existing check would have passed all seven skills in T6 \u2014 every one has a non-empty paths value.",
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T6"
+      ],
+      "leverage_rank": 7,
+      "shared_root_cause": "RC5",
+      "verify": "Re-adding a paths: gate to an auto_invoke skill fails the gate.",
+      "blocker": null,
+      "status": "done",
+      "commit": "0e9cbf29",
+      "completion_note": "check_skills_standard now errors on non-empty paths + model-invocable. Previously only an EMPTY paths was rejected, which is why all 7 passed. A genuinely file-triggered skill may keep paths but must also carry disable-model-invocation. Mutation-checked. docs/skills-standard.md gained a 'paths: is an availability gate, not a relevance hint' section with the measurement and the name-only alternative. 8 gate tests."
+    },
+    {
+      "id": "T8",
+      "lane": "B",
+      "finding": "F2",
+      "task": "Raise skill-router recall. Measured 6 correct / 11 missed / 1 wrong against the 18-row 'Common triggers' table that rules/23-l9-skill-routing publishes as the routing contract. Consequence beyond routing: route_prompt returned None for this session's prompt, so ~/.cursor/l9/skill-route.json was never written and ~/.claude/l9/skill-usage.jsonl never created \u2014 the banner reports 'logger never wrote', but the logger does mkdir(parents=True) itself and is simply never reached.",
+      "files": [
+        "ops/skill_routing/ (shared scorer)",
+        "ops/generated/skill-registry.json (54 skills loaded correctly \u2014 not the cause)",
+        "environment/agents/adapters/claude-code/hooks/user_prompt_skill_router.py:74-77",
+        "rules/23-l9-skill-routing.mdc (the trigger table used as the test oracle)"
+      ],
+      "evidence": "Misses include l9-pr-remediation ('PR review / merge blockers / readiness'), l9-structured-reasoning, l9-gap-analysis, l9-context7-docs, l9-incident-response, l9-auditing-performance, l9-setting-up-ci, l9-skill-compiler, l9-wire-skill-into-repo, l9-recursive-optimization, l9-plan-simple. One wrong: 'Campaign / PE / make campaign' routes to l9-pe-campaign-activate, expected l9-plan.",
+      "effort": "L",
+      "risk": "medium",
+      "risk_detail": "Loosening thresholds trades false negatives for false positives; a wrong high-confidence route is worse than none. Build the trigger table into a regression test first, then tune against it.",
+      "dependencies": [],
+      "leverage_rank": 8,
+      "shared_root_cause": "RC6",
+      "verify": "A regression test asserts the documented trigger table, and recall is materially above the 6/18 baseline with no new wrong routes.",
+      "blocker": null,
+      "status": "open"
+    },
+    {
+      "id": "T9",
+      "lane": "C",
+      "finding": "F8",
+      "task": "Recover the setup-script revision that exists only in the hosted account Environment-variables field. verify_account_env.py reports the field carries L9_STUB_REVISION 2026-08-29.3 while HEAD carries 2026-08-29.1 \u2014 the field is AHEAD of the repository and holds the only copy. Its own guidance: do NOT re-paste (that downgrades production and destroys the only copy); copy the field out, diff it against web/setup.bootstrap.sh, and commit what it added.",
+      "files": [
+        "environment/agents/adapters/claude-code/web/setup.bootstrap.sh:99 (L9_STUB_REVISION=\"2026-08-29.1\")",
+        "environment/agents/adapters/claude-code/verify_account_env.py:134-146 (drift detection)"
+      ],
+      "evidence": "Reported every SessionStart as `DRIFT: Setup script is revision 2026-08-29.3, HEAD is 2026-08-29.1`. Pre-existing, still uncommitted.",
+      "effort": "S",
+      "risk": "high",
+      "risk_detail": "Data-loss risk. The field is the only copy of the delta. A careless re-paste destroys it.",
+      "dependencies": [],
+      "leverage_rank": 9,
+      "shared_root_cause": "RC7",
+      "verify": "HEAD's L9_STUB_REVISION matches the field, and the drift line stops appearing.",
+      "blocker": "Requires the operator to read the hosted Environment-variables field. No agent on this surface can read it.",
+      "status": "open"
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T3",
+    "T6",
+    "T8"
+  ],
+  "non_findings": [
+    "Context7 MCP tools absent \u2014 rule 22 fallback to skill l9-context7-docs, which IS loaded. Working as designed.",
+    "32 skills with disable-model-invocation plus 31 skillOverrides user-invocable-only \u2014 deliberate explicit_only tier; /name invocation works for all, including /l9-pr-remediation.",
+    "No commit hook \u2014 by design (verification_bypass_gate --status reports model: governed_gate, by_design: true). pre-commit install is forbidden.",
+    "Plugin marketplace skipped \u2014 platform SKIP_PLUGIN_MARKETPLACE=true; plugins are not a required plane here.",
+    "Graphiti CLI and MCP both healthy; group_id=cursor-governance resolved via registry, not a forbidden default."
+  ],
+  "convergence": {
+    "status": "lane_a_complete",
+    "lane_a": "T1-T5 done and committed on claude/bootstrap-audit-4jijz4.",
+    "lane_b_handoff": "T6/T7 done. T8 (skill-router recall, measured 6/18 against the l9-skill-routing trigger table) remains: build the table into a regression test first, then tune. Note the 7 newly-discoverable skills change the routing input set, so re-measure the 6/18 baseline before tuning.",
+    "lane_c_handoff": "T9 needs the operator to copy the hosted Environment-variables field out and diff it against web/setup.bootstrap.sh. Do NOT re-paste the field \u2014 it is ahead of HEAD and holds the only copy.",
+    "known_lag": "The live SSOT at /root/.cursor-governance is main@ac0e5e6 and still carries the pre-fix files. SessionStart projects from the SSOT, so the three retired commands and the old banner lines return on each new session until this branch merges.",
+    "next_skill": "l9-ynp",
+    "overlap_resolution": "PR_STACK=auto could not resolve a unique tip (4 sibling chains target main). Published against origin/main with PR_STACK= (the documented opt-out; the overlap gate still ran). Gate cleared #404 as disjoint and blocked on #408 for commands/commands-index.md. Resolved by dropping this branch's one-line edit to that file rather than stacking on a 3-deep cross-agent chain, since #408 removes the same row anyway."
+  }
+}
