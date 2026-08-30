@@ -10,9 +10,131 @@ set -euo pipefail
 # Inherit no host git dir — `git -C` is ignored when GIT_DIR is set.
 unset GIT_DIR GIT_WORK_TREE GIT_INDEX_FILE GIT_OBJECT_DIRECTORY GIT_COMMON_DIR GIT_PREFIX
 
-CLONE="${CURSOR_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
-CLONE="$(cd "$CLONE" && pwd)"
 _FF_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+_FF_SELF="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/$(basename "${BASH_SOURCE[0]}")"
+# Bare /ff from a Cursor-Governance checkout: this tree + SSOT in parallel.
+# /ff --clone and /ff --ssot: one target (other repos). L9_FF_ONE_CLONE=1
+# stops the pair from recursing. Fixtures have no identity files → no pair.
+_FF_WANT_CLONE=0
+_FF_WANT_SSOT=0
+while [ "$#" -gt 0 ]; do
+  case "$1" in
+    --clone) _FF_WANT_CLONE=1; shift ;;
+    --ssot) _FF_WANT_SSOT=1; shift ;;
+    *)
+      echo "FAIL: unknown argument $1 (use --clone, --ssot, or neither)" >&2
+      exit 2
+      ;;
+  esac
+done
+if [ "$_FF_WANT_CLONE" -eq 1 ] && [ "$_FF_WANT_SSOT" -eq 1 ]; then
+  echo "FAIL: --clone and --ssot are mutually exclusive; bare /ff pairs both" >&2
+  exit 2
+fi
+for _wkind_cand in \
+  "${_FF_ROOT}/ops/scripts/lib/workspace_kind.sh" \
+  "$HOME/.cursor-governance/ops/scripts/lib/workspace_kind.sh"; do
+  if [ -f "$_wkind_cand" ]; then
+    # shellcheck source=../../../ops/scripts/lib/workspace_kind.sh
+    . "$_wkind_cand"
+    break
+  fi
+done
+unset _wkind_cand
+
+_ff_ssot_path() {
+  if [ -e "$HOME/.cursor-governance/.git" ]; then
+    cd "$HOME/.cursor-governance" && pwd
+    return 0
+  fi
+  return 1
+}
+
+_ff_working_clone() {
+  local cand real ssot=""
+  if [ -n "${CURSOR_GOVERNANCE_CLONE:-}" ]; then
+    cd "${CURSOR_GOVERNANCE_CLONE}" && pwd
+    return 0
+  fi
+  ssot="$(_ff_ssot_path)" || ssot=""
+  cand="$(pwd)"
+  if declare -F is_governance_identity_tree >/dev/null 2>&1 &&
+    is_governance_identity_tree "$cand"; then
+    real="$(cd "$cand" && pwd)"
+    if [ "$real" != "$ssot" ]; then
+      echo "$real"
+      return 0
+    fi
+  fi
+  cand="${HOME}/Cursor-Governance"
+  if [ -e "$cand/.git" ] &&
+    declare -F is_governance_identity_tree >/dev/null 2>&1 &&
+    is_governance_identity_tree "$cand"; then
+    real="$(cd "$cand" && pwd)"
+    if [ "$real" != "$ssot" ]; then
+      echo "$real"
+      return 0
+    fi
+  fi
+  echo "FAIL: --clone needs a Cursor-Governance working copy (set CURSOR_GOVERNANCE_CLONE)" >&2
+  return 1
+}
+
+if [ "$_FF_WANT_CLONE" -eq 1 ]; then
+  export L9_FF_ONE_CLONE=1
+  CURSOR_GOVERNANCE_DIR="$(_ff_working_clone)" || exit 1
+  export CURSOR_GOVERNANCE_DIR
+elif [ "$_FF_WANT_SSOT" -eq 1 ]; then
+  export L9_FF_ONE_CLONE=1
+  CURSOR_GOVERNANCE_DIR="$(_ff_ssot_path)" || {
+    echo "FAIL: $HOME/.cursor-governance is not a git clone." >&2
+    exit 1
+  }
+  export CURSOR_GOVERNANCE_DIR
+fi
+
+_ff_here="${CURSOR_GOVERNANCE_DIR:-$(pwd)}"
+_ff_here="$(cd "$_ff_here" && pwd)"
+_ff_ssot="$(_ff_ssot_path)" || _ff_ssot=""
+if [ -z "${L9_FF_ONE_CLONE:-}" ] &&
+  declare -F is_governance_identity_tree >/dev/null 2>&1 &&
+  is_governance_identity_tree "$_ff_here"; then
+  if [ -z "$_ff_ssot" ]; then
+    echo "FAIL: $HOME/.cursor-governance is not a git clone." >&2
+    exit 1
+  fi
+  if [ "$_ff_here" != "$_ff_ssot" ]; then
+    echo "ff: parallel this=$_ff_here ssot=$_ff_ssot"
+    L9_FF_ONE_CLONE=1 CURSOR_GOVERNANCE_DIR="$_ff_here" bash "$_FF_SELF" &
+    _ff_p1=$!
+    L9_FF_ONE_CLONE=1 CURSOR_GOVERNANCE_DIR="$_ff_ssot" bash "$_FF_SELF" &
+    _ff_p2=$!
+    _ff_rc1=0
+    _ff_rc2=0
+    wait "$_ff_p1" || _ff_rc1=$?
+    wait "$_ff_p2" || _ff_rc2=$?
+    if [ "$_ff_rc1" -ne 0 ] || [ "$_ff_rc2" -ne 0 ]; then
+      echo "FAIL: paired ff this_rc=$_ff_rc1 ssot_rc=$_ff_rc2" >&2
+      exit 1
+    fi
+    exit 0
+  fi
+fi
+unset _ff_here _ff_ssot _FF_SELF _FF_WANT_CLONE _FF_WANT_SSOT
+if [ -n "${CURSOR_GOVERNANCE_DIR:-}" ]; then
+  CLONE="$(cd "$CURSOR_GOVERNANCE_DIR" && pwd)"
+else
+  _pwd="$(pwd)"
+  _kind="consumer"
+  if declare -F classify_workspace_kind >/dev/null 2>&1; then
+    _kind="$(classify_workspace_kind "$_pwd")"
+  fi
+  case "$_kind" in
+    ssot|ssot_checkout) CLONE="$(cd "$_pwd" && pwd)" ;;
+    *) CLONE="$(cd "$HOME/.cursor-governance" && pwd)" ;;
+  esac
+  unset _pwd _kind
+fi
 _SSOT_KEEP_LIB=""
 for _ssot_keep_cand in \
   "${_FF_ROOT}/ops/scripts/lib/ssot_machine_local_keep.sh" \

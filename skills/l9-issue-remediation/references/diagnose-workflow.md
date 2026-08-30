@@ -6,22 +6,24 @@ role: diagnose_workflow
 tags: [issues, diagnose, fleet, blockers, readiness]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-08-11
+version: 1.1.0
+updated: 2026-08-29
 /L9_META -->
 
-# Diagnose Workflow (read-only)
+# Diagnose Workflow (auditor)
 
-Read-only org issue readiness. **Never** commit, push, close issues, or edit
-worktrees for fixes.
+Read-only org issue readiness plus **already-resolved close** only. Never
+commit, push, edit worktrees for fixes, or invoke `/l9-pr-remediation`.
 
 ## Usage
 
 ```text
-/issues
-/issues Quantum-L9/SEO-Bot
-/issues Quantum-L9/SEO-Bot#5
+/issues diagnose
+/issues diagnose Quantum-L9/SEO-Bot
+/issues diagnose Quantum-L9/SEO-Bot#5
 ```
+
+Bare `/issues` is remediator Converge — not this workflow.
 
 ## Steps
 
@@ -44,14 +46,27 @@ python3 skills/l9-issue-remediation/scripts/issue_ingest.py --repo Quantum-L9/SE
 
 GATE: issue snapshot fetched before any verdict.
 
-3. **Rank** — prioritize: Critical/High labels → cross-repo drift → blocked/blocking
-   language → oldest updated. Cluster linked issues (body refs like
-   `Quantum-L9/Website-Bot#…`, `SEO-Bot`/`website-bot` pairs).
+3. **Rank clusters** (leverage, not a single sticky pick):
 
-4. **Classify (read-only)** — ownership guess only; do not mutate. Load
+```bash
+python3 skills/l9-issue-remediation/scripts/cluster_rank.py --issues issues.json --output clusters.json
+```
+
+4. **Classify (read-only)** — ownership guess only; do not mutate code. Load
    [ownership-boundary.md](ownership-boundary.md) + [finding-classifier.md](finding-classifier.md).
 
-5. **Present inline** — format below. Load `l9-ynp` when useful.
+5. **Already-resolved close** — if a linked PR is merged or the defect is gone
+   on default, run `scripts/close_resolved_issue.py` with `--merged-pr` or
+   `--commit` proof. Still **never** chain `/l9-pr-remediation`. Confirm the
+   gate:
+
+```bash
+python3 skills/l9-issue-remediation/scripts/open_issues_gate.py --intent diagnose --issues issues.json
+```
+
+Must print `diagnose_never_chains`.
+
+6. **Present inline** — format below. Load `l9-ynp` when useful.
 
 ## Inline output
 
@@ -67,15 +82,18 @@ GATE: issue snapshot fetched before any verdict.
 ### Cross-repo clusters
 - {cluster_id}: {repos/issues} — shared cause hypothesis
 
+### Already closed (auditor hygiene)
+- {owner}/{repo}#{n} — evidence {merged PR or commit}
+
 ### Warnings
 - …
 
 **Diagnose Verdict:** CLEAN | ACTIONABLE | BLOCKED_HUMAN | BLOCKED_EXTERNAL
 
 ### YNP
-**YES:** Converge sticky cluster {owner}/{repo}#{n}
+**YES:** remediator `/issues` or `/l9-issue-remediation` on the ranked queue
 **NO:** Hold — HUMAN/EXTERNAL only
-**PROCEED:** load l9-issue-remediation Converge on that cluster
+**PROCEED:** do not start `/l9-pr-remediation` from Diagnose
 ```
 
 ## Enforcement
@@ -83,5 +101,6 @@ GATE: issue snapshot fetched before any verdict.
 | Rule | Severity |
 |------|----------|
 | Skip issue ingest | HIGH — block verdict |
-| Commit/push/close during Diagnose | CRITICAL |
+| Commit / push / fix during Diagnose | CRITICAL |
+| Chain `/l9-pr-remediation` from Diagnose | CRITICAL |
 | Alignment/gap/deep-eval theater | HIGH — do not emit |

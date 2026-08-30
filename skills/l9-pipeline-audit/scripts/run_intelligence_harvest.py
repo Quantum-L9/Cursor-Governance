@@ -14,10 +14,10 @@ import sys
 from pathlib import Path
 from typing import Any
 
-PLAN_AUDIT = Path(__file__).resolve().parents[2] / "l9-plan-audit" / "scripts"
+SCRIPTS = Path(__file__).resolve().parent
 HARVEST = Path(__file__).resolve().parents[2] / "l9-intelligence-harvest" / "scripts"
-if str(PLAN_AUDIT) not in sys.path:
-    sys.path.insert(0, str(PLAN_AUDIT))
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
 from harvest_plan_invariants import (  # noqa: E402
     compile_by_concern,
     emit_compiled_plan,

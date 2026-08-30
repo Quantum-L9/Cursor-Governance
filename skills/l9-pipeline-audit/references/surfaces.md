@@ -8,8 +8,13 @@ version: 1.0.0
 
 # Pipeline-audit surfaces
 
-Same component verdicts as `l9-plan-audit` (`live_invariant`, `stale_wiring`,
+Same component verdicts (`live_invariant`, `stale_wiring`,
 `superseded_mission`, `spent`). `harvestable` = live + stale/superseded.
+
+Plans, WIP, and campaigns are one family. SessionStart NEXT 1–3 takes **one
+slot per surface** first (plans, then wip, then campaigns), then fills leftover
+slots. Eligible WIP is harvestable (`possible-landed`) or pending-active — not
+inventory-`landed`. Cap 3.
 
 | Surface | Root | Spent | Harvest emit |
 |---|---|---|---|

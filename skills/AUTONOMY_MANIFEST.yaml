@@ -59,8 +59,6 @@ tiers:
     use_when: an agent needs an api key, token, password, infisical hydrate, aws secret ref, registry sync, or fail-closed credential check without keychain or printing values
   - skill: l9-claude-code-deepseek
     use_when: wiring Claude Code in a consumer clone to DeepSeek, opening a Claude Code tab on DeepSeek, or hydrating DEEPSEEK_API_KEY without Anthropic billing
-  - skill: l9-plan-audit
-    use_when: session context shows Plan audit or the 7-day live-queue scanner; not /l9-audit-plans and not /l9-pipeline-audit
   explicit_only:
   - skill: l9-forge
     reason: zero-pause batch execution
@@ -89,7 +87,7 @@ tiers:
   - skill: l9-pr-remediation
     reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, then merges them oldest-first and stack-safe (squash only when unstacked). make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
   - skill: l9-issue-remediation
-    reason: Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs — high blast radius, explicit only; hint_allowed for read-only Diagnose
+    reason: /issues and /l9-issue-remediation are remediator Converge (drain all clusters, land on PRs, close resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.
   - skill: l9-bounded-autonomy
     reason: campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only
   - skill: l9-pe-campaign-activate
@@ -147,6 +145,8 @@ tiers:
     reason: Skill wrapper retired; the capability runs from workflows/dags/inspect_dag.py via /inspect — archived out of live skills/ discovery, never auto-invoke or reconcile
   - item: skills/_archived/l9-harvest-pipeline/
     reason: Skill wrapper retired; the capability runs from workflows/dags/harvest_deploy_dag.py and workflows/use_harvest_executor.py via /harvest and /use-harvest — archived out of live skills/ discovery, never auto-invoke or reconcile
+  - item: skills/_archived/l9-plan-audit/
+    reason: superseded by skills/l9-pipeline-audit/; archived out of live skills/ discovery — never auto-invoke or reconcile
 reasoning_routing:
   purpose: Which l9-structured-reasoning reference applies to which task class.
   sources:
@@ -193,7 +193,6 @@ claude_routing:
   - l9-setting-up-ci
   - l9-graphiti-memory
   - l9-aws-secrets
-  - l9-plan-audit
   - l9-code-graph-rag-mcp
   - l9-architecture-decision-records
   - l9-monitoring-terminal-errors
@@ -274,15 +273,18 @@ claude_routing:
     - cross-repo issues
     - diagnose issues
     - /issues
-    negative_signals:
+    - /l9-issue-remediation
     - remediate the issue
     - fix the issue
     - unblock the issue
     - babysit issues
     - converge issues
+    negative_signals:
+    - admin merge
+    - force push
     supporting:
     - l9-pr-remediation
-    note: 'explicit_only + hint_allowed — Read Diagnose path only; Converge mutate requires explicit fix/remediate/unblock/babysit or autonomy packet. PR green/merge stays on l9-pr-remediation.
+    note: 'explicit_only + hint_allowed — /issues and /l9-issue-remediation are remediator Converge. Diagnose is /issues diagnose or “what’s blocking?” only and never chains /l9-pr-remediation. Converge lands fixes on matching or stacked PRs, closes status=fixed, and chains l9-pr-remediation only when open_issues=0.
 
       '
   - id: code_analysis
@@ -487,32 +489,25 @@ claude_routing:
     - port_aws_to_infisical
     supporting:
     - l9-structured-reasoning
-  - id: plan_audit
-    primary: l9-plan-audit
-    signal_weight: 8
-    positive_signals:
-    - plan audit
-    - unbuilt plans
-    - stale plans
-    - audit .cursor/plans
-    - which plans are unbuilt
-    - sessionStart plan audit
-    supporting:
-    - l9-plan
-    - l9-ynp
   - id: pipeline_audit
     primary: l9-pipeline-audit
     signal_weight: 8
     positive_signals:
     - pipeline audit
     - l9-pipeline-audit
+    - plan audit
+    - unbuilt plans
+    - stale plans
+    - audit .cursor/plans
+    - which plans are unbuilt
+    - sessionStart plan audit
     - harvest WIP campaigns
     - audit program-execution campaigns
     - harvestable components
     supporting:
     - l9-intelligence-harvest
-    - l9-plan-audit
     - l9-gmp-protocol
+    - l9-ynp
   - id: performance_audit
     primary: l9-auditing-performance
     signal_weight: 8

@@ -6,6 +6,10 @@
 # setup_workspace_symlinks.sh (hooks, IDE, plugins) runs unless
 # L9_WIRE_LINKS_ONLY=1 — Python isolate/lane creators set that so they
 # do not pay a 30–90s machine reconcile on every worktree.
+#
+# Kind split matches setup_workspace_symlinks.sh C10: ssot and
+# ssot_checkout never get .cursor-commands. Links-only must honor that
+# too — make pr heals via this script and exits before setup.
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -28,8 +32,7 @@ if ! resolve_governance_paths; then
 fi
 
 GC="$GLOBAL_COMMANDS"
-WS_REAL="$(python3 -c "import os; print(os.path.realpath('$WORKSPACE'))")"
-GC_REAL="$(python3 -c "import os; print(os.path.realpath('$GC'))")"
+WS_KIND="$(classify_workspace_kind "$WORKSPACE")"
 
 _link_ok() {
   local link=$1 expected=$2
@@ -57,7 +60,7 @@ _link_or_update() {
 }
 
 already_wired=0
-if [ "$WS_REAL" = "$GC_REAL" ]; then
+if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
   if [ ! -e "$WORKSPACE/.cursor-commands" ] && [ ! -L "$WORKSPACE/.cursor-commands" ] \
     && _link_ok "$WORKSPACE/.cursor/plans" "$HOME/.cursor/plans" \
     && _link_ok "$WORKSPACE/.cursor/governance/CANONICAL_LAW.md" "$GOV_ROOT/CANONICAL_LAW.md"; then
@@ -77,10 +80,16 @@ fi
 echo "WIRE: $WORKSPACE (consumer .cursor links)"
 WORKSPACE_DIR="$WORKSPACE"
 ensure_machine_cursor_plans_store
-if [ "$WS_REAL" = "$GC_REAL" ]; then
+if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
   if [ -e "$WORKSPACE/.cursor-commands" ] || [ -L "$WORKSPACE/.cursor-commands" ]; then
     rm -f "$WORKSPACE/.cursor-commands"
-    echo "REMOVED: .cursor-commands self-alias"
+    if [ "$WS_KIND" = "ssot" ]; then
+      echo "REMOVED: .cursor-commands self-alias"
+    else
+      echo "REMOVED: .cursor-commands on ssot_checkout (consumer link not required)"
+    fi
+  else
+    echo "OK: .cursor-commands absent on $WS_KIND (no consumer link)"
   fi
 else
   _link_or_update "$WORKSPACE/.cursor-commands" "$GC" ".cursor-commands"

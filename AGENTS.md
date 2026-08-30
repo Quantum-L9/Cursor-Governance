@@ -1036,6 +1036,70 @@ where `additive_only`. It also supersedes the Cursor “scoped-commits after
 - Combined `beforeShellExecution` is Cursor-only. Claude uses PreToolUse
   (`local_execution_gate_wrap.py`). Do not copy the hook cut.
 
+<!-- FF_PAIR_FLAGS_V1 -->
+## `/ff` pairs this clone + SSOT (2026-08-29)
+
+This fragment supersedes “name the clone (`ssot` vs `workspace`)” and
+“stop until they name one” in `l9-repo-sync` clone-map / compact workflow
+history. Those sentences stay on disk only where already rewritten.
+
+- In this repo, bare **`/ff`** / `make ff` is **one** `ff.sh` that fast-forwards
+  **this checkout and** `$HOME/.cursor-governance` **in parallel**.
+- **`/ff --clone`** / `make ff-clone` = working copy only.
+- **`/ff --ssot`** / `make ff-ssot` = SSOT only.
+- Use the flags from other repos. Do not diagnose. Do not sequential-ff.
+
+<!-- L9_ISSUE_REMEDIATE_AUTOMATION_V1 -->
+## `/issues` remediator (2026-08-29)
+
+Remediator slashes **`/issues`** and **`/l9-issue-remediation`** are Converge
+by default. `/issues diagnose` (or “what’s blocking?”) is the auditor: inventory
+plus already-resolved close only. Diagnose never starts `/l9-pr-remediation`.
+
+Converge drains all automatable clusters, highest leverage first. Land each
+fix on the matching open PR, else a new stacked PR on the newest
+(`PR_STACK=auto`). Close when `status=fixed` (`close_resolved_issue.py`) so
+the issue does not stay OPEN.
+
+**`/l9-pr-remediation` runs only after bound-target `open_issues=0`.** Zero
+means zero. Leftover HUMAN/EXTERNAL OPEN issues are `BLOCKED_OPEN_ISSUES` —
+do not weaken to an automatable subset. The issue skill never `gh pr merge`.
+
+<!-- L9_PLAN_AUDIT_ABSORBED_V1 -->
+## `l9-plan-audit` absorbed into `l9-pipeline-audit` (2026-08-29)
+
+This fragment supersedes the live-scanner sentences in §16, `L9_AUDIT_PLANS_V1`,
+`L9_PIPELINE_AUDIT_V1`, and `L9_SESSION_PIPELINE_AUDIT_V1`. Those paragraphs
+stay on disk (additive_only). Do not treat `skills/l9-plan-audit/` as a live
+pack.
+
+- SessionStart `### Plan audit` is `skills/l9-pipeline-audit/scripts/audit_pipeline.py --format session-start`. The plans scanner is `skills/l9-pipeline-audit/scripts/audit_plans.py`.
+- Plans, WIP, and PE campaigns are one family. NEXT 1–3 takes one slot per surface first, then fills leftovers (cap 3). Eligible WIP is harvestable or pending-active, not inventory-`landed`.
+- Live skill is **`l9-pipeline-audit`**. The old pack is archived at `skills/_archived/l9-plan-audit/` (`superseded_by: l9-pipeline-audit`).
+- `/plan-audit` remains a compatibility alias of `/l9-pipeline-audit`. `/l9-audit-plans` remains the plans-store shelf organizer. Do not auto-Build. Do not `make campaign`.
+
+<!-- L9_PR_SECURITY_VELOCITY_V1 -->
+## Local PR security velocity (2026-08-29)
+
+`make pr` / `make pr-check` / default `make pr-security` use
+`PR_SECURITY_PROFILE=velocity`: one gitleaks process over the changed set,
+gitleaks+bandit+semgrep in parallel, Semgrep `p/secrets` plus
+`.semgrep/l9-pr.yml`. `p/python` stays on CI and on
+`PR_SECURITY_PROFILE=full make pr-security` / `make pr-security-full`
+(also a `pr-full` prereq). `SEMGREP_CONFIGS` still overrides. Do not skip
+the security wave. Do not default `gitleaks detect` without `--no-git`.
+
+<!-- L9_PLAN_SIMPLE_STACK_PR_V1 -->
+## `l9-plan-simple` Build publishes a stacked PR (2026-08-29)
+
+This fragment supersedes the “Build button on the current checkout” sentence
+in `L9_PLAN_SIMPLE_V1`. That paragraph stays on disk (additive_only). Do not fold it.
+
+- Planning still binds the current workspace. Do not write `Lock: origin/main = <sha>`. Do not run `make campaign`.
+- After **Build** todos complete: scoped-commit, `l4_local.py authorize-release`, then **`PR_STACK=auto PR_REMEDIATE=0 make pr`**.
+- If any open PR exists: **never** branch from `origin/main`. Start from the unique open-PR chain tip. Sibling chains fail closed. Empty board may use `origin/main`.
+- The finish reply **must** display the opened PR URL as proof.
+
 <!-- L9_SESSION_END_DIRT_CLOSE_V1 -->
 ## SessionEnd dirt-close is the loop (2026-08-29)
 

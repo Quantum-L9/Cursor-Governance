@@ -8,6 +8,8 @@
 #
 # Consumer usage (no per-repo Makefile copy required):
 #   make -C "$HOME/.cursor-governance" pr-security WS="$(pwd)"
+# Full Semgrep packs: PR_SECURITY_PROFILE=full make pr-security
+#                     (or make pr-security-full)
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
@@ -37,6 +39,12 @@ case "$PR_SECURITY_MODE" in
   *) echo "run_pr_security: unknown --mode '$PR_SECURITY_MODE' (want gate|advisory)" >&2; exit 2 ;;
 esac
 
+PR_SECURITY_PROFILE="${PR_SECURITY_PROFILE:-velocity}"
+case "$PR_SECURITY_PROFILE" in
+  velocity|full) : ;;
+  *) echo "run_pr_security: unknown PR_SECURITY_PROFILE '$PR_SECURITY_PROFILE' (want velocity|full)" >&2; exit 2 ;;
+esac
+
 WS="${_ws_arg:-${WS:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 
@@ -56,7 +64,18 @@ PIP_AUDIT_PIN="$(pin_from_req pip-audit)"
 BANDIT_PIN="${BANDIT_PIN:-1.8.6}"
 PIP_AUDIT_PIN="${PIP_AUDIT_PIN:-2.9.0}"
 BANDIT_SEVERITY="${BANDIT_SEVERITY:-high}"
-SEMGREP_CONFIGS="${SEMGREP_CONFIGS:-p/python p/secrets}"
+_LOCAL_SEMGREP_RULES="$GOV_ROOT/.semgrep/l9-pr.yml"
+# SEMGREP_CONFIGS override wins when the caller sets the variable (even empty).
+if [[ "${SEMGREP_CONFIGS+set}" != "set" ]]; then
+  if [[ "$PR_SECURITY_PROFILE" = "full" ]]; then
+    SEMGREP_CONFIGS="p/python p/secrets"
+  else
+    SEMGREP_CONFIGS="p/secrets"
+  fi
+  if [[ -f "$_LOCAL_SEMGREP_RULES" ]]; then
+    SEMGREP_CONFIGS="$SEMGREP_CONFIGS $_LOCAL_SEMGREP_RULES"
+  fi
+fi
 
 EXCLUDE_PREFIXES=(
   _archived/ _archive/ archive/ archived/
@@ -117,15 +136,36 @@ filter_existing() {
   done
 }
 
+_replay_scanner_log() {
+  local log="$1" line
+  [[ -f "$log" ]] || return 0
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    note "$line"
+    case "$line" in
+      "PASS: "*) PASS=$((PASS + 1)) ;;
+      "FAIL: "*) FAIL=$((FAIL + 1)); FAILURES+=("${line#FAIL: }") ;;
+      "SKIP: "*) SKIP=$((SKIP + 1)) ;;
+    esac
+  done <"$log"
+}
+
 note "=== PR security gate (changed files only) ==="
 note "Governance: $GOV_ROOT"
 note "Workspace:  $WS"
 note "Advisory:   $PR_SECURITY_ADVISORY"
+note "Profile:    $PR_SECURITY_PROFILE"
 note "Pins: gitleaks@$GITLEAKS_PIN bandit==$BANDIT_PIN pip-audit==$PIP_AUDIT_PIN"
 
 _all_tmp="$(mktemp)"
 _chg_tmp="$(mktemp)"
-trap 'rm -f "$_all_tmp" "$_chg_tmp"' EXIT
+_scan_tmp=""
+_wave_dir=""
+_cleanup() {
+  rm -f "$_all_tmp" "$_chg_tmp"
+  [[ -n "$_scan_tmp" && -d "$_scan_tmp" ]] && rm -rf "$_scan_tmp"
+  [[ -n "$_wave_dir" && -d "$_wave_dir" ]] && rm -rf "$_wave_dir"
+}
+trap _cleanup EXIT
 if [[ -n "${PR_CHANGED_FILE:-}" && -f "$PR_CHANGED_FILE" ]]; then
   note "OK: skip resolve_changed_files.sh (PR_CHANGED_FILE)"
   cat "$PR_CHANGED_FILE" >"$_all_tmp"
@@ -148,6 +188,9 @@ if [[ ${#CHANGED[@]} -eq 0 ]]; then
 fi
 
 # ── gitleaks ───────────────────────────────────────────────────────────────
+# One process over a temp tree of the changed set. `gitleaks dir a b` ignores
+# extra args and can walk the cwd (measured: two files → 141 MB). Never default
+# `detect` without --no-git (that scans git history).
 run_gitleaks() {
   if ! have gitleaks; then
     missing_tool gitleaks "bash ops/scripts/bootstrap_agent_environment.sh --surface local"
@@ -161,19 +204,32 @@ run_gitleaks() {
   fi
   local cfg_args=()
   [[ -f "$GITLEAKS_CONFIG" ]] && cfg_args=(-c "$GITLEAKS_CONFIG")
-  local status=0
-  local f
-  # Scan only changed paths (not the whole tree / history).
+  _scan_tmp="$(mktemp -d "${TMPDIR:-/tmp}/l9-gitleaks-changed.XXXXXX")"
+  local f dest
   for f in "${CHANGED[@]}"; do
-    if ! (
-      cd "$WS"
-      gitleaks detect --no-git --redact --exit-code=1 "${cfg_args[@]}" --source "$f"
-    ); then
-      status=1
+    dest="$_scan_tmp/$f"
+    mkdir -p "$(dirname "$dest")"
+    if ! ln "$WS/$f" "$dest" 2>/dev/null; then
+      cp "$WS/$f" "$dest"
     fi
   done
+  local status=0
+  local -a extra=(--redact --exit-code=1)
+  extra+=(--no-banner)
+  extra+=("${cfg_args[@]}")
+  if gitleaks dir --help >/dev/null 2>&1; then
+    if ! gitleaks dir "${extra[@]}" "$_scan_tmp"; then
+      status=1
+    fi
+  else
+    if ! gitleaks detect --no-git "${extra[@]}" --source "$_scan_tmp"; then
+      status=1
+    fi
+  fi
+  rm -rf "$_scan_tmp"
+  _scan_tmp=""
   if [[ "$status" -eq 0 ]]; then
-    ok "gitleaks (${#CHANGED[@]} changed path(s))"
+    ok "gitleaks (${#CHANGED[@]} changed path(s), one process)"
   else
     fail "gitleaks found secrets in changed files"
   fi
@@ -241,10 +297,11 @@ run_semgrep() {
   for c in $SEMGREP_CONFIGS; do
     configs+=(--config "$c")
   done
+  note "semgrep configs: $SEMGREP_CONFIGS"
   if have semgrep; then
     ver="$(semgrep --version 2>/dev/null | head -1 || true)"
     note "semgrep: $ver (SDK supported range >=1.100.0,<2.0.0)"
-    if semgrep --error --quiet "${configs[@]}" "${targets[@]}"; then
+    if semgrep --error --quiet --metrics=off "${configs[@]}" "${targets[@]}"; then
       ok "semgrep (${#targets[@]} file(s))"
     else
       fail "semgrep found issues in changed files"
@@ -252,7 +309,7 @@ run_semgrep() {
   elif have uvx || have uv; then
     ver="$(run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --version 2>/dev/null | head -1 || true)"
     note "semgrep: $ver (SDK supported range >=1.100.0,<2.0.0)"
-    if run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --error --quiet "${configs[@]}" "${targets[@]}"; then
+    if run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --error --quiet --metrics=off "${configs[@]}" "${targets[@]}"; then
       ok "semgrep (${#targets[@]} file(s))"
     else
       fail "semgrep found issues in changed files"
@@ -290,13 +347,29 @@ run_pip_audit() {
   ) && ok "pip-audit==$PIP_AUDIT_PIN" || fail "pip-audit found vulnerabilities"
 }
 
-run_gitleaks
-run_bandit
-run_semgrep
+_wave_dir="$(mktemp -d "${TMPDIR:-/tmp}/l9-pr-security-wave.XXXXXX")"
+_run_wave_job() {
+  local name="$1"
+  local fn="run_${name}"
+  (
+    trap - EXIT
+    set +e
+    "$fn"
+    echo $? >"$_wave_dir/${name}.rc"
+  ) >"$_wave_dir/${name}.log" 2>&1 &
+}
+_run_wave_job gitleaks
+_run_wave_job bandit
+_run_wave_job semgrep
+wait
+_replay_scanner_log "$_wave_dir/gitleaks.log"
+_replay_scanner_log "$_wave_dir/bandit.log"
+_replay_scanner_log "$_wave_dir/semgrep.log"
+
 run_pip_audit
 
 note ""
-note "Summary: pass=$PASS fail=$FAIL skip=$SKIP mode=$PR_SECURITY_MODE"
+note "Summary: pass=$PASS fail=$FAIL skip=$SKIP mode=$PR_SECURITY_MODE profile=$PR_SECURITY_PROFILE"
 if [[ "$FAIL" -gt 0 ]]; then
   for f in "${FAILURES[@]}"; do
     note "  - $f"

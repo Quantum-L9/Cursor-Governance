@@ -9,15 +9,17 @@ metadata:
   tags: [l9, git, sync, fast-forward, ssot, cursor-governance]
   owner: igor_beylin
   status: active
-  version: 1.3.0
-  updated: 2026-08-28
+  version: 1.4.0
+  updated: 2026-08-29
 ---
 
 # Repo Sync (in-place fast-forward)
 
 ## Purpose
 
-Catch a **named** Cursor-Governance clone up to `origin/main` **in place**.
+Catch **this** Cursor-Governance clone **and** `$HOME/.cursor-governance`
+up to `origin/main` **in place**, in parallel, when they are different
+gitdirs.
 `.venv`, env.local keep-list files (`.env.local`, `env.local`,
 `.env.*.local`, `.claude/settings.local.json`), and unique untracked files
 stay. Unique local commits and every dirty tracked path are parked first.
@@ -38,8 +40,8 @@ catch-up — not only triple-dot colliding ones.
 
 | Mode | Mutates? | Action |
 |---|---|---|
-| diagnose | No | Name the clone. Inventory. Can this branch ff? |
-| sync (`/ff`) | Yes — catch-up | Run [references/execute.md](references/execute.md) via `scripts/ff.sh` |
+| diagnose | No | Skip. Not a stop. |
+| sync (`/ff`) | Yes | `ff.sh` (pairs SSOT). `/ff --clone` / `/ff --ssot` = one target. |
 | refuse | No | Park/hold/switch failed. Do not reset a feature branch onto main. |
 
 No new pull script. The only mutate path is `scripts/ff.sh` (`reset --keep`
@@ -48,7 +50,7 @@ stashes untracked). `GOVERNANCE_SYNC_PUSH=0`. `GOVERNANCE_SYNC_HARD_RESET=0`.
 
 ## Authority Order
 
-1. User-named target clone (`ssot` vs `workspace`).
+1. `/ff` / `make ff` from this checkout — script pairs SSOT. No naming.
 2. This skill + rule `55-ff-only-ssot-sync`.
 3. `l9-git-work-preserve` when a parked ref needs later triage or extract.
 
@@ -71,19 +73,19 @@ It classifies `refs/l9/preserved/ff/*`, `refs/l9/preserved/ff-dirty/*`, and
 
 ## Compact Workflow
 
-1. **Name** — print [references/clone-map.md](references/clone-map.md). If the
-   user said “this repo” and both gitdirs exist, **stop until they name one**.
-2. **Diagnose** — [references/diagnose-first.md](references/diagnose-first.md).
-3. **Refuse** — [references/forbidden.md](references/forbidden.md) if the ask
+1. **Run once** — [references/clone-map.md](references/clone-map.md).
+   `bash skills/l9-repo-sync/scripts/ff.sh` or `make ff`. The script pairs
+   this checkout + SSOT in parallel. Do not diagnose both. Do not wait, then
+   ff SSOT. Do not stop to name clones.
+2. **Refuse** — [references/forbidden.md](references/forbidden.md) if the ask
    needs clone, swap, push, or an **agent** `git switch`. Inner `ff.sh` may
    `git switch` to `main` after parking.
-4. **Execute** — [references/execute.md](references/execute.md) via
+3. **Execute** — [references/execute.md](references/execute.md) via
    `scripts/ff.sh`. Dirt, unique commits, and not-on-main are **not** a stop.
    Step 0 inside the script switches to `main` without moving the feature ref.
-5. **Verify** — same `gitdir`, HEAD on `main`, `.venv` and env.local keep-list
-   still present at the same paths, no new `~/.cursor-governance.bak.*`
-   from this run.
-6. **Shelf** — leftover untracked `WIP/`, `docs/plans/`, and
+4. **Done** when the script prints `OK:` for each clone. Do not add a second
+   census or pytest to `/ff`.
+5. **Shelf** — leftover untracked `WIP/`, `docs/plans/`, and
    `environment/program-execution/campaigns/` become a sibling branch
    (`feat/ff-shelf-<stamp>`). Copy the bytes into the new worktree
    (untracked files are not in a fresh checkout). Apply Improve, then

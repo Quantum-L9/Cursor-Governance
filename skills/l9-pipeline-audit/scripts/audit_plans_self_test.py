@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Self-test for l9-plan-audit (skill-local; not collected by root pytest)."""
+"""Self-test for absorbed audit_plans.py (skill-local; not collected by root pytest)."""
 
 from __future__ import annotations
 
@@ -78,8 +78,8 @@ def main() -> int:
     errors: list[str] = []
 
     listed = skill_validation_scripts()
-    if listed != ["self_test.py"]:
-        errors.append(f"SKILL.md Validation scripts mismatch: {listed}")
+    if "self_test.py" not in listed:
+        errors.append(f"SKILL.md Validation must list self_test.py: {listed}")
 
     for required in (
         ROOT / "SKILL.md",
@@ -349,11 +349,11 @@ isProject: false
             pass
 
     if errors:
-        print("FAIL: l9-plan-audit self_test")
+        print("FAIL: audit_plans_self_test")
         for err in errors:
             print(f"  - {err}")
         return 1
-    print("PASS: l9-plan-audit self_test")
+    print("PASS: audit_plans_self_test")
     return 0
 
 

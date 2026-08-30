@@ -43,6 +43,10 @@ _GENERIC_BASENAMES = frozenset(
         "AGENTS.md",
         "README.md",
         "TODO.md",
+        "expect.yaml",
+        "source.yaml",
+        "MANIFEST.yaml",
+        "MANIFEST.json",
     }
 )
 
@@ -266,6 +270,19 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
             if inferred not in selected:
                 selected.append(inferred)
             continue
+        tests_dir = Path(path).parent / "tests"
+        if (REPO_ROOT / tests_dir).is_dir():
+            referencing = tests_referencing(path, REPO_ROOT / tests_dir)
+        else:
+            referencing = []
+        if referencing:
+            for target in referencing:
+                if target not in selected:
+                    selected.append(target)
+            # The source file itself is not a pytest target: collecting a
+            # non-test module yields nothing and only lengthens the command.
+            missing.append(path)
+            continue
         owners = [
             suite
             for suite in suites
@@ -279,20 +296,6 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
                     if text and text != "." and text not in selected:
                         selected.append(text)
             continue
-        tests_dir = Path(path).parent / "tests"
-        if (REPO_ROOT / tests_dir).is_dir():
-            referencing = tests_referencing(path, REPO_ROOT / tests_dir)
-            fallbacks = referencing
-        else:
-            fallbacks = []
-        if not fallbacks:
-            missing.append(path)
-            continue
-        for target in fallbacks:
-            if target not in selected:
-                selected.append(target)
-        # The source file itself is not a pytest target: collecting a
-        # non-test module yields nothing and only lengthens the command.
         missing.append(path)
     if "." in selected:
         raise SystemExit("select_pr_pytest_paths refused to emit repo-root '.'")
