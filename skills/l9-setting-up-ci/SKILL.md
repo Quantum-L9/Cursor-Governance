@@ -1,7 +1,6 @@
 ---
 name: l9-setting-up-ci
 description: activate governed L9 CI from the org seeder or l9-ci-core stamp. never invent ci.yml or biome.json. use when bootstrapping CI, activating l9-ci-core, adding Biome, or adding lint/test/type-check stages.
-paths: ".github/workflows/**, biome.json, .biomeignore, .editorconfig, .vscode/extensions.json"
 metadata:
   skill_schema: 1
   layer: control_plane
