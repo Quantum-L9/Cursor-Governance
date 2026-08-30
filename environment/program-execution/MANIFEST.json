@@ -2007,7 +2007,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "2228b0404197b97ce328cf7922fa94e8ee013fb6fd911d8b1876f8b87b332379"
+      "sha256": "d66c9520b13c52ad0039f5dd3aa26df81782366aa99fd230f790d9e609dbebaf"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2051,7 +2051,7 @@
     },
     {
       "path": "scripts/tests/test_failed_result_harvest.py",
-      "sha256": "c76b27ee0192593da2c870fdcdfaa3fa173c595285e9e497b0a34fa2e34f3034"
+      "sha256": "48dd1764d4bdee3cc253f747bb16fcef5b60504d9293f93750d014dff2c6791a"
     },
     {
       "path": "scripts/tests/test_launchability.py",
