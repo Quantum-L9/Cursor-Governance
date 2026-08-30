@@ -39,6 +39,7 @@ _GOV_LIB = _governance_lib()
 if str(_GOV_LIB) not in sys.path:
     sys.path.insert(0, str(_GOV_LIB))
 
+from workspace_roots import skipped_roots as _skipped_roots  # noqa: E402
 from workspace_roots import workspace_roots as _shared_workspace_roots  # noqa: E402
 
 #: Cloud containers put several repositories side by side. Hydrating each costs
@@ -98,7 +99,32 @@ def _hydration_roots(workspace: Path) -> list[Path]:
         workspace,
         cap=_MAX_HYDRATION_ROOTS,
         predicate=_resolves_to_own_group,
+        prefer=_is_session_workspace,
     )
+
+
+def _is_session_workspace(root: Path) -> bool:
+    """True for the repository the bootstrap receipt records as wired.
+
+    That is the session's own project directory, so it is the one repository
+    whose memory is certain to be wanted. Alphabetical truncation dropped it:
+    the receipt named `l9-constellation-topology`, which sorts seventh of nine
+    under a cap of six, so the session hydrated six repositories and not the one
+    it was working in.
+    """
+    try:
+        state = json.loads(
+            (Path.home() / ".l9" / "claude" / "bootstrap-state.json").read_text(encoding="utf-8")
+        )
+        wired = str(state.get("workspace") or "")
+    except (OSError, ValueError):
+        return False
+    if not wired:
+        return False
+    try:
+        return Path(wired).resolve() == root.resolve()
+    except OSError:
+        return False
 
 
 sys.path.insert(0, str(MEM))
@@ -228,15 +254,26 @@ def main() -> int:
             "No phase-lock is required or accepted for repository mutation.",
         ]
         if len(roots) > 1:
-            lines.insert(
-                1,
+            over_cap, filtered = _skipped_roots(workspace, roots, predicate=_resolves_to_own_group)
+            summary = (
                 f"Multi-repo container: hydrated {len(roots)} of "
                 f"{_repo_count(workspace)} repositories under {workspace} "
-                f"(cap {_MAX_HYDRATION_ROOTS}; repositories with no namespace of their "
-                "own are skipped). A group_id is repository identity, never container "
-                "identity — resolving one from the container root matches every repo "
-                "and returns none.",
+                f"(cap {_MAX_HYDRATION_ROOTS}). A group_id is repository identity, never "
+                "container identity — resolving one from the container root matches every "
+                "repo and returns none."
             )
+            # Name what was dropped and why: the two reasons have different
+            # remedies, and a bare "6 of 9" left the reader unable to tell which
+            # repositories were missing from their own session's memory.
+            if over_cap:
+                summary += " Not hydrated (over cap): " + ", ".join(p.name for p in over_cap) + "."
+            if filtered:
+                summary += (
+                    " Skipped (no namespace of their own): "
+                    + ", ".join(p.name for p in filtered)
+                    + "."
+                )
+            lines.insert(1, summary)
         _emit("\n".join(line for line in lines if line))
     except Exception as exc:  # fail-open
         _emit(

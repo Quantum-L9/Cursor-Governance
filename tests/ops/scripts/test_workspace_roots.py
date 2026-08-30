@@ -18,6 +18,7 @@ from workspace_roots import (  # noqa: E402
     DEFAULT_MAX_ROOTS,
     is_repository,
     projection_roots,
+    skipped_roots,
     workspace_roots,
 )
 
@@ -111,3 +112,33 @@ def test_live_container_shape_is_stable(tmp_path: Path, cap: int) -> None:
     result = workspace_roots(tmp_path, cap=cap)
     assert result == sorted(made)[:cap]
     assert all(is_repository(path) for path in result)
+
+
+def test_prefer_moves_the_session_repo_ahead_of_the_cap(tmp_path: Path) -> None:
+    """Alphabetical truncation dropped the repository being worked in.
+
+    Nine repositories and a cap of six meant the two late in the alphabet were
+    never hydrated — including the one the bootstrap receipt named as wired.
+    """
+    for name in ("a-repo", "b-repo", "c-repo", "z-repo"):
+        (tmp_path / name / ".git").mkdir(parents=True)
+    plain = workspace_roots(tmp_path, cap=2)
+    assert [p.name for p in plain] == ["a-repo", "b-repo"]
+    preferred = workspace_roots(tmp_path, cap=2, prefer=lambda p: p.name == "z-repo")
+    assert [p.name for p in preferred] == ["z-repo", "a-repo"]
+
+
+def test_skipped_roots_separates_over_cap_from_filtered(tmp_path: Path) -> None:
+    """The two skip reasons have different remedies, so they are reported apart."""
+    for name in ("a-repo", "b-repo", "no-ns"):
+        (tmp_path / name / ".git").mkdir(parents=True)
+    predicate = lambda p: p.name != "no-ns"  # noqa: E731
+    selected = workspace_roots(tmp_path, cap=1, predicate=predicate)
+    over_cap, filtered = skipped_roots(tmp_path, selected, predicate=predicate)
+    assert [p.name for p in over_cap] == ["b-repo"]
+    assert [p.name for p in filtered] == ["no-ns"]
+
+
+def test_repository_workspace_ignores_prefer(tmp_path: Path) -> None:
+    (tmp_path / ".git").mkdir()
+    assert workspace_roots(tmp_path, prefer=lambda _p: False) == [tmp_path]

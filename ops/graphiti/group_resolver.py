@@ -109,11 +109,16 @@ def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> di
         toplevel = _git_toplevel(cwd)
         if toplevel is not None and toplevel != cwd:
             unique = _repo_matches(registry, toplevel)
+    # True when the only matches came from repositories *beneath* cwd — i.e. cwd
+    # is a multi-repository container root, not a repository. A cloud session is
+    # rooted there, so this is the common case, not an edge case.
+    from_container_root = False
     if not unique:
         child_hits: list[str] = []
         for root in _child_git_roots(cwd):
             child_hits.extend(_repo_matches(registry, root))
         unique = sorted(set(child_hits))
+        from_container_root = bool(unique)
 
     override = explicit or os.environ.get("GRAPHITI_GROUP_ID", "").strip() or None
     if override:
@@ -137,10 +142,33 @@ def resolve_group_id(cwd: Path | None = None, explicit: str | None = None) -> di
     if len(unique) == 1:
         return {"group_id": unique[0], "method": "registry", "readonly": False}
     if len(unique) > 1:
+        # Refusing to pick is correct: a group_id is repository identity, and
+        # collapsing several repositories onto one namespace is the failure this
+        # guard exists to prevent. What was wrong was the remedy. "set
+        # GRAPHITI_GROUP_ID" reads as an account-level pin, which the environment
+        # contract forbids for exactly the reason above. Name the situation and
+        # the two legitimate remedies instead of implying the forbidden one.
+        if from_container_root:
+            error = (
+                f"{cwd} is a multi-repository container root, not a repository; "
+                f"it matches {len(unique)} groups: {unique}. A group_id is repository "
+                "identity — run this command from one repository directory, or pass "
+                "--group-id for that single invocation. Do not pin GRAPHITI_GROUP_ID "
+                "in the environment: it would file every repository under one group."
+            )
+        else:
+            error = (
+                f"ambiguous group match: {unique} — the registry matches this one "
+                "repository under several groups; fix the overlapping entry in "
+                "ops/graphiti/group_registry.yaml, or pass --group-id for this "
+                "invocation."
+            )
         return {
             "group_id": None,
-            "error": f"ambiguous group match: {unique} — set GRAPHITI_GROUP_ID",
+            "error": error,
             "readonly": True,
+            "candidates": unique,
+            "container_root": from_container_root,
         }
 
     on_failure = (registry.get("resolution") or {}).get("on_failure", "abort_write_allow_readonly")

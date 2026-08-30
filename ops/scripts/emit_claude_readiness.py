@@ -39,6 +39,7 @@ import subprocess
 import sys
 import urllib.error
 import urllib.request
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
@@ -64,6 +65,11 @@ UNKNOWN = "UNKNOWN"
 
 # Worst-of ordering for aggregation (higher index = worse).
 _ORDER = {READY: 0, UNKNOWN: 1, DEGRADED: 2, BLOCKED: 3}
+
+
+def _now_iso() -> str:
+    """UTC generation time for the receipt, seconds precision."""
+    return datetime.now(UTC).replace(microsecond=0).isoformat()
 
 
 def _gov_root() -> Path:
@@ -187,28 +193,62 @@ def _map_projection_status(entry: dict[str, Any] | str, *, domain: str = "") -> 
     return _PROJ_STATUS.get(raw, UNKNOWN)
 
 
+_PROJ_DOMAINS = ("skills", "commands", "rules", "settings", "hooks", "plugins", "mcp")
+
+
+def _collision_names(entry: dict[str, Any] | str) -> list[str]:
+    """Collision entries recorded by the projection engine for one domain."""
+    if isinstance(entry, str):
+        return []
+    raw = entry.get("collisions")
+    return [str(c) for c in raw] if isinstance(raw, list) else []
+
+
 def _projection_statuses(receipt: dict[str, Any] | None) -> dict[str, str]:
-    """Per-domain projection status from the projection receipt (not symlink existence)."""
-    domains = ("skills", "commands", "rules", "settings", "hooks", "plugins", "mcp")
-    out = {d: UNKNOWN for d in domains}
+    """Per-domain projection status from the projection receipt (not symlink existence).
+
+    A domain the engine calls "ok" can still be missing manifest-enabled entries:
+    a name colliding between the command and skill namespaces is dropped from the
+    command projection (the skill stays authoritative). Reporting that domain
+    READY hid five dropped commands, `/l9-pr-remediation` among them — so a
+    domain carrying collisions is downgraded here.
+    """
+    out = {d: UNKNOWN for d in _PROJ_DOMAINS}
     if not receipt:
         return out
+    collisions = _projection_collisions(receipt)
+    for domain, entry in _iter_projection_entries(receipt):
+        out[domain] = _map_projection_status(entry, domain=domain)
+    for domain, names in collisions.items():
+        if names and out.get(domain) == READY:
+            out[domain] = DEGRADED
+    return out
+
+
+def _projection_collisions(receipt: dict[str, Any] | None) -> dict[str, list[str]]:
+    """Per-domain collision entries recorded by the projection engine."""
+    out: dict[str, list[str]] = {d: [] for d in _PROJ_DOMAINS}
+    if not receipt:
+        return out
+    for domain, entry in _iter_projection_entries(receipt):
+        out[domain] = _collision_names(entry)
+    return out
+
+
+def _iter_projection_entries(receipt: dict[str, Any]):
+    """Yield (domain, entry) for both receipt shapes (list of dicts, or a map)."""
     per = receipt.get("domains")
     if isinstance(per, list):
         for entry in per:
-            if not isinstance(entry, dict):
-                continue
-            name = str(entry.get("domain") or "")
-            if name in out:
-                out[name] = _map_projection_status(entry, domain=name)
-    elif isinstance(per, dict):
-        for d in domains:
-            entry = per.get(d)
             if isinstance(entry, dict):
-                out[d] = _map_projection_status(entry, domain=d)
-            elif isinstance(entry, str):
-                out[d] = _map_projection_status(entry, domain=d)
-    return out
+                name = str(entry.get("domain") or "")
+                if name in _PROJ_DOMAINS:
+                    yield name, entry
+    elif isinstance(per, dict):
+        for domain in _PROJ_DOMAINS:
+            entry = per.get(domain)
+            if isinstance(entry, (dict, str)):
+                yield domain, entry
 
 
 DEFAULT_GRAPHITI_MCP_URL = "https://memory.quantumaipartners.com/graphiti/mcp"
@@ -227,6 +267,17 @@ _BLOCKER_VOCAB = {
 }
 
 
+# Blockers that describe a path problem, not a credential problem. Saying
+# "not authenticated" over an egress denial invited the one repair the contract
+# forbids — pasting GRAPHITI_MCP_TOKEN — when the fix is a network allow-list.
+_REACHABILITY_BLOCKERS = frozenset({"allowlist", "reachability", "dns", "network", "config"})
+
+
+def _blocker_sentence(blocker: str) -> str:
+    verb = "not reachable" if blocker in _REACHABILITY_BLOCKERS else "not authenticated"
+    return f"{verb} (blocker: {blocker})"
+
+
 def graphiti_mcp_url() -> str:
     return (os.environ.get("GRAPHITI_MCP_URL") or DEFAULT_GRAPHITI_MCP_URL).strip()
 
@@ -234,17 +285,28 @@ def graphiti_mcp_url() -> str:
 def _classify_graphiti_http_code(code: int) -> tuple[str, str]:
     """Map an HTTP status from GRAPHITI_MCP_URL to READY/DEGRADED + blocker.
 
-    MCP is JSON-RPC POST; GET/HEAD often returns 405. Any 2xx–4xx except 401/403
-    means the front door answered. 403 is the hosted allowlist miss (operator
-    paste), not a missing token — do not treat it as a reason to paste one.
+    MCP is JSON-RPC POST; a GET/HEAD probe draws 405 (method refused) or 426
+    (upgrade required) from a perfectly healthy server, so both count as "the
+    front door answered". This dimension is REACHABILITY, not a usable session —
+    whether a bearer works is Graphiti_authenticated_health, which is a separate
+    field precisely so the two are never collapsed.
+
+    401 is identity. 403 is the hosted egress allow-list miss (operator
+    settings), never a missing token — do not treat it as a reason to paste one.
+
+    What this classifier cannot see is the transport. The probe reaches here
+    only if the connection succeeded, so a proxy-refused host used to arrive as
+    a direct-dial success and score READY. That is fixed in the transport
+    (safe_https honors HTTPS_PROXY), not by reinterpreting these codes: marking
+    426 DEGRADED would make a healthy server read as broken.
     """
     if code == 401:
-        return DEGRADED, "not authenticated (blocker: identity)"
+        return DEGRADED, _blocker_sentence("identity")
     if code == 403:
-        return DEGRADED, "not authenticated (blocker: allowlist)"
+        return DEGRADED, _blocker_sentence("allowlist")
     if 200 <= code < 500:
         return READY, "front door reachable"
-    return DEGRADED, "not authenticated (blocker: reachability)"
+    return DEGRADED, _blocker_sentence("reachability")
 
 
 def _graphiti_mcp_http_health() -> tuple[str, str]:
@@ -252,7 +314,7 @@ def _graphiti_mcp_http_health() -> tuple[str, str]:
         return READY, "probe skipped"
     url = graphiti_mcp_url()
     if not url:
-        return DEGRADED, "not authenticated (blocker: config)"
+        return DEGRADED, _blocker_sentence("config")
     # Never urllib.urlopen: GRAPHITI_MCP_URL is env-sourced and urllib follows
     # file:// (CWE-939). safe_https.exchange is HTTPS or loopback HTTP only.
     req = urllib.request.Request(url, method="GET")
@@ -268,9 +330,18 @@ def _graphiti_mcp_http_health() -> tuple[str, str]:
     except urllib.error.HTTPError as exc:
         return _classify_graphiti_http_code(int(exc.code))
     except ValueError:
-        return DEGRADED, "not authenticated (blocker: config)"
+        return DEGRADED, _blocker_sentence("config")
+    except urllib.error.URLError as exc:
+        # A proxy that refuses CONNECT with 403 is the hosted egress allow-list,
+        # which has a different repair than an unroutable host. The failure text
+        # is only INSPECTED for that shape; the note returned is fixed vocabulary,
+        # so no probe-derived text is ever logged.
+        detail = f"{getattr(exc, 'reason', '') or ''} {exc}"
+        if "CONNECT" in detail and "403" in detail:
+            return DEGRADED, _blocker_sentence("allowlist")
+        return DEGRADED, _blocker_sentence("reachability")
     except Exception:  # noqa: BLE001 - a probe never crashes the emitter
-        return DEGRADED, "not authenticated (blocker: reachability)"
+        return DEGRADED, _blocker_sentence("reachability")
 
 
 def _graphiti_cli_health(gov: Path) -> tuple[str, str]:
@@ -298,12 +369,12 @@ def _graphiti_cli_health(gov: Path) -> tuple[str, str]:
     # Classify without interpolating probe-derived exception text.
     blob = json.dumps(data).lower()
     if "403" in blob:
-        return DEGRADED, "not authenticated (blocker: allowlist)"
+        return DEGRADED, _blocker_sentence("allowlist")
     if "401" in blob:
-        return DEGRADED, "not authenticated (blocker: identity)"
+        return DEGRADED, _blocker_sentence("identity")
     if data.get("liveness_ok") and not (data.get("tools") or {}).get("reachable"):
         return DEGRADED, "cli tool plane unreachable"
-    return DEGRADED, "not authenticated (blocker: reachability)"
+    return DEGRADED, _blocker_sentence("reachability")
 
 
 def graphiti_probe(gov: Path) -> dict[str, Any]:
@@ -324,7 +395,7 @@ def _graphiti_health(probe: dict[str, Any]) -> tuple[str, str]:
         return READY, "authenticated"
     key = str(probe.get("primary_blocker") or "").strip().lower()
     blocker = _BLOCKER_VOCAB.get(key, "unknown")
-    return DEGRADED, f"not authenticated (blocker: {blocker})"
+    return DEGRADED, _blocker_sentence(blocker)
 
 
 def _mcp_status(bootstrap: dict[str, Any] | None, proj_mcp: str) -> tuple[str, str]:
@@ -346,9 +417,51 @@ def _makefile_facade(gov: Path) -> tuple[str, str]:
     code, out, _ = _run(
         ["make", "-C", str(gov), "--no-print-directory", "l9-consumer-safe-list"], timeout=25
     )
-    if code == 0 and out.split():
-        return READY, f"{len(out.split())} CONSUMER_SAFE targets"
+    # The target echoes one line of names, but the toolchain prints a preamble
+    # ahead of it ("UV: cached locked environment", "OK: gov-python <path>").
+    # Counting the whole stdout counted those words as targets, so the reported
+    # number drifted with whichever preamble lines happened to print. Count the
+    # last non-empty line, which is the target list itself.
+    lines = [ln for ln in out.splitlines() if ln.strip()]
+    targets = lines[-1].split() if lines else []
+    if code == 0 and targets:
+        return READY, f"{len(targets)} CONSUMER_SAFE targets"
     return DEGRADED, "l9-consumer-safe-list did not report targets"
+
+
+def _github_git_status(gov: Path) -> tuple[str, str]:
+    """Prove git READ against the governance origin, not that a token exists.
+
+    Hosted Claude authenticates git through the platform proxy, so a present or
+    absent GH_TOKEN says nothing. `ls-remote` is the only answer that matches
+    what a clone or fetch will actually do.
+    """
+    origin = _git(gov, "remote", "get-url", "origin")
+    if not origin:
+        return UNKNOWN, "no origin remote on the governance clone"
+    code, out, _ = _run(["git", "ls-remote", "--exit-code", origin, "HEAD"], timeout=30)
+    if code == 0 and out.strip():
+        return READY, "git read authenticated (ls-remote)"
+    return DEGRADED, "git read failed against the governance origin"
+
+
+def _github_gh_status() -> tuple[str, str]:
+    """Prove the gh REST path functionally.
+
+    Deliberately NOT `gh auth status`: on this surface it reports the token in
+    GH_TOKEN invalid while `gh api` succeeds through the platform proxy, so the
+    status subcommand produces a false negative. An absent gh binary is reported
+    here rather than discovered at publish time — pr_overlap_check.py is
+    REST-only through `gh api`, and the merge transports shell out to gh, so a
+    missing binary fails those closed with no warning at startup.
+    """
+    code, _, _ = _run(["bash", "-lc", "command -v gh >/dev/null 2>&1"], timeout=10)
+    if code != 0:
+        return DEGRADED, "gh CLI not on PATH (overlap + merge transports unavailable)"
+    code, out, _ = _run(["gh", "api", "user", "--jq", ".login"], timeout=25)
+    if code == 0 and out.strip():
+        return READY, "gh REST authenticated"
+    return DEGRADED, "gh present but REST call failed"
 
 
 def _dispatcher_status(gov: Path) -> tuple[str, str]:
@@ -509,6 +622,7 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
     proj = _read_json(home / ".l9" / "claude" / "projection-receipt.json")
     bootstrap = _read_json(home / ".l9" / "claude" / "bootstrap-state.json")
     proj_status = _projection_statuses(proj)
+    proj_collisions = _projection_collisions(proj)
     split = graphiti_probe(gov)
     cli_status = str(split["cli"]["status"])
     cli_note = str(split["cli"]["reason"])
@@ -520,6 +634,8 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
 
     mcp_status, mcp_note = _mcp_status(bootstrap, proj_status["mcp"])
     facade_status, facade_note = _makefile_facade(gov)
+    gh_git_status, gh_git_note = _github_git_status(gov)
+    gh_cli_status, gh_cli_note = _github_gh_status()
     disp_status, disp_note = _dispatcher_status(gov)
     merge_status, merge_note = _merge_authority_status(gov)
     interp_status, interp_note = _interpreter_importable_status(gov)
@@ -545,6 +661,8 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         "memory_cli_status": cli_status,
         "memory_mcp_status": mem_mcp_status,
         "Graphiti_authenticated_health": graphiti_status,
+        "github_git_status": gh_git_status,
+        "github_gh_status": gh_cli_status,
         "Makefile_facade_status": facade_status,
         "dispatcher_status": disp_status,
         "merge_authority_status": merge_status,
@@ -559,11 +677,21 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
         "memory_cli_status": cli_note,
         "memory_mcp_status": mem_mcp_note,
         "Graphiti_authenticated_health": graphiti_note,
+        "github_git_status": gh_git_note,
+        "github_gh_status": gh_cli_note,
         "Makefile_facade_status": facade_note,
         "dispatcher_status": disp_note,
         "merge_authority_status": merge_note,
         _BOUNDARY_FIELD: boundary_note,
     }
+
+    cmd_collisions = proj_collisions.get("commands") or []
+    if cmd_collisions:
+        dropped = ", ".join(sorted(c.split(":", 1)[-1] for c in cmd_collisions))
+        notes["command_projection_status"] = (
+            f"{len(cmd_collisions)} enabled command(s) dropped on skill-name collision "
+            f"(skill stays authoritative): {dropped}"
+        )
 
     def _line(key: str, status: str) -> str:
         note = notes.get(key, "")
@@ -578,7 +706,12 @@ def build_receipt(*, gov: Path | None = None, workspace: str | None = None) -> d
 
     receipt: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
-        "timestamp": _git(gov, "log", "-1", "--format=%cI") or "",
+        # When this receipt was produced. It used to carry the governance commit
+        # date, which is not the same clock: a receipt written at 17:13 reported
+        # 16:57 and so appeared to predate the bootstrap-state.json it summarizes,
+        # making every freshness comparison against it wrong.
+        "timestamp": _now_iso(),
+        "governance_commit_time": _git(gov, "log", "-1", "--format=%cI") or "",
         "governance_repository": ident["governance_repository"],
         "governance_default_branch": ident["governance_default_branch"],
         "governance_SHA": ident["governance_SHA"],
@@ -624,6 +757,8 @@ def _compact(receipt: dict[str, Any]) -> str:
         "memory_cli_status",
         "memory_mcp_status",
         "Graphiti_authenticated_health",
+        "github_git_status",
+        "github_gh_status",
         "Makefile_facade_status",
         "dispatcher_status",
         "merge_authority_status",

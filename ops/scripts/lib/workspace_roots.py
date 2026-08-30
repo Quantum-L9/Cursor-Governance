@@ -51,18 +51,25 @@ def workspace_roots(
     *,
     cap: int = DEFAULT_MAX_ROOTS,
     predicate: Callable[[Path], bool] | None = None,
+    prefer: Callable[[Path], bool] | None = None,
 ) -> list[Path]:
     """Repository roots inside `workspace`, in resolution order.
 
     When `workspace` is itself a repository the result is `[workspace]` and
-    `predicate` is not consulted — the caller named a checkout, and filtering it
-    out would leave nothing to act on.
+    neither `predicate` nor `prefer` is consulted — the caller named a checkout,
+    and filtering it out would leave nothing to act on.
 
     When `workspace` is a container, its immediate children carrying a `.git`
     entry are returned sorted, filtered by `predicate` when given, and truncated
     to `cap`. A container with no usable child falls back to `[workspace]`, so a
     caller always receives at least one root and never has to special-case an
     empty list.
+
+    `prefer` moves the repositories that matter most ahead of the cap, keeping
+    alphabetical order inside each band. Without it the truncation was purely
+    alphabetical, which silently dropped the repository the session was actually
+    working in: with nine repositories and a cap of six, the two the operator
+    had branches on were simply late in the alphabet.
     """
     if is_repository(workspace):
         return [workspace]
@@ -71,7 +78,41 @@ def workspace_roots(
     except OSError:
         children = []
     usable = [child for child in children if predicate is None or predicate(child)]
+    if prefer is not None:
+        usable = [c for c in usable if prefer(c)] + [c for c in usable if not prefer(c)]
     return usable[:cap] or [workspace]
+
+
+def skipped_roots(
+    workspace: Path,
+    selected: list[Path],
+    *,
+    predicate: Callable[[Path], bool] | None = None,
+) -> tuple[list[Path], list[Path]]:
+    """Repositories not selected, split into (over_cap, filtered_out).
+
+    Reported by name rather than as a count, because "hydrated 6 of 9" leaves
+    the reader unable to tell which three were dropped or why — and the two
+    reasons have different remedies: over-cap is ordering, filtered-out means
+    the repository has no namespace of its own.
+    """
+    if is_repository(workspace):
+        return [], []
+    try:
+        children = sorted(child for child in workspace.iterdir() if is_repository(child))
+    except OSError:
+        return [], []
+    chosen = {c.resolve() for c in selected}
+    over_cap: list[Path] = []
+    filtered: list[Path] = []
+    for child in children:
+        if child.resolve() in chosen:
+            continue
+        if predicate is not None and not predicate(child):
+            filtered.append(child)
+        else:
+            over_cap.append(child)
+    return over_cap, filtered
 
 
 def projection_roots(workspace: Path, *, cap: int = DEFAULT_MAX_ROOTS) -> list[Path]:

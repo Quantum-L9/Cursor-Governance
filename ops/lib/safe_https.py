@@ -6,6 +6,7 @@ redirects (Authorization header must not leave the allow-listed host).
 
 from __future__ import annotations
 
+import os
 import socket
 import ssl
 import urllib.error
@@ -41,6 +42,94 @@ class HttpsResponse:
 
 
 LOOPBACK_HTTP_HOSTS = frozenset({"127.0.0.1", "localhost", "::1"})
+
+
+def _proxy_bypasses(host: str) -> bool:
+    """True when NO_PROXY exempts ``host``.
+
+    Exact names, leading-dot suffixes, ``*.example.com`` globs and a bare ``*``
+    are honored. CIDR entries are ignored: they scope IP literals, and every
+    caller here dials a DNS name.
+    """
+    raw = os.environ.get("NO_PROXY") or os.environ.get("no_proxy") or ""
+    host = host.lower().rstrip(".")
+    for entry in raw.split(","):
+        item = entry.strip().lower().rstrip(".")
+        if not item or "/" in item:
+            continue
+        if item == "*":
+            return True
+        if item.startswith("*."):
+            item = item[1:]
+        if item.startswith("."):
+            if host == item[1:] or host.endswith(item):
+                return True
+            continue
+        if host == item:
+            return True
+    return False
+
+
+def proxy_for_https(host: str) -> str | None:
+    """The HTTPS proxy that applies to ``host``, or None for a direct dial.
+
+    A raw socket silently ignores ``HTTPS_PROXY``. In a hosted container where
+    all egress is brokered, that turns a health probe into a measurement of a
+    path no real client takes: the probe reaches the origin directly while every
+    genuine client is refused at the proxy, and a blocked host reports healthy.
+    Reading the proxy here keeps the probe on the client's path.
+    """
+    proxy = os.environ.get("HTTPS_PROXY") or os.environ.get("https_proxy") or ""
+    proxy = proxy.strip()
+    if not proxy or _proxy_bypasses(host):
+        return None
+    parsed = urlparse(proxy if "://" in proxy else f"http://{proxy}")
+    if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+        return None
+    return parsed.geturl()
+
+
+def _open_tunnel(proxy_url: str, host: str, port: int, timeout: float, label: str) -> socket.socket:
+    """CONNECT through ``proxy_url`` and return the tunnelled socket.
+
+    The tunnel carries no TLS of its own: the caller wraps the returned socket
+    with the verified context and ``server_hostname=host``, so proxy interception
+    still fails certificate validation exactly as a direct dial would.
+    """
+    parsed = urlparse(proxy_url)
+    proxy_host = parsed.hostname or ""
+    proxy_port = parsed.port or (443 if parsed.scheme == "https" else 80)
+    sock = socket.create_connection((proxy_host, proxy_port), timeout=timeout)
+    try:
+        if parsed.scheme == "https":
+            sock = tls12_context().wrap_socket(sock, server_hostname=proxy_host)
+        lines = [f"CONNECT {host}:{port} HTTP/1.1", f"Host: {host}:{port}"]
+        if parsed.username:
+            from base64 import b64encode
+
+            raw = f"{parsed.username}:{parsed.password or ''}".encode()
+            lines.append(f"Proxy-Authorization: Basic {b64encode(raw).decode('ascii')}")
+        sock.sendall(("\r\n".join(lines) + "\r\n\r\n").encode("latin-1"))
+        head = b""
+        while b"\r\n\r\n" not in head:
+            piece = sock.recv(4096)
+            if not piece:
+                break
+            head += piece
+            if len(head) > 65536:
+                break
+        first = head.split(b"\r\n", 1)[0].decode("latin-1", "replace")
+        code = 0
+        parts = first.split(None, 2)
+        if len(parts) >= 2 and parts[1].isdigit():
+            code = int(parts[1])
+        if code != 200:
+            msg = f"{label} proxy refused CONNECT with status {code or 'unparsable'}"
+            raise urllib.error.URLError(msg)
+    except BaseException:
+        sock.close()
+        raise
+    return sock
 
 
 def require_https_url(
@@ -194,11 +283,18 @@ def exchange(
             if context.verify_mode != ssl.CERT_REQUIRED or not context.check_hostname:
                 raise urllib.error.URLError("HTTPS requires CERT_REQUIRED and check_hostname")
             port = parsed.port or 443
-            raw_sock = socket.create_connection((host, port), timeout=timeout)
+            proxy = proxy_for_https(host)
+            if proxy:
+                raw_sock = _open_tunnel(proxy, host, port, timeout, label)
+            else:
+                raw_sock = socket.create_connection((host, port), timeout=timeout)
             sock: socket.socket = context.wrap_socket(raw_sock, server_hostname=host)
         else:
             port = parsed.port or 80
             sock = socket.create_connection((host, port), timeout=timeout)
+    except urllib.error.URLError:
+        # Already carries the proxy's refusal reason — do not re-wrap it.
+        raise
     except OSError as exc:
         raise urllib.error.URLError(exc) from exc
     header_host = host if parsed.port in (None, 80, 443) else f"{host}:{port}"

@@ -10,6 +10,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO / "ops" / "lib"))
 
+import safe_https  # noqa: E402
 from safe_https import require_exchange_url, require_https_url  # noqa: E402
 
 _FETCHERS = (
@@ -79,3 +80,45 @@ def test_require_exchange_url_allows_loopback_http_only() -> None:
         require_exchange_url("file:///etc/passwd", allow_loopback_http=True)
     with pytest.raises(ValueError, match="non-loopback"):
         require_exchange_url("http://example.com/x", allow_loopback_http=True)
+
+
+# --- Proxy awareness ----------------------------------------------------------
+# A raw socket silently ignores HTTPS_PROXY. In a hosted container where all
+# egress is brokered, that made a health probe measure a path no real client
+# takes: the probe reached the origin directly while every genuine client was
+# refused at the proxy, so a blocked host reported healthy.
+
+
+def test_proxy_is_used_when_configured(monkeypatch) -> None:
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.internal:8080")
+    monkeypatch.delenv("NO_PROXY", raising=False)
+    monkeypatch.delenv("no_proxy", raising=False)
+    assert safe_https.proxy_for_https("example.com") == "http://proxy.internal:8080"
+
+
+def test_no_proxy_exempts_exact_host(monkeypatch) -> None:
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.internal:8080")
+    monkeypatch.setenv("NO_PROXY", "example.com,other.test")
+    assert safe_https.proxy_for_https("example.com") is None
+    assert safe_https.proxy_for_https("elsewhere.test") is not None
+
+
+def test_no_proxy_suffix_and_wildcard(monkeypatch) -> None:
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.internal:8080")
+    monkeypatch.setenv("NO_PROXY", ".svc.cluster.local,*.internal.test")
+    assert safe_https.proxy_for_https("api.svc.cluster.local") is None
+    assert safe_https.proxy_for_https("db.internal.test") is None
+    assert safe_https.proxy_for_https("public.example") is not None
+
+
+def test_no_proxy_cidr_entries_do_not_exempt_names(monkeypatch) -> None:
+    """CIDR entries scope IP literals; every caller here dials a DNS name."""
+    monkeypatch.setenv("HTTPS_PROXY", "http://proxy.internal:8080")
+    monkeypatch.setenv("NO_PROXY", "10.0.0.0/8,172.16.0.0/12")
+    assert safe_https.proxy_for_https("example.com") is not None
+
+
+def test_absent_proxy_means_direct_dial(monkeypatch) -> None:
+    monkeypatch.delenv("HTTPS_PROXY", raising=False)
+    monkeypatch.delenv("https_proxy", raising=False)
+    assert safe_https.proxy_for_https("example.com") is None

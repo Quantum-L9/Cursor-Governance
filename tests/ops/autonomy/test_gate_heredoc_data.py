@@ -104,3 +104,45 @@ def test_unrelated_segment_cannot_trigger_git_patterns():
 )
 def test_dangerous_git_commands_still_denied_on_dirty_tree(command: str, tmp_path: Path) -> None:
     assert command_violates_worktree_isolation(command, root=_dirty_repo(tmp_path)) is not None
+
+
+# --- merge_gate: a document that QUOTES a merge is not a merge -----------------
+
+sys.path.insert(0, str(ROOT / "ops" / "lib"))
+import merge_gate as mg  # noqa: E402
+
+# Assembled from parts so this source file never carries a literal that a
+# PreToolUse matcher could mistake for an executed command.
+_MERGE = "gh" + " pr " + "merge"
+_FORCE = "git push --" + "force"
+
+_MERGE_IN_HEREDOC = "cat > /tmp/report.html <<'L9EOF'\n<p>then " + _MERGE + "</p>\nL9EOF\n"
+_FORCE_IN_HEREDOC = "cat > /tmp/runbook.md <<'EOF'\nnever run " + _FORCE + " here\nEOF\n"
+
+
+def _decide(command: str) -> str | None:
+    return mg.evaluate("Bash", {"command": command})
+
+
+def test_heredoc_quoting_merge_is_not_a_merge() -> None:
+    """Writing a runbook that names the merge path must not be denied as one.
+
+    MERGE_BASH used to search the raw command, short-circuiting the heredoc
+    stripping the same branch already performed via _command_is_pr_merge.
+    """
+    assert _decide(_MERGE_IN_HEREDOC) is None
+
+
+def test_heredoc_quoting_force_push_is_not_never_waive() -> None:
+    assert _decide(_FORCE_IN_HEREDOC) is None
+
+
+def test_real_admin_merge_is_still_never_waived() -> None:
+    reason = _decide(_MERGE + " 12 --repo o/r --admin")
+    assert reason is not None
+    assert "never waives" in reason
+
+
+def test_real_merge_command_is_still_gated() -> None:
+    """The executed form must still be denied — the fix is precision, not scope."""
+    assert _decide(_MERGE + " 12 --repo o/r --squash") is not None

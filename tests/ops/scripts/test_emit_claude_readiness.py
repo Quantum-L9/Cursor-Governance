@@ -42,7 +42,15 @@ def test_aggregate_unknown_never_reports_pass() -> None:
     assert er._aggregate({"a": READY, "b": UNKNOWN}) == DEGRADED
 
 
-def test_projection_skipped_is_not_pass() -> None:
+def test_projection_skipped_is_not_pass(monkeypatch) -> None:
+    """A skipped required domain is not PASS.
+
+    The hosted marketplace exception is a separate case
+    (`test_plugin_marketplace_skip_is_ready`), so SKIP_PLUGIN_MARKETPLACE must be
+    cleared here: every hosted Claude session exports it, which leaked into this
+    test and made it assert the opposite of its own name.
+    """
+    monkeypatch.delenv("SKIP_PLUGIN_MARKETPLACE", raising=False)
     receipt = {
         "domains": [
             {"domain": "plugins", "status": "skipped"},
@@ -152,6 +160,7 @@ def test_working_cli_and_dead_mcp_are_not_one_word(tmp_path: Path, monkeypatch) 
         "_graphiti_mcp_http_health",
         lambda: (DEGRADED, "not authenticated (blocker: allowlist)"),
     )
+    _stub_github(monkeypatch)
     receipt = er.build_receipt(gov=gov, workspace=str(gov))
     assert receipt["memory_cli_status"] == READY
     assert receipt["memory_mcp_status"] == DEGRADED
@@ -173,6 +182,7 @@ def test_graphiti_probe_does_not_call_broker(tmp_path: Path, monkeypatch) -> Non
     home = _fake_home(tmp_path, mcp="READY")
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    _stub_github(monkeypatch)
     receipt = er.build_receipt(gov=gov, workspace=str(gov))
     assert called["broker"] is False
     assert receipt["Graphiti_authenticated_health"] == READY
@@ -252,6 +262,16 @@ def _init_fake_gov(
     return gov
 
 
+def _stub_github(monkeypatch, *, git=READY, gh=READY) -> None:
+    """Keep the GitHub capability probes off the network in unit tests.
+
+    Both are functional probes by design (`git ls-remote`, `gh api user`), so a
+    test that did not stub them would depend on the runner's credentials.
+    """
+    monkeypatch.setattr(er, "_github_git_status", lambda _gov: (git, "stub git"))
+    monkeypatch.setattr(er, "_github_gh_status", lambda: (gh, "stub gh"))
+
+
 def _fake_home(tmp_path: Path, *, mcp: str = "READY") -> Path:
     home = tmp_path / "home"
     cl = home / ".l9" / "claude"
@@ -270,6 +290,7 @@ def _build(gov: Path, home: Path, monkeypatch) -> dict:
     monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
     monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli authenticated"))
     monkeypatch.setattr(er, "_graphiti_mcp_http_health", lambda: (READY, "front door reachable"))
+    _stub_github(monkeypatch)
     return er.build_receipt(gov=gov, workspace=str(gov))
 
 
@@ -384,3 +405,91 @@ def test_stale_sha_prevents_ready(tmp_path: Path, monkeypatch) -> None:
     receipt = _build(gov, home, monkeypatch)
     assert receipt["overall_readiness"] != READY
     assert any("freshness" in w for w in receipt["warnings"])
+
+
+# --- Truthfulness regressions (startup ceremony audit) -------------------------
+
+
+def test_path_blockers_do_not_claim_an_auth_problem() -> None:
+    """An egress denial must not be worded as a missing credential.
+
+    Saying "not authenticated" over an allow-list miss invites pasting
+    GRAPHITI_MCP_TOKEN, which the environment contract forbids outright.
+    """
+    assert er._blocker_sentence("allowlist").startswith("not reachable")
+    assert er._blocker_sentence("reachability").startswith("not reachable")
+    assert er._blocker_sentence("identity").startswith("not authenticated")
+
+
+def test_timestamp_is_generation_time_not_the_commit_date(tmp_path: Path, monkeypatch) -> None:
+    """The receipt must not appear to predate the inputs it summarizes.
+
+    `timestamp` used to carry the governance commit date, so a receipt written
+    at 17:13 reported 16:57 — earlier than the bootstrap-state.json it
+    summarizes. The clock is pinned here rather than compared for inequality: a
+    fake clone committed in the same second as the receipt makes an inequality
+    assertion pass or fail by coincidence.
+    """
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path)
+    monkeypatch.setattr(er, "_now_iso", lambda: "2099-01-01T00:00:00+00:00")
+    receipt = _build(gov, home, monkeypatch)
+    assert receipt["timestamp"] == "2099-01-01T00:00:00+00:00"
+    assert receipt["governance_commit_time"] == er._git(gov, "log", "-1", "--format=%cI")
+
+
+def test_github_capability_is_reported(tmp_path: Path, monkeypatch) -> None:
+    """An absent gh CLI must surface at startup, not at publish time."""
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path)
+    monkeypatch.setenv("HOME", str(home))
+    monkeypatch.setattr(Path, "home", classmethod(lambda cls: home))
+    monkeypatch.setattr(er, "_graphiti_cli_health", lambda _gov: (READY, "cli authenticated"))
+    monkeypatch.setattr(er, "_graphiti_mcp_http_health", lambda: (READY, "front door reachable"))
+    _stub_github(monkeypatch, git=READY, gh=DEGRADED)
+    receipt = er.build_receipt(gov=gov, workspace=str(gov))
+    assert receipt["github_git_status"] == READY
+    assert receipt["github_gh_status"] == DEGRADED
+    assert receipt["overall_readiness"] == DEGRADED
+
+
+def test_command_collisions_downgrade_the_command_domain(tmp_path: Path, monkeypatch) -> None:
+    """Dropped commands must not sit behind a READY command projection."""
+    gov = _init_fake_gov(tmp_path, merge_denies=True)
+    home = _fake_home(tmp_path)
+    cl = home / ".l9" / "claude"
+    domains = [
+        {"domain": d, "status": "ok"}
+        for d in ("skills", "rules", "settings", "hooks", "plugins", "mcp")
+    ]
+    domains.append(
+        {
+            "domain": "commands",
+            "status": "ok",
+            "collisions": ["command-skill-collision:l9-pr-remediation"],
+        }
+    )
+    (cl / "projection-receipt.json").write_text(json.dumps({"domains": domains}), encoding="utf-8")
+    receipt = _build(gov, home, monkeypatch)
+    assert receipt["command_projection_status"] == DEGRADED
+    assert receipt["skill_projection_status"] == READY
+    assert "l9-pr-remediation" in receipt["notes"]["command_projection_status"]
+
+
+def test_facade_count_ignores_toolchain_preamble(tmp_path: Path, monkeypatch) -> None:
+    """The target count must not drift with incidental preamble lines."""
+    gov = tmp_path / "gov"
+    gov.mkdir()
+    (gov / "Makefile").write_text("all:\n", encoding="utf-8")
+    monkeypatch.setattr(
+        er,
+        "_run",
+        lambda *_a, **_k: (
+            0,
+            "UV: cached locked environment\nOK: gov-python /x/y/python\nstart pr pr-check\n",
+            "",
+        ),
+    )
+    status, note = er._makefile_facade(gov)
+    assert status == READY
+    assert note == "3 CONSUMER_SAFE targets"

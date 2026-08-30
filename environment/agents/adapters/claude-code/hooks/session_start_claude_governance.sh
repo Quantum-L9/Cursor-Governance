@@ -379,7 +379,7 @@ except Exception:
         LINES+=("bootstrap repair: receipt was '$state' at ${revision:0:8} — running the installer once")
         if timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}" \
           env L9_BOOTSTRAP_LOG_PATH="$HOME/.l9/claude/bootstrap-repair-${revision}.log" \
-          bash "$installer" \
+          bash "$installer" --governance "$GOV" --workspace "$WORKSPACE" \
           >"$HOME/.l9/claude/bootstrap-repair-${revision}.log" 2>&1; then
           : >"$marker"
         fi

@@ -611,6 +611,11 @@ def _merge_authorized(tool_name: str, tool_input: dict[str, Any]) -> bool:
 
 
 def _never_waive_command(command: str) -> bool:
+    # Heredoc bodies are DATA being written to a file, not commands being run.
+    # Searching the raw string denied a document that merely quoted these forms
+    # — writing a runbook or an audit that names the merge path was refused as
+    # if it were a merge. Every genuinely executed command survives the strip.
+    command = strip_heredoc_bodies(command)
     return bool(
         FORCE_PUSH_BASH.search(command)
         or HARD_RESET_BASH.search(command)
@@ -680,7 +685,10 @@ def evaluate(
             return NEVER_WAIVE_REASON
         # _command_is_pr_merge covers the REST endpoint reached by curl, which
         # is not a git/gh event and so lands here — where authorization runs.
-        if MERGE_BASH.search(command) or _command_is_pr_merge(command):
+        # MERGE_BASH must see the SAME heredoc-stripped text: searching the raw
+        # command short-circuited the parsing _command_is_pr_merge already does,
+        # so a file whose contents quoted the merge command was denied as one.
+        if MERGE_BASH.search(strip_heredoc_bodies(command)) or _command_is_pr_merge(command):
             if not _merge_authorized(tool_name, tool_input):
                 return MERGE_DENY_REASON
             if _human_breakglass():
