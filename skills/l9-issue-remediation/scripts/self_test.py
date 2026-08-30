@@ -12,7 +12,10 @@ REPO = Path(__file__).resolve().parents[3]
 SKILL = (ROOT / "SKILL.md").read_text(encoding="utf-8")
 REFS = {p.name: p.read_text(encoding="utf-8") for p in (ROOT / "references").glob("*.md")}
 ISSUES_CMD = (REPO / "commands" / "issues.md").read_text(encoding="utf-8")
-REMEDIATE_CMD = (REPO / "commands" / "l9-issue-remediation.md").read_text(encoding="utf-8")
+_REMEDIATE_PATH = REPO / "commands" / "l9-issue-remediation.md"
+if not _REMEDIATE_PATH.is_file():
+    _REMEDIATE_PATH = REPO / "commands" / "_archived" / "l9-issue-remediation.md"
+REMEDIATE_CMD = _REMEDIATE_PATH.read_text(encoding="utf-8")
 
 sys.path.insert(0, str(ROOT / "scripts"))
 import close_resolved_issue  # noqa: E402
@@ -158,6 +161,7 @@ def test_command_open_issues_gate() -> None:
     _need(ISSUES_CMD, "open_issues == 0", "commands/issues.md")
     _need(ISSUES_CMD, "open_issues_gate.py", "commands/issues.md")
     _need(ISSUES_CMD, "/issues diagnose", "commands/issues.md")
+    _need(ISSUES_CMD, "same turn", "commands/issues.md")
     _need(ISSUES_CMD, "never", "commands/issues.md")
     if "Diagnose **never** invokes" not in ISSUES_CMD and "never invokes" not in ISSUES_CMD.lower():
         _fail("commands/issues.md must say Diagnose never invokes /l9-pr-remediation")
@@ -241,6 +245,10 @@ def test_skill_defaults() -> None:
     _need(SKILL, "chain_pr_remediation: after_open_issues_zero", "SKILL.md")
     _need(SKILL, "make_pr: true", "SKILL.md")
     _need(SKILL, "close_resolved: true", "SKILL.md")
+    _need(SKILL, "close_now_same_turn: true", "SKILL.md")
+    _need(SKILL, "Close-now law", "SKILL.md")
+    _need(REFS["issue-verify.md"], "skill failure", "issue-verify.md")
+    _need(REFS["unblock-breadcrumb.md"], "same turn", "unblock-breadcrumb.md")
     _need(SKILL, "verify_before_trust: true", "SKILL.md")
     _need(SKILL, "max_autonomy: until_human_blocker", "SKILL.md")
     _need(SKILL, "recommend_letter: A", "SKILL.md")
