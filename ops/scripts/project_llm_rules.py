@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import shutil
 import sys
 import tempfile
@@ -55,13 +56,40 @@ def render_frontmatter(description: str, paths: list[str] | None) -> str:
     return f"---\n{dumped}\n---\n"
 
 
-def build_projected_text(stem: str, description: str, body: str, paths: list[str] | None) -> str:
+def capability_precondition_note(metadata: dict[str, Any]) -> str:
+    """Annotate a projected rule when it names an MCP server this surface may lack."""
+    required = metadata.get("requires_mcp")
+    if not required:
+        return ""
+    name = str(required).strip()
+    if not name:
+        return ""
+    live = os.environ.get("L9_MCP_SERVERS", "")
+    hosted_skip = os.environ.get("SKIP_PLUGIN_MARKETPLACE", "") == "true"
+    unmet = hosted_skip or (bool(live) and name.lower() not in live.lower())
+    lines = [f"<!-- capability_precondition: requires_mcp={name} -->"]
+    if unmet:
+        lines.append(
+            f"> **UNMET:** this surface does not expose `{name}`. "
+            "Fallback: skill `l9-context7-docs` or an official docs GET."
+        )
+    return "\n".join(lines) + "\n"
+
+
+def build_projected_text(
+    stem: str,
+    description: str,
+    body: str,
+    paths: list[str] | None,
+    metadata: dict[str, Any] | None = None,
+) -> str:
     marker = GENERATED_MARKER.format(stem=stem)
     # Ensure body starts with a newline separation after frontmatter.
     body_text = body if body.startswith("\n") or body == "" else f"\n{body}"
     if not body_text.endswith("\n"):
         body_text += "\n"
-    return f"{render_frontmatter(description, paths)}{body_text}\n{marker}\n"
+    note = capability_precondition_note(metadata or {})
+    return f"{render_frontmatter(description, paths)}{note}{body_text}\n{marker}\n"
 
 
 def readme_text() -> str:
@@ -135,7 +163,7 @@ def project_entries(
         if out_name in outputs:
             raise ValueError(f"duplicate projected output name: {out_name}")
 
-        text = build_projected_text(stem, description, parsed.body, paths)
+        text = build_projected_text(stem, description, parsed.body, paths, parsed.metadata)
         outputs[out_name] = text
         rows.append(
             {

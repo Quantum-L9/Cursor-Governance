@@ -27,6 +27,7 @@
 L9_DEFAULT_GOVERNANCE_DIR="$HOME/.cursor-governance"
 
 l9_load_session_env() {
+  _L9_RESOLVE_CALLED=1
   if [ -z "${L9_GOVERNANCE_DIR:-}" ]; then
     local env_file="${L9_SESSION_ENV_FILE:-$HOME/.l9/cloud-session.env}"
     # shellcheck disable=SC1090
@@ -46,7 +47,10 @@ l9_governance_dir() {
   printf '%s' "$L9_GOVERNANCE_DIR"
 }
 
+_L9_RESOLVE_CALLED=0
+
 resolve_governance_paths() {
+  _L9_RESOLVE_CALLED=1
   GOV_ROOT=""
   GLOBAL_COMMANDS=""
   l9_load_session_env
@@ -61,6 +65,7 @@ resolve_governance_paths() {
 }
 
 resolve_governance_paths_or_exit() {
+  _L9_RESOLVE_CALLED=1
   if resolve_governance_paths; then
     return 0
   fi
@@ -201,3 +206,16 @@ bind_isolate_toolchain() {
   fi
   echo "OK: isolate toolchain PATH=$GOV_TOOLCHAIN_ROOT/.venv UV_PROJECT=$UV_PROJECT"
 }
+
+# T-CI023: sourcing this file does not bind GOV_ROOT. Warn at EXIT when no
+# entry point ran. Do not install an EXIT trap over one the caller already set.
+_l9_warn_if_unresolved() {
+  [ "${_L9_RESOLVE_CALLED:-0}" != "0" ] && return 0
+  echo "WARN: resolve_governance_paths.sh sourced but resolve_governance_paths / resolve_governance_paths_or_exit was not called" >&2
+}
+
+if [ "${BASH_SOURCE[0]-}" != "${0-}" ]; then
+  if [ -z "$(trap -p EXIT 2>/dev/null || true)" ]; then
+    trap '_l9_warn_if_unresolved' EXIT
+  fi
+fi

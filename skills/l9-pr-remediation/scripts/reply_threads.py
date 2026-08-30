@@ -128,7 +128,14 @@ def _resolve_chunk(threads: list[dict[str, Any]]) -> None:
     )
 
 
-def _summary_markdown(pr: dict[str, Any], *, cycle: int, commit: str, verify: str) -> str:
+def _summary_markdown(
+    pr: dict[str, Any],
+    *,
+    cycle: int,
+    commit: str,
+    verify: str,
+    threads_resolved: int | None = None,
+) -> str:
     threads = list(pr.get("threads") or [])
     buckets: dict[str, list[dict[str, Any]]] = {
         "fixed": [],
@@ -161,7 +168,10 @@ def _summary_markdown(pr: dict[str, Any], *, cycle: int, commit: str, verify: st
         return "\n".join(lines)
 
     total = len(threads)
-    resolved = total
+    if threads_resolved is None:
+        footer = f"*Local verify: {verify} | Threads: replied (resolve not run this pass)*"
+    else:
+        footer = f"*Local verify: {verify} | Threads resolved: {threads_resolved}/{total}*"
     return (
         f"## PR Remediation — Cycle {cycle} Summary\n\n"
         f"**Commit:** `{commit}` | **Findings processed:** {total} | "
@@ -175,7 +185,7 @@ def _summary_markdown(pr: dict[str, Any], *, cycle: int, commit: str, verify: st
         f"### Disagreed ({len(buckets['disagreed'])})\n"
         f"{_rows(buckets['disagreed'], ('Finding', 'Reason'))}\n\n"
         f"---\n"
-        f"*Local verify: {verify} | Threads resolved: {resolved}/{total}*\n"
+        f"{footer}\n"
     )
 
 
@@ -242,10 +252,17 @@ def main(argv: list[str] | None = None) -> int:
 
         if not args.no_summary:
             _log(f"PR #{number}: posting batch summary")
+            resolved_for_summary: int | None = None if args.summary_only else len(threads)
             _post_summary(
                 args.repo,
                 number,
-                _summary_markdown(pr, cycle=cycle, commit=commit, verify=verify),
+                _summary_markdown(
+                    pr,
+                    cycle=cycle,
+                    commit=commit,
+                    verify=verify,
+                    threads_resolved=resolved_for_summary,
+                ),
             )
             gh_calls += 1
             summaries += 1
