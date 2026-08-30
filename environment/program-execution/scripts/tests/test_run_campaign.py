@@ -2364,9 +2364,11 @@ class CampaignInputRoutingTests(unittest.TestCase):
             path = Path(raw) / "CAMPAIGN_SOURCE.yaml"
             _dump(path, self._source())
             self.assertEqual(self.mod.main(["--check-input", str(path)]), 0)
-            bad = Path(raw) / "intent-v1.yaml"
-            _dump(bad, INTENT_V1)
-            self.assertEqual(self.mod.main(["--check-input", str(bad)]), 2)
+            intent = Path(raw) / "intent-v1.yaml"
+            _dump(intent, INTENT_V1)
+            # Compile ingress is live. Campaign execute of intent.v1 still
+            # refuse_publication / classify reject; --check-input does not.
+            self.assertEqual(self.mod.main(["--check-input", str(intent)]), 0)
 
     def test_cli_rejection_is_terminal_and_explains_itself(self) -> None:
         with tempfile.TemporaryDirectory() as raw:

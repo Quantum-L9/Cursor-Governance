@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import re
+import sys
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -69,6 +70,9 @@ ROUTES = {
     CampaignInputKind.ACTIVATE: "activate -> campaign_source -> blueprint -> PEC",
     CampaignInputKind.PLAN: "plan -> activate -> campaign_source -> blueprint -> PEC",
     CampaignInputKind.BRIEF: "brief -> activate -> campaign_source -> blueprint -> PEC",
+    CampaignInputKind.PROGRAM_INTENT_V1: (
+        "intent -> compiler -> blueprint (compile ingress; not campaign execute)"
+    ),
 }
 
 
@@ -305,6 +309,64 @@ def _compile_module() -> Any:
     return module
 
 
+def _preflight_program_intent(classification: Classification) -> list[str]:
+    """Feed program-execution.intent.v1 through the strict compiler parser.
+
+    This is compile ingress, not campaign execution. intent.py stays strict.
+    Nothing is written under ~/.l9/programs.
+    """
+    document = classification.document
+    if not isinstance(document, dict):
+        raise CampaignInputRejected(
+            detected=classification.kind,
+            schema=classification.schema,
+            path=classification.path,
+            reason="program-execution.intent.v1 document is not a mapping.",
+            fix="Supply a YAML/JSON object with schema and objective.",
+        )
+    pe_root = Path(__file__).resolve().parents[1]
+    if str(pe_root) not in sys.path:
+        sys.path.insert(0, str(pe_root))
+    from compiler.intent import parse_intent
+
+    try:
+        intent = parse_intent(document)
+    except ValueError as exc:
+        raise CampaignInputRejected(
+            detected=classification.kind,
+            schema=classification.schema,
+            path=classification.path,
+            reason=str(exc),
+            fix="Fix the intent against program-execution.intent.v1. Nothing was executed.",
+        ) from exc
+    return [f"intent_objective={intent.objective}"]
+
+
+def compile_intent_ingress(path: Path) -> dict[str, Any]:
+    """Classify and compile-check a program-execution.intent.v1 file.
+
+    Used by the shadow harness and ``--check-input``. Does not execute a campaign.
+    """
+    found = classify(path)
+    if found.kind is not CampaignInputKind.PROGRAM_INTENT_V1:
+        return {
+            "kind": found.kind.value,
+            "route": found.route,
+            "supported": found.supported,
+            "compile_ok": False,
+            "reason": "not program-execution.intent.v1",
+        }
+    warnings = _preflight_program_intent(found)
+    return {
+        "kind": found.kind.value,
+        "route": ROUTES[CampaignInputKind.PROGRAM_INTENT_V1],
+        "supported": True,
+        "compile_ok": True,
+        "warnings": warnings,
+        "nothing_executed": True,
+    }
+
+
 def preflight(classification: Classification) -> list[str]:
     """Prove a direct campaign source is executable, not merely well-named.
 
@@ -317,6 +379,8 @@ def preflight(classification: Classification) -> list[str]:
     Read-only. Returns compile warnings for supported non-direct kinds (none)
     and for a clean direct source. Raises the terminal refusal otherwise.
     """
+    if classification.kind is CampaignInputKind.PROGRAM_INTENT_V1:
+        return _preflight_program_intent(classification)
     if classification.kind is not CampaignInputKind.CAMPAIGN_SOURCE_V2:
         return []
     document = classification.document
@@ -346,12 +410,14 @@ def reject(classification: Classification) -> CampaignInputRejected:
             schema=classification.schema,
             path=classification.path,
             reason=(
-                "The live campaign runner accepts campaign-source.v2 and supported "
-                "activation/brief inputs. program-execution.intent.v1 is a design-time "
-                "compiler input and has no live campaign adapter."
+                "The live campaign runner does not execute program-execution.intent.v1. "
+                "Compile ingress is live: classify + compiler.intent.parse_intent "
+                "(intent -> compiler -> blueprint). Conversion is not the only path."
             ),
             fix=(
-                "Synthesize or convert this intent to campaign-source.v2, then run:\n"
+                "Compile through the Program Execution compiler (shadow / "
+                "--check-input). Campaign execution still uses campaign-source.v2 "
+                "after compile:\n"
                 '    make -C "$HOME/.cursor-governance" campaign '
                 "INTENT=/path/to/CAMPAIGN_SOURCE.yaml"
             ),
@@ -422,7 +488,8 @@ def main(argv: list[str] | None = None) -> int:
     except CampaignInputRejected as exc:
         print(json.dumps(exc.to_dict(), indent=2) if args.json else exc.render())
         return exc.exit_code
-    if not found.supported:
+    compile_ingress = found.kind is CampaignInputKind.PROGRAM_INTENT_V1
+    if not found.supported and not compile_ingress:
         exc = reject(found)
         print(json.dumps(exc.to_dict(), indent=2) if args.json else exc.render())
         return exc.exit_code

@@ -1,0 +1,10 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 11_no_explicit_target
+objective_contains:
+- seam
+expected_dispositions:
+- UNKNOWN
+unknowns_expected:
+- seam
+authority_must_not_expand: true
+source_traceability_required: true

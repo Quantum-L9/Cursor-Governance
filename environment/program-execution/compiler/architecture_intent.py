@@ -76,6 +76,37 @@ _SIGNAL_PATTERNS = tuple(
     for signal in sorted(NORMATIVE_SIGNALS, key=len, reverse=True)
 )
 
+# Lowercase materiality — same canonical names as the uppercase anchors.
+# Prohibitions and obligations survive; bare conversational "keep"/"reuse"
+# do not, so coverage does not drown (C2 materiality threshold).
+_MATERIAL_SIGNAL_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
+    ("MUST NOT", re.compile(r"(?i)(?<![A-Za-z])must\s+not(?![A-Za-z])")),
+    ("DO NOT", re.compile(r"(?i)(?<![A-Za-z])(?:do\s+not|don't)(?![A-Za-z])")),
+    (
+        "NEVER",
+        re.compile(
+            r"(?i)(?<![A-Za-z])(?:must\s+never|never\s+"
+            r"(?:replace|grant|create|delete|advertise|serve|push|merge))"
+            r"(?![A-Za-z])"
+        ),
+    ),
+    ("SHALL", re.compile(r"(?i)(?<![A-Za-z])shall(?![A-Za-z])")),
+    ("MUST", re.compile(r"(?i)(?<![A-Za-z])must(?![A-Za-z])")),
+    ("REQUIRED", re.compile(r"(?i)(?<![A-Za-z])required(?![A-Za-z])")),
+    ("REQUIRE", re.compile(r"(?i)(?<![A-Za-z])require(?![A-Za-z])")),
+    ("PRESERVE", re.compile(r"(?i)(?<![A-Za-z])preserve(?![A-Za-z])")),
+    ("FORBIDDEN", re.compile(r"(?i)(?<![A-Za-z])forbidden(?![A-Za-z])")),
+    ("PROHIBITED", re.compile(r"(?i)(?<![A-Za-z])prohibited(?![A-Za-z])")),
+    (
+        "KEEP",
+        re.compile(r"(?i)(?<![A-Za-z])keep\s+(?:the|existing|current)(?![A-Za-z])"),
+    ),
+    (
+        "PRESERVE",
+        re.compile(r"(?i)(?<![A-Za-z])reuse\s+(?:the|existing|current)(?![A-Za-z])"),
+    ),
+)
+
 UNIT_KINDS = (
     "frontmatter",
     "heading",
@@ -183,13 +214,16 @@ def digest(text: str) -> str:
 def normative_signals(text: str) -> tuple[str, ...]:
     """Deterministic lexical materiality signals present in `text`.
 
-    Case-sensitive on purpose: architecture prose reserves upper-case MUST for
-    an obligation and uses lower-case "must" conversationally. Over-detecting
-    turns every sentence into a coverage obligation and the audit stops meaning
-    anything.
+    Upper-case MUST / MUST NOT remain high-confidence anchors. Lower-case
+    must / don't / never / preserve are material prohibitions and obligations
+    with the same canonical names so they cannot vanish. Bare conversational
+    "keep" is not a signal unless it names an existing object.
     """
     found: list[str] = []
     for signal, pattern in _SIGNAL_PATTERNS:
+        if pattern.search(text) and not any(signal in seen for seen in found):
+            found.append(signal)
+    for signal, pattern in _MATERIAL_SIGNAL_PATTERNS:
         if pattern.search(text) and not any(signal in seen for seen in found):
             found.append(signal)
     return tuple(sorted(found))
