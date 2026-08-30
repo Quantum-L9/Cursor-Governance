@@ -83,11 +83,58 @@ def classify_path(root: Path, path: str) -> str:
     return "source"
 
 
+def decode_git_quoted_path(path: str) -> str:
+    """Decode C-style escapes in git status quoted paths (octal + \\n \\t \\\" \\\\)."""
+    raw = bytearray()
+    i = 0
+    while i < len(path):
+        ch = path[i]
+        if ch != "\\" or i + 1 >= len(path):
+            raw.extend(ch.encode("utf-8"))
+            i += 1
+            continue
+        nxt = path[i + 1]
+        if nxt == "n":
+            raw.append(0x0A)
+            i += 2
+            continue
+        if nxt == "t":
+            raw.append(0x09)
+            i += 2
+            continue
+        if nxt == "r":
+            raw.append(0x0D)
+            i += 2
+            continue
+        if nxt == "b":
+            raw.append(0x08)
+            i += 2
+            continue
+        if nxt == '"':
+            raw.extend(b'"')
+            i += 2
+            continue
+        if nxt == "\\":
+            raw.extend(b"\\")
+            i += 2
+            continue
+        if nxt in "01234567":
+            j = i + 1
+            while j < len(path) and j < i + 4 and path[j] in "01234567":
+                j += 1
+            raw.append(int(path[i + 1 : j], 8))
+            i = j
+            continue
+        raw.extend(ch.encode("utf-8"))
+        i += 1
+    return raw.decode("utf-8")
+
+
 def porcelain_path(line: str) -> str:
     """Extract the path from a `git status --porcelain` line, handling renames."""
     path = line[3:].strip()
     if " -> " in path:
         path = path.split(" -> ", 1)[1]
     if path.startswith('"') and path.endswith('"') and len(path) > 1:
-        path = path[1:-1]
+        path = decode_git_quoted_path(path[1:-1])
     return normalize(path)
