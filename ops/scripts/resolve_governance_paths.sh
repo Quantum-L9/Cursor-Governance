@@ -186,11 +186,18 @@ bind_isolate_toolchain() {
   fi
   GOV_TOOLCHAIN_ROOT="$(resolve_gov_toolchain_root "$ws" "$fallback")"
   export GOV_TOOLCHAIN_ROOT
-  export UV_PROJECT="$GOV_TOOLCHAIN_ROOT"
+  # PATH stays on the donor interpreter. UV_PROJECT must be the gated
+  # checkout when it is a uv project — otherwise `uv lock --check` / ruff
+  # re-wrap worktree Python against the primary clone's pin.
+  if [ -f "$ws/pyproject.toml" ]; then
+    export UV_PROJECT="$ws"
+  else
+    export UV_PROJECT="$GOV_TOOLCHAIN_ROOT"
+  fi
   if [ -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/python" ]; then
     export PATH="$GOV_TOOLCHAIN_ROOT/.venv/bin:$PATH"
   elif [ -x "$GOV_TOOLCHAIN_ROOT/.venv/bin/python3" ]; then
     export PATH="$GOV_TOOLCHAIN_ROOT/.venv/bin:$PATH"
   fi
-  echo "OK: isolate toolchain bound to $GOV_TOOLCHAIN_ROOT (UV_PROJECT)"
+  echo "OK: isolate toolchain PATH=$GOV_TOOLCHAIN_ROOT/.venv UV_PROJECT=$UV_PROJECT"
 }

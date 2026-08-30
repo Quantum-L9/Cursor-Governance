@@ -188,6 +188,8 @@ class ClaudeCodeProvider:
             else []
         )
         host_errors = host.get("errors") if isinstance(host.get("errors"), list) else None
+        stdout_text = excerpts.redacted_excerpt(result.stdout)
+        stderr_text = excerpts.redacted_excerpt(result.stderr)
         diagnostics = {
             "type": "claude_code_execution",
             "stdout_digest": result.stdout_digest,
@@ -202,9 +204,30 @@ class ClaudeCodeProvider:
             "result_type": type(host.get("result")).__name__,
             "payload_keys": sorted(payload.keys()),
             "changed_files_type": type(payload.get("changed_files")).__name__,
-            "stdout_excerpt": excerpts.redacted_excerpt(result.stdout),
-            "stderr_excerpt": excerpts.redacted_excerpt(result.stderr),
+            "stdout_excerpt": stdout_text,
+            "stderr_excerpt": stderr_text,
         }
+        transport_evidence = dict(result.to_evidence())
+        fail_error: dict[str, object] = {
+            "type": "claude_code_error",
+            "exit_code": result.exit_code,
+            "stderr_digest": result.stderr_digest,
+            "stdout_digest": result.stdout_digest,
+            "parse_error": parse_error,
+            "subtype": host.get("subtype"),
+            "host_errors": host_errors,
+            "stdout_excerpt": stdout_text,
+            "stderr_excerpt": stderr_text,
+        }
+        if status == "FAIL":
+            # Bounded redacted text on FAIL so a digest-only receipt is not the
+            # only diagnostic. Digests stay; secrets stay redacted.
+            diagnostics["stdout_text"] = stdout_text
+            diagnostics["stderr_text"] = stderr_text
+            fail_error["stdout_text"] = stdout_text
+            fail_error["stderr_text"] = stderr_text
+            transport_evidence["stdout_text"] = stdout_text
+            transport_evidence["stderr_text"] = stderr_text
         provider_result = CanonicalProviderResult(
             execution_id=request.execution_id,
             status=status,
@@ -216,23 +239,8 @@ class ClaudeCodeProvider:
                 str(host.get("session_id")) if host.get("session_id") is not None else None
             ),
             observed_capabilities=("inspect", "local_write", "artifact_production"),
-            errors=(
-                ()
-                if status == "PASS"
-                else (
-                    {
-                        "type": "claude_code_error",
-                        "exit_code": result.exit_code,
-                        "stderr_digest": result.stderr_digest,
-                        "parse_error": parse_error,
-                        "subtype": host.get("subtype"),
-                        "host_errors": host_errors,
-                        "stdout_excerpt": diagnostics["stdout_excerpt"],
-                        "stderr_excerpt": diagnostics["stderr_excerpt"],
-                    },
-                )
-            ),
-            transport_evidence_refs=(result.to_evidence(),),
+            errors=() if status == "PASS" else (fail_error,),
+            transport_evidence_refs=(transport_evidence,),
         )
         return ProviderInvocation(
             status=status,

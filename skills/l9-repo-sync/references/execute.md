@@ -3,23 +3,24 @@ l9_schema: 1
 parent: l9-repo-sync
 tags: [sync, execute, fast-forward]
 status: active
-version: 1.2.0
-updated: 2026-08-22
+version: 1.3.0
+updated: 2026-08-29
 /L9_META -->
 
 # Execute (only this)
 
-`/ff` catches a **named** clone up to `origin/main` **in place** while keeping
-`.venv`, env.local keep-list files, and every unique untracked path. Unique
-work is parked first. Nothing unique is deleted. Keep-list:
-`.env.local`, `env.local`, `.env.*.local`, `.claude/settings.local.json`
-(same lib as `governance_activate_fresh.sh` swap carry).
+`/ff` (no flags) from a Cursor-Governance checkout catches **this tree and**
+`$HOME/.cursor-governance` up to `origin/main` **in parallel**. `/ff --clone`
+and `/ff --ssot` are one target each (other repos). Unique work is parked
+first. Nothing unique is deleted. Keep-list: `.env.local`, `env.local`,
+`.env.*.local`, `.claude/settings.local.json`.
 
 The only mutate path is the wrapper:
 
 ```bash
-CURSOR_GOVERNANCE_DIR="<absolute-named-clone>" \
-  bash skills/l9-repo-sync/scripts/ff.sh
+bash skills/l9-repo-sync/scripts/ff.sh
+CURSOR_GOVERNANCE_DIR="$(pwd)" bash skills/l9-repo-sync/scripts/ff.sh --clone
+bash skills/l9-repo-sync/scripts/ff.sh --ssot
 ```
 
 `ff.sh` does **not** call `governance_sync.sh`. That script’s dirty path is

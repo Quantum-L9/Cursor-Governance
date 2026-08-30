@@ -1,0 +1,13 @@
+rules:
+  - id: l9.no-semgrep-app-token-in-child-env
+    message: >-
+      Do not read SEMGREP_APP_TOKEN from a model-controlled process. Local CE
+      must scrub the token so an inherited credential cannot upgrade the scan.
+    languages: [python]
+    severity: ERROR
+    metadata:
+      l9.surface: pr-security-velocity
+    pattern-either:
+      - pattern: os.environ["SEMGREP_APP_TOKEN"]
+      - pattern: os.environ.get("SEMGREP_APP_TOKEN")
+      - pattern: os.getenv("SEMGREP_APP_TOKEN")

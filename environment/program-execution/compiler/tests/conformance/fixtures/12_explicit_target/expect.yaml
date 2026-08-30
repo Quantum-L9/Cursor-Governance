@@ -1,0 +1,9 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 12_explicit_target
+objective_contains:
+- Harden the existing
+- compiler
+expected_dispositions:
+- HARDEN_WIRE_EXISTING
+authority_must_not_expand: true
+source_traceability_required: true

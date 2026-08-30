@@ -12,10 +12,11 @@ what the repository expects, and prints exact paste-ready replacement text.
 
 The audit found four deviations, all of them costly and none of them visible:
 
-    L9_CAPABILITY_BROKER_URL               missing  -> whole capability plane unconfigured
     CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS   missing  -> native 20-subagent ceiling
     L9_AUTONOMY_MAX_PARALLEL               4        -> expected 480
     L9_AUTONOMY_MAX_MUTATION_LANES         2        -> expected 128 (120x throttle)
+
+`L9_CAPABILITY_BROKER_URL` is retired (never shipped) and is not an account field.
 
 The last two are Cursor's constrained defaults, which the example file says
 explicitly belong to Cursor and not here.
@@ -447,8 +448,8 @@ def main(argv: list[str] | None = None) -> int:
             )
     for key in result["prohibited_present"]:
         print(f"  PROHIBITED: {key} is set in this environment (value not shown)")
-        print("              delete it from the Environment variables field; the broker")
-        print("              holds this credential on its own side (contract S1/S2/S3)")
+        print("              delete it from the Environment variables field; a pasted")
+        print("              credential is never a workaround (contract S1/S2/S3)")
     if result["stub_drift"]:
         actual = result["stub_revision_actual"] or "<unrecorded>"
         print(

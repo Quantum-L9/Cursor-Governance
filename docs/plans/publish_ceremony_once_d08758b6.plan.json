@@ -191,22 +191,30 @@
     {
       "surface": "AGENTS.md",
       "action": "update",
-      "todo_ids": ["law-append"]
+      "todo_ids": [
+        "law-append"
+      ]
     },
     {
       "surface": "CANONICAL_LAW.md",
       "action": "update",
-      "todo_ids": ["law-append"]
+      "todo_ids": [
+        "law-append"
+      ]
     },
     {
       "surface": "INVARIANTS.md",
       "action": "update",
-      "todo_ids": ["law-append"]
+      "todo_ids": [
+        "law-append"
+      ]
     },
     {
       "surface": "Makefile",
       "action": "update",
-      "todo_ids": ["law-append"]
+      "todo_ids": [
+        "law-append"
+      ]
     },
     {
       "surface": "CLAUDE.md",
@@ -275,6 +283,12 @@
       "command": "make pr",
       "pass_criteria": "one local gate then open PR; remediates=1; no merge",
       "status": "pending"
+    },
+    {
+      "id": "FV-PRECOMMIT-CATALOG",
+      "command": ".pre-commit-config.yaml catalog via make pr-check",
+      "pass_criteria": "PASS at execute time. This repository installs no commit hook by design; the catalog runs through make pr-check. Status not_applicable: execution-time gate, matching #376.",
+      "status": "not_applicable"
     }
   ],
   "convergence": {

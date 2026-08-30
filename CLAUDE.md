@@ -51,20 +51,20 @@ the formatter block).
   `make push` and the MCP `create_pull_request` / `push_files` tools. If
   `make pr` is what is denied, that is a fault.
 - **This surface holds no credentials.** It is `model-controlled`: no Infisical
-  import, no PAT, no bearer. Capabilities resolve through the broker, which
-  keeps the credential on the far side. A capability reporting `DEGRADED` or
-  `BLOCKED_BY_PLATFORM` is never a reason to paste a secret — see
+  import, no PAT, no bearer. The capability-broker experiment never shipped;
+  authenticated Sonar/Semgrep/Context7 are not delivered through a broker. A
+  capability reporting `UNAVAILABLE` is never a reason to paste a secret — see
   `docs/DEGRADED_MODE_CONTRACT.md`.
 - **Local `git commit` runs no hooks here, and that is deliberate.** This repo
   installs no commit hook — `pre-commit install` is *forbidden*
   (`validate_claude_env.check_session_deps_installs_no_git_hook`,
   `ops/scripts/run_pr_precommit.sh`), because a raw hook runs the catalog
-  without the surface-aware SKIP list. Verification lives at `make pr-check`
-  (public quality) and `make pr` (publish). So never reach for `--no-verify`,
+  without the surface-aware SKIP list. Verification lives at `make pr` /
+  `l9 pr` (publish) and `OPEN_PR=0 make pr` (diagnose). So never reach for `--no-verify`,
   `git commit -n`, `-c core.hooksPath=`, or `SKIP=`/`HUSKY=`: there is no hook
   to skip, the token only signals intent to dodge verification, and
   `ops/autonomy/verification_bypass_gate.py` denies it at PreToolUse. If you
-  want the checks, run `make pr-check`.
+  want the checks, run `OPEN_PR=0 make pr` or `l9 pr`.
 - **Receipts expire.** `~/.l9/claude/bootstrap-state.json` and
   `~/.l9/claude/gov-refresh.json` carry a UTC timestamp and a TTL. Read them
   through `ops/scripts/claude_bootstrap_receipt.py` and

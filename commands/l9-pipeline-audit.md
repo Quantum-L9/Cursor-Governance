@@ -23,8 +23,9 @@ compiled packets as a new plan, `WIP/<M-D-YY>/<concern>/`, or a campaign
 `HARVEST_INTENT.md`. Execute those packets with `/gmp`.
 
 SessionStart uses this pack's `audit_pipeline.py --format session-start`
-(same three surfaces; heading stays `### Plan audit`). On-demand harvest
-stays this slash. This is **not** `/l9-audit-plans` (plans-store shelf only).
+(same three surfaces; heading stays `### Plan audit`; NEXT 1–3 is one slot
+per surface). On-demand harvest stays this slash. This is **not**
+`/l9-audit-plans` (plans-store shelf only).
 This is **not** `/harvest` / `l9-harvest-pipeline` (sed/cp deploy).
 
 Do **not** auto-Build. Do **not** run `make campaign`. Do **not** admit a
@@ -36,7 +37,7 @@ Program Lock. Do **not** whole-file supersede a mixed donor.
 
 ## SKILLS THIS COMMAND CALLS
 
-1. `l9-plan-audit` — plans scan (`scripts/audit_plans.py`)
+1. this pack `scripts/audit_plans.py` — plans scan
 2. `ops/scripts/wip_corpus.py` — read `WIP/INVENTORY.yaml` only (do not write)
 3. Campaign sources — classify `CAMPAIGN_SOURCE.yaml` (do not mutate immutable source)
 4. `l9-intelligence-harvest` — `bind_request.py` + `inventory_source.py` + qualify

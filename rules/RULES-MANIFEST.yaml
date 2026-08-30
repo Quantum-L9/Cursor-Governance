@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-29T08:41:26Z'
+generated_utc: '2026-08-30T00:04:18Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:8e74d0b5a9581bff3f1e15694f1697f44c665529bac4209d302669992f7f50f4
+source_tree_digest: sha256:1e974250fd41e18793ab6d80f1c064c22fe86f11d8b4b6145e14cfb3f2c411a1
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -48,7 +48,7 @@ rules:
   first_heading: Slash Command Recognition
   has_yaml_frontmatter: true
   line_count: 163
-  content_digest: sha256:caca5dcf9d485d532cf1b298b8082dfbb98470ed0daa393f09c99068ebfc6b42
+  content_digest: sha256:4b4c9ae5e47b05d862a74e898b30b764265f3649c77b63c0749fd069dc303096
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -273,8 +273,8 @@ rules:
   globs: null
   first_heading: Context7 Auto-Invoke (External Docs)
   has_yaml_frontmatter: true
-  line_count: 65
-  content_digest: sha256:d683a886480c6b7004a8ac26a89477f5461491e45605a0b4517def51ca40ad70
+  line_count: 73
+  content_digest: sha256:7ceac6084da9eae1edf3499748750d8867e4c9bf06dcccfa6f7f0272768706cd
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -555,8 +555,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
-  line_count: 135
-  content_digest: sha256:6e7690a6d6e954a4a4597f695305a62ef5bda9243873beec73fddf5ab7b93580
+  line_count: 130
+  content_digest: sha256:fa1919b48e7b37850955b6afc9053c6389a949848e561308238b86dc0060ce34
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -577,8 +577,8 @@ rules:
   globs: null
   first_heading: Shared worktree isolation
   has_yaml_frontmatter: true
-  line_count: 85
-  content_digest: sha256:9f0288253b252e993f73174d35c7c1963180014c665ca512e8d05f1d0a0829c9
+  line_count: 92
+  content_digest: sha256:f70eda56dbbce79a45ba86f2c875093220ed91ac68fd8e46eed75a44b1d9c40d
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -720,7 +720,7 @@ rules:
 - file: 55-ff-only-ssot-sync.mdc
   id: l9.rule.55.ff.only.ssot.sync
   id_source: explicit
-  version: 1.2.0
+  version: 1.3.0
   description: Sync or fast-forward a Cursor-Governance clone only via /ff and l9-repo-sync (in-place ff). Never governance_activate_fresh swap. Never delete unique work.
   scope: global
   domain: git
@@ -730,8 +730,8 @@ rules:
   globs: null
   first_heading: Fast-forward only (no SSOT clobber)
   has_yaml_frontmatter: true
-  line_count: 63
-  content_digest: sha256:f50edf623c5b6a907d57ef87e0c6bad86a77032015b71b104b98b96320c739f7
+  line_count: 64
+  content_digest: sha256:57c768e5abe242ad4993f66ae08398548bde5f7a558fa9c80bf044a19ebb6fe6
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -1335,7 +1335,7 @@ rules:
   id: l9.rule.l4.local-autonomy
   id_source: explicit
   version: 1.0.0
-  description: L4 local autonomy — stacked local commits, no mid-execution push, then PR template. Kernels fire before precommit, not as L4.
+  description: L4 local autonomy — stacked local commits, no mid-execution push, then PR template. Tree kernels fire on adapter make pr, not as L4. Cursor skips the tree latch.
   scope: global
   domain: git
   activation: always
@@ -1345,7 +1345,7 @@ rules:
   first_heading: L4 Local Autonomy (no mid-execution push)
   has_yaml_frontmatter: true
   line_count: 73
-  content_digest: sha256:0ae1c99fa217b0befbfa51186e544dbb2b4ce31a8376f7a512f271cf8fa4173b
+  content_digest: sha256:c76e780ff9b83a6b5773fbfd046096239558c8a4abe939939aa32d6a69843da3
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -1586,8 +1586,8 @@ rules:
   globs: null
   first_heading: Local commit is standing (always on)
   has_yaml_frontmatter: true
-  line_count: 64
-  content_digest: sha256:69479f6c29499b67beb0c2d5dd68bd7651ff751db7de0ad0cb3587c5de1ce689
+  line_count: 66
+  content_digest: sha256:26aa22ee445fd265f2edcb56a7818b6f0109c195169ca2edd73a1c97d0bb97f1
   authority: canonical_global
   context_cost: minimal
   deprecated: false

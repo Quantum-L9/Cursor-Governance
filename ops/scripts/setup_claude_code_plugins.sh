@@ -131,6 +131,7 @@ emit("CORE_MARKETPLACES", core.get("marketplaces") or [])
 emit("CORE_PLUGINS", core.get("plugins") or [])
 emit("CLASS_MARKETPLACES", class_cfg.get("marketplaces") or [])
 emit("CLASS_PLUGINS", class_cfg.get("plugins") or [])
+emit("DESKTOP_ONLY", data.get("desktop_only") or [])
 emit("RETIRED_USER_SCOPE", data.get("retired_user_scope") or [])
 PYEOF
 }
@@ -148,6 +149,7 @@ CORE_MARKETPLACE_REPOS=()
 CORE_PLUGINS=()
 CLASS_MARKETPLACES=()
 CLASS_PLUGINS=()
+DESKTOP_ONLY=()
 RETIRED_USER_SCOPE_PLUGINS=()
 section=""
 while IFS= read -r line; do
@@ -160,6 +162,7 @@ while IFS= read -r line; do
         CORE_PLUGINS) CORE_PLUGINS+=("$line") ;;
         CLASS_MARKETPLACES) CLASS_MARKETPLACES+=("$line") ;;
         CLASS_PLUGINS) CLASS_PLUGINS+=("$line") ;;
+        DESKTOP_ONLY) DESKTOP_ONLY+=("$line") ;;
         RETIRED_USER_SCOPE) RETIRED_USER_SCOPE_PLUGINS+=("$line") ;;
       esac
       ;;
@@ -205,6 +208,9 @@ fi
 PLUGINS=("${CORE_PLUGINS[@]}")
 if [ "${#CLASS_PLUGINS[@]}" -gt 0 ]; then
   PLUGINS+=("${CLASS_PLUGINS[@]}")
+fi
+if [ "${#DESKTOP_ONLY[@]}" -gt 0 ]; then
+  PLUGINS+=("${DESKTOP_ONLY[@]}")
 fi
 
 STAMP_DIR="$HOME/.claude/plugins"
@@ -312,6 +318,13 @@ done
 log ""
 for plugin in "${CORE_PLUGINS[@]}"; do
   log "Plugin (user scope): $plugin"
+  if ! claude plugin install -s user "$plugin"; then
+    echo "WARN: plugin install failed: $plugin" >&2
+  fi
+done
+
+for plugin in "${DESKTOP_ONLY[@]}"; do
+  log "Plugin (desktop extras, user scope): $plugin"
   if ! claude plugin install -s user "$plugin"; then
     echo "WARN: plugin install failed: $plugin" >&2
   fi

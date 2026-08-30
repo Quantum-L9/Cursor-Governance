@@ -17,6 +17,41 @@ REGISTRY_PATH = REPO_ROOT / "ops" / "config" / "python-contract.json"
 # prose over-selects: a `README.md` edit otherwise names 25 unrelated suites.
 DOC_SUFFIXES = (".md",)
 
+# Basenames that appear in too many tests to mean "this file changed".
+# Full-path matches still count (`ops/scripts/run_pr_gate.sh` in a test).
+_GENERIC_BASENAMES = frozenset(
+    {
+        "Makefile",
+        "makefile",
+        "LICENSE",
+        "Dockerfile",
+        "setup.sh",
+        "install.sh",
+        "hooks.json",
+        ".mcp.json",
+        "pyproject.toml",
+        "requirements.txt",
+        ".gitignore",
+        "uv.lock",
+        "package.json",
+        "tsconfig.json",
+        ".pre-commit-config.yaml",
+        "CODEOWNERS",
+        "CMakeLists.txt",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "AGENTS.md",
+        "README.md",
+        "TODO.md",
+        "expect.yaml",
+        "source.yaml",
+        "MANIFEST.yaml",
+        "MANIFEST.json",
+    }
+)
+
+_SKIP_TEST_PARTS = frozenset({".venv", ".git", "node_modules", "fixtures"})
+
 
 def _load_suites(registry: Path) -> list[dict]:
     data = json.loads(registry.read_text(encoding="utf-8"))
@@ -122,8 +157,8 @@ def tests_referencing(changed: str, tests_dir: Path, *, repo_root: Path = REPO_R
     environment/program-execution/scripts/ therefore selected every PE script
     test — smoke campaigns and worker lifecycles included — for a change that
     touched none of them. Tests that mention the module by name are the ones
-    that can plausibly break; when none do, the caller keeps the whole
-    directory, so this only ever narrows a guess, never a certainty.
+    that can plausibly break. When none do, return empty — do not fall back
+    to the whole directory.
     """
     stem = Path(changed).stem
     if not stem:
@@ -143,6 +178,25 @@ def tests_referencing(changed: str, tests_dir: Path, *, repo_root: Path = REPO_R
     return found
 
 
+def _iter_test_modules(repo_root: Path) -> list[Path]:
+    """Test modules that can name a changed file. Skip venv, git, fixtures."""
+    found: list[Path] = []
+    roots = [
+        repo_root / "tests",
+        repo_root / "ops" / "scripts" / "tests",
+        repo_root / "environment",
+        repo_root / "skills",
+    ]
+    for root in roots:
+        if not root.is_dir():
+            continue
+        for path in root.rglob("test_*.py"):
+            if any(part in _SKIP_TEST_PARTS for part in path.parts):
+                continue
+            found.append(path)
+    return found
+
+
 def tests_naming_path(changed: str, *, repo_root: Path = REPO_ROOT) -> list[str]:
     """Test files that name a non-Python changed file.
 
@@ -150,21 +204,11 @@ def tests_naming_path(changed: str, *, repo_root: Path = REPO_ROOT) -> list[str]
     stem inference finds nothing and the file used to contribute no targets at
     all. Tests still assert *about* such files by naming them — the swallowed
     failure ratchet keys SWALLOW_BASELINE on 'ops/scripts/run_pr_gate.sh', and
-    a change to that script is exactly what it exists to catch. Scanning the
-    295 test modules for the literal name costs ~20ms, so the whole tree is
-    searched rather than a guessed subdirectory.
+    a change to that script is exactly what it exists to catch.
 
-    Both the repository-relative path and the bare filename count as naming the
-    file: a test that says `run_pr_gate.sh` asserts about it just as much as one
-    that spells the full path, and dropping the second kind loses real coverage.
-    Path matches are listed first only so the most specific targets lead.
-
-    Documentation markdown is excluded. The scope above is executable and
-    config artifacts; `.md` is prose, and its filenames are too common for a
-    substring scan to mean anything — the root `README.md` matched 25 unrelated
-    modules that merely mention the word. `.mdc` rule files stay in scope: they
-    are governance config and the suite asserts about them by name. Tests that
-    assert about prose still run in CI's full catalog.
+    Full-path matches always count. Basename-only matches skip generic names
+    (`Makefile`, `hooks.json`, …) so a popular stem cannot union the catalog.
+    Documentation markdown is excluded (same as before).
     """
 
     target = changed.strip()
@@ -173,11 +217,12 @@ def tests_naming_path(changed: str, *, repo_root: Path = REPO_ROOT) -> list[str]
     if target.endswith(".md"):
         return []
     basename = Path(target).name
+    if basename in _GENERIC_BASENAMES and "/" not in target:
+        return []
+    skip_basename = basename in _GENERIC_BASENAMES
     by_path: list[str] = []
     by_name: list[str] = []
-    for path in sorted(repo_root.rglob("test_*.py")):
-        if any(part in {".venv", ".git", "node_modules"} for part in path.parts):
-            continue
+    for path in sorted(_iter_test_modules(repo_root)):
         try:
             text = path.read_text(encoding="utf-8", errors="ignore")
         except OSError:
@@ -185,7 +230,7 @@ def tests_naming_path(changed: str, *, repo_root: Path = REPO_ROOT) -> list[str]
         relative = path.relative_to(repo_root).as_posix()
         if target in text:
             by_path.append(relative)
-        elif basename and basename in text:
+        elif basename and not skip_basename and basename in text:
             by_name.append(relative)
     return by_path + [item for item in by_name if item not in by_path]
 
@@ -225,6 +270,19 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
             if inferred not in selected:
                 selected.append(inferred)
             continue
+        tests_dir = Path(path).parent / "tests"
+        if (REPO_ROOT / tests_dir).is_dir():
+            referencing = tests_referencing(path, REPO_ROOT / tests_dir)
+        else:
+            referencing = []
+        if referencing:
+            for target in referencing:
+                if target not in selected:
+                    selected.append(target)
+            # The source file itself is not a pytest target: collecting a
+            # non-test module yields nothing and only lengthens the command.
+            missing.append(path)
+            continue
         owners = [
             suite
             for suite in suites
@@ -238,17 +296,6 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
                     if text and text != "." and text not in selected:
                         selected.append(text)
             continue
-        tests_dir = Path(path).parent / "tests"
-        if (REPO_ROOT / tests_dir).is_dir():
-            referencing = tests_referencing(path, REPO_ROOT / tests_dir)
-            fallbacks = referencing or [tests_dir.as_posix()]
-        else:
-            fallbacks = [str(Path(path).parent)]
-        for target in fallbacks:
-            if target not in selected:
-                selected.append(target)
-        # The source file itself is not a pytest target: collecting a
-        # non-test module yields nothing and only lengthens the command.
         missing.append(path)
     if "." in selected:
         raise SystemExit("select_pr_pytest_paths refused to emit repo-root '.'")
@@ -267,7 +314,7 @@ def select_pr_pytest_paths(changed: list[str], *, registry: Path = REGISTRY_PATH
             print(
                 "NOTE: no inferred test for "
                 + ", ".join(still_missing)
-                + "; scoped to that tests/ directory, not the catalog",
+                + "; no directory fallback (named tests only)",
                 file=sys.stderr,
             )
     if unrunnable:

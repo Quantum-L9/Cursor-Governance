@@ -7,17 +7,10 @@ secret-free JSON snapshot (`sonarcloud-issues-before.json` by convention).
 
 Read-only against SonarCloud: this never mutates issue or hotspot state.
 
-Authenticated access is BROKERED on model-controlled surfaces (contract §13). This
-process does not read SONAR_TOKEN from the environment when it is running inside an
-agent runtime, because a token there is a token the model possesses. It asks the
-shared capability plane for `sonar.read_issues` and receives sanitized results:
-
-    l9-pr-remediation -> capability client -> L9 broker -> Sonar API
-
-Repository identity still comes from sonar-project.properties via --project /
---organization; the broker receives project/organization identifiers, never a token.
-A trusted operator running this by hand keeps the direct path. Either way no token is
-printed, stored, or written to the snapshot; Authorization headers are redacted.
+Authenticated access on model-controlled surfaces is unauthenticated public
+read only. The capability broker never shipped. A trusted operator running this
+by hand still uses SONAR_TOKEN via DirectTransport. No token is printed, stored,
+or written to the snapshot; Authorization headers are redacted.
 
 Fail-closed: if pagination cannot retrieve every reported issue, the snapshot is marked
 BLOCKED and the process exits non-zero rather than emitting a smaller-than-real set.
@@ -35,15 +28,14 @@ import urllib.request
 from datetime import UTC, datetime
 from pathlib import Path
 
-# The capability plane lives in ops/secrets (the SSOT). Import it rather than
-# re-implementing a second client inside a skill.
+# Brokered Sonar is retired (never shipped). Model surfaces use unauthenticated
+# public reads. Operators still use DirectTransport + SONAR_TOKEN.
 _OPS_SECRETS = Path(__file__).resolve().parents[3] / "ops" / "secrets"
 _OPS_LIB = Path(__file__).resolve().parents[3] / "ops" / "lib"
 for _extra in (_OPS_SECRETS, _OPS_LIB):
     if str(_extra) not in sys.path:
         sys.path.insert(0, str(_extra))
 
-from capability_client import CapabilityClient  # noqa: E402
 from safe_https import https_exchange  # noqa: E402
 from surface_trust import classify, require_trusted  # noqa: E402
 
@@ -100,56 +92,21 @@ class DirectTransport:
             raise SystemExit(f"BLOCKED: SonarCloud {path} request failed: {exc}") from exc
 
 
-class BrokerTransport:
-    """Capability path. The credential stays beyond the model boundary.
-
-    Only registry-declared caller params are forwarded; project and organization
-    are workspace-derived on the broker side, so this process cannot ask for a
-    repository it is not working in.
-    """
-
-    CAPABILITY = "sonar.read_issues"
-
-    def __init__(self, client: CapabilityClient) -> None:
-        self.client = client
-
-    @property
-    def authenticated(self) -> bool:
-        return True
-
-    def get(self, path: str, params: dict[str, str]) -> dict:
-        forward = {
-            key: str(value)
-            for key, value in params.items()
-            if key in ("branch", "pullRequest", "p", "ps") and value not in (None, "")
-        }
-        forward["path"] = path
-        try:
-            return self.client.invoke(self.CAPABILITY, forward).get("result", {})
-        except (LookupError, RuntimeError) as exc:
-            raise SystemExit(f"BLOCKED: brokered SonarCloud {path} failed: {exc}") from exc
-
-
-def build_transport(base_url: str, surface: str | None = None) -> DirectTransport | BrokerTransport:
+def build_transport(base_url: str, surface: str | None = None) -> DirectTransport:
     """Pick the transport from the caller's trust class, not from a flag.
 
-    A model-controlled surface gets the broker or nothing. It never falls back to
-    reading SONAR_TOKEN, because that fallback is the vulnerability.
+    A model-controlled surface never reads SONAR_TOKEN. The capability broker
+    never shipped, so the only remaining model path is unauthenticated public
+    read. Operators keep DirectTransport with a token.
     """
     trust = classify(surface)
     if trust.raw_secret_allowed:
         token = os.environ.get("SONAR_TOKEN") or os.environ.get("SONARCLOUD_TOKEN")
         return DirectTransport(base_url, token, surface)
 
-    client = CapabilityClient()
-    status = client.status(BrokerTransport.CAPABILITY)
-    if status.status == "ENABLED":
-        return BrokerTransport(client)
-    # Unauthenticated public read. Honest degradation: fewer issues are visible,
-    # and the snapshot records that it was unauthenticated (contract §18).
     print(
-        f"sonar_fetch: {BrokerTransport.CAPABILITY} {status.status} ({status.detail}); "
-        "continuing UNAUTHENTICATED — private findings will be absent",
+        "sonar_fetch: capability broker retired; continuing UNAUTHENTICATED — "
+        "private findings will be absent",
         file=sys.stderr,
     )
     return DirectTransport(base_url, None, surface)
@@ -192,7 +149,7 @@ def _scope_params(branch: str | None, pull_request: str | None) -> dict[str, str
 
 
 def fetch_issues(
-    transport: DirectTransport | BrokerTransport,
+    transport: DirectTransport,
     project: str,
     organization: str,
     scope: dict[str, str],
@@ -219,9 +176,7 @@ def fetch_issues(
     return {"issues": issues, "total": total, "retrieved": len(issues), "complete": complete}
 
 
-def fetch_rules(
-    transport: DirectTransport | BrokerTransport, rule_keys: list[str], organization: str
-) -> dict:
+def fetch_rules(transport: DirectTransport, rule_keys: list[str], organization: str) -> dict:
     rules: dict[str, dict] = {}
     for rule_key in sorted(set(rule_keys)):
         payload = transport.get("/rules/show", {"key": rule_key, "organization": organization})

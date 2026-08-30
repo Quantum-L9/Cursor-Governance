@@ -28,6 +28,32 @@ todos:
     phase: execute
     depends_on: [A4]
 isProject: false
+kernel_pass:
+  bound_path: contract-v31-fixes.plan.md
+  improve:
+    kernel: kernels/Improve.md
+    ran_at: 2026-08-29T17:20:00Z
+    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    deltas:
+      - "Stamp kernel_pass so the next editor is not the first to fail G_PLAN_KERNEL_PASS"
+      - "Keep this plan's existing todos and body; do not reopen landed work from this stamp"
+      - "Do not mix #374 end-of-file-fixer exclude into this corpus pass"
+  recursive_alignment:
+    kernel: kernels/Recursive Alignment.md
+    ran_at: 2026-08-29T17:20:30Z
+    body_sha256: "0000000000000000000000000000000000000000000000000000000000000000"
+    deltas:
+      - "Align with issue #377 and the #376 G_PRECOMMIT_CONFIG plus kernel_pass precedent"
+      - "Leave docs/plans/_TEMPLATE.plan.md exempt via PLAN_SKIP_PREFIXES"
+      - "Do not edit .pre-commit-config.yaml in this cluster"
+  validate_repair:
+    kernel: kernels/Validate & Repair.md
+    ran_at: 2026-08-29T17:21:00Z
+    body_sha256: "29b6081916c8e1f27e39755ff2a9cf8e2c6793cc4dd9f39f3af7103e7ee61477"
+    deltas:
+      - "G_PLAN_ETC and G_PLAN_EITHER_OR stay clean after this stamp"
+      - "Canonical body_sha256 is the post-stamp file hash with sha fields zeroed"
+      - "Do not mark status executable while the checker still fails"
 ---
 
 # PLAN: Contract v3.1 — land the two unadopted review fixes and the three v3 regressions
@@ -280,7 +306,7 @@ One paragraph: residual defect or feature; system bound; non-negotiable preserve
 
 ## Capability preflight
 
-`schema_ref:` `canonical.schema.capability_preflight.v1`  
+`schema_ref:` `canonical.schema.capability_preflight.v1`
 `instance_binding:` `capability_preflight_ref` → fill path or inline id below.
 
 | Field | Value |
@@ -332,7 +358,7 @@ Mutations outside this envelope are forbidden (PLAN-SCHEMA-004).
 
 ### Autonomous merge
 
-`autonomous_merge:` `false` always in packet + PE `COMPATIBILITY.yaml` (forbidden).  
+`autonomous_merge:` `false` always in packet + PE `COMPATIBILITY.yaml` (forbidden).
 **Merge for this plan** only after PE verify/handoff path + [@autonomy](commands/autonomy.md) join on this L4 plan/PE stack, green+mergeable (see Execute section). Outside that stack → denied.
 
 ## Side effects and idempotency
@@ -356,7 +382,7 @@ Required for every destructive / external-write TODO (PLAN-SCHEMA-005).
 
 ## Rollback
 
-`schema_ref:` `canonical.schema.rollback_contract.v1`  
+`schema_ref:` `canonical.schema.rollback_contract.v1`
 `instance_binding:` `rollback_contract_ref`
 
 | Field | Value |
@@ -421,8 +447,8 @@ Required for every destructive / external-write TODO (PLAN-SCHEMA-005).
 
 ## Execution DAG
 
-`schema_ref:` `canonical.schema.dependency_topology.v1`  
-`instance_binding:` `dependency_topology_ref` / `execution_DAG_ref`  
+`schema_ref:` `canonical.schema.dependency_topology.v1`
+`instance_binding:` `dependency_topology_ref` / `execution_DAG_ref`
 Must be acyclic before status may become `executable` (PLAN-SCHEMA-007).
 
 | Field | Value |
@@ -446,8 +472,8 @@ Must be acyclic before status may become `executable` (PLAN-SCHEMA-007).
 
 ## Property evidence matrix
 
-`schema_ref:` `canonical.schema.validation_evidence.v1`  
-`instance_binding:` `validation_evidence_refs` / `property_evidence_matrix_ref`  
+`schema_ref:` `canonical.schema.validation_evidence.v1`
+`instance_binding:` `validation_evidence_refs` / `property_evidence_matrix_ref`
 Exit-0 alone is insufficient when property needs structural/runtime proof (PLAN-SCHEMA-008).
 
 | evidence_id | claim_id / SP | evidence_kind | method | command | expected_positive | status |
@@ -498,8 +524,8 @@ Exit-0 alone is insufficient when property needs structural/runtime proof (PLAN-
 
 ## Convergence
 
-`schema_ref:` `canonical.schema.convergence_contract.v1`  
-`instance_binding:` `convergence_contract_ref`  
+`schema_ref:` `canonical.schema.convergence_contract.v1`
+`instance_binding:` `convergence_contract_ref`
 Convergence requires all blocking evidence + gates (PLAN-SCHEMA-015).
 
 | Field | Value |
@@ -640,4 +666,3 @@ todos:
     content: …
     status: pending
 ```
-

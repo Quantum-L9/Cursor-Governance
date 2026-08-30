@@ -69,7 +69,7 @@ endif
 
 help:
 	@echo "Targets: start sync wiring-check symlinks-check symlinks-install claude-plugins claude-projection claude-projection-check claude-env claude-skill-registry sync-generated claude-skills claude-skills-check claude-skills-test autonomy-validate autonomy-contracts-validate agents-env ide-profile ide-profile-test backup-gate-test path-lint precommit precommit-repo backup push graphiti-health lint lint-ruff lint-mypy test uv-lock-check pr PR Pr pR pr-check pr-security pr-full venv rules-validate rules-stabilize secrets-sync secrets-check ui-operator-sync"
-	@echo "  make capability-contract-validate / capability-check / capability-broker-preflight — zero-static-secret capability plane"
+	@echo "  make capability-contract-validate / capability-check — zero-static-secret capability plane (broker retired)"
 	@echo "  make repo-write-lock-test / precommit-hook-contract — repo-write lock selftest; pre-commit hook read_only/writer contract"
 	@echo "  make l4-status / l4-begin / l4-record-kernels / l4-authorize — L4 local autonomy (no mid-exec push)"
 	@echo "  make kernel-precommit — kernel hook (before precommit-repo hooks/tests; not L4)"
@@ -309,13 +309,11 @@ claude-env:
 	if [ $$structural -ne 0 ]; then exit $$structural; fi; \
 	exit $$runtime
 
-## Diagnose why the capability plane is unavailable, and whether egress matches
-## the posture recorded in docs/NETWORK_POSTURE.md. Both report rather than fail:
-## on a hosted surface the primary blocker is platform-issued identity, which no
-## change in this repository can resolve (docs/DEGRADED_MODE_CONTRACT.md).
+## Diagnose egress against docs/NETWORK_POSTURE.md. The capability broker is
+## retired (never shipped); do not probe it. Report rather than fail.
 .PHONY: claude-diagnose
 claude-diagnose:
-	$(PYTHON) ops/secrets/probe_broker.py || true
+	@echo "capability broker experiment retired (never shipped); not probed"
 	$(PYTHON) ops/scripts/probe_network_posture.py
 
 ## Fail-closed first-class autonomy family registry (environment/contracts/autonomy).
@@ -538,6 +536,8 @@ test-ci-parity:
 # Velocity path: run_pr_gate.sh owns precommit (run_pr_precommit.sh) once.
 # Do not re-add a Make prereq that double-runs precommit-repo on pr-check or pr.
 # capability-contract is domain-gated inside the gate; corpus lives on pr-full.
+# Teaching: finished work → scoped commit → make pr. precommit-repo is optional
+# autofix, not a prerequisite (AGENTS TESTS_ONCE_MAKE_PR_V1).
 #
 # pr-check does NOT strip git identity — it runs as you do, which is the right
 # default for a local gate. When a suite touches Git worktrees, `make
@@ -625,18 +625,15 @@ capability-check:
 		--surface "$${L9_GOVERNANCE_SURFACE:-unknown}" \
 		$(if $(REQUIRE),--require-capabilities "$(REQUIRE)",)
 
-## Broker posture (trusted side): boundary isolation + workload identity.
+## Retired (never shipped). See ops/secrets/_archived/capability-broker/RETIRED.md
 capability-broker-preflight:
-	$(PYTHON) ops/secrets/capability_broker.py preflight
+	@echo "capability broker experiment retired (never shipped)" >&2
+	@exit 2
 
-## Run capability broker locally for CLI surfaces.
-## Binds to localhost:8787, authenticates to Infisical via AWS bootstrap.
-## Set L9_CAPABILITY_BROKER_URL=http://localhost:8787 in your shell.
-## For cloud surfaces: deploy to K8s with ops/secrets/k8s/broker-deployment.yaml
+## Retired (never shipped). See ops/secrets/_archived/capability-broker/RETIRED.md
 broker-serve:
-	@echo "Starting L9 capability broker on http://localhost:8787"
-	@echo "Set: export L9_CAPABILITY_BROKER_URL=http://localhost:8787"
-	$(PYTHON) ops/secrets/capability_broker.py serve --audience cli_local --port 8787 --bind 127.0.0.1
+	@echo "capability broker experiment retired (never shipped)" >&2
+	@exit 2
 
 ## Install optional UI-operator deps (playwright + boto3). Not required for make pr.
 ## After this: playwright install
@@ -824,6 +821,14 @@ PUSH_ONLY ?= 0
 ff:
 	CURSOR_GOVERNANCE_DIR="$(CURDIR)" bash skills/l9-repo-sync/scripts/ff.sh
 
+.PHONY: ff-clone ff-ssot
+## /ff --clone (Cursor-Governance working copy only)
+ff-clone:
+	bash skills/l9-repo-sync/scripts/ff.sh --clone
+## /ff --ssot ($HOME/.cursor-governance only)
+ff-ssot:
+	bash skills/l9-repo-sync/scripts/ff.sh --ssot
+
 # L9_DISPATCHER_FACADE_V1
 # Single classification authority for the thin `l9` cross-repo facade
 # (environment/agents/adapters/claude-code/bin/l9). A CONSUMER_SAFE target is
@@ -867,5 +872,15 @@ claude-readiness:
 # recipe environment; export so run_pr_gate.sh sees it.
 pr: export PR_EARLY_OVERLAP = 1
 # Pass PR_STACK into the unchanged precommit-repo recipe (additive_only).
-# GNU Make 3.81 needs the assignment; a bare `export PR_STACK` would empty it.
-precommit-repo: export PR_STACK = $(PR_STACK)
+# GNU Make 3.81 treats `export PR_STACK = $(PR_STACK)` as a recursive self-ref
+# and aborts `make precommit-repo`. Make 4.x snapshots that form; `:=` snapshots
+# on both. A bare `export PR_STACK` is a prerequisite named `export` on 3.81.
+precommit-repo: export PR_STACK := $(PR_STACK)
+
+.PHONY: pr-security-full
+## Full Semgrep packs (p/python + p/secrets + local rules) on changed files.
+pr-security-full:
+	PR_SECURITY_PROFILE=full PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" PR_BASE="$(PR_BASE)" \
+		bash ops/scripts/run_pr_security.sh "$(WS)"
+
+pr-full: pr-security-full

@@ -1,0 +1,10 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 07_superseded_design_requested
+objective_contains:
+- memory-bank
+expected_dispositions:
+- UNKNOWN
+unknowns_expected:
+- superseded
+authority_must_not_expand: true
+source_traceability_required: true

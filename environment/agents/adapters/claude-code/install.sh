@@ -30,8 +30,10 @@
 # HEALTH CONTRACT: every step classifies itself BLOCKED / DEGRADED / READY.
 #   BLOCKED   governance SSOT absent, locked interpreter unusable, or required
 #             settings wiring failed (exit code reflects it).
-#   DEGRADED  optional capability unavailable, marketplace plugin unavailable,
-#             memory unavailable, or an optional checker unavailable.
+#   DEGRADED  optional capability unavailable, memory unavailable, or an
+#             optional checker unavailable. A platform-disabled marketplace
+#             (SKIP_PLUGIN_MARKETPLACE=true) is READY — hosted extras are not
+#             a required plane; slash commands are projected, not plugins.
 #   READY     required environment contract satisfied.
 # The machine-readable receipt lands at ~/.l9/claude/bootstrap-state.json
 # (schema l9.claude-bootstrap.v1); the SessionStart hook projects it. There is
@@ -67,7 +69,11 @@ warn() { printf 'claude-adapter WARN: %s\n' "$*" >&2; }
 # downgrade: READY -> DEGRADED -> BLOCKED.
 STATUS_SHARED="READY"; STATUS_SETTINGS="READY"; STATUS_SKILLS="READY"
 STATUS_RULES="READY"; STATUS_CAPABILITIES="READY"; STATUS_MEMORY="READY"
-STATUS_MCP="READY"; STATUS_PLUGINS="READY"
+STATUS_MEMORY_CLI="READY"; STATUS_MEMORY_MCP="READY"
+STATUS_MCP="READY"; STATUS_PLUGINS="READY"; STATUS_COMMANDS="READY"
+REASON_SHARED=""; REASON_SETTINGS=""; REASON_SKILLS=""; REASON_COMMANDS=""
+REASON_RULES=""; REASON_CAPABILITIES=""; REASON_MEMORY=""; REASON_MEMORY_CLI=""
+REASON_MEMORY_MCP=""; REASON_MCP=""; REASON_PLUGINS=""
 
 downgrade() { # $1=step-var-name $2=new-status $3=reason
   local name="$1" want="$2" cur="${!1}"
@@ -75,6 +81,19 @@ downgrade() { # $1=step-var-name $2=new-status $3=reason
   if [ "$want" = "BLOCKED" ] || { [ "$want" = "DEGRADED" ] && [ "$cur" = "READY" ]; }; then
     eval "$name='$want'"
     [ "$QUIET" = "1" ] || say "  $name -> $want${3:+: $3}"
+    case "$name" in
+      STATUS_SHARED) REASON_SHARED="${3:-}" ;;
+      STATUS_SETTINGS) REASON_SETTINGS="${3:-}" ;;
+      STATUS_SKILLS) REASON_SKILLS="${3:-}" ;;
+      STATUS_COMMANDS) REASON_COMMANDS="${3:-}" ;;
+      STATUS_RULES) REASON_RULES="${3:-}" ;;
+      STATUS_CAPABILITIES) REASON_CAPABILITIES="${3:-}" ;;
+      STATUS_MEMORY) REASON_MEMORY="${3:-}" ;;
+      STATUS_MEMORY_CLI) REASON_MEMORY_CLI="${3:-}" ;;
+      STATUS_MEMORY_MCP) REASON_MEMORY_MCP="${3:-}" ;;
+      STATUS_MCP) REASON_MCP="${3:-}" ;;
+      STATUS_PLUGINS) REASON_PLUGINS="${3:-}" ;;
+    esac
   fi
 }
 
@@ -128,11 +147,28 @@ write_receipt() {
     printf '  "shared_bootstrap": "%s",\n' "$(json_token "$STATUS_SHARED")"
     printf '  "settings": "%s",\n' "$(json_token "$STATUS_SETTINGS")"
     printf '  "skills": "%s",\n' "$(json_token "$STATUS_SKILLS")"
+    printf '  "commands": "%s",\n' "$(json_token "$STATUS_COMMANDS")"
     printf '  "rules": "%s",\n' "$(json_token "$STATUS_RULES")"
     printf '  "capabilities": "%s",\n' "$(json_token "$STATUS_CAPABILITIES")"
     printf '  "memory": "%s",\n' "$(json_token "$STATUS_MEMORY")"
+    printf '  "memory_cli": "%s",\n' "$(json_token "$STATUS_MEMORY_CLI")"
+    printf '  "memory_mcp": "%s",\n' "$(json_token "$STATUS_MEMORY_MCP")"
     printf '  "mcp": "%s",\n' "$(json_token "$STATUS_MCP")"
     printf '  "plugins": "%s",\n' "$(json_token "$STATUS_PLUGINS")"
+    printf '  "reasons": {\n'
+    printf '    "shared_bootstrap": "%s",\n' "$(json_token "$REASON_SHARED")"
+    printf '    "settings": "%s",\n' "$(json_token "$REASON_SETTINGS")"
+    printf '    "skills": "%s",\n' "$(json_token "$REASON_SKILLS")"
+    printf '    "commands": "%s",\n' "$(json_token "$REASON_COMMANDS")"
+    printf '    "rules": "%s",\n' "$(json_token "$REASON_RULES")"
+    printf '    "capabilities": "%s",\n' "$(json_token "$REASON_CAPABILITIES")"
+    printf '    "memory": "%s",\n' "$(json_token "$REASON_MEMORY")"
+    printf '    "memory_cli": "%s",\n' "$(json_token "$REASON_MEMORY_CLI")"
+    printf '    "memory_mcp": "%s",\n' "$(json_token "$REASON_MEMORY_MCP")"
+    printf '    "mcp": "%s",\n' "$(json_token "$REASON_MCP")"
+    printf '    "plugins": "%s"\n' "$(json_token "$REASON_PLUGINS")"
+    printf '  },\n'
+    printf '  "log_path": "%s",\n' "$(json_token "${L9_BOOTSTRAP_LOG_PATH:-}")"
     printf '  "overall": "%s"\n' "$(json_token "$state")"
     printf '}\n'
   } > "$RECEIPT" 2>/dev/null || return 0
@@ -201,6 +237,25 @@ case "$GOV_DIR" in
     GOV_DIR="$HOME/.cursor-governance"
     ;;
 esac
+
+# Cloud doctor: `make claude-install-check` passes --governance $(CURDIR). On
+# hosted Claude that is the workspace clone, not the live SSOT SessionStart
+# loaded ($HOME/.cursor-governance). Projection --check against the workspace
+# then reports skills/rules drift while the session is READY. Remap only in
+# --check when the platform skipped the marketplace (the hosted topology) and
+# a distinct live SSOT exists. Local Desktop `make claude-install-check` from
+# a worktree is unchanged.
+if [ "$CHECK" = "1" ]; then
+  live_ssot="${L9_GOVERNANCE_DIR:-$HOME/.cursor-governance}"
+  if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ] && [ -f "$live_ssot/CANONICAL_LAW.md" ]; then
+    gov_abs="$(cd "$GOV_DIR" 2>/dev/null && pwd -P)" || gov_abs=""
+    live_abs="$(cd "$live_ssot" 2>/dev/null && pwd -P)" || live_abs=""
+    if [ -n "$gov_abs" ] && [ -n "$live_abs" ] && [ "$gov_abs" != "$live_abs" ]; then
+      warn "check-mode: --governance $GOV_DIR is not the live SSOT; checking $live_ssot"
+      GOV_DIR="$live_ssot"
+    fi
+  fi
+fi
 
 if [ ! -f "$GOV_DIR/CANONICAL_LAW.md" ]; then
   warn "no governance SSOT at $GOV_DIR — the surface caller must clone it first"
@@ -274,6 +329,7 @@ if [ -n "$GOV_PY" ] && [ -f "$PROJECTION_ENGINE" ]; then
     # so no domain can claim health from silence.
     downgrade STATUS_SETTINGS BLOCKED "projection engine failed (exit $projection_rc)"
     downgrade STATUS_SKILLS DEGRADED "projection engine failed (exit $projection_rc)"
+    downgrade STATUS_COMMANDS DEGRADED "projection engine failed (exit $projection_rc)"
     downgrade STATUS_RULES DEGRADED "projection engine failed (exit $projection_rc)"
     downgrade STATUS_PLUGINS DEGRADED "projection engine failed (exit $projection_rc)"
   fi
@@ -284,6 +340,7 @@ if [ -n "$GOV_PY" ] && [ -f "$PROJECTION_ENGINE" ]; then
   for pair in \
     "settings STATUS_SETTINGS" \
     "skills STATUS_SKILLS" \
+    "commands STATUS_COMMANDS" \
     "rules STATUS_RULES" \
     "plugins STATUS_PLUGINS"; do
     domain="${pair%% *}"
@@ -306,15 +363,41 @@ elif [ -n "$GOV_PY" ]; then
   warn "missing ops/scripts/claude_projection.py"
   downgrade STATUS_SETTINGS BLOCKED "projection engine missing"
   downgrade STATUS_SKILLS DEGRADED "projection engine missing"
+  downgrade STATUS_COMMANDS DEGRADED "projection engine missing"
   downgrade STATUS_RULES DEGRADED "projection engine missing"
   downgrade STATUS_PLUGINS DEGRADED "projection engine missing"
 fi
 
+# Hosted/Mobile wrap: account Environment variables may lower autonomy without
+# forking settings.template.json. Desktop CLI is unchanged (no overlay).
+if [ "$CHECK" != "1" ] && [ -n "$GOV_PY" ]; then
+  if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ] || [ -n "${CLAUDE_CODE_REMOTE:-}" ]; then
+    overlay="$GOV_DIR/environment/agents/adapters/claude-code/overlay_hosted_settings_env.py"
+    if [ -f "$overlay" ]; then
+      "$GOV_PY" "$overlay" --workspace "$WORKSPACE" \
+        || warn "hosted settings env overlay failed"
+    fi
+  fi
+fi
+
+# --- 2b) GitHub Packages via gh (hosted only; same identity as git/gh) -----
+# Committed .npmrc `_authToken=${NODE_AUTH_TOKEN}` 401s when that env is empty.
+# CI already uses secrets.GITHUB_TOKEN. Hosted Claude has `gh`; wire npm to it.
+# Desktop/Cursor must not write a PAT into ~/.npmrc (that file is not ephemeral).
+if [ "$CHECK" != "1" ] && { [ -n "${CLAUDE_CODE_REMOTE:-}" ] || [ -n "${CLAUDE_CODE_REMOTE_SESSION_ID:-}" ]; }; then
+  GH_NPM="$GOV_DIR/ops/secrets/gh_npm.sh"
+  if [ -f "$GH_NPM" ]; then
+    if bash "$GH_NPM" --install-userconfig; then
+      say "npm GitHub Packages: userconfig from gh auth token (not NODE_AUTH_TOKEN)"
+    else
+      warn "npm GitHub Packages: gh auth token not available"
+    fi
+  fi
+fi
+
 # --- 3) Memory MCP front door (Claude .mcp.json format) ---------------------
-# Brokered front door: the template points at ${L9_CAPABILITY_BROKER_URL}
-# (/mcp/graphiti) and carries NO bearer (contract S3/§12). The broker speaks
-# the MCP handshake and maps search_memory/write_governed to
-# graphiti.query/graphiti.write_governed.
+# Graphiti HTTPS front door: the template points at ${GRAPHITI_MCP_URL} and
+# carries NO bearer. The capability broker never shipped (retired 2026-08-29).
 stage "mcp-front-door"
 # .mcp.json is a PROJECTION of mcp.template.json (the single MCP authority),
 # already rendered in the claude-projection stage above. The old `cp only if
@@ -333,60 +416,68 @@ case "$MCP_STATUS" in
   *) downgrade STATUS_MCP DEGRADED "mcp projection: $MCP_STATUS" ;;
 esac
 
-# Capability plane + memory posture for the receipt.
-#
-# This used to read `[ -z "$L9_CAPABILITY_BROKER_URL" ]` and call the result the
-# honest posture. Defining a NAME is not evidence that a plane works: the
-# configured broker host has had no DNS record and the hosted surface issues no
-# session identity, and the receipt still said READY for both capabilities and
-# memory. A false green is worse than a red, because nobody goes looking.
-#
-# ops/secrets/probe_broker.py is the classifier that already knows the
-# difference (identity vs configuration vs reachability). Exit 0 means a usable
-# plane; anything else names its primary blocker. It answers in under a second
-# when DNS fails, which is the case it has to be fast for.
-stage "capability-plane"
-PROBE_BROKER="$GOV_DIR/ops/secrets/probe_broker.py"
-if [ -z "${L9_CAPABILITY_BROKER_URL:-}" ]; then
-  downgrade STATUS_CAPABILITIES DEGRADED "L9_CAPABILITY_BROKER_URL unset"
-  downgrade STATUS_MEMORY DEGRADED "no broker-authenticated identity path"
-elif [ -n "$GOV_PY" ] && [ -f "$PROBE_BROKER" ]; then
-  if probe_json="$(L9_PROBE_QUIET=1 "$GOV_PY" "$PROBE_BROKER" --json 2>/dev/null)"; then
-    say "capability broker: reachable and identified"
-  else
-    probe_blocker="$(printf '%s' "$probe_json" \
-      | sed -n 's/.*"primary_blocker": *"\([^"]*\)".*/\1/p' | head -n 1)"
-    : "${probe_blocker:=unavailable}"
-    downgrade STATUS_CAPABILITIES DEGRADED "broker probe: $probe_blocker"
-    downgrade STATUS_MEMORY DEGRADED "broker probe: $probe_blocker"
+# Graphiti health without the capability broker. CLI uses the locked
+# interpreter + graphiti_memory_client.py; MCP is HTTP to GRAPHITI_MCP_URL
+# (default https://memory.quantumaipartners.com/graphiti/mcp). Connect vs 401
+# vs 403 allowlist are distinct reasons. capability broker experiment retired
+# (never shipped; not probed). A leftover broker URL in .mcp.json is still a
+# defect.
+stage "graphiti-health"
+EMITTER="$GOV_DIR/ops/scripts/emit_claude_readiness.py"
+if [ -n "$GOV_PY" ] && [ -f "$EMITTER" ]; then
+  probe_json="$("$GOV_PY" "$EMITTER" --graphiti-probe --root "$GOV_DIR" 2>/dev/null)" || probe_json=""
+  if [ -n "$probe_json" ]; then
+    cli_st="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["cli"]["status"])' 2>/dev/null)" || cli_st=UNKNOWN
+    cli_rs="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["cli"]["reason"])' 2>/dev/null)" || cli_rs=""
+    mcp_st="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["mcp"]["status"])' 2>/dev/null)" || mcp_st=UNKNOWN
+    mcp_rs="$(printf '%s' "$probe_json" | "$GOV_PY" -c 'import json,sys; print(json.load(sys.stdin)["mcp"]["reason"])' 2>/dev/null)" || mcp_rs=""
+    case "$cli_st" in
+      DEGRADED|BLOCKED|UNKNOWN) downgrade STATUS_MEMORY_CLI DEGRADED "${cli_rs:-cli health}" ;;
+    esac
+    case "$mcp_st" in
+      DEGRADED|BLOCKED|UNKNOWN) downgrade STATUS_MEMORY_MCP DEGRADED "${mcp_rs:-mcp health}" ;;
+    esac
+    say "graphiti memory.cli=$cli_st memory.mcp=$mcp_st"
   fi
-else
-  downgrade STATUS_CAPABILITIES DEGRADED "broker unprobeable (no interpreter or probe script)"
-  downgrade STATUS_MEMORY DEGRADED "broker unprobeable (no interpreter or probe script)"
 fi
-
-# The memory MCP front door resolves THROUGH the broker
-# (url: ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti), so a present .mcp.json says
-# nothing about whether that server can ever connect. When the file routes
-# through the broker and the broker is not READY, neither is the front door.
-if [ "$STATUS_CAPABILITIES" != "READY" ] \
-   && [ -f "$WORKSPACE/.mcp.json" ] \
+if [ "$STATUS_MEMORY_CLI" != "READY" ]; then
+  downgrade STATUS_MEMORY DEGRADED "${REASON_MEMORY_CLI:-memory.cli}"
+elif [ "$STATUS_MEMORY_MCP" != "READY" ]; then
+  downgrade STATUS_MEMORY DEGRADED "${REASON_MEMORY_MCP:-memory.mcp}"
+fi
+if [ -f "$WORKSPACE/.mcp.json" ] \
    && grep -q 'L9_CAPABILITY_BROKER_URL' "$WORKSPACE/.mcp.json" 2>/dev/null; then
-  downgrade STATUS_MCP DEGRADED "front door routes through an unavailable broker"
+  downgrade STATUS_MCP DEGRADED "front door still routes through retired capability broker"
 fi
 
 # --- 3b) Marketplace plugins ------------------------------------------------
 # Plugin convergence is a projection-engine domain (declarative desired state
 # in plugins.desired.json; setup_claude_code_plugins.sh only as fallback) and
-# already ran in stage claude-projection. What remains here is the honest
-# posture: a platform-disabled marketplace, or a missing claude CLI, still
-# means the PreToolUse matcher's context7 plugin cannot exist.
+# already ran in stage claude-projection. Hosted Web/Mobile set
+# SKIP_PLUGIN_MARKETPLACE=true: that skip is by design (desktop extras are not
+# required for Web/Mobile parity). Slash commands load through
+# claude_projection.py (commands domain), not the marketplace. A missing
+# claude CLI on Desktop still means marketplace packages were not converged.
 stage "marketplace-plugins"
 if [ "${SKIP_PLUGIN_MARKETPLACE:-}" = "true" ]; then
   say "plugin marketplace disabled by the platform (SKIP_PLUGIN_MARKETPLACE=true)"
-  downgrade STATUS_PLUGINS DEGRADED "marketplace disabled by the platform"
+  say "plugins: READY (hosted skip — desktop extras are not a required plane)"
 elif ! command -v claude >/dev/null 2>&1; then
   downgrade STATUS_PLUGINS DEGRADED "claude CLI unavailable — plugins not converged"
+fi
+
+# Structural doctor. --check still runs it; the session receipt is not
+# overwritten in check mode (bootstrap-check.json). A non-zero structural
+# result downgrades settings so SessionStart does not report READY files that
+# failed validation.
+stage "structural-validate"
+VALIDATOR="$GOV_DIR/environment/agents/adapters/claude-code/validate_claude_env.py"
+if [ -n "$GOV_PY" ] && [ -f "$VALIDATOR" ]; then
+  if ! "$GOV_PY" "$VALIDATOR" >/dev/null 2>&1; then
+    downgrade STATUS_SETTINGS DEGRADED "validate_claude_env structural fail"
+  else
+    say "validate_claude_env: STRUCTURAL_PASS"
+  fi
 fi
 
 # --- 4) Excludes for the GENERATED .claude mirrors --------------------------
@@ -432,8 +523,9 @@ fi
 
 # --- Receipt + final classification -----------------------------------------
 OVERALL="READY"
-for st in "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_RULES" \
-          "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP" "$STATUS_PLUGINS"; do
+for st in "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_COMMANDS" \
+          "$STATUS_RULES" "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP" \
+          "$STATUS_PLUGINS"; do
   case "$st" in
     BLOCKED)  OVERALL="BLOCKED"; break ;;
     DEGRADED) OVERALL="DEGRADED" ;;
@@ -449,9 +541,10 @@ write_receipt "$OVERALL"
 say "bootstrap receipt: $RECEIPT ($OVERALL)"
 
 log "Claude Code adapter: $OVERALL"
-[ "$QUIET" = "1" ] || printf '  shared=%s settings=%s skills=%s rules=%s capabilities=%s memory=%s mcp=%s plugins=%s\n' \
-  "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_RULES" \
-  "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP" "$STATUS_PLUGINS"
+[ "$QUIET" = "1" ] || printf '  shared=%s settings=%s skills=%s commands=%s rules=%s capabilities=%s memory=%s mcp=%s plugins=%s\n' \
+  "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_COMMANDS" \
+  "$STATUS_RULES" "$STATUS_CAPABILITIES" "$STATUS_MEMORY" "$STATUS_MCP" \
+  "$STATUS_PLUGINS"
 
 if [ "$OVERALL" = "BLOCKED" ]; then
   warn "BLOCKED — see classification above; SessionStart will report the degraded contract"

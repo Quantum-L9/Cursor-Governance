@@ -1,9 +1,11 @@
 ## Issue unblock (session reference)
 
-**Cluster:** Quantum-L9/Cursor-Governance#303 (context: #301 EXTERNAL, #302 INFRA)
-**Owning fix:** PR #320 — broker enforces `requires` + `max_requests_per_minute`; codex/gemini/manus/generic MCP templates brokered and bearer-free
-**Next:** watch PR #320 to green, then take #303 item 1 (k8s broker manifest divergence) as an authorized infra change — `ops/secrets/deploy/**` and `ops/secrets/k8s/**` are protected under rule 90
-**Pickup:** Graphiti PICKUP written 2026-08-26
+**Cluster:** Quantum-L9/Cursor-Governance#368
+**Owning fix:** this branch — append-only successor under CANONICAL_LAW §8 naming `graphiti_memory_client.py` + hydration as the live Durable-episodes interface
+**Next:** publish PR then merge (user asked issues→0). #367 Makefile targets already absent on `origin/main`.
+**Pickup:** Graphiti PICKUP written 2026-08-29
+
+Prior: #374 closed via PR #395. SEO-Bot #74/#75 closed via PR #76. #303 broker / #301 EXTERNAL / #302 INFRA remain.
 
 Prior cluster #171 (memory gates reporting unmeasured state) is closed: PR #264
 landed both fixes and they were re-verified against `main@498dcaa` this session.

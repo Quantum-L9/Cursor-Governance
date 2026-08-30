@@ -62,15 +62,27 @@ Do **not** ask the human to click `github.com` UI when this PAT can finish the j
 
 ## npm / GitHub Packages auth
 
-Plain `NODE_AUTH_TOKEN` env is **not** honored by npm for the `@quantum-l9`
-scoped registry unless an `.npmrc` line maps it. From any clone, prefer the
-wrapper — it resolves the sole PAT and execs your command with
-`npm_config_//npm.pkg.github.com/:_authToken` set (nothing persisted):
+Hosted / agent surfaces: use the same GitHub identity `git`/`gh` already have.
+Do **not** paste `NODE_AUTH_TOKEN` into account Environment variables.
+
+```bash
+ops/secrets/gh_npm.sh npm ci
+```
+
+Hosted Claude SessionStart (`install.sh`) also runs `gh_npm.sh --install-userconfig`
+into ephemeral user npm config when `CLAUDE_CODE_REMOTE` is set.
+
+Trusted-operator Infisical (sole PAT in the vault) remains a separate wrapper:
 
 ```bash
 ops/secrets/authed_npm.sh npm ci
 ops/secrets/authed_npm.sh npm publish
 ```
+
+Plain `NODE_AUTH_TOKEN` env is **not** honored by npm for the `@quantum-l9`
+scoped registry unless an `.npmrc` line maps it. A committed
+`_authToken=${NODE_AUTH_TOKEN}` line 401s when that env is empty — drop it;
+CI should keep `NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}` with `packages: read`.
 
 Or inline, without persisting auth anywhere:
 

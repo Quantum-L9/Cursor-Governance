@@ -113,7 +113,7 @@ class FrontDoorTests(unittest.TestCase):
         self.assertNotIn("l9-shared-memory", servers)
         self.assertIn("graphiti-memory", servers)
         url = servers["graphiti-memory"].get("url", "")
-        self.assertEqual(url, "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti")
+        self.assertEqual(url, "${GRAPHITI_MCP_URL}")
 
     def test_mcp_template_holds_no_bearer(self) -> None:
         """Contract S3/§12: the functional config carries no Graphiti bearer.

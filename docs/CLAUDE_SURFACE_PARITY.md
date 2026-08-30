@@ -23,13 +23,13 @@ Expected, per `l9.claude_operational_parity_convergence.v1`:
 | Enabled skills | projected per-skill symlinks from the skill registry | `claude_projection.py` (skills) |
 | Enabled commands | per-command symlinks from `commands/COMMANDS_MANIFEST.yaml` | `claude_projection.py` (commands) |
 | Rules contract | `environment/generated/llm-rules/**` mounted at `.claude/rules` | `claude_projection.py` (rules) |
-| Plugin required state | declarative `plugins.desired.json` | `claude_projection.py` (plugins) |
+| Plugin required state | Desktop: `plugins.desired.json` (core + desktop_only). Hosted: marketplace skip is READY, not a required plane. | `claude_projection.py` (plugins) |
 | MCP contract | `.mcp.json` is a projection of `mcp.template.json` (single MCP authority) | `claude_projection.py` (mcp) |
 | Memory backend | Cursor Graphiti front door only (`ops/graphiti`); no side door | rule 03; CANONICAL_LAW §8 |
-| Graphiti capability | authenticated Graphiti when the platform issues identity | broker plane; `probe_broker.py` |
+| Graphiti capability | HTTPS Graphiti (`GRAPHITI_MCP_URL`); `memory.cli` vs `memory.mcp`; broker retired | `emit_claude_readiness.py` graphiti probe; adapter `mcp.template.json` |
 | Secret boundary | `model-controlled` — no broker/Infisical/Graphiti secret on the surface | `verify_account_env.py` prohibited set |
 | Makefile facade | one Governance Makefile; `l9` dispatcher exposes CONSUMER_SAFE targets | `L9_CONSUMER_SAFE_TARGETS`; `docs/L9_DISPATCHER.md` |
-| PR validation | governance Makefile `pr` via `l9 pr` / `make -C "$GOV" pr WS="$PWD"` → `open_pr_after_gate.sh` (REST); changed-files gate; consumer repo needs no local `pr` target | governance Makefile `pr` / `pr-check` (`docs/L9_DISPATCHER.md`) |
+| PR validation | governance Makefile `pr` via `l9 pr` / `make -C "$GOV" pr WS="$PWD"` → `open_pr_after_gate.sh` (REST); changed-files gate; consumer repo needs no local `pr` target. Same finish as Cursor: authorize-release then `PR_REMEDIATE=0 make pr` / `l9 pr`. Cursor skips tree kernels; this adapter still fires them. | governance Makefile `pr` / `pr-check` (`docs/L9_DISPATCHER.md`); Profile `session_start_block` |
 | Push authority | available when repo release law + L4 release receipt allow | `l4_local.py`; `open_pr_after_gate.sh` |
 | Merge authority | no standing env boolean; scoped, expiring receipt or human breakglass | `merge_gate.py`; `authorize_merge.py` |
 | Readiness schema | `l9.claude-readiness.v1` (this repo) | `emit_claude_readiness.py` |

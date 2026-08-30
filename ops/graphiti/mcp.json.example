@@ -7,9 +7,10 @@
     "",
     "This file is NOT the shape for agent adapters and never was authoritative",
     "for Claude Code. Model-controlled surfaces hold no credential: they point at",
-    "the brokered front door ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti with no",
-    "in-file bearer. See environment/agents/adapters/claude-code/mcp.template.json",
-    "(canonical) and environment/agents/adapters/ADAPTER_CONTRACT.md.",
+    "${GRAPHITI_MCP_URL} with no in-file bearer. See",
+    "environment/agents/adapters/claude-code/mcp.template.json (canonical) and",
+    "environment/agents/adapters/ADAPTER_CONTRACT.md. The capability broker",
+    "(${L9_CAPABILITY_BROKER_URL}/mcp/graphiti) never shipped.",
     "Retired: l9-shared-memory @ https://memory.quantumaipartners.com (HTTP side door)."
   ],
   "mcpServers": {

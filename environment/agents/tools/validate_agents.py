@@ -194,14 +194,14 @@ def _check_env_example(envf: Path, agent: dict, production_url: str | None) -> N
     # That encoded the old posture — every surface carried a bearer, and review
     # only checked it was not a live one. A placeholder in a committed example is
     # an instruction to paste a real token into a model-controlled environment,
-    # which is exactly what the capability plane removes. Memory now resolves
-    # through the brokered graphiti.* capabilities, so a token here is a
-    # violation regardless of its value.
+    #     which is exactly what the zero-static-secret contract removes. Memory
+    # resolves through GRAPHITI_MCP_URL (no bearer on the surface), so a token
+    # here is a violation regardless of its value.
     if tok_m:
         err(
             "A2",
             f"{envf.name}: GRAPHITI_MCP_TOKEN must be ABSENT from a model-controlled "
-            "surface; memory resolves through the brokered graphiti.* capabilities "
+            "surface; memory resolves through GRAPHITI_MCP_URL with no bearer "
             "(contract S3/§12)",
         )
 

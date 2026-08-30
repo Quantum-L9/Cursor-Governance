@@ -26,6 +26,9 @@ These are **not** `/ff`. Name them so agents can refuse. Do not run them.
 - `GOVERNANCE_SYNC_PUSH=1` for “fast forward”
 - `worktree prune` as cleanup
 - Resetting a **feature** branch onto `origin/main`
+- Stopping to name `ssot` vs `workspace`
+- Sequential `ff.sh` on SSOT after this clone already finished (bare `/ff`
+  pairs inside the script; from other repos use `--clone` or `--ssot`)
 
 ## Allowed catch-up (only inside `scripts/ff.sh`)
 

@@ -52,7 +52,12 @@ def main() -> int:
             cwd=str(workspace),
             capture_output=True,
             text=True,
-            env={**os.environ, "HOME": str(home), "CLAUDE_PROJECT_DIR": str(workspace)},
+            env={
+                **os.environ,
+                "HOME": str(home),
+                "CLAUDE_PROJECT_DIR": str(workspace),
+                "CLAUDECODE": "1",
+            },
             check=False,
         )
         step("session_start exit 0", proc.returncode == 0)

@@ -378,6 +378,9 @@ def test_precommit_repo_kernel_hook_fails_before_hooks(tmp_path: Path) -> None:
             "PR_BASE": "main",
             "PR_CHANGED_FILE": str(listed),
             "PATH": f"{bin_dir}:/usr/bin:/bin",
+            # Tree kernels are adapter-surface only. Cursor pytest inherits
+            # CURSOR_AGENT and would skip the latch this test is proving.
+            "L9_GOVERNANCE_SURFACE": "claude-code",
         },
     )
     assert proc.returncode == 2, proc.stdout + proc.stderr
@@ -534,6 +537,15 @@ def test_gate_hard_stop_precedes_pytest() -> None:
     fn_at = gate.find("_gate_run_projection_heal() {")
     assert fn_at != -1 and fn_at < heal_at
     assert "--check --quiet --no-receipt" not in gate[fn_at:heal_at]
+    assert "PR_PRECOMMIT_DEFER_DIRTY_STOP=1" in gate
+    assert "OK: skip root-file protection (no root-level path in change set)" in gate
+    assert "OK: skip local-activation --check (healed this run)" in gate
+    assert "OK: skip wiring (isolate/ssot_checkout; wiring sources unchanged)" in gate
+
+
+def test_velocity_precommit_skips_commit_verification_contract() -> None:
+    text = (ROOT / "ops" / "scripts" / "run_pr_precommit.sh").read_text(encoding="utf-8")
+    assert "commit-verification-contract" in text.split("_CORPUS_SKIP=", 1)[1].split("\n", 1)[0]
 
 
 def test_workflow_action_pins() -> None:

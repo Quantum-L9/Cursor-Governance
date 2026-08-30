@@ -23,10 +23,9 @@ import sys
 from collections.abc import Iterator
 from pathlib import Path
 
-# Graphiti front door is brokered: the template points at the L9 capability
-# broker (/mcp/graphiti) and never holds the bearer. Never register
-# l9-shared-memory.
-GRAPHITI_BROKER_URL_ENV_REF = "${L9_CAPABILITY_BROKER_URL}/mcp/graphiti"
+# Graphiti front door is GRAPHITI_MCP_URL (HTTPS). The capability broker never
+# shipped. Never register l9-shared-memory.
+GRAPHITI_URL_ENV_REF = "${GRAPHITI_MCP_URL}"
 # Scheme prefixes assembled from parts (SonarCloud python:S5332). Detection only.
 _URL_SCHEME_PREFIXES = tuple(f"{scheme}://" for scheme in ("http", "https"))
 
@@ -160,18 +159,17 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
         _fail("mcp.template.json must define graphiti-memory front door", failures)
         return
     url = mem.get("url", "")
-    if url == GRAPHITI_BROKER_URL_ENV_REF:
-        print("  OK: mcp URL is the brokered front door (${L9_CAPABILITY_BROKER_URL}/mcp/graphiti)")
+    if url == GRAPHITI_URL_ENV_REF:
+        print("  OK: mcp URL is GRAPHITI_MCP_URL (capability broker retired)")
     else:
         _fail(
-            f"mcp.template.json URL must be {GRAPHITI_BROKER_URL_ENV_REF!r} "
-            "(brokered graphiti.query front door; bearer stays beyond the trust boundary)",
+            f"mcp.template.json URL must be {GRAPHITI_URL_ENV_REF!r} "
+            "(Graphiti HTTPS front door; no broker, no bearer)",
             failures,
         )
     if "headers" in mem and mem.get("headers"):
         _fail(
-            "mcp.template.json graphiti-memory must not carry headers — "
-            "the broker authenticates and holds the Graphiti credential",
+            "mcp.template.json graphiti-memory must not carry headers — no bearer on this surface",
             failures,
         )
     else:
@@ -570,8 +568,8 @@ def check_no_secret_paste_instructions(failures: list[str]) -> None:
                 )
                 problems += 1
         if path.name == "setup.bootstrap.sh":
-            if "L9_CAPABILITY_BROKER_URL" not in text:
-                _fail("web/setup.bootstrap.sh must mention L9_CAPABILITY_BROKER_URL", failures)
+            if "GRAPHITI_MCP_URL" not in text:
+                _fail("web/setup.bootstrap.sh must mention GRAPHITI_MCP_URL", failures)
                 problems += 1
             if "INFISICAL_PASSWORD" not in text:
                 _fail(

@@ -187,6 +187,7 @@ class HookWriterTests(unittest.TestCase):
                 "HOME": str(home),
                 "PATH": "/usr/bin:/bin:/usr/local/bin",
                 "CLAUDE_CODE_REMOTE": "false",
+                "CLAUDECODE": "1",
                 "CLAUDE_PROJECT_DIR": str(REPO),
             }
             result = subprocess.run(

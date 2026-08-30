@@ -1707,6 +1707,9 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             else:
                 gates["validation"] = "INCOMPLETE"
             gates["wiring"] = _wiring_gate(contract, task)
+            # Controller-owned candidate identity. The worker cannot git add or
+            # git commit (permission_renderer denials) and must return
+            # candidate_sha JSON null. HEAD after the attempt is the identity.
             candidate_sha = run_git(worktree, "rev-parse", "HEAD").stdout.strip()
         gates["residual_unknowns"] = (
             "PASS" if not (receipt.get("residual_unknowns") or []) else "BLOCKED"

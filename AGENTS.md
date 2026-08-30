@@ -969,3 +969,166 @@ skips the tree latch too. L4 on the shelf worktree is `begin` then
 `authorize-release` only — not `record-kernels`. Mid-session plan inject does
 not apply those kernels; `/ff` is the apply site. This fragment supersedes
 the `record-kernels` sentence in `FF_SHELF_WIP_PLANS_V1`.
+
+<!-- CURSOR_SESSIONSTART_NO_CLAUDE_CLOUD_V1 -->
+## Cursor SessionStart does not score Claude cloud (2026-08-29)
+
+`ops/hooks/session_start_bootstrap.sh` does not run `claude_projection.py`.
+Claude Code SessionStart (`session_start_claude_governance.sh`) is a no-op
+unless a Claude runtime marker is set (`CLAUDE_CODE_REMOTE=true`,
+`CLAUDECODE`, `CLAUDE_CODE_ENTRYPOINT`, or `CLAUDE_CODE_SESSION_ID`).
+`.governance-build-lock` is local-only (gitignored); presence still skips
+backup. This fragment supersedes §2.1 step 2 (Claude projection from Cursor
+SessionStart) and the older “keep `.governance-build-lock` tracked” housekeeping
+decision.
+
+<!-- CURSOR_KERNEL_LATCH_ADAPTER_ONLY_V1 -->
+## Tree kernels are Claude Code ceremony, not Cursor (2026-08-29)
+
+`ops/autonomy/kernel_gate.py` on `make precommit-repo` fires only when
+`L9_GOVERNANCE_SURFACE` is `claude-code` / `codex` / `gemini` / `manus`, or a
+Claude runtime marker is set. Cursor (`CURSOR_AGENT`, surface `cursor`, or
+unset) skips the latch. Cursor still scoped-commits after `make precommit-repo`
+(hooks + ruff) without a kernel receipt. `/ff` corpus kernels are unchanged.
+
+<!-- CAPABILITY_BROKER_RETIRED_V1 -->
+## Capability broker retired (2026-08-29)
+
+The capability broker never shipped. Session bootstrap does not probe it.
+Adapter MCP templates use `${GRAPHITI_MCP_URL}`. Cursor `master.mcp.json`
+does not route GitHub/Context7/Semgrep/GitGuardian through the broker.
+`make capability-check` / `broker-serve` print RETIRED and exit 0 unless
+`L9_BROKER_FORCE=1`. Cursor Graphiti is the local CLI / tunnel. Do not paste
+secrets to “fix” a retired plane. See `ops/secrets/RETIRED.md`.
+
+<!-- MAKE_381_PR_STACK_EXPORT_V1 -->
+## `make precommit-repo` on Apple GNU Make 3.81 (2026-08-29)
+
+macOS `/usr/bin/make` is GNU Make 3.81. `precommit-repo: export PR_STACK = $(PR_STACK)` is a recursive self-definition on 3.81 (Make 4.x snapshots that form). The live line is `export PR_STACK := $(PR_STACK)` so default `auto` and `PR_STACK=` opt-out reach `run_pr_precommit.sh`. Do not restore the `=` flavor. Homebrew `gmake` is not required.
+
+<!-- TESTS_ONCE_MAKE_PR_V1 -->
+## Finished work → scoped commit → `make pr` (2026-08-29)
+
+This fragment supersedes the “after every local commit, run `make precommit-repo` then `make pr`” sentence in `PRECOMMIT_REPO_OWNS_RUFF_V1`. That paragraph stays on disk (additive_only). Do not fold it.
+
+- After finished work: scoped-commit (pathspecs; rule 49), then **`make pr`**. The gate already runs writers (kernel + eof/whitespace + locked ruff) once.
+- `make precommit-repo` is **optional local autofix** when you want the rewrite before publish. It is **not** a prerequisite of `make pr`. Do not add it as a Make prereq of `pr-check` / `pr`.
+- Receipt skip already prevents a second pytest on an unchanged tree. Do not run a second full gate on an unchanged tree.
+- Do not flip `PR_REMEDIATE`. Campaign and L4 authorize-release publish stay `PR_REMEDIATE=0 make pr`.
+
+<!-- ONE_FINISH_MAKE_PR_V1 -->
+## One finish path (2026-08-29)
+
+This fragment supersedes Cursor “STOP after `make precommit-repo`” sentences
+in Profile `session_start_block` / `llm_rules_override` (live text is rewritten
+in `ops/autonomy/surface_profile.yaml`). Historical paragraphs stay on disk
+where `additive_only`. It also supersedes the Cursor “scoped-commits after
+`make precommit-repo`” sentence in `CURSOR_KERNEL_LATCH_ADAPTER_ONLY_V1`.
+
+- All surfaces (Cursor, Claude Code desktop, Claude Code Mobile): finished
+  work → scoped-commit → `l4_local.py authorize-release` →
+  `PR_REMEDIATE=0 make pr` / `l9 pr`.
+- Do not run `make precommit-repo` then `make pr`. Receipt skip is not a
+  second ceremony.
+- Tree kernels: Cursor skips the tree latch (`kernel_gate.py`). Desktop and
+  Mobile still fire them on `make pr`. Plan-kernel and `/ff` corpus kernels
+  are unchanged.
+- Combined `beforeShellExecution` is Cursor-only. Claude uses PreToolUse
+  (`local_execution_gate_wrap.py`). Do not copy the hook cut.
+
+<!-- FF_PAIR_FLAGS_V1 -->
+## `/ff` pairs this clone + SSOT (2026-08-29)
+
+This fragment supersedes “name the clone (`ssot` vs `workspace`)” and
+“stop until they name one” in `l9-repo-sync` clone-map / compact workflow
+history. Those sentences stay on disk only where already rewritten.
+
+- In this repo, bare **`/ff`** / `make ff` is **one** `ff.sh` that fast-forwards
+  **this checkout and** `$HOME/.cursor-governance` **in parallel**.
+- **`/ff --clone`** / `make ff-clone` = working copy only.
+- **`/ff --ssot`** / `make ff-ssot` = SSOT only.
+- Use the flags from other repos. Do not diagnose. Do not sequential-ff.
+
+<!-- L9_ISSUE_REMEDIATE_AUTOMATION_V1 -->
+## `/issues` remediator (2026-08-29)
+
+Remediator slashes **`/issues`** and **`/l9-issue-remediation`** are Converge
+by default. `/issues diagnose` (or “what’s blocking?”) is the auditor: inventory
+plus already-resolved close only. Diagnose never starts `/l9-pr-remediation`.
+
+Converge drains all automatable clusters, highest leverage first. Land each
+fix on the matching open PR, else a new stacked PR on the newest
+(`PR_STACK=auto`). Close when `status=fixed` (`close_resolved_issue.py`) so
+the issue does not stay OPEN.
+
+**`/l9-pr-remediation` runs only after bound-target `open_issues=0`.** Zero
+means zero. Leftover HUMAN/EXTERNAL OPEN issues are `BLOCKED_OPEN_ISSUES` —
+do not weaken to an automatable subset. The issue skill never `gh pr merge`.
+
+<!-- L9_PLAN_AUDIT_ABSORBED_V1 -->
+## `l9-plan-audit` absorbed into `l9-pipeline-audit` (2026-08-29)
+
+This fragment supersedes the live-scanner sentences in §16, `L9_AUDIT_PLANS_V1`,
+`L9_PIPELINE_AUDIT_V1`, and `L9_SESSION_PIPELINE_AUDIT_V1`. Those paragraphs
+stay on disk (additive_only). Do not treat `skills/l9-plan-audit/` as a live
+pack.
+
+- SessionStart `### Plan audit` is `skills/l9-pipeline-audit/scripts/audit_pipeline.py --format session-start`. The plans scanner is `skills/l9-pipeline-audit/scripts/audit_plans.py`.
+- Plans, WIP, and PE campaigns are one family. NEXT 1–3 takes one slot per surface first, then fills leftovers (cap 3). Eligible WIP is harvestable or pending-active, not inventory-`landed`.
+- Live skill is **`l9-pipeline-audit`**. The old pack is archived at `skills/_archived/l9-plan-audit/` (`superseded_by: l9-pipeline-audit`).
+- `/plan-audit` remains a compatibility alias of `/l9-pipeline-audit`. `/l9-audit-plans` remains the plans-store shelf organizer. Do not auto-Build. Do not `make campaign`.
+
+<!-- L9_PR_SECURITY_VELOCITY_V1 -->
+## Local PR security velocity (2026-08-29)
+
+`make pr` / `make pr-check` / default `make pr-security` use
+`PR_SECURITY_PROFILE=velocity`: one gitleaks process over the changed set,
+gitleaks+bandit+semgrep in parallel, Semgrep `p/secrets` plus
+`.semgrep/l9-pr.yml`. `p/python` stays on CI and on
+`PR_SECURITY_PROFILE=full make pr-security` / `make pr-security-full`
+(also a `pr-full` prereq). `SEMGREP_CONFIGS` still overrides. Do not skip
+the security wave. Do not default `gitleaks detect` without `--no-git`.
+
+<!-- L9_PLAN_SIMPLE_STACK_PR_V1 -->
+## `l9-plan-simple` Build publishes a stacked PR (2026-08-29)
+
+This fragment supersedes the “Build button on the current checkout” sentence
+in `L9_PLAN_SIMPLE_V1`. That paragraph stays on disk (additive_only). Do not fold it.
+
+- Planning still binds the current workspace. Do not write `Lock: origin/main = <sha>`. Do not run `make campaign`.
+- After **Build** todos complete: scoped-commit, `l4_local.py authorize-release`, then **`PR_STACK=auto PR_REMEDIATE=0 make pr`**.
+- If any open PR exists: **never** branch from `origin/main`. Start from the unique open-PR chain tip. Sibling chains fail closed. Empty board may use `origin/main`.
+- The finish reply **must** display the opened PR URL as proof.
+
+<!-- L9_SESSION_END_DIRT_CLOSE_V1 -->
+## SessionEnd dirt-close is the loop (2026-08-29)
+
+`sessionEnd` classifies, cleans, and prunes leftover porcelain in **this
+session workspace** via `ops/scripts/session_end_dirt_close.py` **before**
+`repo_hygiene.py --apply`. It does **not** hand leftover dirt to `/ff`,
+harvest, or a human inventory of preserve refs. `/ff` is unchanged and is
+not the closer. Do not teach `/ff` to drain `l9/dirt-shelf`.
+
+A **dirty file** is a porcelain path whose bytes are **novel**: not
+`origin/main`, not an open-PR blob at the same path, not generated, not
+secrets / `WIP/Legal Defense/`. Agents asked "what dirty files are there"
+**MUST** run:
+
+```bash
+"$HOME/.cursor-governance/.venv/bin/python" \
+  ops/scripts/session_end_dirt_close.py --workspace "$(pwd)" --status
+```
+
+`dirty_files` / `dirty_unique` is the only list that may be called dirty.
+Do **not** answer from raw `git status --porcelain`. Copies already on
+main or an open PR are removed from the tree and **not** parked. Novel
+unique bytes go on one rolling `refs/heads/l9/dirt-shelf`. Absorbed parks
+are deleted after the tip SHA is written to the receipt. Secrets and
+Legal Defense stay on disk (`left_in_tree`) and are never temp-indexed.
+
+Kill switch: `L9_HYGIENE_DIRT_CLOSE=0`. Skip `reason=aborted|error`,
+background agents, the 120s quiet window, and a held repo-write lock.
+Fail-open. SessionEnd does not `make pr`, push, or merge. Sibling
+worktrees are not closed. Cap 200 novel paths per run; overflow stays in
+`dirty_files`. If `novel_parked>0`, say "N unique paths on l9/dirt-shelf"
+— not N dirty files.

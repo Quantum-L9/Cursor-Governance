@@ -39,7 +39,7 @@ This skill exists to reduce "debug hell": check the docs before the first implem
 
 ## Auto-Invoke Triggers (mandatory)
 
-**Do not wait for "use context7".** When any trigger matches, load this skill and call Context7 MCP **before** the first implementation edit.
+**Do not wait for "use context7".** When any trigger matches, load this skill and call Context7 MCP **before** the first implementation edit. When `mcp__context7__*` tools are absent (hosted marketplace skip), this skill itself — or an official docs GET — closes the obligation.
 
 | Domain | Invoke when | Seed `libraryName` |
 |--------|-------------|---------------------|

@@ -28,6 +28,15 @@ def main() -> int:
     if not harvest_pack.is_file():
         errors.append("l9-intelligence-harvest bind_request.py missing after ff")
 
+    absorbed = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "audit_plans_self_test.py")],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if absorbed.returncode != 0:
+        errors.append(f"audit_plans_self_test failed: {absorbed.stdout}{absorbed.stderr}")
+
     with tempfile.TemporaryDirectory(prefix="l9-pipeline-audit-") as tmp:
         ws = Path(tmp)
         (ws / "docs" / "plans").mkdir(parents=True)
@@ -101,6 +110,8 @@ def main() -> int:
                 "pe_loop_compiled_8-28-26" not in next_stems
             ):
                 errors.append(f"compiled packet must be NEXT: {next_names}")
+            if "note.md" not in next_names:
+                errors.append(f"possible-landed WIP must be NEXT: {next_names}")
             if not (ws / "docs" / "plans" / "built" / "spent_done.plan.md").is_file():
                 errors.append("spent root plan must archive to built/")
             if (ws / "docs" / "plans" / "spent_done.plan.md").exists():

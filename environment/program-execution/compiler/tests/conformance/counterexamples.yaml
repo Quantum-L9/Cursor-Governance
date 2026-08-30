@@ -1,0 +1,50 @@
+schema: l9.pec.counterexample-registry.v1
+wave: W2
+note: >
+  Frozen characterization of current compiler behavior. Desired-safe assertions
+  that still fail are listed as expected_failure until the owning wave lands.
+  This wave does not change product semantics.
+entries:
+  - id: CE-AT-002
+    at: AT-002
+    fixture: 04_lowercase_prohibition
+    desired_safe: lowercase don't replace assurance survives with provenance
+    wave: W4
+    status: closed_by_w4
+  - id: CE-AT-003
+    at: AT-003
+    fixture: 04_lowercase_prohibition
+    desired_safe: upper and lower prohibitions are semantically equivalent
+    wave: W4
+    status: closed_by_w4
+  - id: CE-AT-004
+    at: AT-004
+    fixture: 12_explicit_target
+    desired_safe: program-execution.intent.v1 compiles through ingress
+    wave: W3
+    status: closed_by_w3_compile_ingress
+    residual: classify_campaign_input still refuses campaign execute (this Build forbids make campaign)
+  - id: CE-AT-005
+    at: AT-005
+    fixture: 06_existing_feature_requested_again
+    desired_safe: every material source unit gets an explicit disposition
+    wave: W5
+    status: closed_by_w5
+  - id: CE-AT-006
+    at: AT-006
+    fixture: 06_existing_feature_requested_again
+    desired_safe: existing implementation is not blindly CREATE
+    wave: W5
+    status: closed_by_w5
+  - id: CE-AT-007
+    at: AT-007
+    fixture: 11_no_explicit_target
+    desired_safe: unknown seam does not fabricate a mutation path
+    wave: W6
+    status: closed_by_w6
+  - id: CE-AT-008
+    at: AT-008
+    fixture: 13_authority_ambiguity
+    desired_safe: authority-bearing ambiguity does not become permission
+    wave: W3
+    status: closed_by_authority_must_not_expand

@@ -6,6 +6,8 @@ import os
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[3]
 SCRIPTS = ROOT / "ops" / "scripts"
 LIB = SCRIPTS / "lib" / "resolve_pr_stack.sh"
@@ -219,12 +221,71 @@ def test_makefile_passes_pr_stack_into_gate_recipes() -> None:
     assert 'PR_STACK="$(PR_STACK)"' in pr_check
     precommit_repo = makefile.split("precommit-repo:", 1)[1].split("\n\n", 1)[0]
     # Recipe line stays byte-identical (additive_only). PR_STACK is a
-    # target-specific export so the leaf still sees auto without a deletion.
+    # simply-expanded target-specific export so Apple Make 3.81 can snapshot
+    # `auto` without a recursive self-ref (`=` flavor).
     assert 'PR_BASE="$(PR_BASE)" bash ops/scripts/run_pr_precommit.sh' in precommit_repo
-    assert "precommit-repo: export PR_STACK = $(PR_STACK)" in makefile
+    assert "precommit-repo: export PR_STACK := $(PR_STACK)" in makefile
+    assert "precommit-repo: export PR_STACK = $(PR_STACK)" not in makefile
     assert "pr_stack_apply_publish_base" in PREFLIGHT.read_text(encoding="utf-8")
     assert "pr_stack_apply_publish_base" in OPEN_PR.read_text(encoding="utf-8")
     assert "pr_stack_apply_publish_base" in GATE.read_text(encoding="utf-8")
     assert "pr_stack_apply_publish_base" in (
         ROOT / "ops" / "scripts" / "run_pr_precommit.sh"
     ).read_text(encoding="utf-8")
+
+
+def _apple_make() -> Path | None:
+    make = Path("/usr/bin/make")
+    if not make.is_file():
+        return None
+    ver = subprocess.run([str(make), "--version"], capture_output=True, text=True, check=False)
+    if "GNU Make 3.81" not in (ver.stdout or ""):
+        return None
+    return make
+
+
+def test_apple_make_381_snapshots_pr_stack_with_simply_expanded_export(
+    tmp_path: Path,
+) -> None:
+    make = _apple_make()
+    if make is None:
+        pytest.skip("Apple /usr/bin/make 3.81 is not this host's make")
+    probe = tmp_path / "t.mk"
+    probe.write_text(
+        "PR_STACK ?= auto\n"
+        ".PHONY: precommit-repo\n"
+        "precommit-repo: export PR_STACK := $(PR_STACK)\n"
+        "precommit-repo:\n"
+        "\t@echo env=$$PR_STACK\n",
+        encoding="utf-8",
+    )
+    default = _run([str(make), "-f", str(probe), "precommit-repo"], cwd=tmp_path)
+    assert default.returncode == 0, default.stderr
+    assert "env=auto" in default.stdout
+    empty = _run([str(make), "-f", str(probe), "precommit-repo", "PR_STACK="], cwd=tmp_path)
+    assert empty.returncode == 0, empty.stderr
+    assert empty.stdout.strip() == "env="
+    custom = _run(
+        [str(make), "-f", str(probe), "precommit-repo", "PR_STACK=custom"],
+        cwd=tmp_path,
+    )
+    assert custom.returncode == 0, custom.stderr
+    assert "env=custom" in custom.stdout
+
+
+def test_apple_make_381_rejects_recursive_pr_stack_export(tmp_path: Path) -> None:
+    make = _apple_make()
+    if make is None:
+        pytest.skip("Apple /usr/bin/make 3.81 is not this host's make")
+    probe = tmp_path / "t.mk"
+    probe.write_text(
+        "PR_STACK ?= auto\n"
+        ".PHONY: precommit-repo\n"
+        "precommit-repo: export PR_STACK = $(PR_STACK)\n"
+        "precommit-repo:\n"
+        "\t@echo env=$$PR_STACK\n",
+        encoding="utf-8",
+    )
+    result = _run([str(make), "-f", str(probe), "precommit-repo"], cwd=tmp_path)
+    assert result.returncode != 0
+    assert "Recursive variable" in (result.stderr or result.stdout)

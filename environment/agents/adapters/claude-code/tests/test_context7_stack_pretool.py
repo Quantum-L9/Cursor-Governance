@@ -32,6 +32,12 @@ class Context7StackPretoolTests(unittest.TestCase):
         self.assertTrue(self.mod.STACK_NAME_RE.search(blob))
         self.assertFalse(self.mod._session_called_context7("sess-none"))
 
+    def test_deny_reason_names_skill_fallback(self) -> None:
+        src = HOOK.read_text(encoding="utf-8")
+        self.assertIn("l9-context7-docs", src)
+        self.assertIn("when those tools exist", src)
+        self.assertNotIn("GET official docs", src)
+
     def test_allows_when_receipt_pass(self) -> None:
         with tempfile.TemporaryDirectory() as raw:
             primed = Path(raw) / "primed" / "demo" / "stack-proof.json"

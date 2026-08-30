@@ -233,3 +233,71 @@ def test_gate_script_records_timing_keys() -> None:
     assert "total_ms" in text
     assert 'PR_CHANGED_FILE="$changed_file"' in text
     assert "fetch_receipt_reusable" in text
+    assert '>"$_wave_dir/$name.ms"' in text
+    assert "_wave_t0s" not in text
+    assert 'cat "$_wave_dir/${_wave_names[$_wave_i]}.ms"' in text
+    wait_at = text.find('while [ "$_wave_i" -lt "${#_wave_pids[@]}" ]')
+    assert wait_at != -1
+    wait_loop = text[wait_at:]
+    assert "$(_now_ms) - ${_wave_t0s" not in wait_loop
+
+
+def test_fast_wave_job_does_not_inherit_slow_sibling_wall(tmp_path: Path) -> None:
+    """In-job .ms spans must not inherit a sibling's wait-time wall."""
+    wave_dir = tmp_path / "wave"
+    wave_dir.mkdir()
+    script = tmp_path / "wave.sh"
+    script.write_text(
+        """#!/usr/bin/env bash
+set -euo pipefail
+_now_ms() { python3 -c 'import time; print(int(time.time() * 1000))'; }
+_wave_dir="$1"
+_wave_pids=()
+_wave_names=()
+_wave_start() {
+  local name="$1"
+  shift
+  (
+    _t0="$(_now_ms)"
+    set +e
+    "$@"
+    _rc=$?
+    set -e
+    echo $(($(_now_ms) - _t0)) >"$_wave_dir/$name.ms"
+    exit "$_rc"
+  ) >"$_wave_dir/$name.log" 2>&1 &
+  _wave_pids+=("$!")
+  _wave_names+=("$name")
+}
+_wave_start fast sleep 0.05
+_wave_start slow sleep 0.25
+_wave_i=0
+while [ "$_wave_i" -lt "${#_wave_pids[@]}" ]; do
+  wait "${_wave_pids[$_wave_i]}" || true
+  _wave_i=$((_wave_i + 1))
+done
+""",
+        encoding="utf-8",
+    )
+    proc = subprocess.run(
+        ["bash", str(script), str(wave_dir)],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    fast_ms = int((wave_dir / "fast.ms").read_text(encoding="utf-8").strip())
+    slow_ms = int((wave_dir / "slow.ms").read_text(encoding="utf-8").strip())
+    assert fast_ms < 150, f"fast job inherited wait-time wall: {fast_ms}ms"
+    assert slow_ms >= 200, f"slow job too short: {slow_ms}ms"
+    assert fast_ms < slow_ms
+
+
+def test_pr_security_modes_script() -> None:
+    proc = _run(["bash", str(SCRIPTS / "tests" / "test_pr_security_modes.sh")], cwd=ROOT)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_pr_security_speed_script() -> None:
+    proc = _run(["bash", str(SCRIPTS / "tests" / "test_pr_security_speed.sh")], cwd=ROOT)
+    assert proc.returncode == 0, proc.stdout + proc.stderr

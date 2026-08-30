@@ -9,7 +9,7 @@ updated: 2026-08-22
 
 # Diagnose first
 
-On the **named** clone, record:
+On **this** clone (`pwd` / `CURSOR_GOVERNANCE_DIR`), record:
 
 1. `git rev-parse --git-common-dir` (identity — must be unchanged after ff)
 2. current branch

@@ -24,22 +24,19 @@ execution machinery.
 
 ## Memory carrier
 
-Brokered Graphiti front door:
+Graphiti HTTPS front door (every adapter):
 
 ```text
-${L9_CAPABILITY_BROKER_URL}/mcp/graphiti
+${GRAPHITI_MCP_URL}
 ```
 
-**No adapter MCP template carries a bearer.** `GRAPHITI_MCP_TOKEN` is resolved
-by the broker on its own side of the trust boundary, never by a surface and
-never from an adapter config file — the same rule the capability carrier states
-below, applied to memory. An adapter template that interpolates
-`Authorization: Bearer ${GRAPHITI_MCP_TOKEN}` is a contract violation, not a
-fallback: when the broker URL is unset or the broker is not deployed, the
-server returns an honest 401 and memory runs DEGRADED.
+Default: `https://memory.quantumaipartners.com/graphiti/mcp`. **No adapter MCP
+template carries a bearer.** `GRAPHITI_MCP_TOKEN` is deliberately absent. An
+adapter template that interpolates `Authorization: Bearer ${GRAPHITI_MCP_TOKEN}`
+or points at `${L9_CAPABILITY_BROKER_URL}` is a contract violation.
 
-The direct cloud endpoint `https://memory.quantumaipartners.com/graphiti/mcp`
-is now reachable only from behind the broker. `ops/graphiti/mcp.json.example`
+The capability-broker experiment never shipped. Do not restore a brokered
+Graphiti URL to "fix" unauthenticated memory. `ops/graphiti/mcp.json.example`
 is the separate trusted-operator (Cursor SSH tunnel) shape and is not an
 adapter template.
 
@@ -96,9 +93,13 @@ possesses, however careful the surrounding code is. So the architecture removes
 raw-secret *possession* rather than discouraging raw-secret *use*.
 
 ```text
-agent surface ──(named capability)──▶ L9 broker ──(workload identity)──▶ Infisical ──▶ upstream
-              ◀──(sanitized result)──┘        [trust boundary]
+agent surface ──(named capability)──▶ capability_client ──▶ UNAVAILABLE (broker retired)
+Infisical remains the secret SSOT on the trusted-operator side of the boundary.
 ```
+
+The capability-broker experiment never shipped. `capability_client.py --check`
+reports every registered capability `UNAVAILABLE`. That is never a reason to
+paste a secret. Implementation: `ops/secrets/_archived/capability-broker/`.
 
 `ops/secrets/` remains the SSOT inventory. `ops/secrets/capabilities.yaml` maps
 capability ids onto refs already registered there — it is a mapping, never a
@@ -135,13 +136,12 @@ Rules binding on every surface, present and future:
 - No adapter implements its own resolver, vault path, broker, or bootstrap
   script. A surface-specific copy is a contract violation.
 - There is **no generic raw-secret API**. `get_secret(name)`, `GET /secret/<name>`
-  and `--print-secret` do not exist for model-controlled callers, and the broker
-  serves no route that returns secret material.
+  and `--print-secret` do not exist for model-controlled callers.
 - Values never reach git, logs, receipts, or chat. `--check` reports capability
   names and status only.
-- A broker that cannot be reached is **DEGRADED, reported, and non-fatal** —
-  adapters degrade and continue rather than aborting the session. An outage is
-  never reported as a passing check.
+- The retired capability plane reports **UNAVAILABLE** and is non-fatal —
+  adapters continue rather than aborting the session. An outage is never
+  reported as a passing `--require` check.
 - A capability that cannot be delivered is a *delivery* problem. Do not ask a
   human to paste a credential into a surface environment to work around it.
 

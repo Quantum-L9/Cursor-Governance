@@ -51,17 +51,18 @@ def test_runner_help_names_local_and_pull_request() -> None:
 
 
 def test_standing_remediate_zero_string_gone_from_live_surfaces() -> None:
-    """Rule 48 is remediator doctrine: it must not prescribe ceremony publish.
+    """One-finish teachers name ceremony publish; remediator publish is not it.
 
-    Campaign ceremony still names ``PR_REMEDIATE=0 make pr`` in
-    surface_profile.yaml. Remediator SKILL.md may mention that string only as
-    do-not-run.
+    Rule 48 and surface_profile.yaml teach ``PR_REMEDIATE=0 make pr``.
+    Remediator SKILL.md still verifies with ``make precommit-repo`` and
+    publishes with ``git push``.
     """
-    assert "PR_REMEDIATE=0 make pr" not in RULE_48.read_text(encoding="utf-8")
+    assert "PR_REMEDIATE=0 make pr" in RULE_48.read_text(encoding="utf-8")
     assert "PR_REMEDIATE=0 make pr" in SURFACE.read_text(encoding="utf-8")
     skill = REMEDIATOR_SKILL.read_text(encoding="utf-8")
     assert "make precommit-repo" in skill
     assert "git push" in skill
+    assert "do not run `make pr`" in skill
 
 
 def test_foo_py_maps_to_named_test_not_dot(tmp_path: Path) -> None:

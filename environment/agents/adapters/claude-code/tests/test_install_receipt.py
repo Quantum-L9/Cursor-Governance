@@ -105,6 +105,8 @@ class InstallReceiptTests(unittest.TestCase):
         parsed = self._receipt()
         self.assertEqual(parsed["schema"], "l9.claude-bootstrap.v1")
         self.assertIsInstance(parsed["ttl_seconds"], int)
+        self.assertIsInstance(parsed.get("reasons"), dict)
+        self.assertIn("log_path", parsed)
 
     def test_non_repository_workspace_is_blocked_not_ready(self) -> None:
         (self.gov / "CANONICAL_LAW.md").write_text("synthetic", encoding="utf-8")
@@ -122,7 +124,9 @@ class InstallReceiptTests(unittest.TestCase):
 
     def test_reader_classifies_the_failed_receipt(self) -> None:
         self._run()
-        result = read(self.receipt)
+        # Synthetic gov has no git; install.sh records revision "unknown".
+        # Do not probe the live SSOT clone or the reader reports superseded.
+        result = read(self.receipt, governance_revision="unknown")
         self.assertEqual(result["state"], "failed")
         self.assertIn("startup", result["reason"])
 

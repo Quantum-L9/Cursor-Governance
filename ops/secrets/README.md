@@ -27,21 +27,22 @@ Auth for that project is still in AWS as
 | `sync_secrets_registry.py` | Sync secret *names* (and optional key names) from AWS SM |
 | `resolve_secret.py` | Resolve `secret_id#json_key` (`--check` never prints values). **Operator only** |
 | `capabilities.yaml` | Capability registry — maps capability ids to already-registered refs. Not a second inventory |
-| `capability_registry.py` | Loader shared by client and broker |
-| `capability_client.py` | **Model-side.** Requests capabilities. Has no value-returning call at all |
-| `capability_broker.py` | **Trusted side.** Holds credentials, executes fixed upstream contracts, sanitizes responses |
-| `broker_identity.py` | ES256 / JWKS verification of Claude session assertions |
+| `capability_registry.py` | Loader for `capabilities.yaml` |
+| `capability_client.py` | **Model-side.** Reports capabilities as UNAVAILABLE (broker retired). Has no value-returning call at all |
+| `capability_broker.py` | **Retired stub.** Implementation: `_archived/capability-broker/` |
+| `broker_identity.py` | **Retired stub.** Same archive |
+| `probe_broker.py` | **Retired stub.** Same archive |
 | `surface_trust.py` | The one place that decides model-controlled vs trusted-operator |
 | `bootstrap_agent_env.sh` | Shared capability bootstrap for every surface; denies `--export` on model surfaces |
 | `hydrate_infisical.py` | Provider layer + **trusted-operator** CLI |
 | `validate_capability_contract.py` | Regression barrier: fails the build on reintroduced secrets |
-| `deploy/broker-kubernetes.yaml` | Reference broker deployment (operator-applied, never agent-applied) |
+| `_archived/capability-broker/` | Never-shipped broker implementation (`git mv`, not a live server) |
 
 ## Architecture
 
 ```text
-agent surface ──(named capability)──▶ broker ──(workload identity)──▶ Infisical ──▶ upstream
-              ◀──(sanitized result)──┘      [trust boundary]
+agent surface ──(named capability)──▶ capability_client ──▶ UNAVAILABLE (broker retired)
+Infisical remains the secret SSOT on the trusted-operator side of the boundary.
 ```
 
 Everything left of the boundary is assumed hostile: an LLM can read its own
@@ -62,9 +63,9 @@ model can spawn cannot promote itself.
 ## Commands
 
 ```bash
-make capability-check REQUIRE=sonar.read_issues,graphiti.query   # status only
+make capability-check REQUIRE=sonar.read_issues,graphiti.query   # status only (UNAVAILABLE)
 make capability-contract-validate                                # regression barrier
-make capability-broker-preflight                                 # broker posture
+# capability-broker-preflight / broker-serve — retired (exit 2)
 make secrets-sync          # AWS → local registry (operator)
 make secrets-check REF='openclaw-igorbot/github#token'
 # or:

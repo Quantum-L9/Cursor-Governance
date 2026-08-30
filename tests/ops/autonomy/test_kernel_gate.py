@@ -20,6 +20,17 @@ def _gate():
     return kernel_gate
 
 
+@pytest.fixture(autouse=True)
+def adapter_kernel_surface(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Existing latch tests prove Claude Code / adapter behavior."""
+    monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "claude-code")
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    monkeypatch.delenv("CLAUDECODE", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_REMOTE", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_ENTRYPOINT", raising=False)
+    monkeypatch.delenv("CLAUDE_CODE_SESSION_ID", raising=False)
+
+
 def test_precommit_fails_before_receipt(stacked_repo: Path) -> None:
     gate = _gate()
     rc = gate.precommit(stacked_repo, ROOT, None)
@@ -93,6 +104,24 @@ def test_code_change_without_receipt_still_fails(stacked_repo: Path, tmp_path: P
     assert gate.precommit(stacked_repo, ROOT, changed) == 2
 
 
+def test_cursor_surface_skips_tree_latch(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "cursor")
+    monkeypatch.setenv("CURSOR_AGENT", "1")
+    gate = _gate()
+    assert gate.precommit(stacked_repo, ROOT, None) == 0
+
+
+def test_unset_surface_skips_tree_latch(
+    stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
+    monkeypatch.delenv("CURSOR_AGENT", raising=False)
+    gate = _gate()
+    assert gate.precommit(stacked_repo, ROOT, None) == 0
+
+
 def test_authorize_release_without_record_kernels(
     stacked_repo: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -111,3 +140,31 @@ def test_authorize_release_without_record_kernels(
     allowed, reason = release_allows_remote(stacked_repo)
     assert allowed
     assert "release_authorized" in reason
+
+
+def test_cursor_surface_skips_tree_latch_without_receipt(
+    stacked_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("L9_GOVERNANCE_SURFACE", "cursor")
+    gate = _gate()
+    code = stacked_repo / "ops" / "foo.py"
+    code.parent.mkdir(parents=True)
+    code.write_text("x = 1\n", encoding="utf-8")
+    changed = tmp_path / "changed.txt"
+    changed.write_text("ops/foo.py\n")
+    assert gate.precommit(stacked_repo, ROOT, changed) == 0
+
+
+def test_unset_surface_skips_tree_latch_without_receipt(
+    stacked_repo: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("L9_GOVERNANCE_SURFACE", raising=False)
+    gate = _gate()
+    code = stacked_repo / "ops" / "foo.py"
+    code.parent.mkdir(parents=True)
+    code.write_text("x = 1\n", encoding="utf-8")
+    changed = tmp_path / "changed.txt"
+    changed.write_text("ops/foo.py\n")
+    assert gate.precommit(stacked_repo, ROOT, changed) == 0
+    assert gate.adapter_tree_kernels_required({}) is False
+    assert gate.adapter_tree_kernels_required({"L9_GOVERNANCE_SURFACE": "claude-code"}) is True
