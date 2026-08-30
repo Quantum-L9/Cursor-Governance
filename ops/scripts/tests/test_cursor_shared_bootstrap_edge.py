@@ -85,6 +85,11 @@ class CursorSharedBootstrapEdgeTests(unittest.TestCase):
         ):
             self.assertNotIn(slogan, live)
 
+    def test_hook_recognizes_lowercase_hydrate_degraded(self) -> None:
+        live = _live_path(HOOK.read_text(encoding="utf-8"))
+        self.assertIn("*degraded*", live)
+        self.assertIn("*hydrate\\ CLI\\ missing*", live)
+
     def test_hook_emits_single_graphiti_hydrate_heading(self) -> None:
         live = _live_path(HOOK.read_text(encoding="utf-8"))
         self.assertIn("HYDRATE_BLOCK", live)

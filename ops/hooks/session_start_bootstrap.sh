@@ -449,9 +449,9 @@ fi
 HYDRATE_DEGRADED="false"
 HYDRATE_REASON=""
 case "$HYDRATE_MD" in
-  *DEGRADED*|*'"degraded": true'*)
+  *DEGRADED*|*degraded*|*hydrate\ CLI\ missing*|*'"degraded": true'*)
     HYDRATE_DEGRADED="true"
-    HYDRATE_REASON="$(printf '%s\n' "$HYDRATE_MD" | grep -E 'degraded|degrade_reason|hydration degraded' | head -n 2 | tr '\n' ' ')"
+    HYDRATE_REASON="$(printf '%s\n' "$HYDRATE_MD" | grep -E 'degraded|degrade_reason|hydration degraded|hydrate CLI missing' | head -n 2 | tr '\n' ' ')"
     ;;
 esac
 
