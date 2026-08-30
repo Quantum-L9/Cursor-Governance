@@ -1099,3 +1099,36 @@ in `L9_PLAN_SIMPLE_V1`. That paragraph stays on disk (additive_only). Do not fol
 - After **Build** todos complete: scoped-commit, `l4_local.py authorize-release`, then **`PR_STACK=auto PR_REMEDIATE=0 make pr`**.
 - If any open PR exists: **never** branch from `origin/main`. Start from the unique open-PR chain tip. Sibling chains fail closed. Empty board may use `origin/main`.
 - The finish reply **must** display the opened PR URL as proof.
+
+<!-- L9_SESSION_END_DIRT_CLOSE_V1 -->
+## SessionEnd dirt-close is the loop (2026-08-29)
+
+`sessionEnd` classifies, cleans, and prunes leftover porcelain in **this
+session workspace** via `ops/scripts/session_end_dirt_close.py` **before**
+`repo_hygiene.py --apply`. It does **not** hand leftover dirt to `/ff`,
+harvest, or a human inventory of preserve refs. `/ff` is unchanged and is
+not the closer. Do not teach `/ff` to drain `l9/dirt-shelf`.
+
+A **dirty file** is a porcelain path whose bytes are **novel**: not
+`origin/main`, not an open-PR blob at the same path, not generated, not
+secrets / `WIP/Legal Defense/`. Agents asked "what dirty files are there"
+**MUST** run:
+
+```bash
+"$HOME/.cursor-governance/.venv/bin/python" \
+  ops/scripts/session_end_dirt_close.py --workspace "$(pwd)" --status
+```
+
+`dirty_files` / `dirty_unique` is the only list that may be called dirty.
+Do **not** answer from raw `git status --porcelain`. Copies already on
+main or an open PR are removed from the tree and **not** parked. Novel
+unique bytes go on one rolling `refs/heads/l9/dirt-shelf`. Absorbed parks
+are deleted after the tip SHA is written to the receipt. Secrets and
+Legal Defense stay on disk (`left_in_tree`) and are never temp-indexed.
+
+Kill switch: `L9_HYGIENE_DIRT_CLOSE=0`. Skip `reason=aborted|error`,
+background agents, the 120s quiet window, and a held repo-write lock.
+Fail-open. SessionEnd does not `make pr`, push, or merge. Sibling
+worktrees are not closed. Cap 200 novel paths per run; overflow stays in
+`dirty_files`. If `novel_parked>0`, say "N unique paths on l9/dirt-shelf"
+— not N dirty files.
