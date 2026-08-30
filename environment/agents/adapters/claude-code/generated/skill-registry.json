@@ -1126,7 +1126,7 @@
     },
     {
       "composition_role": "general",
-      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template and execute it with the build button, then open a stacked PR. never branch off main when an open PR exists. always make pr after build and display the PR URL. use when scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
+      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template and execute it with the build button, then open a stacked PR. never branch off main when an open PR exists. always publish via the stacked path after build and display the PR URL. use when scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-plan-simple",
@@ -1303,5 +1303,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b5fb7390d5db44ab932147d5781cd54bf3bf64635d99054e167b10ca38638f2b",
-  "source_skill_corpus_sha256": "a90e122902c6fbc894505a5b9685d840d1e5278d1ccf1f0a14a77aeb40acf2b4"
+  "source_skill_corpus_sha256": "a092e0f5354d11bffde0c08dd130fc5be0206fe38054108cbaabef19d35886b8"
 }
