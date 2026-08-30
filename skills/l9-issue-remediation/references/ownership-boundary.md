@@ -6,8 +6,8 @@ role: ownership_boundary
 tags: [issues, ownership, codebase, cross-repo]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-08-11
+version: 1.1.0
+updated: 2026-08-30
 /L9_META -->
 
 # Ownership Boundary
@@ -58,8 +58,11 @@ auth the agent cannot create (e.g. `NODE_AUTH_TOKEN` grant).
 
 Current evidence disproves the issue on current main.
 
-**Action:** comment with evidence; do not close without user confirm unless the
-issue author is the bot and policy allows.
+**Action:** comment with evidence. Close-now law (SKILL.md + issue-verify.md)
+wins when verify emits `already-fixed` / `not-reproducible` / `does-not-exist`
+/ `duplicate` / `superseded`: close in this turn via `close_resolved_issue.py`
+with `--reason` and `--proof`. User confirm is required only when ownership is
+FALSE_POSITIVE and verify cannot emit one of those reasons.
 
 ## Decision Test
 
