@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-29T21:11:57Z'
+generated_utc: '2026-08-30T00:02:45Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:cf5b7cfb168f9372ebba2fe525a3854e4c75310ccaf106e7680aa049ec6b7f92
+source_tree_digest: sha256:b09c7984d5ae980e6e7832ea0182adb493ec7c92f60c914302490efa084c2fa1
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -577,8 +577,8 @@ rules:
   globs: null
   first_heading: Shared worktree isolation
   has_yaml_frontmatter: true
-  line_count: 85
-  content_digest: sha256:9f0288253b252e993f73174d35c7c1963180014c665ca512e8d05f1d0a0829c9
+  line_count: 92
+  content_digest: sha256:f70eda56dbbce79a45ba86f2c875093220ed91ac68fd8e46eed75a44b1d9c40d
   authority: canonical_global
   context_cost: moderate
   deprecated: false

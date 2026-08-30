@@ -46,6 +46,13 @@ wiping untracked in-flight fix files.
    missing `.cursor-commands`, `.cursor/plans`, `.cursor/governance`, or an
    IDE profile stamp. Machine hooks stay fail-closed. Classifier:
    `ops/scripts/lib/workspace_kind.sh`.
+8. **SessionEnd dirt-close is this session workspace only.**
+   `session_end_dirt_close.py` may restore or remove porcelain in the
+   payload workspace after `git cat-file` proves a novel path on
+   `l9/dirt-shelf`, or when the path is already on `origin/main` / an
+   open-PR blob. That is the close, not a scoop. Do not classify, park,
+   or delete dirt in a **sibling** worktree. Do not dump raw
+   `git status --porcelain` as "dirty files" — use `--status`.
 
 ## Automated writers: the repo-write lock
 

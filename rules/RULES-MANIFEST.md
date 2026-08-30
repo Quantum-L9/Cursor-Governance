@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-29T21:11:57Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-30T00:02:45Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -42,7 +42,7 @@ Generated: `2026-08-29T21:11:57Z`. Source: `rules/*.mdc`.
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `76c8cba8c93a` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
 | `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 130 | `fa1919b48e7b` |
-| `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 85 | `9f0288253b25` |
+| `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 92 | `f70eda56dbbc` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | agent_requested | 35 | `38f6e2e26683` |
