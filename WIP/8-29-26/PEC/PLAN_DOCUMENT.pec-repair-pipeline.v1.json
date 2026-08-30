@@ -1,0 +1,790 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "PEC repair pipeline W0-W10",
+  "objective": "Execute the remaining Program Execution repair pipeline from this PLAN_DOCUMENT on the current checkout via Cursor Build. Land worker diagnosability, the shadow conformance harness, then compiler ingress/fidelity/grounding/lowering, then spine graduation. Stop before v3 control-plane and RiskPacket until W7 metrics are zero. Do not run the campaign runner, admit a Program Lock, or invent a second controller, transport, replanner, authorization model, evidence model, or competing orchestrator. BOOTSTRAP-PEC-000 / pec1 / pec2 live only as archived provenance.",
+  "success_criteria": [
+    "W0: FAIL receipts retain bounded worker stderr/stdout text; candidate identity and git add/commit denials agree; a 1-file local_write adapter probe at current HEAD records turns, changed_files, and stderr text",
+    "W1: compiler/tests/conformance has fixtures 01-14, a semantic expectation format that is not a second Blueprint, and a shadow runner that compiles without campaign execution and emits the named metric dimensions; AT-002 through AT-008 may fail as recorded baseline; AT-009 (no side effects) and AT-010 (wording-independent semantic diff) must hold on the harness itself",
+    "W3: campaign_input.py accepts program-execution.intent.v1 through unified ingress; operator is not told to convert to campaign-source.v2 as the only path; AT-001 and AT-011 hold",
+    "W4: lowercase prohibitions retain provenance equivalent to uppercase MUST NOT; lexical anchors stay; add semantic materiality plus negation/contradiction check; test_normative_signals_are_case_sensitive no longer encodes silent loss as the contract; AT-002 and AT-003 hold",
+    "W5-W6: requirements receive ALREADY_SATISFIED/KEEP/MERGE_WITH_EXISTING/HARDEN_WIRE_EXISTING/CREATE/DELETE_SUPERSEDED/MIGRATION_CONTEXT/UNKNOWN dispositions from repo_truth before lowering; unknown seams become read-only discovery deps that produce grounded seam evidence; tasks name writable paths rather than docs/program-execution fallbacks; AT-005 through AT-008 hold",
+    "W7: material_intent_loss, prohibition_loss, acceptance_loss, unknown_loss, false_create_where_canonical_exists, grounding_error, authority_widening, and manual IR edits are 0 on golden journeys 1-6; AT-012 fail-closed before side effects; campaign runner is still not invoked from this plan",
+    "W8-W10 remain unstarted until W7 blocking properties pass; .pre-commit-config.yaml is the hook catalog for changed PE files",
+    "Bridge record only: hashed immutable source intent (IR0) plus bootstrap pack 00-06 layout documented; no competing orchestrator; CONTRACT_DRIFT stops a branch rather than blindly adapting architecture"
+  ],
+  "scope": {
+    "in": [
+      "WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-repair-pipeline.v1.json as the remaining-work SSOT",
+      "WIP/8-29-26/PEC/_archive/PEC/ as absorbed provenance (BOOTSTRAP-PEC-000, pec1, pec2) -- do not execute from archive",
+      "environment/program-execution/adapters/claude-code/provider.py and permission_renderer.py",
+      "environment/program-execution/peer_execution and pec controller candidate_sha recording",
+      "environment/program-execution/compiler including tests/conformance",
+      "environment/program-execution/scripts/campaign_input.py",
+      "environment/program-execution/compiler/architecture_intent.py architecture_extractor.py architecture_coverage.py architecture_ir.py repo_truth.py architecture_to_campaign.py synthesizer.py",
+      "bootstrap contract packs under a path inside write_allow for W1-W7 evidence (record layout only)"
+    ],
+    "out": [
+      "make campaign, pec bootstrap/claim/render, Program Lock, Controller lease",
+      "environment-experience 8-release pack",
+      "Perplexity PR pack v2 merge queue provenance feature trees preview leases",
+      "PE Memory campaign cutover",
+      "WIP execution schema family canonical.schema.*.yaml landings",
+      "rewriting pe-v3-hardening CAMPAIGN_SOURCE.yaml",
+      "RiskPacket ImpactEngine World Model l9-assurance protocol until W7 exit",
+      "second Program Controller, second REPLAN_CONTRACT, second authorization or evidence model, second TransportPacket",
+      "merge, push, force-push, admin-merge",
+      "AGENTS.md CANONICAL_LAW.md Makefile rewrites unless a remaining wave proves a pointer defect"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse HEAD && git branch --show-current",
+      "pass_criteria": "HEAD recorded; current checkout used; no origin/main SHA lock written",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "test -f WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-repair-pipeline.v1.json && test ! -e WIP/8-29-26/PEC/PEC && test -f WIP/8-29-26/PEC/_archive/PEC/PEC\\ Contract.md && test -f WIP/8-29-26/PEC/_archive/PEC/pec1.md && test -f WIP/8-29-26/PEC/_archive/PEC/pec2.md",
+      "pass_criteria": "PLAN_DOCUMENT is remaining-work SSOT; PEC/PEC live folder absent; BOOTSTRAP-PEC-000 sources live only under _archive/PEC/",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "python3 skills/l9-plan/scripts/route_plan.py --risk high --evidence partial --json",
+      "pass_criteria": "depth=deep; omit_gates=[]",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "grep -n PROGRAM_INTENT_V1 environment/program-execution/scripts/campaign_input.py",
+      "pass_criteria": "kind classified and rejected from SUPPORTED_KINDS (W3 target)",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T-W0-stderr",
+      "task": "Retain bounded worker stdout/stderr text on FAIL in the Claude adapter; keep digest fields",
+      "files": [
+        "environment/program-execution/adapters/claude-code/provider.py",
+        "environment/program-execution/adapters/claude-code/tests/test_driver.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "stderr_digest",
+      "leverage_rank": 2,
+      "shared_root_cause": "Peer Execution FAIL is undiagnosable from receipts"
+    },
+    {
+      "id": "T-W0-sha",
+      "task": "Align candidate identity with permission_renderer denials of git add and git commit",
+      "files": [
+        "environment/program-execution/adapters/claude-code/permission_renderer.py",
+        "environment/program-execution/peer_execution/execution.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "T-W0-stderr"
+      ],
+      "operation": "Replace",
+      "anchor": "Bash(git add:*)",
+      "blocker": "Choose worker-commit grant versus controller-owned candidate identity after T-W0-probe evidence; do not guess",
+      "leverage_rank": 3,
+      "shared_root_cause": "Worker asked for candidate_sha it cannot create"
+    },
+    {
+      "id": "T-W0-probe",
+      "task": "Re-probe one 1-file local_write path at current HEAD via adapter tests; record turns, changed_files, stderr text",
+      "files": [
+        "environment/program-execution/adapters/claude-code/tests/test_driver.py",
+        "environment/program-execution/conformance/test_shared_peer_execution_lifecycle.py"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "T-W0-sha"
+      ],
+      "operation": "Insert",
+      "anchor": "candidate_sha",
+      "leverage_rank": 6
+    },
+    {
+      "id": "T-W1-characterize",
+      "task": "Add characterization tests for journeys A-J that record route, stages reached, losses, and side effects without semantic fixes. Classify involved seams as CANONICAL_ACTIVE / PARTIAL / DUPLICATE / LEGACY / SUPERSEDED / GENERATED / DEAD_PATH / UNKNOWN before mutation. Record whether launchability currently mutates Task Cards after Blueprint validation (assert-only target; do not rewrite).",
+      "files": [
+        "environment/program-execution/compiler/tests/conformance/test_characterization.py",
+        "environment/program-execution/scripts/campaign_input.py"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T-W0-stderr"
+      ],
+      "operation": "Create",
+      "anchor": "SUPPORTED_KINDS",
+      "leverage_rank": 4,
+      "shared_root_cause": "No reproducible compiler failure matrix"
+    },
+    {
+      "id": "T-W1-fixtures",
+      "task": "Land fixture corpus 01 through 14 plus semantic expectation format that is not a second Blueprint. Each fixture keeps hashed immutable source intent (IR0). Unit dispositions include represented / intentionally_omitted_with_reason / duplicate / superseded / unknown / conflict / non-material.",
+      "files": [
+        "environment/program-execution/compiler/tests/conformance/",
+        "environment/program-execution/compiler/tests/conformance/schema_semantic_expectation.json"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T-W1-characterize"
+      ],
+      "operation": "Create",
+      "anchor": "conformance/",
+      "leverage_rank": 5
+    },
+    {
+      "id": "T-W1-shadow",
+      "task": "Implement shadow compiler runner and comparator with dimensioned metrics (material_intent_loss prohibition_loss acceptance_loss unknown_loss false_create grounding_error authority_widening source_traceability fixture_pass/fail) and zero campaign execution side effects (AT-009). Compare semantic equivalence, not wording (AT-010). Named score dimensions may exist but must not collapse raw counts. Document bootstrap pack 00-06 as record layout only.",
+      "files": [
+        "environment/program-execution/compiler/tests/conformance/shadow_runner.py",
+        "environment/program-execution/compiler/cli.py"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "T-W1-fixtures"
+      ],
+      "operation": "Create",
+      "anchor": "compiler/cli.py",
+      "leverage_rank": 1,
+      "shared_root_cause": "Every later wave needs a regression harness"
+    },
+    {
+      "id": "T-W2-counterexamples",
+      "task": "Freeze current failures as a machine-readable counterexample registry; mark desired-safe assertions as expected failures; no semantic product fixes in this wave",
+      "files": [
+        "environment/program-execution/compiler/tests/conformance/counterexamples.yaml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T-W1-shadow"
+      ],
+      "operation": "Create",
+      "anchor": "counterexamples.yaml",
+      "leverage_rank": 7
+    },
+    {
+      "id": "T-W3-ingress",
+      "task": "Unify human ingress so one-liner, ADR, Markdown, architecture-intent, and program-execution.intent.v1 enter without operator-chosen internal route (AT-001); keep intent.py strict; explicit valid canonical input stays compatible (AT-011); AT-004: intent.v1 must not dead-end on campaign-router refusal.",
+      "files": [
+        "environment/program-execution/scripts/campaign_input.py",
+        "environment/program-execution/compiler/intent.py",
+        "environment/program-execution/compiler/resolver.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "T-W2-counterexamples"
+      ],
+      "operation": "Replace",
+      "anchor": "SUPPORTED_KINDS",
+      "leverage_rank": 8,
+      "shared_root_cause": "Operator must pick an internal PEC input kind"
+    },
+    {
+      "id": "T-W4-fidelity",
+      "task": "Add semantic materiality so lowercase prohibitions and constraints survive with provenance; keep uppercase MUST/MUST NOT as high-confidence anchors; add negation/contradiction check plus source-grounded critic; every material source unit gets an explicit unit disposition (no silent disappearance); retarget case-sensitivity tests to the new contract (AT-002, AT-003).",
+      "files": [
+        "environment/program-execution/compiler/architecture_intent.py",
+        "environment/program-execution/compiler/architecture_extractor.py",
+        "environment/program-execution/compiler/architecture_coverage.py",
+        "environment/program-execution/compiler/tests/test_architecture_intent.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "T-W3-ingress"
+      ],
+      "operation": "Replace",
+      "anchor": "test_normative_signals_are_case_sensitive",
+      "leverage_rank": 9,
+      "shared_root_cause": "Coverage treats only uppercase normative tokens as material"
+    },
+    {
+      "id": "T-W5-microscope",
+      "task": "Extend repo_truth with disposition IR (ALREADY_SATISFIED KEEP MERGE_WITH_EXISTING HARDEN_WIRE_EXISTING CREATE DELETE_SUPERSEDED MIGRATION_CONTEXT UNKNOWN) plus IR2 path/symbol/caller/owner/generated/deprecated/duplicate evidence before task synthesis (AT-005, AT-006). Prefer extending RepoTruth over inventing a second grounding store.",
+      "files": [
+        "environment/program-execution/compiler/repo_truth.py",
+        "environment/program-execution/compiler/architecture_ir.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "T-W4-fidelity"
+      ],
+      "operation": "Insert",
+      "anchor": "classify_dispositions",
+      "leverage_rank": 10
+    },
+    {
+      "id": "T-W6-lowering",
+      "task": "Synthesize tasks from obligation times owner times seam times dependency edge; headings are a weak clustering hint only; unknown seam is a read-only discovery dependency that produces grounded seam evidence then a dependent mutation task; require per-task writable paths; stop docs/program-execution TASK fallback (AT-007, AT-008).",
+      "files": [
+        "environment/program-execution/compiler/architecture_to_campaign.py",
+        "environment/program-execution/compiler/synthesizer.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "T-W5-microscope"
+      ],
+      "operation": "Replace",
+      "anchor": "architecture_to_campaign.py",
+      "leverage_rank": 11
+    },
+    {
+      "id": "T-W7-graduate",
+      "task": "Prove golden journeys 1-6 through shadow compile plus Blueprint validation with zero material-intent / prohibition / acceptance / unknown loss, zero false CREATE, zero authority widening, and zero manual IR edits; malformed/unsafe source fails before side effects (AT-012); do not invoke the campaign runner; do not report COMPLETE while required tests fail; distinguish pre-existing vs regression vs unresolved contract requirement.",
+      "files": [
+        "environment/program-execution/compiler/tests/conformance/",
+        "environment/program-execution/compiler/tests/test_blueprint_validation.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "T-W0-probe",
+        "T-W6-lowering"
+      ],
+      "operation": "Insert",
+      "anchor": "test_blueprint_validation.py",
+      "leverage_rank": 12
+    },
+    {
+      "id": "T-W8-v3",
+      "task": "v3 control-plane reconstruction S1-S8 plus REPLAN_CONTRACT runtime closure on two planes with a fresh baseline SHA",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec",
+        "environment/program-execution/compiler",
+        "environment/program-execution/core/shared/REPLAN_CONTRACT.yaml"
+      ],
+      "effort": "XL",
+      "risk": "irreversible",
+      "dependencies": [
+        "T-W7-graduate"
+      ],
+      "operation": "Insert",
+      "anchor": "REPLAN_CONTRACT.yaml",
+      "blocker": "Do not start until T-W7-graduate blocking success properties pass; freeze a new baseline; do not rewrite pe-v3-hardening source",
+      "leverage_rank": 13
+    },
+    {
+      "id": "T-W9-risk",
+      "task": "Assurance RiskPacket protocol then PEC ImpactEngine shadow then enforcement then outcome-driven replan",
+      "files": [
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py",
+        "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py"
+      ],
+      "effort": "XL",
+      "risk": "irreversible",
+      "dependencies": [
+        "T-W8-v3"
+      ],
+      "operation": "Insert",
+      "anchor": "contracts.py",
+      "blocker": "l9-assurance schemas live outside this repo; do not start until T-W8-v3 complete; do not create a RiskPacket router",
+      "leverage_rank": 14
+    },
+    {
+      "id": "T-W10-dogfood",
+      "task": "Feed PEC the original messy RiskPacket human objective and prove it HARDEN/KEEP/CREATE without duplicates, with source-to-evidence lineage",
+      "files": [
+        "environment/program-execution/compiler/tests/conformance/"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "T-W9-risk"
+      ],
+      "operation": "Insert",
+      "anchor": "conformance/",
+      "blocker": "Do not start until T-W9-risk complete",
+      "leverage_rank": 15
+    }
+  ],
+  "critical_path": [
+    "T-W0-stderr",
+    "T-W1-characterize",
+    "T-W1-fixtures",
+    "T-W1-shadow",
+    "T-W2-counterexamples",
+    "T-W3-ingress",
+    "T-W4-fidelity",
+    "T-W5-microscope",
+    "T-W6-lowering",
+    "T-W0-sha",
+    "T-W0-probe",
+    "T-W7-graduate"
+  ],
+  "milestones": [
+    {
+      "id": "M-W0",
+      "outcome": "Worker FAILs are diagnosable and candidate identity matches permissions",
+      "unlocks": "Honest W7 execution probes without guessing"
+    },
+    {
+      "id": "M-W1",
+      "outcome": "Shadow conformance harness and fixture corpus exist",
+      "unlocks": "Every later compiler change is a regression test"
+    },
+    {
+      "id": "M-W2W6",
+      "outcome": "Ingress, fidelity, microscope, and lowering close AT-001 through AT-008",
+      "unlocks": "W7 spine graduation"
+    },
+    {
+      "id": "M-W7",
+      "outcome": "Golden journeys pass with zero material-intent loss and zero false CREATE",
+      "unlocks": "Separate follow-on for W8-W10; still no campaign runner from this plan"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "CP-W0",
+      "after": "M-W0",
+      "evidence_required": "FAIL receipt includes stderr text; permissions and candidate_sha agree; probe log exists",
+      "no_go_action": "Stop. Do not start W7 worker probes. Do not invoke the campaign runner."
+    },
+    {
+      "id": "CP-W1",
+      "after": "M-W1",
+      "evidence_required": "shadow_runner compiles a fixture with no worktree mutation and emits metric keys",
+      "no_go_action": "Stop compiler semantic edits until the harness records current defects"
+    },
+    {
+      "id": "CP-W4",
+      "after": "T-W4-fidelity",
+      "evidence_required": "lowercase prohibition fixture retains provenance; case-sensitivity test retargeted not deleted to hide loss",
+      "no_go_action": "Stop. Restore tests. Do not weaken assertions."
+    },
+    {
+      "id": "CP-W7",
+      "after": "M-W7",
+      "evidence_required": "W7 success_criteria metrics are 0; campaign runner was not invoked",
+      "no_go_action": "Do not start T-W8-v3, T-W9-risk, or T-W10-dogfood"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "Operator campaign front-door text already exists; W3 changes campaign_input.py not AGENTS.md unless a pointer is proven false"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "No constitution change; compiler/runtime ownership stays"
+    },
+    {
+      "surface": "ARCHITECTURE.md",
+      "action": "update",
+      "todo_ids": [
+        "T-W3-ingress",
+        "T-W5-microscope"
+      ],
+      "reason": "Index compiler ingress and grounding stages if those land"
+    },
+    {
+      "surface": "INVARIANTS.md",
+      "action": "n_a",
+      "reason": "No new org invariant; PE module tests own the new assertions"
+    },
+    {
+      "surface": "WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-repair-pipeline.v1.json",
+      "action": "update",
+      "todo_ids": [
+        "T-W7-graduate"
+      ],
+      "reason": "Remaining-work SSOT after PEC/PEC archive; record wave evidence here"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If T-W0-probe at current HEAD already PASSes with edits and stderr, is T-W0-stderr still a product defect or only missing tests?",
+      "If adding PROGRAM_INTENT_V1 to SUPPORTED_KINDS without a compile adapter recreates the dead-end as a later crash, has W3 actually unified ingress?",
+      "If lowercase retention is implemented by treating every sentence as normative, does coverage drown in false material units?",
+      "If W7 is declared done while the Build agent invoked the campaign runner, has this plan been violated?",
+      "If repo_truth cannot name a canonical owner, does lowering still emit CREATE write paths?"
+    ],
+    "assumed_false_ifs": [
+      "Worker 13-turn FAIL still reproduces at 74f8622617db907941587679a18b93cf3e5d7b50",
+      "Compiler module in-tree is incomplete rather than wrong-to-rebuild",
+      "Shadow compile can run without mutating ~/.l9/programs or git worktrees",
+      "l9-assurance remains out of session for W9",
+      "Dirty WIP deletions do not overlap environment/program-execution write_allow"
+    ],
+    "blast_radius": "Wrong ingress or lowering can fabricate tasks that overwrite live PE control-plane files. Wrong permission change can let workers git commit/push. Starting W8/W9 early can duplicate Controller/replan/auth. Weakening architecture_intent tests hides semantic loss.",
+    "rollback": "git restore --worktree --staged scoped to write_allow paths; revert local commits on this checkout only; do not force-push; delete untracked conformance fixtures if they are wrong; leave ~/.l9/programs untouched because this plan must not create campaign runtimes"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T-W1-shadow",
+      "T-W0-stderr",
+      "T-W1-characterize",
+      "T-W1-fixtures",
+      "T-W0-sha",
+      "T-W0-probe",
+      "T-W2-counterexamples",
+      "T-W3-ingress",
+      "T-W4-fidelity",
+      "T-W5-microscope",
+      "T-W6-lowering",
+      "T-W7-graduate",
+      "T-W8-v3",
+      "T-W9-risk",
+      "T-W10-dogfood"
+    ],
+    "shared_causes": [
+      "Human must choose an internal PEC schema/route",
+      "Materiality keyed on uppercase tokens only",
+      "Receipts store stderr digest not text",
+      "candidate_sha required while git commit is denied",
+      "Lowering follows document sections not seams",
+      "Source intent rewritten instead of hashed and referenced",
+      "Launchability mutates compiled artifacts after seal"
+    ],
+    "deletions_or_consolidations": [
+      "Do not re-admit archived Campaign Activation Files or pe-v3-control-plane-convergence prep",
+      "Do not rebuild the in-tree compiler module",
+      "Do not land Perplexity host overlays in this plan",
+      "Do not keep WIP/8-29-26/PEC/PEC as a live SSOT; archive only",
+      "Do not recreate PEC-repair-pipeline.md; this PLAN_DOCUMENT replaced it",
+      "Do not implement bootstrap pack as a second runtime protocol"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Build on dirty main overlaps foreign WIP deletions",
+      "mitigation": "Pathspec only under write_allow; overlap_policy stop_if_dirty_overlaps_may_modify; do not git add WIP deletions"
+    },
+    {
+      "risk": "Permission widening lets a worker push or commit out of envelope",
+      "mitigation": "Keep gh and git push denied; if worker commit is granted, bound it to the worktree and still deny push"
+    },
+    {
+      "risk": "W3 loosens intent.py",
+      "mitigation": "Ingress sits before intent.py; strict schema stays"
+    },
+    {
+      "risk": "W4 deletes case-sensitivity tests to go green",
+      "mitigation": "Retarget tests to prove lowercase retention; rule 95"
+    },
+    {
+      "risk": "W8/W9 start before W7",
+      "mitigation": "CP-W7 no-go; blockers on T-W8 T-W9 T-W10"
+    },
+    {
+      "risk": "Phase 10 bootstrap pack becomes a competing orchestrator",
+      "mitigation": "Record layout only under write_allow; Claude remains executor; PEC shadow-compiles"
+    },
+    {
+      "risk": "Worker blindly obeys a stale contract when the live seam moved",
+      "mitigation": "CONTRACT_DRIFT with path/symbol; adapt only safe equivalents; STOP on architecture difference"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Does the 13-turn empty-edit worker FAIL still reproduce at HEAD 74f8622617db907941587679a18b93cf3e5d7b50?",
+      "decision_effect": "T-W0-stderr may shrink to tests-only if already fixed",
+      "resolution": "probe"
+    },
+    {
+      "id": "U2",
+      "question": "Is candidate identity owned by a bounded worker commit grant or by the controller reading the worktree?",
+      "decision_effect": "permission_renderer versus pec/controller.py mutation set",
+      "resolution": "probe"
+    },
+    {
+      "id": "U3",
+      "question": "Is environment/program-execution/compiler/tests/conformance/ the canonical fixture home versus compiler/tests/?",
+      "decision_effect": "fixture paths in T-W1-*",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U4",
+      "question": "Is Quantum-L9/l9-assurance attached when T-W9-risk becomes eligible?",
+      "decision_effect": "W9 cannot invent RiskPacket schemas in this repo if Assurance owns them",
+      "resolution": "block"
+    },
+    {
+      "id": "U5",
+      "question": "Does launchability currently write synthesized validations back into Task Cards after Blueprint seal?",
+      "decision_effect": "Characterize in T-W1-characterize; do not rewrite launchability in this plan",
+      "resolution": "probe"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V-shadow",
+      "command": "python3 -m pytest environment/program-execution/compiler/tests/conformance -q",
+      "pass_criteria": "harness runs; W1 baseline failures named not hidden",
+      "status": "pending"
+    },
+    {
+      "id": "V-compiler",
+      "command": "python3 -m pytest environment/program-execution/compiler/tests environment/program-execution/adapters/claude-code/tests -q",
+      "pass_criteria": "changed-file tests pass after each wave",
+      "status": "pending"
+    },
+    {
+      "id": "V-precommit",
+      "command": ".pre-commit-config.yaml",
+      "pass_criteria": "changed-file hooks named in catalog; no campaign runner",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U1",
+      "U2",
+      "U3",
+      "U4",
+      "U5"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "Plan validated for Cursor Build. Implementation not run. U1-U2 require W0 probe. W8-W10 blocked until W7."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "environment/program-execution/adapters/claude-code/",
+      "environment/program-execution/compiler/",
+      "environment/program-execution/scripts/campaign_input.py",
+      "environment/program-execution/peer_execution/",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/",
+      "environment/program-execution/conformance/",
+      "WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-repair-pipeline.v1.json",
+      "ARCHITECTURE.md"
+    ],
+    "must_not_modify": [
+      "environment/program-execution/core/shared/AUTHORIZATION_MODEL.yaml",
+      "environment/program-execution/core/shared/EVIDENCE_MODEL.yaml",
+      "CANONICAL_LAW.md",
+      "ops/autonomy/surface_profile.yaml",
+      "environment/program-execution/campaigns/pe-v3-hardening/CAMPAIGN_SOURCE.yaml",
+      "WIP/8-29-26/PEC/_archive/"
+    ],
+    "preserved_contracts": [
+      "Program Controller is the only runtime Program authority",
+      "REPLAN_CONTRACT remains canonical",
+      "TransportPacket stays Gate-owned",
+      "refuse_publication stays fail-closed",
+      "Cursor Build execute path; campaign runner forbidden until a later plan after W7",
+      "intent.py stays a strict IR",
+      "Hashed IR0 source intent is immutable",
+      "CONTRACT_DRIFT on live-vs-contract contradiction; do not recreate superseded components",
+      "Launchability is assert-only after Blueprint seal (characterize only in this plan)",
+      "Bootstrap pack 00-06 is a temporary record, not a second orchestrator"
+    ],
+    "validation_commands": [
+      "python3 -m pytest environment/program-execution/compiler/tests -q",
+      "python3 -m pytest environment/program-execution/adapters/claude-code/tests -q",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "estimate": "W0-W1 one Build slice; W2-W7 multi-slice; W8-W10 follow-on after W7",
+  "absorbed_from": {
+    "archived_folder": "WIP/8-29-26/PEC/_archive/PEC/",
+    "sources": [
+      "PEC Contract.md (BOOTSTRAP-PEC-000)",
+      "pec1.md",
+      "pec2.md"
+    ],
+    "already_in_plan": [
+      "W1 fixtures 01-14 and journeys A-J",
+      "W3 unified ingress / do not loosen intent.py",
+      "W4 lowercase fidelity with uppercase anchors kept",
+      "W5-W6 KEEP/MERGE/HARDEN/CREATE before lowering; unknown seam is discovery",
+      "W7 shadow graduation; no campaign runner",
+      "W8-W10 RiskPacket / ImpactEngine / World Model deferred",
+      "forbidden second controller / transport / auth / evidence / replanner"
+    ],
+    "added_this_revision": [
+      "AT-001 and AT-009 through AT-012",
+      "Phase 8 extra metric dimensions and pec2 score names",
+      "IR0-IR5 stage names and hashed immutable source intent",
+      "bootstrap pack 00-06 record layout (not a runtime protocol)",
+      "CONTRACT_DRIFT stop with path/symbol/observed/stale/recommended action",
+      "MIGRATION_CONTEXT disposition",
+      "Phase 5 unit dispositions (represented / omitted-with-reason / duplicate / superseded / unknown / conflict / non-material)",
+      "launchability is ASSERT ONLY after Blueprint seal (characterize; do not rewrite in this plan)",
+      "golden journeys 5-6 (authority ambiguity; safe repo-resolvable ambiguity)",
+      "IR2 grounding fact kinds (artifact/symbol/caller/owner/generated/deprecated/duplicate)"
+    ]
+  },
+  "acceptance_tests": [
+    {
+      "id": "AT-001",
+      "wave": "W3",
+      "statement": "Ordinary one-sentence human intent through public ingress does not require the user to identify an internal PEC schema or compiler route."
+    },
+    {
+      "id": "AT-002",
+      "wave": "W4",
+      "statement": "Lowercase \"don't replace assurance\" survives normalization with source provenance."
+    },
+    {
+      "id": "AT-003",
+      "wave": "W4",
+      "statement": "Equivalent uppercase and lowercase prohibitions produce semantically equivalent prohibition assertions."
+    },
+    {
+      "id": "AT-004",
+      "wave": "W3",
+      "statement": "program-execution.intent.v1 does not dead-end merely because the campaign router refuses that internal kind."
+    },
+    {
+      "id": "AT-005",
+      "wave": "W5",
+      "statement": "Architecture input: every materially relevant source unit receives an explicit disposition."
+    },
+    {
+      "id": "AT-006",
+      "wave": "W5",
+      "statement": "Requested functionality already present can be ALREADY_SATISFIED / KEEP / HARDEN_WIRE_EXISTING instead of CREATE."
+    },
+    {
+      "id": "AT-007",
+      "wave": "W6",
+      "statement": "Unknown implementation seam does not fabricate a mutation path."
+    },
+    {
+      "id": "AT-008",
+      "wave": "W6",
+      "statement": "Authority-bearing ambiguity: uncertainty does not become permission."
+    },
+    {
+      "id": "AT-009",
+      "wave": "W1",
+      "statement": "Shadow compilation produces no repository/runtime execution side effect."
+    },
+    {
+      "id": "AT-010",
+      "wave": "W1",
+      "statement": "Comparator reports semantic differences independently of exact generated wording."
+    },
+    {
+      "id": "AT-011",
+      "wave": "W3",
+      "statement": "Explicit valid PEC canonical input remains compatible through unified ingress."
+    },
+    {
+      "id": "AT-012",
+      "wave": "W7",
+      "statement": "Malformed or unsafe source fails before execution side effects."
+    }
+  ],
+  "compiler_ir_stages": [
+    {
+      "id": "IR0",
+      "name": "SourceCapture",
+      "owns": "exact original text, content hash, source units; immutable; never rewrite into better requirements"
+    },
+    {
+      "id": "IR1",
+      "name": "SemanticIntent",
+      "owns": "objective, requirements, constraints, prohibitions, acceptance, unknowns"
+    },
+    {
+      "id": "IR2",
+      "name": "RepositoryGrounding",
+      "owns": "artifact, symbol, definition, caller/callee, import, schema, test, runtime owner, authority owner, producer/consumer, generated/deprecated/superseded/canonical/duplicate/active"
+    },
+    {
+      "id": "IR3",
+      "name": "Reconciliation",
+      "owns": "ALREADY_SATISFIED KEEP MERGE_WITH_EXISTING HARDEN_WIRE_EXISTING CREATE DELETE_SUPERSEDED MIGRATION_CONTEXT UNKNOWN"
+    },
+    {
+      "id": "IR4",
+      "name": "RequirementAuthority",
+      "owns": "SHALL/SHOULD/MAY, evidence, ceilings, risk, forbidden moves"
+    },
+    {
+      "id": "IR5",
+      "name": "ExecutionGraph",
+      "owns": "tasks, dependencies, gates, rollback, resources; then Blueprint validation then Program Lock (Lock out of this plan)"
+    }
+  ],
+  "unit_dispositions": [
+    "represented",
+    "intentionally_omitted_with_reason",
+    "duplicate",
+    "superseded",
+    "unknown",
+    "conflict",
+    "non-material"
+  ],
+  "shadow_metric_dimensions": [
+    "material_intent_loss_count",
+    "prohibition_loss_count",
+    "acceptance_loss_count",
+    "unknown_loss_count",
+    "false_create_count",
+    "grounding_error_count",
+    "authority_widening_count",
+    "source_traceability_percent",
+    "fixture_pass_count",
+    "fixture_fail_count"
+  ],
+  "convergence_score_names": [
+    "Intent Fidelity",
+    "Grounding Accuracy",
+    "Disposition Accuracy",
+    "Task Completeness",
+    "Authority Correctness",
+    "Evidence Completeness",
+    "Execution Correctness"
+  ],
+  "golden_journeys": [
+    "one-sentence human intent \u2192 normalize \u2192 valid Blueprint \u2192 no manual IR edits",
+    "long architecture ADR \u2192 normalize \u2192 source-grounded Blueprint \u2192 constraints/prohibitions preserved",
+    "explicit program-execution.intent.v1 \u2192 supported canonical route \u2192 no conversion dead-end",
+    "already-implemented functionality \u2192 grounding recognizes it \u2192 no false CREATE",
+    "authority-bearing ambiguity \u2192 UNKNOWN / blocked / escalation \u2192 no authority widening",
+    "safe ambiguity resolvable from repo truth \u2192 grounding resolves \u2192 compilation continues"
+  ],
+  "bootstrap_bridge": {
+    "status": "temporary_record_only",
+    "rule": "Do not build a competing orchestrator. Dual lane: trusted explicit contract + Claude/model execution; same raw intent through PEC shadow compile \u2192 semantic conformance report.",
+    "source_intent": "00-source-intent.md is immutable and hashed; every downstream requirement keeps file+span provenance",
+    "pack_layout": [
+      "00-source-intent.md",
+      "01-intent-ir.yaml",
+      "02-grounding.yaml",
+      "03-requirements.yaml",
+      "04-execution-contract.yaml",
+      "05-evidence/",
+      "06-completion.yaml"
+    ],
+    "eventual_map": {
+      "00": "IR0",
+      "01": "IR1",
+      "02": "IR2",
+      "03": "IR4",
+      "04": "Blueprint / Task Contract",
+      "05": "PEC receipts/evidence",
+      "06": "Program completion projection"
+    },
+    "contract_drift": "If live repo contradicts the contract: emit CONTRACT_DRIFT with exact path/symbol, observed behavior, why the contract is stale, recommended converged action. Safe equivalent may adapt; material architecture difference STOP. Do not recreate a superseded component."
+  },
+  "launchability_rule": "After Blueprint seal, launchability is ASSERT ONLY. Do not let launchability discover missing semantics and mutate the compiled artifact. Characterize the current write-back smell in W1; do not rewrite launchability in this plan."
+}

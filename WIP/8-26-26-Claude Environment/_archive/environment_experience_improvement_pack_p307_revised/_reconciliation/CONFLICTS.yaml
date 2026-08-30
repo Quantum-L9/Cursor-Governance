@@ -1,0 +1,141 @@
+schema: l9.environment_experience.conflicts/v1
+generated_at: '2026-08-25T02:03:03Z'
+conflicts:
+- conflict_id: C-001
+  concept: bootstrap_projection_vs_repository_owned_.claude
+  source_versions:
+  - P1
+  - P3
+  - P6
+  - P9
+  competing_states:
+  - Older material recommends propagating ignore patterns for injected .claude paths.
+  - Pack 9 proves Cognitive.Engine.Graphs owns tracked .claude/rules files and bootstrap projection can replace them.
+  resolution: Ownership-aware projection. Ignore only verified generated/untracked paths; never blanket-ignore or overwrite
+    tracked repository-owned .claude content.
+  authority_basis: Later direct evidence corrects the unsafe generalization while preserving the older machine-local-path
+    insight.
+  confidence: confirmed
+  remaining_unknowns: []
+  state: RESOLVED
+- conflict_id: C-002
+  concept: L9_AUTONOMY_AUTONOMOUS_MERGE_authoritative_value
+  source_versions:
+  - P1
+  - P3
+  - P4
+  - P6
+  - P7
+  - P8
+  - P9
+  competing_states:
+  - Verifier expects false.
+  - Observed live value is true in multiple sessions/sources.
+  - Corpus does not establish which policy value is intended.
+  resolution: UNKNOWN_OR_OPEN. Fix provenance and repair reachability first; do not silently flip the authority-widening value.
+  authority_basis: No source provides a later explicit policy lock deciding true vs false.
+  confidence: confirmed
+  remaining_unknowns:
+  - OD-001
+  state: OPEN
+- conflict_id: C-003
+  concept: make_pr_absolute_doctrine_vs_missing_repo_target
+  source_versions:
+  - P1
+  - P3
+  - P6
+  - P9
+  competing_states:
+  - Doctrine says make pr is the only publish path.
+  - Multiple consumer repos do not define a pr target; some docs describe fallbacks.
+  resolution: UNKNOWN_OR_OPEN. Choose either universal target provisioning or a canonical supported fallback, then remove
+    the conflicting absolute.
+  authority_basis: Repeated direct observations establish the contradiction; no source locks one of the two remedies.
+  confidence: confirmed
+  remaining_unknowns:
+  - OD-002
+  state: OPEN
+- conflict_id: C-004
+  concept: GitHub_cli_availability_and_auth_health
+  source_versions:
+  - P1
+  - P3
+  - P4
+  - P6
+  - P7
+  - P8
+  - P9
+  competing_states:
+  - Some documentation says gh is unavailable or token invalid.
+  - Several sessions show gh installed and REST working while GraphQL-backed probes/commands fail.
+  - Other sessions genuinely observe invalid GH_TOKEN.
+  resolution: 'Model transport and credential health separately: CLI presence, REST auth, GraphQL reachability, and token
+    validity are independent dimensions.'
+  authority_basis: Cross-session direct command evidence.
+  confidence: confirmed
+  remaining_unknowns: []
+  state: RESOLVED
+- conflict_id: C-005
+  concept: capability_broker_failure_cause
+  source_versions:
+  - P1
+  - P9
+  competing_states:
+  - Proxy/allowlist denial is plausible.
+  - Upstream broker outage is also plausible.
+  resolution: UNKNOWN_OR_OPEN until DNS/direct-connect/proxy diagnostics discriminate cause.
+  authority_basis: Observed CONNECT 502 cannot support a stronger causal claim.
+  confidence: confirmed
+  remaining_unknowns:
+  - OD-003
+  state: OPEN
+- conflict_id: C-006
+  concept: memory_health_aggregate_vs_transport_health
+  source_versions:
+  - P6
+  - P9
+  competing_states:
+  - Receipt/aggregate state reports memory DEGRADED.
+  - Sanctioned Graphiti CLI path can be healthy while writeback/hydration semantics are still poor.
+  resolution: Split health by transport and operation; do not collapse Graphiti reachability, writeback result, and hydration
+    usefulness into one verdict.
+  authority_basis: Direct contradictory observations plus source improvements that propose a shared/transport-specific probe.
+  confidence: confirmed
+  remaining_unknowns:
+  - OD-005
+  state: RESOLVED
+- conflict_id: C-007
+  concept: destructive_guardrail_usability_vs_fail_closed_safety
+  source_versions:
+  - P1
+  - P3
+  - P4
+  - P7
+  - P8
+  - P9
+  competing_states:
+  - Legitimate scratch/cache cleanup is repeatedly denied.
+  - Unresolved/empty expansion must remain fail-closed because expansion to a parent path can be destructive.
+  resolution: Preserve fail-closed expansion safety; improve literal scoped cleanup, reachable authorization, and diagnostics.
+    Do not weaken the core unresolved-target check.
+  authority_basis: Pack 1 explicitly documents the safety rationale; later packs show usability/escape-channel defects, not
+    evidence that fail-closed behavior is wrong.
+  confidence: confirmed
+  remaining_unknowns: []
+  state: RESOLVED
+- conflict_id: C-008
+  concept: pack9_supersedes_which_exact_0118_archive
+  source_versions:
+  - P3
+  - P9
+  competing_states:
+  - Pack 9 explicitly supersedes environment_experience_improvement_pack.zip generated 2026-08-24T01:18Z.
+  - Pack 3 is generated 2026-08-24T01:18:29Z and covers the same Cognitive.Engine.Graphs session family, but Pack 9 reports
+    the predecessor as 34,537 bytes while the accessible Pack 3 ZIP is 33,582 bytes.
+  resolution: Treat Pack 3 as a high-confidence likely representation/derivative of the referenced predecessor, but do not
+    claim byte identity or exact supersession. Pack 9 explicitly supersedes an unbound 01:18 predecessor alias.
+  authority_basis: Timestamp and semantic match are strong; byte-size mismatch prevents exact identity.
+  confidence: likely
+  remaining_unknowns:
+  - OD-006
+  state: RESOLVED_WITH_UNKNOWN

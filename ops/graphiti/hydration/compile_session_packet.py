@@ -96,6 +96,21 @@ def _fact_text(fact: dict[str, Any]) -> str:
     return json.dumps(fact, ensure_ascii=False)[:400]
 
 
+_PICKUP_RESTATEMENTS = (
+    "continue from the latest graphiti pickup",
+    "resuming from the latest graphiti pickup",
+    "resume prior work from graphiti pickup",
+    "the next action involves resuming from the latest graphiti pickup",
+    "claude-code agent requested to continue from the latest graphiti pickup",
+)
+
+
+def _is_pickup_restatement(text: str) -> bool:
+    """True when the fact only restates the hydrate ritual, not a task."""
+    lowered = text.lower()
+    return any(marker in lowered for marker in _PICKUP_RESTATEMENTS)
+
+
 def _parse_pickup_pipe(text: str) -> tuple[str, str]:
     """Parse ``PICKUP|objective=…|next=…`` search lines from close Phase A."""
     if "PICKUP|" not in text.upper() and not text.upper().startswith("PICKUP|"):
@@ -250,20 +265,34 @@ def compile_session_packet(
         degraded = True
         degrade_reason = degrade_reason or "empty PICKUP search"
 
+    task_facts = [fact for fact in facts if not _is_pickup_restatement(_fact_text(fact))]
+    empty_task_state = bool(facts) and not task_facts
+
     budget = _hydration_budget()
-    context_parts = [pickup.get("context_slice") or ""]
-    for fact in facts[:5]:
-        context_parts.append(_fact_text(fact)[:400])
-    context_slice = "\n---\n".join(p for p in context_parts if p)[:budget]
+    if empty_task_state:
+        context_slice = ""
+        pickup_parsed = False
+        pickup = {
+            "active_objective": "PICKUP-only hydrate — no task-bearing facts",
+            "next_action": "Proceed from user request; treat memory as empty",
+            "context_slice": "",
+        }
+    else:
+        context_parts = [pickup.get("context_slice") or ""]
+        for fact in task_facts[:5]:
+            context_parts.append(_fact_text(fact)[:400])
+        context_slice = "\n---\n".join(p for p in context_parts if p)[:budget]
 
     fact_previews: list[dict[str, str]] = []
-    for fact in facts[:3]:
+    for fact in task_facts[:3]:
         text = _fact_text(fact)[:120]
         uuid = str(fact.get("uuid") or fact.get("id") or "")[:64]
         fact_previews.append({"uuid": uuid, "text_head": text})
 
     hydrate_stats = {
-        "facts_returned": len(facts),
+        "facts_returned": len(task_facts),
+        "raw_facts": len(facts),
+        "empty_task_state": empty_task_state,
         "pickup_parsed": pickup_parsed,
         "context_chars": len(context_slice),
         "search_queries_used": max(1, search_queries_used) if group_id else search_queries_used,
