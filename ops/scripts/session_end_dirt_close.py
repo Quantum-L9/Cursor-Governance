@@ -513,7 +513,11 @@ def apply_close(
                         {"path": rel, "class": NOVEL_CLASS, "action": "parked+cleaned"}
                     )
             park_failures = [rel for rel in novel if rel not in cleaned]
-            if park_failures and commit not in {"", "unchanged"} and not commit.startswith("add-failed"):
+            if (
+                park_failures
+                and commit not in {"", "unchanged"}
+                and not commit.startswith("add-failed")
+            ):
                 receipt.setdefault("errors", []).append(
                     f"partial-park:{len(park_failures)} path(s) not on shelf"
                 )
