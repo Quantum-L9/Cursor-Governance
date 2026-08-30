@@ -9,7 +9,7 @@ metadata:
   tags: [l9, session, handoff, memory, governance, graphiti, force-retry]
   owner: igor_beylin
   status: active
-  version: 1.6.0
+  version: 1.6.1
   updated: 2026-08-30
 ---
 
@@ -39,31 +39,36 @@ Slash command entry: [`commands/end-session.md`](../../commands/end-session.md).
 
 ## Core Contract (recovery path)
 
-`HEALTH → client write PICKUP/lessons (agent_id) → stamp close receipt → REDIS (optional) → GOVERNANCE BACKUP → HANDOFF`
+`HEALTH → repair-write (PICKUP + receipt) → optional lesson writes → REDIS (optional) → GOVERNANCE BACKUP → HANDOFF`
 
-**Primary** is `graphiti_memory_client.py write` (or `hydration.cli repair-write`,
-which is the same write + receipt stamp). Do **not** prefer
-`hydration.cli close --reason force_retry` — that replays the hook closer
-(ADR-0028 Option C rejected).
+**Primary** is `hydration.cli repair-write` (PICKUP write + `write_receipt`).
+A bare `graphiti_memory_client.py write` does **not** stamp the close receipt.
+Do **not** prefer `hydration.cli close --reason force_retry` — that replays the
+hook closer (ADR-0028 Option C rejected). Repair the **prior** session from
+`previous_opened.json` when SessionStart reported a close-gap.
 
 ```bash
 GOV="${HOME}/.cursor-governance"
 GRAPHITI_PY="${GOV}/.venv/bin/python"
 CLIENT="${GOV}/ops/graphiti/graphiti_memory_client.py"
+WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
+PRIOR_FILE="$WS/.l9/memory/previous_opened.json"
+REPAIR_SID=""
+if [ -f "$PRIOR_FILE" ]; then
+  REPAIR_SID="$("$GRAPHITI_PY" -c 'import json,sys; print(json.load(open(sys.argv[1])).get("session_id") or "")' "$PRIOR_FILE")"
+fi
+REPAIR_SID="${REPAIR_SID:-${CURSOR_CONVERSATION_ID:-manual}}"
 export L9_MEMORY_AGENT_ID=cursor USER_ID=cursor_agent
 "$GRAPHITI_PY" "$CLIENT" health
 cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli repair-write \
-  --project-dir "$(pwd)" --session-id "${CURSOR_CONVERSATION_ID:-manual}" \
+  --project-dir "$WS" --session-id "$REPAIR_SID" \
   --objective "{TASK}" --next "{NEXT}" --files "{FILES}" --blocker "{BLOCKER}" \
   --agent-id cursor
 ```
 
-Equivalent primary write (same store):
+Optional lesson writes after `repair-write` (same store; these do not stamp a close receipt):
 
 ```bash
-"$GRAPHITI_PY" "$CLIENT" write \
-  "PICKUP|date=$(date +%Y-%m-%d)|task={TASK}|next={NEXT}|blocker={BLOCKER}|session=${CURSOR_CONVERSATION_ID}" \
-  --kind pickup_context --agent-id cursor
 "$GRAPHITI_PY" "$CLIENT" write "{terse fact}" --kind lesson --agent-id cursor
 ```
 
@@ -84,7 +89,7 @@ Equivalent primary write (same store):
 ## Compact Workflow
 
 1. Confirm close-gap (hydrate `REPAIR: /end-session`, missing receipt, or `write_count=0`).
-2. HEALTH, then `repair-write` or `graphiti_memory_client.py write` with `--agent-id`.
+2. HEALTH, then `repair-write` targeting the prior session id. Do not use client `write` as the close-gap repair.
 3. Optional Redis `cache_set_session_context`; else PICKUP is resume SSOT.
 4. Run governance backup if needed.
 5. Emit handoff summary (completed / in-progress / next).

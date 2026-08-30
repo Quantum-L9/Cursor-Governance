@@ -425,6 +425,14 @@ def test_resolve_session_id_order(monkeypatch):
     assert resolve_session_id(explicit="explicit-1") == "explicit-1"
 
 
+def test_orchestrator_opens_latch_before_graphiti_enabled() -> None:
+    text = (ROOT / "ops" / "hooks" / "session_start_memory_orchestrator.sh").read_text(
+        encoding="utf-8"
+    )
+    assert text.index("cli open") < text.index("if graphiti_enabled")
+    assert text.index("if graphiti_enabled") < text.index("cli compile")
+
+
 def test_background_open_does_not_rotate_last_opened(tmp_path):
     from ops.graphiti.hydration.session_latches import (
         read_last_opened,

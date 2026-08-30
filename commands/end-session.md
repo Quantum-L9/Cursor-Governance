@@ -41,21 +41,24 @@ Do **not** prefer `hydration.cli close` as the repair (ADR-0028).
 ```bash
 GOV="${HOME}/.cursor-governance"
 GRAPHITI_PY="${GOV}/.venv/bin/python"
+WS="${CURSOR_PROJECT_DIR:-$(pwd)}"
 export L9_MEMORY_AGENT_ID=cursor USER_ID=cursor_agent
+PRIOR_FILE="$WS/.l9/memory/previous_opened.json"
+REPAIR_SID=""
+if [ -f "$PRIOR_FILE" ]; then
+  REPAIR_SID="$("$GRAPHITI_PY" -c 'import json,sys; print(json.load(open(sys.argv[1])).get("session_id") or "")' "$PRIOR_FILE")"
+fi
+REPAIR_SID="${REPAIR_SID:-${CURSOR_CONVERSATION_ID:-manual}}"
 "$GRAPHITI_PY" "$GOV/ops/graphiti/graphiti_memory_client.py" health
 cd "$GOV" && PYTHONPATH="$GOV" "$GRAPHITI_PY" -m ops.graphiti.hydration.cli repair-write \
-  --project-dir "${CURSOR_PROJECT_DIR:-$(pwd)}" \
-  --session-id "${CURSOR_CONVERSATION_ID:-manual}" \
+  --project-dir "$WS" \
+  --session-id "$REPAIR_SID" \
   --objective "{TASK}" --next "{NEXT}" --agent-id cursor
 ```
 
-Direct equivalent:
-
-```bash
-"$GRAPHITI_PY" "$GOV/ops/graphiti/graphiti_memory_client.py" write \
-  "PICKUP|date={DATE}|task={TASK}|files={FILES}|next={NEXT}|blocker={BLOCKER}|session={SESSION}" \
-  --kind pickup_context --agent-id cursor
-```
+Do **not** substitute `graphiti_memory_client.py write` for this step. That path
+creates a PICKUP episode and never calls `write_receipt`, so hydrate still
+classifies a close-gap. `repair-write` is the only documented repair.
 
 Skip if the close receipt is already `closed` and `write_count>0` unless
 superseding. Do **not** write `memory-bank/`.
