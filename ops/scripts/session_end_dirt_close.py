@@ -58,7 +58,9 @@ LANDED_CLASSES = frozenset({"already_on_baseline", "already_on_open_pr", "genera
 NOVEL_CLASS = "unique_novel"
 
 
-def _git(root: Path, *args: str, env: dict[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def _git(
+    root: Path, *args: str, env: dict[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     merged = os.environ.copy()
     if env:
         merged.update(env)
@@ -467,7 +469,9 @@ def apply_close(
         if row["class"] not in LANDED_CLASSES:
             continue
         row["action"] = restore_or_remove(root, row["path"])
-        receipt["actions"].append({"path": row["path"], "class": row["class"], "action": row["action"]})
+        receipt["actions"].append(
+            {"path": row["path"], "class": row["class"], "action": row["action"]}
+        )
 
     overflow = leftover_novel[MAX_NOVEL_PATHS:]
     novel = leftover_novel[:MAX_NOVEL_PATHS]
@@ -525,7 +529,9 @@ def run(
         git, baseline=baseline, blob_index_path=blob_index_path, pr_heads=pr_heads
     )
     rows = classify_workspace(root, baseline=baseline, blob_index=blob_index, pr_index_error=pr_err)
-    closable = [r["path"] for r in rows if r["class"] in LANDED_CLASSES or r["class"] == NOVEL_CLASS]
+    closable = [
+        r["path"] for r in rows if r["class"] in LANDED_CLASSES or r["class"] == NOVEL_CLASS
+    ]
     skip = gate_skip_reason(payload, root, closable) if apply else ""
     if apply:
         receipt = apply_close(
@@ -592,13 +598,14 @@ def main(argv: list[str] | None = None) -> int:
 
     print(json.dumps(result, indent=2, sort_keys=True))
     status = result.get("status") or result
+    dirty_unique = status.get("dirty_unique", len(status.get("dirty_files") or []))
+    already_landed = len(status.get("already_landed") or [])
+    novel_parked = len(status.get("novel_parked") or [])
+    absorbed_pruned = len(status.get("absorbed_pruned") or [])
     print(
-        "dirt-close dirty_unique=%s already_landed=%s novel_parked=%s absorbed_pruned=%s"
-        % (
-            status.get("dirty_unique", len(status.get("dirty_files") or [])),
-            len(status.get("already_landed") or []),
-            len(status.get("novel_parked") or []),
-            len(status.get("absorbed_pruned") or []),
+        (
+            f"dirt-close dirty_unique={dirty_unique} already_landed={already_landed}"
+            f" novel_parked={novel_parked} absorbed_pruned={absorbed_pruned}"
         ),
         file=sys.stderr,
     )

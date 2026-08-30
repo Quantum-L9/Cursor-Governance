@@ -7,7 +7,6 @@ import json
 import os
 import subprocess
 import sys
-import time
 from pathlib import Path
 
 import pytest
@@ -207,7 +206,9 @@ def test_sp08_generated_restored_not_parked(repo: Path) -> None:
     result = apply(repo)
     assert "environment/generated/llm-rules/sample.md" in result["status"]["already_landed"]
     assert gen.read_text(encoding="utf-8") == "generated"
-    assert not dirt.path_on_rev(repo, dirt.DIRT_SHELF_REF, "environment/generated/llm-rules/sample.md")
+    assert not dirt.path_on_rev(
+        repo, dirt.DIRT_SHELF_REF, "environment/generated/llm-rules/sample.md"
+    )
 
 
 def test_sp09_open_pr_blob_removed_not_parked(repo: Path, tmp_path: Path) -> None:
