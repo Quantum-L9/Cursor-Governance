@@ -171,10 +171,7 @@ def _summary_markdown(
     if threads_resolved is None:
         footer = f"*Local verify: {verify} | Threads: replied (resolve not run this pass)*"
     else:
-        footer = (
-            f"*Local verify: {verify} | Threads resolved: "
-            f"{threads_resolved}/{total}*"
-        )
+        footer = f"*Local verify: {verify} | Threads resolved: {threads_resolved}/{total}*"
     return (
         f"## PR Remediation — Cycle {cycle} Summary\n\n"
         f"**Commit:** `{commit}` | **Findings processed:** {total} | "
