@@ -125,7 +125,10 @@ class StubRevisionTests(unittest.TestCase):
 
     def test_stub_writes_its_revision_into_the_session_env(self) -> None:
         stub = (ADAPTER / "web" / "setup.bootstrap.sh").read_text(encoding="utf-8")
-        self.assertIn("export L9_STUB_REVISION=", stub)
+        lib = (ADAPTER / "lib" / "cloud_account_env.sh").read_text(encoding="utf-8")
+        self.assertIn("export L9_STUB_REVISION", stub)
+        self.assertIn("export L9_STUB_REVISION=", lib)
+        self.assertIn("l9_write_cloud_session_env", stub)
 
 
 class AccountFieldsDocumentTests(unittest.TestCase):
@@ -201,6 +204,12 @@ class PlatformBlockTests(unittest.TestCase):
     def test_bootstrap_does_not_export_or_probe_broker_url(self) -> None:
         src = (ADAPTER / "web" / "setup.bootstrap.sh").read_text(encoding="utf-8")
         self.assertNotIn("L9_CAPABILITY_BROKER_URL", src)
+        self.assertIn("cloud_account_env.sh", src)
+
+    def test_cloud_env_lib_strips_retired_broker_url(self) -> None:
+        src = (ADAPTER / "lib" / "cloud_account_env.sh").read_text(encoding="utf-8")
+        self.assertIn("L9_CAPABILITY_BROKER_URL", src)
+        self.assertIn("l9_normalize_cloud_account_env", src)
 
 
 class DegradedModeContractTests(unittest.TestCase):

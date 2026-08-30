@@ -484,8 +484,13 @@ fi
 if [ "${USER_ID:-}" = "cursor_agent" ] && [ "$SURFACE" != "cursor" ]; then
   warn "memory identity 'cursor_agent' is reserved — surface '$SURFACE' must use its own USER_ID"
 fi
-for retired in L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN; do
-  [ -n "${!retired:-}" ] && warn "$retired set — retired ADR-0006 side door; remove it"
+for retired in \
+  L9_MEMORY_HTTP_URL L9_MEMORY_CLIENT_TOKEN L9_MEMORY_HTTP_TOKEN \
+  L9_CAPABILITY_BROKER_URL; do
+  if [ -n "${!retired:-}" ]; then
+    warn "$retired set — retired; remove from account environment"
+    unset "$retired"
+  fi
 done
 # Memory front door. A bearer in this process is a contract violation.
 # Graphiti is GRAPHITI_MCP_URL (HTTPS) or the local SSH tunnel CLI — not a

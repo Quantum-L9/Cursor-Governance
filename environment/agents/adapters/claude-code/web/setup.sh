@@ -35,8 +35,13 @@
 # ---------------------------------------------------------------------------
 set -uo pipefail
 
-# Cloud Graphiti default when unset (CLI hosts export the loopback tunnel URL).
-: "${GRAPHITI_MCP_URL:=https://memory.quantumaipartners.com/graphiti/mcp}"
+_L9_ADAPTER="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [ -f "$_L9_ADAPTER/lib/cloud_account_env.sh" ]; then
+  # shellcheck source=../lib/cloud_account_env.sh
+  source "$_L9_ADAPTER/lib/cloud_account_env.sh"
+  l9_normalize_cloud_account_env
+fi
+unset _L9_ADAPTER
 
 log() { printf '\n=== %s ===\n' "$*"; }
 have() { command -v "$1" >/dev/null 2>&1; }

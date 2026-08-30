@@ -50,6 +50,7 @@ DELIBERATELY_ABSENT = frozenset(
     {
         "GH_TOKEN",
         "L9_GOVERNANCE_DIR",
+        "L9_CAPABILITY_BROKER_URL",
         "GRAPHITI_MCP_TOKEN",
         "GRAPHITI_GROUP_ID",
         "SONAR_TOKEN",
@@ -69,8 +70,8 @@ DELIBERATELY_ABSENT = frozenset(
 RUNTIME_MANAGED = frozenset({"CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"})
 
 #: Credentials the example file prohibits outright. Nothing on this surface
-#: legitimately sets them: the capability broker holds them on its own side, and
-#: setup.bootstrap.sh strips any that arrive. So finding one in the live runtime
+#: legitimately sets them; setup.bootstrap.sh strips any that arrive. Finding one
+#: in the live runtime
 #: means it was pasted into the Environment variables field, or survived a stub
 #: that never ran — a persistent, reusable secret in a model-readable
 #: environment, which is the one thing the contract exists to prevent.
@@ -277,7 +278,8 @@ example and regenerate, or the two disagree and the drift check trusts the examp
 
 No PAT, no Graphiti bearer, no Sonar or Semgrep token, no Infisical client
 secret, no AWS key. Everything in this field is readable by anything the model
-can run. A capability reporting DEGRADED is a broker-delivery problem; pasting a
+can run. A capability reporting DEGRADED is expected on model-controlled surfaces;
+see docs/DEGRADED_MODE_CONTRACT.md — pasting a
 secret here to turn it green is a permanent compromise (contract S1/S2/S3).
 
 `verify_account_env.py` now reports a prohibited credential it finds in the live

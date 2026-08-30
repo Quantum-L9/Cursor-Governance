@@ -59,19 +59,15 @@ variables field in plaintext and everything in it is readable by the model, so a
 token there is a token the model possesses — including `INFISICAL_CLIENT_SECRET`,
 which would be a master key to the entire inventory.
 
-Authenticated work resolves through the shared **capability plane** instead. The
-session asks for a named capability; a trusted broker holds the credential and
-returns only sanitized results. `ops/secrets` remains the SSOT.
+The capability-broker experiment **never shipped** (retired 2026-08-29).
+Authenticated Sonar/Semgrep/Context7 via a broker are **not delivered** on this
+surface. That is expected, not misconfiguration — see
+`docs/DEGRADED_MODE_CONTRACT.md` for what still works (`git`, `gh api` REST,
+`uv`, local `semgrep` CE, `make pr`, every skill that does not call a retired
+capability). Infisical remains operator SSOT; nothing from it belongs here.
 
-```bash
-# capability names and status only — there is no value-returning call here
-python3 ops/secrets/bootstrap_agent_env.sh --check --surface claude-code \
-  --require-capabilities sonar.read_issues,semgrep.appsec_scan,graphiti.query
-```
-
-Raw secret export is **denied** on this surface, and on every unregistered
-surface. If a capability is unavailable, the fix is broker delivery — never
-pasting a credential into the variables field to turn a check green.
+If a capability reports `UNAVAILABLE` or `DEGRADED`, that is **never** a reason
+to paste a credential into the variables field.
 
 Two things are deliberately **absent** from the variables field because they
 name one repository while the environment is reused across many:

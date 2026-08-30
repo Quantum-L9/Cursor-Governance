@@ -27,6 +27,50 @@ proactively from their `description` / `when_to_use` signals and the canonical
 routing manifest. Explicit-only skills require direct invocation or established
 campaign authority. Skill visibility and routing are context, not mutation authority.
 
+## Cursor / Claude Code parity (skill SSOT)
+
+| Surface | Skills | Slash commands |
+|---|---|---|
+| **Cursor** | Plugin + `.cursor-commands/skills/` (SSOT) | **18** live commands only — executors, DAGs, bootstrap (`commands/COMMANDS_MANIFEST.yaml`). Skill wrappers retired to `commands/_archived/`. |
+| **Claude Code** | Symlinks under `~/.claude/skills/` and `<repo>/.claude/skills/` → `$HOME/.cursor-governance/skills/` | Same **18** non-wrapper commands under `.claude/commands/`. No command file when slash basename equals a registered skill name. |
+
+Invoke remediators and other explicit packs **as skills** (`/l9-issue-remediation`, `/l9-pr-remediation`, …). `validate_commands_manifest.py` fails closed if a new `commands/*.md` duplicates a skill name.
+
+Projection engine: `ops/scripts/claude_projection.py`.
+
+## Cloud bootstrap (Web · Mobile)
+
+Account environment triad (paste once; Mobile inherits Web):
+
+| Field | File |
+|---|---|
+| Setup script | `web/setup.bootstrap.sh` → execs `web/setup.sh` → `install.sh` |
+| Environment variables | `web/environment.env.example` |
+| Network access | `web/network-policy.md` |
+
+Keep the Setup paste **thin**: normalize env, clone `$HOME/.cursor-governance`,
+hand off. Adapter wiring (skills, commands, rules, `.mcp.json`, receipt) lives
+in `install.sh` and SessionStart self-repair — do not duplicate in the stub.
+
+Per-repo **committed** `.claude/settings.json` + hooks are required; the account
+Setup alone does not load governance into a session project.
+
+## Memory and MCP (broker retired)
+
+- Graphiti HTTPS only: `${GRAPHITI_MCP_URL}` (default
+  `https://memory.quantumaipartners.com/graphiti/mcp`). **No bearer** on hosted
+  surfaces. Do not set `L9_CAPABILITY_BROKER_URL` (never shipped).
+- `.mcp.json` is a **projection** of `mcp.template.json` (single
+  `graphiti-memory` server) via `claude_projection.py` — not a 6-server broker
+  layout.
+- Empty hydrate / `memory.mcp=DEGRADED` is honest; memory does **not** gate
+  repository writes. See `docs/DEGRADED_MODE_CONTRACT.md`.
+
+## Finish path (all Claude surfaces)
+
+Scoped commit → `l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr`.
+Hosted surfaces still run tree kernels on `make pr`; Cursor skips the tree latch.
+
 ## Invocation
 
 - Load `CANONICAL_LAW.md` first, then `AGENTS.md`, then the specific `SKILL.md`.

@@ -60,6 +60,18 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# Hosted surfaces: re-normalize when install runs outside the cached Setup path
+# (SessionStart self-repair, make claude-install on --cloud).
+if [ -n "${CLAUDE_CODE_REMOTE:-}" ] || [ -n "${CLAUDE_CODE_REMOTE_SESSION_ID:-}" ]; then
+  _l9_env_lib="$GOV_DIR/environment/agents/adapters/claude-code/lib/cloud_account_env.sh"
+  if [ -f "$_l9_env_lib" ]; then
+    # shellcheck source=lib/cloud_account_env.sh
+    source "$_l9_env_lib"
+    l9_normalize_cloud_account_env
+  fi
+  unset _l9_env_lib
+fi
+
 log()  { [ "$QUIET" = "1" ] || printf '\n=== %s ===\n' "$*"; }
 say()  { [ "$QUIET" = "1" ] || printf '%s\n' "$*"; }
 warn() { printf 'claude-adapter WARN: %s\n' "$*" >&2; }
