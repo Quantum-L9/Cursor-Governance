@@ -64,3 +64,6 @@ properties:
   degrade_reason:
     type: string
     maxLength: 500
+  close_gap:
+    type: boolean
+    default: false

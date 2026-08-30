@@ -24,6 +24,7 @@ if str(_REPO_ROOT) not in sys.path:
 from episode_contract import redact_pii  # noqa: E402
 from group_resolver import resolve_group_id  # noqa: E402
 
+from ops.graphiti.hydration import session_latches as _latches  # noqa: E402
 from ops.graphiti.hydration.identity import (  # noqa: E402
     IdentityError,
     envelope_body,
@@ -47,23 +48,9 @@ def re_safe(session_id: str) -> str:
 
 def _closes_dir(project_dir: Path) -> str:
     """Real path to project_dir/.l9/memory/closes (must stay under project root)."""
-    root_r = os.path.realpath(str(Path(project_dir).expanduser()))
-    closes_r = os.path.realpath(os.path.join(root_r, ".l9", "memory", "closes"))
-    if os.path.commonpath([root_r, closes_r]) != root_r:
-        raise ValueError("closes directory escapes project root")
-    return closes_r
+    from ops.graphiti.hydration.session_latches import closes_dir
 
-
-def _receipt_path(project_dir: Path, session_id: str) -> str:
-    """Build a receipt filesystem path under project_dir/.l9/memory/closes."""
-    safe = re_safe(session_id)
-    if not _SAFE_NAME.match(safe):
-        raise ValueError("invalid session_id for receipt path")
-    closes_r = _closes_dir(project_dir)
-    path_r = os.path.realpath(os.path.join(closes_r, f"{safe}.json"))
-    if os.path.commonpath([closes_r, path_r]) != closes_r:
-        raise ValueError("receipt path escapes closes directory")
-    return path_r
+    return closes_dir(project_dir)
 
 
 def _load_rules() -> dict[str, Any]:
@@ -78,7 +65,7 @@ def _load_rules() -> dict[str, Any]:
 
 def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
     try:
-        path_r = _receipt_path(project_dir, session_id)
+        path_r = _latches.receipt_path(project_dir, session_id)
     except ValueError:
         return False
     if not os.path.isfile(path_r):
@@ -93,29 +80,8 @@ def already_closed(project_dir: Path, session_id: str, head_hash: str) -> bool:
 
 
 def write_receipt(project_dir: Path, session_id: str, payload: dict[str, Any]) -> None:
-    """Persist a close receipt with taint-safe scalars only."""
-    path_r = _receipt_path(project_dir, session_id)
-    os.makedirs(os.path.dirname(path_r), exist_ok=True)
-    # Use the function-arg session_id (not payload) and head_hash digest only.
-    # Omit reason/agent/group/enqueue error text so CodeQL password taint from
-    # Phase B key handling cannot reach this storage sink.
-    status = payload.get("status")
-    status_out = status if status in {"closed", "closed_enqueue_failed"} else "other"
-    enqueue_ok = payload.get("enqueue_ok")
-    safe = {
-        "status": status_out,
-        "session_id": str(session_id),
-        "head_hash": str(payload.get("head_hash") or ""),
-        "phase_a": bool(payload.get("phase_a") is True),
-        "phase_b": bool(payload.get("phase_b") is True),
-        "enqueue_ok": True if enqueue_ok is True else (False if enqueue_ok is False else None),
-        "enqueue_error_present": bool(payload.get("enqueue_error")),
-        "write_count": int(payload.get("write_count") or 0),
-        "closed_at": str(payload.get("closed_at") or "")[:64],
-    }
-    # path_r is commonpath-bounded under project_dir/.l9/memory/closes
-    with open(path_r, "w", encoding="utf-8") as handle:  # NOSONAR python:S2083
-        handle.write(json.dumps(safe, indent=2, ensure_ascii=False) + "\n")
+    """Persist a close receipt with taint-safe scalars only (ADR-0028 statuses)."""
+    _latches.write_receipt(project_dir, session_id, payload)
 
 
 def _git_signal(project_dir: Path) -> str:
@@ -275,6 +241,35 @@ def _distill_signal_packet(
         return None, f"phase_b_{type(exc).__name__}"
 
 
+def _persist_early_receipt(
+    project: Path,
+    session_id: str,
+    report: dict[str, Any],
+    *,
+    status: str | None = None,
+    dry_run: bool = False,
+) -> None:
+    receipt_status = status or (
+        "close_failed" if report.get("status") in {"failed", "close_failed"} else "close_failed"
+    )
+    receipt = {
+        "status": receipt_status,
+        "session_id": session_id,
+        "phase_a": bool(report.get("phase_a")),
+        "phase_b": bool(report.get("phase_b")),
+        "write_count": len(
+            [w for w in (report.get("writes") or []) if w.get("written") or w.get("dry_run")]
+        ),
+        "closed_at": datetime.now(UTC).isoformat(),
+    }
+    report["receipt"] = receipt
+    if not dry_run:
+        try:
+            write_receipt(project, session_id, receipt)
+        except (OSError, ValueError) as exc:
+            report["warnings"].append(f"receipt write failed: {exc}")
+
+
 def close_session(
     *,
     project_dir: str | Path,
@@ -290,7 +285,7 @@ def close_session(
     clock = clock or time.monotonic
     started = clock()
     project = Path(project_dir).expanduser().resolve()
-    session_id = session_id or "default"
+    session_id = _latches.resolve_session_id(explicit=session_id)
     report: dict[str, Any] = {
         "status": "skipped",
         "session_id": session_id,
@@ -309,7 +304,8 @@ def close_session(
         )
     except IdentityError as exc:
         report["warnings"].append(str(exc))
-        report["status"] = "skipped"
+        report["status"] = "close_failed"
+        _persist_early_receipt(project, session_id, report, dry_run=dry_run)
         return report
 
     transcript, t_source = load_transcript_excerpt(
@@ -332,6 +328,7 @@ def close_session(
         report["warnings"].append(f"WARN: write blocked — {msg}")
         report["status"] = "skipped"
         report["skip_reason"] = msg
+        _persist_early_receipt(project, session_id, report, status="close_failed", dry_run=dry_run)
         return report
 
     if is_background_agent and not transcript:
@@ -412,6 +409,7 @@ def close_session(
     except Exception as exc:  # noqa: BLE001
         report["warnings"].append(f"Phase A write failed: {exc}")
         report["status"] = "failed"
+        _persist_early_receipt(project, session_id, report, status="close_failed", dry_run=dry_run)
         return report
 
     elapsed_a = clock() - started
