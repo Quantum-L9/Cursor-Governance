@@ -110,7 +110,17 @@ def test_preflight_fails_without_l4(tmp_path: Path) -> None:
 
 def test_preflight_passes_after_authorize(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
-    env = {"L9_L4_LOCAL_AUTONOMY": "1", "WS": str(repo), "PR_BASE": "main"}
+    # Empty L9_AUTONOMY_STATE_DIR keeps L4 state inside this temp repo, so the
+    # authorize step and the preflight that reads it back agree on one location.
+    # Inheriting the developer value put them in different places — writer and
+    # reader resolve it independently — and the authorized release then looked
+    # unauthorized. Same reason the other two lifecycle tests pin it.
+    env = {
+        "L9_L4_LOCAL_AUTONOMY": "1",
+        "WS": str(repo),
+        "PR_BASE": "main",
+        "L9_AUTONOMY_STATE_DIR": "",
+    }
     assert (
         _run(["python3", str(L4), "--workspace", str(repo), "begin"], cwd=repo, env=env).returncode
         == 0

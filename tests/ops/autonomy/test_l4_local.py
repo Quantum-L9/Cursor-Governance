@@ -10,8 +10,6 @@ from pathlib import Path
 
 import pytest
 
-from conftest import git_in
-
 ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
@@ -208,18 +206,29 @@ def test_pr_template_names_the_released_repos_own_template(stacked_repo: Path) -
 # ---------------------------------------------------------------------------
 
 
+def _git(repo: Path, *args: str) -> None:
+    """Local git helper.
+
+    Deliberately not imported from tests/ops/autonomy/conftest.py: under a
+    full-suite run pytest's rootdir puts the REPO-ROOT conftest on sys.path, so
+    `from conftest import git_in` resolves to the wrong module and the whole
+    file fails to collect. A three-line helper beats a fragile import.
+    """
+    subprocess.run(["git", "-C", str(repo), *args], check=True, capture_output=True)
+
+
 def _sibling_repo(tmp_path: Path, name: str, branch: str) -> Path:
     """A second checkout carrying the SAME branch name as `stacked_repo`."""
     repo = tmp_path / name
     repo.mkdir()
-    git_in(repo, "init")
-    git_in(repo, "config", "user.email", "test@example.com")
-    git_in(repo, "config", "user.name", "test")
+    _git(repo, "init")
+    _git(repo, "config", "user.email", "test@example.com")
+    _git(repo, "config", "user.name", "test")
     (repo / "README.md").write_text("x\n", encoding="utf-8")
-    git_in(repo, "add", "README.md")
-    git_in(repo, "commit", "-m", "init")
-    git_in(repo, "branch", "-M", "main")
-    git_in(repo, "checkout", "-b", branch)
+    _git(repo, "add", "README.md")
+    _git(repo, "commit", "-m", "init")
+    _git(repo, "branch", "-M", "main")
+    _git(repo, "checkout", "-b", branch)
     return repo
 
 
