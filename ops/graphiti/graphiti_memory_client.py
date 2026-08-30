@@ -742,6 +742,9 @@ def cmd_bootstrap(args: argparse.Namespace) -> int:
         "sources": [str(p.relative_to(repo)) for p in _discover_bootstrap_sources(repo)],
         "seeded_at": datetime.now(UTC).isoformat(),
     }
+    if (repo / "reports" / "repo-index").is_dir():
+        # Path pointer only — never ingest catalog bodies (ADR-0028).
+        manifest["sources"].append("reports/repo-index/")
     seed_name = _bootstrap_seed_name(group_id)
     body = json.dumps(manifest, indent=2)
 

@@ -1162,3 +1162,22 @@ Fail-open. SessionEnd does not `make pr`, push, or merge. Sibling
 worktrees are not closed. Cap 200 novel paths per run; overflow stays in
 `dirty_files`. If `novel_parked>0`, say "N unique paths on l9/dirt-shelf"
 — not N dirty files.
+
+<!-- L9_HYDRATE_CLOSE_VISIBLE_V1 -->
+## Hydrate close visibility (2026-08-30)
+
+This fragment does not rewrite `MEMORY_PIPELINE_MAP.md` or ADR-0005 / ADR-0006.
+
+- SessionStart writes `.l9/memory/opens/` and rotates `previous_opened.json`.
+  Compile treats a prior session with no receipt, `write_count=0`, or no
+  `session=<id>` PICKUP as a **close-gap**. `additional_context` then **leads**
+  with `DEGRADED` and `REPAIR: /end-session`.
+- sessionEnd always writes a close receipt when the project dir is known.
+  `write_count=0` gets one `graphiti_memory_client` pickup_context fallback.
+  Local receipts are latches, not resume SSOT.
+- `/end-session` primary is `graphiti_memory_client.py write` (or
+  `hydration.cli repair-write`). Do not prefer `hydration.cli close`.
+- Mid-session T2 writes (`lesson` / `insight` / structured PICKUP) stay the
+  live path. Do not dump `reports/repo-index` bodies into Graphiti; `bootstrap`
+  RepoManifest may list `reports/repo-index/` as a path pointer only.
+- Authority: `docs/decisions/ADR-0028-session-hydrate-close-visibility.md`.

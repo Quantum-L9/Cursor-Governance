@@ -1,7 +1,7 @@
 # Memory Pipeline Map (live path SSOT)
 
 Canonical narrative for agent episodic memory in Quantum-L9 coding workspaces.
-Authority: CANONICAL_LAW §2.1 / §8, ADR-0005, rules `03-graphiti-memory` + `87-cursor-memory-kernel`.
+Authority: CANONICAL_LAW §2.1 / §8, ADR-0005, ADR-0028, rules `03-graphiti-memory` + `87-cursor-memory-kernel`.
 
 ## One store
 
@@ -20,16 +20,23 @@ Authority: CANONICAL_LAW §2.1 / §8, ADR-0005, rules `03-graphiti-memory` + `87
 ```text
 sessionStart
   → resolve group_id from CURSOR_PROJECT_DIR
-  → compile SessionHydrationPacket (PICKUP + facts)
+  → write open latch (.l9/memory/opens + rotate previous_opened / last_opened)
+  → compile SessionHydrationPacket (PICKUP + facts + close-gap check)
+  → if prior session missing receipt / write_count=0 / no session PICKUP:
+      lead additional_context with DEGRADED + REPAIR: /end-session (ADR-0028)
   → emit additional_context with objective + next= + compact JSON
   → inject receipt for gates (fail-open if Graphiti down)
 
 session work
-  → atomic writes via CLI/bridge with required agent_id
+  → atomic T2 writes via CLI (`lesson` / `insight` / structured PICKUP)
   → source_description = agent={id};kind={kind}
 
 sessionEnd (X-out / window_close / completed / aborted)
+  → Phase A/B via close_session.py; always write a close receipt
+  → if write_count=0: one graphiti_memory_client pickup_context fallback
+  → stderr ERROR on skip/fail; enqueue failure still exit 2
   → idempotent receipt under .l9/memory/closes/{session_id}.json
+    (latches only — not resume SSOT)
   → Phase A (≤8s): heuristic pickup_context + session_summary
   → Phase B (≤18s, if key + time): SessionSignalPacket via fixed-host OpenAI
     helper (`ops/graphiti/hydration/openai_fixed_host.py`); ephemeral key from
@@ -70,13 +77,16 @@ Every new episode must be searchable by `agent=` in `source_description` and sta
 
 ## `/end-session` — force-retry / offline recovery only
 
-Normal closes are automatic. Use `/end-session` (skill `l9-end-session`) only when:
+Normal closes are automatic. Use `/end-session` (skill `l9-end-session`) when
+SessionStart prints `REPAIR: /end-session`, or:
 
 - sessionEnd hook failed or was skipped (offline, missing project dir)
 - you need a richer manual PICKUP after a degraded close
 - governance backup / Redis handoff must be forced interactively
 
-Do not treat `/end-session` as required for every X-out.
+**Primary repair** is `graphiti_memory_client.py write --kind pickup_context`
+(or `hydration.cli repair-write`). Do not prefer `hydration.cli close`.
+Do not treat `/end-session` as required for every X-out. See ADR-0028.
 
 ## Budgets
 
