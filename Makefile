@@ -876,3 +876,11 @@ pr: export PR_EARLY_OVERLAP = 1
 # and aborts `make precommit-repo`. Make 4.x snapshots that form; `:=` snapshots
 # on both. A bare `export PR_STACK` is a prerequisite named `export` on 3.81.
 precommit-repo: export PR_STACK := $(PR_STACK)
+
+.PHONY: pr-security-full
+## Full Semgrep packs (p/python + p/secrets + local rules) on changed files.
+pr-security-full:
+	PR_SECURITY_PROFILE=full PR_SECURITY_ADVISORY="$(PR_SECURITY_ADVISORY)" PR_BASE="$(PR_BASE)" \
+		bash ops/scripts/run_pr_security.sh "$(WS)"
+
+pr-full: pr-security-full
