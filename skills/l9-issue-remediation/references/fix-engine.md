@@ -12,7 +12,7 @@ updated: 2026-08-13
 
 # Fix Engine
 
-Concurrent safe codebase fixes for one sticky cluster → local verify → one commit.
+Concurrent safe codebase fixes for one cluster → local verify → land on a PR.
 
 ## Lesson Recall (before inventing a fix)
 
@@ -38,14 +38,20 @@ rg -i "<error class or key phrase>" \
 5. Run every locally reproducible required gate for that repo (lint/type/test).
 6. On fail: fix and re-run all (≤5 iterations). If a fix breaks a gate, revert that
    fix and defer with reason.
-7. One conventional commit + push with trailer:
+7. One conventional commit with trailer:
 
 ```text
 Issue-Remediation-Cycle: {owner}/{repo}#{issue}/cycle-{N}
 ```
 
-8. If a PR is needed or already open →
-   [handoff-to-pr-remediation.md](handoff-to-pr-remediation.md).
+8. Land the commit per [pr-landing.md](pr-landing.md) (`scripts/pr_landing.py`):
+   matching open PR → `git push` that branch; else `PR_REMEDIATE=0 make pr`
+   stacked on the newest open PR (`PR_STACK=auto`); else first PR on
+   `origin/main`. PR body lists `Fixes #n` for every cluster issue.
+9. Close the issue once the fix is on that PR
+   (`scripts/close_resolved_issue.py --on-pr`). Do **not** invoke
+   `/l9-pr-remediation` here — that waits for `open_issues=0`
+   ([handoff-to-pr-remediation.md](handoff-to-pr-remediation.md)).
 
 ## Forbidden
 

@@ -1048,3 +1048,19 @@ history. Those sentences stay on disk only where already rewritten.
 - **`/ff --clone`** / `make ff-clone` = working copy only.
 - **`/ff --ssot`** / `make ff-ssot` = SSOT only.
 - Use the flags from other repos. Do not diagnose. Do not sequential-ff.
+
+<!-- L9_ISSUE_REMEDIATE_AUTOMATION_V1 -->
+## `/issues` remediator (2026-08-29)
+
+Remediator slashes **`/issues`** and **`/l9-issue-remediation`** are Converge
+by default. `/issues diagnose` (or “what’s blocking?”) is the auditor: inventory
+plus already-resolved close only. Diagnose never starts `/l9-pr-remediation`.
+
+Converge drains all automatable clusters, highest leverage first. Land each
+fix on the matching open PR, else a new stacked PR on the newest
+(`PR_STACK=auto`). Close when `status=fixed` (`close_resolved_issue.py`) so
+the issue does not stay OPEN.
+
+**`/l9-pr-remediation` runs only after bound-target `open_issues=0`.** Zero
+means zero. Leftover HUMAN/EXTERNAL OPEN issues are `BLOCKED_OPEN_ISSUES` —
+do not weaken to an automatable subset. The issue skill never `gh pr merge`.
