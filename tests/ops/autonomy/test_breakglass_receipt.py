@@ -13,11 +13,12 @@ sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
 import breakglass_receipt as bg  # noqa: E402
 
-
 NOW = datetime(2026, 8, 29, 15, 0, 0, tzinfo=UTC)
 
 
-def test_standing_env_without_receipt_is_inert(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_standing_env_without_receipt_is_inert(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setenv(bg.OVERRIDE_ENV, "incident-1234")
     monkeypatch.setenv(bg.RECEIPT_ENV, str(tmp_path / "missing.json"))
     assert bg.active_publish_path_reason(now=NOW) == ""

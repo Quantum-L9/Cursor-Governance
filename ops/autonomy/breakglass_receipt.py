@@ -84,9 +84,7 @@ def evaluate(
     if receipt is None:
         if standing:
             base["status"] = "inert_env"
-            base["detail"] = (
-                f"{OVERRIDE_ENV} is set but inert without a valid breakglass receipt"
-            )
+            base["detail"] = f"{OVERRIDE_ENV} is set but inert without a valid breakglass receipt"
         else:
             base["status"] = "none"
             base["detail"] = "no publish-path breakglass in force"

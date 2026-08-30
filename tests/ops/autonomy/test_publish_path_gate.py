@@ -280,9 +280,7 @@ def test_cursor_shell_allows_remediator_git_push(
     assert json.loads("".join(captured.parts))["permission"] == "allow"
 
 
-def test_standing_override_env_is_inert(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_standing_override_env_is_inert(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """A pasted L9_PUBLISH_PATH_OVERRIDE string must not widen the publish plane."""
     monkeypatch.setenv(gate.PUBLISH_PATH_OVERRIDE_ENV, "incident-1234")
     monkeypatch.delenv("L9_PUBLISH_PATH_RECEIPT", raising=False)

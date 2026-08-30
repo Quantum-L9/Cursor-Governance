@@ -230,8 +230,7 @@ def reprobe_degraded(result: dict[str, Any]) -> dict[str, Any]:
             continue
         if key not in reasons or not reasons[key]:
             reasons[key] = (
-                f"{value}: last recorded state; SessionStart re-probe is fail-soft "
-                f"(see {log_path})"
+                f"{value}: last recorded state; SessionStart re-probe is fail-soft (see {log_path})"
             )
     result["reasons"] = reasons
     return result
