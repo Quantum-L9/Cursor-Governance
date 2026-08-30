@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-30T03:36:31Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-30T18:47:56Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -23,7 +23,7 @@ Generated: `2026-08-30T03:36:31Z`. Source: `rules/*.mdc`.
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 70 | `93cd8a5cbf32` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
-| `06-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | git | always | 56 | `a8c0978cff70` |
+| `06-governance-ssot-paths.mdc` | `l9.rule.governance-ssot-paths` | global | git | always | 56 | `d08e5923b2c6` |
 | `08-vps-ops.mdc` | `l9.rule.08.vps.ops` | global | git | agent_requested | 192 | `8ca195f6994d` |
 | `09-execute-as-instructed.mdc` | `l9.rule.09.execute.as.instructed` | global | general | always | 48 | `13d3fb355837` |
 | `10-lang-typescript.mdc` | `l9.rule.10.lang.typescript` | global | typescript | agent_requested | 182 | `bb98eadfc112` |
@@ -42,17 +42,17 @@ Generated: `2026-08-30T03:36:31Z`. Source: `rules/*.mdc`.
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `76c8cba8c93a` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
 | `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 130 | `fa1919b48e7b` |
-| `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 92 | `f70eda56dbbc` |
+| `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 94 | `6171469f5516` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
 | `52-qa-jest.mdc` | `l9.rule.52.qa.jest` | global | testing | agent_requested | 35 | `38f6e2e26683` |
 | `53-pr-overlap-guardrail.mdc` | `l9.rule.53.pr.overlap.guardrail` | global | git | always | 117 | `f0ca4633d6a1` |
 | `54-context-sensitive-git-guardrails.mdc` | `l9.rule.54.git.guardrails` | global | git | always | 78 | `22327366534e` |
-| `55-ff-only-ssot-sync.mdc` | `l9.rule.55.ff.only.ssot.sync` | global | git | always | 65 | `1d24650ccf3d` |
+| `55-ff-only-ssot-sync.mdc` | `l9.rule.55.ff.only.ssot.sync` | global | git | always | 71 | `2f96be733d68` |
 | `59-incident-lessons.mdc` | `l9.rule.incident.lessons` | global | deployment | agent_requested | 22 | `3fb8e334a6b1` |
 | `60-anti-patterns.mdc` | `l9.rule.anti.patterns` | global | testing | always | 27 | `664ff6afbb7f` |
 | `61-secrets-and-dependencies.mdc` | `l9.rule.61.secrets.and.dependencies` | global | security | agent_requested | 50 | `d90a13c2549a` |
-| `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 23 | `9b4abefa8ef4` |
+| `62-github-openclaw-authority.mdc` | `l9.rule.62.github.openclaw.authority` | global | git | always | 27 | `8083a57ba87c` |
 | `63-env-no-hardcode.mdc` | `l9.rule.configuration.no-hardcode` | global | general | auto_attached | 42 | `369e0ab6d90f` |
 | `65-observability-performance.mdc` | `l9.rule.65.observability.performance` | global | memory | agent_requested | 43 | `888c5c4b9057` |
 | `69-ide-profile-exceptions.mdc` | `l9.rule.ide-profile-exceptions` | global | general | agent_requested | 49 | `2bc076e7c46c` |

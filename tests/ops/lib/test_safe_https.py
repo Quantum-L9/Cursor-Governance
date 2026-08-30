@@ -35,6 +35,14 @@ def test_fetchers_do_not_call_urllib_urlopen() -> None:
         assert "from urllib.request import urlopen" not in src
 
 
+def test_issue_comment_sends_user_agent() -> None:
+    src = (
+        REPO / "skills" / "l9-issue-remediation" / "scripts" / "post_issue_comment.py"
+    ).read_text(encoding="utf-8")
+    assert "User-Agent" in src
+    assert "Quantum-L9-l9-issue-remediation" in src
+
+
 def test_require_https_url_rejects_file_and_http() -> None:
     hosts = frozenset({"api.github.com"})
     with pytest.raises(ValueError, match="non-https"):

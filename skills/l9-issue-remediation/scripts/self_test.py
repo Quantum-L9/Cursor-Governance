@@ -230,6 +230,12 @@ def test_open_issues_gate() -> None:
         _fail(f"open_issues=0 converge must chain: {ok}")
 
 
+def test_comment_sends_user_agent() -> None:
+    src = (ROOT / "scripts" / "post_issue_comment.py").read_text(encoding="utf-8")
+    _need(src, "User-Agent", "post_issue_comment.py")
+    _need(src, "Quantum-L9-l9-issue-remediation", "post_issue_comment.py")
+
+
 def test_skill_defaults() -> None:
     _need(SKILL, "max_clusters_per_invoke: all", "SKILL.md")
     _need(SKILL, "chain_pr_remediation: after_open_issues_zero", "SKILL.md")
@@ -261,6 +267,7 @@ def main() -> int:
     test_command_open_issues_gate()
     test_pr_landing()
     test_open_issues_gate()
+    test_comment_sends_user_agent()
     test_skill_defaults()
     print("PASS: l9-issue-remediation self_test")
     return 0
