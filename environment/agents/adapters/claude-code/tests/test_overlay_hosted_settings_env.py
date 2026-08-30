@@ -72,9 +72,9 @@ class OverlayHostedSettingsEnvTests(unittest.TestCase):
             local_env = json.loads(
                 (workspace / ".claude" / "settings.local.json").read_text(encoding="utf-8")
             )["env"]
-            user_env = json.loads(
-                (home / ".claude" / "settings.json").read_text(encoding="utf-8")
-            )["env"]
+            user_env = json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))[
+                "env"
+            ]
             self.assertEqual(local_env["L9_AUTONOMY_MAX_PARALLEL"], "8")
             self.assertEqual(user_env["L9_AUTONOMY_MAX_PARALLEL"], "8")
             self.assertEqual(local_env["L9_GOVERNANCE_SURFACE"], "claude-code")

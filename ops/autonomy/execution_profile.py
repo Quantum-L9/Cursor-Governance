@@ -183,9 +183,12 @@ def resolve(
     guideline, guideline_source = read_setting("workflowSizeGuideline", workspace, home)
     disable_workflows, _ = read_setting("disableWorkflows", workspace, home)
     native_limit = _int_env(env, "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS")
-    spawn_depth_live = _int_env(env, "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH")
-    spawn_depth_declared = declared_env_int(
-        "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH", workspace, home
+    spawn_key = "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH"
+    spawn_depth_live = _int_env(env, spawn_key)
+    # Gated on the set so the constant is load-bearing: a name added to
+    # RUNTIME_DECREMENTED changes behaviour here rather than only documenting it.
+    spawn_depth_declared = (
+        declared_env_int(spawn_key, workspace, home) if spawn_key in RUNTIME_DECREMENTED else None
     )
     # Declared wins where it exists: a decremented live value describes this
     # agent's remaining nesting budget, not a misconfiguration. Where nothing is
@@ -294,7 +297,6 @@ def _claude_defects(
             "subagent onto one model — role-specific model choice is the policy"
         )
     return defects
-
 
 
 def _depth_note(resolved: Mapping[str, Any]) -> str:

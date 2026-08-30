@@ -17,6 +17,7 @@ ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT / "ops" / "autonomy"))
 
 from execution_profile import (  # noqa: E402
+    RUNTIME_DECREMENTED,
     classify,
     load_policy,
     render_block,
@@ -196,6 +197,22 @@ def test_a_genuinely_undeclared_low_depth_is_still_a_defect(tmp_path: Path) -> N
     resolved = _resolve(env, tmp_path)
     assert resolved["subagent_spawn_depth_declared"] is None
     assert any("nested delegation" in d for d in resolved["defects"])
+
+
+def test_runtime_decremented_set_agrees_with_verify_account_env() -> None:
+    """The two modules previously reached opposite verdicts on the same variable
+    in one banner. The comment saying they must agree is worth nothing unless
+    something fails when they drift, so assert it."""
+
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_verify_account_env",
+        ROOT / "environment/agents/adapters/claude-code/verify_account_env.py",
+    )
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    assert RUNTIME_DECREMENTED == module.RUNTIME_MANAGED
 
 
 def test_global_subagent_model_override_is_a_defect(tmp_path: Path) -> None:
