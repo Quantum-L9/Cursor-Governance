@@ -211,10 +211,15 @@ if GOV=$(resolve_governance_dir); then
   LINES+=("authority order: CANONICAL_LAW.md > Autonomy Surface Profile > AGENTS.md > skills > agent-invented contracts")
   if [ -d "$GOV/skills" ]; then
     n=$(find "$GOV/skills" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+    # -L is load-bearing: every entry under .claude/skills is a SYMLINK to a
+    # directory in the governance clone. Without -L, find refuses to descend and
+    # the count reports the handful of real directories -- it printed
+    # "skills loadable: 1" against 54 resolvable skills, which is precisely the
+    # line an operator reads to conclude that skills failed to load.
     loadable=0
     for d in "$WORKSPACE/.claude/skills" "$HOME/.claude/skills"; do
       if [ -d "$d" ]; then
-        c=$(find "$d" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
+        c=$(find -L "$d" -maxdepth 2 -name SKILL.md 2>/dev/null | wc -l | tr -d ' ')
         loadable=$((loadable + c))
       fi
     done
@@ -469,7 +474,21 @@ print("primary_blocker=" + str(notes.get("Graphiti_authenticated_health") or "no
   while IFS= read -r line || [ -n "$line" ]; do
     [ -n "$line" ] && LINES+=("$line")
   done <<< "$parsed"
-  LINES+=("mcp_configuration=.mcp.json is a projection of mcp.template.json (single MCP authority)")
+  # .mcp.json is the single authority over the servers GOVERNANCE configures --
+  # not over the session's MCP surface. Hosted surfaces inject servers (github,
+  # and others) that governance neither configures nor gates, so the unqualified
+  # "single MCP authority" claim was false wherever it mattered.
+  mcp_managed="$(timeout 10 python3 -c '
+import json, sys
+try:
+    with open(sys.argv[1], encoding="utf-8") as fh:
+        servers = sorted((json.load(fh).get("mcpServers") or {}))
+except Exception:
+    sys.exit(1)
+print(", ".join(servers) if servers else "none")
+' "$WORKSPACE/.mcp.json" 2>/dev/null || echo "unreadable")"
+  LINES+=("mcp_configuration=.mcp.json is a projection of mcp.template.json; it is the single authority over GOVERNANCE-MANAGED servers only [$mcp_managed]")
+  LINES+=("mcp_platform_injected=this surface may also carry platform-injected servers that governance does not configure or gate -- read the live tool surface, not this file, for the full set")
 }
 
 # --- Final machine-readable readiness receipt (Phase 7) ---------------------
