@@ -19,9 +19,7 @@ from typing import Any
 
 GH_TIMEOUT_SEC = 30
 CHUNK_SIZE = 6
-VALID_DISPOSITIONS = frozenset(
-    {"fixed", "deferred", "acknowledged", "disagreed"}
-)
+VALID_DISPOSITIONS = frozenset({"fixed", "deferred", "acknowledged", "disagreed"})
 
 
 def _log(msg: str) -> None:
@@ -67,9 +65,7 @@ def _chunks(items: list[Any], size: int) -> list[list[Any]]:
     return [items[i : i + size] for i in range(0, len(items), size)]
 
 
-def _require_inspected(
-    prs: list[dict[str, Any]], *, summary_only: bool = False
-) -> None:
+def _require_inspected(prs: list[dict[str, Any]], *, summary_only: bool = False) -> None:
     for pr in prs:
         for th in pr.get("threads") or []:
             if th.get("inspected") is not True:
