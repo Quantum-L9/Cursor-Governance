@@ -24,6 +24,18 @@ _SECRET_PATTERNS: tuple[tuple[re.Pattern[str], str], ...] = (
 )
 
 
+_ALLOWLIST_LINE = re.compile(
+    r"(?i)("
+    r"^(error|warning|fatal|fail)[:\s]"
+    r"|permission denied"
+    r"|max(?:imum)? (?:number of )?turns"
+    r"|exit[_ ]?code"
+    r"|unauthorized|forbidden|not allowed"
+    r"|timed? ?out"
+    r")"
+)
+
+
 def redacted_excerpt(text: str | None, *, limit: int = _EXCERPT_LIMIT) -> str | None:
     if not isinstance(text, str) or not text:
         return None
@@ -34,3 +46,22 @@ def redacted_excerpt(text: str | None, *, limit: int = _EXCERPT_LIMIT) -> str | 
     if not sanitized:
         return None
     return sanitized[-limit:]
+
+
+def allowlisted_excerpt(text: str | None, *, limit: int = _EXCERPT_LIMIT) -> str | None:
+    """Keep only shape-validated diagnostic lines, then redact secrets.
+
+    Arbitrary CLI/JSON dumps are dropped. Digests stay on the caller.
+    """
+    if not isinstance(text, str) or not text:
+        return None
+    kept = []
+    for raw in text.splitlines():
+        line = raw.strip()
+        if not line or line[:1] in "{[":
+            continue
+        if _ALLOWLIST_LINE.search(line):
+            kept.append(line)
+    if not kept:
+        return None
+    return redacted_excerpt("\n".join(kept), limit=limit)
