@@ -5,7 +5,9 @@
 2. Merge-patch `~/.claude/settings.json` (preserve enabledPlugins / theme / extras)
 3. Merge-patch consumer `<workspace>/.claude/settings.json` (template-managed
    keys win; consumer-owned keys such as `enabledPlugins` survive) and install
-   `<workspace>/.claude/hooks/*` as real files
+   `<workspace>/.claude/hooks/*` as real files. A git-tracked workspace
+   settings file keeps its own `hooks` registrations, composed with the
+   template's — never wholesale-replaced (issue #281)
 
 Usage:
   python3 ops/scripts/reconcile_claude_settings.py --root "$HOME/.cursor-governance"
@@ -18,6 +20,7 @@ from __future__ import annotations
 import argparse
 import json
 import shutil
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any
@@ -89,8 +92,36 @@ def consumer_settings(template: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _compose_hook_groups(
+    template_hooks: dict[str, Any], existing_hooks: dict[str, Any]
+) -> dict[str, Any]:
+    """Union hook registrations: consumer groups first, governance appended.
+
+    A git-tracked workspace settings.json may carry the repo's own guards —
+    Cognitive.Engine.Graphs keeps a banned-pattern PreToolUse contract there —
+    and wholesale template replacement silently disables them for the whole
+    session (issue #281). Compose instead: keep every consumer group, add the
+    governance groups that are not already present (deep-equal dedupe), so a
+    file whose hooks already equal the template stays byte-identical and
+    reconciliation remains churn-free.
+    """
+    merged: dict[str, Any] = json.loads(json.dumps(existing_hooks))
+    for event, template_groups in template_hooks.items():
+        groups = merged.setdefault(event, [])
+        seen = {json.dumps(group, sort_keys=True) for group in groups}
+        for group in template_groups:
+            key = json.dumps(group, sort_keys=True)
+            if key not in seen:
+                groups.append(json.loads(json.dumps(group)))
+                seen.add(key)
+    return merged
+
+
 def merge_workspace_settings(
-    template: dict[str, Any], existing: dict[str, Any] | None
+    template: dict[str, Any],
+    existing: dict[str, Any] | None,
+    *,
+    compose_hooks: bool = False,
 ) -> dict[str, Any]:
     """Managed keys from the template; every consumer-owned key survives.
 
@@ -100,9 +131,17 @@ def merge_workspace_settings(
     (notably `enabledPlugins`, written by `claude plugin install -s project`)
     are appended, never dropped: the old whole-file write silently deleted
     them on every settings reconcile that ran after a plugin install.
+
+    `compose_hooks` (set when the workspace settings file is git-tracked)
+    unions hook registrations instead of letting the template win wholesale:
+    the repo owns a tracked file, and its PreToolUse/Stop guards must survive
+    reconciliation (issue #281). An untracked injected file stays wholly
+    template-managed so retired governance hooks do not linger.
     """
     base = dict(existing or {})
     out = consumer_settings(template)
+    if compose_hooks and isinstance(base.get("hooks"), dict):
+        out["hooks"] = _compose_hook_groups(template.get("hooks", {}), base["hooks"])
     for key, value in base.items():
         if key in out or str(key).startswith("_"):
             continue
@@ -232,6 +271,32 @@ def uninstall_user(*, check: bool) -> dict[str, Any]:
     return {"wrote": wrote, "drift": drift, "removed": removed}
 
 
+def settings_is_git_tracked(workspace: Path) -> bool:
+    """True when the workspace tracks `.claude/settings.json` (repo-owned file).
+
+    Tracked is the ownership signal, not file presence: a container-injected
+    file is untracked and wholly template-managed, while a tracked file is repo
+    content whose hooks must be composed with — never replaced by — the
+    template (issue #281). A workspace that is not a git repository is
+    untracked by definition.
+    """
+    proc = subprocess.run(
+        [
+            "git",
+            "-C",
+            str(workspace),
+            "ls-files",
+            "--error-unmatch",
+            "--",
+            ".claude/settings.json",
+        ],
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    return proc.returncode == 0
+
+
 def reconcile_workspace(
     root: Path, workspace: Path, template: dict[str, Any], *, check: bool
 ) -> dict[str, Any]:
@@ -240,10 +305,11 @@ def reconcile_workspace(
     claude = workspace / ".claude"
     settings_path = claude / "settings.json"
     existing = load_json(settings_path) if settings_path.is_file() else None
+    tracked = settings_is_git_tracked(workspace)
     drift.extend(
         write_if_changed(
             settings_path,
-            dump_json(merge_workspace_settings(template, existing)),
+            dump_json(merge_workspace_settings(template, existing, compose_hooks=tracked)),
             check=check,
             wrote=wrote,
         )
