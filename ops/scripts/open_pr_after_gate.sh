@@ -13,7 +13,9 @@ PR_REMEDIATE="${PR_REMEDIATE:-1}"
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
-resolve_governance_paths || true
+if ! resolve_governance_paths; then
+  GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+fi
 # shellcheck source=lib/fetch_receipt.sh
 source "$SCRIPT_DIR/lib/fetch_receipt.sh"
 # shellcheck source=lib/resolve_pr_stack.sh
@@ -212,7 +214,7 @@ _push_with_bounded_recover() {
     git fetch origin "$BASE_REF" || return 1
     git merge --no-edit "origin/$BASE_REF" || return 1
     if [ -f "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" ]; then
-      python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" --force || true
+      python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" --force || return 1
     fi
     attempt=$((attempt + 1))
   done
