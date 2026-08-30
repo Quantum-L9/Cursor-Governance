@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-30T04:36:24Z'
+generated_utc: '2026-08-30T18:19:17Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:a583e29356c944be9f7c92178b550df9ea6a705625377666f4d6c96b4e2fc200
+source_tree_digest: sha256:14b18069bdf20077645436855fa38bfbef006cc3090069d67c2cc818e270c568
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -273,8 +273,8 @@ rules:
   globs: null
   first_heading: Context7 Auto-Invoke (External Docs)
   has_yaml_frontmatter: true
-  line_count: 74
-  content_digest: sha256:ac701b392ee6abb7e28c1298f74f41a0d2d55c140113e1a37d0d792aa92f95cc
+  line_count: 73
+  content_digest: sha256:7ceac6084da9eae1edf3499748750d8867e4c9bf06dcccfa6f7f0272768706cd
   authority: canonical_global
   context_cost: minimal
   deprecated: false

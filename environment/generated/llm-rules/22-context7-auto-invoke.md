@@ -1,7 +1,6 @@
 ---
 description: Auto-invoke Context7 MCP before coding on external libraries —FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools, APIs, MCP, install, Docker.
 ---
-<!-- capability_precondition: requires_mcp=context7 -->
 
 # Context7 Auto-Invoke (External Docs)
 
