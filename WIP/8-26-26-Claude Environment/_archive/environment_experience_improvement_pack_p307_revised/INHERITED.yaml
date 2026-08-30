@@ -1,0 +1,95 @@
+schema: l9.environment_experience.inheritance/v1
+pack_revision: p307-r2
+predecessor_pack: WIP/8-26-26/environment_experience_improvement_pack_p307
+predecessor_assessed_against_sha: 30c6ecd4
+assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+
+rule: >
+  This revision reconciles DELIVERY STATE against current main. It does not re-run the
+  source-pack reconciliation that produced the corpus. Artifacts recording that
+  reconciliation, and artifacts describing observations rather than forward work, are
+  carried forward BYTE-IDENTICAL and are listed below with the reason for each. This pack
+  is self-contained: the inherited files are physically present, not referenced.
+
+verification: >
+  Byte-identity against the predecessor is asserted per file and is checkable with
+  `diff -r` between the two pack directories — the only differences must be the six revised
+  artifacts and the two new ones.
+
+execution_wave_1: >
+  Wave 1 (2026-08-29, PR#360) wrote execution state back into the SAME six revised artifacts
+  and touched none of the fourteen inherited ones, so the byte-identity claim above is
+  unaffected and still checkable exactly as stated. Execution state is additive and separately
+  stamped — progress.yaml gains an `execution` block, each delivered record gains an
+  `execution` sub-block and keeps its `residual_as_assessed` — so no assessment field changed
+  meaning. No new store was created for delivery state: a third store is the CI-035 failure
+  this pack exists to stop repeating.
+
+revised_here:
+- path: README.md
+  why: pack identity, status, roadmap and structure all move with the new binding
+- path: PROGRESS.md
+  why: full re-assessment, three status corrections, re-derived execution order
+- path: progress.yaml
+  why: per-record disposition, evidence, queue, lane, schedule slot, effort weight, leverage
+- path: improvements.yaml
+  why: >
+    rewritten progress blocks, re-derived dependencies, CI-037 promoted to a first-class
+    record so the two stores stop disagreeing about how many records the pack has
+- path: IMPROVEMENT_PLAN.md
+  why: the active queue shrank from an implied 34 to an explicit 27 and was reordered
+- path: OPEN_DECISIONS.yaml
+  why: re-checked at this binding; OD-001, OD-006 and OD-007 moved
+
+new_here:
+- path: INHERITED.yaml
+  why: this file — names what is carried forward and why, so inheritance is a claim with reasons rather than an absence of change
+- path: _reconciliation/CURRENT_STATE_RECONCILIATION.yaml
+  why: the audit ledger for this pass — binding, method, per-record disposition, every corrected and invalidated claim, validation results
+
+inherited_unchanged:
+- path: ARCHITECTURE.md
+  why: >
+    Reconciled control-system boundaries and dependency direction. This pass produced no
+    evidence that any boundary moved; the four live findings are instances of the coarse-state
+    seam it already names, not new structure.
+- path: LAWS_AND_INVARIANTS.md
+  why: evidence-derived safety/ownership/freshness invariants; none was contradicted at this binding
+- path: EXPERIENCE_REPORT.md
+  why: human synthesis of the source sessions; historical by construction
+- path: FRICTION_AND_FAILURES.md
+  why: >
+    recurring and context-specific defects as observed in the source packs. Delivery state
+    against them lives in progress.yaml, not here.
+- path: environment_inventory.yaml
+  why: cross-session environment/capability model from the source corpus
+- path: experience.yaml
+  why: canonical machine record of source-session experience
+- path: failures.yaml
+  why: canonical machine failure records; this pass judged remedies, not the failure corpus
+- path: friction.yaml
+  why: canonical machine friction records; same reason
+- path: _reconciliation/CORPUS.yaml
+  why: the 11 discovered / 9 unique source archives — fixed at source-pack generation
+- path: _reconciliation/LINEAGE.yaml
+  why: pack-to-pack supersession among the nine sources — fixed at generation
+- path: _reconciliation/SOURCE_MAP.yaml
+  why: every final artifact back to its source versions/paths — still the lineage authority
+- path: _reconciliation/COMPLETENESS_MATRIX.yaml
+  why: disposition of all 93 source objects — a source-reconciliation record, not a delivery record
+- path: _reconciliation/RECONCILIATION_LEDGER.yaml
+  why: merge/keep/supersede choices among the nine source packs
+- path: _reconciliation/CONFLICTS.yaml
+  why: >
+    unresolved source conflicts. Re-read at this binding; none was resolved or newly
+    contradicted by the 59 commits, so it is carried forward rather than restated.
+
+integrity:
+  predecessor_record_count_improvements_yaml: 37
+  predecessor_record_count_progress_yaml: 38
+  revision_record_count_both_stores: 38
+  note: >
+    The predecessor's two machine stores disagreed on record count (CI-037 existed only in
+    progress.yaml) and on counts and binding (improvements.yaml's progress_meta read
+    'main@post-#307-merge', 2/9/25 of 36; progress.yaml read 30c6ecd4, 4/15/19 of 38).
+    Both are reconciled in r2.

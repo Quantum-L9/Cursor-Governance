@@ -6,7 +6,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
-GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
+resolve_governance_paths || true
+GOV_ROOT="${GOV_ROOT:-$(cd "$SCRIPT_DIR/../.." && pwd)}"
 WS="${WS:-${1:-$(pwd)}}"
 WS="$(cd "$WS" && pwd)"
 PR_BASE="${PR_BASE:-origin/main}"

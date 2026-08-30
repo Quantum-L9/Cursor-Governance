@@ -41,7 +41,11 @@ SWALLOW_BASELINE = {
     # existing PR is merged/closed; a failed read falls through to opening a
     # fresh PR (fail-safe), so the swallow is justified. The commit added the
     # occurrence without bumping this baseline, leaving the ratchet red on main.
-    "ops/scripts/open_pr_after_gate.sh": 18,
+    # 20 since #404 Codex recovery: fetch remote feature branch tip and stage
+    # generated-artifact pathspecs both use `|| true` so a missing remote tip or
+    # absent generated path never aborts the bounded push-recover loop. Fail-safe
+    # (retry push without those optional steps) — not a check-result swallow.
+    "ops/scripts/open_pr_after_gate.sh": 20,
     # 15 since #359 (0fc6ee6), which added gate timing and the wave-log
     # aggregator. That commit introduced five occurrences without bumping this
     # baseline, leaving the ratchet red on main — the same shape as the

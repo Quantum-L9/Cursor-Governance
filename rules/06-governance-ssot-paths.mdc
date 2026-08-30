@@ -36,7 +36,7 @@ There is no nested `GlobalCommands/` directory and no cloud-storage fallback.
 
 ## Required resolution API
 
-Governance scripts source `resolve_governance_paths.sh` and use the exported `$GOV_ROOT` and `$GLOBAL_COMMANDS` values. Hooks installed as real files must resolve the clone explicitly rather than deriving the root from a cloud path.
+Governance scripts source `resolve_governance_paths.sh` and then call `resolve_governance_paths` or `resolve_governance_paths_or_exit` before using `$GOV_ROOT` / `$GLOBAL_COMMANDS`. Sourcing the file alone does not bind which clone is authoritative (a WARN fires at EXIT if no entry point ran). Hooks installed as real files must resolve the clone explicitly rather than deriving the root from a cloud path. Session env is loaded inside `l9_load_session_env` so non-interactive shells see `L9_GOVERNANCE_DIR`.
 
 ## Forbidden
 
