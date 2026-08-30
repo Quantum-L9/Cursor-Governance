@@ -142,8 +142,7 @@ class ClaudeProviderSourceTests(unittest.TestCase):
     def test_allowlisted_excerpt_drops_arbitrary_json(self) -> None:
         excerpts = self._excerpts()
         dumped = (
-            '{"subtype": "error_max_turns", "errors": '
-            '["Reached maximum number of turns (12)"]}'
+            '{"subtype": "error_max_turns", "errors": ["Reached maximum number of turns (12)"]}'
         )
         self.assertIsNone(excerpts.allowlisted_excerpt(dumped))
         kept = excerpts.allowlisted_excerpt("noise\nerror: max turns exceeded\nnoise")
