@@ -120,6 +120,9 @@ commands:
 - slash: /l9-audit-plans
   file: commands/l9-audit-plans.md
   enabled: true
+- slash: /l9-issue-remediation
+  file: commands/l9-issue-remediation.md
+  enabled: true
 - slash: /l9-pipeline-audit
   file: commands/l9-pipeline-audit.md
   enabled: true

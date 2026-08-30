@@ -30,12 +30,12 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/autonomy` | Bounded autonomy — parallel Tasks + background PR poll (packet) |
 | `/ynp` | Highest-leverage next action |
 | `/l9-plan` | Deep PE+autonomy `.plan.md` via first-class template |
-| `/l9-plan-simple` | Same template, Cursor Build on the current checkout (not `make campaign`) |
+| `/l9-plan-simple` | Same template, Cursor Build, then stacked `make pr` (never off `main` if an open PR exists) |
 | `/l9-plan-build` | Plan via `/l9-plan-simple`, Improve then Validate & Repair, then Cursor Build under `/gmp` |
 | `/l9-audit-plans` | Shelf the plans store: root = current unbuilt; partial/built/superseded/parked in subfolders |
 | `/l9-pipeline-audit` | Audit plans + WIP + PE campaigns; harvest via `l9-intelligence-harvest` (`/plan-audit` alias) |
 | `/git-work-preserve` | Diagnose-first git work audit / extract / prune-propose (`l9-git-work-preserve`) |
-| `/ff` | In-place catch-up of a named Cursor-Governance clone (`l9-repo-sync`) |
+| `/ff` | This Cursor-Governance clone **and** SSOT in parallel (`--clone` / `--ssot` = one target) |
 | `/analyze` | Explore structure, flows, hotspots (`l9-code-analysis`; probe mode via `l9-component-verification`) |
 | `/evaluate` | Deep readiness / compliance audit |
 | `/analyze_evaluate` | Analyze + evaluate in one pass |
@@ -67,7 +67,8 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/clean` | Cleanup command |
 | `/extract-chat` / `/extract-from-chat` / `/extract_align` | Chat / pattern extraction |
 | `/spec` / `/dag-authoring` | Spec / DAG lifecycle (incl. thin command binding and CONVERT) |
-| `/issues` | GitHub issues Diagnose / Converge |
+| `/issues` | Issue remediator (Converge); `/issues diagnose` auditor |
+| `/l9-issue-remediation` | Same Converge as `/issues`; chain `/l9-pr-remediation` only at `open_issues=0` |
 | `/plan-audit` | Compatibility alias of `/l9-pipeline-audit` |
 | `/lcto` | L CTO strategic mode |
 

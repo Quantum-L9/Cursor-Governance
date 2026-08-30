@@ -25,12 +25,16 @@ EXECUTE_VIA_PE = "pe-campaign"
 EXECUTE_VIA_BUILD = "cursor-build"
 BUILD_EXECUTE_SECTION = """## Execute via Cursor Build
 
-Press **Build**. Work in the **current checkout**.
+Press **Build**. Plan on the current workspace. Execute on the unique open-PR chain tip.
 
+- If any open PR exists: **never** branch from `origin/main`. Start from the unique chain tip (`PR_STACK=auto`). Use `agent_worktree_start.sh` when this checkout is not already that tip. Sibling open-PR chains fail closed.
+- If the board is empty: `origin/main` is allowed.
 - Do not run `make campaign`.
 - Do not admit a Program Lock or Controller lease.
 - Do not write `Lock: origin/main = <sha>`.
-- Do not open a new worktree from tip as a planning requirement.
+- Do not open a new worktree from tip as a **planning** requirement.
+- After Build todos complete: scoped-commit (pathspecs), `l4_local.py authorize-release`, then `PR_STACK=auto PR_REMEDIATE=0 make pr`. Do not skip `make pr`.
+- The finish reply **must** display the opened PR URL as proof. Without that URL the Build is incomplete.
 """
 
 # Skill path is a symlink; prefer resolving the first-class git SSOT.
@@ -109,22 +113,26 @@ def _frontmatter(plan: dict, execute_via: str = EXECUTE_VIA_PE) -> str:
 
 
 _BUILD_EXECUTE_BLURB = (
-    "> **Execute:** when status is `executable`, press **Build** and work in the "
-    "**current checkout**. Do **not** run `make campaign`, admit a Program Lock, "
-    "or free-form mutate from this markdown alone."
+    "> **Execute:** when status is `executable`, press **Build**, stack on the "
+    "unique open-PR tip if any open PR exists (`PR_STACK=auto`; never `origin/main`), "
+    "then `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. Do **not** "
+    "run `make campaign`, admit a Program Lock, or free-form mutate from this markdown alone."
 )
 _BUILD_TODOS_BLURB = (
     "> **Cursor todos:** frontmatter `todos` project to Build todos. Body is the binding contract."
 )
 _BUILD_NEXT_ACTION = (
     "| minimum_safe_next_action | When law holds and status=`executable`, "
-    "press **Build** and work in the current checkout — do not free-form execute |"
+    "press **Build**, stack if any open PR exists (`PR_STACK=auto`), then `make pr` "
+    "and display the PR URL — do not free-form execute |"
 )
-_BUILD_CONVERGENCE_VIA = "| execute_via | Cursor Build on the current checkout |"
+_BUILD_CONVERGENCE_VIA = (
+    "| execute_via | Cursor Build; stacked PR if any open PR exists; display PR URL |"
+)
 _BUILD_MACHINE_STUB = """execute_via:
   pipeline: cursor-build
   mention_program: "Cursor Build"
-  command_ref: current checkout
+  command_ref: PR_STACK=auto make pr
   authority_order:
     - plan_document
     - cursor_build
@@ -176,7 +184,7 @@ def _swap_execute_block(body: str, execute_via: str) -> str:
         swapped = BUILD_EXECUTE_SECTION.rstrip() + "\n\n" + body
     swapped = swapped.replace(
         "Execute via @environment/program-execution + subordinate @autonomy",
-        "Execute via Cursor Build on the current checkout",
+        "Execute via Cursor Build; stacked make pr if any open PR exists",
     )
     return _rewrite_pe_directives_for_build(swapped)
 
@@ -226,8 +234,12 @@ def render(plan: dict, template_text: str, execute_via: str = EXECUTE_VIA_PE) ->
     body = _swap_execute_block(body, execute_via)
 
     if execute_via == EXECUTE_VIA_BUILD:
-        execute_blurb = "Press **Build**. Work in the current checkout. Do not run `make campaign`."
-        next_skill = "Build (current checkout)"
+        execute_blurb = (
+            "Press **Build**. Stack on the unique open-PR tip if any open PR exists. "
+            "After todos: `PR_STACK=auto PR_REMEDIATE=0 make pr` and display the PR URL. "
+            "Do not run `make campaign`."
+        )
+        next_skill = "Build then stacked make pr"
         execute_via_line = f"- execute_via: {EXECUTE_VIA_BUILD}"
     else:
         execute_blurb = (

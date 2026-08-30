@@ -1,0 +1,12 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 02_brain_dump
+objective_contains:
+- ingress
+preserve:
+- receipts
+prohibitions:
+- DO NOT
+expected_dispositions:
+- KEEP
+authority_must_not_expand: true
+source_traceability_required: true

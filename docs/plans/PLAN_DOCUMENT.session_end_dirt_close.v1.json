@@ -1,0 +1,295 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "SessionEnd dirt close",
+  "objective": "After a completed sessionEnd, the session workspace has dirty_files=0: landed copies gone, novel unique bytes only on l9/dirt-shelf, absorbed parks pruned, --status the honest answer.",
+  "success_criteria": [
+    "SP-01 unique modified plus unique untracked parks onto l9/dirt-shelf and porcelain is empty",
+    "SP-02 and SP-09 paths matching origin/main or an open-PR blob are removed and not parked",
+    "SP-11 --status reports dirty_unique=0 on a 50-file already-on-baseline pile",
+    "SP-10 absorbed dirt-shelf tip is deleted after tip SHA is recorded"
+  ],
+  "scope": {
+    "in": [
+      "ops/scripts/session_end_dirt_close.py",
+      "ops/hooks/session_end_repo_hygiene.sh",
+      "ops/scripts/repo_hygiene.py protect l9/dirt-shelf",
+      "ops/scripts/REPO_HYGIENE.md",
+      "AGENTS.md L9_SESSION_END_DIRT_CLOSE_V1",
+      "rules/49-shared-worktree-isolation.mdc",
+      "tests/ops/scripts/test_session_end_dirt_close.py"
+    ],
+    "out": [
+      "/ff drain or l9-repo-sync changes",
+      "make pr or git push from sessionEnd",
+      "SSOT write-gate or activate refuse-swap",
+      "sibling worktree cleaning",
+      "prune_execute.py / CANONICAL_LAW.md"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "bind worktree feat/session-end-dirt-close from origin/main",
+      "pass_criteria": "HEAD matches fetched origin/main; not dirty main",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-branch",
+      "task": "Cut feat/session-end-dirt-close from origin/main; emit PLAN_DOCUMENT",
+      "files": [
+        "docs/plans/PLAN_DOCUMENT.session_end_dirt_close.v1.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Create",
+      "anchor": "docs/plans/",
+      "leverage_rank": 6
+    },
+    {
+      "id": "todo-close-module",
+      "task": "Add session_end_dirt_close.py --apply and --status",
+      "files": [
+        "ops/scripts/session_end_dirt_close.py"
+      ],
+      "effort": "L",
+      "risk": "high",
+      "dependencies": [
+        "todo-branch"
+      ],
+      "operation": "Create",
+      "anchor": "ops/scripts/",
+      "leverage_rank": 1,
+      "shared_root_cause": "porcelain dump treated as dirty"
+    },
+    {
+      "id": "todo-prune-absorbed",
+      "task": "Prune absorbed dirt-shelf and leftover worktree-dirt refs",
+      "files": [
+        "ops/scripts/session_end_dirt_close.py"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "todo-close-module"
+      ],
+      "operation": "Insert",
+      "anchor": "prune_absorbed",
+      "leverage_rank": 2
+    },
+    {
+      "id": "todo-hook-gates",
+      "task": "Wire dirt-close before hygiene --apply with sessionEnd gates",
+      "files": [
+        "ops/hooks/session_end_repo_hygiene.sh"
+      ],
+      "effort": "M",
+      "risk": "high",
+      "dependencies": [
+        "todo-close-module"
+      ],
+      "operation": "Replace",
+      "anchor": "session_end_repo_hygiene.sh",
+      "leverage_rank": 3
+    },
+    {
+      "id": "todo-status-doctrine",
+      "task": "Append AGENTS.md fragment; correct REPO_HYGIENE.md; rule 49 clause",
+      "files": [
+        "AGENTS.md",
+        "ops/scripts/REPO_HYGIENE.md",
+        "rules/49-shared-worktree-isolation.mdc"
+      ],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [
+        "todo-hook-gates"
+      ],
+      "operation": "Insert",
+      "anchor": "append-only",
+      "leverage_rank": 5
+    },
+    {
+      "id": "todo-tests",
+      "task": "Fixture tests SP-01 through SP-11",
+      "files": [
+        "tests/ops/scripts/test_session_end_dirt_close.py"
+      ],
+      "effort": "L",
+      "risk": "medium",
+      "dependencies": [
+        "todo-close-module",
+        "todo-prune-absorbed"
+      ],
+      "operation": "Create",
+      "anchor": "tests/ops/scripts/",
+      "leverage_rank": 4
+    },
+    {
+      "id": "todo-verify",
+      "task": "Targeted pytest; scoped commits; stop before publish",
+      "files": [
+        "tests/ops/scripts/test_session_end_dirt_close.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-tests",
+        "todo-status-doctrine"
+      ],
+      "operation": "Insert",
+      "anchor": "verify",
+      "leverage_rank": 7
+    }
+  ],
+  "critical_path": [
+    "todo-branch",
+    "todo-close-module",
+    "todo-prune-absorbed",
+    "todo-hook-gates",
+    "todo-tests",
+    "todo-status-doctrine",
+    "todo-verify"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "dirt-close module classifies, parks, prunes",
+      "unlocks": "hook wiring and honest --status"
+    },
+    {
+      "id": "M2",
+      "outcome": "SP-01 through SP-11 pass",
+      "unlocks": "doctrine append and scoped commit"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "M1",
+      "evidence_required": "session_end_dirt_close.py exists with --apply and --status",
+      "no_go_action": "do not wire the hook"
+    },
+    {
+      "id": "C2",
+      "after": "M2",
+      "evidence_required": "pytest tests/ops/scripts/test_session_end_dirt_close.py PASS",
+      "no_go_action": "fix fixtures; do not publish"
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "update",
+      "todo_ids": [
+        "todo-status-doctrine"
+      ]
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "hook-only; no constitution change"
+    },
+    {
+      "surface": "ARCHITECTURE.md",
+      "action": "n_a",
+      "reason": "index already names ops/hooks"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does sessionEnd fire while an agent is still editing?",
+      "Does park then rm lose the only copy if cat-file is skipped?",
+      "Does a gh failure get treated as already landed?",
+      "Does repo_hygiene --apply delete a novel l9/dirt-shelf?"
+    ],
+    "assumed_false_ifs": [
+      "an agent answers dirty files from raw porcelain",
+      "an agent sets L9_HYGIENE_DIRT_CLOSE=0 to hide dirt"
+    ],
+    "blast_radius": "wrong restore mid-edit destroys in-flight work; wrong open-PR match drops a same-path same-sha256 copy; wrong hygiene delete of dirt-shelf loses novel parked bytes",
+    "rollback": "L9_HYGIENE_DIRT_CLOSE=0 restores prior hook behavior; shelf tip SHA in receipts; revert the feature commits"
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-close-module",
+      "todo-prune-absorbed",
+      "todo-hook-gates",
+      "todo-tests",
+      "todo-status-doctrine",
+      "todo-branch",
+      "todo-verify"
+    ],
+    "shared_causes": [
+      "git status --porcelain treated as the dirty-files answer",
+      "landed copies left in the tree and re-inventoried"
+    ],
+    "deletions_or_consolidations": [
+      "do not add a /ff worktree-dirt drain",
+      "one rolling l9/dirt-shelf instead of stamp-per-session refs"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "sessionEnd restore during an active edit",
+      "mitigation": "reason aborted/error, background, 120s quiet, repo-write lock skip"
+    },
+    {
+      "risk": "delete unique bytes before they are on the shelf",
+      "mitigation": "restore/remove only after git cat-file -e shelf:path"
+    }
+  ],
+  "unknowns": [],
+  "final_validation": [
+    {
+      "id": "V1",
+      "command": "pytest tests/ops/scripts/test_session_end_dirt_close.py tests/ops/scripts/test_repo_hygiene.py",
+      "pass_criteria": "PASS",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": ".pre-commit-config.yaml",
+      "pass_criteria": "hook catalog named; no new hook id required",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [],
+    "next_skill": "none",
+    "stop_reason": "plan validated structurally; implementation in progress"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/scripts/session_end_dirt_close.py",
+      "ops/hooks/session_end_repo_hygiene.sh",
+      "ops/scripts/repo_hygiene.py",
+      "ops/scripts/REPO_HYGIENE.md",
+      "AGENTS.md",
+      "rules/49-shared-worktree-isolation.mdc",
+      "tests/ops/scripts/test_session_end_dirt_close.py",
+      "docs/plans/PLAN_DOCUMENT.session_end_dirt_close.v1.json",
+      "docs/plans/session_end_dirt_close_*.plan.md"
+    ],
+    "must_not_modify": [
+      "CANONICAL_LAW.md",
+      "skills/l9-repo-sync/",
+      "ops/scripts/backup_to_github.sh"
+    ],
+    "preserved_contracts": [
+      "sessionEnd fail-open",
+      "no make pr from the hook",
+      "/ff unchanged"
+    ],
+    "validation_commands": [
+      "pytest tests/ops/scripts/test_session_end_dirt_close.py",
+      ".pre-commit-config.yaml"
+    ]
+  },
+  "depth": "deep"
+}

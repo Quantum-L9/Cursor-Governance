@@ -6,33 +6,45 @@ role: pr_handoff
 tags: [issues, pr, handoff, l9-pr-remediation]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-08-11
+version: 1.1.0
+updated: 2026-08-29
 /L9_META -->
 
 # Handoff to l9-pr-remediation
 
-This skill **never merges**. When unblock requires a green PR, hand off to
-`l9-pr-remediation` Converge — that skill remediates and merges:
+This skill **never merges**. Remediator Converge may load `l9-pr-remediation`
+**only** after the bound target reports `open_issues == 0`.
 
-## When to hand off
+Diagnose / auditor **never** calls this path.
 
-- A fix commit needs review/CI before the issue can close
-- An existing open PR already addresses the sticky cluster
-- Local verify is green but remote required checks are not yet observed
+## Hard gate
 
-## How
+```bash
+python3 skills/l9-issue-remediation/scripts/open_issues_gate.py \
+  --intent converge --issues issues.json
+```
 
-1. Ensure the PR exists on the owning repo (open if needed with a clear body
-   linking every issue in the cluster: `Fixes #n` / `Related to org/repo#n`).
-2. Load **`l9-pr-remediation`** Converge (or Diagnose then Converge on mutate
-   authority) for `{owner}/{repo}#{pr}`.
+- `chain: true` / `open_issues: 0` → invoke `/l9-pr-remediation` Converge on
+  each owning repo that has the stacked PRs.
+- Any other result (`BLOCKED_OPEN_ISSUES`, `DIAGNOSE_NO_CHAIN`) → **do not**
+  start that skill. Zero means zero. Do not start early to babysit PRs.
+
+Close resolved issues **before** this gate (fix already on a PR). Waiting for
+GitHub `Fixes #n` auto-close on merge deadlocks the gate.
+
+## How (only after the gate)
+
+1. Load **`l9-pr-remediation`** Converge (`commands/l9-pr-remediation.md`) for
+   each owning repo that has open PRs.
+2. That command writes `authorize_merge.py --all-open`, remediates, then
+   `stack_safe_merge.py`. This skill does not merge.
 3. Do not run a second CI babysit loop inside this skill.
-4. After PR converges (or while waiting), still fulfill breadcrumb law for the
-   **issues** (PICKUP + comments + conditional session-ref).
+4. Breadcrumb law for issues must already be satisfied (PICKUP + comments +
+   close-if-fixed + conditional session-ref).
 
 ## Forbidden
 
 - `gh pr merge` from `l9-issue-remediation`
-- Duplicating Sonar/CodeQL/debt remediation paths here — those live in
-  `l9-pr-remediation`
+- Invoking `/l9-pr-remediation` while `open_issues != 0`
+- Invoking `/l9-pr-remediation` from Diagnose
+- Duplicating Sonar/CodeQL/debt remediation paths here

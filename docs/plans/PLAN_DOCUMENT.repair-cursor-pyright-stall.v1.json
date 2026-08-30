@@ -1,0 +1,290 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "Repair Cursor Pyright stall on ssot_checkout",
+  "depth": "standard",
+  "objective": "Stop the persistent Cursor status-bar and notification text N files to analyze plus Unable to open by (1) not creating .cursor-commands on ssot_checkout so Cursor Pyright cannot enumerate the second ~/.cursor-governance tree, and (2) pinning cursorpyright.analysis.include to the existing [tool.pyright] include list. Do not edit biome.json or the Biome extension. The diagnosed emitter is anysphere.cursorpyright, not biomejs.biome.",
+  "success_criteria": [
+    "setup_workspace_symlinks.sh does not create .cursor-commands when classify_workspace_kind is ssot_checkout, and removes a pre-existing link on that kind",
+    "ops/scripts/tests/test_workspace_kind.sh or test_workspace_rules_overlay.sh PASSes a new ssot_checkout case that fails if .cursor-commands is created",
+    "environment/ide/settings.python.json sets cursorpyright.analysis.include to the same roots as pyproject.toml [tool.pyright] include, autoSearchPaths false, and shouldImportPylanceSettings never",
+    "After install_ide_profile merge, .vscode/settings.json carries those three keys; biome.json is byte-identical to HEAD",
+    "Cursor Pyright Output after Restart Server does not list files under .cursor-commands or ~/.cursor-governance as workspace sources; the files-to-analyze spinner clears on this checkout with only markdown tabs open",
+    "make pr-check PASSes against .pre-commit-config.yaml on the changed-file set"
+  ],
+  "scope": {
+    "in": [
+      "ops/scripts/setup_workspace_symlinks.sh ssot_checkout .cursor-commands branch",
+      "ops/scripts/tests/test_workspace_kind.sh and/or test_workspace_rules_overlay.sh",
+      "environment/ide/settings.python.json cursorpyright keys",
+      "install_ide_profile / ops/scripts/adapters/cursor.sh merge into .vscode/settings.json",
+      "prove step: Restart Server + Output Cursor - Pyright"
+    ],
+    "out": [
+      "biome.json and biomejs.biome extension install or uninstall",
+      "user-level ~/Library/Application Support/Cursor/User/settings.json",
+      "pyproject.toml [tool.pyright] rewrite (exclude already lists .cursor-commands; file is additive_only)",
+      "CANONICAL_LAW.md AGENTS.md Makefile",
+      "restoring WIP/8-29-26/PEC/PEC-repair-pipeline.md or closing editor tabs",
+      "Cursor Models quota / Cline / GitLens",
+      "make campaign Program Lock PE overlay",
+      "disabling cursorpyright or Ruff"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "P0",
+      "command_or_action": "git rev-parse --abbrev-ref HEAD && git rev-parse HEAD && test -L .cursor-commands && python3 -c 'import os; print(os.path.realpath(\".cursor-commands\"))'",
+      "pass_criteria": "branch main; HEAD recorded; .cursor-commands realpath is $HOME/.cursor-governance and not this workspace",
+      "status": "passed"
+    },
+    {
+      "id": "P1",
+      "command_or_action": "rg -F 'files to analyze' ~/.cursor/extensions/anysphere.cursorpyright-1.0.12/dist/server.js; rg -F 'files to analyze' ~/.cursor/extensions/biomejs.biome-3.7.1-universal/out/main.js; pgrep -lf biomejs || true",
+      "pass_criteria": "exact string present only in cursorpyright; biome main.js has no match; no biome LSP process",
+      "status": "passed"
+    },
+    {
+      "id": "P2",
+      "command_or_action": "python3 .claude/skills/l9-plan/scripts/route_plan.py --risk medium --evidence sufficient --json",
+      "pass_criteria": "depth=standard omit_gates=[]",
+      "status": "passed"
+    },
+    {
+      "id": "P3",
+      "command_or_action": "stat -f %Sm -t %Y-%m-%dT%H:%M .cursor-commands && classify via ops/scripts/lib/workspace_kind.sh",
+      "pass_criteria": "symlink mtime 2026-08-29T11:27; workspace kind ssot_checkout",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "todo-01-stop-ssot-checkout-link",
+      "task": "In setup_workspace_symlinks.sh, classify workspace kind and treat ssot_checkout the same as ssot for .cursor-commands only: remove an existing link and do not create one. Consumers still get the link. Leave .cursor/plans and plugin wiring unchanged.",
+      "files": ["ops/scripts/setup_workspace_symlinks.sh"],
+      "effort": "S",
+      "risk": "medium",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "C10 — never create a self-alias when wiring the SSOT clone itself",
+      "leverage_rank": 1,
+      "shared_root_cause": "sessionStart created .cursor-commands on a second governance clone; Pyright follows that symlink into a full second tree"
+    },
+    {
+      "id": "todo-02-prove-kind-gate",
+      "task": "Add an ssot_checkout fixture case to the existing symlink/kind tests so setup_workspace_symlinks.sh fails the test if it creates .cursor-commands on an identity-tree checkout.",
+      "files": [
+        "ops/scripts/tests/test_workspace_kind.sh",
+        "ops/scripts/tests/test_workspace_rules_overlay.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["todo-01-stop-ssot-checkout-link"],
+      "operation": "Insert",
+      "anchor": "ssot_checkout — consumer .cursor-commands / .cursor/plans / .cursor/governance not required",
+      "leverage_rank": 3
+    },
+    {
+      "id": "todo-03-pin-pyright-include",
+      "task": "Add cursorpyright.analysis.include matching pyproject.toml [tool.pyright] include (conftest.py, ops, environment, skills, tools, workflows). Set cursorpyright.analysis.autoSearchPaths to false and cursorpyright.shouldImportPylanceSettings to never. Keep the existing exclude list. Do not edit biome.json.",
+      "files": ["environment/ide/settings.python.json"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Replace",
+      "anchor": "cursorpyright.analysis.diagnosticMode",
+      "leverage_rank": 2,
+      "shared_root_cause": "workspace settings have exclude only; autoSearchPaths defaults true so enumeration still walks extra trees"
+    },
+    {
+      "id": "todo-04-merge-ide-profile",
+      "task": "Run install_ide_profile.sh on this workspace so .vscode/settings.json receives the new cursorpyright keys. Confirm biome.json is unchanged versus HEAD.",
+      "files": [
+        ".vscode/settings.json",
+        "ops/scripts/install_ide_profile.sh"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": ["todo-03-pin-pyright-include"],
+      "operation": "Replace",
+      "anchor": "SETTINGS_FILES=... settings.python.json",
+      "leverage_rank": 4
+    },
+    {
+      "id": "todo-05-prove-clear",
+      "task": "Run the kind tests and make pr-check. Restart Cursor Pyright. Confirm Output Cursor - Pyright does not enumerate .cursor-commands, and the files-to-analyze spinner is gone with only markdown editors open.",
+      "files": [".pre-commit-config.yaml"],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "todo-02-prove-kind-gate",
+        "todo-04-merge-ide-profile"
+      ],
+      "operation": "Wrap",
+      "anchor": "make pr-check",
+      "leverage_rank": 5
+    }
+  ],
+  "critical_path": [
+    "todo-01-stop-ssot-checkout-link",
+    "todo-02-prove-kind-gate",
+    "todo-03-pin-pyright-include",
+    "todo-04-merge-ide-profile",
+    "todo-05-prove-clear"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "ssot_checkout no longer receives a .cursor-commands symlink from setup_workspace_symlinks.sh",
+      "unlocks": "Pyright cannot follow a second governance tree created at sessionStart"
+    },
+    {
+      "id": "M2",
+      "outcome": "IDE profile include list matches [tool.pyright] and is merged into .vscode/settings.json",
+      "unlocks": "Enumeration stays inside ops/environment/skills/tools/workflows even if a stray symlink returns"
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "todo-01-stop-ssot-checkout-link",
+      "evidence_required": "A consumer fixture still gets .cursor-commands; an ssot_checkout fixture does not",
+      "no_go_action": "Stop. Do not change settings.python.json until the kind branch is proven. Revert the setup script edit."
+    },
+    {
+      "id": "C2",
+      "after": "todo-05-prove-clear",
+      "evidence_required": "kind tests PASS; make pr-check PASS; biome.json unchanged; Pyright Output has no .cursor-commands paths",
+      "no_go_action": "Stop and replan. Do not disable Biome or cursorpyright to hide the spinner."
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "Section 11 already states ssot_checkout must not require consumer .cursor-commands; this plan implements that sentence in setup_workspace_symlinks.sh"
+    },
+    {
+      "surface": "CANONICAL_LAW.md",
+      "action": "n_a",
+      "reason": "No constitution change; symlink law already forbids SSOT self-alias and does not require the link on a second clone"
+    },
+    {
+      "surface": "environment/ide/README.md",
+      "action": "n_a",
+      "reason": "README already names settings.python.json as the Python analysis payload; new keys live in that file"
+    },
+    {
+      "surface": "biome.json",
+      "action": "n_a",
+      "reason": "Biome is not the diagnosed emitter; leave the file untouched"
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "If after removing .cursor-commands the spinner still shows 13-plus files with only markdown tabs open, is a different language server or Cursor indexer the emitter?",
+      "If a consumer repo loses .cursor-commands because classify_workspace_kind mis-labels it as ssot_checkout, do slash commands break?",
+      "If [tool.pyright] include already limits enumeration, does adding vscode include change nothing and leave the stall intact?"
+    ],
+    "assumed_false_ifs": [
+      "anysphere.cursorpyright remains the owner of the files-to-analyze string",
+      "This folder remains ssot_checkout (realpath != $HOME/.cursor-governance, identity files present)",
+      "Consumers are not identity trees (no CANONICAL_LAW.md + AUTONOMY_MANIFEST + RULES-MANIFEST + check_governance_wiring.sh set)"
+    ],
+    "blast_radius": "sessionStart wiring on every Cursor-Governance worktree or second clone; consumer repos unchanged if kind classification stays correct. Pyright completion scope shrinks to the include list (already the [tool.pyright] contract). Biome format-on-save for JS/TS/JSON is untouched.",
+    "rollback": "Revert setup_workspace_symlinks.sh and the test insertion. Revert environment/ide/settings.python.json. Re-run install_ide_profile.sh to restore .vscode/settings.json. Recreate .cursor-commands on this checkout only if a consumer workflow needs it (it is gitignored)."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "todo-01-stop-ssot-checkout-link",
+      "todo-03-pin-pyright-include",
+      "todo-02-prove-kind-gate",
+      "todo-04-merge-ide-profile",
+      "todo-05-prove-clear"
+    ],
+    "shared_causes": [
+      "setup_workspace_symlinks.sh treats ssot_checkout as a consumer and creates .cursor-commands pointing at a second full governance tree",
+      "Cursor Pyright activates on pyproject.toml and enumerates before openFilesOnly diagnostics run"
+    ],
+    "deletions_or_consolidations": [
+      "Remove the gitignored .cursor-commands symlink on this ssot_checkout (script does it; do not add the path to git)"
+    ]
+  },
+  "risks": [
+    {
+      "risk": "Kind misclassification drops .cursor-commands on a true consumer",
+      "mitigation": "C1: consumer fixture must still receive the link; identity-file check is already in workspace_kind.sh"
+    },
+    {
+      "risk": "Agent mistakes Biome for the target and edits biome.json",
+      "mitigation": "write_deny biome.json; SP requires biome.json identical to HEAD"
+    },
+    {
+      "risk": "Spinner was only a short openFilesOnly pass and the remaining toast is the missing PEC tab",
+      "mitigation": "Prove step checks Pyright Output paths, not toast absence alone; missing PEC file stays out of scope"
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "What is the full path on the second Unable to open toast?",
+      "decision_effect": "Does not change the Pyright wiring repair; tab restore is out of scope",
+      "resolution": "accept_bounded"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "V0",
+      "command": "bash ops/scripts/tests/test_workspace_kind.sh && bash ops/scripts/tests/test_workspace_rules_overlay.sh",
+      "pass_criteria": "both scripts PASS including the new ssot_checkout no-link case",
+      "status": "pending"
+    },
+    {
+      "id": "V1",
+      "command": "git diff --name-only HEAD -- biome.json && git diff --exit-code HEAD -- biome.json",
+      "pass_criteria": "biome.json not in the diff; exit 0",
+      "status": "pending"
+    },
+    {
+      "id": "V2",
+      "command": "PR_BASE=origin/main make pr-check  # catalog .pre-commit-config.yaml changed-file hooks",
+      "pass_criteria": "PASS using .pre-commit-config.yaml changed-file hooks on this envelope",
+      "status": "pending"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1"],
+    "next_skill": "Build on this checkout",
+    "stop_reason": "PLAN_DOCUMENT validated. Implementation waits for Cursor Build. Do not run make campaign."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "ops/scripts/setup_workspace_symlinks.sh",
+      "ops/scripts/tests/test_workspace_kind.sh",
+      "ops/scripts/tests/test_workspace_rules_overlay.sh",
+      "environment/ide/settings.python.json",
+      ".vscode/settings.json"
+    ],
+    "must_not_modify": [
+      "biome.json",
+      "CANONICAL_LAW.md",
+      "AGENTS.md",
+      "Makefile",
+      "pyproject.toml",
+      "WIP/",
+      "docs/plans/pec-repair-pipeline-w0-w10_056a9b48.plan.md"
+    ],
+    "preserved_contracts": [
+      "AGENTS.md section 11 ssot vs ssot_checkout vs consumer",
+      "pyproject.toml [tool.pyright] include/exclude (additive_only root file)",
+      "formatter exclusivity: Biome owns JS/TS/JSON; Ruff owns Python; cursorpyright stays the Python language server"
+    ],
+    "validation_commands": [
+      "bash ops/scripts/tests/test_workspace_kind.sh",
+      "bash ops/scripts/tests/test_workspace_rules_overlay.sh",
+      "make pr-check"
+    ]
+  }
+}

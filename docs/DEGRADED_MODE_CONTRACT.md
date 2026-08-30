@@ -36,7 +36,7 @@ work today.
 | `gh api` (REST) | Proxy-injected. `gh auth status` reports a false negative — use `gh api user` |
 | `uv`, `uv sync --locked` | The locked toolchain is the SSOT and needs no broker |
 | `pre-commit` | The CANONICAL_LAW §12 gate |
-| `node`, `npm` | Public registry only |
+| `node`, `npm` | Public registry always. `@quantum-l9/*` on GitHub Packages uses `gh auth token` (`ops/secrets/gh_npm.sh`); do not paste `NODE_AUTH_TOKEN` |
 | Local `semgrep` CE, `bandit`, `pip-audit` | Credential-free rulesets |
 | `gitleaks` | Once provisioned; the security gate fails closed without it |
 | Every `l9-*` skill that does not call a capability | |

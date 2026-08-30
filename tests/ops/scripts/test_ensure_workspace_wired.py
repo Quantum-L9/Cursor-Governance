@@ -49,6 +49,50 @@ def test_ensure_workspace_wired_creates_links_and_is_idempotent(tmp_path: Path) 
     assert "WIRE:" in first.stdout or "LINKED:" in first.stdout or "OK:" in first.stdout
 
 
+@pytest.mark.skipif(not HELPER.is_file(), reason="helper missing")
+def test_ensure_workspace_wired_ssot_checkout_removes_cursor_commands(
+    tmp_path: Path,
+) -> None:
+    home = tmp_path / "home"
+    ssot = home / ".cursor-governance"
+    (ssot / "skills").mkdir(parents=True)
+    (ssot / "CANONICAL_LAW.md").write_text("canonical law\n", encoding="utf-8")
+    checkout = tmp_path / "ssot-checkout"
+    (checkout / "skills").mkdir(parents=True)
+    (checkout / "rules").mkdir(parents=True)
+    (checkout / "ops/scripts").mkdir(parents=True)
+    (checkout / "CANONICAL_LAW.md").write_text("# law\n", encoding="utf-8")
+    (checkout / "skills/AUTONOMY_MANIFEST.yaml").write_text("x\n", encoding="utf-8")
+    (checkout / "rules/RULES-MANIFEST.yaml").write_text("x\n", encoding="utf-8")
+    (checkout / "ops/scripts/check_governance_wiring.sh").write_text(
+        "#!/bin/sh\n", encoding="utf-8"
+    )
+    leftover = checkout / ".cursor-commands"
+    leftover.symlink_to(ssot)
+    env = os.environ.copy()
+    env["HOME"] = str(home)
+    env["L9_WIRE_LINKS_ONLY"] = "1"
+    first = subprocess.run(
+        ["bash", str(HELPER), str(checkout)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert not leftover.exists(), first.stdout + first.stderr
+    assert (checkout / ".cursor/plans").is_symlink()
+    assert (checkout / ".cursor/governance/CANONICAL_LAW.md").is_symlink()
+    second = subprocess.run(
+        ["bash", str(HELPER), str(checkout)],
+        check=True,
+        capture_output=True,
+        text=True,
+        env=env,
+    )
+    assert "already wired" in second.stdout
+    assert not leftover.exists(), second.stdout + second.stderr
+
+
 def test_run_pr_gate_locks_before_wiring_check() -> None:
     text = GATE.read_text(encoding="utf-8")
     lock_at = text.find('L9_REPO_WRITE_LOCK_LABEL="make-pr-gate"')

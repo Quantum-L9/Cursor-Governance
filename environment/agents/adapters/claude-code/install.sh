@@ -380,6 +380,21 @@ if [ "$CHECK" != "1" ] && [ -n "$GOV_PY" ]; then
   fi
 fi
 
+# --- 2b) GitHub Packages via gh (hosted only; same identity as git/gh) -----
+# Committed .npmrc `_authToken=${NODE_AUTH_TOKEN}` 401s when that env is empty.
+# CI already uses secrets.GITHUB_TOKEN. Hosted Claude has `gh`; wire npm to it.
+# Desktop/Cursor must not write a PAT into ~/.npmrc (that file is not ephemeral).
+if [ "$CHECK" != "1" ] && { [ -n "${CLAUDE_CODE_REMOTE:-}" ] || [ -n "${CLAUDE_CODE_REMOTE_SESSION_ID:-}" ]; }; then
+  GH_NPM="$GOV_DIR/ops/secrets/gh_npm.sh"
+  if [ -f "$GH_NPM" ]; then
+    if bash "$GH_NPM" --install-userconfig; then
+      say "npm GitHub Packages: userconfig from gh auth token (not NODE_AUTH_TOKEN)"
+    else
+      warn "npm GitHub Packages: gh auth token not available"
+    fi
+  fi
+fi
+
 # --- 3) Memory MCP front door (Claude .mcp.json format) ---------------------
 # Graphiti HTTPS front door: the template points at ${GRAPHITI_MCP_URL} and
 # carries NO bearer. The capability broker never shipped (retired 2026-08-29).

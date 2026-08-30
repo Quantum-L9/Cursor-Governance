@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-29T21:11:57Z'
+generated_utc: '2026-08-30T00:04:18Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:cf5b7cfb168f9372ebba2fe525a3854e4c75310ccaf106e7680aa049ec6b7f92
+source_tree_digest: sha256:1e974250fd41e18793ab6d80f1c064c22fe86f11d8b4b6145e14cfb3f2c411a1
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -48,7 +48,7 @@ rules:
   first_heading: Slash Command Recognition
   has_yaml_frontmatter: true
   line_count: 163
-  content_digest: sha256:caca5dcf9d485d532cf1b298b8082dfbb98470ed0daa393f09c99068ebfc6b42
+  content_digest: sha256:4b4c9ae5e47b05d862a74e898b30b764265f3649c77b63c0749fd069dc303096
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -577,8 +577,8 @@ rules:
   globs: null
   first_heading: Shared worktree isolation
   has_yaml_frontmatter: true
-  line_count: 85
-  content_digest: sha256:9f0288253b252e993f73174d35c7c1963180014c665ca512e8d05f1d0a0829c9
+  line_count: 92
+  content_digest: sha256:f70eda56dbbce79a45ba86f2c875093220ed91ac68fd8e46eed75a44b1d9c40d
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -720,7 +720,7 @@ rules:
 - file: 55-ff-only-ssot-sync.mdc
   id: l9.rule.55.ff.only.ssot.sync
   id_source: explicit
-  version: 1.2.0
+  version: 1.3.0
   description: Sync or fast-forward a Cursor-Governance clone only via /ff and l9-repo-sync (in-place ff). Never governance_activate_fresh swap. Never delete unique work.
   scope: global
   domain: git
@@ -730,8 +730,8 @@ rules:
   globs: null
   first_heading: Fast-forward only (no SSOT clobber)
   has_yaml_frontmatter: true
-  line_count: 63
-  content_digest: sha256:f50edf623c5b6a907d57ef87e0c6bad86a77032015b71b104b98b96320c739f7
+  line_count: 64
+  content_digest: sha256:57c768e5abe242ad4993f66ae08398548bde5f7a558fa9c80bf044a19ebb6fe6
   authority: canonical_global
   context_cost: minimal
   deprecated: false

@@ -26,12 +26,11 @@ not delete files to unblock. Keep-list: `.env.local`, `env.local`,
 
 ## MUST
 
-- Name the clone (`ssot` = `$HOME/.cursor-governance`, or `workspace`)
+- Bare `/ff` in this repo: run `skills/l9-repo-sync/scripts/ff.sh` **once**
+  (pairs this checkout + `$HOME/.cursor-governance` in parallel)
+- `/ff --clone` / `/ff --ssot`: pass that flag through; one target
 - Set `GOVERNANCE_SYNC_PUSH=0` and `GOVERNANCE_SYNC_HARD_RESET=0`
-- Set `CURSOR_GOVERNANCE_DIR` to that clone
-- Run `skills/l9-repo-sync/scripts/ff.sh` (it switches to `main` after parking;
-  do not `git switch` yourself)
-- Verify `.venv`, env.local keep-list files, and unique untracked paths still exist (or are held) after the run
+- Do not `git switch` yourself (the script switches to `main` after parking)
 - After catch-up, shelf leftover untracked `WIP/`, `docs/plans/`, and
   `environment/program-execution/campaigns/` onto a sibling branch — copy the
   bytes in, apply Improve then Recursive Alignment then Validate & Repair
@@ -50,6 +49,8 @@ not delete files to unblock. Keep-list: `.env.local`, `env.local`,
   `main` after park is the exception)
 - Reset a feature branch onto `origin/main`
 - Delete dirty or untracked files so `reset --keep` can proceed
+- Stop to name `ssot` vs `workspace`
+- Sequential second `ff.sh` after this clone (the script pairs)
 
 If `reset --keep` aborts, unique bytes are still in the tree or on a
 preserve/hold ref. Re-run `/ff`. Do not swap. Do not delete.

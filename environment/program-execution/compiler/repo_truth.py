@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 import subprocess
+from collections.abc import Sequence
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -29,6 +31,43 @@ DPK_FILES = (
 )
 
 
+DISPOSITIONS = (
+    "ALREADY_SATISFIED",
+    "KEEP",
+    "MERGE_WITH_EXISTING",
+    "HARDEN_WIRE_EXISTING",
+    "CREATE",
+    "DELETE_SUPERSEDED",
+    "MIGRATION_CONTEXT",
+    "UNKNOWN",
+)
+
+_PATH_TOKEN = re.compile(r"\b((?:[\w.-]+/)+[\w.-]+\.(?:py|md|yaml|yml|json|toml|sh))\b")
+_IDENT_TOKEN = re.compile(r"\b([A-Za-z_][A-Za-z0-9_]{3,})\b")
+
+
+@dataclass(frozen=True)
+class RequirementDisposition:
+    """One obligation classified against repository evidence before lowering."""
+
+    requirement_id: str
+    statement: str
+    disposition: str
+    path: str | None
+    symbol: str | None
+    evidence: str
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "requirement_id": self.requirement_id,
+            "statement": self.statement,
+            "disposition": self.disposition,
+            "path": self.path,
+            "symbol": self.symbol,
+            "evidence": self.evidence,
+        }
+
+
 @dataclass
 class RepoTruth:
     root: Path
@@ -44,6 +83,79 @@ class RepoTruth:
     validation_commands: list[str] = field(default_factory=list)
     rollback_defs: list[str] = field(default_factory=list)
     source_priority: dict[str, str] = field(default_factory=dict)
+
+
+def classify_dispositions(
+    requirements: Sequence[str],
+    truth: RepoTruth,
+) -> list[RequirementDisposition]:
+    """Classify each requirement against path and symbol evidence.
+
+    Does not replace ``discover``. Unknown stays UNKNOWN. Existing paths are
+    never blindly CREATE.
+    """
+    rows: list[RequirementDisposition] = []
+    for index, raw in enumerate(requirements, start=1):
+        statement = str(raw).strip()
+        if not statement:
+            continue
+        req_id = f"REQ-{index:03d}"
+        path, symbol, evidence = _ground_requirement(statement, truth)
+        lowered = statement.lower()
+        create_intent = any(token in lowered for token in ("create", "add new", "introduce"))
+        forbid_create = any(
+            token in lowered for token in ("do not create", "don't create", "must not create")
+        )
+        if create_intent and forbid_create:
+            disposition = "UNKNOWN"
+        elif path and any(token in lowered for token in ("harden", "wire", "extend")):
+            disposition = "HARDEN_WIRE_EXISTING"
+        elif path and any(token in lowered for token in ("already", "existing", "current")):
+            disposition = "KEEP"
+        elif path and "merge" in lowered:
+            disposition = "MERGE_WITH_EXISTING"
+        elif path and any(token in lowered for token in ("delete", "supersede", "remove")):
+            disposition = "DELETE_SUPERSEDED"
+        elif path and any(token in lowered for token in ("migrate", "migration")):
+            disposition = "MIGRATION_CONTEXT"
+        elif path:
+            disposition = "KEEP"
+        elif create_intent:
+            disposition = "CREATE"
+        else:
+            disposition = "UNKNOWN"
+        rows.append(
+            RequirementDisposition(
+                requirement_id=req_id,
+                statement=statement,
+                disposition=disposition,
+                path=path,
+                symbol=symbol,
+                evidence=evidence,
+            )
+        )
+    return rows
+
+
+def _ground_requirement(statement: str, truth: RepoTruth) -> tuple[str | None, str | None, str]:
+    root = truth.root
+    for match in _PATH_TOKEN.finditer(statement):
+        rel = match.group(1)
+        if (root / rel).exists():
+            return rel, None, f"path_exists:{rel}"
+    compiler_root = None
+    for candidate in (root / "environment/program-execution/compiler", root / "compiler"):
+        if candidate.is_dir():
+            compiler_root = candidate
+            break
+    if compiler_root is not None:
+        for match in _IDENT_TOKEN.finditer(statement):
+            ident = match.group(1)
+            exact = compiler_root / f"{ident}.py"
+            if exact.is_file():
+                rel = str(exact.relative_to(root))
+                return rel, ident, f"symbol_match:{ident}->{rel}"
+    return None, None, "no_path_or_symbol_evidence"
 
 
 def discover(root: Path) -> RepoTruth:
@@ -215,4 +327,11 @@ def _rollback_defs(root: Path, truth: RepoTruth) -> list[str]:
     return rollbacks
 
 
-__all__ = ["PRIORITY", "RepoTruth", "discover"]
+__all__ = [
+    "DISPOSITIONS",
+    "PRIORITY",
+    "RepoTruth",
+    "RequirementDisposition",
+    "classify_dispositions",
+    "discover",
+]

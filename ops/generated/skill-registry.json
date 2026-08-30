@@ -24,7 +24,6 @@
       "l9-setting-up-ci",
       "l9-graphiti-memory",
       "l9-aws-secrets",
-      "l9-plan-audit",
       "l9-code-graph-rag-mcp",
       "l9-architecture-decision-records",
       "l9-monitoring-terminal-errors"
@@ -87,13 +86,10 @@
         "hint_allowed": true,
         "id": "issue_remediation",
         "negative_signals": [
-          "remediate the issue",
-          "fix the issue",
-          "unblock the issue",
-          "babysit issues",
-          "converge issues"
+          "admin merge",
+          "force push"
         ],
-        "note": "explicit_only + hint_allowed \u2014 Read Diagnose path only; Converge mutate requires explicit fix/remediate/unblock/babysit or autonomy packet. PR green/merge stays on l9-pr-remediation.\n",
+        "note": "explicit_only + hint_allowed \u2014 /issues and /l9-issue-remediation are remediator Converge. Diagnose is /issues diagnose or \u201cwhat\u2019s blocking?\u201d only and never chains /l9-pr-remediation. Converge verifies each issue is real, drains at max autonomy, asks recommended-A questions only for human/architecture blockers, lands fixes on matching or stacked PRs, closes status=fixed, and chains l9-pr-remediation only when open_issues=0.\n",
         "positive_signals": [
           "open issues",
           "github issues",
@@ -102,7 +98,13 @@
           "org issues",
           "cross-repo issues",
           "diagnose issues",
-          "/issues"
+          "/issues",
+          "/l9-issue-remediation",
+          "remediate the issue",
+          "fix the issue",
+          "unblock the issue",
+          "babysit issues",
+          "converge issues"
         ],
         "primary": "l9-issue-remediation",
         "signal_weight": 8,
@@ -370,27 +372,16 @@
         ]
       },
       {
-        "id": "plan_audit",
+        "id": "pipeline_audit",
         "positive_signals": [
+          "pipeline audit",
+          "l9-pipeline-audit",
           "plan audit",
           "unbuilt plans",
           "stale plans",
           "audit .cursor/plans",
           "which plans are unbuilt",
-          "sessionStart plan audit"
-        ],
-        "primary": "l9-plan-audit",
-        "signal_weight": 8,
-        "supporting": [
-          "l9-plan",
-          "l9-ynp"
-        ]
-      },
-      {
-        "id": "pipeline_audit",
-        "positive_signals": [
-          "pipeline audit",
-          "l9-pipeline-audit",
+          "sessionStart plan audit",
           "harvest WIP campaigns",
           "audit program-execution campaigns",
           "harvestable components"
@@ -399,8 +390,8 @@
         "signal_weight": 8,
         "supporting": [
           "l9-intelligence-harvest",
-          "l9-plan-audit",
-          "l9-gmp-protocol"
+          "l9-gmp-protocol",
+          "l9-ynp"
         ]
       },
       {
@@ -1036,12 +1027,12 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge open github issues across all non-archived quantum-l9 repos \u2014 inventory and rank blockers, fix at the obvious owning repo, hand prs to l9-pr-remediation, and leave graphiti pickup plus issue comment plus conditional root session-reference markdown so the next agent can resume. use when reviewing org issue readiness or blockers, or when the user asks to fix, remediate, unblock, or converge open issues across repos.",
+      "description": "remediator for open github issues across all non-archived quantum-l9 repos \u2014 verify each issue is real before trusting it, drain clusters until a human architecture blocker, ask a recommended multiple-choice (A first), then resume. close phantoms; land real fixes on a matching or stacked pr. use when the user runs /issues or /l9-issue-remediation, or asks to fix, remediate, unblock, or converge open issues.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-issue-remediation",
       "path": "skills/l9-issue-remediation",
-      "reason": "Org-wide GitHub Issues Diagnose (hint) + Converge unblock across Quantum-L9 repos with Graphiti PICKUP breadcrumbs \u2014 high blast radius, explicit only; hint_allowed for read-only Diagnose",
+      "reason": "/issues and /l9-issue-remediation are remediator Converge (verify-before-trust, drain all clusters at max autonomy, recommended-A human blockers, land on PRs, close phantoms/resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1102,7 +1093,7 @@
     },
     {
       "composition_role": "general",
-      "description": "audit plans, WIP, and PE campaigns; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit runs.",
+      "description": "audit plans, WIP, and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs, or session context shows Plan audit.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pipeline-audit",
@@ -1134,19 +1125,8 @@
       "when_to_use": "scope is unclear, requirements need decomposition, or implementation needs a machine-validated plan/spec first"
     },
     {
-      "composition_role": "primary",
-      "description": "sessionStart scanner for unbuilt plans in the last 7 days under the live plans-store root. use when session context shows Plan audit. do not use to author plans (l9-plan-simple / l9-plan) or to shelf the store (that is /l9-audit-plans). do not auto-build plans.",
-      "disable_model_invocation": false,
-      "invocation": "model_allowed",
-      "name": "l9-plan-audit",
-      "path": "skills/l9-plan-audit",
-      "reason": "",
-      "user_invocable": true,
-      "when_to_use": "session context shows Plan audit or the 7-day live-queue scanner; not /l9-audit-plans and not /l9-pipeline-audit"
-    },
-    {
       "composition_role": "general",
-      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template and execute it with the build button on the current checkout. use when scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
+      "description": "create a machine-validated cursor .plan.md from the shared executable-plan template and execute it with the build button, then open a stacked PR. never branch off main when an open PR exists. always make pr after build and display the PR URL. use when scope is unclear, requirements need decomposition, cursor plan mode is on, or the next step should be planned before code changes. do not use when the user asks for program-execution, make campaign, /l9-plan, or a pe campaign lock.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-plan-simple",
@@ -1322,6 +1302,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "788452df425c73f3e5bc18f9044458164e553d6488c940f7ded52b5c0f0ff985",
-  "source_skill_corpus_sha256": "db2802a298e69cb54a4dddae45bb30276805140279b6eee71404b15b0d4712b7"
+  "source_manifest_sha256": "b5fb7390d5db44ab932147d5781cd54bf3bf64635d99054e167b10ca38638f2b",
+  "source_skill_corpus_sha256": "c1173c86bbe9ebe29dbd6e2d62984cc615fcbdd46de061cd3a0cebce448d01f8"
 }
