@@ -88,10 +88,21 @@ def test_preflight_fails_on_main(tmp_path: Path) -> None:
 
 def test_preflight_fails_without_l4(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
+    # Empty L9_AUTONOMY_STATE_DIR keeps L4 state inside this temp repo. Without
+    # it the inherited developer value points at a shared directory, and this
+    # brand-new repo — which never ran `begin` — inherited whichever release
+    # some other checkout had authorized there. That is the same shared-state
+    # defect the L4 gate itself was fixed for; pinning it here keeps the test
+    # measuring pr_preflight.sh rather than the machine it runs on.
     proc = _run(
         ["bash", str(SCRIPTS / "pr_preflight.sh"), str(repo)],
         cwd=repo,
-        env={"PR_BASE": "main", "WS": str(repo), "L9_L4_LOCAL_AUTONOMY": "1"},
+        env={
+            "PR_BASE": "main",
+            "WS": str(repo),
+            "L9_L4_LOCAL_AUTONOMY": "1",
+            "L9_AUTONOMY_STATE_DIR": "",
+        },
     )
     assert proc.returncode == 1
     assert "make improve" in proc.stderr
@@ -142,7 +153,17 @@ def test_improve_record_refused_without_phase(tmp_path: Path) -> None:
 
 def test_improve_begin_then_record(tmp_path: Path) -> None:
     repo = _init_repo(tmp_path, feature=True)
-    env = {"WS": str(repo), "PR_BASE": "main", "IMPROVE_RECORD": "0"}
+    # Empty L9_AUTONOMY_STATE_DIR pins L4 state to the in-worktree path this
+    # test asserts. `_run` inherits os.environ, and a developer session sets
+    # that variable (settings.template.json ships ~/.l9/autonomy), which puts
+    # the receipt somewhere this test never looks — so the assertion below
+    # failed on a correct tree purely because of the ambient environment.
+    env = {
+        "WS": str(repo),
+        "PR_BASE": "main",
+        "IMPROVE_RECORD": "0",
+        "L9_AUTONOMY_STATE_DIR": "",
+    }
     begin = _run(["bash", str(SCRIPTS / "run_improve.sh")], cwd=repo, env=env)
     assert begin.returncode == 0, begin.stderr
     assert "L9_AGENT_REQUIRED" in begin.stdout

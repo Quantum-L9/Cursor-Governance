@@ -9,6 +9,12 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=resolve_governance_paths.sh
 source "$SCRIPT_DIR/resolve_governance_paths.sh"
+# rules/06: sourcing alone does not bind which clone is authoritative, and the
+# EXIT trap warns when the entry point never ran. This script then pins GOV_ROOT
+# to its OWN checkout on the next line — `make improve` must drive the tree it
+# was invoked from — so the resolver is called for its binding and side effects
+# (session env via l9_load_session_env) and is not allowed to fail the run.
+resolve_governance_paths || true
 GOV_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 WS="${WS:-$(pwd)}"
 WS="$(cd "$WS" && pwd)"
