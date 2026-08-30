@@ -1,0 +1,61 @@
+schema_id: canonical.schema.feature_tree.v1
+description: >
+  Canonical schema for a feature tree — a spec-derived dependency DAG whose
+  node order is enforced as PR/branch merge order.
+required_top_level_fields: [schema, program_id, stack_base, nodes]
+field_definitions:
+  schema: { type: string, const: canonical.schema.feature_tree.v1 }
+  program_id: { type: string }
+  stack_base: { type: string }
+  nodes: { type: array, items: { $ref: "#/definitions/node" } }
+definitions:
+  node:
+    type: object
+    required: [id, title, depends_on, branch, base, contract, file_scope, gates, state]
+    properties:
+      id: { type: string, pattern: "^[A-Z]{2,6}-[0-9]{3}$" }
+      title: { type: string }
+      depends_on: { type: array, items: { type: string } }
+      branch: { type: string }
+      base: { type: string }
+      contract: { type: string }
+      file_scope: { type: array, items: { type: string } }
+      gates: { type: array, items: { type: string } }
+      worktree: { type: string }
+      state: { type: string, enum: [planned, in_progress, in_review, merged, blocked] }
+validation_rules:
+  - id: FT001
+    description: nodes must form a directed acyclic graph.
+  - id: FT002
+    description: every id referenced in depends_on must exist as a node id.
+  - id: FT003
+    description: a node's base must equal stack_base or a dependency's branch.
+  - id: FT004
+    description: nodes must not be merged before all depends_on nodes are merged.
+  - id: FT005
+    description: file_scope globs must be pairwise disjoint among unrelated nodes.
+  - id: FT006
+    description: contract path must exist and be readable.
+  - id: FT031
+    description: PR diff file list must be a subset of the resolved node's file_scope.
+example_minimal_tree:
+  schema: canonical.schema.feature_tree.v1
+  program_id: program-execution-control-plane
+  stack_base: main
+  nodes:
+    - id: PE-010
+      title: Land feature-tree and agent-git enforcement foundation
+      depends_on: []
+      branch: feat/program-execution-foundation
+      base: main
+      contract: reports/2026-08-20/contracts/PE-010.contract.md
+      file_scope:
+        - contracts/schemas/canonical.schema.feature_tree.v1.yaml
+        - tools/check_feature_tree.py
+        - tools/agent_git.py
+        - commands/agent-git.md
+        - .github/workflows/feature-tree-gate.yml
+        - .github/workflows/agent-git-guard.yml
+      gates: [feature-tree-gate, agent-git-guard]
+      worktree: ../wt-pe-010
+      state: planned

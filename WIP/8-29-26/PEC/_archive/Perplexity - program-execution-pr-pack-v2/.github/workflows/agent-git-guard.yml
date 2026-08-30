@@ -1,0 +1,26 @@
+name: agent-git-guard
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+permissions:
+  contents: read
+  pull-requests: read
+jobs:
+  agent-git-guard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - run: git fetch origin ${{ github.event.pull_request.base.ref }} --depth=1
+      - run: |
+          BASE="origin/${{ github.event.pull_request.base.ref }}"
+          MISSING=0
+          for sha in $(git log "$BASE"..HEAD --format='%H'); do
+            git show -s --format='%B' "$sha" | grep -q '^L9-Agent: ' || { echo "::error::commit $sha missing L9-Agent trailer"; MISSING=1; }
+          done
+          [ "$MISSING" -eq 0 ] || exit 1
+      - run: |
+          BASE="origin/${{ github.event.pull_request.base.ref }}"
+          WORKTREES=$(git log "$BASE"..HEAD --format='%B' | grep '^L9-Worktree: ' | sort -u)
+          COUNT=$(echo "$WORKTREES" | grep -c . || true)
+          [ "$COUNT" -le 1 ] || { echo "::error::multiple worktrees on branch"; echo "$WORKTREES"; exit 1; }

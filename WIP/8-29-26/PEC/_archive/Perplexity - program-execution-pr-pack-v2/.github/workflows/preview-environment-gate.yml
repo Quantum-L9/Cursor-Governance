@@ -1,0 +1,25 @@
+name: preview-environment-gate
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  pull_request_target:
+    types: [closed]
+permissions:
+  contents: read
+jobs:
+  verify-lease:
+    if: github.event.action != 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - id: node
+        run: echo "node_id=$(echo '${{ github.event.pull_request.title }}' | grep -oE '[A-Z]{2,6}-[0-9]{3}' | head -n 1)" >> "$GITHUB_OUTPUT"
+      - run: python tools/environment_lease.py --reports-dir "reports/$(date +%F)" verify --node-id "${{ steps.node.outputs.node_id }}"
+  reconcile-on-close:
+    if: github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          NODE_ID=$(echo "${{ github.event.pull_request.title }}" | grep -oE '[A-Z]{2,6}-[0-9]{3}' | head -n 1)
+          python tools/environment_lease.py --reports-dir "reports/$(date +%F)" release --node-id "$NODE_ID"

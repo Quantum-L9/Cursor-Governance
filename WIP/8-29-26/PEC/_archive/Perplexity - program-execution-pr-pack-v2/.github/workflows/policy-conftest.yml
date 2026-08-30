@@ -1,0 +1,24 @@
+name: policy-conftest
+on:
+  pull_request:
+    paths: ["reports/**/tasks/feature_tree.v1.yaml", "policy/**"]
+permissions:
+  contents: read
+jobs:
+  conftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          curl -sSL -o conftest.tar.gz https://github.com/open-policy-agent/conftest/releases/latest/download/conftest_Linux_x86_64.tar.gz
+          tar xzf conftest.tar.gz conftest && sudo mv conftest /usr/local/bin
+      - run: conftest verify --policy policy
+      - run: |
+          TREE=$(find reports -type f -name 'feature_tree.v1.yaml' | sort | tail -n 1)
+          conftest test --policy policy "$TREE"
+      - run: |
+          pip install pyyaml
+          TREE=$(find reports -type f -name 'feature_tree.v1.yaml' | sort | tail -n 1)
+          python tools/generate_program_execution_artifacts.py --tree "$TREE" \
+            --out-codeowners governance/generated/CODEOWNERS \
+            --out-ruleset governance/generated/github-ruleset.program-execution.json --check

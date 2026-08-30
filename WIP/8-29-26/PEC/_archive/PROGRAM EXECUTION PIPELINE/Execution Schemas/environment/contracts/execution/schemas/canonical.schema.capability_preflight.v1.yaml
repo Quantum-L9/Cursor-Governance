@@ -1,0 +1,173 @@
+schema_id: canonical.schema.capability_preflight.v1
+schema_name: Canonical Capability Preflight Schema
+schema_class: canonical_execution_contract_schema
+schema_family: l9_execution_architecture
+version: 1.0.0
+status: canonical_draft
+first_class_artifact: true
+artifact_filename: canonical.schema.capability_preflight.v1.yaml
+purpose:
+  primary: 'Define the canonical preflight contract for proving runtime, repository, tool, permission, dependency, and external-system
+    capabilities before execution or mutation.
+
+    '
+  output_level: schema_not_instance
+  intended_use:
+  - execution_preflight
+  - runtime_census
+  - repository_capability_probe
+  - external_system_readiness
+  - mutation_gating
+  not_for:
+  - implementation
+  - speculative_capability_assumptions
+ontology:
+  parent_type: execution_contract_schema
+  specialized_type: capability_preflight_schema
+  instance_type_generated_by_this_schema: capability_preflight
+required_sections:
+  identity:
+    required: true
+    fields:
+      preflight_id:
+        type: string
+        required: true
+      source_ref:
+        type: ref
+        required: true
+      phase_id:
+        type: string
+        required: true
+      blocking:
+        const: true
+  baseline:
+    required: true
+    fields:
+      immutable_baseline_ref:
+        type: ref
+        required: true
+      baseline_verified:
+        type: boolean
+        required: true
+      drift_detected:
+        type: boolean
+        required: true
+  probes:
+    required: true
+    type: list
+    min_items: 1
+    item_schema:
+      id:
+        type: string
+        required: true
+      capability:
+        enum:
+        - repository_access
+        - branch_and_HEAD_resolution
+        - filesystem_read
+        - filesystem_write
+        - command_available
+        - interpreter_available
+        - import_available
+        - network_read
+        - network_write
+        - external_service_health
+        - permission_check
+        - secret_availability
+        - dependency_resolution
+        - schema_parse
+        - workflow_parse
+        - custom
+        required: true
+      property:
+        type: string
+        required: true
+      method:
+        type: string
+        required: true
+      pass_condition:
+        type: string
+        required: true
+      status:
+        enum:
+        - passed
+        - failed
+        - blocked
+        - not_run
+        - unknown
+        required: true
+      evidence_ref:
+        type: ref
+        required: false
+  result:
+    required: true
+    fields:
+      overall_status:
+        enum:
+        - passed
+        - blocked
+        - failed
+        - incomplete
+        required: true
+      failed_probe_ids:
+        type: list_string
+        required: true
+      unknown_probe_ids:
+        type: list_string
+        required: true
+      minimum_safe_next_action:
+        type: string
+        required: true
+  policy:
+    required: true
+    fields:
+      on_failed_blocking_probe:
+        const: block_execution
+      on_unknown_required_probe:
+        const: block_affected_phase
+      on_baseline_drift:
+        const: stop_and_replan
+      advisory_debt:
+        enum:
+        - non_blocking_if_untouched
+        - blocking
+        - policy_defined
+        required: true
+validation_rules:
+- id: CAP-PREFLIGHT-001
+  severity: blocker
+  rule: Blocking preflight requires an immutable baseline reference.
+- id: CAP-PREFLIGHT-002
+  severity: blocker
+  rule: Baseline drift blocks execution.
+- id: CAP-PREFLIGHT-003
+  severity: blocker
+  rule: Failed required probes block execution or the affected phase.
+- id: CAP-PREFLIGHT-004
+  severity: blocker
+  rule: Unknown required capability must not be assumed available.
+- id: CAP-PREFLIGHT-005
+  severity: major
+  rule: Probe success requires evidence appropriate to the capability type.
+derivation_targets:
+  can_generate:
+  - capability_preflight
+  - runtime_census
+  - preflight_receipt
+  - blocker_register
+  - minimum_safe_next_action
+anti_drift_rules:
+- Do not replace probes with assumptions.
+- Do not treat historical success as current capability proof.
+- Do not proceed after baseline drift.
+- Do not let advisory debt block unrelated execution unless policy requires it.
+minimum_viable_instance_requirements:
+  required:
+  - identity
+  - baseline
+  - probes
+  - result
+  - policy
+schema_dependency_direction:
+  depends_on: []
+  cycle_policy: schema_dependency_graph_must_be_acyclic

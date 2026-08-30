@@ -1,0 +1,14 @@
+schema_id: canonical.program_execution.environment_lease.v1
+description: Operational contract for environment lease lifecycle.
+lifecycle:
+  - claim: on node state -> in_progress
+  - renew: on each CI run touching the node's file_scope
+  - reconcile: on PR close or merge
+  - expire: ttl_seconds after last renew with no reconcile event
+failure_modes:
+  - id: EN010
+    description: PR merged/closed without lease reconciliation
+    action: ops/scripts/reconcile_preview_leases.py sweeps and force-releases
+  - id: EN011
+    description: preview env vars do not match leased db_branch
+    action: fail preview-environment-gate; do not deploy

@@ -1,0 +1,8 @@
+schema_id: canonical.program_execution.semantic_conflict.v1
+description: Contract for the semantic-merge probe (trial merge + union of node tests).
+process:
+  - construct_trial_merge: git worktree + git merge --no-commit
+  - select_tests: union of direct_tests for all nodes in the trial merge
+  - run_tests: pytest against the trial merge only
+  - record_verdict: reports/<date>/tasks/semantic_merge_verdict.json
+  - discard_trial_merge: always
