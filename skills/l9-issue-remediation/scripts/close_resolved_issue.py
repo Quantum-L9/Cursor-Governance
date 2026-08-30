@@ -2,7 +2,8 @@
 """Close a GitHub issue that is already resolved — evidence-gated.
 
 Posts the canonical unblock comment (status=fixed) then `gh issue close`.
-HUMAN/EXTERNAL require superseded|duplicate|already-fixed|not-reproducible|does-not-exist plus proof.
+HUMAN/EXTERNAL require superseded|duplicate|already-fixed|
+not-reproducible|does-not-exist plus proof.
 Never prints tokens. Stdlib + gh CLI.
 """
 

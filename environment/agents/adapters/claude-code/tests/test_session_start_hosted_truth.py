@@ -38,6 +38,30 @@ class SessionStartHostedTruthTests(unittest.TestCase):
         self.assertIn("skills loadable:", text)
         self.assertIn(".claude/skills", text)
 
+    def test_loadable_skill_counter_follows_symlinks(self) -> None:
+        """Every entry under .claude/skills is a SYMLINK to a directory in the
+        governance clone, so a bare `find` refuses to descend and counts none of
+        them. The banner printed "skills loadable: 1" against 54 resolvable
+        skills -- the single real directory under ~/.claude/skills -- which is
+        exactly the line an operator reads to conclude skills failed to load."""
+
+        text = HOOK.read_text(encoding="utf-8")
+        start = text.index("loadable=0")
+        counter = text[start : text.index('LINES+=("skills available:', start)]
+        self.assertIn("find -L", counter)
+        self.assertNotIn('find "$d"', counter)
+
+    def test_mcp_claim_is_scoped_to_governance_managed_servers(self) -> None:
+        """.mcp.json is the single authority over the servers governance
+        configures, not over the session's MCP surface. Hosted surfaces inject
+        servers governance neither configures nor gates, so the unqualified
+        "single MCP authority" claim was false wherever it mattered."""
+
+        text = HOOK.read_text(encoding="utf-8")
+        self.assertIn("GOVERNANCE-MANAGED servers only", text)
+        self.assertIn("mcp_platform_injected=", text)
+        self.assertNotIn("(single MCP authority)", text)
+
     def test_hook_does_not_probe_broker(self) -> None:
         text = HOOK.read_text(encoding="utf-8")
         self.assertNotIn("probe_broker.py", text)

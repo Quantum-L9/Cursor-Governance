@@ -7,8 +7,29 @@ capability URLs stay identical; autonomy ceilings may differ.
 
 Claude Code reads `env` from settings.json. If that object wins over process
 environment, a Mobile paste of L9_AUTONOMY_* would be ignored. This overlay
-writes the allowlisted process-env values into workspace (and user-scope)
-settings.json `env` after projection.
+writes the allowlisted process-env values into the workspace (and user-scope)
+settings after projection.
+
+The workspace target is `.claude/settings.local.json`, NOT the tracked
+`.claude/settings.json`. The tracked file is a GENERATED artifact (it is listed
+in sync_generated_artifacts GENERATED_PATH_PREFIXES) projected from
+settings.template.json, and patching it in place dirtied a clean checkout within
+seconds of every SessionStart. Worse, the runtime decrements
+CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH per nesting level (3 -> 1 observed within
+one session; see verify_account_env.RUNTIME_MANAGED), so committing that churn
+would have frozen nested-delegation depth at 1 for every future session.
+`.claude/settings.local.json` is already gitignored, and project-local settings
+outrank shared project settings, so the values still reach the session.
+
+The local file receives the COMPLETE merged env, not just the overlay keys.
+Claude Code's published precedence table does not state whether `env` merges
+key-by-key across scopes or is taken whole from the highest scope that sets it.
+Writing the full object is correct under either reading; writing only the
+overlay keys would silently drop L9_GOVERNANCE_SURFACE under the second, which
+is the one value that must stay exactly `claude-code` or the session leaves the
+Autonomy Surface Profile. The cost is that a later change to the tracked env is
+masked until the next SessionStart rebuilds the local file, which the bootstrap
+does every time.
 
 Never copies credentials. Never rewrites L9_GOVERNANCE_SURFACE (must stay
 exactly `claude-code` or the session drops out of the Autonomy Surface Profile).
@@ -81,6 +102,48 @@ def _patch_file(path: Path, overlay: dict[str, str]) -> bool:
     return True
 
 
+def _write_workspace_local(workspace: Path, overlay: dict[str, str]) -> bool:
+    """Write the merged env into the gitignored project-local settings file.
+
+    Base is the tracked settings.json env when it is readable, so the local file
+    is a complete picture rather than a fragment. Any other keys already in
+    settings.local.json (personal permissions, for example) are preserved.
+    """
+    if not overlay:
+        return False
+    claude_dir = workspace / ".claude"
+    if not claude_dir.is_dir():
+        return False
+
+    base_env: dict[str, Any] = {}
+    tracked = claude_dir / "settings.json"
+    if tracked.is_file():
+        try:
+            tracked_data = json.loads(tracked.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            tracked_data = None
+        if isinstance(tracked_data, dict) and isinstance(tracked_data.get("env"), dict):
+            base_env = dict(tracked_data["env"])
+
+    local = claude_dir / "settings.local.json"
+    data: dict[str, Any] = {}
+    if local.is_file():
+        try:
+            existing = json.loads(local.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            existing = None
+        if isinstance(existing, dict):
+            data = existing
+
+    data["env"] = base_env
+    apply_overlay(data, overlay)
+    try:
+        local.write_text(json.dumps(data, indent=2) + "\n", encoding="utf-8")
+    except OSError:
+        return False
+    return True
+
+
 def overlay_hosted_settings(
     *,
     workspace: Path,
@@ -89,8 +152,8 @@ def overlay_hosted_settings(
 ) -> list[str]:
     overlay = overlay_payload_from_environ(environ)
     written: list[str] = []
-    if _patch_file(workspace / ".claude" / "settings.json", overlay):
-        written.append("workspace")
+    if _write_workspace_local(workspace, overlay):
+        written.append("workspace-local")
     home = home or Path.home()
     if _patch_file(home / ".claude" / "settings.json", overlay):
         written.append("user")

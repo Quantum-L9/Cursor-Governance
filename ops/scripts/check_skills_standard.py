@@ -119,8 +119,26 @@ def check_skills(root: Path) -> tuple[list[str], list[str], int, int, int]:
                 f"{rel}: body {nlines} lines exceeds {BODY_MAX} - use progressive disclosure"
             )
 
-        if "paths" in fm and not fm.get("paths"):
+        paths = fm.get("paths")
+        if "paths" in fm and not paths:
             errs.append(f"{rel}: empty `paths` would hide the skill; remove the key instead")
+        elif paths and not dmi and not is_arch:
+            # The empty-paths check above was the only one, and it could not catch
+            # the case that actually bit: seven skills declared auto_invoke in
+            # AUTONOMY_MANIFEST carried a NON-empty `paths` and were absent from
+            # every session roster until a matching file was touched. Measured
+            # 2026-08-30: 7/7 path-gated skills missing, 0/16 listed skills gated.
+            # `paths` reads like a Cursor rule `globs:` (19 rules/*.mdc use that
+            # key with this same comma-separated glob syntax) where scoping is
+            # free, but for a skill it removes the entry from discovery, so an
+            # intent-triggered skill becomes unreachable by the request that
+            # should trigger it.
+            errs.append(
+                f"{rel}: `paths` on a model-invocable skill hides it from the skill listing "
+                "until a matching file is in context, so a skill declared auto_invoke is "
+                "silently absent. Remove `paths`, or set disable-model-invocation: true to "
+                "hide it deliberately."
+            )
 
     if disc > BUDGET:
         errs.append(f"discovery footprint {disc} exceeds budget {BUDGET}")

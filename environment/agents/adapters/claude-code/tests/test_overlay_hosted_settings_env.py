@@ -37,41 +37,99 @@ class OverlayHostedSettingsEnvTests(unittest.TestCase):
         self.assertEqual(settings["env"]["L9_GOVERNANCE_SURFACE"], REQUIRED_SURFACE)
         self.assertEqual(settings["env"]["L9_AUTONOMY_ENABLED"], "false")
 
-    def test_writes_workspace_and_user_settings(self) -> None:
-        with tempfile.TemporaryDirectory() as tmp:
-            base = Path(tmp)
-            workspace = base / "ws"
-            (workspace / ".claude").mkdir(parents=True)
-            (workspace / ".claude" / "settings.json").write_text(
-                json.dumps(
-                    {
-                        "env": {
-                            "L9_GOVERNANCE_SURFACE": "claude-code",
-                            "L9_AUTONOMY_MAX_PARALLEL": "480",
-                        }
+    @staticmethod
+    def _build(base: Path) -> tuple[Path, Path]:
+        workspace = base / "ws"
+        (workspace / ".claude").mkdir(parents=True)
+        (workspace / ".claude" / "settings.json").write_text(
+            json.dumps(
+                {
+                    "env": {
+                        "L9_GOVERNANCE_SURFACE": "claude-code",
+                        "L9_AUTONOMY_MAX_PARALLEL": "480",
                     }
-                ),
-                encoding="utf-8",
-            )
-            home = base / "home"
-            (home / ".claude").mkdir(parents=True)
-            (home / ".claude" / "settings.json").write_text(
-                json.dumps({"env": {"L9_GOVERNANCE_SURFACE": "claude-code"}}),
-                encoding="utf-8",
-            )
+                }
+            ),
+            encoding="utf-8",
+        )
+        home = base / "home"
+        (home / ".claude").mkdir(parents=True)
+        (home / ".claude" / "settings.json").write_text(
+            json.dumps({"env": {"L9_GOVERNANCE_SURFACE": "claude-code"}}),
+            encoding="utf-8",
+        )
+        return workspace, home
+
+    def test_writes_workspace_local_and_user_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, home = self._build(Path(tmp))
             written = overlay_hosted_settings(
                 workspace=workspace,
                 home=home,
                 environ={"L9_AUTONOMY_MAX_PARALLEL": "8"},
             )
-            self.assertEqual(written, ["workspace", "user"])
-            ws_settings = workspace / ".claude" / "settings.json"
-            user_settings = home / ".claude" / "settings.json"
-            ws_env = json.loads(ws_settings.read_text(encoding="utf-8"))["env"]
-            user_env = json.loads(user_settings.read_text(encoding="utf-8"))["env"]
-            self.assertEqual(ws_env["L9_AUTONOMY_MAX_PARALLEL"], "8")
+            self.assertEqual(written, ["workspace-local", "user"])
+            local_env = json.loads(
+                (workspace / ".claude" / "settings.local.json").read_text(encoding="utf-8")
+            )["env"]
+            user_env = json.loads((home / ".claude" / "settings.json").read_text(encoding="utf-8"))[
+                "env"
+            ]
+            self.assertEqual(local_env["L9_AUTONOMY_MAX_PARALLEL"], "8")
             self.assertEqual(user_env["L9_AUTONOMY_MAX_PARALLEL"], "8")
-            self.assertEqual(ws_env["L9_GOVERNANCE_SURFACE"], "claude-code")
+            self.assertEqual(local_env["L9_GOVERNANCE_SURFACE"], "claude-code")
+
+    def test_tracked_workspace_settings_is_never_modified(self) -> None:
+        """The regression this overlay caused: a tracked GENERATED artifact was
+        patched in place, dirtying a clean checkout at every SessionStart."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, home = self._build(Path(tmp))
+            tracked = workspace / ".claude" / "settings.json"
+            before = tracked.read_bytes()
+            overlay_hosted_settings(
+                workspace=workspace,
+                home=home,
+                environ={
+                    "L9_AUTONOMY_MAX_PARALLEL": "8",
+                    "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "1",
+                },
+            )
+            self.assertEqual(tracked.read_bytes(), before)
+
+    def test_local_file_carries_complete_env_not_just_overlay_keys(self) -> None:
+        """Written whole because Claude Code's precedence table does not say
+        whether `env` merges key-by-key or is taken whole from the top scope.
+        A fragment would drop L9_GOVERNANCE_SURFACE under the second reading."""
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, home = self._build(Path(tmp))
+            overlay_hosted_settings(
+                workspace=workspace,
+                home=home,
+                environ={"L9_AUTONOMY_ENABLED": "true"},
+            )
+            local_env = json.loads(
+                (workspace / ".claude" / "settings.local.json").read_text(encoding="utf-8")
+            )["env"]
+            # inherited from the tracked file, absent from the overlay payload
+            self.assertEqual(local_env["L9_AUTONOMY_MAX_PARALLEL"], "480")
+            self.assertEqual(local_env["L9_GOVERNANCE_SURFACE"], "claude-code")
+            self.assertEqual(local_env["L9_AUTONOMY_ENABLED"], "true")
+
+    def test_preserves_unrelated_keys_already_in_local_settings(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            workspace, home = self._build(Path(tmp))
+            local = workspace / ".claude" / "settings.local.json"
+            local.write_text(
+                json.dumps({"permissions": {"allow": ["Bash(ls:*)"]}}), encoding="utf-8"
+            )
+            overlay_hosted_settings(
+                workspace=workspace,
+                home=home,
+                environ={"L9_AUTONOMY_ENABLED": "true"},
+            )
+            data = json.loads(local.read_text(encoding="utf-8"))
+            self.assertEqual(data["permissions"], {"allow": ["Bash(ls:*)"]})
+            self.assertEqual(data["env"]["L9_AUTONOMY_ENABLED"], "true")
 
 
 if __name__ == "__main__":
