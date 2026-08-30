@@ -151,6 +151,14 @@ def main() -> int:
             errors.append("cursor-build render retained PE machine-stub pipeline")
         if "project→Lock→claim→render→autonomy lanes" in out:
             errors.append("cursor-build render retained PE convergence next-action")
+        if "PR_STACK=auto" not in out:
+            errors.append("cursor-build render missing stacked PR_STACK=auto")
+        if "make pr" not in out:
+            errors.append("cursor-build render missing make pr after Build")
+        if "PR URL" not in out:
+            errors.append("cursor-build render missing PR URL proof")
+        if "**never** branch from `origin/main`" not in out:
+            errors.append("cursor-build render missing never-branch-from-main when open PR exists")
     else:
         errors.append(f"cursor-build render failed\n{build.stderr}")
 

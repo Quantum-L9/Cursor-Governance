@@ -291,3 +291,13 @@ done
     assert fast_ms < 150, f"fast job inherited wait-time wall: {fast_ms}ms"
     assert slow_ms >= 200, f"slow job too short: {slow_ms}ms"
     assert fast_ms < slow_ms
+
+
+def test_pr_security_modes_script() -> None:
+    proc = _run(["bash", str(SCRIPTS / "tests" / "test_pr_security_modes.sh")], cwd=ROOT)
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
+
+def test_pr_security_speed_script() -> None:
+    proc = _run(["bash", str(SCRIPTS / "tests" / "test_pr_security_speed.sh")], cwd=ROOT)
+    assert proc.returncode == 0, proc.stdout + proc.stderr

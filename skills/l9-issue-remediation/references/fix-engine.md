@@ -12,7 +12,7 @@ updated: 2026-08-13
 
 # Fix Engine
 
-Concurrent safe codebase fixes for one sticky cluster → local verify → one commit.
+Concurrent safe codebase fixes for one cluster → local verify → land on a PR.
 
 ## Lesson Recall (before inventing a fix)
 
@@ -32,20 +32,30 @@ rg -i "<error class or key phrase>" \
 ## Steps
 
 1. Clone or open the **owning repo** worktree (never invent paths).
-2. **Lesson recall** — run the search above; apply a matching template only when the current failure matches.
+2. **Verify the issue** — [issue-verify.md](issue-verify.md). Recreate the
+   live GitHub record. If 404 or already CLOSED, stop this item. If the
+   defect is absent, close (`not-reproducible` / `does-not-exist` /
+   `already-fixed`) and do not patch. Continue only on `exists`.
+3. **Lesson recall** — run the search above; apply a matching template only when the current failure matches.
 3. Implement the smallest change that removes the root cause.
 4. Prefer shared contracts/tests that would fail if the audited bug returned.
 5. Run every locally reproducible required gate for that repo (lint/type/test).
 6. On fail: fix and re-run all (≤5 iterations). If a fix breaks a gate, revert that
    fix and defer with reason.
-7. One conventional commit + push with trailer:
+7. One conventional commit with trailer:
 
 ```text
 Issue-Remediation-Cycle: {owner}/{repo}#{issue}/cycle-{N}
 ```
 
-8. If a PR is needed or already open →
-   [handoff-to-pr-remediation.md](handoff-to-pr-remediation.md).
+8. Land the commit per [pr-landing.md](pr-landing.md) (`scripts/pr_landing.py`):
+   matching open PR → `git push` that branch; else `PR_REMEDIATE=0 make pr`
+   stacked on the newest open PR (`PR_STACK=auto`); else first PR on
+   `origin/main`. PR body lists `Fixes #n` for every cluster issue.
+9. Close the issue once the fix is on that PR
+   (`scripts/close_resolved_issue.py --on-pr`). Do **not** invoke
+   `/l9-pr-remediation` here — that waits for `open_issues=0`
+   ([handoff-to-pr-remediation.md](handoff-to-pr-remediation.md)).
 
 ## Forbidden
 

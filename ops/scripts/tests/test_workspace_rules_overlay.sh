@@ -165,4 +165,43 @@ t9_store="$(python3 -c "import os; print(os.path.realpath('$gov9/docs/plans'))")
 [ "$t9_rt" = "$t9_store" ]
 pass "SSOT setup removes .cursor-commands self-alias and wires .cursor/plans"
 
+# T10: ssot_checkout (identity tree, not live SSOT) must not get .cursor-commands.
+# Consumer T8 still requires the link; this case is the C1 complement.
+fixture_home10="$TMP_ROOT/t10-home"
+gov10="$fixture_home10/.cursor-governance"
+checkout10="$TMP_ROOT/t10-checkout"
+mkdir -p "$gov10/ops/scripts/lib" "$gov10/ops/hooks" "$gov10/skills" "$gov10/commands" \
+  "$gov10/rules" "$checkout10/skills" "$checkout10/rules" "$checkout10/ops/scripts"
+cp "$OPS_DIR/setup_workspace_symlinks.sh" "$gov10/ops/scripts/"
+cp "$OPS_DIR/resolve_governance_paths.sh" "$gov10/ops/scripts/"
+cp "$OPS_DIR/lib/path_contracts.sh" "$gov10/ops/scripts/lib/"
+cp "$OPS_DIR/lib/rules_overlay.sh" "$gov10/ops/scripts/lib/"
+cp "$OPS_DIR/lib/workspace_kind.sh" "$gov10/ops/scripts/lib/"
+cp "$OPS_DIR/lib/cursor_plans_store.sh" "$gov10/ops/scripts/lib/"
+printf '%s\n' '# law' > "$gov10/CANONICAL_LAW.md"
+printf '%s\n' '# law' > "$checkout10/CANONICAL_LAW.md"
+printf '%s\n' 'x' > "$gov10/skills/AUTONOMY_MANIFEST.yaml"
+printf '%s\n' 'x' > "$checkout10/skills/AUTONOMY_MANIFEST.yaml"
+printf '%s\n' 'x' > "$gov10/rules/RULES-MANIFEST.yaml"
+printf '%s\n' 'x' > "$checkout10/rules/RULES-MANIFEST.yaml"
+printf '%s\n' '#!/bin/sh' > "$checkout10/ops/scripts/check_governance_wiring.sh"
+printf '%s\n' '{"version":1,"hooks":{}}' > "$gov10/ops/hooks/hooks.json.template"
+printf '%s\n' '#!/usr/bin/env bash' > "$gov10/ops/scripts/governance_activate_fresh.sh"
+chmod +x "$gov10/ops/scripts/governance_activate_fresh.sh"
+cat > "$gov10/ops/scripts/validate_governance_symlinks.sh" <<'SH'
+#!/usr/bin/env bash
+exit 0
+SH
+chmod +x "$gov10/ops/scripts/validate_governance_symlinks.sh"
+ln -sfn "$gov10" "$checkout10/.cursor-commands"
+(
+  export HOME="$fixture_home10"
+  export GRAPHITI_MEMORY_ENABLED=0
+  cd "$checkout10"
+  bash "$gov10/ops/scripts/setup_workspace_symlinks.sh" >/dev/null
+)
+[ ! -e "$checkout10/.cursor-commands" ]
+[ -L "$checkout10/.cursor/plans" ]
+pass "ssot_checkout setup removes .cursor-commands and does not recreate it"
+
 echo "RESULT: PASS ($PASS cases)"

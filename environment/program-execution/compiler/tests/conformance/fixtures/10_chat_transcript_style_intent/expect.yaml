@@ -1,0 +1,10 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 10_chat_transcript_style_intent
+objective_contains:
+- assurance
+prohibitions:
+- DO NOT
+expected_dispositions:
+- HARDEN_WIRE_EXISTING
+authority_must_not_expand: true
+source_traceability_required: true

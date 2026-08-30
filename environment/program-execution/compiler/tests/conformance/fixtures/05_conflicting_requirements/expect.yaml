@@ -1,0 +1,12 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 05_conflicting_requirements
+objective_contains:
+- Program Controller
+prohibitions:
+- DO NOT
+expected_dispositions:
+- UNKNOWN
+unknowns_expected:
+- conflict
+authority_must_not_expand: true
+source_traceability_required: true

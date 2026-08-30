@@ -1,6 +1,6 @@
 <!-- L9_META
 l9_schema: 1
-parent: l9-plan-audit
+parent: l9-pipeline-audit
 tags: [plan, audit, staleness, session-start]
 status: active
 version: 1.1.0

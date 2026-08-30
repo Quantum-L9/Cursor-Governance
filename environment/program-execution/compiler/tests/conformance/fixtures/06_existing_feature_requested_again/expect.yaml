@@ -1,0 +1,10 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 06_existing_feature_requested_again
+objective_contains:
+- compiler/intent.py
+preserve:
+- parser
+expected_dispositions:
+- KEEP
+authority_must_not_expand: true
+source_traceability_required: true

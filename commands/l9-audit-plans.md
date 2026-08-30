@@ -10,8 +10,8 @@ auto_chain: null
 ## WHAT IT DOES
 
 Audit the machine-global Cursor **plans store** and put every `.plan.md` on the
-correct shelf. This is **not** `l9-plan` (author a plan) and **not** the
-sessionStart skill `l9-plan-audit` (7-day live-queue display only).
+correct shelf. This is **not** `l9-plan` (author a plan) and **not**
+`/l9-pipeline-audit` (plans + WIP + campaigns live-queue and harvest).
 
 Store path: workspace `.cursor/plans` → `~/.cursor/plans` → `docs/plans/`
 (stamp `$HOME/.cursor/l9-plans-store`). Rules: [`docs/plans/README.md`](../docs/plans/README.md).
@@ -49,9 +49,9 @@ Companion `.plan.json` / `.activate.yaml` move with their `.plan.md`.
 ```bash
 REPO="${CURSOR_PROJECT_DIR:-$(pwd)}"
 GOV="${HOME}/.cursor-governance"
-[ -f "$GOV/skills/l9-plan-audit/scripts/audit_plans.py" ] || GOV="$REPO"
+[ -f "$GOV/skills/l9-pipeline-audit/scripts/audit_plans.py" ] || GOV="$REPO"
 
-python3 "$GOV/skills/l9-plan-audit/scripts/audit_plans.py" \
+python3 "$GOV/skills/l9-pipeline-audit/scripts/audit_plans.py" \
   --workspace "$REPO" \
   --window-days 7 \
   --format markdown \
@@ -134,6 +134,6 @@ Re-run the step-1 CLI. Root must be current unbuilt only (plus `_TEMPLATE`).
 
 ## NOTES
 
-- SessionStart `### Plan audit` is `l9-pipeline-audit` (plans + WIP + campaigns; spent archive only). This slash remains the plans-store shelf organizer.
+- SessionStart `### Plan audit` is `l9-pipeline-audit` (plans + WIP + campaigns; one NEXT slot per surface; spent archive only). This slash remains the plans-store shelf organizer.
 - `/plan-audit` is a compatibility alias of `/l9-pipeline-audit`, not this command.
 - Slash: `commands/l9-audit-plans.md`

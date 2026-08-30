@@ -37,9 +37,11 @@ def run(
     # The fixtures assume `git init --bare` yields HEAD -> refs/heads/main; on a
     # host where init.defaultBranch is unset git uses master, the bare remote's
     # HEAD dangles, and clones land on an unborn branch instead of main.
-    merged["GIT_CONFIG_COUNT"] = "1"
+    merged["GIT_CONFIG_COUNT"] = "2"
     merged["GIT_CONFIG_KEY_0"] = "init.defaultBranch"
     merged["GIT_CONFIG_VALUE_0"] = "main"
+    merged["GIT_CONFIG_KEY_1"] = "core.excludesFile"
+    merged["GIT_CONFIG_VALUE_1"] = ""
     if env:
         merged.update(env)
     return subprocess.run(

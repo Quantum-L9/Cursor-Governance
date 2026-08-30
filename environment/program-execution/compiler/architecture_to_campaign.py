@@ -1032,14 +1032,10 @@ def _task(
     workstream_id: str,
 ) -> dict[str, Any]:
     declared_paths = list(paths)
-    if not read_only and not declared_paths:
-        # A mutating task must name what it may write. When the architecture
-        # names no file for this section, the one location the compiler can
-        # honestly declare is the task's own record — under-scoped rather than
-        # over-scoped, and widened by naming paths in the source. Emitting an
-        # empty scope instead would ask the worker to accept write authority
-        # over files nobody named.
-        declared_paths = [f"docs/program-execution/{task_id}.md"]
+    unknown_seam = not read_only and not declared_paths
+    # Unknown implementation seam is a discovery dependency, not a fabricated
+    # docs/program-execution/<TASK>.md write target.
+    inspection_only = read_only or unknown_seam
     return {
         "id": task_id,
         "title": title,
@@ -1048,10 +1044,12 @@ def _task(
         "workstream_id": workstream_id,
         "wave_id": "W0",
         "target_id": target_id,
-        "execution_kind": "read_only" if read_only else "repo_local",
+        "execution_kind": "read_only" if inspection_only else "repo_local",
         "objective": objective,
-        "authority_basis_ids": ["AUTH-002" if read_only else "AUTH-003"],
+        "authority_basis_ids": ["AUTH-002" if inspection_only else "AUTH-003"],
         "required_decision_ids": [],
+        # Empty: unknown seam is scheduled as inspection, not a blocked
+        # reference the Blueprint validator cannot resolve (ADR-0023 §5).
         "blocking_unknown_ids": [],
         "input_evidence_ids": list(input_evidence_ids),
         "paths": declared_paths,
@@ -1067,12 +1065,12 @@ def _task(
         "risk": {
             "tier": "T0",
             "reversibility": "fully_reversible",
-            "blast_radius": "inspection_only" if read_only else "declared_paths",
+            "blast_radius": "inspection_only" if inspection_only else "declared_paths",
         },
         "authorization_ceiling": {
             "inspect": True,
-            "local_write": not read_only,
-            "commit": not read_only,
+            "local_write": not inspection_only,
+            "commit": not inspection_only,
             "push": False,
             "pull_request": False,
             "merge": False,

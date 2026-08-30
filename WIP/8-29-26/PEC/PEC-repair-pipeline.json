@@ -1,0 +1,544 @@
+{
+  "schema": "l9.pec.repair-pipeline.v1",
+  "title": "Program Execution repair pipeline \u2014 remaining work only",
+  "updated": "2026-08-29",
+  "inspected_head": "74f86226",
+  "corpus_archived_to": "WIP/8-29-26/PEC/_archive",
+  "execution_mode": "bootstrap_bridge_stage_a",
+  "execution_mode_means": "Claude Code Desktop executes explicit contracts. PEC compiles the same raw intent in shadow only (no campaign execution). Do not make campaign until W7 (C5 graduation).",
+  "doctrine": {
+    "authority_chain": [
+      "immutable operator intent",
+      "semantics-preserving compilation",
+      "accepted Blueprint",
+      "Program Lock",
+      "exact task authorization",
+      "immutable candidate",
+      "independent verification",
+      "scoped evidence",
+      "authorized promotion",
+      "advisory handoff",
+      "authenticated owner verdict"
+    ],
+    "order_law": "Trust the compiler before giving the runtime richer instructions. RiskPacket, ImpactEngine, World Model, and host overlays (merge queue, preview leases) are after C5.",
+    "strictness": "Human ingress is permissive. Internal IR, Blueprint, and Program Lock stay strict. Unknown stays UNKNOWN.",
+    "two_planes": "When mutating the control plane (W8+), freeze a pinned v2 orchestrator checkout (plane A) and edit the live implementation (plane B). Do not self-modify the interpreter mid-run."
+  },
+  "forbidden": [
+    "second Program Controller",
+    "second Program-state store",
+    "second REPLAN_CONTRACT",
+    "second authorization model",
+    "second evidence model",
+    "second receipt universe",
+    "second TransportPacket",
+    "RiskPacket router (Gate owns routing)",
+    "approved field inside RiskPacket",
+    "World Model dependency for Risk v1",
+    "make campaign / pec execute until W7 exit",
+    "hand-author campaign-source.v2 when a brief/intent route exists",
+    "merge or push from a repair contract unless separately authorized",
+    "fabricate a mutation path for an unknown implementation seam"
+  ],
+  "live_evidence": {
+    "compiler_module": "environment/program-execution/compiler",
+    "campaign_input": "environment/program-execution/scripts/campaign_input.py",
+    "program_intent_dead_end": {
+      "path": "environment/program-execution/scripts/campaign_input.py",
+      "lines": "343-358",
+      "fact": "PROGRAM_INTENT_V1 is classified then rejected; operator is told to convert to campaign-source.v2. Not in SUPPORTED_KINDS."
+    },
+    "normative_case_trap": {
+      "path": "environment/program-execution/compiler/tests/test_architecture_intent.py",
+      "test": "test_normative_signals_are_case_sensitive",
+      "fact": "Live tests assert lowercase 'must' is not a signal. That is the semantic-loss bug, currently encoded as intended behavior."
+    },
+    "worker_permissions": {
+      "path": "environment/program-execution/adapters/claude-code/permission_renderer.py",
+      "fact": "local_write grants Edit/Write; Bash(git add:*) and Bash(git commit:*) are denied. Worker is asked for candidate_sha it cannot create."
+    },
+    "stderr_digest_only": {
+      "path": "environment/program-execution/adapters/claude-code/provider.py",
+      "fact": "Failure receipts store stderr_digest, not stderr text. Peer Execution FAIL is undiagnosable from receipts."
+    },
+    "publication_refused": {
+      "path": "environment/program-execution/scripts/run_campaign.py",
+      "symbol": "refuse_publication",
+      "fact": "C0 runner merge/push/PR-open is already fail-closed. Dead code after the raise is residue, not an open leak."
+    },
+    "no_shadow_harness": "repo grep for shadow compiler / BOOTSTRAP-PEC / intent conformance returned zero live hits"
+  },
+  "completed_removed_from_pipeline": [
+    {
+      "id": "campaign-front-door-kinds",
+      "status": "partial_landed",
+      "what": "campaign_input.py routes brief, plan, activate, campaign-source.v2, architecture-intent.v1. Publication stages refuse_publication.",
+      "residual": "PROGRAM_INTENT_V1 still rejected \u2014 owned by W3."
+    },
+    {
+      "id": "compiler-module-in-tree",
+      "status": "partial_landed",
+      "what": "intent.py, architecture_{intent,extractor,coverage,ir}, repo_truth.py, architecture_to_campaign.py, synthesizer.py, blueprint_validate.py exist under environment/program-execution/compiler.",
+      "residual": "Ingress, lowercase fidelity, microscope grounding, grounded lowering, shadow harness \u2014 W1\u2013W6."
+    },
+    {
+      "id": "bounded-replanning-v1",
+      "status": "complete",
+      "evidence": "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml \u2014 CONVERGED, PR 149"
+    },
+    {
+      "id": "l9-devpack-program-execution-hardening",
+      "status": "complete",
+      "evidence": "CAMPAIGN_STATUS.yaml \u2014 CONVERGED, PR 150"
+    },
+    {
+      "id": "cc-pe-intent-compiler-v1",
+      "status": "complete_archival",
+      "what": "Contract registered in-tree; AUTH-001 bound compiler to environment/program-execution/compiler. Quality Gates A\u2013F were never the live graduation test.",
+      "evidence": "campaigns/cc-pe-intent-compiler-v1/README.md honesty: leftover / INCONCLUSIVE"
+    },
+    {
+      "id": "level3-make-pr-single-path",
+      "status": "complete",
+      "evidence": "CAMPAIGN_STATUS.yaml \u2014 CONVERGED, PR 187"
+    },
+    {
+      "id": "l9-pe-campaign-activate",
+      "status": "complete",
+      "what": "Skill + compile_activation_files.py is live. WIP Campaign Activation Files are a worked example, not remaining work."
+    },
+    {
+      "id": "c0-runner-publication-containment",
+      "status": "complete",
+      "what": "run_campaign.py refuse_publication on push, PR create, merge, publish. C0-A/C0-B from pe-v3 INTENT are closed."
+    },
+    {
+      "id": "graphiti-resume-ssot",
+      "status": "complete",
+      "what": "Resume SSOT is Graphiti. PE Memory cutover docs are not a live blocker for compiler repair."
+    }
+  ],
+  "deferred_out_of_this_pipeline": [
+    {
+      "id": "environment-experience-convergence",
+      "archive": "_archive/PE-environment-experience-convergence.md",
+      "why": "Separate 8-release environment-experience pack. Used PE as executor; is not PEC compiler repair. Handoff of that failed run is evidence for W0 only."
+    },
+    {
+      "id": "perplexity-pr-pack-v2",
+      "archive": "_archive/Perplexity - program-execution-pr-pack-v2",
+      "why": "Host overlay: merge queue, provenance, feature trees, preview leases. After C5 graduation, not before."
+    },
+    {
+      "id": "pe-memory-campaign-cutover",
+      "archive": "_archive/Perplexity - program-execution-pr-pack-v2/PE Memory",
+      "why": "Campaign-scoped memory design. Graphiti is already resume SSOT. Revisit after W7 if compiler still lacks an evidence/memory projection."
+    },
+    {
+      "id": "wip-execution-schema-family",
+      "archive": "_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas",
+      "why": "Draft canonical.schema.*.yaml copies. Live plan schema is skills/l9-plan/schemas/plan-document.schema.json. Land a schema only when a remaining wave needs a missing contract type."
+    },
+    {
+      "id": "campaign-activation-kit-copy",
+      "archive": "_archive/Campaign Activation Files",
+      "why": "Skill is live; level3 example converged. Do not re-admit from this WIP copy."
+    },
+    {
+      "id": "pe-v3-hardening-forensic-source",
+      "live_path": "environment/program-execution/campaigns/pe-v3-hardening",
+      "why": "Immutable forensic campaign-source (operator_intake). Do not rewrite. W8 consumes its counterexample intent, does not re-execute the 2026-08-17 seed as-is (baseline SHAs are stale)."
+    }
+  ],
+  "pipeline": [
+    {
+      "id": "W0",
+      "contract_id": "PEC-WORKER-DIAG-001",
+      "maps_from": [
+        "HANDOFF-pe-execution-attempt.md"
+      ],
+      "title": "Make Peer Execution failures diagnosable",
+      "why_first": "Every later wave that needs a real worker will otherwise fail as TASK-001 provider FAIL with empty changed_files and no stderr. Seven measured runs at c3081ee; re-verify at current HEAD.",
+      "status": "landed_shadow_build",
+      "do_not": "Re-run make campaign to 'see if it works'. Fix retention first.",
+      "work": [
+        {
+          "id": "W0.1",
+          "title": "Retain worker stdout/stderr on FAIL",
+          "paths": [
+            "environment/program-execution/adapters/claude-code/provider.py"
+          ],
+          "acceptance": "Failure receipt includes bounded stderr/stdout text behind a debug flag or on FAIL; digest remains. A reproduced FAIL names the actual error."
+        },
+        {
+          "id": "W0.2",
+          "title": "Resolve candidate_sha vs denied git add/commit",
+          "paths": [
+            "environment/program-execution/adapters/claude-code/permission_renderer.py",
+            "environment/program-execution/peer_execution/execution.py",
+            "environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py"
+          ],
+          "acceptance": "Either the worker may create the candidate commit it must return, or the controller records candidate identity from the worktree without requiring the worker to git commit. Contract and permissions agree. changed_files empty is no longer forced by this contradiction."
+        },
+        {
+          "id": "W0.3",
+          "title": "Re-probe one 1-file local_write task at current HEAD",
+          "acceptance": "Receipt shows turns, changed_files, and stderr text. If still 13 turns / zero edits, that is now a named defect with logs, not a guess."
+        }
+      ]
+    },
+    {
+      "id": "W1",
+      "contract_id": "BOOTSTRAP-PEC-000",
+      "maps_from": [
+        "PEC Contract.md",
+        "pec2.md \u00a714",
+        "pec1.md \u00a715\u201316"
+      ],
+      "title": "Intent-compiler conformance corpus + shadow comparison harness",
+      "status": "landed_shadow_build",
+      "objective": "Permanent fixture infrastructure so every later contract is also a compiler test. PEC MUST NOT execute the shadow campaign.",
+      "non_goals": [
+        "RiskPacket",
+        "ImpactEngine",
+        "World Model",
+        "autonomous risk-aware replan",
+        "peer-execution redesign",
+        "Gate redesign"
+      ],
+      "work": [
+        {
+          "id": "W1.1",
+          "title": "Characterization tests of current compiler (no semantic fixes yet)",
+          "cases": [
+            "A one-sentence freeform",
+            "B ordinary Markdown",
+            "C program-execution.intent.v1",
+            "D architecture-intent",
+            "E long ADR",
+            "F lowercase don't replace assurance",
+            "G uppercase DO NOT REPLACE ASSURANCE",
+            "H existing feature requested again",
+            "I vague harmless intent",
+            "J authority-bearing ambiguity"
+          ]
+        },
+        {
+          "id": "W1.2",
+          "title": "Permanent fixture corpus",
+          "suggested_location": "environment/program-execution/compiler/tests/conformance/",
+          "fixtures": [
+            "01_one_sentence_intent",
+            "02_brain_dump",
+            "03_long_architecture_adr",
+            "04_lowercase_prohibition",
+            "05_conflicting_requirements",
+            "06_existing_feature_requested_again",
+            "07_superseded_design_requested",
+            "08_vague_business_goal",
+            "09_detailed_technical_spec",
+            "10_chat_transcript_style_intent",
+            "11_no_explicit_target",
+            "12_explicit_target",
+            "13_authority_ambiguity",
+            "14_safe_resolvable_ambiguity"
+          ]
+        },
+        {
+          "id": "W1.3",
+          "title": "Semantic expectation format (test-facing, not a second Blueprint)",
+          "fields": [
+            "objective_contains",
+            "preserve",
+            "prohibitions",
+            "expected_dispositions",
+            "unknowns_expected",
+            "authority_must_not_expand",
+            "source_traceability_required"
+          ]
+        },
+        {
+          "id": "W1.4",
+          "title": "Shadow compiler runner + comparator + score dimensions",
+          "report_must_identify": [
+            "missing objectives/requirements/prohibitions/acceptance",
+            "lost unknowns",
+            "false CREATE",
+            "incorrect KEEP/MERGE/HARDEN",
+            "authority widening",
+            "target-resolution mismatch",
+            "missing source provenance",
+            "ungrounded implementation claims"
+          ],
+          "metrics": [
+            "material_intent_loss_count",
+            "prohibition_loss_count",
+            "acceptance_loss_count",
+            "unknown_loss_count",
+            "false_create_count",
+            "grounding_error_count",
+            "authority_widening_count",
+            "source_traceability_percent",
+            "fixture_pass_count",
+            "fixture_fail_count"
+          ]
+        }
+      ],
+      "acceptance_tests": [
+        "AT-001 ordinary one-sentence intent does not require choosing an internal PEC schema/route",
+        "AT-002 lowercase don't replace assurance survives with provenance",
+        "AT-003 upper and lower prohibitions are semantically equivalent",
+        "AT-004 program-execution.intent.v1 does not dead-end at the campaign router",
+        "AT-005 every material source unit gets an explicit disposition",
+        "AT-006 existing implementation is not blindly CREATE",
+        "AT-007 unknown seam does not fabricate a mutation path",
+        "AT-008 authority-bearing ambiguity does not become permission",
+        "AT-009 shadow compile has no repo/runtime side effect",
+        "AT-010 comparator is semantic, not wording-exact",
+        "AT-011 explicit valid PEC canonical input still works",
+        "AT-012 malformed/unsafe source fails before side effects"
+      ],
+      "note": "AT-002 through AT-008 will FAIL on current HEAD. That is the baseline. W1 lands the harness and records the failures. W2\u2013W6 make them pass."
+    },
+    {
+      "id": "W2",
+      "contract_id": "C0",
+      "maps_from": [
+        "pec1.md C0",
+        "PE-PE 1.md S0"
+      ],
+      "title": "Baseline microscope \u2014 freeze current failures as executable counterexamples",
+      "status": "landed_shadow_build",
+      "depends_on": [
+        "W1"
+      ],
+      "acceptance": "Golden journey matrix exists as tests. Desired-safe assertions may xfail. No behavior fixes in this wave. Counterexample registry is machine-readable."
+    },
+    {
+      "id": "W3",
+      "contract_id": "C1",
+      "maps_from": [
+        "pec1.md C1",
+        "PEC Contract.md Phase 4"
+      ],
+      "title": "Unified human intent ingress",
+      "status": "landed_shadow_build",
+      "depends_on": [
+        "W2"
+      ],
+      "paths": [
+        "environment/program-execution/scripts/campaign_input.py",
+        "environment/program-execution/compiler/intent.py",
+        "environment/program-execution/compiler/resolver.py"
+      ],
+      "acceptance": "one-liner, ADR, ordinary Markdown, and explicit schemas all enter one ingress. program-execution.intent.v1 no longer dead-ends. Operator does not choose brief vs architecture vs intent. Internal schemas stay strict."
+    },
+    {
+      "id": "W4",
+      "contract_id": "C2",
+      "maps_from": [
+        "pec1.md C2",
+        "PEC Contract.md Phase 5"
+      ],
+      "title": "Semantic fidelity \u2014 no silent loss of human meaning",
+      "status": "landed_shadow_build",
+      "depends_on": [
+        "W3"
+      ],
+      "paths": [
+        "environment/program-execution/compiler/architecture_intent.py",
+        "environment/program-execution/compiler/architecture_extractor.py",
+        "environment/program-execution/compiler/architecture_coverage.py",
+        "environment/program-execution/compiler/architecture_ir.py"
+      ],
+      "acceptance": "Lowercase don't/never/must not/preserve/keep/reuse survive with source provenance, equivalent to uppercase anchors. Keep lexical MUST/MUST NOT as high-confidence detectors. Update tests that currently assert case-sensitivity as the contract \u2014 that assertion is the defect.",
+      "warning": "Rule 95: do not weaken tests to hide loss. Change the contract those tests encode, then prove lowercase retention."
+    },
+    {
+      "id": "W5",
+      "contract_id": "C3",
+      "maps_from": [
+        "pec1.md C3",
+        "PEC Contract.md Phase 6"
+      ],
+      "title": "Repository microscope IR",
+      "status": "landed_shadow_build",
+      "depends_on": [
+        "W4"
+      ],
+      "paths": [
+        "environment/program-execution/compiler/repo_truth.py"
+      ],
+      "dispositions": [
+        "ALREADY_SATISFIED",
+        "KEEP",
+        "MERGE_WITH_EXISTING",
+        "HARDEN_WIRE_EXISTING",
+        "CREATE",
+        "DELETE_SUPERSEDED",
+        "MIGRATION_CONTEXT",
+        "UNKNOWN"
+      ],
+      "acceptance": "Before task synthesis, each requirement is classified with path+symbol evidence. Do not replace repo_truth.py. If full microscope exceeds the contract, land the IR + enough grounding for the conformance harness and record residual unknowns honestly."
+    },
+    {
+      "id": "W6",
+      "contract_id": "C4",
+      "maps_from": [
+        "pec1.md C4"
+      ],
+      "title": "Grounded lowering \u2014 tasks from obligation \u00d7 owner \u00d7 seam",
+      "status": "landed_shadow_build",
+      "depends_on": [
+        "W5"
+      ],
+      "paths": [
+        "environment/program-execution/compiler/architecture_to_campaign.py",
+        "environment/program-execution/compiler/synthesizer.py"
+      ],
+      "acceptance": "No fake docs-path writes. Unknown seam becomes a discovery dependency, not a fabricated write target. Headings are hints only. Missing task paths no longer default to docs/program-execution/<TASK>.md."
+    },
+    {
+      "id": "W7",
+      "contract_id": "C5",
+      "maps_from": [
+        "pec1.md C5",
+        "pec1.md graduation test"
+      ],
+      "title": "Compiler/execution spine graduation",
+      "status": "landed_shadow_build",
+      "depends_on": [
+        "W0",
+        "W6"
+      ],
+      "acceptance": {
+        "journeys": [
+          "one-sentence intent \u2192 Blueprint without manual IR edits",
+          "long ADR \u2192 grounded Blueprint, prohibitions preserved",
+          "program-execution.intent.v1 \u2192 live route, no conversion homework",
+          "existing feature \u2192 not CREATE",
+          "authority ambiguity \u2192 UNKNOWN/block, no widening",
+          "safe ambiguity \u2192 grounding resolves, compile continues"
+        ],
+        "metrics": {
+          "material_intent_loss": 0,
+          "false_create_where_canonical_exists": 0,
+          "authority_widening": 0,
+          "manual_artifact_edits": 0,
+          "private_stage_bypasses": 0
+        },
+        "repeatability": "tiny deterministic fixtures: 10 consecutive clean shadow+execute runs"
+      },
+      "first_make_campaign_allowed": true
+    },
+    {
+      "id": "W8",
+      "contract_id": "PE-V3-CONTROL-PLANE",
+      "maps_from": [
+        "PE-PE 1.md S1\u2013S8",
+        "pe-v3-control-plane-convergence",
+        "pec1.md C6"
+      ],
+      "title": "v3 control-plane reconstruction on a trusted compiler",
+      "status": "open",
+      "depends_on": [
+        "W7"
+      ],
+      "prep_note": "WIP pe-v3-control-plane-convergence was PREP only, never admitted. Baselines 7517f377 / 0db3fed are stale \u2014 freeze a new baseline at execution start. Two planes required. Do not flatten via compile_activation_files.py.",
+      "subwaves": [
+        {
+          "id": "S1",
+          "title": "Semantic conservation compiler + atomic acceptance"
+        },
+        {
+          "id": "S2",
+          "title": "Exact identity: generations, immutable candidates, promotion"
+        },
+        {
+          "id": "S3",
+          "title": "Claim-scoped evidence admissibility"
+        },
+        {
+          "id": "S4",
+          "title": "Principal + grant authority (actor strings confer nothing)"
+        },
+        {
+          "id": "S5",
+          "title": "Linearizable runtime: UoW, fencing, crash suite"
+        },
+        {
+          "id": "S6",
+          "title": "Derived gates, constrained verify, generation-aware replan/retry"
+        },
+        {
+          "id": "S7",
+          "title": "Advisory convergence handoff + owner verdict"
+        },
+        {
+          "id": "S8",
+          "title": "v2\u2192v3 migration, vertical conformance, shadow self-host"
+        }
+      ],
+      "c6_overlap": "Replan runtime closure (every REPLAN_CONTRACT delta has deterministic behavior or fail-closed unsupported) lands in S6, not as a parallel campaign."
+    },
+    {
+      "id": "W9",
+      "contract_id": "C7-C10",
+      "maps_from": [
+        "pec1.md C7\u2013C10"
+      ],
+      "title": "RiskPacket / ImpactEngine / enforcement / outcome-driven replan",
+      "status": "open",
+      "depends_on": [
+        "W8"
+      ],
+      "order": [
+        "C7 l9-assurance protocol (no execution authority)",
+        "C8 PEC ImpactEngine + shadow RiskPacket",
+        "C9 bind fresh RiskPacket before EXECUTING",
+        "C10 outcome divergence \u2192 bounded replan"
+      ],
+      "invariant": "No graph edge found is not evidence that no graph edge exists. Unknown coverage is partial/unknown, never blast_radius=0."
+    },
+    {
+      "id": "W10",
+      "contract_id": "C11",
+      "maps_from": [
+        "pec1.md C11"
+      ],
+      "title": "PEC dogfood \u2014 messy human RiskPacket objective compiled and executed by PEC itself",
+      "status": "open",
+      "depends_on": [
+        "W9"
+      ],
+      "acceptance": "PEC independently: existing replanner HARDEN, auth/evidence KEEP, receipts EXTEND, Gate KEEP, ImpactEngine CREATE, RiskPacket CREATE, no duplicates. Source\u2192IR\u2192task\u2192diff\u2192evidence lineage proven."
+    }
+  ],
+  "next": {
+    "id": "W8",
+    "contract_id": "PE-V3-CONTROL-PLANE",
+    "blocked_until": "separate plan + fresh baseline SHA; this Build did not start W8-W10",
+    "execute_via": "later plan. Not this Cursor Build."
+  },
+  "bootstrap_artifact_shape": {
+    "note": "Temporary compilation record for every manual contract. Becomes PEC IR later. Not a second runtime.",
+    "layout": [
+      "00-source-intent.md (immutable, hashed)",
+      "01-intent-ir.yaml",
+      "02-grounding.yaml",
+      "03-requirements.yaml",
+      "04-execution-contract.yaml",
+      "05-evidence/",
+      "06-completion.yaml"
+    ]
+  },
+  "gotchas_if_hand_authoring_campaign_source": [
+    "plan_status required Ready|ConditionallyReady (run_campaign.py, not JSON schema)",
+    "risks[].owner required; impact not severity; mitigations is a list",
+    "input_evidence_ids may only name admitted evidence (default_admit is EVID-001)",
+    "declare paths: per task or worker gets docs/program-execution/<TASK>.md",
+    "validation command_or_inspection is one shell op \u2014 no && || | ; $()",
+    "IDs ^TASK-[0-9]{3,}$ / ^GATE-[0-9]{3,}$ \u2014 TASK-001A fails",
+    "failed campaign_id is not reusable; stale blueprint is silently reused"
+  ]
+}

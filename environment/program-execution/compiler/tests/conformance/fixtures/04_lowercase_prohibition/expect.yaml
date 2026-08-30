@@ -1,0 +1,12 @@
+schema: l9.pec.conformance-expectation.v1
+fixture_id: 04_lowercase_prohibition
+objective_contains:
+- assurance
+preserve:
+- compiler/intent.py
+prohibitions:
+- DO NOT
+expected_dispositions:
+- KEEP
+authority_must_not_expand: true
+source_traceability_required: true

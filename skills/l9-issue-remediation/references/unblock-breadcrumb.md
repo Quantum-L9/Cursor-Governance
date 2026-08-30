@@ -3,16 +3,17 @@ l9_schema: 1
 parent: l9-issue-remediation
 layer: reference
 role: unblock_breadcrumb
-tags: [issues, pickup, graphiti, session-reference, comment]
+tags: [issues, pickup, graphiti, session-reference, comment, close]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-08-11
+version: 1.1.0
+updated: 2026-08-29
 /L9_META -->
 
 # Unblock Breadcrumb Contract
 
-Mandatory Converge closeout. Order: **PICKUP → issue comments → conditional session-ref**.
+Mandatory Converge closeout. Order: **PICKUP → issue comments → close if
+resolved → conditional session-ref**.
 
 ## 1. Graphiti PICKUP (required)
 
@@ -44,7 +45,22 @@ Use `scripts/post_issue_comment.py`. Body template:
 
 Never include secret values, tokens, or `.env` contents.
 
-## 3. Root session-reference markdown (conditional)
+## 3. Close if resolved (required when status=fixed)
+
+If the marker `status=fixed`, the GitHub issue **must not stay OPEN**.
+
+Use `scripts/close_resolved_issue.py` (comment + `gh issue close --reason completed`).
+
+- Converge: close when the fix is **on a PR or already landed** (`--on-pr` /
+  `--commit` / `--merged-pr`). Do not wait for remediator merge.
+- Diagnose: close already-resolved only (linked PR merged, or defect gone on
+  default) with the same evidence flags.
+- HUMAN / EXTERNAL: refuse unless `--reason superseded|duplicate|already-fixed|not-reproducible|does-not-exist`
+  plus proof.
+
+Done-when **fails** if `status=fixed` and the issue is still OPEN.
+
+## 4. Root session-reference markdown (conditional)
 
 Path: repo-root `TODO.md`.
 
@@ -69,5 +85,6 @@ Idempotent: refresh the same heading body; do not spawn duplicate sections.
 |------------|---------|-----------------|
 | PICKUP | failed | `BLOCKED_PICKUP` |
 | Issue comment | failed | not converged |
+| status=fixed and issue still OPEN | close skipped | not converged |
 | Session-ref | file absent | ok (skipped) |
 | Session-ref | file present, update failed | not converged |

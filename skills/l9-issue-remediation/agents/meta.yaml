@@ -1,4 +1,4 @@
 interface:
   display_name: "L9 Issue Remediation"
-  short_description: "Diagnose or converge open Quantum-L9 GitHub issues and leave resume breadcrumbs"
+  short_description: "Verify then remediate Quantum-L9 issues at max autonomy; recommended-A human blockers; chain PR remediator at open_issues=0"
   brand_color: "#B45309"
