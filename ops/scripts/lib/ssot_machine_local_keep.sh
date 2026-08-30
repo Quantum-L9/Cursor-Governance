@@ -4,6 +4,31 @@
 # overwrite fodder when origin starts tracking a colliding name.
 # shellcheck shell=bash
 
+# Secret / legal WIP paths are never corpus-keep (gitignore + shelf skip).
+ssot_ff_corpus_skip_rel() {
+  local rel="${1#./}"
+  case "$rel" in
+    WIP/Legal\ Defense/*|WIP/Legal\ Defense) return 0 ;;
+    WIP/*oauth*.json|WIP/*credentials*.json|WIP/*client_secret*.json) return 0 ;;
+  esac
+  return 1
+}
+
+# Tracked or untracked corpus bytes that /ff must not clobber (like .venv).
+# SSOT: ops/config/wip-corpus.yaml skip_dir_names + secret_globs.
+ssot_is_ff_corpus_keep() {
+  local rel="${1#./}"
+  if ssot_ff_corpus_skip_rel "$rel"; then
+    return 1
+  fi
+  case "$rel" in
+    TODO.md|WIP/*|docs/plans/*|environment/program-execution/campaigns/*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
 ssot_is_machine_local_keep() {
   local rel="${1#./}"
   case "$rel" in
