@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-30T18:19:17Z'
+generated_utc: '2026-08-30T03:14:40Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:14b18069bdf20077645436855fa38bfbef006cc3090069d67c2cc818e270c568
+source_tree_digest: sha256:bacdc0a6b40601c2e292eebda5914f63ebc4f0b108acd5b3ce39251a82e41223
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -136,7 +136,7 @@ rules:
   first_heading: Governance SSOT Path Contract
   has_yaml_frontmatter: true
   line_count: 56
-  content_digest: sha256:d08e5923b2c6f97978b812df1efcc5c6e0734275e6a06d3ed6346390380508ec
+  content_digest: sha256:a8c0978cff70bea2b859557c5aa2b7ed5f9157d959006b981252d9b582c372e0
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -577,8 +577,8 @@ rules:
   globs: null
   first_heading: Shared worktree isolation
   has_yaml_frontmatter: true
-  line_count: 94
-  content_digest: sha256:6171469f551631fad67777364ed10603c33db8d90dc97ee7353d26ff1bd42da9
+  line_count: 92
+  content_digest: sha256:f70eda56dbbce79a45ba86f2c875093220ed91ac68fd8e46eed75a44b1d9c40d
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -730,8 +730,8 @@ rules:
   globs: null
   first_heading: Fast-forward only (no SSOT clobber)
   has_yaml_frontmatter: true
-  line_count: 64
-  content_digest: sha256:57c768e5abe242ad4993f66ae08398548bde5f7a558fa9c80bf044a19ebb6fe6
+  line_count: 65
+  content_digest: sha256:1d24650ccf3d40434e6bff47f98affa6b67feb1e6a6d237dc4474a62b2f7e26f
   authority: canonical_global
   context_cost: minimal
   deprecated: false
@@ -825,8 +825,8 @@ rules:
   globs: null
   first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14)
   has_yaml_frontmatter: true
-  line_count: 27
-  content_digest: sha256:8083a57ba87c282fb103b0dfeca5493b28e5ad09833a79de97af2b4dc69f2f11
+  line_count: 23
+  content_digest: sha256:9b4abefa8ef4ede36d0ed6e55fef4eb702b7c3407c3053bf0d363f13bddc8b5d
   authority: canonical_global
   context_cost: minimal
   deprecated: false

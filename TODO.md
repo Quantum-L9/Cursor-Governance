@@ -437,3 +437,13 @@ findings were deliberately left open:
       than reporting a bare `DEGRADED`.
 
 - [x] PE top-level `environment/program-execution/MANIFEST.json` is advisory/manual; campaign promotion no longer blocks on its freshness. Standalone manifest validation remains strict.
+
+## `/ff` closed publish loop (2026-08-29) — DONE in doctrine
+
+- [x] **`commands/ff.md`** — shelf loop finishes with `PR_STACK=auto PR_REMEDIATE=0 make pr` unless `FF_SHELF_PUBLISH=0`; post-shelf `run_ff_post_shelf.sh` + `verify_worktree_clean.py`
+- [x] **`skills/l9-repo-sync/`** — execute.md + SKILL.md aligned
+- [x] **`rules/55-ff-only-ssot-sync.mdc`** — closed-loop MUST bullet
+- [x] **`AGENTS.md`** `FF_CLOSE_PUBLISH_LOOP_V1` — supersedes ask-first in `FF_SHELF_WIP_PLANS_V1`
+- [x] **`ops/scripts/verify_worktree_clean.py`** + **`run_ff_post_shelf.sh`**
+
+Plan: `docs/plans/ff_close_publish_loop_a1b2c3d4.plan.md`

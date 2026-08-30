@@ -107,13 +107,20 @@ or held, no new `~/.cursor-governance.bak.*`.
    "$SHELF/.venv/bin/python" ops/autonomy/l4_local.py authorize-release
    ```
 
-7. **Ask before publishing.** Report the file list and the branch name, and run
-   `PR_REMEDIATE=0 make pr` only once the user approves. `/ff` is a request to
-   catch a clone up, not a request to publish — push and `make pr` stay
-   ask-first (`AGENTS.md` "Commit before you stop"; `rules/99-no-auto-commit.mdc`).
-   If approval is declined, the branch stays local and the copies stay put.
-8. Leave the copies in the named clone. Do not `git stash -u`. Do not run
-   `make pr` from inside `ff.sh`.
+7. **Finish the shelf loop (default ON).** When shelf paths remain after dedupe,
+   run `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf worktree and display
+   the opened **PR URL**. Opt-out: `FF_SHELF_PUBLISH=0` (shelf + commit only).
+   `/ff` still does not call `make pr` from inside `ff.sh` — the slash caller
+   runs publish after `ff.sh` returns.
+8. **Post-shelf close** in the named clone:
+
+   ```bash
+   bash ops/scripts/run_ff_post_shelf.sh "$CLONE"
+   ops/scripts/verify_worktree_clean.py --workspace "$CLONE"
+   ```
+
+   Leave shelf copies in the named clone until verify passes. Do not `git stash -u`.
+   Do not run `make pr` from inside `ff.sh`.
 
 `refs/l9/preserved/ff-dirty/<stamp>` stays until `l9-git-work-preserve` triage
 plus `prune-policy` say otherwise. `/ff` never deletes it.

@@ -884,6 +884,24 @@ carries so repeat runs do not re-shelve the same bytes.
 Secret globs and `WIP/Legal Defense/` stay out. Dirty-preserve refs stay
 until `l9-git-work-preserve` triage + prune-policy.
 
+
+<!-- FF_CLOSE_PUBLISH_LOOP_V1 -->
+## `/ff` closes the shelf publish loop (2026-08-29)
+
+Supersedes the "Publishing is ask-first" sentence in `FF_SHELF_WIP_PLANS_V1` only.
+
+- When `/ff` shelves untracked WIP/plans/campaigns, the caller **must** finish:
+  scoped commit → `l4_local.py authorize-release` →
+  `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf worktree unless
+  `FF_SHELF_PUBLISH=0`.
+- After publish (or when the shelf list is empty), run
+  `bash ops/scripts/run_ff_post_shelf.sh "<clone>"` then
+  `ops/scripts/verify_worktree_clean.py --workspace "<clone>"`.
+- Claude Code / plan execution on a clean baseline: verify exit 0, then
+  `agent_worktree_start.sh` when an isolated tree is required.
+- `ff.sh` stays push-off; publish remains in the slash caller, not inside
+  `ff.sh`.
+
 <!-- L9_PR_REMEDIATE_SPEED_V1 -->
 ## `/l9-pr-remediation` publish is not `make pr` (2026-08-28)
 

@@ -35,8 +35,9 @@ not delete files to unblock. Keep-list: `.env.local`, `env.local`,
   `environment/program-execution/campaigns/` onto a sibling branch — copy the
   bytes in, apply Improve then Recursive Alignment then Validate & Repair
   before precommit, then `l4_local.py begin` + `authorize-release` (not
-  `record-kernels`), then ask before `PR_REMEDIATE=0 make pr`. `ff.sh` stays
-  push-off.
+  `record-kernels`), then `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf
+  worktree unless `FF_SHELF_PUBLISH=0`, then `run_ff_post_shelf.sh` +
+  `verify_worktree_clean.py` on the named clone. `ff.sh` stays push-off.
 
 ## MUST NOT
 
