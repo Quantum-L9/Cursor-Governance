@@ -79,9 +79,7 @@ def verify(
     if fetch:
         fetch_proc = _git(root, "fetch", "origin")
         if fetch_proc.returncode != 0:
-            warnings.append(
-                "fetch origin failed (offline?) — comparing to last-known origin/main"
-            )
+            warnings.append("fetch origin failed (offline?) — comparing to last-known origin/main")
 
     head_proc = _git(root, "rev-parse", "HEAD")
     base_proc = _git(root, "rev-parse", baseline)
@@ -130,9 +128,15 @@ def verify(
 
     gh_proc = subprocess.run(  # noqa: S603
         [
-            "gh", "pr", "list", "--state", "open",
-            "--search", "head:feat/ff-shelf-",
-            "--json", "headRefName",
+            "gh",
+            "pr",
+            "list",
+            "--state",
+            "open",
+            "--search",
+            "head:feat/ff-shelf-",
+            "--json",
+            "headRefName",
         ],
         capture_output=True,
         text=True,
