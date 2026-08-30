@@ -1567,7 +1567,7 @@
     },
     {
       "path": "integrations/subagent-generated-data/compile_units.py",
-      "sha256": "faeb9ef5b78b1844f9e4809de9584e167cec85b976be85b23f642eec02652f82"
+      "sha256": "7f5792cd4539a8926cff0701c1d81a40e8e45489ff97ad897a3fba854e11edfb"
     },
     {
       "path": "integrations/subagent-generated-data/outcome_publisher.py",
@@ -2159,7 +2159,7 @@
     },
     {
       "path": "tests/hardening/test_real_campaign_e2e.py",
-      "sha256": "d8290565761302ba6e2f34a80984c1ee6ec0e93c8c7c43ba55c260b59568c0e0"
+      "sha256": "99b9aacbaff0ec80b0d1cdbf878bd093488af3f9e42591e6146a8b6f980e8f94"
     },
     {
       "path": "tests/test_adapter_cli.py",
