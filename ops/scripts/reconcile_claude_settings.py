@@ -22,6 +22,7 @@ import json
 import shutil
 import subprocess
 import sys
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 
@@ -105,14 +106,18 @@ def _compose_hook_groups(
     file whose hooks already equal the template stays byte-identical and
     reconciliation remains churn-free.
     """
-    merged: dict[str, Any] = json.loads(json.dumps(existing_hooks))
+    merged: dict[str, Any] = deepcopy(existing_hooks)
     for event, template_groups in template_hooks.items():
-        groups = merged.setdefault(event, [])
+        # A malformed event value is not a hook list: replace it with the
+        # working governance groups instead of crashing on `append`.
+        if not isinstance(merged.get(event), list):
+            merged[event] = []
+        groups = merged[event]
         seen = {json.dumps(group, sort_keys=True) for group in groups}
         for group in template_groups:
             key = json.dumps(group, sort_keys=True)
             if key not in seen:
-                groups.append(json.loads(json.dumps(group)))
+                groups.append(deepcopy(group))
                 seen.add(key)
     return merged
 
@@ -280,20 +285,24 @@ def settings_is_git_tracked(workspace: Path) -> bool:
     template (issue #281). A workspace that is not a git repository is
     untracked by definition.
     """
-    proc = subprocess.run(
-        [
-            "git",
-            "-C",
-            str(workspace),
-            "ls-files",
-            "--error-unmatch",
-            "--",
-            ".claude/settings.json",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        proc = subprocess.run(
+            [
+                "git",
+                "-C",
+                str(workspace),
+                "ls-files",
+                "--error-unmatch",
+                "--",
+                ".claude/settings.json",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except OSError:
+        # git missing — fall back to the managed whole-file path.
+        return False
     return proc.returncode == 0
 
 

@@ -133,6 +133,25 @@ def test_compose_churn_free_when_hooks_already_match_template() -> None:
     assert merged["theme"] == "dark"
 
 
+def test_compose_replaces_malformed_event_value_with_template() -> None:
+    template = {
+        "hooks": {
+            "SessionStart": [{"hooks": [{"type": "command", "command": "gov-session-start"}]}]
+        }
+    }
+    existing = {
+        "hooks": {
+            "SessionStart": {"not": "a list"},
+            "Stop": [{"hooks": [{"type": "command", "command": "consumer-stop"}]}],
+        }
+    }
+    merged = merge_workspace_settings(template, existing, compose_hooks=True)
+    # A malformed event value is not a hook list: governance groups replace it.
+    assert merged["hooks"]["SessionStart"][0]["hooks"][0]["command"] == "gov-session-start"
+    # Consumer-owned events stay verbatim.
+    assert merged["hooks"]["Stop"][0]["hooks"][0]["command"] == "consumer-stop"
+
+
 def test_reconcile_workspace_composes_tracked_settings(tmp_path: Path) -> None:
     root = tmp_path / "gov"
     hooks = root / "environment" / "agents" / "adapters" / "claude-code" / "hooks"
