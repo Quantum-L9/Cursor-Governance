@@ -73,7 +73,7 @@ commands:
   enabled: true
 - slash: /rules
   file: commands/rules.md
-  enabled: true
+  enabled: false
 - slash: /spec
   file: commands/spec.md
   enabled: true
@@ -82,7 +82,7 @@ commands:
   enabled: true
 - slash: /update-command
   file: commands/update-command.md
-  enabled: true
+  enabled: false
 - slash: /use-harvest
   file: commands/use-harvest.md
   enabled: true
