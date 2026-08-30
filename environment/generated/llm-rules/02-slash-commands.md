@@ -11,9 +11,10 @@ When the user types a message starting with `/` followed by a command name, this
 If user message matches: `/commandname` or `/command-name` or `/command_name`
 
 Then:
-1. Read the corresponding file from the command locations (see below)
-2. Execute the protocol defined in that file
-3. Follow all steps, phases, and output formats specified
+1. If the slash basename matches a registered skill in `ops/generated/skill-registry.json`, read `skills/<name>/SKILL.md` (Claude Code: native skill slash; Cursor: plugin discovery).
+2. Else read the corresponding file from the command locations (see below)
+3. Execute the protocol defined in that file or skill
+4. Follow all steps, phases, and output formats specified
 
 ## Command File Locations (Repo-Agnostic)
 
@@ -24,7 +25,8 @@ Commands and workflows are resolved in this order:
 | `.cursor/commands/{cmd}.md` | Repo-specific commands | 1st (highest) |
 | `.cursor-commands/commands/{cmd}.md` | Shared governance commands (symlink → SSOT) | 2nd |
 | `~/.cursor/plugins/local/l9-governance/commands/{cmd}.md` | Same SSOT via l9-governance plugin | 2nd (equivalent) |
-| L9 skill whose `SKILL.md` matches the command | Skill-backed fallback (see `skills/AUTONOMY_MANIFEST.yaml`) | 3rd |
+| `skills/{name}/SKILL.md` | Registered L9 skill when slash basename equals skill name | 1st for skill names |
+| L9 skill via router hint | Skill-backed route (see `skills/AUTONOMY_MANIFEST.yaml`) | When no command file |
 | `.cursor/workflows-synced/` | Synced workflow executors and DAGs | For DAG execution |
 | `.cursor/workflows-synced/dags/` | DAG definitions | For DAG-based commands |
 
@@ -34,10 +36,10 @@ Commands and workflows are resolved in this order:
 - `commands/commands-index.md` — human quick reference
 
 > When governance is activated (`sessionStart` bootstrap, `/start-session`, or `make start`),
-> the `l9-governance` plugin + `.cursor-commands` symlink expose this entire `commands/`
-> library. Prefer the `.md` command file when present; use the L9 skill only if the file
-> is missing. Skills may still auto-invoke for overlapping work — the slash file is the
-> explicit protocol when the user typed `/…`.
+> the `l9-governance` plugin + `.cursor-commands` symlink expose skills and the
+> **non-wrapper** `commands/` library. Skill-named slashes (`/l9-issue-remediation`, …)
+> load `skills/<name>/SKILL.md` — there is no duplicate `commands/` file. Remaining
+> commands are executors, DAGs, or bootstrap only. See `commands/commands-index.md`.
 
 ### Workflow/DAG Resolution
 
@@ -53,60 +55,30 @@ When a command needs generator scripts:
 
 ## Available Slash Commands (enabled)
 
-Primary rows match `commands/COMMANDS_MANIFEST.yaml`. Aliases are footnotes, not second primary rows: `/readme` → `/docs`, `/lint-fix` → `/lint`, `/violation` → `/governance`. `/audit-component` is live (`l9-component-verification`). Folded verify-ladder slashes (`/probe`, `/verify-component`) are modes on the analyze family. Retired with no alias: `/rules`, `/git-work-preserve`, `/harvest2`. `/update-command` is retired into `/dag-authoring --bind-command`.
+Live commands match `commands/COMMANDS_MANIFEST.yaml` (**18** — skill wrappers retired to `commands/_archived/`). For remediators, planners, CI, wiring, and analysis, invoke the **skill** directly (`skills/<name>/SKILL.md`).
 
 | Command | File | Description |
 |---------|------|-------------|
-| `/analyze` | `commands/analyze.md` | Rapid exploration (`l9-code-analysis`) |
-| `/analyze_evaluate` | `commands/analyze_evaluate.md` | Combined analysis + evaluation |
-| `/audit-component` | `commands/audit-component.md` | Export / wiring / API audit (`l9-component-verification`) |
-| `/autonomy` | `commands/autonomy.md` | Bounded autonomy — parallel Tasks + background PR poll |
-| `/ci` | `commands/ci.md` | CI/CD operations |
-| `/ci-policy` | `commands/ci-policy.md` | CI policy / gate authoring |
-| `/clean` | `commands/clean.md` | Cleanup command |
-| `/clean_compress` | `commands/clean_compress.md` | Clean and compress code |
-| `/confirm-wiring` | `commands/confirm-wiring.md` | Verify workspace or component is wired |
-| `/consolidate` | `commands/consolidate.md` | Consolidate scattered code |
-| `/dag-authoring` | `commands/dag-authoring.md` | DAG lifecycle — create/update/validate/register/command-bind |
-| `/docs` | `commands/docs.md` | Agent-docs update (`l9-update-agent-docs`; not the README DAG) |
-| `/e2e-blockers` | `commands/e2e-blockers.md` | E2E / local-proof blockers + brief |
-| `/end-session` | `commands/end-session.md` | Close session — save context, handoff |
-| `/evaluate` | `commands/evaluate.md` | Deep evaluation (`l9-code-analysis`) |
-| `/extract-chat` | `commands/extract-chat.md` | Extract insights from chat transcripts |
-| `/extract-from-chat` | `commands/extract-from-chat.md` | Extract from chat (alternate) |
-| `/extract_align` | `commands/extract_align.md` | Extract and align patterns |
-| `/ff` | `commands/ff.md` | In-place catch-up of a named clone (`l9-repo-sync`) |
-| `/forge` | `commands/forge.md` | Forge mode — rapid multi-GMP execution |
-| `/gap-analysis` | `commands/gap-analysis.md` | Gap analysis vs target state |
-| `/gap-analysis-new` | `commands/gap-analysis-new.md` | Gap analysis (alternate protocol) |
-| `/gmp` | `commands/gmp.md` | Governance Managed Process — phased execution |
-| `/governance` | `commands/governance.md` | Governance check + report-violation mode |
-| `/governance-backup` | `commands/governance-backup.md` | Push governance SSOT to GitHub |
-| `/harvest` | `commands/harvest.md` | Harvest patterns from code/conversation |
-| `/index` | `commands/index.md` | Export repo indexes |
-| `/inspect` | `commands/inspect.md` | Code gate — validate external code before import |
-| `/issues` | `commands/issues.md` | GitHub issues Diagnose / Converge |
-| `/l9-plan` | `commands/l9-plan.md` | Create PE+autonomy execution plan (`l9-plan` skill) |
-| `/l9-plan-simple` | `commands/l9-plan-simple.md` | Shared executable-plan template, Cursor Build |
-| `/l9-plan-build` | `commands/l9-plan-build.md` | Plan-simple + Improve + V&R → Cursor Build `/gmp` |
-| `/l9-pr-remediation` | `commands/l9-pr-remediation.md` | Converge all open PRs to green, then merge |
-| `/lcto` | `commands/lcto.md` | L CTO mode — strategic technical decisions |
-| `/lint` | `commands/lint.md` | Systematic lint fixes (no commit) |
-| `/mem` | `commands/mem.md` | Memory-aware execution |
-| `/migrate` | `commands/migrate.md` | Autonomous code migration |
-| `/l9-audit-plans` | `commands/l9-audit-plans.md` | Shelf the plans store (root = current unbuilt). Not `/l9-pipeline-audit`. |
-| `/l9-pipeline-audit` | `commands/l9-pipeline-audit.md` | Audit plans + WIP + PE campaigns; harvest via `l9-intelligence-harvest`. |
-| `/plan-audit` | `commands/plan-audit.md` | Compatibility alias of `/l9-pipeline-audit` |
-| `/pr` | `commands/pr.md` | PR Diagnose (readiness / blockers) via l9-pr-remediation |
-| `/pr-train` | `commands/pr-train.md` | Current-branch stacked PRs, halt for remediator Converge, then `/ff` when open_pr=0 |
-| `/reasoning` | `commands/reasoning.md` | Activate extended reasoning stack |
-| `/refactor` | `commands/refactor.md` | Systematic refactoring/migration |
-| `/refactor-sweep` | `commands/refactor-sweep.md` | Broad refactor sweep |
-| `/spec` | `commands/spec.md` | Generate specification |
 | `/start-session` | `commands/start-session.md` | Run L9 sessionStart bootstrap (`make start`) |
-| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested code via plan |
-| `/wire` | `commands/wire.md` | Wire governance workspace or a code component |
-| `/ynp` | `commands/ynp.md` | Yes No Proceed — decision framework |
+| `/gmp` | `commands/gmp.md` | GMP executor + plan Build |
+| `/governance-backup` | `commands/governance-backup.md` | Push governance SSOT to GitHub |
+| `/clean` | `commands/clean.md` | Workspace cleanup (`make clean`) |
+| `/harvest` | `commands/harvest.md` | Harvest deploy DAG |
+| `/use-harvest` | `commands/use-harvest.md` | Deploy harvested artifacts |
+| `/migrate` | `commands/migrate.md` | Migration executor |
+| `/inspect` | `commands/inspect.md` | External code gate (inspect DAG) |
+| `/refactor` | `commands/refactor.md` | Refactoring DAG |
+| `/refactor-sweep` | `commands/refactor-sweep.md` | Broad refactor sweep |
+| `/index` | `commands/index.md` | Export repo indexes |
+| `/pr-train` | `commands/pr-train.md` | Stacked PR train DAG |
+| `/l9-plan-build` | `commands/l9-plan-build.md` | Plan-simple + kernels + Build DAG |
+| `/l9-audit-plans` | `commands/l9-audit-plans.md` | Plans-store shelf (not pipeline audit) |
+| `/lcto` | `commands/lcto.md` | L CTO strategic mode |
+| `/spec` | `commands/spec.md` | Specification generator |
+| `/rules` | `commands/rules.md` | List governance rules |
+| `/update-command` | `commands/update-command.md` | Slash minimizer DAG (legacy) |
+
+Skill examples (no `commands/` file): `l9-issue-remediation`, `l9-pr-remediation`, `l9-plan`, `l9-pipeline-audit`, `l9-bounded-autonomy`, `l9-ynp`, `l9-code-analysis`, `l9-ci-ops`, `l9-forge`, `l9-repo-sync`, `l9-end-session`, … — full map in `ops/generated/skill-registry.json`.
 
 Full map: `commands/COMMANDS_MANIFEST.yaml`. Human index: `commands/commands-index.md`.
 
