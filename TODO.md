@@ -11,6 +11,63 @@ Prior cluster #171 (memory gates reporting unmeasured state) is closed: PR #264
 landed both fixes and they were re-verified against `main@498dcaa` this session.
 
 # Authored by IGOR - USER - Owner - BOSS - Quantum AI Overlord And ruler of Cursor Governance Repo
+-1. add autonomy and subagent fan-out capabilities to claude - especially claude code desktop (which mobile should inherit if not already activated there):
+
+--> Claude Code desktop is not failing to launch workers. **Nothing in the desktop session actually deploys them.** The 480-lane numbers are a ceiling. The main session still has to call Claude’s Agent tool, and the packs that would make it do that are locked off.
+
+## What actually launches workers
+
+There is no daemon that fans out a Build or a remediator. Three layers exist, and desktop uses none of them by default:
+
+| Layer | Path | What it does on desktop |
+|---|---|---|
+| Cursor Task fan-out | `environment/agents/cursor-subagents/` plus skill `l9-bounded-autonomy` | Cursor-only. Claude desktop does not use Task. |
+| Shared scheduler | `environment/program-execution/peer_execution/autonomy/` (`scheduler.py`, `cli.py`, `bootstrap.py`) | SessionStart only **reports** a ready set if a campaign already exists under `.l9/autonomy`. It does not spawn Agents. No campaign → `no_active_campaign`. |
+| Swarm / leases | root `autonomy/` plus `autonomy/policies/resource-classes.json` | Authorization plane. Not a desktop dispatcher. |
+
+Claude’s own profile (`ops/autonomy/claude-execution-profiles.json`, surface `claude_local`) says saturate / 480 / 128. That is permission to run many workers, not a process that starts them.
+
+## Why a normal Build or remediator stays single-agent
+
+**The concurrency skill cannot auto-fire.** In the projected Claude settings (`environment/agents/adapters/claude-code/settings.template.json`), these are all `user-invocable-only`:
+
+- `l9-bounded-autonomy` — the only pack that says “launch all ready work in one wave”
+- `l9-pr-remediation`
+- `l9-plan-simple` (Build)
+- `l9-issue-remediation`
+- `l9-pe-campaign-activate`
+
+Those same packs also have `disable-model-invocation: true`. Desktop Claude will not load them unless you type `/autonomy`, `/l9-bounded-autonomy`, `/l9-pr-remediation`, or `/l9-plan-simple`.
+
+**`l9-bounded-autonomy` is a Cursor SOP.** It tells the model to spawn Cursor `Task` tools and to get an admission token from `autonomy/adapters/cursor/host_bridge.py`. On Claude, the bridge file says: call `peer_execution/autonomy/cli.py init` then `plan`. If you never ran `init` with a campaign JSON, the scheduler has an empty ready set.
+
+**Remediation, once invoked, is written as one main agent.** `/l9-pr-remediation` Converge is diagnose → fix → `make precommit-repo` → `git push` → next PR. Defaults include `parallel_independent_prs: true`, but that means the main agent may batch independent edits. It does not say “spawn Agent workers.” “No babysit” and “do not poll CI” also remove the background poll-worker pattern.
+
+**Build is the same.** `l9-plan-simple` is a single-checkout Cursor Build path: finish todos, scoped commit, L4, `PR_STACK=auto PR_REMEDIATE=0 make pr`. No worker fleet.
+
+**Agent is not on the allow list.** `settings.template.json` `permissions.allow` lists Read/Grep/Glob and many Bash/git/gh forms. It does **not** allow `Agent`. Desktop will prompt, or the model will skip the tool so it does not stop for permission. That alone produces a serial session even when the profile says 480.
+
+**Hooks are not the blocker.** PreToolUse on Claude matches Bash, Edit/Write, GitHub MCP, and Skill — not Agent. Lifecycle `compose_subagent_start` is the Cursor admission gate. Desktop is not being denied by that hook.
+
+## What you will see vs a real ceiling
+
+| Symptom | Meaning |
+|---|---|
+| Zero extra Agents on Build / remediator / ordinary work | Expected: skills locked, no campaign graph, Agent not pre-allowed |
+| Caps at about 20 | `CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS` unset — Claude’s native default. Desktop does not get the hosted overlay (`overlay_hosted_settings_env.py` only runs on Web/Mobile). |
+| SessionStart says `no_active_campaign` | Scheduler has nothing to admit. Profile text about 480 does not spawn anyone. |
+
+## What would actually make desktop fan out
+
+1. Invoke the pack: `/autonomy` or `/l9-bounded-autonomy`, not a bare “build this” / “fix the PRs”.
+2. Have a campaign graph (`cli.py init` + `plan`) so SessionStart injects a non-empty ready set.
+3. On Claude, spawn Claude **Agent** tools (not Cursor Task), one wave, non-overlapping writes.
+4. Pre-allow `Agent` in Claude settings if you do not want a permission stop on every spawn.
+
+Until those four are true, desktop will keep doing Build and remediator work as a single agent. That is the current contract, not a silent native-Claude outage.
+
+
+0. eliminate claude code bootstrap script drift deleting superseded versions keeping only 1 and 1 file with variables for mobile environment config.
 
 1. Convert this file into a json with execution steps that can be fed into a plan/contract or best option PEC and executed as a long autonomous campaign.
 2. resolve drift between agent-bootstrap gitleaks 8.30.0 ≠ canonical pin 8.24.3 surfaced by session-start
