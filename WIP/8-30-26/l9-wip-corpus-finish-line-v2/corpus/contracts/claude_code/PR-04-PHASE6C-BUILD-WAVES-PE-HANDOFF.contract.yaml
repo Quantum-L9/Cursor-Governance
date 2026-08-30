@@ -1,0 +1,52 @@
+meta:
+  artifact_type: claude_code_build_contract
+  id: corpus-phase6c-build-wave-and-pe-handoff
+  target_repo: Quantum-L9/l9-cognitive-runtime
+  prerequisite: corpus-phase6b-leverage-planner
+  terminal_authority: HALT_BEFORE_MERGE
+
+mission: >
+  Implement BuildWavePlanner and a machine-valid Cursor-Governance Program Execution handoff.
+  Compile dependency-correct parallel waves from prioritized WorkUnits. Stop at the WHAT/WHY boundary.
+
+required_behavior:
+  - remove OBSOLETE from active waves while retaining history
+  - isolate WAITING/UNKNOWN/external blockers
+  - build and validate prerequisite DAG
+  - fail closed on unresolved cycles unless explicitly classified external/unknown
+  - group independent ready units in parallel lanes
+  - favor upstream foundational unlocks before downstream work
+  - recalculate reachable work after each hypothetical wave
+  - emit wave purpose, work units, prerequisites, expected unlocks, evidence and reconsideration triggers
+  - render a Program Execution handoff using the canonical schema in the finish-line pack or the repo's superseding equivalent
+
+handoff_boundary:
+  include:
+    - objective
+    - selected waves/work units
+    - prerequisite DAG
+    - authoritative artifacts/evidence refs
+    - completion criteria
+    - validation expectations
+    - risk/authority constraints
+    - unresolved unknowns
+    - explicit out-of-scope/deferred work
+    - source graph/corpus snapshot identity
+  exclude:
+    - worker/provider routing
+    - PR merge decisions
+    - retry loops
+    - CI orchestration implementation
+    - campaign state ownership
+
+validation:
+  - parallel-wave test
+  - dependency-order test
+  - cycle fail-closed test
+  - deferred-state test
+  - end-to-end fixture: memory/topology-shaped input -> context -> work units -> leverage -> build waves -> PE handoff
+  - JSON/schema validation
+  - repo-native lint/type/test/build
+
+completion:
+  terminal: HALT_BEFORE_MERGE
