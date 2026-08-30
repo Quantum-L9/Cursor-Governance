@@ -51,9 +51,9 @@
       "alias": null,
       "class": "always",
       "output": "06-governance-ssot-paths.md",
-      "output_sha256": "558fc57999614b155b11ce03c53ace31b22d79fe9b6391ef1255db000bb49c05",
+      "output_sha256": "440a9fe5c7e64d6a675c33fa0c581aab846e7886191e8054606ede5790589afc",
       "source": "rules/06-governance-ssot-paths.mdc",
-      "source_sha256": "a8c0978cff70bea2b859557c5aa2b7ed5f9157d959006b981252d9b582c372e0",
+      "source_sha256": "d08e5923b2c6f97978b812df1efcc5c6e0734275e6a06d3ed6346390380508ec",
       "stem": "06-governance-ssot-paths"
     },
     {
@@ -105,9 +105,9 @@
       "alias": null,
       "class": "always",
       "output": "22-context7-auto-invoke.md",
-      "output_sha256": "b10edfb7f87b70f087deea8673d89ef424e3be75ce66021992fd8e8f135ec682",
+      "output_sha256": "dbfdeb51244fa5c854f18a8a54436cc64b9281d63728b424e99c705b969fd46b",
       "source": "rules/22-context7-auto-invoke.mdc",
-      "source_sha256": "7ceac6084da9eae1edf3499748750d8867e4c9bf06dcccfa6f7f0272768706cd",
+      "source_sha256": "ac701b392ee6abb7e28c1298f74f41a0d2d55c140113e1a37d0d792aa92f95cc",
       "stem": "22-context7-auto-invoke"
     },
     {
@@ -222,9 +222,9 @@
       "alias": null,
       "class": "always",
       "output": "49-shared-worktree-isolation.md",
-      "output_sha256": "e0e13fba21b30e1c9f5cd2d31e5adc3895b7beed785c148cc28b9ca59137d3d6",
+      "output_sha256": "4f28832d8e22d72198acfd98da4ad4472fdeb0358a714bfcbd556e4b5e66c9d8",
       "source": "rules/49-shared-worktree-isolation.mdc",
-      "source_sha256": "9f0288253b252e993f73174d35c7c1963180014c665ca512e8d05f1d0a0829c9",
+      "source_sha256": "d4eee7f3416b0f269591b815b703c870a31218fe85fc0d4184117119d17d7ef1",
       "stem": "49-shared-worktree-isolation"
     },
     {
@@ -312,9 +312,9 @@
       "alias": null,
       "class": "always",
       "output": "62-github-openclaw-authority.md",
-      "output_sha256": "5a708c7ad3a03fd4a1d072850dd2b033a0d286d3584cf9df07df6fad5220c17f",
+      "output_sha256": "9619a20aa1b53a9ee27639ac7028fa092d773b2e464f04f50d504baff572aa4c",
       "source": "rules/62-github-openclaw-authority.mdc",
-      "source_sha256": "9b4abefa8ef4ede36d0ed6e55fef4eb702b7c3407c3053bf0d363f13bddc8b5d",
+      "source_sha256": "8083a57ba87c282fb103b0dfeca5493b28e5ad09833a79de97af2b4dc69f2f11",
       "stem": "62-github-openclaw-authority"
     },
     {
@@ -620,7 +620,7 @@
       "output": "zz-autonomy-surface-override.md",
       "output_sha256": "e91c1f24e261f024793005b93c225487a71b804c398fab480f4bc6e0a3c663dc",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "a19bcc6f72222d50080207ae7642275e79e445e5db47171568f413ff64c27e5a",
+      "source_sha256": "067f01b5503ed070fc016758c85d5418fa3e5ee8ae7d75e129cb4abe9beeddb4",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 69
   },
-  "tree_sha256": "81d67426cb0c337882b7d1acf4fa16e5df6e76049ca6c33755c343f383f3189a"
+  "tree_sha256": "bffb3a59b77e86c7726f234e8d2b2ac312342f4bab7ceac03c7095a5fb93953d"
 }

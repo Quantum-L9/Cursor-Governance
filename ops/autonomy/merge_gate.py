@@ -574,9 +574,19 @@ def _file_authorizes(repo: str, pr: str, head_sha: str = "") -> bool:
     return False
 
 
+_LAST_EFFECTIVE: dict[str, str] = {}
+
+
+def effective_merge_authority() -> dict[str, str]:
+    """The last L9_MERGE_AUTHORIZED presence merge_gate actually read."""
+    return dict(_LAST_EFFECTIVE)
+
+
 def _human_breakglass() -> bool:
     """L9_MERGE_AUTHORIZED is human-set; it accepts the stack risk explicitly."""
-    return bool(os.environ.get("L9_MERGE_AUTHORIZED", "").strip())
+    raw = os.environ.get("L9_MERGE_AUTHORIZED", "").strip()
+    _LAST_EFFECTIVE["L9_MERGE_AUTHORIZED"] = "set" if raw else "empty"
+    return bool(raw)
 
 
 _SHA_INPUT_KEYS = ("sha", "head_sha", "expected_head_sha", "expected_head_oid", "match_head_commit")
@@ -668,7 +678,13 @@ def evaluate(
                 return NEVER_WAIVE_REASON
             if _human_breakglass():
                 return None
-            return _stack_safety_reason(command, tool_name, tool_input)
+            stack = _stack_safety_reason(command, tool_name, tool_input)
+            if stack:
+                return (
+                    f"{stack} (effective L9_MERGE_AUTHORIZED="
+                    f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
+                )
+            return stack
         return None
 
     if _never_waive_tool(tool_name, tool_input):
@@ -682,20 +698,38 @@ def evaluate(
         # is not a git/gh event and so lands here — where authorization runs.
         if MERGE_BASH.search(command) or _command_is_pr_merge(command):
             if not _merge_authorized(tool_name, tool_input):
-                return MERGE_DENY_REASON
+                return (
+                    f"{MERGE_DENY_REASON} (effective L9_MERGE_AUTHORIZED="
+                    f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
+                )
             if _human_breakglass():
                 return None
-            return _stack_safety_reason(command, tool_name, tool_input)
+            stack = _stack_safety_reason(command, tool_name, tool_input)
+            if stack:
+                return (
+                    f"{stack} (effective L9_MERGE_AUTHORIZED="
+                    f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
+                )
+            return stack
         return None
 
     if tool_name in DENY_TOOL_NAMES:
         if not _merge_authorized(tool_name, tool_input):
-            return MERGE_DENY_REASON
+            return (
+                f"{MERGE_DENY_REASON} (effective L9_MERGE_AUTHORIZED="
+                f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
+            )
         if _human_breakglass():
             return None
         method = str(tool_input.get("merge_method") or tool_input.get("method") or "")
         pseudo = f"gh pr merge --{method.lower()}" if method else "gh pr merge"
-        return _stack_safety_reason(pseudo, tool_name, tool_input)
+        stack = _stack_safety_reason(pseudo, tool_name, tool_input)
+        if stack:
+            return (
+                f"{stack} (effective L9_MERGE_AUTHORIZED="
+                f"{_LAST_EFFECTIVE.get('L9_MERGE_AUTHORIZED', 'unread')})"
+            )
+        return stack
     return None
 
 

@@ -153,6 +153,14 @@ def test_always_exits_zero_and_never_blocks(tmp_path: Path, budget: str) -> None
     assert run(workspace, tmp_path / "home", budget=budget).returncode == 0
 
 
+def test_stamp_writer_records_exit_and_interpreter() -> None:
+    body = HELPER.read_text(encoding="utf-8")
+    assert "write_deps_stamp()" in body
+    assert "import_smoke()" in body
+    assert 'echo "exit=$rc"' in body
+    assert "import json,sys,yaml" in body
+
+
 def test_proof_does_not_collapse_outdated_into_the_plain_resolution() -> None:
     """`uv sync --check` exit 1 (outdated) must never fall through to a narrower
     resolution that could pass. Only exit 2 (extra undefined) may fall through."""

@@ -74,6 +74,8 @@ Disable with `L9_REPO_WRITE_LOCK=0` (diagnostics only).
 - `ops/autonomy/worktree_isolation_gate.py` via `local_execution_gate.py`
   (Cursor `beforeShellExecution` + Claude PreToolUse)
 - Escape (human/ops only): `L9_GIT_REVERT_AUTHORIZED`, `L9_GIT_BROAD_ADD_AUTHORIZED`,
-  `L9_GIT_SWITCH_AUTHORIZED`, `L9_GIT_RESET_AUTHORIZED`, or `L9_WORKTREE_ISOLATION=0`
+  `L9_GIT_SWITCH_AUTHORIZED`, `L9_GIT_RESET_AUTHORIZED`, or `L9_WORKTREE_ISOLATION=0`.
+  These are read by `ops/autonomy/worktree_isolation_gate.py` (`_authorized`); they
+  are reachable, not documentary-only.
 
 <!-- generated-from: rules/49-shared-worktree-isolation.mdc; do-not-edit -->

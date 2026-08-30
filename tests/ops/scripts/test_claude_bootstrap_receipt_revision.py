@@ -74,6 +74,16 @@ def test_ttl_expiry_still_wins_when_the_revision_matches() -> None:
     assert "expired" in result["reason"]
 
 
+def test_reprobe_attaches_reason_and_log_path() -> None:
+    payload = make("DEGRADED")
+    payload["mcp"] = "DEGRADED"
+    result = receipt.evaluate(payload, now=NOW, governance_revision="a" * 40)
+    probed = receipt.reprobe_degraded(result)
+    assert probed["log_path"]
+    assert "mcp" in probed["reasons"]
+    assert "DEGRADED" in probed["reasons"]["mcp"]
+
+
 def test_missing_receipt_is_never_ran_not_ready(tmp_path: Path) -> None:
     result = receipt.read(tmp_path / "absent.json", now=NOW, governance_revision="a" * 40)
     assert result["state"] == receipt.NEVER_RAN

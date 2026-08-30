@@ -280,15 +280,31 @@ def test_cursor_shell_allows_remediator_git_push(
     assert json.loads("".join(captured.parts))["permission"] == "allow"
 
 
+def test_standing_override_env_is_inert(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A pasted L9_PUBLISH_PATH_OVERRIDE string must not widen the publish plane."""
+    monkeypatch.setenv(gate.PUBLISH_PATH_OVERRIDE_ENV, "incident-1234")
+    monkeypatch.delenv("L9_PUBLISH_PATH_RECEIPT", raising=False)
+    monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
+    reason = gate.evaluate("Bash", {"command": "make push"}, root=tmp_path)
+    assert reason is not None
+    assert "make push" in reason
+
+
 def test_human_override_restores_prior_behaviour(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """Breakglass is human/ops only, and hands control back to the L4 check.
+    """Breakglass is a scoped expiring receipt, and hands control back to L4.
 
     Exercised through `make push`: git/gh never reach the publish-path rule at
     all now, so the override's remaining subject is the non-git bypass forms.
     """
-    monkeypatch.setenv(gate.PUBLISH_PATH_OVERRIDE_ENV, "incident-1234")
+    from breakglass_receipt import write_receipt
+
+    receipt = tmp_path / "publish-path-override.json"
+    write_receipt(issuer="ops", reason="incident-1234", hours=2, path=receipt)
+    monkeypatch.setenv("L9_PUBLISH_PATH_RECEIPT", str(receipt))
     monkeypatch.setattr(gate, "release_allows_remote", lambda root: (True, None))
     assert gate.evaluate("Bash", {"command": "make push"}, root=tmp_path) is None
 

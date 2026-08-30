@@ -7,6 +7,7 @@ scope: global
 activation: always
 authority: canonical_global
 alwaysApply: true
+requires_mcp: context7
 ---
 
 # Context7 Auto-Invoke (External Docs)

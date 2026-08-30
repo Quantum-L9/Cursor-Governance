@@ -14,5 +14,9 @@ description: Agents MUST use openclaw-igorbot/github#token for GitHub; MUST NOT 
   `governance-distribution`. Interactive/agent `gh` work still uses the openclaw PAT.
 - **Ask-human only** after `resolve_secret.py --check` fails, or for true
   non-API human factors (name the failing ref).
+- **REST `gh api` is the same PAT, not a second secret.** GraphQL (`gh pr view
+  --json`, `gh repo view --json`) may 403 on restricted gateways. `gh api
+  repos/...` is a sanctioned route for the same `openclaw-igorbot/github#token`.
+  Do not provision another GitHub credential to "fix" a GraphQL 403.
 
 <!-- generated-from: rules/62-github-openclaw-authority.mdc; do-not-edit -->

@@ -152,6 +152,40 @@ toolchain_proven() {
   return 0
 }
 
+# Import smoke on the resolved interpreter. toolchain_proven says the lock is
+# applied; this says the interpreter can actually import the session extras.
+import_smoke() {
+  local repo="$1" py out rc=0
+  py=""
+  if [ -x "$repo/.venv/bin/python" ]; then
+    py="$repo/.venv/bin/python"
+  elif command -v python3 >/dev/null 2>&1; then
+    py="$(command -v python3)"
+  else
+    echo "import-smoke: no interpreter for $repo" >&2
+    return 1
+  fi
+  out="$("$py" -c 'import json,sys,yaml; print(sys.executable); print(sys.version.split()[0])' 2>&1)" || rc=$?
+  echo "import-smoke: interpreter=$py rc=$rc"
+  echo "$out" | sed 's/^/import-smoke: /'
+  return "$rc"
+}
+
+write_deps_stamp() {
+  local stamp="$1" repo="$2" rc="$3" py=""
+  if [ -x "$repo/.venv/bin/python" ]; then
+    py="$repo/.venv/bin/python"
+  fi
+  {
+    echo "exit=$rc"
+    echo "ts=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)"
+    echo "interpreter=${py:-none}"
+    if [ -n "$py" ]; then
+      echo "version=$("$py" --version 2>/dev/null || echo unknown)"
+    fi
+  } >"$stamp"
+}
+
 # --- Per-repository install -------------------------------------------------
 install_repo() {
   local repo="$1" failed=0
@@ -215,8 +249,13 @@ if [ "${SESSION_DEPS_DETACHED:-}" = "1" ]; then
     # Stamp ONLY on proven applied state. Stamping an attempted install is what
     # cached a no-op as success for a whole fingerprint generation.
     if toolchain_proven "$repo"; then
-      touch "$STAMP_DIR/deps-$(fingerprint "$repo").stamp"
-      echo "session-deps: $repo proven applied" >&2
+      if import_smoke "$repo"; then
+        write_deps_stamp "$STAMP_DIR/deps-$(fingerprint "$repo").stamp" "$repo" 0
+        echo "session-deps: $repo proven applied" >&2
+      else
+        DEPS_FAILED=1
+        echo "WARN: $repo import smoke failed — no stamp written" >&2
+      fi
     else
       DEPS_FAILED=1
       echo "WARN: $repo toolchain not proven applied — no stamp written" >&2

@@ -399,6 +399,45 @@ if [ -f "$AUDIT_PY" ]; then
   [ -n "$PLAN_AUDIT_MD" ] || PLAN_AUDIT_MD="pipeline audit: unavailable"
 fi
 
+# T-CI007 / T-CI015 / T-CI021 / T-CI022 — live Cursor SessionStart caller (U2).
+GRANT_NOTE="publish-path grant: none"
+if [ -f "$GC/ops/autonomy/breakglass_receipt.py" ]; then
+  GRANT_NOTE="$("$AUDIT_PY_BIN" "$GC/ops/autonomy/breakglass_receipt.py" --status 2>/dev/null || echo "publish-path grant: unread")"
+fi
+TWO_CLONE_NOTE=""
+WS_ROOT="${CURSOR_PROJECT_DIR:-$PWD}"
+if git -C "$WS_ROOT" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+  ws_abs=$(cd "$(git -C "$WS_ROOT" rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null && pwd -P)
+  gov_abs=$(cd "$GC" 2>/dev/null && pwd -P)
+  if [ -n "$ws_abs" ] && [ -n "$gov_abs" ] && [ "$ws_abs" != "$gov_abs" ]; then
+    ws_sha=$(git -C "$ws_abs" rev-parse --short HEAD 2>/dev/null || echo "?")
+    gov_sha=$(git -C "$GC" rev-parse --short HEAD 2>/dev/null || echo "?")
+    if [ -f "$ws_abs/CANONICAL_LAW.md" ] && [ -f "$ws_abs/AGENTS.md" ]; then
+      clone_kind="intentional consumer checkout of Cursor-Governance"
+    else
+      clone_kind="leftover or unknown second checkout"
+    fi
+    TWO_CLONE_NOTE=$(printf '%s\n' \
+      "- two-clone: workspace $ws_abs @$ws_sha ($clone_kind)" \
+      "- two-clone: live SSOT $gov_abs @$gov_sha" \
+      "- two-clone: rules resolve from live SSOT (not the workspace clone)")
+  fi
+fi
+SKILL_LOG="$HOME/.claude/l9/skill-usage.jsonl"
+if [ -f "$SKILL_LOG" ]; then
+  SKILL_NOTE="skill-usage: $SKILL_LOG ($(wc -l < "$SKILL_LOG" | tr -d ' ') entries)"
+else
+  SKILL_NOTE="skill-usage: $SKILL_LOG (absent — logger never wrote)"
+fi
+ITEST_NOTE="itest: neo4j 127.0.0.1:7687 reachable — service-backed integration tests may run"
+if ! "$AUDIT_PY_BIN" -c 'import socket;s=socket.socket();s.settimeout(0.3);s.connect(("127.0.0.1",7687));s.close()' 2>/dev/null; then
+  ITEST_NOTE="itest: unavailable — neo4j absent or 127.0.0.1:7687 refused"
+fi
+BOOTSTRAP_NOTE=""
+if [ -f "$GC/ops/scripts/claude_bootstrap_receipt.py" ]; then
+  BOOTSTRAP_NOTE="$("$AUDIT_PY_BIN" "$GC/ops/scripts/claude_bootstrap_receipt.py" --read --reprobe 2>/dev/null | head -n 20 || true)"
+fi
+
 COMBINED="$(cat <<EOF
 ## L9 session state
 ### Governance
@@ -409,11 +448,17 @@ COMBINED="$(cat <<EOF
 - self-link: ${SELF_LINK}
 - wire: ${WIRE_NOTE}
 - backup: ${BACKUP_NOTE}
+${TWO_CLONE_NOTE}
 ### Runtime
 - venv: ${VENV_NOTE}
 - ide-profile: ${IDE_NOTE}
 - tunnel: ${TUNNEL_NOTE}
 - graphiti health: ${GRAPHITI_HEALTH}
+- ${GRANT_NOTE}
+- ${SKILL_NOTE}
+- ${ITEST_NOTE}
+${BOOTSTRAP_NOTE:+- bootstrap:}${BOOTSTRAP_NOTE:+
+}${BOOTSTRAP_NOTE}
 ### Graphiti hydrate
 ${HYDRATE_MD}
 ### Code-graph

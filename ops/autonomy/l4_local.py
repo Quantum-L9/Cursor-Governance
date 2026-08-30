@@ -147,10 +147,35 @@ STATE_FILENAME = "l4-local-phase.json"
 RECEIPT_FILENAME = "l4-release-receipt.json"
 
 
+def _expand_state_dir(raw: str, root: Path) -> Path:
+    text = raw.strip().replace("${HOME}", str(Path.home())).replace("$HOME", str(Path.home()))
+    path = Path(text).expanduser()
+    if not path.is_absolute():
+        path = root / path
+    return path
+
+
 def _autonomy_dir(root: Path) -> Path:
-    """Return <git-root>/.l9/autonomy after validating the work tree."""
+    """Resolve the L4 state directory.
+
+    ``L9_AUTONOMY_STATE_DIR`` relocates state outside the worktree when set
+    (template default: ``$HOME/.l9/autonomy``). Unset, or a leftover receipt
+    that only exists under ``<workspace>/.l9/autonomy``, keeps the gitignored
+    worktree fallback. This function never deletes the old receipt.
+    """
     base = _validated_git_root(root)
-    return base.joinpath(".l9", "autonomy")
+    legacy = base.joinpath(".l9", "autonomy")
+    env = os.environ.get("L9_AUTONOMY_STATE_DIR", "").strip()
+    if env:
+        chosen = _expand_state_dir(env, base)
+        if (
+            chosen != legacy
+            and (legacy / RECEIPT_FILENAME).is_file()
+            and not (chosen / RECEIPT_FILENAME).is_file()
+        ):
+            return legacy
+        return chosen
+    return legacy
 
 
 def state_path(root: Path) -> Path:
@@ -472,15 +497,20 @@ def release_allows_remote(root: Path) -> tuple[bool, str]:
 
 def status_dict(root: Path) -> dict[str, Any]:
     allowed, reason = release_allows_remote(root)
+    receipt = load_receipt(root)
+    head = current_head(root)
+    pinned = str((receipt or {}).get("head_sha") or "")
+    stale = bool(pinned and head and pinned != head)
     return {
         "workspace": str(root),
         "branch": current_branch(root),
-        "head": current_head(root),
+        "head": head,
         "phase": (load_phase(root) or {}).get("phase"),
-        "receipt": load_receipt(root),
+        "receipt": receipt,
         "state": load_phase(root),
         "remote_allowed": allowed,
         "reason": reason,
+        "stale": stale,
         "kernels_required": [KERNEL_RECURSIVE_ALIGNMENT, KERNEL_VALIDATE_REPAIR],
         "pr_template": resolve_pr_template(root),
     }
