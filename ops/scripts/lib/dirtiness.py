@@ -28,7 +28,9 @@ _BARE_SCRATCH = {prefix.rstrip("/") for prefix in SCRATCH_PREFIXES}
 
 
 def normalize(path: str) -> str:
-    normalized = path.replace("\\", "/").strip()
+    # Strip only ASCII SP. After git C-style unquoting, trailing \n/\t/\r are
+    # literal path bytes — .strip() would collapse `"foo\n"` into `foo`.
+    normalized = path.replace("\\", "/").strip(" ")
     while normalized.startswith("./"):
         normalized = normalized[2:]
     return normalized
@@ -127,7 +129,8 @@ def decode_git_quoted_path(path: str) -> str:
             continue
         raw.extend(ch.encode("utf-8"))
         i += 1
-    return raw.decode("utf-8")
+    # Git quotePath octal escapes are raw bytes; non-UTF-8 names are legal.
+    return raw.decode("utf-8", errors="surrogateescape")
 
 
 def porcelain_path(line: str) -> str:

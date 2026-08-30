@@ -25,3 +25,14 @@ def test_porcelain_path_decodes_git_octal_em_dash() -> None:
 def test_porcelain_path_plain_ascii_unchanged() -> None:
     line = "?? WIP/plain-file.md"
     assert dirtiness.porcelain_path(line) == "WIP/plain-file.md"
+
+
+def test_porcelain_path_preserves_decoded_trailing_newline() -> None:
+    line = r'?? "foo\n"'
+    assert dirtiness.porcelain_path(line) == "foo\n"
+
+
+def test_porcelain_path_surrogateescapes_non_utf8_octal() -> None:
+    line = r'?? "bad\377name"'
+    decoded = dirtiness.porcelain_path(line)
+    assert decoded.encode("utf-8", errors="surrogateescape") == b"bad\xffname"
