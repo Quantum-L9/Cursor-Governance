@@ -264,9 +264,12 @@ def restore_or_remove(root: Path, rel: str) -> str:
             shutil.rmtree(path)
         elif path.exists() or path.is_symlink():
             path.unlink()
-        return "removed"
     except OSError as exc:
         return f"remove-failed:{exc}"
+    cached = _git(root, "rm", "--cached", "-f", "--ignore-unmatch", "--", rel)
+    if cached.returncode != 0:
+        return f"unstage-failed:{cached.stderr.strip()[:120]}"
+    return "removed"
 
 
 def ref_exists(root: Path, ref: str) -> bool:
@@ -289,6 +292,10 @@ def park_novel(root: Path, rels: list[str]) -> tuple[str, str]:
     with tempfile.TemporaryDirectory(prefix="l9-dirt-close-") as tmp:
         index = Path(tmp) / "index"
         env = {"GIT_INDEX_FILE": str(index)}
+        if ref_exists(root, DIRT_SHELF_REF):
+            seeded = _git(root, "read-tree", DIRT_SHELF_REF, env=env)
+            if seeded.returncode != 0:
+                return DIRT_SHELF_REF, f"read-tree-failed:{seeded.stderr.strip()[:160]}"
         add = _git(root, "add", "-f", "--", *rels, env=env)
         if add.returncode != 0:
             return DIRT_SHELF_REF, f"add-failed:{add.stderr.strip()[:160]}"
@@ -317,6 +324,14 @@ def park_novel(root: Path, rels: list[str]) -> tuple[str, str]:
         if upd.returncode != 0:
             return DIRT_SHELF_REF, f"update-ref-failed:{upd.stderr.strip()[:160]}"
         return DIRT_SHELF_REF, commit
+
+
+def parked_blob_matches_worktree(root: Path, rel: str) -> bool:
+    wt = _sha256_file(root / rel)
+    if wt is None:
+        return False
+    blob = prune_open_pr_copies.sha256_blob(root, DIRT_SHELF_REF, rel)
+    return blob is not None and blob == wt
 
 
 def path_on_rev(root: Path, rev: str, rel: str) -> bool:
@@ -479,11 +494,11 @@ def apply_close(
     if novel:
         _ref, commit = park_novel(root, novel)
         receipt["shelf_commit"] = commit
-        if commit.startswith("add-failed") or commit.endswith("-failed"):
+        if commit.endswith("-failed") or commit.startswith("add-failed"):
             receipt["errors"] = [commit]
         else:
             for rel in novel:
-                if path_on_rev(root, DIRT_SHELF_REF, rel):
+                if parked_blob_matches_worktree(root, rel):
                     restore_or_remove(root, rel)
                     cleaned.append(rel)
                     receipt["actions"].append(

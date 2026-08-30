@@ -96,8 +96,7 @@ print(candidate or "")
 
   echo "workspace: $WS (mode $MODE)"
 
-  DIRT_CLOSE="$WS/ops/scripts/session_end_dirt_close.py"
-  [ -f "$DIRT_CLOSE" ] || DIRT_CLOSE="$GLOBAL_COMMANDS/ops/scripts/session_end_dirt_close.py"
+  DIRT_CLOSE="$GLOBAL_COMMANDS/ops/scripts/session_end_dirt_close.py"
   if [ "${L9_HYGIENE_DIRT_CLOSE:-1}" != "0" ] && [ -f "$DIRT_CLOSE" ]; then
     DIRT_OUT="$RECEIPTS/dirt-close-hook.json"
     [ -n "$RECEIPTS" ] || DIRT_OUT="/dev/null"

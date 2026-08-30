@@ -274,3 +274,46 @@ def test_error_reason_skips(repo: Path) -> None:
     result = apply(repo, payload={"reason": "error"})
     assert result["skip"] == "sessionEnd reason=error"
     assert (repo / "x.md").is_file()
+
+
+def test_rolling_shelf_keeps_earlier_parks(repo: Path) -> None:
+    (repo / "first.md").write_text("one", encoding="utf-8")
+    apply(repo)
+    assert dirt.path_on_rev(repo, dirt.DIRT_SHELF_REF, "first.md")
+    (repo / "second.md").write_text("two", encoding="utf-8")
+    apply(repo)
+    assert dirt.path_on_rev(repo, dirt.DIRT_SHELF_REF, "first.md")
+    assert dirt.path_on_rev(repo, dirt.DIRT_SHELF_REF, "second.md")
+
+
+def test_staged_head_absent_is_unstaged(repo: Path) -> None:
+    (repo / "staged.md").write_text("only index", encoding="utf-8")
+    git(repo, "add", "--", "staged.md")
+    result = apply(repo)
+    assert result["status"]["dirty_unique"] == 0
+    assert "staged.md" not in porcelain(repo)
+    ls = subprocess.run(
+        ["git", "-C", str(repo), "ls-files", "--", "staged.md"],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert ls.stdout.strip() == ""
+
+
+def test_park_failure_does_not_delete_worktree(repo: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    (repo / "keep.md").write_text("unique", encoding="utf-8")
+
+    def boom(root: Path, rels: list[str]) -> tuple[str, str]:
+        return dirt.DIRT_SHELF_REF, "update-ref-failed:denied"
+
+    monkeypatch.setattr(dirt, "park_novel", boom)
+    result = apply(repo)
+    assert (repo / "keep.md").is_file()
+    assert "keep.md" in result["status"]["dirty_files"]
+
+
+def test_hook_uses_ssot_script_only() -> None:
+    text = (REPO / "ops" / "hooks" / "session_end_repo_hygiene.sh").read_text(encoding="utf-8")
+    assert 'DIRT_CLOSE="$GLOBAL_COMMANDS/ops/scripts/session_end_dirt_close.py"' in text
+    assert 'DIRT_CLOSE="$WS/ops/scripts/session_end_dirt_close.py"' not in text
