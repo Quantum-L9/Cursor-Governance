@@ -285,3 +285,21 @@ patterns:
     preferred_response:
       - collapse_invalid_variants
       - promote_true_policy_to_canonical_owner
+  - id: KP-017
+    name: unanswered_required_architecture_questions
+    category: architecture
+    default_severity: critical
+    signals:
+      - proposed_build_fix_or_solution_without_direction_answer
+      - constellation_alignment_asserted_without_cited_owner
+      - first_order_claim_without_existing_mechanism_search
+      - RAPID_used_to_skip_the_architecture_question_triad
+    defect_when:
+      - any_required_architecture_question_is_unanswered_or_silently_yes
+    counterevidence:
+      - all_three_questions_recorded_with_bound_evidence
+      - not_applicable_answers_state_why_no_proposal_or_why_not_l9
+    preferred_response:
+      - answer_the_triad_before_promotion
+      - reject_parallel_constellation_owners
+      - select_the_first_order_move
