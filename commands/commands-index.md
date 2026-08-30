@@ -35,7 +35,7 @@ Primary slashes match `commands/COMMANDS_MANIFEST.yaml`. Aliases (not primary ro
 | `/l9-audit-plans` | Shelf the plans store: root = current unbuilt; partial/built/superseded/parked in subfolders |
 | `/l9-pipeline-audit` | Audit plans + WIP + PE campaigns; harvest via `l9-intelligence-harvest` (`/plan-audit` alias) |
 | `/git-work-preserve` | Diagnose-first git work audit / extract / prune-propose (`l9-git-work-preserve`) |
-| `/ff` | In-place catch-up of a named Cursor-Governance clone (`l9-repo-sync`) |
+| `/ff` | This Cursor-Governance clone **and** SSOT in parallel (`--clone` / `--ssot` = one target) |
 | `/analyze` | Explore structure, flows, hotspots (`l9-code-analysis`; probe mode via `l9-component-verification`) |
 | `/evaluate` | Deep readiness / compliance audit |
 | `/analyze_evaluate` | Analyze + evaluate in one pass |

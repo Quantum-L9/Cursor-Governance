@@ -195,16 +195,22 @@ remove_repo_duplicate "$HOME/.cursor/skills" "~/.cursor/skills (pre-4.0.0 symlin
 remove_repo_duplicate "$HOME/.cursor/commands" "~/.cursor/commands (pre-4.0.0 symlink)"
 remove_repo_duplicate "$HOME/.cursor/rules" "~/.cursor/rules (pre-4.0.0 symlink)"
 
-# C10 — never create a self-alias when wiring the SSOT clone itself
-# (realpath(workspace)==realpath(GLOBAL_COMMANDS)). Self-links nest forever in the IDE.
-WS_REAL="$(path_realpath "$WORKSPACE_DIR")"
-GC_REAL="$(path_realpath "$GLOBAL_COMMANDS")"
-if [ "$WS_REAL" = "$GC_REAL" ]; then
+# C10 — never create .cursor-commands on ssot or ssot_checkout.
+# Live SSOT self-alias nests forever. A second clone's link points at a full
+# second governance tree and Cursor Pyright enumerates it (AGENTS.md §11).
+WS_KIND="$(classify_workspace_kind "$WORKSPACE_DIR")"
+if [ "$WS_KIND" = "ssot" ] || [ "$WS_KIND" = "ssot_checkout" ]; then
   if [ -L "$WORKSPACE_DIR/.cursor-commands" ] || [ -e "$WORKSPACE_DIR/.cursor-commands" ]; then
     rm -f "$WORKSPACE_DIR/.cursor-commands"
-    echo "REMOVED: .cursor-commands self-alias (SSOT must not link to itself)"
-  else
+    if [ "$WS_KIND" = "ssot" ]; then
+      echo "REMOVED: .cursor-commands self-alias (SSOT must not link to itself)"
+    else
+      echo "REMOVED: .cursor-commands on ssot_checkout (consumer link not required)"
+    fi
+  elif [ "$WS_KIND" = "ssot" ]; then
     echo "OK: .cursor-commands absent on SSOT (no self-alias)"
+  else
+    echo "OK: .cursor-commands absent on ssot_checkout (no consumer link)"
   fi
 else
   link_or_update "$WORKSPACE_DIR/.cursor-commands" "$GLOBAL_COMMANDS" ".cursor-commands"

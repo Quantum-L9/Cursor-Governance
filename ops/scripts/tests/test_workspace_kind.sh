@@ -125,4 +125,11 @@ if echo "$out" | grep -q 'sessionEnd hook incomplete'; then
 fi
 pass "validate_governance_symlinks ssot_checkout skips consumer links"
 
+grep -q 'classify_workspace_kind' "$OPS_DIR/setup_workspace_symlinks.sh" \
+  || fail_now "setup_workspace_symlinks.sh must call classify_workspace_kind"
+pass "setup_workspace_symlinks.sh uses classify_workspace_kind"
+grep -q 'classify_workspace_kind' "$OPS_DIR/ensure_workspace_wired.sh" \
+  || fail_now "ensure_workspace_wired.sh must call classify_workspace_kind"
+pass "ensure_workspace_wired.sh uses classify_workspace_kind"
+
 echo "RESULT: PASS — workspace kind ($PASS checks)"

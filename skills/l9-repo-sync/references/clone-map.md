@@ -3,21 +3,23 @@ l9_schema: 1
 parent: l9-repo-sync
 tags: [sync, clone, ssot]
 status: active
-version: 1.2.0
-updated: 2026-08-22
+version: 1.3.0
+updated: 2026-08-29
 /L9_META -->
 
-# Clone map (print every time)
+# Clone map
 
-| Alias | Path | Script default without env |
-|---|---|---|
-| `ssot` | `$HOME/.cursor-governance` | Yes (`CURSOR_GOVERNANCE_DIR` default) |
-| `workspace` | Cursor folder gitdir (this checkout) | No — must set `CURSOR_GOVERNANCE_DIR` |
+Bare `/ff` in this repo = **both** gitdirs **in parallel**. Flags split them
+when you are in some other repo.
 
-`CURSOR_GOVERNANCE_DIR` selects the **ff clone**.
-`GLOBAL_COMMANDS` / `$GOV_ROOT` after `resolve_governance_paths.sh` is the
-governance content root (same path on the live SSOT). They are not a license
-to `activate_fresh`.
+| Typed | Target |
+|---|---|
+| `/ff` (no flags) | This Cursor-Governance checkout **and** `$HOME/.cursor-governance`, parallel, when they differ |
+| `/ff --clone` | Working copy only (`pwd` if identity, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`) |
+| `/ff --ssot` | `$HOME/.cursor-governance` only |
 
-If the user says “this repo” and `ssot` and `workspace` are different gitdirs
-(`samefile` false): diagnose both, **stop until they name one**.
+Same realpath (you are already on the live SSOT, no flags): one clone.
+A consumer repo, no flags: SSOT only (not a pair with the consumer tree).
+
+Agents run `ff.sh` **once** with the user's flags. Do not stop. Do not name
+`ssot` vs `workspace`. `GLOBAL_COMMANDS` is not `activate_fresh`.

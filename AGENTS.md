@@ -1035,3 +1035,16 @@ where `additive_only`. It also supersedes the Cursor “scoped-commits after
   are unchanged.
 - Combined `beforeShellExecution` is Cursor-only. Claude uses PreToolUse
   (`local_execution_gate_wrap.py`). Do not copy the hook cut.
+
+<!-- FF_PAIR_FLAGS_V1 -->
+## `/ff` pairs this clone + SSOT (2026-08-29)
+
+This fragment supersedes “name the clone (`ssot` vs `workspace`)” and
+“stop until they name one” in `l9-repo-sync` clone-map / compact workflow
+history. Those sentences stay on disk only where already rewritten.
+
+- In this repo, bare **`/ff`** / `make ff` is **one** `ff.sh` that fast-forwards
+  **this checkout and** `$HOME/.cursor-governance` **in parallel**.
+- **`/ff --clone`** / `make ff-clone` = working copy only.
+- **`/ff --ssot`** / `make ff-ssot` = SSOT only.
+- Use the flags from other repos. Do not diagnose. Do not sequential-ff.

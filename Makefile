@@ -821,6 +821,14 @@ PUSH_ONLY ?= 0
 ff:
 	CURSOR_GOVERNANCE_DIR="$(CURDIR)" bash skills/l9-repo-sync/scripts/ff.sh
 
+.PHONY: ff-clone ff-ssot
+## /ff --clone (Cursor-Governance working copy only)
+ff-clone:
+	bash skills/l9-repo-sync/scripts/ff.sh --clone
+## /ff --ssot ($HOME/.cursor-governance only)
+ff-ssot:
+	bash skills/l9-repo-sync/scripts/ff.sh --ssot
+
 # L9_DISPATCHER_FACADE_V1
 # Single classification authority for the thin `l9` cross-repo facade
 # (environment/agents/adapters/claude-code/bin/l9). A CONSUMER_SAFE target is

@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-29T21:11:57Z'
+generated_utc: '2026-08-29T21:53:12Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:cf5b7cfb168f9372ebba2fe525a3854e4c75310ccaf106e7680aa049ec6b7f92
+source_tree_digest: sha256:f13be6a52f758264edb4d95b34e3754e06932fff053b66991b311da1369332f1
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -720,7 +720,7 @@ rules:
 - file: 55-ff-only-ssot-sync.mdc
   id: l9.rule.55.ff.only.ssot.sync
   id_source: explicit
-  version: 1.2.0
+  version: 1.3.0
   description: Sync or fast-forward a Cursor-Governance clone only via /ff and l9-repo-sync (in-place ff). Never governance_activate_fresh swap. Never delete unique work.
   scope: global
   domain: git
@@ -730,8 +730,8 @@ rules:
   globs: null
   first_heading: Fast-forward only (no SSOT clobber)
   has_yaml_frontmatter: true
-  line_count: 63
-  content_digest: sha256:f50edf623c5b6a907d57ef87e0c6bad86a77032015b71b104b98b96320c739f7
+  line_count: 64
+  content_digest: sha256:57c768e5abe242ad4993f66ae08398548bde5f7a558fa9c80bf044a19ebb6fe6
   authority: canonical_global
   context_cost: minimal
   deprecated: false
