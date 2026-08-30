@@ -109,6 +109,94 @@ class OutcomePublisherTests(unittest.TestCase):
         ):
             self.assertIn(name, signature.parameters)
 
+    def _validator(self):
+        validator_path = self.root.parents[2] / "agents/generated-data/runtime/packet_validator.py"
+        runtime = validator_path.parent
+        if str(runtime) not in sys.path:
+            sys.path.insert(0, str(runtime))
+        spec = importlib.util.spec_from_file_location("pes_test_packet_validator_extra", validator_path)
+        if spec is None or spec.loader is None:
+            raise RuntimeError(validator_path)
+        validator = importlib.util.module_from_spec(spec)
+        sys.modules[spec.name] = validator
+        spec.loader.exec_module(validator)
+        return validator.PacketValidator()
+
+    def test_compile_from_changed_files_is_packet_valid(self) -> None:
+        projection = load_module(
+            self.root / "receipt_projection.py",
+            "pes_test_receipt_projection_compile",
+        )
+        packet = projection.generated_data_packet(
+            {
+                "task_id": "TASK-COMPILE",
+                "claimed_status": "passed_local",
+                "generated_at": "2026-08-30T12:00:00Z",
+                "changed_files": ["environment/agents/runtime_paths.py"],
+                "verification": {
+                    "verdict": "PASSED_LOCAL",
+                    "observed_changed_files": ["environment/agents/runtime_paths.py"],
+                    "gates": {"pytest": "PASS"},
+                },
+            },
+            repository="Quantum-L9/Cursor-Governance",
+            base_sha="2" * 40,
+            agent_id="cursor",
+            campaign_id="campaign-compile",
+        )
+        report = self._validator().validate(packet)
+        self.assertTrue(report.valid, report.to_dict())
+        self.assertTrue(packet["generated_data_units"])
+        self.assertTrue(packet["reuse_assessment"]["reusable_data_found"])
+        self.assertIn("Compiled reusable PE findings", packet["reuse_assessment"]["reason"])
+        self.assertFalse(any(unit.get("self_promoted") for unit in packet["generated_data_units"]))
+        memory_units = [
+            unit
+            for unit in packet["generated_data_units"]
+            if "memory" in unit.get("proposed_routes", [])
+        ]
+        self.assertTrue(memory_units)
+
+    def test_empty_assessment_when_no_extractable_evidence(self) -> None:
+        projection = load_module(
+            self.root / "receipt_projection.py",
+            "pes_test_receipt_projection_empty",
+        )
+        packet = projection.generated_data_packet(
+            {
+                "task_id": "TASK-EMPTY",
+                "claimed_status": "completed",
+                "generated_at": "2026-08-30T12:00:00Z",
+            },
+            repository="Quantum-L9/example",
+            base_sha="3" * 40,
+            agent_id="cursor",
+        )
+        report = self._validator().validate(packet)
+        self.assertTrue(report.valid, report.to_dict())
+        self.assertEqual(packet["generated_data_units"], [])
+        self.assertFalse(packet["reuse_assessment"]["reusable_data_found"])
+        self.assertIn("no extractable evidence", packet["reuse_assessment"]["reason"])
+
+    def test_provider_authored_units_pass_through(self) -> None:
+        compiler = load_module(
+            self.root / "compile_units.py",
+            "pes_test_compile_units_passthrough",
+        )
+        existing = [{"unit_id": "u-3"}]
+        compiled = compiler.compile_generated_data_units(
+            {
+                "task_id": "TASK-PASS",
+                "generated_data_units": existing,
+                "changed_files": ["src/a.py"],
+            },
+            repository="Quantum-L9/example",
+            base_sha="4" * 40,
+            generated_at="2026-08-30T12:00:00Z",
+        )
+        self.assertFalse(compiled["compiled"])
+        self.assertEqual(compiled["units"], existing)
+
 
 if __name__ == "__main__":
     unittest.main()

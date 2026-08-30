@@ -20,7 +20,17 @@ if str(_OPS_LIB) not in sys.path:
 from safe_https import exchange  # noqa: E402
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent
-_MEMORY_OUTBOX_DIR = _PACKAGE_ROOT / ".runtime" / "memory-outbox"
+_AGENTS_ROOT = Path(__file__).resolve().parents[2]
+if str(_AGENTS_ROOT) not in sys.path:
+    sys.path.insert(0, str(_AGENTS_ROOT))
+try:
+    from runtime_paths import memory_outbox_root as _memory_outbox_root
+except ImportError:  # pragma: no cover - isolated adapter load without agents root
+    def _memory_outbox_root() -> Path:
+        return _PACKAGE_ROOT / ".runtime" / "memory-outbox"
+
+
+_MEMORY_OUTBOX_DIR = _memory_outbox_root()
 
 
 class GraphitiAdapterError(RuntimeError):

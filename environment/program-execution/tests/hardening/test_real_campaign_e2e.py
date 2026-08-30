@@ -22,13 +22,9 @@ On (9): every subprocess launched anywhere in this module is recorded and
 screened, so the no-publication boundary is *proven for this run* rather than
 assumed from the fact that nobody wrote a push.
 
-On (8): `submitted` here means `enqueued` — the candidate is durably written to
-the file outbox and nothing in this repository advances it further. That is the
-current, truthful state of the memory handoff and is asserted as such. It is
-NOT an assertion that the state is desirable: the missing outbox drain is
-tracked as an open escalated finding (see
-`docs/handoffs/PE_SWARM_MEMORY_REMEDIATION_FINDINGS.md`, RC-3). When a drain lands,
-`test_enqueued_is_not_reported_as_persisted` is the test that must be revisited.
+On (8): first-hop `submitted` still means `enqueued` to the file outbox.
+`test_enqueued_is_not_reported_as_persisted` then drains with a fake accept
+command and asserts the drained end state. Enqueue is never persistence.
 """
 
 from __future__ import annotations
@@ -542,7 +538,7 @@ def _deliver_to_outbox(tmp_path: Path) -> tuple[Any, Path]:
         designated_authority_approval=True,
         recurrence_counts={"unit-repo-fact-001": 2, "unit-contract-gap-001": 2},
     )
-    outbox = tmp_path / "memory-outbox"
+    outbox = tmp_path / "outbox" / "memory"
     worker = DeliveryWorker(
         DeliveryWorkerConfiguration(
             repository_root=str(_REPO_ROOT),
@@ -575,19 +571,21 @@ def test_memory_candidate_reaches_a_submission_status(tmp_path: Path) -> None:
 def test_enqueued_is_not_reported_as_persisted(tmp_path: Path) -> None:
     """`enqueued` is a submission status, never a persistence claim.
 
-    This encodes the *current* memory-handoff reality: the file outbox has no
-    drain in this repository, so an enqueued candidate has not reached Graphiti
-    and must never be summarized as if it had. Tracked as escalated finding RC-3
-    in docs/handoffs/PE_SWARM_MEMORY_REMEDIATION_FINDINGS.md. When a drain is added,
-    revisit this assertion rather than deleting it.
+    After the first hop the candidate is in the sibling outbox and the summary
+    must still report persisted=UNKNOWN. Drain with a fake accept command
+    advances DESTINATION_SUBMITTED and removes the file. Acceptance is still
+    not a Graphiti persistence proof.
     """
 
     from campaign_summary import build_summary
+    from delivery_worker import DeliveryWorker, DeliveryWorkerConfiguration
+    from state_store import PipelineState, PipelineStateStore
 
     delivery, outbox = _deliver_to_outbox(tmp_path)
     assert delivery is not None
     assert delivery.enqueued >= 1
     assert delivery.accepted == 0, "outbox delivery must not claim destination acceptance"
+    assert sorted(outbox.glob("memcand-*.json"))
 
     summary = build_summary(
         database_path=tmp_path / "pipeline.sqlite3",
@@ -597,9 +595,39 @@ def test_enqueued_is_not_reported_as_persisted(tmp_path: Path) -> None:
     assert memory["memory_units_persisted"] is None
     assert memory["memory_units_retrievable"] is None
     assert memory["memory_candidates_accepted"] == 0
+    assert memory["outbox_backlog_count"] >= 1
 
-    # Nothing in the repository drains the outbox, so the candidate stays put.
-    assert sorted(outbox.glob("memcand-*.json"))
+    accept = [
+        sys.executable,
+        "-c",
+        "import json,sys; json.dump({'status':'accepted','memory_id':'m-e2e','write_receipt_id':'w-e2e'}, sys.stdout)",
+    ]
+    store = PipelineStateStore(tmp_path / "pipeline.sqlite3")
+    drain_worker = DeliveryWorker(
+        DeliveryWorkerConfiguration(
+            repository_root=str(_REPO_ROOT),
+            database_path=str(tmp_path / "pipeline.sqlite3"),
+            memory_mode="command",
+            memory_command=tuple(accept),
+            memory_outbox=str(outbox),
+            route_outbox_root=str(tmp_path / "routes"),
+        ),
+        store=store,
+    )
+    drained = drain_worker.drain_memory_outbox(actor="rc7-e2e")
+    assert drained and drained[0]["status"] == "accepted"
+    assert not list(outbox.glob("memcand-*.json"))
+    job = store.get_job(delivery.job_id)
+    assert job.state is PipelineState.DESTINATION_ACCEPTED
+
+    drained_summary = build_summary(
+        database_path=tmp_path / "pipeline.sqlite3",
+        campaign_id=_valid_packet()["identity"]["campaign_id"],
+    )
+    drained_memory = drained_summary["memory"]
+    assert drained_memory["memory_units_persisted"] is None
+    assert drained_memory["memory_candidates_accepted"] >= 1
+    assert drained_memory["outbox_backlog_count"] == 0
 
 
 # ----------------------------------------------------------------------

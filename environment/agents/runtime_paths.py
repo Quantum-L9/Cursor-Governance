@@ -97,6 +97,11 @@ def generated_data_outbox_root() -> Path:
     return (generated_data_root() / "outbox").resolve()
 
 
+def memory_outbox_root() -> Path:
+    """Canonical memory-route candidate outbox (FileOutboxTransport + drain)."""
+    return (generated_data_outbox_root() / "memory").resolve()
+
+
 def discover_existing_generated_data_database(
     *,
     repo_root: Path | None = None,
