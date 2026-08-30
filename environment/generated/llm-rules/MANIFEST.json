@@ -276,9 +276,9 @@
       "alias": null,
       "class": "always",
       "output": "55-ff-only-ssot-sync.md",
-      "output_sha256": "e9455bd44cb313bc633b519237094369a576530fc03be4c35d1dadfd34120b45",
+      "output_sha256": "d43a90ec060f117cfe5a273b1a2a99f0f40c279aa322c3fccb4d99d755ddc6f1",
       "source": "rules/55-ff-only-ssot-sync.mdc",
-      "source_sha256": "57c768e5abe242ad4993f66ae08398548bde5f7a558fa9c80bf044a19ebb6fe6",
+      "source_sha256": "1d24650ccf3d40434e6bff47f98affa6b67feb1e6a6d237dc4474a62b2f7e26f",
       "stem": "55-ff-only-ssot-sync"
     },
     {
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 69
   },
-  "tree_sha256": "e4ac0083e9994be9226b84d24c2b3255c71738d761cb0d4bc6678d97482c8b58"
+  "tree_sha256": "fff4e21b09002a7b189d35123bb0c2c053a8178d725544dc519af7d383f02cb7"
 }
