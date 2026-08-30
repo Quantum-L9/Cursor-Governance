@@ -17,14 +17,19 @@ from generate_commands_manifest import build_manifest, is_excluded  # noqa: E402
 REGISTRY_REL = Path("ops/generated/skill-registry.json")
 
 
-def load_skill_names(root: Path) -> set[str]:
+def load_skill_names(root: Path) -> set[str] | None:
+    """Return skill names, or None when the registry is missing/unreadable.
+
+    None means fail closed — callers must not treat an absent registry as an
+    empty skill set (that would silently accept every command/skill collision).
+    """
     path = root / REGISTRY_REL
     if not path.is_file():
-        return set()
+        return None
     try:
         registry = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
-        return set()
+        return None
     return {
         str(record.get("name"))
         for record in registry.get("skills", [])
@@ -73,6 +78,12 @@ def validate(root: Path) -> list[str]:
         errors.append(f"duplicate slash commands: {dupes}")
 
     skill_names = load_skill_names(root)
+    if skill_names is None:
+        errors.append(
+            f"missing or unreadable {REGISTRY_REL} — cannot validate "
+            "command/skill collisions fail-closed"
+        )
+        return errors
     for entry in data.get("commands", []) or []:
         if not isinstance(entry, dict):
             continue

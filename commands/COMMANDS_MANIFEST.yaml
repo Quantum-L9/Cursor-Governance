@@ -38,6 +38,9 @@ commands:
 - slash: /inspect
   file: commands/inspect.md
   enabled: true
+- slash: /issues
+  file: commands/issues.md
+  enabled: true
 - slash: /l9-audit-plans
   file: commands/l9-audit-plans.md
   enabled: true
@@ -49,6 +52,12 @@ commands:
   enabled: true
 - slash: /migrate
   file: commands/migrate.md
+  enabled: true
+- slash: /plan-audit
+  file: commands/plan-audit.md
+  enabled: true
+- slash: /pr
+  file: commands/pr.md
   enabled: true
 - slash: /pr-train
   file: commands/pr-train.md
