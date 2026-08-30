@@ -1,6 +1,6 @@
 ---
 name: l9-issue-remediation
-description: remediator for open github issues across all non-archived quantum-l9 repos — drain leverage-ranked clusters, land fixes on the matching open pr or a stacked pr on the newest, close resolved issues, and chain l9-pr-remediation only when open_issues=0. diagnose is the auditor opt-out. use when the user runs /issues or /l9-issue-remediation, or asks to fix, remediate, unblock, or converge open issues.
+description: remediator for open github issues across all non-archived quantum-l9 repos — verify each issue is real before trusting it, drain clusters until a human architecture blocker, ask a recommended multiple-choice (A first), then resume. close phantoms; land real fixes on a matching or stacked pr. use when the user runs /issues or /l9-issue-remediation, or asks to fix, remediate, unblock, or converge open issues.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -9,7 +9,7 @@ metadata:
   tags: [l9, issues, github, diagnose, remediation, cross-repo, unblock, graphiti, fleet]
   owner: igor_beylin
   status: active
-  version: 1.1.0
+  version: 1.2.0
   updated: 2026-08-29
 ---
 
@@ -19,7 +19,10 @@ metadata:
 
 Sibling to `l9-pr-remediation` for **GitHub Issues** across the Quantum-L9 fleet.
 Two intents: **Diagnose** (auditor) or **Converge** (remediator). No packaging
-theater. Converge drains **all** automatable clusters, highest leverage first.
+theater. Converge runs at **max autonomy**: verify every issue, drain all
+automatable clusters, do not stop between them. Stop only when a human
+(architecture / product / external) is required — then ask a recommended
+multiple-choice (**A** first) and resume.
 
 | Intent | Mutates | Triggers | Behavior |
 |--------|---------|----------|----------|
@@ -79,7 +82,8 @@ Load [references/diagnose-workflow.md](references/diagnose-workflow.md).
 | Else | newest open PR | `PR_REMEDIATE=0 make pr` stacked (`PR_STACK=auto`) |
 | `open_issues == 0` | `open_issues_gate.py --intent converge` | Chain **`l9-pr-remediation`** |
 | `open_issues > 0` | leftover OPEN including HUMAN/EXTERNAL | `BLOCKED_OPEN_ISSUES` — do not chain |
-| Human/external | product/secrets/third-party | Note; do not fake close |
+| Human/external / architecture | product/secrets/SSOT move | Drain other clusters; then [human-blocker-mcq.md](references/human-blocker-mcq.md) (**A** = recommended); resume after the letter |
+| Phantom / stale issue | [issue-verify.md](references/issue-verify.md) | Close with evidence; do not remediate |
 
 ## Converge — Outputs (per cycle that changes code)
 
@@ -100,25 +104,35 @@ No tarballs, run-report schemas, or issue-file bundles.
 
 ## Laws (Converge)
 
-1. **All automatable clusters.** Default `max_clusters_per_invoke: all`,
-   highest leverage first. Per-cluster max 3 cycles. Never start cycle 4 on
-   one cluster.
-2. **Codebase only** in owning repo(s). Never edit `.github/workflows/**`,
+1. **Max autonomy.** Default `max_clusters_per_invoke: all`, highest
+   leverage first. Do not stop between issues. Per-cluster max 3 cycles.
+   Never start cycle 4 on one cluster. Stop the invoke only when the next
+   step is impossible without a human — then
+   [human-blocker-mcq.md](references/human-blocker-mcq.md) and resume.
+2. **Verify before trust.** Recreate the live GitHub issue and prove the
+   defect in the owning repo ([issue-verify.md](references/issue-verify.md))
+   before any patch. Close if it does not exist or is not reproducible;
+   remediate only if it does. Agents invent issues — do not assume OPEN
+   means correct.
+3. **Codebase only** in owning repo(s). Never edit `.github/workflows/**`,
    branch protection, org secrets policy, or CI-only infra. Note and skip.
-3. **Ownership before edit.** Load [ownership-boundary.md](references/ownership-boundary.md).
-4. **Obvious owner.** Shared package/SSOT before ad-hoc consumer edits.
-5. **One commit per cycle** in the mutated owning repo. Zero if nothing safe.
-6. **PR landing.** Matching open PR wins; else stacked PR on newest; else
+4. **Ownership before edit.** Load [ownership-boundary.md](references/ownership-boundary.md).
+5. **Obvious owner.** Shared package/SSOT before ad-hoc consumer edits.
+6. **One commit per cycle** in the mutated owning repo. Zero if nothing safe.
+7. **PR landing.** Matching open PR wins; else stacked PR on newest; else
    first PR on `origin/main`. See [pr-landing.md](references/pr-landing.md).
-7. **Local verify blocks publish.** ≤5 re-diag iterations.
-8. **No gate weakening / suppressions** as “fixes.”
-9. **Never** force-push, merge PRs, expose secrets, or mass-close HUMAN
-   issues. Evidence-close HUMAN/EXTERNAL only as superseded/duplicate/already-fixed.
-10. **`/l9-pr-remediation` only after `open_issues=0`.**
+8. **Local verify blocks publish.** ≤5 re-diag iterations.
+9. **No gate weakening / suppressions** as “fixes.”
+10. **Never** force-push, merge PRs, expose secrets, or mass-close HUMAN
+    issues. Evidence-close only as
+    superseded|duplicate|already-fixed|not-reproducible|does-not-exist.
+11. **`/l9-pr-remediation` only after `open_issues=0`.**
     [handoff-to-pr-remediation.md](references/handoff-to-pr-remediation.md).
-11. **Breadcrumb law** is part of Done When — PICKUP failure or `status=fixed`
+12. **Breadcrumb law** is part of Done When — PICKUP failure or `status=fixed`
     still OPEN blocks “converged.”
-12. **Do not invent** root session-reference markdown files.
+13. **Do not invent** root session-reference markdown files.
+14. **Architecture stays human.** Recommend the optimal path as **A**; do not
+    implement a new architecture until they pick a letter.
 
 ## Hot Path (Converge)
 
@@ -126,24 +140,31 @@ No tarballs, run-report schemas, or issue-file bundles.
    (`<!-- l9-issue-remediation:... -->`).
 1. **Discover gates (read-only)** in the owning repo.
 2. **Ingest + rank** — `issue_ingest.py` then `cluster_rank.py`.
-3. **Fix** the current highest-leverage automatable cluster (concurrent when
-   independent). [fix-engine.md](references/fix-engine.md) (**Lesson Recall**).
-4. **Local verify** → commit with trailer
+3. **Verify** each issue in the current cluster
+   ([issue-verify.md](references/issue-verify.md)). Close phantoms; skip
+   404/already-CLOSED. Do not patch until `exists`.
+4. **Fix** only `exists` items (concurrent when independent).
+   [fix-engine.md](references/fix-engine.md) (**Lesson Recall**).
+5. **Local verify** → commit with trailer
    `Issue-Remediation-Cycle: {owner}/{repo}#{n}/cycle-{N}`.
-5. **Land on PR** — [pr-landing.md](references/pr-landing.md).
-6. **Breadcrumbs** — PICKUP + comments + **close if fixed** + conditional session-ref.
-7. **Re-ingest + gate** — [convergence-loop.md](references/convergence-loop.md).
+6. **Land on PR** — [pr-landing.md](references/pr-landing.md).
+7. **Breadcrumbs** — PICKUP + comments + **close if fixed** + conditional session-ref.
+8. **Re-ingest + gate** — [convergence-loop.md](references/convergence-loop.md).
+   Next automatable cluster immediately. HUMAN/ARCHITECTURE leftover →
+   [human-blocker-mcq.md](references/human-blocker-mcq.md), then resume.
    Chain `/l9-pr-remediation` **only** when `open_issues_gate.py` says `chain: true`.
 
 ## Done When (Converge)
 
-- Automatable clusters drained **or** only HUMAN/EXTERNAL remain
+- Automatable clusters drained (verified, closed, or fixed)
+- Remaining HUMAN / ARCHITECTURE / EXTERNAL presented as recommended-A
+  questions; queue resumes after letters
 - Every `status=fixed` issue is CLOSED
 - Linked issues commented; PICKUP written (or status `BLOCKED_PICKUP`)
 - Session-ref updated only where `TODO.md` pre-existed
 - Worktree clean in mutated repos
 - `/l9-pr-remediation` invoked **only if** bound-target `open_issues=0`;
-  otherwise status `BLOCKED_OPEN_ISSUES`
+  otherwise status `BLOCKED_OPEN_ISSUES` (after the MCQ turn if humans remain)
 
 ## Resource Map
 
@@ -154,8 +175,11 @@ No tarballs, run-report schemas, or issue-file bundles.
 - [scripts/cluster_rank.py](scripts/cluster_rank.py)
 - [scripts/close_resolved_issue.py](scripts/close_resolved_issue.py)
 - [scripts/open_issues_gate.py](scripts/open_issues_gate.py)
+- [references/issue-verify.md](references/issue-verify.md)
 
 ### Converge
+- [references/issue-verify.md](references/issue-verify.md)
+- [references/human-blocker-mcq.md](references/human-blocker-mcq.md)
 - [references/ownership-boundary.md](references/ownership-boundary.md)
 - [references/finding-classifier.md](references/finding-classifier.md)
 - [references/cross-repo-routing.md](references/cross-repo-routing.md)
@@ -178,6 +202,9 @@ No tarballs, run-report schemas, or issue-file bundles.
 org: Quantum-L9
 fleet: non_archived_via_gh
 max_clusters_per_invoke: all
+max_autonomy: until_human_blocker
+recommend_letter: A
+verify_before_trust: true
 max_cycles: 3
 max_local_verify_iterations: 5
 make_pr: true
@@ -202,7 +229,10 @@ pr_policy: land_then_chain_after_open_issues_zero  # never merge here
 - Unknown owning repo → do not mutate; ask or Diagnose escalate
 - Graphiti PICKUP fails → `BLOCKED_PICKUP`; still post comments; do not claim converged
 - `status=fixed` still OPEN → not converged; run `close_resolved_issue.py`
-- `open_issues != 0` → `BLOCKED_OPEN_ISSUES`; do not chain `/l9-pr-remediation`
+- `open_issues != 0` after automatable drain → present
+  [human-blocker-mcq.md](references/human-blocker-mcq.md); status
+  `BLOCKED_OPEN_ISSUES` until letters land or hold; do not chain
+  `/l9-pr-remediation` while any issue stays OPEN
 - Fix breaks local gate → revert that fix, defer with reason
 - Max cycles on a cluster → continue other clusters; do not start cycle 4 on that one
 

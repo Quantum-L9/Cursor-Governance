@@ -89,7 +89,7 @@
           "admin merge",
           "force push"
         ],
-        "note": "explicit_only + hint_allowed \u2014 /issues and /l9-issue-remediation are remediator Converge. Diagnose is /issues diagnose or \u201cwhat\u2019s blocking?\u201d only and never chains /l9-pr-remediation. Converge lands fixes on matching or stacked PRs, closes status=fixed, and chains l9-pr-remediation only when open_issues=0.\n",
+        "note": "explicit_only + hint_allowed \u2014 /issues and /l9-issue-remediation are remediator Converge. Diagnose is /issues diagnose or \u201cwhat\u2019s blocking?\u201d only and never chains /l9-pr-remediation. Converge verifies each issue is real, drains at max autonomy, asks recommended-A questions only for human/architecture blockers, lands fixes on matching or stacked PRs, closes status=fixed, and chains l9-pr-remediation only when open_issues=0.\n",
         "positive_signals": [
           "open issues",
           "github issues",
@@ -1027,12 +1027,12 @@
     },
     {
       "composition_role": "general",
-      "description": "remediator for open github issues across all non-archived quantum-l9 repos \u2014 drain leverage-ranked clusters, land fixes on the matching open pr or a stacked pr on the newest, close resolved issues, and chain l9-pr-remediation only when open_issues=0. diagnose is the auditor opt-out. use when the user runs /issues or /l9-issue-remediation, or asks to fix, remediate, unblock, or converge open issues.",
+      "description": "remediator for open github issues across all non-archived quantum-l9 repos \u2014 verify each issue is real before trusting it, drain clusters until a human architecture blocker, ask a recommended multiple-choice (A first), then resume. close phantoms; land real fixes on a matching or stacked pr. use when the user runs /issues or /l9-issue-remediation, or asks to fix, remediate, unblock, or converge open issues.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-issue-remediation",
       "path": "skills/l9-issue-remediation",
-      "reason": "/issues and /l9-issue-remediation are remediator Converge (drain all clusters, land on PRs, close resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.",
+      "reason": "/issues and /l9-issue-remediation are remediator Converge (verify-before-trust, drain all clusters at max autonomy, recommended-A human blockers, land on PRs, close phantoms/resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1302,6 +1302,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "22ac1f140124a55fc928aff83dfd50e4570acb2dc082cc83b1d253949a01835c",
-  "source_skill_corpus_sha256": "f8aceaed78c20259f161d18d941d18ca53b3224cfa997cdc963b8c1c9b56eaa0"
+  "source_manifest_sha256": "b5fb7390d5db44ab932147d5781cd54bf3bf64635d99054e167b10ca38638f2b",
+  "source_skill_corpus_sha256": "de6dcaf9067602a0671ec9619ea50e00d8af599f7234330e5627bdb31d31a05e"
 }

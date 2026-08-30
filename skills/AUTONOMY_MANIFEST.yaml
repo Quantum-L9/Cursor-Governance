@@ -87,7 +87,7 @@ tiers:
   - skill: l9-pr-remediation
     reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, then merges them oldest-first and stack-safe (squash only when unstacked). make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
   - skill: l9-issue-remediation
-    reason: /issues and /l9-issue-remediation are remediator Converge (drain all clusters, land on PRs, close resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.
+    reason: /issues and /l9-issue-remediation are remediator Converge (verify-before-trust, drain all clusters at max autonomy, recommended-A human blockers, land on PRs, close phantoms/resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.
   - skill: l9-bounded-autonomy
     reason: campaign autonomy with parallel Tasks and background PR-poll; remediation push under campaign authorization packet — high blast radius, explicit only
   - skill: l9-pe-campaign-activate
@@ -284,7 +284,7 @@ claude_routing:
     - force push
     supporting:
     - l9-pr-remediation
-    note: 'explicit_only + hint_allowed — /issues and /l9-issue-remediation are remediator Converge. Diagnose is /issues diagnose or “what’s blocking?” only and never chains /l9-pr-remediation. Converge lands fixes on matching or stacked PRs, closes status=fixed, and chains l9-pr-remediation only when open_issues=0.
+    note: 'explicit_only + hint_allowed — /issues and /l9-issue-remediation are remediator Converge. Diagnose is /issues diagnose or “what’s blocking?” only and never chains /l9-pr-remediation. Converge verifies each issue is real, drains at max autonomy, asks recommended-A questions only for human/architecture blockers, lands fixes on matching or stacked PRs, closes status=fixed, and chains l9-pr-remediation only when open_issues=0.
 
       '
   - id: code_analysis

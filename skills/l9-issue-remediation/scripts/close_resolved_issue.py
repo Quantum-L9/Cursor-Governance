@@ -2,7 +2,7 @@
 """Close a GitHub issue that is already resolved — evidence-gated.
 
 Posts the canonical unblock comment (status=fixed) then `gh issue close`.
-HUMAN/EXTERNAL require superseded|duplicate|already-fixed plus proof.
+HUMAN/EXTERNAL require superseded|duplicate|already-fixed|not-reproducible|does-not-exist plus proof.
 Never prints tokens. Stdlib + gh CLI.
 """
 
@@ -23,8 +23,12 @@ if str(_HERE) not in sys.path:
 import post_issue_comment as comment  # noqa: E402
 
 HUMANISH = frozenset({"HUMAN", "EXTERNAL"})
-ALLOWED_HUMAN_REASONS = frozenset({"superseded", "duplicate", "already-fixed"})
-PROOF_REASONS = frozenset({"superseded", "duplicate", "already-fixed"})
+ALLOWED_HUMAN_REASONS = frozenset(
+    {"superseded", "duplicate", "already-fixed", "not-reproducible", "does-not-exist"}
+)
+PROOF_REASONS = frozenset(
+    {"superseded", "duplicate", "already-fixed", "not-reproducible", "does-not-exist"}
+)
 
 
 def validate_close(
@@ -50,12 +54,15 @@ def validate_close(
         if reason not in ALLOWED_HUMAN_REASONS:
             raise SystemExit(
                 "BLOCKED: HUMAN/EXTERNAL close requires --reason "
-                "superseded|duplicate|already-fixed plus proof"
+                "superseded|duplicate|already-fixed|not-reproducible|does-not-exist plus proof"
             )
         if not evidence:
             raise SystemExit("BLOCKED: HUMAN/EXTERNAL close requires proof")
     if reason and reason not in PROOF_REASONS:
-        raise SystemExit("BLOCKED: --reason must be superseded|duplicate|already-fixed")
+        raise SystemExit(
+            "BLOCKED: --reason must be superseded|duplicate|already-fixed|"
+            "not-reproducible|does-not-exist"
+        )
     return reason or "already-fixed"
 
 

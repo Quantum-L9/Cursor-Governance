@@ -55,7 +55,7 @@ Use `scripts/close_resolved_issue.py` (comment + `gh issue close --reason comple
   `--commit` / `--merged-pr`). Do not wait for remediator merge.
 - Diagnose: close already-resolved only (linked PR merged, or defect gone on
   default) with the same evidence flags.
-- HUMAN / EXTERNAL: refuse unless `--reason superseded|duplicate|already-fixed`
+- HUMAN / EXTERNAL: refuse unless `--reason superseded|duplicate|already-fixed|not-reproducible|does-not-exist`
   plus proof.
 
 Done-when **fails** if `status=fixed` and the issue is still OPEN.

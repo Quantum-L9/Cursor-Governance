@@ -31,7 +31,7 @@ PR green/merge is owned by `l9-pr-remediation` and may start **only** when
 |-------|--------|
 | `open_issues == 0` (intent=converge) | **Chain** `/l9-pr-remediation` |
 | `open_issues > 0` and automatable clusters remain | Next cluster / next cycle |
-| `open_issues > 0` and only HUMAN / EXTERNAL remain | `BLOCKED_OPEN_ISSUES` — do **not** chain |
+| `open_issues > 0` and only HUMAN / ARCHITECTURE / EXTERNAL remain | Present [human-blocker-mcq.md](human-blocker-mcq.md) (**A** = recommended). Status `BLOCKED_OPEN_ISSUES` until the letter. Resume the queue after the answer. Do **not** chain |
 | PICKUP failed | `BLOCKED_PICKUP` — not converged |
 | Cluster cycles == 3 with remaining codebase work | Stop that cluster; continue others |
 
@@ -45,7 +45,9 @@ evaluates this for the purpose of starting remediator.
 
 ## Early stop vs chain
 
-Do not burn cycles on HUMAN product forks or EXTERNAL secret provisioning.
-Breadcrumb them. They keep `open_issues > 0` and therefore **block** the
-remediator chain until evidence-closed or actually resolved. Do not weaken
-the gate to “automatable subset = 0.”
+Do not burn cycles on HUMAN product forks, ARCHITECTURE approval, or
+EXTERNAL secret provisioning. Drain every other automatable cluster first.
+Then ask the recommended-A questions. They keep `open_issues > 0` and
+**block** the remediator chain until evidence-closed or actually resolved.
+Do not weaken the gate to “automatable subset = 0.” Do not idle the invoke
+waiting on one blocker while other clusters can still move.

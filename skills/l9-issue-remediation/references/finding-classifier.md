@@ -39,8 +39,10 @@ highest leverage first:
 3. Severity
 4. Oldest updated as tie-break
 
-Ignore HUMAN/EXTERNAL-only clusters for mutation (Diagnose may still list
-them). They remain OPEN and keep `open_issues > 0` unless evidence-closed.
+Ignore HUMAN/EXTERNAL/ARCHITECTURE-only clusters for mutation (Diagnose
+may still list them). They remain OPEN and keep `open_issues > 0` unless
+evidence-closed. After the automatable queue is empty, ask recommended-A
+questions ([human-blocker-mcq.md](human-blocker-mcq.md)) and resume.
 
 Independent owning repos may run in parallel; dependent clusters stay serial.
 

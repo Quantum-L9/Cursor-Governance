@@ -46,18 +46,25 @@ python3 skills/l9-issue-remediation/scripts/issue_ingest.py --repo Quantum-L9/SE
 
 GATE: issue snapshot fetched before any verdict.
 
-3. **Rank clusters** (leverage, not a single sticky pick):
+3. **Verify existence (auditor)** — live `gh issue view` per
+   [issue-verify.md](issue-verify.md). Do not treat ingest JSON as proof.
+   Already-CLOSED / 404 → drop from the verdict list. OPEN but
+   already-fixed / not-reproducible / does-not-exist → evidence-close
+   (step 6). Never invent a replacement issue.
+
+4. **Rank clusters** (leverage, not a single sticky pick):
 
 ```bash
 python3 skills/l9-issue-remediation/scripts/cluster_rank.py --issues issues.json --output clusters.json
 ```
 
-4. **Classify (read-only)** — ownership guess only; do not mutate code. Load
+5. **Classify (read-only)** — ownership guess only; do not mutate code. Load
    [ownership-boundary.md](ownership-boundary.md) + [finding-classifier.md](finding-classifier.md).
 
-5. **Already-resolved close** — if a linked PR is merged or the defect is gone
-   on default, run `scripts/close_resolved_issue.py` with `--merged-pr` or
-   `--commit` proof. Still **never** chain `/l9-pr-remediation`. Confirm the
+6. **Already-resolved / phantom close** — if a linked PR is merged, the
+   defect is gone, or verify said `not-reproducible` / `does-not-exist`,
+   run `scripts/close_resolved_issue.py` with `--merged-pr`, `--commit`,
+   or `--proof`. Still **never** chain `/l9-pr-remediation`. Confirm the
    gate:
 
 ```bash
@@ -66,7 +73,7 @@ python3 skills/l9-issue-remediation/scripts/open_issues_gate.py --intent diagnos
 
 Must print `diagnose_never_chains`.
 
-6. **Present inline** — format below. Load `l9-ynp` when useful.
+7. **Present inline** — format below. Load `l9-ynp` when useful.
 
 ## Inline output
 
