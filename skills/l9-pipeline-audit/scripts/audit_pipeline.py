@@ -19,9 +19,9 @@ try:
 except ImportError:  # pragma: no cover
     yaml = None  # type: ignore[assignment]
 
-PLAN_AUDIT = Path(__file__).resolve().parents[2] / "l9-plan-audit" / "scripts"
-if str(PLAN_AUDIT) not in sys.path:
-    sys.path.insert(0, str(PLAN_AUDIT))
+SCRIPTS = Path(__file__).resolve().parent
+if str(SCRIPTS) not in sys.path:
+    sys.path.insert(0, str(SCRIPTS))
 from audit_plans import (  # noqa: E402
     STATUS_SUPERSEDED_RE,
     TEMPLATE_NAME,
@@ -258,66 +258,113 @@ def _is_compiled_plan(path: str) -> bool:
     return fm.get("compiled") is True
 
 
+def _eligible_next(row: dict[str, Any]) -> bool:
+    if row.get("surface") == "wip":
+        if str(row.get("status") or "") == "landed":
+            return False
+        return bool(row.get("harvestable") or row.get("pending"))
+    return bool(row.get("pending") or row.get("harvestable"))
+
+
+def _plan_rank_key(row: dict[str, Any], queue: list[str]) -> tuple[int, int]:
+    path = str(row.get("path") or "")
+    stem = Path(path).name.replace(".plan.md", "")
+    compiled = 0 if _is_compiled_plan(path) else 1
+    name = str(row.get("name") or "")
+    try:
+        queue_i = queue.index(stem)
+    except ValueError:
+        try:
+            queue_i = queue.index(name)
+        except ValueError:
+            queue_i = 10_000
+    return (compiled, queue_i)
+
+
+def _wip_rank_key(row: dict[str, Any]) -> tuple[int, str]:
+    return (0 if row.get("harvestable") else 1, str(row.get("name") or ""))
+
+
+def _campaign_rank_key(row: dict[str, Any]) -> tuple[int, str]:
+    return (0 if row.get("pending") else 1, str(row.get("name") or ""))
+
+
+def _readme_plan_row(plans_dir: Path, name: str) -> dict[str, Any] | None:
+    candidate = plans_dir / f"{name}.plan.md"
+    if not candidate.is_file():
+        return None
+    try:
+        text = candidate.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    if not text:
+        return None
+    fm, _body = parse_frontmatter(text)
+    if not is_unbuilt(fm.get("todos"), fm):
+        return None
+    return {
+        "surface": "plans",
+        "path": str(candidate),
+        "name": str(fm.get("name") or name),
+        "pending": True,
+        "harvestable": False,
+    }
+
+
 def rank_next(findings: list[dict[str, Any]], plans_dir: Path) -> list[dict[str, Any]]:
-    """First-order execute order: compiled, README live queue, campaigns. Not WIP spam."""
+    """Family execute order: one slot per surface, then fill. Cap 3."""
     queue = _readme_queue(plans_dir)
-    by_key: dict[str, dict[str, Any]] = {}
+    buckets: dict[str, list[dict[str, Any]]] = {"plans": [], "wip": [], "campaigns": []}
     for row in findings:
-        if not row.get("pending") and not row.get("harvestable"):
+        if not _eligible_next(row):
             continue
-        if row["surface"] == "wip":
+        surface = str(row.get("surface") or "")
+        if surface in buckets:
+            buckets[surface].append(row)
+    by_stem = {
+        Path(str(row.get("path") or "")).name.replace(".plan.md", ""): row
+        for row in buckets["plans"]
+    }
+    for name in queue:
+        if name in by_stem:
             continue
-        path_name = Path(str(row.get("path") or "")).name
-        stem = path_name[: -len(".plan.md")] if path_name.endswith(".plan.md") else path_name
-        for key in (str(row.get("name") or ""), stem):
-            if key:
-                by_key.setdefault(key, row)
+        extra = _readme_plan_row(plans_dir, name)
+        if extra is not None:
+            buckets["plans"].append(extra)
+            by_stem[name] = extra
+    buckets["plans"].sort(key=lambda row: _plan_rank_key(row, queue))
+    buckets["wip"].sort(key=_wip_rank_key)
+    buckets["campaigns"].sort(key=_campaign_rank_key)
+
     ranked: list[dict[str, Any]] = []
     seen: set[str] = set()
 
-    def _take(row: dict[str, Any]) -> None:
-        key = str(row.get("name") or "")
+    def _take(row: dict[str, Any]) -> bool:
+        key = f"{row.get('surface')}:{row.get('path') or row.get('name')}"
         if not key or key in seen:
-            return
+            return False
         seen.add(key)
         item = dict(row)
-        if row["surface"] == "plans" and _is_compiled_plan(str(row.get("path"))):
+        surface = str(row.get("surface") or "")
+        if surface == "plans" and _is_compiled_plan(str(row.get("path"))):
             item["execute"] = "/gmp"
-        elif row["surface"] == "campaigns":
+        elif surface == "campaigns":
             item["execute"] = "/gmp"
+        elif surface == "wip":
+            item["execute"] = "harvest or /gmp"
         else:
             item["execute"] = "Build or /gmp"
         ranked.append(item)
+        return True
 
-    for row in findings:
-        if row["surface"] == "plans" and _is_compiled_plan(str(row.get("path"))):
-            _take(row)
-    for name in queue:
-        row = by_key.get(name)
-        if row is None:
-            candidate = plans_dir / f"{name}.plan.md"
-            if candidate.is_file():
-                try:
-                    text = candidate.read_text(encoding="utf-8", errors="replace")
-                except OSError:
-                    text = ""
-                if text:
-                    fm, _body = parse_frontmatter(text)
-                    if is_unbuilt(fm.get("todos"), fm):
-                        row = {
-                            "surface": "plans",
-                            "path": str(candidate),
-                            "name": str(fm.get("name") or name),
-                            "pending": True,
-                            "harvestable": False,
-                        }
-        if row:
-            _take(row)
-    for row in findings:
-        if row["surface"] == "campaigns" and row.get("pending"):
-            _take(row)
-    for row in findings:
-        if row["surface"] == "plans" and row.get("pending"):
+    for surface in ("plans", "wip", "campaigns"):
+        for row in buckets[surface]:
+            if _take(row):
+                break
+    for surface in ("plans", "wip", "campaigns"):
+        for row in buckets[surface]:
+            if len(ranked) >= 3:
+                return ranked[:3]
             _take(row)
     return ranked[:3]
 

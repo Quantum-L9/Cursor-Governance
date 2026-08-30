@@ -1,6 +1,6 @@
 ---
 name: l9-pipeline-audit
-description: "audit plans, WIP, and PE campaigns; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit runs."
+description: "audit plans, WIP, and PE campaigns as one family; harvest via l9-intelligence-harvest. use when /l9-pipeline-audit or /plan-audit runs, or session context shows Plan audit."
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -9,26 +9,28 @@ metadata:
   tags: [l9, pipeline-audit, plans, wip, campaigns, harvest]
   owner: igor_beylin
   status: active
-  version: 1.0.0
-  updated: 2026-08-28
+  version: 1.1.0
+  updated: 2026-08-29
 ---
 
 # l9-pipeline-audit
 
-On-demand orchestrator. Slash `/l9-pipeline-audit` (alias `/plan-audit`) is the
-explicit invoke. SessionStart runs `scripts/audit_pipeline.py --format session-start`
-(heading `### Plan audit`) against tracked `docs/plans` plus `WIP/` and PE
-campaigns. That path archives spent plans and inventory-landed WIP only.
+Sole live-queue + harvest orchestrator. Slash `/l9-pipeline-audit` (alias
+`/plan-audit`) is the explicit invoke. SessionStart runs
+`scripts/audit_pipeline.py --format session-start` (heading `### Plan audit`)
+against tracked `docs/plans` plus `WIP/` and PE campaigns. Plans, WIP, and
+campaigns share NEXT 1–3 (one slot per surface first). That path archives
+spent plans and inventory-landed WIP only.
 
 ## Skills this workflow calls
 
 | Step | Owner | Must not substitute |
 |---|---|---|
-| Plans live-queue | `l9-plan-audit` `scripts/audit_plans.py` | a second plans scanner |
+| Plans live-queue | this pack `scripts/audit_plans.py` | a second plans scanner |
 | WIP inventory | `ops/scripts/wip_corpus.py` (read `WIP/INVENTORY.yaml`; do not write) | walking Legal Defense |
 | Campaigns | `environment/program-execution/campaigns/*/CAMPAIGN_SOURCE.yaml` | `make campaign` |
 | Harvest | `l9-intelligence-harvest` bind + inventory + qualify + validate | `l9-harvest-pipeline`, inventing `l9-intelligence-harvest` |
-| Emit | this pack `scripts/emit_compiled.py` | PE Controller / Program Lock |
+| Emit | this pack `scripts/run_intelligence_harvest.py` | PE Controller / Program Lock |
 | Execute packet | `/gmp` (`l9-gmp-protocol`) | `make campaign` |
 
 `l9-global-architect` stays STANDALONE if invoked. Repository presence does not
