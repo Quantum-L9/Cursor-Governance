@@ -121,9 +121,7 @@ class MarkdownEmitTests(unittest.TestCase):
 
 class SkillUsageClassificationTests(unittest.TestCase):
     def test_absent_log_is_na_not_degraded(self) -> None:
-        line = report.classify_skill_usage(
-            "/tmp/skill-usage.jsonl (absent — logger never wrote)"
-        )
+        line = report.classify_skill_usage("/tmp/skill-usage.jsonl (absent — logger never wrote)")
         self.assertEqual(line["class"], report.NA)
         self.assertFalse(line["include_in_degraded"])
 

@@ -292,9 +292,7 @@ def collect(
     lines.append(classify_simple("wiring", wiring, fail_tokens=("fail",)))
     lines.append(classify_simple("backup", backup, fail_tokens=("fail", "error")))
     graphiti_row = next((item for item in lines if item["name"] == "graphiti"), None)
-    graphiti_unhealthy = bool(
-        graphiti_row and graphiti_row["class"] in {DEGRADED, FAILED}
-    )
+    graphiti_unhealthy = bool(graphiti_row and graphiti_row["class"] in {DEGRADED, FAILED})
     if hydrate_degraded and graphiti_unhealthy:
         extra = (hydrate_reason or "hydrate reported degraded").strip()
         if extra and extra not in (graphiti_row.get("evidence") or ""):
