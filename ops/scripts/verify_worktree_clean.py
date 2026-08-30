@@ -120,9 +120,7 @@ def verify(
     if dirty_unique is None:
         dirty_unique = len(dirt.get("dirty_files") or [])
     if dirty_unique == -1:
-        errors.append(
-            f"dirt-close status unavailable: {dirt.get('error', 'unknown')}"
-        )
+        errors.append(f"dirt-close status unavailable: {dirt.get('error', 'unknown')}")
     elif dirty_unique != 0:
         errors.append(
             f"dirty_unique={dirty_unique} (run session_end_dirt_close --status for paths)"
