@@ -54,6 +54,7 @@ class EndToEndRoutingTests(unittest.TestCase):
             decisions[0].status,
             "eligible",
         )
+        self.assertTrue(decisions[0].requires_independent_validation)
 
     def test_contract_gap_requires_medium_risk_control(
         self,
@@ -127,6 +128,76 @@ class EndToEndRoutingTests(unittest.TestCase):
                 "advisory",
             )
             self.assertFalse(stored["governance"]["may_override_repository_state"])
+
+    def test_memory_first_seen_without_validation_defers(self) -> None:
+        harvest = SubagentDataHarvester().harvest(self.packet)
+        memory_unit = next(
+            unit
+            for unit in harvest.harvested_units
+            if unit.original_unit["primary_class"] == "repository_fact"
+        )
+        route = RoutingEngine().route(memory_unit.to_dict())[0]
+        result = PromotionGate().evaluate(
+            harvested_unit=memory_unit.to_dict(),
+            routing_decision=route.to_dict(),
+            independent_validation_present=False,
+            recurrence_count=1,
+        )
+        self.assertEqual(result.decision, "defer")
+        self.assertIn(
+            "medium_risk_requires_validation_or_recurrence",
+            result.reasons,
+        )
+
+    def test_memory_recurrence_two_promotes_without_validation(self) -> None:
+        harvest = SubagentDataHarvester().harvest(self.packet)
+        memory_unit = next(
+            unit
+            for unit in harvest.harvested_units
+            if unit.original_unit["primary_class"] == "repository_fact"
+        )
+        route = RoutingEngine().route(memory_unit.to_dict())[0]
+        result = PromotionGate().evaluate(
+            harvested_unit=memory_unit.to_dict(),
+            routing_decision=route.to_dict(),
+            independent_validation_present=False,
+            recurrence_count=2,
+        )
+        self.assertEqual(result.decision, "promote")
+
+    def test_route_flag_defers_low_risk_first_seen(self) -> None:
+        harvest = SubagentDataHarvester().harvest(self.packet)
+        memory_unit = next(
+            unit
+            for unit in harvest.harvested_units
+            if unit.original_unit["primary_class"] == "repository_fact"
+        )
+        harvested = memory_unit.to_dict()
+        harvested["classification"] = {
+            **harvested["classification"],
+            "authority_sensitivity": "low",
+            "risk_of_incorrect_reuse": "low",
+        }
+        decision = {
+            "unit_id": harvested["unit_id"],
+            "route": "evidence",
+            "status": "eligible",
+            "required_authority": "runtime",
+            "requires_independent_validation": True,
+        }
+        result = PromotionGate().evaluate(
+            harvested_unit=harvested,
+            routing_decision=decision,
+            independent_validation_present=False,
+            recurrence_count=1,
+        )
+        self.assertEqual(result.decision, "defer")
+
+    def test_promotion_numeric_floors_unchanged(self) -> None:
+        text = (RUNTIME / "promotion_gate.py").read_text(encoding="utf-8")
+        self.assertIn("confidence < 0.75", text)
+        self.assertIn("confidence < 0.5", text)
+        self.assertIn("designated_authority_approval_required", text)
 
 
 if __name__ == "__main__":
