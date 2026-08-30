@@ -2,10 +2,12 @@
 
 Design constraints (fail-closed):
 
-- Heredoc bodies are DATA, not commands — they are stripped before matching.
-  Terminators are tracked with a stack and matched line-start/exact; a data
-  line that merely looks like a terminator closes the body early, which means
-  we match MORE of the remaining text (the safe direction).
+- Heredoc bodies are DATA, not commands — they are stripped before matching,
+  UNLESS the heredoc feeds a shell (``bash <<'EOF'``), where the body really is
+  commands and is kept verbatim. Terminators are tracked with a stack and
+  matched line-start/exact; a data line that merely looks like a terminator
+  closes the body early, which means we match MORE of the remaining text (the
+  safe direction).
 - Quoted spans are NEVER stripped. Stripping them would hide real commands
   passed to wrappers (``bash -c 'git push …'``) — a fail-open hole. Segment
   splitting honors quote state instead.
@@ -17,6 +19,7 @@ Design constraints (fail-closed):
 from __future__ import annotations
 
 import re
+from pathlib import PurePosixPath
 
 # Opener only — no repeating optional-quantifier group. CodeQL 410/412 flagged
 # both `\S+` and `[^\s>|&;]+` after `[0-9]?>>?` inside `*`: `>a>a…` / `!0>`
@@ -57,20 +60,56 @@ def _heredoc_delimiter(line: str) -> str | None:
     return match.group(2)
 
 
+#: Interpreters that execute a heredoc body AS SHELL. A body fed to one of these
+#: is commands, not data, so it must stay visible to every gate. A body fed to
+#: `cat > file`, `python3 -`, `jq`, or a plain redirect is data: it is written or
+#: interpreted as another language, and the shell never runs those words.
+_SHELL_INTERPRETERS = frozenset({"bash", "sh", "zsh", "dash", "ksh", "shell"})
+
+
+def _heredoc_body_is_shell(line: str) -> bool:
+    """True when the heredoc opened on LINE is executed by a shell."""
+    head = line.split("<<", 1)[0]
+    for token in head.replace("|", " ").replace(";", " ").replace("&", " ").split():
+        if "=" in token and not token.startswith("-"):
+            continue  # leading VAR=value assignment
+        if token in {"env", "exec", "command", "nohup", "time"}:
+            continue
+        if token.startswith("-"):
+            continue
+        return PurePosixPath(token).name in _SHELL_INTERPRETERS
+    return False
+
+
 def strip_heredoc_bodies(command: str) -> str:
-    """Remove heredoc bodies; keeps the line that opens the heredoc."""
+    """Remove heredoc bodies that are DATA; keep the line that opens the heredoc.
+
+    A heredoc body is normally data — text written to a file or handed to a
+    non-shell interpreter — so gates that pattern-match commands must not read it
+    as one. Writing a runbook that quotes a forbidden command is not running it.
+
+    A body piped into a SHELL is the exception and is kept verbatim: there the
+    words really are commands, and stripping them would let `bash <<'EOF' … EOF`
+    carry anything past every gate that relies on this helper.
+    """
     lines = command.splitlines()
     out: list[str] = []
     terminators: list[str] = []
+    keep_body = False
     for line in lines:
         if terminators:
             if line.strip() == terminators[-1]:
                 terminators.pop()
+                keep_body = False
+                continue
+            if keep_body:
+                out.append(line)
             continue
         out.append(line)
         delimiter = _heredoc_delimiter(line)
         if delimiter is not None:
             terminators.append(delimiter)
+            keep_body = _heredoc_body_is_shell(line)
     return "\n".join(out)
 
 

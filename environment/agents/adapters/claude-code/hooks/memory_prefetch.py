@@ -99,32 +99,58 @@ def _hydration_roots(workspace: Path) -> list[Path]:
         workspace,
         cap=_MAX_HYDRATION_ROOTS,
         predicate=_resolves_to_own_group,
-        prefer=_is_session_workspace,
+        prefer=_is_active_repository,
     )
 
 
-def _is_session_workspace(root: Path) -> bool:
-    """True for the repository the bootstrap receipt records as wired.
+def _is_active_repository(root: Path) -> bool:
+    """True for a repository this session is plausibly working in.
 
-    That is the session's own project directory, so it is the one repository
-    whose memory is certain to be wanted. Alphabetical truncation dropped it:
-    the receipt named `l9-constellation-topology`, which sorts seventh of nine
-    under a cap of six, so the session hydrated six repositories and not the one
-    it was working in.
+    Alphabetical truncation dropped exactly the repositories that mattered: with
+    nine side by side and a cap of six, the ones the operator had branches on
+    sat late in the alphabet and were never hydrated.
+
+    Two signals, cheapest first. The bootstrap receipt's workspace is decisive
+    when it names a repository — but once that receipt correctly describes the
+    session, it names the CONTAINER, and then it matches nothing. So the signal
+    that carries the common case is the branch: a repository checked out on
+    anything other than its default branch is one being worked in.
     """
     try:
         state = json.loads(
             (Path.home() / ".l9" / "claude" / "bootstrap-state.json").read_text(encoding="utf-8")
         )
         wired = str(state.get("workspace") or "")
+        if wired and Path(wired).resolve() == root.resolve():
+            return True
     except (OSError, ValueError):
+        pass
+    return _on_feature_branch(root)
+
+
+def _on_feature_branch(root: Path) -> bool:
+    """True when HEAD is not the repository's default branch."""
+    import subprocess
+
+    def _git(*args: str) -> str:
+        try:
+            proc = subprocess.run(  # noqa: S603 - fixed argv, no shell
+                ["git", "-C", str(root), *args],
+                capture_output=True,
+                text=True,
+                timeout=5,
+                check=False,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return ""
+        return proc.stdout.strip() if proc.returncode == 0 else ""
+
+    head = _git("rev-parse", "--abbrev-ref", "HEAD")
+    if not head or head == "HEAD":
         return False
-    if not wired:
-        return False
-    try:
-        return Path(wired).resolve() == root.resolve()
-    except OSError:
-        return False
+    ref = _git("symbolic-ref", "--quiet", "refs/remotes/origin/HEAD")
+    default = ref.rsplit("/", 1)[-1] if ref else "main"
+    return head != default
 
 
 sys.path.insert(0, str(MEM))
