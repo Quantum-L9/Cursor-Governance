@@ -280,12 +280,14 @@ def load_json(path: Path) -> dict[str, Any] | None:
 
 
 def write_autonomy_json(root: Path, filename: str, data: dict[str, Any]) -> None:
-    """Write JSON under .l9/autonomy using an allowlisted filename only."""
+    """Write JSON under the resolved L4 state directory using an allowlisted filename only."""
     if filename not in {STATE_FILENAME, RECEIPT_FILENAME}:
         raise RuntimeError(f"refusing non-allowlisted L4 filename: {filename}")
-    base = _validated_git_root(root)
+    # Route through _autonomy_dir so L9_AUTONOMY_STATE_DIR is honoured on writes
+    # (same path as load_phase / load_receipt) rather than hardcoding <workspace>/.l9/autonomy.
+    autonomy_dir = _autonomy_dir(root)
     # Sonar-recognized sanitizer: realpath + commonpath (see render_principals.under_root).
-    autonomy_base = os.path.realpath(os.path.join(str(base), ".l9", "autonomy"))
+    autonomy_base = os.path.realpath(str(autonomy_dir))
     os.makedirs(autonomy_base, exist_ok=True)
     target = os.path.realpath(os.path.join(autonomy_base, filename))
     if os.path.commonpath([autonomy_base, target]) != autonomy_base:

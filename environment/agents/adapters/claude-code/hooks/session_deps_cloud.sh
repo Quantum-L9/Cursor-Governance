@@ -165,7 +165,7 @@ import_smoke() {
     echo "import-smoke: no interpreter for $repo" >&2
     return 1
   fi
-  out="$("$py" -c 'import json,sys,yaml; print(sys.executable); print(sys.version.split()[0])' 2>&1)" || rc=$?
+  out="$("$py" -c 'import json,sys; print(sys.executable); print(sys.version.split()[0])' 2>&1)" || rc=$?
   echo "import-smoke: interpreter=$py rc=$rc"
   echo "$out" | sed 's/^/import-smoke: /'
   return "$rc"

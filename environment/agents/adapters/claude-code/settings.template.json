@@ -210,7 +210,7 @@
     "L9_AUTONOMY_REMEDIATION_SKILL": "l9-pr-remediation",
     "L9_AUTONOMY_MAX_PARALLEL": "480",
     "L9_AUTONOMY_MAX_MUTATION_LANES": "128",
-    "L9_AUTONOMY_STATE_DIR": "$HOME/.l9/autonomy",
+    "L9_AUTONOMY_STATE_DIR": "~/.l9/autonomy",
     "L9_DISCOVER_BEFORE_ASK": "true",
     "L9_REQUIRE_EXACT_SHA_GREEN": "true",
     "L9_PROACTIVE_SKILLS": "true",

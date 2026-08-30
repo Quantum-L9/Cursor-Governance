@@ -212,9 +212,29 @@ _push_with_bounded_recover() {
     fi
     echo "WARN: push rejected — recover $((attempt + 1))/$max (fetch + merge --no-edit + regen)"
     git fetch origin "$BASE_REF" || return 1
+    # Also fetch the remote feature branch tip: a concurrent publisher advancing the
+    # same PR branch causes the rejection; merging only origin/$BASE_REF leaves those
+    # commits absent and the next push is rejected again.
+    git fetch origin "$branch" 2>/dev/null || true
     git merge --no-edit "origin/$BASE_REF" || return 1
+    if git rev-parse "origin/$branch" >/dev/null 2>&1 && \
+       ! git merge-base --is-ancestor "origin/$branch" HEAD 2>/dev/null; then
+      git merge --no-edit "origin/$branch" || return 1
+    fi
     if [ -f "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" ]; then
       python3 "$GOV_ROOT/ops/scripts/sync_generated_artifacts.py" --force || return 1
+      # Commit any generated-artifact rewrites from the merge before re-pushing;
+      # leaving them unstaged means the retry push publishes an unvalidated tree.
+      if ! git diff --quiet; then
+        git add -- \
+          "environment/generated/llm-rules/" \
+          "rules/RULES-MANIFEST.json" "rules/RULES-MANIFEST.md" "rules/RULES-MANIFEST.yaml" \
+          "ops/generated/skill-registry.json" \
+          "environment/agents/adapters/claude-code/generated/" \
+          "environment/program-execution/MANIFEST.json" 2>/dev/null || true
+        git diff --cached --quiet || \
+          git commit --no-edit -m "chore(generated): heal artifacts after push-recovery merge" || return 1
+      fi
     fi
     attempt=$((attempt + 1))
   done
