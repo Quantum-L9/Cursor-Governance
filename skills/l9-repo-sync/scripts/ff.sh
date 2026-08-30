@@ -149,6 +149,13 @@ if [ -n "$_SSOT_KEEP_LIB" ]; then
   # shellcheck source=../../../ops/scripts/lib/ssot_machine_local_keep.sh
   . "$_SSOT_KEEP_LIB"
 else
+  ssot_ff_corpus_skip_rel() { return 1; }
+  ssot_is_ff_corpus_keep() {
+    case "${1#./}" in
+      TODO.md|WIP/*|docs/plans/*|environment/program-execution/campaigns/*) return 0 ;;
+    esac
+    return 1
+  }
   ssot_is_machine_local_keep() {
     case "${1#./}" in
       .venv|.venv/*|.env.local|env.local|.claude/settings.local.json|.env.*.local) return 0 ;;
@@ -191,7 +198,7 @@ unset _keep_rel _keep_f
 UNTRACKED_BEFORE="$(git -C "$CLONE" ls-files --others --exclude-standard | LC_ALL=C sort)"
 
 echo "ff: clone=$CLONE branch=$BRANCH_BEFORE push=0 hard_reset=0 stash_u=0"
-echo "ff: keeping .venv, env.local files, and untracked; unique commits and dirty tracked get preserve refs"
+echo "ff: keeping .venv, env.local, corpus (TODO.md WIP/ docs/plans/ PE campaigns), and untracked; other dirty tracked get preserve refs"
 
 # A bare `fetch origin main` can leave origin/main stale (FETCH_HEAD only)
 # on some CI git/refspec layouts; then behind=0 and colliding untracked
@@ -209,6 +216,7 @@ DIRTY_REF=""
 HOLD=""
 OVERWRITE_UNTRACKED=""
 PARKED_UNTRACKED=0
+CORPUS_KEPT=""
 CLONE_KEY="$(printf '%s' "$CLONE" | shasum -a 256 | awk '{print substr($1,1,12)}')"
 HOLD_ROOT="${HOME}/.cursor/l9-ff-hold/${CLONE_KEY}/${STAMP}"
 
@@ -276,6 +284,12 @@ _park_dirty_tracked() {
 
   while IFS= read -r rel; do
     [ -z "$rel" ] && continue
+    if declare -F ssot_is_ff_corpus_keep >/dev/null 2>&1 && ssot_is_ff_corpus_keep "$rel"; then
+      echo "ff: classify path=${rel} class=corpus_keep (worktree bytes preserved; not reset to HEAD)"
+      _copy_hold_tracked "$rel"
+      CORPUS_KEPT="${CORPUS_KEPT}${rel}"$'\n'
+      continue
+    fi
     origin_blob="$(_blob_at "origin/${TARGET_BRANCH}" "$rel")"
     wt_blob="$(_wt_blob "$rel")"
     if [ -n "$origin_blob" ] && [ "$wt_blob" = "$origin_blob" ]; then
@@ -383,6 +397,23 @@ if [ "$BEHIND" -gt 0 ] || [ "$AHEAD" -gt 0 ] || [ -n "$OVERWRITE_UNTRACKED" ] ||
   git -C "$CLONE" checkout -f "origin/${TARGET_BRANCH}" -- .
 fi
 
+if [ -n "$CORPUS_KEPT" ]; then
+  while IFS= read -r rel; do
+    [ -z "$rel" ] && continue
+    src="$HOLD_ROOT/tracked/$rel"
+    if [ ! -e "$src" ] && [ ! -L "$src" ] && [ ! -f "${src}.deleted" ]; then
+      continue
+    fi
+    if [ -f "${src}.deleted" ]; then
+      rm -f "$CLONE/$rel" 2>/dev/null || true
+      echo "OK: restored corpus_keep deletion for $rel after catch-up"
+      continue
+    fi
+    mkdir -p "$(dirname "$CLONE/$rel")"
+    cp -a "$src" "$CLONE/$rel"
+    echo "OK: restored corpus_keep $rel after catch-up"
+  done <<<"$CORPUS_KEPT"
+fi
 
 if [ -d "$HOLD_ROOT/machine-local" ] && [ -n "$KEEP_BEFORE" ]; then
   while IFS= read -r rel; do

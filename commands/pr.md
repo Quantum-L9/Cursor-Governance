@@ -11,6 +11,9 @@ strict_mode: true
 
 Delegates to skill **`l9-pr-remediation`** in **Diagnose** intent (read-only).
 
+Claude Code Converge: invoke skill **`/l9-pr-remediation`** (no `commands/` duplicate).
+Cursor: `/pr` stays Diagnose-only; Converge requires the skill or explicit remediate language.
+
 ## Usage
 
 ```text
@@ -22,8 +25,8 @@ Delegates to skill **`l9-pr-remediation`** in **Diagnose** intent (read-only).
 
 1. Read `skills/l9-pr-remediation/SKILL.md` and follow **Diagnose** + [references/diagnose-workflow.md](../skills/l9-pr-remediation/references/diagnose-workflow.md).
 2. Optional focused lenses: [references/review-angles.md](../skills/l9-pr-remediation/references/review-angles.md).
-3. `/pr` is Diagnose only — no merge. Merge is `/l9-pr-remediation` Converge: [references/merge-advise.md](../skills/l9-pr-remediation/references/merge-advise.md).
-4. **Never** unpack PR diffs into the worktree. **Never** run Converge (fix/push/merge) from `/pr` alone — that requires `/l9-pr-remediation` or explicit remediate/fix/babysit intent.
+3. `/pr` is Diagnose only — no merge. Converge is skill **`l9-pr-remediation`** (`/l9-pr-remediation` on Claude Code): [references/merge-advise.md](../skills/l9-pr-remediation/references/merge-advise.md).
+4. **Never** unpack PR diffs into the worktree. **Never** run Converge (fix/push/merge) from `/pr` alone — that requires **`l9-pr-remediation`** or explicit remediate/fix/babysit intent.
 
 ## Forbidden
 

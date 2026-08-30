@@ -1,0 +1,182 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "title": "PE loop re-compiled against current main",
+  "objective": "Re-compile the compiled pe-loop invariants plan against current origin/main ac0e5e67d235a301b0df7acf9ca43edf87c094de: drop items already landed (authed_npm.sh, stack_pr.py, merge_gate human-file, pr_stacking policy, CAMPAIGN_EXECUTION_POLICY, bootstrap call edge, clean-temp-state integration test, EIE INTENT memo), keep the 8 lost admission/gate fixes as explicit NEW work derived from the plan spec, and implement the still-missing PE seams (worker dispatch, receipt-to-distill signals, evidence intake, autonomy projection) plus the residual pec/readiness gaps, with every existing suite staying green.",
+  "success_criteria": [
+    "SC-01 Baseline locked: origin/main ac0e5e67 recorded; branch pe/unified-loop created from it; baseline receipt written",
+    "SC-02 pec/dispatch.py exists; dispatch integration test passes: render-contract resolves an execution profile, probes a provider, invokes it; provider result maps to an attempt-receipt pre-submission; worker_cannot_self_verify invariant holds; CAPABILITY_UNSUPPORTED falls back to manual worker brief",
+    "SC-03 EXECUTION_ROUTING_POLICY.yaml carries a codex preference row for tightly-scoped mechanical work; routing golden vectors pass; no-match returns CAPABILITY_UNSUPPORTED",
+    "SC-04 outcome_publisher called from pec record-attempt, verify, evaluate-gate, export-handoff; distill enqueue observable via dry-run queue listing",
+    "SC-05 collect_evidence.py --memory-lookup returns Graphiti context read-only and fails closed when Graphiti is unreachable (no memory mutation from admission)",
+    "SC-06 contract_mapper emits per-task autonomy_action_id plus packet skeleton; unit test asserts the mapping without any autonomy-side mutation",
+    "SC-07 blueprint_ops.py gains a union-diff verify helper (unions per-task changed-path lists, detects duplicates and missing vs blueprint-declared paths); unit tests green",
+    "SC-08 l4_local.py resolves a named workspace root; an unknown name fails closed naming the known roots",
+    "SC-09 graphiti_memory_client.py accepts --session-id for hook-driven writes (additive; MCP header path unchanged)",
+    "SC-10 command_parse.py heredoc-redirect regression tests green (parser fixed only if a test fails)",
+    "SC-11 pec phase-lock acquire and governed-mutation verify share the same session_id, namespace, workspace, memory_state_root; a mismatch prints both identities",
+    "SC-12 pec preflight returns ready/blockers/next_action covering draft-admission and phase-lock in addition to the existing reconcile/lease/holder/PREPARED/actor/writable checks",
+    "SC-13 pec draft-contract/compile cannot report success for an artifact the immediate consumer rejects (consumer-reject gate + test)",
+    "SC-14 ops/hooks/check_gh_package_deps.py exists, registered in .pre-commit-config.yaml (additive) and precommit-hook-contract.json; fixtures catch unpublished version and fabricated lock integrity",
+    "SC-15 surface_profile.yaml contains pr_remediation_until_green_and_mergeable; structural assertion test passes",
+    "SC-16 claude_bootstrap_receipt.py and governance_refresh_receipt.py expose a state_root key answering which governance/runtime revisions and state roots a PE invocation will use; UNKNOWN is explicit; unverified mixed revisions fail before PE",
+    "SC-17 a test fails if the session_start_bootstrap.sh -> bootstrap_agent_environment.sh --surface cursor call edge is removed",
+    "SC-18 all existing suites stay green: PE conformance (142+), controller (25+), autonomy (56+), compile (5+), campaign-schema (2), shared peer-execution lifecycle, clean-startup integration, plus every new test in this plan",
+    "SC-19 make pr-check PASS on changed files; diff hygiene: no out-of-scope paths modified"
+  ],
+  "scope": {
+    "in": [
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/dispatch.py (new)",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py + controller.py (additive call sites)",
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/tests/ (new tests)",
+      "environment/program-execution/registry/EXECUTION_ROUTING_POLICY.yaml (additive codex row)",
+      "environment/program-execution/scripts/collect_evidence.py (--memory-lookup flag)",
+      "environment/program-execution/scripts/blueprint_ops.py (union-diff verify helper)",
+      "environment/program-execution/integrations/autonomy-control-plane/contract_mapper.py (autonomy_action_id + packet skeleton emission)",
+      "ops/autonomy/l4_local.py (named-roots resolution)",
+      "ops/autonomy/command_parse.py (regression tests; fix only if failing)",
+      "ops/graphiti/graphiti_memory_client.py (--session-id CLI flag)",
+      "ops/hooks/check_gh_package_deps.py (new) + .pre-commit-config.yaml (one additive entry) + ops/config/precommit-hook-contract.json (one additive entry)",
+      "ops/autonomy/surface_profile.yaml (one additive field)",
+      "ops/scripts/claude_bootstrap_receipt.py + ops/scripts/governance_refresh_receipt.py (state_root key)",
+      "tests/ (new tests)",
+      "docs/plans plan-store bookkeeping"
+    ],
+    "out": [
+      "skills/AUTONOMY_MANIFEST.yaml (hand-authored routing SSOT; rule 53: only orphan-heal mutates it)",
+      "Schema changes to Program Lock / Blueprint v2 required fields",
+      "Model-level inference routing (ADR-0020)",
+      "Autonomy-side mutation (emission only)",
+      "environment/agents/adapters/claude-code/hooks/memory_gate.py + memory_lock.py hook behavior",
+      "Protected cores",
+      "Any deletion from additive-only root files",
+      "TODO.md (foreign edit in this workspace)"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {"id": "P0", "command_or_action": "bind workspace /Users/ib-mac/Cursor-Governance; origin/main fetched", "pass_criteria": "baseline ac0e5e67 == origin/main; pe/unified-loop created from it", "status": "passed"},
+    {"id": "P1", "command_or_action": "open-PR board: #404 (claude-env) and #405<-#406<-#407 remediation stack open against main", "pass_criteria": "pe-loop is a disjoint workstream; PR_STACK=auto keeps PR_BASE=main", "status": "passed"},
+    {"id": "P2", "command_or_action": "gap sweep against origin/main for all 19 todos", "pass_criteria": "each todo targets a verified MISSING/PARTIAL item; no duplicate of landed work", "status": "passed"},
+    {"id": "P3", "command_or_action": "hook catalog in scope: .pre-commit-config.yaml", "pass_criteria": "additive-only entry for check_gh_package_deps; no removals", "status": "passed"}
+  ],
+  "todos": [
+    {"id": "inv-01", "task": "Lock baseline origin/main ac0e5e67; create branch pe/unified-loop from it; begin L4 contract on the branch", "files": [], "effort": "S", "risk": "low", "dependencies": [], "operation": "Wrap", "anchor": "git branch pe/unified-loop ac0e5e67", "blocker": "none: git mechanics only; mutation begins after C1", "leverage_rank": 19, "shared_root_cause": "no locked baseline"},
+    {"id": "inv-02", "task": "New pec/dispatch.py: at render-contract resolve execution profile via identity_binding/peer_readiness, consult EXECUTION_ROUTING_POLICY + capability probes, invoke peer_execution.runner with Worker Brief + context manifest; map CanonicalProviderResult into attempt-receipt pre-submission; worker_cannot_self_verify preserved; CAPABILITY_UNSUPPORTED falls back to manual worker brief. Add cli.py render-contract call site + dispatch integration test", "files": ["environment/program-execution/core/program-execution-controller-template/scripts/pec/dispatch.py", "environment/program-execution/core/program-execution-controller-template/scripts/pec/cli.py", "environment/program-execution/core/program-execution-controller-template/scripts/pec/tests/test_dispatch.py"], "effort": "L", "risk": "high", "dependencies": ["inv-01"], "operation": "Create", "anchor": "new module + render-contract call site", "leverage_rank": 1, "shared_root_cause": "workers never dispatched through PE seams"},
+    {"id": "inv-03", "task": "EXECUTION_ROUTING_POLICY.yaml: additive codex preference row for tightly-scoped mechanical work; routing golden vectors test (policy enforced, no-match returns CAPABILITY_UNSUPPORTED, worker_cannot_self_verify preserved)", "files": ["environment/program-execution/registry/EXECUTION_ROUTING_POLICY.yaml", "environment/program-execution/core/program-execution-controller-template/scripts/pec/tests/test_routing_golden.py"], "effort": "M", "risk": "medium", "dependencies": ["inv-01"], "operation": "Create", "anchor": "policy row + golden vectors", "leverage_rank": 3, "shared_root_cause": "routing policy incomplete for mechanical work"},
+    {"id": "inv-04", "task": "Wire outcome_publisher into pec record-attempt, verify, evaluate-gate, export-handoff (receipt_projection + distill_queue enqueue); dry-run queue listing observable in test; agent-scoped atomic facts only", "files": ["environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py", "environment/program-execution/core/program-execution-controller-template/scripts/pec/tests/test_outcome_publisher.py"], "effort": "M", "risk": "medium", "dependencies": ["inv-01"], "operation": "Wrap", "anchor": "existing cmd handlers", "leverage_rank": 2, "shared_root_cause": "receipts never reach distill"},
+    {"id": "inv-05", "task": "collect_evidence.py --memory-lookup flag: read-only Graphiti context via integrations/graphiti/context_reader; fails closed when Graphiti unreachable; never writes memory from admission; unit test both paths", "files": ["environment/program-execution/scripts/collect_evidence.py", "environment/program-execution/scripts/tests/test_collect_evidence_memory.py"], "effort": "M", "risk": "medium", "dependencies": ["inv-01"], "operation": "Wrap", "anchor": "argparse block + main flow", "leverage_rank": 5, "shared_root_cause": "admission has no evidence intake"},
+    {"id": "inv-06", "task": "contract_mapper.py: emit per-task autonomy_action_id plus campaign-packet skeleton via the mapper (emission only); unit test asserts the mapping without any autonomy-side mutation", "files": ["environment/program-execution/integrations/autonomy-control-plane/contract_mapper.py", "environment/program-execution/integrations/autonomy-control-plane/tests/test_contract_mapper_action_id.py"], "effort": "S", "risk": "medium", "dependencies": ["inv-01"], "operation": "Wrap", "anchor": "existing action_id mapping", "leverage_rank": 6, "shared_root_cause": "claim not projected to autonomy"},
+    {"id": "inv-07", "task": "blueprint_ops.py: union-diff verify helper (union of per-task changed-path lists across waves; duplicates and paths missing vs blueprint-declared set raise); unit tests", "files": ["environment/program-execution/scripts/blueprint_ops.py", "environment/program-execution/scripts/tests/test_blueprint_union_diff.py"], "effort": "M", "risk": "medium", "dependencies": ["inv-01"], "operation": "Create", "anchor": "new helper near existing verify functions", "leverage_rank": 7, "shared_root_cause": "lost union-diff admission fix"},
+    {"id": "inv-08", "task": "l4_local.py named-roots: --workspace accepts a registered workspace NAME resolved to its root; unknown name fails closed and lists known names; unit tests", "files": ["ops/autonomy/l4_local.py", "tests/ops/autonomy/test_l4_named_roots.py"], "effort": "S", "risk": "medium", "dependencies": ["inv-01"], "operation": "Wrap", "anchor": "argparse --workspace + resolve step", "leverage_rank": 8, "shared_root_cause": "lost L4 named-roots fix"},
+    {"id": "inv-09", "task": "graphiti_memory_client.py: additive --session-id CLI flag for hook-driven writes (MCP header path unchanged); CLI test", "files": ["ops/graphiti/graphiti_memory_client.py", "tests/ops/graphiti/test_session_id_flag.py"], "effort": "S", "risk": "low", "dependencies": ["inv-01"], "operation": "Wrap", "anchor": "argparse block", "leverage_rank": 9, "shared_root_cause": "lost memory session-id flag fix"},
+    {"id": "inv-10", "task": "command_parse.py: heredoc-redirect regression tests (backtracking-regex failure mode); fix the parser minimally only if a test fails", "files": ["ops/autonomy/command_parse.py", "tests/ops/autonomy/test_command_parse_heredoc.py"], "effort": "S", "risk": "low", "dependencies": ["inv-01"], "operation": "Create", "anchor": "new test file", "leverage_rank": 10, "shared_root_cause": "lost heredoc-safe matching fix"},
+    {"id": "inv-11", "task": "pec phase-lock identity: acquire and governed-mutation verify use the same session_id, namespace, workspace, memory_state_root; a mismatch prints both identities; unit test", "files": ["environment/program-execution/core/program-execution-controller-template/scripts/pec/controller.py", "environment/program-execution/core/program-execution-controller-template/scripts/pec/tests/test_phase_lock_identity.py"], "effort": "M", "risk": "medium", "dependencies": ["inv-01"], "operation": "Wrap", "anchor": "acquire/verify paths", "leverage_rank": 4, "shared_root_cause": "lock identity not bound to session"},
+    {"id": "inv-12", "task": "pec preflight: extend ready/blockers/next_action to cover draft-admission and phase-lock (in addition to existing reconcile/lease/holder/PREPARED/actor/writable checks); tests", "files": ["environment/program-execution/core/program-execution-controller-template/scripts/pec/preflight.py", "environment/program-execution/core/program-execution-controller-template/scripts/pec/tests/test_preflight_coverage.py"], "effort": "M", "risk": "medium", "dependencies": ["inv-01"], "operation": "Wrap", "anchor": "preflight checks block", "leverage_rank": 11, "shared_root_cause": "preflight blind to admission + lock state"},
+    {"id": "inv-13", "task": "pec draft-contract/compile: consumer-reject gate — compile must not report success for an artifact the immediate consumer (wiring gate) rejects; test with a rejecting consumer fixture", "files": ["environment/program-execution/core/program-execution-controller-template/scripts/pec/contracts.py", "environment/program-execution/core/program-execution-controller-template/scripts/pec/tests/test_consumer_reject.py"], "effort": "M", "risk": "medium", "dependencies": ["inv-01"], "operation": "Wrap", "anchor": "draft_source_contract + verify path", "leverage_rank": 12, "shared_root_cause": "compile can succeed for rejected artifacts"},
+    {"id": "inv-14", "task": "New ops/hooks/check_gh_package_deps.py: every @quantum-l9/* version in package.json must exist on GitHub Packages and lock resolved/integrity must match registry metadata; register one additive entry in .pre-commit-config.yaml + precommit-hook-contract.json; fixtures + unit tests", "files": ["ops/hooks/check_gh_package_deps.py", ".pre-commit-config.yaml", "ops/config/precommit-hook-contract.json", "tests/ops/hooks/test_check_gh_package_deps.py"], "effort": "M", "risk": "medium", "dependencies": ["inv-01"], "operation": "Create", "anchor": "new hook + additive registrations", "leverage_rank": 13, "shared_root_cause": "unverified dependency publishes"},
+    {"id": "inv-15", "task": "surface_profile.yaml: add pr_remediation_until_green_and_mergeable operating default (additive); structural assertion test", "files": ["ops/autonomy/surface_profile.yaml", "tests/ops/autonomy/test_surface_profile_defaults.py"], "effort": "S", "risk": "low", "dependencies": ["inv-01"], "operation": "Wrap", "anchor": "existing policy block", "leverage_rank": 14, "shared_root_cause": "operating default not encoded"},
+    {"id": "inv-16", "task": "Readiness receipts: add state_root key to claude_bootstrap_receipt.py and governance_refresh_receipt.py answering which governance/runtime revisions and state roots a PE invocation will use; UNKNOWN explicit; unverified mixed revisions fail before PE; tests", "files": ["ops/scripts/claude_bootstrap_receipt.py", "ops/scripts/governance_refresh_receipt.py", "tests/ops/scripts/test_readiness_receipt_state_root.py"], "effort": "M", "risk": "medium", "dependencies": ["inv-01"], "operation": "Wrap", "anchor": "receipt output keys", "leverage_rank": 15, "shared_root_cause": "PE invocation revision unknown"},
+    {"id": "inv-17", "task": "Bootstrap call-edge regression test: session_start_bootstrap.sh invokes ops/scripts/bootstrap_agent_environment.sh --surface cursor before exit 0; test fails if the edge is removed", "files": ["tests/ops/hooks/test_bootstrap_surface_edge.py"], "effort": "S", "risk": "low", "dependencies": ["inv-01"], "operation": "Create", "anchor": "new test file", "leverage_rank": 16, "shared_root_cause": "surface edge unprotected"},
+    {"id": "inv-18", "task": "Suite green gate: PE conformance (142+), controller (25+), autonomy (56+), compile (5+), campaign-schema (2), peer-execution lifecycle, clean-startup integration, plus all new tests; record counts and failures", "files": ["environment/program-execution/core/program-execution-controller-template/scripts/pec/tests/", "tests/ops/"], "effort": "L", "risk": "medium", "dependencies": ["inv-02", "inv-03", "inv-04", "inv-05", "inv-06", "inv-07", "inv-08", "inv-09", "inv-10", "inv-11", "inv-12", "inv-13", "inv-14", "inv-15", "inv-16", "inv-17"], "operation": "Wrap", "anchor": "pytest runs", "blocker": "none: validation gate only", "leverage_rank": 17, "shared_root_cause": "regression risk"},
+    {"id": "inv-19", "task": "make pr-check PASS on changed files + diff hygiene (git diff --name-only: only scope.in paths) + plan-store bookkeeping", "files": [".pre-commit-config.yaml"], "effort": "M", "risk": "medium", "dependencies": ["inv-18"], "operation": "Wrap", "anchor": "make pr-check", "blocker": "none: validation gate only", "leverage_rank": 18, "shared_root_cause": "gate hygiene"}
+  ],
+  "critical_path": ["inv-01", "inv-02", "inv-03", "inv-04", "inv-11", "inv-18", "inv-19"],
+  "milestones": [
+    {"id": "M1", "outcome": "branch pe/unified-loop at ac0e5e67 with L4 begun", "unlocks": "all mutations"},
+    {"id": "M2", "outcome": "dispatch seam + routing + signals + evidence + projection landed", "unlocks": "suite gate"},
+    {"id": "M3", "outcome": "all suites green + pr-check PASS", "unlocks": "finalize"}
+  ],
+  "checkpoints": [
+    {"id": "C1", "after": "M1", "evidence_required": "git rev-parse HEAD == ac0e5e67 on pe/unified-loop; l4_local status shows begun", "no_go_action": "stop; do not mutate without locked branch"},
+    {"id": "C2", "after": "M2", "evidence_required": "each new test file passes in isolation; dispatch integration test passes", "no_go_action": "fix failing todo before suite gate"},
+    {"id": "C3", "after": "M3", "evidence_required": "suite counts recorded; make pr-check exit 0", "no_go_action": "stop; do not finalize"}
+  ],
+  "doc_root_surface_impact": [
+    {"surface": "AGENTS.md", "action": "n_a", "reason": "no law change"},
+    {"surface": "Makefile", "action": "n_a", "reason": "no target change"},
+    {"surface": "CANONICAL_LAW.md", "action": "n_a", "reason": "no authority change"},
+    {"surface": "rules/*.mdc", "action": "n_a", "reason": "operating defaults already documented; no rule text change"}
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Does dispatch break the manual worker brief fallback? Tested: CAPABILITY_UNSUPPORTED path.",
+      "Does contract_mapper emission mutate autonomy state? Tested: no-mutation unit test.",
+      "Does check_gh_package_deps break local pre-commit when GitHub Packages is unreachable? Fixture-mocked; network only in integration scope.",
+      "Do new pec tests break controller conformance counts? Counted in inv-18."
+    ],
+    "assumed_false_ifs": [
+      "IF origin/main still equals ac0e5e67 at execution start (re-verified at inv-01)",
+      "IF peer_execution.runner exists on main with CanonicalProviderResult shape (verified during inv-02; stop-and-report if absent)",
+      "IF graphiti context_reader.read_context signature matches inv-05 usage (verified during inv-05)"
+    ],
+    "blast_radius": "Controller call sites are the execution heart of every future program; mitigations: additive call sites only, manual fallback preserved, full controller suite before PR",
+    "rollback": "git restore scoped paths on pe/unified-loop; all call sites additive — removal restores prior behavior; no schema changes"
+  },
+  "leverage": {
+    "ranked_todo_ids": ["inv-02", "inv-04", "inv-03", "inv-11", "inv-05", "inv-06", "inv-07", "inv-08"],
+    "shared_causes": [
+      "The lost pe/pipeline-fixes branch carried all four seams; re-deriving from spec closes the whole loop at once",
+      "Receipt-to-distill and autonomy projection share the same contract_mapper/outcome_publisher boundary"
+    ],
+    "deletions_or_consolidations": ["none: additive work only; no deletions in scope"]
+  },
+  "risks": [
+    {"risk": "peer_execution.runner API shape differs from donor description", "mitigation": "verify signature at inv-02 start; adapt call site to actual API; stop-and-report if absent"},
+    {"risk": "check_gh_package_deps network flake in pre-commit", "mitigation": "fixture-mocked unit tests; hook fails closed only on registry mismatch, warns on transport error"},
+    {"risk": "suite gate runs long", "mitigation": "targeted tests per todo first; full suites once in inv-18"}
+  ],
+  "unknowns": [
+    {"id": "U1", "question": "peer_execution.runner exact entrypoint and CanonicalProviderResult shape on main", "decision_effect": "dispatch.py call-site shape", "resolution": "probe"},
+    {"id": "U2", "question": "graphiti context_reader.read_context exact signature", "decision_effect": "--memory-lookup flag wiring", "resolution": "probe"},
+    {"id": "U3", "question": "pec cli.py command-registration shape for render-contract and compile hooks", "decision_effect": "call-site anchors", "resolution": "probe"}
+  ],
+  "final_validation": [
+    {"id": "V1", "command": "python3 -m pytest environment/program-execution/core/program-execution-controller-template/scripts/pec/tests/ -q", "pass_criteria": "all new pec tests pass", "status": "pending"},
+    {"id": "V2", "command": "python3 -m pytest tests/ops/ -q", "pass_criteria": "ops/autonomy + ops/graphiti + ops/hooks + ops/scripts tests pass", "status": "pending"},
+    {"id": "V3", "command": "OPEN_PR=0 make pr", "pass_criteria": "PASS", "status": "pending"},
+    {"id": "V4", "command": "git diff --name-only origin/main...HEAD", "pass_criteria": "only scope.in paths", "status": "pending"},
+    {"id": "V5", "command": "pre-commit run check-gh-package-deps --config .pre-commit-config.yaml", "pass_criteria": "hook loads from .pre-commit-config.yaml and passes on changed files", "status": "pending"}
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": ["U1", "U2", "U3"],
+    "next_skill": "l9-gmp-protocol",
+    "stop_reason": "plan re-compiled against current main with verified gap sweep; implementation runs directly per operator order"
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "environment/program-execution/core/program-execution-controller-template/scripts/pec/",
+      "environment/program-execution/registry/EXECUTION_ROUTING_POLICY.yaml",
+      "environment/program-execution/scripts/",
+      "environment/program-execution/integrations/autonomy-control-plane/",
+      "ops/autonomy/l4_local.py", "ops/autonomy/command_parse.py", "ops/autonomy/surface_profile.yaml",
+      "ops/graphiti/graphiti_memory_client.py",
+      "ops/hooks/check_gh_package_deps.py", ".pre-commit-config.yaml", "ops/config/precommit-hook-contract.json",
+      "ops/scripts/claude_bootstrap_receipt.py", "ops/scripts/governance_refresh_receipt.py",
+      "tests/", "docs/plans/"
+    ],
+    "must_not_modify": [
+      "skills/AUTONOMY_MANIFEST.yaml",
+      "environment/agents/adapters/claude-code/hooks/memory_gate.py", "environment/agents/adapters/claude-code/hooks/memory_lock.py",
+      "environment/program-execution/core/*/MANIFEST.yaml schema-required fields",
+      "any deletion from additive-only root files",
+      "protected cores", "TODO.md"
+    ],
+    "preserved_contracts": [
+      "worker_cannot_self_verify invariant",
+      "no autonomy-side mutation from claim/contract_mapper (emission only)",
+      "manual worker brief fallback on CAPABILITY_UNSUPPORTED",
+      "merge stays human-only; force-push/admin-merge forbidden",
+      "Graphiti is read-only from admission paths"
+    ],
+    "validation_commands": [
+      "python3 -m pytest <targeted dirs> -q",
+      "OPEN_PR=0 make pr",
+      "git diff --name-only origin/main...HEAD"
+    ]
+  },
+  "depth": "deep",
+  "checklist": ["baseline locked", "all todos evidenced", "suites green", "pr-check PASS", "diff hygiene"],
+  "estimate": "1 GMP"
+}

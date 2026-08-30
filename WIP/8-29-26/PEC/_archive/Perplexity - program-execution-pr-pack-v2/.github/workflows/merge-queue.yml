@@ -1,0 +1,23 @@
+name: merge-queue-ci
+on:
+  pull_request:
+  merge_group:
+permissions:
+  contents: read
+jobs:
+  required-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install pyyaml
+      - id: batch
+        run: |
+          IDS=$(git log --format='%B' HEAD~10..HEAD 2>/dev/null | grep -oE '^L9-Node: [A-Z]{2,6}-[0-9]{3}' | awk '{print $2}' | sort -u | tr '\n' ' ')
+          if [ -z "$IDS" ]; then IDS=$(echo "${{ github.event.pull_request.title }}" | grep -oE '[A-Z]{2,6}-[0-9]{3}'); fi
+          echo "ids=$IDS" >> "$GITHUB_OUTPUT"
+      - run: |
+          TREE=$(find reports -type f -name 'feature_tree.v1.yaml' | sort | tail -n 1)
+          python tools/check_merge_queue.py --tree "$TREE" --batch-node-ids ${{ steps.batch.outputs.ids }}

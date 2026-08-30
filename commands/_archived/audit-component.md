@@ -1,15 +1,16 @@
 ---
 name: audit-component
-version: "1.0.0"
+version: "2.0.0"
 description: "Audit a component for export consistency, file wiring, and API instantiation"
 auto_chain: ynp
-dag: component-audit-v1
-dag_file: .cursor-commands/workflows/dags/component_audit_dag.py
 ---
 
-# /audit-component — Component Wiring Audit
+# /audit-component — Component wiring audit
 
-**DAG-ENFORCED.** Execute the `component-audit-v1` DAG.
+Delegates to skill **`l9-component-verification`** (mode `audit-component`).
+
+There is no `component_audit_dag.py` and no `component-audit-v1` registration.
+This slash is a thin trigger for the skill, not a DAG.
 
 ## Usage
 
@@ -19,24 +20,15 @@ dag_file: .cursor-commands/workflows/dags/component_audit_dag.py
 /audit-component                 # Discover and pick highest-priority
 ```
 
-## What It Does
+## EXECUTION
 
-1. **Level A** — Package export audit (`__all__` vs imports)
-2. **Level B** — File-level wiring (consumers, tests, re-exports)
-3. **Level C** — API instantiation (used symbols, missing APIs)
+1. Read and follow skill `l9-component-verification` in mode `audit-component`.
+2. Run the levels in `skills/l9-component-verification/references/component-audit.md`:
+   package export (`__all__` vs imports), file-level wiring, API instantiation.
+3. Report evidence per level. Auto-chain `/ynp`.
 
-## Execution
+## FORBIDDEN
 
-```python
-from .cursor-commands.workflows.dags import COMPONENT_AUDIT_DAG
-# Follow each node's action field in sequence
-```
-
-The DAG contains all instructions. Follow each node's `action` field exactly.
-
-## Key Files
-
-- **DAG**: `.cursor-commands/workflows/dags/component_audit_dag.py`
-- **Script**: `tools/validation/audit_package_exports.py`
-- **Guide**: `reports/COMPONENT_WIRING_AUDIT_GUIDE.md`
-- **Confirm-Wiring**: `.cursor-commands/workflows/dags/confirm_wiring_dag.py`
+- Pasting a DAG body into this file
+- Inventing a second audit protocol beside the skill
+- Asserting wiring you did not check

@@ -1,0 +1,13 @@
+schema: canonical.schema.feature_tree.v1
+program_id: scope-test
+stack_base: main
+nodes:
+  - id: PE-011
+    title: Too few gates
+    depends_on: []
+    branch: chore/pe-011
+    base: main
+    contract: reports/2026-08-20/contracts/PE-011.contract.md
+    file_scope: [tools/foo.py]
+    gates: [only-one-gate]
+    state: planned

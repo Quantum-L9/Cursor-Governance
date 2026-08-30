@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from pathlib import Path
 
@@ -12,6 +13,28 @@ import yaml
 # Reuse generator model for drift compare.
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from generate_commands_manifest import build_manifest, is_excluded  # noqa: E402
+
+REGISTRY_REL = Path("ops/generated/skill-registry.json")
+
+
+def load_skill_names(root: Path) -> set[str] | None:
+    """Return skill names, or None when the registry is missing/unreadable.
+
+    None means fail closed — callers must not treat an absent registry as an
+    empty skill set (that would silently accept every command/skill collision).
+    """
+    path = root / REGISTRY_REL
+    if not path.is_file():
+        return None
+    try:
+        registry = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return {
+        str(record.get("name"))
+        for record in registry.get("skills", [])
+        if isinstance(record, dict) and record.get("name")
+    }
 
 
 def validate(root: Path) -> list[str]:
@@ -53,6 +76,23 @@ def validate(root: Path) -> list[str]:
     dupes = sorted({s for s in slashes if slashes.count(s) > 1})
     if dupes:
         errors.append(f"duplicate slash commands: {dupes}")
+
+    skill_names = load_skill_names(root)
+    if skill_names is None:
+        errors.append(
+            f"missing or unreadable {REGISTRY_REL} — cannot validate "
+            "command/skill collisions fail-closed"
+        )
+        return errors
+    for entry in data.get("commands", []) or []:
+        if not isinstance(entry, dict):
+            continue
+        slash = str(entry.get("slash") or "").lstrip("/")
+        if slash and slash in skill_names:
+            errors.append(
+                f"command-skill-collision:{slash} — skills/ SSOT owns this name; "
+                "invoke via Claude Code skill slash or Cursor skill route, not commands/"
+            )
     return errors
 
 

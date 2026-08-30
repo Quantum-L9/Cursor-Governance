@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-30T03:14:40Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-30T03:36:31Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -19,7 +19,7 @@ Generated: `2026-08-30T03:14:40Z`. Source: `rules/*.mdc`.
 | File | ID | Scope | Domain | Activation | Lines | Digest |
 |---|---|---|---|---|---:|---|
 | `00-global.mdc` | `l9.rule.00.global` | global | governance | always | 40 | `f52c4a83d314` |
-| `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 163 | `4b4c9ae5e47b` |
+| `02-slash-commands.mdc` | `l9.rule.slash-commands` | global | governance | always | 135 | `76d110e9c449` |
 | `03-graphiti-memory.mdc` | `l9.rule.graphiti.memory` | global | memory | always | 70 | `93cd8a5cbf32` |
 | `04-cursor-redis-session.mdc` | `l9.rule.04.cursor.redis.session` | global | memory | agent_requested | 70 | `64a0e957121b` |
 | `05-ask-mode.mdc` | `l9.rule.05.ask.mode` | global | governance | always | 65 | `4b2f5f472100` |
