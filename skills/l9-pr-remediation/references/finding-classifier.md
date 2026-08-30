@@ -3,11 +3,11 @@ l9_schema: 1
 parent: l9-pr-remediation
 layer: reference
 role: finding_classifier
-tags: [pr, classification, triage, severity]
+tags: [pr, classification, triage, severity, board]
 owner: igor_beylin
 status: active
-version: 3.4.0
-updated: 2026-08-18
+version: 3.5.0
+updated: 2026-08-30
 /L9_META -->
 
 # Finding Classifier
@@ -16,14 +16,25 @@ updated: 2026-08-18
 
 Classify each ingested finding by **ownership first**, then severity and fix strategy. Determines what may be edited and what runs in parallel this cycle.
 
+## Two axes
+
+A finding is about a file. A board verdict is about the pull request. Keep them apart — fusing them is what turned "I may not patch this" into "this PR is stuck".
+
+| Axis | Question | Values | Decided by |
+|------|----------|--------|-----------|
+| **edit** | May I patch this file? | `CODEBASE` / `CI_PIPELINE` / `ENVIRONMENT` / `HUMAN` / `FALSE_POSITIVE` | this file, per finding |
+| **board** | What happens to this PR? | `merge` / `fix` / `wait` / `leftover` | `ops/autonomy/pr_board.py`, per PR |
+
+Board rules that are not negotiable in prose: required-check identity is the union of branch protection and repository rulesets; a red check outside that set does not block merge; conflicted **paths** decide a conflict, not `mergeStateStatus`; `leftover` requires a declaration (`--human-decision` / `--unfixable-check`); unknown telemetry is `wait`, never `merge`. Do not add a per-finding `board` field — the ledger carries it once per PR ([remediation-plan.md](remediation-plan.md)).
+
 ## Ownership (before severity)
 
 | Class | Edit? | Action |
 |-------|-------|--------|
 | **CODEBASE** | yes | Fix in the concurrent batch |
-| **CI_PIPELINE** | no | Note in status; continue other clusters |
+| **CI_PIPELINE** | no | Note in status; continue other clusters. Declare to the board only if the check is required and unfixable |
 | **ENVIRONMENT** | no | Venv preflight once; export UV_PYTHON; continue other clusters |
-| **HUMAN** | no | Reply + resolve; do not merge that PR; continue other clusters |
+| **HUMAN** | no | Reply + resolve; name the decision and pass it to `pr_board.py --human-decision`; continue other clusters |
 | **FALSE_POSITIVE** | no | Reply with evidence; resolve |
 
 See [ownership-boundary.md](ownership-boundary.md). Unknown ownership **or** unverified root cause → do not edit that cluster. `disposition: fix` requires a root cause traced to current source or CI logs, with a confidence of `high` or `medium`. `low` / `Unknown` → `defer` or `note_*`, not a patch.
@@ -32,7 +43,7 @@ See [ownership-boundary.md](ownership-boundary.md). Unknown ownership **or** unv
 
 | Severity | Definition | Action |
 |----------|-----------|--------|
-| **blocking** | CI gate failure that prevents merge | Fix immediately, cycle 1 priority |
+| **blocking** | **Required** CI gate failure that prevents merge (required per `pr_board.py`, not per rollup) | Fix immediately, cycle 1 priority |
 | **actionable** | Review comment with a clear, implementable suggestion | Fix after blocking items resolved |
 | **discussion** | Review comment asking a question or proposing alternatives | Do not fix; **still reply**. Code-review agent comments in this bucket are never silently dropped. |
 | **deferred** | Requires human decision, architectural change, or external dependency | Do not fix; **still reply** with reason |
