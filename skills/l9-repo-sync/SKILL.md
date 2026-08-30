@@ -24,6 +24,12 @@ gitdirs.
 `.env.*.local`, `.claude/settings.local.json`), and unique untracked files
 stay. Unique local commits and every dirty tracked path are parked first.
 Nothing unique is deleted.
+
+**Shelf publish loop (2026-08-29):** when `/ff` shelves WIP/plans/campaigns, the
+caller finishes with `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf
+worktree unless `FF_SHELF_PUBLISH=0`, then runs
+`ops/scripts/run_ff_post_shelf.sh` and `verify_worktree_clean.py` on the named
+clone. See `commands/ff.md` step 2–3 and `AGENTS.md` `FF_CLOSE_PUBLISH_LOOP_V1`.
 Slash entry: [`/ff`](../../commands/ff.md). Rule:
 [`rules/55-ff-only-ssot-sync.mdc`](../../rules/55-ff-only-ssot-sync.mdc).
 

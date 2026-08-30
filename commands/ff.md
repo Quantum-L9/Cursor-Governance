@@ -70,11 +70,22 @@ tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
    shelved `*.plan.md`). Then pathspec-add **only** those files, scoped commit,
    run `l4_local.py begin` then `authorize-release` in that worktree
    (**not** `record-kernels` — corpus kernels are not an L4 phase). Then
-   **ask the user** before `PR_REMEDIATE=0 make pr`.
-   Catching a clone up is not authorization to publish. Do **not** put
-   `make pr` inside `ff.sh`. Do not scoop other untracked paths. Do not delete
-   the copies in the named clone.
-3. Auto-chain `/ynp`.
+   **finish the shelf loop** unless `FF_SHELF_PUBLISH=0`:
+   `PR_STACK=auto PR_REMEDIATE=0 make pr` in the shelf worktree and display
+   the opened **PR URL**. If the shelf list was empty after dedupe, skip publish.
+   Opt-out: `FF_SHELF_PUBLISH=0` shelves and commits only (no `make pr`).
+   Do **not** put `make pr` inside `ff.sh`. Do not scoop other untracked paths.
+   Do not delete the copies in the named clone.
+3. **Post-shelf close** — in the named clone (not the shelf worktree):
+
+   ```bash
+   bash ops/scripts/run_ff_post_shelf.sh "$(pwd)"
+   ops/scripts/verify_worktree_clean.py --workspace "$(pwd)"
+   ```
+
+   For plan execution on a clean baseline after verify passes, prefer
+   `agent_worktree_start.sh` off the open-PR tip or `origin/main`.
+4. Auto-chain `/ynp`.
 
 ## FORBIDDEN
 
