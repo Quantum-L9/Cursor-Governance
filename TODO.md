@@ -103,6 +103,28 @@ numbering after fenced blocks, MD022/MD032 blank lines around headings/lists.
   `fix-engine.md` (duplicate step 3 + list renumber), `issue-verify.md`, `unblock-breadcrumb.md`
 - [ ] **`skills/l9-pr-remediation/references/`** — `review-replies.md`, `run-contract.md`
 
+## `/ff` shelf worktree — publish through, do not stop mid-flight (2026-08-29)
+
+Observed failure mode: catch-up lands on `main`, agent shelves leftover untracked
+`WIP/` / `docs/plans/` / PE campaigns onto `feat/ff-shelf-*`, applies corpus kernels,
+then **stops before publish** (“ask before `PR_REMEDIATE=0 make pr`”). That leaves
+shelved work parked on a branch with no PR — half the job done.
+
+**Desired behavior:** after kernels + scoped commit + L4 `begin` / `authorize-release`
+in the shelf worktree, **finish the loop** — run `PR_REMEDIATE=0 make pr`, report the
+opened PR URL, and close out. Do not park in the intersection and walk away.
+
+Touch surfaces (keep aligned):
+
+- [ ] **`commands/ff.md`** — step 2 currently says ask before publish; change to
+  complete publish unless user explicitly passed an opt-out flag
+- [ ] **`skills/l9-repo-sync/SKILL.md`** + **`references/execute.md`** — same contract
+- [ ] **`rules/55-ff-only-ssot-sync.mdc`** — regenerate llm-rules after rule edit
+- [ ] **`AGENTS.md`** `FF_SHELF_WIP_PLANS_V1` — “Publishing is ask-first” vs user
+  intent: `/ff` should be a closed loop when shelf bytes exist
+
+Context: catch-up at `ac0e5e67`; shelf + kernels ran; publish did not.
+
 ## Ruff debt (RESOLVED 2026-07-28 — `ruff check .` and `ruff format --check .` are green)
 
 Both steps in `.github/workflows/l9-lint-test.yml`'s `Lint and Type Check` job were failing
