@@ -135,7 +135,11 @@ write_receipt() {
     printf '{\n'
     printf '  "schema": "l9.claude-bootstrap.v1",\n'
     printf '  "surface": "claude-code",\n'
-    printf '  "mode": "%s",\n' "$([ "$CHECK" = "1" ] && echo check || echo local)"
+    # run_mode, not "mode": the axis is check-vs-write, and the old value
+    # "local" read as local-vs-cloud — so a hosted cloud session's receipt
+    # appeared to say it had been wired locally. Nothing consumes this key;
+    # renaming it costs no reader and removes the misreading.
+    printf '  "run_mode": "%s",\n' "$([ "$CHECK" = "1" ] && echo check || echo write)"
     printf '  "state": "%s",\n' "$(json_token "$state")"
     printf '  "stage": "%s",\n' "$(json_token "$RECEIPT_STAGE")"
     printf '  "remediation": "%s",\n' "$(json_token "$RECEIPT_REMEDIATION")"

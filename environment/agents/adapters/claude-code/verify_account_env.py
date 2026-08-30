@@ -114,6 +114,34 @@ PROHIBITED_PRESENT = frozenset(
     }
 )
 
+#: Fields the contract RETIRED. Not credentials — so `prohibited_present` never
+#: looks at them — but each one advertises a plane that no longer exists, and a
+#: reader who finds it set concludes the wrong thing about how this surface gets
+#: its memory or its authority.
+#:
+#: The verifier compared only the EXPECTED set, so a retired variable left in the
+#: account field passed as "all N expected variables match" while
+#: L9_CAPABILITY_BROKER_URL sat live in the environment, three sentences after the
+#: file that declares it "deliberately absent".
+#:
+#: Deliberately NOT here: GRAPHITI_GROUP_ID (a per-shell export is the documented
+#: one-off override), SONAR_PROJECT_KEY / SONAR_ORG_KEY (install.sh derives and
+#: unsets them per repository), and L9_GOVERNANCE_DIR (setup.bootstrap.sh writes
+#: it into the durable session env). Flagging those would cry wolf on a correct
+#: environment, which is how a report teaches its reader to ignore it.
+RETIRED_FIELDS = frozenset(
+    {
+        "L9_CAPABILITY_BROKER_URL",
+        "L9_MEMORY_HTTP_URL",
+        "L9_MEMORY_CLIENT_TOKEN",
+        "L9_MEMORY_HTTP_TOKEN",
+        "L9_AUTONOMY_AUTONOMOUS_MERGE",
+        "L9_MEMORY_REQUIRED",
+        "L9_MEMORY_FAIL_CLOSED",
+        "GRAPHITI_WRITE_GATES",
+    }
+)
+
 #: Names whose VALUE must never be printed, whatever the example file says.
 #: The expected set is derived from environment.env.example, which by contract
 #: assigns no credential — but that contract is enforced elsewhere, and a tool
@@ -215,6 +243,12 @@ def prohibited_present(env: dict[str, str] | None = None) -> list[str]:
         for key in PROHIBITED_PRESENT
         if (live.get(key) or "").strip() and (live.get(key) or "").strip() != PROXY_SENTINEL
     )
+
+
+def retired_present(env: dict[str, str] | None = None) -> list[str]:
+    """Retired field names carrying a value in the live runtime."""
+    live = os.environ if env is None else env
+    return sorted(key for key in RETIRED_FIELDS if (live.get(key) or "").strip())
 
 
 def compare(expected: dict[str, str], env: dict[str, str] | None = None) -> list[dict[str, str]]:
@@ -415,6 +449,7 @@ def run(
     have_rev = stub_revision_actual(env, session_env)
     drift = bool(want_rev) and have_rev != want_rev
     leaked = prohibited_present(env)
+    retired = retired_present(env)
     return {
         "expected_keys": len(expected),
         "deviations": deviations,
@@ -423,7 +458,8 @@ def run(
         "stub_drift": drift,
         "stub_drift_direction": revision_direction(have_rev, want_rev) if drift else "same",
         "prohibited_present": leaked,
-        "ok": not deviations and not drift and not leaked,
+        "retired_present": retired,
+        "ok": not deviations and not drift and not leaked and not retired,
     }
 
 
@@ -468,6 +504,10 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"  INFO: {key}={safe_value(key, os.environ[key])} (runtime-managed; not compared)"
             )
+    for key in result["retired_present"]:
+        print(f"  RETIRED: {key} is set but the contract retired this field")
+        print("           delete it from the Environment variables field; it advertises")
+        print("           a plane that no longer exists and misleads whoever reads it")
     for key in result["prohibited_present"]:
         print(f"  PROHIBITED: {key} is set in this environment (value not shown)")
         print("              delete it from the Environment variables field; a pasted")

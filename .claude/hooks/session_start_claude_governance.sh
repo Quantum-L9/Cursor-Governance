@@ -528,7 +528,11 @@ if [ -f "$skill_log" ]; then
   skill_n=$(wc -l < "$skill_log" | tr -d ' ')
   LINES+=("skill-usage: $skill_log ($skill_n entries)")
 else
-  LINES+=("skill-usage: $skill_log (absent — logger never wrote)")
+  # Absent at SessionStart is the NORMAL state: this block renders before the
+  # first Skill/PreToolUse event of the session, so the logger has had nothing
+  # to write yet. Reporting "logger never wrote" made a healthy hook read as a
+  # broken one on every single session.
+  LINES+=("skill-usage: $skill_log (no events yet this session)")
 fi
 
 if [ -f "$GOV/ops/autonomy/breakglass_receipt.py" ]; then
