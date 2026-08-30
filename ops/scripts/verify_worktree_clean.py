@@ -120,29 +120,35 @@ def verify(
     if dirty_unique is None:
         dirty_unique = len(dirt.get("dirty_files") or [])
     if dirty_unique == -1:
-        warnings.append(f"dirt-close status unavailable: {dirt.get('error', 'unknown')}")
+        errors.append(
+            f"dirt-close status unavailable: {dirt.get('error', 'unknown')}"
+        )
     elif dirty_unique != 0:
         errors.append(
             f"dirty_unique={dirty_unique} (run session_end_dirt_close --status for paths)"
         )
 
-    gh_proc = subprocess.run(  # noqa: S603
-        [
-            "gh",
-            "pr",
-            "list",
-            "--state",
-            "open",
-            "--search",
-            "head:feat/ff-shelf-",
-            "--json",
-            "headRefName",
-        ],
-        capture_output=True,
-        text=True,
-        check=False,
-    )
-    if gh_proc.returncode == 0:
+    try:
+        gh_proc = subprocess.run(  # noqa: S603
+            [
+                "gh",
+                "pr",
+                "list",
+                "--state",
+                "open",
+                "--search",
+                "head:feat/ff-shelf-",
+                "--json",
+                "headRefName",
+            ],
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        warnings.append("gh unavailable — skipped feat/ff-shelf-* PR check")
+        gh_proc = None
+    if gh_proc is not None and gh_proc.returncode == 0:
         try:
             open_shelf = {row["headRefName"] for row in json.loads(gh_proc.stdout or "[]")}
         except (json.JSONDecodeError, KeyError, TypeError):
@@ -153,7 +159,7 @@ def verify(
                 name = line.strip().lstrip("* ").strip()
                 if name.startswith("feat/ff-shelf-") and name not in open_shelf:
                     warnings.append(f"local shelf branch {name!r} has no open PR")
-    else:
+    elif gh_proc is not None:
         warnings.append("gh unavailable — skipped feat/ff-shelf-* PR check")
 
     ok = not errors
