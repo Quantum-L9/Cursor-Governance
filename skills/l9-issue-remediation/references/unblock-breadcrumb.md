@@ -6,8 +6,8 @@ role: unblock_breadcrumb
 tags: [issues, pickup, graphiti, session-reference, comment, close]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-08-29
+version: 1.2.0
+updated: 2026-08-30
 /L9_META -->
 
 # Unblock Breadcrumb Contract
@@ -47,14 +47,21 @@ Never include secret values, tokens, or `.env` contents.
 
 ## 3. Close if resolved (required when status=fixed)
 
-If the marker `status=fixed`, the GitHub issue **must not stay OPEN**.
+If the marker `status=fixed` **or** verify said already-fixed / phantom, the
+GitHub issue **must not stay OPEN**. Close in the **same turn** as the
+verdict. A status reply that says “already-fixed” while the issue is still
+OPEN is not converged.
 
 Use `scripts/close_resolved_issue.py` (comment + `gh issue close --reason completed`).
+If the helper cannot post (missing User-Agent / token), close with `gh issue
+comment` then `gh issue close --reason completed` in the same turn.
 
 - Converge: close when the fix is **on a PR or already landed** (`--on-pr` /
   `--commit` / `--merged-pr`). Do not wait for remediator merge.
-- Diagnose: close already-resolved only (linked PR merged, or defect gone on
-  default) with the same evidence flags.
+- Diagnose: close already-resolved in the same turn (linked PR merged, or
+  defect gone on default) with the same evidence flags. Diagnose **does**
+  close already-fixed issues. A stale pack that says “Diagnose never close”
+  is not authority.
 - HUMAN / EXTERNAL: refuse unless `--reason superseded|duplicate|already-fixed|not-reproducible|does-not-exist`
   plus proof.
 

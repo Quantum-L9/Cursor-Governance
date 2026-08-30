@@ -9,8 +9,8 @@ metadata:
   tags: [l9, issues, github, diagnose, remediation, cross-repo, unblock, graphiti, fleet]
   owner: igor_beylin
   status: active
-  version: 1.2.0
-  updated: 2026-08-29
+  version: 1.3.0
+  updated: 2026-08-30
 ---
 
 # Issue Remediation
@@ -26,8 +26,8 @@ multiple-choice (**A** first) and resume.
 
 | Intent | Mutates | Triggers | Behavior |
 |--------|---------|----------|----------|
-| **Diagnose** | already-resolved close only | `/issues diagnose` / readiness / “what’s blocking?” | Fleet ingest + rank; close already-fixed; **never** commit/push/fix; **never** chain `/l9-pr-remediation` |
-| **Converge** | yes | `/issues` / `/l9-issue-remediation` / fix / remediate / unblock / babysit | Hot path; land on PRs; close when fixed; chain remediator **only if** `open_issues=0`; **never** `gh pr merge` |
+| **Diagnose** | already-resolved close only | `/issues diagnose` / readiness / “what’s blocking?” | Fleet ingest + rank; **close already-fixed in the same turn**; **never** commit/push/fix; **never** chain `/l9-pr-remediation` |
+| **Converge** | yes | `/issues` / `/l9-issue-remediation` / fix / remediate / unblock / babysit | Hot path; land on PRs; **close in the same turn when fixed**; chain remediator **only if** `open_issues=0`; **never** `gh pr merge` |
 
 ### Intent precedence (hard)
 
@@ -57,8 +57,13 @@ Before claiming Converge done:
 1. **Graphiti PICKUP** — required. Fail closed as `BLOCKED_PICKUP` if write fails.
 2. **Issue comment** — required on every issue in each touched cluster
    ([references/unblock-breadcrumb.md](references/unblock-breadcrumb.md)).
-3. **Close if `status=fixed`** — `scripts/close_resolved_issue.py`. An issue
-   marked fixed must not stay OPEN.
+3. **Close-now law** — if the issue is `already-fixed` / `not-reproducible` /
+   `does-not-exist` / `duplicate` / `superseded`, or the fix is on a PR
+   (`status=fixed`), **close it in this turn** via
+   `scripts/close_resolved_issue.py` (or `gh issue close` if the comment
+   helper is blocked). Do not report the verdict and leave the issue OPEN.
+   Do not defer close to merge, to the next cluster, or to a later session.
+   An OPEN GitHub row after a resolved verdict is a skill failure.
 4. **Root session-reference markdown** (`TODO.md`) — update **only if the file
    already exists** in that repo. Never create it.
 
@@ -69,7 +74,9 @@ Load [references/diagnose-workflow.md](references/diagnose-workflow.md).
 **Forbidden in Diagnose:** commit, push, fix worktrees, chain
 `/l9-pr-remediation`, alignment %, gap matrix, deep-eval theater.
 
-**Allowed in Diagnose:** already-resolved close with evidence.
+**Allowed in Diagnose:** already-resolved close with evidence — **required
+in the same turn**, not optional hygiene. A stale backup copy of this skill
+that says “Diagnose never close” is not authority.
 
 ## Converge — Inputs → Actions
 
@@ -83,7 +90,7 @@ Load [references/diagnose-workflow.md](references/diagnose-workflow.md).
 | `open_issues == 0` | `open_issues_gate.py --intent converge` | Chain **`l9-pr-remediation`** |
 | `open_issues > 0` | leftover OPEN including HUMAN/EXTERNAL | `BLOCKED_OPEN_ISSUES` — do not chain |
 | Human/external / architecture | product/secrets/SSOT move | Drain other clusters; then [human-blocker-mcq.md](references/human-blocker-mcq.md) (**A** = recommended); resume after the letter |
-| Phantom / stale issue | [issue-verify.md](references/issue-verify.md) | Close with evidence; do not remediate |
+| Phantom / stale / already-fixed issue | [issue-verify.md](references/issue-verify.md) | Close in this turn with evidence; do not remediate; do not leave OPEN |
 
 ## Converge — Outputs (per cycle that changes code)
 
@@ -113,7 +120,8 @@ No tarballs, run-report schemas, or issue-file bundles.
    defect in the owning repo ([issue-verify.md](references/issue-verify.md))
    before any patch. Close if it does not exist or is not reproducible;
    remediate only if it does. Agents invent issues — do not assume OPEN
-   means correct.
+   means correct. A verified `already-fixed` issue is closed **before**
+   the next tool call that starts another cluster.
 3. **Codebase only** in owning repo(s). Never edit `.github/workflows/**`,
    branch protection, org secrets policy, or CI-only infra. Note and skip.
 4. **Ownership before edit.** Load [ownership-boundary.md](references/ownership-boundary.md).
@@ -128,8 +136,8 @@ No tarballs, run-report schemas, or issue-file bundles.
     superseded|duplicate|already-fixed|not-reproducible|does-not-exist.
 11. **`/l9-pr-remediation` only after `open_issues=0`.**
     [handoff-to-pr-remediation.md](references/handoff-to-pr-remediation.md).
-12. **Breadcrumb law** is part of Done When — PICKUP failure or `status=fixed`
-    still OPEN blocks “converged.”
+12. **Breadcrumb law** is part of Done When — PICKUP failure or a resolved
+    issue still OPEN blocks “converged.” Close-now is not optional commentary.
 13. **Do not invent** root session-reference markdown files.
 14. **Architecture stays human.** Recommend the optimal path as **A**; do not
     implement a new architecture until they pick a letter.
@@ -159,7 +167,8 @@ No tarballs, run-report schemas, or issue-file bundles.
 - Automatable clusters drained (verified, closed, or fixed)
 - Remaining HUMAN / ARCHITECTURE / EXTERNAL presented as recommended-A
   questions; queue resumes after letters
-- Every `status=fixed` issue is CLOSED
+- Every resolved issue (`status=fixed` / already-fixed / phantom) is
+  CLOSED on GitHub in the same turn — not “will close after merge”
 - Linked issues commented; PICKUP written (or status `BLOCKED_PICKUP`)
 - Session-ref updated only where `TODO.md` pre-existed
 - Worktree clean in mutated repos
@@ -210,10 +219,12 @@ max_local_verify_iterations: 5
 make_pr: true
 chain_pr_remediation: after_open_issues_zero
 close_resolved: true
+close_now_same_turn: true
 breadcrumb:
   graphiti_pickup: required
   issue_comment: required
   close_if_fixed: required
+  close_now_same_turn: required
   session_ref_todo_md: only_if_exists
 pr_policy: land_then_chain_after_open_issues_zero  # never merge here
 ```

@@ -6,8 +6,8 @@ role: issue_verify
 tags: [issues, verify, recreate, phantom, diagnose-first]
 owner: igor_beylin
 status: active
-version: 1.0.0
-updated: 2026-08-29
+version: 1.1.0
+updated: 2026-08-30
 /L9_META -->
 
 # Issue verify (before any remediator trust)
@@ -43,11 +43,16 @@ In the owning repo (current default branch, or the claimed path):
 | Verdict | Meaning | Next |
 |---------|---------|------|
 | `exists` | Defect is present in source or a failing local gate | Remediate (fix-engine) |
-| `already-fixed` | Code already has the fix; issue is stale | Close with `--commit` or `--merged-pr` |
-| `not-reproducible` | Claimed failure does not happen; no matching defect | Close with `--reason not-reproducible --proof {what you ran}` |
-| `does-not-exist` | Issue describes a file/API/behavior that is not in this repo (wrong target or invented) | Close with `--reason does-not-exist --proof {search}` |
+| `already-fixed` | Code already has the fix; issue is stale | Close **in this turn** with `--commit` or `--merged-pr` |
+| `not-reproducible` | Claimed failure does not happen; no matching defect | Close **in this turn** with `--reason not-reproducible --proof {what you ran}` |
+| `does-not-exist` | Issue describes a file/API/behavior that is not in this repo (wrong target or invented) | Close **in this turn** with `--reason does-not-exist --proof {search}` |
 
-Close via `scripts/close_resolved_issue.py` (`--status fixed` + evidence).
+Close via `scripts/close_resolved_issue.py` (`--status fixed` + evidence)
+**before** writing the user-facing status and **before** starting the next
+cluster. Reporting `already-fixed` while leaving the GitHub issue OPEN is a
+skill failure. Do not wait for PR merge, `/l9-pr-remediation`, or a later
+session.
+
 Do not mass-close HUMAN/EXTERNAL: those still need
 `superseded|duplicate|already-fixed|not-reproducible|does-not-exist` plus proof.
 

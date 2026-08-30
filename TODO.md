@@ -1,8 +1,8 @@
 ## Issue unblock (session reference)
 
-**Cluster:** Quantum-L9/.github#6 + l9-codegraph#12/#28 + remediator User-Agent
-**Owning fix:** https://github.com/Quantum-L9/.github/pull/84 (root ISSUE_TEMPLATE); https://github.com/Quantum-L9/Cursor-Governance/pull/415 (User-Agent); #12/#28 closed as duplicate
-**Next:** human letters on remaining OPEN issues; do not chain /l9-pr-remediation
+**Cluster:** CEG#139 closed already-fixed + skill close-now v1.3.0
+**Owning fix:** CEG#139 closed 2026-08-30; skill PR stacked on #415
+**Next:** CEG#138 / PR 248 then remaining HUMAN issues; do not chain /l9-pr-remediation
 **Pickup:** Graphiti PICKUP written 2026-08-30
 
 Prior: #281 / PR #412.

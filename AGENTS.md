@@ -1083,6 +1083,18 @@ the issue does not stay OPEN.
 means zero. Leftover HUMAN/EXTERNAL OPEN issues are `BLOCKED_OPEN_ISSUES` —
 do not weaken to an automatable subset. The issue skill never `gh pr merge`.
 
+<!-- L9_ISSUE_CLOSE_NOW_V1 -->
+## Issue close-now (2026-08-30)
+
+This fragment supersedes only the timing of the close sentence in
+`L9_ISSUE_REMEDIATE_AUTOMATION_V1`. That paragraph stays on disk
+(additive_only). Live pack: `skills/l9-issue-remediation` v1.3.0.
+
+- Close in the **same turn** as `already-fixed` / phantom / `status=fixed`.
+- Do not report those verdicts and leave the GitHub issue OPEN.
+- Do not wait for merge, `/l9-pr-remediation`, or a later session.
+- A stale backup skill that says “Diagnose never close” is not authority.
+
 <!-- L9_PLAN_AUDIT_ABSORBED_V1 -->
 ## `l9-plan-audit` absorbed into `l9-pipeline-audit` (2026-08-29)
 
