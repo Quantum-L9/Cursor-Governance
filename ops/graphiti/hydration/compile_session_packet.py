@@ -244,9 +244,7 @@ def compile_session_packet(
                 facts = _search_facts(group_id, f"PICKUP session={prior}", limit=8)
                 if facts and not any(prior in _fact_text(f) for f in facts):
                     close_gap = True
-                    close_gap_text = close_gap_text or (
-                        f"prior session {prior} has no PICKUP fact"
-                    )
+                    close_gap_text = close_gap_text or (f"prior session {prior} has no PICKUP fact")
                 elif not facts:
                     close_gap = True
                     close_gap_text = close_gap_text or (

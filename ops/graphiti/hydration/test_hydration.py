@@ -497,6 +497,7 @@ def test_compile_enqueue_failed_is_not_close_gap(monkeypatch, tmp_path):
         "resolve_group_id",
         lambda p: {"group_id": "cursor-governance", "readonly": False},
     )
+
     def _facts(_gid, query, **_k):
         if "old-enq" in str(query):
             return [{"fact": "PICKUP|session=old-enq|next=continue"}]

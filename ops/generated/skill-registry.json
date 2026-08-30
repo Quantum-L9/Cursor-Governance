@@ -906,7 +906,7 @@
     },
     {
       "composition_role": "general",
-      "description": "force-retry session close \u2014 manual PICKUP/learnings when auto sessionEnd failed or offline. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
+      "description": "force-retry session close \u2014 Graphiti write PICKUP/learnings when auto sessionEnd failed or hydrate printed REPAIR. use for recovery, richer handoff, or governance backup \u2014 not required for normal X-out.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-end-session",
@@ -1303,5 +1303,5 @@
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
   "source_manifest_sha256": "b5fb7390d5db44ab932147d5781cd54bf3bf64635d99054e167b10ca38638f2b",
-  "source_skill_corpus_sha256": "a092e0f5354d11bffde0c08dd130fc5be0206fe38054108cbaabef19d35886b8"
+  "source_skill_corpus_sha256": "662cf0c9fcfdb03fb1dcee86621f72eaf0f23693036ebdda4b29049876a595dc"
 }

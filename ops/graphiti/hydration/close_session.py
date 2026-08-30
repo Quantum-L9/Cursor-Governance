@@ -328,9 +328,7 @@ def close_session(
         report["warnings"].append(f"WARN: write blocked — {msg}")
         report["status"] = "skipped"
         report["skip_reason"] = msg
-        _persist_early_receipt(
-            project, session_id, report, status="close_failed", dry_run=dry_run
-        )
+        _persist_early_receipt(project, session_id, report, status="close_failed", dry_run=dry_run)
         return report
 
     if is_background_agent and not transcript:
@@ -411,9 +409,7 @@ def close_session(
     except Exception as exc:  # noqa: BLE001
         report["warnings"].append(f"Phase A write failed: {exc}")
         report["status"] = "failed"
-        _persist_early_receipt(
-            project, session_id, report, status="close_failed", dry_run=dry_run
-        )
+        _persist_early_receipt(project, session_id, report, status="close_failed", dry_run=dry_run)
         return report
 
     elapsed_a = clock() - started
