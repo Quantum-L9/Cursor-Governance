@@ -1,0 +1,2432 @@
+schema: l9.environment_experience.friction.canonical/v1
+generated_at: '2026-08-25T02:03:03Z'
+records:
+- id: CR-001
+  title: Stop-hook safety signal cannot distinguish authored work from bootstrap residue
+  status: ACTIVE_RECURRING
+  summary: The turn-ending hook treats bootstrap-owned residue as author work and repeatedly asks for commits that would violate
+    repository ownership or delete tracked content.
+  source_records:
+  - source_ref: P1/friction/FRICTION-01
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-01
+    source_title: Stop hook demands committing files that must never be committed
+    source_record:
+      id: FRICTION-01
+      rank: 1
+      title: Stop hook demands committing files that must never be committed
+      impact: high
+      frequency: every-session
+      surface: bootstrap
+      observed_verbatim: '[~/.claude/stop-hook-git-check.sh]: There are untracked files in the repository. Please commit and
+        push these changes to the remote branch.'
+      what_it_covered:
+        bootstrap_wiring_in_repos: 8
+        wiring_paths:
+        - .claude/hooks/merge_gate_wrap.py
+        - .claude/hooks/session_start_claude_governance.sh
+        - .claude/rules
+        - .claude/settings.json
+        - .mcp.json
+        session_receipts: 2
+        receipt_paths:
+        - org-github-defaults/.l9/autonomy/l4-local-phase.json
+        - org-github-defaults/.l9/autonomy/l4-release-receipt.json
+      evidence: evidence/07-repos.txt
+      root_cause:
+        statement: The hook tests for any untracked file and cannot distinguish agent-authored work from machine-local bootstrap
+          residue.
+        confidence: fact
+      correctness_conflict: Complying would violate rule 49-shared-worktree-isolation ("stage only paths you authored this
+        session") across 8 unrelated repositories.
+      observed_cost: Fires every session, was wrong about every file it flagged here, and trains agents to ignore it — degrading
+        it as a safety signal.
+      improvements:
+      - IMP-08
+      - IMP-06
+      - IMP-07
+  - source_ref: P3/friction/FRIC-02
+    source_pack: P3
+    source_path: friction.yaml
+    source_id: FRIC-02
+    source_title: Every repo permanently dirty and the Stop hook pushes toward committing it
+    source_record:
+      id: FRIC-02
+      rank: 2
+      title: Every repo permanently dirty and the Stop hook pushes toward committing it
+      impact: HIGH
+      frequency:
+        repos: 9
+        stop_hook_firings: 2
+      evidence:
+      - command: per-repo git status --porcelain --untracked-files=all
+        output: 9/9 repos dirty; dirty paths that are not .claude/.mcp.json/.l9 = 0 in every repo
+      - observation: 'Stop hook ~/.claude/stop-hook-git-check.sh: ''There are uncommitted changes in the repository. Please
+          commit and push these changes to the remote branch.'''
+      cost: two turns spent establishing that the dirt was not the session's own work
+      consequence_if_followed: would have committed a machine-specific symlink and removed repo hooks (see FAIL-02)
+      improvement_refs:
+      - B2
+      - B3
+  - source_ref: P9/friction/FR-10
+    source_pack: P9
+    source_path: friction.yaml
+    source_id: FR-10
+    source_title: Turn-ending stop-hook message must be evaluated and rejected on every turn
+    source_record:
+      id: FR-10
+      rank: 10
+      title: Turn-ending stop-hook message must be evaluated and rejected on every turn
+      frequency: per_turn
+      cost: A recurring decision that always resolves the same way, with an attendant risk of eventually complying by reflex.
+      evidence:
+        message: There are uncommitted changes in the repository. Please commit and push these changes to the remote branch.
+        correct_response: decline - complying would delete 9 tracked files and commit a machine-absolute symlink
+        occurrences: approximately 17 across the session
+      root_cause_ref: F-01
+      handled_by: Declined every time and documented the reasoning once.
+      improvements:
+      - I-BS-01
+      - I-BS-02
+  reconciliation_action: MERGE
+- id: CR-002
+  title: GitHub capability documentation disagrees with observed transport reality
+  status: ACTIVE_RECURRING
+  summary: Prompt/rule text can claim gh is unavailable while the CLI and REST path work, or otherwise disagree with the observed
+    tool surface.
+  source_records:
+  - source_ref: P1/friction/FRICTION-03
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-03
+    source_title: System prompt contradicts the environment on gh availability
+    source_record:
+      id: FRICTION-03
+      rank: 3
+      title: System prompt contradicts the environment on gh availability
+      impact: high
+      frequency: every-session
+      surface: environment
+      prompt_claim: You do NOT have access to the `gh` CLI, `hub` CLI, or direct GitHub API access.
+      contradicting_prompt_line: 'Installed CLIs preconfigured for the proxy: gh'
+      observed_reality:
+        gh_installed: true
+        gh_version: 2.98.0
+        gh_api_rest_exit_code: 0
+        gh_graphql_exit_code: 1
+      evidence: evidence/03-gh-capability-matrix.txt
+      root_cause:
+        statement: The prompt states a blanket denial where the real boundary is transport-specific.
+        confidence: fact
+      observed_cost: Compounds FAIL-01. Two independent signals both pointed away from a working REST path.
+      accurate_statement: gh REST works; gh GraphQL and every gh pr subcommand do not; gh auth status will falsely report
+        an invalid token.
+      improvements:
+      - IMP-01
+  - source_ref: P3/friction/FRIC-10
+    source_pack: P3
+    source_path: friction.yaml
+    source_id: FRIC-10
+    source_title: Documented tool surface disagrees with the observed one
+    source_record:
+      id: FRIC-10
+      rank: 10
+      title: Documented tool surface disagrees with the observed one
+      impact: MED
+      frequency:
+        occurrences: 1
+      evidence:
+      - documented: 'system prompt: ''You do NOT have access to the gh CLI, hub CLI, or direct GitHub API access.'''
+      - command: command -v gh
+        output: /usr/bin/gh
+      - command: gh api repos/Quantum-L9/Cognitive.Engine.Graphs
+        exit_code: 0
+      - actual_constraint: GraphQL disabled and org-wide search disabled; repository-scoped REST permitted
+      cost: the real constraint had to be discovered by probing
+      improvement_ref: A6
+  - source_ref: P6/friction/FR-5
+    source_pack: P6
+    source_path: friction.yaml
+    source_id: FR-5
+    source_title: Contradictory harness guidance about gh availability
+    source_record:
+      id: FR-5
+      title: Contradictory harness guidance about gh availability
+      severity: L
+      frequency: per_session_read
+      plane: env
+      facts:
+      - same system context asserts gh 'preconfigured for the proxy' and 'You do NOT have access to the gh CLI'
+      - 'observed truth: installed, unauthenticated (GH_TOKEN invalid)'
+      improvement_refs:
+      - ENV-3
+  reconciliation_action: MERGE
+- id: CR-003
+  title: make pr doctrine conflicts with repositories that do not define the target
+  status: ACTIVE_OPEN_DECISION
+  summary: An absolute publish-path rule and consumer repository Makefiles are not contractually aligned.
+  source_records:
+  - source_ref: P1/friction/FRICTION-04
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-04
+    source_title: Doctrine mandates a command surface the target repo does not define
+    source_record:
+      id: FRICTION-04
+      rank: 4
+      title: Doctrine mandates a command surface the target repo does not define
+      impact: high
+      frequency: per-repo
+      surface: governance
+      doctrine_claim: '`make pr` is the ONLY way to reach GitHub — this is a path rule, not a timing rule.'
+      doctrine_sources:
+      - ops/autonomy/surface_profile.yaml
+      - rules/48-make-pr-remediation
+      - rules/88-l4-local-autonomy
+      measurement:
+        command: grep -cE '^(pr|pr-check):' /home/user/org-github-defaults/Makefile
+        result: 0
+      repo_actual_targets:
+      - activate
+      - preflight
+      - validate
+      - sync-core
+      - sync-labels
+      - seed-dry
+      - seed-apply
+      - apply-rulesets
+      - set-properties
+      - pin-actions
+      - audit-pins
+      - enforce-dry
+      - enforce-apply
+      - dispatch
+      - clean
+      evidence: evidence/12-final.txt
+      competing_authority: 'l9-pr-remediation states "Repos without a `pr` target: fall back to the workflow `run:` list",
+        with no stated precedence against the profile''s absolute phrasing.'
+      what_was_done:
+        local_verify: make validate
+        local_verify_result: 32 passed, 0 failed
+        publish: git push (after L4 release receipt)
+        doctrine_status: off-doctrine under the surface profile, sanctioned under the skill
+      improvements:
+      - IMP-13
+  - source_ref: P6/friction/FR-2
+    source_pack: P6
+    source_path: friction.yaml
+    source_id: FR-2
+    source_title: Doctrine mandates 'make pr' but consumer repo lacks the target
+    source_record:
+      id: FR-2
+      title: Doctrine mandates 'make pr' but consumer repo lacks the target
+      severity: M
+      frequency: per_publish_attempt
+      plane: bootstrap
+      facts:
+      - grep '^pr:' Cognitive.Engine.Graphs/Makefile matched nothing (only 'start:' present)
+      - 'PR #234 body records invoking open_pr_after_gate.sh directly for this reason'
+      improvement_refs:
+      - BOOT-6
+  reconciliation_action: MERGE
+- id: CR-004
+  title: Hydration is capped, non-relevant, or tautological instead of task-bearing
+  status: ACTIVE_RECURRING
+  summary: Hydration can skip the target repo, omit the skipped set, or return only generic resume statements rather than
+    actionable task state.
+  source_records:
+  - source_ref: P1/friction/FRICTION-06
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-06
+    source_title: Graphiti hydration capped below repo count and returned no task content
+    source_record:
+      id: FRICTION-06
+      rank: 6
+      title: Graphiti hydration capped below repo count and returned no task content
+      impact: medium
+      frequency: every-session
+      surface: bootstrap
+      observed_verbatim: hydrated 6 of 11 repositories under /home/user (cap 6; repositories with no namespace of their own
+        are skipped)
+      hydrated_group_ids:
+      - cognitive-engine-graphs
+      - llm-router
+      - seo-bot
+      - website-bot
+      - l9-ci-core
+      - l9-ci-sdk
+      packet_stats:
+        facts_returned: 8
+        pickup_parsed: true
+        context_chars: 542
+        search_queries_used: 1
+      content_assessment: All 8 facts were restatements of "resume from the latest Graphiti PICKUP" with no task content.
+        None of the hydrated repos was the one being worked on.
+      root_cause:
+        statement: Selection is not relevance-ordered against the session's task target, and an empty PICKUP is emitted as
+          8 paraphrases rather than reported as empty.
+        confidence: inference
+      improvements:
+      - IMP-09
+  - source_ref: P4/friction/FR-07
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-07
+    source_title: Memory hydration silently covers a subset of the repositories present
+    source_record:
+      id: FR-07
+      rank: 7
+      title: Memory hydration silently covers a subset of the repositories present
+      category: memory
+      measured:
+        directories_under_home_user: 9
+        git_repositories: 8
+        hydrated: 6
+        cap: 6
+      evidence:
+      - 'session banner: "Multi-repo container: hydrated 6 of 9 repositories under /home/user (cap 6)"'
+      - 'observed: 8 git repositories plus one non-repository directory (quantum-l9)'
+      cost_description: Two repositories received no hydration. Which two is not stated in the banner, so an agent cannot
+        tell whether the repository it is about to work on had memory loaded.
+      root_cause:
+        classification: design_limit_reported_without_detail
+        statement: The cap is enforced and announced; the excluded set is not named.
+      unknown:
+      - Which two repositories were excluded, and by what ordering.
+  - source_ref: P6/friction/FR-6
+    source_pack: P6
+    source_path: friction.yaml
+    source_id: FR-6
+    source_title: Hydration banner ambiguity — '4 of 5 repositories', 5th unnamed
+    source_record:
+      id: FR-6
+      title: Hydration banner ambiguity — '4 of 5 repositories', 5th unnamed
+      severity: L
+      frequency: every_session
+      plane: bootstrap
+      facts:
+      - ls /home/user shows 4 repos; banner says 'hydrated 4 of 5 repositories under /home/user'
+      unknowns:
+      - fifth_repo_identity
+      inferences:
+      - likely quantum-l9/.github (in session scope, not cloned)
+      improvement_refs:
+      - BOOT-7
+  - source_ref: P7/friction/FR-05
+    source_pack: P7
+    source_path: friction.yaml
+    source_id: FR-05
+    source_title: Graphiti PICKUP hydration content is circular
+    source_record:
+      id: FR-05
+      title: Graphiti PICKUP hydration content is circular
+      impact: low (transport works; payload contributed no task steering)
+      frequency: every SessionStart, 4 group_ids each
+      detail: 'FACT (quoted): "next=resume from the latest Graphiti PICKUP" / "The next action is to resume from the latest
+        Graphiti PICKUP" — the resume pointer points at itself. facts_returned=8 per packet, but the facts restate the instruction
+        to resume. Assessment that this is low-signal: inference.
+
+        '
+  - source_ref: P9/friction/FR-02
+    source_pack: P9
+    source_path: friction.yaml
+    source_id: FR-02
+    source_title: Session resume carried no task state; continuity came entirely from the transcript
+    source_record:
+      id: FR-02
+      rank: 2
+      title: Session resume carried no task state; continuity came entirely from the transcript
+      frequency: per_session
+      cost: Repository state, branch positions and outstanding questions had to be re-derived with fresh commands at every
+        resume.
+      evidence:
+        hydration_reported: facts_returned=8, pickup_parsed=yes, degraded=false, 4 group_ids
+        hydration_content: All eight facts were restatements of the act of resuming, e.g. "The next action is to resume from
+          the latest Graphiti PICKUP in the Cognitive.Engine.Graphs project" and "The cursor agent resumes from the latest
+          Graphiti pickup."
+        upstream_cause: 'writeback receipt writes: 0 (F-04)'
+      root_cause_ref: F-04
+      handled_by: 'Re-derived state each time: git fetch, git rev-parse, list_pull_requests.'
+      improvements:
+      - I-BS-05
+      - I-BS-06
+  reconciliation_action: MERGE
+- id: CR-005
+  title: Bootstrap degradation lacks reasons, retry guidance, and remediation
+  status: ACTIVE_RECURRING
+  summary: Degraded states recur without per-component cause, logs, or automatic re-probe/remediation, forcing raw receipt
+    archaeology.
+  source_records:
+  - source_ref: P1/friction/FRICTION-10
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-10
+    source_title: Bootstrap degradation reported without diagnostics
+    source_record:
+      id: FRICTION-10
+      rank: 8
+      title: Bootstrap degradation reported without diagnostics
+      impact: medium
+      frequency: every-session
+      surface: bootstrap
+      degraded:
+      - shared_bootstrap
+      - capabilities
+      - memory
+      - mcp
+      - plugins
+      ready:
+      - settings
+      - skills
+      - rules
+      attributable:
+      - capabilities
+      attribution_method: Manual correlation of L9_CAPABILITY_BROKER_URL against the proxy's recentRelayFailures list.
+      unknown:
+      - shared_bootstrap
+      - memory
+      - mcp
+      - plugins
+      root_cause:
+        statement: The reporter emits a one-word status with no reason, log path, or retry hint.
+        confidence: fact
+      improvements:
+      - IMP-10
+  - source_ref: P3/friction/FRIC-06
+    source_pack: P3
+    source_path: friction.yaml
+    source_id: FRIC-06
+    source_title: Bootstrap degradation is reported without cause or remedy
+    source_record:
+      id: FRIC-06
+      rank: 6
+      title: Bootstrap degradation is reported without cause or remedy
+      impact: MED
+      frequency:
+        session_starts: 4
+        of: 4
+      evidence:
+      - observation: 'claude bootstrap: degraded — degraded: shared_bootstrap, capabilities, memory, mcp, plugins'
+      - observation: 'READY: settings, skills, rules. DEGRADED: 5 of 8 subsystems, no error text, no remediation command'
+      cost: capability loss cannot be assessed; agent cannot tell whether a needed subsystem is among the degraded
+      status: UNKNOWN
+      improvement_ref: B5
+  - source_ref: P7/friction/FR-01
+    source_pack: P7
+    source_path: friction.yaml
+    source_id: FR-01
+    source_title: bootstrap reports DEGRADED subsystems at every session start; receipt expires to "unknown"
+    source_record:
+      id: FR-01
+      title: bootstrap reports DEGRADED subsystems at every session start; receipt expires to "unknown"
+      impact: medium (uncertainty about what is actually wired; no observed functional loss this session)
+      frequency: every SessionStart (4/4); final start additionally "receipt expired (100469s old, ttl 86400s)"
+      detail: 'FACT: "claude bootstrap: degraded — degraded: shared_bootstrap, capabilities, memory, mcp, plugins" with settings/skills/rules
+        READY. Meanwhile Graphiti hydration (memory) and GitHub MCP (mcp) demonstrably worked. Whether DEGRADED is expected
+        for the claude_cloud surface: UNKNOWN — never diagnosed; the status line and observed behavior contradict each other,
+        which is itself the friction.
+
+        '
+  - source_ref: P8/friction/R-05
+    source_pack: P8
+    source_path: friction.yaml
+    source_id: R-05
+    source_title: Bootstrap degradation is reported but nothing re-runs the remediation
+    source_record:
+      id: R-05
+      rank: 5
+      title: Bootstrap degradation is reported but nothing re-runs the remediation
+      impact: medium
+      frequency: persistent
+      fact:
+        receipt_field:
+          remediation: bash /root/.cursor-governance/environment/agents/adapters/claude-code/install.sh
+        observed: The remediation string is carried in the receipt and printed in the banner, but the receipt remained expired
+          and DEGRADED across every session-start observed in this conversation.
+        hook_evidence:
+          command: grep -nE 'install.sh|bootstrap_agent_environment|verify_account_env' hooks/session_start_claude_governance.sh
+          result: only verify_account_env is referenced (line 289)
+      inference: INFERENCE (medium confidence) - the SessionStart hook verifies and reports but does not invoke install.sh,
+        so a degraded bootstrap persists until a human runs it. Confidence is medium because only one hook file was inspected;
+        the launcher l9_hook_exec.sh was not traced end to end.
+  - source_ref: P9/friction/FR-03
+    source_pack: P9
+    source_path: friction.yaml
+    source_id: FR-03
+    source_title: Bootstrap health must be read out of raw JSON because the banner is unusable
+    source_record:
+      id: FR-03
+      rank: 3
+      title: Bootstrap health must be read out of raw JSON because the banner is unusable
+      frequency: per_session
+      cost: An extra read and a manual TTL comparison before any statement about environment readiness can be trusted.
+      evidence:
+        banner: 'claude bootstrap: unknown - receipt expired (100520s old, ttl 86400s)'
+        what_was_needed: cat /root/.l9/claude/bootstrap-state.json to see settings READY, skills READY, rules READY, and four
+          DEGRADED components
+        complication: the JSON itself is 28h stale, so its own verdicts required independent probing (see F-07)
+      root_cause_ref: F-06
+      handled_by: Read the receipt, then re-probed each component independently.
+      improvements:
+      - I-BS-04
+  reconciliation_action: MERGE
+- id: CR-006
+  title: Shell cwd does not persist across command invocations
+  status: ACTIVE_ENVIRONMENT_CONSTRAINT
+  summary: The harness resets cwd between shell calls. This is documented behavior but becomes correctness friction when procedures
+    assume persistent cd state.
+  source_records:
+  - source_ref: P1/friction/FRICTION-07
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-07
+    source_title: Shell working directory does not persist across cd
+    source_record:
+      id: FRICTION-07
+      rank: 9
+      title: Shell working directory does not persist across cd
+      impact: medium
+      frequency: every-run
+      surface: environment
+      observed_verbatim: Shell cwd was reset to /home/user
+      occurrences_observed: 2
+      root_cause:
+        statement: Each Bash invocation starts from the primary working directory.
+        confidence: fact
+      observed_cost: Absolute paths required for every governance script call; a silent reset after cd is a correctness hazard
+        for any relative-path command that follows.
+      improvements: []
+      note: Documented behavior of the harness; recorded for operator awareness, not as a defect.
+  - source_ref: P3/friction/FRIC-01
+    source_pack: P3
+    source_path: friction.yaml
+    source_id: FRIC-01
+    source_title: Working directory does not persist between commands
+    source_record:
+      id: FRIC-01
+      rank: 1
+      title: Working directory does not persist between commands
+      impact: HIGH_NUISANCE
+      frequency:
+        observed: majority of tool invocations
+      evidence:
+      - observation: '''Shell cwd was reset to /home/user'' appended to the output of most commands'
+      cost: every command carries its own cd; a forgotten cd silently targets the wrong repo in a 9-repo workspace
+      workaround: absolute paths or an explicit cd in every invocation
+      improvement_ref: null
+      note: harness behaviour; no governance change proposed
+  reconciliation_action: MERGE
+- id: CR-007
+  title: One-time breakglass authority persists as standing configuration
+  status: ACTIVE_RECURRING
+  summary: A value explicitly described as one-time survives across sessions, making exceptional authority indistinguishable
+    from baseline policy.
+  source_records:
+  - source_ref: P1/friction/FRICTION-08
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-08
+    source_title: A one-time breakglass variable is permanently set
+    source_record:
+      id: FRICTION-08
+      rank: 10
+      title: A one-time breakglass variable is permanently set
+      impact: medium
+      frequency: every-session
+      surface: environment
+      variable: L9_PUBLISH_PATH_OVERRIDE
+      value: one-time breakglass authorized by user
+      sessions_present: 2
+      evidence: evidence/05-env.txt
+      root_cause:
+        statement: The value asserts single use; the environment carries it as standing configuration.
+        confidence: fact
+      observed_cost: A never-expiring breakglass is indistinguishable from normal configuration.
+      improvements:
+      - IMP-04
+  - source_ref: P6/friction/FR-4
+    source_pack: P6
+    source_path: friction.yaml
+    source_id: FR-4
+    source_title: Stale 'one-time' breakglass grant persists in account env
+    source_record:
+      id: FR-4
+      title: Stale 'one-time' breakglass grant persists in account env
+      severity: LM
+      frequency: standing
+      plane: env
+      facts:
+      - L9_PUBLISH_PATH_OVERRIDE='one-time breakglass authorized by user' present in live env
+      inferences:
+      - standing presence contradicts self-described one-time scope
+      improvement_refs:
+      - ENV-2
+  reconciliation_action: MERGE
+- id: CR-008
+  title: Interpreter and checker authority is fragmented across PATH, hooks, CI, and project envs
+  status: ACTIVE_RECURRING
+  summary: Multiple Python/checker versions and non-durable PYTHONPATH/PATH requirements create repeated setup cost and ambiguous
+    validation authority.
+  source_records:
+  - source_ref: P1/friction/FRICTION-13
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-13
+    source_title: Interpreter mandate rests on a premise that is false in this container
+    source_record:
+      id: FRICTION-13
+      rank: 12
+      title: Interpreter mandate rests on a premise that is false in this container
+      impact: low
+      frequency: every-run
+      surface: governance
+      rule: rules/03-graphiti-memory
+      rule_rationale_verbatim: system `python3` often lacks PyYAML
+      measured:
+        system_python:
+          version: 3.11.15
+          pyyaml: 6.0.1
+        governance_venv_python:
+          version: 3.12.3
+          pyyaml: 6.0.3
+      evidence: evidence/12-final.txt
+      root_cause:
+        statement: The mandate is correct (pinned interpreter, isolated dependencies) but is justified by a claim contradicted
+          by container state.
+        confidence: fact
+      observed_cost: None functionally; a rule justified by a false premise erodes over time.
+      improvements:
+      - IMP-17
+  - source_ref: P2/friction/FRIC-01
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-01
+    source_title: Three different ruff versions are reachable; the one on PATH is not the one CI uses
+    source_record:
+      id: FRIC-01
+      rank: 1
+      title: Three different ruff versions are reachable; the one on PATH is not the one CI uses
+      category: toolchain_drift
+      impact: correctness_hazard
+      frequency: continuous
+      observed:
+        system_on_path: ruff 0.15.8 (/root/.local/bin/ruff)
+        venv_pinned: ruff 0.16.0 (.venv, from pyproject [ci] + requirements-ci.txt)
+        pre_commit_rev: v0.15.5 (.pre-commit-config.yaml)
+        mypy_spread: system 1.19.1 vs pinned 2.3.0
+        pytest_spread: system 9.0.2 vs pinned 9.1.1
+      why_it_matters:
+      - '`ruff format` output differs between ruff releases. The gate this session had to fix (FAIL-05) was exactly a formatting
+        disagreement.'
+      - A contributor who types a bare `ruff format .` gets 0.15.8 and can produce a diff that CI's 0.16.0 rejects, or 'fix'
+        a file into a state CI dislikes.
+      - 'The repository''s own requirements-ci.txt comment already warns about this: ''real version drift even though ruff.toml
+        pins the *rule set*''.'
+      mitigation_used_this_session:
+        action: Every gate was invoked as `.venv/bin/python -m <tool>`, never as a bare tool name.
+        evidence: All 10 gate invocations in the Gate D block used the $P=.venv/bin/python prefix.
+      status: mitigated_by_convention_not_by_environment
+      inference:
+        claim: The pre-commit rev v0.15.5 is likely stale relative to the 0.16.0 pins.
+        basis: Version ordering only.
+        confidence: Not verified — ruff 0.15.5 was never executed here. See UNK-03.
+  - source_ref: P2/friction/FRIC-02
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-02
+    source_title: PYTHONPATH must be re-exported in every single shell invocation
+    source_record:
+      id: FRIC-02
+      rank: 2
+      title: PYTHONPATH must be re-exported in every single shell invocation
+      category: variable_loading
+      impact: repeated_manual_step
+      frequency: 18
+      frequency_basis: Count of Bash invocations in this session that began with `export PYTHONPATH="$PWD"`.
+      observed:
+        fresh_shell_value: PYTHONPATH=[<unset>]
+        harness_constraint: Shell state (env vars, functions) does not persist between Bash tool calls; working directory
+          does.
+        repo_mechanism: Makefile:29 exports it, but only for recipes run under make. No shell-level loader exists.
+      consequence:
+      - Any gate invoked without the prefix would import a different l9_ci (or fail), silently.
+      - '`python -m l9_ci manifest generate` is the most sensitive: it writes a tracked file.'
+      status: unresolved_in_environment
+      note: This is the closest thing in this session to a 'variable-load' concern. There is no script to critique — see FRIC-03.
+  - source_ref: P2/friction/FRIC-09
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-09
+    source_title: yamllint had to be installed ad hoc and unpinned
+    source_record:
+      id: FRIC-09
+      rank: 9
+      title: yamllint had to be installed ad hoc and unpinned
+      category: toolchain_drift
+      impact: one_time_cost
+      frequency: 1
+      observed:
+        command: .venv/bin/pip install -q yamllint
+        pinned_anywhere_in_pyproject_or_requirements_ci: false
+        pre_commit_declares: yamllint rev v1.38.0
+        installed_version_recorded: false
+        installed_version_recorded_reason: Version was not captured at install time. Not reconstructed here.
+      consequence: The yamllint findings reported this session came from an unrecorded version, not necessarily v1.38.0.
+      status: acknowledged_limitation
+  - source_ref: P3/friction/FRIC-03
+    source_pack: P3
+    source_path: friction.yaml
+    source_id: FRIC-03
+    source_title: Three ruff versions across PATH, pre-commit pin, and CI
+    source_record:
+      id: FRIC-03
+      rank: 3
+      title: Three ruff versions across PATH, pre-commit pin, and CI
+      impact: MED
+      frequency:
+        verification_rounds: 3
+      evidence:
+      - source: PATH
+        command: ruff --version
+        output: ruff 0.15.8
+      - source: pre-commit
+        file: .pre-commit-config.yaml
+        output: 'rev: v0.15.5'
+      - source: CI
+        file: job log
+        output: ruff-0.15.12
+      cost: local verification against one ruff proves nothing about the gate that runs; 0.15.5 installed to a scratch prefix
+        to confirm formatting
+      workaround: verified against 0.15.5 and 0.15.8; CI at 0.15.12 confirmed clean
+      improvement_ref: null
+  - source_ref: P3/friction/FRIC-04
+    source_pack: P3
+    source_path: friction.yaml
+    source_id: FRIC-04
+    source_title: UV_PYTHON unset although the skill contract requires it
+    source_record:
+      id: FRIC-04
+      rank: 4
+      title: UV_PYTHON unset although the skill contract requires it
+      impact: MED
+      frequency:
+        contract_references: 2
+      evidence:
+      - command: env | grep UV_PYTHON
+        output: (absent)
+      - contract: l9-pr-remediation Hot Path step 0 fingerprints UV_PYTHON as uv-managed native CPython; step 5 prescribes
+          'UV_PYTHON=<native> make pr-check'
+      - command: env | grep UV_
+        output: UV_NATIVE_TLS=true
+      cost: interpreter resolved by hand three times; compounds FAIL-04 and FAIL-05
+      improvement_ref: A2
+  - source_ref: P5/friction/FR-003
+    source_pack: P5
+    source_path: friction.yaml
+    source_id: FR-003
+    source_title: Local lint/type-check uses unpinned tools
+    source_record:
+      id: FR-003
+      rank: 3
+      title: Local lint/type-check uses unpinned tools
+      impact: high
+      frequency: every lint run
+      status: fact
+      root_cause: Makefile lint targets call bare ruff/mypy; PATH resolves to /root/.local/bin
+      detail: mypy on PATH is 1.19.1 against a 2.3.0 pin - a major version behind.
+      observed_workaround: Session invoked .venv/bin/ruff explicitly with --no-cache.
+      evidence: Makefile:52-54,86-88; version probe
+  - source_ref: P7/friction/FR-04
+    source_pack: P7
+    source_path: friction.yaml
+    source_id: FR-04
+    source_title: system python3 lacks the test toolchain; the repo venv is mandatory
+    source_record:
+      id: FR-04
+      title: system python3 lacks the test toolchain; the repo venv is mandatory
+      impact: low-medium (one failed probe, then a permanent path convention)
+      frequency: discovered once; affected every subsequent test command
+      detail: 'FACT: `python3 -c "import pytest"` fails (ModuleNotFoundError) on Python 3.11.15; /home/user/Cursor-Governance/.venv/bin/python3
+        is Python 3.12.3 with pytest 9.1.1; Makefile already pins PYTHON to the venv. Every ad-hoc command must remember the
+        venv prefix.
+
+        '
+  - source_ref: P8/friction/R-02
+    source_pack: P8
+    source_path: friction.yaml
+    source_id: R-02
+    source_title: Interpreter on PATH is not the interpreter the project runs
+    source_record:
+      id: R-02
+      rank: 2
+      title: Interpreter on PATH is not the interpreter the project runs
+      impact: medium
+      frequency: persistent
+      fact:
+        path_python:
+          version: 3.11.15
+          command: python3 -V
+        project_python:
+          version: 3.12.3
+          command: uv run python -V
+          repo: l9-constellation-topology
+      cost_observed: Every project command had to be prefixed with `uv run`. A bare python3 invocation silently targets a
+        different interpreter with a different dependency set.
+      corroborating_doctrine: rules/03-graphiti-memory states the governance CLI must never be called with bare python3 because
+        the system interpreter lacks PyYAML. FACT that the same hazard shape exists here.
+  - source_ref: P9/friction/FR-05
+    source_pack: P9
+    source_path: friction.yaml
+    source_id: FR-05
+    source_title: Every Makefile or test invocation needs an explicit interpreter or PATH prefix
+    source_record:
+      id: FR-05
+      rank: 5
+      title: Every Makefile or test invocation needs an explicit interpreter or PATH prefix
+      frequency: per_task
+      cost: A prefix on each invocation; a forgotten prefix silently selects the wrong interpreter.
+      evidence:
+        default: python3 --version -> Python 3.11.15
+        required: 'AGENTS.md: Python 3.12+'
+        venv: /root/.cache/pypoetry/virtualenvs/l9-engine-6JECpu72-py3.12, outside the repository
+        in_repo_venv: absent - ls -d Cognitive.Engine.Graphs/.venv -> No such file or directory
+        makefile_calls: Makefile lines 106 and 230 invoke bare python3
+      root_cause_ref: F-15
+      handled_by: PATH=<venv>/bin:$PATH prefix on make invocations.
+      improvements:
+      - I-EL-05
+  reconciliation_action: MERGE
+- id: CR-009
+  title: Destructive-path guardrails require fully literal targets
+  status: ACTIVE_RECURRING
+  summary: The guardrail evaluates command text and rejects same-line variable expansions even when the runtime value would
+    be scoped. This is a usability constraint around an intentionally fail-closed boundary.
+  source_records:
+  - source_ref: P1/friction/FRICTION-12
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-12
+    source_title: Destructive-command guardrail rejects a set variable in an rm -rf target
+    source_record:
+      id: FRICTION-12
+      rank: 13
+      title: Destructive-command guardrail rejects a set variable in an rm -rf target
+      impact: low
+      frequency: once-observed
+      surface: governance
+      command: rm -rf "$PACK" && mkdir -p "$PACK"
+      denial_verbatim: 'git guardrails (l9-context-sensitive-git-guardrails): target ''$PACK'' contains an unresolved or empty
+        expansion — an empty variable turns a scoped delete into a delete of its parent. Resolve it, or set L9_GIT_DESTRUCTIVE_AUTHORIZED=<reason>.'
+      actual_state: $PACK was assigned on the preceding line of the same compound command.
+      root_cause:
+        statement: The guardrail evaluates command text, not runtime variable state.
+        confidence: fact
+      assessment: correct_fail_closed
+      rationale: The prevented failure mode (empty expansion deleting a parent directory) is unrecoverable; the false-positive
+        cost is one retry with a literal path.
+      improvements: []
+      recommendation: no change
+  - source_ref: P9/friction/FR-07
+    source_pack: P9
+    source_path: friction.yaml
+    source_id: FR-07
+    source_title: Destructive-verb guardrail requires fully literal paths, rejecting same-line variable assignment
+    source_record:
+      id: FR-07
+      rank: 7
+      title: Destructive-verb guardrail requires fully literal paths, rejecting same-line variable assignment
+      frequency: intermittent
+      cost: One retry per attempt, plus rewriting the command with literal paths.
+      evidence:
+        command: SP=<path>; rm -rf "$SP/exp-pack2"; mkdir -p "$SP/exp-pack2"; cd ...
+        response: 'git guardrails (l9-context-sensitive-git-guardrails): target ''$SP/exp-pack2'' contains an unresolved or
+          empty expansion - an empty variable turns a scoped delete into a delete of its parent.'
+        assessment: correct fail-closed behaviour per rule 54; the guardrail parses statically and cannot observe a variable
+          assigned earlier in the same line
+      root_cause_ref: F-14
+      handled_by: Rewrote with literal paths; then dropped the rm entirely when the whole line was denied.
+      improvements:
+      - I-BS-10
+  reconciliation_action: MERGE
+- id: CR-010
+  title: Multiple governance checkouts create wrong-tree risk
+  status: ACTIVE_RECURRING
+  summary: Two governance clones at different revisions coexist, making it easy to inspect or edit a non-authoritative tree.
+  source_records:
+  - source_ref: P7/friction/FR-03
+    source_pack: P7
+    source_path: friction.yaml
+    source_id: FR-03
+    source_title: two governance clones with different roles invite wrong-tree edits
+    source_record:
+      id: FR-03
+      title: two governance clones with different roles invite wrong-tree edits
+      impact: medium (one actual mis-edit occurred; caught and reverted within a minute)
+      frequency: 1 incident; standing hazard all session
+      detail: 'FACT: /root/.cursor-governance is the SSOT clone (hook-managed, on main); /home/user/Cursor-Governance is the
+        working clone (PR branch). One edit to skills/l9-bounded-autonomy/SKILL.md landed in the SSOT clone by mistake (file
+        path chosen from an earlier Read of that clone), was detected via `git status` there, reverted with `git checkout
+        --`, and reapplied in the working clone.
+
+        '
+  - source_ref: P8/friction/R-01
+    source_pack: P8
+    source_path: friction.yaml
+    source_id: R-01
+    source_title: Two governance clones at different revisions in one workspace
+    source_record:
+      id: R-01
+      rank: 1
+      title: Two governance clones at different revisions in one workspace
+      impact: high
+      frequency: persistent
+      fact:
+        ssot:
+          path: /root/.cursor-governance
+          head: 829f45ec0ac8e1250878e4d8e96a0643ae7412c9
+        duplicate:
+          path: /home/user/Cursor-Governance
+          head: 84d06e3
+        command: git -C <path> rev-parse HEAD
+        exit_code: 0
+      why_it_matters: FACT - governance doctrine (rules/06-governance-ssot-paths) names $HOME/.cursor-governance as the sole
+        local governance root. A second clone of the same repository at a different revision is present under the workspace,
+        and 84d06e3 happens to be the exact revision the expired bootstrap receipt pins.
+      cost_observed: Every governance path had to be written as an absolute /root/... path to be certain which clone was being
+        read.
+      classification: stale_duplicate_path
+  - source_ref: P9/friction/FR-04
+    source_pack: P9
+    source_path: friction.yaml
+    source_id: FR-04
+    source_title: Two governance checkouts at different revisions
+    source_record:
+      id: FR-04
+      rank: 4
+      title: Two governance checkouts at different revisions
+      frequency: per_session
+      cost: Every governance citation needs a decision about which tree is authoritative before it can be quoted.
+      evidence:
+        ssot: /root/.cursor-governance at 829f45ec (gov-refresh.json, state fresh)
+        consumer: /home/user/Cursor-Governance at 84d06e3
+        note: 84d06e3 is also the governance_revision pinned inside the stale bootstrap receipt
+        rule_context: 06-governance-ssot-paths defines $HOME/.cursor-governance as the sole local governance root; $HOME is
+          /root here while the workspace is /home/user
+      root_cause_ref: F-06
+      handled_by: Treated /root/.cursor-governance as SSOT for rule text and cited file paths explicitly.
+      improvements:
+      - I-BS-13
+  reconciliation_action: MERGE
+- id: CR-011
+  title: Queued notifications can arrive after their state has been superseded
+  status: ACTIVE_RECURRING
+  summary: Delayed notification/check-in delivery can present obsolete work as current without an obvious age signal.
+  source_records:
+  - source_ref: P8/friction/R-08
+    source_pack: P8
+    source_path: friction.yaml
+    source_id: R-08
+    source_title: Notification wake-ups repeatedly delivered already-superseded state
+    source_record:
+      id: R-08
+      rank: 8
+      title: Notification wake-ups repeatedly delivered already-superseded state
+      impact: low
+      frequency: 9
+      fact:
+        pattern: check_suite.completed and issue_comment events arrived naming head SHAs that had already been replaced by
+          a newer push (observed for 0392b74, d1c6ee8, fc01928, f996558, cc2e58c, 77acfa5, 30020aa, b280201).
+        cost: each required an API re-check to establish whether the event was current
+      note: FACT - the harness comment on those events explicitly says to verify the PR's overall state before acting, so
+        the re-check is the documented behaviour rather than a defect. Recorded because it was a recurring cost.
+  - source_ref: P8/friction/R-09
+    source_pack: P8
+    source_path: friction.yaml
+    source_id: R-09
+    source_title: Stale scheduled check-in delivered an out-of-date work list
+    source_record:
+      id: R-09
+      rank: 9
+      title: Stale scheduled check-in delivered an out-of-date work list
+      impact: low
+      frequency: 1
+      fact:
+        trigger_id: trig_01GtNiLQZ6NL9mc3VB3WAEiF
+        fired_at: '2026-08-24T02:03:31Z'
+        content_pinned_head: 77acfa5
+        actual_head_at_fire: b280201
+        consequence: The check-in listed as "REMAINING WORK" items that had already been completed and pushed. It also instructed
+          reporting the contract as mid-execution "if the session is gone", which did not apply.
+      mitigation_applied: Later check-ins were re-armed with refreshed state and an explicit INTERVAL NOTE; the interval was
+        widened 1h -> 3h -> 6h as checks stayed quiet.
+  - source_ref: P9/friction/FR-06
+    source_pack: P9
+    source_path: friction.yaml
+    source_id: FR-06
+    source_title: Scheduled check-in delivered roughly two hours late, after the work it asked for was already done
+    source_record:
+      id: FR-06
+      rank: 6
+      title: Scheduled check-in delivered roughly two hours late, after the work it asked for was already done
+      frequency: intermittent
+      cost: A duplicate verification pass and a reconciliation of which observation was current.
+      evidence:
+        queued_at: '2026-08-24T23:35:59Z'
+        work_actually_performed_at: 2026-08-24T23:39Z (same verification, run ahead of the notification)
+        delivered_at: after the 2026-08-25T01:33:27Z container restart, read at ~01:34Z
+        note: the delay spans the restart; the trigger itself fired on time
+      root_cause:
+        type: inference
+        statement: Queued notifications are held until the session is next invoked; the restart extended that gap.
+        grounded_in: the queued_at timestamp, the restart time, and the delivery time
+      handled_by: Compared timestamps, confirmed the earlier pass was newer, and did not redo the work.
+      improvements:
+      - I-BS-14
+  reconciliation_action: MERGE
+- id: CR-012
+  title: Always-on rules can require capabilities the active surface does not expose
+  status: ACTIVE_RECURRING
+  summary: The projected rule corpus can mandate unavailable MCPs or mechanisms, leaving the rule in force but its prescribed
+    execution path impossible.
+  source_records:
+  - source_ref: P4/friction/FR-05
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-05
+    source_title: A mandatory documentation rule could not be satisfied because its MCP server was not exposed
+    source_record:
+      id: FR-05
+      rank: 5
+      title: A mandatory documentation rule could not be satisfied because its MCP server was not exposed
+      category: mcp_and_rules
+      measured:
+        declared_mcp_servers: 6
+        exposed_to_agent: 2
+      evidence:
+      - '/home/user/.mcp.json declares: Context7, GitGuardian, GitHub, Playwright, Semgrep, graphiti-memory'
+      - 'rule 22-context7-auto-invoke: "Mandatory - call Context7 before first implementation ... Do not treat a missing allow-list
+        entry as permission to skip."'
+      - ToolSearch "context7 resolve-library-id query-docs" returned Vercel doc search, DesignSync, WebSearch - no context7
+        tool
+      cost_description: Work in this session touched Node built-ins, an HTTP client contract, PDF and OOXML container formats.
+        Rule 22 requires resolve-library-id followed by query-docs before writing such code. No such tool existed on this
+        surface, so the rule was unsatisfiable rather than skipped by choice.
+      root_cause:
+        classification: environment_gap
+        statement: The workspace declares six MCP servers; two families of tools were actually offered, and neither was Context7.
+          The rule text anticipates a missing allow-list entry but not a missing server.
+      unknown:
+      - Whether Context7 failed to start, was filtered by this surface, or was never launched for cloud sessions.
+  - source_ref: P9/friction/FR-01
+    source_pack: P9
+    source_path: friction.yaml
+    source_id: FR-01
+    source_title: A mandatory global rule requires a tool this surface cannot expose
+    source_record:
+      id: FR-01
+      rank: 1
+      title: A mandatory global rule requires a tool this surface cannot expose
+      frequency: per_task
+      cost: Every implementation task begins with an unsatisfiable precondition that must be reasoned around rather than followed.
+      evidence:
+        rule: '22-context7-auto-invoke: ''Mandatory - call Context7 before first implementation ... Do not wait for the user
+          to say use context7''; ''Do not treat a missing allow-list entry as permission to skip.'''
+        reality: claude mcp list shows the Context7 server Skipped for a missing type key (F-03); no mcp__context7__* tool
+          existed at any point.
+        secondary: settings.json PreToolUse matcher Skill|mcp__context7__.*|mcp__plugin_context7_context7__.* has two dead
+          arms for the same reason.
+      root_cause_ref: F-03
+      handled_by: Proceeded without Context7 and recorded the gap rather than silently skipping the rule.
+      improvements:
+      - I-BS-03
+      - I-BS-12
+  - source_ref: P9/friction/FR-08
+    source_pack: P9
+    source_path: friction.yaml
+    source_id: FR-08
+    source_title: Always-on rule corpus is large relative to what the surface can actually do
+    source_record:
+      id: FR-08
+      rank: 8
+      title: Always-on rule corpus is large relative to what the surface can actually do
+      frequency: per_session
+      cost: Reconciling rules that name unavailable tooling against what the environment provides.
+      evidence:
+        loaded_rules: 24 generated rule files mounted at .claude/rules via symlink
+        examples_of_unavailable_dependencies:
+        - 22-context7-auto-invoke requires an MCP server that never parses (F-03)
+        - 49-shared-worktree-isolation and 88-l4-local-autonomy publish escape variables that cannot reach the gate (F-05)
+        - 48-make-pr-remediation and the surface profile require make pr, absent from the repository (F-10)
+        - 62-github-openclaw-authority describes PAT resolution while GH_TOKEN is literally 'proxy-injected'
+      root_cause:
+        type: inference
+        statement: The rule corpus is authored for a surface with a fully wired capability plane; this session had four of
+          eight bootstrap components DEGRADED.
+        grounded_in: the four rule/reality pairs cited above
+      handled_by: Followed each rule's intent, and recorded each unmet precondition instead of silently ignoring it.
+      improvements:
+      - I-BS-12
+  reconciliation_action: MERGE
+- id: CR-013
+  title: Generated artifacts and clean-tree gates create regeneration churn
+  status: ACTIVE_RECURRING
+  summary: Tracked generated output and clean-tree-before-validate policies create regenerate/commit/revalidate loops and
+    conflict risk.
+  source_records:
+  - source_ref: P2/friction/FRIC-11
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-11
+    source_title: Generated artifacts are tracked in git, making merges and clean-tree checks fragile
+    source_record:
+      id: FRIC-11
+      rank: 11
+      title: Generated artifacts are tracked in git, making merges and clean-tree checks fragile
+      category: repo_design
+      impact: one_time_cost
+      frequency: 3
+      observed:
+        tracked_generated_file: MANIFEST.md
+        untracked_generated_file: VALIDATION_REPORT.json (.gitignore:25)
+        occurrences:
+        - Merge conflict on MANIFEST.md (FAIL-08)
+        - MANIFEST.md regeneration required on each of the three branches
+        - ci.yml gate 8 is literally `git diff --exit-code MANIFEST.md`
+        asymmetry_note: VALIDATION_REPORT.json embeds the HEAD commit sha, so it can never be current for the commit that
+          contains it. It is gitignored. MANIFEST.md has no such property and is tracked.
+      status: inherent_to_repo_design
+  - source_ref: P4/friction/FR-01
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-01
+    source_title: Regenerate-then-revalidate loop on committed dist and the architecture manifest
+    source_record:
+      id: FR-01
+      rank: 1
+      title: Regenerate-then-revalidate loop on committed dist and the architecture manifest
+      category: bootstrap_and_repo_gates
+      measured:
+        architecture_manifest_is_stale_results: 8
+        dist_integrity_failed_results: 8
+        npm_run_manifest_update_invocations: 32
+        npm_run_build_invocations: 29
+        npm_run_validate_invocations: 53
+      evidence:
+      - 'gate output: "architecture manifest is stale; run npm run manifest:update"'
+      - 'gate output: "dist-integrity: FAILED: committed dist differs from isolated source build"'
+      - 'gate output: "dist-integrity: FAILED: dist is dirty before validation"'
+      cost_description: Each source change required build, manifest regeneration, staging and a full re-validate. `npm run
+        validate` was observed at 61-62 s wall clock, so the sixteen rejections above each cost roughly a minute plus the
+        rebuild.
+      root_cause:
+        classification: repo_design_consequence
+        statement: The repository commits its own build output and a deterministic manifest that hashes tracked files, and
+          validates both. Any edit therefore has three artefacts to keep in step, and the gate only reports the first one
+          that is out of step, so the loop is serial.
+      already_mitigated_by: the gate reports the exact repair command in its failure text
+      residual: the loop itself, not the message
+  - source_ref: P8/friction/R-03
+    source_pack: P8
+    source_path: friction.yaml
+    source_id: R-03
+    source_title: The validate gate requires an already-clean tree, forcing commit-before-validate
+    source_record:
+      id: R-03
+      rank: 3
+      title: The validate gate requires an already-clean tree, forcing commit-before-validate
+      impact: medium
+      frequency: 6
+      fact:
+        command: make validate
+        observed_exit_when_dirty: 2
+        failing_step: git-integrity
+        working_sequence: stage -> commit -> regenerate GIT_TREE_MANIFEST.json -> commit -> make validate
+      cost_observed: Validation could not be used as a pre-commit check. Each cycle became two commits (content, then manifest
+        refresh) before the gate could run at all.
+      note: INFERENCE - this is a deliberate design (the manifest hashes the committed tree). The friction is the ordering
+        it imposes, not the check itself.
+  reconciliation_action: MERGE
+- id: CR-014
+  title: Variable-loading behavior is implicit, shell-sensitive, or multiply authoritative
+  status: ACTIVE_RECURRING
+  summary: Resolver scripts, interactive shell state, and multiple env authority files make effective values hard to reproduce
+    and easy to lose in non-interactive commands.
+  source_records:
+  - source_ref: P4/friction/FR-09
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-09
+    source_title: Governance path resolution requires a call, not a source
+    source_record:
+      id: FR-09
+      rank: 9
+      title: Governance path resolution requires a call, not a source
+      category: env_loader
+      measured:
+        sourced_only: GOV_ROOT unset, rc 0
+        sourced_and_called: GOV_ROOT=/root/.cursor-governance, rc 0
+      evidence:
+      - bash -c ". resolve_governance_paths.sh; echo ${GOV_ROOT:-<unset>}" -> <unset>, source_rc 0
+      - bash -c ". resolve_governance_paths.sh; resolve_governance_paths; echo $GOV_ROOT" -> /root/.cursor-governance
+      cost_description: Rule 06 says scripts "source resolve_governance_paths.sh and use the exported $GOV_ROOT". Sourcing
+        alone exports nothing and returns 0, so a consumer that follows the rule literally gets an empty variable and no error.
+        Establishing this took four probes during this audit.
+      root_cause:
+        classification: documentation_gap
+        statement: The file is a function library. The rule describes it as if sourcing had the side effect. The behaviour
+          is correct; the instruction is incomplete.
+      correction_note: 'An earlier hypothesis during this audit - that the resolver fails when L9_GOVERNANCE_DIR is absent
+        - was tested and disproved: it returns the same unset result with the variable set, because nothing had called the
+        function.'
+  - source_ref: P4/friction/FR-10
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-10
+    source_title: Session-scoped variables are absent from non-interactive shells
+    source_record:
+      id: FR-10
+      rank: 10
+      title: Session-scoped variables are absent from non-interactive shells
+      category: env_loader
+      measured:
+        keys_declared_in_cloud_session_env: 4
+        keys_live_in_agent_shell: 2
+      evidence:
+      - /root/.bashrc:6 -> `[ -z "$PS1" ] && return`
+      - /root/.bashrc:110 and /root/.profile:12 source $HOME/.l9/cloud-session.env
+      - 'bash -c: L9_GOVERNANCE_DIR=<unset>; bash -lc: L9_GOVERNANCE_DIR=/root/.cursor-governance'
+      cost_description: L9_GOVERNANCE_DIR and L9_STUB_REVISION are unavailable to the shell the agent actually uses. No failure
+        was traced to this in the session, because the code that needs them calls l9_load_session_env internally.
+      root_cause:
+        classification: env_loader_defect
+        statement: The loader is wired into interactive and login startup only. The agent's Bash tool runs non-interactive,
+          which returns from .bashrc at line 6, before the source at line 110.
+  - source_ref: P5/friction/FR-005
+    source_pack: P5
+    source_path: friction.yaml
+    source_id: FR-005
+    source_title: Five competing environment-variable authorities
+    source_record:
+      id: FR-005
+      rank: 5
+      title: Five competing environment-variable authorities
+      impact: high
+      frequency: continuous
+      status: fact
+      root_cause: Only .env.local.example matches the loader; .env.required has zero consumers
+      detail:
+        env_required_names:
+        - APP_NAME
+        - APP_API_KEY
+        - APP_PORT
+        of_which_are_Settings_fields: []
+        silently_discarded_by: extra="ignore" (app/core/config.py:97)
+        env_template_wrong_value: APP_MODULE=engine.main:app; this repo's app is app.main
+      evidence: grep for .env.required consumers returned only bootstrap.sh self-references
+  - source_ref: P6/friction/FR-7
+    source_pack: P6
+    source_path: friction.yaml
+    source_id: FR-7
+    source_title: Resolver source-without-call yields empty vars silently
+    source_record:
+      id: FR-7
+      title: Resolver source-without-call yields empty vars silently
+      severity: L
+      frequency: once_observed_self_inflicted
+      plane: loader
+      facts:
+      - source resolve_governance_paths.sh; echo $GOV_ROOT -> empty, rc 0
+      - source ... && resolve_governance_paths -> rc 0, GOV_ROOT=/root/.cursor-governance
+      improvement_refs:
+      - LOADER-2
+  reconciliation_action: MERGE
+- id: CR-015
+  title: Local validation does not consistently mirror blocking CI
+  status: ACTIVE_RECURRING
+  summary: Hooks may be absent, local checker lists incomplete, or service-backed integration tests unavailable, so local
+    green is not equivalent to merge-ready green.
+  source_records:
+  - source_ref: P2/friction/FRIC-06
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-06
+    source_title: No git hooks installed, so the repository's fail-closed push gate never engaged
+    source_record:
+      id: FRIC-06
+      rank: 6
+      title: No git hooks installed, so the repository's fail-closed push gate never engaged
+      category: bootstrap
+      impact: correctness_hazard
+      frequency: 1
+      observed:
+        hooks_dir: .git/hooks
+        active_hooks: none (only .sample files)
+        pre_commit_binary: ABSENT
+        repo_intent: '.pre-commit-config.yaml sets default_install_hook_types: [pre-commit, pre-push]; Makefile `push` target
+          routes through `check`; a `l9-make-check` local hook exists.'
+      consequence:
+      - Three commits were created and pushed this session with zero automatic enforcement.
+      - Correctness rested entirely on manually invoking the 10-gate list. That worked, but it was a convention, not a guardrail.
+      status: unresolved_in_environment
+      unknown_ref: UNK-02
+  - source_ref: P2/friction/FRIC-08
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-08
+    source_title: Four local checkers exist that the ci.yml gate list does not run
+    source_record:
+      id: FRIC-08
+      rank: 8
+      title: Four local checkers exist that the ci.yml gate list does not run
+      category: gate_discoverability
+      impact: one_time_cost
+      frequency: 1
+      observed:
+        ci_yml_gates:
+        - compileall
+        - ruff check
+        - ruff format --check
+        - mypy
+        - pytest --cov
+        - gate-evaluator 100%
+        - generate_validation_report
+        - manifest currency
+        additional_checkers_found:
+        - lint/check_action_pins.py
+        - lint/check_governance_json.py
+        - lint/yamllint-infra.yml
+        - lint/yamllint-data.yml
+        how_discovered: Not from ci.yml. Surfaced from a review comment naming check_action_pins.py, then confirmed by ls
+          lint/.
+      consequence:
+      - Gate discovery from .github/workflows/*.yml alone was incomplete. Two of the checks that gated this work live in lint/
+        and run via other workflows and pre-commit.
+      status: worked_around
+      workaround: Both were added to the local gate list and run explicitly (gates 9 and 10).
+  - source_ref: P5/friction/FR-001
+    source_pack: P5
+    source_path: friction.yaml
+    source_id: FR-001
+    source_title: No local CI parity path
+    source_record:
+      id: FR-001
+      rank: 1
+      title: No local CI parity path
+      impact: critical
+      frequency: every verification cycle
+      status: fact
+      root_cause: local_pr_pipeline/pr_pipeline.sh absent while 10 Makefile targets invoke it
+      observed_workaround: Gate commands were hand-assembled and run directly (.venv/bin/ruff, .venv/bin/python -m pytest).
+      evidence: exit=127; Makefile:129-156
+  - source_ref: P9/friction/FR-09
+    source_pack: P9
+    source_path: friction.yaml
+    source_id: FR-09
+    source_title: Integration test suite depends on Docker-backed testcontainers, so local proof is partial
+    source_record:
+      id: FR-09
+      rank: 9
+      title: Integration test suite depends on Docker-backed testcontainers, so local proof is partial
+      frequency: per_task
+      cost: Test evidence had to be split into what runs locally and what cannot, then compared against a base tree to prove
+        pre-existing failures.
+      evidence:
+        structure: tests/integration/ uses testcontainers-neo4j per AGENTS.md
+        observed_earlier: 25 collection errors without a running Neo4j container
+        method_used: extracted the base tree with git archive | tar -x and diffed the error sets to prove they were byte-identical
+          and pre-existing
+      root_cause:
+        type: fact
+        statement: Integration coverage requires a live Neo4j container; the harness provides docker 29.3.1 but no pre-started
+          service.
+      handled_by: Base-tree differential comparison to separate pre-existing failures from regressions.
+      improvements:
+      - I-EL-07
+  reconciliation_action: MERGE
+- id: CR-016
+  title: Wait and gate latency consume operator cycles
+  status: ACTIVE_RECURRING
+  summary: Foreground waits may be blocked and first-run gates can be slow, creating repeated polling or harness-specific
+    workarounds.
+  source_records:
+  - source_ref: P2/friction/FRIC-10
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-10
+    source_title: Foreground sleep is blocked, so waiting on CI required a background task
+    source_record:
+      id: FRIC-10
+      rank: 10
+      title: Foreground sleep is blocked, so waiting on CI required a background task
+      category: agent_tooling
+      impact: one_time_cost
+      frequency: 2
+      observed:
+        constraint: 'Harness: ''Foreground `sleep` is blocked; use Monitor with an until-loop to wait on a condition.'''
+        monitor_unusable_reason: Monitor executes bash. The GitHub state needed was only reachable through mcp__github__*
+          tools, which bash cannot call. No gh CLI (see FRIC-04) meant no shell-native poll was possible.
+        workaround: Bash `sleep N` with run_in_background:true, then re-query via MCP, then TaskStop to suppress the redundant
+          notification.
+        occurrences:
+        - task bj6uz3vhu (sleep 90)
+        - task bq6hs847c (sleep 100)
+      status: worked_around
+  - source_ref: P4/friction/FR-02
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-02
+    source_title: Aggregate gate wall-clock dominates the edit cycle
+    source_record:
+      id: FR-02
+      rank: 2
+      title: Aggregate gate wall-clock dominates the edit cycle
+      category: tooling
+      measured:
+        npm_run_validate_invocations: 53
+        npx_vitest_run_invocations: 176
+        observed_validate_duration_s: 61-62
+        observed_full_suite_duration_s: 49-62
+        slowest_test_files_s:
+          tests/corpus_scale_incremental.test.ts: 47-62
+          tests/corpus_resume_scale.test.ts: 36-48
+          tests/corpus_scale.test.ts: 27-37
+      evidence:
+      - Vitest summary lines emitted by the runs themselves, e.g. 'Duration 62.01s', 'Duration 49.27s'
+      - '''tests/corpus_scale_incremental.test.ts (1 test) 61839ms'' before the fixture was trimmed'
+      cost_description: The single largest scale file was measured at 61.8 s, above the 60 s per-file RPC ceiling this repository
+        has previously hit. Trimming the generated fixture body brought it to 47 s, which is headroom rather than safety.
+      root_cause:
+        classification: workload_characteristic
+        statement: Scale qualification deliberately scans ten thousand artifacts. The cost is intended; the risk is that it
+          sits close to a harness timeout that is not configurable from the repository's vitest config.
+      unknown:
+      - Whether the 60 s per-file RPC ceiling is configurable on this surface.
+  - source_ref: P7/friction/FR-06
+    source_pack: P7
+    source_path: friction.yaml
+    source_id: FR-06
+    source_title: waiting on long-running commands requires specific harness patterns
+    source_record:
+      id: FR-06
+      title: waiting on long-running commands requires specific harness patterns
+      impact: low-medium (three separate adjustments mid-session)
+      frequency: 3 events
+      detail: 'FACT: (1) `make pr-check 2>&1 | tail` in background produced an empty output file until completion (tail buffers),
+        hiding progress; (2) foreground `sleep 90; tail` was blocked by the harness with an instruction to use Monitor/until-loops;
+        (3) the Monitor tool schema had to be loaded via ToolSearch before first use. Workable, but each was a detour discovered
+        by hitting the wall.
+
+        '
+  - source_ref: P7/friction/FR-07
+    source_pack: P7
+    source_path: friction.yaml
+    source_id: FR-07
+    source_title: first-run gate latency is high; receipt reuse then makes it instant
+    source_record:
+      id: FR-07
+      title: first-run gate latency is high; receipt reuse then makes it instant
+      impact: low (cost paid once per changed tree)
+      frequency: 2 full gate runs, 1 receipt-reuse run
+      detail: 'FACT: full `make pr-check` ran ~6 minutes (scoped pytest 1619+ tests, security scans, wiring checks); on unchanged
+        tree `make pr` printed "OK: gate receipt matches unchanged state — skipping full validation" and proceeded immediately.
+        Controller suite alone: 140-186s; PE smoke: 43-56s; conformance: ~180s.
+
+        '
+  reconciliation_action: MERGE
+- id: CR-100
+  title: Bootstrap residue is gitignored in only some repos
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    statement: The stanza was authored once, in one repo, and never propagated.
+    confidence: fact
+  source_records:
+  - source_ref: P1/friction/FRICTION-02
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-02
+    source_title: Bootstrap residue is gitignored in only some repos
+    source_record:
+      id: FRICTION-02
+      rank: 2
+      title: Bootstrap residue is gitignored in only some repos
+      impact: high
+      frequency: per-repo
+      surface: bootstrap
+      evidence: evidence/09-ignore.txt
+      measurements:
+        repos_total: 10
+        repos_with_untracked_wiring: 8
+        repos_clean: 2
+        clean_repos:
+        - l9-meta-injector
+        - org-github-defaults
+        clean_repo_reason:
+          l9-meta-injector: .gitignore:45,48 already covers the pattern
+          org-github-defaults: fresh clone; carries .l9 receipts instead
+        l9_ignored_in:
+        - LLM-Router
+        - SEO-Bot
+        - Website-Bot
+        - l9-meta-injector
+        l9_not_ignored_in:
+        - Cognitive.Engine.Graphs
+        - l9-ci-core
+        - l9-ci-sdk
+        - l9-cognitive-runtime
+        - l9-graphiti-memory
+        - org-github-defaults
+      existing_fix_location: /home/user/l9-meta-injector/.gitignore
+      existing_fix_lines:
+      - 45
+      - 48
+      existing_fix_stanza:
+      - .claude/hooks/
+      - .claude/rules
+      - .claude/skills/
+      - .mcp.json
+      existing_fix_rationale_verbatim: 'Machine-local: the hooks carry absolute $HOME paths and `.claude/rules` is a symlink
+        into the governance clone, so none of it is portable to another checkout. `.claude/settings.json` is hand-authored
+        repository content and stays tracked. `.claude/rules` is deliberately written without a trailing slash: a trailing-slash
+        pattern does not match a symlink.'
+      root_cause:
+        statement: The stanza was authored once, in one repo, and never propagated.
+        confidence: fact
+      improvements:
+      - IMP-06
+      - IMP-07
+  reconciliation_action: KEEP
+- id: CR-101
+  title: L4 release receipt names a PR template path absent from the released repo
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    statement: The field is resolved against the governance clone, not the released repo.
+    confidence: inference
+  source_records:
+  - source_ref: P1/friction/FRICTION-05
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-05
+    source_title: L4 release receipt names a PR template path absent from the released repo
+    source_record:
+      id: FRICTION-05
+      rank: 5
+      title: L4 release receipt names a PR template path absent from the released repo
+      impact: medium
+      frequency: every-run
+      surface: governance
+      receipt_field:
+        pr_template: PULL_REQUEST_TEMPLATE.md
+      repo_actual_path: .github/pull_request_template.md
+      repo_template_header_warning: A copy at repo ROOT does NOT propagate org-wide — GitHub only reads the nested path.
+      root_cause:
+        statement: The field is resolved against the governance clone, not the released repo.
+        confidence: inference
+      observed_cost: An evidence artifact carries a path that is wrong for the repo it covers.
+      improvements:
+      - IMP-14
+  reconciliation_action: KEEP
+- id: CR-102
+  title: Drift report attributes a settings.json value to the account layer
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    statement: The reporter assumes the account layer without checking settings.json.
+    confidence: fact
+  source_records:
+  - source_ref: P1/friction/FRICTION-09
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-09
+    source_title: Drift report attributes a settings.json value to the account layer
+    source_record:
+      id: FRICTION-09
+      rank: 7
+      title: Drift report attributes a settings.json value to the account layer
+      impact: medium
+      frequency: every-session
+      surface: environment
+      reported: 'L9_AUTONOMY_AUTONOMOUS_MERGE: expected ''false'', got ''true'' (1 of 33)'
+      suggested_repair_targets: account "Environment variables" pane
+      actual_source: /home/user/.claude/settings.json:166
+      actual_source_verbatim: '"L9_AUTONOMY_AUTONOMOUS_MERGE": "true",'
+      evidence: evidence/10-drift.txt
+      root_cause:
+        statement: The reporter assumes the account layer without checking settings.json.
+        confidence: fact
+      observed_cost: Following the suggested repair would not clear the drift.
+      improvements:
+      - IMP-03
+  reconciliation_action: KEEP
+- id: CR-103
+  title: MCP server identity is unstable across sessions
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    statement: Server IDs are per-session identifiers, not stable names.
+    confidence: fact
+  source_records:
+  - source_ref: P1/friction/FRICTION-11
+    source_pack: P1
+    source_path: friction.yaml
+    source_id: FRICTION-11
+    source_title: MCP server identity is unstable across sessions
+    source_record:
+      id: FRICTION-11
+      rank: 11
+      title: MCP server identity is unstable across sessions
+      impact: low
+      frequency: every-session
+      surface: bootstrap
+      observed_changes:
+      - from: mcp__7003dd92-d023-46ce-8bbb-1f00e381244e__*
+        to: mcp__8f441170-1b8d-4f0e-ba24-e261e9069318__*
+      - from: mcp__Tavily-MCP__*
+        to: mcp__fb6b1488-5fd9-435f-b3af-01c461128bf3__*
+      tools_reported_gone: 43
+      gone_families:
+      - mcp__Google_Calendar__* (1)
+      - mcp__Tavily-MCP__* (5)
+      - mcp__Vercel__* (37)
+      root_cause:
+        statement: Server IDs are per-session identifiers, not stable names.
+        confidence: fact
+      observed_cost: Any stored procedure naming a tool by full ID breaks between sessions.
+      improvements: []
+  reconciliation_action: KEEP
+- id: CR-104
+  title: No variable-load script exists in this repository
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: No variable-load script exists in this repository
+  source_records:
+  - source_ref: P2/friction/FRIC-03
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-03
+    source_title: No variable-load script exists in this repository
+    source_record:
+      id: FRIC-03
+      rank: 3
+      title: No variable-load script exists in this repository
+      category: variable_loading
+      impact: correctness_hazard
+      frequency: 1
+      finding_type: verified_negative
+      evidence:
+      - 'ls -a repo root: no .env, .env.*, .envrc'
+      - 'find (excluding .venv) for *.env, .envrc, env.sh, load_env*, setenv*, bootstrap*: no matches'
+      - 'grep -rnE ''source .*\.env|dotenv|load_dotenv|set -a'' over *.sh, Makefile, *.py: no matches'
+      - 'scripts/ contains exactly: aud008_install_required_check.sh, generate_validation_report.py'
+      consequence:
+      - There is no single place that defines the environment a local gate run needs.
+      - The authoritative definition is spread across Makefile:29, ci.yml env blocks, and operator memory.
+      status: unresolved_in_environment
+  reconciliation_action: KEEP
+- id: CR-105
+  title: GH_TOKEN and GITHUB_TOKEN are set, but no gh CLI exists to consume them
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: GH_TOKEN and GITHUB_TOKEN are set, but no gh CLI exists to consume them
+  source_records:
+  - source_ref: P2/friction/FRIC-04
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-04
+    source_title: GH_TOKEN and GITHUB_TOKEN are set, but no gh CLI exists to consume them
+    source_record:
+      id: FRIC-04
+      rank: 4
+      title: GH_TOKEN and GITHUB_TOKEN are set, but no gh CLI exists to consume them
+      category: capability_mismatch
+      impact: correctness_hazard
+      frequency: 1
+      observed:
+        tokens_present:
+        - GH_TOKEN
+        - GITHUB_TOKEN
+        gh_binary: ABSENT (command -v gh -> not found)
+        hub_binary: ABSENT
+      consequence:
+      - 'The l9-pr-remediation skill''s entire Core Contract is specified in gh commands: `gh run view --log-failed`, `gh
+        api /repos/{owner}/{repo}/pulls/{pr}/reviews`, `gh pr view --comments`, `gh run list`.'
+      - Every one of those had to be re-derived against mcp__github__* tools, which have different pagination, different field
+        sets, and (see FAIL-09) a response-size limit the gh CLI does not have.
+      - Two credentials sit in the environment unused by the intended consumer.
+      status: worked_around
+      workaround: All GitHub reads/writes went through mcp__github__* tools.
+  reconciliation_action: KEEP
+- id: CR-106
+  title: The repository's documented bootstrap path was never exercised; a parallel path was used instead
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: The repository's documented bootstrap path was never exercised; a parallel path was used instead
+  source_records:
+  - source_ref: P2/friction/FRIC-05
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-05
+    source_title: The repository's documented bootstrap path was never exercised; a parallel path was used instead
+    source_record:
+      id: FRIC-05
+      rank: 5
+      title: The repository's documented bootstrap path was never exercised; a parallel path was used instead
+      category: bootstrap
+      impact: one_time_cost
+      frequency: 1
+      observed:
+        documented_path:
+          entrypoint: make bootstrap (= deps install-hooks doctor), Makefile
+          deps_installs_from: requirements-ci.txt + pre-commit
+          gate_entrypoint: make check (= ensure-toolchain hooks ensure-clean typecheck test)
+        path_actually_used:
+          commands:
+          - python3 -m venv .venv
+          - .venv/bin/python -m pip install -U pip -q
+          - .venv/bin/python -m pip install -e ".[ci]" -c constraints.txt -q
+          exit_code: 0
+          rationale: Mirrors .github/workflows/ci.yml step 'Install pinned validation toolchain' exactly, so local results
+            match the blocking gate.
+        divergence: make deps installs requirements-ci.txt; ci.yml installs pyproject [ci] extra under constraints.txt. Both
+          currently declare ruff 0.16.0 / mypy 2.3.0 / pytest 9.1.1, so no version conflict was observed.
+      status: accepted_divergence
+      unknown_ref: UNK-01
+  reconciliation_action: KEEP
+- id: CR-107
+  title: CLAUDE.md's 'Live CI facts' understates the pre-commit hook set by 7 hooks
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: CLAUDE.md's 'Live CI facts' understates the pre-commit hook set by 7 hooks
+  source_records:
+  - source_ref: P2/friction/FRIC-07
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-07
+    source_title: CLAUDE.md's 'Live CI facts' understates the pre-commit hook set by 7 hooks
+    source_record:
+      id: FRIC-07
+      rank: 7
+      title: CLAUDE.md's 'Live CI facts' understates the pre-commit hook set by 7 hooks
+      category: stale_documentation
+      impact: correctness_hazard
+      frequency: 1
+      observed:
+        documented: 'Pre-commit has two hooks: `ruff --fix` and `ruff-format`.'
+        actual_count: 9
+        actual_hooks:
+        - ruff
+        - ruff-format
+        - yamllint
+        - yamllint-data
+        - biome-check
+        - l9-governance-json
+        - l9-action-pins
+        - l9-zizmor
+        - l9-make-check
+      consequence:
+      - An agent trusting CLAUDE.md would expect `pre-commit run --all-files` to be cheap and formatting-only. It in fact
+        runs the action-pin checker, the governance JSON checker, zizmor, biome and a full `make check`.
+      - It also means the action-pin and governance-JSON checks that mattered most this session (FAIL-06b) are documented
+        as not existing in the hook set.
+      status: unresolved_in_repository
+  reconciliation_action: KEEP
+- id: CR-108
+  title: Stale and obsolete paths encountered
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Stale and obsolete paths encountered
+  source_records:
+  - source_ref: P2/friction/FRIC-12
+    source_pack: P2
+    source_path: friction.yaml
+    source_id: FRIC-12
+    source_title: Stale and obsolete paths encountered
+    source_record:
+      id: FRIC-12
+      rank: 12
+      title: Stale and obsolete paths encountered
+      category: stale_paths
+      impact: one_time_cost
+      frequency: 4
+      items:
+      - path: .github/pull_request_template.md vs .github/PULL_REQUEST_TEMPLATE.md
+        issue: Case-only duplicate; both tracked simultaneously (git ls-files showed both).
+        disposition: Lowercase copy removed this session.
+      - path: .github/governance/README.md links '../l9-lint-test.yml'
+        issue: Resolves to .github/l9-lint-test.yml, which never existed at that path. Broken before this session.
+        disposition: Repointed to ../../docs/templates/ this session.
+      - path: Quantum-L9/l9-ci-core@v2 (referenced by install-consumer-ci@v2)
+        issue: 'No v2 tag exists on l9-ci-core. Tags observed: v0.1.0, v1, v1.0.0. The ref was dangling, not merely mutable.'
+        disposition: Pinned to 76919c8e9bae42ca15779e8c54df0cfec1444a79.
+      - path: memory-bank/WIP-L9-SDK/.../l9-manifest-reconcile.yml
+        issue: A second copy of a workflow inside memory-bank/, excluded from the manifest via --exclude-dir memory-bank and
+          from pytest via norecursedirs.
+        disposition: Untouched. Noted only.
+      status: partially_resolved
+  reconciliation_action: KEEP
+- id: CR-109
+  title: Two receipt scopes with no shared index
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Two receipt scopes with no shared index
+  source_records:
+  - source_ref: P3/friction/FRIC-05
+    source_pack: P3
+    source_path: friction.yaml
+    source_id: FRIC-05
+    source_title: Two receipt scopes with no shared index
+    source_record:
+      id: FRIC-05
+      rank: 5
+      title: Two receipt scopes with no shared index
+      impact: MED
+      frequency:
+        duplicate_kernel_runs: 2
+      evidence:
+      - path: /home/user/Cognitive.Engine.Graphs/.l9/autonomy/l4-release-receipt.json
+        content: phase=release_authorized stacked_branch=claude/pr-remediation-skill-eval-8c0jr2
+      - path: <scratchpad>/wt225/.l9/autonomy/l4-release-receipt.json
+        content: phase=release_authorized stacked_branch=wt-pr225
+      - path: $HOME/.l9/autonomy/merge-authorization.json
+        content: 'single home-scoped entry: repo=Quantum-L9/Cognitive.Engine.Graphs pr=''*'''
+      cost: moving between a worktree and its parent clone silently re-arms the L4 gate; begin/record-kernels/authorize-release
+        ran twice
+      improvement_ref: B6
+  reconciliation_action: KEEP
+- id: CR-110
+  title: L4 receipt stores a branch name that can go stale
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: L4 receipt stores a branch name that can go stale
+  source_records:
+  - source_ref: P3/friction/FRIC-07
+    source_pack: P3
+    source_path: friction.yaml
+    source_id: FRIC-07
+    source_title: L4 receipt stores a branch name that can go stale
+    source_record:
+      id: FRIC-07
+      rank: 7
+      title: L4 receipt stores a branch name that can go stale
+      impact: LOW
+      frequency:
+        occurrences: 1
+      evidence:
+      - fact: receipt written with stacked_branch=wt-pr225
+      - command: git branch -m wt-pr225 feat/cursor-memory-refuse-file-url
+      - fact: receipt still reads wt-pr225; the push it authorised still succeeded
+      cost: receipt no longer describes the branch it authorised
+      improvement_ref: B6
+  reconciliation_action: KEEP
+- id: CR-111
+  title: pytest summary line absent from captured stdout
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: pytest summary line absent from captured stdout
+  source_records:
+  - source_ref: P3/friction/FRIC-08
+    source_pack: P3
+    source_path: friction.yaml
+    source_id: FRIC-08
+    source_title: pytest summary line absent from captured stdout
+    source_record:
+      id: FRIC-08
+      rank: 8
+      title: pytest summary line absent from captured stdout
+      impact: LOW
+      frequency:
+        attempts: 3
+      evidence:
+      - command: pytest tests/ -m unit -q --no-header -p no:cacheprovider
+        output: progress dots present; no 'N passed' line in captured output
+      - workaround_command: pytest ... --junit-xml then parse XML
+        output: '{''tests'': ''741'', ''failures'': ''0'', ''errors'': ''0'', ''skipped'': ''3''}'
+      cost: three attempts to obtain a test count
+      improvement_ref: null
+  reconciliation_action: KEEP
+- id: CR-112
+  title: Governance revision moves mid-session
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Governance revision moves mid-session
+  source_records:
+  - source_ref: P3/friction/FRIC-09
+    source_pack: P3
+    source_path: friction.yaml
+    source_id: FRIC-09
+    source_title: Governance revision moves mid-session
+    source_record:
+      id: FRIC-09
+      rank: 9
+      title: Governance revision moves mid-session
+      impact: LOW
+      frequency:
+        distinct_revisions_observed: 3
+      evidence:
+      - observation: 'SessionStart governance rev: main@fda7f5f'
+      - observation: 'SessionStart governance rev: main@582d53a'
+      - observation: 'SessionStart governance rev: main@84d06e3'
+      cost: none_observed
+      risk: rules in force may change between turns
+      status: UNKNOWN
+      improvement_ref: null
+  reconciliation_action: KEEP
+- id: CR-113
+  title: Bootstrap receipt expired and is bound to a governance revision that is no longer checked out
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: environment_defect
+    statement: The bootstrap receipt records the governance revision it was produced against but is not invalidated when that
+      revision changes. It expires only on wall-clock TTL, which is 24x longer than the refresh TTL.
+  source_records:
+  - source_ref: P4/friction/FR-03
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-03
+    source_title: Bootstrap receipt expired and is bound to a governance revision that is no longer checked out
+    source_record:
+      id: FR-03
+      rank: 3
+      title: Bootstrap receipt expired and is bound to a governance revision that is no longer checked out
+      category: bootstrap
+      measured:
+        receipt_ttl_seconds: 86400
+        receipt_age_seconds_observed: 87600
+        governance_refresh_ttl_seconds: 3600
+        governance_commits_behind: 0
+      evidence:
+      - '/root/.l9/claude/bootstrap-state.json: generated_at 2026-08-23T00:48:54Z, ttl 86400'
+      - 'receipt governance_revision: fda7f5fee17ff3f6318942f2826cc3517f1c85b4'
+      - 'clone HEAD: 84d06e3d340e75b46f5e9820e865e20376418f01'
+      - '/root/.l9/claude/gov-refresh.json: state fresh, refreshed 2026-08-24T01:07:25Z'
+      - 'session banner: "claude bootstrap: unknown — receipt expired (87516s old, ttl 86400s)"'
+      cost_description: Two staleness mechanisms with different TTLs and no cross-invalidation. The governance clone refreshed
+        to a new revision and reported itself fresh while the bootstrap receipt still described the previous revision, so
+        the session opened with component health reported as "unknown".
+      root_cause:
+        classification: environment_defect
+        statement: The bootstrap receipt records the governance revision it was produced against but is not invalidated when
+          that revision changes. It expires only on wall-clock TTL, which is 24x longer than the refresh TTL.
+      consequence_observed: Component health for capabilities, memory, mcp and plugins was reported as DEGRADED from a 24-hour-old
+        receipt. The memory component was in fact healthy when tested directly during this audit (exit 0, healthy true).
+  reconciliation_action: KEEP
+- id: CR-114
+  title: Account environment drift on a safety-relevant variable, with a manual-only repair
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: process_gap
+    statement: The account Environment Variables panel is the highest-precedence source and is writable only through a UI.
+      The verifier can detect drift and emit the correct fields but cannot apply them.
+  source_records:
+  - source_ref: P4/friction/FR-04
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-04
+    source_title: Account environment drift on a safety-relevant variable, with a manual-only repair
+    source_record:
+      id: FR-04
+      rank: 4
+      title: Account environment drift on a safety-relevant variable, with a manual-only repair
+      category: variables
+      measured:
+        variables_in_contract: 33
+        variables_drifted: 1
+        verify_exit_code: 1
+      evidence:
+      - 'command: python3 .../verify_account_env.py -> exit 1'
+      - 'finding: "L9_AUTONOMY_AUTONOMOUS_MERGE: expected ''false'', got ''true''"'
+      - 'live value: L9_AUTONOMY_AUTONOMOUS_MERGE=true'
+      - 'repair text: "--emit-fields then paste docs/ACCOUNT_FIELDS.md section 1 into Environment variables"'
+      cost_description: The drift was reported at session start and again at the start of the next session, unchanged. The
+        repair requires a human to paste values into an account settings panel; no command can apply it.
+      root_cause:
+        classification: process_gap
+        statement: The account Environment Variables panel is the highest-precedence source and is writable only through a
+          UI. The verifier can detect drift and emit the correct fields but cannot apply them.
+      severity_note: 'The drifting variable governs autonomous merge. The doctrine in force states merge stays denied until
+        /l9-pr-remediation writes a receipt, so the drift did not by itself authorise anything; PR #81 was merged by a human
+        (cryptoxdog). The divergence is still worth closing.'
+  reconciliation_action: KEEP
+- id: CR-115
+  title: Memory writes are read-only from the default working directory
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: environment_interaction
+    statement: Two correct behaviours combine badly. The harness resets the working directory to the container root; the memory
+      client resolves repository identity from the working directory and refuses to guess when several repositories match.
+  source_records:
+  - source_ref: P4/friction/FR-06
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-06
+    source_title: Memory writes are read-only from the default working directory
+    source_record:
+      id: FR-06
+      rank: 6
+      title: Memory writes are read-only from the default working directory
+      category: memory
+      measured:
+        resolve_from_container_root: group_id null, readonly true
+        resolve_from_repository: group_id l9-meta-injector, readonly false
+      evidence:
+      - 'cwd /home/user -> {"group_id": null, "error": "ambiguous group match: [8 repos] - set GRAPHITI_GROUP_ID", "readonly":
+        true}'
+      - 'cwd /home/user/l9-meta-injector -> {"group_id": "l9-meta-injector", "method": "registry", "readonly": false}'
+      cost_description: The default working directory of every Bash call is /home/user, the multi-repository container root,
+        which is exactly the location where group resolution is ambiguous and the client degrades to read-only.
+      root_cause:
+        classification: environment_interaction
+        statement: Two correct behaviours combine badly. The harness resets the working directory to the container root; the
+          memory client resolves repository identity from the working directory and refuses to guess when several repositories
+          match.
+      workaround: cd into the repository, or export GRAPHITI_GROUP_ID
+  reconciliation_action: KEEP
+- id: CR-116
+  title: Editing was routed through shell heredocs rather than file-editing tools
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: policy_environment_mismatch
+    statement: A Bash-first editing instruction meets a Bash tool that rejects control characters in its payload. For content
+      containing such bytes the fallback is a file-writing tool, so the policy has an exception it does not state.
+  source_records:
+  - source_ref: P4/friction/FR-08
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-08
+    source_title: Editing was routed through shell heredocs rather than file-editing tools
+    source_record:
+      id: FR-08
+      rank: 8
+      title: Editing was routed through shell heredocs rather than file-editing tools
+      category: agent_tooling_policy
+      measured:
+        python_heredoc_invocations: 298
+        write_tool_calls: 44
+        edit_tool_calls: 2
+        bash_share_of_all_tool_calls: 1097/1257 = 87%
+        heredoc_anchor_miss_failures: 2
+        heredoc_control_character_rejections: 2
+      evidence:
+      - parsed from the transcript's tool_use blocks by tool name
+      - 'session instruction in force: "make file changes with sed, heredocs, or short scripts, rather than using the dedicated
+        Read, Edit, or Write tools"'
+      cost_description: 'Exact-string replacement through a heredoc worked at a 0.7% failure rate, which is low. The cost
+        is not failure but verbosity: each edit ships its own anchor text and replacement inside a shell payload, and two
+        edits had to be re-routed to the Write tool because their content contained bytes the Bash tool refuses.'
+      root_cause:
+        classification: policy_environment_mismatch
+        statement: A Bash-first editing instruction meets a Bash tool that rejects control characters in its payload. For
+          content containing such bytes the fallback is a file-writing tool, so the policy has an exception it does not state.
+  reconciliation_action: KEEP
+- id: CR-117
+  title: Context was lost and reconstructed mid-contract
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: expected_behaviour_with_cost
+    statement: A long single-repository contract exceeded one context window.
+  source_records:
+  - source_ref: P4/friction/FR-11
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-11
+    source_title: Context was lost and reconstructed mid-contract
+    source_record:
+      id: FR-11
+      rank: 11
+      title: Context was lost and reconstructed mid-contract
+      category: session_continuity
+      measured:
+        transcript_lines: 6101
+        tool_use_blocks: 1257
+        summarisation_events: 1
+      evidence:
+      - 'transcript contains a continuation notice: "This session is being continued from a previous conversation that ran
+        out of context."'
+      - 'file-changed notices on 11 files: "changed on disk since you last read it"'
+      cost_description: After summarisation, files this session had authored had to be re-read before they could be edited
+        safely. The harness surfaced the eleven files whose on-disk state had moved past the model's last read, which prevented
+        blind edits.
+      root_cause:
+        classification: expected_behaviour_with_cost
+        statement: A long single-repository contract exceeded one context window.
+  reconciliation_action: KEEP
+- id: CR-118
+  title: Duplicate user settings file in a non-effective location
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: stale_path
+    statement: Two copies exist because the workspace and HOME are different trees. Their content agrees; only key ordering
+      differs, so they were written by two serialisers or two versions of one.
+  source_records:
+  - source_ref: P4/friction/FR-12
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-12
+    source_title: Duplicate user settings file in a non-effective location
+    source_record:
+      id: FR-12
+      rank: 12
+      title: Duplicate user settings file in a non-effective location
+      category: stale_or_duplicate_paths
+      measured:
+        files: 2
+        byte_size_each: 7989
+        content_differences: 0
+      evidence:
+      - md5 /root/.claude/settings.json != md5 /home/user/.claude/settings.json
+      - canonicalised diff shows only the position of the `env` block
+      - HOME=/root, so /root/.claude/settings.json is the effective file
+      cost_description: Cost was investigation only. A reader who opens the workspace copy sees accurate content, but edits
+        there would have no effect.
+      root_cause:
+        classification: stale_path
+        statement: Two copies exist because the workspace and HOME are different trees. Their content agrees; only key ordering
+          differs, so they were written by two serialisers or two versions of one.
+  reconciliation_action: KEEP
+- id: CR-119
+  title: Superseded dependency stamps accumulate
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: housekeeping_gap
+    statement: Stamps are written per toolchain fingerprint and never reclaimed.
+  source_records:
+  - source_ref: P4/friction/FR-13
+    source_pack: P4
+    source_path: friction.yaml
+    source_id: FR-13
+    source_title: Superseded dependency stamps accumulate
+    source_record:
+      id: FR-13
+      rank: 13
+      title: Superseded dependency stamps accumulate
+      category: stale_or_duplicate_paths
+      measured:
+        stamps: 9
+        logs: 9
+        current_fingerprint_count: 1
+        total_size: 48K
+      evidence:
+      - ls /root/.l9/claude/deps-*.stamp | wc -l -> 9
+      - 'session banner names one current fingerprint: 9ff843f2c5497a1f...'
+      cost_description: Negligible disk; no failure attributed. Recorded for completeness.
+      root_cause:
+        classification: housekeeping_gap
+        statement: Stamps are written per toolchain fingerprint and never reclaimed.
+  reconciliation_action: KEEP
+- id: CR-120
+  title: Environment supplies none of the application configuration
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: No .env or .env.local; 0 of 49 Settings fields present in OS env
+  source_records:
+  - source_ref: P5/friction/FR-002
+    source_pack: P5
+    source_path: friction.yaml
+    source_id: FR-002
+    source_title: Environment supplies none of the application configuration
+    source_record:
+      id: FR-002
+      rank: 2
+      title: Environment supplies none of the application configuration
+      impact: critical
+      frequency: continuous
+      status: fact
+      root_cause: No .env or .env.local; 0 of 49 Settings fields present in OS env
+      consequence: All values fall back to defaults, including placeholder secrets.
+      placeholder_defaults:
+      - field: inter_node_secret
+        default: dev-inter-node-secret
+      - field: neo4j_password
+        default: changeme
+      - field: database_url
+        default: postgresql+asyncpg://enrich:changeme@localhost:5432/enrich
+      evidence: app/core/config.py:94-98; scripted 49-field scan
+  reconciliation_action: KEEP
+- id: CR-121
+  title: Bootstrap entrypoint belongs to a different project
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: bootstrap.sh self-identifies as 'Venture Forge Toolbox'; 12 of 15 copy sources absent
+  source_records:
+  - source_ref: P5/friction/FR-004
+    source_pack: P5
+    source_path: friction.yaml
+    source_id: FR-004
+    source_title: Bootstrap entrypoint belongs to a different project
+    source_record:
+      id: FR-004
+      rank: 4
+      title: Bootstrap entrypoint belongs to a different project
+      impact: high
+      frequency: once per onboarding
+      status: fact
+      root_cause: bootstrap.sh self-identifies as 'Venture Forge Toolbox'; 12 of 15 copy sources absent
+      evidence: bootstrap.sh:1-21,70; sandboxed exit=1
+  reconciliation_action: KEEP
+- id: CR-122
+  title: Branch policy and actual work are disjoint
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Directive names 7 repos; all work occurred in enrichment.inference.engine which is not among them
+  source_records:
+  - source_ref: P5/friction/FR-006
+    source_pack: P5
+    source_path: friction.yaml
+    source_id: FR-006
+    source_title: Branch policy and actual work are disjoint
+    source_record:
+      id: FR-006
+      rank: 6
+      title: Branch policy and actual work are disjoint
+      impact: medium
+      frequency: whole session
+      status: fact
+      root_cause: Directive names 7 repos; all work occurred in enrichment.inference.engine which is not among them
+      detail:
+        designated_branch: claude/pr-remediation-enrichment-engine-smfw97
+        present_in_engine_repo: false
+        engine_branch: main
+        repos_idle_on_designated_branch:
+        - .github
+        - LLM-Router
+        - SEO-Bot
+        - Website-Bot
+        - l9-cognitive-runtime
+        - l9-graphiti-memory
+        - l9-meta-injector
+      evidence: git branch -a --list '*smfw97*' returned empty in the engine repo
+  reconciliation_action: KEEP
+- id: CR-123
+  title: TESTING=true is inert locally
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Set by 3 workflows; read by no Python in the repo
+  source_records:
+  - source_ref: P5/friction/FR-007
+    source_pack: P5
+    source_path: friction.yaml
+    source_id: FR-007
+    source_title: TESTING=true is inert locally
+    source_record:
+      id: FR-007
+      rank: 7
+      title: TESTING=true is inert locally
+      impact: low
+      frequency: every documented verify command
+      status: fact
+      root_cause: Set by 3 workflows; read by no Python in the repo
+      detail:
+        set_by:
+        - .github/workflows/sonarcloud.yml
+        - .github/workflows/ci.yml
+        - .github/workflows/pr-pipeline.yml
+        python_readers: 0
+      evidence: grep -rnE '(environ|getenv).*TESTING' --include=*.py returned no matches
+  reconciliation_action: KEEP
+- id: CR-124
+  title: Core CLI tooling absent; GitHub work rerouted
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: gh, gitleaks, semgrep, pre-commit not installed
+  source_records:
+  - source_ref: P5/friction/FR-008
+    source_pack: P5
+    source_path: friction.yaml
+    source_id: FR-008
+    source_title: Core CLI tooling absent; GitHub work rerouted
+    source_record:
+      id: FR-008
+      rank: 8
+      title: Core CLI tooling absent; GitHub work rerouted
+      impact: medium
+      frequency: continuous
+      status: fact
+      root_cause: gh, gitleaks, semgrep, pre-commit not installed
+      observed_workaround: All GitHub operations used MCP GitHub tools instead of gh.
+      evidence: command -v probe
+  reconciliation_action: KEEP
+- id: CR-125
+  title: Build residue and duplicate config in the tree
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Caches and generated reports sit alongside sources
+  source_records:
+  - source_ref: P5/friction/FR-009
+    source_pack: P5
+    source_path: friction.yaml
+    source_id: FR-009
+    source_title: Build residue and duplicate config in the tree
+    source_record:
+      id: FR-009
+      rank: 9
+      title: Build residue and duplicate config in the tree
+      impact: low
+      frequency: continuous
+      status: fact
+      root_cause: Caches and generated reports sit alongside sources
+      detail:
+      - coverage.xml
+      - .coverage
+      - htmlcov/
+      - .ruff_cache
+      - .mypy_cache
+      - .pytest_cache
+      - __pycache__
+      - artifacts/
+      - .devcontainer/P2_6_devcontainer.json duplicates devcontainer.json
+      - '''Current Work'' directory name contains a space'
+      - 'four agent-instruction files: AGENTS.md, CLAUDE.md, CURSOR.md, .cursorrules'
+      evidence: directory listing of repo root
+  reconciliation_action: KEEP
+- id: CR-126
+  title: pip dependency backtracking during session-deps editable install
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: pip dependency backtracking during session-deps editable install
+  source_records:
+  - source_ref: P6/friction/FR-1
+    source_pack: P6
+    source_path: friction.yaml
+    source_id: FR-1
+    source_title: pip dependency backtracking during session-deps editable install
+    source_record:
+      id: FR-1
+      title: pip dependency backtracking during session-deps editable install
+      severity: M
+      frequency: per_environment_build
+      plane: bootstrap
+      facts:
+      - deps-e04d58dc log (18925 B) dominated by sequential openai 1.82.0->1.78.0 metadata downloads
+      - duration UNKNOWN — log has no timestamps
+      - fingerprint cache made turn-2 warm pass cheap (160 B log)
+      improvement_refs:
+      - BOOT-5
+  reconciliation_action: KEEP
+- id: CR-127
+  title: Receipt CLI ergonomics — required --read flag is the only verb; 'status' rejected
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Receipt CLI ergonomics — required --read flag is the only verb; 'status' rejected
+  source_records:
+  - source_ref: P6/friction/FR-3
+    source_pack: P6
+    source_path: friction.yaml
+    source_id: FR-3
+    source_title: Receipt CLI ergonomics — required --read flag is the only verb; 'status' rejected
+    source_record:
+      id: FR-3
+      title: Receipt CLI ergonomics — required --read flag is the only verb; 'status' rejected
+      severity: L
+      frequency: per_manual_use
+      plane: loader
+      facts:
+      - 'claude_bootstrap_receipt.py status -> argparse error: ''the following arguments are required: --read'''
+      - same for governance_refresh_receipt.py
+      - CLAUDE.md names the scripts without showing the flag
+      improvement_refs:
+      - LOADER-1
+  reconciliation_action: KEEP
+- id: CR-128
+  title: persistent account-field drift warning that a session cannot repair
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: persistent account-field drift warning that a session cannot repair
+  source_records:
+  - source_ref: P7/friction/FR-02
+    source_pack: P7
+    source_path: friction.yaml
+    source_id: FR-02
+    source_title: persistent account-field drift warning that a session cannot repair
+    source_record:
+      id: FR-02
+      title: persistent account-field drift warning that a session cannot repair
+      impact: medium (repeated noise; a real policy variable is wrong the whole time)
+      frequency: every SessionStart (4/4)
+      detail: 'FACT: "DRIFT: 1 of 33 variables — L9_AUTONOMY_AUTONOMOUS_MERGE expected ''false'', got ''true''". The printed
+        repair requires a human to paste docs/ACCOUNT_FIELDS.md section 1 into the claude.ai Environment variables console;
+        nothing inside the session can fix it, so the same warning recurs forever until an operator acts.
+
+        '
+  reconciliation_action: KEEP
+- id: CR-129
+  title: session wake resets create verification overhead for branch state
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: session wake resets create verification overhead for branch state
+  source_records:
+  - source_ref: P7/friction/FR-08
+    source_pack: P7
+    source_path: friction.yaml
+    source_id: FR-08
+    source_title: session wake resets create verification overhead for branch state
+    source_record:
+      id: FR-08
+      title: session wake resets create verification overhead for branch state
+      impact: low (state actually survived every time; each wake cost a re-check)
+      frequency: 3 wakes
+      detail: 'FACT: each SessionStart printed "governance refresh: cloud session — reset ephemeral clone to origin/main"
+        (which applies to the SSOT clone) while the working clone kept its branch and commits; confirming that required `git
+        status`/`git log` after every wake before continuing.
+
+        '
+  reconciliation_action: KEEP
+- id: CR-130
+  title: GitHub API scope excludes repositories the task must read
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: GitHub API scope excludes repositories the task must read
+  source_records:
+  - source_ref: P8/friction/R-04
+    source_pack: P8
+    source_path: friction.yaml
+    source_id: R-04
+    source_title: GitHub API scope excludes repositories the task must read
+    source_record:
+      id: R-04
+      rank: 4
+      title: GitHub API scope excludes repositories the task must read
+      impact: medium
+      frequency: 2
+      fact:
+        command: gh api repos/Quantum-L9/l9-meta-injector/pulls/83
+        exit_code: 1
+        stderr_verbatim: 'HTTP 403: GitHub access to this repository is not enabled for this session. Use add_repo to request
+          access.'
+        workaround_applied: 'Anonymous git over the session proxy: `git fetch --depth 1 origin pull/83/head:pr83`, which succeeded
+          and yielded the exact head SHA.'
+      cost_observed: The producer PR head had to be obtained by fetching a PR ref instead of one API call. PR metadata (title,
+        state, review comments) stayed unavailable for that repository for the whole session.
+      note: FACT - the git lane and the API lane have different scopes for the same repository. Read access via git succeeded
+        while the API returned 403.
+  reconciliation_action: KEEP
+- id: CR-131
+  title: Scratchpad artifacts needed for a repeatable run are not durable
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Scratchpad artifacts needed for a repeatable run are not durable
+  source_records:
+  - source_ref: P8/friction/R-06
+    source_pack: P8
+    source_path: friction.yaml
+    source_id: R-06
+    source_title: Scratchpad artifacts needed for a repeatable run are not durable
+    source_record:
+      id: R-06
+      rank: 6
+      title: Scratchpad artifacts needed for a repeatable run are not durable
+      impact: medium
+      frequency: 1
+      fact:
+        artifact: /tmp/claude-0/<session>/scratchpad/fixtures/build_corpus.mjs
+        purpose: builds the two-root eight-format fixture corpus for the cross-repo E2E
+        durability: FACT - it lives only under the session scratchpad. A container recycle loses it, and the E2E would have
+          to be reconstructed from the producer's tests/helpers/document_fixtures.ts and zip_fixtures.ts.
+        mitigation_applied: The rebuild instruction was written into the scheduled check-in body so a later wake would not
+          rediscover it from scratch.
+      note: This is friction, not failure - the run succeeded. The cost is that the most expensive artifact of the session
+        is the least durable.
+  reconciliation_action: KEEP
+- id: CR-132
+  title: TypeScript helpers need an import rewrite before Node can execute them
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: TypeScript helpers need an import rewrite before Node can execute them
+  source_records:
+  - source_ref: P8/friction/R-07
+    source_pack: P8
+    source_path: friction.yaml
+    source_id: R-07
+    source_title: TypeScript helpers need an import rewrite before Node can execute them
+    source_record:
+      id: R-07
+      rank: 7
+      title: TypeScript helpers need an import rewrite before Node can execute them
+      impact: low
+      frequency: 1
+      fact:
+        command: node --experimental-strip-types probe.mjs
+        first_exit_code: 2
+        stderr_verbatim: 'ERR_MODULE_NOT_FOUND ... url: ''file:///.../tests/helpers/zip_fixtures'''
+        cause: TS-style extensionless relative import is not resolvable by Node ESM
+        workaround_applied: Copy the two helpers to scratch and rewrite `from "./zip_fixtures"` to `from "./zip_fixtures.ts"`;
+          after that all 8 builders loaded.
+      positive_finding: FACT - the producer declares zero runtime dependencies and ships a built dist/ at the same commit
+        as src/, so its CLI ran with plain node and no install. That is what made the real cross-repo E2E cheap.
+  reconciliation_action: KEEP

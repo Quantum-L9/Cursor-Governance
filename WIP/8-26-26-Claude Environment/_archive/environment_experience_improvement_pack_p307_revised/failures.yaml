@@ -1,0 +1,2640 @@
+schema: l9.environment_experience.failures.canonical/v1
+generated_at: '2026-08-25T02:03:03Z'
+records:
+- id: CF-001
+  title: GitHub GraphQL-dependent paths fail while REST can remain healthy
+  status: ACTIVE_RECURRING
+  summary: 'The environment repeatedly exposes a transport split: REST can work while GraphQL-backed gh operations, auth probes,
+    PR commands, or merge helpers fail. Health checks and doctrine that collapse these into one GitHub state produce false
+    diagnoses.'
+  source_records:
+  - source_ref: P1/failures/FAIL-01
+    source_pack: P1
+    source_path: failures.yaml
+    source_id: FAIL-01
+    source_title: gh auth status reports a valid token as invalid
+    source_record:
+      id: FAIL-01
+      rank: 1
+      title: gh auth status reports a valid token as invalid
+      impact: critical
+      frequency: every-session
+      reproduced_this_session: true
+      commands:
+      - command: gh auth status
+        exit_code: 1
+        output_excerpt: X Failed to log in to github.com using token (GH_TOKEN) / The token in GH_TOKEN is invalid.
+      - command: gh api user
+        exit_code: 0
+        output_excerpt: '{"login":"cryptoxdog","id":31744795,...}'
+      evidence: evidence/02-gh.txt
+      root_cause:
+        statement: gh auth status verifies credentials over GraphQL; session policy returns HTTP 403 for GraphQL, and gh renders
+          any auth-probe failure as "token is invalid".
+        confidence: inference_high
+      observed_cost: Taken at face value in the PR-remediation run; the entire gh CLI path was abandoned for the whole session.
+        REST via gh api was available throughout and never tried.
+      improvements:
+      - IMP-01
+      - IMP-02
+  - source_ref: P1/failures/FAIL-02
+    source_pack: P1
+    source_path: failures.yaml
+    source_id: FAIL-02
+    source_title: All gh pr subcommands blocked by GraphQL session policy
+    source_record:
+      id: FAIL-02
+      rank: 3
+      title: All gh pr subcommands blocked by GraphQL session policy
+      impact: critical
+      frequency: every-session
+      reproduced_this_session: true
+      commands:
+      - command: gh api graphql -f query='{viewer{login}}'
+        exit_code: 1
+        output_excerpt: 'HTTP 403: This GraphQL query is not enabled for this session — only the pinned set of PR-review operations
+          is served. Use REST via `gh api repos/{owner}/{repo}/...` instead.'
+      - command: gh pr list --repo Quantum-L9/.github --state all --limit 3 --json number,title
+        exit_code: 1
+        output_excerpt: 'HTTP 403: This GraphQL query is not enabled for this session'
+      - command: gh api repos/Quantum-L9/.github --jq .full_name
+        exit_code: 0
+        output_excerpt: Quantum-L9/.github
+      evidence: evidence/03-gh-capability-matrix.txt
+      root_cause:
+        statement: Session policy serves only a pinned set of PR-review GraphQL operations.
+        confidence: fact
+      note: This error is self-diagnosing — it names the REST alternative in the message text. FAIL-01 is the dangerous one
+        because it does not.
+      improvements:
+      - IMP-01
+      - IMP-11
+  - source_ref: P1/failures/FAIL-03
+    source_pack: P1
+    source_path: failures.yaml
+    source_id: FAIL-03
+    source_title: stack_safe_merge.py cannot complete its stack probe
+    source_record:
+      id: FAIL-03
+      rank: 2
+      title: stack_safe_merge.py cannot complete its stack probe
+      impact: critical
+      frequency: every-run
+      reproduced_this_session: true
+      commands:
+      - command: /root/.cursor-governance/.venv/bin/python /root/.cursor-governance/ops/autonomy/stack_safe_merge.py --repo
+          Quantum-L9/.github --pr 59 --json
+        exit_code: 2
+        output_excerpt: 'FAIL: stack probe: HTTP 403: This GraphQL query is not enabled for this session'
+      evidence: evidence/06-gh-dependency.txt
+      root_cause:
+        statement: stack_safe_merge imports _stacked_children from merge_gate.py lines 240 and 244, which shell out to `gh
+          pr view --json headRefName` and `gh pr list --json number`. Both are GraphQL-backed and blocked (FAIL-02).
+        confidence: fact
+      contract_impact: l9-pr-remediation Law 12 designates this script the only sanctioned way to choose a merge method. It
+        is inoperable by default in this environment.
+      workaround_used:
+        mechanism: L9_STACK_PROBE_FILE
+        note: Documented as a test hook. Topology derived from REST (base.ref / head.ref across open PRs) and injected. The
+          script then selected correctly.
+        selections:
+        - pr: 58
+          method: merge
+          reason: 'head ''fix/seed-ci-safe-pack'' is the base of open PR(s) #59; --merge preserves ancestry'
+        - pr: 59
+          method: squash
+          reason: no open PR bases on this head; --squash is safe
+        residual: Execution still required GitHub MCP, because the emitted argv is a `gh pr merge` command and gh pr is GraphQL-backed.
+      downstream:
+        statement: merge_gate.py fails closed on the same probe, returning _stack_unknown_reason for ancestry-breaking methods.
+          Safe, but it names the wrong cause to the operator.
+        confidence: inference
+      improvements:
+      - IMP-11
+      - IMP-12
+  - source_ref: P3/failures/FAIL-01
+    source_pack: P3
+    source_path: failures.yaml
+    source_id: FAIL-01
+    source_title: GraphQL disabled; the only sanctioned merge command cannot run
+    source_record:
+      id: FAIL-01
+      rank: 1
+      title: GraphQL disabled; the only sanctioned merge command cannot run
+      impact: BLOCKER
+      frequency:
+        distinct_commands: 3
+      category: permission_surface
+      evidence:
+      - command: gh api graphql -f query='query { viewer { login } }'
+        exit_code: 1
+        output: 'HTTP 403: This GraphQL query is not enabled for this session — only the pinned set of PR-review operations
+          is served. Use REST via `gh api repos/{owner}/{repo}/...` instead.'
+      - command: gh pr list --repo Quantum-L9/Cognitive.Engine.Graphs --state open
+        exit_code: 1
+      - command: gh api 'search/issues?q=org:Quantum-L9+test'
+        exit_code: 1
+      - command: python ops/autonomy/stack_safe_merge.py --repo Quantum-L9/Cognitive.Engine.Graphs --pr 225 --run
+        exit_code: 1
+        output: 'FAIL: stack probe: HTTP 403: This GraphQL query is not enabled for this session'
+      - command: gh api repos/Quantum-L9/Cognitive.Engine.Graphs
+        exit_code: 0
+        note: 'control: repository-scoped REST works'
+      root_cause: stack_safe_merge.py resolves children via merge_gate._stacked_children -> gh pr view / gh pr list (GraphQL),
+        and execs gh pr merge (GraphQL).
+      contract_conflict: l9-pr-remediation Law 12 names this helper as the only sanctioned merge path and forbids typing --squash/--merge
+        by hand.
+      workaround:
+        steps:
+        - 'derive probe inputs via REST: GET pulls?state=open&base=<head> -> no children'
+        - inject via the helper's own L9_STACK_PROBE_FILE
+        - helper returned method=squash, reason='no open PR bases on this head'
+        - execute the helper's verdict via PUT /repos/{o}/{r}/pulls/225/merge
+        merge_method_chosen_by: helper_not_operator
+      residual_risk: REST merge endpoint may not be intercepted by merge_gate.py, which matches on gh pr merge command text
+      residual_risk_status: UNKNOWN
+      improvement_ref: C1
+  - source_ref: P4/failures/F-10
+    source_pack: P4
+    source_path: failures.yaml
+    source_id: F-10
+    source_title: gh auth status reports an invalid token while gh api succeeds
+    source_record:
+      id: F-10
+      rank: 10
+      title: gh auth status reports an invalid token while gh api succeeds
+      severity: low
+      frequency: 1
+      blocked_progress: false
+      evidence:
+      - 'command: gh auth status -> exit 1, "The token in GH_TOKEN is invalid."'
+      - 'command: gh api repos/Quantum-L9/l9-meta-injector -> exit 0'
+      - 'GH_TOKEN length: 14 (not a GitHub PAT shape)'
+      root_cause:
+        classification: environment_inconsistency
+        statement_fact: 'The credential in GH_TOKEN does not authenticate, yet GitHub REST calls through gh succeed, and `make
+          pr` opened PR #81 successfully.'
+        statement_inference: Authentication is supplied by something other than GH_TOKEN, most likely the agent proxy. Not
+          directly observed.
+        consequence: '`gh auth status` is a false-negative health check here. Any script or runbook that gates on it would
+          refuse to proceed in a working environment.'
+      workaround_used: none_required
+      workaround_effective: not_applicable
+  - source_ref: P7/failures/F-05
+    source_pack: P7
+    source_path: failures.yaml
+    source_id: F-05
+    source_title: gh CLI degraded — invalid GH_TOKEN, GraphQL refused, subscribe 404
+    source_record:
+      id: F-05
+      title: gh CLI degraded — invalid GH_TOKEN, GraphQL refused, subscribe 404
+      impact: medium (publish flow degraded to REST; PR subscribe fell back to MCP tool; PR body update done via MCP)
+      frequency: every gh non-REST operation
+      category: credentials
+      symptom:
+      - 'gh auth status: ''The token in GH_TOKEN is invalid.'''
+      - 'open_pr_after_gate.sh: ''NOTE: SURFACE_UNSUPPORTED_GRAPHQL — this session gateway refuses GitHub GraphQL; falling
+        back to REST'' (x3)'
+      - 'subscribe step: ''gh: Not Found (HTTP 404)'' -> WARN, continuing'
+      root_cause: 'FACT: GH_TOKEN in the environment does not authenticate gh directly; REST calls succeed because the agent
+        proxy injects credentials (inference from observed behavior: REST worked, GraphQL and auth status did not). Exact
+        proxy credential mechanism: UNKNOWN (not inspected).
+
+        '
+      resolution: workaround only — REST paths and GitHub MCP tools carried all needed operations.
+      evidence:
+      - PR overlap gate produced real open-PR file lists and PASSED via gh api REST
+      - 'PR #287 body updated via mcp__github__update_pull_request; subscription via mcp__github__subscribe_pr_activity'
+  - source_ref: P8/failures/F-02
+    source_pack: P8
+    source_path: failures.yaml
+    source_id: F-02
+    source_title: GraphQL is refused by the session gateway, so gh PR subcommands fail
+    source_record:
+      id: F-02
+      rank: 2
+      title: GraphQL is refused by the session gateway, so gh PR subcommands fail
+      impact: high
+      frequency: 2
+      class: capability_restriction
+      fact:
+        commands:
+        - gh pr checks 18 --repo Quantum-L9/l9-constellation-topology --json name,bucket
+        - gh pr view 18 --json headRefOid,mergeable,mergeStateStatus
+        exit_code: 1
+        stderr_verbatim: 'HTTP 403: This GraphQL query is not enabled for this session - only the pinned set of PR-review
+          operations is served. Use REST via `gh api repos/{owner}/{repo}/...` instead.'
+      consequence_observed:
+        description: FACT - a background Monitor was armed using `gh pr checks --json`. Because the failure is silent inside
+          a poll loop, the monitor would have polled to timeout emitting nothing while appearing healthy. It was detected
+          only because the same command was run interactively and returned 403.
+        remediation_applied: Monitor rewritten against REST (gh api repos/{o}/{r}/commits/{sha}/check-runs) and the original
+          stopped via TaskStop.
+      root_cause: FACT (documented) - docs/DEGRADED_MODE_CONTRACT.md and web/environment.env.example:99-101 state the gateway
+        serves only a pinned set of PR-review GraphQL operations.
+  - source_ref: P9/failures/F-11
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-11
+    source_title: gh pr create is blocked at the GraphQL layer; PR creation only works through REST
+    source_record:
+      id: F-11
+      rank: 11
+      title: gh pr create is blocked at the GraphQL layer; PR creation only works through REST
+      severity: medium
+      frequency: once
+      plane: env_loader
+      provenance: earlier_session
+      evidence:
+        observed: gh pr create returned HTTP 403 and the gateway response named REST as the permitted alternative
+        successful_alternative: gh api -X POST /repos/{owner}/{repo}/pulls
+        note: the MCP create_pull_request tool was not exposed in this session, so it was not an option
+      root_cause:
+        type: inference
+        statement: The egress policy permits the GitHub REST surface and denies the GraphQL surface that gh pr create uses.
+        grounded_in: the 403 naming REST, and the REST call succeeding immediately afterwards
+      consequence: The ordinary CLI path for opening a PR fails with an error that does not name the fix in gh's own terms.
+      workaround_used: Used gh api REST directly.
+      status: OPEN
+      improvements:
+      - I-EL-04
+  - source_ref: P9/failures/F-20
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-20
+    source_title: Harness documentation states the gh CLI is unavailable; gh 2.98.0 is installed and was used successfully
+    source_record:
+      id: F-20
+      rank: 20
+      title: Harness documentation states the gh CLI is unavailable; gh 2.98.0 is installed and was used successfully
+      severity: low
+      frequency: once
+      plane: env_loader
+      provenance: re_verified
+      evidence:
+        documentation: 'session system prompt: ''You do NOT have access to the gh CLI, hub CLI, or direct GitHub API access.'''
+        actual: gh --version -> gh version 2.98.0 (2026-08-20)
+        usage: gh api -X POST /repos/{owner}/{repo}/pulls was the path that actually opened a pull request this session
+      root_cause:
+        type: fact
+        statement: Documented capability set does not match the provisioned image.
+      consequence: The documented statement would have ruled out the only path that worked for PR creation.
+      workaround_used: Verified capability empirically rather than trusting the description.
+      status: OPEN
+      improvements:
+      - I-EL-04
+  reconciliation_action: MERGE
+- id: CF-002
+  title: Bootstrap projection violates consumer-repository ownership
+  status: ACTIVE_CRITICAL
+  summary: Session bootstrap can write, symlink, or project machine-local material into paths that a consumer repository already
+    tracks. Pack 9 proves this can overwrite nine tracked .claude/rules files and leave a permanently dirty tree.
+  source_records:
+  - source_ref: P3/failures/FAIL-02
+    source_pack: P3
+    source_path: failures.yaml
+    source_id: FAIL-02
+    source_title: Bootstrap rewrites tracked repo content, silently disabling repo guardrails
+    source_record:
+      id: FAIL-02
+      rank: 2
+      title: Bootstrap rewrites tracked repo content, silently disabling repo guardrails
+      impact: HIGH
+      frequency:
+        repos_affected: 2
+        repos_scanned: 9
+      category: bootstrap
+      evidence:
+      - command: git -C /home/user/Cognitive.Engine.Graphs ls-files -- .claude .mcp.json | wc -l
+        output: '18'
+      - command: git -C /home/user/Cognitive.Engine.Graphs status --porcelain --untracked-files=all
+        output: 9 x ' D .claude/rules/*.md'; ' M .claude/settings.json'; '?? .claude/rules'; '?? .claude/hooks/'; '?? .mcp.json'
+      - command: ls -ld /home/user/Cognitive.Engine.Graphs/.claude/rules
+        output: lrwxrwxrwx .claude/rules -> /root/.cursor-governance/environment/generated/llm-rules
+      - command: grep -c 'contract_scanner\|pickle.load\|import fastapi' .claude/settings.json
+        output: '0'
+      - command: git -C /home/user/l9-meta-injector diff --stat -- .claude/settings.json
+        output: 1 file changed, 198 insertions(+), 28 deletions(-)
+      - command: python3 compare tracked vs live permissions.allow (l9-meta-injector)
+        output: tracked=33 live=47 dropped=17
+      hooks_lost_in_cognitive_engine_graphs:
+      - event: PreToolUse
+        matcher: Bash
+        purpose: 'banned-pattern guard: eval(, exec(, pickle.load, yaml.load, import fastapi/starlette/uvicorn (Contracts
+          1/9)'
+      - event: PostToolUse
+        matcher: Write|Edit|MultiEdit
+        purpose: ruff check --select=SEC,ARCH on edited .py
+      - event: Stop
+        matcher: null
+        purpose: python3 tools/contract_scanner.py --quick
+      root_cause: bootstrap writes .claude/** and .mcp.json unconditionally, without testing whether the destination path
+        is tracked
+      rule_conflict: 'rules/06-governance-ssot-paths Forbidden: machine-specific /root/... paths; whole-directory links to
+        global rules'
+      workaround: none_applied
+      note: not committed; committing would push a machine-specific symlink and remove repo hooks
+      tracked_at: Quantum-L9/Cursor-Governance#281 (comment posted this session)
+      improvement_refs:
+      - B1
+      - B2
+      - B3
+  - source_ref: P6/failures/FA-4
+    source_pack: P6
+    source_path: failures.yaml
+    source_id: FA-4
+    source_title: Bootstrap writes session artifacts into repo checkouts (incl. over tracked .claude surface)
+    source_record:
+      id: FA-4
+      title: Bootstrap writes session artifacts into repo checkouts (incl. over tracked .claude surface)
+      severity: MH
+      frequency: every_session
+      plane: bootstrap
+      facts:
+      - 'git status --porcelain: ''?? .claude/ ?? .mcp.json'' in l9-cognitive-runtime and l9-constellation-topology'
+      - '''?? .claude/hooks/ ?? .mcp.json'' in Cognitive.Engine.Graphs whose .claude root has 18 tracked paths on main'
+      - 'verified downstream defect: PR #235 first attempt gitignored /.claude/ hiding tracked surface (repaired 2026-08-24)'
+      improvement_refs:
+      - BOOT-3
+  - source_ref: P9/failures/F-01
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-01
+    source_title: Bootstrap projects .claude/rules as a symlink over 9 tracked repository files, leaving the workspace permanently
+      dirty
+    source_record:
+      id: F-01
+      rank: 1
+      title: Bootstrap projects .claude/rules as a symlink over 9 tracked repository files, leaving the workspace permanently
+        dirty
+      severity: blocker
+      frequency: per_turn
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        command: git -C /home/user/Cognitive.Engine.Graphs status --porcelain
+        output_excerpt:
+        - ' D .claude/rules/capability-registry.md'
+        - ' D .claude/rules/contracts.md'
+        - ' D .claude/rules/feature-flags.md'
+        - ' D .claude/rules/gates-scoring.md'
+        - ' D .claude/rules/learnings.md'
+        - ' D .claude/rules/routing.md'
+        - ' D .claude/rules/subsystems.md'
+        - ' D .claude/rules/system-state.md'
+        - ' D .claude/rules/testing.md'
+        - ' M .claude/settings.json'
+        - ?? .claude/hooks/
+        - ?? .claude/rules
+        - ?? .mcp.json
+        corroborating:
+        - git -C Cognitive.Engine.Graphs ls-files .claude -> 18 tracked files, 9 of them under .claude/rules/
+        - ls -la /home/user/.claude/rules -> symlink to /root/.cursor-governance/environment/generated/llm-rules
+        - git show origin/main:.gitignore lines 71-77 explicitly declines to ignore .claude/ and calls this a bootstrap/projection
+          concern
+      root_cause:
+        type: fact
+        statement: The adapter replaces the repository-owned .claude/rules directory with a symlink to the governance clone.
+          Git sees 9 tracked files deleted and one untracked symlink.
+      consequence: Every turn ends with a dirty tree that cannot be committed without deleting 9 tracked files and committing
+        a machine-absolute symlink. It also drives F-02.
+      workaround_used: Declined to commit on every prompt; left the tree dirty for the entire session.
+      status: OPEN
+      improvements:
+      - I-BS-01
+  reconciliation_action: MERGE
+- id: CF-003
+  title: Authority-sensitive environment drift persists without reachable repair
+  status: ACTIVE_OPEN_DECISION
+  summary: L9_AUTONOMY_AUTONOMOUS_MERGE repeatedly differs from the verifier expectation and the advertised repair path is
+    not executable by the session. The intended value itself is not established by the corpus.
+  source_records:
+  - source_ref: P3/failures/FAIL-06
+    source_pack: P3
+    source_path: failures.yaml
+    source_id: FAIL-06
+    source_title: Account variable drift widens merge autonomy and cannot be fixed in-session
+    source_record:
+      id: FAIL-06
+      rank: 6
+      title: Account variable drift widens merge autonomy and cannot be fixed in-session
+      impact: HIGH
+      frequency:
+        session_starts_affected: 4
+        of: 4
+      category: variable_loader
+      evidence:
+      - command: python3 environment/agents/adapters/claude-code/verify_account_env.py
+        exit_code: 0
+        output: 'OK: Setup script revision 2026-08-22.2 / DRIFT: 1 of 33 variables / L9_AUTONOMY_AUTONOMOUS_MERGE: expected
+          ''false'', got ''true'''
+      - command: env | grep L9_AUTONOMY_AUTONOMOUS_MERGE
+        output: L9_AUTONOMY_AUTONOMOUS_MERGE=true
+      direction_of_drift: widens_autonomy_relative_to_expectation
+      repair_path: verify_account_env.py --emit-fields then manual paste of docs/ACCOUNT_FIELDS.md section 1 into a web-UI
+        field
+      repair_available_in_session: false
+      effect_on_this_session: UNKNOWN
+      effect_note: this session performed a merge; no gate emitted a decision record naming the variable
+      improvement_ref: A1
+  - source_ref: P6/failures/FA-3
+    source_pack: P6
+    source_path: failures.yaml
+    source_id: FA-3
+    source_title: Account env drift on merge authority (L9_AUTONOMY_AUTONOMOUS_MERGE)
+    source_record:
+      id: FA-3
+      title: Account env drift on merge authority (L9_AUTONOMY_AUTONOMOUS_MERGE)
+      severity: H
+      frequency: every_session
+      plane: env
+      facts:
+      - 'live env: L9_AUTONOMY_AUTONOMOUS_MERGE=true; expected ''false'''
+      - 'verify_account_env.py: ''DRIFT: 1 of 33 variables''; exit code 1'
+      - flagged in SessionStart banner of both observed sessions; unrepaired
+      improvement_refs:
+      - ENV-1
+  - source_ref: P8/failures/F-01
+    source_pack: P8
+    source_path: failures.yaml
+    source_id: F-01
+    source_title: Account-env drift on a safety flag is detected every session and repaired never
+    source_record:
+      id: F-01
+      rank: 1
+      title: Account-env drift on a safety flag is detected every session and repaired never
+      impact: high
+      frequency: 2
+      class: environment_variable_contradiction
+      fact:
+        command: python3 environment/agents/adapters/claude-code/verify_account_env.py
+        exit_code: 1
+        stdout: 'DRIFT: 1 of 33 variables / L9_AUTONOMY_AUTONOMOUS_MERGE: expected ''false'', got ''true'''
+      live_value:
+        variable: L9_AUTONOMY_AUTONOMOUS_MERGE
+        observed: 'true'
+        source: /root/.claude/settings.json env block (16 keys)
+      root_cause:
+        type: contradiction_inside_governance_repo
+        declaration_a:
+          path: environment/agents/adapters/claude-code/settings.template.json
+          line: 194
+          content: '"L9_AUTONOMY_AUTONOMOUS_MERGE": "true"'
+          corroborating_line:
+            line: 25
+            content: Standing autonomous merge is ON (L9_AUTONOMY_AUTONOMOUS_MERGE=true).
+        declaration_b:
+          path: environment/agents/adapters/claude-code/web/environment.env.example
+          line: 110
+          content: L9_AUTONOMY_AUTONOMOUS_MERGE=false
+        verifier_authority:
+          path: environment/agents/adapters/claude-code/verify_account_env.py
+          lines:
+          - 42
+          - 98
+          content: ENV_EXAMPLE = HERE / "web" / "environment.env.example" ... "The expected set is derived from environment.env.example,
+            which by contract"
+        conclusion: FACT - the settings template renders 'true' into the live session while the verifier derives 'false' from
+          environment.env.example. The two governance files disagree, so the drift is structural.
+      documented_repair_is_ineffective:
+        stated_repair: paste docs/ACCOUNT_FIELDS.md section 1 into Environment variables
+        why_ineffective: INFERENCE (high confidence, from the evidence above) - the live value is produced by the rendered
+          settings env block, so an account-field paste is re-overwritten by the template on the next install/render.
+      corroborating_session_evidence:
+        note: environment.env.example lines 96-104 state that true "bought an affordance that always failed at the last step"
+          because gh pr merge is a GraphQL mutation and this gateway answers 403. That prediction was confirmed independently
+          this session - see F-02.
+  - source_ref: P9/failures/F-12
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-12
+    source_title: Account field drift persists across restarts and its printed repair requires a human web-UI paste
+    source_record:
+      id: F-12
+      rank: 12
+      title: Account field drift persists across restarts and its printed repair requires a human web-UI paste
+      severity: medium
+      frequency: per_session
+      plane: env_loader
+      provenance: re_verified
+      evidence:
+        banner: 'DRIFT: 1 of 33 variables - L9_AUTONOMY_AUTONOMOUS_MERGE: expected ''false'', got ''true'''
+        live_value: env -> L9_AUTONOMY_AUTONOMOUS_MERGE=true
+        printed_repair: python3 environment/agents/adapters/claude-code/verify_account_env.py --emit-fields, then paste docs/ACCOUNT_FIELDS.md
+          section 1 into Environment variables
+        persistence: reported identically at the previous session start and again after the 01:33:27Z restart
+      root_cause:
+        type: fact
+        statement: The environment plane is populated from account fields the session cannot write, so a detected drift can
+          be reported but never corrected from inside the session.
+      consequence: A drifted autonomy variable that widens merge authority stays drifted indefinitely, and the warning becomes
+        background noise.
+      workaround_used: Treated the expected value as authoritative and did not merge without explicit user instruction.
+      status: OPEN
+      improvements:
+      - I-EL-03
+  reconciliation_action: MERGE
+- id: CF-004
+  title: Bootstrap health receipts become stale without re-probing degraded components
+  status: ACTIVE_RECURRING
+  summary: Bootstrap readiness can be structurally valid while runtime components remain degraded, and receipts can expire
+    or survive restarts without regeneration or component re-probe.
+  source_records:
+  - source_ref: P6/failures/FA-2
+    source_pack: P6
+    source_path: failures.yaml
+    source_id: FA-2
+    source_title: Bootstrap receipt expired -> state unknown; degraded components persist unrepaired
+    source_record:
+      id: FA-2
+      title: Bootstrap receipt expired -> state unknown; degraded components persist unrepaired
+      severity: H
+      frequency: every_session_after_24h
+      plane: bootstrap
+      facts:
+      - 'claude_bootstrap_receipt.py --read: state=unknown, reason=''receipt expired (99580s old, ttl 86400s)'''
+      - 'components DEGRADED since 2026-08-23T21:38:26Z: shared_bootstrap, capabilities, memory, mcp, plugins'
+      - remediation install.sh exists (22528 B, executable); not executed by SessionStart in 2 observed turns
+      improvement_refs:
+      - BOOT-1
+  - source_ref: P8/failures/F-03
+    source_pack: P8
+    source_path: failures.yaml
+    source_id: F-03
+    source_title: Runtime readiness is DEGRADED while structural validation passes
+    source_record:
+      id: F-03
+      rank: 3
+      title: Runtime readiness is DEGRADED while structural validation passes
+      impact: high
+      frequency: 1
+      class: bootstrap_state
+      fact:
+      - command: python3 validate_claude_env.py
+        exit_code: 0
+        result: STRUCTURAL_PASS (runtime readiness not asserted)
+      - command: python3 validate_claude_env.py --runtime
+        exit_code: 5
+        result: 'RUNTIME: DEGRADED'
+      - command: python3 ops/scripts/claude_bootstrap_receipt.py --read
+        exit_code: 0
+        result: receipt expired (102617s old, ttl 86400s)
+      degraded_components:
+      - shared_bootstrap
+      - capabilities
+      - memory
+      - mcp
+      - plugins
+      ready_components:
+      - settings
+      - skills
+      - rules
+      root_cause:
+        fact: The receipt at /root/.l9/claude/bootstrap-state.json was generated 2026-08-23T21:04:40Z with ttl_seconds 86400
+          and was 102619s old when read. It is both expired and pinned to governance_revision 84d06e3d, while the live governance
+          clone is at 829f45ec.
+        unknown: UNKNOWN - which component caused shared_bootstrap=DEGRADED. The receipt records state per component but no
+          reason, and no log from that run is retained under /root/.l9/claude/.
+      note: 'The session banner reported this correctly ("claude bootstrap: unknown - receipt expired"). The detection works;
+        the repair does not run.'
+  - source_ref: P9/failures/F-06
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-06
+    source_title: Bootstrap receipt is never regenerated, so bootstrap state reports unknown/expired on every session start
+    source_record:
+      id: F-06
+      rank: 6
+      title: Bootstrap receipt is never regenerated, so bootstrap state reports unknown/expired on every session start
+      severity: high
+      frequency: per_session
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        receipt: /root/.l9/claude/bootstrap-state.json
+        generated_at: '2026-08-23T21:38:31Z'
+        ttl_seconds: 86400
+        mtime: 2026-08-23 21:38
+        container_boot: '2026-08-25T01:33:27Z'
+        banner_line_this_session: 'claude bootstrap: unknown - receipt expired (100520s old, ttl 86400s)'
+        banner_line_previous_session: 'claude bootstrap: unknown - receipt expired (93611s old, ttl 86400s)'
+        contrast: /root/.l9/claude/gov-refresh.json WAS refreshed at 2026-08-25T01:33:48Z by the same restart
+        stale_pin: the receipt records governance_revision 84d06e3d while the SSOT is at 829f45ec
+      root_cause:
+        type: inference
+        statement: Restart re-provisioning rewrites /root/.claude/* (all mtime 01:33) and refreshes the governance receipt,
+          but does not re-run the bootstrap installer, so the receipt ages past its TTL and stays there permanently.
+        grounded_in: the mtime contrast between /root/.claude/* and /root/.l9/claude/bootstrap-state.json
+      consequence: Bootstrap health is unreadable at every session start; the receipt also pins a superseded governance revision.
+      workaround_used: Read the component states directly out of the JSON instead of trusting the banner.
+      status: OPEN
+      improvements:
+      - I-BS-04
+  reconciliation_action: MERGE
+- id: CF-005
+  title: Memory continuity is empty or internally contradictory
+  status: ACTIVE_RECURRING
+  summary: Hydration can carry no task-bearing state, writeback can produce zero durable writes, and aggregate memory health
+    can disagree with the sanctioned Graphiti path.
+  source_records:
+  - source_ref: P6/failures/FA-5
+    source_pack: P6
+    source_path: failures.yaml
+    source_id: FA-5
+    source_title: Hydration carries no task state; completed contract missing -> full re-verification burn
+    source_record:
+      id: FA-5
+      title: Hydration carries no task state; completed contract missing -> full re-verification burn
+      severity: MH
+      frequency: once_observed_plausibly_recurring
+      plane: bootstrap
+      facts:
+      - 'turn-2 hydrate for cognitive-engine-graphs: 8/8 facts restate ''resume from the latest Graphiti PICKUP'''
+      - 'turn-1 contract evidence lock stale (PR #235 head 44219b5 vs live 9a963b3; #237 merged; #233 closed)'
+      - completion state discoverable only from live GitHub; turn 1 spent entirely on re-verification
+      inferences:
+      - a completion PICKUP write at contract end would have prevented the burn
+      improvement_refs:
+      - BOOT-4
+  - source_ref: P6/failures/FA-6
+    source_pack: P6
+    source_path: failures.yaml
+    source_id: FA-6
+    source_title: Memory state contradiction between receipt and hydrate
+    source_record:
+      id: FA-6
+      title: Memory state contradiction between receipt and hydrate
+      severity: M
+      frequency: every_session
+      plane: bootstrap
+      facts:
+      - 'bootstrap receipt: memory=DEGRADED'
+      - 'same-session Graphiti hydrate: degraded=false with facts returned'
+      unknowns:
+      - authoritative_probe
+      improvement_refs:
+      - BOOT-2
+  - source_ref: P9/failures/F-04
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-04
+    source_title: Memory writeback produced zero durable writes, which starves the next session's hydration into tautology
+    source_record:
+      id: F-04
+      rank: 4
+      title: Memory writeback produced zero durable writes, which starves the next session's hydration into tautology
+      severity: high
+      frequency: per_session
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        receipt: /home/user/.l9/memory/receipts/09f7fefb-36d8-507f-a0e5-874701422fd3.writeback.json
+        fields:
+          status: ran
+          close_status: skipped
+          writes: 0
+          warnings: 1
+        created_at_utc: '2026-08-24T23:41:07Z'
+        downstream_observation: The 01:33:59Z SessionStart hydration reported facts_returned=8 and pickup_parsed=yes, but
+          every returned fact was self-referential, e.g. "The next action is to resume from the latest Graphiti PICKUP in
+          the Cognitive.Engine.Graphs project."
+      root_cause:
+        type: inference
+        statement: The Stop hook ran and wrote nothing, so the store holds only meta-episodes about resuming. Hydration then
+          returns those meta-episodes and reports success, because the metric counted is facts_returned, not task-bearing
+          content.
+        grounded_in: writeback receipt writes:0 plus the verbatim hydration facts in the SessionStart banner
+      consequence: Memory reports healthy and carries no task state; session continuity came entirely from the conversation
+        transcript.
+      workaround_used: Relied on the transcript and on re-derived repository state.
+      status: OPEN
+      improvements:
+      - I-BS-05
+      - I-BS-06
+  - source_ref: P9/failures/F-07
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-07
+    source_title: 'memory: DEGRADED is reported while the sanctioned Graphiti CLI path is fully healthy'
+    source_record:
+      id: F-07
+      rank: 7
+      title: 'memory: DEGRADED is reported while the sanctioned Graphiti CLI path is fully healthy'
+      severity: high
+      frequency: per_session
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        degraded_claim: 'SessionStart banner and /root/.l9/claude/bootstrap-state.json both report memory: DEGRADED'
+        contradicting_probe:
+          command: /root/.cursor-governance/.venv/bin/python /root/.cursor-governance/ops/graphiti/graphiti_memory_client.py
+            health
+          exit_code: 0
+          output: 'healthy: true; circuit CLOSED, failure_count 0; liveness status healthy service graphiti-mcp; tools.reachable
+            true; tool_count 9; resolver group_id cognitive-engine-graphs, readonly false'
+        contradicting_receipt: '/home/user/.l9/memory/receipts/<session>.json reports degraded: false, status prefetched,
+          4 group_ids hydrated'
+      root_cause:
+        type: inference
+        statement: Two front doors exist. The CLI reaches memory.quantumaipartners.com directly via GRAPHITI_MCP_URL and works.
+          The MCP transport routes through the capability broker and does not. The receipt collapses both into one memory
+          verdict, and because of F-06 that verdict is also 28 hours stale.
+        grounded_in: the health probe, the hydrate receipt, and the broker probe in F-08
+      consequence: The banner discourages use of a memory path that is in fact working.
+      workaround_used: Used the CLI front door directly.
+      status: OPEN
+      improvements:
+      - I-BS-05
+      - I-BS-04
+  reconciliation_action: MERGE
+- id: CF-006
+  title: Capability broker path is degraded without cause discrimination
+  status: ACTIVE_OPEN_UNKNOWN
+  summary: Broker access fails at the network/proxy boundary, but the observed CONNECT failure does not distinguish proxy
+    denial from upstream unavailability.
+  source_records:
+  - source_ref: P1/failures/FAIL-05
+    source_pack: P1
+    source_path: failures.yaml
+    source_id: FAIL-05
+    source_title: Capability broker CONNECT rejected by proxy gateway
+    source_record:
+      id: FAIL-05
+      rank: 5
+      title: Capability broker CONNECT rejected by proxy gateway
+      impact: high
+      frequency: every-session
+      reproduced_this_session: true
+      probe:
+        command: curl -sS "$HTTPS_PROXY/__agentproxy/status"
+        exit_code: 0
+        finding:
+          kind: connect_rejected
+          host: broker.quantumaipartners.com:443
+          detail: gateway answered 502 to CONNECT (policy denial or upstream failure)
+      evidence: evidence/04-proxy.txt
+      correlated_variable: L9_CAPABILITY_BROKER_URL=https://broker.quantumaipartners.com/l9/capability
+      root_cause:
+        statement: Host not on the proxy allowlist, or upstream unavailable.
+        confidence: inference_high
+        unresolved: The 502-to-CONNECT response cannot distinguish policy denial from upstream failure.
+      observed_cost: capabilities DEGRADED at every SessionStart. No functional loss observed in this workload, which is not
+        evidence that the broker is unneeded generally.
+      improvements:
+      - IMP-05
+  - source_ref: P9/failures/F-08
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-08
+    source_title: Capability broker is unreachable, so every brokered capability resolves DEGRADED
+    source_record:
+      id: F-08
+      rank: 8
+      title: Capability broker is unreachable, so every brokered capability resolves DEGRADED
+      severity: high
+      frequency: per_session
+      plane: env_loader
+      provenance: re_verified
+      evidence:
+        url: https://broker.quantumaipartners.com/l9/capability
+        curl: 'curl: (56) CONNECT tunnel failed, response 502 ; http_code=000 ; time=0.27s'
+        dns: getent hosts broker.quantumaipartners.com -> no result
+        dependent_states: 'capabilities: DEGRADED, mcp: DEGRADED, memory: DEGRADED, plugins: DEGRADED'
+      root_cause:
+        type: UNKNOWN
+        statement: Unresolved - see U-02. The proxy's 502 on CONNECT does not distinguish upstream-down from policy-denied.
+      consequence: No brokered capability could be used; the broker is also the declared front door for five of the six MCP
+        servers.
+      workaround_used: None; used harness-provided tooling instead.
+      status: OPEN
+      improvements:
+      - I-EL-02
+  reconciliation_action: MERGE
+- id: CF-007
+  title: MCP responses can exceed the usable context/token envelope
+  status: ACTIVE_RECURRING
+  summary: Several MCP methods return payloads too large for the response budget, forcing diversion or loss of direct usability.
+  source_records:
+  - source_ref: P1/failures/FAIL-06
+    source_pack: P1
+    source_path: failures.yaml
+    source_id: FAIL-06
+    source_title: MCP pull_request_read get_files exceeded the token cap
+    source_record:
+      id: FAIL-06
+      rank: 6
+      title: MCP pull_request_read get_files exceeded the token cap
+      impact: medium
+      frequency: once-observed
+      reproduced_this_session: false
+      tool: mcp__github__pull_request_read
+      method: get_files
+      subject: Quantum-L9/.github PR 59
+      result_size_chars: 109019
+      persisted_to: mcp-github-pull_request_read-1787502269767.txt
+      persisted_size_bytes: 109638
+      evidence: evidence/11-misc.txt
+      root_cause:
+        statement: The method returns full per-file patch bodies and exposes no field-projection parameter, unlike sibling
+          list_pull_requests which accepts `fields`.
+        confidence: fact
+      workaround_used:
+        command: git diff --name-status origin/main...HEAD
+        exit_code: 0
+        note: Same information in roughly 35 lines.
+      improvements:
+      - IMP-15
+  - source_ref: P2/failures/FAIL-09
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-09
+    source_title: MCP tool response exceeded the token limit and was diverted to a file
+    source_record:
+      id: FAIL-09
+      rank: 9
+      title: MCP tool response exceeded the token limit and was diverted to a file
+      category: agent_tooling
+      impact: local
+      frequency: 1
+      evidence:
+        command: mcp__github__actions_list list_workflow_runs branch=chore/auto-seed-governance
+        observed_output: 'Error: result (60,764 characters across 1 line) exceeds maximum allowed tokens. Output has been
+          saved to /root/.claude/projects/.../mcp-github-actions_list-1787448779325.txt'
+        root_cause: The tool has no server-side field projection for this method; per_page=10 still returned full run objects
+          including complete commit messages.
+      resolution:
+        action: Parsed the saved file with a python one-liner projecting only head_sha/status/conclusion/name/created_at.
+        verification: 12 rows printed; the action_required finding (FAIL-07) came from this parse.
+      status: resolved_with_workaround
+  - source_ref: P7/failures/F-09
+    source_pack: P7
+    source_path: failures.yaml
+    source_id: F-09
+    source_title: MCP job-log responses exceed token limits
+    source_record:
+      id: F-09
+      title: MCP job-log responses exceed token limits
+      impact: low-medium (extra slicing steps to reach the one failing test)
+      frequency: 2 (57,762-char and 663,341-char results)
+      category: observability
+      symptom: '''result ... exceeds maximum allowed tokens. Output has been saved to <file>'' — content then extracted with
+        grep/python slicing'
+      root_cause: 'FACT: full CI job logs are far larger than the tool-result budget; get_job_logs tail_lines granularity
+        is coarse'
+      resolution: saved-file + targeted grep/python extraction worked
+      evidence: both oversize notices quoted in session
+  reconciliation_action: MERGE
+- id: CF-008
+  title: Shell working-directory reset breaks relative-path operations
+  status: ACTIVE_RECURRING
+  summary: Independent shell invocations reset cwd, so relative commands can silently target the wrong place unless every
+    governance/repo action receives an explicit target path.
+  source_records:
+  - source_ref: P4/failures/F-01
+    source_pack: P4
+    source_path: failures.yaml
+    source_id: F-01
+    source_title: Relative-path commands failed after the shell working directory was reset
+    source_record:
+      id: F-01
+      rank: 1
+      title: Relative-path commands failed after the shell working directory was reset
+      severity: medium
+      frequency: 4
+      blocked_progress: true
+      evidence:
+      - 'tool_result: "Exit code 2 | sed: can''t read src/corpus_reasoning.ts: No such file or directory"'
+      - 'tool_result: "Exit code 2 | sed: can''t read src/corpus_embeddings.ts: No such file or directory"'
+      - 'tool_result: "Exit code 1 | head: cannot open ''corpus-report.md'' for reading: No such file or directory"'
+      - 'tool_result: "Exit code 1 | ls: cannot access ''docs/decisions/'': No such file or directory | tail: cannot open
+        ''docs/decision_log.md''"'
+      - notice "Shell cwd was reset to /home/user" x6
+      root_cause:
+        classification: environment_defect
+        statement: The Bash working directory persists across calls while it stays inside the primary working directory, and
+          is reset to /home/user when a command leaves it. Governance tooling lives at /root/.cursor-governance, outside that
+          tree, so every governance invocation silently returned the shell to /home/user and the next relative path resolved
+          against the wrong root.
+        proof:
+        - cd /home/user/l9-meta-injector -> next call pwd=/home/user/l9-meta-injector (persisted)
+        - cd /root/.cursor-governance -> "Shell cwd was reset to /home/user"; next call pwd=/home/user
+      workaround_used: subshell isolation `( cd <dir> && ... )` and absolute paths
+      workaround_effective: true
+  - source_ref: P7/failures/F-07
+    source_pack: P7
+    source_path: failures.yaml
+    source_id: F-07
+    source_title: shell working-directory reset broke a make invocation
+    source_record:
+      id: F-07
+      title: shell working-directory reset broke a make invocation
+      impact: low (one failed command, immediate retry)
+      frequency: 1 (reset itself observed twice)
+      category: harness_shell
+      symptom: 'make: *** No rule to make target ''pr-check''.  Stop. (exit 2) after harness note ''Shell cwd was reset to
+        /home/user'''
+      root_cause: 'FACT: shell cwd does not persist across some tool events; a `cd` inside an earlier compound command was
+        undone'
+      resolution: prefix commands with `cd /home/user/Cursor-Governance`
+      evidence: both messages quoted above
+  reconciliation_action: MERGE
+- id: CF-009
+  title: Fail-closed gates reject legitimate scoped operations without sufficiently actionable remediation
+  status: ACTIVE_RECURRING
+  summary: Safety gates correctly fail closed in ambiguous cases, but legitimate scoped cleanup/staging/compound operations
+    can be rejected, diagnostic granularity is weak, and documented escape variables may be unreachable to the agent.
+  source_records:
+  - source_ref: P1/failures/FAIL-07
+    source_pack: P1
+    source_path: failures.yaml
+    source_id: FAIL-07
+    source_title: Sandbox denied cleanup of session receipts
+    source_record:
+      id: FAIL-07
+      rank: 7
+      title: Sandbox denied cleanup of session receipts
+      impact: low
+      frequency: once-observed
+      reproduced_this_session: false
+      command: rm -rf .l9 && git status --porcelain --untracked-files=all
+      result: Permission to use Bash with command ... has been denied.
+      root_cause:
+        statement: Sandbox permission policy for the composed destructive command.
+        confidence: fact
+      observed_cost: The two L4 receipts remain untracked in org-github-defaults, which is what keeps FRICTION-01 firing at
+        end of session.
+      improvements:
+      - IMP-07
+  - source_ref: P3/failures/FAIL-07
+    source_pack: P3
+    source_path: failures.yaml
+    source_id: FAIL-07
+    source_title: Destructive-action gates block cleanup an agent may not self-authorise
+    source_record:
+      id: FAIL-07
+      rank: 7
+      title: Destructive-action gates block cleanup an agent may not self-authorise
+      impact: LOW
+      frequency:
+        refusals: 4
+      category: gate
+      evidence:
+      - command: git worktree add <scratchpad>/wt225 pr225
+        output: 'shared-worktree isolation: raw git worktree add denied — the new folder has no .cursor links. Use ops/scripts/worktree_add_wired.sh
+          or set L9_WORKTREE_ADD_AUTHORIZED=<reason>.'
+      - command: bash ops/scripts/worktree_add_wired.sh -b wt-pr225 <path> pr225
+        output: 'fatal: invalid reference: pr225 (ref not yet fetched)'
+      - command: rm -rf <scratchpad>/wt225/.venv312
+        output: denied (x2)
+      - command: gh api -X DELETE repos/.../git/refs/heads/feat/cursor-memory-refuse-file-url
+        output: 'git guardrails: an authenticated DELETE against the GitHub API is an irreversible remote deletion with no
+          local recovery. Set L9_GIT_DESTRUCTIVE_AUTHORIZED=<reason>.'
+      consequences:
+      - scratch venv could not be removed
+      - merged branch not deleted; --delete-branch component of the helper's chosen argv unfulfilled
+      assessment: branch-deletion refusal correct; rm -rf refusal over-broad inside the session's own scratchpad
+      improvement_ref: C3
+  - source_ref: P4/failures/F-04
+    source_pack: P4
+    source_path: failures.yaml
+    source_id: F-04
+    source_title: Broad git staging denied by the shared-worktree isolation gate
+    source_record:
+      id: F-04
+      rank: 4
+      title: Broad git staging denied by the shared-worktree isolation gate
+      severity: low
+      frequency: 2
+      blocked_progress: true
+      evidence:
+      - 'command: git add -A -- src tests scripts docs package.json ...'
+      - 'gate output: "shared-worktree isolation: broad staging (-A/--all/./-u without pathspecs) denied — scoops foreign
+        dirty work on shared clones."'
+      - 'gate source: /root/.cursor-governance/ops/autonomy/worktree_isolation_gate.py:226'
+      root_cause:
+        classification: gate_working_as_designed
+        statement: Rule 49-shared-worktree-isolation forbids -A/-u without pathspecs. The command carried explicit pathspecs
+          but also -A, and the gate matches on the flag rather than on whether pathspecs were supplied.
+      workaround_used: re-issued as `git add -- src tests scripts docs package.json ...` without -A
+      workaround_effective: true
+  - source_ref: P4/failures/F-05
+    source_pack: P4
+    source_path: failures.yaml
+    source_id: F-05
+    source_title: Git guardrails failed closed on an undeterminable or unresolved target
+    source_record:
+      id: F-05
+      rank: 5
+      title: Git guardrails failed closed on an undeterminable or unresolved target
+      severity: low
+      frequency: 2
+      blocked_progress: true
+      evidence:
+      - 'gate: "policy evaluation failed (git status --porcelain exited 128); a sensitive mutation cannot be ruled out, so
+        this fails closed (I017)"'
+      - 'gate: "target ''$W'' contains an unresolved or empty expansion — an empty variable turns a scoped delete into a delete
+        of its parent"'
+      root_cause:
+        classification: gate_working_as_designed
+        statement: Both refusals are the documented fail-closed behaviour of rule 54-context-sensitive-git-guardrails. The
+          second was caused by writing a destructive command against a shell variable the gate could not resolve.
+      workaround_used: literal absolute paths instead of a variable
+      workaround_effective: true
+  - source_ref: P7/failures/F-06
+    source_pack: P7
+    source_path: failures.yaml
+    source_id: F-06
+    source_title: session permission/execution gate faults and denials
+    source_record:
+      id: F-06
+      title: session permission/execution gate faults and denials
+      impact: low-medium (each required a workaround; no data loss)
+      frequency: 4 distinct events
+      category: harness_gating
+      events:
+      - 'DENIED: compound `find ... -exec rm -rf` cache cleanup'
+      - 'DENIED: `rm -rf environment/program-execution/peer_execution/.pytest_cache` (worked around with python shutil.rmtree)'
+      - 'BLOCKED: `sleep 90; tail ...` (harness rule; switched to Monitor/until-loop)'
+      - 'INTERNAL_EVALUATION_ERROR: execution gate failed to evaluate a compound `make pr-check && ... make pr` command (''gate
+        fault, not a policy decision''); splitting the command worked'
+      root_cause: 'FACT for the deny/block events: session policy denies broad deletions and foreground sleeps. For INTERNAL_EVALUATION_ERROR
+        the message itself declares a gate fault; underlying cause UNKNOWN.
+
+        '
+      evidence: exact error strings quoted per event in session transcript
+  - source_ref: P8/failures/F-05
+    source_pack: P8
+    source_path: failures.yaml
+    source_id: F-05
+    source_title: A whole compound command is discarded when one clause trips a guardrail
+    source_record:
+      id: F-05
+      rank: 5
+      title: A whole compound command is discarded when one clause trips a guardrail
+      impact: medium
+      frequency: 3
+      class: tooling_interaction
+      fact:
+        command: SP=...; mkdir -p ...; cat > "$SP/fixtures/build_corpus.mjs" <<EOF ... EOF; rm -rf "$SP/e2e"; node ...
+        refusal_verbatim: 'git guardrails (l9-context-sensitive-git-guardrails): target ''$SP/e2e'' contains an unresolved
+          or empty expansion - an empty variable turns a scoped delete into a delete of its parent.'
+        consequence: FACT - the heredoc earlier in the same command never executed, so build_corpus.mjs was not written. Confirmed
+          by `ls -la .../fixtures/` showing only document_fixtures.ts and zip_fixtures.ts.
+        rework: the file had to be rewritten via the Write tool
+      second_occurrence:
+        command: git add -A -- src/ MANIFEST.md && git commit ...
+        refusal_verbatim: 'shared-worktree isolation: broad staging (-A/--all/./-u without pathspecs) denied - scoops foreign
+          dirty work on shared clones.'
+        note: FACT - the refusal fired even though explicit pathspecs were supplied after --. The commit in the same command
+          did not run.
+      third_occurrence:
+        context: Occurred while packaging this very report, which makes it the clearest evidence in the pack.
+        command: OUT=<path>; rm -f "$OUT"; zip -q -X -j "$OUT" <9 files>; unzip -l "$OUT"
+        refusal_verbatim: 'git guardrails (l9-context-sensitive-git-guardrails): target ''$OUT'' contains an unresolved or
+          empty expansion.'
+        consequence: 'FACT - a MANIFEST.json update earlier in the same command was discarded along with the rm, and had to
+          be re-run. The rm itself was unnecessary: the target did not exist.'
+        note: The guardrail cannot resolve a variable assigned in the same command, so any $VAR delete is refused regardless
+          of how the variable was set.
+      guardrail_assessment: 'Both guardrails were correct to fire on the delete and on -A. The cost is all-or-nothing rejection
+        of multi-clause commands. Mitigation that worked throughout: use literal absolute paths for any destructive clause,
+        and keep destructive clauses out of commands that also produce artifacts.'
+  - source_ref: P8/failures/F-07
+    source_pack: P8
+    source_path: failures.yaml
+    source_id: F-07
+    source_title: A literal rm -rf of a scratchpad path was denied by policy
+    source_record:
+      id: F-07
+      rank: 7
+      title: A literal rm -rf of a scratchpad path was denied by policy
+      impact: low
+      frequency: 1
+      class: permission
+      fact:
+        command: rm -rf /tmp/claude-0/<session>/scratchpad/corpus
+        result_verbatim: Permission to use Bash with command ... has been denied.
+      consequence: none - the directory did not exist and mkdir -p alone sufficed
+      note: Recorded for completeness. FACT that it was denied; no workaround was needed.
+  - source_ref: P9/failures/F-05
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-05
+    source_title: Documented gate escape variables are unreachable from the agent side
+    source_record:
+      id: F-05
+      rank: 5
+      title: Documented gate escape variables are unreachable from the agent side
+      severity: blocker
+      frequency: once
+      plane: bootstrap
+      provenance: earlier_session
+      evidence:
+        attempted_forms:
+        - export L9_WORKTREE_ADD_AUTHORIZED=<reason> then run the command
+        - L9_WORKTREE_ADD_AUTHORIZED=<reason> git worktree add ...
+        - the same two forms for L9_GIT_SWITCH_AUTHORIZED
+        observed: no effect in either form; the gate denied the command unchanged
+        mechanism_evidence:
+        - ops/autonomy/worktree_isolation_gate.py:88 -> return bool(os.environ.get(env_key, '').strip())
+        - ops/autonomy/local_execution_gate.py:416 -> raw = sys.stdin.read()
+        - ops/autonomy/local_execution_gate.py:363-365 -> command is read from the stdin event's tool_input
+        documented_in: rules/49-shared-worktree-isolation.md and rules/88-l4-local-autonomy.md both publish these variables
+          as the escape
+      root_cause:
+        type: inference
+        statement: The gate runs as a PreToolUse hook process spawned by the harness, receiving the command as JSON on stdin.
+          It resolves the escape from its own os.environ. A variable exported inside a Bash tool call lives in a shell that
+          starts after the gate has already decided, and an inline VAR=value prefix is only text inside the command string
+          the gate parses. Neither form can ever reach the gate's environment.
+        grounded_in: the three source citations above plus the observed no-effect behaviour
+      consequence: A documented, rule-published escape hatch does not function on this surface.
+      workaround_used: Used git clone --branch instead of git worktree add to obtain an isolated checkout.
+      status: OPEN
+      improvements:
+      - I-BS-07
+  - source_ref: P9/failures/F-14
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-14
+    source_title: Gates reject an entire compound command, so non-offending stages in the same line never run
+    source_record:
+      id: F-14
+      rank: 14
+      title: Gates reject an entire compound command, so non-offending stages in the same line never run
+      severity: medium
+      frequency: intermittent
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        instance_earlier: git add ... && git commit ... && git push ... was denied as a unit; the commit stage did not run
+          either
+        instance_now:
+          command: SP=<path>; rm -rf "$SP/exp-pack2"; mkdir -p "$SP/exp-pack2"; cd ...
+          response: 'git guardrails (l9-context-sensitive-git-guardrails): target ''$SP/exp-pack2'' contains an unresolved
+            or empty expansion'
+          note: correct fail-closed behaviour; the guardrail parses statically and cannot see a variable assigned earlier
+            in the same line
+        instance_now_2:
+          command: rm -rf <literal path> ; mkdir -p <literal path> ; cd <literal path> && pwd
+          response: Permission to use Bash with command ... has been denied
+          note: the whole compound line was denied, including the mkdir and cd stages
+      root_cause:
+        type: fact
+        statement: Gate and permission evaluation operate on the whole command string, so one disallowed stage suppresses
+          every other stage in the same invocation.
+      consequence: Work must be decomposed into single-purpose invocations; batching costs a retry each time it is attempted.
+      workaround_used: Split into one command per intent; used literal paths instead of variables in any line containing a
+        destructive verb.
+      status: OPEN
+      improvements:
+      - I-BS-10
+  reconciliation_action: MERGE
+- id: CF-010
+  title: Project interpreter and toolchain readiness do not reliably match repository requirements
+  status: ACTIVE_RECURRING
+  summary: PATH, system Python, project virtualenvs, pinned checker versions, and readiness banners can disagree. A tool being
+    installed is not proof that the repository is importable or that CI-equivalent tools are selected.
+  source_records:
+  - source_ref: P3/failures/FAIL-04
+    source_pack: P3
+    source_path: failures.yaml
+    source_id: FAIL-04
+    source_title: Default interpreter older than every constellation repo requires
+    source_record:
+      id: FAIL-04
+      rank: 4
+      title: Default interpreter older than every constellation repo requires
+      impact: HIGH
+      frequency:
+        incidents: 1
+        failed_commands: 4
+      category: environment
+      evidence:
+      - command: python3 -V
+        output: Python 3.11.15
+      - command: pip install -r requirements-ci.txt
+        output: 'ERROR: Cannot uninstall cryptography 41.0.7, RECORD file not found. Hint: The package was installed by debian.'
+      - command: pytest tests/ -m unit
+        output: 'Interrupted: 86 errors during collection / ModuleNotFoundError: No module named ''fastapi'''
+      - command: pip install -r requirements.txt
+        output: 'ERROR: Package ''constellation-node-sdk'' requires a different Python: 3.11.15 not in ''>=3.12'''
+      - command: ls /usr/bin/python3.12
+        output: present but not default
+      workaround: /usr/bin/python3.12 -m venv .venv312 then reinstall
+      workaround_result:
+        tests: 741
+        failures: 0
+        errors: 0
+        skipped: 3
+      improvement_refs:
+      - A3
+      - A4
+  - source_ref: P3/failures/FAIL-05
+    source_pack: P3
+    source_path: failures.yaml
+    source_id: FAIL-05
+    source_title: PATH mypy cannot load the repo's mypy plugin; two mypy versions present
+    source_record:
+      id: FAIL-05
+      rank: 5
+      title: PATH mypy cannot load the repo's mypy plugin; two mypy versions present
+      impact: MED
+      frequency:
+        attempts: 2
+      category: environment
+      evidence:
+      - command: mypy engine/ --config-file=pyproject.toml --ignore-missing-imports --exclude chassis
+        output: 'pyproject.toml:1: error: Error importing plugin "pydantic.mypy": No module named ''pydantic'''
+      - command: python3 -c 'import pydantic; print(pydantic.VERSION)'
+        output: 2.13.4 (present for python3, absent for the uv tool venv)
+      - command: head -3 /root/.local/bin/mypy
+        output: '#!/root/.local/share/uv/tools/mypy/bin/python'
+      - command: python3 -m mypy engine/ --config-file=pyproject.toml --ignore-missing-imports --exclude chassis
+        exit_code: 0
+        output: 'Success: no issues found in 139 source files'
+      - versions:
+          path_mypy: 1.19.1
+          module_mypy: 1.14.0
+      workaround: invoke via python3 -m mypy
+      improvement_ref: A5
+  - source_ref: P4/failures/F-03
+    source_pack: P4
+    source_path: failures.yaml
+    source_id: F-03
+    source_title: Graphiti memory client aborts under the system interpreter
+    source_record:
+      id: F-03
+      rank: 3
+      title: Graphiti memory client aborts under the system interpreter
+      severity: medium
+      frequency: 4
+      blocked_progress: partial
+      evidence:
+      - 'command: python3 /root/.cursor-governance/ops/graphiti/graphiti_memory_client.py health'
+      - 'exit_code: 1'
+      - 'stderr: "ModuleNotFoundError: No module named ''pydantic''" via episode_contract.py:10'
+      root_cause:
+        classification: environment_defect
+        statement: /usr/local/bin/python3 (3.11.15) has neither pydantic nor the client's other dependencies. The governance
+          venv (3.12.3) has them. Nothing on PATH points at the venv, so the intuitive invocation is the failing one.
+        proof:
+        - 'system python3: import pydantic -> ModuleNotFoundError'
+        - 'gov venv python: import pydantic -> yes; health -> exit 0, {"healthy": true}'
+      workaround_used: /root/.cursor-governance/.venv/bin/python (prescribed by rule 03-graphiti-memory)
+      workaround_effective: true
+  - source_ref: P5/failures/FAIL-004
+    source_pack: P5
+    source_path: failures.yaml
+    source_id: FAIL-004
+    source_title: 'make setup cannot complete: pre-commit absent'
+    source_record:
+      id: FAIL-004
+      title: 'make setup cannot complete: pre-commit absent'
+      status: inference
+      command: command -v pre-commit
+      exit_code: 1
+      evidence_path: Makefile:14-16
+      impact: medium
+      note: .pre-commit-config.yaml exists (5786 B) but the binary is not installed.
+  - source_ref: P7/failures/F-04
+    source_pack: P7
+    source_path: failures.yaml
+    source_id: F-04
+    source_title: bridge test module not collectable without PYTHONPATH
+    source_record:
+      id: F-04
+      title: bridge test module not collectable without PYTHONPATH
+      impact: medium (test suite falsely appears broken from repo root)
+      frequency: 2 invocations failed before the workaround was standard
+      category: test_harness_wiring
+      symptom: 'pytest collection ERROR for environment/program-execution/integrations/ autonomy-control-plane/tests/test_bridge.py:
+        "ModuleNotFoundError: No module named ''adapters''" (exit 2 on collection)
+
+        '
+      root_cause: 'FACT: test_bridge.py imports `from adapters.common.imports import load_module` at module top, before its
+        own sys.path bootstrap runs; the import resolves only with environment/program-execution on PYTHONPATH (exactly how
+        the Makefile targets invoke it).
+
+        '
+      resolution: 'run with PYTHONPATH=environment/program-execution — then 6/6 (later 8/8) pass. No repo change was made
+        for this (out of the session''s task scope).
+
+        '
+      evidence:
+      - failing traceback quoted in session (tests/test_bridge.py:8)
+      - Makefile program-execution-conformance uses PYTHONPATH=$(PE_ROOT)
+  - source_ref: P9/failures/F-15
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-15
+    source_title: Toolchain absent from PATH despite session-deps reporting install pass complete
+    source_record:
+      id: F-15
+      rank: 15
+      title: Toolchain absent from PATH despite session-deps reporting install pass complete
+      severity: medium
+      frequency: once
+      plane: env_loader
+      provenance: earlier_session
+      evidence:
+        banner: 'session deps: session-deps: toolchain ready (fingerprint 9ff843f2...)'
+        log: /root/.l9/claude/deps-9ff843f2....log contains only 'installing workspace toolchain' and 'install pass complete'
+        observed: project imports and test tooling were not available until poetry env use /usr/bin/python3.12 and poetry
+          install were run by hand
+        followup: Makefile invocations additionally required PATH=<venv>/bin:$PATH
+        residual_now: default python3 is 3.11.15 while the repo requires 3.12+; no in-repo .venv exists; poetry env info --path
+          -> /root/.cache/pypoetry/virtualenvs/l9-engine-6JECpu72-py3.12
+      root_cause:
+        type: inference
+        statement: The deps pass reports completion without verifying that an importable project environment is on PATH, and
+          the interpreter it leaves as default is a minor version below the project's floor.
+        grounded_in: the two-line log, the observed manual provisioning, and the version contrast above
+      consequence: A false ready signal at session start, costing a diagnose-and-provision detour before any test could run.
+      workaround_used: poetry env use /usr/bin/python3.12 && poetry install, then PATH-prefixed make invocations.
+      status: PARTIALLY_OPEN
+      improvements:
+      - I-EL-05
+  reconciliation_action: MERGE
+- id: CF-011
+  title: Governance contracts require command surfaces absent from consumer repositories
+  status: ACTIVE_OPEN_DECISION
+  summary: The operating contract can name a mandatory local or publish entrypoint that the target repository does not implement,
+    forcing off-doctrine workarounds or dead targets.
+  source_records:
+  - source_ref: P3/failures/FAIL-09
+    source_pack: P3
+    source_path: failures.yaml
+    source_id: FAIL-09
+    source_title: Skill's PUBLIC verb contract absent from the target repo
+    source_record:
+      id: FAIL-09
+      rank: 9
+      title: Skill's PUBLIC verb contract absent from the target repo
+      impact: MED
+      frequency:
+        incidents: 1
+      category: contract
+      evidence:
+      - command: grep -nE '^(pr|pr-check|improve):' Makefile
+        output: NO Makefile targets matched
+      - fact: l9-pr-remediation defaults specify verify=make pr-check, publish='PR_REMEDIATE=0 make pr'
+      workaround: 'documented fallback: make agent-check-unit components (ruff, mypy, pytest, tools/*.py)'
+      improvement_ref: C4
+  - source_ref: P5/failures/FAIL-001
+    source_pack: P5
+    source_path: failures.yaml
+    source_id: FAIL-001
+    source_title: Advertised local gate entrypoint does not exist
+    source_record:
+      id: FAIL-001
+      title: Advertised local gate entrypoint does not exist
+      status: fact
+      command: bash local_pr_pipeline/pr_pipeline.sh validate
+      exit_code: 127
+      stderr: 'bash: local_pr_pipeline/pr_pipeline.sh: No such file or directory'
+      affected:
+      - make pr
+      - make pr-validate
+      - make pr-lint
+      - make pr-semgrep
+      - make pr-test
+      - make pr-security
+      - make pr-compliance
+      - make pr-l9
+      - make pr-docs
+      - make pr-quick
+      evidence_path: Makefile:129-156
+      impact: critical
+      note: 'CI comments on PR #194 advertise ''Local equivalent: make pr''.'
+  - source_ref: P5/failures/FAIL-003
+    source_pack: P5
+    source_path: failures.yaml
+    source_id: FAIL-003
+    source_title: make deploy targets a missing script
+    source_record:
+      id: FAIL-003
+      title: make deploy targets a missing script
+      status: inference
+      command: test -e scripts/deploy.sh
+      exit_code: 1
+      evidence_path: Makefile:225
+      impact: medium
+      note: Path absence observed; the make target itself was not executed.
+  - source_ref: P9/failures/F-10
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-10
+    source_title: make pr is doctrine's only publish path but the target does not exist in the target repository
+    source_record:
+      id: F-10
+      rank: 10
+      title: make pr is doctrine's only publish path but the target does not exist in the target repository
+      severity: blocker
+      frequency: once
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        probe: grep -cE '^pr(-check)?:' /home/user/Cognitive.Engine.Graphs/Makefile -> 0
+        target_list: 44 targets exist; none is pr or pr-check
+        doctrine: 'Autonomy Surface Profile: ''make pr is the ONLY way to reach GitHub - this is a path rule, not a timing
+          rule'''
+        underlying_script_exists: /root/.cursor-governance/ops/scripts/open_pr_after_gate.sh
+      root_cause:
+        type: fact
+        statement: The consumer repository never received the Makefile target that the governance doctrine requires.
+      consequence: The sanctioned publish path was unusable; publication required invoking the underlying script directly.
+      workaround_used: Invoked ops/scripts/open_pr_after_gate.sh directly; both the L4 release gate and the PR overlap gate
+        still ran and passed.
+      status: OPEN
+      improvements:
+      - I-BS-08
+  reconciliation_action: MERGE
+- id: CF-012
+  title: Concurrent branch writers cause non-fast-forward publication failures
+  status: ACTIVE_RECURRING
+  summary: Shared PR head branches can receive concurrent writes, invalidating local assumptions and causing repeated non-fast-forward
+    push rejection.
+  source_records:
+  - source_ref: P2/failures/FAIL-04
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-04
+    source_title: Non-fast-forward push rejection after third party force-pushed the branch
+    source_record:
+      id: FAIL-04
+      rank: 4
+      title: Non-fast-forward push rejection after third party force-pushed the branch
+      category: concurrency
+      impact: blocking
+      impact_detail: 'The PR #70 remediation commit could not be pushed; its base commit had been orphaned.'
+      frequency: 1
+      evidence:
+        command: git push origin HEAD:chore/auto-seed-governance
+        observed_output: 'hint: ... ''Note about fast-forwards'''
+        fetch_evidence: git fetch origin chore/auto-seed-governance -> ' + 5792572...c983a53 chore/auto-seed-governance ->
+          origin/... (forced update)'
+        content_check: git diff --stat 5792572 origin/chore/auto-seed-governance -> empty (identical trees, new SHAs)
+        root_cause: The Quantum-L9/.github auto-seed bot force-pushed the branch, replacing commits 57d4a6f and 5792572 with
+          40e68fd and c983a53.
+      resolution:
+        action: 'Rebased the single unpushed local commit: `git rebase --onto origin/chore/auto-seed-governance 5792572 pr70-work`.
+          No force-push over the bot''s history.'
+        verification: '''Successfully rebased and updated refs/heads/pr70-work''; gates re-run green; push c983a53..fe0dfab
+          succeeded.'
+      status: resolved
+  - source_ref: P7/failures/F-02
+    source_pack: P7
+    source_path: failures.yaml
+    source_id: F-02
+    source_title: make pr push rejected (non-fast-forward) twice — concurrent writer on the shared PR branch
+    source_record:
+      id: F-02
+      title: make pr push rejected (non-fast-forward) twice — concurrent writer on the shared PR branch
+      impact: high (publication blocked twice; each required fetch + merge + regen + full re-gate cycle)
+      frequency: 2 (plus 2 more remote advances absorbed before pushing)
+      category: publish_flow_concurrency
+      symptom: '"! [rejected] HEAD -> agent/claude-code/swarm-remediation-pack (non-fast-forward)" then later "(fetch first)";
+        make: *** [Makefile:448: pr] Error 1
+
+        '
+      root_cause: 'FACT: the operator''s Cursor remediation loop pushed commits (99e4f1c, f574c4d, e4b88786) to the same PR
+        head branch while this session was gating its own push. The repo-write lock (ops/scripts/lib/repo_write_lock.sh) is
+        machine-local by design and cannot serialize writers on different machines.
+
+        '
+      resolution: 'fetch + `git merge --no-edit origin/<branch>` (never rewriting the other writer''s history) + regenerate
+        generated manifests per the merge-driver obligation + re-gate + re-publish; final push accepted (3b3a843).
+
+        '
+      evidence:
+      - make pr output blocks quoted above (2 distinct rejects)
+      - 'git log deltas: 2f03db7..99e4f1c, f574c4d..e4b88786 fetched between attempts'
+  reconciliation_action: MERGE
+- id: CF-013
+  title: Generated artifacts and manifest coupling make validation and merging fragile
+  status: ACTIVE_RECURRING
+  summary: Generated validation artifacts and manifests can fail on index/worktree mismatch, conflict during merge, or make
+    release-readiness fail whenever files are added.
+  source_records:
+  - source_ref: P2/failures/FAIL-02
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-02
+    source_title: '`scripts/generate_validation_report.py` raised FileNotFoundError on an unstaged deletion'
+    source_record:
+      id: FAIL-02
+      rank: 2
+      title: '`scripts/generate_validation_report.py` raised FileNotFoundError on an unstaged deletion'
+      category: repo_script
+      impact: blocking
+      impact_detail: Gate 7 of the ci.yml gate list could not complete locally.
+      frequency: 1
+      evidence:
+        command: python scripts/generate_validation_report.py
+        exit_code: 1
+        observed_output: 'FileNotFoundError: [Errno 2] No such file or directory: ''/home/user/l9-ci-sdk/.github/pull_request_template.md'''
+        traceback_site: scripts/generate_validation_report.py:83 in _sha256 -> path.read_bytes()
+        root_cause: _tracked_files() enumerates `git ls-files -z` (the INDEX) and then reads each path from the WORKING TREE.
+          A file deleted on disk but still in the index yields a path that cannot be opened. The deletion had been un-staged
+          by an earlier `git stash`/`git stash pop` (see FAIL-03).
+      resolution:
+        action: '`git add -A` to stage the deletion so the index matched the working tree.'
+        verification: 'Re-ran: ''wrote VALIDATION_REPORT.json (351 files inventoried)'', exit 0.'
+      status: resolved
+      residual_risk: The script is index-driven but disk-reading. Any contributor with an unstaged deletion hits the same
+        crash. Not fixed in this session.
+  - source_ref: P2/failures/FAIL-08
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-08
+    source_title: MANIFEST.md merge conflict when combining both PR branches
+    source_record:
+      id: FAIL-08
+      rank: 8
+      title: MANIFEST.md merge conflict when combining both PR branches
+      category: version_control
+      impact: local
+      frequency: 1
+      evidence:
+        command: git merge --no-edit origin/chore/auto-seed-governance
+        observed_output: 'Auto-merging MANIFEST.md / CONFLICT (content): Merge conflict in MANIFEST.md / Automatic merge failed'
+        root_cause: MANIFEST.md is generated output tracked in git; both branches regenerated it against different file sets.
+      resolution:
+        action: 'Regenerated with the owning tool rather than hand-resolving: `python -m l9_ci manifest generate --repository-root
+          . --output MANIFEST.md --tracked-only --exclude-dir memory-bank`, then `git add`.'
+        verification: grep -c '<<<<<<<|>>>>>>>' MANIFEST.md -> 0
+      status: resolved
+  - source_ref: P8/failures/F-04
+    source_pack: P8
+    source_path: failures.yaml
+    source_id: F-04
+    source_title: Release-readiness fails whenever a new source or test file is added
+    source_record:
+      id: F-04
+      rank: 4
+      title: Release-readiness fails whenever a new source or test file is added
+      impact: medium
+      frequency: 3
+      class: repo_gate
+      fact:
+        command: uv run python scripts/validate_release_readiness.py
+        exit_code_json:
+          blocking_finding_count: 2
+        finding_type: manifest_omission
+        evidence_verbatim: File exists but is absent from MANIFEST.md.
+        paths_flagged:
+        - src/l9_constellation_topology/packets/adapters/errors.py
+        - src/l9_constellation_topology/packets/adapters/meta_work_signals.py
+        - tests/test_meta_work_signal_payload.py
+      occurrences: 3
+      repair_applied: manual edit of MANIFEST.md, one line per new file
+      root_cause: FACT - MANIFEST.md is hand-maintained and the gate compares the file tree against it. Every new file is
+        a guaranteed failure until a human adds a row.
+      severity_note: The gate is correct and worth keeping. The cost is that it fails after the work rather than at file creation.
+  reconciliation_action: MERGE
+- id: CF-014
+  title: MCP capability exposure is unstable or invalid across sessions
+  status: ACTIVE_RECURRING
+  summary: Declared MCP integrations can disappear, churn identities, fail schema parsing, require impossible interactive
+    approval, or be loaded redundantly.
+  source_records:
+  - source_ref: P4/failures/F-06
+    source_pack: P4
+    source_path: failures.yaml
+    source_id: F-06
+    source_title: MCP tool disappeared mid-session under its original name
+    source_record:
+      id: F-06
+      rank: 6
+      title: MCP tool disappeared mid-session under its original name
+      severity: medium
+      frequency: 2
+      blocked_progress: true
+      evidence:
+      - 'tool_use_error: "No such tool available: mcp__Claude_Code_Remote__subscribe_pr_activity"'
+      - 'tool_use_error: "No such tool available: mcp__Claude_Code_Remote__delete_trigger"'
+      - 'session notice: "43 deferred tools are no longer available (MCP server disconnected)"'
+      root_cause:
+        classification: environment_instability
+        statement: The MCP server exposing these tools was renamed or reconnected under a different server identifier during
+          the session. Equivalents reappeared under opaque UUID prefixes (mcp__bf7c680d-...), so the capability survived but
+          every reference to the old name broke.
+      workaround_used: re-resolved the tool under its new UUID-prefixed name
+      workaround_effective: true
+  - source_ref: P6/failures/FA-7
+    source_pack: P6
+    source_path: failures.yaml
+    source_id: FA-7
+    source_title: MCP server churn between turns (43 tools disconnected, UUID re-identification)
+    source_record:
+      id: FA-7
+      title: MCP server churn between turns (43 tools disconnected, UUID re-identification)
+      severity: M
+      frequency: once_observed
+      plane: bootstrap
+      facts:
+      - 'turn-2 harness notice: 43 deferred tools no longer available (Google_Calendar, Tavily-MCP x5, Vercel x37)'
+      - equivalents reappeared under uuid-prefixed server ids
+      - consistent with receipt mcp=DEGRADED; GitHub MCP server unaffected
+      improvement_refs:
+      - BOOT-2
+  - source_ref: P9/failures/F-03
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-03
+    source_title: 'Five of six declared MCP servers never parse: url present, type key missing'
+    source_record:
+      id: F-03
+      rank: 3
+      title: 'Five of six declared MCP servers never parse: url present, type key missing'
+      severity: blocker
+      frequency: per_session
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        command: claude mcp list
+        exit_code: 0
+        output_excerpt:
+        - '[Warning] (/home/user/.mcp.json) [GitHub] mcpServers.GitHub: Skipped - MCP server "GitHub" has a "url" but no "type";
+          add "type": "http" (or "sse" / "ws") to this entry'
+        - '[Warning] (/home/user/.mcp.json) [Context7] mcpServers.Context7: Skipped - same reason'
+        - '[Warning] (/home/user/.mcp.json) [Semgrep] mcpServers.Semgrep: Skipped - same reason'
+        - '[Warning] (/home/user/.mcp.json) [GitGuardian] mcpServers.GitGuardian: Skipped - same reason'
+        - '[Warning] (/home/user/.mcp.json) [Playwright] mcpServers.Playwright: Skipped - same reason'
+        config_file: /home/user/.mcp.json
+        config_authority_comment: environment/agents/adapters/claude-code/mcp.template.json
+        contrast: 'the sixth entry, graphiti-memory, does carry "type": "http" and does parse'
+      root_cause:
+        type: fact
+        statement: 'A schema defect in the MCP template: five server objects specify url and headers but omit the required
+          type discriminator. This is local configuration, not networking.'
+      consequence: No Context7, Semgrep, GitGuardian or Playwright tools existed in this session. The global Context7 rule
+        (22-context7-auto-invoke) mandates calling resolve-library-id and query-docs before implementation; that obligation
+        was unsatisfiable on this surface.
+      workaround_used: None available in-session; proceeded without Context7 and noted it.
+      status: OPEN
+      improvements:
+      - I-BS-03
+  - source_ref: P9/failures/F-16
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-16
+    source_title: graphiti-memory MCP server is blocked on an interactive approval a cloud session cannot give
+    source_record:
+      id: F-16
+      rank: 16
+      title: graphiti-memory MCP server is blocked on an interactive approval a cloud session cannot give
+      severity: medium
+      frequency: per_session
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        command: claude mcp list
+        output: 'graphiti-memory: ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti (HTTP) - Pending approval (run `claude` to approve)'
+        note: this is the only declared server that parses; it is then held at an approval prompt
+      root_cause:
+        type: fact
+        statement: The server requires interactive approval, and this surface is non-interactive.
+      consequence: Even the one correctly-formed MCP entry yields no tools.
+      workaround_used: Used the Graphiti CLI front door instead.
+      status: OPEN
+      improvements:
+      - I-BS-03
+  - source_ref: P9/failures/F-18
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-18
+    source_title: MCP config warnings are emitted twice from two config locations
+    source_record:
+      id: F-18
+      rank: 18
+      title: MCP config warnings are emitted twice from two config locations
+      severity: low
+      frequency: per_session
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        command: claude mcp list
+        observation: each of the 5 warnings appears twice - once tagged (/home/user/.mcp.json) and once untagged
+        reported_project_config: /home/user/Cognitive.Engine.Graphs/.mcp.json
+      root_cause:
+        type: inference
+        statement: Two copies of the same broken config are loaded - the workspace-level file and the per-repository file
+          written into the checkout by bootstrap.
+        grounded_in: the duplicated warning text and the two distinct paths named in the diagnostic
+      consequence: Diagnostic noise that obscures how many distinct servers are actually broken.
+      workaround_used: Counted distinct server names rather than warning lines.
+      status: OPEN
+      improvements:
+      - I-BS-03
+  reconciliation_action: MERGE
+- id: CF-100
+  title: add_repo cannot attach a repository whose name begins with a dot
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    statement: Clone-directory name is derived from the repo name; no on-disk alias exists.
+    confidence: fact
+  source_records:
+  - source_ref: P1/failures/FAIL-04
+    source_pack: P1
+    source_path: failures.yaml
+    source_id: FAIL-04
+    source_title: add_repo cannot attach a repository whose name begins with a dot
+    source_record:
+      id: FAIL-04
+      rank: 4
+      title: add_repo cannot attach a repository whose name begins with a dot
+      impact: high
+      frequency: structural
+      reproduced_this_session: false
+      reproduction_note: Not re-run this session; the tool result is quoted verbatim from the prior session in which it occurred.
+      tool: add_repo
+      arguments:
+        owner: Quantum-L9
+        repo: .github
+        access: push
+      error_verbatim: 'add_repo: repository name ".github" begins with ''.'', so its clone directory would be a hidden path
+        under this session''s working directory and could collide with configuration directories (e.g. ~/.claude). Repositories
+        whose names begin with ''.'' cannot be attached to this session.'
+      root_cause:
+        statement: Clone-directory name is derived from the repo name; no on-disk alias exists.
+        confidence: fact
+      workaround_used:
+        command: git clone https://github.com/Quantum-L9/.github.git org-github-defaults
+        exit_code: 0
+        residual: Repo present on disk but never registered as a session source, so its CLAUDE.md, skills, and plugins never
+          loaded.
+      scope_note: The repo is inside the session's declared GitHub scope. Every GitHub org has exactly one .github repo, so
+        this blocks a whole class of org-governance work.
+      improvements:
+      - IMP-16
+  reconciliation_action: KEEP
+- id: CF-101
+  title: Piping `git push` into `tail` masked a rejected push and reported success
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Piping `git push` into `tail` masked a rejected push and reported success
+  source_records:
+  - source_ref: P2/failures/FAIL-01
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-01
+    source_title: Piping `git push` into `tail` masked a rejected push and reported success
+    source_record:
+      id: FAIL-01
+      rank: 1
+      title: Piping `git push` into `tail` masked a rejected push and reported success
+      category: operator_tooling
+      impact: degrading
+      impact_detail: 'A non-fast-forward rejection was reported as PUSH_OK. Had it not been re-checked, the session would
+        have concluded that PR #70''s fix was pushed when it was not.'
+      frequency: 1
+      evidence:
+        command: for i in 1 2 3 4; do if git push origin HEAD:chore/auto-seed-governance 2>&1 | tail -4; then echo "PUSH_OK";
+          break; fi; ... done
+        observed_output: 'hint: have locally. This is usually caused by another repository pushing to
+
+          hint: the same ref. ... ''Note about fast-forwards''
+
+          PUSH_OK
+
+          '
+        root_cause: In a pipeline, `$?` is the exit status of the last command (`tail`), not `git push`. Without `set -o pipefail`
+          the rejection is invisible to the `if`.
+        detection: Manual reading of the hint text in the output, not by exit code.
+      resolution:
+        action: Added `set -o pipefail` to the retry loop before re-pushing.
+        verification: Re-push printed 'To https://github.com/Quantum-L9/l9-ci-sdk / c983a53..fe0dfab' with PUSH_OK.
+      status: resolved
+  reconciliation_action: KEEP
+- id: CF-102
+  title: '`git stash` / `git stash pop` silently discarded index staging'
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: '`git stash` / `git stash pop` silently discarded index staging'
+  source_records:
+  - source_ref: P2/failures/FAIL-03
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-03
+    source_title: '`git stash` / `git stash pop` silently discarded index staging'
+    source_record:
+      id: FAIL-03
+      rank: 3
+      title: '`git stash` / `git stash pop` silently discarded index staging'
+      category: version_control
+      impact: degrading
+      impact_detail: Converted staged deletions and renames into unstaged ones, which then broke FAIL-02. The `git rm` and
+        `git mv` results appeared intact in `git status` but with a changed staging column.
+      frequency: 1
+      evidence:
+        commands:
+        - git stash -q
+        - git stash pop -q
+        observed_after_lines:
+        - ''' D .github/pull_request_template.md''  (leading space = UNSTAGED deletion)'
+        - ''' D .github/workflows/l9-lint-test-node.yml''  (unstaged)'
+        - '''A  docs/templates/l9-lint-test-node.yml''  (staged add; rename pairing lost)'
+        before_state: git rm / git mv had staged these (D  / R  in column 1).
+        root_cause: '`git stash pop` restores working-tree content but does not restore the index by default (`--index` is
+          required).'
+      resolution:
+        action: '`git add -A`, which re-staged everything and restored rename detection (R  entries reappeared).'
+        verification: git status showed 'R  .github/workflows/l9-lint-test.yml -> docs/templates/l9-lint-test.yml'.
+      status: resolved
+  reconciliation_action: KEEP
+- id: CF-103
+  title: '`ruff format --check` failed on a file introduced by PR #64'
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: '`ruff format --check` failed on a file introduced by PR #64'
+  source_records:
+  - source_ref: P2/failures/FAIL-05
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-05
+    source_title: '`ruff format --check` failed on a file introduced by PR #64'
+    source_record:
+      id: FAIL-05
+      rank: 5
+      title: '`ruff format --check` failed on a file introduced by PR #64'
+      category: ci_gate
+      impact: blocking
+      impact_detail: 'One of the two red gates on PR #64.'
+      frequency: 1
+      evidence:
+        command: python -m ruff format --check l9_ci tests scripts
+        exit_code: 1
+        observed_output: 'unformatted: File would be reformatted --> tests/architecture/test_version_alignment.py:1:1 ...
+          1 file would be reformatted, 156 files already formatted'
+        ci_corroboration: 'GitHub job 96921472504 env R_RUFF_FORMAT: failure'
+      resolution:
+        action: python -m ruff format tests/architecture/test_version_alignment.py (ruff 0.16.0, the CI-pinned version)
+        verification: Re-run exit 0; CI run 32609587457 step 'ruff format check' success.
+      status: resolved
+  reconciliation_action: KEEP
+- id: CF-104
+  title: 'pytest: 5 failures, from two unrelated causes'
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: 'pytest: 5 failures, from two unrelated causes'
+  source_records:
+  - source_ref: P2/failures/FAIL-06
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-06
+    source_title: 'pytest: 5 failures, from two unrelated causes'
+    source_record:
+      id: FAIL-06
+      rank: 6
+      title: 'pytest: 5 failures, from two unrelated causes'
+      category: ci_gate
+      impact: blocking
+      frequency: 1
+      evidence:
+        command: python -m pytest --cov=l9_ci --cov-branch -q
+        exit_code: 1
+        observed_output: 5 failed, 420 passed, 1 skipped
+        ci_corroboration: 'GitHub job 96921472504 env R_PYTEST_COV: failure'
+      sub_failures:
+      - id: FAIL-06a
+        test: tests/commands/test_observation_cli.py::test_project_mandatory_findings_accepts_absolute_cli_input
+        observed_error: 'assert 5 == 0; stderr: evidence ''ev-1'' references unregistered provider ''semgrep''; finding ''finding-1''
+          references unregistered provider ''semgrep'''
+        root_cause: Test fixture built a FindingBundle with providers=() and coverage=() while evidence/findings referenced
+          provider 'semgrep'. The CLI path runs the full artifact validator (l9_ci/artifacts/validator.py:90,101,117); the
+          direct API path used by the sibling integration test does not.
+        resolution: Registered ProviderRun('semgrep','1.0.0','1.100.0','import',True) and Coverage('semgrep',CoverageStatus.COMPLETE,1,1,())
+          per the idiom in tests/providers/semgrep/test_provider.py:43 and tests/integration/test_sarif_projection.py:63.
+      - id: FAIL-06b
+        tests:
+        - tests/architecture/test_l9_wiring.py::test_every_action_reference_is_sha_pinned
+        - tests/architecture/test_l9_wiring.py::test_non_action_references_target_core_only
+        - tests/architecture/test_l9_wiring.py::test_least_privilege_permissions[governance.yml]
+        - tests/architecture/test_l9_wiring.py::test_least_privilege_permissions[on-org-update.yml]
+        observed_errors:
+        - 'unpinned refs (need @<40-hex sha>): [''governance.yml:27:...governance-pr.yml@v1'', ''governance.yml:32:...governance-issue.yml@v1'',
+          ''l9-lint-test.yml:66:...install-consumer-ci@v2'', ''l9-lint-test.yml:106:...install-consumer-ci@v2'']'
+        - 'non-Core, non-actions refs: [''governance.yml:27:...'', ''governance.yml:32:...'', ''l9-lint-test-node.yml:45:Quantum-L9/l9-ci-sdk/.github/workflows/l9-biome-scan.yml@f546f12...'']'
+        - 'governance.yml must declare contents: read|write'
+        - 'on-org-update.yml requests forbidden write scopes: [''contents'', ''pull-requests'']'
+        root_cause: Files seeded by the org auto-seed into .github/workflows/ violate this repository's own wiring invariants.
+        detection_note: 'These four failures were NOT visible on PR #70. See FAIL-07.'
+      status: resolved
+  reconciliation_action: KEEP
+- id: CF-105
+  title: 'PR #70''s CI never ran: every workflow was gated in `action_required`'
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: 'PR #70''s CI never ran: every workflow was gated in `action_required`'
+  source_records:
+  - source_ref: P2/failures/FAIL-07
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-07
+    source_title: 'PR #70''s CI never ran: every workflow was gated in `action_required`'
+    source_record:
+      id: FAIL-07
+      rank: 7
+      title: 'PR #70''s CI never ran: every workflow was gated in `action_required`'
+      category: ci_platform
+      impact: degrading
+      impact_detail: 'PR #70 displayed 2 successful checks and no failures, while four invariant tests were in fact failing
+        on its content. The PR looked healthier than it was.'
+      frequency: 1
+      evidence:
+        command: mcp__github__actions_list list_workflow_runs branch=chore/auto-seed-governance
+        observed_output: 'c983a53b completed action_required | Governance          | 2026-08-23T01:15:50Z
+
+          c983a53b completed action_required | L9 Analysis         | 2026-08-23T01:15:50Z
+
+          c983a53b completed action_required | L9 Self CI          | 2026-08-23T01:15:49Z
+
+          c983a53b completed action_required | SDK self-validation | 2026-08-23T01:15:49Z
+
+          '
+        contrast_after_push: 'fe0dfab8 completed success | SDK self-validation | 2026-08-23T01:31:59Z
+
+          fe0dfab8 completed success | L9 Self CI          | 2026-08-23T01:31:59Z
+
+          fe0dfab8 completed success | Governance          | 2026-08-23T01:31:59Z
+
+          '
+        check_count_before: 2
+        check_count_after: 24
+      resolution:
+        action: None applied by this session. The condition cleared when the branch received a push from this session's identity.
+        caveat: The causal mechanism was not verified. See environment_inventory.yaml UNK-04.
+      status: observed_not_fixed
+  reconciliation_action: KEEP
+- id: CF-106
+  title: Bash quoting error passed a multi-word string as a single path
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Bash quoting error passed a multi-word string as a single path
+  source_records:
+  - source_ref: P2/failures/FAIL-10
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-10
+    source_title: Bash quoting error passed a multi-word string as a single path
+    source_record:
+      id: FAIL-10
+      rank: 10
+      title: Bash quoting error passed a multi-word string as a single path
+      category: operator_tooling
+      impact: local
+      frequency: 1
+      evidence:
+        command: run() { pytest "$1" ...; }; run "tests/integration/test_assurance_observation.py -k content_address or reused_identity"
+        observed_output: 'ERROR: file or directory not found: tests/integration/test_assurance_observation.py -k content_address
+          or reused_identity'
+        occurrences_in_one_invocation: 3
+        root_cause: Quoting the whole argument list as one word; the shell function received one argv entry.
+      resolution:
+        action: Re-issued with the path and -k expression as separate arguments.
+        verification: '''2 failed, 14 deselected'' — the intended negative-control result.'
+      status: resolved
+  reconciliation_action: KEEP
+- id: CF-107
+  title: 'Negative-control methodology error: `git stash` reverted the tests along with the fixes'
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: 'Negative-control methodology error: `git stash` reverted the tests along with the fixes'
+  source_records:
+  - source_ref: P2/failures/FAIL-11
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-11
+    source_title: 'Negative-control methodology error: `git stash` reverted the tests along with the fixes'
+    source_record:
+      id: FAIL-11
+      rank: 11
+      title: 'Negative-control methodology error: `git stash` reverted the tests along with the fixes'
+      category: verification_method
+      impact: local
+      impact_detail: First attempt to prove the new regression tests fail without their fixes proved nothing.
+      frequency: 2
+      evidence:
+        attempt_1:
+          command: git stash -q && pytest tests/integration/test_assurance_observation.py
+          observed_output: 5 passed
+          why_invalid: The stash removed the 6 new tests too, so only the 5 pre-existing tests ran.
+        attempt_2:
+          command: git checkout HEAD -- l9_ci/integration/observation.py l9_ci/schemas/v1/observation.schema.json
+          observed_output: 'ImportError: cannot import name ''_timestamp_errors'' ... 1 error in 0.21s'
+          why_invalid: Collection error, which proves only that the helper is new.
+      resolution:
+        action: Disabled each fix individually via targeted sed edits against a backup copy, running only the matching tests.
+        verification: '(a) D1 disabled -> 2 failed (content_address, reused_identity)
+
+          (b) D2 schema reverted -> 1 failed (non_sdk_producer)
+
+          (c) D3 reverted -> 1 failed (running_sdk)
+
+          '
+      status: resolved
+  reconciliation_action: KEEP
+- id: CF-108
+  title: A regression test passed for the wrong reason because of an optional dependency
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: A regression test passed for the wrong reason because of an optional dependency
+  source_records:
+  - source_ref: P2/failures/FAIL-12
+    source_pack: P2
+    source_path: failures.yaml
+    source_id: FAIL-12
+    source_title: A regression test passed for the wrong reason because of an optional dependency
+    source_record:
+      id: FAIL-12
+      rank: 12
+      title: A regression test passed for the wrong reason because of an optional dependency
+      category: verification_method
+      impact: local
+      impact_detail: The first draft of the malformed-timestamp test asserted through validate_observation, which in this
+        environment is backed by rfc3339-validator from the `ci` extra. It would have passed even if the code fix were absent,
+        and would not have covered a base install.
+      frequency: 1
+      evidence:
+        first_draft_result: 6 failed (test asserted match='RFC3339|calendar date-time' but got 'observation schema validation
+          failed')
+        diagnosis: jsonschema's FormatChecker had a registered date-time implementation because `pip install -e .[ci]` installed
+          rfc3339-validator==0.1.4, so schema validation raised first.
+      resolution:
+        action: Re-targeted the test at _timestamp_errors() directly — the check that does not depend on what is installed
+          — plus a broad end-to-end assertion, and added a positive-control test for well-formed offsets.
+        verification: 16 passed in tests/integration/test_assurance_observation.py.
+      status: resolved
+  reconciliation_action: KEEP
+- id: CF-109
+  title: git push returned INTERNAL_EVALUATION_ERROR from the worktree cwd
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: UNKNOWN
+  source_records:
+  - source_ref: P3/failures/FAIL-03
+    source_pack: P3
+    source_path: failures.yaml
+    source_id: FAIL-03
+    source_title: git push returned INTERNAL_EVALUATION_ERROR from the worktree cwd
+    source_record:
+      id: FAIL-03
+      rank: 3
+      title: git push returned INTERNAL_EVALUATION_ERROR from the worktree cwd
+      impact: BLOCKER
+      frequency:
+        attempts: 3
+      category: gate
+      evidence:
+      - command: git push origin HEAD:refs/heads/feat/cursor-memory-refuse-file-url (cwd=<scratchpad>/wt225)
+        exit_code: non_zero
+        output: 'INTERNAL_EVALUATION_ERROR: the execution gate could not complete a policy evaluation for this command, so
+          it denied it. This is a gate fault, not a policy decision about the command. See the hook''s stderr for the failure.'
+      - command: echo <payload> | bash l9_hook_exec.sh --class gate local_execution_gate_wrap.py
+        exit_code: 0
+        timing: real 0m0.098s
+        note: rules out the 5s hook timeout
+      - command: git push origin feat/cursor-memory-refuse-file-url (cwd=/home/user/Cognitive.Engine.Graphs)
+        output: 'L4 local autonomy: mid-execution remote denied ... (a normal POLICY denial, not a fault)'
+      - command: git push origin feat/cursor-memory-refuse-file-url (after l4 authorize-release in main clone)
+        exit_code: 0
+        output: abd7670..49da921  feat/cursor-memory-refuse-file-url -> feat/cursor-memory-refuse-file-url
+      root_cause: UNKNOWN
+      root_cause_note: hook stderr never surfaced; harness message pointed to it but did not include it
+      reproducible_now: false
+      reproduction_blocked_because: release receipts now exist in both workspaces; re-probing the gate from both cwds returns
+        exit 0. The pre-receipt state cannot be re-entered non-destructively.
+      candidate_causes_not_distinguished:
+      - /tmp cwd classification
+      - missing release receipt in that workspace
+      - transient fault
+      workaround: re-ran l4_local.py begin -> record-kernels -> authorize-release in the main clone; pushed from there
+      improvement_refs:
+      - B4
+      - B6
+  reconciliation_action: KEEP
+- id: CF-110
+  title: Governance SSOT outside the session's GitHub scope while its rules are in force
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: Governance SSOT outside the session's GitHub scope while its rules are in force
+  source_records:
+  - source_ref: P3/failures/FAIL-08
+    source_pack: P3
+    source_path: failures.yaml
+    source_id: FAIL-08
+    source_title: Governance SSOT outside the session's GitHub scope while its rules are in force
+    source_record:
+      id: FAIL-08
+      rank: 8
+      title: Governance SSOT outside the session's GitHub scope while its rules are in force
+      impact: MED
+      frequency:
+        incidents: 1
+      category: permission_surface
+      evidence:
+      - command: gh api repos/Quantum-L9/Cursor-Governance/issues?state=open
+        exit_code: 1
+        output: 'HTTP 403: GitHub access to this repository is not enabled for this session. Use add_repo to request access.'
+      - fact: the same repo is cloned locally at /root/.cursor-governance and its rules are loaded into the system prompt
+      workaround: add_repo mid-task
+      improvement_ref: C2
+  reconciliation_action: KEEP
+- id: CF-111
+  title: Governance CLI refused because it was invoked from the governance clone
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: usage_defect_enabled_by_environment
+    statement: l4_local.py derives the branch from its process working directory. Run from the governance clone it inspects
+      that clone (branch main) instead of the target repository, and refuses. The tool lives in one tree and must act on another,
+      with nothing in the invocation making that explicit.
+    proof:
+    - cwd=/root/.cursor-governance -> workspace reported as /root/.cursor-governance, branch main, refused
+    - cwd=/home/user/l9-meta-injector -> workspace /home/user/l9-meta-injector, branch claude/..., accepted
+  source_records:
+  - source_ref: P4/failures/F-02
+    source_pack: P4
+    source_path: failures.yaml
+    source_id: F-02
+    source_title: Governance CLI refused because it was invoked from the governance clone
+    source_record:
+      id: F-02
+      rank: 2
+      title: Governance CLI refused because it was invoked from the governance clone
+      severity: medium
+      frequency: 3
+      blocked_progress: true
+      evidence:
+      - 'command: cd /root/.cursor-governance && python3 ops/autonomy/l4_local.py begin --contract-id ...'
+      - 'output: "FAIL: L4 begin refused on ''main'' — create/checkout a stacked feature branch first"'
+      - 'source of message: /root/.cursor-governance/ops/autonomy/l4_local.py:244'
+      root_cause:
+        classification: usage_defect_enabled_by_environment
+        statement: l4_local.py derives the branch from its process working directory. Run from the governance clone it inspects
+          that clone (branch main) instead of the target repository, and refuses. The tool lives in one tree and must act
+          on another, with nothing in the invocation making that explicit.
+        proof:
+        - cwd=/root/.cursor-governance -> workspace reported as /root/.cursor-governance, branch main, refused
+        - cwd=/home/user/l9-meta-injector -> workspace /home/user/l9-meta-injector, branch claude/..., accepted
+      workaround_used: ( cd /home/user/l9-meta-injector && python3 /root/.cursor-governance/ops/autonomy/l4_local.py ... )
+      workaround_effective: true
+  reconciliation_action: KEEP
+- id: CF-112
+  title: Bash tool rejected commands containing control characters
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: harness_guard_working_as_designed
+    statement: Heredoc payloads containing raw control bytes are refused before execution. Encountered when writing file content
+      through a shell heredoc rather than through a file-writing tool.
+  source_records:
+  - source_ref: P4/failures/F-07
+    source_pack: P4
+    source_path: failures.yaml
+    source_id: F-07
+    source_title: Bash tool rejected commands containing control characters
+    source_record:
+      id: F-07
+      rank: 7
+      title: Bash tool rejected commands containing control characters
+      severity: low
+      frequency: 2
+      blocked_progress: true
+      evidence:
+      - 'tool_use_error: InputValidationError, message "command contains control characters that would be hidden in the approval
+        dialog"'
+      root_cause:
+        classification: harness_guard_working_as_designed
+        statement: Heredoc payloads containing raw control bytes are refused before execution. Encountered when writing file
+          content through a shell heredoc rather than through a file-writing tool.
+      workaround_used: the Write tool for file content containing special characters
+      workaround_effective: true
+  reconciliation_action: KEEP
+- id: CF-113
+  title: Foreground sleep blocked
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: harness_guard_working_as_designed
+    statement: Foreground `sleep` is prohibited; polling must use the Monitor tool or a scheduled wake.
+  source_records:
+  - source_ref: P4/failures/F-08
+    source_pack: P4
+    source_path: failures.yaml
+    source_id: F-08
+    source_title: Foreground sleep blocked
+    source_record:
+      id: F-08
+      rank: 8
+      title: Foreground sleep blocked
+      severity: low
+      frequency: 1
+      blocked_progress: true
+      evidence:
+      - 'tool_use_error: "Blocked: sleep 90 followed by: cd /home/user/l9-meta-injector gh pr view 79 ..."'
+      root_cause:
+        classification: harness_guard_working_as_designed
+        statement: Foreground `sleep` is prohibited; polling must use the Monitor tool or a scheduled wake.
+      workaround_used: Monitor tool and send_later scheduling (3 Monitor calls, 4 send_later calls in transcript)
+      workaround_effective: true
+  reconciliation_action: KEEP
+- id: CF-114
+  title: In-place edit script aborted because its anchor text did not match
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    classification: usage_defect
+    statement: Editing by exact-string replacement in a python heredoc fails when the anchor is stale. One instance was caused
+      by a literal byte in the target file (\x89 in a PNG placeholder) that the anchor did not reproduce.
+    measured_rate: 2 anchor misses across 298 python-heredoc invocations (0.7%)
+  source_records:
+  - source_ref: P4/failures/F-09
+    source_pack: P4
+    source_path: failures.yaml
+    source_id: F-09
+    source_title: In-place edit script aborted because its anchor text did not match
+    source_record:
+      id: F-09
+      rank: 9
+      title: In-place edit script aborted because its anchor text did not match
+      severity: low
+      frequency: 2
+      blocked_progress: false
+      evidence:
+      - 'tool_result contains: Traceback ... File "<stdin>", line 78, in <module> | AssertionError'
+      - counted by parsing tool_result blocks for both 'AssertionError' and 'File "<stdin>"'
+      root_cause:
+        classification: usage_defect
+        statement: Editing by exact-string replacement in a python heredoc fails when the anchor is stale. One instance was
+          caused by a literal byte in the target file (\x89 in a PNG placeholder) that the anchor did not reproduce.
+        measured_rate: 2 anchor misses across 298 python-heredoc invocations (0.7%)
+      workaround_used: read the exact bytes with repr() first, then re-issue
+      workaround_effective: true
+      correction_note: 'An initial count of 39 AssertionError-bearing results was wrong: 38 of them were Vitest assertion
+        failures from the ordinary red-green test cycle, not edit failures. Disambiguated by requiring ''File \"<stdin>\"''
+        in the same result.'
+  reconciliation_action: KEEP
+- id: CF-115
+  title: bootstrap.sh aborts on its first copy
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: bootstrap.sh aborts on its first copy
+  source_records:
+  - source_ref: P5/failures/FAIL-002
+    source_pack: P5
+    source_path: failures.yaml
+    source_id: FAIL-002
+    source_title: bootstrap.sh aborts on its first copy
+    source_record:
+      id: FAIL-002
+      title: bootstrap.sh aborts on its first copy
+      status: fact
+      command: bash /home/user/enrichment.inference.engine/bootstrap.sh <disposable-target>
+      exit_code: 1
+      stderr: 'cp: cannot stat ''/home/user/enrichment.inference.engine/tools/infra/check_env.sh'': No such file or directory'
+      evidence_path: bootstrap.sh:70
+      impact: high
+      detail:
+        strict_mode: set -euo pipefail (bootstrap.sh:23)
+        copy_invocations: 15
+        absent_sources: 12
+        files_created: 0
+        repo_dirty_after: 0
+      note: Run against a disposable target; the real repo was source only and stayed clean.
+  reconciliation_action: KEEP
+- id: CF-116
+  title: GH_TOKEN invalid — sanctioned publish path cannot authenticate
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: GH_TOKEN invalid — sanctioned publish path cannot authenticate
+  source_records:
+  - source_ref: P6/failures/FA-1
+    source_pack: P6
+    source_path: failures.yaml
+    source_id: FA-1
+    source_title: GH_TOKEN invalid — sanctioned publish path cannot authenticate
+    source_record:
+      id: FA-1
+      title: GH_TOKEN invalid — sanctioned publish path cannot authenticate
+      severity: H
+      frequency: every_session
+      plane: env
+      facts:
+      - gh v2.98.0 installed at /usr/bin/gh
+      - 'gh auth status: ''Failed to log in to github.com using token (GH_TOKEN)'' / ''The token in GH_TOKEN is invalid'''
+      inferences:
+      - gh-api-dependent gates (rule 53 pr_overlap_check, rule 62 openclaw PAT flow) cannot execute on this surface
+      - 'no doctrinally clean publish path here: make pr chain needs gh, MCP write tools are doctrine-denied'
+      observed_blocking: false
+      observed_blocking_note: latent in observed window; turn 1 required no publish
+      improvement_refs:
+      - ENV-3
+      - BOOT-6
+  reconciliation_action: KEEP
+- id: CF-117
+  title: CI red on PR
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: 'FACT: the new Controller fan-in cherry-pick was the Controller''s first commit-creating git operation; Controller-created
+    worktrees carry no repo-local committer identity; GitHub runners have no global identity; the container DID have one (user.name=Claude),
+    so every local run passed. The failed cherry-pick left a dirty tree that the abort path mislabeled as an "integration
+    conflict". A second independent cause (host GIT_DIR export leaking into `git -C`) was found and fixed by the operator''s
+    Cursor session in parallel (commit f574c4d).
+
+    '
+  source_records:
+  - source_ref: P7/failures/F-01
+    source_pack: P7
+    source_path: failures.yaml
+    source_id: F-01
+    source_title: CI red on PR
+    source_record:
+      id: F-01
+      title: CI red on PR
+      impact: critical (blocked the PR's merge; two CI runs red; ~2h of remediation across two agents)
+      frequency: 2 CI runs failed ("Test Suite" job 97302385360 at head 2f03db7; "Peer Execution Conformance" job 97308548652
+        at head 99e4f1c); reproduced locally once
+      category: environment_parity
+      symptom: 'run_campaign_under_test.CampaignError: pec complete failed: "integration conflict for TASK-001 at <sha>; candidate
+        branch and worktree preserved, task remains PASSED_LOCAL" (test_run_campaign.py::test_default_repo_root_derives_write_root_from_l9;
+        conformance suite 411 tests, errors=1, exit 1)
+
+        '
+      root_cause: 'FACT: the new Controller fan-in cherry-pick was the Controller''s first commit-creating git operation;
+        Controller-created worktrees carry no repo-local committer identity; GitHub runners have no global identity; the container
+        DID have one (user.name=Claude), so every local run passed. The failed cherry-pick left a dirty tree that the abort
+        path mislabeled as an "integration conflict". A second independent cause (host GIT_DIR export leaking into `git -C`)
+        was found and fixed by the operator''s Cursor session in parallel (commit f574c4d).
+
+        '
+      reproduction: 'HOME=<empty-dir> GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null .venv/bin/python3 -m pytest
+        environment/program-execution/scripts/tests/ test_run_campaign.py::RunCampaignTests::test_default_repo_root_derives_write_root_from_l9
+        -> 1 failed (exit 1), identical error text to CI
+
+        '
+      resolution: 'commit eafeb24 (bind Controller identity per cherry-pick invocation + honest conflict-vs-failure classification);
+        merged with operator commits f574c4d/e4b88786; final head 3b3a843 check suite completed clean; PR merged.
+
+        '
+      evidence:
+      - 'gh job logs (via mcp__github__get_job_logs) for job 97302385360: ''= 1 failed, 1619 passed, 1 skipped ... ='', FAILED
+        test_default_repo_root_derives_write_root_from_l9'
+      - 'gh job logs for job 97308548652: conformance report status FAIL, errors 1, tests_run 411, ''##[error]Process completed
+        with exit code 1'''
+      - 'local identity-free repro: 1 failed in 12.63s; after fix: 1 passed in 18.33s; conformance identity-free: 411/411
+        PASS twice'
+  reconciliation_action: KEEP
+- id: CF-118
+  title: make program-execution-adapters FAILED on pytest cache debris
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: 'FACT: running pytest inside environment/program-execution/peer_execution created .pytest_cache; the adapters validator
+    treats any cache debris as a failure and nothing in the flow pre-cleans it.
+
+    '
+  source_records:
+  - source_ref: P7/failures/F-03
+    source_pack: P7
+    source_path: failures.yaml
+    source_id: F-03
+    source_title: make program-execution-adapters FAILED on pytest cache debris
+    source_record:
+      id: F-03
+      title: make program-execution-adapters FAILED on pytest cache debris
+      impact: medium (validation gate red until cleanup; one retry cycle)
+      frequency: 1
+      category: bootstrap_validation
+      symptom: 'validate_execution_adapters.py report: status FAIL, errors: ["compiled or cache debris: peer_execution/.pytest_cache"];
+        make: *** [Makefile:559: program-execution-adapters] Error 1
+
+        '
+      root_cause: 'FACT: running pytest inside environment/program-execution/peer_execution created .pytest_cache; the adapters
+        validator treats any cache debris as a failure and nothing in the flow pre-cleans it.
+
+        '
+      resolution: 'deleted via python shutil.rmtree (direct `rm -rf` was denied by the session permission gate twice); rerun
+        exit 0 ("thin-provider-conformance status PASS").
+
+        '
+      evidence:
+      - FAIL report text and Makefile line number quoted above
+      - 'post-clean rerun: status PASS'
+  reconciliation_action: KEEP
+- id: CF-119
+  title: deferred tool schemas not loaded — first TaskCreate call failed
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: 'FACT: deferred tools must have schemas fetched via ToolSearch before first call'
+  source_records:
+  - source_ref: P7/failures/F-08
+    source_pack: P7
+    source_path: failures.yaml
+    source_id: F-08
+    source_title: deferred tool schemas not loaded — first TaskCreate call failed
+    source_record:
+      id: F-08
+      title: deferred tool schemas not loaded — first TaskCreate call failed
+      impact: low
+      frequency: 1 (same pattern required an explicit ToolSearch load for Monitor)
+      category: harness_tooling
+      symptom: 'InputValidationError: TaskCreate ... schema was not sent to the API; load with ToolSearch ''select:TaskCreate'''
+      root_cause: 'FACT: deferred tools must have schemas fetched via ToolSearch before first call'
+      resolution: skipped task tracking; loaded Monitor schema via ToolSearch when needed
+      evidence: error text quoted above
+  reconciliation_action: KEEP
+- id: CF-120
+  title: Output sink refuses a destination directory that already exists
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary: FACT - the bundle sink treats an existing destination as an immutable bundle. An empty directory created by mkdir
+    -p is indistinguishable from a committed bundle to that check.
+  source_records:
+  - source_ref: P8/failures/F-06
+    source_pack: P8
+    source_path: failures.yaml
+    source_id: F-06
+    source_title: Output sink refuses a destination directory that already exists
+    source_record:
+      id: F-06
+      rank: 6
+      title: Output sink refuses a destination directory that already exists
+      impact: low
+      frequency: 1
+      class: tool_contract
+      fact:
+        command: uv run l9-topology adapt-meta-corpus --meta-generation <gen> --out <dir>
+        status_field: failed
+        stderr_verbatim: 'adapt-meta-corpus: manifest.json: immutable packet bundle already exists'
+        precondition_created_by: mkdir -p <dir> earlier in the same shell command
+      repair_applied: use a fresh, non-existent destination path
+      root_cause: FACT - the bundle sink treats an existing destination as an immutable bundle. An empty directory created
+        by mkdir -p is indistinguishable from a committed bundle to that check.
+  reconciliation_action: KEEP
+- id: CF-121
+  title: Harness stop hook demands a commit of bootstrap artifacts on every turn; complying would delete tracked files
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    type: inference
+    statement: The hook cannot distinguish agent-authored work from bootstrap projection artifacts. Given F-01 the trigger
+      condition is permanently true, so the hook fires on every turn.
+    grounded_in: F-01 evidence plus the hook source quoted above
+  source_records:
+  - source_ref: P9/failures/F-02
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-02
+    source_title: Harness stop hook demands a commit of bootstrap artifacts on every turn; complying would delete tracked
+      files
+    source_record:
+      id: F-02
+      rank: 2
+      title: Harness stop hook demands a commit of bootstrap artifacts on every turn; complying would delete tracked files
+      severity: high
+      frequency: per_turn
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        hook: /root/.claude/stop-hook-git-check.sh
+        trigger_code: if ! git diff --quiet || ! git diff --cached --quiet; then echo "There are uncommitted changes ..."
+          >&2; exit 2; fi
+        observed_message: There are uncommitted changes in the repository. Please commit and push these changes to the remote
+          branch.
+        observed_count_this_session: approximately 17 firings; exact count not logged by the hook
+      root_cause:
+        type: inference
+        statement: The hook cannot distinguish agent-authored work from bootstrap projection artifacts. Given F-01 the trigger
+          condition is permanently true, so the hook fires on every turn.
+        grounded_in: F-01 evidence plus the hook source quoted above
+      consequence: A blocking exit-2 message on every turn that must be correctly ignored; an agent that complied would destroy
+        repository content.
+      workaround_used: Declined each time and recorded why.
+      status: OPEN
+      improvements:
+      - I-BS-01
+      - I-BS-02
+  reconciliation_action: KEEP
+- id: CF-122
+  title: CLAUDE_SESSION_JWT is unset, so every brokered MCP Authorization header expands empty
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    type: UNKNOWN
+    statement: Unresolved - see U-01. The issuing component is outside this container and nothing local logs a mint attempt.
+  source_records:
+  - source_ref: P9/failures/F-09
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-09
+    source_title: CLAUDE_SESSION_JWT is unset, so every brokered MCP Authorization header expands empty
+    source_record:
+      id: F-09
+      rank: 9
+      title: CLAUDE_SESSION_JWT is unset, so every brokered MCP Authorization header expands empty
+      severity: high
+      frequency: per_session
+      plane: env_loader
+      provenance: re_verified
+      evidence:
+        probe: test -n "${CLAUDE_SESSION_JWT:-}" -> UNSET/EMPTY
+        consumer: '/home/user/.mcp.json - five entries carry "Authorization": "${CLAUDE_SESSION_JWT}"'
+        config_own_words: '"the broker authenticates this session with the platform-issued workload JWT (CLAUDE_SESSION_JWT)"'
+      root_cause:
+        type: UNKNOWN
+        statement: Unresolved - see U-01. The issuing component is outside this container and nothing local logs a mint attempt.
+      consequence: Independent of F-03 and F-08, brokered MCP calls would still be unauthenticated. Three independent faults
+        each individually fatal sit on the same path.
+      workaround_used: None; the config's own guidance forbids substituting a pasted token.
+      status: OPEN
+      improvements:
+      - I-EL-01
+  reconciliation_action: KEEP
+- id: CF-123
+  title: L4 release receipt is pinned to a head SHA that is no longer the branch tip
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    type: fact
+    statement: The receipt binds to the SHA at authorization time; any later commit invalidates it silently.
+  source_records:
+  - source_ref: P9/failures/F-13
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-13
+    source_title: L4 release receipt is pinned to a head SHA that is no longer the branch tip
+    source_record:
+      id: F-13
+      rank: 13
+      title: L4 release receipt is pinned to a head SHA that is no longer the branch tip
+      severity: medium
+      frequency: intermittent
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        receipt: /home/user/Cognitive.Engine.Graphs/.l9/autonomy/l4-release-receipt.json
+        pinned: head_sha 3994580835842b712ef6c7721f3f1f1f09c60d1d
+        actual: branch claude/gap-fix-artifact-audit-aepkkb is at 125c038
+        phase: release_authorized
+      root_cause:
+        type: fact
+        statement: The receipt binds to the SHA at authorization time; any later commit invalidates it silently.
+      consequence: Every additional commit after authorization requires re-running begin, record-kernels and authorize-release
+        before publishing again.
+      workaround_used: Re-ran the L4 cycle after each further commit.
+      status: OPEN
+      improvements:
+      - I-BS-09
+  reconciliation_action: KEEP
+- id: CF-124
+  title: A one-time breakglass grant persists in the environment across container restarts
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    type: fact
+    statement: The grant is expressed as a durable environment variable and carries no expiry.
+  source_records:
+  - source_ref: P9/failures/F-17
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-17
+    source_title: A one-time breakglass grant persists in the environment across container restarts
+    source_record:
+      id: F-17
+      rank: 17
+      title: A one-time breakglass grant persists in the environment across container restarts
+      severity: medium
+      frequency: per_session
+      plane: env_loader
+      provenance: re_verified
+      evidence:
+        value: L9_PUBLISH_PATH_OVERRIDE=one-time breakglass authorized by user
+        persistence: still present after the 2026-08-25T01:33:27Z restart
+        no_ttl: the value is free text; no receipt or log records its origin, scope or expiry
+      root_cause:
+        type: fact
+        statement: The grant is expressed as a durable environment variable and carries no expiry.
+      consequence: A grant whose own text says one-time is in force indefinitely, and nothing in-session can retire it.
+      workaround_used: None; recorded and continued to follow the sanctioned publish path.
+      status: OPEN
+      improvements:
+      - I-EL-06
+  reconciliation_action: KEEP
+- id: CF-125
+  title: Skill usage logging captured one event across a multi-day session
+  status: OBSERVED_CONTEXT_SPECIFIC
+  summary:
+    type: UNKNOWN
+    statement: Cannot distinguish "the router only fired once" from "logging silently dropped events". The PreToolUse matcher
+      for the logger is Skill|mcp__context7__.*|mcp__plugin_context7_context7__.*, and per F-03 no context7 tool namespace
+      existed, so two of its three match arms were dead.
+  source_records:
+  - source_ref: P9/failures/F-19
+    source_pack: P9
+    source_path: failures.yaml
+    source_id: F-19
+    source_title: Skill usage logging captured one event across a multi-day session
+    source_record:
+      id: F-19
+      rank: 19
+      title: Skill usage logging captured one event across a multi-day session
+      severity: low
+      frequency: per_session
+      plane: bootstrap
+      provenance: re_verified
+      evidence:
+        flag: L9_SKILL_USAGE_LOGGING=true
+        log: /root/.claude/l9/skill-usage.jsonl
+        entries: 1
+        only_entry: '{"event": "router_recommendation", "primary": "l9-gmp-protocol", "score": 8, "source": "description",
+          "supporting": ["l9-structured-reasoning"]}'
+        entry_mtime: 2026-08-24 00:57
+      root_cause:
+        type: UNKNOWN
+        statement: Cannot distinguish "the router only fired once" from "logging silently dropped events". The PreToolUse
+          matcher for the logger is Skill|mcp__context7__.*|mcp__plugin_context7_context7__.*, and per F-03 no context7 tool
+          namespace existed, so two of its three match arms were dead.
+      consequence: No usable telemetry about which skills were routed or used.
+      workaround_used: None needed for the work itself.
+      status: OPEN
+      improvements:
+      - I-BS-11
+  reconciliation_action: KEEP

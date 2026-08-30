@@ -1,0 +1,628 @@
+schema: l9.environment_experience.progress/v1
+assessed_against: main@30c6ecd4 (post-#324/#325/#326/#327/#328 merge)
+assessed_against_sha: 30c6ecd4
+assessed_at: '2026-08-27'
+assessment_scope: targeted
+assessment_scope_note: 'Not a full re-assessment. Records touched by #324 and #325 were
+  verified against the tree at 30c6ecd4; every other record carries its main@8f73be9
+  assessment forward unchanged. The overlay was stale on arrival by CI-034''s own
+  criterion — it named main@8f73be9 while main had advanced five merges — so
+  assessed_against_sha is recorded here rather than left proposed. That is the change
+  CI-034 asks for, minus its drift check, which is still unbuilt.'
+counts:
+  done: 4
+  partial: 15
+  not_started: 19
+total: 38
+next_slice:
+  id: slice-ownership-aware-writes
+  title: Ownership-aware writes (extend PR#307's is_tracked guard)
+  why: 'Unchanged and now overdue: PR#307 merged the is_tracked() ownership guard on ONE write site and
+    left the same-shape defect on the four others, verified again at 498dcaa. It is still the highest-value,
+    lowest-risk next move — it reuses shipped code, is fully validatable in-repo with git fixtures, closes
+    the biggest open P0 residual (CI-002), and folds in a P1 (CI-003) that shares the root cause.'
+  records:
+  - 'CI-002 residual (P0): apply is_tracked() before the remaining projection writes — claude_projection.py:422
+    (.mcp.json), reconcile_claude_l9_skills.py, reconcile_claude_commands.py, reconcile_claude_settings.py
+    — and add Phase 2b (project to a non-owned sibling when the target is tracked). Verify the 8-fixture
+    git-status-clean done_when.'
+  - 'CI-003 (P1), re-scoped: the named target /root/.claude/stop-hook-git-check.sh is harness-owned. The
+    in-repo lever is the .git/info/exclude glob list in ops/scripts/bootstrap_agent_environment.sh — add
+    .claude/** and .mcp.json there, which --exclude-standard already honours.'
+  - 'CI-031 (P3, opportunistic): keep tracked-path/gitignore hygiene synchronized as the guard and the
+    ignore stanzas move together.'
+  excluded: CI-002 Phase 2c (L9_AUTONOMY_STATE_DIR relocation) touches l4_local.py + local_execution_gate.py
+    + make pr together — sequence it as its own change.
+  alternative: Receipt-integrity slice — CI-004's live revision disagreement plus the proposed CI-034
+    and CI-035. Small, in-repo, and it fixes the mechanism that let this overlay go stale unnoticed.
+records:
+- id: CI-001
+  priority: 1
+  title: Publish and enforce the real GitHub REST/GraphQL capability boundary
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance 5612f6b (probe, merged) + be3f01c9 (#325, merge verb) +
+    7ceeef38 (#324, gate recognition of the REST merge) + pre-existing ops/scripts/lib/gh_auth_probe.sh
+  residual:
+  - 'IMP-01 only: the Anthropic remote-session prompt still tells agents they have no gh access. Harness-owned;
+    no in-repo lever. Classified external.'
+  evidence:
+  - 'ops/autonomy/merge_gate.py: _gh_rest_json / _stacked_children_rest resolve the stack probe over REST,
+    CLI kept as fallback (IMP-11); _transport_blocked names the transport in the deny text instead of
+    ''unknown'' (IMP-12)'
+  - ops/scripts/lib/gh_auth_probe.sh probes the REST identity endpoint and outranks a failing auth-status
+    check (IMP-02) — present at 78f122a, so the 2026-08-26 not_started was wrong
+  - 'be3f01c9 (#325): stack_safe_merge.py gained a REST execution transport for the merge verb. 7ceeef38
+    (#324): merge_gate recognises it — _segment_is_rest_pr_merge matches a PUT to repos/*/pulls/N/merge
+    from gh api or curl, and _target_from_input resolves owner/name/number from the endpoint path, without
+    which the stack probe returns early on an empty PR number and every REST merge reads as safe. Measured
+    against the unmodified gate: four REST forms unrecognised, gh pr merge and a REST GET unchanged.'
+  - 'Landed as two independent PRs rather than one. #325 was stacked on #324 and disclosed the overlap in
+    its own body; both merged and the composition is intact on main. Recorded because the pack''s counts
+    are read as delivery evidence, and "one record, two authors, two PRs" is the shape that produced the
+    #319 duplication this same slice was opened to close.'
+  - 'live: the CLI merge verb returns 403 on this session gateway; a human merged #320 and #321 by hand
+    because the sanctioned helper could not execute'
+- id: CI-002
+  priority: 0
+  title: Make bootstrap projection ownership-aware and non-destructive to tracked repo content
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: PR#304 (Contract 1) + PR#307 (CI-008/CI-009/CI-002 slice), both merged into main
+  residual:
+  - UNCHANGED since 2026-08-26. The is_tracked guard still covers only the rule-adapter reconciler. It
+    must extend to claude_projection.py:422 (.mcp.json), reconcile_claude_l9_skills.py, reconcile_claude_commands.py,
+    reconcile_claude_settings.py.
+  - Phase 2b (project to a non-owned sibling when the target is tracked), 2c (L9_AUTONOMY_STATE_DIR outside
+    the worktree), and 2d (per-repo gitignore propagation) are not built; the 8-fixture git-status-clean
+    done_when is unverified.
+  evidence:
+  - is_tracked is defined and called only in ops/scripts/reconcile_llm_rule_adapters.py (lines 27, 146);
+    grep -c is_tracked returns 0 for claude_projection.py, reconcile_claude_l9_skills.py, reconcile_claude_commands.py,
+    reconcile_claude_settings.py, and the last commit on all four predates the guard
+  - 'Phase 2c unbuilt: L9_AUTONOMY_STATE_DIR still defaults to ''.l9/autonomy'' inside the worktree in
+    peer_execution/autonomy/{cli,bootstrap}.py'
+- id: CI-003
+  priority: 1
+  title: Make the Stop hook ownership-aware instead of residue-blind
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - 'Stop-hook ownership-awareness: not started.'
+  - 'OWNERSHIP NOTE: the named target /root/.claude/stop-hook-git-check.sh is harness-owned and not editable
+    from this repo. The in-repo lever is the .git/info/exclude glob list in ops/scripts/bootstrap_agent_environment.sh
+    — re-scope the record to that, or mark it external.'
+  evidence:
+  - 'read /root/.claude/stop-hook-git-check.sh: it fires on any `git diff` delta and on any `git ls-files
+    --others --exclude-standard` output, with no ownership classification'
+  - 'partial mitigation already present at 78f122a: bootstrap_agent_environment.sh writes /.cursor-commands,
+    /.cursor/, /.l9/, memory-bank/ into .git/info/exclude, which --exclude-standard honours — but .claude/**
+    and .mcp.json are not in that list'
+- id: CI-004
+  priority: 0
+  title: Regenerate bootstrap receipts on lifecycle/revision changes and re-probe degraded components
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - bootstrap-state.json is still not regenerated on container/session lifecycle or on a governance revision
+    change; stale-receipt invalidation is not wired.
+  - Per-component log paths exist only for deps; the other components (capabilities, memory, mcp, plugins)
+    report a bare DEGRADED with no evidence path.
+  - No cross-check between the three receipt stores — see the proposed CI-035.
+  evidence:
+  - 'LIVE DEFECT, this session: /root/.l9/claude/bootstrap-state.json is pinned to governance_revision
+    c3081ee, generated_at 2026-08-26T19:30:48Z, while gov-refresh.json (2026-08-27T00:01:55Z) and readiness-receipt.json
+    (2026-08-26T23:23:01Z) both carry 498dcaa. Two receipt stores disagree about the governance revision
+    inside one session and nothing invalidated the stale one.'
+  - 'partial correction to the recorded residual: per-component log paths DO exist for the deps stage
+    — 11 deps-<fingerprint>.log files with content under /root/.l9/claude/.'
+- id: CI-005
+  priority: 1
+  title: Make memory health transport-specific and continuity task-bearing
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - 'Memory health transport-specificity + continuity tasks: not started.'
+  evidence:
+  - 'live: bootstrap-state.json carries one collapsed "memory": "DEGRADED" — no memory.cli / memory.mcp
+    split (I-BS-05)'
+  - 'live hydrate: stats facts_returned=8, and all 8 are self-referential PICKUP restatements (''The next
+    action involves resuming from the latest Graphiti PICKUP'') — a hydration carrying no task state reports
+    as successful (I-BS-06, IMP-09)'
+  - the multi-repo banner naming the cap and the skip reason predates this assessment (78f122a) and does
+    not enumerate skipped repo names with per-repo reasons (BOOT-7)
+- id: CI-006
+  priority: 0
+  title: Resolve authority-sensitive environment drift at the actual source
+  original_status: OPEN_DECISION
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - General mechanism (separate authority-widening drift from cosmetic drift, make repair reachable/human-only,
+    record the governing value) is not built.
+  - 'done_when ''0 of 33 in exactly one layer'': the stray var is still present, now valued false rather
+    than true, so it no longer even nominally widens authority. Delete it to reach the exact-one-layer
+    end state.'
+  evidence:
+  - 'live: env carries L9_AUTONOMY_AUTONOMOUS_MERGE=false (was =true at assessment)'
+- id: CI-007
+  priority: 0
+  title: Replace standing breakglass environment strings with scoped expiring receipts
+  original_status: ACTIVE
+  progress: done
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - 'CLOSED since 2026-08-26: the readiness merge_authority probe no longer crashes or false-reports ''regression''
+    — /root/.l9/claude/readiness-receipt.json reports READY with a correct note.'
+  - 'done_when literal ''variable absent from a fresh session'' still unmet, but the value changed: the
+    live account now carries L9_AUTONOMY_AUTONOMOUS_MERGE=false, not =true. Still inert, still authorizes
+    nothing; delete the env line to satisfy the literal.'
+  evidence:
+  - 'live readiness receipt: merge_authority_status=READY, note ''env boolean does not authorize merge;
+    receipt/breakglass required'''
+- id: CI-008
+  priority: 0
+  title: Reconcile make pr doctrine with consumer-repository command contracts
+  original_status: OPEN_DECISION
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#307 (merged into main)
+  residual:
+  - Running the governance pre-commit config against a *consumer* workspace (cwd=$GOV, absolute --files,
+    governance-only-local-hook skip subset) needs real-consumer validation and is scoped in-script, not
+    enabled. The done_when's consumer-side leg is unverified.
+  evidence:
+  - ops/scripts/run_pr_precommit.sh lines 22-32 bind the governance pre-commit config explicitly and carry
+    the consumer-workspace gap as an in-script scoped follow-up
+  - tests/ops/scripts/test_publish_verb_governance_always.py asserts the governance-rooted verb, that
+    a consumer needs no pr target, and that the gate binds the governance config
+- id: CI-009
+  priority: 0
+  title: Establish one project interpreter/toolchain authority and verify importability before READY
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#307 (merged into main)
+  residual:
+  - 'CONFIRMED still open: session-deps asserts readiness without an import smoke. The live banner says
+    ''session-deps: toolchain ready (fingerprint 9ff843f2…)'' and the backing log /root/.l9/claude/deps-9ff843f2….log
+    contains only ''installing workspace toolchain'' and ''install pass complete'' — no import proof and
+    no exit code.'
+  - 'A sourceable scripts/env.sh (IMP-E1) was deliberately NOT added: this repo already has one interpreter
+    authority (Makefile + ensure_gov_python.sh + gov-python prereq). Container-image items (A2-A5) are
+    external (SC-IMG).'
+  evidence:
+  - ops/scripts/emit_claude_readiness.py::_interpreter_importable_status probes the locked interpreter
+    for yaml/jsonschema/pydantic; UNKNOWN on a missing interpreter, DEGRADED on an import failure
+  - 'live readiness receipt: interpreter_importable_status=READY, note ''governance interpreter imports
+    core deps'''
+- id: CI-010
+  priority: 0
+  title: Make broker authentication and reachability diagnosable
+  original_status: ACTIVE_WITH_UNKNOWN
+  progress: partial
+  delivered_by: PR#305 (+ predecessor PR#304) and PR#320, all merged into main
+  residual:
+  - 'CONNECT cannot succeed (no platform-issued identity — external; tracked as Quantum-L9/Cursor-Governance
+    issues #301, #302).'
+  - Broker states not fully split into proxy-denied vs upstream-error for allowlist remediation decisions.
+  evidence:
+  - 'live capability plane: broker_reachability=no_dns_record/unreachable_URLError, broker_identity_status=none:hosted_surface_issues_no_session_identity,
+    primary_blocker=identity — the states are named, not collapsed'
+  - PR#320 (merged) moves every adapter's memory front door to the broker URL with no inline bearer, so
+    an unset broker returns an honest 401 and memory runs DEGRADED
+- id: CI-011
+  priority: 2
+  title: Bound large MCP responses with field projection/pagination
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence: []
+- id: CI-012
+  priority: 1
+  title: Gate rules and MCP config on actual surface capabilities
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#320 (merged into main as c3ddeea) + pre-existing adapter
+    templates
+  residual:
+  - 'IMP-07: rule 22 still mandates Context7 on every surface. This surface exposes no context7 MCP server
+    (live tool roster carries graphiti-memory, github, Vercel, Tavily, Google Calendar — no context7),
+    so the rule names a mechanism the surface lacks.'
+  - 'I-BS-12: projected always-on rules still carry no capability precondition annotation.'
+  evidence:
+  - 'PR#320 (merged) ops/secrets/capabilities.yaml: `requires` may name only capability_broker.EVALUABLE_REQUIREMENTS
+    — a precondition no code evaluates now denies the capability instead of passing silently; unevaluable
+    phase_lock_held removed'
+  - PR#320 (merged) ops/secrets/capability_broker.py +96, tests/ops/secrets/test_capability_plane.py +110
+  - PR#320 (merged) environment/agents/adapters/generic/mcp.template.json moved to the brokered front
+    door (no inline bearer), matching the claude-code peer
+  - 'I-BS-03 already satisfied at 78f122a: claude-code and codex mcp.template.json both carry the `type`
+    discriminator, and so does the live /home/user/.mcp.json'
+  - PR#320 merged 2026-08-27T00:38Z as c3ddeea; it did not touch the Context7 stack-proof path or CONTEXT7_API_KEY
+- id: CI-013
+  priority: 1
+  title: Preserve fail-closed destructive/staging gates while making denials actionable
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence: []
+- id: CI-014
+  priority: 2
+  title: Make target repository/cwd explicit for governance CLIs
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - Covers the make-target facade only; many ops/scripts governance CLIs still depend on persistent shell
+    cwd.
+  evidence:
+  - environment/agents/adapters/claude-code/bin/l9 passes explicit WS=$PWD and -C $GOV; the Makefile owns
+    CONSUMER_SAFE target classification (single authority).
+- id: CI-015
+  priority: 1
+  title: Name and enforce the authoritative governance checkout
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - 'CLOSED since 2026-08-26: ''read the SSOT''s issues without add_repo'' (C2) is now met.'
+  - 'Non-authoritative clones are still not relabelled or removed: /root/.cursor-governance and /home/user/Cursor-Governance
+    both sit at 498dcaa, and the session banner names only the first (I-WT-01, I-BS-13).'
+  evidence:
+  - 'done_when met this session: listed 6 open Quantum-L9/Cursor-Governance issues via the GitHub MCP
+    with no add_repo call — the SSOT is in the session repository scope'
+- id: CI-016
+  priority: 1
+  title: Make L4/release receipts resolve paths, branch, and head dynamically
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
+  residual:
+  - The L4/release receipt's pr_template resolution is still hardcoded, so the done_when (a receipt written
+    in org-github-defaults names .github/pull_request_template.md or null) remains unmet.
+  evidence:
+  - ops/autonomy/l4_local.py resolves branch and head dynamically (current_branch, current_head, branch-drift
+    check at lines 173-334)
+  - pr_template is still the literal 'PULL_REQUEST_TEMPLATE.md' at lines 339 and 436; the file has not
+    been touched since 3cc4cab
+- id: CI-017
+  priority: 1
+  title: Validate generated-artifact membership and report all drift in one pass
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance 7dc7e4f (merged)
+  residual:
+  - 'The three named targets are untouched: CEG scripts/generate_validation_report.py still aborts gate
+    7 on a staged-but-deleted path (IMP-B1); l9-meta-injector still reports manifest staleness and dist
+    divergence in separate passes (IMP-09); CEG validate_release_readiness.py still only fails at the
+    gate on missing MANIFEST.md membership, with no --fix and no pre-commit surface (I-WT-03).'
+  evidence:
+  - 'ops/scripts/sync_generated_artifacts.py: environment/program-execution/MANIFEST.json is no longer
+    ''advisory, never auto-synced''; the commit-time hook opts in so the manifest tracks the tree it hashes,
+    instead of every PE edit failing `make program-execution-conformance` into a regenerate-by-hand-and-retry
+    loop'
+  - that is I-WT-03's shape — surface the omission at commit time rather than only at the release gate
+    — applied to the governance repo's own generated manifest
+- id: CI-018
+  priority: 1
+  title: Make local CI parity and hooks first-class provisioning
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence: []
+- id: CI-019
+  priority: 2
+  title: Coordinate concurrent writers on shared PR branches
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence: []
+- id: CI-020
+  priority: 3
+  title: Expose notification age when queued state is delivered
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence: []
+- id: CI-021
+  priority: 2
+  title: Make session-experience and skill-usage logging observable
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence:
+  - 'live: /root/.claude/l9/ does not exist — skill-usage logging still reaches no disk'
+- id: CI-022
+  priority: 2
+  title: Provision or explicitly declare service-backed integration-test dependencies
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence: []
+- id: CI-023
+  priority: 1
+  title: Collapse variable-loading authorities into one reproducible loader contract
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence:
+  - rules/06-governance-ssot-paths.mdc still says scripts 'source resolve_governance_paths.sh and use
+    the exported values' — no must-call wording (IMP-02)
+  - ops/scripts/resolve_governance_paths.sh carries no source-without-call guard (LOADER-2)
+- id: CI-024
+  priority: 2
+  title: Repair or remove foreign/stale bootstrap and deploy entrypoints
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence: []
+- id: CI-025
+  priority: 2
+  title: Provide sanctioned cleanup of generated/cache residue
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence: []
+- id: CI-026
+  priority: 3
+  title: Support safe on-disk aliases for dot-prefixed repositories
+  original_status: ACTIVE
+  progress: done
+  delivered_by: Session repository scope (Quantum-L9/.github attached; clone at /home/user/.github)
+  residual:
+  - 'done_when names ''its CLAUDE.md and skills load'': that repo carries AGENTS.md, not CLAUDE.md, and
+    ships no skills/ tree — the clause is moot rather than unmet. Its .claude/ tree is present.'
+  - Attachment predates this assessment; the 2026-08-26 pass recorded not_started without checking the
+    on-disk clone.
+  evidence:
+  - ls -d /home/user/.github -> present, carrying .claude/, .l9/, .mcp.json, AGENTS.md
+  - session repository scope list names quantum-l9/.github
+- id: CI-027
+  priority: 3
+  title: Correct rule rationale that no longer matches container reality
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence:
+  - rules/03-graphiti-memory.mdc:56 still reads 'system `python3` often lacks PyYAML'; `python3 -c 'import
+    yaml'` succeeds on this container
+- id: CI-028
+  priority: 2
+  title: Improve dependency provisioning evidence and determinism
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence:
+  - live deps log contains no exit code and no in-content timestamp; the paired .stamp file is zero bytes
+    (I-EL-03)
+- id: CI-029
+  priority: 3
+  title: Persist repeatable cross-repo E2E fixtures
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: l9-constellation-topology tests/corpus_fixtures.py (3b02c6b)
+  residual:
+  - 'Not proven to be I-WT-04''s builder: build_corpus.mjs is absent from the repo (no .mjs files at all),
+    and corpus_fixtures.py declares six document formats where I-WT-04 named an eight-format corpus. Whether
+    the real producer/consumer qualification now runs off this fixture, or still off a scratchpad builder,
+    is unverified.'
+  - '''importing the producer''s fixture helpers rather than duplicating them'' is unconfirmed.'
+  evidence:
+  - tests/corpus_fixtures.py is committed in the target repo and builds the two-root corpus in memory,
+    deliberately rather than as checked-in bytes
+  - tests/fixtures/topology_packets/foundational-two-repo/ persists the compiled bundle
+  - scripts/generate_fixture_packets.py regenerates fixtures byte-reproducibly and its --check is part
+    of the standard validation gate
+- id: CI-030
+  priority: 3
+  title: Improve receipt CLI ergonomics without multiplying state owners
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence:
+  - ops/scripts/claude_bootstrap_receipt.py:144 still declares --read with required=True — no default
+    read action
+- id: CI-031
+  priority: 3
+  title: Keep repo documentation and tracked-path hygiene synchronized
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence:
+  - l9-ci-sdk/CLAUDE.md:45 still states 'Pre-commit has two hooks'; l9-ci-sdk/.pre-commit-config.yaml
+    declares 9 (ruff, ruff-format, yamllint x2, biome-check, l9-governance-json, l9-action-pins, l9-zizmor,
+    l9-make-check)
+- id: CI-032
+  priority: 3
+  title: Give slow validation units explicit headroom without weakening total proof
+  original_status: ACTIVE
+  progress: not_started
+  delivered_by: null
+  residual:
+  - Not addressed by the merged work.
+  evidence: []
+- id: CI-033
+  priority: 99
+  title: Use pipefail in push/retry helpers
+  original_status: COMPLETED
+  progress: done
+  delivered_by: Pre-existing (already COMPLETED at pack generation)
+  residual: []
+  evidence:
+  - Marked COMPLETED in the source pack (pipefail in push/retry helpers).
+- id: CI-100
+  priority: 4
+  title: 'Investigate why PR #70''s workflow runs were gated in action_required'
+  original_status: ACTIVE_CONTEXT_SPECIFIC
+  progress: not_started
+  delivered_by: null
+  residual:
+  - 'Context-specific investigation (PR #70 action_required): not started.'
+  evidence: []
+- id: CI-101
+  priority: 4
+  title: Align the branch directive with the repository actually worked in
+  original_status: ACTIVE_CONTEXT_SPECIFIC
+  progress: not_started
+  delivered_by: null
+  residual:
+  - 'Context-specific (branch directive vs repo worked in): not started, and still recurring.'
+  evidence:
+  - 'reproducing live: this session''s branch directive names one branch, claude/zip-task-review-33gw3m,
+    identically across all 10 in-scope repositories'
+- id: CI-102
+  priority: 4
+  title: Valid GH_TOKEN or formal surface exemption from gh-dependent gates
+  original_status: ACTIVE_CONTEXT_SPECIFIC
+  progress: partial
+  delivered_by: Quantum-L9/Cursor-Governance 5612f6b (merged) — a third path, unwritten
+  residual:
+  - 'Neither sanctioned option was taken: no openclaw PAT via the secret plane (option a), and no surface_profile
+    / rules 53 / rules 62 amendment sanctioning the MCP path for claude-cloud (option b). The gates work
+    by a third route — REST-capable probes — that no rule or profile records, so the next gh-dependent
+    gate written will reproduce the original block.'
+  evidence:
+  - 'live: `gh api user --jq .login` -> cryptoxdog with GH_TOKEN=proxy-injected'
+  - merge_gate.py answers the stack probe over REST, so the gh-dependent gate that was exit-2 blocked
+    on this surface now returns an answer
+- id: CI-036
+  priority: 2
+  title: Keep unpushed-commit counts honest across merged-and-deleted branches
+  original_status: ACTIVE
+  progress: partial
+  delivered_by: be3f01c9 (#325, bootstrap prune + origin/HEAD) + 7ceeef38 (#324, an in-repo checker that
+    does not depend on local remote-tracking refs at all)
+  residual:
+  - The checker that surfaced this is the harness stop hook under /root/.claude/, which resolves origin/$current_branch
+    without confirming the branch still exists upstream. That file is harness-owned; this repo fixed the
+    cause it owns (stale refs, unset origin/HEAD), not the checker's resolution logic. Classified external,
+    same bucket as CI-003.
+  - repo_hygiene.py already ran fetch --prune, but only at session end — too late for a count read during
+    the session. Not consolidated with the new session-start prune.
+  evidence:
+  - 'Observed live 2026-08-27: after #321 merged and its branch was deleted upstream, the session''s unpushed-commit
+    check reported 16 where 2 were real. refs/remotes/origin/<branch> survived locally at the pre-merge
+    tip, so <that tip>..HEAD counted every commit main had gained since the merge as this branch''s unpushed
+    work.'
+  - 'Pruning alone is not the fix and would have been worse: the fallback is origin/HEAD, which a fetch-built
+    checkout never sets, so rev-list fails and the count reads 0 with real unpushed commits present. Measured:
+    prune alone took this repo from 16 to silence.'
+  - ops/scripts/bootstrap_agent_environment.sh now prunes stale remote-tracking refs and ensures origin/HEAD
+    resolves, both fail-soft and guarded on an origin remote existing.
+  - '7ceeef38 (#324) added ops/autonomy/session_debt.py, which answers the same question without trusting
+    local refs to CLEAR it: a cloud clone is built +refs/heads/main:refs/remotes/origin/main, so
+    refs/remotes/origin/<feature> never exists however many times the branch is pushed. Its first cut
+    reported this very branch unpushed minutes after it opened #324; it now consults the remote when local
+    refs cannot prove publication, and treats a HEAD that is an ancestor of the remote tip as published
+    rather than behind. Both false positives were unclearable by pushing, which is the failure mode this
+    record is about.'
+  - 'Two independent mechanisms now cover this record — a prune that makes local refs trustworthy (#325)
+    and a checker that does not need them to be (#324). Neither was written knowing about the other.'
+  - 'ops/scripts/tests/test_stale_remote_ref_counts.sh reproduces the defect over a real bare upstream:
+    overcount 7 vs 2, prune-only silence at 0, prune+set-head correct at 2, idempotence, and no-remote
+    fail-soft. 6/6 pass.'
+- id: CI-037
+  priority: 1
+  title: Make abandoned work fail closed instead of relying on doctrine
+  original_status: NEW
+  progress: done
+  delivered_by: 7ceeef38 (#324) — rules/42-no-abandoned-work.mdc + ops/autonomy/session_debt.py, registered
+    on the Claude Stop hook as --class gate
+  why: 'Three standing operator rules — commit implies push, an identified bug must be fixed, a pre-existing
+    error is in scope once identified — were doctrine only, and each failed in practice on 2026-08-27:
+    five local commits sat unpushed behind a narrated blocker, a found bug became a request for permission,
+    and allowlist drift was deferred as "pre-existing, not mine". Narrating a blocker reads as discharging
+    it, so the rules were reduced to debt a gate can refuse to end a turn over.'
+  evidence:
+  - 'Two debt kinds. publish is detected from git and never declared, cleared only by pushing. finding is
+    declared by whoever observed it and cleared by close --evidence; defer --reason is deliberately weaker
+    and keeps the item OPEN, so the next session inherits it instead of rediscovering it. That is what
+    stops "pre-existing, not mine" from staying an exit.'
+  - 'Exit 2 on the Stop hook blocks the turn from ending and returns the reason to the model. Registered
+    through l9_hook_exec.sh --class gate, the same fail-closed path as the other three gates.'
+  - 'Self-demonstrating: the gate flagged its own commit as unpushed, then flagged a false positive in its
+    own detector (a second worktree behind the remote tip), which was fixed rather than waived.'
+  - 'tests/ops/autonomy/test_session_debt.py: 16 tests, including the unsatisfiable-gate trap — a gate that
+    fires on already-published work teaches bypassing, so publication must be provable from a
+    single-branch-refspec clone.'
+  residual:
+  - 'Registration was incomplete on first landing: two sibling contracts still described three gates and
+    the hook command used a third message shape. Repaired by a3d91aa5 before the merge. The record is done;
+    the lesson is that a gate count lives in more than one contract and all of them are the invariant.'
+  - 'The ledger is per-workspace under .l9/autonomy/. A finding recorded in one worktree is not visible from
+    another, so cross-workspace inheritance is by convention, not mechanism.'
+previous_assessment:
+  assessed_against: main@78f122a (merged) + PR#307 open (CI-008/CI-009/CI-002 slice)
+  assessed_at: '2026-08-26'
+  counts:
+    done: 2
+    partial: 9
+    not_started: 25
+proposed_records:
+- id: CI-034
+  priority: 1
+  title: Bind the progress overlay to a governance SHA and invalidate it on drift
+  why: 'assessed_against was the prose label ''main@post-#307-merge''. main advanced 47 commits to 498dcaa
+    and PR#320 opened; nothing marked the overlay stale, and six records were re-judged by hand to find
+    it. This is CI-004''s defect class — a receipt not bound to the revision it describes — applied to
+    the pack itself. It recurred within the hour: this pack was rewritten at 498dcaa naming PR#320 as
+    open, and PR#320 merged as c3ddeea before the overlay was published — stale again, by the same mechanism,
+    on its second day.'
+  change: Record assessed_against_sha alongside the label, and add a check that compares it to the governance
+    HEAD and reports the overlay stale when they differ.
+  done_when: A pack read at a governance revision other than assessed_against_sha reports itself stale
+    before its counts are quoted.
+- id: CI-035
+  priority: 1
+  title: Cross-check the receipt stores against one another
+  why: 'Live this session: bootstrap-state.json says governance_revision c3081ee while gov-refresh.json
+    and readiness-receipt.json both say 498dcaa. CI-004 covers a receipt going stale against the world;
+    nothing covers two concurrent receipt stores disagreeing with each other, which is the cheaper and
+    more reliable detector.'
+  change: Have the readiness emitter compare governance_revision across every receipt under $HOME/.l9/claude
+    and report a mismatch as a named DEGRADED dimension.
+  done_when: A bootstrap-state.json pinned to an older revision than gov-refresh.json produces a named
+    readiness warning rather than silence.
+  note: Fold into CI-004 instead if you prefer one record per defect class.
+proposed_schema_change:
+  id: progress-schema/external-owner
+  why: CI-001 (IMP-01 session prompt), CI-003 (/root/.claude/stop-hook-git-check.sh), CI-011 (GitHub MCP
+    server), CI-013 (IMP-10 harness tracker) and CI-020 (ReadNotifications envelope) all name surfaces
+    this org does not own. They sit in the same not_started bucket as in-repo work that could ship tomorrow,
+    so they never move and they inflate the not-started count.
+  change: 'Add blocked_on: external to the progress block (or a status class EXTERNAL_BLOCKED) and report
+    it as its own count, so ''not started'' means ''startable and not started''.'
+verification_note: 'Two records were recorded not_started on 2026-08-26 for work already on disk at 78f122a:
+  CI-001''s IMP-02 leg (ops/scripts/lib/gh_auth_probe.sh) and CI-026 (the /home/user/.github clone). Populating
+  each record''s evidence list with the command that decides it makes the next pass re-runnable instead
+  of re-judged.'
