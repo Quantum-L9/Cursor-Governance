@@ -4,28 +4,28 @@ overview: Land a truthful SessionStart reporter on the unique open-PR stack tip,
 todos:
   - id: todo-01-stack-tip
     content: PR_STACK=auto worktree from unique tip 416; abandon origin/main start-session-truth branch
-    status: in_progress
+    status: completed
   - id: todo-02-reporter-load
     content: Land runtime reporter with GC/worktree/override resolve; delete GRANT/ITEST/BOOTSTRAP slogans
-    status: pending
+    status: completed
   - id: todo-03-timeout
     content: Portable run_with_timeout in Claude SessionStart repair; emit failed-log evidence
-    status: pending
+    status: completed
   - id: todo-04-side-door
     content: Stop claude_projection from setup_workspace_symlinks SessionStart auto-wire
-    status: pending
+    status: completed
   - id: todo-05-hydrate-heading
     content: "Single ### Graphiti hydrate heading (packet vs bootstrap wrap)"
-    status: pending
+    status: completed
   - id: todo-06-harden-gmp
     content: "/gmp ENFORCE: tests that fail on slogans, GNU timeout, projection side door, load-path miss"
-    status: pending
+    status: completed
   - id: todo-07-validate-gmp
     content: "/gmp VALIDATE: worktree hook JSON + targeted pytest; do not claim SSOT changed"
-    status: pending
+    status: completed
   - id: todo-08-publish
     content: "After validate: authorize-release + PR_STACK=auto PR_REMEDIATE=0 make pr; show PR URL"
-    status: pending
+    status: completed
 isProject: false
 ---
 
