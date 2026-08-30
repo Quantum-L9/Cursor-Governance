@@ -1181,3 +1181,21 @@ This fragment does not rewrite `MEMORY_PIPELINE_MAP.md` or ADR-0005 / ADR-0006.
   live path. Do not dump `reports/repo-index` bodies into Graphiti; `bootstrap`
   RepoManifest may list `reports/repo-index/` as a path pointer only.
 - Authority: `docs/decisions/ADR-0028-session-hydrate-close-visibility.md`.
+
+<!-- ONE_PR_TEMPLATE_AUTONOMOUS_V1 -->
+## One PR template, autonomous compile (2026-08-30)
+
+This fragment supersedes the live path in `PROTECTED_ROOT_PR_TEMPLATE_V1`.
+That paragraph stays on disk (additive_only). Do not fold it.
+
+- The only PR body is `.github/pull_request_template.md`. Root
+  `PULL_REQUEST_TEMPLATE.md` and `.github/PULL_REQUEST_TEMPLATE/protected-root.md`
+  are retired.
+- `make pr` compiles the body via `ops/scripts/compose_pr_body.py` (Summary /
+  Type / Risk / Rollback / Changes by intent). No human leftover.
+- When any `additive_only` root file is in the diff, the same template's
+  **Protected-root** block at the top is filled and the stamp
+  `<!-- L9_PROTECTED_ROOT_PR -->` must be in the body. The Root-file
+  append-only gate still fails CI without that stamp.
+- Prefer append-only. A rewrite still needs
+  `ALLOW-ROOT-DELETION: <path> — <reason>` in a commit message.

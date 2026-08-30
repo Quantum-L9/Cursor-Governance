@@ -39,9 +39,9 @@ DEFAULT_BASE = os.environ.get("ROOT_PROTECT_BASE", "origin/main")
 CONFIG_RELPATH = "ops/config/root-file-protection.json"
 GIT_TIMEOUT_SECONDS = 120
 # Machine stamp. Required in the PR body when any additive_only root file is in
-# the diff. make pr injects .github/PULL_REQUEST_TEMPLATE/protected-root.md.
+# the diff. make pr fills .github/pull_request_template.md Protected-root.
 PROTECTED_ROOT_PR_STAMP = "<!-- L9_PROTECTED_ROOT_PR -->"
-PROTECTED_ROOT_PR_TEMPLATE = ".github/PULL_REQUEST_TEMPLATE/protected-root.md"
+PROTECTED_ROOT_PR_TEMPLATE = ".github/pull_request_template.md"
 
 # ALLOW-ROOT-DELETION: <path> — <reason>   (em-dash or " - " separator; reason required)
 _MARKER_RE = re.compile(

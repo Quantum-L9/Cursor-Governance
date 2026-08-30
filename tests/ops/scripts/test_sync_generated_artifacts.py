@@ -142,6 +142,44 @@ def test_commands_manifest_preserves_prior_slash(tmp_path: Path) -> None:
     assert by_file["commands/harvest2.md"] == "/harvest2"
 
 
+def test_sync_heals_commands_manifest_on_skills_only_change(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Skills-only PRs must still drop retired slash entries from COMMANDS_MANIFEST."""
+    import sync_generated_artifacts as sga
+
+    commands = tmp_path / "commands"
+    commands.mkdir()
+    (commands / "harvest.md").write_text("---\nname: harvest\n---\n# h\n", encoding="utf-8")
+    (commands / "COMMANDS_MANIFEST.yaml").write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "commands": [
+                    {"slash": "/harvest", "file": "commands/harvest.md", "enabled": True},
+                    {"slash": "/rules", "file": "commands/rules.md", "enabled": True},
+                ],
+                "excluded": ["commands/COMMANDS_MANIFEST.yaml"],
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(sga, "assert_no_live_deprecated_skills", lambda _root: None)
+    monkeypatch.setattr(sga, "heal_orphan_skills", lambda *_a, **_k: None)
+    monkeypatch.setattr(sga, "sync_skill_registry", lambda *_a, **_k: None)
+    monkeypatch.setattr(sga, "sync_skill_overrides", lambda *_a, **_k: None)
+    monkeypatch.setattr(sga, "sync_claude_settings", lambda *_a, **_k: None)
+    monkeypatch.setattr(sga, "reconcile_llm_adapters", lambda *_a, **_k: None)
+
+    result = sync(tmp_path, changed_paths={"skills/l9-foo/SKILL.md"})
+    assert not result["errors"], result["errors"]
+    assert "commands/COMMANDS_MANIFEST.yaml" in result["wrote"]
+    doc = yaml.safe_load((commands / "COMMANDS_MANIFEST.yaml").read_text(encoding="utf-8"))
+    slashes = {entry["slash"] for entry in doc["commands"]}
+    assert slashes == {"/harvest"}
+
+
 def test_sync_force_no_churn_on_second_pass(tmp_path: Path) -> None:
     # Minimal governance-shaped tree using real generators where cheap.
     root = tmp_path

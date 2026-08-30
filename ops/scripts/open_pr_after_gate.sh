@@ -374,33 +374,21 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
         2>/dev/null || true
     )"
   fi
-  if [[ -n "$_touched_additive" ]]; then
-    for candidate in \
-      "$WS/.github/PULL_REQUEST_TEMPLATE/protected-root.md" \
-      "$GOV_ROOT/.github/PULL_REQUEST_TEMPLATE/protected-root.md"; do
-      if [[ -f "$candidate" ]]; then
-        template_file="$candidate"
-        break
-      fi
-    done
-    if [[ -z "$template_file" ]]; then
-      echo "ERROR: PR touches additive_only root files but .github/PULL_REQUEST_TEMPLATE/protected-root.md is missing" >&2
-      printf '%s\n' "$_touched_additive" >&2
-      exit 1
+  for candidate in \
+    "$WS/.github/pull_request_template.md" \
+    "$GOV_ROOT/.github/pull_request_template.md"; do
+    if [[ -f "$candidate" ]]; then
+      template_file="$candidate"
+      break
     fi
-    echo "NOTE: additive_only root files in this PR — using protected-root template:"
-    printf '%s\n' "$_touched_additive"
-  fi
+  done
   if [[ -z "$template_file" ]]; then
-    for candidate in \
-      "$WS/PULL_REQUEST_TEMPLATE.md" \
-      "$WS/.github/PULL_REQUEST_TEMPLATE.md" \
-      "$GOV_ROOT/PULL_REQUEST_TEMPLATE.md"; do
-      if [[ -f "$candidate" ]]; then
-        template_file="$candidate"
-        break
-      fi
-    done
+    echo "ERROR: one PR template missing: .github/pull_request_template.md" >&2
+    exit 1
+  fi
+  if [[ -n "$_touched_additive" ]]; then
+    echo "NOTE: additive_only root files in this PR — composer fills Protected-root:"
+    printf '%s\n' "$_touched_additive"
   fi
   compose_py="$SCRIPT_DIR/compose_pr_body.py"
   if [[ -x "$GOV_ROOT/.venv/bin/python" ]]; then
@@ -413,6 +401,10 @@ if [[ -z "$pr_url" || -z "$pr_number" ]]; then
   compose_args=(--workspace "$WS" --pr-base "$PR_BASE" --handoff "$compose_handoff")
   if [[ -n "$template_file" ]]; then
     compose_args+=(--template "$template_file")
+  fi
+  if [[ -n "$_touched_additive" ]]; then
+    printf '%s\n' "$_touched_additive" > "$WS/.l9/pr/additive-only.txt"
+    compose_args+=(--additive-only-file "$WS/.l9/pr/additive-only.txt")
   fi
   if [[ -n "${campaign_body:-}" ]]; then
     printf '%s\n' "$campaign_body" > "$WS/.l9/pr/campaign-body.md"
@@ -513,7 +505,7 @@ else
         printf '  %s\n' $_reopen_touched
         echo "      but its body predates them and lacks <!-- L9_PROTECTED_ROOT_PR -->."
         echo "      The Root-file append-only gate WILL fail until the body uses"
-        echo "      .github/PULL_REQUEST_TEMPLATE/protected-root.md."
+        echo "      .github/pull_request_template.md (stamp <!-- L9_PROTECTED_ROOT_PR -->)."
         echo "      A rewrite (not append-only) additionally needs a commit line:"
         echo "        ALLOW-ROOT-DELETION: <path> — <reason>"
       fi
