@@ -1,0 +1,45 @@
+meta:
+  artifact_type: claude_code_build_contract
+  id: corpus-phase6a-work-unit-compiler
+  target_repo: Quantum-L9/l9-cognitive-runtime
+  prerequisite: corpus-phase5-work-context-compiler
+  terminal_authority: HALT_BEFORE_MERGE
+
+mission: >
+  Implement WorkUnitCompiler that converts WorkContextPacket/CompiledTaskContext evidence into
+  bounded coherent WorkUnits. Prioritize work, never files. Do not perform leverage ranking yet.
+
+preflight:
+  - refresh main and verify Phase 5 prerequisite state
+  - inspect existing task/execution graph models and reuse ownership boundaries
+  - identify explicit work predicates and readiness evidence available from the input packet
+
+construction_laws:
+  - one WorkUnit has one coherent objective and completion condition
+  - each WorkUnit cites exact artifact/evidence refs
+  - prerequisites, blockers and capabilities unlocked are explicit
+  - split independently completable work
+  - never merge based only on topic/embedding similarity
+  - never infer percent complete from TODO counts
+  - unresolved semantic grouping remains UNKNOWN/candidate rather than canonical
+
+required_outputs:
+  - WorkUnit model/schema integration
+  - deterministic semantic work identity
+  - WorkUnitCompiler
+  - tests for split/merge boundaries, blockers, prerequisite preservation, duplicate grouping and unknown grouping
+
+prohibited:
+  - leverage score or priority class assignment
+  - worker scheduling
+  - repository mutation outside l9-cognitive-runtime
+  - Program Execution handoff generation
+
+validation:
+  - repo-native lint/type/test/build
+  - Phase 5 regression suite
+  - WorkUnit fixture tests
+  - no circular dependency introduced between context and planning packages
+
+completion:
+  terminal: HALT_BEFORE_MERGE

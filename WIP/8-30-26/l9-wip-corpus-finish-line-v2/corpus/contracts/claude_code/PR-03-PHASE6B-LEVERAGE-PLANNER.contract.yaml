@@ -1,0 +1,51 @@
+meta:
+  artifact_type: claude_code_build_contract
+  id: corpus-phase6b-leverage-planner
+  target_repo: Quantum-L9/l9-cognitive-runtime
+  prerequisite: corpus-phase6a-work-unit-compiler
+  terminal_authority: HALT_BEFORE_MERGE
+
+mission: >
+  Implement evidence-backed ordinal leverage planning over WorkUnits, including conservative
+  counterfactual unlock simulation. The planner chooses priority class and opportunity radius, not
+  execution mechanics.
+
+required_dimensions:
+  - dependency_centrality
+  - unblock_fanout
+  - capability_unlock
+  - reuse_potential
+  - strategic_alignment
+  - readiness
+  - effort
+  - risk
+  - unknown_burden
+
+required_priority_classes:
+  - FOUNDATIONAL_UNLOCK
+  - QUICK_HIGH_LEVERAGE
+  - DEPENDENCY_REQUIRED
+  - READY_VALUE
+  - STRATEGIC_BET
+  - WAITING
+  - LOW_RETURN
+  - OBSOLETE
+  - UNKNOWN
+
+laws:
+  - dimensions are ordinal 0..5 and retain evidence/rationale
+  - no opaque 0-100 master score as authority
+  - counterfactual simulation is pure and cannot mutate canonical work state
+  - blocker and unknown states can demote/hold a unit
+  - ranking must be deterministic for identical input packet + policy version
+
+validation:
+  - priority-class boundary tests
+  - deterministic repeatability test
+  - counterfactual immutability test
+  - dependency fan-out fixture test
+  - cycle/unknown handling tests
+  - repo-native lint/type/test/build
+
+completion:
+  terminal: HALT_BEFORE_MERGE
