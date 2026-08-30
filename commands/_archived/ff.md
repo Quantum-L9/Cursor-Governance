@@ -1,7 +1,7 @@
 ---
 name: ff
-version: "1.6.0"
-description: "In-place catch-up: this Cursor-Governance clone + SSOT in parallel; --clone / --ssot for one target"
+version: "1.7.0"
+description: "In-place catch-up: this Cursor-Governance clone + SSOT in parallel; corpus keep-list like .venv; --clone / --ssot for one target"
 auto_chain: ynp
 aliases:
   - /repo-sync
@@ -25,10 +25,17 @@ Unique work is **parked, never deleted**:
 
 - `.venv` stays at the same path
 - `.env.local`, `env.local`, `.env.*.local`, and `.claude/settings.local.json`
-  stay (same keep-list as sessionStart swap)
+  stay (machine-local keep-list; same as sessionStart swap)
+- **Corpus keep-list** — worktree bytes survive catch-up (never reset to
+  `HEAD`, never clobbered by `checkout -f origin/main -- .`):
+  - `TODO.md` (agent task queue — not code)
+  - `WIP/**` (except `WIP/Legal Defense/` and credential-shaped globs)
+  - `docs/plans/**`
+  - `environment/program-execution/campaigns/**`
+  SSOT: `ops/scripts/lib/ssot_machine_local_keep.sh` → `ssot_is_ff_corpus_keep`
 - unique untracked files stay in the tree
 - unique local commits are parked on `l9/ff-preserve-<stamp>`
-- every dirty tracked path is classified, copied to
+- other dirty tracked paths are classified, copied to
   `$HOME/.cursor/l9-ff-hold/`, and parked at
   `refs/l9/preserved/ff-dirty/<stamp>` so `reset --keep` can proceed
 - untracked paths that `origin/main` now tracks move to that hold (not `/tmp`)
@@ -37,6 +44,22 @@ It does **not** call `governance_sync.sh` (that script stashes untracked).
 
 Rule: [`rules/55-ff-only-ssot-sync.mdc`](../rules/55-ff-only-ssot-sync.mdc).
 Skill: [`skills/l9-repo-sync/SKILL.md`](../skills/l9-repo-sync/SKILL.md).
+
+## Clean-repo law (corpus)
+
+Corpus is not code. Modified corpus bytes belong on GitHub — committed and
+pushed via the shelf loop — not in a agent stash, not left to rot in
+`refs/l9/preserved/ff-dirty/*` without a PR.
+
+| Corpus path | During `/ff` | After `/ff` |
+|---|---|---|
+| `TODO.md` | **Protected** (corpus keep-list) | If still dirty vs `origin/main`, shelf + commit + `PR_STACK=auto PR_REMEDIATE=0 make pr` |
+| `WIP/`, `docs/plans/`, `environment/program-execution/campaigns/` (untracked) | Copied to shelf worktree | Same shelf loop |
+| Same trees (dirty **tracked**) | **Protected** in worktree through catch-up | Shelf loop must include those paths in the pathspec commit |
+
+**MUST NOT** use `git stash push` / `git stash save` to “save” corpus for `/ff`.
+That hides bytes off-branch and has caused data loss (e.g. `wip-todo-unrelated`).
+Use the shelf loop or a scoped commit on the current branch before catch-up.
 
 ## EXECUTION
 
@@ -58,15 +81,15 @@ bash skills/l9-repo-sync/scripts/ff.sh --ssot
 `--clone` from another repo: this checkout if it is a governance identity
 tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
 
-2. **Shelf leftover `WIP/`, `docs/plans/`, and
-   `environment/program-execution/campaigns/`** — if any untracked files remain
-   under those trees (skip gitignored secret globs, `WIP/Legal Defense/`,
-   credential filenames, and anything an open `feat/ff-shelf-*` PR already
-   carries), cut a sibling worktree from the new `origin/main` tip
-   (`feat/ff-shelf-<stamp>`), **copy those files into it** — untracked bytes
-   do not exist in a fresh checkout. **Before commit and before precommit**,
-   apply `kernels/Improve.md`, then `kernels/Recursive Alignment.md`, then
-   `kernels/Validate & Repair.md` to those files (write `kernel_pass` on
+2. **Shelf corpus** — untracked **and** dirty tracked paths under the
+   keep-list trees plus `TODO.md` when they still differ from what is already
+   on an open `feat/ff-shelf-*` PR or `origin/main`. Skip gitignored secret
+   globs, `WIP/Legal Defense/`, credential filenames, and paths an open shelf
+   PR already carries at the same sha256. Cut a sibling worktree from the new
+   `origin/main` tip (`feat/ff-shelf-<stamp>`), **copy those files into it** —
+   untracked bytes do not exist in a fresh checkout. **Before commit and before
+   precommit**, apply `kernels/Improve.md`, then `kernels/Recursive
+   Alignment.md`, then `kernels/Validate & Repair.md` (write `kernel_pass` on
    shelved `*.plan.md`). Then pathspec-add **only** those files, scoped commit,
    run `l4_local.py begin` then `authorize-release` in that worktree
    (**not** `record-kernels` — corpus kernels are not an L4 phase). Then
@@ -105,7 +128,8 @@ tree, else `$HOME/Cursor-Governance`, else `CURSOR_GOVERNANCE_CLONE`.
 
 - `governance_activate_fresh.sh` / `make start` as “sync”
 - `GOVERNANCE_SYNC_PUSH=1` or `GOVERNANCE_SYNC_HARD_RESET=1`
-- `git stash -u` / `git reset --hard` / deleting files to unblock catch-up
+- `git stash -u` / `git stash push` on corpus paths / `git reset --hard` /
+  deleting files to unblock catch-up
 - Agent `git switch` / `checkout` / `pull` / `clone`. Inner `ff.sh` `git switch`
   **to `main` after parking** is the exception. Resetting a feature branch
   onto `origin/main` stays forbidden.
