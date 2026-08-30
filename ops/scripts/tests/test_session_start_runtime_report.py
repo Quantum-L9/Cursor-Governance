@@ -174,9 +174,7 @@ class ReporterResolveTests(unittest.TestCase):
 
 class HookWiringTests(unittest.TestCase):
     def test_cursor_hook_calls_the_reporter_and_drops_slogans(self) -> None:
-        text = (REPO / "ops" / "hooks" / "session_start_bootstrap.sh").read_text(
-            encoding="utf-8"
-        )
+        text = (REPO / "ops" / "hooks" / "session_start_bootstrap.sh").read_text(encoding="utf-8")
         self.assertIn("session_start_runtime_report.py", text)
         self.assertIn("resolve_runtime_reporter", text)
         self.assertNotIn("itest: unavailable — neo4j absent", text)
@@ -215,7 +213,7 @@ class PortableTimeoutTests(unittest.TestCase):
             [
                 "bash",
                 "-c",
-                "source \"$1\"; PATH=/usr/bin:/bin run_with_timeout 2 echo portable-ok",
+                'source "$1"; PATH=/usr/bin:/bin run_with_timeout 2 echo portable-ok',
                 "bash",
                 str(lib),
             ],
@@ -233,7 +231,7 @@ class PortableTimeoutTests(unittest.TestCase):
             [
                 "bash",
                 "-c",
-                "source \"$1\"; PATH=/usr/bin:/bin run_with_timeout 1 sleep 5",
+                'source "$1"; PATH=/usr/bin:/bin run_with_timeout 1 sleep 5',
                 "bash",
                 str(lib),
             ],

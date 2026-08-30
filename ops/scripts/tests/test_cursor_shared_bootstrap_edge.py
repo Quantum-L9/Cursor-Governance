@@ -67,9 +67,7 @@ class CursorSharedBootstrapEdgeTests(unittest.TestCase):
     def test_hook_reporter_resolve_prefers_worktree_over_gc(self) -> None:
         live = _live_path(HOOK.read_text(encoding="utf-8"))
         override = live.index("L9_SESSION_RUNTIME_REPORT")
-        worktree = live.index(
-            'CURSOR_PROJECT_DIR/ops/scripts/session_start_runtime_report.py'
-        )
+        worktree = live.index("CURSOR_PROJECT_DIR/ops/scripts/session_start_runtime_report.py")
         gc = live.index("$GC/ops/scripts/session_start_runtime_report.py")
         self.assertLess(override, worktree)
         self.assertLess(worktree, gc)

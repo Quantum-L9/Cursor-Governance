@@ -25,8 +25,8 @@ for _path in (_SCRIPTS, _AUTONOMY):
     if str(_path) not in sys.path:
         sys.path.insert(0, str(_path))
 
-from claude_bootstrap_receipt import read as read_claude_receipt  # noqa: E402
 from breakglass_receipt import evaluate, load_receipt  # noqa: E402
+from claude_bootstrap_receipt import read as read_claude_receipt  # noqa: E402
 
 OK = "ok"
 NA = "n/a"
@@ -194,7 +194,9 @@ def classify_graphiti(*, detail: str, stderr: str, healthy: bool) -> dict[str, A
     evidence = (stderr or "").strip() or detail or "no stderr captured — probe swallowed"
     return _line(
         "graphiti",
-        FAILED if "unreachable" in (detail or "").lower() or "refused" in evidence.lower() else DEGRADED,
+        FAILED
+        if "unreachable" in (detail or "").lower() or "refused" in evidence.lower()
+        else DEGRADED,
         detail or "unhealthy",
         evidence=evidence[:500],
     )
@@ -273,9 +275,7 @@ def collect(
         classify_simple("venv", venv, fail_tokens=("absent", "missing", "fail")),
         classify_simple("ide-profile", ide_profile, fail_tokens=("fail", "error")),
         classify_simple("tunnel", tunnel, fail_tokens=("fail", "refused", "error", "closed")),
-        classify_graphiti(
-            detail=graphiti_detail, stderr=graphiti_stderr, healthy=graphiti_healthy
-        ),
+        classify_graphiti(detail=graphiti_detail, stderr=graphiti_stderr, healthy=graphiti_healthy),
         classify_publish_path(evaluate(load_receipt())),
         classify_simple("skill-usage", skill_note, fail_tokens=("absent", "never wrote")),
         classify_itest(error=probe_neo4j(), codegraph=codegraph),
