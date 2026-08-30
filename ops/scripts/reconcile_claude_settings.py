@@ -134,9 +134,7 @@ def _compose_hook_groups(
         if not isinstance(existing_groups, list):
             continue
         merged[event] = [
-            deepcopy(group)
-            for group in existing_groups
-            if not _is_l9_managed_hook_group(group)
+            deepcopy(group) for group in existing_groups if not _is_l9_managed_hook_group(group)
         ]
     for event, template_groups in template_hooks.items():
         # A malformed event value is not a hook list: replace it with the

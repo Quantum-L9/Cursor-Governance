@@ -154,12 +154,12 @@ def test_compose_replaces_malformed_event_value_with_template() -> None:
 
 def test_compose_drops_stale_l9_managed_hooks_before_appending_template() -> None:
     stale = (
-        'bash -c \'x="$HOME/.cursor-governance/environment/agents/adapters/'
+        "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/"
         'claude-code/hooks/l9_hook_exec.sh"; [ -f "$x" ] || exit 0; '
         'exec bash "$x" --class observer retired_gate.sh\''
     )
     fresh = (
-        'bash -c \'x="$HOME/.cursor-governance/environment/agents/adapters/'
+        "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/"
         'claude-code/hooks/l9_hook_exec.sh"; [ -f "$x" ] || exit 0; '
         'exec bash "$x" --class observer session_start_claude_governance.sh\''
     )
@@ -172,11 +172,7 @@ def test_compose_drops_stale_l9_managed_hooks_before_appending_template() -> Non
         "hooks": {
             "SessionStart": [
                 {"hooks": [{"type": "command", "command": stale}]},
-                {
-                    "hooks": [
-                        {"type": "command", "command": "python3 tools/contract_scanner.py"}
-                    ]
-                },
+                {"hooks": [{"type": "command", "command": "python3 tools/contract_scanner.py"}]},
             ],
         }
     }
