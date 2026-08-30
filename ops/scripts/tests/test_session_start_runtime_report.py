@@ -71,13 +71,10 @@ class ClaudeAdapterClassificationTests(unittest.TestCase):
             repair_text="timeout: command not found",
         )
         by_name = {item["name"]: item for item in lines}
+        self.assertEqual(list(by_name), ["claude-adapter"])
         self.assertEqual(by_name["claude-adapter"]["class"], report.NA)
         self.assertFalse(by_name["claude-adapter"]["include_in_degraded"])
-        repair = by_name["claude-adapter-repair"]
-        self.assertEqual(repair["class"], report.FAILED)
-        self.assertTrue(repair["include_in_degraded"])
-        self.assertIn("timeout: command not found", repair["summary"])
-        self.assertIn("bootstrap-repair-deadbeef.log", repair["evidence"])
+        self.assertNotIn("claude-adapter-repair", by_name)
 
     def test_claude_surface_never_ran_is_this_surface_failed(self) -> None:
         lines = report.classify_claude_adapter(
@@ -110,8 +107,8 @@ class MarkdownEmitTests(unittest.TestCase):
         self.assertIn("publish-path: ok", md)
         self.assertIn("itest/neo4j: n/a", md)
         self.assertIn("claude-adapter: n/a", md)
-        self.assertIn("claude-adapter-repair: failed", md)
-        self.assertNotIn("- none", md)
+        self.assertNotIn("claude-adapter-repair", md)
+        self.assertIn("### Degraded\n- none", md)
         self.assertNotIn("no publish-path breakglass in force", md)
         self.assertNotIn("itest: unavailable", md)
 
@@ -120,6 +117,67 @@ class MarkdownEmitTests(unittest.TestCase):
             [report.classify_publish_path({"status": "none", "in_force": False})]
         )
         self.assertIn("### Degraded\n- none", md)
+
+
+class SkillUsageClassificationTests(unittest.TestCase):
+    def test_absent_log_is_na_not_degraded(self) -> None:
+        line = report.classify_skill_usage(
+            "/tmp/skill-usage.jsonl (absent — logger never wrote)"
+        )
+        self.assertEqual(line["class"], report.NA)
+        self.assertFalse(line["include_in_degraded"])
+
+    def test_present_log_is_ok(self) -> None:
+        line = report.classify_skill_usage("/tmp/skill-usage.jsonl (730 entries)")
+        self.assertEqual(line["class"], report.OK)
+        self.assertFalse(line["include_in_degraded"])
+
+
+class HydrateCollapseTests(unittest.TestCase):
+    def test_unhealthy_graphiti_does_not_add_hydrate_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            lines = report.collect(
+                surface="cursor",
+                venv="locked",
+                ide_profile="applied",
+                tunnel="open",
+                graphiti_detail="unreachable",
+                graphiti_stderr="Connection reset by peer",
+                graphiti_healthy=False,
+                wiring="PASS",
+                backup="armed",
+                skill_note="/tmp/x.jsonl (1 entries)",
+                codegraph="skipped",
+                hydrate_degraded=True,
+                hydrate_reason="PICKUP search unreachable",
+                home=Path(tmp),
+            )
+        names = [item["name"] for item in lines]
+        self.assertIn("graphiti", names)
+        self.assertNotIn("graphiti-hydrate", names)
+        graphiti = next(item for item in lines if item["name"] == "graphiti")
+        self.assertIn("PICKUP search unreachable", graphiti["evidence"])
+
+    def test_healthy_graphiti_keeps_hydrate_row(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            lines = report.collect(
+                surface="cursor",
+                venv="locked",
+                ide_profile="applied",
+                tunnel="open",
+                graphiti_detail="healthy",
+                graphiti_stderr="",
+                graphiti_healthy=True,
+                wiring="PASS",
+                backup="armed",
+                skill_note="/tmp/x.jsonl (1 entries)",
+                codegraph="skipped",
+                hydrate_degraded=True,
+                hydrate_reason="empty packet",
+                home=Path(tmp),
+            )
+        names = [item["name"] for item in lines]
+        self.assertIn("graphiti-hydrate", names)
 
 
 class ReporterResolveTests(unittest.TestCase):
@@ -182,6 +240,8 @@ class HookWiringTests(unittest.TestCase):
         self.assertNotIn("GRANT_NOTE", text)
         self.assertNotIn("ITEST_NOTE", text)
         self.assertNotIn("BOOTSTRAP_NOTE", text)
+        self.assertNotIn("plugins, IDE, cold venv", text)
+        self.assertNotIn("cold venv", text)
 
     def test_claude_hook_uses_portable_timeout(self) -> None:
         text = (
@@ -199,9 +259,12 @@ class HookWiringTests(unittest.TestCase):
             text,
             r'(?<!run_with_)timeout "\$\{L9_BOOTSTRAP_REPAIR_BUDGET:-90\}"',
         )
-        repair = text.index('run_with_timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}"')
-        installer = text.index('bash "$installer"', repair)
+        self.assertNotIn('run_with_timeout() { shift; "$@"; }', text)
+        skipped = text.index("bootstrap repair: SKIPPED — run_with_timeout.sh missing")
+        installer = text.index('bash "$installer"', skipped)
+        repair = text.index('run_with_timeout "${L9_BOOTSTRAP_REPAIR_BUDGET:-90}"', skipped)
         marker = text.index(': >"$marker"', installer)
+        self.assertLess(skipped, installer)
         self.assertLess(repair, installer)
         self.assertLess(installer, marker)
 

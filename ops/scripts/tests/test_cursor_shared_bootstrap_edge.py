@@ -80,6 +80,8 @@ class CursorSharedBootstrapEdgeTests(unittest.TestCase):
             "GRANT_NOTE",
             "ITEST_NOTE",
             "BOOTSTRAP_NOTE",
+            "plugins, IDE, cold venv",
+            "cold venv",
         ):
             self.assertNotIn(slogan, live)
 

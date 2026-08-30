@@ -140,12 +140,9 @@ def classify_claude_adapter(
 ) -> list[dict[str, Any]]:
     state = str(receipt.get("state") or "unknown")
     reason = str(receipt.get("reason") or "")
-    log_path = str(receipt.get("log_path") or "")
-    repair_hit = (repair_text or "").strip()
-    repair_name = repair_log or log_path
 
     if surface != "claude-code":
-        lines = [
+        return [
             _line(
                 "claude-adapter",
                 NA,
@@ -157,23 +154,9 @@ def classify_claude_adapter(
                 include_in_degraded=False,
             )
         ]
-        if state not in {"ready", ""} or repair_hit:
-            how = repair_hit or reason or f"receipt state={state}"
-            lines.append(
-                _line(
-                    "claude-adapter-repair",
-                    FAILED if "timeout" in how or state == "never_ran" else DEGRADED,
-                    (
-                        f"Claude Code SessionStart last repair did not write a "
-                        f"receipt (state={state}). How: {how}"
-                    ),
-                    evidence=f"{repair_name}: {how}" if repair_name else how,
-                    this_surface=False,
-                    include_in_degraded=True,
-                )
-            )
-        return lines
 
+    repair_hit = (repair_text or "").strip()
+    repair_name = repair_log or str(receipt.get("log_path") or "")
     if state == "ready":
         return [_line("claude-adapter", OK, reason or "all required components READY")]
     klass = FAILED if state in {"never_ran", "failed", "blocked"} else DEGRADED
@@ -209,6 +192,22 @@ def classify_simple(name: str, detail: str, *, fail_tokens: tuple[str, ...] = ()
         klass = FAILED if "fail" in lowered or "refused" in lowered else DEGRADED
         return _line(name, klass, text, evidence=text)
     return _line(name, OK, text or "ok")
+
+
+def classify_skill_usage(detail: str) -> dict[str, Any]:
+    """A missing Claude skill-usage log is n/a on Cursor, not a this-session fault."""
+    text = detail or ""
+    lowered = text.lower()
+    if "absent" in lowered or "never wrote" in lowered:
+        return _line(
+            "skill-usage",
+            NA,
+            text or "logger never wrote — not required on this surface",
+            evidence=text,
+            this_surface=False,
+            include_in_degraded=False,
+        )
+    return _line("skill-usage", OK, text or "ok")
 
 
 def probe_neo4j(host: str = "127.0.0.1", port: int = 7687, timeout: float = 0.3) -> str:
@@ -277,7 +276,7 @@ def collect(
         classify_simple("tunnel", tunnel, fail_tokens=("fail", "refused", "error", "closed")),
         classify_graphiti(detail=graphiti_detail, stderr=graphiti_stderr, healthy=graphiti_healthy),
         classify_publish_path(evaluate(load_receipt())),
-        classify_simple("skill-usage", skill_note, fail_tokens=("absent", "never wrote")),
+        classify_skill_usage(skill_note),
         classify_itest(error=probe_neo4j(), codegraph=codegraph),
     ]
     receipt = read_claude_receipt()
@@ -292,7 +291,16 @@ def collect(
     )
     lines.append(classify_simple("wiring", wiring, fail_tokens=("fail",)))
     lines.append(classify_simple("backup", backup, fail_tokens=("fail", "error")))
-    if hydrate_degraded:
+    graphiti_row = next((item for item in lines if item["name"] == "graphiti"), None)
+    graphiti_unhealthy = bool(
+        graphiti_row and graphiti_row["class"] in {DEGRADED, FAILED}
+    )
+    if hydrate_degraded and graphiti_unhealthy:
+        extra = (hydrate_reason or "hydrate reported degraded").strip()
+        if extra and extra not in (graphiti_row.get("evidence") or ""):
+            prior = (graphiti_row.get("evidence") or "").strip()
+            graphiti_row["evidence"] = f"{prior} hydrate: {extra}".strip()
+    elif hydrate_degraded:
         lines.append(
             _line(
                 "graphiti-hydrate",

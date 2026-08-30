@@ -95,6 +95,10 @@ def test_bootstrap_repair_marker_follows_installer_success() -> None:
         r'(?<!run_with_)timeout "\$\{L9_BOOTSTRAP_REPAIR_BUDGET:-90\}"',
         text,
     )
+    assert 'run_with_timeout() { shift; "$@"; }' not in text
+    assert text.index("bootstrap repair: SKIPPED — run_with_timeout.sh missing") < text.index(
+        'bash "$installer"'
+    )
 
 
 def _synthetic_gov(home: Path, *, tracked_dirt: bool, untracked_dirt: bool) -> Path:

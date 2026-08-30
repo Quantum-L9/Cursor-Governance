@@ -8,8 +8,9 @@ set -uo pipefail
 
 REPO="${CURSOR_PROJECT_DIR:-}"
 
-# Slow reconcilers (plugins, IDE, cold venv) are backgrounded during sessionStart.
-# Manual `make start` sets L9_BOOTSTRAP_SYNC=1 to run them in the foreground.
+# IDE profile is the only SessionStart reconciler that writes the workspace.
+# uv / scratch_hold already ran in bootstrap_agent_environment.sh.
+# Manual `make start` sets L9_BOOTSTRAP_SYNC=1 to run IDE in the foreground.
 BOOTSTRAP_SYNC="${L9_BOOTSTRAP_SYNC:-0}"
 
 # Reconcilers write into the workspace (.vscode/settings.json, .claude/, the
