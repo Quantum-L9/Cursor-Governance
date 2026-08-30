@@ -93,6 +93,29 @@ def consumer_settings(template: dict[str, Any]) -> dict[str, Any]:
     return out
 
 
+def _is_l9_managed_hook_group(group: Any) -> bool:
+    """True when a hook group was projected from governance (not repo-owned).
+
+    Managed registrations invoke ``l9_hook_exec.sh`` from the cursor-governance
+    clone. Stale copies of those groups must be dropped before compose, or a
+    retired gate keeps running beside its replacement.
+    """
+    if not isinstance(group, dict):
+        return False
+    hooks = group.get("hooks")
+    if not isinstance(hooks, list):
+        return False
+    for hook in hooks:
+        if not isinstance(hook, dict):
+            continue
+        command = str(hook.get("command") or "")
+        if "l9_hook_exec.sh" in command:
+            return True
+        if "/.cursor-governance/" in command and "/claude-code/hooks/" in command:
+            return True
+    return False
+
+
 def _compose_hook_groups(
     template_hooks: dict[str, Any], existing_hooks: dict[str, Any]
 ) -> dict[str, Any]:
@@ -101,12 +124,20 @@ def _compose_hook_groups(
     A git-tracked workspace settings.json may carry the repo's own guards —
     Cognitive.Engine.Graphs keeps a banned-pattern PreToolUse contract there —
     and wholesale template replacement silently disables them for the whole
-    session (issue #281). Compose instead: keep every consumer group, add the
-    governance groups that are not already present (deep-equal dedupe), so a
-    file whose hooks already equal the template stays byte-identical and
-    reconciliation remains churn-free.
+    session (issue #281). Compose instead: keep every *consumer* group, drop
+    previously projected L9 registrations, then append current template groups
+    (deep-equal dedupe). That way a retired governance hook cannot linger
+    beside its replacement while genuine repo-owned guards survive.
     """
-    merged: dict[str, Any] = deepcopy(existing_hooks)
+    merged: dict[str, Any] = {}
+    for event, existing_groups in existing_hooks.items():
+        if not isinstance(existing_groups, list):
+            continue
+        merged[event] = [
+            deepcopy(group)
+            for group in existing_groups
+            if not _is_l9_managed_hook_group(group)
+        ]
     for event, template_groups in template_hooks.items():
         # A malformed event value is not a hook list: replace it with the
         # working governance groups instead of crashing on `append`.

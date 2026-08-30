@@ -152,6 +152,42 @@ def test_compose_replaces_malformed_event_value_with_template() -> None:
     assert merged["hooks"]["Stop"][0]["hooks"][0]["command"] == "consumer-stop"
 
 
+def test_compose_drops_stale_l9_managed_hooks_before_appending_template() -> None:
+    stale = (
+        'bash -c \'x="$HOME/.cursor-governance/environment/agents/adapters/'
+        'claude-code/hooks/l9_hook_exec.sh"; [ -f "$x" ] || exit 0; '
+        'exec bash "$x" --class observer retired_gate.sh\''
+    )
+    fresh = (
+        'bash -c \'x="$HOME/.cursor-governance/environment/agents/adapters/'
+        'claude-code/hooks/l9_hook_exec.sh"; [ -f "$x" ] || exit 0; '
+        'exec bash "$x" --class observer session_start_claude_governance.sh\''
+    )
+    template = {
+        "hooks": {
+            "SessionStart": [{"hooks": [{"type": "command", "command": fresh}]}],
+        }
+    }
+    existing = {
+        "hooks": {
+            "SessionStart": [
+                {"hooks": [{"type": "command", "command": stale}]},
+                {
+                    "hooks": [
+                        {"type": "command", "command": "python3 tools/contract_scanner.py"}
+                    ]
+                },
+            ],
+        }
+    }
+    merged = merge_workspace_settings(template, existing, compose_hooks=True)
+    commands = [g["hooks"][0]["command"] for g in merged["hooks"]["SessionStart"]]
+    assert stale not in commands
+    assert "python3 tools/contract_scanner.py" in commands
+    assert fresh in commands
+    assert commands.count(fresh) == 1
+
+
 def test_reconcile_workspace_composes_tracked_settings(tmp_path: Path) -> None:
     root = tmp_path / "gov"
     hooks = root / "environment" / "agents" / "adapters" / "claude-code" / "hooks"
