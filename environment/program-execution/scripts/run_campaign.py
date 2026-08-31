@@ -2284,6 +2284,53 @@ def blueprint_byte_inventory(blueprint: Path) -> dict[str, str]:
     }
 
 
+def task_count_agreement(
+    blueprint: Path, launchability: Mapping[str, Any], pec_workspace: Path
+) -> dict[str, int]:
+    """Compiled, launchable and locked task counts, as three independent reads.
+
+    Each is taken from the artifact that stage actually produced, not from a
+    shared variable, because a shared variable is what would hide the defect
+    this measures.
+    """
+    module = _load_script("launchability", PE_ROOT / "scripts/launchability.py")
+    lock_path = pec_workspace / "runtime" / "program-lock.json"
+    locked = 0
+    if lock_path.is_file():
+        try:
+            locked = len(json.loads(lock_path.read_text(encoding="utf-8")).get("tasks") or [])
+        except (OSError, json.JSONDecodeError):  # pragma: no cover - lock is written by pec
+            locked = -1
+    return {
+        "compiled": len(module.blueprint_tasks(blueprint)),
+        "launchability": int(launchability.get("task_count") or 0),
+        "program_lock": locked,
+    }
+
+
+def assert_task_counts_agree(
+    blueprint: Path, launchability: Mapping[str, Any], pec_workspace: Path
+) -> dict[str, int]:
+    """Fatal invariant: compile, launchability and the lock saw the same tasks.
+
+    B1 was exactly this disagreement, and nothing noticed. Launchability read
+    `tasks.json`, found nothing, and self-skipped as "no_task_cards" while
+    compile had produced a full set and the lock froze them. Every stage looked
+    healthy in isolation; only the counts side by side show the adapter had come
+    unplugged. Cheap to check, and it fails at bootstrap rather than as a
+    mystery at arm or verify.
+    """
+    counts = task_count_agreement(blueprint, launchability, pec_workspace)
+    if len(set(counts.values())) == 1:
+        return counts
+    detail = ", ".join(f"{stage}={count}" for stage, count in sorted(counts.items()))
+    raise CampaignError(
+        f"task count disagreement across stages ({detail}); a stage is reading a "
+        "different task source than the others",
+        error_code="TASK_COUNT_DISAGREEMENT",
+    )
+
+
 def assert_blueprint_immutable(blueprint: Path, accepted: dict[str, str], *, phase: str) -> int:
     """Fatal executable invariant: accepted Blueprint bytes never move in execution."""
     current = blueprint_byte_inventory(blueprint)
@@ -4923,6 +4970,10 @@ def _run_campaign_stages(
     timer.flush()
     report.pec_note = str(pec_result.get("output") or "")
     log("pec bootstrap ok")
+    task_counts = assert_task_counts_agree(
+        blueprint, report.launchability, Path(report.pec_workspace)
+    )
+    log(f"task counts agree: {task_counts['compiled']} across compile, launchability, lock")
     with traced(trace, "bootstrap", "pec_runtime_activate"):
         pec_status = activate_pec_runtime(Path(report.pec_workspace), campaign_id=campaign_id)
     log(f"pec runtime_status={pec_status.get('runtime_status')}")

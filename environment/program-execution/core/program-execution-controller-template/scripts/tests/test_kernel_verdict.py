@@ -17,11 +17,23 @@ from helpers import (
 
 
 def _inspection_blueprint(root: Path) -> Path:
+    """A task with a terminal verifier that flattens to no shell command.
+
+    These tests are about the verdict when the contract carries nothing the
+    Controller can run. `inspection` used to produce that state, but a mutating
+    repo_local task with only `inspection` is now refused at acceptance and at
+    readiness (`missing_terminal_verifier`), so it can no longer reach verify.
+
+    `external_adapter` is the reachable form of the same condition: terminal, so
+    the task is legitimately claimable, yet deliberately not shell-flattened, so
+    `validation_commands` is still empty and the Controller still has nothing to
+    execute. The verdict semantics under test are unchanged.
+    """
     bp = make_blueprint(root)
     cards = yaml.safe_load((bp / "TASK_CARDS.yaml").read_text(encoding="utf-8"))
     for task in cards.get("tasks") or []:
         for item in task.get("validation") or []:
-            item["method"] = "inspection"
+            item["method"] = "external_adapter"
     (bp / "TASK_CARDS.yaml").write_text(yaml.safe_dump(cards, sort_keys=False), encoding="utf-8")
     return bp
 

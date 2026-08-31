@@ -44,7 +44,39 @@ so **W4 and W5 are now closed on the live surface**, not only in shadow:
   wording and per-item provenance. CE-AT-005 / CE-AT-006 hold live.
 
 Still **not** authorized: W8 activation, and `PLAN_DOCUMENT.pec-repair-pipeline.v1.json`
-is unchanged. The next remediation entry is position 13 (`A5`).
+is unchanged.
+
+<!-- PEC-TAIL-5 -->
+### Tail batch 13-17 — remediation_order fully executed
+
+Positions 13-17 landed under `pec-tail-5-2026-08-31`. **All 17 remediation entries
+are now complete**; nothing in `remediation_order` is open.
+
+- **A5** — the brief route emits `route_confusion` diagnostics when a memo carries
+  architecture-grade structure. It warns through the existing preflight warning
+  channel and never re-routes: re-routing on a heuristic is the guessing this
+  front door exists to stop. It reads `normative_signals`, not a second regex.
+- **B10** — fixtures moved off the dead `execution_kind` vocabulary. `repo_change`
+  and `analysis` are not in the task-cards enum
+  (`program_control | repo_local | external_adapter | read_only`), so tests built
+  on them asserted a vocabulary nothing else speaks.
+- **B7** — `missing_terminal_verifier` is a blocking Controller readiness reason.
+  Acceptance already refuses it pre-seal; readiness is the second line for a lock
+  written before that rule existed.
+- **B1 class** — `assert_task_counts_agree` compares compiled / launchability /
+  program-lock counts at bootstrap. This is the check that would have caught the
+  original B1 the moment it happened.
+- **A8** — the "fails only for" clause now names the exact five `audit()` failures
+  and the two that live outside it.
+
+Two things seen and deliberately **not** changed, recorded so they are not lost:
+`launchability._INSPECTION_KINDS` still tolerates `analysis`/`inspection`/
+`decision`/`review` (unreachable through schema-validated blueprints), and
+`CoverageError` is exported but never raised. Both are production surfaces that
+B10 and A8 do not cover.
+
+W8 activation remains unauthorized and requires its own plan bound to a fresh
+`origin/main` SHA.
 
 This folder is no longer a dump of PE research. It is one remaining pipeline.
 

@@ -9,8 +9,30 @@ campaign mapping per material executable item, counted and compared.
 The loop around it is a repair loop, not a gate. Ordinary incompleteness in a
 first extraction pass — a missed unit, an ungrounded restatement, a
 misclassification — is normal and gets another bounded round aimed only at what
-is actually missing. Compilation fails only for conditions that more rounds
-cannot fix.
+is actually missing.
+
+Compilation fails only for the conditions `audit()` records as failures, and
+that set is exactly these five:
+
+1. A source unit carrying normative signals has no disposition at all.
+2. A normative unit has a disposition outside `GOVERNED_DISPOSITIONS`.
+3. A semantic item cites no source unit (`source_refs` is empty).
+4. A material *executable* item has no campaign mapping — checked only once
+   `mappings` is supplied, which happens after lowering, so a pre-lowering
+   audit cannot fail on this one.
+5. Fewer source chunks were extracted than were sent.
+
+Everything else the audit reports is a count, not a verdict. Two failures
+live outside `audit()` and are named here so the boundary is complete:
+`ask()` propagates `ExtractorError` when a response is still malformed after
+its bounded retry, and `compile_architecture_intent` raises
+`ArchitectureCompileError` when the repair rounds end with `status != "PASS"`.
+Both leave nothing executed.
+
+`CoverageError` is exported from this module but is raised nowhere; the
+non-convergence path is the `ArchitectureCompileError` above. It is named
+here rather than left to be inferred, because an exception in `__all__` reads
+like part of the contract.
 """
 
 from __future__ import annotations

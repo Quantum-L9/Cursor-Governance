@@ -38,7 +38,11 @@ def _task(**overrides):
     task = {
         "id": "TASK-001",
         "title": "Implement change",
-        "execution_kind": "repo_change",
+        # Canonical per task-cards.schema.json:
+        # program_control | repo_local | external_adapter | read_only.
+        # This fixture said "repo_change", which the schema does not accept, so
+        # every test built on it asserted a vocabulary nothing else speaks.
+        "execution_kind": "repo_local",
         "definition_status": "ready",
         "outputs": [{"location": "docs/result.md"}],
         "validation": [],
@@ -125,9 +129,10 @@ class LaunchabilityTest(unittest.TestCase):
             self.assertNotIn("TASK-001", report["synthesized_validations"])
 
     def test_inspection_kinds_do_not_require_executable_validation(self) -> None:
+        """`read_only` is the canonical inspection kind; "analysis" is not one."""
         with tempfile.TemporaryDirectory() as raw:
             report = launchability.check_tasks(
-                [_task(execution_kind="analysis", outputs=[])], Path(raw), infer=False
+                [_task(execution_kind="read_only", outputs=[])], Path(raw), infer=False
             )
             self.assertTrue(report["launchable"])
 

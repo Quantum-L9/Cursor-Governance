@@ -493,31 +493,71 @@
         "pri": "P2",
         "change": "Add route-confusion diagnostics to the brief route (warn, don't steal)",
         "why": "never silently push a rich document through a weaker compiler",
-        "finding": "A5"
+        "finding": "A5",
+        "execution_status": "complete",
+        "execution_batch": "pec-tail-5-2026-08-31",
+        "validation_evidence": {
+          "relevant_tests": "PASS — 653 passed/34 subtests (scripts + controller template + compiler); 160 passed/9 xfailed (tests + conformance + claude-code adapter)",
+          "repo_wide_tests": "PASS — 1266 passed; the 2 remaining failures (test_pr_summary hook registration, dag_authoring command file) were verified failing identically on main da0c7530 and are recorded as deferred session debt",
+          "lint": "PASS — ruff check + ruff format --check over environment/program-execution",
+          "generated_artifacts": "PASS — sync_generated_artifacts.py --force --pe-manifest; test_core_manifest_shapes green"
+        }
       },
       {
         "pri": "P2",
         "change": "Delete legacy repo_change / analysis / tasks.json launchability fixtures",
         "why": "tests assert a dead vocabulary",
-        "finding": "B10"
+        "finding": "B10",
+        "execution_status": "complete",
+        "execution_batch": "pec-tail-5-2026-08-31",
+        "validation_evidence": {
+          "relevant_tests": "PASS — 653 passed/34 subtests (scripts + controller template + compiler); 160 passed/9 xfailed (tests + conformance + claude-code adapter)",
+          "repo_wide_tests": "PASS — 1266 passed; the 2 remaining failures (test_pr_summary hook registration, dag_authoring command file) were verified failing identically on main da0c7530 and are recorded as deferred session debt",
+          "lint": "PASS — ruff check + ruff format --check over environment/program-execution",
+          "generated_artifacts": "PASS — sync_generated_artifacts.py --force --pe-manifest; test_core_manifest_shapes green"
+        }
       },
       {
         "pri": "P2",
         "change": "Put missing_terminal_verifier into Controller readiness/preflight",
         "why": "defence in depth",
-        "finding": "B7"
+        "finding": "B7",
+        "execution_status": "complete",
+        "execution_batch": "pec-tail-5-2026-08-31",
+        "validation_evidence": {
+          "relevant_tests": "PASS — 653 passed/34 subtests (scripts + controller template + compiler); 160 passed/9 xfailed (tests + conformance + claude-code adapter)",
+          "repo_wide_tests": "PASS — 1266 passed; the 2 remaining failures (test_pr_summary hook registration, dag_authoring command file) were verified failing identically on main da0c7530 and are recorded as deferred session debt",
+          "lint": "PASS — ruff check + ruff format --check over environment/program-execution",
+          "generated_artifacts": "PASS — sync_generated_artifacts.py --force --pe-manifest; test_core_manifest_shapes green"
+        }
       },
       {
         "pri": "P2",
         "change": "Assert compiled_task_count == launchability_task_count == program_lock_task_count",
         "why": "instantly catches adapter disconnects",
-        "finding": "B1 class"
+        "finding": "B1 class",
+        "execution_status": "complete",
+        "execution_batch": "pec-tail-5-2026-08-31",
+        "validation_evidence": {
+          "relevant_tests": "PASS — 653 passed/34 subtests (scripts + controller template + compiler); 160 passed/9 xfailed (tests + conformance + claude-code adapter)",
+          "repo_wide_tests": "PASS — 1266 passed; the 2 remaining failures (test_pr_summary hook registration, dag_authoring command file) were verified failing identically on main da0c7530 and are recorded as deferred session debt",
+          "lint": "PASS — ruff check + ruff format --check over environment/program-execution",
+          "generated_artifacts": "PASS — sync_generated_artifacts.py --force --pe-manifest; test_core_manifest_shapes green"
+        }
       },
       {
         "pri": "P3",
         "change": "Tighten compiler README's 'fails only for' clause to the real failure set",
         "why": "documented acceptance boundary must be exact",
-        "finding": "A8"
+        "finding": "A8",
+        "execution_status": "complete",
+        "execution_batch": "pec-tail-5-2026-08-31",
+        "validation_evidence": {
+          "relevant_tests": "PASS — 653 passed/34 subtests (scripts + controller template + compiler); 160 passed/9 xfailed (tests + conformance + claude-code adapter)",
+          "repo_wide_tests": "PASS — 1266 passed; the 2 remaining failures (test_pr_summary hook registration, dag_authoring command file) were verified failing identically on main da0c7530 and are recorded as deferred session debt",
+          "lint": "PASS — ruff check + ruff format --check over environment/program-execution",
+          "generated_artifacts": "PASS — sync_generated_artifacts.py --force --pe-manifest; test_core_manifest_shapes green"
+        }
       }
     ],
     "proof_tests": {
@@ -718,13 +758,50 @@
           "live_surface": "PASS — CE-AT-002/003 and CE-AT-005/006 now proven on the live/deterministic surface, not only in shadow"
         },
         "remote_publication": "pushed to PR #442 (Quantum-L9/Cursor-Governance)"
+      },
+      {
+        "id": "pec-tail-5-2026-08-31",
+        "authority": "current_task: execute the next slice from the tracker",
+        "selected_remediation_positions": [
+          13,
+          14,
+          15,
+          16,
+          17
+        ],
+        "production_baseline_main_sha": "da0c7530df837d417a1437f9d08b5d8e61ba4a10",
+        "closes": [
+          "A5",
+          "B10",
+          "B7",
+          "B1 class",
+          "A8"
+        ],
+        "notes": {
+          "A5": "route_confusion diagnostics on the brief route; warns via the existing preflight warning channel and never re-routes. Uses compiler.architecture_intent.normative_signals rather than a second regex, per the A3 one-vocabulary law.",
+          "B10": "test fixtures moved off the dead execution_kind vocabulary (repo_change -> repo_local, analysis -> read_only) to the task-cards schema enum. The one remaining tasks.json fixture is the B1 negative control proving tasks.json is ignored, so it stays.",
+          "B7": "missing_terminal_verifier is now a blocking readiness reason in the Controller. Four inspection-only fixtures were constructing the state B4 forbids; they moved to external_adapter, which is terminal but not shell-flattened, so the verdict semantics they test are unchanged and reachable.",
+          "B1 class": "assert_task_counts_agree compares compiled vs launchability vs program_lock at bootstrap, each read from the artifact that stage produced.",
+          "A8": "the 'fails only for' clause now enumerates the exact five audit() failures plus the two outside it."
+        },
+        "observations": [
+          "launchability._INSPECTION_KINDS still carries analysis/inspection/decision/review, none of which are in the task-cards execution_kind enum. Unreachable through schema-validated blueprints; left alone because B10's scope is fixtures, not production tolerance.",
+          "CoverageError is exported from architecture_coverage but raised nowhere; the real non-convergence failure is ArchitectureCompileError. Documented in place rather than removed, since deleting an exported name is an API change A8 does not cover."
+        ],
+        "validation": {
+          "relevant_tests": "PASS — 653 passed/34 subtests (scripts + controller template + compiler); 160 passed/9 xfailed (tests + conformance + claude-code adapter)",
+          "repo_wide_tests": "PASS — 1266 passed; the 2 remaining failures (test_pr_summary hook registration, dag_authoring command file) were verified failing identically on main da0c7530 and are recorded as deferred session debt",
+          "lint": "PASS — ruff check + ruff format --check over environment/program-execution",
+          "generated_artifacts": "PASS — sync_generated_artifacts.py --force --pe-manifest; test_core_manifest_shapes green"
+        },
+        "remote_publication": "pushed to PR #442 (Quantum-L9/Cursor-Governance)"
       }
     ],
     "next_remediation": {
-      "position": 13,
-      "finding": "A5",
-      "change": "Add route-confusion diagnostics to the brief route (warn, don't steal)",
-      "status": "open"
+      "position": null,
+      "finding": null,
+      "change": "remediation_order is fully executed; positions 1-17 complete",
+      "status": "none_open"
     }
   },
   "completed_removed_from_pipeline": [

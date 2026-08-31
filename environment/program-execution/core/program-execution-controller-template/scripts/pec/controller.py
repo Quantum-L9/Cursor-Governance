@@ -744,6 +744,35 @@ _BLOCKING = "blocking"
 _STATE = "state"
 
 
+#: A verification mechanism that can actually produce a verdict. `inspection`
+#: alone cannot: it yields a reading, not the pass/fail the Controller acts on.
+_TERMINAL_VERIFICATION_METHODS = {"command", "command_and_inspection", "external_adapter"}
+
+#: Ceiling flags that make a task mutating, and so require a terminal verifier.
+_MUTATING_AUTHORIZATIONS = ("local_write", "commit", "destructive_change")
+
+
+def missing_terminal_verifier(task: dict[str, Any]) -> bool:
+    """A mutating repo-local task the Controller could never verify.
+
+    Acceptance already refuses this before a Blueprint is sealed. This is the
+    defence in depth: a lock written before that rule existed, or a task that
+    reached runtime by some other path, would otherwise be claimable and fail
+    only at `verify` — after the worker had already changed the repository.
+    Readiness is where that costs nothing.
+    """
+    if str(task.get("execution_kind") or "").strip() != "repo_local":
+        return False
+    ceiling = task.get("authorization_ceiling") or {}
+    if not any(bool(ceiling.get(action)) for action in _MUTATING_AUTHORIZATIONS):
+        return False
+    mechanisms = task.get("verification_mechanisms") or []
+    return not any(
+        isinstance(item, dict) and str(item.get("method") or "") in _TERMINAL_VERIFICATION_METHODS
+        for item in mechanisms
+    )
+
+
 def _gate_prerequisite_kind(gate: dict[str, Any] | None) -> str:
     """Classify an unsatisfied gate prerequisite (ADR-0023).
 
@@ -790,6 +819,8 @@ def task_readiness_detail(
         entries.append((_BLOCKING, "global_halt"))
     if task["definition_status"] != "ready":
         entries.append((_BLOCKING, f"definition_not_ready:{task['definition_status']}"))
+    if missing_terminal_verifier(task):
+        entries.append((_BLOCKING, "missing_terminal_verifier"))
     if task["runtime_state"] in {
         "LEASED",
         "PREPARED",

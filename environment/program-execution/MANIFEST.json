@@ -931,7 +931,7 @@
     },
     {
       "path": "compiler/architecture_coverage.py",
-      "sha256": "308e8293aee0a7301ac87db1e2fe0c288ceb79be62f94754290d878a1ac26527"
+      "sha256": "a3608a1af790b8ffe3a15614c0f665b8fa1e74784429f4a0a2d12d351fb23db0"
     },
     {
       "path": "compiler/architecture_extractor.py",
@@ -1935,7 +1935,7 @@
     },
     {
       "path": "scripts/campaign_input.py",
-      "sha256": "1cf8ecd11318d0d3f9df3ec55e17ced51de23c4d0d0d5910d95d26248e22afa4"
+      "sha256": "d227f1a422acfe22fba75183a55b20e8cd4090866f3f0a3d4149c1657e88dec9"
     },
     {
       "path": "scripts/campaign_pr_copy.py",
@@ -2015,7 +2015,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "eceb457ddcee3a3d5837074cc7c4c8959a416fbf8a2a645a79d365676db3e8f6"
+      "sha256": "c174ba876299c817d2090668be0dc7b4f8535975212ff8e7c7591e644a03cce2"
     },
     {
       "path": "scripts/run_conformance.py",
@@ -2059,7 +2059,7 @@
     },
     {
       "path": "scripts/tests/test_execution_completeness.py",
-      "sha256": "9ed02e3f78ef092f2d13d97c69dcc62c7400f92550a1ba2c360349583ec74f71"
+      "sha256": "5eb3cef4de8362d41277f91e8e4b409d2dd6234c9ed7829b5518a1b5697650ab"
     },
     {
       "path": "scripts/tests/test_failed_result_harvest.py",
@@ -2067,7 +2067,7 @@
     },
     {
       "path": "scripts/tests/test_launchability.py",
-      "sha256": "237092facaca4e7efb3e8d0be9f740dd700425a69fa93266ffe68778a2c96a9d"
+      "sha256": "0f8d9b2f834a15a58186b95db1911a870d254db73bd2dda208049e365e56636c"
     },
     {
       "path": "scripts/tests/test_lazy_materialization.py",

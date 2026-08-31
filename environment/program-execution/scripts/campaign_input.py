@@ -82,6 +82,10 @@ class Classification:
     path: Path
     schema: str = ""
     document: dict[str, Any] | None = field(default=None, repr=False)
+    #: Non-binding observations about this routing decision. A diagnostic never
+    #: changes `kind`: the router warns, it does not re-route. Silence here
+    #: means the router saw nothing worth telling the operator.
+    diagnostics: tuple[str, ...] = ()
 
     @property
     def supported(self) -> bool:
@@ -97,6 +101,7 @@ class Classification:
             "schema": self.schema,
             "path": str(self.path),
             "supported": self.supported,
+            "diagnostics": list(self.diagnostics),
             "route": self.route,
         }
 
@@ -215,6 +220,66 @@ def _is_plan_intent(doc: dict[str, Any] | None) -> bool:
     return False
 
 
+#: How much normative structure makes a memo look like an architecture source.
+#: Deliberately not a tight threshold: this only decides whether the operator is
+#: told the richer route exists, and a false positive costs one warning line
+#: while a false negative costs a silently flattened document.
+ROUTE_CONFUSION_MIN_SIGNALS = 3
+ROUTE_CONFUSION_MIN_HEADINGS = 2
+
+_HEADING_RE = re.compile(r"^#{1,6}\s+\S", re.M)
+
+
+def _normative_signals(text: str) -> tuple[str, ...]:
+    """The compiler's vocabulary, or nothing if it cannot be reached.
+
+    Imported lazily and by the same route `program-execution.intent.v1`
+    parsing already uses, so the front door stays dependency-light at import
+    time. It must be *this* vocabulary and not a second regex of the router's
+    own: one parser, one vocabulary, one semantic law.
+    """
+    pe_root = Path(__file__).resolve().parents[1]
+    if str(pe_root) not in sys.path:
+        sys.path.insert(0, str(pe_root))
+    try:
+        from compiler.architecture_intent import normative_signals
+    except Exception:  # pragma: no cover - diagnostics never block routing
+        return ()
+    try:
+        return tuple(normative_signals(text))
+    except Exception:  # pragma: no cover - diagnostics never block routing
+        return ()
+
+
+def route_confusion_diagnostics(text: str) -> tuple[str, ...]:
+    """Warn when a brief carries architecture-grade structure. Never re-route.
+
+    The brief compiler reads a memo. An architecture document states
+    obligations, prohibitions and acceptance across sections, and the
+    architecture route exists to compile exactly that with provenance. Pushing
+    one through the brief route loses that structure silently, which is the
+    failure this warns about.
+
+    It warns and stops there on purpose. Re-routing on a heuristic would take
+    the operator's choice away and make the front door guess at intent — the
+    thing this module was written to stop doing. The operator says
+    `make campaign-architecture`, or declares the frontmatter schema.
+    """
+    signals = _normative_signals(text)
+    headings = len(_HEADING_RE.findall(text))
+    if len(signals) < ROUTE_CONFUSION_MIN_SIGNALS or headings < ROUTE_CONFUSION_MIN_HEADINGS:
+        return ()
+    return (
+        f"route_confusion: this brief carries {len(signals)} normative signal(s) "
+        f"({', '.join(signals)}) across {headings} headings, which reads as an "
+        "architecture source. The brief route still compiles it, but the brief "
+        "compiler does not preserve obligation/prohibition provenance. For "
+        "semantic compilation run `make campaign-architecture`, or declare "
+        f"`schema: {ARCHITECTURE_INTENT_SCHEMA}` in frontmatter. Routing is "
+        "unchanged; this is a warning, not a redirect.",
+    )
+
+
 def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Classification:
     """Classify by content and schema, never by file extension alone.
 
@@ -255,7 +320,11 @@ def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Cla
         if _is_plan_intent(frontmatter):
             return Classification(kind=CampaignInputKind.PLAN, path=path, document=frontmatter)
         if path.suffix.lower() in {".md", ".markdown", ".txt"}:
-            return Classification(kind=CampaignInputKind.BRIEF, path=path)
+            return Classification(
+                kind=CampaignInputKind.BRIEF,
+                path=path,
+                diagnostics=route_confusion_diagnostics(text),
+            )
         return Classification(kind=CampaignInputKind.UNKNOWN, path=path)
     schema = str(doc.get("schema") or "").strip()
     if schema == ARCHITECTURE_INTENT_SCHEMA:
@@ -282,7 +351,13 @@ def classify(path: Path, *, forced_kind: CampaignInputKind | None = None) -> Cla
             return Classification(
                 kind=CampaignInputKind.PLAN, path=path, schema=schema, document=frontmatter
             )
-        return Classification(kind=CampaignInputKind.BRIEF, path=path, schema=schema, document=doc)
+        return Classification(
+            kind=CampaignInputKind.BRIEF,
+            path=path,
+            schema=schema,
+            document=doc,
+            diagnostics=route_confusion_diagnostics(text),
+        )
     return Classification(kind=CampaignInputKind.UNKNOWN, path=path, schema=schema, document=doc)
 
 
@@ -378,11 +453,14 @@ def preflight(classification: Classification) -> list[str]:
 
     Read-only. Returns compile warnings for supported non-direct kinds (none)
     and for a clean direct source. Raises the terminal refusal otherwise.
+
+    Routing diagnostics ride the same channel: they are warnings about the
+    route that was chosen, and this is where the operator already reads them.
     """
     if classification.kind is CampaignInputKind.PROGRAM_INTENT_V1:
-        return _preflight_program_intent(classification)
+        return [*classification.diagnostics, *_preflight_program_intent(classification)]
     if classification.kind is not CampaignInputKind.CAMPAIGN_SOURCE_V2:
-        return []
+        return list(classification.diagnostics)
     document = classification.document
     if not isinstance(document, dict):  # pragma: no cover - classify guarantees this
         return []

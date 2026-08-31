@@ -619,5 +619,68 @@ class NormalExecutionImmutabilityTest(unittest.TestCase):
             self.assertEqual(ctx.exception.error_code, "POST_ACCEPT_BLUEPRINT_WRITE")
 
 
+class TaskCountAgreementTest(unittest.TestCase):
+    """B1-class: compile, launchability and the lock must have seen one task set.
+
+    The original B1 was this disagreement going unnoticed — launchability read
+    `tasks.json`, found nothing, and self-skipped while compile and the lock
+    carried a full set. Each stage looked healthy alone.
+    """
+
+    @staticmethod
+    def _blueprint(root: Path, task_count: int) -> Path:
+        blueprint = root / "blueprint"
+        blueprint.mkdir()
+        tasks = [
+            dict(_task(method="command"), id=f"TASK-{n:03d}") for n in range(1, task_count + 1)
+        ]
+        (blueprint / "TASK_CARDS.yaml").write_text(
+            yaml.safe_dump({"tasks": tasks}, sort_keys=False), encoding="utf-8"
+        )
+        return blueprint
+
+    @staticmethod
+    def _workspace(root: Path, locked: int) -> Path:
+        workspace = root / "ws"
+        (workspace / "runtime").mkdir(parents=True)
+        (workspace / "runtime" / "program-lock.json").write_text(
+            json.dumps({"tasks": [{"id": f"TASK-{n:03d}"} for n in range(1, locked + 1)]}),
+            encoding="utf-8",
+        )
+        return workspace
+
+    def test_agreement_passes_and_reports_the_counts(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            counts = run_campaign.assert_task_counts_agree(
+                self._blueprint(root, 2), {"task_count": 2}, self._workspace(root, 2)
+            )
+            self.assertEqual(counts, {"compiled": 2, "launchability": 2, "program_lock": 2})
+
+    def test_a_self_skipped_launchability_is_fatal(self) -> None:
+        """The exact B1 shape: compile and lock agree, launchability saw none."""
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            with self.assertRaises(run_campaign.CampaignError) as ctx:
+                run_campaign.assert_task_counts_agree(
+                    self._blueprint(root, 2),
+                    {"task_count": 0, "skipped": "no_task_cards"},
+                    self._workspace(root, 2),
+                )
+            self.assertEqual(ctx.exception.error_code, "TASK_COUNT_DISAGREEMENT")
+            self.assertIn("launchability=0", str(ctx.exception))
+            self.assertIn("compiled=2", str(ctx.exception))
+
+    def test_a_lock_that_froze_a_different_set_is_fatal(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            root = Path(raw)
+            with self.assertRaises(run_campaign.CampaignError) as ctx:
+                run_campaign.assert_task_counts_agree(
+                    self._blueprint(root, 2), {"task_count": 2}, self._workspace(root, 1)
+                )
+            self.assertEqual(ctx.exception.error_code, "TASK_COUNT_DISAGREEMENT")
+            self.assertIn("program_lock=1", str(ctx.exception))
+
+
 if __name__ == "__main__":
     unittest.main()
