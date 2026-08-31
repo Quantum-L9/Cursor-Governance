@@ -193,7 +193,19 @@ the root copy does not. That is a content difference — the same class of judge
 merges first.
 
 Withholding costs nothing recoverable: both copies remain on `main`, and the
-`BUILT/` destination arrives via #431 regardless. **The follow-up, once #431 has
-merged**, is a two-line frontmatter edit restoring `status: completed` / `built: true`
-onto the surviving `BUILT/` copy, and deletion of the then-redundant `built/` copy.
+`BUILT/` destination arrives via #431 regardless.
+
+**The repo's own shelver then settled it, and not the way this pack proposed.** With
+the two `built/` copies restored, the gate's generated-heal step moved the **root**
+copies into `BUILT/` on its own — the same direction #431 takes, and byte-identical to
+#431's blob at both paths (`26a3243c`, `a2fa8a99`). That output is committed here as
+the shelver produced it. So the add/add conflict is resolved by the tooling that owns
+the shelf rather than by whichever branch merged first, and both branches now make the
+*same* change at those two paths, which merges clean.
+
+**The follow-up is unchanged and now narrower:** `docs/plans/built/` still holds those
+two lowercase copies, and they are the ones carrying `status: completed` / `built:
+true`. Restoring those two frontmatter keys onto the `BUILT/` copy and dropping the
+redundant `built/` copy finishes RC-7. It stays out of this branch because the key
+restoration is the content judgement `plan-copies-diverged` records, not hygiene.
 That finishes RC-7 without either branch overwriting the other's choice.
