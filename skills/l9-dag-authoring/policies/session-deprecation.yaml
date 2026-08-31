@@ -35,7 +35,7 @@ catalog:
     source_path: workflows/dags/wire_dag.py
     disposition: ABSORB_INTO_SKILL
     domain_owner: l9-governance-wiring
-    proof_path: skills/l9-governance-wiring/references/wire-executor.md
+    proof_path: skills/_archived/l9-governance-wiring/references/wire-executor.md
   - dag_id: test-pipeline-v1
     source_path: workflows/dags/test_pipeline_dag.py
     disposition: ABSORB_INTO_SKILL

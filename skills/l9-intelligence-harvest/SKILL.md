@@ -57,4 +57,4 @@ Load `references/system-reconstruction-contract.md`, `references/concept-extract
 
 Required: `harvest.json`, `harvest-receipt.json`. Optional renderer: `DONOR-HARVEST-BRIEF.md`.
 
-After pack/runtime validation, hand repository discovery and registration to `l9-wire-skill-into-repo`; do not duplicate wiring logic here.
+After pack/runtime validation, hand repository discovery and registration to `l9-wire-into-repo`; do not duplicate wiring logic here.

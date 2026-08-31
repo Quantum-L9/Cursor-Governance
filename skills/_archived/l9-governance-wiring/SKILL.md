@@ -1,6 +1,6 @@
 ---
 name: l9-governance-wiring
-description: workspace governance symlinks, component wire executor, confirm-wiring audit, governance checks, rules inventory, and github ssot backup. use for /wire governance, confirm-wiring, or governance-backup.
+description: deprecated legacy bundle for workspace symlinks, component wiring, confirmation, governance checks, inventory, health, and backup. do not activate; use l9-wire-into-repo for generic repository wiring and the appropriate narrower owner for specialized governance operations.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -8,12 +8,17 @@ metadata:
   role: skill_entrypoint
   tags: [l9, governance, wiring, symlinks, backup]
   owner: igor_beylin
-  status: active
+  status: deprecated
   version: 2.0.0
-  updated: 2026-06-06
+  updated: 2026-08-31
 ---
 
-# Governance Wiring
+# Governance Wiring (ARCHIVED)
+
+> **Deprecated and archived.** Generic repository wiring is owned by
+> `skills/l9-wire-into-repo/`. Workspace symlink setup/validation is owned by
+> `skills/l9-governance-symlinks/`. This pack is retained as history only —
+> its references below describe retired machinery and are not repaired.
 
 ## Purpose
 

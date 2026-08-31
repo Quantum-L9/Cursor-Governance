@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-30T20:34:14Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-31T01:21:34Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -30,7 +30,7 @@ Generated: `2026-08-30T20:34:14Z`. Source: `rules/*.mdc`.
 | `15-work-tracking.mdc` | `l9.rule.15.work.tracking` | global | general | agent_requested | 38 | `79c9306f7061` |
 | `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | agent_requested | 190 | `fa976f39b458` |
 | `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 73 | `7ceac6084da9` |
-| `23-l9-skill-routing.mdc` | `l9.rule.skill-routing` | global | governance | always | 100 | `9e2ab29ad5ce` |
+| `23-l9-skill-routing.mdc` | `l9.rule.skill-routing` | global | governance | always | 100 | `181ceb1a7b4b` |
 | `25-python-dora-header.mdc` | `l9.rule.25.python.dora.header` | global | python | auto_attached | 173 | `49302e69c080` |
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | agent_requested | 145 | `935829c0a8d1` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | agent_requested | 182 | `fbbfa0dc8cc4` |

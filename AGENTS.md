@@ -476,7 +476,7 @@ to pass `make pr`.
 ### 12.1 Allowed
 
 Bug fixes, dangling-reference repair, test/doc additions, new skills via
-`l9-skill-compiler` → `l9-wire-skill-into-repo`.
+`l9-skill-compiler` → `l9-wire-into-repo`.
 
 ### 12.2 High-risk — extreme care
 

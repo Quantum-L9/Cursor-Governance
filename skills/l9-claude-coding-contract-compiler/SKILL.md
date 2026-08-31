@@ -195,7 +195,7 @@ categories required; DPK prohibited behaviors adopted verbatim.
 
 The exemplary claim is gated deterministically by `scripts/validate_exemplary_skill.py`
 (l9-skill-compiler). Any failing or Unknown gate downgrades the tier to `strong` — never a
-fabricated pass. Repo-registry wiring (`l9-wire-skill-into-repo`) is `not_applicable` in
+fabricated pass. Repo-registry wiring (`l9-wire-into-repo`) is `not_applicable` in
 environments where that global skill is absent.
 
 ### After-use improvement hook

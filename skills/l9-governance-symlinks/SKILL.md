@@ -1,6 +1,6 @@
 ---
 name: l9-governance-symlinks
-description: Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.
+description: Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when the .cursor-commands link, the l9-governance plugin link, .cursor/plans, or .cursor/governance are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.
 disable-model-invocation: true
 ---
 
@@ -10,9 +10,19 @@ Run canonical `setup_workspace_symlinks.sh` in the workspace, then run `validate
 
 ## What this does
 
-- Wires user-level Cursor links (`~/.cursor/skills`, `~/.cursor/commands`) to the governance SSOT (`$HOME/.cursor-governance`).
-- Wires repo-level links in the current workspace: `.cursor-commands`, `.cursor/commands`, `.cursor/rules`, `.cursor/governance`.
-- Validates every link resolves to the canonical Single Source of Truth and reports `RESULT: PASS` or `RESULT: FAIL`.
+- Wires the user-level Cursor plugin link `~/.cursor/plugins/local/l9-governance`
+  to the governance SSOT (`$HOME/.cursor-governance`). Cursor discovers skills,
+  commands, and rules through that plugin.
+- Wires repo-level links in the current workspace: `.cursor-commands` (the
+  consumer reference plane) and `.cursor/plans`.
+- **Removes** the retired pre-4.0.0 whole-directory links
+  `~/.cursor/{skills,commands,rules}` and `.cursor/{commands,skills}`. These are
+  legacy duplicates, not wiring targets — the script deletes them and the
+  validator fails if they reappear.
+- Leaves `.cursor/governance` and `.cursor/rules` as **real repository-owned
+  directories**, never whole-directory symlinks to the SSOT.
+- Validates every link resolves to the canonical Single Source of Truth and
+  reports `RESULT: PASS` or `RESULT: FAIL`.
 
 The canonical scripts live under the governance SSOT:
 
@@ -21,6 +31,16 @@ $HOME/.cursor-governance/ops/scripts
 ```
 
 Dropbox paths are retired and must not be probed.
+
+## Ownership boundary
+
+This skill is the **exact owner** of governance workspace symlink setup and
+validation. It is narrow by design.
+
+Generic repository wiring — locating an artifact's authoritative owner and
+propagating reachability to its intended consumers — belongs to
+`l9-wire-into-repo`. That skill may delegate here; it must not duplicate this
+contract, and this skill must not grow into a general wiring drawer.
 
 ## Workflow
 
@@ -70,6 +90,8 @@ Confirm exit code is `0`. If you see `RESULT: FAIL`, read the `FAIL:` lines, the
 
 - `missing: .../CANONICAL_LAW.md` — the GitHub clone at `$HOME/.cursor-governance` is not present/synced; do not patch links, fix the SSOT first.
 - `not a symlink` / `expected X got Y` — a stale file or wrong target; re-running Step 2 repairs it.
+- `legacy ~/.cursor/<skills|commands|rules> present` — a retired pre-4.0.0
+  whole-directory link came back; re-running Step 2 removes it. Do not recreate it.
 - `missing .../skills/<l9-skill>/SKILL.md` — a required L9 skill is absent from the SSOT.
 
 ## Report

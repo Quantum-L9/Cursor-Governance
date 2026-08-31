@@ -15,7 +15,7 @@ They must be:
 Live discovery surfaces (`skills/*/SKILL.md`, Cursor plugin skills root, Claude
 adapter symlinks) must never see archived packs.
 
-**Operating skill:** `l9-wire-skill-into-repo` owns unwire/deprecate/deregister
+**Operating skill:** `l9-wire-into-repo` owns unwire/deprecate/deregister
 (`references/unwire-deprecate.md`). Do not invent a parallel retirement path.
 
 ## Contents

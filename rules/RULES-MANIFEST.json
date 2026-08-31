@@ -1,9 +1,9 @@
 {
   "$schema": "l9.cursor-rules-manifest/v2",
-  "generated_utc": "2026-08-30T20:34:14Z",
+  "generated_utc": "2026-08-31T01:21:34Z",
   "generator": "ops/scripts/generate_rules_manifest.py",
   "rules_directory": "rules",
-  "source_tree_digest": "sha256:232d8dc9b4ee0466d72232bfc717e5c42eb95b1c109cda4167d5189ea9af1e2f",
+  "source_tree_digest": "sha256:26f9b72880bf6048d5e768afa158d561f61858596363e54553c923c74e397232",
   "summary": {
     "total_mdc_files": 68,
     "always_apply_true": 32,
@@ -325,7 +325,7 @@
       "first_heading": "L9 skill routing (Cursor)",
       "has_yaml_frontmatter": true,
       "line_count": 100,
-      "content_digest": "sha256:9e2ab29ad5cea7404c969e71f9bbf7bc8c7fb1cf173daf98519f17ff6137e282",
+      "content_digest": "sha256:181ceb1a7b4bbefbb3ec478e55ac047d04a7537bb1c66abadeeeabddfa9d4663",
       "authority": "canonical_global",
       "context_cost": "moderate",
       "deprecated": false,

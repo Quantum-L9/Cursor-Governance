@@ -110,10 +110,8 @@
     },
     {
       "prompt": "Wire the skill into the repo discovery tables after compiling it",
-      "expected_primary": "l9-wire-skill-into-repo",
-      "expected_supporting": [
-        "l9-update-agent-docs"
-      ]
+      "expected_primary": "l9-wire-into-repo",
+      "expected_supporting": []
     },
     {
       "prompt": "Improve the skills so agents proactively use skills more",
