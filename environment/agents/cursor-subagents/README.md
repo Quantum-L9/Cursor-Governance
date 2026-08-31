@@ -1,8 +1,8 @@
 # Cursor Subagent Delegation
-Status: active contract  
-Scope: Cursor-native subagents only  
-Runtime owner: active main Cursor agent  
-Safety owner: root `autonomy/`  
+Status: active contract
+Scope: Cursor-native subagents only
+Runtime owner: active main Cursor agent
+Safety owner: root `autonomy/`
 Durable document owner: `environment/agents/generated-data/`
 ## Purpose
 This module lets the active main Cursor agent fan out bounded work to native
@@ -52,13 +52,21 @@ Only accepted result documents are projected into the existing
 The generated-data subsystem remains authoritative for validation, harvesting,
 classification, routing, promotion, delivery, retrieval, and invalidation.
 Raw subagent chat must not be written directly to memory.
+### Admission token
+Mint one token per native Task with
+`python -m autonomy.adapters.cursor.mint_admission` (calls only
+`CursorHostBridge.create_admission`). Embed `L9_ADMISSION_TOKEN=…`.
+A Task without a READY Autonomy action stays denied. Do not add a second
+token store.
 ## Execution lifecycle
 ```text
 ready campaign action or bounded main-agent task
     ↓
 autonomy lease and resource claims
     ↓
-existing Cursor task renderer
+mint admission (`autonomy/adapters/cursor/mint_admission.py` → `create_admission`)
+    ↓
+existing Cursor task renderer embeds `L9_ADMISSION_TOKEN=…`
     ↓
 main Cursor agent launches native subagent
     ↓

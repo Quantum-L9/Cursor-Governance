@@ -1,25 +1,53 @@
 {
   "_comment": [
-    "Claude Code MCP configuration — Graphiti HTTPS front door.",
+    "Claude Code MCP configuration — Graphiti HTTPS front door and Context7 docs.",
     "Authority: environment/agents/adapters/claude-code/mcp.template.json is the",
     "SINGLE canonical owner. The project-scope .mcp.json is RENDERED from this file",
     "by ops/scripts/claude_projection.py (domain: mcp) and drift-checked — it is a",
     "projection, never a second authority.",
     "",
-    "NO CREDENTIALS in this file or in the account environment. Graphiti is",
-    "${GRAPHITI_MCP_URL} (default https://memory.quantumaipartners.com/graphiti/mcp).",
-    "The capability broker (L9_CAPABILITY_BROKER_URL / broker.quantumaipartners.com)",
-    "never shipped and is retired; do not point MCP at it.",
+    "NO CREDENTIAL VALUES in this file, in .mcp.json, or in the account variables",
+    "field. Transport credentials are referenced as ${VAR} only, exactly like",
+    "${GRAPHITI_MCP_URL}: the platform proxies a value into the variable when it",
+    "has one to proxy, Claude Code expands it at load, and nothing is ever written",
+    "down. web/setup.bootstrap.sh therefore does not sweep GRAPHITI_MCP_TOKEN or",
+    "CONTEXT7_API_KEY — the same reasoning that keeps GH_TOKEN unswept there.",
     "",
-    "FORBIDDEN: GRAPHITI_MCP_TOKEN in server config, the retired HTTP l9-shared-memory",
-    "side door, L9_MEMORY_HTTP_* lifecycle env, and ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti."
+    "_requires_env on a server: the server renders only when every listed variable",
+    "is set and non-empty. _optional_headers: {VAR: {header: value}} merges those",
+    "headers only when VAR is set and non-empty. Both are private keys, stripped",
+    "from the render like _comment. They exist so an unproxied session degrades to",
+    "the previous behaviour instead of emitting a server that cannot authenticate:",
+    "Graphiti stays unauthenticated (which is how the front door works today) and",
+    "Context7 is simply absent, with the obligation on skill l9-context7-docs per",
+    "rules/22-context7-auto-invoke.",
+    "",
+    "STILL FORBIDDEN: a literal token value anywhere in this file or in the account",
+    "variables field, the retired HTTP l9-shared-memory side door, L9_MEMORY_HTTP_*",
+    "lifecycle env, and ${L9_CAPABILITY_BROKER_URL}/mcp/graphiti (never shipped)."
   ],
   "mcpServers": {
     "graphiti-memory": {
       "type": "http",
       "url": "${GRAPHITI_MCP_URL}",
       "timeout": 120000,
-      "alwaysLoad": true
+      "alwaysLoad": true,
+      "_optional_headers": {
+        "GRAPHITI_MCP_TOKEN": {
+          "Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"
+        }
+      }
+    },
+    "context7": {
+      "type": "http",
+      "url": "https://mcp.context7.com/mcp",
+      "timeout": 120000,
+      "_requires_env": [
+        "CONTEXT7_API_KEY"
+      ],
+      "headers": {
+        "Authorization": "Bearer ${CONTEXT7_API_KEY}"
+      }
     }
   }
 }

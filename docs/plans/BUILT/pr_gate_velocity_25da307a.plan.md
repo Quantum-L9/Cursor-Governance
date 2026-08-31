@@ -1,5 +1,7 @@
 ---
 name: PR gate velocity
+status: completed
+built: true
 overview: "Writers-first publish path: two-phase kernel receipt, ruff, then fail-closed generated sync in one precommit-repo pass; pytest only for suites whose owned_paths intersect the change set. Autonomy / Wave 3 / PE controller are path-owned, not campaign-owned."
 todos:
   - id: suite-filter

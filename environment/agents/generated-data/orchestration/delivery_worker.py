@@ -4,6 +4,7 @@ import argparse
 import json
 import os
 import subprocess
+import sys
 import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -532,12 +533,322 @@ class DeliveryWorker:
         actor: str,
         limit: int = 20,
     ) -> list[DeliveryExecutionResult]:
+        try:
+            self.drain_memory_outbox(actor=actor, limit=min(5, max(0, limit)))
+        except Exception:
+            pass
         results: list[DeliveryExecutionResult] = []
         for _ in range(max(0, limit)):
             result = self.run_once(actor=actor)
             if result is None:
                 break
             results.append(result)
+        return results
+
+    def _memory_outbox_dir(self) -> Path:
+        configured = Path(self.configuration.memory_outbox)
+        default_rel = "environment/agents/generated-data/.runtime/memory-outbox"
+        if not str(self.configuration.memory_outbox) or str(configured) == default_rel:
+            agents_root = Path(__file__).resolve().parents[2]
+            if str(agents_root) not in sys.path:
+                sys.path.insert(0, str(agents_root))
+            try:
+                from runtime_paths import memory_outbox_root
+
+                return memory_outbox_root()
+            except Exception:
+                return Path(self.configuration.repository_root) / default_rel
+        return configured
+
+    def _legacy_memory_outbox_dir(self) -> Path:
+        return (
+            Path(self.configuration.repository_root)
+            / "environment"
+            / "agents"
+            / "generated-data"
+            / ".runtime"
+            / "memory-outbox"
+        )
+
+    def _adopt_legacy_outbox(self) -> list[Path]:
+        canonical = self._memory_outbox_dir()
+        canonical.mkdir(parents=True, exist_ok=True)
+        legacy = self._legacy_memory_outbox_dir()
+        adopted: list[Path] = []
+        if not legacy.is_dir() or legacy.resolve() == canonical.resolve():
+            return adopted
+        for source in sorted(legacy.glob("memcand-*.json")):
+            destination = canonical / source.name
+            if destination.exists():
+                continue
+            destination.write_bytes(source.read_bytes())
+            source.unlink()
+            adopted.append(destination)
+        return adopted
+
+    def _packet_has_pending_candidates(self, packet_id: str, current: Path) -> bool:
+        if not packet_id:
+            return False
+        outbox = self._memory_outbox_dir()
+        for path in outbox.glob("memcand-*.json"):
+            if path.resolve() == current.resolve():
+                continue
+            try:
+                other = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if str((other.get("source") or {}).get("packet_id") or "") == packet_id:
+                return True
+        return False
+
+    def _job_for_packet(self, packet_id: str) -> Any | None:
+        if not packet_id:
+            return None
+        with self.store.connect() as connection:
+            row = connection.execute(
+                "SELECT job_id FROM processing_jobs WHERE packet_id = ? ORDER BY created_at",
+                (packet_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self.store.get_job(str(row["job_id"]))
+
+    def _drain_transport(self) -> Any | None:
+        loader = PriorWaveModuleLoader(self.configuration.repository_root)
+        module = loader.load_adapter_module("graphiti_memory.py")
+        HttpJsonTransport = getattr(module, "HttpJsonTransport")
+        CommandTransport = getattr(module, "CommandTransport")
+        command = list(self.configuration.memory_command)
+        if self.configuration.memory_mode == "http" and self.configuration.memory_endpoint:
+            return HttpJsonTransport(
+                self.configuration.memory_endpoint,
+                bearer_token=os.environ.get("L9_GRAPHITI_MEMORY_TOKEN"),
+                timeout_seconds=self.configuration.timeout_seconds,
+            )
+        if command:
+            return CommandTransport(command, timeout_seconds=self.configuration.timeout_seconds)
+        if self.configuration.memory_mode == "command":
+            script = (
+                Path(self.configuration.repository_root)
+                / "environment"
+                / "agents"
+                / "generated-data"
+                / "adapters"
+                / "ingest_memory_candidate.py"
+            )
+            if script.is_file():
+                return CommandTransport(
+                    [sys.executable, str(script)],
+                    timeout_seconds=self.configuration.timeout_seconds,
+                )
+        return None
+
+    def drain_memory_outbox(self, actor: str, limit: int = 20) -> list[dict[str, Any]]:
+        """Deliver enqueued memory candidates. Never uses FileOutboxTransport."""
+        from state_store import PipelineState
+
+        self._adopt_legacy_outbox()
+        outbox = self._memory_outbox_dir()
+        results: list[dict[str, Any]] = []
+        transport = self._drain_transport()
+        files = sorted(outbox.glob("memcand-*.json"))[: max(0, limit)]
+        for path in files:
+            candidate = json.loads(path.read_text(encoding="utf-8"))
+            packet_id = str((candidate.get("source") or {}).get("packet_id") or "")
+            unit_id = str((candidate.get("knowledge") or {}).get("unit_id") or "")
+            job = self._job_for_packet(packet_id)
+            if job is None:
+                results.append({"path": str(path), "status": "no_job", "packet_id": packet_id})
+                continue
+            if job.state is PipelineState.DESTINATION_ACCEPTED:
+                path.unlink(missing_ok=True)
+                results.append(
+                    {
+                        "path": str(path),
+                        "status": "already_delivered",
+                        "job_id": job.job_id,
+                    }
+                )
+                continue
+            if job.state is not PipelineState.DESTINATION_SUBMITTED:
+                results.append(
+                    {
+                        "path": str(path),
+                        "status": "skip",
+                        "state": job.state.value,
+                        "job_id": job.job_id,
+                    }
+                )
+                continue
+            snapshots = self.store.list_stage_snapshots(
+                job_id=job.job_id,
+                stage=PipelineState.DELIVERY_PENDING.value,
+            )
+            delivery = {}
+            for item in snapshots:
+                payload = item.get("payload") if isinstance(item, Mapping) else None
+                if isinstance(payload, Mapping) and str(payload.get("unit_id")) == unit_id:
+                    delivery = dict(payload)
+                    break
+            idempotency_key = str(
+                delivery.get("idempotency_key") or candidate.get("candidate_id") or path.stem
+            )
+            attempt_number = self._next_attempt_number(job.job_id, unit_id or path.stem, "memory")
+            attempt = self.store.record_delivery_attempt(
+                job_id=job.job_id,
+                unit_id=unit_id or path.stem,
+                route="memory",
+                attempt_number=attempt_number,
+                idempotency_key=idempotency_key,
+            )
+            if transport is None:
+                self.store.complete_delivery_attempt(
+                    attempt_id=attempt.attempt_id,
+                    status="FAILED",
+                    error_class="unconfigured_transport",
+                    error_message="drain has no Command or HTTP transport",
+                )
+                results.append(
+                    {
+                        "path": str(path),
+                        "status": "unconfigured",
+                        "job_id": job.job_id,
+                        "state": PipelineState.DESTINATION_SUBMITTED.value,
+                    }
+                )
+                continue
+            try:
+                response = transport.deliver(candidate)
+                status = str(response.get("status", "unknown")).lower()
+                if status in {"duplicate", "already_exists"}:
+                    status = "deduplicated"
+                if status not in {
+                    "accepted",
+                    "admitted",
+                    "merged",
+                    "deduplicated",
+                    "rejected",
+                    "denied",
+                    "quarantined",
+                }:
+                    raise DeliveryError(f"Unsupported drain status: {status}")
+                if status in {"rejected", "denied"}:
+                    raise DestinationRejected(f"Destination rejected drain: {response}")
+                self.store.complete_delivery_attempt(
+                    attempt_id=attempt.attempt_id,
+                    status="SUCCEEDED",
+                    response_code=status,
+                    response_payload=response,
+                )
+                self.store.record_delivery_receipt(
+                    job_id=job.job_id,
+                    unit_id=unit_id or path.stem,
+                    route="memory",
+                    destination_status=status,
+                    destination_reference=str(
+                        response.get(
+                            "memory_id",
+                            response.get("write_receipt_id", response.get("path", "")),
+                        )
+                    )
+                    or None,
+                    payload=response,
+                )
+                remaining = self._packet_has_pending_candidates(packet_id, path)
+                target = (
+                    PipelineState.DESTINATION_DEFERRED
+                    if status == "quarantined"
+                    else (
+                        PipelineState.DESTINATION_SUBMITTED
+                        if remaining
+                        else PipelineState.DESTINATION_ACCEPTED
+                    )
+                )
+                if target is not PipelineState.DESTINATION_SUBMITTED:
+                    self.store.transition(
+                        job_id=job.job_id,
+                        expected_state=PipelineState.DESTINATION_SUBMITTED,
+                        target_state=target,
+                        actor=actor,
+                        payload={"drain": True, "status": status},
+                    )
+                path.unlink()
+                self.store.recalculate_campaign_state(job.campaign_id)
+                results.append(
+                    {
+                        "path": str(path),
+                        "status": status,
+                        "job_id": job.job_id,
+                        "state": target.value,
+                    }
+                )
+            except DestinationRejected as exc:
+                self.store.complete_delivery_attempt(
+                    attempt_id=attempt.attempt_id,
+                    status="FAILED",
+                    error_class=RetryClass.PERMANENT_REJECTION.value,
+                    error_message=str(exc),
+                )
+                self.store.transition(
+                    job_id=job.job_id,
+                    expected_state=PipelineState.DESTINATION_SUBMITTED,
+                    target_state=PipelineState.DESTINATION_REJECTED,
+                    actor=actor,
+                    payload={"drain": True, "error": str(exc)},
+                )
+                path.unlink()
+                self.store.recalculate_campaign_state(job.campaign_id)
+                results.append({"path": str(path), "status": "rejected", "job_id": job.job_id})
+            except Exception as exc:
+                failure_class = self.retry_policy.classify_exception(exc)
+                self.store.complete_delivery_attempt(
+                    attempt_id=attempt.attempt_id,
+                    status="FAILED",
+                    error_class=failure_class.value,
+                    error_message=str(exc),
+                )
+                decision = self.retry_policy.decide(
+                    job_id=job.job_id,
+                    attempt_number=attempt_number,
+                    failure_class=failure_class,
+                )
+                current = self.store.get_job(job.job_id)
+                if decision.retry:
+                    self.store.schedule_retry(
+                        job_id=job.job_id,
+                        expected_state=current.state,
+                        actor=actor,
+                        next_attempt_at=str(decision.next_attempt_at),
+                        error_code=failure_class.value,
+                        error_message=str(exc),
+                        payload={"drain": True, "path": str(path)},
+                    )
+                    results.append(
+                        {
+                            "path": str(path),
+                            "status": "retry",
+                            "job_id": job.job_id,
+                            "state": PipelineState.RETRY_WAIT.value,
+                        }
+                    )
+                else:
+                    self.store.dead_letter(
+                        job_id=job.job_id,
+                        expected_state=current.state,
+                        actor=actor,
+                        failure_class=failure_class.value,
+                        reason=str(exc),
+                        payload={"drain": True, "path": str(path)},
+                        unit_id=unit_id or path.stem,
+                        route="memory",
+                    )
+                    results.append(
+                        {
+                            "path": str(path),
+                            "status": "dead_lettered",
+                            "job_id": job.job_id,
+                        }
+                    )
         return results
 
     def _transport_for(self, route: str) -> DeliveryTransport:
@@ -606,9 +917,21 @@ def main() -> int:
     parser.add_argument("--memory-endpoint")
     parser.add_argument("--memory-command", nargs="+", default=[])
     parser.add_argument("--limit", type=int, default=1)
+    parser.add_argument("--drain", action="store_true")
     args = parser.parse_args()
     root = Path(args.root).resolve()
     runtime_root = root / "environment" / "agents" / "generated-data" / ".runtime"
+    agents_root = root / "environment" / "agents"
+    if str(agents_root) not in sys.path:
+        sys.path.insert(0, str(agents_root))
+    try:
+        from runtime_paths import generated_data_outbox_root, memory_outbox_root
+
+        memory_outbox = str(memory_outbox_root())
+        route_outbox = str(generated_data_outbox_root())
+    except Exception:
+        memory_outbox = str(runtime_root / "memory-outbox")
+        route_outbox = str(runtime_root)
     configuration = DeliveryWorkerConfiguration(
         repository_root=str(root),
         database_path=(
@@ -617,11 +940,13 @@ def main() -> int:
         memory_mode=args.memory_mode,
         memory_endpoint=args.memory_endpoint,
         memory_command=tuple(args.memory_command),
-        memory_outbox=str(runtime_root / "memory-outbox"),
-        route_outbox_root=str(runtime_root),
+        memory_outbox=memory_outbox,
+        route_outbox_root=route_outbox,
     )
     worker = DeliveryWorker(configuration)
-    if args.job_id:
+    if args.drain:
+        payload = worker.drain_memory_outbox(actor=args.actor, limit=args.limit)
+    elif args.job_id:
         result = worker.run_once(actor=args.actor, job_id=args.job_id)
         payload: Any = result.to_dict() if result is not None else {"processed": False}
     else:

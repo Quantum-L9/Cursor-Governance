@@ -80,6 +80,32 @@ that counts as explicit approval for the push + PR open performed by
 `ops/scripts/open_pr_after_gate.sh` (overrides the generic “ask before push”
 default for this one command path only).
 
+## Report what the publish shipped (MUST, every `make pr`)
+
+`Opened: <url>` is not a report. Every publish MUST be followed by a summary
+naming the PR, its base and head, the commit and file counts, and **the changed
+files** — no exceptions, and not only when the user asks.
+
+The facts are supplied, so there is nothing to reconstruct or recall:
+`open_pr_after_gate.sh` writes `.l9/pr/pr-summary.json`
+(`ops/scripts/write_pr_summary.py`) at the one place that knows a PR was opened,
+and on Claude surfaces `hooks/pr_summary_posttool.py` renders it into the turn
+once per `(pr, head_sha)`. Read the receipt directly on any surface where that
+hook does not run. A receipt whose `source` is not `github_api` means the file
+list came from the local diff — say so rather than presenting it as the PR's own.
+
+**The list is the floor, not the report.** A hook can guarantee the facts; it
+cannot do the part worth reading. Also state:
+
+- the files **grouped by intent**, not in `git` order;
+- what the gate caught that you had not — a conflict, a kernel finding against
+  your own diff, a test you had misclassified;
+- anything still failing, and why it is not being hidden (`rules/95`).
+
+MUST NOT: report a publish from memory when the receipt exists, present a
+`local_diff` list as the PR's, or let the mechanical list stand in for the
+judgment above.
+
 ## Gate dirtiness semantics (do not misread pre-commit)
 
 pre-commit exits non-zero for **two unrelated reasons** —
