@@ -105,6 +105,22 @@ missing_tool() { # $1=tool  $2=provisioning hint
   fi
 }
 
+uvx_failed_to_provision() { # $1 = captured uvx output
+  # True when uv could not FETCH/RESOLVE/INSTALL the package, as opposed to the
+  # tool running and reporting findings. uv exits 1 for both, so a scanner that
+  # never ran would otherwise be published as a security finding — inventing a
+  # vulnerability out of a network fault and teaching readers to discount the
+  # next real one. Matched on uv's own diagnostics, which name the failure.
+  case "$1" in
+    *"Failed to fetch"* | *"Failed to download"* | *"Failed to install"* | \
+      *"error sending request"* | *"No solution found"* | *"Failed to resolve"* | \
+      *"invalid peer certificate"*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
 run_uvx_pkg() {
   # run_uvx_pkg <pkg==ver> <bin> [args...]
   local spec="$1" bin="$2"
@@ -161,19 +177,15 @@ _chg_tmp="$(mktemp)"
 _scan_tmp=""
 _wave_dir=""
 _cleanup() {
-  # Capture and restore the status that triggered the trap. Under `set -e` bash
-  # lets an EXIT trap's final command status override the script's own exit, and
-  # every line below is a `[[ ... ]] && rm` that returns 1 when its guard is
-  # false. `_wave_dir` is only populated once scans actually run, so on the
-  # "nothing in scope" path at line ~187 the trap ended non-zero and turned an
-  # explicit `exit 0` into 1 — the gate printed "RESULT: PASS" and still failed
-  # the reader wave. Preserving $? keeps both directions honest: a real
-  # `exit 1` below stays 1.
-  local _rc=$?
   rm -f "$_all_tmp" "$_chg_tmp"
   [[ -n "$_scan_tmp" && -d "$_scan_tmp" ]] && rm -rf "$_scan_tmp"
   [[ -n "$_wave_dir" && -d "$_wave_dir" ]] && rm -rf "$_wave_dir"
-  return "$_rc"
+  # An EXIT trap's status replaces the script's. The two [[ ]] tests above are
+  # false on the early "nothing in scope" exit (neither temp dir is created
+  # yet), so without this the trap returned 1 and turned `exit 0` -- printed as
+  # "RESULT: PASS" -- into a gate failure for any change set that filters to
+  # empty (a WIP-only or docs-only PR).
+  return 0
 }
 trap _cleanup EXIT
 if [[ -n "${PR_CHANGED_FILE:-}" && -f "$PR_CHANGED_FILE" ]]; then
@@ -266,8 +278,26 @@ run_bandit() {
     missing_tool bandit "install uv (https://astral.sh/uv)"
     return 0
   fi
-  if run_uvx_pkg "bandit==${BANDIT_PIN}" bandit "${py[@]}" "$sev_flag" -q; then
+  # bandit's exit codes separate the two outcomes this gate must never conflate:
+  # 0 = ran, clean. 1 = ran, found issues. Anything else = it did not run — and
+  # run_uvx_pkg adds its own non-zero when uvx cannot fetch the pinned package
+  # at all. Reporting that as "bandit reported issues" invents a security
+  # finding out of a network fault, sends the reader hunting for a
+  # vulnerability that does not exist, and teaches them to discount the next
+  # real bandit failure. A scanner that could not run is missing_tool, which is
+  # still a gate failure in gate mode but says the true reason.
+  local bandit_out bandit_rc=0
+  bandit_out="$(run_uvx_pkg "bandit==${BANDIT_PIN}" bandit "${py[@]}" "$sev_flag" -q 2>&1)" \
+    || bandit_rc=$?
+  [ -n "$bandit_out" ] && printf '%s\n' "$bandit_out"
+  if [[ "$bandit_rc" -eq 0 ]]; then
     ok "bandit==$BANDIT_PIN (${#py[@]} file(s), severity>=$BANDIT_SEVERITY)"
+  elif uvx_failed_to_provision "$bandit_out"; then
+    # uv exits 1 when it cannot fetch or resolve the package — the SAME code
+    # bandit uses for "issues found". Exit status alone cannot tell them apart,
+    # so the provisioning signature in uv's own output is what separates them.
+    missing_tool "bandit==$BANDIT_PIN" \
+      "uvx could not provision the pinned package — check network/TLS to PyPI"
   else
     fail "bandit reported issues in changed Python files"
   fi

@@ -1,0 +1,21 @@
+{
+  "organization": "Quantum-L9",
+  "ruleset_id": 21895545,
+  "ruleset_name": "L9 canonical CI required",
+  "enforcement": "active",
+  "workflow": {
+    "repository_id": 1285564308,
+    "path": ".github/workflows/org-ci.yml",
+    "ref": "refs/heads/main"
+  },
+  "targets": {
+    "repositories": [
+      "~ALL"
+    ],
+    "refs": [
+      "~DEFAULT_BRANCH"
+    ]
+  },
+  "bypass_actors": [],
+  "captured_at": "2026-08-31T03:19:03Z"
+}

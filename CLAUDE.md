@@ -65,6 +65,46 @@ the formatter block).
   to skip, the token only signals intent to dodge verification, and
   `ops/autonomy/verification_bypass_gate.py` denies it at PreToolUse. If you
   want the checks, run `OPEN_PR=0 make pr` or `l9 pr`.
+- **"Pre-existing" and "environment defect" are conclusions, not first
+  impressions.** A failing test is evidence (`rules/95`), and rule 42 puts a bug
+  in scope *the moment it is identified* — including one you did not write. So a
+  test that fails only in your clone, or only after another test ran, is not
+  triaged until you can name the mechanism. Baselining it on unmodified `main`
+  tells you whose it is; it does not tell you whether it is real.
+
+  Order-dependent failures almost always mean **shared mutable state**, and
+  shared state inside a gate is the bug rather than the noise. Two L4 tests
+  failed this way and were nearly written off as clone artifacts; the mechanism
+  was `L9_AUTONOMY_STATE_DIR` resolving to one machine-wide `~/.l9/autonomy`
+  with no workspace stamped in the receipt, so an `authorize-release` in one
+  checkout authorized `git push` in every other checkout sharing the branch
+  name — which, in a fleet that puts one branch name across every repo, is all
+  of them. Recording and deferring it was the wrong call; it is a security
+  boundary. Fix it or say plainly that you have not.
+
+  Diagnose in this order: reproduce in isolation → baseline on unmodified
+  `main` → name the shared resource → only then classify. `session_debt.py
+  defer` records what you could not finish; it never converts a live defect into
+  an acceptable one.
+- **Destructive commands take an explicit list, never a glob.** `rm -f
+  docs/plans/BUILT/*.plan.md`, meant to drop six duplicate files, deleted 213
+  tracked ones because the directory was already tracked — recoverable only
+  because everything in it was committed. Before any delete: `git status
+  --porcelain` and `git clean -nd` to read the target list, then name the paths
+  you verified. Never `rm -rf $VAR/...` where `$VAR` could be empty, and never
+  widen a delete to "tidy up" beyond what you proved disposable
+  (`rules/54`, `rules/49`).
+
+  Mechanically denied here, so reaching for them is a wasted turn: `make push`
+  and MCP `create_pull_request` / `push_files` (`local_execution_gate.py`, every
+  phase); `git commit --no-verify` / `-n`, `-c core.hooksPath=`, `SKIP=`,
+  `HUSKY=0`, `pre-commit uninstall`, edits to `.git/hooks/**`
+  (`verification_bypass_gate.py`); `git add -A` / `--all` / `.` / `-u` without
+  pathspecs, `git revert` / `reset` / `checkout` / `switch` on a shared dirty
+  clone, and `rm -rf WIP` (`worktree_isolation_gate.py`). Force-push,
+  hard-reset, admin-merge and secret exfiltration are never waived. Staging is
+  explicit pathspecs for paths *you* authored this session — a `git diff
+  --name-only | … git add` scoop takes another agent's work with it.
 - **Receipts expire.** `~/.l9/claude/bootstrap-state.json` and
   `~/.l9/claude/gov-refresh.json` carry a UTC timestamp and a TTL. Read them
   through `ops/scripts/claude_bootstrap_receipt.py` and
@@ -104,9 +144,9 @@ files are `additive_only` — among them `pyproject.toml`, `requirements.txt`,
 and `AGENTS.md`. Adding lines to one is free. **Removing or overwriting a line
 needs `ALLOW-ROOT-DELETION: <path> — <reason>` in a commit message on the
 branch** (any commit in the range counts) plus CODEOWNERS approval, and the PR
-must use `.github/PULL_REQUEST_TEMPLATE/protected-root.md`
-(`<!-- L9_PROTECTED_ROOT_PR -->`). `make pr` injects the template but cannot
-invent the marker; without it the gate blocks the push. Authoritative list:
+must use `.github/pull_request_template.md`
+(`<!-- L9_PROTECTED_ROOT_PR -->`). `make pr` fills the Protected-root block
+at the top of that one template; without the stamp the gate blocks the push. Authoritative list:
 `ops/config/root-file-protection.json`. Full rule: `AGENTS.md` §14.
 `ops/autonomy/root_file_advisory.py` warns at the start of a turn when a
 protected root file is being overwritten without its marker, so this is caught

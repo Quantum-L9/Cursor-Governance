@@ -222,6 +222,26 @@ check_run() {
     fail "conclusion=$conclusion"
   fi
 
+  # LIVE_CANARY_PASS must be a run that started after ACTIVE promotion.
+  # Re-checking the Phase 3 PR without a new head would reuse the evaluate-mode
+  # check while ENFORCEMENT already reads active.
+  if [[ "$ENFORCEMENT" == "active" ]]; then
+    if [[ ! -f "$HERE/evidence/promoted-at" ]]; then
+      fail "ACTIVE canary requires evidence/promoted-at (MODE=active apply.sh writes it)"
+    else
+      local promoted started
+      promoted="$(tr -d '[:space:]' < "$HERE/evidence/promoted-at")"
+      started="$(jq -r '.started_at // empty' <<<"$run")"
+      if [[ -z "$started" ]]; then
+        fail "check run has no started_at — cannot prove it ran after promotion"
+      elif [[ -z "$promoted" || "$started" < "$promoted" ]]; then
+        fail "check run started_at=$started is before promotion $promoted — push a new canary commit after ACTIVE"
+      else
+        pass "check run started after ACTIVE promotion ($promoted)"
+      fi
+    fi
+  fi
+
   mkdir -p "$HERE/evidence"
   jq -n --arg slug "$slug" --arg pr "$pr" --arg head "$head" \
         --arg url "$url" --arg conclusion "$conclusion" --arg app "$app" \

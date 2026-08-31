@@ -141,7 +141,7 @@ a stubbed GitHub API — no network, no credentials, no mutation — and asserts
 refusal path, including the payload-identity regression:
 
 ```bash
-bash selftest.sh          # expect: selftest: 24 passed, 0 failed
+bash selftest.sh          # expect: selftest: 31 passed, 0 failed
 ```
 
 **STOP** on any failure: a kit that will not refuse correctly must not be pointed at

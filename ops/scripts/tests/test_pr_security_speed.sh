@@ -74,12 +74,31 @@ if command -v uvx >/dev/null 2>&1; then
   SPEED_PATH="$FAKE:$(dirname "$(command -v uvx)"):$SPEED_PATH"
 fi
 
+# `env -i` below scrubs the environment so the gate cannot read stray L9 vars.
+# That scrub also removed the proxy and CA settings uv needs to reach the index,
+# so on a sandboxed runner bandit could not be PROVISIONED at all — and the test
+# then failed for want of network rather than for anything the gate did. Keeping
+# uv on PATH while removing the only way it can fetch is a fixture that deletes
+# the state it requires. Pass through just the network/TLS variables, by name,
+# when the outer environment actually has them.
+SPEED_NET_ENV=""
+for _var in HTTPS_PROXY HTTP_PROXY ALL_PROXY NO_PROXY \
+  https_proxy http_proxy all_proxy no_proxy \
+  SSL_CERT_FILE SSL_CERT_DIR REQUESTS_CA_BUNDLE CURL_CA_BUNDLE \
+  UV_CACHE_DIR UV_NATIVE_TLS UV_INSECURE_HOST; do
+  if [ -n "${!_var:-}" ]; then
+    SPEED_NET_ENV="$SPEED_NET_ENV $_var=${!_var}"
+  fi
+done
+unset _var
+
 run_gate() {
   local extra_env="$1"
   set +e
   env -i HOME="$TMP_ROOT" PATH="$SPEED_PATH" \
     L9_GITLEAKS_COUNT="$COUNT" L9_SEMGREP_ARGS="$ARGS" \
     L9_GITLEAKS_FAIL="${L9_GITLEAKS_FAIL:-0}" \
+    $SPEED_NET_ENV \
     $extra_env \
     bash "$SECURITY" --mode gate "$ws" 2>&1
   local rc=$?
@@ -129,6 +148,7 @@ run_py() {
   env -i HOME="$TMP_ROOT" PATH="$SPEED_PATH" \
     L9_GITLEAKS_COUNT="$COUNT" L9_SEMGREP_ARGS="$ARGS" \
     PR_SECURITY_PROFILE="$profile" \
+    $SPEED_NET_ENV \
     bash "$SECURITY" --mode gate "$py_ws" 2>&1
   local rc=$?
   set -e

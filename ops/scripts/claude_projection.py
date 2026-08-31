@@ -353,7 +353,51 @@ def project_plugins(root: Path, workspace: Path, check: bool) -> DomainOutcome:
     return outcome
 
 
-def render_mcp(template: dict[str, Any], existing: dict[str, Any] | None) -> dict[str, Any]:
+def _render_server(spec: Any, environ: dict[str, str]) -> Any:
+    """Resolve one managed server spec against the environment.
+
+    Returns None when the server must not be rendered. Private ``_``-prefixed
+    keys are template directives and never ship, the same as ``_comment``:
+
+    ``_requires_env``  list of variable names. The server renders only when all
+                       of them are set and non-empty. A server whose credential
+                       is not proxied is omitted rather than emitted in a state
+                       where it cannot authenticate.
+    ``_optional_headers``  ``{VAR: {header: value}}``. Each header block merges
+                       into ``headers`` only when VAR is set and non-empty, so
+                       an unproxied session keeps the previous wire behaviour
+                       instead of sending an empty credential.
+
+    Values stay as ``${VAR}`` references — Claude Code expands them at load, so
+    no credential is ever written into the rendered file.
+    """
+    if not isinstance(spec, dict):
+        return spec
+    required = spec.get("_requires_env") or []
+    if isinstance(required, str):
+        required = [required]
+    if any(not environ.get(str(name), "").strip() for name in required):
+        return None
+
+    out = {key: value for key, value in spec.items() if not key.startswith("_")}
+    optional = spec.get("_optional_headers")
+    if isinstance(optional, dict):
+        headers = dict(out.get("headers") or {})
+        for var, block in optional.items():
+            if not environ.get(str(var), "").strip():
+                continue
+            if isinstance(block, dict):
+                headers.update(block)
+        if headers:
+            out["headers"] = headers
+    return out
+
+
+def render_mcp(
+    template: dict[str, Any],
+    existing: dict[str, Any] | None,
+    environ: dict[str, str] | None = None,
+) -> dict[str, Any]:
     """Render the project .mcp.json from the canonical template.
 
     The template is the single MCP authority; .mcp.json is its projection. The
@@ -361,13 +405,24 @@ def render_mcp(template: dict[str, Any], existing: dict[str, Any] | None) -> dic
     servers already present in .mcp.json — any key the template does not define —
     are preserved, so a repo may add its own MCP server without the projection
     clobbering it. A managed server always takes the template's definition.
+
+    Managed servers additionally resolve through :func:`_render_server`, which
+    honours the ``_requires_env`` / ``_optional_headers`` directives so a
+    credential the platform has not proxied yields the previous behaviour rather
+    than a server that loads and then cannot authenticate.
     """
+    env = os.environ if environ is None else environ
     managed = template.get("mcpServers") or {}
     servers: dict[str, Any] = {}
     for name, spec in (existing or {}).get("mcpServers", {}).items():
         if name not in managed:
             servers[name] = spec
-    servers.update(managed)
+    for name, spec in managed.items():
+        rendered = _render_server(spec, dict(env))
+        if rendered is None:
+            servers.pop(name, None)
+            continue
+        servers[name] = rendered
     return {
         "_generated": (
             "Rendered from environment/agents/adapters/claude-code/mcp.template.json "
@@ -409,10 +464,18 @@ def project_mcp(root: Path, workspace: Path, check: bool) -> DomainOutcome:
     rendered = render_mcp(template, existing)
     content = json.dumps(rendered, indent=2) + "\n"
 
-    managed_names = sorted((template.get("mcpServers") or {}).keys())
-    unmanaged = sorted(set((rendered.get("mcpServers") or {}).keys()) - set(managed_names))
+    declared_names = sorted((template.get("mcpServers") or {}).keys())
+    rendered_names = set((rendered.get("mcpServers") or {}).keys())
+    managed_names = sorted(rendered_names & set(declared_names))
+    gated_out = sorted(set(declared_names) - rendered_names)
+    unmanaged = sorted(rendered_names - set(declared_names))
     outcome.detail["managed_servers"] = managed_names
     outcome.detail["preserved_unmanaged"] = unmanaged
+    if gated_out:
+        # Declared but not rendered: a _requires_env variable the platform has
+        # not proxied. Named so the omission is legible instead of looking like
+        # a template that forgot the server.
+        outcome.detail["gated_out_servers"] = gated_out
     outcome.projected = len(managed_names)
 
     current = target.read_text(encoding="utf-8") if target.is_file() else None

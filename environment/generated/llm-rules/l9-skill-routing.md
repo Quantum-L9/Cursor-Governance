@@ -76,7 +76,7 @@ If the file is stale or absent, still select from available skills yourself.
 | Gaps / readiness / % complete | `l9-gap-analysis` |
 | Library/SDK/API docs before coding | `l9-context7-docs` |
 | Compile SOP/prompt into a skill | `l9-skill-compiler` |
-| Register/wire a new skill | `l9-wire-skill-into-repo` |
+| Wire / rewire / verify / unwire an existing artifact or capability | `l9-wire-into-repo` |
 | Harden/converge packs or skill usage | `l9-recursive-optimization` |
 | Graphiti / memory prefetch / health | `l9-graphiti-memory` |
 | Deep trade-offs / architecture / debug / corpus | `l9-structured-reasoning` |

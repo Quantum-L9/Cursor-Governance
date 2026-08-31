@@ -39,6 +39,12 @@ cat > "$WORK/bin/gh" <<'STUB'
 # single ruleset read. RULESETS_JSON unset means "org read fails" (no authority).
 args="$*"
 case "$args" in
+  *"/check-runs"*)
+      [[ -n "${CHECK_RUNS:-}" ]] || exit 1
+      printf '%s\n' "$CHECK_RUNS" ;;
+  *"/pulls/"*)
+      [[ -n "${CANARY_SHA:-}" ]] || exit 1
+      printf '%s\n' "$CANARY_SHA" ;;
   *"orgs/Quantum-L9/rulesets/"*)
       [[ -n "${RULESET_DETAIL:-}" ]] || exit 1
       printf '%s\n' "$RULESET_DETAIL" ;;
@@ -133,9 +139,29 @@ expect_fail "T4 MODE=active with no existing ruleset -> refuse to create" \
   -- env RULESETS_JSON='[]' MODE=active bash "$WORK/kit/apply.sh"
 
 reset_kit
-expect_fail "T5 two rulesets share the canonical name -> refuse" \
-  "rulesets are named" \
+expect_fail "T5 two rulesets share the canonical identity -> refuse" \
+  "share the canonical identity" \
   -- env RULESETS_JSON="$LIST_DUPES" bash "$WORK/kit/apply.sh"
+
+# The legacy decorated name is the SAME ruleset, not a missing one. Counting only
+# the undecorated name reports zero, and CREATE then leaves the old org-wide
+# workflow rule running beside the new one — two blocking rules, one org.
+LIST_LEGACY='[{"id":42,"name":"L9 canonical CI required (evaluate)","enforcement":"evaluate"}]'
+reset_kit
+expect_out "T5a legacy decorated name resolves as the same identity [regression]" \
+  "will UPDATE in place" \
+  -- env RULESETS_JSON="$LIST_LEGACY" MODE=active bash "$WORK/kit/apply.sh"
+
+reset_kit
+expect_out "T5b legacy decorated name is renamed, not duplicated [regression]" \
+  "*** RENAME" \
+  -- env RULESETS_JSON="$LIST_LEGACY" MODE=active bash "$WORK/kit/apply.sh"
+
+reset_kit
+LIST_LEGACY_SPLIT='[{"id":42,"name":"L9 canonical CI required (evaluate)","enforcement":"evaluate"},{"id":43,"name":"L9 canonical CI required","enforcement":"active"}]'
+expect_fail "T5c canonical + legacy decorate together -> refuse (split)" \
+  "share the canonical identity" \
+  -- env RULESETS_JSON="$LIST_LEGACY_SPLIT" bash "$WORK/kit/apply.sh"
 
 reset_kit
 expect_fail "T6 evaluate over live active ruleset -> refuse to demote" \
@@ -247,6 +273,49 @@ if jq -e '.enforcement=="active" and .ruleset_id==42 and (.bypass_actors|length)
 else
   bad "V11 LIVE_ENFORCING writes well-formed enforcement evidence" "evidence missing or malformed"
 fi
+
+echo
+echo "=== verify.sh: ACTIVE canary must post-date promotion ==="
+
+# A canary run from the EVALUATE phase still sits on the PR head after promotion.
+# Re-checking without a new commit would report LIVE_CANARY_PASS off an
+# advisory-mode run — the exact "proved it under evaluate, claimed it under
+# active" confusion the phase ordering exists to prevent.
+CANARY_SHA="4e2d4e9d64a8a5ca89da91c5ef18314c0331d4b4"
+runs_started() {
+  printf '[{"name":"Analyze (central Core)","conclusion":"success","started_at":"%s","html_url":"https://example.invalid/run/1","app":{"slug":"github-actions"}}]' "$1"
+}
+
+reset_kit
+mkdir -p "$WORK/kit/evidence"
+expect_fail "P1 active canary with no promoted-at receipt -> FAIL" \
+  "requires evidence/promoted-at" \
+  -- env RULESETS_JSON="$LIST_ACTIVE" RULESET_DETAIL="$(active_detail)" \
+     CANARY_SHA="$CANARY_SHA" CHECK_RUNS="$(runs_started 2026-08-31T03:19:00Z)" \
+     bash "$WORK/kit/verify.sh" --pr Quantum-L9/l9-observability-core 4
+
+reset_kit
+mkdir -p "$WORK/kit/evidence"; printf '2026-08-31T03:17:28Z\n' > "$WORK/kit/evidence/promoted-at"
+expect_fail "P2 active canary that ran BEFORE promotion -> FAIL [regression]" \
+  "before promotion" \
+  -- env RULESETS_JSON="$LIST_ACTIVE" RULESET_DETAIL="$(active_detail)" \
+     CANARY_SHA="$CANARY_SHA" CHECK_RUNS="$(runs_started 2026-08-31T03:10:00Z)" \
+     bash "$WORK/kit/verify.sh" --pr Quantum-L9/l9-observability-core 4
+
+reset_kit
+mkdir -p "$WORK/kit/evidence"; printf '2026-08-31T03:17:28Z\n' > "$WORK/kit/evidence/promoted-at"
+expect_out "P3 active canary that ran AFTER promotion -> LIVE_CANARY_PASS" \
+  "RESULT: LIVE_CANARY_PASS" \
+  -- env RULESETS_JSON="$LIST_ACTIVE" RULESET_DETAIL="$(active_detail)" \
+     CANARY_SHA="$CANARY_SHA" CHECK_RUNS="$(runs_started 2026-08-31T03:19:00Z)" \
+     bash "$WORK/kit/verify.sh" --pr Quantum-L9/l9-observability-core 4
+
+reset_kit
+expect_out "P4 evaluate-phase canary needs no promotion receipt" \
+  "RESULT: ADVISORY_CANARY_PASS" \
+  -- env RULESETS_JSON="$LIST_EVAL" RULESET_DETAIL="$GOOD_DETAIL" \
+     CANARY_SHA="$CANARY_SHA" CHECK_RUNS="$(runs_started 2026-08-31T03:10:00Z)" \
+     bash "$WORK/kit/verify.sh" --pr Quantum-L9/l9-observability-core 4
 
 echo
 printf 'selftest: %d passed, %d failed\n' "$PASSED" "$FAILED"

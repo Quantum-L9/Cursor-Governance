@@ -4,13 +4,23 @@ description: Auto-invoke Context7 MCP before coding on external libraries —Fas
 
 # Context7 Auto-Invoke (External Docs)
 
-**MCP servers:** `context7` (Claude Code plugin) **and** `user-Context7` (Cursor).
+**MCP servers:** `context7` (Claude Code plugin, and the governed remote HTTP
+server in `mcp.template.json`) **and** `user-Context7` (Cursor).
 **Skill:** `@.cursor-commands/skills/l9-context7-docs/`
 
-When Context7 MCP tools (`mcp__context7__*`) are **absent** — hosted Web/Mobile
-with `SKIP_PLUGIN_MARKETPLACE=true` — the obligation is skill `l9-context7-docs`
-or an official docs GET. Do not treat a missing MCP tool as permission to skip
-docs, and do not register a credential-bearing Context7 HTTP MCP to close this.
+Hosted Web/Mobile runs with `SKIP_PLUGIN_MARKETPLACE=true`, so the marketplace
+plugin never installs there. The governed remote server closes that gap without
+a pasted secret: `mcp.template.json` declares `context7` at
+`https://mcp.context7.com/mcp` with `Authorization: Bearer ${CONTEXT7_API_KEY}`
+and `_requires_env: [CONTEXT7_API_KEY]`. The variable is **proxied**, never
+pasted — `${VAR}` is expanded by Claude Code at load, no value is written to any
+file or to the account variables field, and when nothing is proxied the server
+is simply not rendered.
+
+So when `mcp__context7__*` tools are **absent** the obligation is unchanged:
+skill `l9-context7-docs` or an official docs GET. Never treat a missing MCP tool
+as permission to skip docs, and never close the gap by pasting a literal key
+into the account variables field, into `mcp.template.json`, or into `.mcp.json`.
 
 Call whichever server this surface exposes. Do not treat a missing allow-list
 entry as permission to skip.

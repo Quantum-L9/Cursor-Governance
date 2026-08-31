@@ -52,6 +52,78 @@ work today.
 | `gitguardian.mcp` | No brokered secret scanning; `gitleaks` still runs locally |
 | `github.mcp`, `github.packages_read` | Platform GitHub MCP (where connected) covers most of this |
 
+## Observed GitHub transports
+
+Rows are **dated and per-container measurements**, not a standing claim. A container
+that contradicts a row is new evidence: add a dated row, do not silently rewrite an
+old one. The contract these measure against lives in `ops/autonomy/surface_profile.yaml`
+under `surface_capabilities.github`, and in rule 62's surface-transport section.
+
+### 2026-08-29, re-verified 2026-08-30 — Claude Code cloud container, `Quantum-L9/Cursor-Governance`
+
+First measured at `a2f78b5`; every row below re-probed unchanged at `450b7d0`.
+
+| Probe | Result |
+|---|---|
+| `gh` binary | **present**, `/usr/bin/gh` v2.98.0 |
+| `gh api user` | **works** — resolves `cryptoxdog` |
+| `gh api repos/Quantum-L9/Cursor-Governance` | **works** |
+| `mcp__github__*` tools | **work** |
+| `gh auth status` | reports `The token in GH_TOKEN is invalid` — **and exits 0** |
+| `gitleaks` | present, `/root/.local/bin/gitleaks` |
+| `pre-commit` | present, `/root/.local/bin/pre-commit` |
+| `uv` | present, `/root/.local/bin/uv` |
+| `semgrep` | **absent** |
+
+Two consequences worth stating plainly.
+
+**`gh auth status` is a misleading detector.** It reports failure and exits 0. A script
+branching on its exit code takes the success path while its own output says the
+opposite, and a human reading only the text concludes GitHub is unreachable when the
+REST route works. Probe the endpoint you need instead.
+
+**The session prompt on this surface asserts there is no `gh` CLI.** That assertion is
+false here, as the first row shows. It is harness-owned and there is no in-repo lever
+for it (P307 CI-001 R1), so it is recorded rather than fixed: trust the probe, not the
+prompt.
+
+### 2026-08-31 — Claude Code cloud container, `Quantum-L9/Cursor-Governance` @ `a221142`
+
+Re-probed while integrating this change. Every row above reproduces **except one**.
+
+| Probe | Result | vs. the row above |
+|---|---|---|
+| `gh` binary | **present**, `/usr/bin/gh` v2.98.0 | same |
+| `gh api user` | **works** — resolves `cryptoxdog`, exit 0 | same |
+| `gh api repos/Quantum-L9/Cursor-Governance` | **works**, exit 0 | same |
+| `gh auth status` | reports `The token in GH_TOKEN is invalid` — **and exits 1** | **contradicts** |
+| `gitleaks` | present, `/root/.local/bin/gitleaks` | same |
+| `pre-commit` | present, `/root/.local/bin/pre-commit` | same |
+| `uv` | present, `/root/.local/bin/uv` | same |
+| `semgrep` | **absent** | same |
+
+The contradicting row is recorded, not merged into the earlier one, per the rule at the
+top of this section. It does not weaken the conclusion drawn from it — it hardens it.
+The earlier row supported "never gate on `gh auth status`" because the exit code
+disagreed with the message. Two containers of the same surface class now return
+**different** exit codes for the same message and the same working `gh api`, so the
+exit code is not a stable signal in either direction, and a script gating on it fails
+unpredictably rather than consistently.
+
+What must not be read into this: the 2026-08-29/30 row is not retracted, and neither
+row licenses asserting a mechanism. `gh api` succeeding while the session's own
+`GH_TOKEN` is an invalid sentinel remains the only claim either row supports.
+
+### Relationship to the P307 pack
+
+`WIP/8-26-26/environment_experience_improvement_pack_p307_revised` records **CR-105**
+("GH_TOKEN and GITHUB_TOKEN are set, but no gh CLI exists to consume them") and
+**CR-124** ("Core CLI tooling absent; GitHub work rerouted — gh, gitleaks, semgrep,
+pre-commit not installed"). Both carry `status: OBSERVED_CONTEXT_SPECIFIC`, and both
+stand: they describe containers that were measured. The table above is a **dated
+counter-observation for a different container**, not a correction of theirs. In this
+one, `gh`, `gitleaks` and `pre-commit` are present and only `semgrep` is absent.
+
 ## The rule that does not bend
 
 A capability reporting `UNAVAILABLE`, `DEGRADED`, or `BLOCKED_BY_PLATFORM` is

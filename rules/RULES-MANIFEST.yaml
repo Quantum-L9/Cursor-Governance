@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-30T20:34:14Z'
+generated_utc: '2026-08-31T02:53:19Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:232d8dc9b4ee0466d72232bfc717e5c42eb95b1c109cda4167d5189ea9af1e2f
+source_tree_digest: sha256:e2e49441c14df4c35f0be76f94de872b3b642b2672977395cdabaf6382365136
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -263,7 +263,7 @@ rules:
 - file: 22-context7-auto-invoke.mdc
   id: l9.rule.22.context7.auto.invoke
   id_source: explicit
-  version: 1.1.0
+  version: 1.2.0
   description: Auto-invoke Context7 MCP before coding on external libraries —FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools, APIs, MCP, install, Docker.
   scope: global
   domain: git
@@ -273,10 +273,10 @@ rules:
   globs: null
   first_heading: Context7 Auto-Invoke (External Docs)
   has_yaml_frontmatter: true
-  line_count: 73
-  content_digest: sha256:7ceac6084da9eae1edf3499748750d8867e4c9bf06dcccfa6f7f0272768706cd
+  line_count: 83
+  content_digest: sha256:f1c56c69c455311e0dde0b49562f6b571f8e7777470d05502071b8d7461b94e5
   authority: canonical_global
-  context_cost: minimal
+  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null
@@ -296,7 +296,7 @@ rules:
   first_heading: L9 skill routing (Cursor)
   has_yaml_frontmatter: true
   line_count: 100
-  content_digest: sha256:9e2ab29ad5cea7404c969e71f9bbf7bc8c7fb1cf173daf98519f17ff6137e282
+  content_digest: sha256:181ceb1a7b4bbefbb3ec478e55ac047d04a7537bb1c66abadeeeabddfa9d4663
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -555,8 +555,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
-  line_count: 130
-  content_digest: sha256:fa1919b48e7b37850955b6afc9053c6389a949848e561308238b86dc0060ce34
+  line_count: 156
+  content_digest: sha256:c03f04d87d3d601f4f2c8ca4fa63cd051b221931172ed9690f6a805f87310855
   authority: canonical_global
   context_cost: moderate
   deprecated: false
@@ -815,8 +815,8 @@ rules:
 - file: 62-github-openclaw-authority.mdc
   id: l9.rule.62.github.openclaw.authority
   id_source: explicit
-  version: 1.0.0
-  description: Agents MUST use openclaw-igorbot/github#token for GitHub; MUST NOT ask humans to operate github.com UI.
+  version: 1.1.0
+  description: Agents MUST use openclaw-igorbot/github#token for GitHub where the surface holds credentials; on a model-controlled surface the REST `gh api` route and the mcp__github__* tools are the sanctioned capability, by observation and without a mechanism asserted. MUST NOT ask humans to operate github.com UI.
   scope: global
   domain: git
   activation: always
@@ -825,8 +825,8 @@ rules:
   globs: null
   first_heading: GitHub Openclaw PAT authority (CANONICAL_LAW §14)
   has_yaml_frontmatter: true
-  line_count: 27
-  content_digest: sha256:8083a57ba87c282fb103b0dfeca5493b28e5ad09833a79de97af2b4dc69f2f11
+  line_count: 71
+  content_digest: sha256:985a7374a0641c01e6d95a091c6f23c1713bc8f6ef6983a8ff1eade69738c4c2
   authority: canonical_global
   context_cost: minimal
   deprecated: false

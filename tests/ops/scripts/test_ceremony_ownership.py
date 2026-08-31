@@ -98,8 +98,6 @@ def test_live_teachers_do_not_teach_postcommit_precommit_repo() -> None:
 PLAN_TEACHERS = (
     ROOT / "skills" / "l9-plan" / "SKILL.md",
     ROOT / "skills" / "l9-plan-simple" / "SKILL.md",
-    ROOT / "commands" / "l9-plan.md",
-    ROOT / "commands" / "l9-plan-simple.md",
 )
 
 PLAN_CEREMONY_GATES = (

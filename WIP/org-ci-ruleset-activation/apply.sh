@@ -149,27 +149,39 @@ if [[ "$(jq -r '.rules[0].parameters.do_not_enforce_on_create' "$PAYLOAD")" != "
 fi
 echo "create-gating:   disabled (safe)"
 
-# 5. EXACTLY ONE canonical ruleset. Zero is legal only before the first apply.
-#    Two means a previous run split the identity; picking either one silently is
-#    how an org ends up enforcing the wrong copy.
-MATCHES="$(jq -r --arg n "$NAME" '[.[] | select(.name==$n)] | length' <<<"$RULESETS")"
-if [[ "$MATCHES" -gt 1 ]]; then
+# 5. EXACTLY ONE family member. The parent-kit evaluate payload named the
+#    ruleset "$NAME (evaluate)". Counting only the un-decorated name then
+#    reports zero and CREATE leaves that org-wide workflow running beside
+#    the new one. Treat the decorated names as the same identity: update
+#    (and rename) in place. Two family members is a split — fail closed.
+FAMILY="$(jq -c --arg n "$NAME" '
+  [.[] | select(
+    .name == $n
+    or .name == ($n + " (evaluate)")
+    or .name == ($n + " (active)")
+  )]
+' <<<"$RULESETS")"
+FAMILY_COUNT="$(jq -r 'length' <<<"$FAMILY")"
+if [[ "$FAMILY_COUNT" -gt 1 ]]; then
   cat >&2 <<EOF
-FAIL: $MATCHES rulesets are named '$NAME'.
+FAIL: $FAMILY_COUNT rulesets share the canonical identity (name or legacy decorate).
 
-$(jq -r --arg n "$NAME" '.[] | select(.name==$n) | "  id \(.id)  enforcement=\(.enforcement)"' <<<"$RULESETS")
+$(jq -r '.[] | "  id \(.id)  name=\(.name)  enforcement=\(.enforcement)"' <<<"$FAMILY")
 
-The canonical name must resolve to exactly one ruleset. Delete the duplicates
-before continuing — see the runbook's Rollback section — then re-run.
+Resolve to exactly one — see the runbook Rollback — then re-run. Creating
+another copy would leave two org-wide workflow rules.
 EOF
   exit 1
 fi
 
 EXISTING=""
 CURRENT_ENFORCEMENT=""
-if [[ "$MATCHES" == "1" ]]; then
-  EXISTING="$(jq -r --arg n "$NAME" '.[] | select(.name==$n) | .id' <<<"$RULESETS")"
-  CURRENT_ENFORCEMENT="$(jq -r --arg n "$NAME" '.[] | select(.name==$n) | .enforcement' <<<"$RULESETS")"
+EXISTING_NAME=""
+if [[ "$FAMILY_COUNT" == "1" ]]; then
+  EXISTING="$(jq -r '.[0].id' <<<"$FAMILY")"
+  CURRENT_ENFORCEMENT="$(jq -r '.[0].enforcement' <<<"$FAMILY")"
+  EXISTING_NAME="$(jq -r '.[0].name' <<<"$FAMILY")"
+  echo "family:          id $EXISTING name='$EXISTING_NAME' (legacy decorate is the same identity)"
 fi
 
 # 6. Only EVALUATE may create. ACTIVE promotes something that already exists and
@@ -221,7 +233,9 @@ echo "enforcement:     $(jq -r '.enforcement' "$PAYLOAD")"
 echo "targets:         $(jq -rc '.conditions.repository_name.include' "$PAYLOAD") @ $(jq -rc '.conditions.ref_name.include' "$PAYLOAD")"
 echo "bypass actors:   $(jq -rc '.bypass_actors' "$PAYLOAD")"
 if [[ -n "$EXISTING" ]]; then
-  echo "existing:        id $EXISTING (enforcement=$CURRENT_ENFORCEMENT) — will UPDATE in place"
+  echo "existing:        id $EXISTING name='$EXISTING_NAME' (enforcement=$CURRENT_ENFORCEMENT) — will UPDATE in place"
+  [[ "$EXISTING_NAME" != "$NAME" ]] \
+    && echo "                 *** RENAME: '$EXISTING_NAME' -> '$NAME' (legacy decorate)"
   [[ "$MODE" == "evaluate" && "$CURRENT_ENFORCEMENT" == "active" ]] \
     && echo "                 *** DEMOTION: active -> evaluate (ALLOW_DEMOTE=1) ***"
 else
@@ -247,6 +261,10 @@ else
   printf '%s\n' "$NEW" > "$ID_RECEIPT"
 fi
 echo "recorded id -> evidence/ruleset-id"
+if [[ "$MODE" == "active" ]]; then
+  date -u +%Y-%m-%dT%H:%M:%SZ > "$HERE/evidence/promoted-at"
+  echo "recorded promotion clock -> evidence/promoted-at"
+fi
 
 # Post-write invariant: still exactly one.
 POST="$(gh api "orgs/$ORG/rulesets" 2>/dev/null \

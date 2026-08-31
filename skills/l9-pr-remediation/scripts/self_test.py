@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 4.3.1. Stdlib only."""
+"""Contract tests for l9-pr-remediation 4.5.0. Stdlib only."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_version_and_map() -> None:
-    _need(SKILL, "version: 4.3.1", "SKILL.md")
+    _need(SKILL, "version: 4.5.0", "SKILL.md")
     if not (ROOT / "scripts" / "reply_threads.py").is_file():
         _fail("scripts/reply_threads.py missing")
     _need(SKILL, "Kernel bind", "SKILL.md")
@@ -172,8 +172,60 @@ def test_fast_path() -> None:
 
 def test_ci_and_poll() -> None:
     _need(SKILL, "Poll workers never merge", "SKILL.md")
+    _need(SKILL, "Own until merged", "SKILL.md")
+    _need(SKILL, "subscribe/own", "SKILL.md")
+    _need(SKILL, "own_until_merged: true", "SKILL.md")
+    _need(SKILL, "forbid_reinvoke_handoff: true", "SKILL.md")
+    _need(REFS["convergence-loop.md"], "Own until merged", "convergence-loop.md")
+    _need(REFS["convergence-loop.md"], "viewerSubscription", "convergence-loop.md")
+    _need(SKILL, "Never finish with", "SKILL.md")
     _need(REFS["run-contract.md"], "merge_eligible", "run-contract.md")
     _need(REFS["remediation-plan.md"], "companion", "remediation-plan.md")
+
+
+def test_board_axis() -> None:
+    """The board verdict is computed, not judged from an ownership class.
+
+    Reading `statusCheckRollup` (every check, required or not) as a merge
+    verdict parked six mergeable PRs on 2026-08-30. The pack must point at the
+    helper that resolves required-check identity instead.
+    """
+    helper = Path(__file__).resolve().parents[3] / "ops" / "autonomy" / "pr_board.py"
+    if not helper.is_file():
+        _fail("ops/autonomy/pr_board.py missing (board authority)")
+    source = helper.read_text(encoding="utf-8")
+    _need(source, "rules/branches", "pr_board.py")  # ruleset-protected repos
+    _need(source, "/protection", "pr_board.py")  # classic branch protection
+    if "gh pr merge" in source:
+        _fail("pr_board.py must advise only; stack_safe_merge.py --run executes")
+
+    _need(SKILL, "ops/autonomy/pr_board.py", "SKILL.md")
+    _need(SKILL, "board_authority: ops/autonomy/pr_board.py", "SKILL.md")
+    _need(SKILL, "board_values: [merge, fix, wait, leftover]", "SKILL.md")
+    _need(SKILL, "leftover_requires_declaration: true", "SKILL.md")
+    _need(SKILL, "done_predicate: open_prs=0", "SKILL.md")
+    _need(SKILL, "The board is computed, not judged", "SKILL.md")
+    _need(SKILL, "ownership is not the board", "SKILL.md")
+    _need(SKILL, "--human-decision", "SKILL.md")
+    _need(SKILL, "--unfixable-check", "SKILL.md")
+    _need(REFS["run-contract.md"], "P_board", "run-contract.md")
+    _need(REFS["run-contract.md"], "pr_board.py", "run-contract.md")
+    _need(REFS["convergence-loop.md"], "pr_board.py", "convergence-loop.md")
+    _need(REFS["finding-classifier.md"], "ops/autonomy/pr_board.py", "finding-classifier.md")
+    _need(REFS["ownership-boundary.md"], "edit axis", "ownership-boundary.md")
+    _need(REFS["remediation-plan.md"], "board_declaration", "remediation-plan.md")
+
+    # The leftover factory: an ownership class read as a PR outcome.
+    pack = "\n".join([SKILL, *REFS.values()])
+    _forbid(pack, "HUMAN / CI_PIPELINE leftovers still stop that PR", "l9-pr-remediation pack")
+    _forbid(pack, "HUMAN / CI_PIPELINE leftovers stop that PR", "l9-pr-remediation pack")
+    _forbid(
+        REFS["convergence-loop.md"],
+        "Only `CI_PIPELINE` / `HUMAN` / `ENVIRONMENT` blockers remain",
+        "convergence-loop.md",
+    )
+    _forbid(REFS["ownership-boundary.md"], "**Do not merge that PR**", "ownership-boundary.md")
+    _forbid(REFS["finding-classifier.md"], "do not merge that PR", "finding-classifier.md")
 
 
 def test_counters() -> None:
@@ -200,6 +252,7 @@ def main() -> None:
     test_conversations()
     test_fast_path()
     test_ci_and_poll()
+    test_board_axis()
     test_counters()
     print("l9-pr-remediation self_test: PASS")
 

@@ -1,7 +1,34 @@
-<!-- Canonical org-wide PR template. Correct path: .github/pull_request_template.md
-     inside the Quantum-L9/.github repo's own .github/ folder. A copy at repo ROOT
-     does NOT propagate org-wide — GitHub only reads the nested path.
-     See docs/AUDIT.md, finding #1. -->
+<!-- L9_PROTECTED_ROOT_PR -->
+<!--
+  The stamp above is required in the PR body when any additive_only root file
+  is in the diff (ops/config/root-file-protection.json). make pr fills this
+  Protected-root block. When no additive_only path is touched, the composer
+  marks the section N/A.
+
+  Prefer append-only edits. A rewrite/deletion also needs a commit line:
+    ALLOW-ROOT-DELETION: <path> — <reason with proof of necessity>
+-->
+
+## Protected-root
+
+### Paths
+
+<!-- One path per line. Must match the additive_only diff. Composer fills. -->
+
+- ` `
+
+### Edit mode (pick one per path)
+
+- [ ] **Append-only** — existing lines kept; only new lines added (no `ALLOW-ROOT-DELETION`)
+- [ ] **Justified rewrite** — commit contains `ALLOW-ROOT-DELETION: <path> — <reason>`
+
+### Why a root file
+
+<!-- What cannot be done in a non-root path. Composer fills. -->
+
+### Proof of necessity (rewrites only)
+
+<!-- Issue, failing gate, or law citation. Empty if every path is append-only. -->
 
 ## Problem
 
@@ -13,6 +40,15 @@ paste the error / failing output here, or delete this block and describe the gap
 ```
 
 Closes #
+
+## Type of Change
+
+- [ ] Bug fix
+- [ ] Feature / enhancement
+- [ ] Refactor (no behavior change)
+- [ ] Documentation
+- [ ] CI / governance change
+- [ ] Breaking change (see rollback below)
 
 ## Fix
 
@@ -57,11 +93,7 @@ $ ruff check . && pyright
 
 ## Changes by intent
 
-<!-- YOU write this. One line per file you meant to touch, with the reason.
-     This is the contract; the bot-generated list below is the actual diff.
-     Any mismatch is flagged by CI — an unexplained file is usually a stray
-     debug edit, a committed artifact, or scope creep.
-     Delete the ADDED or MODIFIED heading if empty. Use `path — why`. -->
+<!-- Composer fills one `path — why` line per name-status row. -->
 
 **Added**
 - `path/to/new_file.py` — why this file needs to exist
@@ -74,7 +106,7 @@ $ ruff check . && pyright
 
 ## Files touched
 
-<!-- Auto-filled by .github/workflows/pr-files.yml on every push. Do not edit by hand. -->
+<!-- Auto-filled by make pr / .github/workflows/pr-files.yml. Do not edit by hand. -->
 
 <!-- FILES-TOUCHED:START -->
 _pending — the bot fills this in on push_

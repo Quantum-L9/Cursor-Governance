@@ -3,18 +3,18 @@ l9_schema: 1
 parent: l9-pr-remediation
 layer: reference
 role: convergence_loop
-tags: [pr, convergence, loop, ci, local-verify]
+tags: [pr, convergence, loop, ci, local-verify, board]
 owner: igor_beylin
 status: active
-version: 3.5.0
-updated: 2026-08-28
+version: 3.7.0
+updated: 2026-08-30
 /L9_META -->
 
 # Convergence Loop
 
 ## Purpose
 
-After publishing the **single** planned commit (which has ALREADY passed `make precommit-repo`), continue the next independent PR, then MERGE_TRAIN. Do not poll CI.
+After publishing the **single** planned commit (which has ALREADY passed `make precommit-repo`), continue the next independent PR, then MERGE_TRAIN. **Own the subscribed PRs until they are green and merged.** The human is not watching. Do not stop with a reinvoke YNP because required checks are still running.
 
 A second cycle is **not** the normal path. It is only for signals that did not exist at census time. See [remediation-plan.md](remediation-plan.md).
 
@@ -48,24 +48,26 @@ A second cycle is **not** the normal path. It is only for signals that did not e
 │  4. FIRST_MERGE_GATE then MERGE_TRAIN                    │
 │                                                          │
 │  → do not merge because this one PR is green             │
-│  → do not wait for required checks                       │
+│  → own required-check wait (15s snapshots) then merge    │
 │  → new post-push comments already present: one more      │
 │  → skipped census / unrun local gate: protocol failure   │
 │  → max cycles: STOP + partial report                     │
 └─────────────────────────────────────────────────────────┘
 ```
 
-## No wait
+## Own until merged
 
-After remediator publish, record the head SHA and continue. Do not poll. Snapshot `gh pr view` once per PR at diagnose. Re-read CI only when a later snapshot already shows a red required check that names a source file this PR owns.
+Subscribe to every in-scope open PR at preflight (`viewerSubscription`; PUT `issues/{n}/subscription` when not `SUBSCRIBED`). A 404/422 does not waive ownership.
+
+After remediator publish, record the head SHA and continue independent PRs. Then stay on MERGE_TRAIN: snapshot `gh pr view` / `gh pr checks` every 15s (cap `max_wait_snapshots`) until `mergeStateStatus=CLEAN` or a CODEBASE-red required check names a source file this PR owns. Never tell the human to re-invoke `/l9-pr-remediation` because CI is still running.
 
 If CI is already red on a source file this PR owns:
 
 1. Fetch the failure logs: `gh run view {RUN_ID} --log-failed`
 2. Identify the **delta** — what's different between local ruff/hooks and CI.
 3. If fixable locally in **source** → fix, re-run `make precommit-repo`, one more `git push` (counts as the exceptional next cycle if already published).
-4. If environment-only → classify `ENVIRONMENT` or `CI_PIPELINE`. Note it. **Do not** edit workflows to skip or weaken the failing job.
-5. If unfixable → defer with reason "CI environment delta". If MERGE_TRAIN is blocked, record the blocker and finish.
+4. If environment-only → classify `ENVIRONMENT` or `CI_PIPELINE` on the **edit** axis. Note it. **Do not** edit workflows to skip or weaken the failing job. That classification says you may not patch the file; it does not park the PR.
+5. If unfixable → defer with reason "CI environment delta" **and** declare it to the board: `pr_board.py --unfixable-check "{required check name}"`. Only then is that PR `leftover`. An undeclared pipeline note leaves the PR on the train. Required checks **in progress** are `board=wait`, not a finish — keep polling.
 
 ## Convergence Gate
 
@@ -81,7 +83,9 @@ This PR is ready for the train when ALL conditions are true:
 | All blocking findings resolved | Internal tracking: all `blocking` findings have status `fixed` |
 | All actionable findings resolved or deferred | Internal tracking |
 
-Required-check success is **not** a remediator gate.
+| Board says merge | `pr_board.py --repo {owner}/{repo} --pr {n} --json` returns `board: merge` at the current head |
+
+Required-check success **is** the remediator wait before `stack_safe_merge.py --run`. Local `Passed` is still not remote `Passed`. "Required" means present in the union of branch protection and repository rulesets — a red check outside that set never held the train.
 
 ## Re-Ingestion (When Not Converged)
 
@@ -134,6 +138,11 @@ local_verify: Passed | Failed | Unknown
 remote_ci: Passed | Failed | Unknown | NotApplicable
 new_comments_after_final_publish: {integer}
 
+board: merge | fix | wait | leftover      # ops/autonomy/pr_board.py at this head
+board_reason: "{helper reason}"
+board_declaration: ""                      # --human-decision / --unfixable-check, required for leftover
+open_prs: {integer}                        # mission target is 0
+
 deferred_items:
   - id: "review-7"
     reason: "Requires architectural decision"
@@ -141,15 +150,15 @@ deferred_items:
 protocol_violations:
   - "None" | list of any batch/verify violations that occurred
 
-minimum_safe_next_action: "wait_first_merge_gate" | "merge_train_oldest_first" | "manual review of deferred items" | "run another cycle"
+minimum_safe_next_action: "own_required_checks_then_merge" | "merge_train_oldest_first" | "manual review of deferred items" | "run another cycle"
 ```
 
 ## Stop Conditions
 
 MUST stop the loop when:
 - `cycles_run >= max_cycles` → emit `partial`
-- Local verify Passed AND no new actionable codebase signals → emit `converged` for **this PR**. Do not merge until FIRST_MERGE_GATE. Then MERGE_TRAIN.
-- Only `CI_PIPELINE` / `HUMAN` / `ENVIRONMENT` blockers remain → emit `partial` early (more cycles cannot help); do not merge that PR
+- Local verify Passed AND no new actionable codebase signals → emit `converged` for **this PR**. Do not merge until FIRST_MERGE_GATE. Then MERGE_TRAIN (own the required-check wait; do not hand off).
+- `pr_board.py` returns `leftover` for a PR → that PR is `partial`, and the status must quote the declaration (`--human-decision` or `--unfixable-check`) that produced it. Edit-axis notes alone are **not** that declaration and are not a stop condition: attempt the merge first. `fix` means another cycle for that PR; `wait` means keep polling.
 - Poll worker `merge_eligible` on a stale SHA → ignore; never merge from it
 - A fix causes an unrecoverable regression → emit `blocked`
 - GitHub API is rate-limited and retry fails → emit `blocked`
@@ -174,4 +183,9 @@ makefile_primary: precommit-repo
 oldest_created_at_default: true
 stack_safe: true
 merge_on_converge: true
+own_until_merged: true
+subscribe_open_prs: true
+poll_interval_seconds: 15
+max_wait_snapshots: 32
+forbid_reinvoke_handoff: true
 ```
