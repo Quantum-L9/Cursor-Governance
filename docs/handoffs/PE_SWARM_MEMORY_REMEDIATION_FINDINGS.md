@@ -434,3 +434,22 @@ $ yaml.safe_load(peer-execution.yml)     -> 12 steps, valid
 | `materialize` is lease-unaware (TASK-02) | Low | — |
 | Cursor prompt renders write claims as non-exclusive (TASK-04) | Low | — |
 | Dead `CURSOR_ROLE_TO_RESULT_KIND` entries (TASK-04) | Low | — |
+
+---
+
+## GMP-C addendum (2026-08-30)
+
+**Plan:** `plan.sgd.gmp_c_promotion_admission.v1` · stacked Build on unique GitHub tip PR 431.
+
+Promotion: `routes/memory.yaml` `independent_validation_required` is `true`.
+`PromotionGate.evaluate` reads `routing_decision.requires_independent_validation`.
+Confidence floors `0.75` / `0.5` and high-risk designated-authority stay
+unchanged. Failed PE publish does not invent `recurrence_counts`.
+
+Cursor admission: `autonomy/adapters/cursor/mint_admission.py` wraps
+`CursorHostBridge.create_admission` only. No second token store.
+`ops/graphiti/distill_queue/` untouched.
+
+Note: GitHub PR bases 429→430→431 do not match git ancestry on this tip.
+GMP-A/B (`compile_units.py`, `ingest_memory_candidate.py`) are not present
+here and were not re-landed.

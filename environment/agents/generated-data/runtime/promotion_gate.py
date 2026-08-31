@@ -133,6 +133,9 @@ class PromotionGate:
             independent_validation_present=independent_validation_present,
             designated_authority_approval=designated_authority_approval,
             recurrence_count=recurrence_count,
+            route_requires_independent_validation=self._requires_independent_validation(
+                routing_decision
+            ),
         )
         if deferred is not None:
             return deferred
@@ -235,6 +238,7 @@ class PromotionGate:
         independent_validation_present: bool,
         designated_authority_approval: bool,
         recurrence_count: int,
+        route_requires_independent_validation: bool = False,
     ) -> PromotionResult | None:
         if risk_class == "high":
             if not independent_validation_present:
@@ -252,7 +256,7 @@ class PromotionGate:
                     reasons=tuple(sorted(set(reasons))),
                     conditions=tuple(sorted(set(conditions))),
                 )
-        if risk_class == "medium":
+        if risk_class == "medium" or route_requires_independent_validation:
             if not independent_validation_present and recurrence_count < 2:
                 return self._result(
                     unit_id=unit_id,
@@ -321,6 +325,15 @@ class PromotionGate:
         ):
             return "medium"
         return "low"
+
+    @staticmethod
+    def _requires_independent_validation(routing_decision: Mapping[str, Any]) -> bool:
+        raw = routing_decision.get("requires_independent_validation")
+        if isinstance(raw, bool):
+            return raw
+        if isinstance(raw, str):
+            return raw.strip().lower() in {"1", "true", "yes"}
+        return False
 
     @staticmethod
     def _confidence(

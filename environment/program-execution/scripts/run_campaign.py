@@ -3263,7 +3263,11 @@ def publish_task_outcome(
             designated_authority_approval=False,
             recurrence_counts=(
                 task.get("recurrence_counts")
-                if isinstance(task.get("recurrence_counts"), dict)
+                if (
+                    bool(verification)
+                    and verification.get("verdict") == "PASSED_LOCAL"
+                    and isinstance(task.get("recurrence_counts"), dict)
+                )
                 else None
             ),
         )
