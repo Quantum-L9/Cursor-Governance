@@ -8,11 +8,9 @@ seam carries three P0s. Next = **W8**, with the reopened residuals below folded 
 **Cursor Build plan (W0–W7 done):** [`docs/plans/pec-repair-pipeline-w0-w10_056a9b48.plan.md`](../../../docs/plans/pec-repair-pipeline-w0-w10_056a9b48.plan.md)
 **PLAN_DOCUMENT (W8-forward):** [`PLAN_DOCUMENT.pec-repair-pipeline.v1.json`](./PLAN_DOCUMENT.pec-repair-pipeline.v1.json)
 **Sources:** moved to [`_archive/`](./_archive) and deprecated. Do not execute from archived files.
-**Live SSOT is this trio** — `PEC-repair-pipeline.md` (narrative), `PEC-repair-pipeline.json`
-(machine), `PLAN_DOCUMENT.pec-repair-pipeline.v1.json` (W8-forward plan). `_archive/DEPRECATED.md`
-says the `.md` / `.json` "are gone" and names the PLAN_DOCUMENT the sole SSOT; that sentence was
-never true — both files exist at every commit from `e8785018` onward and were re-synced by
-`2dec45c`. The archive is immutable provenance, so the correction is recorded here, not there.
+**Live SSOT is this trio** — this file (narrative), `PEC-repair-pipeline.json` (machine),
+`PLAN_DOCUMENT.pec-repair-pipeline.v1.json` (W8-forward plan). Ignore `_archive/DEPRECATED.md`'s
+claim that the `.md` / `.json` "are gone" — see *Already done*.
 
 This folder is no longer a dump of PE research. It is one remaining pipeline.
 
@@ -120,6 +118,136 @@ pipeline never covered; it is precisely the W7 residual "spine execute / Lock no
 A1 BLOCKED-Blueprint pathology repaired · A2 unknown seam fabricates no write authority ·
 A6 minimal `intent.v1` stays strict by design · A7 coverage/provenance strict in the right place.
 
+### Harvested — target lifecycle (Pec2)
+
+The audit's correction is not "make the executor better at patching Blueprints"; it is to make
+execution completeness a **compile/admission** property:
+
+```text
+operator intent → compiler → native Task Cards
+  → PRE-SEAL EXECUTION COMPLETENESS
+      ├─ derive deterministic validators where authority permits
+      ├─ preserve all original validation semantics
+      ├─ resolve typed verification mechanisms
+      └─ fail if mutating work remains unverifiable
+  → regenerate MANIFEST → canonical Blueprint validation → accept/seal
+  → bootstrap immutable Program Lock → Source Contracts → Rendered Contracts
+  → readiness / claim → workers
+```
+
+**Governing invariant:** after accept/seal, `Blueprint write count = 0` during ordinary execution.
+Not "few", not "only validator fixes" — zero. A genuinely new fact becomes an explicit superseding
+Blueprint revision with provenance, never an implicit runtime patch.
+
+**Diagnosis:** two definitions of "Blueprint complete" coexist. Compile/accept says *"the task has a
+validation object"*; execution says *"I need an executable validation command"*. Neither is wrong
+alone — the bug is that they are reconciled **after acceptance, during execution**.
+
+**Restart cost of that reconciliation:** invalidate → adopt → re-lock → re-materialize → re-claim →
+re-prepare → re-render → re-start, paid **per task**. That is the mechanical explanation for a
+campaign that appears to prepare itself forever instead of doing work.
+
+**Typed replacement for the lossy field** — `required_validation_commands: list[str]` should become
+`verification_mechanisms` as a tagged union (`command` / `inspection` / `external_adapter`) with
+exact evaluator and admission semantics per kind. Do not cross a major architecture boundary by
+reducing a tagged union to a list of strings.
+
+**Required invariant for explicit scoped relock** (B3) — even with explicit task ids: all
+non-task-definition source digests MUST equal the previous lock; task membership MUST be unchanged;
+all non-selected task definitions MUST hash identically. Scoped adoption may then update only the
+digest of the legally changed source, never opportunistically refresh every Blueprint digest.
+
+### Harvested — remediation order (Pec2 "what I would change in code")
+
+| Pri | Change | Why |
+| --- | --- | --- |
+| P0 | Replace `launchability.blueprint_tasks()` with the canonical native `TASK_CARDS.yaml` parser used by Controller/compiler | Eliminate the native/legacy adapter split (B1) |
+| P0 | Delete the normal-execution Blueprint-write branch from `fill_inferred_validation()` | Runtime must not mutate sealed authority (B2) |
+| P0 | Make `post_accept_blueprint_write_count != 0` a fatal invariant violation | Turns architecture law into executable law |
+| P0 | Harden explicit scoped relock against all non-selected source drift | Prevent mixed-version locks / digest laundering (B3) |
+| P1 | Introduce typed `verification_mechanisms` across Blueprint → Lock → Source → Rendered | Stop losing inspection / external_adapter semantics (B5) |
+| P1 | Require a terminal verification mechanism for every mutating `repo_local` task before acceptance | Catch incomplete execution semantics at the right stage (B4) |
+| P1 | Run execution-completeness enrichment **before** final MANIFEST generation | Avoid post-validation mutation (B9) |
+| P1 | Store launchability/admission reports outside the sealed Blueprint, or create them before the final manifest | Keep immutable-source accounting exact (B9) |
+| P1 | Remove destructive validation-list replacement; enrich canonically | Preserve operator completion semantics (B8) |
+| P1 | Require canonical Blueprint schema validation after every pre-seal mutation | Stop invalid source being laundered through normalization (B8) |
+| P2 | Delete legacy `repo_change` / `analysis` / `tasks.json` launchability fixtures | Tests assert a dead vocabulary (B10) |
+| P2 | Put `missing_terminal_verifier` into Controller readiness/preflight | Defence in depth (B7) |
+| P2 | Assert `compiled_task_count == launchability_task_count == program_lock_task_count` | Instantly catches adapter disconnects (B1 class) |
+
+### Harvested — proof tests (Pec2)
+
+The strongest end-to-end regression is nearly trivial, and had it existed the pathology could not
+have hidden:
+
+```text
+blueprint_digest_at_acceptance = sha256(all Blueprint bytes)
+run entire campaign
+assert sha256(all Blueprint bytes) == blueprint_digest_at_acceptance
+assert normal_execution_relock_count == 0
+```
+
+| Test | Required assertion |
+| --- | --- |
+| Native compiled campaign → launchability | tasks read from `TASK_CARDS.yaml` == compiler task count |
+| `repo_local` + `local_write` + inspection-only | cannot reach acceptance/bootstrap without an authorized terminal verifier |
+| `read_only` + inspection-only | remains valid — do not over-tighten discovery/audit work |
+| Pre-seal inferred validator | canonical Task Card stays schema-valid; existing validations preserved |
+| Pre-seal mutation + MANIFEST | final tree/hash inventory validates exactly once after enrichment |
+| Full multi-task campaign | Blueprint byte-identical from acceptance through completion |
+| Full multi-task campaign | `normal_execution_relock_count == 0` |
+| Missing runtime verifier | structured blocker before worker launch — not a source rewrite |
+| `external_adapter` validation | survives Blueprint → Lock → Source → Rendered without disappearing |
+| Explicit task relock + AUTHORITY_MAP drift | relock refused |
+| Explicit task relock + gate/evidence/program drift | relock refused |
+| Explicit scoped relock | non-selected source digests cannot be silently refreshed |
+| Fixture hygiene | every execution kind used in tests belongs to the current Task Card enum |
+| Provider boundary | worker/provider has no capability to modify accepted Blueprint authority |
+
+### Harvested — compiler seam remediation + scorecard (Pec1)
+
+Three changes, in order:
+
+1. **P1 — collapse normative lexical semantics into one implementation.**
+   `architecture_intent.normative_signals()` becomes the deterministic extractor's canonical signal
+   source. Add live E2E fixtures with lowercase `must`, `must not`, `don't`, `never`, `preserve`,
+   "keep the existing…", "reuse the current…", run through
+   `compile_architecture_intent(..., extractor=deterministic)`, requiring coverage PASS plus correct
+   task/prohibition semantics. One parser, one vocabulary, one semantic law.
+2. **P1/P2 — wire repository dispositions into `architecture_to_campaign.lower()`.** Carry `KEEP`,
+   `HARDEN_WIRE_EXISTING`, `MERGE_WITH_EXISTING`, `CREATE` into semantic provenance and action
+   formation rather than only discovering whether a path exists. Then promote the W5 shadow cases
+   into real architecture-compiler E2E fixtures.
+3. **P2 — add route-confusion diagnostics.** Keep generic Markdown → brief deterministic, but when
+   ordinary `make campaign` sees high architecture/normative density, tell the operator that
+   `campaign-architecture` exists. **Warn, don't steal** — never silently reinterpret, never
+   silently push a rich document through a weaker compiler.
+
+| Dimension | Score | Note |
+| --- | --- | --- |
+| Rich intent rejected because schema too narrow | 9/10 | dedicated architecture route is the right structural fix |
+| Unknowns create BLOCKED Blueprint cards | 10/10 | evidence-task/dependency treatment repaired |
+| Unknown implementation location handling | 10/10 | ready + inspection-only + zero invented write authority |
+| Semantic fidelity / no-loss architecture | 8.5/10 | provenance and coverage strong |
+| Natural-language deterministic acceptance | **6/10** | the A3 extractor split undermines the W4 claim on fallback surfaces |
+| Repository reconciliation | **6.5/10** | disposition intelligence exists but sits in shadow, not the live lowerer (A4) |
+| Conformance confidence | **7/10** | golden architecture E2E is meaningful; the W4/W5 shadow suite must not declare closure for behavior it never executes |
+
+**Operator front door for dense material** (not the minimal `intent.v1`):
+
+```bash
+make -C "$HOME/.cursor-governance" campaign-architecture \
+  INTENT=/path/to/microscope-audit.md TARGET=owner/repo
+```
+
+Accepted through that route without rewriting: dense architecture documents, microscope audits,
+technical reviews, implementation plans, prose+tables+code fences, very long documents (whole-unit
+chunking), documents with no task list, "we need to determine whether X" (→ ready read-only
+discovery), requirements with no known implementation path (→ inspection-only, no fabricated
+target), no explicit test command, and explicit OUT OF SCOPE deferrals (preserved as exclusions).
+Still refused by design: `program-execution.intent.v1` carrying tasks/files/waves/prompts;
+internally contradictory equal-authority obligations; wholly non-executable prose.
+
 ### Disposition
 
 B1–B3 are the highest-leverage items in this file: they explain a campaign that "prepares forever",
@@ -158,11 +286,15 @@ Use live skill **`skills/l9-pe-campaign-activate`** — not WIP template copies 
 - Campaign front door for brief / plan / activate / campaign-source.v2 / architecture-intent.
 - `run_campaign.py` `refuse_publication` — runner cannot push, open, or merge.
 - Campaigns: `bounded-replanning-v1` (PR 149), `l9-devpack-program-execution-hardening` (PR 150) — CONVERGED;
-  `level3-make-pr-single-path` (PR 187) — CONVERGED_WITH_NON_BLOCKING_RISKS. Verdicts are the
-  `CAMPAIGN_STATUS.yaml` ledger's own strings; do not flatten the qualified one to CONVERGED.
+  `level3-make-pr-single-path` (PR 187) — CONVERGED_WITH_NON_BLOCKING_RISKS (ledger's own string).
 - `cc-pe-intent-compiler-v1` — registered/archival; not the graduation test.
 - Skill `l9-pe-campaign-activate` — live.
 - Graphiti is resume SSOT.
+- **Tracker-truth fixes (2026-08-31, `ead6d6f`)** — closed, do not re-raise: Build-plan link
+  depth corrected (`../../` → `../../../`); `_archive/DEPRECATED.md`'s "are gone" claim recorded as
+  never-true (archive is `must_not_modify`, so the correction lives here); level3 verdict restored to
+  the ledger's `CONVERGED_WITH_NON_BLOCKING_RISKS`; `T-W1-fixtures` repointed from the nonexistent
+  `schema_semantic_expectation.json` to the landed `conformance/expectation.py`.
 
 ---
 

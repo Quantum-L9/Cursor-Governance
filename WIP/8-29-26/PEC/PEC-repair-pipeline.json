@@ -1,6 +1,6 @@
 {
   "schema": "l9.pec.repair-pipeline.v1",
-  "title": "Program Execution repair pipeline \u2014 remaining work only",
+  "title": "Program Execution repair pipeline — remaining work only",
   "updated": "2026-08-31",
   "inspected_head": "35880e7078b06b2c8dfe7a26ccec390bd11935c6",
   "w0_w7_complete_at": "e8785018",
@@ -244,7 +244,284 @@
       "W4 is contract-delivered but not end-to-end closed: AT-002/AT-003 fail on the deterministic extractor, the surface tests force.",
       "W5 is contract-delivered but not integrated: CE-AT-005/006 are closed in shadow only; the live lowerer never calls classify_dispositions.",
       "W7's recorded residual ('spine execute/Lock not proven') is exactly the seam Pec2 audits; B1-B3 are its highest-leverage defects."
-    ]
+    ],
+    "harvest_complete": true,
+    "harvest_note": "Findings, remediation order, proof tests, target lifecycle, scorecard and acceptance surface are all harvested from Pec1.md/Pec2.md. Nothing in the uploads remains unrecorded. Narrative form lives in PEC-repair-pipeline.md.",
+    "target_lifecycle": {
+      "principle": "execution completeness is a compile/admission property, not a runtime repair",
+      "order": [
+        "operator intent",
+        "compiler",
+        "native Task Cards",
+        "PRE-SEAL EXECUTION COMPLETENESS",
+        "regenerate MANIFEST",
+        "canonical Blueprint validation",
+        "accept/seal",
+        "bootstrap immutable Program Lock",
+        "Source Contracts",
+        "Rendered Contracts",
+        "readiness / claim",
+        "workers"
+      ],
+      "pre_seal_completeness_duties": [
+        "derive deterministic validators where authority permits",
+        "preserve all original validation semantics",
+        "resolve typed verification mechanisms",
+        "fail if mutating work remains unverifiable"
+      ],
+      "governing_invariant": "after accept/seal, Blueprint write count = 0 during ordinary execution; a new fact becomes an explicit superseding Blueprint revision with provenance, never an implicit runtime patch",
+      "diagnosis": "two definitions of 'Blueprint complete' coexist (compile/accept: has a validation object; execution: needs an executable command) and are reconciled after acceptance during execution",
+      "restart_cost_per_task": [
+        "invalidate",
+        "adopt",
+        "re-lock",
+        "re-materialize",
+        "re-claim",
+        "re-prepare",
+        "re-render",
+        "re-start"
+      ],
+      "typed_replacement": {
+        "replace": "required_validation_commands: list[str]",
+        "with": "verification_mechanisms tagged union",
+        "kinds": [
+          "command",
+          "inspection",
+          "external_adapter"
+        ],
+        "rule": "do not cross a major architecture boundary by reducing a tagged union to list[str]"
+      },
+      "scoped_relock_required_invariant": [
+        "all non-task-definition source digests MUST equal the previous lock",
+        "task membership MUST be unchanged",
+        "all non-selected task definitions MUST hash identically",
+        "scoped adoption updates only the digest of the legally changed source; never opportunistically refresh every Blueprint digest"
+      ]
+    },
+    "remediation_order": [
+      {
+        "pri": "P0",
+        "change": "Replace launchability.blueprint_tasks() with the canonical native TASK_CARDS.yaml parser used by Controller/compiler",
+        "why": "eliminate the native/legacy adapter split",
+        "finding": "B1"
+      },
+      {
+        "pri": "P0",
+        "change": "Delete the normal-execution Blueprint-write branch from fill_inferred_validation()",
+        "why": "runtime must not mutate sealed authority",
+        "finding": "B2"
+      },
+      {
+        "pri": "P0",
+        "change": "Make post_accept_blueprint_write_count != 0 a fatal invariant violation",
+        "why": "turns architecture law into executable law",
+        "finding": "B2"
+      },
+      {
+        "pri": "P0",
+        "change": "Harden explicit scoped relock against all non-selected source drift",
+        "why": "prevent mixed-version Program Locks / digest laundering",
+        "finding": "B3"
+      },
+      {
+        "pri": "P1",
+        "change": "Introduce typed verification_mechanisms across Blueprint -> Lock -> Source -> Rendered",
+        "why": "stop losing inspection/external_adapter semantics",
+        "finding": "B5"
+      },
+      {
+        "pri": "P1",
+        "change": "Require a terminal verification mechanism for every mutating repo_local task before acceptance",
+        "why": "catch incomplete execution semantics at the right stage",
+        "finding": "B4"
+      },
+      {
+        "pri": "P1",
+        "change": "Run execution-completeness enrichment before final MANIFEST generation",
+        "why": "avoid post-validation mutation",
+        "finding": "B9"
+      },
+      {
+        "pri": "P1",
+        "change": "Store launchability/admission reports outside the sealed Blueprint, or create them before the final manifest",
+        "why": "keep immutable-source accounting exact",
+        "finding": "B9"
+      },
+      {
+        "pri": "P1",
+        "change": "Remove destructive validation-list replacement; enrich canonically",
+        "why": "preserve operator completion semantics",
+        "finding": "B8"
+      },
+      {
+        "pri": "P1",
+        "change": "Require canonical Blueprint schema validation after every pre-seal mutation",
+        "why": "stop invalid source being laundered through normalization",
+        "finding": "B8"
+      },
+      {
+        "pri": "P1",
+        "change": "Collapse normative lexical semantics into one implementation (normative_signals as the extractor's canonical source) with lowercase live E2E fixtures",
+        "why": "one parser, one vocabulary, one semantic law",
+        "finding": "A3"
+      },
+      {
+        "pri": "P1/P2",
+        "change": "Wire repository dispositions into architecture_to_campaign.lower(); promote W5 shadow cases to architecture-compiler E2E fixtures",
+        "why": "carry KEEP/HARDEN/MERGE/CREATE into provenance and action formation",
+        "finding": "A4"
+      },
+      {
+        "pri": "P2",
+        "change": "Add route-confusion diagnostics to the brief route (warn, don't steal)",
+        "why": "never silently push a rich document through a weaker compiler",
+        "finding": "A5"
+      },
+      {
+        "pri": "P2",
+        "change": "Delete legacy repo_change / analysis / tasks.json launchability fixtures",
+        "why": "tests assert a dead vocabulary",
+        "finding": "B10"
+      },
+      {
+        "pri": "P2",
+        "change": "Put missing_terminal_verifier into Controller readiness/preflight",
+        "why": "defence in depth",
+        "finding": "B7"
+      },
+      {
+        "pri": "P2",
+        "change": "Assert compiled_task_count == launchability_task_count == program_lock_task_count",
+        "why": "instantly catches adapter disconnects",
+        "finding": "B1 class"
+      },
+      {
+        "pri": "P3",
+        "change": "Tighten compiler README's 'fails only for' clause to the real failure set",
+        "why": "documented acceptance boundary must be exact",
+        "finding": "A8"
+      }
+    ],
+    "proof_tests": {
+      "strongest_end_to_end": [
+        "blueprint_digest_at_acceptance = sha256(all Blueprint bytes)",
+        "run entire campaign",
+        "assert sha256(all Blueprint bytes) == blueprint_digest_at_acceptance",
+        "assert normal_execution_relock_count == 0"
+      ],
+      "matrix": [
+        {
+          "test": "native compiled campaign -> launchability",
+          "assertion": "tasks read from TASK_CARDS.yaml == compiler task count"
+        },
+        {
+          "test": "repo_local + local_write + inspection-only",
+          "assertion": "cannot reach acceptance/bootstrap without an authorized terminal verifier"
+        },
+        {
+          "test": "read_only + inspection-only",
+          "assertion": "remains valid; do not over-tighten discovery/audit work"
+        },
+        {
+          "test": "pre-seal inferred validator",
+          "assertion": "canonical Task Card stays schema-valid; existing validations preserved"
+        },
+        {
+          "test": "pre-seal mutation + MANIFEST",
+          "assertion": "final tree/hash inventory validates exactly once after enrichment"
+        },
+        {
+          "test": "full multi-task campaign (integrity)",
+          "assertion": "Blueprint byte-identical from acceptance through completion"
+        },
+        {
+          "test": "full multi-task campaign (relock)",
+          "assertion": "normal_execution_relock_count == 0"
+        },
+        {
+          "test": "missing runtime verifier",
+          "assertion": "structured blocker before worker launch, not a source rewrite"
+        },
+        {
+          "test": "external_adapter validation",
+          "assertion": "survives Blueprint -> Lock -> Source -> Rendered without disappearing"
+        },
+        {
+          "test": "explicit task relock + AUTHORITY_MAP drift",
+          "assertion": "relock refused"
+        },
+        {
+          "test": "explicit task relock + gate/evidence/program drift",
+          "assertion": "relock refused"
+        },
+        {
+          "test": "explicit scoped relock",
+          "assertion": "non-selected source digests cannot be silently refreshed"
+        },
+        {
+          "test": "fixture hygiene",
+          "assertion": "every execution kind used in tests belongs to the current Task Card enum"
+        },
+        {
+          "test": "provider boundary",
+          "assertion": "worker/provider has no capability to modify accepted Blueprint authority"
+        }
+      ]
+    },
+    "acceptance_scorecard": [
+      {
+        "dimension": "rich intent rejected because schema too narrow",
+        "score": "9/10"
+      },
+      {
+        "dimension": "unknowns create BLOCKED Blueprint cards",
+        "score": "10/10"
+      },
+      {
+        "dimension": "unknown implementation location handling",
+        "score": "10/10"
+      },
+      {
+        "dimension": "semantic fidelity / no-loss architecture",
+        "score": "8.5/10"
+      },
+      {
+        "dimension": "natural-language deterministic acceptance",
+        "score": "6/10",
+        "note": "A3 extractor split undermines the W4 claim on fallback surfaces"
+      },
+      {
+        "dimension": "repository reconciliation",
+        "score": "6.5/10",
+        "note": "disposition intelligence sits in shadow, not the live lowerer (A4)"
+      },
+      {
+        "dimension": "conformance confidence",
+        "score": "7/10",
+        "note": "the W4/W5 shadow suite must not declare closure for behavior it never executes"
+      }
+    ],
+    "architecture_front_door": {
+      "command": "make -C \"$HOME/.cursor-governance\" campaign-architecture INTENT=/path/to/microscope-audit.md TARGET=owner/repo",
+      "accepts_without_rewrite": [
+        "dense architecture document",
+        "microscope audit",
+        "technical review",
+        "implementation plan",
+        "prose + tables + code fences",
+        "very long document (whole-unit chunking)",
+        "no task list",
+        "'determine whether X' -> ready read-only discovery",
+        "requirement with no known implementation path -> inspection-only, no fabricated target",
+        "no explicit test command",
+        "explicit OUT OF SCOPE deferral preserved as exclusion"
+      ],
+      "still_refused_by_design": [
+        "program-execution.intent.v1 carrying tasks/files/waves/prompts",
+        "internally contradictory equal-authority obligations",
+        "wholly non-executable prose"
+      ]
+    }
   },
   "completed_removed_from_pipeline": [
     {
@@ -257,34 +534,34 @@
       "id": "campaign-front-door-kinds",
       "status": "partial_landed",
       "what": "campaign_input.py routes brief, plan, activate, campaign-source.v2, architecture-intent.v1. Publication stages refuse_publication.",
-      "residual": "PROGRAM_INTENT_V1 still rejected \u2014 owned by W3."
+      "residual": "PROGRAM_INTENT_V1 still rejected — owned by W3."
     },
     {
       "id": "compiler-module-in-tree",
       "status": "partial_landed",
       "what": "intent.py, architecture_{intent,extractor,coverage,ir}, repo_truth.py, architecture_to_campaign.py, synthesizer.py, blueprint_validate.py exist under environment/program-execution/compiler.",
-      "residual": "Ingress, lowercase fidelity, microscope grounding, grounded lowering, shadow harness \u2014 W1\u2013W6."
+      "residual": "Ingress, lowercase fidelity, microscope grounding, grounded lowering, shadow harness — W1–W6."
     },
     {
       "id": "bounded-replanning-v1",
       "status": "complete",
-      "evidence": "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml \u2014 CONVERGED, PR 149"
+      "evidence": "environment/program-execution/campaigns/CAMPAIGN_STATUS.yaml — CONVERGED, PR 149"
     },
     {
       "id": "l9-devpack-program-execution-hardening",
       "status": "complete",
-      "evidence": "CAMPAIGN_STATUS.yaml \u2014 CONVERGED, PR 150"
+      "evidence": "CAMPAIGN_STATUS.yaml — CONVERGED, PR 150"
     },
     {
       "id": "cc-pe-intent-compiler-v1",
       "status": "complete_archival",
-      "what": "Contract registered in-tree; AUTH-001 bound compiler to environment/program-execution/compiler. Quality Gates A\u2013F were never the live graduation test.",
+      "what": "Contract registered in-tree; AUTH-001 bound compiler to environment/program-execution/compiler. Quality Gates A–F were never the live graduation test.",
       "evidence": "campaigns/cc-pe-intent-compiler-v1/README.md honesty: leftover / INCONCLUSIVE"
     },
     {
       "id": "level3-make-pr-single-path",
       "status": "complete",
-      "evidence": "CAMPAIGN_STATUS.yaml \u2014 CONVERGED_WITH_NON_BLOCKING_RISKS, PR 187"
+      "evidence": "CAMPAIGN_STATUS.yaml — CONVERGED_WITH_NON_BLOCKING_RISKS, PR 187"
     },
     {
       "id": "l9-pe-campaign-activate",
@@ -300,6 +577,13 @@
       "id": "graphiti-resume-ssot",
       "status": "complete",
       "what": "Resume SSOT is Graphiti. PE Memory cutover docs are not a live blocker for compiler repair."
+    },
+    {
+      "id": "tracker-truth-fixes-2026-08-31",
+      "status": "complete",
+      "commit": "ead6d6f",
+      "what": "Four evidence-backed tracker defects closed: Build-plan link depth (../../ -> ../../../); _archive/DEPRECATED.md 'are gone' recorded as never-true (archive is must_not_modify, correction lives in the live trio); level3 verdict restored to ledger string CONVERGED_WITH_NON_BLOCKING_RISKS; T-W1-fixtures repointed from nonexistent schema_semantic_expectation.json to landed conformance/expectation.py.",
+      "evidence": "link check 0 broken; plan validator PASS; PE suites unchanged (819 root + 592 conformance + 153 compiler/adapter, 0 failures)"
     }
   ],
   "deferred_out_of_this_pipeline": [
@@ -350,8 +634,8 @@
       "contract_id": "BOOTSTRAP-PEC-000",
       "maps_from": [
         "PEC Contract.md",
-        "pec2.md \u00a714",
-        "pec1.md \u00a715\u201316"
+        "pec2.md §14",
+        "pec1.md §15–16"
       ],
       "title": "Intent-compiler conformance corpus + shadow comparison harness",
       "status": "complete",
@@ -570,7 +854,7 @@
       "id": "W9",
       "contract_id": "C7-C10",
       "maps_from": [
-        "pec1.md C7\u2013C10"
+        "pec1.md C7–C10"
       ],
       "title": "RiskPacket / ImpactEngine / enforcement / outcome-driven replan",
       "status": "open",
@@ -581,7 +865,7 @@
         "C7 l9-assurance protocol (no execution authority)",
         "C8 PEC ImpactEngine + shadow RiskPacket",
         "C9 bind fresh RiskPacket before EXECUTING",
-        "C10 outcome divergence \u2192 bounded replan"
+        "C10 outcome divergence → bounded replan"
       ],
       "invariant": "No graph edge found is not evidence that no graph edge exists. Unknown coverage is partial/unknown, never blast_radius=0."
     },
@@ -591,12 +875,12 @@
       "maps_from": [
         "pec1.md C11"
       ],
-      "title": "PEC dogfood \u2014 messy human RiskPacket objective compiled and executed by PEC itself",
+      "title": "PEC dogfood — messy human RiskPacket objective compiled and executed by PEC itself",
       "status": "open",
       "depends_on": [
         "W9"
       ],
-      "acceptance": "PEC independently: existing replanner HARDEN, auth/evidence KEEP, receipts EXTEND, Gate KEEP, ImpactEngine CREATE, RiskPacket CREATE, no duplicates. Source\u2192IR\u2192task\u2192diff\u2192evidence lineage proven."
+      "acceptance": "PEC independently: existing replanner HARDEN, auth/evidence KEEP, receipts EXTEND, Gate KEEP, ImpactEngine CREATE, RiskPacket CREATE, no duplicates. Source→IR→task→diff→evidence lineage proven."
     }
   ],
   "next": {
@@ -635,8 +919,8 @@
     "risks[].owner required; impact not severity; mitigations is a list",
     "input_evidence_ids may only name admitted evidence (default_admit is EVID-001)",
     "declare paths: per task or worker gets docs/program-execution/<TASK>.md",
-    "validation command_or_inspection is one shell op \u2014 no && || | ; $()",
-    "IDs ^TASK-[0-9]{3,}$ / ^GATE-[0-9]{3,}$ \u2014 TASK-001A fails",
+    "validation command_or_inspection is one shell op — no && || | ; $()",
+    "IDs ^TASK-[0-9]{3,}$ / ^GATE-[0-9]{3,}$ — TASK-001A fails",
     "failed campaign_id is not reusable; stale blueprint is silently reused"
   ]
 }

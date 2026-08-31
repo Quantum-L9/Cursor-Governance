@@ -1,5 +1,5 @@
 schema: l9.wip.inventory.v1
-updated: '2026-08-31T00:19:24Z'
+updated: '2026-08-31T00:26:06Z'
 entries:
 - path: WIP/8-14-26/Web SEO LLM Trio/L9 Website Improvement — Independent Validation
     Contract Pack.md
@@ -1609,12 +1609,12 @@ entries:
 - path: WIP/8-29-26/PEC/PEC-repair-pipeline.json
   kind: dated
   date_bucket: 8-29-26
-  sha256: 08658d28cd399ec54e5ba19c0d5aeefa9db4a34927e27369df4763c54b461577
+  sha256: 80fbb34ec085c20cfd77568bdee71830e3e356f7f8a8f72ab6f946014700de25
   status: active
 - path: WIP/8-29-26/PEC/PEC-repair-pipeline.md
   kind: dated
   date_bucket: 8-29-26
-  sha256: 7b7aae5777e037c68f03e3e4e38578b261e56664718b99a241c770f9546fca2c
+  sha256: ed42f0fdc57a16b31fb763ba6214de13159d7de71d664b83b33ef53937909611
   status: active
 - path: WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-repair-pipeline.v1.json
   kind: dated
