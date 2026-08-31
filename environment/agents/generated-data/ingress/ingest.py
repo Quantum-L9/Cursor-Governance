@@ -142,6 +142,11 @@ def _run_delivery_if_configured(
         store=PipelineStateStore(database_path),
     )
     result = worker.run_once(actor=actor, job_id=job_id)
+    if result is not None and result.enqueued:
+        try:
+            worker.drain_memory_outbox(actor=actor, limit=5)
+        except Exception:
+            pass
     return result.to_dict() if result is not None else None
 
 

@@ -1,5 +1,7 @@
 ---
 name: Memory outbox drain: give DESTINATION_SUBMITTED an owner
+absorbed_by: close_sgd_loop_bd6bbbff.plan.md
+status_note: "ABSORBED 2026-08-30 — implemented as GMP-B in close_sgd_loop. Do not implement a second drain."
 overview: "Close RC-3. Generated-data memory candidates are durably enqueued to a file outbox and land in PipelineState.DESTINATION_SUBMITTED, which is deliberately non-terminal, but no component in the repository ever reads that outbox or advances that state. Add the single missing consumer inside the existing DeliveryWorker, reusing the existing transports, retry policy, receipt chain and state machine,..."
 todos:
   - id: todo-01-baseline-preflight

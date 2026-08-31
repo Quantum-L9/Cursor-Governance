@@ -15,7 +15,7 @@ E2E are executed tests, not static reads.
 | TASK-02 | RC-2 legacy replay path | **PARTIALLY_CONFIRMED** — `drive` clean, `reset` bypasses | none (guard specified) |
 | TASK-03 | RC-4 decorative policy keys | **CONFIRMED** — 12 decorative keys | none (VALIDATE_ONLY) |
 | TASK-04 | RC-5 provider fallthrough | **REFUTED** — both adapters fail closed | none |
-| TASK-05 | RC-3 outbox drain | **ESCALATED (P0-adjacent)** — no drain exists | none — stop condition fired |
+| TASK-05 | RC-3 outbox drain | **CLOSED** — `DeliveryWorker.drain_memory_outbox` plus `--drain`; opportunistic drain on `run_batch` and after ingest enqueue; `memory_outbox_root()` is the single writer/drain path | `close_sgd_loop_bd6bbbff` (GMP-B) |
 | TASK-06 | RC-6 worktree isolation | **CONFIRMED_CLOSED** — proven live | new test |
 | TASK-07 | RC-7 E2E coverage gap | **CLOSED** — E2E written and wired to CI | new test + CI step |
 
@@ -216,6 +216,15 @@ The default direction is the fail-closed one.
    `_result_contract` is ever reached. Unreachable entries.
 
 ---
+
+## TASK-05 — RC-3: **CLOSED** (2026-08-30). Drain owner is `DeliveryWorker.drain_memory_outbox`
+
+**Closed by** `docs/plans/close_sgd_loop_bd6bbbff.plan.md` (GMP-B). Absorbs
+`docs/plans/memory_outbox_drain_7c4a1e93.plan.md` — do not implement a second
+drain. Evidence: `environment/agents/generated-data/tests/integration/test_memory_outbox_drain.py`
+and the rewritten `test_enqueued_is_not_reported_as_persisted`.
+
+Historical finding below is preserved.
 
 ## TASK-05 — RC-3: **ESCALATED.** No memory-outbox drain exists
 
