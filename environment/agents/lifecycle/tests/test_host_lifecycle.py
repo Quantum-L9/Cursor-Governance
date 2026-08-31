@@ -44,6 +44,7 @@ class HostLifecycleTests(unittest.TestCase):
         os.environ["L9_AUTONOMY_RUNTIME_DB"] = str(self.database)
         self.addCleanup(os.environ.pop, "L9_AUTONOMY_RUNTIME_DB", None)
         campaign_data = campaign_payload()
+        campaign_data["base_state"]["commit_sha"] = "a" * 40
         deployment_data = deployment_payload()
         compiled = compile_graph(
             CampaignAuthorization.from_dict(campaign_data),
@@ -164,6 +165,62 @@ class HostLifecycleTests(unittest.TestCase):
         # the existing result pipeline (never quarantined as an orphan).
         self.assertNotEqual(out.get("status"), "QUARANTINED")
         self.assertTrue(receipts.host_stop_path("sub-100").is_file())
+
+    def test_host_stop_structured_result_writes_accepted_subagent_ingress(self) -> None:
+        admission = self._admission()
+        compose_start.compose_host_pre_tool_use(
+            self._pre_tool_use_payload(admission["prompt_marker"])
+        )
+        compose_start.compose_host_subagent_start(self._subagent_start_payload())
+        assignment = receipts.load_assignment(admission["admission_token"])
+        self.assertIsNotNone(assignment)
+        document = {
+            "schema": "l9.cursor-subagent.result.v1",
+            "schema_version": "1.0.0",
+            "result_id": "result-host-ingest-001",
+            "result_kind": "ReconReport",
+            "status": "completed",
+            "identity": {
+                "campaign_id": assignment["campaign_id"],
+                "graph_id": assignment["graph_id"],
+                "action_id": assignment["action_id"],
+                "agent_id": assignment["agent_id"],
+                "lease_id": assignment["lease_id"],
+                "base_sha": assignment["base_sha"],
+            },
+            "assignment": {
+                "role": "recon",
+                "objective": "Inspect the generated-data seam.",
+                "input_artifact_ids": [],
+                "allowed_paths": list(assignment.get("allowed_paths") or []),
+                "forbidden_paths": list(assignment.get("forbidden_paths") or []),
+            },
+            "deliverable": {
+                "summary": "One durable result was produced.",
+                "findings": [],
+                "files_read": ["environment/agents/results/gateway.py"],
+                "files_changed": [],
+                "evidence": [],
+                "commands_executed": [],
+                "validations": [],
+                "unresolved_items": [],
+                "recommended_next_actions": [],
+                "reuse_assessment": {
+                    "reusable_data_found": False,
+                    "confidence": 1.0,
+                    "reason": "No reusable finding in this host-lifecycle fixture.",
+                },
+                "visibility": "repository_local",
+            },
+            "provenance": {"produced_at": "2026-08-30T23:54:00Z"},
+        }
+        out = compose_stop.compose_subagent_stop(
+            {"subagent_id": "sub-100", "status": "COMPLETED", "output": document}
+        )
+        self.assertEqual(out.get("status"), "RETURNED", out)
+        generated = out.get("generated_data") or {}
+        ingress = generated.get("ingress_receipt") or {}
+        self.assertEqual(ingress.get("source_kind"), "accepted_subagent_result", generated)
 
 
 if __name__ == "__main__":

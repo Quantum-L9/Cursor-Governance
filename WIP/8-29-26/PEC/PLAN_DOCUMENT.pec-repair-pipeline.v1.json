@@ -136,7 +136,7 @@
       "task": "Land fixture corpus 01 through 14 plus semantic expectation format that is not a second Blueprint. Each fixture keeps hashed immutable source intent (IR0). Unit dispositions include represented / intentionally_omitted_with_reason / duplicate / superseded / unknown / conflict / non-material.",
       "files": [
         "environment/program-execution/compiler/tests/conformance/",
-        "environment/program-execution/compiler/tests/conformance/schema_semantic_expectation.json"
+        "environment/program-execution/compiler/tests/conformance/expectation.py"
       ],
       "effort": "M",
       "risk": "low",
@@ -527,6 +527,24 @@
       "question": "Does launchability currently write synthesized validations back into Task Cards after Blueprint seal?",
       "decision_effect": "Characterize in T-W1-characterize; do not rewrite launchability in this plan",
       "resolution": "probe"
+    },
+    {
+      "id": "U6",
+      "question": "Should the deterministic extractor consume architecture_intent.normative_signals() as its canonical vocabulary, or should _KIND_RULES be normalized case-insensitively?",
+      "decision_effect": "Verified at 450b7d0e: _sentence_kind() returns None for lowercase obligations that normative_signals() marks ('MUST','PRESERVE'). W4/AT-002/AT-003 are not closed on the deterministic surface, which is the surface tests force. Two competing normative vocabularies must collapse to one.",
+      "resolution": "block"
+    },
+    {
+      "id": "U7",
+      "question": "Should architecture_to_campaign.lower() consume repo_truth.classify_dispositions() instead of its own RepositoryFacts path-exists check?",
+      "decision_effect": "Verified at 450b7d0e: classify_dispositions has zero production callers (only test_repo_truth.py and shadow_runner.py). CE-AT-005/006 are closed in shadow only, so W5 KEEP/MERGE/HARDEN/CREATE semantics are unproven on the live lowering path.",
+      "resolution": "block"
+    },
+    {
+      "id": "U8",
+      "question": "Does the Blueprint->execution seam (launchability reader, post-accept Blueprint writes, explicit-task-id relock) belong to W8 S1/S2/S6, or does it need its own wave before W8?",
+      "decision_effect": "Verified at 450b7d0e: blueprint_tasks() reads tasks.json so a native TASK_CARDS.yaml Blueprint yields 0 tasks and launchability self-skips (B1); fill_inferred_validation() rewrites accepted Blueprint then relocks (B2); relock_definitions(task_ids=...) bypasses the drift classifier (B3). These are the concrete defects behind W7's recorded 'spine execute/Lock not proven' residual. B9 warns the B1 reader fix must be transactional with MANIFEST regeneration, not a one-line adapter patch.",
+      "resolution": "block"
     }
   ],
   "final_validation": [
@@ -553,10 +571,13 @@
     "status": "blocked",
     "remaining_unknown_ids": [
       "U4",
-      "U5"
+      "U5",
+      "U6",
+      "U7",
+      "U8"
     ],
     "next_skill": "l9-plan",
-    "stop_reason": "W0-W7 complete at e8785018 (HEAD 35880e70). W8-W10 blocked until separate Build plan with fresh origin/main baseline SHA."
+    "stop_reason": "W0-W7 landed at e8785018; re-verified at baseline 450b7d0e (819 root + 592 conformance + 153 compiler/adapter, 0 failures). External audit reconciliation 2026-08-31 reopened W4 (U6) and W5 (U7) as contract-delivered but not end-to-end closed, and recorded a previously untracked Blueprint->execution seam with three P0s (U8). W8-W10 remain blocked until a separate Build plan with a fresh origin/main baseline SHA; that plan must start from these verified residuals."
   },
   "gmp_handoff": {
     "may_modify": [

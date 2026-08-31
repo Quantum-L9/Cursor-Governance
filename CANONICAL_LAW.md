@@ -193,15 +193,38 @@ Bypass the gate for one run: `GOVERNANCE_BACKUP_FORCE=1` (a manual
 
 ---
 
-## 6. Skill Wiring
+## 6. Repository Wiring
 
-- New global skill → `l9-skill-compiler`, then `l9-wire-skill-into-repo`
+Wiring is the establishment, relocation, verification, or removal of the
+minimum authoritative integration edges required for an existing artifact or
+capability to become reachable by its intended consumers.
+
+- **Owner:** `l9-wire-into-repo` — for any artifact class (skills, rules,
+  commands, hooks, modules, exports, schemas, configuration, adapters,
+  generated projections).
+- **Governing invariant:** never repair a downstream leaf when a valid
+  authoritative upstream point can propagate the same integration to that leaf.
+  Wire source-first: authoritative owner → source registration/export →
+  projector/reconciler → adapter/binding → consumer. Upstream means dependency
+  and authority upstream, not filesystem depth.
+- A generated projection never outranks its source; a dependent adapter never
+  outranks the shared implementation owner.
+- **Specialized owners survive.** Where a narrower skill owns an exact mutation
+  (e.g. `l9-governance-symlinks` for workspace binding), generic wiring
+  diagnoses topology and delegates that mutation — it does not duplicate the
+  specialist's contract.
+
+### 6.0.1 Skill wiring (one specialization)
+
+- New global skill → `l9-skill-compiler`, then `l9-wire-into-repo`
 - New repo-local skill → `.claude/skills/plasticos-*` (not governance root)
 - **Deprecated skills cannot remain in live `skills/`.** Archive with
   `git mv skills/<name> skills/_archived/<name>`, remove from
   `AUTONOMY_MANIFEST.yaml` tiers, and keep them out of adapter reconcile /
   skill-registry generation. `status: deprecated` or `*-deprecated` at the
   top level of `skills/` is a fail-closed sync error.
+- Skill archival is a specialization of unwire, not its definition. Other
+  artifact classes retire under their own lifecycle contract.
 
 ## 6.1 Autonomy Velocity Doctrine (adapter surfaces)
 

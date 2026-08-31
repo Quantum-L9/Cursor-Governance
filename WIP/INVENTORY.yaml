@@ -1,6 +1,2545 @@
 schema: l9.wip.inventory.v1
-updated: '2026-08-18T02:03:02Z'
+updated: '2026-08-31T00:26:06Z'
 entries:
+- path: WIP/8-14-26/Web SEO LLM Trio/L9 Website Improvement — Independent Validation
+    Contract Pack.md
+  kind: dated
+  date_bucket: 8-14-26
+  sha256: bb40afc54704c68d4e092b7e6c50559d826a8e655eed60a05a998fd1f2b131e4
+  status: active
+- path: WIP/8-14-26/Web SEO LLM Trio/Program1.md
+  kind: dated
+  date_bucket: 8-14-26
+  sha256: 1ed69216e8a8e43c50bbd491b4350a840baeac8c2baa7c599cf0d083e47cdc7d
+  status: active
+- path: WIP/8-14-26/Web SEO LLM Trio/pe-campaign/AGENT_FEED.md
+  kind: dated
+  date_bucket: 8-14-26
+  sha256: 91511b2cb9436e18ad790ceb2d454fc4a40f8e1715b4b93190fcc009907bb8fc
+  status: active
+- path: WIP/8-14-26/Web SEO LLM Trio/pe-campaign/CAMPAIGN_SOURCE.yaml
+  kind: dated
+  date_bucket: 8-14-26
+  sha256: d86592b07012068ac8c28a4140053507cffc3fd67c994e78a7612c6a7408b23a
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-14-26/Web SEO LLM Trio/pe-campaign/INTENT.yaml
+  kind: dated
+  date_bucket: 8-14-26
+  sha256: d117875c4f70d14682ed08095bd8f03f64dd8b8dc59110f781da6b5156de74a0
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-14-26/Web SEO LLM Trio/pe-campaign/README.md
+  kind: dated
+  date_bucket: 8-14-26
+  sha256: 1cbd4f611139db2711c0ebd1e1e96752f0abad13e6b1243f0e0c4b6a2a1851ef
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-14-26/Web SEO LLM Trio/pe-campaign/source-integrity-receipt.json
+  kind: dated
+  date_bucket: 8-14-26
+  sha256: 99ef521192c7ff64d6ceb758f6269fdfe3034ba56bb717e6a6f957f7e5736846
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/CAMPAIGN_SOURCE.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/HOST_REGISTRATIONS.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: 79a7cd612b2285f29deb6a2c0a4bda16767f527c18bd2b136d145e670c832a4f
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/INTENT.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: e544a0da48f095b78d1bb62bca86ecaa8ed0cda035da8e7b80085428fdd13f53
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/PE LAUNCH TEMPLATE/HOWTO.md
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: d2b17fcc8809984c78c9e3168ff25d845507375b5f34aa4ad059b1507a4f9f23
+  status: active
+- path: WIP/8-15-26/Campaign Activation Files/PE LAUNCH TEMPLATE/INTENT.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: 292b4d49c2f89745fc6c113ce3be840919e3d0b2113406889d35dc935c50ef2e
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/README.md
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: fb3f5a300f1ee60c2649c53ef87e9a9dba029d68670e42db985652985142259f
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/examples/four-commit-one-pr.host-registrations.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: 79a7cd612b2285f29deb6a2c0a4bda16767f527c18bd2b136d145e670c832a4f
+  status: active
+- path: WIP/8-15-26/Campaign Activation Files/examples/four-commit-one-pr.intent.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: b9a0e16d7758b9dbf374e0c63a02b84f17d66d350fa6ee5e4a6f7ea6116dc445
+  status: active
+- path: WIP/8-15-26/Campaign Activation Files/host-patches/CAMPAIGN_EXECUTION_POLICY.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: 6e88223cb0ad57abaa978028174b8086c18655824cadcb061edb8c1de8ca359f
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/host-patches/CAMPAIGN_STATUS.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: 60ff2362d3749e71d3e787efea6df148ededadce5f6dceed8cf8cbdc14696bc5
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/host-patches/COMPILE_ALLOWLIST.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: a062354a12706e122c161d60aef464a7807e48036106c05bd8f5993cae9f938e
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/host-patches/surface_profile.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: 4192b47ea1a70601be559d3b5db1cdae9442f9e8cc92ed69c31de750e60747c5
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/level3-make-pr-single-path/CAMPAIGN_SOURCE.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/level3-make-pr-single-path/source-integrity-receipt.json
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: ffdc3886258e00f9ced91b1bd54084bbd56cb1f5a9223e432e1eafdb2e512d18
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/Campaign Activation Files/source-integrity-receipt.json
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: ffdc3886258e00f9ced91b1bd54084bbd56cb1f5a9223e432e1eafdb2e512d18
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/PE-Template.md
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  status: active
+- path: WIP/8-15-26/PE-github.md
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: d866b6a98e2512ffa6c3bdc904df810d02eb13d83b7f55c645dd8e73d732a05b
+  status: active
+- path: WIP/8-15-26/Untitled
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: 152338032dbbd260faee9f7ecbe291068d4a44edf422416649ced39981e0d03e
+  status: active
+- path: WIP/8-15-26/makefile/Makefile-CG.md
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: 1dabcd0177354c6550ad9938d3c60c53ffff7222c903c157f376cba3d63c5bf8
+  status: active
+- path: WIP/8-15-26/makefile/pe-activation/CAMPAIGN_SOURCE.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/makefile/pe-activation/HOST_REGISTRATIONS.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: 79a7cd612b2285f29deb6a2c0a4bda16767f527c18bd2b136d145e670c832a4f
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/makefile/pe-activation/INTENT.yaml
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: b9a0e16d7758b9dbf374e0c63a02b84f17d66d350fa6ee5e4a6f7ea6116dc445
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-15-26/makefile/pe-activation/Makefile PE.md
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: 23c9a55fd404aa4f5feca9a1690fa8d90fcd22eb29573febf3705664b8a35a0f
+  status: active
+- path: WIP/8-15-26/makefile/pe-activation/source-integrity-receipt.json
+  kind: dated
+  date_bucket: 8-15-26
+  sha256: ffdc3886258e00f9ced91b1bd54084bbd56cb1f5a9223e432e1eafdb2e512d18
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-16-26-random/Memory output.md
+  kind: series
+  date_bucket: null
+  sha256: 6f5995fbfbc0b6a633dd79ffb5a9b03809abcd9f74968b6d4add7dee8f412538
+  status: active
+- path: WIP/8-16-26-random/README.md
+  kind: series
+  date_bucket: null
+  sha256: 13c2f027801b5bc2315af0176344f220ba57b77f0b234f505b17fda73961c9ce
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-16-26-random/graphiti question.md
+  kind: series
+  date_bucket: null
+  sha256: 708fe9a4cfdd8c634fc5eb16a6cfd58a592e9b661afdcfb907efc7037a60109d
+  status: active
+- path: WIP/8-16-26-random/intent.yaml
+  kind: series
+  date_bucket: null
+  sha256: 60e36422f563a302648ac1709dd9e616084cd0b9ca4897ff962fc47e3ff02074
+  status: active
+- path: WIP/8-16-26-random/session start.md
+  kind: series
+  date_bucket: null
+  sha256: 5761f363c3c8bbd87cf9ce40c151f359c5325bd68de08cd3b26c62e62dddbfd0
+  status: active
+- path: WIP/8-16-26-random/world.model.md
+  kind: series
+  date_bucket: null
+  sha256: 1f1f92ed413ceb094d29a8e8e3ab91faf81d34dffacae97d7809757cd4be9603
+  status: active
+- path: WIP/8-16-26/Memory output.md
+  kind: dated
+  date_bucket: 8-16-26
+  sha256: 6f5995fbfbc0b6a633dd79ffb5a9b03809abcd9f74968b6d4add7dee8f412538
+  status: active
+- path: WIP/8-16-26/README.md
+  kind: dated
+  date_bucket: 8-16-26
+  sha256: 13c2f027801b5bc2315af0176344f220ba57b77f0b234f505b17fda73961c9ce
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-16-26/graphiti question.md
+  kind: dated
+  date_bucket: 8-16-26
+  sha256: 708fe9a4cfdd8c634fc5eb16a6cfd58a592e9b661afdcfb907efc7037a60109d
+  status: active
+- path: WIP/8-16-26/intent.yaml
+  kind: dated
+  date_bucket: 8-16-26
+  sha256: 60e36422f563a302648ac1709dd9e616084cd0b9ca4897ff962fc47e3ff02074
+  status: active
+- path: WIP/8-16-26/session start.md
+  kind: dated
+  date_bucket: 8-16-26
+  sha256: 5761f363c3c8bbd87cf9ce40c151f359c5325bd68de08cd3b26c62e62dddbfd0
+  status: active
+- path: WIP/8-16-26/world.model.md
+  kind: dated
+  date_bucket: 8-16-26
+  sha256: 1f1f92ed413ceb094d29a8e8e3ab91faf81d34dffacae97d7809757cd4be9603
+  status: active
+- path: WIP/8-17-25/claude-code-env-contract/PLAN_DOCUMENT.claude-code-env-contract.v1.json
+  kind: dated
+  date_bucket: 8-17-25
+  sha256: 709ef5b2767c3b4e2bcacdd9ec53a998cfc5704bf788a9f6afe27bdb8ff14117
+  status: active
+- path: WIP/8-18-26/pe-v3-control-plane-convergence/CAMPAIGN_SOURCE.yaml
+  kind: dated
+  date_bucket: 8-18-26
+  sha256: f11e155d59425e9c188323a05981b76a4f3a2ae3169e6546ee97b63ef00dd0c2
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-18-26/pe-v3-control-plane-convergence/INTENT.yaml
+  kind: dated
+  date_bucket: 8-18-26
+  sha256: 7530e99297a882a5e182ac57bf4bee2d552c81b69096da9fb9b1fde7a7a685f4
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-18-26/pe-v3-control-plane-convergence/PREP_RECORD.md
+  kind: dated
+  date_bucket: 8-18-26
+  sha256: 4dbe24f792e37c43a2d7104ac80692e1583741a9d76bfbbc06b290924bfc975b
+  status: active
+- path: WIP/8-18-26/pe-v3-control-plane-convergence/source-integrity-receipt.json
+  kind: dated
+  date_bucket: 8-18-26
+  sha256: b4bc694f36126575bf43b0e951ca852e8ae9247c1a857b18a0d53458ae291528
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/OIDC/cursor-governance-infisical-pack/.github/workflows/claude-code-bootstrap.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 3761fc0bab48c6fbc4762468a528b951091eb9262a71436244d65372312a994c
+  status: active
+- path: WIP/8-20-26/OIDC/cursor-governance-infisical-pack/ops/secrets/INFISICAL_OIDC_SETUP.md
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: cf94d988344b9fe3939e9024532b43dc182c9afe75f95aad8039cb6c3f9e7585
+  status: active
+- path: WIP/8-20-26/OIDC/cursor-governance-infisical-pack/scripts/claude_code_bootstrap_verify.sh
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 50f0c6aa77115d92204e89e47658d3abe3ff23de5a54a508d688b7a52ec6154a
+  status: active
+- path: WIP/8-20-26/OIDC/infisical-gha-oidc-v1.md
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 80d055b927ca0338a1652b73366d353069cbfabc8e3fca23f7ac804ef6587650
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/.coderabbit.yaml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 569502959d002131fa78f97bac1d5245312ab4c3ed5d05590958e2fb8e095b86
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/.pre-commit-config.yaml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: bb80f29040a84a20c42566cc96fb8a8b90e5dca3e83b30763eda3f0790791ef5
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config 2/.semgrep/semgrep-rules.yaml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: daac277b32625591fc085918525e6ce9d1948d76b64feaded5a2d2e461167b3b
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/copilot-instructions.md
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 665f54e82d1f091ede2f4a2613b2e26f7eadd52b2d6e737656105b988daceb76
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config 2/pr_review_config.yaml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 1502e645e978aff2831c20cd9d0fcf8f0081fa3478131220ddb5a3eeb71d893a
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/pytest.ini
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 8ada3c3ba795a43d9535639599eb2b883784ad4b09d6b78aade3b9cd6bbfdd18
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config 2/release-drafter.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 2a46d2c76a97e2e3c2206c8d7cc5dd1191409720b856a01baec4c0565acf5a3a
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/requirements-ci.txt
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 3e39cbb5ee773d645c858494a2997bb1f4dbb03142afd4cf33391bb53a4a299a
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/sonar-project.properties
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: b59db0bb401cfdc2808e2ae11f1fb0d976ddcd8c850341c9953ff8efb7834e4c
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config 2/workflows/audit-pr-review.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: e8589289f7a3a9cc2b8593a08ff8f159704d508e8b369b7cb63681f4efe7792a
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/baseline-ratchet-caller.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 8fcc0af429d0c242476255910c69eebed100ad54c7810c7f167f09aa8dafebad
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/ci.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 997d7c6a16b8a2175b925eccbbe5403a8518810ba152dbb5f28ac0a1d3127fc2
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/codeql.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 4d15fdcd0d0ac97804b66897047a25483f982a77be93a658fa137ad4a0b8de6d
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config 2/workflows/coderabbit-notify.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 6d6510eee35db9efdc60beb8a45e341d79b877e7377f978e0b833a21bfb8fba8
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/compliance.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 170ca0709d46379d8859c64a94bdce2e582299ba6a99438254d8f5986fbe2c76
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/docker-build.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: f479f0291fc0e736f15305f0f035b20107701dd16fa496da8dbf12bf4c643140
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/docs-consistency.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 0bc6d9d9c07838910a6b63fb774a02cb1ec060c5d28e75323d6e7d7f71decbe4
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/docs-sync.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 0162c6a38b9988bf72fca366db7b2c7b148f95e16b6fd2ebf562e68cecf68e1a
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/gitguardian.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 9f426dc8b3347a7d03b309d532cfaf0b0c6fe33258e07b31063079ec70bc90c4
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/gitleaks.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: a0f0c0282f8bd1f87e2b2b84eab407e82c13fab4338fe15ac2909df027dd2b4e
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/k8s-deploy.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: dcaeccd16d9c36d38201b027ac9f71b20784407156299de26e287fada665236c
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/l9-constitution-gate.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: d721397d5cf8e48edd33f35ebd3608a1d3cf565ae562a11e2ca36a27a2ecb052
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/l9-contract-control.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 77a58aa9fab056db931756d57325dcca1255011130d3cab32e139569994dee4a
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/perplexity-code-review.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: a9008c85bc7946add53c46c165db2d2db3c5c19a25d30b7fdacfe29f5cf22c0b
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/pr-pipeline.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 698e1be844081cf39fc2a2393358b926c110936b4e31a23487120aa8e8621343
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/pr-review-enforcement.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 7594d7601f20262332157eae622bf10d0efb0519c59a7c8002ac3e12d134719c
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/refactoring-validation.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 8deb3998ce4f5718cf3ace00476da77009e4b303a40bca859d73fb400c73fa20
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/release-drafter.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 4c2a782811407740ebcb5c92a4def8bebd5112f276737eefd08b53da04790a86
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/release.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: c96eb7a59095364cd41606e20a26e6411c6a870116764425110f95d5713f88d8
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/sonarcloud.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 48fa51b28f73113612021c3b40e2caf25698969f0900811b3532f41942a6c278
+  status: active
+- path: WIP/8-20-26/pre-commit-config 2/workflows/supply-chain.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 4049b588db404b6e48fcdca9d4d73bad53765c99d33ec5684433a2a98667ccd5
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config/.pre-commit-config.yaml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 464c7e0563b715a43b40ad2de3aa37a9432a48accf3375035d3bab8b33737ae5
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config/workflows/audit.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: f836afb7ba80770117ed97885fd732a0d88ca6bd19b4ec08e584e0dbd0ab1925
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/baseline-ratchet-caller.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 86291b6100d74fe4fc496bc5365259d79ad9971ff36ed98a7b02d208bdd78b24
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/ci-quality.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: f0edddce32fe7414ae37dbccb103a24edf9ccfe3f793d28438523aeab1ce597e
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/ci.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 39f1eb2b523bd9437cb026c0529e3c855ebe93e402bc4cef19b2474c10ad58b1
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/codeql.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: fc7274464899c5690b6bba9f4417af0c4d0d62eece795d007c172d4bd7c025b8
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config/workflows/coderabbit-notify.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 440678a6f16c5643e1e2da76ed8c5616176609fce39220329ab739ba8c16f834
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/compliance.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: fccd7588833cc53d723afdfbaa0655e0a7fc4f4c442bac544c2c9e9d1253dced
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/contracts.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 1264d1477971f9b5c69830f33655d5c6ce1718404818b0a122ba62f40dd06737
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/dev-layer-gmp.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 294998d063a928ef225fe8ea4cf4dc25b05e8f5b1581a4a2b0fda5f077d124a7
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/docker-build.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: c14229bdeedd57e491b35b1ca936a96836ab53169f21919ef1e7266d55c42e4e
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/docs-code-sync.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 1155e9a65cab5b9e61fe89d9b838f9fc244047e40e80012c758d140a4db08297
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/k8s-deploy.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: cf93814b2818c0ad66974813380dfc73ffa9c369a48f75864bc3bab21a2bcd61
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/l9-analysis.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 4fbde47a749eb97940ef61491290d9b876405b7316c7ca252e59e2a2fae66121
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config/workflows/l9-lint-test.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 58c525171cda88085d1f5c6fc64d298732666fdc411cd377059299c45688da47
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config/workflows/lint-autofix.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 2c2970f468dd4392c703d43332306acfa11a2944773de6f0965058ae2689ec5d
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config/workflows/pr-review-enforcement.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: dc811fca8be05b9a62ff5449b5f38870408e9d3b2c4c09a97940faeb2452e26b
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/refactoring-validation.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: eb220b948dd3d060ae27c86eeb089e718c6fca3cc965de83ee30dc5c018d4d41
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/release-drafter.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 005582018d922f415024a85a809598a1eed909088ee8c5aaafa1e8e1db80a054
+  status: active
+- path: WIP/8-20-26/pre-commit-config/workflows/supply-chain.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: db56c1f7a9999af68d64df70bc3b4b585194f61756f06b650d366abd713bbc35
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-20-26/pre-commit-config/workflows/terminology-guard.yml
+  kind: dated
+  date_bucket: 8-20-26
+  sha256: 019629220cf0ebdbf8e27131352e18b3b487ceea5ded88ba5f814eb3a740d188
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/.github/workflows/agent-git-guard.yml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: c4dbf8cc2e0dcc1e4709205578e560e68f6580bd1b1e02e6a06b7f081a7e217c
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/.github/workflows/artifact-provenance.yml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 4e63247c161b4ff79ed01b74e2cc6c90b7c44f0b50775ff74cfc3e1b603c8ae9
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/.github/workflows/deploy-with-provenance-gate.yml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: ea93768f246b1ef67828357c37ca65a906825249a223b39eb945b8a64fd90e9d
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/.github/workflows/feature-tree-gate.yml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 4f0ede83b7a428efb3e03a8b1ee81e80f8f33d223bedbfc4af864538599a0af5
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/.github/workflows/merge-queue.yml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 7d2a5a71f07744760056c3dc0da628e9f92546218a0e70c2d7c1dff5707fa0b2
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/.github/workflows/policy-conftest.yml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 4412bf1cf0938bc1f3f648a3041126e2e8f6b451e922d05db488cefc5ae7d140
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/.github/workflows/preview-environment-gate.yml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: c6645429f4aa24e7ed81860168f5d97b59a37f84229afb043afa04c7477d0505
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/.github/workflows/semantic-conflict.yml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 86da0d8b2fd100b1043d320fd0529721018a95a933cf65c6ab1c9f017931a5fc
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/.github/workflows/test-impact.yml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: cff60ff335e1a5f26af5ba149aa3266c38da76eaa7c9485249bfe956b65a9b35
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/EXTERNAL_CONFIGURATION/github-merge-queue.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: ff8e8295e009300f2a34cc77cf42420e933c588897d70bb5227657c0d5096149
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/EXTERNAL_CONFIGURATION/github-ruleset.program-execution.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: eecfc69ede81a6a8f2125186f335b0ed8938ad7e3a5694a7f90cfc0fc71ede3d
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/EXTERNAL_CONFIGURATION/supabase-preview-branches.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 9e2d25b90210497c17586a47ac28627e052a8c77aa65dd2a5809d3cb74b57075
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/EXTERNAL_CONFIGURATION/vercel-preview-integration.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 57032afc68c0276028febe3cb65fe40cd5b5211c64f8e3f628eb0880ab0b532a
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/MANIFEST.json
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: d90c8c497bf539b7b616372590217f64f66baadbeb19d9bed07be1800e45607c
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/Campaign-memory
+    Cut over/Activation.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 67813b664d2074b7daf29123a6187c2d9f9028bfd5010c6763e2717a04e440f8
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/Campaign-memory
+    Cut over/Campaign Source Yaml.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 4356d6b034aaf897f22308d05058927a917a458c2027d84ca136cebcf7d3a7a8
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/Campaign-memory
+    Cut over/Memory Cutover Spec.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: c1e918d84fc2b14083ff918c58e1cbb1c799c7897f6b4b0f27093099cd811e6e
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/Campaign-memory
+    Cut over/Program.yaml.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 2d89106bcb7a6503f5b855911695f34017fd2ed8baad7a8e7e1148affb8dafbc
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/Memory1.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: b382dcce6a1207bd5c4d57a8cc95151d4343f3cf44da96ad4297a5323df167f7
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/Memory2.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 7a82ef37907f81327693f1254ca13ce085f39a15b86e19cab0f6220289d36d54
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/Memory3.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: b876460709b8ffbd676617052cfa94530f1a378a8b44629653d4b41f1bc66ab3
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/Memory4.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 6784fba09152d178bbc9c1ac58e3670d365d81ebb8a66f270f5a381dae8f9f8d
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/Memory5.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 932f7d5b67e52badf9d269fdf05fda446d0bb84bbc916b9bc2179b731e5fc530
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/PE redis.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 7c07a47534e9bea7942a62852576b02274233ec583cc9392ad3b84badf9fde57
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/PE- Memory.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: fc48a26039b98587d89b4eff45eb0309871d08675979c0020fc6ac73466b20ad
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/PE Memory/l9-shared-memory.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 7acfb95bc770955b6b2958f4f3a25b501d06c551fb479704653f5d6856aa17ba
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/README.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 7c0eafa9d67f7cc2924e17df609533b7db3aab57a36ebcb5b2a3500e971e80de
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/RUNBOOK.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: eae8c0373ddf83981a40f56eb74289986aba9d3ff77e4c0c7667f49d134e4103
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/commands/agent-git.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 147b561c6237a6485fe295f7b3f6dfdcb84003913bc3f60b30fc804b827857c2
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/contracts/program-execution/canonical.environment_lease.v1.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 166c5f93c3672b371ec5466805f8ef55a8e4480f579424a79bce775a6d95afb6
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/contracts/program-execution/canonical.merge_queue.v1.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: ae517f721d08eb811d7723c5bea9d368c7c28bff5dfb613941e37eadd69a395b
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/contracts/program-execution/canonical.provenance.v1.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: b60f4e48cf3f1c5ff5866aba0e4d7a2657309dadba73d9a28daf1cca9c010428
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/contracts/program-execution/canonical.semantic_conflict.v1.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 7948889dae034bce1bdf54249627068472a99f474c881ed133c9899f8d9c439e
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/contracts/schemas/canonical.schema.environment_lease.v1.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 527400fae0916647ab73f5607ca1ef7d44c486c6e0757adf34491064e3e56d58
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/contracts/schemas/canonical.schema.feature_tree.v1.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: f9ae9e300ca88e8940187b8171f7b27e7533c9df6dbe4c1ba0c54044e23a28fa
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/contracts/schemas/canonical.schema.semantic_contract.v1.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 50b0fee957b5b50555552bc5e80966afc2bb73eb26b0bdfdd28b63971375a72e
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/contracts/schemas/canonical.schema.test_impact_map.v1.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: ab9681a4e3c172d802b8aee9d58fc0f8fe3fa4ac59ac0c5991ed0c96136d5524
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/governance/generated/CODEOWNERS
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 2367ceb592b74ecb665abde054823dd08f401c9ed81e2c088b5ead94b0f64e7d
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/governance/generated/github-ruleset.program-execution.json
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 74c16639928ff83e44a7acd63ee1670b908665d237af5ad9162946ac033e7eaa
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/ops/__init__.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/ops/config/environment-lease.config.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 22f93a97d52a6d6ff51a18f89393a42fdc1a71ffc1a088839d13fbb8b5c0d6c7
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/ops/config/merge-queue.config.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 77980e64bc640b4776ad360ffc564071a863f27298750a23c443c377f4d3dd0c
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/ops/config/test-impact.config.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 5a507e2a1b8d6e287b9bdb15017ba8c3c1759178b3a54ae64a4ebf95cd3476ea
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/ops/lib/__init__.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/ops/lib/telemetry.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 639e6472939ac7373a87c032d0ac8de96b3d4dfa5bbeb1e2af95f0460a50fd0b
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/ops/schemas/program_execution_event.schema.json
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 87651370516797bb7b597dfc52c75c3fe4c8b2522a3ed19c7cc97f85602f31bd
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/ops/scripts/emit_program_execution_metrics.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 53c4eba6a085edc087087b9b1a9abb4e26f94d2dc0f277816b1394433eb15229
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/ops/scripts/reconcile_preview_leases.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 1cb8c65a5528c46944d9ce25fbf0a519d665a25ca0002d5894a495ec5d3aba66
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/policy/environment_lease.rego
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 7ed8354477addbe4ea2039adef7bcb64bc9c55ee5f5d09ca5a6bbf1e3a6e7df5
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/policy/feature_tree.rego
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 8225962e94d691ada1f64885f1d8718ef54800d2514224f4415e1afc6eea7db1
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/policy/merge_queue.rego
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: aa52d6ea5d1b23bacc2427395f538c04df5635da902d8b626eb0f6f9190eab65
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/policy/provenance.rego
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 3b53443ed4f051e3835b864a580328ce632dc44e8f98f0dead4ffdf20244140f
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/policy/semantic_conflict.rego
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: b55f2a0fb9a95b6df3ea379790d53de1b33d455da8d339bc3289de4a51bba417
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/policy/testdata/invalid_parallel_scope.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: b0275caf2fc3721a6c5a676ef04acd2cb604f4f738f16efa7f702ec992b7c55c
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/policy/testdata/invalid_provenance.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: c1e5e892e17a079748cd780e0ce9f5995fd7de40e74978ba3b89dd5109bf0d09
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/policy/testdata/valid_environment_lease.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 024c0910dd1958fdf29fe8a8867f9217f35a643f2b369ebc76798ae470367ff4
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/policy/testdata/valid_feature_tree.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: fdfbe9a9936d5cb0e996c6ea60ef7b1c4ba8652b44b2b229e35867ef95b96b84
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tests/fixtures/feature_trees/PE-010.contract.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 25cf54c697a69632c5952486ec189be371ddddc422bca30910f17b2c3a0ba31d
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tests/fixtures/feature_trees/PE-020.contract.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 25cf54c697a69632c5952486ec189be371ddddc422bca30910f17b2c3a0ba31d
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tests/fixtures/feature_trees/invalid_cycle.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 022fa8b4497459b55263a7731e1aae87c721de1b41e4f9f5750da85d6a9e524f
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tests/fixtures/feature_trees/invalid_parallel_scope.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 86367a7a65b7523a38d5a62864ec17c9c53bcc0838850e3a7fdaafb0775e1ed9
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tests/fixtures/feature_trees/valid.yaml
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 0fff09356c6624e12a673bee407931e583272a6c2e7c2bc9228d154042b0bbe7
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tests/tools/test_agent_git.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 3494b68df8641d6e2fb1ba88f3e97064742fbae84c337f79319b9e5dee7a7d26
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tests/tools/test_check_feature_tree.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 7d0ee9ad3677e92d3b3458f19c0b46c865bb2c16ac7af61ec2e175b3832816e2
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tests/tools/test_telemetry.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: b9d12919210363ebe2284b471b3fe92b5e6638f449442d2cd89b420d38225b8e
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tools/agent_git.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 4e58812e8c33eba324fcc0b1b34872234f2b32d84c21a5f2dbb1103b08b37cce
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tools/check_feature_tree.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 37dcf6552c15debfb629af4aa59e7a221063042cfd57634d2b59c46f8e55fd04
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tools/check_merge_queue.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: ce6012705838b049426d2559dc157a1e59aa0077de5361b95e859d859b20415d
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tools/environment_lease.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 515a901faaede56c6caa31f690411c837861c8523808857f3df5dba76a8a993f
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tools/generate_program_execution_artifacts.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: c285cbdc6bcd6200b49eac250acda2539ea9efba26aed1ef7a6bb1a188b9d7d3
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tools/select_impacted_tests.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: abc9549b68ce9d87d48cfdb373ca37d079ea7f68a45b16cb17abdb2f4b3d6304
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tools/semantic_merge_probe.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 72ed32014e7c682890e2b0954d7d16c6d7cbc808e4b95608ca8125ea42ce0073
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/tools/verify_provenance.py
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 963e370519037b8943f6816539442f75a84a9bca832161ae5f206cf3100847c9
+  status: active
+- path: WIP/8-21-26/Perplexity - program-execution-pr-pack-v2/wiring/ob-010-instrumentation-diffs.md
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: f53349e3bd4fbeb4b0aeab5e359d9a095d4622122837fd9285b80f81146dd11e
+  status: active
+- path: WIP/8-21-26/claude code environment/02-setup-script.sh
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: dab9e0f5b29ef135e79ef833cadb47e18665966c2b8d4a6d79ec1320f0a638b4
+  status: active
+- path: WIP/8-21-26/claude code environment/02setupscript.sh
+  kind: dated
+  date_bucket: 8-21-26
+  sha256: 79dfdbbad4b1de415520f6a513f0160fa9da10ad8ba565e9a4bae04dca98a888
+  status: active
+- path: WIP/8-26-26-Claude Environment/PLAN_DOCUMENT.claude-env-pending-fixes.v1.json
+  kind: series
+  date_bucket: null
+  sha256: 6e3ae86847e1cda9a2237ad1d08ccaf8b2b70a99374b61b75c71fec0751b6a5b
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/8-17-25-Claude/claude-code-env-contract/PLAN_DOCUMENT.claude-code-env-contract.v1.json
+  kind: series
+  date_bucket: null
+  sha256: 709ef5b2767c3b4e2bcacdd9ec53a998cfc5704bf788a9f6afe27bdb8ff14117
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/DEPRECATED.md
+  kind: series
+  date_bucket: null
+  sha256: 44c9319471fe5485238ca1b9559abe6141f4a4c831e143cb6b1584eca4bbd747
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/URGENT-environment-experience-progress.md
+  kind: series
+  date_bucket: null
+  sha256: eb87f28df106581624af352ea1fe5f69dc90d812ab9a32b7b2e36709821e4dad
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/claude code environment/02-setup-script.sh
+  kind: series
+  date_bucket: null
+  sha256: dab9e0f5b29ef135e79ef833cadb47e18665966c2b8d4a6d79ec1320f0a638b4
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/claude code environment/02setupscript.sh
+  kind: series
+  date_bucket: null
+  sha256: 79dfdbbad4b1de415520f6a513f0160fa9da10ad8ba565e9a4bae04dca98a888
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/claude-code-mobile-environment/README.md
+  kind: series
+  date_bucket: null
+  sha256: 3f8b6dd97d9ede28e9e14770d2ed5fd8d7e7438c2cca3d085e6387019e447324
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-26-26-Claude Environment/_archive/claude-code-mobile-environment/claude-code-mobile-environment.plan.json
+  kind: series
+  date_bucket: null
+  sha256: e5adc5edbdb83538eababf00b6e075515831c680dd00a973f67cc49abd67c5a7
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/claude-code-mobile-environment/claude-code-mobile-environment.plan.md
+  kind: series
+  date_bucket: null
+  sha256: ad5ac6e27570402a1ab0503c3ff1b5e50aaeee7695cd68727f7fcd195eef2833
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml
+  kind: series
+  date_bucket: null
+  sha256: be4458074dba842e62159ef017c83ed85b92fc7239e9c2a77ef57e7fa2cbf421
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/ARCHITECTURE.md
+  kind: series
+  date_bucket: null
+  sha256: 2edc22bbe61f6bc54bc2cc549d0a9019f8766655a172467a7a55f422f6f2e6b9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/EXPERIENCE_REPORT.md
+  kind: series
+  date_bucket: null
+  sha256: b057a73f65f79f6ac09a5b410447c7576966fab4166b454b664d4a7e34b8d98c
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/FRICTION_AND_FAILURES.md
+  kind: series
+  date_bucket: null
+  sha256: 6876432d31e45d8eba26d0b7292915b42506a1cfc24c01c3c7dff60ca3646180
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/IMPROVEMENT_PLAN.md
+  kind: series
+  date_bucket: null
+  sha256: 928d5c91c6f0fe899972227a6215021c10c5f961315f8cf4eb4127b1df251b1f
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/LAWS_AND_INVARIANTS.md
+  kind: series
+  date_bucket: null
+  sha256: f7cc334fbdd133b277c40b65181d6391a9cd7cb040e0fa2dcf8b84e93c0e44b0
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/OPEN_DECISIONS.yaml
+  kind: series
+  date_bucket: null
+  sha256: 431394f6ce8e0cb17aeeff10eba9a204e7114505455e2e2ffd73d05e01eb611b
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/PROGRESS.md
+  kind: series
+  date_bucket: null
+  sha256: e3982cb78d163c0dd90675e744897dd96c492c21f4fa1e1f6af3cdc97fd73ef9
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/README.md
+  kind: series
+  date_bucket: null
+  sha256: ca4066bf1c0ca008c45fb83b1346605e3e5a46a643fcccebfbaac988205b4e36
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/_reconciliation/COMPLETENESS_MATRIX.yaml
+  kind: series
+  date_bucket: null
+  sha256: 265e50819134024194ebfc75cc996d489aa7704ffcd24c5a72c1e1ede38899f8
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/_reconciliation/CONFLICTS.yaml
+  kind: series
+  date_bucket: null
+  sha256: 4919ba66be03bb8c048d4463bfc4cdd2b55fbbbaba370190be1fb690e9c6cba0
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/_reconciliation/CORPUS.yaml
+  kind: series
+  date_bucket: null
+  sha256: cd6e4022ce4e7162e74d2eedd05f7b6ea6e19a43fb0575f6253ae8f8eadf022c
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/_reconciliation/LINEAGE.yaml
+  kind: series
+  date_bucket: null
+  sha256: 0ae955c5c50f2cbc3700fa103c02575f760d179d4a245c54bcd44950e8d43525
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/_reconciliation/RECONCILIATION_LEDGER.yaml
+  kind: series
+  date_bucket: null
+  sha256: 45fdfb15c76be437413df1deac7f9c9fc01d323070e35aff06cb61e9aba57d8e
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/_reconciliation/SOURCE_MAP.yaml
+  kind: series
+  date_bucket: null
+  sha256: cd9c7e97680e5b01f88927a12c214f03cbf477da81241741f4daead2398bd649
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/environment_inventory.yaml
+  kind: series
+  date_bucket: null
+  sha256: 43af6b3d11383de10f2f169cf7df5d48ba1e62911f30bbb92df58e942fdf7b54
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/experience.yaml
+  kind: series
+  date_bucket: null
+  sha256: 83c5cff0e205d9cc6ecd39d4109ab1739fbcf4a43c77d0d1b70a9d59fce4aa43
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/failures.yaml
+  kind: series
+  date_bucket: null
+  sha256: 811e1bf870a467b903dd8e4e59145b5901b9301d73c528ef90d63cb8a316e34e
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/friction.yaml
+  kind: series
+  date_bucket: null
+  sha256: ef80964d0f4be371b1afe6c966a84bfadced673cbd81ebc0352e75b04b7c7de6
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/improvements.yaml
+  kind: series
+  date_bucket: null
+  sha256: 3f3712cd4b790618be73daabb20c345c63478a1e51617f8a0894992104cd3c98
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307/progress.yaml
+  kind: series
+  date_bucket: null
+  sha256: e409b091388359d3153917b957c69489188faad1ab995c289029bb459bc7ee91
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/ARCHITECTURE.md
+  kind: series
+  date_bucket: null
+  sha256: 2edc22bbe61f6bc54bc2cc549d0a9019f8766655a172467a7a55f422f6f2e6b9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/EXPERIENCE_REPORT.md
+  kind: series
+  date_bucket: null
+  sha256: b057a73f65f79f6ac09a5b410447c7576966fab4166b454b664d4a7e34b8d98c
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/FRICTION_AND_FAILURES.md
+  kind: series
+  date_bucket: null
+  sha256: 6876432d31e45d8eba26d0b7292915b42506a1cfc24c01c3c7dff60ca3646180
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/IMPROVEMENT_PLAN.md
+  kind: series
+  date_bucket: null
+  sha256: 753c4db7820cf0c78bb8648620e68fd37010fa6cb4cea0b334288f947e4290ce
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/INHERITED.yaml
+  kind: series
+  date_bucket: null
+  sha256: 6edd1e52667e434bb113fe48bf1eac76b9e1e6bd8260ca4e78aa2663dd94a5f1
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/LAWS_AND_INVARIANTS.md
+  kind: series
+  date_bucket: null
+  sha256: f7cc334fbdd133b277c40b65181d6391a9cd7cb040e0fa2dcf8b84e93c0e44b0
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/OPEN_DECISIONS.yaml
+  kind: series
+  date_bucket: null
+  sha256: 34dd571d7f2312dec307b6a456c57b4e7b53d6e27f1faf029417a5b63564404b
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/PROGRESS.md
+  kind: series
+  date_bucket: null
+  sha256: d9126dd5331d513a6a21e93400dec0a499531e7122d23c66d6dfb35c31251368
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/README.md
+  kind: series
+  date_bucket: null
+  sha256: 2bdcba84b2c105241f3469923eea5c80d2924ab38cac46dc541d7d5eba29d710
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/_reconciliation/COMPLETENESS_MATRIX.yaml
+  kind: series
+  date_bucket: null
+  sha256: 265e50819134024194ebfc75cc996d489aa7704ffcd24c5a72c1e1ede38899f8
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/_reconciliation/CONFLICTS.yaml
+  kind: series
+  date_bucket: null
+  sha256: 4919ba66be03bb8c048d4463bfc4cdd2b55fbbbaba370190be1fb690e9c6cba0
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/_reconciliation/CORPUS.yaml
+  kind: series
+  date_bucket: null
+  sha256: cd6e4022ce4e7162e74d2eedd05f7b6ea6e19a43fb0575f6253ae8f8eadf022c
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/_reconciliation/CURRENT_STATE_RECONCILIATION.yaml
+  kind: series
+  date_bucket: null
+  sha256: af7c2d40c4fe1939da7f7f50f44f161998450863627c4b7a79d139ab5e3b4c92
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/_reconciliation/LINEAGE.yaml
+  kind: series
+  date_bucket: null
+  sha256: 0ae955c5c50f2cbc3700fa103c02575f760d179d4a245c54bcd44950e8d43525
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/_reconciliation/RECONCILIATION_LEDGER.yaml
+  kind: series
+  date_bucket: null
+  sha256: 45fdfb15c76be437413df1deac7f9c9fc01d323070e35aff06cb61e9aba57d8e
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/_reconciliation/SOURCE_MAP.yaml
+  kind: series
+  date_bucket: null
+  sha256: cd9c7e97680e5b01f88927a12c214f03cbf477da81241741f4daead2398bd649
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/environment_inventory.yaml
+  kind: series
+  date_bucket: null
+  sha256: 43af6b3d11383de10f2f169cf7df5d48ba1e62911f30bbb92df58e942fdf7b54
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/experience.yaml
+  kind: series
+  date_bucket: null
+  sha256: 83c5cff0e205d9cc6ecd39d4109ab1739fbcf4a43c77d0d1b70a9d59fce4aa43
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/failures.yaml
+  kind: series
+  date_bucket: null
+  sha256: 811e1bf870a467b903dd8e4e59145b5901b9301d73c528ef90d63cb8a316e34e
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/friction.yaml
+  kind: series
+  date_bucket: null
+  sha256: ef80964d0f4be371b1afe6c966a84bfadced673cbd81ebc0352e75b04b7c7de6
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/improvements.yaml
+  kind: series
+  date_bucket: null
+  sha256: b902eea3375de4b4fa1fb557082bf0a2c6d86f5d8e82b9915c191a8e075b8626
+  status: active
+- path: WIP/8-26-26-Claude Environment/_archive/environment_experience_improvement_pack_p307_revised/progress.yaml
+  kind: series
+  date_bucket: null
+  sha256: e1b53ba843c2a6f5aeb14120050a39018ffcbffa17c8f84f8ab760ccb75b7d28
+  status: active
+- path: WIP/8-26-26/GAR_PHASE2_INTEGRATION_EXECUTION_CONTRACT.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 289769f1c3b73bc50fb6416e6f348a0298e0b5e48f15e804862912af186a8294
+  status: active
+- path: WIP/8-26-26/PEC/PEC Contract.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 66fa28ebe97a4c9fc243b1d700b28c221e9c4151fc94f86d553f50e9ec381e48
+  status: active
+- path: WIP/8-26-26/PEC/pec1.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 6b3212ee4eab8f692c6a3b37409bea4e36a3757fd6bc7221bbe5c6af7b724678
+  status: active
+- path: WIP/8-26-26/PEC/pec2.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 2bee3cda30da3f5c46dcd6ded01cd0c7f62604233bc8a7b8a134506cba6b0030
+  status: active
+- path: WIP/8-26-26/URGENT-environment-experience-progress.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: eb87f28df106581624af352ea1fe5f69dc90d812ab9a32b7b2e36709821e4dad
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/ARCHITECTURE.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 2edc22bbe61f6bc54bc2cc549d0a9019f8766655a172467a7a55f422f6f2e6b9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/EXPERIENCE_REPORT.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: b057a73f65f79f6ac09a5b410447c7576966fab4166b454b664d4a7e34b8d98c
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/FRICTION_AND_FAILURES.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 6876432d31e45d8eba26d0b7292915b42506a1cfc24c01c3c7dff60ca3646180
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/IMPROVEMENT_PLAN.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 928d5c91c6f0fe899972227a6215021c10c5f961315f8cf4eb4127b1df251b1f
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/LAWS_AND_INVARIANTS.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: f7cc334fbdd133b277c40b65181d6391a9cd7cb040e0fa2dcf8b84e93c0e44b0
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/OPEN_DECISIONS.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 431394f6ce8e0cb17aeeff10eba9a204e7114505455e2e2ffd73d05e01eb611b
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/PROGRESS.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: e3982cb78d163c0dd90675e744897dd96c492c21f4fa1e1f6af3cdc97fd73ef9
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/README.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: ca4066bf1c0ca008c45fb83b1346605e3e5a46a643fcccebfbaac988205b4e36
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/_reconciliation/COMPLETENESS_MATRIX.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 265e50819134024194ebfc75cc996d489aa7704ffcd24c5a72c1e1ede38899f8
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/_reconciliation/CONFLICTS.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 4919ba66be03bb8c048d4463bfc4cdd2b55fbbbaba370190be1fb690e9c6cba0
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/_reconciliation/CORPUS.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: cd6e4022ce4e7162e74d2eedd05f7b6ea6e19a43fb0575f6253ae8f8eadf022c
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/_reconciliation/LINEAGE.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 0ae955c5c50f2cbc3700fa103c02575f760d179d4a245c54bcd44950e8d43525
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/_reconciliation/RECONCILIATION_LEDGER.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 45fdfb15c76be437413df1deac7f9c9fc01d323070e35aff06cb61e9aba57d8e
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/_reconciliation/SOURCE_MAP.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: cd9c7e97680e5b01f88927a12c214f03cbf477da81241741f4daead2398bd649
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/environment_inventory.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 43af6b3d11383de10f2f169cf7df5d48ba1e62911f30bbb92df58e942fdf7b54
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/experience.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 83c5cff0e205d9cc6ecd39d4109ab1739fbcf4a43c77d0d1b70a9d59fce4aa43
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/failures.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 811e1bf870a467b903dd8e4e59145b5901b9301d73c528ef90d63cb8a316e34e
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/friction.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: ef80964d0f4be371b1afe6c966a84bfadced673cbd81ebc0352e75b04b7c7de6
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/improvements.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 3f3712cd4b790618be73daabb20c345c63478a1e51617f8a0894992104cd3c98
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307/progress.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: e409b091388359d3153917b957c69489188faad1ab995c289029bb459bc7ee91
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/ARCHITECTURE.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 2edc22bbe61f6bc54bc2cc549d0a9019f8766655a172467a7a55f422f6f2e6b9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/EXPERIENCE_REPORT.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: b057a73f65f79f6ac09a5b410447c7576966fab4166b454b664d4a7e34b8d98c
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/FRICTION_AND_FAILURES.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 6876432d31e45d8eba26d0b7292915b42506a1cfc24c01c3c7dff60ca3646180
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/IMPROVEMENT_PLAN.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 753c4db7820cf0c78bb8648620e68fd37010fa6cb4cea0b334288f947e4290ce
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/INHERITED.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 6edd1e52667e434bb113fe48bf1eac76b9e1e6bd8260ca4e78aa2663dd94a5f1
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/LAWS_AND_INVARIANTS.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: f7cc334fbdd133b277c40b65181d6391a9cd7cb040e0fa2dcf8b84e93c0e44b0
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/OPEN_DECISIONS.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 34dd571d7f2312dec307b6a456c57b4e7b53d6e27f1faf029417a5b63564404b
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/PROGRESS.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: d9126dd5331d513a6a21e93400dec0a499531e7122d23c66d6dfb35c31251368
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/README.md
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 2bdcba84b2c105241f3469923eea5c80d2924ab38cac46dc541d7d5eba29d710
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/_reconciliation/COMPLETENESS_MATRIX.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 265e50819134024194ebfc75cc996d489aa7704ffcd24c5a72c1e1ede38899f8
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/_reconciliation/CONFLICTS.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 4919ba66be03bb8c048d4463bfc4cdd2b55fbbbaba370190be1fb690e9c6cba0
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/_reconciliation/CORPUS.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: cd6e4022ce4e7162e74d2eedd05f7b6ea6e19a43fb0575f6253ae8f8eadf022c
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/_reconciliation/CURRENT_STATE_RECONCILIATION.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: af7c2d40c4fe1939da7f7f50f44f161998450863627c4b7a79d139ab5e3b4c92
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/_reconciliation/LINEAGE.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 0ae955c5c50f2cbc3700fa103c02575f760d179d4a245c54bcd44950e8d43525
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/_reconciliation/RECONCILIATION_LEDGER.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 45fdfb15c76be437413df1deac7f9c9fc01d323070e35aff06cb61e9aba57d8e
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/_reconciliation/SOURCE_MAP.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: cd9c7e97680e5b01f88927a12c214f03cbf477da81241741f4daead2398bd649
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/environment_inventory.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 43af6b3d11383de10f2f169cf7df5d48ba1e62911f30bbb92df58e942fdf7b54
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/experience.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 83c5cff0e205d9cc6ecd39d4109ab1739fbcf4a43c77d0d1b70a9d59fce4aa43
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/failures.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: 811e1bf870a467b903dd8e4e59145b5901b9301d73c528ef90d63cb8a316e34e
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/friction.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: ef80964d0f4be371b1afe6c966a84bfadced673cbd81ebc0352e75b04b7c7de6
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/improvements.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: b902eea3375de4b4fa1fb557082bf0a2c6d86f5d8e82b9915c191a8e075b8626
+  status: active
+- path: WIP/8-26-26/environment_experience_improvement_pack_p307_revised/progress.yaml
+  kind: dated
+  date_bucket: 8-26-26
+  sha256: e1b53ba843c2a6f5aeb14120050a39018ffcbffa17c8f84f8ab760ccb75b7d28
+  status: active
+- path: WIP/8-27-26/HANDOFF-pe-execution-attempt.md
+  kind: dated
+  date_bucket: 8-27-26
+  sha256: cf50bfd68521c8ef71eb06194b859533c61342a846147626a23bacb7e1680e72
+  status: active
+- path: WIP/8-27-26/PE-environment-experience-convergence.md
+  kind: dated
+  date_bucket: 8-27-26
+  sha256: c05afa7aa29cb5c412b0ae4664e14355a40cd79ec1cea66fd226fc9d359e189a
+  status: active
+- path: WIP/8-28-26/execution-governance-harvest/DONOR-HARVEST-BRIEF.md
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 43878d7e6f5d3388d9d097d09f4f807ddfb35442efa81b944670bf643ddddead
+  status: active
+- path: WIP/8-28-26/execution-governance-harvest/harvest-receipt.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: da32d93b4528d91c8608d232a7e9aa75bbeee413c3609d1249eafb5a150d8994
+  status: active
+- path: WIP/8-28-26/execution-governance-harvest/harvest-request.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: fbfdab24355e85c06b7a838692034db195259653d097d61d3e7205629aa20681
+  status: active
+- path: WIP/8-28-26/execution-governance-harvest/harvest.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 519ebcdb99c1114710ca89ceee387f01ae2a17be20fc063bd5d37384bc0f2e62
+  status: active
+- path: WIP/8-28-26/intelligence-harvest/archived-suite6/DONOR-HARVEST-BRIEF.md
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 875c65d5d57bc739029a48c8a2e28aeea47e9d1124a53c33237f243136fc6419
+  status: active
+- path: WIP/8-28-26/intelligence-harvest/archived-suite6/harvest-receipt.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 3659e048d1f3399c2162a1668e076a2580f653866398e8da9e2a6ea8960eb86a
+  status: active
+- path: WIP/8-28-26/intelligence-harvest/archived-suite6/harvest.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 420ea666d5b8eb116905ec8023fdfdbf22a772ab613d9f181beedd7d8cb65f02
+  status: active
+- path: WIP/8-28-26/intelligence-harvest/no-regress-git-work-preserve/DONOR-HARVEST-BRIEF.md
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 06f8ca09ff1d5dd02724c58f8cdb5180f0e26beedd0ad65900ee06fa176318ad
+  status: active
+- path: WIP/8-28-26/intelligence-harvest/no-regress-git-work-preserve/harvest-receipt.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 1813385ef71d11ae1c0f6cd4e0740835b0cb5359876fec21fbdbbc58d98e35c9
+  status: active
+- path: WIP/8-28-26/intelligence-harvest/no-regress-git-work-preserve/harvest.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 3a3ca9eca5b5c45ab489310e90b64fc43aa89a7f67912137a6b56c64852dd39e
+  status: active
+- path: WIP/8-28-26/intelligence-harvest/readme-updater/DONOR-HARVEST-BRIEF.md
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: e71df636566c43191b9f44f9d49e54731fdfea2d775b68b7729dc9f74a64eee5
+  status: active
+- path: WIP/8-28-26/intelligence-harvest/readme-updater/harvest-receipt.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: b3de91fc995c7d27535f2dddeb7a53d2d3a43b30dd5ac3df69faa976d234fe44
+  status: active
+- path: WIP/8-28-26/intelligence-harvest/readme-updater/harvest.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: e62a1fc1fa8002cb5d102d3fe9833a2e1f6eacf1196c407469593319707afe25
+  status: active
+- path: WIP/8-28-26/novel-remainder-harvest/allowlist.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 6c0465557d2152c343f191e453ff8d6065ac5dd863e4d31ec849fcdd2971f4aa
+  status: active
+- path: WIP/8-28-26/novel-remainder-harvest/harvest-ws.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 3da31e0ccc3fc2d5a2f48a21ed0492799df68d4fca610e94f8a8bf57b795c25c
+  status: active
+- path: WIP/8-28-26/novel-remainder-harvest/inv-ssot.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: a6ec305bcb76930196bb7444a0f5fed7875b5311a671c676f962d0698cce3440
+  status: active
+- path: WIP/8-28-26/novel-remainder-harvest/inv-ws.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 5223ff5e605c82f5d9b4099d49b5aa84e4af073c5a56832751b40750e5352b2e
+  status: active
+- path: WIP/8-28-26/novel-remainder-harvest/prune-execute.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 2bb20ea54d98482ad8e861b5ee5cd97cacc65074e19182f55caa1a55c985a430
+  status: active
+- path: WIP/8-28-26/novel-remainder-harvest/prune-propose.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 0cf784c29ce69ecadb4c0287533d74f05d680d2135702ce5f27905686b7ad7d6
+  status: active
+- path: WIP/8-28-26/novel-remainder-harvest/skip.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: b593bff52cb006762b1b72fe2c796b195aa546b581781574cac0db32759d2e09
+  status: active
+- path: WIP/8-28-26/novel-remainder-harvest/triage-ssot.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 59d94323860bd3f17dcde8aa974ba46fc15690ddf206a3f13d41bf2d6bdf21ef
+  status: active
+- path: WIP/8-28-26/novel-remainder-harvest/triage-ws.json
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: f2c585e1d791fbd994ad2ad96cd43b660ec8b064e8552a4e855978103c93cf1d
+  status: active
+- path: WIP/8-28-26/suite6-cutover/CUTOVER_INVARIANTS.md
+  kind: dated
+  date_bucket: 8-28-26
+  sha256: 45ea893dc69a4c278da0b7696a511966b97344513bf4570023f00c4418ddad4f
+  status: active
+- path: WIP/8-29-26/OIDC/cursor-governance-infisical-pack/.github/workflows/claude-code-bootstrap.yml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 3761fc0bab48c6fbc4762468a528b951091eb9262a71436244d65372312a994c
+  status: active
+- path: WIP/8-29-26/OIDC/cursor-governance-infisical-pack/infisical-gha-oidc-v1.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 80d055b927ca0338a1652b73366d353069cbfabc8e3fca23f7ac804ef6587650
+  status: active
+- path: WIP/8-29-26/OIDC/cursor-governance-infisical-pack/ops/secrets/INFISICAL_OIDC_SETUP.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: cf94d988344b9fe3939e9024532b43dc182c9afe75f95aad8039cb6c3f9e7585
+  status: active
+- path: WIP/8-29-26/OIDC/cursor-governance-infisical-pack/scripts/claude_code_bootstrap_verify.sh
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 50f0c6aa77115d92204e89e47658d3abe3ff23de5a54a508d688b7a52ec6154a
+  status: active
+- path: WIP/8-29-26/PE-Template.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  status: active
+- path: WIP/8-29-26/PE-github.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: d866b6a98e2512ffa6c3bdc904df810d02eb13d83b7f55c645dd8e73d732a05b
+  status: active
+- path: WIP/8-29-26/PEC/PEC-repair-pipeline.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 80fbb34ec085c20cfd77568bdee71830e3e356f7f8a8f72ab6f946014700de25
+  status: active
+- path: WIP/8-29-26/PEC/PEC-repair-pipeline.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: ed42f0fdc57a16b31fb763ba6214de13159d7de71d664b83b33ef53937909611
+  status: active
+- path: WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-repair-pipeline.v1.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 26bbad3b0226780669a397b0ca60542688fbeb0511d575d309709b84b314ddee
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/CAMPAIGN_SOURCE.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/HOST_REGISTRATIONS.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 79a7cd612b2285f29deb6a2c0a4bda16767f527c18bd2b136d145e670c832a4f
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/INTENT.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: e544a0da48f095b78d1bb62bca86ecaa8ed0cda035da8e7b80085428fdd13f53
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/PE LAUNCH TEMPLATE/HOWTO.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: d2b17fcc8809984c78c9e3168ff25d845507375b5f34aa4ad059b1507a4f9f23
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/PE LAUNCH TEMPLATE/INTENT.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 292b4d49c2f89745fc6c113ce3be840919e3d0b2113406889d35dc935c50ef2e
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/README.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: fb3f5a300f1ee60c2649c53ef87e9a9dba029d68670e42db985652985142259f
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/examples/four-commit-one-pr.host-registrations.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 79a7cd612b2285f29deb6a2c0a4bda16767f527c18bd2b136d145e670c832a4f
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/examples/four-commit-one-pr.intent.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b9a0e16d7758b9dbf374e0c63a02b84f17d66d350fa6ee5e4a6f7ea6116dc445
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/host-patches/CAMPAIGN_EXECUTION_POLICY.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 6e88223cb0ad57abaa978028174b8086c18655824cadcb061edb8c1de8ca359f
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/host-patches/CAMPAIGN_STATUS.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 60ff2362d3749e71d3e787efea6df148ededadce5f6dceed8cf8cbdc14696bc5
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/host-patches/COMPILE_ALLOWLIST.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: a062354a12706e122c161d60aef464a7807e48036106c05bd8f5993cae9f938e
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/host-patches/surface_profile.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 4192b47ea1a70601be559d3b5db1cdae9442f9e8cc92ed69c31de750e60747c5
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/level3-make-pr-single-path/CAMPAIGN_SOURCE.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/level3-make-pr-single-path/source-integrity-receipt.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: ffdc3886258e00f9ced91b1bd54084bbd56cb1f5a9223e432e1eafdb2e512d18
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Campaign Activation Files/source-integrity-receipt.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: ffdc3886258e00f9ced91b1bd54084bbd56cb1f5a9223e432e1eafdb2e512d18
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/DEPRECATED.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7c359eb2d55581311fad3829d41d9da70058de56b3f3c9e94384712365bf30c0
+  status: active
+- path: WIP/8-29-26/PEC/_archive/HANDOFF-pe-execution-attempt.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: cf50bfd68521c8ef71eb06194b859533c61342a846147626a23bacb7e1680e72
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PE-environment-experience-convergence.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: c05afa7aa29cb5c412b0ae4664e14355a40cd79ec1cea66fd226fc9d359e189a
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PEC Contract.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 66fa28ebe97a4c9fc243b1d700b28c221e9c4151fc94f86d553f50e9ec381e48
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PEC/PEC Contract.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 66fa28ebe97a4c9fc243b1d700b28c221e9c4151fc94f86d553f50e9ec381e48
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PEC/pec1.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 6b3212ee4eab8f692c6a3b37409bea4e36a3757fd6bc7221bbe5c6af7b724678
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PEC/pec2.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 2bee3cda30da3f5c46dcd6ded01cd0c7f62604233bc8a7b8a134506cba6b0030
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.capability_preflight.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 59c889fe052733aa1f1665066268c5d9549a94a23d67e9f500719751fb4c9630
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.coding_contract.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 5f2a8d007ac3f3c10f55aa212f2200678209016d143e1c5d7a2039c92002c773
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.convergence_contract.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 71c600166fd10e0d66e3d456b460e7a70d9f99e20b3631cf19a18c2c9c8f6f76
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.dependency_topology.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 4ad45fcf5c301d57ebd5413b9a932f25fffe3d592059df382f25115502d2cd25
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.execution_contract.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 312b1b4afb735bb44776ad1bcb6af825195724a71dc5e6547edba7729adcf0e3
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.execution_packet.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: adfe6a77a124135169bfc36fc72728857574c919ea5ff2b57822fd0a20bc84ba
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.mutation_authorization.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 2307130d16fd75e212c0c6daa0555a9e62dcfc4ae55e4e92bdedee1128c98c85
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.plan_document.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 1b0e865489c562fc29addd71cd8049ce26d140c59134943a85a2694f89cf7b00
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.rollback_contract.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: a141687d850116f2ae7e6c1df018fe50d6b0a35598e24580a31df0e4c1ae51bf
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.validation_evidence.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: f6de735e8c2d254a89b25a7cf63f6de9337624fd4ef4381850a810d493e8e08f
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/Execution Schemas/memory
+    lock question.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 6bb81ef33bf95d165dae9fb59e96930ba58c47a4b41160dff5ebd804c032d840
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/PE LAUNCH TEMPLATE/HOWTO.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: d2b17fcc8809984c78c9e3168ff25d845507375b5f34aa4ad059b1507a4f9f23
+  status: active
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/PE LAUNCH TEMPLATE/INTENT.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 292b4d49c2f89745fc6c113ce3be840919e3d0b2113406889d35dc935c50ef2e
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/PROGRAM EXECUTION PIPELINE/PE-PE 1.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: cd6da4a9300a9c903bf62e4f428aab445ffa9e33923a20aacef07650dc155874
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/.github/workflows/agent-git-guard.yml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: c4dbf8cc2e0dcc1e4709205578e560e68f6580bd1b1e02e6a06b7f081a7e217c
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/.github/workflows/artifact-provenance.yml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 4e63247c161b4ff79ed01b74e2cc6c90b7c44f0b50775ff74cfc3e1b603c8ae9
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/.github/workflows/deploy-with-provenance-gate.yml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: ea93768f246b1ef67828357c37ca65a906825249a223b39eb945b8a64fd90e9d
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/.github/workflows/feature-tree-gate.yml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 4f0ede83b7a428efb3e03a8b1ee81e80f8f33d223bedbfc4af864538599a0af5
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/.github/workflows/merge-queue.yml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7d2a5a71f07744760056c3dc0da628e9f92546218a0e70c2d7c1dff5707fa0b2
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/.github/workflows/policy-conftest.yml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 4412bf1cf0938bc1f3f648a3041126e2e8f6b451e922d05db488cefc5ae7d140
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/.github/workflows/preview-environment-gate.yml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: c6645429f4aa24e7ed81860168f5d97b59a37f84229afb043afa04c7477d0505
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/.github/workflows/semantic-conflict.yml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 86da0d8b2fd100b1043d320fd0529721018a95a933cf65c6ab1c9f017931a5fc
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/.github/workflows/test-impact.yml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: cff60ff335e1a5f26af5ba149aa3266c38da76eaa7c9485249bfe956b65a9b35
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/EXTERNAL_CONFIGURATION/github-merge-queue.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: ff8e8295e009300f2a34cc77cf42420e933c588897d70bb5227657c0d5096149
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/EXTERNAL_CONFIGURATION/github-ruleset.program-execution.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: eecfc69ede81a6a8f2125186f335b0ed8938ad7e3a5694a7f90cfc0fc71ede3d
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/EXTERNAL_CONFIGURATION/supabase-preview-branches.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 9e2d25b90210497c17586a47ac28627e052a8c77aa65dd2a5809d3cb74b57075
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/EXTERNAL_CONFIGURATION/vercel-preview-integration.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 57032afc68c0276028febe3cb65fe40cd5b5211c64f8e3f628eb0880ab0b532a
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/MANIFEST.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: d90c8c497bf539b7b616372590217f64f66baadbeb19d9bed07be1800e45607c
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/Campaign-memory
+    Cut over/Activation.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 67813b664d2074b7daf29123a6187c2d9f9028bfd5010c6763e2717a04e440f8
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/Campaign-memory
+    Cut over/Campaign Source Yaml.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 4356d6b034aaf897f22308d05058927a917a458c2027d84ca136cebcf7d3a7a8
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/Campaign-memory
+    Cut over/Memory Cutover Spec.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: c1e918d84fc2b14083ff918c58e1cbb1c799c7897f6b4b0f27093099cd811e6e
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/Campaign-memory
+    Cut over/Program.yaml.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 2d89106bcb7a6503f5b855911695f34017fd2ed8baad7a8e7e1148affb8dafbc
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/Memory1.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b382dcce6a1207bd5c4d57a8cc95151d4343f3cf44da96ad4297a5323df167f7
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/Memory2.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7a82ef37907f81327693f1254ca13ce085f39a15b86e19cab0f6220289d36d54
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/Memory3.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b876460709b8ffbd676617052cfa94530f1a378a8b44629653d4b41f1bc66ab3
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/Memory4.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 6784fba09152d178bbc9c1ac58e3670d365d81ebb8a66f270f5a381dae8f9f8d
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/Memory5.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 932f7d5b67e52badf9d269fdf05fda446d0bb84bbc916b9bc2179b731e5fc530
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/PE
+    redis.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7c07a47534e9bea7942a62852576b02274233ec583cc9392ad3b84badf9fde57
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/PE-
+    Memory.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: fc48a26039b98587d89b4eff45eb0309871d08675979c0020fc6ac73466b20ad
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/PE Memory/l9-shared-memory.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7acfb95bc770955b6b2958f4f3a25b501d06c551fb479704653f5d6856aa17ba
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/README.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7c0eafa9d67f7cc2924e17df609533b7db3aab57a36ebcb5b2a3500e971e80de
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/RUNBOOK.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: eae8c0373ddf83981a40f56eb74289986aba9d3ff77e4c0c7667f49d134e4103
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/commands/agent-git.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 147b561c6237a6485fe295f7b3f6dfdcb84003913bc3f60b30fc804b827857c2
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/contracts/program-execution/canonical.environment_lease.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 166c5f93c3672b371ec5466805f8ef55a8e4480f579424a79bce775a6d95afb6
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/contracts/program-execution/canonical.merge_queue.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: ae517f721d08eb811d7723c5bea9d368c7c28bff5dfb613941e37eadd69a395b
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/contracts/program-execution/canonical.provenance.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b60f4e48cf3f1c5ff5866aba0e4d7a2657309dadba73d9a28daf1cca9c010428
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/contracts/program-execution/canonical.semantic_conflict.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7948889dae034bce1bdf54249627068472a99f474c881ed133c9899f8d9c439e
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/contracts/schemas/canonical.schema.environment_lease.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 527400fae0916647ab73f5607ca1ef7d44c486c6e0757adf34491064e3e56d58
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/contracts/schemas/canonical.schema.feature_tree.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: f9ae9e300ca88e8940187b8171f7b27e7533c9df6dbe4c1ba0c54044e23a28fa
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/contracts/schemas/canonical.schema.semantic_contract.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 50b0fee957b5b50555552bc5e80966afc2bb73eb26b0bdfdd28b63971375a72e
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/contracts/schemas/canonical.schema.test_impact_map.v1.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: ab9681a4e3c172d802b8aee9d58fc0f8fe3fa4ac59ac0c5991ed0c96136d5524
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/governance/generated/CODEOWNERS
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 2367ceb592b74ecb665abde054823dd08f401c9ed81e2c088b5ead94b0f64e7d
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/governance/generated/github-ruleset.program-execution.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 74c16639928ff83e44a7acd63ee1670b908665d237af5ad9162946ac033e7eaa
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/ops/__init__.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/ops/config/environment-lease.config.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 22f93a97d52a6d6ff51a18f89393a42fdc1a71ffc1a088839d13fbb8b5c0d6c7
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/ops/config/merge-queue.config.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 77980e64bc640b4776ad360ffc564071a863f27298750a23c443c377f4d3dd0c
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/ops/config/test-impact.config.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 5a507e2a1b8d6e287b9bdb15017ba8c3c1759178b3a54ae64a4ebf95cd3476ea
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/ops/lib/__init__.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/ops/lib/telemetry.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 639e6472939ac7373a87c032d0ac8de96b3d4dfa5bbeb1e2af95f0460a50fd0b
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/ops/schemas/program_execution_event.schema.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 87651370516797bb7b597dfc52c75c3fe4c8b2522a3ed19c7cc97f85602f31bd
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/ops/scripts/emit_program_execution_metrics.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 53c4eba6a085edc087087b9b1a9abb4e26f94d2dc0f277816b1394433eb15229
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/ops/scripts/reconcile_preview_leases.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 1cb8c65a5528c46944d9ce25fbf0a519d665a25ca0002d5894a495ec5d3aba66
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/policy/environment_lease.rego
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7ed8354477addbe4ea2039adef7bcb64bc9c55ee5f5d09ca5a6bbf1e3a6e7df5
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/policy/feature_tree.rego
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 8225962e94d691ada1f64885f1d8718ef54800d2514224f4415e1afc6eea7db1
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/policy/merge_queue.rego
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: aa52d6ea5d1b23bacc2427395f538c04df5635da902d8b626eb0f6f9190eab65
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/policy/provenance.rego
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 3b53443ed4f051e3835b864a580328ce632dc44e8f98f0dead4ffdf20244140f
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/policy/semantic_conflict.rego
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b55f2a0fb9a95b6df3ea379790d53de1b33d455da8d339bc3289de4a51bba417
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/policy/testdata/invalid_parallel_scope.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b0275caf2fc3721a6c5a676ef04acd2cb604f4f738f16efa7f702ec992b7c55c
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/policy/testdata/invalid_provenance.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: c1e5e892e17a079748cd780e0ce9f5995fd7de40e74978ba3b89dd5109bf0d09
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/policy/testdata/valid_environment_lease.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 024c0910dd1958fdf29fe8a8867f9217f35a643f2b369ebc76798ae470367ff4
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/policy/testdata/valid_feature_tree.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: fdfbe9a9936d5cb0e996c6ea60ef7b1c4ba8652b44b2b229e35867ef95b96b84
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tests/fixtures/feature_trees/PE-010.contract.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 25cf54c697a69632c5952486ec189be371ddddc422bca30910f17b2c3a0ba31d
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tests/fixtures/feature_trees/PE-020.contract.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 25cf54c697a69632c5952486ec189be371ddddc422bca30910f17b2c3a0ba31d
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tests/fixtures/feature_trees/invalid_cycle.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 022fa8b4497459b55263a7731e1aae87c721de1b41e4f9f5750da85d6a9e524f
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tests/fixtures/feature_trees/invalid_parallel_scope.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 86367a7a65b7523a38d5a62864ec17c9c53bcc0838850e3a7fdaafb0775e1ed9
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tests/fixtures/feature_trees/valid.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 0fff09356c6624e12a673bee407931e583272a6c2e7c2bc9228d154042b0bbe7
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tests/tools/test_agent_git.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 3494b68df8641d6e2fb1ba88f3e97064742fbae84c337f79319b9e5dee7a7d26
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tests/tools/test_check_feature_tree.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7d0ee9ad3677e92d3b3458f19c0b46c865bb2c16ac7af61ec2e175b3832816e2
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tests/tools/test_telemetry.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b9d12919210363ebe2284b471b3fe92b5e6638f449442d2cd89b420d38225b8e
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tools/agent_git.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 4e58812e8c33eba324fcc0b1b34872234f2b32d84c21a5f2dbb1103b08b37cce
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tools/check_feature_tree.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 37dcf6552c15debfb629af4aa59e7a221063042cfd57634d2b59c46f8e55fd04
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tools/check_merge_queue.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: ce6012705838b049426d2559dc157a1e59aa0077de5361b95e859d859b20415d
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tools/environment_lease.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 515a901faaede56c6caa31f690411c837861c8523808857f3df5dba76a8a993f
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tools/generate_program_execution_artifacts.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: c285cbdc6bcd6200b49eac250acda2539ea9efba26aed1ef7a6bb1a188b9d7d3
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tools/select_impacted_tests.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: abc9549b68ce9d87d48cfdb373ca37d079ea7f68a45b16cb17abdb2f4b3d6304
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tools/semantic_merge_probe.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 72ed32014e7c682890e2b0954d7d16c6d7cbc808e4b95608ca8125ea42ce0073
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/tools/verify_provenance.py
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 963e370519037b8943f6816539442f75a84a9bca832161ae5f206cf3100847c9
+  status: active
+- path: WIP/8-29-26/PEC/_archive/Perplexity - program-execution-pr-pack-v2/wiring/ob-010-instrumentation-diffs.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: f53349e3bd4fbeb4b0aeab5e359d9a095d4622122837fd9285b80f81146dd11e
+  status: active
+- path: WIP/8-29-26/PEC/_archive/pe-v3-control-plane-convergence/CAMPAIGN_SOURCE.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: f11e155d59425e9c188323a05981b76a4f3a2ae3169e6546ee97b63ef00dd0c2
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/pe-v3-control-plane-convergence/INTENT.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7530e99297a882a5e182ac57bf4bee2d552c81b69096da9fb9b1fde7a7a685f4
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/pe-v3-control-plane-convergence/PREP_RECORD.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 4dbe24f792e37c43a2d7104ac80692e1583741a9d76bfbbc06b290924bfc975b
+  status: active
+- path: WIP/8-29-26/PEC/_archive/pe-v3-control-plane-convergence/source-integrity-receipt.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b4bc694f36126575bf43b0e951ca852e8ae9247c1a857b18a0d53458ae291528
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/PEC/_archive/pec1.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 6b3212ee4eab8f692c6a3b37409bea4e36a3757fd6bc7221bbe5c6af7b724678
+  status: active
+- path: WIP/8-29-26/PEC/_archive/pec2.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 2bee3cda30da3f5c46dcd6ded01cd0c7f62604233bc8a7b8a134506cba6b0030
+  status: active
+- path: WIP/8-29-26/Web SEO LLM Trio/L9 Website Improvement — Independent Validation
+    Contract Pack.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: bb40afc54704c68d4e092b7e6c50559d826a8e655eed60a05a998fd1f2b131e4
+  status: active
+- path: WIP/8-29-26/Web SEO LLM Trio/Program1.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 1ed69216e8a8e43c50bbd491b4350a840baeac8c2baa7c599cf0d083e47cdc7d
+  status: active
+- path: WIP/8-29-26/Web SEO LLM Trio/pe-campaign/AGENT_FEED.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 91511b2cb9436e18ad790ceb2d454fc4a40f8e1715b4b93190fcc009907bb8fc
+  status: active
+- path: WIP/8-29-26/Web SEO LLM Trio/pe-campaign/CAMPAIGN_SOURCE.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: d86592b07012068ac8c28a4140053507cffc3fd67c994e78a7612c6a7408b23a
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/Web SEO LLM Trio/pe-campaign/INTENT.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: d117875c4f70d14682ed08095bd8f03f64dd8b8dc59110f781da6b5156de74a0
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/Web SEO LLM Trio/pe-campaign/README.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 1cbd4f611139db2711c0ebd1e1e96752f0abad13e6b1243f0e0c4b6a2a1851ef
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/Web SEO LLM Trio/pe-campaign/source-integrity-receipt.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 99ef521192c7ff64d6ceb758f6269fdfe3034ba56bb717e6a6f957f7e5736846
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/ff-close-loop/PLAN_DOCUMENT.ff-close-publish-loop.v1.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 328f3a34e0fdaaad9ecc2050817184405fab33def1b89ad68602e91e54de9376
+  status: active
+- path: WIP/8-29-26/governance-caller-permission-repair/governance-caller-permission-repair.plan.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 7c4b90aef8b2e9cbe4343b83439f331701c6ee5ee4610cea0626bb2ad4ba701d
+  status: active
+- path: WIP/8-29-26/governance-caller-permission-repair/governance-caller-permission-repair.plan.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 727e1d205fba81584cc74d36977897d6c1b2aeef2875d8c7c2390d5708ef5546
+  status: active
+- path: WIP/8-29-26/l9-runtime-velocity/FRICTION_MAP.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: d3a5b3d26abc4b311641311815e453b150bc653d0ec0db0dcf818882aab67382
+  status: active
+- path: WIP/8-29-26/l9-runtime-velocity/l9-runtime-velocity_7c4a1e93.plan.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: cc1da2380193148992daadeeafed1d32378995635f1452939108a7d867934bf6
+  status: active
+- path: WIP/8-29-26/l9-runtime-velocity/plan.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 02d05ed55dac5411e7b137b831636ff34ea1fa1841d56c87a1ef246f3286614a
+  status: active
+- path: WIP/8-29-26/makefile/Makefile-CG.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 1dabcd0177354c6550ad9938d3c60c53ffff7222c903c157f376cba3d63c5bf8
+  status: active
+- path: WIP/8-29-26/makefile/Untitled
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 152338032dbbd260faee9f7ecbe291068d4a44edf422416649ced39981e0d03e
+  status: active
+- path: WIP/8-29-26/makefile/pe-activation/CAMPAIGN_SOURCE.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b820c6fc3314fdb030a22f17276648e448ccc5d9f2d4afd54731e95f10ac4ab9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/makefile/pe-activation/HOST_REGISTRATIONS.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 79a7cd612b2285f29deb6a2c0a4bda16767f527c18bd2b136d145e670c832a4f
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/makefile/pe-activation/INTENT.yaml
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: b9a0e16d7758b9dbf374e0c63a02b84f17d66d350fa6ee5e4a6f7ea6116dc445
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-29-26/makefile/pe-activation/Makefile PE.md
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: 23c9a55fd404aa4f5feca9a1690fa8d90fcd22eb29573febf3705664b8a35a0f
+  status: active
+- path: WIP/8-29-26/makefile/pe-activation/source-integrity-receipt.json
+  kind: dated
+  date_bucket: 8-29-26
+  sha256: ffdc3886258e00f9ced91b1bd54084bbd56cb1f5a9223e432e1eafdb2e512d18
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/README.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 552afcd6c87a729cd5280d48b460577e09e4e958bc82f84522b8fb84b0dda64a
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/00_README.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 447eb9664fac293515c47896f036b308511ae65b85f9ca221e39f2a5e9e4dbc8
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/01_MISSION_LOCK.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 2ec8eb6416eb4d0b8aaa47eee58ea0d96a315bbca92d08541abda4c7d034d128
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/02_CANONICAL_ARCHITECTURE.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 88afaf95eb55c21af9c5932784ec3759ae39afbbd701ba538f0e8503c2494441
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/03_AUTHORITY_AND_EPISTEMIC_MODEL.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 6756264be0f2bdd2ef437920394355d67f76251904dcee02b4cd37493b994f9c
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/04_POST_REMEDIATION_REVALIDATION_GATE.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 0edc602afea7c4acec4f4fa75467be746e49df53c76b6540049750c4ba9a4f29
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/05_PHASE_1_PILOT_FOLDER_TEST_RUNBOOK.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: b814a8d58cafb63129f90498d1a322cd31bfdfc0e6873d3c5ac8d076f573ae9f
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/06_PHASE_2_REAL_DRAWER_OPERATIONALIZATION_RUNBOOK.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 53f8931c968779fec718c87604d112ad2c2b6742bd4976911fdfac1df12062f0
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/07_PHASE_3_FULL_CORPUS_ROLLOUT_RUNBOOK.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: b14124072ddf4f9be42ed5d7b7cc71c12f0a4c45e99a803df3d1b8384e714959
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/08_TASK_SCOPED_RETRIEVAL_CONTEXT_COMPILATION_PLAYBOOK.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 74293611001445829d372dc258211bf06145ec27b8724bd000dc910334a66328
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/09_WORK_CONTEXT_COMPILER_SPEC.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 45a0a003e9f7041b1f9de360b8d0e4f0c531cebf2bb3761f0fce02623fcd4cee
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/10_WORK_UNIT_COMPILER_SPEC.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: a54c17c0eb8f29a614e72ca856c2060c7e6310456548496873caa654e2dc3a4b
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/11_LEVERAGE_PLANNER_SPEC.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: fff037fd64afd45cdfc2a7810da9999ee46a1be3886190e85725ea6c6d0f6919
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/12_BUILD_WAVE_PLANNER_SPEC.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 86fb41ad1fd279e800df83d3d9384928ba729a40269b016f6778b6c4ac1bf492
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/13_CURSOR_GOVERNANCE_PROGRAM_EXECUTION_HANDOFF.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: f00bef085673a5d887c2407dc8b54ea12d4ec9d902ee5448970b806ded8b6521
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/14_ACCEPTANCE_TEST_MATRIX.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 61e82acca84bf06fb8f8973efa8e69d585d2d0c185eafc40b9b1f56575af2245
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/15_FAILURE_RECOVERY_AND_ROLLBACK.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: fc820614187b9eac0cdb4ad1968023511a289dfc5dbe634e38cce5cbb18b2d41
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/16_SECURITY_AND_AUTHORITY_CONTROLS.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: b2dc3127bed5df70326b6f6644c6305be6d289e99904502c7117297c120cb87e
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/17_KPI_SCORECARD.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: ecb7b3e552e1cac692b2b101f402e4ae5ed07539431c3c052b7e807e8b36fb9e
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/18_FINISH_LINE_CHECKLIST.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: a94546f43c40e961b4664715b7ec42a93f2888168d52d939ec829a1bede61283
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/19_DECISION_LOG_AND_OPEN_QUESTIONS.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 772e754ebb37b8fecee6ee8376f46fb24d26e87b79158ed71e39c1a1ae861253
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/20_PHASE_5_6_DEEP_IMPLEMENTATION_SECTION.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: a93678a1cd288a8ae7722019c38472ac6ebd51e7a8a8ae72c290b934f0703d2b
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/contracts/claude_code/PR-01-PHASE5-WORK-CONTEXT-COMPILER.contract.yaml
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 49c2b6795b67b9b7f9580b84e575e1abb9cfe78e1df176deb9fdf4176b15cf2f
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/contracts/claude_code/PR-02-PHASE6A-WORK-UNIT-COMPILER.contract.yaml
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: c0a390f28799ff0d7cb33de0ce47e578e965cc29b21387dd55501d7bce28587d
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/contracts/claude_code/PR-03-PHASE6B-LEVERAGE-PLANNER.contract.yaml
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 4b8dcd484325250f2af7ec12113baf9100db6e99e925a671281071dd91ea1dd7
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/contracts/claude_code/PR-04-PHASE6C-BUILD-WAVES-PE-HANDOFF.contract.yaml
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 5e15550e964746374cd7dcc4e61ca7fc3bd1ff9ff83f9863980f6f0158d52674
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/contracts/claude_code/README.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 707b24898edd065d7b9ba74e1a0e4449d1beded3968094133f9931e1f8834357
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/implementation/phase5_6/build_wave_planner.py
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 917a4095873e1179f28f874ec47f6e946389699aed382240f2673fbd0753d37a
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/implementation/phase5_6/leverage_planner.py
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 135c325c420a1f55ae447a64bc7a80672aef42180bc7992158221559aa9940f8
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/implementation/phase5_6/models.py
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 43e1367d8b02620ea5b077c59ae7cea1c69120042df87ec83a53986618be0bcb
+  status: possible-landed
+  note: possible-landed
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/implementation/phase5_6/ports.py
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: b7fb4dc78b7f945e1fb1f9a0cb044898d3ef2ad18cff39b8dc6d3ff67b2d579d
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/implementation/phase5_6/work_context_compiler.py
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: f766e54b7bc6eb4e0f23eed0369b0123d21b373f12ab9689819e45512c4ef4ac
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/implementation/phase5_6/work_unit_compiler.py
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: b42edfc07fd435a799a69c3ca9297b11458a23056eb2d6d45594565f2fa7db6c
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/runbooks/PHASE_5_6_IMPLEMENTATION_RUNBOOK.md
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 449c3a30fe0fcb356f77de5d39fd5f381b8d97ce4a180d33c8e9290923beca06
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/schemas/build_wave_plan.schema.json
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 8570c53d98da8f8681c429c6a3178612a871d809cdfe35d191f8565a0ceba0fc
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/schemas/program_execution_handoff.schema.json
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 3e3040f25bb0225458f471f9a9c76a2882e4328f5649a750c4537b0b956598bb
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/schemas/work_context_packet.schema.json
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 98127c0f65120f8c868ec45d186db3decdd2b68e5ebac45672042f2efe1d7517
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/schemas/work_unit.schema.json
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: ebe9f6c5146c3d90ce12d0e196489e70938d906b1c5794bf7c70cfa9cfb0c7b6
+  status: active
+- path: WIP/8-30-26/l9-wip-corpus-finish-line-v2/corpus/tests/phase5_6/test_reference_implementation.py
+  kind: dated
+  date_bucket: 8-30-26
+  sha256: 3ac4232322c831b7d9be1985e0644e979c93f57f0611e65145ba623c927c044d
+  status: active
+- path: WIP/Audit - Pre-flight.md
+  kind: series
+  date_bucket: null
+  sha256: a904b8eb91dcfd02c5c0dfb5722d0c98519bd446059ebe1bef167ed2c3740574
+  status: active
 - path: WIP/CG Contract Evolution/Cursor Prompt 2.md
   kind: series
   date_bucket: null
@@ -95,6 +2634,474 @@ entries:
   sha256: 0844e9eb09cfc6e08a885299c1df473c889b0286aae9a0512f9dec71c2d47b0e
   status: possible-landed
   note: possible-landed
+- path: WIP/CG/Cursor Prompt 2.md
+  kind: series
+  date_bucket: null
+  sha256: 3a4155ec430904e91c3a435680cdce0000d17f819a603132ae8aa12429115bfe
+  status: active
+- path: WIP/CG/Cursor Prompt.md
+  kind: series
+  date_bucket: null
+  sha256: 59eaef96b612920134fb6daebc0b78aaac53062f4421d78cd73d105bcd40bed0
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.capability_contract.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: 28fe43ab6ae16ea1d15de95683caccddf5aedfd404179c62eb783f9b5b2657b4
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.contract_extraction_record.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: 098841123e6fba9f96308cf794548d2feb96ffa2d15d155b3f276ccd0bae5cac
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.contract_projection_binding.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: 0f5de727ff4a71ee7f7ca667a602821c4ceae994ce5a270845cd432372e70ffa
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.contract_registry.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: ae35b281f4e0802478bd5cbdce7d2200ce562ad96fa6e7b9bf07cf322445390e
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.cursor_rules_manifest.v3.yaml
+  kind: series
+  date_bucket: null
+  sha256: f8a63350745d52f77f2c8aacfabcb7c935207f237da7a551a7f13b72edb29e11
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.evidence_contract.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: f3dc81f9a80c50a1f129e879f85c419514b65ceb5d76bfa2105ee5a4d4d17166
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.governance_contract.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: f04cee7b798b4779e68dc77f10b77f1b7428d3a55fb6d3441b83baf4df10fc02
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.invariant_contract.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: c69c841ff921b5ede97e5b92184f8397e6a8c8536ce308a5c5fa80f4801347e4
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.policy_contract.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: 9cb8369b044a147ff840c179d56b6968c203e19c8f58fe7e8d30f8c0f1cb9ba1
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.rule_activation_binding.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: 7701fe7a6171700041315aadb1d5e6dccbc5eb3c0c5a446ed7521932b68535f9
+  status: active
+- path: WIP/CG/contracts/schemas/canonical.schema.workflow_contract.v1.yaml
+  kind: series
+  date_bucket: null
+  sha256: 2a39e0fa96d17ffec84b2543e0f883529f49ab03ed3d80549998ffb61717af42
+  status: active
+- path: WIP/CG/docs/decisions/ADR-0007-contracts-own-rule-semantics.md
+  kind: series
+  date_bucket: null
+  sha256: ef2b294bfb4020b395fd6ff2515b2054975da84daee7f124f5da591a9907ecc9
+  status: active
+- path: WIP/CG/docs/decisions/ADR-0008-rule-activation-binding-intermediate-representation.md
+  kind: series
+  date_bucket: null
+  sha256: ea5e333a21688d0a0321c34123c814db4271a3fc66bf9982a084d6b542b4968d
+  status: active
+- path: WIP/CG/docs/decisions/ADR-0009-normative-advisory-rule-channels.md
+  kind: series
+  date_bucket: null
+  sha256: a26310c862b63b4d6e72ab0da381a992d148fd447db3215a9fe50d1edad3c837
+  status: active
+- path: WIP/CG/docs/decisions/ADR-0010-rule-activation-and-context-budget.md
+  kind: series
+  date_bucket: null
+  sha256: 957569e748bfbb28bc46dda1a9efd603df6f9ec2b24f6d8b62642f66af8013dc
+  status: active
+- path: WIP/CG/docs/decisions/ADR-0011-deterministic-generated-cursor-rule-projections.md
+  kind: series
+  date_bucket: null
+  sha256: a8312fef08cd7f626264c90d5920d769253a69226e083a0f92583e3ba789780f
+  status: active
+- path: WIP/CG/docs/decisions/ADR-0012-rules-manifest-generated-projection-registry.md
+  kind: series
+  date_bucket: null
+  sha256: 38c0f7097d82a7b2150d286b2ba58397ae7d666a1cbd4db74708335322a5082b
+  status: active
+- path: WIP/CG/docs/decisions/ADR-0013-rule-compiler-fail-closed-conflicts-scope-and-drift.md
+  kind: series
+  date_bucket: null
+  sha256: 8b7538f383c726d0d6609fda32f30c94c8fa0448db5b63b16baa5c1c54cc7169
+  status: active
+- path: WIP/CG/docs/decisions/ADR-0014-rules-strangler-migration-and-doctrine-ratchet.md
+  kind: series
+  date_bucket: null
+  sha256: c19009f09437f6eea7005285882a3693da79a8832c1279345729e2d7349118c9
+  status: active
+- path: WIP/CG/ops/config/doctrine-baseline.rules.yaml
+  kind: series
+  date_bucket: null
+  sha256: ac772bcf8da9f68c0c2b6bc22ecf0b6243726374765bba2790a9a9dcc5cd9973
+  status: active
+- path: WIP/CG/ops/contracts/adapters/cursor_rules.py
+  kind: series
+  date_bucket: null
+  sha256: 169b256d0eebf778cc45a6130f7821915605aa0ae54e55350b64d6ea2c29d924
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/build_doctrine_census.py
+  kind: series
+  date_bucket: null
+  sha256: bdcae65a252f322b78dec00a250c83d355b21bb6ee3c1980eca6725da6c5afc8
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/build_rule_doctrine_census.py
+  kind: series
+  date_bucket: null
+  sha256: 475719de7200089509fc0a9a21d46f23de37c10efbb69d13c9c0ea9f7de4488e
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/build_rules.py
+  kind: series
+  date_bucket: null
+  sha256: 99dd3a96dd193c60bda641b3bb1b6fcc34da96525bfd0c7bea67c6f3372f63ec
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/cluster_doctrine.py
+  kind: series
+  date_bucket: null
+  sha256: 9517c2f0de4bd11d3a28a40b44ff085a4d6c9dc36c6027af35cccd8ada6cd895
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/detect_hidden_doctrine.py
+  kind: series
+  date_bucket: null
+  sha256: 250afad6eee2f553b4c8f71047657c5d6ddd105cc85d71fa106039c3781e8dd7
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/extract_doctrine.py
+  kind: series
+  date_bucket: null
+  sha256: 635c25b524d8b3d0f19c34e3ba02754d9f2eb855e27b40ad114a3dc008df1d22
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/render_cursor_rule.py
+  kind: series
+  date_bucket: null
+  sha256: adb7349ac504f1c45cfcf70d657f5403693f8bf69ba8bd29c48fb87cefbf4ff9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/resolve_rule_contracts.py
+  kind: series
+  date_bucket: null
+  sha256: d4f8a230e05046004b1005213fbc8836f0d6f99cfd1716cfecb8fc65f409d079
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/validate_doctrine_ratchet.py
+  kind: series
+  date_bucket: null
+  sha256: 70fcf47e9d1c7bb5e93e6de0a54d37c767864668c29cdd5c9866cd065d3c4661
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/validate_rule_binding.py
+  kind: series
+  date_bucket: null
+  sha256: 9229a16f4b32d4ad4ab02e4cf1d91f456228b8f64a90061abd157dd547638fef
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/contracts/validate_rule_projections.py
+  kind: series
+  date_bucket: null
+  sha256: 0c7f2aa65beb223ccb2fc3a8cb46c1eb5de6389c576c9195c7ce35b163911f86
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/ops/scripts/generate_rules_manifest.py
+  kind: series
+  date_bucket: null
+  sha256: 8694f895dbc1e0341817cecd956f6668426de3b9263cbbfe14e7cad0ed71e9ad
+  status: possible-landed
+  note: possible-landed
+- path: WIP/CG/tests/contracts/test_rules_contract_compiler.py
+  kind: series
+  date_bucket: null
+  sha256: 0844e9eb09cfc6e08a885299c1df473c889b0286aae9a0512f9dec71c2d47b0e
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/.cursor/rules/claude-code-deepseek.mdc
+  kind: series
+  date_bucket: null
+  sha256: bd5c18c5157268098494227592576716c10e39dd2294c607ac9d8193f306c595
+  status: active
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/AGENT_TASK.md
+  kind: series
+  date_bucket: null
+  sha256: eb0d8f1a9fcbc953f27ef2d430cb29aa40c3d3d9971acaa16e25578e70e4e379
+  status: active
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/README.md
+  kind: series
+  date_bucket: null
+  sha256: f642907f68551367dd6915b49499fce773aa5674582bd25c704ac431b78a71ca
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/START-HERE-PROMPT.md
+  kind: series
+  date_bucket: null
+  sha256: 9e58dd9e33417cd658a964aecb20f8a42b89a98bc17163aefd66f28bbafa8e12
+  status: active
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/docs/MOBILE.md
+  kind: series
+  date_bucket: null
+  sha256: c86eec75da4ef9d3d5c8638a7db69a323e8e3ff5c43c49e4c1e236e2e51d86cc
+  status: active
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/docs/TROUBLESHOOTING.md
+  kind: series
+  date_bucket: null
+  sha256: 62d9d7f18c0907f03d8e8511387bdaf1c8e5c6252a33d674d585fee6d8169d5c
+  status: active
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/env.local.example
+  kind: series
+  date_bucket: null
+  sha256: 0f231bf0cb9ef3d84157fafdd6ab5296adda64c53d59f423a53b977af24920a0
+  status: active
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/scripts/claude-deepseek.ps1
+  kind: series
+  date_bucket: null
+  sha256: fdb5f66ca1253c66c9698202930baf8e22d511daad0e4357b0651b7ced098a7f
+  status: active
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/scripts/claude-deepseek.sh
+  kind: series
+  date_bucket: null
+  sha256: 363b449f0308ef8b5b86b435e3f16ee1fd2f0755ecad36857487cd9abec51d99
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/scripts/preflight.ps1
+  kind: series
+  date_bucket: null
+  sha256: 7397713b9d60e79da742b7dc8b22056043bdc1acc960921f6eb950df118fb0b8
+  status: active
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/scripts/preflight.sh
+  kind: series
+  date_bucket: null
+  sha256: 7b332567b5ab939ebb8d27674aa0b8bab81646fe63969a6cc8af08bd7782d12a
+  status: active
+- path: WIP/Cursor ToDo's/deepseek-claude-pack/scripts/verify-routing.sh
+  kind: series
+  date_bucket: null
+  sha256: 013dffe5c2e3740d37ab3f26bb2927882862cb7fbde4b612e6a57c5d4d09a6ef
+  status: active
+- path: WIP/Cursor ToDo's/housekeeping-pack/AGENT_TASK.md
+  kind: series
+  date_bucket: null
+  sha256: 14d4d4501676222aa250401069a0fa180f549c78fc72a43ad3139db407e0e5fb
+  status: active
+- path: WIP/Cursor ToDo's/housekeeping-pack/CHECKLIST.md
+  kind: series
+  date_bucket: null
+  sha256: cadc13850972ea6d96ff974a8a79bb69b8ee067ed5b9482dcdc28ec1ee761538
+  status: active
+- path: WIP/Cursor ToDo's/housekeeping-pack/RUNBOOK.md
+  kind: series
+  date_bucket: null
+  sha256: 95ea7adb4189406d515a0258385befa122a6459969069ca1f633b2307a33cb71
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/housekeeping-pack/START-HERE-PROMPT.md
+  kind: series
+  date_bucket: null
+  sha256: d73a2f374cec506b79bca65d7810dba087d53399d4749de55b3574253cb90380
+  status: active
+- path: WIP/Cursor ToDo's/housekeeping-pack/scripts/check_repo_hygiene.py
+  kind: series
+  date_bucket: null
+  sha256: 8209b46c58af23ee4b9bfd3598a39f8eb4cc6ff3cc8253a1f760c9cd9d31fa79
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/housekeeping-pack/scripts/cleanup_branches.sh
+  kind: series
+  date_bucket: null
+  sha256: 3a501237ff8f0f0269431fb9ddf7bff3482cc7c0183b77e3a82a69964315232c
+  status: active
+- path: WIP/Cursor ToDo's/housekeeping-pack/templates/TODO.md
+  kind: series
+  date_bucket: null
+  sha256: 8a584cbe8d017742ad4245ae67e5fe11d24c6f089030da3172452b7ae0160111
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/housekeeping-pack/workflows/branch-hygiene.yml
+  kind: series
+  date_bucket: null
+  sha256: 11725dc0b908a12068ef8508afa0085bd906abd8ed5bd83c2d7ea87eaf2c59b7
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/housekeeping-pack/workflows/dependabot.yml
+  kind: series
+  date_bucket: null
+  sha256: 4d721600390a972ae5310be80e5551fc1af57a2d94fca1c3e6a88693500b75fb
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/housekeeping-pack/workflows/governance-self-check.yml
+  kind: series
+  date_bucket: null
+  sha256: 35472b73f9ccea56e82a8c80cfe051f524cec7b51369ed3fd9302891b676f624
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/housekeeping-pack/workflows/repo-hygiene.yml
+  kind: series
+  date_bucket: null
+  sha256: 102f61dbca1460b42725525ac5808e0b57f8a5a6343eaf07273b49ad26b97196
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/linear-cursor-pack/.cursor/rules/linear-workflow.mdc
+  kind: series
+  date_bucket: null
+  sha256: 8acd1b02f6b2b052cc91a8a6555d83079672b6ee5c327d07c95a135c8b7eff75
+  status: active
+- path: WIP/Cursor ToDo's/linear-cursor-pack/AGENT_TASK.md
+  kind: series
+  date_bucket: null
+  sha256: df3bd4cb4ba9382414c4f73ff3d2e9c1acc4d6f0dee83c0d3470c8d21f24de9f
+  status: active
+- path: WIP/Cursor ToDo's/linear-cursor-pack/CHECKLIST.md
+  kind: series
+  date_bucket: null
+  sha256: 2fa41c9831a4cdc3735114740aab1f34a50fd4423e6075269764a5e674013322
+  status: active
+- path: WIP/Cursor ToDo's/linear-cursor-pack/README.md
+  kind: series
+  date_bucket: null
+  sha256: f6e7f68a42a0a6ee161016a55fe4eaf132330bfaab5d763851a7002214e4151c
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/linear-cursor-pack/RUNBOOK.md
+  kind: series
+  date_bucket: null
+  sha256: 13b4e8c71559e69c8bf2f6cf07e35885a940a6ad44e77f96aa87d2aa2bf029ee
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/linear-cursor-pack/START-HERE-PROMPT.md
+  kind: series
+  date_bucket: null
+  sha256: d31b955c6ddf0eacde603640cd1cb6f1d2ba2e3b8220469a14c0853b316874a7
+  status: active
+- path: WIP/Cursor ToDo's/linear-cursor-pack/scripts/verify-linear-mcp.ps1
+  kind: series
+  date_bucket: null
+  sha256: be05c7cd4424f0c149c60041c2d45ad8bb0f88a96c91b443da3b8b09aff740cf
+  status: active
+- path: WIP/Cursor ToDo's/linear-cursor-pack/scripts/verify-linear-mcp.sh
+  kind: series
+  date_bucket: null
+  sha256: ade60c4929ab63110460a96e4e71cc4083b46ba2b36aa8c3070a93a245354d06
+  status: active
+- path: WIP/Cursor ToDo's/linear-cursor-pack/templates/env.linear.example
+  kind: series
+  date_bucket: null
+  sha256: fda13ac8236a418ecc862efb31396085a99db794eb0c83011736afd504fb7e7a
+  status: active
+- path: WIP/Cursor ToDo's/linear-cursor-pack/templates/mcp.linear.fallback.json
+  kind: series
+  date_bucket: null
+  sha256: aebe69ac601154b7c288d834af543a6896bddee6fe6619a1c69dcfffd0788182
+  status: active
+- path: WIP/Cursor ToDo's/linear-cursor-pack/templates/mcp.linear.json
+  kind: series
+  date_bucket: null
+  sha256: 75d86e7cce5a404eb2fea91b1a9478b9fb8d9b2e8da229173fb0c9f84f9b9a8f
+  status: active
+- path: WIP/Cursor ToDo's/rules-normalization-pack/CHECKLIST.md
+  kind: series
+  date_bucket: null
+  sha256: 421c7f7ee243ff1d745ae0bce8eb5db8052e5ba3c64984022c7748d66ecb8c21
+  status: active
+- path: WIP/Cursor ToDo's/rules-normalization-pack/MIGRATION-MAP.md
+  kind: series
+  date_bucket: null
+  sha256: 69998f12abc3698681baa25a3d6e7e8a9845ed31854d49f2d8f85ccf462887e4
+  status: active
+- path: WIP/Cursor ToDo's/rules-normalization-pack/NORMALIZE_TASK.md
+  kind: series
+  date_bucket: null
+  sha256: b36d90eaaf83052d593fe1313eb5f60c379d3a932a229032095800c707a2523a
+  status: active
+- path: WIP/Cursor ToDo's/rules-normalization-pack/STANDARD.md
+  kind: series
+  date_bucket: null
+  sha256: f9689eef3c3410aa1e50ffe3c684b0af710f1c15cb55904b9fabd2e1c5874997
+  status: active
+- path: WIP/Cursor ToDo's/rules-normalization-pack/START-HERE-PROMPT.md
+  kind: series
+  date_bucket: null
+  sha256: 0c5fd49eb4643cb071d5bbff94464c4b2e774a5857bff93f0d6bb87f05f087f4
+  status: active
+- path: WIP/Cursor ToDo's/rules-normalization-pack/scripts/check_rules_standard.py
+  kind: series
+  date_bucket: null
+  sha256: de5e21c9e26012694b374c52b71867540d6cea1f180d203510826f39343b5518
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/rules-normalization-pack/scripts/normalize_frontmatter.py
+  kind: series
+  date_bucket: null
+  sha256: e7c2424c9a7f5770916d440b3124a0626eb6f5e097876a0ed11134a943406902
+  status: active
+- path: WIP/Cursor ToDo's/rules-normalization-pack/templates/rule-template.mdc
+  kind: series
+  date_bucket: null
+  sha256: 6a6474d1e4f3fca5093e90a90799eacb41fdf8b4ffc7ea031aba548c1f386ceb
+  status: active
+- path: WIP/Cursor ToDo's/skills-normalization-pack/CHECKLIST.md
+  kind: series
+  date_bucket: null
+  sha256: 5486c7bc2a66929b6b563fefe02221168797841e3ff594448a66fd3847ffc4a3
+  status: active
+- path: WIP/Cursor ToDo's/skills-normalization-pack/NORMALIZE_TASK.md
+  kind: series
+  date_bucket: null
+  sha256: d0c94240f3dc6371e5c455d12efb6d05d33cbfc5bbe7eac340e469a301d1b360
+  status: active
+- path: WIP/Cursor ToDo's/skills-normalization-pack/PATHS-PROPOSAL.md
+  kind: series
+  date_bucket: null
+  sha256: 446bda91a77dc8744c52cbaa5af03d6cb7ebd5620bb032531b3122ee8ddbbcde
+  status: active
+- path: WIP/Cursor ToDo's/skills-normalization-pack/STANDARD.md
+  kind: series
+  date_bucket: null
+  sha256: c8aeb0f858350b5a337c05a7f2d6df52c95f48250e92892fa4846c472ceeb59f
+  status: active
+- path: WIP/Cursor ToDo's/skills-normalization-pack/START-HERE-PROMPT.md
+  kind: series
+  date_bucket: null
+  sha256: f5ca1766a708ddd043ae767d58e4440cb30485ad24b636ed052ffc78fde5188f
+  status: active
+- path: WIP/Cursor ToDo's/skills-normalization-pack/scripts/check_skills_standard.py
+  kind: series
+  date_bucket: null
+  sha256: 390686ecec86ef91fb5bbd3e885645cb5e27bc37338df8c6e32745da448dc85f
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Cursor ToDo's/skills-normalization-pack/scripts/nest_skill_metadata.py
+  kind: series
+  date_bucket: null
+  sha256: 441e3745244cc3cccb922c07f656749d11c56cb1131fca87271bf7cf5e2c8222
+  status: active
+- path: WIP/Cursor ToDo's/skills-normalization-pack/templates/SKILL.md
+  kind: series
+  date_bucket: null
+  sha256: dbaa372a355becd3d4cdf6de24d01dc473b597f52363dd9b7c0b8fc09a79b4bd
+  status: possible-landed
+  note: possible-landed
+- path: WIP/Deepseek-Check-Status.md
+  kind: series
+  date_bucket: null
+  sha256: cb19030709bc6e2d1d51c70b6b5da6ad8a27237f4d6170583d7d16c03d8ec32c
+  status: active
+- path: WIP/Execution Schemas/memory lock question.md
+  kind: series
+  date_bucket: null
+  sha256: 6bb81ef33bf95d165dae9fb59e96930ba58c47a4b41160dff5ebd804c032d840
+  status: active
 - path: WIP/Graphiti/Memory output.md
   kind: series
   date_bucket: null
@@ -111,75 +3118,25 @@ entries:
   date_bucket: null
   sha256: 708fe9a4cfdd8c634fc5eb16a6cfd58a592e9b661afdcfb907efc7037a60109d
   status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.capability_preflight.v1.yaml
+- path: WIP/Memory output.md
   kind: series
   date_bucket: null
-  sha256: 59c889fe052733aa1f1665066268c5d9549a94a23d67e9f500719751fb4c9630
+  sha256: 6f5995fbfbc0b6a633dd79ffb5a9b03809abcd9f74968b6d4add7dee8f412538
   status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.coding_contract.v1.yaml
+- path: WIP/PE Odoo/Odoo Intent 1.md
   kind: series
   date_bucket: null
-  sha256: 5f2a8d007ac3f3c10f55aa212f2200678209016d143e1c5d7a2039c92002c773
+  sha256: 16dff38c1bb3bec2d9b55c5e92336e1392056c2db39fdcc95d93ea9b30f0a32b
   status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.convergence_contract.v1.yaml
+- path: WIP/PE Odoo/Odoo Intent 2.md
   kind: series
   date_bucket: null
-  sha256: 71c600166fd10e0d66e3d456b460e7a70d9f99e20b3631cf19a18c2c9c8f6f76
+  sha256: 259402a6f2e08b55910d2a48d4c3a836f98bdcb1acd06c973f826bb5c4db06f6
   status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.dependency_topology.v1.yaml
+- path: WIP/PE Odoo/PE Odoo.md
   kind: series
   date_bucket: null
-  sha256: 4ad45fcf5c301d57ebd5413b9a932f25fffe3d592059df382f25115502d2cd25
-  status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.execution_contract.v1.yaml
-  kind: series
-  date_bucket: null
-  sha256: 312b1b4afb735bb44776ad1bcb6af825195724a71dc5e6547edba7729adcf0e3
-  status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.execution_packet.v1.yaml
-  kind: series
-  date_bucket: null
-  sha256: adfe6a77a124135169bfc36fc72728857574c919ea5ff2b57822fd0a20bc84ba
-  status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.mutation_authorization.v1.yaml
-  kind: series
-  date_bucket: null
-  sha256: 2307130d16fd75e212c0c6daa0555a9e62dcfc4ae55e4e92bdedee1128c98c85
-  status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.plan_document.v1.yaml
-  kind: series
-  date_bucket: null
-  sha256: 1b0e865489c562fc29addd71cd8049ce26d140c59134943a85a2694f89cf7b00
-  status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.rollback_contract.v1.yaml
-  kind: series
-  date_bucket: null
-  sha256: a141687d850116f2ae7e6c1df018fe50d6b0a35598e24580a31df0e4c1ae51bf
-  status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/environment/contracts/execution/schemas/canonical.schema.validation_evidence.v1.yaml
-  kind: series
-  date_bucket: null
-  sha256: f6de735e8c2d254a89b25a7cf63f6de9337624fd4ef4381850a810d493e8e08f
-  status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/Execution Schemas/memory lock question.md
-  kind: series
-  date_bucket: null
-  sha256: 6bb81ef33bf95d165dae9fb59e96930ba58c47a4b41160dff5ebd804c032d840
-  status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/PE LAUNCH TEMPLATE/HOWTO.md
-  kind: series
-  date_bucket: null
-  sha256: d2b17fcc8809984c78c9e3168ff25d845507375b5f34aa4ad059b1507a4f9f23
-  status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/PE LAUNCH TEMPLATE/INTENT.yaml
-  kind: series
-  date_bucket: null
-  sha256: 292b4d49c2f89745fc6c113ce3be840919e3d0b2113406889d35dc935c50ef2e
-  status: active
-- path: WIP/PROGRAM EXECUTION PIPELINE/PE-PE 1.md
-  kind: series
-  date_bucket: null
-  sha256: cd6da4a9300a9c903bf62e4f428aab445ffa9e33923a20aacef07650dc155874
+  sha256: 2902d962714ad17ef2bef9aad7fa9367abeae534c55139da5c3bd7fc5f8425c2
   status: active
 - path: WIP/Quantum Animation/00_quantum_animation_system_architecture.yaml
   kind: series
@@ -346,73 +3303,6 @@ entries:
   date_bucket: null
   sha256: b6ac8dc1662523e2ddfaf1f2d4b7c8fcc6e641d807ebcbeb9006fe25a7b4fe2d
   status: active
-- path: WIP/repo-hygiene-pack/AGENT_TASK.md
-  kind: series
-  date_bucket: null
-  sha256: 14d4d4501676222aa250401069a0fa180f549c78fc72a43ad3139db407e0e5fb
-  status: active
-- path: WIP/repo-hygiene-pack/CHECKLIST.md
-  kind: series
-  date_bucket: null
-  sha256: cadc13850972ea6d96ff974a8a79bb69b8ee067ed5b9482dcdc28ec1ee761538
-  status: active
-- path: WIP/repo-hygiene-pack/RB-HK-001.plan.md
-  kind: series
-  date_bucket: null
-  sha256: 357afcd75a16b4cbcc81e1deec384127f48688604089b1a29aea405b37878b00
-  status: active
-- path: WIP/repo-hygiene-pack/RUNBOOK.md
-  kind: series
-  date_bucket: null
-  sha256: 95ea7adb4189406d515a0258385befa122a6459969069ca1f633b2307a33cb71
-  status: possible-landed
-  note: possible-landed
-- path: WIP/repo-hygiene-pack/START-HERE-PROMPT.md
-  kind: series
-  date_bucket: null
-  sha256: d73a2f374cec506b79bca65d7810dba087d53399d4749de55b3574253cb90380
-  status: active
-- path: WIP/repo-hygiene-pack/scripts/check_repo_hygiene.py
-  kind: series
-  date_bucket: null
-  sha256: 8209b46c58af23ee4b9bfd3598a39f8eb4cc6ff3cc8253a1f760c9cd9d31fa79
-  status: possible-landed
-  note: possible-landed
-- path: WIP/repo-hygiene-pack/scripts/cleanup_branches.sh
-  kind: series
-  date_bucket: null
-  sha256: 3a501237ff8f0f0269431fb9ddf7bff3482cc7c0183b77e3a82a69964315232c
-  status: active
-- path: WIP/repo-hygiene-pack/templates/TODO.md
-  kind: series
-  date_bucket: null
-  sha256: 8a584cbe8d017742ad4245ae67e5fe11d24c6f089030da3172452b7ae0160111
-  status: possible-landed
-  note: possible-landed
-- path: WIP/repo-hygiene-pack/workflows/branch-hygiene.yml
-  kind: series
-  date_bucket: null
-  sha256: 11725dc0b908a12068ef8508afa0085bd906abd8ed5bd83c2d7ea87eaf2c59b7
-  status: possible-landed
-  note: possible-landed
-- path: WIP/repo-hygiene-pack/workflows/dependabot.yml
-  kind: series
-  date_bucket: null
-  sha256: 4d721600390a972ae5310be80e5551fc1af57a2d94fca1c3e6a88693500b75fb
-  status: possible-landed
-  note: possible-landed
-- path: WIP/repo-hygiene-pack/workflows/governance-self-check.yml
-  kind: series
-  date_bucket: null
-  sha256: 35472b73f9ccea56e82a8c80cfe051f524cec7b51369ed3fd9302891b676f624
-  status: possible-landed
-  note: possible-landed
-- path: WIP/repo-hygiene-pack/workflows/repo-hygiene.yml
-  kind: series
-  date_bucket: null
-  sha256: 102f61dbca1460b42725525ac5808e0b57f8a5a6343eaf07273b49ad26b97196
-  status: possible-landed
-  note: possible-landed
 - path: WIP/World Model/world.model.md
   kind: series
   date_bucket: null
@@ -509,6 +3399,92 @@ entries:
   kind: receipt
   date_bucket: null
   sha256: c19bcc796f1d97e6d543da4b4bdf1b695cbf3763c1b3ee8d3a4c82ca7d39f90c
+  status: active
+- path: WIP/_receipts/prune-20260829T080008Z.json
+  kind: receipt
+  date_bucket: null
+  sha256: 43753898f3a4fc113d8ac15e081c64a7f198d5fd9cddb007df11af30265b3811
+  status: active
+- path: WIP/_receipts/prune-20260829T080251Z.json
+  kind: receipt
+  date_bucket: null
+  sha256: 53f942bee06603f4086c6014b89fd51d582df61eec6976d58d256be78d51350a
+  status: active
+- path: WIP/backlog/control-plane-stages/Agent & Readme.md
+  kind: series
+  date_bucket: null
+  sha256: 60accd9923f8995b70e31d61073156e0d66b3351a4ba3159c2ce65274f7d17cd
+  status: active
+- path: WIP/backlog/control-plane-stages/Audit (before plan).md
+  kind: series
+  date_bucket: null
+  sha256: e82a95b736e3456b0e6f4e49e43e5e2acaf012c382db37d7c7a24d552fcc7aa1
+  status: active
+- path: WIP/backlog/control-plane-stages/Build (after plan).md
+  kind: series
+  date_bucket: null
+  sha256: 283a7b82db96ff3fdc06aa2a58341a375ce7a04186f2f6090c07f65ce696a541
+  status: active
+- path: WIP/backlog/control-plane-stages/Change (after build).md
+  kind: series
+  date_bucket: null
+  sha256: 057e4f9300a280906ec11304542b2d9fa5662690792d1a7ec02aeb7c99d034d6
+  status: active
+- path: WIP/backlog/control-plane-stages/Done.md
+  kind: series
+  date_bucket: null
+  sha256: c04807590427032203c6735a474d79961ad196114b38061cfcd5507e3f36d195
+  status: active
+- path: WIP/backlog/control-plane-stages/Plan (after audit).md
+  kind: series
+  date_bucket: null
+  sha256: b5a85bd93db6c036c6fc4cbba02073efa56c2a96ee113200c6de2f5c0cecc914
+  status: active
+- path: WIP/backlog/control-plane-stages/Release (after Change).md
+  kind: series
+  date_bucket: null
+  sha256: 6d611bcc11176c4010b2da57a9c9cf3c30ac2f78c14481218e1c30b757143022
+  status: active
+- path: WIP/bootstrap-audit-remediation.plan.json
+  kind: series
+  date_bucket: null
+  sha256: ef425982c59c3d15249d425ee4c6ec1b95ae11d12ac0e052964eb881312c47b5
+  status: active
+- path: WIP/claude-code-mobile-environment/README.md
+  kind: series
+  date_bucket: null
+  sha256: 3f8b6dd97d9ede28e9e14770d2ed5fd8d7e7438c2cca3d085e6387019e447324
+  status: possible-landed
+  note: possible-landed
+- path: WIP/claude-code-mobile-environment/claude-code-mobile-environment.plan.json
+  kind: series
+  date_bucket: null
+  sha256: e5adc5edbdb83538eababf00b6e075515831c680dd00a973f67cc49abd67c5a7
+  status: active
+- path: WIP/claude-code-mobile-environment/claude-code-mobile-environment.plan.md
+  kind: series
+  date_bucket: null
+  sha256: ad5ac6e27570402a1ab0503c3ff1b5e50aaeee7695cd68727f7fcd195eef2833
+  status: active
+- path: WIP/claude-code-mobile-environment/claude-code-mobile-remediation.contract.v3.1.yaml
+  kind: series
+  date_bucket: null
+  sha256: be4458074dba842e62159ef017c83ed85b92fc7239e9c2a77ef57e7fa2cbf421
+  status: active
+- path: WIP/governance-caller-permission-repair/governance-caller-permission-repair.plan.json
+  kind: series
+  date_bucket: null
+  sha256: 7c4b90aef8b2e9cbe4343b83439f331701c6ee5ee4610cea0626bb2ad4ba701d
+  status: active
+- path: WIP/governance-caller-permission-repair/governance-caller-permission-repair.plan.md
+  kind: series
+  date_bucket: null
+  sha256: 9ef553df3ce5bf0c44a2a8f7c333a25b7264eb9f1f49d51105bacf067d34cc43
+  status: active
+- path: WIP/graphiti question.md
+  kind: series
+  date_bucket: null
+  sha256: 708fe9a4cfdd8c634fc5eb16a6cfd58a592e9b661afdcfb907efc7037a60109d
   status: active
 - path: WIP/housekeeping-pack/AGENT_TASK.md
   kind: series
@@ -628,16 +3604,98 @@ entries:
   sha256: fcd663e264d238fcb65e00496440135f37c1579f0e39bda0a7a8aac47f1c46ab
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0001-peer-execution-core-upstream-of-adapters.md
+  kind: series
+  date_bucket: null
+  sha256: 8da992faf0b1bd5e6c8715d723f82d555f6c9af9d599613a682a239c600ff0cb
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0002-separate-peer-identity-profile-transport-provider.md
+  kind: series
+  date_bucket: null
+  sha256: 2e520d7b97c1a1e69ea9d8fd034f5079c098f8b75b043470b19157c5ba3060d1
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0003-canonical-execution-request-result-and-shared-transports.md
+  kind: series
+  date_bucket: null
+  sha256: ddbc73dde033ffc77216e9bbefe7d80fd7c936e33a95a67b7120ae76e4a0e6c9
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0004-provider-neutral-inference-routing-deepseek-deferred.md
+  kind: series
+  date_bucket: null
+  sha256: a5dc02a5d6a2bfd82f3fd6e47e21679d7299eb9ca15e8cf657b7fee2750eae44
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0005-decompose-claude-code-thick-adapter.md
+  kind: series
+  date_bucket: null
+  sha256: bd5dafe3f55bf6efd9211565dbc2a978766737dacc423f365b4ca72929af5efc
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0006-thin-adapter-conformance-is-merge-blocking.md
+  kind: series
+  date_bucket: null
+  sha256: cc964f2428c22ffc016b863cdd7e17caa91f7a21948741ff92087deb33e08a08
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0017-peer-execution-core-upstream-of-adapters.md
+  kind: series
+  date_bucket: null
+  sha256: 2083a32877a0f1eea59620278299b2947e9009037b349f74091a81b9a21c7e77
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0018-separate-peer-identity-profile-transport-provider.md
+  kind: series
+  date_bucket: null
+  sha256: 66fa7360e1f73dd0e4579ea0d1710ddaf9c931f6cfcd2216977d475646fcac46
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0019-canonical-execution-request-result-and-shared-transports.md
+  kind: series
+  date_bucket: null
+  sha256: c0aa48fcd2375dee39a6291f9b95cee38f9528bf7745ec473e091e8e38e9d47b
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0020-provider-neutral-inference-routing-deepseek-deferred.md
+  kind: series
+  date_bucket: null
+  sha256: 7337cd05d9c597c27846218a6368eaa5a7a4dcefe7509325d86ba96a564301bf
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0021-decompose-claude-code-thick-adapter.md
+  kind: series
+  date_bucket: null
+  sha256: b31251bc3054b49b1dab96d33963b9cc7a14a70268bf7a5776e1c1cd16ac0975
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/ADR-0022-thin-adapter-conformance-is-merge-blocking.md
+  kind: series
+  date_bucket: null
+  sha256: f2dfb58d2da424eb0ecf521053c7fc0cae9fc8e05a964efa2db7ee9eb7bf095a
+  status: active
+- path: WIP/llm_peer_execution_core/architecture_authority/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml
+  kind: series
+  date_bucket: null
+  sha256: aa6998a0817d884b52cc6d7541319f2307aa26afd516b4fd5bbf977c4b148c86
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/conftest.py
   kind: series
   date_bucket: null
   sha256: 5d18e81283114655da30139e21a22341748f7ed9071a0d0ef3a030eccfa0b0b8
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/agents/PEER_EXECUTION.md
+  kind: series
+  date_bucket: null
+  sha256: 019dc3fe883630ef45a06815db86013e1b04b3bfa6a4494ae74e07c8b4bbc6dc
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/agents/PEER_RUNTIME_BINDINGS.yaml
+  kind: series
+  date_bucket: null
+  sha256: b951cd69c8302a3831ebc9df930bcb7c745dc1cb395354c777dc0de8baa24c12
+  status: possible-landed
+  note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/agents/adapters/ADAPTER_CONTRACT.md
   kind: series
   date_bucket: null
   sha256: 76f17dad5ba1d7423727c9629efa19eb7c570136ab0620fd57b22da8568b28c0
+  status: possible-landed
+  note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/agents/schemas/peer-runtime-bindings.schema.json
+  kind: series
+  date_bucket: null
+  sha256: 5ddd7bb99b7ec4f0336e10a8bd269520bf5ab710e34205bf2d8cc1dbcecb4c03
   status: possible-landed
   note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/agents/tools/validate_executable_peers.py
@@ -652,6 +3710,93 @@ entries:
   sha256: 01837c0c1b62ff82e5c8fd4356f89981e44269412ad546247348cb2b728b0301
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/autonomy/README.md
+  kind: series
+  date_bucket: null
+  sha256: b5679586610e46c523ce5b16e0b1bb84bd66809366a4236205971b8fc0e8c0ba
+  status: possible-landed
+  note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/autonomy/meta/peer-execution-bounded-autonomy-runtime.meta.md
+  kind: series
+  date_bucket: null
+  sha256: f2754ccf54f7be9ccf6efd850765838d4f07fa31a27a1f208cc306dd021a27cf
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/MANIFEST.yaml
+  kind: series
+  date_bucket: null
+  sha256: 9117552dbef250ef92e3f9e82efe93f39dba0e0c7d8fc30ba2825cc9e1f9cb22
+  status: possible-landed
+  note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/PEER_EXECUTION_THIN_ADAPTER_LAW.yaml
+  kind: series
+  date_bucket: null
+  sha256: aa6998a0817d884b52cc6d7541319f2307aa26afd516b4fd5bbf977c4b148c86
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/README.md
+  kind: series
+  date_bucket: null
+  sha256: 346d2eb5d26791351735cf1329987052b5d2336504588b7dbd96d64b045bc45a
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0001-peer-execution-core-upstream-of-adapters.md
+  kind: series
+  date_bucket: null
+  sha256: 8da992faf0b1bd5e6c8715d723f82d555f6c9af9d599613a682a239c600ff0cb
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0002-separate-peer-identity-profile-transport-provider.md
+  kind: series
+  date_bucket: null
+  sha256: 2e520d7b97c1a1e69ea9d8fd034f5079c098f8b75b043470b19157c5ba3060d1
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0003-canonical-execution-request-result-and-shared-transports.md
+  kind: series
+  date_bucket: null
+  sha256: ddbc73dde033ffc77216e9bbefe7d80fd7c936e33a95a67b7120ae76e4a0e6c9
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0004-provider-neutral-inference-routing-deepseek-deferred.md
+  kind: series
+  date_bucket: null
+  sha256: a5dc02a5d6a2bfd82f3fd6e47e21679d7299eb9ca15e8cf657b7fee2750eae44
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0005-decompose-claude-code-thick-adapter.md
+  kind: series
+  date_bucket: null
+  sha256: bd5dafe3f55bf6efd9211565dbc2a978766737dacc423f365b4ca72929af5efc
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0006-thin-adapter-conformance-is-merge-blocking.md
+  kind: series
+  date_bucket: null
+  sha256: cc964f2428c22ffc016b863cdd7e17caa91f7a21948741ff92087deb33e08a08
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0017-peer-execution-core-upstream-of-adapters.md
+  kind: series
+  date_bucket: null
+  sha256: 2083a32877a0f1eea59620278299b2947e9009037b349f74091a81b9a21c7e77
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0018-separate-peer-identity-profile-transport-provider.md
+  kind: series
+  date_bucket: null
+  sha256: 66fa7360e1f73dd0e4579ea0d1710ddaf9c931f6cfcd2216977d475646fcac46
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0019-canonical-execution-request-result-and-shared-transports.md
+  kind: series
+  date_bucket: null
+  sha256: c0aa48fcd2375dee39a6291f9b95cee38f9528bf7745ec473e091e8e38e9d47b
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0020-provider-neutral-inference-routing-deepseek-deferred.md
+  kind: series
+  date_bucket: null
+  sha256: 7337cd05d9c597c27846218a6368eaa5a7a4dcefe7509325d86ba96a564301bf
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0021-decompose-claude-code-thick-adapter.md
+  kind: series
+  date_bucket: null
+  sha256: b31251bc3054b49b1dab96d33963b9cc7a14a70268bf7a5776e1c1cd16ac0975
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/contracts/execution/adr/ADR-0022-thin-adapter-conformance-is-merge-blocking.md
+  kind: series
+  date_bucket: null
+  sha256: f2dfb58d2da424eb0ecf521053c7fc0cae9fc8e05a964efa2db7ee9eb7bf095a
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/ARCHITECTURE.md
   kind: series
   date_bucket: null
@@ -676,6 +3821,11 @@ entries:
   sha256: 74a07476be01ebe9f614c871c6dab7ef448c16a8be5b5d4b1b158edfd0326743
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/ci/github-actions/provider.py
+  kind: series
+  date_bucket: null
+  sha256: 10d5c06b273ba2295984cc4b87a8b0e37e6ecb24295d30c32e906bc5ad71cc05
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/claude-code/ADAPTER.yaml
   kind: series
   date_bucket: null
@@ -694,12 +3844,23 @@ entries:
   sha256: 3c25fdc45f08f9b8f9fa48aac9dc4f3421965a0ef4917226135837da67e46950
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/claude-code/stream_parser.py
+  kind: series
+  date_bucket: null
+  sha256: 3a178cabe5c1f0e75539cda4977ec36b8449b8f1f18c9bab870600ab760c4923
+  status: possible-landed
+  note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/claude-code/tests/test_driver.py
   kind: series
   date_bucket: null
   sha256: f1462bb522134a88c4b1ca165d09bd04d9023b5561297a5bff79cd80376e073c
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/codex/ADAPTER.yaml
+  kind: series
+  date_bucket: null
+  sha256: 7e012b0245c9135a0de986b8f285f33965598d7fb2d04f01d95cac94449a7ce0
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/codex/provider.py
   kind: series
   date_bucket: null
@@ -790,36 +3951,97 @@ entries:
   sha256: 1132d982cfa0c50638de4f40e12735422c3e6e15ff238eeb9ad9f9b188577634
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/cursor-background/ADAPTER.yaml
+  kind: series
+  date_bucket: null
+  sha256: 2c2cc7a5dae787a59bf4ea21d9aacff2297a09311ca434c6f8eb8886c3a416b6
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/cursor-background/provider.py
   kind: series
   date_bucket: null
   sha256: cf29857e6c660ca5076781a57075356c082821f1b834e827a925535ef94177a7
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/cursor-foreground/ADAPTER.yaml
+  kind: series
+  date_bucket: null
+  sha256: 3c44c9540dae3722026283453be2940ea7178d3f162a41e59760d772deaf09cb
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/cursor-foreground/provider.py
   kind: series
   date_bucket: null
   sha256: d8f455ef4c53dfeee4199860582ceb128a579b1743311568506ab48c20ba8b11
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/deployment/target-specific/provider.py
+  kind: series
+  date_bucket: null
+  sha256: 165010b9b6aff5438eaef6044f346b9a8c527f2d41cb8fa6460dda63aaedaa12
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/gemini/ADAPTER.yaml
+  kind: series
+  date_bucket: null
+  sha256: 0b8508e8abf4dc73bf131060c94863861ccd69704044c47118127c1e0bca6b87
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/gemini/provider.py
   kind: series
   date_bucket: null
   sha256: d1c43a8a8b630612da36ee4ad9d3a6e8e15fdc9b9945b2230778d5c9266fd72f
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/github/checks/provider.py
+  kind: series
+  date_bucket: null
+  sha256: 72ea752c013daba81f0067b001d142d2cb7b2b30fad4a09969ac311b0842b96c
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/github/deployments/provider.py
+  kind: series
+  date_bucket: null
+  sha256: 5e05edcbb8bbea72157049fada8757bcb5ede2ba9cfd724cd01bdf70e3fa96f5
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/github/remote-actions/provider.py
   kind: series
   date_bucket: null
   sha256: e64c0bc7660efa82779544590d38c2b6cc1cc54bbce589d955542d319aa0fee9
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/manus/ADAPTER.yaml
+  kind: series
+  date_bucket: null
+  sha256: 7d92ced52144b08124a820d0e61224afac28a92f9aee66c5e0d5d4c95d8c2f13
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/adapters/manus/provider.py
   kind: series
   date_bucket: null
   sha256: a15f4e15e2ea56080a84692f0d6099299e5d0ac957056dd4c79ca7fc97fa7132
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/schemas/canonical-execution-request.schema.json
+  kind: series
+  date_bucket: null
+  sha256: 5be2686a0dea34aee640a73d78f38c5311073509d16b9a5dfba763c96e6deb77
+  status: possible-landed
+  note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/schemas/canonical-provider-result.schema.json
+  kind: series
+  date_bucket: null
+  sha256: dfbc69884e3384f297badd6497d0963d8806ec7d8ba4166dab890d042d854a12
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/schemas/context-manifest.schema.json
+  kind: series
+  date_bucket: null
+  sha256: c6f98fe50066e68ed368b3bc18e3e47e79d252fed0ade01172a4f207dce76b4a
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/schemas/execution-adapter-spec.schema.json
+  kind: series
+  date_bucket: null
+  sha256: 4b54c1efd8158f0a1891155d1630c5a6ee083bcae32bacb1b9aa76d880581ed0
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/schemas/execution-profile.schema.json
+  kind: series
+  date_bucket: null
+  sha256: f4c89230b66b3499c50c0ed6f3e4a8d8f479e182c58552fa53aad78992b276b4
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/conformance/test_agent_ref_binding.py
   kind: series
   date_bucket: null
@@ -838,16 +4060,48 @@ entries:
   sha256: 50b1352af7dbace7e6b4dd64560b61faf189fac23faa80137116cb4cee59ef8f
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/integrations/agent-identity/identity_binding.py
+  kind: series
+  date_bucket: null
+  sha256: 5967fefabad499e1dddaaae2d06d454dbe5e6acc3acaf8a99614d6e292f85a9e
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/integrations/bootstrap/peer_readiness.py
   kind: series
   date_bucket: null
   sha256: 8ed72c83edf000e070532135fe42a0cc3e6de7597f6e93e692aa5d2f582144c1
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/README.md
+  kind: series
+  date_bucket: null
+  sha256: 8494397945f6d85e03cf97ed8f2d4730149cbba3962e049ec4f27382f2bd12e0
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/__init__.py
+  kind: series
+  date_bucket: null
+  sha256: 8adeb4908bba5f6a5fe78066a8c3df5d3b8356ba47eb2ffe5c70897bedcb52e5
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/autonomy/README.md
+  kind: series
+  date_bucket: null
+  sha256: 262d4b59cde3ed9268ac6efb8bc7457ccce741bbe2f441c67fd7653459ce73bc
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/autonomy/validate_autonomy.py
   kind: series
   date_bucket: null
   sha256: 5d19fbe571c5d4d1484eebce02ac8b34caeff58781a071061960c39e6ea994cc
+  status: possible-landed
+  note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/bindings.py
+  kind: series
+  date_bucket: null
+  sha256: 36d4fbbe38f4c7bed41e9e82252ef74af05c7a2303d0577a3a99aeeffb0569cc
+  status: possible-landed
+  note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/context.py
+  kind: series
+  date_bucket: null
+  sha256: 50e56ccd71aaf6bd3107dd4c0d7b2886b1758f88dbd81e1e42de819081901717
   status: possible-landed
   note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/contracts.py
@@ -862,6 +4116,11 @@ entries:
   sha256: 738de085817fce43a9b7209d7442d1c978386c024926053485fb885ceb16ea9e
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/digests.py
+  kind: series
+  date_bucket: null
+  sha256: 75fdccca72d5c80750bce58c8960198eb17da50948c049f04808be4d173db4b5
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/driver_execution.py
   kind: series
   date_bucket: null
@@ -874,12 +4133,22 @@ entries:
   sha256: cc91699e79fa3d6de240731867ed9feff31b56aceff2cfd826410656bf1aa63e
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/imports.py
+  kind: series
+  date_bucket: null
+  sha256: 8847fdfd6313b03d907701d12b16a4fd03007439ae3d330e47a70ef8d6b83ac7
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/permissions.py
   kind: series
   date_bucket: null
   sha256: 78a9539cbd32143d9253923a6054385ed096b4d9d62fffbe3185375e0476d770
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/profiles.py
+  kind: series
+  date_bucket: null
+  sha256: aa1fd58c5815a8e747a3f85c89fb88e77c3c3fe685a4c7d71c901551fee071ab
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/provider.py
   kind: series
   date_bucket: null
@@ -892,6 +4161,16 @@ entries:
   sha256: 6a2e8de98de7c370b002c13246c03205d5679a9d1a3c3398765e74d8fbd4a6ae
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/runtime_store.py
+  kind: series
+  date_bucket: null
+  sha256: d0a073947e2bdc6059238230750d26d020f608520e107301e7211430ca635577
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/schema_registry.py
+  kind: series
+  date_bucket: null
+  sha256: eb7cd357fc48abbbde4719e2ac651c3c8f0321b7c0019821f81fe001deae02cc
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/peer_execution/subprocess_runner.py
   kind: series
   date_bucket: null
@@ -910,6 +4189,33 @@ entries:
   sha256: d178bf572a0923e23d3b705c3d68631848a330f43186674b0fe90a156a6afc53
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_ADAPTER_HEALTH.yaml
+  kind: series
+  date_bucket: null
+  sha256: 582fc9abd771f928f60bc6dea08f81cdab68c054e20b884942b46028c4f8837a
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_ADAPTER_REGISTRY.yaml
+  kind: series
+  date_bucket: null
+  sha256: 5dc61cdb25ca98c76a775d2fcfe7c0e8eb7f961327b96c25f92233573a16c464
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_CONCURRENCY_POLICY.yaml
+  kind: series
+  date_bucket: null
+  sha256: f285ff70c137e0c4f5a3fd6b1eba5fc6f00be3574dd32b79aa47fd326697669a
+  status: possible-landed
+  note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_PROFILE_REGISTRY.yaml
+  kind: series
+  date_bucket: null
+  sha256: 84e22c36e0e19a3e59032455f20c0954538d44abbdcb07ed3d5f715f9a66ddb9
+  status: possible-landed
+  note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/registry/EXECUTION_ROUTING_POLICY.yaml
+  kind: series
+  date_bucket: null
+  sha256: dd75195c3d5be7ae75e610b0f17446ff965d08c62c738a83dc3596f4fc22abb2
+  status: active
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/scripts/peer_execution_cli.py
   kind: series
   date_bucket: null
@@ -926,6 +4232,12 @@ entries:
   kind: series
   date_bucket: null
   sha256: b142d570c5234b2a43bb53b7b7e42a3422e8b80c41410e5d4c22876236848738
+  status: possible-landed
+  note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/scripts/render_adapter_matrix.py
+  kind: series
+  date_bucket: null
+  sha256: 1223944cab2a6bed5f7f87e0e64c68850b137dc7f1fa149b8188fbaa8d52f24b
   status: possible-landed
   note: possible-landed
 - path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/scripts/run_conformance.py
@@ -946,6 +4258,27 @@ entries:
   sha256: a7fb1544f06560ee3a49fffaf207cfe3dff875de9b0ad2c262e5450c3bc073c9
   status: possible-landed
   note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/validation/README.md
+  kind: series
+  date_bucket: null
+  sha256: b7cf56aa747119dfce74837e8de0557645b6a322cd9de43104b9dc5304485fce
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/environment/program-execution/validation/VALIDATION.md
+  kind: series
+  date_bucket: null
+  sha256: 670b748cf6ad4359d28d774712a28633f64c1553cdfcc08704065553e18a03c2
+  status: active
+- path: WIP/llm_peer_execution_core/repo_overlay/ops/scripts/validate_autonomy_contracts.py
+  kind: series
+  date_bucket: null
+  sha256: 07db813ae014e47997c14ec1171e6b9973a1d5ec0c60da1ed8e93c9a3f6ece7e
+  status: possible-landed
+  note: possible-landed
+- path: WIP/llm_peer_execution_core/repo_overlay/skills/l9-bounded-autonomy/references/claude-code-bridge.md
+  kind: series
+  date_bucket: null
+  sha256: 2580525ea70bce316bd442485dd20f1db8ae39b022c108f3664071a2faf1308d
+  status: active
 - path: WIP/llm_peer_execution_core/scripts/apply_pr_pack.py
   kind: series
   date_bucket: null
@@ -971,6 +4304,38 @@ entries:
   date_bucket: null
   sha256: b4eba104aeed6a95c728b6012f74225a226ceb9659f633ce491ee8f4206b67ff
   status: active
+- path: WIP/org-ci-ruleset-activation/README.md
+  kind: series
+  date_bucket: null
+  sha256: 09d21423cd1e22661b839101512ff5084332959e814ea697a107e6eed8459784
+  status: possible-landed
+  note: possible-landed
+- path: WIP/org-ci-ruleset-activation/apply.sh
+  kind: series
+  date_bucket: null
+  sha256: 84edf833a5540234ec234d7f000b498ff3709d6aa0292962febb5fec1686e7c3
+  status: active
+- path: WIP/org-ci-ruleset-activation/evidence/README.md
+  kind: series
+  date_bucket: null
+  sha256: 5ae89536316fd6118379ca6376136cd51b2bb5020096d52aa24e36e28aeb02fd
+  status: possible-landed
+  note: possible-landed
+- path: WIP/org-ci-ruleset-activation/org-ci-required.active.ruleset.json
+  kind: series
+  date_bucket: null
+  sha256: 3eb3e7e8e458e6e77761ea9f48bedea79ddcb5939be88de75635455bba8d3ae5
+  status: active
+- path: WIP/org-ci-ruleset-activation/org-ci-required.ruleset.json
+  kind: series
+  date_bucket: null
+  sha256: 360fbd2d8eedfd67358af18483283bdb4d48d6c5d13fe97e4929c7c3f313ee88
+  status: active
+- path: WIP/org-ci-ruleset-activation/verify.sh
+  kind: series
+  date_bucket: null
+  sha256: c8d9c03bdbfb4701b4194ad68df127b8106998e10d9c835d8da3bcbcfe1f98b6
+  status: active
 - path: WIP/out-of-scope-hold/Untitled
   kind: series
   date_bucket: null
@@ -982,3 +4347,75 @@ entries:
   sha256: 698b2936d056ba2eff8a4b65a4bd98b79e0241054ccdca30d768a31b3612c877
   status: possible-landed
   note: possible-landed
+- path: WIP/repo-hygiene-pack/AGENT_TASK.md
+  kind: series
+  date_bucket: null
+  sha256: 14d4d4501676222aa250401069a0fa180f549c78fc72a43ad3139db407e0e5fb
+  status: active
+- path: WIP/repo-hygiene-pack/CHECKLIST.md
+  kind: series
+  date_bucket: null
+  sha256: cadc13850972ea6d96ff974a8a79bb69b8ee067ed5b9482dcdc28ec1ee761538
+  status: active
+- path: WIP/repo-hygiene-pack/RB-HK-001.plan.md
+  kind: series
+  date_bucket: null
+  sha256: 357afcd75a16b4cbcc81e1deec384127f48688604089b1a29aea405b37878b00
+  status: active
+- path: WIP/repo-hygiene-pack/RUNBOOK.md
+  kind: series
+  date_bucket: null
+  sha256: 95ea7adb4189406d515a0258385befa122a6459969069ca1f633b2307a33cb71
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/START-HERE-PROMPT.md
+  kind: series
+  date_bucket: null
+  sha256: d73a2f374cec506b79bca65d7810dba087d53399d4749de55b3574253cb90380
+  status: active
+- path: WIP/repo-hygiene-pack/scripts/check_repo_hygiene.py
+  kind: series
+  date_bucket: null
+  sha256: 8209b46c58af23ee4b9bfd3598a39f8eb4cc6ff3cc8253a1f760c9cd9d31fa79
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/scripts/cleanup_branches.sh
+  kind: series
+  date_bucket: null
+  sha256: 3a501237ff8f0f0269431fb9ddf7bff3482cc7c0183b77e3a82a69964315232c
+  status: active
+- path: WIP/repo-hygiene-pack/templates/TODO.md
+  kind: series
+  date_bucket: null
+  sha256: 8a584cbe8d017742ad4245ae67e5fe11d24c6f089030da3172452b7ae0160111
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/workflows/branch-hygiene.yml
+  kind: series
+  date_bucket: null
+  sha256: 11725dc0b908a12068ef8508afa0085bd906abd8ed5bd83c2d7ea87eaf2c59b7
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/workflows/dependabot.yml
+  kind: series
+  date_bucket: null
+  sha256: 4d721600390a972ae5310be80e5551fc1af57a2d94fca1c3e6a88693500b75fb
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/workflows/governance-self-check.yml
+  kind: series
+  date_bucket: null
+  sha256: 35472b73f9ccea56e82a8c80cfe051f524cec7b51369ed3fd9302891b676f624
+  status: possible-landed
+  note: possible-landed
+- path: WIP/repo-hygiene-pack/workflows/repo-hygiene.yml
+  kind: series
+  date_bucket: null
+  sha256: 102f61dbca1460b42725525ac5808e0b57f8a5a6343eaf07273b49ad26b97196
+  status: possible-landed
+  note: possible-landed
+- path: WIP/world.model.md
+  kind: series
+  date_bucket: null
+  sha256: 1f1f92ed413ceb094d29a8e8e3ab91faf81d34dffacae97d7809757cd4be9603
+  status: active

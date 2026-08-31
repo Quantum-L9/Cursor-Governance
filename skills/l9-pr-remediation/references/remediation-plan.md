@@ -3,11 +3,11 @@ l9_schema: 1
 parent: l9-pr-remediation
 layer: reference
 role: remediation_plan
-tags: [pr, plan, preflight, tracking, one-commit, makefile]
+tags: [pr, plan, preflight, tracking, one-commit, makefile, board]
 owner: igor_beylin
 status: active
-version: 2.2.0
-updated: 2026-08-18
+version: 2.3.0
+updated: 2026-08-30
 /L9_META -->
 
 # Remediation Plan (this PR → one commit)
@@ -56,6 +56,16 @@ remediation_plan:
   locked_plan_reused: false
   one_and_done: true
 
+  # PR-level board verdict, straight from ops/autonomy/pr_board.py at head_sha.
+  # It belongs here once, never on a finding: findings are about files (the edit
+  # axis), the board is about the pull request.
+  board: merge | fix | wait | leftover
+  board_reason: "{helper reason}"
+  board_declaration: ""      # --human-decision / --unfixable-check; required for leftover
+  required_checks: ["{context}"]
+  failing_required: []
+  board_receipt: ".l9/pr/board-{n}.json"
+
   findings:
     - id: "cq-1"
       source: github-code-quality | copilot | human | bot | ci | sonar | codeql | debt
@@ -93,6 +103,8 @@ remediation_plan:
 **Plan gate (blocks edits):**
 
 - [ ] `RUN_CONTRACT` exists for the run
+- [ ] `board` + `board_reason` came from `pr_board.py` at `head_sha`; `leftover` carries its `board_declaration`
+- [ ] No finding carries a `board` field (board is PR-level; ownership is per finding)
 - [ ] Every ingested finding on **this** PR has `ownership` + `disposition` + `evidence` + `root_cause` (or `Unknown`)
 - [ ] Every `disposition: fix` has `confidence` of `high` or `medium` and a cited-file read at the current head
 - [ ] Every `fix` item is in a cluster with files + action

@@ -9,8 +9,8 @@ metadata:
   tags: [l9, gar, architect, runtime, contracts, convergence]
   owner: igor_beylin
   status: experimental
-  version: 0.4.0
-  updated: 2026-08-26
+  version: 0.5.0
+  updated: 2026-08-30
 ---
 # L9 Global Architect
 Use this file only as the host bootloader.

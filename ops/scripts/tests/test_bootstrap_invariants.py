@@ -45,7 +45,12 @@ SWALLOW_BASELINE = {
     # generated-artifact pathspecs both use `|| true` so a missing remote tip or
     # absent generated path never aborts the bounded push-recover loop. Fail-safe
     # (retry push without those optional steps) — not a check-result swallow.
-    "ops/scripts/open_pr_after_gate.sh": 20,
+    # 21 since the publish-summary receipt: write_pr_summary.py runs AFTER the PR
+    # exists, so letting it abort would report a failed publish for a PR that was
+    # opened successfully — the exact false signal the summary is meant to remove.
+    # A missing receipt is a reporting gap (rules/48 still requires the summary,
+    # read from the receipt or the API); it is never a check result.
+    "ops/scripts/open_pr_after_gate.sh": 21,
     # 15 since #359 (0fc6ee6), which added gate timing and the wave-log
     # aggregator. That commit introduced five occurrences without bumping this
     # baseline, leaving the ratchet red on main — the same shape as the

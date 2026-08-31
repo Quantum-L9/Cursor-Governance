@@ -171,6 +171,16 @@ def _map_projection_status(entry: dict[str, Any] | str, *, domain: str = "") -> 
     exception: SKIP_PLUGIN_MARKETPLACE=true is platform policy, desktop extras
     are not a required plane, and slash commands load through the commands
     domain — not plugins.
+
+    The exception is decided from the RECEIPT's own reason, never from ambient
+    environment. `project_plugins` already records
+    ``reason="marketplace disabled by the platform"`` when it skips for policy,
+    so the evidence is present where the claim is made. Consulting
+    ``SKIP_PLUGIN_MARKETPLACE`` here as well meant that on any hosted surface —
+    where it is always ``true`` — *every* skipped-plugins receipt read READY,
+    including ``reason="claude CLI unavailable"``, which is a genuinely degraded
+    session reported as a healthy one. Platform policy says plugins may be
+    skipped; it does not say why THIS projection skipped.
     """
     if isinstance(entry, str):
         raw = entry.lower()
@@ -181,8 +191,7 @@ def _map_projection_status(entry: dict[str, Any] | str, *, domain: str = "") -> 
         detail = maybe_detail if isinstance(maybe_detail, dict) else {}
         domain = domain or str(entry.get("domain") or "")
     if raw == "skipped" and domain == "plugins":
-        reason = str(detail.get("reason") or "")
-        if "marketplace" in reason or os.environ.get("SKIP_PLUGIN_MARKETPLACE") == "true":
+        if "marketplace" in str(detail.get("reason") or ""):
             return READY
     return _PROJ_STATUS.get(raw, UNKNOWN)
 

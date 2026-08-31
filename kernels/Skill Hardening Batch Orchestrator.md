@@ -21,4 +21,4 @@ compiled_prompt:
 
   batch_wire:
     deferred_until: all 43 skills complete
-    skill: l9-wire-skill-into-repo
+    skill: l9-wire-into-repo

@@ -18,6 +18,7 @@ from autonomy.adapters.cursor.host_bridge import (
     host_bind_pre_tool_use,
     host_bind_subagent_start,
 )
+from autonomy.adapters.cursor.mint_admission import mint_admission
 from autonomy.adapters.orchestrator import AdapterOrchestrator
 from autonomy.compiler.graph_compiler import compile_graph
 from autonomy.models import CampaignAuthorization, DeploymentManifest
@@ -94,6 +95,26 @@ class AdmissionCreationTests(HostBridgeTestCase):
         # The adapter session is durable in the root runtime database.
         session = self.orchestrator.require_conformant_session(admission["session_id"])
         self.assertEqual(session["status"], "PASS")
+
+
+class MintAdmissionHelperTests(HostBridgeTestCase):
+    def test_mint_helper_calls_create_admission(self) -> None:
+        admission = mint_admission(
+            campaign_id=CAMPAIGN_ID,
+            agent_id="cursor-child-1",
+            repository_root=ROOT,
+            database_path=self.database,
+            adapter_config=load_example("adapters/cursor.json"),
+        )
+        self.assertTrue(admission["admission_token"].startswith("admission-"))
+        self.assertTrue(admission["prompt_marker"].startswith("L9_ADMISSION_TOKEN="))
+
+    def test_mint_helper_is_not_a_second_store(self) -> None:
+        text = (
+            Path(__file__).resolve().parents[1] / "adapters" / "cursor" / "mint_admission.py"
+        ).read_text(encoding="utf-8")
+        self.assertNotIn("CREATE TABLE", text)
+        self.assertIn("create_admission", text)
 
 
 class PreToolUseBindTests(HostBridgeTestCase):

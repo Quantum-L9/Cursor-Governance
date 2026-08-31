@@ -150,7 +150,7 @@ l4_local_autonomy:
       id: recursive_alignment
     - path: kernels/Validate & Repair.md
       id: validate_repair
-  pr_template: PULL_REQUEST_TEMPLATE.md
+  pr_template: .github/pull_request_template.md
   post_push:
     required_command: make pr
     remediation_skill: l9-pr-remediation
