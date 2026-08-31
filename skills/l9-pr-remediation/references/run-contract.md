@@ -3,11 +3,11 @@ l9_schema: 1
 parent: l9-pr-remediation
 layer: reference
 role: run_contract
-tags: [pr, preflight, venv, command-surface, topology, cache, makefile]
+tags: [pr, preflight, venv, command-surface, topology, cache, makefile, board]
 owner: igor_beylin
 status: active
-version: 1.3.0
-updated: 2026-08-28
+version: 1.5.0
+updated: 2026-08-30
 /L9_META -->
 
 # Run Contract (min preflight + cache)
@@ -27,7 +27,8 @@ Emit `RUN_CONTRACT` in the first Converge status. Reuse until invalidation.
 | `P_prs` | `gh pr list` + `gh pr view --json files` for each open PR | Overlap nonempty → FIRST_MERGE_GATE. Do not merge the first green PR. |
 | `P_stack` | For each open PR, is `headRefName` the `baseRefName` of another open PR? | Stacked parent: squash/rebase denied. Children first, retarget, or `--merge`. |
 | `P_wire` | `git worktree list` first; reuse the worktree that already holds the branch | `worktree_add_wired.sh` only when none exists. Do not commit wire / `AGENTS.md`. |
-| `P_blockers` | Known HUMAN / CI_PIPELINE / ENVIRONMENT | Note; continue independent CODEBASE work. |
+| `P_board` | Per open PR: `"$GOV_PY" ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` | The board verdict (`merge` / `fix` / `wait` / `leftover`) and the required-check set come from here. `statusCheckRollup` in `P_prs` is inventory, not a verdict — it lists optional checks too. Do not author a verdict from `mergeStateStatus`, a bare check conclusion, or an issue body. Re-run per head SHA; a verdict is stale the moment the head moves. |
+| `P_blockers` | Known HUMAN / CI_PIPELINE / ENVIRONMENT — **edit axis only** | Note which files you may not patch; continue independent CODEBASE work. These classes are **not** board verdicts and do not park a PR. A named human decision or an unfixable required check reaches the board only as `pr_board.py --human-decision` / `--unfixable-check`. |
 | `P_diag` | For the PR about to be edited: head SHA, `gh pr checks`, paginated `reviewThreads`, cited-file read at that SHA | Missing evidence → `Unknown`; do not edit. `disposition: fix` requires a verified root cause. |
 | `P_verify` | `make precommit-repo` (changed-file hooks plus ruff) | `make precommit-repo` is the remediator gate. Record `Passed` / `Failed` / `Unknown`. Do not run `make pr-check`. Do not run pytest or conformance. Do not treat local `Passed` as remote CI `Passed`. |
 
@@ -42,6 +43,7 @@ This host (Cursor-Governance / Makefile capability graph):
 - verify: `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo`
 - kernels (optional): `make improve`
 - publish: `git push` of the already-open PR branch
+- board: `ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json` (read-only advice; writes `.l9/pr/board-{n}.json`; never merges)
 - merge: `ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run` (method chosen in code; oldest `createdAt` first)
 - interpreter: `$PWD/.venv/bin/python` (Makefile `$(PYTHON)`). Not Homebrew / system / miniconda base.
 - read-only git: allowed
@@ -122,7 +124,7 @@ FIRST_MERGE_GATE forbids `gh pr merge` until:
 - expected merge effect on remaining PRs known
 - merge strategy selected (squash if unstacked; `--merge` or children-first if stacked)
 
-Then MERGE_TRAIN: **oldest `createdAt` first (bottom-up)**. After each merge, do **not** `gh pr update-branch` on a child whose parent was squash-merged. Use `git rebase --onto <new-base> <old-parent-tip> <child>` when the child must move. Do not wait for CI.
+Then MERGE_TRAIN: **oldest `createdAt` first (bottom-up)**. After each merge, do **not** `gh pr update-branch` on a child whose parent was squash-merged. Use `git rebase --onto <new-base> <old-parent-tip> <child>` when the child must move. When the only blocker is required checks in progress, poll until `CLEAN` then merge — do not hand the watch back to the human.
 
 Forbidden: remediate A → merge A → discover B conflicts → remediate B → rerun CI → repeat.
 
@@ -156,6 +158,7 @@ run_contract:
     verify: "make precommit-repo"
     publish: "git push"
     improve: "make improve"
+    board: "ops/autonomy/pr_board.py --repo {owner}/{repo} --pr {n} --json"
     merge: "ops/autonomy/stack_safe_merge.py --repo {owner}/{repo} --pr {n} --run"
     interpreter: "{repo}/.venv/bin/python"
     readonly_git: true
@@ -173,6 +176,12 @@ run_contract:
       createdAt: "{iso}"
       files: ["path"]
       stack_children: []
+      # PR-level, straight from pr_board.py at this head. Never per finding.
+      board: merge | fix | wait | leftover
+      board_reason: "{helper reason}"
+      required_checks: ["{context}"]
+      failing_required: []
+      board_receipt: ".l9/pr/board-192.json"
   overlap:
     - files: ["ops/generated/skill-registry.json"]
       prs: [191, 192]
@@ -181,7 +190,8 @@ run_contract:
     order: [191, 192]   # oldest createdAt first
     first_merge_gate: ready
     stack_safe: true
-  blockers: []
+  blockers: []          # edit-axis notes only; never a reason a PR stays open
+  open_prs: 0           # mission target; anything else names each PR's board
   counters:
     time_to_first_useful_action: UNKNOWN
     blocked_command_attempts: 0

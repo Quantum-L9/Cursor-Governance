@@ -414,6 +414,8 @@ def reconcile_llm_adapters(
 
 
 def sync_commands(root: Path, wrote: list[str]) -> None:
+    if not (root / "commands").is_dir():
+        return
     out = root / "commands" / "COMMANDS_MANIFEST.yaml"
     prior = out.read_bytes() if out.is_file() else None
     run_generator(
@@ -551,8 +553,7 @@ def sync(
             # projection of the template that call regenerates.
             sync_claude_settings(root, wrote, warnings)
             reconcile_llm_adapters(root, warnings, workspace=workspace)
-        if should_run(changed, ("commands/",)):
-            sync_commands(root, wrote)
+        sync_commands(root, wrote)
         pe_touched = should_run(changed, ("environment/program-execution/",))
         if pe_touched:
             sync_pe_core(root, wrote)

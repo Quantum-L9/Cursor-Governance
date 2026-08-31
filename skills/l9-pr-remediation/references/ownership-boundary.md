@@ -3,16 +3,24 @@ l9_schema: 1
 parent: l9-pr-remediation
 layer: reference
 role: ownership_boundary
-tags: [pr, ownership, codebase, ci-pipeline]
+tags: [pr, ownership, codebase, ci-pipeline, edit-axis]
 owner: igor_beylin
 status: active
-version: 3.2.0
-updated: 2026-08-18
+version: 3.3.0
+updated: 2026-08-30
 /L9_META -->
 
 # Ownership Boundary
 
 Classify before any edit. This skill repairs **codebase** defects only.
+
+**This file is the edit axis and nothing else.** Ownership answers one question:
+may I patch this file? It never decides what happens to the pull request. That
+verdict — `merge` / `fix` / `wait` / `leftover` — comes from
+`ops/autonomy/pr_board.py`, which reads required-check identity and conflicted
+paths. `edit=CI_PIPELINE` is not `board=leftover`: a pipeline you may not patch
+can still be a PR GitHub will merge, and reading these classes as PR outcomes is
+what parked six mergeable PRs on 2026-08-30.
 
 ## CODEBASE
 
@@ -33,7 +41,7 @@ Read-only surfaces (never edit here):
 - contradictory lint/type config when the needed change alters enforcement rather than code
 - missing secrets / provisioning / third-party outages
 
-**Action:** cite evidence in the cycle status. Do not edit. Do not emit issue-file bundles or tarballs. Continue every independent codebase cluster.
+**Action:** cite evidence in the cycle status. Do not edit. Do not emit issue-file bundles or tarballs. Continue every independent codebase cluster. Then let the board decide the PR: if the failing check is **required** and cannot be fixed without editing CI, declare it (`pr_board.py --unfixable-check "{name}"`) and that PR is `leftover`. If the check is not in the required set, it never blocked merge.
 
 ## ENVIRONMENT
 
@@ -45,7 +53,7 @@ Interpreter, arch, ABI, or venv failure (cryptography native-ext import, Rosetta
 
 Needs product, architecture, legal, or security-exception judgment.
 
-**Action:** name the decision in the reply (linked issue if Deferred), resolve the thread, finish all independent codebase work. **Do not merge that PR** until the human decision exists. GitHub conversation resolution is a merge blocker — do not leave `isResolved: false`.
+**Action:** name the decision in the reply (linked issue if Deferred), resolve the thread, finish all independent codebase work, then pass the decision to `pr_board.py --human-decision "{decision}"` so that PR is `leftover` on a named decision rather than on a hunch. An unnamed "feels like a human call" is not a decision and does not park a PR. GitHub conversation resolution is itself a merge blocker — do not leave `isResolved: false`.
 
 ## Code-review agents
 

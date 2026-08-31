@@ -3,5 +3,5 @@
 # Keep discovery triggers in SKILL.md frontmatter; this file is display-only.
 interface:
   display_name: "L9 PR Remediation"
-  short_description: "Diagnose or converge PRs via precommit-repo / git push, then a stack-safe oldest-first merge train."
+  short_description: "Diagnose or converge PRs via precommit-repo / git push, then own subscribed PRs through required checks to a stack-safe merge train. The board verdict comes from ops/autonomy/pr_board.py, not from an ownership class."
   brand_color: "#1F6FEB"

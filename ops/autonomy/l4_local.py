@@ -257,17 +257,15 @@ def current_head(root: Path) -> str:
 
 
 #: Where a PR template may live in the RELEASED repository, in the order
-#: `ops/scripts/open_pr_after_gate.sh` searches (lines 341-347), plus the two
-#: further locations GitHub itself honours for a single default template.
+#: `ops/scripts/open_pr_after_gate.sh` searches. GitHub's default filename is
+#: `.github/pull_request_template.md` (this repo's only body).
 #:
-#: The governance clone's own PULL_REQUEST_TEMPLATE.md is the publisher's LAST
-#: resort and is deliberately absent here: naming it in a receipt written for a
-#: consumer would report the governance default as if it were that repo's
-#: template, which is exactly the defect this list exists to fix.
+#: The governance clone's own template is the publisher's LAST resort and is
+#: deliberately absent here: naming it in a receipt written for a consumer
+#: would report the governance default as if it were that repo's template.
 PR_TEMPLATE_CANDIDATES: tuple[str, ...] = (
-    "PULL_REQUEST_TEMPLATE.md",
-    ".github/PULL_REQUEST_TEMPLATE.md",
     ".github/pull_request_template.md",
+    ".github/PULL_REQUEST_TEMPLATE.md",
     "docs/PULL_REQUEST_TEMPLATE.md",
 )
 

@@ -1181,3 +1181,78 @@ This fragment does not rewrite `MEMORY_PIPELINE_MAP.md` or ADR-0005 / ADR-0006.
   live path. Do not dump `reports/repo-index` bodies into Graphiti; `bootstrap`
   RepoManifest may list `reports/repo-index/` as a path pointer only.
 - Authority: `docs/decisions/ADR-0028-session-hydrate-close-visibility.md`.
+
+<!-- ONE_PR_TEMPLATE_AUTONOMOUS_V1 -->
+## One PR template, autonomous compile (2026-08-30)
+
+This fragment supersedes the live path in `PROTECTED_ROOT_PR_TEMPLATE_V1`.
+That paragraph stays on disk (additive_only). Do not fold it.
+
+- The only PR body is `.github/pull_request_template.md`. Root
+  `PULL_REQUEST_TEMPLATE.md` and `.github/PULL_REQUEST_TEMPLATE/protected-root.md`
+  are retired.
+- `make pr` compiles the body via `ops/scripts/compose_pr_body.py` (Summary /
+  Type / Risk / Rollback / Changes by intent). No human leftover.
+- When any `additive_only` root file is in the diff, the same template's
+  **Protected-root** block at the top is filled and the stamp
+  `<!-- L9_PROTECTED_ROOT_PR -->` must be in the body. The Root-file
+  append-only gate still fails CI without that stamp.
+- Prefer append-only. A rewrite still needs
+  `ALLOW-ROOT-DELETION: <path> — <reason>` in a commit message.
+
+<!-- L9_PR_REMEDIATE_OWN_UNTIL_MERGED_V1 -->
+## `/l9-pr-remediation` owns PRs until merged (2026-08-30)
+
+This fragment supersedes only the “Do not poll CI after push / record the
+blocker and finish” sentences in `L9_PR_REMEDIATE_SPEED_V1`. That paragraph
+stays on disk (additive_only). Live pack: `skills/l9-pr-remediation` v4.4.0.
+
+- Converge **subscribes** to every in-scope open PR and **owns** them.
+  The human is not watching.
+- After remediator `git push`, continue independent PRs, then **stay on
+  MERGE_TRAIN**. Poll required checks (15s snapshots) until `CLEAN` and
+  merge via `stack_safe_merge.py --run`.
+- Never finish with “re-invoke `/l9-pr-remediation` when CI turns green.”
+- A GitHub subscription 404/422 does not waive ownership.
+- HUMAN / CI_PIPELINE leftovers still stop that PR. `--admin` stays denied.
+- Poll workers never merge.
+
+<!-- L9_PR_REMEDIATE_BOARD_AXIS_V1 -->
+## The PR board is computed, not judged (2026-08-30)
+
+This fragment supersedes only the sentence “HUMAN / CI_PIPELINE leftovers still
+stop that PR” in `L9_PR_REMEDIATE_OWN_UNTIL_MERGED_V1`. That paragraph stays on
+disk (additive_only). `--admin` stays denied. Live pack:
+`skills/l9-pr-remediation` v4.5.0.
+
+Two axes, and only one of them is a judgement:
+
+- **edit** — may I patch this file? `CODEBASE` / `CI_PIPELINE` / `ENVIRONMENT` /
+  `HUMAN` / `FALSE_POSITIVE`, per finding, from
+  `skills/l9-pr-remediation/references/ownership-boundary.md`.
+- **board** — what happens to this PR? `merge` / `fix` / `wait` / `leftover`,
+  per PR, from **`ops/autonomy/pr_board.py`**.
+
+`edit=CI_PIPELINE` is **not** `board=leftover`. A pipeline you may not patch can
+still be a PR GitHub will merge.
+
+- Required checks are the **union** of branch protection and repository
+  rulesets. A ruleset-only repository reports zero required contexts through
+  branch protection alone, and zero reads as “nothing is blocking”.
+- A red check outside the required set never blocked merge.
+  `mergeStateStatus: UNSTABLE` is a merge, not a wall.
+- Zero required checks on an **unprotected base** (a stacked PR based on an
+  agent branch) is an answer, not a gap: nothing is required, so a mergeable PR
+  is `merge`. A protection probe that *fails* degrades to `wait` instead, so the
+  two cases never collapse into one.
+- Conflicted **paths** decide a conflict. Generated-only conflicts are
+  regeneration work, not a wall.
+- `leftover` is an evidenced **input**, never an inference:
+  `--human-decision "<named decision>"` or `--unfixable-check "<required check>"`.
+  Attempt the merge before parking a PR.
+- Unknown telemetry degrades to `wait`, never `merge`.
+- Mission is `open_prs=0`, the shape `L9_ISSUE_REMEDIATE_AUTOMATION_V1` already
+  uses for issues. A status that reports blockers must quote the
+  `.l9/pr/board-<pr>.json` receipt, not prose.
+- `pr_board.py` advises only. `ops/autonomy/stack_safe_merge.py --run` stays the
+  sole merge executor and still chooses the method.

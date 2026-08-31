@@ -85,7 +85,7 @@ tiers:
   - skill: l9-setting-up-terraform
     reason: infra-as-code bootstrap — high blast radius, explicit only
   - skill: l9-pr-remediation
-    reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, then merges them oldest-first and stack-safe (squash only when unstacked). make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
+    reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
   - skill: l9-issue-remediation
     reason: /issues and /l9-issue-remediation are remediator Converge (verify-before-trust, drain all clusters at max autonomy, recommended-A human blockers, land on PRs, close phantoms/resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.
   - skill: l9-bounded-autonomy
@@ -257,7 +257,7 @@ claude_routing:
     - admin merge
     - force push
     supporting: []
-    note: 'Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run make pr or make pr-check. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.
+    note: 'Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Subscribe/own every open PR through required checks; do not hand the watch back to the human. The per-PR board verdict comes from ops/autonomy/pr_board.py (required-check identity from branch protection plus rulesets, conflicted paths); an ownership class is the edit axis and never parks a PR; leftover requires --human-decision or --unfixable-check; mission is open_prs=0. Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run make pr or make pr-check. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.
 
       '
   - id: issue_remediation

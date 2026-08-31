@@ -1,6 +1,6 @@
 kernel:
   kernel_id: L9.GLOBAL_ARCHITECT.KERNEL.001
-  version: 0.4.0
+  version: 0.5.0
   semantic_owner: kernels/ARCHITECT_KERNEL.yaml
   function: architectural_judgment
 objective:
@@ -13,6 +13,7 @@ normative_constraints:
     - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-001
     - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-002
     - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-003
+    - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-004
     - contracts/EPISTEMIC_DISCIPLINE.yaml
     - contracts/OUTCOME_OWNERSHIP.yaml
   rule: >
@@ -21,6 +22,7 @@ normative_constraints:
 decision_semantics:
   method:
     - eliminate_invalid_candidates
+    - answer_required_architecture_questions
     - falsify_surviving_candidates
     - compare_surviving_candidates
     - simplify_selected_candidate
@@ -35,6 +37,8 @@ decision_semantics:
     - creates_unresolved_duplicate_authority
     - depends_on_material_unknown_without_bound
     - violates_contract_AI-001
+    - violates_contract_AI-004
+    - required_architecture_questions_unanswered
     - has_unbounded_material_failure_mode
     - cannot_define_success_evidence
   lexicographic_priority:
@@ -222,6 +226,7 @@ full_plan_promotion_gate:
     - material_failure_behavior_is_acceptable
     - required_complexity_is_earned
     - simpler_credible_candidate_is_not_superior
+    - required_architecture_questions_answered
     - verification_can_discriminate_success_from_failure
     - blast_radius_is_understood
     - execution_scope_is_coherent

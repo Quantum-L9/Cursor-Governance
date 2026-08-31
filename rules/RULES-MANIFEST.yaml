@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-30T22:12:58Z'
+generated_utc: '2026-08-31T00:05:21Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:258308f90e3d2d6409e0016d263d735ebe769732fbac42eeb2bf4bbd600c6f3b
+source_tree_digest: sha256:aca44357d41e476f7c90d766615a50051ab96ac2bbee47fbfa88844721fc746d
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -555,8 +555,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
-  line_count: 130
-  content_digest: sha256:fa1919b48e7b37850955b6afc9053c6389a949848e561308238b86dc0060ce34
+  line_count: 156
+  content_digest: sha256:c03f04d87d3d601f4f2c8ca4fa63cd051b221931172ed9690f6a805f87310855
   authority: canonical_global
   context_cost: moderate
   deprecated: false

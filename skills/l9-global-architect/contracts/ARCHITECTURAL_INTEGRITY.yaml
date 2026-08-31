@@ -1,13 +1,13 @@
 metadata:
   contract_id: L9.GAR.ARCHITECTURAL_INTEGRITY.001
-  version: 0.4.0
+  version: 0.5.0
   kind: invariant
   status: review
   title: GAR Architectural Integrity
   summary: >
     Require architectural complexity to be earned, ownership to be explicit,
-    and material assumptions to be supported whenever GAR evaluates or changes
-    architecture.
+    material assumptions to be supported, and the required architecture
+    questions to be answered for every proposed build, fix, or solution.
   owner: l9-global-architect
   domain: architectural_integrity
   tags:
@@ -27,18 +27,21 @@ scope:
     - architecture_review
     - plan_promotion
     - implementation_review
+    - proposed_build_fix_or_solution
     - convergence_support
   resources:
     - repository_architecture
     - artifact_architecture
     - runtime_architecture
+    - proposed_solution
   environments:
     - standalone
     - l9_integrated
   triggers:
     - architecture_is_material
     - structural_change_is_material
-normative_clauses:
+    - build_fix_or_solution_is_proposed
+  normative_clauses:
   - clause_id: AI-001
     effect: require
     subject: structural_complexity
@@ -60,6 +63,14 @@ normative_clauses:
     object: architecture_plan_implementation_or_verification
     conditions:
       - assumption_can_change_material_outcome
+  - clause_id: AI-004
+    effect: require
+    subject: proposed_build_fix_or_solution
+    action: answer_required_architecture_questions_with_bound_evidence
+    object: architecture_direction_constellation_alignment_and_first_order
+    conditions:
+      - unanswered_is_blocking_unknown
+      - silent_yes_is_not_an_answer
 dependencies:
   requires_contracts:
     - L9.GAR.EPISTEMIC_DISCIPLINE.001
@@ -97,6 +108,13 @@ evidence_obligations:
       explicit operator-authorized risk, or a typed block.
     blocking: true
     negative_proof_required: true
+  - property_id: AI-004
+    evidence_contract_ref: null
+    proof: >
+      Record a discriminating answer for each required architecture question
+      before promoting or realizing a proposed build, fix, or solution.
+    blocking: true
+    negative_proof_required: true
 projections:
   binding_refs: []
 provenance:
@@ -104,6 +122,7 @@ provenance:
   source_refs:
     - ADR-L9-GAR-001
     - GAR-v0.1-architectural-integrity
+    - GAR-v0.5-required-architecture-questions
   extraction_record_refs: []
   rationale_refs:
     - decisions/ADR-L9-GAR-001.yaml
@@ -117,15 +136,17 @@ lifecycle:
   change_policy: semantic_versioning
 invariant_definition:
   assertion: >
-    Every applicable GAR architectural decision satisfies all three blocking
-    integrity properties: complexity is earned, ownership is explicit, and
-    material assumptions are supported.
+    Every applicable GAR architectural decision satisfies all four blocking
+    integrity properties: complexity is earned, ownership is explicit,
+    material assumptions are supported, and the required architecture
+    questions are answered for every proposed build, fix, or solution.
   subject: applicable_gar_architectural_decision
   predicate: blocking_architectural_integrity_properties
   expected_state:
     AI-001: SATISFIED
     AI-002: SATISFIED
     AI-003: SATISFIED
+    AI-004: SATISFIED
   applies_when: []
   forbidden_states:
     - property_id: AI-001
@@ -133,6 +154,8 @@ invariant_definition:
     - property_id: AI-002
       states: [VIOLATED, UNKNOWN, DISPUTED]
     - property_id: AI-003
+      states: [VIOLATED, UNKNOWN, DISPUTED]
+    - property_id: AI-004
       states: [VIOLATED, UNKNOWN, DISPUTED]
 violation:
   effect: fail_closed
@@ -205,6 +228,84 @@ integrity_properties:
       - undocumented_material_assumption
     violation_reason_code: UNSUPPORTED_ASSUMPTION
     unresolved_reason_code: MATERIAL_ASSUMPTION_UNRESOLVED
+  AI-004:
+    name: required_architecture_questions_must_be_answered
+    evaluator: EVAL-EVIDENCE-BOUND-MODEL
+    applies_when_any:
+      - build_is_proposed
+      - fix_is_proposed
+      - solution_is_proposed
+      - architecture_candidate_is_selected
+      - plan_is_promoted
+      - mutation_or_artifact_is_realized
+    not_applicable_when:
+      - no_build_fix_or_solution_is_proposed
+    required_questions:
+      - id: AI-Q001
+        field: architecture.required_questions.direction
+        question: is_this_the_right_architecture_direction
+        prose: Is this the right architecture direction?
+        required_proof:
+          - named_direction
+          - why_this_direction_fits_the_objective
+          - why_competing_directions_were_rejected_or_why_no_real_competitor_exists
+        fail_reason_code: ARCHITECTURE_NOT_COHERENT
+      - id: AI-Q002
+        field: architecture.required_questions.constellation_alignment
+        question: does_it_align_with_the_l9_constellation
+        prose: Does it align with the L9 constellation?
+        required_proof:
+          - cited_l9_owners_or_explicit_not_applicable
+          - no_second_ssot_or_duplicate_governance_tree
+          - no_adapter_owned_shared_brain
+        alignment_sources:
+          - CANONICAL_LAW.md
+          - CANONICAL_LAW.md#2.1
+          - AGENTS.md
+          - ops/autonomy/surface_profile.yaml
+          - environment/program-execution
+          - observed_semantic_owners_in_the_target_repository
+        fail_when:
+          - second_ssot_or_duplicate_governance_tree
+          - adapter_owned_shared_brain
+          - parallel_owner_for_an_existing_constellation_responsibility
+          - l9_fit_claimed_without_cited_owner
+        fail_reason_code: CONSTELLATION_MISALIGNED
+        not_applicable_when:
+          - target_is_not_an_l9_governed_or_constellation_artifact
+          - proposal_does_not_claim_l9_alignment
+        not_applicable_still_requires_recorded_answer: true
+      - id: AI-Q003
+        field: architecture.required_questions.first_order
+        question: is_this_the_cleanest_first_order_way_of_solving_the_problem
+        prose: Is this the cleanest first-order way of solving the problem?
+        required_proof:
+          - named_first_order_move
+          - existing_mechanism_search_result
+          - why_a_simpler_credible_move_is_not_superior
+        fail_reason_code: UNEARNED_COMPLEXITY
+    required_proof:
+      - AI-Q001_answered
+      - AI-Q002_answered
+      - AI-Q003_answered
+      - each_answer_bound_to_current_evidence_or_explicit_not_applicable
+    answer_states:
+      SATISFIED:
+        meaning: question answered yes or not_applicable with bound evidence
+      VIOLATED:
+        meaning: question answered no, or yes without required proof
+      UNKNOWN:
+        meaning: question unanswered or answer is a silent default
+      DISPUTED:
+        meaning: credible evidence conflicts on the answer
+    forbidden_states:
+      - unanswered_required_architecture_question
+      - silent_yes_without_evidence
+      - constellation_alignment_asserted_without_cited_owner
+      - first_order_claim_without_existing_mechanism_search
+      - RAPID_depth_used_to_skip_the_triad
+    violation_reason_code: REQUIRED_ARCHITECTURE_QUESTIONS_UNANSWERED
+    unresolved_reason_code: REQUIRED_ARCHITECTURE_QUESTIONS_UNANSWERED
 cross_rules:
   - id: AI-X001
     rule: blocking integrity violations cannot be numerically averaged away
@@ -216,11 +317,17 @@ cross_rules:
     rule: local correctness is insufficient when global coherence is damaged
   - id: AI-X005
     rule: deletion consolidation and removal are first-class architectural outcomes
+  - id: AI-X006
+    rule: >
+      Every proposed build, fix, or solution must answer the required
+      architecture questions before promotion or realization. RAPID depth
+      and architecture_decision_required == false do not waive AI-004.
 promotion_gate:
   pass_when:
     - AI-001 in [SATISFIED, NOT_APPLICABLE]
     - AI-002 in [SATISFIED, NOT_APPLICABLE]
     - AI-003 in [SATISFIED, NOT_APPLICABLE]
+    - AI-004 in [SATISFIED, NOT_APPLICABLE]
   fail_closed_on:
     - VIOLATED
     - UNKNOWN
