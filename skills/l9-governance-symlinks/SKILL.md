@@ -1,6 +1,6 @@
 ---
 name: l9-governance-symlinks
-description: Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when the .cursor-commands link, the l9-governance plugin link, .cursor/plans, or .cursor/governance are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.
+description: Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when the .cursor-commands link, the l9-governance plugin link, or .cursor/plans are missing or broken, or when asked to set up, repair, or validate governance symlinks.
 disable-model-invocation: true
 ---
 
