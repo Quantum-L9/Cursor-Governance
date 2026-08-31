@@ -1,9 +1,21 @@
 from __future__ import annotations
 
 import hashlib
+import importlib.util
 import json
 from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
+
+
+def _load_compiler():
+    path = Path(__file__).with_name("compile_units.py")
+    spec = importlib.util.spec_from_file_location("pes_compile_generated_data_units", path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot load {path}")
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
 
 
 def _completion_status(receipt: Mapping[str, Any]) -> str:
@@ -60,10 +72,20 @@ def generated_data_packet(
     if not generated_at:
         raise ValueError("PE outcome receipt requires a stable generated_at/verified_at timestamp")
     artifact_id = str(receipt.get("evidence_id") or receipt.get("receipt_id") or task_id)
-    raw_units = receipt.get("generated_data_units") or receipt.get("reusable_findings") or []
     visibility = str(receipt.get("visibility") or "campaign_local")
+    compiler = _load_compiler()
+    compiled = compiler.compile_generated_data_units(
+        receipt,
+        repository=repository,
+        base_sha=base_sha,
+        generated_at=generated_at,
+        verification=receipt.get("verification")
+        if isinstance(receipt.get("verification"), Mapping)
+        else None,
+        failure_reason=str(receipt.get("failure_reason") or "") or None,
+    )
     generated_units = []
-    for item in raw_units:
+    for item in compiled["units"]:
         if not isinstance(item, Mapping):
             continue
         unit = dict(item)
@@ -71,7 +93,8 @@ def generated_data_packet(
         generated_units.append(unit)
     reusable = bool(generated_units)
     reuse = receipt.get("reuse_assessment")
-    if isinstance(reuse, Mapping):
+    compiled_reuse = compiled["reuse_assessment"]
+    if isinstance(reuse, Mapping) and not compiled.get("compiled"):
         reusable = bool(reuse.get("reusable_data_found", reusable))
         confidence = float(reuse.get("confidence", 1.0 if reusable else 0.0))
         reason = str(
@@ -88,17 +111,16 @@ def generated_data_packet(
         }
     else:
         reuse_assessment = {
-            "reusable_data_found": reusable,
-            "task_local_value": 1 if reusable else 0,
-            "cross_task_value": 1 if reusable else 0,
-            "cross_repository_value": 0,
-            "confidence": 1.0 if reusable else 0.0,
-            "reason": (
-                "PE outcome contains reusable findings"
-                if reusable
-                else "PE outcome contained no reusable generated-data units"
+            "reusable_data_found": bool(compiled_reuse.get("reusable_data_found", reusable)),
+            "task_local_value": int(compiled_reuse.get("task_local_value", 1 if reusable else 0)),
+            "cross_task_value": int(compiled_reuse.get("cross_task_value", 1 if reusable else 0)),
+            "cross_repository_value": int(compiled_reuse.get("cross_repository_value", 0)),
+            "confidence": max(
+                0.0, min(1.0, float(compiled_reuse.get("confidence", 1.0 if reusable else 0.0)))
             ),
+            "reason": str(compiled_reuse.get("reason") or ""),
         }
+        reusable = bool(reuse_assessment["reusable_data_found"])
     seed = {
         "campaign_id": campaign,
         "task_id": task_id,
@@ -137,7 +159,16 @@ def generated_data_packet(
             "base_sha": base_sha,
             "input_artifacts": [str(item) for item in receipt.get("input_artifacts", []) if item],
             "evidence_artifacts": [artifact_id],
-            "inspected_paths": [str(item) for item in receipt.get("inspected_paths", []) if item],
+            "inspected_paths": [
+                str(item)
+                for item in (
+                    receipt.get("inspected_paths")
+                    or compiled.get("inspected_paths")
+                    or receipt.get("changed_files")
+                    or []
+                )
+                if item
+            ],
             "executed_commands": [
                 str(item) for item in receipt.get("executed_commands", []) if item
             ],

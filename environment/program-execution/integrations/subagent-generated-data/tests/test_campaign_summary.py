@@ -87,6 +87,21 @@ class CampaignSummaryTruthfulnessTests(unittest.TestCase):
         self.assertIn("distilled: UNKNOWN units", brief)
         self.assertIn("Memory persisted: UNKNOWN", brief)
         self.assertIn("retrievable: UNKNOWN", brief)
+        self.assertIn("Outbox backlog:", brief)
+
+    def test_outbox_backlog_is_measured_from_sibling_directory(self) -> None:
+        with tempfile.TemporaryDirectory() as raw:
+            runtime_root = Path(raw)
+            database = runtime_root / "generated-data" / "pipeline.sqlite3"
+            database.parent.mkdir(parents=True)
+            _seed_database(database, "campaign-1")
+            outbox = database.parent / "outbox" / "memory"
+            outbox.mkdir(parents=True)
+            (outbox / "memcand-backlog.json").write_text("{}", encoding="utf-8")
+            summary = self.module.build_summary(database_path=database, campaign_id="campaign-1")
+        self.assertEqual(summary["memory"]["outbox_backlog_count"], 1)
+        self.assertIsInstance(summary["memory"]["outbox_oldest_candidate_age_seconds"], int)
+        self.assertIsNone(summary["memory"]["memory_units_persisted"])
 
 
 if __name__ == "__main__":

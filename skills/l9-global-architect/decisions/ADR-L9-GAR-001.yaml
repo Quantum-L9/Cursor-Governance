@@ -59,6 +59,7 @@ decision:
     - unearned_complexity
     - fuzzy_ownership
     - unsupported_material_assumptions
+    - unanswered_required_architecture_questions
     constitutional_doctrine_includes_false_completion: true
     false_completion_semantic_owner: contracts/CONVERGENCE.yaml
   execution_law:

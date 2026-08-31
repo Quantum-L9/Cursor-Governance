@@ -146,7 +146,7 @@ def test_sync_heals_commands_manifest_on_skills_only_change(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Skills-only PRs must still drop retired slash entries from COMMANDS_MANIFEST."""
-    import sync_generated_artifacts as sga
+    sga = sys.modules[sync.__module__]
 
     commands = tmp_path / "commands"
     commands.mkdir()
