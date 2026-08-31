@@ -159,6 +159,20 @@ def ruleset_required(repo: str, branch: str) -> tuple[list[str], bool]:
     return contexts, strict
 
 
+def _required_app_ids(rules: list[Any]) -> dict[str, str]:
+    """Context -> integration/app id when a ruleset or protection pins a producer."""
+    pinned: dict[str, str] = {}
+    for rule in rules or []:
+        if not isinstance(rule, dict) or rule.get("type") != "required_status_checks":
+            continue
+        for check in (rule.get("parameters") or {}).get("required_status_checks") or []:
+            context = str((check or {}).get("context") or "").strip()
+            app_id = (check or {}).get("integration_id")
+            if context and app_id is not None:
+                pinned[context] = str(app_id)
+    return pinned
+
+
 def protection_required(repo: str, branch: str) -> tuple[list[str], bool]:
     """Required contexts and the strict flag from classic branch protection.
 
@@ -173,6 +187,10 @@ def protection_required(repo: str, branch: str) -> tuple[list[str], bool]:
         raise BoardError(f"branch protection probe failed: {exc}") from exc
     checks = (payload or {}).get("required_status_checks") or {}
     contexts = [str(c).strip() for c in (checks.get("contexts") or []) if str(c).strip()]
+    for check in checks.get("checks") or []:
+        context = str((check or {}).get("context") or "").strip()
+        if context and context not in contexts:
+            contexts.append(context)
     return contexts, bool(checks.get("strict"))
 
 
@@ -184,9 +202,33 @@ def required_checks(repo: str, branch: str) -> tuple[list[str], bool]:
     return merged, ruleset_strict or protection_strict
 
 
-def _rollup_states(view: dict[str, Any]) -> dict[str, str]:
-    """Map check name -> state, over both check runs and legacy statuses."""
+def _rollup_app_id(node: dict[str, Any]) -> str:
+    app = node.get("app") or node.get("checkSuite") or {}
+    if isinstance(app, dict):
+        nested = app.get("app") if isinstance(app.get("app"), dict) else app
+        for key in ("databaseId", "id", "integration_id", "slug"):
+            value = nested.get(key)
+            if value is not None and str(value).strip():
+                return str(value).strip()
+    for key in ("integration_id", "app_id"):
+        value = node.get(key)
+        if value is not None and str(value).strip():
+            return str(value).strip()
+    return ""
+
+
+def _rollup_states(
+    view: dict[str, Any], required_apps: dict[str, str] | None = None
+) -> dict[str, str]:
+    """Map check name -> state, over both check runs and legacy statuses.
+
+    When a required context is pinned to an integration, prefer the rollup
+    node whose app identity matches. Name-only fallback stays for telemetry
+    that does not carry an app id.
+    """
+    pinned = required_apps or {}
     states: dict[str, str] = {}
+    pinned_hit: set[str] = set()
     for node in view.get("statusCheckRollup") or []:
         if not isinstance(node, dict):
             continue
@@ -197,7 +239,17 @@ def _rollup_states(view: dict[str, Any]) -> dict[str, str]:
         # A check run that is still running reports an empty conclusion.
         if not state:
             state = "PENDING"
-        states[name] = state
+        app_id = _rollup_app_id(node)
+        want = pinned.get(name)
+        if want:
+            if app_id and app_id != want:
+                continue
+            if app_id and app_id == want:
+                states[name] = state
+                pinned_hit.add(name)
+                continue
+        if name not in pinned_hit:
+            states[name] = state
     return states
 
 
@@ -278,11 +330,13 @@ def collect(repo: str, pr: str) -> dict[str, Any]:
         contexts = [str(c) for c in injected.get("required_checks") or []]
         strict = bool(injected.get("strict"))
         conflicts = [str(p) for p in injected.get("conflicted_paths") or []]
+        apps = {str(k): str(v) for k, v in (injected.get("required_apps") or {}).items()}
         return {
             "view": view,
             "required": contexts,
             "strict": strict,
             "conflicted_paths": conflicts,
+            "required_apps": apps,
         }
 
     view = _pr_view(repo, pr)
@@ -293,10 +347,23 @@ def collect(repo: str, pr: str) -> dict[str, Any]:
     if threads is not None:
         view["reviewThreads"] = threads
     contexts, strict = required_checks(repo, base)
+    apps: dict[str, str] = {}
+    try:
+        rules = _gh_json(["api", f"repos/{repo}/rules/branches/{base}"])
+        if isinstance(rules, list):
+            apps.update(_required_app_ids(rules))
+    except RuntimeError:
+        apps = {}
     conflicts: list[str] = []
     if str(view.get("mergeable") or "").upper() == "CONFLICTING":
         conflicts = conflicted_paths(f"origin/{base}", str(view.get("headRefOid") or ""))
-    return {"view": view, "required": contexts, "strict": strict, "conflicted_paths": conflicts}
+    return {
+        "view": view,
+        "required": contexts,
+        "strict": strict,
+        "conflicted_paths": conflicts,
+        "required_apps": apps,
+    }
 
 
 def decide(
@@ -310,13 +377,16 @@ def decide(
     required = list(facts["required"])
     strict = bool(facts["strict"])
     conflicts = list(facts["conflicted_paths"])
-    states = _rollup_states(view)
+    states = _rollup_states(view, facts.get("required_apps") or {})
     merge_state = str(view.get("mergeStateStatus") or "").upper()
     mergeable = str(view.get("mergeable") or "").upper()
+    review_decision = str(view.get("reviewDecision") or "").upper()
 
     failing = [name for name in required if states.get(name, "EXPECTED") in FAILING_STATES]
     pending = [name for name in required if states.get(name, "EXPECTED") in PENDING_STATES]
     unresolved = _unresolved_threads(view)
+    declared_unfixable = [name for name in unfixable_checks if name in failing]
+    fixable_failing = [name for name in failing if name not in unfixable_checks]
 
     verdict = {
         "board": WAIT,
@@ -330,21 +400,6 @@ def decide(
         "mergeable": mergeable,
         "unresolved_threads": unresolved,
     }
-
-    if human_decision:
-        verdict["board"] = LEFTOVER
-        verdict["reason"] = f"named HUMAN decision outstanding: {human_decision}"
-        return verdict
-
-    declared_unfixable = [name for name in unfixable_checks if name in failing]
-    if declared_unfixable:
-        verdict["board"] = LEFTOVER
-        verdict["reason"] = (
-            "required check(s) "
-            + ", ".join(declared_unfixable)
-            + " declared unfixable without editing CI"
-        )
-        return verdict
 
     if conflicts:
         generated_only = all(is_generated_path(path) for path in conflicts)
@@ -372,9 +427,9 @@ def decide(
         )
         return verdict
 
-    if failing:
+    if fixable_failing:
         verdict["board"] = FIX
-        verdict["reason"] = "required check(s) failing: " + ", ".join(failing)
+        verdict["reason"] = "required check(s) failing: " + ", ".join(fixable_failing)
         return verdict
 
     if unresolved:
@@ -384,7 +439,7 @@ def decide(
         )
         return verdict
 
-    if str(view.get("reviewDecision") or "").upper() == "CHANGES_REQUESTED":
+    if review_decision == "CHANGES_REQUESTED":
         verdict["board"] = FIX
         verdict["reason"] = "review decision is CHANGES_REQUESTED"
         return verdict
@@ -397,6 +452,27 @@ def decide(
     if view.get("isDraft"):
         verdict["board"] = FIX
         verdict["reason"] = "pull request is a draft; mark it ready for review"
+        return verdict
+
+    if human_decision:
+        verdict["board"] = LEFTOVER
+        verdict["reason"] = f"named HUMAN decision outstanding: {human_decision}"
+        return verdict
+
+    if declared_unfixable:
+        verdict["board"] = LEFTOVER
+        verdict["reason"] = (
+            "required check(s) "
+            + ", ".join(declared_unfixable)
+            + " declared unfixable without editing CI"
+        )
+        return verdict
+
+    if review_decision == "REVIEW_REQUIRED":
+        verdict["board"] = LEFTOVER
+        verdict["reason"] = (
+            "required approval is missing; wait for review — no source edit can supply it"
+        )
         return verdict
 
     # Everything this helper can name is green, and GitHub still will not merge.

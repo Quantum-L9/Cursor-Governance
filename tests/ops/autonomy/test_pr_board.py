@@ -153,6 +153,41 @@ def test_named_human_decision_is_leftover() -> None:
     assert "ADR needed" in verdict["reason"]
 
 
+def test_human_decision_does_not_park_fixable_conflict() -> None:
+    verdict = decide(
+        _facts(
+            rollup=_green(),
+            mergeable="CONFLICTING",
+            merge_state="DIRTY",
+            conflicts=["ops/autonomy/pr_board.py"],
+        ),
+        human_decision="ADR needed",
+    )
+    assert verdict["board"] == FIX
+    assert "ops/autonomy/pr_board.py" in verdict["reason"]
+
+
+def test_review_required_is_leftover_not_fix() -> None:
+    verdict = decide(
+        _facts(rollup=_green(), merge_state="BLOCKED", review_decision="REVIEW_REQUIRED")
+    )
+    assert verdict["board"] == LEFTOVER
+    assert "required approval" in verdict["reason"]
+
+
+def test_pinned_app_id_beats_same_named_foreign_check() -> None:
+    rollup = [
+        {"name": "Lint and Type Check", "conclusion": "SUCCESS", "app_id": "999"},
+        {"name": "Lint and Type Check", "conclusion": "FAILURE", "app_id": "42"},
+        {"name": "Test Suite", "conclusion": "SUCCESS"},
+    ]
+    facts = _facts(rollup=rollup, merge_state="BLOCKED")
+    facts["required_apps"] = {"Lint and Type Check": "42"}
+    verdict = decide(facts)
+    assert verdict["board"] == FIX
+    assert verdict["failing_required"] == ["Lint and Type Check"]
+
+
 def test_unresolved_thread_is_fix() -> None:
     verdict = decide(
         _facts(rollup=_green(), merge_state="BLOCKED", threads=[{"isResolved": False}])

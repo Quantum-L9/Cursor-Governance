@@ -1,6 +1,6 @@
 ---
 name: l9-pr-remediation
-description: diagnose or converge github prs — remediator path is precommit-repo then git push, then subscribe/own every open pr through required checks to a stack-safe oldest-first merge. the board verdict comes from ops/autonomy/pr_board.py, never from a check conclusion or mergeStateStatus alone. do not run make pr or make pr-check. do not stop and tell the human to reinvoke when ci is still running. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.
+description: diagnose or converge github prs — remediator path is precommit-repo then git push, then a stack-safe oldest-first merge train. board verdict is ops/autonomy/pr_board.py, never a check conclusion alone. do not run make pr or make pr-check. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
