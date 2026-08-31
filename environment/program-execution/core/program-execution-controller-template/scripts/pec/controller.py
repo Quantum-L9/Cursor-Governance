@@ -6,6 +6,7 @@ import json
 import re
 import shutil
 import subprocess
+import sys
 import uuid
 from collections.abc import Iterable
 from pathlib import Path
@@ -1083,6 +1084,47 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
         db.close()
 
 
+def _claim_autonomy_projection(
+    task: dict[str, Any], lease: dict[str, Any]
+) -> dict[str, Any] | None:
+    """Emit autonomy_action_id + packet skeleton. No autonomy-side mutation."""
+
+    path = task.get("source_contract_path")
+    if not path or not Path(path).is_file():
+        return None
+    pe_root = Path(__file__).resolve().parents[4]
+    mapper = pe_root / "integrations" / "autonomy-control-plane"
+    if str(pe_root) not in sys.path:
+        sys.path.insert(0, str(pe_root))
+    if str(mapper) not in sys.path:
+        sys.path.insert(0, str(mapper))
+    try:
+        from contract_mapper import map_program_contract
+    except ImportError:
+        return None
+    contract = load_json(Path(path))
+    mapped = map_program_contract(
+        {
+            **contract,
+            "task_id": task["id"],
+            "base_sha": lease.get("base_sha"),
+            "branch": lease.get("branch"),
+            "program_digest": contract.get("program_digest"),
+        },
+        adapter_id="controller",
+        attempt_number=1,
+    )
+    ids = mapped["ids"]
+    return {
+        "autonomy_action_id": ids["action_id"],
+        "autonomy_packet_skeleton": {
+            "campaign_id": ids["campaign_id"],
+            "graph_id": ids["graph_id"],
+            "action_id": ids["action_id"],
+        },
+    }
+
+
 def claim_task(
     workspace: Path,
     task_id: str,
@@ -1136,6 +1178,9 @@ def claim_task(
         )
         db.transition_task(task_id, "LEASED")
         ledger.append("TASK_LEASED", holder, lease)
+        projection = _claim_autonomy_projection(task, lease)
+        if projection is not None:
+            lease = {**lease, **projection}
         return lease
     finally:
         db.close()
@@ -1328,12 +1373,18 @@ def record_attempt(workspace: Path, task_id: str, receipt_source: Path) -> dict[
                 "receipt_digest": digest_object(receipt),
             },
         )
-        return {
+        submitted = {
             "status": "SUBMITTED",
             "task_id": task_id,
             "attempt": attempt,
             "receipt": str(target),
         }
+        from .signals import publish_controller_event
+
+        submitted["signal"] = publish_controller_event(
+            workspace, event="record-attempt", receipt=submitted
+        )
+        return submitted
     finally:
         db.close()
 
@@ -1777,6 +1828,11 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                 "evidence_id": evidence_id,
             },
         )
+        from .signals import publish_controller_event
+
+        verification["signal"] = publish_controller_event(
+            workspace, event="verify", receipt=verification
+        )
         return verification
     finally:
         db.close()
@@ -2093,6 +2149,11 @@ def evaluate_gate(
                 "receipt": str(target),
                 "receipt_digest": receipt["receipt_digest"],
             },
+        )
+        from .signals import publish_controller_event
+
+        receipt["signal"] = publish_controller_event(
+            workspace, event="evaluate-gate", receipt=receipt
         )
         return receipt
     finally:
@@ -2522,6 +2583,11 @@ def export_handoff(
             )
             db.set_meta("campaign_status", payload)
             receipt["campaign_status"] = payload
+        from .signals import publish_controller_event
+
+        receipt["signal"] = publish_controller_event(
+            workspace, event="export-handoff", receipt=receipt
+        )
         return receipt
     finally:
         db.close()

@@ -263,6 +263,9 @@ files:
 - path: program-execution-controller-template/policy/waivers.yaml
   sha256: 1ad9c11bb1400280b352d17c607c870698bc236159bb78da7006bfb1a0496e9a
   bytes: 339
+- path: program-execution-controller-template/receipts/unified-loop-baseline.json
+  sha256: 232cf0f351288cc102ea7d2ea90a1e575ccac0c9514f8173f94c7a54e4e8512a
+  bytes: 365
 - path: program-execution-controller-template/references/APPROVALS_WAIVERS_AND_HANDOFF.md
   sha256: b1302b5a53ae2507701febb1c226aba2e26da79dc3ca88b928487da837afc659
   bytes: 404
@@ -345,8 +348,8 @@ files:
   sha256: de8bd4aece170268f2b85e6fcd2c411c44a39726fc766cae97e7a4cac44a520b
   bytes: 12972
 - path: program-execution-controller-template/scripts/pec/cli.py
-  sha256: 4e95cb40a81e25d8d4949d44d16884cfaf06dc54590b181aefda80f4f0d05b8c
-  bytes: 19117
+  sha256: 3f5b76c2c0f4c88721ac298f9b4ae6b7c0545fd3ebaff95a6dc3e80dca81c558
+  bytes: 19331
 - path: program-execution-controller-template/scripts/pec/common.py
   sha256: df55978ff7841bf6db5b05f3e937c3d682c956b0992d9e02022cdb277f0fa104
   bytes: 2887
@@ -354,8 +357,11 @@ files:
   sha256: acc86ed2260ba6a048b40dca0cf589345796830e4d58a970b377113f2ac1e14b
   bytes: 17021
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 8be35e8838e62b7ace3e996451cabc8dccb2bd67a5d1d8a635d5657d1a4e590c
-  bytes: 107085
+  sha256: d2787c387912499f098377fbb579c9f71ee0b09956dac818cf837debe0b2768d
+  bytes: 109318
+- path: program-execution-controller-template/scripts/pec/dispatch.py
+  sha256: b4b4a0959e287009d7770e513b388ce1c8f10326a181e537b4ff435ce153aaf2
+  bytes: 5715
 - path: program-execution-controller-template/scripts/pec/exec_env.py
   sha256: 56fe5eb1114dda26f3e061de03580b788cfa5e654c117d0c0b65ac9083d15a10
   bytes: 10917
@@ -371,6 +377,9 @@ files:
 - path: program-execution-controller-template/scripts/pec/runtime.py
   sha256: 4de2ad94cf8e0e94069b2d97fec2d4c11cf36a2fbdbc4f8bed730d314cf449a3
   bytes: 3094
+- path: program-execution-controller-template/scripts/pec/signals.py
+  sha256: 45e469b0aed640fff46fe695198f45bbe84aed1b62d46e02201f9b0736162230
+  bytes: 1627
 - path: program-execution-controller-template/scripts/pec/state.py
   sha256: e273f8051fef9d72913aaa667649fbfd61f18ddc1064fd933673d9e093593432
   bytes: 24319
@@ -476,6 +485,9 @@ files:
 - path: program-execution-controller-template/scripts/tests/test_task_readiness_semantics.py
   sha256: 00acd7272a820111d4605f9ef3eb668f08514fe78214be65253e76f4d9012c3e
   bytes: 10048
+- path: program-execution-controller-template/scripts/tests/test_unified_loop_seams.py
+  sha256: 05af0fa4bb81c6a8d930c14c2ebb097adf4b630a424f760bac992eed7f92d862
+  bytes: 5629
 - path: program-execution-controller-template/scripts/tests/test_verify_committed_work.py
   sha256: c8cc87f837178654df0aa58f2f8c893546c87cc8c793bf45223a4d93a05fda56
   bytes: 1882
@@ -591,5 +603,5 @@ integrity:
   algorithm: sha256
   self_excluded: true
 summary:
-  file_count: 195
-  total_bytes: 730198
+  file_count: 199
+  total_bytes: 745981
