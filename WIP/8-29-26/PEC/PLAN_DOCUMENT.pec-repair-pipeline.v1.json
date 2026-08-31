@@ -136,7 +136,7 @@
       "task": "Land fixture corpus 01 through 14 plus semantic expectation format that is not a second Blueprint. Each fixture keeps hashed immutable source intent (IR0). Unit dispositions include represented / intentionally_omitted_with_reason / duplicate / superseded / unknown / conflict / non-material.",
       "files": [
         "environment/program-execution/compiler/tests/conformance/",
-        "environment/program-execution/compiler/tests/conformance/schema_semantic_expectation.json"
+        "environment/program-execution/compiler/tests/conformance/expectation.py"
       ],
       "effort": "M",
       "risk": "low",

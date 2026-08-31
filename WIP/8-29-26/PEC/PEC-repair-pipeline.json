@@ -97,7 +97,7 @@
     {
       "id": "level3-make-pr-single-path",
       "status": "complete",
-      "evidence": "CAMPAIGN_STATUS.yaml \u2014 CONVERGED, PR 187"
+      "evidence": "CAMPAIGN_STATUS.yaml \u2014 CONVERGED_WITH_NON_BLOCKING_RISKS, PR 187"
     },
     {
       "id": "l9-pe-campaign-activate",

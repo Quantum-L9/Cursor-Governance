@@ -2,9 +2,14 @@
 
 **Updated:** 2026-08-30 — W0–W7 **complete** at `e8785018` (HEAD `35880e70`). Next = **W8**.
 **Machine SSOT:** [`PEC-repair-pipeline.json`](./PEC-repair-pipeline.json)
-**Cursor Build plan (W0–W7 done):** [`docs/plans/pec-repair-pipeline-w0-w10_056a9b48.plan.md`](../../docs/plans/pec-repair-pipeline-w0-w10_056a9b48.plan.md)
+**Cursor Build plan (W0–W7 done):** [`docs/plans/pec-repair-pipeline-w0-w10_056a9b48.plan.md`](../../../docs/plans/pec-repair-pipeline-w0-w10_056a9b48.plan.md)
 **PLAN_DOCUMENT (W8-forward):** [`PLAN_DOCUMENT.pec-repair-pipeline.v1.json`](./PLAN_DOCUMENT.pec-repair-pipeline.v1.json)
 **Sources:** moved to [`_archive/`](./_archive) and deprecated. Do not execute from archived files.
+**Live SSOT is this trio** — `PEC-repair-pipeline.md` (narrative), `PEC-repair-pipeline.json`
+(machine), `PLAN_DOCUMENT.pec-repair-pipeline.v1.json` (W8-forward plan). `_archive/DEPRECATED.md`
+says the `.md` / `.json` "are gone" and names the PLAN_DOCUMENT the sole SSOT; that sentence was
+never true — both files exist at every commit from `e8785018` onward and were re-synced by
+`2dec45c`. The archive is immutable provenance, so the correction is recorded here, not there.
 
 This folder is no longer a dump of PE research. It is one remaining pipeline.
 
@@ -81,7 +86,9 @@ Use live skill **`skills/l9-pe-campaign-activate`** — not WIP template copies 
 - W0–W7 spine (commit `e8785018`).
 - Campaign front door for brief / plan / activate / campaign-source.v2 / architecture-intent.
 - `run_campaign.py` `refuse_publication` — runner cannot push, open, or merge.
-- Campaigns: `bounded-replanning-v1`, `l9-devpack-program-execution-hardening`, `level3-make-pr-single-path` — CONVERGED.
+- Campaigns: `bounded-replanning-v1` (PR 149), `l9-devpack-program-execution-hardening` (PR 150) — CONVERGED;
+  `level3-make-pr-single-path` (PR 187) — CONVERGED_WITH_NON_BLOCKING_RISKS. Verdicts are the
+  `CAMPAIGN_STATUS.yaml` ledger's own strings; do not flatten the qualified one to CONVERGED.
 - `cc-pe-intent-compiler-v1` — registered/archival; not the graduation test.
 - Skill `l9-pe-campaign-activate` — live.
 - Graphiti is resume SSOT.
