@@ -45,7 +45,7 @@ one and a blocking one that nobody reconciles.
 | Phase | Gate | Result required | Owner |
 |-------|------|-----------------|-------|
 | 0 Preconditions | authority + blast radius understood | `orgs/…/rulesets` readable | Human |
-| 1 Dry run | `MODE=evaluate bash apply.sh` | plan printed, nothing written | Human |
+| 1 Dry run | `bash selftest.sh` then `MODE=evaluate bash apply.sh` | selftest green; plan printed, nothing written | Human |
 | 2 Create EVALUATE | `DRY_RUN=0 MODE=evaluate bash apply.sh` | `RESULT: ADVISORY_VALID` | Human |
 | 3 Canary under EVALUATE | real consumer PR | `RESULT: ADVISORY_CANARY_PASS` | Human |
 | 4 Promote to ACTIVE | `DRY_RUN=0 MODE=active bash apply.sh` | `RESULT: LIVE_ENFORCING` | Human |
@@ -83,11 +83,19 @@ Plan is **informational**, not a gate:
 gh api orgs/Quantum-L9 --jq '.plan.name // "unknown"'
 ```
 
-The `workflows` rule ships on GHEC and GHES ≥ 3.12 and not on Free/Pro/Team, and
-`evaluate` enforcement is Enterprise-only — but GitHub states no plan requirement in
-prose and `.plan.name` is not a capability probe. The authoritative capability check
-is the `rulesets` read above plus GitHub accepting the payload. `apply.sh` therefore
-prints the plan and does not branch on it.
+`evaluate` enforcement is documented Enterprise-only (REST: *"`evaluate` — allows
+admins to test rules before enforcement (available with GitHub Enterprise only)"*).
+The `workflows` rule's own plan gating is **not** stated in prose anywhere in the
+docs; it is inferable only from docs versioning metadata
+(`data/features/repo-rules-required-workflows.yml`: `ghec: '*'`, `ghes: '>=3.12'`, no
+`fpt` entry) and from the rule's absence from the Free/Pro/Team version of the
+"Available rules for rulesets" page. Treat that as strong inference, not a quoted
+guarantee.
+
+Either way `.plan.name` is not a capability probe. The authoritative capability check
+is the `rulesets` read above plus GitHub accepting the payload, so `apply.sh` prints
+the plan and does not branch on it — a hard string match on `enterprise` only invents
+a false negative.
 
 If the org genuinely lacks the capability, the honest options are to upgrade the plan
 or to change `enforcement_mechanism` in `l9-ci-core` to something achievable and update
@@ -127,6 +135,17 @@ Expected repository ID `1285564308`. **STOP** if more than one ruleset named
 ---
 
 ## Phase 1 — Dry run
+
+Exercise the kit's own decision logic first. `selftest.sh` runs both scripts against
+a stubbed GitHub API — no network, no credentials, no mutation — and asserts every
+refusal path, including the payload-identity regression:
+
+```bash
+bash selftest.sh          # expect: selftest: 24 passed, 0 failed
+```
+
+**STOP** on any failure: a kit that will not refuse correctly must not be pointed at
+the organization.
 
 ```bash
 MODE=evaluate bash apply.sh
