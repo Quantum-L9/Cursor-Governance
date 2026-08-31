@@ -1,14 +1,18 @@
 {
-  "name": "L9 canonical CI required (evaluate)",
+  "name": "L9 canonical CI required",
   "target": "branch",
   "enforcement": "evaluate",
   "conditions": {
     "ref_name": {
-      "include": ["~DEFAULT_BRANCH"],
+      "include": [
+        "~DEFAULT_BRANCH"
+      ],
       "exclude": []
     },
     "repository_name": {
-      "include": ["~ALL"],
+      "include": [
+        "~ALL"
+      ],
       "exclude": [],
       "protected": false
     }
