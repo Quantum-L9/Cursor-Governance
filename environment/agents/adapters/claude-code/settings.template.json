@@ -4,7 +4,7 @@
     "Committable .claude/settings.json for an L9 consumer repo. Copy to .claude/settings.json",
     "and commit it: on Claude Code Web/Mobile only git-tracked files survive the clone, so a",
     "committed settings.json is what makes governance boot with no manual step. On the CLI the",
-    "same file is picked up locally. Keep secrets OUT of this file \u2014 they belong in the account",
+    "same file is picked up locally. Keep secrets OUT of this file — they belong in the account",
     "environment (web/environment.env.example) or user-scope config, never in a repo.",
     "Field/event names track the Claude Code release; see https://code.claude.com/docs.",
     "On hosted Web/Mobile, install.sh overlays allowlisted L9_AUTONOMY_* and",
@@ -13,14 +13,14 @@
     "without a second settings tree. L9_GOVERNANCE_SURFACE stays claude-code.",
     "permissions.allow lets the bounded-autonomy runtime complete work end to end: scoped git",
     "writes (branch/worktree/commit), CI inspection (gh run/pr checks), read-only GitHub",
-    "queries, PR monitoring (subscribe/unsubscribe), and `make pr` \u2014 so completed work",
+    "queries, PR monitoring (subscribe/unsubscribe), and `make pr` — so completed work",
     "opens a PR and is driven to green via the l9-pr-remediation loop WITHOUT a prompt.",
-    "PUBLISH PATH: `PR_REMEDIATE=0 make pr` remains the preferred route to GitHub \u2014 it runs",
+    "PUBLISH PATH: `PR_REMEDIATE=0 make pr` remains the preferred route to GitHub — it runs",
     "the Makefile checkers, then pushes and opens the PR. That preference is POLICY and is",
     "unchanged. It is no longer enforced by denying execution: `git` and `gh` commands are",
     "exempt from every governance gate (ops/autonomy/git_execution_exemption.py), so no deny",
     "entry for them belongs here either. `make push` and the MCP create_pull_request/",
-    "push_files tools are still denied \u2014 they are not git/gh executables and the gate still",
+    "push_files tools are still denied — they are not git/gh executables and the gate still",
     "blocks them. This allow/deny split must agree with ops/autonomy/local_execution_gate.py,",
     "and validate_claude_env.py fails when it does not, in both directions.",
     "An allow entry here is what an agent reads as 'approved, no prompt', so git/gh forms the",
@@ -61,7 +61,7 @@
           },
           {
             "type": "command",
-            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s \u2014 BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate session_debt_wrap.py'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate session_debt_wrap.py'",
             "timeout": 30
           }
         ]
@@ -109,12 +109,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s \u2014 BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate merge_gate_wrap.py'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate merge_gate_wrap.py'",
             "timeout": 5
           },
           {
             "type": "command",
-            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s \u2014 BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate local_execution_gate_wrap.py'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate local_execution_gate_wrap.py'",
             "timeout": 5
           }
         ]
@@ -124,8 +124,20 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s \u2014 BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate memory_gate.py'",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || { printf \"l9-gate: launcher missing at %s — BLOCKING (INV-1)\\n\" \"$x\" >&2; exit 2; }; exec bash \"$x\" --class gate memory_gate.py'",
             "timeout": 12
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer pr_summary_posttool.py'",
+            "timeout": 5
           }
         ]
       }

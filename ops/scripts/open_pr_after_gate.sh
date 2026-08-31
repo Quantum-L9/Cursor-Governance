@@ -541,6 +541,23 @@ if [[ -z "$pr_number" ]]; then
   exit 1
 fi
 
+# Record what this publish shipped. Placed after the pr_number guard because
+# both paths — freshly opened and already open — converge here, so one call
+# covers `make pr`, `l9 pr`, and every `make -C "$GOV" pr WS=…` spelling. Never
+# fails the publish: a missing summary is a reporting gap, not a bad PR.
+_pr_summary_py="$GOV_ROOT/ops/scripts/write_pr_summary.py"
+if [[ -f "$_pr_summary_py" ]]; then
+  "${compose_python:-python3}" "$_pr_summary_py" \
+    --workspace "$WS" \
+    --repo "${owner}/${name}" \
+    --number "$pr_number" \
+    --base "$PR_BASE" \
+    --branch "$branch" \
+    --url "$pr_url" \
+    --head-sha "$(git -C "$WS" rev-parse HEAD 2>/dev/null || echo '')" ||
+    echo "WARN: pr summary receipt not written (continuing)"
+fi
+
 echo "--- subscribe (GitHub notifications for PR #$pr_number) ---"
 if gh api -X PUT "repos/${owner}/${name}/issues/${pr_number}/subscription" \
   -f subscribed=true -f ignored=false >/dev/null; then
