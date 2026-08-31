@@ -164,6 +164,12 @@ _cleanup() {
   rm -f "$_all_tmp" "$_chg_tmp"
   [[ -n "$_scan_tmp" && -d "$_scan_tmp" ]] && rm -rf "$_scan_tmp"
   [[ -n "$_wave_dir" && -d "$_wave_dir" ]] && rm -rf "$_wave_dir"
+  # An EXIT trap's status replaces the script's. The two [[ ]] tests above are
+  # false on the early "nothing in scope" exit (neither temp dir is created
+  # yet), so without this the trap returned 1 and turned `exit 0` -- printed as
+  # "RESULT: PASS" -- into a gate failure for any change set that filters to
+  # empty (a WIP-only or docs-only PR).
+  return 0
 }
 trap _cleanup EXIT
 if [[ -n "${PR_CHANGED_FILE:-}" && -f "$PR_CHANGED_FILE" ]]; then
