@@ -3,10 +3,10 @@ l9_schema: 1
 parent: l9-pr-remediation
 layer: reference
 role: convergence_loop
-tags: [pr, convergence, loop, ci, local-verify]
+tags: [pr, convergence, loop, ci, local-verify, board]
 owner: igor_beylin
 status: active
-version: 3.6.0
+version: 3.7.0
 updated: 2026-08-30
 /L9_META -->
 
@@ -66,8 +66,8 @@ If CI is already red on a source file this PR owns:
 1. Fetch the failure logs: `gh run view {RUN_ID} --log-failed`
 2. Identify the **delta** — what's different between local ruff/hooks and CI.
 3. If fixable locally in **source** → fix, re-run `make precommit-repo`, one more `git push` (counts as the exceptional next cycle if already published).
-4. If environment-only → classify `ENVIRONMENT` or `CI_PIPELINE`. Note it. **Do not** edit workflows to skip or weaken the failing job.
-5. If unfixable → defer with reason "CI environment delta". HUMAN / CI_PIPELINE leftovers stop that PR. Required checks **in progress** are not a finish — keep polling.
+4. If environment-only → classify `ENVIRONMENT` or `CI_PIPELINE` on the **edit** axis. Note it. **Do not** edit workflows to skip or weaken the failing job. That classification says you may not patch the file; it does not park the PR.
+5. If unfixable → defer with reason "CI environment delta" **and** declare it to the board: `pr_board.py --unfixable-check "{required check name}"`. Only then is that PR `leftover`. An undeclared pipeline note leaves the PR on the train. Required checks **in progress** are `board=wait`, not a finish — keep polling.
 
 ## Convergence Gate
 
@@ -83,7 +83,9 @@ This PR is ready for the train when ALL conditions are true:
 | All blocking findings resolved | Internal tracking: all `blocking` findings have status `fixed` |
 | All actionable findings resolved or deferred | Internal tracking |
 
-Required-check success **is** the remediator wait before `stack_safe_merge.py --run`. Local `Passed` is still not remote `Passed`.
+| Board says merge | `pr_board.py --repo {owner}/{repo} --pr {n} --json` returns `board: merge` at the current head |
+
+Required-check success **is** the remediator wait before `stack_safe_merge.py --run`. Local `Passed` is still not remote `Passed`. "Required" means present in the union of branch protection and repository rulesets — a red check outside that set never held the train.
 
 ## Re-Ingestion (When Not Converged)
 
@@ -136,6 +138,11 @@ local_verify: Passed | Failed | Unknown
 remote_ci: Passed | Failed | Unknown | NotApplicable
 new_comments_after_final_publish: {integer}
 
+board: merge | fix | wait | leftover      # ops/autonomy/pr_board.py at this head
+board_reason: "{helper reason}"
+board_declaration: ""                      # --human-decision / --unfixable-check, required for leftover
+open_prs: {integer}                        # mission target is 0
+
 deferred_items:
   - id: "review-7"
     reason: "Requires architectural decision"
@@ -151,7 +158,7 @@ minimum_safe_next_action: "own_required_checks_then_merge" | "merge_train_oldest
 MUST stop the loop when:
 - `cycles_run >= max_cycles` → emit `partial`
 - Local verify Passed AND no new actionable codebase signals → emit `converged` for **this PR**. Do not merge until FIRST_MERGE_GATE. Then MERGE_TRAIN (own the required-check wait; do not hand off).
-- Only `CI_PIPELINE` / `HUMAN` / `ENVIRONMENT` blockers remain → emit `partial` early (more cycles cannot help); do not merge that PR
+- `pr_board.py` returns `leftover` for a PR → that PR is `partial`, and the status must quote the declaration (`--human-decision` or `--unfixable-check`) that produced it. Edit-axis notes alone are **not** that declaration and are not a stop condition: attempt the merge first. `fix` means another cycle for that PR; `wait` means keep polling.
 - Poll worker `merge_eligible` on a stale SHA → ignore; never merge from it
 - A fix causes an unrecoverable regression → emit `blocked`
 - GitHub API is rate-limited and retry fails → emit `blocked`
