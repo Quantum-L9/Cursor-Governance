@@ -40,7 +40,7 @@ misled otherwise:
 | **T5** | ⬜ | ✅ **done** | Receipt freshness binds to the governance revision, not the clock alone. | — |
 | **T6** | ⬜ | ✅ **done** | SessionStart runs the installer once per revision when the receipt is not `ready`, instead of printing its remediation string. | Whether it fired and could not repair, or did not fire, is not answerable from the receipt. Open probe. |
 | **RC-6** | — | ✅ **done** | The cloud refresh skips its hard reset when the clone carries tracked modifications, names the skip in the banner, and records `reset-skipped-dirty`. The probe is `git status --porcelain`, never a stash. | P307 CI-015 R1 stays open — two governance checkouts exist in this container and nothing prints both paths with their revisions. |
-| **RC-7** | — | ✅ **done** | The plans shelver resolves to the tracked `BUILT/` whenever it exists, so case-sensitive and case-insensitive platforms converge. | **10 tracked files still sit in `docs/plans/built/`**, committed by PR#354 before the fix existed. The fix stops regeneration; it does not clean what already landed. |
+| **RC-7** | — | ✅ **done** | The plans shelver resolves to the tracked `BUILT/` whenever it exists, so case-sensitive and case-insensitive platforms converge. | **10 tracked files still sat in `docs/plans/built/`**, committed by PR#354 before the fix existed. The fix stops regeneration; it does not clean what already landed. **8 of the 10 are folded into `BUILT/` here; 2 are withheld** — `pr_gate_velocity_25da307a` and `precommit_before_pr_408895ec` are also being moved into `BUILT/` by open PR #431, from the *root* copy rather than the `built/` copy, so both branches would add the same path with different bytes. Withheld rather than raced; see the note below. |
 | **RC-8** | — | ✅ **done** | An uncomputable comparison is now distinct from an empty one: the resolver deepens a shallow clone once and retries, and exits naming the cause when no merge base exists even then. | — |
 | **T7** | ⬜ | ⬜ **not started** | — | Rule 62 is still `version: 1.0.0`. |
 | **T8** | ⬜ | ⬜ **not started** | — | `l9-cognitive-runtime` still carries no `CLAUDE.md`, `AGENTS.md`, `INVARIANTS.md` or `ARCHITECTURE.md`. |
@@ -174,3 +174,26 @@ from a different direction. Judging them in isolation would double-count:
 
 T7, T8 and T9 in that order. T9 last and alone: it is the only unit that changes publish
 authorization, and it now has three readers to keep consistent.
+
+## RC-7 residue: the two files withheld from this branch
+
+`docs/plans/built/` held ten tracked files. Eight are folded into `BUILT/` here.
+Two are not:
+
+| File | Why withheld |
+|---|---|
+| `pr_gate_velocity_25da307a.plan.md` | open PR #431 adds `docs/plans/BUILT/<name>` from `docs/plans/<name>` |
+| `precommit_before_pr_408895ec.plan.md` | same |
+
+Both branches would create the same destination path from a **different source
+copy**, which is an add/add conflict, and the two sources are not equivalent: the
+`built/` copy carries `status: completed` and `built: true` in its frontmatter and
+the root copy does not. That is a content difference — the same class of judgement
+`plan-copies-diverged` records — so it is not resolvable by picking whichever branch
+merges first.
+
+Withholding costs nothing recoverable: both copies remain on `main`, and the
+`BUILT/` destination arrives via #431 regardless. **The follow-up, once #431 has
+merged**, is a two-line frontmatter edit restoring `status: completed` / `built: true`
+onto the surviving `BUILT/` copy, and deletion of the then-redundant `built/` copy.
+That finishes RC-7 without either branch overwriting the other's choice.

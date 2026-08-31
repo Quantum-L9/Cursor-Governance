@@ -151,7 +151,18 @@ records:
     residual:
       - The fix stops regeneration; it does not clean what already landed. docs/plans/built/
         still carries 10 tracked files at a2f78b5, committed by PR#354 before the fix existed.
-        None collides by name with the 208 files in docs/plans/BUILT/.
+        None collided by name with the 208 files in docs/plans/BUILT/ at a2f78b5.
+      - >-
+        Two of the ten now collide with an IN-FLIGHT branch rather than with main.
+        Open PR #431 adds docs/plans/BUILT/pr_gate_velocity_25da307a.plan.md and
+        docs/plans/BUILT/precommit_before_pr_408895ec.plan.md from the docs/plans root
+        copy, while this branch would add the same two paths from the docs/plans/built
+        copy. The sources are not equivalent — the built/ copy carries the two
+        frontmatter keys "status" (completed) and "built" (true), and the root copy
+        carries neither — so it is an add/add conflict with a content judgement inside
+        it, not a first-past-the-post race. Both are withheld from this branch; 8 of
+        the 10 are folded. Follow-up once #431 merges: restore those two frontmatter
+        keys onto the surviving BUILT/ copy and drop the redundant built/ copy.
     p307_records: [CI-031]
 
   - id: RC-8

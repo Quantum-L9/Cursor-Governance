@@ -312,9 +312,9 @@
       "alias": null,
       "class": "always",
       "output": "62-github-openclaw-authority.md",
-      "output_sha256": "bf67a2e19f72cfd2a1f712cd05f2533b362e0ecb49311b7ed0304b4564dff54c",
+      "output_sha256": "40b5fb6daabd636d2e0277dab494594d48b7acfdf6dfe90e159ba9b774d91a3c",
       "source": "rules/62-github-openclaw-authority.mdc",
-      "source_sha256": "fd731f685ef2d052f310c268d1a838fcd3633248d02bbb2c194631b6717fe0ca",
+      "source_sha256": "985a7374a0641c01e6d95a091c6f23c1713bc8f6ef6983a8ff1eade69738c4c2",
       "stem": "62-github-openclaw-authority"
     },
     {
@@ -620,7 +620,7 @@
       "output": "zz-autonomy-surface-override.md",
       "output_sha256": "e91c1f24e261f024793005b93c225487a71b804c398fab480f4bc6e0a3c663dc",
       "source": "ops/autonomy/surface_profile.yaml",
-      "source_sha256": "8e99279f9439d96c2cbbd3d2ab52a8f1beec50f8ebe69a112e5ac5af7710fdeb",
+      "source_sha256": "0124335c0a76e2b72fc7d5aa3e4bb98b511227a22c9900b0e25645eb88873921",
       "stem": "zz-autonomy-surface-override"
     }
   ],
@@ -632,5 +632,5 @@
     "skipped_agent_requested": 17,
     "source_mdc": 69
   },
-  "tree_sha256": "3da72e0b929d7a08946e39ad3007f7a7e613e7964dfcd89d5c20e035b858b65a"
+  "tree_sha256": "89de6ede51e02292585070f0b982f84d1afd1edf0d5b2c41fc26b8831aeee95b"
 }

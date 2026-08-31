@@ -95,12 +95,12 @@ surface_capabilities:
       - id: gh_auth_status
         rule: never gate on this command's exit code
         why: >-
-          Its exit code does not agree with itself across containers of this surface
-          class — 0 on 2026-08-29/30 and 1 on 2026-08-31, same message, same working
-          `gh api` (docs/DEGRADED_MODE_CONTRACT.md). A script gating on it is wrong in
-          both directions and which direction is not predictable. Probe the endpoint
-          you need (`gh api user`, or the specific route) instead of gating on this
-          command.
+          Its exit code is not a stable signal: containers of this surface class have
+          returned different exit codes for the same "token invalid" message while
+          `gh api` worked in both. A script gating on it is wrong in both directions
+          and which direction is not predictable. Dated rows are in
+          docs/DEGRADED_MODE_CONTRACT.md. Probe the endpoint you need (`gh api user`,
+          or the specific route) instead of gating on this command.
     scope: >-
       This key names which GitHub TRANSPORT is sanctioned. It says nothing about the
       publication path — `make pr` remains the sanctioned route (see campaign_execution

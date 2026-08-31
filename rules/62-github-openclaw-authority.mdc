@@ -51,9 +51,9 @@ reason to paste a secret into the sandbox.
 ### `gh auth status` is not a capability probe
 
 It reports the `GH_TOKEN` sentinel invalid, **and its exit code does not agree with
-itself across containers**: 0 on 2026-08-29/30 and 1 on 2026-08-31, in the same
-surface class, with the same message and the same working `gh api`
-(`docs/DEGRADED_MODE_CONTRACT.md`). So a script that gates on it is wrong in both
+itself across containers**: containers of this surface class have returned different
+exit codes for that same message while `gh api` worked in both — the dated rows are in
+`docs/DEGRADED_MODE_CONTRACT.md`. So a script that gates on it is wrong in both
 directions — it takes the success path while the output says the opposite, or it
 declares GitHub unreachable while `gh api` works — and which of the two is not
 predictable. A human reading only the text reaches the second conclusion either way.
