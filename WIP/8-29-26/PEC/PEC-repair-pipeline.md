@@ -22,7 +22,29 @@ no longer repairs sealed Blueprint authority. Typed verification semantics survi
 Blueprint -> Program Lock -> Controller state -> Source Contract -> Rendered Contract.
 
 This does **not** close the reopened W4/W5 residuals and does **not** authorize W8
-activation. The next remediation entry is position 11 (`A3`).
+activation.
+
+<!-- PEC-NORMATIVE-AND-DISPOSITION-2 -->
+### Normative-vocabulary and disposition batch 11-12
+
+Positions 11 (`A3`) and 12 (`A4`) are implemented and locally validated under
+`pec-normative-and-disposition-2-2026-08-31`. These are the two reopened residuals,
+so **W4 and W5 are now closed on the live surface**, not only in shadow:
+
+- **U6 / A3** — `architecture_intent.normative_signals` is the extractor's canonical
+  source. The second, upper-case-only vocabulary in `architecture_extractor` is gone,
+  so `must not` reaches the same kind as `MUST NOT`. Before this, `_sentence_kind()`
+  returned `None` for every lower-case obligation while `normative_signals` reported
+  the canonical name — two vocabularies disagreeing about the same sentence.
+  CE-AT-002 / CE-AT-003 now hold on the deterministic surface the tests force.
+- **U7 / A4** — `architecture_to_campaign.lower()` consumes
+  `repo_truth.classify_dispositions()`. That classifier had **zero production callers**;
+  lowering asked only `RepositoryFacts.path_exists`, a binary that cannot tell
+  `HARDEN_WIRE_EXISTING` from `CREATE`. KEEP / HARDEN / MERGE / CREATE now reach action
+  wording and per-item provenance. CE-AT-005 / CE-AT-006 hold live.
+
+Still **not** authorized: W8 activation, and `PLAN_DOCUMENT.pec-repair-pipeline.v1.json`
+is unchanged. The next remediation entry is position 13 (`A5`).
 
 This folder is no longer a dump of PE research. It is one remaining pipeline.
 
@@ -46,8 +68,8 @@ W8+ requires a **new plan** bound to a fresh `origin/main` SHA after W7 merges.
 | **W1** | `BOOTSTRAP-PEC-000` | **Complete** | W0 |
 | **W2** | C0 | **Complete** | W1 |
 | **W3** | C1 | **Complete** (execute residual) | W2 |
-| **W4** | C2 | **Complete (contract)** — residual A3 reopened | W3 |
-| **W5** | C3 | **Complete (contract)** — residual A4 reopened | W4 |
+| **W4** | C2 | **Complete** — residual A3 closed live (batch 11-12) | W3 |
+| **W5** | C3 | **Complete** — residual A4 closed live (batch 11-12) | W4 |
 | **W6** | C4 | **Complete** | W5 |
 | **W7** | C5 | **Complete** (shadow only) | W0 + W6 |
 | **W8** | PE v3 S0–S8 + C6 | **Open** | W7 |

@@ -463,13 +463,31 @@
         "pri": "P1",
         "change": "Collapse normative lexical semantics into one implementation (normative_signals as the extractor's canonical source) with lowercase live E2E fixtures",
         "why": "one parser, one vocabulary, one semantic law",
-        "finding": "A3"
+        "finding": "A3",
+        "execution_status": "complete",
+        "execution_batch": "pec-normative-and-disposition-2-2026-08-31",
+        "validation_evidence": {
+          "compiler_tests": "PASS — 140 passed, 9 subtests (environment/program-execution/compiler/tests)",
+          "full_relevant_tests": "PASS — 648 passed/34 subtests (scripts + controller template + compiler); 160 passed/9 xfailed (tests + conformance + claude-code adapter)",
+          "repo_wide_tests": "PASS — 1267 passed; the 2 remaining failures (test_pr_summary hook registration, dag_authoring command file) were verified failing identically on main da0c7530 and are recorded as deferred session debt",
+          "lint": "PASS — ruff check + ruff format --check over environment/program-execution/compiler",
+          "live_surface": "PASS — CE-AT-002/003 and CE-AT-005/006 now proven on the live/deterministic surface, not only in shadow"
+        }
       },
       {
         "pri": "P1/P2",
         "change": "Wire repository dispositions into architecture_to_campaign.lower(); promote W5 shadow cases to architecture-compiler E2E fixtures",
         "why": "carry KEEP/HARDEN/MERGE/CREATE into provenance and action formation",
-        "finding": "A4"
+        "finding": "A4",
+        "execution_status": "complete",
+        "execution_batch": "pec-normative-and-disposition-2-2026-08-31",
+        "validation_evidence": {
+          "compiler_tests": "PASS — 140 passed, 9 subtests (environment/program-execution/compiler/tests)",
+          "full_relevant_tests": "PASS — 648 passed/34 subtests (scripts + controller template + compiler); 160 passed/9 xfailed (tests + conformance + claude-code adapter)",
+          "repo_wide_tests": "PASS — 1267 passed; the 2 remaining failures (test_pr_summary hook registration, dag_authoring command file) were verified failing identically on main da0c7530 and are recorded as deferred session debt",
+          "lint": "PASS — ruff check + ruff format --check over environment/program-execution/compiler",
+          "live_surface": "PASS — CE-AT-002/003 and CE-AT-005/006 now proven on the live/deterministic surface, not only in shadow"
+        }
       },
       {
         "pri": "P2",
@@ -675,12 +693,37 @@
           }
         },
         "remote_publication": "not_performed_by_program_execution"
+      },
+      {
+        "id": "pec-normative-and-disposition-2-2026-08-31",
+        "authority": "current_task: execute the next slice from the tracker",
+        "selected_remediation_positions": [
+          11,
+          12
+        ],
+        "production_baseline_main_sha": "da0c7530df837d417a1437f9d08b5d8e61ba4a10",
+        "closes": [
+          "A3 / reopened W4 residual (U6)",
+          "A4 / reopened W5 residual (U7)"
+        ],
+        "resolves_unknowns": {
+          "U6": "normative_signals is now the extractor's canonical source; the second upper-case-only vocabulary in architecture_extractor is gone",
+          "U7": "architecture_to_campaign.lower() consumes repo_truth.classify_dispositions; the classifier now has a production caller"
+        },
+        "validation": {
+          "compiler_tests": "PASS — 140 passed, 9 subtests (environment/program-execution/compiler/tests)",
+          "full_relevant_tests": "PASS — 648 passed/34 subtests (scripts + controller template + compiler); 160 passed/9 xfailed (tests + conformance + claude-code adapter)",
+          "repo_wide_tests": "PASS — 1267 passed; the 2 remaining failures (test_pr_summary hook registration, dag_authoring command file) were verified failing identically on main da0c7530 and are recorded as deferred session debt",
+          "lint": "PASS — ruff check + ruff format --check over environment/program-execution/compiler",
+          "live_surface": "PASS — CE-AT-002/003 and CE-AT-005/006 now proven on the live/deterministic surface, not only in shadow"
+        },
+        "remote_publication": "pushed to PR #442 (Quantum-L9/Cursor-Governance)"
       }
     ],
     "next_remediation": {
-      "position": 11,
-      "finding": "A3",
-      "change": "Collapse normative lexical semantics into one implementation (normative_signals as the extractor's canonical source) with lowercase live E2E fixtures",
+      "position": 13,
+      "finding": "A5",
+      "change": "Add route-confusion diagnostics to the brief route (warn, don't steal)",
       "status": "open"
     }
   },
