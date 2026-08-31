@@ -6,8 +6,8 @@ role: plan_workflow
 tags: [plan, todo, validation, projection, cursor-build]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-08-29
+version: 1.2.0
+updated: 2026-08-30
 /L9_META -->
 
 # Plan Workflow — Shared Template, Cursor Build Execute
@@ -27,10 +27,15 @@ Section list matches [`../l9-plan/references/plan-workflow-pe-autonomy.md`](../.
 | `PLAN_DOCUMENT` JSON | Machine SSOT for depth gates | `python3 ../l9-plan/scripts/validate_plan_document.py` MUST PASS |
 | Cursor `.plan.md` | Executable projection the user Builds | Shared canonical template; PE execute block **replaced** |
 
+## Architect upstream (required)
+
+Read `skills/l9-global-architect/SKILL.md` and run the GAR bootloader **before** emit. Do not skip to PLAN_DOCUMENT. Standalone `/l9-global-architect` remains explicit-only; this step is the plan-simple supporting invoke.
+
 ## Emit sequence (fail-closed)
 
-1. Emit + validate `PLAN_DOCUMENT` JSON.
-2. Project with:
+1. Run `l9-global-architect` to settle architecture (or record that it is already settled).
+2. Emit + validate `PLAN_DOCUMENT` JSON.
+3. Project with:
 
 ```bash
 python3 ../l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=cursor-build \
@@ -39,10 +44,17 @@ python3 ../l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=
 
    Or hand-copy the first-class SSOT and apply the execute swap below. Do **not** call `render_plan_pe_autonomy.py` without `--execute-via=cursor-build` (that injects PE).
 
-3. Frontmatter: Cursor `name`, `overview`, `todos`, `isProject`, plus `kind: simple`, `execute_via: cursor-build`.
-4. Convergence `execute_via`: `cursor-build`.
-5. Immutable baseline: current workspace (branch, dirty, HEAD if useful). Do **not** write `Lock: origin/main = <sha>`. Do **not** require a clean tip worktree. Do **not** stop-and-replan as a Program Lock. For code in scope name `.pre-commit-config.yaml` as the hook catalog.
-6. DAG / Phase-0 table: keep as the todo/DAG projection. Rows are Build todos, not Controller `claim`/`render` Task Cards.
+4. Frontmatter: Cursor `name`, `overview`, `todos`, `isProject`, plus `kind: simple`, `execute_via: cursor-build`.
+5. Convergence `execute_via`: `cursor-build`.
+6. Immutable baseline: current workspace (branch, dirty, HEAD if useful). Do **not** write `Lock: origin/main = <sha>`. Do **not** require a clean tip worktree. Do **not** stop-and-replan as a Program Lock. For code in scope name `.pre-commit-config.yaml` as the hook catalog.
+7. DAG / Phase-0 table: keep as the todo/DAG projection. Rows are Build todos, not Controller `claim`/`render` Task Cards.
+8. Generate and validate the section receipt (schema owner is `../l9-plan/schemas/plan-document.schema.json`; receipt shape is `../schemas/plan-section-receipt.schema.json`):
+
+```bash
+python3 scripts/generate_plan_section_receipt.py \
+  --plan-json <plan.json> --plan-md <plan.md> --out <plan>.section-receipt.json
+python3 scripts/validate_plan_section_receipt.py <plan>.section-receipt.json
+```
 
 ## Execute swap (required)
 

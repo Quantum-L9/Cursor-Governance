@@ -6,8 +6,8 @@ role: validation_checklist
 tags: [plan, validation, cursor-build]
 owner: igor_beylin
 status: active
-version: 1.1.0
-updated: 2026-08-29
+version: 1.2.0
+updated: 2026-08-30
 /L9_META -->
 
 # Validation Checklist
@@ -18,11 +18,15 @@ updated: 2026-08-29
 - [ ] `references/executable-plan.template.md` is a symlink to the first-class SSOT
 - [ ] No forked copy of `canonical.template.executable_plan.v1.plan.md`
 - [ ] Reuses `l9-plan` schema + `validate_plan_document.py` (not copied)
+- [ ] Compact workflow loads `l9-global-architect` before emit
+- [ ] `scripts/generate_plan_section_receipt.py` and `scripts/validate_plan_section_receipt.py` present
 
 ## Delivered plan
 
 - [ ] PLAN_DOCUMENT emitted
 - [ ] `python3 ../l9-plan/scripts/validate_plan_document.py <plan.json>` PASS
+- [ ] `l9-global-architect` ran upstream (receipt `gar_upstream.invoked: true`)
+- [ ] `python3 scripts/validate_plan_section_receipt.py <plan>.section-receipt.json` PASS
 - [ ] `.plan.md` projected with `--execute-via=cursor-build` (or hand-filled with the execute swap)
 - [ ] Frontmatter has `kind: simple` and `execute_via: cursor-build`
 - [ ] Body has **Execute via Cursor Build**

@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://l9.local/schemas/plan-section-receipt.schema.json",
+  "title": "SIMPLE_PLAN_SECTION_RECEIPT",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "generated_at",
+    "plan_json_path",
+    "plan_md_path",
+    "plan_json_sha256",
+    "plan_md_sha256",
+    "section_schema_ref",
+    "template_ref",
+    "gar_upstream",
+    "json_sections",
+    "md_sections",
+    "frontmatter",
+    "execute_swap",
+    "status"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "kind": {
+      "const": "simple_plan_section_receipt"
+    },
+    "generated_at": {
+      "type": "string",
+      "minLength": 1
+    },
+    "plan_json_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "plan_md_path": {
+      "type": "string",
+      "minLength": 1
+    },
+    "plan_json_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "plan_md_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "section_schema_ref": {
+      "const": "skills/l9-plan/schemas/plan-document.schema.json"
+    },
+    "template_ref": {
+      "const": "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"
+    },
+    "gar_upstream": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["invoked", "skill_ref"],
+      "properties": {
+        "invoked": {
+          "type": "boolean"
+        },
+        "skill_ref": {
+          "const": "skills/l9-global-architect"
+        },
+        "run_id": {
+          "type": ["string", "null"]
+        }
+      }
+    },
+    "json_sections": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "minProperties": 1
+    },
+    "md_sections": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "boolean"
+      },
+      "minProperties": 1
+    },
+    "frontmatter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "overview", "todos", "isProject", "kind", "execute_via"],
+      "properties": {
+        "name": { "type": "boolean" },
+        "overview": { "type": "boolean" },
+        "todos": { "type": "boolean" },
+        "isProject": { "type": "boolean" },
+        "kind": { "type": "boolean" },
+        "execute_via": { "type": "boolean" }
+      }
+    },
+    "execute_swap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cursor_build_heading",
+        "live_pe_heading",
+        "live_make_campaign"
+      ],
+      "properties": {
+        "cursor_build_heading": { "type": "boolean" },
+        "live_pe_heading": { "type": "boolean" },
+        "live_make_campaign": { "type": "boolean" }
+      }
+    },
+    "status": {
+      "enum": ["pass", "fail"]
+    }
+  }
+}
