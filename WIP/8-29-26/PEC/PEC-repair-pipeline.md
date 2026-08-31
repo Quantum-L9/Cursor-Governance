@@ -1,6 +1,9 @@
 # Program Execution repair pipeline — remaining work
 
-**Updated:** 2026-08-30 — W0–W7 **complete** at `e8785018` (HEAD `35880e70`). Next = **W8**.
+**Updated:** 2026-08-31 — W0–W7 landed at `e8785018`; re-verified at baseline `450b7d0e`.
+Two external microscope audits reconciled (see **External audit reconciliation**): **W4 and W5
+are contract-delivered but not end-to-end closed**, and a previously untracked Blueprint→execution
+seam carries three P0s. Next = **W8**, with the reopened residuals below folded in.
 **Machine SSOT:** [`PEC-repair-pipeline.json`](./PEC-repair-pipeline.json)
 **Cursor Build plan (W0–W7 done):** [`docs/plans/pec-repair-pipeline-w0-w10_056a9b48.plan.md`](../../../docs/plans/pec-repair-pipeline-w0-w10_056a9b48.plan.md)
 **PLAN_DOCUMENT (W8-forward):** [`PLAN_DOCUMENT.pec-repair-pipeline.v1.json`](./PLAN_DOCUMENT.pec-repair-pipeline.v1.json)
@@ -33,8 +36,8 @@ W8+ requires a **new plan** bound to a fresh `origin/main` SHA after W7 merges.
 | **W1** | `BOOTSTRAP-PEC-000` | **Complete** | W0 |
 | **W2** | C0 | **Complete** | W1 |
 | **W3** | C1 | **Complete** (execute residual) | W2 |
-| **W4** | C2 | **Complete** | W3 |
-| **W5** | C3 | **Complete** (thin microscope) | W4 |
+| **W4** | C2 | **Complete (contract)** — residual A3 reopened | W3 |
+| **W5** | C3 | **Complete (contract)** — residual A4 reopened | W4 |
 | **W6** | C4 | **Complete** | W5 |
 | **W7** | C5 | **Complete** (shadow only) | W0 + W6 |
 | **W8** | PE v3 S0–S8 + C6 | **Open** | W7 |
@@ -58,6 +61,74 @@ W8+ is forbidden until a separate plan with a fresh baseline SHA.
 
 - W3: `PROGRAM_INTENT_V1` ∉ `SUPPORTED_KINDS` for campaign **execute** until a post-W8 `make campaign` plan.
 - W7: Spine execute / Lock / 10-run repeatability not proven; `make campaign` was not invoked.
+- **W4 reopened (A3):** lowercase materiality is closed in `architecture_intent.normative_signals()`
+  but **not** in `architecture_extractor._sentence_kind()`, whose `_KIND_RULES` are uppercase literals
+  matched with `signal in sentence` — no `lower()`, no `IGNORECASE`. Probe at `450b7d0e`:
+  `normative_signals("the resolver must preserve …")` → `('MUST','PRESERVE')`, while
+  `_sentence_kind(...)` → `None` (uppercase → `requirement`). Two vocabularies; AT-002/AT-003 are
+  not closed on the deterministic surface, which is the surface tests force.
+- **W5 reopened (A4):** `repo_truth.classify_dispositions()` has **zero production callers** — only
+  `test_repo_truth.py` and `tests/conformance/shadow_runner.py`. The live lowerer
+  `architecture_to_campaign.py` uses its own `RepositoryFacts` / `_resolve_paths` (exists vs proposed).
+  CE-AT-005/006 are closed **in shadow only**; the live path is unproven.
+
+---
+
+## External audit reconciliation (2026-08-31)
+
+Two operator microscope audits (`Pec1.md` compiler seam, `Pec2.md` Blueprint→execution seam) were
+reconciled against baseline `450b7d0e`. **Every claim below was re-verified in code before being
+recorded here — none is carried on the audit's word.** 18 discrete findings.
+
+| Verdict | Count | Share |
+| --- | --- | --- |
+| **Additive** (not tracked by this pipeline) | **14** | **78%** |
+|  └ fully new | 12 | 67% |
+|  └ sharpens an existing W8/S6 bullet | 2 | 11% |
+| Already covered (confirms landed W0–W7) | 4 | 22% |
+
+Per document: **Pec1 50% additive** (4/8 — it audits the compiler front half W0–W7 already closed,
+so half is confirmation). **Pec2 100% additive** (10/10 — it audits the Blueprint→execution seam this
+pipeline never covered; it is precisely the W7 residual "spine execute / Lock not proven").
+
+### Additive — compiler seam (Pec1)
+
+| ID | Finding | Sev | Evidence at `450b7d0e` |
+| --- | --- | --- | --- |
+| A3 | Deterministic extractor loses lowercase obligations | P1 | `_sentence_kind()` → `None` for lowercase, `requirement` for uppercase; `normative_signals()` returns `('MUST','PRESERVE')` for both |
+| A4 | `repo_truth` dispositions never reach live lowering | P1 | `classify_dispositions` callers: `test_repo_truth.py`, `shadow_runner.py`. Zero production |
+| A5 | Unmarked dense `.md` silently routes to brief compiler | P2 | By design; audit asks for a warn-don't-steal diagnostic, not auto-detection |
+| A8 | Compiler README overstates the failure set | P3 | README:154 "fails … **only** for" 4 conditions; lowerer also raises at `architecture_to_campaign.py:264` and `:516` |
+
+### Additive — Blueprint→execution seam (Pec2), previously untracked
+
+| ID | Finding | Sev | Evidence at `450b7d0e` |
+| --- | --- | --- | --- |
+| B1 | Launchability gate is a no-op on native Blueprints | **P0** | `blueprint_tasks()` reads `tasks.json` / `tasks/*.json` (launchability.py:325). Probe: a `TASK_CARDS.yaml` with 1 task → **0 tasks**; `check_launchability` then returns `launchable: True, skipped: no_task_cards` (run_campaign.py:2294). The writer at launchability.py:296 speaks `TASK_CARDS.yaml` — reader and writer disagree inside one file |
+| B2 | Normal execution rewrites accepted Blueprint authority | **P0** | `fill_inferred_validation()` (run_campaign.py:2408) writes `TASK_CARDS.yaml`, then relocks and rematerializes |
+| B3 | Explicit-task-id relock bypasses the drift classifier | **P0/P1** | `relock_definitions(task_ids=…)` (controller.py:369) skips `stale_task_ids()`; its docstring makes the bypass deliberate, but the automatic late-repair caller supplies ids without doing the comparison the docstring assumes |
+| B4 | Mutating `repo_local` task may pass with inspection-only validation | P1 | No `repo_local + local_write ⇒ terminal verifier` rule at compile or admission |
+| B5 | Program Lock flattens the validation algebra | P1 | `required_commands` keeps only `{command, command_and_inspection}` (blueprint.py); `inspection` / `external_adapter` drop out. *Sharpens W8/S6 "validation adapter path semantics"* |
+| B6 | Contracts treat zero validators as complete | P1 | `source-contract.schema.json` `validation_commands.minItems: 0` |
+| B7 | No `missing_terminal_verifier` blocker | P1 | Absent from readiness and preflight. *Sharpens W8/S6* |
+| B8 | Late writer emits a schema-invalid card, destructively | P1 | Entry omits `environment` (schema requires `id, method, command_or_inspection, environment, expected_result` — validated: `'environment' is a required property`), and **replaces** `task["validation"]` rather than appending. Launchability's own writer does set `environment`, so this is specific to `run_campaign` |
+| B9 | Repairing B1 exposes a MANIFEST transaction-order problem | P1 | Launchability mutation is manifest-governed; revalidation currently precedes manifest regeneration. Not executed — reasoned from sequencing |
+| B10 | Launchability fixtures assert a dead vocabulary | P2 | `test_launchability.py` uses `repo_change` / `analysis`; native enum is `program_control, repo_local, external_adapter, read_only` |
+
+### Already covered — no action (confirms landed work)
+
+A1 BLOCKED-Blueprint pathology repaired · A2 unknown seam fabricates no write authority ·
+A6 minimal `intent.v1` stays strict by design · A7 coverage/provenance strict in the right place.
+
+### Disposition
+
+B1–B3 are the highest-leverage items in this file: they explain a campaign that "prepares forever",
+and B1 is a one-line-looking reader bug that **B9 says must not be fixed one-line**. A3/A4 mean the
+W4/W5 rows above read "Complete" for a contract that is delivered but not integrated — the shadow
+harness is green on paths the live compiler does not take.
+
+**None of this is authorized work here.** W8+ still requires its own plan on a fresh `origin/main`
+SHA. Recorded so that plan starts from verified truth instead of re-deriving it.
 
 ---
 

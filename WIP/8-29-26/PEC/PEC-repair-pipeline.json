@@ -1,7 +1,7 @@
 {
   "schema": "l9.pec.repair-pipeline.v1",
   "title": "Program Execution repair pipeline \u2014 remaining work only",
-  "updated": "2026-08-30",
+  "updated": "2026-08-31",
   "inspected_head": "35880e7078b06b2c8dfe7a26ccec390bd11935c6",
   "w0_w7_complete_at": "e8785018",
   "corpus_archived_to": "WIP/8-29-26/PEC/_archive",
@@ -58,6 +58,193 @@
     ],
     "residual_w3": "Campaign runner still refuses program-execution.intent.v1 execute; compile ingress is the landed path.",
     "residual_w7": "Spine execute/Lock/10-run repeatability pending; shadow graduation metrics are zero."
+  },
+  "external_audit_reconciliation": {
+    "reconciled_at": "2026-08-31",
+    "baseline_sha": "450b7d0e1db46ad9b211b8be09dc641aae12cfaf",
+    "sources": [
+      "Pec1.md (compiler seam microscope)",
+      "Pec2.md (Blueprint->execution seam microscope)"
+    ],
+    "method": "every claim re-verified in code at the baseline before recording; none carried on the audit's word",
+    "totals": {
+      "discrete_findings": 18,
+      "additive": 14,
+      "additive_pct": 78,
+      "fully_new": 12,
+      "fully_new_pct": 67,
+      "sharpens_existing_w8_bullet": 2,
+      "already_covered": 4,
+      "already_covered_pct": 22,
+      "per_document": {
+        "Pec1": {
+          "additive": 4,
+          "total": 8,
+          "pct": 50
+        },
+        "Pec2": {
+          "additive": 10,
+          "total": 10,
+          "pct": 100
+        }
+      }
+    },
+    "authorization": "none of this is authorized work in this pipeline; W8+ still requires its own plan on a fresh origin/main SHA",
+    "additive_findings": [
+      {
+        "id": "A3",
+        "title": "Deterministic extractor loses lowercase obligations",
+        "severity": "P1",
+        "verdict": "confirmed_defect",
+        "evidence_at_450b7d0e": "_sentence_kind() returns None for lowercase and 'requirement' for uppercase; normative_signals() returns ('MUST','PRESERVE') for both. _KIND_RULES are uppercase literals matched with 'signal in sentence'.",
+        "seam": "compiler/architecture_extractor.py",
+        "maps_to_wave": "W4 reopened"
+      },
+      {
+        "id": "A4",
+        "title": "repo_truth dispositions never reach live lowering",
+        "severity": "P1",
+        "verdict": "confirmed_defect",
+        "evidence_at_450b7d0e": "classify_dispositions callers are test_repo_truth.py and tests/conformance/shadow_runner.py only; zero production. architecture_to_campaign.py uses its own RepositoryFacts/_resolve_paths.",
+        "seam": "compiler/architecture_to_campaign.py + repo_truth.py",
+        "maps_to_wave": "W5 reopened"
+      },
+      {
+        "id": "A5",
+        "title": "Unmarked dense .md routes to the brief compiler",
+        "severity": "P2",
+        "verdict": "confirmed_by_design",
+        "evidence_at_450b7d0e": "Only declared architecture frontmatter routes ordinary make campaign to architecture. Audit asks for a warn-don't-steal diagnostic, not heuristic auto-detection.",
+        "seam": "scripts/campaign_input.py",
+        "maps_to_wave": "W8 prep"
+      },
+      {
+        "id": "A8",
+        "title": "Compiler README overstates the failure set",
+        "severity": "P3",
+        "verdict": "confirmed",
+        "evidence_at_450b7d0e": "README:154 says compilation fails 'only for' four conditions; architecture_to_campaign.py:264 and :516 raise two more.",
+        "seam": "compiler/README.md",
+        "maps_to_wave": "W8 prep"
+      },
+      {
+        "id": "B1",
+        "title": "Launchability gate is a no-op on native Blueprints",
+        "severity": "P0",
+        "verdict": "confirmed_empirically",
+        "evidence_at_450b7d0e": "blueprint_tasks() reads tasks.json / tasks/*.json (launchability.py:325). Probe: TASK_CARDS.yaml with 1 task returned 0 tasks; check_launchability then returns launchable=True skipped=no_task_cards (run_campaign.py:2294). Writer at launchability.py:296 uses TASK_CARDS.yaml - reader and writer disagree in one file.",
+        "seam": "scripts/launchability.py + scripts/run_campaign.py",
+        "maps_to_wave": "W8 S1/S6"
+      },
+      {
+        "id": "B2",
+        "title": "Normal execution rewrites accepted Blueprint authority",
+        "severity": "P0",
+        "verdict": "confirmed",
+        "evidence_at_450b7d0e": "fill_inferred_validation() (run_campaign.py:2408) writes TASK_CARDS.yaml, then adopt_changed_definitions + rematerialize_after_relock.",
+        "seam": "scripts/run_campaign.py",
+        "maps_to_wave": "W8 S1"
+      },
+      {
+        "id": "B3",
+        "title": "Explicit-task-id relock bypasses the drift classifier",
+        "severity": "P0/P1",
+        "verdict": "confirmed",
+        "evidence_at_450b7d0e": "relock_definitions(task_ids=...) (controller.py:369) skips stale_task_ids(). Bypass is deliberate per docstring, but the automatic late-repair caller supplies ids without the source comparison the docstring assumes.",
+        "seam": "controller-template/scripts/pec/controller.py",
+        "maps_to_wave": "W8 S2"
+      },
+      {
+        "id": "B4",
+        "title": "Mutating repo_local task may pass with inspection-only validation",
+        "severity": "P1",
+        "verdict": "confirmed",
+        "evidence_at_450b7d0e": "No 'repo_local + local_write implies terminal verifier' rule at compile or admission.",
+        "seam": "compiler + blueprint admission",
+        "maps_to_wave": "W8 S1/S6"
+      },
+      {
+        "id": "B5",
+        "title": "Program Lock flattens the validation algebra",
+        "severity": "P1",
+        "verdict": "confirmed",
+        "evidence_at_450b7d0e": "required_commands keeps only {command, command_and_inspection}; inspection and external_adapter drop out.",
+        "seam": "controller-template/scripts/pec/blueprint.py",
+        "maps_to_wave": "W8 S6 (sharpens)"
+      },
+      {
+        "id": "B6",
+        "title": "Contracts treat zero validators as complete",
+        "severity": "P1",
+        "verdict": "confirmed",
+        "evidence_at_450b7d0e": "source-contract.schema.json validation_commands.minItems = 0; empty required set makes the inclusion check vacuous.",
+        "seam": "controller-template/schemas/source-contract.schema.json",
+        "maps_to_wave": "W8 S6"
+      },
+      {
+        "id": "B7",
+        "title": "No missing_terminal_verifier blocker",
+        "severity": "P1",
+        "verdict": "confirmed",
+        "evidence_at_450b7d0e": "Absent from readiness and preflight.",
+        "seam": "controller-template/scripts/pec/{controller,preflight}.py",
+        "maps_to_wave": "W8 S6 (sharpens)"
+      },
+      {
+        "id": "B8",
+        "title": "Late writer emits a schema-invalid card, destructively",
+        "severity": "P1",
+        "verdict": "confirmed",
+        "evidence_at_450b7d0e": "Entry omits required 'environment' (schema validation: \"'environment' is a required property\") and replaces task['validation'] rather than appending. Launchability's writer does set environment; defect is specific to run_campaign.",
+        "seam": "scripts/run_campaign.py",
+        "maps_to_wave": "W8 S1"
+      },
+      {
+        "id": "B9",
+        "title": "Repairing B1 exposes a MANIFEST transaction-order problem",
+        "severity": "P1",
+        "verdict": "plausible_not_executed",
+        "evidence_at_450b7d0e": "Launchability mutation is manifest-governed; revalidation currently precedes manifest regeneration. Reasoned from sequencing, not executed.",
+        "seam": "scripts/launchability.py + accept_blueprint.py",
+        "maps_to_wave": "W8 S1"
+      },
+      {
+        "id": "B10",
+        "title": "Launchability fixtures assert a dead vocabulary",
+        "severity": "P2",
+        "verdict": "confirmed",
+        "evidence_at_450b7d0e": "test_launchability.py uses repo_change / analysis; native execution_kind enum is program_control, repo_local, external_adapter, read_only.",
+        "seam": "scripts/tests/test_launchability.py",
+        "maps_to_wave": "W8 S0"
+      }
+    ],
+    "already_covered_no_action": [
+      {
+        "id": "A1",
+        "title": "BLOCKED-Blueprint pathology repaired",
+        "covered_by": "W3/W6 + CE-AT-004/007"
+      },
+      {
+        "id": "A2",
+        "title": "Unknown seam fabricates no write authority",
+        "covered_by": "W6 + CE-AT-007"
+      },
+      {
+        "id": "A6",
+        "title": "Minimal intent.v1 stays strict by design",
+        "covered_by": "W3 residual"
+      },
+      {
+        "id": "A7",
+        "title": "Coverage/provenance strict in the right place",
+        "covered_by": "W4 evidence"
+      }
+    ],
+    "status_corrections": [
+      "W4 is contract-delivered but not end-to-end closed: AT-002/AT-003 fail on the deterministic extractor, the surface tests force.",
+      "W5 is contract-delivered but not integrated: CE-AT-005/006 are closed in shadow only; the live lowerer never calls classify_dispositions.",
+      "W7's recorded residual ('spine execute/Lock not proven') is exactly the seam Pec2 audits; B1-B3 are its highest-leverage defects."
+    ]
   },
   "completed_removed_from_pipeline": [
     {
