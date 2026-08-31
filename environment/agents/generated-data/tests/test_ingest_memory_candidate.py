@@ -90,6 +90,32 @@ class IngestMemoryCandidateTests(unittest.TestCase):
             self.module.ingest_candidate(_candidate(), dry_run=True)
         self.assertEqual(calls, [])
 
+    def test_recorded_repository_maps_to_registry_group(self) -> None:
+        captured: list = []
+
+        def fake_resolve(*args, **kwargs):
+            captured.append((args, kwargs))
+            return {"group_id": "cursor-governance", "readonly": False}
+
+        calls = _install_client_fake()
+        client = sys.modules["ops.graphiti.graphiti_memory_client"]
+        client.resolve_group_id = fake_resolve
+        candidate = _candidate()
+        candidate["source"]["repository"] = "Quantum-L9/Cursor-Governance"
+        result = self.module.ingest_candidate(candidate, dry_run=True)
+        self.assertEqual(result["status"], "accepted")
+        self.assertEqual(calls, [])
+        self.assertTrue(captured)
+        self.assertEqual(captured[0][1].get("explicit"), "cursor-governance")
+
+    def test_unknown_repository_fails_closed(self) -> None:
+        calls = _install_client_fake()
+        candidate = _candidate()
+        candidate["source"]["repository"] = "Quantum-L9/does-not-exist"
+        with self.assertRaises(RuntimeError):
+            self.module.ingest_candidate(candidate, dry_run=True)
+        self.assertEqual(calls, [])
+
 
 if __name__ == "__main__":
     unittest.main()

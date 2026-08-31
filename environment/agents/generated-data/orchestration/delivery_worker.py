@@ -582,8 +582,24 @@ class DeliveryWorker:
             if destination.exists():
                 continue
             destination.write_bytes(source.read_bytes())
+            source.unlink()
             adopted.append(destination)
         return adopted
+
+    def _packet_has_pending_candidates(self, packet_id: str, current: Path) -> bool:
+        if not packet_id:
+            return False
+        outbox = self._memory_outbox_dir()
+        for path in outbox.glob("memcand-*.json"):
+            if path.resolve() == current.resolve():
+                continue
+            try:
+                other = json.loads(path.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError):
+                continue
+            if str((other.get("source") or {}).get("packet_id") or "") == packet_id:
+                return True
+        return False
 
     def _job_for_packet(self, packet_id: str) -> Any | None:
         if not packet_id:
@@ -738,18 +754,24 @@ class DeliveryWorker:
                     or None,
                     payload=response,
                 )
+                remaining = self._packet_has_pending_candidates(packet_id, path)
                 target = (
                     PipelineState.DESTINATION_DEFERRED
                     if status == "quarantined"
-                    else PipelineState.DESTINATION_ACCEPTED
+                    else (
+                        PipelineState.DESTINATION_SUBMITTED
+                        if remaining
+                        else PipelineState.DESTINATION_ACCEPTED
+                    )
                 )
-                self.store.transition(
-                    job_id=job.job_id,
-                    expected_state=PipelineState.DESTINATION_SUBMITTED,
-                    target_state=target,
-                    actor=actor,
-                    payload={"drain": True, "status": status},
-                )
+                if target is not PipelineState.DESTINATION_SUBMITTED:
+                    self.store.transition(
+                        job_id=job.job_id,
+                        expected_state=PipelineState.DESTINATION_SUBMITTED,
+                        target_state=target,
+                        actor=actor,
+                        payload={"drain": True, "status": status},
+                    )
                 path.unlink()
                 self.store.recalculate_campaign_state(job.campaign_id)
                 results.append(

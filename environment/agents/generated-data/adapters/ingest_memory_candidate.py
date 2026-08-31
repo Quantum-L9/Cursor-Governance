@@ -16,6 +16,29 @@ if str(_REPO) not in sys.path:
     sys.path.insert(0, str(_REPO))
 
 
+def _group_from_candidate_source(source: Mapping[str, Any]) -> str | None:
+    """Prefer the candidate's recorded repository over the drain process cwd."""
+    recorded = str(source.get("repository") or "").strip()
+    if not recorded:
+        return None
+    from ops.graphiti.group_resolver import load_registry
+
+    repos = load_registry().get("repos") or {}
+    if recorded in repos:
+        return recorded
+    needle = recorded.lower()
+    for slug, cfg in repos.items():
+        github = str((cfg or {}).get("github") or "")
+        if github and github.lower() == needle:
+            return str(slug)
+        name = github.rsplit("/", 1)[-1] if github else ""
+        if name and name.lower() == needle:
+            return str(slug)
+        if recorded.lower() == str(slug).lower():
+            return str(slug)
+    return None
+
+
 def _candidate_from_stdin(raw: bytes) -> dict[str, Any]:
     parsed = json.loads(raw.decode("utf-8") if raw else "{}")
     if not isinstance(parsed, Mapping):
@@ -65,7 +88,16 @@ def ingest_candidate(candidate: Mapping[str, Any], *, dry_run: bool = False) -> 
         user_id=identity["user_id"],
         kind="insight",
     )
-    resolved = resolve_group_id(target_repo(argparse.Namespace(workspace=None)))
+    recorded_repo = str(source.get("repository") or "").strip()
+    explicit_group = _group_from_candidate_source(source)
+    if recorded_repo and not explicit_group:
+        raise RuntimeError(
+            f"write blocked: no group match for candidate.source.repository={recorded_repo}"
+        )
+    resolved = resolve_group_id(
+        target_repo(argparse.Namespace(workspace=None)),
+        explicit=explicit_group,
+    )
     group_id = resolved.get("group_id")
     if resolved.get("readonly") or not group_id or group_id in FORBIDDEN_GROUPS:
         raise RuntimeError(f"write blocked: {resolved.get('error') or resolved.get('warning')}")
