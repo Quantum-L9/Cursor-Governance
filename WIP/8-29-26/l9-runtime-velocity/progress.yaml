@@ -1,0 +1,240 @@
+schema: l9.environment_experience.progress/v1
+pack: WIP/8-29-26/l9-runtime-velocity
+pack_revision: velocity-r1
+plan_document: WIP/8-29-26/l9-runtime-velocity/plan.json
+friction_map: WIP/8-29-26/l9-runtime-velocity/FRICTION_MAP.md
+assessed_against: main@450b7d0 (Quantum-L9/Cursor-Governance)
+assessed_against_sha: 450b7d0  # re-bound 2026-08-30, 109 commits after a2f78b5
+assessed_at: '2026-08-30'
+assessment_scope: full
+assessment_scope_note: >-
+  First progress record for this pack. The pack shipped its analysis, its plan and its
+  implementation without ever recording which units landed, so nothing is carried forward
+  from a prior assessment — every record below is judged against the tree at a2f78b5 and
+  against probes run in the live container on 2026-08-29.
+delivered_by: >-
+  Quantum-L9/Cursor-Governance PR#373, squash-merged into main as 7df89e74 on 2026-08-28.
+  24 files, +2979 / -156. The PR body describes only its first commit and understates the
+  change as "analysis only"; the merged content carries the full T1-T6 implementation plus
+  the three defects found during it.
+counts:
+  done: 11
+  partial: 0
+  not_started: 1
+  blocked: 0
+  unknown: 0
+total: 12
+queue_counts:
+  active: 1
+  closed: 11
+
+records:
+  - id: T1
+    title: Extract the per-repository workspace-root resolver into a shared library
+    progress: done
+    root_cause: RC-1 container-root-as-workspace
+    delivered: ops/scripts/lib/workspace_roots.py — workspace_roots() and projection_roots(),
+      held by tests/ops/scripts/test_workspace_roots.py.
+    evidence: File present at a2f78b5; memory_prefetch imports it rather than re-deriving.
+    residual:
+      - Ordering is an alphabetical sort truncated at DEFAULT_MAX_ROOTS=6. A seventh
+        repository is dropped by alphabet, not by relevance. See P307 CI-005 R4, which asks
+        for ordering by the session's declared repo scope before the cap is applied.
+    p307_records: [CI-005]
+
+  - id: T2
+    title: Reconcile per-repository .claude mirrors
+    progress: done
+    root_cause: RC-1 container-root-as-workspace
+    delivered: reconcile_claude_commands.py and reconcile_llm_skill_adapters.py iterate
+      projection_roots(); held by tests/ops/scripts/test_claude_projection_multi_repo.py.
+    evidence: >-
+      Session banner at a2f78b5 reports "claude projection: ok".
+    residual: []
+    p307_records: [CI-002]
+
+  - id: T3
+    title: Make session_deps_cloud.sh provision each detected repository
+    progress: done
+    root_cause: RC-1 container-root-as-workspace
+    delivered: Per-repository fingerprint, install and stamp, with an aggregate banner line;
+      held by tests/environment/adapters/test_session_deps_cloud.py.
+    evidence: >-
+      Session banner at a2f78b5 reports "session-deps: 4/4 repositories cached and proven —
+      nothing to install", where the pre-fix banner reported a container-root fingerprint
+      derived from tool versions alone. Still 4/4 at 450b7d0.
+    residual: []
+    probe_2026_08_30: >-
+      A suspicion checked and DISMISSED. The bootstrap receipt records
+      workspace=/home/user, the container root rather than a repository, which looked
+      like RC-1 residue in the receipt plane. It is not: install.sh classifies the
+      workspace explicitly and treats a multi-repo container root as a legitimate wiring
+      target ("workspace ... is a multi-repo container root - wiring project artifacts"),
+      refusing only when the workspace is neither a repo, the harness project dir, nor a
+      container root. The field records where project artifacts are wired, which is
+      correctly the container root. Not a defect.
+    p307_records: [CI-028]
+
+  - id: T4
+    title: Make the deps stamp assert applied state, not attempted state
+    progress: done
+    root_cause: RC-1 container-root-as-workspace
+    delivered: toolchain_proven() gates the stamp write; a failed install refuses the stamp
+      and warns instead of reporting ready (session_deps_cloud.sh:147, :218, :222).
+    evidence: Read at a2f78b5. The comment at :116 states the contract explicitly — "The old
+      stamp recorded that an install was ATTEMPTED."
+    residual:
+      - P307 CI-028 R1 is NOT delivered by this unit and remains open — the stamp is written
+        with `touch`, so it carries neither the deps step's exit code nor a timestamp. The
+        proof gate and the exit-code record are different asks; only the former shipped.
+    p307_records: [CI-028]
+
+  - id: T5
+    title: Bind bootstrap receipt freshness to the governance revision
+    progress: done
+    root_cause: RC-2 time-based rather than revision-based readiness
+    delivered: claude_bootstrap_receipt.py compares the recorded governance_revision against
+      live_governance_revision() and returns unknown on a supersede; an undeterminable probe
+      deliberately fails open rather than manufacturing UNKNOWN.
+    evidence: Probed in the live container 2026-08-29 — recorded a2f78b531b55 equals live
+      a2f78b531b55, receipt age 168s, so the guard is active and the DEGRADED verdict below
+      is current rather than inherited.
+    residual: []
+    p307_records: [CI-004]
+    clears_p307_residual: 'CI-004 R1 (IMP-03 / I-BF-01)'
+
+  - id: T6
+    title: Re-run the installer when the receipt is UNKNOWN or DEGRADED
+    progress: done
+    root_cause: RC-2 time-based rather than revision-based readiness
+    delivered: SessionStart invokes the adapter installer once per revision when the receipt
+      is not ready, bounded and fail-open, then re-reads the receipt.
+    evidence: CLAUDE.md at a2f78b5 states the contract; the receipt in the live container is
+      168s old, so something regenerated it this session.
+    residual: []
+    probe_2026_08_30: >-
+      RESOLVED, and the earlier residual here was wrong. It claimed you could not tell
+      whether the installer fired or merely failed. You can: T6 writes a per-revision
+      marker and log at ~/.l9/claude/bootstrap-repair-<rev>.{attempted,log} and reports
+      SKIPPED / running / FAILED rc plus the log head in the SessionStart banner. The
+      answer was in the banner and the log, not the receipt. Evidence in this container:
+      markers exist for BOTH a2f78b5 and 450b7d0; the 450b7d0 log ends "Claude Code
+      adapter: READY" with all nine components READY, and the receipt moved from
+      degraded (5/8 at a2f78b5) to READY at 450b7d0. T6 works as designed.
+    p307_records: [CI-004]
+    clears_p307_residual: 'CI-004 R2 (IMP-04 / BOOT-1)'
+
+  - id: RC-6
+    title: The cloud refresh hard-resets $GOV with no guard
+    progress: done
+    origin: found while implementing, not in the original friction map
+    delivered: session_start_claude_governance.sh skips the reset when the clone carries
+      tracked modifications, names the skip in the banner, and records reset-skipped-dirty.
+      The probe is git status --porcelain, never a stash.
+    evidence: tests/environment/adapters/test_session_start_refresh_guard.py present at
+      a2f78b5.
+    residual:
+      - P307 CI-015 R1 stays open — when a second checkout of the governance repository is
+        present, nothing prints both paths with their revisions and states which one rules
+        resolve from. Both clones exist in this container (/root/.cursor-governance at
+        a2f78b5 and /home/user/Cursor-Governance), which is the condition CI-015 describes.
+    p307_records: [CI-015, CI-002]
+
+  - id: RC-7
+    title: The plans shelver un-tracks committed files on Linux
+    progress: done
+    origin: found while implementing, not in the original friction map
+    delivered: skills/l9-pipeline-audit/scripts/audit_pipeline.py resolves the shelf to the
+      tracked BUILT/ whenever it exists, so the case-insensitive and case-sensitive platforms
+      converge on the directory under version control.
+    evidence: tests/ops/scripts/test_pipeline_audit_built_shelf.py present at a2f78b5.
+    residual:
+      - The fix stops regeneration; it does not clean what already landed. docs/plans/built/
+        still carries 10 tracked files at a2f78b5, committed by PR#354 before the fix existed.
+        None collides by name with the 208 files in docs/plans/BUILT/.
+    p307_records: [CI-031]
+
+  - id: RC-8
+    title: The quality gate passed a branch it never looked at
+    progress: done
+    origin: found while implementing, not in the original friction map
+    severity: highest of the pack — a false PASS removes the guarantee every other change
+      depends on.
+    delivered: resolve_changed_files.sh distinguishes an uncomputable comparison from an
+      empty one; on a shallow clone it deepens once and retries, and exits naming the cause
+      when no merge base exists even then.
+    evidence: tests/ops/scripts/test_resolve_changed_files_merge_base.py present at a2f78b5.
+    residual: []
+
+  - id: T7
+    title: Publish an observed GitHub transport truth-table and correct the stale prior-art record
+    progress: done
+    delivered: >-
+      rule 62 -> v1.1.0 with a surface-transport section; surface_capabilities.github in
+      ops/autonomy/surface_profile.yaml; a dated Observed GitHub transports table in
+      docs/DEGRADED_MODE_CONTRACT.md; dated counter-observations on P307 CR-105 / CR-124.
+      Satisfies T-CI102 in the live queue.
+    correction_during_implementation: >-
+      The first draft attributed the working gh route to the capability broker. main retired that
+      broker as never-shipped (f855e90, 14469c3), and its own rule-62 bullet states REST gh api is
+      the same openclaw PAT. The claim was replaced with the observation alone — gh api succeeds
+      while this session's GH_TOKEN is an invalid sentinel — and the mechanism is deliberately not
+      asserted. Recording a probe as a theory is what made the first draft wrong.
+    root_cause: RC-3 documented capability contradicts observed transport
+    evidence: rules/62-github-openclaw-authority.mdc is still version 1.0.0 at a2f78b5.
+    probes_2026_08_29:
+      gh_binary: present, /usr/bin/gh v2.98.0
+      gh_auth_status: reports "The token in GH_TOKEN is invalid" AND exits 0
+      gh_api_user: works, resolves cryptoxdog
+      gitleaks: present
+      pre_commit: present
+      uv: present
+      semgrep: absent
+    probes_2026_08_31:
+      note: >-
+        Re-probed at integration against main a221142. Every 2026-08-29 row reproduces
+        except gh_auth_status, which returns the same message and exit 1. Recorded as a
+        dated counter-observation in docs/DEGRADED_MODE_CONTRACT.md; the standing rule
+        text no longer asserts a specific exit code.
+      gh_auth_status: reports "The token in GH_TOKEN is invalid" AND exits 1
+      gh_api_user: works, resolves cryptoxdog
+      semgrep: absent
+    note: >-
+      P307 CR-105 and CR-124 are already status OBSERVED_CONTEXT_SPECIFIC, so they are not to
+      be overturned. The correct action is a dated counter-observation for this container.
+      P307 CI-102 R1 names the concrete deliverable — record the REST route as a sanctioned
+      surface capability in ops/autonomy/surface_profile.yaml and rule 62.
+    p307_records: [CI-102, CI-001]
+
+  - id: T8
+    title: Seed agent-authority docs in l9-cognitive-runtime
+    progress: not_started
+    root_cause: RC-4 repo law absent from the repository
+    evidence: Probed 2026-08-29 — /home/user/l9-cognitive-runtime carries no CLAUDE.md,
+      AGENTS.md, INVARIANTS.md or ARCHITECTURE.md. This absence is why the PR pack must ship
+      INVARIANTS.md for verbatim copy as step 3 of its own execution order.
+    p307_records: [CI-031]
+
+  - id: T9
+    title: Replace the standing publish breakglass with a scoped expiring receipt
+    progress: done
+    delivered_by_other_work: >-
+      Cursor-Governance PR#404, NOT this pack. ops/autonomy/breakglass_receipt.py, schema
+      l9.publish-path-breakglass.v1, carries issuer / scope / reason / issued_at / expires_at,
+      and its docstring states a standing L9_PUBLISH_PATH_OVERRIDE string is now inert. That is
+      T9's contract, delivered independently while this pack had it queued. Recorded as done and
+      attributed to PR#404 — this pack did not build it.
+    root_cause: RC-5 standing authority from a one-time grant
+    risk: high — changes publish authorization
+    evidence: >-
+      L9_PUBLISH_PATH_OVERRIDE is exported into every session carrying the literal text
+      "one-time breakglass authorized by user".
+    unknown_u4_resolved: >-
+      U4 asked whether anything besides ops/autonomy/local_execution_gate.py reads the
+      variable. Answer, probed 2026-08-29: three code/config readers —
+      ops/autonomy/local_execution_gate.py, ops/autonomy/surface_profile.yaml and
+      ops/scripts/bootstrap_agent_environment.sh — plus
+      environment/agents/adapters/ADAPTER_CONTRACT.md and the generated rule projection.
+      T9 is therefore a cross-surface contract change, not a single-site edit, and ships as
+      its own PR.
+    p307_records: [CI-007]

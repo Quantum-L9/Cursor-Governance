@@ -1624,6 +1624,22 @@ records:
 - id: CR-105
   title: GH_TOKEN and GITHUB_TOKEN are set, but no gh CLI exists to consume them
   status: OBSERVED_CONTEXT_SPECIFIC
+  counter_observation_2026_08_29:
+    binding: Claude Code cloud container, Quantum-L9/Cursor-Governance @ a2f78b5
+    finding: >-
+      A gh CLI DOES exist in this container — /usr/bin/gh v2.98.0 — and `gh api user`
+      succeeds through the broker, resolving cryptoxdog. This record is NOT overturned:
+      its status is OBSERVED_CONTEXT_SPECIFIC and it describes a container that was
+      measured. This is a dated observation of a different container.
+    sharper_finding: >-
+      The durable defect here is not the binary's absence but the detector. `gh auth
+      status` reports "The token in GH_TOKEN is invalid" AND EXITS 0, so a script
+      branching on its exit code takes the success path while its own output says the
+      opposite. That misreports on every container, present binary or not.
+    recorded_in:
+    - docs/DEGRADED_MODE_CONTRACT.md (Observed GitHub transports)
+    - ops/autonomy/surface_profile.yaml (surface_capabilities.github)
+    - rules/62-github-openclaw-authority.mdc v1.1.0 (surface transport)
   summary: GH_TOKEN and GITHUB_TOKEN are set, but no gh CLI exists to consume them
   source_records:
   - source_ref: P2/friction/FRIC-04
@@ -2212,6 +2228,16 @@ records:
 - id: CR-124
   title: Core CLI tooling absent; GitHub work rerouted
   status: OBSERVED_CONTEXT_SPECIFIC
+  counter_observation_2026_08_29:
+    binding: Claude Code cloud container, Quantum-L9/Cursor-Governance @ a2f78b5
+    finding: >-
+      Of the four tools this record names absent, three are present in this container:
+      gh (/usr/bin/gh v2.98.0), gitleaks (/root/.local/bin/gitleaks) and pre-commit
+      (/root/.local/bin/pre-commit). Only semgrep is absent, which is consistent with
+      the l9-analysis workflow normalizing provider output rather than relying on a
+      local binary. NOT overturned — OBSERVED_CONTEXT_SPECIFIC, different container.
+    recorded_in:
+    - docs/DEGRADED_MODE_CONTRACT.md (Observed GitHub transports)
   summary: gh, gitleaks, semgrep, pre-commit not installed
   source_records:
   - source_ref: P5/friction/FR-008
