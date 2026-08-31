@@ -97,7 +97,7 @@ files:
 - path: scripts/pec/common.py
   sha256: df55978ff7841bf6db5b05f3e937c3d682c956b0992d9e02022cdb277f0fa104
 - path: scripts/pec/contracts.py
-  sha256: 183f5469b7e24a4ce7b9cb52ee5f8f96a1a4a3d58c58e05f78e13167cd0855c8
+  sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
 - path: scripts/pec/controller.py
   sha256: 8be35e8838e62b7ace3e996451cabc8dccb2bd67a5d1d8a635d5657d1a4e590c
 - path: scripts/pec/exec_env.py
@@ -111,7 +111,7 @@ files:
 - path: scripts/pec/runtime.py
   sha256: 4de2ad94cf8e0e94069b2d97fec2d4c11cf36a2fbdbc4f8bed730d314cf449a3
 - path: scripts/pec/state.py
-  sha256: 0e4f605f63a85a0975c3356e3c4488e1e24b1215ce31dd598247c84a5278fb5b
+  sha256: 914706ae4b0b0e46bfa5e3d51d5cfc8ce566415b0719d0eaff5b91feb9da2b2d
 - path: scripts/pec/workspace_reset.py
   sha256: edf39052bd7f13cb79e946fa55cc2b6fecff50b96dfc0043943c007ab088a443
 - path: scripts/pec.py
