@@ -16,6 +16,7 @@ Phases:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import subprocess
@@ -155,6 +156,23 @@ def _expand_state_dir(raw: str, root: Path) -> Path:
     return path
 
 
+def workspace_identity(root: Path) -> str:
+    """Stable identity of the workspace an L4 state file belongs to.
+
+    The resolved git work tree, because the L4 unit is the WORKTREE, not the
+    repository: rule 49 gives one mutating agent one checkout, and two
+    worktrees of the same repo are two independent L4 subjects.
+    """
+    return str(_validated_git_root(root))
+
+
+def _workspace_slug(root: Path) -> str:
+    """Directory segment that keeps one workspace's state out of another's."""
+    identity = workspace_identity(root)
+    digest = hashlib.sha256(identity.encode("utf-8")).hexdigest()[:12]
+    return f"{Path(identity).name}-{digest}"
+
+
 def _autonomy_dir(root: Path) -> Path:
     """Resolve the L4 state directory.
 
@@ -162,19 +180,28 @@ def _autonomy_dir(root: Path) -> Path:
     (template default: ``$HOME/.l9/autonomy``). Unset, or a leftover receipt
     that only exists under ``<workspace>/.l9/autonomy``, keeps the gitignored
     worktree fallback. This function never deletes the old receipt.
+
+    A relocated directory is namespaced per workspace. It used to be shared:
+    every repository on the machine read and wrote ONE ``~/.l9/autonomy``, and
+    the state files carried ``stacked_branch`` but no workspace, so a release
+    authorized in one repo satisfied ``release_allows_remote`` in a different
+    repo whose branch happened to share the name. A fleet where every repo
+    carries the same branch name made that the normal case rather than the
+    edge one. Namespacing removes the collision; the identity check in
+    :func:`_state_workspace_conflict` still refuses a file that reaches this
+    workspace by any other route.
     """
     base = _validated_git_root(root)
     legacy = base.joinpath(".l9", "autonomy")
     env = os.environ.get("L9_AUTONOMY_STATE_DIR", "").strip()
     if env:
         chosen = _expand_state_dir(env, base)
-        if (
-            chosen != legacy
-            and (legacy / RECEIPT_FILENAME).is_file()
-            and not (chosen / RECEIPT_FILENAME).is_file()
-        ):
+        if chosen == legacy:
+            return chosen
+        scoped = chosen / _workspace_slug(root)
+        if not (scoped / RECEIPT_FILENAME).is_file() and (legacy / RECEIPT_FILENAME).is_file():
             return legacy
-        return chosen
+        return scoped
     return legacy
 
 
@@ -290,6 +317,11 @@ def write_autonomy_json(root: Path, filename: str, data: dict[str, Any]) -> None
     target = os.path.realpath(os.path.join(autonomy_base, filename))
     if os.path.commonpath([autonomy_base, target]) != autonomy_base:
         raise RuntimeError(f"L4 state path escapes autonomy dir: {target}")
+    # Stamp the subject. A state file that cannot name its own workspace cannot
+    # be checked against the one asking to push, which is exactly how a receipt
+    # written for one repo came to authorize another. Stamped in place, not on a
+    # copy, so the dict a caller keeps (and returns) is the one on disk.
+    data["workspace"] = workspace_identity(root)
     payload = json.dumps(data, indent=2, sort_keys=True) + "\n"
     with open(target, "w", encoding="utf-8") as handle:
         handle.write(payload)
@@ -478,6 +510,34 @@ def _allow_from_phase(state: dict[str, Any] | None) -> tuple[bool, str]:
     )
 
 
+def _state_workspace_conflict(root: Path, doc: dict[str, Any] | None, kind: str) -> str | None:
+    """Reason to refuse `doc`, or None when it belongs to this workspace.
+
+    Fails closed on an UNSTAMPED file as well as a foreign one. An unstamped
+    file predates workspace stamping, and at that time state was shared
+    machine-wide — so it is precisely the file that cannot be shown to belong
+    here. Re-authorizing is cheap; honouring another workspace's release is not.
+    """
+    if not doc:
+        return None
+    ours = workspace_identity(root)
+    stamped = str(doc.get("workspace") or "").strip()
+    if stamped == ours:
+        return None
+    if not stamped:
+        return (
+            f"L4 {kind} carries no workspace stamp — it predates workspace-scoped "
+            "state, when one directory was shared by every repository on the "
+            "machine. Re-run: python3 ops/autonomy/l4_local.py begin && "
+            "python3 ops/autonomy/l4_local.py authorize-release"
+        )
+    return (
+        f"L4 {kind} belongs to workspace {stamped!r}, current is {ours!r} — a "
+        "release authorized in another checkout does not authorize this one. "
+        "Re-run begin + authorize-release here."
+    )
+
+
 def release_allows_remote(root: Path) -> tuple[bool, str]:
     """Return (allowed, reason) for git push / gh pr create."""
     if os.environ.get("L9_L4_LOCAL_AUTONOMY", "1").strip() in {"0", "false", "False", "no"}:
@@ -487,6 +547,14 @@ def release_allows_remote(root: Path) -> tuple[bool, str]:
 
     receipt = load_receipt(root)
     state = load_phase(root)
+    # Identity before contents. Branch name and HEAD sha are not identity: every
+    # repository in a fleet may carry the same branch name, and that is what let
+    # one repo's receipt authorize a push in another.
+    for doc, kind in ((receipt, "receipt"), (state, "phase")):
+        conflict = _state_workspace_conflict(root, doc, kind)
+        if conflict:
+            return False, conflict
+
     branch = current_branch(root)
     if receipt:
         decided = _allow_from_receipt(root, receipt, state, branch)

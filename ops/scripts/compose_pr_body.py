@@ -12,6 +12,7 @@ import argparse
 import json
 import re
 import subprocess
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -95,6 +96,24 @@ def _load_json(path: Path) -> dict[str, Any] | None:
     return payload if isinstance(payload, dict) else None
 
 
+def _l4_receipt_path(workspace: Path) -> Path:
+    """Ask l4_local where the receipt is; never re-derive the location here.
+
+    L4 state is not always at <workspace>/.l9/autonomy: L9_AUTONOMY_STATE_DIR
+    relocates it, and a relocated directory is namespaced per workspace. A
+    second component resolving the same state by its own rule is how a
+    consumer silently reads nothing — the PR body would simply lose its L4
+    section, with no error to notice. One owner, one resolver.
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "autonomy"))
+        from l4_local import receipt_path
+
+        return receipt_path(workspace)
+    except Exception:  # noqa: BLE001 — fall back rather than break PR composition
+        return workspace / ".l9" / "autonomy" / "l4-release-receipt.json"
+
+
 def _issue_numbers(text: str) -> list[int]:
     found: list[int] = []
     patterns = (
@@ -146,7 +165,7 @@ def collect_mechanical(
         changed_files=changed,
         issue_closes=unique_issues,
         gate_receipt=_load_json(workspace / ".l9" / "pr" / "gate-receipt.json"),
-        l4_receipt=_load_json(workspace / ".l9" / "autonomy" / "l4-release-receipt.json"),
+        l4_receipt=_load_json(_l4_receipt_path(workspace)),
         campaign_body=campaign_body.strip(),
         template_path=template_path,
         additive_only_paths=[p for p in (additive_only_paths or []) if p.strip()],

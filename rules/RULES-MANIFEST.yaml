@@ -1,8 +1,8 @@
 $schema: l9.cursor-rules-manifest/v2
-generated_utc: '2026-08-30T20:34:14Z'
+generated_utc: '2026-08-31T00:05:21Z'
 generator: ops/scripts/generate_rules_manifest.py
 rules_directory: rules
-source_tree_digest: sha256:232d8dc9b4ee0466d72232bfc717e5c42eb95b1c109cda4167d5189ea9af1e2f
+source_tree_digest: sha256:aca44357d41e476f7c90d766615a50051ab96ac2bbee47fbfa88844721fc746d
 summary:
   total_mdc_files: 68
   always_apply_true: 32
@@ -263,7 +263,7 @@ rules:
 - file: 22-context7-auto-invoke.mdc
   id: l9.rule.22.context7.auto.invoke
   id_source: explicit
-  version: 1.1.0
+  version: 1.2.0
   description: Auto-invoke Context7 MCP before coding on external libraries —FastAPI, Neo4j, pytest, GitHub Actions, new platforms/tools, APIs, MCP, install, Docker.
   scope: global
   domain: git
@@ -273,10 +273,10 @@ rules:
   globs: null
   first_heading: Context7 Auto-Invoke (External Docs)
   has_yaml_frontmatter: true
-  line_count: 73
-  content_digest: sha256:7ceac6084da9eae1edf3499748750d8867e4c9bf06dcccfa6f7f0272768706cd
+  line_count: 83
+  content_digest: sha256:f1c56c69c455311e0dde0b49562f6b571f8e7777470d05502071b8d7461b94e5
   authority: canonical_global
-  context_cost: minimal
+  context_cost: moderate
   deprecated: false
   replacement: null
   removal_plan: null
@@ -555,8 +555,8 @@ rules:
   globs: null
   first_heading: make pr → green merge-ready; /l9-pr-remediation → merge
   has_yaml_frontmatter: true
-  line_count: 130
-  content_digest: sha256:fa1919b48e7b37850955b6afc9053c6389a949848e561308238b86dc0060ce34
+  line_count: 156
+  content_digest: sha256:c03f04d87d3d601f4f2c8ca4fa63cd051b221931172ed9690f6a805f87310855
   authority: canonical_global
   context_cost: moderate
   deprecated: false
