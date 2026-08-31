@@ -11,6 +11,7 @@ KIND_BY_ACTION_CLASS = {
     "repository_implementation": "worker_host",
     "interactive_local_repair": "worker_host",
     "read_only_architecture_or_artifact_work": "worker_host",
+    "tightly_scoped_mechanical": "worker_host",
     "verification": "verifier",
     "remote_repository_action": "remote_action",
     "check_read_or_publication": "remote_action",
