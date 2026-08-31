@@ -104,9 +104,9 @@ files are `additive_only` — among them `pyproject.toml`, `requirements.txt`,
 and `AGENTS.md`. Adding lines to one is free. **Removing or overwriting a line
 needs `ALLOW-ROOT-DELETION: <path> — <reason>` in a commit message on the
 branch** (any commit in the range counts) plus CODEOWNERS approval, and the PR
-must use `.github/PULL_REQUEST_TEMPLATE/protected-root.md`
-(`<!-- L9_PROTECTED_ROOT_PR -->`). `make pr` injects the template but cannot
-invent the marker; without it the gate blocks the push. Authoritative list:
+must use `.github/pull_request_template.md`
+(`<!-- L9_PROTECTED_ROOT_PR -->`). `make pr` fills the Protected-root block
+at the top of that one template; without the stamp the gate blocks the push. Authoritative list:
 `ops/config/root-file-protection.json`. Full rule: `AGENTS.md` §14.
 `ops/autonomy/root_file_advisory.py` warns at the start of a turn when a
 protected root file is being overwritten without its marker, so this is caught
