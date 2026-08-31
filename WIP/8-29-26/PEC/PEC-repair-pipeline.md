@@ -12,6 +12,18 @@ seam carries three P0s. Next = **W8**, with the reopened residuals below folded 
 `PLAN_DOCUMENT.pec-repair-pipeline.v1.json` (W8-forward plan). Ignore `_archive/DEPRECATED.md`'s
 claim that the `.md` / `.json` "are gone" — see *Already done*.
 
+<!-- PEC-EXECUTION-COMPLETENESS-10 -->
+### Execution-completeness batch 1-10
+
+The first ten entries in `external_audit_reconciliation.remediation_order` are now
+implemented and locally validated under `pec-execution-completeness-10-2026-08-30`. This closes B1, the two B2
+repairs, B3, B5, B4, the two B9 repairs, and the two B8 repairs. Normal execution
+no longer repairs sealed Blueprint authority. Typed verification semantics survive
+Blueprint -> Program Lock -> Controller state -> Source Contract -> Rendered Contract.
+
+This does **not** close the reopened W4/W5 residuals and does **not** authorize W8
+activation. The next remediation entry is position 11 (`A3`).
+
 This folder is no longer a dump of PE research. It is one remaining pipeline.
 
 ---
