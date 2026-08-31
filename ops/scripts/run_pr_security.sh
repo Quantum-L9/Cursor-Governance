@@ -161,9 +161,19 @@ _chg_tmp="$(mktemp)"
 _scan_tmp=""
 _wave_dir=""
 _cleanup() {
+  # Capture and restore the status that triggered the trap. Under `set -e` bash
+  # lets an EXIT trap's final command status override the script's own exit, and
+  # every line below is a `[[ ... ]] && rm` that returns 1 when its guard is
+  # false. `_wave_dir` is only populated once scans actually run, so on the
+  # "nothing in scope" path at line ~187 the trap ended non-zero and turned an
+  # explicit `exit 0` into 1 — the gate printed "RESULT: PASS" and still failed
+  # the reader wave. Preserving $? keeps both directions honest: a real
+  # `exit 1` below stays 1.
+  local _rc=$?
   rm -f "$_all_tmp" "$_chg_tmp"
   [[ -n "$_scan_tmp" && -d "$_scan_tmp" ]] && rm -rf "$_scan_tmp"
   [[ -n "$_wave_dir" && -d "$_wave_dir" ]] && rm -rf "$_wave_dir"
+  return "$_rc"
 }
 trap _cleanup EXIT
 if [[ -n "${PR_CHANGED_FILE:-}" && -f "$PR_CHANGED_FILE" ]]; then
