@@ -1,6 +1,6 @@
 ---
 name: l9-pr-remediation
-description: diagnose or converge github prs — remediator path is precommit-repo then git push, then a stack-safe oldest-first merge train. do not run make pr or make pr-check. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.
+description: diagnose or converge github prs — remediator path is precommit-repo then git push, then subscribe/own every open pr through required checks to a stack-safe oldest-first merge. do not run make pr or make pr-check. do not stop and tell the human to reinvoke when ci is still running. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.
 disable-model-invocation: true
 metadata:
   skill_schema: 1
@@ -9,8 +9,8 @@ metadata:
   tags: [l9, pr, ci, code-review, github-code-quality, copilot, diagnose, sonarcloud, codeql, debt, remediation, concurrent, github, makefile]
   owner: igor_beylin
   status: active
-  version: 4.3.1
-  updated: 2026-08-29
+  version: 4.4.0
+  updated: 2026-08-30
 ---
 
 # PR Remediation
@@ -115,16 +115,16 @@ Applies `kernels/Diagnose First Kernel.md`, `kernels/Validate & Repair.md`, and 
 5. **Plan the PR, then patch that PR.** No edits on a PR until its ingested findings have dispositions. Independent clusters run in parallel into one worktree batch. A locked `Remediation-Cycle` / plan whose files still match is executed, not rewritten.
 6. **One commit, one remediator publish.** Zero if nothing codebase-safe remains. Never commit-per-finding, never publish to probe CI, never `--no-verify`. Remediator publish **is** `git push` of the already-open PR branch. Do not run `make pr`. Campaign / feature work that is not this skill still must not use raw `git push` when its cached publish target is `make pr`.
 7. **Local verify blocks commit.** Local verify **is** `L9_REMEDIATOR=1 PR_BASE=origin/main make precommit-repo` (changed-file hooks plus ruff). That env makes `make pr-check` fail closed so this skill cannot enter the reader wave. Do not run `make pr-check`. Do not run pytest or conformance. Do not require all-files pre-commit. Never `--no-verify`. Record the result as `Passed` / `Failed` / `Unknown`. Remote CI is independent confirmation — do not claim remote `Passed` from local `Passed`.
-8. **No babysit.** After publish: record the head SHA and continue the next independent PR. Do not poll CI. Snapshot `gh pr view` once per PR at diagnose. Re-read CI only when a later snapshot already shows a red required check that names a source file this PR owns. If MERGE_TRAIN is blocked by required checks, record the blocker and finish.
+8. **Own until merged.** Subscribe to every in-scope open PR at preflight. The human is **not** watching. After publish: record the head SHA and continue independent PRs, then **stay on the train**. Poll `gh pr view` / `gh pr checks` every 15s (cap `max_wait_snapshots`) until `mergeStateStatus=CLEAN` or a CODEBASE-red required check appears (then the next cycle). Never finish with “re-invoke `/l9-pr-remediation` when CI turns green.” A 404/422 on the GitHub subscription API does not waive ownership. Poll workers never merge.
 9. **Validate suggestions against current code.** Comment snippets are not ground truth.
 10. **No gate weakening / suppressions.** No `NOSONAR`, blanket noqa/type-ignore/eslint-disable, CodeQL dismissals/exclusions, skipped tests, or lowered thresholds. Narrow documented suppression only for a *proven* false positive where a code fix is less safe.
 11. **Every conversation resolved.** Reply Fixed / Deferred / Acknowledged / Disagreed, then `resolveReviewThread` on **every** GraphQL `reviewThreads` node with `isResolved: false` — any author (`github-code-quality`, Copilot, `github-advanced-security`, CodeQL, humans, unknown bots). Paginate threads (`pageInfo.hasNextPage`). GitHub "a conversation must be resolved" **is** a merge blocker. HUMAN: name the decision in the reply (linked issue if Deferred), resolve the thread, **do not merge that PR** until the decision exists. Bots re-file on new lines after a push — those are **new** threads. Re-query after every publish and immediately before `gh pr merge`.
-12. **FIRST_MERGE_GATE + stack-safe oldest-first.** Never force-push, rewrite history, expose tokens, or `--admin` merge. Merge only after the open-PR inventory, overlap matrix, and merge-effect prediction exist, and after the required sequence is remediated and published. Do not merge the first green PR. Default order is **oldest `createdAt` first (bottom-up)**. Merge **only** via `ops/autonomy/stack_safe_merge.py --run` — never type `--squash` / `--merge` by hand. The helper emits `--merge` when the head is the base of another open PR and `--squash` only for a leaf. After a parent squash, never `gh pr update-branch` / merge main into the child — rebase `--onto` the new base. Do not wait for CI to flip green. If a merge is blocked by required checks, record it and finish.
+12. **FIRST_MERGE_GATE + stack-safe oldest-first.** Never force-push, rewrite history, expose tokens, or `--admin` merge. Merge only after the open-PR inventory, overlap matrix, and merge-effect prediction exist, and after the required sequence is remediated and published. Do not merge the first green PR. Default order is **oldest `createdAt` first (bottom-up)**. Merge **only** via `ops/autonomy/stack_safe_merge.py --run` — never type `--squash` / `--merge` by hand. The helper emits `--merge` when the head is the base of another open PR and `--squash` only for a leaf. After a parent squash, never `gh pr update-branch` / merge main into the child — rebase `--onto` the new base. When the only merge blocker is required checks **in progress**, poll until `CLEAN` and merge. HUMAN / CI_PIPELINE leftovers still stop that PR. Never `gh pr update-branch` after a squash of a parent.
 13. **No invented evidence.** Do not invent check conclusions, SHAs, thread ids, or `Passed`. `{braces}` in this pack are templates until substituted from `gh` / Makefile / `file` output observed in this run.
 
 ## Hot Path (Converge)
 
-0. **Authorize (Converge invoke only), then read-only preflight.** User invoke is merge authorization — write the receipt. Then inspect only: load [references/run-contract.md](references/run-contract.md), cache remediator verbs (`make precommit-repo`, `git push`), fingerprint the venv (`UV_PYTHON` = uv-managed **native** CPython; reject x86_64/miniconda/`uv python find --system` on arm64), list **all** open PRs, build the overlap + stack matrix (`gh pr view --json files`). Reuse a worktree that already holds the branch (`git worktree list` first). `worktree_add_wired.sh` only when none exists. Emit `RUN_CONTRACT`. Do not edit a PR in this step.
+0. **Authorize (Converge invoke only), then read-only preflight.** User invoke is merge authorization — write the receipt. Then inspect only: load [references/run-contract.md](references/run-contract.md), cache remediator verbs (`make precommit-repo`, `git push`), fingerprint the venv (`UV_PYTHON` = uv-managed **native** CPython; reject x86_64/miniconda/`uv python find --system` on arm64), list **all** open PRs, **subscribe/own each** (`viewerSubscription`; PUT `issues/{n}/subscription` when not `SUBSCRIBED`), build the overlap + stack matrix (`gh pr view --json files`). Reuse a worktree that already holds the branch (`git worktree list` first). `worktree_add_wired.sh` only when none exists. Emit `RUN_CONTRACT`. Do not edit a PR in this step.
 
 ```bash
 # TEMPLATE — substitute owner/repo from the verified gh target in this run
@@ -148,7 +148,7 @@ Reuse a locked plan / `Remediation-Cycle:` trailer when files still match. If no
    (GraphQL batch, 30s `gh` timeout, flushed progress, batch summary).
    Do not loop REST reply + `resolveReviewThread` per thread.
    [references/review-replies.md](references/review-replies.md).
-8. **Next PR immediately.** [references/convergence-loop.md](references/convergence-loop.md). Re-query `reviewThreads` (paginated). Reply + resolve re-files. **Do not merge** because this one PR is green. Repeat 2–8 for remaining in-scope PRs. Do not poll CI.
+8. **Next PR immediately, then own the wait.** [references/convergence-loop.md](references/convergence-loop.md). Re-query `reviewThreads` (paginated). Reply + resolve re-files. **Do not merge** because this one PR is green. Repeat 2–8 for remaining in-scope PRs. After REMEDIATE_ALL, stay subscribed and poll required checks on the train — do not stop.
 9. **MERGE_TRAIN** only after FIRST_MERGE_GATE. Oldest `createdAt` first. Immediately before each `gh pr merge`, re-query `reviewThreads` and the stack probe (is this head the base of another open PR?). Zero `isResolved: false` required.
 
 ```bash
@@ -163,7 +163,7 @@ Never `--admin`. Never unpack diffs. Never merge-as-you-go. Never `gh pr update-
 
 On the final observed head SHA of each open PR, then after the train (or a documented independence merge):
 
-- remediations published via `git push` (or only recorded CI-pipeline / ENVIRONMENT / HUMAN blockers remain — those PRs stay unmerged). Required-check success is CI's job; do not wait for it.
+- remediations published via `git push` (or only recorded CI-pipeline / ENVIRONMENT / HUMAN blockers remain — those PRs stay unmerged). Required checks that are still **in progress** are this skill's job: poll until `CLEAN`, then merge. Do not leave a green-or-pending board with a reinvoke YNP.
 - no unpredicted merge conflict
 - no unresolved GraphQL `reviewThreads` (any author; pagination complete)
 - Sonar/CodeQL/debt: confirmed codebase root causes fixed when those surfaces were in scope; remote scanner closure claimed only when observed
@@ -231,6 +231,11 @@ verify: make precommit-repo
 publish: git push                # already-open PR branch
 improve: make improve            # optional kernels; not publish
 merge_on_converge: true
+own_until_merged: true
+subscribe_open_prs: true
+poll_interval_seconds: 15
+max_wait_snapshots: 32
+forbid_reinvoke_handoff: true
 local_verify:
   prefer_makefile: true
   makefile_primary: precommit-repo
@@ -267,6 +272,7 @@ merge:
 - Poll worker `merge_eligible` on a stale SHA → ignore; never merge from it
 - Squash denied because head is a stack parent → merge children first, retarget, or `--merge`; do not `update-branch`
 - Unpredicted `CONFLICTING` after a merge → rebuild remaining overlap; do not continue the train blindly
+- Required checks still pending after FIRST_MERGE_GATE → poll; do not hand off
 - Max cycles → report remaining items; do not start cycle 4
 
 ## Final Status (required)

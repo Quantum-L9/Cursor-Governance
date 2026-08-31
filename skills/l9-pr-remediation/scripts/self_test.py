@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Contract tests for l9-pr-remediation 4.3.1. Stdlib only."""
+"""Contract tests for l9-pr-remediation 4.4.0. Stdlib only."""
 
 from __future__ import annotations
 
@@ -29,7 +29,7 @@ def _forbid(text: str, needle: str, where: str) -> None:
 
 
 def test_version_and_map() -> None:
-    _need(SKILL, "version: 4.3.1", "SKILL.md")
+    _need(SKILL, "version: 4.4.0", "SKILL.md")
     if not (ROOT / "scripts" / "reply_threads.py").is_file():
         _fail("scripts/reply_threads.py missing")
     _need(SKILL, "Kernel bind", "SKILL.md")
@@ -172,6 +172,13 @@ def test_fast_path() -> None:
 
 def test_ci_and_poll() -> None:
     _need(SKILL, "Poll workers never merge", "SKILL.md")
+    _need(SKILL, "Own until merged", "SKILL.md")
+    _need(SKILL, "subscribe/own", "SKILL.md")
+    _need(SKILL, "own_until_merged: true", "SKILL.md")
+    _need(SKILL, "forbid_reinvoke_handoff: true", "SKILL.md")
+    _need(REFS["convergence-loop.md"], "Own until merged", "convergence-loop.md")
+    _need(REFS["convergence-loop.md"], "viewerSubscription", "convergence-loop.md")
+    _need(SKILL, "Never finish with", "SKILL.md")
     _need(REFS["run-contract.md"], "merge_eligible", "run-contract.md")
     _need(REFS["remediation-plan.md"], "companion", "remediation-plan.md")
 
