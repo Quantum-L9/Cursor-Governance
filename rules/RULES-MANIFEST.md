@@ -1,6 +1,6 @@
 # Cursor governance rules manifest
 
-Generated: `2026-08-31T01:33:15Z`. Source: `rules/*.mdc`.
+Generated: `2026-08-31T02:53:19Z`. Source: `rules/*.mdc`.
 
 ## Counts
 
@@ -29,8 +29,8 @@ Generated: `2026-08-31T01:33:15Z`. Source: `rules/*.mdc`.
 | `10-lang-typescript.mdc` | `l9.rule.10.lang.typescript` | global | typescript | agent_requested | 182 | `bb98eadfc112` |
 | `15-work-tracking.mdc` | `l9.rule.15.work.tracking` | global | general | agent_requested | 38 | `79c9306f7061` |
 | `20-lang-python.mdc` | `l9.rule.20.lang.python` | global | python | agent_requested | 190 | `fa976f39b458` |
-| `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 73 | `7ceac6084da9` |
-| `23-l9-skill-routing.mdc` | `l9.rule.skill-routing` | global | governance | always | 100 | `9e2ab29ad5ce` |
+| `22-context7-auto-invoke.mdc` | `l9.rule.22.context7.auto.invoke` | global | git | always | 83 | `f1c56c69c455` |
+| `23-l9-skill-routing.mdc` | `l9.rule.skill-routing` | global | governance | always | 100 | `181ceb1a7b4b` |
 | `25-python-dora-header.mdc` | `l9.rule.25.python.dora.header` | global | python | auto_attached | 173 | `49302e69c080` |
 | `30-framework-react.mdc` | `l9.rule.30.framework.react` | global | typescript | agent_requested | 145 | `935829c0a8d1` |
 | `40-domain-autonomy.mdc` | `l9.rule.40.domain.autonomy` | global | security | agent_requested | 182 | `fbbfa0dc8cc4` |
@@ -41,7 +41,7 @@ Generated: `2026-08-31T01:33:15Z`. Source: `rules/*.mdc`.
 | `45-pre-action-verification.mdc` | `l9.rule.pre-action-verification` | global | general | always | 87 | `2d4e738329b0` |
 | `46-kernel-pack-new-branch.mdc` | `l9.rule.46.kernel.pack.new.branch` | global | general | agent_requested | 36 | `76c8cba8c93a` |
 | `47-agent-pattern-activation.mdc` | `l9.rule.47.agent.pattern.activation` | global | memory | agent_requested | 116 | `058301b4286b` |
-| `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 130 | `fa1919b48e7b` |
+| `48-make-pr-remediation.mdc` | `l9.rule.48.make.pr.remediation` | global | general | always | 156 | `c03f04d87d3d` |
 | `49-shared-worktree-isolation.mdc` | `l9.rule.49.shared.worktree.isolation` | global | git | always | 94 | `6171469f5516` |
 | `50-qa-testing.mdc` | `l9.rule.50.qa.testing` | global | testing | auto_attached | 207 | `4e739913c198` |
 | `51-qa-playwright.mdc` | `l9.rule.51.qa.playwright` | global | testing | agent_requested | 34 | `ea8a218a6725` |
