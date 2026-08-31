@@ -1,6 +1,6 @@
 metadata:
   contract_id: L9.GAR.WORKFLOW.001
-  version: 0.4.0
+  version: 0.5.0
   kind: workflow
   status: review
   title: GAR Principal Architect Engineer Workflow
@@ -154,6 +154,7 @@ states:
   - system_model_exit_properties_satisfied
   exit_properties:
   - architectural_integrity_satisfied
+  - required_architecture_questions_answered
   - selected_candidate_exists
 - state_id: PLAN
   purpose: Compile architecture into bounded executable realization
@@ -325,6 +326,7 @@ transitions:
   gates:
   - realization_mode in [MUTATION, ARTIFACT]
   - architectural_integrity_satisfied
+  - required_architecture_questions_answered
   - selected_candidate_exists
   actions:
   - ACT-ARCHITECT
@@ -338,6 +340,7 @@ transitions:
   gates:
   - realization_mode in [ANALYSIS, DECISION]
   - architectural_integrity_satisfied
+  - required_architecture_questions_answered
   - requested_decision_or_analysis_ready == true
   actions:
   - ACT-ARCHITECT
@@ -911,6 +914,7 @@ plan_readiness:
     - acceptance_evidence_known
     - material_unknowns_absent
     - architecture_decision_required == false
+    - contracts/ARCHITECTURAL_INTEGRITY.yaml#AI-004 == SATISFIED
     does_not_require:
     - PLAN_state
     - PLAN_ATTACK_state

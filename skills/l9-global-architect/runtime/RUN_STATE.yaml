@@ -1,6 +1,6 @@
 run_state_model:
   model_id: L9.GAR.RUN_STATE.001
-  version: 0.4.0
+  version: 0.5.0
   artifact_class: runtime_state_template
   status: experimental
   semantic_owner: runtime/RUN_STATE.yaml
@@ -23,7 +23,7 @@ template_semantics:
     fields and transition invariants remain applicable.
 runtime_compatibility:
   runtime_id: L9.GLOBAL_ARCHITECT.RUNTIME.001
-  requires: ">=0.4.0 <0.5.0"
+  requires: ">=0.5.0 <0.6.0"
 instance_template:
   run:
     run_id: null
@@ -112,6 +112,19 @@ instance_template:
     decision_summary: null
     integrity_evaluation_refs: []
     unresolved_architecture_defects: []
+    required_questions:
+      direction:
+        answered: false
+        verdict: null
+        evidence_refs: []
+      constellation_alignment:
+        answered: false
+        verdict: null
+        evidence_refs: []
+      first_order:
+        answered: false
+        verdict: null
+        evidence_refs: []
   plan:
     status: absent
     plan_ref: null
@@ -263,6 +276,8 @@ transition_invariants:
     assertion: objective-derived realization validation and delivery obligations may be narrowed only by new explicit user instruction, never by runtime re-derivation
   - id: RS-015
     assertion: a block receipt MUST NOT satisfy VALID_BLOCK_RECEIPT unless its type legitimacy predicate is SATISFIED on current-run evidence
+  - id: RS-016
+    assertion: selected architecture and promoted plans MUST NOT be accepted while any architecture.required_questions field remains unanswered
 material_progress:
   accepted_kinds:
     - new_discriminating_evidence

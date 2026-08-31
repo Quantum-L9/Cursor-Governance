@@ -1,6 +1,6 @@
 catalog:
   catalog_id: L9.GAR.REASON_CODES.001
-  version: 0.4.0
+  version: 0.5.0
   artifact_class: reason_code_catalog
   status: experimental
   semantic_owner: catalogs/REASON_CODES.yaml
@@ -152,6 +152,16 @@ reason_codes:
     severity: BLOCKER
     recoverability: recoverable
     meaning: The selected architecture violates global coherence required invariants boundaries or failure semantics.
+  - code: REQUIRED_ARCHITECTURE_QUESTIONS_UNANSWERED
+    category: architecture
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: A proposed build, fix, or solution was advanced without recorded evidenced answers to the required architecture-direction, L9-constellation-alignment, and first-order questions.
+  - code: CONSTELLATION_MISALIGNED
+    category: architecture
+    severity: BLOCKER
+    recoverability: recoverable
+    meaning: The proposal creates a parallel owner, second SSOT, adapter-owned shared brain, or otherwise fails verified L9 constellation topology.
   - code: SCOPE_EXPANSION_UNJUSTIFIED
     category: planning
     severity: BLOCKER
