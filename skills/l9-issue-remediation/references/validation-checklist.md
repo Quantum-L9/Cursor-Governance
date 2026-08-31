@@ -45,7 +45,7 @@ updated: 2026-08-29
 
 ## Wiring
 
-- [ ] `l9-wire-skill-into-repo` PASS
+- [ ] `l9-wire-into-repo` PASS
 - [ ] `AUTONOMY_MANIFEST.yaml` `explicit_only` row present
 - [ ] `/issues` remediator Converge-by-default; `/issues diagnose` auditor
 - [ ] `/l9-issue-remediation` slash exists and matches Converge

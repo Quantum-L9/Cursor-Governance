@@ -14,7 +14,7 @@
       "l9-gap-analysis",
       "l9-ynp",
       "l9-skill-compiler",
-      "l9-wire-skill-into-repo",
+      "l9-wire-into-repo",
       "l9-update-agent-docs",
       "l9-api-smoke-testing",
       "l9-auditing-performance",
@@ -221,19 +221,31 @@
         ]
       },
       {
-        "id": "wire_skill",
-        "positive_signals": [
-          "wire the skill",
-          "wire skill into",
-          "register the skill",
-          "skill discovery tables",
-          "subagent preload"
+        "id": "wire_into_repo",
+        "negative_signals": [
+          "governance symlinks",
+          "workspace symlinks",
+          "graphiti memory",
+          "claude code deepseek"
         ],
-        "primary": "l9-wire-skill-into-repo",
+        "positive_signals": [
+          "wire into repo",
+          "wire this capability",
+          "wire this artifact",
+          "wire the skill",
+          "register this capability",
+          "make this discoverable",
+          "make this reachable",
+          "connect this to consumers",
+          "integrate this upstream",
+          "rewire this",
+          "verify the wiring",
+          "unwire this",
+          "deregister this"
+        ],
+        "primary": "l9-wire-into-repo",
         "signal_weight": 8,
-        "supporting": [
-          "l9-update-agent-docs"
-        ]
+        "supporting": []
       },
       {
         "id": "update_agent_docs",
@@ -693,8 +705,7 @@
       "l9-graphiti-memory",
       "l9-architecture-decision-records",
       "l9-update-agent-docs",
-      "l9-ynp",
-      "l9-wire-skill-into-repo"
+      "l9-ynp"
     ],
     "trivial_patterns": [
       "^fix (the )?typo\\b",
@@ -972,23 +983,12 @@
     },
     {
       "composition_role": "general",
-      "description": "Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.",
+      "description": "Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when the .cursor-commands link, the l9-governance plugin link, or .cursor/plans are missing or broken, or when asked to set up, repair, or validate governance symlinks.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-governance-symlinks",
       "path": "skills/l9-governance-symlinks",
-      "reason": "narrow symlink setup/validate op (subset of l9-governance-wiring); disable-model-invocation, explicit only",
-      "user_invocable": true,
-      "when_to_use": ""
-    },
-    {
-      "composition_role": "general",
-      "description": "workspace governance symlinks, component wire executor, confirm-wiring audit, governance checks, rules inventory, and github ssot backup. use for /wire governance, confirm-wiring, or governance-backup.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
-      "name": "l9-governance-wiring",
-      "path": "skills/l9-governance-wiring",
-      "reason": "symlinks, hooks, and governance backup",
+      "reason": "narrow governance workspace binding setup and validation; exact-owner mutation skill surviving the l9-governance-wiring retirement; disable-model-invocation, explicit only",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1280,14 +1280,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "registers, updates, or retires agent skills in discovery tables, autonomy manifests, adapter symlinks, subagent preloads, and related agent docs. use immediately after l9-skill-compiler finishes, when a skill pack exists but is not discoverable, when the user asks to wire or register a skill, or when a skill must be deprecated, unwired, archived, deregistered, or superseded \u2014 deprecate means archive out of live skills/ and clear every registry, never leave a deprecated pack discoverable.",
+      "description": "wire, rewire, verify, or unwire an existing repository artifact or capability by locating its authoritative owner, selecting the highest-leverage upstream integration point, propagating through existing manifests, generators, exports, adapters, and discovery surfaces, and proving downstream reachability. use when something exists but is not discoverable, reachable, registered, exported, invoked, configured, hooked up, or consistently consumed across intended repository surfaces.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
-      "name": "l9-wire-skill-into-repo",
-      "path": "skills/l9-wire-skill-into-repo",
+      "name": "l9-wire-into-repo",
+      "path": "skills/l9-wire-into-repo",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads"
+      "when_to_use": "wiring, rewiring, verifying, registering, exposing, or unwiring an existing repository artifact or capability by finding its authoritative upstream owner and propagating reachability to intended consumers without duplicate leaf wiring"
     },
     {
       "composition_role": "primary",
@@ -1302,6 +1302,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "79be334e57712f0046f03d27e2a187242d0a6cb303552a2d759cb3e671b26067",
-  "source_skill_corpus_sha256": "6be4a0e8c2a5947ff25cc3598084df7fd7c74f4c351c875408552059fb5ecd72"
+  "source_manifest_sha256": "daa54da4cb8e7a1b3a43bfde11c3906db992fe88eabb73a6c73ec2f29bcf42b9",
+  "source_skill_corpus_sha256": "ac1c0fc2ea982ebe1cd02385d8b64429f146690635fc6c3cfe0fa476b7ac5c82"
 }

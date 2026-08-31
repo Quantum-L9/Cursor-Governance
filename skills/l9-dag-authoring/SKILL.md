@@ -96,7 +96,7 @@ literal, not a construction.
 - Command binding is optional and trigger-only. A command must never duplicate
   workflow instructions.
 - Do not own Skill discovery or autonomy wiring. Hand that to
-  `l9-wire-skill-into-repo` only when Skill wiring is requested.
+  `l9-wire-into-repo` only when Skill wiring is requested.
 - Do not claim commands, imports, registration, compilation, tests, or runtime
   behavior that were not actually checked.
 

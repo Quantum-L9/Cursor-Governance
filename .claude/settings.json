@@ -96,18 +96,6 @@
         ]
       }
     ],
-    "PostToolUse": [
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'x=\"$HOME/.cursor-governance/environment/agents/adapters/claude-code/hooks/l9_hook_exec.sh\"; [ -f \"$x\" ] || exit 0; exec bash \"$x\" --class observer pr_summary_posttool.py'",
-            "timeout": 5
-          }
-        ]
-      }
-    ],
     "UserPromptExpansion": [
       {
         "hooks": [
@@ -211,7 +199,6 @@
     "l9-git-work-preserve": "user-invocable-only",
     "l9-global-architect": "user-invocable-only",
     "l9-governance-symlinks": "user-invocable-only",
-    "l9-governance-wiring": "user-invocable-only",
     "l9-intelligence-harvest": "user-invocable-only",
     "l9-issue-remediation": "user-invocable-only",
     "l9-kubernetes-deploying": "user-invocable-only",
