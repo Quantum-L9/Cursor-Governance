@@ -137,9 +137,7 @@ def check_receipt(path: Path) -> list[str]:
             f"G_RECEIPT_STATUS: claimed {receipt.get('status')!r} != observed {observed_status!r}"
         )
     errors.extend(
-        missing_labels(
-            observed_json, observed_md, observed_fm, observed_swap, gar_invoked
-        )
+        missing_labels(observed_json, observed_md, observed_fm, observed_swap, gar_invoked)
     )
 
     out: list[str] = []

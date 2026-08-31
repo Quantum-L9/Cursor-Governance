@@ -17,15 +17,12 @@ SKILL_ROOT = Path(__file__).resolve().parents[1]
 REPO_ROOT = SKILL_ROOT.parents[1]
 PLAN_SCHEMA_REL = "skills/l9-plan/schemas/plan-document.schema.json"
 TEMPLATE_REL = (
-    "environment/contracts/execution/templates/"
-    "canonical.template.executable_plan.v1.plan.md"
+    "environment/contracts/execution/templates/canonical.template.executable_plan.v1.plan.md"
 )
 GAR_SKILL_REF = "skills/l9-global-architect"
 EXECUTE_BUILD = "Execute via Cursor Build"
 FRONTMATTER_KEYS = ("name", "overview", "todos", "isProject", "kind", "execute_via")
-NEGATION_RE = re.compile(
-    r"(?i)\b(do not|don't|never|not a|not the|must not|forbidden)\b"
-)
+NEGATION_RE = re.compile(r"(?i)\b(do not|don't|never|not a|not the|must not|forbidden)\b")
 OPTIONAL_HEADING_RE = re.compile(r"\*+\(optional", re.I)
 HEADING_RE = re.compile(r"^## +(.+)$", re.M)
 FRONTMATTER_RE = re.compile(r"\A---\s*\n(.*?)\n---\s*\n?", re.S)
@@ -45,8 +42,8 @@ def template_path() -> Path:
 
 
 def json_required_keys(schema: dict[str, Any] | None = None) -> list[str]:
-    data = schema if schema is not None else json.loads(
-        plan_schema_path().read_text(encoding="utf-8")
+    data = (
+        schema if schema is not None else json.loads(plan_schema_path().read_text(encoding="utf-8"))
     )
     required = data.get("required")
     if not isinstance(required, list) or not required:
@@ -56,9 +53,7 @@ def json_required_keys(schema: dict[str, Any] | None = None) -> list[str]:
 
 def md_required_headings(template_text: str | None = None) -> list[str]:
     text = (
-        template_text
-        if template_text is not None
-        else template_path().read_text(encoding="utf-8")
+        template_text if template_text is not None else template_path().read_text(encoding="utf-8")
     )
     headings: list[str] = []
     seen: set[str] = set()
@@ -82,9 +77,7 @@ def md_required_headings(template_text: str | None = None) -> list[str]:
 def heading_present(text: str, required: str) -> bool:
     for match in HEADING_RE.finditer(text):
         got = match.group(1).strip()
-        if got == required or got.startswith(f"{required} ") or got.startswith(
-            f"{required} ("
-        ):
+        if got == required or got.startswith(f"{required} ") or got.startswith(f"{required} ("):
             return True
     return False
 

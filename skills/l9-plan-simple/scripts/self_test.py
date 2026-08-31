@@ -92,9 +92,7 @@ def main() -> int:
         try:
             live_json.write_bytes(PLAN_PASS.read_bytes())
             live_md.write_text(plan_md.read_text(encoding="utf-8"), encoding="utf-8")
-            receipt = build_receipt(
-                live_json, live_md, gar_invoked=True, gar_run_id="self-test"
-            )
+            receipt = build_receipt(live_json, live_md, gar_invoked=True, gar_run_id="self-test")
             live_receipt.write_text(json.dumps(receipt, indent=2) + "\n", encoding="utf-8")
             pass_errors = check_receipt(live_receipt)
             if pass_errors:
@@ -102,12 +100,8 @@ def main() -> int:
 
             stripped = live_md.read_text(encoding="utf-8").replace("## Rollback\n", "## Removed\n")
             fail_md.write_text(stripped, encoding="utf-8")
-            fail_built = build_receipt(
-                live_json, fail_md, gar_invoked=True, gar_run_id="self-test"
-            )
-            fail_receipt.write_text(
-                json.dumps(fail_built, indent=2) + "\n", encoding="utf-8"
-            )
+            fail_built = build_receipt(live_json, fail_md, gar_invoked=True, gar_run_id="self-test")
+            fail_receipt.write_text(json.dumps(fail_built, indent=2) + "\n", encoding="utf-8")
             fail_errors = check_receipt(fail_receipt)
             if not any("Rollback" in err for err in fail_errors):
                 errors.append(
@@ -115,9 +109,7 @@ def main() -> int:
                     + repr(fail_errors)
                 )
 
-            no_gar = build_receipt(
-                live_json, live_md, gar_invoked=False, gar_run_id=None
-            )
+            no_gar = build_receipt(live_json, live_md, gar_invoked=False, gar_run_id=None)
             if no_gar["status"] != "fail":
                 errors.append("receipt with gar_upstream.invoked=false must status=fail")
         finally:
