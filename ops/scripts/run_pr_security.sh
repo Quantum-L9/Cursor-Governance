@@ -89,9 +89,30 @@ SKIP=0
 FAILURES=()
 
 note() { printf '%s\n' "$*"; }
-ok() { PASS=$((PASS + 1)); note "PASS: $*"; }
-fail() { FAIL=$((FAIL + 1)); FAILURES+=("$*"); note "FAIL: $*"; }
-skip() { SKIP=$((SKIP + 1)); note "SKIP: $*"; }
+
+# The counted markers start their own line, always.
+#
+# Scanners run as background wave jobs whose stdout and stderr are redirected to
+# a log; the subshell's own PASS/FAIL counters die with it, so
+# `_replay_scanner_log` re-counting those markers is the *only* accounting the
+# gate has. It matches with `case "$line" in "FAIL: "*)`, which requires the
+# marker at column 0.
+#
+# A tool whose final write is not newline-terminated therefore lands its last
+# bytes on the same line as the marker that follows it:
+#
+#     boomFAIL: semgrep found issues in changed files
+#
+# That line matches nothing, the failure is never counted, and a gate with a
+# real finding in its log reports RESULT: PASS. Silent, and in the direction
+# that admits work rather than blocking it.
+#
+# The leading newline costs a blank line in the transcript when output was
+# already terminated. A swallowed FAIL costs a security gate.
+_marker() { printf '\n%s\n' "$*"; }
+ok() { PASS=$((PASS + 1)); _marker "PASS: $*"; }
+fail() { FAIL=$((FAIL + 1)); FAILURES+=("$*"); _marker "FAIL: $*"; }
+skip() { SKIP=$((SKIP + 1)); _marker "SKIP: $*"; }
 have() { command -v "$1" >/dev/null 2>&1; }
 
 # A scanner that is ABSENT is categorically different from a scanner that had
@@ -256,11 +277,37 @@ run_bandit() {
     missing_tool bandit "install uv (https://astral.sh/uv)"
     return 0
   fi
-  if run_uvx_pkg "bandit==${BANDIT_PIN}" bandit "${py[@]}" "$sev_flag" -q; then
-    ok "bandit==$BANDIT_PIN (${#py[@]} file(s), severity>=$BANDIT_SEVERITY)"
-  else
-    fail "bandit reported issues in changed Python files"
+  # Prove the tool exists before believing its exit status.
+  #
+  # `run_uvx_pkg` returns uv's status when uv itself fails, so a package that
+  # could not be fetched is indistinguishable from a tool that ran and found
+  # something -- both arrive as a non-zero code, and the gate reported
+  # `bandit reported issues in changed Python files` for a scan that never
+  # happened. A `--version` probe separates the two: if bandit cannot even
+  # answer that, nothing was scanned and no finding exists to report.
+  if ! run_uvx_pkg "bandit==${BANDIT_PIN}" bandit --version >/dev/null 2>&1; then
+    fail "bandit==$BANDIT_PIN could not be run (fetch or toolchain failure) -- no files were scanned; this is an environment failure, not a finding"
+    return 0
   fi
+
+  # Same exit-code discipline as semgrep below: bandit answers 1 for findings
+  # and 2 for "I could not scan" (unreadable target, bad option).
+  local bandit_out="" bandit_rc=0
+  bandit_out="$(run_uvx_pkg "bandit==${BANDIT_PIN}" bandit "${py[@]}" "$sev_flag" -q 2>&1)" \
+    || bandit_rc=$?
+  case "$bandit_rc" in
+    0)
+      ok "bandit==$BANDIT_PIN (${#py[@]} file(s), severity>=$BANDIT_SEVERITY)"
+      ;;
+    1)
+      [[ -n "$bandit_out" ]] && printf '%s\n' "$bandit_out"
+      fail "bandit reported issues in changed Python files"
+      ;;
+    *)
+      [[ -n "$bandit_out" ]] && printf '%s\n' "$bandit_out" | tail -15
+      fail "bandit could not complete the scan (exit $bandit_rc) -- no files were scanned; this is a tool or environment failure, not a finding"
+      ;;
+  esac
 }
 
 # ── semgrep ────────────────────────────────────────────────────────────────
@@ -298,25 +345,52 @@ run_semgrep() {
     configs+=(--config "$c")
   done
   note "semgrep configs: $SEMGREP_CONFIGS"
+
+  # Exit status is the whole diagnosis, and it was being thrown away.
+  #
+  # semgrep distinguishes "I scanned and found things" (1) from "I could not
+  # scan" (2 and above: unfetchable registry config, bad rule syntax, crash).
+  # A bare `if` collapses both into the else-branch, so a run that never
+  # started was reported as `semgrep found issues in changed files` -- a
+  # sentence naming findings that do not exist, about files nothing read.
+  #
+  # That cost real time: an unreachable registry (403 on semgrep.dev) is
+  # indistinguishable from a genuine finding in the gate output, so the
+  # operator hunts a phantom finding instead of an egress rule. `--quiet` then
+  # suppresses the error text that would have said so, which is why the output
+  # is captured and the tail surfaced on a non-finding failure.
+  #
+  # Both outcomes still FAIL. This changes what the gate *says*, never what it
+  # admits: a scan that could not run is not a scan that passed.
+  local out="" rc=0
   if have semgrep; then
     ver="$(semgrep --version 2>/dev/null | head -1 || true)"
     note "semgrep: $ver (SDK supported range >=1.100.0,<2.0.0)"
-    if semgrep --error --quiet --metrics=off "${configs[@]}" "${targets[@]}"; then
-      ok "semgrep (${#targets[@]} file(s))"
-    else
-      fail "semgrep found issues in changed files"
-    fi
+    out="$(semgrep --error --quiet --metrics=off "${configs[@]}" "${targets[@]}" 2>&1)" || rc=$?
   elif have uvx || have uv; then
     ver="$(run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --version 2>/dev/null | head -1 || true)"
     note "semgrep: $ver (SDK supported range >=1.100.0,<2.0.0)"
-    if run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --error --quiet --metrics=off "${configs[@]}" "${targets[@]}"; then
-      ok "semgrep (${#targets[@]} file(s))"
-    else
-      fail "semgrep found issues in changed files"
-    fi
+    out="$(run_uvx_pkg "semgrep>=1.100.0,<2" semgrep --error --quiet --metrics=off "${configs[@]}" "${targets[@]}" 2>&1)" || rc=$?
   else
     missing_tool semgrep "install uv/uvx, or pip install semgrep"
+    return 0
   fi
+
+  case "$rc" in
+    0)
+      ok "semgrep (${#targets[@]} file(s))"
+      ;;
+    1)
+      [[ -n "$out" ]] && printf '%s\n' "$out" >&2
+      fail "semgrep found issues in changed files"
+      ;;
+    *)
+      # Not a finding. Surface the tail so the cause is on screen rather than
+      # inferred from an exit code nobody printed.
+      [[ -n "$out" ]] && printf '%s\n' "$out" | tail -15 >&2
+      fail "semgrep could not complete the scan (exit $rc) -- no files were scanned; this is a tool or configuration failure, not a finding"
+      ;;
+  esac
 }
 
 # ── pip-audit ──────────────────────────────────────────────────────────────

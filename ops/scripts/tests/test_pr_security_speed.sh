@@ -47,7 +47,35 @@ for arg in "$@"; do
 done
 exit 0
 EOF
-chmod +x "$FAKE/gitleaks" "$FAKE/semgrep"
+# bandit is reached through `uvx --from bandit==PIN bandit`, not through PATH,
+# so faking `bandit` here would never be consulted. The fake stands in for uvx.
+#
+# It has to: `run_gate` invokes the gate under `env -i`, which strips the TLS
+# and proxy environment uv needs, so a real `uvx --from bandit==...` cannot
+# fetch the pinned package and fails with `invalid peer certificate`. That is a
+# property of this sandbox, not of the gate -- and this suite is about ceremony
+# speed and semgrep argv, not about whether a package index is reachable.
+#
+# Before the gate learned to tell "could not run" from "found something", that
+# fetch failure was reported as `bandit reported issues in changed Python
+# files` and then silently uncounted, so this test passed while a scanner was
+# failing inside it.
+cat >"$FAKE/uvx" <<'EOF'
+#!/bin/sh
+# Answer only for the bandit route the gate uses; anything else is unexpected
+# here and should fail loudly rather than silently succeed.
+case " $* " in
+  *" bandit "*)
+    for arg in "$@"; do
+      [ "$arg" = "--version" ] && { echo "bandit 1.9.4"; exit 0; }
+    done
+    exit 0
+    ;;
+esac
+echo "fake uvx: unexpected invocation: $*" >&2
+exit 127
+EOF
+chmod +x "$FAKE/gitleaks" "$FAKE/semgrep" "$FAKE/uvx"
 
 ws="$TMP_ROOT/ws"
 mkdir -p "$ws"
@@ -64,15 +92,11 @@ git -C "$ws" add one.txt two.txt
 export HOME="$TMP_ROOT"
 export L9_GITLEAKS_COUNT="$COUNT"
 export L9_SEMGREP_ARGS="$ARGS"
-# Keep git/uv so bandit can run when a .py file is in scope; gitleaks/semgrep
-# are the fakes under $FAKE.
+# gitleaks, semgrep and the uvx-bandit route are all fakes under $FAKE.
+# $FAKE first, and no real uv/uvx behind it: the fake uvx above is what serves
+# bandit. Putting the real one on the path would reintroduce the network fetch
+# this suite must not depend on.
 SPEED_PATH="$FAKE:/usr/bin:/bin"
-if command -v uv >/dev/null 2>&1; then
-  SPEED_PATH="$FAKE:$(dirname "$(command -v uv)"):$SPEED_PATH"
-fi
-if command -v uvx >/dev/null 2>&1; then
-  SPEED_PATH="$FAKE:$(dirname "$(command -v uvx)"):$SPEED_PATH"
-fi
 
 run_gate() {
   local extra_env="$1"
