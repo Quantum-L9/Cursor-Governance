@@ -62,9 +62,7 @@ def test_cleanup_trap_preserves_triggering_status() -> None:
     end = body.index("\n}", start)
     cleanup = body[start:end]
 
-    assert "local _rc=$?" in cleanup, (
-        "_cleanup must capture $? on entry:\n" + cleanup
-    )
+    assert "local _rc=$?" in cleanup, "_cleanup must capture $? on entry:\n" + cleanup
     assert cleanup.rstrip().endswith('return "$_rc"'), (
         "_cleanup must end by returning the captured status:\n" + cleanup
     )
