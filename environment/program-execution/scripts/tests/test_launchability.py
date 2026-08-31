@@ -172,7 +172,7 @@ class InferenceReachesTheTaskCardTest(unittest.TestCase):
             blueprint = self._cards(root, [_task(outputs=[{"location": "docs/result.md"}])])
 
             changed = launchability.apply_synthesized_validations(
-                blueprint, {"TASK-001": ["test -s 'docs/result.md'"]}
+                blueprint, {"TASK-001": ["test -s 'docs/result.md'"]}, validate=False
             )
 
             self.assertEqual(changed, ["TASK-001"])
@@ -190,7 +190,9 @@ class InferenceReachesTheTaskCardTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             blueprint = self._cards(Path(raw), [_task()])
 
-            launchability.apply_synthesized_validations(blueprint, {"TASK-001": ["make check"]})
+            launchability.apply_synthesized_validations(
+                blueprint, {"TASK-001": ["make check"]}, validate=False
+            )
 
             self.assertTrue(self._written(blueprint)[0]["id"].startswith("VAL-INFERRED-"))
 
@@ -206,7 +208,7 @@ class InferenceReachesTheTaskCardTest(unittest.TestCase):
             blueprint = self._cards(Path(raw), [_task(validation=[declared])])
 
             changed = launchability.apply_synthesized_validations(
-                blueprint, {"TASK-001": ["python3 -m pytest -q"]}
+                blueprint, {"TASK-001": ["python3 -m pytest -q"]}, validate=False
             )
 
             self.assertEqual(changed, [])
@@ -217,7 +219,9 @@ class InferenceReachesTheTaskCardTest(unittest.TestCase):
             blueprint = self._cards(Path(raw), [_task()])
             before = (blueprint / "TASK_CARDS.yaml").read_bytes()
 
-            self.assertEqual(launchability.apply_synthesized_validations(blueprint, {}), [])
+            self.assertEqual(
+                launchability.apply_synthesized_validations(blueprint, {}, validate=False), []
+            )
             self.assertEqual((blueprint / "TASK_CARDS.yaml").read_bytes(), before)
 
 

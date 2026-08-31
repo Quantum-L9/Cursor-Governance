@@ -81,6 +81,10 @@ class PipelineAssemblyFillTest(unittest.TestCase):
             run_cli("reconcile", "--workspace", str(workspace), "--repository", f"repo-a={repo}")
             contract = source_contract("TASK-001", "docs/result.txt")
             contract["validation_commands"] = []
+            # `_inspection_blueprint` rewrote every card's method, and the Source
+            # Contract must preserve the Blueprint's mechanisms exactly.
+            for mechanism in contract["verification_mechanisms"]:
+                mechanism["method"] = "inspection"
             write_json(temp / "TASK-001.source.json", contract)
             run_cli(
                 "register-contract",

@@ -264,6 +264,16 @@ class CompileCampaignSourceTests(unittest.TestCase):
                 stack_proof=_pass_proof(tmp / "stack-proof.json"),
             )  # self-validates template mode
 
+            # Execution completeness is solved pre-seal: launchability enriches
+            # the Task Cards before acceptance, which is assertion-only. The
+            # prepare pipeline runs this between compile and accept, so the
+            # closed loop has to as well.
+            launch = _load("launchability_loop_test", PE_ROOT / "scripts/launchability.py")
+            launch_report = launch.check_tasks(launch.blueprint_tasks(target), tmp, infer=True)
+            launch.apply_synthesized_validations(
+                target, launch_report.get("synthesized_validations") or {}, validate=False
+            )
+
             collect = _load("collect_evidence_test", PE_ROOT / "scripts/collect_evidence.py")
             collected = collect.collect_evidence(
                 target,

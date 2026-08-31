@@ -83,6 +83,7 @@ class StateDB:
               completion_gates TEXT NOT NULL,
               authorization_ceiling TEXT NOT NULL,
               required_acceptance TEXT NOT NULL,
+              verification_mechanisms TEXT NOT NULL,
               required_validation_commands TEXT NOT NULL,
               risk_tier TEXT NOT NULL,
               definition_status TEXT NOT NULL,
@@ -159,6 +160,11 @@ class StateDB:
             );
             """
         )
+        task_columns = {str(row["name"]) for row in self.conn.execute("PRAGMA table_info(tasks)")}
+        if "verification_mechanisms" not in task_columns:
+            self.conn.execute(
+                "ALTER TABLE tasks ADD COLUMN verification_mechanisms TEXT NOT NULL DEFAULT '[]'"
+            )
         self.conn.commit()
 
     def close(self) -> None:
@@ -235,6 +241,7 @@ class StateDB:
             "completion_gates",
             "authorization_ceiling",
             "required_acceptance",
+            "verification_mechanisms",
             "required_validation_commands",
         }
 
@@ -258,6 +265,9 @@ class StateDB:
                 task.get("authorization_ceiling") or {}, sort_keys=True
             ),
             "required_acceptance": json.dumps(task.get("required_acceptance") or []),
+            "verification_mechanisms": json.dumps(
+                task.get("verification_mechanisms") or [], sort_keys=True
+            ),
             "required_validation_commands": json.dumps(
                 task.get("required_validation_commands") or []
             ),

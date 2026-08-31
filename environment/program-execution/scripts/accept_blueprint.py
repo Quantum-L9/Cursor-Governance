@@ -45,6 +45,7 @@ from blueprint_ops import (  # noqa: E402
     validate_blueprint,
     write_manifest,
 )
+from launchability import blueprint_tasks, terminal_verification_errors  # noqa: E402
 
 PE_ROOT = Path(__file__).resolve().parents[1]
 RECEIPT_SCHEMA_PATH = (
@@ -89,6 +90,12 @@ def accept_blueprint(blueprint: Path, *, actor: str, evidence_ids: list[str]) ->
     status = (program.get("program") or {}).get("definition_status")
     if status == "accepted":
         raise RuntimeError(f"Blueprint already accepted: {root}")
+
+    terminal_errors = terminal_verification_errors(blueprint_tasks(root))
+    if terminal_errors:
+        raise RuntimeError(
+            "execution completeness failed before acceptance: " + "; ".join(terminal_errors[:5])
+        )
 
     program["program"]["definition_status"] = "accepted"
     dump_yaml(program_path, program)
