@@ -2,18 +2,57 @@ schema: l9.environment_experience.progress/v1
 pack_revision: p307-r2
 predecessor_pack: WIP/8-26-26/environment_experience_improvement_pack_p307
 predecessor_assessed_against_sha: 30c6ecd4
-assessed_against: main@59f03a5d (Quantum-L9/Cursor-Governance)
-assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
-assessed_at: '2026-08-28'
-assessment_scope: full
+assessed_against: main@a2f78b5 (Quantum-L9/Cursor-Governance)
+assessed_against_sha: a2f78b531b55bb99cbbf84447665a2b779d39714
+assessed_at: '2026-08-29'
+assessment_scope: targeted
+lifecycle: provenance
+superseded_by: WIP/8-26-26-Claude Environment/PLAN_DOCUMENT.claude-env-pending-fixes.v1.json
+superseded_note: >-
+  Demoted to provenance on 2026-08-29 by WIP/8-26-26-Claude Environment/_archive/DEPRECATED.md,
+  which names this pack "useful provenance; not the live queue". The re-assessment recorded below
+  remains accurate for the records it re-judged, and is kept because the live queue's own records
+  (T-CI004, T-CI102, T-CI007, ...) trace back to these ids. Do not execute or admit from here.
+previous_assessment:
+  assessed_against: main@59f03a5d (Quantum-L9/Cursor-Governance)
+  assessed_against_sha: 59f03a5d4460b939360bc2fd5dd85239d47416a5
+  assessed_at: '2026-08-28'
+  assessment_scope: full
+reassessment_2026_08_29:
+  scope: targeted
+  trigger: >-
+    main advanced 64 commits from 59f03a5d to a2f78b5, and Cursor-Governance PR#373 (squash 7df89e74) landed
+    the WIP/8-29-26/l9-runtime-velocity implementation, which delivers directly against records in this queue.
+  records_rejudged_against_the_tree:
+  - CI-004
+  - CI-028
+  - CI-005
+  - CI-015
+  - CI-002
+  - CI-102
+  - CI-007
+  status_changes:
+  - 'CI-028: not_started -> partial'
+  - 'CI-005: not_started -> partial'
+  residuals_cleared:
+  - 'CI-004 R1 (IMP-03 / I-BF-01) by velocity T5'
+  - 'CI-004 R2 (IMP-04 / BOOT-1) by velocity T6'
+  carried_forward_unexamined: >-
+    THIS PASS IS TARGETED, NOT FULL. The other 31 records are carried forward from the 59f03a5d assessment
+    without being re-judged against a2f78b5. That is the same shape as the defect this pack's r2 header calls
+    out in its own predecessor — which named 30c6ecd4 while main had advanced 59 commits — so it is stated
+    here rather than left implicit. Those 31 judgements are 64 commits stale and should be treated as
+    provisional until a full pass runs. The seven records above, and only those seven, were verified against
+    the tree and the live container on 2026-08-29.
+  companion_pack: WIP/8-29-26/l9-runtime-velocity (see its PROGRESS.md and progress.yaml)
 assessment_scope_note: Full re-derivation, not a counter update. Every one of the 38 records was re-judged against
   the tree and the live container at 59f03a5d; none carries a prior judgement forward unexamined. The predecessor
   overlay named 30c6ecd4 while main had advanced 59 commits and 514 files — CI-034's defect, fourth occurrence,
   and the reason this pass is full rather than targeted.
 counts:
   done: 7
-  partial: 15
-  not_started: 12
+  partial: 17
+  not_started: 10
   blocked: 1
   unknown: 3
 queue_counts:
@@ -188,11 +227,22 @@ records:
   delivered_by: Quantum-L9/Cursor-Governance PR#305 (+ predecessor PR#304), merged into main
   live_defect: true
   residual:
-  - 'IMP-03 / I-BF-01: treat a governance_revision mismatch as expiry, distinct from TTL expiry.'
-  - 'IMP-04 / BOOT-1: re-probe DEGRADED components at session start rather than serving a day-old verdict, under
-    the repo-write lock, fail-soft.'
   - 'I-BF-03 / IMP-10 / B5: a reason string and log path per degraded component. The deps stage already has log
     files; the other five components have nothing.'
+  cleared_residual:
+  - cleared: 'IMP-03 / I-BF-01: treat a governance_revision mismatch as expiry, distinct from TTL expiry.'
+    by: WIP/8-29-26/l9-runtime-velocity T5, shipped in Cursor-Governance PR#373 (squash 7df89e74)
+    evidence: claude_bootstrap_receipt.py compares the recorded governance_revision against live_governance_revision()
+      and returns unknown on a supersede. Probed in the live container 2026-08-29 — recorded a2f78b531b55 equals
+      live a2f78b531b55, receipt age 168s, so the guard is active and the DEGRADED verdict is current not inherited.
+  - cleared: 'IMP-04 / BOOT-1: re-probe DEGRADED components at session start rather than serving a day-old verdict.'
+    by: WIP/8-29-26/l9-runtime-velocity T6, shipped in Cursor-Governance PR#373 (squash 7df89e74)
+    evidence: SessionStart invokes the adapter installer once per revision when the receipt is not ready, bounded
+      and fail-open, then re-reads the receipt. The live receipt is 168s old, so it was regenerated this session.
+    caveat: Whether the installer fired and could not repair, or did not fire at all, is not answerable from the
+      receipt as it stands. That ambiguity is itself an argument for R3.
+  reassessed_2026_08_29: 'Two of three residuals cleared by PR#373. The record stays partial: R3 is the reason
+    the remaining DEGRADED verdict is still undiagnosable, and it is now this record''s whole content.'
   evidence:
   - REPRODUCING AT THIS BINDING, fourth recorded occurrence. /root/.l9/claude/bootstrap-state.json carries governance_revision
     b618338db235b120709202a217c8b0109bc3c05b, generated_at 2026-08-28T04:34:13Z. /root/.l9/claude/gov-refresh.json
@@ -253,6 +303,12 @@ records:
   previous_progress: done
   progress: partial
   disposition: PARTIAL
+  reassessed_2026_08_29: >-
+    Unchanged at partial. Scheduled as WIP/8-29-26/l9-runtime-velocity T9. That pack's unknown U4 is now
+    resolved and widens this record's blast radius: L9_PUBLISH_PATH_OVERRIDE has three code/config readers —
+    ops/autonomy/local_execution_gate.py, ops/autonomy/surface_profile.yaml and
+    ops/scripts/bootstrap_agent_environment.sh — plus environment/agents/adapters/ADAPTER_CONTRACT.md and the
+    generated rule projection. R2 is therefore a cross-surface contract change, not a single-site edit.
   queue: active
   confidence: high
   optimized_sequence: 3
@@ -343,8 +399,16 @@ records:
   title: Improve dependency provisioning evidence and determinism
   original_status: ACTIVE
   previous_progress: not_started
-  progress: not_started
-  disposition: NOT_STARTED
+  progress: partial
+  disposition: PARTIAL
+  reassessed_2026_08_29: >-
+    not_started -> partial. WIP/8-29-26/l9-runtime-velocity T3 and T4 shipped in Cursor-Governance PR#373
+    (squash 7df89e74): session_deps_cloud.sh now fingerprints, installs and stamps PER REPOSITORY, and
+    toolchain_proven() gates the stamp so a failed install refuses it and warns rather than reporting ready.
+    The banner at a2f78b5 reads "4/4 repositories cached and proven" where it previously derived a
+    container-root fingerprint from tool versions alone. R1 is NOT cleared — the stamp is written with a bare
+    `touch`, so it carries neither the deps step's exit code nor a timestamp. Proof-gating the stamp and
+    recording the exit code are different asks and only the former shipped.
   queue: active
   confidence: high
   optimized_sequence: 5
@@ -425,6 +489,12 @@ records:
   previous_progress: partial
   progress: partial
   disposition: PARTIAL
+  reassessed_2026_08_29: >-
+    Unchanged at partial, and R1's premise re-verified in this container on 2026-08-29 rather than carried
+    forward: gh is present at /usr/bin/gh v2.98.0; `gh api user` succeeds and resolves cryptoxdog; `gh auth
+    status` reports "The token in GH_TOKEN is invalid" AND EXITS 0, so any script branching on its exit code
+    silently takes the success path. gitleaks, pre-commit and uv are present; semgrep is absent. R1 remains the
+    deliverable and is scheduled as WIP/8-29-26/l9-runtime-velocity T7.
   queue: active
   confidence: high
   optimized_sequence: 7
@@ -461,8 +531,17 @@ records:
   title: Make memory health transport-specific and continuity task-bearing
   original_status: ACTIVE
   previous_progress: not_started
-  progress: not_started
-  disposition: NOT_STARTED
+  progress: partial
+  disposition: PARTIAL
+  reassessed_2026_08_29: >-
+    not_started -> partial on the strength of R4's first half only. WIP/8-29-26/l9-runtime-velocity T1 shipped
+    ops/scripts/lib/workspace_roots.py in PR#373, and the session banner now enumerates every discovered
+    repository as hydrated or skipped ("hydrated 4 of 4 repositories under /home/user (cap 6; repositories with
+    no namespace of their own are skipped)"). R4's second half is NOT delivered: workspace_roots() sorts
+    children alphabetically and truncates at DEFAULT_MAX_ROOTS=6, so a seventh repository is dropped by
+    alphabet rather than by the session's declared repo scope. R1, R2 and R3 are untouched. Note also that the
+    `memory` component is DEGRADED in this container for an external reason — the graphiti-memory MCP server
+    returns 502, upstream dial failed — which is exactly the transport-specific split R1 asks for.
   queue: active
   confidence: high
   optimized_sequence: 8
@@ -751,6 +830,11 @@ records:
   previous_progress: partial
   progress: partial
   disposition: PARTIAL
+  reassessed_2026_08_29: >-
+    Unchanged at partial. WIP/8-29-26/l9-runtime-velocity T2 (PR#373) brought per-repository .claude mirrors
+    inside the reconcilers' target set via projection_roots(), so the dangling-symlink hazard this record was
+    partly written against is mitigated. R1 (relocate L9_AUTONOMY_STATE_DIR outside the worktree) and R2 are
+    untouched.
   queue: active
   confidence: high
   optimized_sequence: 15
@@ -871,6 +955,13 @@ records:
   previous_progress: partial
   progress: partial
   disposition: PARTIAL
+  reassessed_2026_08_29: >-
+    Unchanged at partial. WIP/8-29-26/l9-runtime-velocity RC-6 (PR#373) made the cloud refresh skip its hard
+    reset when the governance clone carries tracked modifications, recording reset-skipped-dirty — that closes
+    the destructive leg, not this record. R1 stays open and its precondition is live: two checkouts of the
+    governance repository exist in this container (/root/.cursor-governance at a2f78b5, which the hooks run
+    from, and /home/user/Cursor-Governance, which the session works in), and nothing prints both paths with
+    their revisions and states which one rules resolve from.
   queue: active
   confidence: high
   optimized_sequence: 17

@@ -1,5 +1,15 @@
 # Environment Experience Improvement Pack — Progress (revision r2)
 
+> **THIS PACK IS PROVENANCE, NOT THE LIVE QUEUE.** As of 2026-08-29 the live
+> remaining-work queue is `WIP/8-26-26-Claude Environment/PLAN_DOCUMENT.claude-env-pending-fixes.v1.json`
+> (see `WIP/8-26-26-Claude Environment/_archive/DEPRECATED.md`). Read that first.
+> Nothing here should be executed or `make campaign`'d from.
+>
+> **Last assessment of this pack: `main@a2f78b5`, 2026-08-29 — see [Re-assessment 2026-08-29](#re-assessment-2026-08-29--targeted-against-maina2f78b5).**
+> That pass is **targeted**: it re-judged CI-004, CI-028, CI-005, CI-015, CI-002, CI-102 and CI-007
+> against the tree. Everything else on this page is the `59f03a5d` assessment and is 64 commits
+> stale. Current counts: **7 done · 17 partial · 10 not started · 1 blocked · 3 unknown**.
+
 Assessed against **main@59f03a5d** on 2026-08-28, full SHA `59f03a5d4460b939360bc2fd5dd85239d47416a5`.
 Predecessor: `WIP/8-26-26/environment_experience_improvement_pack_p307`, assessed at `30c6ecd4`.
 
@@ -19,6 +29,51 @@ records agree by construction.
 > main is at `59f03a5d`, 59 commits and 514 files later. Carrying judgements forward across
 > that gap is how three records came to be wrong, so every record here was re-judged against
 > the tree and the live container.
+
+## Re-assessment 2026-08-29 — targeted, against `main@a2f78b5`
+
+`main` advanced **64 commits** from `59f03a5d` to `a2f78b5`, and Cursor-Governance **PR#373**
+(squash `7df89e74`) landed the `WIP/8-29-26/l9-runtime-velocity` implementation, which delivers
+directly against records in this queue. Counts after this pass:
+
+**7 done · 17 partial · 10 not started · 1 blocked · 3 unknown** (of 38) — `partial` +2 and
+`not_started` −2 against the `59f03a5d` figures below.
+
+> **This pass is targeted, not full.** Seven records were re-judged against the tree and the live
+> container: **CI-004, CI-028, CI-005, CI-015, CI-002, CI-102, CI-007**. The other **31 are carried
+> forward from `59f03a5d` unexamined** and are 64 commits stale — treat them as provisional. This is
+> the same shape as the defect the r2 header below calls out in its own predecessor, which named
+> `30c6ecd4` while main had advanced 59 commits. It is stated here rather than left implicit,
+> because leaving it implicit is what made three records wrong last time.
+
+| Record | Was | Now | What changed |
+|---|---|---|---|
+| **CI-004** | 🟡 partial | 🟡 partial | **R1 and R2 cleared.** Velocity T5 binds receipt freshness to the governance revision; T6 re-runs the installer once per revision when the receipt is not `ready`. Verified live: recorded `a2f78b531b55` equals live, receipt age 168s, so the guard is active and the DEGRADED verdict is current rather than inherited. **R3 is now the record's whole content** — five components still report bare `DEGRADED` with one global remediation string and no per-component reason or log path. |
+| **CI-028** | ⬜ not started | 🟡 **partial** | Velocity T3 and T4: `session_deps_cloud.sh` fingerprints, installs and stamps **per repository**, and `toolchain_proven()` gates the stamp so a failed install refuses it. Banner reads `4/4 repositories cached and proven`. **R1 not cleared** — the stamp is a bare `touch`, carrying neither the deps exit code nor a timestamp. |
+| **CI-005** | ⬜ not started | 🟡 **partial** | Half of R4 only: the banner now enumerates every discovered repository as hydrated or skipped. The other half is open — `workspace_roots()` sorts alphabetically and truncates at 6, so a 7th repo is dropped by alphabet, not by declared scope. R1's premise is live this session: `memory` is DEGRADED because the graphiti-memory MCP returns **502, upstream dial failed** — precisely the transport-specific split R1 asks for. |
+| **CI-015** | 🟡 partial | 🟡 partial | Velocity RC-6 closed the destructive leg — the cloud refresh now skips its hard reset on a clone with tracked modifications and records `reset-skipped-dirty`. R1 stays open **and its precondition is live**: `/root/.cursor-governance` (where the hooks run) and `/home/user/Cursor-Governance` (where the session works) both exist, and nothing prints both paths with their revisions. |
+| **CI-002** | 🟡 partial | 🟡 partial | Velocity T2 brought per-repository `.claude` mirrors inside the reconcilers' target set via `projection_roots()`. R1 and R2 untouched. |
+| **CI-102** | 🟡 partial | 🟡 partial | R1's premise **re-verified in this container**, not carried forward — see the truth-table below. R1 remains the deliverable, scheduled as velocity T7. |
+| **CI-007** | 🟡 partial | 🟡 partial | Scheduled as velocity T9. Its blast radius widened: `L9_PUBLISH_PATH_OVERRIDE` has **three** code/config readers, so R2 is a cross-surface contract change, not a single-site edit. |
+
+### GitHub transport, probed 2026-08-29 (CI-102 / CI-001)
+
+| Probe | Result |
+|---|---|
+| `gh` | present, `/usr/bin/gh` v2.98.0 |
+| `gh api user` | succeeds, resolves `cryptoxdog` |
+| `gh auth status` | reports `The token in GH_TOKEN is invalid` **and exits 0** |
+| `gitleaks`, `pre-commit`, `uv` | present |
+| `semgrep` | absent |
+
+`gh auth status` is a **misleading detector**: it reports failure and exits 0, so any script
+branching on its exit code silently takes the success path. CR-105 and CR-124 remain
+`OBSERVED_CONTEXT_SPECIFIC` and are **not** overturned — this is a dated counter-observation for
+this container, not a correction of theirs.
+
+Companion pack: `WIP/8-29-26/l9-runtime-velocity` (`PROGRESS.md`, `progress.yaml`).
+
+---
 
 ## Execution wave 1 — what was built, on a branch, and published
 
