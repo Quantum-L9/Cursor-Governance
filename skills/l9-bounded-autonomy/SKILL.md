@@ -49,6 +49,10 @@ Map Claude Code ADR-0001 / pr-convergence law onto Cursor: fan out non-dependent
    opaque marker (`L9_ADMISSION_TOKEN=…`) in the prompt. Lifecycle hooks deny
    uncorrelated native Tasks. Task prose is never authority. A Task without a
    READY Autonomy action stays denied; do not invent a campaign-free token.
+   Use the managed Task type, not generic `explore`: recon → `l9-recon`,
+   remediator → `l9-pr-remediation`, executor/test → `l9-test`,
+   documentation/evidence_writer → `l9-documentation`,
+   reviewer/verifier → `l9-verifier-reviewer`.
 4. **MUST** proceed **L4 local autonomy** (CANONICAL_LAW §6.2 / Profile `l4_local_autonomy`): stacked-branch local commits through program/contract execution with **no mid-execution push**. After local finish → run `kernels/Recursive Alignment.md` then `kernels/Validate & Repair.md` → `ops/autonomy/l4_local.py authorize-release` → `PR_REMEDIATE=0 make pr`. Do **not** remediate. Do **not** merge. Campaign work lands on `campaign/<campaign_id>` with `PR_BASE` set to that branch — never against `main`.
 5. Do **not** spawn `l9-pr-remediation` poll workers unless a human set `PR_REMEDIATE=1`.
 6. Do **not** merge from `/autonomy` or the campaign path. Merge only after
