@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import sys
 import uuid
 from pathlib import Path
 from typing import Any
@@ -28,6 +29,30 @@ from typing import Any
 from autonomy.adapters.orchestrator import AdapterOrchestrator
 from autonomy.runtime.engine import AutonomyRuntime
 from autonomy.runtime.timeutil import parse_timestamp, utc_now, utc_now_text
+
+_BINDINGS_REL = Path("environment/agents/PEER_RUNTIME_BINDINGS.yaml")
+
+
+def _cursor_deployment_readiness_required(repo_root: Path) -> bool:
+    path = Path(repo_root) / _BINDINGS_REL
+    if not path.is_file():
+        return False
+    import yaml
+
+    document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(document, dict):
+        return False
+    peer = (document.get("peers") or {}).get("cursor") or {}
+    deployment = (peer.get("subagents") or {}).get("deployment") or {}
+    return bool(deployment.get("readiness_required"))
+
+
+def _require_cursor_deployment_ready(workspace: Path, repo_root: Path) -> None:
+    if str(repo_root) not in sys.path:
+        sys.path.insert(0, str(repo_root))
+    from environment.agents.deployment.receipts import require_cursor_deployment_ready
+
+    require_cursor_deployment_ready(workspace, repo_root)
 
 ADMISSION_SCHEMA = "l9.cursor-host-admission.v1"
 
@@ -120,6 +145,12 @@ class CursorHostBridge:
         and returns an opaque single-use admission token to embed in the Task
         prompt. Nothing about the Task text participates in authorization.
         """
+        workspace = self.orchestrator.repository_root
+        if _cursor_deployment_readiness_required(workspace):
+            try:
+                _require_cursor_deployment_ready(workspace, workspace)
+            except Exception as exc:  # DeploymentNotReady, missing import, missing yaml
+                return _deny(str(exc))
         if session_id is None:
             if adapter_config is None:
                 msg = "create_admission requires session_id or adapter_config"

@@ -20,6 +20,12 @@ from pathlib import Path
 from typing import Any
 
 RECEIPT_SCHEMA = "l9.agents.deployment-receipt.v1"
+STATUS_READY = "DEPLOYMENT_READY"
+ROLES_MANIFEST = Path("environment/agents/cursor-subagents/CURSOR_SUBAGENT_ROLES.yaml")
+
+
+class DeploymentNotReady(RuntimeError):
+    """Cursor deployment receipt is missing, invalid, blocked, or stale."""
 
 _HERE = Path(__file__).resolve().parent
 _AGENTS_ROOT = _HERE.parent
@@ -96,3 +102,37 @@ def read_deployment_receipt(*, surface: str, workspace_id: str) -> dict[str, Any
     if not isinstance(data, dict):
         raise ValueError(f"deployment receipt must be an object: {path}")
     return data
+
+
+def source_manifest_digest(repo_root: Path) -> str:
+    manifest = Path(repo_root) / ROLES_MANIFEST
+    if not manifest.is_file():
+        raise DeploymentNotReady(f"roles manifest missing: {manifest}")
+    return hashlib.sha256(manifest.read_bytes()).hexdigest()
+
+
+def require_cursor_deployment_ready(workspace: Path, repo_root: Path) -> dict[str, Any]:
+    """Read the Cursor receipt; do not write agents.
+
+    Raises DeploymentNotReady when the receipt is missing, digest-invalid,
+    not DEPLOYMENT_READY, or source_manifest_digest does not match the live
+    CURSOR_SUBAGENT_ROLES.yaml bytes.
+    """
+    workspace_id = workspace_id_for(workspace)
+    receipt = read_deployment_receipt(surface="cursor", workspace_id=workspace_id)
+    if receipt is None:
+        raise DeploymentNotReady(
+            f"cursor deployment receipt missing for workspace {workspace_id}"
+        )
+    if not verify_receipt_digest(receipt):
+        raise DeploymentNotReady("cursor deployment receipt digest invalid")
+    status = str(receipt.get("status") or "")
+    if status != STATUS_READY:
+        raise DeploymentNotReady(
+            f"cursor deployment status is {status}, not {STATUS_READY}"
+        )
+    expected = source_manifest_digest(repo_root)
+    got = str(receipt.get("source_manifest_digest") or "")
+    if got != expected:
+        raise DeploymentNotReady("cursor deployment source_manifest_digest is stale")
+    return receipt

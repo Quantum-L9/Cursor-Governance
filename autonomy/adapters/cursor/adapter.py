@@ -104,18 +104,23 @@ def cursor_task_json(deployment: Mapping[str, Any]) -> str:
 
 
 def _cursor_subagent_type(role: str) -> str:
+    # Managed Task types are the ~/.cursor/agents filename stems. YAML
+    # cursor_subagent_type is the built-in Cursor category, not this field.
     mapping = {
-        "recon": "explore",
+        "recon": "l9-recon",
+        "remediator": "l9-pr-remediation",
+        "executor": "l9-test",
+        "test": "l9-test",
+        "evidence_writer": "l9-documentation",
+        "documentation": "l9-documentation",
+        "reviewer": "l9-verifier-reviewer",
+        "verifier": "l9-verifier-reviewer",
+        "verifier_reviewer": "l9-verifier-reviewer",
         "synthesis": "generalPurpose",
-        "executor": "generalPurpose",
-        "verifier": "generalPurpose",
-        "reviewer": "generalPurpose",
         "poller": "generalPurpose",
         "failure_classifier": "generalPurpose",
-        "remediator": "generalPurpose",
         "context_compiler": "explore",
         "sentinel": "explore",
-        "evidence_writer": "generalPurpose",
         "coordinator": "generalPurpose",
     }
     try:
