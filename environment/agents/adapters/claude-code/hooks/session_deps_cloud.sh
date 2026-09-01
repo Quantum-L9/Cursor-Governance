@@ -39,7 +39,10 @@
 set -uo pipefail
 
 BUDGET="${L9_SESSION_DEPS_BUDGET:-20}"
-WORKSPACE="$PWD"
+# Registered as its own SessionStart hook, so it is invoked with NO arguments
+# and must resolve the project itself. CLAUDE_PROJECT_DIR is the harness's own
+# answer and outranks $PWD, which is only incidentally the project directory.
+WORKSPACE="${CLAUDE_PROJECT_DIR:-$PWD}"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -242,6 +245,15 @@ install_repo() {
 
 # --- Detached run: install every repository that is not already proven ------
 if [ "${SESSION_DEPS_DETACHED:-}" = "1" ]; then
+  # The synchronous side watches for this file rather than for a pid: the worker
+  # now runs in its OWN session (setsid), so its pid is not a child of the
+  # waiter and `kill -0` on `$!` would report the wrong process. Written on any
+  # exit, so an install that dies still ends the wait instead of pinning it to
+  # the full budget.
+  if [ -n "${L9_DEPS_DONE_FILE:-}" ]; then
+    # shellcheck disable=SC2064  # expand the path now, not at trap time
+    trap "printf '%s\n' \"\$?\" > '$L9_DEPS_DONE_FILE' 2>/dev/null || true" EXIT
+  fi
   DEPS_FAILED=0
   while IFS= read -r repo; do
     [ -n "$repo" ] || continue
@@ -288,23 +300,44 @@ if [ -z "$PENDING" ]; then
   exit 0
 fi
 
-LOG="$STAMP_DIR/deps-session-$(date +%s).log"
-(
-  SESSION_DEPS_DETACHED=1 "$BASH" "$0" --workspace "$WORKSPACE" --budget "$BUDGET" \
-    >"$LOG" 2>&1
-) &
-RUN_PID=$!
+_DEPS_STAMP="$(date +%s)"
+LOG="$STAMP_DIR/deps-session-$_DEPS_STAMP.log"
+DONE_FILE="$STAMP_DIR/deps-session-$_DEPS_STAMP.done"
+rm -f "$DONE_FILE"
+
+# setsid puts the worker in its OWN session, so it outlives this hook. It used
+# to be a plain background subshell — a member of the hook's process group — and
+# the harness reaps that group when the hook hits its timeout. So the worker was
+# killed by the very timeout the "continues in background" message was written
+# to survive: an observed run left no process at all and a log that stops
+# mid-download. The message was true only when it was not needed.
+if have setsid; then
+  setsid env SESSION_DEPS_DETACHED=1 L9_DEPS_DONE_FILE="$DONE_FILE" \
+    "$BASH" "$0" --workspace "$WORKSPACE" --budget "$BUDGET" \
+    >"$LOG" 2>&1 </dev/null &
+else
+  # No setsid (non-Linux): keep the previous behaviour rather than nothing. The
+  # worker still dies with the hook, which the report below states honestly.
+  (
+    SESSION_DEPS_DETACHED=1 L9_DEPS_DONE_FILE="$DONE_FILE" \
+      "$BASH" "$0" --workspace "$WORKSPACE" --budget "$BUDGET" \
+      >"$LOG" 2>&1
+  ) &
+fi
+
 END=$(( $(date +%s) + BUDGET ))
-while kill -0 "$RUN_PID" 2>/dev/null; do
-  [ "$(date +%s)" -lt "$END" ] || break
+while [ ! -f "$DONE_FILE" ] && [ "$(date +%s)" -lt "$END" ]; do
   sleep 1
 done
 
-if kill -0 "$RUN_PID" 2>/dev/null; then
-  echo "session-deps: provisioning$PENDING continues in background (budget ${BUDGET}s exceeded) — see $LOG"
+if [ ! -f "$DONE_FILE" ]; then
+  if have setsid; then
+    echo "session-deps: provisioning$PENDING continues in background (budget ${BUDGET}s exceeded) — see $LOG"
+  else
+    echo "session-deps: provisioning$PENDING INCOMPLETE (budget ${BUDGET}s exceeded, no setsid — worker ends with this hook) — see $LOG"
+  fi
   exit 0
 fi
-wait "$RUN_PID" 2>/dev/null || true
 
 # Re-report from proof, never from the fact that a pass ran.
 READY=""

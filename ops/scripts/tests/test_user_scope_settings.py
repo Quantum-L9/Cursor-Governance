@@ -68,7 +68,7 @@ class UserScopeSettingsTests(unittest.TestCase):
             for matcher in group
             for entry in matcher["hooks"]
         ]
-        # 13 registrations covering 12 distinct hook scripts: skill_usage_logger
+        # 14 registrations covering 13 distinct hook scripts: skill_usage_logger
         # is registered twice (PreToolUse and UserPromptExpansion). The fourth
         # gate is session_debt_wrap on Stop (rules/42-no-abandoned-work); the
         # eighth observer is root_file_advisory_wrap on UserPromptSubmit, which
@@ -76,11 +76,16 @@ class UserScopeSettingsTests(unittest.TestCase):
         # The ninth is pr_summary_posttool on PostToolUse, which renders the
         # publish receipt so a `make pr` always reports what it shipped
         # (rules/48). It is an observer: reporting must never gate a tool call.
-        self.assertEqual(len(commands), 13, "every L9 hook registration must reach user scope")
+        # The tenth is session_deps_cloud.sh on SessionStart. It used to be
+        # called from INSIDE session_start_claude_governance.sh, where it spent
+        # ~25s of that hook's 30s budget before any reporting began; SessionStart
+        # hooks run concurrently, so it now carries its own registration and its
+        # own timeout. A registration, not a subroutine, is what makes it free.
+        self.assertEqual(len(commands), 14, "every L9 hook registration must reach user scope")
         self.assertEqual(sum("--class gate" in c for c in commands), 4)
-        self.assertEqual(sum("--class observer" in c for c in commands), 9)
+        self.assertEqual(sum("--class observer" in c for c in commands), 10)
         names = {c.rsplit(" ", 1)[-1].rstrip("'") for c in commands}
-        self.assertEqual(len(names), 12, "twelve distinct hook scripts")
+        self.assertEqual(len(names), 13, "thirteen distinct hook scripts")
 
     def test_managed_keys_are_all_present(self) -> None:
         self._reconcile()
