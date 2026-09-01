@@ -261,14 +261,10 @@ class DeploymentReconcileTests(unittest.TestCase):
     def test_require_ready_blocked_status(self) -> None:
         self._reconcile()
         workspace_id = receipt_lib.workspace_id_for(self.workspace)
-        loaded = receipt_lib.read_deployment_receipt(
-            surface="cursor", workspace_id=workspace_id
-        )
+        loaded = receipt_lib.read_deployment_receipt(surface="cursor", workspace_id=workspace_id)
         assert loaded is not None
         loaded["status"] = validate_lib.STATUS_BLOCKED
-        receipt_lib.write_deployment_receipt(
-            loaded, surface="cursor", workspace_id=workspace_id
-        )
+        receipt_lib.write_deployment_receipt(loaded, surface="cursor", workspace_id=workspace_id)
         with self.assertRaises(receipt_lib.DeploymentNotReady) as ctx:
             receipt_lib.require_cursor_deployment_ready(self.workspace, REPO_ROOT)
         self.assertIn("BLOCKED", str(ctx.exception))
@@ -276,14 +272,10 @@ class DeploymentReconcileTests(unittest.TestCase):
     def test_require_ready_stale_digest(self) -> None:
         self._reconcile()
         workspace_id = receipt_lib.workspace_id_for(self.workspace)
-        loaded = receipt_lib.read_deployment_receipt(
-            surface="cursor", workspace_id=workspace_id
-        )
+        loaded = receipt_lib.read_deployment_receipt(surface="cursor", workspace_id=workspace_id)
         assert loaded is not None
         loaded["source_manifest_digest"] = "0" * 64
-        receipt_lib.write_deployment_receipt(
-            loaded, surface="cursor", workspace_id=workspace_id
-        )
+        receipt_lib.write_deployment_receipt(loaded, surface="cursor", workspace_id=workspace_id)
         with self.assertRaises(receipt_lib.DeploymentNotReady) as ctx:
             receipt_lib.require_cursor_deployment_ready(self.workspace, REPO_ROOT)
         self.assertIn("stale", str(ctx.exception))

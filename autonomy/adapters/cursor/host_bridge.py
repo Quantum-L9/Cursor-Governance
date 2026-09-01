@@ -54,6 +54,7 @@ def _require_cursor_deployment_ready(workspace: Path, repo_root: Path) -> None:
 
     require_cursor_deployment_ready(workspace, repo_root)
 
+
 ADMISSION_SCHEMA = "l9.cursor-host-admission.v1"
 
 _ADMISSION_DDL = """

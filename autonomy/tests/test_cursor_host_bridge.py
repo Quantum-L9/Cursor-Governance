@@ -57,9 +57,7 @@ def _write_cursor_receipt(
         "source_manifest_digest": digest if digest is not None else _roles_digest(ROOT),
         "surface": "cursor",
     }
-    path = receipt_lib.write_deployment_receipt(
-        body, surface="cursor", workspace_id=workspace_id
-    )
+    path = receipt_lib.write_deployment_receipt(body, surface="cursor", workspace_id=workspace_id)
     if corrupt:
         data = json.loads(path.read_text(encoding="utf-8"))
         data["receipt_digest"] = "0" * 64

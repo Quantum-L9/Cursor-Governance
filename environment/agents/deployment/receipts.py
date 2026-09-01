@@ -27,6 +27,7 @@ ROLES_MANIFEST = Path("environment/agents/cursor-subagents/CURSOR_SUBAGENT_ROLES
 class DeploymentNotReady(RuntimeError):
     """Cursor deployment receipt is missing, invalid, blocked, or stale."""
 
+
 _HERE = Path(__file__).resolve().parent
 _AGENTS_ROOT = _HERE.parent
 
@@ -121,16 +122,12 @@ def require_cursor_deployment_ready(workspace: Path, repo_root: Path) -> dict[st
     workspace_id = workspace_id_for(workspace)
     receipt = read_deployment_receipt(surface="cursor", workspace_id=workspace_id)
     if receipt is None:
-        raise DeploymentNotReady(
-            f"cursor deployment receipt missing for workspace {workspace_id}"
-        )
+        raise DeploymentNotReady(f"cursor deployment receipt missing for workspace {workspace_id}")
     if not verify_receipt_digest(receipt):
         raise DeploymentNotReady("cursor deployment receipt digest invalid")
     status = str(receipt.get("status") or "")
     if status != STATUS_READY:
-        raise DeploymentNotReady(
-            f"cursor deployment status is {status}, not {STATUS_READY}"
-        )
+        raise DeploymentNotReady(f"cursor deployment status is {status}, not {STATUS_READY}")
     expected = source_manifest_digest(repo_root)
     got = str(receipt.get("source_manifest_digest") or "")
     if got != expected:
