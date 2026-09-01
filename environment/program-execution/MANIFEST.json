@@ -1247,7 +1247,7 @@
     },
     {
       "path": "conformance/counterexamples/v2-gaps-registry.yaml",
-      "sha256": "e9f5e8094a73abf58fe270a89aeff74a1a084fabb19616501a133ea63dd4b6dd"
+      "sha256": "4f4ba3e91ba9a8e253bb1ba514a856a8a95f158098468cd05c38bff157638ba3"
     },
     {
       "path": "conformance/fixtures/hostile/cancellation-without-evidence.yaml",
@@ -1403,7 +1403,7 @@
     },
     {
       "path": "conformance/test_counterexample_registry.py",
-      "sha256": "a1eca23e92bcd3de3f40aa45bf4dd58e908ef707c4797f292f587cc4e5143c07"
+      "sha256": "6291947b4e4684a179144f1be1ae9545be819ebd5f8f24f97eabb7fdb9921cca"
     },
     {
       "path": "conformance/test_descriptor_schema.py",
@@ -1962,6 +1962,10 @@
       "sha256": "4648483e8b817ec55c13000d17eb8ffe8290c9dbd11fb39b8accff024fef7b26"
     },
     {
+      "path": "scripts/gate_s0_baseline.py",
+      "sha256": "88a654712a893098290e62bc897ecbdb8e52ca318ab6fa6eab673113c3ff7194"
+    },
+    {
       "path": "scripts/generate_manifest.py",
       "sha256": "b07d9bfc8cbf39da6ff697430a9747b5f0f9a764042fd84bda0d21dba14c1b49"
     },
@@ -2068,6 +2072,10 @@
     {
       "path": "scripts/tests/test_failed_result_harvest.py",
       "sha256": "48dd1764d4bdee3cc253f747bb16fcef5b60504d9293f93750d014dff2c6791a"
+    },
+    {
+      "path": "scripts/tests/test_gate_s0_baseline.py",
+      "sha256": "6a72f3928dea598b7b452772b6c5be287c49113eb914044fdef554b1eaa0ea3b"
     },
     {
       "path": "scripts/tests/test_launchability.py",

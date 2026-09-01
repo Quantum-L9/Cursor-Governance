@@ -1,0 +1,397 @@
+{
+  "schema_version": "1.0.0",
+  "mode": "plan",
+  "depth": "deep",
+  "title": "W8/S0 baseline freeze — make GATE-S0-BASELINE-CHARACTERIZED executable",
+  "objective": "Eliminate the W8 start blocker by turning the S0 baseline freeze from a prose precondition into an executable, machine-verified record, so W8 begins on one named mechanical step at W7 merge rather than on a re-plan.",
+  "success_criteria": [
+    "A gate command exists that exits 0 when the baseline record is coherent and the PE surface has not drifted since characterization, and non-zero naming the exact unmet condition otherwise.",
+    "The forensic pe-v3-hardening baseline 0db3fed can never be reported as a live pin: the record separates forensic from characterized from main-pinned, and the gate refuses to conflate them.",
+    "With W7 unmerged the gate reports exactly one remaining condition — pinned_to_main unset — and nothing else, so 'what blocks W8' is answered by a command instead of by reading a tracker.",
+    "The registry conformance suite fails if the baseline block drifts, is missing, or mixes forensic and live pins.",
+    "PE conformance runner still PASSes and the hardening suite still reports 15 xfailed: no product behavior changed.",
+    "The tracker's blocked_until names the single mechanical step (set pinned_to_main to the merge SHA and re-run the gate), not 'a separate plan'."
+  ],
+  "scope": {
+    "in": [
+      "environment/program-execution/conformance/counterexamples/v2-gaps-registry.yaml — add the baseline block",
+      "environment/program-execution/scripts/gate_s0_baseline.py — new executable gate",
+      "environment/program-execution/scripts/tests/test_gate_s0_baseline.py — gate behavior in both states",
+      "environment/program-execution/conformance/test_counterexample_registry.py — enforce the baseline block",
+      "WIP/8-29-26/PEC/PEC-repair-pipeline.json and .md — record the slice and rewrite blocked_until",
+      "WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-w8-s0.v1.json — the committed plan SSOT"
+    ],
+    "out": [
+      "S1 through S8 — semantic conservation, exact identity, evidence admissibility, principal authority, linearizable runtime, derived gates, advisory handoff, v2-to-v3 migration",
+      "Any program-execution-system.v3 / blueprint.v3 / controller.v3 surface",
+      "Program Lock, make campaign, campaign activation, and any PE campaign binding — this is a Cursor Build plan, not a PE campaign",
+      "Merging PR #442, or any change to merge authority or the publish path",
+      "Any change to PE runtime product behavior",
+      "Wiring the gate as a blocking CI step — it cannot pass before merge, so wiring it now would only turn the PR red",
+      "Committing the rendered .plan.md into this repository — it projects into the governance plans store, and a second copy under WIP would be a derived duplicate of the PLAN_DOCUMENT"
+    ]
+  },
+  "code_in_scope": true,
+  "pre_validation": [
+    {
+      "id": "PV1",
+      "command_or_action": "git rev-parse --abbrev-ref HEAD && git rev-parse HEAD && git status --porcelain",
+      "pass_criteria": "branch claude/cursor-governance-pec-pack-lcw0p8, head 9ba6df63, zero dirty paths",
+      "status": "passed"
+    },
+    {
+      "id": "PV2",
+      "command_or_action": "grep -rn 'GATE-S0' across the repo excluding .git",
+      "pass_criteria": "Confirms the gate exists only as prose in the WIP tracker and the archived PE-PE 1.md — no implementation to reuse or duplicate",
+      "status": "passed"
+    },
+    {
+      "id": "PV3",
+      "command_or_action": "grep -rn 'baseline_commit' --include=*.py --include=*.yaml",
+      "pass_criteria": "Names every consumer: the forensic campaign source stop-condition baseline_commit_mismatch, its TASK_CARDS twin, the registry field, and the conformance suite's truthiness assertion",
+      "status": "passed"
+    },
+    {
+      "id": "PV4",
+      "command_or_action": "Read environment/program-execution/scripts/generate_manifest.py and MANIFEST.json",
+      "pass_criteria": "PE surfaces are already digest-manifested — 570 sha256 file entries, core/ carries its own MANIFEST.yaml — so S0's digest-manifest bullet is reuse, not new work",
+      "status": "passed"
+    },
+    {
+      "id": "PV5",
+      "command_or_action": ".pre-commit-config.yaml is the hook catalog for this governed workspace",
+      "pass_criteria": "trailing-whitespace and ruff own the files in scope; generated MANIFEST.json re-digests via sync_generated_artifacts.py --force --pe-manifest",
+      "status": "passed"
+    }
+  ],
+  "todos": [
+    {
+      "id": "T1",
+      "task": "Add a baseline block to the counterexample registry that separates the forensic pin from the characterized SHA from the main pin. Keep the legacy top-level baseline_commit as the forensic value its existing consumers already read, and bind the two so they cannot drift apart.",
+      "files": [
+        "environment/program-execution/conformance/counterexamples/v2-gaps-registry.yaml"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [],
+      "operation": "Insert",
+      "anchor": "after baseline_commit, before counterexamples",
+      "leverage_rank": 1,
+      "shared_root_cause": "A single baseline_commit field cannot express three different kinds of pin, so a forensic SHA sits in a field that reads as live."
+    },
+    {
+      "id": "T2",
+      "task": "Write scripts/gate_s0_baseline.py implementing GATE-S0-BASELINE-CHARACTERIZED. It verifies the baseline block's shape, that every counterexample reproduces, that the PE manifest has not drifted since characterization, and that the forensic pin is never presented as live. It reports each condition individually and exits non-zero naming the unmet ones.",
+      "files": [
+        "environment/program-execution/scripts/gate_s0_baseline.py"
+      ],
+      "effort": "M",
+      "risk": "medium",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Create",
+      "anchor": "new file",
+      "leverage_rank": 2,
+      "shared_root_cause": "A gate named only in prose cannot be run, so its precondition can only be discharged by a human re-reading a tracker."
+    },
+    {
+      "id": "T3",
+      "task": "Extend the registry conformance suite to enforce the baseline block: required keys, forensic pin equal to the legacy field, characterized SHA well-formed, and a forensic value refused in the characterized or main-pinned positions.",
+      "files": [
+        "environment/program-execution/conformance/test_counterexample_registry.py"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1"
+      ],
+      "operation": "Insert",
+      "anchor": "new RegistryBaselineTests class after RegistrySummaryTests",
+      "leverage_rank": 3,
+      "shared_root_cause": "Same as T1 — a claim that nothing checks decays."
+    },
+    {
+      "id": "T4",
+      "task": "Write gate tests covering both states: unmerged (pinned_to_main null, gate reports exactly that one unmet condition) and merged (pin set, gate passes). Include drift, forensic-as-live, and malformed-SHA rejection.",
+      "files": [
+        "environment/program-execution/scripts/tests/test_gate_s0_baseline.py"
+      ],
+      "effort": "M",
+      "risk": "low",
+      "dependencies": [
+        "T2"
+      ],
+      "operation": "Create",
+      "anchor": "new file",
+      "leverage_rank": 4,
+      "shared_root_cause": "The merged state is unreachable here, so it must be proven by fixture or it is never proven at all."
+    },
+    {
+      "id": "T5",
+      "task": "Update both trackers: record the slice under W8 s0_progress, and rewrite next.blocked_until from 'separate plan bound to fresh origin/main SHA after W7 merge' to the single mechanical step that now remains.",
+      "files": [
+        "WIP/8-29-26/PEC/PEC-repair-pipeline.json",
+        "WIP/8-29-26/PEC/PEC-repair-pipeline.md"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T2",
+        "T3",
+        "T4"
+      ],
+      "operation": "Replace",
+      "anchor": "pipeline W8 entry and next block",
+      "leverage_rank": 5,
+      "shared_root_cause": "The tracker is the only place that states what blocks W8; leaving it stale reintroduces the prose blocker."
+    },
+    {
+      "id": "T6",
+      "task": "Regenerate the PE manifest after the registry change and commit the PLAN_DOCUMENT alongside the code, so the plan that authorized the work ships with it. The rendered .plan.md is a projection into the governance plans store, not a repository file, so it is not committed here and is not duplicated into WIP.",
+      "files": [
+        "environment/program-execution/MANIFEST.json",
+        "WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-w8-s0.v1.json"
+      ],
+      "effort": "S",
+      "risk": "low",
+      "dependencies": [
+        "T1",
+        "T5"
+      ],
+      "operation": "Replace",
+      "anchor": "generated output and plan store",
+      "leverage_rank": 6,
+      "shared_root_cause": "The registry bytes are digested, so any edit to it moves the manifest; forgetting this is what turned governance-self-check red once already.",
+      "blocker": ".cursor/plans/pec-w8-s0-baseline-freeze.plan.md resolves through a symlink to the governance plans store (/root/.cursor-governance/docs/plans) and is therefore NOT a file of this repository. The PLAN_DOCUMENT JSON is the committed SSOT; the .plan.md is its projection and lives in the store."
+    }
+  ],
+  "critical_path": [
+    "T1",
+    "T2",
+    "T4",
+    "T5",
+    "T6"
+  ],
+  "milestones": [
+    {
+      "id": "M1",
+      "outcome": "The baseline record can express forensic, characterized, and main-pinned separately, and conformance enforces the distinction.",
+      "unlocks": "A gate can be written against a record that means something."
+    },
+    {
+      "id": "M2",
+      "outcome": "GATE-S0-BASELINE-CHARACTERIZED is executable and proven in both the unmerged and merged states.",
+      "unlocks": "The question 'what blocks W8' is answered by running one command."
+    },
+    {
+      "id": "M3",
+      "outcome": "Trackers name the single remaining mechanical step instead of a plan requirement.",
+      "unlocks": "W8/S0 resumes at merge without re-planning."
+    }
+  ],
+  "checkpoints": [
+    {
+      "id": "C1",
+      "after": "T2",
+      "evidence_required": "Gate run against the live tree prints each condition and exits non-zero naming only pinned_to_main",
+      "no_go_action": "If it names anything else, the extra condition is a real finding — diagnose it before continuing, do not relax the gate."
+    },
+    {
+      "id": "C2",
+      "after": "T4",
+      "evidence_required": "Gate tests pass, including the merged-state fixture and the forensic-as-live rejection",
+      "no_go_action": "If the merged state cannot be proven by fixture, mark convergence blocked rather than claiming the gate works."
+    },
+    {
+      "id": "C3",
+      "after": "T6",
+      "evidence_required": "PE conformance runner PASS, hardening suite 15 xfailed, ruff clean, manifest re-digested",
+      "no_go_action": "Any regression: fix it before publishing. Do not push a red tree."
+    }
+  ],
+  "doc_root_surface_impact": [
+    {
+      "surface": "WIP/8-29-26/PEC/PEC-repair-pipeline.md",
+      "action": "update",
+      "todo_ids": [
+        "T5"
+      ],
+      "reason": "It is the narrative twin of the tracker and currently states the prose blocker this plan removes."
+    },
+    {
+      "surface": "AGENTS.md",
+      "action": "n_a",
+      "reason": "No agent authority, boundary, or command surface changes; the gate is an internal PE script."
+    },
+    {
+      "surface": "README.md",
+      "action": "n_a",
+      "reason": "No user-facing capability changes."
+    },
+    {
+      "surface": "environment/program-execution/MANIFEST.json",
+      "action": "update",
+      "todo_ids": [
+        "T6"
+      ],
+      "reason": "Generated digest of the PE surface; the registry edit and the two new scripts move it."
+    }
+  ],
+  "stress_test": {
+    "disconfirming_questions": [
+      "Is the real blocker the missing plan, or the unmerged PR? If the latter, does this plan actually change anything?",
+      "Does a baseline frozen at a branch SHA mean anything once the PR squash-merges into a different SHA?",
+      "Is adding a baseline block to the registry a second SSOT for something that already exists elsewhere?",
+      "Does the gate duplicate checks the conformance suite already performs?",
+      "Could this gate ever report PASS while the baseline is actually stale?"
+    ],
+    "assumed_false_ifs": [
+      "If GATE-S0-BASELINE-CHARACTERIZED turns out to be implemented somewhere already, T2 is duplication and must become a wiring task instead.",
+      "If the forensic campaign's baseline_commit_mismatch stop-condition reads the registry at runtime, changing the field's meaning breaks it and T1 must instead add a sibling file.",
+      "If the PE manifest does not actually cover the registry file, the drift check in T2 is vacuous and needs a different fingerprint."
+    ],
+    "blast_radius": "Confined to the conformance and scripts trees of environment/program-execution plus two WIP trackers. No PE runtime path imports the registry or the new gate; the gate is not wired into any blocking CI step, so a defect in it cannot fail an unrelated PR. The one shared artifact touched is the generated PE MANIFEST.json, whose staleness is already caught by governance-self-check.",
+    "rollback": "git revert the slice commit. The registry's legacy baseline_commit is left untouched by design, so its existing consumers are unaffected either way, and no test outside the two files added depends on the new block."
+  },
+  "leverage": {
+    "ranked_todo_ids": [
+      "T1",
+      "T2",
+      "T3",
+      "T4",
+      "T5",
+      "T6"
+    ],
+    "shared_causes": [
+      "A precondition stated only in prose cannot be discharged mechanically, so it waits on a human re-reading it — the same root cause that left the counterexample registry asserting a reproduction claim that was false.",
+      "One field holding three different kinds of pin makes forensic and live indistinguishable by construction."
+    ],
+    "deletions_or_consolidations": [
+      "No new file for the baseline: it extends the registry that already holds baseline_commit, rather than starting a parallel record.",
+      "The gate delegates counterexample reproduction to the existing conformance checks rather than restating them.",
+      "S0's digest-manifest bullet consumes the existing MANIFEST.json and validate_manifest.py — nothing new is built for it."
+    ]
+  },
+  "risks": [
+    {
+      "risk": "A baseline characterized at an unmerged branch SHA is invalidated by a squash merge, which produces a different commit.",
+      "mitigation": "characterized_at is deliberately not the main pin. The gate verifies drift by manifest digest rather than by SHA equality, so a squash that preserves the tree keeps the characterization valid, and pinned_to_main is set separately at merge."
+    },
+    {
+      "risk": "Adding a field the forensic campaign source also reads could change the meaning of its baseline_commit_mismatch stop condition.",
+      "mitigation": "The legacy top-level baseline_commit keeps its exact current value and meaning. Conformance binds it equal to baseline.forensic_commit so the two can never diverge."
+    },
+    {
+      "risk": "The gate could become a rubber stamp that passes on a stale baseline.",
+      "mitigation": "It fails closed on any unverifiable condition, and its tests include a drift case proving it rejects a moved manifest."
+    },
+    {
+      "risk": "Wiring the gate into CI now would fail every run until W7 merges, teaching people to ignore it.",
+      "mitigation": "Explicitly out of scope. The gate is invocable and its behavior is proven by tests; wiring is a merge-time step recorded in the tracker."
+    },
+    {
+      "risk": "Scope creep from S0 into S1-S8, which is exactly what the two-plane rule exists to prevent.",
+      "mitigation": "Scope out lists every subwave by name, and the gate deliberately covers only S0's own acceptance bullets."
+    }
+  ],
+  "unknowns": [
+    {
+      "id": "U1",
+      "question": "Will W7 land on main as a squash, a merge commit, or a rebase? That decides what value pinned_to_main takes.",
+      "decision_effect": "Only the value written at merge time, not the mechanism: the gate accepts any commit reachable from origin/main.",
+      "resolution": "accept_bounded"
+    },
+    {
+      "id": "U2",
+      "question": "Should the orchestrator plane-A checkout be a separate physical checkout, or is a recorded immutable reference sufficient for S0?",
+      "decision_effect": "If a physical detached checkout is required, S0 has a further step this plan does not deliver.",
+      "resolution": "block"
+    }
+  ],
+  "final_validation": [
+    {
+      "id": "FV1",
+      "command": "uv run --frozen --no-build python environment/program-execution/scripts/gate_s0_baseline.py",
+      "pass_criteria": "Reports every condition; exits non-zero naming pinned_to_main and nothing else — OBSERVED: Five conditions PASS; exits 1 naming pinned_to_main and nothing else",
+      "status": "passed"
+    },
+    {
+      "id": "FV2",
+      "command": "uv run --frozen --no-build python -m unittest environment/program-execution/scripts/tests/test_gate_s0_baseline.py",
+      "pass_criteria": "All gate tests pass, including merged-state fixture, drift, and forensic-as-live rejection — OBSERVED: 16 tests OK — merged-state fixture, drift, forensic-as-live, independence",
+      "status": "passed"
+    },
+    {
+      "id": "FV3",
+      "command": "uv run --frozen --no-build python -m unittest environment/program-execution/conformance/test_counterexample_registry.py",
+      "pass_criteria": "All registry tests pass including the new baseline block checks — OBSERVED: 14 tests OK (was 9); RegistryBaselineTests added",
+      "status": "passed"
+    },
+    {
+      "id": "FV4",
+      "command": "uv run --frozen --no-build python environment/program-execution/scripts/run_conformance.py",
+      "pass_criteria": "status PASS, 0 failures, 0 errors — OBSERVED: PASS — 649 tests, 0 failures, 0 errors; both new files collected",
+      "status": "passed"
+    },
+    {
+      "id": "FV5",
+      "command": "uv run --frozen --no-build python -m pytest environment/program-execution/tests/hardening -q",
+      "pass_criteria": "56 passed, 15 xfailed — unchanged, proving no product behavior moved — OBSERVED: 56 passed, 15 xfailed — unchanged",
+      "status": "passed"
+    },
+    {
+      "id": "FV6",
+      "command": "uv run --frozen --no-build ruff check . && uv run --frozen --no-build ruff format --check <changed>",
+      "pass_criteria": "All checks passed; no reformat pending — OBSERVED: All checks passed; 2 files reformatted then clean",
+      "status": "passed"
+    },
+    {
+      "id": "FV7",
+      "command": "pre-commit run --config .pre-commit-config.yaml --files <changed paths>",
+      "pass_criteria": "Every hook in .pre-commit-config.yaml passes; trailing-whitespace and ruff own the files in scope, so a hook rewrite means commit the rewrite and re-run rather than bypass — OBSERVED: All hooks passed; end-of-file-fixer rewrote the plans-store projection only",
+      "status": "passed"
+    }
+  ],
+  "convergence": {
+    "status": "partial",
+    "remaining_unknown_ids": [
+      "U2"
+    ],
+    "next_skill": "l9-ynp",
+    "stop_reason": "S0's baseline-freeze bullet becomes executable and its remaining condition is reduced to one mechanical step at W7 merge. U2 — whether plane-A requires a physically detached orchestrator checkout rather than a recorded immutable reference — is left open because resolving it by assumption would build W8 machinery this plan deliberately excludes. S1 through S8 remain unstarted by design. Executed 2026-09-01: the gate is live and reports exactly one unmet condition."
+  },
+  "gmp_handoff": {
+    "may_modify": [
+      "environment/program-execution/conformance/counterexamples/v2-gaps-registry.yaml",
+      "environment/program-execution/conformance/test_counterexample_registry.py",
+      "environment/program-execution/scripts/gate_s0_baseline.py",
+      "environment/program-execution/scripts/tests/test_gate_s0_baseline.py",
+      "environment/program-execution/MANIFEST.json",
+      "WIP/8-29-26/PEC/PEC-repair-pipeline.json",
+      "WIP/8-29-26/PEC/PEC-repair-pipeline.md",
+      "WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-w8-s0.v1.json"
+    ],
+    "must_not_modify": [
+      "environment/program-execution/campaigns/pe-v3-hardening/** — immutable forensic campaign source",
+      "environment/program-execution/tests/hardening/test_hardening_*.py — the counterexamples themselves are characterized, not edited",
+      "Any program-execution runtime module under scripts/ other than the new gate",
+      "environment/program-execution/core/** — carries its own manifest and pair validator",
+      ".github/workflows/** — wiring the gate into CI is out of scope"
+    ],
+    "preserved_contracts": [
+      "The top-level baseline_commit keeps its current value and meaning for the forensic campaign's baseline_commit_mismatch stop condition",
+      "l9.program-execution.counterexamples.v1 stays additive — no field removed or repurposed",
+      "verification: all_counterexamples_reproduce_as_xfail_tests stays true and stays enforced",
+      "No PE product behavior changes in S0"
+    ],
+    "validation_commands": [
+      "uv run --frozen --no-build python environment/program-execution/scripts/gate_s0_baseline.py",
+      "uv run --frozen --no-build python -m unittest environment/program-execution/scripts/tests/test_gate_s0_baseline.py",
+      "uv run --frozen --no-build python -m unittest environment/program-execution/conformance/test_counterexample_registry.py",
+      "uv run --frozen --no-build python environment/program-execution/scripts/run_conformance.py",
+      "uv run --frozen --no-build python -m pytest environment/program-execution/tests/hardening -q"
+    ]
+  },
+  "estimate": "1 GMP"
+}

@@ -328,7 +328,13 @@ SHA. Recorded so that plan starts from verified truth instead of re-deriving it.
 
 ## Next: W8 (v3 control-plane)
 
-Start only via a new plan after W7 lands on `origin/main`. Do not reopen the W0–W7 Build.
+The plan exists and is validated: [`PLAN_DOCUMENT.pec-w8-s0.v1.json`](./PLAN_DOCUMENT.pec-w8-s0.v1.json), projected to
+`.cursor/plans/pec-w8-s0-baseline-freeze.plan.md`. Do not reopen the W0–W7 Build.
+
+**What blocks W8 is now one command, not a document.** Run
+`python environment/program-execution/scripts/gate_s0_baseline.py` — it names every
+condition and exits 0 when S0 is frozen. Today it reports one unmet condition:
+`pinned_to_main`, which is set to the commit at which W7 reaches `origin/main`.
 
 ### W8 prep (from PE-PE 1 — harvested 2026-08-30)
 
@@ -377,6 +383,51 @@ Still gating S0 (unchanged): the baseline commit and orchestrator checkout must 
 frozen independently against a **fresh** `origin/main` SHA after W7 merges, and PE
 surfaces digest-manifested. `GATE-S0-BASELINE-CHARACTERIZED` is **not** passed. No
 v3 surface, no baseline pin, no product behavior change.
+
+### W8/S0 partial — baseline freeze made executable (2026-09-01)
+
+Batch `pec-w8-s0-baseline-freeze-2026-09-01`, planned by
+[`PLAN_DOCUMENT.pec-w8-s0.v1.json`](./PLAN_DOCUMENT.pec-w8-s0.v1.json). **W8 stays
+open.**
+
+`GATE-S0-BASELINE-CHARACTERIZED` existed only as prose — here and in the archived
+`PE-PE 1.md`. A gate that cannot be run can only be discharged by a person
+re-reading it, which is why the freeze kept waiting on a SHA someone would hand-type.
+Separately, `baseline_commit` held the **forensic** `0db3fed` in a field that reads
+as live, with nothing marking the difference.
+
+Landed:
+
+| Path | What |
+|---|---|
+| `scripts/gate_s0_baseline.py` | The gate, executable, reporting each condition independently |
+| `scripts/tests/test_gate_s0_baseline.py` | 16 tests — both states, drift, forensic-as-live, independence |
+| `conformance/counterexamples/v2-gaps-registry.yaml` | `baseline` block: forensic / characterized / main pins kept distinct |
+| `conformance/test_counterexample_registry.py` | `RegistryBaselineTests`; `xfail_reasons` consolidated onto the gate |
+
+Three kinds of pin, deliberately separate — `forensic_commit` (evidence, never
+live), `characterized_at` (where the counterexamples were proven to reproduce),
+`pinned_to_main` (`null` until merge). Drift is measured over the **reproduction
+surface**, not the repository manifest: the manifest digests the registry, so
+recording a manifest digest inside it would be self-referential and could never
+settle.
+
+Against the live tree the gate reports five conditions PASS and exactly one FAIL:
+
+```
+[FAIL] pinned_to_main: not pinned: the characterized work has not reached
+       origin/main yet. Set baseline.pinned_to_main to the merge commit and
+       re-run this gate.
+```
+
+Evidence: gate tests 16 OK · registry suite 14 OK (was 9) · conformance runner
+PASS · hardening 56 passed / 15 xfailed, unchanged.
+
+**Deliberately not done.** The gate is *not* wired as a blocking CI step: it cannot
+pass before merge, so wiring it now would only turn the PR red and teach people to
+ignore it. S1–S8 are unstarted. `U2` is open — whether plane A needs a physically
+detached orchestrator checkout rather than the recorded immutable reference used
+here — left open rather than resolved by assumption.
 
 ### Campaign activation (when W8+ admits campaigns)
 

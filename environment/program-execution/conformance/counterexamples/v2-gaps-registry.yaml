@@ -3,6 +3,25 @@ schema_version: 1.0.0
 baseline_commit: 0db3fedf697b263a3b8bd9ea8ce40113f999b67d
 generated_at: '2026-08-17T12:20:00Z'
 
+# Three kinds of pin, deliberately distinct. One field holding all three is
+# what let a forensic SHA sit in a position that reads as live.
+baseline:
+  # pe-v3-hardening campaign baseline. Historical evidence, never a live pin.
+  # Bound equal to the legacy top-level baseline_commit above, which the
+  # forensic campaign's baseline_commit_mismatch stop condition still reads.
+  forensic_commit: 0db3fedf697b263a3b8bd9ea8ce40113f999b67d
+  # Commit at which every counterexample below was proven to reproduce.
+  characterized_at: 9ba6df638a0ad3afbfeef4f2d319a88f093ff035
+  # Fingerprint of the reproduction surface - the entries and the test files
+  # that reproduce them. Not a manifest digest: the manifest digests this file,
+  # so recording one here would be self-referential and could never settle.
+  characterized_reproduction_digest: sha256:654a0ff27cddef01db6c54590383ffd86f2302ae2a4eedeced342b65446a5837
+  # Pinned immutable v2 orchestrator reference (plane A).
+  orchestrator_plane_a: 9ba6df638a0ad3afbfeef4f2d319a88f093ff035
+  # Set to the merge commit once the characterized work reaches origin/main.
+  # Until then GATE-S0-BASELINE-CHARACTERIZED reports this and nothing else.
+  pinned_to_main: null
+
 counterexamples:
   - id: CE-COMPILER-001
     invariant: semantic_conservation

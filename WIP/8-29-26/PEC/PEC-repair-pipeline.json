@@ -1130,31 +1130,57 @@
         }
       ],
       "c6_overlap": "Replan runtime closure (every REPLAN_CONTRACT delta has deterministic behavior or fail-closed unsupported) lands in S6, not as a parallel campaign.",
-      "s0_progress": {
-        "batch_id": "pec-w8-s0-counterexample-reproduction-2026-09-01",
-        "acceptance_criterion_closed": "All counterexamples have IDs and reproduce as tests",
-        "landed": [
-          "tests/hardening/test_hardening_gates.py — CE-GATE-001",
-          "tests/hardening/test_hardening_repository.py — CE-REPOSITORY-001",
-          "tests/hardening/test_hardening_leases.py — CE-LEASE-001",
-          "tests/hardening/test_hardening_replan.py — CE-REPLAN-001",
-          "tests/hardening/test_hardening_closeout.py — CE-CLOSEOUT-001, CE-CLOSEOUT-002",
-          "conformance/test_counterexample_registry.py — registry claims checked against the suite on disk",
-          "v2-gaps-registry.yaml summary corrected: high 6->7, low 1->0, test_files 8->9"
-        ],
-        "why": "The registry asserted verification: all_counterexamples_reproduce_as_xfail_tests while 5 of the 9 test files it named did not exist, so 6 of 15 counterexamples reproduced as nothing. Its severity and file counts also disagreed with its own entries. The claim is now true and executable rather than prose.",
-        "evidence": {
-          "hardening_suite": "56 passed, 15 xfailed (was 9 xfailed) — uv run pytest environment/program-execution/tests/hardening -q",
-          "conformance_runner": "PASS — 628 tests, 0 failures, 0 errors; conformance/test_counterexample_registry.py collected",
-          "registry_suite": "9 tests OK; reproduced all three summary defects before the correction"
+      "s0_progress": [
+        {
+          "batch_id": "pec-w8-s0-counterexample-reproduction-2026-09-01",
+          "acceptance_criterion_closed": "All counterexamples have IDs and reproduce as tests",
+          "landed": [
+            "tests/hardening/test_hardening_gates.py — CE-GATE-001",
+            "tests/hardening/test_hardening_repository.py — CE-REPOSITORY-001",
+            "tests/hardening/test_hardening_leases.py — CE-LEASE-001",
+            "tests/hardening/test_hardening_replan.py — CE-REPLAN-001",
+            "tests/hardening/test_hardening_closeout.py — CE-CLOSEOUT-001, CE-CLOSEOUT-002",
+            "conformance/test_counterexample_registry.py — registry claims checked against the suite on disk",
+            "v2-gaps-registry.yaml summary corrected: high 6->7, low 1->0, test_files 8->9"
+          ],
+          "why": "The registry asserted verification: all_counterexamples_reproduce_as_xfail_tests while 5 of the 9 test files it named did not exist, so 6 of 15 counterexamples reproduced as nothing. Its severity and file counts also disagreed with its own entries. The claim is now true and executable rather than prose.",
+          "evidence": {
+            "hardening_suite": "56 passed, 15 xfailed (was 9 xfailed) — uv run pytest environment/program-execution/tests/hardening -q",
+            "conformance_runner": "PASS — 628 tests, 0 failures, 0 errors; conformance/test_counterexample_registry.py collected",
+            "registry_suite": "9 tests OK; reproduced all three summary defects before the correction"
+          },
+          "still_gating_s0": [
+            "Baseline commit and orchestrator checkout frozen independently — needs a fresh origin/main SHA after W7 merge (PR #442 still open)",
+            "Relevant PE surfaces digest-manifested",
+            "GATE-S0-BASELINE-CHARACTERIZED not passed"
+          ],
+          "not_claimed": "W8 remains open. No v3 surface, no baseline pin, no gate pass. This slice adds no product behavior — only counterexample reproduction and a registry conformance check."
         },
-        "still_gating_s0": [
-          "Baseline commit and orchestrator checkout frozen independently — needs a fresh origin/main SHA after W7 merge (PR #442 still open)",
-          "Relevant PE surfaces digest-manifested",
-          "GATE-S0-BASELINE-CHARACTERIZED not passed"
-        ],
-        "not_claimed": "W8 remains open. No v3 surface, no baseline pin, no gate pass. This slice adds no product behavior — only counterexample reproduction and a registry conformance check."
-      }
+        {
+          "batch_id": "pec-w8-s0-baseline-freeze-2026-09-01",
+          "plan": "WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-w8-s0.v1.json (validated) + .cursor/plans/pec-w8-s0-baseline-freeze.plan.md",
+          "acceptance_criterion_closed": "Baseline commit and orchestrator checkout frozen — recorded and machine-verified; GATE-S0-BASELINE-CHARACTERIZED is now executable",
+          "landed": [
+            "scripts/gate_s0_baseline.py — GATE-S0-BASELINE-CHARACTERIZED, previously prose only",
+            "scripts/tests/test_gate_s0_baseline.py — 16 tests, both states including the merged-state fixture",
+            "v2-gaps-registry.yaml — baseline block separating forensic / characterized / main pins",
+            "conformance/test_counterexample_registry.py — RegistryBaselineTests; xfail_reasons consolidated onto the gate"
+          ],
+          "why": "GATE-S0-BASELINE-CHARACTERIZED existed only as prose in this tracker and the archived PE-PE 1.md, so the freeze could only be discharged by a person re-reading it. baseline_commit held the forensic pe-v3-hardening SHA in a field that reads as live, with nothing distinguishing forensic evidence from a live pin.",
+          "evidence": {
+            "gate_live_tree": "five conditions PASS, exactly one FAIL — pinned_to_main; exit 1",
+            "gate_tests": "16 tests OK",
+            "registry_suite": "14 tests OK (was 9)",
+            "conformance_runner": "PASS",
+            "hardening_suite": "56 passed, 15 xfailed — unchanged"
+          },
+          "still_gating_s0": [
+            "pinned_to_main is null until the characterized work reaches origin/main"
+          ],
+          "not_claimed": "W8 remains open. S1-S8 unstarted. No v3 surface. The gate is deliberately NOT wired as a blocking CI step: it cannot pass before merge, and wiring it now would only turn the PR red and teach people to ignore it.",
+          "open_unknown": "U2 — whether plane A requires a physically detached orchestrator checkout rather than the recorded immutable reference used here. Left open rather than resolved by assumption."
+        }
+      ]
     },
     {
       "id": "W9",
@@ -1192,10 +1218,11 @@
   "next": {
     "id": "W8",
     "contract_id": "PE-V3-CONTROL-PLANE",
-    "blocked_until": "separate plan bound to fresh origin/main SHA after W7 merge",
+    "blocked_until": "One mechanical step: set baseline.pinned_to_main in environment/program-execution/conformance/counterexamples/v2-gaps-registry.yaml to the commit at which W7 reaches origin/main, then run `python environment/program-execution/scripts/gate_s0_baseline.py`. It exits 0 when S0 is frozen. No re-plan is required — the plan is WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-w8-s0.v1.json and it is validated.",
     "execute_via": "new PLAN_DOCUMENT or Cursor plan — not reopen W0-W7 Build",
     "campaign_activation_ssot": "skills/l9-pe-campaign-activate (not WIP template copies)",
-    "partial_progress": "W8/S0 acceptance criterion \"All counterexamples have IDs and reproduce as tests\" closed on 2026-09-01 (batch pec-w8-s0-counterexample-reproduction-2026-09-01). Baseline freeze still blocked on W7 merge."
+    "partial_progress": "W8/S0: counterexample reproduction closed 2026-09-01 (batch pec-w8-s0-counterexample-reproduction-2026-09-01); baseline freeze made executable the same day (batch pec-w8-s0-baseline-freeze-2026-09-01). S1-S8 unstarted.",
+    "gate_command": "python environment/program-execution/scripts/gate_s0_baseline.py"
   },
   "harvested_from": {
     "deleted": "WIP/PROGRAM EXECUTION PIPELINE/",
