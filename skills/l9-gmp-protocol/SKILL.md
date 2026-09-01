@@ -46,7 +46,7 @@ Does not own:
 
 - generic DAG construction, registration, or discovery -> `l9-dag-authoring`
 - command generation or thin command-to-DAG binding -> `l9-dag-authoring`
-- Skill compilation -> `l9-skill-compiler`; Skill wiring -> `l9-wire-skill-into-repo`
+- Skill compilation -> `l9-skill-compiler`; Skill wiring -> `l9-wire-into-repo`
 - generic component audit / verify / probe -> `l9-component-verification`
 - git publication, merge, or release authority -> the publish path rules
 

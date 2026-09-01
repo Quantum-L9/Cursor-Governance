@@ -3177,6 +3177,38 @@ def publish_task_outcome(
                 reusable_units = list(task.get("generated_data_units") or [])
             verdict = verification.get("verdict") if verification else "FAILED"
             generated_at = (verification.get("verified_at") if verification else None) or utc_now()
+            compiler_module = _load_script(
+                "pe_generated_data_compile_units",
+                PE_ROOT / "integrations/subagent-generated-data/compile_units.py",
+            )
+            compile_receipt = {
+                **source_receipt,
+                "task_id": task_id,
+                "generated_data_units": reusable_units,
+                **({"failure_reason": failure_reason} if failure_reason else {}),
+                **({"verification": verification} if verification else {}),
+            }
+            compiled = compiler_module.compile_generated_data_units(
+                compile_receipt,
+                repository=str(
+                    contract.get("repository")
+                    or contract.get("repository_id")
+                    or task.get("repository_id")
+                    or HOST_REPO_DEFAULT
+                ),
+                base_sha=str(contract["base_sha"]),
+                generated_at=str(generated_at),
+                verification=verification if isinstance(verification, dict) else None,
+                failure_reason=failure_reason,
+            )
+            if compiled.get("compiled"):
+                reusable_units = list(compiled["units"])
+            reuse_assessment = (
+                task.get("reuse_assessment")
+                if isinstance(task.get("reuse_assessment"), dict) and not compiled.get("compiled")
+                else compiled["reuse_assessment"]
+            )
+            inspected = compiled.get("inspected_paths") or source_receipt.get("inspected_paths")
             outcome_payload = {
                 **source_receipt,
                 "campaign_id": campaign_id,
@@ -3187,14 +3219,15 @@ def publish_task_outcome(
                 "generated_at": generated_at,
                 "generated_data_units": reusable_units,
                 **({"failure_reason": failure_reason} if failure_reason else {}),
-                "reuse_assessment": task.get("reuse_assessment")
+                "reuse_assessment": reuse_assessment
                 or {
-                    "reusable_data_found": bool(task.get("generated_data_units")),
-                    "confidence": 1.0 if task.get("generated_data_units") else 0.0,
+                    "reusable_data_found": bool(reusable_units),
+                    "confidence": 1.0 if reusable_units else 0.0,
                     "reason": "PE task supplied reusable findings"
-                    if task.get("generated_data_units")
+                    if reusable_units
                     else "PE task supplied no reusable findings",
                 },
+                **({"inspected_paths": inspected} if inspected else {}),
             }
             source_path.parent.mkdir(parents=True, exist_ok=True)
             temporary = source_path.with_name(f".{source_path.name}.{os.getpid()}.tmp")
@@ -3230,7 +3263,11 @@ def publish_task_outcome(
             designated_authority_approval=False,
             recurrence_counts=(
                 task.get("recurrence_counts")
-                if isinstance(task.get("recurrence_counts"), dict)
+                if (
+                    bool(verification)
+                    and verification.get("verdict") == "PASSED_LOCAL"
+                    and isinstance(task.get("recurrence_counts"), dict)
+                )
                 else None
             ),
         )

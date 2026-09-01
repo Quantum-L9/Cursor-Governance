@@ -145,7 +145,7 @@ fi
 
 echo ""
 echo "=== L9 skills (.cursor-commands/skills) ==="
-for s in l9-structured-reasoning l9-skill-compiler l9-wire-skill-into-repo l9-update-agent-docs l9-gmp-protocol; do
+for s in l9-structured-reasoning l9-skill-compiler l9-wire-into-repo l9-update-agent-docs l9-gmp-protocol; do
   [ -f "$GC/skills/$s/SKILL.md" ] && pass "$s" || fail "missing $s"
 done
 

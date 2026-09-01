@@ -135,7 +135,7 @@ invariants:
         pattern: "AUTO-REQUEST DISABLED"
         present: true
       - type: file_contains
-        path: PULL_REQUEST_TEMPLATE.md
+        path: .github/pull_request_template.md
         pattern: "trigger auto-request"
         present: false
       - type: file_contains
@@ -179,11 +179,8 @@ invariants:
   - id: pr-template-surfaces
     priority: P1
     statement: >-
-      The pull-request template exists both as the repo-root SSOT
-      (PULL_REQUEST_TEMPLATE.md) and as the GitHub-visible template
-      (.github/pull_request_template.md).
+      The pull-request template SSOT is the GitHub-visible file
+      .github/pull_request_template.md. There is no second root copy.
     projections:
-      - type: file_exists
-        path: PULL_REQUEST_TEMPLATE.md
       - type: file_exists
         path: .github/pull_request_template.md

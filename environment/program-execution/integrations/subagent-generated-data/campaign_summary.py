@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
@@ -11,6 +12,18 @@ SUMMARY_SCHEMA = "l9.pe.subagent-generated-data-summary.v1"
 
 def _display(value: Any) -> str:
     return "UNKNOWN" if value is None else str(value)
+
+
+def _measure_outbox(database_path: Path) -> tuple[int, int | None]:
+    """Count sibling outbox files; never the global ~/.l9 tree."""
+    outbox = Path(database_path).parent / "outbox" / "memory"
+    if not outbox.is_dir():
+        return 0, None
+    files = [path for path in outbox.glob("memcand-*.json") if path.is_file()]
+    if not files:
+        return 0, None
+    oldest = min(path.stat().st_mtime for path in files)
+    return len(files), max(0, int(time.time() - oldest))
 
 
 def build_summary(
@@ -59,6 +72,8 @@ def build_summary(
             "memory_units_persisted": None,
             "memory_units_retrievable": None,
             "memory_failures": 0,
+            "outbox_backlog_count": 0,
+            "outbox_oldest_candidate_age_seconds": None,
         },
         "receipt_refs": [],
         "errors": [],
@@ -104,6 +119,10 @@ def build_summary(
                             "message": result.get("error"),
                         }
                     )
+
+    backlog, oldest = _measure_outbox(path)
+    summary["memory"]["outbox_backlog_count"] = backlog
+    summary["memory"]["outbox_oldest_candidate_age_seconds"] = oldest
 
     if not path.is_file():
         summary["errors"].append({"code": "GENERATED_DATA_DATABASE_MISSING", "path": str(path)})
@@ -253,6 +272,11 @@ def render_brief(summary: dict[str, Any]) -> str:
             f"Memory persisted: {_display(memory['memory_units_persisted'])}; "
             f"retrievable: {_display(memory['memory_units_retrievable'])}; "
             f"failures: {memory['memory_failures']}"
+        ),
+        (
+            f"Outbox backlog: {memory.get('outbox_backlog_count', 0)}; "
+            f"oldest candidate age seconds: "
+            f"{_display(memory.get('outbox_oldest_candidate_age_seconds'))}"
         ),
     ]
     return "\n".join(lines)

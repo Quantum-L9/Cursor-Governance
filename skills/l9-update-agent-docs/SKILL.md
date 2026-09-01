@@ -106,12 +106,12 @@ auditor or repairer.
 
 - User says update agent docs / refresh repo docs / sync agent files
 - After CI, pre-commit, or skill-registry changes that make a **pointer** stale
-- After `l9-wire-skill-into-repo` when docs still name a skill incorrectly
+- After `l9-wire-into-repo` when docs still name a wired artifact incorrectly
 - Root `CLAUDE.md` or `INVARIANTS.md` is missing (bootstrap creation — Step 3a)
 - User asks to generate or refresh **module / subsystem** READMEs from code facts
 
-Skill **wire / unwire** is owned by `l9-wire-skill-into-repo`. Use this skill
-afterward only to keep pointers honest.
+Repository **wire / rewire / verify / unwire** is owned by `l9-wire-into-repo`.
+Use this skill afterward only to keep pointers honest.
 
 ## Project Adapters
 
@@ -234,7 +234,7 @@ Do not claim either kernel was wrapped into this skill.
 - Repairer (load, do not copy): `kernels/Validate & Repair.md`
 - Root inventory: `ops/config/root-file-protection.json`
 - Formatter companion: `ops/scripts/adapters/agentdocs.sh`
-- Skill registry wire: `l9-wire-skill-into-repo`
+- Repository wiring: `l9-wire-into-repo`
 - No-wrap check: `scripts/self_test.py`
 - Pointer heading map: `references/pointer-heading-map.yaml`
 - Heading/pointer check: `scripts/validate_pointer_headings.py`

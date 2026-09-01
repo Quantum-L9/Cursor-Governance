@@ -175,6 +175,7 @@ class FailedResultHarvestTests(unittest.TestCase):
         self.assertEqual(source["generated_data_units"], [{"unit_id": "u-3"}])
         self.assertEqual(published["payload"]["verdict"], "FAILED")
         self.assertFalse(published["kwargs"]["independent_validation_present"])
+        self.assertIsNone(published["kwargs"]["recurrence_counts"])
         self.assertEqual(publication, {"published": True})
 
 

@@ -31,8 +31,8 @@ tiers:
     use_when: work just completed, priorities are unclear, or the user asks what to do next
   - skill: l9-skill-compiler
     use_when: creating or improving a reusable skill, making a skill portable across Claude Code, Manus, or Cursor, sharpening activation and reject signals, extracting expert heuristics, eliminating drift or stubs, or producing a validated ZIP
-  - skill: l9-wire-skill-into-repo
-    use_when: registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads
+  - skill: l9-wire-into-repo
+    use_when: wiring, rewiring, verifying, registering, exposing, or unwiring an existing repository artifact or capability by finding its authoritative upstream owner and propagating reachability to intended consumers without duplicate leaf wiring
   - skill: l9-update-agent-docs
     use_when: refreshing AGENTS.md, CLAUDE.md, or README.md as a pointer stack after CI, hook, or registry changes, or creating root CLAUDE.md / INVARIANTS.md when missing
   - skill: l9-code-graph-rag-mcp
@@ -62,8 +62,6 @@ tiers:
   explicit_only:
   - skill: l9-forge
     reason: zero-pause batch execution
-  - skill: l9-governance-wiring
-    reason: symlinks, hooks, and governance backup
   - skill: l9-end-session
     reason: session lifecycle boundary
   - skill: l9-code-maintenance
@@ -85,7 +83,7 @@ tiers:
   - skill: l9-setting-up-terraform
     reason: infra-as-code bootstrap — high blast radius, explicit only
   - skill: l9-pr-remediation
-    reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, then merges them oldest-first and stack-safe (squash only when unstacked). make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
+    reason: Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.
   - skill: l9-issue-remediation
     reason: /issues and /l9-issue-remediation are remediator Converge (verify-before-trust, drain all clusters at max autonomy, recommended-A human blockers, land on PRs, close phantoms/resolved, chain /l9-pr-remediation only at open_issues=0). /issues diagnose remains hint-routeable auditor. High blast radius, explicit only.
   - skill: l9-bounded-autonomy
@@ -99,7 +97,7 @@ tiers:
   - skill: l9-e2e-blocker-resolution
     reason: runs e2e/proof commands, mutates code/docs/TODO, may touch disposable remote targets — high blast radius, explicit only
   - skill: l9-governance-symlinks
-    reason: narrow symlink setup/validate op (subset of l9-governance-wiring); disable-model-invocation, explicit only
+    reason: narrow governance workspace binding setup and validation; exact-owner mutation skill surviving the l9-governance-wiring retirement; disable-model-invocation, explicit only
   - skill: l9-repository-renovation
     reason: audits then implements, commits, pushes, and opens a PR under RENOVATE_TO_PR — high blast radius, explicit only
   - skill: l9-ui-operator
@@ -147,6 +145,8 @@ tiers:
     reason: Skill wrapper retired; the capability runs from workflows/dags/harvest_deploy_dag.py and workflows/use_harvest_executor.py via /harvest and /use-harvest — archived out of live skills/ discovery, never auto-invoke or reconcile
   - item: skills/_archived/l9-plan-audit/
     reason: superseded by skills/l9-pipeline-audit/; archived out of live skills/ discovery — never auto-invoke or reconcile
+  - item: skills/_archived/l9-governance-wiring/
+    reason: superseded by skills/l9-wire-into-repo/ for generic repository wiring; specialized governance operations belong to their narrower owners (skills/l9-governance-symlinks/ for workspace binding) — archived out of live skills/ discovery, never auto-invoke or reconcile
 reasoning_routing:
   purpose: Which l9-structured-reasoning reference applies to which task class.
   sources:
@@ -183,7 +183,7 @@ claude_routing:
   - l9-gap-analysis
   - l9-ynp
   - l9-skill-compiler
-  - l9-wire-skill-into-repo
+  - l9-wire-into-repo
   - l9-update-agent-docs
   - l9-api-smoke-testing
   - l9-auditing-performance
@@ -205,7 +205,6 @@ claude_routing:
   - l9-architecture-decision-records
   - l9-update-agent-docs
   - l9-ynp
-  - l9-wire-skill-into-repo
   trivial_patterns:
   - ^fix (the )?typo\b
   - ^correct (the )?spelling\b
@@ -257,7 +256,7 @@ claude_routing:
     - admin merge
     - force push
     supporting: []
-    note: 'Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run make pr or make pr-check. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.
+    note: 'Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Subscribe/own every open PR through required checks; do not hand the watch back to the human. The per-PR board verdict comes from ops/autonomy/pr_board.py (required-check identity from branch protection plus rulesets, conflicted paths); an ownership class is the edit axis and never parks a PR; leftover requires --human-decision or --unfixable-check; mission is open_prs=0. Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run make pr or make pr-check. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.
 
       '
   - id: issue_remediation
@@ -372,17 +371,29 @@ claude_routing:
     - compile a skill
     supporting:
     - l9-prompt-engineering
-  - id: wire_skill
-    primary: l9-wire-skill-into-repo
+  - id: wire_into_repo
+    primary: l9-wire-into-repo
     signal_weight: 8
     positive_signals:
+    - wire into repo
+    - wire this capability
+    - wire this artifact
     - wire the skill
-    - wire skill into
-    - register the skill
-    - skill discovery tables
-    - subagent preload
-    supporting:
-    - l9-update-agent-docs
+    - register this capability
+    - make this discoverable
+    - make this reachable
+    - connect this to consumers
+    - integrate this upstream
+    - rewire this
+    - verify the wiring
+    - unwire this
+    - deregister this
+    negative_signals:
+    - governance symlinks
+    - workspace symlinks
+    - graphiti memory
+    - claude code deepseek
+    supporting: []
   - id: update_agent_docs
     primary: l9-update-agent-docs
     signal_weight: 8

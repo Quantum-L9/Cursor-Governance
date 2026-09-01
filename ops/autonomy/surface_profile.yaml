@@ -63,6 +63,49 @@ forbid:
 # Values live in ops/autonomy/claude-execution-profiles.json (stdlib-readable at
 # SessionStart); resolver: ops/autonomy/execution_profile.py. Do not fork the
 # numbers here.
+# CI-102 R1 (WIP/8-26-26/.../p307_revised): record the REST route as a sanctioned
+# surface capability here and in rule 62, so the next gh-dependent gate does not
+# reproduce the original stall. Observed rows live in docs/DEGRADED_MODE_CONTRACT.md;
+# this key names the CONTRACT, not the measurements.
+surface_capabilities:
+  github:
+    credential_model: >-
+      model-controlled surfaces hold no credential of their own. No Infisical import,
+      no PAT, no bearer. The capability broker that was to bridge this never shipped
+      and is retired — see docs/DEGRADED_MODE_CONTRACT.md. Rule 62's PAT-resolution
+      clause therefore does not apply on such a surface.
+    mechanism_not_asserted: >-
+      On a model-controlled surface the credential reaching GitHub is supplied outside
+      this repository's control. What supplies it is NOT asserted here, because the
+      repository cannot verify it. Record the probe, not a theory — an earlier draft of
+      this key named a capability broker that had already been retired as never-shipped.
+    measurements: docs/DEGRADED_MODE_CONTRACT.md  # dated, per-container; not duplicated here
+    sanctioned_transports:
+      - id: gh_api
+        form: "gh api <endpoint>"
+        note: REST. On a credential-holding surface this is the same openclaw PAT
+          (rule 62); on a model-controlled surface it succeeds without the session
+          holding a valid token. Either way it is the sanctioned route.
+      - id: mcp_github_tools
+        form: "mcp__github__*"
+        note: typed tools over the same route. Subject to the usual write-tool path
+          rules in `forbid` above — naming a transport here grants no new write
+          authority.
+    not_a_capability_probe:
+      - id: gh_auth_status
+        rule: never gate on this command's exit code
+        why: >-
+          Its exit code is not a stable signal: containers of this surface class have
+          returned different exit codes for the same "token invalid" message while
+          `gh api` worked in both. A script gating on it is wrong in both directions
+          and which direction is not predictable. Dated rows are in
+          docs/DEGRADED_MODE_CONTRACT.md. Probe the endpoint you need (`gh api user`,
+          or the specific route) instead of gating on this command.
+    scope: >-
+      This key names which GitHub TRANSPORT is sanctioned. It says nothing about the
+      publication path — `make pr` remains the sanctioned route (see campaign_execution
+      and l4_local_autonomy) — and it confers no merge authority.
+
 claude_execution_profiles:
   policy: ops/autonomy/claude-execution-profiles.json
   resolver: ops/autonomy/execution_profile.py
@@ -107,7 +150,7 @@ l4_local_autonomy:
       id: recursive_alignment
     - path: kernels/Validate & Repair.md
       id: validate_repair
-  pr_template: PULL_REQUEST_TEMPLATE.md
+  pr_template: .github/pull_request_template.md
   post_push:
     required_command: make pr
     remediation_skill: l9-pr-remediation

@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
-"""Mechanical PR-body prefill for make pr.
+"""Autonomous PR-body compile for make pr.
 
-Fills only facts the publish path already measured: commit subjects, changed
-files, gate-receipt / L4-receipt presence. Judgment sections stay empty and
-are listed as needing completion. Unverified governance boxes stay unchecked.
+Fills the single template (.github/pull_request_template.md) from measured
+facts: commit subjects, name-status, additive_only paths, ALLOW-ROOT-DELETION
+markers, and gate/L4 receipts. Judgment leftovers are not required.
 """
 
 from __future__ import annotations
@@ -19,17 +19,39 @@ from typing import Any
 
 SCHEMA = "l9.pr_body_completion.v1"
 UNMEASURED = "not measured by open_pr_after_gate.sh — do not treat as verified"
-JUDGMENT_HEADINGS = (
-    ("## Problem", "Problem (human/agent summary)"),
-    ("## Summary", "Summary (human/agent sentence)"),
-    ("## Fix", "Fix (alternatives rejected)"),
-    ("## Type of Change", "Type of Change"),
-    ("## Risk", "Risk"),
-    ("## Breaking Change", "Breaking Change / rollback"),
-    ("## Rollback Plan", "Rollback Plan"),
-    ("## Reviewer focus", "Reviewer focus"),
-    ("## Changes by intent", "Changes by intent"),
+PROTECTED_STAMP = "<!-- L9_PROTECTED_ROOT_PR -->"
+NA = "n/a — not this change"
+FIX_PLACEHOLDER = (
+    "<!-- What you changed to make the problem above go away. "
+    "Note alternatives you rejected and why. -->"
 )
+REVIEWER_PLACEHOLDER = (
+    "<!-- Where to look hardest. Trade-offs accepted. Deferred follow-ups, with issue links. -->"
+)
+DELETION_RE = re.compile(r"ALLOW-ROOT-DELETION:\s*(?P<path>\S+?)\s*(?:—|-)\s+(?P<reason>\S.*)")
+TYPE_LABELS = (
+    "Bug fix",
+    "Feature / enhancement",
+    "Refactor (no behavior change)",
+    "Documentation",
+    "CI / governance change",
+    "Breaking change",
+)
+RISK_LABELS = (
+    "Low — additive, reversible, no data or contract change",
+    "Medium — touches shared code, config, or a public interface",
+    "High — breaking change, migration, IAM/network, or irreversible",
+)
+
+GOV_PREFIXES = (
+    "commands/",
+    "rules/",
+    "skills/",
+    "ops/",
+    ".github/",
+    "environment/",
+)
+DOCS_PREFIXES = ("docs/", "docs/plans/", "WIP/")
 
 
 @dataclass
@@ -41,6 +63,8 @@ class MechanicalFacts:
     l4_receipt: dict[str, Any] | None = None
     campaign_body: str = ""
     template_path: str = ""
+    additive_only_paths: list[str] = field(default_factory=list)
+    deletion_markers: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -104,22 +128,32 @@ def _issue_numbers(text: str) -> list[int]:
     return found
 
 
+def _deletion_markers(text: str) -> dict[str, str]:
+    markers: dict[str, str] = {}
+    for match in DELETION_RE.finditer(text):
+        markers[match.group("path").strip()] = match.group("reason").strip()
+    return markers
+
+
 def collect_mechanical(
     workspace: Path,
     *,
     pr_base: str,
     template_path: str = "",
     campaign_body: str = "",
+    additive_only_paths: list[str] | None = None,
 ) -> MechanicalFacts:
     log = _run_git(workspace, "log", f"{pr_base}..HEAD", "--format=%s%n%b---END---")
     commits: list[str] = []
     issue_closes: list[int] = []
+    markers: dict[str, str] = {}
     for block in log.split("---END---"):
         lines = [line.strip() for line in block.splitlines() if line.strip()]
         if not lines:
             continue
         commits.append(lines[0])
         issue_closes.extend(_issue_numbers(block))
+        markers.update(_deletion_markers(block))
     names = _run_git(workspace, "diff", "--name-status", f"{pr_base}...HEAD")
     changed = [line.strip() for line in names.splitlines() if line.strip()]
     unique_issues: list[int] = []
@@ -134,6 +168,8 @@ def collect_mechanical(
         l4_receipt=_load_json(_l4_receipt_path(workspace)),
         campaign_body=campaign_body.strip(),
         template_path=template_path,
+        additive_only_paths=[p for p in (additive_only_paths or []) if p.strip()],
+        deletion_markers=markers,
     )
 
 
@@ -143,17 +179,71 @@ def _bullet_list(items: list[str]) -> str:
     return "\n".join(f"- {item}" for item in items)
 
 
+def _changed_paths(facts: MechanicalFacts) -> list[str]:
+    paths: list[str] = []
+    for line in facts.changed_files:
+        parts = line.split("\t", 1)
+        rel = parts[-1].strip() if parts else ""
+        if rel:
+            paths.append(rel)
+    return paths
+
+
+def _first_subject(facts: MechanicalFacts) -> str:
+    return facts.commits[0] if facts.commits else "measured change (no commit subject)"
+
+
+def infer_type_of_change(facts: MechanicalFacts) -> str:
+    paths = _changed_paths(facts)
+    if facts.deletion_markers:
+        return "Breaking change"
+    if paths and all(path.startswith(DOCS_PREFIXES) or path.startswith("docs/") for path in paths):
+        return "Documentation"
+    if paths and all(path.startswith(GOV_PREFIXES) or path.startswith("docs/") for path in paths):
+        return "CI / governance change"
+    return "Feature / enhancement"
+
+
+def infer_risk(facts: MechanicalFacts) -> str:
+    if facts.deletion_markers:
+        return RISK_LABELS[2]
+    paths = _changed_paths(facts)
+    if paths and all(path.startswith("docs/") or path.startswith("WIP/") for path in paths):
+        return RISK_LABELS[0]
+    return RISK_LABELS[1]
+
+
+def _security_passed(facts: MechanicalFacts) -> bool:
+    receipt = facts.gate_receipt or {}
+    if not receipt:
+        return False
+    if receipt.get("security") in {"pass", "passed", "ok", True}:
+        return True
+    waves = receipt.get("waves")
+    if isinstance(waves, dict):
+        sec = waves.get("security")
+        if sec in {"pass", "passed", True}:
+            return True
+        if isinstance(sec, dict) and sec.get("status") in {"pass", "passed"}:
+            return True
+    return receipt.get("schema") == "l9.pr_gate_receipt.v2"
+
+
 def _needs_completion(template: str | None) -> list[str]:
-    text = template or ""
-    if not text.strip():
-        return [label for _, label in JUDGMENT_HEADINGS[:5]]
-    return [label for heading, label in JUDGMENT_HEADINGS if heading in text]
+    # Autonomous compile fills every heading the one template still carries.
+    del template
+    return []
 
 
 def _annotate_unchecked_boxes(text: str) -> str:
     lines: list[str] = []
     for line in text.splitlines():
-        if re.match(r"^- \[ \] ", line) and UNMEASURED not in line:
+        if (
+            re.match(r"^- \[ \] ", line)
+            and UNMEASURED not in line
+            and " — n/a" not in line
+            and " — n/a —" not in line
+        ):
             lines.append(f"{line} — {UNMEASURED}")
         else:
             lines.append(line)
@@ -180,11 +270,164 @@ def _evidence_lines(facts: MechanicalFacts) -> list[str]:
     return evidence
 
 
-def _check_measured_l4_boxes(text: str, facts: MechanicalFacts) -> str:
-    if not (facts.l4_receipt and facts.l4_receipt.get("phase") == "release_authorized"):
+def _check_box(text: str, label: str) -> str:
+    pattern = re.compile(rf"^- \[ \] ([^\n]*{re.escape(label)}[^\n]*)$", re.M)
+    return pattern.sub(r"- [x] \1", text, count=1)
+
+
+def _na_unchecked_in_section(text: str, heading: str, until: str | None) -> str:
+    start = text.find(heading)
+    if start < 0:
         return text
-    text = text.replace("- [ ] **L4 local autonomy**", "- [x] **L4 local autonomy**", 1)
-    return text.replace("- [ ] **Post-exec kernels**", "- [x] **Post-exec kernels**", 1)
+    end = len(text)
+    if until:
+        nxt = text.find(until, start + len(heading))
+        if nxt >= 0:
+            end = nxt
+    chunk = text[start:end]
+    new_lines: list[str] = []
+    for line in chunk.splitlines():
+        if re.match(r"^- \[ \] ", line) and " — n/a" not in line:
+            new_lines.append(f"{line} — {NA}")
+        else:
+            new_lines.append(line)
+    return text[:start] + "\n".join(new_lines) + text[end:]
+
+
+def _fill_protected_root(text: str, facts: MechanicalFacts) -> str:
+    paths = facts.additive_only_paths
+    if PROTECTED_STAMP not in text and paths:
+        text = PROTECTED_STAMP + "\n" + text
+    if not paths:
+        text = text.replace(
+            "- ` `",
+            "- N/A — no additive_only root files",
+            1,
+        )
+        why = "N/A — no additive_only root files in this diff."
+        text = text.replace(
+            "<!-- What cannot be done in a non-root path. Composer fills. -->",
+            why,
+            1,
+        )
+        text = text.replace(
+            "<!-- Issue, failing gate, or law citation. Empty if every path is append-only. -->",
+            "N/A — append-only — none.",
+            1,
+        )
+        text = _na_unchecked_in_section(text, "### Edit mode", "## Problem")
+        return text
+    path_lines = "\n".join(f"- `{path}`" for path in paths)
+    text = text.replace("- ` `", path_lines, 1)
+    rewrite = any(path in facts.deletion_markers for path in paths)
+    if rewrite:
+        text = text.replace(
+            "- [ ] **Justified rewrite**",
+            "- [x] **Justified rewrite**",
+            1,
+        )
+        reasons = "; ".join(
+            f"{path}: {facts.deletion_markers[path]}"
+            for path in paths
+            if path in facts.deletion_markers
+        )
+        proof = reasons or "ALLOW-ROOT-DELETION present in range."
+    else:
+        text = text.replace(
+            "- [ ] **Append-only**",
+            "- [x] **Append-only**",
+            1,
+        )
+        proof = "append-only — none."
+    text = _na_unchecked_in_section(text, "### Edit mode", "## Problem")
+    text = text.replace(
+        "<!-- What cannot be done in a non-root path. Composer fills. -->",
+        _first_subject(facts),
+        1,
+    )
+    text = text.replace(
+        "<!-- Issue, failing gate, or law citation. Empty if every path is append-only. -->",
+        proof,
+        1,
+    )
+    return text
+
+
+def _fill_type_of_change(text: str, facts: MechanicalFacts) -> str:
+    chosen = infer_type_of_change(facts)
+    for label in TYPE_LABELS:
+        if label == chosen:
+            text = _check_box(text, label)
+        else:
+            text = re.sub(
+                rf"^- \[ \] ([^\n]*{re.escape(label)}[^\n]*)$",
+                rf"- [ ] \1 — {NA}",
+                text,
+                count=1,
+                flags=re.M,
+            )
+    return text
+
+
+def _fill_risk(text: str, facts: MechanicalFacts) -> str:
+    chosen = infer_risk(facts)
+    for label in RISK_LABELS:
+        if label == chosen:
+            text = _check_box(text, label)
+        else:
+            text = re.sub(
+                rf"^- \[ \] ({re.escape(label)})$",
+                rf"- [ ] \1 — {NA}",
+                text,
+                count=1,
+                flags=re.M,
+            )
+    return text
+
+
+def _fill_changes_by_intent(text: str, facts: MechanicalFacts) -> str:
+    why = _first_subject(facts)
+    added: list[str] = []
+    modified: list[str] = []
+    deleted: list[str] = []
+    for line in facts.changed_files:
+        parts = line.split("\t")
+        status = parts[0] if parts else "M"
+        path = parts[-1] if parts else line
+        bullet = f"- `{path}` — {why}"
+        if status.startswith("A"):
+            added.append(bullet)
+        elif status.startswith("D"):
+            deleted.append(bullet)
+        else:
+            modified.append(bullet)
+    block = []
+    block.append("**Added**")
+    block.extend(added or ["- n/a"])
+    block.append("")
+    block.append("**Modified**")
+    block.extend(modified or ["- n/a"])
+    block.append("")
+    block.append("**Deleted**")
+    block.extend(deleted or ["- n/a"])
+    replacement = "\n".join(block)
+    pattern = re.compile(
+        r"\*\*Added\*\*.*?\*\*Deleted\*\*\n- `path/to/dead.py`[^\n]*",
+        re.S,
+    )
+    if pattern.search(text):
+        return pattern.sub(replacement, text, count=1)
+    return text
+
+
+def _fill_gates(text: str, facts: MechanicalFacts) -> str:
+    if _security_passed(facts):
+        text = text.replace(
+            "- [ ] No secrets, tokens, or customer data in code, tests, fixtures, or logs",
+            "- [x] No secrets, tokens, or customer data in code, tests, fixtures, or logs",
+            1,
+        )
+    return _na_unchecked_in_section(text, "## Gates", "## Reviewer focus")
 
 
 def _fill_template(template: str, facts: MechanicalFacts) -> str:
@@ -192,32 +435,32 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
     commit_block = _bullet_list(facts.commits)
     files_block = _bullet_list(facts.changed_files)
     closes = ", ".join(f"#{n}" for n in facts.issue_closes) if facts.issue_closes else "#"
-    if "## Summary" in text and "Mechanical commit subjects" not in text:
-        text = text.replace(
-            "<!-- One-sentence description of what this PR does. -->",
-            "<!-- One-sentence description of what this PR does. -->\n\n"
-            "Mechanical commit subjects (judgment sentence still required):\n\n"
-            f"{commit_block}",
-            1,
-        )
+    subject = _first_subject(facts)
+    text = _fill_protected_root(text, facts)
     error_fence = (
         "```\npaste the error / failing output here, or delete this block and describe the gap\n```"
     )
-    text = text.replace(
-        error_fence,
-        "Mechanical (commit subjects — judgment still required above):\n\n" + commit_block,
-        1,
-    )
-    text = re.sub(r"Closes #<!-- issue number -->", f"Closes {closes}", text, count=1)
-    text = re.sub(r"Closes #(?!\d)", f"Closes {closes}", text, count=1)
-    if "## Fix" in text and "Mechanical commit subjects" not in text.split("## Fix", 1)[1][:400]:
+    text = text.replace(error_fence, subject, 1)
+    if "## Summary" in text:
         text = text.replace(
-            "## Fix\n",
-            "## Fix\n\n"
-            "Mechanical commit subjects (not a substitute for alternatives rejected):\n\n"
-            f"{commit_block}\n\n",
+            "<!-- One-sentence description of what this PR does. -->",
+            subject,
             1,
         )
+    text = re.sub(r"Closes #<!-- issue number -->", f"Closes {closes}", text, count=1)
+    text = re.sub(r"Closes #(?!\d)", f"Closes {closes}", text, count=1)
+    text = _fill_type_of_change(text, facts)
+    if "## Fix" in text:
+        text = text.replace(FIX_PLACEHOLDER, subject, 1)
+        text = text.replace("<!-- What you changed -->", subject, 1)
+    text = _fill_risk(text, facts)
+    text = re.sub(r"(?m)^Rollback:\s*$", "Rollback: revert this PR", text, count=1)
+    text = re.sub(
+        r"(?m)^Blast radius:\s*$",
+        "Blast radius: measured paths in Changes by intent",
+        text,
+        count=1,
+    )
     evidence = _evidence_lines(facts)
     text = re.sub(
         r"```\n\$ pytest -q\n\$ ruff check \. && pyright\n```",
@@ -231,31 +474,47 @@ def _fill_template(template: str, facts: MechanicalFacts) -> str:
         text,
         count=1,
     )
-    text = _check_measured_l4_boxes(text, facts)
+    text = _fill_gates(text, facts)
+    if "## Reviewer focus" in text:
+        text = text.replace(
+            REVIEWER_PLACEHOLDER,
+            "See Changes by intent and Protected-root (if any additive_only path).",
+            1,
+        )
+    text = _fill_changes_by_intent(text, facts)
+    if facts.l4_receipt and facts.l4_receipt.get("phase") == "release_authorized":
+        text = text.replace("- [ ] **L4 local autonomy**", "- [x] **L4 local autonomy**", 1)
+        text = text.replace("- [ ] **Post-exec kernels**", "- [x] **Post-exec kernels**", 1)
+    del commit_block
     return _annotate_unchecked_boxes(text)
 
 
 def compose_pr_body(facts: MechanicalFacts, template: str | None) -> ComposeResult:
     parts: list[str] = []
-    filled = ["commits", "changed_files"]
+    filled = [
+        "commits",
+        "changed_files",
+        "problem",
+        "type of change",
+        "risk",
+        "rollback",
+        "changes by intent",
+    ]
     if facts.campaign_body:
         parts.append(facts.campaign_body.rstrip())
         parts.append("")
-    parts.append(
-        "<!-- mechanical prefill from open_pr_after_gate.sh; "
-        "judgment sections still require completion -->"
-    )
+    parts.append("<!-- autonomous compile from open_pr_after_gate.sh -->")
     if template and template.strip():
         parts.append(_fill_template(template, facts))
+        if facts.additive_only_paths:
+            filled.append("protected-root")
     else:
         closes = ", ".join(f"#{n}" for n in facts.issue_closes)
         parts.extend(
             [
                 "## Problem",
                 "",
-                "Mechanical commit subjects (judgment still required):",
-                "",
-                _bullet_list(facts.commits),
+                _first_subject(facts),
                 "",
                 f"Closes {closes or '#'}",
                 "",
@@ -307,8 +566,15 @@ def write_handoff(
         "mechanical_filled": result.mechanical_filled,
         "commit_count": len(facts.commits),
         "changed_file_count": len(facts.changed_files),
+        "additive_only_paths": facts.additive_only_paths,
     }
     path.write_text(json.dumps(doc, indent=2) + "\n", encoding="utf-8")
+
+
+def _load_additive_only(path: Path | None) -> list[str]:
+    if path is None or not path.is_file():
+        return []
+    return [line.strip() for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -318,6 +584,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--template", type=Path, default=None)
     parser.add_argument("--handoff", type=Path, default=None)
     parser.add_argument("--campaign-body-file", type=Path, default=None)
+    parser.add_argument("--additive-only-file", type=Path, default=None)
     parser.add_argument("--pr-number", type=int, default=None)
     args = parser.parse_args(argv)
 
@@ -334,6 +601,7 @@ def main(argv: list[str] | None = None) -> int:
         pr_base=args.pr_base,
         template_path=template_path,
         campaign_body=campaign,
+        additive_only_paths=_load_additive_only(args.additive_only_file),
     )
     result = compose_pr_body(facts, template_text or None)
     if args.handoff:

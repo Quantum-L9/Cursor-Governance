@@ -11,8 +11,8 @@ delivery:
     endpoint: null
     command: []
     timeout_seconds: 30
-    outbox: subagent-generated-data/.runtime/memory-outbox
-  route_outbox_root: subagent-generated-data/.runtime
+    outbox: $L9_RUNTIME_ROOT/generated-data/outbox/memory
+  route_outbox_root: $L9_RUNTIME_ROOT/generated-data/outbox
 retrieval:
   command_environment_variable: L9_SGD_GRAPHITI_SEARCH_COMMAND
   minimum_confidence: 0.70
@@ -30,3 +30,5 @@ live_commands:
   search: L9_SGD_GRAPHITI_SEARCH_COMMAND
   reuse: L9_SGD_GRAPHITI_REUSE_COMMAND
   invalidate: L9_SGD_GRAPHITI_INVALIDATE_COMMAND
+# L9_SGD_GRAPHITI_INGEST_COMMAND example (MemoryCandidate stdin → add_memory):
+# python environment/agents/generated-data/adapters/ingest_memory_candidate.py

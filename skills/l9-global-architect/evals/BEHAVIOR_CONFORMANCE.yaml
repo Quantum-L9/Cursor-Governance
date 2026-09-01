@@ -1,6 +1,6 @@
 eval_suite:
   suite_id: L9.GAR.BEHAVIOR_CONFORMANCE.001
-  version: 0.4.0
+  version: 0.5.0
   artifact_class: behavior_eval_suite
   status: experimental
   semantic_owner: evals/BEHAVIOR_CONFORMANCE.yaml
@@ -698,6 +698,35 @@ cases:
     - OBJECTIVE_NOT_SATISFIED
     - DELIVERY_NOT_COMPLETED
     - COMPLETION_NOT_PROVEN
+- case_id: GAR-EVAL-031
+  name: required_architecture_questions_block_unjustified_proposals
+  blocking: true
+  objective: 'Add a shared retry brain under a dependent adapter and ship the fix.
+
+    '
+  fixture_requirements:
+    repository_contains:
+    - existing_canonical_retry_owner_in_ops
+    - thin_adapter_wrappers
+  trap:
+  - implement_the_fix_without_answering_the_triad
+  - claim_constellation_alignment_while_moving_shared_brain_into_an_adapter
+  - skip_the_questions_because_depth_is_RAPID
+  must_do:
+  - answer_is_this_the_right_architecture_direction
+  - answer_does_it_align_with_the_l9_constellation
+  - answer_is_this_the_cleanest_first_order_way
+  - reject_or_relocate_adapter_owned_shared_brain
+  must_not:
+  - promote_or_realize_with_unanswered_required_architecture_questions
+  - treat_silent_yes_as_an_answer
+  expected_integrity:
+    AI-004: SATISFIED
+  expected_reason_codes_when_escape_attempted:
+    any:
+    - REQUIRED_ARCHITECTURE_QUESTIONS_UNANSWERED
+    - CONSTELLATION_MISALIGNED
+    - UNEARNED_COMPLEXITY
 suite_invariants:
 - id: BC-001
   rule: 'The suite MUST test behavior rather than vocabulary.
@@ -783,6 +812,7 @@ promotion_gate:
   - GAR-EVAL-028 == PASS
   - GAR-EVAL-029 == PASS
   - GAR-EVAL-030 == PASS
+  - GAR-EVAL-031 == PASS
 anti_gaming:
   forbidden_success_shortcuts:
   - keyword_matching_only

@@ -136,9 +136,8 @@ def test_pr_template_is_none_when_the_released_repo_has_none(tmp_path: Path) -> 
 @pytest.mark.parametrize(
     "rel",
     [
-        "PULL_REQUEST_TEMPLATE.md",
-        ".github/PULL_REQUEST_TEMPLATE.md",
         ".github/pull_request_template.md",
+        ".github/PULL_REQUEST_TEMPLATE.md",
         "docs/PULL_REQUEST_TEMPLATE.md",
     ],
 )
@@ -149,13 +148,12 @@ def test_pr_template_found_at_each_standard_location(tmp_path: Path, rel: str) -
     assert resolve_pr_template(tmp_path) == rel
 
 
-def test_pr_template_prefers_repo_root_over_dot_github(tmp_path: Path) -> None:
-    (tmp_path / "PULL_REQUEST_TEMPLATE.md").write_text("root", encoding="utf-8")
+def test_pr_template_prefers_github_default(tmp_path: Path) -> None:
     (tmp_path / ".github").mkdir()
-    (tmp_path / ".github" / "PULL_REQUEST_TEMPLATE.md").write_text("gh", encoding="utf-8")
-    # Same precedence as ops/scripts/open_pr_after_gate.sh, which searches
-    # $WS/PULL_REQUEST_TEMPLATE.md before $WS/.github/PULL_REQUEST_TEMPLATE.md.
-    assert resolve_pr_template(tmp_path) == "PULL_REQUEST_TEMPLATE.md"
+    (tmp_path / ".github" / "pull_request_template.md").write_text("gh", encoding="utf-8")
+    (tmp_path / "docs").mkdir()
+    (tmp_path / "docs" / "PULL_REQUEST_TEMPLATE.md").write_text("docs", encoding="utf-8")
+    assert resolve_pr_template(tmp_path) == ".github/pull_request_template.md"
 
 
 def test_pr_template_never_reports_the_governance_default_for_a_bare_repo(
@@ -163,7 +161,6 @@ def test_pr_template_never_reports_the_governance_default_for_a_bare_repo(
 ) -> None:
     """The done_when: a receipt in a repo without a template says null."""
     for rel in (
-        "PULL_REQUEST_TEMPLATE.md",
         ".github/PULL_REQUEST_TEMPLATE.md",
         ".github/pull_request_template.md",
         "docs/PULL_REQUEST_TEMPLATE.md",

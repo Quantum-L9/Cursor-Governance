@@ -41,7 +41,6 @@ AUTHORITY_PROTOCOL_SURFACES = (
     "CANONICAL_LAW.md",
     "README.md",
     "CONTRIBUTING.md",
-    "PULL_REQUEST_TEMPLATE.md",
     ".github/pull_request_template.md",
 )
 
