@@ -262,9 +262,7 @@ PLAN_SIMPLE_BUILD_EDGES = [
     ),
     SessionEdge(from_node="improve", to_node="validate_repair"),
     SessionEdge(from_node="validate_repair", to_node="regenerate_section_receipt"),
-    SessionEdge(
-        from_node="regenerate_section_receipt", to_node="revalidate_section_receipt"
-    ),
+    SessionEdge(from_node="regenerate_section_receipt", to_node="revalidate_section_receipt"),
     SessionEdge(from_node="revalidate_section_receipt", to_node="kernel_receipt"),
     SessionEdge(from_node="kernel_receipt", to_node="gate_kernel"),
     SessionEdge(
