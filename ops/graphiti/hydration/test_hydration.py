@@ -642,9 +642,7 @@ def _close_with_budget(monkeypatch, tmp_path, budget):
     monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: ship it", "test"))
     monkeypatch.setattr(cs, "already_closed", lambda *a, **k: False)
     monkeypatch.setattr(cs, "write_receipt", lambda *a, **k: None)
-    monkeypatch.setattr(
-        cs, "_write_kind", lambda body, **kw: {"written": True, "kind": kw["kind"]}
-    )
+    monkeypatch.setattr(cs, "_write_kind", lambda body, **kw: {"written": True, "kind": kw["kind"]})
     monkeypatch.setattr(cs, "_distill_signal_packet", lambda **k: (None, "stubbed"))
     import graphiti_memory_client as gmc
 
