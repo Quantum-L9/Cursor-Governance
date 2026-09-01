@@ -5,7 +5,14 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
-from .common import digest_object, load_yaml, sha256_file, utc_now, write_json
+from .common import (
+    digest_object,
+    load_yaml,
+    sha256_file,
+    utc_now,
+    verification_mechanisms_from_card,
+    write_json,
+)
 
 LOCK_SCHEMA = Path(__file__).resolve().parents[2] / "schemas" / "program-lock.schema.json"
 
@@ -60,9 +67,7 @@ def normalize_blueprint(root: Path) -> dict[str, Any]:
             raise BlueprintError(f"task {raw['id']} references unknown target {raw['target_id']}")
         execution_kind = raw["execution_kind"]
         repository_id = target.get("repository_id") if execution_kind == "repo_local" else None
-        verification_mechanisms = [
-            dict(item) for item in raw.get("validation") or [] if isinstance(item, dict)
-        ]
+        verification_mechanisms = verification_mechanisms_from_card(raw)
         required_commands = [
             item["command_or_inspection"]
             for item in verification_mechanisms

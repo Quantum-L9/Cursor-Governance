@@ -5,6 +5,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from .common import verification_mechanisms_from_card
+
 TASK_STATES = {
     "WAITING",
     "BLOCKED",
@@ -208,12 +210,7 @@ class StateDB:
             task_id = str(task.get("id") or "")
             if task_id not in known:
                 continue
-            card = task.get("source")
-            mechanisms = [
-                item
-                for item in (card.get("validation") if isinstance(card, dict) else None) or []
-                if isinstance(item, dict)
-            ]
+            mechanisms = verification_mechanisms_from_card(task.get("source"))
             if not mechanisms:
                 continue
             self.conn.execute(

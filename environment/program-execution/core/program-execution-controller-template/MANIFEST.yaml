@@ -91,11 +91,11 @@ files:
 - path: scripts/pec/__init__.py
   sha256: 1c97c455db405eead95452458bbd62c3843425adbeb120a7cf5da2848d42a2bb
 - path: scripts/pec/blueprint.py
-  sha256: 76431bc3699ed000fe5b5f302bdc76c694e981c347f32b8ff3f1ef16f0afabef
+  sha256: 978148ef1c5d3038e270852c977ceb29b94eb7646a8f260cc4242563d27082eb
 - path: scripts/pec/cli.py
   sha256: 4e95cb40a81e25d8d4949d44d16884cfaf06dc54590b181aefda80f4f0d05b8c
 - path: scripts/pec/common.py
-  sha256: df55978ff7841bf6db5b05f3e937c3d682c956b0992d9e02022cdb277f0fa104
+  sha256: bd05554c4b639259a1c99971bd962c0ae04ba1fc664f8acb2dd671bc8b0a6053
 - path: scripts/pec/contracts.py
   sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
 - path: scripts/pec/controller.py
@@ -111,7 +111,7 @@ files:
 - path: scripts/pec/runtime.py
   sha256: 4de2ad94cf8e0e94069b2d97fec2d4c11cf36a2fbdbc4f8bed730d314cf449a3
 - path: scripts/pec/state.py
-  sha256: 1376193205b5d03e1ae83d2d59f6102dd047fb5aba32b116278175d7c9f0d6fe
+  sha256: 8f06e0ed6edc61c32fd0d577094820c1ba6f3938bd0ddb90a73813f458475685
 - path: scripts/pec/workspace_reset.py
   sha256: edf39052bd7f13cb79e946fa55cc2b6fecff50b96dfc0043943c007ab088a443
 - path: scripts/pec.py
