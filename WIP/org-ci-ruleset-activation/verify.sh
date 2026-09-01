@@ -37,7 +37,7 @@ WF_REPO_NAME="${WF_REPO_NAME:-Quantum-L9/l9-ci-core}"
 WANT_REPOS="$(jq -c '.conditions.repository_name.include' "$PAYLOAD")"
 WANT_REFS="$(jq -c '.conditions.ref_name.include' "$PAYLOAD")"
 WANT_TARGET="$(jq -r '.target' "$PAYLOAD")"
-EFFECTIVE_CONSUMER="${EFFECTIVE_CONSUMER:-Quantum-L9/l9-observability-core}"
+EFFECTIVE_CONSUMER="${EFFECTIVE_CONSUMER:-}"
 ENF_SCHEMA="l9.org-ci.organization-ruleset-live-enforcement/v1"
 E2E_SCHEMA="l9.org-ci.remote-end-to-end-run/v1"
 
@@ -236,7 +236,6 @@ check_run() {
   run_status="$(jq -r '.status // empty' <<<"$run")"
   actions_run_id="$(sed -n 's#.*/actions/runs/\([0-9][0-9]*\).*#\1#p' <<<"$url")"
   actions_job_id="$(sed -n 's#.*/job/\([0-9][0-9]*\).*#\1#p' <<<"$url")"
-  [[ -n "$actions_job_id" ]] || actions_job_id="$check_run_id"
   pass "canonical CI ran on $head"
   echo "        $url"
   [[ "$app" == "github-actions" ]] \
