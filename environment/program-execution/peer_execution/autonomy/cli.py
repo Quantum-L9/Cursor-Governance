@@ -16,6 +16,7 @@ if __package__ in {None, ""}:
         evaluate_merge,
     )
     from autonomy.scheduler import plan_ready_set  # type: ignore[import-not-found]
+    from autonomy.state_dir import expand_state_dir  # type: ignore[import-not-found]
     from autonomy.state_store import StateStore  # type: ignore[import-not-found]
 
     from autonomy.models import CampaignState, ConcurrencyBudget  # type: ignore[import-not-found]
@@ -23,11 +24,12 @@ else:
     from .merge_coordinator import MergeEvidence, evaluate_merge
     from .models import CampaignState, ConcurrencyBudget
     from .scheduler import plan_ready_set
+    from .state_dir import expand_state_dir
     from .state_store import StateStore
 
 
 def _root(value: str | None) -> Path:
-    return Path(value or os.environ.get("L9_AUTONOMY_STATE_DIR", ".l9/autonomy")).expanduser()
+    return expand_state_dir(value or os.environ.get("L9_AUTONOMY_STATE_DIR"))
 
 
 def _plan_payload(state: CampaignState, total_lanes: int, mutation_lanes: int) -> dict[str, object]:
