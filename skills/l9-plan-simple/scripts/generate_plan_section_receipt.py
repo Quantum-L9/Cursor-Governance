@@ -90,8 +90,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--gar-invoked",
         action=argparse.BooleanOptionalAction,
-        default=True,
-        help="record that l9-global-architect ran upstream (default: true)",
+        default=False,
+        help="record that l9-global-architect ran upstream (default: false; pass evidence)",
     )
     parser.add_argument("--gar-run-id", default=None, help="optional GAR run id")
     args = parser.parse_args(argv)

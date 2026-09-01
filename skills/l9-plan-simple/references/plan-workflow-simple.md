@@ -52,7 +52,8 @@ python3 ../l9-plan/scripts/render_plan_pe_autonomy.py <plan.json> --execute-via=
 
 ```bash
 python3 scripts/generate_plan_section_receipt.py \
-  --plan-json <plan.json> --plan-md <plan.md> --out <plan>.section-receipt.json
+  --plan-json <plan.json> --plan-md <plan.md> --out <plan>.section-receipt.json \
+  --gar-invoked
 python3 scripts/validate_plan_section_receipt.py <plan>.section-receipt.json
 ```
 

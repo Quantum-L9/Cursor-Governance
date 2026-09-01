@@ -9,7 +9,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from paths import safe_cli_path
+from paths import is_under, plans_store_root, safe_cli_path
 from plan_sections import (
     GAR_SKILL_REF,
     PLAN_SCHEMA_REL,
@@ -39,7 +39,18 @@ def _sha256(path: Path) -> str:
 
 
 def _resolve_declared(rel: str) -> Path:
-    return (REPO_ROOT / rel).resolve()
+    if not str(rel).strip():
+        raise ValueError("empty declared path")
+    raw = Path(rel)
+    repo = REPO_ROOT.resolve()
+    resolved = raw.resolve() if raw.is_absolute() else (repo / raw).resolve()
+    allowed = [repo]
+    store = plans_store_root()
+    if store is not None:
+        allowed.append(store)
+    if not any(is_under(resolved, root) for root in allowed):
+        raise ValueError(f"declared path escapes repo and plans store: {rel}")
+    return resolved
 
 
 def _schema_errors(receipt: dict[str, Any]) -> list[str]:
@@ -89,7 +100,7 @@ def check_receipt(path: Path) -> list[str]:
     try:
         plan_json_path = _resolve_declared(json_rel)
         plan_md_path = _resolve_declared(md_rel)
-    except Exception as exc:
+    except (OSError, ValueError) as exc:
         return [*errors, f"G_RECEIPT_PATH: {exc}"]
 
     if not plan_json_path.is_file():

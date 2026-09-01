@@ -29,6 +29,12 @@ DOMAIN_ACTIONS = {
     "validate_plan": "skills/l9-plan/scripts/validate_plan_document.py",
     "generate_section_receipt": ("skills/l9-plan-simple/scripts/generate_plan_section_receipt.py"),
     "validate_section_receipt": ("skills/l9-plan-simple/scripts/validate_plan_section_receipt.py"),
+    "regenerate_section_receipt": (
+        "skills/l9-plan-simple/scripts/generate_plan_section_receipt.py"
+    ),
+    "revalidate_section_receipt": (
+        "skills/l9-plan-simple/scripts/validate_plan_section_receipt.py"
+    ),
 }
 
 
@@ -68,6 +74,9 @@ def test_composition_order() -> None:
     assert dag.get_next_nodes("validate_section_receipt") == ["gate_plan"]
     assert "improve" in dag.get_next_nodes("gate_plan", condition="passed")
     assert dag.get_next_nodes("improve") == ["validate_repair"]
+    assert dag.get_next_nodes("validate_repair") == ["regenerate_section_receipt"]
+    assert dag.get_next_nodes("regenerate_section_receipt") == ["revalidate_section_receipt"]
+    assert dag.get_next_nodes("revalidate_section_receipt") == ["kernel_receipt"]
     assert "gmp_start" in dag.get_next_nodes("gate_kernel", condition="passed")
     assert dag.get_next_nodes("gmp_start") == ["build"]
     assert dag.get_next_nodes("build") == ["gmp_finalize"]

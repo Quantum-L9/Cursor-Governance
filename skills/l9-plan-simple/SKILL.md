@@ -83,7 +83,8 @@ Section proof: generate then validate a **section receipt** against `../l9-plan/
 
 ```bash
 python3 scripts/generate_plan_section_receipt.py \
-  --plan-json <plan.json> --plan-md <plan.md> --out <plan>.section-receipt.json
+  --plan-json <plan.json> --plan-md <plan.md> --out <plan>.section-receipt.json \
+  --gar-invoked
 python3 scripts/validate_plan_section_receipt.py <plan>.section-receipt.json
 ```
 

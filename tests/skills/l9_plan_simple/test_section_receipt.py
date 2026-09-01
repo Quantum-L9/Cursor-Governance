@@ -31,9 +31,6 @@ def test_section_receipt_self_test() -> None:
 
 
 def test_dag_also_reads_gar() -> None:
-    import pytest
-
-    pytest.importorskip("structlog")
     from workflows.dags.plan_simple_build_dag import PLAN_SIMPLE_BUILD_DAG
 
     node = next(item for item in PLAN_SIMPLE_BUILD_DAG.nodes if item.id == "plan_simple")
