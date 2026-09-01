@@ -1476,9 +1476,7 @@ def _unenforced_prohibitions(workspace: Path) -> list[dict[str, Any]]:
     lock_path = workspace / "runtime" / "program-lock.json"
     if not lock_path.is_file():
         return []
-    entries = (load_json(lock_path).get("do_not_build") or {}).get(
-        "prohibited_primary_paths"
-    ) or []
+    entries = (load_json(lock_path).get("do_not_build") or {}).get("prohibited_primary_paths") or []
     unenforced: list[dict[str, Any]] = []
     for item in entries:
         if not isinstance(item, dict) or item.get("path_or_pattern"):

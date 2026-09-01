@@ -354,8 +354,8 @@ files:
   sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
   bytes: 18179
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 365184d3e9b4ae898d4411cbd304c30de309b4df30c1d9fcde5a397077cf0aa5
-  bytes: 111756
+  sha256: c9c384d8300fdef0f6b6557b9d1b41823fd3fbf898130be53d954d80fe8fba08
+  bytes: 111742
 - path: program-execution-controller-template/scripts/pec/exec_env.py
   sha256: 56fe5eb1114dda26f3e061de03580b788cfa5e654c117d0c0b65ac9083d15a10
   bytes: 10917
@@ -592,4 +592,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 195
-  total_bytes: 752230
+  total_bytes: 752216
