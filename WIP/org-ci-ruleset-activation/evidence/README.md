@@ -4,8 +4,14 @@
 |---|---|---|
 | `ruleset-id` | `apply.sh` | every successful apply — the canonical ruleset ID, asserted on later runs so promotion cannot land on a different object |
 | `org-rulesets.before.json` | operator, Phase 0 | baseline inventory |
+| `promoted-at` | `apply.sh` | only on `MODE=active` — the promotion clock. `verify.sh --pr` refuses `LIVE_CANARY_PASS` for a check run that started before it, so an evaluate-mode run cannot be re-read as proof of blocking enforcement |
 | `organization-ruleset-live-enforcement.json` | `verify.sh --check` | only at `RESULT: LIVE_ENFORCING` |
 | `remote-end-to-end-run.json` | `verify.sh --pr <owner/repo> <n>` | canary correlation |
+
+`verify.sh` writes **no** evidence file unless the whole run passes and the state
+is named. A failed conclusion, a check run that is not from GitHub Actions, or a
+run that started before promotion leaves the evidence directory untouched — so a
+file present here always means the check that produced it passed.
 
 `verify.sh` never prints a bare `PASS`. It names the state — `ADVISORY_VALID`,
 `ADVISORY_CANARY_PASS`, `LIVE_ENFORCING`, `LIVE_CANARY_PASS` — because an
