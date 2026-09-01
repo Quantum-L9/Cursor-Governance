@@ -42,7 +42,6 @@ pass() { echo "  PASS  $*"; }
 FAILED=0
 ENFORCEMENT=""
 RULESET_ID=""
-RUN_SLUG=""; RUN_PR=""; RUN_HEAD=""; RUN_URL=""; RUN_CONCLUSION=""; RUN_APP=""
 
 # Both payloads must name one ruleset, or every lookup below is ambiguous.
 if [[ "$NAME" != "$NAME_ACTIVE" ]]; then
@@ -155,6 +154,20 @@ check_ruleset() {
   case "$ENFORCEMENT" in
     active)
       pass "enforcement=active — the sanctioned path is BLOCKING"
+      if [[ "$FAILED" == "0" ]]; then
+        mkdir -p "$HERE/evidence"
+        jq -n --arg org "$ORG" --arg id "$RULESET_ID" --arg name "$NAME" \
+              --arg enf "$ENFORCEMENT" --arg path "$WF_PATH" --arg ref "$WF_REF" \
+              --argjson repo_id "$WF_REPO_ID" \
+              --argjson repos "$WANT_REPOS" --argjson refs "$WANT_REFS" \
+              --arg captured "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+          '{organization:$org, ruleset_id:($id|tonumber), ruleset_name:$name,
+            enforcement:$enf, workflow:{repository_id:$repo_id, path:$path, ref:$ref},
+            targets:{repositories:$repos, refs:$refs}, bypass_actors:[],
+            captured_at:$captured}' \
+          > "$HERE/evidence/organization-ruleset-live-enforcement.json"
+        echo "  wrote evidence/organization-ruleset-live-enforcement.json"
+      fi
       ;;
     evaluate)
       echo "  NOTE  enforcement=evaluate — advisory, NOT blocking."
@@ -229,43 +242,18 @@ check_run() {
     fi
   fi
 
-  # Deliberately does NOT write evidence here. Every write is deferred to
-  # write_evidence below, after FAILED is final: a run whose conclusion is
-  # failure, whose app is not github-actions, or which started before ACTIVE
-  # promotion must not leave an artifact behind that evidence/README.md then
-  # tells an operator to promote into a liveness claim.
-  RUN_SLUG="$slug"; RUN_PR="$pr"; RUN_HEAD="$head"
-  RUN_URL="$url"; RUN_CONCLUSION="$conclusion"; RUN_APP="$app"
-}
-
-write_evidence() {
   mkdir -p "$HERE/evidence"
-  if [[ "$ENFORCEMENT" == "active" ]]; then
-    jq -n --arg org "$ORG" --arg id "$RULESET_ID" --arg name "$NAME" \
-          --arg enf "$ENFORCEMENT" --arg path "$WF_PATH" --arg ref "$WF_REF" \
-          --argjson repo_id "$WF_REPO_ID" \
-          --argjson repos "$WANT_REPOS" --argjson refs "$WANT_REFS" \
-          --arg captured "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      '{organization:$org, ruleset_id:($id|tonumber), ruleset_name:$name,
-        enforcement:$enf, workflow:{repository_id:$repo_id, path:$path, ref:$ref},
-        targets:{repositories:$repos, refs:$refs}, bypass_actors:[],
-        captured_at:$captured}' \
-      > "$HERE/evidence/organization-ruleset-live-enforcement.json"
-    echo "  wrote evidence/organization-ruleset-live-enforcement.json"
-  fi
-  if [[ "$SAW_RUN" == "1" ]]; then
-    jq -n --arg slug "$RUN_SLUG" --arg pr "$RUN_PR" --arg head "$RUN_HEAD" \
-          --arg url "$RUN_URL" --arg conclusion "$RUN_CONCLUSION" --arg app "$RUN_APP" \
-          --arg enforcement "${ENFORCEMENT:-unknown}" \
-          --arg ruleset_id "${RULESET_ID:-unknown}" \
-          --arg captured "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-      '{consumer:$slug, pull_request:($pr|tonumber), head_sha:$head,
-        check_run_url:$url, check_run_app:$app, conclusion:$conclusion,
-        ruleset_id:$ruleset_id, enforcement_at_capture:$enforcement,
-        captured_at:$captured}' \
-      > "$HERE/evidence/remote-end-to-end-run.json"
-    echo "  wrote evidence/remote-end-to-end-run.json"
-  fi
+  jq -n --arg slug "$slug" --arg pr "$pr" --arg head "$head" \
+        --arg url "$url" --arg conclusion "$conclusion" --arg app "$app" \
+        --arg enforcement "${ENFORCEMENT:-unknown}" \
+        --arg ruleset_id "${RULESET_ID:-unknown}" \
+        --arg captured "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+    '{consumer:$slug, pull_request:($pr|tonumber), head_sha:$head,
+      check_run_url:$url, check_run_app:$app, conclusion:$conclusion,
+      ruleset_id:$ruleset_id, enforcement_at_capture:$enforcement,
+      captured_at:$captured}' \
+    > "$HERE/evidence/remote-end-to-end-run.json"
+  echo "  wrote evidence/remote-end-to-end-run.json"
 }
 
 SAW_RUN=0
@@ -279,24 +267,15 @@ esac
 
 echo
 if [[ "$FAILED" != "0" ]]; then
-  echo "  no evidence written — a failed verification proves nothing"
   echo "RESULT: FAIL"
   exit 1
 fi
 
 # Name the state. Never a bare PASS: advisory and blocking are not the same world.
 case "$ENFORCEMENT:$SAW_RUN" in
-  evaluate:0) RESULT="ADVISORY_VALID" ;;
-  evaluate:1) RESULT="ADVISORY_CANARY_PASS" ;;
-  active:0)   RESULT="LIVE_ENFORCING" ;;
-  active:1)   RESULT="LIVE_CANARY_PASS" ;;
-  *)
-    echo "  no evidence written — indeterminate state proves nothing"
-    echo "RESULT: FAIL (indeterminate enforcement state)"
-    exit 1
-    ;;
+  evaluate:0) echo "RESULT: ADVISORY_VALID" ;;
+  evaluate:1) echo "RESULT: ADVISORY_CANARY_PASS" ;;
+  active:0)   echo "RESULT: LIVE_ENFORCING" ;;
+  active:1)   echo "RESULT: LIVE_CANARY_PASS" ;;
+  *)          echo "RESULT: FAIL (indeterminate enforcement state)"; exit 1 ;;
 esac
-
-# Evidence is written only now: the verdict is clean AND the state is named.
-write_evidence
-echo "RESULT: $RESULT"

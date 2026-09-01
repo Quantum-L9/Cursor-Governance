@@ -5,9 +5,16 @@ base `main` @ `da0c7530df837d417a1437f9d08b5d8e61ba4a10`.
 **Audit date:** 2026-09-01 · **Mode:** read-only, exact head · **Verdict:** REQUEST_CHANGES.
 
 This document records what the audit found. The stacked PR carrying it also fixes
-the subset of findings that had one unambiguous correct answer; each of those is
-marked **FIXED HERE**. Everything else is left for the author to decide, on
-purpose — an auditor picking between two defensible designs is not a fix.
+the subset of findings that had one unambiguous correct answer **and no competing
+open PR**; each of those is marked **FIXED HERE**.
+
+Two org-CI findings (F-09, F-13) are marked **ROUTED TO PR #449** instead. The
+attempt to land them was blocked by the PR overlap gate: #449 is open on the same
+two files on a different lineage. That block was correct, and the fix is described
+in full rather than applied, so it can land where the files are already owned.
+
+Everything else is left for the author to decide, on purpose — an auditor picking
+between two defensible designs is not a fix.
 
 ---
 
@@ -98,10 +105,14 @@ no lease token, branch, or worktree. Unclaimable by anyone, recoverable only by
 hand. A projection the plan explicitly scopes as emission-only must never be able
 to fail a claim that already committed.
 
-**Fix:** the mapper call is inside `try: … except Exception: return None`.
+**Fix:** the mapper call is wrapped so it cannot raise out. It records
+`autonomy_projection_error` on the lease rather than returning silently — the
+Validate & Repair kernel's "prefer explicit errors over silent failure", satisfied
+without reintroducing the raise that was the defect, so a broken mapper and "this
+task has no contract to project" no longer look identical.
 Regression: `test_claim_survives_a_projection_that_raises` — raises from
-`contract_mapper` itself rather than patching the guard away, and asserts both
-that the lease returns and that the task is `in_progress` under *this* caller.
+`contract_mapper` itself rather than patching the guard away, and asserts the lease
+returns, the task is `in_progress` under *this* caller, and the error is recorded.
 
 ### F-02 — HIGH · confirmed · **NOT fixed — author's call**
 `pec/signals.py` docstrings claim *"optional OutcomePublisher projection"* and
@@ -177,16 +188,33 @@ second known-failing repository was in view.
 (`ALLOW_DEMOTE=1 DRY_RUN=0 MODE=evaluate bash apply.sh`) until the governance
 repo's own org-ci is green.**
 
-### F-09 — MEDIUM · confirmed · **FIXED HERE**
+### F-09 — MEDIUM · confirmed · **ROUTED TO PR #449**
 `verify.sh` wrote `remote-end-to-end-run.json` **unconditionally** — including on a
 failed conclusion, a non-Actions app, or a failed post-promotion clock check — and
 wrote `organization-ruleset-live-enforcement.json` from inside `check_ruleset`,
 before `check_run` could fail. `evidence/README.md` then tells an operator to
 promote those files into liveness claims.
 
-**Fix:** both writes moved into a single `write_evidence`, called only after
-`FAILED` is final *and* the state is named. A failed or indeterminate run now says
-`no evidence written` and leaves the directory untouched.
+**PR #449 (`agent/cursor/org-ci-closure-ev`) does not fix this** — it enriches both
+payloads with schema, source_type, check_run_id and Actions run/job ids, but keeps
+`organization-ruleset-live-enforcement.json` inside `check_ruleset` and
+`remote-end-to-end-run.json` unconditional at the end of `check_run`. Richer
+evidence written on the same failing paths.
+
+**Proposed fix, not applied here.** This audit's own attempt to land it was
+correctly blocked by the PR overlap gate: #449 is open on the same two files on a
+different lineage, and a sibling PR would have been the split-ownership the gate
+exists to prevent. The change belongs on #449:
+
+- move both `jq` writes into one `write_evidence` function;
+- call it only after `FAILED` is final **and** the enforcement state has been
+  named, so an indeterminate state writes nothing either;
+- have the failure paths print `no evidence written` so the operator sees why.
+
+### F-13 — LOW · **ROUTED TO PR #449**
+`evidence/README.md` omits `promoted-at` from its "written by / when" table, though
+it is load-bearing for `LIVE_CANARY_PASS`. Same file collision as F-09, same
+routing. Add the row, and state the write discipline above alongside it.
 
 ### F-12 — MEDIUM · confirmed · **FIXED HERE**
 `tests/test_unified_loop_seams.py` asserted
@@ -198,11 +226,6 @@ tautology had hidden: the standard fixture contract declares no `action_class`, 
 the CLI dispatch plan is `UNSUPPORTED` with `fallback: manual_worker_brief` — the
 render-contract dispatch seam never actually routes under the test fixture. That
 is now asserted explicitly rather than obscured.
-
-### F-13 — LOW · **FIXED HERE**
-`evidence/README.md` omitted `promoted-at` from its "written by / when" table,
-though it is load-bearing for `LIVE_CANARY_PASS`. Added, along with the write
-discipline from F-09.
 
 ### F-14 — LOW · confirmed · **FIXED HERE**
 Distill job filenames used one-second granularity, so two same-event signals inside
