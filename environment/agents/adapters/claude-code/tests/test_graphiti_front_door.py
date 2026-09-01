@@ -198,5 +198,75 @@ class FrontDoorTests(unittest.TestCase):
             self.assertNotRegex(env, rf"^\s*{token}\s*=", f"{token} must not be assigned")
 
 
+class ValidatorCredentialScanTests(unittest.TestCase):
+    """The validator must scan what SHIPS, not the template's private keys.
+
+    A blanket ``"GRAPHITI_MCP_TOKEN" in json.dumps(servers)`` fired on the
+    sanctioned ``_optional_headers`` directive, so ``make claude-env`` reported
+    STRUCTURAL_FAIL against a template its own contract requires. That pinned
+    the bootstrap receipt at ``settings: DEGRADED`` indefinitely — and with it
+    the exit-5 signal that is supposed to mean "the files are correct and
+    nothing loaded them". A gate stuck red cannot report a real failure.
+    """
+
+    @staticmethod
+    def _validator():
+        sys.path.insert(0, str(CLAUDE))
+        import validate_claude_env as v
+
+        return v
+
+    def test_conditional_bearer_is_not_a_credential_in_server_config(self) -> None:
+        """The real template must pass — this is the regression."""
+        v = self._validator()
+        template = json.loads((CLAUDE / "mcp.template.json").read_text(encoding="utf-8"))
+        servers = template["mcpServers"]
+
+        shipped = {name: v._shipped_shape(spec) for name, spec in servers.items()}
+        self.assertNotIn(
+            "GRAPHITI_MCP_TOKEN",
+            json.dumps(shipped),
+            "_optional_headers is stripped at render; it is not server config",
+        )
+        for name, spec in servers.items():
+            self.assertEqual([], v._optional_header_failures(name, spec))
+
+    def test_unconditional_bearer_still_fails(self) -> None:
+        """Stripping directives must not stop catching a real bearer."""
+        v = self._validator()
+        spec = {
+            "type": "http",
+            "url": "${GRAPHITI_MCP_URL}",
+            "headers": {"Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"},
+        }
+        self.assertIn("GRAPHITI_MCP_TOKEN", json.dumps(v._shipped_shape(spec)))
+
+    def test_literal_credential_in_optional_headers_fails(self) -> None:
+        """A directive may reference a variable, never carry a value.
+
+        Without this, moving the scan off ``_optional_headers`` would open the
+        hole it was closing: the block merges into ``headers`` as soon as the
+        variable is set, so a literal there ships a live credential.
+        """
+        v = self._validator()
+        spec = {
+            "type": "http",
+            "_optional_headers": {"GRAPHITI_MCP_TOKEN": {"Authorization": "Bearer sk-literal"}},
+        }
+        failures = v._optional_header_failures("graphiti-memory", spec)
+        self.assertEqual(1, len(failures), failures)
+        self.assertIn("never a literal credential", failures[0])
+
+    def test_variable_reference_in_optional_headers_passes(self) -> None:
+        v = self._validator()
+        spec = {
+            "type": "http",
+            "_optional_headers": {
+                "GRAPHITI_MCP_TOKEN": {"Authorization": "Bearer ${GRAPHITI_MCP_TOKEN}"}
+            },
+        }
+        self.assertEqual([], v._optional_header_failures("graphiti-memory", spec))
+
+
 if __name__ == "__main__":
     unittest.main()

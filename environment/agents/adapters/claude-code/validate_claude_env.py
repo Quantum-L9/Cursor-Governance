@@ -142,6 +142,52 @@ def _iter_http_urls(obj: object) -> Iterator[str]:
         yield obj
 
 
+_MEMORY_CREDENTIAL_NAMES = ("GRAPHITI_MCP_TOKEN",)
+_ENV_REF_RE = re.compile(r"\$\{[A-Z0-9_]+\}")
+
+
+def _shipped_shape(spec: object) -> object:
+    """What a server spec actually renders to.
+
+    Underscore-prefixed keys are template directives — ``_comment``,
+    ``_requires_env``, ``_optional_headers`` — and ops/scripts/claude_projection.py
+    (``_render_server``) strips them before anything ships. Scanning them as if
+    they were functional config cannot distinguish the sanctioned conditional
+    header from an unconditional bearer, which is the entire purpose of the
+    directive: on a surface where the variable is not proxied, no header
+    materialises at all.
+    """
+    if not isinstance(spec, dict):
+        return spec
+    return {key: value for key, value in spec.items() if not str(key).startswith("_")}
+
+
+def _optional_header_failures(name: str, spec: object) -> list[str]:
+    """``_optional_headers`` may reference a variable, never carry a value.
+
+    The directive merges its block into ``headers`` the moment the variable is
+    set, so a literal here is a real credential waiting to ship. Only ``${VAR}``
+    references are admissible — the same rule the functional ``headers`` block
+    answers to.
+    """
+    if not isinstance(spec, dict):
+        return []
+    optional = spec.get("_optional_headers")
+    if not isinstance(optional, dict):
+        return []
+    out: list[str] = []
+    for var, block in optional.items():
+        if not isinstance(block, dict):
+            continue
+        for header, value in block.items():
+            if isinstance(value, str) and not _ENV_REF_RE.search(value):
+                out.append(
+                    f"mcp.template.json {name}._optional_headers[{var}].{header} "
+                    "must reference ${VAR}, never a literal credential"
+                )
+    return out
+
+
 def check_mcp_uses_env_refs(failures: list[str]) -> None:
     path = HERE / "mcp.template.json"
     if not path.is_file():
@@ -179,9 +225,18 @@ def check_mcp_uses_env_refs(failures: list[str]) -> None:
         if banned in raw:
             _fail(f"mcp.template.json must not reference {banned}", failures)
     # Functional config must never carry the bearer; a prohibition mention in
-    # the _comment block documents the contract and is expected.
-    if "GRAPHITI_MCP_TOKEN" in json.dumps(servers):
-        _fail("mcp.template.json server config must not reference GRAPHITI_MCP_TOKEN", failures)
+    # the _comment block documents the contract and is expected. Template
+    # directives are stripped before anything ships, so scan the shape that
+    # renders: an unconditional bearer still fails, while the sanctioned
+    # _optional_headers conditional — which emits nothing on an unproxied
+    # surface — no longer reads as a credential in the server config.
+    shipped = {name: _shipped_shape(spec) for name, spec in servers.items()}
+    for credential in _MEMORY_CREDENTIAL_NAMES:
+        if credential in json.dumps(shipped):
+            _fail(f"mcp.template.json server config must not reference {credential}", failures)
+    for name, spec in servers.items():
+        for message in _optional_header_failures(name, spec):
+            _fail(message, failures)
     if not failures:
         print("  OK: mcp.template.json references no memory credential in server config")
 
