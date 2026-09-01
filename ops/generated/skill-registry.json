@@ -14,7 +14,7 @@
       "l9-gap-analysis",
       "l9-ynp",
       "l9-skill-compiler",
-      "l9-wire-skill-into-repo",
+      "l9-wire-into-repo",
       "l9-update-agent-docs",
       "l9-api-smoke-testing",
       "l9-auditing-performance",
@@ -64,7 +64,7 @@
           "admin merge",
           "force push"
         ],
-        "note": "Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run make pr or make pr-check. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
+        "note": "Invoking /l9-pr-remediation authorizes merge of all open PRs in the target repo after Converge (oldest-first, stack-safe). Subscribe/own every open PR through required checks; do not hand the watch back to the human. The per-PR board verdict comes from ops/autonomy/pr_board.py (required-check identity from branch protection plus rulesets, conflicted paths); an ownership class is the edit axis and never parks a PR; leftover requires --human-decision or --unfixable-check; mission is open_prs=0. Verify with make precommit-repo; publish with git push of the already-open PR branch. Do not run make pr or make pr-check. Campaigns/make pr stay no-merge. Force-push and admin-merge remain forbidden. Receipt: ops/autonomy/authorize_merge.py --all-open.\n",
         "positive_signals": [
           "remediate the pr",
           "remediate until green",
@@ -221,19 +221,31 @@
         ]
       },
       {
-        "id": "wire_skill",
-        "positive_signals": [
-          "wire the skill",
-          "wire skill into",
-          "register the skill",
-          "skill discovery tables",
-          "subagent preload"
+        "id": "wire_into_repo",
+        "negative_signals": [
+          "governance symlinks",
+          "workspace symlinks",
+          "graphiti memory",
+          "claude code deepseek"
         ],
-        "primary": "l9-wire-skill-into-repo",
+        "positive_signals": [
+          "wire into repo",
+          "wire this capability",
+          "wire this artifact",
+          "wire the skill",
+          "register this capability",
+          "make this discoverable",
+          "make this reachable",
+          "connect this to consumers",
+          "integrate this upstream",
+          "rewire this",
+          "verify the wiring",
+          "unwire this",
+          "deregister this"
+        ],
+        "primary": "l9-wire-into-repo",
         "signal_weight": 8,
-        "supporting": [
-          "l9-update-agent-docs"
-        ]
+        "supporting": []
       },
       {
         "id": "update_agent_docs",
@@ -693,8 +705,7 @@
       "l9-graphiti-memory",
       "l9-architecture-decision-records",
       "l9-update-agent-docs",
-      "l9-ynp",
-      "l9-wire-skill-into-repo"
+      "l9-ynp"
     ],
     "trivial_patterns": [
       "^fix (the )?typo\\b",
@@ -972,23 +983,12 @@
     },
     {
       "composition_role": "general",
-      "description": "Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when .cursor/rules, .cursor/commands, .cursor/skills, or .cursor/governance links are missing/broken, or when the user asks to set up, repair, or validate governance symlinks.",
+      "description": "Wire and verify a repo's Cursor governance symlinks against the GitHub-backed governance SSOT at $HOME/.cursor-governance. Runs the canonical setup_workspace_symlinks.sh in the current workspace, then runs validate_governance_symlinks.sh and confirms PASS. Use when setting up a new workspace/repo for governance, when the .cursor-commands link, the l9-governance plugin link, or .cursor/plans are missing or broken, or when asked to set up, repair, or validate governance symlinks.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-governance-symlinks",
       "path": "skills/l9-governance-symlinks",
-      "reason": "narrow symlink setup/validate op (subset of l9-governance-wiring); disable-model-invocation, explicit only",
-      "user_invocable": true,
-      "when_to_use": ""
-    },
-    {
-      "composition_role": "general",
-      "description": "workspace governance symlinks, component wire executor, confirm-wiring audit, governance checks, rules inventory, and github ssot backup. use for /wire governance, confirm-wiring, or governance-backup.",
-      "disable_model_invocation": true,
-      "invocation": "explicit_only",
-      "name": "l9-governance-wiring",
-      "path": "skills/l9-governance-wiring",
-      "reason": "symlinks, hooks, and governance backup",
+      "reason": "narrow governance workspace binding setup and validation; exact-owner mutation skill surviving the l9-governance-wiring retirement; disable-model-invocation, explicit only",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1137,12 +1137,12 @@
     },
     {
       "composition_role": "general",
-      "description": "diagnose or converge github prs \u2014 remediator path is precommit-repo then git push, then a stack-safe oldest-first merge train. do not run make pr or make pr-check. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
+      "description": "diagnose or converge github prs \u2014 remediator path is precommit-repo then git push, then a stack-safe oldest-first merge train. board verdict is ops/autonomy/pr_board.py, never a check conclusion alone. do not run make pr or make pr-check. use when a campaign left prs unmergeable, the user invokes /l9-pr-remediation, or they ask to fix, remediate, babysit, converge, or merge failing prs.",
       "disable_model_invocation": true,
       "invocation": "explicit_only",
       "name": "l9-pr-remediation",
       "path": "skills/l9-pr-remediation",
-      "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, then merges them oldest-first and stack-safe (squash only when unstacked). make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
+      "reason": "Diagnose remains hint-routeable. Invoking /l9-pr-remediation Converge remediates all open PRs via make precommit-repo then git push, subscribes/owns them through required checks, then merges oldest-first and stack-safe (squash only when unstacked). The board verdict (merge/fix/wait/leftover) comes from ops/autonomy/pr_board.py on required-check identity, never from an ownership class or a bare check conclusion; leftover requires a declaration. Mission is open_prs=0. Do not hand the watch back to the human. make pr is not the remediator publish path. Campaigns/make pr stay no-merge. Force-push and admin-merge stay forbidden.",
       "user_invocable": true,
       "when_to_use": ""
     },
@@ -1280,14 +1280,14 @@
     },
     {
       "composition_role": "primary",
-      "description": "registers, updates, or retires agent skills in discovery tables, autonomy manifests, adapter symlinks, subagent preloads, and related agent docs. use immediately after l9-skill-compiler finishes, when a skill pack exists but is not discoverable, when the user asks to wire or register a skill, or when a skill must be deprecated, unwired, archived, deregistered, or superseded \u2014 deprecate means archive out of live skills/ and clear every registry, never leave a deprecated pack discoverable.",
+      "description": "wire, rewire, verify, or unwire an existing repository artifact or capability by locating its authoritative owner, selecting the highest-leverage upstream integration point, propagating through existing manifests, generators, exports, adapters, and discovery surfaces, and proving downstream reachability. use when something exists but is not discoverable, reachable, registered, exported, invoked, configured, hooked up, or consistently consumed across intended repository surfaces.",
       "disable_model_invocation": false,
       "invocation": "model_allowed",
-      "name": "l9-wire-skill-into-repo",
-      "path": "skills/l9-wire-skill-into-repo",
+      "name": "l9-wire-into-repo",
+      "path": "skills/l9-wire-into-repo",
       "reason": "",
       "user_invocable": true,
-      "when_to_use": "registering a new, relocated, or renamed skill into repo discovery tables and subagent preloads"
+      "when_to_use": "wiring, rewiring, verifying, registering, exposing, or unwiring an existing repository artifact or capability by finding its authoritative upstream owner and propagating reachability to intended consumers without duplicate leaf wiring"
     },
     {
       "composition_role": "primary",
@@ -1302,6 +1302,6 @@
     }
   ],
   "source": "skills/AUTONOMY_MANIFEST.yaml",
-  "source_manifest_sha256": "b2ac419833927c539c0e1c7df9b419e7d0c2c67b7d4f72fe9305e824c8939c68",
-  "source_skill_corpus_sha256": "944964b3101a46e660d3f1eaebc8262b92ee5d2d7492eaf783341a38e964b861"
+  "source_manifest_sha256": "cbaf39b32ddae7a4b663ae852eed2d6f339bfc026a1cd9e9547ed2d35fe050b6",
+  "source_skill_corpus_sha256": "a05b9f72f530bdc2fa3a6846324ef836e06502cdcade7f45f144cd26d925d1c8"
 }
