@@ -75,6 +75,16 @@ def _is_under_ssot(text: str, ssot: Path) -> bool:
     return False
 
 
+def _has_governance_path_component(text: str) -> bool:
+    """True when a governance fragment is a path component, not a filename substring.
+
+    ``/tmp/com.tenx.cursor-governance.out`` contains ``.cursor-governance`` as
+    a label-derived filename, not as a directory. That is not a governance root.
+    """
+    parts = Path(os.path.expanduser(text)).parts
+    return any(fragment in parts for fragment in GOVERNANCE_FRAGMENTS)
+
+
 def classify_string(text: str, ssot: Path) -> str | None:
     """Return a reason if this string violates path law, else None."""
     if not text:
@@ -84,7 +94,7 @@ def classify_string(text: str, ssot: Path) -> str | None:
     for fragment in FORBIDDEN_FRAGMENTS:
         if fragment in text:
             return f"forbidden fragment {fragment!r}"
-    if any(fragment in text for fragment in GOVERNANCE_FRAGMENTS):
+    if _has_governance_path_component(text):
         return "governance root other than $HOME/.cursor-governance"
     return None
 

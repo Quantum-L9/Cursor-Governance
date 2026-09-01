@@ -26,7 +26,8 @@ embedded them. No tool dumps, no sqlite, no git_status wrappers.
 ## Operator
 
 ```bash
-# unload dead jobs
+# unload dead jobs (also: com.tenx.cursor-governance leftover monitor)
+launchctl bootout "gui/$(id -u)/com.tenx.cursor-governance" 2>/dev/null || true
 launchctl bootout "gui/$(id -u)/com.tenx.chat-export" 2>/dev/null || true
 launchctl bootout "gui/$(id -u)/com.tenx.learning-processor" 2>/dev/null || true
 

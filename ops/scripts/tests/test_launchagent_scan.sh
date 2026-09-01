@@ -93,4 +93,51 @@ if grep -q 'launchctl unload' "$OPS_DIR/check_governance_wiring.sh" \
 fi
 pass "wiring checker does not mutate LaunchAgents"
 
+# Label-derived /tmp log names must not false-FAIL path law.
+rm -f "$AGENTS/com.l9.ok.plist"
+cat >"$AGENTS/com.tenx.cursor-governance.plist" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.tenx.cursor-governance</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/x/bin/tenx-cursor-governance.sh</string>
+  </array>
+  <key>StandardOutPath</key>
+  <string>/tmp/com.tenx.cursor-governance.out</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/com.tenx.cursor-governance.err</string>
+</dict>
+</plist>
+EOF
+rc=0
+out="$("$PYTHON" "$SCAN" --dir "$AGENTS" --ssot "$SSOT" 2>&1 || true)"
+"$PYTHON" "$SCAN" --dir "$AGENTS" --ssot "$SSOT" >/dev/null || rc=$?
+[ "$rc" -eq 0 ] || fail_now "/tmp tenx label logs must PASS, got $rc: $out"
+pass "/tmp com.tenx.cursor-governance logs are not a governance root"
+
+# Installer retire: fake LaunchAgents dir, never the real ~/Library/LaunchAgents.
+# shellcheck source=../lib/retire_leftover_launchagents.sh
+source "$OPS_DIR/lib/retire_leftover_launchagents.sh"
+FAKE_LA="$TMP/retire-agents"
+mkdir -p "$FAKE_LA"
+for label in com.tenx.cursor-governance com.tenx.chat-export com.tenx.learning-processor; do
+  printf '<plist></plist>\n' >"$FAKE_LA/${label}.plist"
+done
+L9_LAUNCHAGENTS_DIR="$FAKE_LA" retire_leftover_tenx_launchagents >/dev/null
+for label in com.tenx.cursor-governance com.tenx.chat-export com.tenx.learning-processor; do
+  [ ! -e "$FAKE_LA/${label}.plist" ] || fail_now "live $label plist still present after retire"
+  [ -e "$FAKE_LA/_retired/${label}.plist" ] || fail_now "retired $label plist missing"
+done
+scan_rc=0
+"$PYTHON" "$SCAN" --dir "$FAKE_LA" --ssot "$SSOT" >/dev/null || scan_rc=$?
+[ "$scan_rc" -eq 0 ] || fail_now "scan after retire must PASS, got $scan_rc"
+grep -q 'retire_leftover_tenx_launchagents' "$OPS_DIR/setup_workspace_symlinks.sh" \
+  || fail_now "setup_workspace_symlinks.sh must call retire_leftover_tenx_launchagents"
+pass "retire moves three tenx plists to _retired; scan PASSes"
+
 echo "RESULT: PASS — launchagent scan ($PASS checks)"
