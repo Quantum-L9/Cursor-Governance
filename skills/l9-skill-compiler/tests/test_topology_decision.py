@@ -3,8 +3,14 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", "scripts"))
-sys.modules.pop("_common", None)
+SCRIPTS = os.path.join(HERE, "..", "scripts")
+sys.path.insert(0, SCRIPTS)
+_existing = sys.modules.get("_common")
+_want = os.path.realpath(os.path.join(SCRIPTS, "_common.py"))
+if _existing is not None:
+    _have = os.path.realpath(getattr(_existing, "__file__", "") or "")
+    if _have != _want:
+        sys.modules.pop("_common", None)
 
 import scan_skill_topology as st
 
