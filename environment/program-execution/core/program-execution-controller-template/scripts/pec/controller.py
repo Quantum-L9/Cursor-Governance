@@ -1123,8 +1123,11 @@ def _claim_autonomy_projection(
             attempt_number=1,
         )
         ids = mapped["ids"]
-    except Exception:
-        return None
+    except Exception as exc:
+        # Explicit, not silent: a broken mapper and "this task has no contract
+        # to project" must not look identical to whoever reads the lease. The
+        # claim still stands -- that is the whole point of the guard.
+        return {"autonomy_projection_error": f"{type(exc).__name__}: {exc}"}
     return {
         "autonomy_action_id": ids["action_id"],
         "autonomy_packet_skeleton": {

@@ -200,7 +200,9 @@ class UnifiedLoopSeamTests(unittest.TestCase):
 
             # Raise from contract_mapper itself -- patching
             # _claim_autonomy_projection would replace the guard under test.
-            sys.path.insert(0, str(pe_root() / "integrations" / "autonomy-control-plane"))
+            mapper_dir = str(pe_root() / "integrations" / "autonomy-control-plane")
+            if mapper_dir not in sys.path:
+                sys.path.insert(0, mapper_dir)
             import contract_mapper
 
             def _raise(*args: object, **kwargs: object) -> None:
@@ -218,6 +220,7 @@ class UnifiedLoopSeamTests(unittest.TestCase):
                 contract_mapper.map_program_contract = original
             self.assertTrue(lease.get("lease_id"), lease)
             self.assertNotIn("autonomy_action_id", lease)
+            self.assertIn("ContractActionError", lease["autonomy_projection_error"])
             # The task stays claimed by THIS caller, holding the lease it got.
             in_progress = controller.next_tasks(workspace)["in_progress"]
             self.assertEqual([t["id"] for t in in_progress], ["TASK-001"])

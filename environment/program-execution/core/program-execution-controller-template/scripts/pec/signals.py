@@ -12,7 +12,7 @@ from .common import digest_object
 # Receipt fields a distill job may carry verbatim. Everything else is
 # represented by the receipt digest, so a job never becomes a second copy of
 # controller state and never widens what leaves the workspace.
-_SCALAR_RECEIPT_FIELDS = ("task_id", "status", "attempt", "evidence_id", "receipt_digest")
+_SCALAR_RECEIPT_FIELDS = ("task_id", "status", "attempt", "evidence_id")
 
 
 def distill_queue_dir(workspace: Path) -> Path:
