@@ -112,7 +112,11 @@ W8+ is forbidden until a separate plan with a fresh baseline SHA.
 
 ---
 
-## Verified at HEAD (`35880e70`)
+## Verified at HEAD (`35880e70`) — W7 completion snapshot
+
+> History. This is the evidence at W0–W7 completion (landed `e8785018`); it is not
+> rewritten as work continues. Everything published after W7 is in
+> **Published at HEAD** below.
 
 | Check | Evidence |
 | --- | --- |
@@ -137,6 +141,46 @@ W8+ is forbidden until a separate plan with a fresh baseline SHA.
   CE-AT-005/006 are closed **in shadow only**; the live path is unproven.
 
 ---
+
+## Published at HEAD (`fea124cd`)
+
+[PR #442](https://github.com/Quantum-L9/Cursor-Governance/pull/442) · base `main`
+(at `da0c7530`) · 11 commits · 38 files · `mergeable: true`, state `blocked` · 0 reviews.
+
+Five batches:
+
+| Batch | What |
+|---|---|
+| `pec-execution-completeness-10-2026-08-30` | remediation 1–10 |
+| `pec-normative-and-disposition-2-2026-08-31` | remediation 11–12 |
+| `pec-tail-5-2026-08-31` | remediation 13–17 — queue emptied |
+| `pec-w8-s0-counterexample-reproduction-2026-09-01` | 6 counterexamples that reproduced as nothing |
+| `pec-w8-s0-baseline-freeze-2026-09-01` | `GATE-S0-BASELINE-CHARACTERIZED` made executable |
+
+**CI on this head: 22 checks — 19 success, 2 skipped, 1 failure.** Every job that
+runs this work is green: Peer Execution Conformance, Test Suite, Lint and Type
+Check, governance-self-check.
+
+Local evidence: gate 5 PASS / 1 FAIL (`pinned_to_main`), exit 1 · gate tests 16 OK ·
+registry conformance 14 OK · conformance runner PASS, 649 tests, 0 failures ·
+hardening 56 passed, 15 xfailed.
+
+### The one red check is not this PR's
+
+`Analyze (central Core)` fails at *Enforce central mode on SDK technical gate*.
+`l9-ci-sdk` `7d7762e` `provider.py:396-415` maps **every** entry of semgrep's
+`errors[]` to `ProviderFailure(fatal=required)` without reading the entry's `level`.
+Semgrep reported `{level: warn, type: Timeout}` — a warning — with 669/669 files
+scanned and all 150 findings produced. Coverage is derived from that same failures
+list at `provider.py:431`, so one warning produces both gate reasons and the gate
+returns `incomplete` on a bundle with zero blocking and zero unresolved findings.
+
+Filed upstream as [`l9-ci-sdk#79`](https://github.com/Quantum-L9/l9-ci-sdk/issues/79)
+and [`l9-ci-core#122`](https://github.com/Quantum-L9/l9-ci-core/issues/122); published
+on the PR as `issuecomment-5486348896`; carried as session debt
+`sdk-semgrep-warn-promoted-to-fatal`. Not re-runnable from this surface
+(`rerun-failed-jobs` returns 403). Nothing in this repository can fix it, and it was
+not worked around by excluding the file or the rule.
 
 ## External audit reconciliation (2026-08-31)
 

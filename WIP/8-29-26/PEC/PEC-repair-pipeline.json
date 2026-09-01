@@ -57,7 +57,8 @@
       "test_graduation.py: golden journeys with zero blocking metrics (shadow only; make campaign not run)"
     ],
     "residual_w3": "Campaign runner still refuses program-execution.intent.v1 execute; compile ingress is the landed path.",
-    "residual_w7": "Spine execute/Lock/10-run repeatability pending; shadow graduation metrics are zero."
+    "residual_w7": "Spine execute/Lock/10-run repeatability pending; shadow graduation metrics are zero.",
+    "snapshot_of": "W0-W7 completion evidence at 35880e70 / landed e8785018. Historical — do not rewrite. Work published after W7 is recorded in published_at_head below."
   },
   "external_audit_reconciliation": {
     "reconciled_at": "2026-08-31",
@@ -1256,5 +1257,59 @@
     "validation command_or_inspection is one shell op — no && || | ; $()",
     "IDs ^TASK-[0-9]{3,}$ / ^GATE-[0-9]{3,}$ — TASK-001A fails",
     "failed campaign_id is not reusable; stale blueprint is silently reused"
+  ],
+  "published_at_head": {
+    "head_sha": "fea124cd2aa152123e61231260aba5c3f6817160",
+    "branch": "claude/cursor-governance-pec-pack-lcw0p8",
+    "pr": "Quantum-L9/Cursor-Governance#442",
+    "pr_url": "https://github.com/Quantum-L9/Cursor-Governance/pull/442",
+    "base": "main",
+    "base_sha_at_publish": "da0c7530",
+    "commits": 11,
+    "changed_files": 38,
+    "mergeable": true,
+    "mergeable_state": "blocked",
+    "reviews": 0,
+    "batches": [
+      "pec-execution-completeness-10-2026-08-30 — remediation 1-10",
+      "pec-normative-and-disposition-2-2026-08-31 — remediation 11-12",
+      "pec-tail-5-2026-08-31 — remediation 13-17 (queue emptied)",
+      "pec-w8-s0-counterexample-reproduction-2026-09-01",
+      "pec-w8-s0-baseline-freeze-2026-09-01"
+    ],
+    "ci_verdict": {
+      "checks_total": 22,
+      "success": 19,
+      "skipped": 2,
+      "failure": 1,
+      "pec_jobs_green": [
+        "Peer Execution Conformance",
+        "Test Suite",
+        "Lint and Type Check",
+        "governance-self-check"
+      ]
+    },
+    "local_evidence": {
+      "gate_s0_baseline": "5 conditions PASS, 1 FAIL (pinned_to_main), exit 1",
+      "gate_tests": "16 OK",
+      "registry_conformance": "14 OK",
+      "conformance_runner": "PASS — 649 tests, 0 failures, 0 errors",
+      "hardening_suite": "56 passed, 15 xfailed"
+    }
+  },
+  "external_blockers": [
+    {
+      "id": "analyze-central-core",
+      "symptom": "check `Analyze (central Core)` fails at 'Enforce central mode on SDK technical gate'",
+      "root_cause": "l9-ci-sdk 7d7762e l9_ci/providers/semgrep/provider.py:396-415 maps every entry of semgrep's errors[] to ProviderFailure(fatal=required) without reading the entry's 'level'. Semgrep reported {level: warn, type: Timeout} with 669/669 files scanned and all 150 findings produced. Coverage is derived from the same failures list at provider.py:431, so one warning yields both gate reasons.",
+      "not_this_pr": true,
+      "filed": [
+        "Quantum-L9/l9-ci-sdk#79",
+        "Quantum-L9/l9-ci-core#122"
+      ],
+      "published": "Cursor-Governance#442 issuecomment-5486348896",
+      "session_debt_id": "sdk-semgrep-warn-promoted-to-fatal",
+      "cannot_rerun": "rerun-failed-jobs returns 403 on this surface"
+    }
   ]
 }
