@@ -622,3 +622,61 @@ def test_adr_0028_required_sections():
     assert "Option F" in text
     assert "hydration.cli close" in text
     assert "memory-bank" in text
+
+
+# --- close_session budget parameter -----------------------------------------
+# TOTAL_BUDGET is a PER-CALL ceiling. A caller that closes several repositories
+# inside one hook window (memory_writeback.py on a multi-repo container) must
+# divide its own allowance between them: six calls at the 30 s default overrun a
+# Stop hook by an order of magnitude, and the hook is killed mid-write with no
+# record of how far it got.
+
+
+def _close_with_budget(monkeypatch, tmp_path, budget):
+    monkeypatch.setenv("OPENAI_API_KEY", "sk-test")
+    monkeypatch.setenv("MEMORY_PHASE_B", "1")
+    monkeypatch.delenv("MEMORY_DISTILL_S3_BUCKET", raising=False)
+    monkeypatch.setattr(
+        cs, "resolve_group_id", lambda p: {"group_id": "cursor-governance", "readonly": False}
+    )
+    monkeypatch.setattr(cs, "load_transcript_excerpt", lambda **k: ("user: ship it", "test"))
+    monkeypatch.setattr(cs, "already_closed", lambda *a, **k: False)
+    monkeypatch.setattr(cs, "write_receipt", lambda *a, **k: None)
+    monkeypatch.setattr(
+        cs, "_write_kind", lambda body, **kw: {"written": True, "kind": kw["kind"]}
+    )
+    monkeypatch.setattr(cs, "_distill_signal_packet", lambda **k: (None, "stubbed"))
+    import graphiti_memory_client as gmc
+
+    monkeypatch.setattr(gmc, "load_env", lambda: None)
+    return cs.close_session(
+        project_dir=tmp_path,
+        session_id="budget-1",
+        reason="user_close",
+        agent_id="cursor",
+        dry_run=True,
+        budget=budget,
+    )
+
+
+def test_small_budget_starves_phase_b_but_keeps_phase_a(monkeypatch, tmp_path):
+    """Phase A (the PICKUP write) survives a starved budget; only Phase B yields."""
+    report = _close_with_budget(monkeypatch, tmp_path, budget=2.0)
+    assert report["phase_a"] is True, "the PICKUP write must not be sacrificed to the budget"
+    assert any("insufficient time budget" in w for w in report["warnings"])
+
+
+def test_default_budget_is_unchanged_when_not_passed(monkeypatch, tmp_path):
+    """budget=None keeps TOTAL_BUDGET, so every existing single-repo caller is untouched."""
+    report = _close_with_budget(monkeypatch, tmp_path, budget=None)
+    assert report["phase_a"] is True
+    assert not any("insufficient time budget" in w for w in report["warnings"])
+
+
+def test_budget_is_accepted_as_a_keyword(monkeypatch, tmp_path):
+    import inspect
+
+    params = inspect.signature(cs.close_session).parameters
+    assert "budget" in params
+    assert params["budget"].kind is inspect.Parameter.KEYWORD_ONLY
+    assert params["budget"].default is None

@@ -122,8 +122,43 @@ fi
 RECEIPT_STAGE="startup"
 RECEIPT_REMEDIATION="bash $GOV_DIR/environment/agents/adapters/claude-code/install.sh"
 RECEIPT_WRITTEN=0
+#: Set to 1 only when the installer reaches its own final write_receipt, i.e.
+#: every stage ran. Until then any component still reading READY holds its
+#: INITIAL value, not a verdict.
+RECEIPT_COMPLETE=0
 
 stage() { RECEIPT_STAGE="$1"; }
+
+# On an INCOMPLETE run, a component still reading READY was never evaluated.
+# Serialising it as READY is how a receipt came to assert total failure and
+# total health in the same document: `"state": "failed"`, `"stage":
+# "shared-bootstrap"`, and all eleven components READY with empty reasons,
+# because the process was killed inside stage 1 and `downgrade` — the only
+# mutator — never ran for any of them. The reader then printed
+# "failed — installer failed at stage 'shared-bootstrap'" directly above
+# "shared_bootstrap: READY".
+#
+# A component that WAS downgraded keeps its verdict: DEGRADED and BLOCKED are
+# evidence. Only untouched optimism is rewritten, and only when the run did not
+# finish — this is the same rule the projection already applies one layer down
+# ("nothing was classified, so no domain can claim health from silence").
+_receipt_component() {
+  if [ "$RECEIPT_COMPLETE" = "0" ] && [ "${1:-}" = "READY" ]; then
+    printf 'UNKNOWN'
+  else
+    printf '%s' "${1:-}"
+  fi
+}
+
+# Reason for a component the run never reached. Named so the receipt says why it
+# is UNKNOWN rather than leaving the empty string that made this invisible.
+_receipt_reason() { # $1=status $2=recorded reason
+  if [ "$RECEIPT_COMPLETE" = "0" ] && [ "${1:-}" = "READY" ]; then
+    printf 'not evaluated — installer exited at stage %s' "$RECEIPT_STAGE"
+  else
+    printf '%s' "${2:-}"
+  fi
+}
 
 json_token() { printf '%s' "$1" | tr -d '\n\r\t"\\' | head -c 200; }
 
@@ -144,29 +179,29 @@ write_receipt() {
     printf '  "governance_revision": "%s",\n' \
       "$(json_token "$(git -C "$GOV_DIR" rev-parse HEAD 2>/dev/null || echo unknown)")"
     printf '  "workspace": "%s",\n' "$(json_token "$WORKSPACE")"
-    printf '  "shared_bootstrap": "%s",\n' "$(json_token "$STATUS_SHARED")"
-    printf '  "settings": "%s",\n' "$(json_token "$STATUS_SETTINGS")"
-    printf '  "skills": "%s",\n' "$(json_token "$STATUS_SKILLS")"
-    printf '  "commands": "%s",\n' "$(json_token "$STATUS_COMMANDS")"
-    printf '  "rules": "%s",\n' "$(json_token "$STATUS_RULES")"
-    printf '  "capabilities": "%s",\n' "$(json_token "$STATUS_CAPABILITIES")"
-    printf '  "memory": "%s",\n' "$(json_token "$STATUS_MEMORY")"
-    printf '  "memory_cli": "%s",\n' "$(json_token "$STATUS_MEMORY_CLI")"
-    printf '  "memory_mcp": "%s",\n' "$(json_token "$STATUS_MEMORY_MCP")"
-    printf '  "mcp": "%s",\n' "$(json_token "$STATUS_MCP")"
-    printf '  "plugins": "%s",\n' "$(json_token "$STATUS_PLUGINS")"
+    printf '  "shared_bootstrap": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SHARED")")"
+    printf '  "settings": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SETTINGS")")"
+    printf '  "skills": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_SKILLS")")"
+    printf '  "commands": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_COMMANDS")")"
+    printf '  "rules": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_RULES")")"
+    printf '  "capabilities": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_CAPABILITIES")")"
+    printf '  "memory": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MEMORY")")"
+    printf '  "memory_cli": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MEMORY_CLI")")"
+    printf '  "memory_mcp": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MEMORY_MCP")")"
+    printf '  "mcp": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_MCP")")"
+    printf '  "plugins": "%s",\n' "$(json_token "$(_receipt_component "$STATUS_PLUGINS")")"
     printf '  "reasons": {\n'
-    printf '    "shared_bootstrap": "%s",\n' "$(json_token "$REASON_SHARED")"
-    printf '    "settings": "%s",\n' "$(json_token "$REASON_SETTINGS")"
-    printf '    "skills": "%s",\n' "$(json_token "$REASON_SKILLS")"
-    printf '    "commands": "%s",\n' "$(json_token "$REASON_COMMANDS")"
-    printf '    "rules": "%s",\n' "$(json_token "$REASON_RULES")"
-    printf '    "capabilities": "%s",\n' "$(json_token "$REASON_CAPABILITIES")"
-    printf '    "memory": "%s",\n' "$(json_token "$REASON_MEMORY")"
-    printf '    "memory_cli": "%s",\n' "$(json_token "$REASON_MEMORY_CLI")"
-    printf '    "memory_mcp": "%s",\n' "$(json_token "$REASON_MEMORY_MCP")"
-    printf '    "mcp": "%s",\n' "$(json_token "$REASON_MCP")"
-    printf '    "plugins": "%s"\n' "$(json_token "$REASON_PLUGINS")"
+    printf '    "shared_bootstrap": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_SHARED" "$REASON_SHARED")")"
+    printf '    "settings": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_SETTINGS" "$REASON_SETTINGS")")"
+    printf '    "skills": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_SKILLS" "$REASON_SKILLS")")"
+    printf '    "commands": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_COMMANDS" "$REASON_COMMANDS")")"
+    printf '    "rules": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_RULES" "$REASON_RULES")")"
+    printf '    "capabilities": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_CAPABILITIES" "$REASON_CAPABILITIES")")"
+    printf '    "memory": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MEMORY" "$REASON_MEMORY")")"
+    printf '    "memory_cli": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MEMORY_CLI" "$REASON_MEMORY_CLI")")"
+    printf '    "memory_mcp": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MEMORY_MCP" "$REASON_MEMORY_MCP")")"
+    printf '    "mcp": "%s",\n' "$(json_token "$(_receipt_reason "$STATUS_MCP" "$REASON_MCP")")"
+    printf '    "plugins": "%s"\n' "$(json_token "$(_receipt_reason "$STATUS_PLUGINS" "$REASON_PLUGINS")")"
     printf '  },\n'
     printf '  "log_path": "%s",\n' "$(json_token "${L9_BOOTSTRAP_LOG_PATH:-}")"
     printf '  "overall": "%s"\n' "$(json_token "$state")"
@@ -533,6 +568,9 @@ for st in "$STATUS_SHARED" "$STATUS_SETTINGS" "$STATUS_SKILLS" "$STATUS_COMMANDS
 done
 
 stage "receipt"
+# Every stage ran, so an untouched READY is now a verdict rather than an initial
+# value and `_receipt_component` stops rewriting it to UNKNOWN.
+RECEIPT_COMPLETE=1
 # Unconditional, and no longer gated on the locked interpreter. A missing
 # interpreter is now recorded IN the receipt rather than being the reason no
 # receipt exists — the old branch downgraded to BLOCKED and then wrote nothing,
