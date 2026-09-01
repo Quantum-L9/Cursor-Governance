@@ -1247,7 +1247,7 @@
     },
     {
       "path": "conformance/counterexamples/v2-gaps-registry.yaml",
-      "sha256": "3dfd611c5e96612363ab445e07481994e523b8169b5847bcd69de0de237e4a89"
+      "sha256": "e9f5e8094a73abf58fe270a89aeff74a1a084fabb19616501a133ea63dd4b6dd"
     },
     {
       "path": "conformance/fixtures/hostile/cancellation-without-evidence.yaml",
@@ -1403,7 +1403,7 @@
     },
     {
       "path": "conformance/test_counterexample_registry.py",
-      "sha256": "63d698528854f619ea398d717eab36027fc43f29145b4060eb97ff5af49d955a"
+      "sha256": "a1eca23e92bcd3de3f40aa45bf4dd58e908ef707c4797f292f587cc4e5143c07"
     },
     {
       "path": "conformance/test_descriptor_schema.py",
