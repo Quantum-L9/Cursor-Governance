@@ -149,7 +149,19 @@ if [[ "$(jq -r '.rules[0].parameters.do_not_enforce_on_create' "$PAYLOAD")" != "
 fi
 echo "create-gating:   disabled (safe)"
 
-# 5. EXACTLY ONE family member. The parent-kit evaluate payload named the
+# 5. The workflows rule queues org-ci.yml but does not publish a named
+#    context. Without the companion required_status_checks rule, GitHub
+#    reports BLOCKED and pr_board cannot see the constellation gate.
+CTX="$(jq -r '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context] | .[0] // ""' "$PAYLOAD")"
+if [[ "$CTX" != "Analyze (central Core)" ]]; then
+  echo "FAIL: payload must name 'Analyze (central Core)' as a required status check." >&2
+  echo "      A workflows-only PUT would drop the live named check and leave" >&2
+  echo "      PRs BLOCKED with required_checks=[] — remediator reads that as CODEBASE." >&2
+  exit 1
+fi
+echo "named check:     $CTX"
+
+# 6. EXACTLY ONE family member. The parent-kit evaluate payload named the
 #    ruleset "$NAME (evaluate)". Counting only the un-decorated name then
 #    reports zero and CREATE leaves that org-wide workflow running beside
 #    the new one. Treat the decorated names as the same identity: update

@@ -155,6 +155,12 @@ check_ruleset() {
     && pass "branch creation not gated (do_not_enforce_on_create=true)" \
     || fail "do_not_enforce_on_create=$got_create — repository creation can hang org-wide"
 
+  local got_ctx
+  got_ctx="$(jq -r '[.rules[] | select(.type=="required_status_checks") | .parameters.required_status_checks[].context] | .[0] // ""' <<<"$detail")"
+  [[ "$got_ctx" == "Analyze (central Core)" ]] \
+    && pass "names required check $got_ctx" \
+    || fail "required check '$got_ctx', expected 'Analyze (central Core)' — workflows-only is invisible to pr_board"
+
   case "$ENFORCEMENT" in
     active)
       pass "enforcement=active — the sanctioned path is BLOCKING"
@@ -175,12 +181,14 @@ check_ruleset() {
               --argjson repos "$got_repos" --argjson refs "$got_refs" \
               --arg consumer "$EFFECTIVE_CONSUMER" \
               --arg captured "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+          --arg ctx "$got_ctx" \
           '{schema:$schema, captured_at:$captured, organization:$org,
             ruleset_id:($id|tonumber), ruleset_name:$name, source_type:$source,
             enforcement:$enf, target:$target,
             workflow_repository_id:$repo_id, workflow_repository:$repo_name,
             workflow_path:$path, workflow_ref:$ref, target_ref:$target_ref,
             do_not_enforce_on_create:($create=="true"),
+            required_status_checks:[$ctx],
             bypass_actors:$bypass,
             effective_consumer_repository:$consumer,
             workflow:{repository_id:$repo_id, path:$path, ref:$ref},

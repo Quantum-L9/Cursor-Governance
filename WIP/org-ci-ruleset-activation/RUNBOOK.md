@@ -14,7 +14,11 @@ Activate the organization required-workflow ruleset that requires
 Quantum-L9/l9-ci-core/.github/workflows/org-ci.yml
 ```
 
-on the default branch of every targeted repository.
+**and** the named check `Analyze (central Core)` on the default branch of every
+targeted repository. The workflow rule queues constellation CI. The named check
+is what `GET .../rules/branches/{branch}` and `pr_board.py` can see. A
+workflows-only ruleset reports `BLOCKED` with an empty required set; that is
+not a CODEBASE defect.
 
 This procedure does **not** copy CI into consumer repositories and does **not**
 create a second CI control plane. `ownership.prohibited` in the same contract

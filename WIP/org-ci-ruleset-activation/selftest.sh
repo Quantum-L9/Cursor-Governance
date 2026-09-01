@@ -61,7 +61,7 @@ chmod +x "$WORK/bin/gh"
 export PATH="$WORK/bin:$PATH"
 
 # A ruleset detail body that satisfies every shape assertion in verify.sh.
-GOOD_DETAIL='{"id":42,"name":"L9 canonical CI required","target":"branch","enforcement":"evaluate","bypass_actors":[],"conditions":{"ref_name":{"include":["~DEFAULT_BRANCH"],"exclude":[]},"repository_name":{"include":["~ALL"],"exclude":[]}},"rules":[{"type":"workflows","parameters":{"do_not_enforce_on_create":true,"workflows":[{"repository_id":1285564308,"path":".github/workflows/org-ci.yml","ref":"refs/heads/main"}]}}]}'
+GOOD_DETAIL='{"id":42,"name":"L9 canonical CI required","target":"branch","enforcement":"evaluate","bypass_actors":[],"conditions":{"ref_name":{"include":["~DEFAULT_BRANCH"],"exclude":[]},"repository_name":{"include":["~ALL"],"exclude":[]}},"rules":[{"type":"workflows","parameters":{"do_not_enforce_on_create":true,"workflows":[{"repository_id":1285564308,"path":".github/workflows/org-ci.yml","ref":"refs/heads/main"}]}},{"type":"required_status_checks","parameters":{"strict_required_status_checks_policy":false,"do_not_enforce_on_create":true,"required_status_checks":[{"context":"Analyze (central Core)"}]}}]}'
 LIST_EVAL='[{"id":42,"name":"L9 canonical CI required","enforcement":"evaluate"}]'
 LIST_ACTIVE='[{"id":42,"name":"L9 canonical CI required","enforcement":"active"}]'
 LIST_DUPES='[{"id":42,"name":"L9 canonical CI required","enforcement":"evaluate"},{"id":43,"name":"L9 canonical CI required","enforcement":"active"}]'
@@ -267,7 +267,7 @@ fi
 reset_kit
 env RULESETS_JSON="$LIST_ACTIVE" RULESET_DETAIL="$(active_detail)" \
   bash "$WORK/kit/verify.sh" --check >/dev/null 2>&1 || true
-if jq -e '.enforcement=="active" and .ruleset_id==42 and (.bypass_actors|length)==0' \
+if jq -e '.enforcement=="active" and .ruleset_id==42 and (.bypass_actors|length)==0 and .required_status_checks[0]=="Analyze (central Core)"' \
      "$WORK/kit/evidence/organization-ruleset-live-enforcement.json" >/dev/null 2>&1; then
   ok "V11 LIVE_ENFORCING writes well-formed enforcement evidence"
 else
