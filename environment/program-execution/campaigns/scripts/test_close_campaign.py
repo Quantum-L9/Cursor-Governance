@@ -1,10 +1,17 @@
 from __future__ import annotations
 
+import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from close_campaign import archive_completed, close_campaign, next_campaign
+# close_campaign.py is a sibling script, not an installed package. Under pytest's
+# default prepend import mode this directory landed on sys.path implicitly; the
+# canonical runner passes --import-mode=importlib, which does not do that, so the
+# import must be declared rather than inherited.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from close_campaign import archive_completed, close_campaign, next_campaign  # noqa: E402
 
 
 class CloseCampaignTest(unittest.TestCase):

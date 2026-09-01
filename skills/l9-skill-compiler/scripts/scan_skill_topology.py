@@ -5,7 +5,7 @@ import re
 import sys
 
 import yaml
-from _common import REPO, emit, fail, load_json
+from _compiler_common import REPO, emit, fail, load_json
 
 
 def parse_skill_metadata(skill_md):

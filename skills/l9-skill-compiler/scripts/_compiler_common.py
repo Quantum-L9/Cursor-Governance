@@ -13,9 +13,14 @@ it:
   error, zero for a successful stage.
 * `emit` receives a payload the caller has already shaped (`stage`, `decision`,
   `decided_by`, `evidence`, `candidates`), so it serializes and does not wrap.
-* The serialization matches the one existing `_common.py` in the tree
-  (`skills/l9-intelligence-harvest/scripts/_common.py`): JSON, `indent=2`,
-  `sort_keys=True`, trailing newline.
+* The serialization matches `skills/l9-intelligence-harvest/scripts/_common.py`:
+  JSON, `indent=2`, `sort_keys=True`, trailing newline. That pack keeps the
+  bare `_common` name (its meta/package-integrity.json hashes the path); this
+  one is `_compiler_common` because under pytest's rootdir-relative import mode
+  both resolved to the single global module name `_common`, so whichever pack's
+  tests ran first won `sys.modules` and the other pack's scripts imported the
+  wrong helper — which is how this stage's test broke at collection a second
+  time, after this module was added to fix it breaking the first time.
 * `REPO` is joined with `"skills"` to locate the live pack directory, so it is
   the repository root — three parents above this file.
 """

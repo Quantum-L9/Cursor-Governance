@@ -34,24 +34,8 @@
       "reason": "Not a pytest test: a DAG module (a 'test pipeline' workflow) that only matches the test_*.py naming convention. Its import chain hits the documented-but-unimplemented tools.validation.validate_external_code gap (2026-07-19 decision: leave broken, do not stub). Ignored via pyproject addopts so root collection does not fail on a dormant path."
     },
     {
-      "path": "skills/l9-cli-optimization/scripts/self_test.py",
-      "reason": "Not a pytest test: a self-check script for the l9-cli-optimization skill that matches *_test.py-adjacent discovery patterns. Ignored via pyproject addopts."
-    },
-    {
-      "path": "skills/l9-plan/scripts/self_test.py",
-      "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
-    },
-    {
-      "path": "skills/l9-repository-renovation/scripts/self_test.py",
-      "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
-    },
-    {
-      "path": "skills/l9-structured-reasoning/scripts/self_test.py",
-      "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
-    },
-    {
-      "path": "skills/l9-intelligence-harvest/scripts/self_test.py",
-      "reason": "Not a pytest test: skill pack self-check script. Ignored via pyproject addopts to avoid basename collisions across skills/*/scripts/self_test.py."
+      "path": "skills",
+      "reason": "Not pytest tests: every skills/*/scripts/self_test.py is a skill pack self-check script whose test_* helpers are called by its own main() and fail via SystemExit. All resolve to the single module name `self_test` under rootdir-relative import mode, so any one collected collides with the first sibling and interrupts the run. Excluded as a class by --ignore-glob=skills/*/scripts/self_test.py in pyproject addopts; this entry documents the class, and deliberately replaces the former per-pack enumeration, which went stale (8 of 13 packs unregistered) and left the canonical suite running zero tests."
     }
   ],
   "suites": [

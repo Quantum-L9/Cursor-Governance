@@ -12,6 +12,10 @@ CORE = Path(__file__).resolve().parents[1]
 REPO_ROOT = CORE.parents[2]
 TEMPLATE = CORE / "program-execution-controller-template"
 sys.path.insert(0, str(TEMPLATE / "scripts"))
+# test_replan_integration is a sibling module in this directory. Prepend import
+# mode put it on sys.path implicitly; the canonical runner uses
+# --import-mode=importlib, which does not, so declare it like the line above.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 # Keep the controller template free of compiled debris (validate_controller checks).
 sys.dont_write_bytecode = True

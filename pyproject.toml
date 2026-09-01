@@ -180,11 +180,19 @@ norecursedirs = [
 # 2026-07-19 decision: leave broken, do not stub). Ignored here so collection
 # doesn't fail on a dormant, currently-unused code path; the underlying gap is
 # untouched.
-# skills/*/scripts/self_test.py files are skill self-check scripts, not pytest tests.
-# Every skill that adds one MUST be listed below AND in ops/config/python-contract.json:
-# they all resolve to the module name `self_test` under rootdir-relative import mode,
-# so an unregistered file collides with the first sibling collected and errors the run.
-addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore=skills/l9-cli-optimization/scripts/self_test.py --ignore=skills/l9-plan/scripts/self_test.py --ignore=skills/l9-repository-renovation/scripts/self_test.py --ignore=skills/l9-structured-reasoning/scripts/self_test.py --ignore=skills/l9-intelligence-harvest/scripts/self_test.py"
+# skills/*/scripts/self_test.py files are skill self-check scripts, not pytest tests:
+# each defines test_* helpers that its own main() calls under `if __name__ ==
+# "__main__"`, failing via SystemExit rather than pytest assertions. They all resolve
+# to the module name `self_test` under rootdir-relative import mode, so any one that
+# escapes exclusion collides with the first sibling collected and errors the run.
+#
+# This was an enumeration every new pack had to be added to by hand, in two files.
+# It went stale exactly as that shape always does: 8 of 13 packs were unregistered
+# and three of them interrupted collection, so the canonical suite ran ZERO tests on
+# main. --ignore-glob covers every present and future pack, so there is nothing to
+# keep in sync. ops/config/python-contract.json documents the class; it is not a
+# registration the run depends on.
+addopts = "--ignore=workflows/dags/test_pipeline_dag.py --ignore-glob=skills/*/scripts/self_test.py"
 
 [build-system]
 requires = ["setuptools>=68"]
