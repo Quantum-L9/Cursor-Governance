@@ -158,7 +158,7 @@ check_ruleset() {
   case "$ENFORCEMENT" in
     active)
       pass "enforcement=active — the sanctioned path is BLOCKING"
-      if [[ "$FAILED" == "0" ]]; then
+      if [[ "$FAILED" == "0" && "$SAW_RUN" == "0" ]]; then
         mkdir -p "$HERE/evidence"
         local got_source target_ref
         got_source="$(jq -r '.source_type // empty' <<<"$detail")"
@@ -295,7 +295,10 @@ case "${1:---check}" in
   --pr)
     [[ $# -eq 3 ]] || { echo "usage: verify.sh --pr <owner/repo> <pr-number>" >&2; exit 2; }
     EFFECTIVE_CONSUMER="$2"
-    check_ruleset; check_run "$2" "$3"; SAW_RUN=1 ;;
+    SAW_RUN=1
+    check_ruleset
+    check_run "$2" "$3"
+    ;;
   *) echo "usage: verify.sh [--check | --pr <owner/repo> <pr-number>]" >&2; exit 2 ;;
 esac
 

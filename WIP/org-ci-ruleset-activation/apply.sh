@@ -224,6 +224,11 @@ if [[ -f "$ID_RECEIPT" ]]; then
     echo "      The identity changed under us. Investigate before writing." >&2
     exit 1
   fi
+  if [[ -n "$RECORDED" && -z "$EXISTING" ]]; then
+    echo "FAIL: recorded ruleset id $RECORDED but no ruleset named '$NAME' exists." >&2
+    echo "      Refusing CREATE — that would replace the canonical identity." >&2
+    exit 1
+  fi
 fi
 
 echo
