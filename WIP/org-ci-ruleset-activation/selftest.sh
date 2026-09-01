@@ -283,7 +283,7 @@ echo "=== verify.sh: ACTIVE canary must post-date promotion ==="
 # active" confusion the phase ordering exists to prevent.
 CANARY_SHA="4e2d4e9d64a8a5ca89da91c5ef18314c0331d4b4"
 runs_started() {
-  printf '[{"name":"Analyze (central Core)","conclusion":"success","started_at":"%s","html_url":"https://example.invalid/run/1","app":{"slug":"github-actions"}}]' "$1"
+  printf '[{"name":"Analyze (central Core)","id":99370863320,"status":"completed","conclusion":"success","started_at":"%s","html_url":"https://github.com/Quantum-L9/l9-observability-core/actions/runs/33353393558/job/99370863320","app":{"slug":"github-actions"}}]' "$1"
 }
 
 reset_kit

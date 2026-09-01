@@ -1,8 +1,20 @@
 {
+  "schema": "l9.org-ci.organization-ruleset-live-enforcement/v1",
+  "captured_at": "2026-09-01T09:05:02Z",
   "organization": "Quantum-L9",
   "ruleset_id": 21895545,
   "ruleset_name": "L9 canonical CI required",
+  "source_type": "Organization",
   "enforcement": "active",
+  "target": "branch",
+  "workflow_repository_id": 1285564308,
+  "workflow_repository": "Quantum-L9/l9-ci-core",
+  "workflow_path": ".github/workflows/org-ci.yml",
+  "workflow_ref": "refs/heads/main",
+  "target_ref": "~DEFAULT_BRANCH",
+  "do_not_enforce_on_create": true,
+  "bypass_actors": [],
+  "effective_consumer_repository": "Quantum-L9/l9-observability-core",
   "workflow": {
     "repository_id": 1285564308,
     "path": ".github/workflows/org-ci.yml",
@@ -15,7 +27,5 @@
     "refs": [
       "~DEFAULT_BRANCH"
     ]
-  },
-  "bypass_actors": [],
-  "captured_at": "2026-08-31T03:19:03Z"
+  }
 }

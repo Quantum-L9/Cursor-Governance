@@ -1,11 +1,18 @@
 {
+  "schema": "l9.org-ci.remote-end-to-end-run/v1",
+  "captured_at": "2026-09-01T09:05:03Z",
   "consumer": "Quantum-L9/l9-observability-core",
   "pull_request": 4,
   "head_sha": "4e2d4e9d64a8a5ca89da91c5ef18314c0331d4b4",
+  "check_name": "Analyze (central Core)",
+  "check_run_id": 99370863320,
+  "actions_run_id": 33353393558,
+  "actions_job_id": 99370863320,
   "check_run_url": "https://github.com/Quantum-L9/l9-observability-core/actions/runs/33353393558/job/99370863320",
-  "check_run_app": "github-actions",
+  "app": "github-actions",
+  "status": "completed",
   "conclusion": "success",
+  "check_run_app": "github-actions",
   "ruleset_id": "21895545",
-  "enforcement_at_capture": "active",
-  "captured_at": "2026-08-31T03:19:04Z"
+  "enforcement_at_capture": "active"
 }

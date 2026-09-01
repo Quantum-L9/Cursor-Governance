@@ -33,9 +33,13 @@ NAME_ACTIVE="$(jq -r '.name' "$ACTIVE_PAYLOAD")"
 WF_PATH="$(jq -r '.rules[0].parameters.workflows[0].path' "$PAYLOAD")"
 WF_REPO_ID="$(jq -r '.rules[0].parameters.workflows[0].repository_id' "$PAYLOAD")"
 WF_REF="$(jq -r '.rules[0].parameters.workflows[0].ref' "$PAYLOAD")"
+WF_REPO_NAME="${WF_REPO_NAME:-Quantum-L9/l9-ci-core}"
 WANT_REPOS="$(jq -c '.conditions.repository_name.include' "$PAYLOAD")"
 WANT_REFS="$(jq -c '.conditions.ref_name.include' "$PAYLOAD")"
 WANT_TARGET="$(jq -r '.target' "$PAYLOAD")"
+EFFECTIVE_CONSUMER="${EFFECTIVE_CONSUMER:-}"
+ENF_SCHEMA="l9.org-ci.organization-ruleset-live-enforcement/v1"
+E2E_SCHEMA="l9.org-ci.remote-end-to-end-run/v1"
 
 fail() { echo "  FAIL  $*"; FAILED=1; }
 pass() { echo "  PASS  $*"; }
@@ -156,15 +160,31 @@ check_ruleset() {
       pass "enforcement=active — the sanctioned path is BLOCKING"
       if [[ "$FAILED" == "0" ]]; then
         mkdir -p "$HERE/evidence"
-        jq -n --arg org "$ORG" --arg id "$RULESET_ID" --arg name "$NAME" \
-              --arg enf "$ENFORCEMENT" --arg path "$WF_PATH" --arg ref "$WF_REF" \
-              --argjson repo_id "$WF_REPO_ID" \
-              --argjson repos "$WANT_REPOS" --argjson refs "$WANT_REFS" \
+        local got_source target_ref
+        got_source="$(jq -r '.source_type // empty' <<<"$detail")"
+        target_ref="$(jq -r '.conditions.ref_name.include[0] // empty' <<<"$detail")"
+        jq -n --arg schema "$ENF_SCHEMA" \
+              --arg org "$ORG" --arg id "$RULESET_ID" --arg name "$NAME" \
+              --arg source "$got_source" --arg enf "$ENFORCEMENT" \
+              --arg target "$got_target" --arg target_ref "$target_ref" \
+              --arg path "$got_path" --arg ref "$got_ref" \
+              --arg repo_name "$WF_REPO_NAME" \
+              --argjson repo_id "$got_id" \
+              --arg create "$got_create" \
+              --argjson bypass "$got_bypass" \
+              --argjson repos "$got_repos" --argjson refs "$got_refs" \
+              --arg consumer "$EFFECTIVE_CONSUMER" \
               --arg captured "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-          '{organization:$org, ruleset_id:($id|tonumber), ruleset_name:$name,
-            enforcement:$enf, workflow:{repository_id:$repo_id, path:$path, ref:$ref},
-            targets:{repositories:$repos, refs:$refs}, bypass_actors:[],
-            captured_at:$captured}' \
+          '{schema:$schema, captured_at:$captured, organization:$org,
+            ruleset_id:($id|tonumber), ruleset_name:$name, source_type:$source,
+            enforcement:$enf, target:$target,
+            workflow_repository_id:$repo_id, workflow_repository:$repo_name,
+            workflow_path:$path, workflow_ref:$ref, target_ref:$target_ref,
+            do_not_enforce_on_create:($create=="true"),
+            bypass_actors:$bypass,
+            effective_consumer_repository:$consumer,
+            workflow:{repository_id:$repo_id, path:$path, ref:$ref},
+            targets:{repositories:$repos, refs:$refs}}' \
           > "$HERE/evidence/organization-ruleset-live-enforcement.json"
         echo "  wrote evidence/organization-ruleset-live-enforcement.json"
       fi
@@ -207,10 +227,15 @@ check_run() {
     return
   fi
 
-  local conclusion url app
+  local conclusion url app check_name check_run_id run_status actions_run_id actions_job_id
   conclusion="$(jq -r '.conclusion // "pending"' <<<"$run")"
   url="$(jq -r '.html_url' <<<"$run")"
   app="$(jq -r '.app.slug // "unknown"' <<<"$run")"
+  check_name="$(jq -r '.name // empty' <<<"$run")"
+  check_run_id="$(jq -r '.id // empty' <<<"$run")"
+  run_status="$(jq -r '.status // empty' <<<"$run")"
+  actions_run_id="$(sed -n 's#.*/actions/runs/\([0-9][0-9]*\).*#\1#p' <<<"$url")"
+  actions_job_id="$(sed -n 's#.*/job/\([0-9][0-9]*\).*#\1#p' <<<"$url")"
   pass "canonical CI ran on $head"
   echo "        $url"
   [[ "$app" == "github-actions" ]] \
@@ -243,15 +268,23 @@ check_run() {
   fi
 
   mkdir -p "$HERE/evidence"
-  jq -n --arg slug "$slug" --arg pr "$pr" --arg head "$head" \
-        --arg url "$url" --arg conclusion "$conclusion" --arg app "$app" \
+  jq -n --arg schema "$E2E_SCHEMA" \
+        --arg slug "$slug" --arg pr "$pr" --arg head "$head" \
+        --arg check_name "$check_name" --arg check_run_id "$check_run_id" \
+        --arg actions_run_id "$actions_run_id" --arg actions_job_id "$actions_job_id" \
+        --arg url "$url" --arg app "$app" --arg status "$run_status" \
+        --arg conclusion "$conclusion" \
         --arg enforcement "${ENFORCEMENT:-unknown}" \
         --arg ruleset_id "${RULESET_ID:-unknown}" \
         --arg captured "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    '{consumer:$slug, pull_request:($pr|tonumber), head_sha:$head,
-      check_run_url:$url, check_run_app:$app, conclusion:$conclusion,
-      ruleset_id:$ruleset_id, enforcement_at_capture:$enforcement,
-      captured_at:$captured}' \
+    '{schema:$schema, captured_at:$captured, consumer:$slug,
+      pull_request:($pr|tonumber), head_sha:$head, check_name:$check_name,
+      check_run_id:(if $check_run_id=="" then null else ($check_run_id|tonumber) end),
+      actions_run_id:(if $actions_run_id=="" then null else ($actions_run_id|tonumber) end),
+      actions_job_id:(if $actions_job_id=="" then null else ($actions_job_id|tonumber) end),
+      check_run_url:$url, app:$app, status:$status, conclusion:$conclusion,
+      check_run_app:$app, ruleset_id:$ruleset_id,
+      enforcement_at_capture:$enforcement}' \
     > "$HERE/evidence/remote-end-to-end-run.json"
   echo "  wrote evidence/remote-end-to-end-run.json"
 }
@@ -261,6 +294,7 @@ case "${1:---check}" in
   --check) check_ruleset ;;
   --pr)
     [[ $# -eq 3 ]] || { echo "usage: verify.sh --pr <owner/repo> <pr-number>" >&2; exit 2; }
+    EFFECTIVE_CONSUMER="$2"
     check_ruleset; check_run "$2" "$3"; SAW_RUN=1 ;;
   *) echo "usage: verify.sh [--check | --pr <owner/repo> <pr-number>]" >&2; exit 2 ;;
 esac
