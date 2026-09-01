@@ -111,7 +111,7 @@ files:
 - path: scripts/pec/runtime.py
   sha256: 4de2ad94cf8e0e94069b2d97fec2d4c11cf36a2fbdbc4f8bed730d314cf449a3
 - path: scripts/pec/state.py
-  sha256: 914706ae4b0b0e46bfa5e3d51d5cfc8ce566415b0719d0eaff5b91feb9da2b2d
+  sha256: 1376193205b5d03e1ae83d2d59f6102dd047fb5aba32b116278175d7c9f0d6fe
 - path: scripts/pec/workspace_reset.py
   sha256: edf39052bd7f13cb79e946fa55cc2b6fecff50b96dfc0043943c007ab088a443
 - path: scripts/pec.py

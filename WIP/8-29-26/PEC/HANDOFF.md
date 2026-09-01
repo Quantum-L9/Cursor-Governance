@@ -14,11 +14,10 @@ that proves it is given. Do not trust a status line that has no command beside i
 | | |
 |---|---|
 | Branch | `claude/cursor-governance-pec-pack-lcw0p8` |
-| PR | [#442](https://github.com/Quantum-L9/Cursor-Governance/pull/442) — 17 commits, 48 files, `mergeable: true` |
-| Head | `385e2454` |
+| PR | [#442](https://github.com/Quantum-L9/Cursor-Governance/pull/442) — `mergeable_state: blocked` on the red check below |
+| Head | read it from the PR; this file is written one commit behind by construction |
 | CI | 19 success · 2 skipped · 1 failure (not this PR's — see below) |
-| Worktree | `/root/cg-pec-wt`, clean |
-| Remediation | 17/17 positions complete |
+| Remediation | 17/17 positions complete — **position 4 shipped narrowed**, see below |
 | Findings | 14/14 additive findings closed |
 | W0–W7 | complete |
 | **W8/S0** | **closed** — gate exits 0 |
@@ -26,11 +25,18 @@ that proves it is given. Do not trust a status line that has no command beside i
 | W8 S2–S8 | unstarted |
 | W9, W10 | behind W8 by `depends_on` |
 
+From a wired worktree at the PR head (`run_conformance.py` imports `peer_execution`,
+so it needs the package root on `PYTHONPATH` — the bare command fails in a fresh
+checkout):
+
 ```bash
-cd /root/cg-pec-wt
-uv run --frozen --no-build python environment/program-execution/scripts/gate_s0_baseline.py   # exit 0
-uv run --frozen --no-build python environment/program-execution/scripts/run_conformance.py    # PASS, 659 tests
-uv run --frozen --no-build python -m pytest environment/program-execution/tests/hardening -q  # 56 passed, 15 xfailed
+python environment/program-execution/scripts/gate_s0_baseline.py    # exit 0, pinned_to_main ADVISORY
+PYTHONPATH=environment/program-execution \
+  python environment/program-execution/scripts/run_conformance.py   # PASS, 661 tests
+python -m pytest environment/program-execution/tests/hardening -q   # 56 passed, 15 xfailed
+python -m pytest environment/program-execution/scripts/tests \
+  environment/program-execution/core/program-execution-controller-template/scripts/tests \
+  environment/program-execution/compiler/tests -q                   # 683 passed, 49 subtests
 ```
 
 ---
@@ -55,6 +61,34 @@ and zero unresolved findings**.
 
 Nothing in this repository can fix it. It was **not** worked around by excluding the
 file or the rule; that would be weakening a security check to force a pass.
+
+---
+
+## Position 4 shipped narrower than the invariant it closes
+
+`B3` is recorded complete, and it is — but not as
+`target_lifecycle.scoped_relock_required_invariant` states it. Two of that
+invariant's four clauses are deliberately **not** implemented:
+
+- *"all non-task-definition source digests MUST equal the previous lock"*
+- *"never opportunistically refresh every Blueprint digest"*
+
+`blueprint.py` adopts the current source-digest set wholesale. The guard that
+enforced the first clause was removed because every compile preceding a relock
+regenerates `PROGRAM.yaml` and its siblings, so it could never pass on a live
+campaign — it cost the scoped-relock path entirely and regressed 7 canonical
+`test_prepare_resumable.py` tests. The three guards carrying B3's substance at
+task scope are kept.
+
+**Residual:** a scoped relock naming one task absorbs program-wide semantic
+change into the lock without it being named. Program scope is not covered. The
+correct fix compares normalized program semantics rather than raw digests, which
+is W8 work.
+
+This is recorded in the tracker at `remediation_order[3].narrowing` and
+`target_lifecycle.scoped_relock_required_invariant_status`. It was previously
+disclosed only in the PR description, which meant the tracker — the artifact a
+future session actually reads — asserted an invariant the code refutes.
 
 ---
 
@@ -144,6 +178,16 @@ The gate already passes without it; this clears the standing advisory.
 | `U2` | Does plane A need a physically detached orchestrator checkout, or is the recorded immutable reference enough? | Resolving by assumption would build W8 machinery the S0 plan excluded. Does not block S0. |
 | `U3` | *Closed.* | — |
 | — | Should re-scoring `acceptance_scorecard` happen? | Its scores date from `450b7d0e`, before any batch ran. Two rows name blockers since closed. Not re-scored because no measurement was taken after execution, and an invented number is worse than a dated one. |
+
+Two further defects are recorded in the tracker under `open_follow_ups`, found
+while auditing this branch and deliberately not fixed in it:
+
+| Id | Where | What |
+|---|---|---|
+| `F4` | `run_campaign.py:4327` | resume re-baselines Blueprint immutability from live bytes, so mutation in the accept→resume window — the only cross-process window — is undetectable. The four in-process assertions are correctly baselined at acceptance. |
+| `F6` | `controller.py:1481` | `_unenforced_prohibitions()` skips any entry that *has* a `path_or_pattern`, so a legacy lock storing prose there is both unenforced and undisclosed — U3's own defect, on the population U3 was written for. |
+
+Each is a behavioral change on a governance seam and belongs in its own change.
 
 Four items sit on the session-debt ledger awaiting a human — see
 `python3 ops/autonomy/session_debt.py status`.

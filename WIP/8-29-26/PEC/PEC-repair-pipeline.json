@@ -90,7 +90,7 @@
         }
       }
     },
-    "authorization": "Remediation positions 1-10 were explicitly authorized by the pec_batch_executor task. Positions 11-12 and 13-17 were each authorized by a later explicit instruction to execute the next slice, recorded per batch in execution_batches. W8/S0 work (counterexample reproduction, baseline freeze) was authorized by an explicit instruction to plan and execute W8; W8 as a whole remains open and S1-S8 unstarted.",
+    "authorization": "Remediation positions 1-10 were explicitly authorized by the pec_batch_executor task. Positions 11-12 and 13-17 were each authorized by a later explicit instruction to execute the next slice, recorded per batch in execution_batches. W8/S0 work (counterexample reproduction, baseline freeze) was authorized by an explicit instruction to plan and execute W8; W8/S1 (the prohibition/path split and its U3 coverage gap) was authorized by the same instruction and is partial: the split and U3 are closed; the SemanticModel round-trip, semantic_diff and GATE-S1-SEMANTIC-CONSERVATION are open. W8 as a whole remains open and S2-S8 unstarted.",
     "additive_findings": [
       {
         "id": "A3",
@@ -326,7 +326,19 @@
         "task membership MUST be unchanged",
         "all non-selected task definitions MUST hash identically",
         "scoped adoption updates only the digest of the legally changed source; never opportunistically refresh every Blueprint digest"
-      ]
+      ],
+      "scoped_relock_required_invariant_status": {
+        "as_authored": "The four clauses below are the invariant as the reconciliation recorded it.",
+        "implemented": [
+          "task membership MUST be unchanged",
+          "all non-selected task definitions MUST hash identically"
+        ],
+        "not_implemented": [
+          "all non-task-definition source digests MUST equal the previous lock",
+          "scoped adoption updates only the digest of the legally changed source; never opportunistically refresh every Blueprint digest"
+        ],
+        "see": "remediation_order[3].narrowing"
+      }
     },
     "remediation_order": [
       {
@@ -391,6 +403,17 @@
           "full_relevant_tests": "PASS",
           "code_gate": "PASS",
           "diff_scope": "PASS"
+        },
+        "change_as_shipped": "Three guards: task membership unchanged, Blueprint source membership unchanged, and no drift in any task definition the caller did not name. Two clauses of scoped_relock_required_invariant were deliberately NOT implemented - see narrowing.",
+        "narrowing": {
+          "clauses_not_implemented": [
+            "all non-task-definition source digests MUST equal the previous lock",
+            "scoped adoption updates only the digest of the legally changed source; never opportunistically refresh every Blueprint digest"
+          ],
+          "why": "Every compile preceding a relock regenerates PROGRAM.yaml, EVIDENCE_CATALOG.yaml, CURRENT_STATE_DELTA.yaml and DO_NOT_BUILD.yaml, so a guard on non-task source digests can never pass on a live campaign: pec relock exited 2, adopt_changed_definitions() returned None, and the runtime was quarantined instead of resumed - regressing 7 canonical tests in test_prepare_resumable.py that were green on da0c7530. relock_definitions() documents that drift as the reason the explicit-task-ids path exists. blueprint.py adopts the current source-digest set wholesale.",
+          "residual_risk": "A scoped relock naming one task absorbs program-wide semantic change (PROGRAM.yaml, DO_NOT_BUILD.yaml) into the lock without it being named. B3's substance at task scope is preserved by the three guards; program scope is not covered.",
+          "correct_fix_deferred_to": "W8 - compare normalized program semantics rather than raw digests. Materially different design; not this batch.",
+          "pinned_by": "scripts/tests/test_execution_completeness.py::ScopedRelockTest::test_relock_adopts_named_definition_and_the_whole_current_digest_set"
         }
       },
       {
@@ -586,7 +609,8 @@
           "relevant_tests": "PASS — 653 passed/34 subtests (scripts + controller template + compiler); 160 passed/9 xfailed (tests + conformance + claude-code adapter)",
           "repo_wide_tests": "PASS — 1266 passed; the 2 remaining failures (test_pr_summary hook registration, dag_authoring command file) were verified failing identically on main da0c7530 and are recorded as deferred session debt",
           "lint": "PASS — ruff check + ruff format --check over environment/program-execution",
-          "generated_artifacts": "PASS — sync_generated_artifacts.py --force --pe-manifest; test_core_manifest_shapes green"
+          "generated_artifacts": "PASS — sync_generated_artifacts.py --force --pe-manifest; test_core_manifest_shapes green",
+          "implementing_change": "environment/program-execution/compiler/README.md - the 'fails only for' clause now also names a document that violates its own published schema (intent.v1, autonomy-policy.v1, intent-resolution.v1) and a constraint that would widen authority beyond the active policy profile (policy.py:61,65; intent.py:49,52,65; resolver.py:381). Recorded because the tests, lint and manifest evidence beside it are non-probative for a documentation clause."
         }
       }
     ],
@@ -1430,13 +1454,16 @@
       ]
     },
     "local_evidence": {
-      "gate_s0_baseline": "5 conditions PASS, 1 FAIL (pinned_to_main), exit 1",
+      "measured_at": "4f84435b",
+      "gate_s0_baseline": "5 conditions PASS, 1 ADVISORY (pinned_to_main), exit 0",
       "gate_tests": "16 OK",
       "registry_conformance": "14 OK",
-      "conformance_runner": "PASS — 649 tests, 0 failures, 0 errors",
-      "hardening_suite": "56 passed, 15 xfailed"
+      "conformance_runner": "PASS - 661 tests, 0 failures, 0 errors (needs PYTHONPATH=environment/program-execution)",
+      "hardening_suite": "56 passed, 15 xfailed",
+      "correction_note": "The previous values ('exit 1' and 649 tests) were measured at fea124cd and carried forward unchanged across four publishes. pinned_to_main became ADVISORY at 43c0d67, so the gate has exited 0 since then. Re-measure this block when you refresh it, or delete the row - a stale measurement asserted as current is worse than an absent one."
     },
-    "snapshot_discipline": "This block is a snapshot at head_sha, and it went stale once already - it sat at fea124cd/11 commits while the branch reached 385e2454/17, because it was written on one publish and not refreshed on the next four. Refresh it on every publish, or read head_sha first and distrust the rest when it does not match the PR."
+    "snapshot_discipline": "This block is a snapshot at head_sha, and it went stale once already - it sat at fea124cd/11 commits while the branch reached 385e2454/17, because it was written on one publish and not refreshed on the next four. Refresh it on every publish, or read head_sha first and distrust the rest when it does not match the PR.",
+    "snapshot_is_of": "commit 4f84435b, not necessarily the current PR head. A commit cannot contain its own SHA, so this block is structurally one commit behind on the publish that writes it. Read head_sha first and treat everything here as history when it does not match the PR."
   },
   "external_blockers": [
     {
@@ -1452,5 +1479,27 @@
       "session_debt_id": "sdk-semgrep-warn-promoted-to-fatal",
       "cannot_rerun": "rerun-failed-jobs returns 403 on this surface"
     }
-  ]
+  ],
+  "open_follow_ups": [
+    {
+      "id": "F4",
+      "severity": "medium",
+      "title": "resume-path Blueprint immutability re-baselines instead of comparing to accept",
+      "where": "environment/program-execution/scripts/run_campaign.py:4327-4328, :4353",
+      "detail": "resume_live_campaign() captures blueprint_byte_inventory() from live bytes at resume start, so assert_blueprint_immutable(phase='resume_execute') proves only that the Blueprint did not move during this resume. Mutation in the accept -> resume window - the one window that crosses a process boundary, and the one B2 exists to cover - is undetectable. The four in-process assertions (admit, bootstrap, arm, execute) are correctly baselined at acceptance and are unaffected.",
+      "durable_baseline_available": "runtime/program-lock.json source_digests, written at bootstrap",
+      "also": "assert_task_counts_agree() runs only on the bootstrap path, not on resume.",
+      "status": "open"
+    },
+    {
+      "id": "F6",
+      "severity": "medium",
+      "title": "U3 disclosure misses legacy prohibitions that store prose in path_or_pattern",
+      "where": "core/program-execution-controller-template/scripts/pec/controller.py:1481-1486",
+      "detail": "_unenforced_prohibitions() derives the unenforced set as 'entries with no path_or_pattern'. New compiles are correct - prohibition_kind.entry() omits the field for semantic rules. A lock frozen before this change stores the prose IN path_or_pattern, which is the exact shape the S1 split exists to correct: verified that path_allowed(path, [prose]) returns False without raising, so it does not even reach the new `except ContractError: continue`. Result on a legacy lock: do_not_build reports PASS having matched nothing, and the entry is excluded from unenforced_prohibitions - U3's defect, unclosed on the population U3 was written for.",
+      "suggested_fix": "Treat an entry whose path_or_pattern does not classify as `path` under compiler/prohibition_kind.classify() as unenforced, and disclose it.",
+      "status": "open"
+    }
+  ],
+  "open_follow_ups_note": "Identified while auditing this branch at 4f84435b. Recorded rather than fixed here: each is a behavioral change on a governance seam and belongs in its own change with its own tests, not appended to a batch that is already 49 files."
 }

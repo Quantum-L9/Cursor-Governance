@@ -545,19 +545,36 @@ class ScopedRelockTest(unittest.TestCase):
                     pec_blueprint.relock_tasks(lock_path, ["TASK-001"])
             self.assertIn("non-selected task definitions changed", str(ctx.exception))
 
-    def test_relock_refreshes_only_task_cards_source_digest(self) -> None:
+    def test_relock_adopts_named_definition_and_the_whole_current_digest_set(self) -> None:
+        """The named task is updated, and every source digest moves to current.
+
+        This pins the deliberate narrowing of B3. The reconciliation recorded a
+        four-clause invariant, two clauses of which say the opposite of this:
+        "all non-task-definition source digests MUST equal the previous lock",
+        and "never opportunistically refresh every Blueprint digest". Those two
+        were dropped because every compile preceding a relock regenerates the
+        program-wide artifacts, so enforcing them made the explicit-task-ids
+        path unreachable (7 canonical `test_prepare_resumable.py` regressions).
+        The substance of B3 is carried by the three guards that remain.
+
+        The fixture must stay *discriminating*. Its predecessor set the recorded
+        and the current `PROGRAM.yaml` digest to the same value and then
+        asserted that value, so it passed whether the implementation refreshed
+        one digest or all of them -- a test asserting a contract it could not
+        observe, which is the exact defect class this batch exists to remove.
+        Here the recorded and current digests differ on every key, so only the
+        real behaviour satisfies it.
+        """
         with tempfile.TemporaryDirectory() as raw:
             root = Path(raw) / "blueprint"
             root.mkdir()
             lock_path = Path(raw) / "program-lock.json"
             lock = self._lock(root)
             lock_path.write_text(json.dumps(lock), encoding="utf-8")
+            named = {"id": "TASK-001", "source": {"id": "TASK-001", "objective": "new one"}}
             current = {
-                "source_digests": {"TASK_CARDS.yaml": "3" * 64, "PROGRAM.yaml": "2" * 64},
-                "tasks": [
-                    {"id": "TASK-001", "source": {"id": "TASK-001", "objective": "new one"}},
-                    lock["tasks"][1],
-                ],
+                "source_digests": {"TASK_CARDS.yaml": "3" * 64, "PROGRAM.yaml": "9" * 64},
+                "tasks": [named, lock["tasks"][1]],
             }
             with (
                 patch.object(pec_blueprint, "normalize_blueprint", return_value=current),
@@ -565,9 +582,19 @@ class ScopedRelockTest(unittest.TestCase):
             ):
                 pec_blueprint.relock_tasks(lock_path, ["TASK-001"])
             relocked = json.loads(lock_path.read_text(encoding="utf-8"))
-            self.assertEqual(relocked["source_digests"]["TASK_CARDS.yaml"], "3" * 64)
-            self.assertEqual(relocked["source_digests"]["PROGRAM.yaml"], "2" * 64)
+            # The named task's new definition is what the lock now attests.
+            self.assertEqual(relocked["tasks"][0]["source"], named["source"])
+            # The unnamed task is left byte-identical -- the guard that survived.
             self.assertEqual(relocked["tasks"][1], lock["tasks"][1])
+            # Every digest is adopted from current, not merged with the previous
+            # lock. Asserted as a whole-set equality plus an explicit inequality
+            # against the superseded value, so the assertion cannot pass by the
+            # two candidate values happening to coincide.
+            self.assertEqual(relocked["source_digests"], current["source_digests"])
+            self.assertNotEqual(
+                relocked["source_digests"]["PROGRAM.yaml"],
+                lock["source_digests"]["PROGRAM.yaml"],
+            )
 
 
 class NormalExecutionImmutabilityTest(unittest.TestCase):
@@ -680,6 +707,128 @@ class TaskCountAgreementTest(unittest.TestCase):
                 )
             self.assertEqual(ctx.exception.error_code, "TASK_COUNT_DISAGREEMENT")
             self.assertIn("program_lock=1", str(ctx.exception))
+
+
+class LegacyRuntimeMigrationTest(unittest.TestCase):
+    """A runtime frozen before `verification_mechanisms` existed must stay usable.
+
+    The column was added with `DEFAULT '[]'`, which satisfies SQLite and nothing
+    else: both contract schemas require the array with `minItems: 1`, so a task
+    left at the default renders a contract that fails validation and the
+    Controller answers `contract: FAIL` at verify -- for every task, on a
+    campaign that was healthy before the upgrade.
+    """
+
+    #: The `tasks` columns exactly as they stood before this batch.
+    LEGACY_COLUMNS = (
+        "id TEXT PRIMARY KEY",
+        "title TEXT NOT NULL",
+        "wave_id TEXT NOT NULL",
+        "workstream_id TEXT NOT NULL",
+        "target_id TEXT NOT NULL",
+        "repository_id TEXT",
+        "execution_kind TEXT NOT NULL",
+        "objective TEXT NOT NULL",
+        "dependencies TEXT NOT NULL",
+        "required_decisions TEXT NOT NULL",
+        "blocking_unknowns TEXT NOT NULL",
+        "required_evidence TEXT NOT NULL",
+        "completion_gates TEXT NOT NULL",
+        "authorization_ceiling TEXT NOT NULL",
+        "required_acceptance TEXT NOT NULL",
+        "required_validation_commands TEXT NOT NULL",
+        "risk_tier TEXT NOT NULL",
+        "definition_status TEXT NOT NULL",
+        "runtime_state TEXT NOT NULL",
+        "scope_status TEXT NOT NULL",
+        "source_contract_path TEXT",
+        "source_contract_digest TEXT",
+        "rendered_contract_path TEXT",
+        "rendered_contract_digest TEXT",
+        "base_sha TEXT",
+        "branch TEXT",
+        "worktree TEXT",
+        "lease_id TEXT",
+        "attempts INTEGER NOT NULL DEFAULT 0",
+        "last_error TEXT",
+    )
+
+    def _legacy_runtime(self, runtime: Path, *, lock_tasks: list[dict]) -> Path:
+        runtime.mkdir(parents=True, exist_ok=True)
+        (runtime / "program-lock.json").write_text(
+            json.dumps({"blueprint_root": str(runtime), "tasks": lock_tasks}), encoding="utf-8"
+        )
+        db_path = runtime / "state.sqlite"
+        conn = sqlite3.connect(db_path)
+        conn.execute(f"CREATE TABLE tasks ({', '.join(self.LEGACY_COLUMNS)})")
+        conn.execute(
+            "INSERT INTO tasks (id, title, wave_id, workstream_id, target_id, repository_id, "
+            "execution_kind, objective, dependencies, required_decisions, blocking_unknowns, "
+            "required_evidence, completion_gates, authorization_ceiling, required_acceptance, "
+            "required_validation_commands, risk_tier, definition_status, runtime_state, "
+            "scope_status) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            (
+                "TASK-001",
+                "t",
+                "W1",
+                "WS1",
+                "TGT-1",
+                "repo",
+                "repo_local",
+                "o",
+                "[]",
+                "[]",
+                "[]",
+                "[]",
+                "[]",
+                json.dumps({"local_write": True}),
+                "[]",
+                json.dumps(["pytest a"]),
+                "T2",
+                "ready",
+                "ELIGIBLE",
+                "intent_only",
+            ),
+        )
+        conn.commit()
+        conn.close()
+        return db_path
+
+    def test_migration_backfills_mechanisms_from_the_program_lock(self) -> None:
+        mechanism = _verification("command", "pytest a")
+        with tempfile.TemporaryDirectory() as raw:
+            db_path = self._legacy_runtime(
+                Path(raw) / "runtime",
+                lock_tasks=[{"id": "TASK-001", "source": {"validation": [mechanism]}}],
+            )
+            db = pec_state.StateDB(db_path)
+            try:
+                task = db.task("TASK-001")
+            finally:
+                db.close()
+        self.assertEqual(task["verification_mechanisms"], [mechanism])
+        # The point of the backfill: the value now satisfies the tightened
+        # contract schema, so verify no longer reports contract: FAIL. Asserted
+        # against the schema itself rather than against `!= []`, because the
+        # schema is what `_validate_schema` applies at verify.
+        import jsonschema
+
+        schema = json.loads((SCHEMAS / "task-contract.schema.json").read_text(encoding="utf-8"))
+        subschema = schema["properties"]["verification_mechanisms"]
+        validator = jsonschema.Draft202012Validator(subschema)
+        self.assertEqual([], list(validator.iter_errors(task["verification_mechanisms"])))
+
+    def test_migration_is_silent_when_no_lock_sits_beside_the_database(self) -> None:
+        """A fresh or test runtime has no legacy rows to repair; do not guess."""
+        with tempfile.TemporaryDirectory() as raw:
+            runtime = Path(raw) / "runtime"
+            db_path = self._legacy_runtime(runtime, lock_tasks=[])
+            (runtime / "program-lock.json").unlink()
+            db = pec_state.StateDB(db_path)
+            try:
+                self.assertEqual(db.task("TASK-001")["verification_mechanisms"], [])
+            finally:
+                db.close()
 
 
 if __name__ == "__main__":
