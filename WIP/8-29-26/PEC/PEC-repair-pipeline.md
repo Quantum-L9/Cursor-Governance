@@ -84,6 +84,10 @@ This folder is no longer a dump of PE research. It is one remaining pipeline.
 
 ## What this is
 
+> **New here?** Read [`HANDOFF.md`](./HANDOFF.md) first — current state, the one red
+> check and why it is not this PR's, what is actually left, and the commands that
+> prove each claim. This file is the narrative history behind it.
+
 PEC already has a strong runtime (Program Lock, authorization, evidence, replan contract, peer execution, `refuse_publication`). W0–W7 closed the compiler front half through shadow graduation.
 
 **Do not build RiskPacket next. Do not `make campaign` next.**

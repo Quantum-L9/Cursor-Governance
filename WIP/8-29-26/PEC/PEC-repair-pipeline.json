@@ -1395,14 +1395,14 @@
     "failed campaign_id is not reusable; stale blueprint is silently reused"
   ],
   "published_at_head": {
-    "head_sha": "fea124cd2aa152123e61231260aba5c3f6817160",
+    "head_sha": "385e2454b123c4710e9148da791cf310825ff754",
     "branch": "claude/cursor-governance-pec-pack-lcw0p8",
     "pr": "Quantum-L9/Cursor-Governance#442",
     "pr_url": "https://github.com/Quantum-L9/Cursor-Governance/pull/442",
     "base": "main",
     "base_sha_at_publish": "da0c7530",
-    "commits": 11,
-    "changed_files": 38,
+    "commits": 17,
+    "changed_files": 48,
     "mergeable": true,
     "mergeable_state": "blocked",
     "reviews": 0,
@@ -1411,13 +1411,17 @@
       "pec-normative-and-disposition-2-2026-08-31 — remediation 11-12",
       "pec-tail-5-2026-08-31 — remediation 13-17 (queue emptied)",
       "pec-w8-s0-counterexample-reproduction-2026-09-01",
-      "pec-w8-s0-baseline-freeze-2026-09-01"
+      "pec-w8-s0-baseline-freeze-2026-09-01",
+      "pec-w8-s0-close-2026-09-01 — B6 closed; GATE-S0 passes",
+      "pec-w8-s1-prohibition-split-2026-09-01",
+      "pec-w8-s1-u3-gate-coverage-2026-09-01"
     ],
     "ci_verdict": {
       "checks_total": 22,
       "success": 19,
       "skipped": 2,
       "failure": 1,
+      "only_failure": "Analyze (central Core) — not this PR, see external_blockers",
       "pec_jobs_green": [
         "Peer Execution Conformance",
         "Test Suite",
@@ -1431,7 +1435,8 @@
       "registry_conformance": "14 OK",
       "conformance_runner": "PASS — 649 tests, 0 failures, 0 errors",
       "hardening_suite": "56 passed, 15 xfailed"
-    }
+    },
+    "snapshot_discipline": "This block is a snapshot at head_sha, and it went stale once already - it sat at fea124cd/11 commits while the branch reached 385e2454/17, because it was written on one publish and not refreshed on the next four. Refresh it on every publish, or read head_sha first and distrust the rest when it does not match the PR."
   },
   "external_blockers": [
     {
