@@ -34,6 +34,7 @@ from autonomy.tests.swarm_fixtures import (
     deployment_payload,
 )
 from environment.agents.deployment import receipts as receipt_lib
+from environment.agents.deployment.receipts import DeploymentNotReady
 
 ROOT = Path(__file__).resolve().parents[2]
 
@@ -263,27 +264,27 @@ class DeploymentReadinessAdmissionTests(HostBridgeTestCase):
             surface="cursor", workspace_id=receipt_lib.workspace_id_for(ROOT)
         )
         path.unlink()
-        decision = self._admission()
-        self.assertFalse(decision["allowed"])
-        self.assertIn("missing", decision["reason"])
+        with self.assertRaises(DeploymentNotReady) as caught:
+            self._admission()
+        self.assertIn("missing", str(caught.exception))
 
     def test_blocked_receipt_denies(self) -> None:
         _write_cursor_receipt(ROOT, status="BLOCKED")
-        decision = self._admission()
-        self.assertFalse(decision["allowed"])
-        self.assertIn("BLOCKED", decision["reason"])
+        with self.assertRaises(DeploymentNotReady) as caught:
+            self._admission()
+        self.assertIn("BLOCKED", str(caught.exception))
 
     def test_stale_digest_denies(self) -> None:
         _write_cursor_receipt(ROOT, digest="0" * 64)
-        decision = self._admission()
-        self.assertFalse(decision["allowed"])
-        self.assertIn("stale", decision["reason"])
+        with self.assertRaises(DeploymentNotReady) as caught:
+            self._admission()
+        self.assertIn("stale", str(caught.exception))
 
     def test_invalid_digest_denies(self) -> None:
         _write_cursor_receipt(ROOT, corrupt=True)
-        decision = self._admission()
-        self.assertFalse(decision["allowed"])
-        self.assertIn("digest invalid", decision["reason"])
+        with self.assertRaises(DeploymentNotReady) as caught:
+            self._admission()
+        self.assertIn("digest invalid", str(caught.exception))
 
 
 if __name__ == "__main__":

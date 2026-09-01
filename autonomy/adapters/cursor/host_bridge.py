@@ -37,11 +37,14 @@ def _cursor_deployment_readiness_required(repo_root: Path) -> bool:
     path = Path(repo_root) / _BINDINGS_REL
     if not path.is_file():
         return False
-    import yaml
+    try:
+        import yaml
 
-    document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+        document = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    except Exception:
+        return True
     if not isinstance(document, dict):
-        return False
+        return True
     peer = (document.get("peers") or {}).get("cursor") or {}
     deployment = (peer.get("subagents") or {}).get("deployment") or {}
     return bool(deployment.get("readiness_required"))
@@ -50,9 +53,17 @@ def _cursor_deployment_readiness_required(repo_root: Path) -> bool:
 def _require_cursor_deployment_ready(workspace: Path, repo_root: Path) -> None:
     if str(repo_root) not in sys.path:
         sys.path.insert(0, str(repo_root))
-    from environment.agents.deployment.receipts import require_cursor_deployment_ready
+    from environment.agents.deployment.receipts import (
+        DeploymentNotReady,
+        require_cursor_deployment_ready,
+    )
 
-    require_cursor_deployment_ready(workspace, repo_root)
+    try:
+        require_cursor_deployment_ready(workspace, repo_root)
+    except DeploymentNotReady:
+        raise
+    except Exception as exc:
+        raise DeploymentNotReady(str(exc)) from exc
 
 
 ADMISSION_SCHEMA = "l9.cursor-host-admission.v1"
@@ -137,6 +148,7 @@ class CursorHostBridge:
         action_id: str | None = None,
         requested_role: str | None = None,
         ttl_seconds: int | None = None,
+        workspace: str | Path | None = None,
     ) -> dict[str, Any]:
         """Create a pending admission for one native Task launch.
 
@@ -146,12 +158,10 @@ class CursorHostBridge:
         and returns an opaque single-use admission token to embed in the Task
         prompt. Nothing about the Task text participates in authorization.
         """
-        workspace = self.orchestrator.repository_root
-        if _cursor_deployment_readiness_required(workspace):
-            try:
-                _require_cursor_deployment_ready(workspace, workspace)
-            except Exception as exc:  # DeploymentNotReady, missing import, missing yaml
-                return _deny(str(exc))
+        repo_root = self.orchestrator.repository_root
+        campaign_workspace = Path(workspace).resolve() if workspace is not None else repo_root
+        if _cursor_deployment_readiness_required(repo_root):
+            _require_cursor_deployment_ready(campaign_workspace, repo_root)
         if session_id is None:
             if adapter_config is None:
                 msg = "create_admission requires session_id or adapter_config"
