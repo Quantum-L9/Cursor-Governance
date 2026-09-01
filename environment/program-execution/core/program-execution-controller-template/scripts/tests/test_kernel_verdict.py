@@ -87,6 +87,27 @@ class KernelVerdictTest(unittest.TestCase):
             )
             cleanup_worktree(repo, workspace)
 
+    def test_coverage_is_stated_even_when_there_is_nothing_to_state(self) -> None:
+        """U3: an empty list, not a missing field.
+
+        Absence would be read as "nothing to report" and as "this emitter does
+        not report", which are different claims. The schema requires the field
+        so the second reading cannot arise.
+        """
+        with TemporaryDirectory() as raw:
+            temp = Path(raw)
+            bp = make_blueprint(temp / "blueprint")
+            repo = make_repo(temp / "repo")
+            workspace = temp / "runtime"
+            run_cli("bootstrap", "--workspace", str(workspace), "--blueprint", str(bp))
+            run_cli("reconcile", "--workspace", str(workspace), "--repository", f"repo-a={repo}")
+            register_contract(temp, workspace)
+            prepare_attempt(temp, workspace)
+            verification = run_cli("verify", "TASK-001", "--workspace", str(workspace))
+            self.assertIn("unenforced_prohibitions", verification)
+            self.assertEqual(verification["unenforced_prohibitions"], [])
+            cleanup_worktree(repo, workspace)
+
     def test_wiring_links_do_not_fail_kernel_pass(self) -> None:
         with TemporaryDirectory() as raw:
             temp = Path(raw)

@@ -59,6 +59,9 @@ class DoNotBuildVerifyTest(unittest.TestCase):
                     str(workspace),
                 )
                 self.assertEqual(verification["gates"]["do_not_build"], "FAIL")
+                # A path prohibition IS evaluated here, so it must not be
+                # reported as something this gate skipped.
+                self.assertEqual(verification["unenforced_prohibitions"], [])
             finally:
                 cleanup_worktree(repo, workspace)
 
@@ -119,6 +122,14 @@ class DoNotBuildVerifyTest(unittest.TestCase):
                     "PASS",
                     "a semantic prohibition must not decide a path gate",
                 )
+                # U3: and the PASS must not read wider than it is. The receipt
+                # names the law this gate could not evaluate, so nobody mistakes
+                # "the changed paths are clean" for "no prohibition was
+                # violated".
+                unenforced = verification["unenforced_prohibitions"]
+                self.assertEqual([row["id"] for row in unenforced], ["DNB-001"])
+                self.assertIn("second Program Execution runtime", unenforced[0]["statement"])
+                self.assertEqual(unenforced[0]["enforced_by"], "review_and_conformance")
             finally:
                 cleanup_worktree(repo, workspace)
 

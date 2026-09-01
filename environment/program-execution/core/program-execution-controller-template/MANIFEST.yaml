@@ -83,7 +83,7 @@ files:
 - path: schemas/task-contract.schema.json
   sha256: 08dd769b01fcca140d0b43647ddce142ea3fd07384e2f7ba26bf8fa658d3f919
 - path: schemas/verification-receipt.schema.json
-  sha256: c11832210052974f9ec8b31d1b63e36087fb35b5d5385bbec993a55307c5d21e
+  sha256: 6780f3341ff52e661da0bd91acc9e7e4321964a44d9cbe33242ec67a25173163
 - path: schemas/waiver.schema.json
   sha256: 6ff6e71f1a820ae05bbd795a50ac96e176bf971ccb8f6e9051f4da1623b087c7
 - path: scripts/instantiate.py
@@ -99,7 +99,7 @@ files:
 - path: scripts/pec/contracts.py
   sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
 - path: scripts/pec/controller.py
-  sha256: 22a3b70e729471e240563a149671277ead553d15cfe89f040662161f9d477de1
+  sha256: 365184d3e9b4ae898d4411cbd304c30de309b4df30c1d9fcde5a397077cf0aa5
 - path: scripts/pec/exec_env.py
   sha256: 56fe5eb1114dda26f3e061de03580b788cfa5e654c117d0c0b65ac9083d15a10
 - path: scripts/pec/ledger.py
@@ -139,7 +139,7 @@ files:
 - path: scripts/tests/test_decision_unknown.py
   sha256: b564797fadb1a16ba35d6d08c71bd742e81e03ca29ec11c86c3e8a44139012bd
 - path: scripts/tests/test_do_not_build_verify.py
-  sha256: 0629ceff7c23532472610e3913fc1d2496eab012468ac54339d3c10623dadd32
+  sha256: bec6145fab2c70007baf383813c19cdc2e39e788d5154d6159294c4f4752425b
 - path: scripts/tests/test_execution_recovery.py
   sha256: 6402cf39797ab7e0d3a6ef19ea6054153d6e696b327da713eda2b5f58697973e
 - path: scripts/tests/test_fail_task.py
@@ -147,7 +147,7 @@ files:
 - path: scripts/tests/test_import_graph.py
   sha256: ca6bcfa79727f80b322e47f5fdaa228eaabf96e758e3ba13897aefcbdd734e01
 - path: scripts/tests/test_kernel_verdict.py
-  sha256: 0366bb07fe1b12cb8ca50379d27d2d04d2a359cda85b568bd76c9b3c3ae5fad4
+  sha256: ce614ea57ffe7fdc55cb09e81177b0f97f68572e7fa6f2f110cf05a78090298f
 - path: scripts/tests/test_leases_and_approval.py
   sha256: ae7ef493630fb9c7ffe0b0939537328298cdf98e351b59b7d9890cd79c70fb9c
 - path: scripts/tests/test_ledger_tamper.py

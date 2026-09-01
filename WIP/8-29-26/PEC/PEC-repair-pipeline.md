@@ -604,6 +604,46 @@ reconstructed semantics` round-trip, `semantic_diff` empty on a full fixture, an
 **W9 and W10** are sequenced behind W8's remaining subwaves by `depends_on`, not by a
 missing plan.
 
+### U3 closed — `do_not_build` states what it did not check (2026-09-01)
+
+Batch `pec-w8-s1-u3-gate-coverage-2026-09-01`. This gap was **opened by the S1
+split and closed by the same session.**
+
+Stopping semantic prohibitions being globbed was right. Leaving the gate silent
+about them was not: `do_not_build: PASS` then reads as *"no prohibition was
+violated"* when it only ever meant *"the changed paths are clean"*. That is the
+third instance of one root cause — **a gate reporting PASS about work it did not
+do** — after B6's `worker_validation_claim` and the split itself.
+
+The verification receipt now carries:
+
+```json
+"unenforced_prohibitions": [
+  {"id": "DNB-001",
+   "statement": "a second Program Execution runtime or Controller",
+   "enforced_by": "review_and_conformance"}
+]
+```
+
+Derived as the **complement of what the gate actually matches**, not by reading
+`kind`, so a legacy entry carrying neither a kind nor a pattern is reported here
+rather than falling between the two.
+
+**Declared, not required — and that correction came from the suite.** Requiring it
+was the first attempt, on the reasoning that an emitter which omits the field goes
+silent again. Conformance refuted it: adapters emit this same receipt (generic
+shell lifecycle, probe dispatch/collect) and have no program lock to read, so an
+empty list from one would assert coverage it never checked — the exact vacuous
+claim the field exists to prevent. The obligation belongs to the only emitter that
+can honestly discharge it, pinned by the Controller's own tests rather than by a
+schema three other producers share.
+
+**Deliberately not done:** `do_not_build` does *not* become INCOMPLETE when
+semantic prohibitions exist. Those laws are normal and are enforced by review and
+conformance; making the gate incomplete for them would mark every campaign
+incomplete forever — the unclearable-gate shape corrected in S0. The gate keeps
+its path verdict; the receipt carries the coverage.
+
 ### Campaign activation (when W8+ admits campaigns)
 
 Use live skill **`skills/l9-pe-campaign-activate`** — not WIP template copies under `_archive/`.

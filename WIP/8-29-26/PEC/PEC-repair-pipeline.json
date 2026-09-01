@@ -1299,6 +1299,19 @@
             "GATE-S1-SEMANTIC-CONSERVATION"
           ],
           "open_unknown": "U3 - whether an unenforceable semantic prohibition should make do_not_build INCOMPLETE rather than PASS. Left bounded: it would change every campaign gate output, not just this seam."
+        },
+        {
+          "batch_id": "pec-w8-s1-u3-gate-coverage-2026-09-01",
+          "closes": "U3 - opened by this session, closed by it",
+          "why": "The S1 split stopped semantic prohibitions being globbed, which was right, but left do_not_build silent about them. Its PASS then read as \"no prohibition was violated\" when it only ever meant \"the changed paths are clean\". That is the same root cause as B6 and as the split itself: a gate reporting PASS about work it did not do.",
+          "landed": [
+            "controller.py _unenforced_prohibitions() - derived as the complement of what the gate matches, not by reading kind, so a legacy entry with neither kind nor pattern is reported rather than lost between the two",
+            "verification receipt carries unenforced_prohibitions with id, statement and enforced_by",
+            "verification-receipt.schema.json declares the field; the Controller always emits it and its tests pin that",
+            "tests: semantic prohibition reported while do_not_build PASSes; path prohibition not reported; empty list stated when there is nothing to state"
+          ],
+          "not_done_deliberately": "do_not_build does NOT become INCOMPLETE when semantic prohibitions exist. Semantic laws are normal and are enforced by review and conformance, so that would mark every campaign incomplete forever - the unclearable-gate shape corrected in S0. The gate keeps its path verdict; the receipt states the coverage.",
+          "schema_safety": "The field is declared but NOT required. Requiring it was the first attempt and the conformance suite refuted it: adapters emit this same receipt (generic shell lifecycle, probe dispatch/collect) and have no program lock to read, so an empty list from one would assert coverage it never checked - the vacuous claim the field exists to prevent. The obligation sits on the only emitter that can honestly discharge it, pinned by the Controller's own tests rather than by a shared schema."
         }
       ]
     },
@@ -1342,10 +1355,11 @@
     "blocked_until": "Nothing is blocked. S0 is closed and S1 has started: the prohibition/path split is done. S1's remaining bullets are the SemanticModel round-trip and semantic_diff, a substantially larger build needing their own plan and authorization.",
     "gate_command": "python environment/program-execution/scripts/gate_s0_baseline.py",
     "s0_status": "PASS (advisory pinned_to_main; binds at S8)",
-    "s1_status": "partial - split closed; SemanticModel round-trip and semantic_diff open",
+    "s1_status": "partial - prohibition/path split closed and its coverage gap (U3) closed; SemanticModel round-trip, semantic_diff and GATE-S1-SEMANTIC-CONSERVATION open",
     "w9_w10": "W9 depends_on W8 and W10 depends_on W9. They are sequenced behind W8 remaining subwaves by dependency, not by any missing plan or authorization.",
     "execute_via": "new PLAN_DOCUMENT or Cursor plan - not reopen W0-W7 Build",
-    "campaign_activation_ssot": "skills/l9-pe-campaign-activate (not WIP template copies)"
+    "campaign_activation_ssot": "skills/l9-pe-campaign-activate (not WIP template copies)",
+    "recommended_sequence": "Land PR #442 before the SemanticModel round-trip: it is the deepest compiler change in W8 and the PR already carries 15 commits across 47 files with no review. Building it on a main that carries this work also gives baseline.pinned_to_main its real value instead of a standing advisory."
   },
   "harvested_from": {
     "deleted": "WIP/PROGRAM EXECUTION PIPELINE/",

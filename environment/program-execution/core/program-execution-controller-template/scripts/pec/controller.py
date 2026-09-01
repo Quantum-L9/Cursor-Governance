@@ -1460,6 +1460,39 @@ def _preflight2_gates(commands: list[str]) -> dict[str, str]:
     }
 
 
+def _unenforced_prohibitions(workspace: Path) -> list[dict[str, Any]]:
+    """Prohibitions the do_not_build gate cannot evaluate.
+
+    That gate matches file paths. A prohibition with no usable pattern - an
+    architecture law such as "a second Program Execution runtime or Controller"
+    - is enforced by review and conformance instead, and the gate is silent
+    about it. Silence is what makes a PASS read wider than it is, so the
+    verification receipt names them.
+
+    Derived as the complement of the set the gate actually matches, rather than
+    by reading `kind`, so a legacy entry carrying neither a kind nor a pattern
+    is reported here too instead of vanishing between the two.
+    """
+    lock_path = workspace / "runtime" / "program-lock.json"
+    if not lock_path.is_file():
+        return []
+    entries = (load_json(lock_path).get("do_not_build") or {}).get(
+        "prohibited_primary_paths"
+    ) or []
+    unenforced: list[dict[str, Any]] = []
+    for item in entries:
+        if not isinstance(item, dict) or item.get("path_or_pattern"):
+            continue
+        unenforced.append(
+            {
+                "id": str(item.get("id") or ""),
+                "statement": str(item.get("statement") or ""),
+                "enforced_by": str(item.get("detection") or "review_and_conformance"),
+            }
+        )
+    return unenforced
+
+
 def _wiring_gate(contract: dict[str, Any], task: dict[str, Any]) -> str:
     source = task.get("source") if isinstance(task.get("source"), dict) else {}
     consumers = contract.get("consumers") or source.get("consumers") or []
@@ -1667,6 +1700,13 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
         changed: list[str] = []
         validations: list[dict[str, Any]] = []
         candidate_sha = None
+        # What the do_not_build gate does NOT cover. Semantic prohibitions carry
+        # no path to match (W8/S1), so a PASS from that gate means "the changed
+        # paths are clean", never "no prohibition was violated". Saying which
+        # rules it could not evaluate keeps the receipt from reading as the
+        # broader claim. Derived from the lock, so it stands even when the
+        # worktree is gone and every gate is FAIL.
+        unenforced_prohibitions = _unenforced_prohibitions(workspace)
         if worktree is None or not worktree.is_dir():
             for name in [
                 "base_sha",
@@ -1779,6 +1819,7 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             "declared_changed_files": sorted(set(receipt.get("changed_files") or [])),
             "observed_changed_files": changed,
             "validations": validations,
+            "unenforced_prohibitions": unenforced_prohibitions,
             "gates": gates,
             "kernel_verdict": kernel_verdict,
             "dod_gates": dod_gates,
