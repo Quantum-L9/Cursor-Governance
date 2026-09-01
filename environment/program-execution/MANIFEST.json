@@ -1247,7 +1247,7 @@
     },
     {
       "path": "conformance/counterexamples/v2-gaps-registry.yaml",
-      "sha256": "ad607fdf3ba2383a13bbc9800a165825987488ba85c2d9ff1ce613e886371a5b"
+      "sha256": "3dfd611c5e96612363ab445e07481994e523b8169b5847bcd69de0de237e4a89"
     },
     {
       "path": "conformance/fixtures/hostile/cancellation-without-evidence.yaml",
@@ -1400,6 +1400,10 @@
     {
       "path": "conformance/test_core_schema_references.py",
       "sha256": "4c01b664f98cf7544b27ebbc66622034d56fc4a57800569067d134fd842ff959"
+    },
+    {
+      "path": "conformance/test_counterexample_registry.py",
+      "sha256": "63d698528854f619ea398d717eab36027fc43f29145b4060eb97ff5af49d955a"
     },
     {
       "path": "conformance/test_descriptor_schema.py",
@@ -2158,12 +2162,32 @@
       "sha256": "bc1e898928e1f08e9731d0de3f7580e21f7bdb360ddfcf8ed0eb4fe33b8246c3"
     },
     {
+      "path": "tests/hardening/test_hardening_closeout.py",
+      "sha256": "5fe08d4a96aefca7725d4df23f73d65e36486c121bceeb82d57e7bdb649fa4b2"
+    },
+    {
       "path": "tests/hardening/test_hardening_compiler.py",
       "sha256": "db1f52a25b62e895edb04512118dd1fdbb22734920885810814123da6044a7c2"
     },
     {
       "path": "tests/hardening/test_hardening_evidence.py",
       "sha256": "726573e3d19370f4a2f906da9e9c35b500b8d5dabd59e1e965009084600c4315"
+    },
+    {
+      "path": "tests/hardening/test_hardening_gates.py",
+      "sha256": "128351f6cfc5c499e4a168208eeecab81679c472b6e4e9edfb5937f9bd8016fe"
+    },
+    {
+      "path": "tests/hardening/test_hardening_leases.py",
+      "sha256": "c69b86c3ad76282f5805f51a54a7c0a35a659168cdca64946ed4cb898fc9ee1e"
+    },
+    {
+      "path": "tests/hardening/test_hardening_replan.py",
+      "sha256": "8efef80c433b9ab1cf7d0ff742b35315a96a2457256c858814b68dbbca5d3f92"
+    },
+    {
+      "path": "tests/hardening/test_hardening_repository.py",
+      "sha256": "344a8ab678dd46f02bcd0ca10c7e428463348920afd270fa5195cc260c3f2ad3"
     },
     {
       "path": "tests/hardening/test_real_campaign_e2e.py",

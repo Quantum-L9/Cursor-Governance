@@ -142,10 +142,10 @@ counterexamples:
 summary:
   total_counterexamples: 15
   critical: 7
-  high: 6
+  high: 7
   medium: 1
-  low: 1
-  test_files: 8
+  low: 0
+  test_files: 9
   
 status: registry_complete
 verification: all_counterexamples_reproduce_as_xfail_tests

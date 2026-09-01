@@ -339,6 +339,45 @@ Start only via a new plan after W7 lands on `origin/main`. Do not reopen the W0�
 
 See [`PEC-repair-pipeline.json`](./PEC-repair-pipeline.json) W8 `subwaves` for S0–S8 acceptance bullets.
 
+### W8/S0 partial — counterexample reproduction closed (2026-09-01)
+
+Batch `pec-w8-s0-counterexample-reproduction-2026-09-01`. **W8 stays open**; this
+closes one S0 acceptance bullet and nothing else.
+
+The registry declared `verification: all_counterexamples_reproduce_as_xfail_tests`
+while **five of the nine test files it named did not exist** — so six of fifteen
+counterexamples reproduced as nothing at all. Its own summary disagreed with its
+entries as well (`high: 6` against seven, `low: 1` against none, `test_files: 8`
+against nine).
+
+Landed:
+
+| Path | Counterexamples |
+|---|---|
+| `tests/hardening/test_hardening_gates.py` | CE-GATE-001 |
+| `tests/hardening/test_hardening_repository.py` | CE-REPOSITORY-001 |
+| `tests/hardening/test_hardening_leases.py` | CE-LEASE-001 |
+| `tests/hardening/test_hardening_replan.py` | CE-REPLAN-001 |
+| `tests/hardening/test_hardening_closeout.py` | CE-CLOSEOUT-001, CE-CLOSEOUT-002 |
+| `conformance/test_counterexample_registry.py` | — (checks the registry against the suite on disk) |
+
+The summary counts were corrected to match the entries. The `verification` claim
+was **earned rather than softened**: it is now true, and
+`test_verification_claim_is_earned` fails if it ever stops being — every entry must
+name a test file that exists, defining a function that carries an `xfail` marker
+whose reason names that counterexample's own ID.
+
+Evidence:
+
+- hardening suite — **56 passed, 15 xfailed** (was 9 xfailed)
+- conformance runner — **PASS**, 628 tests, 0 failures, 0 errors, new file collected
+- registry suite — 9 tests OK; it reproduced all three summary defects before the correction
+
+Still gating S0 (unchanged): the baseline commit and orchestrator checkout must be
+frozen independently against a **fresh** `origin/main` SHA after W7 merges, and PE
+surfaces digest-manifested. `GATE-S0-BASELINE-CHARACTERIZED` is **not** passed. No
+v3 surface, no baseline pin, no product behavior change.
+
 ### Campaign activation (when W8+ admits campaigns)
 
 Use live skill **`skills/l9-pe-campaign-activate`** — not WIP template copies under `_archive/`.
