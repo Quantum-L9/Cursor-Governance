@@ -251,8 +251,16 @@ if [ "${SESSION_DEPS_DETACHED:-}" = "1" ]; then
   # exit, so an install that dies still ends the wait instead of pinning it to
   # the full budget.
   if [ -n "${L9_DEPS_DONE_FILE:-}" ]; then
-    # shellcheck disable=SC2064  # expand the path now, not at trap time
-    trap "printf '%s\n' \"\$?\" > '$L9_DEPS_DONE_FILE' 2>/dev/null || true" EXIT
+    # An EXIT trap is INHERITED BY `( … )` SUBSHELLS in bash, and install_repo
+    # runs several of them. Unguarded, the first subshell to finish wrote the
+    # completion marker while npm was still installing, so the waiter below
+    # stopped early and re-reported readiness from a half-applied tree — the
+    # precise false-ready this helper's proof gate exists to prevent.
+    # $$ stays the top-level shell's pid inside a subshell; $BASHPID is the
+    # subshell's own. Equal means this really is the worker exiting.
+    _DEPS_MAIN_PID=$$
+    # shellcheck disable=SC2064  # expand the path and pid now, not at trap time
+    trap "[ \"\$BASHPID\" = \"$_DEPS_MAIN_PID\" ] && printf '%s\n' \"\$?\" > '$L9_DEPS_DONE_FILE' 2>/dev/null; true" EXIT
   fi
   DEPS_FAILED=0
   while IFS= read -r repo; do

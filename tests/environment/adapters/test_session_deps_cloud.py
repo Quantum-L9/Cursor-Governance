@@ -31,13 +31,37 @@ HELPER = (
 )
 
 
-def run(workspace: Path, home: Path, *, remote: str = "true", budget: str = "20"):
+def _path_without(tool: str) -> str:
+    """PATH with every directory providing `tool` removed.
+
+    Lets a test pin the UNAPPLIED state deterministically instead of racing the
+    installer: with no npm on PATH the helper's node branch is skipped outright,
+    so a package.json can never gain node_modules and "not applied" is a fact
+    rather than a hope about how long an install takes.
+    """
+    return os.pathsep.join(
+        entry
+        for entry in os.environ.get("PATH", "").split(os.pathsep)
+        if entry and not (Path(entry) / tool).exists()
+    )
+
+
+def run(
+    workspace: Path,
+    home: Path,
+    *,
+    remote: str = "true",
+    budget: str = "20",
+    path: str | None = None,
+):
     env = {
         **os.environ,
         "HOME": str(home),
         "CLAUDE_CODE_REMOTE": remote,
         "L9_SESSION_DEPS_BUDGET": budget,
     }
+    if path is not None:
+        env["PATH"] = path
     return subprocess.run(
         ["bash", str(HELPER), "--workspace", str(workspace)],
         capture_output=True,
@@ -124,18 +148,51 @@ def test_unapplied_node_lock_is_not_reported_ready(tmp_path: Path) -> None:
 
     This is the shape of the original false positive: readiness asserted from
     the fact that a pass ran rather than from applied state.
+
+    The unapplied state is pinned by removing npm from PATH, not by a budget
+    too short for the install to finish. That timing assumption was invisible
+    and wrong: with a warm npm cache the install completes inside a 1s budget,
+    npm creates node_modules, and "proven applied" becomes the TRUTH — so the
+    test failed while the contract held. npm's own docs are explicit that
+    node_modules presence is not an install-completion signal, which is why the
+    fixture must remove the installer rather than out-run it.
     """
     workspace = tmp_path / "container"
     workspace.mkdir()
     repo = make_repo(workspace, "webapp")
     (repo / "package.json").write_text('{"name":"webapp","private":true}\n', encoding="utf-8")
     home = tmp_path / "home"
-    result = run(workspace, home, budget="1")
+    result = run(workspace, home, path=_path_without("npm"))
     assert result.returncode == 0
     combined = result.stdout + result.stderr
-    assert "UNPROVEN" in combined or "continues in background" in combined
+    assert not (repo / "node_modules").exists(), "fixture invalid: npm was still reachable"
+    assert "UNPROVEN" in combined, combined
     stamps = list((home / ".l9" / "claude").glob("deps-*.stamp"))
     assert stamps == [], "a stamp must never be written for an unproven toolchain"
+
+
+def test_applied_node_toolchain_is_reported_ready_and_stamped(tmp_path: Path) -> None:
+    """The converse, so the pair pins the implication in both directions.
+
+    Readiness must track APPLIED STATE — which means it has to be granted when
+    the state really is applied, not merely withheld when it is not. Without
+    this, "never report ready" would pass a helper that reports nothing ever.
+    """
+    if _path_without("npm") == os.environ.get("PATH", ""):
+        pytest.skip("npm not installed on this runner; the applied state cannot be constructed")
+
+    workspace = tmp_path / "container"
+    workspace.mkdir()
+    repo = make_repo(workspace, "webapp")
+    (repo / "package.json").write_text('{"name":"webapp","private":true}\n', encoding="utf-8")
+    home = tmp_path / "home"
+    result = run(workspace, home, budget="120")
+    assert result.returncode == 0
+    combined = result.stdout + result.stderr
+    assert (repo / "node_modules").is_dir(), combined
+    assert "UNPROVEN" not in combined, combined
+    stamps = list((home / ".l9" / "claude").glob("deps-*.stamp"))
+    assert stamps, "an applied toolchain must be stamped, or every session re-installs"
 
 
 def test_single_repository_workspace_keeps_its_own_root(tmp_path: Path) -> None:

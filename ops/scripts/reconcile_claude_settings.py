@@ -49,6 +49,71 @@ CONSUMER_HOOK_FILES = (
 
 PRESERVE_USER_KEYS = ("enabledPlugins", "theme", "statusLine", "model")
 
+#: Hooks that size their own work against the wall clock, and the environment
+#: variable each one reads its allowance from.
+#:
+#: A hook cannot ask the harness how long it has. So the allowance has to be
+#: told to it, and it used to be told twice: once as the registration's
+#: ``timeout`` and once as a literal in ``env``. Two independently editable
+#: numbers that must agree is a defect waiting for its first edit, and the
+#: dangerous direction is silent — LOWER the timeout without lowering the env
+#: value and the hook believes it has time it does not have, overruns, and is
+#: killed mid-flight. That is exactly the failure this budget machinery was
+#: added to remove (SessionStart was killed at 30s having emitted nothing).
+#:
+#: So the registration is the single source and these values are DERIVED from
+#: it at reconcile time. ``reserve`` is subtracted for work the hook does
+#: outside the budgeted operation itself — writing its receipt, rendering its
+#: report — so the budget is what is actually available to spend, not the wall
+#: the harness kills at.
+#:
+#: A hook not present in the template gets no variable, and its own in-script
+#: default applies. Never guess a budget for a registration that is not there.
+BUDGET_BINDINGS: dict[str, tuple[str, str, int]] = {
+    # hook file: (hook event, env var, seconds reserved for non-budgeted work)
+    SESSION_START_NAME: ("SessionStart", "L9_SESSION_START_BUDGET", 0),
+    "memory_writeback.py": ("Stop", "L9_MEMORY_WRITEBACK_BUDGET", 15),
+}
+
+
+def _hook_timeout(template: dict[str, Any], event: str, hook_file: str) -> int | None:
+    """The registered timeout for one hook file, or None when it is absent."""
+    for group in (template.get("hooks") or {}).get(event) or []:
+        if not isinstance(group, dict):
+            continue
+        for hook in group.get("hooks") or []:
+            if not isinstance(hook, dict):
+                continue
+            if hook_file in str(hook.get("command") or ""):
+                timeout = hook.get("timeout")
+                if isinstance(timeout, int) and timeout > 0:
+                    return timeout
+    return None
+
+
+def derive_budget_env(template: dict[str, Any]) -> dict[str, Any]:
+    """Publish each hook's wall-clock allowance, computed from its registration.
+
+    Mutates and returns ``template``. Runs once, at the single load site, so
+    every rendered surface (governance-committed, user scope, workspace scope)
+    carries the same derived values and none of them can drift from the
+    registration they describe.
+
+    A literal left in the template's ``env`` is overwritten rather than
+    honoured: a hand-edited budget that disagrees with the timeout is the bug,
+    not a configuration.
+    """
+    env = template.setdefault("env", {})
+    if not isinstance(env, dict):  # pragma: no cover - malformed template
+        return template
+    for hook_file, (event, var, reserve) in BUDGET_BINDINGS.items():
+        timeout = _hook_timeout(template, event, hook_file)
+        if timeout is None:
+            env.pop(var, None)
+            continue
+        env[var] = str(max(1, timeout - reserve))
+    return template
+
 
 def load_json(path: Path) -> dict[str, Any]:
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -370,7 +435,7 @@ def run(
     template_path = root / TEMPLATE_REL
     if not template_path.is_file():
         raise FileNotFoundError(template_path)
-    template = load_json(template_path)
+    template = derive_budget_env(load_json(template_path))
     results: dict[str, Any] = {"check": check, "root": str(root)}
     all_drift: list[str] = []
     all_wrote: list[str] = []

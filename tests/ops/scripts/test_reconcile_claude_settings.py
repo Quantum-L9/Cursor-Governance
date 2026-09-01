@@ -248,3 +248,115 @@ def test_reconcile_workspace_composes_tracked_settings(tmp_path: Path) -> None:
     assert second["wrote"] == []
     check = run(root, workspace=ws, user=False, gov=True, check=True)
     assert check["ok"] is True
+
+
+# --- Hook budgets are derived from registrations, never authored twice -------
+# A hook cannot ask the harness how long it has, so the allowance is told to it.
+# It used to be told twice -- as the registration's `timeout` and as a literal
+# in `env` -- and two independently editable numbers that must agree is a defect
+# waiting for its first edit. The dangerous direction is silent: LOWER a timeout
+# without lowering the env literal and the hook believes it has time it does not,
+# overruns, and is killed mid-flight. That is the exact failure the budget
+# machinery exists to remove.
+
+REPO_ROOT = Path(__file__).resolve().parents[3]
+TEMPLATE = REPO_ROOT / "environment/agents/adapters/claude-code/settings.template.json"
+
+
+def _template() -> dict:
+    return json.loads(TEMPLATE.read_text(encoding="utf-8"))
+
+
+def test_template_authors_no_budget_literal() -> None:
+    """Budgets are derived. A literal in the template is the bug, not config."""
+    env = _template().get("env") or {}
+    authored = [k for k in env if k.endswith("_BUDGET")]
+    assert authored == [], (
+        f"{authored} authored in settings.template.json env; budgets are derived "
+        "from each hook's own `timeout` by derive_budget_env()"
+    )
+
+
+def test_derive_publishes_a_budget_for_every_binding() -> None:
+    from reconcile_claude_settings import BUDGET_BINDINGS, derive_budget_env
+
+    env = derive_budget_env(_template())["env"]
+    for _hook, (_event, var, _reserve) in BUDGET_BINDINGS.items():
+        assert var in env, f"{var} not derived"
+        assert int(env[var]) > 0
+
+
+def test_derived_budget_never_exceeds_the_timeout_it_is_derived_from() -> None:
+    """The whole point: the hook must not believe it has more time than it has."""
+    from reconcile_claude_settings import BUDGET_BINDINGS, _hook_timeout, derive_budget_env
+
+    template = _template()
+    env = derive_budget_env(json.loads(TEMPLATE.read_text(encoding="utf-8")))["env"]
+    for hook_file, (event, var, reserve) in BUDGET_BINDINGS.items():
+        timeout = _hook_timeout(template, event, hook_file)
+        assert timeout is not None, f"{hook_file} has no registration to derive from"
+        assert int(env[var]) == max(1, timeout - reserve)
+        assert int(env[var]) <= timeout
+
+
+def test_lowering_a_timeout_lowers_the_budget() -> None:
+    """The regression that matters: a timeout edit must carry the budget with it."""
+    from reconcile_claude_settings import SESSION_START_NAME, derive_budget_env
+
+    template = _template()
+    for group in template["hooks"]["SessionStart"]:
+        for hook in group["hooks"]:
+            if SESSION_START_NAME in hook["command"]:
+                hook["timeout"] = 12
+    env = derive_budget_env(template)["env"]
+    assert env["L9_SESSION_START_BUDGET"] == "12", (
+        "a lowered timeout left a stale, higher budget — the silent direction "
+        "of the drift this derivation removes"
+    )
+
+
+def test_a_stale_literal_is_overwritten_not_honoured() -> None:
+    from reconcile_claude_settings import derive_budget_env
+
+    template = _template()
+    template.setdefault("env", {})["L9_SESSION_START_BUDGET"] = "999"
+    env = derive_budget_env(template)["env"]
+    assert env["L9_SESSION_START_BUDGET"] != "999"
+
+
+def test_absent_registration_publishes_no_budget() -> None:
+    """Never guess an allowance for a hook that is not registered."""
+    from reconcile_claude_settings import derive_budget_env
+
+    template = _template()
+    template["hooks"]["Stop"] = []
+    template.setdefault("env", {})["L9_MEMORY_WRITEBACK_BUDGET"] = "75"
+    env = derive_budget_env(template)["env"]
+    assert "L9_MEMORY_WRITEBACK_BUDGET" not in env
+
+
+def test_deps_helper_default_budget_fits_its_registration() -> None:
+    """The one budget still coupled by hand: deps waits, then detaches.
+
+    Its allowance is a UX choice (how long to block session start) rather than a
+    kill wall, so it is not derived — but it must still fit inside the timeout,
+    or the synchronous report is lost to the reap.
+    """
+    import re
+
+    template = _template()
+    timeout = None
+    for group in template["hooks"]["SessionStart"]:
+        for hook in group["hooks"]:
+            if "session_deps_cloud.sh" in hook["command"]:
+                timeout = hook["timeout"]
+    assert timeout is not None, "session_deps_cloud.sh must be registered"
+
+    script = (
+        REPO_ROOT / "environment/agents/adapters/claude-code/hooks/session_deps_cloud.sh"
+    ).read_text(encoding="utf-8")
+    match = re.search(r'BUDGET="\$\{L9_SESSION_DEPS_BUDGET:-(\d+)\}"', script)
+    assert match, "session_deps_cloud.sh must declare a default budget"
+    assert int(match.group(1)) < timeout, (
+        f"deps budget {match.group(1)}s does not fit its {timeout}s registration"
+    )

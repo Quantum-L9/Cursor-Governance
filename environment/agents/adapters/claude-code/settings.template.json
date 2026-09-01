@@ -32,7 +32,16 @@
     "scoped, expiring receipt that /l9-pr-remediation writes for the target repo (and PR).",
     "Campaigns and make pr still do not merge, and only reach green + mergeable + resolved",
     "threads, oldest first. Force pushes, hard resets, destructive cleanup, and admin-merge",
-    "remain forbidden by policy."
+    "remain forbidden by policy.",
+    "HOOK BUDGETS ARE DERIVED, NOT AUTHORED. A hook that sizes its own work against the",
+    "wall clock reads its allowance from an L9_*_BUDGET variable, and those variables are",
+    "computed from the `timeout` on the hook's own registration below by",
+    "ops/scripts/reconcile_claude_settings.py (BUDGET_BINDINGS). Do NOT add them to `env`",
+    "here: a literal would be overwritten at render, and a literal that disagreed with the",
+    "timeout is precisely the failure the budgets exist to prevent -- lower a timeout while",
+    "a stale env value stays high and the hook believes it has time it does not, overruns,",
+    "and is killed mid-flight having produced nothing. To change a hook's allowance, change",
+    "its `timeout`; the variable follows."
   ],
   "hooks": {
     "SessionStart": [
@@ -233,9 +242,7 @@
     "L9_PROACTIVE_SKILLS": "true",
     "L9_SKILL_USAGE_LOGGING": "true",
     "CLAUDE_CODE_MAX_CONCURRENT_SUBAGENTS": "480",
-    "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "3",
-    "L9_SESSION_START_BUDGET": "30",
-    "L9_MEMORY_WRITEBACK_BUDGET": "75"
+    "CLAUDE_CODE_MAX_SUBAGENT_SPAWN_DEPTH": "3"
   },
   "skillOverrides": {
     "l9-bounded-autonomy": "user-invocable-only",
