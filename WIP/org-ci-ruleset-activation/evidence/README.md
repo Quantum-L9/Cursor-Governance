@@ -7,6 +7,8 @@
 | `organization-ruleset-live-enforcement.json` | `verify.sh --check` | only at `RESULT: LIVE_ENFORCING` |
 | `remote-end-to-end-run.json` | `verify.sh --pr <owner/repo> <n>` | canary correlation |
 
+Both JSON files carry brief-required top-level keys (`schema`, observed GitHub fields). Nested `workflow` / `targets` extras are allowed. Re-run `verify.sh`; do not hand-edit values.
+
 `verify.sh` never prints a bare `PASS`. It names the state — `ADVISORY_VALID`,
 `ADVISORY_CANARY_PASS`, `LIVE_ENFORCING`, `LIVE_CANARY_PASS` — because an
 evaluate-mode ruleset reading as "PASS" is exactly how an advisory rule gets recorded
