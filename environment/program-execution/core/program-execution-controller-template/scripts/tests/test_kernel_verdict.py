@@ -76,6 +76,15 @@ class KernelVerdictTest(unittest.TestCase):
             self.assertEqual(verification["kernel_verdict"], "INCOMPLETE")
             self.assertEqual(verification["verdict"], "FAILED")
             self.assertEqual(verification["gates"]["validation"], "INCOMPLETE")
+            # B6: the claim gate must be honest on its own, not rescued by the
+            # sibling above. With no commands both sides of its equality are
+            # empty and `all([])` is True, so it used to report PASS having
+            # asserted the worker's claim against zero evidence.
+            self.assertEqual(
+                verification["gates"]["worker_validation_claim"],
+                "INCOMPLETE",
+                "a claim gate that checked nothing must not report PASS",
+            )
             cleanup_worktree(repo, workspace)
 
     def test_wiring_links_do_not_fail_kernel_pass(self) -> None:

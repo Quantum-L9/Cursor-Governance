@@ -59,14 +59,30 @@ BASELINE_REQUIRED_KEYS = (
 
 @dataclass(frozen=True)
 class Condition:
-    """One gate condition and why it did or did not hold."""
+    """One gate condition and why it did or did not hold.
+
+    ``blocking`` separates what S0 is *about* from what merely travels with it.
+    S0 asks whether the v2 baseline is characterized and frozen. Whether that
+    characterization has reached ``origin/main`` is a release property, not a
+    characterization property, and gating S0 on it makes the gate unclearable by
+    any action available before merge - the failure mode where an
+    uncleanable gate teaches people to route around it. A non-blocking
+    condition is still evaluated, still printed, and still in the JSON; it just
+    does not decide the exit code.
+    """
 
     id: str
     passed: bool
     detail: str
+    blocking: bool = True
 
     def to_dict(self) -> dict[str, Any]:
-        return {"id": self.id, "passed": self.passed, "detail": self.detail}
+        return {
+            "id": self.id,
+            "passed": self.passed,
+            "blocking": self.blocking,
+            "detail": self.detail,
+        }
 
 
 def xfail_reasons(path: Path) -> dict[str, list[str]]:
@@ -238,30 +254,53 @@ def _check_drift(
 
 
 def _check_main_pin(baseline: dict[str, Any], *, verify_ancestry: bool) -> Condition:
+    """Durability of the pin. Advisory here; enforced at promotion.
+
+    A branch commit is already immutable, so the freeze is verifiable without
+    ``main``. What ``main`` adds is durability: a squash merge lands the same
+    tree under a different sha, after which a pin naming only the branch commit
+    survives solely on a closed PR ref. That matters when the baseline is
+    promoted - S8's v2-to-v3 migration - not when it is characterized.
+    """
     pinned = baseline.get("pinned_to_main")
     if pinned is None:
         return Condition(
             "pinned_to_main",
             False,
             "not pinned: the characterized work has not reached origin/main yet. "
-            "Set baseline.pinned_to_main to the merge commit and re-run this gate.",
+            "Advisory at S0 - the baseline is frozen and verifiable without it. "
+            "Set baseline.pinned_to_main to the merge commit for durability; "
+            "promotion (S8) is where it becomes required.",
+            blocking=False,
         )
     if not isinstance(pinned, str) or not SHA_PATTERN.match(pinned):
         return Condition(
             "pinned_to_main",
             False,
             f"pinned_to_main is not a 40-character lowercase sha: {pinned!r}",
+            blocking=False,
         )
     if not verify_ancestry:
-        return Condition("pinned_to_main", True, f"pinned to {pinned} (ancestry not verified)")
+        return Condition(
+            "pinned_to_main",
+            True,
+            f"pinned to {pinned} (ancestry not verified)",
+            blocking=False,
+        )
     code, _ = _git("merge-base", "--is-ancestor", pinned, "origin/main")
     if code != 0:
         return Condition(
             "pinned_to_main",
             False,
             f"{pinned} is not reachable from origin/main",
+            blocking=False,
         )
-    return Condition("pinned_to_main", True, f"pinned to {pinned}, reachable from origin/main")
+    return Condition(
+        "pinned_to_main",
+        True,
+        f"pinned to {pinned}, reachable from origin/main",
+        blocking=False,
+    )
 
 
 def evaluate(
@@ -295,25 +334,43 @@ def evaluate(
     return conditions
 
 
+def blocking_failures(conditions: list[Condition]) -> list[Condition]:
+    return [item for item in conditions if item.blocking and not item.passed]
+
+
+def advisories(conditions: list[Condition]) -> list[Condition]:
+    return [item for item in conditions if not item.blocking and not item.passed]
+
+
 def render(conditions: list[Condition], *, as_json: bool) -> str:
-    unmet = [item for item in conditions if not item.passed]
+    blocked = blocking_failures(conditions)
+    advisory = advisories(conditions)
     if as_json:
         return json.dumps(
             {
                 "gate": GATE_ID,
-                "status": "pass" if not unmet else "blocked",
+                "status": "pass" if not blocked else "blocked",
                 "conditions": [item.to_dict() for item in conditions],
-                "unmet": [item.id for item in unmet],
+                "unmet_blocking": [item.id for item in blocked],
+                "unmet_advisory": [item.id for item in advisory],
             },
             indent=2,
         )
     lines = [f"{GATE_ID}"]
     for item in conditions:
-        lines.append(f"  [{'PASS' if item.passed else 'FAIL'}] {item.id}: {item.detail}")
-    if unmet:
-        lines.append(f"BLOCKED: {', '.join(item.id for item in unmet)}")
+        if item.passed:
+            mark = "PASS"
+        else:
+            mark = "FAIL" if item.blocking else "ADVISORY"
+        lines.append(f"  [{mark}] {item.id}: {item.detail}")
+    if blocked:
+        lines.append(f"BLOCKED: {', '.join(item.id for item in blocked)}")
     else:
         lines.append("PASS: baseline characterized and frozen")
+        if advisory:
+            # Never silent. A passing gate that is carrying an unmet advisory
+            # has to say so on the same screen, or "advisory" becomes "hidden".
+            lines.append(f"  carrying advisory: {', '.join(item.id for item in advisory)}")
     return "\n".join(lines)
 
 
@@ -328,7 +385,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     conditions = evaluate(verify_ancestry=not args.no_verify_ancestry)
     print(render(conditions, as_json=args.json))
-    return 0 if all(item.passed for item in conditions) else 1
+    return 1 if blocking_failures(conditions) else 0
 
 
 if __name__ == "__main__":

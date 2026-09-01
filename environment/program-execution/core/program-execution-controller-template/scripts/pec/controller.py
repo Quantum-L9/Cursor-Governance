@@ -1721,12 +1721,23 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
             claimed_results = receipt.get("validation_results") or []
             claimed_commands = [item.get("command") for item in claimed_results]
             required_commands = contract.get("validation_commands") or []
-            gates["worker_validation_claim"] = (
-                "PASS"
-                if claimed_commands == required_commands
-                and all(item.get("status") == "PASS" for item in claimed_results)
-                else "FAIL"
-            )
+            if not required_commands:
+                # A claim gate that checked nothing must not report PASS. With no
+                # commands both sides are empty, so the equality holds vacuously
+                # and `all([])` is True - the gate would assert the worker's
+                # validation claim on zero evidence. Today `validation` is
+                # INCOMPLETE in the same breath so the verdict is already
+                # refused, but that makes the safety a property of a sibling
+                # gate rather than of this one. Say INCOMPLETE here too, so the
+                # honest answer does not depend on which gate is read.
+                gates["worker_validation_claim"] = "INCOMPLETE"
+            else:
+                gates["worker_validation_claim"] = (
+                    "PASS"
+                    if claimed_commands == required_commands
+                    and all(item.get("status") == "PASS" for item in claimed_results)
+                    else "FAIL"
+                )
             if required_commands:
                 gates.update(_preflight2_gates([str(command) for command in required_commands]))
                 validations = [_run_validation(command, worktree) for command in required_commands]

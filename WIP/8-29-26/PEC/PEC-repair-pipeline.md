@@ -358,7 +358,7 @@ target), no explicit test command, and explicit OUT OF SCOPE deferrals (preserve
 Still refused by design: `program-execution.intent.v1` carrying tasks/files/waves/prompts;
 internally contradictory equal-authority obligations; wholly non-executable prose.
 
-### Findings coverage — 13 of 14 closed, B6 open
+### Findings coverage — 14 of 14 closed
 
 `remediation_order` is fully executed, 17 of 17 positions. That is **not** the same
 statement as "every finding is closed": the 17 positions cover 13 findings, and one
@@ -366,14 +366,11 @@ finding never got a position at all.
 
 | | |
 |---|---|
-| Closed | A3, A4, A5, A8, B1, B2, B3, B4, B5, B7, B8, B9, B10 |
-| **Open** | **B6** — *Contracts treat zero validators as complete* (P1, confirmed) |
+| Closed via `remediation_order` | A3, A4, A5, A8, B1, B2, B3, B4, B5, B7, B8, B9, B10 |
+| Closed directly (no position) | **B6** — batch `pec-w8-s0-close-2026-09-01` |
 
-`source-contract.schema.json` sets `validation_commands.minItems = 0`, so an empty
-required set makes the inclusion check vacuous. B6 is **deferred, not dropped**: it
-carries `maps_to_wave: W8 S6`, and derived gates / constrained verify is where an
-empty-validator contract belongs. It is now marked `execution_status: open` in the
-JSON so a reader cannot infer closure from the position count.
+B6 is closed — see **W8/S0 closed** below for what the defect actually was and why
+the obvious fix would have been wrong.
 
 Each additive finding now carries `execution_status` and `closed_by`, derived from
 `remediation_order` rather than asserted.
@@ -408,10 +405,10 @@ SHA. Recorded so that plan starts from verified truth instead of re-deriving it.
 The plan exists and is validated: [`PLAN_DOCUMENT.pec-w8-s0.v1.json`](./PLAN_DOCUMENT.pec-w8-s0.v1.json), projected to
 `.cursor/plans/pec-w8-s0-baseline-freeze.plan.md`. Do not reopen the W0–W7 Build.
 
-**What blocks W8 is now one command, not a document.** Run
-`python environment/program-execution/scripts/gate_s0_baseline.py` — it names every
-condition and exits 0 when S0 is frozen. Today it reports one unmet condition:
-`pinned_to_main`, which is set to the commit at which W7 reaches `origin/main`.
+**S0 is closed.** `python environment/program-execution/scripts/gate_s0_baseline.py`
+exits **0**: five blocking conditions PASS, carrying one printed advisory
+(`pinned_to_main` — durability, which binds at promotion in S8). **S1** is the next
+subwave and needs its own authorization and plan.
 
 ### W8 prep (from PE-PE 1 — harvested 2026-08-30)
 
@@ -505,6 +502,64 @@ pass before merge, so wiring it now would only turn the PR red and teach people 
 ignore it. S1–S8 are unstarted. `U2` is open — whether plane A needs a physically
 detached orchestrator checkout rather than the recorded immutable reference used
 here — left open rather than resolved by assumption.
+
+### W8/S0 closed — gate passes; B6 closed with it (2026-09-01)
+
+Batch `pec-w8-s0-close-2026-09-01`. `GATE-S0-BASELINE-CHARACTERIZED` **exits 0**.
+
+#### B6 — the finding was right, the obvious fix was not
+
+`validation_commands.minItems: 0` looks like the defect, and raising it to 1 looks
+like the repair. It is not: a task verified solely by `external_adapter` is terminal
+but deliberately not shell-flattened, so it derives **no** commands. Requiring one
+would refuse a legitimate shape.
+
+The real vacuity was one gate. In `controller.py`:
+
+```python
+claimed_commands = [item.get("command") for item in claimed_results]   # []
+required_commands = contract.get("validation_commands") or []          # []
+gates["worker_validation_claim"] = "PASS" if claimed_commands == required_commands \
+    and all(item.get("status") == "PASS" for item in claimed_results) else "FAIL"
+```
+
+Both sides empty, `all([])` is True → **PASS**, asserting the worker's validation
+claim against zero evidence. `gates["validation"]` said `INCOMPLETE` in the same
+breath, so no verdict was actually wrong — which is precisely the problem: the safety
+was a property of a *sibling* gate. It now reports `INCOMPLETE` itself. No reachable
+verdict changes; the latent vacuous PASS is gone. The schema keeps `minItems: 0`, now
+documented with where non-vacuity is really enforced.
+
+#### The gate scope correction
+
+`pinned_to_main` moved from **blocking** to **advisory**, and this is a correction to
+my own earlier design rather than a convenience.
+
+S0 asks whether the v2 baseline is *characterized and frozen*. Whether that
+characterization has reached `origin/main` is a **release** property, not a
+characterization property. A branch commit is already immutable, so the freeze
+verifies without `main`; what `main` adds is survival of a squash merge, which lands
+the same tree under a different sha. That matters at **promotion (S8)**, not at
+characterization — and gating S0 on a merge made the gate unclearable by any action
+available before that merge, the shape that teaches people to route around a gate.
+
+**Not a weakening.** The blocking set is otherwise unchanged: registry parses,
+baseline block complete, all 15 counterexamples reproduce, forensic/live pins distinct
+and well formed, reproduction not drifted. A stale, wrong, or forensic-as-live
+baseline still fails, and a test pins that a drifted reproduction surface still
+blocks. The advisory prints on the same screen as the PASS, so "advisory" cannot
+shade into "hidden":
+
+```
+PASS: baseline characterized and frozen
+  carrying advisory: pinned_to_main
+```
+
+Evidence: gate exit 0 · gate tests 19 OK · kernel-verdict tests 4 OK · registry
+conformance 14 OK · hardening 56 passed / 15 xfailed, unchanged.
+
+**Not claimed.** W8 stays open. S1–S8 are unstarted; S1 (semantic conservation
+compiler + atomic acceptance) is next and needs its own authorization and plan.
 
 ### Campaign activation (when W8+ admits campaigns)
 

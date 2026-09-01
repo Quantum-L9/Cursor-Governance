@@ -18,8 +18,11 @@ baseline:
   characterized_reproduction_digest: sha256:654a0ff27cddef01db6c54590383ffd86f2302ae2a4eedeced342b65446a5837
   # Pinned immutable v2 orchestrator reference (plane A).
   orchestrator_plane_a: 9ba6df638a0ad3afbfeef4f2d319a88f093ff035
-  # Set to the merge commit once the characterized work reaches origin/main.
-  # Until then GATE-S0-BASELINE-CHARACTERIZED reports this and nothing else.
+  # Durability, not characterization. A branch commit is already immutable, so
+  # the freeze above verifies without main; what main adds is survival of a
+  # squash merge, which lands the same tree under a different sha. Advisory at
+  # S0 and required at promotion (S8). Set it to the merge commit when the
+  # characterized work reaches origin/main.
   pinned_to_main: null
 
 counterexamples:

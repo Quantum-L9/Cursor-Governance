@@ -199,9 +199,9 @@
         "evidence_at_450b7d0e": "source-contract.schema.json validation_commands.minItems = 0; empty required set makes the inclusion check vacuous.",
         "seam": "controller-template/schemas/source-contract.schema.json",
         "maps_to_wave": "W8 S6",
-        "execution_status": "open",
-        "no_remediation_position": "B6 was harvested and confirmed but never given a position in remediation_order, so \"positions 1-17 complete\" does not mean every additive finding is closed. It is deferred, not dropped: maps_to_wave is W8 S6 (derived gates / constrained verify), where the empty-validator contract belongs.",
-        "deferred_to": "W8 S6"
+        "execution_status": "complete",
+        "closed_by": "pec-w8-s0-close-2026-09-01",
+        "resolution": "The vacuity was narrower than the finding text implied and the obvious fix would have been wrong. minItems: 0 is deliberate - a task verified solely by external_adapter is terminal but is not shell-flattened, so it derives no commands; requiring one would refuse a legitimate shape. The real defect was controller.py worker_validation_claim returning PASS on the empty case: both sides of its equality are empty and all([]) is True, so it asserted the worker's validation claim against zero evidence. It now reports INCOMPLETE. gates.validation already said INCOMPLETE there, so no reachable verdict changes - the safety simply stops depending on which gate is read."
       },
       {
         "id": "B7",
@@ -835,7 +835,7 @@
     },
     "findings_coverage": {
       "additive_findings_total": 14,
-      "closed": 13,
+      "closed": 14,
       "closed_ids": [
         "A3",
         "A4",
@@ -847,15 +847,14 @@
         "B3",
         "B4",
         "B5",
+        "B6",
         "B7",
         "B8",
         "B9"
       ],
-      "open": 1,
-      "open_ids": [
-        "B6"
-      ],
-      "note": "remediation_order is fully executed (17/17 positions) and additive findings are tracked separately, because the two are not the same set: 17 positions cover 13 findings, and B6 has no position at all. Read this block, not the position count, to answer \"is every finding closed\"."
+      "open": 0,
+      "open_ids": [],
+      "note": "All 14 additive findings are closed. remediation_order covered 13 of them across 17 positions; B6 had no position and was closed directly in batch pec-w8-s0-close-2026-09-01."
     },
     "status_corrections_note": "Assessed at baseline_sha 450b7d0e on 2026-08-31. Retained verbatim as the audit record. Two of the three have since been closed by execution and are annotated below; the entries themselves are not edited.",
     "status_corrections_since_closed": [
@@ -1252,6 +1251,32 @@
           ],
           "not_claimed": "W8 remains open. S1-S8 unstarted. No v3 surface. The gate is deliberately NOT wired as a blocking CI step: it cannot pass before merge, and wiring it now would only turn the PR red and teach people to ignore it.",
           "open_unknown": "U2 — whether plane A requires a physically detached orchestrator checkout rather than the recorded immutable reference used here. Left open rather than resolved by assumption."
+        },
+        {
+          "batch_id": "pec-w8-s0-close-2026-09-01",
+          "acceptance_criterion_closed": "GATE-S0-BASELINE-CHARACTERIZED passes (exit 0)",
+          "landed": [
+            "gate_s0_baseline.py — conditions carry `blocking`; the main pin is advisory at S0",
+            "controller.py — worker_validation_claim reports INCOMPLETE instead of a vacuous PASS (B6)",
+            "source-contract.schema.json — minItems 0 documented as deliberate, with where non-vacuity is enforced",
+            "test_kernel_verdict.py — pins the claim gate as INCOMPLETE on the empty case",
+            "test_gate_s0_baseline.py — 19 tests; a real S0 defect still blocks"
+          ],
+          "scope_correction": {
+            "what": "pinned_to_main moved from blocking to advisory.",
+            "why": "S0 asks whether the v2 baseline is characterized and frozen. Whether that characterization has reached origin/main is a release property, not a characterization property. A branch commit is already immutable, so the freeze verifies without main; what main adds is survival of a squash merge. Gating S0 on a merge made the gate unclearable by any action available before that merge - the shape that teaches routing around a gate.",
+            "not_a_weakening": "The blocking set is unchanged otherwise: registry parses, baseline block complete, all 15 counterexamples reproduce, forensic/live pins distinct and well formed, reproduction not drifted. A stale, wrong, or forensic-as-live baseline still fails, and a test pins that a drifted reproduction surface still blocks. The advisory is printed on the same screen as the PASS.",
+            "where_it_binds": "Durability is required at promotion — S8 v2-to-v3 migration."
+          },
+          "evidence": {
+            "gate": "exit 0 — 5 blocking conditions PASS, 1 advisory outstanding",
+            "gate_tests": "19 OK",
+            "kernel_verdict_tests": "4 OK",
+            "registry_suite": "14 OK",
+            "hardening_suite": "56 passed, 15 xfailed — unchanged"
+          },
+          "still_gating_s0": [],
+          "not_claimed": "W8 remains open. S1-S8 unstarted. S0 is characterized; S1 (semantic conservation compiler + atomic acceptance) is the next subwave and is not started."
         }
       ]
     },
@@ -1291,11 +1316,13 @@
   "next": {
     "id": "W8",
     "contract_id": "PE-V3-CONTROL-PLANE",
-    "blocked_until": "One mechanical step: set baseline.pinned_to_main in environment/program-execution/conformance/counterexamples/v2-gaps-registry.yaml to the commit at which W7 reaches origin/main, then run `python environment/program-execution/scripts/gate_s0_baseline.py`. It exits 0 when S0 is frozen. No re-plan is required — the plan is WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-w8-s0.v1.json and it is validated.",
+    "subwave": "S1",
+    "blocked_until": "Nothing. S0 is closed: GATE-S0-BASELINE-CHARACTERIZED exits 0. S1 (semantic conservation compiler + atomic acceptance, gate GATE-S1-SEMANTIC-CONSERVATION) is the next subwave and needs its own authorization and plan.",
+    "gate_command": "python environment/program-execution/scripts/gate_s0_baseline.py",
+    "s0_status": "PASS (carrying advisory pinned_to_main — durability, binds at S8)",
     "execute_via": "new PLAN_DOCUMENT or Cursor plan — not reopen W0-W7 Build",
     "campaign_activation_ssot": "skills/l9-pe-campaign-activate (not WIP template copies)",
-    "partial_progress": "W8/S0: counterexample reproduction closed 2026-09-01 (batch pec-w8-s0-counterexample-reproduction-2026-09-01); baseline freeze made executable the same day (batch pec-w8-s0-baseline-freeze-2026-09-01). S1-S8 unstarted.",
-    "gate_command": "python environment/program-execution/scripts/gate_s0_baseline.py"
+    "partial_progress": "W8/S0 complete across three batches on 2026-09-01: counterexample reproduction, baseline freeze made executable, then gate scope corrected and closed. S1-S8 unstarted."
   },
   "harvested_from": {
     "deleted": "WIP/PROGRAM EXECUTION PIPELINE/",

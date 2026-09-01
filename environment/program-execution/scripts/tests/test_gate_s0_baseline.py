@@ -52,18 +52,27 @@ def _detail(conditions, condition_id: str) -> str:
 class LiveTreeTests(unittest.TestCase):
     """What the gate says about this repository, right now."""
 
-    def test_only_the_main_pin_is_outstanding(self) -> None:
+    def test_s0_is_characterized(self) -> None:
+        """Every blocking condition holds: S0 is frozen on its own terms."""
         conditions = gate.evaluate(verify_ancestry=False)
-        unmet = [item.id for item in conditions if not item.passed]
-        self.assertEqual(
-            unmet,
-            ["pinned_to_main"],
-            "S0 is characterized; the only thing left is the merge pin",
-        )
+        blocked = [item.id for item in gate.blocking_failures(conditions)]
+        self.assertEqual(blocked, [], "no blocking condition may be outstanding")
 
-    def test_the_outstanding_condition_says_what_to_do(self) -> None:
+    def test_the_main_pin_is_advisory_not_blocking(self) -> None:
+        """Durability travels with S0; it is not what S0 asserts.
+
+        Gating characterization on a merge would make the gate unclearable by
+        any action available before that merge.
+        """
         conditions = gate.evaluate(verify_ancestry=False)
-        self.assertIn("pinned_to_main", _detail(conditions, "pinned_to_main"))
+        advisory = [item.id for item in gate.advisories(conditions)]
+        self.assertEqual(advisory, ["pinned_to_main"])
+
+    def test_the_advisory_says_what_to_do_and_where_it_binds(self) -> None:
+        conditions = gate.evaluate(verify_ancestry=False)
+        detail = _detail(conditions, "pinned_to_main")
+        self.assertIn("pinned_to_main", detail)
+        self.assertIn("promotion", detail)
 
     def test_recorded_digest_is_the_live_reproduction_surface(self) -> None:
         registry = gate.load_registry()
@@ -115,6 +124,18 @@ class FixtureStateTests(unittest.TestCase):
         conditions = self._evaluate(self._mutate(pinned_to_main="HEAD"))
         self.assertFalse(_verdicts(conditions)["pinned_to_main"])
         self.assertIn("not a 40-character", _detail(conditions, "pinned_to_main"))
+
+    def test_a_real_s0_defect_still_blocks(self) -> None:
+        """The advisory reclassification must not have made the gate toothless.
+
+        A drifted reproduction surface is an S0 defect and has to block even
+        though the merge pin no longer does.
+        """
+        registry = copy.deepcopy(self.registry)
+        registry["baseline"]["characterized_reproduction_digest"] = "sha256:" + "0" * 64
+        conditions = self._evaluate_raw(registry)
+        blocked = [item.id for item in gate.blocking_failures(conditions)]
+        self.assertIn("reproduction_not_drifted", blocked)
 
     def test_forensic_commit_cannot_be_presented_as_the_characterized_pin(self) -> None:
         forensic = self.registry["baseline"]["forensic_commit"]
@@ -207,19 +228,27 @@ class FixtureStateTests(unittest.TestCase):
 
 
 class RenderTests(unittest.TestCase):
-    def test_json_report_names_the_unmet_conditions(self) -> None:
+    def test_json_report_separates_blocking_from_advisory(self) -> None:
         conditions = gate.evaluate(verify_ancestry=False)
         payload = json.loads(gate.render(conditions, as_json=True))
         self.assertEqual(payload["gate"], gate.GATE_ID)
-        self.assertEqual(payload["status"], "blocked")
-        self.assertEqual(payload["unmet"], ["pinned_to_main"])
+        self.assertEqual(payload["status"], "pass")
+        self.assertEqual(payload["unmet_blocking"], [])
+        self.assertEqual(payload["unmet_advisory"], ["pinned_to_main"])
 
-    def test_text_report_marks_each_condition(self) -> None:
+    def test_every_condition_declares_whether_it_blocks(self) -> None:
+        conditions = gate.evaluate(verify_ancestry=False)
+        payload = json.loads(gate.render(conditions, as_json=True))
+        for row in payload["conditions"]:
+            self.assertIn("blocking", row, row)
+
+    def test_a_passing_gate_still_shows_the_advisory(self) -> None:
+        """Advisory must not shade into hidden."""
         conditions = gate.evaluate(verify_ancestry=False)
         text = gate.render(conditions, as_json=False)
-        self.assertIn(gate.GATE_ID, text)
-        self.assertIn("[FAIL] pinned_to_main", text)
-        self.assertIn("BLOCKED: pinned_to_main", text)
+        self.assertIn("[ADVISORY] pinned_to_main", text)
+        self.assertIn("PASS: baseline characterized and frozen", text)
+        self.assertIn("carrying advisory: pinned_to_main", text)
 
 
 if __name__ == "__main__":

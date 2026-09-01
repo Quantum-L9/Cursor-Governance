@@ -1247,7 +1247,7 @@
     },
     {
       "path": "conformance/counterexamples/v2-gaps-registry.yaml",
-      "sha256": "4f4ba3e91ba9a8e253bb1ba514a856a8a95f158098468cd05c38bff157638ba3"
+      "sha256": "5a52752e2f70325628709a6039ddb12e31b53b49ccdf3b68ed13c32ac5c04d0c"
     },
     {
       "path": "conformance/fixtures/hostile/cancellation-without-evidence.yaml",
@@ -1963,7 +1963,7 @@
     },
     {
       "path": "scripts/gate_s0_baseline.py",
-      "sha256": "88a654712a893098290e62bc897ecbdb8e52ca318ab6fa6eab673113c3ff7194"
+      "sha256": "4467d72ae4ba94216f8a10e26a46dd756b635844822f627bbcf731c648e128c3"
     },
     {
       "path": "scripts/generate_manifest.py",
@@ -2075,7 +2075,7 @@
     },
     {
       "path": "scripts/tests/test_gate_s0_baseline.py",
-      "sha256": "6a72f3928dea598b7b452772b6c5be287c49113eb914044fdef554b1eaa0ea3b"
+      "sha256": "f0c632cdf49873405596a3554e6191c6c83a7d101828e49ee9c0930b8d60d617"
     },
     {
       "path": "scripts/tests/test_launchability.py",

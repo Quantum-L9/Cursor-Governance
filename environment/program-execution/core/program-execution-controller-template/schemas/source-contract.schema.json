@@ -127,7 +127,8 @@
       "items": {
         "type": "string",
         "minLength": 1
-      }
+      },
+      "description": "Command-only projection of verification_mechanisms, in mechanism order. minItems is 0 on purpose, not by oversight: a task verified solely by external_adapter is terminal but is deliberately not shell-flattened, so it derives no commands. Requiring one here would refuse that legitimate shape. The non-vacuity guarantee lives elsewhere and is stronger: contracts.py binds this array equal to the command-method projection of verification_mechanisms, missing_terminal_verifier refuses a mutating task with no terminal verifier, and both the validation and worker_validation_claim gates report INCOMPLETE - never PASS - when this array is empty."
     },
     "required_gate_ids": {
       "type": "array",

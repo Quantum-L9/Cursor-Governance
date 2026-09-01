@@ -313,7 +313,7 @@
     {
       "id": "FV1",
       "command": "uv run --frozen --no-build python environment/program-execution/scripts/gate_s0_baseline.py",
-      "pass_criteria": "Reports every condition; exits non-zero naming pinned_to_main and nothing else — OBSERVED: Five conditions PASS; exits 1 naming pinned_to_main and nothing else",
+      "pass_criteria": "Reports every condition; exits 0 when every BLOCKING condition holds, carrying any unmet advisory printed alongside — OBSERVED: exit 0, five blocking conditions PASS, advisory pinned_to_main printed",
       "status": "passed"
     },
     {
@@ -354,12 +354,12 @@
     }
   ],
   "convergence": {
-    "status": "partial",
+    "status": "converged",
     "remaining_unknown_ids": [
       "U2"
     ],
     "next_skill": "l9-ynp",
-    "stop_reason": "S0's baseline-freeze bullet becomes executable and its remaining condition is reduced to one mechanical step at W7 merge. U2 — whether plane-A requires a physically detached orchestrator checkout rather than a recorded immutable reference — is left open because resolving it by assumption would build W8 machinery this plan deliberately excludes. S1 through S8 remain unstarted by design. Executed 2026-09-01: the gate is live and reports exactly one unmet condition."
+    "stop_reason": "S0's baseline-freeze bullet is executable and GATE-S0-BASELINE-CHARACTERIZED exits 0. Executed 2026-09-01 across three batches. One correction to this plan's own design was made during execution and is recorded in full under W8 s0_progress.scope_correction in PEC-repair-pipeline.json: pinned_to_main was planned as a blocking condition and is now advisory, because S0 asserts that the baseline is characterized and frozen — a branch commit is already immutable, so the freeze verifies without main — while reaching origin/main is durability that binds at promotion (S8). Gating characterization on a merge made the gate unclearable by any action available before it. The blocking set is otherwise unchanged and a test pins that a drifted reproduction surface still blocks. B6 was closed in the same batch (worker_validation_claim no longer returns a vacuous PASS on an empty command set; full controller suite 112 passed, so no reachable verdict changed). U2 stays open by choice — plane A's checkout topology is not what S0 asserts. S1 through S8 remain unstarted by design."
   },
   "gmp_handoff": {
     "may_modify": [

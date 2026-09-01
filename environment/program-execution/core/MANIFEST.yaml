@@ -324,8 +324,8 @@ files:
   sha256: c71c33aa73f8382311cbc5d71fd5e597f5d0b45f9e9ec798be8a3e189a123643
   bytes: 958
 - path: program-execution-controller-template/schemas/source-contract.schema.json
-  sha256: 8397f8b42a6fc24db0f4b0cdb95bdf5c98145feed49ebf62e19683ccbcd0db7c
-  bytes: 3651
+  sha256: 0e55cf39acc7afcfa362dbb135b3417e4f364c6f25b79a88daa5f254c1993275
+  bytes: 4319
 - path: program-execution-controller-template/schemas/task-contract.schema.json
   sha256: 08dd769b01fcca140d0b43647ddce142ea3fd07384e2f7ba26bf8fa658d3f919
   bytes: 4791
@@ -354,8 +354,8 @@ files:
   sha256: 946e53429aa413bda374070057ea5e9043d66ef5773344e2b593fb3e575fda51
   bytes: 18179
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: 0dd37fd0956ae3393a7a66427d416e59a68796192ac5cdbc8c4606f2dfd7f7a7
-  bytes: 108556
+  sha256: 2b4b24a891ef0e0209044b964d40fadad91018f959b9c8009d4fbf69538b2d14
+  bytes: 109317
 - path: program-execution-controller-template/scripts/pec/exec_env.py
   sha256: 56fe5eb1114dda26f3e061de03580b788cfa5e654c117d0c0b65ac9083d15a10
   bytes: 10917
@@ -426,8 +426,8 @@ files:
   sha256: ca6bcfa79727f80b322e47f5fdaa228eaabf96e758e3ba13897aefcbdd734e01
   bytes: 6768
 - path: program-execution-controller-template/scripts/tests/test_kernel_verdict.py
-  sha256: 38b391ae4f6049a0c7f4fe106cb904ef7c37d2029a9b10dc12437d807511930c
-  bytes: 7053
+  sha256: 0366bb07fe1b12cb8ca50379d27d2d04d2a359cda85b568bd76c9b3c3ae5fad4
+  bytes: 7564
 - path: program-execution-controller-template/scripts/tests/test_leases_and_approval.py
   sha256: ae7ef493630fb9c7ffe0b0939537328298cdf98e351b59b7d9890cd79c70fb9c
   bytes: 3705
@@ -592,4 +592,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 195
-  total_bytes: 741234
+  total_bytes: 743174
