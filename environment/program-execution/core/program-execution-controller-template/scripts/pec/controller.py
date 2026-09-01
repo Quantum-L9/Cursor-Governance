@@ -1087,7 +1087,16 @@ def next_tasks(workspace: Path) -> dict[str, Any]:
 def _claim_autonomy_projection(
     task: dict[str, Any], lease: dict[str, Any]
 ) -> dict[str, Any] | None:
-    """Emit autonomy_action_id + packet skeleton. No autonomy-side mutation."""
+    """Emit autonomy_action_id + packet skeleton. No autonomy-side mutation.
+
+    Returns None rather than raising. The caller invokes this *after* the task
+    has durably transitioned to LEASED and the ledger event is on disk, so any
+    exception escaping here would abandon a lease no worker ever received:
+    the task reads in_progress while the caller sees a failed claim. This is a
+    projection, never an authority -- ``contract_mapper.require_coherent_actions``
+    deliberately raises ContractActionError on an incoherent action set, and that
+    is a fact about the contract, not a reason to lose the claim.
+    """
 
     path = task.get("source_contract_path")
     if not path or not Path(path).is_file():
@@ -1100,21 +1109,25 @@ def _claim_autonomy_projection(
         sys.path.insert(0, str(mapper))
     try:
         from contract_mapper import map_program_contract
-    except ImportError:
-        return None
-    contract = load_json(Path(path))
-    mapped = map_program_contract(
-        {
-            **contract,
-            "task_id": task["id"],
-            "base_sha": lease.get("base_sha"),
-            "branch": lease.get("branch"),
-            "program_digest": contract.get("program_digest"),
-        },
-        adapter_id="controller",
-        attempt_number=1,
-    )
-    ids = mapped["ids"]
+
+        contract = load_json(Path(path))
+        mapped = map_program_contract(
+            {
+                **contract,
+                "task_id": task["id"],
+                "base_sha": lease.get("base_sha"),
+                "branch": lease.get("branch"),
+                "program_digest": contract.get("program_digest"),
+            },
+            adapter_id="controller",
+            attempt_number=1,
+        )
+        ids = mapped["ids"]
+    except Exception as exc:
+        # Explicit, not silent: a broken mapper and "this task has no contract
+        # to project" must not look identical to whoever reads the lease. The
+        # claim still stands -- that is the whole point of the guard.
+        return {"autonomy_projection_error": f"{type(exc).__name__}: {exc}"}
     return {
         "autonomy_action_id": ids["action_id"],
         "autonomy_packet_skeleton": {

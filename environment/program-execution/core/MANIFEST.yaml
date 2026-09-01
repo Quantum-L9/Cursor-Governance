@@ -357,8 +357,8 @@ files:
   sha256: acc86ed2260ba6a048b40dca0cf589345796830e4d58a970b377113f2ac1e14b
   bytes: 17021
 - path: program-execution-controller-template/scripts/pec/controller.py
-  sha256: d2787c387912499f098377fbb579c9f71ee0b09956dac818cf837debe0b2768d
-  bytes: 109318
+  sha256: 0e68c04d443f72fd657668402275f02759bcbaa630bd66a374f0a91b7ad44ffd
+  bytes: 110209
 - path: program-execution-controller-template/scripts/pec/dispatch.py
   sha256: b4b4a0959e287009d7770e513b388ce1c8f10326a181e537b4ff435ce153aaf2
   bytes: 5715
@@ -378,8 +378,8 @@ files:
   sha256: 4de2ad94cf8e0e94069b2d97fec2d4c11cf36a2fbdbc4f8bed730d314cf449a3
   bytes: 3094
 - path: program-execution-controller-template/scripts/pec/signals.py
-  sha256: 45e469b0aed640fff46fe695198f45bbe84aed1b62d46e02201f9b0736162230
-  bytes: 1627
+  sha256: 181df8e54d5edd133ba000dc55df46b9459d623085f4d560e142d1f16f4e928b
+  bytes: 3010
 - path: program-execution-controller-template/scripts/pec/state.py
   sha256: e273f8051fef9d72913aaa667649fbfd61f18ddc1064fd933673d9e093593432
   bytes: 24319
@@ -486,8 +486,8 @@ files:
   sha256: 00acd7272a820111d4605f9ef3eb668f08514fe78214be65253e76f4d9012c3e
   bytes: 10048
 - path: program-execution-controller-template/scripts/tests/test_unified_loop_seams.py
-  sha256: 05af0fa4bb81c6a8d930c14c2ebb097adf4b630a424f760bac992eed7f92d862
-  bytes: 5629
+  sha256: 9c893936973580e06253e97dd471a1eab3c7ed668d88acb8268d8f684693c6b6
+  bytes: 10123
 - path: program-execution-controller-template/scripts/tests/test_verify_committed_work.py
   sha256: c8cc87f837178654df0aa58f2f8c893546c87cc8c793bf45223a4d93a05fda56
   bytes: 1882
@@ -604,4 +604,4 @@ integrity:
   self_excluded: true
 summary:
   file_count: 199
-  total_bytes: 745981
+  total_bytes: 752749
