@@ -358,6 +358,39 @@ target), no explicit test command, and explicit OUT OF SCOPE deferrals (preserve
 Still refused by design: `program-execution.intent.v1` carrying tasks/files/waves/prompts;
 internally contradictory equal-authority obligations; wholly non-executable prose.
 
+### Findings coverage — 13 of 14 closed, B6 open
+
+`remediation_order` is fully executed, 17 of 17 positions. That is **not** the same
+statement as "every finding is closed": the 17 positions cover 13 findings, and one
+finding never got a position at all.
+
+| | |
+|---|---|
+| Closed | A3, A4, A5, A8, B1, B2, B3, B4, B5, B7, B8, B9, B10 |
+| **Open** | **B6** — *Contracts treat zero validators as complete* (P1, confirmed) |
+
+`source-contract.schema.json` sets `validation_commands.minItems = 0`, so an empty
+required set makes the inclusion check vacuous. B6 is **deferred, not dropped**: it
+carries `maps_to_wave: W8 S6`, and derived gates / constrained verify is where an
+empty-validator contract belongs. It is now marked `execution_status: open` in the
+JSON so a reader cannot infer closure from the position count.
+
+Each additive finding now carries `execution_status` and `closed_by`, derived from
+`remediation_order` rather than asserted.
+
+### Audit assessment is dated, not live
+
+`status_corrections` and `acceptance_scorecard` were measured at `450b7d0e`, before
+any batch ran. They are retained verbatim — annotated, never rewritten. Two of the
+three status corrections have since been closed by execution (A3 and A4, batch
+`pec-normative-and-disposition-2-2026-08-31`; B1–B3 in the first batch and the tail),
+recorded in `status_corrections_since_closed`.
+
+The scorecard is **not** re-scored. Two rows name a blocker that is now closed — the
+A3 extractor split and A4's shadow-only dispositions — but no measurement was taken
+after execution, and a number invented to look current is worse than a dated one.
+Re-scoring is real work, not a tracker edit.
+
 ### Disposition
 
 B1–B3 are the highest-leverage items in this file: they explain a campaign that "prepares forever",

@@ -90,7 +90,7 @@
         }
       }
     },
-    "authorization": "Remediation positions 1-10 were explicitly authorized by the current pec_batch_executor task. W8 activation and positions 11+ remain separate work.",
+    "authorization": "Remediation positions 1-10 were explicitly authorized by the pec_batch_executor task. Positions 11-12 and 13-17 were each authorized by a later explicit instruction to execute the next slice, recorded per batch in execution_batches. W8/S0 work (counterexample reproduction, baseline freeze) was authorized by an explicit instruction to plan and execute W8; W8 as a whole remains open and S1-S8 unstarted.",
     "additive_findings": [
       {
         "id": "A3",
@@ -99,7 +99,9 @@
         "verdict": "confirmed_defect",
         "evidence_at_450b7d0e": "_sentence_kind() returns None for lowercase and 'requirement' for uppercase; normative_signals() returns ('MUST','PRESERVE') for both. _KIND_RULES are uppercase literals matched with 'signal in sentence'.",
         "seam": "compiler/architecture_extractor.py",
-        "maps_to_wave": "W4 reopened"
+        "maps_to_wave": "W4 reopened",
+        "execution_status": "complete",
+        "closed_by": "pec-normative-and-disposition-2-2026-08-31"
       },
       {
         "id": "A4",
@@ -108,7 +110,9 @@
         "verdict": "confirmed_defect",
         "evidence_at_450b7d0e": "classify_dispositions callers are test_repo_truth.py and tests/conformance/shadow_runner.py only; zero production. architecture_to_campaign.py uses its own RepositoryFacts/_resolve_paths.",
         "seam": "compiler/architecture_to_campaign.py + repo_truth.py",
-        "maps_to_wave": "W5 reopened"
+        "maps_to_wave": "W5 reopened",
+        "execution_status": "complete",
+        "closed_by": "pec-normative-and-disposition-2-2026-08-31"
       },
       {
         "id": "A5",
@@ -117,7 +121,9 @@
         "verdict": "confirmed_by_design",
         "evidence_at_450b7d0e": "Only declared architecture frontmatter routes ordinary make campaign to architecture. Audit asks for a warn-don't-steal diagnostic, not heuristic auto-detection.",
         "seam": "scripts/campaign_input.py",
-        "maps_to_wave": "W8 prep"
+        "maps_to_wave": "W8 prep",
+        "execution_status": "complete",
+        "closed_by": "pec-tail-5-2026-08-31"
       },
       {
         "id": "A8",
@@ -126,7 +132,9 @@
         "verdict": "confirmed",
         "evidence_at_450b7d0e": "README:154 says compilation fails 'only for' four conditions; architecture_to_campaign.py:264 and :516 raise two more.",
         "seam": "compiler/README.md",
-        "maps_to_wave": "W8 prep"
+        "maps_to_wave": "W8 prep",
+        "execution_status": "complete",
+        "closed_by": "pec-tail-5-2026-08-31"
       },
       {
         "id": "B1",
@@ -135,7 +143,9 @@
         "verdict": "confirmed_empirically",
         "evidence_at_450b7d0e": "blueprint_tasks() reads tasks.json / tasks/*.json (launchability.py:325). Probe: TASK_CARDS.yaml with 1 task returned 0 tasks; check_launchability then returns launchable=True skipped=no_task_cards (run_campaign.py:2294). Writer at launchability.py:296 uses TASK_CARDS.yaml - reader and writer disagree in one file.",
         "seam": "scripts/launchability.py + scripts/run_campaign.py",
-        "maps_to_wave": "W8 S1/S6"
+        "maps_to_wave": "W8 S1/S6",
+        "execution_status": "complete",
+        "closed_by": "pec-execution-completeness-10-2026-08-30"
       },
       {
         "id": "B2",
@@ -144,7 +154,9 @@
         "verdict": "confirmed",
         "evidence_at_450b7d0e": "fill_inferred_validation() (run_campaign.py:2408) writes TASK_CARDS.yaml, then adopt_changed_definitions + rematerialize_after_relock.",
         "seam": "scripts/run_campaign.py",
-        "maps_to_wave": "W8 S1"
+        "maps_to_wave": "W8 S1",
+        "execution_status": "complete",
+        "closed_by": "pec-execution-completeness-10-2026-08-30"
       },
       {
         "id": "B3",
@@ -153,7 +165,9 @@
         "verdict": "confirmed",
         "evidence_at_450b7d0e": "relock_definitions(task_ids=...) (controller.py:369) skips stale_task_ids(). Bypass is deliberate per docstring, but the automatic late-repair caller supplies ids without the source comparison the docstring assumes.",
         "seam": "controller-template/scripts/pec/controller.py",
-        "maps_to_wave": "W8 S2"
+        "maps_to_wave": "W8 S2",
+        "execution_status": "complete",
+        "closed_by": "pec-execution-completeness-10-2026-08-30"
       },
       {
         "id": "B4",
@@ -162,7 +176,9 @@
         "verdict": "confirmed",
         "evidence_at_450b7d0e": "No 'repo_local + local_write implies terminal verifier' rule at compile or admission.",
         "seam": "compiler + blueprint admission",
-        "maps_to_wave": "W8 S1/S6"
+        "maps_to_wave": "W8 S1/S6",
+        "execution_status": "complete",
+        "closed_by": "pec-execution-completeness-10-2026-08-30"
       },
       {
         "id": "B5",
@@ -171,7 +187,9 @@
         "verdict": "confirmed",
         "evidence_at_450b7d0e": "required_commands keeps only {command, command_and_inspection}; inspection and external_adapter drop out.",
         "seam": "controller-template/scripts/pec/blueprint.py",
-        "maps_to_wave": "W8 S6 (sharpens)"
+        "maps_to_wave": "W8 S6 (sharpens)",
+        "execution_status": "complete",
+        "closed_by": "pec-execution-completeness-10-2026-08-30"
       },
       {
         "id": "B6",
@@ -180,7 +198,10 @@
         "verdict": "confirmed",
         "evidence_at_450b7d0e": "source-contract.schema.json validation_commands.minItems = 0; empty required set makes the inclusion check vacuous.",
         "seam": "controller-template/schemas/source-contract.schema.json",
-        "maps_to_wave": "W8 S6"
+        "maps_to_wave": "W8 S6",
+        "execution_status": "open",
+        "no_remediation_position": "B6 was harvested and confirmed but never given a position in remediation_order, so \"positions 1-17 complete\" does not mean every additive finding is closed. It is deferred, not dropped: maps_to_wave is W8 S6 (derived gates / constrained verify), where the empty-validator contract belongs.",
+        "deferred_to": "W8 S6"
       },
       {
         "id": "B7",
@@ -189,7 +210,9 @@
         "verdict": "confirmed",
         "evidence_at_450b7d0e": "Absent from readiness and preflight.",
         "seam": "controller-template/scripts/pec/{controller,preflight}.py",
-        "maps_to_wave": "W8 S6 (sharpens)"
+        "maps_to_wave": "W8 S6 (sharpens)",
+        "execution_status": "complete",
+        "closed_by": "pec-tail-5-2026-08-31"
       },
       {
         "id": "B8",
@@ -198,7 +221,9 @@
         "verdict": "confirmed",
         "evidence_at_450b7d0e": "Entry omits required 'environment' (schema validation: \"'environment' is a required property\") and replaces task['validation'] rather than appending. Launchability's writer does set environment; defect is specific to run_campaign.",
         "seam": "scripts/run_campaign.py",
-        "maps_to_wave": "W8 S1"
+        "maps_to_wave": "W8 S1",
+        "execution_status": "complete",
+        "closed_by": "pec-execution-completeness-10-2026-08-30"
       },
       {
         "id": "B9",
@@ -207,7 +232,9 @@
         "verdict": "plausible_not_executed",
         "evidence_at_450b7d0e": "Launchability mutation is manifest-governed; revalidation currently precedes manifest regeneration. Reasoned from sequencing, not executed.",
         "seam": "scripts/launchability.py + accept_blueprint.py",
-        "maps_to_wave": "W8 S1"
+        "maps_to_wave": "W8 S1",
+        "execution_status": "complete",
+        "closed_by": "pec-execution-completeness-10-2026-08-30"
       },
       {
         "id": "B10",
@@ -216,7 +243,9 @@
         "verdict": "confirmed",
         "evidence_at_450b7d0e": "test_launchability.py uses repo_change / analysis; native execution_kind enum is program_control, repo_local, external_adapter, read_only.",
         "seam": "scripts/tests/test_launchability.py",
-        "maps_to_wave": "W8 S0"
+        "maps_to_wave": "W8 S0",
+        "execution_status": "complete",
+        "closed_by": "pec-tail-5-2026-08-31"
       }
     ],
     "already_covered_no_action": [
@@ -803,7 +832,50 @@
       "finding": null,
       "change": "remediation_order is fully executed; positions 1-17 complete",
       "status": "none_open"
-    }
+    },
+    "findings_coverage": {
+      "additive_findings_total": 14,
+      "closed": 13,
+      "closed_ids": [
+        "A3",
+        "A4",
+        "A5",
+        "A8",
+        "B1",
+        "B10",
+        "B2",
+        "B3",
+        "B4",
+        "B5",
+        "B7",
+        "B8",
+        "B9"
+      ],
+      "open": 1,
+      "open_ids": [
+        "B6"
+      ],
+      "note": "remediation_order is fully executed (17/17 positions) and additive findings are tracked separately, because the two are not the same set: 17 positions cover 13 findings, and B6 has no position at all. Read this block, not the position count, to answer \"is every finding closed\"."
+    },
+    "status_corrections_note": "Assessed at baseline_sha 450b7d0e on 2026-08-31. Retained verbatim as the audit record. Two of the three have since been closed by execution and are annotated below; the entries themselves are not edited.",
+    "status_corrections_since_closed": [
+      {
+        "correction": "W4 / AT-002 / AT-003 — deterministic extractor",
+        "closed_by": "A3, batch pec-normative-and-disposition-2-2026-08-31",
+        "what_changed": "architecture_extractor now imports normative_signals from architecture_intent; one normative vocabulary instead of two."
+      },
+      {
+        "correction": "W5 / CE-AT-005 / CE-AT-006 — live lowerer never calls classify_dispositions",
+        "closed_by": "A4, batch pec-normative-and-disposition-2-2026-08-31",
+        "what_changed": "architecture_to_campaign.lower() calls classify_dispositions before task formation; dispositions reach actions and map_item. It is no longer shadow-only."
+      },
+      {
+        "correction": "W7 residual — spine execute/Lock, B1-B3 the highest-leverage defects",
+        "closed_by": "B1, B2, B3 in batch pec-execution-completeness-10-2026-08-30; B1-class task-count agreement in batch pec-tail-5-2026-08-31",
+        "what_changed": "Blueprint->execution seam closed; run_campaign asserts task-count agreement and raises TASK_COUNT_DISAGREEMENT."
+      }
+    ],
+    "acceptance_scorecard_note": "Scores measured at baseline_sha 450b7d0e, before any remediation batch ran. They are not re-scored here: no measurement was taken after execution, and inventing a number would be worse than a dated one. Two rows carry a blocking note that has since been closed — \"A3 extractor split\" and \"disposition intelligence sits in shadow (A4)\" — both by batch pec-normative-and-disposition-2-2026-08-31. Re-scoring is real work, not a tracker edit."
   },
   "completed_removed_from_pipeline": [
     {
