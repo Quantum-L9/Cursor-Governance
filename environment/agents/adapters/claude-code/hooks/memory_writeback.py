@@ -96,6 +96,13 @@ def _writeback_roots(contract: dict, session_id: str, workspace: Path) -> list[P
         if roots:
             return roots
     except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        # Deliberately swallowed, and the fallback below is the whole point: an
+        # absent, truncated or malformed prefetch receipt is an ordinary state
+        # (a session that never hydrated, a container reaped mid-write), not an
+        # error to propagate out of a fail-open Stop hook. Re-deriving the roots
+        # from the shared resolver is strictly better than the alternative this
+        # function exists to remove — closing the container root, where
+        # resolve_group_id matches every repository and returns none.
         pass
     return _shared_workspace_roots(workspace)
 

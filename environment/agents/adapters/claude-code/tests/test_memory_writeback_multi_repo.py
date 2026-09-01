@@ -20,8 +20,8 @@ import json
 import sys
 import types
 import unittest
+import unittest.mock as mock
 from pathlib import Path
-from unittest import mock
 
 CLAUDE_DIR = Path(__file__).resolve().parent.parent
 HOOKS = CLAUDE_DIR / "hooks"
