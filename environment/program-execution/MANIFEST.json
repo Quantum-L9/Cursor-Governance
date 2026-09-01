@@ -990,6 +990,10 @@
       "sha256": "4107dbbc61a3f98afe7cd242d223c9c3db03ee40dcedb4ac758f9752183ceac3"
     },
     {
+      "path": "compiler/prohibition_kind.py",
+      "sha256": "055fa635d8e27de7c64a85577e0c677e84c5e18013e62b70debf58c7fae4def6"
+    },
+    {
       "path": "compiler/repo_truth.py",
       "sha256": "01fe16473ba19db67bd590777cbc99dfed568f0b0b9021c9db9dbe501765a386"
     },
@@ -1031,7 +1035,7 @@
     },
     {
       "path": "compiler/synthesizer.py",
-      "sha256": "3cb14bdec5349b8da9b9e95e5cccfbc477eb995ad973f86be563c9f86e32e7f4"
+      "sha256": "a9c29e96488122cfed8db85f94ffc2d7d1a2990f7a307af214b73a0ac1533eb0"
     },
     {
       "path": "compiler/tests/conformance/__init__.py",
@@ -1955,7 +1959,7 @@
     },
     {
       "path": "scripts/compile_campaign_source.py",
-      "sha256": "516703896cc9dd62b270047542c516744505141043f24a0eda6b9fb717d6cdaf"
+      "sha256": "4d5803c9ac2f085aa643cca7f73f40faba3714c6b6ae3f846a92f7dfba69fcf8"
     },
     {
       "path": "scripts/context7_stack_proof.py",
@@ -2055,7 +2059,7 @@
     },
     {
       "path": "scripts/tests/test_compile_architecture_intent.py",
-      "sha256": "62bafdc15ff68d73aba63b2bf06241b2c440248076bac790b7bb6403ecf616c4"
+      "sha256": "afce3717e020b4a70f4f10c6ba0db52610f0f09aeb4df7571523f0d0b3733aaa"
     },
     {
       "path": "scripts/tests/test_compile_campaign_source.py",
@@ -2112,6 +2116,10 @@
     {
       "path": "scripts/tests/test_prepare_resumable.py",
       "sha256": "7701a32ea046d298cb186f1c3ae2f3ca82131b82ef296138d917a6af279e4e15"
+    },
+    {
+      "path": "scripts/tests/test_prohibition_kind.py",
+      "sha256": "b2b2144a1ba7feb93f2cd31b71d3c309efb524441eb59985ee76850c435159b1"
     },
     {
       "path": "scripts/tests/test_replay_campaign.py",

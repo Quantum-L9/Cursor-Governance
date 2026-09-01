@@ -1278,6 +1278,28 @@
           "still_gating_s0": [],
           "not_claimed": "W8 remains open. S1-S8 unstarted. S0 is characterized; S1 (semantic conservation compiler + atomic acceptance) is the next subwave and is not started."
         }
+      ],
+      "s1_progress": [
+        {
+          "batch_id": "pec-w8-s1-prohibition-split-2026-09-01",
+          "plan": "WIP/8-29-26/PEC/PLAN_DOCUMENT.pec-w8-s1.v1.json (validated)",
+          "acceptance_criterion_closed": "Separate prohibition rules from filesystem_scope paths - one of S1's four bullets",
+          "defect_found": "compile_campaign_source.py wrote a prohibition's natural-language statement into DO_NOT_BUILD path_or_pattern, and the Controller globbed that field against changed files with a substring fallback. A sentence never appears inside a repo path, so do_not_build reported PASS having enforced nothing. compiler/synthesizer.py shipped two hardcoded architecture laws the same way.",
+          "landed": [
+            "compiler/prohibition_kind.py - classifier plus entry builder, conservative toward `path` so no existing glob is reclassified",
+            "compile_campaign_source.py and compiler/synthesizer.py - both emitters route through it",
+            "controller.py - the ContractError substring fallback is gone; an unparseable entry is skipped, not pretended to match",
+            "do-not-build.schema.json - `kind` declared (additive; additionalProperties was already true)",
+            "test_prohibition_kind.py (7) and test_do_not_build_verify.py (+1) - both sides pinned"
+          ],
+          "checked_before_removing_enforcement": "No live campaign carries any DNB entry: the forensic pe-v3-hardening blueprint has zero, and the template holds a REPLACE_WITH placeholder. Removing the fallback dropped no real enforcement.",
+          "s1_still_open": [
+            "CAMPAIGN_SOURCE -> SemanticModel -> projections -> reconstructed semantics",
+            "semantic_diff empty on a fixture carrying every governing field",
+            "GATE-S1-SEMANTIC-CONSERVATION"
+          ],
+          "open_unknown": "U3 - whether an unenforceable semantic prohibition should make do_not_build INCOMPLETE rather than PASS. Left bounded: it would change every campaign gate output, not just this seam."
+        }
       ]
     },
     {
@@ -1317,12 +1339,13 @@
     "id": "W8",
     "contract_id": "PE-V3-CONTROL-PLANE",
     "subwave": "S1",
-    "blocked_until": "Nothing. S0 is closed: GATE-S0-BASELINE-CHARACTERIZED exits 0. S1 (semantic conservation compiler + atomic acceptance, gate GATE-S1-SEMANTIC-CONSERVATION) is the next subwave and needs its own authorization and plan.",
+    "blocked_until": "Nothing is blocked. S0 is closed and S1 has started: the prohibition/path split is done. S1's remaining bullets are the SemanticModel round-trip and semantic_diff, a substantially larger build needing their own plan and authorization.",
     "gate_command": "python environment/program-execution/scripts/gate_s0_baseline.py",
-    "s0_status": "PASS (carrying advisory pinned_to_main — durability, binds at S8)",
-    "execute_via": "new PLAN_DOCUMENT or Cursor plan — not reopen W0-W7 Build",
-    "campaign_activation_ssot": "skills/l9-pe-campaign-activate (not WIP template copies)",
-    "partial_progress": "W8/S0 complete across three batches on 2026-09-01: counterexample reproduction, baseline freeze made executable, then gate scope corrected and closed. S1-S8 unstarted."
+    "s0_status": "PASS (advisory pinned_to_main; binds at S8)",
+    "s1_status": "partial - split closed; SemanticModel round-trip and semantic_diff open",
+    "w9_w10": "W9 depends_on W8 and W10 depends_on W9. They are sequenced behind W8 remaining subwaves by dependency, not by any missing plan or authorization.",
+    "execute_via": "new PLAN_DOCUMENT or Cursor plan - not reopen W0-W7 Build",
+    "campaign_activation_ssot": "skills/l9-pe-campaign-activate (not WIP template copies)"
   },
   "harvested_from": {
     "deleted": "WIP/PROGRAM EXECUTION PIPELINE/",

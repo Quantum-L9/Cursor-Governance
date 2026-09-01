@@ -1708,8 +1708,14 @@ def verify_attempt(workspace: Path, task_id: str) -> dict[str, Any]:
                         if path_allowed(path, [str(pattern)]):
                             dnb_hit = True
                     except ContractError:
-                        if str(pattern) in path:
-                            dnb_hit = True
+                        # An entry that will not parse as a repo path is not a
+                        # path prohibition, and substring-matching it against a
+                        # filename was never enforcement: a sentence does not
+                        # appear inside a path, so the gate passed having
+                        # matched nothing. Semantic prohibitions now travel in
+                        # their own channel (compiler/prohibition_kind.py) and
+                        # carry no path_or_pattern, so they never arrive here.
+                        continue
             gates["do_not_build"] = "FAIL" if dnb_hit else "PASS"
             gates["symlink"] = (
                 "PASS"

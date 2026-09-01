@@ -20,6 +20,27 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
+
+def _load_prohibition_entry() -> Any:
+    """Load the shared prohibition classifier from the compiler package.
+
+    scripts/ reaches compiler/ by path rather than by package import, the same
+    direction campaign_input.py already uses, because the repository root also
+    carries a `scripts` package that shadows this one.
+    """
+    module_path = Path(__file__).resolve().parents[1] / "compiler" / "prohibition_kind.py"
+    spec = importlib.util.spec_from_file_location("pes_prohibition_kind", module_path)
+    if spec is None or spec.loader is None:  # pragma: no cover - packaging error
+        raise RuntimeError(f"cannot load {module_path}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules.setdefault("pes_prohibition_kind", module)
+    spec.loader.exec_module(module)
+    return module.entry
+
+
+prohibition_entry = _load_prohibition_entry()
+
+
 from blueprint_ops import (  # noqa: E402
     dump_yaml,
     load_yaml,
@@ -1175,13 +1196,16 @@ def compile_source(
             "schema": "program-execution-blueprint.do-not-build.v2",
             "schema_version": "2.0.0",
             "prohibited_primary_paths": [
-                {
-                    "id": item["id"],
-                    "path_or_pattern": item["statement"],
-                    "reason": item["rationale"],
-                    "detection": "review_and_conformance",
-                    "exception_authority": "NONE",
-                }
+                # W8/S1: a prohibition is either a path the Controller can match
+                # or a law it cannot. Writing a law into path_or_pattern did not
+                # enforce it - it made do_not_build PASS having matched nothing.
+                prohibition_entry(
+                    identifier=item["id"],
+                    statement=item["statement"],
+                    reason=item["rationale"],
+                    detection="review_and_conformance",
+                    exception_authority="NONE",
+                )
                 for item in src.get("prohibited_paths") or []
             ],
             "allowed_experiments": [

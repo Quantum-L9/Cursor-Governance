@@ -561,6 +561,49 @@ conformance 14 OK · hardening 56 passed / 15 xfailed, unchanged.
 **Not claimed.** W8 stays open. S1–S8 are unstarted; S1 (semantic conservation
 compiler + atomic acceptance) is next and needs its own authorization and plan.
 
+### W8/S1 started — semantic prohibitions are not path globs (2026-09-01)
+
+Batch `pec-w8-s1-prohibition-split-2026-09-01`, planned by
+[`PLAN_DOCUMENT.pec-w8-s1.v1.json`](./PLAN_DOCUMENT.pec-w8-s1.v1.json). Closes the
+**split** bullet of S1; three bullets remain.
+
+S1's split is stated as *"prohibitions (semantic laws) vs
+filesystem_scope.forbidden_paths (glob paths)"*. The seam was doing the opposite:
+
+```python
+# compile_campaign_source.py
+"path_or_pattern": item["statement"],     # a sentence, into a glob field
+```
+
+The Controller then matched that field against the files an attempt changed, with a
+substring fallback when it would not parse as a path. A sentence never appears inside
+a repo path, so `do_not_build` reported **PASS having enforced nothing** — the same
+shape as B6, one layer out. `compiler/synthesizer.py` shipped two hardcoded
+architecture laws exactly that way: *"a second Program Execution runtime or
+Controller"* and *"compiler-owned mutable runtime state"*.
+
+Landed:
+
+| Path | What |
+|---|---|
+| `compiler/prohibition_kind.py` | Classifier + entry builder; **conservative toward `path`** so no existing glob is reclassified |
+| `compile_campaign_source.py`, `compiler/synthesizer.py` | Both emitters route through it |
+| `controller.py` | Substring fallback removed — an unparseable entry is skipped, not pretended to match |
+| `do-not-build.schema.json` | `kind` declared (additive; `additionalProperties` was already true) |
+| `test_prohibition_kind.py`, `test_do_not_build_verify.py` | 7 + 1 tests, both sides of the seam |
+
+**Checked before removing enforcement.** No live campaign carries any DNB entry — the
+forensic `pe-v3-hardening` blueprint has zero and the template holds a
+`REPLACE_WITH` placeholder — so the fallback was enforcing nothing that anyone
+relies on. That check was a plan checkpoint, not an afterthought.
+
+**Still open in S1:** the `CAMPAIGN_SOURCE → SemanticModel → projections →
+reconstructed semantics` round-trip, `semantic_diff` empty on a full fixture, and
+`GATE-S1-SEMANTIC-CONSERVATION`. Those are a substantially larger build.
+
+**W9 and W10** are sequenced behind W8's remaining subwaves by `depends_on`, not by a
+missing plan.
+
 ### Campaign activation (when W8+ admits campaigns)
 
 Use live skill **`skills/l9-pe-campaign-activate`** — not WIP template copies under `_archive/`.
