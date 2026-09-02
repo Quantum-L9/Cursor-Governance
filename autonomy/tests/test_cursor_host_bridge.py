@@ -9,6 +9,9 @@ event is denied.
 
 from __future__ import annotations
 
+import hashlib
+import json
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -30,14 +33,48 @@ from autonomy.tests.swarm_fixtures import (
     campaign_payload,
     deployment_payload,
 )
+from environment.agents.deployment import receipts as receipt_lib
+from environment.agents.deployment.receipts import DeploymentNotReady
 
 ROOT = Path(__file__).resolve().parents[2]
+
+
+def _roles_digest(repo_root: Path) -> str:
+    path = repo_root / "environment/agents/cursor-subagents/CURSOR_SUBAGENT_ROLES.yaml"
+    return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _write_cursor_receipt(
+    workspace: Path,
+    *,
+    status: str = receipt_lib.STATUS_READY,
+    digest: str | None = None,
+    corrupt: bool = False,
+) -> Path:
+    workspace_id = receipt_lib.workspace_id_for(workspace)
+    body = {
+        "schema": receipt_lib.RECEIPT_SCHEMA,
+        "status": status,
+        "source_manifest_digest": digest if digest is not None else _roles_digest(ROOT),
+        "surface": "cursor",
+    }
+    path = receipt_lib.write_deployment_receipt(body, surface="cursor", workspace_id=workspace_id)
+    if corrupt:
+        data = json.loads(path.read_text(encoding="utf-8"))
+        data["receipt_digest"] = "0" * 64
+        path.write_text(json.dumps(data) + "\n", encoding="utf-8")
+    return path
 
 
 class HostBridgeTestCase(unittest.TestCase):
     def setUp(self) -> None:
         self.tempdir = tempfile.TemporaryDirectory()
         self.addCleanup(self.tempdir.cleanup)
+        self._prev_runtime = os.environ.get("L9_RUNTIME_ROOT")
+        self.l9_runtime = Path(self.tempdir.name) / "l9runtime"
+        os.environ["L9_RUNTIME_ROOT"] = str(self.l9_runtime)
+        self.addCleanup(self._restore_runtime)
+        _write_cursor_receipt(ROOT)
         self.database = Path(self.tempdir.name) / "runtime.sqlite3"
         campaign_data = campaign_payload()
         deployment_data = deployment_payload()
@@ -67,6 +104,12 @@ class HostBridgeTestCase(unittest.TestCase):
             self.runtime, repository_root=ROOT, requirements=requirements
         )
         self.bridge = CursorHostBridge(self.runtime, self.orchestrator)
+
+    def _restore_runtime(self) -> None:
+        if self._prev_runtime is None:
+            os.environ.pop("L9_RUNTIME_ROOT", None)
+        else:
+            os.environ["L9_RUNTIME_ROOT"] = self._prev_runtime
 
     def _admission(self, agent_id: str = "cursor-child-1") -> dict:
         return self.bridge.create_admission(
@@ -208,6 +251,40 @@ class SubagentStartBindTests(HostBridgeTestCase):
         )
         decision = host_bind_subagent_start(self.database, tool_call_id="tu-1", subagent_id="sub-1")
         self.assertFalse(decision["allowed"])
+
+
+class DeploymentReadinessAdmissionTests(HostBridgeTestCase):
+    def test_ready_receipt_admits(self) -> None:
+        admission = self._admission()
+        self.assertTrue(admission["admission_token"].startswith("admission-"))
+        self.assertNotIn("allowed", admission)
+
+    def test_missing_receipt_denies(self) -> None:
+        path = receipt_lib.receipt_path(
+            surface="cursor", workspace_id=receipt_lib.workspace_id_for(ROOT)
+        )
+        path.unlink()
+        with self.assertRaises(DeploymentNotReady) as caught:
+            self._admission()
+        self.assertIn("missing", str(caught.exception))
+
+    def test_blocked_receipt_denies(self) -> None:
+        _write_cursor_receipt(ROOT, status="BLOCKED")
+        with self.assertRaises(DeploymentNotReady) as caught:
+            self._admission()
+        self.assertIn("BLOCKED", str(caught.exception))
+
+    def test_stale_digest_denies(self) -> None:
+        _write_cursor_receipt(ROOT, digest="0" * 64)
+        with self.assertRaises(DeploymentNotReady) as caught:
+            self._admission()
+        self.assertIn("stale", str(caught.exception))
+
+    def test_invalid_digest_denies(self) -> None:
+        _write_cursor_receipt(ROOT, corrupt=True)
+        with self.assertRaises(DeploymentNotReady) as caught:
+            self._admission()
+        self.assertIn("digest invalid", str(caught.exception))
 
 
 if __name__ == "__main__":
