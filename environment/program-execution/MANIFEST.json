@@ -1675,7 +1675,7 @@
     },
     {
       "path": "peer_execution/autonomy/bootstrap.py",
-      "sha256": "5e11c0cb2fd258a3d80fec2d8296a3c6e44074370661c34bf5e87e356f4f7766"
+      "sha256": "ca4ce8b178ff9b28729fe9ac49ebac63143001d2f412b60ae98fa190b72d1d51"
     },
     {
       "path": "peer_execution/autonomy/claim_lease.py",
@@ -1683,7 +1683,7 @@
     },
     {
       "path": "peer_execution/autonomy/cli.py",
-      "sha256": "aaab201a13f6b95a1c55c39d0772fe8aa8ac60551a2025b8870bec8f0c440621"
+      "sha256": "0f04b7c6e361e8165ac02fcad2422c21a20bcae4b804afff71b11003dc920d64"
     },
     {
       "path": "peer_execution/autonomy/examples/pr-convergence-campaign.json",
@@ -1726,6 +1726,10 @@
       "sha256": "89f7e93af5301d329e0999c288ce60e8749726102e20847cc032b3e238f1d4f5"
     },
     {
+      "path": "peer_execution/autonomy/state_dir.py",
+      "sha256": "bf8990ae69de3c7eaca8417c20988f07d5cbe059d552cea2130e806205bdef71"
+    },
+    {
       "path": "peer_execution/autonomy/state_store.py",
       "sha256": "1c8001288b5b42d1df5f98af32ba6bdcdfb87ae07beff17df4c505ab9a6cb612"
     },
@@ -1756,6 +1760,10 @@
     {
       "path": "peer_execution/autonomy/tests/test_scheduler.py",
       "sha256": "dc1457732df2208bd12f0d18e05c33c10b1a6b204f7398685a0dfe63d92410e0"
+    },
+    {
+      "path": "peer_execution/autonomy/tests/test_state_dir.py",
+      "sha256": "402a719e7b8a12ace5e0eb29065fafcf87c0dac18e52b64036880b18be587365"
     },
     {
       "path": "peer_execution/autonomy/tests/test_state_store.py",
