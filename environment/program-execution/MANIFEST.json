@@ -1942,6 +1942,10 @@
       "sha256": "c7cae64da3979a31621edf7eb7897a5eacbe8578a2edabd433c023caabe91ba0"
     },
     {
+      "path": "scripts/campaign_exec.py",
+      "sha256": "c449b34630df393441c70d990c91004cee3e17f5d88760ddbf607f6e21fa0148"
+    },
+    {
       "path": "scripts/campaign_input.py",
       "sha256": "c036934452744386bceeab3cd50c7059edb35a5f945a0be4a3d06c3d8d4f2b56"
     },
@@ -2023,7 +2027,7 @@
     },
     {
       "path": "scripts/run_campaign.py",
-      "sha256": "09244206f851a3679a5bd00e85e6f8a58544bf2d538cfe8e350d7df3ff879f32"
+      "sha256": "bd3a3f97b087fb02edefa1733aa5e49f3b36dc84c72b7bfe7dd9f3eb8632d2ec"
     },
     {
       "path": "scripts/run_conformance.py",
