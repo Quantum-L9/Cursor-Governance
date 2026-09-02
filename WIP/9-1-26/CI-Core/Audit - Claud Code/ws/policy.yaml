@@ -1,0 +1,15 @@
+schema: l9.finding-policy/v1
+# Companion to the runtime-captured fixture (see provenance.yaml): classifies
+# the single observed finding as advisory. The finding is real (bounded
+# subprocess invocation in the semgrep provider, reviewed: command is built
+# from a fixed argv list, not shell interpolation), so advisory is the honest
+# deterministic classification for the fixture's strict full-path test.
+metadata:
+  version: 1.0.0
+  status: fixture
+defaults:
+  mode: unresolved
+rules:
+  python.django.security.injection.command.subprocess-injection.subprocess-injection:
+    policy_key: L9-PY-SUBPROCESS-INJECTION
+    mode: advisory

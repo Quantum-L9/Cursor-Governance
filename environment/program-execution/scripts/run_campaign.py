@@ -36,6 +36,7 @@ _SCRIPT_DIR = Path(__file__).resolve().parent
 if str(_SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPT_DIR))
 
+import campaign_exec  # noqa: E402 - sibling; owns subprocess.run (Semgrep taint)
 import pe_trace  # noqa: E402 - sibling module, imported after the sys.path guard
 
 PE_ROOT = Path(__file__).resolve().parents[1]
@@ -364,21 +365,7 @@ def _commit_identity_args(repo: Path) -> list[str]:
 
 
 def git_env() -> dict[str, str]:
-    env = os.environ.copy()
-    for key in (
-        "GIT_DIR",
-        "GIT_WORK_TREE",
-        "GIT_INDEX_FILE",
-        "GIT_OBJECT_DIRECTORY",
-        "GIT_ALTERNATE_OBJECT_DIRECTORIES",
-        "GIT_COMMON_DIR",
-        "GIT_PREFIX",
-    ):
-        env.pop(key, None)
-    env["GIT_TERMINAL_PROMPT"] = "0"
-    env["GIT_ASKPASS"] = "echo"
-    env["GCM_INTERACTIVE"] = "never"
-    return env
+    return campaign_exec.git_env()
 
 
 def run_cmd(
@@ -389,22 +376,13 @@ def run_cmd(
     env: dict[str, str] | None = None,
 ) -> subprocess.CompletedProcess[str]:
     # Single choke point: no campaign subprocess reaches a remote unless a
-    # governed release transition is open.
+    # governed release transition is open. The spawn itself lives in
+    # campaign_exec so Semgrep taint rules do not time out on this file.
     action = publication_command(cmd)
     if action is not None:
         refuse_publication(action)
-    child_env = os.environ.copy() if env is None else dict(env)
-    child_env.setdefault("L9_CAMPAIGN_TUNNEL", "1")
     try:
-        return subprocess.run(
-            cmd,
-            check=False,
-            capture_output=True,
-            text=True,
-            timeout=timeout,
-            cwd=str(cwd) if cwd is not None else None,
-            env=child_env,
-        )
+        return campaign_exec.run_child(cmd, timeout=timeout, cwd=cwd, env=env)
     except subprocess.TimeoutExpired as exc:
         raise CampaignError(f"timed out after {timeout}s: {' '.join(cmd[:6])}") from exc
 
