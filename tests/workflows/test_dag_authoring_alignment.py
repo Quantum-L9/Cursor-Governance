@@ -15,6 +15,7 @@ import sys
 from pathlib import Path
 
 import pytest
+import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 SKILL = REPO_ROOT / "skills" / "l9-dag-authoring"
@@ -31,6 +32,8 @@ DAG_AUTHORING_SOURCE = REPO_ROOT / "workflows" / "dags" / "dag_authoring_dag.py"
 DISCOVERY_BOUNDARY = REPO_ROOT / "workflows" / "dags" / "__init__.py"
 PACKAGE_INIT = REPO_ROOT / "workflows" / "__init__.py"
 COMMAND = REPO_ROOT / "commands" / "dag-authoring.md"
+ARCHIVED_COMMAND = REPO_ROOT / "commands" / "_archived" / "dag-authoring.md"
+COMMAND_BINDING_POLICY = SKILL / "policies" / "command-binding.yaml"
 
 
 # --------------------------------------------------------------------------
@@ -275,9 +278,32 @@ def test_discovery_boundary_still_registers_every_session_dag():
 
 
 def test_command_trigger_uses_canonical_path():
-    result = validate_command(COMMAND, "dag-authoring-v1")
-    assert result["status"] == "PASS", result["errors"]
-    assert result["line_count"] <= 80
+    """A command that EXISTS is trigger-only; its existence is not required.
+
+    `policies/command-binding.yaml` lists `command_is_optional` first, and
+    SKILL.md repeats it: "Command binding is optional and trigger-only." This
+    test used to require `commands/dag-authoring.md` unconditionally, which is
+    stricter than the policy it covers — so it has never passed. da0c753 added
+    this DAG's wrapper directly at `commands/_archived/`, the live slash route
+    being the Skill itself (rules/02: skill wrappers retired to _archived).
+
+    Requiring the file back would contradict that retirement, and asserting
+    nothing would let a wrapper rot into a fat pseudo-workflow unnoticed. So
+    pin what the policy actually binds: optionality, and the trigger shape of
+    every command artifact that does exist.
+    """
+    policy = yaml.safe_load(COMMAND_BINDING_POLICY.read_text(encoding="utf-8"))
+    assert "command_is_optional" in policy["rules"], (
+        "this test permits an absent binding only because the policy does"
+    )
+
+    bound = [path for path in (COMMAND, ARCHIVED_COMMAND) if path.is_file()]
+    assert bound, "no dag-authoring command artifact in either commands/ or commands/_archived/"
+
+    for path in bound:
+        result = validate_command(path, "dag-authoring-v1")
+        assert result["status"] == "PASS", (str(path), result["errors"])
+        assert result["line_count"] <= policy["recommended_max_lines"]
 
 
 def test_command_trigger_rejects_stale_cursor_commands_path(tmp_path):
