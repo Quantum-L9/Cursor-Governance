@@ -37,8 +37,12 @@ from typing import Any
 # Sibling import safety: this module is also loaded via importlib (tests) and
 # run directly, so the PE root may not be on sys.path.
 _PE_ROOT = Path(__file__).resolve().parents[1]
+# APPEND, never insert(0): Program Execution needs its own PE-exclusive
+# packages here, but `scripts` is a top-level name it SHARES with the
+# repository root. Prepending would hand PE's `scripts/` that name for the
+# whole process. See peer_execution.imports.pe_script.
 if str(_PE_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PE_ROOT))
+    sys.path.append(str(_PE_ROOT))
 
 from peer_execution.validation_command import validation_command_error  # noqa: E402
 

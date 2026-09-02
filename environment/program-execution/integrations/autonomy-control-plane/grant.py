@@ -37,14 +37,20 @@ from typing import Any
 _HERE = Path(__file__).resolve().parent
 _PE_ROOT = _HERE.parents[1]
 _GOV_ROOT = _PE_ROOT.parents[1]
-for _path in (_HERE, _PE_ROOT, _GOV_ROOT):
+if str(_HERE) not in sys.path:
+    sys.path.insert(0, str(_HERE))
+# APPEND the roots, never insert(0): `scripts` is a top-level name Program
+# Execution SHARES with the repository root, so prepending either root decides
+# that name for the whole host process. See peer_execution.imports.pe_script.
+for _path in (_PE_ROOT, _GOV_ROOT):
     if str(_path) not in sys.path:
-        sys.path.insert(0, str(_path))
+        sys.path.append(str(_path))
 
 from bridge import AutonomyControlPlaneBridge  # noqa: E402
 from contract_mapper import (  # noqa: E402
     ContractActionError,
     map_program_contract,
+    read_scope_paths,
     require_coherent_actions,
 )
 from peer_execution.bindings import (  # noqa: E402
@@ -575,7 +581,20 @@ def _first_writable(contract: Mapping[str, Any]) -> str | None:
 def _resource_for_capability(contract: Mapping[str, Any], capability: str) -> str | None:
     if not capability.startswith(("repository.", "file.", "git.diff")):
         return None
-    return _first_writable(contract) or "README.md"
+    declared = _first_writable(contract)
+    if declared:
+        return declared
+    if capability in WRITE_CAPABILITIES or capability in COMMIT_CAPABILITIES:
+        # A write grant probed against an invented file ("README.md") recorded a
+        # decision about a path the task never named. A mutation contract with
+        # no writable path has nothing a write capability can be scoped to.
+        raise AutonomyGrantError(
+            f"WRITABLE_PATHS_REQUIRED: {capability} needs a declared writable path to probe"
+        )
+    # Read capabilities are probed against the campaign's own read scope: the
+    # first declared path, or the whole-worktree pattern the mapper grants
+    # when nothing is declared. Never a file the task did not name.
+    return read_scope_paths(contract)[0]
 
 
 def _action_status(runtime: AutonomyRuntime, campaign_id: str, action_id: str) -> str:
