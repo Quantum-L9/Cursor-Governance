@@ -38,7 +38,11 @@ def _task(**overrides):
     task = {
         "id": "TASK-001",
         "title": "Implement change",
-        "execution_kind": "repo_change",
+        # Canonical per task-cards.schema.json:
+        # program_control | repo_local | external_adapter | read_only.
+        # This fixture said "repo_change", which the schema does not accept, so
+        # every test built on it asserted a vocabulary nothing else speaks.
+        "execution_kind": "repo_local",
         "definition_status": "ready",
         "outputs": [{"location": "docs/result.md"}],
         "validation": [],
@@ -125,9 +129,10 @@ class LaunchabilityTest(unittest.TestCase):
             self.assertNotIn("TASK-001", report["synthesized_validations"])
 
     def test_inspection_kinds_do_not_require_executable_validation(self) -> None:
+        """`read_only` is the canonical inspection kind; "analysis" is not one."""
         with tempfile.TemporaryDirectory() as raw:
             report = launchability.check_tasks(
-                [_task(execution_kind="analysis", outputs=[])], Path(raw), infer=False
+                [_task(execution_kind="read_only", outputs=[])], Path(raw), infer=False
             )
             self.assertTrue(report["launchable"])
 
@@ -172,7 +177,7 @@ class InferenceReachesTheTaskCardTest(unittest.TestCase):
             blueprint = self._cards(root, [_task(outputs=[{"location": "docs/result.md"}])])
 
             changed = launchability.apply_synthesized_validations(
-                blueprint, {"TASK-001": ["test -s 'docs/result.md'"]}
+                blueprint, {"TASK-001": ["test -s 'docs/result.md'"]}, validate=False
             )
 
             self.assertEqual(changed, ["TASK-001"])
@@ -190,7 +195,9 @@ class InferenceReachesTheTaskCardTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as raw:
             blueprint = self._cards(Path(raw), [_task()])
 
-            launchability.apply_synthesized_validations(blueprint, {"TASK-001": ["make check"]})
+            launchability.apply_synthesized_validations(
+                blueprint, {"TASK-001": ["make check"]}, validate=False
+            )
 
             self.assertTrue(self._written(blueprint)[0]["id"].startswith("VAL-INFERRED-"))
 
@@ -206,7 +213,7 @@ class InferenceReachesTheTaskCardTest(unittest.TestCase):
             blueprint = self._cards(Path(raw), [_task(validation=[declared])])
 
             changed = launchability.apply_synthesized_validations(
-                blueprint, {"TASK-001": ["python3 -m pytest -q"]}
+                blueprint, {"TASK-001": ["python3 -m pytest -q"]}, validate=False
             )
 
             self.assertEqual(changed, [])
@@ -217,7 +224,9 @@ class InferenceReachesTheTaskCardTest(unittest.TestCase):
             blueprint = self._cards(Path(raw), [_task()])
             before = (blueprint / "TASK_CARDS.yaml").read_bytes()
 
-            self.assertEqual(launchability.apply_synthesized_validations(blueprint, {}), [])
+            self.assertEqual(
+                launchability.apply_synthesized_validations(blueprint, {}, validate=False), []
+            )
             self.assertEqual((blueprint / "TASK_CARDS.yaml").read_bytes(), before)
 
 

@@ -123,6 +123,30 @@
     "receipt_digest": {
       "type": "string",
       "pattern": "^[a-f0-9]{64}$"
+    },
+    "unenforced_prohibitions": {
+      "type": "array",
+      "description": "Prohibitions the do_not_build gate could not evaluate, because they carry no path to match. That gate reports on changed file paths only, so its PASS never means 'no prohibition was violated'. Emitted by the Controller on every verification, empty list included, so full coverage is stated rather than inferred from a missing field; that obligation is pinned by the Controller's own tests. It is deliberately NOT required here, because adapters share this schema and have no program lock to read - an empty list from one would assert coverage it never checked.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "statement",
+          "enforced_by"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "statement": {
+            "type": "string"
+          },
+          "enforced_by": {
+            "type": "string"
+          }
+        }
+      }
     }
   }
 }

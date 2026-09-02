@@ -26,7 +26,8 @@
             "type": "string"
           },
           "path_or_pattern": {
-            "type": "string"
+            "type": "string",
+            "description": "Repo path or glob. Present only when kind is `path`."
           },
           "reason": {
             "type": "string"
@@ -36,6 +37,17 @@
           },
           "exception_authority": {
             "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "path",
+              "semantic"
+            ],
+            "description": "Which channel this prohibition travels in. `path` carries a repo path or glob and is matched by the Controller against the files an attempt changed; `semantic` carries an architecture law enforced by review and conformance. A semantic entry deliberately omits path_or_pattern: there is nothing to glob, and writing the law there made do_not_build report PASS having matched nothing."
+          },
+          "statement": {
+            "type": "string",
+            "description": "The prohibition as written, for both kinds."
           }
         }
       }

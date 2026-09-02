@@ -5,6 +5,8 @@ import sqlite3
 from pathlib import Path
 from typing import Any
 
+from .common import verification_mechanisms_from_card
+
 TASK_STATES = {
     "WAITING",
     "BLOCKED",
@@ -88,6 +90,7 @@ class StateDB:
               completion_gates TEXT NOT NULL,
               authorization_ceiling TEXT NOT NULL,
               required_acceptance TEXT NOT NULL,
+              verification_mechanisms TEXT NOT NULL,
               required_validation_commands TEXT NOT NULL,
               risk_tier TEXT NOT NULL,
               definition_status TEXT NOT NULL,
@@ -164,7 +167,61 @@ class StateDB:
             );
             """
         )
+        task_columns = {str(row["name"]) for row in self.conn.execute("PRAGMA table_info(tasks)")}
+        if "verification_mechanisms" not in task_columns:
+            self.conn.execute(
+                "ALTER TABLE tasks ADD COLUMN verification_mechanisms TEXT NOT NULL DEFAULT '[]'"
+            )
+            self._backfill_verification_mechanisms()
         self.conn.commit()
+
+    def _backfill_verification_mechanisms(self) -> None:
+        """Populate the new column for rows frozen before it existed.
+
+        The default `'[]'` is a schema placeholder, not an answer. Both contract
+        schemas require `verification_mechanisms` with `minItems: 1`, so a task
+        left at the default renders a contract that fails validation and the
+        Controller reports `contract: FAIL` at verify -- for every task, on a
+        runtime that was healthy before the upgrade. Without this, the migration
+        would make an in-flight campaign unfinishable rather than merely
+        uninformed.
+
+        The answer is already frozen beside this database. The program lock
+        carries each task's authored card under `source`, and
+        `normalize_blueprint()` derives the mechanisms from exactly that card's
+        `validation` list, so reading it here reproduces the value the next
+        relock would write -- without consulting the Blueprint, which may no
+        longer be on this disk.
+
+        Deliberately silent when there is nothing to read: a database with no
+        lock beside it is a fresh or test runtime with no legacy rows to
+        repair. A task whose card declares no validation stays `'[]'`, which is
+        the honest answer for it; acceptance now refuses to seal such a task
+        when it is mutating, so it cannot recur going forward.
+        """
+        lock_path = self.path.parent / "program-lock.json"
+        if not lock_path.is_file():
+            return
+        try:
+            locked = json.loads(lock_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            return
+        if not isinstance(locked, dict):
+            return
+        known = {str(row["id"]) for row in self.conn.execute("SELECT id FROM tasks")}
+        for task in locked.get("tasks") or []:
+            if not isinstance(task, dict):
+                continue
+            task_id = str(task.get("id") or "")
+            if task_id not in known:
+                continue
+            mechanisms = verification_mechanisms_from_card(task.get("source"))
+            if not mechanisms:
+                continue
+            self.conn.execute(
+                "UPDATE tasks SET verification_mechanisms=? WHERE id=?",
+                (json.dumps(mechanisms, sort_keys=True), task_id),
+            )
 
     def close(self) -> None:
         self.conn.close()
@@ -240,6 +297,7 @@ class StateDB:
             "completion_gates",
             "authorization_ceiling",
             "required_acceptance",
+            "verification_mechanisms",
             "required_validation_commands",
         }
 
@@ -263,6 +321,9 @@ class StateDB:
                 task.get("authorization_ceiling") or {}, sort_keys=True
             ),
             "required_acceptance": json.dumps(task.get("required_acceptance") or []),
+            "verification_mechanisms": json.dumps(
+                task.get("verification_mechanisms") or [], sort_keys=True
+            ),
             "required_validation_commands": json.dumps(
                 task.get("required_validation_commands") or []
             ),

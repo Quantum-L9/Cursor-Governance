@@ -153,9 +153,12 @@ permanently unclaimable.
 
 Compilation fails, before any side effect, only for conditions more rounds
 cannot fix: an unreadable source, an unresolvable target, coverage that will not
-converge, or a contradiction between equal-authority obligations that the source
-itself does not settle. The alternative — minting a Blueprint full of BLOCKED
-tasks — looks like a program and can never run.
+converge, a contradiction between equal-authority obligations that the source
+itself does not settle, a document that violates its own published schema
+(`program-execution.intent.v1`, `program-execution.autonomy-policy.v1`,
+`program-execution.intent-resolution.v1`), or a constraint that would widen
+authority beyond the active policy profile. The alternative — minting a
+Blueprint full of BLOCKED tasks — looks like a program and can never run.
 
 ### Extractors
 

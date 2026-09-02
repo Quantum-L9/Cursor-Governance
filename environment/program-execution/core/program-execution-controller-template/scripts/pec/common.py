@@ -55,6 +55,21 @@ def write_json(path: Path, value: Any) -> None:
     os.replace(temp, path_r)
 
 
+def verification_mechanisms_from_card(card: Any) -> list[dict[str, Any]]:
+    """The typed verification mechanisms an authored Task Card declares.
+
+    One owner for this derivation. `normalize_blueprint()` applies it when it
+    freezes a task into the Program Lock, and the `verification_mechanisms`
+    migration applies it again when it backfills a runtime frozen before that
+    column existed. Those two must agree exactly -- the backfill's whole claim
+    is that it reproduces what the next relock would write -- and two copies of
+    the same list comprehension in two modules is how that quietly stops being
+    true.
+    """
+    validation = card.get("validation") if isinstance(card, dict) else None
+    return [dict(item) for item in validation or [] if isinstance(item, dict)]
+
+
 def resolve_within(root: Path, candidate: Path) -> Path:
     root = root.resolve()
     resolved = candidate.resolve()

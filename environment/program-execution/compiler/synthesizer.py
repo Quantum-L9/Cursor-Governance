@@ -10,6 +10,7 @@ import yaml
 from peer_execution.imports import load_module
 
 from .mission_admission import validate_mission_context
+from .prohibition_kind import entry as prohibition_entry
 
 MODULE_ROOT = Path(__file__).resolve().parent
 PE_ROOT = MODULE_ROOT.parent
@@ -776,21 +777,25 @@ def _do_not_build() -> dict[str, Any]:
     return {
         "schema": "program-execution-blueprint.do-not-build.v2",
         "schema_version": "2.0.0",
+        # Both of these are architecture laws, not globs. They used to ship as
+        # path_or_pattern, which the Controller then tried to match against
+        # changed files - a sentence never appears inside a path, so the gate
+        # passed having enforced neither. They now travel as semantic rules.
         "prohibited_primary_paths": [
-            {
-                "id": "DNB-001",
-                "path_or_pattern": "a second Program Execution runtime or Controller",
-                "reason": "The existing Controller is the sole runtime authority",
-                "detection": "review plus conformance checks",
-                "exception_authority": "NONE",
-            },
-            {
-                "id": "DNB-002",
-                "path_or_pattern": "compiler-owned mutable runtime state",
-                "reason": "The compiler emits definitions; runtime state belongs to the Controller",
-                "detection": "review plus conformance checks",
-                "exception_authority": "NONE",
-            },
+            prohibition_entry(
+                identifier="DNB-001",
+                statement="a second Program Execution runtime or Controller",
+                reason="The existing Controller is the sole runtime authority",
+                detection="review plus conformance checks",
+                exception_authority="NONE",
+            ),
+            prohibition_entry(
+                identifier="DNB-002",
+                statement="compiler-owned mutable runtime state",
+                reason="The compiler emits definitions; runtime state belongs to the Controller",
+                detection="review plus conformance checks",
+                exception_authority="NONE",
+            ),
         ],
         "allowed_experiments": [],
     }
